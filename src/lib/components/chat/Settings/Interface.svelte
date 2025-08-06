@@ -536,29 +536,6 @@
 
 			<div>
 				<div class=" py-0.5 flex w-full justify-between">
-					<div id="widescreen-mode-label" class=" self-center text-xs">
-						{$i18n.t('Widescreen Mode')}
-					</div>
-
-					<button
-						class="p-1 px-3 text-xs flex rounded-sm transition"
-						on:click={() => {
-							toggleWidescreenMode();
-						}}
-						aria-labelledby="widescreen-mode-label"
-						type="button"
-					>
-						{#if widescreenMode === true}
-							<span class="ml-2 self-center">{$i18n.t('On')}</span>
-						{:else}
-							<span class="ml-2 self-center">{$i18n.t('Off')}</span>
-						{/if}
-					</button>
-				</div>
-			</div>
-
-			<div>
-				<div class=" py-0.5 flex w-full justify-between">
 					<div id="chat-direction-label" class=" self-center text-xs">
 						{$i18n.t('Chat direction')}
 					</div>
@@ -575,6 +552,57 @@
 							<span class="ml-2 self-center">{$i18n.t('RTL')}</span>
 						{:else}
 							<span class="ml-2 self-center">{$i18n.t('Auto')}</span>
+						{/if}
+					</button>
+				</div>
+			</div>
+
+			<div>
+				<div class=" py-0.5 flex w-full justify-between">
+					<div id="chat-background-label" class=" self-center text-xs">
+						{$i18n.t('Chat Background Image')}
+					</div>
+
+					<button
+						aria-labelledby="chat-background-label"
+						class="p-1 px-3 text-xs flex rounded-sm transition"
+						on:click={() => {
+							if (backgroundImageUrl !== null) {
+								backgroundImageUrl = null;
+								saveSettings({ backgroundImageUrl });
+							} else {
+								filesInputElement.click();
+							}
+						}}
+						type="button"
+					>
+						{#if backgroundImageUrl !== null}
+							<span class="ml-2 self-center">{$i18n.t('Reset')}</span>
+						{:else}
+							<span class="ml-2 self-center">{$i18n.t('Upload')}</span>
+						{/if}
+					</button>
+				</div>
+			</div>
+
+			<div>
+				<div class=" py-0.5 flex w-full justify-between">
+					<div id="widescreen-mode-label" class=" self-center text-xs">
+						{$i18n.t('Widescreen Mode')}
+					</div>
+
+					<button
+						class="p-1 px-3 text-xs flex rounded-sm transition"
+						on:click={() => {
+							toggleWidescreenMode();
+						}}
+						aria-labelledby="widescreen-mode-label"
+						type="button"
+					>
+						{#if widescreenMode === true}
+							<span class="ml-2 self-center">{$i18n.t('On')}</span>
+						{:else}
+							<span class="ml-2 self-center">{$i18n.t('Off')}</span>
 						{/if}
 					</button>
 				</div>
@@ -628,6 +656,73 @@
 				</div>
 			{/if}
 
+			<div>
+				<div id="allow-user-location-label" class=" py-0.5 flex w-full justify-between">
+					<div class=" self-center text-xs">{$i18n.t('Allow User Location')}</div>
+
+					<button
+						aria-labelledby="allow-user-location-label"
+						class="p-1 px-3 text-xs flex rounded-sm transition"
+						on:click={() => {
+							toggleUserLocation();
+						}}
+						type="button"
+					>
+						{#if userLocation === true}
+							<span class="ml-2 self-center">{$i18n.t('On')}</span>
+						{:else}
+							<span class="ml-2 self-center">{$i18n.t('Off')}</span>
+						{/if}
+					</button>
+				</div>
+			</div>
+
+			<div>
+				<div class=" py-0.5 flex w-full justify-between">
+					<div id="haptic-feedback-label" class=" self-center text-xs">
+						{$i18n.t('Haptic Feedback')} ({$i18n.t('Android')})
+					</div>
+
+					<button
+						aria-labelledby="haptic-feedback-label"
+						class="p-1 px-3 text-xs flex rounded-sm transition"
+						on:click={() => {
+							toggleHapticFeedback();
+						}}
+						type="button"
+					>
+						{#if hapticFeedback === true}
+							<span class="ml-2 self-center">{$i18n.t('On')}</span>
+						{:else}
+							<span class="ml-2 self-center">{$i18n.t('Off')}</span>
+						{/if}
+					</button>
+				</div>
+			</div>
+
+			<div>
+				<div class=" py-0.5 flex w-full justify-between">
+					<div id="copy-formatted-label" class=" self-center text-xs">
+						{$i18n.t('Copy Formatted Text')}
+					</div>
+
+					<button
+						aria-labelledby="copy-formatted-label"
+						class="p-1 px-3 text-xs flex rounded-sm transition"
+						on:click={() => {
+							toggleCopyFormatted();
+						}}
+						type="button"
+					>
+						{#if copyFormatted === true}
+							<span class="ml-2 self-center">{$i18n.t('On')}</span>
+						{:else}
+							<span class="ml-2 self-center">{$i18n.t('Off')}</span>
+						{/if}
+					</button>
+				</div>
+			</div>
+
 			{#if $user?.role === 'admin'}
 				<div>
 					<div class=" py-0.5 flex w-full justify-between">
@@ -676,208 +771,26 @@
 				</div>
 			{/if}
 
-			<div class=" my-1.5 text-sm font-medium">{$i18n.t('Chat')}</div>
+			<div class=" my-1.5 text-sm font-medium">{$i18n.t('Input')}</div>
 
 			<div>
 				<div class=" py-0.5 flex w-full justify-between">
-					<div id="auto-generation-label" class=" self-center text-xs">
-						{$i18n.t('Title Auto-Generation')}
+					<div id="enter-key-behavior-label" class=" self-center text-xs">
+						{$i18n.t('Enter Key Behavior')}
 					</div>
 
 					<button
-						aria-labelledby="auto-generation-label"
-						class="p-1 px-3 text-xs flex rounded-sm transition"
+						aria-labelledby="enter-key-behavior-label"
+						class="p-1 px-3 text-xs flex rounded transition"
 						on:click={() => {
-							toggleTitleAutoGenerate();
+							togglectrlEnterToSend();
 						}}
 						type="button"
 					>
-						{#if titleAutoGenerate === true}
-							<span class="ml-2 self-center">{$i18n.t('On')}</span>
+						{#if ctrlEnterToSend === true}
+							<span class="ml-2 self-center">{$i18n.t('Ctrl+Enter to Send')}</span>
 						{:else}
-							<span class="ml-2 self-center">{$i18n.t('Off')}</span>
-						{/if}
-					</button>
-				</div>
-			</div>
-
-			<div>
-				<div class=" py-0.5 flex w-full justify-between">
-					<div class=" self-center text-xs">{$i18n.t('Follow-Up Auto-Generation')}</div>
-
-					<button
-						aria-labelledby="auto-generation-label"
-						class="p-1 px-3 text-xs flex rounded-sm transition"
-						on:click={() => {
-							toggleAutoFollowUps();
-						}}
-						type="button"
-					>
-						{#if autoFollowUps === true}
-							<span class="ml-2 self-center">{$i18n.t('On')}</span>
-						{:else}
-							<span class="ml-2 self-center">{$i18n.t('Off')}</span>
-						{/if}
-					</button>
-				</div>
-			</div>
-
-			<div>
-				<div class=" py-0.5 flex w-full justify-between">
-					<div id="chat-tags-label" class=" self-center text-xs">
-						{$i18n.t('Chat Tags Auto-Generation')}
-					</div>
-
-					<button
-						aria-labelledby="chat-tags-label"
-						class="p-1 px-3 text-xs flex rounded-sm transition"
-						on:click={() => {
-							toggleAutoTags();
-						}}
-						type="button"
-					>
-						{#if autoTags === true}
-							<span class="ml-2 self-center">{$i18n.t('On')}</span>
-						{:else}
-							<span class="ml-2 self-center">{$i18n.t('Off')}</span>
-						{/if}
-					</button>
-				</div>
-			</div>
-
-			<div>
-				<div class=" py-0.5 flex w-full justify-between">
-					<div id="detect-artifacts-label" class=" self-center text-xs">
-						{$i18n.t('Detect Artifacts Automatically')}
-					</div>
-
-					<button
-						aria-labelledby="detect-artifacts-label"
-						class="p-1 px-3 text-xs flex rounded-sm transition"
-						on:click={() => {
-							toggleDetectArtifacts();
-						}}
-						type="button"
-					>
-						{#if detectArtifacts === true}
-							<span class="ml-2 self-center">{$i18n.t('On')}</span>
-						{:else}
-							<span class="ml-2 self-center">{$i18n.t('Off')}</span>
-						{/if}
-					</button>
-				</div>
-			</div>
-
-			<div>
-				<div class=" py-0.5 flex w-full justify-between">
-					<div id="auto-copy-label" class=" self-center text-xs">
-						{$i18n.t('Auto-Copy Response to Clipboard')}
-					</div>
-
-					<button
-						aria-labelledby="auto-copy-label"
-						class="p-1 px-3 text-xs flex rounded-sm transition"
-						on:click={() => {
-							toggleResponseAutoCopy();
-						}}
-						type="button"
-					>
-						{#if responseAutoCopy === true}
-							<span class="ml-2 self-center">{$i18n.t('On')}</span>
-						{:else}
-							<span class="ml-2 self-center">{$i18n.t('Off')}</span>
-						{/if}
-					</button>
-				</div>
-			</div>
-
-			<div>
-				<div class=" py-0.5 flex w-full justify-between">
-					<div id="fade-streaming-label" class=" self-center text-xs">
-						{$i18n.t('Fade Effect for Streaming Text')}
-					</div>
-
-					<button
-						aria-labelledby="fade-streaming-label"
-						class="p-1 px-3 text-xs flex rounded-sm transition"
-						on:click={() => {
-							toggleChatFadeStreamingText();
-						}}
-						type="button"
-					>
-						{#if chatFadeStreamingText === true}
-							<span class="ml-2 self-center">{$i18n.t('On')}</span>
-						{:else}
-							<span class="ml-2 self-center">{$i18n.t('Off')}</span>
-						{/if}
-					</button>
-				</div>
-			</div>
-
-			<div>
-				<div class=" py-0.5 flex w-full justify-between">
-					<div id="keep-followup-prompts-label" class=" self-center text-xs">
-						{$i18n.t('Keep Follow-Up Prompts in Chat')}
-					</div>
-
-					<button
-						aria-labelledby="keep-followup-prompts-label"
-						class="p-1 px-3 text-xs flex rounded-sm transition"
-						on:click={() => {
-							toggleKeepFollowUpPrompts();
-						}}
-						type="button"
-					>
-						{#if keepFollowUpPrompts === true}
-							<span class="ml-2 self-center">{$i18n.t('On')}</span>
-						{:else}
-							<span class="ml-2 self-center">{$i18n.t('Off')}</span>
-						{/if}
-					</button>
-				</div>
-			</div>
-
-			<div>
-				<div class=" py-0.5 flex w-full justify-between">
-					<div id="insert-followup-prompt-label" class=" self-center text-xs">
-						{$i18n.t('Insert Follow-Up Prompt to Input')}
-					</div>
-
-					<button
-						aria-labelledby="insert-followup-prompt-label"
-						class="p-1 px-3 text-xs flex rounded-sm transition"
-						on:click={() => {
-							toggleInsertFollowUpPrompt();
-						}}
-						type="button"
-					>
-						{#if insertFollowUpPrompt === true}
-							<span class="ml-2 self-center">{$i18n.t('On')}</span>
-						{:else}
-							<span class="ml-2 self-center">{$i18n.t('Off')}</span>
-						{/if}
-					</button>
-				</div>
-			</div>
-
-			<div>
-				<div class=" py-0.5 flex w-full justify-between">
-					<div id="keep-followup-prompts-label" class=" self-center text-xs">
-						{$i18n.t('Display Multi-model Responses in Tabs')}
-					</div>
-
-					<button
-						aria-labelledby="keep-followup-prompts-label"
-						class="p-1 px-3 text-xs flex rounded-sm transition"
-						on:click={() => {
-							toggleDisplayMultiModelResponsesInTabs();
-						}}
-						type="button"
-					>
-						{#if displayMultiModelResponsesInTabs === true}
-							<span class="ml-2 self-center">{$i18n.t('On')}</span>
-						{:else}
-							<span class="ml-2 self-center">{$i18n.t('Off')}</span>
+							<span class="ml-2 self-center">{$i18n.t('Enter to Send')}</span>
 						{/if}
 					</button>
 				</div>
@@ -1002,21 +915,205 @@
 				</div>
 			</div>
 
+			<div class=" my-1.5 text-sm font-medium">{$i18n.t('Chat')}</div>
+
 			<div>
 				<div class=" py-0.5 flex w-full justify-between">
-					<div id="copy-formatted-label" class=" self-center text-xs">
-						{$i18n.t('Copy Formatted Text')}
+					<div id="auto-generation-label" class=" self-center text-xs">
+						{$i18n.t('Title Auto-Generation')}
 					</div>
 
 					<button
-						aria-labelledby="copy-formatted-label"
+						aria-labelledby="auto-generation-label"
 						class="p-1 px-3 text-xs flex rounded-sm transition"
 						on:click={() => {
-							toggleCopyFormatted();
+							toggleTitleAutoGenerate();
 						}}
 						type="button"
 					>
-						{#if copyFormatted === true}
+						{#if titleAutoGenerate === true}
+							<span class="ml-2 self-center">{$i18n.t('On')}</span>
+						{:else}
+							<span class="ml-2 self-center">{$i18n.t('Off')}</span>
+						{/if}
+					</button>
+				</div>
+			</div>
+
+			<div>
+				<div class=" py-0.5 flex w-full justify-between">
+					<div class=" self-center text-xs">{$i18n.t('Follow-Up Auto-Generation')}</div>
+
+					<button
+						aria-labelledby="auto-generation-label"
+						class="p-1 px-3 text-xs flex rounded-sm transition"
+						on:click={() => {
+							toggleAutoFollowUps();
+						}}
+						type="button"
+					>
+						{#if autoFollowUps === true}
+							<span class="ml-2 self-center">{$i18n.t('On')}</span>
+						{:else}
+							<span class="ml-2 self-center">{$i18n.t('Off')}</span>
+						{/if}
+					</button>
+				</div>
+			</div>
+
+			<div>
+				<div class=" py-0.5 flex w-full justify-between">
+					<div id="chat-tags-label" class=" self-center text-xs">
+						{$i18n.t('Chat Tags Auto-Generation')}
+					</div>
+
+					<button
+						aria-labelledby="chat-tags-label"
+						class="p-1 px-3 text-xs flex rounded-sm transition"
+						on:click={() => {
+							toggleAutoTags();
+						}}
+						type="button"
+					>
+						{#if autoTags === true}
+							<span class="ml-2 self-center">{$i18n.t('On')}</span>
+						{:else}
+							<span class="ml-2 self-center">{$i18n.t('Off')}</span>
+						{/if}
+					</button>
+				</div>
+			</div>
+
+			<div>
+				<div class=" py-0.5 flex w-full justify-between">
+					<div id="web-search-in-chat-label" class=" self-center text-xs">
+						{$i18n.t('Web Search in Chat')}
+					</div>
+
+					<button
+						aria-labelledby="web-search-in-chat-label"
+						class="p-1 px-3 text-xs flex rounded-sm transition"
+						on:click={() => {
+							toggleWebSearch();
+						}}
+						type="button"
+					>
+						{#if webSearch === 'always'}
+							<span class="ml-2 self-center">{$i18n.t('Always')}</span>
+						{:else}
+							<span class="ml-2 self-center">{$i18n.t('Default')}</span>
+						{/if}
+					</button>
+				</div>
+			</div>
+
+			<div>
+				<div class=" py-0.5 flex w-full justify-between">
+					<div id="detect-artifacts-label" class=" self-center text-xs">
+						{$i18n.t('Detect Artifacts Automatically')}
+					</div>
+
+					<button
+						aria-labelledby="detect-artifacts-label"
+						class="p-1 px-3 text-xs flex rounded-sm transition"
+						on:click={() => {
+							toggleDetectArtifacts();
+						}}
+						type="button"
+					>
+						{#if detectArtifacts === true}
+							<span class="ml-2 self-center">{$i18n.t('On')}</span>
+						{:else}
+							<span class="ml-2 self-center">{$i18n.t('Off')}</span>
+						{/if}
+					</button>
+				</div>
+			</div>
+
+			<div>
+				<div class=" py-0.5 flex w-full justify-between">
+					<div id="auto-copy-label" class=" self-center text-xs">
+						{$i18n.t('Auto-Copy Response to Clipboard')}
+					</div>
+
+					<button
+						aria-labelledby="auto-copy-label"
+						class="p-1 px-3 text-xs flex rounded-sm transition"
+						on:click={() => {
+							toggleResponseAutoCopy();
+						}}
+						type="button"
+					>
+						{#if responseAutoCopy === true}
+							<span class="ml-2 self-center">{$i18n.t('On')}</span>
+						{:else}
+							<span class="ml-2 self-center">{$i18n.t('Off')}</span>
+						{/if}
+					</button>
+				</div>
+			</div>
+
+			<div>
+				<div class=" py-0.5 flex w-full justify-between">
+					<div id="fade-streaming-label" class=" self-center text-xs">
+						{$i18n.t('Fade Effect for Streaming Text')}
+					</div>
+
+					<button
+						aria-labelledby="fade-streaming-label"
+						class="p-1 px-3 text-xs flex rounded-sm transition"
+						on:click={() => {
+							toggleChatFadeStreamingText();
+						}}
+						type="button"
+					>
+						{#if chatFadeStreamingText === true}
+							<span class="ml-2 self-center">{$i18n.t('On')}</span>
+						{:else}
+							<span class="ml-2 self-center">{$i18n.t('Off')}</span>
+						{/if}
+					</button>
+				</div>
+			</div>
+
+			<div>
+				<div class=" py-0.5 flex w-full justify-between">
+					<div id="keep-followup-prompts-label" class=" self-center text-xs">
+						{$i18n.t('Keep Follow-Up Prompts in Chat')}
+					</div>
+
+					<button
+						aria-labelledby="keep-followup-prompts-label"
+						class="p-1 px-3 text-xs flex rounded-sm transition"
+						on:click={() => {
+							toggleKeepFollowUpPrompts();
+						}}
+						type="button"
+					>
+						{#if keepFollowUpPrompts === true}
+							<span class="ml-2 self-center">{$i18n.t('On')}</span>
+						{:else}
+							<span class="ml-2 self-center">{$i18n.t('Off')}</span>
+						{/if}
+					</button>
+				</div>
+			</div>
+
+			<div>
+				<div class=" py-0.5 flex w-full justify-between">
+					<div id="insert-followup-prompt-label" class=" self-center text-xs">
+						{$i18n.t('Insert Follow-Up Prompt to Input')}
+					</div>
+
+					<button
+						aria-labelledby="insert-followup-prompt-label"
+						class="p-1 px-3 text-xs flex rounded-sm transition"
+						on:click={() => {
+							toggleInsertFollowUpPrompt();
+						}}
+						type="button"
+					>
+						{#if insertFollowUpPrompt === true}
 							<span class="ml-2 self-center">{$i18n.t('On')}</span>
 						{:else}
 							<span class="ml-2 self-center">{$i18n.t('Off')}</span>
@@ -1073,117 +1170,22 @@
 
 			<div>
 				<div class=" py-0.5 flex w-full justify-between">
-					<div id="chat-background-label" class=" self-center text-xs">
-						{$i18n.t('Chat Background Image')}
+					<div id="keep-followup-prompts-label" class=" self-center text-xs">
+						{$i18n.t('Display Multi-model Responses in Tabs')}
 					</div>
 
 					<button
-						aria-labelledby="chat-background-label"
+						aria-labelledby="keep-followup-prompts-label"
 						class="p-1 px-3 text-xs flex rounded-sm transition"
 						on:click={() => {
-							if (backgroundImageUrl !== null) {
-								backgroundImageUrl = null;
-								saveSettings({ backgroundImageUrl });
-							} else {
-								filesInputElement.click();
-							}
+							toggleDisplayMultiModelResponsesInTabs();
 						}}
 						type="button"
 					>
-						{#if backgroundImageUrl !== null}
-							<span class="ml-2 self-center">{$i18n.t('Reset')}</span>
-						{:else}
-							<span class="ml-2 self-center">{$i18n.t('Upload')}</span>
-						{/if}
-					</button>
-				</div>
-			</div>
-
-			<div>
-				<div id="allow-user-location-label" class=" py-0.5 flex w-full justify-between">
-					<div class=" self-center text-xs">{$i18n.t('Allow User Location')}</div>
-
-					<button
-						aria-labelledby="allow-user-location-label"
-						class="p-1 px-3 text-xs flex rounded-sm transition"
-						on:click={() => {
-							toggleUserLocation();
-						}}
-						type="button"
-					>
-						{#if userLocation === true}
+						{#if displayMultiModelResponsesInTabs === true}
 							<span class="ml-2 self-center">{$i18n.t('On')}</span>
 						{:else}
 							<span class="ml-2 self-center">{$i18n.t('Off')}</span>
-						{/if}
-					</button>
-				</div>
-			</div>
-
-			<div>
-				<div class=" py-0.5 flex w-full justify-between">
-					<div id="haptic-feedback-label" class=" self-center text-xs">
-						{$i18n.t('Haptic Feedback')} ({$i18n.t('Android')})
-					</div>
-
-					<button
-						aria-labelledby="haptic-feedback-label"
-						class="p-1 px-3 text-xs flex rounded-sm transition"
-						on:click={() => {
-							toggleHapticFeedback();
-						}}
-						type="button"
-					>
-						{#if hapticFeedback === true}
-							<span class="ml-2 self-center">{$i18n.t('On')}</span>
-						{:else}
-							<span class="ml-2 self-center">{$i18n.t('Off')}</span>
-						{/if}
-					</button>
-				</div>
-			</div>
-
-			<!-- <div>
-				<div class=" py-0.5 flex w-full justify-between">
-					<div id="fluidly-stream-label" class=" self-center text-xs">
-						{$i18n.t('Fluidly stream large external response chunks')}
-					</div>
-
-					<button
-					aria-labelledby="fluidly-stream-label"
-						class="p-1 px-3 text-xs flex rounded-sm transition"
-						on:click={() => {
-							toggleSplitLargeChunks();
-						}}
-						type="button"
-					>
-						{#if splitLargeChunks === true}
-							<span class="ml-2 self-center">{$i18n.t('On')}</span>
-						{:else}
-							<span class="ml-2 self-center">{$i18n.t('Off')}</span>
-						{/if}
-					</button>
-				</div>
-			</div> -->
-
-			<div>
-				<div class=" py-0.5 flex w-full justify-between">
-					<div id="enter-key-behavior-label" class=" self-center text-xs">
-						{$i18n.t('Enter Key Behavior')}
-					</div>
-
-					<button
-						aria-labelledby="enter-key-behavior-label"
-						class="p-1 px-3 text-xs flex rounded transition"
-						on:click={() => {
-							togglectrlEnterToSend();
-						}}
-						type="button"
-					>
-						{#if ctrlEnterToSend === true}
-							<span class="ml-2 self-center">{$i18n.t('Ctrl+Enter to Send')}</span>
-						{:else}
-							<span class="ml-2 self-center">{$i18n.t('Enter to Send')}</span>
 						{/if}
 					</button>
 				</div>
@@ -1207,29 +1209,6 @@
 							<span class="ml-2 self-center">{$i18n.t('On')}</span>
 						{:else}
 							<span class="ml-2 self-center">{$i18n.t('Off')}</span>
-						{/if}
-					</button>
-				</div>
-			</div>
-
-			<div>
-				<div class=" py-0.5 flex w-full justify-between">
-					<div id="web-search-in-chat-label" class=" self-center text-xs">
-						{$i18n.t('Web Search in Chat')}
-					</div>
-
-					<button
-						aria-labelledby="web-search-in-chat-label"
-						class="p-1 px-3 text-xs flex rounded-sm transition"
-						on:click={() => {
-							toggleWebSearch();
-						}}
-						type="button"
-					>
-						{#if webSearch === 'always'}
-							<span class="ml-2 self-center">{$i18n.t('Always')}</span>
-						{:else}
-							<span class="ml-2 self-center">{$i18n.t('Default')}</span>
 						{/if}
 					</button>
 				</div>
