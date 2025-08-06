@@ -55,7 +55,7 @@
 			id: 'explain',
 			label: $i18n.t('Explain'),
 			icon: LightBulb,
-			prompt: `{{SELECTED_CONTENT}}\n\n\nExplain`
+			prompt: `{{SELECTED_CONTENT}}\n\n\n${$i18n.t('Explain')}`
 		}
 	];
 
