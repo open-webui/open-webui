@@ -104,6 +104,13 @@
 			restartOpu(); // Restart logic
 		}
 	}
+        export async function handleAbortClick() {
+                const confirmed = window.confirm("Are you sure you want to abort the query?");
+                if (confirmed) {
+                        abortTaskOpu(); // Abort logic
+                }
+        }
+
 </script>
 
 <div class=" dark:text-white">

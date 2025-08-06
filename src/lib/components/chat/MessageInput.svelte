@@ -12,7 +12,7 @@
 	import { v4 as uuidv4 } from 'uuid';
 	import { createPicker, getAuthToken } from '$lib/utils/google-drive-picker';
 	import { pickAndDownloadFile } from '$lib/utils/onedrive-file-picker';
-	import { abortTaskOpu} from './Controls/Controls.svelte';
+	import { handleAbortClick } from './Controls/Controls.svelte';
 	import { onMount, tick, getContext, createEventDispatcher, onDestroy } from 'svelte';
 	const dispatch = createEventDispatcher();
 
@@ -1825,7 +1825,7 @@
 													<button
 														class="bg-white hover:bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-white dark:hover:bg-gray-800 transition rounded-full p-1.5"
 														on:click={() => {
-															abortTaskOpu();
+															handleAbortClick();
 															stopResponse();
 														}}
 													>
