@@ -776,10 +776,7 @@ async def process_chat_payload(request, form_data, user, metadata, model):
             if folder and folder.data:
                 if "system_prompt" in folder.data:
                     form_data = apply_model_system_prompt_to_body(
-                        folder.data["system_prompt"], 
-                        form_data, 
-                        metadata, 
-                        user
+                        folder.data["system_prompt"], form_data, metadata, user
                     )
                 if "files" in folder.data:
                     form_data["files"] = [
@@ -2079,6 +2076,19 @@ async def process_chat_response(
                                         }
                                     )
 
+                        if (
+                            content_blocks[-1]["type"] == "reasoning"
+                            and content_blocks[-1].get("attributes", {}).get("type")
+                            == "reasoning_content"
+                        ):
+                            reasoning_block = content_blocks[-1]
+                            if reasoning_block.get("ended_at") is None:
+                                reasoning_block["ended_at"] = time.time()
+                                reasoning_block["duration"] = int(
+                                    reasoning_block["ended_at"]
+                                    - reasoning_block["started_at"]
+                                )
+
                     if response_tool_calls:
                         tool_calls.append(response_tool_calls)
 
@@ -2091,6 +2101,7 @@ async def process_chat_response(
                 tool_call_retries = 0
 
                 while len(tool_calls) > 0 and tool_call_retries < MAX_TOOL_CALL_RETRIES:
+
                     tool_call_retries += 1
 
                     response_tool_calls = tool_calls.pop(0)
