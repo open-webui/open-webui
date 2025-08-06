@@ -302,6 +302,7 @@ def convert_payload_openai_to_ollama(openai_payload: dict) -> dict:
     if openai_payload.get("options"):
         ollama_payload["options"] = openai_payload["options"]
         ollama_options = openai_payload["options"]
+        ollama_payload["think"] = ollama_options.get("reasoning_effort", True)
 
         def parse_json(value: str) -> dict:
             """
