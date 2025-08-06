@@ -1023,7 +1023,7 @@
 			</Folder>
 		</div>
 
-		<div class="px-2">
+		<div class="px-2 pt-1.5">
 			<div class="flex flex-col font-primary">
 				{#if $user !== undefined && $user !== null}
 					<UserMenu
