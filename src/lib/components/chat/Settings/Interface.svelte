@@ -792,7 +792,7 @@
 					<div class="flex items-center gap-3 p-1">
 						{#if showFloatingActionButtons}
 							<button
-								class="text-xs text-gray-700 underline"
+								class="text-xs text-gray-700 dark:text-gray-400 underline"
 								type="button"
 								on:click={() => {
 									showManageFloatingActionButtonsModal = true;
