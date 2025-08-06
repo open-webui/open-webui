@@ -256,7 +256,7 @@ def get_scim_auth(
             )
 
         # Check if SCIM is enabled
-        scim_enabled = getattr(request.app.state.config, "SCIM_ENABLED", False)
+        scim_enabled = getattr(request.app.state, "SCIM_ENABLED", False)
         log.info(
             f"SCIM auth check - raw SCIM_ENABLED: {scim_enabled}, type: {type(scim_enabled)}"
         )
@@ -271,7 +271,7 @@ def get_scim_auth(
             )
 
         # Verify the SCIM token
-        scim_token = getattr(request.app.state.config, "SCIM_TOKEN", None)
+        scim_token = getattr(request.app.state, "SCIM_TOKEN", None)
         # Handle both PersistentConfig and direct value
         if hasattr(scim_token, "value"):
             scim_token = scim_token.value

@@ -658,8 +658,8 @@ app.state.config.ENABLE_DIRECT_CONNECTIONS = ENABLE_DIRECT_CONNECTIONS
 #
 ########################################
 
-app.state.config.SCIM_ENABLED = SCIM_ENABLED
-app.state.config.SCIM_TOKEN = SCIM_TOKEN
+app.state.SCIM_ENABLED = SCIM_ENABLED
+app.state.SCIM_TOKEN = SCIM_TOKEN
 
 ########################################
 #
