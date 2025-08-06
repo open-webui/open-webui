@@ -97,6 +97,12 @@
 		} else {
 			searchDebounceTimeout = setTimeout(async () => {
 				chatList = await getChatListBySearchText(localStorage.token, query, page);
+
+				if ((chatList ?? []).length === 0) {
+					allChatsLoaded = true;
+				} else {
+					allChatsLoaded = false;
+				}
 			}, 500);
 		}
 
