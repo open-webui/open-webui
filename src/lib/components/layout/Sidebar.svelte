@@ -23,7 +23,8 @@
 		config,
 		isApp,
 		models,
-		selectedFolder
+		selectedFolder,
+		WEBUI_NAME
 	} from '$lib/stores';
 	import { onMount, getContext, tick, onDestroy } from 'svelte';
 
@@ -430,6 +431,23 @@
 		dropZone?.removeEventListener('drop', onDrop);
 		dropZone?.removeEventListener('dragleave', onDragLeave);
 	});
+
+	const newChatHandler = async () => {
+		selectedChatId = null;
+		selectedFolder.set(null);
+
+		if ($user?.role !== 'admin' && $user?.permissions?.chat?.temporary_enforced) {
+			await temporaryChatEnabled.set(true);
+		} else {
+			await temporaryChatEnabled.set(false);
+		}
+
+		setTimeout(() => {
+			if ($mobile) {
+				showSidebar.set(false);
+			}
+		}, 0);
+	};
 </script>
 
 <ArchivedChatsModal
@@ -500,11 +518,32 @@
 	data-state={$showSidebar}
 >
 	<div
-		class="py-2 my-auto flex flex-col justify-between h-screen max-h-[100dvh] w-[260px] overflow-x-hidden z-50 {$showSidebar
+		class=" my-auto flex flex-col justify-between h-screen max-h-[100dvh] w-[260px] overflow-x-hidden z-50 {$showSidebar
 			? ''
 			: 'invisible'}"
 	>
-		<div class="px-1.5 flex justify-between space-x-1 text-gray-600 dark:text-gray-400">
+		<div
+			class="px-1.5 py-2 flex justify-between space-x-1 text-gray-600 dark:text-gray-400 sticky top-0 z-10 bg-gray-50 dark:bg-gray-900"
+		>
+			<a
+				class="flex items-center rounded-lg p-1.5 h-full justify-center hover:bg-gray-100 dark:hover:bg-gray-900 transition no-drag-region"
+				href="/"
+				draggable="false"
+				on:click={newChatHandler}
+			>
+				<img
+					crossorigin="anonymous"
+					src="{WEBUI_BASE_URL}/static/favicon.png"
+					class="sidebar-new-chat-icon size-6 rounded-full"
+					alt=""
+				/>
+			</a>
+
+			<div class="flex flex-1 px-2">
+				<div class=" self-center font-medium text-gray-850 dark:text-white font-primary">
+					{$WEBUI_NAME}
+				</div>
+			</div>
 			<button
 				class=" cursor-pointer p-[7px] flex rounded-xl hover:bg-gray-100 dark:hover:bg-gray-900 transition"
 				on:click={() => {
@@ -528,47 +567,6 @@
 					</svg>
 				</div>
 			</button>
-
-			<a
-				id="sidebar-new-chat-button"
-				class="flex justify-between items-center flex-1 rounded-lg px-2 py-1 h-full text-right hover:bg-gray-100 dark:hover:bg-gray-900 transition no-drag-region"
-				href="/"
-				draggable="false"
-				on:click={async () => {
-					selectedChatId = null;
-					selectedFolder.set(null);
-
-					if ($user?.role !== 'admin' && $user?.permissions?.chat?.temporary_enforced) {
-						await temporaryChatEnabled.set(true);
-					} else {
-						await temporaryChatEnabled.set(false);
-					}
-
-					setTimeout(() => {
-						if ($mobile) {
-							showSidebar.set(false);
-						}
-					}, 0);
-				}}
-			>
-				<div class="flex items-center">
-					<div class="self-center mx-1.5">
-						<img
-							crossorigin="anonymous"
-							src="{WEBUI_BASE_URL}/static/favicon.png"
-							class="sidebar-new-chat-icon size-5 -translate-x-1.5 rounded-full"
-							alt=""
-						/>
-					</div>
-					<div class=" self-center text-sm text-gray-850 dark:text-white font-primary">
-						{$i18n.t('New Chat')}
-					</div>
-				</div>
-
-				<div>
-					<PencilSquare className=" size-5" strokeWidth="2" />
-				</div>
-			</a>
 		</div>
 
 		<!-- {#if $user?.role === 'admin'}
@@ -597,107 +595,127 @@
 			</div>
 		{/if} -->
 
-		<div class="px-1.5 flex justify-center text-gray-800 dark:text-gray-200">
-			<button
-				class="grow flex items-center space-x-3 rounded-lg px-2 py-[7px] hover:bg-gray-100 dark:hover:bg-gray-900 transition outline-none"
-				on:click={() => {
-					showSearch.set(true);
-				}}
-				draggable="false"
-			>
-				<div class="self-center">
-					<Search strokeWidth="2" className="size-[1.1rem]" />
-				</div>
+		<div class="pb-1.5">
+			<div class="px-1.5 flex justify-center text-gray-800 dark:text-gray-200">
+				<a
+					id="sidebar-new-chat-button"
+					class="grow flex items-center space-x-3 rounded-lg px-2 py-[7px] hover:bg-gray-100 dark:hover:bg-gray-900 transition outline-none"
+					href="/"
+					draggable="false"
+					on:click={newChatHandler}
+				>
+					<div class="self-center">
+						<PencilSquare className=" size-[1.1rem]" strokeWidth="2" />
+					</div>
 
-				<div class="flex self-center translate-y-[0.5px]">
-					<div class=" self-center text-sm font-primary">{$i18n.t('Search')}</div>
+					<div class="flex self-center translate-y-[0.5px]">
+						<div class=" self-center text-sm font-primary">{$i18n.t('New Chat')}</div>
+					</div>
+				</a>
+			</div>
+
+			<div class="px-1.5 flex justify-center text-gray-800 dark:text-gray-200">
+				<button
+					class="grow flex items-center space-x-3 rounded-lg px-2 py-[7px] hover:bg-gray-100 dark:hover:bg-gray-900 transition outline-none"
+					on:click={() => {
+						showSearch.set(true);
+					}}
+					draggable="false"
+				>
+					<div class="self-center">
+						<Search strokeWidth="2" className="size-[1.1rem]" />
+					</div>
+
+					<div class="flex self-center translate-y-[0.5px]">
+						<div class=" self-center text-sm font-primary">{$i18n.t('Search')}</div>
+					</div>
+				</button>
+			</div>
+
+			{#if ($config?.features?.enable_notes ?? false) && ($user?.role === 'admin' || ($user?.permissions?.features?.notes ?? true))}
+				<div class="px-1.5 flex justify-center text-gray-800 dark:text-gray-200">
+					<a
+						class="grow flex items-center space-x-3 rounded-lg px-2 py-[7px] hover:bg-gray-100 dark:hover:bg-gray-900 transition"
+						href="/notes"
+						on:click={() => {
+							selectedChatId = null;
+							chatId.set('');
+
+							if ($mobile) {
+								showSidebar.set(false);
+							}
+						}}
+						draggable="false"
+					>
+						<div class="self-center">
+							<svg
+								class="size-4"
+								aria-hidden="true"
+								xmlns="http://www.w3.org/2000/svg"
+								width="24"
+								height="24"
+								fill="none"
+								viewBox="0 0 24 24"
+							>
+								<path
+									stroke="currentColor"
+									stroke-linecap="round"
+									stroke-linejoin="round"
+									stroke-width="2"
+									d="M10 3v4a1 1 0 0 1-1 1H5m4 8h6m-6-4h6m4-8v16a1 1 0 0 1-1 1H6a1 1 0 0 1-1-1V7.914a1 1 0 0 1 .293-.707l3.914-3.914A1 1 0 0 1 9.914 3H18a1 1 0 0 1 1 1Z"
+								/>
+							</svg>
+						</div>
+
+						<div class="flex self-center translate-y-[0.5px]">
+							<div class=" self-center text-sm font-primary">{$i18n.t('Notes')}</div>
+						</div>
+					</a>
 				</div>
-			</button>
+			{/if}
+
+			{#if $user?.role === 'admin' || $user?.permissions?.workspace?.models || $user?.permissions?.workspace?.knowledge || $user?.permissions?.workspace?.prompts || $user?.permissions?.workspace?.tools}
+				<div class="px-1.5 flex justify-center text-gray-800 dark:text-gray-200">
+					<a
+						class="grow flex items-center space-x-3 rounded-lg px-2 py-[7px] hover:bg-gray-100 dark:hover:bg-gray-900 transition"
+						href="/workspace"
+						on:click={() => {
+							selectedChatId = null;
+							chatId.set('');
+
+							if ($mobile) {
+								showSidebar.set(false);
+							}
+						}}
+						draggable="false"
+					>
+						<div class="self-center">
+							<svg
+								xmlns="http://www.w3.org/2000/svg"
+								fill="none"
+								viewBox="0 0 24 24"
+								stroke-width="2"
+								stroke="currentColor"
+								class="size-[1.1rem]"
+							>
+								<path
+									stroke-linecap="round"
+									stroke-linejoin="round"
+									d="M13.5 16.875h3.375m0 0h3.375m-3.375 0V13.5m0 3.375v3.375M6 10.5h2.25a2.25 2.25 0 0 0 2.25-2.25V6a2.25 2.25 0 0 0-2.25-2.25H6A2.25 2.25 0 0 0 3.75 6v2.25A2.25 2.25 0 0 0 6 10.5Zm0 9.75h2.25A2.25 2.25 0 0 0 10.5 18v-2.25a2.25 2.25 0 0 0-2.25-2.25H6a2.25 2.25 0 0 0-2.25 2.25V18A2.25 2.25 0 0 0 6 20.25Zm9.75-9.75H18a2.25 2.25 0 0 0 2.25-2.25V6A2.25 2.25 0 0 0 18 3.75h-2.25A2.25 2.25 0 0 0 13.5 6v2.25a2.25 2.25 0 0 0 2.25 2.25Z"
+								/>
+							</svg>
+						</div>
+
+						<div class="flex self-center translate-y-[0.5px]">
+							<div class=" self-center text-sm font-primary">{$i18n.t('Workspace')}</div>
+						</div>
+					</a>
+				</div>
+			{/if}
 		</div>
 
-		{#if ($config?.features?.enable_notes ?? false) && ($user?.role === 'admin' || ($user?.permissions?.features?.notes ?? true))}
-			<div class="px-1.5 flex justify-center text-gray-800 dark:text-gray-200">
-				<a
-					class="grow flex items-center space-x-3 rounded-lg px-2 py-[7px] hover:bg-gray-100 dark:hover:bg-gray-900 transition"
-					href="/notes"
-					on:click={() => {
-						selectedChatId = null;
-						chatId.set('');
-
-						if ($mobile) {
-							showSidebar.set(false);
-						}
-					}}
-					draggable="false"
-				>
-					<div class="self-center">
-						<svg
-							class="size-4"
-							aria-hidden="true"
-							xmlns="http://www.w3.org/2000/svg"
-							width="24"
-							height="24"
-							fill="none"
-							viewBox="0 0 24 24"
-						>
-							<path
-								stroke="currentColor"
-								stroke-linecap="round"
-								stroke-linejoin="round"
-								stroke-width="2"
-								d="M10 3v4a1 1 0 0 1-1 1H5m4 8h6m-6-4h6m4-8v16a1 1 0 0 1-1 1H6a1 1 0 0 1-1-1V7.914a1 1 0 0 1 .293-.707l3.914-3.914A1 1 0 0 1 9.914 3H18a1 1 0 0 1 1 1Z"
-							/>
-						</svg>
-					</div>
-
-					<div class="flex self-center translate-y-[0.5px]">
-						<div class=" self-center text-sm font-primary">{$i18n.t('Notes')}</div>
-					</div>
-				</a>
-			</div>
-		{/if}
-
-		{#if $user?.role === 'admin' || $user?.permissions?.workspace?.models || $user?.permissions?.workspace?.knowledge || $user?.permissions?.workspace?.prompts || $user?.permissions?.workspace?.tools}
-			<div class="px-1.5 flex justify-center text-gray-800 dark:text-gray-200">
-				<a
-					class="grow flex items-center space-x-3 rounded-lg px-2 py-[7px] hover:bg-gray-100 dark:hover:bg-gray-900 transition"
-					href="/workspace"
-					on:click={() => {
-						selectedChatId = null;
-						chatId.set('');
-
-						if ($mobile) {
-							showSidebar.set(false);
-						}
-					}}
-					draggable="false"
-				>
-					<div class="self-center">
-						<svg
-							xmlns="http://www.w3.org/2000/svg"
-							fill="none"
-							viewBox="0 0 24 24"
-							stroke-width="2"
-							stroke="currentColor"
-							class="size-[1.1rem]"
-						>
-							<path
-								stroke-linecap="round"
-								stroke-linejoin="round"
-								d="M13.5 16.875h3.375m0 0h3.375m-3.375 0V13.5m0 3.375v3.375M6 10.5h2.25a2.25 2.25 0 0 0 2.25-2.25V6a2.25 2.25 0 0 0-2.25-2.25H6A2.25 2.25 0 0 0 3.75 6v2.25A2.25 2.25 0 0 0 6 10.5Zm0 9.75h2.25A2.25 2.25 0 0 0 10.5 18v-2.25a2.25 2.25 0 0 0-2.25-2.25H6a2.25 2.25 0 0 0-2.25 2.25V18A2.25 2.25 0 0 0 6 20.25Zm9.75-9.75H18a2.25 2.25 0 0 0 2.25-2.25V6A2.25 2.25 0 0 0 18 3.75h-2.25A2.25 2.25 0 0 0 13.5 6v2.25a2.25 2.25 0 0 0 2.25 2.25Z"
-							/>
-						</svg>
-					</div>
-
-					<div class="flex self-center translate-y-[0.5px]">
-						<div class=" self-center text-sm font-primary">{$i18n.t('Workspace')}</div>
-					</div>
-				</a>
-			</div>
-		{/if}
-
-		<div class="relative flex flex-col flex-1 overflow-y-auto overflow-x-hidden">
-			<div class="mt-0.5" id="pinned-models-list">
+		<div class="relative flex flex-col flex-1">
+			<div class="mt-0.5 pb-1.5" id="pinned-models-list">
 				{#if ($models ?? []).length > 0 && ($settings?.pinnedModels ?? []).length > 0}
 					{#each $settings.pinnedModels as modelId (modelId)}
 						{@const model = $models.find((model) => model.id === modelId)}
@@ -1023,7 +1041,7 @@
 			</Folder>
 		</div>
 
-		<div class="px-2 pt-1.5">
+		<div class="px-2 pt-1.5 pb-2 sticky bottom-0 z-10 bg-gray-50 dark:bg-gray-900">
 			<div class="flex flex-col font-primary">
 				{#if $user !== undefined && $user !== null}
 					<UserMenu
