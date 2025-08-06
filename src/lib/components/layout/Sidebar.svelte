@@ -1035,7 +1035,7 @@
 						}}
 					>
 						<div
-							class=" flex items-center rounded-xl py-1.5 px-2.5 w-full hover:bg-gray-100 dark:hover:bg-gray-900 transition"
+							class=" flex items-center rounded-xl py-2.5 px-2.5 w-full hover:bg-gray-100 dark:hover:bg-gray-900 transition"
 						>
 							<div class=" self-center mr-3">
 								<img
