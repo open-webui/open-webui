@@ -1815,6 +1815,8 @@ async def process_chat_response(
                     nonlocal content_blocks
 
                     response_tool_calls = []
+                    delta_count = 0
+                    BATCH_SIZE = 3
 
                     async for line in response.body_iterator:
                         line = line.decode("utf-8") if isinstance(line, bytes) else line
@@ -2063,12 +2065,23 @@ async def process_chat_response(
                                                 ),
                                             }
 
-                                await event_emitter(
-                                    {
-                                        "type": "chat:completion",
-                                        "data": data,
-                                    }
-                                )
+                                if delta:
+                                    delta_count += 1
+                                    if delta_count >= BATCH_SIZE:
+                                        await event_emitter(
+                                            {
+                                                "type": "chat:completion",
+                                                "data": data,
+                                            }
+                                        )
+                                        delta_count = 0
+                                else:
+                                    await event_emitter(
+                                        {
+                                            "type": "chat:completion",
+                                            "data": data,
+                                        }
+                                    )
                         except Exception as e:
                             done = "data: [DONE]" in line
                             if done:
