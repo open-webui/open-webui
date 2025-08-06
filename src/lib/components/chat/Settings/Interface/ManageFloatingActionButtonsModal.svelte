@@ -93,11 +93,19 @@
 										class=""
 										type="button"
 										on:click={() => {
+											let id = `new-button`;
+											let idx = 0;
+
+											while (floatingActionButtons.some((b) => b.id === id)) {
+												idx++;
+												id = `new-button-${idx}`;
+											}
+
 											floatingActionButtons = [
 												...floatingActionButtons,
 												{
-													id: 'new-button',
-													label: $i18n.t('New Button'),
+													id: id,
+													label: `${$i18n.t('New Button')}`,
 													input: true,
 													prompt: `{{CONTENT}}\n\n\n{{INPUT_CONTENT}}`
 												}
@@ -117,17 +125,17 @@
 						{:else}
 							{#each floatingActionButtons as button (button.id)}
 								<div class=" py-1 flex w-full justify-between items-start">
-									<div class="flex flex-col items-start">
+									<div class="flex flex-col items-start pr-2">
 										<input
 											class=" self-center text-xs outline-none w-20"
 											placeholder={$i18n.t('Button Label')}
-											value={button.label}
+											bind:value={button.label}
 										/>
 
 										<input
 											class=" self-center text-xs outline-none w-20 text-gray-600 dark:text-gray-400"
 											placeholder={$i18n.t('Button ID')}
-											value={button.id}
+											bind:value={button.id}
 										/>
 									</div>
 
@@ -151,6 +159,8 @@
 										<Minus className="h-4 w-4" />
 									</button>
 								</div>
+
+								<hr class="border-gray-50 dark:border-gray-850 my-2" />
 							{/each}
 						{/if}
 					</div>
