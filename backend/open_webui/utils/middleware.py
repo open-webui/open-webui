@@ -1403,12 +1403,17 @@ async def process_chat_response(
 
                 for block in content_blocks:
                     if block["type"] == "text":
-                        content = f"{content}{block['content'].strip()}\n"
+                        block_content = block["content"].strip()
+                        if block_content:
+                            content = f"{content}{block_content}\n"
                     elif block["type"] == "tool_calls":
                         attributes = block.get("attributes", {})
 
                         tool_calls = block.get("content", [])
                         results = block.get("results", [])
+
+                        if content and not content.endswith("\n"):
+                            content += "\n"
 
                         if results:
 
@@ -1432,12 +1437,12 @@ async def process_chat_response(
                                         break
 
                                 if tool_result:
-                                    tool_calls_display_content = f'{tool_calls_display_content}\n<details type="tool_calls" done="true" id="{tool_call_id}" name="{tool_name}" arguments="{html.escape(json.dumps(tool_arguments))}" result="{html.escape(json.dumps(tool_result, ensure_ascii=False))}" files="{html.escape(json.dumps(tool_result_files)) if tool_result_files else ""}">\n<summary>Tool Executed</summary>\n</details>\n'
+                                    tool_calls_display_content = f'{tool_calls_display_content}<details type="tool_calls" done="true" id="{tool_call_id}" name="{tool_name}" arguments="{html.escape(json.dumps(tool_arguments))}" result="{html.escape(json.dumps(tool_result, ensure_ascii=False))}" files="{html.escape(json.dumps(tool_result_files)) if tool_result_files else ""}">\n<summary>Tool Executed</summary>\n</details>\n'
                                 else:
-                                    tool_calls_display_content = f'{tool_calls_display_content}\n<details type="tool_calls" done="false" id="{tool_call_id}" name="{tool_name}" arguments="{html.escape(json.dumps(tool_arguments))}">\n<summary>Executing...</summary>\n</details>'
+                                    tool_calls_display_content = f'{tool_calls_display_content}<details type="tool_calls" done="false" id="{tool_call_id}" name="{tool_name}" arguments="{html.escape(json.dumps(tool_arguments))}">\n<summary>Executing...</summary>\n</details>\n'
 
                             if not raw:
-                                content = f"{content}\n{tool_calls_display_content}\n\n"
+                                content = f"{content}{tool_calls_display_content}"
                         else:
                             tool_calls_display_content = ""
 
@@ -1450,10 +1455,10 @@ async def process_chat_response(
                                     "arguments", ""
                                 )
 
-                                tool_calls_display_content = f'{tool_calls_display_content}\n<details type="tool_calls" done="false" id="{tool_call_id}" name="{tool_name}" arguments="{html.escape(json.dumps(tool_arguments))}">\n<summary>Executing...</summary>\n</details>'
+                                tool_calls_display_content = f'{tool_calls_display_content}\n<details type="tool_calls" done="false" id="{tool_call_id}" name="{tool_name}" arguments="{html.escape(json.dumps(tool_arguments))}">\n<summary>Executing...</summary>\n</details>\n'
 
                             if not raw:
-                                content = f"{content}\n{tool_calls_display_content}\n\n"
+                                content = f"{content}{tool_calls_display_content}"
 
                     elif block["type"] == "reasoning":
                         reasoning_display_content = "\n".join(
@@ -1466,16 +1471,23 @@ async def process_chat_response(
                         start_tag = block.get("start_tag", "")
                         end_tag = block.get("end_tag", "")
 
+                        if content and not content.endswith("\n"):
+                            content += "\n"
+
                         if reasoning_duration is not None:
                             if raw:
-                                content = f'{content}\n{start_tag}{block["content"]}{end_tag}\n'
+                                content = (
+                                    f'{content}{start_tag}{block["content"]}{end_tag}\n'
+                                )
                             else:
-                                content = f'{content}\n<details type="reasoning" done="true" duration="{reasoning_duration}">\n<summary>Thought for {reasoning_duration} seconds</summary>\n{reasoning_display_content}\n</details>\n'
+                                content = f'{content}<details type="reasoning" done="true" duration="{reasoning_duration}">\n<summary>Thought for {reasoning_duration} seconds</summary>\n{reasoning_display_content}\n</details>\n'
                         else:
                             if raw:
-                                content = f'{content}\n{start_tag}{block["content"]}{end_tag}\n'
+                                content = (
+                                    f'{content}{start_tag}{block["content"]}{end_tag}\n'
+                                )
                             else:
-                                content = f'{content}\n<details type="reasoning" done="false">\n<summary>Thinking…</summary>\n{reasoning_display_content}\n</details>\n'
+                                content = f'{content}<details type="reasoning" done="false">\n<summary>Thinking…</summary>\n{reasoning_display_content}\n</details>\n'
 
                     elif block["type"] == "code_interpreter":
                         attributes = block.get("attributes", {})
@@ -1495,22 +1507,26 @@ async def process_chat_response(
                             # Keep content as is - either closing backticks or no backticks
                             content = content_stripped + original_whitespace
 
+                        if content and not content.endswith("\n"):
+                            content += "\n"
+
                         if output:
                             output = html.escape(json.dumps(output))
 
                             if raw:
-                                content = f'{content}\n<code_interpreter type="code" lang="{lang}">\n{block["content"]}\n</code_interpreter>\n```output\n{output}\n```\n'
+                                content = f'{content}<code_interpreter type="code" lang="{lang}">\n{block["content"]}\n</code_interpreter>\n```output\n{output}\n```\n'
                             else:
-                                content = f'{content}\n<details type="code_interpreter" done="true" output="{output}">\n<summary>Analyzed</summary>\n```{lang}\n{block["content"]}\n```\n</details>\n'
+                                content = f'{content}<details type="code_interpreter" done="true" output="{output}">\n<summary>Analyzed</summary>\n```{lang}\n{block["content"]}\n```\n</details>\n'
                         else:
                             if raw:
-                                content = f'{content}\n<code_interpreter type="code" lang="{lang}">\n{block["content"]}\n</code_interpreter>\n'
+                                content = f'{content}<code_interpreter type="code" lang="{lang}">\n{block["content"]}\n</code_interpreter>\n'
                             else:
-                                content = f'{content}\n<details type="code_interpreter" done="false">\n<summary>Analyzing...</summary>\n```{lang}\n{block["content"]}\n```\n</details>\n'
+                                content = f'{content}<details type="code_interpreter" done="false">\n<summary>Analyzing...</summary>\n```{lang}\n{block["content"]}\n```\n</details>\n'
 
                     else:
                         block_content = str(block["content"]).strip()
-                        content = f"{content}{block['type']}: {block_content}\n"
+                        if block_content:
+                            content = f"{content}{block['type']}: {block_content}\n"
 
                 return content.strip()
 
