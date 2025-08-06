@@ -705,8 +705,8 @@
 		</div>
 
 		<div class="relative flex flex-col flex-1">
-			<div class="mt-0.5 pb-1.5" id="pinned-models-list">
-				{#if ($models ?? []).length > 0 && ($settings?.pinnedModels ?? []).length > 0}
+			{#if ($models ?? []).length > 0 && ($settings?.pinnedModels ?? []).length > 0}
+				<div class="mt-0.5 pb-1.5" id="pinned-models-list">
 					{#each $settings.pinnedModels as modelId (modelId)}
 						{@const model = $models.find((model) => model.id === modelId)}
 						{#if model}
@@ -746,8 +746,8 @@
 							</div>
 						{/if}
 					{/each}
-				{/if}
-			</div>
+				</div>
+			{/if}
 
 			{#if $config?.features?.enable_channels && ($user?.role === 'admin' || $channels.length > 0)}
 				<Folder
