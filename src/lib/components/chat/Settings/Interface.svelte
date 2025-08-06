@@ -58,6 +58,9 @@
 	let collapseCodeBlocks = false;
 	let expandDetails = false;
 
+	let showFloatingActionButtons = true;
+	let floatingActionButtons = null;
+
 	let imageCompression = false;
 	let imageCompressionSize = {
 		width: '',
@@ -106,7 +109,7 @@
 		saveSettings({ promptAutocomplete: promptAutocomplete });
 	};
 
-	const togglesScrollOnBranchChange = async () => {
+	const toggleScrollOnBranchChange = async () => {
 		scrollOnBranchChange = !scrollOnBranchChange;
 		saveSettings({ scrollOnBranchChange: scrollOnBranchChange });
 	};
@@ -333,6 +336,11 @@
 		saveSettings({ iframeSandboxAllowForms });
 	};
 
+	const toggleShowFloatingActionButtons = async () => {
+		showFloatingActionButtons = !showFloatingActionButtons;
+		saveSettings({ showFloatingActionButtons });
+	};
+
 	onMount(async () => {
 		titleAutoGenerate = $settings?.title?.auto ?? true;
 		autoTags = $settings?.autoTags ?? true;
@@ -385,6 +393,9 @@
 
 		hapticFeedback = $settings?.hapticFeedback ?? false;
 		ctrlEnterToSend = $settings?.ctrlEnterToSend ?? false;
+
+		showFloatingActionButtons = $settings?.showFloatingActionButtons ?? true;
+		floatingActionButtons = $settings?.floatingActionButtons ?? null;
 
 		imageCompression = $settings?.imageCompression ?? false;
 		imageCompressionSize = $settings?.imageCompressionSize ?? { width: '', height: '' };
@@ -1201,11 +1212,34 @@
 						aria-labelledby="scroll-on-branch-change-label"
 						class="p-1 px-3 text-xs flex rounded-sm transition"
 						on:click={() => {
-							togglesScrollOnBranchChange();
+							toggleScrollOnBranchChange();
 						}}
 						type="button"
 					>
 						{#if scrollOnBranchChange === true}
+							<span class="ml-2 self-center">{$i18n.t('On')}</span>
+						{:else}
+							<span class="ml-2 self-center">{$i18n.t('Off')}</span>
+						{/if}
+					</button>
+				</div>
+			</div>
+
+			<div>
+				<div class=" py-0.5 flex w-full justify-between">
+					<div id="floating-action-buttons-label" class=" self-center text-xs">
+						{$i18n.t('Show Floating Action Buttons')}
+					</div>
+
+					<button
+						aria-labelledby="floating-action-buttons-label"
+						class="p-1 px-3 text-xs flex rounded-sm transition"
+						on:click={() => {
+							toggleShowFloatingActionButtons();
+						}}
+						type="button"
+					>
+						{#if showFloatingActionButtons === true}
 							<span class="ml-2 self-center">{$i18n.t('On')}</span>
 						{:else}
 							<span class="ml-2 self-center">{$i18n.t('Off')}</span>
