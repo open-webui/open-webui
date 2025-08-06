@@ -60,7 +60,7 @@
 	export let scrollToBottom: Function = () => {};
 
 	export let acceptFiles = true;
-	export let showFormattingButtons = true;
+	export let showFormattingToolbar = true;
 
 	let showInputVariablesModal = false;
 	let inputVariables: Record<string, any> = {};
@@ -700,7 +700,7 @@
 									bind:this={chatInputElement}
 									json={true}
 									messageInput={true}
-									{showFormattingButtons}
+									{showFormattingToolbar}
 									shiftEnter={!($settings?.ctrlEnterToSend ?? false) &&
 										(!$mobile ||
 											!(

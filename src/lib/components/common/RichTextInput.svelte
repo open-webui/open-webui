@@ -222,7 +222,7 @@
 	export let editable = true;
 	export let collaboration = false;
 
-	export let showFormattingButtons = true;
+	export let showFormattingToolbar = true;
 
 	export let preserveBreaks = false;
 	export let generateAutoCompletion: Function = async () => null;
@@ -1003,7 +1003,7 @@
 						]
 					: []),
 
-				...(showFormattingButtons
+				...(showFormattingToolbar
 					? [
 							BubbleMenu.configure({
 								element: bubbleMenuElement,
@@ -1316,7 +1316,7 @@
 	};
 </script>
 
-{#if showFormattingButtons}
+{#if showFormattingToolbar}
 	<div bind:this={bubbleMenuElement} id="bubble-menu" class="p-0">
 		<FormattingButtons {editor} />
 	</div>
