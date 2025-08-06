@@ -1,35 +1,35 @@
 function codeTokenizer(src: string) {
-	const match = src.match(/^```([^\n]*)\n([\s\S]*?)\n```/);
+	const match = /^```(\w+)?(.*?)\n([\s\S]*?)(?:\n```|$)/.exec(src);
 	if (!match) return;
-
-	const raw = match[0];
-	const info = match[1];
-	const text = match[2];
-
-	const [lang, ...attrs] = info.trim().split(/\s+/);
+	const lang = match[1] || null;
+	const attrs = match[2].trim().split(/\s+/).filter(Boolean);
+	const text = match[3];
 
 	return {
 		type: 'code',
-		raw,
 		lang,
 		attrs,
+		raw: match[0],
 		text
 	};
 }
 
 function codeRenderer(token: any) {
-	const { lang } = token;
-	return `<code class="language-${lang}">${token.text}</code>`;
+	return `<code class="language-${token.lang}">${token.text}</code>`;
 }
 
 function codeStart(src: string) {
 	return src.match(/^```/) ? 0 : -1;
+
+	// Look for opening code fence (```lang attr1 attr2)
+	const match = src.match(/^```(\w+)?(.*?)\n/);
+	return match ? match.index : undefined;
 }
 
 // Extension wrapper function
 function codeExtension() {
 	return {
-		name: 'code-block',
+		name: 'custom-code',
 		level: 'block',
 		start: codeStart,
 		tokenizer: codeTokenizer,
