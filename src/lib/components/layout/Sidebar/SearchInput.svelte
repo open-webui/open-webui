@@ -136,6 +136,7 @@
 
 	const initTags = async () => {
 		loading = true;
+
 		await tags.set(await getAllTags(localStorage.token));
 		loading = false;
 	};
@@ -144,26 +145,6 @@
 		value = '';
 		dispatch('input');
 	};
-
-	const documentClickHandler = (e) => {
-		const searchContainer = document.getElementById('search-container');
-		const chatSearch = document.getElementById('chat-search');
-
-		if (!searchContainer.contains(e.target) && !chatSearch.contains(e.target)) {
-			if (e.target.id.startsWith('search-tag-') || e.target.id.startsWith('search-option-')) {
-				return;
-			}
-			focused = false;
-		}
-	};
-
-	onMount(() => {
-		document.addEventListener('click', documentClickHandler);
-	});
-
-	onDestroy(() => {
-		document.removeEventListener('click', documentClickHandler);
-	});
 </script>
 
 <div class="px-1 mb-1 flex justify-center space-x-2 relative z-10" id="search-container">
@@ -182,6 +163,7 @@
 				dispatch('input');
 			}}
 			on:focus={() => {
+				hovering = false;
 				focused = true;
 				initTags();
 			}}
@@ -258,8 +240,8 @@
 				selectedIdx = null;
 			}}
 			on:mouseleave={() => {
-				selectedIdx = 0;
 				hovering = false;
+				selectedIdx = 0;
 			}}
 		>
 			<div class="px-2 py-2 text-xs group">
