@@ -47,22 +47,18 @@
 	import ChatItem from './Sidebar/ChatItem.svelte';
 	import Spinner from '../common/Spinner.svelte';
 	import Loader from '../common/Loader.svelte';
-	import AddFilesPlaceholder from '../AddFilesPlaceholder.svelte';
 	import Folder from '../common/Folder.svelte';
-	import Plus from '../icons/Plus.svelte';
 	import Tooltip from '../common/Tooltip.svelte';
 	import Folders from './Sidebar/Folders.svelte';
 	import { getChannels, createNewChannel } from '$lib/apis/channels';
 	import ChannelModal from './Sidebar/ChannelModal.svelte';
 	import ChannelItem from './Sidebar/ChannelItem.svelte';
 	import PencilSquare from '../icons/PencilSquare.svelte';
-	import Home from '../icons/Home.svelte';
 	import Search from '../icons/Search.svelte';
 	import SearchModal from './SearchModal.svelte';
 	import FolderModal from './Sidebar/Folders/FolderModal.svelte';
-	import Sortable from 'sortablejs';
-	import { updateUserSettings } from '$lib/apis/users';
 	import Sidebar from '../icons/Sidebar.svelte';
+	import PinnedModelList from './Sidebar/PinnedModelList.svelte';
 
 	const BREAKPOINT = 768;
 
@@ -81,28 +77,6 @@
 	let showCreateFolderModal = false;
 	let folders = {};
 	let newFolderId = null;
-
-	const initPinnedModelsSortable = () => {
-		const pinnedModelsList = document.getElementById('pinned-models-list');
-		if (pinnedModelsList && !$mobile) {
-			new Sortable(pinnedModelsList, {
-				animation: 150,
-				onUpdate: async (event) => {
-					const modelId = event.item.dataset.id;
-					const newIndex = event.newIndex;
-
-					const pinnedModels = $settings.pinnedModels;
-					const oldIndex = pinnedModels.indexOf(modelId);
-
-					pinnedModels.splice(oldIndex, 1);
-					pinnedModels.splice(newIndex, 0, modelId);
-
-					settings.set({ ...$settings, pinnedModels: pinnedModels });
-					await updateUserSettings(localStorage.token, { ui: $settings });
-				}
-			});
-		}
-	};
 
 	const initFolders = async () => {
 		const folderList = await getFolders(localStorage.token).catch((error) => {
@@ -398,7 +372,6 @@
 
 		await initChannels();
 		await initChatList();
-		initPinnedModelsSortable();
 
 		window.addEventListener('keydown', onKeyDown);
 		window.addEventListener('keyup', onKeyUp);
@@ -706,47 +679,7 @@
 
 		<div class="relative flex flex-col flex-1">
 			{#if ($models ?? []).length > 0 && ($settings?.pinnedModels ?? []).length > 0}
-				<div class="mt-0.5 pb-1.5" id="pinned-models-list">
-					{#each $settings.pinnedModels as modelId (modelId)}
-						{@const model = $models.find((model) => model.id === modelId)}
-						{#if model}
-							<div
-								class="px-1.5 flex justify-center text-gray-800 dark:text-gray-200 cursor-grab"
-								data-id={modelId}
-							>
-								<a
-									class="grow flex items-center space-x-2.5 rounded-lg px-2 py-[7px] hover:bg-gray-100 dark:hover:bg-gray-900 transition"
-									href="/?model={modelId}"
-									on:click={() => {
-										selectedChatId = null;
-										chatId.set('');
-
-										if ($mobile) {
-											showSidebar.set(false);
-										}
-									}}
-									draggable="false"
-								>
-									<div class="self-center shrink-0">
-										<img
-											crossorigin="anonymous"
-											src={model?.info?.meta?.profile_image_url ??
-												`${WEBUI_BASE_URL}/static/favicon.png`}
-											class=" size-5 rounded-full -translate-x-[0.5px]"
-											alt="logo"
-										/>
-									</div>
-
-									<div class="flex self-center translate-y-[0.5px]">
-										<div class=" self-center text-sm font-primary line-clamp-1">
-											{model?.name ?? modelId}
-										</div>
-									</div>
-								</a>
-							</div>
-						{/if}
-					{/each}
-				</div>
+				<PinnedModelList bind:selectedChatId />
 			{/if}
 
 			{#if $config?.features?.enable_channels && ($user?.role === 'admin' || $channels.length > 0)}
