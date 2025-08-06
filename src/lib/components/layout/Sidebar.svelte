@@ -523,7 +523,7 @@
 			: 'invisible'}"
 	>
 		<div
-			class="px-1.5 py-2 flex justify-between space-x-1 text-gray-600 dark:text-gray-400 sticky top-0 z-10 bg-gray-50 dark:bg-gray-900"
+			class="px-1.5 py-2 flex justify-between space-x-1 text-gray-600 dark:text-gray-400 sticky top-0 z-10 bg-gray-50 dark:bg-gray-950"
 		>
 			<a
 				class="flex items-center rounded-lg p-1.5 h-full justify-center hover:bg-gray-100 dark:hover:bg-gray-900 transition no-drag-region"
@@ -1041,7 +1041,7 @@
 			</Folder>
 		</div>
 
-		<div class="px-2 pt-1.5 pb-2 sticky bottom-0 z-10 bg-gray-50 dark:bg-gray-900">
+		<div class="px-2 pt-1.5 pb-2 sticky bottom-0 z-10 bg-gray-50 dark:bg-gray-950">
 			<div class="flex flex-col font-primary">
 				{#if $user !== undefined && $user !== null}
 					<UserMenu
