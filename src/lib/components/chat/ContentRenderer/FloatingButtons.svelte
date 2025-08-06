@@ -17,6 +17,7 @@
 	export let id = '';
 	export let model = null;
 	export let messages = [];
+	export let actions = [];
 	export let onAdd = (e) => {};
 
 	let floatingInput = false;
@@ -30,20 +31,11 @@
 	let responseDone = false;
 	let controller = null;
 
-	const autoScroll = async () => {
-		const responseContainer = document.getElementById('response-container');
-		if (responseContainer) {
-			// Scroll to bottom only if the scroll is at the bottom give 50px buffer
-			if (
-				responseContainer.scrollHeight - responseContainer.clientHeight <=
-				responseContainer.scrollTop + 50
-			) {
-				responseContainer.scrollTop = responseContainer.scrollHeight;
-			}
-		}
-	};
+	$: if (actions.length === 0) {
+		actions = DEFAULT_ACTIONS;
+	}
 
-	const ACTIONS = [
+	const DEFAULT_ACTIONS = [
 		{
 			id: 'ask',
 			label: $i18n.t('Ask'),
@@ -59,6 +51,19 @@
 		}
 	];
 
+	const autoScroll = async () => {
+		const responseContainer = document.getElementById('response-container');
+		if (responseContainer) {
+			// Scroll to bottom only if the scroll is at the bottom give 50px buffer
+			if (
+				responseContainer.scrollHeight - responseContainer.clientHeight <=
+				responseContainer.scrollTop + 50
+			) {
+				responseContainer.scrollTop = responseContainer.scrollHeight;
+			}
+		}
+	};
+
 	const actionHandler = async (actionId) => {
 		if (!model) {
 			toast.error('Model not selected');
@@ -70,14 +75,14 @@
 			.map((line) => `> ${line}`)
 			.join('\n');
 
-		let selectedAction = ACTIONS.find((action) => action.id === actionId);
+		let selectedAction = actions.find((action) => action.id === actionId);
 		if (!selectedAction) {
 			toast.error('Action not found');
 			return;
 		}
 
 		let prompt = selectedAction?.prompt ?? '';
-		if (selectedAction.input) {
+		if (prompt.includes('{{INPUT_CONTENT}}') && !floatingInput) {
 			prompt = prompt.replace('{{INPUT_CONTENT}}', floatingInputValue);
 			floatingInputValue = '';
 		}
@@ -212,14 +217,14 @@
 			<div
 				class="flex flex-row gap-0.5 shrink-0 p-1 bg-white dark:bg-gray-850 dark:text-gray-100 text-medium rounded-lg shadow-xl"
 			>
-				{#each ACTIONS as action}
+				{#each actions as action}
 					<button
 						class="px-1 hover:bg-gray-50 dark:hover:bg-gray-800 rounded-sm flex items-center gap-1 min-w-fit"
 						on:click={async () => {
 							selectedText = window.getSelection().toString();
 							selectedAction = action;
 
-							if (action.input) {
+							if (action.prompt.includes('{{INPUT_CONTENT}}')) {
 								floatingInput = true;
 								floatingInputValue = '';
 
@@ -235,7 +240,9 @@
 							}
 						}}
 					>
-						<svelte:component this={action.icon} className="size-3 shrink-0" />
+						{#if action.icon}
+							<svelte:component this={action.icon} className="size-3 shrink-0" />
+						{/if}
 						<div class="shrink-0">{action.label}</div>
 					</button>
 				{/each}
