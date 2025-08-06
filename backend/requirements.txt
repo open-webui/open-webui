@@ -60,6 +60,7 @@ elasticsearch==9.0.1
 pinecone==6.0.2
 oracledb==3.2.0
 
+av==14.0.1 # Caution: Set due to FATAL FIPS SELFTEST FAILURE, see discussion https://github.com/open-webui/open-webui/discussions/15720
 transformers
 sentence-transformers==4.1.0
 accelerate
