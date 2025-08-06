@@ -2008,21 +2008,6 @@ ORACLE_DB_POOL_MIN = int(os.environ.get("ORACLE_DB_POOL_MIN", 2))
 ORACLE_DB_POOL_MAX = int(os.environ.get("ORACLE_DB_POOL_MAX", 10))
 ORACLE_DB_POOL_INCREMENT = int(os.environ.get("ORACLE_DB_POOL_INCREMENT", 1))
 
-log.info(f"VECTOR_DB: {VECTOR_DB}")
-log.info(
-    f"ORACLE_DB_USE_WALLET: {ORACLE_DB_USE_WALLET}/type: {type(ORACLE_DB_USE_WALLET)}"
-)
-log.info(f"ORACLE_DB_USER: {ORACLE_DB_USER}/type: {type(ORACLE_DB_USER)}")
-log.info(f"ORACLE_DB_PASSWORD: {ORACLE_DB_PASSWORD}/type: {type(ORACLE_DB_PASSWORD)}")
-log.info(f"ORACLE_DB_DSN: {ORACLE_DB_DSN}/type: {type(ORACLE_DB_DSN)}")
-log.info(f"ORACLE_WALLET_DIR: {ORACLE_WALLET_DIR}/type: {type(ORACLE_WALLET_DIR)}")
-log.info(
-    f"ORACLE_WALLET_PASSWORD: {ORACLE_WALLET_PASSWORD}/type: {type(ORACLE_WALLET_PASSWORD)}"
-)
-log.info(f"ORACLE_VECTOR_LENGTH: {ORACLE_VECTOR_LENGTH}")
-log.info(f"ORACLE_DB_POOL_MIN: {ORACLE_DB_POOL_MIN}")
-log.info(f"ORACLE_DB_POOL_MAX: {ORACLE_DB_POOL_MAX}")
-log.info(f"ORACLE_DB_POOL_INCREMENT: {ORACLE_DB_POOL_INCREMENT}")
 
 if VECTOR_DB == "oracle23ai":
     if not ORACLE_DB_USER or not ORACLE_DB_PASSWORD or not ORACLE_DB_DSN:
@@ -2033,6 +2018,8 @@ if VECTOR_DB == "oracle23ai":
         raise ValueError(
             "Oracle23ai requires setting ORACLE_WALLET_DIR and ORACLE_WALLET_PASSWORD when using wallet authentication."
         )
+
+log.info(f"VECTOR_DB: {VECTOR_DB}")
 
 # S3 Vector
 S3_VECTOR_BUCKET_NAME = os.environ.get("S3_VECTOR_BUCKET_NAME", None)
