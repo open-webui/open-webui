@@ -34,7 +34,6 @@
 	export let onAddMessages = (e) => {};
 
 	let contentContainerElement;
-
 	let floatingButtonsElement;
 
 	const updateButtonPosition = (event) => {

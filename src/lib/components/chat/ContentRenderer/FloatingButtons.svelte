@@ -17,14 +17,15 @@
 	export let id = '';
 	export let model = null;
 	export let messages = [];
-	export let onAdd = () => {};
+	export let onAdd = (e) => {};
 
 	let floatingInput = false;
+	let selectedAction = null;
 
 	let selectedText = '';
 	let floatingInputValue = '';
 
-	let prompt = '';
+	let content = '';
 	let responseContent = null;
 	let responseDone = false;
 	let controller = null;
@@ -42,108 +43,51 @@
 		}
 	};
 
-	const askHandler = async () => {
+	const ACTIONS = [
+		{
+			id: 'ask',
+			label: $i18n.t('Ask'),
+			icon: ChatBubble,
+			input: true,
+			prompt: `{{SELECTED_CONTENT}}\n\n\n{{INPUT_CONTENT}}`
+		},
+		{
+			id: 'explain',
+			label: $i18n.t('Explain'),
+			icon: LightBulb,
+			prompt: `{{SELECTED_CONTENT}}\n\n\nExplain`
+		}
+	];
+
+	const actionHandler = async (actionId) => {
 		if (!model) {
 			toast.error('Model not selected');
 			return;
 		}
-		prompt = [
-			// Blockquote each line of the selected text
-			...selectedText.split('\n').map((line) => `> ${line}`),
-			'',
-			// Then your question
-			floatingInputValue
-		].join('\n');
-		floatingInputValue = '';
 
-		responseContent = '';
-		let res;
-		[res, controller] = await chatCompletion(localStorage.token, {
-			model: model,
-			messages: [
-				...messages,
-				{
-					role: 'user',
-					content: prompt
-				}
-			].map((message) => ({
-				role: message.role,
-				content: message.content
-			})),
-			stream: true // Enable streaming
-		});
-
-		if (res && res.ok) {
-			const reader = res.body.getReader();
-			const decoder = new TextDecoder();
-
-			const processStream = async () => {
-				while (true) {
-					// Read data chunks from the response stream
-					const { done, value } = await reader.read();
-					if (done) {
-						break;
-					}
-
-					// Decode the received chunk
-					const chunk = decoder.decode(value, { stream: true });
-
-					// Process lines within the chunk
-					const lines = chunk.split('\n').filter((line) => line.trim() !== '');
-
-					for (const line of lines) {
-						if (line.startsWith('data: ')) {
-							if (line.startsWith('data: [DONE]')) {
-								responseDone = true;
-
-								await tick();
-								autoScroll();
-								continue;
-							} else {
-								// Parse the JSON chunk
-								try {
-									const data = JSON.parse(line.slice(6));
-
-									// Append the `content` field from the "choices" object
-									if (data.choices && data.choices[0]?.delta?.content) {
-										responseContent += data.choices[0].delta.content;
-
-										autoScroll();
-									}
-								} catch (e) {
-									console.error(e);
-								}
-							}
-						}
-					}
-				}
-			};
-
-			// Process the stream in the background
-			try {
-				await processStream();
-			} catch (e) {
-				if (e.name !== 'AbortError') {
-					console.error(e);
-				}
-			}
-		} else {
-			toast.error('An error occurred while fetching the explanation');
-		}
-	};
-
-	const explainHandler = async () => {
-		if (!model) {
-			toast.error('Model not selected');
-			return;
-		}
-		const quotedText = selectedText
+		let selectedContent = selectedText
 			.split('\n')
 			.map((line) => `> ${line}`)
 			.join('\n');
-		prompt = `${quotedText}\n\nExplain`;
 
+		let selectedAction = ACTIONS.find((action) => action.id === actionId);
+		if (!selectedAction) {
+			toast.error('Action not found');
+			return;
+		}
+
+		let prompt = selectedAction?.prompt ?? '';
+		if (selectedAction.input) {
+			prompt = prompt.replace('{{INPUT_CONTENT}}', floatingInputValue);
+			floatingInputValue = '';
+		}
+
+		prompt = prompt.replace('{{CONTENT}}', selectedText);
+		prompt = prompt.replace('{{SELECTED_CONTENT}}', selectedContent);
+
+		content = prompt;
 		responseContent = '';
+
 		let res;
 		[res, controller] = await chatCompletion(localStorage.token, {
 			model: model,
@@ -151,7 +95,7 @@
 				...messages,
 				{
 					role: 'user',
-					content: prompt
+					content: content
 				}
 			].map((message) => ({
 				role: message.role,
@@ -223,7 +167,7 @@
 		const messages = [
 			{
 				role: 'user',
-				content: prompt
+				content: content
 			},
 			{
 				role: 'assistant',
@@ -239,6 +183,12 @@
 	};
 
 	export const closeHandler = () => {
+		if (controller) {
+			controller.abort();
+		}
+
+		selectedAction = null;
+		selectedText = '';
 		responseContent = null;
 		responseDone = false;
 		floatingInput = false;
@@ -262,36 +212,33 @@
 			<div
 				class="flex flex-row gap-0.5 shrink-0 p-1 bg-white dark:bg-gray-850 dark:text-gray-100 text-medium rounded-lg shadow-xl"
 			>
-				<button
-					class="px-1 hover:bg-gray-50 dark:hover:bg-gray-800 rounded-sm flex items-center gap-1 min-w-fit"
-					on:click={async () => {
-						selectedText = window.getSelection().toString();
-						floatingInput = true;
+				{#each ACTIONS as action}
+					<button
+						class="px-1 hover:bg-gray-50 dark:hover:bg-gray-800 rounded-sm flex items-center gap-1 min-w-fit"
+						on:click={async () => {
+							selectedText = window.getSelection().toString();
+							selectedAction = action;
 
-						await tick();
-						setTimeout(() => {
-							const input = document.getElementById('floating-message-input');
-							if (input) {
-								input.focus();
+							if (action.input) {
+								floatingInput = true;
+								floatingInputValue = '';
+
+								await tick();
+								setTimeout(() => {
+									const input = document.getElementById('floating-message-input');
+									if (input) {
+										input.focus();
+									}
+								}, 0);
+							} else {
+								actionHandler(action.id);
 							}
-						}, 0);
-					}}
-				>
-					<ChatBubble className="size-3 shrink-0" />
-
-					<div class="shrink-0">{$i18n.t('Ask')}</div>
-				</button>
-				<button
-					class="px-1 hover:bg-gray-50 dark:hover:bg-gray-800 rounded-sm flex items-center gap-1 min-w-fit"
-					on:click={() => {
-						selectedText = window.getSelection().toString();
-						explainHandler();
-					}}
-				>
-					<LightBulb className="size-3 shrink-0" />
-
-					<div class="shrink-0">{$i18n.t('Explain')}</div>
-				</button>
+						}}
+					>
+						<svelte:component this={action.icon} className="size-3 shrink-0" />
+						<div class="shrink-0">{action.label}</div>
+					</button>
+				{/each}
 			</div>
 		{:else}
 			<div
@@ -305,7 +252,7 @@
 					bind:value={floatingInputValue}
 					on:keydown={(e) => {
 						if (e.key === 'Enter') {
-							askHandler();
+							actionHandler(selectedAction?.id);
 						}
 					}}
 				/>
@@ -316,7 +263,7 @@
 							? 'bg-black text-white hover:bg-gray-900 dark:bg-white dark:text-black dark:hover:bg-gray-100 '
 							: 'text-white bg-gray-200 dark:text-gray-900 dark:bg-gray-700 disabled'} transition rounded-full p-1.5 m-0.5 self-center"
 						on:click={() => {
-							askHandler();
+							actionHandler(selectedAction?.id);
 						}}
 					>
 						<svg
@@ -341,7 +288,7 @@
 				class="bg-gray-50/50 dark:bg-gray-800 dark:text-gray-100 text-medium rounded-xl px-3.5 py-3 w-full"
 			>
 				<div class="font-medium">
-					<Markdown id={`${id}-float-prompt`} content={prompt} />
+					<Markdown id={`${id}-float-prompt`} {content} />
 				</div>
 			</div>
 
@@ -349,7 +296,7 @@
 				class="bg-white dark:bg-gray-850 dark:text-gray-100 text-medium rounded-xl px-3.5 py-3 w-full"
 			>
 				<div class=" max-h-80 overflow-y-auto w-full markdown-prose-xs" id="response-container">
-					{#if responseContent.trim() === ''}
+					{#if !responseContent || responseContent?.trim() === ''}
 						<Skeleton size="sm" />
 					{:else}
 						<Markdown id={`${id}-float-response`} content={responseContent} />
