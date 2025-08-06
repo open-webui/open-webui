@@ -308,3 +308,8 @@ cypress/videos
 cypress/screenshots
 .vscode/settings.json
 docker
+
+# Development artifacts
+backend/cache/
+backend/vector_db/*.sqlite3
+docker_logs*.txt
