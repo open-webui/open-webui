@@ -440,25 +440,23 @@
 					</div>
 
 					<button
-						aria-labelledby="high-contrast-mode-label"
+						aria-labelledby="high-contrast-mode-label high-contrast-state"
 						class="p-1 px-3 text-xs flex rounded-sm transition"
 						on:click={() => {
 							toggleHighContrastMode();
 						}}
 						type="button"
 					>
-						{#if highContrastMode === true}
-							<span class="ml-2 self-center">{$i18n.t('On')}</span>
-						{:else}
-							<span class="ml-2 self-center">{$i18n.t('Off')}</span>
-						{/if}
+						<span class="ml-2 self-center" id="high-contrast-state"
+							>{highContrastMode === true ? $i18n.t('On') : $i18n.t('Off')}</span
+						>
 					</button>
 				</div>
 			</div>
 
 			<div>
 				<div class=" py-0.5 flex w-full justify-between">
-					<div id="landing-page-mode-label" class=" self-center text-xs">
+					<div id="landing-page-mode-label landing-page-mode-state" class=" self-center text-xs">
 						{$i18n.t('Landing Page Mode')}
 					</div>
 
@@ -470,11 +468,9 @@
 						}}
 						type="button"
 					>
-						{#if landingPageMode === ''}
-							<span class="ml-2 self-center">{$i18n.t('Default')}</span>
-						{:else}
-							<span class="ml-2 self-center">{$i18n.t('Chat')}</span>
-						{/if}
+						<span class="ml-2 self-center" id="landing-page-mode-state"
+							>{landingPageMode === '' ? $i18n.t('Default') : $i18n.t('Chat')}</span
+						>
 					</button>
 				</div>
 			</div>
@@ -486,18 +482,16 @@
 					</div>
 
 					<button
-						aria-labelledby="chat-bubble-ui-label"
+						aria-labelledby="chat-bubble-ui-label chat-bubble-ui-state"
 						class="p-1 px-3 text-xs flex rounded-sm transition"
 						on:click={() => {
 							toggleChatBubble();
 						}}
 						type="button"
 					>
-						{#if chatBubble === true}
-							<span class="ml-2 self-center">{$i18n.t('On')}</span>
-						{:else}
-							<span class="ml-2 self-center">{$i18n.t('Off')}</span>
-						{/if}
+						<span class="ml-2 self-center" id="chat-bubble-ui-state"
+							>{chatBubble === true ? $i18n.t('On') : $i18n.t('Off')}</span
+						>
 					</button>
 				</div>
 			</div>
@@ -510,18 +504,16 @@
 						</div>
 
 						<button
-							aria-labelledby="chat-bubble-username-label"
+							aria-labelledby="chat-bubble-username-label show-user-name-state"
 							class="p-1 px-3 text-xs flex rounded-sm transition"
 							on:click={() => {
 								toggleShowUsername();
 							}}
 							type="button"
 						>
-							{#if showUsername === true}
-								<span class="ml-2 self-center">{$i18n.t('On')}</span>
-							{:else}
-								<span class="ml-2 self-center">{$i18n.t('Off')}</span>
-							{/if}
+							<span class="ml-2 self-center" id="show-user-name-state"
+								>{showUsername === true ? $i18n.t('On') : $i18n.t('Off')}</span
+							>
 						</button>
 					</div>
 				</div>
@@ -538,14 +530,12 @@
 						on:click={() => {
 							toggleWidescreenMode();
 						}}
-						aria-labelledby="widescreen-mode-label"
+						aria-labelledby="widescreen-mode-labe wide-screen-mode-state"
 						type="button"
 					>
-						{#if widescreenMode === true}
-							<span class="ml-2 self-center">{$i18n.t('On')}</span>
-						{:else}
-							<span class="ml-2 self-center">{$i18n.t('Off')}</span>
-						{/if}
+						<span class="ml-2 self-center" id="wide-screen-mode-state"
+							>{widescreenMode === true ? $i18n.t('On') : $i18n.t('Off')}</span
+						>
 					</button>
 				</div>
 			</div>
@@ -557,18 +547,18 @@
 					</div>
 
 					<button
-						aria-labelledby="chat-direction-label"
+						aria-labelledby="chat-direction-label chat-direction-mode"
 						class="p-1 px-3 text-xs flex rounded-sm transition"
 						on:click={toggleChangeChatDirection}
 						type="button"
 					>
-						{#if chatDirection === 'LTR'}
-							<span class="ml-2 self-center">{$i18n.t('LTR')}</span>
-						{:else if chatDirection === 'RTL'}
-							<span class="ml-2 self-center">{$i18n.t('RTL')}</span>
-						{:else}
-							<span class="ml-2 self-center">{$i18n.t('Auto')}</span>
-						{/if}
+						<span class="ml-2 self-center" id="chat-direction-mode">
+							{chatDirection === 'LTR'
+								? $i18n.t('LTR')
+								: chatDirection === 'RTL'
+									? $i18n.t('RTL')
+									: $i18n.t('Auto')}
+						</span>
 					</button>
 				</div>
 			</div>
@@ -580,18 +570,16 @@
 					</div>
 
 					<button
-						aria-labelledby="notification-sound-label"
+						aria-labelledby="notification-sound-label notification-sound-state"
 						class="p-1 px-3 text-xs flex rounded-sm transition"
 						on:click={() => {
 							toggleNotificationSound();
 						}}
 						type="button"
 					>
-						{#if notificationSound === true}
-							<span class="ml-2 self-center">{$i18n.t('On')}</span>
-						{:else}
-							<span class="ml-2 self-center">{$i18n.t('Off')}</span>
-						{/if}
+						<span class="ml-2 self-center" id="notification-sound-state"
+							>{notificationSound === true ? $i18n.t('On') : $i18n.t('Off')}</span
+						>
 					</button>
 				</div>
 			</div>
@@ -604,18 +592,16 @@
 						</div>
 
 						<button
-							aria-labelledby="play-notification-sound-label"
+							aria-labelledby="play-notification-sound-label notification-sound-always-state"
 							class="p-1 px-3 text-xs flex rounded-sm transition"
 							on:click={() => {
 								toggleNotificationSoundAlways();
 							}}
 							type="button"
 						>
-							{#if notificationSoundAlways === true}
-								<span class="ml-2 self-center">{$i18n.t('On')}</span>
-							{:else}
-								<span class="ml-2 self-center">{$i18n.t('Off')}</span>
-							{/if}
+							<span class="ml-2 self-center" id="notification-sound-always-state"
+								>{notificationSoundAlways === true ? $i18n.t('On') : $i18n.t('Off')}</span
+							>
 						</button>
 					</div>
 				</div>
@@ -629,18 +615,16 @@
 						</div>
 
 						<button
-							aria-labelledby="toast-notifications-label"
+							aria-labelledby="toast-notifications-label show-update-toast-state"
 							class="p-1 px-3 text-xs flex rounded-sm transition"
 							on:click={() => {
 								toggleShowUpdateToast();
 							}}
 							type="button"
 						>
-							{#if showUpdateToast === true}
-								<span class="ml-2 self-center">{$i18n.t('On')}</span>
-							{:else}
-								<span class="ml-2 self-center">{$i18n.t('Off')}</span>
-							{/if}
+							<span class="ml-2 self-center" id="show-update-toast-state"
+								>{showUpdateToast === true ? $i18n.t('On') : $i18n.t('Off')}</span
+							>
 						</button>
 					</div>
 				</div>
@@ -652,18 +636,16 @@
 						</div>
 
 						<button
-							aria-labelledby="whats-new-label"
+							aria-labelledby="whats-new-label show-changelog-stat"
 							class="p-1 px-3 text-xs flex rounded-sm transition"
 							on:click={() => {
 								toggleShowChangelog();
 							}}
 							type="button"
 						>
-							{#if showChangelog === true}
-								<span class="ml-2 self-center">{$i18n.t('On')}</span>
-							{:else}
-								<span class="ml-2 self-center">{$i18n.t('Off')}</span>
-							{/if}
+							<span class="ml-2 self-center" id="show-changelog-state"
+								>{showChangelog === true ? $i18n.t('On') : $i18n.t('Off')}</span
+							>
 						</button>
 					</div>
 				</div>
@@ -678,18 +660,16 @@
 					</div>
 
 					<button
-						aria-labelledby="auto-generation-label"
+						aria-labelledby="auto-generation-label title-auto-generate-state"
 						class="p-1 px-3 text-xs flex rounded-sm transition"
 						on:click={() => {
 							toggleTitleAutoGenerate();
 						}}
 						type="button"
 					>
-						{#if titleAutoGenerate === true}
-							<span class="ml-2 self-center">{$i18n.t('On')}</span>
-						{:else}
-							<span class="ml-2 self-center">{$i18n.t('Off')}</span>
-						{/if}
+						<span class="ml-2 self-center" id="title-auto-generate-state"
+							>{titleAutoGenerate === true ? $i18n.t('On') : $i18n.t('Off')}</span
+						>
 					</button>
 				</div>
 			</div>
@@ -699,18 +679,16 @@
 					<div class=" self-center text-xs">{$i18n.t('Follow-Up Auto-Generation')}</div>
 
 					<button
-						aria-labelledby="auto-generation-label"
+						aria-labelledby="auto-generation-label auto-follow-ups-state"
 						class="p-1 px-3 text-xs flex rounded-sm transition"
 						on:click={() => {
 							toggleAutoFollowUps();
 						}}
 						type="button"
 					>
-						{#if autoFollowUps === true}
-							<span class="ml-2 self-center">{$i18n.t('On')}</span>
-						{:else}
-							<span class="ml-2 self-center">{$i18n.t('Off')}</span>
-						{/if}
+						<span class="ml-2 self-center" id="auto-follow-ups-state"
+							>{autoFollowUps === true ? $i18n.t('On') : $i18n.t('Off')}</span
+						>
 					</button>
 				</div>
 			</div>
@@ -722,18 +700,16 @@
 					</div>
 
 					<button
-						aria-labelledby="chat-tags-label"
+						aria-labelledby="chat-tags-label auto-tags-state"
 						class="p-1 px-3 text-xs flex rounded-sm transition"
 						on:click={() => {
 							toggleAutoTags();
 						}}
 						type="button"
 					>
-						{#if autoTags === true}
-							<span class="ml-2 self-center">{$i18n.t('On')}</span>
-						{:else}
-							<span class="ml-2 self-center">{$i18n.t('Off')}</span>
-						{/if}
+						<span class="ml-2 self-center" id="auto-tags-state"
+							>{autoTags === true ? $i18n.t('On') : $i18n.t('Off')}</span
+						>
 					</button>
 				</div>
 			</div>
@@ -745,18 +721,16 @@
 					</div>
 
 					<button
-						aria-labelledby="detect-artifacts-label"
+						aria-labelledby="detect-artifacts-label detect-artifacts-state"
 						class="p-1 px-3 text-xs flex rounded-sm transition"
 						on:click={() => {
 							toggleDetectArtifacts();
 						}}
 						type="button"
 					>
-						{#if detectArtifacts === true}
-							<span class="ml-2 self-center">{$i18n.t('On')}</span>
-						{:else}
-							<span class="ml-2 self-center">{$i18n.t('Off')}</span>
-						{/if}
+						<span class="ml-2 self-center" id="detect-artifacts-state"
+							>{detectArtifacts === true ? $i18n.t('On') : $i18n.t('Off')}</span
+						>
 					</button>
 				</div>
 			</div>
@@ -768,18 +742,16 @@
 					</div>
 
 					<button
-						aria-labelledby="auto-copy-label"
+						aria-labelledby="auto-copy-label response-auto-copy-state"
 						class="p-1 px-3 text-xs flex rounded-sm transition"
 						on:click={() => {
 							toggleResponseAutoCopy();
 						}}
 						type="button"
 					>
-						{#if responseAutoCopy === true}
-							<span class="ml-2 self-center">{$i18n.t('On')}</span>
-						{:else}
-							<span class="ml-2 self-center">{$i18n.t('Off')}</span>
-						{/if}
+						<span class="ml-2 self-center" id="response-auto-copy-state"
+							>{responseAutoCopy === true ? $i18n.t('On') : $i18n.t('Off')}</span
+						>
 					</button>
 				</div>
 			</div>
@@ -791,18 +763,16 @@
 					</div>
 
 					<button
-						aria-labelledby="fade-streaming-label"
+						aria-labelledby="fade-streaming-label chat-fade-streaming-text-state"
 						class="p-1 px-3 text-xs flex rounded-sm transition"
 						on:click={() => {
 							toggleChatFadeStreamingText();
 						}}
 						type="button"
 					>
-						{#if chatFadeStreamingText === true}
-							<span class="ml-2 self-center">{$i18n.t('On')}</span>
-						{:else}
-							<span class="ml-2 self-center">{$i18n.t('Off')}</span>
-						{/if}
+						<span class="ml-2 self-center" id="chat-fade-streaming-text-state"
+							>{chatFadeStreamingText === true ? $i18n.t('On') : $i18n.t('Off')}</span
+						>
 					</button>
 				</div>
 			</div>
@@ -814,18 +784,16 @@
 					</div>
 
 					<button
-						aria-labelledby="keep-followup-prompts-label"
+						aria-labelledby="keep-followup-prompts-label keep-follow-up-prompts-state"
 						class="p-1 px-3 text-xs flex rounded-sm transition"
 						on:click={() => {
 							toggleKeepFollowUpPrompts();
 						}}
 						type="button"
 					>
-						{#if keepFollowUpPrompts === true}
-							<span class="ml-2 self-center">{$i18n.t('On')}</span>
-						{:else}
-							<span class="ml-2 self-center">{$i18n.t('Off')}</span>
-						{/if}
+						<span class="ml-2 self-center" id="keep-follow-up-prompts-state"
+							>{keepFollowUpPrompts === true ? $i18n.t('On') : $i18n.t('Off')}</span
+						>
 					</button>
 				</div>
 			</div>
@@ -837,18 +805,16 @@
 					</div>
 
 					<button
-						aria-labelledby="insert-followup-prompt-label"
+						aria-labelledby="insert-followup-prompt-label insert-follow-up-prompts-state"
 						class="p-1 px-3 text-xs flex rounded-sm transition"
 						on:click={() => {
 							toggleInsertFollowUpPrompt();
 						}}
 						type="button"
 					>
-						{#if insertFollowUpPrompt === true}
-							<span class="ml-2 self-center">{$i18n.t('On')}</span>
-						{:else}
-							<span class="ml-2 self-center">{$i18n.t('Off')}</span>
-						{/if}
+						<span class="ml-2 self-center" id="insert-follow-up-prompts-state"
+							>{insertFollowUpPrompt === true ? $i18n.t('On') : $i18n.t('Off')}</span
+						>
 					</button>
 				</div>
 			</div>
@@ -860,18 +826,16 @@
 					</div>
 
 					<button
-						aria-labelledby="rich-input-label"
+						aria-labelledby="rich-input-label rich-text-input-state"
 						class="p-1 px-3 text-xs flex rounded-sm transition"
 						on:click={() => {
 							toggleRichTextInput();
 						}}
 						type="button"
 					>
-						{#if richTextInput === true}
-							<span class="ml-2 self-center">{$i18n.t('On')}</span>
-						{:else}
-							<span class="ml-2 self-center">{$i18n.t('Off')}</span>
-						{/if}
+						<span class="ml-2 self-center" id="rich-text-input-state"
+							>{richTextInput === true ? $i18n.t('On') : $i18n.t('Off')}</span
+						>
 					</button>
 				</div>
 			</div>
@@ -907,18 +871,16 @@
 						</div>
 
 						<button
-							aria-labelledby="rich-input-label"
+							aria-labelledby="rich-input-label insert-prompt-as-rich-text-state"
 							class="p-1 px-3 text-xs flex rounded-sm transition"
 							on:click={() => {
 								toggleInsertPromptAsRichText();
 							}}
 							type="button"
 						>
-							{#if insertPromptAsRichText === true}
-								<span class="ml-2 self-center">{$i18n.t('On')}</span>
-							{:else}
-								<span class="ml-2 self-center">{$i18n.t('Off')}</span>
-							{/if}
+							<span class="ml-2 self-center" id="insert-prompt-as-rich-text-state"
+								>{insertPromptAsRichText === true ? $i18n.t('On') : $i18n.t('Off')}</span
+							>
 						</button>
 					</div>
 				</div>
@@ -931,18 +893,16 @@
 							</div>
 
 							<button
-								aria-labelledby="prompt-autocompletion-label"
+								aria-labelledby="prompt-autocompletion-label prompt-autocomplete-state"
 								class="p-1 px-3 text-xs flex rounded-sm transition"
 								on:click={() => {
 									togglePromptAutocomplete();
 								}}
 								type="button"
 							>
-								{#if promptAutocomplete === true}
-									<span class="ml-2 self-center">{$i18n.t('On')}</span>
-								{:else}
-									<span class="ml-2 self-center">{$i18n.t('Off')}</span>
-								{/if}
+								<span class="ml-2 self-center" id="prompt-autocomplete-state"
+									>{promptAutocomplete === true ? $i18n.t('On') : $i18n.t('Off')}</span
+								>
 							</button>
 						</div>
 					</div>
@@ -956,18 +916,16 @@
 					</div>
 
 					<button
-						aria-labelledby="paste-large-label"
+						aria-labelledby="paste-large-label large-text-as-file-state"
 						class="p-1 px-3 text-xs flex rounded-sm transition"
 						on:click={() => {
 							toggleLargeTextAsFile();
 						}}
 						type="button"
 					>
-						{#if largeTextAsFile === true}
-							<span class="ml-2 self-center">{$i18n.t('On')}</span>
-						{:else}
-							<span class="ml-2 self-center">{$i18n.t('Off')}</span>
-						{/if}
+						<span class="ml-2 self-center" id="large-text-as-file-state"
+							>{largeTextAsFile === true ? $i18n.t('On') : $i18n.t('Off')}</span
+						>
 					</button>
 				</div>
 			</div>
@@ -979,18 +937,16 @@
 					</div>
 
 					<button
-						aria-labelledby="copy-formatted-label"
+						aria-labelledby="copy-formatted-label copy-formatted-state"
 						class="p-1 px-3 text-xs flex rounded-sm transition"
 						on:click={() => {
 							toggleCopyFormatted();
 						}}
 						type="button"
 					>
-						{#if copyFormatted === true}
-							<span class="ml-2 self-center">{$i18n.t('On')}</span>
-						{:else}
-							<span class="ml-2 self-center">{$i18n.t('Off')}</span>
-						{/if}
+						<span class="ml-2 self-center" id="copy-formatted-state"
+							>{copyFormatted === true ? $i18n.t('On') : $i18n.t('Off')}</span
+						>
 					</button>
 				</div>
 			</div>
@@ -1002,18 +958,16 @@
 					</div>
 
 					<button
-						aria-labelledby="always-collapse-label"
+						aria-labelledby="always-collapse-label collapse-code-blocks-state"
 						class="p-1 px-3 text-xs flex rounded-sm transition"
 						on:click={() => {
 							toggleCollapseCodeBlocks();
 						}}
 						type="button"
 					>
-						{#if collapseCodeBlocks === true}
-							<span class="ml-2 self-center">{$i18n.t('On')}</span>
-						{:else}
-							<span class="ml-2 self-center">{$i18n.t('Off')}</span>
-						{/if}
+						<span class="ml-2 self-center" id="collapse-code-blocks-state"
+							>{collapseCodeBlocks === true ? $i18n.t('On') : $i18n.t('Off')}</span
+						>
 					</button>
 				</div>
 			</div>
@@ -1025,18 +979,16 @@
 					</div>
 
 					<button
-						aria-labelledby="always-expand-label"
+						aria-labelledby="always-expand-label expand-details-state"
 						class="p-1 px-3 text-xs flex rounded-sm transition"
 						on:click={() => {
 							toggleExpandDetails();
 						}}
 						type="button"
 					>
-						{#if expandDetails === true}
-							<span class="ml-2 self-center">{$i18n.t('On')}</span>
-						{:else}
-							<span class="ml-2 self-center">{$i18n.t('Off')}</span>
-						{/if}
+						<span class="ml-2 self-center" id="expand-details-state"
+							>{expandDetails === true ? $i18n.t('On') : $i18n.t('Off')}</span
+						>
 					</button>
 				</div>
 			</div>
@@ -1048,7 +1000,7 @@
 					</div>
 
 					<button
-						aria-labelledby="chat-background-label"
+						aria-labelledby="chat-background-label background-image-url-state"
 						class="p-1 px-3 text-xs flex rounded-sm transition"
 						on:click={() => {
 							if (backgroundImageUrl !== null) {
@@ -1060,11 +1012,9 @@
 						}}
 						type="button"
 					>
-						{#if backgroundImageUrl !== null}
-							<span class="ml-2 self-center">{$i18n.t('Reset')}</span>
-						{:else}
-							<span class="ml-2 self-center">{$i18n.t('Upload')}</span>
-						{/if}
+						<span class="ml-2 self-center" id="background-image-url-state"
+							>{backgroundImageUrl !== null ? $i18n.t('Reset') : $i18n.t('Upload')}</span
+						>
 					</button>
 				</div>
 			</div>
@@ -1074,18 +1024,16 @@
 					<div class=" self-center text-xs">{$i18n.t('Allow User Location')}</div>
 
 					<button
-						aria-labelledby="allow-user-location-label"
+						aria-labelledby="allow-user-location-label user-location-state"
 						class="p-1 px-3 text-xs flex rounded-sm transition"
 						on:click={() => {
 							toggleUserLocation();
 						}}
 						type="button"
 					>
-						{#if userLocation === true}
-							<span class="ml-2 self-center">{$i18n.t('On')}</span>
-						{:else}
-							<span class="ml-2 self-center">{$i18n.t('Off')}</span>
-						{/if}
+						<span class="ml-2 self-center" id="user-location-state"
+							>{userLocation === true ? $i18n.t('On') : $i18n.t('Off')}</span
+						>
 					</button>
 				</div>
 			</div>
@@ -1097,18 +1045,16 @@
 					</div>
 
 					<button
-						aria-labelledby="haptic-feedback-label"
+						aria-labelledby="haptic-feedback-label haptic-feedback-state"
 						class="p-1 px-3 text-xs flex rounded-sm transition"
 						on:click={() => {
 							toggleHapticFeedback();
 						}}
 						type="button"
 					>
-						{#if hapticFeedback === true}
-							<span class="ml-2 self-center">{$i18n.t('On')}</span>
-						{:else}
-							<span class="ml-2 self-center">{$i18n.t('Off')}</span>
-						{/if}
+						<span class="ml-2 self-center" id="haptic-feedback-state"
+							>{hapticFeedback === true ? $i18n.t('On') : $i18n.t('Off')}</span
+						>
 					</button>
 				</div>
 			</div>
@@ -1143,18 +1089,18 @@
 					</div>
 
 					<button
-						aria-labelledby="enter-key-behavior-label"
+						aria-labelledby="enter-key-behavior-label ctrl-enter-to-send-state"
 						class="p-1 px-3 text-xs flex rounded transition"
 						on:click={() => {
 							togglectrlEnterToSend();
 						}}
 						type="button"
 					>
-						{#if ctrlEnterToSend === true}
-							<span class="ml-2 self-center">{$i18n.t('Ctrl+Enter to Send')}</span>
-						{:else}
-							<span class="ml-2 self-center">{$i18n.t('Enter to Send')}</span>
-						{/if}
+						<span class="ml-2 self-center" id="ctrl-enter-to-send-state"
+							>{ctrlEnterToSend === true
+								? $i18n.t('Ctrl+Enter to Send')
+								: $i18n.t('Enter to Send')}</span
+						>
 					</button>
 				</div>
 			</div>
@@ -1166,18 +1112,16 @@
 					</div>
 
 					<button
-						aria-labelledby="scroll-on-branch-change-label"
+						aria-labelledby="scroll-on-branch-change-label scroll-on-branch-change-state"
 						class="p-1 px-3 text-xs flex rounded-sm transition"
 						on:click={() => {
 							togglesScrollOnBranchChange();
 						}}
 						type="button"
 					>
-						{#if scrollOnBranchChange === true}
-							<span class="ml-2 self-center">{$i18n.t('On')}</span>
-						{:else}
-							<span class="ml-2 self-center">{$i18n.t('Off')}</span>
-						{/if}
+						<span class="ml-2 self-center" id="scroll-on-branch-change-state"
+							>{scrollOnBranchChange === true ? $i18n.t('On') : $i18n.t('Off')}</span
+						>
 					</button>
 				</div>
 			</div>
@@ -1189,18 +1133,16 @@
 					</div>
 
 					<button
-						aria-labelledby="web-search-in-chat-label"
+						aria-labelledby="web-search-in-chat-label web-search-state"
 						class="p-1 px-3 text-xs flex rounded-sm transition"
 						on:click={() => {
 							toggleWebSearch();
 						}}
 						type="button"
 					>
-						{#if webSearch === 'always'}
-							<span class="ml-2 self-center">{$i18n.t('Always')}</span>
-						{:else}
-							<span class="ml-2 self-center">{$i18n.t('Default')}</span>
-						{/if}
+						<span class="ml-2 self-center" id="web-search-state"
+							>{webSearch === 'always' ? $i18n.t('Always') : $i18n.t('Default')}</span
+						>
 					</button>
 				</div>
 			</div>
@@ -1212,18 +1154,16 @@
 					</div>
 
 					<button
-						aria-labelledby="iframe-sandbox-allow-same-origin-label"
+						aria-labelledby="iframe-sandbox-allow-same-origin-label iframe-sandbox-allow-same-origin-state"
 						class="p-1 px-3 text-xs flex rounded-sm transition"
 						on:click={() => {
 							toggleIframeSandboxAllowSameOrigin();
 						}}
 						type="button"
 					>
-						{#if iframeSandboxAllowSameOrigin === true}
-							<span class="ml-2 self-center">{$i18n.t('On')}</span>
-						{:else}
-							<span class="ml-2 self-center">{$i18n.t('Off')}</span>
-						{/if}
+						<span class="ml-2 self-center" id="iframe-sandbox-allow-same-origin-state"
+							>{iframeSandboxAllowSameOrigin === true ? $i18n.t('On') : $i18n.t('Off')}</span
+						>
 					</button>
 				</div>
 			</div>
@@ -1235,18 +1175,16 @@
 					</div>
 
 					<button
-						aria-labelledby="iframe-sandbox-allow-forms-label"
+						aria-labelledby="iframe-sandbox-allow-forms-label iframe-sandbox-allow-forms-state"
 						class="p-1 px-3 text-xs flex rounded-sm transition"
 						on:click={() => {
 							toggleIframeSandboxAllowForms();
 						}}
 						type="button"
 					>
-						{#if iframeSandboxAllowForms === true}
-							<span class="ml-2 self-center">{$i18n.t('On')}</span>
-						{:else}
-							<span class="ml-2 self-center">{$i18n.t('Off')}</span>
-						{/if}
+						<span class="ml-2 self-center" id="iframe-sandbox-allow-forms-state"
+							>{iframeSandboxAllowForms === true ? $i18n.t('On') : $i18n.t('Off')}</span
+						>
 					</button>
 				</div>
 			</div>
@@ -1258,18 +1196,16 @@
 					</div>
 
 					<button
-						aria-labelledby="stylized-pdf-export-label"
+						aria-labelledby="stylized-pdf-export-label stylized-pdf-export-state"
 						class="p-1 px-3 text-xs flex rounded-sm transition"
 						on:click={() => {
 							toggleStylizedPdfExport();
 						}}
 						type="button"
 					>
-						{#if stylizedPdfExport === true}
-							<span class="ml-2 self-center">{$i18n.t('On')}</span>
-						{:else}
-							<span class="ml-2 self-center">{$i18n.t('Off')}</span>
-						{/if}
+						<span class="ml-2 self-center" id="stylized-pdf-export-state"
+							>{stylizedPdfExport === true ? $i18n.t('On') : $i18n.t('Off')}</span
+						>
 					</button>
 				</div>
 			</div>
@@ -1281,18 +1217,16 @@
 					<div class=" self-center text-xs">{$i18n.t('Allow Voice Interruption in Call')}</div>
 
 					<button
-						aria-labelledby="allow-voice-interruption-label"
+						aria-labelledby="allow-voice-interruption-label voice-interruption-state"
 						class="p-1 px-3 text-xs flex rounded-sm transition"
 						on:click={() => {
 							toggleVoiceInterruption();
 						}}
 						type="button"
 					>
-						{#if voiceInterruption === true}
-							<span class="ml-2 self-center">{$i18n.t('On')}</span>
-						{:else}
-							<span class="ml-2 self-center">{$i18n.t('Off')}</span>
-						{/if}
+						<span class="ml-2 self-center" id="voice-interruption-state"
+							>{voiceInterruption === true ? $i18n.t('On') : $i18n.t('Off')}</span
+						>
 					</button>
 				</div>
 			</div>
@@ -1304,18 +1238,16 @@
 					</div>
 
 					<button
-						aria-labelledby="display-emoji-label"
+						aria-labelledby="display-emoji-label show-emoji-in-call-state"
 						class="p-1 px-3 text-xs flex rounded-sm transition"
 						on:click={() => {
 							toggleEmojiInCall();
 						}}
 						type="button"
 					>
-						{#if showEmojiInCall === true}
-							<span class="ml-2 self-center">{$i18n.t('On')}</span>
-						{:else}
-							<span class="ml-2 self-center">{$i18n.t('Off')}</span>
-						{/if}
+						<span class="ml-2 self-center" id="show-emoji-in-call-state"
+							>{showEmojiInCall === true ? $i18n.t('On') : $i18n.t('Off')}</span
+						>
 					</button>
 				</div>
 			</div>
@@ -1329,18 +1261,16 @@
 					</div>
 
 					<button
-						aria-labelledby="image-compression-label"
+						aria-labelledby="image-compression-label image-compression-state"
 						class="p-1 px-3 text-xs flex rounded-sm transition"
 						on:click={() => {
 							toggleImageCompression();
 						}}
 						type="button"
 					>
-						{#if imageCompression === true}
-							<span class="ml-2 self-center">{$i18n.t('On')}</span>
-						{:else}
-							<span class="ml-2 self-center">{$i18n.t('Off')}</span>
-						{/if}
+						<span class="ml-2 self-center" id="image-compression-state"
+							>{imageCompression === true ? $i18n.t('On') : $i18n.t('Off')}</span
+						>
 					</button>
 				</div>
 			</div>
