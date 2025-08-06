@@ -62,6 +62,7 @@
 		width: '',
 		height: ''
 	};
+	let imageCompressionInChannels = true;
 
 	// chat export
 	let stylizedPdfExport = true;
@@ -162,6 +163,11 @@
 	const toggleImageCompression = async () => {
 		imageCompression = !imageCompression;
 		saveSettings({ imageCompression });
+	};
+
+	const toggleImageCompressionInChannels = async () => {
+		imageCompressionInChannels = !imageCompressionInChannels;
+		saveSettings({ imageCompressionInChannels });
 	};
 
 	const toggleChatFadeStreamingText = async () => {
@@ -375,6 +381,7 @@
 
 		imageCompression = $settings?.imageCompression ?? false;
 		imageCompressionSize = $settings?.imageCompressionSize ?? { width: '', height: '' };
+		imageCompressionInChannels = $settings?.imageCompressionInChannels ?? true;
 
 		defaultModelId = $settings?.models?.at(0) ?? '';
 		if ($config?.default_models) {
@@ -1367,6 +1374,29 @@
 								placeholder="Height"
 							/>
 						</div>
+					</div>
+				</div>
+
+				<div>
+					<div class=" py-0.5 flex w-full justify-between">
+						<div id="image-compression-label" class=" self-center text-xs">
+							{$i18n.t('Compress Images in Channels')}
+						</div>
+
+						<button
+							aria-labelledby="image-compression-label"
+							class="p-1 px-3 text-xs flex rounded-sm transition"
+							on:click={() => {
+								toggleImageCompressionInChannels();
+							}}
+							type="button"
+						>
+							{#if imageCompressionInChannels === true}
+								<span class="ml-2 self-center">{$i18n.t('On')}</span>
+							{:else}
+								<span class="ml-2 self-center">{$i18n.t('Off')}</span>
+							{/if}
+						</button>
 					</div>
 				</div>
 			{/if}
