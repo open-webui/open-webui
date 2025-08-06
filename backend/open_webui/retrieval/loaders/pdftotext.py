@@ -1,11 +1,14 @@
+from open_webui.utils.db_utils import store_status
 import logging
 import requests
-from open_webui.env import SRC_LOG_LEVELS, CELERY_BROKER_URL
 import time
-from tenacity import retry, stop_after_attempt, wait_exponential, retry_if_exception_type
 import pika
-import time
 import json
+from tenacity import retry, stop_after_attempt, wait_exponential, retry_if_exception_type
+
+
+from open_webui.env import SRC_LOG_LEVELS, CELERY_BROKER_URL
+from open_webui.utils.db_utils import get_status
 
 log = logging.getLogger(__name__)
 log.setLevel(SRC_LOG_LEVELS["RAG"])
@@ -23,6 +26,35 @@ def post_with_retry(url, headers=None, files=None, data=None):
     r = requests.post(url=url, headers=headers, files=files, data=data)
     r.raise_for_status()  # Lança um HTTPError se o status não for 2xx
     return r
+
+
+def consume_and_store():
+    params = pika.URLParameters(CELERY_BROKER_URL)
+    while True:
+        try:
+            connection = pika.BlockingConnection(params)
+            channel = connection.channel()
+            channel.queue_declare(queue='pdf2text_status')
+
+            def callback(ch, method, properties, body):
+                try:
+                    msg = json.loads(body)
+                    task_id = msg['task_id']
+                    status = msg['status']
+                    store_status(task_id, status)
+                except Exception as e:
+                    print(f"Erro ao processar mensagem: {e}")
+                ch.basic_ack(delivery_tag=method.delivery_tag)
+
+            channel.basic_qos(prefetch_count=10)
+            channel.basic_consume(queue='pdf2text_status',
+                                  on_message_callback=callback)
+            print("Consumidor iniciado, aguardando mensagens...")
+            channel.start_consuming()
+        except Exception as e:
+            print(
+                f"Erro no consumidor RabbitMQ, tentando reconectar em 5s...: {e}")
+            time.sleep(5)
 
 
 class PdftotextLoader():
@@ -94,7 +126,8 @@ class PdftotextLoaderAsync:
         if r.status_code != 200:
             log.error(
                 f"Failed to extract text from PDF using OCR: {r.status_code} - {r.text}")
-            raise Exception(f"Failed to extract text from PDF: {r.status_code} - {r.text}")
+            raise Exception(
+                f"Failed to extract text from PDF: {r.status_code} - {r.text}")
 
         log.info(r)
         response = r.json()
@@ -115,49 +148,6 @@ class PdftotextLoaderAsync:
             log.error(
                 f"Failed to extract text from PDF using OCR after retries: {e}")
             raise e
-        
-    def wait_for_task_status(self, target_task_id, interval=1, timeout=900):
-        """Consome fila RabbitMQ até encontrar task_id com status final (completed/failure)."""
-        params = pika.URLParameters(CELERY_BROKER_URL)
-        connection = pika.BlockingConnection(params)
-        channel = connection.channel()
-        channel.queue_declare(queue='pdf2text_status')
-
-        status = None
-        start = time.time()
-
-        def callback(ch, method, properties, body):
-            nonlocal status
-            msg = json.loads(body)
-            if msg['task_id'] == target_task_id:
-                status = msg['status']
-                print(f"Recebido: {msg}")
-                ch.basic_ack(delivery_tag=method.delivery_tag)
-                channel.stop_consuming()
-            else:
-                # Descarta ou re-publica se desejar reter a mensagem para outros consumidores
-                ch.basic_ack(delivery_tag=method.delivery_tag)
-
-        print(f"Esperando task {target_task_id} finalizar (completed ou failure)...")
-        try:
-            while status not in ("completed", "failure"):
-                if time.time() - start > timeout:
-                    print("Timeout aguardando resposta.")
-                    break
-                channel.basic_consume(queue='pdf2text_status', on_message_callback=callback)
-                channel.start_consuming()
-                if status in ("completed", "failure"):
-                    break
-                time.sleep(interval)
-        except Exception as e:
-            raise Exception(f"Erro de conexão com RabbitMQ: {e}")
-        finally:    
-            connection.close()
-        if status is not None:
-            print(f"Tarefa finalizou com status: {status}")
-        else:
-            print("Tarefa não encontrada ou não finalizou no tempo limite.")
-        return status
 
     def check_status(self, task_id):
         """
@@ -182,7 +172,9 @@ class PdftotextLoaderAsync:
         """
         Synchronously retrieves the extracted text once the task is completed.
         """
-        status = self.wait_for_task_status(queue_id)
+        status = ''
+        while status != 'completed' and status != 'failed':
+            status = get_status(queue_id)
         if status == 'completed':
             result = self.check_status(task_id)
             if result.get("result").get("status") == "completed":
@@ -191,4 +183,3 @@ class PdftotextLoaderAsync:
             raise Exception(f"OCR task {task_id} failed")
         else:
             log.info(f"OCR task {task_id} is still in progress, waiting...")
-            

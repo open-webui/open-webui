@@ -116,7 +116,7 @@ def upload_file(
 
 tasks_cache = {}  # Dictionary to store task results
 
-# Cache temporário para exemplo (substituir por um sistema persistente)
+# # Cache temporário para exemplo (substituir por um sistema persistente)
 cache_lock = Lock()
 
 
@@ -128,7 +128,7 @@ def process_tasks(request, form_data, user, task_id):
         task = tasks_cache.get(task_id, {})
 
     task['status'] = "Processing PDF..."
-   
+
     try:
         text = process_file_async(
             request, form_data, task_id, user)
@@ -136,9 +136,10 @@ def process_tasks(request, form_data, user, task_id):
         log.exception(e)
         task['error'] = str(e)
         task['status'] = "Processing Failed"
-        return 
+        return
     task['text'] = text
     task['status'] = "Processing Completed"
+
 
 @router.post("/async")
 async def upload_file_async(
