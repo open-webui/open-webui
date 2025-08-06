@@ -440,6 +440,13 @@ ENABLE_COMPRESSION_MIDDLEWARE = (
 
 
 ####################################
+# SCIM Configuration
+####################################
+
+SCIM_ENABLED = os.environ.get("SCIM_ENABLED", "False").lower() == "true"
+SCIM_TOKEN = os.environ.get("SCIM_TOKEN", "")
+
+####################################
 # LICENSE_KEY
 ####################################
 

@@ -117,14 +117,8 @@ from open_webui.config import (
     OPENAI_API_CONFIGS,
     # Direct Connections
     ENABLE_DIRECT_CONNECTIONS,
-
-    # SCIM
-    SCIM_ENABLED,
-    SCIM_TOKEN,
-
     # Model list
     ENABLE_BASE_MODELS_CACHE,
-
     # Thread pool size for FastAPI/AnyIO
     THREAD_POOL_SIZE,
     # Tool Server Configs
@@ -426,6 +420,9 @@ from open_webui.env import (
     WEBUI_AUTH_TRUSTED_EMAIL_HEADER,
     WEBUI_AUTH_TRUSTED_NAME_HEADER,
     WEBUI_AUTH_SIGNOUT_REDIRECT_URL,
+    # SCIM
+    SCIM_ENABLED,
+    SCIM_TOKEN,
     ENABLE_COMPRESSION_MIDDLEWARE,
     ENABLE_WEBSOCKET_SUPPORT,
     BYPASS_MODEL_ACCESS_CONTROL,
@@ -1236,7 +1233,8 @@ app.include_router(
 app.include_router(utils.router, prefix="/api/v1/utils", tags=["utils"])
 
 # SCIM 2.0 API for identity management
-app.include_router(scim.router, prefix="/api/v1/scim/v2", tags=["scim"])
+if SCIM_ENABLED:
+    app.include_router(scim.router, prefix="/api/v1/scim/v2", tags=["scim"])
 
 
 try:
