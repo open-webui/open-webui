@@ -24,8 +24,8 @@
 	"devDependencies": {
 		"@sveltejs/adapter-auto": "3.2.2",
 		"@sveltejs/adapter-static": "^3.0.2",
-		"@sveltejs/kit": "^2.5.20",
-		"@sveltejs/vite-plugin-svelte": "^3.1.1",
+		"@sveltejs/kit": "^2.27.1",
+		"@sveltejs/vite-plugin-svelte": "^6.1.0",
 		"@tailwindcss/container-queries": "^0.1.1",
 		"@tailwindcss/postcss": "^4.0.0",
 		"@tailwindcss/typography": "^0.5.13",
@@ -47,8 +47,8 @@
 		"tailwindcss": "^4.0.0",
 		"tslib": "^2.4.1",
 		"typescript": "^5.5.4",
-		"vite": "^5.4.14",
-		"vitest": "^1.6.1"
+		"vite": "^7.0.6",
+		"vitest": "^3.2.4"
 	},
 	"type": "module",
 	"dependencies": {
@@ -131,7 +131,7 @@
 		"tippy.js": "^6.3.7",
 		"turndown": "^7.2.0",
 		"turndown-plugin-gfm": "^1.0.2",
-		"undici": "^7.3.0",
+		"undici": "^7.5.0",
 		"uuid": "^9.0.1",
 		"vite-plugin-static-copy": "^2.2.0",
 		"y-prosemirror": "^1.3.7",
