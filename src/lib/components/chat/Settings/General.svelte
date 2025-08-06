@@ -42,6 +42,7 @@
 	let params = {
 		// Advanced
 		stream_response: null,
+		streaming_batch_size: null,
 		function_calling: null,
 		seed: null,
 		temperature: null,
@@ -71,6 +72,7 @@
 			system: system !== '' ? system : undefined,
 			params: {
 				stream_response: params.stream_response !== null ? params.stream_response : undefined,
+				streaming_batch_size: params.streaming_batch_size !== null ? params.streaming_batch_size : undefined,
 				function_calling: params.function_calling !== null ? params.function_calling : undefined,
 				seed: (params.seed !== null ? params.seed : undefined) ?? undefined,
 				stop: params.stop ? params.stop.split(',').filter((e) => e) : undefined,

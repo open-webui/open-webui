@@ -1634,6 +1634,12 @@
 			params?.stream_response ??
 			true;
 
+		const stream_batch_size =
+			model?.info?.params?.streaming_batch_size ??
+			$settings?.params?.streaming_batch_size ??
+			params?.streaming_batch_size ??
+			1;
+
 		let messages = [
 			params?.system || $settings.system
 				? {
@@ -1687,6 +1693,7 @@
 			localStorage.token,
 			{
 				stream: stream,
+				stream_batch_size: stream_batch_size,
 				model: model.id,
 				messages: messages,
 				params: {

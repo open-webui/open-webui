@@ -69,6 +69,7 @@ def remove_open_webui_params(params: dict) -> dict:
     """
     open_webui_params = {
         "stream_response": bool,
+	"streaming_batch_size": int,
         "function_calling": str,
         "system": str,
     }
