@@ -221,7 +221,7 @@ def get_current_user(
         token = request.cookies.get("token")
 
     if token is None:
-        raise HTTPException(status_code=403, detail="Not authenticated")
+        raise HTTPException(status_code=401, detail="Not authenticated")
 
     # auth by api key
     if token.startswith("sk-"):
