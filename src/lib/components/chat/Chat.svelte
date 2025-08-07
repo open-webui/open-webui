@@ -1694,7 +1694,6 @@
 			localStorage.token,
 			{
 				stream: stream,
-				stream_batch_size: stream_batch_size,
 				model: model.id,
 				messages: messages,
 				params: {
@@ -1748,6 +1747,7 @@
 				session_id: $socket?.id,
 				chat_id: $chatId,
 				id: responseMessageId,
+				stream_batch_size: stream_batch_size,
 
 				background_tasks: {
 					...(!$temporaryChatEnabled &&

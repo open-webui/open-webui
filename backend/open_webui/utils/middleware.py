@@ -684,7 +684,7 @@ def apply_params_to_form_data(form_data, model):
 
     open_webui_params = {
         "stream_response": bool,
-	"streaming_batch_size": int,
+        "streaming_batch_size": int,
         "function_calling": str,
         "system": str,
     }
@@ -1817,7 +1817,7 @@ async def process_chat_response(
 
                     response_tool_calls = []
                     delta_count = 0
-                    delta_batch_size = max(1, form_data.get("stream_batch_size", 1))
+                    delta_batch_size = max(1, form_data.get("metadata", {}).get("stream_batch_size", 1))
 
                     async for line in response.body_iterator:
                         line = line.decode("utf-8") if isinstance(line, bytes) else line
