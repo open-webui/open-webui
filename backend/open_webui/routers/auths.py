@@ -3,6 +3,7 @@ import uuid
 import time
 import datetime
 import logging
+import json
 from aiohttp import ClientSession
 
 from open_webui.models.auths import (
@@ -47,11 +48,18 @@ from open_webui.utils.auth import (
     get_current_user,
     get_password_hash,
     get_http_authorization_cred,
+    verify_totp_code,
+    verify_backup_code,
+    generate_totp_secret,
+    generate_totp_qr_code,
+    generate_backup_codes,
+    hash_backup_codes,
+    verify_password,
 )
 from open_webui.utils.webhook import post_webhook
 from open_webui.utils.access_control import get_permissions
 
-from typing import Optional, List
+from typing import Optional, List, Union
 
 from ssl import CERT_NONE, CERT_REQUIRED, PROTOCOL_TLS
 
@@ -71,6 +79,34 @@ log.setLevel(SRC_LOG_LEVELS["MAIN"])
 class SessionUserResponse(Token, UserResponse):
     expires_at: Optional[int] = None
     permissions: Optional[dict] = None
+    
+class TotpSigninForm(BaseModel):
+    email: str
+    temp_token: str
+    totp_code: str
+
+class TotpRequiredResponse(BaseModel):
+    requires_totp: bool = True
+    temp_token: str
+    message: str = "TOTP verification required"
+    
+class TotpSetupResponse(BaseModel):
+    secret: str
+    qr_code: str
+    uri: str
+    backup_codes: List[str]
+
+class TotpEnableForm(BaseModel):
+    totp_code: str
+
+class TotpStatusResponse(BaseModel):
+    enabled: bool
+
+class BackupCodesResponse(BaseModel):
+    backup_codes: List[str]
+
+class DisableTOTPForm(BaseModel):
+    password: str
 
 
 @router.get("/", response_model=SessionUserResponse)
@@ -451,7 +487,7 @@ async def ldap_auth(request: Request, response: Response, form_data: LdapForm):
 ############################
 
 
-@router.post("/signin", response_model=SessionUserResponse)
+@router.post("/signin", response_model=Union[SessionUserResponse, TotpRequiredResponse])
 async def signin(request: Request, response: Response, form_data: SigninForm):
     if WEBUI_AUTH_TRUSTED_EMAIL_HEADER:
         if WEBUI_AUTH_TRUSTED_EMAIL_HEADER not in request.headers:
@@ -501,7 +537,22 @@ async def signin(request: Request, response: Response, form_data: SigninForm):
         user = Auths.authenticate_user(form_data.email.lower(), form_data.password)
 
     if user:
+        # Check if user has TOTP enabled
+        if user.totp_enabled and user.totp_secret:
+            # User needs TOTP verification - return temp token
+            temp_token_data = {
+                "temp": True,
+                "user_id": user.id,
+                "exp": int(time.time()) + 300  # 5 minute expiry
+            }
+            temp_token = create_token(data=temp_token_data)
+            
+            return TotpRequiredResponse(
+                temp_token=temp_token,
+                message="Please enter your 6-digit authenticator code"
+            )
 
+        # No TOTP required - proceed with normal login
         expires_delta = parse_duration(request.app.state.config.JWT_EXPIRES_IN)
         expires_at = None
         if expires_delta:
@@ -532,6 +583,95 @@ async def signin(request: Request, response: Response, form_data: SigninForm):
             user.id, request.app.state.config.USER_PERMISSIONS
         )
 
+        return SessionUserResponse(
+            token=token,
+            token_type="Bearer",
+            expires_at=expires_at,
+            id=user.id,
+            email=user.email,
+            name=user.name,
+            role=user.role,
+            profile_image_url=user.profile_image_url,
+            permissions=user_permissions,
+        )
+    else:
+        raise HTTPException(400, detail=ERROR_MESSAGES.INVALID_CRED)
+
+
+############################
+# SignIn TOTP (Second Step)
+############################
+
+@router.post("/signin/totp", response_model=SessionUserResponse)
+async def signin_totp(request: Request, response: Response, form_data: TotpSigninForm):
+    try:
+        # Verify temp token
+        temp_data = decode_token(form_data.temp_token)
+        if not temp_data or not temp_data.get("temp") or temp_data.get("exp", 0) < int(time.time()):
+            raise HTTPException(400, detail="Invalid or expired temporary token")
+        
+        user_id = temp_data.get("user_id")
+        if not user_id:
+            raise HTTPException(400, detail="Invalid temporary token")
+        
+        # Get user
+        user = Users.get_user_by_id(user_id)
+        if not user:
+            raise HTTPException(400, detail="User not found")
+        
+        # Verify email matches (additional security check)
+        if user.email.lower() != form_data.email.lower():
+            raise HTTPException(400, detail="Email mismatch")
+        
+        # Check if TOTP is enabled
+        if not user.totp_enabled or not user.totp_secret:
+            raise HTTPException(400, detail="TOTP not enabled for this user")
+        
+        # Try TOTP code first
+        totp_valid = verify_totp_code(user.totp_secret, form_data.totp_code)
+        backup_valid = False
+        
+        # If TOTP fails, try backup code
+        if not totp_valid and user.totp_backup_codes:
+            backup_valid, updated_codes = verify_backup_code(user.totp_backup_codes, form_data.totp_code)
+            if backup_valid:
+                # Update user's backup codes (remove used code)
+                Users.update_user_by_id(user.id, {"totp_backup_codes": updated_codes})
+        
+        if not totp_valid and not backup_valid:
+            raise HTTPException(400, detail="Invalid TOTP code or backup code")
+        
+        # Generate final JWT token
+        expires_delta = parse_duration(request.app.state.config.JWT_EXPIRES_IN)
+        expires_at = None
+        if expires_delta:
+            expires_at = int(time.time()) + int(expires_delta.total_seconds())
+
+        token = create_token(
+            data={"id": user.id},
+            expires_delta=expires_delta,
+        )
+
+        datetime_expires_at = (
+            datetime.datetime.fromtimestamp(expires_at, datetime.timezone.utc)
+            if expires_at
+            else None
+        )
+
+        # Set the cookie token
+        response.set_cookie(
+            key="token",
+            value=token,
+            expires=datetime_expires_at,
+            httponly=True,
+            samesite=WEBUI_AUTH_COOKIE_SAME_SITE,
+            secure=WEBUI_AUTH_COOKIE_SECURE,
+        )
+
+        user_permissions = get_permissions(
+            user.id, request.app.state.config.USER_PERMISSIONS
+        )
+
         return {
             "token": token,
             "token_type": "Bearer",
@@ -543,8 +683,12 @@ async def signin(request: Request, response: Response, form_data: SigninForm):
             "profile_image_url": user.profile_image_url,
             "permissions": user_permissions,
         }
-    else:
-        raise HTTPException(400, detail=ERROR_MESSAGES.INVALID_CRED)
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        log.error(f"TOTP signin error: {str(e)}")
+        raise HTTPException(500, detail="An error occurred during TOTP verification")
 
 
 ############################
@@ -1007,6 +1151,233 @@ async def update_ldap_config(
     request.app.state.config.ENABLE_LDAP = form_data.enable_ldap
     return {"ENABLE_LDAP": request.app.state.config.ENABLE_LDAP}
 
+
+############################
+# TOTP Management Endpoints
+############################
+
+@router.post("/auth/totp/setup", response_model=TotpSetupResponse)
+async def setup_totp(user=Depends(get_current_user)):
+    """
+    Generate TOTP secret, QR code, and backup codes for initial 2FA setup.
+    User must call /auth/totp/enable afterwards to activate 2FA.
+    """
+    try:
+        # Check if TOTP is already enabled
+        if user.totp_enabled:
+            raise HTTPException(400, detail="TOTP is already enabled for this user")
+        
+        # Generate new TOTP secret
+        secret = generate_totp_secret()
+        
+        # App name should match your application name
+        app_name = "Open WebUI"
+        
+        # Build URI with proper URL encoding
+        import urllib.parse
+        
+        # URL encode the components
+        encoded_app_name = urllib.parse.quote(app_name)
+        encoded_email = urllib.parse.quote(user.email)
+        encoded_issuer = urllib.parse.quote(app_name)
+        
+        # Build URI exactly like PyOTP format
+        uri = f"otpauth://totp/{encoded_app_name}:{encoded_email}?secret={secret}&issuer={encoded_issuer}"
+        
+        # Generate QR code using the complete URI
+        qr_code = generate_totp_qr_code(uri)  # Pass only the URI
+        
+        # Generate backup codes
+        backup_codes = generate_backup_codes()
+        
+        # Store the secret (but don't enable TOTP yet)
+        # User needs to verify they can generate codes before we enable it
+        Users.update_user_by_id(user.id, {
+            "totp_secret": secret,
+            "totp_backup_codes": hash_backup_codes(backup_codes)
+        })
+        
+        return TotpSetupResponse(
+            secret=secret,
+            qr_code=qr_code,
+            uri=uri,
+            backup_codes=backup_codes
+        )
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        log.error(f"TOTP setup error: {str(e)}")
+        raise HTTPException(500, detail="An error occurred during TOTP setup")
+
+
+@router.get("/auth/totp/status")
+async def get_totp_status(user=Depends(get_verified_user)):
+    """
+    Get TOTP status for the current user
+    """
+    try:
+        # Get user from database to check TOTP status
+        user_data = Users.get_user_by_id(user.id)
+        if not user_data:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail=ERROR_MESSAGES.USER_NOT_FOUND
+            )
+        
+        return {
+            "enabled": user_data.totp_enabled or False,
+            "has_backup_codes": bool(user_data.totp_backup_codes)
+        }
+        
+    except Exception as e:
+        log.error(f"Error getting TOTP status: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=ERROR_MESSAGES.DEFAULT()
+        )
+
+
+@router.post("/auth/totp/enable", response_model=TotpStatusResponse)
+async def enable_totp(form_data: TotpEnableForm, user=Depends(get_current_user)):
+    """
+    Enable TOTP 2FA after verifying user can generate valid codes.
+    User must provide a valid TOTP code to prove their authenticator app is working.
+    """
+    try:
+        # Check if user has completed setup
+        if not user.totp_secret:
+            raise HTTPException(400, detail="TOTP setup not completed. Call /auth/totp/setup first")
+        
+        # Check if TOTP is already enabled
+        if user.totp_enabled:
+            raise HTTPException(400, detail="TOTP is already enabled for this user")
+        
+        # Verify the TOTP code
+        if not verify_totp_code(user.totp_secret, form_data.totp_code):
+            raise HTTPException(400, detail="Invalid TOTP code")
+        
+        # Enable TOTP for the user
+        success = Users.update_user_by_id(user.id, {"totp_enabled": True})
+        
+        if not success:
+            raise HTTPException(500, detail="Failed to enable TOTP")
+        
+        return TotpStatusResponse(enabled=True)
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        log.error(f"TOTP enable error: {str(e)}")
+        raise HTTPException(500, detail="An error occurred while enabling TOTP")
+
+
+@router.post("/auth/totp/disable")
+async def disable_totp(form_data: DisableTOTPForm, user=Depends(get_verified_user)):
+    """
+    Disable TOTP for a user after password verification
+    """
+    try:
+        # Check if TOTP is enabled
+        if not user.totp_enabled:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="TOTP is not enabled for this user"
+            )
+        
+        # Verify password using authentication (similar to original code)
+        authenticated_user = Auths.authenticate_user(user.email, form_data.password)
+        if not authenticated_user:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=ERROR_MESSAGES.INVALID_PASSWORD
+            )
+        
+        # Disable TOTP
+        success = Users.update_user_by_id(user.id, {
+            "totp_enabled": False,
+            "totp_secret": None,
+            "totp_backup_codes": None
+        })
+        
+        if not success:
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail="Failed to disable TOTP"
+            )
+        
+        return {"message": "TOTP disabled successfully"}
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        log.error(f"Error disabling TOTP: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=ERROR_MESSAGES.DEFAULT()
+        )
+
+
+@router.get("/auth/totp/backup-codes", response_model=BackupCodesResponse)
+async def get_backup_codes(user=Depends(get_current_user)):
+    """
+    Retrieve current backup codes for the authenticated user.
+    Only works if TOTP is enabled.
+    """
+    try:
+        # Check if TOTP is enabled
+        if not user.totp_enabled or not user.totp_secret:
+            raise HTTPException(400, detail="TOTP is not enabled for this user")
+        
+        # Check if backup codes exist
+        if not user.totp_backup_codes:
+            raise HTTPException(404, detail="No backup codes found. Generate new codes first")
+        
+        # Parse backup codes from JSON
+        try:
+            backup_codes = json.loads(user.totp_backup_codes)
+        except json.JSONDecodeError:
+            raise HTTPException(500, detail="Backup codes data is corrupted")
+        
+        return BackupCodesResponse(backup_codes=backup_codes)
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        log.error(f"Get backup codes error: {str(e)}")
+        raise HTTPException(500, detail="An error occurred while retrieving backup codes")
+
+
+@router.post("/auth/totp/regenerate-backup-codes", response_model=BackupCodesResponse)
+async def regenerate_backup_codes(user=Depends(get_current_user)):
+    """
+    Generate new backup codes, replacing any existing ones.
+    Only works if TOTP is enabled.
+    """
+    try:
+        # Check if TOTP is enabled
+        if not user.totp_enabled or not user.totp_secret:
+            raise HTTPException(400, detail="TOTP is not enabled for this user")
+        
+        # Generate new backup codes
+        new_backup_codes = generate_backup_codes()
+        
+        # Update user's backup codes
+        success = Users.update_user_by_id(user.id, {
+            "totp_backup_codes": hash_backup_codes(new_backup_codes)
+        })
+        
+        if not success:
+            raise HTTPException(500, detail="Failed to update backup codes")
+        
+        return BackupCodesResponse(backup_codes=new_backup_codes)
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        log.error(f"Regenerate backup codes error: {str(e)}")
+        raise HTTPException(500, detail="An error occurred while regenerating backup codes")
+    
 
 ############################
 # API Key

@@ -9,7 +9,7 @@ from open_webui.models.groups import Groups
 
 
 from pydantic import BaseModel, ConfigDict
-from sqlalchemy import BigInteger, Column, String, Text
+from sqlalchemy import BigInteger, Column, String, Text, Boolean
 from sqlalchemy import or_
 
 
@@ -36,6 +36,10 @@ class User(Base):
     info = Column(JSONField, nullable=True)
 
     oauth_sub = Column(Text, unique=True)
+    
+    totp_secret = Column(String, nullable=True)
+    totp_enabled = Column(Boolean, default=False, nullable=True) 
+    totp_backup_codes = Column(Text, nullable=True)
 
 
 class UserSettings(BaseModel):
@@ -62,6 +66,10 @@ class UserModel(BaseModel):
     oauth_sub: Optional[str] = None
 
     model_config = ConfigDict(from_attributes=True)
+    
+    totp_secret: Optional[str] = None
+    totp_enabled: Optional[bool] = False
+    totp_backup_codes: Optional[str] = None
 
 
 ####################

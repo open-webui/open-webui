@@ -7,6 +7,7 @@
 	import { WEBUI_BASE_URL } from '$lib/constants';
 
 	import UpdatePassword from './Account/UpdatePassword.svelte';
+	import TotpSettings from './Account/TotpSettings.svelte';
 	import { getGravatarUrl } from '$lib/apis/utils';
 	import { generateInitialsImage, canvasPixelTest } from '$lib/utils';
 	import { copyToClipboard } from '$lib/utils';
@@ -271,6 +272,10 @@
 		<div class="my-2">
 			<UpdatePassword />
 		</div>
+
+		<hr class="border-gray-50 dark:border-gray-850 my-2" />
+
+		<TotpSettings />
 
 		{#if ($config?.features?.enable_api_key ?? true) || $user?.role === 'admin'}
 			<div class="flex justify-between items-center text-sm mb-2">
