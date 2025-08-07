@@ -138,6 +138,8 @@ dependencies = [
 
     "posthog==5.4.0",
 
+    "html2docx>=1.6.0",
+
 ]
 readme = "README.md"
 requires-python = ">= 3.11, < 3.13.0a1"
