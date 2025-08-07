@@ -34,6 +34,7 @@ def resetStop():
 
 router = APIRouter()
 
+#Sends embedding progress to the front end
 @router.get("/process/file/stream")
 async def process_file_stream(request: Request):
     async def event_stream():
@@ -59,13 +60,14 @@ async def process_file_stream(request: Request):
             clear_queue(progress_queue)
     return StreamingResponse(event_stream(), media_type="text/event-stream")
 
-
+#Function called from knowledge end while embedding router
+#Throws an error in the embedding loop
 def endWhileRun():
-    clear_queue(progress_queue)
     triggerStop()
+    clear_queue(progress_queue)
 
 
-
+#Clears the queue in order to not mess up later functionaility
 def clear_queue(queue: asyncio.Queue):
     try:
         while not queue.empty():

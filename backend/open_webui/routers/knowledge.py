@@ -584,7 +584,7 @@ def remove_file_from_knowledge_by_id(
         )
     
 
-
+#Router used to end embedding if prompted by the user
 @router.post("/{id}/process/file/stop", response_model=Optional[KnowledgeFilesResponse])
 def endduringembedding(
         request: Request,

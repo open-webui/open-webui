@@ -1,5 +1,7 @@
 import { WEBUI_API_BASE_URL } from '$lib/constants';
 
+// Refactored uploading function that supports upload cancellation
+// Old but supports needed functionality
 export const uploadFile = (
 	token: string,
 	file: File,
@@ -16,11 +18,12 @@ export const uploadFile = (
 	const xhr = new XMLHttpRequest();
 
 	const promise = new Promise((resolve, reject) => {
+		// Opens request for uploading to server
 		xhr.open('POST', `${WEBUI_API_BASE_URL}/files/?process=${process}`, true);
 
 		xhr.setRequestHeader('Authorization', `Bearer ${token}`);
 		xhr.setRequestHeader('Accept', 'application/json');
-
+		//Incriments progress bar
 		xhr.upload.onprogress = (event) => {
 			if (onProgress && event.lengthComputable) {
 				let percent = Math.round(((event.loaded * 100) / event.total) / 2);
@@ -28,7 +31,7 @@ export const uploadFile = (
 				onProgress(percent);
 			}
 		};
-
+		//Error checking
 		xhr.onload = () => {
 			if (xhr.status >= 200 && xhr.status < 300) {
 				try {

@@ -426,7 +426,7 @@
 			knowledge.files = knowledge.files.filter((file) => file.id !== fileId);
 		}
 	};
-
+	//  Function that deletes unnecessary files after cancelation
 	const deleteTempUpload = async (fileId) => {
 		if (knowledge?.files) {
 			knowledge.files = knowledge.files.filter(file => file.itemId !== fileId);
@@ -464,7 +464,6 @@
 	const updateFileContentHandler = async () => {
 		const fileId = selectedFile.id;
 		const content = selectedFileContent;
-
 		// Clear the cache for this file since we're updating it
 		fileContentCache.delete(fileId);
 
@@ -478,7 +477,7 @@
 		).catch((e) => {
 			toast.error(`${e}`);
 		});
-		if (res && updatedKnowledge) {
+		if (updatedKnowledge) {
 			knowledge = updatedKnowledge;
 			toast.success($i18n.t('File content updated successfully.'));
 		}
@@ -780,27 +779,18 @@
 					{#if selectedFile}
 						<div class=" flex flex-col w-full h-full max-h-full">
 							<div class="shrink-0 mb-2 flex items-center">
-								{#if !showSidepanel}
-									<div class="-translate-x-2">
-										<button
-											class="w-full text-left text-sm p-1.5 rounded-lg dark:text-gray-300 dark:hover:text-white hover:bg-black/5 dark:hover:bg-gray-850"
-											on:click={() => {
-												pane.expand();
-											}}
-										>
-											<ChevronLeft strokeWidth="2.5" />
-										</button>
-									</div>
-								{/if}
-
-								<div class=" flex-1 text-xl font-medium">
-									<a
-										class="hover:text-gray-500 dark:hover:text-gray-100 hover:underline grow line-clamp-1"
-										href={selectedFile.id ? `/api/v1/files/${selectedFile.id}/content` : '#'}
-										target="_blank"
+								<div class="mr-2">
+									<button
+										class="w-full text-left text-sm p-1.5 rounded-lg dark:text-gray-300 dark:hover:text-white hover:bg-black/5 dark:hover:bg-gray-850"
+										on:click={() => {
+											selectedFileId = null;
+										}}
 									>
-										{decodeString(selectedFile?.meta?.name)}
-									</a>
+										<ChevronLeft strokeWidth="2.5" />
+									</button>
+								</div>
+								<div class=" flex-1 text-xl line-clamp-1">
+									{selectedFile?.meta?.name}
 								</div>
 
 								<div>

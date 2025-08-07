@@ -83,7 +83,7 @@ class DefaultParser(ParserInterface):
         self.name = "Default Parser"
         self.parser_type = parser_type
 
-    def delete_doc(self, collection_name):
+    def delete_doc(self, collection_name, file_id=None):
         try:
             VECTOR_DB_CLIENT.delete(
                 collection_name=collection_name
@@ -194,6 +194,7 @@ class DefaultParser(ParserInterface):
                 else request.app.state.config.RAG_OLLAMA_API_KEY
             ),
             request.app.state.config.RAG_EMBEDDING_BATCH_SIZE,
+            track_embedding=True,
         )
 
         embeddings = embedding_function(
@@ -235,11 +236,10 @@ class DefaultParser(ParserInterface):
 
 
 
-
+    #Searchs for and deletes all pysical vector folder paths
+    #Uses a few presumtions about program operation ie what it is looking for will always be in the first array index
     def delete_segment_by_file_id(self, file_id_to_remove: str, collection_name: str):
-        if VECTOR_DB != "chroma":
-            print("Vector DB is not Chroma. Skipping segment deletion.")
-            return
+        assert VECTOR_DB == "chroma", "Vector DB is not Chroma. Skipping segment deletion."
 
         try:
             db_path = Path(CHROMA_DATA_PATH) / "chroma.sqlite3"
@@ -290,11 +290,9 @@ class DefaultParser(ParserInterface):
             print(f"Error during segment deletion: {e}")
 
 
-
+    #Removes empty data cells. Slows down system, but decreases file size
     def compact_chroma_fts(self):
-        if VECTOR_DB != "chroma":
-            print("Vector DB is not Chroma. Skipping segment deletion.")
-            return
+        assert VECTOR_DB == "chroma", "Vector DB is not Chroma. Skipping segment deletion."
         
         sqlite_path = Path(CHROMA_DATA_PATH) / "chroma.sqlite3"
         conn = sqlite3.connect(sqlite_path)

@@ -8,7 +8,7 @@
 	export let selectedFileId = null;
 	export let files = [];
 	export let small = false;
-
+	// Function that will start the router connection when the file has started embedding
 	$: {
 		for (const file of files) {
 			if (file.status === 'processing' && !file._sseConnected) {
@@ -17,7 +17,7 @@
 			}
 		}
 	}
-		
+	// Function that reads in progress updates for the progress bar
 	function handleUploadComplete(fileId: string) {
 		const source = new EventSource(`${PROGRESS_API_BASE_URL}/process/file/stream`);
 		
@@ -74,6 +74,7 @@
 					}
 					dispatch('click', file.id);
 				}}
+				
 				on:dismiss={() => {
 					if (file.status === 'uploading') {
 						if(file.xhr) {

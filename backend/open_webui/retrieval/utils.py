@@ -386,6 +386,7 @@ def get_embedding_function(
     url,
     key,
     embedding_batch_size,
+    track_embedding = False,
 ):
 
     from open_webui.routers.progress import update_progress, getStop, resetStop  # global progress queue
@@ -412,9 +413,15 @@ def get_embedding_function(
                 # Update SSE progress (safely from sync context)
                 update_progress(min(i + embedding_batch_size, total), total)
             return embeddings
-        return lambda query, prefix=None, user=None: generate_multiple(
-            query, prefix, user
-        )
+        #Variable to not impede on querying. The embedding needs to use initial function when embedding queries
+        if track_embedding:
+            return lambda query, prefix=None, user=None: generate_multiple(
+                query, prefix, user
+            )
+        else:
+            return lambda query, prefix=None, user=None: embedding_function.encode(
+                query, **({"prompt": prefix} if prefix else {})
+            ).tolist()
         
     elif embedding_engine in ["ollama", "openai"]:
         func = lambda query, prefix=None, user=None: generate_embeddings(

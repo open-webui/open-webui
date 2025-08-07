@@ -874,8 +874,8 @@ def process_file(
             # Usage: /files/{file_id}/data/content/update, /files/ (audio file upload pipeline)
 
             # /files/{file_id}/data/content/update
-            VECTOR_DB_CLIENT.delete_collection(collection_name=f"file-{file.id}")
-
+            VECTOR_DB_CLIENT.delete_collection(collection_name=collection_name)
+            VECTOR_DB_CLIENT.delete(collection_name=collection_name)
             docs = [
                 Document(
                     page_content=form_data.content.replace("<br/>", "\n"),
@@ -975,6 +975,7 @@ def process_file(
                             user=user,
                             file_path=file.path
                         )
+                    #Error occurs when embedding is cancelled. removes the downloaded file if this occurs
                     except RuntimeError as e:
                         
                         if os.path.exists(file_path):
