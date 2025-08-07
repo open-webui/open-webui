@@ -313,3 +313,4 @@ cypress/screenshots
 /backend/pipe-functions
 backend/set_env.ps1
 /backend/.claude
+/backend/DB-Migration-ACP-3780/context-files
