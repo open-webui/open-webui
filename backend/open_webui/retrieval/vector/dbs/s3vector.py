@@ -70,6 +70,34 @@ class S3VectorClient(VectorDBBase):
             log.error(f"Error creating S3 index '{index_name}': {e}")
             raise
 
+    def _sanitize_metadata_values(self, metadata: Dict[str, Any]) -> Dict[str, Any]:
+        """
+        Ensure all metadata values are of supported types (strings, numbers, booleans, or arrays).
+        AWS S3 Vector requires metadata values to be these types.
+        """
+        if not isinstance(metadata, dict):
+            return {}
+
+        sanitized = {}
+        for key, value in metadata.items():
+            # Convert to supported types
+            if isinstance(value, (str, int, float, bool)) or value is None:
+                sanitized[key] = value
+            elif isinstance(value, list):
+                # Convert list items to supported types
+                sanitized_list = []
+                for item in value:
+                    if isinstance(item, (str, int, float, bool)) or item is None:
+                        sanitized_list.append(item)
+                    else:
+                        sanitized_list.append(str(item))
+                sanitized[key] = sanitized_list
+            else:
+                # Convert unsupported types to string
+                sanitized[key] = str(value)
+
+        return sanitized
+
     def _filter_metadata(
         self, metadata: Dict[str, Any], item_id: str
     ) -> Dict[str, Any]:
@@ -183,6 +211,9 @@ class S3VectorClient(VectorDBBase):
                 # Add the text field to metadata so it's available for retrieval
                 metadata["text"] = item["text"]
 
+                # Ensure all metadata values are of supported types (strings, numbers, booleans, arrays)
+                metadata = self._sanitize_metadata_values(metadata)
+
                 # Filter metadata to comply with S3 Vector API limit of 10 keys
                 metadata = self._filter_metadata(metadata, item["id"])
 
@@ -240,6 +271,9 @@ class S3VectorClient(VectorDBBase):
                 metadata = item.get("metadata", {}).copy()
                 # Add the text field to metadata so it's available for retrieval
                 metadata["text"] = item["text"]
+
+                # Ensure all metadata values are of supported types (strings, numbers, booleans, arrays)
+                metadata = self._sanitize_metadata_values(metadata)
 
                 # Filter metadata to comply with S3 Vector API limit of 10 keys
                 metadata = self._filter_metadata(metadata, item["id"])
