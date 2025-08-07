@@ -1,5 +1,5 @@
 <script>
-	import { showArchivedChats, showSidebar, user } from '$lib/stores';
+	import { mobile, showArchivedChats, showSidebar, user } from '$lib/stores';
 	import { getContext } from 'svelte';
 
 	const i18n = getContext('i18n');
@@ -17,21 +17,23 @@
 >
 	<nav class="   px-2 pt-1.5 ml-0.5 backdrop-blur-xl w-full drag-region">
 		<div class=" flex items-center">
-			<div class="{$showSidebar ? 'md:hidden' : ''} flex flex-none items-center">
-				<Tooltip content={$showSidebar ? $i18n.t('Close Sidebar') : $i18n.t('Open Sidebar')}>
-					<button
-						id="sidebar-toggle-button"
-						class=" cursor-pointer flex rounded-lg hover:bg-gray-100 dark:hover:bg-gray-850 transition cursor-"
-						on:click={() => {
-							showSidebar.set(!$showSidebar);
-						}}
-					>
-						<div class=" self-center p-1.5">
-							<Sidebar />
-						</div>
-					</button>
-				</Tooltip>
-			</div>
+			{#if $mobile}
+				<div class="{$showSidebar ? 'md:hidden' : ''} flex flex-none items-center">
+					<Tooltip content={$showSidebar ? $i18n.t('Close Sidebar') : $i18n.t('Open Sidebar')}>
+						<button
+							id="sidebar-toggle-button"
+							class=" cursor-pointer flex rounded-lg hover:bg-gray-100 dark:hover:bg-gray-850 transition cursor-"
+							on:click={() => {
+								showSidebar.set(!$showSidebar);
+							}}
+						>
+							<div class=" self-center p-1.5">
+								<Sidebar />
+							</div>
+						</button>
+					</Tooltip>
+				</div>
+			{/if}
 
 			<div class="ml-2 py-0.5 self-center flex items-center justify-between w-full">
 				<div class="">

@@ -422,6 +422,17 @@
 			}
 		}, 0);
 	};
+
+	const itemClickHandler = async () => {
+		selectedChatId = null;
+		chatId.set('');
+
+		if ($mobile) {
+			showSidebar.set(false);
+		}
+
+		await tick();
+	};
 </script>
 
 <ArchivedChatsModal
@@ -479,6 +490,187 @@
 		}
 	}}
 />
+
+{#if !$mobile}
+	<div
+		class="{$showSidebar
+			? 'md:hidden'
+			: ''} py-2 px-1.5 flex flex-col justify-between text-black dark:text-white h-full border-e border-gray-50 dark:border-gray-850"
+	>
+		<button
+			class="flex flex-col flex-1"
+			on:click={() => {
+				showSidebar.set(!$showSidebar);
+			}}
+		>
+			<div class="pb-1.5">
+				<Tooltip content={$showSidebar ? $i18n.t('Close Sidebar') : $i18n.t('Open Sidebar')}>
+					<button
+						class=" cursor-pointer flex rounded-lg hover:bg-gray-100 dark:hover:bg-gray-850 transition group"
+					>
+						<div class=" self-center flex items-center justify-center size-9">
+							<img
+								crossorigin="anonymous"
+								src="{WEBUI_BASE_URL}/static/favicon.png"
+								class="sidebar-new-chat-icon size-6 rounded-full group-hover:hidden"
+								alt=""
+							/>
+
+							<Sidebar className="size-5 hidden group-hover:flex" />
+						</div>
+					</button>
+				</Tooltip>
+			</div>
+
+			<div>
+				<div class="">
+					<Tooltip content={$i18n.t('New Chat')}>
+						<a
+							class=" cursor-pointer flex rounded-lg hover:bg-gray-100 dark:hover:bg-gray-850 transition group"
+							href="/"
+							draggable="false"
+							on:click={async (e) => {
+								e.stopImmediatePropagation();
+								e.preventDefault();
+
+								goto('/');
+								newChatHandler();
+							}}
+						>
+							<div class=" self-center flex items-center justify-center size-9">
+								<PencilSquare className="size-4.5" />
+							</div>
+						</a>
+					</Tooltip>
+				</div>
+
+				<div class="">
+					<Tooltip content={$i18n.t('Search')}>
+						<button
+							class=" cursor-pointer flex rounded-lg hover:bg-gray-100 dark:hover:bg-gray-850 transition group"
+							on:click={(e) => {
+								e.stopImmediatePropagation();
+								e.preventDefault();
+
+								showSearch.set(true);
+							}}
+							draggable="false"
+						>
+							<div class=" self-center flex items-center justify-center size-9">
+								<Search className="size-4.5" />
+							</div>
+						</button>
+					</Tooltip>
+				</div>
+
+				{#if ($config?.features?.enable_notes ?? false) && ($user?.role === 'admin' || ($user?.permissions?.features?.notes ?? true))}
+					<div class="">
+						<Tooltip content={$i18n.t('Notes')}>
+							<a
+								class=" cursor-pointer flex rounded-lg hover:bg-gray-100 dark:hover:bg-gray-850 transition group"
+								href="/notes"
+								on:click={async (e) => {
+									e.stopImmediatePropagation();
+									e.preventDefault();
+
+									goto('/notes');
+									itemClickHandler();
+								}}
+								draggable="false"
+							>
+								<div class=" self-center flex items-center justify-center size-9">
+									<svg
+										class="size-4.5"
+										aria-hidden="true"
+										xmlns="http://www.w3.org/2000/svg"
+										width="24"
+										height="24"
+										stroke-width="1.5"
+										fill="none"
+										viewBox="0 0 24 24"
+									>
+										<path
+											stroke="currentColor"
+											stroke-linecap="round"
+											stroke-linejoin="round"
+											d="M10 3v4a1 1 0 0 1-1 1H5m4 8h6m-6-4h6m4-8v16a1 1 0 0 1-1 1H6a1 1 0 0 1-1-1V7.914a1 1 0 0 1 .293-.707l3.914-3.914A1 1 0 0 1 9.914 3H18a1 1 0 0 1 1 1Z"
+										/>
+									</svg>
+								</div>
+							</a>
+						</Tooltip>
+					</div>
+				{/if}
+
+				{#if $user?.role === 'admin' || $user?.permissions?.workspace?.models || $user?.permissions?.workspace?.knowledge || $user?.permissions?.workspace?.prompts || $user?.permissions?.workspace?.tools}
+					<div class="">
+						<Tooltip content={$i18n.t('Workspace')}>
+							<a
+								class=" cursor-pointer flex rounded-lg hover:bg-gray-100 dark:hover:bg-gray-850 transition group"
+								href="/workspace"
+								on:click={async (e) => {
+									e.stopImmediatePropagation();
+									e.preventDefault();
+
+									goto('/workspace');
+									itemClickHandler();
+								}}
+								draggable="false"
+							>
+								<div class=" self-center flex items-center justify-center size-9">
+									<svg
+										xmlns="http://www.w3.org/2000/svg"
+										fill="none"
+										viewBox="0 0 24 24"
+										stroke-width="1.5"
+										stroke="currentColor"
+										class="size-4.5"
+									>
+										<path
+											stroke-linecap="round"
+											stroke-linejoin="round"
+											d="M13.5 16.875h3.375m0 0h3.375m-3.375 0V13.5m0 3.375v3.375M6 10.5h2.25a2.25 2.25 0 0 0 2.25-2.25V6a2.25 2.25 0 0 0-2.25-2.25H6A2.25 2.25 0 0 0 3.75 6v2.25A2.25 2.25 0 0 0 6 10.5Zm0 9.75h2.25A2.25 2.25 0 0 0 10.5 18v-2.25a2.25 2.25 0 0 0-2.25-2.25H6a2.25 2.25 0 0 0-2.25 2.25V18A2.25 2.25 0 0 0 6 20.25Zm9.75-9.75H18a2.25 2.25 0 0 0 2.25-2.25V6A2.25 2.25 0 0 0 18 3.75h-2.25A2.25 2.25 0 0 0 13.5 6v2.25a2.25 2.25 0 0 0 2.25 2.25Z"
+										/>
+									</svg>
+								</div>
+							</a>
+						</Tooltip>
+					</div>
+				{/if}
+			</div>
+		</button>
+
+		<div>
+			<div>
+				<div class="">
+					{#if $user !== undefined && $user !== null}
+						<UserMenu
+							role={$user?.role}
+							on:show={(e) => {
+								if (e.detail === 'archived-chat') {
+									showArchivedChats.set(true);
+								}
+							}}
+						>
+							<div
+								class=" cursor-pointer flex rounded-lg hover:bg-gray-100 dark:hover:bg-gray-850 transition group"
+							>
+								<div class=" self-center flex items-center justify-center size-9">
+									<img
+										src={$user?.profile_image_url}
+										class=" size-6 object-cover rounded-full"
+										alt={$i18n.t('Open User Profile Menu')}
+										aria-label={$i18n.t('Open User Profile Menu')}
+									/>
+								</div>
+							</div>
+						</UserMenu>
+					{/if}
+				</div>
+			</div>
+		</div>
+	</div>
+{/if}
 
 <div
 	bind:this={navElement}
@@ -600,14 +792,7 @@
 					<a
 						class="grow flex items-center space-x-3 rounded-lg px-2 py-[7px] hover:bg-gray-100 dark:hover:bg-gray-900 transition"
 						href="/notes"
-						on:click={() => {
-							selectedChatId = null;
-							chatId.set('');
-
-							if ($mobile) {
-								showSidebar.set(false);
-							}
-						}}
+						on:click={itemClickHandler}
 						draggable="false"
 					>
 						<div class="self-center">
@@ -642,14 +827,7 @@
 					<a
 						class="grow flex items-center space-x-3 rounded-lg px-2 py-[7px] hover:bg-gray-100 dark:hover:bg-gray-900 transition"
 						href="/workspace"
-						on:click={() => {
-							selectedChatId = null;
-							chatId.set('');
-
-							if ($mobile) {
-								showSidebar.set(false);
-							}
-						}}
+						on:click={itemClickHandler}
 						draggable="false"
 					>
 						<div class="self-center">

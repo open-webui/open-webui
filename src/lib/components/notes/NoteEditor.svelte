@@ -31,7 +31,16 @@
 	import { uploadFile } from '$lib/apis/files';
 	import { chatCompletion, generateOpenAIChatCompletion } from '$lib/apis/openai';
 
-	import { config, models, settings, showSidebar, socket, user, WEBUI_NAME } from '$lib/stores';
+	import {
+		config,
+		mobile,
+		models,
+		settings,
+		showSidebar,
+		socket,
+		user,
+		WEBUI_NAME
+	} from '$lib/stores';
 
 	import NotePanel from '$lib/components/notes/NotePanel.svelte';
 
@@ -937,27 +946,29 @@ Provide the enhanced notes in markdown format. Use markdown syntax for headings,
 				<div class=" w-full flex flex-col {loading ? 'opacity-20' : ''}">
 					<div class="shrink-0 w-full flex justify-between items-center px-3.5 mb-1.5">
 						<div class="w-full flex items-center">
-							<div
-								class="{$showSidebar
-									? 'md:hidden pl-0.5'
-									: ''} flex flex-none items-center pr-1 -translate-x-1"
-							>
-								<Tooltip
-									content={$showSidebar ? $i18n.t('Close Sidebar') : $i18n.t('Open Sidebar')}
+							{#if $mobile}
+								<div
+									class="{$showSidebar
+										? 'md:hidden pl-0.5'
+										: ''} flex flex-none items-center pr-1 -translate-x-1"
 								>
-									<button
-										id="sidebar-toggle-button"
-										class=" cursor-pointer flex rounded-lg hover:bg-gray-100 dark:hover:bg-gray-850 transition cursor-"
-										on:click={() => {
-											showSidebar.set(!$showSidebar);
-										}}
+									<Tooltip
+										content={$showSidebar ? $i18n.t('Close Sidebar') : $i18n.t('Open Sidebar')}
 									>
-										<div class=" self-center p-1.5">
-											<Sidebar />
-										</div>
-									</button>
-								</Tooltip>
-							</div>
+										<button
+											id="sidebar-toggle-button"
+											class=" cursor-pointer flex rounded-lg hover:bg-gray-100 dark:hover:bg-gray-850 transition cursor-"
+											on:click={() => {
+												showSidebar.set(!$showSidebar);
+											}}
+										>
+											<div class=" self-center p-1.5">
+												<Sidebar />
+											</div>
+										</button>
+									</Tooltip>
+								</div>
+							{/if}
 
 							<input
 								class="w-full text-2xl font-medium bg-transparent outline-hidden"

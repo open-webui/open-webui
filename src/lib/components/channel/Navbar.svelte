@@ -2,7 +2,7 @@
 	import { getContext } from 'svelte';
 	import { toast } from 'svelte-sonner';
 
-	import { showArchivedChats, showSidebar, user } from '$lib/stores';
+	import { mobile, showArchivedChats, showSidebar, user } from '$lib/stores';
 
 	import { slide } from 'svelte/transition';
 	import { page } from '$app/stores';
@@ -24,25 +24,27 @@
 
 	<div class=" flex max-w-full w-full mx-auto px-1 pt-0.5 bg-transparent">
 		<div class="flex items-center w-full max-w-full">
-			<div
-				class="{$showSidebar
-					? 'md:hidden'
-					: ''} mr-1.5 mt-0.5 self-start flex flex-none items-center text-gray-600 dark:text-gray-400"
-			>
-				<Tooltip content={$showSidebar ? $i18n.t('Close Sidebar') : $i18n.t('Open Sidebar')}>
-					<button
-						id="sidebar-toggle-button"
-						class=" cursor-pointer flex rounded-lg hover:bg-gray-100 dark:hover:bg-gray-850 transition cursor-"
-						on:click={() => {
-							showSidebar.set(!$showSidebar);
-						}}
-					>
-						<div class=" self-center p-1.5">
-							<Sidebar />
-						</div>
-					</button>
-				</Tooltip>
-			</div>
+			{#if $mobile}
+				<div
+					class="{$showSidebar
+						? 'md:hidden'
+						: ''} mr-1.5 mt-0.5 self-start flex flex-none items-center text-gray-600 dark:text-gray-400"
+				>
+					<Tooltip content={$showSidebar ? $i18n.t('Close Sidebar') : $i18n.t('Open Sidebar')}>
+						<button
+							id="sidebar-toggle-button"
+							class=" cursor-pointer flex rounded-lg hover:bg-gray-100 dark:hover:bg-gray-850 transition cursor-"
+							on:click={() => {
+								showSidebar.set(!$showSidebar);
+							}}
+						>
+							<div class=" self-center p-1.5">
+								<Sidebar />
+							</div>
+						</button>
+					</Tooltip>
+				</div>
+			{/if}
 
 			<div
 				class="flex-1 overflow-hidden max-w-full py-0.5

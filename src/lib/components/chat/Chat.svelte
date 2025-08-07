@@ -88,6 +88,8 @@
 	import NotificationToast from '../NotificationToast.svelte';
 	import Spinner from '../common/Spinner.svelte';
 	import { fade } from 'svelte/transition';
+	import Tooltip from '../common/Tooltip.svelte';
+	import Sidebar from '../icons/Sidebar.svelte';
 
 	export let chatIdProp = '';
 

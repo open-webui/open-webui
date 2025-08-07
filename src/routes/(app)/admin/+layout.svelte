@@ -2,7 +2,7 @@
 	import { onMount, getContext } from 'svelte';
 	import { goto } from '$app/navigation';
 
-	import { WEBUI_NAME, showSidebar, user } from '$lib/stores';
+	import { WEBUI_NAME, mobile, showSidebar, user } from '$lib/stores';
 	import { page } from '$app/stores';
 	import Tooltip from '$lib/components/common/Tooltip.svelte';
 	import Sidebar from '$lib/components/icons/Sidebar.svelte';
@@ -33,21 +33,23 @@
 	>
 		<nav class="   px-2.5 pt-1.5 backdrop-blur-xl drag-region">
 			<div class=" flex items-center gap-1">
-				<div class="{$showSidebar ? 'md:hidden' : ''} flex flex-none items-center self-end">
-					<Tooltip content={$showSidebar ? $i18n.t('Close Sidebar') : $i18n.t('Open Sidebar')}>
-						<button
-							id="sidebar-toggle-button"
-							class=" cursor-pointer flex rounded-lg hover:bg-gray-100 dark:hover:bg-gray-850 transition cursor-"
-							on:click={() => {
-								showSidebar.set(!$showSidebar);
-							}}
-						>
-							<div class=" self-center p-1.5">
-								<Sidebar />
-							</div>
-						</button>
-					</Tooltip>
-				</div>
+				{#if $mobile}
+					<div class="{$showSidebar ? 'md:hidden' : ''} flex flex-none items-center self-end">
+						<Tooltip content={$showSidebar ? $i18n.t('Close Sidebar') : $i18n.t('Open Sidebar')}>
+							<button
+								id="sidebar-toggle-button"
+								class=" cursor-pointer flex rounded-lg hover:bg-gray-100 dark:hover:bg-gray-850 transition cursor-"
+								on:click={() => {
+									showSidebar.set(!$showSidebar);
+								}}
+							>
+								<div class=" self-center p-1.5">
+									<Sidebar />
+								</div>
+							</button>
+						</Tooltip>
+					</div>
+				{/if}
 
 				<div class=" flex w-full">
 					<div

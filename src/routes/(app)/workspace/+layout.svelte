@@ -57,21 +57,23 @@
 	>
 		<nav class="   px-2.5 pt-1.5 backdrop-blur-xl drag-region">
 			<div class=" flex items-center gap-1">
-				<div class="{$showSidebar ? 'md:hidden' : ''} self-center flex flex-none items-center">
-					<Tooltip content={$showSidebar ? $i18n.t('Close Sidebar') : $i18n.t('Open Sidebar')}>
-						<button
-							id="sidebar-toggle-button"
-							class=" cursor-pointer flex rounded-lg hover:bg-gray-100 dark:hover:bg-gray-850 transition cursor-"
-							on:click={() => {
-								showSidebar.set(!$showSidebar);
-							}}
-						>
-							<div class=" self-center p-1.5">
-								<Sidebar />
-							</div>
-						</button>
-					</Tooltip>
-				</div>
+				{#if $mobile}
+					<div class="{$showSidebar ? 'md:hidden' : ''} self-center flex flex-none items-center">
+						<Tooltip content={$showSidebar ? $i18n.t('Close Sidebar') : $i18n.t('Open Sidebar')}>
+							<button
+								id="sidebar-toggle-button"
+								class=" cursor-pointer flex rounded-lg hover:bg-gray-100 dark:hover:bg-gray-850 transition cursor-"
+								on:click={() => {
+									showSidebar.set(!$showSidebar);
+								}}
+							>
+								<div class=" self-center p-1.5">
+									<Sidebar />
+								</div>
+							</button>
+						</Tooltip>
+					</div>
+				{/if}
 
 				<div class="">
 					<div
