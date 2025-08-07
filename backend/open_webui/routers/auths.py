@@ -8,7 +8,6 @@ from aiohttp import ClientSession
 from open_webui.models.auths import (
     AddUserForm,
     ApiKey,
-    Auths,
     Token,
     LdapForm,
     SigninForm,
@@ -18,6 +17,7 @@ from open_webui.models.auths import (
     UpdateProfileForm,
     UserResponse,
 )
+from open_webui.models.auths_table import Auths
 from open_webui.models.users import Users
 
 from open_webui.constants import ERROR_MESSAGES, WEBHOOK_MESSAGES
@@ -48,7 +48,7 @@ from open_webui.utils.auth import (
 from open_webui.utils.webhook import post_webhook
 from open_webui.utils.access_control import get_permissions
 
-from typing import Optional, List
+from typing import Optional
 
 from ssl import CERT_REQUIRED, PROTOCOL_TLS
 from ldap3 import Server, Connection, NONE, Tls
@@ -359,7 +359,6 @@ async def signin(request: Request, response: Response, form_data: SigninForm):
         user = Auths.authenticate_user(form_data.email.lower(), form_data.password)
 
     if user:
-
         expires_delta = parse_duration(request.app.state.config.JWT_EXPIRES_IN)
         expires_at = None
         if expires_delta:

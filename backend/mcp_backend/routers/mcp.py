@@ -6,7 +6,6 @@ It follows the same patterns as the Ollama and OpenAI routers for consistency.
 """
 
 import logging
-import json
 from typing import Optional, Dict, List, Any
 
 from fastmcp.client import Client
@@ -14,8 +13,7 @@ from fastapi import APIRouter, Depends, HTTPException, Request
 from pydantic import BaseModel
 
 from open_webui.utils.auth import get_admin_user, get_verified_user
-from open_webui.mcp_manager import mcp_manager
-from open_webui.models.mcp_servers import MCPServers
+from mcp_backend.models.mcp_servers import MCPServers
 
 log = logging.getLogger(__name__)
 

@@ -4,7 +4,6 @@ import uuid
 from pathlib import Path
 from typing import Optional
 from pydantic import BaseModel
-import mimetypes
 from urllib.parse import quote
 
 from open_webui.storage.provider import Storage
@@ -17,7 +16,6 @@ from open_webui.models.files import (
 )
 from open_webui.routers.retrieval import process_file, ProcessFileForm
 
-from open_webui.config import UPLOAD_DIR
 from open_webui.env import SRC_LOG_LEVELS
 from open_webui.constants import ERROR_MESSAGES
 
@@ -126,7 +124,7 @@ async def delete_all_files(user=Depends(get_admin_user)):
             Storage.delete_all_files()
         except Exception as e:
             log.exception(e)
-            log.error(f"Error deleting files")
+            log.error("Error deleting files")
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail=ERROR_MESSAGES.DEFAULT("Error deleting files"),
@@ -246,7 +244,7 @@ async def get_file_content_by_id(id: str, user=Depends(get_verified_user)):
                 )
         except Exception as e:
             log.exception(e)
-            log.error(f"Error getting file content")
+            log.error("Error getting file content")
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail=ERROR_MESSAGES.DEFAULT("Error getting file content"),
@@ -277,7 +275,7 @@ async def get_html_file_content_by_id(id: str, user=Depends(get_verified_user)):
                 )
         except Exception as e:
             log.exception(e)
-            log.error(f"Error getting file content")
+            log.error("Error getting file content")
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail=ERROR_MESSAGES.DEFAULT("Error getting file content"),
@@ -345,7 +343,25 @@ async def get_file_content_by_id(id: str, user=Depends(get_verified_user)):
 async def delete_file_by_id(id: str, user=Depends(get_verified_user)):
     file = Files.get_file_by_id(id)
     if file and (file.user_id == user.id or user.role == "admin"):
-        # We should add Chroma cleanup here
+        # Clean up vectors from Qdrant before deleting file record
+        try:
+            from open_webui.routers.retrieval import cleanup_file_vectors
+
+            # Get collection name from file metadata if available
+            collection_name = None
+            if hasattr(file, "meta") and file.meta:
+                collection_name = file.meta.get("collection_name")
+
+            # Clean up vectors
+            cleanup_success = cleanup_file_vectors(file.id, collection_name)
+            if not cleanup_success:
+                log.warning(
+                    f"Vector cleanup failed for file {file.id}, but continuing with file deletion"
+                )
+
+        except Exception as e:
+            log.exception(f"Error during vector cleanup for file {file.id}: {e}")
+            # Continue with file deletion even if vector cleanup fails
 
         result = Files.delete_file_by_id(id)
         if result:
@@ -353,7 +369,7 @@ async def delete_file_by_id(id: str, user=Depends(get_verified_user)):
                 Storage.delete_file(file.path)
             except Exception as e:
                 log.exception(e)
-                log.error(f"Error deleting files")
+                log.error("Error deleting files")
                 raise HTTPException(
                     status_code=status.HTTP_400_BAD_REQUEST,
                     detail=ERROR_MESSAGES.DEFAULT("Error deleting files"),

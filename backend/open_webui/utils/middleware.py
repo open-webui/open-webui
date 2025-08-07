@@ -3,9 +3,7 @@ import logging
 import sys
 
 import asyncio
-from aiocache import cached
-from typing import Any, Optional
-import random
+from typing import Optional
 import json
 import inspect
 from uuid import uuid4
@@ -14,9 +12,8 @@ from concurrent.futures import ThreadPoolExecutor
 
 from open_webui.models.message_metrics import MessageMetrics
 from fastapi import Request
-from fastapi import BackgroundTasks
 
-from starlette.responses import Response, StreamingResponse
+from starlette.responses import StreamingResponse
 
 
 from open_webui.models.chats import Chats
@@ -41,7 +38,6 @@ from open_webui.utils.webhook import post_webhook
 
 from open_webui.models.users import UserModel
 from open_webui.models.functions import Functions
-from open_webui.models.models import Models
 
 from open_webui.retrieval.utils import get_sources_from_files
 
@@ -56,10 +52,9 @@ from open_webui.utils.misc import (
     get_message_list,
     add_or_update_system_message,
     get_last_user_message,
-    get_last_assistant_message,
     prepend_to_first_user_message_content,
 )
-from open_webui.utils.tools import get_tools, get_tools_async
+from open_webui.utils.tools import get_tools_async
 from open_webui.utils.plugin import load_function_module_by_id
 
 
@@ -69,7 +64,6 @@ from open_webui.config import DEFAULT_TOOLS_FUNCTION_CALLING_PROMPT_TEMPLATE
 from open_webui.env import (
     SRC_LOG_LEVELS,
     GLOBAL_LOG_LEVEL,
-    BYPASS_MODEL_ACCESS_CONTROL,
     ENABLE_REALTIME_CHAT_SAVE,
 )
 from open_webui.constants import TASKS
@@ -193,7 +187,7 @@ async def chat_completion_tools_handler(
     def get_tools_function_calling_payload(messages, task_model_id, content):
         user_message = get_last_user_message(messages)
         history = "\n".join(
-            f"{message['role'].upper()}: \"\"\"{message['content']}\"\"\""
+            f'{message["role"].upper()}: """{message["content"]}"""'
             for message in messages[::-1][:4]
         )
 
@@ -257,17 +251,17 @@ async def chat_completion_tools_handler(
 
     # Debug: Log the user query
     user_message = get_last_user_message(body["messages"])
-    log.info(f"=== USER QUERY FOR FUNCTION CALLING ===")
+    log.info("=== USER QUERY FOR FUNCTION CALLING ===")
     log.info(f"User query: {user_message}")
-    log.info(f"======================================")
+    log.info("======================================")
 
     try:
         response = await generate_chat_completion(request, form_data=payload, user=user)
         log.debug(f"{response=}")
         content = await get_content_from_response(response)
-        log.info(f"=== FUNCTION CALLING RESPONSE ===")
+        log.info("=== FUNCTION CALLING RESPONSE ===")
         log.info(f"Model response for tool calling: {content}")
-        log.info(f"==================================")
+        log.info("==================================")
 
         if not content:
             return body, {}
@@ -286,9 +280,9 @@ async def chat_completion_tools_handler(
             # Parse multiple JSON objects from the response
             tool_calls = []
 
-            log.info(f"=== PARSING TOOL CALLS ===")
+            log.info("=== PARSING TOOL CALLS ===")
             log.info(f"Raw content to parse: {repr(content)}")
-            log.info(f"==========================")
+            log.info("==========================")
 
             # First, try to parse as a single JSON array
             try:
@@ -392,20 +386,20 @@ async def chat_completion_tools_handler(
                                 tool_calls = [result]
                             except json.JSONDecodeError:
                                 log.error(
-                                    f"Corrected JSON parsing also failed, treating as no tool usage"
+                                    "Corrected JSON parsing also failed, treating as no tool usage"
                                 )
                                 return body, {}
                         else:
                             log.error(
-                                f"Could not find balanced JSON, treating as no tool usage"
+                                "Could not find balanced JSON, treating as no tool usage"
                             )
                             return body, {}
 
-            log.info(f"=== PARSED TOOL CALLS ===")
+            log.info("=== PARSED TOOL CALLS ===")
             log.info(f"Total tool calls extracted: {len(tool_calls)}")
             for i, call in enumerate(tool_calls):
                 log.info(f"Tool call {i}: {call}")
-            log.info(f"=========================")
+            log.info("=========================")
 
             # Process all tool calls
             for tool_call in tool_calls:
@@ -417,10 +411,10 @@ async def chat_completion_tools_handler(
                     continue
 
                 tool_function_params = tool_call.get("parameters", {})
-                log.info(f"=== TOOL CALL DEBUG ===")
+                log.info("=== TOOL CALL DEBUG ===")
                 log.info(f"Tool: {tool_function_name}")
                 log.info(f"Raw parameters from model: {tool_function_params}")
-                log.info(f"=======================)")
+                log.info("=======================)")
 
                 try:
                     # Get all parameters from the tool spec, not just required ones
@@ -538,7 +532,7 @@ async def chat_web_search_handler(
             response = response[bracket_start:bracket_end]
             queries = json.loads(response)
             queries = queries.get("queries", [])
-        except Exception as e:
+        except Exception:
             queries = [response]
 
     except Exception as e:
@@ -710,7 +704,7 @@ async def chat_image_generation_handler(
                 response = response[bracket_start:bracket_end]
                 response = json.loads(response)
                 prompt = response.get("prompt", [])
-            except Exception as e:
+            except Exception:
                 prompt = user_message
 
         except Exception as e:
@@ -748,7 +742,7 @@ async def chat_image_generation_handler(
             {
                 "type": "status",
                 "data": {
-                    "description": f"An error occured while generating an image",
+                    "description": "An error occured while generating an image",
                     "done": True,
                 },
             }
@@ -791,11 +785,11 @@ async def chat_completion_files_handler(
 
                 queries_response = queries_response[bracket_start:bracket_end]
                 queries_response = json.loads(queries_response)
-            except Exception as e:
+            except Exception:
                 queries_response = {"queries": [queries_response]}
 
             queries = queries_response.get("queries", [])
-        except Exception as e:
+        except Exception:
             queries = []
 
         if len(queries) == 0:
@@ -1016,7 +1010,7 @@ async def process_chat_payload(request, form_data, metadata, user, model):
             and context_string.strip() == ""
         ):
             log.debug(
-                f"With a 0 relevancy threshold for RAG, the context cannot be empty"
+                "With a 0 relevancy threshold for RAG, the context cannot be empty"
             )
 
         # Workaround for Ollama 2.0+ system prompt issue
@@ -1163,7 +1157,7 @@ async def process_chat_response(
                                     "data": tags,
                                 }
                             )
-                        except Exception as e:
+                        except Exception:
                             pass
 
     event_emitter = None
@@ -1179,7 +1173,6 @@ async def process_chat_response(
 
     if not isinstance(response, StreamingResponse):
         if event_emitter:
-
             if "selected_model_id" in response:
                 Chats.upsert_message_to_chat_by_id_and_message_id(
                     metadata["chat_id"],
@@ -1193,7 +1186,6 @@ async def process_chat_response(
                 content = response["choices"][0]["message"]["content"]
 
                 if content:
-
                     await event_emitter(
                         {
                             "type": "chat:completion",
@@ -1270,7 +1262,6 @@ async def process_chat_response(
         return response
 
     if event_emitter:
-
         task_id = str(uuid4())  # Create a unique task ID.
 
         # Handle as a background task
@@ -1421,7 +1412,6 @@ async def process_chat_response(
 
                                             reasoning_start_time = None
                                         else:
-
                                             reasoning_display_content = "\n".join(
                                                 (
                                                     f"> {line}"
@@ -1454,7 +1444,7 @@ async def process_chat_response(
                                 "data": data,
                             }
                         )
-                    except Exception as e:
+                    except Exception:
                         done = "data: [DONE]" in line
                         if done:
                             pass
@@ -1537,7 +1527,6 @@ async def process_chat_response(
         return {"status": True, "task_id": task_id}
 
     else:
-
         # Fallback to the original response
         async def stream_wrapper(original_generator, events):
             def wrap_item(item):

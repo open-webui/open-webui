@@ -8,7 +8,6 @@ Create Date: 2024-10-20 17:02:35.241684
 
 from alembic import op
 import sqlalchemy as sa
-import json
 from sqlalchemy.sql import table, column
 from sqlalchemy import String, Text, JSON, and_
 

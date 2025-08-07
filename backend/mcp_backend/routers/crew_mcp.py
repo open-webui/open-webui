@@ -5,14 +5,12 @@ API endpoints for CrewAI integration with MCP servers
 
 import logging
 import sys
-import os
 from pathlib import Path
 from typing import Optional, Dict, Any
 from fastapi import APIRouter, HTTPException, Depends, Request
 from pydantic import BaseModel
 
-from open_webui.utils.auth import get_admin_user, get_verified_user
-from open_webui.routers.tasks import generate_chat_tags, generate_title
+from open_webui.utils.auth import get_verified_user
 from open_webui.models.chats import Chats
 from open_webui.socket.main import get_event_emitter
 
@@ -21,7 +19,7 @@ backend_dir = Path(__file__).parent.parent.parent
 sys.path.append(str(backend_dir))
 
 try:
-    from crew_mcp_integration import CrewMCPManager
+    from mcp_backend.integration.crew_mcp_integration import CrewMCPManager
 except ImportError as e:
     logging.error(f"Failed to import CrewMCPManager: {e}")
     CrewMCPManager = None
@@ -169,8 +167,6 @@ async def generate_title_and_tags_background(
         # Setup
         event_emitter = await _setup_event_emitter(request, user)
 
-        from open_webui.utils.task import get_task_model_id
-
         models = request_data.app.state.MODELS
 
         # Safety check to prevent crashes
@@ -205,7 +201,7 @@ async def generate_title_and_tags_background(
             )
             if title:
                 await _emit_event(event_emitter, "chat:title", title, request.chat_id)
-        except Exception as e:
+        except Exception:
             pass
 
         try:
@@ -214,10 +210,10 @@ async def generate_title_and_tags_background(
             )
             if tags:
                 await _emit_event(event_emitter, "chat:tags", tags, request.chat_id)
-        except Exception as e:
+        except Exception:
             pass
 
-    except Exception as e:
+    except Exception:
         pass
 
 
@@ -276,7 +272,7 @@ async def run_crew_query(
         selected_tools = request.selected_tools or []
 
         log.info(f"Selected tools: {selected_tools}")
-        log.info(f"Using intelligent crew with manager agent for routing")
+        log.info("Using intelligent crew with manager agent for routing")
 
         # Always use the intelligent crew - it will handle routing internally
         # Run in executor to prevent blocking the main thread and causing health check failures
@@ -306,7 +302,7 @@ async def run_crew_query(
                         await generate_title_and_tags_background(
                             request_data, request, result, user
                         )
-                    except Exception as e:
+                    except Exception:
                         # Completely isolate any background task exceptions
                         pass
 
@@ -325,13 +321,13 @@ async def run_crew_query(
                         else:
                             # Task completed successfully
                             pass
-                    except Exception as e:
+                    except Exception:
                         # Don't let callback exceptions propagate
                         pass
 
                 task.add_done_callback(handle_background_task_completion)
 
-            except Exception as e:
+            except Exception:
                 # Completely isolate any background task creation exceptions
                 pass
 

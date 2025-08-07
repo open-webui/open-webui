@@ -1,9 +1,7 @@
 import logging
 import os
-import uuid
 from typing import Optional, Union
 
-import asyncio
 import requests
 
 from huggingface_hub import snapshot_download
@@ -13,8 +11,8 @@ from langchain_core.documents import Document
 
 
 from open_webui.config import VECTOR_DB
+from open_webui.constants import VECTOR_COLLECTION_PREFIXES
 from open_webui.retrieval.vector.connector import VECTOR_DB_CLIENT
-from open_webui.utils.misc import get_last_user_message
 
 from open_webui.models.users import UserModel
 from open_webui.models.files import Files
@@ -143,7 +141,7 @@ def query_doc_with_hybrid_search(
 
         log.info(
             "query_doc_with_hybrid_search:result "
-            + f'{result["metadatas"]} {result["distances"]}'
+            + f"{result['metadatas']} {result['distances']}"
         )
         return result
     except Exception as e:
@@ -239,16 +237,19 @@ def query_collection(
         query_embedding = embedding_function(query)
         for collection_name in collection_names:
             if collection_name:
-                try:
-                    result = query_doc(
-                        collection_name=collection_name,
-                        k=k,
-                        query_embedding=query_embedding,
-                    )
-                    if result is not None:
-                        results.append(result.model_dump())
-                except Exception as e:
-                    log.exception(f"Error when querying the collection: {e}")
+                # Use the clean reindex utility function
+                from open_webui.retrieval.reindex_utils import (
+                    handle_collection_query_with_reindex,
+                )
+
+                result = handle_collection_query_with_reindex(
+                    collection_name=collection_name,
+                    k=k,
+                    query_embedding=query_embedding,
+                )
+
+                if result is not None:
+                    results.append(result)
             else:
                 pass
 
@@ -283,9 +284,7 @@ def query_collection_with_hybrid_search(
                 )
                 results.append(result)
         except Exception as e:
-            log.exception(
-                "Error when querying the collection with " f"hybrid_search: {e}"
-            )
+            log.exception(f"Error when querying the collection with hybrid_search: {e}")
             error = True
 
     if error:
@@ -371,7 +370,7 @@ def get_sources_from_files(
             }
         elif (
             file.get("type") != "web_search"
-            and request.app.state.config.BYPASS_WEB_SEARCH_EMBEDDING_AND_RETRIEVAL
+            and request.app.state.config.RAG_FULL_CONTEXT
         ):
             # BYPASS_EMBEDDING_AND_RETRIEVAL
             if file.get("type") == "collection":
@@ -432,7 +431,9 @@ def get_sources_from_files(
                 if file.get("legacy"):
                     collection_names.append(f"{file['id']}")
                 else:
-                    collection_names.append(f"file-{file['id']}")
+                    collection_names.append(
+                        f"{VECTOR_COLLECTION_PREFIXES.FILE}{file['id']}"
+                    )
 
             collection_names = set(collection_names).difference(extracted_collections)
             if not collection_names:
@@ -463,7 +464,7 @@ def get_sources_from_files(
                                     reranking_function=reranking_function,
                                     r=r,
                                 )
-                            except Exception as e:
+                            except Exception:
                                 log.debug(
                                     "Error when using hybrid search, using"
                                     " non hybrid search as fallback."

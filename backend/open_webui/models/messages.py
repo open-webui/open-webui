@@ -1,16 +1,12 @@
-import json
 import time
 import uuid
 from typing import Optional
 
-from open_webui.internal.db import Base, get_db
-from open_webui.models.tags import TagModel, Tag, Tags
-
+from open_webui.internal.db import get_db
+from open_webui.models.base import Base
 
 from pydantic import BaseModel, ConfigDict
-from sqlalchemy import BigInteger, Boolean, Column, String, Text, JSON
-from sqlalchemy import or_, func, select, and_, text
-from sqlalchemy.sql import exists
+from sqlalchemy import BigInteger, Column, Text, JSON
 
 ####################
 # Message DB Schema

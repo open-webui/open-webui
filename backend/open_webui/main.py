@@ -1,10 +1,8 @@
 import asyncio
-import inspect
 import json
 import logging
 import mimetypes
 import os
-import shutil
 import sys
 import time
 
@@ -13,22 +11,14 @@ from urllib.parse import urlencode, parse_qs, urlparse
 from pydantic import BaseModel
 from sqlalchemy import text
 
-from typing import Optional
-from aiocache import cached
-import aiohttp
-
 
 from fastapi import (
     Depends,
     FastAPI,
-    File,
-    Form,
     HTTPException,
     Request,
-    UploadFile,
     status,
     applications,
-    BackgroundTasks,
 )
 
 from fastapi.openapi.docs import get_swagger_ui_html
@@ -40,7 +30,7 @@ from fastapi.staticfiles import StaticFiles
 from starlette.exceptions import HTTPException as StarletteHTTPException
 from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.middleware.sessions import SessionMiddleware
-from starlette.responses import Response, StreamingResponse
+from starlette.responses import Response
 
 
 from open_webui.socket.main import (
@@ -73,9 +63,8 @@ from open_webui.routers import (
     users,
     jira,
     utils,
-    mcp,
-    crew_mcp,
 )
+from mcp_backend.routers import mcp, crew_mcp
 
 from open_webui.routers.retrieval import (
     get_embedding_function,
@@ -87,7 +76,7 @@ from open_webui.internal.db import Session
 
 from open_webui.models.functions import Functions
 from open_webui.models.models import Models
-from open_webui.models.users import UserModel, Users
+from open_webui.models.users import Users
 
 from open_webui.config import (
     # Ollama
@@ -142,18 +131,12 @@ from open_webui.config import (
     SURVEY_URL,
     SURVEY_URL_FR,
     WHISPER_MODEL,
-    WHISPER_MODEL_AUTO_UPDATE,
-    WHISPER_MODEL_DIR,
-    # Retrieval
     RAG_TEMPLATE,
-    DEFAULT_RAG_TEMPLATE,
     RAG_FULL_CONTEXT,
     RAG_EMBEDDING_MODEL,
     RAG_EMBEDDING_MODEL_AUTO_UPDATE,
-    RAG_EMBEDDING_MODEL_TRUST_REMOTE_CODE,
     RAG_RERANKING_MODEL,
     RAG_RERANKING_MODEL_AUTO_UPDATE,
-    RAG_RERANKING_MODEL_TRUST_REMOTE_CODE,
     RAG_EMBEDDING_ENGINE,
     RAG_EMBEDDING_BATCH_SIZE,
     RAG_RELEVANCE_THRESHOLD,
@@ -197,13 +180,10 @@ from open_webui.config import (
     GOOGLE_DRIVE_CLIENT_ID,
     GOOGLE_DRIVE_API_KEY,
     ENABLE_RAG_HYBRID_SEARCH,
-    ENABLE_RAG_LOCAL_WEB_FETCH,
     ENABLE_RAG_WEB_LOADER_SSL_VERIFICATION,
     ENABLE_RAG_WEB_SEARCH,
     BYPASS_WEB_SEARCH_EMBEDDING_AND_RETRIEVAL,
     ENABLE_GOOGLE_DRIVE_INTEGRATION,
-    UPLOAD_DIR,
-    # WebUI
     WEBUI_AUTH,
     WEBUI_NAME,
     WEBUI_BANNERS,
@@ -224,7 +204,6 @@ from open_webui.config import (
     DEFAULT_USER_ROLE,
     DEFAULT_PROMPT_SUGGESTIONS,
     DEFAULT_MODELS,
-    DEFAULT_ARENA_MODEL,
     MODEL_ORDER_LIST,
     EVALUATION_ARENA_MODELS,
     # WebUI (OAuth)
@@ -298,7 +277,6 @@ from open_webui.env import (
     ENABLE_WEBSOCKET_SUPPORT,
     BYPASS_MODEL_ACCESS_CONTROL,
     RESET_CONFIG_ON_START,
-    OFFLINE_MODE,
 )
 
 
@@ -374,7 +352,7 @@ async def lifespan(app: FastAPI):
 
     # Initialize FastMCP manager
     try:
-        from open_webui.mcp_manager import get_mcp_manager
+        from mcp_backend.management.mcp_manager import get_mcp_manager
 
         app.state.mcp_manager = get_mcp_manager()
         log.info("FastMCP manager initialized")
@@ -831,24 +809,75 @@ app.add_middleware(SecurityHeadersMiddleware)
 
 @app.middleware("http")
 async def commit_session_after_request(request: Request, call_next):
-    response = await call_next(request)
-    # log.debug("Commit session after request")
-    Session.commit()
-    return response
+    try:
+        response = await call_next(request)
+        # log.debug("Commit session after request")
+        Session.commit()
+
+        # Ensure we always return a response
+        if response is None:
+            log.error(
+                f"No response generated in commit_session_after_request for {request.url.path}"
+            )
+            return JSONResponse(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                content={"detail": "No response generated"},
+            )
+        return response
+    except Exception as e:
+        log.error(
+            f"Error in commit_session_after_request middleware for {request.url.path}: {e}"
+        )
+        try:
+            Session.rollback()
+        except Exception as rollback_error:
+            log.error(f"Error during session rollback: {rollback_error}")
+        return JSONResponse(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            content={"detail": "Internal server error"},
+        )
 
 
 @app.middleware("http")
 async def check_url(request: Request, call_next):
     start_time = int(time.time())
     request.state.enable_api_key = app.state.config.ENABLE_API_KEY
-    response = await call_next(request)
-    process_time = int(time.time()) - start_time
-    response.headers["X-Process-Time"] = str(process_time)
-    return response
+
+    try:
+        response = await call_next(request)
+
+        # Ensure we always return a response
+        if response is None:
+            log.error(
+                f"No response generated in check_url middleware for {request.url.path}"
+            )
+            return JSONResponse(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                content={"detail": "No response generated"},
+            )
+
+        process_time = int(time.time()) - start_time
+        response.headers["X-Process-Time"] = str(process_time)
+        return response
+    except Exception as e:
+        log.error(f"Error in check_url middleware for {request.url.path}: {e}")
+        return JSONResponse(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            content={"detail": "Internal server error"},
+        )
 
 
 @app.middleware("http")
 async def inspect_websocket(request: Request, call_next):
+    # Log all socket.io requests for debugging
+    if "/ws/socket.io" in request.url.path:
+        log.debug(f"Socket.io request: {request.url.path}?{request.url.query}")
+        log.debug(f"Transport: {request.query_params.get('transport')}")
+        log.debug(
+            f"Headers: Upgrade={request.headers.get('Upgrade')}, Connection={request.headers.get('Connection')}"
+        )
+
+    # Only apply WebSocket validation for actual WebSocket upgrade requests
     if (
         "/ws/socket.io" in request.url.path
         and request.query_params.get("transport") == "websocket"
@@ -858,11 +887,39 @@ async def inspect_websocket(request: Request, call_next):
         # Check that there's the correct headers for an upgrade, else reject the connection
         # This is to work around this upstream issue: https://github.com/miguelgrinberg/python-engineio/issues/367
         if upgrade != "websocket" or "upgrade" not in connection:
+            log.warning(
+                f"Invalid WebSocket upgrade request: upgrade={upgrade}, connection={connection}"
+            )
             return JSONResponse(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 content={"detail": "Invalid WebSocket upgrade request"},
             )
-    return await call_next(request)
+
+    try:
+        response = await call_next(request)
+        # Ensure we always return a response
+        if response is None:
+            log.error(f"No response generated for {request.url.path}")
+            return JSONResponse(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                content={"detail": "No response generated"},
+            )
+        return response
+    except Exception as e:
+        log.error(f"Error in inspect_websocket middleware for {request.url.path}: {e}")
+        # For WebSocket upgrade requests, return a proper error response
+        if (
+            "/ws/socket.io" in request.url.path
+            and request.query_params.get("transport") == "websocket"
+        ):
+            return JSONResponse(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                content={"detail": "WebSocket connection failed"},
+            )
+        return JSONResponse(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            content={"detail": "Internal server error"},
+        )
 
 
 app.add_middleware(
@@ -1271,9 +1328,16 @@ async def healthcheck():
 
 
 @app.get("/health/db")
-async def healthcheck_with_db():
-    Session.execute(text("SELECT 1;")).all()
-    return {"status": True}
+def healthcheck_with_db():
+    try:
+        Session.execute(text("SELECT 1;")).all()
+        return {"status": True}
+    except Exception as e:
+        log.error(f"Database health check failed: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="Database connection failed",
+        )
 
 
 app.mount("/static", StaticFiles(directory=STATIC_DIR), name="static")

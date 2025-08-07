@@ -12,7 +12,7 @@ from fastapi import (
 )
 from starlette.responses import RedirectResponse
 
-from open_webui.models.auths import Auths
+from open_webui.models.auths_table import Auths
 from open_webui.models.users import Users
 from open_webui.models.groups import Groups, GroupModel, GroupUpdateForm
 from open_webui.config import (

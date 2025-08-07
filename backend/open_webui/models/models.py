@@ -2,16 +2,14 @@ import logging
 import time
 from typing import Optional
 
-from open_webui.internal.db import Base, JSONField, get_db
+from open_webui.internal.db import JSONField, get_db
 from open_webui.env import SRC_LOG_LEVELS
-
+from open_webui.models.base import Base
 from open_webui.models.users import Users, UserResponse
 
 
 from pydantic import BaseModel, ConfigDict
 
-from sqlalchemy import or_, and_, func
-from sqlalchemy.dialects import postgresql, sqlite
 from sqlalchemy import BigInteger, Column, Text, JSON, Boolean
 
 

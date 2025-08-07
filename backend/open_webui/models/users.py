@@ -2,9 +2,9 @@ import time
 from typing import Optional
 from logging import getLogger
 
-from open_webui.internal.db import Base, JSONField, get_db
+from open_webui.internal.db import JSONField, get_db
 
-
+from open_webui.models.base import Base
 from open_webui.models.chats import Chats
 from open_webui.models.groups import Groups
 
@@ -171,7 +171,6 @@ class UsersTable:
         self, skip: Optional[int] = None, limit: Optional[int] = None
     ) -> list[UserModel]:
         with get_db() as db:
-
             query = db.query(User).order_by(User.created_at.desc())
 
             if skip:

@@ -24,7 +24,8 @@ from open_webui.env import (
     WEBUI_NAME,
     log,
 )
-from open_webui.internal.db import Base, get_db
+from open_webui.internal.db import get_db
+from open_webui.models.base import Base
 
 
 class EndpointFilter(logging.Filter):
@@ -38,27 +39,6 @@ logging.getLogger("uvicorn.access").addFilter(EndpointFilter())
 ####################################
 # Config helpers
 ####################################
-
-
-# Function to run the alembic migrations
-def run_migrations():
-    print("Running migrations")
-    try:
-        from alembic import command
-        from alembic.config import Config
-
-        alembic_cfg = Config(OPEN_WEBUI_DIR / "alembic.ini")
-
-        # Set the script location dynamically
-        migrations_path = OPEN_WEBUI_DIR / "migrations"
-        alembic_cfg.set_main_option("script_location", str(migrations_path))
-
-        command.upgrade(alembic_cfg, "head")
-    except Exception as e:
-        print(f"Error: {e}")
-
-
-run_migrations()
 
 
 class Config(Base):
@@ -1765,24 +1745,33 @@ CHUNK_OVERLAP = PersistentConfig(
 DEFAULT_RAG_TEMPLATE = """### Task:
 Respond to the user query using the provided context, incorporating inline citations in the format [source_id] **only when the <source_id> tag is explicitly provided** in the context.
 
-### Guidelines:
+### Critical Guidelines:
+- **NEVER include XML tags, angle brackets, or any raw markup in your response text**
+- **Do not output tags like <source_id>, </source>, <context>, </context>, or any similar XML/HTML tags**
+- **Your response must be clean text with only [source_id] citations when appropriate**
 - If you don't know the answer, clearly state that.
 - If uncertain, ask the user for clarification.
 - Respond in the same language as the user's query.
 - If the context is unreadable or of poor quality, inform the user and provide the best possible answer.
 - If the answer isn't present in the context but you possess the knowledge, explain this to the user and provide the answer using your own understanding.
 - **Only include inline citations using [source_id] when a <source_id> tag is explicitly provided in the context.**
+- **CRITICAL: Use the EXACT source_id from the <source_id> tag. Do not make up or substitute citation names.**
+- **For web search results (few sources): Cite ALL relevant sources that contain pertinent information.**
+- **For knowledge base queries (many sources): Prioritize citing the most authoritative and relevant sources to avoid overwhelming the response.**
+- **Use multiple citations when different sources provide complementary information.**
 - Do not cite if the <source_id> tag is not provided in the context.
-- Do not use XML tags in your response.
 - Ensure citations are concise and directly related to the information provided.
 
-### Example of Citation:
-If the user asks about a specific topic and the information is found in "whitepaper.pdf" with a provided <source_id>, the response should include the citation like so:
-* "According to the study, the proposed method increases efficiency by 20% [whitepaper.pdf]."
+### Citation Examples:
+Document source: "According to the study, the proposed method increases efficiency by 20% [research_paper_2023.pdf]."
+Web search with multiple sources: "The current prime minister is Justin Trudeau [https://en.wikipedia.org/wiki/Prime_Minister_of_Canada][https://www.pm.gc.ca/en]."
+Knowledge base with selective citation: "The methodology described in the research shows promising results [technical_report.pdf]."
+**CRITICAL: Only use the exact source_id that appears in <source_id> tags in the context. Do not use placeholder names like 'whitepaper.pdf' unless that exact source_id is provided.**
 If no <source_id> is present, the response should omit the citation.
 
 ### Output:
-Provide a clear and direct response to the user's query, including inline citations in the format [source_id] only when the <source_id> tag is present in the context.
+**IMPORTANT: Your response must be clean, readable text. Do not include any XML tags, angle brackets, or markup in your output.**
+Provide a clear and direct response to the user's query, including inline citations in the format [source_id] only when the <source_id> tag is present in the context. For web searches (typically ≤5 sources), cite all relevant sources. For knowledge bases (typically >5 sources), focus on the most authoritative sources.
 
 <context>
 {{CONTEXT}}
