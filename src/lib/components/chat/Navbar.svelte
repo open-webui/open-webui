@@ -13,12 +13,19 @@
 		showControls,
 		showSidebar,
 		temporaryChatEnabled,
-		user
+		user,
+		chats,
+		currentChatPage,
+		chatTitle
 	} from '$lib/stores';
 
 	import { slide } from 'svelte/transition';
 	import { page } from '$app/stores';
+	import { goto } from '$app/navigation';
+	import { v4 as uuidv4 } from 'uuid';
 
+	import { createNewChat, getChatList } from '$lib/apis/chats';
+	import { createMessagesList } from '$lib/utils';
 	import ShareChatModal from '../chat/ShareChatModal.svelte';
 	import ModelSelector from '../chat/ModelSelector.svelte';
 	import Tooltip from '../common/Tooltip.svelte';
@@ -46,6 +53,45 @@
 
 	let showShareChatModal = false;
 	let showDownloadChatModal = false;
+
+	const saveTemporaryConversation = async () => {
+		try {
+			if (!history?.currentId || !Object.keys(history.messages).length) {
+				toast.error($i18n.t('No conversation to save'));
+				return;
+			}
+
+			const messages = createMessagesList(history, history.currentId);
+			const firstUserMessage = messages.find(m => m.role === 'user');
+			const generatedTitle = firstUserMessage?.content?.slice(0, 50) || $i18n.t('New Chat');
+			const finalTitle = generatedTitle.length > 50 ? generatedTitle + '...' : generatedTitle;
+
+			const savedChat = await createNewChat(
+				localStorage.token,
+				{
+					id: uuidv4(),
+					title: finalTitle,
+					models: selectedModels,
+					history: history,
+					messages: messages,
+					timestamp: Date.now()
+				},
+				null
+			);
+
+			if (savedChat) {
+				temporaryChatEnabled.set(false);
+				chatId.set(savedChat.id);
+				chats.set(await getChatList(localStorage.token, $currentChatPage));
+				
+				await goto(`/c/${savedChat.id}`);
+				toast.success($i18n.t('Conversation saved successfully'));
+			}
+		} catch (error) {
+			console.error('Error saving conversation:', error);
+			toast.error($i18n.t('Failed to save conversation'));
+		}
+	};
 </script>
 
 <ShareChatModal bind:show={showShareChatModal} chatId={$chatId} />
@@ -218,7 +264,18 @@
 
 	{#if $temporaryChatEnabled && $chatId === 'local'}
 		<div class=" w-full z-30 text-center">
-			<div class="text-xs text-gray-500">{$i18n.t('Temporary Chat')}</div>
+			<div class="flex items-center justify-center gap-2">
+				<div class="text-xs text-gray-500">{$i18n.t('Temporary Chat')}</div>
+				{#if history?.currentId && Object.keys(history.messages).length > 0}
+					<button
+						class="text-xs bg-blue-500 hover:bg-blue-600 text-white px-2 py-1 rounded transition-colors"
+						on:click={saveTemporaryConversation}
+						aria-label={$i18n.t('Save Conversation')}
+					>
+						{$i18n.t('Save Conversation')}
+					</button>
+				{/if}
+			</div>
 		</div>
 	{/if}
 
