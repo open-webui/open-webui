@@ -5,6 +5,7 @@
 	import Tooltip from './Tooltip.svelte';
 	export let state = true;
 	export let id = '';
+	export let ariaLabelledbyId = '';
 	export let tooltip = false;
 
 	const i18n = getContext('i18n');
@@ -20,6 +21,7 @@
 	<Switch.Root
 		bind:checked={state}
 		{id}
+		aria-labelledby={ariaLabelledbyId}
 		class="flex h-5 min-h-5 w-9 shrink-0 cursor-pointer items-center rounded-full px-[3px] mx-[1px] transition  {($settings?.highContrastMode ??
 		false)
 			? 'focus:outline focus:outline-2 focus:outline-gray-800 focus:dark:outline-gray-200'

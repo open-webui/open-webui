@@ -299,6 +299,7 @@
 
 					<div class="flex items-center gap-2 p-1">
 						<Switch
+							ariaLabelledbyId="high-contrast-mode-label"
 							tooltip={true}
 							bind:state={highContrastMode}
 							on:change={() => {
@@ -317,6 +318,7 @@
 
 					<div class="flex items-center gap-2 p-1">
 						<Switch
+							ariaLabelledbyId="notification-sound-label"
 							tooltip={true}
 							bind:state={notificationSound}
 							on:change={() => {
@@ -336,6 +338,7 @@
 
 						<div class="flex items-center gap-2 p-1">
 							<Switch
+								ariaLabelledbyId="play-notification-sound-label"
 								tooltip={true}
 								bind:state={notificationSoundAlways}
 								on:change={() => {
@@ -353,6 +356,7 @@
 
 					<div class="flex items-center gap-2 p-1">
 						<Switch
+							ariaLabelledbyId="allow-user-location-label"
 							tooltip={true}
 							bind:state={userLocation}
 							on:change={() => {
@@ -371,6 +375,7 @@
 
 					<div class="flex items-center gap-2 p-1">
 						<Switch
+							ariaLabelledbyId="haptic-feedback-label"
 							tooltip={true}
 							bind:state={hapticFeedback}
 							on:change={() => {
@@ -389,6 +394,7 @@
 
 					<div class="flex items-center gap-2 p-1">
 						<Switch
+							ariaLabelledbyId="copy-formatted-label"
 							tooltip={true}
 							bind:state={copyFormatted}
 							on:change={() => {
@@ -408,6 +414,7 @@
 
 						<div class="flex items-center gap-2 p-1">
 							<Switch
+								ariaLabelledbyId="toast-notifications-label"
 								tooltip={true}
 								bind:state={showUpdateToast}
 								on:change={() => {
@@ -426,6 +433,7 @@
 
 						<div class="flex items-center gap-2 p-1">
 							<Switch
+								ariaLabelledbyId="whats-new-label"
 								tooltip={true}
 								bind:state={showChangelog}
 								on:change={() => {
@@ -446,18 +454,18 @@
 					</div>
 
 					<button
-						aria-labelledby="chat-direction-label"
+						aria-labelledby="chat-direction-label chat-direction-mode"
 						class="p-1 px-3 text-xs flex rounded-sm transition"
 						on:click={toggleChangeChatDirection}
 						type="button"
 					>
-						{#if chatDirection === 'LTR'}
-							<span class="ml-2 self-center">{$i18n.t('LTR')}</span>
-						{:else if chatDirection === 'RTL'}
-							<span class="ml-2 self-center">{$i18n.t('RTL')}</span>
-						{:else}
-							<span class="ml-2 self-center">{$i18n.t('Auto')}</span>
-						{/if}
+						<span class="ml-2 self-center" id="chat-direction-mode">
+							{chatDirection === 'LTR'
+								? $i18n.t('LTR')
+								: chatDirection === 'RTL'
+									? $i18n.t('RTL')
+									: $i18n.t('Auto')}
+						</span>
 					</button>
 				</div>
 			</div>
@@ -469,18 +477,16 @@
 					</div>
 
 					<button
-						aria-labelledby="landing-page-mode-label"
+						aria-labelledby="landing-page-mode-label notification-sound-state"
 						class="p-1 px-3 text-xs flex rounded-sm transition"
 						on:click={() => {
 							toggleLandingPageMode();
 						}}
 						type="button"
 					>
-						{#if landingPageMode === ''}
-							<span class="ml-2 self-center">{$i18n.t('Default')}</span>
-						{:else}
-							<span class="ml-2 self-center">{$i18n.t('Chat')}</span>
-						{/if}
+						<span class="ml-2 self-center" id="notification-sound-state"
+							>{notificationSound === true ? $i18n.t('On') : $i18n.t('Off')}</span
+						>
 					</button>
 				</div>
 			</div>
@@ -492,7 +498,7 @@
 					</div>
 
 					<button
-						aria-labelledby="chat-background-label"
+						aria-labelledby="chat-background-label background-image-url-state"
 						class="p-1 px-3 text-xs flex rounded-sm transition"
 						on:click={() => {
 							if (backgroundImageUrl !== null) {
@@ -504,11 +510,9 @@
 						}}
 						type="button"
 					>
-						{#if backgroundImageUrl !== null}
-							<span class="ml-2 self-center">{$i18n.t('Reset')}</span>
-						{:else}
-							<span class="ml-2 self-center">{$i18n.t('Upload')}</span>
-						{/if}
+						<span class="ml-2 self-center" id="background-image-url-state"
+							>{backgroundImageUrl !== null ? $i18n.t('Reset') : $i18n.t('Upload')}</span
+						>
 					</button>
 				</div>
 			</div>
@@ -522,6 +526,7 @@
 					<div class="flex items-center gap-2 p-1">
 						<Switch
 							tooltip={true}
+							ariaLabelledbyId="chat-bubble-ui-label"
 							bind:state={chatBubble}
 							on:change={() => {
 								saveSettings({ chatBubble });
@@ -540,6 +545,7 @@
 
 						<div class="flex items-center gap-2 p-1">
 							<Switch
+								ariaLabelledbyId="chat-bubble-username-label"
 								tooltip={true}
 								bind:state={showUsername}
 								on:change={() => {
@@ -559,6 +565,7 @@
 
 					<div class="flex items-center gap-2 p-1">
 						<Switch
+							ariaLabelledbyId="widescreen-mode-label"
 							tooltip={true}
 							bind:state={widescreenMode}
 							on:change={() => {
@@ -577,6 +584,7 @@
 
 					<div class="flex items-center gap-2 p-1">
 						<Switch
+							ariaLabelledbyId="fade-streaming-label"
 							tooltip={true}
 							bind:state={chatFadeStreamingText}
 							on:change={() => {
@@ -595,6 +603,7 @@
 
 					<div class="flex items-center gap-2 p-1">
 						<Switch
+							ariaLabelledbyId="auto-generation-label"
 							tooltip={true}
 							bind:state={titleAutoGenerate}
 							on:change={() => {
@@ -607,10 +616,13 @@
 
 			<div>
 				<div class=" py-0.5 flex w-full justify-between">
-					<div class=" self-center text-xs">{$i18n.t('Follow-Up Auto-Generation')}</div>
+					<div class=" self-center text-xs" id="follow-up-auto-generation-label">
+						{$i18n.t('Follow-Up Auto-Generation')}
+					</div>
 
 					<div class="flex items-center gap-2 p-1">
 						<Switch
+							ariaLabelledbyId="follow-up-auto-generation-label"
 							tooltip={true}
 							bind:state={autoFollowUps}
 							on:change={() => {
@@ -629,6 +641,7 @@
 
 					<div class="flex items-center gap-2 p-1">
 						<Switch
+							ariaLabelledbyId="chat-tags-label"
 							tooltip={true}
 							bind:state={autoTags}
 							on:change={() => {
@@ -647,6 +660,7 @@
 
 					<div class="flex items-center gap-2 p-1">
 						<Switch
+							ariaLabelledbyId="auto-copy-label"
 							tooltip={true}
 							bind:state={responseAutoCopy}
 							on:change={() => {
@@ -659,12 +673,13 @@
 
 			<div>
 				<div class=" py-0.5 flex w-full justify-between">
-					<div id="keep-followup-prompts-label" class=" self-center text-xs">
+					<div id="keep-follow-up-prompts-label" class=" self-center text-xs">
 						{$i18n.t('Keep Follow-Up Prompts in Chat')}
 					</div>
 
 					<div class="flex items-center gap-2 p-1">
 						<Switch
+							ariaLabelledbyId="keep-follow-up-prompts-label"
 							tooltip={true}
 							bind:state={keepFollowUpPrompts}
 							on:change={() => {
@@ -677,12 +692,13 @@
 
 			<div>
 				<div class=" py-0.5 flex w-full justify-between">
-					<div id="insert-followup-prompt-label" class=" self-center text-xs">
+					<div id="insert-follow-up-prompt-label" class=" self-center text-xs">
 						{$i18n.t('Insert Follow-Up Prompt to Input')}
 					</div>
 
 					<div class="flex items-center gap-2 p-1">
 						<Switch
+							ariaLabelledbyId="insert-follow-up-prompt-label"
 							tooltip={true}
 							bind:state={insertFollowUpPrompt}
 							on:change={() => {
@@ -701,6 +717,7 @@
 
 					<div class="flex items-center gap-2 p-1">
 						<Switch
+							ariaLabelledbyId="always-collapse-label"
 							tooltip={true}
 							bind:state={collapseCodeBlocks}
 							on:change={() => {
@@ -719,6 +736,7 @@
 
 					<div class="flex items-center gap-2 p-1">
 						<Switch
+							ariaLabelledbyId="always-expand-label"
 							tooltip={true}
 							bind:state={expandDetails}
 							on:change={() => {
@@ -737,6 +755,7 @@
 
 					<div class="flex items-center gap-2 p-1">
 						<Switch
+							ariaLabelledbyId="keep-followup-prompts-label"
 							tooltip={true}
 							bind:state={displayMultiModelResponsesInTabs}
 							on:change={() => {
@@ -755,6 +774,7 @@
 
 					<div class="flex items-center gap-2 p-1">
 						<Switch
+							ariaLabelledbyId="scroll-on-branch-change-label"
 							tooltip={true}
 							bind:state={scrollOnBranchChange}
 							on:change={() => {
@@ -773,6 +793,7 @@
 
 					<div class="flex items-center gap-2 p-1">
 						<Switch
+							ariaLabelledbyId="stylized-pdf-export-label"
 							tooltip={true}
 							bind:state={stylizedPdfExport}
 							on:change={() => {
@@ -785,15 +806,16 @@
 
 			<div>
 				<div class=" py-0.5 flex w-full justify-between">
-					<div id="floating-action-buttons-label" class=" self-center text-xs">
+					<label id="floating-action-buttons-label" class=" self-center text-xs">
 						{$i18n.t('Floating Action Buttons')}
-					</div>
+					</label>
 
 					<div class="flex items-center gap-3 p-1">
 						{#if showFloatingActionButtons}
 							<button
 								class="text-xs text-gray-700 dark:text-gray-400 underline"
 								type="button"
+								aria-label={$i18n.t('Open Modal To Manage Floating Action Buttons')}
 								on:click={() => {
 									showManageFloatingActionButtonsModal = true;
 								}}
@@ -803,6 +825,7 @@
 						{/if}
 
 						<Switch
+							ariaLabelledbyId="floating-action-buttons-label"
 							tooltip={true}
 							bind:state={showFloatingActionButtons}
 							on:change={() => {
@@ -820,18 +843,16 @@
 					</div>
 
 					<button
-						aria-labelledby="web-search-in-chat-label"
+						aria-labelledby="web-search-in-chat-label web-search-state"
 						class="p-1 px-3 text-xs flex rounded-sm transition"
 						on:click={() => {
 							toggleWebSearch();
 						}}
 						type="button"
 					>
-						{#if webSearch === 'always'}
-							<span class="ml-2 self-center">{$i18n.t('Always')}</span>
-						{:else}
-							<span class="ml-2 self-center">{$i18n.t('Default')}</span>
-						{/if}
+						<span class="ml-2 self-center" id="web-search-state"
+							>{webSearch === 'always' ? $i18n.t('Always') : $i18n.t('Default')}</span
+						>
 					</button>
 				</div>
 			</div>
@@ -840,7 +861,7 @@
 
 			<div>
 				<div class=" py-0.5 flex w-full justify-between">
-					<div id="enter-key-behavior-label" class=" self-center text-xs">
+					<div id="enter-key-behavior-label ctrl-enter-to-send-state" class=" self-center text-xs">
 						{$i18n.t('Enter Key Behavior')}
 					</div>
 
@@ -852,11 +873,11 @@
 						}}
 						type="button"
 					>
-						{#if ctrlEnterToSend === true}
-							<span class="ml-2 self-center">{$i18n.t('Ctrl+Enter to Send')}</span>
-						{:else}
-							<span class="ml-2 self-center">{$i18n.t('Enter to Send')}</span>
-						{/if}
+						<span class="ml-2 self-center" id="ctrl-enter-to-send-state"
+							>{ctrlEnterToSend === true
+								? $i18n.t('Ctrl+Enter to Send')
+								: $i18n.t('Enter to Send')}</span
+						>
 					</button>
 				</div>
 			</div>
@@ -870,6 +891,7 @@
 					<div class="flex items-center gap-2 p-1">
 						<Switch
 							tooltip={true}
+							ariaLabelledbyId="rich-input-label"
 							bind:state={richTextInput}
 							on:change={() => {
 								saveSettings({ richTextInput });
@@ -882,12 +904,13 @@
 			{#if richTextInput}
 				<div>
 					<div class=" py-0.5 flex w-full justify-between">
-						<div id="rich-input-label" class=" self-center text-xs">
+						<div id="show-formatting-toolbar-label" class=" self-center text-xs">
 							{$i18n.t('Show Formatting Toolbar')}
 						</div>
 
 						<div class="flex items-center gap-2 p-1">
 							<Switch
+								ariaLabelledbyId="show-formatting-toolbar-label"
 								tooltip={true}
 								bind:state={showFormattingToolbar}
 								on:change={() => {
@@ -900,12 +923,13 @@
 
 				<div>
 					<div class=" py-0.5 flex w-full justify-between">
-						<div id="rich-input-label" class=" self-center text-xs">
+						<div id="insert-prompt-as-rich-text-label" class=" self-center text-xs">
 							{$i18n.t('Insert Prompt as Rich Text')}
 						</div>
 
 						<div class="flex items-center gap-2 p-1">
 							<Switch
+								ariaLabelledbyId="insert-prompt-as-rich-text-label"
 								tooltip={true}
 								bind:state={insertPromptAsRichText}
 								on:change={() => {
@@ -925,6 +949,7 @@
 
 							<div class="flex items-center gap-2 p-1">
 								<Switch
+									ariaLabelledbyId="prompt-autocompletion-label"
 									tooltip={true}
 									bind:state={promptAutocomplete}
 									on:change={() => {
@@ -946,6 +971,7 @@
 					<div class="flex items-center gap-2 p-1">
 						<Switch
 							tooltip={true}
+							ariaLabelledbyId="paste-large-label"
 							bind:state={largeTextAsFile}
 							on:change={() => {
 								saveSettings({ largeTextAsFile });
@@ -965,6 +991,7 @@
 
 					<div class="flex items-center gap-2 p-1">
 						<Switch
+							ariaLabelledbyId="detect-artifacts-label"
 							tooltip={true}
 							bind:state={detectArtifacts}
 							on:change={() => {
@@ -983,6 +1010,7 @@
 
 					<div class="flex items-center gap-2 p-1">
 						<Switch
+							ariaLabelledbyId="iframe-sandbox-allow-same-origin-label"
 							tooltip={true}
 							bind:state={iframeSandboxAllowSameOrigin}
 							on:change={() => {
@@ -1001,6 +1029,7 @@
 
 					<div class="flex items-center gap-2 p-1">
 						<Switch
+							ariaLabelledbyId="iframe-sandbox-allow-forms-label"
 							tooltip={true}
 							bind:state={iframeSandboxAllowForms}
 							on:change={() => {
@@ -1015,10 +1044,13 @@
 
 			<div>
 				<div class=" py-0.5 flex w-full justify-between">
-					<div class=" self-center text-xs">{$i18n.t('Allow Voice Interruption in Call')}</div>
+					<div class=" self-center text-xs" id="allow-voice-interruption-in-call-label">
+						{$i18n.t('Allow Voice Interruption in Call')}
+					</div>
 
 					<div class="flex items-center gap-2 p-1">
 						<Switch
+							ariaLabelledbyId="allow-voice-interruption-in-call-label"
 							tooltip={true}
 							bind:state={voiceInterruption}
 							on:change={() => {
@@ -1037,6 +1069,7 @@
 
 					<div class="flex items-center gap-2 p-1">
 						<Switch
+							ariaLabelledbyId="display-emoji-label"
 							tooltip={true}
 							bind:state={showEmojiInCall}
 							on:change={() => {
@@ -1057,6 +1090,7 @@
 
 					<div class="flex items-center gap-2 p-1">
 						<Switch
+							ariaLabelledbyId="image-compression-label"
 							tooltip={true}
 							bind:state={imageCompression}
 							on:change={() => {
@@ -1081,6 +1115,7 @@
 							<input
 								bind:value={imageCompressionSize.width}
 								type="number"
+								aria-labelledby="image-comp-width"
 								class="w-20 bg-transparent outline-hidden text-center"
 								min="0"
 								placeholder="Width"
@@ -1091,6 +1126,7 @@
 							<input
 								bind:value={imageCompressionSize.height}
 								type="number"
+								aria-labelledby="image-comp-height"
 								class="w-20 bg-transparent outline-hidden text-center"
 								min="0"
 								placeholder="Height"
@@ -1101,12 +1137,13 @@
 
 				<div>
 					<div class=" py-0.5 flex w-full justify-between">
-						<div id="image-compression-label" class=" self-center text-xs">
+						<div id="image-compression-in-channels-label" class=" self-center text-xs">
 							{$i18n.t('Compress Images in Channels')}
 						</div>
 
 						<div class="flex items-center gap-2 p-1">
 							<Switch
+								ariaLabelledbyId="image-compression-in-channels-label"
 								tooltip={true}
 								bind:state={imageCompressionInChannels}
 								on:change={() => {
