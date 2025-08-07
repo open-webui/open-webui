@@ -74,6 +74,7 @@
 		"@tiptap/extension-image": "^3.0.7",
 		"@tiptap/extension-link": "^3.0.7",
 		"@tiptap/extension-list": "^3.0.7",
+		"@tiptap/extension-mention": "^3.0.9",
 		"@tiptap/extension-table": "^3.0.7",
 		"@tiptap/extension-typography": "^3.0.7",
 		"@tiptap/extension-youtube": "^3.0.7",

@@ -136,6 +136,8 @@
 	import Highlight from '@tiptap/extension-highlight';
 	import CodeBlockLowlight from '@tiptap/extension-code-block-lowlight';
 
+	import Mention from '@tiptap/extension-mention';
+
 	import { all, createLowlight } from 'lowlight';
 
 	import { PASTED_TEXT_CHARACTER_LIMIT } from '$lib/constants';
@@ -1136,6 +1138,16 @@
 							if (event.key === 'Enter') {
 								const isCtrlPressed = event.ctrlKey || event.metaKey; // metaKey is for Cmd key on Mac
 								if (event.shiftKey && !isCtrlPressed) {
+									const { state } = view;
+									const { $from } = state.selection;
+									const lineStart = $from.before($from.depth);
+									const lineEnd = $from.after($from.depth);
+									const lineText = state.doc.textBetween(lineStart, lineEnd, '\n', '\0').trim();
+									if (lineText === '```') {
+										// Fix GitHub issue #16337: prevent backtick removal for lines starting with ```
+										return false; // Let ProseMirror handle the Enter key normally
+									}
+
 									editor.commands.enter(); // Insert a new line
 									view.dispatch(view.state.tr.scrollIntoView()); // Move viewport to the cursor
 									event.preventDefault();
