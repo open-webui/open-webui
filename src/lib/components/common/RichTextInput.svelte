@@ -1093,7 +1093,32 @@
 							if (event.key === 'Enter') {
 								const isCtrlPressed = event.ctrlKey || event.metaKey; // metaKey is for Cmd key on Mac
 								if (event.shiftKey && !isCtrlPressed) {
-									editor.commands.enter(); // Insert a new line
+									// Store the content before the enter command to detect unwanted transformations
+									const { state } = view;
+									const { from } = state.selection;
+									const $pos = state.doc.resolve(from);
+									const currentNode = $pos.parent;
+									let preventCodeBlockRule = false;
+									
+									// Check if current line starts with three backticks
+									if (currentNode.type.name === 'paragraph') {
+										const nodeText = currentNode.textContent;
+										const cursorOffset = from - $pos.start($pos.depth);
+										const beforeCursor = nodeText.substring(0, cursorOffset);
+										
+										// Fix GitHub issue #16337: prevent backtick removal for lines starting with ```
+										if (beforeCursor.trim().startsWith('```')) {
+											preventCodeBlockRule = true;
+										}
+									}
+									
+									if (preventCodeBlockRule) {
+										// Use setHardBreak to add newline without triggering input rules
+										editor.commands.setHardBreak();
+									} else {
+										editor.commands.enter(); // Insert a new line
+									}
+									
 									view.dispatch(view.state.tr.scrollIntoView()); // Move viewport to the cursor
 									event.preventDefault();
 									return true;
