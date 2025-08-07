@@ -26,8 +26,25 @@ if [[ "$DATABASE_URL" == *{* ]]; then
     --region "$AWS_REGION")
 
   echo "INFO: Successfully generated IAM auth token."
-  # Construct the final DATABASE_URL with the temporary token as the password
-  export DATABASE_URL="postgresql://${DB_USER}:${IAM_AUTH_TOKEN}@${DB_HOST}:${DB_PORT}/${DB_NAME}"
+  
+  # Debug logging to understand what we're working with
+  echo "DEBUG: DB_USER='${DB_USER}'"
+  echo "DEBUG: DB_HOST='${DB_HOST}'" 
+  echo "DEBUG: DB_PORT='${DB_PORT}'"
+  echo "DEBUG: DB_NAME='${DB_NAME}'"
+  echo "DEBUG: AWS_REGION='${AWS_REGION}'"
+  echo "DEBUG: IAM_AUTH_TOKEN length: ${#IAM_AUTH_TOKEN} characters"
+  echo "DEBUG: First 50 chars of token: ${IAM_AUTH_TOKEN:0:50}..."
+  
+  # URL-encode the IAM auth token since it contains special characters (&, =, ?, etc.)
+  # that can break URL parsing when used as a password in the connection string
+  ENCODED_TOKEN=$(python3 -c "import urllib.parse; print(urllib.parse.quote('${IAM_AUTH_TOKEN}', safe=''))")
+  echo "DEBUG: ENCODED_TOKEN length: ${#ENCODED_TOKEN} characters"
+  echo "DEBUG: First 50 chars of encoded token: ${ENCODED_TOKEN:0:50}..."
+  
+  # Construct the final DATABASE_URL with the URL-encoded token as the password
+  export DATABASE_URL="postgresql://${DB_USER}:${ENCODED_TOKEN}@${DB_HOST}:${DB_PORT}/${DB_NAME}"
+  echo "DEBUG: Final DATABASE_URL (with token redacted): postgresql://${DB_USER}:[REDACTED]@${DB_HOST}:${DB_PORT}/${DB_NAME}"
 else
   echo "INFO: Local development environment detected. Skipping IAM token generation."
   # In this case, we just use the DATABASE_URL as-is (e.g., "sqlite:///data/db.sqlite")
