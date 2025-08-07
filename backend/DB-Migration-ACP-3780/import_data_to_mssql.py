@@ -400,8 +400,10 @@ def main():
         # Connect to database
         logger.info("Connecting to MSSQL database...")
         conn_string = get_connection_string()
-        connection = pyodbc.connect(conn_string)
-        connection.autocommit = False  # Ensure we're in transaction mode
+        connection = pyodbc.connect(conn_string, autocommit=False)
+        connection.setdecoding(pyodbc.SQL_CHAR, encoding='utf-8')
+        connection.setdecoding(pyodbc.SQL_WCHAR, encoding='utf-8')
+        connection.setencoding(encoding='utf-8')
         cursor = connection.cursor()
         logger.info("Connected successfully")
         
