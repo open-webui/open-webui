@@ -11,6 +11,7 @@ from datetime import datetime
 import logging
 import subprocess
 import platform
+import re
 
 # Configure logging
 logging.basicConfig(
@@ -171,14 +172,33 @@ def prepare_value(value, column_type):
     """Prepare value for insertion based on column type"""
     if value is None:
         return None
-    
+
     # Handle different data types
     if isinstance(value, str):
-        # Check if it's a JSON string that needs to remain as string
-        if column_type in ['NVARCHAR(MAX)', 'VARCHAR(MAX)', 'TEXT']:
+        # Try to parse as datetime if it looks like one
+        if 'datetime' in column_type.lower() and re.match(r'^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}(\.\d+)?$', value):
+            try:
+                if '.' in value:
+                    return datetime.strptime(value, '%Y-%m-%d %H:%M:%S.%f')
+                else:
+                    return datetime.strptime(value, '%Y-%m-%d %H:%M:%S')
+            except ValueError:
+                pass  # Fall through
+
+        if column_type.upper() in ['NVARCHAR(MAX)', 'VARCHAR(MAX)', 'TEXT']:
             return value
         return value
     elif isinstance(value, (int, float)):
+        # Convert Unix timestamps to datetime objects for datetime columns
+        if 'datetime' in column_type.lower():
+            try:
+                # Handle timestamps that might be in milliseconds
+                if value > 1000000000000: # Likely milliseconds
+                    return datetime.fromtimestamp(value / 1000)
+                else: # Likely seconds
+                    return datetime.fromtimestamp(value)
+            except (ValueError, TypeError):
+                return value # Not a valid timestamp, return as is
         return value
     elif isinstance(value, bool):
         return 1 if value else 0
@@ -320,8 +340,22 @@ def import_table_data(cursor, table_data):
     column_list = ', '.join([f'[{col}]' for col in columns])
     insert_query = f"INSERT INTO {table_ref} ({column_list}) VALUES ({placeholders})"
     
-    # Get column types for value preparation
-    column_types = {col['name']: col.get('type', 'VARCHAR') for col in table_data['columns']}
+    # Get column types from the database schema, as JSON types are unreliable
+    column_types = {}
+    try:
+        schema = DB_CONFIG.get('schema', 'dbo')
+        query = "SELECT COLUMN_NAME, DATA_TYPE FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA = ? AND TABLE_NAME = ?"
+        cursor.execute(query, schema, table_name)
+        db_column_types = {row.COLUMN_NAME: row.DATA_TYPE for row in cursor.fetchall()}
+        
+        # Use the accurate DB types
+        for col in columns:
+            column_types[col] = db_column_types.get(col, 'VARCHAR') # Default to VARCHAR if not found
+            
+    except Exception as e:
+        logger.warning(f"Could not fetch column types for table {table_name}, falling back to JSON types. Error: {e}")
+        # Fallback to using types from JSON if DB query fails
+        column_types = {col['name']: col.get('type', 'VARCHAR') for col in table_data['columns']}
     
     # Insert rows
     success_count = 0
@@ -401,8 +435,13 @@ def main():
         test_table = get_table_reference('feedback')
         try:
             cursor.execute(f"SELECT COUNT(*) FROM {test_table}")
-            count = cursor.fetchone()[0]
-            logger.info(f"Successfully accessed {test_table}, current row count: {count}")
+            row = cursor.fetchone()
+            if row:
+                count = row[0]
+                logger.info(f"Successfully accessed {test_table}, current row count: {count}")
+            else:
+                logger.warning(f"Could not retrieve row count for {test_table}, assuming 0.")
+                count = 0
         except Exception as e:
             logger.error(f"Cannot access {test_table}: {e}")
             logger.error("This might be a permissions issue")
