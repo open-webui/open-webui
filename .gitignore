@@ -312,3 +312,4 @@ cypress/screenshots
 
 /backend/pipe-functions
 backend/set_env.ps1
+/backend/.claude
