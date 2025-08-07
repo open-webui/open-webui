@@ -27,7 +27,7 @@ bcrypt==4.3.0
 
 pymongo
 redis
-boto3==1.35.53
+boto3==1.40.4
 
 argon2-cffi==23.1.0
 APScheduler==3.10.4
