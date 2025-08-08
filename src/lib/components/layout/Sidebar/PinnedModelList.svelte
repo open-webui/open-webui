@@ -41,7 +41,7 @@
 		{@const model = $models.find((model) => model.id === modelId)}
 		{#if model}
 			<div
-				class="px-1.5 flex justify-center text-gray-800 dark:text-gray-200 cursor-grab"
+				class="px-[7px] flex justify-center text-gray-800 dark:text-gray-200 cursor-grab"
 				data-id={modelId}
 			>
 				<a

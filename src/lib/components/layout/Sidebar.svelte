@@ -496,7 +496,7 @@
 	<div
 		class="{$showSidebar
 			? 'md:hidden'
-			: ''} py-2 px-[5px] flex flex-col justify-between text-black dark:text-white h-full border-e border-gray-50 dark:border-gray-850"
+			: ''} py-2 px-1.5 flex flex-col justify-between text-black dark:text-white h-full border-e border-gray-50 dark:border-gray-850"
 	>
 		<button
 			class="flex flex-col flex-1 cursor-[e-resize]"
@@ -710,7 +710,7 @@
 		</div>
 
 		<div class="pb-1.5">
-			<div class="px-1.5 flex justify-center text-gray-800 dark:text-gray-200">
+			<div class="px-[7px] flex justify-center text-gray-800 dark:text-gray-200">
 				<a
 					id="sidebar-new-chat-button"
 					class="grow flex items-center space-x-3 rounded-lg px-2 py-2 hover:bg-gray-100 dark:hover:bg-gray-900 transition outline-none"
@@ -728,7 +728,7 @@
 				</a>
 			</div>
 
-			<div class="px-1.5 flex justify-center text-gray-800 dark:text-gray-200">
+			<div class="px-[7px] flex justify-center text-gray-800 dark:text-gray-200">
 				<button
 					class="grow flex items-center space-x-3 rounded-lg px-2 py-2 hover:bg-gray-100 dark:hover:bg-gray-900 transition outline-none"
 					on:click={() => {
@@ -747,7 +747,7 @@
 			</div>
 
 			{#if ($config?.features?.enable_notes ?? false) && ($user?.role === 'admin' || ($user?.permissions?.features?.notes ?? true))}
-				<div class="px-1.5 flex justify-center text-gray-800 dark:text-gray-200">
+				<div class="px-[7px] flex justify-center text-gray-800 dark:text-gray-200">
 					<a
 						class="grow flex items-center space-x-3 rounded-lg px-2 py-2 hover:bg-gray-100 dark:hover:bg-gray-900 transition"
 						href="/notes"
@@ -766,7 +766,7 @@
 			{/if}
 
 			{#if $user?.role === 'admin' || $user?.permissions?.workspace?.models || $user?.permissions?.workspace?.knowledge || $user?.permissions?.workspace?.prompts || $user?.permissions?.workspace?.tools}
-				<div class="px-1.5 flex justify-center text-gray-800 dark:text-gray-200">
+				<div class="px-[7px] flex justify-center text-gray-800 dark:text-gray-200">
 					<a
 						class="grow flex items-center space-x-3 rounded-lg px-2 py-2 hover:bg-gray-100 dark:hover:bg-gray-900 transition"
 						href="/workspace"
