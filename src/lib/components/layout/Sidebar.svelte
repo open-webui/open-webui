@@ -505,6 +505,7 @@
 {#if !$mobile && !$showSidebar}
 	<div
 		class=" py-2 px-1.5 flex flex-col justify-between text-black dark:text-white h-full border-e border-gray-50 dark:border-gray-850 z-10"
+		id="sidebar"
 	>
 		<button
 			class="flex flex-col flex-1 cursor-[e-resize]"
@@ -687,7 +688,7 @@
 				: 'invisible'}"
 		>
 			<div
-				class="px-1.5 pt-2 pb-1.5 flex justify-between space-x-1 text-gray-600 dark:text-gray-400 sticky top-0 z-10 bg-gray-50 dark:bg-gray-950"
+				class="sidebar px-1.5 pt-2 pb-1.5 flex justify-between space-x-1 text-gray-600 dark:text-gray-400 sticky top-0 z-10 bg-gray-50 dark:bg-gray-950"
 			>
 				<a
 					class="flex items-center rounded-lg p-1.5 h-full justify-center hover:bg-gray-100 dark:hover:bg-gray-850 transition no-drag-region"
@@ -1100,7 +1101,7 @@
 				</Folder>
 			</div>
 
-			<div class="px-2 pt-1.5 pb-2 sticky bottom-0 z-10 bg-gray-50 dark:bg-gray-950">
+			<div class="px-2 pt-1.5 pb-2 sticky bottom-0 z-10 bg-gray-50 dark:bg-gray-950 sidebar">
 				<div class="flex flex-col font-primary">
 					{#if $user !== undefined && $user !== null}
 						<UserMenu
