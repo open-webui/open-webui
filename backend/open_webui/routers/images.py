@@ -60,6 +60,13 @@ async def get_config(request: Request, user=Depends(get_admin_user)):
             "GEMINI_API_BASE_URL": request.app.state.config.IMAGES_GEMINI_API_BASE_URL,
             "GEMINI_API_KEY": request.app.state.config.IMAGES_GEMINI_API_KEY,
         },
+        "custom": {
+            "TXT2IMG_AI_API_BASE_URL": request.app.state.config.TXT2IMG_AI_API_BASE_URL,
+            "TXT2IMG_AI_API_HEADERS": request.app.state.config.TXT2IMG_AI_API_HEADERS,
+            "TXT2IMG_AI_API_BODY": request.app.state.config.TXT2IMG_AI_API_BODY,
+            "TXT2IMGDOWNLOAD_AI_API_BASE_URL": request.app.state.config.TXT2IMGDOWNLOAD_AI_API_BASE_URL,
+            "TXT2IMGDOWNLOAD_AI_API_HEADERS": request.app.state.config.TXT2IMGDOWNLOAD_AI_API_HEADERS,
+        },
     }
 
 
@@ -88,6 +95,14 @@ class GeminiConfigForm(BaseModel):
     GEMINI_API_KEY: str
 
 
+class CustomConfigForm(BaseModel):
+    TXT2IMG_AI_API_BASE_URL: str
+    TXT2IMG_AI_API_HEADERS: str
+    TXT2IMG_AI_API_BODY: str
+    TXT2IMGDOWNLOAD_AI_API_BASE_URL: str
+    TXT2IMGDOWNLOAD_AI_API_HEADERS: str
+
+
 class ConfigForm(BaseModel):
     enabled: bool
     engine: str
@@ -96,6 +111,7 @@ class ConfigForm(BaseModel):
     automatic1111: Automatic1111ConfigForm
     comfyui: ComfyUIConfigForm
     gemini: GeminiConfigForm
+    custom: CustomConfigForm
 
 
 @router.post("/config/update")
@@ -152,6 +168,20 @@ async def update_config(
         form_data.comfyui.COMFYUI_WORKFLOW_NODES
     )
 
+    request.app.state.config.TXT2IMG_AI_API_BASE_URL = (
+        form_data.custom.TXT2IMG_AI_API_BASE_URL
+    )
+    request.app.state.config.TXT2IMG_AI_API_HEADERS = (
+        form_data.custom.TXT2IMG_AI_API_HEADERS
+    )
+    request.app.state.config.TXT2IMG_AI_API_BODY = form_data.custom.TXT2IMG_AI_API_BODY
+    request.app.state.config.TXT2IMGDOWNLOAD_AI_API_BASE_URL = (
+        form_data.custom.TXT2IMGDOWNLOAD_AI_API_BASE_URL
+    )
+    request.app.state.config.TXT2IMGDOWNLOAD_AI_API_HEADERS = (
+        form_data.custom.TXT2IMGDOWNLOAD_AI_API_HEADERS
+    )
+
     return {
         "enabled": request.app.state.config.ENABLE_IMAGE_GENERATION,
         "engine": request.app.state.config.IMAGE_GENERATION_ENGINE,
@@ -176,6 +206,13 @@ async def update_config(
         "gemini": {
             "GEMINI_API_BASE_URL": request.app.state.config.IMAGES_GEMINI_API_BASE_URL,
             "GEMINI_API_KEY": request.app.state.config.IMAGES_GEMINI_API_KEY,
+        },
+        "custom": {
+            "TXT2IMG_AI_API_BASE_URL": request.app.state.config.TXT2IMG_AI_API_BASE_URL,
+            "TXT2IMG_AI_API_HEADERS": request.app.state.config.TXT2IMG_AI_API_HEADERS,
+            "TXT2IMG_AI_API_BODY": request.app.state.config.TXT2IMG_AI_API_BODY,
+            "TXT2IMGDOWNLOAD_AI_API_BASE_URL": request.app.state.config.TXT2IMGDOWNLOAD_AI_API_BASE_URL,
+            "TXT2IMGDOWNLOAD_AI_API_HEADERS": request.app.state.config.TXT2IMGDOWNLOAD_AI_API_HEADERS,
         },
     }
 
@@ -397,6 +434,37 @@ def get_models(request: Request, user=Depends(get_verified_user)):
                         ][0],
                     )
                 )
+        elif request.app.state.config.IMAGE_GENERATION_ENGINE == "custom":
+            headers = json.loads(request.app.state.config.TXT2IMG_AI_API_HEADERS)
+
+            body_str = request.app.state.config.TXT2IMG_AI_API_BODY.replace(
+                "{QUERY}", form_data.prompt
+            )
+            body = json.loads(body_str)
+
+            r = await asyncio.to_thread(
+                requests.post,
+                url=request.app.state.config.TXT2IMG_AI_API_BASE_URL,
+                json=body,
+                headers=headers,
+            )
+
+            r.raise_for_status()
+            res = r.json()
+
+            file_id = res["file_id"]
+
+            download_headers = json.loads(
+                request.app.state.config.TXT2IMGDOWNLOAD_AI_API_HEADERS
+            )
+
+            image_data, content_type = load_url_image_data(
+                f"{request.app.state.config.TXT2IMGDOWNLOAD_AI_API_BASE_URL}{file_id}",
+                headers=download_headers,
+            )
+
+            url = upload_image(request, image_data, content_type, {}, user)
+            return [{"url": url}]
         elif (
             request.app.state.config.IMAGE_GENERATION_ENGINE == "automatic1111"
             or request.app.state.config.IMAGE_GENERATION_ENGINE == ""

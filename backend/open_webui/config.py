@@ -2976,6 +2976,34 @@ IMAGE_GENERATION_MODEL = PersistentConfig(
     os.getenv("IMAGE_GENERATION_MODEL", ""),
 )
 
+# Custom API
+TXT2IMG_AI_API_BASE_URL = PersistentConfig(
+    "TXT2IMG_AI_API_BASE_URL",
+    "image_generation.custom.txt2img_ai_api_base_url",
+    os.getenv("TXT2IMG_AI_API_BASE_URL", ""),
+)
+TXT2IMG_AI_API_HEADERS = PersistentConfig(
+    "TXT2IMG_AI_API_HEADERS",
+    "image_generation.custom.txt2img_ai_api_headers",
+    os.getenv("TXT2IMG_AI_API_HEADERS", "{}"),
+)
+TXT2IMG_AI_API_BODY = PersistentConfig(
+    "TXT2IMG_AI_API_BODY",
+    "image_generation.custom.txt2img_ai_api_body",
+    os.getenv("TXT2IMG_AI_API_BODY", "{}"),
+)
+TXT2IMGDOWNLOAD_AI_API_BASE_URL = PersistentConfig(
+    "TXT2IMGDOWNLOAD_AI_API_BASE_URL",
+    "image_generation.custom.txt2imgdownload_ai_api_base_url",
+    os.getenv("TXT2IMGDOWNLOAD_AI_API_BASE_URL", ""),
+)
+TXT2IMGDOWNLOAD_AI_API_HEADERS = PersistentConfig(
+    "TXT2IMGDOWNLOAD_AI_API_HEADERS",
+    "image_generation.custom.txt2imgdownload_ai_api_headers",
+    os.getenv("TXT2IMGDOWNLOAD_AI_API_HEADERS", "{}"),
+)
+
+
 ####################################
 # Audio
 ####################################
