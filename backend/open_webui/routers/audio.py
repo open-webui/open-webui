@@ -143,7 +143,6 @@ def set_faster_whisper_model(model: str, auto_update: bool = False):
             whisper_model = WhisperModel(**faster_whisper_kwargs)
     return whisper_model
 
-
 ##########################################
 #
 # Audio API
@@ -549,6 +548,11 @@ def transcription_handler(request, file_path, metadata):
     id = filename.split(".")[0]
 
     metadata = metadata or {}
+    languages = [
+        lang for lang in [metadata.get("language", None), WHISPER_LANGUAGE]
+        if lang is not None and lang != ""
+    ]
+    languages.append(None)
 
     if request.app.state.config.STT_ENGINE == "":
         if request.app.state.faster_whisper_model is None:
@@ -561,11 +565,7 @@ def transcription_handler(request, file_path, metadata):
             file_path,
             beam_size=5,
             vad_filter=request.app.state.config.WHISPER_VAD_FILTER,
-            language=(
-                metadata.get("language", None)
-                if WHISPER_LANGUAGE == ""
-                else WHISPER_LANGUAGE
-            ),
+            language=languages[0],
         )
         log.info(
             "Detected language '%s' with probability %f"
@@ -585,21 +585,27 @@ def transcription_handler(request, file_path, metadata):
     elif request.app.state.config.STT_ENGINE == "openai":
         r = None
         try:
-            r = requests.post(
-                url=f"{request.app.state.config.STT_OPENAI_API_BASE_URL}/audio/transcriptions",
-                headers={
-                    "Authorization": f"Bearer {request.app.state.config.STT_OPENAI_API_KEY}"
-                },
-                files={"file": (filename, open(file_path, "rb"))},
-                data={
-                    "model": request.app.state.config.STT_MODEL,
-                    **(
-                        {"language": metadata.get("language")}
-                        if metadata.get("language")
-                        else {}
-                    ),
-                },
-            )
+            params = {"model": request.app.state.config.STT_MODEL}
+            while len(languages) != 0:
+                language = languages.pop(0)
+                if language is not None:
+                    params["language"] = language
+                r = requests.post(
+                    url=f"{request.app.state.config.STT_OPENAI_API_BASE_URL}/audio/transcriptions",
+                    headers={
+                        "Authorization": f"Bearer {request.app.state.config.STT_OPENAI_API_KEY}"
+                    },
+                    files={"file": (filename, open(file_path, "rb"))},
+                    data=params,
+                )
+                if r.status_code == 400 and "language" in r.text:
+                    log.warning(
+                        f"Failed openai transcribe with language=\"{language}\""
+                        f", Retrying with \"{languages[0]}\"..."
+                    )
+                    del params["language"]
+                    continue
+                break
 
             r.raise_for_status()
             data = r.json()
@@ -644,15 +650,27 @@ def transcription_handler(request, file_path, metadata):
             # Add model if specified
             params = {}
             if request.app.state.config.STT_MODEL:
-                params["model"] = request.app.state.config.STT_MODEL
-
+                params["model"] = request.app.state.config.STT_MODEL            
+            
             # Make request to Deepgram API
-            r = requests.post(
-                "https://api.deepgram.com/v1/listen?smart_format=true",
-                headers=headers,
-                params=params,
-                data=file_data,
-            )
+            while len(languages) != 0:
+                language = languages.pop(0)
+                if language is not None:
+                    params["language"] = language
+                r = requests.post(
+                    "https://api.deepgram.com/v1/listen?smart_format=true",
+                    headers=headers,
+                    params=params,
+                    data=file_data,
+                )
+                if r.status_code == 400 and "language" in r.text:
+                    del params["language"]
+                    log.warning(
+                        f"Failed deepgram transcribe with language=\"{language}\""
+                        f", Retrying with \"{languages[0]}\"..."
+                    )
+                    continue
+                break
             r.raise_for_status()
             response_data = r.json()
 
