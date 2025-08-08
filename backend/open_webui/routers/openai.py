@@ -806,7 +806,9 @@ async def generate_chat_completion(
     key = request.app.state.config.OPENAI_API_KEYS[idx]
 
     # Check if model is a reasoning model that needs special handling
-    is_reasoning_model = payload["model"].lower().startswith(("o1", "o3", "o4", "gpt-5"))
+    is_reasoning_model = (
+        payload["model"].lower().startswith(("o1", "o3", "o4", "gpt-5"))
+    )
     if is_reasoning_model:
         payload = openai_reasoning_model_handler(payload)
     elif "api.openai.com" not in url:
