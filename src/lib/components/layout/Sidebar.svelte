@@ -506,7 +506,10 @@
 			}}
 		>
 			<div class="pb-1.5">
-				<Tooltip content={$showSidebar ? $i18n.t('Close Sidebar') : $i18n.t('Open Sidebar')}>
+				<Tooltip
+					content={$showSidebar ? $i18n.t('Close Sidebar') : $i18n.t('Open Sidebar')}
+					placement="right"
+				>
 					<button
 						class=" flex rounded-lg hover:bg-gray-100 dark:hover:bg-gray-850 transition group cursor-[e-resize]"
 					>
@@ -526,7 +529,7 @@
 
 			<div>
 				<div class="">
-					<Tooltip content={$i18n.t('New Chat')}>
+					<Tooltip content={$i18n.t('New Chat')} placement="right">
 						<a
 							class=" cursor-pointer flex rounded-lg hover:bg-gray-100 dark:hover:bg-gray-850 transition group"
 							href="/"
@@ -547,7 +550,7 @@
 				</div>
 
 				<div class="">
-					<Tooltip content={$i18n.t('Search')}>
+					<Tooltip content={$i18n.t('Search')} placement="right">
 						<button
 							class=" cursor-pointer flex rounded-lg hover:bg-gray-100 dark:hover:bg-gray-850 transition group"
 							on:click={(e) => {
@@ -567,7 +570,7 @@
 
 				{#if ($config?.features?.enable_notes ?? false) && ($user?.role === 'admin' || ($user?.permissions?.features?.notes ?? true))}
 					<div class="">
-						<Tooltip content={$i18n.t('Notes')}>
+						<Tooltip content={$i18n.t('Notes')} placement="right">
 							<a
 								class=" cursor-pointer flex rounded-lg hover:bg-gray-100 dark:hover:bg-gray-850 transition group"
 								href="/notes"
@@ -590,7 +593,7 @@
 
 				{#if $user?.role === 'admin' || $user?.permissions?.workspace?.models || $user?.permissions?.workspace?.knowledge || $user?.permissions?.workspace?.prompts || $user?.permissions?.workspace?.tools}
 					<div class="">
-						<Tooltip content={$i18n.t('Workspace')}>
+						<Tooltip content={$i18n.t('Workspace')} placement="right">
 							<a
 								class=" cursor-pointer flex rounded-lg hover:bg-gray-100 dark:hover:bg-gray-850 transition group"
 								href="/workspace"
