@@ -82,6 +82,16 @@
 		}
 
 		let prompt = selectedAction?.prompt ?? '';
+		let toolIds = [];
+
+		let toolIdPattern = /\{\{TOOL:([^\}]+)\}\}/g;
+		let match;
+		while ((match = toolIdPattern.exec(prompt)) !== null) {
+			toolIds.push(match[1]);
+		}
+		// Remove all TOOL placeholders from the prompt
+		prompt = prompt.replace(toolIdPattern, '');
+
 		if (prompt.includes('{{INPUT_CONTENT}}') && !floatingInput) {
 			prompt = prompt.replace('{{INPUT_CONTENT}}', floatingInputValue);
 			floatingInputValue = '';
@@ -106,6 +116,15 @@
 				role: message.role,
 				content: message.content
 			})),
+			...(toolIds.length > 0
+				? {
+						tool_ids: toolIds
+						// params: {
+						// 	function_calling: 'native'
+						// }
+					}
+				: {}),
+
 			stream: true // Enable streaming
 		});
 
