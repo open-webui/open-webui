@@ -1,3 +1,4 @@
+
 # TODO: Implement a more intelligent load balancing mechanism for distributing requests among multiple backend instances.
 # Current implementation uses a simple round-robin approach (random.choice). Consider incorporating algorithms like weighted round-robin,
 # least connections, or least response time for better resource utilization and performance optimization.
@@ -69,7 +70,7 @@ from open_webui.constants import ERROR_MESSAGES
 
 log = logging.getLogger(__name__)
 log.setLevel(SRC_LOG_LEVELS["OLLAMA"])
-DEFAULT_FLASK_URL = "http://localhost:5000"
+DEFAULT_FLASK_URL = "http://localhost:5001"
 
 ##########################################
 #
@@ -720,7 +721,7 @@ async def unload_model(
 async def pull_model_helper(user=Depends(get_admin_user),gold:str = '',human_name:str = ''):
     
 
-    url = DEFAULT_FLASK_URL #"http://127.0.0.1:5000"
+    url = DEFAULT_FLASK_URL #"http://127.0.0.1:5001 for now; change as necessary!"
 
     # Admin should be able to pull models from any source
     payload = {'actual_name':gold,'human_name':human_name}
@@ -754,9 +755,6 @@ async def pull_model(
     # Admin should be able to pull models from any source
     payload = {**form_data, "insecure": True}
     
-    print('URL in original_request: ', f"{url}/api/pull")
-
-    
     original_post_request = await send_post_request(
         url=f"{url}/api/pull",
         payload=json.dumps(payload),
@@ -764,31 +762,34 @@ async def pull_model(
         user=user,
     )
 
-    #async def test(original_post_request):
-    
+
+    async def pull_model_helper_stream(user, key, model_name):
+        yield json.dumps({"status": "IGNORE ABOVE MESSAGE"}) + "\n"
+        result_response = await pull_model_helper(user, key, model_name)
+        yield json.dumps({"result": result_response}) + "\n"
+        
     GOLDEN_NAME = None
-    print('HUMAN MODEL NAME: ',form_data["model"])
-    async for line in original_post_request.body_iterator:
-        decoded = line.decode("utf-8")
-        if GOLDEN_NAME == None:
-            data = json.loads(decoded)
-            if "digest" in data:
-                GOLDEN_NAME = data["digest"]
+    async def stream():
+        nonlocal GOLDEN_NAME
+        print('MODEL NAME: ',form_data)
+        async for line in original_post_request.body_iterator:
+            decoded = line.decode("utf-8")
+            if GOLDEN_NAME == None:
+                data = json.loads(decoded)
+                if "digest" in data:
+                    GOLDEN_NAME = data["digest"]
+            yield line
+            
+        if GOLDEN_NAME:
+            key = '-'.join(GOLDEN_NAME.split(':'))
+            async for output in pull_model_helper_stream(user, key, form_data["model"]):
+                yield output#.encode()
 
-        print(decoded,'')  # or buffer it, write to file, etc.
-    
-    GOLDEN_NAME = '-'.join(GOLDEN_NAME.split(':'))
-    print(GOLDEN_NAME) #sha-key
-    
-
-    
-    result = await pull_model_helper(user,GOLDEN_NAME,form_data["model"])
-    
-    print('RESULT: ', result)
-
-    return result
-    #syncio.create_task(test(original_post_request))
-    #return original_post_request
+    async def userInterface():
+        response = StreamingResponse(stream(), media_type="application/json")
+        return response
+      
+    return await userInterface()
 
 
 class PushModelForm(BaseModel):
