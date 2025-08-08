@@ -638,32 +638,32 @@
 					<div class="flex flex-col gap-3">
 						<div>
 							<div class=" mb-2 text-sm font-medium">
-								{$i18n.t('Text To Image AI API Base URL')}
+								{$i18n.t('Custom Image Generation URL')}
 							</div>
 							<input
 								class="w-full rounded-lg py-2 px-4 text-sm bg-gray-50 dark:text-gray-300 dark:bg-gray-850 outline-hidden"
 								placeholder="http://ipordomain:portifnecessary/api/generation/image"
-								bind:value={config.custom.TXT2IMG_AI_API_BASE_URL}
+								bind:value={config.custom.url}
 							/>
 						</div>
 						<div>
 							<div class=" mb-2 text-sm font-medium">
-								{$i18n.t('Text To Image AI API Headers')}
+								{$i18n.t('Custom Image Generation Headers')}
 							</div>
 							<Textarea
 								class="w-full rounded-lg py-2 px-4 text-sm bg-gray-50 dark:text-gray-300 dark:bg-gray-850 outline-hidden"
 								placeholder={`{"Authorization": "Bearer tokengoeshere", "Content-Type": "application/json"}`}
-								bind:value={config.custom.TXT2IMG_AI_API_HEADERS}
+								bind:value={config.custom.headers}
 							/>
 						</div>
 						<div>
 							<div class=" mb-2 text-sm font-medium">
-								{$i18n.t('Text To Image AI API Body')}
+								{$i18n.t('Custom Image Generation Body')}
 							</div>
 							<Textarea
 								class="w-full rounded-lg py-2 px-4 text-sm bg-gray-50 dark:text-gray-300 dark:bg-gray-850 outline-hidden"
 								placeholder={`{"query": "{QUERY}"}`}
-								bind:value={config.custom.TXT2IMG_AI_API_BODY}
+								bind:value={config.custom.body}
 							/>
 							<div class="mt-2 text-xs text-gray-400 dark:text-gray-500">
 								{$i18n.t('Use {QUERY} as a placeholder for the prompt.')}
@@ -671,12 +671,12 @@
 						</div>
 						<div>
 							<div class=" mb-2 text-sm font-medium">
-								{$i18n.t('Image Download AI API Base URL')}
+								{$i18n.t('Custom Image Download URL')}
 							</div>
 							<input
 								class="w-full rounded-lg py-2 px-4 text-sm bg-gray-50 dark:text-gray-300 dark:bg-gray-850 outline-hidden"
 								placeholder="http://ipordomain:portifnecessary/api/device/download/file/"
-								bind:value={config.custom.TXT2IMGDOWNLOAD_AI_API_BASE_URL}
+								bind:value={config.custom.download_url}
 							/>
 							<div class="mt-2 text-xs text-gray-400 dark:text-gray-500">
 								{$i18n.t('The file ID will be appended to this URL.')}
@@ -684,12 +684,12 @@
 						</div>
 						<div>
 							<div class=" mb-2 text-sm font-medium">
-								{$i18n.t('Image Download AI API Headers')}
+								{$i18n.t('Custom Image Download Headers')}
 							</div>
 							<Textarea
 								class="w-full rounded-lg py-2 px-4 text-sm bg-gray-50 dark:text-gray-300 dark:bg-gray-850 outline-hidden"
 								placeholder={`{"Authorization": "tokengoeshere"}`}
-								bind:value={config.custom.TXT2IMGDOWNLOAD_AI_API_HEADERS}
+								bind:value={config.custom.download_headers}
 							/>
 						</div>
 					</div>

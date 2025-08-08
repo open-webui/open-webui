@@ -61,11 +61,11 @@ async def get_config(request: Request, user=Depends(get_admin_user)):
             "GEMINI_API_KEY": request.app.state.config.IMAGES_GEMINI_API_KEY,
         },
         "custom": {
-            "TXT2IMG_AI_API_BASE_URL": request.app.state.config.TXT2IMG_AI_API_BASE_URL,
-            "TXT2IMG_AI_API_HEADERS": request.app.state.config.TXT2IMG_AI_API_HEADERS,
-            "TXT2IMG_AI_API_BODY": request.app.state.config.TXT2IMG_AI_API_BODY,
-            "TXT2IMGDOWNLOAD_AI_API_BASE_URL": request.app.state.config.TXT2IMGDOWNLOAD_AI_API_BASE_URL,
-            "TXT2IMGDOWNLOAD_AI_API_HEADERS": request.app.state.config.TXT2IMGDOWNLOAD_AI_API_HEADERS,
+            "url": request.app.state.config.CUSTOM_IMAGE_GENERATION_URL,
+            "headers": request.app.state.config.CUSTOM_IMAGE_GENERATION_HEADERS,
+            "body": request.app.state.config.CUSTOM_IMAGE_GENERATION_BODY,
+            "download_url": request.app.state.config.CUSTOM_IMAGE_DOWNLOAD_URL,
+            "download_headers": request.app.state.config.CUSTOM_IMAGE_DOWNLOAD_HEADERS,
         },
     }
 
@@ -96,11 +96,11 @@ class GeminiConfigForm(BaseModel):
 
 
 class CustomConfigForm(BaseModel):
-    TXT2IMG_AI_API_BASE_URL: str
-    TXT2IMG_AI_API_HEADERS: str
-    TXT2IMG_AI_API_BODY: str
-    TXT2IMGDOWNLOAD_AI_API_BASE_URL: str
-    TXT2IMGDOWNLOAD_AI_API_HEADERS: str
+    url: str
+    headers: str
+    body: str
+    download_url: str
+    download_headers: str
 
 
 class ConfigForm(BaseModel):
@@ -168,19 +168,11 @@ async def update_config(
         form_data.comfyui.COMFYUI_WORKFLOW_NODES
     )
 
-    request.app.state.config.TXT2IMG_AI_API_BASE_URL = (
-        form_data.custom.TXT2IMG_AI_API_BASE_URL
-    )
-    request.app.state.config.TXT2IMG_AI_API_HEADERS = (
-        form_data.custom.TXT2IMG_AI_API_HEADERS
-    )
-    request.app.state.config.TXT2IMG_AI_API_BODY = form_data.custom.TXT2IMG_AI_API_BODY
-    request.app.state.config.TXT2IMGDOWNLOAD_AI_API_BASE_URL = (
-        form_data.custom.TXT2IMGDOWNLOAD_AI_API_BASE_URL
-    )
-    request.app.state.config.TXT2IMGDOWNLOAD_AI_API_HEADERS = (
-        form_data.custom.TXT2IMGDOWNLOAD_AI_API_HEADERS
-    )
+    request.app.state.config.CUSTOM_IMAGE_GENERATION_URL = form_data.custom.url
+    request.app.state.config.CUSTOM_IMAGE_GENERATION_HEADERS = form_data.custom.headers
+    request.app.state.config.CUSTOM_IMAGE_GENERATION_BODY = form_data.custom.body
+    request.app.state.config.CUSTOM_IMAGE_DOWNLOAD_URL = form_data.custom.download_url
+    request.app.state.config.CUSTOM_IMAGE_DOWNLOAD_HEADERS = form_data.custom.download_headers
 
     return {
         "enabled": request.app.state.config.ENABLE_IMAGE_GENERATION,
@@ -208,11 +200,11 @@ async def update_config(
             "GEMINI_API_KEY": request.app.state.config.IMAGES_GEMINI_API_KEY,
         },
         "custom": {
-            "TXT2IMG_AI_API_BASE_URL": request.app.state.config.TXT2IMG_AI_API_BASE_URL,
-            "TXT2IMG_AI_API_HEADERS": request.app.state.config.TXT2IMG_AI_API_HEADERS,
-            "TXT2IMG_AI_API_BODY": request.app.state.config.TXT2IMG_AI_API_BODY,
-            "TXT2IMGDOWNLOAD_AI_API_BASE_URL": request.app.state.config.TXT2IMGDOWNLOAD_AI_API_BASE_URL,
-            "TXT2IMGDOWNLOAD_AI_API_HEADERS": request.app.state.config.TXT2IMGDOWNLOAD_AI_API_HEADERS,
+            "url": request.app.state.config.CUSTOM_IMAGE_GENERATION_URL,
+            "headers": request.app.state.config.CUSTOM_IMAGE_GENERATION_HEADERS,
+            "body": request.app.state.config.CUSTOM_IMAGE_GENERATION_BODY,
+            "download_url": request.app.state.config.CUSTOM_IMAGE_DOWNLOAD_URL,
+            "download_headers": request.app.state.config.CUSTOM_IMAGE_DOWNLOAD_HEADERS,
         },
     }
 
@@ -622,16 +614,16 @@ async def image_generations(
             return images
 
         elif request.app.state.config.IMAGE_GENERATION_ENGINE == "custom":
-            headers = json.loads(request.app.state.config.TXT2IMG_AI_API_HEADERS)
+            headers = json.loads(request.app.state.config.CUSTOM_IMAGE_GENERATION_HEADERS)
 
-            body_str = request.app.state.config.TXT2IMG_AI_API_BODY.replace(
+            body_str = request.app.state.config.CUSTOM_IMAGE_GENERATION_BODY.replace(
                 "{QUERY}", form_data.prompt
             )
             body = json.loads(body_str)
 
             r = await asyncio.to_thread(
                 requests.post,
-                url=request.app.state.config.TXT2IMG_AI_API_BASE_URL,
+                url=request.app.state.config.CUSTOM_IMAGE_GENERATION_URL,
                 json=body,
                 headers=headers,
             )
@@ -642,11 +634,11 @@ async def image_generations(
             file_id = res["file_id"]
 
             download_headers = json.loads(
-                request.app.state.config.TXT2IMGDOWNLOAD_AI_API_HEADERS
+                request.app.state.config.CUSTOM_IMAGE_DOWNLOAD_HEADERS
             )
 
             image_data, content_type = load_url_image_data(
-                f"{request.app.state.config.TXT2IMGDOWNLOAD_AI_API_BASE_URL}{file_id}",
+                f"{request.app.state.config.CUSTOM_IMAGE_DOWNLOAD_URL}{file_id}",
                 headers=download_headers,
             )
 

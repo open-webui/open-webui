@@ -2977,30 +2977,30 @@ IMAGE_GENERATION_MODEL = PersistentConfig(
 )
 
 # Custom API
-TXT2IMG_AI_API_BASE_URL = PersistentConfig(
-    "TXT2IMG_AI_API_BASE_URL",
-    "image_generation.custom.txt2img_ai_api_base_url",
-    os.getenv("TXT2IMG_AI_API_BASE_URL", ""),
+CUSTOM_IMAGE_GENERATION_URL = PersistentConfig(
+    "CUSTOM_IMAGE_GENERATION_URL",
+    "image_generation.custom.url",
+    os.getenv("CUSTOM_IMAGE_GENERATION_URL", ""),
 )
-TXT2IMG_AI_API_HEADERS = PersistentConfig(
-    "TXT2IMG_AI_API_HEADERS",
-    "image_generation.custom.txt2img_ai_api_headers",
-    os.getenv("TXT2IMG_AI_API_HEADERS", "{}"),
+CUSTOM_IMAGE_GENERATION_HEADERS = PersistentConfig(
+    "CUSTOM_IMAGE_GENERATION_HEADERS",
+    "image_generation.custom.headers",
+    os.getenv("CUSTOM_IMAGE_GENERATION_HEADERS", "{}"),
 )
-TXT2IMG_AI_API_BODY = PersistentConfig(
-    "TXT2IMG_AI_API_BODY",
-    "image_generation.custom.txt2img_ai_api_body",
-    os.getenv("TXT2IMG_AI_API_BODY", "{}"),
+CUSTOM_IMAGE_GENERATION_BODY = PersistentConfig(
+    "CUSTOM_IMAGE_GENERATION_BODY",
+    "image_generation.custom.body",
+    os.getenv("CUSTOM_IMAGE_GENERATION_BODY", "{}"),
 )
-TXT2IMGDOWNLOAD_AI_API_BASE_URL = PersistentConfig(
-    "TXT2IMGDOWNLOAD_AI_API_BASE_URL",
-    "image_generation.custom.txt2imgdownload_ai_api_base_url",
-    os.getenv("TXT2IMGDOWNLOAD_AI_API_BASE_URL", ""),
+CUSTOM_IMAGE_DOWNLOAD_URL = PersistentConfig(
+    "CUSTOM_IMAGE_DOWNLOAD_URL",
+    "image_generation.custom.download_url",
+    os.getenv("CUSTOM_IMAGE_DOWNLOAD_URL", ""),
 )
-TXT2IMGDOWNLOAD_AI_API_HEADERS = PersistentConfig(
-    "TXT2IMGDOWNLOAD_AI_API_HEADERS",
-    "image_generation.custom.txt2imgdownload_ai_api_headers",
-    os.getenv("TXT2IMGDOWNLOAD_AI_API_HEADERS", "{}"),
+CUSTOM_IMAGE_DOWNLOAD_HEADERS = PersistentConfig(
+    "CUSTOM_IMAGE_DOWNLOAD_HEADERS",
+    "image_generation.custom.download_headers",
+    os.getenv("CUSTOM_IMAGE_DOWNLOAD_HEADERS", "{}"),
 )
 
 
