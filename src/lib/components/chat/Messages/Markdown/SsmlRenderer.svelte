@@ -60,7 +60,9 @@
 
 	if (
 		($settings?.audio?.ssml?.autoplay ?? $config.audio.ssml.autoplay) &&
-		!($showCallOverlay && !($settings.audio?.ssml.overrideCall ?? $config.audio.ssml.overrideCall)) &&
+		!(
+			$showCallOverlay && !($settings.audio?.ssml.overrideCall ?? $config.audio.ssml.overrideCall)
+		) &&
 		!done
 	) {
 		toggleSpeakMessage();

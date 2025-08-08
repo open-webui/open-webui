@@ -16,7 +16,6 @@
 	import SensitiveInput from '$lib/components/common/SensitiveInput.svelte';
 	import Switch from '$lib/components/common/Switch.svelte';
 
-
 	import { TTS_RESPONSE_SPLIT } from '$lib/types';
 
 	import type { Writable } from 'svelte/store';
@@ -51,9 +50,9 @@
 	let STT_AZURE_MAX_SPEAKERS = '';
 	let STT_DEEPGRAM_API_KEY = '';
 
-  let DEFAULT_AUTOPLAY_SSML = false;
-  let DEFAULT_SSML_OVERRIDE_CALL = false;
-  let DEFAULT_SHOW_SSML = false;
+	let DEFAULT_AUTOPLAY_SSML = false;
+	let DEFAULT_SSML_OVERRIDE_CALL = false;
+	let DEFAULT_SHOW_SSML = false;
 
 	let STT_WHISPER_MODEL_LOADING = false;
 
@@ -131,11 +130,11 @@
 				AZURE_BASE_URL: STT_AZURE_BASE_URL,
 				AZURE_MAX_SPEAKERS: STT_AZURE_MAX_SPEAKERS
 			},
-      ssml: {
-        DEFAULT_AUTOPLAY_SSML,
-        DEFAULT_SSML_OVERRIDE_CALL,
-        DEFAULT_SHOW_SSML
-      }
+			ssml: {
+				DEFAULT_AUTOPLAY_SSML,
+				DEFAULT_SSML_OVERRIDE_CALL,
+				DEFAULT_SHOW_SSML
+			}
 		});
 
 		if (res) {
@@ -183,9 +182,9 @@
 			STT_AZURE_MAX_SPEAKERS = res.stt.AZURE_MAX_SPEAKERS;
 			STT_DEEPGRAM_API_KEY = res.stt.DEEPGRAM_API_KEY;
 
-      DEFAULT_AUTOPLAY_SSML = res.ssml.DEFAULT_AUTOPLAY_SSML
-      DEFAULT_SSML_OVERRIDE_CALL = res.ssml.DEFAULT_SSML_OVERRIDE_CALL
-      DEFAULT_SHOW_SSML = res.ssml.DEFAULT_SHOW_SSML
+			DEFAULT_AUTOPLAY_SSML = res.ssml.DEFAULT_AUTOPLAY_SSML;
+			DEFAULT_SSML_OVERRIDE_CALL = res.ssml.DEFAULT_SSML_OVERRIDE_CALL;
+			DEFAULT_SHOW_SSML = res.ssml.DEFAULT_SHOW_SSML;
 		}
 
 		await getVoices();
@@ -737,33 +736,35 @@
 				</div>
 			</div>
 
-      <div class="mb-3">
-					<div class=" mb-2.5 text-base font-medium">{$i18n.t('Default Speech Block Settings')}</div>
+			<div class="mb-3">
+				<div class=" mb-2.5 text-base font-medium">{$i18n.t('Default Speech Block Settings')}</div>
 
-					<hr class=" border-gray-100 dark:border-gray-850 my-2" />
+				<hr class=" border-gray-100 dark:border-gray-850 my-2" />
 
-					<div class="mb-2.5 flex w-full items-center justify-between pr-2">
-						<div class=" self-center text-xs font-medium">
-							{$i18n.t('Default Auto-play Speech Blocks')}
-						</div>
-
-						<Switch bind:state={DEFAULT_AUTOPLAY_SSML} />
+				<div class="mb-2.5 flex w-full items-center justify-between pr-2">
+					<div class=" self-center text-xs font-medium">
+						{$i18n.t('Default Auto-play Speech Blocks')}
 					</div>
 
-					<div class="mb-2.5 flex w-full items-center justify-between pr-2">
-						<div class=" self-center text-xs font-medium">{$i18n.t('Default Override Call Response with Speech Blocks')}</div>
-
-						<Switch bind:state={DEFAULT_SSML_OVERRIDE_CALL} />
-					</div>
-
-					<div class="mb-2.5 flex w-full items-center justify-between pr-2">
-						<div class=" self-center text-xs font-medium">
-							{$i18n.t('Default Show Speech Blocks')}
-						</div>
-
-						<Switch bind:state={DEFAULT_SHOW_SSML} />
-					</div>
+					<Switch bind:state={DEFAULT_AUTOPLAY_SSML} />
 				</div>
+
+				<div class="mb-2.5 flex w-full items-center justify-between pr-2">
+					<div class=" self-center text-xs font-medium">
+						{$i18n.t('Default Override Call Response with Speech Blocks')}
+					</div>
+
+					<Switch bind:state={DEFAULT_SSML_OVERRIDE_CALL} />
+				</div>
+
+				<div class="mb-2.5 flex w-full items-center justify-between pr-2">
+					<div class=" self-center text-xs font-medium">
+						{$i18n.t('Default Show Speech Blocks')}
+					</div>
+
+					<Switch bind:state={DEFAULT_SHOW_SSML} />
+				</div>
+			</div>
 		</div>
 	</div>
 	<div class="flex justify-end text-sm font-medium">

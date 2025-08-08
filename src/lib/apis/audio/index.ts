@@ -102,7 +102,7 @@ export const synthesizeOpenAISpeech = async (
 	speaker: string = 'alloy',
 	text: string = '',
 	model?: string,
-  ssml?: boolean
+	ssml?: boolean
 ) => {
 	let error = null;
 
