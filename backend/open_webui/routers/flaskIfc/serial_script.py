@@ -215,7 +215,9 @@ def restart_txe_serial_portion(port, baudrate, path):
 
     ser.close()
 
-def send_serial_command(port, baudrate, command):
+DEFAULT_COMMAND_TIMEOUT=7200
+
+def send_serial_command(port, baudrate, command, timeout=DEFAULT_COMMAND_TIMEOUT):
     if is_lock_available() != True:
         return None
 
@@ -228,17 +230,21 @@ def send_serial_command(port, baudrate, command):
         # Wait to read the serial port
         data = '\0'
         first_time = 1
-        while True:
+        start = time.time()
+        while time.time() - start < timeout:
             try:
                 # read byte by byte to find either a new line character or a prompt marker
                 # instead of new line using line = ser.readline()
                 line = b""
-                while True:
+                while time.time() - start < timeout:
                     if is_lock_available() != True:
                         ser.close()
                         return data
                     byte = ser.read(1)  # Read one byte at a time
                     line += byte
+                    if ("File receive completed" in line.decode('utf-8', errors='ignore')):
+                        ser.close()
+                        return data
                     if (byte == b"\n") or (byte == b"#"):  # Stop when delimiter is found
                         break
                 if line: # Check if line is not empty
