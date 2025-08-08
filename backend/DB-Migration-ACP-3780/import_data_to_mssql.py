@@ -22,14 +22,14 @@ logger = logging.getLogger(__name__)
 
 # Database connection parameters
 DB_CONFIG = {
-    'server': 'dvse-cepm-sqlmi.dceaba912a56.database.windows.net',
+    'server': 'example_server',  # Replace with your server name
     'database': 'openwebui',
     'driver': '{ODBC Driver 17 for SQL Server}',
     'schema': 'dbo',  # Default schema name
     # Add authentication method - you'll need to fill in credentials
     # Option 1: SQL Authentication
-    'username': 'app',
-    'password': 'App',
+    'username': 'example',
+    'password': 'example_password',
     # Option 2: Windows Authentication
     # 'trusted_connection': 'yes'
 }
