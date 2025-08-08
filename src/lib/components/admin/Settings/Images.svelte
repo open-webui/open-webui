@@ -699,64 +699,72 @@
 			{#if config?.enabled}
 				<hr class=" border-gray-100 dark:border-gray-850" />
 
-				<div>
-					<div class=" mb-2.5 text-sm font-medium">{$i18n.t('Set Default Model')}</div>
-					<div class="flex w-full">
-						<div class="flex-1 mr-2">
-							<div class="flex w-full">
-								<div class="flex-1">
-									<Tooltip content={$i18n.t('Enter Model ID')} placement="top-start">
-										<input
-											list="model-list"
-											class="w-full rounded-lg py-2 px-4 text-sm bg-gray-50 dark:text-gray-300 dark:bg-gray-850 outline-hidden"
-											bind:value={imageGenerationConfig.MODEL}
-											placeholder="Select a model"
-											required
-										/>
+				{#if config?.engine !== 'custom'}
+					<div>
+						<div class=" mb-2.5 text-sm font-medium">{$i18n.t('Set Default Model')}</div>
+						<div class="flex w-full">
+							<div class="flex-1 mr-2">
+								<div class="flex w-full">
+									<div class="flex-1">
+										<Tooltip content={$i18n.t('Enter Model ID')} placement="top-start">
+											<input
+												list="model-list"
+												class="w-full rounded-lg py-2 px-4 text-sm bg-gray-50 dark:text-gray-300 dark:bg-gray-850 outline-hidden"
+												bind:value={imageGenerationConfig.MODEL}
+												placeholder="Select a model"
+												required
+											/>
 
-										<datalist id="model-list">
-											{#each models ?? [] as model}
-												<option value={model.id}>{model.name}</option>
-											{/each}
-										</datalist>
-									</Tooltip>
+											<datalist id="model-list">
+												{#each models ?? [] as model}
+													<option value={model.id}>{model.name}</option>
+												{/each}
+											</datalist>
+										</Tooltip>
+									</div>
 								</div>
 							</div>
 						</div>
 					</div>
-				</div>
 
-				<div>
-					<div class=" mb-2.5 text-sm font-medium">{$i18n.t('Set Image Size')}</div>
-					<div class="flex w-full">
-						<div class="flex-1 mr-2">
-							<Tooltip content={$i18n.t('Enter Image Size (e.g. 512x512)')} placement="top-start">
-								<input
-									class="w-full rounded-lg py-2 px-4 text-sm bg-gray-50 dark:text-gray-300 dark:bg-gray-850 outline-hidden"
-									placeholder={$i18n.t('Enter Image Size (e.g. 512x512)')}
-									bind:value={imageGenerationConfig.IMAGE_SIZE}
-									required
-								/>
-							</Tooltip>
+					<div>
+						<div class=" mb-2.5 text-sm font-medium">{$i18n.t('Set Image Size')}</div>
+						<div class="flex w-full">
+							<div class="flex-1 mr-2">
+								<Tooltip
+									content={$i18n.t('Enter Image Size (e.g. 512x512)')}
+									placement="top-start"
+								>
+									<input
+										class="w-full rounded-lg py-2 px-4 text-sm bg-gray-50 dark:text-gray-300 dark:bg-gray-850 outline-hidden"
+										placeholder={$i18n.t('Enter Image Size (e.g. 512x512)')}
+										bind:value={imageGenerationConfig.IMAGE_SIZE}
+										required
+									/>
+								</Tooltip>
+							</div>
 						</div>
 					</div>
-				</div>
 
-				<div>
-					<div class=" mb-2.5 text-sm font-medium">{$i18n.t('Set Steps')}</div>
-					<div class="flex w-full">
-						<div class="flex-1 mr-2">
-							<Tooltip content={$i18n.t('Enter Number of Steps (e.g. 50)')} placement="top-start">
-								<input
-									class="w-full rounded-lg py-2 px-4 text-sm bg-gray-50 dark:text-gray-300 dark:bg-gray-850 outline-hidden"
-									placeholder={$i18n.t('Enter Number of Steps (e.g. 50)')}
-									bind:value={imageGenerationConfig.IMAGE_STEPS}
-									required
-								/>
-							</Tooltip>
+					<div>
+						<div class=" mb-2.5 text-sm font-medium">{$i18n.t('Set Steps')}</div>
+						<div class="flex w-full">
+							<div class="flex-1 mr-2">
+								<Tooltip
+									content={$i18n.t('Enter Number of Steps (e.g. 50)')}
+									placement="top-start"
+								>
+									<input
+										class="w-full rounded-lg py-2 px-4 text-sm bg-gray-50 dark:text-gray-300 dark:bg-gray-850 outline-hidden"
+										placeholder={$i18n.t('Enter Number of Steps (e.g. 50)')}
+										bind:value={imageGenerationConfig.IMAGE_STEPS}
+										required
+									/>
+								</Tooltip>
+							</div>
 						</div>
 					</div>
-				</div>
+				{/if}
 			{/if}
 		{/if}
 	</div>
