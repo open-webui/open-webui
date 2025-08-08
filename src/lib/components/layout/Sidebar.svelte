@@ -666,7 +666,7 @@
 			? 'bg-gray-50 dark:bg-gray-950 z-50'
 			: ' bg-transparent z-0 '} {$isApp
 			? `ml-[4.5rem] md:ml-0 `
-			: 'transition-[width] duration-300 '} shrink-0 text-gray-900 dark:text-gray-200 text-sm fixed top-0 left-0 overflow-x-hidden
+			: ' transition-all duration-300 '} shrink-0 text-gray-900 dark:text-gray-200 text-sm fixed top-0 left-0 overflow-x-hidden
         "
 		transition:slide={{ duration: 200, axis: 'x' }}
 		data-state={$showSidebar}
