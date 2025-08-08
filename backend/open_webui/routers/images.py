@@ -435,36 +435,7 @@ def get_models(request: Request, user=Depends(get_verified_user)):
                     )
                 )
         elif request.app.state.config.IMAGE_GENERATION_ENGINE == "custom":
-            headers = json.loads(request.app.state.config.TXT2IMG_AI_API_HEADERS)
-
-            body_str = request.app.state.config.TXT2IMG_AI_API_BODY.replace(
-                "{QUERY}", form_data.prompt
-            )
-            body = json.loads(body_str)
-
-            r = await asyncio.to_thread(
-                requests.post,
-                url=request.app.state.config.TXT2IMG_AI_API_BASE_URL,
-                json=body,
-                headers=headers,
-            )
-
-            r.raise_for_status()
-            res = r.json()
-
-            file_id = res["file_id"]
-
-            download_headers = json.loads(
-                request.app.state.config.TXT2IMGDOWNLOAD_AI_API_HEADERS
-            )
-
-            image_data, content_type = load_url_image_data(
-                f"{request.app.state.config.TXT2IMGDOWNLOAD_AI_API_BASE_URL}{file_id}",
-                headers=download_headers,
-            )
-
-            url = upload_image(request, image_data, content_type, {}, user)
-            return [{"url": url}]
+            return []
         elif (
             request.app.state.config.IMAGE_GENERATION_ENGINE == "automatic1111"
             or request.app.state.config.IMAGE_GENERATION_ENGINE == ""
@@ -650,6 +621,38 @@ async def image_generations(
 
             return images
 
+        elif request.app.state.config.IMAGE_GENERATION_ENGINE == "custom":
+            headers = json.loads(request.app.state.config.TXT2IMG_AI_API_HEADERS)
+
+            body_str = request.app.state.config.TXT2IMG_AI_API_BODY.replace(
+                "{QUERY}", form_data.prompt
+            )
+            body = json.loads(body_str)
+
+            r = await asyncio.to_thread(
+                requests.post,
+                url=request.app.state.config.TXT2IMG_AI_API_BASE_URL,
+                json=body,
+                headers=headers,
+            )
+
+            r.raise_for_status()
+            res = r.json()
+
+            file_id = res["file_id"]
+
+            download_headers = json.loads(
+                request.app.state.config.TXT2IMGDOWNLOAD_AI_API_HEADERS
+            )
+
+            image_data, content_type = load_url_image_data(
+                f"{request.app.state.config.TXT2IMGDOWNLOAD_AI_API_BASE_URL}{file_id}",
+                headers=download_headers,
+            )
+
+            url = upload_image(request, image_data, content_type, {}, user)
+            images = [{"url": url}]
+            return images
         elif request.app.state.config.IMAGE_GENERATION_ENGINE == "comfyui":
             data = {
                 "prompt": form_data.prompt,
