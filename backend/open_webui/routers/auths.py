@@ -669,7 +669,7 @@ async def signout(request: Request, response: Response):
 
     if ENABLE_OAUTH_SIGNUP.value:
         oauth_id_token = request.cookies.get("oauth_id_token")
-        if oauth_id_token:
+        if oauth_id_token and OPENID_PROVIDER_URL.value:
             try:
                 async with ClientSession(trust_env=True) as session:
                     async with session.get(OPENID_PROVIDER_URL.value) as resp:
