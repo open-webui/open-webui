@@ -1965,7 +1965,7 @@ async def process_web_search(
                     },
                 )
                 for result in search_results
-                if hasattr(result, "snippet")
+                if hasattr(result, "snippet") and result.snippet is not None
             ]
         else:
             loader = get_web_loader(
