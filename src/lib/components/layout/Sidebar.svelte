@@ -498,7 +498,7 @@
 			: ''} py-2 px-1.5 flex flex-col justify-between text-black dark:text-white h-full border-e border-gray-50 dark:border-gray-850"
 	>
 		<button
-			class="flex flex-col flex-1"
+			class="flex flex-col flex-1 cursor-[e-resize]"
 			on:click={() => {
 				showSidebar.set(!$showSidebar);
 			}}
@@ -506,7 +506,7 @@
 			<div class="pb-1.5">
 				<Tooltip content={$showSidebar ? $i18n.t('Close Sidebar') : $i18n.t('Open Sidebar')}>
 					<button
-						class=" cursor-pointer flex rounded-lg hover:bg-gray-100 dark:hover:bg-gray-850 transition group"
+						class=" flex rounded-lg hover:bg-gray-100 dark:hover:bg-gray-850 transition group cursor-[e-resize]"
 					>
 						<div class=" self-center flex items-center justify-center size-9">
 							<img
@@ -712,7 +712,7 @@
 			</a>
 			<Tooltip content={$showSidebar ? $i18n.t('Close Sidebar') : $i18n.t('Open Sidebar')}>
 				<button
-					class=" cursor-pointer flex rounded-lg hover:bg-gray-100 dark:hover:bg-gray-850 transition cursor-"
+					class=" flex rounded-lg hover:bg-gray-100 dark:hover:bg-gray-850 transition cursor-[w-resize]"
 					on:click={() => {
 						showSidebar.set(!$showSidebar);
 					}}

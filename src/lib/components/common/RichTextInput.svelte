@@ -967,6 +967,12 @@
 				Highlight,
 				Typography,
 
+				Mention.configure({
+					HTMLAttributes: {
+						class: 'mention'
+					}
+				}),
+
 				TableKit.configure({
 					table: { resizable: true }
 				}),
