@@ -10,7 +10,12 @@ import requests
 from urllib.parse import quote
 
 from fastapi import Depends, HTTPException, Request, APIRouter
-from fastapi.responses import FileResponse, StreamingResponse, JSONResponse, PlainTextResponse
+from fastapi.responses import (
+    FileResponse,
+    StreamingResponse,
+    JSONResponse,
+    PlainTextResponse,
+)
 from pydantic import BaseModel
 from starlette.background import BackgroundTask
 
@@ -600,9 +605,13 @@ async def verify_connection(
 
                     if r.status != 200:
                         if isinstance(response_data, (dict, list)):
-                            return JSONResponse(status_code=r.status, content=response_data)
+                            return JSONResponse(
+                                status_code=r.status, content=response_data
+                            )
                         else:
-                            return PlainTextResponse(status_code=r.status, content=response_data)
+                            return PlainTextResponse(
+                                status_code=r.status, content=response_data
+                            )
 
                     return response_data
             else:
@@ -620,9 +629,13 @@ async def verify_connection(
 
                     if r.status != 200:
                         if isinstance(response_data, (dict, list)):
-                            return JSONResponse(status_code=r.status, content=response_data)
+                            return JSONResponse(
+                                status_code=r.status, content=response_data
+                            )
                         else:
-                            return PlainTextResponse(status_code=r.status, content=response_data)
+                            return PlainTextResponse(
+                                status_code=r.status, content=response_data
+                            )
 
                     return response_data
 
@@ -973,7 +986,9 @@ async def embeddings(request: Request, form_data: dict, user):
                 if isinstance(response_data, (dict, list)):
                     return JSONResponse(status_code=r.status, content=response_data)
                 else:
-                    return PlainTextResponse(status_code=r.status, content=response_data)
+                    return PlainTextResponse(
+                        status_code=r.status, content=response_data
+                    )
 
             return response_data
     except Exception as e:
@@ -1068,7 +1083,9 @@ async def proxy(path: str, request: Request, user=Depends(get_verified_user)):
                 if isinstance(response_data, (dict, list)):
                     return JSONResponse(status_code=r.status, content=response_data)
                 else:
-                    return PlainTextResponse(status_code=r.status, content=response_data)
+                    return PlainTextResponse(
+                        status_code=r.status, content=response_data
+                    )
 
             return response_data
 
