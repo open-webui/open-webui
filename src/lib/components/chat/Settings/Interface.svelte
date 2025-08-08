@@ -807,7 +807,7 @@
 			<div>
 				<div class=" py-0.5 flex w-full justify-between">
 					<label id="floating-action-buttons-label" class=" self-center text-xs">
-						{$i18n.t('Floating Action Buttons')}
+						{$i18n.t('Floating Quick Actions')}
 					</label>
 
 					<div class="flex items-center gap-3 p-1">
@@ -815,7 +815,7 @@
 							<button
 								class="text-xs text-gray-700 dark:text-gray-400 underline"
 								type="button"
-								aria-label={$i18n.t('Open Modal To Manage Floating Action Buttons')}
+								aria-label={$i18n.t('Open Modal To Manage Floating Quick Actions')}
 								on:click={() => {
 									showManageFloatingActionButtonsModal = true;
 								}}
