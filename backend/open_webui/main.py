@@ -59,6 +59,11 @@ from open_webui.socket.main import (
     periodic_usage_pool_cleanup,
     get_models_in_use,
     get_active_user_ids,
+    get_token_groups,
+    set_token_group,
+    update_token_group,
+    delete_token_group,
+    get_token_usage,
 )
 from open_webui.routers import (
     audio,
@@ -100,6 +105,7 @@ from open_webui.models.functions import Functions
 from open_webui.models.models import Models
 from open_webui.models.users import UserModel, Users
 from open_webui.models.chats import Chats
+from open_webui.models.token_usage import TokenGroup, TokenUsage
 
 from open_webui.config import (
     # Ollama
@@ -1800,6 +1806,132 @@ async def get_opensearch_xml():
     </OpenSearchDescription>
     """
     return Response(content=xml_content, media_type="application/xml")
+
+
+# Token Usage API Models
+class TokenGroupCreate(BaseModel):
+    name: str
+    models: list[str]
+    limit: Optional[int] = None
+
+
+class TokenGroupUpdate(BaseModel):
+    models: Optional[list[str]] = None
+    limit: Optional[int] = None
+
+
+# Token Usage API Endpoints
+@app.get("/api/usage/groups")
+async def get_usage_groups(user=Depends(get_verified_user)):
+    """Get all token groups with their usage"""
+    groups = get_token_groups()
+    usage = get_token_usage()
+    
+    response = {"groups": {}}
+    
+    for group_name, group_data in groups.items():
+        usage_data = usage.get(group_name, {"in": 0, "out": 0, "total": 0})
+        
+        response["groups"][group_name] = {
+            "models": group_data.get("models", []),
+            "limit": group_data.get("limit"),
+            "usage": {
+                "in": usage_data.get("in", 0),
+                "out": usage_data.get("out", 0),
+                "total": usage_data.get("total", 0),
+            }
+        }
+    
+    return response
+
+
+@app.post("/api/usage/groups")
+async def create_usage_group(
+    form_data: TokenGroupCreate, 
+    user=Depends(get_verified_user)
+):
+    """Create a new token group"""
+    try:
+        set_token_group(form_data.name, form_data.models, form_data.limit)
+        
+        # Get the created group data
+        groups = get_token_groups()
+        usage = get_token_usage()
+        
+        group_data = groups.get(form_data.name, {})
+        usage_data = usage.get(form_data.name, {"in": 0, "out": 0, "total": 0})
+        
+        return {
+            "status": True,
+            "group": {
+                "name": form_data.name,
+                "models": group_data.get("models", []),
+                "limit": group_data.get("limit"),
+                "usage": {
+                    "in": usage_data.get("in", 0),
+                    "out": usage_data.get("out", 0), 
+                    "total": usage_data.get("total", 0),
+                }
+            }
+        }
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+
+@app.put("/api/usage/groups/{name}")
+async def update_usage_group(
+    name: str,
+    form_data: TokenGroupUpdate,
+    user=Depends(get_verified_user)
+):
+    """Update an existing token group"""
+    try:
+        success = update_token_group(name, form_data.models, form_data.limit)
+        if not success:
+            raise HTTPException(status_code=404, detail="Group not found")
+        
+        # Get the updated group data
+        groups = get_token_groups()
+        usage = get_token_usage()
+        
+        group_data = groups.get(name, {})
+        usage_data = usage.get(name, {"in": 0, "out": 0, "total": 0})
+        
+        return {
+            "status": True,
+            "group": {
+                "name": name,
+                "models": group_data.get("models", []),
+                "limit": group_data.get("limit"),
+                "usage": {
+                    "in": usage_data.get("in", 0),
+                    "out": usage_data.get("out", 0),
+                    "total": usage_data.get("total", 0),
+                }
+            }
+        }
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+
+@app.delete("/api/usage/groups/{name}")
+async def delete_usage_group(
+    name: str,
+    user=Depends(get_verified_user)
+):
+    """Delete a token group"""
+    try:
+        success = delete_token_group(name)
+        if not success:
+            raise HTTPException(status_code=404, detail="Group not found")
+        
+        return {"status": True}
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=str(e))
 
 
 @app.get("/health")

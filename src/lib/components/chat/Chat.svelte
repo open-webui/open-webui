@@ -144,9 +144,63 @@
 	let files = [];
 	let params = {};
 
+	// Token usage tracking
+	let tokenUsageGroups = {};
+	let usagePollingInterval = null;
+
+	const fetchTokenUsage = async () => {
+		try {
+			const response = await fetch(`${WEBUI_BASE_URL}/api/usage/groups`, {
+				method: 'GET',
+				headers: {
+					Authorization: `Bearer ${localStorage.token}`,
+					'Content-Type': 'application/json'
+				}
+			});
+
+			if (response.ok) {
+				const data = await response.json();
+				tokenUsageGroups = data.groups || {};
+			}
+		} catch (error) {
+			console.error('Error fetching token usage:', error);
+		}
+	};
+
+	// Get relevant groups for currently selected models
+	$: relevantGroups = Object.entries(tokenUsageGroups).filter(([groupName, groupData]) => {
+		const modelList = groupData.models || [];
+		return selectedModelIds.some(modelId => modelList.includes(modelId));
+	});
+
+	const startUsagePolling = () => {
+		if (usagePollingInterval) clearInterval(usagePollingInterval);
+		
+		// Initial fetch
+		fetchTokenUsage();
+		
+		// Poll every 3 seconds
+		usagePollingInterval = setInterval(fetchTokenUsage, 3000);
+	};
+
+	const stopUsagePolling = () => {
+		if (usagePollingInterval) {
+			clearInterval(usagePollingInterval);
+			usagePollingInterval = null;
+		}
+	};
+
 	$: if (chatIdProp) {
 		navigateHandler();
 	}
+
+	onMount(() => {
+		startUsagePolling();
+	});
+
+	onDestroy(() => {
+		stopUsagePolling();
+	});
 
 	const navigateHandler = async () => {
 		loading = true;
@@ -1089,7 +1143,9 @@
 	};
 
 	const getChatEventEmitter = async (modelId: string, chatId: string = '') => {
+		console.log('🔍 USAGE DEBUG (Frontend): Starting getChatEventEmitter for model:', modelId);
 		return setInterval(() => {
+			console.log('🔍 USAGE DEBUG (Frontend): Emitting usage polling event for model:', modelId);
 			$socket?.emit('usage', {
 				action: 'chat',
 				model: modelId,
@@ -1223,9 +1279,32 @@
 
 	const chatCompletionEventHandler = async (data, message, chatId) => {
 		const { id, done, choices, content, sources, selected_model_id, error, usage } = data;
+		
+		// DEBUG: Log the data to see what we're receiving
+		console.log('🔍 USAGE DEBUG (Frontend): chatCompletionEventHandler called with data:', {
+			id, done, selected_model_id, 
+			hasUsage: !!usage,
+			usage: usage,
+			hasSocket: !!$socket
+		});
 
 		if (error) {
 			await handleOpenAIError(error, message);
+		}
+
+		// Emit usage event for token tracking if usage data is available
+		if (usage && selected_model_id && $socket) {
+			console.log('🔍 USAGE DEBUG (Frontend): Emitting usage data:', { model: selected_model_id, usage: usage });
+			$socket.emit('usage', {
+				model: selected_model_id,
+				usage: usage
+			});
+		} else {
+			console.log('🔍 USAGE DEBUG (Frontend): NOT emitting - missing data:', { 
+				hasUsage: !!usage, 
+				hasSelectedModel: !!selected_model_id, 
+				hasSocket: !!$socket 
+			});
 		}
 
 		if (sources && !message?.sources) {
@@ -2150,6 +2229,29 @@
 									/>
 								</div>
 							</div>
+
+							<!-- Token Usage Display -->
+							{#if relevantGroups.length > 0}
+								<div class="px-4 pb-2">
+									<div class="bg-gray-50 dark:bg-gray-850 rounded-lg p-3 text-xs">
+										{#each relevantGroups as [groupName, groupData]}
+											<div class="flex items-center justify-between mb-1 last:mb-0">
+												<span class="font-medium text-gray-700 dark:text-gray-300">{groupName}</span>
+												<div class="flex items-center space-x-2 text-gray-600 dark:text-gray-400">
+													<span>{groupData.usage?.in?.toLocaleString() || 0} IN</span>
+													<span>·</span>
+													<span>{groupData.usage?.out?.toLocaleString() || 0} OUT</span>
+													<span>·</span>
+													<span>{groupData.usage?.total?.toLocaleString() || 0} TOTAL</span>
+													{#if groupData.limit}
+														<span>/ {groupData.limit.toLocaleString()}</span>
+													{/if}
+												</div>
+											</div>
+										{/each}
+									</div>
+								</div>
+							{/if}
 
 							<div class=" pb-2">
 								<MessageInput

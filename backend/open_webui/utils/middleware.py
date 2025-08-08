@@ -731,6 +731,18 @@ async def process_chat_payload(request, form_data, user, metadata, model):
     # -> Chat Files
 
     form_data = apply_params_to_form_data(form_data, model)
+    
+    # Ensure stream_options.include_usage is enabled for token usage tracking
+    if form_data.get("stream", False):
+        if "stream_options" not in form_data:
+            form_data["stream_options"] = {}
+        form_data["stream_options"]["include_usage"] = True
+        log.info(f"🔍 USAGE DEBUG (Middleware): Set stream_options.include_usage=true for streaming request")
+        log.info(f"🔍 USAGE DEBUG (Middleware): form_data.stream_options = {form_data.get('stream_options')}")
+        log.info(f"🔍 USAGE DEBUG (Middleware): Model being requested: {form_data.get('model')}")
+    else:
+        log.info(f"🔍 USAGE DEBUG (Middleware): Non-streaming request, stream_options not set")
+    
     log.debug(f"form_data: {form_data}")
 
     event_emitter = get_event_emitter(metadata)
@@ -1275,6 +1287,10 @@ async def process_chat_response(
                 content = response["choices"][0]["message"]["content"]
 
                 if content:
+                    # Check for usage data in non-streaming response
+                    usage = response.get("usage", {})
+                    if usage:
+                        log.info(f"🔍 USAGE DEBUG (Middleware): Found usage in non-streaming response: {usage}")
 
                     await event_emitter(
                         {
@@ -1285,14 +1301,21 @@ async def process_chat_response(
 
                     title = Chats.get_chat_title_by_id(metadata["chat_id"])
 
+                    # Include usage in the final completion event
+                    completion_data = {
+                        "done": True,
+                        "content": content,
+                        "title": title,
+                    }
+                    if usage:
+                        completion_data["usage"] = usage
+                        completion_data["selected_model_id"] = model_id
+                        log.info(f"🔍 USAGE DEBUG (Middleware): Adding usage to non-streaming completion: {usage}")
+
                     await event_emitter(
                         {
                             "type": "chat:completion",
-                            "data": {
-                                "done": True,
-                                "content": content,
-                                "title": title,
-                            },
+                            "data": completion_data,
                         }
                     )
 
@@ -1750,6 +1773,9 @@ async def process_chat_response(
                 if message
                 else last_assistant_message if last_assistant_message else ""
             )
+            
+            response_usage = None  # Initialize response_usage at the top level
+            chunk_count = 0  # Initialize chunk_count at the top level for logging
 
             content_blocks = [
                 {
@@ -1801,6 +1827,8 @@ async def process_chat_response(
                 async def stream_body_handler(response, form_data):
                     nonlocal content
                     nonlocal content_blocks
+                    nonlocal response_usage
+                    nonlocal chunk_count
 
                     response_tool_calls = []
 
@@ -1821,6 +1849,13 @@ async def process_chat_response(
 
                         try:
                             data = json.loads(data)
+                            chunk_count += 1
+                            
+                            # Minimal debug logging to avoid interfering with stream
+                            if 'usage' in data:
+                                log.info(f"🔍 USAGE DEBUG (Middleware): Chunk #{chunk_count} HAS USAGE: {data['usage']}")
+                            elif chunk_count <= 2:
+                                log.debug(f"🔍 USAGE DEBUG (Middleware): Chunk #{chunk_count} structure: {list(data.keys())}")
 
                             data, _ = await process_filter_functions(
                                 request=request,
@@ -1845,7 +1880,27 @@ async def process_chat_response(
                                     )
                                 else:
                                     choices = data.get("choices", [])
+                                    
+                                    # Check for usage in ANY chunk, not just empty choices
+                                    usage = data.get("usage", {})
+                                    if usage:
+                                        log.info(f"🔍 USAGE DEBUG (Middleware): ✅ FOUND USAGE IN CHUNK #{chunk_count}: {usage}")
+                                        response_usage = usage  # Store for final completion event
+                                    # Minimal logging for final chunks without usage
+                                    elif not choices or (choices and choices[0].get("finish_reason")):
+                                        log.debug(f"🔍 USAGE DEBUG (Middleware): Final chunk #{chunk_count} no usage, finish_reason: {choices[0].get('finish_reason') if choices else 'none'}")
+                                        await event_emitter(
+                                            {
+                                                "type": "usage",
+                                                "data": {
+                                                    "model": model_id,
+                                                    "usage": usage,
+                                                }
+                                            }
+                                        )
+                                    
                                     if not choices:
+                                        # This is likely the final chunk
                                         error = data.get("error", {})
                                         if error:
                                             await event_emitter(
@@ -1856,16 +1911,9 @@ async def process_chat_response(
                                                     },
                                                 }
                                             )
-                                        usage = data.get("usage", {})
-                                        if usage:
-                                            await event_emitter(
-                                                {
-                                                    "type": "chat:completion",
-                                                    "data": {
-                                                        "usage": usage,
-                                                    },
-                                                }
-                                            )
+                                        
+                                        if not usage:
+                                            log.debug(f"🔍 USAGE DEBUG (Middleware): Final chunk with no choices and no usage. Full data: {json.dumps(data)[:500]}")
                                         continue
 
                                     delta = choices[0].get("delta", {})
@@ -2243,6 +2291,7 @@ async def process_chat_response(
                         new_form_data = {
                             "model": model_id,
                             "stream": True,
+                            "stream_options": {"include_usage": True},
                             "tools": form_data["tools"],
                             "messages": [
                                 *form_data["messages"],
@@ -2408,6 +2457,7 @@ async def process_chat_response(
                             new_form_data = {
                                 "model": model_id,
                                 "stream": True,
+                                "stream_options": {"include_usage": True},
                                 "messages": [
                                     *form_data["messages"],
                                     {
@@ -2433,12 +2483,22 @@ async def process_chat_response(
                             log.debug(e)
                             break
 
+                log.info(f"🔍 USAGE DEBUG (Middleware): Stream complete. {chunk_count} chunks, final usage: {bool(response_usage)}")
+                
                 title = Chats.get_chat_title_by_id(metadata["chat_id"])
                 data = {
                     "done": True,
                     "content": serialize_content_blocks(content_blocks),
                     "title": title,
                 }
+                
+                # Include usage data if available
+                if response_usage:
+                    log.info(f"🔍 USAGE DEBUG (Middleware): ✅ Adding usage to completion for {model_id}")
+                    data["usage"] = response_usage
+                    data["selected_model_id"] = model_id  # Include model ID for socket emission
+                else:
+                    log.warning(f"🔍 USAGE DEBUG (Middleware): ❌ No usage data for {model_id}")
 
                 if not ENABLE_REALTIME_CHAT_SAVE:
                     # Save message in the database

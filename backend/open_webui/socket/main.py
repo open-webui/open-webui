@@ -31,6 +31,7 @@ from open_webui.socket.utils import RedisDict, RedisLock, YdocManager
 from open_webui.tasks import create_task, stop_item_tasks
 from open_webui.utils.redis import get_redis_connection
 from open_webui.utils.access_control import has_access, get_users_with_access
+from open_webui.models.token_usage import token_groups
 
 
 from open_webui.env import (
@@ -107,6 +108,18 @@ if WEBSOCKET_MANAGER == "redis":
         redis_sentinels=redis_sentinels,
     )
 
+    # Token usage tracking data structures
+    TOKEN_GROUPS = RedisDict(
+        "open-webui:token_groups",
+        redis_url=WEBSOCKET_REDIS_URL,
+        redis_sentinels=redis_sentinels,
+    )
+    TOKEN_USAGE = RedisDict(
+        "open-webui:token_usage",
+        redis_url=WEBSOCKET_REDIS_URL,
+        redis_sentinels=redis_sentinels,
+    )
+
     clean_up_lock = RedisLock(
         redis_url=WEBSOCKET_REDIS_URL,
         lock_name="usage_cleanup_lock",
@@ -120,6 +133,10 @@ else:
     SESSION_POOL = {}
     USER_POOL = {}
     USAGE_POOL = {}
+
+    # Token usage tracking data structures (in-memory)
+    TOKEN_GROUPS = {}
+    TOKEN_USAGE = {}
 
     aquire_func = release_func = renew_func = lambda: True
 
@@ -235,10 +252,46 @@ def get_active_status_by_user_id(user_id):
     return False
 
 
+def get_token_groups():
+    """Get all token groups"""
+    return token_groups.get_token_groups()
+
+
+def set_token_group(group_name: str, models: list, limit: int = None):
+    """Set a token group"""
+    # Try to update first, if not found create new
+    if not token_groups.update_token_group(group_name, models, limit):
+        return token_groups.create_token_group(group_name, models, limit or 0)
+
+
+def update_token_group(group_name: str, models: list = None, limit: int = None):
+    """Update an existing token group"""
+    return token_groups.update_token_group(group_name, models, limit)
+
+
+def delete_token_group(group_name: str):
+    """Delete a token group"""
+    return token_groups.delete_token_group(group_name)
+
+
+def get_token_usage():
+    """Get current token usage for all groups from database"""
+    # Import here to avoid circular imports
+    from open_webui.models.token_usage import token_groups as db_token_groups
+    groups = db_token_groups.get_token_groups()  # This returns groups WITH usage from DB
+    return {name: group_data["usage"] for name, group_data in groups.items()}
+
+
 @sio.on("usage")
 async def usage(sid, data):
+    log.info(f"🔍 USAGE DEBUG: Received usage event from sid {sid}: {data}")
+    
     if sid in SESSION_POOL:
         model_id = data["model"]
+        usage_data = data.get("usage", {})
+        
+        log.info(f"🔍 USAGE DEBUG: Processing usage for model_id={model_id}, usage_data={usage_data}")
+        
         # Record the timestamp for the last update
         current_time = int(time.time())
 
@@ -247,6 +300,42 @@ async def usage(sid, data):
             **(USAGE_POOL[model_id] if model_id in USAGE_POOL else {}),
             sid: {"updated_at": current_time},
         }
+        
+        # Process token usage tracking
+        await process_token_usage(model_id, usage_data)
+    else:
+        log.warning(f"🔍 USAGE DEBUG: Session {sid} not found in SESSION_POOL")
+
+
+async def process_token_usage(model_id: str, usage_data: dict):
+    """Process token usage data and update group usage counters"""
+    log.info(f"🔍 USAGE DEBUG: Received usage data for model {model_id}: {usage_data}")
+    
+    if not usage_data:
+        log.warning(f"🔍 USAGE DEBUG: No usage data provided for model {model_id}")
+        return
+        
+    # Extract token counts with safe defaults
+    prompt_tokens = usage_data.get("prompt_tokens", 0)
+    completion_tokens = usage_data.get("completion_tokens", 0)
+    
+    # Extract reasoning tokens from completion_tokens_details
+    completion_tokens_details = usage_data.get("completion_tokens_details", {})
+    reasoning_tokens = completion_tokens_details.get("reasoning_tokens", 0)
+    
+    # Calculate IN, OUT, TOTAL according to spec
+    # IN = prompt_tokens
+    # OUT = completion_tokens + reasoning_tokens  
+    # TOTAL = IN + OUT
+    token_in = prompt_tokens
+    token_out = completion_tokens + reasoning_tokens
+    token_total = token_in + token_out
+    
+    log.info(f"🔍 USAGE DEBUG: Calculated tokens for {model_id}: IN={token_in}, OUT={token_out}, TOTAL={token_total}")
+    
+    # Use the database model to update usage
+    token_groups.update_token_usage(model_id, token_in, token_out, token_total)
+    log.info(f"🔍 USAGE DEBUG: Updated token usage for model {model_id}")
 
 
 @sio.event

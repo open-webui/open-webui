@@ -103,6 +103,47 @@
 	export let webSearchEnabled = false;
 	export let codeInterpreterEnabled = false;
 
+	// Reasoning effort functionality
+	let reasoningEffort = 'medium'; // default to medium
+	let reasoningEffortByModel = {};
+
+	// Load reasoning effort preferences from localStorage
+	const loadReasoningEffortPreferences = () => {
+		try {
+			const stored = localStorage.getItem('reasoningEffortByModel');
+			if (stored) {
+				reasoningEffortByModel = JSON.parse(stored);
+			}
+		} catch (e) {
+			console.error('Error loading reasoning effort preferences:', e);
+		}
+	};
+
+	// Save reasoning effort preferences to localStorage
+	const saveReasoningEffortPreferences = () => {
+		try {
+			localStorage.setItem('reasoningEffortByModel', JSON.stringify(reasoningEffortByModel));
+		} catch (e) {
+			console.error('Error saving reasoning effort preferences:', e);
+		}
+	};
+
+	// Update reasoning effort when selected model changes
+	$: if (selectedModelIds.length > 0) {
+		const currentModel = selectedModelIds[0];
+		reasoningEffort = reasoningEffortByModel[currentModel] || 'medium';
+	}
+
+	// Update stored preference when reasoning effort changes
+	const updateReasoningEffort = (effort: string) => {
+		if (selectedModelIds.length > 0) {
+			const currentModel = selectedModelIds[0];
+			reasoningEffortByModel[currentModel] = effort;
+			reasoningEffort = effort;
+			saveReasoningEffortPreferences();
+		}
+	};
+
 	let showInputVariablesModal = false;
 	let inputVariables = {};
 	let inputVariableValues = {};
@@ -122,7 +163,8 @@
 		selectedFilterIds,
 		imageGenerationEnabled,
 		webSearchEnabled,
-		codeInterpreterEnabled
+		codeInterpreterEnabled,
+		reasoning: { effort: reasoningEffort }
 	});
 
 	const inputVariableHandler = async (text: string) => {
@@ -767,6 +809,9 @@
 
 	onMount(async () => {
 		loaded = true;
+
+		// Load reasoning effort preferences
+		loadReasoningEffortPreferences();
 
 		window.setTimeout(() => {
 			const chatInput = document.getElementById('chat-input');
@@ -1700,6 +1745,40 @@
 														</button>
 													</Tooltip>
 												{/each}
+
+												{#if selectedModelIds.length > 0}
+													<div class="relative">
+														<Tooltip content={$i18n.t('Reasoning Effort')} placement="top">
+															<button
+																type="button"
+																class="px-2 @xl:px-2.5 py-2 flex gap-1.5 items-center text-sm rounded-full transition-colors duration-300 focus:outline-hidden max-w-full overflow-hidden hover:bg-gray-50 dark:hover:bg-gray-800 bg-transparent text-gray-600 dark:text-gray-300"
+																on:click={() => {
+																	const select = document.getElementById('reasoning-effort-select');
+																	if (select) {
+																		select.click();
+																	}
+																}}
+															>
+																<svg class="size-4" stroke-width="1.75" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+																	<path d="M9 12L11 14L15 10M21 12C21 16.9706 16.9706 21 12 21C7.02944 21 3 16.9706 3 12C3 7.02944 7.02944 3 12 3C16.9706 3 21 7.02944 21 12Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+																</svg>
+																<span class="hidden @xl:block whitespace-nowrap overflow-hidden text-ellipsis leading-none pr-0.5 capitalize">
+																	{reasoningEffort}
+																</span>
+																<select
+																	id="reasoning-effort-select"
+																	bind:value={reasoningEffort}
+																	on:change={(e) => updateReasoningEffort(e.target.value)}
+																	class="absolute inset-0 opacity-0 cursor-pointer"
+																>
+																	<option value="low">Low</option>
+																	<option value="medium">Medium</option>
+																	<option value="high">High</option>
+																</select>
+															</button>
+														</Tooltip>
+													</div>
+												{/if}
 
 												{#if showWebSearchButton}
 													<Tooltip content={$i18n.t('Search the internet')} placement="top">

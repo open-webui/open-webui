@@ -849,6 +849,13 @@ async def generate_chat_completion(
     session = None
     streaming = False
     response = None
+    
+    # Debug logging for stream_options
+    payload_dict = json.loads(payload) if isinstance(payload, str) else payload
+    if "stream_options" in payload_dict:
+        log.info(f"🔍 USAGE DEBUG (OpenAI Router): Sending request with stream_options: {payload_dict.get('stream_options')}")
+    else:
+        log.warning(f"🔍 USAGE DEBUG (OpenAI Router): No stream_options in payload for model {payload_dict.get('model')}")
 
     try:
         session = aiohttp.ClientSession(
