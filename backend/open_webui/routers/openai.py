@@ -97,10 +97,10 @@ async def cleanup_response(
 
 def openai_reasoning_model_handler(payload):
     """
-    Handle "o" series specific parameters
+    Handle reasoning model specific parameters
     """
     if "max_tokens" in payload:
-        # Convert "max_tokens" to "max_completion_tokens" for all o-series models
+        # Convert "max_tokens" to "max_completion_tokens" for all reasoning models
         payload["max_completion_tokens"] = payload["max_tokens"]
         del payload["max_tokens"]
 
@@ -787,7 +787,7 @@ async def generate_chat_completion(
     url = request.app.state.config.OPENAI_API_BASE_URLS[idx]
     key = request.app.state.config.OPENAI_API_KEYS[idx]
 
-    # Check if model is from "o" series
+    # Check if model is a reasoning model that needs special handling
     is_reasoning_model = payload["model"].lower().startswith(("o1", "o3", "o4", "gpt-5"))
     if is_reasoning_model:
         payload = openai_reasoning_model_handler(payload)
