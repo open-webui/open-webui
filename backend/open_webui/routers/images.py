@@ -484,7 +484,7 @@ def load_url_image_data(url, headers=None):
             return r.content, mime_type
         else:
             log.error("Url does not point to an image.")
-            return None
+            return None, None
 
     except Exception as e:
         log.exception(f"Error saving image: {e}")
@@ -642,7 +642,12 @@ async def image_generations(
                 headers=download_headers,
             )
 
-            if image_data and not content_type:
+            if image_data is None:
+                raise Exception(
+                    "Failed to download image from the custom API. Please check your download URL and headers."
+                )
+
+            if not content_type:
                 content_type = "image/png"
 
             url = upload_image(request, image_data, content_type, {}, user)
