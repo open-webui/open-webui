@@ -88,6 +88,8 @@
 	import NotificationToast from '../NotificationToast.svelte';
 	import Spinner from '../common/Spinner.svelte';
 	import { fade } from 'svelte/transition';
+	import Tooltip from '../common/Tooltip.svelte';
+	import Sidebar from '../icons/Sidebar.svelte';
 
 	export let chatIdProp = '';
 
@@ -127,6 +129,9 @@
 	let codeInterpreterEnabled = false;
 
 	let showCommands = false;
+
+	let generating = false;
+	let generationController = null;
 
 	let chat = null;
 	let tags = [];
@@ -1857,6 +1862,12 @@
 				scrollToBottom();
 			}
 		}
+
+		if (generating) {
+			generating = false;
+			generationController?.abort();
+			generationController = null;
+		}
 	};
 
 	const submitMessage = async (parentId, prompt) => {
@@ -1947,6 +1958,7 @@
 		history.messages[messageId] = message;
 
 		try {
+			generating = true;
 			const [res, controller] = await generateMoACompletion(
 				localStorage.token,
 				message.model,
@@ -1954,11 +1966,14 @@
 				responses
 			);
 
-			if (res && res.ok && res.body) {
+			if (res && res.ok && res.body && generating) {
+				generationController = controller;
 				const textStream = await createOpenAITextStream(res.body, $settings.splitLargeChunks);
 				for await (const update of textStream) {
 					const { value, done, sources, error, usage } = update;
 					if (error || done) {
+						generating = false;
+						generationController = null;
 						break;
 					}
 
@@ -2036,6 +2051,25 @@
 				currentChatPage.set(1);
 				await chats.set(await getChatList(localStorage.token, $currentChatPage));
 			}
+		}
+	};
+
+	const MAX_DRAFT_LENGTH = 5000;
+	let saveDraftTimeout = null;
+	const saveDraft = async (draft, chatId = null) => {
+		if (saveDraftTimeout) {
+			clearTimeout(saveDraftTimeout);
+		}
+
+		if (draft.prompt !== null && draft.prompt.length < MAX_DRAFT_LENGTH) {
+			saveDraftTimeout = setTimeout(async () => {
+				await sessionStorage.setItem(
+					`chat-input${chatId ? `-${chatId}` : ''}`,
+					JSON.stringify(draft)
+				);
+			}, 500);
+		} else {
+			sessionStorage.removeItem(`chat-input${chatId ? `-${chatId}` : ''}`);
 		}
 	};
 </script>
@@ -2171,18 +2205,12 @@
 									transparentBackground={$settings?.backgroundImageUrl ??
 										$config?.license_metadata?.background_image_url ??
 										false}
+									{generating}
 									{stopResponse}
 									{createMessagePair}
-									onChange={(input) => {
+									onChange={(data) => {
 										if (!$temporaryChatEnabled) {
-											if (input.prompt !== null) {
-												sessionStorage.setItem(
-													`chat-input${$chatId ? `-${$chatId}` : ''}`,
-													JSON.stringify(input)
-												);
-											} else {
-												sessionStorage.removeItem(`chat-input${$chatId ? `-${$chatId}` : ''}`);
-											}
+											saveDraft(data, $chatId);
 										}
 									}}
 									on:upload={async (e) => {
@@ -2237,6 +2265,11 @@
 									{stopResponse}
 									{createMessagePair}
 									{onSelect}
+									onChange={(data) => {
+										if (!$temporaryChatEnabled) {
+											saveDraft(data);
+										}
+									}}
 									on:upload={async (e) => {
 										const { type, data } = e.detail;
 

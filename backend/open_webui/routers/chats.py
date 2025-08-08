@@ -712,7 +712,18 @@ async def clone_chat_by_id(
             "title": form_data.title if form_data.title else f"Clone of {chat.title}",
         }
 
-        chat = Chats.insert_new_chat(user.id, ChatForm(**{"chat": updated_chat}))
+        chat = Chats.import_chat(
+            user.id,
+            ChatImportForm(
+                **{
+                    "chat": updated_chat,
+                    "meta": chat.meta,
+                    "pinned": chat.pinned,
+                    "folder_id": chat.folder_id,
+                }
+            ),
+        )
+
         return ChatResponse(**chat.model_dump())
     else:
         raise HTTPException(
@@ -757,12 +768,19 @@ async def clone_shared_chat_by_id(request: Request, id: str, user=Depends(get_ve
             "title": f"Clone of {chat.title}",
         }
 
-        new_chat = Chats.insert_new_chat(user.id, ChatForm(**{"chat": updated_chat}))
-        
-        # Create a new share link for the cloned chat
-        shared_chat = Chats.share_chat_by_id(new_chat.id)
-        
-        return ChatResponse(**shared_chat.model_dump())
+        chat = Chats.import_chat(
+            user.id,
+            ChatImportForm(
+                **{
+                    "chat": updated_chat,
+                    "meta": chat.meta,
+                    "pinned": chat.pinned,
+                    "folder_id": chat.folder_id,
+                }
+            ),
+        )
+        shared_chat_entry = Chats.share_chat_by_id(chat.id)
+        return ChatResponse(**shared_chat_entry.model_dump())
     else:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED, detail=ERROR_MESSAGES.DEFAULT()

@@ -196,7 +196,6 @@
 	const submitHandler = async () => {
 		updateOpenAIHandler();
 		updateOllamaHandler();
-		updateDirectConnectionsHandler();
 
 		dispatch('save');
 	};

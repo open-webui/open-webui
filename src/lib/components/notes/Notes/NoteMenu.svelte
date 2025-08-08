@@ -9,7 +9,7 @@
 
 	import Tooltip from '$lib/components/common/Tooltip.svelte';
 	import ArchiveBox from '$lib/components/icons/ArchiveBox.svelte';
-	import Download from '$lib/components/icons/Download.svelte';
+	import Download from '$lib/components/icons/ArrowDownTray.svelte';
 	import GarbageBin from '$lib/components/icons/GarbageBin.svelte';
 	import DocumentDuplicate from '$lib/components/icons/DocumentDuplicate.svelte';
 	import Share from '$lib/components/icons/Share.svelte';

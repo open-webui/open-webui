@@ -42,7 +42,7 @@
 	}
 
 	const loadChatPreview = async (selectedIdx) => {
-		if (!chatList || chatList.length === 0) {
+		if (!chatList || chatList.length === 0 || chatList[selectedIdx] === undefined) {
 			selectedChat = null;
 			messages = null;
 			history = null;
@@ -97,6 +97,12 @@
 		} else {
 			searchDebounceTimeout = setTimeout(async () => {
 				chatList = await getChatListBySearchText(localStorage.token, query, page);
+
+				if ((chatList ?? []).length === 0) {
+					allChatsLoaded = true;
+				} else {
+					allChatsLoaded = false;
+				}
 			}, 500);
 		}
 
@@ -139,6 +145,11 @@
 	};
 
 	const onKeyDown = (e) => {
+		const searchOptions = document.getElementById('search-options-container');
+		if (searchOptions) {
+			return;
+		}
+
 		if (e.code === 'Escape') {
 			show = false;
 			onClose();

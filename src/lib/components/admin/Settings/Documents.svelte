@@ -171,6 +171,19 @@
 		}
 
 		if (
+			RAGConfig.CONTENT_EXTRACTION_ENGINE === 'datalab_marker' &&
+			RAGConfig.DATALAB_MARKER_ADDITIONAL_CONFIG &&
+			RAGConfig.DATALAB_MARKER_ADDITIONAL_CONFIG.trim() !== ''
+		) {
+			try {
+				JSON.parse(RAGConfig.DATALAB_MARKER_ADDITIONAL_CONFIG);
+			} catch (e) {
+				toast.error($i18n.t('Invalid JSON format in Additional Config'));
+				return;
+			}
+		}
+
+		if (
 			RAGConfig.CONTENT_EXTRACTION_ENGINE === 'document_intelligence' &&
 			(RAGConfig.DOCUMENT_INTELLIGENCE_ENDPOINT === '' ||
 				RAGConfig.DOCUMENT_INTELLIGENCE_KEY === '')
@@ -195,10 +208,6 @@
 			ALLOWED_FILE_EXTENSIONS: RAGConfig.ALLOWED_FILE_EXTENSIONS.split(',')
 				.map((ext) => ext.trim())
 				.filter((ext) => ext !== ''),
-			DATALAB_MARKER_LANGS: RAGConfig.DATALAB_MARKER_LANGS.split(',')
-				.map((code) => code.trim())
-				.filter((code) => code !== '')
-				.join(', '),
 			DOCLING_PICTURE_DESCRIPTION_LOCAL: JSON.parse(
 				RAGConfig.DOCLING_PICTURE_DESCRIPTION_LOCAL || '{}'
 			),
@@ -337,6 +346,21 @@
 							</div>
 						{:else if RAGConfig.CONTENT_EXTRACTION_ENGINE === 'datalab_marker'}
 							<div class="my-0.5 flex gap-2 pr-2">
+								<Tooltip
+									content={$i18n.t(
+										'API Base URL for Datalab Marker service. Defaults to: https://www.datalab.to/api/v1/marker'
+									)}
+									placement="top-start"
+									className="w-full"
+								>
+									<input
+										class="flex-1 w-full text-sm bg-transparent outline-hidden"
+										placeholder={$i18n.t('Enter Datalab Marker API Base URL')}
+										bind:value={RAGConfig.DATALAB_MARKER_API_BASE_URL}
+									/>
+								</Tooltip>
+							</div>
+							<div class="my-0.5 flex gap-2 pr-2">
 								<SensitiveInput
 									placeholder={$i18n.t('Enter Datalab Marker API Key')}
 									required={false}
@@ -344,24 +368,33 @@
 								/>
 							</div>
 
-							<div class="flex justify-between w-full mt-2">
-								<div class="text-xs font-medium">
-									{$i18n.t('Languages')}
+							<div class="flex flex-col gap-2 mt-2">
+								<div class=" flex flex-col w-full justify-between">
+									<div class=" mb-1 text-xs font-medium">
+										{$i18n.t('Additional Config')}
+									</div>
+									<div class="flex w-full items-center relative">
+										<Tooltip
+											content={$i18n.t(
+												'Additional configuration options for marker. This should be a JSON string with key-value pairs. For example, \'{"key": "value"}\'. Supported keys include: disable_links, keep_pageheader_in_output, keep_pagefooter_in_output, filter_blank_pages, drop_repeated_text, layout_coverage_threshold, merge_threshold, height_tolerance, gap_threshold, image_threshold, min_line_length, level_count, default_level'
+											)}
+											placement="top-start"
+											className="w-full"
+										>
+											<Textarea
+												bind:value={RAGConfig.DATALAB_MARKER_ADDITIONAL_CONFIG}
+												placeholder={$i18n.t('Enter JSON config (e.g., {"disable_links": true})')}
+											/>
+										</Tooltip>
+									</div>
 								</div>
-
-								<input
-									class="text-sm bg-transparent outline-hidden"
-									type="text"
-									bind:value={RAGConfig.DATALAB_MARKER_LANGS}
-									placeholder={$i18n.t('e.g.) en,fr,de')}
-								/>
 							</div>
 
 							<div class="flex justify-between w-full mt-2">
 								<div class="self-center text-xs font-medium">
 									<Tooltip
 										content={$i18n.t(
-											'Significantly improves accuracy by using an LLM to enhance tables, forms, inline math, and layout detection. Will increase latency. Defaults to True.'
+											'Significantly improves accuracy by using an LLM to enhance tables, forms, inline math, and layout detection. Will increase latency. Defaults to False.'
 										)}
 										placement="top-start"
 									>
@@ -443,6 +476,21 @@
 								</div>
 								<div class="flex items-center">
 									<Switch bind:state={RAGConfig.DATALAB_MARKER_DISABLE_IMAGE_EXTRACTION} />
+								</div>
+							</div>
+							<div class="flex justify-between w-full mt-2">
+								<div class="self-center text-xs font-medium">
+									<Tooltip
+										content={$i18n.t(
+											'Format the lines in the output. Defaults to False. If set to True, the lines will be formatted to detect inline math and styles.'
+										)}
+										placement="top-start"
+									>
+										{$i18n.t('Format Lines')}
+									</Tooltip>
+								</div>
+								<div class="flex items-center">
+									<Switch bind:state={RAGConfig.DATALAB_MARKER_FORMAT_LINES} />
 								</div>
 							</div>
 							<div class="flex justify-between w-full mt-2">
@@ -1011,22 +1059,71 @@
 							{/if}
 
 							{#if RAGConfig.ENABLE_RAG_HYBRID_SEARCH === true}
-								<div class="mb-2.5 flex w-full justify-between">
-									<div class="self-center text-xs font-medium">
-										{$i18n.t('Weight of BM25 Retrieval')}
-									</div>
-									<div class="flex items-center relative">
-										<input
-											class="flex-1 w-full text-sm bg-transparent outline-hidden"
-											type="number"
-											step="0.01"
-											placeholder={$i18n.t('Enter BM25 Weight')}
-											bind:value={RAGConfig.HYBRID_BM25_WEIGHT}
-											autocomplete="off"
-											min="0.0"
-											max="1.0"
-										/>
-									</div>
+								<div class=" mb-2.5 py-0.5 w-full justify-between">
+									<Tooltip
+										content={$i18n.t(
+											'The Weight of BM25 Hybrid Search. 0 more lexical, 1 more semantic. Default 0.5'
+										)}
+										placement="top-start"
+										className="inline-tooltip"
+									>
+										<div class="flex w-full justify-between">
+											<div class=" self-center text-xs font-medium">
+												{$i18n.t('BM25 Weight')}
+											</div>
+											<button
+												class="p-1 px-3 text-xs flex rounded-sm transition shrink-0 outline-hidden"
+												type="button"
+												on:click={() => {
+													RAGConfig.HYBRID_BM25_WEIGHT =
+														(RAGConfig?.HYBRID_BM25_WEIGHT ?? null) === null ? 0.5 : null;
+												}}
+											>
+												{#if (RAGConfig?.HYBRID_BM25_WEIGHT ?? null) === null}
+													<span class="ml-2 self-center"> {$i18n.t('Default')} </span>
+												{:else}
+													<span class="ml-2 self-center"> {$i18n.t('Custom')} </span>
+												{/if}
+											</button>
+										</div>
+									</Tooltip>
+
+									{#if (RAGConfig?.HYBRID_BM25_WEIGHT ?? null) !== null}
+										<div class="flex mt-0.5 space-x-2">
+											<div class=" flex-1">
+												<input
+													id="steps-range"
+													type="range"
+													min="0"
+													max="1"
+													step="0.05"
+													bind:value={RAGConfig.HYBRID_BM25_WEIGHT}
+													class="w-full h-2 rounded-lg appearance-none cursor-pointer dark:bg-gray-700"
+												/>
+
+												<div class="py-0.5">
+													<div class="flex w-full justify-between">
+														<div class=" text-left text-xs font-small">
+															{$i18n.t('lexical')}
+														</div>
+														<div class=" text-right text-xs font-small">
+															{$i18n.t('semantic')}
+														</div>
+													</div>
+												</div>
+											</div>
+											<div>
+												<input
+													bind:value={RAGConfig.HYBRID_BM25_WEIGHT}
+													type="number"
+													class=" bg-transparent text-center w-14"
+													min="0"
+													max="1"
+													step="any"
+												/>
+											</div>
+										</div>
+									{/if}
 								</div>
 							{/if}
 						{/if}

@@ -135,7 +135,9 @@ class SharingPermissions(BaseModel):
 
 class ChatPermissions(BaseModel):
     controls: bool = True
+    valves: bool = True
     system_prompt: bool = True
+    params: bool = True
     file_upload: bool = True
     delete: bool = True
     edit: bool = True

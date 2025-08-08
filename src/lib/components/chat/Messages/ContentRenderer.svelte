@@ -34,7 +34,6 @@
 	export let onAddMessages = (e) => {};
 
 	let contentContainerElement;
-
 	let floatingButtonsElement;
 
 	const updateButtonPosition = (event) => {
@@ -195,6 +194,7 @@
 	<FloatingButtons
 		bind:this={floatingButtonsElement}
 		{id}
+		actions={$settings?.floatingActionButtons ?? []}
 		model={(selectedModels ?? []).includes(model?.id)
 			? model?.id
 			: (selectedModels ?? []).length > 0

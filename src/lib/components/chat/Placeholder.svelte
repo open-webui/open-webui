@@ -55,6 +55,7 @@
 	export let webSearchEnabled = false;
 
 	export let onSelect = (e) => {};
+	export let onChange = (e) => {};
 
 	export let toolServers = [];
 
@@ -78,8 +79,8 @@
 			className="w-full flex justify-center mb-0.5"
 			placement="top"
 		>
-			<div class="flex items-center gap-2 text-gray-500 font-medium text-lg my-2 w-fit">
-				<EyeSlash strokeWidth="2.5" className="size-5" />{$i18n.t('Temporary Chat')}
+			<div class="flex items-center gap-2 text-gray-500 font-medium text-base my-2 w-fit">
+				<EyeSlash strokeWidth="2.5" className="size-4" />{$i18n.t('Temporary Chat')}
 			</div>
 		</Tooltip>
 	{/if}
@@ -224,15 +225,7 @@
 					{stopResponse}
 					{createMessagePair}
 					placeholder={$i18n.t('How can I help you today?')}
-					onChange={(input) => {
-						if (!$temporaryChatEnabled) {
-							if (input.prompt !== null) {
-								sessionStorage.setItem(`chat-input`, JSON.stringify(input));
-							} else {
-								sessionStorage.removeItem(`chat-input`);
-							}
-						}
-					}}
+					{onChange}
 					on:upload={(e) => {
 						dispatch('upload', e.detail);
 					}}

@@ -1320,7 +1320,6 @@ export const convertOpenApiToToolPayload = (openApiSpec) => {
 		for (const [method, operation] of Object.entries(methods)) {
 			if (operation?.operationId) {
 				const tool = {
-					type: 'function',
 					name: operation.operationId,
 					description: operation.description || operation.summary || 'No description available.',
 					parameters: {
@@ -1389,8 +1388,8 @@ export const slugify = (str: string): string => {
 			.replace(/[\u0300-\u036f]/g, '')
 			// 3. Replace any sequence of whitespace with a single hyphen
 			.replace(/\s+/g, '-')
-			// 4. Remove all characters except alphanumeric characters and hyphens
-			.replace(/[^a-zA-Z0-9-]/g, '')
+			// 4. Remove all characters except alphanumeric characters, hyphens, and underscores
+			.replace(/[^a-zA-Z0-9-_]/g, '')
 			// 5. Convert to lowercase
 			.toLowerCase()
 	);

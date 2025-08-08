@@ -60,7 +60,7 @@
 	export let scrollToBottom: Function = () => {};
 
 	export let acceptFiles = true;
-	export let showFormattingButtons = true;
+	export let showFormattingToolbar = true;
 
 	let showInputVariablesModal = false;
 	let inputVariables: Record<string, any> = {};
@@ -327,7 +327,9 @@
 					let imageUrl = event.target.result;
 
 					// Compress the image if settings or config require it
-					imageUrl = await compressImageHandler(imageUrl, $settings, $config);
+					if ($settings?.imageCompression && $settings?.imageCompressionInChannels) {
+						imageUrl = await compressImageHandler(imageUrl, $settings, $config);
+					}
 
 					files = [
 						...files,
@@ -700,7 +702,7 @@
 									bind:this={chatInputElement}
 									json={true}
 									messageInput={true}
-									{showFormattingButtons}
+									{showFormattingToolbar}
 									shiftEnter={!($settings?.ctrlEnterToSend ?? false) &&
 										(!$mobile ||
 											!(

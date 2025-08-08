@@ -802,7 +802,9 @@
 										{selectedModels}
 										content={message.content}
 										sources={message.sources}
-										floatingButtons={message?.done && !readOnly}
+										floatingButtons={message?.done &&
+											!readOnly &&
+											($settings?.showFloatingActionButtons ?? true)}
 										save={!readOnly}
 										preview={!readOnly}
 										done={($settings?.chatFadeStreamingText ?? true)

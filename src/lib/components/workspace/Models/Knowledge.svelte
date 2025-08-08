@@ -95,8 +95,6 @@
 	const inputFilesHandler = async (inputFiles) => {
 		console.log('Input files handler called with:', inputFiles);
 
-		
-
 		inputFiles.forEach(async (file) => {
 			console.log('Processing file:', {
 				name: file.name,
@@ -180,9 +178,10 @@
 						name={file.name}
 						modal={true}
 						edit={true}
+						loading={file.status === 'uploading'}
 						type={file?.legacy
 							? `Legacy${file.type ? ` ${file.type}` : ''}`
-							: (file?.type ?? 'Collection')}
+							: (file?.type ?? 'collection')}
 						dismissible
 						on:dismiss={(e) => {
 							selectedItems = selectedItems.filter((_, idx) => idx !== fileIdx);
