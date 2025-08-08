@@ -75,8 +75,6 @@
 	import Voice from '../icons/Voice.svelte';
 	const i18n = getContext('i18n');
 
-	export let transparentBackground = false;
-
 	export let onChange: Function = () => {};
 	export let createMessagePair: Function;
 	export let stopResponse: Function;
@@ -929,7 +927,7 @@
 			</div>
 		</div>
 
-		<div class="{transparentBackground ? 'bg-transparent' : 'bg-white dark:bg-gray-900'} ">
+		<div class="bg-transparent">
 			<div
 				class="{($settings?.widescreenMode ?? null)
 					? 'max-w-full'

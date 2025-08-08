@@ -2202,9 +2202,6 @@
 									bind:atSelectedModel
 									bind:showCommands
 									toolServers={$toolServers}
-									transparentBackground={$settings?.backgroundImageUrl ??
-										$config?.license_metadata?.background_image_url ??
-										false}
 									{generating}
 									{stopResponse}
 									{createMessagePair}
@@ -2258,9 +2255,6 @@
 									bind:webSearchEnabled
 									bind:atSelectedModel
 									bind:showCommands
-									transparentBackground={$settings?.backgroundImageUrl ??
-										$config?.license_metadata?.background_image_url ??
-										false}
 									toolServers={$toolServers}
 									{stopResponse}
 									{createMessagePair}
