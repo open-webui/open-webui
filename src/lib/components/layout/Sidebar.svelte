@@ -493,6 +493,15 @@
 	}}
 />
 
+<button
+	id="sidebar-new-chat-button"
+	class="hidden"
+	on:click={() => {
+		goto('/');
+		newChatHandler();
+	}}
+/>
+
 {#if !$mobile && !$showSidebar}
 	<div
 		class=" py-2 px-1.5 flex flex-col justify-between text-black dark:text-white h-full border-e border-gray-50 dark:border-gray-850 z-10"
