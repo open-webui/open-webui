@@ -351,9 +351,10 @@ class ChatTable:
 
                 shared_chat.title = chat.title
                 shared_chat.chat = chat.chat
-
-                if share_id:
-                    shared_chat.id = share_id
+                shared_chat.id = share_id
+                shared_chat.meta = chat.meta
+                shared_chat.pinned = chat.pinned
+                shared_chat.folder_id = chat.folder_id
 
                 shared_chat.updated_at = int(time.time())
                 db.commit()
