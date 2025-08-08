@@ -20,10 +20,6 @@ function codeRenderer(token: any) {
 
 function codeStart(src: string) {
 	return src.match(/^```/) ? 0 : -1;
-
-	// Look for opening code fence (```lang attr1 attr2)
-	const match = src.match(/^```(\w+)?(.*?)\n/);
-	return match ? match.index : undefined;
 }
 
 // Extension wrapper function
