@@ -3,7 +3,7 @@
 	import { processResponseContent, replaceTokens } from '$lib/utils';
 	import { marked } from 'marked';
 
-	import markedCodeExtension from "$lib/utils/marked/code-extension";
+	import markedCodeExtension from '$lib/utils/marked/code-extension';
 	import markedExtension from '$lib/utils/marked/extension';
 	import markedKatexExtension from '$lib/utils/marked/katex-extension';
 
@@ -33,7 +33,7 @@
 		breaks: true
 	};
 
-  marked.use(markedCodeExtension(options))
+	marked.use(markedCodeExtension(options));
 	marked.use(markedKatexExtension(options));
 	marked.use(markedExtension(options));
 
