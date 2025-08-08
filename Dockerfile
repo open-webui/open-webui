@@ -176,6 +176,12 @@ COPY --chown=$UID:$GID --from=build /app/package.json /app/package.json
 # copy backend files
 COPY --chown=$UID:$GID ./backend .
 
+# Copy AWS RDS certificate bundle for SSL connections (downloaded by CI/CD)
+# This enables certificate validation for Aurora PostgreSQL connections
+RUN mkdir -p /root/.postgresql
+COPY --chown=$UID:$GID aws-rds-ca-cert.pem /root/.postgresql/postgresql.crt
+RUN chmod 600 /root/.postgresql/postgresql.crt
+
 EXPOSE 8080
 
 HEALTHCHECK CMD curl --silent --fail http://localhost:${PORT:-8080}/health | jq -ne 'input.status == true' || exit 1
