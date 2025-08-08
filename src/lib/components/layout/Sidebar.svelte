@@ -59,6 +59,7 @@
 	import FolderModal from './Sidebar/Folders/FolderModal.svelte';
 	import Sidebar from '../icons/Sidebar.svelte';
 	import PinnedModelList from './Sidebar/PinnedModelList.svelte';
+	import Note from '../icons/Note.svelte';
 
 	const BREAKPOINT = 768;
 
@@ -495,7 +496,7 @@
 	<div
 		class="{$showSidebar
 			? 'md:hidden'
-			: ''} py-2 px-1.5 flex flex-col justify-between text-black dark:text-white h-full border-e border-gray-50 dark:border-gray-850"
+			: ''} py-2 px-[5px] flex flex-col justify-between text-black dark:text-white h-full border-e border-gray-50 dark:border-gray-850"
 	>
 		<button
 			class="flex flex-col flex-1 cursor-[e-resize]"
@@ -579,23 +580,7 @@
 								draggable="false"
 							>
 								<div class=" self-center flex items-center justify-center size-9">
-									<svg
-										class="size-4.5"
-										aria-hidden="true"
-										xmlns="http://www.w3.org/2000/svg"
-										width="24"
-										height="24"
-										stroke-width="1.5"
-										fill="none"
-										viewBox="0 0 24 24"
-									>
-										<path
-											stroke="currentColor"
-											stroke-linecap="round"
-											stroke-linejoin="round"
-											d="M10 3v4a1 1 0 0 1-1 1H5m4 8h6m-6-4h6m4-8v16a1 1 0 0 1-1 1H6a1 1 0 0 1-1-1V7.914a1 1 0 0 1 .293-.707l3.914-3.914A1 1 0 0 1 9.914 3H18a1 1 0 0 1 1 1Z"
-										/>
-									</svg>
+									<Note className="size-4.5" />
 								</div>
 							</a>
 						</Tooltip>
@@ -676,10 +661,10 @@
 	bind:this={navElement}
 	id="sidebar"
 	class="h-screen max-h-[100dvh] min-h-screen select-none {$showSidebar
-		? 'md:relative w-[260px] max-w-[260px]'
-		: '-translate-x-[260px] w-[0px]'} {$isApp
+		? 'md:relative w-[260px] max-w-[260px] bg-gray-50 dark:bg-gray-950'
+		: 'w-[0px] md:relative md:w-[40px] bg-transparent'} {$isApp
 		? `ml-[4.5rem] md:ml-0 `
-		: 'transition-width duration-200 ease-in-out'}  shrink-0 bg-gray-50 text-gray-900 dark:bg-gray-950 dark:text-gray-200 text-sm fixed z-50 top-0 left-0 overflow-x-hidden
+		: 'transition-width transition-all duration-200 '}  shrink-0 text-gray-900 dark:text-gray-200 text-sm fixed z-50 top-0 left-0 overflow-x-hidden
         "
 	data-state={$showSidebar}
 >
@@ -724,43 +709,17 @@
 			</Tooltip>
 		</div>
 
-		<!-- {#if $user?.role === 'admin'}
-			<div class="px-1.5 flex justify-center text-gray-800 dark:text-gray-200">
-				<a
-					class="grow flex items-center space-x-3 rounded-lg px-2 py-[7px] hover:bg-gray-100 dark:hover:bg-gray-900 transition"
-					href="/home"
-					on:click={() => {
-						selectedChatId = null;
-						chatId.set('');
-
-						if ($mobile) {
-							showSidebar.set(false);
-						}
-					}}
-					draggable="false"
-				>
-					<div class="self-center">
-						<Home strokeWidth="2" className="size-[1.1rem]" />
-					</div>
-
-					<div class="flex self-center translate-y-[0.5px]">
-						<div class=" self-center font-medium text-sm font-primary">{$i18n.t('Home')}</div>
-					</div>
-				</a>
-			</div>
-		{/if} -->
-
 		<div class="pb-1.5">
 			<div class="px-1.5 flex justify-center text-gray-800 dark:text-gray-200">
 				<a
 					id="sidebar-new-chat-button"
-					class="grow flex items-center space-x-3 rounded-lg px-2 py-[7px] hover:bg-gray-100 dark:hover:bg-gray-900 transition outline-none"
+					class="grow flex items-center space-x-3 rounded-lg px-2 py-2 hover:bg-gray-100 dark:hover:bg-gray-900 transition outline-none"
 					href="/"
 					draggable="false"
 					on:click={newChatHandler}
 				>
 					<div class="self-center">
-						<PencilSquare className=" size-[1.1rem]" strokeWidth="2" />
+						<PencilSquare className=" size-4.5" strokeWidth="2" />
 					</div>
 
 					<div class="flex self-center translate-y-[0.5px]">
@@ -771,14 +730,14 @@
 
 			<div class="px-1.5 flex justify-center text-gray-800 dark:text-gray-200">
 				<button
-					class="grow flex items-center space-x-3 rounded-lg px-2 py-[7px] hover:bg-gray-100 dark:hover:bg-gray-900 transition outline-none"
+					class="grow flex items-center space-x-3 rounded-lg px-2 py-2 hover:bg-gray-100 dark:hover:bg-gray-900 transition outline-none"
 					on:click={() => {
 						showSearch.set(true);
 					}}
 					draggable="false"
 				>
 					<div class="self-center">
-						<Search strokeWidth="2" className="size-[1.1rem]" />
+						<Search strokeWidth="2" className="size-4.5" />
 					</div>
 
 					<div class="flex self-center translate-y-[0.5px]">
@@ -790,29 +749,13 @@
 			{#if ($config?.features?.enable_notes ?? false) && ($user?.role === 'admin' || ($user?.permissions?.features?.notes ?? true))}
 				<div class="px-1.5 flex justify-center text-gray-800 dark:text-gray-200">
 					<a
-						class="grow flex items-center space-x-3 rounded-lg px-2 py-[7px] hover:bg-gray-100 dark:hover:bg-gray-900 transition"
+						class="grow flex items-center space-x-3 rounded-lg px-2 py-2 hover:bg-gray-100 dark:hover:bg-gray-900 transition"
 						href="/notes"
 						on:click={itemClickHandler}
 						draggable="false"
 					>
 						<div class="self-center">
-							<svg
-								class="size-4"
-								aria-hidden="true"
-								xmlns="http://www.w3.org/2000/svg"
-								width="24"
-								height="24"
-								fill="none"
-								viewBox="0 0 24 24"
-							>
-								<path
-									stroke="currentColor"
-									stroke-linecap="round"
-									stroke-linejoin="round"
-									stroke-width="2"
-									d="M10 3v4a1 1 0 0 1-1 1H5m4 8h6m-6-4h6m4-8v16a1 1 0 0 1-1 1H6a1 1 0 0 1-1-1V7.914a1 1 0 0 1 .293-.707l3.914-3.914A1 1 0 0 1 9.914 3H18a1 1 0 0 1 1 1Z"
-								/>
-							</svg>
+							<Note className="size-4.5" strokeWidth="2" />
 						</div>
 
 						<div class="flex self-center translate-y-[0.5px]">
@@ -825,7 +768,7 @@
 			{#if $user?.role === 'admin' || $user?.permissions?.workspace?.models || $user?.permissions?.workspace?.knowledge || $user?.permissions?.workspace?.prompts || $user?.permissions?.workspace?.tools}
 				<div class="px-1.5 flex justify-center text-gray-800 dark:text-gray-200">
 					<a
-						class="grow flex items-center space-x-3 rounded-lg px-2 py-[7px] hover:bg-gray-100 dark:hover:bg-gray-900 transition"
+						class="grow flex items-center space-x-3 rounded-lg px-2 py-2 hover:bg-gray-100 dark:hover:bg-gray-900 transition"
 						href="/workspace"
 						on:click={itemClickHandler}
 						draggable="false"
@@ -837,7 +780,7 @@
 								viewBox="0 0 24 24"
 								stroke-width="2"
 								stroke="currentColor"
-								class="size-[1.1rem]"
+								class="size-4.5"
 							>
 								<path
 									stroke-linecap="round"
