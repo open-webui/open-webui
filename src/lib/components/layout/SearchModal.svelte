@@ -352,7 +352,7 @@
 							bind:history
 							bind:messages
 							autoScroll={true}
-							sendPrompt={() => {}}
+							sendMessage={() => {}}
 							continueResponse={() => {}}
 							regenerateResponse={() => {}}
 						/>
