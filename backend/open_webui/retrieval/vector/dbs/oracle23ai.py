@@ -11,10 +11,10 @@ ORACLE_DB_PASSWORD = "Welcome123456"
 ORACLE_DB_DSN = "localhost:1521/FREEPDB1"
 
 ## ADW or ATP
-# ORACLE_DB_USE_WALLET =  true 
+# ORACLE_DB_USE_WALLET =  true
 # ORACLE_DB_USER = "DEMOUSER"
 # ORACLE_DB_PASSWORD = "Welcome123456"
-# ORACLE_DB_DSN = "medium" 
+# ORACLE_DB_DSN = "medium"
 # ORACLE_DB_DSN = "(description=  (retry_count=3)(retry_delay=3)(address=(protocol=tcps)(port=1522)(host=xx.oraclecloud.com))(connect_data=(service_name=yy.adb.oraclecloud.com))(security=(ssl_server_dn_match=no)))"
 # ORACLE_WALLET_DIR = "/home/opc/adb_wallet"
 # ORACLE_WALLET_PASSWORD = "Welcome1"
