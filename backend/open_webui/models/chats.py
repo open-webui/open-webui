@@ -666,6 +666,54 @@ class ChatTable:
                             ]
                         )
                     )
+            elif dialect_name == "mssql":
+                # MS SQL Server case: using OPENJSON and JSON_VALUE for JSON searching
+                query = query.filter(
+                    (
+                        Chat.title.ilike(
+                            f"%{search_text}%"
+                        )  # Case-insensitive search in title
+                        | text(
+                            """
+                            EXISTS (
+                                SELECT 1
+                                FROM OPENJSON(Chat.chat, '$.messages') AS message
+                                WHERE LOWER(JSON_VALUE(message.value, '$.content')) LIKE '%' + :search_text + '%'
+                            )
+                            """
+                        )
+                    ).params(search_text=search_text)
+                )
+
+                # Check if there are any tags to filter, it should have all the tags
+                if "none" in tag_ids:
+                    query = query.filter(
+                        text(
+                            """
+                            NOT EXISTS (
+                                SELECT 1
+                                FROM OPENJSON(Chat.meta, '$.tags') AS tag
+                            )
+                            """
+                        )
+                    )
+                elif tag_ids:
+                    query = query.filter(
+                        and_(
+                            *[
+                                text(
+                                    f"""
+                                    EXISTS (
+                                        SELECT 1
+                                        FROM OPENJSON(Chat.meta, '$.tags') AS tag
+                                        WHERE JSON_VALUE(tag.value, '$') = :tag_id_{tag_idx}
+                                    )
+                                    """
+                                ).params(**{f"tag_id_{tag_idx}": tag_id})
+                                for tag_idx, tag_id in enumerate(tag_ids)
+                            ]
+                        )
+                    )
             else:
                 raise NotImplementedError(
                     f"Unsupported dialect: {db.bind.dialect.name}"
@@ -748,6 +796,13 @@ class ChatTable:
                 query = query.filter(
                     text(
                         "EXISTS (SELECT 1 FROM json_array_elements_text(Chat.meta->'tags') elem WHERE elem = :tag_id)"
+                    )
+                ).params(tag_id=tag_id)
+            elif db.bind.dialect.name == "mssql":
+                # MS SQL Server JSON query for tags within the meta JSON field
+                query = query.filter(
+                    text(
+                        "EXISTS (SELECT 1 FROM OPENJSON(Chat.meta, '$.tags') WHERE JSON_VALUE(value, '$') = :tag_id)"
                     )
                 ).params(tag_id=tag_id)
             else:

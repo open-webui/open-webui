@@ -13,6 +13,7 @@ from open_webui.env import (
     DATABASE_POOL_RECYCLE,
     DATABASE_POOL_SIZE,
     DATABASE_POOL_TIMEOUT,
+    DISABLE_MIGRATIONS,
 )
 from peewee_migrate import Router
 from sqlalchemy import Dialect, create_engine, MetaData, types
@@ -72,7 +73,10 @@ def handle_peewee_migration(DATABASE_URL):
         assert db.is_closed(), "Database connection is still open."
 
 
-handle_peewee_migration(DATABASE_URL)
+if not DISABLE_MIGRATIONS:
+    handle_peewee_migration(DATABASE_URL)
+else:
+    log.info("Peewee migrations disabled (DISABLE_MIGRATIONS=True)")
 
 
 SQLALCHEMY_DATABASE_URL = DATABASE_URL
