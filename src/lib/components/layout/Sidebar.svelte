@@ -711,7 +711,7 @@
 				</a>
 				<Tooltip
 					content={$showSidebar ? $i18n.t('Close Sidebar') : $i18n.t('Open Sidebar')}
-					interactive={true}
+					placement="bottom"
 				>
 					<button
 						class=" flex rounded-lg hover:bg-gray-100 dark:hover:bg-gray-850 transition cursor-[w-resize]"
