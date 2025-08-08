@@ -1308,6 +1308,7 @@
 	"Thorough explanation": "འགྲེལ་བཤད་ཞིབ་ཚགས།",
 	"Thought for {{DURATION}}": "{{DURATION}} རིང་བསམས།",
 	"Thought for {{DURATION}} seconds": "སྐར་ཆ་ {{DURATION}} རིང་བསམས།",
+	"Thought for less than a second": "",
 	"Tika": "Tika",
 	"Tika Server URL required.": "Tika Server URL དགོས་ངེས།",
 	"Tiktoken": "Tiktoken",

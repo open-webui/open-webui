@@ -1308,6 +1308,7 @@
 	"Thorough explanation": "Míniú críochnúil",
 	"Thought for {{DURATION}}": "Smaoineamh ar {{DURATION}}",
 	"Thought for {{DURATION}} seconds": "Smaoineamh ar feadh {{DURATION}} soicind",
+	"Thought for less than a second": "",
 	"Tika": "Tika",
 	"Tika Server URL required.": "Teastaíonn URL Freastalaí Tika.",
 	"Tiktoken": "Tiktoken",

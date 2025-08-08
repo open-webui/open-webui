@@ -1308,6 +1308,7 @@
 	"Thorough explanation": "Alapos magyarázat",
 	"Thought for {{DURATION}}": "Gondolkodott {{DURATION}} ideig",
 	"Thought for {{DURATION}} seconds": "Gondolkodott {{DURATION}} másodpercig",
+	"Thought for less than a second": "",
 	"Tika": "Tika",
 	"Tika Server URL required.": "Tika szerver URL szükséges.",
 	"Tiktoken": "Tiktoken",

@@ -1308,6 +1308,7 @@
 	"Thorough explanation": "Explicación exhaustiva",
 	"Thought for {{DURATION}}": "Pensando durante {{DURATION}}",
 	"Thought for {{DURATION}} seconds": "Pensando durante {{DURATION}} segundos",
+	"Thought for less than a second": "",
 	"Tika": "Tika",
 	"Tika Server URL required.": "URL del Servidor Tika necesaria",
 	"Tiktoken": "Tiktoken",

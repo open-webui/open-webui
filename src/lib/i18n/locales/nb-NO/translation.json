@@ -1308,6 +1308,7 @@
 	"Thorough explanation": "Grundig forklaring",
 	"Thought for {{DURATION}}": "Tenkte i {{DURATION}}",
 	"Thought for {{DURATION}} seconds": "Tenkte i {{DURATION}} sekunder",
+	"Thought for less than a second": "",
 	"Tika": "Tika",
 	"Tika Server URL required.": "Server-URL for Tika kreves.",
 	"Tiktoken": "Tiktoken",

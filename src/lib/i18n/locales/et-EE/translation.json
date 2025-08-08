@@ -1308,6 +1308,7 @@
 	"Thorough explanation": "Põhjalik selgitus",
 	"Thought for {{DURATION}}": "Mõtles {{DURATION}}",
 	"Thought for {{DURATION}} seconds": "Mõtles {{DURATION}} sekundit",
+	"Thought for less than a second": "",
 	"Tika": "Tika",
 	"Tika Server URL required.": "Tika serveri URL on nõutav.",
 	"Tiktoken": "Tiktoken",

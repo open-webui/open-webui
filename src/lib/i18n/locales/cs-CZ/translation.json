@@ -1308,6 +1308,7 @@
 	"Thorough explanation": "Obsáhlé vysvětlení",
 	"Thought for {{DURATION}}": "",
 	"Thought for {{DURATION}} seconds": "",
+	"Thought for less than a second": "",
 	"Tika": "Tika",
 	"Tika Server URL required.": "Je vyžadována URL adresa serveru Tika.",
 	"Tiktoken": "Tiktoken",

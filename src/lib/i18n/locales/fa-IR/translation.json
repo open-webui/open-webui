@@ -1308,6 +1308,7 @@
 	"Thorough explanation": "توضیح کامل",
 	"Thought for {{DURATION}}": "فکر کردن برای {{DURATION}}",
 	"Thought for {{DURATION}} seconds": "فکر کردن برای {{DURATION}} ثانیه",
+	"Thought for less than a second": "",
 	"Tika": "تیکا",
 	"Tika Server URL required.": "آدرس سرور تیکا مورد نیاز است.",
 	"Tiktoken": "تیک توکن",

@@ -1308,6 +1308,7 @@
 	"Thorough explanation": "解释较为详细",
 	"Thought for {{DURATION}}": "思考用时 {{DURATION}}",
 	"Thought for {{DURATION}} seconds": "思考用时 {{DURATION}} 秒",
+	"Thought for less than a second": "思考用时 不足 1 秒",
 	"Tika": "Tika",
 	"Tika Server URL required.": "请输入 Tika 服务器地址",
 	"Tiktoken": "Tiktoken",

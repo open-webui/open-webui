@@ -1308,6 +1308,7 @@
 	"Thorough explanation": "Giải thích kỹ lưỡng",
 	"Thought for {{DURATION}}": "Suy nghĩ trong {{DURATION}}",
 	"Thought for {{DURATION}} seconds": "Suy nghĩ trong {{DURATION}} giây",
+	"Thought for less than a second": "",
 	"Tika": "Tika",
 	"Tika Server URL required.": "Bắt buộc phải nhập URL cho Tika Server ",
 	"Tiktoken": "Tiktoken",

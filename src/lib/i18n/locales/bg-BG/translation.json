@@ -1308,6 +1308,7 @@
 	"Thorough explanation": "Подробно обяснение",
 	"Thought for {{DURATION}}": "Мислил за {{DURATION}}",
 	"Thought for {{DURATION}} seconds": "Мислил за {{DURATION}} секунди",
+	"Thought for less than a second": "",
 	"Tika": "Тика",
 	"Tika Server URL required.": "Изисква се URL адрес на Тика сървъра.",
 	"Tiktoken": "Tiktoken",

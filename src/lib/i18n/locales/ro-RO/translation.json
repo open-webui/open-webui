@@ -1308,6 +1308,7 @@
 	"Thorough explanation": "Explicație detaliată",
 	"Thought for {{DURATION}}": "",
 	"Thought for {{DURATION}} seconds": "",
+	"Thought for less than a second": "",
 	"Tika": "Tika",
 	"Tika Server URL required.": "Este necesar URL-ul serverului Tika.",
 	"Tiktoken": "Tiktoken",

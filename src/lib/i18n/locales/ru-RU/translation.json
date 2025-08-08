@@ -1308,6 +1308,7 @@
 	"Thorough explanation": "Подробное объяснение",
 	"Thought for {{DURATION}}": "Рассуждаю {{DURATION}}",
 	"Thought for {{DURATION}} seconds": "Рассуждение заняло {{DURATION}} секунд(ы)",
+	"Thought for less than a second": "",
 	"Tika": "Tika",
 	"Tika Server URL required.": "Требуется URL-адрес сервера Tika.",
 	"Tiktoken": "",

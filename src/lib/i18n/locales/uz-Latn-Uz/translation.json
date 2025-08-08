@@ -1308,6 +1308,7 @@
 	"Thorough explanation": "To'liq tushuntirish",
 	"Thought for {{DURATION}}": "{{DURATION}} uchun fikr",
 	"Thought for {{DURATION}} seconds": "{{DURATION}} soniya oʻyladim",
+	"Thought for less than a second": "",
 	"Tika": "Tika",
 	"Tika Server URL required.": "Tika Server URL manzili talab qilinadi.",
 	"Tiktoken": "Tiktoken",

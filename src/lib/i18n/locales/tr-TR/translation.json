@@ -1308,6 +1308,7 @@
 	"Thorough explanation": "Kapsamlı açıklama",
 	"Thought for {{DURATION}}": "{{DURATION}} saniye düşünüldü",
 	"Thought for {{DURATION}} seconds": "{{DURATION}} saniye düşünüldü",
+	"Thought for less than a second": "",
 	"Tika": "Tika",
 	"Tika Server URL required.": "Tika Sunucu URL'si gereklidir.",
 	"Tiktoken": "Tiktoken",

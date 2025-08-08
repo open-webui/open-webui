@@ -1308,6 +1308,7 @@
 	"Thorough explanation": "Perusteellinen selitys",
 	"Thought for {{DURATION}}": "Ajatteli {{DURATION}}",
 	"Thought for {{DURATION}} seconds": "Ajatteli {{DURATION}} sekunttia",
+	"Thought for less than a second": "",
 	"Tika": "Tika",
 	"Tika Server URL required.": "Tika palvelimen verkko-osoite vaaditaan.",
 	"Tiktoken": "Tiktoken",

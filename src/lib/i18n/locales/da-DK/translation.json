@@ -1308,6 +1308,7 @@
 	"Thorough explanation": "Grundig forklaring",
 	"Thought for {{DURATION}}": "Tanker for {{DURATION}}",
 	"Thought for {{DURATION}} seconds": "Tanker for {{DURATION}} sekunder",
+	"Thought for less than a second": "",
 	"Tika": "Tika",
 	"Tika Server URL required.": "Tika-server-URL påkrævet.",
 	"Tiktoken": "",

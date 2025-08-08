@@ -1308,6 +1308,7 @@
 	"Thorough explanation": "완전한 설명",
 	"Thought for {{DURATION}}": "{{DURATION}} 동안 생각함",
 	"Thought for {{DURATION}} seconds": "{{DURATION}}초 동안 생각함",
+	"Thought for less than a second": "",
 	"Tika": "티카(Tika)",
 	"Tika Server URL required.": "티카 서버 URL이 필요합니다.",
 	"Tiktoken": "틱토큰 (Tiktoken)",

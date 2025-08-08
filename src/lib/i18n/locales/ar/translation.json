@@ -1308,6 +1308,7 @@
 	"Thorough explanation": "شرح شامل",
 	"Thought for {{DURATION}}": "فكّر لمدة {{DURATION}}",
 	"Thought for {{DURATION}} seconds": "فكّر لمدة {{DURATION}} ثانية",
+	"Thought for less than a second": "",
 	"Tika": "Tika",
 	"Tika Server URL required.": "عنوان خادم Tika مطلوب.",
 	"Tiktoken": "Tiktoken",

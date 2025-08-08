@@ -1308,6 +1308,7 @@
 	"Thorough explanation": "詳細な説明",
 	"Thought for {{DURATION}}": "{{DURATION}}秒間の思考",
 	"Thought for {{DURATION}} seconds": "{{DURATION}}秒間の思考",
+	"Thought for less than a second": "",
 	"Tika": "",
 	"Tika Server URL required.": "Tika Server URLが必要です。",
 	"Tiktoken": "Tiktoken",
