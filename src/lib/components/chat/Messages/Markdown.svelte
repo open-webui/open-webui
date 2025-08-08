@@ -33,8 +33,8 @@
 		breaks: true
 	};
 
-	marked.use(markedCodeExtension(options));
 	marked.use(markedKatexExtension(options));
+	marked.use(markedCodeExtension(options));
 	marked.use(markedExtension(options));
 
 	$: (async () => {
