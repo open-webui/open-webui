@@ -1379,6 +1379,50 @@ async def regenerate_backup_codes(user=Depends(get_current_user)):
         raise HTTPException(500, detail="An error occurred while regenerating backup codes")
     
 
+@router.post("/admin/totp/disable/{user_id}")
+async def admin_disable_user_totp(
+    user_id: str,
+    user=Depends(get_admin_user)
+):
+    """
+    Admin endpoint to disable TOTP for any user
+    Requires admin privileges
+    """
+    try:
+        # Get the target user
+        target_user = Users.get_user_by_id(user_id)
+        if not target_user:
+            raise HTTPException(
+                status_code=404,
+                detail=ERROR_MESSAGES.USER_NOT_FOUND
+            )
+        
+        # Check if user has TOTP enabled
+        if not target_user.totp_enabled:
+            raise HTTPException(
+                status_code=400,
+                detail="TOTP is not enabled for this user"
+            )
+        
+        # Disable TOTP and clear all related data
+        Users.update_user_by_id(user_id, {
+            "totp_enabled": False,
+            "totp_secret": None,
+            "totp_backup_codes": None
+        })
+        
+        return {"success": True, "message": "TOTP disabled successfully for user"}
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        log.error(f"Error disabling TOTP for user {user_id}: {str(e)}")
+        raise HTTPException(
+            status_code=500,
+            detail="Internal server error"
+        )
+
+
 ############################
 # API Key
 ############################

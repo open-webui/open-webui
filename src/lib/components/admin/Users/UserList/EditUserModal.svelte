@@ -6,6 +6,8 @@
 
 	import { updateUserById } from '$lib/apis/users';
 
+	import { adminDisableUserTotp } from '$lib/apis/auths';
+
 	import Modal from '$lib/components/common/Modal.svelte';
 	import localizedFormat from 'dayjs/plugin/localizedFormat';
 	import XMark from '$lib/components/icons/XMark.svelte';
@@ -27,6 +29,8 @@
 		password: ''
 	};
 
+	let disablingTotp = false;
+
 	const submitHandler = async () => {
 		const res = await updateUserById(localStorage.token, selectedUser.id, _user).catch((error) => {
 			toast.error(`${error}`);
@@ -35,6 +39,29 @@
 		if (res) {
 			dispatch('save');
 			show = false;
+		}
+	};
+
+	const disableTotpHandler = async () => {
+		if (!confirm($i18n.t('Are you sure you want to disable 2FA for this user? This will remove their TOTP setup and backup codes.'))) {
+			return;
+		}
+
+		disablingTotp = true;
+		
+		try {
+			await adminDisableUserTotp(localStorage.token, selectedUser.id);
+			toast.success($i18n.t('2FA has been disabled for the user'));
+			
+			// Update the local user object to reflect the change
+			selectedUser.totp_enabled = false;
+			_user.totp_enabled = false;
+			
+			dispatch('save');
+		} catch (error) {
+			toast.error(`${error}`);
+		} finally {
+			disablingTotp = false;
 		}
 	};
 
@@ -151,6 +178,39 @@
 								</div>
 							</div>
 						</div>
+
+						{#if selectedUser.totp_enabled}
+							<div class="flex flex-col w-full">
+								<div class="mb-1 text-xs text-gray-500">{$i18n.t('Two-Factor Authentication')}</div>
+								
+								<div class="flex items-center justify-between">
+									<div class="flex items-center space-x-2">
+										<div class="text-sm text-green-600 dark:text-green-400">
+											{$i18n.t('Enabled')}
+										</div>
+										<svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 text-green-600 dark:text-green-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+											<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+										</svg>
+									</div>
+									
+									<button
+										type="button"
+										class="px-3 py-1.5 text-xs font-medium text-red-600 hover:text-red-800 dark:text-red-400 dark:hover:text-red-300 hover:bg-red-50 dark:hover:bg-red-900/20 transition rounded-md flex items-center space-x-1"
+										disabled={disablingTotp}
+										on:click={disableTotpHandler}
+									>
+										{#if disablingTotp}
+											<div class="animate-spin rounded-full h-3 w-3 border-b-2 border-red-600"></div>
+										{:else}
+											<svg xmlns="http://www.w3.org/2000/svg" class="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+												<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+											</svg>
+										{/if}
+										<span>{$i18n.t('Disable')}</span>
+									</button>
+								</div>
+							</div>
+						{/if}
 
 						<div class="flex justify-end pt-3 text-sm font-medium">
 							<button
