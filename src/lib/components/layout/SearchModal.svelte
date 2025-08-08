@@ -146,7 +146,7 @@
 
 	const onKeyDown = (e) => {
 		const searchOptions = document.getElementById('search-options-container');
-		if (searchOptions) {
+		if (searchOptions || !show) {
 			return;
 		}
 
