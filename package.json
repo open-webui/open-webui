@@ -81,6 +81,7 @@
 		"@tiptap/extensions": "^3.0.7",
 		"@tiptap/pm": "^3.0.7",
 		"@tiptap/starter-kit": "^3.0.7",
+		"@tiptap/suggestion": "^3.0.9",
 		"@xyflow/svelte": "^0.1.19",
 		"async": "^3.2.5",
 		"bits-ui": "^0.21.15",
