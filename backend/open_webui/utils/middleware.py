@@ -1817,7 +1817,7 @@ async def process_chat_response(
 
                     response_tool_calls = []
                     delta_count = 0
-                    delta_batch_size = max(1, form_data.get("metadata", {}).get("stream_batch_size", 1))
+                    delta_batch_size = max(1, int(form_data.get("metadata", {}).get("stream_batch_size") or 1))
 
                     async for line in response.body_iterator:
                         line = line.decode("utf-8") if isinstance(line, bytes) else line
