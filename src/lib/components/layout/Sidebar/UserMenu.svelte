@@ -105,7 +105,7 @@
 				<div class=" self-center truncate">{$i18n.t('Archived Chats')}</div>
 			</DropdownMenu.Item>
 
-			{#if $user?.permissions?.sharing?.shared_chats}
+			{#if $user?.role === 'admin' || $user?.permissions?.sharing?.shared_chats}
 				<DropdownMenu.Item
 					class="flex rounded-md py-1.5 px-3 w-full hover:bg-gray-50 dark:hover:bg-gray-800 transition"
 					on:click={() => {

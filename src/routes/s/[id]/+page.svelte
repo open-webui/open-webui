@@ -5,7 +5,7 @@
 
 	import dayjs from 'dayjs';
 
-	import { settings, chatId, WEBUI_NAME, models, config } from '$lib/stores';
+	import { settings, chatId, WEBUI_NAME, models, config, user as userStore } from '$lib/stores';
 	import { convertMessagesToHistory, createMessagesList } from '$lib/utils';
 
 	import {
@@ -35,7 +35,7 @@
 	let selectedModels = [''];
 
 	let chat = null;
-	let user = null;
+	let chat_owner = null;
 
 	let title = '';
 	let files = [];
@@ -96,7 +96,7 @@
 		});
 
 		if (chat) {
-			user = await getUserById(localStorage.token, chat.user_id).catch((error) => {
+			chat_owner = await getUserById(localStorage.token, chat.user_id).catch((error) => {
 				console.error(error);
 				return null;
 			});
@@ -134,13 +134,13 @@
 	const cloneSharedChat = async () => {
 		if (!chat) return;
 
-		const res = await cloneSharedChatById(localStorage.token, chat.id).catch((error) => {
+		const res = await cloneSharedChatById(localStorage.token, chat.share_id).catch((error) => {
 			toast.error(`${error}`);
 			return null;
 		});
 
 		if (res) {
-			const originalChatId = chat.user_id.replace('shared-', '');
+			const originalChatId = chat.id;
 			await incrementCloneCountById(localStorage.token, originalChatId);
 			goto(`/c/${res.id}`);
 		}
@@ -177,14 +177,14 @@
 							</div>
 						</div>
 
-						{#if user}
+						{#if chat_owner}
 							<div class="flex items-center space-x-2 text-sm text-gray-500 mt-2">
 								<img
-									src={user.profile_image_url}
-									alt={user.name}
+									src={chat_owner.profile_image_url}
+									alt={chat_owner.name}
 									class="w-6 h-6 rounded-full"
 								/>
-								<span>Shared by {user.name}</span>
+								<span>Shared by {chat_owner.name}</span>
 							</div>
 						{/if}
 					</div>
@@ -221,7 +221,7 @@
 					<div class="w-full">
 						<Messages
 							className="h-full flex pt-4 pb-8 "
-							{user}
+							user={chat_owner}
 							chatId={$chatId}
 							readOnly={true}
 							{selectedModels}
@@ -242,15 +242,17 @@
 				class="absolute bottom-0 right-0 left-0 flex justify-center w-full bg-linear-to-b from-transparent to-white dark:to-gray-900"
 			>
 				<div class="pb-5 text-center">
-					<button
-						class="px-4 py-2 text-sm font-medium bg-black hover:bg-gray-900 text-white dark:bg-white dark:text-black dark:hover:bg-gray-100 transition rounded-full"
-						on:click={cloneSharedChat}
-					>
-						{$i18n.t('Clone Chat')}
-					</button>
-					<div class="text-xs text-gray-500 mt-2">
-						{$i18n.t('Continue this conversation in your own account.')}
-					</div>
+					{#if $userStore?.role === 'admin' || $userStore?.permissions?.chat?.clone}
+						<button
+							class="px-4 py-2 text-sm font-medium bg-black hover:bg-gray-900 text-white dark:bg-white dark:text-black dark:hover:bg-gray-100 transition rounded-full"
+							on:click={cloneSharedChat}
+						>
+							{$i18n.t('Clone Chat')}
+						</button>
+						<div class="text-xs text-gray-500 mt-2">
+							{$i18n.t('Continue this conversation in your own account.')}
+						</div>
+					{/if}
 				</div>
 			</div>
 		</div>

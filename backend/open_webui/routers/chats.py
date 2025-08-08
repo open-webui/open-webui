@@ -27,7 +27,7 @@ class SharedChatListResponse(BaseModel):
     chats: list[ChatTitleIdResponse]
 
 
-from open_webui.utils.auth import get_admin_user, get_verified_user
+from open_webui.utils.auth import get_admin_user, get_verified_user, get_optional_user
 from open_webui.utils.access_control import has_permission
 
 log = logging.getLogger(__name__)
@@ -426,23 +426,26 @@ async def archive_all_chats(user=Depends(get_verified_user)):
 
 
 @router.get("/share/{share_id}", response_model=Optional[ChatResponse])
-async def get_shared_chat_by_id(share_id: str, user=Depends(get_verified_user)):
-    if user.role == "pending":
+async def get_shared_chat_by_id(
+    share_id: str, user: Optional[dict] = Depends(get_optional_user)
+):
+    if user and user.role == "pending":
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED, detail=ERROR_MESSAGES.NOT_FOUND
         )
 
-    if user.role == "user" or (user.role == "admin" and not ENABLE_ADMIN_CHAT_ACCESS):
-        chat = Chats.get_chat_by_share_id(share_id)
-    elif user.role == "admin" and ENABLE_ADMIN_CHAT_ACCESS:
+    chat = None
+    if user and user.role == "admin" and ENABLE_ADMIN_CHAT_ACCESS:
         chat = Chats.get_chat_by_id(share_id)
+
+    if chat is None:
+        chat = Chats.get_chat_by_share_id(share_id, user)
 
     if chat:
         return ChatResponse(**chat.model_dump())
-
     else:
         raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED, detail=ERROR_MESSAGES.NOT_FOUND
+            status_code=status.HTTP_404_NOT_FOUND, detail=ERROR_MESSAGES.NOT_FOUND
         )
 
 
@@ -768,7 +771,7 @@ async def clone_shared_chat_by_id(request: Request, id: str, user=Depends(get_ve
             "title": f"Clone of {chat.title}",
         }
 
-        chat = Chats.import_chat(
+        new_chat = Chats.import_chat(
             user.id,
             ChatImportForm(
                 **{
@@ -779,8 +782,8 @@ async def clone_shared_chat_by_id(request: Request, id: str, user=Depends(get_ve
                 }
             ),
         )
-        shared_chat_entry = Chats.share_chat_by_id(chat.id)
-        return ChatResponse(**shared_chat_entry.model_dump())
+
+        return ChatResponse(**new_chat.model_dump())
     else:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED, detail=ERROR_MESSAGES.DEFAULT()
@@ -859,21 +862,21 @@ async def share_chat_by_id(
                     detail="Share ID already exists.",
                 )
 
-        if chat.share_id:
-            shared_chat = Chats.update_shared_chat_by_chat_id(
-                chat.id, share_id=form_data.share_id
-            )
-            return ChatResponse(**shared_chat.model_dump())
-
-        shared_chat = Chats.insert_shared_chat_by_chat_id(
-            chat.id, share_id=form_data.share_id
+        result = Chats.share_chat_by_id(
+            chat_id=chat.id, share_id=form_data.share_id
         )
-        if not shared_chat:
+
+        if not result:
             raise HTTPException(
                 status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
                 detail=ERROR_MESSAGES.DEFAULT(),
             )
-        return ChatResponse(**shared_chat.model_dump())
+
+        shared_chat, is_new_share = result
+        response_data = shared_chat.model_dump()
+        response_data["is_new_share"] = is_new_share
+
+        return ChatResponse(**response_data)
 
     else:
         raise HTTPException(

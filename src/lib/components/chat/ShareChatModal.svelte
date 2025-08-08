@@ -15,6 +15,7 @@
 	import ArrowUpTray from '$lib/components/icons/ArrowUpTray.svelte';
 
 	export let chatId;
+	export let closeOnDelete = false;
 
 	let chat = null;
 	let shareUrl = null;
@@ -178,6 +179,10 @@
 									qrCodeUrl = '';
 									toast.success($i18n.t('Link deleted successfully'));
 									sharedChatsUpdated.set(true);
+
+									if (closeOnDelete) {
+										show = false;
+									}
 								}
 							}}
 							>{$i18n.t('Delete Link')}

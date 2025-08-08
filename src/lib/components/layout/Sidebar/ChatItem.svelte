@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { toast } from 'svelte-sonner';
 	import { goto, invalidate, invalidateAll } from '$app/navigation';
+	import { page } from '$app/stores';
 	import { onMount, getContext, createEventDispatcher, tick, onDestroy } from 'svelte';
 	const i18n = getContext('i18n');
 
@@ -107,7 +108,11 @@
 		});
 
 		if (res) {
-			goto(`/c/${res.id}`);
+			if ($page.url.pathname !== '/shared') {
+				goto(`/c/${res.id}`);
+			} else {
+				toast.success('Chat cloned successfully');
+			}
 
 			currentChatPage.set(1);
 			await chats.set(await getChatList(localStorage.token, $currentChatPage));
@@ -488,7 +493,7 @@
 					cloneChatHandler={() => {
 						cloneChatHandler(id);
 					}}
-					showCloneChat={($user?.permissions?.chat?.clone) ?? true}
+					showCloneChat={($user?.role === 'admin' || $user?.permissions?.chat?.clone) ?? true}
 					shareHandler={() => {
 						showShareChatModal = true;
 					}}

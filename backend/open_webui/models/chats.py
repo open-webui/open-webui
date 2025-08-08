@@ -104,6 +104,7 @@ class ChatResponse(BaseModel):
     folder_id: Optional[str] = None
     views: int
     clones: int
+    is_new_share: Optional[bool] = None
 
 
 class ChatTitleIdResponse(BaseModel):
@@ -291,17 +292,19 @@ class ChatTable:
         chat["history"] = history
         return self.update_chat_by_id(id, chat)
 
-    def share_chat_by_id(self, chat_id: str, share_id: Optional[str] = None) -> Optional[ChatModel]:
+    def share_chat_by_id(
+        self, chat_id: str, share_id: Optional[str] = None
+    ) -> Optional[tuple[ChatModel, bool]]:
         with get_db() as db:
             chat = db.get(Chat, chat_id)
             if chat.share_id:
-                return chat
-            
+                return (ChatModel.model_validate(chat), False)
+
             chat.share_id = share_id if share_id else str(uuid.uuid4())
             chat.updated_at = int(time.time())
             db.commit()
             db.refresh(chat)
-            return ChatModel.model_validate(chat)
+            return (ChatModel.model_validate(chat), True)
 
     def insert_shared_chat_by_chat_id(
         self, chat_id: str, share_id: Optional[str] = None
@@ -661,7 +664,7 @@ class ChatTable:
                     if increment_view and (user is None or chat.user_id != user.id):
                         chat.views = (chat.views or 0) + 1
                         db.commit()
-                    return self.get_chat_by_id(id)
+                    return self.get_chat_by_id(chat.id)
                 else:
                     return None
         except Exception as e:

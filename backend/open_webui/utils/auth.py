@@ -312,6 +312,19 @@ def get_current_user(
         )
 
 
+def get_optional_user(
+    request: Request,
+    response: Response,
+    background_tasks: BackgroundTasks,
+    auth_token: HTTPAuthorizationCredentials = Depends(bearer_security),
+):
+    try:
+        user = get_current_user(request, response, background_tasks, auth_token)
+        return user
+    except HTTPException:
+        return None
+
+
 def get_current_user_by_api_key(api_key: str):
     user = Users.get_user_by_api_key(api_key)
 

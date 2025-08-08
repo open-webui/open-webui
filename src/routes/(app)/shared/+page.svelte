@@ -6,7 +6,8 @@
 		revokeAllSharedChats,
 		resetChatStatsById,
 		resetAllChatStats,
-		cloneSharedChatById
+		cloneSharedChatById,
+		shareChatById
 	} from '$lib/apis/chats';
 	import { goto } from '$app/navigation';
 	import { toast } from 'svelte-sonner';
@@ -29,6 +30,7 @@
 	import RevokeAllConfirmationModal from '$lib/components/common/RevokeAllConfirmationModal.svelte';
 	import ResetAllStatsConfirmationModal from '$lib/components/common/ResetAllStatsConfirmationModal.svelte';
 	import MenuLines from '$lib/components/icons/MenuLines.svelte';
+	import Tooltip from '$lib/components/common/Tooltip.svelte';
 
 	let showShareChatModal = false;
 	let selectedChatId = '';
@@ -108,16 +110,15 @@
 
 	let previousShowShareChatModal = false;
 	onMount(async () => {
-		if (!$user?.permissions.sharing.shared_chats) {
-			goto('/');
-			toast.error("You don't have permission to access this page.");
-			return;
-		}
-
 		models.set(await getModels(localStorage.token));
 		getSharedChatList();
 		previousShowShareChatModal = showShareChatModal;
 	});
+
+	$: if ($user && !($user.role === 'admin' || $user.permissions?.sharing?.shared_chats)) {
+		goto('/');
+		toast.error("You don't have permission to access this page.");
+	}
 
 	$: if ($sharedChatsUpdated) {
 		getSharedChatList();
@@ -181,11 +182,16 @@
 	};
 
 	const cloneChat = async (chatId) => {
-		const res = await cloneSharedChatById(localStorage.token, chatId);
-		if (res) {
-			toast.success('Chat cloned');
-			getSharedChatList();
-			chatsUpdated.set(true);
+		const new_chat = await cloneSharedChatById(localStorage.token, chatId);
+		if (new_chat) {
+			const res = await shareChatById(localStorage.token, new_chat.id);
+			if (res) {
+				toast.success('Chat cloned and shared');
+				getSharedChatList();
+				chatsUpdated.set(true);
+			} else {
+				toast.error('Failed to share cloned chat');
+			}
 		} else {
 			toast.error('Failed to clone chat');
 		}
@@ -313,6 +319,32 @@
 	class="transition-width duration-200 ease-in-out {$showSidebar
 		? 'md:max-w-[calc(100%-260px)]'
 		: ''} w-full flex flex-col h-full"
+	on:dragover={(e) => {
+		e.preventDefault();
+	}}
+	on:drop={async (e) => {
+		e.preventDefault();
+
+		const data = e.dataTransfer.getData('text/plain');
+		try {
+			const { type, id } = JSON.parse(data);
+			if (type === 'chat') {
+				const res = await shareChatById(localStorage.token, id);
+
+				if (res) {
+					if (res.is_new_share) {
+						toast.success('Chat shared successfully');
+					} else {
+						toast.info('This chat has already been shared.');
+					}
+					getSharedChatList();
+				}
+			}
+		} catch (e) {
+			toast.error('Failed to share chat.');
+			console.error(e);
+		}
+	}}
 >
 	<div
 		class="flex w-full justify-between items-center p-4 border-b border-gray-100 dark:border-gray-800"
@@ -776,40 +808,50 @@
 								>
 								<td class="px-6 py-3 whitespace-nowrap text-sm font-medium">
 									{#if chat.status === 'active'}
-										<button
-											class="text-indigo-600 dark:text-indigo-400 hover:text-indigo-900 dark:hover:text-indigo-200"
-											on:click={() => {
-												copyLink(`${window.location.origin}/s/${chat.share_id}`);
-												toast.success('Link copied to clipboard');
-											}}>Copy</button
-										>
-										<button
-											class="text-red-600 dark:text-red-400 hover:text-red-900 dark:hover:text-red-200 ml-4"
-											on:click={() => {
-												revokeLink(chat.id);
-											}}>Revoke</button
-										>
-										<button
-											class="text-blue-600 dark:text-blue-400 hover:text-blue-900 dark:hover:text-blue-200 ml-4"
-											on:click={() => {
-												selectedChatId = chat.id;
-												showShareChatModal = true;
-											}}>Modify</button
-										>
-										<button
-											class="text-yellow-600 dark:text-yellow-400 hover:text-yellow-900 dark:hover:text-yellow-200 ml-4"
-											on:click={() => {
-												chatToResetStats = chat;
-												showConfirmResetStats = true;
-											}}>Reset Stats</button
-										>
-										{#if $user?.permissions?.chat?.clone}
+										<Tooltip content="Copy Link" className="inline-block">
 											<button
-												class="text-green-600 dark:text-green-400 hover:text-green-900 dark:hover:text-green-200 ml-4"
+												class="text-indigo-600 dark:text-indigo-400 hover:text-indigo-900 dark:hover:text-indigo-200"
 												on:click={() => {
-													cloneChat(chat.share_id);
-												}}>Clone</button
+													copyLink(`${window.location.origin}/s/${chat.share_id}`);
+													toast.success('Link copied to clipboard');
+												}}>Copy</button
 											>
+										</Tooltip>
+										<Tooltip content="Revoke Link" className="inline-block">
+											<button
+												class="text-red-600 dark:text-red-400 hover:text-red-900 dark:hover:text-red-200 ml-4"
+												on:click={() => {
+													revokeLink(chat.id);
+												}}>Revoke</button
+											>
+										</Tooltip>
+										<Tooltip content="Modify Share Link" className="inline-block">
+											<button
+												class="text-blue-600 dark:text-blue-400 hover:text-blue-900 dark:hover:text-blue-200 ml-4"
+												on:click={() => {
+													selectedChatId = chat.id;
+													showShareChatModal = true;
+												}}>Modify</button
+											>
+										</Tooltip>
+										<Tooltip content="Reset Statistics" className="inline-block">
+											<button
+												class="text-yellow-600 dark:text-yellow-400 hover:text-yellow-900 dark:hover:text-yellow-200 ml-4"
+												on:click={() => {
+													chatToResetStats = chat;
+													showConfirmResetStats = true;
+												}}>Reset Stats</button
+											>
+										</Tooltip>
+										{#if $user?.role === 'admin' || $user?.permissions?.chat?.clone}
+											<Tooltip content="Clone Chat" className="inline-block">
+												<button
+													class="text-green-600 dark:text-green-400 hover:text-green-900 dark:hover:text-green-200 ml-4"
+													on:click={() => {
+														cloneChat(chat.share_id);
+													}}>Clone</button
+												>
+											</Tooltip>
 										{/if}
 									{/if}
 								</td>
@@ -833,7 +875,7 @@
 		{/if}
 	</div>
 </div>
-<ShareChatModal bind:show={showShareChatModal} chatId={selectedChatId} />
+<ShareChatModal bind:show={showShareChatModal} chatId={selectedChatId} closeOnDelete={true} />
 
 <ConfirmDialog
 	bind:show={showConfirmRevokeSelected}
