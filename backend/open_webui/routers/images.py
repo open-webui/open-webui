@@ -642,6 +642,9 @@ async def image_generations(
                 headers=download_headers,
             )
 
+            if image_data and not content_type:
+                content_type = "image/png"
+
             url = upload_image(request, image_data, content_type, {}, user)
             images = [{"url": url}]
             return images
