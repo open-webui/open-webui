@@ -28,6 +28,7 @@ from open_webui.config import (
     OAUTH_BLOCKED_GROUPS,
     OAUTH_ROLES_CLAIM,
     OAUTH_GROUPS_CLAIM,
+    OAUTH_SUB_CLAIM_OVERRIDE,
     OAUTH_EMAIL_CLAIM,
     OAUTH_PICTURE_CLAIM,
     OAUTH_USERNAME_CLAIM,
@@ -65,6 +66,7 @@ auth_manager_config.ENABLE_OAUTH_GROUP_MANAGEMENT = ENABLE_OAUTH_GROUP_MANAGEMEN
 auth_manager_config.ENABLE_OAUTH_GROUP_CREATION = ENABLE_OAUTH_GROUP_CREATION
 auth_manager_config.OAUTH_BLOCKED_GROUPS = OAUTH_BLOCKED_GROUPS
 auth_manager_config.OAUTH_ROLES_CLAIM = OAUTH_ROLES_CLAIM
+auth_manager_config.OAUTH_SUB_CLAIM_OVERRIDE = OAUTH_SUB_CLAIM_OVERRIDE
 auth_manager_config.OAUTH_GROUPS_CLAIM = OAUTH_GROUPS_CLAIM
 auth_manager_config.OAUTH_EMAIL_CLAIM = OAUTH_EMAIL_CLAIM
 auth_manager_config.OAUTH_PICTURE_CLAIM = OAUTH_PICTURE_CLAIM
@@ -359,7 +361,11 @@ class OAuthManager:
             log.warning(f"OAuth callback failed, user data is missing: {token}")
             raise HTTPException(400, detail=ERROR_MESSAGES.INVALID_CRED)
 
-        sub = user_data.get(OAUTH_PROVIDERS[provider].get("sub_claim", "sub"))
+        sub_claim_override = auth_manager_config.OAUTH_SUB_CLAIM_OVERRIDE
+        if sub_claim_override:
+            sub = user_data.get(sub_claim_override)
+        else:
+            sub = user_data.get(OAUTH_PROVIDERS[provider].get("sub_claim", "sub"))
         if not sub:
             log.warning(f"OAuth callback failed, sub is missing: {user_data}")
             raise HTTPException(400, detail=ERROR_MESSAGES.INVALID_CRED)

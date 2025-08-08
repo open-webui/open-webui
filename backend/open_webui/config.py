@@ -469,6 +469,12 @@ OAUTH_PROVIDER_NAME = PersistentConfig(
     os.environ.get("OAUTH_PROVIDER_NAME", "SSO"),
 )
 
+OAUTH_SUB_CLAIM_OVERRIDE = PersistentConfig(
+    "OAUTH_SUB_CLAIM_OVERRIDE",
+    "oauth.oidc.sub_claim_override",
+    os.environ.get("OAUTH_SUB_CLAIM_OVERRIDE", None),
+)
+
 OAUTH_USERNAME_CLAIM = PersistentConfig(
     "OAUTH_USERNAME_CLAIM",
     "oauth.oidc.username_claim",
