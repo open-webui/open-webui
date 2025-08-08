@@ -180,6 +180,9 @@ from open_webui.config import (
     AUDIO_TTS_AZURE_SPEECH_REGION,
     AUDIO_TTS_AZURE_SPEECH_BASE_URL,
     AUDIO_TTS_AZURE_SPEECH_OUTPUT_FORMAT,
+    DEFAULT_AUTOPLAY_SSML,
+    DEFAULT_SHOW_SSML,
+    DEFAULT_SSML_OVERRIDE_CALL,
     PLAYWRIGHT_WS_URL,
     PLAYWRIGHT_TIMEOUT,
     FIRECRAWL_API_BASE_URL,
@@ -1065,6 +1068,10 @@ app.state.faster_whisper_model = None
 app.state.speech_synthesiser = None
 app.state.speech_speaker_embeddings_dataset = None
 
+app.state.config.DEFAULT_SHOW_SSML = DEFAULT_SHOW_SSML
+app.state.config.DEFAULT_AUTOPLAY_SSML = DEFAULT_AUTOPLAY_SSML
+app.state.config.DEFAULT_SSML_OVERRIDE_CALL = DEFAULT_SSML_OVERRIDE_CALL
+
 
 ########################################
 #
@@ -1641,6 +1648,11 @@ async def get_app_config(request: Request):
                     "stt": {
                         "engine": app.state.config.STT_ENGINE,
                     },
+                    "ssml": {
+                        "show": app.state.config.DEFAULT_SHOW_SSML,
+                        "autoplay": app.state.config.DEFAULT_AUTOPLAY_SSML,
+                        "overrideCall": app.state.config.DEFAULT_SSML_OVERRIDE_CALL,
+                    }
                 },
                 "file": {
                     "max_size": app.state.config.FILE_MAX_SIZE,

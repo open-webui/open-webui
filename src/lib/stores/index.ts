@@ -211,6 +211,7 @@ type AudioSettings = {
 	speaker?: string;
 	model?: string;
 	nonLocalVoices?: boolean;
+	ssml: any;
 };
 
 type TitleSettings = {

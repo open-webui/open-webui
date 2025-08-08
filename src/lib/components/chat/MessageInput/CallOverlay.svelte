@@ -563,6 +563,13 @@
 	};
 
 	const chatStartHandler = async (e) => {
+		if (
+			($settings.audio?.ssml.autoplay ?? $config.audio.ssml.autoplay) &&
+			($settings.audio?.ssml.overrideCall ?? $config.audio.ssml.overrideCall)
+		)
+			// If we are overriding the call response with SSML speech blocks don't speak back
+			return;
+
 		const { id } = e.detail;
 
 		chatStreaming = true;

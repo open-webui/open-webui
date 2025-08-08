@@ -9,6 +9,7 @@ from pydub import AudioSegment
 from pydub.silence import split_on_silence
 from concurrent.futures import ThreadPoolExecutor
 from typing import Optional
+import re
 
 from fnmatch import fnmatch
 import aiohttp
@@ -179,9 +180,16 @@ class STTConfigForm(BaseModel):
     AZURE_MAX_SPEAKERS: str
 
 
+class SSMLConfigForm(BaseModel):
+  DEFAULT_AUTOPLAY_SSML: bool
+  DEFAULT_SSML_OVERRIDE_CALL: bool
+  DEFAULT_SHOW_SSML: bool
+
+
 class AudioConfigUpdateForm(BaseModel):
     tts: TTSConfigForm
     stt: STTConfigForm
+    ssml: SSMLConfigForm
 
 
 @router.get("/config")
@@ -213,6 +221,11 @@ async def get_audio_config(request: Request, user=Depends(get_admin_user)):
             "AZURE_BASE_URL": request.app.state.config.AUDIO_STT_AZURE_BASE_URL,
             "AZURE_MAX_SPEAKERS": request.app.state.config.AUDIO_STT_AZURE_MAX_SPEAKERS,
         },
+        "ssml": {
+          "DEFAULT_AUTOPLAY_SSML": request.app.state.config.DEFAULT_AUTOPLAY_SSML,
+          "DEFAULT_SSML_OVERRIDE_CALL": request.app.state.config.DEFAULT_SSML_OVERRIDE_CALL,
+          "DEFAULT_SHOW_SSML": request.app.state.config.DEFAULT_SHOW_SSML
+        }
     }
 
 
@@ -260,6 +273,10 @@ async def update_audio_config(
     else:
         request.app.state.faster_whisper_model = None
 
+    request.app.state.config.DEFAULT_AUTOPLAY_SSML = form_data.ssml.DEFAULT_AUTOPLAY_SSML
+    request.app.state.config.DEFAULT_SSML_OVERRIDE_CALL = form_data.ssml.DEFAULT_SSML_OVERRIDE_CALL
+    request.app.state.config.DEFAULT_SHOW_SSML = form_data.ssml.DEFAULT_SHOW_SSML
+
     return {
         "tts": {
             "OPENAI_API_BASE_URL": request.app.state.config.TTS_OPENAI_API_BASE_URL,
@@ -287,6 +304,11 @@ async def update_audio_config(
             "AZURE_BASE_URL": request.app.state.config.AUDIO_STT_AZURE_BASE_URL,
             "AZURE_MAX_SPEAKERS": request.app.state.config.AUDIO_STT_AZURE_MAX_SPEAKERS,
         },
+        "ssml": {
+          "DEFAULT_AUTOPLAY_SSML": request.app.state.config.DEFAULT_AUTOPLAY_SSML,
+          "DEFAULT_SSML_OVERRIDE_CALL": request.app.state.config.DEFAULT_SSML_OVERRIDE_CALL,
+          "DEFAULT_SHOW_SSML": request.app.state.config.DEFAULT_SHOW_SSML
+        }
     }
 
 
@@ -328,9 +350,15 @@ async def speech(request: Request, user=Depends(get_verified_user)):
         log.exception(e)
         raise HTTPException(status_code=400, detail="Invalid JSON payload")
 
+    stripSsml = lambda content: re.sub(r'<[^>]*>', '', content)
+
     r = None
     if request.app.state.config.TTS_ENGINE == "openai":
         payload["model"] = request.app.state.config.TTS_MODEL
+
+        ssml = payload.get("ssml", False)
+        payload["input"] = stripSsml(payload["input"]) if ssml else payload["input"]
+        payload.pop("ssml", None)
 
         try:
             timeout = aiohttp.ClientTimeout(total=AIOHTTP_CLIENT_TIMEOUT)
@@ -458,7 +486,8 @@ async def speech(request: Request, user=Depends(get_verified_user)):
         output_format = request.app.state.config.TTS_AZURE_SPEECH_OUTPUT_FORMAT
 
         try:
-            data = f"""<speak version="1.0" xmlns="http://www.w3.org/2001/10/synthesis" xml:lang="{locale}">
+            ssml = payload.get("ssml", False)
+            data = payload["input"] if ssml else f"""<speak version="1.0" xmlns="http://www.w3.org/2001/10/synthesis" xml:lang="{locale}">
                 <voice name="{language}">{payload["input"]}</voice>
             </speak>"""
             timeout = aiohttp.ClientTimeout(total=AIOHTTP_CLIENT_TIMEOUT)
@@ -530,8 +559,10 @@ async def speech(request: Request, user=Depends(get_verified_user)):
             embeddings_dataset[speaker_index]["xvector"]
         ).unsqueeze(0)
 
+        ssml = payload.get("ssml", False)
+
         speech = request.app.state.speech_synthesiser(
-            payload["input"],
+            stripSsml(payload["input"]) if ssml else payload["input"],
             forward_params={"speaker_embeddings": speaker_embedding},
         )
 

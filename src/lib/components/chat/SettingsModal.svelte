@@ -489,9 +489,20 @@
 		}, 100);
 	};
 
+	const deepMerge = (target: Record<string, any>, source: Record<string, any>) => {
+		for (const key in source) {
+			if (source[key] instanceof Object && key in target && target[key] instanceof Object) {
+				deepMerge(target[key], source[key]);
+			} else {
+				target[key] = source[key];
+			}
+		}
+		return target;
+	};
+
 	const saveSettings = async (updated) => {
 		console.log(updated);
-		await settings.set({ ...$settings, ...updated });
+		await settings.set(deepMerge($settings, updated));
 		await models.set(await getModels());
 		await updateUserSettings(localStorage.token, { ui: $settings });
 	};
