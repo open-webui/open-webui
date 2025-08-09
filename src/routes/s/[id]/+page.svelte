@@ -65,15 +65,22 @@
 
 	const loadSharedChat = async () => {
 		const token = localStorage.token;
-		const userSettings = token
-			? await getUserSettings(token).catch((error) => {
-					console.error(error);
-					return null;
-			  })
-			: null;
+		if (token) {
+			const userSettings = await getUserSettings(token).catch((error) => {
+				console.error(error);
+				return null;
+			});
 
-		if (userSettings) {
-			settings.set(userSettings.ui);
+			if (userSettings) {
+				settings.set(userSettings.ui);
+			}
+
+			await models.set(
+				await getModels(
+					token,
+					$config?.features?.enable_direct_connections && ($settings?.directConnections ?? null)
+				)
+			);
 		} else {
 			let localStorageSettings = {} as Parameters<(typeof settings)['set']>[0];
 
@@ -86,23 +93,19 @@
 			settings.set(localStorageSettings);
 		}
 
-		await models.set(
-			await getModels(
-				localStorage.token,
-				$config?.features?.enable_direct_connections && ($settings?.directConnections ?? null)
-			)
-		);
 		await chatId.set($page.params.id);
-		chat = await getChatByShareId(localStorage.token, $chatId).catch(async (error) => {
-			await goto('/');
+		chat = await getChatByShareId(token, $chatId).catch(async (error) => {
+			await goto(`/auth?redirect=${encodeURIComponent($page.url.pathname)}`);
 			return null;
 		});
 
 		if (chat) {
-			chat_owner = await getUserById(localStorage.token, chat.user_id).catch((error) => {
-				console.error(error);
-				return null;
-			});
+			if (token) {
+				chat_owner = await getUserById(token, chat.user_id).catch((error) => {
+					console.error(error);
+					return null;
+				});
+			}
 
 			const chatContent = chat.chat;
 

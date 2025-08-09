@@ -598,7 +598,7 @@
 				} else {
 					// Don't redirect if we're already on the auth page
 					// Needed because we pass in tokens from OAuth logins via URL fragments
-					if ($page.url.pathname !== '/auth') {
+					if ($page.url.pathname !== '/auth' && !$page.url.pathname.startsWith('/s/')) {
 						await goto(`/auth?redirect=${encodedUrl}`);
 					}
 				}

@@ -10,6 +10,7 @@ from typing import Sequence, Union
 from alembic import op
 import sqlalchemy as sa
 import open_webui.internal.db
+import json
 
 
 # revision identifiers, used by Alembic.
@@ -22,24 +23,28 @@ depends_on: Union[str, Sequence[str], None] = None
 def upgrade():
     conn = op.get_bind()
     
-    # from e1b3b3b3b3b3
     inspector = sa.inspect(conn)
     columns = inspector.get_columns("chat")
     if "share_id" not in [c["name"] for c in columns]:
         op.add_column("chat", sa.Column("share_id", sa.TEXT(), nullable=True))
 
-    # from 9cc80bb2029f
     op.add_column('chat', sa.Column('views', sa.Integer(), nullable=False, server_default='0'))
-
-    # from 5e8b7f9a8c6d
     op.add_column('chat', sa.Column('clones', sa.Integer(), nullable=False, server_default='0'))
     
-    # from f1a2b3c4d5e6
+    # Merged column additions
+    op.add_column('chat', sa.Column('expires_at', sa.BigInteger(), nullable=True))
+    op.add_column('chat', sa.Column('expire_on_views', sa.Integer(), nullable=True))
+
+    with op.batch_alter_table('chat', schema=None) as batch_op:
+        batch_op.add_column(sa.Column('is_public', sa.Boolean(), server_default=sa.text('0'), nullable=False))
+
     groups = conn.execute(sa.text("SELECT id, permissions FROM \"group\"")).fetchall()
 
-    for group_id, permissions in groups:
-        if permissions is None:
+    for group_id, permissions_str in groups:
+        if permissions_str is None:
             permissions = {}
+        else:
+            permissions = json.loads(permissions_str)
 
         if 'sharing' not in permissions:
             permissions['sharing'] = {}
@@ -55,22 +60,30 @@ def upgrade():
 def downgrade():
     conn = op.get_bind()
     
-    # from f1a2b3c4d5e6
     groups = conn.execute(sa.text("SELECT id, permissions FROM \"group\"")).fetchall()
 
-    for group_id, permissions in groups:
-        if permissions and 'sharing' in permissions and 'shared_chats' in permissions['sharing']:
-            del permissions['sharing']['shared_chats']
-            conn.execute(
-                sa.text("UPDATE \"group\" SET permissions = :permissions WHERE id = :id"),
-                {'permissions': json.dumps(permissions), 'id': group_id}
-            )
+    for group_id, permissions_str in groups:
+        if permissions_str is not None:
+            permissions = json.loads(permissions_str)
+            if permissions and 'sharing' in permissions and 'shared_chats' in permissions['sharing']:
+                del permissions['sharing']['shared_chats']
+                conn.execute(
+                    sa.text("UPDATE \"group\" SET permissions = :permissions WHERE id = :id"),
+                    {'permissions': json.dumps(permissions), 'id': group_id}
+                )
 
-    # from 5e8b7f9a8c6d
-    op.drop_column('chat', 'clones')
+    with op.batch_alter_table('chat', schema=None) as batch_op:
+        try:
+            batch_op.drop_index('chat_share_id')
+        except Exception as e:
+            print(f"Warning: Could not drop index chat_share_id. It might not exist or another error occurred: {e}")
+            pass
 
-    # from 9cc80bb2029f
-    op.drop_column('chat', 'views')
+        # Merged column drops (in reverse order of upgrade additions)
+        batch_op.drop_column('is_public')
+        batch_op.drop_column('expire_on_views')
+        batch_op.drop_column('expires_at')
 
-    # from e1b3b3b3b3b3
-    op.drop_column("chat", "share_id")
+        batch_op.drop_column('clones')
+        batch_op.drop_column('views')
+        batch_op.drop_column("share_id")

@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { getContext, onMount } from 'svelte';
+	import { getContext, onMount, tick } from 'svelte';
 	import {
 		models,
 		config,
@@ -13,12 +13,19 @@
 	import { v4 as uuidv4 } from 'uuid';
 
 	import Modal from '../common/Modal.svelte';
+	import Tooltip from '../common/Tooltip.svelte';
+	import Switch from '../common/Switch.svelte';
 	import Link from '../icons/Link.svelte';
 	import XMark from '$lib/components/icons/XMark.svelte';
 	import ArrowPath from '$lib/components/icons/ArrowPath.svelte';
 	import ArrowDownTray from '$lib/components/icons/ArrowDownTray.svelte';
 	import ArrowUpTray from '$lib/components/icons/ArrowUpTray.svelte';
 	import Calendar from '$lib/components/icons/Calendar.svelte';
+	import Eye from '$lib/components/icons/Eye.svelte';
+	import GarbageBin from '$lib/components/icons/GarbageBin.svelte';
+	import Clipboard from '$lib/components/icons/Clipboard.svelte';
+	import ChevronDown from '$lib/components/icons/ChevronDown.svelte';
+	import QuestionMarkCircle from '$lib/components/icons/QuestionMarkCircle.svelte';
 	import dayjs from 'dayjs';
 	import customParseFormat from 'dayjs/plugin/customParseFormat';
 	dayjs.extend(customParseFormat);
@@ -29,21 +36,48 @@
 		const secondsRemaining = (expirationDate.getTime() - now.getTime()) / 1000;
 
 		if (secondsRemaining <= 0) {
-			return 'Expired';
+			return $i18n.t('Expired');
 		}
 
 		const days = Math.floor(secondsRemaining / (3600 * 24));
-		if (days > 0) return `in ${days} day${days > 1 ? 's' : ''}`;
+		const years = Math.floor(days / 365);
+		if (years > 0) {
+			return years === 1
+				? $i18n.t('in {{count}} year', { count: years })
+				: $i18n.t('in {{count}} years', { count: years });
+		}
+
+		const weeks = Math.floor(days / 7);
+		if (weeks > 0) {
+			return weeks === 1
+				? $i18n.t('in {{count}} week', { count: weeks })
+				: $i18n.t('in {{count}} weeks', { count: weeks });
+		}
+
+		if (days > 0) {
+			return days === 1
+				? $i18n.t('in {{count}} day', { count: days })
+				: $i18n.t('in {{count}} days', { count: days });
+		}
 
 		const hours = Math.floor(secondsRemaining / 3600);
-		if (hours > 0) return `in ${hours} hour${hours > 1 ? 's' : ''}`;
+		if (hours > 0) {
+			return hours === 1
+				? $i18n.t('in {{count}} hour', { count: hours })
+				: $i18n.t('in {{count}} hours', { count: hours });
+		}
 
 		const minutes = Math.floor(secondsRemaining / 60);
-		if (minutes > 0) return `in ${minutes} minute${minutes > 1 ? 's' : ''}`;
+		if (minutes > 0) {
+			return minutes === 1
+				? $i18n.t('in {{count}} minute', { count: minutes })
+				: $i18n.t('in {{count}} minutes', { count: minutes });
+		}
 
-		return `in ${Math.floor(secondsRemaining)} second${
-			Math.floor(secondsRemaining) !== 1 ? 's' : ''
-		}`;
+		const seconds = Math.floor(secondsRemaining);
+		return seconds === 1
+			? $i18n.t('in {{count}} second', { count: seconds })
+			: $i18n.t('in {{count}} seconds', { count: seconds });
 	};
 
 	export let chatId;
@@ -52,29 +86,80 @@
 	let chat = null;
 	let timeRemaining = '';
 	let intervalId = null;
-	let shareUrl = null;
-	let qrCodeUrl = '';
+	let previewQrCodeUrl = '';
+	let downloadQrCodeUrl = '';
 	let share_id = '';
+	$: shareUrl = share_id ? `${window.location.origin}/s/${share_id}` : null;
 	let initial_share_id = '';
 	let expirationOption = 'never';
 	let customExpirationDate = '';
+	let minDateTime = '';
 	let expireOnViewsCount = 1;
 	let initialExpirationOption = 'never';
 	let initialCustomExpirationDate = '';
 	let initialExpireOnViewsCount = 1;
 	let is_public = false;
+	let initial_is_public = false;
 	let currentViews = 0;
 	const i18n = getContext('i18n');
 
+	let isExpirationDropdownOpen = false;
+
+	let expirationOptions = [];
+	$: expirationOptions = [
+		{ value: 'never', label: $i18n.t('Never') },
+		{ value: '1h', label: $i18n.t('1 Hour') },
+		{ value: '24h', label: $i18n.t('24 Hours') },
+		{ value: '7d', label: $i18n.t('7 Days') },
+		{ value: 'expire-on-views', label: $i18n.t('Expire after a number of views') },
+		{ value: 'custom', label: $i18n.t('Custom') }
+	];
+
+	$: selectedExpirationIndex = expirationOptions.findIndex((o) => o.value === expirationOption);
+
+	const handleExpirationScroll = (event) => {
+		event.preventDefault();
+		const direction = event.deltaY < 0 ? -1 : 1;
+		let newIndex = selectedExpirationIndex + direction;
+
+		if (newIndex < 0) {
+			newIndex = expirationOptions.length - 1;
+		} else if (newIndex >= expirationOptions.length) {
+			newIndex = 0;
+		}
+		expirationOption = expirationOptions[newIndex].value;
+	};
+
+	function clickOutside(node) {
+		const handleClick = (event) => {
+			if (node && !node.contains(event.target) && !event.defaultPrevented) {
+				isExpirationDropdownOpen = false;
+			}
+		};
+		document.addEventListener('click', handleClick, true);
+		return {
+			destroy() {
+				document.removeEventListener('click', handleClick, true);
+			}
+		};
+	}
+
 	const handleExpirationChange = () => {
-		if (expirationOption === 'custom' && !customExpirationDate) {
-			customExpirationDate = dayjs().add(1, 'hour').format('YYYY-MM-DDTHH:mm');
+		if (expirationOption === 'custom') {
+			const date = dayjs(customExpirationDate, 'YYYY-MM-DDTHH:mm');
+			if (!customExpirationDate || date.isBefore(dayjs())) {
+				customExpirationDate = dayjs().add(1, 'hour').format('YYYY-MM-DDTHH:mm');
+			}
 		} else if (expirationOption === 'expire-on-views') {
 			if (expireOnViewsCount <= currentViews) {
 				expireOnViewsCount = currentViews + 1;
 			}
 		}
 	};
+
+	$: if (expirationOption) {
+		handleExpirationChange();
+	}
 
 	const validateViewsCount = () => {
 		if (Number(expireOnViewsCount) <= currentViews) {
@@ -156,7 +241,7 @@
 			}
 		}
 
-		if (newDate && newDate.isValid()) {
+		if (newDate && newDate.isValid() && !newDate.isBefore(dayjs())) {
 			customExpirationDate = newDate.format('YYYY-MM-DDTHH:mm');
 		}
 	};
@@ -174,13 +259,27 @@
 		}
 	};
 
-	$: if (shareUrl) {
-		(async () => {
-			qrCodeUrl = await QRCode.toDataURL(shareUrl);
-		})();
-	} else {
-		qrCodeUrl = '';
-	}
+	const debounce = (func, timeout = 300) => {
+		let timer;
+		return (...args) => {
+			clearTimeout(timer);
+			timer = setTimeout(() => {
+				func.apply(this, args);
+			}, timeout);
+		};
+	};
+
+	const generateQrCodesImmediate = async (url) => {
+		if (url) {
+			previewQrCodeUrl = await QRCode.toDataURL(url, { width: 192 });
+			downloadQrCodeUrl = await QRCode.toDataURL(url, { width: 512 });
+		} else {
+			previewQrCodeUrl = '';
+			downloadQrCodeUrl = '';
+		}
+	};
+
+	const generateQrCodesDebounced = debounce(generateQrCodesImmediate, 500);
 
 	const formatISODate = (timestamp) => {
 		const date = new Date(timestamp * 1000);
@@ -203,6 +302,9 @@
 			expirationOption === 'expire-on-views' &&
 			expireOnViewsCount !== initialExpireOnViewsCount
 		) {
+			return true;
+		}
+		if (is_public !== initial_is_public) {
 			return true;
 		}
 		return false;
@@ -286,20 +388,21 @@
 			);
 
 			// Update all state directly and atomically from the single API response.
-			shareUrl = `${window.location.origin}/s/${sharedChat.id}`;
 			share_id = sharedChat.id;
 			initial_share_id = sharedChat.id;
 
 			initialExpirationOption = expirationOption;
 			initialCustomExpirationDate = customExpirationDate;
 			initialExpireOnViewsCount = expireOnViewsCount;
+			initial_is_public = is_public;
 
 			// Update the main chat object to reflect the new share status.
 			chat = {
 				...chat,
 				share_id: sharedChat.id,
 				expires_at: sharedChat.expires_at,
-				expire_on_views: sharedChat.expire_on_views
+				expire_on_views: sharedChat.expire_on_views,
+				is_public: sharedChat.is_public
 			};
 
 			sharedChatsUpdated.set(true);
@@ -351,6 +454,8 @@
 	};
 
 	$: if (show) {
+		minDateTime = dayjs().format('YYYY-MM-DDTHH:mm');
+
 		(async () => {
 			if (chatId) {
 				const _chat = await getChatById(localStorage.token, chatId);
@@ -358,6 +463,8 @@
 					chat = _chat;
 					share_id = chat.share_id ?? '';
 					initial_share_id = share_id;
+
+					generateQrCodesImmediate(share_id ? `${window.location.origin}/s/${share_id}` : null);
 
 					const sharedChatFromStore = $sharedChatsStore.find((c) => c.id === _chat.id);
 					if (sharedChatFromStore) {
@@ -382,17 +489,12 @@
 					}
 
 					is_public = _chat.is_public ?? false;
+					initial_is_public = is_public;
 
 					// Snapshot the newly set initial state
 					initialExpirationOption = expirationOption;
 					initialCustomExpirationDate = customExpirationDate;
 					initialExpireOnViewsCount = expireOnViewsCount;
-
-					if (chat.share_id) {
-						shareUrl = `${window.location.origin}/s/${chat.share_id}`;
-					} else {
-						shareUrl = null;
-					}
 
 					if (intervalId) clearInterval(intervalId);
 					if (chat.expires_at) {
@@ -400,6 +502,9 @@
 						intervalId = setInterval(() => {
 							timeRemaining = formatTimeRemaining(chat.expires_at);
 							if (timeRemaining === 'Expired') {
+								if (expirationOption === 'custom') {
+									customExpirationDate = dayjs().add(1, 'hour').format('YYYY-MM-DDTHH:mm');
+								}
 								clearInterval(intervalId);
 							}
 						}, 1000);
@@ -411,7 +516,6 @@
 				chat = null;
 				share_id = '';
 				initial_share_id = '';
-				shareUrl = null;
 
 				initialExpirationOption = 'never';
 				initialCustomExpirationDate = '';
@@ -423,10 +527,12 @@
 		chat = null;
 		share_id = '';
 		initial_share_id = '';
-		qrCodeUrl = '';
+		previewQrCodeUrl = '';
+		downloadQrCodeUrl = '';
 		expirationOption = 'never';
 		customExpirationDate = '';
 		is_public = false;
+		initial_is_public = false;
 		expireOnViewsCount = 1;
 		initialExpirationOption = 'never';
 		initialCustomExpirationDate = '';
@@ -440,7 +546,41 @@
 <Modal bind:show size="md">
 	<div>
 		<div class=" flex justify-between dark:text-gray-300 px-5 pt-4 pb-0.5">
-			<div class=" text-lg font-medium self-center">{$i18n.t('Share Chat')}</div>
+			<div class=" text-lg font-medium self-center flex items-center space-x-2">
+				{$i18n.t('Share Chat')}
+				<Tooltip placement="right" interactive={true}>
+					<QuestionMarkCircle class="cursor-pointer text-gray-500 size-5" />
+					<div class="p-2 text-sm" slot="tooltip">
+						<div class="font-medium mb-2">{$i18n.t('How Sharing Works:')}</div>
+						<ul class="list-disc list-inside space-y-1">
+							<li>
+								<strong>{$i18n.t('Creates a Snapshot:')}</strong>
+								{$i18n.t(
+									'Sharing creates a static, public snapshot of your conversation up to this point.'
+								)}
+							</li>
+							<li>
+								<strong>{$i18n.t('Future Messages Not Included:')}</strong>
+								{$i18n.t(
+									'Any new messages you send after creating the link will not be added to the shared chat.'
+								)}
+							</li>
+							<li>
+								<strong>{$i18n.t('Updating the Link:')}</strong>
+								{$i18n.t(
+									'You can update the link at any time to reflect the latest state of the conversation.'
+								)}
+							</li>
+							<li>
+								<strong>{$i18n.t('Link Persistence:')}</strong>
+								{$i18n.t(
+									'The link remains active as long as the original chat exists and the expiration, if set, has not been reached.'
+								)}
+							</li>
+						</ul>
+					</div>
+				</Tooltip>
+			</div>
 			<button
 				class="self-center"
 				on:click={() => {
@@ -451,82 +591,20 @@
 			</button>
 		</div>
 
+		{#if chat && chat.chat}
+			<div class="px-5 pt-2 text-sm text-gray-500 dark:text-gray-400 truncate">
+				{chat.chat.title}
+			</div>
+		{/if}
+
 		{#if chat}
 			<div class="px-5 pt-4 pb-5 w-full flex flex-col">
-				<div class=" text-sm dark:text-gray-300 mb-1">
-					<div class="font-medium mb-2">How Sharing Works:</div>
-					<ul class="list-disc list-inside space-y-1">
-						<li>
-							<strong>Creates a Snapshot:</strong>
-							{$i18n.t(
-								"Sharing creates a static, public snapshot of your conversation up to this point."
-							)}
-						</li>
-						<li>
-							<strong>Future Messages Not Included:</strong>
-							{$i18n.t(
-								"Any new messages you send after creating the link will not be added to the shared chat."
-							)}
-						</li>
-						<li>
-							<strong>Updating the Link:</strong>
-							{$i18n.t(
-								'You can update the link at any time to reflect the latest state of the conversation.'
-							)}
-						</li>
-						<li>
-							<strong>Link Persistence:</strong>
-							{$i18n.t(
-								'The link remains active as long as the original chat exists and the expiration, if set, has not been reached.'
-							)}
-						</li>
-					</ul>
-				</div>
-
-				{#if chat.share_id}
-					<div class="mt-2 flex items-center justify-between text-lg">
-						<a
-							href="/s/{chat.share_id}"
-							target="_blank"
-							class=" text-sm underline dark:text-gray-300 mb-1"
-							>{$i18n.t('View existing share link')}</a
-						>
-						<button
-							class="underline text-sm dark:text-white"
-							on:click={async () => {
-								const res = await deleteSharedChatById(localStorage.token, chatId);
-
-								if (res) {
-									chat = await getChatById(localStorage.token, chatId);
-									share_id = '';
-									qrCodeUrl = '';
-									toast.success($i18n.t('Link deleted successfully'));
-									sharedChatsUpdated.set(true);
-
-									if (closeOnDelete) {
-										show = false;
-									}
-								}
-							}}
-							>{$i18n.t('Delete Link')}
-						</button>
-					</div>
-				{/if}
-
 				<div class="mt-4">
 					<div class="flex items-center justify-between">
-						<label for="is_public" class="block text-sm font-medium text-gray-700 dark:text-gray-300">{$i18n.t('Public Access')}</label>
-						<button
-							type="button"
-							class="flex items-center gap-2 px-2.5 py-1.5 rounded-full transition-colors {is_public
-								? 'bg-green-600 hover:bg-green-700'
-								: 'bg-gray-600 hover:bg-gray-700'}"
-							on:click={() => (is_public = !is_public)}
-						>
-							<div class=" text-white text-xs font-medium">
-								{is_public ? $i18n.t('Enabled') : $i18n.t('Disabled')}
-							</div>
-						</button>
+						<label for="is_public" class="block text-sm font-medium text-gray-700 dark:text-gray-300">
+							{$i18n.t('Public Access')}
+						</label>
+						<Switch bind:state={is_public} tooltip={true} />
 					</div>
 					<p class="text-xs text-gray-500 dark:text-gray-400 mt-1">
 						{$i18n.t(
@@ -535,21 +613,39 @@
 					</p>
 				</div>
 
-				<div class="mt-4">
-					<label for="expiration" class="block text-sm font-medium text-gray-700 dark:text-gray-300">{$i18n.t('Link Expiration')}</label>
-					<select
-						id="expiration"
-						bind:value={expirationOption}
-						on:change={handleExpirationChange}
-						class="mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm rounded-md dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white"
+				<div class="mt-4 relative" use:clickOutside>
+					<label for="expiration" class="block text-sm font-medium text-gray-700 dark:text-gray-300"
+						>{$i18n.t('Link Expiration')}</label
 					>
-						<option value="never">{$i18n.t('Never')}</option>
-						<option value="1h">{$i18n.t('1 Hour')}</option>
-						<option value="24h">{$i18n.t('24 Hours')}</option>
-						<option value="7d">{$i18n.t('7 Days')}</option>
-						<option value="expire-on-views">{$i18n.t('Expire after a number of views')}</option>
-						<option value="custom">{$i18n.t('Custom')}</option>
-					</select>
+					<button
+						type="button"
+						class="mt-1 relative block w-full cursor-pointer text-left pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm rounded-md dark:bg-gray-700 dark:border-gray-600 dark:text-white"
+						on:click={() => (isExpirationDropdownOpen = !isExpirationDropdownOpen)}
+						on:wheel|preventDefault={handleExpirationScroll}
+					>
+						<span class="block truncate">{expirationOptions[selectedExpirationIndex]?.label ?? ''}</span>
+						<span class="pointer-events-none absolute inset-y-0 right-0 flex items-center pr-2">
+							<ChevronDown class="h-5 w-5 text-gray-400" />
+						</span>
+					</button>
+
+					{#if isExpirationDropdownOpen}
+						<ul
+							class="absolute z-10 mt-1 w-full rounded-md bg-white shadow-lg border border-gray-200 dark:bg-gray-700 dark:border-gray-600"
+						>
+							{#each expirationOptions as option, i}
+								<li
+									class="relative cursor-pointer select-none py-2 pl-3 pr-9 text-gray-900 dark:text-white hover:bg-indigo-600 hover:text-white"
+									on:click={() => {
+										expirationOption = option.value;
+										isExpirationDropdownOpen = false;
+									}}
+								>
+									<span class="block truncate">{option.label}</span>
+								</li>
+							{/each}
+						</ul>
+					{/if}
 				</div>
 
 				{#if expirationOption === 'custom'}
@@ -613,9 +709,11 @@
 							bind:value={customExpirationDate}
 							id="hidden-datetime-picker"
 							class="absolute bottom-0 left-0 w-px h-px opacity-0"
+							min={minDateTime}
 						/>
 					</div>
 				{/if}
+
 
 				{#if expirationOption === 'expire-on-views'}
 					<div class="mt-4">
@@ -655,12 +753,16 @@
 							<input
 								class="flex-1 min-w-0 bg-transparent py-2 px-1 focus:outline-none dark:text-white"
 								placeholder={$i18n.t('Enter a custom name (optional)')}
-								bind:value={share_id}
+								value={share_id}
 								maxlength="144"
-								on:input={() => {
-									share_id = share_id
-										.replace(/ /g, '-')
-										.replace(/[^a-zA-Z0-9-._~]/g, '');
+								on:input={(e) => {
+									const sanitized = e.target.value.replace(/ /g, '-').replace(/[^a-zA-Z0-9-._~]/g, '');
+									if (share_id !== sanitized) {
+										share_id = sanitized;
+										generateQrCodesDebounced(
+											share_id ? `${window.location.origin}/s/${share_id}` : null
+										);
+									}
 								}}
 							/>
 							<span class="pr-3 text-xs text-gray-500 dark:text-gray-400 shrink-0"
@@ -668,27 +770,88 @@
 							>
 						</div>
 					</div>
-					<button
-						class="flex items-center justify-center py-1.5 px-2.5 rounded-lg dark:text-white dark:hover:bg-gray-800 transition-colors"
-						on:click={() => {
-							share_id = uuidv4();
-						}}
-					>
-						<ArrowPath className="size-6" />
-					</button>
+
+					<div class="flex items-center gap-2">
+						{#if chat.share_id}
+							<Tooltip content={$i18n.t('Generate New ID')}>
+								<button
+									class="flex items-center justify-center p-2 rounded-lg dark:text-white bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors"
+									on:click={() => {
+										share_id = uuidv4();
+										generateQrCodesImmediate(
+											share_id ? `${window.location.origin}/s/${share_id}` : null
+										);
+									}}
+								>
+									<ArrowPath class="size-5" />
+								</button>
+							</Tooltip>
+							<Tooltip content={$i18n.t('Copy Link')}>
+								<button
+									class="flex items-center justify-center p-2 rounded-lg dark:text-white bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors"
+									on:click={() => {
+										copyToClipboard(shareUrl);
+										toast.success($i18n.t('Copied shared chat URL to clipboard!'));
+									}}
+								>
+									<Clipboard class="size-5" />
+								</button>
+							</Tooltip>
+							<Tooltip content={$i18n.t('View Link')}>
+								<a
+									href={shareUrl}
+									target="_blank"
+									class="flex items-center justify-center p-2 rounded-lg dark:text-white bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors"
+								>
+									<Eye class="size-5" />
+								</a>
+							</Tooltip>
+							<Tooltip content={$i18n.t('Delete Link')}>
+								<button
+									class="flex items-center justify-center p-2 rounded-lg text-red-600 dark:text-red-500 bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors"
+									on:click={async () => {
+										const res = await deleteSharedChatById(localStorage.token, chatId);
+										if (res) {
+											chat = await getChatById(localStorage.token, chatId);
+											share_id = '';
+											qrCodeUrl = '';
+											toast.success($i18n.t('Link deleted successfully'));
+											sharedChatsUpdated.set(true);
+											if (closeOnDelete) {
+												show = false;
+											}
+										}
+									}}
+								>
+									<GarbageBin class="size-5" />
+								</button>
+							</Tooltip>
+						{:else}
+							<Tooltip content={$i18n.t('Generate Random ID')}>
+								<button
+									class="flex items-center justify-center p-2 rounded-lg dark:text-white bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors"
+									on:click={() => {
+										share_id = uuidv4();
+									}}
+								>
+									<ArrowPath class="size-5" />
+								</button>
+							</Tooltip>
+						{/if}
+					</div>
 				</div>
 
 				<div class="my-4 flex flex-col items-center justify-center">
-					{#if qrCodeUrl}
+					{#if previewQrCodeUrl}
 						<a
 							class="qr-code-container"
-							href={qrCodeUrl}
+							href={downloadQrCodeUrl}
 							download="qrcode.png"
 							on:click={() => {
 								toast.success($i18n.t('Downloading QR code...'));
 							}}
 						>
-							<img class="w-48 h-48 rounded-md" src={qrCodeUrl} alt="QR Code" />
+							<img class="w-48 h-48 rounded-md" src={previewQrCodeUrl} alt="QR Code" />
 						</a>
 					{/if}
 				</div>
@@ -751,8 +914,7 @@
 							}}
 						>
 							<Link />
-
-							{$i18n.t(chat.share_id ? 'Update Link' : 'Create and Copy Link')}
+							{$i18n.t(chat.share_id ? 'Update Link Settings' : 'Create Link')}
 						</button>
 					</div>
 				</div>
