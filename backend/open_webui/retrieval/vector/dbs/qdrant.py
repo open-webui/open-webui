@@ -179,12 +179,12 @@ class QdrantClient(VectorDBBase):
                     )
                 )
 
-            points = self.client.query_points(
+            points = self.client.scroll(
                 collection_name=f"{self.collection_prefix}_{collection_name}",
-                query_filter=models.Filter(should=field_conditions),
+                scroll_filter=models.Filter(should=field_conditions),
                 limit=limit,
             )
-            return self._result_to_get_result(points.points)
+            return self._result_to_get_result(points[0])
         except Exception as e:
             log.exception(f"Error querying a collection '{collection_name}': {e}")
             return None

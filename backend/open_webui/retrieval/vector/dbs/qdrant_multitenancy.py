@@ -289,12 +289,12 @@ class QdrantClient(VectorDBBase):
         tenant_filter = _tenant_filter(tenant_id)
         field_conditions = [_metadata_filter(k, v) for k, v in filter.items()]
         combined_filter = models.Filter(must=[tenant_filter, *field_conditions])
-        points = self.client.query_points(
+        points = self.client.scroll(
             collection_name=mt_collection,
-            query_filter=combined_filter,
+            scroll_filter=combined_filter,
             limit=limit,
         )
-        return self._result_to_get_result(points.points)
+        return self._result_to_get_result(points[0])
 
     def get(self, collection_name: str) -> Optional[GetResult]:
         """
