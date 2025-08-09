@@ -95,6 +95,7 @@ from open_webui.config import (
 from open_webui.env import (
     SRC_LOG_LEVELS,
     GLOBAL_LOG_LEVEL,
+    CHAT_RESPONSE_STREAM_DELTA_CHUNK_SIZE,
     BYPASS_MODEL_ACCESS_CONTROL,
     ENABLE_REALTIME_CHAT_SAVE,
 )
@@ -1819,7 +1820,7 @@ async def process_chat_response(
 
                     delta_count = 0
                     delta_chunk_size = max(
-                        1,
+                        CHAT_RESPONSE_STREAM_DELTA_CHUNK_SIZE,
                         int(
                             metadata.get("params", {}).get("stream_delta_chunk_size")
                             or 1

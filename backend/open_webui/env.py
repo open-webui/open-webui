@@ -488,6 +488,25 @@ else:
 
 
 ####################################
+# CHAT
+####################################
+
+CHAT_RESPONSE_STREAM_DELTA_CHUNK_SIZE = os.environ.get(
+    "CHAT_RESPONSE_STREAM_DELTA_CHUNK_SIZE", "1"
+)
+
+if CHAT_RESPONSE_STREAM_DELTA_CHUNK_SIZE == "":
+    CHAT_RESPONSE_STREAM_DELTA_CHUNK_SIZE = 1
+else:
+    try:
+        CHAT_RESPONSE_STREAM_DELTA_CHUNK_SIZE = int(
+            CHAT_RESPONSE_STREAM_DELTA_CHUNK_SIZE
+        )
+    except Exception:
+        CHAT_RESPONSE_STREAM_DELTA_CHUNK_SIZE = 1
+
+
+####################################
 # WEBSOCKET SUPPORT
 ####################################
 
