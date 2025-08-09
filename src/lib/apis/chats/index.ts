@@ -809,7 +809,8 @@ export const shareChatById = async (
 	id: string,
 	share_id: string = '',
 	expires_at: number | null = null,
-	expire_on_views: number | null = null
+	expire_on_views: number | null = null,
+	is_public: boolean = false
 ) => {
 	let error = null;
 
@@ -823,7 +824,8 @@ export const shareChatById = async (
 		body: JSON.stringify({
 			share_id: share_id,
 			expires_at: expires_at,
-			expire_on_views: expire_on_views
+			expire_on_views: expire_on_views,
+			is_public: is_public
 		})
 	})
 		.then(async (res) => {

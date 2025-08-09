@@ -64,10 +64,13 @@
 	//////////////////////////
 
 	const loadSharedChat = async () => {
-		const userSettings = await getUserSettings(localStorage.token).catch((error) => {
-			console.error(error);
-			return null;
-		});
+		const token = localStorage.token;
+		const userSettings = token
+			? await getUserSettings(token).catch((error) => {
+					console.error(error);
+					return null;
+			  })
+			: null;
 
 		if (userSettings) {
 			settings.set(userSettings.ui);

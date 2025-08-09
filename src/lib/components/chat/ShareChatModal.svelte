@@ -62,6 +62,7 @@
 	let initialExpirationOption = 'never';
 	let initialCustomExpirationDate = '';
 	let initialExpireOnViewsCount = 1;
+	let is_public = false;
 	let currentViews = 0;
 	const i18n = getContext('i18n');
 
@@ -280,7 +281,8 @@
 				chatId,
 				share_id,
 				expires_at,
-				expire_on_views
+				expire_on_views,
+				is_public
 			);
 
 			// Update all state directly and atomically from the single API response.
@@ -379,6 +381,8 @@
 						expireOnViewsCount = 1;
 					}
 
+					is_public = _chat.is_public ?? false;
+
 					// Snapshot the newly set initial state
 					initialExpirationOption = expirationOption;
 					initialCustomExpirationDate = customExpirationDate;
@@ -422,6 +426,7 @@
 		qrCodeUrl = '';
 		expirationOption = 'never';
 		customExpirationDate = '';
+		is_public = false;
 		expireOnViewsCount = 1;
 		initialExpirationOption = 'never';
 		initialCustomExpirationDate = '';
@@ -507,6 +512,28 @@
 						</button>
 					</div>
 				{/if}
+
+				<div class="mt-4">
+					<div class="flex items-center justify-between">
+						<label for="is_public" class="block text-sm font-medium text-gray-700 dark:text-gray-300">{$i18n.t('Public Access')}</label>
+						<button
+							type="button"
+							class="flex items-center gap-2 px-2.5 py-1.5 rounded-full transition-colors {is_public
+								? 'bg-green-600 hover:bg-green-700'
+								: 'bg-gray-600 hover:bg-gray-700'}"
+							on:click={() => (is_public = !is_public)}
+						>
+							<div class=" text-white text-xs font-medium">
+								{is_public ? $i18n.t('Enabled') : $i18n.t('Disabled')}
+							</div>
+						</button>
+					</div>
+					<p class="text-xs text-gray-500 dark:text-gray-400 mt-1">
+						{$i18n.t(
+							'When enabled, anyone with the link can view the chat. When disabled, only logged-in users can view the chat.'
+						)}
+					</p>
+				</div>
 
 				<div class="mt-4">
 					<label for="expiration" class="block text-sm font-medium text-gray-700 dark:text-gray-300">{$i18n.t('Link Expiration')}</label>

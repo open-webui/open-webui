@@ -830,6 +830,7 @@ class ShareChatForm(BaseModel):
     share_id: Optional[str] = None
     expires_at: Optional[int] = None
     expire_on_views: Optional[int] = None
+    is_public: bool = False
 
 
 @router.post("/{id}/share", response_model=Optional[ChatResponse])
@@ -869,6 +870,7 @@ async def share_chat_by_id(
             share_id=form_data.share_id,
             expires_at=form_data.expires_at,
             expire_on_views=form_data.expire_on_views,
+            is_public=form_data.is_public,
         )
 
         if not result:

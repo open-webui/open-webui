@@ -36,6 +36,7 @@ class Chat(Base):
     share_id = Column(Text, unique=True, nullable=True)
     expires_at = Column(BigInteger, nullable=True)
     expire_on_views = Column(Integer, nullable=True)
+    is_public = Column(Boolean, default=False, nullable=False)
     archived = Column(Boolean, default=False)
     pinned = Column(Boolean, default=False, nullable=True)
 
@@ -59,6 +60,7 @@ class ChatModel(BaseModel):
     share_id: Optional[str] = None
     expires_at: Optional[int] = None
     expire_on_views: Optional[int] = None
+    is_public: bool = False
     archived: bool = False
     pinned: Optional[bool] = False
 
@@ -104,6 +106,7 @@ class ChatResponse(BaseModel):
     share_id: Optional[str] = None  # id of the chat to be shared
     expires_at: Optional[int] = None
     expire_on_views: Optional[int] = None
+    is_public: bool
     archived: bool
     pinned: Optional[bool] = False
     meta: dict = {}
@@ -306,12 +309,14 @@ class ChatTable:
         share_id: Optional[str] = None,
         expires_at: Optional[int] = None,
         expire_on_views: Optional[int] = None,
+        is_public: bool = False,
     ) -> Optional[tuple[ChatModel, bool]]:
         with get_db() as db:
             chat = db.get(Chat, chat_id)
             if chat.share_id:
                 chat.expires_at = expires_at
                 chat.expire_on_views = expire_on_views
+                chat.is_public = is_public
                 db.commit()
                 db.refresh(chat)
                 return (ChatModel.model_validate(chat), False)
@@ -319,6 +324,7 @@ class ChatTable:
             chat.share_id = share_id if share_id else str(uuid.uuid4())
             chat.expires_at = expires_at
             chat.expire_on_views = expire_on_views
+            chat.is_public = is_public
             chat.updated_at = int(time.time())
             db.commit()
             db.refresh(chat)
@@ -683,6 +689,9 @@ class ChatTable:
                 chat = db.query(Chat).filter_by(share_id=id).first()
 
                 if chat:
+                    if not chat.is_public and user is None:
+                        return None
+
                     if chat.expires_at and chat.expires_at < int(time.time()):
                         return None
 
