@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { getContext, onMount } from 'svelte';
 	const i18n = getContext('i18n');
+	import { config } from '$lib/stores';
 
 	import Switch from '$lib/components/common/Switch.svelte';
 	import Tooltip from '$lib/components/common/Tooltip.svelte';
@@ -250,12 +251,14 @@
 			</div>
 			<Switch bind:state={permissions.sharing.public_tools} />
 		</div>
-		<div class="  flex w-full justify-between my-2 pr-2">
-			<div class=" self-center text-xs font-medium">
-				{$i18n.t('Shared Chats Access')}
+		{#if $config.features.enable_shared_chats_access}
+			<div class="  flex w-full justify-between my-2 pr-2">
+				<div class=" self-center text-xs font-medium">
+					{$i18n.t('Shared Chats Access')}
+				</div>
+				<Switch bind:state={permissions.sharing.shared_chats} />
 			</div>
-			<Switch bind:state={permissions.sharing.shared_chats} />
-		</div>
+		{/if}
 	</div>
 
 	<hr class=" border-gray-100 dark:border-gray-850 my-2" />

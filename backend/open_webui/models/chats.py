@@ -34,6 +34,8 @@ class Chat(Base):
     updated_at = Column(BigInteger)
 
     share_id = Column(Text, unique=True, nullable=True)
+    expires_at = Column(BigInteger, nullable=True)
+    expire_on_views = Column(Integer, nullable=True)
     archived = Column(Boolean, default=False)
     pinned = Column(Boolean, default=False, nullable=True)
 
@@ -55,6 +57,8 @@ class ChatModel(BaseModel):
     updated_at: int  # timestamp in epoch
 
     share_id: Optional[str] = None
+    expires_at: Optional[int] = None
+    expire_on_views: Optional[int] = None
     archived: bool = False
     pinned: Optional[bool] = False
 
@@ -98,6 +102,8 @@ class ChatResponse(BaseModel):
     updated_at: int  # timestamp in epoch
     created_at: int  # timestamp in epoch
     share_id: Optional[str] = None  # id of the chat to be shared
+    expires_at: Optional[int] = None
+    expire_on_views: Optional[int] = None
     archived: bool
     pinned: Optional[bool] = False
     meta: dict = {}
@@ -113,6 +119,8 @@ class ChatTitleIdResponse(BaseModel):
     updated_at: int
     created_at: int
     share_id: Optional[str] = None
+    expires_at: Optional[int] = None
+    expire_on_views: Optional[int] = None
     views: Optional[int] = 0
     clones: Optional[int] = 0
 
@@ -293,14 +301,24 @@ class ChatTable:
         return self.update_chat_by_id(id, chat)
 
     def share_chat_by_id(
-        self, chat_id: str, share_id: Optional[str] = None
+        self,
+        chat_id: str,
+        share_id: Optional[str] = None,
+        expires_at: Optional[int] = None,
+        expire_on_views: Optional[int] = None,
     ) -> Optional[tuple[ChatModel, bool]]:
         with get_db() as db:
             chat = db.get(Chat, chat_id)
             if chat.share_id:
+                chat.expires_at = expires_at
+                chat.expire_on_views = expire_on_views
+                db.commit()
+                db.refresh(chat)
                 return (ChatModel.model_validate(chat), False)
 
             chat.share_id = share_id if share_id else str(uuid.uuid4())
+            chat.expires_at = expires_at
+            chat.expire_on_views = expire_on_views
             chat.updated_at = int(time.time())
             db.commit()
             db.refresh(chat)
@@ -561,6 +579,8 @@ class ChatTable:
                 Chat.updated_at,
                 Chat.created_at,
                 Chat.share_id,
+                Chat.expires_at,
+                Chat.expire_on_views,
                 Chat.views,
                 Chat.clones,
             )
@@ -584,8 +604,10 @@ class ChatTable:
                             "updated_at": chat[2],
                             "created_at": chat[3],
                             "share_id": chat[4],
-                            "views": chat[5],
-                            "clones": chat[6],
+                            "expires_at": chat[5],
+                            "expire_on_views": chat[6],
+                            "views": chat[7],
+                            "clones": chat[8],
                         }
                     )
                     for chat in all_chats
@@ -661,9 +683,27 @@ class ChatTable:
                 chat = db.query(Chat).filter_by(share_id=id).first()
 
                 if chat:
+                    if chat.expires_at and chat.expires_at < int(time.time()):
+                        return None
+
+                    if (
+                        chat.expire_on_views is not None
+                        and chat.views >= chat.expire_on_views
+                    ):
+                        return None
+
                     if increment_view and (user is None or chat.user_id != user.id):
                         chat.views = (chat.views or 0) + 1
                         db.commit()
+
+                    if (
+                        chat.expire_on_views is not None
+                        and chat.views >= chat.expire_on_views
+                    ):
+                        chat_model = self.get_chat_by_id(chat.id)
+                        self.update_chat_share_id_by_id(chat.id, None)
+                        return chat_model
+
                     return self.get_chat_by_id(chat.id)
                 else:
                     return None

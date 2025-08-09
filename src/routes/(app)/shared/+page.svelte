@@ -31,6 +31,7 @@
 	import ResetAllStatsConfirmationModal from '$lib/components/common/ResetAllStatsConfirmationModal.svelte';
 	import MenuLines from '$lib/components/icons/MenuLines.svelte';
 	import Tooltip from '$lib/components/common/Tooltip.svelte';
+	import Clipboard from '$lib/components/icons/Clipboard.svelte';
 
 	let showShareChatModal = false;
 	let selectedChatId = '';
@@ -94,8 +95,16 @@
 			);
 			total = res.total;
 			grandTotal = res.grand_total;
+
+			const now = Math.floor(Date.now() / 1000);
+			const activeChats = res.chats.filter(
+				(chat) =>
+					(!chat.expires_at || chat.expires_at > now) &&
+					(!chat.expire_on_views || chat.views < chat.expire_on_views)
+			);
+
 			sharedChatsStore.set(
-				res.chats.map((chat) => ({
+				activeChats.map((chat) => ({
 					...chat,
 					status: 'active',
 					selected: $selectedSharedChatIds.includes(chat.id)
@@ -113,6 +122,31 @@
 		models.set(await getModels(localStorage.token));
 		getSharedChatList();
 		previousShowShareChatModal = showShareChatModal;
+
+		const interval = setInterval(() => {
+			const now = Math.floor(Date.now() / 1000);
+			const chatsToProcess = [...$sharedChatsStore];
+
+			chatsToProcess.forEach(async (chat) => {
+				const isExpiredByTime = chat.expires_at && chat.expires_at <= now;
+				const isExpiredByViews =
+					chat.expire_on_views && chat.views >= chat.expire_on_views;
+
+				if (isExpiredByTime || isExpiredByViews) {
+					const res = await deleteSharedChatById(localStorage.token, chat.id);
+					if (res) {
+						toast.info(`Expired link for "${chat.title}" was automatically revoked.`);
+						sharedChatsStore.update((currentChats) =>
+							currentChats.filter((c) => c.id !== chat.id)
+						);
+					}
+				}
+			});
+		}, 1000);
+
+		return () => {
+			clearInterval(interval);
+		};
 	});
 
 	$: if ($user && !($user.role === 'admin' || $user.permissions?.sharing?.shared_chats)) {
@@ -168,13 +202,6 @@
 	const handleSearch = () => {
 		page = 1;
 		getSharedChatList();
-	};
-
-	const truncateLink = (link) => {
-		if (link.length > 36) {
-			return link.substring(0, 36) + '...';
-		}
-		return link;
 	};
 
 	const copyLink = (link) => {
@@ -329,16 +356,8 @@
 		try {
 			const { type, id } = JSON.parse(data);
 			if (type === 'chat') {
-				const res = await shareChatById(localStorage.token, id);
-
-				if (res) {
-					if (res.is_new_share) {
-						toast.success('Chat shared successfully');
-					} else {
-						toast.info('This chat has already been shared.');
-					}
-					getSharedChatList();
-				}
+				selectedChatId = id;
+				showShareChatModal = true;
 			}
 		} catch (e) {
 			toast.error('Failed to share chat.');
@@ -789,15 +808,30 @@
 								>
 								<td class="px-6 py-3 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
 									{#if chat.status === 'active'}
-										<a
-											href={`/s/${chat.share_id}`}
-											target="_blank"
-											class="text-blue-600 dark:text-blue-400 hover:underline"
-										>
-											/s/{truncateLink(chat.share_id)}
-										</a>
+										<div class="flex items-center">
+											<div class="w-80 truncate">
+												<a
+													href={`/s/${chat.share_id}`}
+													target="_blank"
+													class="text-blue-600 dark:text-blue-400 hover:underline"
+												>
+													/s/{chat.share_id}
+												</a>
+											</div>
+											<Tooltip content="Copy Link" className="ml-2">
+												<button
+													class="p-1 rounded-md hover:bg-gray-100 dark:hover:bg-gray-800"
+													on:click={() => {
+														copyLink(`${window.location.origin}/s/${chat.share_id}`);
+														toast.success('Link copied to clipboard');
+													}}
+												>
+													<Clipboard class="size-4" />
+												</button>
+											</Tooltip>
+										</div>
 									{:else}
-										/s/{truncateLink(chat.share_id)}
+										<div class="w-48 truncate">/s/{chat.share_id}</div>
 									{/if}
 								</td>
 								<td class="px-6 py-3 whitespace-nowrap text-gray-500 dark:text-gray-400 whitespace-nowrap"
@@ -808,18 +842,9 @@
 								>
 								<td class="px-6 py-3 whitespace-nowrap text-sm font-medium">
 									{#if chat.status === 'active'}
-										<Tooltip content="Copy Link" className="inline-block">
-											<button
-												class="text-indigo-600 dark:text-indigo-400 hover:text-indigo-900 dark:hover:text-indigo-200"
-												on:click={() => {
-													copyLink(`${window.location.origin}/s/${chat.share_id}`);
-													toast.success('Link copied to clipboard');
-												}}>Copy</button
-											>
-										</Tooltip>
 										<Tooltip content="Revoke Link" className="inline-block">
 											<button
-												class="text-red-600 dark:text-red-400 hover:text-red-900 dark:hover:text-red-200 ml-4"
+												class="text-red-600 dark:text-red-400 hover:text-red-900 dark:hover:text-red-200"
 												on:click={() => {
 													revokeLink(chat.id);
 												}}>Revoke</button

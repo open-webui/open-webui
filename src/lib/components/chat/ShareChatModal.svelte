@@ -1,6 +1,11 @@
 <script lang="ts">
 	import { getContext, onMount } from 'svelte';
-	import { models, config, sharedChats, sharedChatsUpdated } from '$lib/stores';
+	import {
+		models,
+		config,
+		sharedChats as sharedChatsStore,
+		sharedChatsUpdated
+	} from '$lib/stores';
 
 	import { toast } from 'svelte-sonner';
 	import { deleteSharedChatById, getChatById, shareChatById } from '$lib/apis/chats';
@@ -13,6 +18,10 @@
 	import ArrowPath from '$lib/components/icons/ArrowPath.svelte';
 	import ArrowDownTray from '$lib/components/icons/ArrowDownTray.svelte';
 	import ArrowUpTray from '$lib/components/icons/ArrowUpTray.svelte';
+	import Calendar from '$lib/components/icons/Calendar.svelte';
+	import dayjs from 'dayjs';
+	import customParseFormat from 'dayjs/plugin/customParseFormat';
+	dayjs.extend(customParseFormat);
 
 	export let chatId;
 	export let closeOnDelete = false;
@@ -21,22 +30,221 @@
 	let shareUrl = null;
 	let qrCodeUrl = '';
 	let share_id = '';
+	let initial_share_id = '';
+	let expirationOption = 'never';
+	let customExpirationDate = '';
+	let expireOnViewsCount = 1;
+	let initialExpirationOption = 'never';
+	let initialCustomExpirationDate = '';
+	let initialExpireOnViewsCount = 1;
+	let currentViews = 0;
 	const i18n = getContext('i18n');
 
+	let expirationDateParts = {
+		year: '',
+		month: '',
+		day: '',
+		hour: '',
+		minute: '',
+		ampm: ''
+	};
+
+	$: {
+		if (customExpirationDate) {
+			const date = dayjs(customExpirationDate, 'YYYY-MM-DDTHH:mm');
+			if (date.isValid()) {
+				expirationDateParts = {
+					year: date.format('YYYY'),
+					month: date.format('MM'),
+					day: date.format('DD'),
+					hour: date.format('hh'),
+					minute: date.format('mm'),
+					ampm: date.format('A')
+				};
+			}
+		}
+	}
+
+	$: if (expirationOption === 'custom' && !customExpirationDate) {
+		customExpirationDate = dayjs().add(1, 'hour').format('YYYY-MM-DDTHH:mm');
+	}
+
+	const handleDateScroll = (event, part) => {
+		event.preventDefault();
+
+		if (!customExpirationDate) {
+			// For empty dates, set to current time before adjusting
+			customExpirationDate = dayjs().format('YYYY-MM-DDTHH:mm');
+		}
+
+		const date = dayjs(customExpirationDate, 'YYYY-MM-DDTHH:mm');
+		const direction = event.deltaY < 0 ? 1 : -1; // scroll up increases, scroll down decreases
+
+		let newDate;
+
+		if (part === 'month') {
+			newDate = date.add(direction, 'month');
+		} else if (part === 'day') {
+			newDate = date.add(direction, 'day');
+		} else if (part === 'year') {
+			newDate = date.add(direction, 'year');
+		} else if (part === 'hour') {
+			newDate = date.add(direction, 'hour');
+		} else if (part === 'minute') {
+			newDate = date.add(direction, 'minute');
+		} else if (part === 'ampm') {
+			const currentHour = date.hour();
+			if (currentHour < 12) {
+				newDate = date.hour(currentHour + 12); // Switch to PM
+			} else {
+				newDate = date.hour(currentHour - 12); // Switch to AM
+			}
+		}
+
+		if (newDate && newDate.isValid()) {
+			customExpirationDate = newDate.format('YYYY-MM-DDTHH:mm');
+		}
+	};
+
+	const openDatePicker = () => {
+		const picker = document.getElementById('hidden-datetime-picker');
+		if (picker) {
+			try {
+				picker.showPicker();
+			} catch (error) {
+				// Fallback for browsers that don't support showPicker()
+				console.error('showPicker() is not supported by this browser, falling back to click().', error);
+				picker.click();
+			}
+		}
+	};
+
+	$: if (shareUrl) {
+		(async () => {
+			qrCodeUrl = await QRCode.toDataURL(shareUrl);
+		})();
+	} else {
+		qrCodeUrl = '';
+	}
+
+	const formatISODate = (timestamp) => {
+		const date = new Date(timestamp * 1000);
+		const year = date.getFullYear();
+		const month = (date.getMonth() + 1).toString().padStart(2, '0');
+		const day = date.getDate().toString().padStart(2, '0');
+		const hours = date.getHours().toString().padStart(2, '0');
+		const minutes = date.getMinutes().toString().padStart(2, '0');
+		return `${year}-${month}-${day}T${hours}:${minutes}`;
+	};
+
+	const expirationSettingsChanged = () => {
+		if (expirationOption !== initialExpirationOption) {
+			return true;
+		}
+		if (expirationOption === 'custom' && customExpirationDate !== initialCustomExpirationDate) {
+			return true;
+		}
+		if (
+			expirationOption === 'expire-on-views' &&
+			expireOnViewsCount !== initialExpireOnViewsCount
+		) {
+			return true;
+		}
+		return false;
+	};
+
 	const shareLocalChat = async () => {
+		if (
+			expirationOption === 'expire-on-views' &&
+			initial_share_id &&
+			Number(expireOnViewsCount) <= currentViews
+		) {
+			toast.error(
+				$i18n.t('Max views must be greater than the current view count ({{currentViews}}).', {
+					currentViews: currentViews
+				})
+			);
+			return null;
+		}
+
+		const idChanged = initial_share_id !== '' && share_id !== initial_share_id;
+		const expirationChanged = expirationSettingsChanged();
+
+		if (initial_share_id && !idChanged && !expirationChanged) {
+			toast.info($i18n.t('No changes detected'));
+			return null;
+		}
+
 		try {
-			if (chat.share_id) {
-				await deleteSharedChatById(localStorage.token, chatId);
+			let expires_at = null;
+			let expire_on_views = null;
+
+			if (expirationOption === 'expire-on-views') {
+				const count = Number(expireOnViewsCount);
+				if (!isNaN(count) && count > 0) {
+					expire_on_views = count;
+				} else {
+					toast.error('Number of views must be a valid number greater than 0.');
+					return null;
+				}
+			} else if (expirationOption !== 'never') {
+				if (expirationOption === 'custom') {
+					const selectedDate = new Date(customExpirationDate);
+					const now = new Date();
+					selectedDate.setSeconds(now.getSeconds());
+
+					if (selectedDate < now) {
+						toast.error($i18n.t('The selected date and time cannot be in the past.'));
+						return null;
+					}
+					expires_at = selectedDate.getTime() / 1000;
+				} else {
+					const now = new Date();
+					if (expirationOption === '1h') {
+						now.setHours(now.getHours() + 1);
+					} else if (expirationOption === '24h') {
+						now.setHours(now.getHours() + 24);
+					} else if (expirationOption === '7d') {
+						now.setDate(now.getDate() + 7);
+					}
+					expires_at = Math.floor(now.getTime() / 1000);
+				}
 			}
 
-			const sharedChat = await shareChatById(localStorage.token, chatId, share_id);
+			if (initial_share_id && (idChanged || expirationChanged)) {
+				const res = await deleteSharedChatById(localStorage.token, chatId);
+				if (res) {
+					toast.success($i18n.t('Old share link deleted successfully'));
+				} else {
+					toast.error($i18n.t('Failed to delete old share link'));
+					return null;
+				}
+			}
+
+			const sharedChat = await shareChatById(
+				localStorage.token,
+				chatId,
+				share_id,
+				expires_at,
+				expire_on_views
+			);
+
+			// Update all state directly and atomically from the single API response.
 			shareUrl = `${window.location.origin}/s/${sharedChat.id}`;
-			qrCodeUrl = await QRCode.toDataURL(shareUrl);
-			console.log(shareUrl);
-			
-			const updatedChat = await getChatById(localStorage.token, chatId);
-			chat = updatedChat;
-			share_id = chat.share_id; 
+			share_id = sharedChat.id;
+			initial_share_id = sharedChat.id;
+
+			initialExpirationOption = expirationOption;
+			initialCustomExpirationDate = customExpirationDate;
+			initialExpireOnViewsCount = expireOnViewsCount;
+
+			// Update the main chat object to reflect the new share status.
+			chat = {
+				...chat,
+				share_id: sharedChat.id,
+				expires_at: sharedChat.expires_at,
+				expire_on_views: sharedChat.expire_on_views
+			};
 
 			sharedChatsUpdated.set(true);
 
@@ -92,25 +300,65 @@
 				const _chat = await getChatById(localStorage.token, chatId);
 				if (isDifferentChat(_chat)) {
 					chat = _chat;
-					share_id = chat.share_id ?? ''; 
+					share_id = chat.share_id ?? '';
+					initial_share_id = share_id;
+
+					const sharedChatFromStore = $sharedChatsStore.find((c) => c.id === _chat.id);
+					if (sharedChatFromStore) {
+						currentViews = sharedChatFromStore.views;
+					} else {
+						currentViews = 0;
+					}
+
+					// New logic to correctly set expiration form state
+					if (_chat.expire_on_views) {
+						expirationOption = 'expire-on-views';
+						expireOnViewsCount = _chat.expire_on_views;
+						customExpirationDate = '';
+					} else if (_chat.expires_at) {
+						expirationOption = 'custom';
+						customExpirationDate = formatISODate(_chat.expires_at);
+						expireOnViewsCount = 1;
+					} else {
+						expirationOption = 'never';
+						customExpirationDate = '';
+						expireOnViewsCount = 1;
+					}
+
+					// Snapshot the newly set initial state
+					initialExpirationOption = expirationOption;
+					initialCustomExpirationDate = customExpirationDate;
+					initialExpireOnViewsCount = expireOnViewsCount;
 
 					if (chat.share_id) {
-						qrCodeUrl = await QRCode.toDataURL(`${window.location.origin}/s/${chat.share_id}`);
+						shareUrl = `${window.location.origin}/s/${chat.share_id}`;
 					} else {
-						qrCodeUrl = '';
+						shareUrl = null;
 					}
 				}
 			} else {
 				chat = null;
 				share_id = '';
-				qrCodeUrl = '';
+				initial_share_id = '';
+				shareUrl = null;
+
+				initialExpirationOption = 'never';
+				initialCustomExpirationDate = '';
+				initialExpireOnViewsCount = 1;
 				console.log(chat);
 			}
 		})();
 	} else {
 		chat = null;
 		share_id = '';
+		initial_share_id = '';
 		qrCodeUrl = '';
+		expirationOption = 'never';
+		customExpirationDate = '';
+		expireOnViewsCount = 1;
+		initialExpirationOption = 'never';
+		initialCustomExpirationDate = '';
+		initialExpireOnViewsCount = 1;
 	}
 </script>
 
@@ -154,7 +402,7 @@
 						<li>
 							<strong>Link Persistence:</strong>
 							{$i18n.t(
-								'The link remains active as long as the original chat and the share link itself exist.'
+								'The link remains active as long as the original chat exists and the expiration, if set, has not been reached.'
 							)}
 						</li>
 					</ul>
@@ -166,7 +414,7 @@
 							href="/s/{chat.share_id}"
 							target="_blank"
 							class=" text-sm underline dark:text-gray-300 mb-1"
-							>{$i18n.t('Current existing share link (click to view)')}</a
+							>{$i18n.t('View existing share link')}</a
 						>
 						<button
 							class="underline text-sm dark:text-white"
@@ -187,6 +435,101 @@
 							}}
 							>{$i18n.t('Delete Link')}
 						</button>
+					</div>
+				{/if}
+
+				<div class="mt-4">
+					<label for="expiration" class="block text-sm font-medium text-gray-700 dark:text-gray-300">{$i18n.t('Link Expiration')}</label>
+					<select id="expiration" bind:value={expirationOption} class="mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm rounded-md dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white">
+						<option value="never">{$i18n.t('Never')}</option>
+						<option value="1h">{$i18n.t('1 Hour')}</option>
+						<option value="24h">{$i18n.t('24 Hours')}</option>
+						<option value="7d">{$i18n.t('7 Days')}</option>
+						<option value="expire-on-views">{$i18n.t('Expire after a number of views')}</option>
+						<option value="custom">{$i18n.t('Custom')}</option>
+					</select>
+				</div>
+
+				{#if expirationOption === 'custom'}
+					<div class="mt-4 relative">
+						<div
+							class="flex items-center mt-1 w-full pl-3 pr-2 py-0.5 text-base border border-gray-300 focus-within:ring-2 focus-within:ring-indigo-500 focus-within:border-indigo-500 sm:text-sm rounded-md dark:bg-gray-700 dark:border-gray-600 dark:text-white"
+						>
+							<div class="flex-1">
+								{#if customExpirationDate}
+									<span class="flex items-center">
+										<span
+											class="cursor-pointer px-1 rounded hover:bg-gray-200 dark:hover:bg-gray-600"
+											on:wheel|preventDefault={(e) => handleDateScroll(e, 'month')}
+											>{expirationDateParts.month}</span
+										>
+										<span>/</span>
+										<span
+											class="cursor-pointer px-1 rounded hover:bg-gray-200 dark:hover:bg-gray-600"
+											on:wheel|preventDefault={(e) => handleDateScroll(e, 'day')}
+											>{expirationDateParts.day}</span
+										>
+										<span>/</span>
+										<span
+											class="cursor-pointer px-1 rounded hover:bg-gray-200 dark:hover:bg-gray-600"
+											on:wheel|preventDefault={(e) => handleDateScroll(e, 'year')}
+											>{expirationDateParts.year}</span
+										>
+										<span
+											class="ml-2 cursor-pointer px-1 rounded hover:bg-gray-200 dark:hover:bg-gray-600"
+											on:wheel|preventDefault={(e) => handleDateScroll(e, 'hour')}
+											>{expirationDateParts.hour}</span
+										>
+										<span>:</span>
+										<span
+											class="cursor-pointer px-1 rounded hover:bg-gray-200 dark:hover:bg-gray-600"
+											on:wheel|preventDefault={(e) => handleDateScroll(e, 'minute')}
+											>{expirationDateParts.minute}</span
+										>
+										<span
+											class="ml-1 cursor-pointer px-1 rounded hover:bg-gray-200 dark:hover:bg-gray-600"
+											on:wheel|preventDefault={(e) => handleDateScroll(e, 'ampm')}
+											>{expirationDateParts.ampm}</span
+										>
+									</span>
+								{:else}
+									<span class="text-gray-400 select-none py-2">Select a date and time</span>
+								{/if}
+							</div>
+
+							<button
+								type="button"
+								class="p-2 rounded-md hover:bg-gray-200 dark:hover:bg-gray-600"
+								on:click={openDatePicker}
+								aria-label="Open date picker"
+							>
+								<Calendar class="size-5" />
+							</button>
+						</div>
+						<input
+							type="datetime-local"
+							bind:value={customExpirationDate}
+							id="hidden-datetime-picker"
+							class="absolute bottom-0 left-0 w-px h-px opacity-0"
+						/>
+					</div>
+				{/if}
+
+				{#if expirationOption === 'expire-on-views'}
+					<div class="mt-4">
+						<input type="number" min="1" bind:value={expireOnViewsCount} class="mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm rounded-md dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white" placeholder="Enter number of views" />
+					</div>
+				{/if}
+
+				{#if chat.share_id && chat.expires_at}
+					<div class="mt-2 text-sm text-gray-500 dark:text-gray-400">
+						{$i18n.t('Expires in')} {new Date(chat.expires_at * 1000).toLocaleString()}
+					</div>
+				{/if}
+
+				{#if chat.share_id && chat.expire_on_views}
+					<div class="mt-2 text-sm text-gray-500 dark:text-gray-400">
+						{$i18n.t('Expires after')} {chat.expire_on_views} {$i18n.t('views')}
 					</div>
 				{/if}
 

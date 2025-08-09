@@ -804,7 +804,13 @@ export const cloneSharedChatById = async (token: string, id: string) => {
 
 import { sharedChats } from '$lib/stores';
 
-export const shareChatById = async (token: string, id: string, share_id: string = '') => {
+export const shareChatById = async (
+	token: string,
+	id: string,
+	share_id: string = '',
+	expires_at: number | null = null,
+	expire_on_views: number | null = null
+) => {
 	let error = null;
 
 	const res = await fetch(`${WEBUI_API_BASE_URL}/chats/${id}/share`, {
@@ -815,7 +821,9 @@ export const shareChatById = async (token: string, id: string, share_id: string 
 			...(token && { authorization: `Bearer ${token}` })
 		},
 		body: JSON.stringify({
-			share_id: share_id
+			share_id: share_id,
+			expires_at: expires_at,
+			expire_on_views: expire_on_views
 		})
 	})
 		.then(async (res) => {

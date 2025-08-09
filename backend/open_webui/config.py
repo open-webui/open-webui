@@ -1351,6 +1351,12 @@ ENABLE_COMMUNITY_SHARING = PersistentConfig(
     os.environ.get("ENABLE_COMMUNITY_SHARING", "True").lower() == "true",
 )
 
+ENABLE_SHARED_CHATS_ACCESS = PersistentConfig(
+    "ENABLE_SHARED_CHATS_ACCESS",
+    "ui.enable_shared_chats_access",
+    os.environ.get("ENABLE_SHARED_CHATS_ACCESS", "True").lower() == "true",
+)
+
 ENABLE_MESSAGE_RATING = PersistentConfig(
     "ENABLE_MESSAGE_RATING",
     "ui.enable_message_rating",
