@@ -181,7 +181,7 @@ class DoclingLoader:
                         if lang.strip()
                     ]
 
-            endpoint = f"{self.url}/v1alpha/convert/file"
+            endpoint = f"{self.url}/v1/convert/file"
             r = requests.post(endpoint, files=files, data=params)
 
         if r.ok:
@@ -281,10 +281,15 @@ class Loader:
                 "tiff",
             ]
         ):
+            api_base_url = self.kwargs.get("DATALAB_MARKER_API_BASE_URL", "")
+            if not api_base_url or api_base_url.strip() == "":
+                api_base_url = "https://www.datalab.to/api/v1"
+
             loader = DatalabMarkerLoader(
                 file_path=file_path,
                 api_key=self.kwargs["DATALAB_MARKER_API_KEY"],
-                langs=self.kwargs.get("DATALAB_MARKER_LANGS"),
+                api_base_url=api_base_url,
+                additional_config=self.kwargs.get("DATALAB_MARKER_ADDITIONAL_CONFIG"),
                 use_llm=self.kwargs.get("DATALAB_MARKER_USE_LLM", False),
                 skip_cache=self.kwargs.get("DATALAB_MARKER_SKIP_CACHE", False),
                 force_ocr=self.kwargs.get("DATALAB_MARKER_FORCE_OCR", False),
@@ -295,6 +300,7 @@ class Loader:
                 disable_image_extraction=self.kwargs.get(
                     "DATALAB_MARKER_DISABLE_IMAGE_EXTRACTION", False
                 ),
+                format_lines=self.kwargs.get("DATALAB_MARKER_FORMAT_LINES", False),
                 output_format=self.kwargs.get(
                     "DATALAB_MARKER_OUTPUT_FORMAT", "markdown"
                 ),

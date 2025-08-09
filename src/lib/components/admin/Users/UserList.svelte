@@ -142,8 +142,7 @@
 				type: 'error',
 				title: 'License Error',
 				content:
-					'Exceeded the number of seats in your license. Please contact support to increase the number of seats.',
-				dismissable: true
+					'Exceeded the number of seats in your license. Please contact support to increase the number of seats.'
 			}}
 		/>
 	</div>
@@ -154,7 +153,9 @@
 		<Spinner className="size-5" />
 	</div>
 {:else}
-	<div class="mt-0.5 mb-2 gap-1 flex flex-col md:flex-row justify-between">
+	<div
+		class="pt-0.5 pb-2 gap-1 flex flex-col md:flex-row justify-between sticky top-0 z-10 bg-white dark:bg-gray-900"
+	>
 		<div class="flex md:self-center text-lg font-medium px-0.5">
 			<div class="flex-shrink-0">
 				{$i18n.t('Users')}
@@ -494,7 +495,9 @@
 		ⓘ {$i18n.t("Click on the user role button to change a user's role.")}
 	</div>
 
-	<Pagination bind:page count={total} perPage={30} />
+	{#if total > 30}
+		<Pagination bind:page count={total} perPage={30} />
+	{/if}
 {/if}
 
 {#if !$config?.license_metadata}

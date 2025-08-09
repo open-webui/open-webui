@@ -6,6 +6,7 @@ from typing import Optional
 
 from open_webui.internal.db import Base, get_db
 from open_webui.models.tags import TagModel, Tag, Tags
+from open_webui.models.folders import Folders
 from open_webui.env import SRC_LOG_LEVELS
 
 from pydantic import BaseModel, ConfigDict
@@ -296,6 +297,9 @@ class ChatTable:
                     "user_id": f"shared-{chat_id}",
                     "title": chat.title,
                     "chat": chat.chat,
+                    "meta": chat.meta,
+                    "pinned": chat.pinned,
+                    "folder_id": chat.folder_id,
                     "created_at": chat.created_at,
                     "updated_at": int(time.time()),
                 }
@@ -327,7 +331,9 @@ class ChatTable:
 
                 shared_chat.title = chat.title
                 shared_chat.chat = chat.chat
-
+                shared_chat.meta = chat.meta
+                shared_chat.pinned = chat.pinned
+                shared_chat.folder_id = chat.folder_id
                 shared_chat.updated_at = int(time.time())
                 db.commit()
                 db.refresh(shared_chat)
@@ -612,8 +618,45 @@ class ChatTable:
             if word.startswith("tag:")
         ]
 
+        # Extract folder names - handle spaces and case insensitivity
+        folders = Folders.search_folders_by_names(
+            user_id,
+            [
+                word.replace("folder:", "")
+                for word in search_text_words
+                if word.startswith("folder:")
+            ],
+        )
+        folder_ids = [folder.id for folder in folders]
+
+        is_pinned = None
+        if "pinned:true" in search_text_words:
+            is_pinned = True
+        elif "pinned:false" in search_text_words:
+            is_pinned = False
+
+        is_archived = None
+        if "archived:true" in search_text_words:
+            is_archived = True
+        elif "archived:false" in search_text_words:
+            is_archived = False
+
+        is_shared = None
+        if "shared:true" in search_text_words:
+            is_shared = True
+        elif "shared:false" in search_text_words:
+            is_shared = False
+
         search_text_words = [
-            word for word in search_text_words if not word.startswith("tag:")
+            word
+            for word in search_text_words
+            if (
+                not word.startswith("tag:")
+                and not word.startswith("folder:")
+                and not word.startswith("pinned:")
+                and not word.startswith("archived:")
+                and not word.startswith("shared:")
+            )
         ]
 
         search_text = " ".join(search_text_words)
@@ -621,8 +664,22 @@ class ChatTable:
         with get_db() as db:
             query = db.query(Chat).filter(Chat.user_id == user_id)
 
-            if not include_archived:
+            if is_archived is not None:
+                query = query.filter(Chat.archived == is_archived)
+            elif not include_archived:
                 query = query.filter(Chat.archived == False)
+
+            if is_pinned is not None:
+                query = query.filter(Chat.pinned == is_pinned)
+
+            if is_shared is not None:
+                if is_shared:
+                    query = query.filter(Chat.share_id.isnot(None))
+                else:
+                    query = query.filter(Chat.share_id.is_(None))
+
+            if folder_ids:
+                query = query.filter(Chat.folder_id.in_(folder_ids))
 
             query = query.order_by(Chat.updated_at.desc())
 

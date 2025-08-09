@@ -9,6 +9,7 @@
 	import Modal from '$lib/components/common/Modal.svelte';
 	import localizedFormat from 'dayjs/plugin/localizedFormat';
 	import XMark from '$lib/components/icons/XMark.svelte';
+	import SensitiveInput from '$lib/components/common/SensitiveInput.svelte';
 
 	const i18n = getContext('i18n');
 	const dispatch = createEventDispatcher();
@@ -139,12 +140,13 @@
 								<div class=" mb-1 text-xs text-gray-500">{$i18n.t('New Password')}</div>
 
 								<div class="flex-1">
-									<input
+									<SensitiveInput
 										class="w-full text-sm bg-transparent outline-hidden"
 										type="password"
 										placeholder={$i18n.t('Enter New Password')}
 										bind:value={_user.password}
 										autocomplete="new-password"
+										required={false}
 									/>
 								</div>
 							</div>

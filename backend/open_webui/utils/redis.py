@@ -10,6 +10,9 @@ from open_webui.env import REDIS_SENTINEL_MAX_RETRY_COUNT
 log = logging.getLogger(__name__)
 
 
+_CONNECTION_CACHE = {}
+
+
 class SentinelRedisProxy:
     def __init__(self, sentinel, service, *, async_mode: bool = True, **kw):
         self._sentinel = sentinel
@@ -93,8 +96,8 @@ class SentinelRedisProxy:
 
 def parse_redis_service_url(redis_url):
     parsed_url = urlparse(redis_url)
-    if parsed_url.scheme != "redis":
-        raise ValueError("Invalid Redis URL scheme. Must be 'redis'.")
+    if parsed_url.scheme != "redis" and parsed_url.scheme != "rediss":
+        raise ValueError("Invalid Redis URL scheme. Must be 'redis' or 'rediss'.")
 
     return {
         "username": parsed_url.username or None,
@@ -106,8 +109,25 @@ def parse_redis_service_url(redis_url):
 
 
 def get_redis_connection(
-    redis_url, redis_sentinels, async_mode=False, decode_responses=True
+    redis_url,
+    redis_sentinels,
+    redis_cluster=False,
+    async_mode=False,
+    decode_responses=True,
 ):
+
+    cache_key = (
+        redis_url,
+        tuple(redis_sentinels) if redis_sentinels else (),
+        async_mode,
+        decode_responses,
+    )
+
+    if cache_key in _CONNECTION_CACHE:
+        return _CONNECTION_CACHE[cache_key]
+
+    connection = None
+
     if async_mode:
         import redis.asyncio as redis
 
@@ -122,15 +142,19 @@ def get_redis_connection(
                 password=redis_config["password"],
                 decode_responses=decode_responses,
             )
-            return SentinelRedisProxy(
+            connection = SentinelRedisProxy(
                 sentinel,
                 redis_config["service"],
                 async_mode=async_mode,
             )
+        elif redis_cluster:
+            if not redis_url:
+                raise ValueError("Redis URL must be provided for cluster mode.")
+            return redis.cluster.RedisCluster.from_url(
+                redis_url, decode_responses=decode_responses
+            )
         elif redis_url:
-            return redis.from_url(redis_url, decode_responses=decode_responses)
-        else:
-            return None
+            connection = redis.from_url(redis_url, decode_responses=decode_responses)
     else:
         import redis
 
@@ -144,15 +168,24 @@ def get_redis_connection(
                 password=redis_config["password"],
                 decode_responses=decode_responses,
             )
-            return SentinelRedisProxy(
+            connection = SentinelRedisProxy(
                 sentinel,
                 redis_config["service"],
                 async_mode=async_mode,
             )
+        elif redis_cluster:
+            if not redis_url:
+                raise ValueError("Redis URL must be provided for cluster mode.")
+            return redis.cluster.RedisCluster.from_url(
+                redis_url, decode_responses=decode_responses
+            )
         elif redis_url:
-            return redis.Redis.from_url(redis_url, decode_responses=decode_responses)
-        else:
-            return None
+            connection = redis.Redis.from_url(
+                redis_url, decode_responses=decode_responses
+            )
+
+    _CONNECTION_CACHE[cache_key] = connection
+    return connection
 
 
 def get_sentinels_from_env(sentinel_hosts_env, sentinel_port_env):

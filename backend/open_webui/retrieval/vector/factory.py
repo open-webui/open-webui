@@ -30,6 +30,10 @@ class Vector:
                 from open_webui.retrieval.vector.dbs.pinecone import PineconeClient
 
                 return PineconeClient()
+            case VectorType.S3VECTOR:
+                from open_webui.retrieval.vector.dbs.s3vector import S3VectorClient
+
+                return S3VectorClient()
             case VectorType.OPENSEARCH:
                 from open_webui.retrieval.vector.dbs.opensearch import OpenSearchClient
 
@@ -48,6 +52,10 @@ class Vector:
                 from open_webui.retrieval.vector.dbs.chroma import ChromaClient
 
                 return ChromaClient()
+            case VectorType.ORACLE23AI:
+                from open_webui.retrieval.vector.dbs.oracle23ai import Oracle23aiClient
+
+                return Oracle23aiClient()
             case _:
                 raise ValueError(f"Unsupported vector type: {vector_type}")
 
