@@ -4,7 +4,7 @@ set -e # Exit immediately if a command exits with a non-zero status.
 
 echo "🔍 DEBUG: Checking SSL configuration at startup..."
 
-echo "📂 Root cert location: $(ls -la /root/.postgresql/ 2>/dev/null || echo '/root/.postgresql/ does not exist')"
+echo "📂 Root cert location: $(ls -la /app/.postgresql/ 2>/dev/null || echo '/app/.postgresql/ does not exist')"
 echo "📂 App cert location: $(ls -la /app/.postgresql/ 2>/dev/null || echo '/app/.postgresql/ does not exist')"
 
 echo "🔧 SSL Environment Variables:"
@@ -18,9 +18,9 @@ echo "  POSTGRES_SSLROOTCERT: ${POSTGRES_SSLROOTCERT:-'(not set)'}"
 if [ -f "/app/.postgresql/root.crt" ]; then
     echo "✅ Certificate found in app location: $(ls -la /app/.postgresql/root.crt)"
     echo "🔧 Certificate preview: $(head -3 /app/.postgresql/root.crt)"
-elif [ -f "/root/.postgresql/root.crt" ]; then
-    echo "✅ Certificate found in root location: $(ls -la /root/.postgresql/root.crt)"
-    echo "🔧 Certificate preview: $(head -3 /root/.postgresql/root.crt)"
+elif [ -f "/app/.postgresql/root.crt" ]; then
+    echo "✅ Certificate found in root location: $(ls -la /app/.postgresql/root.crt)"
+    echo "🔧 Certificate preview: $(head -3 /app/.postgresql/root.crt)"
 else
     echo "❌ Certificate NOT found in either location"
 fi

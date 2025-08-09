@@ -174,18 +174,19 @@ COPY --chown=$UID:$GID --from=build /app/CHANGELOG.md /app/CHANGELOG.md
 COPY --chown=$UID:$GID --from=build /app/package.json /app/package.json
 
 # copy backend files
+# Force full rebuild - 2025-08-09-14:50 - Ensure no Docker cache
+RUN echo "Cache bust: $(date)" > /tmp/cache_bust
 COPY --chown=$UID:$GID ./backend .
 
 # Copy AWS RDS certificate bundle for SSL connections (downloaded by CI/CD)  
 # This enables certificate validation for Aurora PostgreSQL connections
 # Copy to both /root/ (for root user) and world-readable location
 # Force rebuild: 2025-08-09 14:45 - Ensure Docker picks up our SSL fixes
-RUN mkdir -p /root/.postgresql /app/.postgresql
-COPY aws-rds-ca-cert.pem /root/.postgresql/root.crt
+RUN mkdir -p /app/.postgresql
 COPY aws-rds-ca-cert.pem /app/.postgresql/root.crt
-RUN chmod 644 /root/.postgresql/root.crt /app/.postgresql/root.crt
+RUN chmod 644 /app/.postgresql/root.crt
 # Debug: Verify certificate file exists and is readable
-RUN echo "🔍 Certificate debug info:" && ls -la /root/.postgresql/ && ls -la /app/.postgresql/ && head -3 /root/.postgresql/root.crt
+RUN echo "🔍 Certificate debug info:" && ls -la /app/.postgresql/ && ls -la /app/.postgresql/ && head -3 /app/.postgresql/root.crt
 
 EXPOSE 8080
 
