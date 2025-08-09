@@ -1401,6 +1401,16 @@ async def chat_completion(
             request.state.direct = True
             request.state.model = model
 
+        # Chat Params
+        stream_delta_chunk_size = form_data.get("params", {}).get(
+            "stream_delta_chunk_size"
+        )
+        # Model Params
+        if model_info and model_info.params:
+            stream_delta_chunk_size = model_info.params.model_dump().get(
+                "stream_delta_chunk_size"
+            )
+
         metadata = {
             "user_id": user.id,
             "chat_id": form_data.pop("chat_id", None),
@@ -1414,16 +1424,21 @@ async def chat_completion(
             "variables": form_data.get("variables", {}),
             "model": model,
             "direct": model_item.get("direct", False),
-            **(
-                {"function_calling": "native"}
-                if form_data.get("params", {}).get("function_calling") == "native"
-                or (
-                    model_info
-                    and model_info.params.model_dump().get("function_calling")
-                    == "native"
-                )
-                else {}
-            ),
+            "params": {
+                "stream_delta_chunk_size": stream_delta_chunk_size,
+                "function_calling": (
+                    "native"
+                    if (
+                        form_data.get("params", {}).get("function_calling") == "native"
+                        or (
+                            model_info
+                            and model_info.params.model_dump().get("function_calling")
+                            == "native"
+                        )
+                    )
+                    else "default"
+                ),
+            },
         }
 
         if metadata.get("chat_id") and (user and user.role != "admin"):

@@ -42,6 +42,7 @@
 	let params = {
 		// Advanced
 		stream_response: null,
+		stream_delta_chunk_size: null,
 		function_calling: null,
 		seed: null,
 		temperature: null,
@@ -71,6 +72,8 @@
 			system: system !== '' ? system : undefined,
 			params: {
 				stream_response: params.stream_response !== null ? params.stream_response : undefined,
+				stream_delta_chunk_size:
+					params.stream_delta_chunk_size !== null ? params.stream_delta_chunk_size : undefined,
 				function_calling: params.function_calling !== null ? params.function_calling : undefined,
 				seed: (params.seed !== null ? params.seed : undefined) ?? undefined,
 				stop: params.stop ? params.stop.split(',').filter((e) => e) : undefined,

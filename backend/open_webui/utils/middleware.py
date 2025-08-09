@@ -684,6 +684,7 @@ def apply_params_to_form_data(form_data, model):
 
     open_webui_params = {
         "stream_response": bool,
+        "stream_delta_chunk_size": int,
         "function_calling": str,
         "system": str,
     }
@@ -930,7 +931,7 @@ async def process_chat_payload(request, form_data, user, metadata, model):
                 }
 
     if tools_dict:
-        if metadata.get("function_calling") == "native":
+        if metadata.get("params", {}).get("function_calling") == "native":
             # If the function calling is native, then call the tools function calling handler
             metadata["tools"] = tools_dict
             form_data["tools"] = [
@@ -1816,6 +1817,15 @@ async def process_chat_response(
 
                     response_tool_calls = []
 
+                    delta_count = 0
+                    delta_chunk_size = max(
+                        1,
+                        int(
+                            metadata.get("params", {}).get("stream_delta_chunk_size")
+                            or 1
+                        ),
+                    )
+
                     async for line in response.body_iterator:
                         line = line.decode("utf-8") if isinstance(line, bytes) else line
                         data = line
@@ -2063,12 +2073,23 @@ async def process_chat_response(
                                                 ),
                                             }
 
-                                await event_emitter(
-                                    {
-                                        "type": "chat:completion",
-                                        "data": data,
-                                    }
-                                )
+                                if delta:
+                                    delta_count += 1
+                                    if delta_count >= delta_chunk_size:
+                                        await event_emitter(
+                                            {
+                                                "type": "chat:completion",
+                                                "data": data,
+                                            }
+                                        )
+                                        delta_count = 0
+                                else:
+                                    await event_emitter(
+                                        {
+                                            "type": "chat:completion",
+                                            "data": data,
+                                        }
+                                    )
                         except Exception as e:
                             done = "data: [DONE]" in line
                             if done:
