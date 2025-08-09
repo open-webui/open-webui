@@ -86,6 +86,17 @@
 		}
 	};
 
+	const handleViewsScroll = (event) => {
+		const direction = event.deltaY < 0 ? 1 : -1;
+		const newCount = Number(expireOnViewsCount) + direction;
+
+		if (newCount > currentViews) {
+			expireOnViewsCount = newCount;
+		} else {
+			expireOnViewsCount = currentViews + 1;
+		}
+	};
+
 	let expirationDateParts = {
 		year: '',
 		month: '',
@@ -586,6 +597,7 @@
 							min="1"
 							bind:value={expireOnViewsCount}
 							on:blur={validateViewsCount}
+							on:wheel|preventDefault={handleViewsScroll}
 							class="mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm rounded-md dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white"
 							placeholder="Enter number of views"
 						/>
