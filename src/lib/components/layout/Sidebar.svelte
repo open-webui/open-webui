@@ -817,7 +817,7 @@
 
 			<div class="relative flex flex-col flex-1">
 				{#if ($models ?? []).length > 0 && ($settings?.pinnedModels ?? []).length > 0}
-					<PinnedModelList bind:selectedChatId />
+					<PinnedModelList bind:selectedChatId {shiftKey} />
 				{/if}
 
 				{#if $config?.features?.enable_channels && ($user?.role === 'admin' || $channels.length > 0)}
