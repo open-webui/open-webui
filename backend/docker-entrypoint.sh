@@ -2,12 +2,16 @@
 set -e # Exit immediately if a command exits with a non-zero status.
 
 echo "🔍 DEBUG: Checking for RDS certificate at startup..."
-if [ -f "/root/.postgresql/root.crt" ]; then
-    echo "✅ Certificate found: $(ls -la /root/.postgresql/root.crt)"
-    echo "🔧 Certificate details: $(file /root/.postgresql/root.crt)"
+echo "📂 Root cert location: $(ls -la /root/.postgresql/ 2>/dev/null || echo '/root/.postgresql/ does not exist')"
+echo "📂 App cert location: $(ls -la /app/.postgresql/ 2>/dev/null || echo '/app/.postgresql/ does not exist')"
+if [ -f "/app/.postgresql/root.crt" ]; then
+    echo "✅ Certificate found in app location: $(ls -la /app/.postgresql/root.crt)"
+    echo "🔧 Certificate preview: $(head -3 /app/.postgresql/root.crt)"
+elif [ -f "/root/.postgresql/root.crt" ]; then
+    echo "✅ Certificate found in root location: $(ls -la /root/.postgresql/root.crt)"
+    echo "🔧 Certificate preview: $(head -3 /root/.postgresql/root.crt)"
 else
-    echo "❌ Certificate NOT found at /root/.postgresql/root.crt"
-    echo "📂 Contents of /root/.postgresql/: $(ls -la /root/.postgresql/ 2>/dev/null || echo 'Directory does not exist')"
+    echo "❌ Certificate NOT found in either location"
 fi
 
 echo "INFO: Generating temporary IAM database auth token..."
