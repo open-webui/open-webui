@@ -10,7 +10,7 @@
 
 	import { toast } from 'svelte-sonner';
 
-	import { chatId, selectedFolder } from '$lib/stores';
+	import { chatId, mobile, selectedFolder, showSidebar } from '$lib/stores';
 
 	import {
 		deleteFolderById,
@@ -31,6 +31,8 @@
 	import FolderIcon from '$lib/components/icons/FolderIcon.svelte';
 	import FolderOpen from '$lib/components/icons/FolderOpen.svelte';
 	import EllipsisHorizontal from '$lib/components/icons/EllipsisHorizontal.svelte';
+	import ChevronDown from '$lib/components/icons/ChevronDown.svelte';
+	import ChevronRight from '$lib/components/icons/ChevronRight.svelte';
 
 	import ChatItem from './ChatItem.svelte';
 	import FolderMenu from './Folders/FolderMenu.svelte';
@@ -275,7 +277,7 @@
 
 	onDestroy(() => {
 		if (folderElement) {
-			folderElement.addEventListener('dragover', onDragOver);
+			folderElement.removeEventListener('dragover', onDragOver);
 			folderElement.removeEventListener('drop', onDrop);
 			folderElement.removeEventListener('dragleave', onDragLeave);
 
@@ -450,11 +452,31 @@
 				folderId
 					? 'bg-gray-100 dark:bg-gray-900'
 					: ''}"
-				on:click={clickHandler}
+				on:dblclick={() => {
+					renameHandler();
+				}}
+				on:click={async (e) => {
+					await goto('/');
+
+					selectedFolder.set(folders[folderId]);
+
+					if ($mobile) {
+						showSidebar.set(!$showSidebar);
+					}
+				}}
 			>
-				<div class="text-gray-300 dark:text-gray-600">
-					<FolderIcon {open} className="size-3.5" strokeWidth="2" />
-				</div>
+				<button
+					class="text-gray-300 dark:text-gray-600"
+					on:click={(e) => {
+						e.stopPropagation();
+					}}
+				>
+					{#if open}
+						<ChevronDown className=" size-3" strokeWidth="2.5" />
+					{:else}
+						<ChevronRight className=" size-3" strokeWidth="2.5" />
+					{/if}
+				</button>
 
 				<div class="translate-y-[0.5px] flex-1 justify-start text-start line-clamp-1">
 					{#if edit}
