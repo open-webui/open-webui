@@ -23,10 +23,35 @@
 	import customParseFormat from 'dayjs/plugin/customParseFormat';
 	dayjs.extend(customParseFormat);
 
+	const formatTimeRemaining = (expires_at) => {
+		const now = new Date();
+		const expirationDate = new Date(expires_at * 1000);
+		const secondsRemaining = (expirationDate.getTime() - now.getTime()) / 1000;
+
+		if (secondsRemaining <= 0) {
+			return 'Expired';
+		}
+
+		const days = Math.floor(secondsRemaining / (3600 * 24));
+		if (days > 0) return `in ${days} day${days > 1 ? 's' : ''}`;
+
+		const hours = Math.floor(secondsRemaining / 3600);
+		if (hours > 0) return `in ${hours} hour${hours > 1 ? 's' : ''}`;
+
+		const minutes = Math.floor(secondsRemaining / 60);
+		if (minutes > 0) return `in ${minutes} minute${minutes > 1 ? 's' : ''}`;
+
+		return `in ${Math.floor(secondsRemaining)} second${
+			Math.floor(secondsRemaining) !== 1 ? 's' : ''
+		}`;
+	};
+
 	export let chatId;
 	export let closeOnDelete = false;
 
 	let chat = null;
+	let timeRemaining = '';
+	let intervalId = null;
 	let shareUrl = null;
 	let qrCodeUrl = '';
 	let share_id = '';
@@ -39,6 +64,12 @@
 	let initialExpireOnViewsCount = 1;
 	let currentViews = 0;
 	const i18n = getContext('i18n');
+
+	const handleExpirationChange = () => {
+		if (expirationOption === 'custom' && !customExpirationDate) {
+			customExpirationDate = dayjs().add(1, 'hour').format('YYYY-MM-DDTHH:mm');
+		}
+	};
 
 	let expirationDateParts = {
 		year: '',
@@ -65,9 +96,6 @@
 		}
 	}
 
-	$: if (expirationOption === 'custom' && !customExpirationDate) {
-		customExpirationDate = dayjs().add(1, 'hour').format('YYYY-MM-DDTHH:mm');
-	}
 
 	const handleDateScroll = (event, part) => {
 		event.preventDefault();
@@ -335,6 +363,19 @@
 					} else {
 						shareUrl = null;
 					}
+
+					if (intervalId) clearInterval(intervalId);
+					if (chat.expires_at) {
+						timeRemaining = formatTimeRemaining(chat.expires_at);
+						intervalId = setInterval(() => {
+							timeRemaining = formatTimeRemaining(chat.expires_at);
+							if (timeRemaining === 'Expired') {
+								clearInterval(intervalId);
+							}
+						}, 1000);
+					} else {
+						timeRemaining = '';
+					}
 				}
 			} else {
 				chat = null;
@@ -359,6 +400,9 @@
 		initialExpirationOption = 'never';
 		initialCustomExpirationDate = '';
 		initialExpireOnViewsCount = 1;
+
+		if (intervalId) clearInterval(intervalId);
+		timeRemaining = '';
 	}
 </script>
 
@@ -440,7 +484,12 @@
 
 				<div class="mt-4">
 					<label for="expiration" class="block text-sm font-medium text-gray-700 dark:text-gray-300">{$i18n.t('Link Expiration')}</label>
-					<select id="expiration" bind:value={expirationOption} class="mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm rounded-md dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white">
+					<select
+						id="expiration"
+						bind:value={expirationOption}
+						on:change={handleExpirationChange}
+						class="mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm rounded-md dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white"
+					>
 						<option value="never">{$i18n.t('Never')}</option>
 						<option value="1h">{$i18n.t('1 Hour')}</option>
 						<option value="24h">{$i18n.t('24 Hours')}</option>
@@ -523,7 +572,10 @@
 
 				{#if chat.share_id && chat.expires_at}
 					<div class="mt-2 text-sm text-gray-500 dark:text-gray-400">
-						{$i18n.t('Expires in')} {new Date(chat.expires_at * 1000).toLocaleString()}
+						{$i18n.t('Expires on')} {new Date(chat.expires_at * 1000).toLocaleString()}
+						{#if timeRemaining}
+							<span class="font-semibold ml-1">({timeRemaining})</span>
+						{/if}
 					</div>
 				{/if}
 
