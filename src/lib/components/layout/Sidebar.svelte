@@ -349,7 +349,7 @@
 		});
 
 		showSidebar.set(!$mobile ? localStorage.sidebar === 'true' : false);
-		showSidebar.subscribe((value) => {
+		showSidebar.subscribe(async (value) => {
 			localStorage.sidebar = value;
 
 			// nav element is not available on the first render
@@ -509,7 +509,9 @@
 	>
 		<button
 			class="flex flex-col flex-1 cursor-[e-resize]"
-			on:click={() => {
+			on:click={async () => {
+				await initChannels();
+				await initChatList();
 				showSidebar.set(!$showSidebar);
 			}}
 		>
