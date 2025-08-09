@@ -29,8 +29,7 @@
 
 	let searchDebounceTimeout;
 
-	let selectedIdx = 0;
-
+	let selectedIdx = null;
 	let selectedChat = null;
 
 	let selectedModels = [''];
@@ -42,7 +41,12 @@
 	}
 
 	const loadChatPreview = async (selectedIdx) => {
-		if (!chatList || chatList.length === 0 || chatList[selectedIdx] === undefined) {
+		if (
+			!chatList ||
+			chatList.length === 0 ||
+			selectedIdx === null ||
+			chatList[selectedIdx] === undefined
+		) {
 			selectedChat = null;
 			messages = null;
 			history = null;
@@ -217,6 +221,10 @@
 				on:input={searchHandler}
 				placeholder={$i18n.t('Search')}
 				showClearButton={true}
+				onFocus={() => {
+					selectedIdx = null;
+					messages = null;
+				}}
 				onKeydown={(e) => {
 					console.log('e', e);
 

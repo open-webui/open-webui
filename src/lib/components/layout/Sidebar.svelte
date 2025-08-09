@@ -10,6 +10,7 @@
 		showSettings,
 		chatId,
 		tags,
+		folders as _folders,
 		showSidebar,
 		showSearch,
 		mobile,
@@ -85,6 +86,7 @@
 			toast.error(`${error}`);
 			return [];
 		});
+		_folders.set(folderList);
 
 		folders = {};
 

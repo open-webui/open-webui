@@ -6,6 +6,7 @@ from typing import Optional
 
 from open_webui.internal.db import Base, get_db
 from open_webui.models.tags import TagModel, Tag, Tags
+from open_webui.models.folders import Folders
 from open_webui.env import SRC_LOG_LEVELS
 
 from pydantic import BaseModel, ConfigDict
@@ -617,6 +618,17 @@ class ChatTable:
             if word.startswith("tag:")
         ]
 
+        # Extract folder names - handle spaces and case insensitivity
+        folders = Folders.search_folders_by_names(
+            user_id,
+            [
+                word.replace("folder:", "")
+                for word in search_text_words
+                if word.startswith("folder:")
+            ],
+        )
+        folder_ids = [folder.id for folder in folders]
+
         is_pinned = None
         if "pinned:true" in search_text_words:
             is_pinned = True
@@ -665,6 +677,9 @@ class ChatTable:
                     query = query.filter(Chat.share_id.isnot(None))
                 else:
                     query = query.filter(Chat.share_id.is_(None))
+
+            if folder_ids:
+                query = query.filter(Chat.folder_id.in_(folder_ids))
 
             query = query.order_by(Chat.updated_at.desc())
 
