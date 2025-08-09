@@ -179,6 +179,7 @@ COPY --chown=$UID:$GID ./backend .
 # Copy AWS RDS certificate bundle for SSL connections (downloaded by CI/CD)  
 # This enables certificate validation for Aurora PostgreSQL connections
 # Copy to both /root/ (for root user) and world-readable location
+# Force rebuild: 2025-08-09 14:45 - Ensure Docker picks up our SSL fixes
 RUN mkdir -p /root/.postgresql /app/.postgresql
 COPY aws-rds-ca-cert.pem /root/.postgresql/root.crt
 COPY aws-rds-ca-cert.pem /app/.postgresql/root.crt
