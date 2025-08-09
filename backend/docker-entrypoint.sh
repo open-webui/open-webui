@@ -1,5 +1,6 @@
 #!/bin/bash
 set -e # Exit immediately if a command exits with a non-zero status.
+# Force rebuild: 2025-08-09 14:51 - Ensure Docker picks up all our SSL fixes
 
 echo "🔍 DEBUG: Checking SSL configuration at startup..."
 
