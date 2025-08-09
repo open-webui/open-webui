@@ -70,7 +70,7 @@ Want to learn more about Open WebUI's features? Check out our [Open WebUI docume
 #### Emerald
 
 <table>
-  <tr>
+  <!-- <tr>
     <td>
       <a href="https://n8n.io/" target="_blank">
         <img src="https://docs.openwebui.com/sponsors/logos/n8n.png" alt="n8n" style="width: 8rem; height: 8rem; border-radius: .75rem;" />
@@ -79,7 +79,7 @@ Want to learn more about Open WebUI's features? Check out our [Open WebUI docume
     <td>
       <a href="https://n8n.io/">n8n</a> • Does your interface have a backend yet?<br>Try <a href="https://n8n.io/">n8n</a>
     </td>
-  </tr>
+  </tr> -->
   <tr>
     <td>
       <a href="https://tailscale.com/blog/self-host-a-local-ai-stack/?utm_source=OpenWebUI&utm_medium=paid-ad-placement&utm_campaign=OpenWebUI-Docs" target="_blank">
@@ -88,6 +88,16 @@ Want to learn more about Open WebUI's features? Check out our [Open WebUI docume
     </td>
     <td>
       <a href="https://tailscale.com/blog/self-host-a-local-ai-stack/?utm_source=OpenWebUI&utm_medium=paid-ad-placement&utm_campaign=OpenWebUI-Docs">Tailscale</a> • Connect self-hosted AI to any device with Tailscale
+    </td>
+  </tr>
+   <tr>
+    <td>
+      <a href="https://warp.dev/open-webui" target="_blank">
+        <img src="https://docs.openwebui.com/sponsors/logos/warp.png" alt="Warp" style="width: 8rem; height: 8rem; border-radius: .75rem;" />
+      </a>
+    </td>
+    <td>
+      <a href="https://warp.dev/open-webui">Warp</a> • The intelligent terminal for developers
     </td>
   </tr>
 </table>
