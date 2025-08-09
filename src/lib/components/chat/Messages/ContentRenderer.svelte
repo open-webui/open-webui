@@ -27,6 +27,7 @@
 	export let save = false;
 	export let preview = false;
 	export let floatingButtons = true;
+	export let topPadding = false;
 
 	export let onSave = (e) => {};
 	export let onSourceClick = (e) => {};
@@ -134,6 +135,7 @@
 		{save}
 		{preview}
 		{done}
+		{topPadding}
 		sourceIds={(sources ?? []).reduce((acc, s) => {
 			let ids = [];
 			s.document.forEach((document, index) => {

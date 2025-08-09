@@ -138,6 +138,7 @@
 
 	export let isLastMessage = true;
 	export let readOnly = false;
+	export let topPadding = false;
 
 	let buttonsContainerElement: HTMLDivElement;
 	let showDeleteConfirm = false;
@@ -798,7 +799,7 @@
 									<!-- always show message contents even if there's an error -->
 									<!-- unless message.error === true which is legacy error handling, where the error message is stored in message.content -->
 									<ContentRenderer
-										id={message.id}
+										id={`${chatId}-${message.id}`}
 										{history}
 										{selectedModels}
 										content={message.content}
@@ -808,6 +809,7 @@
 											($settings?.showFloatingActionButtons ?? true)}
 										save={!readOnly}
 										preview={!readOnly}
+										{topPadding}
 										done={($settings?.chatFadeStreamingText ?? true)
 											? (message?.done ?? false)
 											: true}

@@ -346,6 +346,7 @@
 					<div class="w-full h-full flex flex-col">
 						<Messages
 							className="h-full flex pt-4 pb-8 w-full"
+							chatId={`chat-preview-${selectedChat?.id ?? ''}`}
 							user={$user}
 							readOnly={true}
 							{selectedModels}

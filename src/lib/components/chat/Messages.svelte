@@ -50,6 +50,7 @@
 
 	export let readOnly = false;
 
+	export let topPadding = false;
 	export let bottomPadding = false;
 	export let autoScroll;
 
@@ -445,6 +446,7 @@
 							{addMessages}
 							{triggerScroll}
 							{readOnly}
+							{topPadding}
 						/>
 					{/each}
 				</div>
