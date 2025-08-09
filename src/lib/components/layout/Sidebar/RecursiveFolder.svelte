@@ -10,7 +10,7 @@
 
 	import { toast } from 'svelte-sonner';
 
-	import { chatId, selectedFolder } from '$lib/stores';
+	import { chatId, mobile, selectedFolder, showSidebar } from '$lib/stores';
 
 	import {
 		deleteFolderById,
@@ -64,6 +64,9 @@
 	const handleSingleClick = async () => {
 		await goto('/');
 		selectedFolder.set(folders[folderId]);
+		if ($mobile) {
+			showSidebar.set(!$showSidebar);
+		}
 	};
 	const clickHandler = (event) => {
 		if (timer) {
@@ -275,7 +278,7 @@
 
 	onDestroy(() => {
 		if (folderElement) {
-			folderElement.addEventListener('dragover', onDragOver);
+			folderElement.removeEventListener('dragover', onDragOver);
 			folderElement.removeEventListener('drop', onDrop);
 			folderElement.removeEventListener('dragleave', onDragLeave);
 
@@ -450,6 +453,9 @@
 				folderId
 					? 'bg-gray-100 dark:bg-gray-900'
 					: ''}"
+				on:dblclick={() => {
+					renameHandler();
+				}}
 				on:click={clickHandler}
 			>
 				<div class="text-gray-300 dark:text-gray-600">
