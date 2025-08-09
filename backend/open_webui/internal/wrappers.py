@@ -8,7 +8,6 @@ from peewee import InterfaceError as PeeWeeInterfaceError
 from peewee import PostgresqlDatabase
 from playhouse.db_url import connect, parse
 from playhouse.shortcuts import ReconnectMixin
-from playhouse.sqlcipher_ext import SqlCipherDatabase
 
 log = logging.getLogger(__name__)
 log.setLevel(SRC_LOG_LEVELS["DB"])
@@ -52,6 +51,7 @@ def register_connection(db_url):
             raise ValueError(
                 "DATABASE_PASSWORD is required when using sqlite+sqlcipher:// URLs"
             )
+        from playhouse.sqlcipher_ext import SqlCipherDatabase
 
         # Parse the database path from SQLCipher URL
         # Convert sqlite+sqlcipher:///path/to/db.sqlite to /path/to/db.sqlite
