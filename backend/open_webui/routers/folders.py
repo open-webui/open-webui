@@ -244,11 +244,11 @@ async def delete_folder_by_id(
     folder = Folders.get_folder_by_id_and_user_id(id, user.id)
     if folder:
         try:
-            result = Folders.delete_folder_by_id_and_user_id(id, user.id)
-            if result:
-                return result
-            else:
-                raise Exception("Error deleting folder")
+            folder_ids = Folders.delete_folder_by_id_and_user_id(id, user.id)
+            for folder_id in folder_ids:
+                Chats.delete_chats_by_user_id_and_folder_id(user.id, folder_id)
+
+            return True
         except Exception as e:
             log.exception(e)
             log.error(f"Error deleting folder: {id}")

@@ -251,18 +251,15 @@ class FolderTable:
             log.error(f"update_folder: {e}")
             return
 
-    def delete_folder_by_id_and_user_id(
-        self, id: str, user_id: str, delete_chats=True
-    ) -> bool:
+    def delete_folder_by_id_and_user_id(self, id: str, user_id: str) -> list[str]:
         try:
+            folder_ids = []
             with get_db() as db:
                 folder = db.query(Folder).filter_by(id=id, user_id=user_id).first()
                 if not folder:
-                    return False
+                    return folder_ids
 
-                if delete_chats:
-                    # Delete all chats in the folder
-                    Chats.delete_chats_by_user_id_and_folder_id(user_id, folder.id)
+                folder_ids.append(folder.id)
 
                 # Delete all children folders
                 def delete_children(folder):
@@ -270,12 +267,9 @@ class FolderTable:
                         folder.id, user_id
                     )
                     for folder_child in folder_children:
-                        if delete_chats:
-                            Chats.delete_chats_by_user_id_and_folder_id(
-                                user_id, folder_child.id
-                            )
 
                         delete_children(folder_child)
+                        folder_ids.append(folder_child.id)
 
                         folder = db.query(Folder).filter_by(id=folder_child.id).first()
                         db.delete(folder)
@@ -284,10 +278,10 @@ class FolderTable:
                 delete_children(folder)
                 db.delete(folder)
                 db.commit()
-                return True
+                return folder_ids
         except Exception as e:
             log.error(f"delete_folder: {e}")
-            return False
+            return []
 
 
 Folders = FolderTable()
