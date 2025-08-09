@@ -178,9 +178,10 @@ COPY --chown=$UID:$GID ./backend .
 
 # Copy AWS RDS certificate bundle for SSL connections (downloaded by CI/CD)
 # This enables certificate validation for Aurora PostgreSQL connections
-RUN mkdir -p $HOME/.postgresql
-COPY --chown=$UID:$GID aws-rds-ca-cert.pem $HOME/.postgresql/postgresql.crt
-RUN chmod 600 $HOME/.postgresql/postgresql.crt && chown $UID:$GID $HOME/.postgresql/postgresql.crt
+# Place certificate in both root and user home directories for compatibility
+RUN mkdir -p /root/.postgresql
+COPY aws-rds-ca-cert.pem /root/.postgresql/postgresql.crt
+RUN chmod 644 /root/.postgresql/postgresql.crt
 
 EXPOSE 8080
 
