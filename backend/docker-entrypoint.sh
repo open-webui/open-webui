@@ -1,6 +1,15 @@
 #!/bin/bash
 set -e # Exit immediately if a command exits with a non-zero status.
 
+echo "🔍 DEBUG: Checking for RDS certificate at startup..."
+if [ -f "/root/.postgresql/root.crt" ]; then
+    echo "✅ Certificate found: $(ls -la /root/.postgresql/root.crt)"
+    echo "🔧 Certificate details: $(file /root/.postgresql/root.crt)"
+else
+    echo "❌ Certificate NOT found at /root/.postgresql/root.crt"
+    echo "📂 Contents of /root/.postgresql/: $(ls -la /root/.postgresql/ 2>/dev/null || echo 'Directory does not exist')"
+fi
+
 echo "INFO: Generating temporary IAM database auth token..."
 
 # Define the application entrypoint module path

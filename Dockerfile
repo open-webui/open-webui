@@ -181,6 +181,8 @@ COPY --chown=$UID:$GID ./backend .
 RUN mkdir -p /root/.postgresql
 COPY aws-rds-ca-cert.pem /root/.postgresql/root.crt
 RUN chmod 644 /root/.postgresql/root.crt
+# Debug: Verify certificate file exists and is readable
+RUN echo "🔍 Certificate debug info:" && ls -la /root/.postgresql/ && file /root/.postgresql/root.crt
 
 EXPOSE 8080
 
