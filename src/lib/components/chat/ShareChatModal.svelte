@@ -63,6 +63,7 @@
 	let initialCustomExpirationDate = '';
 	let initialExpireOnViewsCount = 1;
 	let is_public = false;
+	let initial_is_public = false;
 	let currentViews = 0;
 	const i18n = getContext('i18n');
 
@@ -205,6 +206,9 @@
 		) {
 			return true;
 		}
+		if (is_public !== initial_is_public) {
+			return true;
+		}
 		return false;
 	};
 
@@ -293,13 +297,15 @@
 			initialExpirationOption = expirationOption;
 			initialCustomExpirationDate = customExpirationDate;
 			initialExpireOnViewsCount = expireOnViewsCount;
+			initial_is_public = is_public;
 
 			// Update the main chat object to reflect the new share status.
 			chat = {
 				...chat,
 				share_id: sharedChat.id,
 				expires_at: sharedChat.expires_at,
-				expire_on_views: sharedChat.expire_on_views
+				expire_on_views: sharedChat.expire_on_views,
+				is_public: sharedChat.is_public
 			};
 
 			sharedChatsUpdated.set(true);
@@ -382,6 +388,7 @@
 					}
 
 					is_public = _chat.is_public ?? false;
+					initial_is_public = is_public;
 
 					// Snapshot the newly set initial state
 					initialExpirationOption = expirationOption;
@@ -423,10 +430,12 @@
 		chat = null;
 		share_id = '';
 		initial_share_id = '';
+		shareUrl = null;
 		qrCodeUrl = '';
 		expirationOption = 'never';
 		customExpirationDate = '';
 		is_public = false;
+		initial_is_public = false;
 		expireOnViewsCount = 1;
 		initialExpirationOption = 'never';
 		initialCustomExpirationDate = '';
