@@ -25,13 +25,14 @@
 		updateChatFolderIdById
 	} from '$lib/apis/chats';
 
-	import ChevronDown from '../../icons/ChevronDown.svelte';
-	import ChevronRight from '../../icons/ChevronRight.svelte';
 	import Collapsible from '../../common/Collapsible.svelte';
 	import DragGhost from '$lib/components/common/DragGhost.svelte';
 
+	import FolderIcon from '$lib/components/icons/FolderIcon.svelte';
 	import FolderOpen from '$lib/components/icons/FolderOpen.svelte';
 	import EllipsisHorizontal from '$lib/components/icons/EllipsisHorizontal.svelte';
+	import ChevronDown from '$lib/components/icons/ChevronDown.svelte';
+	import ChevronRight from '$lib/components/icons/ChevronRight.svelte';
 
 	import ChatItem from './ChatItem.svelte';
 	import FolderMenu from './Folders/FolderMenu.svelte';
@@ -60,6 +61,27 @@
 	let dragged = false;
 
 	let name = '';
+
+	let timer = null;
+	const handleSingleClick = async () => {
+		await goto('/');
+		selectedFolder.set(folders[folderId]);
+	};
+	const clickHandler = (event) => {
+		if (timer) {
+			clearTimeout(timer);
+			timer = null;
+			open = !open; // Revert the toggle from the first click
+			showFolderModal = true;
+			event.stopPropagation();
+			event.preventDefault();
+		} else {
+			timer = setTimeout(() => {
+				timer = null;
+				handleSingleClick();
+			}, 250);
+		}
+	};
 
 	const onDragOver = (e) => {
 		e.preventDefault();
@@ -255,7 +277,7 @@
 
 	onDestroy(() => {
 		if (folderElement) {
-			folderElement.addEventListener('dragover', onDragOver);
+			folderElement.removeEventListener('dragover', onDragOver);
 			folderElement.removeEventListener('drop', onDrop);
 			folderElement.removeEventListener('dragleave', onDragLeave);
 
