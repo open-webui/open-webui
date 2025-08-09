@@ -10,6 +10,16 @@ import logging
 from open_webui.env import SRC_LOG_LEVELS, PIP_OPTIONS, PIP_PACKAGE_INDEX_OPTIONS
 from open_webui.models.functions import Functions
 from open_webui.models.tools import Tools
+from open_webui.utils.valve_helpers import (
+    update_function_valves,
+    update_tool_valves,
+    get_function_valves,
+    get_tool_valves,
+)
+from open_webui.utils.function_logging import (
+    create_function_logger,
+    create_tool_logger,
+)
 
 log = logging.getLogger(__name__)
 log.setLevel(SRC_LOG_LEVELS["MAIN"])
@@ -97,6 +107,13 @@ def load_tool_module_by_id(tool_id, content=None):
             f.write(content)
         module.__dict__["__file__"] = temp_file.name
 
+        # Inject valve helper functions into the module namespace
+        module.__dict__["update_valves"] = lambda valve_updates: update_tool_valves(tool_id, valve_updates)
+        module.__dict__["get_valves"] = lambda: get_tool_valves(tool_id)
+        
+        # Inject logging functionality
+        module.__dict__["log"] = create_tool_logger(tool_id)
+        
         # Executing the modified content in the created module's namespace
         exec(content, module.__dict__)
         frontmatter = extract_frontmatter(content)
@@ -141,6 +158,13 @@ def load_function_module_by_id(function_id: str, content: str | None = None):
             f.write(content)
         module.__dict__["__file__"] = temp_file.name
 
+        # Inject valve helper functions into the module namespace
+        module.__dict__["update_valves"] = lambda valve_updates: update_function_valves(function_id, valve_updates)
+        module.__dict__["get_valves"] = lambda: get_function_valves(function_id)
+        
+        # Inject logging functionality
+        module.__dict__["log"] = create_function_logger(function_id)
+        
         # Execute the modified content in the created module's namespace
         exec(content, module.__dict__)
         frontmatter = extract_frontmatter(content)

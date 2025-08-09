@@ -9,18 +9,51 @@
 
 	export let valvesSpec = null;
 	export let valves = {};
+	export let pinnedProperties = [];
+
+	let sortedProperties = [];
+	
+	$: if (valvesSpec && Object.keys(valvesSpec?.properties ?? {}).length) {
+		const props = Object.keys(valvesSpec.properties);
+		const pinned = props.filter(prop => pinnedProperties.includes(prop));
+		const unpinned = props.filter(prop => !pinnedProperties.includes(prop));
+		sortedProperties = [...pinned, ...unpinned];
+	}
 </script>
 
 {#if valvesSpec && Object.keys(valvesSpec?.properties ?? {}).length}
-	{#each Object.keys(valvesSpec.properties) as property, idx}
+	{#each sortedProperties as property, idx}
 		<div class=" py-0.5 w-full justify-between">
 			<div class="flex w-full justify-between">
-				<div class=" self-center text-xs font-medium">
-					{valvesSpec.properties[property].title}
+				<div class=" self-center text-xs font-medium flex items-center space-x-2">
+					<span>
+						{valvesSpec.properties[property].title}
 
-					{#if (valvesSpec?.required ?? []).includes(property)}
-						<span class=" text-gray-500">*required</span>
-					{/if}
+						{#if (valvesSpec?.required ?? []).includes(property)}
+							<span class=" text-gray-500">*required</span>
+						{/if}
+					</span>
+					
+					<!-- Pin/Unpin button -->
+					<button
+						class="text-xs opacity-50 hover:opacity-100 transition-opacity"
+						type="button"
+						title={pinnedProperties.includes(property) ? 'Unpin valve' : 'Pin valve'}
+						on:click={() => {
+							if (pinnedProperties.includes(property)) {
+								pinnedProperties = pinnedProperties.filter(p => p !== property);
+							} else {
+								pinnedProperties = [...pinnedProperties, property];
+							}
+							dispatch('pin', { property, pinned: pinnedProperties.includes(property) });
+						}}
+					>
+						{#if pinnedProperties.includes(property)}
+							📌
+						{:else}
+							📍
+						{/if}
+					</button>
 				</div>
 
 				<button
@@ -49,24 +82,44 @@
 				</button>
 			</div>
 
-			{#if (valves[property] ?? null) !== null}
+			{#if (valves[property] ?? null) !== null || valvesSpec.properties[property]?.input?.type === 'static' || valvesSpec.properties[property]?.input?.type === 'textbox' || valvesSpec.properties[property]?.input?.type === 'multiline'}
 				<!-- {valves[property]} -->
 				<div class="flex mt-0.5 mb-0.5 space-x-2">
 					<div class=" flex-1">
 						{#if valvesSpec.properties[property]?.enum ?? null}
-							<select
-								class="w-full rounded-lg py-2 px-4 text-sm dark:text-gray-300 dark:bg-gray-850 outline-hidden border border-gray-100 dark:border-gray-850"
-								bind:value={valves[property]}
-								on:change={() => {
-									dispatch('change');
-								}}
-							>
-								{#each valvesSpec.properties[property].enum as option}
-									<option value={option} selected={option === valves[property]}>
-										{option}
-									</option>
-								{/each}
-							</select>
+							{#if valvesSpec.properties[property]?.input?.type === 'listview'}
+								<!-- Multi-select listview -->
+								<select
+									class="w-full rounded-lg py-2 px-4 text-sm dark:text-gray-300 dark:bg-gray-850 outline-hidden border border-gray-100 dark:border-gray-850"
+									bind:value={valves[property]}
+									multiple
+									size={Math.min(valvesSpec.properties[property].enum.length, 5)}
+									on:change={() => {
+										dispatch('change');
+									}}
+								>
+									{#each valvesSpec.properties[property].enum as option}
+										<option value={option}>
+											{option}
+										</option>
+									{/each}
+								</select>
+							{:else}
+								<!-- Single-select dropdown (default and combobox) -->
+								<select
+									class="w-full rounded-lg py-2 px-4 text-sm dark:text-gray-300 dark:bg-gray-850 outline-hidden border border-gray-100 dark:border-gray-850"
+									bind:value={valves[property]}
+									on:change={() => {
+										dispatch('change');
+									}}
+								>
+									{#each valvesSpec.properties[property].enum as option}
+										<option value={option} selected={option === valves[property]}>
+											{option}
+										</option>
+									{/each}
+								</select>
+							{/if}
 						{:else if (valvesSpec.properties[property]?.type ?? null) === 'boolean'}
 							<div class="flex justify-between items-center">
 								<div class="text-xs text-gray-500">
@@ -82,6 +135,42 @@
 									/>
 								</div>
 							</div>
+						{:else if (valvesSpec.properties[property]?.type ?? null) === 'number' || (valvesSpec.properties[property]?.type ?? null) === 'integer'}
+							{#if valvesSpec.properties[property]?.input?.type === 'slider'}
+								<div class="flex flex-col space-y-2">
+									<div class="flex justify-between text-xs text-gray-500">
+										<span>Min: {valvesSpec.properties[property]?.minimum ?? 0}</span>
+										<span class="font-medium text-gray-700 dark:text-gray-300">Value: {valves[property]}</span>
+										<span>Max: {valvesSpec.properties[property]?.maximum ?? 100}</span>
+									</div>
+									<input
+										type="range"
+										min={valvesSpec.properties[property]?.minimum ?? 0}
+										max={valvesSpec.properties[property]?.maximum ?? 100}
+										step={valvesSpec.properties[property]?.step ?? 1}
+										class="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer dark:bg-gray-700 slider"
+										bind:value={valves[property]}
+										on:input={() => {
+											dispatch('change');
+										}}
+									/>
+								</div>
+							{:else}
+								<input
+									class="w-full rounded-lg py-2 px-4 text-sm dark:text-gray-300 dark:bg-gray-850 outline-hidden border border-gray-100 dark:border-gray-850"
+									type="number"
+									placeholder={valvesSpec.properties[property].title}
+									bind:value={valves[property]}
+									min={valvesSpec.properties[property]?.minimum}
+									max={valvesSpec.properties[property]?.maximum}
+									step={valvesSpec.properties[property]?.step}
+									autocomplete="off"
+									required
+									on:change={() => {
+										dispatch('change');
+									}}
+								/>
+							{/if}
 						{:else if (valvesSpec.properties[property]?.type ?? null) !== 'string'}
 							<input
 								class="w-full rounded-lg py-2 px-4 text-sm dark:text-gray-300 dark:bg-gray-850 outline-hidden border border-gray-100 dark:border-gray-850"
@@ -148,18 +237,55 @@
 										/>
 									{/if}
 								</div>
+							{:else if valvesSpec.properties[property]?.input?.type === 'static' || valvesSpec.properties[property]?.input?.type === 'static_text'}
+								<!-- Static text - display only, no input -->
+								<div class="bg-gray-50 dark:bg-gray-800 rounded-lg py-2 px-4 text-sm text-gray-700 dark:text-gray-300">
+									{valvesSpec.properties[property]?.input?.value || valvesSpec.properties[property]?.default || valvesSpec.properties[property].title}
+								</div>
+							{:else if valvesSpec.properties[property]?.input?.type === 'static_multiline'}
+								<!-- Static multiline text - display only, no input -->
+								<div class="bg-gray-50 dark:bg-gray-800 rounded-lg py-3 px-4 text-sm text-gray-700 dark:text-gray-300 whitespace-pre-wrap min-h-20">
+									{valvesSpec.properties[property]?.input?.value || valvesSpec.properties[property]?.default || valvesSpec.properties[property].title}
+								</div>
+							{:else if valvesSpec.properties[property]?.input?.type === 'textbox' || valvesSpec.properties[property]?.input?.type === 'multiline'}
+								<!-- Textbox/multiline textarea in INPUT CONFIG section -->
+								<textarea
+									class="w-full rounded-lg py-2 px-4 text-sm dark:text-gray-300 dark:bg-gray-850 outline-hidden border border-gray-100 dark:border-gray-850 min-h-20"
+									placeholder={valvesSpec.properties[property].title}
+									bind:value={valves[property]}
+									rows={valvesSpec.properties[property]?.input?.rows ?? 4}
+									autocomplete="off"
+									required
+									on:change={() => {
+										dispatch('change');
+									}}
+								/>
 							{/if}
 						{:else}
-							<textarea
-								class="w-full rounded-lg py-2 px-4 text-sm dark:text-gray-300 dark:bg-gray-850 outline-hidden border border-gray-100 dark:border-gray-850"
-								placeholder={valvesSpec.properties[property].title}
-								bind:value={valves[property]}
-								autocomplete="off"
-								required
-								on:change={() => {
-									dispatch('change');
-								}}
-							/>
+							{#if valvesSpec.properties[property]?.input?.type === 'textbox' || valvesSpec.properties[property]?.input?.type === 'multiline'}
+								<textarea
+									class="w-full rounded-lg py-2 px-4 text-sm dark:text-gray-300 dark:bg-gray-850 outline-hidden border border-gray-100 dark:border-gray-850 min-h-20"
+									placeholder={valvesSpec.properties[property].title}
+									bind:value={valves[property]}
+									rows={valvesSpec.properties[property]?.input?.rows ?? 4}
+									autocomplete="off"
+									required
+									on:change={() => {
+										dispatch('change');
+									}}
+								/>
+							{:else}
+								<textarea
+									class="w-full rounded-lg py-2 px-4 text-sm dark:text-gray-300 dark:bg-gray-850 outline-hidden border border-gray-100 dark:border-gray-850"
+									placeholder={valvesSpec.properties[property].title}
+									bind:value={valves[property]}
+									autocomplete="off"
+									required
+									on:change={() => {
+										dispatch('change');
+									}}
+								/>
+							{/if}
 						{/if}
 					</div>
 				</div>
@@ -175,3 +301,30 @@
 {:else}
 	<div class="text-xs">No valves</div>
 {/if}
+
+<style>
+	/* Slider styling */
+	.slider::-webkit-slider-thumb {
+		appearance: none;
+		height: 16px;
+		width: 16px;
+		border-radius: 50%;
+		background: #3b82f6;
+		cursor: pointer;
+		box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+	}
+
+	.slider::-moz-range-thumb {
+		height: 16px;
+		width: 16px;
+		border-radius: 50%;
+		background: #3b82f6;
+		cursor: pointer;
+		border: none;
+		box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+	}
+
+	.slider::-webkit-slider-track {
+		background: transparent;
+	}
+</style>

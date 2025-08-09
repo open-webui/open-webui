@@ -29,43 +29,75 @@
 
 	let valvesSpec = null;
 	let valves = {};
+	let pinnedProperties = [];
+
+	const getPinningKey = () => `valve_pins_${type}_${id}`;
+	
+	const loadPinnedProperties = () => {
+		try {
+			const saved = localStorage.getItem(getPinningKey());
+			if (saved) {
+				pinnedProperties = JSON.parse(saved);
+			}
+		} catch (error) {
+			console.warn('Failed to load pinned properties:', error);
+		}
+	};
+	
+	const savePinnedProperties = () => {
+		try {
+			localStorage.setItem(getPinningKey(), JSON.stringify(pinnedProperties));
+		} catch (error) {
+			console.warn('Failed to save pinned properties:', error);
+		}
+	};
 
 	const submitHandler = async () => {
 		saving = true;
 
-		if (valvesSpec) {
-			// Convert string to array
-			for (const property in valvesSpec.properties) {
-				if (valvesSpec.properties[property]?.type === 'array') {
-					valves[property] = (valves[property] ?? '').split(',').map((v) => v.trim());
+		try {
+			if (valvesSpec) {
+				// Convert string to array only if it's actually a string (for comma-separated values)
+				// Multi-select elements already provide arrays, so don't convert those
+				for (const property in valvesSpec.properties) {
+					if (valvesSpec.properties[property]?.type === 'array') {
+						if (typeof valves[property] === 'string') {
+							valves[property] = (valves[property] ?? '').split(',').map((v) => v.trim()).filter(v => v);
+						}
+						// If it's already an array (from multi-select), leave it as is
+					}
+				}
+
+				let res = null;
+
+				if (type === 'tool') {
+					res = await updateToolValvesById(localStorage.token, id, valves);
+				} else if (type === 'function') {
+					res = await updateFunctionValvesById(localStorage.token, id, valves);
+				}
+
+				if (res) {
+					toast.success('Valves updated successfully');
+					dispatch('save');
+				} else {
+					toast.error('Failed to update valves');
 				}
 			}
-
-			let res = null;
-
-			if (type === 'tool') {
-				res = await updateToolValvesById(localStorage.token, id, valves).catch((error) => {
-					toast.error(`${error}`);
-				});
-			} else if (type === 'function') {
-				res = await updateFunctionValvesById(localStorage.token, id, valves).catch((error) => {
-					toast.error(`${error}`);
-				});
-			}
-
-			if (res) {
-				toast.success('Valves updated successfully');
-				dispatch('save');
-			}
+		} catch (error) {
+			console.error('Error updating valves:', error);
+			toast.error(`Error: ${error}`);
+		} finally {
+			saving = false;
 		}
-
-		saving = false;
 	};
 
 	const initHandler = async () => {
 		loading = true;
 		valves = {};
 		valvesSpec = null;
+
+		// Load pinned properties
+		loadPinnedProperties();
 
 		if (type === 'tool') {
 			valves = await getToolValvesById(localStorage.token, id);
@@ -80,10 +112,20 @@
 		}
 
 		if (valvesSpec) {
-			// Convert array to string
+			// Convert array to proper format based on input type
 			for (const property in valvesSpec.properties) {
 				if (valvesSpec.properties[property]?.type === 'array') {
-					valves[property] = (valves[property] ?? []).join(',');
+					// For listview (multi-select), keep as array
+					// For other array inputs that might be comma-separated, convert to string
+					if (valvesSpec.properties[property]?.input?.type === 'listview') {
+						// Keep as array for multi-select elements
+						if (!Array.isArray(valves[property])) {
+							valves[property] = valves[property] ? [valves[property]] : [];
+						}
+					} else {
+						// Convert to comma-separated string for other array types
+						valves[property] = (valves[property] ?? []).join(',');
+					}
 				}
 			}
 		}
@@ -120,7 +162,12 @@
 				>
 					<div class="px-1">
 						{#if !loading}
-							<Valves {valvesSpec} bind:valves />
+							<Valves 
+								{valvesSpec} 
+								bind:valves 
+								bind:pinnedProperties
+								on:pin={savePinnedProperties}
+							/>
 						{:else}
 							<Spinner className="size-5" />
 						{/if}
@@ -128,19 +175,17 @@
 
 					<div class="flex justify-end pt-3 text-sm font-medium">
 						<button
-							class="px-3.5 py-1.5 text-sm font-medium bg-black hover:bg-gray-900 text-white dark:bg-white dark:text-black dark:hover:bg-gray-100 transition rounded-full {saving
-								? ' cursor-not-allowed'
+							class="px-3.5 py-1.5 text-sm font-medium bg-black hover:bg-gray-900 text-white dark:bg-white dark:text-black dark:hover:bg-gray-100 transition-all duration-200 rounded-full flex items-center space-x-2 {saving
+								? ' cursor-not-allowed opacity-80'
 								: ''}"
 							type="submit"
 							disabled={saving}
 						>
-							{$i18n.t('Save')}
-
-							{#if saving}
-								<div class="ml-2 self-center">
-									<Spinner />
-								</div>
-							{/if}
+							<span>{$i18n.t('Save')}</span>
+							
+							<div class="loader-container {saving ? 'show' : 'hide'}">
+								<Spinner className="size-4" />
+							</div>
 						</button>
 					</div>
 				</form>
@@ -168,5 +213,24 @@
 
 	input[type='number'] {
 		-moz-appearance: textfield; /* Firefox */
+	}
+
+	/* Loader container animations */
+	.loader-container {
+		overflow: hidden;
+		transition: all 0.3s ease-in-out;
+		transform-origin: center;
+	}
+
+	.loader-container.hide {
+		width: 0;
+		opacity: 0;
+		transform: scale(0);
+	}
+
+	.loader-container.show {
+		width: 1rem;
+		opacity: 1;
+		transform: scale(1);
 	}
 </style>

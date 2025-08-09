@@ -415,6 +415,15 @@ async def get_tools_valves_spec_by_id(
             tools_module, _ = load_tool_module_by_id(id)
             request.app.state.TOOLS[id] = tools_module
 
+        # Check for custom valve spec function first
+        if hasattr(tools_module, "get_valve_spec"):
+            try:
+                log.info(f"Calling custom get_valve_spec for tool {id}")
+                return tools_module.get_valve_spec()
+            except Exception as e:
+                log.exception(f"Error calling get_valve_spec for tool {id}: {e}")
+        
+        # Fall back to Pydantic schema
         if hasattr(tools_module, "Valves"):
             Valves = tools_module.Valves
             return Valves.schema()
@@ -469,6 +478,14 @@ async def update_tools_valves_by_id(
         form_data = {k: v for k, v in form_data.items() if v is not None}
         valves = Valves(**form_data)
         Tools.update_tool_valves_by_id(id, valves.model_dump())
+        
+        # Call on_valves_updated callback if it exists
+        if hasattr(tools_module, "on_valves_updated"):
+            try:
+                tools_module.on_valves_updated(valves.model_dump())
+            except Exception as callback_error:
+                log.exception(f"Error calling on_valves_updated for tool {id}: {callback_error}")
+        
         return valves.model_dump()
     except Exception as e:
         log.exception(f"Failed to update tool valves by id {id}: {e}")
@@ -514,6 +531,14 @@ async def get_tools_user_valves_spec_by_id(
             tools_module, _ = load_tool_module_by_id(id)
             request.app.state.TOOLS[id] = tools_module
 
+        # Check for custom user valve spec function first
+        if hasattr(tools_module, "get_user_valve_spec"):
+            try:
+                return tools_module.get_user_valve_spec()
+            except Exception as e:
+                log.exception(f"Error calling get_user_valve_spec for tool {id}: {e}")
+        
+        # Fall back to Pydantic schema
         if hasattr(tools_module, "UserValves"):
             UserValves = tools_module.UserValves
             return UserValves.schema()
@@ -547,6 +572,14 @@ async def update_tools_user_valves_by_id(
                 Tools.update_user_valves_by_id_and_user_id(
                     id, user.id, user_valves.model_dump()
                 )
+                
+                # Call on_valves_updated callback if it exists
+                if hasattr(tools_module, "on_valves_updated"):
+                    try:
+                        tools_module.on_valves_updated(user_valves.model_dump(), user_id=user.id)
+                    except Exception as callback_error:
+                        log.exception(f"Error calling on_valves_updated for tool {id} user {user.id}: {callback_error}")
+                
                 return user_valves.model_dump()
             except Exception as e:
                 log.exception(f"Failed to update user valves by id {id}: {e}")
