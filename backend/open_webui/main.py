@@ -1411,7 +1411,7 @@ async def chat_completion(
         )
 
         # Model Params
-        if not stream_delta_chunk_size and model_info_params:
+        if model_info_params.get("stream_delta_chunk_size"):
             stream_delta_chunk_size = model_info_params.get("stream_delta_chunk_size")
 
         metadata = {
