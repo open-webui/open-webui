@@ -15,6 +15,8 @@
 	import Skeleton from '../Messages/Skeleton.svelte';
 
 	export let id = '';
+	export let messageId = '';
+
 	export let model = null;
 	export let messages = [];
 	export let actions = [];
@@ -211,7 +213,7 @@
 
 		onAdd({
 			modelId: model,
-			parentId: id,
+			parentId: messageId,
 			messages: messages
 		});
 	};

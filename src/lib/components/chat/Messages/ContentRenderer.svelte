@@ -17,7 +17,10 @@
 
 	export let id;
 	export let content;
+
 	export let history;
+	export let messageId;
+
 	export let selectedModels = [];
 
 	export let done = true;
@@ -196,6 +199,7 @@
 	<FloatingButtons
 		bind:this={floatingButtonsElement}
 		{id}
+		{messageId}
 		actions={$settings?.floatingActionButtons ?? []}
 		model={(selectedModels ?? []).includes(model?.id)
 			? model?.id

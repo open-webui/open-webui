@@ -800,6 +800,7 @@
 									<!-- unless message.error === true which is legacy error handling, where the error message is stored in message.content -->
 									<ContentRenderer
 										id={`${chatId}-${message.id}`}
+										messageId={message.id}
 										{history}
 										{selectedModels}
 										content={message.content}
