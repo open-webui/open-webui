@@ -1401,15 +1401,18 @@ async def chat_completion(
             request.state.direct = True
             request.state.model = model
 
+        model_info_params = (
+            model_info.params.model_dump() if model_info and model_info.params else {}
+        )
+
         # Chat Params
         stream_delta_chunk_size = form_data.get("params", {}).get(
             "stream_delta_chunk_size"
         )
+
         # Model Params
-        if model_info and model_info.params:
-            stream_delta_chunk_size = model_info.params.model_dump().get(
-                "stream_delta_chunk_size"
-            )
+        if not stream_delta_chunk_size and model_info_params:
+            stream_delta_chunk_size = model_info_params.get("stream_delta_chunk_size")
 
         metadata = {
             "user_id": user.id,
@@ -1430,11 +1433,7 @@ async def chat_completion(
                     "native"
                     if (
                         form_data.get("params", {}).get("function_calling") == "native"
-                        or (
-                            model_info
-                            and model_info.params.model_dump().get("function_calling")
-                            == "native"
-                        )
+                        or model_info_params.get("function_calling") == "native"
                     )
                     else "default"
                 ),
