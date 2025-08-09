@@ -13,6 +13,8 @@
 	import { v4 as uuidv4 } from 'uuid';
 
 	import Modal from '../common/Modal.svelte';
+	import Tooltip from '../common/Tooltip.svelte';
+	import Switch from '../common/Switch.svelte';
 	import Link from '../icons/Link.svelte';
 	import XMark from '$lib/components/icons/XMark.svelte';
 	import ArrowPath from '$lib/components/icons/ArrowPath.svelte';
@@ -449,7 +451,41 @@
 <Modal bind:show size="md">
 	<div>
 		<div class=" flex justify-between dark:text-gray-300 px-5 pt-4 pb-0.5">
-			<div class=" text-lg font-medium self-center">{$i18n.t('Share Chat')}</div>
+			<div class=" text-lg font-medium self-center flex items-center space-x-2">
+				{$i18n.t('Share Chat')}
+				<Tooltip placement="right" interactive={true}>
+					<span class="cursor-pointer text-gray-500">(?)</span>
+					<div class="p-2 text-sm" slot="tooltip">
+						<div class="font-medium mb-2">How Sharing Works:</div>
+						<ul class="list-disc list-inside space-y-1">
+							<li>
+								<strong>Creates a Snapshot:</strong>
+								{$i18n.t(
+									"Sharing creates a static, public snapshot of your conversation up to this point."
+								)}
+							</li>
+							<li>
+								<strong>Future Messages Not Included:</strong>
+								{$i18n.t(
+									"Any new messages you send after creating the link will not be added to the shared chat."
+								)}
+							</li>
+							<li>
+								<strong>Updating the Link:</strong>
+								{$i18n.t(
+									'You can update the link at any time to reflect the latest state of the conversation.'
+								)}
+							</li>
+							<li>
+								<strong>Link Persistence:</strong>
+								{$i18n.t(
+									'The link remains active as long as the original chat exists and the expiration, if set, has not been reached.'
+								)}
+							</li>
+						</ul>
+					</div>
+				</Tooltip>
+			</div>
 			<button
 				class="self-center"
 				on:click={() => {
@@ -462,36 +498,6 @@
 
 		{#if chat}
 			<div class="px-5 pt-4 pb-5 w-full flex flex-col">
-				<div class=" text-sm dark:text-gray-300 mb-1">
-					<div class="font-medium mb-2">How Sharing Works:</div>
-					<ul class="list-disc list-inside space-y-1">
-						<li>
-							<strong>Creates a Snapshot:</strong>
-							{$i18n.t(
-								"Sharing creates a static, public snapshot of your conversation up to this point."
-							)}
-						</li>
-						<li>
-							<strong>Future Messages Not Included:</strong>
-							{$i18n.t(
-								"Any new messages you send after creating the link will not be added to the shared chat."
-							)}
-						</li>
-						<li>
-							<strong>Updating the Link:</strong>
-							{$i18n.t(
-								'You can update the link at any time to reflect the latest state of the conversation.'
-							)}
-						</li>
-						<li>
-							<strong>Link Persistence:</strong>
-							{$i18n.t(
-								'The link remains active as long as the original chat exists and the expiration, if set, has not been reached.'
-							)}
-						</li>
-					</ul>
-				</div>
-
 				{#if chat.share_id}
 					<div class="mt-2 flex items-center justify-between text-lg">
 						<a
@@ -524,18 +530,10 @@
 
 				<div class="mt-4">
 					<div class="flex items-center justify-between">
-						<label for="is_public" class="block text-sm font-medium text-gray-700 dark:text-gray-300">{$i18n.t('Public Access')}</label>
-						<button
-							type="button"
-							class="flex items-center gap-2 px-2.5 py-1.5 rounded-full transition-colors {is_public
-								? 'bg-green-600 hover:bg-green-700'
-								: 'bg-gray-600 hover:bg-gray-700'}"
-							on:click={() => (is_public = !is_public)}
-						>
-							<div class=" text-white text-xs font-medium">
-								{is_public ? $i18n.t('Enabled') : $i18n.t('Disabled')}
-							</div>
-						</button>
+						<label for="is_public" class="block text-sm font-medium text-gray-700 dark:text-gray-300">
+							{$i18n.t('Public Access')}
+						</label>
+						<Switch bind:state={is_public} tooltip={true} />
 					</div>
 					<p class="text-xs text-gray-500 dark:text-gray-400 mt-1">
 						{$i18n.t(
