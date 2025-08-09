@@ -1,9 +1,19 @@
 #!/bin/bash
 set -e # Exit immediately if a command exits with a non-zero status.
 
-echo "🔍 DEBUG: Checking for RDS certificate at startup..."
+echo "🔍 DEBUG: Checking SSL configuration at startup..."
+
 echo "📂 Root cert location: $(ls -la /root/.postgresql/ 2>/dev/null || echo '/root/.postgresql/ does not exist')"
 echo "📂 App cert location: $(ls -la /app/.postgresql/ 2>/dev/null || echo '/app/.postgresql/ does not exist')"
+
+echo "🔧 SSL Environment Variables:"
+echo "  PGSSLMODE: ${PGSSLMODE:-'(not set)'}"
+echo "  PG_SSLMODE: ${PG_SSLMODE:-'(not set)'}"
+echo "  POSTGRES_SSLMODE: ${POSTGRES_SSLMODE:-'(not set)'}"
+echo "  PGSSLROOTCERT: ${PGSSLROOTCERT:-'(not set)'}"
+echo "  PG_SSLROOTCERT: ${PG_SSLROOTCERT:-'(not set)'}"  
+echo "  POSTGRES_SSLROOTCERT: ${POSTGRES_SSLROOTCERT:-'(not set)'}"
+
 if [ -f "/app/.postgresql/root.crt" ]; then
     echo "✅ Certificate found in app location: $(ls -la /app/.postgresql/root.crt)"
     echo "🔧 Certificate preview: $(head -3 /app/.postgresql/root.crt)"
