@@ -368,6 +368,9 @@
 					navElement.style['-webkit-app-region'] = 'drag';
 				}
 			}
+
+			await initChannels();
+			await initChatList();
 		});
 
 		chats.subscribe((value) => {
@@ -512,8 +515,6 @@
 		<button
 			class="flex flex-col flex-1 cursor-[e-resize]"
 			on:click={async () => {
-				await initChannels();
-				await initChatList();
 				showSidebar.set(!$showSidebar);
 			}}
 		>
