@@ -369,8 +369,10 @@
 				}
 			}
 
-			await initChannels();
-			await initChatList();
+			if (!value) {
+				await initChannels();
+				await initChatList();
+			}
 		});
 
 		chats.subscribe((value) => {
