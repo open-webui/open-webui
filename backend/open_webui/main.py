@@ -470,6 +470,9 @@ from open_webui.tasks import (
 from open_webui.utils.redis import get_sentinels_from_env
 
 
+from open_webui.constants import ERROR_MESSAGES
+
+
 if SAFE_MODE:
     print("SAFE MODE ENABLED")
     Functions.deactivate_all_functions()
@@ -1422,6 +1425,14 @@ async def chat_completion(
                 else {}
             ),
         }
+
+        if metadata.get("chat_id") and (user and user.role != "admin"):
+            chat = Chats.get_chat_by_id_and_user_id(metadata["chat_id"], user.id)
+            if chat is None:
+                raise HTTPException(
+                    status_code=status.HTTP_404_NOT_FOUND,
+                    detail=ERROR_MESSAGES.DEFAULT(),
+                )
 
         request.state.metadata = metadata
         form_data["metadata"] = metadata
