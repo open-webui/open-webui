@@ -60,7 +60,11 @@ class QdrantClient(VectorDBBase):
                 timeout=self.QDRANT_TIMEOUT,
             )
         else:
-            self.client = Qclient(url=self.QDRANT_URI, api_key=self.QDRANT_API_KEY, timeout=QDRANT_TIMEOUT,)
+            self.client = Qclient(
+                url=self.QDRANT_URI,
+                api_key=self.QDRANT_API_KEY,
+                timeout=QDRANT_TIMEOUT,
+            )
 
     def _result_to_get_result(self, points) -> GetResult:
         ids = []

@@ -76,7 +76,11 @@ class QdrantClient(VectorDBBase):
                 timeout=self.QDRANT_TIMEOUT,
             )
             if self.PREFER_GRPC
-            else Qclient(url=self.QDRANT_URI, api_key=self.QDRANT_API_KEY, timeout=self.QDRANT_TIMEOUT,)
+            else Qclient(
+                url=self.QDRANT_URI,
+                api_key=self.QDRANT_API_KEY,
+                timeout=self.QDRANT_TIMEOUT,
+            )
         )
 
         # Main collection types for multi-tenancy

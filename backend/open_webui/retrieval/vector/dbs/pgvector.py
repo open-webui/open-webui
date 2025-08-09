@@ -421,7 +421,7 @@ class PgvectorClient(VectorDBBase):
                 documents[qid].append(row.text)
                 metadatas[qid].append(row.vmetadata)
 
-            self.session.rollback() # read-only transaction
+            self.session.rollback()  # read-only transaction
             return SearchResult(
                 ids=ids, distances=distances, documents=documents, metadatas=metadatas
             )
@@ -479,7 +479,7 @@ class PgvectorClient(VectorDBBase):
             documents = [[result.text for result in results]]
             metadatas = [[result.vmetadata for result in results]]
 
-            self.session.rollback() # read-only transaction
+            self.session.rollback()  # read-only transaction
             return GetResult(
                 ids=ids,
                 documents=documents,
@@ -527,7 +527,7 @@ class PgvectorClient(VectorDBBase):
                 documents = [[result.text for result in results]]
                 metadatas = [[result.vmetadata for result in results]]
 
-            self.session.rollback() # read-only transaction
+            self.session.rollback()  # read-only transaction
             return GetResult(ids=ids, documents=documents, metadatas=metadatas)
         except Exception as e:
             self.session.rollback()
@@ -598,7 +598,7 @@ class PgvectorClient(VectorDBBase):
                 .first()
                 is not None
             )
-            self.session.rollback() # read-only transaction
+            self.session.rollback()  # read-only transaction
             return exists
         except Exception as e:
             self.session.rollback()

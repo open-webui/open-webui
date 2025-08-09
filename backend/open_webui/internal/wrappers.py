@@ -46,23 +46,25 @@ class ReconnectingPostgresqlDatabase(CustomReconnectMixin, PostgresqlDatabase):
 
 def register_connection(db_url):
     # Check if using SQLCipher protocol
-    if db_url.startswith('sqlite+sqlcipher://'):
+    if db_url.startswith("sqlite+sqlcipher://"):
         database_password = os.environ.get("DATABASE_PASSWORD")
         if not database_password or database_password.strip() == "":
-            raise ValueError("DATABASE_PASSWORD is required when using sqlite+sqlcipher:// URLs")
-        
+            raise ValueError(
+                "DATABASE_PASSWORD is required when using sqlite+sqlcipher:// URLs"
+            )
+
         # Parse the database path from SQLCipher URL
         # Convert sqlite+sqlcipher:///path/to/db.sqlite to /path/to/db.sqlite
-        db_path = db_url.replace('sqlite+sqlcipher://', '')
-        if db_path.startswith('/'):
+        db_path = db_url.replace("sqlite+sqlcipher://", "")
+        if db_path.startswith("/"):
             db_path = db_path[1:]  # Remove leading slash for relative paths
-        
+
         # Use Peewee's native SqlCipherDatabase with encryption
         db = SqlCipherDatabase(db_path, passphrase=database_password)
         db.autoconnect = True
         db.reuse_if_open = True
         log.info("Connected to encrypted SQLite database using SQLCipher")
-        
+
     else:
         # Standard database connection (existing logic)
         db = connect(db_url, unquote_user=True, unquote_password=True)

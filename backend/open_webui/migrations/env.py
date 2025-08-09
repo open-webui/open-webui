@@ -63,26 +63,29 @@ def run_migrations_online() -> None:
 
     """
     # Handle SQLCipher URLs
-    if DB_URL and DB_URL.startswith('sqlite+sqlcipher://'):
+    if DB_URL and DB_URL.startswith("sqlite+sqlcipher://"):
         if not DATABASE_PASSWORD or DATABASE_PASSWORD.strip() == "":
-            raise ValueError("DATABASE_PASSWORD is required when using sqlite+sqlcipher:// URLs")
-        
+            raise ValueError(
+                "DATABASE_PASSWORD is required when using sqlite+sqlcipher:// URLs"
+            )
+
         # Extract database path from SQLCipher URL
-        db_path = DB_URL.replace('sqlite+sqlcipher://', '')
-        if db_path.startswith('/'):
+        db_path = DB_URL.replace("sqlite+sqlcipher://", "")
+        if db_path.startswith("/"):
             db_path = db_path[1:]  # Remove leading slash for relative paths
-        
+
         # Create a custom creator function that uses sqlcipher3
         def create_sqlcipher_connection():
             import sqlcipher3
+
             conn = sqlcipher3.connect(db_path, check_same_thread=False)
             conn.execute(f"PRAGMA key = '{DATABASE_PASSWORD}'")
             return conn
-        
+
         connectable = create_engine(
             "sqlite://",  # Dummy URL since we're using creator
             creator=create_sqlcipher_connection,
-            echo=False
+            echo=False,
         )
     else:
         # Standard database connection (existing logic)
