@@ -62,7 +62,8 @@
 			public_models: false,
 			public_knowledge: false,
 			public_prompts: false,
-			public_tools: false
+			public_tools: false,
+			shared_chats: false
 		},
 		chat: {
 			controls: true,

@@ -1213,6 +1213,10 @@ USER_PERMISSIONS_CHAT_SHARE = (
     os.environ.get("USER_PERMISSIONS_CHAT_SHARE", "True").lower() == "true"
 )
 
+USER_PERMISSIONS_CHAT_CLONE = (
+    os.environ.get("USER_PERMISSIONS_CHAT_CLONE", "True").lower() == "true"
+)
+
 USER_PERMISSIONS_CHAT_EXPORT = (
     os.environ.get("USER_PERMISSIONS_CHAT_EXPORT", "True").lower() == "true"
 )
@@ -1289,6 +1293,7 @@ DEFAULT_USER_PERMISSIONS = {
         "delete": USER_PERMISSIONS_CHAT_DELETE,
         "edit": USER_PERMISSIONS_CHAT_EDIT,
         "share": USER_PERMISSIONS_CHAT_SHARE,
+        "clone": USER_PERMISSIONS_CHAT_CLONE,
         "export": USER_PERMISSIONS_CHAT_EXPORT,
         "stt": USER_PERMISSIONS_CHAT_STT,
         "tts": USER_PERMISSIONS_CHAT_TTS,
@@ -1363,6 +1368,12 @@ ENABLE_COMMUNITY_SHARING = PersistentConfig(
     "ENABLE_COMMUNITY_SHARING",
     "ui.enable_community_sharing",
     os.environ.get("ENABLE_COMMUNITY_SHARING", "True").lower() == "true",
+)
+
+ENABLE_SHARED_CHATS_ACCESS = PersistentConfig(
+    "ENABLE_SHARED_CHATS_ACCESS",
+    "ui.enable_shared_chats_access",
+    os.environ.get("ENABLE_SHARED_CHATS_ACCESS", "True").lower() == "true",
 )
 
 ENABLE_MESSAGE_RATING = PersistentConfig(
