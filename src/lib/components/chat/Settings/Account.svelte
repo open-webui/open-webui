@@ -268,9 +268,11 @@
 
 		<hr class="border-gray-50 dark:border-gray-850 my-2" />
 
-		<div class="my-2">
-			<UpdatePassword />
-		</div>
+		{#if $user?.login_method === 'local'}
+			<div class="my-2">
+				<UpdatePassword />
+			</div>
+		{/if}
 
 		{#if ($config?.features?.enable_api_key ?? true) || $user?.role === 'admin'}
 			<div class="flex justify-between items-center text-sm mb-2">
