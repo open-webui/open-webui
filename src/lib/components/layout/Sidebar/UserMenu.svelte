@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { DropdownMenu } from 'bits-ui';
-	import { createEventDispatcher, getContext, onMount } from 'svelte';
+	import { createEventDispatcher, getContext, onMount, tick } from 'svelte';
 
 	import { flyAndScale } from '$lib/utils/transitions';
 	import { goto } from '$app/navigation';
@@ -74,10 +74,12 @@
 			<DropdownMenu.Item
 				class="flex rounded-md py-1.5 px-3 w-full hover:bg-gray-50 dark:hover:bg-gray-800 transition cursor-pointer"
 				on:click={async () => {
-					await showSettings.set(true);
 					show = false;
 
+					await showSettings.set(true);
+
 					if ($mobile) {
+						await tick();
 						showSidebar.set(false);
 					}
 				}}
@@ -90,11 +92,14 @@
 
 			<DropdownMenu.Item
 				class="flex rounded-md py-1.5 px-3 w-full hover:bg-gray-50 dark:hover:bg-gray-800 transition cursor-pointer"
-				on:click={() => {
-					dispatch('show', 'archived-chat');
+				on:click={async () => {
 					show = false;
 
+					dispatch('show', 'archived-chat');
+
 					if ($mobile) {
+						await tick();
+
 						showSidebar.set(false);
 					}
 				}}
@@ -129,9 +134,10 @@
 					as="a"
 					href="/playground"
 					class="flex rounded-md py-1.5 px-3 w-full hover:bg-gray-50 dark:hover:bg-gray-800 transition select-none"
-					on:click={() => {
+					on:click={async () => {
 						show = false;
 						if ($mobile) {
+							await tick();
 							showSidebar.set(false);
 						}
 					}}
@@ -145,9 +151,10 @@
 					as="a"
 					href="/admin"
 					class="flex rounded-md py-1.5 px-3 w-full hover:bg-gray-50 dark:hover:bg-gray-800 transition select-none"
-					on:click={() => {
+					on:click={async () => {
 						show = false;
 						if ($mobile) {
+							await tick();
 							showSidebar.set(false);
 						}
 					}}
@@ -196,9 +203,14 @@
 				<DropdownMenu.Item
 					class="flex gap-2 items-center py-1.5 px-3 text-sm select-none w-full cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 rounded-md transition cursor-pointer"
 					id="chat-share-button"
-					on:click={() => {
-						showShortcuts.set(!$showShortcuts);
+					on:click={async () => {
 						show = false;
+						showShortcuts.set(!$showShortcuts);
+
+						if ($mobile) {
+							await tick();
+							showSidebar.set(false);
+						}
 					}}
 				>
 					<Keyboard className="size-5" />

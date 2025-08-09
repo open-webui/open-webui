@@ -366,7 +366,7 @@
 		});
 
 		showSidebar.set(!$mobile ? localStorage.sidebar === 'true' : false);
-		showSidebar.subscribe((value) => {
+		showSidebar.subscribe(async (value) => {
 			localStorage.sidebar = value;
 
 			// nav element is not available on the first render
@@ -526,7 +526,9 @@
 	>
 		<button
 			class="flex flex-col flex-1 cursor-[e-resize]"
-			on:click={() => {
+			on:click={async () => {
+				await initChannels();
+				await initChatList();
 				showSidebar.set(!$showSidebar);
 			}}
 		>
@@ -656,7 +658,7 @@
 
 		<div>
 			<div>
-				<div class="">
+				<div class=" py-0.5">
 					{#if $user !== undefined && $user !== null}
 						<UserMenu
 							role={$user?.role}
@@ -834,7 +836,7 @@
 
 			<div class="relative flex flex-col flex-1">
 				{#if ($models ?? []).length > 0 && ($settings?.pinnedModels ?? []).length > 0}
-					<PinnedModelList bind:selectedChatId />
+					<PinnedModelList bind:selectedChatId {shiftKey} />
 				{/if}
 
 				{#if $config?.features?.enable_channels && ($user?.role === 'admin' || $channels.length > 0)}
@@ -1121,7 +1123,7 @@
 				</Folder>
 			</div>
 
-			<div class="px-2 pt-1.5 pb-2 sticky bottom-0 z-10 bg-gray-50 dark:bg-gray-950 sidebar">
+			<div class="px-1.5 pt-1.5 pb-2 sticky bottom-0 z-10 bg-gray-50 dark:bg-gray-950 sidebar">
 				<div class="flex flex-col font-primary">
 					{#if $user !== undefined && $user !== null}
 						<UserMenu
@@ -1133,7 +1135,7 @@
 							}}
 						>
 							<div
-								class=" flex items-center rounded-xl py-2.5 px-2.5 w-full hover:bg-gray-100 dark:hover:bg-gray-900 transition"
+								class=" flex items-center rounded-xl py-2 px-1.5 w-full hover:bg-gray-100 dark:hover:bg-gray-900 transition"
 							>
 								<div class=" self-center mr-3">
 									<img

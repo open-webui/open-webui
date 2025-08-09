@@ -33,7 +33,6 @@
 	import InputVariablesModal from '../chat/MessageInput/InputVariablesModal.svelte';
 
 	export let placeholder = $i18n.t('Send a Message');
-	export let transparentBackground = false;
 
 	export let id = null;
 

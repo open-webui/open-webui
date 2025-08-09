@@ -15,11 +15,14 @@
 		? 'md:max-w-[calc(100%-260px)]'
 		: ''} max-w-full"
 >
-	<nav class="   px-2 pt-1.5 ml-0.5 backdrop-blur-xl w-full drag-region">
+	<nav class="   px-2 pt-1.5 backdrop-blur-xl w-full drag-region">
 		<div class=" flex items-center">
 			{#if $mobile}
 				<div class="{$showSidebar ? 'md:hidden' : ''} flex flex-none items-center">
-					<Tooltip content={$showSidebar ? $i18n.t('Close Sidebar') : $i18n.t('Open Sidebar')}>
+					<Tooltip
+						content={$showSidebar ? $i18n.t('Close Sidebar') : $i18n.t('Open Sidebar')}
+						interactive={true}
+					>
 						<button
 							id="sidebar-toggle-button"
 							class=" cursor-pointer flex rounded-lg hover:bg-gray-100 dark:hover:bg-gray-850 transition cursor-"

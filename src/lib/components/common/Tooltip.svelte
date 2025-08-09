@@ -15,6 +15,7 @@
 	export let offset = [0, 4];
 	export let allowHTML = true;
 	export let tippyOptions = {};
+	export let interactive = false;
 
 	let tooltipElement;
 	let tooltipInstance;
@@ -40,6 +41,7 @@
 					...(theme !== '' ? { theme } : { theme: 'dark' }),
 					arrow: false,
 					offset: offset,
+					interactive: interactive,
 					...tippyOptions
 				});
 			}

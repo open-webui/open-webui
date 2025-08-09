@@ -203,6 +203,8 @@ class PgvectorClient(VectorDBBase):
                 for item in items:
                     vector = self.adjust_vector_length(item["vector"])
                     # Use raw SQL for BYTEA/pgcrypto
+                    # Ensure metadata is converted to its JSON text representation
+                    json_metadata = json.dumps(item["metadata"])
                     self.session.execute(
                         text(
                             """
@@ -211,7 +213,7 @@ class PgvectorClient(VectorDBBase):
                             VALUES (
                                 :id, :vector, :collection_name,
                                 pgp_sym_encrypt(:text, :key),
-                                pgp_sym_encrypt(:metadata::text, :key)
+                                pgp_sym_encrypt(:metadata_text, :key)
                             )
                             ON CONFLICT (id) DO NOTHING
                         """
@@ -221,7 +223,7 @@ class PgvectorClient(VectorDBBase):
                             "vector": vector,
                             "collection_name": collection_name,
                             "text": item["text"],
-                            "metadata": json.dumps(item["metadata"]),
+                            "metadata_text": json_metadata,
                             "key": PGVECTOR_PGCRYPTO_KEY,
                         },
                     )
@@ -255,6 +257,7 @@ class PgvectorClient(VectorDBBase):
             if PGVECTOR_PGCRYPTO:
                 for item in items:
                     vector = self.adjust_vector_length(item["vector"])
+                    json_metadata = json.dumps(item["metadata"])
                     self.session.execute(
                         text(
                             """
@@ -263,7 +266,7 @@ class PgvectorClient(VectorDBBase):
                             VALUES (
                                 :id, :vector, :collection_name,
                                 pgp_sym_encrypt(:text, :key),
-                                pgp_sym_encrypt(:metadata::text, :key)
+                                pgp_sym_encrypt(:metadata_text, :key)
                             )
                             ON CONFLICT (id) DO UPDATE SET
                               vector = EXCLUDED.vector,
@@ -277,7 +280,7 @@ class PgvectorClient(VectorDBBase):
                             "vector": vector,
                             "collection_name": collection_name,
                             "text": item["text"],
-                            "metadata": json.dumps(item["metadata"]),
+                            "metadata_text": json_metadata,
                             "key": PGVECTOR_PGCRYPTO_KEY,
                         },
                     )

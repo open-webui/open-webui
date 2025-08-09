@@ -31,7 +31,7 @@
 	<div>
 		<div class=" flex justify-between dark:text-gray-100 px-5 pt-4 pb-1.5">
 			<h1 class="text-lg font-medium self-center font-primary">
-				{$i18n.t('Action Buttons')}
+				{$i18n.t('Quick Actions')}
 			</h1>
 			<button
 				class="self-center"
@@ -123,7 +123,7 @@
 								{$i18n.t('Default action buttons will be used.')}
 							</div>
 						{:else}
-							{#each floatingActionButtons as button (button.id)}
+							{#each floatingActionButtons as button, buttonIdx}
 								<div class=" py-1 flex w-full justify-between items-start">
 									<div class="flex flex-col items-start pr-2">
 										<input

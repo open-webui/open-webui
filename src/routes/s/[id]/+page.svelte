@@ -233,7 +233,7 @@
 							bind:messages
 							bind:autoScroll
 							bottomPadding={files.length > 0}
-							sendPrompt={() => {}}
+							sendMessage={() => {}}
 							continueResponse={() => {}}
 							regenerateResponse={() => {}}
 						/>

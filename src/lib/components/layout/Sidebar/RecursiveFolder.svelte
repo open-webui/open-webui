@@ -10,7 +10,7 @@
 
 	import { toast } from 'svelte-sonner';
 
-	import { chatId, selectedFolder } from '$lib/stores';
+	import { chatId, mobile, selectedFolder, showSidebar } from '$lib/stores';
 
 	import {
 		deleteFolderById,
@@ -437,15 +437,24 @@
 					await goto('/');
 
 					selectedFolder.set(folders[folderId]);
+
+					if ($mobile) {
+						showSidebar.set(!$showSidebar);
+					}
 				}}
 			>
-				<div class="text-gray-300 dark:text-gray-600">
+				<button
+					class="text-gray-300 dark:text-gray-600"
+					on:click={(e) => {
+						e.stopPropagation();
+					}}
+				>
 					{#if open}
 						<ChevronDown className=" size-3" strokeWidth="2.5" />
 					{:else}
 						<ChevronRight className=" size-3" strokeWidth="2.5" />
 					{/if}
-				</div>
+				</button>
 
 				<div class="translate-y-[0.5px] flex-1 justify-start text-start line-clamp-1">
 					{#if edit}

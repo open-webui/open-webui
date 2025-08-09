@@ -1,3 +1,4 @@
+from backend.open_webui.retrieval.vector.utils import stringify_metadata
 from open_webui.retrieval.vector.main import (
     VectorDBBase,
     VectorItem,
@@ -183,6 +184,9 @@ class S3VectorClient(VectorDBBase):
                 # Add the text field to metadata so it's available for retrieval
                 metadata["text"] = item["text"]
 
+                # Convert metadata to string format for consistency
+                metadata = stringify_metadata(metadata)
+
                 # Filter metadata to comply with S3 Vector API limit of 10 keys
                 metadata = self._filter_metadata(metadata, item["id"])
 
@@ -240,6 +244,9 @@ class S3VectorClient(VectorDBBase):
                 metadata = item.get("metadata", {}).copy()
                 # Add the text field to metadata so it's available for retrieval
                 metadata["text"] = item["text"]
+
+                # Convert metadata to string format for consistency
+                metadata = stringify_metadata(metadata)
 
                 # Filter metadata to comply with S3 Vector API limit of 10 keys
                 metadata = self._filter_metadata(metadata, item["id"])

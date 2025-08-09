@@ -5,6 +5,7 @@
 	import { WEBUI_NAME, mobile, showSidebar, user } from '$lib/stores';
 	import { page } from '$app/stores';
 	import Tooltip from '$lib/components/common/Tooltip.svelte';
+
 	import Sidebar from '$lib/components/icons/Sidebar.svelte';
 
 	const i18n = getContext('i18n');
@@ -27,15 +28,18 @@
 
 {#if loaded}
 	<div
-		class=" flex flex-col w-full h-screen max-h-[100dvh] transition-width duration-200 ease-in-out {$showSidebar
+		class=" flex flex-col h-screen max-h-[100dvh] flex-1 transition-width duration-200 ease-in-out {$showSidebar
 			? 'md:max-w-[calc(100%-260px)]'
-			: ''} max-w-full"
+			: ' md:max-w-[calc(100%-49px)]'}  w-full max-w-full"
 	>
 		<nav class="   px-2.5 pt-1.5 backdrop-blur-xl drag-region">
 			<div class=" flex items-center gap-1">
 				{#if $mobile}
 					<div class="{$showSidebar ? 'md:hidden' : ''} flex flex-none items-center self-end">
-						<Tooltip content={$showSidebar ? $i18n.t('Close Sidebar') : $i18n.t('Open Sidebar')}>
+						<Tooltip
+							content={$showSidebar ? $i18n.t('Close Sidebar') : $i18n.t('Open Sidebar')}
+							interactive={true}
+						>
 							<button
 								id="sidebar-toggle-button"
 								class=" cursor-pointer flex rounded-lg hover:bg-gray-100 dark:hover:bg-gray-850 transition cursor-"

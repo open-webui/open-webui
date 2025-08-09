@@ -471,6 +471,9 @@ from open_webui.tasks import (
 from open_webui.utils.redis import get_sentinels_from_env
 
 
+from open_webui.constants import ERROR_MESSAGES
+
+
 if SAFE_MODE:
     print("SAFE MODE ENABLED")
     Functions.deactivate_all_functions()
@@ -1425,6 +1428,14 @@ async def chat_completion(
             ),
         }
 
+        if metadata.get("chat_id") and (user and user.role != "admin"):
+            chat = Chats.get_chat_by_id_and_user_id(metadata["chat_id"], user.id)
+            if chat is None:
+                raise HTTPException(
+                    status_code=status.HTTP_404_NOT_FOUND,
+                    detail=ERROR_MESSAGES.DEFAULT(),
+                )
+
         request.state.metadata = metadata
         form_data["metadata"] = metadata
 
@@ -1804,7 +1815,7 @@ async def get_manifest_json():
         return {
             "name": app.state.WEBUI_NAME,
             "short_name": app.state.WEBUI_NAME,
-            "description": "Open WebUI is an open, extensible, user-friendly interface for AI that adapts to your workflow.",
+            "description": f"{app.state.WEBUI_NAME} is an open, extensible, user-friendly interface for AI that adapts to your workflow.",
             "start_url": "/",
             "display": "standalone",
             "background_color": "#343541",

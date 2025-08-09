@@ -227,7 +227,7 @@ def openai_chat_chunk_message_template(
     if tool_calls:
         template["choices"][0]["delta"]["tool_calls"] = tool_calls
 
-    if not content and not tool_calls:
+    if not content and not reasoning_content and not tool_calls:
         template["choices"][0]["finish_reason"] = "stop"
 
     if usage:

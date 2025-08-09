@@ -146,7 +146,7 @@
 										placeholder={$i18n.t('Enter New Password')}
 										bind:value={_user.password}
 										autocomplete="new-password"
-										required
+										required={false}
 									/>
 								</div>
 							</div>

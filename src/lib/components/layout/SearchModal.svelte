@@ -146,7 +146,7 @@
 
 	const onKeyDown = (e) => {
 		const searchOptions = document.getElementById('search-options-container');
-		if (searchOptions) {
+		if (searchOptions || !show) {
 			return;
 		}
 
@@ -352,7 +352,7 @@
 							bind:history
 							bind:messages
 							autoScroll={true}
-							sendPrompt={() => {}}
+							sendMessage={() => {}}
 							continueResponse={() => {}}
 							regenerateResponse={() => {}}
 						/>

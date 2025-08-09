@@ -398,10 +398,16 @@ def convert_openapi_to_tool_payload(openapi_spec):
                         description += (
                             f". Possible values: {', '.join(param_schema.get('enum'))}"
                         )
-                    tool["parameters"]["properties"][param_name] = {
+                    param_property = {
                         "type": param_schema.get("type"),
                         "description": description,
                     }
+
+                    # Include items property for array types (required by OpenAI)
+                    if param_schema.get("type") == "array" and "items" in param_schema:
+                        param_property["items"] = param_schema["items"]
+
+                    tool["parameters"]["properties"][param_name] = param_property
                     if param.get("required"):
                         tool["parameters"]["required"].append(param_name)
 
