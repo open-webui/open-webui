@@ -68,6 +68,21 @@
 	const handleExpirationChange = () => {
 		if (expirationOption === 'custom' && !customExpirationDate) {
 			customExpirationDate = dayjs().add(1, 'hour').format('YYYY-MM-DDTHH:mm');
+		} else if (expirationOption === 'expire-on-views') {
+			if (expireOnViewsCount <= currentViews) {
+				expireOnViewsCount = currentViews + 1;
+			}
+		}
+	};
+
+	const validateViewsCount = () => {
+		if (Number(expireOnViewsCount) <= currentViews) {
+			toast.warning(
+				`Max views must be greater than the current view count (${currentViews}). Setting to ${
+					currentViews + 1
+				}.`
+			);
+			expireOnViewsCount = currentViews + 1;
 		}
 	};
 
@@ -566,7 +581,14 @@
 
 				{#if expirationOption === 'expire-on-views'}
 					<div class="mt-4">
-						<input type="number" min="1" bind:value={expireOnViewsCount} class="mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm rounded-md dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white" placeholder="Enter number of views" />
+						<input
+							type="number"
+							min="1"
+							bind:value={expireOnViewsCount}
+							on:blur={validateViewsCount}
+							class="mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm rounded-md dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white"
+							placeholder="Enter number of views"
+						/>
 					</div>
 				{/if}
 
