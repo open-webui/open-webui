@@ -79,10 +79,13 @@ class GoogleDriveService:
 
     def __init__(self) -> None:
         self.service: Optional[Resource] = None
-        self._initialize_service()
+        self._credentials: Optional[service_account.Credentials] = None
+        self._service_initialized: bool = False
+        # Only prepare credentials, don't build the service yet
+        self._prepare_credentials()
 
-    def _initialize_service(self) -> None:
-        """Initialize Google Drive service with service account credentials."""
+    def _prepare_credentials(self) -> None:
+        """Prepare credentials without building the service."""
         try:
             if not GOOGLE_DRIVE_SERVICE_ACCOUNT_JSON.value:
                 log.warning("Google Drive service account JSON not configured")
@@ -91,28 +94,48 @@ class GoogleDriveService:
             # Parse service account JSON
             service_account_info = json.loads(GOOGLE_DRIVE_SERVICE_ACCOUNT_JSON.value)
 
-            # Create credentials
-            credentials = service_account.Credentials.from_service_account_info(
+            # Create credentials (this is fast and doesn't make network calls)
+            self._credentials = service_account.Credentials.from_service_account_info(
                 service_account_info,
                 scopes=["https://www.googleapis.com/auth/drive.readonly"],
             )
-
-            # Build service
-            self.service = build("drive", "v3", credentials=credentials)
-            log.info("Google Drive service initialized successfully")
+            log.debug("Google Drive credentials prepared")
 
         except json.JSONDecodeError as e:
             log.error(f"Invalid service account JSON: {e}")
         except Exception as e:
+            log.error(f"Failed to prepare Google Drive credentials: {e}")
+
+    def _initialize_service(self) -> None:
+        """Initialize Google Drive service with service account credentials."""
+        try:
+            if not self._credentials:
+                log.warning("Google Drive credentials not available")
+                return
+
+            # Build service (this makes a network call to Google's discovery API)
+            self.service = build("drive", "v3", credentials=self._credentials)
+            self._service_initialized = True
+            log.info("Google Drive service initialized successfully")
+
+        except Exception as e:
             log.error(f"Failed to initialize Google Drive service: {e}")
+    
+    def _ensure_service(self) -> None:
+        """Ensure the service is initialized before use."""
+        if not self._service_initialized and self._credentials:
+            self._initialize_service()
 
     def is_configured(self) -> bool:
         """Check if Google Drive service is properly configured."""
-        return self.service is not None
+        return self._credentials is not None
 
     def refresh_configuration(self) -> None:
         """Refresh the service configuration. Call this when config is updated."""
-        self._initialize_service()
+        self.service = None
+        self._service_initialized = False
+        self._credentials = None
+        self._prepare_credentials()
 
     def get_service_account_email(self) -> Optional[str]:
         """Get the service account email address."""
@@ -139,6 +162,9 @@ class GoogleDriveService:
         Returns:
             List of file information dictionaries
         """
+        # Ensure service is initialized before use
+        self._ensure_service()
+        
         if not self.service:
             raise Exception("Google Drive service not configured")
 
@@ -204,6 +230,9 @@ class GoogleDriveService:
         self, folder_id: str, path: str = ""
     ) -> List[GoogleDriveFile]:
         """Get files directly in a specific folder."""
+        # Ensure service is initialized
+        self._ensure_service()
+        
         files = []
         page_token = None
 
@@ -270,8 +299,14 @@ class GoogleDriveService:
             # Filter out folders and only keep files
             for item in items:
                 if item.get("mimeType") != "application/vnd.google-apps.folder":
+                    file_id = item["id"]
+                    # Ensure file ID is clean (no extra parameters)
+                    if "?" in file_id or "&" in file_id:
+                        log.warning(f"File ID contains query parameters: {file_id}")
+                        file_id = file_id.split("?")[0].split("&")[0]
+                    
                     file_info: GoogleDriveFile = {
-                        "id": item["id"],
+                        "id": file_id,
                         "name": item["name"],
                         "mimeType": item["mimeType"],
                         "modifiedTime": item["modifiedTime"],
@@ -283,7 +318,7 @@ class GoogleDriveService:
                     if "parents" in item:
                         file_info["parents"] = item["parents"]
                     files.append(file_info)
-                    log.info(f"Google Drive: Added file '{item['name']}' to results")
+                    log.info(f"Google Drive: Added file '{item['name']}' (ID: {file_id}) to results")
 
             page_token = results.get("nextPageToken")
             if not page_token:
@@ -293,6 +328,9 @@ class GoogleDriveService:
 
     def _get_subfolders(self, folder_id: str) -> List[Dict[str, str]]:
         """Get subfolders in a specific folder."""
+        # Ensure service is initialized
+        self._ensure_service()
+        
         subfolders = []
         page_token = None
 
@@ -451,12 +489,39 @@ class GoogleDriveService:
         Returns:
             Tuple of (file_content_bytes, filename)
         """
+        # Ensure service is initialized
+        self._ensure_service()
+        
         if not self.service:
             raise Exception("Google Drive service not configured")
 
         try:
             mime_type = file_info.get("mimeType", "")
             file_name = file_info.get("name", "")
+            
+            # Log file details for debugging
+            log.info(f"Attempting to download file: '{file_name}' (ID: {file_id}, Type: {mime_type})")
+            
+            # First, verify we can access the file's metadata with full details
+            try:
+                assert self.service is not None
+                file_check = self.service.files().get(
+                    fileId=file_id,
+                    fields="id,name,mimeType,permissions,capabilities,driveId,teamDriveId,parents",
+                    supportsAllDrives=True
+                ).execute()
+                
+                log.info(f"File metadata check successful. Capabilities: {file_check.get('capabilities', {})}")
+                
+                # Check if we have export/download capability
+                can_download = file_check.get('capabilities', {}).get('canDownload', True)
+                if not can_download:
+                    log.warning(f"File '{file_name}' cannot be downloaded due to permissions")
+                    raise Exception("File cannot be downloaded due to permissions")
+                    
+            except HttpError as e:
+                log.error(f"Failed to access file metadata: {e}")
+                raise
 
             # Handle Google Workspace files (export)
             if mime_type.startswith("application/vnd.google-apps"):
@@ -519,5 +584,4 @@ class GoogleDriveService:
         return file_content, file_name
 
 
-# Global instance
-google_drive_service = GoogleDriveService()
+# Note: Provider should create instance as needed, not use singleton

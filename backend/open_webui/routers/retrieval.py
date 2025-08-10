@@ -81,7 +81,7 @@ from open_webui.utils.misc import (
     calculate_sha256_string,
 )
 from open_webui.utils.auth import get_admin_user, get_verified_user
-from open_webui.services.google_drive import google_drive_service
+from open_webui.utils.content_sources import refresh_provider_configuration
 
 from open_webui.config import (
     ENV,
@@ -918,9 +918,9 @@ async def update_rag_config(
         else request.app.state.config.ENABLE_ONEDRIVE_INTEGRATION
     )
 
-    # Refresh Google Drive service if service account JSON was updated
+    # Refresh Google Drive provider if service account JSON was updated
     if form_data.GOOGLE_DRIVE_SERVICE_ACCOUNT_JSON is not None:
-        google_drive_service.refresh_configuration()
+        refresh_provider_configuration('google_drive')
 
     if form_data.web is not None:
         # Web search settings

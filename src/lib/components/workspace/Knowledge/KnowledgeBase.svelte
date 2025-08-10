@@ -28,6 +28,7 @@
 
 	import AddContentMenu from './KnowledgeBase/AddContentMenu.svelte';
 	import AddTextContentModal from './KnowledgeBase/AddTextContentModal.svelte';
+	import ContentSourceStatus from './KnowledgeBase/ContentSourceStatus.svelte';
 
 	import Drawer from '$lib/components/common/Drawer.svelte';
 	import RichTextInput from '$lib/components/common/RichTextInput.svelte';
@@ -36,7 +37,8 @@
 	import SyncConfirmDialog from '../../common/ConfirmDialog.svelte';
 	import AccessControlModal from '../common/AccessControlModal.svelte';
 	import Search from '$lib/components/icons/Search.svelte';
-	import GoogleDriveSyncModal from './KnowledgeBase/GoogleDriveSyncModal.svelte';
+	import ContentSourceSyncModal from './KnowledgeBase/ContentSourceSyncModal.svelte';
+	import { getContentSourceProviders } from '$lib/apis/knowledge';
 
 	let largeScreen = true;
 
@@ -50,11 +52,6 @@
 		description: string;
 		data: {
 			file_ids: string[];
-			// Google Drive sync fields
-			google_drive_folder_id?: string;
-			google_drive_include_nested?: boolean;
-			google_drive_sync_interval_days?: number;
-			google_drive_last_sync?: number;
 		};
 		files: any[];
 	};
@@ -66,7 +63,10 @@
 	let showAddTextContentModal = false;
 	let showSyncConfirmModal = false;
 	let showAccessControlModal = false;
-	let showGoogleDriveSyncModal = false;
+	let showContentSourceSyncModal = false;
+	
+	let availableProviders = [];
+	let selectedContentProvider = null;
 
 	let inputFiles = null;
 
@@ -528,6 +528,16 @@
 	};
 
 	onMount(async () => {
+		// Load available content source providers
+		try {
+			const providers = await getContentSourceProviders(localStorage.token);
+			if (providers) {
+				availableProviders = providers.filter(p => p.configured);
+			}
+		} catch (error) {
+			console.error('Failed to load content source providers:', error);
+		}
+
 		// listen to resize 1024px
 		mediaQuery = window.matchMedia('(min-width: 1024px)');
 
@@ -641,15 +651,18 @@
 	}}
 />
 
-<GoogleDriveSyncModal
-	bind:show={showGoogleDriveSyncModal}
-	knowledgeId={id}
-	knowledgeData={knowledge}
-	on:sync={(e) => {
-		knowledge = e.detail;
-		toast.success($i18n.t('Google Drive folder synced successfully'));
-	}}
-/>
+{#if selectedContentProvider}
+	<ContentSourceSyncModal
+		bind:show={showContentSourceSyncModal}
+		knowledgeId={id}
+		provider={selectedContentProvider}
+		knowledgeData={knowledge}
+		on:sync={(e) => {
+			knowledge = e.detail;
+			toast.success($i18n.t(`${selectedContentProvider.display_name} synced successfully`));
+		}}
+	/>
+{/if}
 
 <input
 	id="files-input"
@@ -730,6 +743,12 @@
 							}}
 						/>
 					</div>
+
+					{#if knowledge}
+						<div class="px-1 mt-1">
+							<ContentSourceStatus knowledgeData={knowledge} />
+						</div>
+					{/if}
 				</div>
 			</div>
 		</div>
@@ -878,6 +897,7 @@
 
 								<div>
 									<AddContentMenu
+										{availableProviders}
 										on:upload={(e) => {
 											if (e.detail.type === 'directory') {
 												uploadDirectoryHandler();
@@ -888,9 +908,10 @@
 											}
 										}}
 										on:sync={(e) => {
-											if (e.detail.type === 'google-drive') {
-												showGoogleDriveSyncModal = true;
-											} else {
+											if (e.detail.type === 'content-source' && e.detail.provider) {
+												selectedContentProvider = e.detail.provider;
+												showContentSourceSyncModal = true;
+											} else if (e.detail.type === 'directory') {
 												showSyncConfirmModal = true;
 											}
 										}}

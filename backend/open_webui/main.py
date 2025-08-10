@@ -80,6 +80,7 @@ from open_webui.routers import (
     memories,
     models,
     knowledge,
+    content_sources,
     prompts,
     evaluations,
     tools,
@@ -462,7 +463,7 @@ from open_webui.tasks import (
     list_tasks,
 )  # Import from tasks.py
 
-from open_webui.services.google_drive_scheduler import google_drive_scheduler
+from open_webui.content_sources.scheduler import scheduler as content_source_scheduler
 
 from open_webui.utils.redis import get_sentinels_from_env
 
@@ -564,30 +565,26 @@ async def lifespan(app: FastAPI):
             None,
         )
 
-    # Start Google Drive sync scheduler if enabled
-    if app.state.config.ENABLE_GOOGLE_DRIVE_FOLDER_SYNC:
-        try:
-            await google_drive_scheduler.start()
-            log.info("Google Drive sync scheduler started successfully")
-        except Exception as e:
-            log.error(f"Failed to start Google Drive sync scheduler: {e}")
-            # Non-critical failure - continue application startup
+    # Start content source sync scheduler if any providers are configured
+    # The scheduler will automatically check which providers need syncing
+    try:
+        await content_source_scheduler.start()
+        log.info("Content source sync scheduler started successfully")
+    except Exception as e:
+        log.error(f"Failed to start content source sync scheduler: {e}")
+        # Non-critical failure - continue application startup
 
     yield
 
     if hasattr(app.state, "redis_task_command_listener"):
         app.state.redis_task_command_listener.cancel()
 
-    # Stop Google Drive sync scheduler
-    if (
-        hasattr(app.state, "config")
-        and app.state.config.ENABLE_GOOGLE_DRIVE_FOLDER_SYNC
-    ):
-        try:
-            await google_drive_scheduler.stop()
-            log.info("Google Drive sync scheduler stopped")
-        except Exception as e:
-            log.error(f"Error stopping Google Drive sync scheduler: {e}")
+    # Stop content source sync scheduler
+    try:
+        await content_source_scheduler.stop()
+        log.info("Content source sync scheduler stopped")
+    except Exception as e:
+        log.error(f"Error stopping content source sync scheduler: {e}")
 
 
 app = FastAPI(
@@ -1227,6 +1224,7 @@ app.include_router(notes.router, prefix="/api/v1/notes", tags=["notes"])
 
 app.include_router(models.router, prefix="/api/v1/models", tags=["models"])
 app.include_router(knowledge.router, prefix="/api/v1/knowledge", tags=["knowledge"])
+app.include_router(content_sources.router, prefix="/api/v1/content-sources", tags=["content_sources"])
 app.include_router(prompts.router, prefix="/api/v1/prompts", tags=["prompts"])
 app.include_router(tools.router, prefix="/api/v1/tools", tags=["tools"])
 

@@ -1,5 +1,25 @@
 import { WEBUI_API_BASE_URL } from '$lib/constants';
-import type { GoogleDriveServiceAccount, GoogleDriveSyncResponse } from '$lib/types/google-drive';
+import type { ContentSourceProvider } from '$lib/types';
+
+/**
+ * Knowledge Base API
+ * 
+ * This file contains generic content source endpoints for managing knowledge base content.
+ * 
+ * Generic Endpoints (Provider-agnostic):
+ * - getContentSourceInfo(): Get information about any content source provider
+ * - syncContentSource(): Sync content from any provider to a knowledge base
+ * - getContentSourceProviders(): Get list of available content source providers
+ * 
+ * All endpoints support multiple content source providers (Google Drive, OneDrive, etc.)
+ */
+
+// Import generic content source types from centralized types
+import type { 
+	ContentSourceServiceInfo as ContentSourceInfo,
+	ContentSourceSyncConfig,
+	ContentSourceSyncResults
+} from '$lib/types';
 
 export const createNewKnowledge = async (
 	token: string,
@@ -347,12 +367,48 @@ export const deleteKnowledgeById = async (token: string, id: string) => {
 	return res;
 };
 
-export const getGoogleDriveServiceAccountEmail = async (
+// Get list of available content source providers
+export const getContentSourceProviders = async (
 	token: string
-): Promise<GoogleDriveServiceAccount | null> => {
+): Promise<ContentSourceProvider[] | null> => {
 	let error = null;
 
-	const res = await fetch(`${WEBUI_API_BASE_URL}/knowledge/google-drive/service-account-email`, {
+	const res = await fetch(`${WEBUI_API_BASE_URL}/content-sources/`, {
+		method: 'GET',
+		headers: {
+			Accept: 'application/json',
+			'Content-Type': 'application/json',
+			authorization: `Bearer ${token}`
+		}
+	})
+		.then(async (res) => {
+			if (!res.ok) throw await res.json();
+			return res.json();
+		})
+		.then((json) => {
+			return json.providers || [];
+		})
+		.catch((err) => {
+			error = err.detail;
+			console.error(err);
+			return null;
+		});
+
+	if (error) {
+		throw error;
+	}
+
+	return res;
+};
+
+// Generic content source functions
+export const getContentSourceInfo = async (
+	token: string,
+	provider: string
+): Promise<ContentSourceInfo | null> => {
+	let error = null;
+
+	const res = await fetch(`${WEBUI_API_BASE_URL}/content-sources/${provider}/info`, {
 		method: 'GET',
 		headers: {
 			Accept: 'application/json',
@@ -380,27 +436,23 @@ export const getGoogleDriveServiceAccountEmail = async (
 	return res;
 };
 
-export const syncGoogleDriveFolder = async (
+
+// Generic content source sync function
+export const syncContentSource = async (
 	token: string,
 	knowledgeId: string,
-	folderId: string,
-	includeNested: boolean = true,
-	syncIntervalDays: number = 1
-): Promise<GoogleDriveSyncResponse | null> => {
+	config: ContentSourceSyncConfig
+): Promise<ContentSourceSyncResults | null> => {
 	let error = null;
 
-	const res = await fetch(`${WEBUI_API_BASE_URL}/knowledge/${knowledgeId}/google-drive/sync`, {
+	const res = await fetch(`${WEBUI_API_BASE_URL}/knowledge/${knowledgeId}/sync`, {
 		method: 'POST',
 		headers: {
 			Accept: 'application/json',
 			'Content-Type': 'application/json',
 			authorization: `Bearer ${token}`
 		},
-		body: JSON.stringify({
-			folder_id: folderId,
-			include_nested: includeNested,
-			sync_interval_days: syncIntervalDays
-		})
+		body: JSON.stringify(config)
 	})
 		.then(async (res) => {
 			if (!res.ok) throw await res.json();
