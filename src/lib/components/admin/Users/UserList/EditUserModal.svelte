@@ -27,8 +27,7 @@
 		password: ''
 	};
 
-	let _user_groups: any[] = [];
-	let loadingGroups = false;
+	let userGroups: any[] | null = null;
 
 	const submitHandler = async () => {
 		const res = await updateUserById(localStorage.token, selectedUser.id, _user).catch((error) => {
@@ -43,14 +42,12 @@
 
 	const loadUserGroups = async () => {
 		if (!selectedUser?.id) return;
-		loadingGroups = true;
-		try {
-			_user_groups = await getUserGroupsById(localStorage.token, selectedUser.id);
-		} catch (error) {
+		userGroups = null;
+
+		userGroups = await getUserGroupsById(localStorage.token, selectedUser.id).catch((error) => {
 			toast.error(`${error}`);
-		} finally {
-			loadingGroups = false;
-		}
+			return null;
+		});
 	};
 
 	onMount(() => {
@@ -122,6 +119,24 @@
 								</div>
 							</div>
 
+							{#if userGroups}
+								<div class="flex flex-col w-full text-sm">
+									<div class="mb-1 text-xs text-gray-500">{$i18n.t('User Groups')}</div>
+
+									{#if userGroups.length}
+										<div class="flex flex-wrap gap-1 my-0.5 -mx-1">
+											{#each userGroups as userGroup}
+												<span class="px-2 py-0.5 rounded-full bg-gray-100 dark:bg-gray-850 text-xs">
+													{userGroup.name}
+												</span>
+											{/each}
+										</div>
+									{:else}
+										<span>-</span>
+									{/if}
+								</div>
+							{/if}
+
 							<div class="flex flex-col w-full">
 								<div class=" mb-1 text-xs text-gray-500">{$i18n.t('Email')}</div>
 
@@ -166,20 +181,6 @@
 									/>
 								</div>
 							</div>
-						</div>
-
-						<div class="flex flex-col w-full">
-							<div class="mb-1 text-xs text-gray-500">{$i18n.t('Groups')}</div>
-
-							{#if loadingGroups}
-								<div class="text-sm font-medium text-white">{$i18n.t('Loading groups...')}</div>
-							{:else if _user_groups.length === 0}
-								<div class="text-sm font-medium text-white">{$i18n.t('No groups assigned')}</div>
-							{:else}
-								<div class="text-sm font-medium text-white">
-									{_user_groups.map(g => g.name).join(', ')}
-								</div>
-							{/if}
 						</div>
 
 						<div class="flex justify-end pt-3 text-sm font-medium">
