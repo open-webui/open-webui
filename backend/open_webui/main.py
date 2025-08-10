@@ -531,6 +531,11 @@ async def lifespan(app: FastAPI):
     # when the first user lands on the / route.
     log.info("Installing external dependencies of functions and tools...")
     install_tool_and_function_dependencies()
+    
+    # Migrate legacy webhooks to new system
+    log.info("Migrating legacy webhooks...")
+    from open_webui.utils.webhook import migrate_legacy_webhooks
+    migrate_legacy_webhooks()
 
     app.state.redis = get_redis_connection(
         redis_url=REDIS_URL,
@@ -1773,6 +1778,172 @@ async def update_webhook_url(form_data: UrlForm, user=Depends(get_admin_user)):
     app.state.config.WEBHOOK_URL = form_data.url
     app.state.WEBHOOK_URL = app.state.config.WEBHOOK_URL
     return {"url": app.state.config.WEBHOOK_URL}
+
+
+# New webhook management endpoints
+
+@app.get("/api/webhooks")
+async def get_webhook_configs(user=Depends(get_admin_user)):
+    from open_webui.models.webhooks import WebhookConfigs
+    from open_webui.internal.db import get_db
+    
+    db = next(get_db())
+    webhook_configs = WebhookConfigs(db)
+    return webhook_configs.get_webhook_configs()
+
+
+@app.get("/api/webhooks/user/{user_id}")
+async def get_user_webhook_configs(user_id: str, user=Depends(get_verified_user)):
+    # Users can only access their own webhooks, admins can access any user's webhooks
+    if user.role != "admin" and user.id != user_id:
+        raise HTTPException(status_code=403, detail="Access denied")
+    
+    from open_webui.models.webhooks import WebhookConfigs
+    from open_webui.internal.db import get_db
+    
+    db = next(get_db())
+    webhook_configs = WebhookConfigs(db)
+    return webhook_configs.get_webhook_configs_by_user_id(user_id)
+
+
+@app.get("/api/webhooks/events")
+async def get_available_webhook_events(user=Depends(get_verified_user)):
+    from open_webui.utils.webhook_events import get_available_events, get_event_categories
+    
+    return {
+        "events": get_available_events(),
+        "categories": get_event_categories()
+    }
+
+
+@app.post("/api/webhooks")
+async def create_webhook_config(form_data: dict, user=Depends(get_verified_user)):
+    from open_webui.models.webhooks import WebhookConfigs, WebhookConfigForm
+    from open_webui.utils.webhook_events import validate_events
+    from open_webui.internal.db import get_db
+    import uuid
+    
+    # Validate form data
+    try:
+        webhook_form = WebhookConfigForm(**form_data)
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=f"Invalid form data: {e}")
+    
+    # Validate events
+    validated_events = validate_events(webhook_form.events)
+    if not validated_events:
+        raise HTTPException(status_code=400, detail="No valid events specified")
+    
+    # Determine user_id based on permissions
+    user_id = None
+    if user.role != "admin":
+        user_id = user.id  # Non-admin users can only create user-specific webhooks
+    elif "user_id" in form_data:
+        user_id = form_data["user_id"]  # Admins can specify user_id or leave None for global
+    
+    db = next(get_db())
+    webhook_configs = WebhookConfigs(db)
+    
+    webhook_id = str(uuid.uuid4())
+    result = webhook_configs.insert_new_webhook_config(
+        id=webhook_id,
+        name=webhook_form.name,
+        url=webhook_form.url,
+        events=validated_events,
+        user_id=user_id,
+        enabled=webhook_form.enabled
+    )
+    
+    if result:
+        return result
+    else:
+        raise HTTPException(status_code=500, detail="Failed to create webhook configuration")
+
+
+@app.get("/api/webhooks/{webhook_id}")
+async def get_webhook_config(webhook_id: str, user=Depends(get_verified_user)):
+    from open_webui.models.webhooks import WebhookConfigs
+    from open_webui.internal.db import get_db
+    
+    db = next(get_db())
+    webhook_configs = WebhookConfigs(db)
+    webhook_config = webhook_configs.get_webhook_config_by_id(webhook_id)
+    
+    if not webhook_config:
+        raise HTTPException(status_code=404, detail="Webhook configuration not found")
+    
+    # Check permissions
+    if user.role != "admin" and webhook_config.user_id != user.id:
+        raise HTTPException(status_code=403, detail="Access denied")
+    
+    return webhook_config
+
+
+@app.put("/api/webhooks/{webhook_id}")
+async def update_webhook_config(webhook_id: str, form_data: dict, user=Depends(get_verified_user)):
+    from open_webui.models.webhooks import WebhookConfigs, WebhookConfigUpdateForm
+    from open_webui.utils.webhook_events import validate_events
+    from open_webui.internal.db import get_db
+    
+    db = next(get_db())
+    webhook_configs = WebhookConfigs(db)
+    
+    # Check if webhook exists and user has permission
+    existing_config = webhook_configs.get_webhook_config_by_id(webhook_id)
+    if not existing_config:
+        raise HTTPException(status_code=404, detail="Webhook configuration not found")
+    
+    if user.role != "admin" and existing_config.user_id != user.id:
+        raise HTTPException(status_code=403, detail="Access denied")
+    
+    # Validate form data
+    try:
+        webhook_form = WebhookConfigUpdateForm(**form_data)
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=f"Invalid form data: {e}")
+    
+    # Prepare update data
+    update_data = {}
+    if webhook_form.name is not None:
+        update_data["name"] = webhook_form.name
+    if webhook_form.url is not None:
+        update_data["url"] = webhook_form.url
+    if webhook_form.enabled is not None:
+        update_data["enabled"] = webhook_form.enabled
+    if webhook_form.events is not None:
+        validated_events = validate_events(webhook_form.events)
+        if not validated_events:
+            raise HTTPException(status_code=400, detail="No valid events specified")
+        update_data["events"] = validated_events
+    
+    result = webhook_configs.update_webhook_config_by_id(webhook_id, update_data)
+    if result:
+        return result
+    else:
+        raise HTTPException(status_code=500, detail="Failed to update webhook configuration")
+
+
+@app.delete("/api/webhooks/{webhook_id}")
+async def delete_webhook_config(webhook_id: str, user=Depends(get_verified_user)):
+    from open_webui.models.webhooks import WebhookConfigs
+    from open_webui.internal.db import get_db
+    
+    db = next(get_db())
+    webhook_configs = WebhookConfigs(db)
+    
+    # Check if webhook exists and user has permission
+    existing_config = webhook_configs.get_webhook_config_by_id(webhook_id)
+    if not existing_config:
+        raise HTTPException(status_code=404, detail="Webhook configuration not found")
+    
+    if user.role != "admin" and existing_config.user_id != user.id:
+        raise HTTPException(status_code=403, detail="Access denied")
+    
+    success = webhook_configs.delete_webhook_config_by_id(webhook_id)
+    if success:
+        return {"message": "Webhook configuration deleted successfully"}
+    else:
+        raise HTTPException(status_code=500, detail="Failed to delete webhook configuration")
 
 
 @app.get("/api/version")

@@ -624,6 +624,26 @@ async def signup(request: Request, response: Response, form_data: SignupForm):
                 secure=WEBUI_AUTH_COOKIE_SECURE,
             )
 
+            # Trigger new webhook system
+            from open_webui.utils.webhook import trigger_webhooks
+            from open_webui.utils.webhook_events import WebhookEvent
+            
+            trigger_webhooks(
+                event_type=WebhookEvent.USER_SIGNUP.value,
+                message=WEBHOOK_MESSAGES.USER_SIGNUP(user.name),
+                event_data={
+                    "action": "signup",
+                    "user_id": user.id,
+                    "name": user.name,
+                    "email": user.email,
+                    "role": user.role,
+                    "created_at": user.created_at,
+                    "user": user.model_dump_json(exclude_none=True),
+                },
+                user_id=user.id
+            )
+            
+            # Keep legacy webhook for backward compatibility
             if request.app.state.config.WEBHOOK_URL:
                 await post_webhook(
                     request.app.state.WEBUI_NAME,

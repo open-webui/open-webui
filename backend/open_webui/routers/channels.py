@@ -208,6 +208,28 @@ async def send_notification(name, webui_url, channel, message, active_user_ids):
                     "webhook_url", None
                 )
 
+                # Trigger new webhook system for user-specific webhooks
+                from open_webui.utils.webhook import trigger_webhooks
+                from open_webui.utils.webhook_events import WebhookEvent
+                
+                trigger_webhooks(
+                    event_type=WebhookEvent.CHANNEL_MESSAGE_CREATED.value,
+                    message=f"#{channel.name} - {webui_url}/channels/{channel.id}\n\n{message.content}",
+                    event_data={
+                        "action": "channel_message",
+                        "channel_id": channel.id,
+                        "channel_name": channel.name,
+                        "message_id": message.id,
+                        "content": message.content,
+                        "content_preview": message.content[:200] + ("..." if len(message.content) > 200 else ""),
+                        "user_id": message.user_id,
+                        "url": f"{webui_url}/channels/{channel.id}",
+                        "created_at": message.created_at,
+                    },
+                    user_id=user.id
+                )
+                
+                # Keep legacy webhook for backward compatibility
                 if webhook_url:
                     await post_webhook(
                         name,
