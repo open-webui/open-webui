@@ -48,29 +48,6 @@ router = APIRouter()
 
 
 ############################
-# Helper Functions
-############################
-
-def check_duplicate_in_vector_db(collection_name: str, file_hash: str) -> bool:
-    """Check if a file with the given hash already exists in the vector DB."""
-    if not file_hash or not collection_name:
-        return False
-    
-    try:
-        result = VECTOR_DB_CLIENT.query(
-            collection_name=collection_name,
-            filter={"hash": file_hash},
-        )
-        
-        if result is not None and result.ids and result.ids[0]:
-            return True
-    except Exception as e:
-        log.debug(f"Error checking duplicate in vector DB: {e}")
-    
-    return False
-
-
-############################
 # Response Models
 ############################
 
