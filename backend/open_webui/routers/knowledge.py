@@ -25,7 +25,6 @@ from open_webui.storage.provider import Storage
 from open_webui.constants import ERROR_MESSAGES
 from open_webui.utils.auth import get_verified_user
 from open_webui.utils.access_control import has_access, has_permission
-from open_webui.utils.misc import calculate_sha256_string
 from open_webui.content_sources import content_source_registry, content_source_factory
 
 
@@ -37,29 +36,6 @@ log = logging.getLogger(__name__)
 log.setLevel(SRC_LOG_LEVELS["MODELS"])
 
 router = APIRouter()
-
-
-############################
-# Helper Functions
-############################
-
-def check_duplicate_in_vector_db(collection_name: str, file_hash: str) -> bool:
-    """Check if a file with the given hash already exists in the vector DB."""
-    if not file_hash or not collection_name:
-        return False
-    
-    try:
-        result = VECTOR_DB_CLIENT.query(
-            collection_name=collection_name,
-            filter={"hash": file_hash},
-        )
-        
-        if result is not None and result.ids and result.ids[0]:
-            return True
-    except Exception as e:
-        log.debug(f"Error checking duplicate in vector DB: {e}")
-    
-    return False
 
 
 ############################
