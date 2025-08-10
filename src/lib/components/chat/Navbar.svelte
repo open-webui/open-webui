@@ -71,12 +71,9 @@
 					<div
 						class="{$showSidebar
 							? 'md:hidden'
-							: ''} mr-1.5 mt-1 self-start flex flex-none items-center text-gray-600 dark:text-gray-400"
+							: ''} -translate-x-0.5 mr-1 mt-1 self-start flex flex-none items-center text-gray-600 dark:text-gray-400"
 					>
-						<Tooltip
-							content={$showSidebar ? $i18n.t('Close Sidebar') : $i18n.t('Open Sidebar')}
-							interactive={true}
-						>
+						<Tooltip content={$showSidebar ? $i18n.t('Close Sidebar') : $i18n.t('Open Sidebar')}>
 							<button
 								class=" cursor-pointer flex rounded-lg hover:bg-gray-100 dark:hover:bg-gray-850 transition"
 								on:click={() => {
