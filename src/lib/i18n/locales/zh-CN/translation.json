@@ -1450,6 +1450,7 @@
 	"Use proxy designated by http_proxy and https_proxy environment variables to fetch page contents.": "使用由 http_proxy 和 https_proxy 环境变量指定的代理获取页面内容",
 	"user": "用户",
 	"User": "用户",
+	"User Groups": "",
 	"User location successfully retrieved.": "成功检索到用户位置",
 	"User menu": "用户菜单",
 	"User Webhooks": "用户 Webhook",

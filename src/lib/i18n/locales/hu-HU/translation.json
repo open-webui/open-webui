@@ -1450,6 +1450,7 @@
 	"Use proxy designated by http_proxy and https_proxy environment variables to fetch page contents.": "",
 	"user": "felhasználó",
 	"User": "Felhasználó",
+	"User Groups": "",
 	"User location successfully retrieved.": "Felhasználó helye sikeresen lekérve.",
 	"User menu": "",
 	"User Webhooks": "Felhasználói webhookok",

@@ -1450,6 +1450,7 @@
 	"Use proxy designated by http_proxy and https_proxy environment variables to fetch page contents.": "Käytä http_proxy- ja https_proxy-ympäristömuuttujien määrittämää välityspalvelinta sivun sisällön hakemiseen.",
 	"user": "käyttäjä",
 	"User": "Käyttäjä",
+	"User Groups": "",
 	"User location successfully retrieved.": "Käyttäjän sijainti haettu onnistuneesti.",
 	"User menu": "",
 	"User Webhooks": "Käyttäjän Webhook:it",

@@ -1450,6 +1450,7 @@
 	"Use proxy designated by http_proxy and https_proxy environment variables to fetch page contents.": "http_proxy ۋە https_proxy مۇھىت ئۆزگەرگۈچ بويىچە بەت مەزمۇنى ئېلىش.",
 	"user": "ئىشلەتكۈچى",
 	"User": "ئىشلەتكۈچى",
+	"User Groups": "",
 	"User location successfully retrieved.": "ئىشلەتكۈچى ئورنى مۇۋەپپەقىيەتلىك ئېلىندى.",
 	"User menu": "",
 	"User Webhooks": "ئىشلەتكۈچى Webhookلىرى",
