@@ -1344,14 +1344,14 @@ async def process_chat_response(
                         **response_data,
                     }
 
+                if isinstance(response, dict):
+                    response = response_data
                 if isinstance(response, JSONResponse):
                     response = JSONResponse(
                         content=response_data,
                         headers=response.headers,
                         status_code=response.status_code,
                     )
-                else:
-                    response = response_data
 
             return response
         else:
