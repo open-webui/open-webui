@@ -386,8 +386,10 @@ async def get_function_valves_spec_by_id(
                 result = function_module.get_valve_spec()
                 return result
             except Exception as e:
-                log.exception(f"Error calling module-level get_valve_spec for function {id}: {e}")
-        
+                log.exception(
+                    f"Error calling module-level get_valve_spec for function {id}: {e}"
+                )
+
         # Check for custom valve spec method on function instance
         if hasattr(function_module, function_type):
             function_class = getattr(function_module, function_type)
@@ -398,8 +400,10 @@ async def get_function_valves_spec_by_id(
                     result = function_instance.get_valve_spec()
                     return result
                 except Exception as e:
-                    log.exception(f"Error calling class method get_valve_spec for function {id}: {e}")
-        
+                    log.exception(
+                        f"Error calling class method get_valve_spec for function {id}: {e}"
+                    )
+
         # Fall back to Pydantic schema
         if hasattr(function_module, "Valves"):
             Valves = function_module.Valves
@@ -434,14 +438,16 @@ async def update_function_valves_by_id(
                 form_data = {k: v for k, v in form_data.items() if v is not None}
                 valves = Valves(**form_data)
                 Functions.update_function_valves_by_id(id, valves.model_dump())
-                
+
                 # Call on_valves_updated callback if it exists
                 if hasattr(function_module, "on_valves_updated"):
                     try:
                         function_module.on_valves_updated(valves.model_dump())
                     except Exception as callback_error:
-                        log.exception(f"Error calling on_valves_updated for function {id}: {callback_error}")
-                
+                        log.exception(
+                            f"Error calling on_valves_updated for function {id}: {callback_error}"
+                        )
+
                 return valves.model_dump()
             except Exception as e:
                 log.exception(f"Error updating function values by id {id}: {e}")
@@ -501,8 +507,10 @@ async def get_function_user_valves_spec_by_id(
             try:
                 return function_module.get_user_valve_spec()
             except Exception as e:
-                log.exception(f"Error calling get_user_valve_spec for function {id}: {e}")
-        
+                log.exception(
+                    f"Error calling get_user_valve_spec for function {id}: {e}"
+                )
+
         # Fall back to Pydantic schema
         if hasattr(function_module, "UserValves"):
             UserValves = function_module.UserValves
@@ -535,14 +543,18 @@ async def update_function_user_valves_by_id(
                 Functions.update_user_valves_by_id_and_user_id(
                     id, user.id, user_valves.model_dump()
                 )
-                
+
                 # Call on_valves_updated callback if it exists
                 if hasattr(function_module, "on_valves_updated"):
                     try:
-                        function_module.on_valves_updated(user_valves.model_dump(), user_id=user.id)
+                        function_module.on_valves_updated(
+                            user_valves.model_dump(), user_id=user.id
+                        )
                     except Exception as callback_error:
-                        log.exception(f"Error calling on_valves_updated for function {id} user {user.id}: {callback_error}")
-                
+                        log.exception(
+                            f"Error calling on_valves_updated for function {id} user {user.id}: {callback_error}"
+                        )
+
                 return user_valves.model_dump()
             except Exception as e:
                 log.exception(f"Error updating function user valves by id {id}: {e}")

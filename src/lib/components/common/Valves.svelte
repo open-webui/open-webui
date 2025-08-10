@@ -12,11 +12,14 @@
 	export let pinnedProperties = [];
 
 	let sortedProperties = [];
-	
+	let pinnedSet = new Set(pinnedProperties);
+
+	$: pinnedSet = new Set(pinnedProperties);
+
 	$: if (valvesSpec && Object.keys(valvesSpec?.properties ?? {}).length) {
 		const props = Object.keys(valvesSpec.properties);
-		const pinned = props.filter(prop => pinnedProperties.includes(prop));
-		const unpinned = props.filter(prop => !pinnedProperties.includes(prop));
+		const pinned = props.filter((prop) => pinnedSet.has(prop));
+		const unpinned = props.filter((prop) => !pinnedSet.has(prop));
 		sortedProperties = [...pinned, ...unpinned];
 	}
 </script>
@@ -33,22 +36,22 @@
 							<span class=" text-gray-500">*required</span>
 						{/if}
 					</span>
-					
+
 					<!-- Pin/Unpin button -->
 					<button
 						class="text-xs opacity-50 hover:opacity-100 transition-opacity"
 						type="button"
-						title={pinnedProperties.includes(property) ? 'Unpin valve' : 'Pin valve'}
+						title={pinnedSet.has(property) ? 'Unpin valve' : 'Pin valve'}
 						on:click={() => {
-							if (pinnedProperties.includes(property)) {
-								pinnedProperties = pinnedProperties.filter(p => p !== property);
+							if (pinnedSet.has(property)) {
+								pinnedProperties = pinnedProperties.filter((p) => p !== property);
 							} else {
 								pinnedProperties = [...pinnedProperties, property];
 							}
-							dispatch('pin', { property, pinned: pinnedProperties.includes(property) });
+							dispatch('pin', { property, pinned: pinnedSet.has(property) });
 						}}
 					>
-						{#if pinnedProperties.includes(property)}
+						{#if pinnedSet.has(property)}
 							📌
 						{:else}
 							📍
@@ -140,7 +143,9 @@
 								<div class="flex flex-col space-y-2">
 									<div class="flex justify-between text-xs text-gray-500">
 										<span>Min: {valvesSpec.properties[property]?.minimum ?? 0}</span>
-										<span class="font-medium text-gray-700 dark:text-gray-300">Value: {valves[property]}</span>
+										<span class="font-medium text-gray-700 dark:text-gray-300"
+											>Value: {valves[property]}</span
+										>
 										<span>Max: {valvesSpec.properties[property]?.maximum ?? 100}</span>
 									</div>
 									<input
@@ -239,13 +244,21 @@
 								</div>
 							{:else if valvesSpec.properties[property]?.input?.type === 'static' || valvesSpec.properties[property]?.input?.type === 'static_text'}
 								<!-- Static text - display only, no input -->
-								<div class="bg-gray-50 dark:bg-gray-800 rounded-lg py-2 px-4 text-sm text-gray-700 dark:text-gray-300">
-									{valvesSpec.properties[property]?.input?.value || valvesSpec.properties[property]?.default || valvesSpec.properties[property].title}
+								<div
+									class="bg-gray-50 dark:bg-gray-800 rounded-lg py-2 px-4 text-sm text-gray-700 dark:text-gray-300"
+								>
+									{valvesSpec.properties[property]?.input?.value ||
+										valvesSpec.properties[property]?.default ||
+										valvesSpec.properties[property].title}
 								</div>
 							{:else if valvesSpec.properties[property]?.input?.type === 'static_multiline'}
 								<!-- Static multiline text - display only, no input -->
-								<div class="bg-gray-50 dark:bg-gray-800 rounded-lg py-3 px-4 text-sm text-gray-700 dark:text-gray-300 whitespace-pre-wrap min-h-20">
-									{valvesSpec.properties[property]?.input?.value || valvesSpec.properties[property]?.default || valvesSpec.properties[property].title}
+								<div
+									class="bg-gray-50 dark:bg-gray-800 rounded-lg py-3 px-4 text-sm text-gray-700 dark:text-gray-300 whitespace-pre-wrap min-h-20"
+								>
+									{valvesSpec.properties[property]?.input?.value ||
+										valvesSpec.properties[property]?.default ||
+										valvesSpec.properties[property].title}
 								</div>
 							{:else if valvesSpec.properties[property]?.input?.type === 'textbox' || valvesSpec.properties[property]?.input?.type === 'multiline'}
 								<!-- Textbox/multiline textarea in INPUT CONFIG section -->
@@ -261,31 +274,29 @@
 									}}
 								/>
 							{/if}
+						{:else if valvesSpec.properties[property]?.input?.type === 'textbox' || valvesSpec.properties[property]?.input?.type === 'multiline'}
+							<textarea
+								class="w-full rounded-lg py-2 px-4 text-sm dark:text-gray-300 dark:bg-gray-850 outline-hidden border border-gray-100 dark:border-gray-850 min-h-20"
+								placeholder={valvesSpec.properties[property].title}
+								bind:value={valves[property]}
+								rows={valvesSpec.properties[property]?.input?.rows ?? 4}
+								autocomplete="off"
+								required
+								on:change={() => {
+									dispatch('change');
+								}}
+							/>
 						{:else}
-							{#if valvesSpec.properties[property]?.input?.type === 'textbox' || valvesSpec.properties[property]?.input?.type === 'multiline'}
-								<textarea
-									class="w-full rounded-lg py-2 px-4 text-sm dark:text-gray-300 dark:bg-gray-850 outline-hidden border border-gray-100 dark:border-gray-850 min-h-20"
-									placeholder={valvesSpec.properties[property].title}
-									bind:value={valves[property]}
-									rows={valvesSpec.properties[property]?.input?.rows ?? 4}
-									autocomplete="off"
-									required
-									on:change={() => {
-										dispatch('change');
-									}}
-								/>
-							{:else}
-								<textarea
-									class="w-full rounded-lg py-2 px-4 text-sm dark:text-gray-300 dark:bg-gray-850 outline-hidden border border-gray-100 dark:border-gray-850"
-									placeholder={valvesSpec.properties[property].title}
-									bind:value={valves[property]}
-									autocomplete="off"
-									required
-									on:change={() => {
-										dispatch('change');
-									}}
-								/>
-							{/if}
+							<textarea
+								class="w-full rounded-lg py-2 px-4 text-sm dark:text-gray-300 dark:bg-gray-850 outline-hidden border border-gray-100 dark:border-gray-850"
+								placeholder={valvesSpec.properties[property].title}
+								bind:value={valves[property]}
+								autocomplete="off"
+								required
+								on:change={() => {
+									dispatch('change');
+								}}
+							/>
 						{/if}
 					</div>
 				</div>

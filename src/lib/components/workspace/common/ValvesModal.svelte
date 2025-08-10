@@ -32,7 +32,7 @@
 	let pinnedProperties = [];
 
 	const getPinningKey = () => `valve_pins_${type}_${id}`;
-	
+
 	const loadPinnedProperties = () => {
 		try {
 			const saved = localStorage.getItem(getPinningKey());
@@ -43,7 +43,7 @@
 			console.warn('Failed to load pinned properties:', error);
 		}
 	};
-	
+
 	const savePinnedProperties = () => {
 		try {
 			localStorage.setItem(getPinningKey(), JSON.stringify(pinnedProperties));
@@ -62,7 +62,10 @@
 				for (const property in valvesSpec.properties) {
 					if (valvesSpec.properties[property]?.type === 'array') {
 						if (typeof valves[property] === 'string') {
-							valves[property] = (valves[property] ?? '').split(',').map((v) => v.trim()).filter(v => v);
+							valves[property] = (valves[property] ?? '')
+								.split(',')
+								.map((v) => v.trim())
+								.filter((v) => v);
 						}
 						// If it's already an array (from multi-select), leave it as is
 					}
@@ -162,9 +165,9 @@
 				>
 					<div class="px-1">
 						{#if !loading}
-							<Valves 
-								{valvesSpec} 
-								bind:valves 
+							<Valves
+								{valvesSpec}
+								bind:valves
 								bind:pinnedProperties
 								on:pin={savePinnedProperties}
 							/>
@@ -182,7 +185,7 @@
 							disabled={saving}
 						>
 							<span>{$i18n.t('Save')}</span>
-							
+
 							<div class="loader-container {saving ? 'show' : 'hide'}">
 								<Spinner className="size-4" />
 							</div>

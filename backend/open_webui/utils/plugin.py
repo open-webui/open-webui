@@ -108,12 +108,14 @@ def load_tool_module_by_id(tool_id, content=None):
         module.__dict__["__file__"] = temp_file.name
 
         # Inject valve helper functions into the module namespace
-        module.__dict__["update_valves"] = lambda valve_updates: update_tool_valves(tool_id, valve_updates)
+        module.__dict__["update_valves"] = lambda valve_updates: update_tool_valves(
+            tool_id, valve_updates
+        )
         module.__dict__["get_valves"] = lambda: get_tool_valves(tool_id)
-        
+
         # Inject logging functionality
         module.__dict__["log"] = create_tool_logger(tool_id)
-        
+
         # Executing the modified content in the created module's namespace
         exec(content, module.__dict__)
         frontmatter = extract_frontmatter(content)
@@ -159,12 +161,14 @@ def load_function_module_by_id(function_id: str, content: str | None = None):
         module.__dict__["__file__"] = temp_file.name
 
         # Inject valve helper functions into the module namespace
-        module.__dict__["update_valves"] = lambda valve_updates: update_function_valves(function_id, valve_updates)
+        module.__dict__["update_valves"] = lambda valve_updates: update_function_valves(
+            function_id, valve_updates
+        )
         module.__dict__["get_valves"] = lambda: get_function_valves(function_id)
-        
+
         # Inject logging functionality
         module.__dict__["log"] = create_function_logger(function_id)
-        
+
         # Execute the modified content in the created module's namespace
         exec(content, module.__dict__)
         frontmatter = extract_frontmatter(content)
