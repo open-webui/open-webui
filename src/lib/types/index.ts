@@ -14,5 +14,9 @@ export enum TTS_RESPONSE_SPLIT {
 	NONE = 'none'
 }
 
-// Re-export Google Drive types for convenience
+// Re-export content source types (generic provider-agnostic types)
+export * from './content-sources';
+
+// Re-export Google Drive specific types
 export * from './google-drive';
+

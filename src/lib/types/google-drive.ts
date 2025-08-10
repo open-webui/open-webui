@@ -1,5 +1,14 @@
 // Google Drive TypeScript Type Definitions
+// Specific types for Google Drive integration
 // Mirrors backend Python types for consistency
+
+import type { KnowledgeDataWithContentSource } from './content-sources';
+
+/**
+ * Google Drive Specific Types
+ * These types are specific to Google Drive integration
+ * For generic content source types, see content-sources.ts
+ */
 
 /**
  * Google Drive file information from Google Drive API
@@ -164,22 +173,6 @@ export interface GoogleOAuthError {
 	error_description?: string;
 	error_uri?: string;
 	message?: string;
-}
-
-/**
- * Knowledge base data with Google Drive fields
- */
-export interface KnowledgeDataWithGoogleDrive {
-	id?: string;
-	name: string;
-	description?: string;
-	data?: Record<string, unknown>;
-	// Google Drive specific fields
-	google_drive_folder_id?: string;
-	google_drive_include_nested?: boolean;
-	google_drive_sync_interval_days?: number;
-	google_drive_last_sync?: number;
-	google_drive_file_ids?: string[];
 }
 
 /**

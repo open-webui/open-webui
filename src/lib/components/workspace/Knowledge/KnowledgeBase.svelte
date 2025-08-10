@@ -32,6 +32,7 @@
 
 	import AddContentMenu from './KnowledgeBase/AddContentMenu.svelte';
 	import AddTextContentModal from './KnowledgeBase/AddTextContentModal.svelte';
+	import ContentSourceStatus from './KnowledgeBase/ContentSourceStatus.svelte';
 
 
 	import Drawer from '$lib/components/common/Drawer.svelte';
@@ -46,6 +47,8 @@
 	import Pagination from '$lib/components/common/Pagination.svelte';
 	import AttachWebpageModal from '$lib/components/chat/MessageInput/AttachWebpageModal.svelte';
 	import GoogleDriveSyncModal from './KnowledgeBase/GoogleDriveSyncModal.svelte';
+	import ContentSourceSyncModal from './KnowledgeBase/ContentSourceSyncModal.svelte';
+	import { getContentSourceProviders } from '$lib/apis/knowledge';
 
 	let largeScreen = true;
 
@@ -65,11 +68,6 @@
 		description: string;
 		data: {
 			file_ids: string[];
-			// Google Drive sync fields
-			google_drive_folder_id?: string;
-			google_drive_include_nested?: boolean;
-			google_drive_sync_interval_days?: number;
-			google_drive_last_sync?: number;
 		};
 		files: any[];
 		access_grants?: any[];
@@ -84,6 +82,9 @@
 	let selectedFile = null;
 	let selectedFileContent = '';
 	let showGoogleDriveSyncModal = false;
+	let showContentSourceSyncModal = false;
+	let availableProviders = [];
+	let selectedContentProvider = null;
 
 	let inputFiles = null;
 
@@ -701,6 +702,16 @@
 	};
 
 	onMount(async () => {
+		// Load available content source providers
+		try {
+			const providers = await getContentSourceProviders(localStorage.token);
+			if (providers) {
+				availableProviders = providers.filter(p => p.configured);
+			}
+		} catch (error) {
+			console.error('Failed to load content source providers:', error);
+		}
+
 		// listen to resize 1024px
 		mediaQuery = window.matchMedia('(min-width: 1024px)');
 
@@ -803,15 +814,18 @@
 	}}
 />
 
-<GoogleDriveSyncModal
-	bind:show={showGoogleDriveSyncModal}
-	knowledgeId={id}
-	knowledgeData={knowledge}
-	on:sync={(e) => {
-		knowledge = e.detail;
-		toast.success($i18n.t('Google Drive folder synced successfully'));
-	}}
-/>
+{#if selectedContentProvider}
+	<ContentSourceSyncModal
+		bind:show={showContentSourceSyncModal}
+		knowledgeId={id}
+		provider={selectedContentProvider}
+		knowledgeData={knowledge}
+		on:sync={(e) => {
+			knowledge = e.detail;
+			toast.success($i18n.t(`${selectedContentProvider.display_name} synced successfully`));
+		}}
+	/>
+{/if}
 
 <input
 	id="files-input"
@@ -921,6 +935,12 @@
 							}}
 						/>
 					</div>
+
+					{#if knowledge}
+						<div class="px-1 mt-1">
+							<ContentSourceStatus knowledgeData={knowledge} />
+						</div>
+					{/if}
 				</div>
 			</div>
 		</div>
