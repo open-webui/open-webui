@@ -627,7 +627,7 @@ async def signup(request: Request, response: Response, form_data: SignupForm):
             # Trigger new webhook system
             from open_webui.utils.webhook import trigger_webhooks
             from open_webui.utils.webhook_events import WebhookEvent
-            
+
             trigger_webhooks(
                 event_type=WebhookEvent.USER_SIGNUP.value,
                 message=WEBHOOK_MESSAGES.USER_SIGNUP(user.name),
@@ -640,9 +640,9 @@ async def signup(request: Request, response: Response, form_data: SignupForm):
                     "created_at": user.created_at,
                     "user": user.model_dump_json(exclude_none=True),
                 },
-                user_id=user.id
+                user_id=user.id,
             )
-            
+
             # Keep legacy webhook for backward compatibility
             if request.app.state.config.WEBHOOK_URL:
                 await post_webhook(
