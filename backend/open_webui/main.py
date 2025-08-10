@@ -1380,8 +1380,8 @@ async def chat_completion(
 
     metadata = {}
     try:
-        model_id = form_data.get("model") or model_item.get("id")
         if not model_item.get("direct", False):
+            model_id = form_data.get("model", None)
             if model_id not in request.app.state.MODELS:
                 raise Exception("Model not found")
 
@@ -1397,8 +1397,6 @@ async def chat_completion(
         else:
             model = model_item
             model_info = None
-            if model_id is None:
-                model_id = model.get("id")
 
             request.state.direct = True
             request.state.model = model
