@@ -8,6 +8,8 @@ import uvicorn
 from typing import Optional
 from typing_extensions import Annotated
 
+from . import env
+
 app = typer.Typer()
 
 KEY_FILE = Path.cwd() / ".webui_secret_key"
