@@ -693,10 +693,16 @@ OTEL_EXPORTER_OTLP_INSECURE = (
     os.environ.get("OTEL_EXPORTER_OTLP_INSECURE", "False").lower() == "true"
 )
 OTEL_METRICS_EXPORTER_OTLP_INSECURE = (
-    os.environ.get("OTEL_METRICS_EXPORTER_OTLP_INSECURE", "False").lower() == "true"
+    os.environ.get(
+        "OTEL_METRICS_EXPORTER_OTLP_INSECURE", str(OTEL_EXPORTER_OTLP_INSECURE)
+    ).lower()
+    == "true"
 )
 OTEL_LOGS_EXPORTER_OTLP_INSECURE = (
-    os.environ.get("OTEL_LOGS_EXPORTER_OTLP_INSECURE", "False").lower() == "true"
+    os.environ.get(
+        "OTEL_LOGS_EXPORTER_OTLP_INSECURE", str(OTEL_EXPORTER_OTLP_INSECURE)
+    ).lower()
+    == "true"
 )
 OTEL_SERVICE_NAME = os.environ.get("OTEL_SERVICE_NAME", "open-webui")
 OTEL_RESOURCE_ATTRIBUTES = os.environ.get(
