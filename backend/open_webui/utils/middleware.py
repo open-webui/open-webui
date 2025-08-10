@@ -1254,7 +1254,7 @@ async def process_chat_response(
     # Non-streaming response
     if not isinstance(response, StreamingResponse):
         if event_emitter:
-            if "error" in response:
+            if isinstance(response, dict) and "error" in response:
                 error = response["error"].get("detail", response["error"])
                 Chats.upsert_message_to_chat_by_id_and_message_id(
                     metadata["chat_id"],
@@ -1264,7 +1264,7 @@ async def process_chat_response(
                     },
                 )
 
-            if "selected_model_id" in response:
+            if isinstance(response, dict) and "selected_model_id" in response:
                 Chats.upsert_message_to_chat_by_id_and_message_id(
                     metadata["chat_id"],
                     metadata["message_id"],
@@ -1273,7 +1273,7 @@ async def process_chat_response(
                     },
                 )
 
-            choices = response.get("choices", [])
+            choices = response.get("choices", []) if isinstance(response, dict) else []
             if choices and choices[0].get("message", {}).get("content"):
                 content = response["choices"][0]["message"]["content"]
 
