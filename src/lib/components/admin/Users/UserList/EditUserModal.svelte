@@ -4,7 +4,7 @@
 	import { createEventDispatcher } from 'svelte';
 	import { onMount, getContext } from 'svelte';
 
-	import { updateUserById } from '$lib/apis/users';
+	import { updateUserById, getUserGroupsById } from '$lib/apis/users';
 
 	import Modal from '$lib/components/common/Modal.svelte';
 	import localizedFormat from 'dayjs/plugin/localizedFormat';
@@ -27,6 +27,9 @@
 		password: ''
 	};
 
+	let _user_groups: any[] = [];
+	let loadingGroups = false;
+
 	const submitHandler = async () => {
 		const res = await updateUserById(localStorage.token, selectedUser.id, _user).catch((error) => {
 			toast.error(`${error}`);
@@ -38,10 +41,23 @@
 		}
 	};
 
+	const loadUserGroups = async () => {
+		if (!selectedUser?.id) return;
+		loadingGroups = true;
+		try {
+			_user_groups = await getUserGroupsById(localStorage.token, selectedUser.id);
+		} catch (error) {
+			toast.error(`${error}`);
+		} finally {
+			loadingGroups = false;
+		}
+	};
+
 	onMount(() => {
 		if (selectedUser) {
 			_user = selectedUser;
 			_user.password = '';
+			loadUserGroups();
 		}
 	});
 </script>
@@ -150,6 +166,20 @@
 									/>
 								</div>
 							</div>
+						</div>
+
+						<div class="flex flex-col w-full">
+							<div class="mb-1 text-xs text-gray-500">{$i18n.t('Groups')}</div>
+
+							{#if loadingGroups}
+								<div class="text-sm font-medium text-white">{$i18n.t('Loading groups...')}</div>
+							{:else if _user_groups.length === 0}
+								<div class="text-sm font-medium text-white">{$i18n.t('No groups assigned')}</div>
+							{:else}
+								<div class="text-sm font-medium text-white">
+									{_user_groups.map(g => g.name).join(', ')}
+								</div>
+							{/if}
 						</div>
 
 						<div class="flex justify-end pt-3 text-sm font-medium">
