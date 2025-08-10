@@ -1450,6 +1450,7 @@
 	"Use proxy designated by http_proxy and https_proxy environment variables to fetch page contents.": "Саҳифа мазмунини олиш учун http_proxy ва https_proxy муҳит ўзгарувчилари томонидан белгиланган прокси-сервердан фойдаланинг.",
 	"user": "фойдаланувчи",
 	"User": "Фойдаланувчи",
+	"User Groups": "",
 	"User location successfully retrieved.": "Фойдаланувчи жойлашуви муваффақиятли олинди.",
 	"User menu": "",
 	"User Webhooks": "Фойдаланувчи веб-ҳуклари",

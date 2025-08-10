@@ -1450,6 +1450,7 @@
 	"Use proxy designated by http_proxy and https_proxy environment variables to fetch page contents.": "http_proxy 및 https_proxy 환경 변수로 지정된 프록시를 사용하여 페이지 콘텐츠를 가져옵니다.",
 	"user": "사용자",
 	"User": "사용자",
+	"User Groups": "",
 	"User location successfully retrieved.": "성공적으로 사용자의 위치를 불러왔습니다",
 	"User menu": "사용자 메뉴",
 	"User Webhooks": "사용자 웹훅",

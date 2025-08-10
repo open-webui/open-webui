@@ -1450,6 +1450,7 @@
 	"Use proxy designated by http_proxy and https_proxy environment variables to fetch page contents.": "Usar el proxy asignado en las variables del entorno http_proxy y/o https_proxy para extraer contenido",
 	"user": "usuario",
 	"User": "Usuario",
+	"User Groups": "",
 	"User location successfully retrieved.": "Ubicación de usuario obtenida correctamente.",
 	"User menu": "Menu de Usuario",
 	"User Webhooks": "Usuario Webhooks",
