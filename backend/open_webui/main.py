@@ -1375,13 +1375,13 @@ async def chat_completion(
     if not request.app.state.MODELS:
         await get_all_models(request, user=user)
 
+    model_id = form_data.get("model", None)
     model_item = form_data.pop("model_item", {})
     tasks = form_data.pop("background_tasks", None)
 
     metadata = {}
     try:
         if not model_item.get("direct", False):
-            model_id = form_data.get("model", None)
             if model_id not in request.app.state.MODELS:
                 raise Exception("Model not found")
 

@@ -1450,6 +1450,7 @@
 	"Use proxy designated by http_proxy and https_proxy environment variables to fetch page contents.": "http_proxy と https_proxy 環境変数で指定されたプロキシを使用してページの内容を取得します。",
 	"user": "ユーザー",
 	"User": "ユーザー",
+	"User Groups": "",
 	"User location successfully retrieved.": "ユーザーの位置情報が正常に取得されました。",
 	"User menu": "",
 	"User Webhooks": "",

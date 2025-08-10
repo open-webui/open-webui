@@ -4,7 +4,7 @@
 	import { createEventDispatcher } from 'svelte';
 	import { onMount, getContext } from 'svelte';
 
-	import { updateUserById } from '$lib/apis/users';
+	import { updateUserById, getUserGroupsById } from '$lib/apis/users';
 
 	import Modal from '$lib/components/common/Modal.svelte';
 	import localizedFormat from 'dayjs/plugin/localizedFormat';
@@ -27,6 +27,8 @@
 		password: ''
 	};
 
+	let userGroups: any[] | null = null;
+
 	const submitHandler = async () => {
 		const res = await updateUserById(localStorage.token, selectedUser.id, _user).catch((error) => {
 			toast.error(`${error}`);
@@ -38,10 +40,21 @@
 		}
 	};
 
+	const loadUserGroups = async () => {
+		if (!selectedUser?.id) return;
+		userGroups = null;
+
+		userGroups = await getUserGroupsById(localStorage.token, selectedUser.id).catch((error) => {
+			toast.error(`${error}`);
+			return null;
+		});
+	};
+
 	onMount(() => {
 		if (selectedUser) {
 			_user = selectedUser;
 			_user.password = '';
+			loadUserGroups();
 		}
 	});
 </script>
@@ -105,6 +118,24 @@
 									</select>
 								</div>
 							</div>
+
+							{#if userGroups}
+								<div class="flex flex-col w-full text-sm">
+									<div class="mb-1 text-xs text-gray-500">{$i18n.t('User Groups')}</div>
+
+									{#if userGroups.length}
+										<div class="flex flex-wrap gap-1 my-0.5 -mx-1">
+											{#each userGroups as userGroup}
+												<span class="px-2 py-0.5 rounded-full bg-gray-100 dark:bg-gray-850 text-xs">
+													{userGroup.name}
+												</span>
+											{/each}
+										</div>
+									{:else}
+										<span>-</span>
+									{/if}
+								</div>
+							{/if}
 
 							<div class="flex flex-col w-full">
 								<div class=" mb-1 text-xs text-gray-500">{$i18n.t('Email')}</div>
