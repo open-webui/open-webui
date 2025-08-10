@@ -104,7 +104,7 @@
 		// Remove all TOOL placeholders from the prompt
 		prompt = prompt.replace(toolIdPattern, '');
 
-		if (prompt.includes('{{INPUT_CONTENT}}') && !floatingInput) {
+		if (prompt.includes('{{INPUT_CONTENT}}') && floatingInput) {
 			prompt = prompt.replace('{{INPUT_CONTENT}}', floatingInputValue);
 			floatingInputValue = '';
 		}
