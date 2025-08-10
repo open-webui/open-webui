@@ -1,7 +1,6 @@
 <script lang="ts">
 	import fileSaver from 'file-saver';
 	const { saveAs } = fileSaver;
-
 	import { downloadDatabase, downloadLiteLLMConfig } from '$lib/apis/utils';
 	import { onMount, getContext } from 'svelte';
 	import { config, user } from '$lib/stores';
@@ -9,23 +8,58 @@
 	import { getAllUserChats } from '$lib/apis/chats';
 	import { getAllUsers } from '$lib/apis/users';
 	import { exportConfig, importConfig } from '$lib/apis/configs';
-
+	import PruneDataDialog from '$lib/components/common/PruneDataDialog.svelte';
+	import { pruneData } from '$lib/apis/prune';
 	const i18n = getContext('i18n');
-
 	export let saveHandler: Function;
-
+	let showPruneDataDialog = false;
 	const exportAllUserChats = async () => {
 		let blob = new Blob([JSON.stringify(await getAllUserChats(localStorage.token))], {
 			type: 'application/json'
 		});
 		saveAs(blob, `all-chats-export-${Date.now()}.json`);
 	};
+	
+	const handlePruneDataConfirm = async (event) => {
+		const { 
+			days, 
+			exempt_archived_chats, 
+			exempt_chats_in_folders,
+			delete_orphaned_chats,
+			delete_orphaned_tools,
+			delete_orphaned_functions,
+			delete_orphaned_prompts,
+			delete_orphaned_knowledge_bases,
+			delete_orphaned_models,
+			delete_orphaned_notes,
+			delete_orphaned_folders
+		} = event.detail;
+		
+		const res = await pruneData(
+			localStorage.token, 
+			days, 
+			exempt_archived_chats, 
+			exempt_chats_in_folders,
+			delete_orphaned_chats,
+			delete_orphaned_tools,
+			delete_orphaned_functions,
+			delete_orphaned_prompts,
+			delete_orphaned_knowledge_bases,
+			delete_orphaned_models,
+			delete_orphaned_notes,
+			delete_orphaned_folders
+		).catch((error) => {
+			toast.error(`${error}`);
+			return null;
+		});
+		if (res) {
+			toast.success('Data pruned successfully');
+		}
+	};
 
 	const exportUsers = async () => {
 		const users = await getAllUsers(localStorage.token);
-
 		const headers = ['id', 'name', 'email', 'role'];
-
 		const csv = [
 			headers.join(','),
 			...users.users.map((user) => {
@@ -39,16 +73,15 @@
 					.join(',');
 			})
 		].join('\n');
-
 		const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
 		saveAs(blob, 'users.csv');
 	};
-
+	
 	onMount(async () => {
 		// permissions = await getUserPermissions(localStorage.token);
 	});
 </script>
-
+<PruneDataDialog bind:show={showPruneDataDialog} on:confirm={handlePruneDataConfirm} />
 <form
 	class="flex flex-col h-full justify-between space-y-3 text-sm"
 	on:submit|preventDefault={async () => {
@@ -58,7 +91,6 @@
 	<div class=" space-y-3 overflow-y-scroll scrollbar-hidden h-full">
 		<div>
 			<div class=" mb-2 text-sm font-medium">{$i18n.t('Database')}</div>
-
 			<input
 				id="config-json-input"
 				hidden
@@ -67,24 +99,20 @@
 				on:change={(e) => {
 					const file = e.target.files[0];
 					const reader = new FileReader();
-
 					reader.onload = async (e) => {
 						const res = await importConfig(localStorage.token, JSON.parse(e.target.result)).catch(
 							(error) => {
 								toast.error(`${error}`);
 							}
 						);
-
 						if (res) {
 							toast.success('Config imported successfully');
 						}
 						e.target.value = null;
 					};
-
 					reader.readAsText(file);
 				}}
 			/>
-
 			<button
 				type="button"
 				class=" flex rounded-md py-2 px-3 w-full hover:bg-gray-200 dark:hover:bg-gray-800 transition"
@@ -111,7 +139,6 @@
 					{$i18n.t('Import Config from JSON File')}
 				</div>
 			</button>
-
 			<button
 				type="button"
 				class=" flex rounded-md py-2 px-3 w-full hover:bg-gray-200 dark:hover:bg-gray-800 transition"
@@ -142,19 +169,15 @@
 					{$i18n.t('Export Config to JSON File')}
 				</div>
 			</button>
-
 			<hr class="border-gray-100 dark:border-gray-850 my-1" />
-
 			{#if $config?.features.enable_admin_export ?? true}
 				<div class="  flex w-full justify-between">
 					<!-- <div class=" self-center text-xs font-medium">{$i18n.t('Allow Chat Deletion')}</div> -->
-
 					<button
 						class=" flex rounded-md py-1.5 px-3 w-full hover:bg-gray-200 dark:hover:bg-gray-800 transition"
 						type="button"
 						on:click={() => {
 							// exportAllUserChats();
-
 							downloadDatabase(localStorage.token).catch((error) => {
 								toast.error(`${error}`);
 							});
@@ -178,7 +201,6 @@
 						<div class=" self-center text-sm font-medium">{$i18n.t('Download Database')}</div>
 					</button>
 				</div>
-
 				<button
 					class=" flex rounded-md py-2 px-3 w-full hover:bg-gray-200 dark:hover:bg-gray-800 transition"
 					on:click={() => {
@@ -204,7 +226,6 @@
 						{$i18n.t('Export All Chats (All Users)')}
 					</div>
 				</button>
-
 				<button
 					class=" flex rounded-md py-2 px-3 w-full hover:bg-gray-200 dark:hover:bg-gray-800 transition"
 					on:click={() => {
@@ -231,9 +252,34 @@
 					</div>
 				</button>
 			{/if}
+			<hr class="border-gray-100 dark:border-gray-850 my-1" />
+			<button
+				type="button"
+				class=" flex rounded-md py-2 px-3 w-full bg-yellow-500 hover:bg-yellow-600 text-white transition"
+				on:click={() => {
+					showPruneDataDialog = true;
+				}}
+			>
+				<div class=" self-center mr-3">
+					<svg
+						xmlns="http://www.w3.org/2000/svg"
+						viewBox="0 0 16 16"
+						fill="currentColor"
+						class="w-4 h-4"
+					>
+						<path
+							fill-rule="evenodd"
+							d="M4.5 2a.5.5 0 0 0-.5.5v1a.5.5 0 0 0 .5.5h7a.5.5 0 0 0 .5-.5v-1a.5.5 0 0 0-.5-.5h-7ZM3 6a1 1 0 0 0-1 1v6a1 1 0 0 0 1 1h10a1 1 0 0 0 1-1V7a1 1 0 0 0-1-1H3Zm1 4a.5.5 0 0 1 .5-.5h6a.5.5 0 0 1 0 1H4.5a.5.5 0 0 1-.5-.5Z"
+							clip-rule="evenodd"
+						/>
+					</svg>
+				</div>
+				<div class=" self-center text-sm font-medium">
+					{$i18n.t('Prune Orphaned Data')}
+				</div>
+			</button>
 		</div>
 	</div>
-
 	<!-- <div class="flex justify-end pt-3 text-sm font-medium">
 		<button
 			class=" px-4 py-2 bg-emerald-700 hover:bg-emerald-800 text-gray-100 transition rounded-lg"
@@ -241,6 +287,5 @@
 		>
 			{$i18n.t('Save')}
 		</button>
-
 	</div> -->
 </form>
