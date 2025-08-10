@@ -296,6 +296,14 @@ def receive_pull_model():
     time.sleep(1)
 
     print("renaming file")
+
+    dir_path = os.path.dirname(data['human_name'])  # ✅ Python way
+
+    print(dir_path)
+
+    # Create the directory structure on the target device
+    read_cmd_from_serial(port, baudrate, f"cd {destn_path}; mkdir -p {dir_path}")
+
     read_cmd_from_serial(port,baudrate,f"cd {destn_path}; mv {data['actual_name']} {data['human_name']}")
 
     time.sleep(1)
