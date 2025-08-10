@@ -501,3 +501,13 @@ async def delete_user_by_id(user_id: str, user=Depends(get_admin_user)):
         status_code=status.HTTP_403_FORBIDDEN,
         detail=ERROR_MESSAGES.ACTION_PROHIBITED,
     )
+
+
+############################
+# GetUserGroupsById
+############################
+
+
+@router.get("/{user_id}/groups")
+async def get_user_groups_by_id(user_id: str, user=Depends(get_admin_user)):
+    return Groups.get_groups_by_member_id(user_id)
