@@ -1785,11 +1785,15 @@
 		).catch(async (error) => {
 			console.log(error);
 
-			let errorMessage = $i18n.t(`Uh-oh! There was an issue with the response.`);
+			let errorMessage = error;
 			if (error?.error?.message) {
 				errorMessage = error.error.message;
 			} else if (error?.message) {
 				errorMessage = error.message;
+			}
+
+			if (typeof errorMessage === 'object') {
+				errorMessage = $i18n.t(`Uh-oh! There was an issue with the response.`);
 			}
 
 			toast.error(`${errorMessage}`);
