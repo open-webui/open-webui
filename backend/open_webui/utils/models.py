@@ -23,7 +23,6 @@ from open_webui.utils.access_control import has_access
 
 from open_webui.config import (
     DEFAULT_ARENA_MODEL,
-    ENABLE_ADMIN_WORKSPACE_CONTENT_ACCESS,
 )
 
 from open_webui.env import SRC_LOG_LEVELS, GLOBAL_LOG_LEVEL
@@ -182,62 +181,45 @@ async def get_all_models(request, refresh: bool = False, user: UserModel = None)
         elif custom_model.is_active and (
             custom_model.id not in [model["id"] for model in models]
         ):
-            # Check access control for custom models
-            should_include = False
-            
-            if user and user.role == "admin" and ENABLE_ADMIN_WORKSPACE_CONTENT_ACCESS:
-                # Admin with full workspace access
-                should_include = True
-            elif user and user.id == custom_model.user_id:
-                # Owner always has access
-                should_include = True
-            elif user and has_access(user.id, "read", custom_model.access_control):
-                # User has explicit read access
-                should_include = True
-            elif not user:
-                # No user context - include for backwards compatibility
-                should_include = True
-            
-            if should_include:
-                owned_by = "openai"
-                pipe = None
-        
-                action_ids = []
-                filter_ids = []
-        
-                for model in models:
-                    if (
-                        custom_model.base_model_id == model["id"]
-                        or custom_model.base_model_id == model["id"].split(":")[0]
-                    ):
-                        owned_by = model.get("owned_by", "unknown owner")
-                        if "pipe" in model:
-                            pipe = model["pipe"]
-                        break
-        
-                if custom_model.meta:
-                    meta = custom_model.meta.model_dump()
-        
-                    if "actionIds" in meta:
-                        action_ids.extend(meta["actionIds"])
-        
-                    if "filterIds" in meta:
-                        filter_ids.extend(meta["filterIds"])
-        
-                models.append(
-                    {
-                        "id": f"{custom_model.id}",
-                        "name": custom_model.name,
-                        "object": "model",
-                        "created": custom_model.created_at,
-                        "owned_by": owned_by,
-                        "info": custom_model.model_dump(),
-                        "preset": True,
-                        **({"pipe": pipe} if pipe is not None else {}),
-                        "action_ids": action_ids,
-                        "filter_ids": filter_ids,
-                    }
-                )
+            owned_by = "openai"
+            pipe = None
+
+            action_ids = []
+            filter_ids = []
+
+            for model in models:
+                if (
+                    custom_model.base_model_id == model["id"]
+                    or custom_model.base_model_id == model["id"].split(":")[0]
+                ):
+                    owned_by = model.get("owned_by", "unknown owner")
+                    if "pipe" in model:
+                        pipe = model["pipe"]
+                    break
+
+            if custom_model.meta:
+                meta = custom_model.meta.model_dump()
+
+                if "actionIds" in meta:
+                    action_ids.extend(meta["actionIds"])
+
+                if "filterIds" in meta:
+                    filter_ids.extend(meta["filterIds"])
+
+            models.append(
+                {
+                    "id": f"{custom_model.id}",
+                    "name": custom_model.name,
+                    "object": "model",
+                    "created": custom_model.created_at,
+                    "owned_by": owned_by,
+                    "info": custom_model.model_dump(),
+                    "preset": True,
+                    **({"pipe": pipe} if pipe is not None else {}),
+                    "action_ids": action_ids,
+                    "filter_ids": filter_ids,
+                }
+            )
 
     # Process action_ids to get the actions
     def get_action_items_from_module(function, module):
