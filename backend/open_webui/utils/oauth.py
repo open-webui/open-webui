@@ -115,7 +115,13 @@ class OAuthManager:
                 nested_claims = oauth_claim.split(".")
                 for nested_claim in nested_claims:
                     claim_data = claim_data.get(nested_claim, {})
-                oauth_roles = claim_data if isinstance(claim_data, list) else []
+
+                if isinstance(claim_data, list):
+                    oauth_roles = claim_data
+                elif isinstance(claim_data, (str, int)):
+                    oauth_roles = [str(claim_data)]
+                else:
+                    oauth_roles = []
 
             log.debug(f"Oauth Roles claim: {oauth_claim}")
             log.debug(f"User roles from oauth: {oauth_roles}")
