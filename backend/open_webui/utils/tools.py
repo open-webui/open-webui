@@ -626,7 +626,13 @@ async def execute_tool_server(
                     if response.status >= 400:
                         text = await response.text()
                         raise Exception(f"HTTP error {response.status}: {text}")
-                    return await response.json()
+
+                    try:
+                        response_data = await response.json()
+                    except Exception:
+                        response_data = await response.text()
+
+                    return response_data
             else:
                 async with request_method(
                     final_url,
@@ -636,7 +642,13 @@ async def execute_tool_server(
                     if response.status >= 400:
                         text = await response.text()
                         raise Exception(f"HTTP error {response.status}: {text}")
-                    return await response.json()
+
+                    try:
+                        response_data = await response.json()
+                    except Exception:
+                        response_data = await response.text()
+
+                    return response_data
 
     except Exception as err:
         error = str(err)
