@@ -1279,14 +1279,16 @@ async def get_models(
                 ):
                     filtered_models.append(model)
                 continue
-
+    
             model_info = Models.get_model_by_id(model["id"])
             if model_info:
-                if user.id == model_info.user_id or has_access(
-                    user.id, type="read", access_control=model_info.access_control
+                if (
+                    (user.role == "admin" and ENABLE_ADMIN_WORKSPACE_CONTENT_ACCESS)
+                    or user.id == model_info.user_id 
+                    or has_access(user.id, type="read", access_control=model_info.access_control)
                 ):
                     filtered_models.append(model)
-
+    
         return filtered_models
 
     all_models = await get_all_models(request, refresh=refresh, user=user)
