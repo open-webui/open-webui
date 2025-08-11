@@ -489,7 +489,7 @@
 						type="button"
 					>
 						<span class="ml-2 self-center" id="notification-sound-state"
-							>{notificationSound === true ? $i18n.t('On') : $i18n.t('Off')}</span
+							>{landingPageMode === '' ? $i18n.t('Default') : $i18n.t('Chat')}</span
 						>
 					</button>
 				</div>
