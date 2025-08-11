@@ -1569,12 +1569,6 @@
 					{/if}
 				{/if}
 			</div>
-
-			{#if message?.done}
-				<div aria-live="polite" class="sr-only">
-					{message?.content ?? ''}
-				</div>
-			{/if}
 		</div>
 	</article>
 {/key}
