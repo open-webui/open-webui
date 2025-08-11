@@ -52,6 +52,8 @@
 	let keepFollowUpPrompts = false;
 	let insertFollowUpPrompt = false;
 
+	let regenerateMenu = true;
+
 	let landingPageMode = '';
 	let chatBubble = true;
 	let chatDirection: 'LTR' | 'RTL' | 'auto' = 'auto';
@@ -199,6 +201,8 @@
 
 		keepFollowUpPrompts = $settings?.keepFollowUpPrompts ?? false;
 		insertFollowUpPrompt = $settings?.insertFollowUpPrompt ?? false;
+
+		regenerateMenu = $settings?.regenerateMenu ?? true;
 
 		largeTextAsFile = $settings?.largeTextAsFile ?? false;
 		copyFormatted = $settings?.copyFormatted ?? false;
@@ -485,7 +489,7 @@
 						type="button"
 					>
 						<span class="ml-2 self-center" id="notification-sound-state"
-							>{notificationSound === true ? $i18n.t('On') : $i18n.t('Off')}</span
+							>{landingPageMode === '' ? $i18n.t('Default') : $i18n.t('Chat')}</span
 						>
 					</button>
 				</div>
@@ -703,6 +707,25 @@
 							bind:state={insertFollowUpPrompt}
 							on:change={() => {
 								saveSettings({ insertFollowUpPrompt });
+							}}
+						/>
+					</div>
+				</div>
+			</div>
+
+			<div>
+				<div class=" py-0.5 flex w-full justify-between">
+					<div id="regenerate-menu-label" class=" self-center text-xs">
+						{$i18n.t('Regenerate Menu')}
+					</div>
+
+					<div class="flex items-center gap-2 p-1">
+						<Switch
+							ariaLabelledbyId="regenerate-menu-label"
+							tooltip={true}
+							bind:state={regenerateMenu}
+							on:change={() => {
+								saveSettings({ regenerateMenu });
 							}}
 						/>
 					</div>
