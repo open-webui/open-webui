@@ -538,6 +538,16 @@ async def lifespan(app: FastAPI):
 
     asyncio.create_task(periodic_usage_pool_cleanup())
 
+    # Initialize GoDaddy specific extensions if they exist
+    try:
+        from godaddy import init_godaddy_extensions
+        init_godaddy_extensions()
+        log.info("GoDaddy extensions initialized")
+    except ImportError:
+        log.debug("GoDaddy extensions not available")
+    except Exception as e:
+        log.error(f"Failed to initialize GoDaddy extensions: {e}")
+
     if app.state.config.ENABLE_BASE_MODELS_CACHE:
         await get_all_models(
             Request(

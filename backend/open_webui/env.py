@@ -76,6 +76,9 @@ else:
 log = logging.getLogger(__name__)
 log.info(f"GLOBAL_LOG_LEVEL: {GLOBAL_LOG_LEVEL}")
 
+import boto3
+boto3.set_stream_logger('botocore', logging.WARNING)
+
 if "cuda_error" in locals():
     log.exception(cuda_error)
     del cuda_error
