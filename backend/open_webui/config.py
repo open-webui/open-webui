@@ -1288,11 +1288,8 @@ DEFAULT_USER_PERMISSIONS = {
         "controls": USER_PERMISSIONS_CHAT_CONTROLS,
         "valves": USER_PERMISSIONS_CHAT_VALVES,
         "system_prompt": USER_PERMISSIONS_CHAT_SYSTEM_PROMPT,
-<<<<<<< HEAD
         "params": USER_PERMISSIONS_CHAT_PARAMS,
-=======
         "image_capture": USER_PERMISSIONS_CHAT_IMAGE_CAPTURE,
->>>>>>> 5d24a72b8 (Added permission to enable/disable image capture)
         "file_upload": USER_PERMISSIONS_CHAT_FILE_UPLOAD,
         "delete": USER_PERMISSIONS_CHAT_DELETE,
         "edit": USER_PERMISSIONS_CHAT_EDIT,
