@@ -22,14 +22,14 @@ logger = logging.getLogger(__name__)
 
 # Database connection parameters
 DB_CONFIG = {
-    'server': 'example_server',  # Replace with your server name
-    'database': 'openwebui',
-    'driver': '{ODBC Driver 17 for SQL Server}',
-    'schema': 'dbo',  # Default schema name
+    "server": "dvse-cepm-sqlmi.dceaba912a56.database.windows.net",  # Replace with your server name
+    "database": "openwebui",
+    "driver": "{ODBC Driver 17 for SQL Server}",
+    "schema": "dbo",  # Default schema name
     # Add authentication method - you'll need to fill in credentials
     # Option 1: SQL Authentication
-    'username': 'example',
-    'password': 'example_password',
+    "username": "app",
+    "password": "App",
     # Option 2: Windows Authentication
     # 'trusted_connection': 'yes'
 }
@@ -342,21 +342,45 @@ def import_table_data(cursor, table_data):
     
     # Get column types from the database schema, as JSON types are unreliable
     column_types = {}
+    input_sizes = []
     try:
         schema = DB_CONFIG.get('schema', 'dbo')
-        query = "SELECT COLUMN_NAME, DATA_TYPE FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA = ? AND TABLE_NAME = ?"
+        query = """
+        SELECT 
+            COLUMN_NAME, 
+            DATA_TYPE,
+            CHARACTER_MAXIMUM_LENGTH
+        FROM INFORMATION_SCHEMA.COLUMNS 
+        WHERE TABLE_SCHEMA = ? AND TABLE_NAME = ?
+        ORDER BY ORDINAL_POSITION
+        """
         cursor.execute(query, schema, table_name)
-        db_column_types = {row.COLUMN_NAME: row.DATA_TYPE for row in cursor.fetchall()}
-        
-        # Use the accurate DB types
-        for col in columns:
-            column_types[col] = db_column_types.get(col, 'VARCHAR') # Default to VARCHAR if not found
+        db_column_info = {row.COLUMN_NAME: (row.DATA_TYPE, row.CHARACTER_MAXIMUM_LENGTH) for row in cursor.fetchall()}
+
+        # Map to pyodbc types and sizes
+        for col_name in columns:
+            data_type, max_len = db_column_info.get(col_name, ('VARCHAR', 0))
+            column_types[col_name] = data_type
             
+            if 'nvarchar' in data_type.lower():
+                # For NVARCHAR(MAX), max_len is -1
+                input_sizes.append((pyodbc.SQL_WVARCHAR, 0 if max_len == -1 else max_len))
+            elif 'varchar' in data_type.lower():
+                # For VARCHAR(MAX), max_len is -1
+                input_sizes.append((pyodbc.SQL_VARCHAR, 0 if max_len == -1 else max_len))
+            else:
+                # For other types, size is not needed
+                input_sizes.append(None)
+        
+        # Set input sizes to avoid issues with NVARCHAR(MAX) and UTF8 collations
+        if any(size is not None for size in input_sizes):
+            cursor.setinputsizes(input_sizes)
+
     except Exception as e:
         logger.warning(f"Could not fetch column types for table {table_name}, falling back to JSON types. Error: {e}")
         # Fallback to using types from JSON if DB query fails
         column_types = {col['name']: col.get('type', 'VARCHAR') for col in table_data['columns']}
-    
+
     # Insert rows
     success_count = 0
     for i, row in enumerate(rows):

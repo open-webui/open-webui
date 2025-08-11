@@ -4,6 +4,14 @@
 -- Text encoding used: System
 --
 
+CREATE DATABASE [openwebui] COLLATE Latin1_General_100_CI_AS_SC_UTF8;
+GO
+
+USE [openwebui];
+GO
+
+
+
 BEGIN TRANSACTION;
 
 -- Table: alembic_version
@@ -339,3 +347,14 @@ CREATE UNIQUE INDEX [user_id] ON [user] ([id]);
 CREATE UNIQUE INDEX [user_oauth_sub] ON [user] ([oauth_sub]) WHERE [oauth_sub] IS NOT NULL;
 
 COMMIT TRANSACTION;
+GO
+
+-- Grant permissions to the 'app' user
+USE [openwebui];
+GO
+CREATE USER [app] FOR LOGIN [app];
+GO
+ALTER ROLE [db_datareader] ADD MEMBER [app];
+GO
+ALTER ROLE [db_datawriter] ADD MEMBER [app];
+GO
