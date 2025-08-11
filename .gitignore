@@ -314,3 +314,6 @@ composes/
 # Develop openweb paths
 backend/data-celery
 backend/data
+
+# Continue dev
+.continue/
