@@ -46,6 +46,11 @@ def _augment_postgres_url_with_iam_and_ssl(db_url: str) -> str:
     if not db_url.startswith("postgres://") and not db_url.startswith("postgresql://"):
         return db_url
     final_url = db_url
+    
+    # Debug SSL environment variables
+    log.info(f"🔍 DEBUG SSL ENV: PG_SSLMODE={PG_SSLMODE}, PG_SSLROOTCERT={PG_SSLROOTCERT}")
+    log.info(f"🔍 DEBUG SSL ENV: ENABLE_AWS_RDS_IAM={ENABLE_AWS_RDS_IAM}, AWS_REGION={AWS_REGION}")
+    
     try:
         from urllib.parse import urlparse, quote
         if ENABLE_AWS_RDS_IAM:
@@ -65,9 +70,11 @@ def _augment_postgres_url_with_iam_and_ssl(db_url: str) -> str:
         if PG_SSLMODE and "sslmode=" not in final_url:
             sep = "&" if "?" in final_url else "?"
             final_url = f"{final_url}{sep}sslmode={PG_SSLMODE}"
+            log.info(f"🔍 DEBUG: Added sslmode={PG_SSLMODE} to URL")
         if PG_SSLROOTCERT and "sslrootcert=" not in final_url:
             sep = "&" if "?" in final_url else "?"
             final_url = f"{final_url}{sep}sslrootcert={PG_SSLROOTCERT}"
+            log.info(f"🔍 DEBUG: Added sslrootcert={PG_SSLROOTCERT} to URL")
     except Exception as e:
         log.exception(f"Failed to augment PostgreSQL URL for IAM/SSL: {e}")
         raise
