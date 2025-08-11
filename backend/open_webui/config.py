@@ -7,7 +7,7 @@ import redis
 
 from datetime import datetime
 from pathlib import Path
-from typing import Generic, Optional, TypeVar
+from typing import Generic, Union, Optional, TypeVar
 from urllib.parse import urlparse
 
 import requests
@@ -168,9 +168,19 @@ class PersistentConfig(Generic[T]):
         self.config_path = config_path
         self.env_value = env_value
         self.config_value = get_config_value(config_path)
+
         if self.config_value is not None and ENABLE_PERSISTENT_CONFIG:
-            log.info(f"'{env_name}' loaded from the latest database entry")
-            self.value = self.config_value
+            if (
+                self.config_path.startswith("oauth.")
+                and not ENABLE_OAUTH_PERSISTENT_CONFIG
+            ):
+                log.info(
+                    f"Skipping loading of '{env_name}' as OAuth persistent config is disabled"
+                )
+                self.value = env_value
+            else:
+                log.info(f"'{env_name}' loaded from the latest database entry")
+                self.value = self.config_value
         else:
             self.value = env_value
 
@@ -213,13 +223,14 @@ class PersistentConfig(Generic[T]):
 
 class AppConfig:
     _state: dict[str, PersistentConfig]
-    _redis: Optional[redis.Redis] = None
+    _redis: Union[redis.Redis, redis.cluster.RedisCluster] = None
     _redis_key_prefix: str
 
     def __init__(
         self,
         redis_url: Optional[str] = None,
         redis_sentinels: Optional[list] = [],
+        redis_cluster: Optional[bool] = False,
         redis_key_prefix: str = "open-webui",
     ):
         super().__setattr__("_state", {})
@@ -227,7 +238,12 @@ class AppConfig:
         if redis_url:
             super().__setattr__(
                 "_redis",
-                get_redis_connection(redis_url, redis_sentinels, decode_responses=True),
+                get_redis_connection(
+                    redis_url,
+                    redis_sentinels,
+                    redis_cluster,
+                    decode_responses=True,
+                ),
             )
 
     def __setattr__(self, key, value):
@@ -296,6 +312,9 @@ JWT_EXPIRES_IN = PersistentConfig(
 # OAuth config
 ####################################
 
+ENABLE_OAUTH_PERSISTENT_CONFIG = (
+    os.environ.get("ENABLE_OAUTH_PERSISTENT_CONFIG", "True").lower() == "true"
+)
 
 ENABLE_OAUTH_SIGNUP = PersistentConfig(
     "ENABLE_OAUTH_SIGNUP",
@@ -461,6 +480,12 @@ OAUTH_PROVIDER_NAME = PersistentConfig(
     "OAUTH_PROVIDER_NAME",
     "oauth.oidc.provider_name",
     os.environ.get("OAUTH_PROVIDER_NAME", "SSO"),
+)
+
+OAUTH_SUB_CLAIM = PersistentConfig(
+    "OAUTH_SUB_CLAIM",
+    "oauth.oidc.sub_claim",
+    os.environ.get("OAUTH_SUB_CLAIM", None),
 )
 
 OAUTH_USERNAME_CLAIM = PersistentConfig(
@@ -679,6 +704,23 @@ def load_oauth_providers():
             "redirect_uri": OPENID_REDIRECT_URI.value,
             "register": oidc_oauth_register,
         }
+
+    configured_providers = []
+    if GOOGLE_CLIENT_ID.value:
+        configured_providers.append("Google")
+    if MICROSOFT_CLIENT_ID.value:
+        configured_providers.append("Microsoft")
+    if GITHUB_CLIENT_ID.value:
+        configured_providers.append("GitHub")
+
+    if configured_providers and not OPENID_PROVIDER_URL.value:
+        provider_list = ", ".join(configured_providers)
+        log.warning(
+            f"⚠️  OAuth providers configured ({provider_list}) but OPENID_PROVIDER_URL not set - logout will not work!"
+        )
+        log.warning(
+            f"Set OPENID_PROVIDER_URL to your OAuth provider's OpenID Connect discovery endpoint to fix logout functionality."
+        )
 
 
 load_oauth_providers()
@@ -1143,8 +1185,16 @@ USER_PERMISSIONS_CHAT_CONTROLS = (
     os.environ.get("USER_PERMISSIONS_CHAT_CONTROLS", "True").lower() == "true"
 )
 
+USER_PERMISSIONS_CHAT_VALVES = (
+    os.environ.get("USER_PERMISSIONS_CHAT_VALVES", "True").lower() == "true"
+)
+
 USER_PERMISSIONS_CHAT_SYSTEM_PROMPT = (
     os.environ.get("USER_PERMISSIONS_CHAT_SYSTEM_PROMPT", "True").lower() == "true"
+)
+
+USER_PERMISSIONS_CHAT_PARAMS = (
+    os.environ.get("USER_PERMISSIONS_CHAT_PARAMS", "True").lower() == "true"
 )
 
 USER_PERMISSIONS_CHAT_FILE_UPLOAD = (
@@ -1232,7 +1282,9 @@ DEFAULT_USER_PERMISSIONS = {
     },
     "chat": {
         "controls": USER_PERMISSIONS_CHAT_CONTROLS,
+        "valves": USER_PERMISSIONS_CHAT_VALVES,
         "system_prompt": USER_PERMISSIONS_CHAT_SYSTEM_PROMPT,
+        "params": USER_PERMISSIONS_CHAT_PARAMS,
         "file_upload": USER_PERMISSIONS_CHAT_FILE_UPLOAD,
         "delete": USER_PERMISSIONS_CHAT_DELETE,
         "edit": USER_PERMISSIONS_CHAT_EDIT,
@@ -1299,6 +1351,10 @@ WEBHOOK_URL = PersistentConfig(
 
 ENABLE_ADMIN_EXPORT = os.environ.get("ENABLE_ADMIN_EXPORT", "True").lower() == "true"
 
+ENABLE_ADMIN_WORKSPACE_CONTENT_ACCESS = (
+    os.environ.get("ENABLE_ADMIN_WORKSPACE_CONTENT_ACCESS", "True").lower() == "true"
+)
+
 ENABLE_ADMIN_CHAT_ACCESS = (
     os.environ.get("ENABLE_ADMIN_CHAT_ACCESS", "True").lower() == "true"
 )
@@ -1337,10 +1393,11 @@ if THREAD_POOL_SIZE is not None and isinstance(THREAD_POOL_SIZE, str):
 def validate_cors_origin(origin):
     parsed_url = urlparse(origin)
 
-    # Check if the scheme is either http or https
-    if parsed_url.scheme not in ["http", "https"]:
+    # Check if the scheme is either http or https, or a custom scheme
+    schemes = ["http", "https"] + CORS_ALLOW_CUSTOM_SCHEME
+    if parsed_url.scheme not in schemes:
         raise ValueError(
-            f"Invalid scheme in CORS_ALLOW_ORIGIN: '{origin}'. Only 'http' and 'https' are allowed."
+            f"Invalid scheme in CORS_ALLOW_ORIGIN: '{origin}'. Only 'http' and 'https' and CORS_ALLOW_CUSTOM_SCHEME are allowed."
         )
 
     # Ensure that the netloc (domain + port) is present, indicating it's a valid URL
@@ -1354,6 +1411,11 @@ def validate_cors_origin(origin):
 # CORS_ALLOW_ORIGIN=http://localhost:5173;http://localhost:8080
 # in your .env file depending on your frontend port, 5173 in this case.
 CORS_ALLOW_ORIGIN = os.environ.get("CORS_ALLOW_ORIGIN", "*").split(";")
+
+# Allows custom URL schemes (e.g., app://) to be used as origins for CORS.
+# Useful for local development or desktop clients with schemes like app:// or other custom protocols.
+# Provide a semicolon-separated list of allowed schemes in the environment variable CORS_ALLOW_CUSTOM_SCHEMES.
+CORS_ALLOW_CUSTOM_SCHEME = os.environ.get("CORS_ALLOW_CUSTOM_SCHEME", "").split(";")
 
 if CORS_ALLOW_ORIGIN == ["*"]:
     log.warning(
@@ -1862,6 +1924,8 @@ QDRANT_API_KEY = os.environ.get("QDRANT_API_KEY", None)
 QDRANT_ON_DISK = os.environ.get("QDRANT_ON_DISK", "false").lower() == "true"
 QDRANT_PREFER_GRPC = os.environ.get("QDRANT_PREFER_GRPC", "false").lower() == "true"
 QDRANT_GRPC_PORT = int(os.environ.get("QDRANT_GRPC_PORT", "6334"))
+QDRANT_TIMEOUT = int(os.environ.get("QDRANT_TIMEOUT", "5"))
+QDRANT_HNSW_M = int(os.environ.get("QDRANT_HNSW_M", "16"))
 ENABLE_QDRANT_MULTITENANCY_MODE = (
     os.environ.get("ENABLE_QDRANT_MULTITENANCY_MODE", "true").lower() == "true"
 )
@@ -1951,6 +2015,37 @@ PINECONE_DIMENSION = int(os.getenv("PINECONE_DIMENSION", 1536))  # or 3072, 1024
 PINECONE_METRIC = os.getenv("PINECONE_METRIC", "cosine")
 PINECONE_CLOUD = os.getenv("PINECONE_CLOUD", "aws")  # or "gcp" or "azure"
 
+# ORACLE23AI (Oracle23ai Vector Search)
+
+ORACLE_DB_USE_WALLET = os.environ.get("ORACLE_DB_USE_WALLET", "false").lower() == "true"
+ORACLE_DB_USER = os.environ.get("ORACLE_DB_USER", None)  #
+ORACLE_DB_PASSWORD = os.environ.get("ORACLE_DB_PASSWORD", None)  #
+ORACLE_DB_DSN = os.environ.get("ORACLE_DB_DSN", None)  #
+ORACLE_WALLET_DIR = os.environ.get("ORACLE_WALLET_DIR", None)
+ORACLE_WALLET_PASSWORD = os.environ.get("ORACLE_WALLET_PASSWORD", None)
+ORACLE_VECTOR_LENGTH = os.environ.get("ORACLE_VECTOR_LENGTH", 768)
+
+ORACLE_DB_POOL_MIN = int(os.environ.get("ORACLE_DB_POOL_MIN", 2))
+ORACLE_DB_POOL_MAX = int(os.environ.get("ORACLE_DB_POOL_MAX", 10))
+ORACLE_DB_POOL_INCREMENT = int(os.environ.get("ORACLE_DB_POOL_INCREMENT", 1))
+
+
+if VECTOR_DB == "oracle23ai":
+    if not ORACLE_DB_USER or not ORACLE_DB_PASSWORD or not ORACLE_DB_DSN:
+        raise ValueError(
+            "Oracle23ai requires setting ORACLE_DB_USER, ORACLE_DB_PASSWORD, and ORACLE_DB_DSN."
+        )
+    if ORACLE_DB_USE_WALLET and (not ORACLE_WALLET_DIR or not ORACLE_WALLET_PASSWORD):
+        raise ValueError(
+            "Oracle23ai requires setting ORACLE_WALLET_DIR and ORACLE_WALLET_PASSWORD when using wallet authentication."
+        )
+
+log.info(f"VECTOR_DB: {VECTOR_DB}")
+
+# S3 Vector
+S3_VECTOR_BUCKET_NAME = os.environ.get("S3_VECTOR_BUCKET_NAME", None)
+S3_VECTOR_REGION = os.environ.get("S3_VECTOR_REGION", None)
+
 ####################################
 # Information Retrieval (RAG)
 ####################################
@@ -2012,10 +2107,16 @@ DATALAB_MARKER_API_KEY = PersistentConfig(
     os.environ.get("DATALAB_MARKER_API_KEY", ""),
 )
 
-DATALAB_MARKER_LANGS = PersistentConfig(
-    "DATALAB_MARKER_LANGS",
-    "rag.datalab_marker_langs",
-    os.environ.get("DATALAB_MARKER_LANGS", ""),
+DATALAB_MARKER_API_BASE_URL = PersistentConfig(
+    "DATALAB_MARKER_API_BASE_URL",
+    "rag.datalab_marker_api_base_url",
+    os.environ.get("DATALAB_MARKER_API_BASE_URL", ""),
+)
+
+DATALAB_MARKER_ADDITIONAL_CONFIG = PersistentConfig(
+    "DATALAB_MARKER_ADDITIONAL_CONFIG",
+    "rag.datalab_marker_additional_config",
+    os.environ.get("DATALAB_MARKER_ADDITIONAL_CONFIG", ""),
 )
 
 DATALAB_MARKER_USE_LLM = PersistentConfig(
@@ -2053,6 +2154,12 @@ DATALAB_MARKER_DISABLE_IMAGE_EXTRACTION = PersistentConfig(
     "rag.datalab_marker_disable_image_extraction",
     os.environ.get("DATALAB_MARKER_DISABLE_IMAGE_EXTRACTION", "false").lower()
     == "true",
+)
+
+DATALAB_MARKER_FORMAT_LINES = PersistentConfig(
+    "DATALAB_MARKER_FORMAT_LINES",
+    "rag.datalab_marker_format_lines",
+    os.environ.get("DATALAB_MARKER_FORMAT_LINES", "false").lower() == "true",
 )
 
 DATALAB_MARKER_OUTPUT_FORMAT = PersistentConfig(

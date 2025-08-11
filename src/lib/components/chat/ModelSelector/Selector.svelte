@@ -394,14 +394,17 @@
 						class="w-full text-sm bg-transparent outline-hidden"
 						placeholder={searchPlaceholder}
 						autocomplete="off"
+						aria-label={$i18n.t('Search In Models')}
 						on:keydown={(e) => {
 							if (e.code === 'Enter' && filteredItems.length > 0) {
 								value = filteredItems[selectedModelIdx].value;
 								show = false;
 								return; // dont need to scroll on selection
 							} else if (e.code === 'ArrowDown') {
+								e.stopPropagation();
 								selectedModelIdx = Math.min(selectedModelIdx + 1, filteredItems.length - 1);
 							} else if (e.code === 'ArrowUp') {
+								e.stopPropagation();
 								selectedModelIdx = Math.max(selectedModelIdx - 1, 0);
 							} else {
 								// if the user types something, reset to the top selection.
@@ -436,6 +439,7 @@
 									selectedConnectionType === ''
 										? ''
 										: 'text-gray-300 dark:text-gray-600 hover:text-gray-700 dark:hover:text-white'} transition capitalize"
+									aria-pressed={selectedTag === '' && selectedConnectionType === ''}
 									on:click={() => {
 										selectedConnectionType = '';
 										selectedTag = '';
@@ -450,6 +454,7 @@
 									class="min-w-fit outline-none p-1.5 {selectedConnectionType === 'local'
 										? ''
 										: 'text-gray-300 dark:text-gray-600 hover:text-gray-700 dark:hover:text-white'} transition capitalize"
+									aria-pressed={selectedConnectionType === 'local'}
 									on:click={() => {
 										selectedTag = '';
 										selectedConnectionType = 'local';
@@ -464,6 +469,7 @@
 									class="min-w-fit outline-none p-1.5 {selectedConnectionType === 'external'
 										? ''
 										: 'text-gray-300 dark:text-gray-600 hover:text-gray-700 dark:hover:text-white'} transition capitalize"
+									aria-pressed={selectedConnectionType === 'external'}
 									on:click={() => {
 										selectedTag = '';
 										selectedConnectionType = 'external';
@@ -478,6 +484,7 @@
 									class="min-w-fit outline-none p-1.5 {selectedConnectionType === 'direct'
 										? ''
 										: 'text-gray-300 dark:text-gray-600 hover:text-gray-700 dark:hover:text-white'} transition capitalize"
+									aria-pressed={selectedConnectionType === 'direct'}
 									on:click={() => {
 										selectedTag = '';
 										selectedConnectionType = 'direct';
@@ -492,6 +499,7 @@
 									class="min-w-fit outline-none p-1.5 {selectedTag === tag
 										? ''
 										: 'text-gray-300 dark:text-gray-600 hover:text-gray-700 dark:hover:text-white'} transition capitalize"
+									aria-pressed={selectedTag === tag}
 									on:click={() => {
 										selectedConnectionType = '';
 										selectedTag = tag;
@@ -613,7 +621,7 @@
 
 			{#if showTemporaryChatControl}
 				<div class="flex items-center mx-2 mt-1 mb-2">
-					<button
+					<DropdownMenu.Item
 						class="flex justify-between w-full font-medium line-clamp-1 select-none items-center rounded-button py-2 px-3 text-sm text-gray-700 dark:text-gray-100 outline-hidden transition-all duration-75 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg cursor-pointer data-highlighted:bg-muted"
 						on:click={async () => {
 							temporaryChatEnabled.set(!$temporaryChatEnabled);
@@ -642,7 +650,7 @@
 						<div>
 							<Switch state={$temporaryChatEnabled} />
 						</div>
-					</button>
+					</DropdownMenu.Item>
 				</div>
 			{:else}
 				<div class="mb-3"></div>

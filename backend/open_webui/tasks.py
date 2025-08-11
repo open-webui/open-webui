@@ -8,7 +8,7 @@ from redis.asyncio import Redis
 from fastapi import Request
 from typing import Dict, List, Optional
 
-from open_webui.env import SRC_LOG_LEVELS
+from open_webui.env import SRC_LOG_LEVELS, REDIS_KEY_PREFIX
 
 
 log = logging.getLogger(__name__)
@@ -19,9 +19,9 @@ tasks: Dict[str, asyncio.Task] = {}
 item_tasks = {}
 
 
-REDIS_TASKS_KEY = "open-webui:tasks"
-REDIS_ITEM_TASKS_KEY = "open-webui:tasks:item"
-REDIS_PUBSUB_CHANNEL = "open-webui:tasks:commands"
+REDIS_TASKS_KEY = f"{REDIS_KEY_PREFIX}:tasks"
+REDIS_ITEM_TASKS_KEY = f"{REDIS_KEY_PREFIX}:tasks:item"
+REDIS_PUBSUB_CHANNEL = f"{REDIS_KEY_PREFIX}:tasks:commands"
 
 
 async def redis_task_command_listener(app):

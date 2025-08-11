@@ -195,7 +195,7 @@ class AuditLoggingMiddleware:
 
         try:
             user = get_current_user(
-                request, None, get_http_authorization_cred(auth_header)
+                request, None, None, get_http_authorization_cred(auth_header)
             )
             return user
         except Exception as e:

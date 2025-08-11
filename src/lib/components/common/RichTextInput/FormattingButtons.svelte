@@ -72,7 +72,6 @@
 				<ArrowLeftTag />
 			</button>
 		</Tooltip>
-
 		<Tooltip placement="top" content={$i18n.t('Sink List')}>
 			<button
 				on:click={() =>
