@@ -110,7 +110,7 @@ RUN chown -R $UID:$GID /app $HOME
 
 RUN if [ "$USE_OLLAMA" = "true" ]; then \
     # break cache so we get a new version of ollama everytime
-    echo "${BUILD_HASH}" > /tmp/ollama_build_hash && \
+    echo "$BUILD_HASH" > /tmp/ollama_build_hash && \
     apt-get update && \
     # Install pandoc and netcat
     apt-get install -y --no-install-recommends git build-essential pandoc netcat-openbsd curl && \
