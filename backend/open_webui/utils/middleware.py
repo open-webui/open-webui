@@ -1255,9 +1255,16 @@ async def process_chat_response(
     if not isinstance(response, StreamingResponse):
         if event_emitter:
             if isinstance(response, dict) or isinstance(response, JSONResponse):
-                response_data = (
-                    response if isinstance(response, dict) else response.content
-                )
+
+                if isinstance(response, JSONResponse) and isinstance(
+                    response.body, bytes
+                ):
+                    try:
+                        response_data = json.loads(response.body.decode("utf-8"))
+                    except json.JSONDecodeError:
+                        response_data = {"error": {"detail": "Invalid JSON response"}}
+                else:
+                    response_data = response
 
                 if "error" in response_data:
                     error = response_data["error"].get("detail", response_data["error"])
