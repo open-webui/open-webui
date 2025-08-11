@@ -605,8 +605,14 @@
 		class=" flex w-full message-{message.id}"
 		id="message-{message.id}"
 		dir={$settings.chatDirection}
+		aria-labelledby="model-wrote-this-{message.id}"
 	>
 		<div class={`shrink-0 ltr:mr-3 rtl:ml-3 hidden @lg:flex mt-1 `}>
+			<h2 id="model-wrote-this-{message.id}" class="sr-only"
+				>{$i18n.t('{{NAME}} wrote:', {
+					NAME: model?.name
+				})}</h2
+			>
 			<ProfileImage
 				src={model?.info?.meta?.profile_image_url ??
 					($i18n.language === 'dg-DG'

@@ -115,7 +115,9 @@
 	role="group"
 	dir={$settings.chatDirection}
 	id="message-{message.id}"
+	aria-labelledby="you-wrote-this-{message.id}"
 >
+	<h2 class="sr-only" id="you-wrote-this-{message.id}">{$i18n.t('You Wrote: ')}</h2>
 	{#if !($settings?.chatBubble ?? true)}
 		<div class={`shrink-0 ltr:mr-3 rtl:ml-3 mt-1`}>
 			<ProfileImage
