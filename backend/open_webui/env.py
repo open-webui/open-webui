@@ -320,7 +320,7 @@ PG_SSLMODE = os.environ.get(
     "PG_SSLMODE",
     os.environ.get("POSTGRES_SSLMODE", "verify-full"),
 )
-# Force rebuild: 2025-08-09 14:53 - Cache busting via core Python module
+# FORCE REBUILD: 2025-08-11 16:20 - SSL debug must be included in Docker build
 PG_SSLROOTCERT = os.environ.get(
     "PG_SSLROOTCERT",
     os.environ.get("POSTGRES_SSLROOTCERT", ""),
