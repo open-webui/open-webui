@@ -221,6 +221,7 @@
 														? ''
 														: 'group-hover:visible invisible transition'}"
 													type="button"
+													aria-label={$i18n.t('Delete File')}
 													on:click={() => {
 														editedFiles.splice(fileIdx, 1);
 
@@ -231,6 +232,7 @@
 														xmlns="http://www.w3.org/2000/svg"
 														viewBox="0 0 20 20"
 														fill="currentColor"
+														aria-hidden="true"
 														class="size-4"
 													>
 														<path
@@ -264,6 +266,9 @@
 						{/if}
 
 						<div class="max-h-96 overflow-auto">
+							<label class="sr-only" for="message-edit-{message.id}"
+								>{$i18n.t('Edit Message Input')}</label
+							>
 							<textarea
 								id="message-edit-{message.id}"
 								bind:this={messageEditTextAreaElement}
@@ -291,6 +296,7 @@
 						<div class=" mt-2 mb-1 flex justify-between text-sm font-medium">
 							<div>
 								<button
+									aria-label={$i18n.t('Save Edited Message')}
 									id="save-edit-message-button"
 									class=" px-4 py-2 bg-gray-50 hover:bg-gray-100 dark:bg-gray-800 dark:hover:bg-gray-700 border border-gray-100 dark:border-gray-700 text-gray-700 dark:text-gray-200 transition rounded-3xl"
 									on:click={() => {
@@ -303,6 +309,7 @@
 
 							<div class="flex space-x-1.5">
 								<button
+									aria-label={$i18n.t('Cancel Edit Of Message')}
 									id="close-edit-message-button"
 									class="px-4 py-2 bg-white dark:bg-gray-900 hover:bg-gray-100 text-gray-800 dark:text-gray-100 transition rounded-3xl"
 									on:click={() => {
@@ -313,6 +320,7 @@
 								</button>
 
 								<button
+									aria-label={$i18n.t('Send Edited Message')}
 									id="confirm-edit-message-button"
 									class=" px-4 py-2 bg-gray-900 dark:bg-white hover:bg-gray-850 text-gray-100 dark:text-gray-800 transition rounded-3xl"
 									on:click={() => {
@@ -418,12 +426,14 @@
 										{/if}
 
 										<button
+											aria-label={$i18n.t('Show Next Message')}
 											class="self-center p-1 hover:bg-black/5 dark:hover:bg-white/5 dark:hover:text-white hover:text-black rounded-md transition"
 											on:click={() => {
 												showNextMessage(message);
 											}}
 										>
 											<svg
+												aria-hidden="true"
 												xmlns="http://www.w3.org/2000/svg"
 												fill="none"
 												viewBox="0 0 24 24"
@@ -450,8 +460,10 @@
 										on:click={() => {
 											editMessageHandler();
 										}}
+										aria-label={$i18n.t('Edit Message')}
 									>
 										<svg
+											aria-hidden="true"
 											xmlns="http://www.w3.org/2000/svg"
 											fill="none"
 											viewBox="0 0 24 24"
@@ -471,6 +483,7 @@
 
 							<Tooltip content={$i18n.t('Copy')} placement="bottom">
 								<button
+									aria-label={$i18n.t('Copy Message To Clipboard')}
 									class="{($settings?.highContrastMode ?? false)
 										? ''
 										: 'invisible group-hover:visible'} p-1.5 hover:bg-black/5 dark:hover:bg-white/5 rounded-lg dark:hover:text-white hover:text-black transition"
@@ -485,6 +498,7 @@
 										stroke-width="2.3"
 										stroke="currentColor"
 										class="w-4 h-4"
+										aria-hidden="true"
 									>
 										<path
 											stroke-linecap="round"
@@ -498,6 +512,7 @@
 							{#if !readOnly && (!isFirstMessage || siblings.length > 1)}
 								<Tooltip content={$i18n.t('Delete')} placement="bottom">
 									<button
+										aria-label={$i18n.t('Delete Message')}
 										class="{($settings?.highContrastMode ?? false)
 											? ''
 											: 'invisible group-hover:visible'} p-1 rounded-sm dark:hover:text-white hover:text-black transition"
@@ -508,6 +523,7 @@
 										<svg
 											xmlns="http://www.w3.org/2000/svg"
 											fill="none"
+											aria-hidden="true"
 											viewBox="0 0 24 24"
 											stroke-width="2"
 											stroke="currentColor"
@@ -527,6 +543,7 @@
 								{#if siblings.length > 1}
 									<div class="flex self-center" dir="ltr">
 										<button
+											aria-label={$i18n.t('Show Previous Message')}
 											class="self-center p-1 hover:bg-black/5 dark:hover:bg-white/5 dark:hover:text-white hover:text-black rounded-md transition"
 											on:click={() => {
 												showPreviousMessage(message);
@@ -536,6 +553,7 @@
 												xmlns="http://www.w3.org/2000/svg"
 												fill="none"
 												viewBox="0 0 24 24"
+												aria-hidden="true"
 												stroke="currentColor"
 												stroke-width="2.5"
 												class="size-3.5"
@@ -578,6 +596,7 @@
 											<!-- svelte-ignore a11y-no-static-element-interactions -->
 											<div
 												class="text-sm tracking-widest font-semibold self-center dark:text-gray-100 min-w-fit"
+												role="button"
 												on:dblclick={async () => {
 													messageIndexEdit = true;
 
@@ -596,6 +615,7 @@
 										{/if}
 
 										<button
+											aria-label={$i18n.t('Show Next Message')}
 											class="self-center p-1 hover:bg-black/5 dark:hover:bg-white/5 dark:hover:text-white hover:text-black rounded-md transition"
 											on:click={() => {
 												showNextMessage(message);
@@ -605,6 +625,7 @@
 												xmlns="http://www.w3.org/2000/svg"
 												fill="none"
 												viewBox="0 0 24 24"
+												aria-hidden="true"
 												stroke="currentColor"
 												stroke-width="2.5"
 												class="size-3.5"

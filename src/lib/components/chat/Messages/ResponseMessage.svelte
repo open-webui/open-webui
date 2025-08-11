@@ -1249,7 +1249,7 @@
 									{#if !$temporaryChatEnabled && ($config?.features.enable_message_rating ?? true)}
 										<Tooltip content={$i18n.t('Good Response')} placement="bottom">
 											<button
-												aria-label={$i18n.t('Good Response')}
+												aria-label={$i18n.t('Rate Message With A Good Response')}
 												class="{isLastMessage || ($settings?.highContrastMode ?? false)
 													? 'visible'
 													: 'invisible group-hover:visible'} p-1.5 hover:bg-black/5 dark:hover:bg-white/5 rounded-lg {(
@@ -1287,7 +1287,7 @@
 
 										<Tooltip content={$i18n.t('Bad Response')} placement="bottom">
 											<button
-												aria-label={$i18n.t('Bad Response')}
+												aria-label={$i18n.t('Rate Message With A Bad Response')}
 												class="{isLastMessage || ($settings?.highContrastMode ?? false)
 													? 'visible'
 													: 'invisible group-hover:visible'} p-1.5 hover:bg-black/5 dark:hover:bg-white/5 rounded-lg {(
