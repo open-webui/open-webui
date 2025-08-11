@@ -17,7 +17,10 @@
 
 	export let id;
 	export let content;
+
 	export let history;
+	export let messageId;
+
 	export let selectedModels = [];
 
 	export let done = true;
@@ -27,6 +30,7 @@
 	export let save = false;
 	export let preview = false;
 	export let floatingButtons = true;
+	export let topPadding = false;
 
 	export let onSave = (e) => {};
 	export let onSourceClick = (e) => {};
@@ -134,6 +138,7 @@
 		{save}
 		{preview}
 		{done}
+		{topPadding}
 		sourceIds={(sources ?? []).reduce((acc, s) => {
 			let ids = [];
 			s.document.forEach((document, index) => {
@@ -194,6 +199,7 @@
 	<FloatingButtons
 		bind:this={floatingButtonsElement}
 		{id}
+		{messageId}
 		actions={$settings?.floatingActionButtons ?? []}
 		model={(selectedModels ?? []).includes(model?.id)
 			? model?.id

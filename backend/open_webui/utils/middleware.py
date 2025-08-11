@@ -19,7 +19,7 @@ from concurrent.futures import ThreadPoolExecutor
 
 
 from fastapi import Request, HTTPException
-from starlette.responses import Response, StreamingResponse
+from starlette.responses import Response, StreamingResponse, JSONResponse
 
 
 from open_webui.models.chats import Chats
@@ -95,6 +95,7 @@ from open_webui.config import (
 from open_webui.env import (
     SRC_LOG_LEVELS,
     GLOBAL_LOG_LEVEL,
+    CHAT_RESPONSE_STREAM_DELTA_CHUNK_SIZE,
     BYPASS_MODEL_ACCESS_CONTROL,
     ENABLE_REALTIME_CHAT_SAVE,
 )
@@ -684,6 +685,7 @@ def apply_params_to_form_data(form_data, model):
 
     open_webui_params = {
         "stream_response": bool,
+        "stream_delta_chunk_size": int,
         "function_calling": str,
         "system": str,
     }
@@ -930,7 +932,7 @@ async def process_chat_payload(request, form_data, user, metadata, model):
                 }
 
     if tools_dict:
-        if metadata.get("function_calling") == "native":
+        if metadata.get("params", {}).get("function_calling") == "native":
             # If the function calling is native, then call the tools function calling handler
             metadata["tools"] = tools_dict
             form_data["tools"] = [
@@ -1252,91 +1254,104 @@ async def process_chat_response(
     # Non-streaming response
     if not isinstance(response, StreamingResponse):
         if event_emitter:
-            if "error" in response:
-                error = response["error"].get("detail", response["error"])
-                Chats.upsert_message_to_chat_by_id_and_message_id(
-                    metadata["chat_id"],
-                    metadata["message_id"],
-                    {
-                        "error": {"content": error},
-                    },
+            if isinstance(response, dict) or isinstance(response, JSONResponse):
+                response_data = (
+                    response if isinstance(response, dict) else response.content
                 )
 
-            if "selected_model_id" in response:
-                Chats.upsert_message_to_chat_by_id_and_message_id(
-                    metadata["chat_id"],
-                    metadata["message_id"],
-                    {
-                        "selectedModelId": response["selected_model_id"],
-                    },
-                )
-
-            choices = response.get("choices", [])
-            if choices and choices[0].get("message", {}).get("content"):
-                content = response["choices"][0]["message"]["content"]
-
-                if content:
-
-                    await event_emitter(
-                        {
-                            "type": "chat:completion",
-                            "data": response,
-                        }
-                    )
-
-                    title = Chats.get_chat_title_by_id(metadata["chat_id"])
-
-                    await event_emitter(
-                        {
-                            "type": "chat:completion",
-                            "data": {
-                                "done": True,
-                                "content": content,
-                                "title": title,
-                            },
-                        }
-                    )
-
-                    # Save message in the database
+                if "error" in response_data:
+                    error = response_data["error"].get("detail", response_data["error"])
                     Chats.upsert_message_to_chat_by_id_and_message_id(
                         metadata["chat_id"],
                         metadata["message_id"],
                         {
-                            "role": "assistant",
-                            "content": content,
+                            "error": {"content": error},
                         },
                     )
 
-                    # Send a webhook notification if the user is not active
-                    if not get_active_status_by_user_id(user.id):
-                        webhook_url = Users.get_user_webhook_url_by_id(user.id)
-                        if webhook_url:
-                            post_webhook(
-                                request.app.state.WEBUI_NAME,
-                                webhook_url,
-                                f"{title} - {request.app.state.config.WEBUI_URL}/c/{metadata['chat_id']}\n\n{content}",
-                                {
-                                    "action": "chat",
-                                    "message": content,
+                if "selected_model_id" in response_data:
+                    Chats.upsert_message_to_chat_by_id_and_message_id(
+                        metadata["chat_id"],
+                        metadata["message_id"],
+                        {
+                            "selectedModelId": response_data["selected_model_id"],
+                        },
+                    )
+
+                choices = response_data.get("choices", [])
+                if choices and choices[0].get("message", {}).get("content"):
+                    content = response_data["choices"][0]["message"]["content"]
+
+                    if content:
+                        await event_emitter(
+                            {
+                                "type": "chat:completion",
+                                "data": response_data,
+                            }
+                        )
+
+                        title = Chats.get_chat_title_by_id(metadata["chat_id"])
+
+                        await event_emitter(
+                            {
+                                "type": "chat:completion",
+                                "data": {
+                                    "done": True,
+                                    "content": content,
                                     "title": title,
-                                    "url": f"{request.app.state.config.WEBUI_URL}/c/{metadata['chat_id']}",
                                 },
-                            )
+                            }
+                        )
 
-                    await background_tasks_handler()
+                        # Save message in the database
+                        Chats.upsert_message_to_chat_by_id_and_message_id(
+                            metadata["chat_id"],
+                            metadata["message_id"],
+                            {
+                                "role": "assistant",
+                                "content": content,
+                            },
+                        )
 
-            if events and isinstance(events, list) and isinstance(response, dict):
-                extra_response = {}
-                for event in events:
-                    if isinstance(event, dict):
-                        extra_response.update(event)
-                    else:
-                        extra_response[event] = True
+                        # Send a webhook notification if the user is not active
+                        if not get_active_status_by_user_id(user.id):
+                            webhook_url = Users.get_user_webhook_url_by_id(user.id)
+                            if webhook_url:
+                                post_webhook(
+                                    request.app.state.WEBUI_NAME,
+                                    webhook_url,
+                                    f"{title} - {request.app.state.config.WEBUI_URL}/c/{metadata['chat_id']}\n\n{content}",
+                                    {
+                                        "action": "chat",
+                                        "message": content,
+                                        "title": title,
+                                        "url": f"{request.app.state.config.WEBUI_URL}/c/{metadata['chat_id']}",
+                                    },
+                                )
 
-                response = {
-                    **extra_response,
-                    **response,
-                }
+                        await background_tasks_handler()
+
+                if events and isinstance(events, list):
+                    extra_response = {}
+                    for event in events:
+                        if isinstance(event, dict):
+                            extra_response.update(event)
+                        else:
+                            extra_response[event] = True
+
+                    response_data = {
+                        **extra_response,
+                        **response_data,
+                    }
+
+                if isinstance(response, dict):
+                    response = response_data
+                if isinstance(response, JSONResponse):
+                    response = JSONResponse(
+                        content=response_data,
+                        headers=response.headers,
+                        status_code=response.status_code,
+                    )
 
             return response
         else:
@@ -1816,6 +1831,15 @@ async def process_chat_response(
 
                     response_tool_calls = []
 
+                    delta_count = 0
+                    delta_chunk_size = max(
+                        CHAT_RESPONSE_STREAM_DELTA_CHUNK_SIZE,
+                        int(
+                            metadata.get("params", {}).get("stream_delta_chunk_size")
+                            or 1
+                        ),
+                    )
+
                     async for line in response.body_iterator:
                         line = line.decode("utf-8") if isinstance(line, bytes) else line
                         data = line
@@ -2063,12 +2087,23 @@ async def process_chat_response(
                                                 ),
                                             }
 
-                                await event_emitter(
-                                    {
-                                        "type": "chat:completion",
-                                        "data": data,
-                                    }
-                                )
+                                if delta:
+                                    delta_count += 1
+                                    if delta_count >= delta_chunk_size:
+                                        await event_emitter(
+                                            {
+                                                "type": "chat:completion",
+                                                "data": data,
+                                            }
+                                        )
+                                        delta_count = 0
+                                else:
+                                    await event_emitter(
+                                        {
+                                            "type": "chat:completion",
+                                            "data": data,
+                                        }
+                                    )
                         except Exception as e:
                             done = "data: [DONE]" in line
                             if done:

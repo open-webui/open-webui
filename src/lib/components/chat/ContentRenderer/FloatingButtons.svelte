@@ -15,6 +15,8 @@
 	import Skeleton from '../Messages/Skeleton.svelte';
 
 	export let id = '';
+	export let messageId = '';
+
 	export let model = null;
 	export let messages = [];
 	export let actions = [];
@@ -102,7 +104,7 @@
 		// Remove all TOOL placeholders from the prompt
 		prompt = prompt.replace(toolIdPattern, '');
 
-		if (prompt.includes('{{INPUT_CONTENT}}') && !floatingInput) {
+		if (prompt.includes('{{INPUT_CONTENT}}') && floatingInput) {
 			prompt = prompt.replace('{{INPUT_CONTENT}}', floatingInputValue);
 			floatingInputValue = '';
 		}
@@ -211,7 +213,7 @@
 
 		onAdd({
 			modelId: model,
-			parentId: id,
+			parentId: messageId,
 			messages: messages
 		});
 	};

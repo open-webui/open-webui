@@ -10,6 +10,8 @@ from open_webui.config import (
     QDRANT_PREFER_GRPC,
     QDRANT_URI,
     QDRANT_COLLECTION_PREFIX,
+    QDRANT_TIMEOUT,
+    QDRANT_HNSW_M,
 )
 from open_webui.env import SRC_LOG_LEVELS
 from open_webui.retrieval.vector.main import (
@@ -51,6 +53,8 @@ class QdrantClient(VectorDBBase):
         self.QDRANT_ON_DISK = QDRANT_ON_DISK
         self.PREFER_GRPC = QDRANT_PREFER_GRPC
         self.GRPC_PORT = QDRANT_GRPC_PORT
+        self.QDRANT_TIMEOUT = QDRANT_TIMEOUT
+        self.QDRANT_HNSW_M = QDRANT_HNSW_M
 
         if not self.QDRANT_URI:
             raise ValueError(
@@ -69,9 +73,14 @@ class QdrantClient(VectorDBBase):
                 grpc_port=self.GRPC_PORT,
                 prefer_grpc=self.PREFER_GRPC,
                 api_key=self.QDRANT_API_KEY,
+                timeout=self.QDRANT_TIMEOUT,
             )
             if self.PREFER_GRPC
-            else Qclient(url=self.QDRANT_URI, api_key=self.QDRANT_API_KEY)
+            else Qclient(
+                url=self.QDRANT_URI,
+                api_key=self.QDRANT_API_KEY,
+                timeout=self.QDRANT_TIMEOUT,
+            )
         )
 
         # Main collection types for multi-tenancy
@@ -132,6 +141,12 @@ class QdrantClient(VectorDBBase):
                 size=dimension,
                 distance=models.Distance.COSINE,
                 on_disk=self.QDRANT_ON_DISK,
+            ),
+            # Disable global index building due to multitenancy
+            # For more details https://qdrant.tech/documentation/guides/multiple-partitions/#calibrate-performance
+            hnsw_config=models.HnswConfigDiff(
+                payload_m=self.QDRANT_HNSW_M,
+                m=0,
             ),
         )
         log.info(
@@ -278,12 +293,12 @@ class QdrantClient(VectorDBBase):
         tenant_filter = _tenant_filter(tenant_id)
         field_conditions = [_metadata_filter(k, v) for k, v in filter.items()]
         combined_filter = models.Filter(must=[tenant_filter, *field_conditions])
-        points = self.client.query_points(
+        points = self.client.scroll(
             collection_name=mt_collection,
-            query_filter=combined_filter,
+            scroll_filter=combined_filter,
             limit=limit,
         )
-        return self._result_to_get_result(points.points)
+        return self._result_to_get_result(points[0])
 
     def get(self, collection_name: str) -> Optional[GetResult]:
         """
@@ -296,12 +311,12 @@ class QdrantClient(VectorDBBase):
             log.debug(f"Collection {mt_collection} doesn't exist, get returns None")
             return None
         tenant_filter = _tenant_filter(tenant_id)
-        points = self.client.query_points(
+        points = self.client.scroll(
             collection_name=mt_collection,
-            query_filter=models.Filter(must=[tenant_filter]),
+            scroll_filter=models.Filter(must=[tenant_filter]),
             limit=NO_LIMIT,
         )
-        return self._result_to_get_result(points.points)
+        return self._result_to_get_result(points[0])
 
     def upsert(self, collection_name: str, items: List[VectorItem]):
         """

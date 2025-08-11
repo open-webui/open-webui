@@ -1484,14 +1484,23 @@
 
 		saveSessionSelectedModels();
 
-		await sendPrompt(history, userPrompt, userMessageId, { newChat: true });
+		await sendMessage(history, userMessageId, { newChat: true });
 	};
 
-	const sendPrompt = async (
+	const sendMessage = async (
 		_history,
-		prompt: string,
 		parentId: string,
-		{ modelId = null, modelIdx = null, newChat = false } = {}
+		{
+			messages = null,
+			modelId = null,
+			modelIdx = null,
+			newChat = false
+		}: {
+			messages?: any[] | null;
+			modelId?: string | null;
+			modelIdx?: number | null;
+			newChat?: boolean;
+		} = {}
 	) => {
 		if (autoScroll) {
 			scrollToBottom();
@@ -1561,9 +1570,8 @@
 				const model = $models.filter((m) => m.id === modelId).at(0);
 
 				if (model) {
-					const messages = createMessagesList(_history, parentId);
 					// If there are image files, check if model is vision capable
-					const hasImages = messages.some((message) =>
+					const hasImages = createMessagesList(_history, parentId).some((message) =>
 						message.files?.some((file) => file.type === 'image')
 					);
 
@@ -1580,7 +1588,15 @@
 					const chatEventEmitter = await getChatEventEmitter(model.id, _chatId);
 
 					scrollToBottom();
-					await sendPromptSocket(_history, model, responseMessageId, _chatId);
+					await sendMessageSocket(
+						model,
+						messages && messages.length > 0
+							? messages
+							: createMessagesList(_history, responseMessageId),
+						_history,
+						responseMessageId,
+						_chatId
+					);
 
 					if (chatEventEmitter) clearInterval(chatEventEmitter);
 				} else {
@@ -1593,12 +1609,11 @@
 		chats.set(await getChatList(localStorage.token, $currentChatPage));
 	};
 
-	const sendPromptSocket = async (_history, model, responseMessageId, _chatId) => {
-		const chatMessages = createMessagesList(history, history.currentId);
+	const sendMessageSocket = async (model, _messages, _history, responseMessageId, _chatId) => {
 		const responseMessage = _history.messages[responseMessageId];
 		const userMessage = _history.messages[responseMessage.parentId];
 
-		const chatMessageFiles = chatMessages
+		const chatMessageFiles = _messages
 			.filter((message) => message.files)
 			.flatMap((message) => message.files);
 
@@ -1652,7 +1667,7 @@
 						)}`
 					}
 				: undefined,
-			...createMessagesList(_history, responseMessageId).map((message) => ({
+			..._messages.map((message) => ({
 				...message,
 				content: processDetails(message.content)
 			}))
@@ -1900,31 +1915,39 @@
 			scrollToBottom();
 		}
 
-		await sendPrompt(history, userPrompt, userMessageId);
+		await sendMessage(history, userMessageId);
 	};
 
-	const regenerateResponse = async (message) => {
+	const regenerateResponse = async (message, suggestionPrompt = null) => {
 		console.log('regenerateResponse');
 
 		if (history.currentId) {
 			let userMessage = history.messages[message.parentId];
-			let userPrompt = userMessage.content;
 
 			if (autoScroll) {
 				scrollToBottom();
 			}
 
-			if ((userMessage?.models ?? [...selectedModels]).length == 1) {
-				// If user message has only one model selected, sendPrompt automatically selects it for regeneration
-				await sendPrompt(history, userPrompt, userMessage.id);
-			} else {
-				// If there are multiple models selected, use the model of the response message for regeneration
-				// e.g. many model chat
-				await sendPrompt(history, userPrompt, userMessage.id, {
-					modelId: message.model,
-					modelIdx: message.modelIdx
-				});
-			}
+			await sendMessage(history, userMessage.id, {
+				...(suggestionPrompt
+					? {
+							messages: [
+								...createMessagesList(history, message.id),
+								{
+									role: 'user',
+									content: suggestionPrompt
+								}
+							]
+						}
+					: {}),
+				...((userMessage?.models ?? [...selectedModels]).length > 1
+					? {
+							// If multiple models are selected, use the model from the message
+							modelId: message.model,
+							modelIdx: message.modelIdx
+						}
+					: {})
+			});
 		}
 	};
 
@@ -1942,7 +1965,13 @@
 				.at(0);
 
 			if (model) {
-				await sendPromptSocket(history, model, responseMessage.id, _chatId);
+				await sendMessageSocket(
+					model,
+					createMessagesList(history, responseMessage.id),
+					history,
+					responseMessage.id,
+					_chatId
+				);
 			}
 		}
 	};
@@ -2056,6 +2085,7 @@
 
 	const MAX_DRAFT_LENGTH = 5000;
 	let saveDraftTimeout = null;
+
 	const saveDraft = async (draft, chatId = null) => {
 		if (saveDraftTimeout) {
 			clearTimeout(saveDraftTimeout);
@@ -2071,6 +2101,13 @@
 		} else {
 			sessionStorage.removeItem(`chat-input${chatId ? `-${chatId}` : ''}`);
 		}
+	};
+
+	const clearDraft = async (chatId = null) => {
+		if (saveDraftTimeout) {
+			clearTimeout(saveDraftTimeout);
+		}
+		await sessionStorage.removeItem(`chat-input${chatId ? `-${chatId}` : ''}`);
 	};
 </script>
 
@@ -2171,7 +2208,7 @@
 										}}
 										{selectedModels}
 										{atSelectedModel}
-										{sendPrompt}
+										{sendMessage}
 										{showMessage}
 										{submitMessage}
 										{continueResponse}
@@ -2179,6 +2216,7 @@
 										{mergeResponses}
 										{chatActionHandler}
 										{addMessages}
+										topPadding={true}
 										bottomPadding={files.length > 0}
 										{onSelect}
 									/>
@@ -2222,6 +2260,7 @@
 										}
 									}}
 									on:submit={async (e) => {
+										clearDraft();
 										if (e.detail || files.length > 0) {
 											await tick();
 											submitPrompt(
@@ -2274,6 +2313,7 @@
 										}
 									}}
 									on:submit={async (e) => {
+										clearDraft();
 										if (e.detail || files.length > 0) {
 											await tick();
 											submitPrompt(

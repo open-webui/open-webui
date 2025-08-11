@@ -168,9 +168,19 @@ class PersistentConfig(Generic[T]):
         self.config_path = config_path
         self.env_value = env_value
         self.config_value = get_config_value(config_path)
+
         if self.config_value is not None and ENABLE_PERSISTENT_CONFIG:
-            log.info(f"'{env_name}' loaded from the latest database entry")
-            self.value = self.config_value
+            if (
+                self.config_path.startswith("oauth.")
+                and not ENABLE_OAUTH_PERSISTENT_CONFIG
+            ):
+                log.info(
+                    f"Skipping loading of '{env_name}' as OAuth persistent config is disabled"
+                )
+                self.value = env_value
+            else:
+                log.info(f"'{env_name}' loaded from the latest database entry")
+                self.value = self.config_value
         else:
             self.value = env_value
 
@@ -302,6 +312,9 @@ JWT_EXPIRES_IN = PersistentConfig(
 # OAuth config
 ####################################
 
+ENABLE_OAUTH_PERSISTENT_CONFIG = (
+    os.environ.get("ENABLE_OAUTH_PERSISTENT_CONFIG", "True").lower() == "true"
+)
 
 ENABLE_OAUTH_SIGNUP = PersistentConfig(
     "ENABLE_OAUTH_SIGNUP",
@@ -467,6 +480,12 @@ OAUTH_PROVIDER_NAME = PersistentConfig(
     "OAUTH_PROVIDER_NAME",
     "oauth.oidc.provider_name",
     os.environ.get("OAUTH_PROVIDER_NAME", "SSO"),
+)
+
+OAUTH_SUB_CLAIM = PersistentConfig(
+    "OAUTH_SUB_CLAIM",
+    "oauth.oidc.sub_claim",
+    os.environ.get("OAUTH_SUB_CLAIM", None),
 )
 
 OAUTH_USERNAME_CLAIM = PersistentConfig(
@@ -1905,6 +1924,8 @@ QDRANT_API_KEY = os.environ.get("QDRANT_API_KEY", None)
 QDRANT_ON_DISK = os.environ.get("QDRANT_ON_DISK", "false").lower() == "true"
 QDRANT_PREFER_GRPC = os.environ.get("QDRANT_PREFER_GRPC", "false").lower() == "true"
 QDRANT_GRPC_PORT = int(os.environ.get("QDRANT_GRPC_PORT", "6334"))
+QDRANT_TIMEOUT = int(os.environ.get("QDRANT_TIMEOUT", "5"))
+QDRANT_HNSW_M = int(os.environ.get("QDRANT_HNSW_M", "16"))
 ENABLE_QDRANT_MULTITENANCY_MODE = (
     os.environ.get("ENABLE_QDRANT_MULTITENANCY_MODE", "true").lower() == "true"
 )

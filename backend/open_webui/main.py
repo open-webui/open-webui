@@ -470,6 +470,9 @@ from open_webui.tasks import (
 from open_webui.utils.redis import get_sentinels_from_env
 
 
+from open_webui.constants import ERROR_MESSAGES
+
+
 if SAFE_MODE:
     print("SAFE MODE ENABLED")
     Functions.deactivate_all_functions()
@@ -1258,6 +1261,7 @@ if audit_level != AuditLevel.NONE:
 
 
 @app.get("/api/models")
+@app.get("/api/v1/models")  # Experimental: Compatibility with OpenAI API
 async def get_models(
     request: Request, refresh: bool = False, user=Depends(get_verified_user)
 ):
@@ -1338,6 +1342,7 @@ async def get_base_models(request: Request, user=Depends(get_admin_user)):
 
 
 @app.post("/api/embeddings")
+@app.post("/api/v1/embeddings")  # Experimental: Compatibility with OpenAI API
 async def embeddings(
     request: Request, form_data: dict, user=Depends(get_verified_user)
 ):
@@ -1364,6 +1369,7 @@ async def embeddings(
 
 
 @app.post("/api/chat/completions")
+@app.post("/api/v1/chat/completions")  # Experimental: Compatibility with OpenAI API
 async def chat_completion(
     request: Request,
     form_data: dict,
@@ -1372,13 +1378,13 @@ async def chat_completion(
     if not request.app.state.MODELS:
         await get_all_models(request, user=user)
 
+    model_id = form_data.get("model", None)
     model_item = form_data.pop("model_item", {})
     tasks = form_data.pop("background_tasks", None)
 
     metadata = {}
     try:
         if not model_item.get("direct", False):
-            model_id = form_data.get("model", None)
             if model_id not in request.app.state.MODELS:
                 raise Exception("Model not found")
 
@@ -1398,6 +1404,19 @@ async def chat_completion(
             request.state.direct = True
             request.state.model = model
 
+        model_info_params = (
+            model_info.params.model_dump() if model_info and model_info.params else {}
+        )
+
+        # Chat Params
+        stream_delta_chunk_size = form_data.get("params", {}).get(
+            "stream_delta_chunk_size"
+        )
+
+        # Model Params
+        if model_info_params.get("stream_delta_chunk_size"):
+            stream_delta_chunk_size = model_info_params.get("stream_delta_chunk_size")
+
         metadata = {
             "user_id": user.id,
             "chat_id": form_data.pop("chat_id", None),
@@ -1411,17 +1430,26 @@ async def chat_completion(
             "variables": form_data.get("variables", {}),
             "model": model,
             "direct": model_item.get("direct", False),
-            **(
-                {"function_calling": "native"}
-                if form_data.get("params", {}).get("function_calling") == "native"
-                or (
-                    model_info
-                    and model_info.params.model_dump().get("function_calling")
-                    == "native"
-                )
-                else {}
-            ),
+            "params": {
+                "stream_delta_chunk_size": stream_delta_chunk_size,
+                "function_calling": (
+                    "native"
+                    if (
+                        form_data.get("params", {}).get("function_calling") == "native"
+                        or model_info_params.get("function_calling") == "native"
+                    )
+                    else "default"
+                ),
+            },
         }
+
+        if metadata.get("chat_id") and (user and user.role != "admin"):
+            chat = Chats.get_chat_by_id_and_user_id(metadata["chat_id"], user.id)
+            if chat is None:
+                raise HTTPException(
+                    status_code=status.HTTP_404_NOT_FOUND,
+                    detail=ERROR_MESSAGES.DEFAULT(),
+                )
 
         request.state.metadata = metadata
         form_data["metadata"] = metadata
