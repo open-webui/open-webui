@@ -322,11 +322,11 @@
 	<div class=" my-2 mb-5 gap-2 grid lg:grid-cols-2 xl:grid-cols-3" id="model-list">
 		{#each filteredModels as model (model.id)}
 			<div
-				class=" flex flex-col cursor-pointer w-full px-3 py-2 dark:hover:bg-white/5 hover:bg-black/5 rounded-xl transition"
+				class=" flex flex-col cursor-pointer w-full px-4 py-3 border border-gray-50 dark:border-gray-850 dark:hover:bg-white/5 hover:bg-black/5 rounded-2xl transition"
 				id="model-item-{model.id}"
 			>
 				<div class="flex gap-4 mt-1 mb-0.5">
-					<div class=" w-[44px]">
+					<div class=" w-10">
 						<div
 							class=" rounded-full object-cover {model.is_active
 								? ''
@@ -609,7 +609,7 @@
 
 			<a
 				class=" flex cursor-pointer items-center justify-between hover:bg-gray-50 dark:hover:bg-gray-850 w-full mb-2 px-3.5 py-1.5 rounded-xl transition"
-				href="https://openwebui.com/#open-webui-community"
+				href="https://openwebui.com/models"
 				target="_blank"
 			>
 				<div class=" self-center">

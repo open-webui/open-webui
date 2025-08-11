@@ -27,14 +27,57 @@
 	});
 
 	import TurndownService from 'turndown';
-	import { gfm } from 'turndown-plugin-gfm';
+	import { gfm } from '@joplin/turndown-plugin-gfm';
 	const turndownService = new TurndownService({
 		codeBlockStyle: 'fenced',
 		headingStyle: 'atx'
 	});
 	turndownService.escape = (string) => string;
+
 	// Use turndown-plugin-gfm for proper GFM table support
 	turndownService.use(gfm);
+
+	// Add custom table header rule before using GFM plugin
+	turndownService.addRule('tableHeaders', {
+		filter: 'th',
+		replacement: function (content, node) {
+			return content;
+		}
+	});
+
+	// Add custom table rule to handle headers properly
+	turndownService.addRule('tables', {
+		filter: 'table',
+		replacement: function (content, node) {
+			// Extract rows
+			const rows = Array.from(node.querySelectorAll('tr'));
+			if (rows.length === 0) return content;
+
+			let markdown = '\n';
+
+			rows.forEach((row, rowIndex) => {
+				const cells = Array.from(row.querySelectorAll('th, td'));
+				const cellContents = cells.map((cell) => {
+					// Get the text content and clean it up
+					let cellContent = turndownService.turndown(cell.innerHTML).trim();
+					// Remove extra paragraph tags that might be added
+					cellContent = cellContent.replace(/^\n+|\n+$/g, '');
+					return cellContent;
+				});
+
+				// Add the row
+				markdown += '| ' + cellContents.join(' | ') + ' |\n';
+
+				// Add separator after first row (which should be headers)
+				if (rowIndex === 0) {
+					const separator = cells.map(() => '---').join(' | ');
+					markdown += '| ' + separator + ' |\n';
+				}
+			});
+
+			return markdown + '\n';
+		}
+	});
 
 	turndownService.addRule('taskListItems', {
 		filter: (node) =>
@@ -92,6 +135,8 @@
 	import Typography from '@tiptap/extension-typography';
 	import Highlight from '@tiptap/extension-highlight';
 	import CodeBlockLowlight from '@tiptap/extension-code-block-lowlight';
+
+	import Mention from '@tiptap/extension-mention';
 
 	import { all, createLowlight } from 'lowlight';
 
@@ -179,7 +224,7 @@
 	export let editable = true;
 	export let collaboration = false;
 
-	export let showFormattingButtons = true;
+	export let showFormattingToolbar = true;
 
 	export let preserveBreaks = false;
 	export let generateAutoCompletion: Function = async () => null;
@@ -922,6 +967,12 @@
 				Highlight,
 				Typography,
 
+				Mention.configure({
+					HTMLAttributes: {
+						class: 'mention'
+					}
+				}),
+
 				TableKit.configure({
 					table: { resizable: true }
 				}),
@@ -960,7 +1011,7 @@
 						]
 					: []),
 
-				...(showFormattingButtons
+				...(showFormattingToolbar
 					? [
 							BubbleMenu.configure({
 								element: bubbleMenuElement,
@@ -1093,6 +1144,16 @@
 							if (event.key === 'Enter') {
 								const isCtrlPressed = event.ctrlKey || event.metaKey; // metaKey is for Cmd key on Mac
 								if (event.shiftKey && !isCtrlPressed) {
+									const { state } = view;
+									const { $from } = state.selection;
+									const lineStart = $from.before($from.depth);
+									const lineEnd = $from.after($from.depth);
+									const lineText = state.doc.textBetween(lineStart, lineEnd, '\n', '\0').trim();
+									if (lineText === '```') {
+										// Fix GitHub issue #16337: prevent backtick removal for lines starting with ```
+										return false; // Let ProseMirror handle the Enter key normally
+									}
+
 									editor.commands.enter(); // Insert a new line
 									view.dispatch(view.state.tr.scrollIntoView()); // Move viewport to the cursor
 									event.preventDefault();
@@ -1273,7 +1334,7 @@
 	};
 </script>
 
-{#if showFormattingButtons}
+{#if showFormattingToolbar}
 	<div bind:this={bubbleMenuElement} id="bubble-menu" class="p-0">
 		<FormattingButtons {editor} />
 	</div>

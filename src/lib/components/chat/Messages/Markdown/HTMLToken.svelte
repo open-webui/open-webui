@@ -122,6 +122,11 @@
 	{:else if token.text.includes(`<source_id`)}
 		<Source {id} {token} onClick={onSourceClick} />
 	{:else}
-		{token.text}
+		{@const br = token.text.match(/<br\s*\/?>/)}
+		{#if br}
+			<br />
+		{:else}
+			{token.text}
+		{/if}
 	{/if}
 {/if}

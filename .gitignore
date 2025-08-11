@@ -2,6 +2,8 @@ deploy_to_ubuntu.md
 deployment.md
 update.md
 
+x.py
+yarn.lock
 .DS_Store
 node_modules
 /build
@@ -16,7 +18,8 @@ vite.config.ts.timestamp-*
 __pycache__/
 *.py[cod]
 *$py.class
-
+.nvmrc
+CLAUDE.md
 # C extensions
 *.so
 

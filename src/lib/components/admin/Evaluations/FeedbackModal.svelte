@@ -54,6 +54,20 @@
 			<div class="flex flex-col md:flex-row w-full px-5 pb-4 md:space-x-4 dark:text-gray-200">
 				{#if loaded}
 					<div class="flex flex-col w-full">
+						<div class="flex flex-col w-full mb-2">
+							<div class=" mb-1 text-xs text-gray-500">{$i18n.t('Chat ID')}</div>
+
+							<div class="flex-1 text-xs">
+								<a
+									href={`/s/${selectedFeedback?.meta?.chat_id}`}
+									class=" hover:underline"
+									target="_blank"
+								>
+									<span>{selectedFeedback?.meta?.chat_id ?? '-'}</span>
+								</a>
+							</div>
+						</div>
+
 						{#if feedbackData}
 							{@const messageId = feedbackData?.meta?.message_id}
 							{@const messages = feedbackData?.snapshot?.chat?.chat?.history.messages}

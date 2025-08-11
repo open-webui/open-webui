@@ -127,9 +127,14 @@
 			let timeout;
 			const worker = getPyodideWorker();
 
+			const startTag = `--||CODE-START-${id}||--`;
+			const endTag = `--||CODE-END-${id}||--`;
+
 			const script = `
 import black
+print("${startTag}")
 print(black.format_str("""${code.replace(/\\/g, '\\\\').replace(/`/g, '\\`').replace(/"/g, '\\"')}""", mode=black.Mode()))
+print("${endTag}")
 `;
 
 			const packages = ['black'];
@@ -144,7 +149,20 @@ print(black.format_str("""${code.replace(/\\/g, '\\\\').replace(/`/g, '\\`').rep
 				if (stderr) {
 					reject(stderr);
 				} else {
-					const formatted = stdout && typeof stdout === 'string' ? stdout.trim() : '';
+					function extractBetweenDelimiters(stdout, start, end) {
+						console.log('stdout', stdout);
+						const startIdx = stdout.indexOf(start);
+						const endIdx = stdout.indexOf(end, startIdx + start.length);
+						if (startIdx === -1 || endIdx === -1) return null;
+						return stdout.slice(startIdx + start.length, endIdx).trim();
+					}
+
+					const formatted = extractBetweenDelimiters(
+						stdout && typeof stdout === 'string' ? stdout : '',
+						startTag,
+						endTag
+					);
+
 					resolve({ code: formatted });
 				}
 			}

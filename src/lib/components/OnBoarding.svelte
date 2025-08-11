@@ -62,7 +62,7 @@
 
 		<div class="w-full h-full absolute top-0 left-0 backdrop-blur-xs bg-black/50"></div>
 
-		<div class="relative bg-transparent w-full min-h-screen flex z-10">
+		<div class="relative bg-transparent w-full h-screen max-h-[100dvh] flex z-10">
 			<div class="flex flex-col justify-end w-full items-center pb-10 text-center">
 				<div class="text-5xl lg:text-7xl font-secondary">
 					<Marquee
