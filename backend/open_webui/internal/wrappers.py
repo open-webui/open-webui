@@ -75,16 +75,19 @@ def _augment_postgres_url_with_iam_and_ssl(db_url: str) -> str:
 
 
 def register_connection(db_url):
-    db_url = _augment_postgres_url_with_iam_and_ssl(db_url)
-    db = connect(db_url, unquote_user=True, unquote_password=True)
+    log.info(f"🔍 DEBUG: Original DB URL: {db_url[:50]}...")
+    augmented_url = _augment_postgres_url_with_iam_and_ssl(db_url)
+    log.info(f"🔍 DEBUG: Augmented DB URL: {augmented_url[:50]}...")
+    db = connect(augmented_url, unquote_user=True, unquote_password=True)
     if isinstance(db, PostgresqlDatabase):
         # Enable autoconnect for SQLite databases, managed by Peewee
         db.autoconnect = True
         db.reuse_if_open = True
         log.info("Connected to PostgreSQL database")
 
-        # Get the connection details
-        connection = parse(db_url, unquote_user=True, unquote_password=True)
+        # Get the connection details from the AUGMENTED URL to preserve SSL params
+        connection = parse(augmented_url, unquote_user=True, unquote_password=True)
+        log.info(f"🔍 DEBUG: Parsed connection params: {connection}")
 
         # Use our custom database class that supports reconnection
         db = ReconnectingPostgresqlDatabase(**connection)
