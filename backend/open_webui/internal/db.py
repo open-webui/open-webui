@@ -13,6 +13,10 @@ from open_webui.env import (
     DATABASE_POOL_RECYCLE,
     DATABASE_POOL_SIZE,
     DATABASE_POOL_TIMEOUT,
+    ENABLE_AWS_RDS_IAM,
+    AWS_REGION,
+    PG_SSLMODE,
+    PG_SSLROOTCERT,
 )
 from peewee_migrate import Router
 from sqlalchemy import Dialect, create_engine, MetaData, types
@@ -75,7 +79,43 @@ def handle_peewee_migration(DATABASE_URL):
 handle_peewee_migration(DATABASE_URL)
 
 
-SQLALCHEMY_DATABASE_URL = DATABASE_URL
+# Build SQLAlchemy connect args for SSL and IAM token if enabled
+sqlalchemy_connect_args = {}
+
+# Force SSL parameters if provided to avoid libpq trying default ~/.postgresql
+if PG_SSLMODE:
+    sqlalchemy_connect_args.setdefault("connect_args", {})
+    sqlalchemy_connect_args["connect_args"]["sslmode"] = PG_SSLMODE
+if PG_SSLROOTCERT:
+    sqlalchemy_connect_args.setdefault("connect_args", {})
+    sqlalchemy_connect_args["connect_args"]["sslrootcert"] = PG_SSLROOTCERT
+
+# IAM auth: generate token as password when enabled
+sqlalchemy_url = DATABASE_URL
+if ENABLE_AWS_RDS_IAM and sqlalchemy_url.startswith("postgresql://"):
+    try:
+        import boto3
+        from urllib.parse import urlparse, quote
+
+        parsed = urlparse(sqlalchemy_url)
+        username = parsed.username or ""
+        host = parsed.hostname
+        port = parsed.port or 5432
+        if not AWS_REGION:
+            raise ValueError("AWS_REGION must be set when ENABLE_AWS_RDS_IAM is true")
+        rds = boto3.client("rds", region_name=AWS_REGION)
+        token = rds.generate_db_auth_token(DBHostname=host, Port=port, DBUsername=username)
+        # Reconstruct URL with token as password and ensure empty password is ok
+        safe_user = quote(username) if username else ""
+        safe_host = host
+        new_netloc = f"{safe_user}:{quote(token)}@{safe_host}:{port}"
+        sqlalchemy_url = parsed._replace(netloc=new_netloc).geturl()
+        log.info("Using AWS RDS IAM token for PostgreSQL authentication")
+    except Exception as e:
+        log.exception(f"Failed to generate AWS RDS IAM token: {e}")
+        raise
+
+SQLALCHEMY_DATABASE_URL = sqlalchemy_url
 if "sqlite" in SQLALCHEMY_DATABASE_URL:
     engine = create_engine(
         SQLALCHEMY_DATABASE_URL, connect_args={"check_same_thread": False}
@@ -90,10 +130,11 @@ else:
             pool_recycle=DATABASE_POOL_RECYCLE,
             pool_pre_ping=True,
             poolclass=QueuePool,
+            **sqlalchemy_connect_args,
         )
     else:
         engine = create_engine(
-            SQLALCHEMY_DATABASE_URL, pool_pre_ping=True, poolclass=NullPool
+            SQLALCHEMY_DATABASE_URL, pool_pre_ping=True, poolclass=NullPool, **sqlalchemy_connect_args
         )
 
 
