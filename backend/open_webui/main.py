@@ -375,6 +375,7 @@ from open_webui.config import (
     RESPONSE_WATERMARK,
     # Admin
     ENABLE_ADMIN_CHAT_ACCESS,
+    ENABLE_ADMIN_WORKSPACE_CONTENT_ACCESS,
     ENABLE_ADMIN_EXPORT,
     # Tasks
     TASK_MODEL,
@@ -1321,7 +1322,7 @@ async def get_models(
         )
 
     # Filter out models that the user does not have access to
-    if user.role == "user" and not BYPASS_MODEL_ACCESS_CONTROL:
+    if (user.role == "user" or (user.role == "admin" and not ENABLE_ADMIN_WORKSPACE_CONTENT_ACCESS)) and not BYPASS_MODEL_ACCESS_CONTROL:
         models = get_filtered_models(models, user)
 
     log.debug(
