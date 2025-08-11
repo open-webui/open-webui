@@ -181,8 +181,9 @@ def upload_serial_command():
     return render_template('upload.html') # Display the upload form
 
 DEFAULT_THREAD_TIMEOUT=900
+GB = 1024 * 1024 * 1024
 
-def actual_transfer(file):
+def actual_transfer(file, file_size):
     # Check if the file is empty
         if file.name == '':
             return "No file selected"
@@ -200,10 +201,14 @@ def actual_transfer(file):
             stdout, stderr = process.communicate()
             script_path = "./recvFromHost "
             command = f"cd {exe_path}; {script_path} {destn_path}{filename}\n"
-            print(command)
+
+            timeout = max(120 * file_size / GB, DEFAULT_THREAD_TIMEOUT) #2 mins per 1 GB is the speed we observe
+
+            print("Command:", command, "Timeout:", timeout)
+
             def scriptRecvFromHost():
                  try:
-                     result = serial_script.send_serial_command(port,baudrate,command, timeout=DEFAULT_THREAD_TIMEOUT)
+                     result = serial_script.send_serial_command(port,baudrate,command, timeout=timeout)
                      job_status["result"] = result
                      print("Success:", job_status["result"])
                      recv_output = result
@@ -226,17 +231,13 @@ def actual_transfer(file):
             except Exception as e:
                 print("process completed with exception")
                 return f"copy2fpga-x86.sh failed: {e}", 500
-            
+
             print("Thread starting")
             thread.start()
             print("Thread started")
-            #thread.join(120)
-            #if thread.is_alive():
-            #    return "Transfer still in progress", 202  # Accepted but not complete
-            #else:
-            #    return f"Transfer result: {job_status['result']}", 200
+
             start = time.time()
-            while (time.time() - start < DEFAULT_THREAD_TIMEOUT) and (job_status["running"] != False):
+            while (time.time() - start < timeout) and (job_status["running"] != False):
                 time.sleep(1)
             print("Thread joining", job_status["running"])
 
@@ -281,6 +282,7 @@ def receive_pull_model():
     time.sleep(1)
 
     try:
+        file_size = os.path.getsize(path)
         file_obj = open(path, "rb")
     except Exception as e:
         return manual_response(content=f"File open failed: {e}",thinking=f"File open failed: {e}", incoming_headers=incoming_headers), 500
@@ -290,16 +292,14 @@ def receive_pull_model():
     full_path = file_obj.name
     print(full_path)
     try:
-        actual_transfer(file_obj)
+        actual_transfer(file_obj, file_size)
     except Exception as e:
         return manual_response(content=f"File transfer failed: {e}",thinking=f"File transfer failed: {e}", incoming_headers=incoming_headers), 500
     time.sleep(1)
 
-    print("renaming file")
+    print("Renaming file", data['human_name'])
 
     dir_path = os.path.dirname(data['human_name'])  # ✅ Python way
-
-    print(dir_path)
 
     # Create the directory structure on the target device
     read_cmd_from_serial(port, baudrate, f"cd {destn_path}; mkdir -p {dir_path}")
@@ -308,12 +308,12 @@ def receive_pull_model():
 
     time.sleep(1)
 
-    print("Listing out files")
+    print("Listing out existing files")
     read_cmd_from_serial(port,baudrate,f"cd {destn_path}; ls -lt")
 
     time.sleep(1)
 
-    print("Doing checksum of files")
+    print("Doing checksum of the upload file")
     target_check_sum = serial_script.send_serial_command(port,baudrate,f"cd {destn_path}; md5sum {data['human_name']}")
     
     time.sleep(1)
@@ -325,15 +325,6 @@ def receive_pull_model():
         return manual_response(content="Failed checksum match",thinking="Failed checksum match", incoming_headers=incoming_headers), 400
       
     return manual_response(content="File Download Done",thinking="File Download Done", incoming_headers=incoming_headers), 200
-
-#    command = f"upload file"
-#    try:
-#        result = subprocess.run(['python3', 'serial_script.py', port, baudrate, command], capture_output=True, text=True, check=True)
-#        return result.stdout, 200
-#    except subprocess.CalledProcessError as e:
-#        return f"Error executing script: {e.stderr}", 500
-
-
 
 
 @app.route('/upload-file', methods=['GET', 'POST'])
