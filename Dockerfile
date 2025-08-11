@@ -118,6 +118,8 @@ RUN if [ "$USE_OLLAMA" = "true" ]; then \
     # install helper tools
     apt-get install -y --no-install-recommends curl jq && \
     # install ollama
+    # break cache so we get a new version of ollama everytime
+    RUN echo "${BUILD_HASH}" > /tmp/ollama_build_hash
     curl -fsSL https://ollama.com/install.sh | sh && \
     # cleanup
     rm -rf /var/lib/apt/lists/*; \
