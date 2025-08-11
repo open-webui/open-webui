@@ -98,9 +98,17 @@ def get_tools(
                         token = tool_server_connection.get("key", "")
                     elif auth_type == "session":
                         token = request.state.token.credentials
+                    elif auth_type == "jomax":
+                        # For jomax auth type, we'll extract token later from cookies
+                        # Store request in server_data for later use
+                        tool_server_data["request"] = request
+                        token = None  # Will be extracted at execution time
 
                     def make_tool_function(function_name, token, tool_server_data):
                         async def tool_function(**kwargs):
+                            # Store auth_type in server_data for execute_tool_server to use
+                            tool_server_data["auth_type"] = tool_server_connection.get("auth_type", "bearer")
+                            
                             return await execute_tool_server(
                                 token=token,
                                 url=tool_server_data["url"],
@@ -611,7 +619,19 @@ async def execute_tool_server(
 
         headers = {"Content-Type": "application/json"}
 
-        if token:
+        # Get auth type from server data
+        auth_type = server_data.get("auth_type", "bearer")
+        
+        # Handle jomax auth type - extract token from cookies
+        if auth_type == "jomax" and "request" in server_data:
+            request = server_data["request"]
+            auth_jomax = request.cookies.get("auth_jomax")
+            if auth_jomax:
+                headers["Authorization"] = f"sso-jwt {auth_jomax}"
+            else:
+                log.warning("auth_jomax cookie not found for jomax auth type")
+        # Handle bearer token from other auth types
+        elif token:
             headers["Authorization"] = f"Bearer {token}"
 
         async with aiohttp.ClientSession(trust_env=True) as session:
