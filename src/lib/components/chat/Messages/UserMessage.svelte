@@ -144,8 +144,11 @@
 
 					{#if message.timestamp}
 						<div
-							class=" self-center text-xs invisible group-hover:visible text-gray-400 font-medium first-letter:capitalize ml-0.5 translate-y-[1px]"
-						>
+							class="self-center text-xs text-gray-400 font-medium first-letter:capitalize ml-0.5 translate-y-[1px] {($settings?.highContrastMode ??
+							false)
+								? 'dark:text-gray-900 text-gray-100'
+								: 'invisible group-hover:visible transition'}"
+						>						
 							<Tooltip content={dayjs(message.timestamp * 1000).format('LLLL')}>
 								<span id="message-timestamp-{message.timestamp}" class="line-clamp-1"
 									>{formatDate(message.timestamp * 1000)}</span
@@ -158,7 +161,10 @@
 		{:else if message.timestamp}
 			<div class="flex justify-end pr-2 text-xs">
 				<div
-					class="text-[0.65rem] invisible group-hover:visible text-gray-400 font-medium first-letter:capitalize mb-0.5"
+					class="text-[0.65rem] text-gray-400 font-medium first-letter:capitalize mb-0.5 {($settings?.highContrastMode ??
+					false)
+						? 'dark:text-gray-100 text-gray-900'
+						: 'invisible group-hover:visible transition'}"
 				>
 					<Tooltip content={dayjs(message.timestamp * 1000).format('LLLL')}>
 						<span id="message-timestamp-{message.timestamp}" class="line-clamp-1"
