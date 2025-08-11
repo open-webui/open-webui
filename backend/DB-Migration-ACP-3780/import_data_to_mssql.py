@@ -112,8 +112,8 @@ def load_json_data(file_path):
     """Load and parse JSON data file"""
     logger.info(f"Loading data from {file_path}")
     
-    # Try different encodings - cp1252 should handle the Windows quotation marks
-    encodings = ['cp1252', 'latin-1', 'utf-8', 'utf-8-sig', 'iso-8859-1']
+    # Try different encodings - prioritize utf-8 for emoji support
+    encodings = ['utf-8', 'utf-8-sig', 'cp1252', 'latin-1', 'iso-8859-1']
     
     for encoding in encodings:
         try:
@@ -363,7 +363,8 @@ def import_table_data(cursor, table_data):
             column_types[col_name] = data_type
             
             if 'nvarchar' in data_type.lower():
-                # For NVARCHAR(MAX), max_len is -1
+                # For NVARCHAR(MAX), max_len is -1. Set size to 0 for MAX.
+                # pyodbc.SQL_WVARCHAR is crucial for Unicode characters like emojis.
                 input_sizes.append((pyodbc.SQL_WVARCHAR, 0 if max_len == -1 else max_len))
             elif 'varchar' in data_type.lower():
                 # For VARCHAR(MAX), max_len is -1
@@ -425,9 +426,6 @@ def main():
         logger.info("Connecting to MSSQL database...")
         conn_string = get_connection_string()
         connection = pyodbc.connect(conn_string, autocommit=False)
-        connection.setdecoding(pyodbc.SQL_CHAR, encoding='utf-8')
-        connection.setdecoding(pyodbc.SQL_WCHAR, encoding='utf-8')
-        connection.setencoding(encoding='utf-8')
         cursor = connection.cursor()
         logger.info("Connected successfully")
         
