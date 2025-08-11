@@ -20,7 +20,7 @@
 	export let modal = false;
 	export let loading = false;
 
-	export let item = null;
+  	export let item: any = null;
 	export let edit = false;
 	export let small = false;
 
@@ -66,6 +66,14 @@
 		dispatch('click');
 	}}
 >
+  {#if item?.status === 'processing'}
+    <div class="absolute left-0 right-0 top-0 h-0.5 bg-gray-200 dark:bg-gray-800 overflow-hidden rounded-t-2xl">
+      <div
+        class="h-full bg-sky-500 transition-all duration-300"
+        style={`width: ${Math.min(100, Math.max(0, item?.progress ?? 0))}%`}
+      />
+    </div>
+  {/if}
 	{#if !small}
 		<div class="p-3 bg-black/20 dark:bg-white/10 text-white rounded-xl">
 			{#if !loading}
