@@ -115,7 +115,7 @@
 	role="group"
 	dir={$settings.chatDirection}
 	id="message-{message.id}"
-	aria-labelledby="you-wrote-this-{message.id}"
+	aria-labelledby="message-timestamp-{message.timestamp} you-wrote-this-{message.id}"
 >
 	<h2 class="sr-only" id="you-wrote-this-{message.id}">{$i18n.t('You Wrote: ')}</h2>
 	{#if !($settings?.chatBubble ?? true)}
@@ -147,7 +147,9 @@
 							class=" self-center text-xs invisible group-hover:visible text-gray-400 font-medium first-letter:capitalize ml-0.5 translate-y-[1px]"
 						>
 							<Tooltip content={dayjs(message.timestamp * 1000).format('LLLL')}>
-								<span class="line-clamp-1">{formatDate(message.timestamp * 1000)}</span>
+								<span id="message-timestamp-{message.timestamp}" class="line-clamp-1"
+									>{formatDate(message.timestamp * 1000)}</span
+								>
 							</Tooltip>
 						</div>
 					{/if}
@@ -159,7 +161,9 @@
 					class="text-[0.65rem] invisible group-hover:visible text-gray-400 font-medium first-letter:capitalize mb-0.5"
 				>
 					<Tooltip content={dayjs(message.timestamp * 1000).format('LLLL')}>
-						<span class="line-clamp-1">{formatDate(message.timestamp * 1000)}</span>
+						<span id="message-timestamp-{message.timestamp}" class="line-clamp-1"
+							>{formatDate(message.timestamp * 1000)}</span
+						>
 					</Tooltip>
 				</div>
 			</div>

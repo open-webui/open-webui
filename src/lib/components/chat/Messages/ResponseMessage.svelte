@@ -605,7 +605,7 @@
 		class=" flex w-full message-{message.id}"
 		id="message-{message.id}"
 		dir={$settings.chatDirection}
-		aria-labelledby="model-wrote-this-{message.id}"
+		aria-labelledby="message-timestamp-{message.timestamp} model-wrote-this-{message.id}"
 	>
 		<div class={`shrink-0 ltr:mr-3 rtl:ml-3 hidden @lg:flex mt-1 `}>
 			<h2 id="model-wrote-this-{message.id}" class="sr-only"
@@ -635,7 +635,9 @@
 						class=" self-center text-xs invisible group-hover:visible text-gray-400 font-medium first-letter:capitalize ml-0.5 translate-y-[1px]"
 					>
 						<Tooltip content={dayjs(message.timestamp * 1000).format('LLLL')}>
-							<span class="line-clamp-1">{formatDate(message.timestamp * 1000)}</span>
+							<span class="line-clamp-1" id="message-timestamp-{message.timestamp}"
+								>{formatDate(message.timestamp * 1000)}</span
+							>
 						</Tooltip>
 					</div>
 				{/if}
