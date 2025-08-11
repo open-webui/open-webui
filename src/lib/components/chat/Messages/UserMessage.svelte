@@ -110,8 +110,9 @@
 	}}
 />
 
-<div
+<article
 	class=" flex w-full user-message group"
+	role="group"
 	dir={$settings.chatDirection}
 	id="message-{message.id}"
 >
@@ -603,4 +604,4 @@
 			{/if}
 		</div>
 	</div>
-</div>
+</article>

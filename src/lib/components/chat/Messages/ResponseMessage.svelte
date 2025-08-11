@@ -600,7 +600,8 @@
 />
 
 {#key message.id}
-	<div
+	<article
+		role="group"
 		class=" flex w-full message-{message.id}"
 		id="message-{message.id}"
 		dir={$settings.chatDirection}
@@ -1563,7 +1564,7 @@
 				</div>
 			{/if}
 		</div>
-	</div>
+	</article>
 {/key}
 
 <style>
