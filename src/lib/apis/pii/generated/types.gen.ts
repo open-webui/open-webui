@@ -5,28 +5,28 @@
  * Response model for task progress tracking.
  */
 export type ApiTaskProgressResponse = {
-    /**
-     * Task Id
-     */
-    task_id: string;
-    status?: TaskStatus;
-    /**
-     * Progress Percentage
-     */
-    progress_percentage?: number;
-    /**
-     * Result of the file processing. Omitted if quiet=true was specified in the request.
-     */
-    result?: FileBaseModel | null;
-    /**
-     * Error Message
-     */
-    error_message?: string | null;
-    /**
-     * Pii
-     * List of detected PII entities with their positions and types. Omitted if quiet=true was specified in the request.
-     */
-    pii?: Array<PiiEntity> | null;
+	/**
+	 * Task Id
+	 */
+	task_id: string;
+	status?: TaskStatus;
+	/**
+	 * Progress Percentage
+	 */
+	progress_percentage?: number;
+	/**
+	 * Result of the file processing. Omitted if quiet=true was specified in the request.
+	 */
+	result?: FileBaseModel | null;
+	/**
+	 * Error Message
+	 */
+	error_message?: string | null;
+	/**
+	 * Pii
+	 * List of detected PII entities with their positions and types. Omitted if quiet=true was specified in the request.
+	 */
+	pii?: Array<PiiEntity> | null;
 };
 
 /**
@@ -34,11 +34,11 @@ export type ApiTaskProgressResponse = {
  * Response model for asynchronous binary file processing.
  */
 export type AsyncBinaryResponse = {
-    /**
-     * Task Id
-     * ID of the file masking processing task
-     */
-    task_id: string;
+	/**
+	 * Task Id
+	 * ID of the file masking processing task
+	 */
+	task_id: string;
 };
 
 /**
@@ -48,16 +48,16 @@ export type AsyncBinaryResponse = {
  * Contains the base64-encoded content of the document.
  */
 export type FileBaseModel = {
-    /**
-     * Content Type
-     * MIME type of the document (e.g., application/pdf)
-     */
-    content_type: string;
-    /**
-     * Content Base64
-     * Base64-encoded content of the redacted document, ready for client-side display or download
-     */
-    content_base64: string;
+	/**
+	 * Content Type
+	 * MIME type of the document (e.g., application/pdf)
+	 */
+	content_type: string;
+	/**
+	 * Content Base64
+	 * Base64-encoded content of the redacted document, ready for client-side display or download
+	 */
+	content_base64: string;
 };
 
 /**
@@ -67,31 +67,31 @@ export type FileBaseModel = {
  * Process PDF or DOCX files to identify and mask sensitive information.
  */
 export type FileMaskRequest = {
-    /**
-     * Configuration for PII detection and masking. If omitted, defaults to detecting ALL types.
-     */
-    pii_labels?: PiiLabels | null;
-    /**
-     * Known Entities
-     * Optional list of known entities, used to correctly set ids of PII entities for unmasking.
-     */
-    known_entities?: Array<{
-        [key: string]: unknown;
-    }> | null;
-    /**
-     * Modifiers
-     * Optional list of modifiers to use for masking.
-     */
-    modifiers?: Array<TextProcessModifier> | null;
-    /**
-     * Redact Images
-     * Whether to redact images containing PII. When enabled, the API will analyze images for sensitive content.
-     */
-    redact_images?: boolean;
-    /**
-     * File to mask.
-     */
-    file: FileObject;
+	/**
+	 * Configuration for PII detection and masking. If omitted, defaults to detecting ALL types.
+	 */
+	pii_labels?: PiiLabels | null;
+	/**
+	 * Known Entities
+	 * Optional list of known entities, used to correctly set ids of PII entities for unmasking.
+	 */
+	known_entities?: Array<{
+		[key: string]: unknown;
+	}> | null;
+	/**
+	 * Modifiers
+	 * Optional list of modifiers to use for masking.
+	 */
+	modifiers?: Array<TextProcessModifier> | null;
+	/**
+	 * Redact Images
+	 * Whether to redact images containing PII. When enabled, the API will analyze images for sensitive content.
+	 */
+	redact_images?: boolean;
+	/**
+	 * File to mask.
+	 */
+	file: FileObject;
 };
 
 /**
@@ -102,16 +102,16 @@ export type FileMaskRequest = {
  * about detected PII entities if not in quiet mode.
  */
 export type FileMaskResponse = {
-    /**
-     * File Base64
-     * Base64 encoded masked file content
-     */
-    file_base64: string;
-    /**
-     * Pii
-     * List of detected PII entities with their positions and types. Omitted if quiet=true was specified in the request.
-     */
-    pii?: Array<PiiEntity> | null;
+	/**
+	 * File Base64
+	 * Base64 encoded masked file content
+	 */
+	file_base64: string;
+	/**
+	 * Pii
+	 * List of detected PII entities with their positions and types. Omitted if quiet=true was specified in the request.
+	 */
+	pii?: Array<PiiEntity> | null;
 };
 
 /**
@@ -120,31 +120,31 @@ export type FileMaskResponse = {
  * The file should be provided as base64-encoded content.
  */
 export type FileObject = {
-    /**
-     * File Name
-     * Name of the file.
-     */
-    file_name: string;
-    /**
-     * File Content Type
-     * MIME type of the file.
-     */
-    file_content_type: string;
-    /**
-     * File Content Base64
-     * Base64 encoded content of the file.
-     */
-    file_content_base64: string;
+	/**
+	 * File Name
+	 * Name of the file.
+	 */
+	file_name: string;
+	/**
+	 * File Content Type
+	 * MIME type of the file.
+	 */
+	file_content_type: string;
+	/**
+	 * File Content Base64
+	 * Base64 encoded content of the file.
+	 */
+	file_content_base64: string;
 };
 
 /**
  * HTTPValidationError
  */
 export type HttpValidationError = {
-    /**
-     * Detail
-     */
-    detail?: Array<ValidationError>;
+	/**
+	 * Detail
+	 */
+	detail?: Array<ValidationError>;
 };
 
 /**
@@ -152,36 +152,36 @@ export type HttpValidationError = {
  * Information about a detected PII entity.
  */
 export type PiiEntity = {
-    /**
-     * Text
-     * Original text of the PII entity
-     */
-    text: string;
-    /**
-     * Label
-     * Label used for masking the entity (e.g., PERSON_1, EMAIL_2)
-     */
-    label: string;
-    /**
-     * Id
-     * Unique identifier for the PII entity
-     */
-    id: number;
-    /**
-     * Type
-     * Type of the PII entity (e.g., PERSON, EMAIL)
-     */
-    type: string;
-    /**
-     * Raw Text
-     * Raw text of the PII entity as it appeared in the original text
-     */
-    raw_text: string;
-    /**
-     * Occurrences
-     * List of occurrences of this entity in the text
-     */
-    occurrences: Array<PiiOccurrence>;
+	/**
+	 * Text
+	 * Original text of the PII entity
+	 */
+	text: string;
+	/**
+	 * Label
+	 * Label used for masking the entity (e.g., PERSON_1, EMAIL_2)
+	 */
+	label: string;
+	/**
+	 * Id
+	 * Unique identifier for the PII entity
+	 */
+	id: number;
+	/**
+	 * Type
+	 * Type of the PII entity (e.g., PERSON, EMAIL)
+	 */
+	type: string;
+	/**
+	 * Raw Text
+	 * Raw text of the PII entity as it appeared in the original text
+	 */
+	raw_text: string;
+	/**
+	 * Occurrences
+	 * List of occurrences of this entity in the text
+	 */
+	occurrences: Array<PiiOccurrence>;
 };
 
 /**
@@ -192,16 +192,16 @@ export type PiiEntity = {
  * and which ones to ignore, giving you fine-grained control over the masking process.
  */
 export type PiiLabels = {
-    /**
-     * Detect
-     * List of PII labels to detect. Use "ALL" to detect all available PII types.
-     */
-    detect?: Array<string>;
-    /**
-     * Ignore
-     * List of PII labels to ignore during detection, even if included in "detect". Useful for excluding certain types from ALL.
-     */
-    ignore?: Array<string> | null;
+	/**
+	 * Detect
+	 * List of PII labels to detect. Use "ALL" to detect all available PII types.
+	 */
+	detect?: Array<string>;
+	/**
+	 * Ignore
+	 * List of PII labels to ignore during detection, even if included in "detect". Useful for excluding certain types from ALL.
+	 */
+	ignore?: Array<string> | null;
 };
 
 /**
@@ -209,16 +209,16 @@ export type PiiLabels = {
  * Information about a specific occurrence of a PII entity in text.
  */
 export type PiiOccurrence = {
-    /**
-     * Start Idx
-     * Start index of the PII entity in the text
-     */
-    start_idx: number;
-    /**
-     * End Idx
-     * End index of the PII entity in the text
-     */
-    end_idx: number;
+	/**
+	 * Start Idx
+	 * Start index of the PII entity in the text
+	 */
+	start_idx: number;
+	/**
+	 * End Idx
+	 * End index of the PII entity in the text
+	 */
+	end_idx: number;
 };
 
 /**
@@ -229,26 +229,26 @@ export type PiiOccurrence = {
  * masking and unmasking across multiple API calls.
  */
 export type Session = {
-    /**
-     * Session Id
-     * Unique identifier for the session
-     */
-    session_id: string;
-    /**
-     * Ttl
-     * Time to live in format like "24h", "7d", "30m"
-     */
-    ttl: string;
-    /**
-     * Created At
-     * Timestamp when the session was created
-     */
-    created_at: string;
-    /**
-     * Expires At
-     * Timestamp when the session will expire
-     */
-    expires_at?: string | null;
+	/**
+	 * Session Id
+	 * Unique identifier for the session
+	 */
+	session_id: string;
+	/**
+	 * Ttl
+	 * Time to live in format like "24h", "7d", "30m"
+	 */
+	ttl: string;
+	/**
+	 * Created At
+	 * Timestamp when the session was created
+	 */
+	created_at: string;
+	/**
+	 * Expires At
+	 * Timestamp when the session will expire
+	 */
+	expires_at?: string | null;
 };
 
 /**
@@ -259,16 +259,16 @@ export type Session = {
  * masking and unmasking of entities across different operations.
  */
 export type SessionCreate = {
-    /**
-     * Description
-     * Optional description of the session for tracking purposes.
-     */
-    description?: string | null;
-    /**
-     * Ttl
-     * Time to live in format like "24h", "7d", "30m". Default is 24 hours.
-     */
-    ttl?: string;
+	/**
+	 * Description
+	 * Optional description of the session for tracking purposes.
+	 */
+	description?: string | null;
+	/**
+	 * Ttl
+	 * Time to live in format like "24h", "7d", "30m". Default is 24 hours.
+	 */
+	ttl?: string;
 };
 
 /**
@@ -282,27 +282,27 @@ export type TaskStatus = 'PENDING' | 'PROCESSING' | 'SUCCESS' | 'FAILURE';
  * Request for masking PII in text data.
  */
 export type TextMaskRequest = {
-    /**
-     * Configuration for PII detection and masking. If omitted, defaults to detecting ALL types.
-     */
-    pii_labels?: PiiLabels | null;
-    /**
-     * Known Entities
-     * Optional list of known entities, used to correctly set ids of PII entities for unmasking.
-     */
-    known_entities?: Array<{
-        [key: string]: unknown;
-    }> | null;
-    /**
-     * Modifiers
-     * Optional list of modifiers to use for masking.
-     */
-    modifiers?: Array<TextProcessModifier> | null;
-    /**
-     * Text
-     * List of text strings to mask PII from
-     */
-    text: Array<string>;
+	/**
+	 * Configuration for PII detection and masking. If omitted, defaults to detecting ALL types.
+	 */
+	pii_labels?: PiiLabels | null;
+	/**
+	 * Known Entities
+	 * Optional list of known entities, used to correctly set ids of PII entities for unmasking.
+	 */
+	known_entities?: Array<{
+		[key: string]: unknown;
+	}> | null;
+	/**
+	 * Modifiers
+	 * Optional list of modifiers to use for masking.
+	 */
+	modifiers?: Array<TextProcessModifier> | null;
+	/**
+	 * Text
+	 * List of text strings to mask PII from
+	 */
+	text: Array<string>;
 };
 
 /**
@@ -313,20 +313,20 @@ export type TextMaskRequest = {
  * PII entities if not in quiet mode.
  */
 export type TextMaskResponse = {
-    /**
-     * Text
-     * List of masked text strings
-     */
-    text: Array<string>;
-    /**
-     * Pii
-     * List of detected PII entities with their positions and types. Omitted if quiet=true was specified in the request.
-     */
-    pii?: Array<Array<PiiEntity>> | null;
-    /**
-     * Session information if a new session was created via the create_session parameter.
-     */
-    session?: Session | null;
+	/**
+	 * Text
+	 * List of masked text strings
+	 */
+	text: Array<string>;
+	/**
+	 * Pii
+	 * List of detected PII entities with their positions and types. Omitted if quiet=true was specified in the request.
+	 */
+	pii?: Array<Array<PiiEntity>> | null;
+	/**
+	 * Session information if a new session was created via the create_session parameter.
+	 */
+	session?: Session | null;
 };
 
 /**
@@ -336,25 +336,25 @@ export type TextMaskResponse = {
  * Exactly one of 'entity' or 'pattern' must be provided.
  */
 export type TextProcessModifier = {
-    /**
-     * Action
-     */
-    action: 'ignore' | 'word-mask' | 'string-mask';
-    /**
-     * Entity
-     * Entity name to mask or ignore
-     */
-    entity?: string | null;
-    /**
-     * Pattern
-     * Regex pattern to mask or ignore
-     */
-    pattern?: string | null;
-    /**
-     * Type
-     * Label to use for the mask modifier. If not provided, defaults to "CUSTOM".
-     */
-    type?: string | null;
+	/**
+	 * Action
+	 */
+	action: 'ignore' | 'word-mask' | 'string-mask';
+	/**
+	 * Entity
+	 * Entity name to mask or ignore
+	 */
+	entity?: string | null;
+	/**
+	 * Pattern
+	 * Regex pattern to mask or ignore
+	 */
+	pattern?: string | null;
+	/**
+	 * Type
+	 * Label to use for the mask modifier. If not provided, defaults to "CUSTOM".
+	 */
+	type?: string | null;
 };
 
 /**
@@ -365,16 +365,16 @@ export type TextProcessModifier = {
  * from the session. For ephemeral operations, provide the entities mapping.
  */
 export type TextUnmaskRequest = {
-    /**
-     * Text
-     * List of masked text strings to unmask
-     */
-    text: Array<string>;
-    /**
-     * Entities
-     * Optional list of entities to use for unmasking. If not provided, session context will be used. Required for ephemeral operations.
-     */
-    entities?: Array<UnmaskPiiEntity> | null;
+	/**
+	 * Text
+	 * List of masked text strings to unmask
+	 */
+	text: Array<string>;
+	/**
+	 * Entities
+	 * Optional list of entities to use for unmasking. If not provided, session context will be used. Required for ephemeral operations.
+	 */
+	entities?: Array<UnmaskPiiEntity> | null;
 };
 
 /**
@@ -384,16 +384,16 @@ export type TextUnmaskRequest = {
  * Contains the unmasked text strings with original values restored in place of masked tokens.
  */
 export type TextUnmaskResponse = {
-    /**
-     * Text
-     * List of unmasked text strings
-     */
-    text: Array<string>;
-    /**
-     * Pii
-     * List of PII entities used for unmasking. Omitted if quiet=true was specified in the request.
-     */
-    pii?: Array<UnmaskPiiEntity> | null;
+	/**
+	 * Text
+	 * List of unmasked text strings
+	 */
+	text: Array<string>;
+	/**
+	 * Pii
+	 * List of PII entities used for unmasking. Omitted if quiet=true was specified in the request.
+	 */
+	pii?: Array<UnmaskPiiEntity> | null;
 };
 
 /**
@@ -401,422 +401,442 @@ export type TextUnmaskResponse = {
  * Information about a PII entity to unmask.
  */
 export type UnmaskPiiEntity = {
-    /**
-     * Text
-     * Original text of the PII entity
-     */
-    text: string;
-    /**
-     * Label
-     * Label used for masking the entity (e.g., PERSON_1, EMAIL_2)
-     */
-    label: string;
+	/**
+	 * Text
+	 * Original text of the PII entity
+	 */
+	text: string;
+	/**
+	 * Label
+	 * Label used for masking the entity (e.g., PERSON_1, EMAIL_2)
+	 */
+	label: string;
 };
 
 /**
  * ValidationError
  */
 export type ValidationError = {
-    /**
-     * Location
-     */
-    loc: Array<string | number>;
-    /**
-     * Message
-     */
-    msg: string;
-    /**
-     * Error Type
-     */
-    type: string;
+	/**
+	 * Location
+	 */
+	loc: Array<string | number>;
+	/**
+	 * Message
+	 */
+	msg: string;
+	/**
+	 * Error Type
+	 */
+	type: string;
 };
 
 export type HealthCheckHealthGetData = {
-    body?: never;
-    path?: never;
-    query?: never;
-    url: '/health';
+	body?: never;
+	path?: never;
+	query?: never;
+	url: '/health';
 };
 
 export type HealthCheckHealthGetResponses = {
-    /**
-     * Successful Response
-     */
-    200: unknown;
+	/**
+	 * Successful Response
+	 */
+	200: unknown;
 };
 
 export type CacheHealthCheckHealthCacheGetData = {
-    body?: never;
-    path?: never;
-    query?: never;
-    url: '/health/cache';
+	body?: never;
+	path?: never;
+	query?: never;
+	url: '/health/cache';
 };
 
 export type CacheHealthCheckHealthCacheGetResponses = {
-    /**
-     * Successful Response
-     */
-    200: unknown;
+	/**
+	 * Successful Response
+	 */
+	200: unknown;
 };
 
 export type CreateSessionSessionsPostData = {
-    body: SessionCreate;
-    path?: never;
-    query?: never;
-    url: '/sessions';
+	body: SessionCreate;
+	path?: never;
+	query?: never;
+	url: '/sessions';
 };
 
 export type CreateSessionSessionsPostErrors = {
-    /**
-     * Validation Error
-     */
-    422: HttpValidationError;
+	/**
+	 * Validation Error
+	 */
+	422: HttpValidationError;
 };
 
-export type CreateSessionSessionsPostError = CreateSessionSessionsPostErrors[keyof CreateSessionSessionsPostErrors];
+export type CreateSessionSessionsPostError =
+	CreateSessionSessionsPostErrors[keyof CreateSessionSessionsPostErrors];
 
 export type CreateSessionSessionsPostResponses = {
-    /**
-     * Successful Response
-     */
-    201: Session;
+	/**
+	 * Successful Response
+	 */
+	201: Session;
 };
 
-export type CreateSessionSessionsPostResponse = CreateSessionSessionsPostResponses[keyof CreateSessionSessionsPostResponses];
+export type CreateSessionSessionsPostResponse =
+	CreateSessionSessionsPostResponses[keyof CreateSessionSessionsPostResponses];
 
 export type DeleteSessionSessionsSessionIdDeleteData = {
-    body?: never;
-    path: {
-        /**
-         * Session Id
-         */
-        session_id: string;
-    };
-    query?: never;
-    url: '/sessions/{session_id}';
+	body?: never;
+	path: {
+		/**
+		 * Session Id
+		 */
+		session_id: string;
+	};
+	query?: never;
+	url: '/sessions/{session_id}';
 };
 
 export type DeleteSessionSessionsSessionIdDeleteErrors = {
-    /**
-     * Validation Error
-     */
-    422: HttpValidationError;
+	/**
+	 * Validation Error
+	 */
+	422: HttpValidationError;
 };
 
-export type DeleteSessionSessionsSessionIdDeleteError = DeleteSessionSessionsSessionIdDeleteErrors[keyof DeleteSessionSessionsSessionIdDeleteErrors];
+export type DeleteSessionSessionsSessionIdDeleteError =
+	DeleteSessionSessionsSessionIdDeleteErrors[keyof DeleteSessionSessionsSessionIdDeleteErrors];
 
 export type DeleteSessionSessionsSessionIdDeleteResponses = {
-    /**
-     * Response Delete Session Sessions  Session Id  Delete
-     * Successful Response
-     */
-    200: {
-        [key: string]: unknown;
-    };
+	/**
+	 * Response Delete Session Sessions  Session Id  Delete
+	 * Successful Response
+	 */
+	200: {
+		[key: string]: unknown;
+	};
 };
 
-export type DeleteSessionSessionsSessionIdDeleteResponse = DeleteSessionSessionsSessionIdDeleteResponses[keyof DeleteSessionSessionsSessionIdDeleteResponses];
+export type DeleteSessionSessionsSessionIdDeleteResponse =
+	DeleteSessionSessionsSessionIdDeleteResponses[keyof DeleteSessionSessionsSessionIdDeleteResponses];
 
 export type GetSessionSessionsSessionIdGetData = {
-    body?: never;
-    path: {
-        /**
-         * Session Id
-         */
-        session_id: string;
-    };
-    query?: never;
-    url: '/sessions/{session_id}';
+	body?: never;
+	path: {
+		/**
+		 * Session Id
+		 */
+		session_id: string;
+	};
+	query?: never;
+	url: '/sessions/{session_id}';
 };
 
 export type GetSessionSessionsSessionIdGetErrors = {
-    /**
-     * Validation Error
-     */
-    422: HttpValidationError;
+	/**
+	 * Validation Error
+	 */
+	422: HttpValidationError;
 };
 
-export type GetSessionSessionsSessionIdGetError = GetSessionSessionsSessionIdGetErrors[keyof GetSessionSessionsSessionIdGetErrors];
+export type GetSessionSessionsSessionIdGetError =
+	GetSessionSessionsSessionIdGetErrors[keyof GetSessionSessionsSessionIdGetErrors];
 
 export type GetSessionSessionsSessionIdGetResponses = {
-    /**
-     * Successful Response
-     */
-    200: Session;
+	/**
+	 * Successful Response
+	 */
+	200: Session;
 };
 
-export type GetSessionSessionsSessionIdGetResponse = GetSessionSessionsSessionIdGetResponses[keyof GetSessionSessionsSessionIdGetResponses];
+export type GetSessionSessionsSessionIdGetResponse =
+	GetSessionSessionsSessionIdGetResponses[keyof GetSessionSessionsSessionIdGetResponses];
 
 export type MaskTextTextMaskPostData = {
-    body: TextMaskRequest;
-    path?: never;
-    query?: {
-        /**
-         * Create Session
-         * If true, creates a new session for subsequent operations
-         */
-        create_session?: boolean;
-        /**
-         * Quiet
-         * If true, omits PII details from response for reduced verbosity
-         */
-        quiet?: boolean;
-    };
-    url: '/text/mask';
+	body: TextMaskRequest;
+	path?: never;
+	query?: {
+		/**
+		 * Create Session
+		 * If true, creates a new session for subsequent operations
+		 */
+		create_session?: boolean;
+		/**
+		 * Quiet
+		 * If true, omits PII details from response for reduced verbosity
+		 */
+		quiet?: boolean;
+	};
+	url: '/text/mask';
 };
 
 export type MaskTextTextMaskPostErrors = {
-    /**
-     * Validation Error
-     */
-    422: HttpValidationError;
+	/**
+	 * Validation Error
+	 */
+	422: HttpValidationError;
 };
 
-export type MaskTextTextMaskPostError = MaskTextTextMaskPostErrors[keyof MaskTextTextMaskPostErrors];
+export type MaskTextTextMaskPostError =
+	MaskTextTextMaskPostErrors[keyof MaskTextTextMaskPostErrors];
 
 export type MaskTextTextMaskPostResponses = {
-    /**
-     * Successful Response
-     */
-    200: TextMaskResponse;
+	/**
+	 * Successful Response
+	 */
+	200: TextMaskResponse;
 };
 
-export type MaskTextTextMaskPostResponse = MaskTextTextMaskPostResponses[keyof MaskTextTextMaskPostResponses];
+export type MaskTextTextMaskPostResponse =
+	MaskTextTextMaskPostResponses[keyof MaskTextTextMaskPostResponses];
 
 export type UnmaskTextTextUnmaskPostData = {
-    body: TextUnmaskRequest;
-    path?: never;
-    query?: {
-        /**
-         * Quiet
-         * If true, omits PII details from response for reduced verbosity
-         */
-        quiet?: boolean;
-    };
-    url: '/text/unmask';
+	body: TextUnmaskRequest;
+	path?: never;
+	query?: {
+		/**
+		 * Quiet
+		 * If true, omits PII details from response for reduced verbosity
+		 */
+		quiet?: boolean;
+	};
+	url: '/text/unmask';
 };
 
 export type UnmaskTextTextUnmaskPostErrors = {
-    /**
-     * Validation Error
-     */
-    422: HttpValidationError;
+	/**
+	 * Validation Error
+	 */
+	422: HttpValidationError;
 };
 
-export type UnmaskTextTextUnmaskPostError = UnmaskTextTextUnmaskPostErrors[keyof UnmaskTextTextUnmaskPostErrors];
+export type UnmaskTextTextUnmaskPostError =
+	UnmaskTextTextUnmaskPostErrors[keyof UnmaskTextTextUnmaskPostErrors];
 
 export type UnmaskTextTextUnmaskPostResponses = {
-    /**
-     * Successful Response
-     */
-    200: TextUnmaskResponse;
+	/**
+	 * Successful Response
+	 */
+	200: TextUnmaskResponse;
 };
 
-export type UnmaskTextTextUnmaskPostResponse = UnmaskTextTextUnmaskPostResponses[keyof UnmaskTextTextUnmaskPostResponses];
+export type UnmaskTextTextUnmaskPostResponse =
+	UnmaskTextTextUnmaskPostResponses[keyof UnmaskTextTextUnmaskPostResponses];
 
 export type MaskFileFileMaskPostData = {
-    body: FileMaskRequest;
-    path?: never;
-    query?: {
-        /**
-         * Create Session
-         * If true, creates a new session for subsequent operations
-         */
-        create_session?: boolean;
-    };
-    url: '/file/mask';
+	body: FileMaskRequest;
+	path?: never;
+	query?: {
+		/**
+		 * Create Session
+		 * If true, creates a new session for subsequent operations
+		 */
+		create_session?: boolean;
+	};
+	url: '/file/mask';
 };
 
 export type MaskFileFileMaskPostErrors = {
-    /**
-     * Validation Error
-     */
-    422: HttpValidationError;
+	/**
+	 * Validation Error
+	 */
+	422: HttpValidationError;
 };
 
-export type MaskFileFileMaskPostError = MaskFileFileMaskPostErrors[keyof MaskFileFileMaskPostErrors];
+export type MaskFileFileMaskPostError =
+	MaskFileFileMaskPostErrors[keyof MaskFileFileMaskPostErrors];
 
 export type MaskFileFileMaskPostResponses = {
-    /**
-     * Successful Response
-     */
-    200: AsyncBinaryResponse;
+	/**
+	 * Successful Response
+	 */
+	200: AsyncBinaryResponse;
 };
 
-export type MaskFileFileMaskPostResponse = MaskFileFileMaskPostResponses[keyof MaskFileFileMaskPostResponses];
+export type MaskFileFileMaskPostResponse =
+	MaskFileFileMaskPostResponses[keyof MaskFileFileMaskPostResponses];
 
 export type GetTaskProgressFileMaskTaskTaskIdGetData = {
-    body?: never;
-    path: {
-        /**
-         * Task Id
-         */
-        task_id: string;
-    };
-    query?: {
-        /**
-         * Quiet
-         * If true, omits PII details from response for reduced verbosity
-         */
-        quiet?: boolean;
-    };
-    url: '/file/mask/task/{task_id}';
+	body?: never;
+	path: {
+		/**
+		 * Task Id
+		 */
+		task_id: string;
+	};
+	query?: {
+		/**
+		 * Quiet
+		 * If true, omits PII details from response for reduced verbosity
+		 */
+		quiet?: boolean;
+	};
+	url: '/file/mask/task/{task_id}';
 };
 
 export type GetTaskProgressFileMaskTaskTaskIdGetErrors = {
-    /**
-     * Validation Error
-     */
-    422: HttpValidationError;
+	/**
+	 * Validation Error
+	 */
+	422: HttpValidationError;
 };
 
-export type GetTaskProgressFileMaskTaskTaskIdGetError = GetTaskProgressFileMaskTaskTaskIdGetErrors[keyof GetTaskProgressFileMaskTaskTaskIdGetErrors];
+export type GetTaskProgressFileMaskTaskTaskIdGetError =
+	GetTaskProgressFileMaskTaskTaskIdGetErrors[keyof GetTaskProgressFileMaskTaskTaskIdGetErrors];
 
 export type GetTaskProgressFileMaskTaskTaskIdGetResponses = {
-    /**
-     * Successful Response
-     */
-    200: ApiTaskProgressResponse;
+	/**
+	 * Successful Response
+	 */
+	200: ApiTaskProgressResponse;
 };
 
-export type GetTaskProgressFileMaskTaskTaskIdGetResponse = GetTaskProgressFileMaskTaskTaskIdGetResponses[keyof GetTaskProgressFileMaskTaskTaskIdGetResponses];
+export type GetTaskProgressFileMaskTaskTaskIdGetResponse =
+	GetTaskProgressFileMaskTaskTaskIdGetResponses[keyof GetTaskProgressFileMaskTaskTaskIdGetResponses];
 
 export type MaskTextWithSessionSessionsSessionIdTextMaskPostData = {
-    body: TextMaskRequest;
-    path: {
-        /**
-         * Session Id
-         */
-        session_id: string;
-    };
-    query?: {
-        /**
-         * Quiet
-         * If true, omits PII details from response for reduced verbosity
-         */
-        quiet?: boolean;
-    };
-    url: '/sessions/{session_id}/text/mask';
+	body: TextMaskRequest;
+	path: {
+		/**
+		 * Session Id
+		 */
+		session_id: string;
+	};
+	query?: {
+		/**
+		 * Quiet
+		 * If true, omits PII details from response for reduced verbosity
+		 */
+		quiet?: boolean;
+	};
+	url: '/sessions/{session_id}/text/mask';
 };
 
 export type MaskTextWithSessionSessionsSessionIdTextMaskPostErrors = {
-    /**
-     * Validation Error
-     */
-    422: HttpValidationError;
+	/**
+	 * Validation Error
+	 */
+	422: HttpValidationError;
 };
 
-export type MaskTextWithSessionSessionsSessionIdTextMaskPostError = MaskTextWithSessionSessionsSessionIdTextMaskPostErrors[keyof MaskTextWithSessionSessionsSessionIdTextMaskPostErrors];
+export type MaskTextWithSessionSessionsSessionIdTextMaskPostError =
+	MaskTextWithSessionSessionsSessionIdTextMaskPostErrors[keyof MaskTextWithSessionSessionsSessionIdTextMaskPostErrors];
 
 export type MaskTextWithSessionSessionsSessionIdTextMaskPostResponses = {
-    /**
-     * Successful Response
-     */
-    200: TextMaskResponse;
+	/**
+	 * Successful Response
+	 */
+	200: TextMaskResponse;
 };
 
-export type MaskTextWithSessionSessionsSessionIdTextMaskPostResponse = MaskTextWithSessionSessionsSessionIdTextMaskPostResponses[keyof MaskTextWithSessionSessionsSessionIdTextMaskPostResponses];
+export type MaskTextWithSessionSessionsSessionIdTextMaskPostResponse =
+	MaskTextWithSessionSessionsSessionIdTextMaskPostResponses[keyof MaskTextWithSessionSessionsSessionIdTextMaskPostResponses];
 
 export type UnmaskTextWithSessionSessionsSessionIdTextUnmaskPostData = {
-    body: TextUnmaskRequest;
-    path: {
-        /**
-         * Session Id
-         */
-        session_id: string;
-    };
-    query?: {
-        /**
-         * Quiet
-         * If true, omits PII details from response for reduced verbosity
-         */
-        quiet?: boolean;
-    };
-    url: '/sessions/{session_id}/text/unmask';
+	body: TextUnmaskRequest;
+	path: {
+		/**
+		 * Session Id
+		 */
+		session_id: string;
+	};
+	query?: {
+		/**
+		 * Quiet
+		 * If true, omits PII details from response for reduced verbosity
+		 */
+		quiet?: boolean;
+	};
+	url: '/sessions/{session_id}/text/unmask';
 };
 
 export type UnmaskTextWithSessionSessionsSessionIdTextUnmaskPostErrors = {
-    /**
-     * Validation Error
-     */
-    422: HttpValidationError;
+	/**
+	 * Validation Error
+	 */
+	422: HttpValidationError;
 };
 
-export type UnmaskTextWithSessionSessionsSessionIdTextUnmaskPostError = UnmaskTextWithSessionSessionsSessionIdTextUnmaskPostErrors[keyof UnmaskTextWithSessionSessionsSessionIdTextUnmaskPostErrors];
+export type UnmaskTextWithSessionSessionsSessionIdTextUnmaskPostError =
+	UnmaskTextWithSessionSessionsSessionIdTextUnmaskPostErrors[keyof UnmaskTextWithSessionSessionsSessionIdTextUnmaskPostErrors];
 
 export type UnmaskTextWithSessionSessionsSessionIdTextUnmaskPostResponses = {
-    /**
-     * Successful Response
-     */
-    200: TextUnmaskResponse;
+	/**
+	 * Successful Response
+	 */
+	200: TextUnmaskResponse;
 };
 
-export type UnmaskTextWithSessionSessionsSessionIdTextUnmaskPostResponse = UnmaskTextWithSessionSessionsSessionIdTextUnmaskPostResponses[keyof UnmaskTextWithSessionSessionsSessionIdTextUnmaskPostResponses];
+export type UnmaskTextWithSessionSessionsSessionIdTextUnmaskPostResponse =
+	UnmaskTextWithSessionSessionsSessionIdTextUnmaskPostResponses[keyof UnmaskTextWithSessionSessionsSessionIdTextUnmaskPostResponses];
 
 export type MaskFileWithSessionSessionsSessionIdFileMaskPostData = {
-    body: FileMaskRequest;
-    path: {
-        /**
-         * Session Id
-         */
-        session_id: string;
-    };
-    query?: {
-        /**
-         * Quiet
-         * If true, omits PII details from response for reduced verbosity
-         */
-        quiet?: boolean;
-    };
-    url: '/sessions/{session_id}/file/mask';
+	body: FileMaskRequest;
+	path: {
+		/**
+		 * Session Id
+		 */
+		session_id: string;
+	};
+	query?: {
+		/**
+		 * Quiet
+		 * If true, omits PII details from response for reduced verbosity
+		 */
+		quiet?: boolean;
+	};
+	url: '/sessions/{session_id}/file/mask';
 };
 
 export type MaskFileWithSessionSessionsSessionIdFileMaskPostErrors = {
-    /**
-     * Validation Error
-     */
-    422: HttpValidationError;
+	/**
+	 * Validation Error
+	 */
+	422: HttpValidationError;
 };
 
-export type MaskFileWithSessionSessionsSessionIdFileMaskPostError = MaskFileWithSessionSessionsSessionIdFileMaskPostErrors[keyof MaskFileWithSessionSessionsSessionIdFileMaskPostErrors];
+export type MaskFileWithSessionSessionsSessionIdFileMaskPostError =
+	MaskFileWithSessionSessionsSessionIdFileMaskPostErrors[keyof MaskFileWithSessionSessionsSessionIdFileMaskPostErrors];
 
 export type MaskFileWithSessionSessionsSessionIdFileMaskPostResponses = {
-    /**
-     * Successful Response
-     */
-    200: FileMaskResponse;
+	/**
+	 * Successful Response
+	 */
+	200: FileMaskResponse;
 };
 
-export type MaskFileWithSessionSessionsSessionIdFileMaskPostResponse = MaskFileWithSessionSessionsSessionIdFileMaskPostResponses[keyof MaskFileWithSessionSessionsSessionIdFileMaskPostResponses];
+export type MaskFileWithSessionSessionsSessionIdFileMaskPostResponse =
+	MaskFileWithSessionSessionsSessionIdFileMaskPostResponses[keyof MaskFileWithSessionSessionsSessionIdFileMaskPostResponses];
 
 export type RedocHtmlRedocGetData = {
-    body?: never;
-    path?: never;
-    query?: never;
-    url: '/redoc';
+	body?: never;
+	path?: never;
+	query?: never;
+	url: '/redoc';
 };
 
 export type RedocHtmlRedocGetResponses = {
-    /**
-     * Successful Response
-     */
-    200: unknown;
+	/**
+	 * Successful Response
+	 */
+	200: unknown;
 };
 
 export type DocsHtmlDocsGetData = {
-    body?: never;
-    path?: never;
-    query?: never;
-    url: '/docs';
+	body?: never;
+	path?: never;
+	query?: never;
+	url: '/docs';
 };
 
 export type DocsHtmlDocsGetResponses = {
-    /**
-     * Successful Response
-     */
-    200: unknown;
+	/**
+	 * Successful Response
+	 */
+	200: unknown;
 };
 
 export type ClientOptions = {
-    baseUrl: `${string}://${string}/latest` | (string & {});
+	baseUrl: `${string}://${string}/latest` | (string & {});
 };
