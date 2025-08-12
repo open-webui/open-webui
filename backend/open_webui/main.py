@@ -55,12 +55,14 @@ from starlette.responses import Response, StreamingResponse
 from open_webui.utils import logger
 from open_webui.utils.audit import AuditLevel, AuditLoggingMiddleware
 from open_webui.utils.logger import start_logger
+log.info("🚀 MAIN: About to import from socket.main...")
 from open_webui.socket.main import (
     app as socket_app,
     periodic_usage_pool_cleanup,
     get_models_in_use,
     get_active_user_ids,
 )
+log.info("🚀 MAIN: ✅ Successfully imported from socket.main")
 from open_webui.routers import (
     audio,
     images,
@@ -504,24 +506,40 @@ https://github.com/open-webui/open-webui
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
+    log.info("🚀 LIFESPAN: Starting FastAPI lifespan initialization...")
+    
+    log.info("🚀 LIFESPAN: Setting instance ID...")
     app.state.instance_id = INSTANCE_ID
+    
+    log.info("🚀 LIFESPAN: Starting logger...")
     start_logger()
 
+    log.info("🚀 LIFESPAN: Checking reset config...")
     if RESET_CONFIG_ON_START:
+        log.info("🚀 LIFESPAN: Resetting config...")
         reset_config()
+    else:
+        log.info("🚀 LIFESPAN: Skipping config reset")
 
+    log.info("🚀 LIFESPAN: Checking license...")
     if LICENSE_KEY:
+        log.info("🚀 LIFESPAN: Getting license data...")
         get_license_data(app, LICENSE_KEY)
+    else:
+        log.info("🚀 LIFESPAN: No license key configured")
 
     # This should be blocking (sync) so functions are not deactivated on first /get_models calls
     # when the first user lands on the / route.
+    log.info("🚀 LIFESPAN: Checking function dependency installation...")
     enable_function_dependency_install = os.getenv("ENABLE_FUNCTION_DEPENDENCY_INSTALL", "true").lower() == "true"
     if enable_function_dependency_install:
-        log.info("Installing external dependencies of functions and tools...")
+        log.info("🚀 LIFESPAN: Installing external dependencies of functions and tools...")
         install_tool_and_function_dependencies()
+        log.info("🚀 LIFESPAN: ✅ Function dependencies installed successfully")
     else:
-        log.info("Skipping function dependency installation (ENABLE_FUNCTION_DEPENDENCY_INSTALL=false)")
+        log.info("🚀 LIFESPAN: Skipping function dependency installation (ENABLE_FUNCTION_DEPENDENCY_INSTALL=false)")
 
+    log.info(f"🚀 LIFESPAN: Setting up Redis connection... REDIS_URL='{REDIS_URL[:50] if REDIS_URL else 'None'}...'")
     app.state.redis = get_redis_connection(
         redis_url=REDIS_URL,
         redis_sentinels=get_sentinels_from_env(
@@ -529,22 +547,40 @@ async def lifespan(app: FastAPI):
         ),
         async_mode=True,
     )
+    log.info(f"🚀 LIFESPAN: ✅ Redis connection setup complete. Redis available: {app.state.redis is not None}")
 
     if app.state.redis is not None:
+        log.info("🚀 LIFESPAN: Creating Redis task command listener...")
         app.state.redis_task_command_listener = asyncio.create_task(
             redis_task_command_listener(app)
         )
+        log.info("🚀 LIFESPAN: ✅ Redis task command listener created")
+    else:
+        log.info("🚀 LIFESPAN: Skipping Redis task command listener (no Redis)")
 
+    log.info("🚀 LIFESPAN: Configuring thread pool...")
     if THREAD_POOL_SIZE and THREAD_POOL_SIZE > 0:
+        log.info(f"🚀 LIFESPAN: Setting thread pool size to {THREAD_POOL_SIZE}...")
         limiter = anyio.to_thread.current_default_thread_limiter()
         limiter.total_tokens = THREAD_POOL_SIZE
+        log.info("🚀 LIFESPAN: ✅ Thread pool configured")
+    else:
+        log.info("🚀 LIFESPAN: Using default thread pool size")
 
+    log.info("🚀 LIFESPAN: Creating periodic usage pool cleanup task...")
     asyncio.create_task(periodic_usage_pool_cleanup())
+    log.info("🚀 LIFESPAN: ✅ Periodic cleanup task created")
+
+    log.info("🚀 LIFESPAN: ✅ ALL INITIALIZATION COMPLETE - FastAPI is ready to serve requests!")
 
     yield
 
+    log.info("🚀 LIFESPAN: Shutting down...")
     if hasattr(app.state, "redis_task_command_listener"):
+        log.info("🚀 LIFESPAN: Cancelling Redis task command listener...")
         app.state.redis_task_command_listener.cancel()
+        log.info("🚀 LIFESPAN: ✅ Redis task command listener cancelled")
+    log.info("🚀 LIFESPAN: ✅ Shutdown complete")
 
 
 app = FastAPI(

@@ -20,12 +20,22 @@ def parse_redis_service_url(redis_url):
 def get_redis_connection(
     redis_url, redis_sentinels, async_mode=False, decode_responses=True
 ):
+    import logging
+    log = logging.getLogger(__name__)
+    
+    log.info(f"🔴 REDIS: get_redis_connection called with async_mode={async_mode}")
+    log.info(f"🔴 REDIS: redis_url='{redis_url[:50] if redis_url else 'None'}...'")
+    log.info(f"🔴 REDIS: redis_sentinels={redis_sentinels}")
+    
     if async_mode:
+        log.info("🔴 REDIS: Using async mode...")
         import redis.asyncio as redis
 
         # If using sentinel in async mode
         if redis_sentinels:
+            log.info("🔴 REDIS: Using sentinel configuration...")
             redis_config = parse_redis_service_url(redis_url)
+            log.info(f"🔴 REDIS: Parsed redis config: {redis_config}")
             sentinel = redis.sentinel.Sentinel(
                 redis_sentinels,
                 port=redis_config["port"],
@@ -34,16 +44,26 @@ def get_redis_connection(
                 password=redis_config["password"],
                 decode_responses=decode_responses,
             )
-            return sentinel.master_for(redis_config["service"])
+            log.info("🔴 REDIS: ✅ Sentinel created, getting master...")
+            result = sentinel.master_for(redis_config["service"])
+            log.info("🔴 REDIS: ✅ Redis connection via sentinel established")
+            return result
         elif redis_url:
-            return redis.from_url(redis_url, decode_responses=decode_responses)
+            log.info("🔴 REDIS: Using direct Redis URL connection...")
+            result = redis.from_url(redis_url, decode_responses=decode_responses)
+            log.info("🔴 REDIS: ✅ Redis connection via URL established")
+            return result
         else:
+            log.info("🔴 REDIS: No Redis URL or sentinels provided, returning None")
             return None
     else:
+        log.info("🔴 REDIS: Using sync mode...")
         import redis
 
         if redis_sentinels:
+            log.info("🔴 REDIS: Using sentinel configuration (sync)...")
             redis_config = parse_redis_service_url(redis_url)
+            log.info(f"🔴 REDIS: Parsed redis config: {redis_config}")
             sentinel = redis.sentinel.Sentinel(
                 redis_sentinels,
                 port=redis_config["port"],
@@ -52,10 +72,17 @@ def get_redis_connection(
                 password=redis_config["password"],
                 decode_responses=decode_responses,
             )
-            return sentinel.master_for(redis_config["service"])
+            log.info("🔴 REDIS: ✅ Sentinel created (sync), getting master...")
+            result = sentinel.master_for(redis_config["service"])
+            log.info("🔴 REDIS: ✅ Redis connection via sentinel established (sync)")
+            return result
         elif redis_url:
-            return redis.Redis.from_url(redis_url, decode_responses=decode_responses)
+            log.info("🔴 REDIS: Using direct Redis URL connection (sync)...")
+            result = redis.Redis.from_url(redis_url, decode_responses=decode_responses)
+            log.info("🔴 REDIS: ✅ Redis connection via URL established (sync)")
+            return result
         else:
+            log.info("🔴 REDIS: No Redis URL or sentinels provided, returning None (sync)")
             return None
 
 
