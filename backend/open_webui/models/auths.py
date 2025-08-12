@@ -8,7 +8,7 @@ from open_webui.env import SRC_LOG_LEVELS
 from pydantic import BaseModel
 from sqlalchemy import Boolean, Column, String, Text
 from open_webui.utils.auth import verify_password
-from open_webui.utils import encryption_utils # Added for new encryption logic
+from open_webui.utils import encryption_utils  # Added for new encryption logic
 from open_webui.utils.logger import ASSERT
 
 log = logging.getLogger(__name__)
@@ -30,13 +30,13 @@ class Auth(Base):
     # The 'id' of the Auth record now corresponds to the derived UserID from the User table.
     id = Column(String, primary_key=True)
 
-    email = Column(String)      # unused for SaaS; Enterprise may use it
-    password = Column(Text)     # unused for SaaS & Enterprise
+    email = Column(String)  # unused for SaaS; Enterprise may use it
+    password = Column(Text)  # unused for SaaS & Enterprise
     active = Column(Boolean)
 
 
 class AuthModel(BaseModel):
-    id: str                     # Corresponds to UserID
+    id: str  # Corresponds to UserID
     email: str
     password: str
     active: bool = True
@@ -113,7 +113,7 @@ class AuthsTable:
         role: str = "pending",
         oauth_sub: Optional[str] = None,
     ) -> Optional[UserModel]:
-        
+
         # Handles the creation of a new user by:
         # 1. Deriving a UserID from the email (simulating kms:GenerateMac).
         # 2. Generating cryptographic keys (salt, UserKey, DEK, UserEncryptedDEK).
@@ -125,7 +125,9 @@ class AuthsTable:
 
             # Step 1: Generate UserID from email using HMAC (simulates kms:GenerateMac)
             # TODO: Replace with kms:GenerateMac call in AWS environment.
-            user_id_str = encryption_utils.generate_user_id(email, encryption_utils.LOCAL_HMAC_KEY)
+            user_id_str = encryption_utils.generate_user_id(
+                email, encryption_utils.LOCAL_HMAC_KEY
+            )
             log.info(f"Generated UserID: {user_id_str} for email: {email}")
 
             # Pre-check: Ensure a user with this derived UserID doesn't already exist.
@@ -134,16 +136,20 @@ class AuthsTable:
             # but harmless if UserID collision is a concern from other sources.
             existing_user_by_id = Users.get_user_by_id(user_id_str)
             if existing_user_by_id:
-                ASSERT(f"User with derived ID {user_id_str} (from email {email}) already exists.")
-                return None 
-                
+                ASSERT(
+                    f"User with derived ID {user_id_str} (from email {email}) already exists."
+                )
+                return None
+
             # Step 2: Generate salt for PBKDF2
             salt_val = encryption_utils.generate_salt()
             log.debug(f"Generated salt for UserID {salt_val}")
 
             # Step 3: Derive UserKey from UserID and salt using PBKDF2
             # UserKey is used to encrypt the DEK.
-            user_key_val = encryption_utils.derive_key_from_user_id(user_id_str, salt_val)
+            user_key_val = encryption_utils.derive_key_from_user_id(
+                user_id_str, salt_val
+            )
             log.debug(f"Derived UserKey for UserID {user_key_val}")
 
             # Step 4: Generate a new Data Encryption Key (DEK)
@@ -152,19 +158,28 @@ class AuthsTable:
             log.debug(f"Generated DEK for UserID {dek_plaintext}")
 
             # Step 5: Encrypt the DEK with the UserKey
-            user_encrypted_dek_val = encryption_utils.encrypt_dek(dek_plaintext, user_key_val)
+            user_encrypted_dek_val = encryption_utils.encrypt_dek(
+                dek_plaintext, user_key_val
+            )
             log.debug(f"Encrypted DEK for UserID {user_encrypted_dek_val}")
-            
+
             # Step 6: Placeholder for KMS-encrypted DEK
             # TODO: When in AWS, encrypt dek_plaintext with KMS master key and store result here.
-            kms_encrypted_dek_val = None # This will be actual ciphertext from KMS in AWS.
-            log.debug(f"KMS Encrypted DEK (stubbed as None) for UserID {kms_encrypted_dek_val}")
+            kms_encrypted_dek_val = (
+                None  # This will be actual ciphertext from KMS in AWS.
+            )
+            log.debug(
+                f"KMS Encrypted DEK (stubbed as None) for UserID {kms_encrypted_dek_val}"
+            )
 
             # Create Auth table entry. Its ID is now the derived UserID.
-            auth_id = user_id_str 
+            auth_id = user_id_str
 
             auth_entry_pydantic = AuthModel(
-                id=auth_id, email=email, password=password, active=True # 'password' here is the HASHED password
+                id=auth_id,
+                email=email,
+                password=password,
+                active=True,  # 'password' here is the HASHED password
             )
             db_auth_entry = Auth(**auth_entry_pydantic.model_dump())
             db.add(db_auth_entry)
@@ -181,18 +196,20 @@ class AuthsTable:
                 role=role,
                 oauth_sub=oauth_sub,
                 salt=salt_val,
-                user_key=user_key_val, # TEMPORARY storage of raw UserKey
+                user_key=user_key_val,  # TEMPORARY storage of raw UserKey
                 user_encrypted_dek=user_encrypted_dek_val,
-                kms_encrypted_dek=kms_encrypted_dek_val # STUB
+                kms_encrypted_dek=kms_encrypted_dek_val,  # STUB
             )
 
             if user:
                 log.info(f"User successfully created with UserID: {user.id}")
-                db.commit() # Commit changes for both Auth and User records.
+                db.commit()  # Commit changes for both Auth and User records.
                 return user
             else:
-                log.error(f"User creation failed for email {email} after auth entry preparation. Rolling back.")
-                db.rollback() # Rollback if Users.insert_new_user failed.
+                log.error(
+                    f"User creation failed for email {email} after auth entry preparation. Rolling back."
+                )
+                db.rollback()  # Rollback if Users.insert_new_user failed.
                 return None
 
     def authenticate_user(self, email: str, password: str) -> Optional[UserModel]:
@@ -211,21 +228,31 @@ class AuthsTable:
                 auth_record = db.query(Auth).filter_by(id=user.id, active=True).first()
                 if auth_record:
                     if verify_password(password, auth_record.password):
-                        log.info(f"User {user.id} (email: {email}) authenticated successfully.")
+                        log.info(
+                            f"User {user.id} (email: {email}) authenticated successfully."
+                        )
                         return user
                     else:
-                        log.warning(f"Authentication failed: Invalid password for user {user.id} (email: {email})")
+                        log.warning(
+                            f"Authentication failed: Invalid password for user {user.id} (email: {email})"
+                        )
                         return None
                 else:
-                    log.warning(f"Authentication failed: No active auth record found for user {user.id} (email: {email})")
+                    log.warning(
+                        f"Authentication failed: No active auth record found for user {user.id} (email: {email})"
+                    )
                     return None
         except Exception as e:
-            ASSERT(f"Exception during authentication for user {user.id} (email: {email}): {e}")
+            ASSERT(
+                f"Exception during authentication for user {user.id} (email: {email}): {e}"
+            )
             return None
 
     # WE WON'T USE API KEYS FOR AUTHENTICATION IN SAAS, BUT CAN USE THIS MODEL FOR CLEINT CERTS
     def authenticate_user_by_api_key(self, api_key: str) -> Optional[UserModel]:
-        log.info(f"authenticate_user_by_api_key: {api_key[:10]}...") # Log only a portion of API key
+        log.info(
+            f"authenticate_user_by_api_key: {api_key[:10]}..."
+        )  # Log only a portion of API key
         if not api_key:
             return None
 
@@ -234,7 +261,7 @@ class AuthsTable:
             return user if user else None
         except Exception as e:
             ASSERT(f"Exception during API key authentication: {e}")
-            return None # Changed from False to None for consistency
+            return None  # Changed from False to None for consistency
 
     def authenticate_user_by_email(self, email: str) -> Optional[UserModel]:
         # This method seems to be for cases where password is not checked (e.g. trusted header auth)
@@ -249,7 +276,9 @@ class AuthsTable:
                 return user
             return None
         except Exception as e:
-            log.error(f"Exception during authentication by email (no password check) for {email}: {e}")
+            log.error(
+                f"Exception during authentication by email (no password check) for {email}: {e}"
+            )
             return None
 
     # USERS WILL NOT HAVE THE OPTON TO CHANGE EMAILS

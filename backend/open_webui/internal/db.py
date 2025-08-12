@@ -22,7 +22,9 @@ from open_webui.env import (
 # CRITICAL DEBUG: Check SSL env vars at module import time
 log = logging.getLogger(__name__)
 log.setLevel(SRC_LOG_LEVELS["DB"])
-log.info(f"🔍 CRITICAL DEBUG DB.PY IMPORT: PG_SSLMODE={PG_SSLMODE}, PG_SSLROOTCERT={PG_SSLROOTCERT}")
+log.info(
+    f"🔍 CRITICAL DEBUG DB.PY IMPORT: PG_SSLMODE={PG_SSLMODE}, PG_SSLROOTCERT={PG_SSLROOTCERT}"
+)
 log.info(f"🔍 CRITICAL DEBUG DB.PY IMPORT: DATABASE_URL={DATABASE_URL[:50]}...")
 from peewee_migrate import Router
 from sqlalchemy import Dialect, create_engine, MetaData, types
@@ -64,30 +66,30 @@ def handle_peewee_migration(DATABASE_URL):
     db = None
     try:
         log.info("🔍 DEBUG: Starting Peewee migration process...")
-        
+
         # Replace the postgresql:// with postgres:// to handle the peewee migration
         db_url = DATABASE_URL.replace("postgresql://", "postgres://")
         log.info(f"🔍 DEBUG: Migration DB URL: {db_url[:60]}...")
-        
+
         log.info("🔍 DEBUG: Attempting database connection for migration...")
         db = register_connection(db_url)
         log.info("🔍 DEBUG: Database connection established for migration")
-        
+
         migrate_dir = OPEN_WEBUI_DIR / "internal" / "migrations"
         log.info(f"🔍 DEBUG: Migration directory: {migrate_dir}")
         log.info(f"🔍 DEBUG: Migration directory exists: {migrate_dir.exists()}")
-        
+
         if migrate_dir.exists():
             migration_files = list(migrate_dir.glob("*.py"))
             log.info(f"🔍 DEBUG: Found {len(migration_files)} migration files")
-        
+
         log.info("🔍 DEBUG: Creating migration router...")
         router = Router(db, logger=log, migrate_dir=migrate_dir)
-        
+
         log.info("🔍 DEBUG: Starting migration router execution...")
         router.run()
         log.info("🔍 DEBUG: Migration completed successfully")
-        
+
         db.close()
 
     except Exception as e:
@@ -134,7 +136,9 @@ if ENABLE_AWS_RDS_IAM and sqlalchemy_url.startswith("postgresql://"):
         if not AWS_REGION:
             raise ValueError("AWS_REGION must be set when ENABLE_AWS_RDS_IAM is true")
         rds = boto3.client("rds", region_name=AWS_REGION)
-        token = rds.generate_db_auth_token(DBHostname=host, Port=port, DBUsername=username)
+        token = rds.generate_db_auth_token(
+            DBHostname=host, Port=port, DBUsername=username
+        )
         # Reconstruct URL with token as password and ensure empty password is ok
         safe_user = quote(username) if username else ""
         safe_host = host
@@ -164,7 +168,10 @@ else:
         )
     else:
         engine = create_engine(
-            SQLALCHEMY_DATABASE_URL, pool_pre_ping=True, poolclass=NullPool, **sqlalchemy_connect_args
+            SQLALCHEMY_DATABASE_URL,
+            pool_pre_ping=True,
+            poolclass=NullPool,
+            **sqlalchemy_connect_args,
         )
 
 

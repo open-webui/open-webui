@@ -11,7 +11,7 @@
 
 # def _process_chat_messages(chat_obj: Chat, mode: str):
 #     """Helper function to traverse and encrypt/decrypt message content."""
-    
+
 #     # Get the active DEK from the context variable for the current request
 #     dek = dek_context.get()
 #     if not dek:
@@ -26,7 +26,7 @@
 #         if "content" in message and message["content"]:
 #             content = message["content"]
 
-#             # STAGE 1 - SIMPLY ADD A FIXED PREFIX TO PROVE ENCRYPTION SHIM WORKS            
+#             # STAGE 1 - SIMPLY ADD A FIXED PREFIX TO PROVE ENCRYPTION SHIM WORKS
 #             if mode == "encrypt" and isinstance(content, str):
 #                 # If content is a plain string, "encrypt" it.
 #                 message["content"] = encryption_service.encrypt_content(content, dek)
@@ -90,10 +90,11 @@ log = logging.getLogger(__name__)
 # --- HARDCODED FOR TESTING ---
 # Replace with the actual user ID of the NEW user you created.
 # You can find this by looking at the 'users' table in the db.sqlite file.
-TEST_USER_ID = "your-new-user-id-goes-here" 
+TEST_USER_ID = "your-new-user-id-goes-here"
 # This is a dummy key, since our test functions don't actually use it.
-TEST_DEK = b'mock-dek-for-testing'
+TEST_DEK = b"mock-dek-for-testing"
 # -----------------------------
+
 
 def _process_chat_messages(chat_obj: Chat, mode: str):
     """
@@ -115,13 +116,27 @@ def _process_chat_messages(chat_obj: Chat, mode: str):
         if "content" in message and message["content"]:
             content = message["content"]
             if mode == "encrypt" and isinstance(content, str):
-                log.info(f"_process_chat_messages (list) BEFORE ENCRYPT: {content[:30]}...")
-                message["content"] = encryption_service.encrypt_content(content, TEST_DEK)
-                log.info(f"_process_chat_messages (list) AFTER ENCRYPT: {message['content'].get('ciphertext','')[:30]}...")
+                log.info(
+                    f"_process_chat_messages (list) BEFORE ENCRYPT: {content[:30]}..."
+                )
+                message["content"] = encryption_service.encrypt_content(
+                    content, TEST_DEK
+                )
+                log.info(
+                    f"_process_chat_messages (list) AFTER ENCRYPT: {message['content'].get('ciphertext','')[:30]}..."
+                )
                 modified = True
-            elif mode == "decrypt" and isinstance(content, dict) and content.get("is_encrypted"):
-                log.info(f"_process_chat_messages (list) BEFORE DECRYPT: {content.get('ciphertext','')[:40]}...")
-                message["content"] = encryption_service.decrypt_content(content, TEST_DEK)
+            elif (
+                mode == "decrypt"
+                and isinstance(content, dict)
+                and content.get("is_encrypted")
+            ):
+                log.info(
+                    f"_process_chat_messages (list) BEFORE DECRYPT: {content.get('ciphertext','')[:40]}..."
+                )
+                message["content"] = encryption_service.decrypt_content(
+                    content, TEST_DEK
+                )
                 modified = True
 
     # Process dict-style chat["history"]["messages"]
@@ -130,17 +145,32 @@ def _process_chat_messages(chat_obj: Chat, mode: str):
         if "content" in message and message["content"]:
             content = message["content"]
             if mode == "encrypt" and isinstance(content, str):
-                log.info(f"_process_chat_messages (dict) BEFORE ENCRYPT: {content[:30]}...")
-                message["content"] = encryption_service.encrypt_content(content, TEST_DEK)
-                log.info(f"_process_chat_messages (dict) AFTER ENCRYPT: {message['content'].get('ciphertext','')[:30]}...")
+                log.info(
+                    f"_process_chat_messages (dict) BEFORE ENCRYPT: {content[:30]}..."
+                )
+                message["content"] = encryption_service.encrypt_content(
+                    content, TEST_DEK
+                )
+                log.info(
+                    f"_process_chat_messages (dict) AFTER ENCRYPT: {message['content'].get('ciphertext','')[:30]}..."
+                )
                 modified = True
-            elif mode == "decrypt" and isinstance(content, dict) and content.get("is_encrypted"):
-                log.info(f"_process_chat_messages (dict) BEFORE DECRYPT: {content.get('ciphertext','')[:40]}...")
-                message["content"] = encryption_service.decrypt_content(content, TEST_DEK)
+            elif (
+                mode == "decrypt"
+                and isinstance(content, dict)
+                and content.get("is_encrypted")
+            ):
+                log.info(
+                    f"_process_chat_messages (dict) BEFORE DECRYPT: {content.get('ciphertext','')[:40]}..."
+                )
+                message["content"] = encryption_service.decrypt_content(
+                    content, TEST_DEK
+                )
                 modified = True
 
     if modified:
         flag_modified(chat_obj, "chat")
+
 
 def encrypt_on_save(mapper, connection, target: Chat):
     """Listen for 'before_insert' and 'before_update' events."""
@@ -152,6 +182,7 @@ def encrypt_on_save(mapper, connection, target: Chat):
     assert isinstance(history, dict), "Expected chat['history'] to be a dict"
     assert "messages" in history, "Missing 'messages' key in chat['history']"
 
+
 def decrypt_on_load(target: Chat, context):
     """Listen for the 'load' event."""
     log.debug(f"DECRYPT_ON_LOAD event triggered for Chat ID: {target.id}")
@@ -160,7 +191,7 @@ def decrypt_on_load(target: Chat, context):
 
 def register_encryption_listeners():
     """Attaches the event listeners to the Chat model."""
-    event.listen(Chat, 'before_insert', encrypt_on_save)
-    event.listen(Chat, 'before_update', encrypt_on_save)
-    event.listen(Chat, 'load', decrypt_on_load)
+    event.listen(Chat, "before_insert", encrypt_on_save)
+    event.listen(Chat, "before_update", encrypt_on_save)
+    event.listen(Chat, "load", decrypt_on_load)
     log.info("TEST (Hardcoded User) encryption event listeners registered.")

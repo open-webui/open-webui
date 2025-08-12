@@ -2,7 +2,13 @@ from logging.config import fileConfig
 
 from alembic import context
 from open_webui.models.auths import Auth
-from open_webui.env import DATABASE_URL, ENABLE_AWS_RDS_IAM, AWS_REGION, PG_SSLMODE, PG_SSLROOTCERT
+from open_webui.env import (
+    DATABASE_URL,
+    ENABLE_AWS_RDS_IAM,
+    AWS_REGION,
+    PG_SSLMODE,
+    PG_SSLROOTCERT,
+)
 from sqlalchemy import engine_from_config, pool
 
 # this is the Alembic Config object, which provides
@@ -39,13 +45,18 @@ if ENABLE_AWS_RDS_IAM and DB_URL and DB_URL.startswith("postgresql://"):
         if not AWS_REGION:
             raise ValueError("AWS_REGION must be set when ENABLE_AWS_RDS_IAM is true")
         rds = boto3.client("rds", region_name=AWS_REGION)
-        token = rds.generate_db_auth_token(DBHostname=host, Port=port, DBUsername=username)
+        token = rds.generate_db_auth_token(
+            DBHostname=host, Port=port, DBUsername=username
+        )
         safe_user = quote(username) if username else ""
         new_netloc = f"{safe_user}:{quote(token)}@{host}:{port}"
         DB_URL = parsed._replace(netloc=new_netloc).geturl()
     except Exception as e:
         import logging
-        logging.getLogger(__name__).exception(f"Failed to generate AWS RDS IAM token: {e}")
+
+        logging.getLogger(__name__).exception(
+            f"Failed to generate AWS RDS IAM token: {e}"
+        )
         raise
 
 if DB_URL:

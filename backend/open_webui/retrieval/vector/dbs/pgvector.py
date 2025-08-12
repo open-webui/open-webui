@@ -93,11 +93,17 @@ class PgvectorClient(VectorDBBase):
                     host = parsed.hostname
                     port = parsed.port or 5432
                     if not AWS_REGION:
-                        raise ValueError("AWS_REGION must be set when ENABLE_AWS_RDS_IAM is true")
+                        raise ValueError(
+                            "AWS_REGION must be set when ENABLE_AWS_RDS_IAM is true"
+                        )
                     rds = boto3.client("rds", region_name=AWS_REGION)
-                    token = rds.generate_db_auth_token(DBHostname=host, Port=port, DBUsername=username)
+                    token = rds.generate_db_auth_token(
+                        DBHostname=host, Port=port, DBUsername=username
+                    )
                     safe_user = quote(username) if username else ""
-                    vec_url = parsed._replace(netloc=f"{safe_user}:{quote(token)}@{host}:{port}").geturl()
+                    vec_url = parsed._replace(
+                        netloc=f"{safe_user}:{quote(token)}@{host}:{port}"
+                    ).geturl()
                 except Exception as e:
                     log.exception(f"Failed to generate IAM token for PGVector DB: {e}")
                     raise

@@ -16,6 +16,7 @@ from open_webui.env import (
 if TYPE_CHECKING:
     from loguru import Record
 
+
 def ASSERT(condition_or_message, message=None):
     if message is None:
         # Only one argument passed, treat it as message, assume condition is False
@@ -29,8 +30,10 @@ def ASSERT(condition_or_message, message=None):
         assert condition, message
     else:
         import logging
+
         if not condition:
             logging.error(f"ASSERT warning: {message}")
+
 
 def stdout_format(record: "Record") -> str:
     """

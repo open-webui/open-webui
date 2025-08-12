@@ -5,15 +5,15 @@ services:
     container_name: owui-dev
     ports:
       # Map the application port
-      - "8080:8080"
+      - '8080:8080'
       # [CRITICAL] Map the debugpy port
-      - "5678:5678"
+      - '5678:5678'
     volumes:
       # [CRITICAL] Bind mount your local backend code into the container
       - ./backend:/app/backend
 
       # - open-webui-db:/app/backend/data
-      - ./backend/data:/app/backend/data       # ./backend/data is where the DB lives during development
+      - ./backend/data:/app/backend/data # ./backend/data is where the DB lives during development
     environment:
       # Set the environment variable to enable your debug key retrieval logic
       - DEBUG_USER_KEYS=True
@@ -25,7 +25,7 @@ services:
       - WEBUI_SECRET_KEY=a_secure_random_string_for_local_dev
       # Add this line to enable the sign-up page
       - ENABLE_SIGNUP=True
-    entrypoint: ""
+    entrypoint: ''
     command:
       # The command to run inside the container
       bash /app/backend/start.sh

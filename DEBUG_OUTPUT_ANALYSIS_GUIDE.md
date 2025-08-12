@@ -1,6 +1,7 @@
 # Debug Output Analysis Guide - Per-User Chat Encryption
 
 ## Overview
+
 This guide helps analyze debug output from the per-user chat encryption system to verify correct operation and troubleshoot issues.
 
 ---
@@ -20,6 +21,7 @@ DEBUG: Cleared DEK from context variable.
 ```
 
 **What this means:**
+
 - ✅ SQLAlchemy event listener triggered correctly
 - ✅ User-specific DEK retrieved and set in context
 - ✅ Message content encrypted with user's DEK
@@ -38,6 +40,7 @@ DEBUG: Cleared DEK from context variable.
 ```
 
 **What this means:**
+
 - ✅ Chat loaded from database with encrypted content
 - ✅ User-specific DEK retrieved for decryption
 - ✅ Ciphertext successfully decrypted to original message
@@ -55,6 +58,7 @@ INFO: (HISTORY) AFTER DECRYPT: <branch_message_text>...
 ```
 
 **What this means:**
+
 - ✅ Both main messages AND history branches are encrypted
 - ✅ Chat editing/branching functionality preserved with encryption
 
@@ -70,6 +74,7 @@ ASSERT: User <user_id> is missing 'user_key' or 'user_encrypted_dek' in DB. Cann
 ```
 
 **Diagnosis:**
+
 - ❌ User doesn't exist or lacks encryption fields
 - ❌ Database schema missing encryption columns
 - ❌ User creation process not populating encryption fields
@@ -83,6 +88,7 @@ ASSERT: Failed to decrypt DEK for user <user_id>: <error>. Fallback to mock key.
 ```
 
 **Diagnosis:**
+
 - ❌ UserKey doesn't match the one used to encrypt the DEK
 - ❌ Corrupted encryption data in database
 - ❌ Key derivation process changed
@@ -97,6 +103,7 @@ ERROR: DECRYPTION FAILED for history message <msg_id>: <error>
 ```
 
 **Diagnosis:**
+
 - ❌ Message encrypted with different DEK than current user has
 - ❌ Corrupted ciphertext in database
 - ❌ Wrong user trying to access another user's messages
@@ -110,6 +117,7 @@ Warning: Using MOCK_ENCRYPTION_KEY. Ensure this is intended (Phase 1 or unauthen
 ```
 
 **Diagnosis:**
+
 - ⚠️ System fell back to mock encryption key
 - Could be normal for: unauthenticated users, errors, fallback scenarios
 - Could be problematic if happening for authenticated users
@@ -125,21 +133,25 @@ Warning: Using MOCK_ENCRYPTION_KEY. Ensure this is intended (Phase 1 or unauthen
 When testing the system, verify these patterns:
 
 **✅ Per-User Isolation:**
+
 - [ ] Each user sees different ciphertext for same message content
 - [ ] User A cannot see decrypted content from User B's messages
 - [ ] Different base64 ciphertext patterns for different users
 
 **✅ Encryption Format:**
+
 - [ ] Ciphertext starts with `Z0FBQUFBQm9o` (Base64 encoded Fernet tokens)
 - [ ] No plaintext content visible in `(CHAT) AFTER ENCRYPT` logs
 - [ ] Symmetric encrypt/decrypt cycles (same content in/out)
 
 **✅ Context Management:**
+
 - [ ] Every `Successfully set plaintext DEK` has matching `Cleared DEK from context`
 - [ ] No DEK context leakage between users
 - [ ] Context cleared even when exceptions occur
 
 **✅ Multi-Language Support:**
+
 - [ ] Unicode characters (emojis, accented chars, non-Latin scripts) encrypt/decrypt correctly
 - [ ] No encoding issues in logs or database
 
@@ -150,10 +162,12 @@ When testing the system, verify these patterns:
 ### Issue: No Encryption Logs Appearing
 
 **Symptoms:**
+
 - No `(CHAT) BEFORE ENCRYPT` / `(CHAT) AFTER ENCRYPT` logs
 - Messages appear to save normally but may not be encrypted
 
 **Debug Steps:**
+
 1. Check if SQLAlchemy event listeners are registered:
    ```python
    python -c "from open_webui.models import db_encryption_shim; print('Shim loaded')"
@@ -167,10 +181,12 @@ When testing the system, verify these patterns:
 ### Issue: Decryption Errors on Load
 
 **Symptoms:**
+
 - Messages show as `[DECRYPTION ERROR]` in UI
 - `DECRYPTION FAILED` errors in logs
 
 **Debug Steps:**
+
 1. Check if user's DEK can be decrypted:
    ```python
    user = Users.get_user_by_id(user_id)
@@ -185,10 +201,12 @@ When testing the system, verify these patterns:
 ### Issue: Cross-User Data Access
 
 **Symptoms:**
+
 - User can see another user's decrypted messages
 - Same ciphertext appearing for different users
 
 **Debug Steps:**
+
 1. Verify user isolation in database:
    ```sql
    SELECT DISTINCT user_encrypted_dek FROM user;  -- Should be unique per user
@@ -199,10 +217,12 @@ When testing the system, verify these patterns:
 ### Issue: Performance Problems
 
 **Symptoms:**
+
 - Slow message loading
 - High CPU usage during chat operations
 
 **Debug Steps:**
+
 1. Monitor encryption/decryption frequency in logs
 2. Check for unnecessary re-encryption of already encrypted content
 3. Verify database indexes on user_id and encryption fields
@@ -215,16 +235,19 @@ When testing the system, verify these patterns:
 ### Key Metrics to Track
 
 **Encryption Operations:**
+
 - Count of `BEFORE ENCRYPT` vs `AFTER ENCRYPT` (should match)
 - Time between encrypt start/finish (should be <10ms typically)
 - Frequency of mock key fallbacks (should be minimal)
 
 **Database Operations:**
+
 - Query time for user encryption data retrieval
 - Chat loading time with decryption
 - Database connection pool usage
 
 **Error Rates:**
+
 - Decryption failure rate (should be <0.1%)
 - Mock key usage rate for authenticated users (should be <1%)
 - Context cleanup failure rate (should be 0%)
@@ -238,7 +261,7 @@ grep "BEFORE ENCRYPT" logs.txt | wc -l
 # Find decryption errors
 grep "DECRYPTION FAILED" logs.txt
 
-# Check mock key usage frequency  
+# Check mock key usage frequency
 grep "Using MOCK_ENCRYPTION_KEY" logs.txt | wc -l
 
 # Monitor user isolation
@@ -252,7 +275,7 @@ grep "Successfully set plaintext DEK" logs.txt | awk '{print $NF}' | sort | uniq
 **System is working correctly when you see:**
 
 1. **Consistent encrypt/decrypt cycles** for each user
-2. **Unique ciphertext** for each user's messages  
+2. **Unique ciphertext** for each user's messages
 3. **No decryption errors** during normal operation
 4. **Clean context management** (all DEKs cleared after use)
 5. **History/branching support** (both CHAT and HISTORY logs)
