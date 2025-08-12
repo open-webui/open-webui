@@ -1224,28 +1224,28 @@
 													autocomplete={$config?.features?.enable_autocomplete_generation &&
 														($settings?.promptAutocomplete ?? false)}
 													enablePiiModifiers={true}
-												piiModifierLabels={[
-													'PERSON',
-													'EMAIL',
-													'PHONE_NUMBER',
-													'ADDRESS',
-													'SSN',
-													'CREDIT_CARD',
-													'DATE_TIME',
-													'IP_ADDRESS',
-													'URL',
-													'IBAN',
-													'MEDICAL_LICENSE',
-													'US_PASSPORT',
-													'US_DRIVER_LICENSE'
-												]}
-												{enablePiiDetection}
-												{piiApiKey}
-												{piiMaskingEnabled}
-												conversationId={chatId || undefined}
-												onPiiDetected={handlePiiDetected}
-												onPiiToggled={handlePiiToggled}
-												generateAutoCompletion={async (text) => {
+													piiModifierLabels={[
+														'PERSON',
+														'EMAIL',
+														'PHONE_NUMBER',
+														'ADDRESS',
+														'SSN',
+														'CREDIT_CARD',
+														'DATE_TIME',
+														'IP_ADDRESS',
+														'URL',
+														'IBAN',
+														'MEDICAL_LICENSE',
+														'US_PASSPORT',
+														'US_DRIVER_LICENSE'
+													]}
+													{enablePiiDetection}
+													{piiApiKey}
+													{piiMaskingEnabled}
+													conversationId={chatId || undefined}
+													onPiiDetected={handlePiiDetected}
+													onPiiToggled={handlePiiToggled}
+													generateAutoCompletion={async (text) => {
 														if (selectedModelIds.length === 0 || !selectedModelIds.at(0)) {
 															toast.error($i18n.t('Please select a model first.'));
 														}
@@ -1279,11 +1279,11 @@
 															stopResponse();
 														}
 
-													// Command/Ctrl + Shift + Enter to submit a message pair
-													if (isCtrlPressed && e.key === 'Enter' && e.shiftKey) {
-														e.preventDefault();
-														createMessagePair(getPromptToSend());
-													}
+														// Command/Ctrl + Shift + Enter to submit a message pair
+														if (isCtrlPressed && e.key === 'Enter' && e.shiftKey) {
+															e.preventDefault();
+															createMessagePair(getPromptToSend());
+														}
 
 														// Check if Ctrl + R is pressed
 														if (prompt === '' && isCtrlPressed && e.key.toLowerCase() === 'r') {
@@ -1388,14 +1388,14 @@
 																		? (e.key === 'Enter' || e.keyCode === 13) && isCtrlPressed
 																		: (e.key === 'Enter' || e.keyCode === 13) && !e.shiftKey;
 
-															if (enterPressed) {
-																e.preventDefault();
-																if (prompt !== '' || files.length > 0) {
-																	dispatch('submit', getPromptToSend());
+																if (enterPressed) {
+																	e.preventDefault();
+																	if (prompt !== '' || files.length > 0) {
+																		dispatch('submit', getPromptToSend());
+																	}
 																}
 															}
 														}
-													}
 
 														if (e.key === 'Escape') {
 															console.log('Escape');
