@@ -18,6 +18,12 @@ from open_webui.env import (
     PG_SSLMODE,
     PG_SSLROOTCERT,
 )
+
+# CRITICAL DEBUG: Check SSL env vars at module import time
+log = logging.getLogger(__name__)
+log.setLevel(SRC_LOG_LEVELS["DB"])
+log.info(f"🔍 CRITICAL DEBUG DB.PY IMPORT: PG_SSLMODE={PG_SSLMODE}, PG_SSLROOTCERT={PG_SSLROOTCERT}")
+log.info(f"🔍 CRITICAL DEBUG DB.PY IMPORT: DATABASE_URL={DATABASE_URL[:50]}...")
 from peewee_migrate import Router
 from sqlalchemy import Dialect, create_engine, MetaData, types
 from sqlalchemy.ext.declarative import declarative_base
