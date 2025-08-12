@@ -40,12 +40,15 @@ class WebSearchGrounder:
             return True
 
         if not TRANSLATION_AVAILABLE:
-            log.warning("Transformers not available for translation")
+            log.warning(
+                "transformers not available for translation. Install with: pip install transformers>=4.46.0"
+            )
             return False
 
         try:
             from transformers import pipeline
 
+            log.info("Loading French-to-English translation pipeline...")
             # Use a lightweight multilingual translation model
             self.translator = pipeline(
                 "translation",
@@ -113,32 +116,25 @@ class WebSearchGrounder:
 
     def _initialize_txtai(self):
         """Load txtai-wikipedia from HuggingFace Hub"""
-        global TXTAI_AVAILABLE
-
         if self.model_loaded:
             return True
 
         if not TXTAI_AVAILABLE:
-            try:
-                import subprocess
-                import sys
-
-                subprocess.check_call(
-                    [sys.executable, "-m", "pip", "install", "txtai>=7.4"]
-                )
-                TXTAI_AVAILABLE = True
-            except Exception as e:
-                log.error(f"Failed to install txtai: {e}")
-                return False
+            log.error(
+                "txtai is not available. Please install with: pip install txtai[graph]>=8.6.0"
+            )
+            return False
 
         try:
             from txtai.embeddings import Embeddings
 
+            log.info("Loading txtai-wikipedia model from HuggingFace Hub...")
             self.embeddings = Embeddings()
             self.embeddings.load(
                 provider="huggingface-hub", container="neuml/txtai-wikipedia"
             )
             self.model_loaded = True
+            log.info("txtai-wikipedia model loaded successfully")
             return True
         except Exception as e:
             log.error(f"Failed to load txtai-wikipedia: {e}")
