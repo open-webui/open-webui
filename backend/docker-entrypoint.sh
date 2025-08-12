@@ -25,7 +25,7 @@ else
     echo "❌ Certificate NOT found in either location"
 fi
 
-echo "INFO: Generating temporary IAM database auth token..."
+echo "INFO: Checking database authentication method..."
 
 # Define the application entrypoint module path
 APP_MODULE="open_webui.main:app"
@@ -34,7 +34,10 @@ APP_MODULE="open_webui.main:app"
 # This is how we differentiate between a local sqlite string and the AWS Secrets Manager JSON.
 if [[ "$DATABASE_URL" == *{* ]]; then
   echo "INFO: Production environment detected. Parsing DATABASE_URL from JSON secret."
-  echo "INFO: Generating temporary IAM database auth token..."
+  
+  # Check if IAM authentication is enabled
+  if [[ "${ENABLE_AWS_RDS_IAM:-true}" == "true" ]]; then
+    echo "INFO: IAM authentication enabled. Generating temporary IAM database auth token..."
 
   # These variables are already set in your ECS Task Definition from the owui-stack
   # We just need the database name, which is typically 'postgres' by default for Aurora
@@ -66,11 +69,32 @@ if [[ "$DATABASE_URL" == *{* ]]; then
   echo "DEBUG: ENCODED_TOKEN length: ${#ENCODED_TOKEN} characters"
   echo "DEBUG: First 50 chars of encoded token: ${ENCODED_TOKEN:0:50}..."
   
-  # Construct the final DATABASE_URL with the URL-encoded token as the password
-  export DATABASE_URL="postgresql://${DB_USER}:${ENCODED_TOKEN}@${DB_HOST}:${DB_PORT}/${DB_NAME}"
-  echo "DEBUG: Final DATABASE_URL (with token redacted): postgresql://${DB_USER}:[REDACTED]@${DB_HOST}:${DB_PORT}/${DB_NAME}"
+    # Construct the final DATABASE_URL with the URL-encoded token as the password
+    export DATABASE_URL="postgresql://${DB_USER}:${ENCODED_TOKEN}@${DB_HOST}:${DB_PORT}/${DB_NAME}"
+    echo "DEBUG: Final DATABASE_URL (with IAM token redacted): postgresql://${DB_USER}:[REDACTED]@${DB_HOST}:${DB_PORT}/${DB_NAME}"
+  else
+    echo "INFO: IAM authentication disabled. Using password from secret."
+    
+    # Extract password from the JSON secret
+    DB_USER=$(echo "$DATABASE_URL" | jq -r .username)
+    DB_PASSWORD=$(echo "$DATABASE_URL" | jq -r .password)
+    DB_NAME=$(echo "$DATABASE_URL" | jq -r .dbname)
+    
+    echo "DEBUG: DB_USER='${DB_USER}'"
+    echo "DEBUG: DB_HOST='${DB_HOST}'" 
+    echo "DEBUG: DB_PORT='${DB_PORT}'"
+    echo "DEBUG: DB_NAME='${DB_NAME}'"
+    echo "DEBUG: Password length: ${#DB_PASSWORD} characters"
+    
+    # URL-encode the password in case it contains special characters
+    ENCODED_PASSWORD=$(python3 -c "import urllib.parse; print(urllib.parse.quote('${DB_PASSWORD}', safe=''))")
+    
+    # Construct the final DATABASE_URL with the password
+    export DATABASE_URL="postgresql://${DB_USER}:${ENCODED_PASSWORD}@${DB_HOST}:${DB_PORT}/${DB_NAME}"
+    echo "DEBUG: Final DATABASE_URL (with password redacted): postgresql://${DB_USER}:[REDACTED]@${DB_HOST}:${DB_PORT}/${DB_NAME}"
+  fi
 else
-  echo "INFO: Local development environment detected. Skipping IAM token generation."
+  echo "INFO: Local development environment detected. Skipping database authentication setup."
   # In this case, we just use the DATABASE_URL as-is (e.g., "sqlite:///data/db.sqlite")
 fi
 
