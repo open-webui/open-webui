@@ -988,9 +988,15 @@
 								>
 								<td class="px-6 py-3 whitespace-nowrap text-gray-500 dark:text-gray-400 whitespace-nowrap">
 									{#if chat.status === 'active'}
-										<span class="text-green-500">Active</span>
+										<span
+											class="px-2 py-1 text-xs font-semibold leading-5 text-green-800 bg-green-100 rounded-full"
+											>Active</span
+										>
 									{:else}
-										<span class="text-red-500">Revoked</span>
+										<span
+											class="px-2 py-1 text-xs font-semibold leading-5 text-red-800 bg-red-100 rounded-full"
+											>Revoked</span
+										>
 									{/if}
 								</td>
 								<td class="px-6 py-3 whitespace-nowrap text-sm font-medium">
