@@ -4,6 +4,7 @@ import mimetypes
 import os
 import shutil
 import asyncio
+import time
 
 
 import uuid
@@ -1108,6 +1109,30 @@ async def update_rag_config(
 ####################################
 
 
+def _set_processing(
+    file_id: str, status: str, stage: str, progress: int, error: Optional[str] = None
+) -> None:
+    """Best-effort helper to persist processing state to file.meta.processing.
+
+    This is intentionally tolerant to failures and will not raise.
+    """
+    try:
+        payload = {
+            "processing": {
+                "status": status,
+                "stage": stage,
+                "progress": progress,
+                "updated_at": int(datetime.now().timestamp() * 1000),
+            }
+        }
+        if error is not None:
+            payload["processing"]["error"] = error
+        Files.update_file_metadata_by_id(file_id, payload)
+    except Exception:
+        # Swallow errors – progress reporting must not break processing
+        pass
+
+
 def save_docs_to_vector_db(
     request: Request,
     docs,
@@ -1341,6 +1366,9 @@ def process_file(
         if collection_name is None:
             collection_name = f"file-{file.id}"
 
+        # Initialize processing metadata so clients can poll
+        _set_processing(file.id, status="processing", stage="starting", progress=0)
+
         if form_data.content:
             # Update the content in the file
             # Usage: /files/{file_id}/data/content/update, /files/ (audio file upload pipeline)
@@ -1365,7 +1393,13 @@ def process_file(
                 )
             ]
 
+            # Pre-mark extracting so clients see progress immediately
+            _set_processing(file.id, "processing", "extracting", 10)
+            # Simulate slow extraction before collecting full text
+            time.sleep(2)
             text_content = form_data.content
+            # Content provided directly; extraction stage completed
+            _set_processing(file.id, "processing", "extracting", 20)
         elif form_data.collection_name:
             # Check if the file has already been processed and save the content
             # Usage: /knowledge/{id}/file/add, /knowledge/{id}/file/update
@@ -1396,7 +1430,12 @@ def process_file(
                     )
                 ]
 
+            # Pre-mark extracting so clients see progress immediately
+            _set_processing(file.id, "processing", "extracting", 10)
+            # Simulate slow extraction before collecting full text
+            time.sleep(2)
             text_content = file.data.get("content", "")
+            _set_processing(file.id, "processing", "extracting", 20)
         else:
             # Process the file and save the content
             # Usage: /files/
@@ -1461,13 +1500,20 @@ def process_file(
                         },
                     )
                 ]
+            # Pre-mark extracting so clients see progress immediately
+            _set_processing(file.id, "processing", "extracting", 10)
             text_content = " ".join([doc.page_content for doc in docs])
+            # Extraction completed
+            _set_processing(file.id, "processing", "extracting", 20)
 
         log.debug(f"text_content: {text_content}")
         Files.update_file_data_by_id(
             file.id,
             {"content": text_content},
         )
+
+        # About to embed/index
+        _set_processing(file.id, "processing", "embedding", 30)
 
         hash = calculate_sha256_string(text_content)
         Files.update_file_hash_by_id(file.id, hash)
@@ -1488,12 +1534,17 @@ def process_file(
                 )
 
                 if result:
+                    # Indexing completed
+                    _set_processing(file.id, "processing", "indexing", 95)
                     Files.update_file_metadata_by_id(
                         file.id,
                         {
                             "collection_name": collection_name,
                         },
                     )
+
+                    # Done
+                    _set_processing(file.id, "done", "done", 100)
 
                     return {
                         "status": True,
@@ -1502,8 +1553,11 @@ def process_file(
                         "content": text_content,
                     }
             except Exception as e:
+                # Mark error state so clients stop polling
+                _set_processing(file.id, "error", "error", 100, error=str(e))
                 raise e
         else:
+            _set_processing(file.id, "done", "done", 100)
             return {
                 "status": True,
                 "collection_name": None,
@@ -1519,6 +1573,8 @@ def process_file(
                 detail=ERROR_MESSAGES.PANDOC_NOT_INSTALLED,
             )
         else:
+            # Ensure error state is written
+            _set_processing(form_data.file_id, "error", "error", 100, error=str(e))
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail=str(e),
@@ -1908,7 +1964,6 @@ def search_web(request: Request, engine: str, query: str) -> list[SearchResult]:
 async def process_web_search(
     request: Request, form_data: SearchForm, user=Depends(get_verified_user)
 ):
-
     urls = []
     try:
         logging.info(

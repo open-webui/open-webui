@@ -1,6 +1,11 @@
 import { WEBUI_API_BASE_URL } from '$lib/constants';
 
-export const uploadFile = async (token: string, file: File, metadata?: object | null) => {
+export const uploadFile = async (
+	token: string,
+	file: File,
+	metadata?: object | null,
+	options?: { process?: boolean }
+) => {
 	const data = new FormData();
 	data.append('file', file);
 	if (metadata) {
@@ -9,7 +14,8 @@ export const uploadFile = async (token: string, file: File, metadata?: object | 
 
 	let error = null;
 
-	const res = await fetch(`${WEBUI_API_BASE_URL}/files/`, {
+	const qs = options?.process === false ? '?process=false' : '';
+	const res = await fetch(`${WEBUI_API_BASE_URL}/files/${qs}`, {
 		method: 'POST',
 		headers: {
 			Accept: 'application/json',
