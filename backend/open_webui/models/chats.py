@@ -9,7 +9,7 @@ from open_webui.internal.db import Base, get_db
 from open_webui.models.tags import TagModel, Tag, Tags
 from open_webui.env import SRC_LOG_LEVELS
 
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel, ConfigDict, field_serializer
 from sqlalchemy import (
     BigInteger,
     Boolean,
@@ -108,12 +108,20 @@ class ChatResponse(BaseModel):
     meta: dict = {}
     folder_id: Optional[str] = None
 
+    @field_serializer("updated_at", "created_at")
+    def serialize_dt(self, dt: datetime, _info):
+        return dt.isoformat()
+
 
 class ChatTitleIdResponse(BaseModel):
     id: str
     title: str
     updated_at: datetime
     created_at: datetime
+
+    @field_serializer("updated_at", "created_at")
+    def serialize_dt(self, dt: datetime, _info):
+        return dt.isoformat()
 
 
 class ChatTable:
