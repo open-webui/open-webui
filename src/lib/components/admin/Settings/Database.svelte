@@ -79,9 +79,9 @@
 						return `"${String(user[header]).replace(/"/g, '""')}"`;
 					})
 					.join(',');
-
 			})
 		].join('\n');
+
 		const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
 		saveAs(blob, 'users.csv');
 	};
@@ -101,6 +101,7 @@
 	<div class=" space-y-3 overflow-y-scroll scrollbar-hidden h-full">
 		<div>
 			<div class=" mb-2 text-sm font-medium">{$i18n.t('Database')}</div>
+
 			<input
 				id="config-json-input"
 				hidden
@@ -242,11 +243,9 @@
 							/>
 						</svg>
 					</div>
-
 					<div class=" self-center text-sm font-medium">
 						{$i18n.t('Export All Chats (All Users)')}
 					</div>
-
 				</button>
 
 				<button
@@ -303,6 +302,7 @@
 			</button>
 		</div>
 	</div>
+
 	<!-- <div class="flex justify-end pt-3 text-sm font-medium">
 		<button
 			class=" px-4 py-2 bg-emerald-700 hover:bg-emerald-800 text-gray-100 transition rounded-lg"
@@ -310,5 +310,6 @@
 		>
 			{$i18n.t('Save')}
 		</button>
+
 	</div> -->
 </form>
