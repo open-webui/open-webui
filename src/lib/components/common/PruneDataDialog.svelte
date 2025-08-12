@@ -22,6 +22,10 @@
   let delete_orphaned_notes = true;
   let delete_orphaned_folders = true;
   
+  // Audio cache cleanup
+  let cleanupAudioCache = true;
+  let audio_cache_max_age_days = 30;
+  
   let showDetailsExpanded = false;
   let activeDetailsTab = 'chats';
   let activeSettingsTab = 'chats';
@@ -41,7 +45,8 @@
       delete_orphaned_knowledge_bases,
       delete_orphaned_models,
       delete_orphaned_notes,
-      delete_orphaned_folders
+      delete_orphaned_folders,
+      audio_cache_max_age_days: cleanupAudioCache ? audio_cache_max_age_days : null
     });
     show = false;
   };
@@ -62,7 +67,8 @@ Authorization: Bearer <your-api-key>
   "delete_orphaned_knowledge_bases": ${delete_orphaned_knowledge_bases},
   "delete_orphaned_models": ${delete_orphaned_models},
   "delete_orphaned_notes": ${delete_orphaned_notes},
-  "delete_orphaned_folders": ${delete_orphaned_folders}
+  "delete_orphaned_folders": ${delete_orphaned_folders},
+  "audio_cache_max_age_days": ${cleanupAudioCache ? audio_cache_max_age_days : null}
 }`;
 
   const copyApiCall = () => {
@@ -207,10 +213,10 @@ Authorization: Bearer <your-api-key>
                         {:else if activeDetailsTab === 'imagesaudio'}
                           <div class="space-y-1">
                             <p><strong>{$i18n.t('Images & Audio Content Cleanup:')}</strong></p>
-                            <p>• {$i18n.t('TBD - Image cleanup functionality')}</p>
-                            <p>• {$i18n.t('TBD - Audio cleanup functionality')}</p>
-                            <p>• {$i18n.t('TBD - Orphaned images and audio files')}</p>
-                            <p>• {$i18n.t('TBD - Media processing cache cleanup')}</p>
+                            <p>• {$i18n.t('Generated images: Already integrated with file system - orphaned images are automatically cleaned up when chats are deleted')}</p>
+                            <p>• {$i18n.t('Uploaded images: Already integrated with file system - orphaned images are automatically cleaned up based on active references')}</p>
+                            <p>• {$i18n.t('Audio cache cleanup: Remove old text-to-speech (TTS) generated audio files and speech-to-text (STT) transcription files')}</p>
+                            <p>• {$i18n.t('Audio recordings and transcriptions: Clean up cached audio files older than specified days')}</p>
                           </div>
                         {:else if activeDetailsTab === 'system'}
                           <div class="space-y-1">
@@ -261,7 +267,7 @@ Authorization: Bearer <your-api-key>
             {$i18n.t('Configure what data should be cleaned up during the pruning process.')}
           </p>
 
-          <!-- Settings Tab Navigation - ONLY CHATS AND WORKSPACE -->
+          <!-- Settings Tab Navigation -->
           <div class="flex flex-wrap gap-1 mb-4 border-b border-blue-300 dark:border-blue-700">
             <button
               class="px-3 py-2 text-sm font-medium rounded-t transition-colors {activeSettingsTab === 'chats' ? 'bg-blue-100 dark:bg-blue-800 text-blue-800 dark:text-blue-200' : 'text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-200'}"
@@ -275,9 +281,15 @@ Authorization: Bearer <your-api-key>
             >
               {$i18n.t('Workspace')}
             </button>
+            <button
+              class="px-3 py-2 text-sm font-medium rounded-t transition-colors {activeSettingsTab === 'audio' ? 'bg-blue-100 dark:bg-blue-800 text-blue-800 dark:text-blue-200' : 'text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-200'}"
+              on:click={() => activeSettingsTab = 'audio'}
+            >
+              {$i18n.t('Audio Cache')}
+            </button>
           </div>
 
-          <!-- Settings Tab Content - ONLY CHATS AND WORKSPACE -->
+          <!-- Settings Tab Content -->
           <div class="space-y-4">
             {#if activeSettingsTab === 'chats'}
               <!-- Age-Based Chat Deletion -->
@@ -507,6 +519,61 @@ Authorization: Bearer <your-api-key>
                     </div>
                   </div>
                 </div>
+              </div>
+
+            {:else if activeSettingsTab === 'audio'}
+              <!-- Audio Cache Cleanup -->
+              <div class="space-y-4">
+                <div class="flex items-start py-2">
+                  <div class="flex items-center">
+                    <div class="mr-3">
+                      <Switch bind:state={cleanupAudioCache} />
+                    </div>
+                    <div>
+                      <div class="text-sm font-medium text-gray-900 dark:text-gray-100">
+                        {$i18n.t('Clean audio cache')}
+                      </div>
+                      <div class="text-xs text-gray-500 dark:text-gray-400">
+                        {$i18n.t('Remove old audio cache files (TTS and STT recordings)')}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                <!-- Audio Cache Options (when enabled) -->
+                {#if cleanupAudioCache}
+                  <div class="ml-8 space-y-4 border-l-2 border-gray-200 dark:border-gray-700 pl-4">
+                    <div class="space-y-2">
+                      <label class="text-sm font-medium text-gray-700 dark:text-gray-300">
+                        {$i18n.t('Delete audio files older than')}
+                      </label>
+                      <div class="flex items-center space-x-2">
+                        <input
+                          id="audio-days"
+                          type="number"
+                          min="0"
+                          bind:value={audio_cache_max_age_days}
+                          class="w-20 px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                        />
+                        <span class="text-sm text-gray-700 dark:text-gray-300">{$i18n.t('days')}</span>
+                      </div>
+                      <p class="text-xs text-gray-500 dark:text-gray-400">
+                        {$i18n.t('Remove cached TTS (text-to-speech) and STT (speech-to-text) files older than specified days')}
+                      </p>
+                    </div>
+                    
+                    <div class="bg-gray-50 dark:bg-gray-800 rounded-lg p-3">
+                      <h5 class="text-sm font-medium text-gray-900 dark:text-gray-100 mb-2">
+                        {$i18n.t('Audio Cache Types:')}
+                      </h5>
+                      <div class="space-y-1 text-xs text-gray-600 dark:text-gray-400">
+                        <p>• <strong>{$i18n.t('TTS Files:')}</strong> {$i18n.t('Generated audio files when AI speaks text to you')}</p>
+                        <p>• <strong>{$i18n.t('STT Files:')}</strong> {$i18n.t('Uploaded audio files for transcription (voice messages)')}</p>
+                        <p>• <strong>{$i18n.t('Metadata:')}</strong> {$i18n.t('Associated JSON files with transcription data')}</p>
+                      </div>
+                    </div>
+                  </div>
+                {/if}
               </div>
             {/if}
           </div>
