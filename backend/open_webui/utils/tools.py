@@ -38,6 +38,7 @@ from open_webui.models.users import UserModel
 from open_webui.utils.plugin import load_tool_module_by_id
 from open_webui.env import (
     SRC_LOG_LEVELS,
+    AIOHTTP_CLIENT_TIMEOUT,
     AIOHTTP_CLIENT_TIMEOUT_TOOL_SERVER_DATA,
     AIOHTTP_CLIENT_SESSION_TOOL_SERVER_SSL,
 )
@@ -613,7 +614,9 @@ async def execute_tool_server(
         if token:
             headers["Authorization"] = f"Bearer {token}"
 
-        async with aiohttp.ClientSession(trust_env=True) as session:
+        async with aiohttp.ClientSession(
+            trust_env=True, timeout=aiohttp.ClientTimeout(total=AIOHTTP_CLIENT_TIMEOUT)
+        ) as session:
             request_method = getattr(session, http_method.lower())
 
             if http_method in ["post", "put", "patch"]:
