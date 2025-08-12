@@ -1547,7 +1547,7 @@ def process_file(
                         doc.metadata["pii"] = pii
                     except Exception:
                         pass
-                      
+
             text_content = " ".join([doc.page_content for doc in docs])
             # Extraction completed
             _set_processing(file.id, "processing", "extracting", 20)
