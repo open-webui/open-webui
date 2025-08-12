@@ -1511,6 +1511,7 @@
 	"Write a prompt suggestion (e.g. Who are you?)": "اكتب اقتراحًا سريعًا (على سبيل المثال، من أنت؟)",
 	"Write a summary in 50 words that summarizes [topic or keyword].": "اكتب ملخصًا في 50 كلمة يلخص [الموضوع أو الكلمة الرئيسية]",
 	"Write something...": "اكتب شيئًا...",
+	"Write your model system prompt content here\ne.g.) You are Mario from Super Mario Bros, acting as an assistant.": "اكتب محتوى مطالبة النظام (system prompt) لنموذجك هنا\nعلى سبيل المثال: أنت ماريو من Super Mario Bros وتتصرف كمساعد.",
 	"Yacy Instance URL": "",
 	"Yacy Password": "",
 	"Yacy Username": "",

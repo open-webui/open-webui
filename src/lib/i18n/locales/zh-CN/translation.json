@@ -1511,6 +1511,7 @@
 	"Write a prompt suggestion (e.g. Who are you?)": "写一个提示词建议（例如：你是谁？）",
 	"Write a summary in 50 words that summarizes [topic or keyword].": "用 50 个字写一个总结 [主题或关键词]",
 	"Write something...": "写点什么...",
+	"Write your model system prompt content here\ne.g.) You are Mario from Super Mario Bros, acting as an assistant.": "请在此填写模型的系统提示内容\n例如：你是《超级马里奥兄弟》中的马里奥（Mario），扮演助理的角色。",
 	"Yacy Instance URL": "YaCy 实例 URL",
 	"Yacy Password": "YaCy 密码",
 	"Yacy Username": "YaCy 用户名",

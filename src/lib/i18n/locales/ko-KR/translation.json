@@ -1511,6 +1511,7 @@
 	"Write a prompt suggestion (e.g. Who are you?)": "프롬프트 제안 작성 (예: 당신은 누구인가요?)",
 	"Write a summary in 50 words that summarizes [topic or keyword].": "[주제 또는 키워드]에 대한 50단어 요약문을 작성하시오.",
 	"Write something...": "내용을 입력하세요…",
+	"Write your model system prompt content here\ne.g.) You are Mario from Super Mario Bros, acting as an assistant.": "여기에 모델 시스템 프롬프트 내용을 작성하세요\n예: 당신은 Super Mario Bros의 마리오로서, 어시스턴트 역할을 합니다.",
 	"Yacy Instance URL": "Yacy 인스턴스 URL",
 	"Yacy Password": "Yacy 비밀번호",
 	"Yacy Username": "Yacy 사용자 이름",
