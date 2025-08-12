@@ -137,7 +137,9 @@ class FolderTable:
 
     def get_all_folders(self) -> list[FolderModel]:
         with get_db() as db:
-            return [FolderModel.model_validate(folder) for folder in db.query(Folder).all()]
+            return [
+                FolderModel.model_validate(folder) for folder in db.query(Folder).all()
+            ]
 
     def get_folder_by_parent_id_and_user_id_and_name(
         self, parent_id: Optional[str], user_id: str, name: str
