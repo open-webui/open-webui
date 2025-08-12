@@ -100,15 +100,8 @@
 			total = res.total;
 			grandTotal = res.grand_total;
 
-			const now = Math.floor(Date.now() / 1000);
-			const activeChats = res.chats.filter(
-				(chat) =>
-					(!chat.expires_at || chat.expires_at > now) &&
-					(!chat.expire_on_views || chat.views < chat.expire_on_views)
-			);
-
 			sharedChatsStore.set(
-				activeChats.map((chat) => ({
+				res.chats.map((chat) => ({
 					...chat,
 					status: 'active',
 					selected: $selectedSharedChatIds.includes(chat.id)

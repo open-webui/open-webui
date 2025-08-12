@@ -538,6 +538,18 @@ class ChatTable:
                 db.query(Chat)
                 .filter_by(user_id=user_id)
                 .filter(Chat.share_id.isnot(None))
+                .filter(
+                    or_(
+                        Chat.expires_at.is_(None),
+                        Chat.expires_at > int(time.time()),
+                    )
+                )
+                .filter(
+                    or_(
+                        Chat.expire_on_views.is_(None),
+                        Chat.views < Chat.expire_on_views,
+                    )
+                )
             )
 
             if filter:
