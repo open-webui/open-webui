@@ -15,6 +15,18 @@ from sqlalchemy import or_, func, select, and_, text
 from sqlalchemy.sql import exists
 from sqlalchemy.sql.expression import bindparam
 
+# Import JSONB for PostgreSQL support - gracefully handle absence
+try:
+    from sqlalchemy.dialects.postgresql import JSONB
+    HAS_JSONB = True
+except ImportError:
+    JSONB = None
+    HAS_JSONB = False
+
+# Constants for database column types
+COLUMN_CHAT = "chat"
+COLUMN_META = "meta"
+
 ####################
 # Chat DB Schema
 ####################
@@ -29,7 +41,8 @@ class Chat(Base):
     id = Column(String, primary_key=True)
     user_id = Column(String)
     title = Column(Text)
-    chat = Column(JSON)
+    # Use JSONB for PostgreSQL, JSON for others
+    chat = Column(JSONB if HAS_JSONB else JSON)
 
     created_at = Column(BigInteger)
     updated_at = Column(BigInteger)
@@ -38,7 +51,8 @@ class Chat(Base):
     archived = Column(Boolean, default=False)
     pinned = Column(Boolean, default=False, nullable=True)
 
-    meta = Column(JSON, server_default="{}")
+    # Use JSONB for PostgreSQL, JSON for others
+    meta = Column(JSONB if HAS_JSONB else JSON, server_default="{}")
     folder_id = Column(Text, nullable=True)
 
 
@@ -109,6 +123,163 @@ class ChatTitleIdResponse(BaseModel):
 
 
 class ChatTable:
+    def __init__(self):
+        # Cache for JSONB column checks to avoid repeated database queries
+        self._jsonb_cache = {}
+    
+    def _is_jsonb_column(self, db, column_name: str = "chat") -> bool:
+        """
+        Check if a column is using JSONB type in PostgreSQL.
+        Results are cached to avoid repeated database queries.
+        
+        Args:
+            db: Database session
+            column_name: Name of the column to check
+            
+        Returns:
+            bool: True if column is JSONB, False otherwise
+        """
+        if not HAS_JSONB or db.bind.dialect.name != "postgresql":
+            return False
+        
+        # Check cache first
+        cache_key = f"{db.bind.url}_{column_name}"
+        if cache_key in self._jsonb_cache:
+            return self._jsonb_cache[cache_key]
+        
+        try:
+            result = db.execute(
+                text("""
+                    SELECT data_type 
+                    FROM information_schema.columns 
+                    WHERE table_name = 'chat' 
+                    AND column_name = :column_name
+                """),
+                {"column_name": column_name}
+            )
+            row = result.fetchone()
+            is_jsonb = row and row[0].lower() == "jsonb"
+            
+            # Cache the result
+            self._jsonb_cache[cache_key] = is_jsonb
+            return is_jsonb
+        except Exception as e:
+            log.warning(f"Error checking JSONB column type for {column_name}: {e}")
+            return False
+    
+    def _get_json_array_elements_func(self, db, column_name: str = "chat") -> str:
+        """
+        Get the appropriate JSON array elements function based on column type.
+        
+        Returns:
+            str: Either 'jsonb_array_elements' or 'json_array_elements'
+        """
+        if self._is_jsonb_column(db, column_name):
+            return "jsonb_array_elements"
+        return "json_array_elements"
+    
+    def _get_json_array_elements_text_func(self, db, column_name: str = "meta") -> str:
+        """
+        Get the appropriate JSON array elements text function based on column type.
+        
+        Returns:
+            str: Either 'jsonb_array_elements_text' or 'json_array_elements_text'
+        """
+        if self._is_jsonb_column(db, column_name):
+            return "jsonb_array_elements_text"
+        return "json_array_elements_text"
+    
+    def _build_tag_containment_query(self, db, tag_ids: list[str]) -> text:
+        """
+        Build an optimized tag containment query based on database capabilities.
+        
+        Args:
+            db: Database session
+            tag_ids: List of tag IDs to check
+            
+        Returns:
+            text: SQLAlchemy text clause for the query
+        """
+        if self._is_jsonb_column(db, COLUMN_META):
+            # JSONB supports efficient containment operator
+            return text("Chat.meta->'tags' @> CAST(:tags_array AS jsonb)").params(
+                tags_array=json.dumps(tag_ids)
+            )
+        else:
+            # Fallback to EXISTS queries for each tag
+            conditions = []
+            for idx, tag_id in enumerate(tag_ids):
+                conditions.append(
+                    text(f"""
+                        EXISTS (
+                            SELECT 1
+                            FROM json_array_elements_text(Chat.meta->'tags') AS tag
+                            WHERE tag = :tag_id_{idx}
+                        )
+                    """).params(**{f"tag_id_{idx}": tag_id})
+                )
+            return and_(*conditions)
+    
+    def create_gin_indexes(self) -> bool:
+        """
+        Create GIN indexes on JSONB columns for better query performance.
+        This significantly improves performance for tag filtering and message search.
+        
+        Returns:
+            bool: True if indexes were created successfully, False otherwise
+        """
+        try:
+            with get_db() as db:
+                if db.bind.dialect.name != "postgresql":
+                    log.info("GIN indexes are only supported on PostgreSQL")
+                    return False
+                
+                indexes_created = []
+                
+                # Create index on meta->tags if column is JSONB
+                if self._is_jsonb_column(db, COLUMN_META):
+                    try:
+                        db.execute(text("""
+                            CREATE INDEX IF NOT EXISTS idx_chat_meta_tags_gin 
+                            ON chat USING GIN ((meta->'tags'))
+                        """))
+                        indexes_created.append("idx_chat_meta_tags_gin")
+                    except Exception as e:
+                        log.warning(f"Failed to create meta tags GIN index: {e}")
+                    
+                    try:
+                        db.execute(text("""
+                            CREATE INDEX IF NOT EXISTS idx_chat_meta_gin 
+                            ON chat USING GIN (meta)
+                        """))
+                        indexes_created.append("idx_chat_meta_gin")
+                    except Exception as e:
+                        log.warning(f"Failed to create meta GIN index: {e}")
+                
+                # Create index on chat messages if column is JSONB
+                if self._is_jsonb_column(db, COLUMN_CHAT):
+                    try:
+                        db.execute(text("""
+                            CREATE INDEX IF NOT EXISTS idx_chat_messages_gin 
+                            ON chat USING GIN ((chat->'history'->'messages'))
+                        """))
+                        indexes_created.append("idx_chat_messages_gin")
+                    except Exception as e:
+                        log.warning(f"Failed to create messages GIN index: {e}")
+                
+                db.commit()
+                
+                if indexes_created:
+                    log.info(f"Created GIN indexes: {', '.join(indexes_created)}")
+                else:
+                    log.info("No GIN indexes created (columns may not be JSONB)")
+                
+                return len(indexes_created) > 0
+                
+        except Exception as e:
+            log.error(f"Error creating GIN indexes: {e}")
+            return False
+
     def insert_new_chat(self, user_id: str, form_data: ChatForm) -> Optional[ChatModel]:
         with get_db() as db:
             id = str(uuid.uuid4())
@@ -732,11 +903,12 @@ class ChatTable:
                     )
 
             elif dialect_name == "postgresql":
-                # PostgreSQL relies on proper JSON query for search
+                # Use appropriate function based on column type
+                array_func = self._get_json_array_elements_func(db, COLUMN_CHAT)
                 postgres_content_sql = (
                     "EXISTS ("
                     "    SELECT 1 "
-                    "    FROM json_array_elements(Chat.chat->'messages') AS message "
+                    f"    FROM {array_func}(Chat.chat->'messages') AS message "
                     "    WHERE LOWER(message->>'content') LIKE '%' || :content_key || '%'"
                     ")"
                 )
@@ -750,33 +922,25 @@ class ChatTable:
 
                 # Check if there are any tags to filter, it should have all the tags
                 if "none" in tag_ids:
-                    query = query.filter(
-                        text(
-                            """
-                            NOT EXISTS (
-                                SELECT 1
-                                FROM json_array_elements_text(Chat.meta->'tags') AS tag
-                            )
-                            """
+                    if self._is_jsonb_column(db, COLUMN_META):
+                        # JSONB - check for empty array or null
+                        query = query.filter(
+                            text("(Chat.meta->'tags' IS NULL OR Chat.meta->'tags' = CAST('[]' AS jsonb))")
                         )
-                    )
+                    else:
+                        # JSON - standard check
+                        array_func = self._get_json_array_elements_text_func(db, COLUMN_META)
+                        query = query.filter(
+                            text(f"""
+                                NOT EXISTS (
+                                    SELECT 1
+                                    FROM {array_func}(Chat.meta->'tags') AS tag
+                                )
+                            """)
+                        )
                 elif tag_ids:
-                    query = query.filter(
-                        and_(
-                            *[
-                                text(
-                                    f"""
-                                    EXISTS (
-                                        SELECT 1
-                                        FROM json_array_elements_text(Chat.meta->'tags') AS tag
-                                        WHERE tag = :tag_id_{tag_idx}
-                                    )
-                                    """
-                                ).params(**{f"tag_id_{tag_idx}": tag_id})
-                                for tag_idx, tag_id in enumerate(tag_ids)
-                            ]
-                        )
-                    )
+                    # Use helper method for optimized tag containment query
+                    query = query.filter(self._build_tag_containment_query(db, tag_ids))
             else:
                 raise NotImplementedError(
                     f"Unsupported dialect: {db.bind.dialect.name}"
@@ -855,12 +1019,9 @@ class ChatTable:
                     )
                 ).params(tag_id=tag_id)
             elif db.bind.dialect.name == "postgresql":
-                # PostgreSQL JSON query for tags within the meta JSON field (for `json` type)
-                query = query.filter(
-                    text(
-                        "EXISTS (SELECT 1 FROM json_array_elements_text(Chat.meta->'tags') elem WHERE elem = :tag_id)"
-                    )
-                ).params(tag_id=tag_id)
+                # Use optimized single tag query
+                single_tag_query = self._build_tag_containment_query(db, [tag_id])
+                query = query.filter(single_tag_query)
             else:
                 raise NotImplementedError(
                     f"Unsupported dialect: {db.bind.dialect.name}"
@@ -909,12 +1070,9 @@ class ChatTable:
                 ).params(tag_id=tag_id)
 
             elif db.bind.dialect.name == "postgresql":
-                # PostgreSQL JSONB support for querying the tags inside the `meta` JSON field
-                query = query.filter(
-                    text(
-                        "EXISTS (SELECT 1 FROM json_array_elements_text(Chat.meta->'tags') elem WHERE elem = :tag_id)"
-                    )
-                ).params(tag_id=tag_id)
+                # Use optimized single tag query
+                single_tag_query = self._build_tag_containment_query(db, [tag_id])
+                query = query.filter(single_tag_query)
 
             else:
                 raise NotImplementedError(
