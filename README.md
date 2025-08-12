@@ -119,6 +119,11 @@ Open WebUI can be installed using pip, the Python package installer. Before proc
    pip install open-webui
    ```
 
+to Update open-webui:
+```bash
+pip install --upgrade open-webui
+```
+
 2. **Running Open WebUI**:
    After installation, you can start Open WebUI by executing:
 
