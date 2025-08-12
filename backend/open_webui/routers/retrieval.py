@@ -1516,9 +1516,13 @@ def process_file(
                 ]
             # Pre-mark extracting so clients see progress immediately
             _set_processing(file.id, "processing", "extracting", 10)
+
             text_content = []
+            known_entities = []
+            current_page_offset = 0
+            detections = {}
+
             for doc in docs:
-                current_page_offset = 0
                 pii = None
                 if (
                     request.app.state.config.ENABLE_PII_DETECTION
@@ -1534,6 +1538,7 @@ def process_file(
                         body = TextMaskRequest(
                             text=[doc.page_content],
                             pii_labels=PiiLabels(detect=["ALL"]),
+                            known_entities=known_entities,
                         )
                         response = mask_text_text_mask_post.sync(
                             client=client,
@@ -1544,7 +1549,26 @@ def process_file(
                         # response can be HTTPValidationError or TextMaskResponse
                         if hasattr(response, "pii"):
                             # response.pii is list[list[PiiEntity]] or None/Unset
-                            pii = (response.pii or [[]])[0] if response.pii else []
+                            pii = (response.pii or [[]])[0] if response.pii else {}
+                            for pii_entity in pii:
+
+                                updated_occurences = []
+
+                                for occurrence in pii_entity.occurrences:
+                                    adjusted_occurrence = {
+                                        "start_idx": occurrence.start_idx + current_page_offset,
+                                        "end_idx": occurrence.end_idx + current_page_offset,
+                                    }
+                                    updated_occurences.append(adjusted_occurrence)
+
+                                pii_entity.occurrences = updated_occurences
+
+                                if pii_entity.text not in detections:
+                                    detections[pii_entity.text] = pii_entity
+                                    known_entities.append({'id': pii_entity.id, 'label': pii_entity.label, 'name': pii_entity.text})
+                                else:
+                                    detections[pii_entity.text].occurrences.extend(pii_entity.occurrences)
+
                     except Exception:
                         pii = None
                 # attach PII to document metadata for downstream use
@@ -1564,6 +1588,8 @@ def process_file(
         Files.update_file_data_by_id(
             file.id,
             {"content": text_content},
+            {"pii": detections},
+            {"full_text": " ".join(text_content)},
         )
 
         # About to embed/index
