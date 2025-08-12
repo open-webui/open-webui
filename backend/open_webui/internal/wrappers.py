@@ -98,23 +98,37 @@ def _augment_postgres_url_with_iam_and_ssl(db_url: str) -> str:
 
 
 def register_connection(db_url):
+    print(f"🔌 DB_CONNECT: Starting register_connection with URL: {db_url[:50]}...")
     log.info(f"🔍 DEBUG: Original DB URL: {db_url[:50]}...")
+    
+    print("🔌 DB_CONNECT: About to augment URL with IAM/SSL...")
     augmented_url = _augment_postgres_url_with_iam_and_ssl(db_url)
+    print(f"🔌 DB_CONNECT: URL augmentation complete: {augmented_url[:50]}...")
     log.info(f"🔍 DEBUG: Augmented DB URL: {augmented_url[:50]}...")
+    
+    print("🔌 DB_CONNECT: About to call connect()...")
     db = connect(augmented_url, unquote_user=True, unquote_password=True)
+    print("🔌 DB_CONNECT: ✅ connect() completed successfully")
+    
     if isinstance(db, PostgresqlDatabase):
+        print("🔌 DB_CONNECT: Setting up PostgreSQL database...")
         # Enable autoconnect for SQLite databases, managed by Peewee
         db.autoconnect = True
         db.reuse_if_open = True
         log.info("Connected to PostgreSQL database")
 
         # Get the connection details from the AUGMENTED URL to preserve SSL params
+        print("🔌 DB_CONNECT: Parsing connection details...")
         connection = parse(augmented_url, unquote_user=True, unquote_password=True)
+        print(f"🔌 DB_CONNECT: Connection details parsed successfully")
         log.info(f"🔍 DEBUG: Parsed connection params: {connection}")
 
         # Use our custom database class that supports reconnection
+        print("🔌 DB_CONNECT: Creating ReconnectingPostgresqlDatabase...")
         db = ReconnectingPostgresqlDatabase(**connection)
+        print("🔌 DB_CONNECT: About to call db.connect()...")
         db.connect(reuse_if_open=True)
+        print("🔌 DB_CONNECT: ✅ db.connect() completed successfully")
     elif isinstance(db, SqliteDatabase):
         # Enable autoconnect for SQLite databases, managed by Peewee
         db.autoconnect = True
