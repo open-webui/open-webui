@@ -65,31 +65,42 @@ class JSONField(types.TypeDecorator):
 def handle_peewee_migration(DATABASE_URL):
     db = None
     try:
+        print("🗄️ DB_MIGRATION: Starting Peewee migration process...")
         log.info("🗄️ DB_MIGRATION: Starting Peewee migration process...")
 
         # Replace the postgresql:// with postgres:// to handle the peewee migration
         db_url = DATABASE_URL.replace("postgresql://", "postgres://")
+        print(f"🗄️ DB_MIGRATION: Migration DB URL: {db_url[:60]}...")
         log.info(f"🗄️ DB_MIGRATION: Migration DB URL: {db_url[:60]}...")
 
+        print("🗄️ DB_MIGRATION: Attempting database connection for migration...")
         log.info("🗄️ DB_MIGRATION: Attempting database connection for migration...")
         db = register_connection(db_url)
+        print("🗄️ DB_MIGRATION: ✅ Database connection established for migration")
         log.info("🗄️ DB_MIGRATION: ✅ Database connection established for migration")
 
         migrate_dir = OPEN_WEBUI_DIR / "internal" / "migrations"
+        print(f"🗄️ DB_MIGRATION: Migration directory: {migrate_dir}")
         log.info(f"🗄️ DB_MIGRATION: Migration directory: {migrate_dir}")
+        print(f"🗄️ DB_MIGRATION: Migration directory exists: {migrate_dir.exists()}")
         log.info(f"🗄️ DB_MIGRATION: Migration directory exists: {migrate_dir.exists()}")
 
         if migrate_dir.exists():
             migration_files = list(migrate_dir.glob("*.py"))
+            print(f"🗄️ DB_MIGRATION: Found {len(migration_files)} migration files")
             log.info(f"🗄️ DB_MIGRATION: Found {len(migration_files)} migration files")
             for migration_file in migration_files:
+                print(f"🗄️ DB_MIGRATION: Migration file: {migration_file.name}")
                 log.info(f"🗄️ DB_MIGRATION: Migration file: {migration_file.name}")
 
+        print("🗄️ DB_MIGRATION: Creating migration router...")
         log.info("🗄️ DB_MIGRATION: Creating migration router...")
         router = Router(db, logger=log, migrate_dir=migrate_dir)
 
+        print("🗄️ DB_MIGRATION: Starting migration router execution...")
         log.info("🗄️ DB_MIGRATION: Starting migration router execution...")
         router.run()
+        print("🗄️ DB_MIGRATION: ✅ Migration completed successfully")
         log.info("🗄️ DB_MIGRATION: ✅ Migration completed successfully")
 
         log.info("🗄️ DB_MIGRATION: Closing database connection...")
@@ -112,8 +123,10 @@ def handle_peewee_migration(DATABASE_URL):
             log.info("🔍 DEBUG: Database connection closed successfully")
 
 
+print("🗄️ DB_MODULE: About to call handle_peewee_migration...")
 log.info("🗄️ DB_MODULE: About to call handle_peewee_migration...")
 handle_peewee_migration(DATABASE_URL)
+print("🗄️ DB_MODULE: ✅ handle_peewee_migration completed successfully")
 log.info("🗄️ DB_MODULE: ✅ handle_peewee_migration completed successfully")
 
 
