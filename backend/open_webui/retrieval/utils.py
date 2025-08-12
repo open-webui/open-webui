@@ -508,7 +508,11 @@ def get_sources_from_items(
             # Note Attached
             note = Notes.get_note_by_id(item.get("id"))
 
-            if user.role == "admin" or has_access(user.id, "read", note.access_control):
+            if note and (
+                user.role == "admin"
+                or note.user_id == user.id
+                or has_access(user.id, "read", note.access_control)
+            ):
                 # User has access to the note
                 query_result = {
                     "documents": [[note.data.get("content", {}).get("md", "")]],

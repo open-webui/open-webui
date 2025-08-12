@@ -401,12 +401,14 @@ async def get_rag_config(request: Request, user=Depends(get_admin_user)):
         "CONTENT_EXTRACTION_ENGINE": request.app.state.config.CONTENT_EXTRACTION_ENGINE,
         "PDF_EXTRACT_IMAGES": request.app.state.config.PDF_EXTRACT_IMAGES,
         "DATALAB_MARKER_API_KEY": request.app.state.config.DATALAB_MARKER_API_KEY,
-        "DATALAB_MARKER_LANGS": request.app.state.config.DATALAB_MARKER_LANGS,
+        "DATALAB_MARKER_API_BASE_URL": request.app.state.config.DATALAB_MARKER_API_BASE_URL,
+        "DATALAB_MARKER_ADDITIONAL_CONFIG": request.app.state.config.DATALAB_MARKER_ADDITIONAL_CONFIG,
         "DATALAB_MARKER_SKIP_CACHE": request.app.state.config.DATALAB_MARKER_SKIP_CACHE,
         "DATALAB_MARKER_FORCE_OCR": request.app.state.config.DATALAB_MARKER_FORCE_OCR,
         "DATALAB_MARKER_PAGINATE": request.app.state.config.DATALAB_MARKER_PAGINATE,
         "DATALAB_MARKER_STRIP_EXISTING_OCR": request.app.state.config.DATALAB_MARKER_STRIP_EXISTING_OCR,
         "DATALAB_MARKER_DISABLE_IMAGE_EXTRACTION": request.app.state.config.DATALAB_MARKER_DISABLE_IMAGE_EXTRACTION,
+        "DATALAB_MARKER_FORMAT_LINES": request.app.state.config.DATALAB_MARKER_FORMAT_LINES,
         "DATALAB_MARKER_USE_LLM": request.app.state.config.DATALAB_MARKER_USE_LLM,
         "DATALAB_MARKER_OUTPUT_FORMAT": request.app.state.config.DATALAB_MARKER_OUTPUT_FORMAT,
         "EXTERNAL_DOCUMENT_LOADER_URL": request.app.state.config.EXTERNAL_DOCUMENT_LOADER_URL,
@@ -566,12 +568,14 @@ class ConfigForm(BaseModel):
     CONTENT_EXTRACTION_ENGINE: Optional[str] = None
     PDF_EXTRACT_IMAGES: Optional[bool] = None
     DATALAB_MARKER_API_KEY: Optional[str] = None
-    DATALAB_MARKER_LANGS: Optional[str] = None
+    DATALAB_MARKER_API_BASE_URL: Optional[str] = None
+    DATALAB_MARKER_ADDITIONAL_CONFIG: Optional[str] = None
     DATALAB_MARKER_SKIP_CACHE: Optional[bool] = None
     DATALAB_MARKER_FORCE_OCR: Optional[bool] = None
     DATALAB_MARKER_PAGINATE: Optional[bool] = None
     DATALAB_MARKER_STRIP_EXISTING_OCR: Optional[bool] = None
     DATALAB_MARKER_DISABLE_IMAGE_EXTRACTION: Optional[bool] = None
+    DATALAB_MARKER_FORMAT_LINES: Optional[bool] = None
     DATALAB_MARKER_USE_LLM: Optional[bool] = None
     DATALAB_MARKER_OUTPUT_FORMAT: Optional[str] = None
     EXTERNAL_DOCUMENT_LOADER_URL: Optional[str] = None
@@ -683,10 +687,15 @@ async def update_rag_config(
         if form_data.DATALAB_MARKER_API_KEY is not None
         else request.app.state.config.DATALAB_MARKER_API_KEY
     )
-    request.app.state.config.DATALAB_MARKER_LANGS = (
-        form_data.DATALAB_MARKER_LANGS
-        if form_data.DATALAB_MARKER_LANGS is not None
-        else request.app.state.config.DATALAB_MARKER_LANGS
+    request.app.state.config.DATALAB_MARKER_API_BASE_URL = (
+        form_data.DATALAB_MARKER_API_BASE_URL
+        if form_data.DATALAB_MARKER_API_BASE_URL is not None
+        else request.app.state.config.DATALAB_MARKER_API_BASE_URL
+    )
+    request.app.state.config.DATALAB_MARKER_ADDITIONAL_CONFIG = (
+        form_data.DATALAB_MARKER_ADDITIONAL_CONFIG
+        if form_data.DATALAB_MARKER_ADDITIONAL_CONFIG is not None
+        else request.app.state.config.DATALAB_MARKER_ADDITIONAL_CONFIG
     )
     request.app.state.config.DATALAB_MARKER_SKIP_CACHE = (
         form_data.DATALAB_MARKER_SKIP_CACHE
@@ -712,6 +721,11 @@ async def update_rag_config(
         form_data.DATALAB_MARKER_DISABLE_IMAGE_EXTRACTION
         if form_data.DATALAB_MARKER_DISABLE_IMAGE_EXTRACTION is not None
         else request.app.state.config.DATALAB_MARKER_DISABLE_IMAGE_EXTRACTION
+    )
+    request.app.state.config.DATALAB_MARKER_FORMAT_LINES = (
+        form_data.DATALAB_MARKER_FORMAT_LINES
+        if form_data.DATALAB_MARKER_FORMAT_LINES is not None
+        else request.app.state.config.DATALAB_MARKER_FORMAT_LINES
     )
     request.app.state.config.DATALAB_MARKER_OUTPUT_FORMAT = (
         form_data.DATALAB_MARKER_OUTPUT_FORMAT
@@ -1006,7 +1020,8 @@ async def update_rag_config(
         "CONTENT_EXTRACTION_ENGINE": request.app.state.config.CONTENT_EXTRACTION_ENGINE,
         "PDF_EXTRACT_IMAGES": request.app.state.config.PDF_EXTRACT_IMAGES,
         "DATALAB_MARKER_API_KEY": request.app.state.config.DATALAB_MARKER_API_KEY,
-        "DATALAB_MARKER_LANGS": request.app.state.config.DATALAB_MARKER_LANGS,
+        "DATALAB_MARKER_API_BASE_URL": request.app.state.config.DATALAB_MARKER_API_BASE_URL,
+        "DATALAB_MARKER_ADDITIONAL_CONFIG": request.app.state.config.DATALAB_MARKER_ADDITIONAL_CONFIG,
         "DATALAB_MARKER_SKIP_CACHE": request.app.state.config.DATALAB_MARKER_SKIP_CACHE,
         "DATALAB_MARKER_FORCE_OCR": request.app.state.config.DATALAB_MARKER_FORCE_OCR,
         "DATALAB_MARKER_PAGINATE": request.app.state.config.DATALAB_MARKER_PAGINATE,
@@ -1229,26 +1244,13 @@ def save_docs_to_vector_db(
         {
             **doc.metadata,
             **(metadata if metadata else {}),
-            "embedding_config": json.dumps(
-                {
-                    "engine": request.app.state.config.RAG_EMBEDDING_ENGINE,
-                    "model": request.app.state.config.RAG_EMBEDDING_MODEL,
-                }
-            ),
+            "embedding_config": {
+                "engine": request.app.state.config.RAG_EMBEDDING_ENGINE,
+                "model": request.app.state.config.RAG_EMBEDDING_MODEL,
+            },
         }
         for doc in docs
     ]
-
-    # ChromaDB does not like datetime formats
-    # for meta-data so convert them to string.
-    for metadata in metadatas:
-        for key, value in metadata.items():
-            if (
-                isinstance(value, datetime)
-                or isinstance(value, list)
-                or isinstance(value, dict)
-            ):
-                metadata[key] = str(value)
 
     try:
         if VECTOR_DB_CLIENT.has_collection(collection_name=collection_name):
@@ -1406,12 +1408,14 @@ def process_file(
                 loader = Loader(
                     engine=request.app.state.config.CONTENT_EXTRACTION_ENGINE,
                     DATALAB_MARKER_API_KEY=request.app.state.config.DATALAB_MARKER_API_KEY,
-                    DATALAB_MARKER_LANGS=request.app.state.config.DATALAB_MARKER_LANGS,
+                    DATALAB_MARKER_API_BASE_URL=request.app.state.config.DATALAB_MARKER_API_BASE_URL,
+                    DATALAB_MARKER_ADDITIONAL_CONFIG=request.app.state.config.DATALAB_MARKER_ADDITIONAL_CONFIG,
                     DATALAB_MARKER_SKIP_CACHE=request.app.state.config.DATALAB_MARKER_SKIP_CACHE,
                     DATALAB_MARKER_FORCE_OCR=request.app.state.config.DATALAB_MARKER_FORCE_OCR,
                     DATALAB_MARKER_PAGINATE=request.app.state.config.DATALAB_MARKER_PAGINATE,
                     DATALAB_MARKER_STRIP_EXISTING_OCR=request.app.state.config.DATALAB_MARKER_STRIP_EXISTING_OCR,
                     DATALAB_MARKER_DISABLE_IMAGE_EXTRACTION=request.app.state.config.DATALAB_MARKER_DISABLE_IMAGE_EXTRACTION,
+                    DATALAB_MARKER_FORMAT_LINES=request.app.state.config.DATALAB_MARKER_FORMAT_LINES,
                     DATALAB_MARKER_USE_LLM=request.app.state.config.DATALAB_MARKER_USE_LLM,
                     DATALAB_MARKER_OUTPUT_FORMAT=request.app.state.config.DATALAB_MARKER_OUTPUT_FORMAT,
                     EXTERNAL_DOCUMENT_LOADER_URL=request.app.state.config.EXTERNAL_DOCUMENT_LOADER_URL,
@@ -1785,7 +1789,7 @@ def search_web(request: Request, engine: str, query: str) -> list[SearchResult]:
                 request.app.state.config.SERPLY_API_KEY,
                 query,
                 request.app.state.config.WEB_SEARCH_RESULT_COUNT,
-                request.app.state.config.WEB_SEARCH_DOMAIN_FILTER_LIST,
+                filter_list=request.app.state.config.WEB_SEARCH_DOMAIN_FILTER_LIST,
             )
         else:
             raise Exception("No SERPLY_API_KEY found in environment variables")
@@ -1961,7 +1965,7 @@ async def process_web_search(
                     },
                 )
                 for result in search_results
-                if hasattr(result, "snippet")
+                if hasattr(result, "snippet") and result.snippet is not None
             ]
         else:
             loader = get_web_loader(

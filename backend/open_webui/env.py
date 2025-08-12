@@ -7,6 +7,7 @@ import sys
 import shutil
 from uuid import uuid4
 from pathlib import Path
+from cryptography.hazmat.primitives import serialization
 
 import markdown
 from bs4 import BeautifulSoup
@@ -287,6 +288,9 @@ DB_VARS = {
 
 if all(DB_VARS.values()):
     DATABASE_URL = f"{DB_VARS['db_type']}://{DB_VARS['db_cred']}@{DB_VARS['db_host']}:{DB_VARS['db_port']}/{DB_VARS['db_name']}"
+elif DATABASE_TYPE == "sqlite+sqlcipher" and not os.environ.get("DATABASE_URL"):
+    # Handle SQLCipher with local file when DATABASE_URL wasn't explicitly set
+    DATABASE_URL = f"sqlite+sqlcipher:///{DATA_DIR}/webui.db"
 
 # Replace the postgres:// with postgresql://
 if "postgres://" in DATABASE_URL:
@@ -345,7 +349,10 @@ ENABLE_REALTIME_CHAT_SAVE = (
 ####################################
 
 REDIS_URL = os.environ.get("REDIS_URL", "")
+REDIS_CLUSTER = os.environ.get("REDIS_CLUSTER", "False").lower() == "true"
+
 REDIS_KEY_PREFIX = os.environ.get("REDIS_KEY_PREFIX", "open-webui")
+
 REDIS_SENTINEL_HOSTS = os.environ.get("REDIS_SENTINEL_HOSTS", "")
 REDIS_SENTINEL_PORT = os.environ.get("REDIS_SENTINEL_PORT", "26379")
 
@@ -377,6 +384,10 @@ except ValueError:
 ####################################
 
 WEBUI_AUTH = os.environ.get("WEBUI_AUTH", "True").lower() == "true"
+ENABLE_SIGNUP_PASSWORD_CONFIRMATION = (
+    os.environ.get("ENABLE_SIGNUP_PASSWORD_CONFIRMATION", "False").lower() == "true"
+)
+
 WEBUI_AUTH_TRUSTED_EMAIL_HEADER = os.environ.get(
     "WEBUI_AUTH_TRUSTED_EMAIL_HEADER", None
 )
@@ -430,6 +441,41 @@ ENABLE_COMPRESSION_MIDDLEWARE = (
     os.environ.get("ENABLE_COMPRESSION_MIDDLEWARE", "True").lower() == "true"
 )
 
+
+####################################
+# SCIM Configuration
+####################################
+
+SCIM_ENABLED = os.environ.get("SCIM_ENABLED", "False").lower() == "true"
+SCIM_TOKEN = os.environ.get("SCIM_TOKEN", "")
+
+####################################
+# LICENSE_KEY
+####################################
+
+LICENSE_KEY = os.environ.get("LICENSE_KEY", "")
+
+LICENSE_BLOB = None
+LICENSE_BLOB_PATH = os.environ.get("LICENSE_BLOB_PATH", DATA_DIR / "l.data")
+if LICENSE_BLOB_PATH and os.path.exists(LICENSE_BLOB_PATH):
+    with open(LICENSE_BLOB_PATH, "rb") as f:
+        LICENSE_BLOB = f.read()
+
+LICENSE_PUBLIC_KEY = os.environ.get("LICENSE_PUBLIC_KEY", "")
+
+pk = None
+if LICENSE_PUBLIC_KEY:
+    pk = serialization.load_pem_public_key(
+        f"""
+-----BEGIN PUBLIC KEY-----
+{LICENSE_PUBLIC_KEY}
+-----END PUBLIC KEY-----
+""".encode(
+            "utf-8"
+        )
+    )
+
+
 ####################################
 # MODELS
 ####################################
@@ -445,6 +491,25 @@ else:
 
 
 ####################################
+# CHAT
+####################################
+
+CHAT_RESPONSE_STREAM_DELTA_CHUNK_SIZE = os.environ.get(
+    "CHAT_RESPONSE_STREAM_DELTA_CHUNK_SIZE", "1"
+)
+
+if CHAT_RESPONSE_STREAM_DELTA_CHUNK_SIZE == "":
+    CHAT_RESPONSE_STREAM_DELTA_CHUNK_SIZE = 1
+else:
+    try:
+        CHAT_RESPONSE_STREAM_DELTA_CHUNK_SIZE = int(
+            CHAT_RESPONSE_STREAM_DELTA_CHUNK_SIZE
+        )
+    except Exception:
+        CHAT_RESPONSE_STREAM_DELTA_CHUNK_SIZE = 1
+
+
+####################################
 # WEBSOCKET SUPPORT
 ####################################
 
@@ -456,6 +521,9 @@ ENABLE_WEBSOCKET_SUPPORT = (
 WEBSOCKET_MANAGER = os.environ.get("WEBSOCKET_MANAGER", "")
 
 WEBSOCKET_REDIS_URL = os.environ.get("WEBSOCKET_REDIS_URL", REDIS_URL)
+WEBSOCKET_REDIS_CLUSTER = (
+    os.environ.get("WEBSOCKET_REDIS_CLUSTER", str(REDIS_CLUSTER)).lower() == "true"
+)
 
 websocket_redis_lock_timeout = os.environ.get("WEBSOCKET_REDIS_LOCK_TIMEOUT", "60")
 
@@ -465,8 +533,8 @@ except ValueError:
     WEBSOCKET_REDIS_LOCK_TIMEOUT = 60
 
 WEBSOCKET_SENTINEL_HOSTS = os.environ.get("WEBSOCKET_SENTINEL_HOSTS", "")
-
 WEBSOCKET_SENTINEL_PORT = os.environ.get("WEBSOCKET_SENTINEL_PORT", "26379")
+
 
 AIOHTTP_CLIENT_TIMEOUT = os.environ.get("AIOHTTP_CLIENT_TIMEOUT", "")
 
@@ -610,11 +678,31 @@ AUDIT_EXCLUDED_PATHS = [path.lstrip("/") for path in AUDIT_EXCLUDED_PATHS]
 
 ENABLE_OTEL = os.environ.get("ENABLE_OTEL", "False").lower() == "true"
 ENABLE_OTEL_METRICS = os.environ.get("ENABLE_OTEL_METRICS", "False").lower() == "true"
+ENABLE_OTEL_LOGS = os.environ.get("ENABLE_OTEL_LOGS", "False").lower() == "true"
+
 OTEL_EXPORTER_OTLP_ENDPOINT = os.environ.get(
     "OTEL_EXPORTER_OTLP_ENDPOINT", "http://localhost:4317"
 )
+OTEL_METRICS_EXPORTER_OTLP_ENDPOINT = os.environ.get(
+    "OTEL_METRICS_EXPORTER_OTLP_ENDPOINT", OTEL_EXPORTER_OTLP_ENDPOINT
+)
+OTEL_LOGS_EXPORTER_OTLP_ENDPOINT = os.environ.get(
+    "OTEL_LOGS_EXPORTER_OTLP_ENDPOINT", OTEL_EXPORTER_OTLP_ENDPOINT
+)
 OTEL_EXPORTER_OTLP_INSECURE = (
     os.environ.get("OTEL_EXPORTER_OTLP_INSECURE", "False").lower() == "true"
+)
+OTEL_METRICS_EXPORTER_OTLP_INSECURE = (
+    os.environ.get(
+        "OTEL_METRICS_EXPORTER_OTLP_INSECURE", str(OTEL_EXPORTER_OTLP_INSECURE)
+    ).lower()
+    == "true"
+)
+OTEL_LOGS_EXPORTER_OTLP_INSECURE = (
+    os.environ.get(
+        "OTEL_LOGS_EXPORTER_OTLP_INSECURE", str(OTEL_EXPORTER_OTLP_INSECURE)
+    ).lower()
+    == "true"
 )
 OTEL_SERVICE_NAME = os.environ.get("OTEL_SERVICE_NAME", "open-webui")
 OTEL_RESOURCE_ATTRIBUTES = os.environ.get(
@@ -626,11 +714,30 @@ OTEL_TRACES_SAMPLER = os.environ.get(
 OTEL_BASIC_AUTH_USERNAME = os.environ.get("OTEL_BASIC_AUTH_USERNAME", "")
 OTEL_BASIC_AUTH_PASSWORD = os.environ.get("OTEL_BASIC_AUTH_PASSWORD", "")
 
+OTEL_METRICS_BASIC_AUTH_USERNAME = os.environ.get(
+    "OTEL_METRICS_BASIC_AUTH_USERNAME", OTEL_BASIC_AUTH_USERNAME
+)
+OTEL_METRICS_BASIC_AUTH_PASSWORD = os.environ.get(
+    "OTEL_METRICS_BASIC_AUTH_PASSWORD", OTEL_BASIC_AUTH_PASSWORD
+)
+OTEL_LOGS_BASIC_AUTH_USERNAME = os.environ.get(
+    "OTEL_LOGS_BASIC_AUTH_USERNAME", OTEL_BASIC_AUTH_USERNAME
+)
+OTEL_LOGS_BASIC_AUTH_PASSWORD = os.environ.get(
+    "OTEL_LOGS_BASIC_AUTH_PASSWORD", OTEL_BASIC_AUTH_PASSWORD
+)
 
 OTEL_OTLP_SPAN_EXPORTER = os.environ.get(
     "OTEL_OTLP_SPAN_EXPORTER", "grpc"
 ).lower()  # grpc or http
 
+OTEL_METRICS_OTLP_SPAN_EXPORTER = os.environ.get(
+    "OTEL_METRICS_OTLP_SPAN_EXPORTER", OTEL_OTLP_SPAN_EXPORTER
+).lower()  # grpc or http
+
+OTEL_LOGS_OTLP_SPAN_EXPORTER = os.environ.get(
+    "OTEL_LOGS_OTLP_SPAN_EXPORTER", OTEL_OTLP_SPAN_EXPORTER
+).lower()  # grpc or http
 
 ####################################
 # TOOLS/FUNCTIONS PIP OPTIONS

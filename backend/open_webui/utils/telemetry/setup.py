@@ -1,15 +1,16 @@
 from fastapi import FastAPI
 from opentelemetry import trace
+
 from opentelemetry.exporter.otlp.proto.grpc.trace_exporter import OTLPSpanExporter
 from opentelemetry.exporter.otlp.proto.http.trace_exporter import (
     OTLPSpanExporter as HttpOTLPSpanExporter,
 )
 from opentelemetry.sdk.resources import SERVICE_NAME, Resource
 from opentelemetry.sdk.trace import TracerProvider
+from opentelemetry.sdk.trace.export import BatchSpanProcessor
 from sqlalchemy import Engine
 from base64 import b64encode
 
-from open_webui.utils.telemetry.exporters import LazyBatchSpanProcessor
 from open_webui.utils.telemetry.instrumentors import Instrumentor
 from open_webui.utils.telemetry.metrics import setup_metrics
 from open_webui.env import (
@@ -25,11 +26,8 @@ from open_webui.env import (
 
 def setup(app: FastAPI, db_engine: Engine):
     # set up trace
-    trace.set_tracer_provider(
-        TracerProvider(
-            resource=Resource.create(attributes={SERVICE_NAME: OTEL_SERVICE_NAME})
-        )
-    )
+    resource = Resource.create(attributes={SERVICE_NAME: OTEL_SERVICE_NAME})
+    trace.set_tracer_provider(TracerProvider(resource=resource))
 
     # Add basic auth header only if both username and password are not empty
     headers = []
@@ -42,7 +40,6 @@ def setup(app: FastAPI, db_engine: Engine):
     if OTEL_OTLP_SPAN_EXPORTER == "http":
         exporter = HttpOTLPSpanExporter(
             endpoint=OTEL_EXPORTER_OTLP_ENDPOINT,
-            insecure=OTEL_EXPORTER_OTLP_INSECURE,
             headers=headers,
         )
     else:
@@ -51,9 +48,9 @@ def setup(app: FastAPI, db_engine: Engine):
             insecure=OTEL_EXPORTER_OTLP_INSECURE,
             headers=headers,
         )
-    trace.get_tracer_provider().add_span_processor(LazyBatchSpanProcessor(exporter))
+    trace.get_tracer_provider().add_span_processor(BatchSpanProcessor(exporter))
     Instrumentor(app=app, db_engine=db_engine).instrument()
 
     # set up metrics only if enabled
     if ENABLE_OTEL_METRICS:
-        setup_metrics(app)
+        setup_metrics(app, resource)

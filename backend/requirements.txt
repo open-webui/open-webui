@@ -9,7 +9,7 @@ passlib[bcrypt]==1.7.4
 cryptography
 
 requests==2.32.4
-aiohttp==3.11.11
+aiohttp==3.12.15
 async-timeout
 aiocache
 aiofiles
@@ -27,7 +27,7 @@ bcrypt==4.3.0
 
 pymongo
 redis
-boto3==1.35.53
+boto3==1.40.5
 
 argon2-cffi==23.1.0
 APScheduler==3.10.4
@@ -42,14 +42,14 @@ asgiref==3.8.1
 # AI libraries
 openai
 anthropic
-google-genai==1.15.0
+google-genai==1.28.0
 google-generativeai==0.8.5
 tiktoken
 
 langchain==0.3.26
 langchain-community==0.3.26
 
-fake-useragent==2.1.0
+fake-useragent==2.2.0
 chromadb==0.6.3
 posthog==5.4.0
 pymilvus==2.5.0
@@ -58,11 +58,14 @@ opensearch-py==2.8.0
 playwright==1.49.1 # Caution: version must match docker-compose.playwright.yaml
 elasticsearch==9.0.1
 pinecone==6.0.2
+oracledb==3.2.0
 
+av==14.0.1 # Caution: Set due to FATAL FIPS SELFTEST FAILURE, see discussion https://github.com/open-webui/open-webui/discussions/15720
 transformers
 sentence-transformers==4.1.0
 accelerate
 colbert-ai==0.2.21
+pyarrow==20.0.0
 einops==0.8.1
 
 
@@ -74,7 +77,7 @@ docx2txt==0.8
 python-pptx==1.0.2
 unstructured==0.16.17
 nltk==3.9.1
-Markdown==3.7
+Markdown==3.8.2
 pypandoc==1.15
 pandas==2.2.3
 openpyxl==3.1.5
@@ -86,7 +89,7 @@ sentencepiece
 soundfile==0.13.1
 azure-ai-documentintelligence==1.0.2
 
-pillow==11.2.1
+pillow==11.3.0
 opencv-python-headless==4.11.0.86
 rapidocr-onnxruntime==1.4.4
 rank-bm25==0.2.2
@@ -96,7 +99,7 @@ onnxruntime==1.20.1
 faster-whisper==1.1.1
 
 PyJWT[crypto]==2.10.1
-authlib==1.4.1
+authlib==1.6.1
 
 black==25.1.0
 langfuse==2.44.0
@@ -133,14 +136,14 @@ firecrawl-py==1.12.0
 tencentcloud-sdk-python==3.0.1336
 
 ## Trace
-opentelemetry-api==1.32.1
-opentelemetry-sdk==1.32.1
-opentelemetry-exporter-otlp==1.32.1
-opentelemetry-instrumentation==0.53b1
-opentelemetry-instrumentation-fastapi==0.53b1
-opentelemetry-instrumentation-sqlalchemy==0.53b1
-opentelemetry-instrumentation-redis==0.53b1
-opentelemetry-instrumentation-requests==0.53b1
-opentelemetry-instrumentation-logging==0.53b1
-opentelemetry-instrumentation-httpx==0.53b1
-opentelemetry-instrumentation-aiohttp-client==0.53b1
+opentelemetry-api==1.36.0
+opentelemetry-sdk==1.36.0
+opentelemetry-exporter-otlp==1.36.0
+opentelemetry-instrumentation==0.57b0
+opentelemetry-instrumentation-fastapi==0.57b0
+opentelemetry-instrumentation-sqlalchemy==0.57b0
+opentelemetry-instrumentation-redis==0.57b0
+opentelemetry-instrumentation-requests==0.57b0
+opentelemetry-instrumentation-logging==0.57b0
+opentelemetry-instrumentation-httpx==0.57b0
+opentelemetry-instrumentation-aiohttp-client==0.57b0

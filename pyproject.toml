@@ -17,7 +17,7 @@ dependencies = [
     "cryptography",
 
     "requests==2.32.4",
-    "aiohttp==3.11.11",
+    "aiohttp==3.12.15",
     "async-timeout",
     "aiocache",
     "aiofiles",
@@ -35,7 +35,7 @@ dependencies = [
 
     "pymongo",
     "redis",
-    "boto3==1.35.53",
+    "boto3==1.40.5",
 
     "argon2-cffi==23.1.0",
     "APScheduler==3.10.4",
@@ -50,14 +50,14 @@ dependencies = [
 
     "openai",
     "anthropic",
-    "google-genai==1.15.0",
+    "google-genai==1.28.0",
     "google-generativeai==0.8.5",
     "tiktoken",
 
     "langchain==0.3.26",
     "langchain-community==0.3.26",
 
-    "fake-useragent==2.1.0",
+    "fake-useragent==2.2.0",
     "chromadb==0.6.3",
     "pymilvus==2.5.0",
     "qdrant-client==1.14.3",
@@ -65,11 +65,13 @@ dependencies = [
     "playwright==1.49.1",
     "elasticsearch==9.0.1",
     "pinecone==6.0.2",
+    "oracledb==3.2.0",
 
     "transformers",
     "sentence-transformers==4.1.0",
     "accelerate",
     "colbert-ai==0.2.21",
+    "pyarrow==20.0.0",
     "einops==0.8.1",
 
     "ftfy==6.2.3",
@@ -80,7 +82,7 @@ dependencies = [
     "python-pptx==1.0.2",
     "unstructured==0.16.17",
     "nltk==3.9.1",
-    "Markdown==3.7",
+    "Markdown==3.8.2",
     "pypandoc==1.15",
     "pandas==2.2.3",
     "openpyxl==3.1.5",
@@ -92,7 +94,7 @@ dependencies = [
     "soundfile==0.13.1",
     "azure-ai-documentintelligence==1.0.2",
 
-    "pillow==11.2.1",
+    "pillow==11.3.0",
     "opencv-python-headless==4.11.0.86",
     "rapidocr-onnxruntime==1.4.4",
     "rank-bm25==0.2.2",
@@ -102,7 +104,7 @@ dependencies = [
     "faster-whisper==1.1.1",
 
     "PyJWT[crypto]==2.10.1",
-    "authlib==1.4.1",
+    "authlib==1.6.1",
 
     "black==25.1.0",
     "langfuse==2.44.0",
@@ -135,7 +137,7 @@ dependencies = [
     "gcp-storage-emulator>=2024.8.3",
 
     "moto[s3]>=5.0.26",
-
+    "oracledb>=3.2.0",
     "posthog==5.4.0",
 
 ]

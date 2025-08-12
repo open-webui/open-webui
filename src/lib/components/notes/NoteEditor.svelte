@@ -31,7 +31,16 @@
 	import { uploadFile } from '$lib/apis/files';
 	import { chatCompletion, generateOpenAIChatCompletion } from '$lib/apis/openai';
 
-	import { config, models, settings, showSidebar, socket, user, WEBUI_NAME } from '$lib/stores';
+	import {
+		config,
+		mobile,
+		models,
+		settings,
+		showSidebar,
+		socket,
+		user,
+		WEBUI_NAME
+	} from '$lib/stores';
 
 	import NotePanel from '$lib/components/notes/NotePanel.svelte';
 
@@ -61,7 +70,6 @@
 	import MicSolid from '../icons/MicSolid.svelte';
 	import VoiceRecording from '../chat/MessageInput/VoiceRecording.svelte';
 	import DeleteConfirmDialog from '$lib/components/common/ConfirmDialog.svelte';
-	import MenuLines from '../icons/MenuLines.svelte';
 	import ChatBubbleOval from '../icons/ChatBubbleOval.svelte';
 
 	import Calendar from '../icons/Calendar.svelte';
@@ -79,7 +87,7 @@
 	import Bars3BottomLeft from '../icons/Bars3BottomLeft.svelte';
 	import ArrowUturnLeft from '../icons/ArrowUturnLeft.svelte';
 	import ArrowUturnRight from '../icons/ArrowUturnRight.svelte';
-	import Sidebar from '../common/Sidebar.svelte';
+	import Sidebar from '../icons/Sidebar.svelte';
 	import ArrowRight from '../icons/ArrowRight.svelte';
 	import Cog6 from '../icons/Cog6.svelte';
 	import AiMenu from './AIMenu.svelte';
@@ -126,6 +134,7 @@
 	let showDeleteConfirm = false;
 	let showAccessControlModal = false;
 
+	let ignoreBlur = false;
 	let titleInputFocused = false;
 	let titleGenerating = false;
 
@@ -937,24 +946,29 @@ Provide the enhanced notes in markdown format. Use markdown syntax for headings,
 				<div class=" w-full flex flex-col {loading ? 'opacity-20' : ''}">
 					<div class="shrink-0 w-full flex justify-between items-center px-3.5 mb-1.5">
 						<div class="w-full flex items-center">
-							<div
-								class="{$showSidebar
-									? 'md:hidden pl-0.5'
-									: ''} flex flex-none items-center pr-1 -translate-x-1"
-							>
-								<button
-									id="sidebar-toggle-button"
-									class="cursor-pointer p-1.5 flex rounded-xl hover:bg-gray-100 dark:hover:bg-gray-850 transition"
-									on:click={() => {
-										showSidebar.set(!$showSidebar);
-									}}
-									aria-label="Toggle Sidebar"
+							{#if $mobile}
+								<div
+									class="{$showSidebar
+										? 'md:hidden pl-0.5'
+										: ''} flex flex-none items-center pr-1 -translate-x-1"
 								>
-									<div class=" m-auto self-center">
-										<MenuLines />
-									</div>
-								</button>
-							</div>
+									<Tooltip
+										content={$showSidebar ? $i18n.t('Close Sidebar') : $i18n.t('Open Sidebar')}
+									>
+										<button
+											id="sidebar-toggle-button"
+											class=" cursor-pointer flex rounded-lg hover:bg-gray-100 dark:hover:bg-gray-850 transition cursor-"
+											on:click={() => {
+												showSidebar.set(!$showSidebar);
+											}}
+										>
+											<div class=" self-center p-1.5">
+												<Sidebar />
+											</div>
+										</button>
+									</Tooltip>
+								</div>
+							{/if}
 
 							<input
 								class="w-full text-2xl font-medium bg-transparent outline-hidden"
@@ -970,7 +984,8 @@ Provide the enhanced notes in markdown format. Use markdown syntax for headings,
 								}}
 								on:blur={(e) => {
 									// check if target is generate button
-									if (e.relatedTarget?.id === 'generate-title-button') {
+									if (ignoreBlur) {
+										ignoreBlur = false;
 										return;
 									}
 
@@ -987,6 +1002,11 @@ Provide the enhanced notes in markdown format. Use markdown syntax for headings,
 										<button
 											class=" self-center dark:hover:text-white transition"
 											id="generate-title-button"
+											disabled={(note?.user_id !== $user?.id && $user?.role !== 'admin') ||
+												titleGenerating}
+											on:mouseenter={() => {
+												ignoreBlur = true;
+											}}
 											on:click={(e) => {
 												e.preventDefault();
 												e.stopImmediatePropagation();
