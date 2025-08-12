@@ -1028,7 +1028,6 @@
 	"Sets the stop sequences to use. When this pattern is encountered, the LLM will stop generating text and return. Multiple stop patterns may be set by specifying multiple separate stop parameters in a modelfile.": "Définit les séquences d'arrêt à utiliser. Lorsque ce modèle est rencontré, le GML arrêtera de générer du texte et retournera. Plusieurs modèles d'arrêt peuvent être définis en spécifiant plusieurs paramètres d'arrêt distincts dans un fichier de modèle.",
 	"Settings": "Paramètres",
 	"Settings saved successfully!": "Paramètres enregistrés avec succès !",
-	"Settings updated successfully": "",
 	"settingsTab": "Vous êtes actuellement dans l'onglet \"{{title}}\" de la page des paramètres",
 	"Share": "Partager",
 	"Share Chat": "Partage de chat",

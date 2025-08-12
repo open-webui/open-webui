@@ -20,7 +20,7 @@
 
 		if (res) {
 			await saveHandler();
-			toast.success($i18n.t('Settings updated successfully'));
+			toast.success($i18n.t('Settings saved successfully!'));
 		}
 		loading = false;
 	};

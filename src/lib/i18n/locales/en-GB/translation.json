@@ -1028,7 +1028,6 @@
 	"Sets the stop sequences to use. When this pattern is encountered, the LLM will stop generating text and return. Multiple stop patterns may be set by specifying multiple separate stop parameters in a modelfile.": "",
 	"Settings": "",
 	"Settings saved successfully!": "",
-	"Settings updated successfully": "",
 	"settingsTab": "You are currently in \"{{title}}\" tab of settings page",
 	"Share": "",
 	"Share Chat": "",
