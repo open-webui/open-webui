@@ -390,7 +390,7 @@ Based on the user's instruction, update and enhance the existing notes or select
 						bind:chatInputElement
 						acceptFiles={false}
 						inputLoading={loading}
-						showFormattingButtons={false}
+						showFormattingToolbar={false}
 						onSubmit={submitHandler}
 						{onStop}
 					>

@@ -3,7 +3,7 @@
 	import { toast } from 'svelte-sonner';
 	import { tick, getContext, onMount } from 'svelte';
 
-	import { models, settings, chatId } from '$lib/stores';
+	import { models, settings } from '$lib/stores';
 	import { user as _user } from '$lib/stores';
 	import { copyToClipboard as _copyToClipboard, formatDate } from '$lib/utils';
 	import { WEBUI_BASE_URL } from '$lib/constants';
@@ -31,6 +31,7 @@
 
 	export let user;
 
+	export let chatId;
 	export let history;
 	export let messageId;
 
@@ -45,6 +46,7 @@
 
 	export let isFirstMessage: boolean;
 	export let readOnly: boolean;
+	export let topPadding = false;
 
 	let showDeleteConfirm = false;
 
@@ -68,10 +70,10 @@
 
 	const copyToClipboard = async (text: string) => {
 		// First unmask any PII placeholders to get the actual text
-		const entities = piiSessionManager.getEntitiesForDisplay($chatId);
+		const entities = piiSessionManager.getEntitiesForDisplay(chatId);
 		console.log(
 			'UserMessage: copyToClipboard - chatId:',
-			$chatId,
+			chatId,
 			'entities found:',
 			entities.length
 		);
@@ -201,8 +203,8 @@
 </script>
 
 <DeleteConfirmDialog
-	bind:show={showDeleteConfirm}
-	title={$i18n.t('Delete message?')}
+    bind:show={showDeleteConfirm}
+    title={$i18n.t('Delete message?')}
 	on:confirm={() => {
 		deleteMessageHandler();
 	}}
@@ -416,9 +418,9 @@
 										}`
 									: ' w-full'}"
 							>
-								{#if message.content}
-									<Markdown id={message.id} content={message.content} conversationId={$chatId} />
-								{/if}
+							{#if message.content}
+								<Markdown id={`${chatId}-${message.id}`} content={message.content} {topPadding} conversationId={chatId} />
+							{/if}
 							</div>
 						</div>
 
@@ -524,7 +526,7 @@
 								{/if}
 							{/if}
 							{#if !readOnly}
-								<Tooltip content={$i18n.t('Edit')} placement="bottom">
+					<Tooltip content={$i18n.t('Edit')} placement="bottom">
 									<button
 										class="invisible group-hover:visible p-1.5 hover:bg-black/5 dark:hover:bg-white/5 rounded-lg dark:hover:text-white hover:text-black transition edit-user-message-button"
 										on:click={() => {
@@ -549,7 +551,7 @@
 								</Tooltip>
 							{/if}
 
-							<Tooltip content={$i18n.t('Copy')} placement="bottom">
+					<Tooltip content={$i18n.t('Copy')} placement="bottom">
 								<button
 									class="invisible group-hover:visible p-1.5 hover:bg-black/5 dark:hover:bg-white/5 rounded-lg dark:hover:text-white hover:text-black transition"
 									on:click={() => {
@@ -574,7 +576,7 @@
 							</Tooltip>
 
 							{#if !readOnly && (!isFirstMessage || siblings.length > 1)}
-								<Tooltip content={$i18n.t('Delete')} placement="bottom">
+						<Tooltip content={$i18n.t('Delete')} placement="bottom">
 									<button
 										class="invisible group-hover:visible p-1 rounded-sm dark:hover:text-white hover:text-black transition"
 										on:click={() => {

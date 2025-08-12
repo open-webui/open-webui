@@ -293,10 +293,20 @@
 						/>
 					</div>
 
-					<div class="flex justify-between">
-						<div>
+					<div
+						class="flex justify-between flex-col sm:flex-row items-start sm:items-center gap-2 mt-2"
+					>
+						<div class="flex-1 shrink-0">
 							<button
-								class="px-3.5 py-1.5 text-sm font-medium bg-gray-50 hover:bg-gray-100 text-gray-900 dark:bg-gray-850 dark:hover:bg-gray-800 dark:text-gray-200 transition rounded-lg"
+								type="button"
+								class="px-3.5 py-1.5 text-sm font-medium bg-gray-50 hover:bg-gray-100 text-gray-900 dark:bg-gray-850 dark:hover:bg-gray-800 dark:text-gray-200 transition rounded-lg shrink-0 {($settings?.highContrastMode ??
+								false)
+									? ''
+									: 'outline-hidden'}"
+								aria-pressed={role === 'assistant'}
+								aria-label={$i18n.t(
+									role === 'user' ? 'Switch to Assistant role' : 'Switch to User role'
+								)}
 								on:click={() => {
 									role = role === 'user' ? 'assistant' : 'user';
 								}}
@@ -309,10 +319,10 @@
 							</button>
 						</div>
 
-						<div class="flex items-center gap-2">
-							<div class="">
+						<div class="flex items-center justify-between gap-2 w-full sm:w-auto">
+							<div class="flex-1">
 								<select
-									class=" bg-transparent border border-gray-100 dark:border-gray-850 rounded-lg py-1 px-2 -mx-0.5 text-sm outline-hidden w-40"
+									class=" bg-transparent border border-gray-100 dark:border-gray-850 rounded-lg py-1 px-2 -mx-0.5 text-sm outline-hidden w-full"
 									bind:value={selectedModelId}
 								>
 									{#each $models as model}
@@ -323,36 +333,38 @@
 								</select>
 							</div>
 
-							{#if !loading}
-								<button
-									disabled={message === ''}
-									class="px-3.5 py-1.5 text-sm font-medium disabled:bg-gray-50 dark:disabled:hover:bg-gray-850 disabled:cursor-not-allowed bg-gray-50 hover:bg-gray-100 text-gray-900 dark:bg-gray-850 dark:hover:bg-gray-800 dark:text-gray-200 transition rounded-lg"
-									on:click={() => {
-										addHandler();
-										role = role === 'user' ? 'assistant' : 'user';
-									}}
-								>
-									{$i18n.t('Add')}
-								</button>
+							<div class="flex gap-2 shrink-0">
+								{#if !loading}
+									<button
+										disabled={message === ''}
+										class="px-3.5 py-1.5 text-sm font-medium disabled:bg-gray-50 dark:disabled:hover:bg-gray-850 disabled:cursor-not-allowed bg-gray-50 hover:bg-gray-100 text-gray-900 dark:bg-gray-850 dark:hover:bg-gray-800 dark:text-gray-200 transition rounded-lg"
+										on:click={() => {
+											addHandler();
+											role = role === 'user' ? 'assistant' : 'user';
+										}}
+									>
+										{$i18n.t('Add')}
+									</button>
 
-								<button
-									class="px-3.5 py-1.5 text-sm font-medium bg-black hover:bg-gray-900 text-white dark:bg-white dark:text-black dark:hover:bg-gray-100 transition rounded-lg"
-									on:click={() => {
-										submitHandler();
-									}}
-								>
-									{$i18n.t('Run')}
-								</button>
-							{:else}
-								<button
-									class="px-3 py-1.5 text-sm font-medium bg-gray-300 text-black transition rounded-lg"
-									on:click={() => {
-										stopResponse();
-									}}
-								>
-									{$i18n.t('Cancel')}
-								</button>
-							{/if}
+									<button
+										class="px-3.5 py-1.5 text-sm font-medium bg-black hover:bg-gray-900 text-white dark:bg-white dark:text-black dark:hover:bg-gray-100 transition rounded-lg"
+										on:click={() => {
+											submitHandler();
+										}}
+									>
+										{$i18n.t('Run')}
+									</button>
+								{:else}
+									<button
+										class="px-3 py-1.5 text-sm font-medium bg-gray-300 text-black transition rounded-lg"
+										on:click={() => {
+											stopResponse();
+										}}
+									>
+										{$i18n.t('Cancel')}
+									</button>
+								{/if}
+							</div>
 						</div>
 					</div>
 				</div>
