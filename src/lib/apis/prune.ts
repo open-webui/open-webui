@@ -12,7 +12,8 @@ export const pruneData = async (
   delete_orphaned_knowledge_bases: boolean = true,
   delete_orphaned_models: boolean = true,
   delete_orphaned_notes: boolean = true,
-  delete_orphaned_folders: boolean = true
+  delete_orphaned_folders: boolean = true,
+  audio_cache_max_age_days: number | null = 30
 ) => {
   let error = null;
 
@@ -33,7 +34,8 @@ export const pruneData = async (
       delete_orphaned_knowledge_bases,
       delete_orphaned_models,
       delete_orphaned_notes,
-      delete_orphaned_folders
+      delete_orphaned_folders,
+      audio_cache_max_age_days
     })
   })
     .then(async (res) => {
