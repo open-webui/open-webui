@@ -1581,16 +1581,17 @@ def process_file(
                 text_content.append(doc.page_content)
                 current_page_offset += len(doc.page_content)
 
+                log.debug(f"text_content: {text_content}")
+                Files.update_file_data_by_id(
+                    file.id,
+                    {"content": " ".join(text_content)},
+                    {"pii": detections},
+                    {"page_content": text_content},
+                )
+
             # Extraction completed
             _set_processing(file.id, "processing", "extracting", 20)
 
-        log.debug(f"text_content: {text_content}")
-        Files.update_file_data_by_id(
-            file.id,
-            {"content": text_content},
-            {"pii": detections},
-            {"full_text": " ".join(text_content)},
-        )
 
         # About to embed/index
         _set_processing(file.id, "processing", "embedding", 30)
