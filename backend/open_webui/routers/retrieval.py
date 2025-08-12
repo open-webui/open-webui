@@ -1516,7 +1516,9 @@ def process_file(
                 ]
             # Pre-mark extracting so clients see progress immediately
             _set_processing(file.id, "processing", "extracting", 10)
+            text_content = []
             for doc in docs:
+                current_page_offset = 0
                 pii = None
                 if (
                     request.app.state.config.ENABLE_PII_DETECTION
@@ -1552,7 +1554,9 @@ def process_file(
                     except Exception:
                         pass
 
-            text_content = " ".join([doc.page_content for doc in docs])
+                text_content.append(doc.page_content)
+                current_page_offset += len(doc.page_content)
+
             # Extraction completed
             _set_processing(file.id, "processing", "extracting", 20)
 
