@@ -103,11 +103,17 @@ from open_webui.internal.db import Session, engine
 
 print("🔍 MAIN.PY DEBUG: Successfully imported db module")
 
+print("🚨 MAIN_IMPORT: About to import models...")
 from open_webui.models.functions import Functions
+print("🚨 MAIN_IMPORT: ✅ Functions imported")
 from open_webui.models.models import Models
+print("🚨 MAIN_IMPORT: ✅ Models imported")
 from open_webui.models.users import UserModel, Users
+print("🚨 MAIN_IMPORT: ✅ Users imported")
 from open_webui.models.chats import Chats
+print("🚨 MAIN_IMPORT: ✅ Chats imported")
 
+print("🚨 MAIN_IMPORT: About to import config...")
 from open_webui.config import (
     LICENSE_KEY,
     # Ollama
