@@ -38,7 +38,6 @@ class PruneDataForm(BaseModel):
     days: Optional[int] = None
     exempt_archived_chats: bool = False
     exempt_chats_in_folders: bool = False
-    # Orphaned resource deletion toggles (for deleted users)
     delete_orphaned_chats: bool = True
     delete_orphaned_tools: bool = False
     delete_orphaned_functions: bool = False
@@ -47,17 +46,17 @@ class PruneDataForm(BaseModel):
     delete_orphaned_models: bool = True
     delete_orphaned_notes: bool = True
     delete_orphaned_folders: bool = True
+    audio_cache_max_age_days: Optional[int] = 30
 
 
 def get_active_file_ids() -> Set[str]:
     """
     Get all file IDs that are actively referenced by knowledge bases, chats, folders, and messages.
-    This is the ground truth for what files should be preserved.
     """
     active_file_ids = set()
 
     try:
-        # 1. Get files referenced by knowledge bases (original logic)
+        # Scan knowledge bases for file references
         knowledge_bases = Knowledges.get_knowledge_bases()
         log.debug(f"Found {len(knowledge_bases)} knowledge bases")
 
@@ -65,15 +64,12 @@ def get_active_file_ids() -> Set[str]:
             if not kb.data:
                 continue
 
-            # Handle different possible data structures for file references
             file_ids = []
 
-            # Check for file_ids array
             if isinstance(kb.data, dict) and "file_ids" in kb.data:
                 if isinstance(kb.data["file_ids"], list):
                     file_ids.extend(kb.data["file_ids"])
 
-            # Check for files array with id field
             if isinstance(kb.data, dict) and "files" in kb.data:
                 if isinstance(kb.data["files"], list):
                     for file_ref in kb.data["files"]:
@@ -82,13 +78,11 @@ def get_active_file_ids() -> Set[str]:
                         elif isinstance(file_ref, str):
                             file_ids.append(file_ref)
 
-            # Add all found file IDs
             for file_id in file_ids:
                 if isinstance(file_id, str) and file_id.strip():
                     active_file_ids.add(file_id.strip())
-                    log.debug(f"KB {kb.id} references file {file_id}")
 
-        # 2. Get files referenced in chats (NEW: scan chat JSON for file references)
+        # Scan chats for file references
         chats = Chats.get_chats()
         log.debug(f"Found {len(chats)} chats to scan for file references")
 
@@ -97,44 +91,35 @@ def get_active_file_ids() -> Set[str]:
                 continue
 
             try:
-                # Convert entire chat JSON to string and extract all file IDs
                 chat_json_str = json.dumps(chat.chat)
 
-                # Find all file ID patterns in the JSON
-                # Pattern 1: "id": "uuid" where uuid looks like a file ID
+                # Extract file IDs using regex patterns
                 file_id_pattern = re.compile(
                     r'"id":\s*"([a-fA-F0-9]{8}-[a-fA-F0-9]{4}-[a-fA-F0-9]{4}-[a-fA-F0-9]{4}-[a-fA-F0-9]{12})"'
                 )
-                potential_file_ids = file_id_pattern.findall(chat_json_str)
-
-                # Pattern 2: URLs containing /api/v1/files/uuid
                 url_pattern = re.compile(
                     r"/api/v1/files/([a-fA-F0-9]{8}-[a-fA-F0-9]{4}-[a-fA-F0-9]{4}-[a-fA-F0-9]{4}-[a-fA-F0-9]{12})"
                 )
+
+                potential_file_ids = file_id_pattern.findall(chat_json_str)
                 url_file_ids = url_pattern.findall(chat_json_str)
 
-                # Combine and validate against actual file records
                 all_potential_ids = set(potential_file_ids + url_file_ids)
                 for file_id in all_potential_ids:
-                    # Verify this ID exists in the file table to avoid false positives
                     if Files.get_file_by_id(file_id):
                         active_file_ids.add(file_id)
-                        log.debug(f"Chat {chat.id}: Found active file {file_id}")
 
             except Exception as e:
                 log.debug(f"Error processing chat {chat.id} for file references: {e}")
 
-        # 3. Get files referenced in folders (scan folder.items, folder.data, folder.meta)
+        # Scan folders for file references
         try:
             folders = Folders.get_all_folders()
-            log.debug(f"Found {len(folders)} folders to scan for file references")
 
             for folder in folders:
-                # Check folder.items JSON
                 if folder.items:
                     try:
                         items_str = json.dumps(folder.items)
-                        # Look for file ID patterns in the JSON
                         file_id_pattern = re.compile(
                             r'"id":\s*"([a-fA-F0-9]{8}-[a-fA-F0-9]{4}-[a-fA-F0-9]{4}-[a-fA-F0-9]{4}-[a-fA-F0-9]{12})"'
                         )
@@ -148,13 +133,9 @@ def get_active_file_ids() -> Set[str]:
                         for file_id in potential_ids:
                             if Files.get_file_by_id(file_id):
                                 active_file_ids.add(file_id)
-                                log.debug(
-                                    f"Folder {folder.id}: Found file {file_id} in items"
-                                )
                     except Exception as e:
                         log.debug(f"Error processing folder {folder.id} items: {e}")
 
-                # Check folder.data JSON
                 if hasattr(folder, "data") and folder.data:
                     try:
                         data_str = json.dumps(folder.data)
@@ -171,28 +152,22 @@ def get_active_file_ids() -> Set[str]:
                         for file_id in potential_ids:
                             if Files.get_file_by_id(file_id):
                                 active_file_ids.add(file_id)
-                                log.debug(
-                                    f"Folder {folder.id}: Found file {file_id} in data"
-                                )
                     except Exception as e:
                         log.debug(f"Error processing folder {folder.id} data: {e}")
 
         except Exception as e:
             log.debug(f"Error scanning folders for file references: {e}")
 
-        # 4. Get files referenced in standalone messages (message table)
+        # Scan standalone messages for file references
         try:
-            # Query message table directly since we may not have a Messages model
             with get_db() as db:
                 message_results = db.execute(
                     text("SELECT id, data FROM message WHERE data IS NOT NULL")
                 ).fetchall()
-                log.debug(f"Found {len(message_results)} messages with data to scan")
 
                 for message_id, message_data_json in message_results:
                     if message_data_json:
                         try:
-                            # Convert JSON to string and scan for file patterns
                             data_str = (
                                 json.dumps(message_data_json)
                                 if isinstance(message_data_json, dict)
@@ -212,9 +187,6 @@ def get_active_file_ids() -> Set[str]:
                             for file_id in potential_ids:
                                 if Files.get_file_by_id(file_id):
                                     active_file_ids.add(file_id)
-                                    log.debug(
-                                        f"Message {message_id}: Found file {file_id}"
-                                    )
                         except Exception as e:
                             log.debug(
                                 f"Error processing message {message_id} data: {e}"
@@ -224,7 +196,6 @@ def get_active_file_ids() -> Set[str]:
 
     except Exception as e:
         log.error(f"Error determining active file IDs: {e}")
-        # Fail safe: return empty set, which will prevent deletion
         return set()
 
     log.info(f"Found {len(active_file_ids)} active file IDs")
@@ -236,19 +207,15 @@ def safe_delete_vector_collection(collection_name: str) -> bool:
     Safely delete a vector collection, handling both logical and physical cleanup.
     """
     try:
-        # First, try to delete the collection through the client
         try:
             VECTOR_DB_CLIENT.delete_collection(collection_name=collection_name)
-            log.debug(f"Deleted collection from vector DB: {collection_name}")
         except Exception as e:
             log.debug(f"Collection {collection_name} may not exist in DB: {e}")
 
-        # Then, handle physical cleanup for ChromaDB
         if "chroma" in VECTOR_DB.lower():
             vector_dir = Path(CACHE_DIR).parent / "vector_db" / collection_name
             if vector_dir.exists() and vector_dir.is_dir():
                 shutil.rmtree(vector_dir)
-                log.debug(f"Deleted physical vector directory: {vector_dir}")
                 return True
 
         return True
@@ -263,19 +230,14 @@ def safe_delete_file_by_id(file_id: str) -> bool:
     Safely delete a file record and its associated vector collection.
     """
     try:
-        # Get file info before deletion
         file_record = Files.get_file_by_id(file_id)
         if not file_record:
-            log.debug(f"File {file_id} not found in database")
-            return True  # Already gone
+            return True
 
-        # Delete vector collection first
         collection_name = f"file-{file_id}"
         safe_delete_vector_collection(collection_name)
 
-        # Delete database record
         Files.delete_file_by_id(file_id)
-        log.debug(f"Deleted file record: {file_id}")
 
         return True
 
@@ -290,7 +252,6 @@ def cleanup_orphaned_uploads(active_file_ids: Set[str]) -> None:
     """
     upload_dir = Path(CACHE_DIR).parent / "uploads"
     if not upload_dir.exists():
-        log.debug("Uploads directory does not exist")
         return
 
     deleted_count = 0
@@ -301,33 +262,27 @@ def cleanup_orphaned_uploads(active_file_ids: Set[str]) -> None:
                 continue
 
             filename = file_path.name
-
-            # Extract file ID from filename (common patterns)
             file_id = None
 
-            # Pattern 1: UUID_filename or UUID-filename
+            # Extract file ID from filename patterns
             if len(filename) > 36:
                 potential_id = filename[:36]
-                if potential_id.count("-") == 4:  # UUID format
+                if potential_id.count("-") == 4:
                     file_id = potential_id
 
-            # Pattern 2: filename might be the file ID itself
             if not file_id and filename.count("-") == 4 and len(filename) == 36:
                 file_id = filename
 
-            # Pattern 3: Check if any part of filename matches active IDs
             if not file_id:
                 for active_id in active_file_ids:
                     if active_id in filename:
                         file_id = active_id
                         break
 
-            # If we found a potential file ID and it's not active, delete it
             if file_id and file_id not in active_file_ids:
                 try:
                     file_path.unlink()
                     deleted_count += 1
-                    log.debug(f"Deleted orphaned upload file: {filename}")
                 except Exception as e:
                     log.error(f"Failed to delete upload file {filename}: {e}")
 
@@ -349,84 +304,50 @@ def cleanup_orphaned_vector_collections(
 
     vector_dir = Path(CACHE_DIR).parent / "vector_db"
     if not vector_dir.exists():
-        log.debug("Vector DB directory does not exist")
         return
 
     chroma_db_path = vector_dir / "chroma.sqlite3"
     if not chroma_db_path.exists():
-        log.debug("ChromaDB metadata file does not exist")
         return
 
-    # Build expected collection names
     expected_collections = set()
 
-    # File collections: file-{file_id}
     for file_id in active_file_ids:
         expected_collections.add(f"file-{file_id}")
 
-    # Knowledge base collections: {kb_id}
     for kb_id in active_kb_ids:
         expected_collections.add(kb_id)
 
-    log.debug(f"Expected collections to preserve: {expected_collections}")
-
-    # Query ChromaDB metadata to get the complete mapping chain:
-    # Directory UUID -> Collection ID -> Collection Name
     uuid_to_collection = {}
     try:
         import sqlite3
 
-        log.debug(f"Attempting to connect to ChromaDB at: {chroma_db_path}")
-
         with sqlite3.connect(str(chroma_db_path)) as conn:
-            # First, check what tables exist
-            tables = conn.execute(
-                "SELECT name FROM sqlite_master WHERE type='table'"
-            ).fetchall()
-            log.debug(f"ChromaDB tables: {tables}")
-
-            # Check the schema of collections table
-            schema = conn.execute("PRAGMA table_info(collections)").fetchall()
-            log.debug(f"Collections table schema: {schema}")
-
-            # Get Collection ID -> Collection Name mapping
             collection_id_to_name = {}
             cursor = conn.execute("SELECT id, name FROM collections")
             rows = cursor.fetchall()
-            log.debug(f"Raw ChromaDB collections query results: {rows}")
 
             for row in rows:
                 collection_id, collection_name = row
                 collection_id_to_name[collection_id] = collection_name
-                log.debug(
-                    f"Mapped collection ID {collection_id} -> name {collection_name}"
-                )
 
-            # Get Directory UUID -> Collection ID mapping from segments table
-            # Only interested in VECTOR segments as those are the actual data directories
             cursor = conn.execute(
                 "SELECT id, collection FROM segments WHERE scope = 'VECTOR'"
             )
             segment_rows = cursor.fetchall()
-            log.debug(f"Raw ChromaDB segments query results: {segment_rows}")
 
             for row in segment_rows:
                 segment_id, collection_id = row
                 if collection_id in collection_id_to_name:
                     collection_name = collection_id_to_name[collection_id]
                     uuid_to_collection[segment_id] = collection_name
-                    log.debug(
-                        f"Mapped directory UUID {segment_id} -> collection {collection_name}"
-                    )
 
-        log.debug(f"Final uuid_to_collection mapping: {uuid_to_collection}")
         log.info(
             f"Found {len(uuid_to_collection)} vector segments in ChromaDB metadata"
         )
 
     except Exception as e:
         log.error(f"Error reading ChromaDB metadata: {e}")
-        # Fail safe: don't delete anything if we can't read metadata
         return
 
     deleted_count = 0
@@ -438,16 +359,12 @@ def cleanup_orphaned_vector_collections(
 
             dir_uuid = collection_dir.name
 
-            # Skip system/metadata files
             if dir_uuid.startswith("."):
                 continue
 
-            # Get the actual collection name from metadata
             collection_name = uuid_to_collection.get(dir_uuid)
 
             if collection_name is None:
-                # Directory exists but no metadata entry - it's orphaned
-                log.debug(f"Directory {dir_uuid} has no metadata entry, deleting")
                 try:
                     shutil.rmtree(collection_dir)
                     deleted_count += 1
@@ -455,25 +372,63 @@ def cleanup_orphaned_vector_collections(
                     log.error(f"Failed to delete orphaned directory {dir_uuid}: {e}")
 
             elif collection_name not in expected_collections:
-                # Collection exists but should be deleted
-                log.debug(
-                    f"Collection {collection_name} (UUID: {dir_uuid}) is orphaned, deleting"
-                )
                 try:
                     shutil.rmtree(collection_dir)
                     deleted_count += 1
                 except Exception as e:
                     log.error(f"Failed to delete collection directory {dir_uuid}: {e}")
 
-            else:
-                # Collection should be preserved
-                log.debug(f"Preserving collection {collection_name} (UUID: {dir_uuid})")
-
     except Exception as e:
         log.error(f"Error cleaning vector collections: {e}")
 
     if deleted_count > 0:
         log.info(f"Deleted {deleted_count} orphaned vector collections")
+
+
+def cleanup_audio_cache(max_age_days: Optional[int] = 30) -> None:
+    """
+    Clean up audio cache files older than specified days.
+    """
+    if max_age_days is None:
+        log.info("Skipping audio cache cleanup (max_age_days is None)")
+        return
+
+    cutoff_time = time.time() - (max_age_days * 86400)
+    deleted_count = 0
+    total_size_deleted = 0
+
+    audio_dirs = [
+        Path(CACHE_DIR) / "audio" / "speech",
+        Path(CACHE_DIR) / "audio" / "transcriptions",
+    ]
+
+    for audio_dir in audio_dirs:
+        if not audio_dir.exists():
+            continue
+
+        try:
+            for file_path in audio_dir.iterdir():
+                if not file_path.is_file():
+                    continue
+
+                file_mtime = file_path.stat().st_mtime
+                if file_mtime < cutoff_time:
+                    try:
+                        file_size = file_path.stat().st_size
+                        file_path.unlink()
+                        deleted_count += 1
+                        total_size_deleted += file_size
+                    except Exception as e:
+                        log.error(f"Failed to delete audio file {file_path}: {e}")
+
+        except Exception as e:
+            log.error(f"Error cleaning audio directory {audio_dir}: {e}")
+
+    if deleted_count > 0:
+        size_mb = total_size_deleted / (1024 * 1024)
+        log.info(
+            f"Deleted {deleted_count} audio cache files ({size_mb:.1f} MB), older than {max_age_days} days"
+        )
 
 
 @router.post("/", response_model=bool)
@@ -507,38 +462,27 @@ async def prune_data(form_data: PruneDataForm, user=Depends(get_admin_user)):
       - If True: Delete notes from deleted users
     - delete_orphaned_folders: bool = True
       - If True: Delete folders from deleted users
+    - audio_cache_max_age_days: Optional[int] = 30
+      - If None: Skip audio cache cleanup
+      - If >= 0: Delete audio cache files (TTS, STT) older than specified days
     """
     try:
         log.info("Starting data pruning process")
 
-        # Stage 1: Delete old chats based on user criteria (optional)
+        # Stage 1: Delete old chats based on user criteria
         if form_data.days is not None:
             cutoff_time = int(time.time()) - (form_data.days * 86400)
             chats_to_delete = []
 
             for chat in Chats.get_chats():
                 if chat.updated_at < cutoff_time:
-                    # Check exemption conditions
                     if form_data.exempt_archived_chats and chat.archived:
-                        log.debug(f"Exempting archived chat: {chat.id}")
                         continue
                     if form_data.exempt_chats_in_folders and (
                         getattr(chat, "folder_id", None) is not None
                         or getattr(chat, "pinned", False)
                     ):
-                        folder_status = (
-                            f"folder_id: {getattr(chat, 'folder_id', None)}"
-                            if getattr(chat, "folder_id", None)
-                            else "not in folder"
-                        )
-                        pinned_status = f"pinned: {getattr(chat, 'pinned', False)}"
-                        log.debug(
-                            f"Exempting chat in folder or pinned: {chat.id} ({folder_status}, {pinned_status})"
-                        )
                         continue
-                    log.debug(
-                        f"Chat {chat.id} will be deleted - archived: {getattr(chat, 'archived', False)}, folder_id: {getattr(chat, 'folder_id', None)}, pinned: {getattr(chat, 'pinned', False)}"
-                    )
                     chats_to_delete.append(chat)
 
             if chats_to_delete:
@@ -552,14 +496,12 @@ async def prune_data(form_data: PruneDataForm, user=Depends(get_admin_user)):
         else:
             log.info("Skipping chat deletion (days parameter is None)")
 
-        # Stage 2: Build ground truth of what should be preserved
+        # Stage 2: Build preservation set
         log.info("Building preservation set")
 
-        # Get all active users
         active_user_ids = {user.id for user in Users.get_users()["users"]}
         log.info(f"Found {len(active_user_ids)} active users")
 
-        # Get all active knowledge bases and their file references
         active_kb_ids = set()
         knowledge_bases = Knowledges.get_knowledge_bases()
 
@@ -569,13 +511,11 @@ async def prune_data(form_data: PruneDataForm, user=Depends(get_admin_user)):
 
         log.info(f"Found {len(active_kb_ids)} active knowledge bases")
 
-        # Get all files that should be preserved (NOW COMPREHENSIVE!)
         active_file_ids = get_active_file_ids()
 
         # Stage 3: Delete orphaned database records
         log.info("Deleting orphaned database records")
 
-        # Delete files not referenced by any knowledge base or belonging to deleted users
         deleted_files = 0
         for file_record in Files.get_files():
             should_delete = (
@@ -590,7 +530,6 @@ async def prune_data(form_data: PruneDataForm, user=Depends(get_admin_user)):
         if deleted_files > 0:
             log.info(f"Deleted {deleted_files} orphaned files")
 
-        # Delete knowledge bases from deleted users (if enabled)
         deleted_kbs = 0
         if form_data.delete_orphaned_knowledge_bases:
             for kb in knowledge_bases:
@@ -604,10 +543,8 @@ async def prune_data(form_data: PruneDataForm, user=Depends(get_admin_user)):
         else:
             log.info("Skipping knowledge base deletion (disabled)")
 
-        # Delete other user-owned resources from deleted users (conditional)
         deleted_others = 0
 
-        # Delete orphaned chats of deleted users (conditional)
         if form_data.delete_orphaned_chats:
             chats_deleted = 0
             for chat in Chats.get_chats():
@@ -620,7 +557,6 @@ async def prune_data(form_data: PruneDataForm, user=Depends(get_admin_user)):
         else:
             log.info("Skipping orphaned chat deletion (disabled)")
 
-        # Delete orphaned tools of deleted users (conditional)
         if form_data.delete_orphaned_tools:
             tools_deleted = 0
             for tool in Tools.get_tools():
@@ -633,7 +569,6 @@ async def prune_data(form_data: PruneDataForm, user=Depends(get_admin_user)):
         else:
             log.info("Skipping tool deletion (disabled)")
 
-        # Delete orphaned functions of deleted users (conditional)
         if form_data.delete_orphaned_functions:
             functions_deleted = 0
             for function in Functions.get_functions():
@@ -646,7 +581,6 @@ async def prune_data(form_data: PruneDataForm, user=Depends(get_admin_user)):
         else:
             log.info("Skipping function deletion (disabled)")
 
-        # Delete orphaned notes of deleted users (conditional)
         if form_data.delete_orphaned_notes:
             notes_deleted = 0
             for note in Notes.get_notes():
@@ -659,7 +593,6 @@ async def prune_data(form_data: PruneDataForm, user=Depends(get_admin_user)):
         else:
             log.info("Skipping note deletion (disabled)")
 
-        # Delete orphaned prompts of deleted users (conditional)
         if form_data.delete_orphaned_prompts:
             prompts_deleted = 0
             for prompt in Prompts.get_prompts():
@@ -672,7 +605,6 @@ async def prune_data(form_data: PruneDataForm, user=Depends(get_admin_user)):
         else:
             log.info("Skipping prompt deletion (disabled)")
 
-        # Delete orphaned models of deleted users (conditional)
         if form_data.delete_orphaned_models:
             models_deleted = 0
             for model in Models.get_all_models():
@@ -685,7 +617,6 @@ async def prune_data(form_data: PruneDataForm, user=Depends(get_admin_user)):
         else:
             log.info("Skipping model deletion (disabled)")
 
-        # Delete orphaned folders of deleted users (conditional)
         if form_data.delete_orphaned_folders:
             folders_deleted = 0
             for folder in Folders.get_all_folders():
@@ -706,28 +637,25 @@ async def prune_data(form_data: PruneDataForm, user=Depends(get_admin_user)):
         # Stage 4: Clean up orphaned physical files
         log.info("Cleaning up orphaned physical files")
 
-        # Rebuild active sets after database cleanup
         final_active_file_ids = get_active_file_ids()
         final_active_kb_ids = {kb.id for kb in Knowledges.get_knowledge_bases()}
 
-        # Clean uploads directory
         cleanup_orphaned_uploads(final_active_file_ids)
-
-        # Clean vector collections
         cleanup_orphaned_vector_collections(final_active_file_ids, final_active_kb_ids)
 
-        # Stage 5: Database optimization
+        # Stage 5: Audio cache cleanup
+        log.info("Cleaning audio cache")
+        cleanup_audio_cache(form_data.audio_cache_max_age_days)
+
+        # Stage 6: Database optimization
         log.info("Optimizing database")
 
-        # Vacuum main database
         try:
             with get_db() as db:
                 db.execute(text("VACUUM"))
-                log.debug("Vacuumed main database")
         except Exception as e:
             log.error(f"Failed to vacuum main database: {e}")
 
-        # Vacuum ChromaDB database if it exists
         if "chroma" in VECTOR_DB.lower():
             chroma_db_path = Path(CACHE_DIR).parent / "vector_db" / "chroma.sqlite3"
             if chroma_db_path.exists():
@@ -736,7 +664,6 @@ async def prune_data(form_data: PruneDataForm, user=Depends(get_admin_user)):
 
                     with sqlite3.connect(str(chroma_db_path)) as conn:
                         conn.execute("VACUUM")
-                        log.debug("Vacuumed ChromaDB database")
                 except Exception as e:
                     log.error(f"Failed to vacuum ChromaDB database: {e}")
 
