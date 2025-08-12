@@ -348,6 +348,7 @@ async def get_session_user_shared_chat_list(
     end_date: Optional[int] = None,
     order_by: Optional[str] = None,
     direction: Optional[str] = None,
+    is_public: Optional[bool] = None,
 ):
     try:
         limit = 20
@@ -364,6 +365,8 @@ async def get_session_user_shared_chat_list(
             filter["order_by"] = order_by
         if direction:
             filter["direction"] = direction
+        if is_public is not None:
+            filter["is_public"] = is_public
 
         return Chats.get_shared_chat_list_by_user_id(
             user.id, skip=skip, limit=limit, filter=filter

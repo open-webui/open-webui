@@ -124,6 +124,7 @@ class ChatTitleIdResponse(BaseModel):
     share_id: Optional[str] = None
     expires_at: Optional[int] = None
     expire_on_views: Optional[int] = None
+    is_public: Optional[bool] = None
     views: Optional[int] = 0
     clones: Optional[int] = 0
 
@@ -543,9 +544,10 @@ class ChatTable:
                 query_key = filter.get("query")
                 if query_key:
                     query = query.filter(Chat.title.ilike(f"%{query_key}%"))
-                
+
                 start_date = filter.get("start_date")
                 end_date = filter.get("end_date")
+                is_public = filter.get("is_public")
 
                 if start_date and end_date:
                     query = query.filter(
@@ -554,6 +556,9 @@ class ChatTable:
                             Chat.created_at <= end_date,
                         )
                     )
+
+                if is_public is not None:
+                    query = query.filter(Chat.is_public == is_public)
 
                 order_by = filter.get("order_by")
                 direction = filter.get("direction")
@@ -587,6 +592,7 @@ class ChatTable:
                 Chat.share_id,
                 Chat.expires_at,
                 Chat.expire_on_views,
+                Chat.is_public,
                 Chat.views,
                 Chat.clones,
             )
@@ -612,8 +618,9 @@ class ChatTable:
                             "share_id": chat[4],
                             "expires_at": chat[5],
                             "expire_on_views": chat[6],
-                            "views": chat[7],
-                            "clones": chat[8],
+                            "is_public": chat[7],
+                            "views": chat[8],
+                            "clones": chat[9],
                         }
                     )
                     for chat in all_chats

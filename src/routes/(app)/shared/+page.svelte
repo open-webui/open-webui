@@ -57,6 +57,7 @@
 	let searchTerm = '';
 	let startDate = '';
 	let endDate = '';
+	let publicFilter = null;
 	let totalSelectedCount = 0;
 	let dateFilterApplied = false;
 
@@ -93,7 +94,8 @@
 				orderBy,
 				direction,
 				startDate ? dayjs(startDate).startOf('day').unix() : undefined,
-				endDate ? dayjs(endDate).endOf('day').unix() : undefined
+				endDate ? dayjs(endDate).endOf('day').unix() : undefined,
+				publicFilter
 			);
 			total = res.total;
 			grandTotal = res.grand_total;
@@ -481,6 +483,20 @@
 						Reset
 					</button>
 				{/if}
+			<div class="relative">
+				<select
+					class="pl-4 pr-10 py-2 border border-gray-300 rounded-lg dark:bg-gray-800 dark:border-gray-700"
+					bind:value={publicFilter}
+					on:change={() => {
+						page = 1;
+						getSharedChatList();
+					}}
+				>
+					<option value={null}>All</option>
+					<option value={true}>Public: Yes</option>
+					<option value={false}>Public: No</option>
+				</select>
+			</div>
 				{#if totalSelectedCount > 0}
 					<button
 						class="px-4 py-2 bg-red-500 text-white rounded-lg whitespace-nowrap"
@@ -704,6 +720,49 @@
 						</th>
 						<th
 							class="px-6 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider cursor-pointer whitespace-nowrap"
+							on:click={() => setSortKey('is_public')}
+						>
+							<div class="flex items-center">
+								<span>Public</span>
+								{#if orderBy === 'is_public'}
+									<span class="ml-1">
+										{#if direction === 'asc'}
+											<svg
+												xmlns="http://www.w3.org/2000/svg"
+												class="h-4 w-4"
+												fill="none"
+												viewBox="0 0 24 24"
+												stroke="currentColor"
+											>
+												<path
+													stroke-linecap="round"
+													stroke-linejoin="round"
+													stroke-width="2"
+													d="M5 15l7-7 7 7"
+												/>
+											</svg>
+										{:else}
+											<svg
+												xmlns="http://www.w3.org/2000/svg"
+												class="h-4 w-4"
+												fill="none"
+												viewBox="0 0 24 24"
+												stroke="currentColor"
+											>
+												<path
+													stroke-linecap="round"
+													stroke-linejoin="round"
+													stroke-width="2"
+													d="M19 9l-7 7-7-7"
+												/>
+											</svg>
+										{/if}
+									</span>
+								{/if}
+							</div>
+						</th>
+						<th
+							class="px-6 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider cursor-pointer whitespace-nowrap"
 							on:click={() => setSortKey('views')}
 						>
 							<div class="flex items-center">
@@ -855,6 +914,9 @@
 										<div class="w-48 truncate">/s/{chat.share_id}</div>
 									{/if}
 								</td>
+								<td class="px-6 py-3 whitespace-nowrap text-gray-500 dark:text-gray-400 whitespace-nowrap"
+									>{chat.is_public ? 'Yes' : 'No'}</td
+								>
 								<td class="px-6 py-3 whitespace-nowrap text-gray-500 dark:text-gray-400 whitespace-nowrap"
 									>{chat.views}</td
 								>

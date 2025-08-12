@@ -97,7 +97,8 @@ export const getSharedChats = async (
 	orderBy?: string,
 	direction?: string,
 	startDate?: number,
-	endDate?: number
+	endDate?: number,
+	is_public?: boolean | null
 ) => {
 	let error = null;
 
@@ -108,6 +109,8 @@ export const getSharedChats = async (
 	if (direction) params.append('direction', direction);
 	if (startDate) params.append('start_date', startDate.toString());
 	if (endDate) params.append('end_date', endDate.toString());
+	if (is_public !== null && is_public !== undefined)
+		params.append('is_public', is_public.toString());
 
 	const res = await fetch(`${WEBUI_API_BASE_URL}/chats/shared?${params.toString()}`, {
 		method: 'GET',
