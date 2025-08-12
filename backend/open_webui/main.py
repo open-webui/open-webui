@@ -1443,7 +1443,7 @@ async def chat_completion(
             },
         }
 
-        if metadata.get("chat_id") and (user and user.role != "admin"):
+        if metadata.get("chat_id") and metadata.get("chat_id") != "local" and (user and user.role != "admin"):
             chat = Chats.get_chat_by_id_and_user_id(metadata["chat_id"], user.id)
             if chat is None:
                 raise HTTPException(
