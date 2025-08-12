@@ -1,28 +1,23 @@
 from collections.abc import Mapping
-from typing import (
-    Any,
-    TypeVar,
-    Optional,
-    BinaryIO,
-    TextIO,
-    TYPE_CHECKING,
-    Generator,
-    Union,
-    cast,
-)
+from typing import Any, TypeVar, Optional, BinaryIO, TextIO, TYPE_CHECKING, Generator
 
 from attrs import define as _attrs_define
 from attrs import field as _attrs_field
 
 from ..types import UNSET, Unset
 
+from ..types import UNSET, Unset
+from typing import cast
+from typing import cast, Union
+from typing import Union
+
 if TYPE_CHECKING:
+    from ..models.file_object import FileObject
     from ..models.pii_labels import PiiLabels
+    from ..models.text_process_modifier import TextProcessModifier
     from ..models.file_mask_request_known_entities_type_0_item import (
         FileMaskRequestKnownEntitiesType0Item,
     )
-    from ..models.text_process_modifier import TextProcessModifier
-    from ..models.file_object import FileObject
 
 
 T = TypeVar("T", bound="FileMaskRequest")
@@ -56,12 +51,12 @@ class FileMaskRequest:
     additional_properties: dict[str, Any] = _attrs_field(init=False, factory=dict)
 
     def to_dict(self) -> dict[str, Any]:
+        from ..models.file_object import FileObject
         from ..models.pii_labels import PiiLabels
+        from ..models.text_process_modifier import TextProcessModifier
         from ..models.file_mask_request_known_entities_type_0_item import (
             FileMaskRequestKnownEntitiesType0Item,
         )
-        from ..models.text_process_modifier import TextProcessModifier
-        from ..models.file_object import FileObject
 
         file = self.file.to_dict()
 
@@ -119,12 +114,12 @@ class FileMaskRequest:
 
     @classmethod
     def from_dict(cls: type[T], src_dict: Mapping[str, Any]) -> T:
+        from ..models.file_object import FileObject
         from ..models.pii_labels import PiiLabels
+        from ..models.text_process_modifier import TextProcessModifier
         from ..models.file_mask_request_known_entities_type_0_item import (
             FileMaskRequestKnownEntitiesType0Item,
         )
-        from ..models.text_process_modifier import TextProcessModifier
-        from ..models.file_object import FileObject
 
         d = dict(src_dict)
         file = FileObject.from_dict(d.pop("file"))

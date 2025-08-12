@@ -30,4 +30,8 @@ cp -R "$STAGE_DIR/nenna_pii_client" "$DEST_DIR"
 
 echo "Python client generated at $DEST_DIR"
 
+# Clean up temporary directory
+rm -rf "$STAGE_DIR"
+echo "Cleaned up temporary directory: $STAGE_DIR"
+
 

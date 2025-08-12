@@ -1,27 +1,22 @@
 from collections.abc import Mapping
-from typing import (
-    Any,
-    TypeVar,
-    Optional,
-    BinaryIO,
-    TextIO,
-    TYPE_CHECKING,
-    Generator,
-    Union,
-    cast,
-)
+from typing import Any, TypeVar, Optional, BinaryIO, TextIO, TYPE_CHECKING, Generator
 
 from attrs import define as _attrs_define
 from attrs import field as _attrs_field
 
 from ..types import UNSET, Unset
 
+from ..types import UNSET, Unset
+from typing import cast
+from typing import cast, Union
+from typing import Union
+
 if TYPE_CHECKING:
     from ..models.pii_labels import PiiLabels
+    from ..models.text_process_modifier import TextProcessModifier
     from ..models.text_mask_request_known_entities_type_0_item import (
         TextMaskRequestKnownEntitiesType0Item,
     )
-    from ..models.text_process_modifier import TextProcessModifier
 
 
 T = TypeVar("T", bound="TextMaskRequest")
@@ -50,10 +45,10 @@ class TextMaskRequest:
 
     def to_dict(self) -> dict[str, Any]:
         from ..models.pii_labels import PiiLabels
+        from ..models.text_process_modifier import TextProcessModifier
         from ..models.text_mask_request_known_entities_type_0_item import (
             TextMaskRequestKnownEntitiesType0Item,
         )
-        from ..models.text_process_modifier import TextProcessModifier
 
         text = self.text
 
@@ -108,10 +103,10 @@ class TextMaskRequest:
     @classmethod
     def from_dict(cls: type[T], src_dict: Mapping[str, Any]) -> T:
         from ..models.pii_labels import PiiLabels
+        from ..models.text_process_modifier import TextProcessModifier
         from ..models.text_mask_request_known_entities_type_0_item import (
             TextMaskRequestKnownEntitiesType0Item,
         )
-        from ..models.text_process_modifier import TextProcessModifier
 
         d = dict(src_dict)
         text = cast(list[str], d.pop("text"))

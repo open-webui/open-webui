@@ -1,15 +1,5 @@
 from collections.abc import Mapping
-from typing import (
-    Any,
-    TypeVar,
-    Optional,
-    BinaryIO,
-    TextIO,
-    TYPE_CHECKING,
-    Generator,
-    Union,
-    cast,
-)
+from typing import Any, TypeVar, Optional, BinaryIO, TextIO, TYPE_CHECKING, Generator
 
 from attrs import define as _attrs_define
 from attrs import field as _attrs_field
@@ -17,6 +7,10 @@ from attrs import field as _attrs_field
 from ..types import UNSET, Unset
 
 from ..models.task_status import TaskStatus
+from ..types import UNSET, Unset
+from typing import cast
+from typing import cast, Union
+from typing import Union
 
 if TYPE_CHECKING:
     from ..models.file_base_model import FileBaseModel
