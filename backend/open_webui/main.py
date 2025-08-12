@@ -94,7 +94,9 @@ from open_webui.routers.retrieval import (
     get_rf,
 )
 
+print("🔍 MAIN.PY DEBUG: About to import db module...")
 from open_webui.internal.db import Session, engine
+print("🔍 MAIN.PY DEBUG: Successfully imported db module")
 
 from open_webui.models.functions import Functions
 from open_webui.models.models import Models
