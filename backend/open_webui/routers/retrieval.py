@@ -81,6 +81,16 @@ from open_webui.retrieval.utils import (
 from open_webui.utils.misc import (
     calculate_sha256_string,
 )
+
+# NENNA PII client (generated)
+from open_webui.clients.nenna_pii_client import AuthenticatedClient
+from open_webui.clients.nenna_pii_client.api.ephemeral_operations import (
+    mask_text_text_mask_post,
+)
+from open_webui.clients.nenna_pii_client.models.text_mask_request import (
+    TextMaskRequest,
+)
+from open_webui.clients.nenna_pii_client.models.pii_labels import PiiLabels
 from open_webui.utils.auth import get_admin_user, get_verified_user
 
 from open_webui.config import (
@@ -1502,6 +1512,42 @@ def process_file(
                 ]
             # Pre-mark extracting so clients see progress immediately
             _set_processing(file.id, "processing", "extracting", 10)
+            for doc in docs:
+                pii = None
+                if (
+                    request.app.state.config.ENABLE_PII_DETECTION
+                    and request.app.state.config.PII_API_KEY
+                ):
+                    try:
+                        client = AuthenticatedClient(
+                            base_url=request.app.state.config.PII_API_BASE_URL,
+                            token=request.app.state.config.PII_API_KEY,
+                            prefix="",
+                            auth_header_name="X-API-Key",
+                        )
+                        body = TextMaskRequest(
+                            text=[doc.page_content],
+                            pii_labels=PiiLabels(detect=["ALL"]),
+                        )
+                        response = mask_text_text_mask_post.sync(
+                            client=client,
+                            body=body,
+                            create_session=False,
+                            quiet=False,
+                        )
+                        # response can be HTTPValidationError or TextMaskResponse
+                        if hasattr(response, "pii"):
+                            # response.pii is list[list[PiiEntity]] or None/Unset
+                            pii = (response.pii or [[]])[0] if response.pii else []
+                    except Exception:
+                        pii = None
+                # attach PII to document metadata for downstream use
+                if pii is not None:
+                    try:
+                        doc.metadata["pii"] = pii
+                    except Exception:
+                        pass
+
             text_content = " ".join([doc.page_content for doc in docs])
             # Extraction completed
             _set_processing(file.id, "processing", "extracting", 20)

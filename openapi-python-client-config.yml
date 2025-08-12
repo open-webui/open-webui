@@ -1,0 +1,19 @@
+# Configuration for openapi-python-client
+
+# Use the same NENNA.ai PII API the TS client targets
+project_name_override: nenna-pii-client
+package_name_override: nenna_pii_client
+
+# Keep names readable; we'll override explicitly if needed later
+use_path_prefixes_for_title_model_names: false
+
+# Optional: faster local runs (we'll format in repo CI/linters instead)
+post_hooks: []
+
+# If we ever hit enum name conflicts, we can switch to literals
+literal_enums: false
+
+# Add attribute docs inside attributes instead of class docstrings
+docstrings_on_attributes: false
+
+
