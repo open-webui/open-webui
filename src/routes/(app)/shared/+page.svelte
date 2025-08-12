@@ -9,7 +9,8 @@
 		cloneSharedChatById,
 		shareChatById,
 		importChat,
-		getChatById
+		getChatById,
+		restoreSharedChat
 	} from '$lib/apis/chats';
 	import { goto } from '$app/navigation';
 	import { toast } from 'svelte-sonner';
@@ -58,6 +59,7 @@
 	let startDate = '';
 	let endDate = '';
 	let publicFilter = null;
+	let statusFilter = 'all';
 	let totalSelectedCount = 0;
 	let dateFilterApplied = false;
 
@@ -95,7 +97,8 @@
 				direction,
 				startDate ? dayjs(startDate).startOf('day').unix() : undefined,
 				endDate ? dayjs(endDate).endOf('day').unix() : undefined,
-				publicFilter
+				publicFilter,
+				statusFilter
 			);
 			total = res.total;
 			grandTotal = res.grand_total;
@@ -103,7 +106,7 @@
 			sharedChatsStore.set(
 				res.chats.map((chat) => ({
 					...chat,
-					status: 'active',
+					status: chat.revoked_at ? 'revoked' : 'active',
 					selected: $selectedSharedChatIds.includes(chat.id)
 				}))
 			);
@@ -229,6 +232,16 @@
 			selectedSharedChatIds.update((ids) => ids.filter((id) => id !== chatId));
 		} else {
 			toast.error('Failed to revoke link');
+		}
+	};
+
+	const restoreLink = async (chatId) => {
+		const res = await restoreSharedChat(localStorage.token, chatId);
+		if (res) {
+			toast.success('Link restored');
+			getSharedChatList();
+		} else {
+			toast.error('Failed to restore link');
 		}
 	};
 
@@ -485,9 +498,23 @@
 						getSharedChatList();
 					}}
 				>
-					<option value={null}>All</option>
+					<option value={null}>Public: All</option>
 					<option value={true}>Public: Yes</option>
 					<option value={false}>Public: No</option>
+				</select>
+			</div>
+			<div class="relative">
+				<select
+					class="pl-4 pr-10 py-2 border border-gray-300 rounded-lg dark:bg-gray-800 dark:border-gray-700"
+					bind:value={statusFilter}
+					on:change={() => {
+						page = 1;
+						getSharedChatList();
+					}}
+				>
+					<option value="all">Status: All</option>
+					<option value="active">Status: Active</option>
+					<option value="revoked">Status: Revoked</option>
 				</select>
 			</div>
 				{#if totalSelectedCount > 0}
@@ -841,6 +868,49 @@
 							</div>
 						</th>
 						<th
+							class="px-6 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider cursor-pointer whitespace-nowrap"
+							on:click={() => setSortKey('revoked_at')}
+						>
+							<div class="flex items-center">
+								<span>Status</span>
+								{#if orderBy === 'revoked_at'}
+									<span class="ml-1">
+										{#if direction === 'asc'}
+											<svg
+												xmlns="http://www.w3.org/2000/svg"
+												class="h-4 w-4"
+												fill="none"
+												viewBox="0 0 24 24"
+												stroke="currentColor"
+											>
+												<path
+													stroke-linecap="round"
+													stroke-linejoin="round"
+													stroke-width="2"
+													d="M5 15l7-7 7 7"
+												/>
+											</svg>
+										{:else}
+											<svg
+												xmlns="http://www.w3.org/2000/svg"
+												class="h-4 w-4"
+												fill="none"
+												viewBox="0 0 24 24"
+												stroke="currentColor"
+											>
+												<path
+													stroke-linecap="round"
+													stroke-linejoin="round"
+													stroke-width="2"
+													d="M19 9l-7 7-7-7"
+												/>
+											</svg>
+										{/if}
+									</span>
+								{/if}
+							</div>
+						</th>
+						<th
 							class="px-6 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider"
 							>Actions</th
 						>
@@ -916,6 +986,13 @@
 								<td class="px-6 py-3 whitespace-nowrap text-gray-500 dark:text-gray-400 whitespace-nowrap"
 									>{chat.clones}</td
 								>
+								<td class="px-6 py-3 whitespace-nowrap text-gray-500 dark:text-gray-400 whitespace-nowrap">
+									{#if chat.status === 'active'}
+										<span class="text-green-500">Active</span>
+									{:else}
+										<span class="text-red-500">Revoked</span>
+									{/if}
+								</td>
 								<td class="px-6 py-3 whitespace-nowrap text-sm font-medium">
 									{#if chat.status === 'active'}
 										<Tooltip content="Revoke Link" className="inline-block">
@@ -926,34 +1003,43 @@
 												}}>Revoke</button
 											>
 										</Tooltip>
-										<Tooltip content="Modify Share Link" className="inline-block">
+									{:else}
+										<Tooltip content="Restore Link" className="inline-block">
 											<button
-												class="text-blue-600 dark:text-blue-400 hover:text-blue-900 dark:hover:text-blue-200 ml-4"
+												class="text-green-600 dark:text-green-400 hover:text-green-900 dark:hover:text-green-200"
 												on:click={() => {
-													selectedChatId = chat.id;
-													showShareChatModal = true;
-												}}>Modify</button
+													restoreLink(chat.id);
+												}}>Restore</button
 											>
 										</Tooltip>
-										<Tooltip content="Reset Statistics" className="inline-block">
+									{/if}
+									<Tooltip content="Modify Share Link" className="inline-block">
+										<button
+											class="text-blue-600 dark:text-blue-400 hover:text-blue-900 dark:hover:text-blue-200 ml-4"
+											on:click={() => {
+												selectedChatId = chat.id;
+												showShareChatModal = true;
+											}}>Modify</button
+										>
+									</Tooltip>
+									<Tooltip content="Reset Statistics" className="inline-block">
+										<button
+											class="text-yellow-600 dark:text-yellow-400 hover:text-yellow-900 dark:hover:text-yellow-200 ml-4"
+											on:click={() => {
+												chatToResetStats = chat;
+												showConfirmResetStats = true;
+											}}>Reset Stats</button
+										>
+									</Tooltip>
+									{#if $user?.role === 'admin' || $user?.permissions?.chat?.clone}
+										<Tooltip content="Clone Chat" className="inline-block">
 											<button
-												class="text-yellow-600 dark:text-yellow-400 hover:text-yellow-900 dark:hover:text-yellow-200 ml-4"
+												class="text-green-600 dark:text-green-400 hover:text-green-900 dark:hover:text-green-200 ml-4"
 												on:click={() => {
-													chatToResetStats = chat;
-													showConfirmResetStats = true;
-												}}>Reset Stats</button
+													cloneChat(chat.share_id);
+												}}>Clone</button
 											>
 										</Tooltip>
-										{#if $user?.role === 'admin' || $user?.permissions?.chat?.clone}
-											<Tooltip content="Clone Chat" className="inline-block">
-												<button
-													class="text-green-600 dark:text-green-400 hover:text-green-900 dark:hover:text-green-200 ml-4"
-													on:click={() => {
-														cloneChat(chat.share_id);
-													}}>Clone</button
-												>
-											</Tooltip>
-										{/if}
 									{/if}
 								</td>
 							</tr>

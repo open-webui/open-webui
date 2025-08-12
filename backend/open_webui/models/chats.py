@@ -35,6 +35,7 @@ class Chat(Base):
 
     share_id = Column(Text, unique=True, nullable=True)
     expires_at = Column(BigInteger, nullable=True)
+    revoked_at = Column(BigInteger, nullable=True)
     expire_on_views = Column(Integer, nullable=True)
     is_public = Column(Boolean, default=False, nullable=False)
     archived = Column(Boolean, default=False)
@@ -59,6 +60,7 @@ class ChatModel(BaseModel):
 
     share_id: Optional[str] = None
     expires_at: Optional[int] = None
+    revoked_at: Optional[int] = None
     expire_on_views: Optional[int] = None
     is_public: bool = False
     archived: bool = False
@@ -105,6 +107,7 @@ class ChatResponse(BaseModel):
     created_at: int  # timestamp in epoch
     share_id: Optional[str] = None  # id of the chat to be shared
     expires_at: Optional[int] = None
+    revoked_at: Optional[int] = None
     expire_on_views: Optional[int] = None
     is_public: bool
     archived: bool
@@ -123,6 +126,7 @@ class ChatTitleIdResponse(BaseModel):
     created_at: int
     share_id: Optional[str] = None
     expires_at: Optional[int] = None
+    revoked_at: Optional[int] = None
     expire_on_views: Optional[int] = None
     is_public: Optional[bool] = None
     views: Optional[int] = 0
@@ -397,9 +401,10 @@ class ChatTable:
     def delete_shared_chat_by_chat_id(self, chat_id: str) -> bool:
         try:
             with get_db() as db:
-                db.query(Chat).filter_by(user_id=f"shared-{chat_id}").delete()
-                db.commit()
-
+                chat = db.query(Chat).filter_by(id=chat_id).first()
+                if chat:
+                    chat.revoked_at = int(time.time())
+                    db.commit()
                 return True
         except Exception:
             return False
@@ -415,6 +420,20 @@ class ChatTable:
                 db.refresh(chat)
                 return ChatModel.model_validate(chat)
         except Exception:
+            return None
+
+    def restore_shared_chat_by_chat_id(self, chat_id: str) -> Optional[ChatModel]:
+        try:
+            with get_db() as db:
+                chat = db.query(Chat).filter_by(id=chat_id).first()
+                if chat:
+                    chat.revoked_at = None
+                    db.commit()
+                    db.refresh(chat)
+                    return ChatModel.model_validate(chat)
+                return None
+        except Exception as e:
+            log.error(f"Error restoring shared chat for chat_id {chat_id}: {e}")
             return None
 
     def toggle_chat_pinned_by_id(self, id: str) -> Optional[ChatModel]:
@@ -560,6 +579,12 @@ class ChatTable:
                 start_date = filter.get("start_date")
                 end_date = filter.get("end_date")
                 is_public = filter.get("is_public")
+                status = filter.get("status")
+
+                if status == "active":
+                    query = query.filter(Chat.revoked_at.is_(None))
+                elif status == "revoked":
+                    query = query.filter(Chat.revoked_at.isnot(None))
 
                 if start_date and end_date:
                     query = query.filter(
@@ -607,6 +632,7 @@ class ChatTable:
                 Chat.is_public,
                 Chat.views,
                 Chat.clones,
+                Chat.revoked_at,
             )
 
             if skip:
@@ -633,6 +659,7 @@ class ChatTable:
                             "is_public": chat[7],
                             "views": chat[8],
                             "clones": chat[9],
+                            "revoked_at": chat[10],
                         }
                     )
                     for chat in all_chats
@@ -708,6 +735,8 @@ class ChatTable:
                 chat = db.query(Chat).filter_by(share_id=id).first()
 
                 if chat:
+                    if chat.revoked_at:
+                        return None
                     if not chat.is_public and user is None:
                         return None
 
@@ -1216,17 +1245,11 @@ class ChatTable:
                 if not chats_to_revoke:
                     return 0
 
-                share_ids = [chat.share_id for chat in chats_to_revoke]
-                count = len(share_ids)
+                count = len(chats_to_revoke)
 
-                # Delete the public versions of the chats (the shared records)
-                db.query(Chat).filter(Chat.id.in_(share_ids)).delete(
-                    synchronize_session=False
-                )
-
-                # Nullify the share_id on the original chats
+                # Set the revoked_at timestamp on the original chats
                 for chat in chats_to_revoke:
-                    chat.share_id = None
+                    chat.revoked_at = int(time.time())
 
                 db.commit()
 

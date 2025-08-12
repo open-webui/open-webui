@@ -349,6 +349,7 @@ async def get_session_user_shared_chat_list(
     order_by: Optional[str] = None,
     direction: Optional[str] = None,
     is_public: Optional[bool] = None,
+    status: Optional[str] = None,
 ):
     try:
         limit = 20
@@ -367,6 +368,8 @@ async def get_session_user_shared_chat_list(
             filter["direction"] = direction
         if is_public is not None:
             filter["is_public"] = is_public
+        if status:
+            filter["status"] = status
 
         return Chats.get_shared_chat_list_by_user_id(
             user.id, skip=skip, limit=limit, filter=filter
@@ -911,9 +914,7 @@ async def delete_shared_chat_by_id(id: str, user=Depends(get_verified_user)):
             return False
 
         result = Chats.delete_shared_chat_by_chat_id(id)
-        update_result = Chats.update_chat_share_id_by_id(id, None)
-
-        return result and update_result != None
+        return result
     else:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
@@ -1041,4 +1042,19 @@ async def delete_all_tags_by_id(id: str, user=Depends(get_verified_user)):
     else:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED, detail=ERROR_MESSAGES.NOT_FOUND
+        )
+
+
+@router.post("/{id}/share/restore", response_model=Optional[ChatResponse])
+async def restore_shared_chat_by_id(id: str, user=Depends(get_verified_user)):
+    chat = Chats.get_chat_by_id_and_user_id(id, user.id)
+    if chat:
+        restored_chat = Chats.restore_shared_chat_by_chat_id(id)
+        if restored_chat:
+            return ChatResponse(**restored_chat.model_dump())
+        return None
+    else:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail=ERROR_MESSAGES.ACCESS_PROHIBITED,
         )

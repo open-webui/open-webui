@@ -33,6 +33,34 @@ export const createNewChat = async (token: string, chat: object, folderId: strin
 	return res;
 };
 
+export const restoreSharedChat = async (token: string, id: string) => {
+	let error = null;
+
+	const res = await fetch(`${WEBUI_API_BASE_URL}/chats/${id}/share/restore`, {
+		method: 'POST',
+		headers: {
+			Accept: 'application/json',
+			'Content-Type': 'application/json',
+			...(token && { authorization: `Bearer ${token}` })
+		}
+	})
+		.then(async (res) => {
+			if (!res.ok) throw await res.json();
+			return res.json();
+		})
+		.catch((err) => {
+			error = err;
+			console.error(err);
+			return null;
+		});
+
+	if (error) {
+		throw error;
+	}
+
+	return res;
+};
+
 export const resetChatStatsById = async (token: string, chatId: string): Promise<boolean> => {
 	let error = null;
 
@@ -98,7 +126,8 @@ export const getSharedChats = async (
 	direction?: string,
 	startDate?: number,
 	endDate?: number,
-	is_public?: boolean | null
+	is_public?: boolean | null,
+	status?: string
 ) => {
 	let error = null;
 
@@ -111,6 +140,7 @@ export const getSharedChats = async (
 	if (endDate) params.append('end_date', endDate.toString());
 	if (is_public !== null && is_public !== undefined)
 		params.append('is_public', is_public.toString());
+	if (status) params.append('status', status);
 
 	const res = await fetch(`${WEBUI_API_BASE_URL}/chats/shared?${params.toString()}`, {
 		method: 'GET',
