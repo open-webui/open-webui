@@ -558,18 +558,6 @@ class ChatTable:
                 db.query(Chat)
                 .filter_by(user_id=user_id)
                 .filter(Chat.share_id.isnot(None))
-                .filter(
-                    or_(
-                        Chat.expires_at.is_(None),
-                        Chat.expires_at > int(time.time()),
-                    )
-                )
-                .filter(
-                    or_(
-                        Chat.expire_on_views.is_(None),
-                        Chat.views < Chat.expire_on_views,
-                    )
-                )
             )
 
             if filter:
@@ -758,9 +746,9 @@ class ChatTable:
                         chat.expire_on_views is not None
                         and chat.views >= chat.expire_on_views
                     ):
-                        chat_model = self.get_chat_by_id(chat.id)
-                        self.update_chat_share_id_by_id(chat.id, None)
-                        return chat_model
+                        chat.revoked_at = int(time.time())
+                        db.commit()
+                        return None
 
                     return self.get_chat_by_id(chat.id)
                 else:

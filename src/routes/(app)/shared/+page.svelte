@@ -132,13 +132,11 @@
 				const isExpiredByViews =
 					chat.expire_on_views && chat.views >= chat.expire_on_views;
 
-				if (isExpiredByTime || isExpiredByViews) {
+				if ((isExpiredByTime || isExpiredByViews) && chat.status === 'active') {
 					const res = await deleteSharedChatById(localStorage.token, chat.id);
 					if (res) {
 						toast.info(`Expired link for "${chat.title}" was automatically revoked.`);
-						sharedChatsStore.update((currentChats) =>
-							currentChats.filter((c) => c.id !== chat.id)
-						);
+						getSharedChatList();
 					}
 				}
 			});
@@ -209,18 +207,22 @@
 	};
 
 	const cloneChat = async (chatId) => {
-		const new_chat = await cloneSharedChatById(localStorage.token, chatId);
-		if (new_chat) {
-			const res = await shareChatById(localStorage.token, new_chat.id);
-			if (res) {
-				toast.success('Chat cloned and shared');
-				getSharedChatList();
-				chatsUpdated.set(true);
+		try {
+			const new_chat = await cloneSharedChatById(localStorage.token, chatId);
+			if (new_chat) {
+				const res = await shareChatById(localStorage.token, new_chat.id);
+				if (res) {
+					toast.success('Chat cloned and shared');
+					getSharedChatList();
+					chatsUpdated.set(true);
+				} else {
+					toast.error('Failed to share cloned chat');
+				}
 			} else {
-				toast.error('Failed to share cloned chat');
+				toast.error('Failed to clone chat');
 			}
-		} else {
-			toast.error('Failed to clone chat');
+		} catch (e) {
+			toast.error('Cannot clone a revoked link.');
 		}
 	};
 
