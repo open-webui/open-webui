@@ -48,6 +48,8 @@ from open_webui.utils.task import (
     rag_template,
     tools_function_calling_generation_template,
 )
+
+from open_webui.grounding.web_search_utils import web_search_grounder
 from open_webui.utils.misc import (
     get_message_list,
     add_or_update_system_message,
@@ -664,6 +666,105 @@ async def chat_web_search_handler(
     return form_data
 
 
+async def chat_web_grounding_handler(
+    request: Request, form_data: dict, extra_params: dict, user
+):
+    """
+    Wikipedia Knowledge Grounding Handler
+
+    Augments LLM responses with current, factual information from txtai-wikipedia.
+    Handles both English and French queries with proper translation flow.
+    """
+    __event_emitter__ = extra_params["__event_emitter__"]
+
+    log.info("🔍 Web grounding handler called")
+
+    # Get the user's message
+    messages = form_data.get("messages", [])
+    if not messages:
+        log.info("🔍 No messages found, skipping grounding")
+        return form_data
+
+    # Get the last user message
+    user_message = ""
+    for message in reversed(messages):
+        if message.get("role") == "user":
+            user_message = message.get("content", "")
+            break
+
+    if not user_message:
+        log.info("🔍 No user message found, skipping grounding")
+        return form_data
+
+    log.info(f"🔍 Processing user message for grounding: {user_message}")
+
+    try:
+        # Check if this query would benefit from web grounding
+        grounding_data = await web_search_grounder.ground_query(
+            user_message, request, user
+        )
+        log.info(f"🔍 Grounding query result: {bool(grounding_data)}")
+
+        if grounding_data:
+            await __event_emitter__(
+                {
+                    "type": "status",
+                    "data": {
+                        "action": "web_grounding",
+                        "description": "Gathering current factual information",
+                        "done": False,
+                    },
+                }
+            )
+
+            # Format the grounding context
+            grounding_context = web_search_grounder.format_grounding_context(
+                grounding_data
+            )
+            log.info(f"🔍 Generated grounding context length: {len(grounding_context)}")
+            log.info(f"🔍 Grounding context preview: {grounding_context[:200]}...")
+
+            # Add the grounding context to the system message or create one
+            system_message_found = False
+            for message in form_data["messages"]:
+                if message.get("role") == "system":
+                    # Append to existing system message
+                    current_content = message.get("content", "")
+                    message["content"] = current_content + "\n\n" + grounding_context
+                    system_message_found = True
+                    log.info("🔍 Added grounding to existing system message")
+                    break
+
+            if not system_message_found:
+                # Create a new system message with grounding context
+                grounding_system_message = {
+                    "role": "system",
+                    "content": grounding_context,
+                }
+                form_data["messages"].insert(0, grounding_system_message)
+                log.info("🔍 Created new system message with grounding")
+
+            # Emit completion status with source count for frontend to handle translation
+            await __event_emitter__(
+                {
+                    "type": "status",
+                    "data": {
+                        "action": "web_grounding",
+                        "description": "Enhanced with current information",
+                        "count": len(grounding_data["grounding_data"]),
+                        "done": True,
+                    },
+                }
+            )
+
+    except Exception as e:
+        log.error(f"Error in web grounding handler: {e}")
+        # Don't emit error status as this shouldn't break the chat flow
+        pass
+
+    return form_data
+
+
 async def chat_image_generation_handler(
     request: Request, form_data: dict, extra_params: dict, user
 ):
@@ -881,6 +982,13 @@ async def process_chat_payload(request, form_data, metadata, user, model):
     sources = []
 
     user_message = get_last_user_message(form_data["messages"])
+
+    # Web Search Knowledge Grounding - Augment LLM knowledge gaps automatically using Option 2
+    if request.app.state.config.ENABLE_WIKIPEDIA_GROUNDING:
+        form_data = await chat_web_grounding_handler(
+            request, form_data, extra_params, user
+        )
+
     model_knowledge = model.get("info", {}).get("meta", {}).get("knowledge", False)
 
     if model_knowledge:
@@ -932,6 +1040,12 @@ async def process_chat_payload(request, form_data, metadata, user, model):
             form_data = await chat_image_generation_handler(
                 request, form_data, extra_params, user
             )
+
+    # Wikipedia Knowledge Grounding - runs independently of web search when enabled
+    if request.app.state.config.ENABLE_WIKIPEDIA_GROUNDING:
+        form_data = await chat_web_grounding_handler(
+            request, form_data, extra_params, user
+        )
 
     try:
         form_data, flags = await chat_completion_filter_functions_handler(

@@ -5,6 +5,7 @@ import re
 import shutil
 import hashlib
 import time
+import tiktoken
 
 import uuid
 from datetime import datetime, timedelta
@@ -360,6 +361,7 @@ async def get_rag_config(request: Request, user=Depends(get_admin_user)):
         "pdf_extract_images": request.app.state.config.PDF_EXTRACT_IMAGES,
         "RAG_FULL_CONTEXT": request.app.state.config.RAG_FULL_CONTEXT,
         "enable_google_drive_integration": request.app.state.config.ENABLE_GOOGLE_DRIVE_INTEGRATION,
+        "ENABLE_WIKIPEDIA_GROUNDING": request.app.state.config.ENABLE_WIKIPEDIA_GROUNDING,
         "content_extraction": {
             "engine": request.app.state.config.CONTENT_EXTRACTION_ENGINE,
             "tika_server_url": request.app.state.config.TIKA_SERVER_URL,
@@ -403,6 +405,9 @@ async def get_rag_config(request: Request, user=Depends(get_admin_user)):
                 "bing_search_v7_subscription_key": request.app.state.config.BING_SEARCH_V7_SUBSCRIPTION_KEY,
                 "result_count": request.app.state.config.RAG_WEB_SEARCH_RESULT_COUNT,
                 "concurrent_requests": request.app.state.config.RAG_WEB_SEARCH_CONCURRENT_REQUESTS,
+            },
+            "wikipedia_grounding": {
+                "enabled": request.app.state.config.ENABLE_WIKIPEDIA_GROUNDING,
             },
         },
     }
@@ -454,8 +459,13 @@ class WebSearchConfig(BaseModel):
     concurrent_requests: Optional[int] = None
 
 
+class WikipediaGroundingConfig(BaseModel):
+    enabled: bool
+
+
 class WebConfig(BaseModel):
-    search: WebSearchConfig
+    search: Optional[WebSearchConfig] = None
+    wikipedia_grounding: Optional[WikipediaGroundingConfig] = None
     web_loader_ssl_verification: Optional[bool] = None
 
 
@@ -463,6 +473,7 @@ class ConfigUpdateForm(BaseModel):
     RAG_FULL_CONTEXT: Optional[bool] = None
     pdf_extract_images: Optional[bool] = None
     enable_google_drive_integration: Optional[bool] = None
+    ENABLE_WIKIPEDIA_GROUNDING: Optional[bool] = None
     file: Optional[FileConfig] = None
     content_extraction: Optional[ContentExtractionConfig] = None
     chunk: Optional[ChunkParamUpdateForm] = None
@@ -570,10 +581,20 @@ async def update_rag_config(
             form_data.web.search.concurrent_requests
         )
 
+    # Wikipedia grounding configuration (simple boolean like MCP)
+    if form_data.ENABLE_WIKIPEDIA_GROUNDING is not None:
+        request.app.state.config.ENABLE_WIKIPEDIA_GROUNDING = (
+            form_data.ENABLE_WIKIPEDIA_GROUNDING
+        )
+        log.info(
+            f"Wikipedia grounding updated to: {form_data.ENABLE_WIKIPEDIA_GROUNDING}"
+        )
+
     return {
         "status": True,
         "pdf_extract_images": request.app.state.config.PDF_EXTRACT_IMAGES,
         "RAG_FULL_CONTEXT": request.app.state.config.RAG_FULL_CONTEXT,
+        "ENABLE_WIKIPEDIA_GROUNDING": request.app.state.config.ENABLE_WIKIPEDIA_GROUNDING,
         "file": {
             "max_size": request.app.state.config.FILE_MAX_SIZE,
             "max_count": request.app.state.config.FILE_MAX_COUNT,
@@ -616,6 +637,9 @@ async def update_rag_config(
                 "bing_search_v7_subscription_key": request.app.state.config.BING_SEARCH_V7_SUBSCRIPTION_KEY,
                 "result_count": request.app.state.config.RAG_WEB_SEARCH_RESULT_COUNT,
                 "concurrent_requests": request.app.state.config.RAG_WEB_SEARCH_CONCURRENT_REQUESTS,
+            },
+            "wikipedia_grounding": {
+                "enabled": request.app.state.config.ENABLE_WIKIPEDIA_GROUNDING,
             },
         },
     }

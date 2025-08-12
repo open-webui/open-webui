@@ -1847,6 +1847,13 @@ RAG_WEB_SEARCH_ENGINE = PersistentConfig(
     os.getenv("RAG_WEB_SEARCH_ENGINE", ""),
 )
 
+# Wikipedia Knowledge Grounding Configuration
+ENABLE_WIKIPEDIA_GROUNDING = PersistentConfig(
+    "ENABLE_WIKIPEDIA_GROUNDING",
+    "rag.wikipedia.grounding.enable",
+    os.getenv("ENABLE_WIKIPEDIA_GROUNDING", "True").lower() == "true",
+)
+
 # You can provide a list of your own websites to filter after performing a web search.
 # This ensures the highest level of safety and reliability of the information sources.
 RAG_WEB_SEARCH_DOMAIN_FILTER_LIST = PersistentConfig(

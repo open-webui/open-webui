@@ -610,6 +610,24 @@
 												})}
 											</div>
 										</div>
+									{:else if status?.action === 'web_grounding'}
+										<div class="flex flex-col justify-center -space-y-0.5">
+											<div
+												class="{status?.done === false
+													? 'shimmer'
+													: ''} text-gray-500 dark:text-gray-500 text-base line-clamp-1 text-wrap"
+											>
+												{#if status?.description === 'Gathering current factual information'}
+													{$i18n.t('Gathering current factual information')}
+												{:else if status?.description === 'Enhanced with current information'}
+													{$i18n.t('Enhanced with {{COUNT}} sources', {
+														COUNT: status?.count || 0
+													})}
+												{:else}
+													{$i18n.t(status?.description)}
+												{/if}
+											</div>
+										</div>
 									{:else}
 										<div class="flex flex-col justify-center -space-y-0.5">
 											<div
