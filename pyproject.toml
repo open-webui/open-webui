@@ -171,10 +171,10 @@ dev-dependencies = []
 allow-direct-references = true
 
 [tool.hatch.version]
-path = "package.json"
 pattern = '"version":\s*"(?P<version>\d+\.\d+\.\d+)(?:n(?P<post>\d+))?"'
 format = "{version}{post}"
 format-jinja = "{{ version }}{% if post %}.post{{ post }}{% endif %}"
+path = "package.json"
 
 [tool.hatch.build.hooks.custom]  # keep this for reading hooks from `hatch_build.py`
 

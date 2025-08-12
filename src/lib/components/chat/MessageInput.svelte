@@ -48,6 +48,7 @@
 	import { uploadFile } from '$lib/apis/files';
 	import { generateAutoCompletion } from '$lib/apis';
 	import { deleteFileById } from '$lib/apis/files';
+	import { processFile as triggerProcessFile } from '$lib/apis/retrieval';
 
 	import { WEBUI_BASE_URL, WEBUI_API_BASE_URL, PASTED_TEXT_CHARACTER_LIMIT } from '$lib/constants';
 
@@ -634,6 +635,7 @@
 			name: file.name,
 			collection_name: '',
 			status: 'uploading',
+			progress: 0,
 			size: file.size,
 			error: '',
 			itemId: tempItemId,
@@ -661,7 +663,10 @@
 				}
 
 				// During the file upload, file content is automatically extracted.
-				const uploadedFile = await uploadFile(localStorage.token, file, metadata);
+				// Upload without server-side processing; we'll trigger processing and poll progress
+				const uploadedFile = await uploadFile(localStorage.token, file, metadata, {
+					process: false
+				});
 
 				if (uploadedFile) {
 					console.log('File upload completed:', {
@@ -675,12 +680,72 @@
 						toast.warning(uploadedFile.error);
 					}
 
-					fileItem.status = 'uploaded';
+					// Begin processing sequence with progress polling
+					fileItem.status = 'processing';
 					fileItem.file = uploadedFile;
 					fileItem.id = uploadedFile.id;
 					fileItem.collection_name =
 						uploadedFile?.meta?.collection_name || uploadedFile?.collection_name;
 					fileItem.url = `${WEBUI_API_BASE_URL}/files/${uploadedFile.id}`;
+
+					// Kick off processing (fire-and-forget)
+					try {
+						// Do not await to keep UI responsive
+						// eslint-disable-next-line @typescript-eslint/no-floating-promises
+						triggerProcessFile(localStorage.token, uploadedFile.id).catch(() => {});
+					} catch (e) {}
+
+					// Poll for processing progress via /files/{id}
+					const pollIntervalMs = 800;
+					const maxPollMs = 30 * 60 * 1000; // 30 minutes safety cap
+					let elapsed = 0;
+					const poll = async () => {
+						try {
+							const res = await fetch(`${WEBUI_API_BASE_URL}/files/${uploadedFile.id}`, {
+								method: 'GET',
+								headers: {
+									Accept: 'application/json',
+									'Content-Type': 'application/json',
+									Authorization: `Bearer ${localStorage.token}`
+								}
+							});
+							if (res.ok) {
+								const json = await res.json();
+								const processing = json?.meta?.processing;
+								if (processing) {
+									console.log('Processing progress:', processing);
+									fileItem.progress =
+										typeof processing.progress === 'number'
+											? processing.progress
+											: (fileItem.progress ?? 0);
+									files = files;
+									if (
+										processing.status === 'done' ||
+										(typeof processing.progress === 'number' && processing.progress >= 100)
+									) {
+										fileItem.status = 'uploaded';
+										console.log('Processing completed');
+										files = files;
+										return; // stop polling
+									}
+									if (processing.status === 'error') {
+										fileItem.status = 'error';
+										fileItem.error = processing.error || 'Processing failed';
+										files = files;
+										return; // stop polling
+									}
+								}
+							}
+						} catch (e) {
+							// ignore transient errors
+						}
+						elapsed += pollIntervalMs;
+						if (elapsed < maxPollMs && fileItem.status === 'processing') {
+							setTimeout(poll, pollIntervalMs);
+						}
+					};
+					// Start polling immediately, then at interval
+					poll();
 
 					files = files;
 				} else {
