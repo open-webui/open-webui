@@ -1070,7 +1070,7 @@
 	"Port": "端口",
 	"Positive attitude": "态度积极",
 	"Prefix ID": "模型 ID 前缀",
-	"Prefix ID is used to avoid conflicts with other connections by adding a prefix to the model IDs - leave empty to disable": "通过在模型 ID 前添加前缀，避免与其他连接的模型冲突。留空则禁用此功能。",
+	"Prefix ID is used to avoid conflicts with other connections by adding a prefix to the model IDs - leave empty to disable": "在模型 ID 前添加前缀以避免与其它连接提供的模型冲突。留空则禁用此功能。",
 	"Prevent file creation": "阻止文件创建",
 	"Preview": "预览",
 	"Previous 30 days": "过去 30 天",
