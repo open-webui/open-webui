@@ -241,6 +241,77 @@ def actual_transfer(file, file_size):
                 time.sleep(1)
             print("Thread joining", job_status["running"])
 
+@app.route('/api/receive-upload', methods=['GET', 'POST'])
+def receive_upload_model():
+
+    data = request.get_json()
+    incoming_headers = dict(request.headers)
+
+    file_name = os.path.basename(data['actual_name'])
+
+    filename_without_ext = os.path.splitext(os.path.basename(data['actual_name']))[0]
+
+    new_file_name = filename_without_ext + ":latest"
+
+    print("human_name:", data['human_name'], "actual_name", data['actual_name'], "new_file_name:", new_file_name)
+
+    preliminary_target_check = serial_script.send_serial_command(port,baudrate,f"cd {destn_path}; md5sum {new_file_name}")
+
+    try:
+        preliminary_host_check = subprocess.run(["md5sum", data['actual_name']],capture_output=True,text=True,check=True)
+    except Exception as e:
+        return manual_response(content=f"File checksum failed: {e}",thinking=f"File checksum failed: {e}", incoming_headers=incoming_headers), 500
+
+    time.sleep(1)
+
+    print('PRELIMINARY TARGET CHECK-SUM: ', preliminary_target_check)
+    print('PRELIMINARY HOST/SHELL CHECK-SUM: ', preliminary_host_check.stdout)
+
+    if preliminary_target_check.split()[0].replace('\x00', '') == preliminary_host_check.stdout.split()[0].replace('\x00', ''):
+        return manual_response(content="File Already Exists",thinking="File Already Exists", incoming_headers=incoming_headers), 200
+
+    time.sleep(1)
+
+    read_cmd_from_serial(port,baudrate,f"cd {destn_path}; rm {new_file_name}")
+
+    time.sleep(1)
+
+    try:
+        file_size = os.path.getsize(data['actual_name'])
+        file_obj = open(data['actual_name'], "rb")
+    except Exception as e:
+        return manual_response(content=f"File open failed: {e}",thinking=f"File open failed: {e}", incoming_headers=incoming_headers), 500
+
+    time.sleep(1)
+
+    full_path = file_obj.name
+    print(full_path)
+    try:
+        actual_transfer(file_obj, file_size)
+    except Exception as e:
+        return manual_response(content=f"File transfer failed: {e}",thinking=f"File transfer failed: {e}", incoming_headers=incoming_headers), 500
+    time.sleep(1)
+
+    read_cmd_from_serial(port,baudrate,f"cd {destn_path}; mv {file_name} {new_file_name}")
+
+    print("Listing out existing files")
+    read_cmd_from_serial(port,baudrate,f"cd {destn_path}; ls -lt")
+
+    time.sleep(1)
+
+    print("Doing checksum of the upload file")
+    target_check_sum = serial_script.send_serial_command(port,baudrate,f"cd {destn_path}; md5sum {new_file_name}")
+
+    time.sleep(1)
+
+    print('TARGET CHECK-SUM: ', target_check_sum)
+    print('HOST/SHELL CHECK-SUM: ', preliminary_host_check.stdout)
+
+    if target_check_sum.split()[0].replace('\x00', '') != preliminary_host_check.stdout.split()[0].replace('\x00', ''):
+        return manual_response(content="Failed checksum match",thinking="Failed checksum match", incoming_headers=incoming_headers), 400
+
+    return manual_response(content="File Download Done",thinking="File Download Done", incoming_headers=incoming_headers), 200
+
 @app.route('/api/receive', methods=['GET', 'POST'])
 def receive_pull_model():
 

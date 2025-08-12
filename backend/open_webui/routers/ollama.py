@@ -1878,6 +1878,25 @@ async def download_model(
     else:
         return None
 
+@router.post("/api/uploadhelper")
+async def upload_model_helper(user=Depends(get_admin_user),gold:str = '',human_name:str = ''):
+
+
+    url = DEFAULT_FLASK_URL #"http://127.0.0.1:5001 for now; change as necessary!"
+
+    # Admin should be able to pull models from any source
+    payload = {'actual_name':gold,'human_name':human_name}
+
+
+    return await send_post_request(
+        url=f"{url}/api/receive-upload",
+        payload=json.dumps(payload),
+        stream=False,
+        key=None,
+        content_type = "application/x-ndjson",
+        user=user,
+    )
+
 
 # TODO: Progress bar does not reflect size & duration of upload.
 @router.post("/models/upload")
@@ -1935,8 +1954,19 @@ async def upload_model(
 
             if response.ok:
                 log.info(f"Uploaded to /api/blobs")  # DEBUG
-                # Remove local file
-                os.remove(file_path)
+
+                print("file_path:", file_path, "model_name :", filename)
+
+                try:
+                    result_response = await upload_model_helper(user, file_path, os.path.splitext(filename))
+                    yield json.dumps({"result": result_response}) + "\n"
+                    if result_response.ok:
+                        log.info(f"API SUCCESS!")  # DEBUG
+                    else:
+                        log.inf(f"Failed to create model in target. {result_response.text}")
+                except Exception as e:
+                    res = {"error Ollama: Could not create model in target, Please try again.": str(e)}
+                    log.info(f"data: {json.dumps(res)}\n\n")
 
                 # Create model in ollama
                 model_name, ext = os.path.splitext(filename)
@@ -1970,6 +2000,8 @@ async def upload_model(
                     raise Exception(
                         f"Failed to create model in Ollama. {create_resp.text}"
                     )
+                # Remove local file
+                os.remove(file_path)
 
             else:
                 raise Exception("Ollama: Could not create blob, Please try again.")
