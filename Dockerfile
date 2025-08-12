@@ -174,16 +174,10 @@ COPY --chown=$UID:$GID --from=build /app/CHANGELOG.md /app/CHANGELOG.md
 COPY --chown=$UID:$GID --from=build /app/package.json /app/package.json
 
 # copy backend files
-# FORCE COMPLETE REBUILD - 2025-08-11-16:20 - SSL debugging not appearing
-RUN echo "FORCE REBUILD SSL DEBUG: $(date +%s)" > /tmp/ssl_debug_rebuild
-# Break cache for backend copy to ensure SSL fixes are included
-RUN echo "SSL FIX TIMESTAMP: 2025-08-11-16:20:$(date +%N)" > /tmp/ssl_fixes
 COPY --chown=$UID:$GID ./backend .
 
 # Copy AWS RDS certificate bundle for SSL connections (downloaded by CI/CD)  
 # This enables certificate validation for Aurora PostgreSQL connections
-# FORCE CERT REBUILD - 2025-08-11-16:20 - Must include SSL certificate fixes
-RUN echo "CERT REBUILD: $(date +%s)" > /tmp/cert_rebuild
 RUN mkdir -p /app/.postgresql
 COPY aws-rds-ca-cert.pem /app/.postgresql/root.crt
 RUN chmod 644 /app/.postgresql/root.crt

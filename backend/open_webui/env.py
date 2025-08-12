@@ -320,7 +320,7 @@ PG_SSLMODE = os.environ.get(
     "PG_SSLMODE",
     os.environ.get("POSTGRES_SSLMODE", "verify-full"),
 )
-# FORCE REBUILD: 2025-08-11 16:20 - SSL debug must be included in Docker build
+# PostgreSQL SSL root certificate path
 PG_SSLROOTCERT = os.environ.get(
     "PG_SSLROOTCERT",
     os.environ.get("POSTGRES_SSLROOTCERT", ""),
