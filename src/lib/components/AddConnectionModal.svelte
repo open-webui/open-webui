@@ -35,7 +35,7 @@
 	let connectionType = 'external';
 	let azure = false;
 	$: azure =
-		(url.includes('azure.') || url.includes('cognitive.microsoft.com')) && !direct ? true : false;
+		(url.includes('azure.') || url.includes('cognitive.microsoft.com') || url.includes('azure.us')) && !direct ? true : false;
 
 	let prefixId = '';
 	let enable = true;
