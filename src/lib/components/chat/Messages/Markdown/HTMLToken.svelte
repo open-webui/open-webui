@@ -125,6 +125,11 @@
 	{:else if token.text.includes(`<source_id`)}
 		<Source {id} {token} onClick={onSourceClick} />
 	{:else}
-		<PiiAwareText text={token.text} id={`${id}-text-html`} {conversationId} {done} />
+		{@const br = token.text.match(/<br\s*\/?>/)}
+		{#if br}
+			<br />
+		{:else}
+			<PiiAwareText text={token.text} id={`${id}-text-html`} {conversationId} {done} />
+		{/if}
 	{/if}
 {/if}

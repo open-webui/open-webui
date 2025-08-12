@@ -75,7 +75,7 @@
 
 		<div class="flex flex-col w-full px-5 pb-5 dark:text-gray-200">
 			<div
-				class=" flex flex-col w-full sm:flex-row sm:justify-center sm:space-x-6 h-[28rem] max-h-screen outline outline-1 rounded-xl outline-gray-100 dark:outline-gray-800 mb-4 mt-1"
+				class=" flex flex-col w-full sm:flex-row sm:justify-center sm:space-x-6 h-[28rem] max-h-screen rounded-xl mb-4 mt-1"
 			>
 				{#if memories.length > 0}
 					<div class="text-left text-sm w-full mb-4 overflow-y-scroll">
@@ -184,13 +184,13 @@
 			</div>
 			<div class="flex text-sm font-medium gap-1.5">
 				<button
-					class=" px-3.5 py-1.5 font-medium hover:bg-black/5 dark:hover:bg-white/5 outline outline-1 outline-gray-300 dark:outline-gray-800 rounded-3xl"
+					class=" px-3.5 py-1.5 font-medium hover:bg-black/5 dark:hover:bg-white/5 outline outline-1 outline-gray-100 dark:outline-gray-800 rounded-3xl"
 					on:click={() => {
 						showAddMemoryModal = true;
 					}}>{$i18n.t('Add Memory')}</button
 				>
 				<button
-					class=" px-3.5 py-1.5 font-medium text-red-500 hover:bg-black/5 dark:hover:bg-white/5 outline outline-1 outline-red-300 dark:outline-red-800 rounded-3xl"
+					class=" px-3.5 py-1.5 font-medium text-red-500 hover:bg-black/5 dark:hover:bg-white/5 outline outline-1 outline-red-100 dark:outline-red-800 rounded-3xl"
 					on:click={() => {
 						if (memories.length > 0) {
 							showClearConfirmDialog = true;

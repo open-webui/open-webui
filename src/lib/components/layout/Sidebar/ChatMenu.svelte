@@ -29,7 +29,7 @@
 	import { chats, settings, theme, user, chatId as currentChatId } from '$lib/stores';
 	import { createMessagesList } from '$lib/utils';
 	import { downloadChatAsPDF } from '$lib/apis/utils';
-	import Download from '$lib/components/icons/Download.svelte';
+	import Download from '$lib/components/icons/ArrowDownTray.svelte';
 	import { PiiSessionManager, unmaskTextWithEntities } from '$lib/utils/pii';
 
 	const i18n = getContext('i18n');

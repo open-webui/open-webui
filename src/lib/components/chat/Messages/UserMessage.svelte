@@ -3,7 +3,7 @@
 	import { toast } from 'svelte-sonner';
 	import { tick, getContext, onMount } from 'svelte';
 
-	import { models, settings, chatId } from '$lib/stores';
+	import { models, settings } from '$lib/stores';
 	import { user as _user } from '$lib/stores';
 	import { copyToClipboard as _copyToClipboard, formatDate } from '$lib/utils';
 	import { WEBUI_BASE_URL } from '$lib/constants';
@@ -31,6 +31,7 @@
 
 	export let user;
 
+	export let chatId;
 	export let history;
 	export let messageId;
 
@@ -45,6 +46,7 @@
 
 	export let isFirstMessage: boolean;
 	export let readOnly: boolean;
+	export let topPadding = false;
 
 	let showDeleteConfirm = false;
 
@@ -68,10 +70,10 @@
 
 	const copyToClipboard = async (text: string) => {
 		// First unmask any PII placeholders to get the actual text
-		const entities = piiSessionManager.getEntitiesForDisplay($chatId);
+		const entities = piiSessionManager.getEntitiesForDisplay(chatId);
 		console.log(
 			'UserMessage: copyToClipboard - chatId:',
-			$chatId,
+			chatId,
 			'entities found:',
 			entities.length
 		);
@@ -417,7 +419,12 @@
 									: ' w-full'}"
 							>
 								{#if message.content}
-									<Markdown id={message.id} content={message.content} conversationId={$chatId} />
+									<Markdown
+										id={`${chatId}-${message.id}`}
+										content={message.content}
+										{topPadding}
+										conversationId={chatId}
+									/>
 								{/if}
 							</div>
 						</div>

@@ -19,37 +19,69 @@ from __future__ import annotations
 
 import time
 from typing import Dict, List, Sequence, Any
+from base64 import b64encode
 
 from fastapi import FastAPI, Request
 from opentelemetry import metrics
 from opentelemetry.exporter.otlp.proto.grpc.metric_exporter import (
     OTLPMetricExporter,
 )
+
+from opentelemetry.exporter.otlp.proto.http.metric_exporter import (
+    OTLPMetricExporter as OTLPHttpMetricExporter,
+)
 from opentelemetry.sdk.metrics import MeterProvider
 from opentelemetry.sdk.metrics.view import View
 from opentelemetry.sdk.metrics.export import (
     PeriodicExportingMetricReader,
 )
-from opentelemetry.sdk.resources import SERVICE_NAME, Resource
+from opentelemetry.sdk.resources import Resource
 
-from open_webui.env import OTEL_SERVICE_NAME, OTEL_EXPORTER_OTLP_ENDPOINT
-
+from open_webui.env import (
+    OTEL_SERVICE_NAME,
+    OTEL_METRICS_EXPORTER_OTLP_ENDPOINT,
+    OTEL_METRICS_BASIC_AUTH_USERNAME,
+    OTEL_METRICS_BASIC_AUTH_PASSWORD,
+    OTEL_METRICS_OTLP_SPAN_EXPORTER,
+    OTEL_METRICS_EXPORTER_OTLP_INSECURE,
+)
 from open_webui.socket.main import get_active_user_ids
 from open_webui.models.users import Users
 
 _EXPORT_INTERVAL_MILLIS = 10_000  # 10 seconds
 
 
-def _build_meter_provider() -> MeterProvider:
+def _build_meter_provider(resource: Resource) -> MeterProvider:
     """Return a configured MeterProvider."""
+    headers = []
+    if OTEL_METRICS_BASIC_AUTH_USERNAME and OTEL_METRICS_BASIC_AUTH_PASSWORD:
+        auth_string = (
+            f"{OTEL_METRICS_BASIC_AUTH_USERNAME}:{OTEL_METRICS_BASIC_AUTH_PASSWORD}"
+        )
+        auth_header = b64encode(auth_string.encode()).decode()
+        headers = [("authorization", f"Basic {auth_header}")]
 
     # Periodic reader pushes metrics over OTLP/gRPC to collector
-    readers: List[PeriodicExportingMetricReader] = [
-        PeriodicExportingMetricReader(
-            OTLPMetricExporter(endpoint=OTEL_EXPORTER_OTLP_ENDPOINT),
-            export_interval_millis=_EXPORT_INTERVAL_MILLIS,
-        )
-    ]
+    if OTEL_METRICS_OTLP_SPAN_EXPORTER == "http":
+        readers: List[PeriodicExportingMetricReader] = [
+            PeriodicExportingMetricReader(
+                OTLPHttpMetricExporter(
+                    endpoint=OTEL_METRICS_EXPORTER_OTLP_ENDPOINT, headers=headers
+                ),
+                export_interval_millis=_EXPORT_INTERVAL_MILLIS,
+            )
+        ]
+    else:
+        readers: List[PeriodicExportingMetricReader] = [
+            PeriodicExportingMetricReader(
+                OTLPMetricExporter(
+                    endpoint=OTEL_METRICS_EXPORTER_OTLP_ENDPOINT,
+                    insecure=OTEL_METRICS_EXPORTER_OTLP_INSECURE,
+                    headers=headers,
+                ),
+                export_interval_millis=_EXPORT_INTERVAL_MILLIS,
+            )
+        ]
 
     # Optional view to limit cardinality: drop user-agent etc.
     views: List[View] = [
@@ -70,17 +102,17 @@ def _build_meter_provider() -> MeterProvider:
     ]
 
     provider = MeterProvider(
-        resource=Resource.create({SERVICE_NAME: OTEL_SERVICE_NAME}),
+        resource=resource,
         metric_readers=list(readers),
         views=views,
     )
     return provider
 
 
-def setup_metrics(app: FastAPI) -> None:
+def setup_metrics(app: FastAPI, resource: Resource) -> None:
     """Attach OTel metrics middleware to *app* and initialise provider."""
 
-    metrics.set_meter_provider(_build_meter_provider())
+    metrics.set_meter_provider(_build_meter_provider(resource))
     meter = metrics.get_meter(__name__)
 
     # Instruments
