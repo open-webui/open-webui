@@ -11,46 +11,38 @@ from ...models.api_task_progress_response import APITaskProgressResponse
 from ...models.http_validation_error import HTTPValidationError
 
 
-
 def _get_kwargs(
     task_id: str,
     *,
     quiet: Union[Unset, bool] = False,
-
 ) -> dict[str, Any]:
-    
-
-    
 
     params: dict[str, Any] = {}
 
     params["quiet"] = quiet
 
-
     params = {k: v for k, v in params.items() if v is not UNSET and v is not None}
-
 
     _kwargs: dict[str, Any] = {
         "method": "get",
-        "url": "/file/mask/task/{task_id}".format(task_id=task_id,),
+        "url": "/file/mask/task/{task_id}".format(
+            task_id=task_id,
+        ),
         "params": params,
     }
-
 
     return _kwargs
 
 
-def _parse_response(*, client: Union[AuthenticatedClient, Client], response: httpx.Response) -> Optional[Union[APITaskProgressResponse, HTTPValidationError]]:
+def _parse_response(
+    *, client: Union[AuthenticatedClient, Client], response: httpx.Response
+) -> Optional[Union[APITaskProgressResponse, HTTPValidationError]]:
     if response.status_code == 200:
         response_200 = APITaskProgressResponse.from_dict(response.json())
-
-
 
         return response_200
     if response.status_code == 422:
         response_422 = HTTPValidationError.from_dict(response.json())
-
-
 
         return response_422
     if client.raise_on_unexpected_status:
@@ -59,7 +51,9 @@ def _parse_response(*, client: Union[AuthenticatedClient, Client], response: htt
         return None
 
 
-def _build_response(*, client: Union[AuthenticatedClient, Client], response: httpx.Response) -> Response[Union[APITaskProgressResponse, HTTPValidationError]]:
+def _build_response(
+    *, client: Union[AuthenticatedClient, Client], response: httpx.Response
+) -> Response[Union[APITaskProgressResponse, HTTPValidationError]]:
     return Response(
         status_code=HTTPStatus(response.status_code),
         content=response.content,
@@ -73,9 +67,8 @@ def sync_detailed(
     *,
     client: Union[AuthenticatedClient, Client],
     quiet: Union[Unset, bool] = False,
-
 ) -> Response[Union[APITaskProgressResponse, HTTPValidationError]]:
-    r""" Get Task Progress
+    r"""Get Task Progress
 
      Retrieve the progress and result of a file masking task.
 
@@ -129,13 +122,11 @@ def sync_detailed(
 
     Returns:
         Response[Union[APITaskProgressResponse, HTTPValidationError]]
-     """
-
+    """
 
     kwargs = _get_kwargs(
         task_id=task_id,
-quiet=quiet,
-
+        quiet=quiet,
     )
 
     response = client.get_httpx_client().request(
@@ -144,14 +135,14 @@ quiet=quiet,
 
     return _build_response(client=client, response=response)
 
+
 def sync(
     task_id: str,
     *,
     client: Union[AuthenticatedClient, Client],
     quiet: Union[Unset, bool] = False,
-
 ) -> Optional[Union[APITaskProgressResponse, HTTPValidationError]]:
-    r""" Get Task Progress
+    r"""Get Task Progress
 
      Retrieve the progress and result of a file masking task.
 
@@ -205,24 +196,22 @@ def sync(
 
     Returns:
         Union[APITaskProgressResponse, HTTPValidationError]
-     """
-
+    """
 
     return sync_detailed(
         task_id=task_id,
-client=client,
-quiet=quiet,
-
+        client=client,
+        quiet=quiet,
     ).parsed
+
 
 async def asyncio_detailed(
     task_id: str,
     *,
     client: Union[AuthenticatedClient, Client],
     quiet: Union[Unset, bool] = False,
-
 ) -> Response[Union[APITaskProgressResponse, HTTPValidationError]]:
-    r""" Get Task Progress
+    r"""Get Task Progress
 
      Retrieve the progress and result of a file masking task.
 
@@ -276,29 +265,25 @@ async def asyncio_detailed(
 
     Returns:
         Response[Union[APITaskProgressResponse, HTTPValidationError]]
-     """
-
+    """
 
     kwargs = _get_kwargs(
         task_id=task_id,
-quiet=quiet,
-
+        quiet=quiet,
     )
 
-    response = await client.get_async_httpx_client().request(
-        **kwargs
-    )
+    response = await client.get_async_httpx_client().request(**kwargs)
 
     return _build_response(client=client, response=response)
+
 
 async def asyncio(
     task_id: str,
     *,
     client: Union[AuthenticatedClient, Client],
     quiet: Union[Unset, bool] = False,
-
 ) -> Optional[Union[APITaskProgressResponse, HTTPValidationError]]:
-    r""" Get Task Progress
+    r"""Get Task Progress
 
      Retrieve the progress and result of a file masking task.
 
@@ -352,12 +337,12 @@ async def asyncio(
 
     Returns:
         Union[APITaskProgressResponse, HTTPValidationError]
-     """
+    """
 
-
-    return (await asyncio_detailed(
-        task_id=task_id,
-client=client,
-quiet=quiet,
-
-    )).parsed
+    return (
+        await asyncio_detailed(
+            task_id=task_id,
+            client=client,
+            quiet=quiet,
+        )
+    ).parsed

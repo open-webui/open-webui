@@ -11,37 +11,29 @@ from ...models.http_validation_error import HTTPValidationError
 from ...models.session import Session
 
 
-
 def _get_kwargs(
     session_id: str,
-
 ) -> dict[str, Any]:
-    
-
-    
-
-    
 
     _kwargs: dict[str, Any] = {
         "method": "get",
-        "url": "/sessions/{session_id}".format(session_id=session_id,),
+        "url": "/sessions/{session_id}".format(
+            session_id=session_id,
+        ),
     }
-
 
     return _kwargs
 
 
-def _parse_response(*, client: Union[AuthenticatedClient, Client], response: httpx.Response) -> Optional[Union[HTTPValidationError, Session]]:
+def _parse_response(
+    *, client: Union[AuthenticatedClient, Client], response: httpx.Response
+) -> Optional[Union[HTTPValidationError, Session]]:
     if response.status_code == 200:
         response_200 = Session.from_dict(response.json())
-
-
 
         return response_200
     if response.status_code == 422:
         response_422 = HTTPValidationError.from_dict(response.json())
-
-
 
         return response_422
     if client.raise_on_unexpected_status:
@@ -50,7 +42,9 @@ def _parse_response(*, client: Union[AuthenticatedClient, Client], response: htt
         return None
 
 
-def _build_response(*, client: Union[AuthenticatedClient, Client], response: httpx.Response) -> Response[Union[HTTPValidationError, Session]]:
+def _build_response(
+    *, client: Union[AuthenticatedClient, Client], response: httpx.Response
+) -> Response[Union[HTTPValidationError, Session]]:
     return Response(
         status_code=HTTPStatus(response.status_code),
         content=response.content,
@@ -63,9 +57,8 @@ def sync_detailed(
     session_id: str,
     *,
     client: AuthenticatedClient,
-
 ) -> Response[Union[HTTPValidationError, Session]]:
-    """ Get Session
+    """Get Session
 
      Retrieve session information and status.
 
@@ -82,12 +75,10 @@ def sync_detailed(
 
     Returns:
         Response[Union[HTTPValidationError, Session]]
-     """
-
+    """
 
     kwargs = _get_kwargs(
         session_id=session_id,
-
     )
 
     response = client.get_httpx_client().request(
@@ -96,13 +87,13 @@ def sync_detailed(
 
     return _build_response(client=client, response=response)
 
+
 def sync(
     session_id: str,
     *,
     client: AuthenticatedClient,
-
 ) -> Optional[Union[HTTPValidationError, Session]]:
-    """ Get Session
+    """Get Session
 
      Retrieve session information and status.
 
@@ -119,22 +110,20 @@ def sync(
 
     Returns:
         Union[HTTPValidationError, Session]
-     """
-
+    """
 
     return sync_detailed(
         session_id=session_id,
-client=client,
-
+        client=client,
     ).parsed
+
 
 async def asyncio_detailed(
     session_id: str,
     *,
     client: AuthenticatedClient,
-
 ) -> Response[Union[HTTPValidationError, Session]]:
-    """ Get Session
+    """Get Session
 
      Retrieve session information and status.
 
@@ -151,27 +140,23 @@ async def asyncio_detailed(
 
     Returns:
         Response[Union[HTTPValidationError, Session]]
-     """
-
+    """
 
     kwargs = _get_kwargs(
         session_id=session_id,
-
     )
 
-    response = await client.get_async_httpx_client().request(
-        **kwargs
-    )
+    response = await client.get_async_httpx_client().request(**kwargs)
 
     return _build_response(client=client, response=response)
+
 
 async def asyncio(
     session_id: str,
     *,
     client: AuthenticatedClient,
-
 ) -> Optional[Union[HTTPValidationError, Session]]:
-    """ Get Session
+    """Get Session
 
      Retrieve session information and status.
 
@@ -188,11 +173,11 @@ async def asyncio(
 
     Returns:
         Union[HTTPValidationError, Session]
-     """
+    """
 
-
-    return (await asyncio_detailed(
-        session_id=session_id,
-client=client,
-
-    )).parsed
+    return (
+        await asyncio_detailed(
+            session_id=session_id,
+            client=client,
+        )
+    ).parsed

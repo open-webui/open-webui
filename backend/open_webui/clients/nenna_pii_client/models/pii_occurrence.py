@@ -7,48 +7,37 @@ from attrs import field as _attrs_field
 from ..types import UNSET, Unset
 
 
-
-
-
-
-
 T = TypeVar("T", bound="PiiOccurrence")
-
 
 
 @_attrs_define
 class PiiOccurrence:
-    """ Information about a specific occurrence of a PII entity in text.
+    """Information about a specific occurrence of a PII entity in text.
 
-        Attributes:
-            start_idx (int): Start index of the PII entity in the text
-            end_idx (int): End index of the PII entity in the text
-     """
+    Attributes:
+        start_idx (int): Start index of the PII entity in the text
+        end_idx (int): End index of the PII entity in the text
+    """
 
     start_idx: int
     end_idx: int
     additional_properties: dict[str, Any] = _attrs_field(init=False, factory=dict)
-
-
-
-
 
     def to_dict(self) -> dict[str, Any]:
         start_idx = self.start_idx
 
         end_idx = self.end_idx
 
-
         field_dict: dict[str, Any] = {}
         field_dict.update(self.additional_properties)
-        field_dict.update({
-            "start_idx": start_idx,
-            "end_idx": end_idx,
-        })
+        field_dict.update(
+            {
+                "start_idx": start_idx,
+                "end_idx": end_idx,
+            }
+        )
 
         return field_dict
-
-
 
     @classmethod
     def from_dict(cls: type[T], src_dict: Mapping[str, Any]) -> T:
@@ -61,7 +50,6 @@ class PiiOccurrence:
             start_idx=start_idx,
             end_idx=end_idx,
         )
-
 
         pii_occurrence.additional_properties = d
         return pii_occurrence

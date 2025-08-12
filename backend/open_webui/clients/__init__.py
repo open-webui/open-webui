@@ -1,4 +1,4 @@
-""" OpenWebUI Client Libraries """
+"""OpenWebUI Client Libraries"""
 
 from .nenna_pii_client import AuthenticatedClient, Client
 

@@ -7,34 +7,24 @@ from attrs import field as _attrs_field
 from ..types import UNSET, Unset
 
 
-
-
-
-
-
 T = TypeVar("T", bound="FileObject")
-
 
 
 @_attrs_define
 class FileObject:
-    """ File object to mask.
+    """File object to mask.
     The file should be provided as base64-encoded content.
 
         Attributes:
             file_name (str): Name of the file.
             file_content_type (str): MIME type of the file.
             file_content_base64 (str): Base64 encoded content of the file.
-     """
+    """
 
     file_name: str
     file_content_type: str
     file_content_base64: str
     additional_properties: dict[str, Any] = _attrs_field(init=False, factory=dict)
-
-
-
-
 
     def to_dict(self) -> dict[str, Any]:
         file_name = self.file_name
@@ -43,18 +33,17 @@ class FileObject:
 
         file_content_base64 = self.file_content_base64
 
-
         field_dict: dict[str, Any] = {}
         field_dict.update(self.additional_properties)
-        field_dict.update({
-            "file_name": file_name,
-            "file_content_type": file_content_type,
-            "file_content_base64": file_content_base64,
-        })
+        field_dict.update(
+            {
+                "file_name": file_name,
+                "file_content_type": file_content_type,
+                "file_content_base64": file_content_base64,
+            }
+        )
 
         return field_dict
-
-
 
     @classmethod
     def from_dict(cls: type[T], src_dict: Mapping[str, Any]) -> T:
@@ -70,7 +59,6 @@ class FileObject:
             file_content_type=file_content_type,
             file_content_base64=file_content_base64,
         )
-
 
         file_object.additional_properties = d
         return file_object

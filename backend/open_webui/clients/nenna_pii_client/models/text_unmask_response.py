@@ -1,5 +1,15 @@
 from collections.abc import Mapping
-from typing import Any, TypeVar, Optional, BinaryIO, TextIO, TYPE_CHECKING, Generator, Union, cast
+from typing import (
+    Any,
+    TypeVar,
+    Optional,
+    BinaryIO,
+    TextIO,
+    TYPE_CHECKING,
+    Generator,
+    Union,
+    cast,
+)
 
 from attrs import define as _attrs_define
 from attrs import field as _attrs_field
@@ -7,19 +17,15 @@ from attrs import field as _attrs_field
 from ..types import UNSET, Unset
 
 if TYPE_CHECKING:
-  from ..models.unmask_pii_entity import UnmaskPiiEntity
-
-
-
+    from ..models.unmask_pii_entity import UnmaskPiiEntity
 
 
 T = TypeVar("T", bound="TextUnmaskResponse")
 
 
-
 @_attrs_define
 class TextUnmaskResponse:
-    """ Response from a text unmasking operation.
+    """Response from a text unmasking operation.
 
     Contains the unmasked text strings with original values restored in place of masked tokens.
 
@@ -27,21 +33,16 @@ class TextUnmaskResponse:
             text (list[str]): List of unmasked text strings
             pii (Union[None, Unset, list['UnmaskPiiEntity']]): List of PII entities used for unmasking. Omitted if
                 quiet=true was specified in the request.
-     """
+    """
 
     text: list[str]
-    pii: Union[None, Unset, list['UnmaskPiiEntity']] = UNSET
+    pii: Union[None, Unset, list["UnmaskPiiEntity"]] = UNSET
     additional_properties: dict[str, Any] = _attrs_field(init=False, factory=dict)
-
-
-
-
 
     def to_dict(self) -> dict[str, Any]:
         from ..models.unmask_pii_entity import UnmaskPiiEntity
+
         text = self.text
-
-
 
         pii: Union[None, Unset, list[dict[str, Any]]]
         if isinstance(self.pii, Unset):
@@ -52,31 +53,29 @@ class TextUnmaskResponse:
                 pii_type_0_item = pii_type_0_item_data.to_dict()
                 pii.append(pii_type_0_item)
 
-
         else:
             pii = self.pii
 
-
         field_dict: dict[str, Any] = {}
         field_dict.update(self.additional_properties)
-        field_dict.update({
-            "text": text,
-        })
+        field_dict.update(
+            {
+                "text": text,
+            }
+        )
         if pii is not UNSET:
             field_dict["pii"] = pii
 
         return field_dict
 
-
-
     @classmethod
     def from_dict(cls: type[T], src_dict: Mapping[str, Any]) -> T:
         from ..models.unmask_pii_entity import UnmaskPiiEntity
+
         d = dict(src_dict)
         text = cast(list[str], d.pop("text"))
 
-
-        def _parse_pii(data: object) -> Union[None, Unset, list['UnmaskPiiEntity']]:
+        def _parse_pii(data: object) -> Union[None, Unset, list["UnmaskPiiEntity"]]:
             if data is None:
                 return data
             if isinstance(data, Unset):
@@ -86,26 +85,22 @@ class TextUnmaskResponse:
                     raise TypeError()
                 pii_type_0 = []
                 _pii_type_0 = data
-                for pii_type_0_item_data in (_pii_type_0):
+                for pii_type_0_item_data in _pii_type_0:
                     pii_type_0_item = UnmaskPiiEntity.from_dict(pii_type_0_item_data)
-
-
 
                     pii_type_0.append(pii_type_0_item)
 
                 return pii_type_0
-            except: # noqa: E722
+            except:  # noqa: E722
                 pass
-            return cast(Union[None, Unset, list['UnmaskPiiEntity']], data)
+            return cast(Union[None, Unset, list["UnmaskPiiEntity"]], data)
 
         pii = _parse_pii(d.pop("pii", UNSET))
-
 
         text_unmask_response = cls(
             text=text,
             pii=pii,
         )
-
 
         text_unmask_response.additional_properties = d
         return text_unmask_response

@@ -12,18 +12,11 @@ from ...models.session import Session
 from ...models.session_create import SessionCreate
 
 
-
 def _get_kwargs(
     *,
     body: SessionCreate,
-
 ) -> dict[str, Any]:
     headers: dict[str, Any] = {}
-
-
-    
-
-    
 
     _kwargs: dict[str, Any] = {
         "method": "post",
@@ -32,24 +25,21 @@ def _get_kwargs(
 
     _kwargs["json"] = body.to_dict()
 
-
     headers["Content-Type"] = "application/json"
 
     _kwargs["headers"] = headers
     return _kwargs
 
 
-def _parse_response(*, client: Union[AuthenticatedClient, Client], response: httpx.Response) -> Optional[Union[HTTPValidationError, Session]]:
+def _parse_response(
+    *, client: Union[AuthenticatedClient, Client], response: httpx.Response
+) -> Optional[Union[HTTPValidationError, Session]]:
     if response.status_code == 201:
         response_201 = Session.from_dict(response.json())
-
-
 
         return response_201
     if response.status_code == 422:
         response_422 = HTTPValidationError.from_dict(response.json())
-
-
 
         return response_422
     if client.raise_on_unexpected_status:
@@ -58,7 +48,9 @@ def _parse_response(*, client: Union[AuthenticatedClient, Client], response: htt
         return None
 
 
-def _build_response(*, client: Union[AuthenticatedClient, Client], response: httpx.Response) -> Response[Union[HTTPValidationError, Session]]:
+def _build_response(
+    *, client: Union[AuthenticatedClient, Client], response: httpx.Response
+) -> Response[Union[HTTPValidationError, Session]]:
     return Response(
         status_code=HTTPStatus(response.status_code),
         content=response.content,
@@ -71,9 +63,8 @@ def sync_detailed(
     *,
     client: AuthenticatedClient,
     body: SessionCreate,
-
 ) -> Response[Union[HTTPValidationError, Session]]:
-    r""" Create Session
+    r"""Create Session
 
      Create a new session for consistent PII masking and unmasking operations.
 
@@ -98,12 +89,10 @@ def sync_detailed(
 
     Returns:
         Response[Union[HTTPValidationError, Session]]
-     """
-
+    """
 
     kwargs = _get_kwargs(
         body=body,
-
     )
 
     response = client.get_httpx_client().request(
@@ -112,13 +101,13 @@ def sync_detailed(
 
     return _build_response(client=client, response=response)
 
+
 def sync(
     *,
     client: AuthenticatedClient,
     body: SessionCreate,
-
 ) -> Optional[Union[HTTPValidationError, Session]]:
-    r""" Create Session
+    r"""Create Session
 
      Create a new session for consistent PII masking and unmasking operations.
 
@@ -143,22 +132,20 @@ def sync(
 
     Returns:
         Union[HTTPValidationError, Session]
-     """
-
+    """
 
     return sync_detailed(
         client=client,
-body=body,
-
+        body=body,
     ).parsed
+
 
 async def asyncio_detailed(
     *,
     client: AuthenticatedClient,
     body: SessionCreate,
-
 ) -> Response[Union[HTTPValidationError, Session]]:
-    r""" Create Session
+    r"""Create Session
 
      Create a new session for consistent PII masking and unmasking operations.
 
@@ -183,27 +170,23 @@ async def asyncio_detailed(
 
     Returns:
         Response[Union[HTTPValidationError, Session]]
-     """
-
+    """
 
     kwargs = _get_kwargs(
         body=body,
-
     )
 
-    response = await client.get_async_httpx_client().request(
-        **kwargs
-    )
+    response = await client.get_async_httpx_client().request(**kwargs)
 
     return _build_response(client=client, response=response)
+
 
 async def asyncio(
     *,
     client: AuthenticatedClient,
     body: SessionCreate,
-
 ) -> Optional[Union[HTTPValidationError, Session]]:
-    r""" Create Session
+    r"""Create Session
 
      Create a new session for consistent PII masking and unmasking operations.
 
@@ -228,11 +211,11 @@ async def asyncio(
 
     Returns:
         Union[HTTPValidationError, Session]
-     """
+    """
 
-
-    return (await asyncio_detailed(
-        client=client,
-body=body,
-
-    )).parsed
+    return (
+        await asyncio_detailed(
+            client=client,
+            body=body,
+        )
+    ).parsed

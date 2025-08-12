@@ -1,5 +1,15 @@
 from collections.abc import Mapping
-from typing import Any, TypeVar, Optional, BinaryIO, TextIO, TYPE_CHECKING, Generator, Union, cast
+from typing import (
+    Any,
+    TypeVar,
+    Optional,
+    BinaryIO,
+    TextIO,
+    TYPE_CHECKING,
+    Generator,
+    Union,
+    cast,
+)
 
 from attrs import define as _attrs_define
 from attrs import field as _attrs_field
@@ -9,17 +19,12 @@ from dateutil.parser import isoparse
 import datetime
 
 
-
-
-
-
 T = TypeVar("T", bound="Session")
-
 
 
 @_attrs_define
 class Session:
-    """ Information about an active masking/unmasking session.
+    """Information about an active masking/unmasking session.
 
     Sessions store the context and entity mappings necessary for consistent
     masking and unmasking across multiple API calls.
@@ -29,17 +34,13 @@ class Session:
             ttl (str): Time to live in format like "24h", "7d", "30m"
             created_at (datetime.datetime): Timestamp when the session was created
             expires_at (Union[None, Unset, datetime.datetime]): Timestamp when the session will expire
-     """
+    """
 
     session_id: str
     ttl: str
     created_at: datetime.datetime
     expires_at: Union[None, Unset, datetime.datetime] = UNSET
     additional_properties: dict[str, Any] = _attrs_field(init=False, factory=dict)
-
-
-
-
 
     def to_dict(self) -> dict[str, Any]:
         session_id = self.session_id
@@ -56,20 +57,19 @@ class Session:
         else:
             expires_at = self.expires_at
 
-
         field_dict: dict[str, Any] = {}
         field_dict.update(self.additional_properties)
-        field_dict.update({
-            "session_id": session_id,
-            "ttl": ttl,
-            "created_at": created_at,
-        })
+        field_dict.update(
+            {
+                "session_id": session_id,
+                "ttl": ttl,
+                "created_at": created_at,
+            }
+        )
         if expires_at is not UNSET:
             field_dict["expires_at"] = expires_at
 
         return field_dict
-
-
 
     @classmethod
     def from_dict(cls: type[T], src_dict: Mapping[str, Any]) -> T:
@@ -79,9 +79,6 @@ class Session:
         ttl = d.pop("ttl")
 
         created_at = isoparse(d.pop("created_at"))
-
-
-
 
         def _parse_expires_at(data: object) -> Union[None, Unset, datetime.datetime]:
             if data is None:
@@ -93,15 +90,12 @@ class Session:
                     raise TypeError()
                 expires_at_type_0 = isoparse(data)
 
-
-
                 return expires_at_type_0
-            except: # noqa: E722
+            except:  # noqa: E722
                 pass
             return cast(Union[None, Unset, datetime.datetime], data)
 
         expires_at = _parse_expires_at(d.pop("expires_at", UNSET))
-
 
         session = cls(
             session_id=session_id,
@@ -109,7 +103,6 @@ class Session:
             created_at=created_at,
             expires_at=expires_at,
         )
-
 
         session.additional_properties = d
         return session

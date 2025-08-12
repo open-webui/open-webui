@@ -1473,7 +1473,10 @@ def process_file(
                 ]
             for doc in docs:
                 pii = None
-                if request.app.state.config.ENABLE_PII_DETECTION and request.app.state.config.PII_API_KEY:
+                if (
+                    request.app.state.config.ENABLE_PII_DETECTION
+                    and request.app.state.config.PII_API_KEY
+                ):
                     try:
                         client = AuthenticatedClient(
                             base_url=request.app.state.config.PII_API_BASE_URL,

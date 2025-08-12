@@ -1,5 +1,6 @@
 from enum import Enum
 
+
 class TextProcessModifierAction(str, Enum):
     IGNORE = "ignore"
     STRING_MASK = "string-mask"

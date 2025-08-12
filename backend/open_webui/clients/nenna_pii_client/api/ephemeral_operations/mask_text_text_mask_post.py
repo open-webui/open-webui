@@ -12,18 +12,13 @@ from ...models.text_mask_request import TextMaskRequest
 from ...models.text_mask_response import TextMaskResponse
 
 
-
 def _get_kwargs(
     *,
     body: TextMaskRequest,
     create_session: Union[Unset, bool] = False,
     quiet: Union[Unset, bool] = False,
-
 ) -> dict[str, Any]:
     headers: dict[str, Any] = {}
-
-
-    
 
     params: dict[str, Any] = {}
 
@@ -31,9 +26,7 @@ def _get_kwargs(
 
     params["quiet"] = quiet
 
-
     params = {k: v for k, v in params.items() if v is not UNSET and v is not None}
-
 
     _kwargs: dict[str, Any] = {
         "method": "post",
@@ -43,24 +36,21 @@ def _get_kwargs(
 
     _kwargs["json"] = body.to_dict()
 
-
     headers["Content-Type"] = "application/json"
 
     _kwargs["headers"] = headers
     return _kwargs
 
 
-def _parse_response(*, client: Union[AuthenticatedClient, Client], response: httpx.Response) -> Optional[Union[HTTPValidationError, TextMaskResponse]]:
+def _parse_response(
+    *, client: Union[AuthenticatedClient, Client], response: httpx.Response
+) -> Optional[Union[HTTPValidationError, TextMaskResponse]]:
     if response.status_code == 200:
         response_200 = TextMaskResponse.from_dict(response.json())
-
-
 
         return response_200
     if response.status_code == 422:
         response_422 = HTTPValidationError.from_dict(response.json())
-
-
 
         return response_422
     if client.raise_on_unexpected_status:
@@ -69,7 +59,9 @@ def _parse_response(*, client: Union[AuthenticatedClient, Client], response: htt
         return None
 
 
-def _build_response(*, client: Union[AuthenticatedClient, Client], response: httpx.Response) -> Response[Union[HTTPValidationError, TextMaskResponse]]:
+def _build_response(
+    *, client: Union[AuthenticatedClient, Client], response: httpx.Response
+) -> Response[Union[HTTPValidationError, TextMaskResponse]]:
     return Response(
         status_code=HTTPStatus(response.status_code),
         content=response.content,
@@ -84,9 +76,8 @@ def sync_detailed(
     body: TextMaskRequest,
     create_session: Union[Unset, bool] = False,
     quiet: Union[Unset, bool] = False,
-
 ) -> Response[Union[HTTPValidationError, TextMaskResponse]]:
-    r""" Mask Text
+    r"""Mask Text
 
      Mask PII from text immediately without creating a session.
 
@@ -160,14 +151,12 @@ def sync_detailed(
 
     Returns:
         Response[Union[HTTPValidationError, TextMaskResponse]]
-     """
-
+    """
 
     kwargs = _get_kwargs(
         body=body,
-create_session=create_session,
-quiet=quiet,
-
+        create_session=create_session,
+        quiet=quiet,
     )
 
     response = client.get_httpx_client().request(
@@ -176,15 +165,15 @@ quiet=quiet,
 
     return _build_response(client=client, response=response)
 
+
 def sync(
     *,
     client: AuthenticatedClient,
     body: TextMaskRequest,
     create_session: Union[Unset, bool] = False,
     quiet: Union[Unset, bool] = False,
-
 ) -> Optional[Union[HTTPValidationError, TextMaskResponse]]:
-    r""" Mask Text
+    r"""Mask Text
 
      Mask PII from text immediately without creating a session.
 
@@ -258,16 +247,15 @@ def sync(
 
     Returns:
         Union[HTTPValidationError, TextMaskResponse]
-     """
-
+    """
 
     return sync_detailed(
         client=client,
-body=body,
-create_session=create_session,
-quiet=quiet,
-
+        body=body,
+        create_session=create_session,
+        quiet=quiet,
     ).parsed
+
 
 async def asyncio_detailed(
     *,
@@ -275,9 +263,8 @@ async def asyncio_detailed(
     body: TextMaskRequest,
     create_session: Union[Unset, bool] = False,
     quiet: Union[Unset, bool] = False,
-
 ) -> Response[Union[HTTPValidationError, TextMaskResponse]]:
-    r""" Mask Text
+    r"""Mask Text
 
      Mask PII from text immediately without creating a session.
 
@@ -351,21 +338,18 @@ async def asyncio_detailed(
 
     Returns:
         Response[Union[HTTPValidationError, TextMaskResponse]]
-     """
-
+    """
 
     kwargs = _get_kwargs(
         body=body,
-create_session=create_session,
-quiet=quiet,
-
+        create_session=create_session,
+        quiet=quiet,
     )
 
-    response = await client.get_async_httpx_client().request(
-        **kwargs
-    )
+    response = await client.get_async_httpx_client().request(**kwargs)
 
     return _build_response(client=client, response=response)
+
 
 async def asyncio(
     *,
@@ -373,9 +357,8 @@ async def asyncio(
     body: TextMaskRequest,
     create_session: Union[Unset, bool] = False,
     quiet: Union[Unset, bool] = False,
-
 ) -> Optional[Union[HTTPValidationError, TextMaskResponse]]:
-    r""" Mask Text
+    r"""Mask Text
 
      Mask PII from text immediately without creating a session.
 
@@ -449,13 +432,13 @@ async def asyncio(
 
     Returns:
         Union[HTTPValidationError, TextMaskResponse]
-     """
+    """
 
-
-    return (await asyncio_detailed(
-        client=client,
-body=body,
-create_session=create_session,
-quiet=quiet,
-
-    )).parsed
+    return (
+        await asyncio_detailed(
+            client=client,
+            body=body,
+            create_session=create_session,
+            quiet=quiet,
+        )
+    ).parsed
