@@ -47,6 +47,8 @@ class PruneDataForm(BaseModel):
     delete_orphaned_models: bool = True
     delete_orphaned_notes: bool = True
     delete_orphaned_folders: bool = True
+    # Audio cache cleanup
+    audio_cache_max_age_days: Optional[int] = 30
 
 
 def get_active_file_ids() -> Set[str]:
@@ -425,6 +427,57 @@ def cleanup_orphaned_vector_collections(active_file_ids: Set[str], active_kb_ids
         log.info(f"Deleted {deleted_count} orphaned vector collections")
 
 
+def cleanup_audio_cache(max_age_days: Optional[int] = 30) -> None:
+    """
+    Clean up audio cache files older than specified days.
+    
+    Args:
+        max_age_days: Delete audio files older than this many days. If None, skip audio cleanup.
+    """
+    if max_age_days is None:
+        log.info("Skipping audio cache cleanup (max_age_days is None)")
+        return
+    
+    cutoff_time = time.time() - (max_age_days * 86400)
+    deleted_count = 0
+    total_size_deleted = 0
+    
+    # Audio cache directories
+    audio_dirs = [
+        Path(CACHE_DIR) / "audio" / "speech",
+        Path(CACHE_DIR) / "audio" / "transcriptions"
+    ]
+    
+    for audio_dir in audio_dirs:
+        if not audio_dir.exists():
+            log.debug(f"Audio directory does not exist: {audio_dir}")
+            continue
+        
+        try:
+            for file_path in audio_dir.iterdir():
+                if not file_path.is_file():
+                    continue
+                
+                # Check file age
+                file_mtime = file_path.stat().st_mtime
+                if file_mtime < cutoff_time:
+                    try:
+                        file_size = file_path.stat().st_size
+                        file_path.unlink()
+                        deleted_count += 1
+                        total_size_deleted += file_size
+                        log.debug(f"Deleted old audio file: {file_path}")
+                    except Exception as e:
+                        log.error(f"Failed to delete audio file {file_path}: {e}")
+                        
+        except Exception as e:
+            log.error(f"Error cleaning audio directory {audio_dir}: {e}")
+    
+    if deleted_count > 0:
+        size_mb = total_size_deleted / (1024 * 1024)
+        log.info(f"Deleted {deleted_count} audio cache files ({size_mb:.1f} MB), older than {max_age_days} days")
+
+
 @router.post("/", response_model=bool)
 async def prune_data(form_data: PruneDataForm, user=Depends(get_admin_user)):
     """
@@ -456,6 +509,9 @@ async def prune_data(form_data: PruneDataForm, user=Depends(get_admin_user)):
       - If True: Delete notes from deleted users
     - delete_orphaned_folders: bool = True
       - If True: Delete folders from deleted users
+    - audio_cache_max_age_days: Optional[int] = 30
+      - If None: Skip audio cache cleanup
+      - If >= 0: Delete audio cache files (TTS, STT) older than specified days
     """
     try:
         log.info("Starting data pruning process")
@@ -650,7 +706,11 @@ async def prune_data(form_data: PruneDataForm, user=Depends(get_admin_user)):
         # Clean vector collections
         cleanup_orphaned_vector_collections(final_active_file_ids, final_active_kb_ids)
         
-        # Stage 5: Database optimization
+        # Stage 5: Audio cache cleanup
+        log.info("Cleaning audio cache")
+        cleanup_audio_cache(form_data.audio_cache_max_age_days)
+        
+        # Stage 6: Database optimization
         log.info("Optimizing database")
         
         # Vacuum main database
