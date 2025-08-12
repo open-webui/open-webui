@@ -983,7 +983,7 @@ async def process_chat_payload(request, form_data, metadata, user, model):
 
     user_message = get_last_user_message(form_data["messages"])
 
-    # Web Search Knowledge Grounding - Augment LLM knowledge gaps automatically using Option 2
+    # Web Search Knowledge Grounding - Augment LLM knowledge gaps automatically
     if request.app.state.config.ENABLE_WIKIPEDIA_GROUNDING:
         form_data = await chat_web_grounding_handler(
             request, form_data, extra_params, user
@@ -1040,12 +1040,6 @@ async def process_chat_payload(request, form_data, metadata, user, model):
             form_data = await chat_image_generation_handler(
                 request, form_data, extra_params, user
             )
-
-    # Wikipedia Knowledge Grounding - runs independently of web search when enabled
-    if request.app.state.config.ENABLE_WIKIPEDIA_GROUNDING:
-        form_data = await chat_web_grounding_handler(
-            request, form_data, extra_params, user
-        )
 
     try:
         form_data, flags = await chat_completion_filter_functions_handler(
