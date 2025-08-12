@@ -7,7 +7,9 @@
 		resetChatStatsById,
 		resetAllChatStats,
 		cloneSharedChatById,
-		shareChatById
+		shareChatById,
+		importChat,
+		getChatById
 	} from '$lib/apis/chats';
 	import { goto } from '$app/navigation';
 	import { toast } from 'svelte-sonner';
@@ -342,6 +344,7 @@
 	}
 </style>
 
+<!-- svelte-ignore a11y-no-static-element-interactions -->
 <div
 	class="transition-width duration-200 ease-in-out {$showSidebar
 		? 'md:max-w-[calc(100%-260px)]'
@@ -354,10 +357,29 @@
 
 		const data = e.dataTransfer.getData('text/plain');
 		try {
-			const { type, id } = JSON.parse(data);
+			const { type, id, item } = JSON.parse(data);
 			if (type === 'chat') {
-				selectedChatId = id;
-				showShareChatModal = true;
+				const ownChat = await getChatById(localStorage.token, id).catch(() => null);
+
+				if (ownChat) {
+					selectedChatId = id;
+					showShareChatModal = true;
+				} else {
+					const res = await importChat(
+						localStorage.token,
+						item.chat,
+						item.meta,
+						item.pinned,
+						item.folder_id
+					);
+
+					if (res) {
+						toast.success('Chat imported successfully');
+						chatsUpdated.set(true);
+						selectedChatId = res.id;
+						showShareChatModal = true;
+					}
+				}
 			}
 		} catch (e) {
 			toast.error('Failed to share chat.');
@@ -369,19 +391,6 @@
 		class="flex w-full justify-between items-center p-4 border-b border-gray-100 dark:border-gray-800"
 	>
 		<div class="flex-1 flex items-center">
-			{#if !$showSidebar}
-				<button
-					class="mr-2 cursor-pointer px-2 py-2 flex rounded-xl hover:bg-gray-100 dark:hover:bg-gray-800 transition"
-					on:click={() => {
-						showSidebar.set(!$showSidebar);
-					}}
-					aria-label="Toggle Sidebar"
-				>
-					<div class="m-auto self-center">
-						<MenuLines />
-					</div>
-				</button>
-			{/if}
 			<div class="text-lg font-semibold">{headerText}</div>
 		</div>
 	</div>
@@ -438,12 +447,24 @@
 				<input
 					type="date"
 					class="px-4 py-2 border border-gray-300 rounded-lg dark:bg-gray-800 dark:border-gray-700"
-					bind:value={startDate}
+					value={startDate}
+					on:change={(e) => {
+						startDate = e.target.value;
+						if (endDate && dayjs(startDate).isAfter(dayjs(endDate))) {
+							endDate = startDate;
+						}
+					}}
 				/>
 				<input
 					type="date"
 					class="px-4 py-2 border border-gray-300 rounded-lg dark:bg-gray-800 dark:border-gray-700"
-					bind:value={endDate}
+					value={endDate}
+					on:change={(e) => {
+						endDate = e.target.value;
+						if (startDate && dayjs(endDate).isBefore(dayjs(startDate))) {
+							startDate = endDate;
+						}
+					}}
 				/>
 				<button
 					class="px-4 py-2 bg-gray-200 dark:bg-gray-700 rounded-lg disabled:opacity-50 disabled:cursor-not-allowed whitespace-nowrap"

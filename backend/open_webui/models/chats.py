@@ -313,22 +313,22 @@ class ChatTable:
     ) -> Optional[tuple[ChatModel, bool]]:
         with get_db() as db:
             chat = db.get(Chat, chat_id)
-            if chat.share_id:
-                chat.expires_at = expires_at
-                chat.expire_on_views = expire_on_views
-                chat.is_public = is_public
-                db.commit()
-                db.refresh(chat)
-                return (ChatModel.model_validate(chat), False)
 
-            chat.share_id = share_id if share_id else str(uuid.uuid4())
+            is_new_share = not chat.share_id
+
+            if share_id:
+                chat.share_id = share_id
+            elif not chat.share_id:
+                chat.share_id = str(uuid.uuid4())
+
             chat.expires_at = expires_at
             chat.expire_on_views = expire_on_views
             chat.is_public = is_public
             chat.updated_at = int(time.time())
+
             db.commit()
             db.refresh(chat)
-            return (ChatModel.model_validate(chat), True)
+            return (ChatModel.model_validate(chat), is_new_share)
 
     def insert_shared_chat_by_chat_id(
         self, chat_id: str, share_id: Optional[str] = None
@@ -718,6 +718,14 @@ class ChatTable:
                     return None
         except Exception as e:
             log.error(f"Error incrementing view count for share_id {id}: {e}")
+            return None
+
+    def get_chat_by_share_id_unrestricted(self, id: str) -> Optional[ChatModel]:
+        try:
+            with get_db() as db:
+                chat = db.query(Chat).filter_by(share_id=id).first()
+                return ChatModel.model_validate(chat) if chat else None
+        except Exception:
             return None
 
     def increment_clone_count_by_id(

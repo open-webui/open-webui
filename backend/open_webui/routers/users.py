@@ -137,6 +137,7 @@ class SharingPermissions(BaseModel):
     public_knowledge: bool = True
     public_prompts: bool = True
     public_tools: bool = True
+    public_chat: bool = True
     shared_chats: bool = False
 
 
@@ -149,7 +150,7 @@ class ChatPermissions(BaseModel):
     delete: bool = True
     edit: bool = True
     share: bool = True
-    clone: bool
+    clone: bool = True
     export: bool = True
     stt: bool = True
     tts: bool = True

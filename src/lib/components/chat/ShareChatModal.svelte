@@ -4,7 +4,8 @@
 		models,
 		config,
 		sharedChats as sharedChatsStore,
-		sharedChatsUpdated
+		sharedChatsUpdated,
+		user
 	} from '$lib/stores';
 
 	import { toast } from 'svelte-sonner';
@@ -29,6 +30,16 @@
 	import dayjs from 'dayjs';
 	import customParseFormat from 'dayjs/plugin/customParseFormat';
 	dayjs.extend(customParseFormat);
+
+	const getRandomGradient = () => {
+		const randomColor = () => '#' + Math.floor(Math.random() * 16777215).toString(16).padStart(6, '0');
+		const color1 = randomColor();
+		const color2 = randomColor();
+		return `linear-gradient(45deg, ${color1}, ${color2})`;
+	};
+
+	let previewGradient = '';
+	let downloadGradient = '';
 
 	const formatTimeRemaining = (expires_at) => {
 		const now = new Date();
@@ -100,6 +111,7 @@
 	let initialExpireOnViewsCount = 1;
 	let is_public = false;
 	let initial_is_public = false;
+	let useGradient = true;
 	let currentViews = 0;
 	const i18n = getContext('i18n');
 
@@ -271,11 +283,43 @@
 
 	const generateQrCodesImmediate = async (url) => {
 		if (url) {
-			previewQrCodeUrl = await QRCode.toDataURL(url, { width: 192 });
-			downloadQrCodeUrl = await QRCode.toDataURL(url, { width: 512 });
+			if (useGradient) {
+				const generateTransparentQRCode = async (url, width) => {
+					return await QRCode.toDataURL(url, {
+						width,
+						color: {
+							dark: '#000000',
+							light: '#00000000' // Transparent background
+						}
+					});
+				};
+
+				previewQrCodeUrl = await generateTransparentQRCode(url, 192);
+				downloadQrCodeUrl = await generateTransparentQRCode(url, 512);
+
+				previewGradient = getRandomGradient();
+				downloadGradient = getRandomGradient();
+			} else {
+				previewQrCodeUrl = await QRCode.toDataURL(url, {
+					width: 192,
+					color: {
+						light: '#FFFFFF' // White background
+					}
+				});
+				downloadQrCodeUrl = await QRCode.toDataURL(url, {
+					width: 512,
+					color: {
+						light: '#FFFFFF' // White background
+					}
+				});
+				previewGradient = '';
+				downloadGradient = '';
+			}
 		} else {
 			previewQrCodeUrl = '';
 			downloadQrCodeUrl = '';
+			previewGradient = '';
+			downloadGradient = '';
 		}
 	};
 
@@ -368,15 +412,6 @@
 				}
 			}
 
-			if (initial_share_id && (idChanged || expirationChanged)) {
-				const res = await deleteSharedChatById(localStorage.token, chatId);
-				if (res) {
-					toast.success($i18n.t('Old share link deleted successfully'));
-				} else {
-					toast.error($i18n.t('Failed to delete old share link'));
-					return null;
-				}
-			}
 
 			const sharedChat = await shareChatById(
 				localStorage.token,
@@ -464,7 +499,7 @@
 					share_id = chat.share_id ?? '';
 					initial_share_id = share_id;
 
-					generateQrCodesImmediate(share_id ? `${window.location.origin}/s/${share_id}` : null);
+					generateQrCodesDebounced(share_id ? `${window.location.origin}/s/${share_id}` : null);
 
 					const sharedChatFromStore = $sharedChatsStore.find((c) => c.id === _chat.id);
 					if (sharedChatFromStore) {
@@ -488,7 +523,7 @@
 						expireOnViewsCount = 1;
 					}
 
-					is_public = _chat.is_public ?? false;
+					is_public = _chat.share_id ? _chat.is_public ?? false : false;
 					initial_is_public = is_public;
 
 					// Snapshot the newly set initial state
@@ -541,6 +576,12 @@
 		if (intervalId) clearInterval(intervalId);
 		timeRemaining = '';
 	}
+
+	$: if ($user && ($user.role !== 'admin' && !($user.permissions.sharing?.public_chat ?? false))) {
+		is_public = false;
+	}
+
+	$: useGradient, generateQrCodesDebounced(shareUrl);
 </script>
 
 <Modal bind:show size="md">
@@ -599,19 +640,24 @@
 
 		{#if chat}
 			<div class="px-5 pt-4 pb-5 w-full flex flex-col">
-				<div class="mt-4">
-					<div class="flex items-center justify-between">
-						<label for="is_public" class="block text-sm font-medium text-gray-700 dark:text-gray-300">
-							{$i18n.t('Public Access')}
-						</label>
-						<Switch bind:state={is_public} tooltip={true} />
+				{#if $user.role === 'admin' || ($user.permissions.sharing?.public_chat ?? false)}
+					<div class="mt-4">
+						<div class="flex items-center justify-between">
+							<label
+								for="is_public"
+								class="block text-sm font-medium text-gray-700 dark:text-gray-300"
+							>
+								{$i18n.t('Public Access')}
+							</label>
+							<Switch bind:state={is_public} tooltip={true} />
+						</div>
+						<p class="text-xs text-gray-500 dark:text-gray-400 mt-1">
+							{$i18n.t(
+								'When enabled, anyone with the link can view the chat. When disabled, only logged-in users can view the chat.'
+							)}
+						</p>
 					</div>
-					<p class="text-xs text-gray-500 dark:text-gray-400 mt-1">
-						{$i18n.t(
-							'When enabled, anyone with the link can view the chat. When disabled, only logged-in users can view the chat.'
-						)}
-					</p>
-				</div>
+				{/if}
 
 				<div class="mt-4 relative" use:clickOutside>
 					<label for="expiration" class="block text-sm font-medium text-gray-700 dark:text-gray-300"
@@ -778,9 +824,6 @@
 									class="flex items-center justify-center p-2 rounded-lg dark:text-white bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors"
 									on:click={() => {
 										share_id = uuidv4();
-										generateQrCodesImmediate(
-											share_id ? `${window.location.origin}/s/${share_id}` : null
-										);
 									}}
 								>
 									<ArrowPath class="size-5" />
@@ -814,7 +857,10 @@
 										if (res) {
 											chat = await getChatById(localStorage.token, chatId);
 											share_id = '';
-											qrCodeUrl = '';
+											initial_share_id = '';
+											previewQrCodeUrl = '';
+											downloadQrCodeUrl = '';
+											is_public = false;
 											toast.success($i18n.t('Link deleted successfully'));
 											sharedChatsUpdated.set(true);
 											if (closeOnDelete) {
@@ -842,16 +888,31 @@
 				</div>
 
 				<div class="my-4 flex flex-col items-center justify-center">
+					<div class="flex items-center justify-between w-full">
+						<label
+							for="is_public"
+							class="block text-sm font-medium text-gray-700 dark:text-gray-300"
+						>
+							{$i18n.t('Gradient QR Code')}
+						</label>
+						<Switch bind:state={useGradient} tooltip={true} />
+					</div>
 					{#if previewQrCodeUrl}
 						<a
-							class="qr-code-container"
+							class="qr-code-container mt-4"
 							href={downloadQrCodeUrl}
 							download="qrcode.png"
 							on:click={() => {
 								toast.success($i18n.t('Downloading QR code...'));
 							}}
 						>
-							<img class="w-48 h-48 rounded-md" src={previewQrCodeUrl} alt="QR Code" />
+							{#if useGradient}
+								<div class="w-48 h-48 rounded-md" style="background: {previewGradient};">
+									<img class="w-full h-full" src={previewQrCodeUrl} alt="QR Code" />
+								</div>
+							{:else}
+								<img class="w-48 h-48 rounded-md" src={previewQrCodeUrl} alt="QR Code" />
+							{/if}
 						</a>
 					{/if}
 				</div>

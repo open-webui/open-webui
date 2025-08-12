@@ -859,7 +859,10 @@ async def share_chat_by_id(
                     status_code=status.HTTP_400_BAD_REQUEST,
                     detail="Share ID cannot contain slashes.",
                 )
-            if Chats.get_chat_by_share_id(form_data.share_id):
+            chat_with_same_share_id = Chats.get_chat_by_share_id_unrestricted(
+                form_data.share_id
+            )
+            if chat_with_same_share_id and chat_with_same_share_id.id != id:
                 raise HTTPException(
                     status_code=status.HTTP_400_BAD_REQUEST,
                     detail="Share ID already exists.",

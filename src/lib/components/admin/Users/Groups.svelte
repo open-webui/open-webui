@@ -63,6 +63,7 @@
 			public_knowledge: false,
 			public_prompts: false,
 			public_tools: false,
+			public_chat: true,
 			shared_chats: false
 		},
 		chat: {
@@ -74,6 +75,7 @@
 			delete: true,
 			edit: true,
 			share: true,
+			clone: true,
 			export: true,
 			stt: true,
 			tts: true,

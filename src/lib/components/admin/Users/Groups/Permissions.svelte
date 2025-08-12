@@ -19,6 +19,7 @@
 			public_knowledge: false,
 			public_prompts: false,
 			public_tools: false,
+			public_chat: true,
 			shared_chats: false
 		},
 		chat: {
@@ -251,6 +252,7 @@
 			</div>
 			<Switch bind:state={permissions.sharing.public_tools} />
 		</div>
+
 		{#if $config.features.enable_shared_chats_access}
 			<div class="  flex w-full justify-between my-2 pr-2">
 				<div class=" self-center text-xs font-medium">
@@ -258,6 +260,14 @@
 				</div>
 				<Switch bind:state={permissions.sharing.shared_chats} />
 			</div>
+			{#if permissions.sharing.shared_chats}
+				<div class="  flex w-full justify-between my-2 pr-2">
+					<div class=" self-center text-xs font-medium">
+						{$i18n.t('Allow Public Chat Sharing')}
+					</div>
+					<Switch bind:state={permissions.sharing.public_chat} />
+				</div>
+			{/if}
 		{/if}
 	</div>
 
