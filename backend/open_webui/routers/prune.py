@@ -4,6 +4,7 @@ import os
 import shutil
 import json
 import re
+import sqlite3
 from typing import Optional, Set
 from pathlib import Path
 
@@ -320,7 +321,6 @@ def cleanup_orphaned_vector_collections(
 
     uuid_to_collection = {}
     try:
-        import sqlite3
 
         with sqlite3.connect(str(chroma_db_path)) as conn:
             collection_id_to_name = {}
@@ -660,7 +660,6 @@ async def prune_data(form_data: PruneDataForm, user=Depends(get_admin_user)):
             chroma_db_path = Path(CACHE_DIR).parent / "vector_db" / "chroma.sqlite3"
             if chroma_db_path.exists():
                 try:
-                    import sqlite3
 
                     with sqlite3.connect(str(chroma_db_path)) as conn:
                         conn.execute("VACUUM")
