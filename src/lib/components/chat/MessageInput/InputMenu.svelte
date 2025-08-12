@@ -23,6 +23,7 @@
 	export let screenCaptureHandler: Function;
 	export let uploadFilesHandler: Function;
 	export let inputFilesHandler: Function;
+	export let addKnowledgeHandler: Function;
 
 	export let uploadGoogleDriveHandler: Function;
 	export let uploadOneDriveHandler: Function;
@@ -190,6 +191,26 @@
 					<div class="line-clamp-1">{$i18n.t('Upload Temporary Files')}</div>
 				</DropdownMenu.Item>
 			</Tooltip>
+
+			<Tooltip
+				content={!fileUploadEnabled ? $i18n.t('You do not have permission to upload files.') : ''}
+				className="w-full"
+			>
+				<DropdownMenu.Item
+					class="flex gap-2 items-center px-3 py-2 text-sm  font-medium cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800  rounded-xl {!fileUploadEnabled
+						? 'opacity-50'
+						: ''}"
+					on:click={() => {
+						if (fileUploadEnabled) {
+							addKnowledgeHandler()
+						}
+					}}
+				>
+					<CameraSolid />
+					<div class=" line-clamp-1">{$i18n.t('Use Knowledge!')}</div>
+				</DropdownMenu.Item>
+			</Tooltip>
+			
 
 			{#if $config?.features?.enable_google_drive_integration}
 				<DropdownMenu.Item

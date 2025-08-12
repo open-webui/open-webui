@@ -124,7 +124,9 @@
 			behavior: 'smooth'
 		});
 	};
-
+	const addKnowledgeHandler = async (c: string) => {
+		prompt = '#';
+	};
 	const screenCaptureHandler = async () => {
 		try {
 			// Request screen media
@@ -1038,6 +1040,7 @@
 										<InputMenu
 											bind:selectedToolIds
 											{screenCaptureHandler}
+											{addKnowledgeHandler}
 											{inputFilesHandler}
 											uploadFilesHandler={() => {
 												filesInputElement.click();
