@@ -329,6 +329,7 @@ class ChatTable:
             chat.expires_at = expires_at
             chat.expire_on_views = expire_on_views
             chat.is_public = is_public
+            chat.revoked_at = None
             chat.updated_at = int(time.time())
 
             db.commit()
