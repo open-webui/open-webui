@@ -63,24 +63,47 @@ class JSONField(types.TypeDecorator):
 def handle_peewee_migration(DATABASE_URL):
     db = None
     try:
+        log.info("🔍 DEBUG: Starting Peewee migration process...")
+        
         # Replace the postgresql:// with postgres:// to handle the peewee migration
-        db = register_connection(DATABASE_URL.replace("postgresql://", "postgres://"))
+        db_url = DATABASE_URL.replace("postgresql://", "postgres://")
+        log.info(f"🔍 DEBUG: Migration DB URL: {db_url[:60]}...")
+        
+        log.info("🔍 DEBUG: Attempting database connection for migration...")
+        db = register_connection(db_url)
+        log.info("🔍 DEBUG: Database connection established for migration")
+        
         migrate_dir = OPEN_WEBUI_DIR / "internal" / "migrations"
+        log.info(f"🔍 DEBUG: Migration directory: {migrate_dir}")
+        log.info(f"🔍 DEBUG: Migration directory exists: {migrate_dir.exists()}")
+        
+        if migrate_dir.exists():
+            migration_files = list(migrate_dir.glob("*.py"))
+            log.info(f"🔍 DEBUG: Found {len(migration_files)} migration files")
+        
+        log.info("🔍 DEBUG: Creating migration router...")
         router = Router(db, logger=log, migrate_dir=migrate_dir)
+        
+        log.info("🔍 DEBUG: Starting migration router execution...")
         router.run()
+        log.info("🔍 DEBUG: Migration completed successfully")
+        
         db.close()
 
     except Exception as e:
-        log.error(f"Failed to initialize the database connection: {e}")
+        log.error(f"🔍 DEBUG: Failed to initialize the database connection: {e}")
+        log.exception("🔍 DEBUG: Full migration error traceback:")
         raise
     finally:
         # Properly closing the database connection
         if db and not db.is_closed():
+            log.info("🔍 DEBUG: Closing database connection...")
             db.close()
 
         # Assert if db connection has been closed
         if db:
             assert db.is_closed(), "Database connection is still open."
+            log.info("🔍 DEBUG: Database connection closed successfully")
 
 
 handle_peewee_migration(DATABASE_URL)
