@@ -57,6 +57,8 @@ from starlette.responses import Response, StreamingResponse
 from open_webui.utils import logger
 from open_webui.utils.audit import AuditLevel, AuditLoggingMiddleware
 from open_webui.utils.logger import start_logger
+logging.basicConfig(stream=sys.stdout, level=logging.INFO)
+log = logging.getLogger(__name__)
 log.info("🚀 MAIN: About to import from socket.main...")
 from open_webui.socket.main import (
     app as socket_app,
