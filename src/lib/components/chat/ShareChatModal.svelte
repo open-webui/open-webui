@@ -849,7 +849,7 @@
 									<Eye class="size-5" />
 								</a>
 							</Tooltip>
-							<Tooltip content={$i18n.t('Delete Link')}>
+							<Tooltip content={$i18n.t('Revoke Link')}>
 								<button
 									class="flex items-center justify-center p-2 rounded-lg text-red-600 dark:text-red-500 bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors"
 									on:click={async () => {
