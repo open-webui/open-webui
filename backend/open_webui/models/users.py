@@ -14,6 +14,7 @@ from sqlalchemy import or_
 # User DB Schema
 ####################
 
+
 class User(Base):
     __tablename__ = "user"
 
@@ -58,7 +59,10 @@ class User(Base):
     # The same plaintext DEK, but encrypted with a master KMS Customer-Managed Key (CMK).
     # This serves as the "break-glass" disaster recovery mechanism for user data.
     # TODO: This field will store actual KMS ciphertext when deployed to AWS and integrated with KMS.
-    kms_encrypted_dek = Column(LargeBinary, nullable=True)  # STUB - For future KMS integration
+    kms_encrypted_dek = Column(
+        LargeBinary, nullable=True
+    )  # STUB - For future KMS integration
+
 
 class UserSettings(BaseModel):
     ui: Optional[dict] = {}
@@ -89,16 +93,18 @@ class UserModel(BaseModel):
     # Fields for per-user encryption.
     # These are stored as bytes in the DB; Pydantic model represents them as Optional[bytes].
     # TODO: Remove 'user_key' from this model when it's removed from the User DB model (after client certs).
-    user_key: Optional[bytes] = None                # TEMPORARY
+    user_key: Optional[bytes] = None  # TEMPORARY
     salt: Optional[bytes] = None
     user_encrypted_dek: Optional[bytes] = None
-    kms_encrypted_dek: Optional[bytes] = None       # STUB for KMS
+    kms_encrypted_dek: Optional[bytes] = None  # STUB for KMS
 
     model_config = ConfigDict(
-        from_attributes=True, # orm_mode = True in Pydantic V1
+        from_attributes=True,  # orm_mode = True in Pydantic V1
         json_encoders={
-            bytes: lambda b: base64.b64encode(b).decode('utf-8') if b is not None else None
-        }
+            bytes: lambda b: (
+                base64.b64encode(b).decode("utf-8") if b is not None else None
+            )
+        },
     )
 
 
@@ -143,18 +149,17 @@ class UserUpdateForm(BaseModel):
 class UsersTable:
     def insert_new_user(
         self,
-        id: str,                  # This is now the derived UserID (HMAC of email)
+        id: str,  # This is now the derived UserID (HMAC of email)
         name: str,
         email: str,
         profile_image_url: str = "/user.png",
         role: str = "pending",
         oauth_sub: Optional[str] = None,
-
         # New parameters for encryption fields
         salt: Optional[bytes] = None,
-        user_key: Optional[bytes] = None,               # TEMPORARY - Raw UserKey
+        user_key: Optional[bytes] = None,  # TEMPORARY - Raw UserKey
         user_encrypted_dek: Optional[bytes] = None,
-        kms_encrypted_dek: Optional[bytes] = None,      # STUB for KMS
+        kms_encrypted_dek: Optional[bytes] = None,  # STUB for KMS
     ) -> Optional[UserModel]:
         # Inserts a new user into the database with all associated information,
         # including fields required for per-user encryption.
@@ -162,34 +167,34 @@ class UsersTable:
         # The 'user_key' is stored temporarily and should be removed in later stages.
         with get_db() as db:
             user_data = {
-                    "id": id,
-                    "name": name,
-                    "email": email,
-                    "role": role,
-                    "profile_image_url": profile_image_url,
-                    "last_active_at": int(time.time()),
-                    "created_at": int(time.time()),
-                    "updated_at": int(time.time()),
-                    "oauth_sub": oauth_sub,
+                "id": id,
+                "name": name,
+                "email": email,
+                "role": role,
+                "profile_image_url": profile_image_url,
+                "last_active_at": int(time.time()),
+                "created_at": int(time.time()),
+                "updated_at": int(time.time()),
+                "oauth_sub": oauth_sub,
                 # Encryption-related fields
                 "salt": salt,
-                "user_key": user_key, # TEMPORARY
+                "user_key": user_key,  # TEMPORARY
                 "user_encrypted_dek": user_encrypted_dek,
-                "kms_encrypted_dek": kms_encrypted_dek, # STUB
+                "kms_encrypted_dek": kms_encrypted_dek,  # STUB
             }
-            
+
             # Create Pydantic model instance for validation and to ensure all fields are present/defaulted
             user_model_instance = UserModel(**user_data)
-            
+
             # Create SQLAlchemy model instance using the Pydantic model's dump.
             # exclude_none=True ensures that fields not provided (and thus None) are not
             # passed to the SQLAlchemy model if they are not explicitly nullable there or have server defaults.
             db_user = User(**user_model_instance.model_dump(exclude_none=True))
-            
+
             db.add(db_user)
             db.commit()
             db.refresh(db_user)
-            
+
             # Return the Pydantic model instance, which is useful for API responses.
             return UserModel.model_validate(db_user)
 

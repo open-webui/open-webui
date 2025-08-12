@@ -2,7 +2,13 @@ from logging.config import fileConfig
 
 from alembic import context
 from open_webui.models.auths import Auth
-from open_webui.env import DATABASE_URL
+from open_webui.env import (
+    DATABASE_URL,
+    ENABLE_AWS_RDS_IAM,
+    AWS_REGION,
+    PG_SSLMODE,
+    PG_SSLROOTCERT,
+)
 from sqlalchemy import engine_from_config, pool
 
 # this is the Alembic Config object, which provides
@@ -25,9 +31,43 @@ target_metadata = Auth.metadata
 # my_important_option = config.get_main_option("my_important_option")
 # ... etc.
 
+# Build URL with optional IAM token
 DB_URL = DATABASE_URL
+if ENABLE_AWS_RDS_IAM and DB_URL and DB_URL.startswith("postgresql://"):
+    try:
+        import boto3
+        from urllib.parse import urlparse, quote
+
+        parsed = urlparse(DB_URL)
+        username = parsed.username or ""
+        host = parsed.hostname
+        port = parsed.port or 5432
+        if not AWS_REGION:
+            raise ValueError("AWS_REGION must be set when ENABLE_AWS_RDS_IAM is true")
+        rds = boto3.client("rds", region_name=AWS_REGION)
+        token = rds.generate_db_auth_token(
+            DBHostname=host, Port=port, DBUsername=username
+        )
+        safe_user = quote(username) if username else ""
+        new_netloc = f"{safe_user}:{quote(token)}@{host}:{port}"
+        DB_URL = parsed._replace(netloc=new_netloc).geturl()
+    except Exception as e:
+        import logging
+
+        logging.getLogger(__name__).exception(
+            f"Failed to generate AWS RDS IAM token: {e}"
+        )
+        raise
 
 if DB_URL:
+    # Include SSL params inline to avoid ~/.postgresql lookups
+    if PG_SSLMODE and "sslmode=" not in DB_URL:
+        sep = "&" if "?" in DB_URL else "?"
+        DB_URL = f"{DB_URL}{sep}sslmode={PG_SSLMODE}"
+    if PG_SSLROOTCERT and "sslrootcert=" not in DB_URL:
+        sep = "&" if "?" in DB_URL else "?"
+        DB_URL = f"{DB_URL}{sep}sslrootcert={PG_SSLROOTCERT}"
+
     config.set_main_option("sqlalchemy.url", DB_URL.replace("%", "%%"))
 
 

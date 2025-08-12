@@ -34,7 +34,7 @@ RUN npm ci
 
 COPY . .
 ENV APP_BUILD_HASH=${BUILD_HASH}
-RUN NODE_OPTIONS=--max-old-space-size=8192 npm run build
+RUN NODE_OPTIONS=--max-old-space-size=12288 npm run build
 
 ######## WebUI backend ########
 FROM python:3.11-slim-bookworm AS base
@@ -116,7 +116,12 @@ RUN if [ "$USE_OLLAMA" = "true" ]; then \
     # for RAG OCR
     apt-get install -y --no-install-recommends ffmpeg libsm6 libxext6 && \
     # install helper tools
-    apt-get install -y --no-install-recommends curl jq && \
+    apt-get install -y --no-install-recommends curl jq unzip && \
+    # install AWS CLI v2
+    curl "https://awscli.amazonaws.com/awscli-exe-linux-$(uname -m).zip" -o "awscliv2.zip" && \
+    unzip awscliv2.zip && \
+    ./aws/install && \
+    rm -rf aws awscliv2.zip && \
     # install ollama
     curl -fsSL https://ollama.com/install.sh | sh && \
     # cleanup
@@ -124,10 +129,15 @@ RUN if [ "$USE_OLLAMA" = "true" ]; then \
     else \
     apt-get update && \
     # Install pandoc, netcat and gcc
-    apt-get install -y --no-install-recommends git build-essential pandoc gcc netcat-openbsd curl jq && \
+    apt-get install -y --no-install-recommends git build-essential pandoc gcc netcat-openbsd curl jq unzip && \
     apt-get install -y --no-install-recommends gcc python3-dev && \
     # for RAG OCR
     apt-get install -y --no-install-recommends ffmpeg libsm6 libxext6 && \
+    # install AWS CLI v2
+    curl "https://awscli.amazonaws.com/awscli-exe-linux-$(uname -m).zip" -o "awscliv2.zip" && \
+    unzip awscliv2.zip && \
+    ./aws/install && \
+    rm -rf aws awscliv2.zip && \
     # cleanup
     rm -rf /var/lib/apt/lists/*; \
     fi
@@ -166,6 +176,17 @@ COPY --chown=$UID:$GID --from=build /app/package.json /app/package.json
 # copy backend files
 COPY --chown=$UID:$GID ./backend .
 
+# Copy AWS RDS certificate bundle for SSL connections (downloaded by CI/CD)  
+# This enables certificate validation for Aurora PostgreSQL connections
+RUN mkdir -p /app/.postgresql
+COPY aws-rds-ca-cert.pem /app/.postgresql/root.crt
+RUN chmod 644 /app/.postgresql/root.crt
+# Debug: Verify certificate file exists and is readable
+RUN echo "🔍 Certificate debug info:" && ls -la /app/.postgresql/ && ls -la /app/.postgresql/ && head -3 /app/.postgresql/root.crt
+
+# Fix static file permissions to prevent permission denied errors
+RUN chown -R $UID:$GID /app/backend/open_webui/static/ || echo "Static directory not found"
+
 EXPOSE 8080
 
 HEALTHCHECK CMD curl --silent --fail http://localhost:${PORT:-8080}/health | jq -ne 'input.status == true' || exit 1
@@ -181,7 +202,7 @@ USER root
 COPY backend/docker-entrypoint.sh /app/backend/docker-entrypoint.sh
 
 # Switch back to the non-root user
-USER 1000
+USER $UID:$GID
 
 # Generate a temporary IAM database auth token
 # ENTRYPOINT ["/app/docker-entrypoint.sh"]

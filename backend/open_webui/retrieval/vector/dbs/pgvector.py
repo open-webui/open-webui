@@ -40,6 +40,7 @@ from open_webui.config import (
 )
 
 from open_webui.env import SRC_LOG_LEVELS
+from open_webui.env import ENABLE_AWS_RDS_IAM, AWS_REGION, PG_SSLMODE, PG_SSLROOTCERT
 
 VECTOR_LENGTH = PGVECTOR_INITIALIZE_MAX_VECTOR_LENGTH
 Base = declarative_base()
@@ -80,9 +81,42 @@ class PgvectorClient(VectorDBBase):
 
             self.session = Session
         else:
-            engine = create_engine(
-                PGVECTOR_DB_URL, pool_pre_ping=True, poolclass=NullPool
-            )
+            # Adjust URL for IAM token and SSL if needed
+            vec_url = PGVECTOR_DB_URL
+            if ENABLE_AWS_RDS_IAM and vec_url.startswith("postgresql://"):
+                try:
+                    import boto3
+                    from urllib.parse import urlparse, quote
+
+                    parsed = urlparse(vec_url)
+                    username = parsed.username or ""
+                    host = parsed.hostname
+                    port = parsed.port or 5432
+                    if not AWS_REGION:
+                        raise ValueError(
+                            "AWS_REGION must be set when ENABLE_AWS_RDS_IAM is true"
+                        )
+                    rds = boto3.client("rds", region_name=AWS_REGION)
+                    token = rds.generate_db_auth_token(
+                        DBHostname=host, Port=port, DBUsername=username
+                    )
+                    safe_user = quote(username) if username else ""
+                    vec_url = parsed._replace(
+                        netloc=f"{safe_user}:{quote(token)}@{host}:{port}"
+                    ).geturl()
+                except Exception as e:
+                    log.exception(f"Failed to generate IAM token for PGVector DB: {e}")
+                    raise
+
+            # Append SSL params to URL to avoid libpq default lookup
+            if PG_SSLMODE and "sslmode=" not in vec_url:
+                sep = "&" if "?" in vec_url else "?"
+                vec_url = f"{vec_url}{sep}sslmode={PG_SSLMODE}"
+            if PG_SSLROOTCERT and "sslrootcert=" not in vec_url:
+                sep = "&" if "?" in vec_url else "?"
+                vec_url = f"{vec_url}{sep}sslrootcert={PG_SSLROOTCERT}"
+
+            engine = create_engine(vec_url, pool_pre_ping=True, poolclass=NullPool)
             SessionLocal = sessionmaker(
                 autocommit=False, autoflush=False, bind=engine, expire_on_commit=False
             )

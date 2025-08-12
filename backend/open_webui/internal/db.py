@@ -13,7 +13,19 @@ from open_webui.env import (
     DATABASE_POOL_RECYCLE,
     DATABASE_POOL_SIZE,
     DATABASE_POOL_TIMEOUT,
+    ENABLE_AWS_RDS_IAM,
+    AWS_REGION,
+    PG_SSLMODE,
+    PG_SSLROOTCERT,
 )
+
+# CRITICAL DEBUG: Check SSL env vars at module import time
+log = logging.getLogger(__name__)
+log.setLevel(SRC_LOG_LEVELS["DB"])
+log.info(
+    f"🔍 CRITICAL DEBUG DB.PY IMPORT: PG_SSLMODE={PG_SSLMODE}, PG_SSLROOTCERT={PG_SSLROOTCERT}"
+)
+log.info(f"🔍 CRITICAL DEBUG DB.PY IMPORT: DATABASE_URL={DATABASE_URL[:50]}...")
 from peewee_migrate import Router
 from sqlalchemy import Dialect, create_engine, MetaData, types
 from sqlalchemy.ext.declarative import declarative_base
@@ -51,31 +63,93 @@ class JSONField(types.TypeDecorator):
 # Workaround to handle the peewee migration
 # This is required to ensure the peewee migration is handled before the alembic migration
 def handle_peewee_migration(DATABASE_URL):
-    # db = None
+    db = None
     try:
+        log.info("🔍 DEBUG: Starting Peewee migration process...")
+
         # Replace the postgresql:// with postgres:// to handle the peewee migration
-        db = register_connection(DATABASE_URL.replace("postgresql://", "postgres://"))
+        db_url = DATABASE_URL.replace("postgresql://", "postgres://")
+        log.info(f"🔍 DEBUG: Migration DB URL: {db_url[:60]}...")
+
+        log.info("🔍 DEBUG: Attempting database connection for migration...")
+        db = register_connection(db_url)
+        log.info("🔍 DEBUG: Database connection established for migration")
+
         migrate_dir = OPEN_WEBUI_DIR / "internal" / "migrations"
+        log.info(f"🔍 DEBUG: Migration directory: {migrate_dir}")
+        log.info(f"🔍 DEBUG: Migration directory exists: {migrate_dir.exists()}")
+
+        if migrate_dir.exists():
+            migration_files = list(migrate_dir.glob("*.py"))
+            log.info(f"🔍 DEBUG: Found {len(migration_files)} migration files")
+
+        log.info("🔍 DEBUG: Creating migration router...")
         router = Router(db, logger=log, migrate_dir=migrate_dir)
+
+        log.info("🔍 DEBUG: Starting migration router execution...")
         router.run()
+        log.info("🔍 DEBUG: Migration completed successfully")
+
         db.close()
 
     except Exception as e:
-        log.error(f"Failed to initialize the database connection: {e}")
+        log.error(f"🔍 DEBUG: Failed to initialize the database connection: {e}")
+        log.exception("🔍 DEBUG: Full migration error traceback:")
         raise
     finally:
         # Properly closing the database connection
         if db and not db.is_closed():
+            log.info("🔍 DEBUG: Closing database connection...")
             db.close()
 
         # Assert if db connection has been closed
-        assert db.is_closed(), "Database connection is still open."
+        if db:
+            assert db.is_closed(), "Database connection is still open."
+            log.info("🔍 DEBUG: Database connection closed successfully")
 
 
 handle_peewee_migration(DATABASE_URL)
 
 
-SQLALCHEMY_DATABASE_URL = DATABASE_URL
+# Build SQLAlchemy connect args for SSL and IAM token if enabled
+sqlalchemy_connect_args = {}
+
+# Force SSL parameters if provided to avoid libpq trying default ~/.postgresql
+if PG_SSLMODE:
+    sqlalchemy_connect_args.setdefault("connect_args", {})
+    sqlalchemy_connect_args["connect_args"]["sslmode"] = PG_SSLMODE
+if PG_SSLROOTCERT:
+    sqlalchemy_connect_args.setdefault("connect_args", {})
+    sqlalchemy_connect_args["connect_args"]["sslrootcert"] = PG_SSLROOTCERT
+
+# IAM auth: generate token as password when enabled
+sqlalchemy_url = DATABASE_URL
+if ENABLE_AWS_RDS_IAM and sqlalchemy_url.startswith("postgresql://"):
+    try:
+        import boto3
+        from urllib.parse import urlparse, quote
+
+        parsed = urlparse(sqlalchemy_url)
+        username = parsed.username or ""
+        host = parsed.hostname
+        port = parsed.port or 5432
+        if not AWS_REGION:
+            raise ValueError("AWS_REGION must be set when ENABLE_AWS_RDS_IAM is true")
+        rds = boto3.client("rds", region_name=AWS_REGION)
+        token = rds.generate_db_auth_token(
+            DBHostname=host, Port=port, DBUsername=username
+        )
+        # Reconstruct URL with token as password and ensure empty password is ok
+        safe_user = quote(username) if username else ""
+        safe_host = host
+        new_netloc = f"{safe_user}:{quote(token)}@{safe_host}:{port}"
+        sqlalchemy_url = parsed._replace(netloc=new_netloc).geturl()
+        log.info("Using AWS RDS IAM token for PostgreSQL authentication")
+    except Exception as e:
+        log.exception(f"Failed to generate AWS RDS IAM token: {e}")
+        raise
+
+SQLALCHEMY_DATABASE_URL = sqlalchemy_url
 if "sqlite" in SQLALCHEMY_DATABASE_URL:
     engine = create_engine(
         SQLALCHEMY_DATABASE_URL, connect_args={"check_same_thread": False}
@@ -90,10 +164,14 @@ else:
             pool_recycle=DATABASE_POOL_RECYCLE,
             pool_pre_ping=True,
             poolclass=QueuePool,
+            **sqlalchemy_connect_args,
         )
     else:
         engine = create_engine(
-            SQLALCHEMY_DATABASE_URL, pool_pre_ping=True, poolclass=NullPool
+            SQLALCHEMY_DATABASE_URL,
+            pool_pre_ping=True,
+            poolclass=NullPool,
+            **sqlalchemy_connect_args,
         )
 
 

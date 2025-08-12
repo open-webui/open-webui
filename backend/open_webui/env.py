@@ -312,6 +312,20 @@ else:
     except Exception:
         DATABASE_POOL_RECYCLE = 3600
 
+# New: AWS RDS IAM & Postgres SSL configuration
+ENABLE_AWS_RDS_IAM = os.environ.get("ENABLE_AWS_RDS_IAM", "False").lower() == "true"
+AWS_REGION = os.environ.get("AWS_REGION", "")
+# Allow both PG_* and POSTGRES_* naming
+PG_SSLMODE = os.environ.get(
+    "PG_SSLMODE",
+    os.environ.get("POSTGRES_SSLMODE", "verify-full"),
+)
+# PostgreSQL SSL root certificate path
+PG_SSLROOTCERT = os.environ.get(
+    "PG_SSLROOTCERT",
+    os.environ.get("POSTGRES_SSLROOTCERT", ""),
+)
+
 RESET_CONFIG_ON_START = (
     os.environ.get("RESET_CONFIG_ON_START", "False").lower() == "true"
 )
