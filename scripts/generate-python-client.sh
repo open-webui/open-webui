@@ -30,3 +30,4 @@ cp -R "$STAGE_DIR/nenna_pii_client" "$DEST_DIR"
 
 echo "Python client generated at $DEST_DIR"
 
+
