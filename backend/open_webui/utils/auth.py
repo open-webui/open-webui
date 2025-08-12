@@ -6,6 +6,11 @@ import hmac
 import hashlib
 import requests
 import os
+import pyotp
+import secrets
+import qrcode
+import io
+import json
 
 
 from cryptography.hazmat.primitives.ciphers.aead import AESGCM
@@ -341,6 +346,140 @@ def get_verified_user(user=Depends(get_current_user)):
             detail=ERROR_MESSAGES.ACCESS_PROHIBITED,
         )
     return user
+
+##############
+# TOTP Utils
+##############
+
+def generate_totp_secret() -> str:
+    """
+    Generate a new TOTP secret key for a user.
+    Returns a base32-encoded secret string.
+    """
+    return pyotp.random_base32()
+
+
+def generate_totp_qr_code(uri: str) -> str:
+    """
+    Generate a QR code image (as base64 string) for TOTP setup.
+    
+    Args:
+        uri: The complete TOTP URI (otpauth://totp/...)
+    
+    Returns:
+        Base64-encoded PNG image of the QR code
+    """
+    
+    # Generate QR code with settings specifically for Google Authenticator
+    qr = qrcode.QRCode(
+        version=1,
+        error_correction=qrcode.constants.ERROR_CORRECT_L,
+        box_size=8,
+        border=4
+    )
+    qr.add_data(uri)
+    qr.make(fit=True)
+    
+    # Create image
+    img = qr.make_image(fill_color="black", back_color="white")
+    
+    # Convert to base64 with proper data URL prefix
+    buffer = io.BytesIO()
+    img.save(buffer, format='PNG')
+    img_str = base64.b64encode(buffer.getvalue()).decode()
+    
+    # Return with data URL prefix
+    return f"data:image/png;base64,{img_str}"
+
+
+def verify_totp_code(totp_secret: str, user_code: str, window: int = 1) -> bool:
+    """
+    Verify a TOTP code against the user's secret.
+    
+    Args:
+        totp_secret: The user's TOTP secret key
+        user_code: The 6-digit code entered by the user
+        window: Time window tolerance (default: 1 = ±30 seconds)
+    
+    Returns:
+        True if code is valid, False otherwise
+    """
+    if not totp_secret or not user_code:
+        return False
+    
+    try:
+        # Remove any spaces or formatting from the code
+        clean_code = user_code.replace(" ", "").replace("-", "")
+        
+        # Verify the code is 6 digits
+        if not clean_code.isdigit() or len(clean_code) != 6:
+            return False
+        
+        totp = pyotp.TOTP(totp_secret)
+        return totp.verify(clean_code, valid_window=window)
+    except Exception as e:
+        return False
+    
+
+def generate_backup_codes(count: int = 8) -> List[str]:
+    """
+    Generate backup recovery codes for TOTP.
+    
+    Args:
+        count: Number of backup codes to generate (default: 8)
+    
+    Returns:
+        List of backup codes (each is 8 characters)
+    """
+    codes = []
+    for _ in range(count):
+        # Generate 8-character alphanumeric code
+        code = ''.join(secrets.choice('ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789') for _ in range(8))
+        codes.append(code)
+    return codes
+
+
+def verify_backup_code(stored_codes: str, user_code: str) -> tuple[bool, str]:
+    """
+    Verify a backup code and remove it from the stored codes.
+    
+    Args:
+        stored_codes: JSON string of remaining backup codes
+        user_code: The backup code entered by the user
+    
+    Returns:
+        Tuple of (is_valid, updated_codes_json)
+    """
+    if not stored_codes or not user_code:
+        return False, stored_codes
+    
+    try:
+        codes_list = json.loads(stored_codes) if stored_codes else []
+        clean_code = user_code.upper().replace(" ", "").replace("-", "")
+        
+        if clean_code in codes_list:
+            # Remove the used code
+            codes_list.remove(clean_code)
+            updated_codes = json.dumps(codes_list)
+            return True, updated_codes
+        
+        return False, stored_codes
+    except Exception as e:
+        log.error(f"Backup code verification error: {e}")
+        return False, stored_codes
+
+
+def hash_backup_codes(codes: List[str]) -> str:
+    """
+    Convert backup codes list to JSON string for database storage.
+    
+    Args:
+        codes: List of backup codes
+    
+    Returns:
+        JSON string of the codes
+    """
+    return json.dumps(codes)
 
 
 def get_admin_user(user=Depends(get_current_user)):
