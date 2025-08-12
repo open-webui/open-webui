@@ -1,3 +1,4 @@
+print("🚨 MAIN_IMPORT: Starting main.py imports...")
 import asyncio
 import inspect
 import json
@@ -8,6 +9,7 @@ import shutil
 import sys
 import time
 import random
+print("🚨 MAIN_IMPORT: Basic imports completed")
 from uuid import uuid4
 
 
