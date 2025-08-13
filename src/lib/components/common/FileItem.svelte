@@ -51,26 +51,26 @@
 		: 'rounded-2xl'} text-left"
 	type="button"
 	on:click={async () => {
-        const isPdf =
-            item?.meta?.content_type === 'application/pdf' ||
-            (item?.name && item?.name.toLowerCase().endsWith('.pdf'));
-        const isDocx =
-            item?.meta?.content_type ===
-                'application/vnd.openxmlformats-officedocument.wordprocessingml.document' ||
-            (item?.name && item?.name.toLowerCase().endsWith('.docx'));
+		const isPdf =
+			item?.meta?.content_type === 'application/pdf' ||
+			(item?.name && item?.name.toLowerCase().endsWith('.pdf'));
+		const isDocx =
+			item?.meta?.content_type ===
+				'application/vnd.openxmlformats-officedocument.wordprocessingml.document' ||
+			(item?.name && item?.name.toLowerCase().endsWith('.docx'));
 
-        // Always open modal for PDF/DOCX to show extracted text preview with PII highlights
-        if (item?.file?.data?.content || modal || isPdf || isDocx) {
-            showModal = !showModal;
-        } else {
-            if (url) {
-                if (type === 'file') {
-                    window.open(`${url}/content`, '_blank').focus();
-                } else {
-                    window.open(`${url}`, '_blank').focus();
-                }
-            }
-        }
+		// Always open modal for PDF/DOCX to show extracted text preview with PII highlights
+		if (item?.file?.data?.content || modal || isPdf || isDocx) {
+			showModal = !showModal;
+		} else {
+			if (url) {
+				if (type === 'file') {
+					window.open(`${url}/content`, '_blank').focus();
+				} else {
+					window.open(`${url}`, '_blank').focus();
+				}
+			}
+		}
 
 		dispatch('click');
 	}}

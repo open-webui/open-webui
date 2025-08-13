@@ -709,13 +709,13 @@
 									Authorization: `Bearer ${localStorage.token}`
 								}
 							});
-                            if (res.ok) {
-                                const json = await res.json();
-                                // Keep local file state in sync with server (data, meta, etc.)
-                                try {
-                                    fileItem.file = json;
-                                } catch (e) {}
-                                const processing = json?.meta?.processing;
+							if (res.ok) {
+								const json = await res.json();
+								// Keep local file state in sync with server (data, meta, etc.)
+								try {
+									fileItem.file = json;
+								} catch (e) {}
+								const processing = json?.meta?.processing;
 								if (processing) {
 									console.log('Processing progress:', processing);
 									fileItem.progress =
