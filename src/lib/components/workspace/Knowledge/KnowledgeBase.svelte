@@ -5,6 +5,7 @@
 	import { PaneGroup, Pane, PaneResizer } from 'paneforge';
 
 	import { onMount, getContext, onDestroy, tick } from 'svelte';
+	import { get } from 'svelte/store';
 	const i18n = getContext('i18n');
 
 	import { goto } from '$app/navigation';
@@ -13,6 +14,7 @@
 		mobile,
 		showSidebar,
 		knowledge as _knowledge,
+		knowledgeList as _knowledgeList,
 		config,
 		user,
 		settings
@@ -28,6 +30,7 @@
 		addFileToKnowledgeById,
 		getKnowledgeById,
 		getKnowledgeBases,
+		getKnowledgeBaseList,
 		removeFileFromKnowledgeById,
 		resetKnowledgeById,
 		updateFileFromKnowledgeById,
@@ -68,6 +71,7 @@
 	};
 
 	let id = null;
+	let hasWriteAccess = true;
 	let knowledge: Knowledge | null = null;
 	let query = '';
 
@@ -465,6 +469,7 @@
 			if (res) {
 				toast.success($i18n.t('Knowledge updated successfully'));
 				_knowledge.set(await getKnowledgeBases(localStorage.token));
+				_knowledgeList.set(await getKnowledgeBaseList(localStorage.token));
 			}
 		}, 1000);
 	};
@@ -534,6 +539,10 @@
 		}
 	};
 
+	const checkWriteAccess = (item) => {
+		return get(_knowledgeList).some((k) => k.id === item.id);
+	};
+
 	onMount(async () => {
 		// listen to resize 1024px
 		mediaQuery = window.matchMedia('(min-width: 1024px)');
@@ -584,6 +593,9 @@
 			goto('/workspace/knowledge');
 		}
 
+		_knowledgeList.set(await getKnowledgeBaseList(localStorage.token));
+		hasWriteAccess = checkWriteAccess(knowledge);
+
 		const dropZone = document.querySelector('body');
 		dropZone?.addEventListener('dragover', onDragOver);
 		dropZone?.addEventListener('drop', onDrop);
@@ -607,7 +619,7 @@
 	};
 </script>
 
-{#if dragged}
+{#if dragged && hasWriteAccess}
 	<div
 		class="fixed {$showSidebar
 			? 'left-0 md:left-[260px] md:w-[calc(100%-260px)]'
@@ -693,27 +705,29 @@
 								class="text-left w-full font-semibold text-2xl font-primary bg-transparent outline-hidden"
 								bind:value={knowledge.name}
 								placeholder="Knowledge Name"
+								disabled={!hasWriteAccess}
 								on:input={() => {
 									changeDebounceHandler();
 								}}
 							/>
 						</div>
+						{#if hasWriteAccess}
+							<div class="self-center shrink-0">
+								<button
+									class="bg-gray-50 hover:bg-gray-100 text-black dark:bg-gray-850 dark:hover:bg-gray-800 dark:text-white transition px-2 py-1 rounded-full flex gap-1 items-center"
+									type="button"
+									on:click={() => {
+										showAccessControlModal = true;
+									}}
+								>
+									<LockClosed strokeWidth="2.5" className="size-3.5" />
 
-						<div class="self-center shrink-0">
-							<button
-								class="bg-gray-50 hover:bg-gray-100 text-black dark:bg-gray-850 dark:hover:bg-gray-800 dark:text-white transition px-2 py-1 rounded-full flex gap-1 items-center"
-								type="button"
-								on:click={() => {
-									showAccessControlModal = true;
-								}}
-							>
-								<LockClosed strokeWidth="2.5" className="size-3.5" />
-
-								<div class="text-sm font-medium shrink-0">
-									{$i18n.t('Access')}
-								</div>
-							</button>
-						</div>
+									<div class="text-sm font-medium shrink-0">
+										{$i18n.t('Access')}
+									</div>
+								</button>
+							</div>
+						{/if}
 					</div>
 
 					<div class="flex w-full px-1">
@@ -721,6 +735,7 @@
 							type="text"
 							class="text-left text-xs w-full text-gray-500 bg-transparent outline-hidden"
 							bind:value={knowledge.description}
+							disabled={!hasWriteAccess}
 							placeholder="Knowledge Description"
 							on:input={() => {
 								changeDebounceHandler();
@@ -761,14 +776,16 @@
 								</div>
 
 								<div>
-									<button
-										class="self-center w-fit text-sm py-1 px-2.5 dark:text-gray-300 dark:hover:text-white hover:bg-black/5 dark:hover:bg-white/5 rounded-lg"
-										on:click={() => {
-											updateFileContentHandler();
-										}}
-									>
-										{$i18n.t('Save')}
-									</button>
+									{#if hasWriteAccess}
+										<button
+											class="self-center w-fit text-sm py-1 px-2.5 dark:text-gray-300 dark:hover:text-white hover:bg-black/5 dark:hover:bg-white/5 rounded-lg"
+											on:click={() => {
+												updateFileContentHandler();
+											}}
+										>
+											{$i18n.t('Save')}
+										</button>
+									{/if}
 								</div>
 							</div>
 
@@ -776,19 +793,29 @@
 								class=" flex-1 w-full h-full max-h-full text-sm bg-transparent outline-hidden overflow-y-auto scrollbar-hidden"
 							>
 								{#key selectedFile.id}
-									<RichTextInput
-										className="input-prose-sm"
-										bind:value={selectedFileContent}
-										placeholder={$i18n.t('Add content here')}
-										preserveBreaks={false}
-									/>
+									{#if hasWriteAccess}
+										<RichTextInput
+											className="input-prose-sm"
+											bind:value={selectedFileContent}
+											placeholder={$i18n.t('Add content here')}
+											preserveBreaks={false}
+										/>
+									{:else}
+										<div class="relative w-full min-w-full h-full min-h-fit input-prose-sm">
+											{selectedFileContent || $i18n.t('No content available')}
+										</div>
+									{/if}
 								{/key}
 							</div>
 						</div>
 					{:else}
 						<div class="h-full flex w-full">
 							<div class="m-auto text-xs text-center text-gray-200 dark:text-gray-700">
-								{$i18n.t('Drag and drop a file to upload or select a file to view')}
+								{#if hasWriteAccess}
+									{$i18n.t('Drag and drop a file to upload or select a file to view')}
+								{:else}
+									{$i18n.t('Select a file to view')}
+								{/if}
 							</div>
 						</div>
 					{/if}
@@ -819,14 +846,16 @@
 								</div>
 
 								<div>
-									<button
-										class="self-center w-fit text-sm py-1 px-2.5 dark:text-gray-300 dark:hover:text-white hover:bg-black/5 dark:hover:bg-white/5 rounded-lg"
-										on:click={() => {
-											updateFileContentHandler();
-										}}
-									>
-										{$i18n.t('Save')}
-									</button>
+									{#if hasWriteAccess}
+										<button
+											class="self-center w-fit text-sm py-1 px-2.5 dark:text-gray-300 dark:hover:text-white hover:bg-black/5 dark:hover:bg-white/5 rounded-lg"
+											on:click={() => {
+												updateFileContentHandler();
+											}}
+										>
+											{$i18n.t('Save')}
+										</button>
+									{/if}
 								</div>
 							</div>
 
@@ -834,12 +863,18 @@
 								class=" flex-1 w-full h-full max-h-full py-2.5 px-3.5 rounded-lg text-sm bg-transparent overflow-y-auto scrollbar-hidden"
 							>
 								{#key selectedFile.id}
-									<RichTextInput
-										className="input-prose-sm"
-										bind:value={selectedFileContent}
-										placeholder={$i18n.t('Add content here')}
-										preserveBreaks={false}
-									/>
+								{#if hasWriteAccess}
+										<RichTextInput
+											className="input-prose-sm"
+											bind:value={selectedFileContent}
+											placeholder={$i18n.t('Add content here')}
+											preserveBreaks={false}
+										/>
+									{:else}
+										<div class="relative w-full min-w-full h-full min-h-fit input-prose-sm">
+											{selectedFileContent || $i18n.t('No content available')}
+										</div>
+									{/if}
 								{/key}
 							</div>
 						</div>
@@ -874,20 +909,22 @@
 								/>
 
 								<div>
-									<AddContentMenu
-										on:upload={(e) => {
-											if (e.detail.type === 'directory') {
-												uploadDirectoryHandler();
-											} else if (e.detail.type === 'text') {
-												showAddTextContentModal = true;
-											} else {
-												document.getElementById('files-input').click();
-											}
-										}}
-										on:sync={(e) => {
-											showSyncConfirmModal = true;
-										}}
-									/>
+									{#if hasWriteAccess}
+										<AddContentMenu
+											on:upload={(e) => {
+												if (e.detail.type === 'directory') {
+													uploadDirectoryHandler();
+												} else if (e.detail.type === 'text') {
+													showAddTextContentModal = true;
+												} else {
+													document.getElementById('files-input').click();
+												}
+											}}
+											on:sync={(e) => {
+												showSyncConfirmModal = true;
+											}}
+										/>
+									{/if}
 								</div>
 							</div>
 						</div>
@@ -901,6 +938,7 @@
 									on:click={(e) => {
 										selectedFileId = selectedFileId === e.detail ? null : e.detail;
 									}}
+									dismissible={hasWriteAccess}
 									on:delete={(e) => {
 										console.log(e.detail);
 
