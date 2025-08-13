@@ -1280,16 +1280,18 @@ async def get_models(
                 ):
                     filtered_models.append(model)
                 continue
-    
+
             model_info = Models.get_model_by_id(model["id"])
             if model_info:
                 if (
                     (user.role == "admin" and ENABLE_ADMIN_WORKSPACE_CONTENT_ACCESS)
-                    or user.id == model_info.user_id 
-                    or has_access(user.id, type="read", access_control=model_info.access_control)
+                    or user.id == model_info.user_id
+                    or has_access(
+                        user.id, type="read", access_control=model_info.access_control
+                    )
                 ):
                     filtered_models.append(model)
-    
+
         return filtered_models
 
     all_models = await get_all_models(request, refresh=refresh, user=user)
@@ -1328,7 +1330,10 @@ async def get_models(
         )
 
     # Filter out models that the user does not have access to
-    if (user.role == "user" or (user.role == "admin" and not ENABLE_ADMIN_WORKSPACE_CONTENT_ACCESS)) and not BYPASS_MODEL_ACCESS_CONTROL:
+    if (
+        user.role == "user"
+        or (user.role == "admin" and not ENABLE_ADMIN_WORKSPACE_CONTENT_ACCESS)
+    ) and not BYPASS_MODEL_ACCESS_CONTROL:
         models = get_filtered_models(models, user)
 
     log.debug(
@@ -1453,12 +1458,13 @@ async def chat_completion(
         }
 
         if metadata.get("chat_id") and (user and user.role != "admin"):
-            chat = Chats.get_chat_by_id_and_user_id(metadata["chat_id"], user.id)
-            if chat is None:
-                raise HTTPException(
-                    status_code=status.HTTP_404_NOT_FOUND,
-                    detail=ERROR_MESSAGES.DEFAULT(),
-                )
+            if metadata["chat_id"] != "local":
+                chat = Chats.get_chat_by_id_and_user_id(metadata["chat_id"], user.id)
+                if chat is None:
+                    raise HTTPException(
+                        status_code=status.HTTP_404_NOT_FOUND,
+                        detail=ERROR_MESSAGES.DEFAULT(),
+                    )
 
         request.state.metadata = metadata
         form_data["metadata"] = metadata
