@@ -327,6 +327,7 @@ from open_webui.config import (
     ENABLE_MESSAGE_RATING,
     ENABLE_USER_WEBHOOKS,
     ENABLE_EVALUATION_ARENA_MODELS,
+    ENABLE_ADMIN_WORKSPACE_CONTENT_ACCESS,
     USER_PERMISSIONS,
     DEFAULT_USER_ROLE,
     PENDING_USER_OVERLAY_CONTENT,
@@ -1321,7 +1322,9 @@ async def get_models(
         )
 
     # Filter out models that the user does not have access to
-    if user.role == "user" and not BYPASS_MODEL_ACCESS_CONTROL:
+    if not BYPASS_MODEL_ACCESS_CONTROL and (
+        user.role != "admin" or not ENABLE_ADMIN_WORKSPACE_CONTENT_ACCESS
+    ):
         models = get_filtered_models(models, user)
 
     log.debug(
@@ -1392,7 +1395,9 @@ async def chat_completion(
             model_info = Models.get_model_by_id(model_id)
 
             # Check if user has access to the model
-            if not BYPASS_MODEL_ACCESS_CONTROL and user.role == "user":
+            if not BYPASS_MODEL_ACCESS_CONTROL and (
+                user.role != "admin" or not ENABLE_ADMIN_WORKSPACE_CONTENT_ACCESS
+            ):
                 try:
                     check_model_access(user, model)
                 except Exception as e:
