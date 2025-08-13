@@ -17,6 +17,7 @@
 	import CameraSolid from '$lib/components/icons/CameraSolid.svelte';
 	import PhotoSolid from '$lib/components/icons/PhotoSolid.svelte';
 	import CommandLineSolid from '$lib/components/icons/CommandLineSolid.svelte';
+	import BookOpen from '$lib/components/icons/BookOpen.svelte';
 
 	const i18n = getContext('i18n');
 
@@ -200,14 +201,11 @@
 					class="flex gap-2 items-center px-3 py-2 text-sm  font-medium cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800  rounded-xl {!fileUploadEnabled
 						? 'opacity-50'
 						: ''}"
-					on:click={() => {
-						if (fileUploadEnabled) {
-							addKnowledgeHandler()
-						}
-					}}
+					on:click={addKnowledgeHandler}
+					
 				>
-					<CameraSolid />
-					<div class=" line-clamp-1">{$i18n.t('Use Knowledge!')}</div>
+					<BookOpen />
+					<div class=" line-clamp-1">{$i18n.t('Use Knowledge')}</div>
 				</DropdownMenu.Item>
 			</Tooltip>
 			

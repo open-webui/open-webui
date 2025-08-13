@@ -124,8 +124,11 @@
 			behavior: 'smooth'
 		});
 	};
-	const addKnowledgeHandler = async (c: string) => {
-		prompt = '#';
+	const addKnowledgeHandler = async () => {
+		if (chatInputElement && typeof chatInputElement.insertLiteral === 'function') {
+				chatInputElement.insertLiteral('#');
+				return;
+		}
 	};
 	const screenCaptureHandler = async () => {
 		try {
