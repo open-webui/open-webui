@@ -1321,7 +1321,10 @@ async def get_models(
         model_order_dict = {model_id: i for i, model_id in enumerate(model_order_list)}
         # Sort models by order list priority, with fallback for those not in the list
         models.sort(
-            key=lambda x: (model_order_dict.get(x["id"], float("inf")), x.get("name"))
+            key=lambda model: (
+                model_order_dict.get(model.get("id"), float("inf")),
+                model.get("name"),
+            )
         )
 
     # Filter out models that the user does not have access to
@@ -1467,13 +1470,16 @@ async def chat_completion(
         log.debug(f"Error processing chat payload: {e}")
         if metadata.get("chat_id") and metadata.get("message_id"):
             # Update the chat message with the error
-            Chats.upsert_message_to_chat_by_id_and_message_id(
-                metadata["chat_id"],
-                metadata["message_id"],
-                {
-                    "error": {"content": str(e)},
-                },
-            )
+            try:
+                Chats.upsert_message_to_chat_by_id_and_message_id(
+                    metadata["chat_id"],
+                    metadata["message_id"],
+                    {
+                        "error": {"content": str(e)},
+                    },
+                )
+            except:
+                pass
 
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
@@ -1483,13 +1489,16 @@ async def chat_completion(
     try:
         response = await chat_completion_handler(request, form_data, user)
         if metadata.get("chat_id") and metadata.get("message_id"):
-            Chats.upsert_message_to_chat_by_id_and_message_id(
-                metadata["chat_id"],
-                metadata["message_id"],
-                {
-                    "model": model_id,
-                },
-            )
+            try:
+                Chats.upsert_message_to_chat_by_id_and_message_id(
+                    metadata["chat_id"],
+                    metadata["message_id"],
+                    {
+                        "model": model_id,
+                    },
+                )
+            except:
+                pass
 
         return await process_chat_response(
             request, response, form_data, user, metadata, model, events, tasks
@@ -1498,13 +1507,16 @@ async def chat_completion(
         log.debug(f"Error in chat completion: {e}")
         if metadata.get("chat_id") and metadata.get("message_id"):
             # Update the chat message with the error
-            Chats.upsert_message_to_chat_by_id_and_message_id(
-                metadata["chat_id"],
-                metadata["message_id"],
-                {
-                    "error": {"content": str(e)},
-                },
-            )
+            try:
+                Chats.upsert_message_to_chat_by_id_and_message_id(
+                    metadata["chat_id"],
+                    metadata["message_id"],
+                    {
+                        "error": {"content": str(e)},
+                    },
+                )
+            except:
+                pass
 
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
