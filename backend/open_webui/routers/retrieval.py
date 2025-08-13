@@ -1444,8 +1444,6 @@ def process_file(
 
             # Pre-mark extracting so clients see progress immediately
             _set_processing(file.id, "processing", "extracting", 10)
-            # Simulate slow extraction before collecting full text
-            time.sleep(2)
             text_content = file.data.get("content", "")
             _set_processing(file.id, "processing", "extracting", 20)
         else:
@@ -1545,31 +1543,43 @@ def process_file(
                             body=body,
                             create_session=False,
                             quiet=False,
-                        )
+                        ).to_dict()
                         # response can be HTTPValidationError or TextMaskResponse
-                        if hasattr(response, "pii"):
+                        if "pii" in response:
                             # response.pii is list[list[PiiEntity]] or None/Unset
-                            pii = (response.pii or [[]])[0] if response.pii else {}
+                            pii = (
+                                (response["pii"] or [[]])[0] if response["pii"] else {}
+                            )
                             for pii_entity in pii:
-
                                 updated_occurences = []
 
-                                for occurrence in pii_entity.occurrences:
+                                for occurrence in pii_entity["occurrences"]:
                                     adjusted_occurrence = {
-                                        "start_idx": occurrence.start_idx + current_page_offset,
-                                        "end_idx": occurrence.end_idx + current_page_offset,
+                                        "start_idx": occurrence["start_idx"]
+                                        + current_page_offset,
+                                        "end_idx": occurrence["end_idx"]
+                                        + current_page_offset,
                                     }
                                     updated_occurences.append(adjusted_occurrence)
 
-                                pii_entity.occurrences = updated_occurences
+                                pii_entity["occurrences"] = updated_occurences
 
-                                if pii_entity.text not in detections:
-                                    detections[pii_entity.text] = pii_entity
-                                    known_entities.append({'id': pii_entity.id, 'label': pii_entity.label, 'name': pii_entity.text})
+                                if pii_entity["text"] not in detections:
+                                    detections[pii_entity["text"]] = pii_entity
+                                    known_entities.append(
+                                        {
+                                            "id": pii_entity["id"],
+                                            "label": pii_entity["label"],
+                                            "name": pii_entity["text"],
+                                        }
+                                    )
                                 else:
-                                    detections[pii_entity.text].occurrences.extend(pii_entity.occurrences)
+                                    detections[pii_entity["text"]][
+                                        "occurrences"
+                                    ].extend(pii_entity["occurrences"])
 
-                    except Exception:
+                    except Exception as e:
+                        log.exception(e)
                         pii = None
                 # attach PII to document metadata for downstream use
                 if pii is not None:
@@ -1584,19 +1594,20 @@ def process_file(
                 log.debug(f"text_content: {text_content}")
                 Files.update_file_data_by_id(
                     file.id,
-                    {"content": " ".join(text_content)},
-                    {"pii": detections},
-                    {"page_content": text_content},
+                    {
+                        "content": " ".join(text_content),
+                        "pii": detections,
+                        "page_content": text_content,
+                    },
                 )
 
             # Extraction completed
             _set_processing(file.id, "processing", "extracting", 20)
 
-
         # About to embed/index
         _set_processing(file.id, "processing", "embedding", 30)
 
-        hash = calculate_sha256_string(text_content)
+        hash = calculate_sha256_string(" ".join(text_content))
         Files.update_file_hash_by_id(file.id, hash)
 
         if not request.app.state.config.BYPASS_EMBEDDING_AND_RETRIEVAL:
@@ -2185,7 +2196,8 @@ def query_doc_handler(
                 collection_name=form_data.collection_name,
                 collection_result=collection_results[form_data.collection_name],
                 query=form_data.query,
-                embedding_function=lambda query, prefix: request.app.state.EMBEDDING_FUNCTION(
+                embedding_function=lambda query,
+                prefix: request.app.state.EMBEDDING_FUNCTION(
                     query, prefix=prefix, user=user
                 ),
                 k=form_data.k if form_data.k else request.app.state.config.TOP_K,
@@ -2250,7 +2262,8 @@ def query_collection_handler(
             return query_collection_with_hybrid_search(
                 collection_names=form_data.collection_names,
                 queries=[form_data.query],
-                embedding_function=lambda query, prefix: request.app.state.EMBEDDING_FUNCTION(
+                embedding_function=lambda query,
+                prefix: request.app.state.EMBEDDING_FUNCTION(
                     query, prefix=prefix, user=user
                 ),
                 k=form_data.k if form_data.k else request.app.state.config.TOP_K,
@@ -2280,7 +2293,8 @@ def query_collection_handler(
             return query_collection(
                 collection_names=form_data.collection_names,
                 queries=[form_data.query],
-                embedding_function=lambda query, prefix: request.app.state.EMBEDDING_FUNCTION(
+                embedding_function=lambda query,
+                prefix: request.app.state.EMBEDDING_FUNCTION(
                     query, prefix=prefix, user=user
                 ),
                 k=form_data.k if form_data.k else request.app.state.config.TOP_K,

@@ -171,7 +171,6 @@ def upload_file(
                     ):
                         file_path = Storage.get_file(file_path)
                         result = transcribe(request, file_path, file_metadata)
-
                         process_file(
                             request,
                             ProcessFileForm(file_id=id, content=result.get("text", "")),
@@ -323,6 +322,38 @@ async def get_file_by_id(id: str, user=Depends(get_verified_user)):
         or user.role == "admin"
         or has_access_to_file(id, "read", user)
     ):
+        # Best-effort augmentation: If page_content is missing (older files), try to reconstruct
+        try:
+            data = file.data or {}
+            if not isinstance(data, dict):
+                data = {}
+
+            if "page_content" not in data or not data.get("page_content"):
+                # Try vector DB first to avoid re-reading the file
+                try:
+                    from open_webui.retrieval.vector.factory import VECTOR_DB_CLIENT
+
+                    result = VECTOR_DB_CLIENT.query(
+                        collection_name=f"file-{file.id}",
+                        filter={"file_id": file.id},
+                    )
+                    if result is not None and len(result.documents) > 0:
+                        pages = result.documents[0]
+                        if isinstance(pages, list) and pages:
+                            Files.update_file_data_by_id(
+                                file.id,
+                                {
+                                    "content": " ".join(pages),
+                                    "page_content": pages,
+                                },
+                            )
+                            file = Files.get_file_by_id(file.id)
+                except Exception:
+                    # Ignore augmentation errors; return original file
+                    pass
+        except Exception:
+            pass
+
         return file
     else:
         raise HTTPException(
@@ -605,7 +636,6 @@ async def delete_file_by_id(id: str, user=Depends(get_verified_user)):
         or user.role == "admin"
         or has_access_to_file(id, "write", user)
     ):
-
         result = Files.delete_file_by_id(id)
         if result:
             try:
