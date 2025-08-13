@@ -1317,10 +1317,7 @@ async def get_models(
         model_order_dict = {model_id: i for i, model_id in enumerate(model_order_list)}
         # Sort models by order list priority, with fallback for those not in the list
         models.sort(
-            key=lambda x: (
-                model_order_dict.get(x.get("id"), float("inf")),
-                (x.get("name") or "").lower()
-            )
+            key=lambda x: (model_order_dict.get(x["id"], float("inf")), x["name"])
         )
 
     # Filter out models that the user does not have access to
