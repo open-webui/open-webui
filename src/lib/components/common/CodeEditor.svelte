@@ -223,6 +223,8 @@ print("${endTag}")
 
 	let extensions = [
 		basicSetup,
+		// REMOVE line wrapping to FORCE horizontal overflow
+		// EditorView.lineWrapping, // This was causing width expansion - REMOVED
 		keymap.of([{ key: 'Tab', run: acceptCompletion }, indentWithTab]),
 		indentUnit.of('    '),
 		placeholder('Enter your code here...'),
@@ -268,6 +270,48 @@ print("${endTag}")
 			}),
 			parent: document.getElementById(`code-textarea-${id}`)
 		});
+		
+		// FORCE horizontal scrolling - NO wrapping allowed
+		setTimeout(() => {
+			const editorContainer = document.getElementById(`code-textarea-${id}`);
+			if (editorContainer) {
+				// Container should be fixed width with scroll
+				editorContainer.style.setProperty('width', '100%', 'important');
+				editorContainer.style.setProperty('max-width', '100%', 'important');
+				editorContainer.style.setProperty('overflow-x', 'auto', 'important');
+				
+				// CodeMirror editor should scroll horizontally
+				const cmEditor = editorContainer.querySelector('.cm-editor');
+				if (cmEditor) {
+					cmEditor.style.setProperty('width', '100%', 'important');
+					cmEditor.style.setProperty('max-width', '100%', 'important');
+					cmEditor.style.setProperty('overflow-x', 'auto', 'important');
+					cmEditor.style.setProperty('overflow-y', 'auto', 'important');
+				}
+				
+				// Content should NOT wrap - let it extend and scroll
+				const cmContent = editorContainer.querySelector('.cm-content');
+				if (cmContent) {
+					cmContent.style.setProperty('width', 'max-content', 'important');
+					cmContent.style.setProperty('min-width', '100%', 'important');
+					cmContent.style.setProperty('white-space', 'nowrap', 'important');
+				}
+				
+				// Lines should NOT wrap
+				const cmLines = editorContainer.querySelectorAll('.cm-line');
+				cmLines.forEach(line => {
+					line.style.setProperty('white-space', 'nowrap', 'important');
+					line.style.setProperty('width', 'max-content', 'important');
+				});
+				
+				// Scroller should handle overflow
+				const cmScroller = editorContainer.querySelector('.cm-scroller');
+				if (cmScroller) {
+					cmScroller.style.setProperty('overflow-x', 'auto', 'important');
+					cmScroller.style.setProperty('overflow-y', 'auto', 'important');
+				}
+			}
+		}, 100);
 
 		if (isDarkMode) {
 			codeEditor.dispatch({
@@ -331,4 +375,43 @@ print("${endTag}")
 	});
 </script>
 
-<div id="code-textarea-{id}" class="h-full w-full text-sm" />
+<style>
+  /* FORCE horizontal overflow and scrolling */
+  :global(.cm-editor) {
+    width: 100% !important;
+    max-width: 100% !important;
+    overflow-x: auto !important;
+    overflow-y: auto !important;
+  }
+  
+  :global(.cm-scroller) {
+    width: 100% !important;
+    max-width: 100% !important;
+    overflow-x: auto !important;
+    overflow-y: auto !important;
+  }
+  
+  :global(.cm-content) {
+    width: max-content !important;
+    min-width: 100% !important;
+    white-space: nowrap !important;
+  }
+  
+  :global(.cm-line) {
+    white-space: nowrap !important;
+    width: max-content !important;
+  }
+</style>
+
+<div 
+  id="code-textarea-{id}" 
+  class="h-full text-sm" 
+  style="
+    width: 100% !important;
+    max-width: 100% !important;
+    min-width: 100% !important;
+    overflow-x: auto !important;
+    flex-shrink: 0 !important;
+    flex-grow: 0 !important;
+  " 
+/>

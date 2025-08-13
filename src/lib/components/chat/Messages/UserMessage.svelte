@@ -3,7 +3,7 @@
 	import { toast } from 'svelte-sonner';
 	import { tick, getContext, onMount } from 'svelte';
 
-	import { models, settings } from '$lib/stores';
+	import { models, settings, mobile } from '$lib/stores';
 	import { user as _user } from '$lib/stores';
 	import { copyToClipboard as _copyToClipboard, formatDate } from '$lib/utils';
 	import { WEBUI_BASE_URL } from '$lib/constants';
@@ -39,6 +39,12 @@
 	export let isFirstMessage: boolean;
 	export let readOnly: boolean;
 	export let topPadding = false;
+	
+	// Resize functionality passed from Message component
+	export let showResizeHandle = false;
+	export let isResizing = false;
+	export let handleResizeStart = () => {};
+	export let resetWidth = () => {};
 
 	let showDeleteConfirm = false;
 
@@ -312,7 +318,7 @@
 					<div class="w-full">
 						<div class="flex {($settings?.chatBubble ?? true) ? 'justify-end pb-1' : 'w-full'}">
 							<div
-								class="rounded-3xl {($settings?.chatBubble ?? true)
+								class="rounded-3xl relative {($settings?.chatBubble ?? true)
 									? `max-w-[90%] px-5 py-2  bg-gray-50 dark:bg-gray-850 ${
 											message.files ? 'rounded-tr-lg' : ''
 										}`
@@ -320,6 +326,23 @@
 							>
 								{#if message.content}
 									<Markdown id={`${chatId}-${message.id}`} content={message.content} {topPadding} />
+								{/if}
+								
+								<!-- Resize Handle for User Messages (disabled on mobile) -->
+								{#if !$mobile && (showResizeHandle || isResizing)}
+									<div
+										class="absolute left-0 top-0 bottom-0 w-2 cursor-col-resize opacity-0 hover:opacity-20 bg-blue-500 transition-opacity duration-200 z-10 rounded-l-3xl"
+										on:mousedown={handleResizeStart}
+										on:dblclick={resetWidth}
+										title="Drag to resize bubble | Double-click to reset"
+									>
+										<!-- Resize indicator dots -->
+										<div class="absolute inset-y-0 left-1/2 transform -translate-x-1/2 flex flex-col justify-center space-y-1">
+											<div class="w-0.5 h-0.5 bg-white rounded-full opacity-60"></div>
+											<div class="w-0.5 h-0.5 bg-white rounded-full opacity-60"></div>
+											<div class="w-0.5 h-0.5 bg-white rounded-full opacity-60"></div>
+										</div>
+									</div>
 								{/if}
 							</div>
 						</div>

@@ -1,16 +1,219 @@
 <script lang="ts">
 	import { toast } from 'svelte-sonner';
 
-	import { tick, getContext, onMount, createEventDispatcher } from 'svelte';
+	import { tick, getContext, onMount, onDestroy, createEventDispatcher } from 'svelte';
 	const dispatch = createEventDispatcher();
 	const i18n = getContext('i18n');
 
-	import { settings } from '$lib/stores';
+	import { settings, mobile } from '$lib/stores';
 	import { copyToClipboard } from '$lib/utils';
 
 	import MultiResponseMessages from './MultiResponseMessages.svelte';
 	import ResponseMessage from './ResponseMessage.svelte';
 	import UserMessage from './UserMessage.svelte';
+	
+	// Resizable bubble state - SIMPLIFIED
+	let isResizing = false;
+	let bubbleWidth = 'auto';
+	let bubbleElement;
+	let showResizeHandle = false;
+	let isInitialRender = true;
+	
+	// STRICT WIDTH SYSTEM - NO REACTIVE CALCULATIONS
+	// Evaluate once and never change
+	let isUserMessage = false;
+	let minWidth = 400;
+	let maxWidth = 900;
+	// FIXED WIDTH - never changes automatically  
+	const defaultWidth = '1152px'; // Always use prompt width
+	
+	// Disable resize functionality on mobile
+	$: enableResize = !$mobile;
+
+	// WIDTH CHANGE LOGGING
+	const logWidthChange = (source, oldWidth, newWidth, stack = null) => {
+		console.log('🔴 WIDTH CHANGE DETECTED:', {
+			source,
+			messageId,
+			isUserMessage,
+			oldWidth,
+			newWidth,
+			bubbleWidth,
+			elementWidth: bubbleElement?.style.width,
+			elementComputedWidth: bubbleElement ? getComputedStyle(bubbleElement).width : 'no element',
+			stack: stack || new Error().stack
+		});
+	};
+	
+	// Monitor bubbleWidth changes
+	$: if (typeof bubbleWidth !== 'undefined') {
+		logWidthChange('bubbleWidth reactive change', 'unknown', bubbleWidth);
+	}
+	
+	// STRICT initialization - set everything once and never change automatically
+	onMount(() => {
+		console.log('🔵 MOUNT START:', { messageId, role: history.messages[messageId]?.role });
+		
+		// Set message type and constraints ONCE
+		isUserMessage = history.messages[messageId]?.role === 'user';
+		minWidth = isUserMessage ? 300 : 400;
+		maxWidth = isUserMessage ? 800 : 900;
+		
+		console.log('🔵 MOUNT - Message type set:', { isUserMessage, minWidth, maxWidth });
+		
+		// Load saved width - STRICT
+		const savedKey = isUserMessage ? 'userBubbleWidth' : 'llmBubbleWidth';
+		const savedWidth = localStorage.getItem(savedKey);
+		const oldBubbleWidth = bubbleWidth;
+		
+		if (savedWidth && savedWidth !== 'auto') {
+			bubbleWidth = savedWidth;
+			console.log('🔵 MOUNT - Loaded saved width:', savedWidth);
+		} else {
+			// FIXED default width - never changes
+			bubbleWidth = defaultWidth;
+			console.log('🔵 MOUNT - Using default width:', defaultWidth);
+		}
+		
+		logWidthChange('MOUNT initialization', oldBubbleWidth, bubbleWidth);
+		
+		// Apply STRICT CSS immediately and LOCK IT
+		setTimeout(() => {
+			if (bubbleElement) {
+				console.log('🔵 MOUNT - Applying CSS:', bubbleWidth);
+				bubbleElement.style.width = bubbleWidth;
+				bubbleElement.style.maxWidth = bubbleWidth;
+				bubbleElement.style.minWidth = `${minWidth}px`;
+				// PREVENT any future automatic changes
+				bubbleElement.style.setProperty('width', bubbleWidth, 'important');
+				bubbleElement.style.setProperty('max-width', bubbleWidth, 'important');
+				
+				console.log('🔵 MOUNT - CSS applied, final computed width:', getComputedStyle(bubbleElement).width);
+				
+				// Set up MutationObserver to detect external width changes
+				const observer = new MutationObserver((mutations) => {
+					mutations.forEach((mutation) => {
+						if (mutation.type === 'attributes' && (mutation.attributeName === 'style' || mutation.attributeName === 'class')) {
+							const currentWidth = getComputedStyle(bubbleElement).width;
+							const currentStyleWidth = bubbleElement.style.width;
+							console.log('🔴 EXTERNAL CHANGE DETECTED:', {
+								mutation: mutation.attributeName,
+								target: mutation.target.tagName,
+								currentComputedWidth: currentWidth,
+								currentStyleWidth: currentStyleWidth,
+								expectedWidth: bubbleWidth,
+								bubbleElementId: bubbleElement.id,
+								stack: new Error().stack
+							});
+						}
+					});
+				});
+				
+				observer.observe(bubbleElement, {
+					attributes: true,
+					attributeFilter: ['style', 'class'],
+					subtree: false
+				});
+				
+				// Store observer for cleanup
+				bubbleElement._widthObserver = observer;
+			}
+			isInitialRender = false;
+		}, 50);
+	});
+	
+	const handleResizeStart = (e) => {
+		isResizing = true;
+		e.preventDefault();
+		
+		const startX = e.clientX;
+		const startWidth = bubbleElement.offsetWidth;
+		
+		// Disable transitions during resize for instant feedback
+		bubbleElement.style.transition = 'none';
+		
+		const handleMouseMove = (e) => {
+			if (!isResizing) return;
+			
+			// Use requestAnimationFrame for smooth 60fps updates
+			requestAnimationFrame(() => {
+				const deltaX = e.clientX - startX;
+				// For user messages with left handle, dragging left increases width (reverse deltaX)
+				// For LLM messages with right handle, dragging right increases width (normal deltaX)
+				const adjustedDeltaX = isUserMessage ? -deltaX : deltaX;
+				
+				// STRICT resize with fixed constraints
+				const newWidth = Math.max(minWidth, Math.min(maxWidth, startWidth + adjustedDeltaX));
+				const newWidthPx = `${newWidth}px`;
+				
+				console.log('🟡 MANUAL RESIZE:', { deltaX, adjustedDeltaX, newWidth: newWidthPx, bubbleWidth });
+				
+				// Update width directly with STRICT CSS
+				bubbleElement.style.setProperty('width', newWidthPx, 'important');
+				bubbleElement.style.setProperty('max-width', newWidthPx, 'important');
+				bubbleElement.style.setProperty('min-width', `${minWidth}px`, 'important');
+				
+				// Update reactive variable
+			const oldBubbleWidth = bubbleWidth;
+				bubbleWidth = newWidthPx;
+				logWidthChange('MANUAL RESIZE', oldBubbleWidth, newWidthPx);
+			});
+		};
+		
+		const handleMouseUp = () => {
+			isResizing = false;
+			
+			console.log('🟡 RESIZE END:', bubbleWidth);
+			
+			// Re-enable transitions
+			bubbleElement.style.transition = '';
+			
+			// STRICT save to localStorage
+			const savedKey = isUserMessage ? 'userBubbleWidth' : 'llmBubbleWidth';
+			localStorage.setItem(savedKey, bubbleWidth);
+			console.log('🟡 RESIZE - Saved to localStorage:', { key: savedKey, value: bubbleWidth });
+			
+			// LOCK the final width with !important
+			bubbleElement.style.setProperty('width', bubbleWidth, 'important');
+			bubbleElement.style.setProperty('max-width', bubbleWidth, 'important');
+			
+			logWidthChange('RESIZE END', 'resizing', bubbleWidth);
+			
+			document.removeEventListener('mousemove', handleMouseMove);
+			document.removeEventListener('mouseup', handleMouseUp);
+		};
+		
+		document.addEventListener('mousemove', handleMouseMove);
+		document.addEventListener('mouseup', handleMouseUp);
+	};
+	
+	const resetWidth = () => {
+		console.log('🟢 RESET WIDTH CALLED');
+		const oldBubbleWidth = bubbleWidth;
+		
+		// STRICT reset to default width
+		bubbleWidth = defaultWidth;
+		const savedKey = isUserMessage ? 'userBubbleWidth' : 'llmBubbleWidth';
+		localStorage.setItem(savedKey, defaultWidth);
+		
+		console.log('🟢 RESET - New width:', defaultWidth);
+		
+		// Apply STRICT CSS with !important to LOCK it
+		if (bubbleElement) {
+			bubbleElement.style.setProperty('width', bubbleWidth, 'important');
+			bubbleElement.style.setProperty('max-width', bubbleWidth, 'important');
+			bubbleElement.style.setProperty('min-width', `${minWidth}px`, 'important');
+		}
+		
+		logWidthChange('RESET WIDTH', oldBubbleWidth, bubbleWidth);
+	};
+	
+	onDestroy(() => {
+		// Clean up mutation observer
+		if (bubbleElement?._widthObserver) {
+			bubbleElement._widthObserver.disconnect();
+		}
+	});
 
 	export let chatId;
 	export let selectedModels = [];
@@ -44,11 +247,24 @@
 	export let topPadding = false;
 </script>
 
-<div
-	class="flex flex-col justify-between px-5 mb-3 w-full {($settings?.widescreenMode ?? null)
-		? 'max-w-full'
-		: 'max-w-5xl'} mx-auto rounded-lg group"
->
+<div class="{($settings?.widescreenMode ?? null) ? 'max-w-full' : 'max-w-6xl'} {$mobile ? 'px-1' : 'px-2.5'} mx-auto">
+	<div
+		bind:this={bubbleElement}
+		data-message-bubble
+		class="relative flex flex-col justify-between {$mobile ? 'px-2' : 'px-5'} mb-3 w-full {enableResize && isUserMessage ? 'ml-auto' : enableResize && !isUserMessage ? 'mr-auto' : ''} rounded-lg group {isResizing ? 'select-none' : !isInitialRender ? 'transition-all duration-300 ease-in-out' : ''} overflow-hidden"
+		style="
+			min-height: 60px !important; 
+			contain: layout !important; 
+			overflow-wrap: break-word !important;
+			word-break: break-word !important;
+			width: {bubbleWidth} !important;
+			max-width: {bubbleWidth} !important;
+			min-width: {minWidth}px !important;
+			height: auto !important;
+		"
+		on:mouseenter={() => enableResize && (showResizeHandle = true)}
+		on:mouseleave={() => enableResize && !isResizing && (showResizeHandle = false)}
+	>
 	{#if history.messages[messageId]}
 		{#if history.messages[messageId].role === 'user'}
 			<UserMessage
@@ -69,6 +285,10 @@
 				{deleteMessage}
 				{readOnly}
 				{topPadding}
+				showResizeHandle={enableResize && showResizeHandle}
+				{isResizing}
+				handleResizeStart={enableResize ? handleResizeStart : () => {}}
+				resetWidth={enableResize ? resetWidth : () => {}}
 			/>
 		{:else if (history.messages[history.messages[messageId].parentId]?.models?.length ?? 1) === 1}
 			<ResponseMessage
@@ -120,4 +340,22 @@
 			/>
 		{/if}
 	{/if}
+	
+	<!-- Resize Handle (only for LLM messages, user messages handle in UserMessage component) -->
+	{#if enableResize && !isUserMessage && (showResizeHandle || isResizing)}
+		<div
+			class="absolute right-0 top-0 bottom-0 w-2 cursor-col-resize opacity-0 hover:opacity-20 bg-blue-500 transition-opacity duration-200 z-10"
+			on:mousedown={handleResizeStart}
+			on:dblclick={resetWidth}
+			title="Drag to resize bubble | Double-click to reset"
+		>
+			<!-- Resize indicator dots -->
+			<div class="absolute inset-y-0 left-1/2 transform -translate-x-1/2 flex flex-col justify-center space-y-1">
+				<div class="w-0.5 h-0.5 bg-white rounded-full opacity-60"></div>
+				<div class="w-0.5 h-0.5 bg-white rounded-full opacity-60"></div>
+				<div class="w-0.5 h-0.5 bg-white rounded-full opacity-60"></div>
+			</div>
+		</div>
+	{/if}
+	</div>
 </div>
