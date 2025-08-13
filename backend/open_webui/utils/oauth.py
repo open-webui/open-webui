@@ -356,9 +356,9 @@ class OAuthManager:
             raise HTTPException(400, detail=ERROR_MESSAGES.INVALID_CRED)
         user_data: UserInfo = token.get("userinfo")
         if (
-            (not user_data) or
-            (auth_manager_config.OAUTH_EMAIL_CLAIM not in user_data) or 
-            (auth_manager_config.OAUTH_USERNAME_CLAIM not in user_data)
+            (not user_data)
+            or (auth_manager_config.OAUTH_EMAIL_CLAIM not in user_data)
+            or (auth_manager_config.OAUTH_USERNAME_CLAIM not in user_data)
         ):
             user_data: UserInfo = await client.userinfo(token=token)
         if not user_data:
@@ -529,7 +529,15 @@ class OAuthManager:
                 default_permissions=request.app.state.config.USER_PERMISSIONS,
             )
 
+        redirect_base_url = str(request.app.state.config.WEBUI_URL or request.base_url)
+        if redirect_base_url.endswith("/"):
+            redirect_base_url = redirect_base_url[:-1]
+        redirect_url = f"{redirect_base_url}/auth"
+
+        response = RedirectResponse(url=redirect_url, headers=response.headers)
+
         # Set the cookie token
+        # Redirect back to the frontend with the JWT token
         response.set_cookie(
             key="token",
             value=jwt_token,
@@ -547,11 +555,4 @@ class OAuthManager:
                 samesite=WEBUI_AUTH_COOKIE_SAME_SITE,
                 secure=WEBUI_AUTH_COOKIE_SECURE,
             )
-        # Redirect back to the frontend with the JWT token
-
-        redirect_base_url = str(request.app.state.config.WEBUI_URL or request.base_url)
-        if redirect_base_url.endswith("/"):
-            redirect_base_url = redirect_base_url[:-1]
-        redirect_url = f"{redirect_base_url}/auth"
-
-        return RedirectResponse(url=redirect_url, headers=response.headers)
+        return response
