@@ -1,19 +1,42 @@
-import logging
 import json
+import logging
 import time
 import uuid
 from typing import Optional
 
-from open_webui.internal.db import Base, get_db
-from open_webui.models.tags import TagModel, Tag, Tags
-from open_webui.models.folders import Folders
 from open_webui.env import SRC_LOG_LEVELS
-
+from open_webui.internal.db import Base, get_db
+from open_webui.models.folders import Folders
+from open_webui.models.tags import Tag, TagModel, Tags
 from pydantic import BaseModel, ConfigDict
-from sqlalchemy import BigInteger, Boolean, Column, String, Text, JSON
-from sqlalchemy import or_, func, select, and_, text
+from sqlalchemy import (
+    JSON,
+    BigInteger,
+    Boolean,
+    Column,
+    String,
+    Text,
+    and_,
+    func,
+    or_,
+    select,
+    text,
+)
 from sqlalchemy.sql import exists
 from sqlalchemy.sql.expression import bindparam
+
+# Import JSONB for PostgreSQL support - gracefully handle absence
+try:
+    from sqlalchemy.dialects.postgresql import JSONB
+
+    HAS_JSONB = True
+except ImportError:
+    JSONB = None
+    HAS_JSONB = False
+
+# Constants for database column types
+COLUMN_CHAT = "chat"
+COLUMN_META = "meta"
 
 ####################
 # Chat DB Schema
@@ -29,7 +52,8 @@ class Chat(Base):
     id = Column(String, primary_key=True)
     user_id = Column(String)
     title = Column(Text)
-    chat = Column(JSON)
+    # Use JSONB for PostgreSQL, JSON for others
+    chat = Column(JSONB if HAS_JSONB else JSON)
 
     created_at = Column(BigInteger)
     updated_at = Column(BigInteger)
@@ -38,7 +62,8 @@ class Chat(Base):
     archived = Column(Boolean, default=False)
     pinned = Column(Boolean, default=False, nullable=True)
 
-    meta = Column(JSON, server_default="{}")
+    # Use JSONB for PostgreSQL, JSON for others
+    meta = Column(JSONB if HAS_JSONB else JSON, server_default="{}")
     folder_id = Column(Text, nullable=True)
 
 
@@ -109,6 +134,237 @@ class ChatTitleIdResponse(BaseModel):
 
 
 class ChatTable:
+    def __init__(self):
+        # Cache for JSONB column checks to avoid repeated database queries
+        self._jsonb_cache = {}
+        # Cache for database capabilities to avoid repeated checks
+        self._db_capabilities = {}
+
+    def _get_db_capabilities(self, db) -> dict:
+        """
+        Get database capabilities including JSONB support for columns.
+        Results are cached per database connection to avoid repeated queries.
+
+        Args:
+            db: Database session
+
+        Returns:
+            dict: Database capabilities with column types
+        """
+        if not HAS_JSONB or db.bind.dialect.name != "postgresql":
+            return {"supports_jsonb": False, "columns": {}}
+
+        # Create a more robust cache key using connection details
+        cache_key = f"{db.bind.dialect.name}_{hash(str(db.bind.url))}"
+
+        if cache_key in self._db_capabilities:
+            return self._db_capabilities[cache_key]
+
+        try:
+            # Query all relevant columns at once for efficiency
+            result = db.execute(
+                text(
+                    """
+                    SELECT column_name, data_type 
+                    FROM information_schema.columns 
+                    WHERE table_name = 'chat' 
+                    AND column_name IN ('chat', 'meta')
+                """
+                )
+            )
+
+            columns = {}
+            for row in result:
+                columns[row[0]] = row[1].lower()
+
+            capabilities = {"supports_jsonb": True, "columns": columns}
+
+            # Cache the result
+            self._db_capabilities[cache_key] = capabilities
+            log.debug(f"Database capabilities cached: {capabilities}")
+            return capabilities
+
+        except Exception as e:
+            log.warning(f"Error checking database capabilities: {e}")
+            fallback = {"supports_jsonb": False, "columns": {}}
+            self._db_capabilities[cache_key] = fallback
+            return fallback
+
+    def _is_jsonb_column(self, db, column_name: str) -> bool:
+        """
+        Check if a column is using JSONB type.
+
+        Args:
+            db: Database session
+            column_name: Name of the column to check
+
+        Returns:
+            bool: True if column is JSONB, False otherwise
+        """
+        capabilities = self._get_db_capabilities(db)
+        if not capabilities["supports_jsonb"]:
+            return False
+
+        return capabilities["columns"].get(column_name) == "jsonb"
+
+    def _get_json_functions(self, db) -> dict:
+        """
+        Get all appropriate JSON functions based on database capabilities.
+
+        Returns:
+            dict: Function names for different JSON operations
+        """
+        capabilities = self._get_db_capabilities(db)
+
+        if not capabilities["supports_jsonb"]:
+            return {
+                "array_elements": "json_array_elements",
+                "array_elements_text": "json_array_elements_text",
+                "supports_containment": False,
+            }
+
+        # Determine functions based on actual column types
+        chat_is_jsonb = capabilities["columns"].get(COLUMN_CHAT) == "jsonb"
+        meta_is_jsonb = capabilities["columns"].get(COLUMN_META) == "jsonb"
+
+        return {
+            "chat_array_elements": (
+                "jsonb_array_elements" if chat_is_jsonb else "json_array_elements"
+            ),
+            "meta_array_elements_text": (
+                "jsonb_array_elements_text"
+                if meta_is_jsonb
+                else "json_array_elements_text"
+            ),
+            "meta_supports_containment": meta_is_jsonb,
+            "chat_is_jsonb": chat_is_jsonb,
+            "meta_is_jsonb": meta_is_jsonb,
+        }
+
+    def _build_tag_query(self, db, tag_ids: list[str], operator: str = "AND") -> text:
+        """
+        Build an optimized tag query based on database capabilities.
+
+        Args:
+            db: Database session
+            tag_ids: List of tag IDs to check
+            operator: "AND" for all tags, "OR" for any tag
+
+        Returns:
+            text: SQLAlchemy text clause for the query
+        """
+        functions = self._get_json_functions(db)
+
+        if functions.get("meta_supports_containment") and operator == "AND":
+            # JSONB supports efficient containment operator for AND operations
+            return text("Chat.meta->'tags' @> CAST(:tags_array AS jsonb)").params(
+                tags_array=json.dumps(tag_ids)
+            )
+        else:
+            # Use EXISTS queries - works for both JSON and JSONB
+            array_func = functions.get(
+                "meta_array_elements_text", "json_array_elements_text"
+            )
+            conditions = []
+
+            for idx, tag_id in enumerate(tag_ids):
+                conditions.append(
+                    text(
+                        f"""
+                        EXISTS (
+                            SELECT 1
+                            FROM {array_func}(Chat.meta->'tags') AS tag
+                            WHERE tag = :tag_id_{idx}
+                        )
+                    """
+                    ).params(**{f"tag_id_{idx}": tag_id})
+                )
+
+            return and_(*conditions) if operator == "AND" else or_(*conditions)
+
+    def create_optimized_indexes(self) -> dict:
+        """
+        Create optimized indexes based on actual database capabilities.
+
+        Returns:
+            dict: Results of index creation with details
+        """
+        result = {
+            "success": False,
+            "indexes_created": [],
+            "indexes_skipped": [],
+            "errors": [],
+        }
+
+        try:
+            with get_db() as db:
+                capabilities = self._get_db_capabilities(db)
+
+                if not capabilities["supports_jsonb"]:
+                    result["indexes_skipped"].append(
+                        "Non-PostgreSQL database - GIN indexes not supported"
+                    )
+                    log.info(
+                        "Skipping index creation: GIN indexes only supported on PostgreSQL"
+                    )
+                    return result
+
+                functions = self._get_json_functions(db)
+
+                # Create indexes based on actual column types
+                index_definitions = []
+
+                if functions.get("meta_is_jsonb"):
+                    index_definitions.extend(
+                        [
+                            (
+                                "idx_chat_meta_tags_gin",
+                                "CREATE INDEX IF NOT EXISTS idx_chat_meta_tags_gin ON chat USING GIN ((meta->'tags'))",
+                            ),
+                            (
+                                "idx_chat_meta_gin",
+                                "CREATE INDEX IF NOT EXISTS idx_chat_meta_gin ON chat USING GIN (meta)",
+                            ),
+                        ]
+                    )
+
+                if functions.get("chat_is_jsonb"):
+                    index_definitions.append(
+                        (
+                            "idx_chat_messages_gin",
+                            "CREATE INDEX IF NOT EXISTS idx_chat_messages_gin ON chat USING GIN ((chat->'history'->'messages'))",
+                        )
+                    )
+
+                # Create indexes
+                for index_name, sql in index_definitions:
+                    try:
+                        db.execute(text(sql))
+                        result["indexes_created"].append(index_name)
+                        log.debug(f"Created index: {index_name}")
+                    except Exception as e:
+                        error_msg = f"Failed to create {index_name}: {e}"
+                        result["errors"].append(error_msg)
+                        log.warning(error_msg)
+
+                db.commit()
+                result["success"] = len(result["indexes_created"]) > 0
+
+                if result["indexes_created"]:
+                    log.info(
+                        f"Successfully created GIN indexes: {', '.join(result['indexes_created'])}"
+                    )
+                elif not result["errors"]:
+                    log.info("No JSONB columns found - skipped GIN index creation")
+
+                return result
+
+        except Exception as e:
+            error_msg = f"Error during index creation: {e}"
+            result["errors"].append(error_msg)
+            log.error(error_msg)
+            return result
+
     def insert_new_chat(self, user_id: str, form_data: ChatForm) -> Optional[ChatModel]:
         with get_db() as db:
             id = str(uuid.uuid4())
@@ -732,11 +988,13 @@ class ChatTable:
                     )
 
             elif dialect_name == "postgresql":
-                # PostgreSQL relies on proper JSON query for search
+                # Use appropriate function based on column type
+                functions = self._get_json_functions(db)
+                array_func = functions.get("chat_array_elements", "json_array_elements")
                 postgres_content_sql = (
                     "EXISTS ("
                     "    SELECT 1 "
-                    "    FROM json_array_elements(Chat.chat->'messages') AS message "
+                    f"    FROM {array_func}(Chat.chat->'messages') AS message "
                     "    WHERE LOWER(message->>'content') LIKE '%' || :content_key || '%'"
                     ")"
                 )
@@ -750,33 +1008,32 @@ class ChatTable:
 
                 # Check if there are any tags to filter, it should have all the tags
                 if "none" in tag_ids:
-                    query = query.filter(
-                        text(
-                            """
-                            NOT EXISTS (
-                                SELECT 1
-                                FROM json_array_elements_text(Chat.meta->'tags') AS tag
+                    functions = self._get_json_functions(db)
+                    if functions.get("meta_is_jsonb"):
+                        # JSONB - check for empty array or null
+                        query = query.filter(
+                            text(
+                                "(Chat.meta->'tags' IS NULL OR Chat.meta->'tags' = CAST('[]' AS jsonb))"
                             )
+                        )
+                    else:
+                        # JSON - standard check
+                        array_func = functions.get(
+                            "meta_array_elements_text", "json_array_elements_text"
+                        )
+                        query = query.filter(
+                            text(
+                                f"""
+                                NOT EXISTS (
+                                    SELECT 1
+                                    FROM {array_func}(Chat.meta->'tags') AS tag
+                                )
                             """
+                            )
                         )
-                    )
                 elif tag_ids:
-                    query = query.filter(
-                        and_(
-                            *[
-                                text(
-                                    f"""
-                                    EXISTS (
-                                        SELECT 1
-                                        FROM json_array_elements_text(Chat.meta->'tags') AS tag
-                                        WHERE tag = :tag_id_{tag_idx}
-                                    )
-                                    """
-                                ).params(**{f"tag_id_{tag_idx}": tag_id})
-                                for tag_idx, tag_id in enumerate(tag_ids)
-                            ]
-                        )
-                    )
+                    # Use helper method for optimized tag query
+                    query = query.filter(self._build_tag_query(db, tag_ids))
             else:
                 raise NotImplementedError(
                     f"Unsupported dialect: {db.bind.dialect.name}"
@@ -855,12 +1112,9 @@ class ChatTable:
                     )
                 ).params(tag_id=tag_id)
             elif db.bind.dialect.name == "postgresql":
-                # PostgreSQL JSON query for tags within the meta JSON field (for `json` type)
-                query = query.filter(
-                    text(
-                        "EXISTS (SELECT 1 FROM json_array_elements_text(Chat.meta->'tags') elem WHERE elem = :tag_id)"
-                    )
-                ).params(tag_id=tag_id)
+                # Use optimized single tag query
+                single_tag_query = self._build_tag_query(db, [tag_id])
+                query = query.filter(single_tag_query)
             else:
                 raise NotImplementedError(
                     f"Unsupported dialect: {db.bind.dialect.name}"
@@ -909,12 +1163,9 @@ class ChatTable:
                 ).params(tag_id=tag_id)
 
             elif db.bind.dialect.name == "postgresql":
-                # PostgreSQL JSONB support for querying the tags inside the `meta` JSON field
-                query = query.filter(
-                    text(
-                        "EXISTS (SELECT 1 FROM json_array_elements_text(Chat.meta->'tags') elem WHERE elem = :tag_id)"
-                    )
-                ).params(tag_id=tag_id)
+                # Use optimized single tag query
+                single_tag_query = self._build_tag_query(db, [tag_id])
+                query = query.filter(single_tag_query)
 
             else:
                 raise NotImplementedError(
