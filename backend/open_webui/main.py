@@ -1730,6 +1730,16 @@ async def get_app_config(request: Request):
             else {
                 **(
                     {
+                        "ui": {
+                            "pending_user_overlay_title": app.state.config.PENDING_USER_OVERLAY_TITLE,
+                            "pending_user_overlay_content": app.state.config.PENDING_USER_OVERLAY_CONTENT,
+                        }
+                    }
+                    if user and user.role == "pending"
+                    else {}
+                )
+                ** (
+                    {
                         "metadata": {
                             "login_footer": app.state.LICENSE_METADATA.get(
                                 "login_footer", ""
@@ -1741,7 +1751,7 @@ async def get_app_config(request: Request):
                     }
                     if app.state.LICENSE_METADATA
                     else {}
-                )
+                ),
             }
         ),
     }
