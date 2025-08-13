@@ -626,7 +626,12 @@
 			const _functions = JSON.parse(event.target.result);
 			console.log(_functions);
 
-			for (const func of _functions) {
+			for (let func of _functions) {
+				if ('function' in func) {
+					// Required for Community JSON import
+					func = func.function;
+				}
+
 				const res = await createNewFunction(localStorage.token, func).catch((error) => {
 					toast.error(`${error}`);
 					return null;
