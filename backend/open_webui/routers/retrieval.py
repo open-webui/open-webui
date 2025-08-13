@@ -1519,6 +1519,7 @@ def process_file(
             known_entities = []
             current_page_offset = 0
             detections = {}
+            page_detections = {}
 
             for doc in docs:
                 pii = None
@@ -1551,6 +1552,8 @@ def process_file(
                                 (response["pii"] or [[]])[0] if response["pii"] else {}
                             )
                             for pii_entity in pii:
+                                page_detections[pii_entity["text"]] = pii_entity.copy()
+
                                 updated_occurences = []
 
                                 for occurrence in pii_entity["occurrences"]:
@@ -1584,7 +1587,7 @@ def process_file(
                 # attach PII to document metadata for downstream use
                 if pii is not None:
                     try:
-                        doc.metadata["pii"] = pii
+                        doc.metadata["pii"] = page_detections
                     except Exception:
                         pass
 
