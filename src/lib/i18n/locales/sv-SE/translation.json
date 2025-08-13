@@ -1511,6 +1511,7 @@
 	"Write a prompt suggestion (e.g. Who are you?)": "Skriv ett instruktionsförslag (t.ex. Vem är du?)",
 	"Write a summary in 50 words that summarizes [topic or keyword].": "Skriv en sammanfattning på 50 ord som sammanfattar [ämne eller nyckelord].",
 	"Write something...": "Skriv någonting...",
+	"Write your model system prompt content here\ne.g.) You are Mario from Super Mario Bros, acting as an assistant.": "Skriv innehållet i modellens systemprompt här\nt.ex.: Du är Mario från Super Mario Bros och agerar som assistent.",
 	"Yacy Instance URL": "Yacy-instans-URL",
 	"Yacy Password": "Yacy-lösenord",
 	"Yacy Username": "Yacy-användarnamn",

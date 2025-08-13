@@ -1511,6 +1511,7 @@
 	"Write a prompt suggestion (e.g. Who are you?)": "Scrivi un suggerimento per il prompt (ad esempio Chi sei?)",
 	"Write a summary in 50 words that summarizes [topic or keyword].": "Scrivi un riassunto in 50 parole che riassume [argomento o parola chiave].",
 	"Write something...": "Scrivi qualcosa...",
+	"Write your model system prompt content here\ne.g.) You are Mario from Super Mario Bros, acting as an assistant.": "Scrivi qui il contenuto del system prompt del tuo modello\nad es.: Sei Mario di Super Mario Bros e agisci come assistente.",
 	"Yacy Instance URL": "URL dell'istanza Yacy",
 	"Yacy Password": "Password Yacy",
 	"Yacy Username": "Nome utente Yacy",

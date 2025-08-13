@@ -1511,6 +1511,7 @@
 	"Write a prompt suggestion (e.g. Who are you?)": "Escriu una suggerència d'indicació (p. ex. Qui ets?)",
 	"Write a summary in 50 words that summarizes [topic or keyword].": "Escriu un resum en 50 paraules que resumeixi [tema o paraula clau].",
 	"Write something...": "Escriu quelcom...",
+	"Write your model system prompt content here\ne.g.) You are Mario from Super Mario Bros, acting as an assistant.": "Escriu aquí el contingut del system prompt del teu model\np. ex.: Ets en Mario de Super Mario Bros i actues com a assistent.",
 	"Yacy Instance URL": "URL de la instància de Yacy",
 	"Yacy Password": "Contrasenya de Yacy",
 	"Yacy Username": "Nom d'usuari de Yacy",
