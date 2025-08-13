@@ -47,7 +47,7 @@
 	};
 
 	onMount(() => {
-		const groupId = querystringValue('id')
+		const groupId = querystringValue('id');
 		if (groupId && groupId === group.id) {
 			showEdit = true;
 		}
