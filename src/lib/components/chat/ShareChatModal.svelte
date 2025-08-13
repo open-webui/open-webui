@@ -499,7 +499,11 @@
 					share_id = chat.share_id ?? '';
 					initial_share_id = share_id;
 
-					generateQrCodesDebounced(share_id ? `${window.location.origin}/s/${share_id}` : null);
+					if (share_id) {
+						generateQrCodesImmediate(`${window.location.origin}/s/${share_id}`);
+					} else {
+						generateQrCodesDebounced(null);
+					}
 
 					const sharedChatFromStore = $sharedChatsStore.find((c) => c.id === _chat.id);
 					if (sharedChatFromStore) {
