@@ -485,7 +485,7 @@
 	"Enter CFG Scale (e.g. 7.0)": "",
 	"Enter Chunk Overlap": "",
 	"Enter Chunk Size": "",
-"Enter comma-separated \"token:bias_value\" pairs (example: 5432:100, 413:-100)": "Insira pares \"token:bias_value\" separados por vírgulas (exemplo: 5432:100, 413:-100)",
+	"Enter comma-separated \"token:bias_value\" pairs (example: 5432:100, 413:-100)": "",
 	"Enter Config in JSON format": "",
 	"Enter content for the pending user info overlay. Leave empty for default.": "",
 	"Enter Datalab Marker API Base URL": "",
