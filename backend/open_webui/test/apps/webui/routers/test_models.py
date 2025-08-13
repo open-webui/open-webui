@@ -25,7 +25,7 @@ class TestModels(AbstractPostgresTest):
                     "base_model_id": "base-model-id",
                     "name": "Hello World",
                     "meta": {
-                        "profile_image_url": "/static/favicon.png",
+                        "profile_image_url": "/favicon.png",
                         "description": "description",
                         "capabilities": None,
                         "model_config": {},
