@@ -20,24 +20,30 @@ router = APIRouter()
 
 @router.get("/", response_model=list[PromptModel])
 async def get_prompts(user=Depends(get_verified_user)):
-    """Get all prompts (original behavior)"""
+    """Get all prompts (original behavior) - now with access control and public prompts"""
     if user.role == "admin":
         prompts = Prompts.get_prompts()
     else:
         # Non-admin users see public prompts + owned prompts + shared prompts
-        prompts = Prompts.get_prompts_by_user_id(user.id)
+        # Use optimized method with large limit for backward compatibility
+        prompts = Prompts.get_prompts_with_access_control(
+            user.id, page=1, limit=10000, search=None
+        )
 
     return prompts
 
 
 @router.get("/list", response_model=list[PromptUserResponse])
 async def get_prompt_list(user=Depends(get_verified_user)):
-    """Get all prompts with user info (original behavior)"""
+    """Get all prompts with user info (original behavior) - now with access control and public prompts"""
     if user.role == "admin":
         prompts = Prompts.get_prompts()
     else:
         # Non-admin users see public prompts + owned prompts + shared prompts
-        prompts = Prompts.get_prompts_by_user_id(user.id)
+        # Use optimized method with large limit for backward compatibility
+        prompts = Prompts.get_prompts_with_access_control_and_users(
+            user.id, page=1, limit=10000, search=None
+        )
 
     return prompts
 
