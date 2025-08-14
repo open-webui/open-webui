@@ -332,7 +332,7 @@
 							<div
 								class=" text-xs font-bold px-1 rounded-sm uppercase line-clamp-1 bg-gray-500/20 text-gray-700 dark:text-gray-200"
 							>
-								{func.type}
+								{$i18n.t(func.type)}
 							</div>
 
 							{#if func?.meta?.manifest?.version}

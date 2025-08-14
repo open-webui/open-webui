@@ -120,9 +120,9 @@
 								<option disabled selected value="">{$i18n.t('Select a engine')}</option>
 								{#each webSearchEngines as engine}
 									{#if engine === 'duckduckgo' || engine === 'ddgs'}
-										<option value={engine}>DDGS</option>
+										<option value={engine}>{$i18n.t('DDGS')}</option>
 									{:else}
-										<option value={engine}>{engine}</option>
+										<option value={engine}>{$i18n.t(engine)}</option>
 									{/if}
 								{/each}
 							</select>

@@ -1,11 +1,13 @@
 <script lang="ts">
-	import { onDestroy, onMount } from 'svelte';
+	import { onDestroy, onMount, getContext } from 'svelte';
 	import panzoom, { type PanZoom } from 'panzoom';
 
 	import fileSaver from 'file-saver';
 	const { saveAs } = fileSaver;
 
 	import XMark from '$lib/components/icons/XMark.svelte';
+
+	const i18n = getContext('i18n');
 
 	export let show = false;
 	export let src = '';
@@ -75,6 +77,7 @@
 			<div>
 				<button
 					class=" p-5"
+					aria-label={$i18n.t('Close')}
 					on:pointerdown={(e) => {
 						e.stopImmediatePropagation();
 						e.preventDefault();
@@ -91,6 +94,7 @@
 			<div>
 				<button
 					class=" p-5 z-999"
+					aria-label={$i18n.t('Download')}
 					on:click={() => {
 						if (src.startsWith('data:image/')) {
 							const base64Data = src.split(',')[1];

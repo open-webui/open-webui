@@ -1,7 +1,9 @@
 <script>
 	import L from 'leaflet';
 	import 'leaflet/dist/leaflet.css';
-	import { onMount, onDestroy } from 'svelte';
+	import { onMount, onDestroy, getContext } from 'svelte';
+
+	const i18n = getContext('i18n');
 
 	let map;
 	let mapElement;
@@ -43,7 +45,10 @@
 			points = [
 				{
 					coords: setViewLocation,
-					content: `Lat: ${setViewLocation[0]}, Lng: ${setViewLocation[1]}`
+					content: $i18n.t(`Lat: {{lat}}, Lng: {{lng}}`, {
+						lat: setViewLocation[0],
+						lng: setViewLocation[1]
+					})
 				}
 			];
 		}
@@ -62,7 +67,7 @@
 			setMarkers([
 				{
 					coords: [e.latlng.lat, e.latlng.lng],
-					content: `Lat: ${e.latlng.lat}, Lng: ${e.latlng.lng}`
+					content: $i18n.t(`Lat: {{lat}}, Lng: {{lng}}`, { lat: e.latlng.lat, lng: e.latlng.lng })
 				}
 			]);
 		});

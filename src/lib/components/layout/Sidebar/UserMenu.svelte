@@ -255,7 +255,7 @@
 			{/if}
 
 			<!-- <DropdownMenu.Item class="flex items-center py-1.5 px-3 text-sm ">
-				<div class="flex items-center">Profile</div>
+				<div class="flex items-center">{$i18n.t("Profile")}</div>
 			</DropdownMenu.Item> -->
 		</DropdownMenu.Content>
 	</slot>

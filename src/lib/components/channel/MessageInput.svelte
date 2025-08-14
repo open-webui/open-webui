@@ -813,7 +813,7 @@
 											<button
 												class="bg-transparent hover:bg-white/80 text-gray-800 dark:text-white dark:hover:bg-gray-800 transition rounded-full p-1.5 outline-hidden focus:outline-hidden"
 												type="button"
-												aria-label="More"
+												aria-label={$i18n.t('More')}
 											>
 												<svg
 													xmlns="http://www.w3.org/2000/svg"

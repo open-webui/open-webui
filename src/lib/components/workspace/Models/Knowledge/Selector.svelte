@@ -67,7 +67,9 @@
 							name: 'All Documents',
 							legacy: true,
 							type: 'collection',
-							description: 'Deprecated (legacy collection), please create a new knowledge base.',
+							description: $i18n.t(
+								'Deprecated (legacy collection), please create a new knowledge base.'
+							),
 							title: $i18n.t('All Documents'),
 							collection_names: legacy_documents.map((item) => item.id)
 						},
@@ -80,7 +82,9 @@
 								name: tag,
 								legacy: true,
 								type: 'collection',
-								description: 'Deprecated (legacy collection), please create a new knowledge base.',
+								description: $i18n.t(
+									'Deprecated (legacy collection), please create a new knowledge base.'
+								),
 								collection_names: legacy_documents
 									.filter((item) => (item?.meta?.tags ?? []).map((tag) => tag.name).includes(tag))
 									.map((item) => item.id)
@@ -181,31 +185,31 @@
 										<div
 											class="bg-gray-500/20 text-gray-700 dark:text-gray-200 rounded-sm uppercase text-xs font-bold px-1 shrink-0"
 										>
-											Legacy
+											{$i18n.t('Legacy')}
 										</div>
 									{:else if item?.meta?.document}
 										<div
 											class="bg-gray-500/20 text-gray-700 dark:text-gray-200 rounded-sm uppercase text-xs font-bold px-1 shrink-0"
 										>
-											Document
+											{$i18n.t('Document')}
 										</div>
 									{:else if item?.type === 'file'}
 										<div
 											class="bg-gray-500/20 text-gray-700 dark:text-gray-200 rounded-sm uppercase text-xs font-bold px-1 shrink-0"
 										>
-											File
+											{$i18n.t('File')}
 										</div>
 									{:else if item?.type === 'note'}
 										<div
 											class="bg-blue-500/20 text-blue-700 dark:text-blue-200 rounded-sm uppercase text-xs font-bold px-1 shrink-0"
 										>
-											Note
+											{$i18n.t('Note')}
 										</div>
 									{:else}
 										<div
 											class="bg-green-500/20 text-green-700 dark:text-green-200 rounded-sm uppercase text-xs font-bold px-1 shrink-0"
 										>
-											Collection
+											{$i18n.t('Collection')}
 										</div>
 									{/if}
 

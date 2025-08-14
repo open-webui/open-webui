@@ -84,7 +84,7 @@
 								}
 							}}
 						>
-							{item?.name ?? 'File'}
+							{item?.name ?? $i18n.t('File')}
 						</a>
 					</div>
 				</div>
@@ -105,7 +105,7 @@
 					<div class=" flex flex-wrap text-sm gap-1 text-gray-500">
 						{#if item?.type === 'collection'}
 							{#if item?.type}
-								<div class="capitalize shrink-0">{item.type}</div>
+								<div class="capitalize shrink-0">{$i18n.t('Collection')}</div>
 								•
 							{/if}
 
@@ -128,13 +128,15 @@
 
 						{#if item?.file?.data?.content}
 							<div class="capitalize shrink-0">
-								{getLineCount(item?.file?.data?.content ?? '')} extracted lines
+								{$i18n.t('{{COUNT}} extracted lines', {
+									COUNT: getLineCount(item?.file?.data?.content ?? '')
+								})}
 							</div>
 
 							<div class="flex items-center gap-1 shrink-0">
 								<Info />
 
-								Formatting may be inconsistent from source.
+								{$i18n.t('Formatting may be inconsistent from source.')}
 							</div>
 						{/if}
 
@@ -206,7 +208,7 @@
 
 					{#if item?.file?.data}
 						<div class="max-h-96 overflow-scroll scrollbar-hidden text-xs whitespace-pre-wrap">
-							{item?.file?.data?.content ?? 'No content'}
+							{item?.file?.data?.content ?? $i18n.t('No content')}
 						</div>
 					{/if}
 				{/if}

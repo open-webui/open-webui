@@ -1142,7 +1142,7 @@
 								class="w-20 bg-transparent outline-hidden text-center"
 								min="0"
 								placeholder={$i18n.t('Width')}
-							/>x
+							/>
 							<label class="sr-only" for="image-comp-height"
 								>{$i18n.t('Image Max Compression Size height')}</label
 							>

@@ -569,7 +569,7 @@
 							<div class="flex flex-col self-start">
 								<div class="flex gap-1">
 									<div class="line-clamp-1">
-										Downloading "{model}"
+										{$i18n.t('Downloading "{{model}}"', { model: model })}
 									</div>
 
 									<div class="shrink-0">

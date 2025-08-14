@@ -1,9 +1,12 @@
 <script lang="ts">
+	import { getContext } from 'svelte';
 	import { DropdownMenu } from 'bits-ui';
 
 	import { flyAndScale } from '$lib/utils/transitions';
 	import { WEBUI_BASE_URL } from '$lib/constants';
 	import { getUserActiveStatusById } from '$lib/apis/users';
+
+	const i18n = getContext('i18n');
 
 	export let side = 'right';
 	export let align = 'top';
@@ -76,7 +79,7 @@
 								</div>
 
 								<div class=" -translate-y-[1px]">
-									<span class="text-xs"> Active </span>
+									<span class="text-xs"> {$i18n.t('Active')} </span>
 								</div>
 							{:else}
 								<div>
@@ -86,7 +89,7 @@
 								</div>
 
 								<div class=" -translate-y-[1px]">
-									<span class="text-xs"> Away </span>
+									<span class="text-xs"> {$i18n.t('Away')} </span>
 								</div>
 							{/if}
 						</div>

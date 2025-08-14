@@ -242,7 +242,7 @@
 						? 'text-gray-800 dark:text-gray-100'
 						: 'text-gray-400 dark:text-gray-500'}"
 				>
-					Couldn't find your language?
+					{$i18n.t("Couldn't find your language?")}
 					<a
 						class="font-medium underline {($settings?.highContrastMode ?? false)
 							? 'text-gray-700 dark:text-gray-200'
@@ -250,7 +250,7 @@
 						href="https://github.com/open-webui/open-webui/blob/main/docs/CONTRIBUTING.md#-translations-and-internationalization"
 						target="_blank"
 					>
-						Help us translate Open WebUI!
+						{$i18n.t("Help us translate Open WebUI!")}
 					</a>
 				</div>
 			{/if}

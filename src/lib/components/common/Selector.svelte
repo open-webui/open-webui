@@ -3,11 +3,12 @@
 
 	import { flyAndScale } from '$lib/utils/transitions';
 
-	import { createEventDispatcher } from 'svelte';
+	import { createEventDispatcher, getContext } from 'svelte';
 	import ChevronDown from '../icons/ChevronDown.svelte';
 	import Check from '../icons/Check.svelte';
 	import Search from '../icons/Search.svelte';
 
+	const i18n = getContext('i18n');
 	const dispatch = createEventDispatcher();
 
 	export let value = '';
@@ -85,7 +86,7 @@
 				{:else}
 					<div>
 						<div class="block px-5 py-2 text-sm text-gray-700 dark:text-gray-100">
-							No results found
+							{$i18n.t('No results found')}
 						</div>
 					</div>
 				{/each}

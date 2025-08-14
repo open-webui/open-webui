@@ -230,7 +230,13 @@
 		// Function to update the UI with the progress
 		const updateProgress = () => {
 			const percentage = (uploadedFiles / totalFiles) * 100;
-			toast.info($i18n.t("Upload Progress: {{uploadedFiles}}/{{totalFiles}} ({{percentage}}%)", { uploadedFiles: uploadedFiles, totalFiles: totalFiles, percentage: percentage.toFixed(2) }));
+			toast.info(
+				$i18n.t('Upload Progress: {{uploadedFiles}}/{{totalFiles}} ({{percentage}}%)', {
+					uploadedFiles,
+					totalFiles,
+					percentage: percentage.toFixed(2)
+				})
+			);
 		};
 
 		// Recursive function to count all files excluding hidden ones
@@ -283,7 +289,7 @@
 		if (totalFiles > 0) {
 			await processDirectory(dirHandle);
 		} else {
-			console.log('No files to upload.');
+			console.log($i18n.t('No files to upload.'));
 		}
 	};
 
@@ -314,8 +320,11 @@
 					const updateProgress = () => {
 						const percentage = (uploadedFiles / totalFiles) * 100;
 						toast.info(
-							$i18n.t("Upload Progress: {{uploadedFiles}}/{{totalFiles}} ({{percentage}}%)", 
-							{ uploadedFiles: uploadedFiles, totalFiles: totalFiles, percentage: percentage.toFixed(2) })
+							$i18n.t('Upload Progress: {{uploadedFiles}}/{{totalFiles}} ({{percentage}}%)', {
+								uploadedFiles,
+								totalFiles,
+								percentage: percentage.toFixed(2)
+							})
 						);
 					};
 
@@ -622,7 +631,7 @@
 				<div class="max-w-md">
 					<AddFilesPlaceholder>
 						<div class=" mt-2 text-center text-sm dark:text-gray-200 w-full">
-							Drop any files here to add to my documents
+							{$i18n.t('Drop any files here to add to my documents')}
 						</div>
 					</AddFilesPlaceholder>
 				</div>

@@ -14,7 +14,7 @@
 			</div>
 		{/if}
 
-		<Tooltip content="Home" placement="right">
+		<Tooltip content={$i18n.t('Home')} placement="right">
 			<button
 				class=" cursor-pointer {selected === 'home' ? 'rounded-2xl' : 'rounded-full'}"
 				on:click={() => {

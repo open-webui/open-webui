@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { getContext } from 'svelte';
 	import { DropdownMenu } from 'bits-ui';
 	import { flyAndScale } from '$lib/utils/transitions';
 	import emojiGroups from '$lib/emoji-groups.json';
@@ -6,6 +7,8 @@
 	import Tooltip from '$lib/components/common/Tooltip.svelte';
 	import VirtualList from '@sveltejs/svelte-virtual-list';
 	import { WEBUI_BASE_URL } from '$lib/constants';
+
+	const i18n = getContext('i18n');
 
 	export let onClose = () => {};
 	export let onSubmit = (name) => {};
@@ -125,7 +128,9 @@
 		<!-- Virtualized Emoji List -->
 		<div class="w-full flex justify-start h-96 overflow-y-auto px-3 pb-3 text-sm">
 			{#if emojiRows.length === 0}
-				<div class="text-center text-xs text-gray-500 dark:text-gray-400">No results</div>
+				<div class="text-center text-xs text-gray-500 dark:text-gray-400">
+					{$i18n.t('No results')}
+				</div>
 			{:else}
 				<div class="w-full flex ml-0.5">
 					<VirtualList rowHeight={ROW_HEIGHT} items={emojiRows} height={384} let:item>

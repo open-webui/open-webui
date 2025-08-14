@@ -238,16 +238,15 @@
 										class="text-gray-500 mt-0.5"
 									>
 										<span class=" capitalize text-black dark:text-white"
-											>{$config?.license_metadata?.type}
-											license</span
-										>
-										registered to
+											>{$i18n.t('{{licenseType}} license', { licenseType: $config?.license_metadata?.type })}
+										</span>
+										{$i18n.t('registered to')}
 										<span class=" capitalize text-black dark:text-white"
 											>{$config?.license_metadata?.organization_name}</span
 										>
-										for
+										{$i18n.t('for')}
 										<span class=" font-medium text-black dark:text-white"
-											>{$config?.license_metadata?.seats ?? 'Unlimited'} users.</span
+											>{$i18n.t('{{seats}} users.', { seats: $config?.license_metadata?.seats ?? $i18n.t('Unlimited') })}</span
 										>
 									</a>
 									{#if $config?.license_metadata?.html}

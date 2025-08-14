@@ -272,14 +272,14 @@
 									<div
 										class=" text-xs font-bold px-1 rounded-sm uppercase line-clamp-1 bg-gray-500/20 text-gray-700 dark:text-gray-200"
 									>
-										TOOL
+										{$i18n.t('TOOL')}
 									</div>
 
 									{#if tool?.meta?.manifest?.version}
 										<div
 											class="text-xs font-bold px-1 rounded-sm line-clamp-1 bg-gray-500/20 text-gray-700 dark:text-gray-200"
 										>
-											v{tool?.meta?.manifest?.version ?? ''}
+											{$i18n.t('v{{version}}', { version: tool?.meta?.manifest?.version ?? '' })}
 										</div>
 									{/if}
 

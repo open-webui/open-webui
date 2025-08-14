@@ -64,12 +64,12 @@
 			</div>
 
 			<!-- <div class="mt-3">
-				To understand what LLM remembers or teach it something new, just chat with it:
+				{$i18n.t('To understand what LLM remembers or teach it something new, just chat with it:')}
 
-				<div>- “Remember that I like concise responses.”</div>
-				<div>- “I just got a puppy!”</div>
-				<div>- “What do you remember about me?”</div>
-				<div>- “Where did we leave off on my last project?”</div>
+				<div>- {$i18n.t('“Remember that I like concise responses.”')}</div>
+				<div>- {$i18n.t('“I just got a puppy!”')}</div>
+				<div>- {$i18n.t('“What do you remember about me?”')}</div>
+				<div>- {$i18n.t('“Where did we leave off on my last project?”')}</div>
 			</div> -->
 		</div>
 
