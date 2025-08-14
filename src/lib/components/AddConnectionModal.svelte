@@ -108,7 +108,7 @@
 
 		if (!ollama && !url) {
 			loading = false;
-			toast.error('URL is required');
+			toast.error($i18n.t('URL is required'));
 			return;
 		}
 
@@ -116,20 +116,20 @@
 			if (!apiVersion) {
 				loading = false;
 
-				toast.error('API Version is required');
+				toast.error($i18n.t('API Version is required'));
 				return;
 			}
 
 			if (!key) {
 				loading = false;
 
-				toast.error('Key is required');
+				toast.error($i18n.t('Key is required'));
 				return;
 			}
 
 			if (modelIds.length === 0) {
 				loading = false;
-				toast.error('Deployment names are required');
+				toast.error($i18n.t('Deployment names are required for Azure OpenAI'));
 				return;
 			}
 		}
