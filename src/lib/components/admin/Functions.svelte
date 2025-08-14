@@ -105,7 +105,7 @@
 			sessionStorage.function = JSON.stringify({
 				..._function,
 				id: `${_function.id}_clone`,
-				name: `${_function.name} (Clone)`
+				name: `${_function.name} (${$i18n.t('Clone')})`
 			});
 			goto('/admin/functions/create');
 		}
@@ -655,7 +655,7 @@
 >
 	<div class="text-sm text-gray-500">
 		<div class=" bg-yellow-500/20 text-yellow-700 dark:text-yellow-200 rounded-lg px-4 py-3">
-			<div>Please carefully review the following warnings:</div>
+			<div>{$i18n.t('Please carefully review the following warnings:')}</div>
 
 			<ul class=" mt-1 list-disc pl-4 text-xs">
 				<li>{$i18n.t('Functions allow arbitrary code execution.')}</li>

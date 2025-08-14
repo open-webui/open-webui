@@ -41,7 +41,7 @@
 
 	export let id = '';
 	export let value = '';
-	export let placeholder = 'Select a model';
+	export let placeholder = $i18n.t('Select a model');
 	export let searchEnabled = true;
 	export let searchPlaceholder = $i18n.t('Search a model');
 
@@ -314,7 +314,7 @@
 				...$MODEL_DOWNLOAD_POOL
 			});
 			await deleteModel(localStorage.token, model);
-			toast.success(`${model} download has been canceled`);
+			toast.success(i18n.t("{{model}} download has been canceled", { model: model }));
 		}
 	};
 

@@ -360,7 +360,7 @@ export const getToolServersData = async (i18n, servers: object[]) => {
 							: `${server?.url}${(server?.path ?? '').startsWith('/') ? '' : '/'}${server?.path}`
 					).catch((err) => {
 						toast.error(
-							i18n.t(`Failed to connect to {{URL}} OpenAPI tool server`, {
+							$i18n.t(`Failed to connect to {{URL}} OpenAPI tool server`, {
 								URL: (server?.path ?? '').includes('://')
 									? server?.path
 									: `${server?.url}${(server?.path ?? '').startsWith('/') ? '' : '/'}${server?.path}`
