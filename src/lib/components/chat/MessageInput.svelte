@@ -1130,7 +1130,7 @@
 														return res;
 													}}
 													oncompositionstart={() => (isComposing = true)}
-													oncompositionend={() => (isComposing = false)}
+													oncompositionend={() => setTimeout(() => (isComposing = false))}
 													on:keydown={async (e) => {
 														e = e.detail.event;
 
@@ -1341,7 +1341,7 @@
 												command = getCommand();
 											}}
 											on:compositionstart={() => (isComposing = true)}
-											on:compositionend={() => (isComposing = false)}
+											on:compositionend={() => setTimeout(() => (isComposing = false))}
 											on:keydown={async (e) => {
 												const isCtrlPressed = e.ctrlKey || e.metaKey; // metaKey is for Cmd key on Mac
 
