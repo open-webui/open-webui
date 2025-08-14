@@ -66,7 +66,7 @@
 
 	const editMessageHandler = async () => {
 		edit = true;
-		editedContent = message.content;
+		editedContent = message?.content ?? '';
 		editedFiles = message.files;
 
 		await tick();
@@ -80,6 +80,11 @@
 	};
 
 	const editMessageConfirmHandler = async (submit = true) => {
+		if (!editedContent && editedFiles.length === 0) {
+			toast.error($i18n.t('Please enter a message or attach a file.'));
+			return;
+		}
+
 		editMessage(message.id, { content: editedContent, files: editedFiles }, submit);
 
 		edit = false;
@@ -186,145 +191,143 @@
 				{/if}
 			{/if}
 
-			{#if message.content !== ''}
-				{#if edit === true}
-					<div class=" w-full bg-gray-50 dark:bg-gray-800 rounded-3xl px-5 py-3 mb-2">
-						{#if (editedFiles ?? []).length > 0}
-							<div class="flex items-center flex-wrap gap-2 -mx-2 mb-1">
-								{#each editedFiles as file, fileIdx}
-									{#if file.type === 'image'}
-										<div class=" relative group">
-											<div class="relative flex items-center">
-												<Image
-													src={file.url}
-													alt="input"
-													imageClassName=" size-14 rounded-xl object-cover"
-												/>
-											</div>
-											<div class=" absolute -top-1 -right-1">
-												<button
-													class=" bg-white text-black border border-white rounded-full group-hover:visible invisible transition"
-													type="button"
-													on:click={() => {
-														editedFiles.splice(fileIdx, 1);
-
-														editedFiles = editedFiles;
-													}}
-												>
-													<svg
-														xmlns="http://www.w3.org/2000/svg"
-														viewBox="0 0 20 20"
-														fill="currentColor"
-														class="size-4"
-													>
-														<path
-															d="M6.28 5.22a.75.75 0 00-1.06 1.06L8.94 10l-3.72 3.72a.75.75 0 101.06 1.06L10 11.06l3.72 3.72a.75.75 0 101.06-1.06L11.06 10l3.72-3.72a.75.75 0 00-1.06-1.06L10 8.94 6.28 5.22z"
-														/>
-													</svg>
-												</button>
-											</div>
+			{#if edit === true}
+				<div class=" w-full bg-gray-50 dark:bg-gray-800 rounded-3xl px-5 py-3 mb-2">
+					{#if (editedFiles ?? []).length > 0}
+						<div class="flex items-center flex-wrap gap-2 -mx-2 mb-1">
+							{#each editedFiles as file, fileIdx}
+								{#if file.type === 'image'}
+									<div class=" relative group">
+										<div class="relative flex items-center">
+											<Image
+												src={file.url}
+												alt="input"
+												imageClassName=" size-14 rounded-xl object-cover"
+											/>
 										</div>
-									{:else}
-										<FileItem
-											item={file}
-											name={file.name}
-											type={file.type}
-											size={file?.size}
-											loading={file.status === 'uploading'}
-											dismissible={true}
-											edit={true}
-											on:dismiss={async () => {
-												editedFiles.splice(fileIdx, 1);
+										<div class=" absolute -top-1 -right-1">
+											<button
+												class=" bg-white text-black border border-white rounded-full group-hover:visible invisible transition"
+												type="button"
+												on:click={() => {
+													editedFiles.splice(fileIdx, 1);
 
-												editedFiles = editedFiles;
-											}}
-											on:click={() => {
-												console.log(file);
-											}}
-										/>
-									{/if}
-								{/each}
-							</div>
-						{/if}
+													editedFiles = editedFiles;
+												}}
+											>
+												<svg
+													xmlns="http://www.w3.org/2000/svg"
+													viewBox="0 0 20 20"
+													fill="currentColor"
+													class="size-4"
+												>
+													<path
+														d="M6.28 5.22a.75.75 0 00-1.06 1.06L8.94 10l-3.72 3.72a.75.75 0 101.06 1.06L10 11.06l3.72 3.72a.75.75 0 101.06-1.06L11.06 10l3.72-3.72a.75.75 0 00-1.06-1.06L10 8.94 6.28 5.22z"
+													/>
+												</svg>
+											</button>
+										</div>
+									</div>
+								{:else}
+									<FileItem
+										item={file}
+										name={file.name}
+										type={file.type}
+										size={file?.size}
+										loading={file.status === 'uploading'}
+										dismissible={true}
+										edit={true}
+										on:dismiss={async () => {
+											editedFiles.splice(fileIdx, 1);
 
-						<div class="max-h-96 overflow-auto">
-							<textarea
-								id="message-edit-{message.id}"
-								bind:this={messageEditTextAreaElement}
-								class=" bg-transparent outline-hidden w-full resize-none"
-								bind:value={editedContent}
-								on:input={(e) => {
-									e.target.style.height = '';
-									e.target.style.height = `${e.target.scrollHeight}px`;
-								}}
-								on:keydown={(e) => {
-									if (e.key === 'Escape') {
-										document.getElementById('close-edit-message-button')?.click();
-									}
-
-									const isCmdOrCtrlPressed = e.metaKey || e.ctrlKey;
-									const isEnterPressed = e.key === 'Enter';
-
-									if (isCmdOrCtrlPressed && isEnterPressed) {
-										document.getElementById('confirm-edit-message-button')?.click();
-									}
-								}}
-							/>
-						</div>
-
-						<div class=" mt-2 mb-1 flex justify-between text-sm font-medium">
-							<div>
-								<button
-									id="save-edit-message-button"
-									class=" px-4 py-2 bg-gray-50 hover:bg-gray-100 dark:bg-gray-800 dark:hover:bg-gray-700 border border-gray-100 dark:border-gray-700 text-gray-700 dark:text-gray-200 transition rounded-3xl"
-									on:click={() => {
-										editMessageConfirmHandler(false);
-									}}
-								>
-									{$i18n.t('Save')}
-								</button>
-							</div>
-
-							<div class="flex space-x-1.5">
-								<button
-									id="close-edit-message-button"
-									class="px-4 py-2 bg-white dark:bg-gray-900 hover:bg-gray-100 text-gray-800 dark:text-gray-100 transition rounded-3xl"
-									on:click={() => {
-										cancelEditMessage();
-									}}
-								>
-									{$i18n.t('Cancel')}
-								</button>
-
-								<button
-									id="confirm-edit-message-button"
-									class=" px-4 py-2 bg-gray-900 dark:bg-white hover:bg-gray-850 text-gray-100 dark:text-gray-800 transition rounded-3xl"
-									on:click={() => {
-										editMessageConfirmHandler();
-									}}
-								>
-									{$i18n.t('Send')}
-								</button>
-							</div>
-						</div>
-					</div>
-				{:else}
-					<div class="w-full">
-						<div class="flex {($settings?.chatBubble ?? true) ? 'justify-end pb-1' : 'w-full'}">
-							<div
-								class="rounded-3xl {($settings?.chatBubble ?? true)
-									? `max-w-[90%] px-5 py-2  bg-gray-50 dark:bg-gray-850 ${
-											message.files ? 'rounded-tr-lg' : ''
-										}`
-									: ' w-full'}"
-							>
-								{#if message.content}
-									<Markdown id={`${chatId}-${message.id}`} content={message.content} {topPadding} />
+											editedFiles = editedFiles;
+										}}
+										on:click={() => {
+											console.log(file);
+										}}
+									/>
 								{/if}
-							</div>
+							{/each}
+						</div>
+					{/if}
+
+					<div class="max-h-96 overflow-auto">
+						<textarea
+							id="message-edit-{message.id}"
+							bind:this={messageEditTextAreaElement}
+							class=" bg-transparent outline-hidden w-full resize-none"
+							bind:value={editedContent}
+							on:input={(e) => {
+								e.target.style.height = '';
+								e.target.style.height = `${e.target.scrollHeight}px`;
+							}}
+							on:keydown={(e) => {
+								if (e.key === 'Escape') {
+									document.getElementById('close-edit-message-button')?.click();
+								}
+
+								const isCmdOrCtrlPressed = e.metaKey || e.ctrlKey;
+								const isEnterPressed = e.key === 'Enter';
+
+								if (isCmdOrCtrlPressed && isEnterPressed) {
+									document.getElementById('confirm-edit-message-button')?.click();
+								}
+							}}
+						/>
+					</div>
+
+					<div class=" mt-2 mb-1 flex justify-between text-sm font-medium">
+						<div>
+							<button
+								id="save-edit-message-button"
+								class=" px-4 py-2 bg-gray-50 hover:bg-gray-100 dark:bg-gray-800 dark:hover:bg-gray-700 border border-gray-100 dark:border-gray-700 text-gray-700 dark:text-gray-200 transition rounded-3xl"
+								on:click={() => {
+									editMessageConfirmHandler(false);
+								}}
+							>
+								{$i18n.t('Save')}
+							</button>
+						</div>
+
+						<div class="flex space-x-1.5">
+							<button
+								id="close-edit-message-button"
+								class="px-4 py-2 bg-white dark:bg-gray-900 hover:bg-gray-100 text-gray-800 dark:text-gray-100 transition rounded-3xl"
+								on:click={() => {
+									cancelEditMessage();
+								}}
+							>
+								{$i18n.t('Cancel')}
+							</button>
+
+							<button
+								id="confirm-edit-message-button"
+								class=" px-4 py-2 bg-gray-900 dark:bg-white hover:bg-gray-850 text-gray-100 dark:text-gray-800 transition rounded-3xl"
+								on:click={() => {
+									editMessageConfirmHandler();
+								}}
+							>
+								{$i18n.t('Send')}
+							</button>
 						</div>
 					</div>
-				{/if}
+				</div>
+			{:else if message.content !== ''}
+				<div class="w-full">
+					<div class="flex {($settings?.chatBubble ?? true) ? 'justify-end pb-1' : 'w-full'}">
+						<div
+							class="rounded-3xl {($settings?.chatBubble ?? true)
+								? `max-w-[90%] px-5 py-2  bg-gray-50 dark:bg-gray-850 ${
+										message.files ? 'rounded-tr-lg' : ''
+									}`
+								: ' w-full'}"
+						>
+							{#if message.content}
+								<Markdown id={`${chatId}-${message.id}`} content={message.content} {topPadding} />
+							{/if}
+						</div>
+					</div>
+				</div>
 			{/if}
 
 			{#if edit !== true}
@@ -453,29 +456,31 @@
 						</Tooltip>
 					{/if}
 
-					<Tooltip content={$i18n.t('Copy')} placement="bottom">
-						<button
-							class="invisible group-hover:visible p-1.5 hover:bg-black/5 dark:hover:bg-white/5 rounded-lg dark:hover:text-white hover:text-black transition"
-							on:click={() => {
-								copyToClipboard(message.content);
-							}}
-						>
-							<svg
-								xmlns="http://www.w3.org/2000/svg"
-								fill="none"
-								viewBox="0 0 24 24"
-								stroke-width="2.3"
-								stroke="currentColor"
-								class="w-4 h-4"
+					{#if message?.content}
+						<Tooltip content={$i18n.t('Copy')} placement="bottom">
+							<button
+								class="invisible group-hover:visible p-1.5 hover:bg-black/5 dark:hover:bg-white/5 rounded-lg dark:hover:text-white hover:text-black transition"
+								on:click={() => {
+									copyToClipboard(message.content);
+								}}
 							>
-								<path
-									stroke-linecap="round"
-									stroke-linejoin="round"
-									d="M15.666 3.888A2.25 2.25 0 0013.5 2.25h-3c-1.03 0-1.9.693-2.166 1.638m7.332 0c.055.194.084.4.084.612v0a.75.75 0 01-.75.75H9a.75.75 0 01-.75-.75v0c0-.212.03-.418.084-.612m7.332 0c.646.049 1.288.11 1.927.184 1.1.128 1.907 1.077 1.907 2.185V19.5a2.25 2.25 0 01-2.25 2.25H6.75A2.25 2.25 0 014.5 19.5V6.257c0-1.108.806-2.057 1.907-2.185a48.208 48.208 0 011.927-.184"
-								/>
-							</svg>
-						</button>
-					</Tooltip>
+								<svg
+									xmlns="http://www.w3.org/2000/svg"
+									fill="none"
+									viewBox="0 0 24 24"
+									stroke-width="2.3"
+									stroke="currentColor"
+									class="w-4 h-4"
+								>
+									<path
+										stroke-linecap="round"
+										stroke-linejoin="round"
+										d="M15.666 3.888A2.25 2.25 0 0013.5 2.25h-3c-1.03 0-1.9.693-2.166 1.638m7.332 0c.055.194.084.4.084.612v0a.75.75 0 01-.75.75H9a.75.75 0 01-.75-.75v0c0-.212.03-.418.084-.612m7.332 0c.646.049 1.288.11 1.927.184 1.1.128 1.907 1.077 1.907 2.185V19.5a2.25 2.25 0 01-2.25 2.25H6.75A2.25 2.25 0 014.5 19.5V6.257c0-1.108.806-2.057 1.907-2.185a48.208 48.208 0 011.927-.184"
+									/>
+								</svg>
+							</button>
+						</Tooltip>
+					{/if}
 
 					{#if !readOnly && (!isFirstMessage || siblings.length > 1)}
 						<Tooltip content={$i18n.t('Delete')} placement="bottom">
