@@ -246,6 +246,11 @@
 		}
 	};
 	
+	// Helper function to check if a path contains hidden folders
+	const hasHiddenFolder = (path) => {
+		return path.split('/').some((part) => part.startsWith('.'));
+	};
+
 	// Modern browsers implementation using File System Access API
 	const handleModernBrowserUpload = async () => {
 		const dirHandle = await window.showDirectoryPicker();
