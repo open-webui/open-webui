@@ -1278,6 +1278,7 @@ def save_docs_to_vector_db(
     for doc in docs:
         start_index = doc.metadata.get("start_index", 0)
         end_index = len(doc.page_content) + start_index
+        pii_to_remove = []
         for pii_entity in doc.metadata.get("pii", []):
             updated_occurrences = []
             for occurrence in doc.metadata["pii"][pii_entity]["occurrences"]:
@@ -1285,9 +1286,15 @@ def save_docs_to_vector_db(
                     occurrence["start_idx"] = occurrence["start_idx"] - start_index
                     occurrence["end_idx"] = occurrence["end_idx"] - start_index
                     updated_occurrences.append(occurrence)
-            doc.metadata["pii"][pii_entity]["occurrences"] = updated_occurrences
+            if updated_occurrences:
+                doc.metadata["pii"][pii_entity]["occurrences"] = updated_occurrences
+            else:
+                pii_to_remove.append(pii_entity)
+        
+        for pii_entity in pii_to_remove:
+            del doc.metadata["pii"][pii_entity]
 
-    log.info(f"docs: {docs}")
+    log.debug(f"docs: {docs}")
     texts = [doc.page_content for doc in docs]
     metadatas = [
         {
@@ -1559,6 +1566,8 @@ def process_file(
                             create_session=False,
                             quiet=False,
                         ).to_dict()
+
+                        log.debug(f"response: {response}")
                         # response can be HTTPValidationError or TextMaskResponse
                         if "pii" in response:
                             # response.pii is list[list[PiiEntity]] or None/Unset
