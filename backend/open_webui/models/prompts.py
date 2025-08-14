@@ -7,7 +7,7 @@ from open_webui.models.users import Users, UserResponse
 from open_webui.utils.access_control import has_access
 
 from pydantic import BaseModel, ConfigDict
-from sqlalchemy import BigInteger, Column, String, Text, JSON, or_, text
+from sqlalchemy import BigInteger, Column, String, Text, JSON, or_, cast
 
 
 ####################
@@ -324,33 +324,23 @@ class PromptsTable:
         then only checks access control for the remaining subset.
         """
         with get_db() as db:
-            # Detect database type and use appropriate query for public prompts
-            engine_name = db.bind.dialect.name
+            # Database-agnostic condition using SQLAlchemy cast for PostgreSQL compatibility
+            public_prompt_condition = or_(
+                Prompt.access_control.is_(None),
+                cast(Prompt.access_control, Text) == "null",
+            )
 
-            if engine_name == "postgresql":
-                # PostgreSQL: JSON null values need explicit type casting
-                query = db.query(Prompt).filter(
-                    text(
-                        "(access_control IS NULL OR access_control::text = 'null') OR prompt.user_id = :user_id"
-                    ).params(user_id=user_id)
+            # Build base query that efficiently filters at database level
+            query = db.query(Prompt).filter(
+                or_(
+                    # Public prompts (database-agnostic condition)
+                    public_prompt_condition,
+                    # User's own prompts
+                    Prompt.user_id == user_id,
+                    # Note: We still need to check shared prompts manually since
+                    # access_control JSON structure requires application-level logic
                 )
-            else:
-                # SQLite and others: use SQLAlchemy conditions
-                public_prompt_condition = or_(
-                    Prompt.access_control.is_(None), Prompt.access_control == "null"
-                )
-
-                # Build base query that efficiently filters at database level
-                query = db.query(Prompt).filter(
-                    or_(
-                        # Public prompts (database-specific condition)
-                        public_prompt_condition,
-                        # User's own prompts
-                        Prompt.user_id == user_id,
-                        # Note: We still need to check shared prompts manually since
-                        # access_control JSON structure requires application-level logic
-                    )
-                )
+            )
 
             # Apply search filter if provided
             if search and search.strip():
@@ -412,33 +402,23 @@ class PromptsTable:
     ) -> int:
         """Get count of prompts the user has access to"""
         with get_db() as db:
-            # Detect database type and use appropriate query for public prompts
-            engine_name = db.bind.dialect.name
+            # Database-agnostic condition using SQLAlchemy cast for PostgreSQL compatibility
+            public_prompt_condition = or_(
+                Prompt.access_control.is_(None),
+                cast(Prompt.access_control, Text) == "null",
+            )
 
-            if engine_name == "postgresql":
-                # PostgreSQL: JSON null values need explicit type casting
-                query = db.query(Prompt).filter(
-                    text(
-                        "(access_control IS NULL OR access_control::text = 'null') OR prompt.user_id = :user_id"
-                    ).params(user_id=user_id)
+            # Build efficient query that filters at database level
+            query = db.query(Prompt).filter(
+                or_(
+                    # Public prompts (database-agnostic condition)
+                    public_prompt_condition,
+                    # User's own prompts
+                    Prompt.user_id == user_id,
+                    # Note: We still need to check shared prompts manually since
+                    # access_control JSON structure requires application-level logic
                 )
-            else:
-                # SQLite and others: use SQLAlchemy conditions
-                public_prompt_condition = or_(
-                    Prompt.access_control.is_(None), Prompt.access_control == "null"
-                )
-
-                # Build efficient query that filters at database level
-                query = db.query(Prompt).filter(
-                    or_(
-                        # Public prompts (database-specific condition)
-                        public_prompt_condition,
-                        # User's own prompts
-                        Prompt.user_id == user_id,
-                        # Note: We still need to check shared prompts manually since
-                        # access_control JSON structure requires application-level logic
-                    )
-                )
+            )
 
             # Apply search filter if provided
             if search and search.strip():
