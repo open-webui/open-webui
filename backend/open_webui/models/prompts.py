@@ -328,27 +328,29 @@ class PromptsTable:
             engine_name = db.bind.dialect.name
 
             if engine_name == "postgresql":
-                # PostgreSQL: JSON null values need special handling
-                public_prompt_condition = text(
-                    "access_control IS NULL OR access_control = 'null'"
+                # PostgreSQL: JSON null values need special handling with raw SQL
+                query = db.query(Prompt).filter(
+                    text(
+                        "(access_control IS NULL OR access_control = 'null') OR prompt.user_id = :user_id"
+                    ).params(user_id=user_id)
                 )
             else:
-                # SQLite and others: use string comparison or IS NULL
+                # SQLite and others: use SQLAlchemy conditions
                 public_prompt_condition = or_(
                     Prompt.access_control.is_(None), Prompt.access_control == "null"
                 )
 
-            # Build base query that efficiently filters at database level
-            query = db.query(Prompt).filter(
-                or_(
-                    # Public prompts (database-specific condition)
-                    public_prompt_condition,
-                    # User's own prompts
-                    Prompt.user_id == user_id,
-                    # Note: We still need to check shared prompts manually since
-                    # access_control JSON structure requires application-level logic
+                # Build base query that efficiently filters at database level
+                query = db.query(Prompt).filter(
+                    or_(
+                        # Public prompts (database-specific condition)
+                        public_prompt_condition,
+                        # User's own prompts
+                        Prompt.user_id == user_id,
+                        # Note: We still need to check shared prompts manually since
+                        # access_control JSON structure requires application-level logic
+                    )
                 )
-            )
 
             # Apply search filter if provided
             if search and search.strip():
@@ -414,27 +416,29 @@ class PromptsTable:
             engine_name = db.bind.dialect.name
 
             if engine_name == "postgresql":
-                # PostgreSQL: JSON null values need special handling
-                public_prompt_condition = text(
-                    "access_control IS NULL OR access_control = 'null'"
+                # PostgreSQL: JSON null values need special handling with raw SQL
+                query = db.query(Prompt).filter(
+                    text(
+                        "(access_control IS NULL OR access_control = 'null') OR prompt.user_id = :user_id"
+                    ).params(user_id=user_id)
                 )
             else:
-                # SQLite and others: use string comparison or IS NULL
+                # SQLite and others: use SQLAlchemy conditions
                 public_prompt_condition = or_(
                     Prompt.access_control.is_(None), Prompt.access_control == "null"
                 )
 
-            # Build efficient query that filters at database level
-            query = db.query(Prompt).filter(
-                or_(
-                    # Public prompts (database-specific condition)
-                    public_prompt_condition,
-                    # User's own prompts
-                    Prompt.user_id == user_id,
-                    # Note: We still need to check shared prompts manually since
-                    # access_control JSON structure requires application-level logic
+                # Build efficient query that filters at database level
+                query = db.query(Prompt).filter(
+                    or_(
+                        # Public prompts (database-specific condition)
+                        public_prompt_condition,
+                        # User's own prompts
+                        Prompt.user_id == user_id,
+                        # Note: We still need to check shared prompts manually since
+                        # access_control JSON structure requires application-level logic
+                    )
                 )
-            )
 
             # Apply search filter if provided
             if search and search.strip():
