@@ -121,6 +121,13 @@ async def create_new_prompt(
             detail=ERROR_MESSAGES.UNAUTHORIZED,
         )
 
+    # Non-admin users can only create private prompts
+    if user.role != "admin" and form_data.access_control is None:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Only administrators can create public prompts",
+        )
+
     prompt = Prompts.get_prompt_by_command(form_data.command)
     if prompt is None:
         prompt = Prompts.insert_new_prompt(user.id, form_data)
@@ -178,15 +185,28 @@ async def update_prompt_by_command(
             detail=ERROR_MESSAGES.NOT_FOUND,
         )
 
-    # Is the user the original creator, in a group with write access, or an admin
-    if (
-        prompt.user_id != user.id
-        and not has_access(user.id, "write", prompt.access_control)
-        and user.role != "admin"
-    ):
+    # Access control based on clarified rules:
+    # - Admins can edit any prompt
+    # - Non-admins can only edit their own private prompts (not public prompts)
+    if user.role != "admin":
+        # Non-admins can only edit their own prompts
+        if prompt.user_id != user.id:
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail=ERROR_MESSAGES.ACCESS_PROHIBITED,
+            )
+        # Non-admins cannot edit public prompts (even their own)
+        if prompt.access_control == "null" or prompt.access_control is None:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Only administrators can edit public prompts",
+            )
+
+    # Non-admin users can only create/maintain private prompts
+    if user.role != "admin" and form_data.access_control is None:
         raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail=ERROR_MESSAGES.ACCESS_PROHIBITED,
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Only administrators can create or modify public prompts",
         )
 
     prompt = Prompts.update_prompt_by_command(f"/{command}", form_data)
@@ -213,11 +233,22 @@ async def delete_prompt_by_command(command: str, user=Depends(get_verified_user)
             detail=ERROR_MESSAGES.NOT_FOUND,
         )
 
-    if prompt.user_id != user.id and user.role != "admin":
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail=ERROR_MESSAGES.ACCESS_PROHIBITED,
-        )
+    # Access control based on clarified rules:
+    # - Admins can delete any prompt
+    # - Non-admins can only delete their own private prompts (not public prompts)
+    if user.role != "admin":
+        # Non-admins can only delete their own prompts
+        if prompt.user_id != user.id:
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail=ERROR_MESSAGES.ACCESS_PROHIBITED,
+            )
+        # Non-admins cannot delete public prompts (even their own)
+        if prompt.access_control == "null" or prompt.access_control is None:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Only administrators can delete public prompts",
+            )
 
     result = Prompts.delete_prompt_by_command(f"/{command}")
     return result

@@ -327,8 +327,8 @@ class PromptsTable:
             # Build base query that efficiently filters at database level
             query = db.query(Prompt).filter(
                 or_(
-                    # Public prompts (access_control is null)
-                    Prompt.access_control.is_(None),
+                    # Public prompts (access_control is stored as string 'null')
+                    Prompt.access_control == "null",
                     # User's own prompts
                     Prompt.user_id == user_id,
                     # Note: We still need to check shared prompts manually since
@@ -357,13 +357,14 @@ class PromptsTable:
             # For the small result set, check shared prompts with has_access
             accessible_prompts = []
             for prompt in prompts:
-                # Already filtered for public and owned at DB level
-                # Just need to check shared prompts
-                if (
-                    prompt.access_control is None
-                    or prompt.user_id == user_id
-                    or has_access(user_id, "read", prompt.access_control)
-                ):
+                # Public prompts (access_control is stored as string 'null') are accessible to everyone
+                if prompt.access_control == "null" or prompt.access_control is None:
+                    accessible_prompts.append(prompt)
+                # User's own prompts are always accessible
+                elif prompt.user_id == user_id:
+                    accessible_prompts.append(prompt)
+                # Check if user has explicit read access to shared prompts
+                elif has_access(user_id, "read", prompt.access_control):
                     accessible_prompts.append(prompt)
 
             return [PromptModel.model_validate(prompt) for prompt in accessible_prompts]
@@ -398,8 +399,8 @@ class PromptsTable:
             # Build efficient query that filters at database level
             query = db.query(Prompt).filter(
                 or_(
-                    # Public prompts (access_control is null)
-                    Prompt.access_control.is_(None),
+                    # Public prompts (access_control is stored as string 'null')
+                    Prompt.access_control == "null",
                     # User's own prompts
                     Prompt.user_id == user_id,
                     # Note: We still need to check shared prompts manually since
@@ -422,13 +423,14 @@ class PromptsTable:
             # For the small result set, check shared prompts with has_access
             accessible_count = 0
             for prompt in prompts:
-                # Already filtered for public and owned at DB level
-                # Just need to check shared prompts
-                if (
-                    prompt.access_control is None
-                    or prompt.user_id == user_id
-                    or has_access(user_id, "read", prompt.access_control)
-                ):
+                # Public prompts (access_control is stored as string 'null') are accessible to everyone
+                if prompt.access_control == "null" or prompt.access_control is None:
+                    accessible_count += 1
+                # User's own prompts are always accessible
+                elif prompt.user_id == user_id:
+                    accessible_count += 1
+                # Check if user has explicit read access to shared prompts
+                elif has_access(user_id, "read", prompt.access_control):
                     accessible_count += 1
 
             return accessible_count
