@@ -165,13 +165,13 @@
 			{#if ($config?.license_metadata?.seats ?? null) !== null}
 				{#if total > $config?.license_metadata?.seats}
 					<span class="text-lg font-medium text-red-500"
-						>{total} {$i18n.t('of')} {$config?.license_metadata?.seats}
-						<span class="text-sm font-normal">{$i18n.t('available users')}</span></span
+						>{total} of {$config?.license_metadata?.seats}
+						<span class="text-sm font-normal">available users</span></span
 					>
 				{:else}
 					<span class="text-lg font-medium text-gray-500 dark:text-gray-300"
-						>{total} {$i18n.t('of')} {$config?.license_metadata?.seats}
-						<span class="text-sm font-normal">{$i18n.t('available users')}</span></span
+						>{total} of {$config?.license_metadata?.seats}
+						<span class="text-sm font-normal">available users</span></span
 					>
 				{/if}
 			{:else}
