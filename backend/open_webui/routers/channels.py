@@ -164,7 +164,7 @@ async def get_channel_messages(
             status_code=status.HTTP_403_FORBIDDEN, detail=ERROR_MESSAGES.DEFAULT()
         )
 
-    message_list = Messages.get_messages_by_channel_id(id, skip, limit)
+    message_list = await Messages.get_messages_by_channel_id(id, skip, limit)
     users = {}
 
     messages = []
@@ -173,7 +173,7 @@ async def get_channel_messages(
             user = await Users.get_user_by_id(message.user_id)
             users[message.user_id] = user
 
-        replies = Messages.get_replies_by_message_id(message.id)
+        replies = await Messages.get_replies_by_message_id(message.id)
         latest_reply_at = replies[0].created_at if replies else None
 
         messages.append(
@@ -182,7 +182,7 @@ async def get_channel_messages(
                     **message.model_dump(),
                     "reply_count": len(replies),
                     "latest_reply_at": latest_reply_at,
-                    "reactions": Messages.get_reactions_by_message_id(message.id),
+                    "reactions": await Messages.get_reactions_by_message_id(message.id),
                     "user": UserNameResponse(**users[message.user_id].model_dump()),
                 }
             )
@@ -244,7 +244,7 @@ async def post_new_message(
         )
 
     try:
-        message = Messages.insert_new_message(form_data, channel.id, user.id)
+        message = await Messages.insert_new_message(form_data, channel.id, user.id)
 
         if message:
             event_data = {
@@ -257,7 +257,7 @@ async def post_new_message(
                             **message.model_dump(),
                             "reply_count": 0,
                             "latest_reply_at": None,
-                            "reactions": Messages.get_reactions_by_message_id(
+                            "reactions": await Messages.get_reactions_by_message_id(
                                 message.id
                             ),
                             "user": UserNameResponse(**user.model_dump()),
@@ -276,7 +276,7 @@ async def post_new_message(
 
             if message.parent_id:
                 # If this message is a reply, emit to the parent message as well
-                parent_message = Messages.get_message_by_id(message.parent_id)
+                parent_message = await Messages.get_message_by_id(message.parent_id)
 
                 if parent_message:
                     await sio.emit(
@@ -348,7 +348,7 @@ async def get_channel_message(
             status_code=status.HTTP_403_FORBIDDEN, detail=ERROR_MESSAGES.DEFAULT()
         )
 
-    message = Messages.get_message_by_id(message_id)
+    message = await Messages.get_message_by_id(message_id)
     if not message:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND, detail=ERROR_MESSAGES.NOT_FOUND
@@ -397,7 +397,7 @@ async def get_channel_thread_messages(
             status_code=status.HTTP_403_FORBIDDEN, detail=ERROR_MESSAGES.DEFAULT()
         )
 
-    message_list = Messages.get_messages_by_parent_id(id, message_id, skip, limit)
+    message_list = await Messages.get_messages_by_parent_id(id, message_id, skip, limit)
     users = {}
 
     messages = []
@@ -412,7 +412,7 @@ async def get_channel_thread_messages(
                     **message.model_dump(),
                     "reply_count": 0,
                     "latest_reply_at": None,
-                    "reactions": Messages.get_reactions_by_message_id(message.id),
+                    "reactions": await Messages.get_reactions_by_message_id(message.id),
                     "user": UserNameResponse(**users[message.user_id].model_dump()),
                 }
             )
@@ -438,7 +438,7 @@ async def update_message_by_id(
             status_code=status.HTTP_404_NOT_FOUND, detail=ERROR_MESSAGES.NOT_FOUND
         )
 
-    message = Messages.get_message_by_id(message_id)
+    message = await Messages.get_message_by_id(message_id)
     if not message:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND, detail=ERROR_MESSAGES.NOT_FOUND
@@ -461,8 +461,8 @@ async def update_message_by_id(
         )
 
     try:
-        message = Messages.update_message_by_id(message_id, form_data)
-        message = Messages.get_message_by_id(message_id)
+        message = await Messages.update_message_by_id(message_id, form_data)
+        message = await Messages.get_message_by_id(message_id)
 
         if message:
             await sio.emit(
@@ -521,7 +521,7 @@ async def add_reaction_to_message(
             status_code=status.HTTP_403_FORBIDDEN, detail=ERROR_MESSAGES.DEFAULT()
         )
 
-    message = Messages.get_message_by_id(message_id)
+    message = await Messages.get_message_by_id(message_id)
     if not message:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND, detail=ERROR_MESSAGES.NOT_FOUND
@@ -533,8 +533,8 @@ async def add_reaction_to_message(
         )
 
     try:
-        Messages.add_reaction_to_message(message_id, user.id, form_data.name)
-        message = Messages.get_message_by_id(message_id)
+        await Messages.add_reaction_to_message(message_id, user.id, form_data.name)
+        message = await Messages.get_message_by_id(message_id)
 
         await sio.emit(
             "channel-events",
@@ -587,7 +587,7 @@ async def remove_reaction_by_id_and_user_id_and_name(
             status_code=status.HTTP_403_FORBIDDEN, detail=ERROR_MESSAGES.DEFAULT()
         )
 
-    message = Messages.get_message_by_id(message_id)
+    message = await Messages.get_message_by_id(message_id)
     if not message:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND, detail=ERROR_MESSAGES.NOT_FOUND
@@ -599,11 +599,11 @@ async def remove_reaction_by_id_and_user_id_and_name(
         )
 
     try:
-        Messages.remove_reaction_by_id_and_user_id_and_name(
+        await Messages.remove_reaction_by_id_and_user_id_and_name(
             message_id, user.id, form_data.name
         )
 
-        message = Messages.get_message_by_id(message_id)
+        message = await Messages.get_message_by_id(message_id)
 
         await sio.emit(
             "channel-events",
@@ -649,7 +649,7 @@ async def delete_message_by_id(
             status_code=status.HTTP_404_NOT_FOUND, detail=ERROR_MESSAGES.NOT_FOUND
         )
 
-    message = Messages.get_message_by_id(message_id)
+    message = await Messages.get_message_by_id(message_id)
     if not message:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND, detail=ERROR_MESSAGES.NOT_FOUND
@@ -672,7 +672,7 @@ async def delete_message_by_id(
         )
 
     try:
-        Messages.delete_message_by_id(message_id)
+        await Messages.delete_message_by_id(message_id)
         await sio.emit(
             "channel-events",
             {
@@ -693,7 +693,7 @@ async def delete_message_by_id(
 
         if message.parent_id:
             # If this message is a reply, emit to the parent message as well
-            parent_message = Messages.get_message_by_id(message.parent_id)
+            parent_message = await Messages.get_message_by_id(message.parent_id)
 
             if parent_message:
                 await sio.emit(
