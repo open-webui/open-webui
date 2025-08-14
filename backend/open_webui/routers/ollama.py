@@ -1955,10 +1955,13 @@ async def upload_model(
             if response.ok:
                 log.info(f"Uploaded to /api/blobs")  # DEBUG
 
-                print("file_path:", file_path, "model_name :", filename)
+                # Create model in ollama
+                model_name, ext = os.path.splitext(filename)
+                log.info(f"Created Model: {model_name}")  # DEBUG
+                print("file_path:", file_path, "model_name :", model_name)
 
                 try:
-                    result_response = await upload_model_helper(user, file_path, os.path.splitext(filename))
+                    result_response = await upload_model_helper(user, file_path, model_name)
                     yield json.dumps({"result": result_response}) + "\n"
                     if result_response.ok:
                         log.info(f"API SUCCESS!")  # DEBUG
@@ -1967,10 +1970,6 @@ async def upload_model(
                 except Exception as e:
                     res = {"error Ollama: Could not create model in target, Please try again.": str(e)}
                     log.info(f"data: {json.dumps(res)}\n\n")
-
-                # Create model in ollama
-                model_name, ext = os.path.splitext(filename)
-                log.info(f"Created Model: {model_name}")  # DEBUG
 
                 create_payload = {
                     "model": model_name,
