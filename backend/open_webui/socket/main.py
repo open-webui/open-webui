@@ -337,7 +337,7 @@ async def join_note(sid, data):
     if not user:
         return
 
-    note = Notes.get_note_by_id(data["note_id"])
+    note = await Notes.get_note_by_id(data["note_id"])
     if not note:
         log.error(f"Note {data['note_id']} not found for user {user.id}")
         return
@@ -394,7 +394,7 @@ async def ydoc_document_join(sid, data):
 
         if document_id.startswith("note:"):
             note_id = document_id.split(":")[1]
-            note = Notes.get_note_by_id(note_id)
+            note = await Notes.get_note_by_id(note_id)
             if not note:
                 log.error(f"Note {note_id} not found")
                 return
@@ -464,7 +464,7 @@ async def ydoc_document_join(sid, data):
 async def document_save_handler(document_id, data, user):
     if document_id.startswith("note:"):
         note_id = document_id.split(":")[1]
-        note = Notes.get_note_by_id(note_id)
+        note = await Notes.get_note_by_id(note_id)
         if not note:
             log.error(f"Note {note_id} not found")
             return

@@ -512,7 +512,7 @@ def get_sources_from_items(
 
         elif item.get("type") == "note":
             # Note Attached
-            note = Notes.get_note_by_id(item.get("id"))
+            note = await Notes.get_note_by_id(item.get("id"))
 
             if note and (
                 user.role == "admin"

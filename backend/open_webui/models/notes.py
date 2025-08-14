@@ -74,7 +74,7 @@ class NoteUserResponse(NoteModel):
 
 
 class NoteTable:
-    def insert_new_note(
+    async def insert_new_note(
         self,
         form_data: NoteForm,
         user_id: str,
@@ -92,8 +92,8 @@ class NoteTable:
 
             new_note = Note(**note.model_dump())
 
-            db.add(new_note)
-            db.commit()
+            await db.add(new_note)
+            await db.commit()
             return note
 
     async def get_notes(self) -> list[NoteModel]:
@@ -112,16 +112,16 @@ class NoteTable:
             or await has_access(user_id, permission, note.access_control)
         ]
 
-    def get_note_by_id(self, id: str) -> Optional[NoteModel]:
+    async def get_note_by_id(self, id: str) -> Optional[NoteModel]:
         async with get_db() as db:
-            note = db.query(Note).filter(Note.id == id).first()
+            note = await db.query(Note).filter(Note.id == id).first()
             return NoteModel.model_validate(note) if note else None
 
-    def update_note_by_id(
+    async def update_note_by_id(
         self, id: str, form_data: NoteUpdateForm
     ) -> Optional[NoteModel]:
         async with get_db() as db:
-            note = db.query(Note).filter(Note.id == id).first()
+            note = await db.query(Note).filter(Note.id == id).first()
             if not note:
                 return None
 
@@ -139,13 +139,13 @@ class NoteTable:
 
             note.updated_at = int(time.time_ns())
 
-            db.commit()
+            await db.commit()
             return NoteModel.model_validate(note) if note else None
 
-    def delete_note_by_id(self, id: str):
+    async def delete_note_by_id(self, id: str):
         async with get_db() as db:
-            db.query(Note).filter(Note.id == id).delete()
-            db.commit()
+            await db.query(Note).filter(Note.id == id).delete()
+            await db.commit()
             return True
 
 
