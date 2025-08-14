@@ -14,6 +14,7 @@
 	import { createMessagesList } from '$lib/utils';
 	import { user } from '$lib/stores';
 	import Messages from '../chat/Messages.svelte';
+	import { goto } from '$app/navigation';
 	dayjs.extend(calendar);
 
 	export let show = false;
@@ -303,7 +304,8 @@
 							on:mouseenter={() => {
 								selectedIdx = idx;
 							}}
-							on:click={() => {
+							on:click={async () => {
+								await goto(`/c/${chat.id}`);
 								show = false;
 								onClose();
 							}}
