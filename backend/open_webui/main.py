@@ -1281,7 +1281,7 @@ async def get_models(
                     filtered_models.append(model)
                 continue
 
-            model_info = Models.get_model_by_id(model["id"])
+            model_info = await Models.get_model_by_id(model["id"])
             if model_info:
                 if (
                     (user.role == "admin" and ENABLE_ADMIN_WORKSPACE_CONTENT_ACCESS)
@@ -1401,7 +1401,7 @@ async def chat_completion(
                 raise Exception("Model not found")
 
             model = request.app.state.MODELS[model_id]
-            model_info = Models.get_model_by_id(model_id)
+            model_info = await Models.get_model_by_id(model_id)
 
             # Check if user has access to the model
             if not BYPASS_MODEL_ACCESS_CONTROL and (

@@ -441,7 +441,7 @@ async def get_filtered_models(models, user):
     # Filter models based on user access control
     filtered_models = []
     for model in models.get("models", []):
-        model_info = Models.get_model_by_id(model["model"])
+        model_info = await Models.get_model_by_id(model["model"])
         if model_info:
             if user.id == model_info.user_id or (
                 await has_access(
@@ -1320,7 +1320,7 @@ async def generate_chat_completion(
         del payload["metadata"]
 
     model_id = payload["model"]
-    model_info = Models.get_model_by_id(model_id)
+    model_info = await Models.get_model_by_id(model_id)
 
     if model_info:
         if model_info.base_model_id:

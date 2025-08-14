@@ -145,7 +145,7 @@ async def get_all_models(request, refresh: bool = False, user: UserModel = None)
         for function in Functions.get_functions_by_type("filter", active_only=True)
     ]
 
-    custom_models = Models.get_all_models()
+    custom_models = await Models.get_all_models()
     for custom_model in custom_models:
         if custom_model.base_model_id is None:
             # Applied directly to a base model

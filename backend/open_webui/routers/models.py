@@ -28,9 +28,9 @@ router = APIRouter()
 @router.get("/", response_model=list[ModelUserResponse])
 async def get_models(id: Optional[str] = None, user=Depends(get_verified_user)):
     if user.role == "admin" and ENABLE_ADMIN_WORKSPACE_CONTENT_ACCESS:
-        return Models.get_models()
+        return await Models.get_models()
     else:
-        return Models.get_models_by_user_id(user.id)
+        return await Models.get_models_by_user_id(user.id)
 
 
 ###########################
@@ -40,7 +40,7 @@ async def get_models(id: Optional[str] = None, user=Depends(get_verified_user)):
 
 @router.get("/base", response_model=list[ModelResponse])
 async def get_base_models(user=Depends(get_admin_user)):
-    return Models.get_base_models()
+    return await Models.get_base_models()
 
 
 ############################
@@ -62,7 +62,7 @@ async def create_new_model(
             detail=ERROR_MESSAGES.UNAUTHORIZED,
         )
 
-    model = Models.get_model_by_id(form_data.id)
+    model = await Models.get_model_by_id(form_data.id)
     if model:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
@@ -70,7 +70,7 @@ async def create_new_model(
         )
 
     else:
-        model = Models.insert_new_model(form_data, user.id)
+        model = await Models.insert_new_model(form_data, user.id)
         if model:
             return model
         else:
@@ -87,7 +87,7 @@ async def create_new_model(
 
 @router.get("/export", response_model=list[ModelModel])
 async def export_models(user=Depends(get_admin_user)):
-    return Models.get_models()
+    return await Models.get_models()
 
 
 ############################
@@ -103,7 +103,7 @@ class SyncModelsForm(BaseModel):
 async def sync_models(
     request: Request, form_data: SyncModelsForm, user=Depends(get_admin_user)
 ):
-    return Models.sync_models(user.id, form_data.models)
+    return await Models.sync_models(user.id, form_data.models)
 
 
 ###########################
@@ -114,7 +114,7 @@ async def sync_models(
 # Note: We're not using the typical url path param here, but instead using a query parameter to allow '/' in the id
 @router.get("/model", response_model=Optional[ModelResponse])
 async def get_model_by_id(id: str, user=Depends(get_verified_user)):
-    model = Models.get_model_by_id(id)
+    model = await Models.get_model_by_id(id)
     if model:
         if (
             (user.role == "admin" and ENABLE_ADMIN_WORKSPACE_CONTENT_ACCESS)
@@ -136,14 +136,14 @@ async def get_model_by_id(id: str, user=Depends(get_verified_user)):
 
 @router.post("/model/toggle", response_model=Optional[ModelResponse])
 async def toggle_model_by_id(id: str, user=Depends(get_verified_user)):
-    model = Models.get_model_by_id(id)
+    model = await Models.get_model_by_id(id)
     if model:
         if (
             user.role == "admin"
             or model.user_id == user.id
             or await has_access(user.id, "write", model.access_control)
         ):
-            model = Models.toggle_model_by_id(id)
+            model = await Models.toggle_model_by_id(id)
 
             if model:
                 return model
@@ -175,7 +175,7 @@ async def update_model_by_id(
     form_data: ModelForm,
     user=Depends(get_verified_user),
 ):
-    model = Models.get_model_by_id(id)
+    model = await Models.get_model_by_id(id)
 
     if not model:
         raise HTTPException(
@@ -193,7 +193,7 @@ async def update_model_by_id(
             detail=ERROR_MESSAGES.ACCESS_PROHIBITED,
         )
 
-    model = Models.update_model_by_id(id, form_data)
+    model = await Models.update_model_by_id(id, form_data)
     return model
 
 
