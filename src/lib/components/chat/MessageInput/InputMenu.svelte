@@ -46,6 +46,16 @@
 
 	export let onClose: Function;
 
+	// Reactive statement for tooltip content
+	$: tooltipContent =
+		webGroundingMode === 'off'
+			? $i18n.t('Off Mode: No web information added to responses')
+			: webGroundingMode === 'auto'
+				? $i18n.t('Auto Mode: Smart enhancement for English/French queries')
+				: webGroundingMode === 'always'
+					? $i18n.t('Always Mode: Enhance every response with web information')
+					: '';
+
 	let tools = {};
 	let show = false;
 
@@ -251,8 +261,10 @@
 						}
 					}}
 				>
-					<div class="flex-1 flex items-center gap-2">
-						<BookOpen />
+					<div class="flex-1 flex items-center gap-3">
+						<div class="flex items-center justify-center">
+							<BookOpen class="w-5 h-5" />
+						</div>
 						<div class="flex flex-col items-start">
 							<div class="line-clamp-1">
 								{$i18n.t('Web Grounding')}
@@ -266,6 +278,17 @@
 									</span>
 								{/if}
 							</div>
+							<Tooltip content={tooltipContent} placement="bottom" class="w-full">
+								<div class="text-xs opacity-60 line-clamp-1 cursor-help">
+									{#if webGroundingMode === 'off'}
+										{$i18n.t('Off Mode: No web information added to responses')}
+									{:else if webGroundingMode === 'auto'}
+										{$i18n.t('Auto Mode: Smart enhancement for English/French queries')}
+									{:else if webGroundingMode === 'always'}
+										{$i18n.t('Always Mode: Enhance every response with web information')}
+									{/if}
+								</div>
+							</Tooltip>
 						</div>
 					</div>
 
