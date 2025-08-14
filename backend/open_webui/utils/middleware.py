@@ -1619,9 +1619,13 @@ async def process_chat_response(
 
                         match = re.search(start_tag_pattern, content)
                         if match:
-                            attr_content = (
-                                match.group(1) if match.group(1) else ""
-                            )  # Ensure it's not None
+                            try:
+                                attr_content = (
+                                    match.group(1) if match.group(1) else ""
+                                )  # Ensure it's not None
+                            except:
+                                attr_content = ""
+
                             attributes = extract_attributes(
                                 attr_content
                             )  # Extract attributes safely
