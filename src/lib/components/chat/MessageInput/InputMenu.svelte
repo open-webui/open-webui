@@ -13,6 +13,7 @@
 	import DocumentArrowUpSolid from '$lib/components/icons/DocumentArrowUpSolid.svelte';
 	import Switch from '$lib/components/common/Switch.svelte';
 	import GlobeAltSolid from '$lib/components/icons/GlobeAltSolid.svelte';
+	import BookOpen from '$lib/components/icons/BookOpen.svelte';
 	import WrenchSolid from '$lib/components/icons/WrenchSolid.svelte';
 	import Cog6Solid from '$lib/components/icons/Cog6Solid.svelte';
 	import CameraSolid from '$lib/components/icons/CameraSolid.svelte';
@@ -39,6 +40,8 @@
 	export let selectedToolIds: string[] = [];
 
 	export let webSearchEnabled: boolean;
+	export let webGroundingEnabled: boolean;
+	export let webGroundingMode: string = 'off'; // 'off', 'auto', 'always'
 	export let imageGenerationEnabled: boolean;
 
 	export let onClose: Function;
@@ -57,6 +60,12 @@
 	$: showWebSearch =
 		$config?.features?.enable_web_search &&
 		($user.role === 'admin' || $user?.permissions?.features?.web_search);
+
+	let showWebGrounding = false;
+
+	$: showWebGrounding =
+		$config?.features?.enable_web_grounding &&
+		($user.role === 'admin' || $user?.permissions?.features?.web_grounding);
 
 	$: if (show) {
 		init();
@@ -225,7 +234,68 @@
 				</button>
 			{/if}
 
-			{#if showImageGeneration || showWebSearch}
+			{#if showWebGrounding}
+				<button
+					class="flex w-full justify-between gap-2 items-center px-3 py-2 text-sm font-medium cursor-pointer rounded-xl"
+					on:click={() => {
+						// Cycle through: off -> auto -> always -> off
+						if (webGroundingMode === 'off') {
+							webGroundingMode = 'auto';
+							webGroundingEnabled = true;
+						} else if (webGroundingMode === 'auto') {
+							webGroundingMode = 'always';
+							webGroundingEnabled = true;
+						} else {
+							webGroundingMode = 'off';
+							webGroundingEnabled = false;
+						}
+					}}
+				>
+					<div class="flex-1 flex items-center gap-2">
+						<BookOpen />
+						<div class="flex flex-col items-start">
+							<div class="line-clamp-1">
+								{$i18n.t('Web Grounding')}
+								{#if webGroundingMode !== 'off'}
+									<span class="opacity-60">
+										{#if webGroundingMode === 'auto'}
+											({$i18n.t('Auto')})
+										{:else if webGroundingMode === 'always'}
+											({$i18n.t('Always')})
+										{/if}
+									</span>
+								{/if}
+							</div>
+						</div>
+					</div>
+
+					<div class="flex items-center">
+						{#key webGroundingMode}
+							{#if webGroundingMode === 'off'}
+								<div
+									class="w-4 h-4 rounded-full bg-gray-400 dark:bg-gray-500 border-2 border-gray-300 dark:border-gray-600"
+								></div>
+							{:else if webGroundingMode === 'auto'}
+								<div
+									class="w-4 h-4 rounded-full bg-blue-500 border-2 border-blue-300 shadow-sm"
+								></div>
+							{:else if webGroundingMode === 'always'}
+								<div
+									class="w-4 h-4 rounded-full bg-green-500 border-2 border-green-300 shadow-sm"
+								></div>
+							{:else}
+								<!-- Fallback for any unexpected states -->
+								<div
+									class="w-4 h-4 rounded-full bg-red-500 border-2 border-red-300 shadow-sm"
+									title="Debug: {webGroundingMode}"
+								></div>
+							{/if}
+						{/key}
+					</div>
+				</button>
+			{/if}
+
+			{#if showImageGeneration || showWebSearch || showWebGrounding}
 				<hr class="border-black/5 dark:border-white/5 my-1" />
 			{/if}
 

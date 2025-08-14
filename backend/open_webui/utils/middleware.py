@@ -667,17 +667,35 @@ async def chat_web_search_handler(
 
 
 async def chat_web_grounding_handler(
-    request: Request, form_data: dict, extra_params: dict, user
+    request: Request,
+    form_data: dict,
+    extra_params: dict,
+    user,
+    web_grounding_mode: str = "auto",
 ):
     """
     Wikipedia Knowledge Grounding Handler
 
     Augments LLM responses with current, factual information from txtai-wikipedia.
-    Handles both English and French queries with proper translation flow.
+    Handles both English and French queries with intelligent content analysis.
+
+    Args:
+        web_grounding_mode: Controls grounding behavior:
+            - "off": Disabled (should not reach this handler)
+            - "auto": Use intelligent filtering to determine if grounding is needed
+            - "always": Always apply grounding regardless of query type
+
+    Note: User session state (toggle) is already checked before this handler is called.
+    This handler only needs to verify admin configuration.
     """
     __event_emitter__ = extra_params["__event_emitter__"]
 
     log.info("🔍 Web grounding handler called")
+
+    # Check admin configuration only (user session state already verified)
+    if not request.app.state.config.ENABLE_WIKIPEDIA_GROUNDING:
+        log.info("🔍 Wikipedia grounding disabled by admin, skipping")
+        return form_data
 
     # Get the user's message
     messages = form_data.get("messages", [])
@@ -696,13 +714,25 @@ async def chat_web_grounding_handler(
         log.info("🔍 No user message found, skipping grounding")
         return form_data
 
-    log.info(f"🔍 Processing user message for grounding: {user_message}")
+    log.info(
+        f"🔍 Processing user message for grounding (mode: {web_grounding_mode}): {user_message}"
+    )
 
     try:
-        # Check if this query would benefit from web grounding
-        grounding_data = await web_search_grounder.ground_query(
-            user_message, request, user
-        )
+        # Handle different grounding modes
+        if web_grounding_mode == "always":
+            # Always mode: force grounding without intelligent filtering
+            log.info("🔍 Always mode: forcing grounding without filtering")
+            grounding_data = await web_search_grounder.ground_query_always(
+                user_message, request, user
+            )
+        else:
+            # Auto mode: use intelligent filtering to determine if grounding is needed
+            log.info("🔍 Auto mode: using intelligent filtering")
+            grounding_data = await web_search_grounder.ground_query(
+                user_message, request, user
+            )
+
         log.info(f"🔍 Grounding query result: {bool(grounding_data)}")
 
         if grounding_data:
@@ -983,12 +1013,6 @@ async def process_chat_payload(request, form_data, metadata, user, model):
 
     user_message = get_last_user_message(form_data["messages"])
 
-    # Web Search Knowledge Grounding - Augment LLM knowledge gaps automatically
-    if request.app.state.config.ENABLE_WIKIPEDIA_GROUNDING:
-        form_data = await chat_web_grounding_handler(
-            request, form_data, extra_params, user
-        )
-
     model_knowledge = model.get("info", {}).get("meta", {}).get("knowledge", False)
 
     if model_knowledge:
@@ -1034,6 +1058,13 @@ async def process_chat_payload(request, form_data, metadata, user, model):
         if "web_search" in features and features["web_search"]:
             form_data = await chat_web_search_handler(
                 request, form_data, extra_params, user
+            )
+
+        if "web_grounding" in features and features["web_grounding"]:
+            # Pass web grounding mode to handler
+            web_grounding_mode = features.get("web_grounding_mode", "auto")
+            form_data = await chat_web_grounding_handler(
+                request, form_data, extra_params, user, web_grounding_mode
             )
 
         if "image_generation" in features and features["image_generation"]:

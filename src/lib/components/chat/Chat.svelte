@@ -115,6 +115,8 @@
 	let selectedToolIds: string[] = [];
 	let imageGenerationEnabled = false;
 	let webSearchEnabled = false;
+	let webGroundingEnabled = false;
+	let webGroundingMode = 'off'; // 'off', 'auto', 'always'
 
 	let chat = null;
 	let tags = [];
@@ -148,6 +150,8 @@
 			files = storedInput?.files || [];
 			selectedToolIds = storedInput?.selectedToolIds || [];
 			webSearchEnabled = storedInput?.webSearchEnabled || false;
+			webGroundingEnabled = storedInput?.webGroundingEnabled || false;
+			webGroundingMode = storedInput?.webGroundingMode || 'off';
 			imageGenerationEnabled = storedInput?.imageGenerationEnabled || false;
 
 			loaded = false;
@@ -402,6 +406,7 @@
 					files = input.files;
 					selectedToolIds = input.selectedToolIds;
 					webSearchEnabled = input.webSearchEnabled;
+					webGroundingEnabled = input.webGroundingEnabled || false;
 					imageGenerationEnabled = input.imageGenerationEnabled;
 				}
 			} catch (e) {
@@ -409,6 +414,7 @@
 				files = [];
 				selectedToolIds = [];
 				webSearchEnabled = false;
+				webGroundingEnabled = false;
 				imageGenerationEnabled = false;
 			}
 		}
@@ -1597,7 +1603,9 @@
 				tool_ids: selectedToolIds.length > 0 ? selectedToolIds : undefined,
 				features: {
 					image_generation: imageGenerationEnabled,
-					web_search: webSearchEnabled
+					web_search: webSearchEnabled,
+					web_grounding: webGroundingEnabled,
+					web_grounding_mode: webGroundingMode
 				},
 
 				session_id: $socket?.id,
@@ -1983,6 +1991,8 @@
 								bind:selectedToolIds
 								bind:imageGenerationEnabled
 								bind:webSearchEnabled
+								bind:webGroundingEnabled
+								bind:webGroundingMode
 								bind:atSelectedModel
 								{stopResponse}
 								{createMessagePair}
@@ -2033,6 +2043,8 @@
 								bind:selectedToolIds
 								bind:imageGenerationEnabled
 								bind:webSearchEnabled
+								bind:webGroundingEnabled
+								bind:webGroundingMode
 								bind:atSelectedModel
 								{stopResponse}
 								{createMessagePair}
