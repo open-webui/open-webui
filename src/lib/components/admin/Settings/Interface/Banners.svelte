@@ -54,7 +54,7 @@
 		}
 
 		if (bannerListElement) {
-			sortable = Sortable.create(bannerListElement, {
+			sortable = new Sortable(bannerListElement, {
 				animation: 150,
 				handle: '.item-handle',
 				onUpdate: async (event) => {
