@@ -279,7 +279,7 @@
 										<div
 											class="text-xs font-bold px-1 rounded-sm line-clamp-1 bg-gray-500/20 text-gray-700 dark:text-gray-200"
 										>
-											{$i18n.t('v{{version}}', { version: tool?.meta?.manifest?.version ?? '' })}
+											v{tool?.meta?.manifest?.version ?? ''}
 										</div>
 									{/if}
 
