@@ -108,9 +108,7 @@
 		deleteMessage(message.id);
 	};
 
-	onMount(() => {
-		// console.log('UserMessage mounted');
-	});
+	onMount(() => {});
 </script>
 
 <DeleteConfirmDialog
