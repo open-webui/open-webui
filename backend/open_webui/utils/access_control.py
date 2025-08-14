@@ -69,7 +69,7 @@ def get_permissions(
     return permissions
 
 
-def has_permission(
+async def has_permission(
     user_id: str,
     permission_key: str,
     default_permissions: Dict[str, Any] = {},
@@ -93,7 +93,7 @@ def has_permission(
     permission_hierarchy = permission_key.split(".")
 
     # Retrieve user group permissions
-    user_groups = Groups.get_groups_by_member_id(user_id)
+    user_groups = await Groups.get_groups_by_member_id(user_id)
 
     for group in user_groups:
         group_permissions = group.permissions
