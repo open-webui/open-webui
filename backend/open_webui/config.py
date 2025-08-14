@@ -4,6 +4,7 @@ import os
 import shutil
 import base64
 import redis
+import asyncio
 
 from datetime import datetime
 from pathlib import Path
@@ -85,23 +86,28 @@ def load_json_config():
         return json.load(file)
 
 
-def save_to_db(data):
-    with get_db() as db:
-        existing_config = db.query(Config).first()
+async def asave_to_db(data):
+    async with get_db() as db:
+        existing_config = await db.query(Config).first()
         if not existing_config:
             new_config = Config(data=data, version=0)
-            db.add(new_config)
+            await db.add(new_config)
         else:
             existing_config.data = data
             existing_config.updated_at = datetime.now()
-            db.add(existing_config)
-        db.commit()
+            await db.add(existing_config)
+        await db.commit()
 
 
-def reset_config():
-    with get_db() as db:
-        db.query(Config).delete()
-        db.commit()
+def save_to_db(data):
+    loop = asyncio.get_event_loop()
+    result = loop.run_until_complete(asave_to_db(data))
+
+
+async def reset_config():
+    async with get_db() as db:
+        await db.query(Config).delete()
+        await db.commit()
 
 
 # When initializing, check if config.json exists and migrate it to the database
@@ -116,25 +122,14 @@ DEFAULT_CONFIG = {
 }
 
 
-def get_config():
-    with get_db() as db:
-        config_entry = db.query(Config).order_by(Config.id.desc()).first()
+async def get_config():
+    async with get_db() as db:
+        config_entry = await db.query(Config).order_by(Config.id.desc()).first()
         return config_entry.data if config_entry else DEFAULT_CONFIG
 
 
-CONFIG_DATA = get_config()
-
-
-def get_config_value(config_path: str):
-    path_parts = config_path.split(".")
-    cur_config = CONFIG_DATA
-    for key in path_parts:
-        if key in cur_config:
-            cur_config = cur_config[key]
-        else:
-            return None
-    return cur_config
-
+loop = asyncio.get_event_loop()
+CONFIG_DATA = loop.run_until_complete(get_config())
 
 PERSISTENT_CONFIG_REGISTRY = []
 
@@ -160,6 +155,17 @@ T = TypeVar("T")
 ENABLE_PERSISTENT_CONFIG = (
     os.environ.get("ENABLE_PERSISTENT_CONFIG", "True").lower() == "true"
 )
+
+
+def get_config_value(config_path: str):
+    path_parts = config_path.split(".")
+    cur_config = CONFIG_DATA
+    for key in path_parts:
+        if key in cur_config:
+            cur_config = cur_config[key]
+        else:
+            return None
+    return cur_config
 
 
 class PersistentConfig(Generic[T]):

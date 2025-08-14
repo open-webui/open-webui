@@ -45,7 +45,9 @@ async def get_notes(request: Request, user=Depends(get_verified_user)):
         NoteUserResponse(
             **{
                 **note.model_dump(),
-                "user": UserResponse(**Users.get_user_by_id(note.user_id).model_dump()),
+                "user": UserResponse(
+                    **((await Users.get_user_by_id(note.user_id)).model_dump())
+                ),
             }
         )
         for note in Notes.get_notes_by_user_id(user.id, "write")

@@ -110,7 +110,7 @@ class ToolsTable:
     def insert_new_tool(
         self, user_id: str, form_data: ToolForm, specs: list[dict]
     ) -> Optional[ToolModel]:
-        with get_db() as db:
+        async with get_db() as db:
             tool = ToolModel(
                 **{
                     **form_data.model_dump(),
@@ -136,17 +136,17 @@ class ToolsTable:
 
     def get_tool_by_id(self, id: str) -> Optional[ToolModel]:
         try:
-            with get_db() as db:
+            async with get_db() as db:
                 tool = db.get(Tool, id)
                 return ToolModel.model_validate(tool)
         except Exception:
             return None
 
-    def get_tools(self) -> list[ToolUserModel]:
-        with get_db() as db:
+    async def get_tools(self) -> list[ToolUserModel]:
+        async with get_db() as db:
             tools = []
             for tool in db.query(Tool).order_by(Tool.updated_at.desc()).all():
-                user = Users.get_user_by_id(tool.user_id)
+                user = await Users.get_user_by_id(tool.user_id)
                 tools.append(
                     ToolUserModel.model_validate(
                         {
@@ -171,7 +171,7 @@ class ToolsTable:
 
     def get_tool_valves_by_id(self, id: str) -> Optional[dict]:
         try:
-            with get_db() as db:
+            async with get_db() as db:
                 tool = db.get(Tool, id)
                 return tool.valves if tool.valves else {}
         except Exception as e:
@@ -180,7 +180,7 @@ class ToolsTable:
 
     def update_tool_valves_by_id(self, id: str, valves: dict) -> Optional[ToolValves]:
         try:
-            with get_db() as db:
+            async with get_db() as db:
                 db.query(Tool).filter_by(id=id).update(
                     {"valves": valves, "updated_at": int(time.time())}
                 )
@@ -189,11 +189,11 @@ class ToolsTable:
         except Exception:
             return None
 
-    def get_user_valves_by_id_and_user_id(
+    async def get_user_valves_by_id_and_user_id(
         self, id: str, user_id: str
     ) -> Optional[dict]:
         try:
-            user = Users.get_user_by_id(user_id)
+            user = await Users.get_user_by_id(user_id)
             user_settings = user.settings.model_dump() if user.settings else {}
 
             # Check if user has "tools" and "valves" settings
@@ -209,11 +209,11 @@ class ToolsTable:
             )
             return None
 
-    def update_user_valves_by_id_and_user_id(
+    async def update_user_valves_by_id_and_user_id(
         self, id: str, user_id: str, valves: dict
     ) -> Optional[dict]:
         try:
-            user = Users.get_user_by_id(user_id)
+            user = await Users.get_user_by_id(user_id)
             user_settings = user.settings.model_dump() if user.settings else {}
 
             # Check if user has "tools" and "valves" settings
@@ -236,7 +236,7 @@ class ToolsTable:
 
     def update_tool_by_id(self, id: str, updated: dict) -> Optional[ToolModel]:
         try:
-            with get_db() as db:
+            async with get_db() as db:
                 db.query(Tool).filter_by(id=id).update(
                     {**updated, "updated_at": int(time.time())}
                 )
@@ -250,7 +250,7 @@ class ToolsTable:
 
     def delete_tool_by_id(self, id: str) -> bool:
         try:
-            with get_db() as db:
+            async with get_db() as db:
                 db.query(Tool).filter_by(id=id).delete()
                 db.commit()
 

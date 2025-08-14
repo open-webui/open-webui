@@ -490,7 +490,7 @@ class OAuthManager:
 
                 role = self.get_user_role(None, user_data)
 
-                user = Auths.insert_new_auth(
+                user = await Auths.insert_new_auth(
                     email=email,
                     password=get_password_hash(
                         str(uuid.uuid4())

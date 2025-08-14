@@ -98,7 +98,7 @@ class MessageTable:
     def insert_new_message(
         self, form_data: MessageForm, channel_id: str, user_id: str
     ) -> Optional[MessageModel]:
-        with get_db() as db:
+        async with get_db() as db:
             id = str(uuid.uuid4())
 
             ts = int(time.time_ns())
@@ -123,7 +123,7 @@ class MessageTable:
             return MessageModel.model_validate(result) if result else None
 
     def get_message_by_id(self, id: str) -> Optional[MessageResponse]:
-        with get_db() as db:
+        async with get_db() as db:
             message = db.get(Message, id)
             if not message:
                 return None
@@ -141,7 +141,7 @@ class MessageTable:
             )
 
     def get_replies_by_message_id(self, id: str) -> list[MessageModel]:
-        with get_db() as db:
+        async with get_db() as db:
             all_messages = (
                 db.query(Message)
                 .filter_by(parent_id=id)
@@ -151,7 +151,7 @@ class MessageTable:
             return [MessageModel.model_validate(message) for message in all_messages]
 
     def get_reply_user_ids_by_message_id(self, id: str) -> list[str]:
-        with get_db() as db:
+        async with get_db() as db:
             return [
                 message.user_id
                 for message in db.query(Message).filter_by(parent_id=id).all()
@@ -160,7 +160,7 @@ class MessageTable:
     def get_messages_by_channel_id(
         self, channel_id: str, skip: int = 0, limit: int = 50
     ) -> list[MessageModel]:
-        with get_db() as db:
+        async with get_db() as db:
             all_messages = (
                 db.query(Message)
                 .filter_by(channel_id=channel_id, parent_id=None)
@@ -174,7 +174,7 @@ class MessageTable:
     def get_messages_by_parent_id(
         self, channel_id: str, parent_id: str, skip: int = 0, limit: int = 50
     ) -> list[MessageModel]:
-        with get_db() as db:
+        async with get_db() as db:
             message = db.get(Message, parent_id)
 
             if not message:
@@ -198,7 +198,7 @@ class MessageTable:
     def update_message_by_id(
         self, id: str, form_data: MessageForm
     ) -> Optional[MessageModel]:
-        with get_db() as db:
+        async with get_db() as db:
             message = db.get(Message, id)
             message.content = form_data.content
             message.data = form_data.data
@@ -211,7 +211,7 @@ class MessageTable:
     def add_reaction_to_message(
         self, id: str, user_id: str, name: str
     ) -> Optional[MessageReactionModel]:
-        with get_db() as db:
+        async with get_db() as db:
             reaction_id = str(uuid.uuid4())
             reaction = MessageReactionModel(
                 id=reaction_id,
@@ -227,7 +227,7 @@ class MessageTable:
             return MessageReactionModel.model_validate(result) if result else None
 
     def get_reactions_by_message_id(self, id: str) -> list[Reactions]:
-        with get_db() as db:
+        async with get_db() as db:
             all_reactions = db.query(MessageReaction).filter_by(message_id=id).all()
 
             reactions = {}
@@ -246,7 +246,7 @@ class MessageTable:
     def remove_reaction_by_id_and_user_id_and_name(
         self, id: str, user_id: str, name: str
     ) -> bool:
-        with get_db() as db:
+        async with get_db() as db:
             db.query(MessageReaction).filter_by(
                 message_id=id, user_id=user_id, name=name
             ).delete()
@@ -254,19 +254,19 @@ class MessageTable:
             return True
 
     def delete_reactions_by_id(self, id: str) -> bool:
-        with get_db() as db:
+        async with get_db() as db:
             db.query(MessageReaction).filter_by(message_id=id).delete()
             db.commit()
             return True
 
     def delete_replies_by_id(self, id: str) -> bool:
-        with get_db() as db:
+        async with get_db() as db:
             db.query(Message).filter_by(parent_id=id).delete()
             db.commit()
             return True
 
     def delete_message_by_id(self, id: str) -> bool:
-        with get_db() as db:
+        async with get_db() as db:
             db.query(Message).filter_by(id=id).delete()
 
             # Delete all reactions to this message

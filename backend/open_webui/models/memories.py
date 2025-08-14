@@ -42,7 +42,7 @@ class MemoriesTable:
         user_id: str,
         content: str,
     ) -> Optional[MemoryModel]:
-        with get_db() as db:
+        async with get_db() as db:
             id = str(uuid.uuid4())
 
             memory = MemoryModel(
@@ -69,7 +69,7 @@ class MemoriesTable:
         user_id: str,
         content: str,
     ) -> Optional[MemoryModel]:
-        with get_db() as db:
+        async with get_db() as db:
             try:
                 memory = db.get(Memory, id)
                 if not memory or memory.user_id != user_id:
@@ -84,7 +84,7 @@ class MemoriesTable:
                 return None
 
     def get_memories(self) -> list[MemoryModel]:
-        with get_db() as db:
+        async with get_db() as db:
             try:
                 memories = db.query(Memory).all()
                 return [MemoryModel.model_validate(memory) for memory in memories]
@@ -92,7 +92,7 @@ class MemoriesTable:
                 return None
 
     def get_memories_by_user_id(self, user_id: str) -> list[MemoryModel]:
-        with get_db() as db:
+        async with get_db() as db:
             try:
                 memories = db.query(Memory).filter_by(user_id=user_id).all()
                 return [MemoryModel.model_validate(memory) for memory in memories]
@@ -100,7 +100,7 @@ class MemoriesTable:
                 return None
 
     def get_memory_by_id(self, id: str) -> Optional[MemoryModel]:
-        with get_db() as db:
+        async with get_db() as db:
             try:
                 memory = db.get(Memory, id)
                 return MemoryModel.model_validate(memory)
@@ -108,7 +108,7 @@ class MemoriesTable:
                 return None
 
     def delete_memory_by_id(self, id: str) -> bool:
-        with get_db() as db:
+        async with get_db() as db:
             try:
                 db.query(Memory).filter_by(id=id).delete()
                 db.commit()
@@ -119,7 +119,7 @@ class MemoriesTable:
                 return False
 
     def delete_memories_by_user_id(self, user_id: str) -> bool:
-        with get_db() as db:
+        async with get_db() as db:
             try:
                 db.query(Memory).filter_by(user_id=user_id).delete()
                 db.commit()
@@ -129,7 +129,7 @@ class MemoriesTable:
                 return False
 
     def delete_memory_by_id_and_user_id(self, id: str, user_id: str) -> bool:
-        with get_db() as db:
+        async with get_db() as db:
             try:
                 memory = db.get(Memory, id)
                 if not memory or memory.user_id != user_id:

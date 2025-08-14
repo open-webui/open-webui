@@ -81,7 +81,7 @@ class PromptsTable:
         )
 
         try:
-            with get_db() as db:
+            async with get_db() as db:
                 result = Prompt(**prompt.model_dump())
                 db.add(result)
                 db.commit()
@@ -95,18 +95,18 @@ class PromptsTable:
 
     def get_prompt_by_command(self, command: str) -> Optional[PromptModel]:
         try:
-            with get_db() as db:
+            async with get_db() as db:
                 prompt = db.query(Prompt).filter_by(command=command).first()
                 return PromptModel.model_validate(prompt)
         except Exception:
             return None
 
-    def get_prompts(self) -> list[PromptUserResponse]:
-        with get_db() as db:
+    async def get_prompts(self) -> list[PromptUserResponse]:
+        async with get_db() as db:
             prompts = []
 
             for prompt in db.query(Prompt).order_by(Prompt.timestamp.desc()).all():
-                user = Users.get_user_by_id(prompt.user_id)
+                user = await Users.get_user_by_id(prompt.user_id)
                 prompts.append(
                     PromptUserResponse.model_validate(
                         {
@@ -134,7 +134,7 @@ class PromptsTable:
         self, command: str, form_data: PromptForm
     ) -> Optional[PromptModel]:
         try:
-            with get_db() as db:
+            async with get_db() as db:
                 prompt = db.query(Prompt).filter_by(command=command).first()
                 prompt.title = form_data.title
                 prompt.content = form_data.content
@@ -147,7 +147,7 @@ class PromptsTable:
 
     def delete_prompt_by_command(self, command: str) -> bool:
         try:
-            with get_db() as db:
+            async with get_db() as db:
                 db.query(Prompt).filter_by(command=command).delete()
                 db.commit()
 

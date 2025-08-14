@@ -155,7 +155,7 @@ class ModelsTable:
             }
         )
         try:
-            with get_db() as db:
+            async with get_db() as db:
                 result = Model(**model.model_dump())
                 db.add(result)
                 db.commit()
@@ -170,14 +170,14 @@ class ModelsTable:
             return None
 
     def get_all_models(self) -> list[ModelModel]:
-        with get_db() as db:
+        async with get_db() as db:
             return [ModelModel.model_validate(model) for model in db.query(Model).all()]
 
-    def get_models(self) -> list[ModelUserResponse]:
-        with get_db() as db:
+    async def get_models(self) -> list[ModelUserResponse]:
+        async with get_db() as db:
             models = []
             for model in db.query(Model).filter(Model.base_model_id != None).all():
-                user = Users.get_user_by_id(model.user_id)
+                user = await Users.get_user_by_id(model.user_id)
                 models.append(
                     ModelUserResponse.model_validate(
                         {
@@ -189,7 +189,7 @@ class ModelsTable:
             return models
 
     def get_base_models(self) -> list[ModelModel]:
-        with get_db() as db:
+        async with get_db() as db:
             return [
                 ModelModel.model_validate(model)
                 for model in db.query(Model).filter(Model.base_model_id == None).all()
@@ -208,14 +208,14 @@ class ModelsTable:
 
     def get_model_by_id(self, id: str) -> Optional[ModelModel]:
         try:
-            with get_db() as db:
+            async with get_db() as db:
                 model = db.get(Model, id)
                 return ModelModel.model_validate(model)
         except Exception:
             return None
 
     def toggle_model_by_id(self, id: str) -> Optional[ModelModel]:
-        with get_db() as db:
+        async with get_db() as db:
             try:
                 is_active = db.query(Model).filter_by(id=id).first().is_active
 
@@ -233,7 +233,7 @@ class ModelsTable:
 
     def update_model_by_id(self, id: str, model: ModelForm) -> Optional[ModelModel]:
         try:
-            with get_db() as db:
+            async with get_db() as db:
                 # update only the fields that are present in the model
                 result = (
                     db.query(Model)
@@ -251,7 +251,7 @@ class ModelsTable:
 
     def delete_model_by_id(self, id: str) -> bool:
         try:
-            with get_db() as db:
+            async with get_db() as db:
                 db.query(Model).filter_by(id=id).delete()
                 db.commit()
 
@@ -261,7 +261,7 @@ class ModelsTable:
 
     def delete_all_models(self) -> bool:
         try:
-            with get_db() as db:
+            async with get_db() as db:
                 db.query(Model).delete()
                 db.commit()
 
@@ -271,7 +271,7 @@ class ModelsTable:
 
     def sync_models(self, user_id: str, models: list[ModelModel]) -> list[ModelModel]:
         try:
-            with get_db() as db:
+            async with get_db() as db:
                 # Get existing models
                 existing_models = db.query(Model).all()
                 existing_ids = {model.id for model in existing_models}

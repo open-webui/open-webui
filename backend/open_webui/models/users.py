@@ -115,7 +115,7 @@ class UserUpdateForm(BaseModel):
 
 
 class UsersTable:
-    def insert_new_user(
+    async def insert_new_user(
         self,
         id: str,
         name: str,
@@ -124,7 +124,7 @@ class UsersTable:
         role: str = "pending",
         oauth_sub: Optional[str] = None,
     ) -> Optional[UserModel]:
-        with get_db() as db:
+        async with get_db() as db:
             user = UserModel(
                 **{
                     "id": id,
@@ -139,53 +139,53 @@ class UsersTable:
                 }
             )
             result = User(**user.model_dump())
-            db.add(result)
-            db.commit()
-            db.refresh(result)
+            await db.add(result)
+            await db.commit()
+            await db.refresh(result)
             if result:
                 return user
             else:
                 return None
 
-    def get_user_by_id(self, id: str) -> Optional[UserModel]:
+    async def get_user_by_id(self, id: str) -> Optional[UserModel]:
         try:
-            with get_db() as db:
-                user = db.query(User).filter_by(id=id).first()
+            async with get_db() as db:
+                user = await db.query(User).filter_by(id=id).first()
                 return UserModel.model_validate(user)
         except Exception:
             return None
 
-    def get_user_by_api_key(self, api_key: str) -> Optional[UserModel]:
+    async def get_user_by_api_key(self, api_key: str) -> Optional[UserModel]:
         try:
-            with get_db() as db:
-                user = db.query(User).filter_by(api_key=api_key).first()
+            async with get_db() as db:
+                user = await db.query(User).filter_by(api_key=api_key).first()
                 return UserModel.model_validate(user)
         except Exception:
             return None
 
-    def get_user_by_email(self, email: str) -> Optional[UserModel]:
+    async def get_user_by_email(self, email: str) -> Optional[UserModel]:
         try:
-            with get_db() as db:
-                user = db.query(User).filter_by(email=email).first()
+            async with get_db() as db:
+                user = await db.query(User).filter_by(email=email).first()
                 return UserModel.model_validate(user)
         except Exception:
             return None
 
-    def get_user_by_oauth_sub(self, sub: str) -> Optional[UserModel]:
+    async def get_user_by_oauth_sub(self, sub: str) -> Optional[UserModel]:
         try:
-            with get_db() as db:
-                user = db.query(User).filter_by(oauth_sub=sub).first()
+            async with get_db() as db:
+                user = await db.query(User).filter_by(oauth_sub=sub).first()
                 return UserModel.model_validate(user)
         except Exception:
             return None
 
-    def get_users(
+    async def get_users(
         self,
         filter: Optional[dict] = None,
         skip: Optional[int] = None,
         limit: Optional[int] = None,
     ) -> UserListResponse:
-        with get_db() as db:
+        async with get_db() as db:
             query = db.query(User)
 
             if filter:
@@ -243,37 +243,37 @@ class UsersTable:
             if limit:
                 query = query.limit(limit)
 
-            users = query.all()
+            users = await query.all()
             return {
                 "users": [UserModel.model_validate(user) for user in users],
-                "total": db.query(User).count(),
+                "total": await db.query(User).count(),
             }
 
-    def get_users_by_user_ids(self, user_ids: list[str]) -> list[UserModel]:
-        with get_db() as db:
-            users = db.query(User).filter(User.id.in_(user_ids)).all()
+    async def get_users_by_user_ids(self, user_ids: list[str]) -> list[UserModel]:
+        async with get_db() as db:
+            users = await db.query(User).filter(User.id.in_(user_ids)).all()
             return [UserModel.model_validate(user) for user in users]
 
-    def get_num_users(self) -> Optional[int]:
-        with get_db() as db:
-            return db.query(User).count()
+    async def get_num_users(self) -> Optional[int]:
+        async with get_db() as db:
+            return await db.query(User).count()
 
-    def has_users(self) -> bool:
-        with get_db() as db:
-            return db.query(db.query(User).exists()).scalar()
+    async def has_users(self) -> bool:
+        async with get_db() as db:
+            return await db.query(db.query(User).exists()).scalar()
 
-    def get_first_user(self) -> UserModel:
+    async def get_first_user(self) -> UserModel:
         try:
-            with get_db() as db:
-                user = db.query(User).order_by(User.created_at).first()
+            async with get_db() as db:
+                user = await db.query(User).order_by(User.created_at).first()
                 return UserModel.model_validate(user)
         except Exception:
             return None
 
-    def get_user_webhook_url_by_id(self, id: str) -> Optional[str]:
+    async def get_user_webhook_url_by_id(self, id: str) -> Optional[str]:
         try:
-            with get_db() as db:
-                user = db.query(User).filter_by(id=id).first()
+            async with get_db() as db:
+                user = await db.query(User).filter_by(id=id).first()
 
                 if user.settings is None:
                     return None
@@ -286,99 +286,103 @@ class UsersTable:
         except Exception:
             return None
 
-    def update_user_role_by_id(self, id: str, role: str) -> Optional[UserModel]:
+    async def update_user_role_by_id(self, id: str, role: str) -> Optional[UserModel]:
         try:
-            with get_db() as db:
-                db.query(User).filter_by(id=id).update({"role": role})
-                db.commit()
-                user = db.query(User).filter_by(id=id).first()
+            async with get_db() as db:
+                await db.query(User).filter_by(id=id).update({"role": role})
+                await db.commit()
+                user = await db.query(User).filter_by(id=id).first()
                 return UserModel.model_validate(user)
         except Exception:
             return None
 
-    def update_user_profile_image_url_by_id(
+    async def update_user_profile_image_url_by_id(
         self, id: str, profile_image_url: str
     ) -> Optional[UserModel]:
         try:
-            with get_db() as db:
-                db.query(User).filter_by(id=id).update(
+            async with get_db() as db:
+                await db.query(User).filter_by(id=id).update(
                     {"profile_image_url": profile_image_url}
                 )
-                db.commit()
+                await db.commit()
 
-                user = db.query(User).filter_by(id=id).first()
+                user = await db.query(User).filter_by(id=id).first()
                 return UserModel.model_validate(user)
         except Exception:
             return None
 
-    def update_user_last_active_by_id(self, id: str) -> Optional[UserModel]:
+    async def update_user_last_active_by_id(self, id: str) -> Optional[UserModel]:
         try:
-            with get_db() as db:
-                db.query(User).filter_by(id=id).update(
+            async with get_db() as db:
+                await db.query(User).filter_by(id=id).update(
                     {"last_active_at": int(time.time())}
                 )
-                db.commit()
+                await db.commit()
 
-                user = db.query(User).filter_by(id=id).first()
+                user = await db.query(User).filter_by(id=id).first()
                 return UserModel.model_validate(user)
         except Exception:
             return None
 
-    def update_user_oauth_sub_by_id(
+    async def update_user_oauth_sub_by_id(
         self, id: str, oauth_sub: str
     ) -> Optional[UserModel]:
         try:
-            with get_db() as db:
-                db.query(User).filter_by(id=id).update({"oauth_sub": oauth_sub})
-                db.commit()
+            async with get_db() as db:
+                await db.query(User).filter_by(id=id).update({"oauth_sub": oauth_sub})
+                await db.commit()
 
-                user = db.query(User).filter_by(id=id).first()
+                user = await db.query(User).filter_by(id=id).first()
                 return UserModel.model_validate(user)
         except Exception:
             return None
 
-    def update_user_by_id(self, id: str, updated: dict) -> Optional[UserModel]:
+    async def update_user_by_id(self, id: str, updated: dict) -> Optional[UserModel]:
         try:
-            with get_db() as db:
-                db.query(User).filter_by(id=id).update(updated)
-                db.commit()
+            async with get_db() as db:
+                await db.query(User).filter_by(id=id).update(updated)
+                await db.commit()
 
-                user = db.query(User).filter_by(id=id).first()
+                user = await db.query(User).filter_by(id=id).first()
                 return UserModel.model_validate(user)
                 # return UserModel(**user.dict())
         except Exception:
             return None
 
-    def update_user_settings_by_id(self, id: str, updated: dict) -> Optional[UserModel]:
+    async def update_user_settings_by_id(
+        self, id: str, updated: dict
+    ) -> Optional[UserModel]:
         try:
-            with get_db() as db:
-                user_settings = db.query(User).filter_by(id=id).first().settings
+            async with get_db() as db:
+                user_settings = await db.query(User).filter_by(id=id).first().settings
 
                 if user_settings is None:
                     user_settings = {}
 
                 user_settings.update(updated)
 
-                db.query(User).filter_by(id=id).update({"settings": user_settings})
-                db.commit()
+                await db.query(User).filter_by(id=id).update(
+                    {"settings": user_settings}
+                )
+                await db.commit()
 
-                user = db.query(User).filter_by(id=id).first()
+                user = await db.query(User).filter_by(id=id).first()
                 return UserModel.model_validate(user)
         except Exception:
             return None
 
-    def delete_user_by_id(self, id: str) -> bool:
+    async def delete_user_by_id(self, id: str) -> bool:
         try:
             # Remove User from Groups
-            Groups.remove_user_from_all_groups(id)
+            await Groups.remove_user_from_all_groups(id)
 
             # Delete User Chats
-            result = Chats.delete_chats_by_user_id(id)
+            result = await Chats.delete_chats_by_user_id(id)
             if result:
-                with get_db() as db:
+                async with get_db() as db:
                     # Delete User
-                    db.query(User).filter_by(id=id).delete()
-                    db.commit()
+                    await db.query(User).filter_by(id=id).delete()
+                    await db.commit()
 
                 return True
             else:
@@ -386,31 +390,33 @@ class UsersTable:
         except Exception:
             return False
 
-    def update_user_api_key_by_id(self, id: str, api_key: str) -> bool:
+    async def update_user_api_key_by_id(self, id: str, api_key: str) -> bool:
         try:
-            with get_db() as db:
-                result = db.query(User).filter_by(id=id).update({"api_key": api_key})
-                db.commit()
+            async with get_db() as db:
+                result = (
+                    await db.query(User).filter_by(id=id).update({"api_key": api_key})
+                )
+                await db.commit()
                 return True if result == 1 else False
         except Exception:
             return False
 
-    def get_user_api_key_by_id(self, id: str) -> Optional[str]:
+    async def get_user_api_key_by_id(self, id: str) -> Optional[str]:
         try:
-            with get_db() as db:
-                user = db.query(User).filter_by(id=id).first()
+            async with get_db() as db:
+                user = await db.query(User).filter_by(id=id).first()
                 return user.api_key
         except Exception:
             return None
 
-    def get_valid_user_ids(self, user_ids: list[str]) -> list[str]:
-        with get_db() as db:
-            users = db.query(User).filter(User.id.in_(user_ids)).all()
+    async def get_valid_user_ids(self, user_ids: list[str]) -> list[str]:
+        async with get_db() as db:
+            users = await db.query(User).filter(User.id.in_(user_ids)).all()
             return [user.id for user in users]
 
-    def get_super_admin_user(self) -> Optional[UserModel]:
-        with get_db() as db:
-            user = db.query(User).filter_by(role="admin").first()
+    async def get_super_admin_user(self) -> Optional[UserModel]:
+        async with get_db() as db:
+            user = await db.query(User).filter_by(role="admin").first()
             if user:
                 return UserModel.model_validate(user)
             else:

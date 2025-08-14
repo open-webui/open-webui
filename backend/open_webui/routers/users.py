@@ -310,7 +310,7 @@ async def get_user_by_id(user_id: str, user=Depends(get_verified_user)):
     # If it is, get the user_id from the chat
     if user_id.startswith("shared-"):
         chat_id = user_id.replace("shared-", "")
-        chat = Chats.get_chat_by_id(chat_id)
+        chat = await Chats.get_chat_by_id(chat_id)
         if chat:
             user_id = chat.user_id
         else:
@@ -319,7 +319,7 @@ async def get_user_by_id(user_id: str, user=Depends(get_verified_user)):
                 detail=ERROR_MESSAGES.USER_NOT_FOUND,
             )
 
-    user = Users.get_user_by_id(user_id)
+    user = await Users.get_user_by_id(user_id)
 
     if user:
         return UserResponse(
@@ -422,11 +422,11 @@ async def update_user_by_id(
             detail="Could not verify primary admin status.",
         )
 
-    user = Users.get_user_by_id(user_id)
+    user = await Users.get_user_by_id(user_id)
 
     if user:
         if form_data.email.lower() != user.email:
-            email_user = Users.get_user_by_email(form_data.email.lower())
+            email_user = await Users.get_user_by_email(form_data.email.lower())
             if email_user:
                 raise HTTPException(
                     status_code=status.HTTP_400_BAD_REQUEST,
@@ -436,10 +436,10 @@ async def update_user_by_id(
         if form_data.password:
             hashed = get_password_hash(form_data.password)
             log.debug(f"hashed: {hashed}")
-            Auths.update_user_password_by_id(user_id, hashed)
+            await Auths.update_user_password_by_id(user_id, hashed)
 
-        Auths.update_email_by_id(user_id, form_data.email.lower())
-        updated_user = Users.update_user_by_id(
+        await Auths.update_email_by_id(user_id, form_data.email.lower())
+        updated_user = await Users.update_user_by_id(
             user_id,
             {
                 "role": form_data.role,
@@ -486,7 +486,7 @@ async def delete_user_by_id(user_id: str, user=Depends(get_admin_user)):
         )
 
     if user.id != user_id:
-        result = Auths.delete_auth_by_id(user_id)
+        result = await Auths.delete_auth_by_id(user_id)
 
         if result:
             return True

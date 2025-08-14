@@ -159,11 +159,11 @@ async def update_password(
     if WEBUI_AUTH_TRUSTED_EMAIL_HEADER:
         raise HTTPException(400, detail=ERROR_MESSAGES.ACTION_PROHIBITED)
     if session_user:
-        user = Auths.authenticate_user(session_user.email, form_data.password)
+        user = await Auths.authenticate_user(session_user.email, form_data.password)
 
         if user:
             hashed = get_password_hash(form_data.new_password)
-            return Auths.update_user_password_by_id(user.id, hashed)
+            return await Auths.update_user_password_by_id(user.id, hashed)
         else:
             raise HTTPException(400, detail=ERROR_MESSAGES.INVALID_PASSWORD)
     else:
@@ -357,7 +357,7 @@ async def ldap_auth(request: Request, response: Response, form_data: LdapForm):
                         else request.app.state.config.DEFAULT_USER_ROLE
                     )
 
-                    user = Auths.insert_new_auth(
+                    user = await Auths.insert_new_auth(
                         email=email,
                         password=str(uuid.uuid4()),
                         name=cn,
@@ -377,7 +377,7 @@ async def ldap_auth(request: Request, response: Response, form_data: LdapForm):
                         500, detail="Internal error occurred during LDAP user creation."
                     )
 
-            user = Auths.authenticate_user_by_email(email)
+            user = await Auths.authenticate_user_by_email(email)
 
             if user:
                 expires_delta = parse_duration(request.app.state.config.JWT_EXPIRES_IN)
@@ -470,7 +470,7 @@ async def signin(request: Request, response: Response, form_data: SigninForm):
                 SignupForm(email=email, password=str(uuid.uuid4()), name=name),
             )
 
-        user = Auths.authenticate_user_by_email(email)
+        user = await Auths.authenticate_user_by_email(email)
         if WEBUI_AUTH_TRUSTED_GROUPS_HEADER and user and user.role != "admin":
             group_names = request.headers.get(
                 WEBUI_AUTH_TRUSTED_GROUPS_HEADER, ""
@@ -485,7 +485,7 @@ async def signin(request: Request, response: Response, form_data: SigninForm):
         admin_password = "admin"
 
         if Users.get_user_by_email(admin_email.lower()):
-            user = Auths.authenticate_user(admin_email.lower(), admin_password)
+            user = await Auths.authenticate_user(admin_email.lower(), admin_password)
         else:
             if Users.has_users():
                 raise HTTPException(400, detail=ERROR_MESSAGES.EXISTING_USERS)
@@ -496,9 +496,11 @@ async def signin(request: Request, response: Response, form_data: SigninForm):
                 SignupForm(email=admin_email, password=admin_password, name="User"),
             )
 
-            user = Auths.authenticate_user(admin_email.lower(), admin_password)
+            user = await Auths.authenticate_user(admin_email.lower(), admin_password)
     else:
-        user = Auths.authenticate_user(form_data.email.lower(), form_data.password)
+        user = await Auths.authenticate_user(
+            form_data.email.lower(), form_data.password
+        )
 
     if user:
 
@@ -589,7 +591,7 @@ async def signup(request: Request, response: Response, form_data: SignupForm):
             )
 
         hashed = get_password_hash(form_data.password)
-        user = Auths.insert_new_auth(
+        user = await Auths.insert_new_auth(
             form_data.email.lower(),
             hashed,
             form_data.name,
@@ -736,7 +738,7 @@ async def add_user(form_data: AddUserForm, user=Depends(get_admin_user)):
 
     try:
         hashed = get_password_hash(form_data.password)
-        user = Auths.insert_new_auth(
+        user = await Auths.insert_new_auth(
             form_data.email.lower(),
             hashed,
             form_data.name,

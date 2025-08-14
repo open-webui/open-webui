@@ -95,7 +95,7 @@ class GroupTable:
     def insert_new_group(
         self, user_id: str, form_data: GroupForm
     ) -> Optional[GroupModel]:
-        with get_db() as db:
+        async with get_db() as db:
             group = GroupModel(
                 **{
                     **form_data.model_dump(exclude_none=True),
@@ -120,14 +120,14 @@ class GroupTable:
                 return None
 
     def get_groups(self) -> list[GroupModel]:
-        with get_db() as db:
+        async with get_db() as db:
             return [
                 GroupModel.model_validate(group)
                 for group in db.query(Group).order_by(Group.updated_at.desc()).all()
             ]
 
     def get_groups_by_member_id(self, user_id: str) -> list[GroupModel]:
-        with get_db() as db:
+        async with get_db() as db:
             return [
                 GroupModel.model_validate(group)
                 for group in db.query(Group)
@@ -143,7 +143,7 @@ class GroupTable:
 
     def get_group_by_id(self, id: str) -> Optional[GroupModel]:
         try:
-            with get_db() as db:
+            async with get_db() as db:
                 group = db.query(Group).filter_by(id=id).first()
                 return GroupModel.model_validate(group) if group else None
         except Exception:
@@ -160,7 +160,7 @@ class GroupTable:
         self, id: str, form_data: GroupUpdateForm, overwrite: bool = False
     ) -> Optional[GroupModel]:
         try:
-            with get_db() as db:
+            async with get_db() as db:
                 db.query(Group).filter_by(id=id).update(
                     {
                         **form_data.model_dump(exclude_none=True),
@@ -175,7 +175,7 @@ class GroupTable:
 
     def delete_group_by_id(self, id: str) -> bool:
         try:
-            with get_db() as db:
+            async with get_db() as db:
                 db.query(Group).filter_by(id=id).delete()
                 db.commit()
                 return True
@@ -183,7 +183,7 @@ class GroupTable:
             return False
 
     def delete_all_groups(self) -> bool:
-        with get_db() as db:
+        async with get_db() as db:
             try:
                 db.query(Group).delete()
                 db.commit()
@@ -193,7 +193,7 @@ class GroupTable:
                 return False
 
     def remove_user_from_all_groups(self, user_id: str) -> bool:
-        with get_db() as db:
+        async with get_db() as db:
             try:
                 groups = self.get_groups_by_member_id(user_id)
 
@@ -221,7 +221,7 @@ class GroupTable:
 
         new_groups = []
 
-        with get_db() as db:
+        async with get_db() as db:
             for group_name in group_names:
                 if group_name not in existing_group_names:
                     new_group = GroupModel(
@@ -244,7 +244,7 @@ class GroupTable:
             return new_groups
 
     def sync_groups_by_group_names(self, user_id: str, group_names: list[str]) -> bool:
-        with get_db() as db:
+        async with get_db() as db:
             try:
                 groups = db.query(Group).filter(Group.name.in_(group_names)).all()
                 group_ids = [group.id for group in groups]
@@ -283,7 +283,7 @@ class GroupTable:
         self, id: str, user_ids: Optional[list[str]] = None
     ) -> Optional[GroupModel]:
         try:
-            with get_db() as db:
+            async with get_db() as db:
                 group = db.query(Group).filter_by(id=id).first()
                 if not group:
                     return None
@@ -307,7 +307,7 @@ class GroupTable:
         self, id: str, user_ids: Optional[list[str]] = None
     ) -> Optional[GroupModel]:
         try:
-            with get_db() as db:
+            async with get_db() as db:
                 group = db.query(Group).filter_by(id=id).first()
                 if not group:
                     return None

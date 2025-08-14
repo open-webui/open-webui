@@ -1,7 +1,6 @@
 import os
 import json
 import logging
-from contextlib import contextmanager
 from typing import Any, Optional
 
 from open_webui.internal.wrappers import register_connection
@@ -21,6 +20,13 @@ from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import scoped_session, sessionmaker
 from sqlalchemy.pool import QueuePool, NullPool
 from sqlalchemy.sql.type_api import _T
+from sqlalchemy.ext.asyncio import (
+    create_async_engine,
+    AsyncSession,
+    async_sessionmaker,
+    AsyncAttrs,
+)
+from contextlib import asynccontextmanager
 from typing_extensions import Self
 
 log = logging.getLogger(__name__)
@@ -102,7 +108,7 @@ if SQLALCHEMY_DATABASE_URL.startswith("sqlite+sqlcipher://"):
         conn.execute(f"PRAGMA key = '{database_password}'")
         return conn
 
-    engine = create_engine(
+    engine = create_async_engine(
         "sqlite://",  # Dummy URL since we're using creator
         creator=create_sqlcipher_connection,
         echo=False,
@@ -111,13 +117,13 @@ if SQLALCHEMY_DATABASE_URL.startswith("sqlite+sqlcipher://"):
     log.info("Connected to encrypted SQLite database using SQLCipher")
 
 elif "sqlite" in SQLALCHEMY_DATABASE_URL:
-    engine = create_engine(
+    engine = create_async_engine(
         SQLALCHEMY_DATABASE_URL, connect_args={"check_same_thread": False}
     )
 else:
     if isinstance(DATABASE_POOL_SIZE, int):
         if DATABASE_POOL_SIZE > 0:
-            engine = create_engine(
+            engine = create_async_engine(
                 SQLALCHEMY_DATABASE_URL,
                 pool_size=DATABASE_POOL_SIZE,
                 max_overflow=DATABASE_POOL_MAX_OVERFLOW,
@@ -127,27 +133,27 @@ else:
                 poolclass=QueuePool,
             )
         else:
-            engine = create_engine(
+            engine = create_async_engine(
                 SQLALCHEMY_DATABASE_URL, pool_pre_ping=True, poolclass=NullPool
             )
     else:
-        engine = create_engine(SQLALCHEMY_DATABASE_URL, pool_pre_ping=True)
+        engine = create_async_engine(SQLALCHEMY_DATABASE_URL, pool_pre_ping=True)
 
-
-SessionLocal = sessionmaker(
-    autocommit=False, autoflush=False, bind=engine, expire_on_commit=False
+AsyncSessionLocal = async_sessionmaker(
+    bind=engine,
+    class_=AsyncSession,
+    expire_on_commit=False,
+    autoflush=False,
+    autocommit=False,
 )
 metadata_obj = MetaData(schema=DATABASE_SCHEMA)
 Base = declarative_base(metadata=metadata_obj)
-Session = scoped_session(SessionLocal)
 
 
-def get_session():
-    db = SessionLocal()
-    try:
-        yield db
-    finally:
-        db.close()
-
-
-get_db = contextmanager(get_session)
+@asynccontextmanager
+async def get_db():
+    async with AsyncSessionLocal() as session:
+        try:
+            yield session
+        finally:
+            await session.close()

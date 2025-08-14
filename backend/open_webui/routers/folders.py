@@ -50,7 +50,7 @@ async def get_folders(user=Depends(get_verified_user)):
             "items": {
                 "chats": [
                     {"title": chat.title, "id": chat.id, "updated_at": chat.updated_at}
-                    for chat in Chats.get_chats_by_folder_id_and_user_id(
+                    for chat in await Chats.get_chats_by_folder_id_and_user_id(
                         folder.id, user.id
                     )
                 ]
@@ -246,7 +246,7 @@ async def delete_folder_by_id(
         try:
             folder_ids = Folders.delete_folder_by_id_and_user_id(id, user.id)
             for folder_id in folder_ids:
-                Chats.delete_chats_by_user_id_and_folder_id(user.id, folder_id)
+                await Chats.delete_chats_by_user_id_and_folder_id(user.id, folder_id)
 
             return True
         except Exception as e:

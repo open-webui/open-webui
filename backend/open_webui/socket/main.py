@@ -295,7 +295,7 @@ async def user_join(sid, data):
         USER_POOL[user.id] = [sid]
 
     # Join all the channels
-    channels = Channels.get_channels_by_user_id(user.id)
+    channels = await Channels.get_channels_by_user_id(user.id)
     log.debug(f"{channels=}")
     for channel in channels:
         await sio.enter_room(sid, f"channel:{channel.id}")
@@ -317,7 +317,7 @@ async def join_channel(sid, data):
         return
 
     # Join all the channels
-    channels = Channels.get_channels_by_user_id(user.id)
+    channels = await Channels.get_channels_by_user_id(user.id)
     log.debug(f"{channels=}")
     for channel in channels:
         await sio.enter_room(sid, f"channel:{channel.id}")
@@ -668,14 +668,14 @@ def get_event_emitter(request_info, update_db=True):
 
         if update_db:
             if "type" in event_data and event_data["type"] == "status":
-                Chats.add_message_status_to_chat_by_id_and_message_id(
+                await Chats.add_message_status_to_chat_by_id_and_message_id(
                     request_info["chat_id"],
                     request_info["message_id"],
                     event_data.get("data", {}),
                 )
 
             if "type" in event_data and event_data["type"] == "message":
-                message = Chats.get_message_by_id_and_message_id(
+                message = await Chats.get_message_by_id_and_message_id(
                     request_info["chat_id"],
                     request_info["message_id"],
                 )
@@ -684,7 +684,7 @@ def get_event_emitter(request_info, update_db=True):
                     content = message.get("content", "")
                     content += event_data.get("data", {}).get("content", "")
 
-                    Chats.upsert_message_to_chat_by_id_and_message_id(
+                    await Chats.upsert_message_to_chat_by_id_and_message_id(
                         request_info["chat_id"],
                         request_info["message_id"],
                         {
@@ -695,7 +695,7 @@ def get_event_emitter(request_info, update_db=True):
             if "type" in event_data and event_data["type"] == "replace":
                 content = event_data.get("data", {}).get("content", "")
 
-                Chats.upsert_message_to_chat_by_id_and_message_id(
+                await Chats.upsert_message_to_chat_by_id_and_message_id(
                     request_info["chat_id"],
                     request_info["message_id"],
                     {

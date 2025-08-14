@@ -103,7 +103,7 @@ class KnowledgeTable:
     def insert_new_knowledge(
         self, user_id: str, form_data: KnowledgeForm
     ) -> Optional[KnowledgeModel]:
-        with get_db() as db:
+        async with get_db() as db:
             knowledge = KnowledgeModel(
                 **{
                     **form_data.model_dump(),
@@ -126,13 +126,13 @@ class KnowledgeTable:
             except Exception:
                 return None
 
-    def get_knowledge_bases(self) -> list[KnowledgeUserModel]:
-        with get_db() as db:
+    async def get_knowledge_bases(self) -> list[KnowledgeUserModel]:
+        async with get_db() as db:
             knowledge_bases = []
             for knowledge in (
                 db.query(Knowledge).order_by(Knowledge.updated_at.desc()).all()
             ):
-                user = Users.get_user_by_id(knowledge.user_id)
+                user = await Users.get_user_by_id(knowledge.user_id)
                 knowledge_bases.append(
                     KnowledgeUserModel.model_validate(
                         {
@@ -156,7 +156,7 @@ class KnowledgeTable:
 
     def get_knowledge_by_id(self, id: str) -> Optional[KnowledgeModel]:
         try:
-            with get_db() as db:
+            async with get_db() as db:
                 knowledge = db.query(Knowledge).filter_by(id=id).first()
                 return KnowledgeModel.model_validate(knowledge) if knowledge else None
         except Exception:
@@ -166,7 +166,7 @@ class KnowledgeTable:
         self, id: str, form_data: KnowledgeForm, overwrite: bool = False
     ) -> Optional[KnowledgeModel]:
         try:
-            with get_db() as db:
+            async with get_db() as db:
                 knowledge = self.get_knowledge_by_id(id=id)
                 db.query(Knowledge).filter_by(id=id).update(
                     {
@@ -184,7 +184,7 @@ class KnowledgeTable:
         self, id: str, data: dict
     ) -> Optional[KnowledgeModel]:
         try:
-            with get_db() as db:
+            async with get_db() as db:
                 knowledge = self.get_knowledge_by_id(id=id)
                 db.query(Knowledge).filter_by(id=id).update(
                     {
@@ -200,7 +200,7 @@ class KnowledgeTable:
 
     def delete_knowledge_by_id(self, id: str) -> bool:
         try:
-            with get_db() as db:
+            async with get_db() as db:
                 db.query(Knowledge).filter_by(id=id).delete()
                 db.commit()
                 return True
@@ -208,7 +208,7 @@ class KnowledgeTable:
             return False
 
     def delete_all_knowledge(self) -> bool:
-        with get_db() as db:
+        async with get_db() as db:
             try:
                 db.query(Knowledge).delete()
                 db.commit()

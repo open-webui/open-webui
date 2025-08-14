@@ -1459,7 +1459,9 @@ async def chat_completion(
 
         if metadata.get("chat_id") and (user and user.role != "admin"):
             if metadata["chat_id"] != "local":
-                chat = Chats.get_chat_by_id_and_user_id(metadata["chat_id"], user.id)
+                chat = await Chats.get_chat_by_id_and_user_id(
+                    metadata["chat_id"], user.id
+                )
                 if chat is None:
                     raise HTTPException(
                         status_code=status.HTTP_404_NOT_FOUND,
@@ -1477,7 +1479,7 @@ async def chat_completion(
         if metadata.get("chat_id") and metadata.get("message_id"):
             # Update the chat message with the error
             try:
-                Chats.upsert_message_to_chat_by_id_and_message_id(
+                await Chats.upsert_message_to_chat_by_id_and_message_id(
                     metadata["chat_id"],
                     metadata["message_id"],
                     {
@@ -1496,7 +1498,7 @@ async def chat_completion(
         response = await chat_completion_handler(request, form_data, user)
         if metadata.get("chat_id") and metadata.get("message_id"):
             try:
-                Chats.upsert_message_to_chat_by_id_and_message_id(
+                await Chats.upsert_message_to_chat_by_id_and_message_id(
                     metadata["chat_id"],
                     metadata["message_id"],
                     {
@@ -1514,7 +1516,7 @@ async def chat_completion(
         if metadata.get("chat_id") and metadata.get("message_id"):
             # Update the chat message with the error
             try:
-                Chats.upsert_message_to_chat_by_id_and_message_id(
+                await Chats.upsert_message_to_chat_by_id_and_message_id(
                     metadata["chat_id"],
                     metadata["message_id"],
                     {
@@ -1593,7 +1595,7 @@ async def list_tasks_endpoint(request: Request, user=Depends(get_verified_user))
 async def list_tasks_by_chat_id_endpoint(
     request: Request, chat_id: str, user=Depends(get_verified_user)
 ):
-    chat = Chats.get_chat_by_id(chat_id)
+    chat = await Chats.get_chat_by_id(chat_id)
     if chat is None or chat.user_id != user.id:
         return {"task_ids": []}
 
@@ -1624,7 +1626,7 @@ async def get_app_config(request: Request):
                 detail="Invalid token",
             )
         if data is not None and "id" in data:
-            user = Users.get_user_by_id(data["id"])
+            user = await Users.get_user_by_id(data["id"])
 
     user_count = Users.get_num_users()
     onboarding = False

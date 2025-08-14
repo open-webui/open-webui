@@ -79,7 +79,7 @@ class NoteTable:
         form_data: NoteForm,
         user_id: str,
     ) -> Optional[NoteModel]:
-        with get_db() as db:
+        async with get_db() as db:
             note = NoteModel(
                 **{
                     "id": str(uuid.uuid4()),
@@ -97,7 +97,7 @@ class NoteTable:
             return note
 
     def get_notes(self) -> list[NoteModel]:
-        with get_db() as db:
+        async with get_db() as db:
             notes = db.query(Note).order_by(Note.updated_at.desc()).all()
             return [NoteModel.model_validate(note) for note in notes]
 
@@ -113,14 +113,14 @@ class NoteTable:
         ]
 
     def get_note_by_id(self, id: str) -> Optional[NoteModel]:
-        with get_db() as db:
+        async with get_db() as db:
             note = db.query(Note).filter(Note.id == id).first()
             return NoteModel.model_validate(note) if note else None
 
     def update_note_by_id(
         self, id: str, form_data: NoteUpdateForm
     ) -> Optional[NoteModel]:
-        with get_db() as db:
+        async with get_db() as db:
             note = db.query(Note).filter(Note.id == id).first()
             if not note:
                 return None
@@ -143,7 +143,7 @@ class NoteTable:
             return NoteModel.model_validate(note) if note else None
 
     def delete_note_by_id(self, id: str):
-        with get_db() as db:
+        async with get_db() as db:
             db.query(Note).filter(Note.id == id).delete()
             db.commit()
             return True

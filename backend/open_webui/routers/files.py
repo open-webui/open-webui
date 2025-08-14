@@ -6,6 +6,7 @@ from fnmatch import fnmatch
 from pathlib import Path
 from typing import Optional
 from urllib.parse import quote
+import asyncio
 
 from fastapi import (
     APIRouter,
@@ -137,22 +138,26 @@ def upload_file(
         }
         contents, file_path = Storage.upload_file(file.file, filename, tags)
 
-        file_item = Files.insert_new_file(
-            user.id,
-            FileForm(
-                **{
-                    "id": id,
-                    "filename": name,
-                    "path": file_path,
-                    "meta": {
-                        "name": name,
-                        "content_type": file.content_type,
-                        "size": len(contents),
-                        "data": file_metadata,
-                    },
-                }
-            ),
+        loop = asyncio.get_event_loop()
+        file_item = loop.run_until_complete(
+            Files.insert_new_file(
+                user.id,
+                FileForm(
+                    **{
+                        "id": id,
+                        "filename": name,
+                        "path": file_path,
+                        "meta": {
+                            "name": name,
+                            "content_type": file.content_type,
+                            "size": len(contents),
+                            "data": file_metadata,
+                        },
+                    }
+                ),
+            )
         )
+
         if process:
             try:
                 if file.content_type:
@@ -187,7 +192,7 @@ def upload_file(
                     )
                     process_file(request, ProcessFileForm(file_id=id), user=user)
 
-                file_item = Files.get_file_by_id(id=id)
+                file_item = loop.run_until_complete(Files.get_file_by_id(id=id))
             except Exception as e:
                 log.exception(e)
                 log.error(f"Error processing file: {file_item.id}")
@@ -489,7 +494,7 @@ async def get_html_file_content_by_id(id: str, user=Depends(get_verified_user)):
             detail=ERROR_MESSAGES.NOT_FOUND,
         )
 
-    file_user = Users.get_user_by_id(file.user_id)
+    file_user = await Users.get_user_by_id(file.user_id)
     if not file_user.role == "admin":
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
