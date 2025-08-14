@@ -1274,6 +1274,20 @@ def save_docs_to_vector_db(
     if len(docs) == 0:
         raise ValueError(ERROR_MESSAGES.EMPTY_CONTENT)
 
+    # Adjust PII entity positions for chunk
+    for doc in docs:
+        start_index = doc.metadata.get("start_index", 0)
+        end_index = len(doc.page_content) + start_index
+        for pii_entity in doc.metadata.get("pii", []):
+            updated_occurrences = []
+            for occurrence in doc.metadata["pii"][pii_entity]["occurrences"]:
+                if occurrence["start_idx"] >= start_index and occurrence["end_idx"] <= end_index:
+                    occurrence["start_idx"] = occurrence["start_idx"] - start_index
+                    occurrence["end_idx"] = occurrence["end_idx"] - start_index
+                    updated_occurrences.append(occurrence)
+            doc.metadata["pii"][pii_entity]["occurrences"] = updated_occurrences
+
+    log.info(f"docs: {docs}")
     texts = [doc.page_content for doc in docs]
     metadatas = [
         {
@@ -1519,9 +1533,9 @@ def process_file(
             known_entities = []
             current_page_offset = 0
             detections = {}
-            page_detections = {}
 
             for doc in docs:
+                page_detections = {}
                 pii = None
                 if (
                     request.app.state.config.ENABLE_PII_DETECTION
@@ -1553,7 +1567,6 @@ def process_file(
                             )
                             for pii_entity in pii:
                                 page_detections[pii_entity["text"]] = pii_entity.copy()
-
                                 updated_occurences = []
 
                                 for occurrence in pii_entity["occurrences"]:
@@ -1580,16 +1593,12 @@ def process_file(
                                     detections[pii_entity["text"]][
                                         "occurrences"
                                     ].extend(pii_entity["occurrences"])
-
                     except Exception as e:
                         log.exception(e)
                         pii = None
-                # attach PII to document metadata for downstream use
-                if pii is not None:
-                    try:
-                        doc.metadata["pii"] = page_detections
-                    except Exception:
-                        pass
+
+                    # attach PII to document metadata for downstream use
+                    doc.metadata["pii"] = page_detections
 
                 text_content.append(doc.page_content)
                 current_page_offset += len(doc.page_content)
