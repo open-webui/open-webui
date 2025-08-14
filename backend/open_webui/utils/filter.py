@@ -2,7 +2,6 @@ import inspect
 import logging
 
 from open_webui.utils.plugin import (
-    load_function_module_by_id,
     get_function_module_from_cache,
 )
 from open_webui.models.functions import Functions
@@ -12,35 +11,39 @@ log = logging.getLogger(__name__)
 log.setLevel(SRC_LOG_LEVELS["MAIN"])
 
 
-def get_function_module(request, function_id, load_from_db=True):
+async def get_function_module(request, function_id, load_from_db=True):
     """
     Get the function module by its ID.
     """
-    function_module, _, _ = get_function_module_from_cache(
+    function_module, _, _ = await get_function_module_from_cache(
         request, function_id, load_from_db
     )
     return function_module
 
 
-def get_sorted_filter_ids(request, model: dict, enabled_filter_ids: list = None):
-    def get_priority(function_id):
-        function = Functions.get_function_by_id(function_id)
+async def get_sorted_filter_ids(request, model: dict, enabled_filter_ids: list = None):
+    async def get_priority(function_id):
+        function = await Functions.get_function_by_id(function_id)
         if function is not None:
-            valves = Functions.get_function_valves_by_id(function_id)
+            valves = await Functions.get_function_valves_by_id(function_id)
             return valves.get("priority", 0) if valves else 0
         return 0
 
-    filter_ids = [function.id for function in Functions.get_global_filter_functions()]
+    filter_ids = [
+        function.id for function in await Functions.get_global_filter_functions()
+    ]
     if "info" in model and "meta" in model["info"]:
         filter_ids.extend(model["info"]["meta"].get("filterIds", []))
         filter_ids = list(set(filter_ids))
     active_filter_ids = [
         function.id
-        for function in Functions.get_functions_by_type("filter", active_only=True)
+        for function in await Functions.get_functions_by_type(
+            "filter", active_only=True
+        )
     ]
 
-    def get_active_status(filter_id):
-        function_module = get_function_module(request, filter_id)
+    async def get_active_status(filter_id):
+        function_module = await get_function_module(request, filter_id)
 
         if getattr(function_module, "toggle", None):
             return filter_id in (enabled_filter_ids or [])
@@ -48,10 +51,13 @@ def get_sorted_filter_ids(request, model: dict, enabled_filter_ids: list = None)
         return True
 
     active_filter_ids = [
-        filter_id for filter_id in active_filter_ids if get_active_status(filter_id)
+        filter_id
+        for filter_id in active_filter_ids
+        if await get_active_status(filter_id)
     ]
 
     filter_ids = [fid for fid in filter_ids if fid in active_filter_ids]
+
     filter_ids.sort(key=get_priority)
 
     return filter_ids
@@ -68,7 +74,7 @@ async def process_filter_functions(
         if not filter:
             continue
 
-        function_module = get_function_module(
+        function_module = await get_function_module(
             request, filter_id, load_from_db=(filter_type != "stream")
         )
         # Prepare handler function
@@ -82,7 +88,7 @@ async def process_filter_functions(
 
         # Apply valves to the function
         if hasattr(function_module, "valves") and hasattr(function_module, "Valves"):
-            valves = Functions.get_function_valves_by_id(filter_id)
+            valves = await Functions.get_function_valves_by_id(filter_id)
             function_module.valves = function_module.Valves(
                 **(valves if valves else {})
             )

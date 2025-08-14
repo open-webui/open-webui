@@ -41,7 +41,6 @@ from open_webui.models.models import Models
 
 
 from open_webui.utils.plugin import (
-    load_function_module_by_id,
     get_function_module_from_cache,
 )
 from open_webui.utils.models import get_all_models, check_model_access
@@ -328,8 +327,8 @@ async def chat_completed(request: Request, form_data: dict, user: Any):
 
     try:
         filter_functions = [
-            Functions.get_function_by_id(filter_id)
-            for filter_id in get_sorted_filter_ids(
+            await Functions.get_function_by_id(filter_id)
+            for filter_id in await get_sorted_filter_ids(
                 request, model, metadata.get("filter_ids", [])
             )
         ]
@@ -352,7 +351,7 @@ async def chat_action(request: Request, action_id: str, form_data: dict, user: A
     else:
         sub_action_id = None
 
-    action = Functions.get_function_by_id(action_id)
+    action = await Functions.get_function_by_id(action_id)
     if not action:
         raise Exception(f"Action not found: {action_id}")
 
@@ -390,10 +389,10 @@ async def chat_action(request: Request, action_id: str, form_data: dict, user: A
         }
     )
 
-    function_module, _, _ = get_function_module_from_cache(request, action_id)
+    function_module, _, _ = await get_function_module_from_cache(request, action_id)
 
     if hasattr(function_module, "valves") and hasattr(function_module, "Valves"):
-        valves = Functions.get_function_valves_by_id(action_id)
+        valves = await Functions.get_function_valves_by_id(action_id)
         function_module.valves = function_module.Valves(**(valves if valves else {}))
 
     if hasattr(function_module, "action"):

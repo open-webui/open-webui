@@ -30,7 +30,6 @@ from open_webui.models.functions import Functions
 from open_webui.models.models import Models
 
 from open_webui.utils.plugin import (
-    load_function_module_by_id,
     get_function_module_from_cache,
 )
 from open_webui.utils.tools import get_tools
@@ -56,17 +55,17 @@ log = logging.getLogger(__name__)
 log.setLevel(SRC_LOG_LEVELS["MAIN"])
 
 
-def get_function_module_by_id(request: Request, pipe_id: str):
-    function_module, _, _ = get_function_module_from_cache(request, pipe_id)
+async def get_function_module_by_id(request: Request, pipe_id: str):
+    function_module, _, _ = await get_function_module_from_cache(request, pipe_id)
 
     if hasattr(function_module, "valves") and hasattr(function_module, "Valves"):
-        valves = Functions.get_function_valves_by_id(pipe_id)
+        valves = await Functions.get_function_valves_by_id(pipe_id)
         function_module.valves = function_module.Valves(**(valves if valves else {}))
     return function_module
 
 
 async def get_function_models(request):
-    pipes = Functions.get_functions_by_type("pipe", active_only=True)
+    pipes = await Functions.get_functions_by_type("pipe", active_only=True)
     pipe_models = []
 
     for pipe in pipes:

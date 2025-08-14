@@ -77,7 +77,6 @@ from open_webui.utils.misc import (
     convert_logit_bias_input_to_json,
 )
 from open_webui.utils.tools import get_tools
-from open_webui.utils.plugin import load_function_module_by_id
 from open_webui.utils.filter import (
     get_sorted_filter_ids,
     process_filter_functions,
@@ -840,8 +839,8 @@ async def process_chat_payload(request, form_data, user, metadata, model):
 
     try:
         filter_functions = [
-            Functions.get_function_by_id(filter_id)
-            for filter_id in get_sorted_filter_ids(
+            await Functions.get_function_by_id(filter_id)
+            for filter_id in await get_sorted_filter_ids(
                 request, model, metadata.get("filter_ids", [])
             )
         ]
@@ -908,7 +907,7 @@ async def process_chat_payload(request, form_data, user, metadata, model):
     tools_dict = {}
 
     if tool_ids:
-        tools_dict = get_tools(
+        tools_dict = await get_tools(
             request,
             tool_ids,
             user,
@@ -1323,7 +1322,9 @@ async def process_chat_response(
 
                         # Send a webhook notification if the user is not active
                         if not get_active_status_by_user_id(user.id):
-                            webhook_url = Users.get_user_webhook_url_by_id(user.id)
+                            webhook_url = await Users.get_user_webhook_url_by_id(
+                                user.id
+                            )
                             if webhook_url:
                                 post_webhook(
                                     request.app.state.WEBUI_NAME,
@@ -1394,8 +1395,8 @@ async def process_chat_response(
         "__model__": model,
     }
     filter_functions = [
-        Functions.get_function_by_id(filter_id)
-        for filter_id in get_sorted_filter_ids(
+        await Functions.get_function_by_id(filter_id)
+        for filter_id in await get_sorted_filter_ids(
             request, model, metadata.get("filter_ids", [])
         )
     ]
@@ -2523,7 +2524,7 @@ async def process_chat_response(
 
                 # Send a webhook notification if the user is not active
                 if not get_active_status_by_user_id(user.id):
-                    webhook_url = Users.get_user_webhook_url_by_id(user.id)
+                    webhook_url = await Users.get_user_webhook_url_by_id(user.id)
                     if webhook_url:
                         post_webhook(
                             request.app.state.WEBUI_NAME,

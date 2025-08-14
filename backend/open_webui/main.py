@@ -477,7 +477,8 @@ from open_webui.constants import ERROR_MESSAGES
 
 if SAFE_MODE:
     print("SAFE MODE ENABLED")
-    Functions.deactivate_all_functions()
+    loop = asyncio.get_event_loop()
+    loop.run_until_complete(Functions.deactivate_all_functions())
 
 logging.basicConfig(stream=sys.stdout, level=GLOBAL_LOG_LEVEL)
 log = logging.getLogger(__name__)
