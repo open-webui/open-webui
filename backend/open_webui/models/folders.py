@@ -7,7 +7,10 @@ import re
 
 from pydantic import BaseModel, ConfigDict
 from sqlalchemy import BigInteger, Column, Text, JSON, Boolean, func
+from sqlalchemy import select
 
+
+from backend.open_webui.internal import db
 from open_webui.internal.db import Base, get_db
 from open_webui.env import SRC_LOG_LEVELS
 
@@ -244,9 +247,9 @@ class FolderTable:
     ) -> Optional[FolderModel]:
         try:
             async with get_db() as db:
-                folder = (
-                    await db.query(Folder).filter_by(id=id, user_id=user_id).first()
-                )
+                stmt = select(Folder).where(Folder.id == id, Folder.user_id == user_id)
+                result = await db.execute(stmt)
+                folder = result.scalars().first()
 
                 if not folder:
                     return None

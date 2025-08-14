@@ -42,7 +42,7 @@ router = APIRouter()
 
 @router.get("/", response_model=list[FolderModel])
 async def get_folders(user=Depends(get_verified_user)):
-    folders = Folders.get_folders_by_user_id(user.id)
+    folders = await Folders.get_folders_by_user_id(user.id)
 
     return [
         {
@@ -66,8 +66,8 @@ async def get_folders(user=Depends(get_verified_user)):
 
 
 @router.post("/")
-def create_folder(form_data: FolderForm, user=Depends(get_verified_user)):
-    folder = Folders.get_folder_by_parent_id_and_user_id_and_name(
+async def create_folder(form_data: FolderForm, user=Depends(get_verified_user)):
+    folder = await Folders.get_folder_by_parent_id_and_user_id_and_name(
         None, user.id, form_data.name
     )
 
@@ -78,7 +78,7 @@ def create_folder(form_data: FolderForm, user=Depends(get_verified_user)):
         )
 
     try:
-        folder = Folders.insert_new_folder(user.id, form_data)
+        folder = await Folders.insert_new_folder(user.id, form_data)
         return folder
     except Exception as e:
         log.exception(e)
@@ -96,7 +96,7 @@ def create_folder(form_data: FolderForm, user=Depends(get_verified_user)):
 
 @router.get("/{id}", response_model=Optional[FolderModel])
 async def get_folder_by_id(id: str, user=Depends(get_verified_user)):
-    folder = Folders.get_folder_by_id_and_user_id(id, user.id)
+    folder = await Folders.get_folder_by_id_and_user_id(id, user.id)
     if folder:
         return folder
     else:
@@ -115,9 +115,9 @@ async def get_folder_by_id(id: str, user=Depends(get_verified_user)):
 async def update_folder_name_by_id(
     id: str, form_data: FolderForm, user=Depends(get_verified_user)
 ):
-    folder = Folders.get_folder_by_id_and_user_id(id, user.id)
+    folder = await Folders.get_folder_by_id_and_user_id(id, user.id)
     if folder:
-        existing_folder = Folders.get_folder_by_parent_id_and_user_id_and_name(
+        existing_folder = await Folders.get_folder_by_parent_id_and_user_id_and_name(
             folder.parent_id, user.id, form_data.name
         )
         if existing_folder and existing_folder.id != id:
@@ -127,7 +127,9 @@ async def update_folder_name_by_id(
             )
 
         try:
-            folder = Folders.update_folder_by_id_and_user_id(id, user.id, form_data)
+            folder = await Folders.update_folder_by_id_and_user_id(
+                id, user.id, form_data
+            )
 
             return folder
         except Exception as e:
@@ -157,9 +159,9 @@ class FolderParentIdForm(BaseModel):
 async def update_folder_parent_id_by_id(
     id: str, form_data: FolderParentIdForm, user=Depends(get_verified_user)
 ):
-    folder = Folders.get_folder_by_id_and_user_id(id, user.id)
+    folder = await Folders.get_folder_by_id_and_user_id(id, user.id)
     if folder:
-        existing_folder = Folders.get_folder_by_parent_id_and_user_id_and_name(
+        existing_folder = await Folders.get_folder_by_parent_id_and_user_id_and_name(
             form_data.parent_id, user.id, folder.name
         )
 
@@ -170,7 +172,7 @@ async def update_folder_parent_id_by_id(
             )
 
         try:
-            folder = Folders.update_folder_parent_id_by_id_and_user_id(
+            folder = await Folders.update_folder_parent_id_by_id_and_user_id(
                 id, user.id, form_data.parent_id
             )
             return folder
@@ -201,10 +203,10 @@ class FolderIsExpandedForm(BaseModel):
 async def update_folder_is_expanded_by_id(
     id: str, form_data: FolderIsExpandedForm, user=Depends(get_verified_user)
 ):
-    folder = Folders.get_folder_by_id_and_user_id(id, user.id)
+    folder = await Folders.get_folder_by_id_and_user_id(id, user.id)
     if folder:
         try:
-            folder = Folders.update_folder_is_expanded_by_id_and_user_id(
+            folder = await Folders.update_folder_is_expanded_by_id_and_user_id(
                 id, user.id, form_data.is_expanded
             )
             return folder
@@ -231,7 +233,7 @@ async def update_folder_is_expanded_by_id(
 async def delete_folder_by_id(
     request: Request, id: str, user=Depends(get_verified_user)
 ):
-    chat_delete_permission = has_permission(
+    chat_delete_permission = await has_permission(
         user.id, "chat.delete", request.app.state.config.USER_PERMISSIONS
     )
 
@@ -241,10 +243,10 @@ async def delete_folder_by_id(
             detail=ERROR_MESSAGES.ACCESS_PROHIBITED,
         )
 
-    folder = Folders.get_folder_by_id_and_user_id(id, user.id)
+    folder = await Folders.get_folder_by_id_and_user_id(id, user.id)
     if folder:
         try:
-            folder_ids = Folders.delete_folder_by_id_and_user_id(id, user.id)
+            folder_ids = await Folders.delete_folder_by_id_and_user_id(id, user.id)
             for folder_id in folder_ids:
                 await Chats.delete_chats_by_user_id_and_folder_id(user.id, folder_id)
 
