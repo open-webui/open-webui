@@ -108,7 +108,7 @@ async def get_session_user(
             secure=WEBUI_AUTH_COOKIE_SECURE,
         )
 
-    user_permissions = get_permissions(
+    user_permissions = await get_permissions(
         user.id, request.app.state.config.USER_PERMISSIONS
     )
 
@@ -406,7 +406,7 @@ async def ldap_auth(request: Request, response: Response, form_data: LdapForm):
                     secure=WEBUI_AUTH_COOKIE_SECURE,
                 )
 
-                user_permissions = get_permissions(
+                user_permissions = await get_permissions(
                     user.id, request.app.state.config.USER_PERMISSIONS
                 )
 
@@ -416,10 +416,10 @@ async def ldap_auth(request: Request, response: Response, form_data: LdapForm):
                     and user_groups
                 ):
                     if ENABLE_LDAP_GROUP_CREATION:
-                        Groups.create_groups_by_group_names(user.id, user_groups)
+                        await Groups.create_groups_by_group_names(user.id, user_groups)
 
                     try:
-                        Groups.sync_groups_by_group_names(user.id, user_groups)
+                        await Groups.sync_groups_by_group_names(user.id, user_groups)
                         log.info(
                             f"Successfully synced groups for user {user.id}: {user_groups}"
                         )
@@ -478,7 +478,7 @@ async def signin(request: Request, response: Response, form_data: SigninForm):
             group_names = [name.strip() for name in group_names if name.strip()]
 
             if group_names:
-                Groups.sync_groups_by_group_names(user.id, group_names)
+                await Groups.sync_groups_by_group_names(user.id, group_names)
 
     elif WEBUI_AUTH == False:
         admin_email = "admin@localhost"
@@ -530,7 +530,7 @@ async def signin(request: Request, response: Response, form_data: SigninForm):
             secure=WEBUI_AUTH_COOKIE_SECURE,
         )
 
-        user_permissions = get_permissions(
+        user_permissions = await get_permissions(
             user.id, request.app.state.config.USER_PERMISSIONS
         )
 
@@ -638,7 +638,7 @@ async def signup(request: Request, response: Response, form_data: SignupForm):
                     },
                 )
 
-            user_permissions = get_permissions(
+            user_permissions = await get_permissions(
                 user.id, request.app.state.config.USER_PERMISSIONS
             )
 

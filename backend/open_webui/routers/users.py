@@ -105,7 +105,7 @@ async def get_all_users(
 
 @router.get("/groups")
 async def get_user_groups(user=Depends(get_verified_user)):
-    return Groups.get_groups_by_member_id(user.id)
+    return await Groups.get_groups_by_member_id(user.id)
 
 
 ############################
@@ -115,7 +115,7 @@ async def get_user_groups(user=Depends(get_verified_user)):
 
 @router.get("/permissions")
 async def get_user_permissisions(request: Request, user=Depends(get_verified_user)):
-    user_permissions = get_permissions(
+    user_permissions = await get_permissions(
         user.id, request.app.state.config.USER_PERMISSIONS
     )
 
@@ -512,4 +512,4 @@ async def delete_user_by_id(user_id: str, user=Depends(get_admin_user)):
 
 @router.get("/{user_id}/groups")
 async def get_user_groups_by_id(user_id: str, user=Depends(get_admin_user)):
-    return Groups.get_groups_by_member_id(user_id)
+    return await Groups.get_groups_by_member_id(user_id)

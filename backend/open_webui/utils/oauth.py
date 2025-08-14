@@ -255,7 +255,7 @@ class OAuthManager:
                     permissions=group_permissions,
                     user_ids=user_ids,
                 )
-                Groups.update_group_by_id(
+                await Groups.update_group_by_id(
                     id=group_model.id, form_data=update_form, overwrite=False
                 )
 
@@ -286,7 +286,7 @@ class OAuthManager:
                     permissions=group_permissions,
                     user_ids=user_ids,
                 )
-                Groups.update_group_by_id(
+                await Groups.update_group_by_id(
                     id=group_model.id, form_data=update_form, overwrite=False
                 )
 

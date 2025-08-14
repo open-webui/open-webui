@@ -92,7 +92,7 @@ class GroupUpdateForm(GroupForm, UserIdsForm):
 
 
 class GroupTable:
-    def insert_new_group(
+    async def insert_new_group(
         self, user_id: str, form_data: GroupForm
     ) -> Optional[GroupModel]:
         async with get_db() as db:
@@ -108,9 +108,9 @@ class GroupTable:
 
             try:
                 result = Group(**group.model_dump())
-                db.add(result)
-                db.commit()
-                db.refresh(result)
+                await db.add(result)
+                await db.commit()
+                await db.refresh(result)
                 if result:
                     return GroupModel.model_validate(result)
                 else:
@@ -119,18 +119,20 @@ class GroupTable:
             except Exception:
                 return None
 
-    def get_groups(self) -> list[GroupModel]:
+    async def get_groups(self) -> list[GroupModel]:
         async with get_db() as db:
             return [
                 GroupModel.model_validate(group)
-                for group in db.query(Group).order_by(Group.updated_at.desc()).all()
+                for group in await db.query(Group)
+                .order_by(Group.updated_at.desc())
+                .all()
             ]
 
-    def get_groups_by_member_id(self, user_id: str) -> list[GroupModel]:
+    async def get_groups_by_member_id(self, user_id: str) -> list[GroupModel]:
         async with get_db() as db:
             return [
                 GroupModel.model_validate(group)
-                for group in db.query(Group)
+                for group in await db.query(Group)
                 .filter(
                     func.json_array_length(Group.user_ids) > 0
                 )  # Ensure array exists
@@ -141,82 +143,82 @@ class GroupTable:
                 .all()
             ]
 
-    def get_group_by_id(self, id: str) -> Optional[GroupModel]:
+    async def get_group_by_id(self, id: str) -> Optional[GroupModel]:
         try:
             async with get_db() as db:
-                group = db.query(Group).filter_by(id=id).first()
+                group = await db.query(Group).filter_by(id=id).first()
                 return GroupModel.model_validate(group) if group else None
         except Exception:
             return None
 
-    def get_group_user_ids_by_id(self, id: str) -> Optional[str]:
-        group = self.get_group_by_id(id)
+    async def get_group_user_ids_by_id(self, id: str) -> Optional[str]:
+        group = await self.get_group_by_id(id)
         if group:
             return group.user_ids
         else:
             return None
 
-    def update_group_by_id(
+    async def update_group_by_id(
         self, id: str, form_data: GroupUpdateForm, overwrite: bool = False
     ) -> Optional[GroupModel]:
         try:
             async with get_db() as db:
-                db.query(Group).filter_by(id=id).update(
+                await db.query(Group).filter_by(id=id).update(
                     {
                         **form_data.model_dump(exclude_none=True),
                         "updated_at": int(time.time()),
                     }
                 )
-                db.commit()
-                return self.get_group_by_id(id=id)
+                await db.commit()
+                return await self.get_group_by_id(id=id)
         except Exception as e:
             log.exception(e)
             return None
 
-    def delete_group_by_id(self, id: str) -> bool:
+    async def delete_group_by_id(self, id: str) -> bool:
         try:
             async with get_db() as db:
-                db.query(Group).filter_by(id=id).delete()
-                db.commit()
+                await db.query(Group).filter_by(id=id).delete()
+                await db.commit()
                 return True
         except Exception:
             return False
 
-    def delete_all_groups(self) -> bool:
+    async def delete_all_groups(self) -> bool:
         async with get_db() as db:
             try:
-                db.query(Group).delete()
-                db.commit()
+                await db.query(Group).delete()
+                await db.commit()
 
                 return True
             except Exception:
                 return False
 
-    def remove_user_from_all_groups(self, user_id: str) -> bool:
+    async def remove_user_from_all_groups(self, user_id: str) -> bool:
         async with get_db() as db:
             try:
-                groups = self.get_groups_by_member_id(user_id)
+                groups = await self.get_groups_by_member_id(user_id)
 
                 for group in groups:
                     group.user_ids.remove(user_id)
-                    db.query(Group).filter_by(id=group.id).update(
+                    await db.query(Group).filter_by(id=group.id).update(
                         {
                             "user_ids": group.user_ids,
                             "updated_at": int(time.time()),
                         }
                     )
-                    db.commit()
+                    await db.commit()
 
                 return True
             except Exception:
                 return False
 
-    def create_groups_by_group_names(
+    async def create_groups_by_group_names(
         self, user_id: str, group_names: list[str]
     ) -> list[GroupModel]:
 
         # check for existing groups
-        existing_groups = self.get_groups()
+        existing_groups = await self.get_groups()
         existing_group_names = {group.name for group in existing_groups}
 
         new_groups = []
@@ -234,28 +236,30 @@ class GroupTable:
                     )
                     try:
                         result = Group(**new_group.model_dump())
-                        db.add(result)
-                        db.commit()
-                        db.refresh(result)
+                        await db.add(result)
+                        await db.commit()
+                        await db.refresh(result)
                         new_groups.append(GroupModel.model_validate(result))
                     except Exception as e:
                         log.exception(e)
                         continue
             return new_groups
 
-    def sync_groups_by_group_names(self, user_id: str, group_names: list[str]) -> bool:
+    async def sync_groups_by_group_names(
+        self, user_id: str, group_names: list[str]
+    ) -> bool:
         async with get_db() as db:
             try:
-                groups = db.query(Group).filter(Group.name.in_(group_names)).all()
+                groups = await db.query(Group).filter(Group.name.in_(group_names)).all()
                 group_ids = [group.id for group in groups]
 
                 # Remove user from groups not in the new list
-                existing_groups = self.get_groups_by_member_id(user_id)
+                existing_groups = await self.get_groups_by_member_id(user_id)
 
                 for group in existing_groups:
                     if group.id not in group_ids:
                         group.user_ids.remove(user_id)
-                        db.query(Group).filter_by(id=group.id).update(
+                        await db.query(Group).filter_by(id=group.id).update(
                             {
                                 "user_ids": group.user_ids,
                                 "updated_at": int(time.time()),
@@ -266,25 +270,25 @@ class GroupTable:
                 for group in groups:
                     if user_id not in group.user_ids:
                         group.user_ids.append(user_id)
-                        db.query(Group).filter_by(id=group.id).update(
+                        await db.query(Group).filter_by(id=group.id).update(
                             {
                                 "user_ids": group.user_ids,
                                 "updated_at": int(time.time()),
                             }
                         )
 
-                db.commit()
+                await db.commit()
                 return True
             except Exception as e:
                 log.exception(e)
                 return False
 
-    def add_users_to_group(
+    async def add_users_to_group(
         self, id: str, user_ids: Optional[list[str]] = None
     ) -> Optional[GroupModel]:
         try:
             async with get_db() as db:
-                group = db.query(Group).filter_by(id=id).first()
+                group = await db.query(Group).filter_by(id=id).first()
                 if not group:
                     return None
 
@@ -296,19 +300,19 @@ class GroupTable:
                         group.user_ids.append(user_id)
 
                 group.updated_at = int(time.time())
-                db.commit()
-                db.refresh(group)
+                await db.commit()
+                await db.refresh(group)
                 return GroupModel.model_validate(group)
         except Exception as e:
             log.exception(e)
             return None
 
-    def remove_users_from_group(
+    async def remove_users_from_group(
         self, id: str, user_ids: Optional[list[str]] = None
     ) -> Optional[GroupModel]:
         try:
             async with get_db() as db:
-                group = db.query(Group).filter_by(id=id).first()
+                group = await db.query(Group).filter_by(id=id).first()
                 if not group:
                     return None
 
@@ -320,8 +324,8 @@ class GroupTable:
                         group.user_ids.remove(user_id)
 
                 group.updated_at = int(time.time())
-                db.commit()
-                db.refresh(group)
+                await db.commit()
+                await db.refresh(group)
                 return GroupModel.model_validate(group)
         except Exception as e:
             log.exception(e)

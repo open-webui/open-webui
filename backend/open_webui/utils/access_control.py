@@ -25,7 +25,7 @@ def fill_missing_permissions(
     return permissions
 
 
-def get_permissions(
+async def get_permissions(
     user_id: str,
     default_permissions: Dict[str, Any],
 ) -> Dict[str, Any]:
@@ -53,7 +53,7 @@ def get_permissions(
                     )  # Use the most permissive value (True > False)
         return permissions
 
-    user_groups = Groups.get_groups_by_member_id(user_id)
+    user_groups = await Groups.get_groups_by_member_id(user_id)
 
     # Deep copy default permissions to avoid modifying the original dict
     permissions = json.loads(json.dumps(default_permissions))

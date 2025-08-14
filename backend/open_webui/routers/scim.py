@@ -305,7 +305,7 @@ async def user_to_scim(user: UserModel, request: Request) -> SCIMUser:
     family_name = name_parts[1] if len(name_parts) > 1 else ""
 
     # Get user's groups
-    user_groups = Groups.get_groups_by_member_id(user.id)
+    user_groups = await Groups.get_groups_by_member_id(user.id)
     groups = [
         {
             "value": group.id,
@@ -811,7 +811,7 @@ async def update_group(
     _: bool = Depends(get_scim_auth),
 ):
     """Update SCIM Group (full update)"""
-    group = Groups.get_group_by_id(group_id)
+    group = await Groups.get_group_by_id(group_id)
     if not group:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
@@ -832,7 +832,7 @@ async def update_group(
         update_form.user_ids = member_ids
 
     # Update group
-    updated_group = Groups.update_group_by_id(group_id, update_form)
+    updated_group = await Groups.update_group_by_id(group_id, update_form)
     if not updated_group:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
@@ -850,7 +850,7 @@ async def patch_group(
     _: bool = Depends(get_scim_auth),
 ):
     """Update SCIM Group (partial update)"""
-    group = Groups.get_group_by_id(group_id)
+    group = await Groups.get_group_by_id(group_id)
     if not group:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
@@ -892,7 +892,7 @@ async def patch_group(
                     update_form.user_ids.remove(member_id)
 
     # Update group
-    updated_group = Groups.update_group_by_id(group_id, update_form)
+    updated_group = await Groups.update_group_by_id(group_id, update_form)
     if not updated_group:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
@@ -909,14 +909,14 @@ async def delete_group(
     _: bool = Depends(get_scim_auth),
 ):
     """Delete SCIM Group"""
-    group = Groups.get_group_by_id(group_id)
+    group = await Groups.get_group_by_id(group_id)
     if not group:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail=f"Group {group_id} not found",
         )
 
-    success = Groups.delete_group_by_id(group_id)
+    success = await Groups.delete_group_by_id(group_id)
     if not success:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,

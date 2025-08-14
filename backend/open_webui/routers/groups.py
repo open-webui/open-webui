@@ -33,9 +33,9 @@ router = APIRouter()
 @router.get("/", response_model=list[GroupResponse])
 async def get_groups(user=Depends(get_verified_user)):
     if user.role == "admin":
-        return Groups.get_groups()
+        return await Groups.get_groups()
     else:
-        return Groups.get_groups_by_member_id(user.id)
+        return await Groups.get_groups_by_member_id(user.id)
 
 
 ############################
@@ -46,7 +46,7 @@ async def get_groups(user=Depends(get_verified_user)):
 @router.post("/create", response_model=Optional[GroupResponse])
 async def create_new_group(form_data: GroupForm, user=Depends(get_admin_user)):
     try:
-        group = Groups.insert_new_group(user.id, form_data)
+        group = await Groups.insert_new_group(user.id, form_data)
         if group:
             return group
         else:
@@ -69,7 +69,7 @@ async def create_new_group(form_data: GroupForm, user=Depends(get_admin_user)):
 
 @router.get("/id/{id}", response_model=Optional[GroupResponse])
 async def get_group_by_id(id: str, user=Depends(get_admin_user)):
-    group = Groups.get_group_by_id(id)
+    group = await Groups.get_group_by_id(id)
     if group:
         return group
     else:
@@ -92,7 +92,7 @@ async def update_group_by_id(
         if form_data.user_ids:
             form_data.user_ids = await Users.get_valid_user_ids(form_data.user_ids)
 
-        group = Groups.update_group_by_id(id, form_data)
+        group = await Groups.update_group_by_id(id, form_data)
         if group:
             return group
         else:
@@ -121,7 +121,7 @@ async def add_user_to_group(
         if form_data.user_ids:
             form_data.user_ids = await Users.get_valid_user_ids(form_data.user_ids)
 
-        group = Groups.add_users_to_group(id, form_data.user_ids)
+        group = await Groups.add_users_to_group(id, form_data.user_ids)
         if group:
             return group
         else:
@@ -142,7 +142,7 @@ async def remove_users_from_group(
     id: str, form_data: UserIdsForm, user=Depends(get_admin_user)
 ):
     try:
-        group = Groups.remove_users_from_group(id, form_data.user_ids)
+        group = await Groups.remove_users_from_group(id, form_data.user_ids)
         if group:
             return group
         else:
@@ -166,7 +166,7 @@ async def remove_users_from_group(
 @router.delete("/id/{id}/delete", response_model=bool)
 async def delete_group_by_id(id: str, user=Depends(get_admin_user)):
     try:
-        result = Groups.delete_group_by_id(id)
+        result = await Groups.delete_group_by_id(id)
         if result:
             return result
         else:
