@@ -37,7 +37,7 @@ class MemoryModel(BaseModel):
 
 
 class MemoriesTable:
-    def insert_new_memory(
+    async def insert_new_memory(
         self,
         user_id: str,
         content: str,
@@ -55,15 +55,15 @@ class MemoriesTable:
                 }
             )
             result = Memory(**memory.model_dump())
-            db.add(result)
-            db.commit()
-            db.refresh(result)
+            await db.add(result)
+            await db.commit()
+            await db.refresh(result)
             if result:
                 return MemoryModel.model_validate(result)
             else:
                 return None
 
-    def update_memory_by_id_and_user_id(
+    async def update_memory_by_id_and_user_id(
         self,
         id: str,
         user_id: str,
@@ -71,73 +71,73 @@ class MemoriesTable:
     ) -> Optional[MemoryModel]:
         async with get_db() as db:
             try:
-                memory = db.get(Memory, id)
+                memory = await db.get(Memory, id)
                 if not memory or memory.user_id != user_id:
                     return None
 
                 memory.content = content
                 memory.updated_at = int(time.time())
 
-                db.commit()
-                return self.get_memory_by_id(id)
+                await db.commit()
+                return await self.get_memory_by_id(id)
             except Exception:
                 return None
 
-    def get_memories(self) -> list[MemoryModel]:
+    async def get_memories(self) -> list[MemoryModel]:
         async with get_db() as db:
             try:
-                memories = db.query(Memory).all()
+                memories = await db.query(Memory).all()
                 return [MemoryModel.model_validate(memory) for memory in memories]
             except Exception:
                 return None
 
-    def get_memories_by_user_id(self, user_id: str) -> list[MemoryModel]:
+    async def get_memories_by_user_id(self, user_id: str) -> list[MemoryModel]:
         async with get_db() as db:
             try:
-                memories = db.query(Memory).filter_by(user_id=user_id).all()
+                memories = await db.query(Memory).filter_by(user_id=user_id).all()
                 return [MemoryModel.model_validate(memory) for memory in memories]
             except Exception:
                 return None
 
-    def get_memory_by_id(self, id: str) -> Optional[MemoryModel]:
+    async def get_memory_by_id(self, id: str) -> Optional[MemoryModel]:
         async with get_db() as db:
             try:
-                memory = db.get(Memory, id)
+                memory = await db.get(Memory, id)
                 return MemoryModel.model_validate(memory)
             except Exception:
                 return None
 
-    def delete_memory_by_id(self, id: str) -> bool:
+    async def delete_memory_by_id(self, id: str) -> bool:
         async with get_db() as db:
             try:
-                db.query(Memory).filter_by(id=id).delete()
-                db.commit()
+                await db.query(Memory).filter_by(id=id).delete()
+                await db.commit()
 
                 return True
 
             except Exception:
                 return False
 
-    def delete_memories_by_user_id(self, user_id: str) -> bool:
+    async def delete_memories_by_user_id(self, user_id: str) -> bool:
         async with get_db() as db:
             try:
-                db.query(Memory).filter_by(user_id=user_id).delete()
-                db.commit()
+                await db.query(Memory).filter_by(user_id=user_id).delete()
+                await db.commit()
 
                 return True
             except Exception:
                 return False
 
-    def delete_memory_by_id_and_user_id(self, id: str, user_id: str) -> bool:
+    async def delete_memory_by_id_and_user_id(self, id: str, user_id: str) -> bool:
         async with get_db() as db:
             try:
-                memory = db.get(Memory, id)
+                memory = await db.get(Memory, id)
                 if not memory or memory.user_id != user_id:
                     return None
 
                 # Delete the memory
-                db.delete(memory)
-                db.commit()
+                await db.delete(memory)
+                await db.commit()
 
                 return True
             except Exception:
