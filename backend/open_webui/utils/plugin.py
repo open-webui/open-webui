@@ -68,17 +68,17 @@ def replace_imports(content):
     return content
 
 
-def load_tool_module_by_id(tool_id, content=None):
+async def load_tool_module_by_id(tool_id, content=None):
 
     if content is None:
-        tool = Tools.get_tool_by_id(tool_id)
+        tool = await Tools.get_tool_by_id(tool_id)
         if not tool:
             raise Exception(f"Toolkit not found: {tool_id}")
 
         content = tool.content
 
         content = replace_imports(content)
-        Tools.update_tool_by_id(tool_id, {"content": content})
+        await Tools.update_tool_by_id(tool_id, {"content": content})
     else:
         frontmatter = extract_frontmatter(content)
         # Install required packages found within the frontmatter
@@ -241,7 +241,7 @@ def install_frontmatter_requirements(requirements: str):
         log.info("No requirements found in frontmatter.")
 
 
-def install_tool_and_function_dependencies():
+async def install_tool_and_function_dependencies():
     """
     Install all dependencies for all admin tools and active functions.
 
@@ -249,8 +249,8 @@ def install_tool_and_function_dependencies():
     and then installing them using pip. Duplicates or similar version specifications are
     handled by pip as much as possible.
     """
-    function_list = Functions.get_functions(active_only=True)
-    tool_list = Tools.get_tools()
+    function_list = await Functions.get_functions(active_only=True)
+    tool_list = await Tools.get_tools()
 
     all_dependencies = ""
     try:

@@ -261,11 +261,11 @@ async def get_knowledge_by_id(id: str, user=Depends(get_verified_user)):
         if (
             user.role == "admin"
             or knowledge.user_id == user.id
-            or has_access(user.id, "read", knowledge.access_control)
+            or await has_access(user.id, "read", knowledge.access_control)
         ):
 
             file_ids = knowledge.data.get("file_ids", []) if knowledge.data else []
-            files = Files.get_file_metadatas_by_ids(file_ids)
+            files = await Files.get_file_metadatas_by_ids(file_ids)
 
             return KnowledgeFilesResponse(
                 **knowledge.model_dump(),
@@ -298,7 +298,7 @@ async def update_knowledge_by_id(
     # Is the user the original creator, in a group with write access, or an admin
     if (
         knowledge.user_id != user.id
-        and not has_access(user.id, "write", knowledge.access_control)
+        and not await has_access(user.id, "write", knowledge.access_control)
         and user.role != "admin"
     ):
         raise HTTPException(
@@ -348,7 +348,7 @@ def add_file_to_knowledge_by_id(
 
     if (
         knowledge.user_id != user.id
-        and not has_access(user.id, "write", knowledge.access_control)
+        and not await has_access(user.id, "write", knowledge.access_control)
         and user.role != "admin"
     ):
         raise HTTPException(
@@ -432,7 +432,7 @@ def update_file_from_knowledge_by_id(
 
     if (
         knowledge.user_id != user.id
-        and not has_access(user.id, "write", knowledge.access_control)
+        and not await has_access(user.id, "write", knowledge.access_control)
         and user.role != "admin"
     ):
 
@@ -503,7 +503,7 @@ def remove_file_from_knowledge_by_id(
 
     if (
         knowledge.user_id != user.id
-        and not has_access(user.id, "write", knowledge.access_control)
+        and not await has_access(user.id, "write", knowledge.access_control)
         and user.role != "admin"
     ):
         raise HTTPException(
@@ -591,7 +591,7 @@ async def delete_knowledge_by_id(id: str, user=Depends(get_verified_user)):
 
     if (
         knowledge.user_id != user.id
-        and not has_access(user.id, "write", knowledge.access_control)
+        and not await has_access(user.id, "write", knowledge.access_control)
         and user.role != "admin"
     ):
         raise HTTPException(
@@ -654,7 +654,7 @@ async def reset_knowledge_by_id(id: str, user=Depends(get_verified_user)):
 
     if (
         knowledge.user_id != user.id
-        and not has_access(user.id, "write", knowledge.access_control)
+        and not await has_access(user.id, "write", knowledge.access_control)
         and user.role != "admin"
     ):
         raise HTTPException(
@@ -697,7 +697,7 @@ def add_files_to_knowledge_batch(
 
     if (
         knowledge.user_id != user.id
-        and not has_access(user.id, "write", knowledge.access_control)
+        and not await has_access(user.id, "write", knowledge.access_control)
         and user.role != "admin"
     ):
         raise HTTPException(

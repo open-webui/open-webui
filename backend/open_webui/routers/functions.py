@@ -440,10 +440,10 @@ async def update_function_valves_by_id(
 
 @router.get("/id/{id}/valves/user", response_model=Optional[dict])
 async def get_function_user_valves_by_id(id: str, user=Depends(get_verified_user)):
-    function = Functions.get_function_by_id(id)
+    function = await Functions.get_function_by_id(id)
     if function:
         try:
-            user_valves = Functions.get_user_valves_by_id_and_user_id(id, user.id)
+            user_valves = await Functions.get_user_valves_by_id_and_user_id(id, user.id)
             return user_valves
         except Exception as e:
             raise HTTPException(
@@ -482,7 +482,7 @@ async def get_function_user_valves_spec_by_id(
 async def update_function_user_valves_by_id(
     request: Request, id: str, form_data: dict, user=Depends(get_verified_user)
 ):
-    function = Functions.get_function_by_id(id)
+    function = await Functions.get_function_by_id(id)
 
     if function:
         function_module, function_type, frontmatter = get_function_module_from_cache(
@@ -495,7 +495,7 @@ async def update_function_user_valves_by_id(
             try:
                 form_data = {k: v for k, v in form_data.items() if v is not None}
                 user_valves = UserValves(**form_data)
-                Functions.update_user_valves_by_id_and_user_id(
+                await Functions.update_user_valves_by_id_and_user_id(
                     id, user.id, user_valves.model_dump()
                 )
                 return user_valves.model_dump()

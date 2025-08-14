@@ -109,8 +109,10 @@ async def process_filter_functions(
                 if hasattr(function_module, "UserValves"):
                     try:
                         params["__user__"]["valves"] = function_module.UserValves(
-                            **Functions.get_user_valves_by_id_and_user_id(
-                                filter_id, params["__user__"]["id"]
+                            **(
+                                await Functions.get_user_valves_by_id_and_user_id(
+                                    filter_id, params["__user__"]["id"]
+                                )
                             )
                         )
                     except Exception as e:

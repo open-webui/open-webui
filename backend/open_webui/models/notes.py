@@ -96,20 +96,20 @@ class NoteTable:
             db.commit()
             return note
 
-    def get_notes(self) -> list[NoteModel]:
+    async def get_notes(self) -> list[NoteModel]:
         async with get_db() as db:
-            notes = db.query(Note).order_by(Note.updated_at.desc()).all()
+            notes = await db.query(Note).order_by(Note.updated_at.desc()).all()
             return [NoteModel.model_validate(note) for note in notes]
 
-    def get_notes_by_user_id(
+    async def get_notes_by_user_id(
         self, user_id: str, permission: str = "write"
     ) -> list[NoteModel]:
-        notes = self.get_notes()
+        notes = await self.get_notes()
         return [
             note
             for note in notes
             if note.user_id == user_id
-            or has_access(user_id, permission, note.access_control)
+            or await has_access(user_id, permission, note.access_control)
         ]
 
     def get_note_by_id(self, id: str) -> Optional[NoteModel]:

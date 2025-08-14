@@ -143,7 +143,7 @@ class KnowledgeTable:
                 )
             return knowledge_bases
 
-    def get_knowledge_bases_by_user_id(
+    async def get_knowledge_bases_by_user_id(
         self, user_id: str, permission: str = "write"
     ) -> list[KnowledgeUserModel]:
         knowledge_bases = self.get_knowledge_bases()
@@ -151,31 +151,31 @@ class KnowledgeTable:
             knowledge_base
             for knowledge_base in knowledge_bases
             if knowledge_base.user_id == user_id
-            or has_access(user_id, permission, knowledge_base.access_control)
+            or await has_access(user_id, permission, knowledge_base.access_control)
         ]
 
-    def get_knowledge_by_id(self, id: str) -> Optional[KnowledgeModel]:
+    async def get_knowledge_by_id(self, id: str) -> Optional[KnowledgeModel]:
         try:
             async with get_db() as db:
-                knowledge = db.query(Knowledge).filter_by(id=id).first()
+                knowledge = await db.query(Knowledge).filter_by(id=id).first()
                 return KnowledgeModel.model_validate(knowledge) if knowledge else None
         except Exception:
             return None
 
-    def update_knowledge_by_id(
+    async def update_knowledge_by_id(
         self, id: str, form_data: KnowledgeForm, overwrite: bool = False
     ) -> Optional[KnowledgeModel]:
         try:
             async with get_db() as db:
-                knowledge = self.get_knowledge_by_id(id=id)
-                db.query(Knowledge).filter_by(id=id).update(
+                knowledge = await self.get_knowledge_by_id(id=id)
+                await db.query(Knowledge).filter_by(id=id).update(
                     {
                         **form_data.model_dump(),
                         "updated_at": int(time.time()),
                     }
                 )
-                db.commit()
-                return self.get_knowledge_by_id(id=id)
+                await db.commit()
+                return await self.get_knowledge_by_id(id=id)
         except Exception as e:
             log.exception(e)
             return None

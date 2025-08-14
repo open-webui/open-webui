@@ -90,7 +90,7 @@ async def update_group_by_id(
 ):
     try:
         if form_data.user_ids:
-            form_data.user_ids = Users.get_valid_user_ids(form_data.user_ids)
+            form_data.user_ids = await Users.get_valid_user_ids(form_data.user_ids)
 
         group = Groups.update_group_by_id(id, form_data)
         if group:
@@ -119,7 +119,7 @@ async def add_user_to_group(
 ):
     try:
         if form_data.user_ids:
-            form_data.user_ids = Users.get_valid_user_ids(form_data.user_ids)
+            form_data.user_ids = await Users.get_valid_user_ids(form_data.user_ids)
 
         group = Groups.add_users_to_group(id, form_data.user_ids)
         if group:

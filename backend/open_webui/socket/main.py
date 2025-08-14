@@ -263,7 +263,7 @@ async def connect(sid, environ, auth):
         data = decode_token(auth["token"])
 
         if data is not None and "id" in data:
-            user = Users.get_user_by_id(data["id"])
+            user = await Users.get_user_by_id(data["id"])
 
         if user:
             SESSION_POOL[sid] = user.model_dump()
@@ -284,7 +284,7 @@ async def user_join(sid, data):
     if data is None or "id" not in data:
         return
 
-    user = Users.get_user_by_id(data["id"])
+    user = await Users.get_user_by_id(data["id"])
     if not user:
         return
 
@@ -312,7 +312,7 @@ async def join_channel(sid, data):
     if data is None or "id" not in data:
         return
 
-    user = Users.get_user_by_id(data["id"])
+    user = await Users.get_user_by_id(data["id"])
     if not user:
         return
 
@@ -333,7 +333,7 @@ async def join_note(sid, data):
     if token_data is None or "id" not in token_data:
         return
 
-    user = Users.get_user_by_id(token_data["id"])
+    user = await Users.get_user_by_id(token_data["id"])
     if not user:
         return
 
@@ -345,7 +345,9 @@ async def join_note(sid, data):
     if (
         user.role != "admin"
         and user.id != note.user_id
-        and not has_access(user.id, type="read", access_control=note.access_control)
+        and not await has_access(
+            user.id, type="read", access_control=note.access_control
+        )
     ):
         log.error(f"User {user.id} does not have access to note {data['note_id']}")
         return
@@ -400,7 +402,7 @@ async def ydoc_document_join(sid, data):
             if (
                 user.get("role") != "admin"
                 and user.get("id") != note.user_id
-                and not has_access(
+                and not await has_access(
                     user.get("id"), type="read", access_control=note.access_control
                 )
             ):
@@ -470,14 +472,14 @@ async def document_save_handler(document_id, data, user):
         if (
             user.get("role") != "admin"
             and user.get("id") != note.user_id
-            and not has_access(
+            and not await has_access(
                 user.get("id"), type="read", access_control=note.access_control
             )
         ):
             log.error(f"User {user.get('id')} does not have access to note {note_id}")
             return
 
-        Notes.update_note_by_id(note_id, NoteUpdateForm(data=data))
+        await Notes.update_note_by_id(note_id, NoteUpdateForm(data=data))
 
 
 @sio.on("ydoc:document:state")

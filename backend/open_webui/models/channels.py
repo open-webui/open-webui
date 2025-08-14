@@ -101,7 +101,7 @@ class ChannelTable:
             channel
             for channel in channels
             if channel.user_id == user_id
-            or has_access(user_id, permission, channel.access_control)
+            or await has_access(user_id, permission, channel.access_control)
         ]
 
     async def get_channel_by_id(self, id: str) -> Optional[ChannelModel]:

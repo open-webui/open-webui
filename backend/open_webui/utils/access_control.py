@@ -107,7 +107,7 @@ def has_permission(
     return get_permission(default_permissions, permission_hierarchy)
 
 
-def has_access(
+async def has_access(
     user_id: str,
     type: str = "write",
     access_control: Optional[dict] = None,
@@ -115,7 +115,7 @@ def has_access(
     if access_control is None:
         return type == "read"
 
-    user_groups = Groups.get_groups_by_member_id(user_id)
+    user_groups = await Groups.get_groups_by_member_id(user_id)
     user_group_ids = [group.id for group in user_groups]
     permission_access = access_control.get(type, {})
     permitted_group_ids = permission_access.get("group_ids", [])
@@ -127,11 +127,11 @@ def has_access(
 
 
 # Get all users with access to a resource
-def get_users_with_access(
+async def get_users_with_access(
     type: str = "write", access_control: Optional[dict] = None
 ) -> List[UserModel]:
     if access_control is None:
-        return Users.get_users()
+        return await Users.get_users()
 
     permission_access = access_control.get(type, {})
     permitted_group_ids = permission_access.get("group_ids", [])
@@ -140,8 +140,8 @@ def get_users_with_access(
     user_ids_with_access = set(permitted_user_ids)
 
     for group_id in permitted_group_ids:
-        group_user_ids = Groups.get_group_user_ids_by_id(group_id)
+        group_user_ids = await Groups.get_group_user_ids_by_id(group_id)
         if group_user_ids:
             user_ids_with_access.update(group_user_ids)
 
-    return Users.get_users_by_user_ids(list(user_ids_with_access))
+    return await Users.get_users_by_user_ids(list(user_ids_with_access))

@@ -311,9 +311,9 @@ async def get_all_models(request, refresh: bool = False, user: UserModel = None)
     return models
 
 
-def check_model_access(user, model):
+async def check_model_access(user, model):
     if model.get("arena"):
-        if not has_access(
+        if not await has_access(
             user.id,
             type="read",
             access_control=model.get("info", {})
@@ -322,12 +322,12 @@ def check_model_access(user, model):
         ):
             raise Exception("Model not found")
     else:
-        model_info = Models.get_model_by_id(model.get("id"))
+        model_info = await Models.get_model_by_id(model.get("id"))
         if not model_info:
             raise Exception("Model not found")
         elif not (
             user.id == model_info.user_id
-            or has_access(
+            or await has_access(
                 user.id, type="read", access_control=model_info.access_control
             )
         ):

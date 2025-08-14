@@ -195,7 +195,7 @@ class ModelsTable:
                 for model in db.query(Model).filter(Model.base_model_id == None).all()
             ]
 
-    def get_models_by_user_id(
+    async def get_models_by_user_id(
         self, user_id: str, permission: str = "write"
     ) -> list[ModelUserResponse]:
         models = self.get_models()
@@ -203,7 +203,7 @@ class ModelsTable:
             model
             for model in models
             if model.user_id == user_id
-            or has_access(user_id, permission, model.access_control)
+            or await has_access(user_id, permission, model.access_control)
         ]
 
     def get_model_by_id(self, id: str) -> Optional[ModelModel]:

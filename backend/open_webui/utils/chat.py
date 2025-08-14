@@ -199,7 +199,7 @@ async def generate_chat_completion(
         # Check if user has access to the model
         if not bypass_filter and user.role == "user":
             try:
-                check_model_access(user, model)
+                await check_model_access(user, model)
             except Exception as e:
                 raise e
 
@@ -424,8 +424,10 @@ async def chat_action(request: Request, action_id: str, form_data: dict, user: A
                 try:
                     if hasattr(function_module, "UserValves"):
                         __user__["valves"] = function_module.UserValves(
-                            **Functions.get_user_valves_by_id_and_user_id(
-                                action_id, user.id
+                            **(
+                                await Functions.get_user_valves_by_id_and_user_id(
+                                    action_id, user.id
+                                )
                             )
                         )
                 except Exception as e:

@@ -517,7 +517,7 @@ def get_sources_from_items(
             if note and (
                 user.role == "admin"
                 or note.user_id == user.id
-                or has_access(user.id, "read", note.access_control)
+                or await has_access(user.id, "read", note.access_control)
             ):
                 # User has access to the note
                 query_result = {
@@ -581,7 +581,7 @@ def get_sources_from_items(
 
                 if knowledge_base and (
                     user.role == "admin"
-                    or has_access(user.id, "read", knowledge_base.access_control)
+                    or await has_access(user.id, "read", knowledge_base.access_control)
                 ):
 
                     file_ids = knowledge_base.data.get("file_ids", [])

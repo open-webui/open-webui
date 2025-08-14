@@ -530,7 +530,7 @@ async def lifespan(app: FastAPI):
     # This should be blocking (sync) so functions are not deactivated on first /get_models calls
     # when the first user lands on the / route.
     log.info("Installing external dependencies of functions and tools...")
-    install_tool_and_function_dependencies()
+    await install_tool_and_function_dependencies()
 
     app.state.redis = get_redis_connection(
         redis_url=REDIS_URL,
@@ -1267,11 +1267,11 @@ if audit_level != AuditLevel.NONE:
 async def get_models(
     request: Request, refresh: bool = False, user=Depends(get_verified_user)
 ):
-    def get_filtered_models(models, user):
+    async def get_filtered_models(models, user):
         filtered_models = []
         for model in models:
             if model.get("arena"):
-                if has_access(
+                if await has_access(
                     user.id,
                     type="read",
                     access_control=model.get("info", {})
@@ -1286,7 +1286,7 @@ async def get_models(
                 if (
                     (user.role == "admin" and ENABLE_ADMIN_WORKSPACE_CONTENT_ACCESS)
                     or user.id == model_info.user_id
-                    or has_access(
+                    or await has_access(
                         user.id, type="read", access_control=model_info.access_control
                     )
                 ):
@@ -1334,7 +1334,7 @@ async def get_models(
         user.role == "user"
         or (user.role == "admin" and not ENABLE_ADMIN_WORKSPACE_CONTENT_ACCESS)
     ) and not BYPASS_MODEL_ACCESS_CONTROL:
-        models = get_filtered_models(models, user)
+        models = await get_filtered_models(models, user)
 
     log.debug(
         f"/api/models returned filtered models accessible to the user: {json.dumps([model.get('id') for model in models])}"
@@ -1408,7 +1408,7 @@ async def chat_completion(
                 user.role != "admin" or not ENABLE_ADMIN_WORKSPACE_CONTENT_ACCESS
             ):
                 try:
-                    check_model_access(user, model)
+                    await check_model_access(user, model)
                 except Exception as e:
                     raise e
         else:
@@ -1628,7 +1628,7 @@ async def get_app_config(request: Request):
         if data is not None and "id" in data:
             user = await Users.get_user_by_id(data["id"])
 
-    user_count = Users.get_num_users()
+    user_count = await Users.get_num_users()
     onboarding = False
 
     if user is None:

@@ -88,14 +88,14 @@ async def get_users(
     if direction:
         filter["direction"] = direction
 
-    return Users.get_users(filter=filter, skip=skip, limit=limit)
+    return await Users.get_users(filter=filter, skip=skip, limit=limit)
 
 
 @router.get("/all", response_model=UserInfoListResponse)
 async def get_all_users(
     user=Depends(get_admin_user),
 ):
-    return Users.get_users()
+    return await Users.get_users()
 
 
 ############################
@@ -205,7 +205,7 @@ async def update_default_user_permissions(
 
 @router.get("/user/settings", response_model=Optional[UserSettings])
 async def get_user_settings_by_session_user(user=Depends(get_verified_user)):
-    user = Users.get_user_by_id(user.id)
+    user = await Users.get_user_by_id(user.id)
     if user:
         return user.settings
     else:
@@ -237,7 +237,7 @@ async def update_user_settings_by_session_user(
         # If the user is not an admin and does not have permission to use tool servers, remove the key
         updated_user_settings["ui"].pop("toolServers", None)
 
-    user = Users.update_user_settings_by_id(user.id, updated_user_settings)
+    user = await Users.update_user_settings_by_id(user.id, updated_user_settings)
     if user:
         return user.settings
     else:
@@ -254,7 +254,7 @@ async def update_user_settings_by_session_user(
 
 @router.get("/user/info", response_model=Optional[dict])
 async def get_user_info_by_session_user(user=Depends(get_verified_user)):
-    user = Users.get_user_by_id(user.id)
+    user = await Users.get_user_by_id(user.id)
     if user:
         return user.info
     else:
@@ -273,12 +273,14 @@ async def get_user_info_by_session_user(user=Depends(get_verified_user)):
 async def update_user_info_by_session_user(
     form_data: dict, user=Depends(get_verified_user)
 ):
-    user = Users.get_user_by_id(user.id)
+    user = await Users.get_user_by_id(user.id)
     if user:
         if user.info is None:
             user.info = {}
 
-        user = Users.update_user_by_id(user.id, {"info": {**user.info, **form_data}})
+        user = await Users.update_user_by_id(
+            user.id, {"info": {**user.info, **form_data}}
+        )
         if user:
             return user.info
         else:
@@ -343,7 +345,7 @@ async def get_user_by_id(user_id: str, user=Depends(get_verified_user)):
 
 @router.get("/{user_id}/profile/image")
 async def get_user_profile_image_by_id(user_id: str, user=Depends(get_verified_user)):
-    user = Users.get_user_by_id(user_id)
+    user = await Users.get_user_by_id(user_id)
     if user:
         if user.profile_image_url:
             # check if it's url or base64
@@ -398,7 +400,7 @@ async def update_user_by_id(
 ):
     # Prevent modification of the primary admin user by other admins
     try:
-        first_user = Users.get_first_user()
+        first_user = await Users.get_first_user()
         if first_user:
             if user_id == first_user.id:
                 if session_user.id != user_id:
@@ -472,7 +474,7 @@ async def update_user_by_id(
 async def delete_user_by_id(user_id: str, user=Depends(get_admin_user)):
     # Prevent deletion of the primary admin user
     try:
-        first_user = Users.get_first_user()
+        first_user = await Users.get_first_user()
         if first_user and user_id == first_user.id:
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN,

@@ -79,13 +79,13 @@ async def create_new_prompt(
 
 @router.get("/command/{command}", response_model=Optional[PromptModel])
 async def get_prompt_by_command(command: str, user=Depends(get_verified_user)):
-    prompt = Prompts.get_prompt_by_command(f"/{command}")
+    prompt = await Prompts.get_prompt_by_command(f"/{command}")
 
     if prompt:
         if (
             user.role == "admin"
             or prompt.user_id == user.id
-            or has_access(user.id, "read", prompt.access_control)
+            or await has_access(user.id, "read", prompt.access_control)
         ):
             return prompt
     else:
@@ -106,7 +106,7 @@ async def update_prompt_by_command(
     form_data: PromptForm,
     user=Depends(get_verified_user),
 ):
-    prompt = Prompts.get_prompt_by_command(f"/{command}")
+    prompt = await Prompts.get_prompt_by_command(f"/{command}")
     if not prompt:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
@@ -116,7 +116,7 @@ async def update_prompt_by_command(
     # Is the user the original creator, in a group with write access, or an admin
     if (
         prompt.user_id != user.id
-        and not has_access(user.id, "write", prompt.access_control)
+        and not await has_access(user.id, "write", prompt.access_control)
         and user.role != "admin"
     ):
         raise HTTPException(
@@ -124,7 +124,7 @@ async def update_prompt_by_command(
             detail=ERROR_MESSAGES.ACCESS_PROHIBITED,
         )
 
-    prompt = Prompts.update_prompt_by_command(f"/{command}", form_data)
+    prompt = await Prompts.update_prompt_by_command(f"/{command}", form_data)
     if prompt:
         return prompt
     else:
@@ -150,7 +150,7 @@ async def delete_prompt_by_command(command: str, user=Depends(get_verified_user)
 
     if (
         prompt.user_id != user.id
-        and not has_access(user.id, "write", prompt.access_control)
+        and not await has_access(user.id, "write", prompt.access_control)
         and user.role != "admin"
     ):
         raise HTTPException(

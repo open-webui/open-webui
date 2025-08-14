@@ -174,7 +174,7 @@ async def generate_function_chat_completion(
             pipe_id, _ = pipe_id.split(".", 1)
         return pipe_id
 
-    def get_function_params(function_module, form_data, user, extra_params=None):
+    async def get_function_params(function_module, form_data, user, extra_params=None):
         if extra_params is None:
             extra_params = {}
 
@@ -187,7 +187,9 @@ async def generate_function_chat_completion(
         }
 
         if "__user__" in params and hasattr(function_module, "UserValves"):
-            user_valves = Functions.get_user_valves_by_id_and_user_id(pipe_id, user.id)
+            user_valves = await Functions.get_user_valves_by_id_and_user_id(
+                pipe_id, user.id
+            )
             try:
                 params["__user__"]["valves"] = function_module.UserValves(**user_valves)
             except Exception as e:
@@ -232,7 +234,7 @@ async def generate_function_chat_completion(
         "__metadata__": metadata,
         "__request__": request,
     }
-    extra_params["__tools__"] = get_tools(
+    extra_params["__tools__"] = await get_tools(
         request,
         tool_ids,
         user,
@@ -261,7 +263,7 @@ async def generate_function_chat_completion(
     function_module = get_function_module_by_id(request, pipe_id)
 
     pipe = function_module.pipe
-    params = get_function_params(function_module, form_data, user, extra_params)
+    params = await get_function_params(function_module, form_data, user, extra_params)
 
     if form_data.get("stream", False):
 

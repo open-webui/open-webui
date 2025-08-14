@@ -443,8 +443,10 @@ async def get_filtered_models(models, user):
     for model in models.get("models", []):
         model_info = Models.get_model_by_id(model["model"])
         if model_info:
-            if user.id == model_info.user_id or has_access(
-                user.id, type="read", access_control=model_info.access_control
+            if user.id == model_info.user_id or (
+                await has_access(
+                    user.id, type="read", access_control=model_info.access_control
+                )
             ):
                 filtered_models.append(model)
     return filtered_models
@@ -1336,8 +1338,10 @@ async def generate_chat_completion(
         if not bypass_filter and user.role == "user":
             if not (
                 user.id == model_info.user_id
-                or has_access(
-                    user.id, type="read", access_control=model_info.access_control
+                or (
+                    await has_access(
+                        user.id, type="read", access_control=model_info.access_control
+                    )
                 )
             ):
                 raise HTTPException(
@@ -1442,8 +1446,10 @@ async def generate_openai_completion(
         if user.role == "user":
             if not (
                 user.id == model_info.user_id
-                or has_access(
-                    user.id, type="read", access_control=model_info.access_control
+                or (
+                    await has_access(
+                        user.id, type="read", access_control=model_info.access_control
+                    )
                 )
             ):
                 raise HTTPException(
@@ -1525,8 +1531,10 @@ async def generate_openai_chat_completion(
         if user.role == "user":
             if not (
                 user.id == model_info.user_id
-                or has_access(
-                    user.id, type="read", access_control=model_info.access_control
+                or (
+                    await has_access(
+                        user.id, type="read", access_control=model_info.access_control
+                    )
                 )
             ):
                 raise HTTPException(
@@ -1623,8 +1631,10 @@ async def get_openai_models(
         for model in models:
             model_info = Models.get_model_by_id(model["id"])
             if model_info:
-                if user.id == model_info.user_id or has_access(
-                    user.id, type="read", access_control=model_info.access_control
+                if user.id == model_info.user_id or (
+                    await has_access(
+                        user.id, type="read", access_control=model_info.access_control
+                    )
                 ):
                     filtered_models.append(model)
         models = filtered_models

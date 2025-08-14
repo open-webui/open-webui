@@ -127,7 +127,7 @@ class PromptsTable:
             prompt
             for prompt in prompts
             if prompt.user_id == user_id
-            or has_access(user_id, permission, prompt.access_control)
+            or await has_access(user_id, permission, prompt.access_control)
         ]
 
     def update_prompt_by_command(

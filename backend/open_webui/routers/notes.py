@@ -133,7 +133,11 @@ async def get_note_by_id(request: Request, id: str, user=Depends(get_verified_us
 
     if user.role != "admin" and (
         user.id != note.user_id
-        and (not has_access(user.id, type="read", access_control=note.access_control))
+        and (
+            not await has_access(
+                user.id, type="read", access_control=note.access_control
+            )
+        )
     ):
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN, detail=ERROR_MESSAGES.DEFAULT()
@@ -167,7 +171,9 @@ async def update_note_by_id(
 
     if user.role != "admin" and (
         user.id != note.user_id
-        and not has_access(user.id, type="write", access_control=note.access_control)
+        and not await has_access(
+            user.id, type="write", access_control=note.access_control
+        )
     ):
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN, detail=ERROR_MESSAGES.DEFAULT()
@@ -212,7 +218,9 @@ async def delete_note_by_id(request: Request, id: str, user=Depends(get_verified
 
     if user.role != "admin" and (
         user.id != note.user_id
-        and not has_access(user.id, type="write", access_control=note.access_control)
+        and not await has_access(
+            user.id, type="write", access_control=note.access_control
+        )
     ):
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN, detail=ERROR_MESSAGES.DEFAULT()
