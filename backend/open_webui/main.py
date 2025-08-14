@@ -1737,8 +1737,8 @@ async def get_app_config(request: Request):
                     }
                     if user and user.role == "pending"
                     else {}
-                )
-                ** (
+                ),
+                **(
                     {
                         "metadata": {
                             "login_footer": app.state.LICENSE_METADATA.get(
