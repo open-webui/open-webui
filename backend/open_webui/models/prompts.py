@@ -7,7 +7,7 @@ from open_webui.models.users import Users, UserResponse
 from open_webui.utils.access_control import has_access
 
 from pydantic import BaseModel, ConfigDict
-from sqlalchemy import BigInteger, Column, String, Text, JSON, or_
+from sqlalchemy import BigInteger, Column, String, Text, JSON, or_, cast
 
 
 ####################
@@ -324,11 +324,17 @@ class PromptsTable:
         then only checks access control for the remaining subset.
         """
         with get_db() as db:
+            # Database-agnostic condition using SQLAlchemy cast for PostgreSQL compatibility
+            public_prompt_condition = or_(
+                Prompt.access_control.is_(None),
+                cast(Prompt.access_control, Text) == "null",
+            )
+
             # Build base query that efficiently filters at database level
             query = db.query(Prompt).filter(
                 or_(
-                    # Public prompts (access_control is stored as string 'null')
-                    Prompt.access_control == "null",
+                    # Public prompts (database-agnostic condition)
+                    public_prompt_condition,
                     # User's own prompts
                     Prompt.user_id == user_id,
                     # Note: We still need to check shared prompts manually since
@@ -357,8 +363,8 @@ class PromptsTable:
             # For the small result set, check shared prompts with has_access
             accessible_prompts = []
             for prompt in prompts:
-                # Public prompts (access_control is stored as string 'null') are accessible to everyone
-                if prompt.access_control == "null" or prompt.access_control is None:
+                # Public prompts (access_control is None) are accessible to everyone
+                if prompt.access_control is None:
                     accessible_prompts.append(prompt)
                 # User's own prompts are always accessible
                 elif prompt.user_id == user_id:
@@ -396,11 +402,17 @@ class PromptsTable:
     ) -> int:
         """Get count of prompts the user has access to"""
         with get_db() as db:
+            # Database-agnostic condition using SQLAlchemy cast for PostgreSQL compatibility
+            public_prompt_condition = or_(
+                Prompt.access_control.is_(None),
+                cast(Prompt.access_control, Text) == "null",
+            )
+
             # Build efficient query that filters at database level
             query = db.query(Prompt).filter(
                 or_(
-                    # Public prompts (access_control is stored as string 'null')
-                    Prompt.access_control == "null",
+                    # Public prompts (database-agnostic condition)
+                    public_prompt_condition,
                     # User's own prompts
                     Prompt.user_id == user_id,
                     # Note: We still need to check shared prompts manually since
@@ -423,8 +435,8 @@ class PromptsTable:
             # For the small result set, check shared prompts with has_access
             accessible_count = 0
             for prompt in prompts:
-                # Public prompts (access_control is stored as string 'null') are accessible to everyone
-                if prompt.access_control == "null" or prompt.access_control is None:
+                # Public prompts (access_control is None) are accessible to everyone
+                if prompt.access_control is None:
                     accessible_count += 1
                 # User's own prompts are always accessible
                 elif prompt.user_id == user_id:
