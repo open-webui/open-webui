@@ -502,7 +502,7 @@ class OAuthManager:
                 )
 
                 if auth_manager_config.WEBHOOK_URL:
-                    post_webhook(
+                    await post_webhook(
                         WEBUI_NAME,
                         auth_manager_config.WEBHOOK_URL,
                         WEBHOOK_MESSAGES.USER_SIGNUP(user.name),
