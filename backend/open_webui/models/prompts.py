@@ -4,6 +4,7 @@ from typing import Optional
 from open_webui.internal.db import get_db
 from open_webui.models.base import Base
 from open_webui.models.users import Users, UserResponse
+from open_webui.utils.access_control import has_access
 
 from pydantic import BaseModel, ConfigDict
 from sqlalchemy import BigInteger, Column, String, Text, JSON
@@ -311,6 +312,100 @@ class PromptsTable:
                 return True
         except Exception:
             return False
+
+    def get_prompts_with_access_control(
+        self, user_id: str, page: int = 1, limit: int = 20, search: str = None
+    ) -> list[PromptModel]:
+        """Get paginated prompts that the user has access to (public + owned + shared)"""
+        with get_db() as db:
+            query = db.query(Prompt)
+
+            # Apply search filter if provided
+            if search and search.strip():
+                search_term = f"%{search.strip().lower()}%"
+                query = query.filter(
+                    Prompt.command.ilike(search_term)
+                    | Prompt.title.ilike(search_term)
+                    | Prompt.content.ilike(search_term)
+                )
+
+            # Get all prompts first
+            all_prompts = query.order_by(Prompt.timestamp.desc()).all()
+
+            # Filter based on access control
+            accessible_prompts = []
+            for prompt in all_prompts:
+                # Always include public prompts (access_control = None)
+                # Include owned prompts
+                # Include prompts the user has read access to
+                if (
+                    prompt.access_control is None
+                    or prompt.user_id == user_id
+                    or has_access(user_id, "read", prompt.access_control)
+                ):
+                    accessible_prompts.append(prompt)
+
+            # Apply pagination after filtering
+            offset = (page - 1) * limit
+            paginated_prompts = accessible_prompts[offset : offset + limit]
+
+            return [PromptModel.model_validate(prompt) for prompt in paginated_prompts]
+
+    def get_prompts_with_access_control_and_users(
+        self, user_id: str, page: int = 1, limit: int = 20, search: str = None
+    ) -> list[PromptUserResponse]:
+        """Get paginated prompts with user info that the user has access to"""
+        # Get accessible prompts first
+        prompts = self.get_prompts_with_access_control(user_id, page, limit, search)
+
+        # Add user info
+        prompts_with_users = []
+        for prompt in prompts:
+            user = Users.get_user_by_id(prompt.user_id)
+            prompts_with_users.append(
+                PromptUserResponse.model_validate(
+                    {
+                        **prompt.model_dump(),
+                        "user": user.model_dump() if user else None,
+                    }
+                )
+            )
+
+        return prompts_with_users
+
+    def get_prompts_count_with_access_control(
+        self, user_id: str, search: str = None
+    ) -> int:
+        """Get count of prompts the user has access to"""
+        with get_db() as db:
+            query = db.query(Prompt)
+
+            # Apply search filter if provided
+            if search and search.strip():
+                search_term = f"%{search.strip().lower()}%"
+                query = query.filter(
+                    Prompt.command.ilike(search_term)
+                    | Prompt.title.ilike(search_term)
+                    | Prompt.content.ilike(search_term)
+                )
+
+            # Get all prompts first
+            all_prompts = query.all()
+
+            # Filter based on access control
+            accessible_count = 0
+            for prompt in all_prompts:
+                # Always include public prompts (access_control = None)
+                # Include owned prompts
+                # Include prompts the user has read access to
+                if (
+                    prompt.access_control is None
+                    or prompt.user_id == user_id
+                    or has_access(user_id, "read", prompt.access_control)
+                ):
+                    accessible_count += 1
+
+            return accessible_count
 
 
 Prompts = PromptsTable()

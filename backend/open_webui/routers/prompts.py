@@ -24,7 +24,7 @@ async def get_prompts(user=Depends(get_verified_user)):
     if user.role == "admin":
         prompts = Prompts.get_prompts()
     else:
-        # Non-admin users only see their own prompts
+        # Non-admin users see public prompts + owned prompts + shared prompts
         prompts = Prompts.get_prompts_by_user_id(user.id)
 
     return prompts
@@ -36,7 +36,7 @@ async def get_prompt_list(user=Depends(get_verified_user)):
     if user.role == "admin":
         prompts = Prompts.get_prompts()
     else:
-        # Non-admin users only see their own prompts
+        # Non-admin users see public prompts + owned prompts + shared prompts
         prompts = Prompts.get_prompts_by_user_id(user.id)
 
     return prompts
@@ -54,8 +54,8 @@ async def get_prompts_paginated(
     if user.role == "admin":
         prompts = Prompts.get_prompts_paginated(page=page, limit=limit, search=search)
     else:
-        # Non-admin users only see their own prompts
-        prompts = Prompts.get_prompts_by_user_id_paginated(
+        # Non-admin users see public prompts + owned prompts + shared prompts
+        prompts = Prompts.get_prompts_with_access_control(
             user.id, page=page, limit=limit, search=search
         )
 
@@ -75,8 +75,8 @@ async def get_prompt_list_paginated(
             page=page, limit=limit, search=search
         )
     else:
-        # Non-admin users only see their own prompts
-        prompts = Prompts.get_prompts_by_user_id_with_users_paginated(
+        # Non-admin users see public prompts + owned prompts + shared prompts
+        prompts = Prompts.get_prompts_with_access_control_and_users(
             user.id, page=page, limit=limit, search=search
         )
 
@@ -92,8 +92,8 @@ async def get_prompts_count(
     if user.role == "admin":
         count = Prompts.get_prompts_count(search=search)
     else:
-        # Non-admin users only see count of their own prompts
-        count = Prompts.get_prompts_count_by_user_id(user.id, search=search)
+        # Non-admin users see count of accessible prompts
+        count = Prompts.get_prompts_count_with_access_control(user.id, search=search)
 
     return {"count": count}
 
