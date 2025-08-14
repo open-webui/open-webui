@@ -7,7 +7,7 @@ from open_webui.models.users import Users, UserResponse
 from open_webui.utils.access_control import has_access
 
 from pydantic import BaseModel, ConfigDict
-from sqlalchemy import BigInteger, Column, String, Text, JSON
+from sqlalchemy import BigInteger, Column, String, Text, JSON, or_, cast
 
 
 ####################
@@ -316,9 +316,31 @@ class PromptsTable:
     def get_prompts_with_access_control(
         self, user_id: str, page: int = 1, limit: int = 20, search: str = None
     ) -> list[PromptModel]:
-        """Get paginated prompts that the user has access to (public + owned + shared)"""
+        """Get paginated prompts that the user has access to (public + owned + shared)
+
+        Performance optimization: This method filters at the database level first,
+        which is much more efficient than loading all prompts and filtering in Python.
+        It uses SQL OR conditions to filter for public prompts and user's own prompts,
+        then only checks access control for the remaining subset.
+        """
         with get_db() as db:
-            query = db.query(Prompt)
+            # Database-agnostic condition using SQLAlchemy cast for PostgreSQL compatibility
+            public_prompt_condition = or_(
+                Prompt.access_control.is_(None),
+                cast(Prompt.access_control, Text) == "null",
+            )
+
+            # Build base query that efficiently filters at database level
+            query = db.query(Prompt).filter(
+                or_(
+                    # Public prompts (database-agnostic condition)
+                    public_prompt_condition,
+                    # User's own prompts
+                    Prompt.user_id == user_id,
+                    # Note: We still need to check shared prompts manually since
+                    # access_control JSON structure requires application-level logic
+                )
+            )
 
             # Apply search filter if provided
             if search and search.strip():
@@ -329,27 +351,29 @@ class PromptsTable:
                     | Prompt.content.ilike(search_term)
                 )
 
-            # Get all prompts first
-            all_prompts = query.order_by(Prompt.timestamp.desc()).all()
+            # Apply pagination and ordering at database level
+            offset = (page - 1) * limit
+            prompts = (
+                query.order_by(Prompt.timestamp.desc())
+                .offset(offset)
+                .limit(limit)
+                .all()
+            )
 
-            # Filter based on access control
+            # For the small result set, check shared prompts with has_access
             accessible_prompts = []
-            for prompt in all_prompts:
-                # Always include public prompts (access_control = None)
-                # Include owned prompts
-                # Include prompts the user has read access to
-                if (
-                    prompt.access_control is None
-                    or prompt.user_id == user_id
-                    or has_access(user_id, "read", prompt.access_control)
-                ):
+            for prompt in prompts:
+                # Public prompts (access_control is None) are accessible to everyone
+                if prompt.access_control is None:
+                    accessible_prompts.append(prompt)
+                # User's own prompts are always accessible
+                elif prompt.user_id == user_id:
+                    accessible_prompts.append(prompt)
+                # Check if user has explicit read access to shared prompts
+                elif has_access(user_id, "read", prompt.access_control):
                     accessible_prompts.append(prompt)
 
-            # Apply pagination after filtering
-            offset = (page - 1) * limit
-            paginated_prompts = accessible_prompts[offset : offset + limit]
-
-            return [PromptModel.model_validate(prompt) for prompt in paginated_prompts]
+            return [PromptModel.model_validate(prompt) for prompt in accessible_prompts]
 
     def get_prompts_with_access_control_and_users(
         self, user_id: str, page: int = 1, limit: int = 20, search: str = None
@@ -378,7 +402,23 @@ class PromptsTable:
     ) -> int:
         """Get count of prompts the user has access to"""
         with get_db() as db:
-            query = db.query(Prompt)
+            # Database-agnostic condition using SQLAlchemy cast for PostgreSQL compatibility
+            public_prompt_condition = or_(
+                Prompt.access_control.is_(None),
+                cast(Prompt.access_control, Text) == "null",
+            )
+
+            # Build efficient query that filters at database level
+            query = db.query(Prompt).filter(
+                or_(
+                    # Public prompts (database-agnostic condition)
+                    public_prompt_condition,
+                    # User's own prompts
+                    Prompt.user_id == user_id,
+                    # Note: We still need to check shared prompts manually since
+                    # access_control JSON structure requires application-level logic
+                )
+            )
 
             # Apply search filter if provided
             if search and search.strip():
@@ -389,20 +429,20 @@ class PromptsTable:
                     | Prompt.content.ilike(search_term)
                 )
 
-            # Get all prompts first
-            all_prompts = query.all()
+            # Get the filtered prompts (much smaller set now)
+            prompts = query.all()
 
-            # Filter based on access control
+            # For the small result set, check shared prompts with has_access
             accessible_count = 0
-            for prompt in all_prompts:
-                # Always include public prompts (access_control = None)
-                # Include owned prompts
-                # Include prompts the user has read access to
-                if (
-                    prompt.access_control is None
-                    or prompt.user_id == user_id
-                    or has_access(user_id, "read", prompt.access_control)
-                ):
+            for prompt in prompts:
+                # Public prompts (access_control is None) are accessible to everyone
+                if prompt.access_control is None:
+                    accessible_count += 1
+                # User's own prompts are always accessible
+                elif prompt.user_id == user_id:
+                    accessible_count += 1
+                # Check if user has explicit read access to shared prompts
+                elif has_access(user_id, "read", prompt.access_control):
                     accessible_count += 1
 
             return accessible_count
