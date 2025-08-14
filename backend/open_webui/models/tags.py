@@ -47,15 +47,15 @@ class TagChatIdForm(BaseModel):
 
 
 class TagTable:
-    def insert_new_tag(self, name: str, user_id: str) -> Optional[TagModel]:
+    async def insert_new_tag(self, name: str, user_id: str) -> Optional[TagModel]:
         async with get_db() as db:
             id = name.replace(" ", "_").lower()
             tag = TagModel(**{"id": id, "user_id": user_id, "name": name})
             try:
                 result = Tag(**tag.model_dump())
-                db.add(result)
-                db.commit()
-                db.refresh(result)
+                await db.add(result)
+                await db.commit()
+                await db.refresh(result)
                 if result:
                     return TagModel.model_validate(result)
                 else:
@@ -64,42 +64,44 @@ class TagTable:
                 log.exception(f"Error inserting a new tag: {e}")
                 return None
 
-    def get_tag_by_name_and_user_id(
+    async def get_tag_by_name_and_user_id(
         self, name: str, user_id: str
     ) -> Optional[TagModel]:
         try:
             id = name.replace(" ", "_").lower()
             async with get_db() as db:
-                tag = db.query(Tag).filter_by(id=id, user_id=user_id).first()
+                tag = await db.query(Tag).filter_by(id=id, user_id=user_id).first()
                 return TagModel.model_validate(tag)
         except Exception:
             return None
 
-    def get_tags_by_user_id(self, user_id: str) -> list[TagModel]:
+    async def get_tags_by_user_id(self, user_id: str) -> list[TagModel]:
         async with get_db() as db:
             return [
                 TagModel.model_validate(tag)
-                for tag in (db.query(Tag).filter_by(user_id=user_id).all())
+                for tag in (await db.query(Tag).filter_by(user_id=user_id).all())
             ]
 
-    def get_tags_by_ids_and_user_id(
+    async def get_tags_by_ids_and_user_id(
         self, ids: list[str], user_id: str
     ) -> list[TagModel]:
         async with get_db() as db:
             return [
                 TagModel.model_validate(tag)
                 for tag in (
-                    db.query(Tag).filter(Tag.id.in_(ids), Tag.user_id == user_id).all()
+                    await db.query(Tag)
+                    .filter(Tag.id.in_(ids), Tag.user_id == user_id)
+                    .all()
                 )
             ]
 
-    def delete_tag_by_name_and_user_id(self, name: str, user_id: str) -> bool:
+    async def delete_tag_by_name_and_user_id(self, name: str, user_id: str) -> bool:
         try:
             async with get_db() as db:
                 id = name.replace(" ", "_").lower()
-                res = db.query(Tag).filter_by(id=id, user_id=user_id).delete()
+                res = await db.query(Tag).filter_by(id=id, user_id=user_id).delete()
                 log.debug(f"res: {res}")
-                db.commit()
+                await db.commit()
                 return True
         except Exception as e:
             log.error(f"delete_tag: {e}")

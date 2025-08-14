@@ -148,9 +148,10 @@ async def import_chat(form_data: ChatImportForm, user=Depends(get_verified_user)
                 tag_name = " ".join([word.capitalize() for word in tag_id.split("_")])
                 if (
                     tag_id != "none"
-                    and Tags.get_tag_by_name_and_user_id(tag_name, user.id) is None
+                    and await Tags.get_tag_by_name_and_user_id(tag_name, user.id)
+                    is None
                 ):
-                    Tags.insert_new_tag(tag_name, user.id)
+                    await Tags.insert_new_tag(tag_name, user.id)
 
         return ChatResponse(**chat.model_dump())
     except Exception as e:
@@ -261,7 +262,7 @@ async def get_user_archived_chats(user=Depends(get_verified_user)):
 @router.get("/all/tags", response_model=list[TagModel])
 async def get_all_user_tags(user=Depends(get_verified_user)):
     try:
-        tags = Tags.get_tags_by_user_id(user.id)
+        tags = await Tags.get_tags_by_user_id(user.id)
         return tags
     except Exception as e:
         log.exception(e)
@@ -556,7 +557,7 @@ async def delete_chat_by_id(request: Request, id: str, user=Depends(get_verified
         chat = await Chats.get_chat_by_id(id)
         for tag in chat.meta.get("tags", []):
             if await Chats.count_chats_by_tag_name_and_user_id(tag, user.id) == 1:
-                Tags.delete_tag_by_name_and_user_id(tag, user.id)
+                await Tags.delete_tag_by_name_and_user_id(tag, user.id)
 
         result = await Chats.delete_chat_by_id_and_user_id(id, user.id)
         return result
@@ -694,7 +695,7 @@ async def archive_chat_by_id(id: str, user=Depends(get_verified_user)):
                     == 0
                 ):
                     log.debug(f"deleting tag: {tag_id}")
-                    Tags.delete_tag_by_name_and_user_id(tag_id, user.id)
+                    await Tags.delete_tag_by_name_and_user_id(tag_id, user.id)
         else:
             for tag_id in chat.meta.get("tags", []):
                 tag = await Tags.get_tag_by_name_and_user_id(tag_id, user.id)
