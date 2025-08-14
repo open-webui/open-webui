@@ -196,7 +196,7 @@ async def update_prompt_by_command(
                 detail=ERROR_MESSAGES.ACCESS_PROHIBITED,
             )
         # Non-admins cannot edit public prompts (even their own)
-        if prompt.access_control == "null" or prompt.access_control is None:
+        if prompt.access_control is None:
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN,
                 detail="Only administrators can edit public prompts",
@@ -244,7 +244,7 @@ async def delete_prompt_by_command(command: str, user=Depends(get_verified_user)
                 detail=ERROR_MESSAGES.ACCESS_PROHIBITED,
             )
         # Non-admins cannot delete public prompts (even their own)
-        if prompt.access_control == "null" or prompt.access_control is None:
+        if prompt.access_control is None:
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN,
                 detail="Only administrators can delete public prompts",
