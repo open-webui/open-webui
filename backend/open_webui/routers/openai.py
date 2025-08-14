@@ -59,8 +59,20 @@ log.setLevel(SRC_LOG_LEVELS["OPENAI"])
 #
 ##########################################
 
+def get_request_cache_key(f, *args, **kwargs):
+    # Extract parameters from args/kwargs for cache key
+    url = kwargs.get("url") if "url" in kwargs else args[0] if len(args) > 0 else None
+    key = kwargs.get("key") if "key" in kwargs else args[1] if len(args) > 1 else None
+    user = kwargs.get("user") if "user" in kwargs else args[2] if len(args) > 2 else None
+    return hashlib.md5(json.dumps({
+        "url": url,
+        "key": key,
+        "user": user.id if user and ENABLE_FORWARD_USER_INFO_HEADERS else None
+    }).encode()).hexdigest()
 
+@cached(ttl=MODELS_CACHE_TTL, key_builder=get_request_cache_key)
 async def send_get_request(url, key=None, user: UserModel = None):
+    log.info(f'Sending GET request to fetch models using {url} with key [***] and user {user.id if user else None}')
     timeout = aiohttp.ClientTimeout(total=AIOHTTP_CLIENT_TIMEOUT_MODEL_LIST)
     try:
         async with aiohttp.ClientSession(timeout=timeout, trust_env=True) as session:
