@@ -119,7 +119,11 @@
 							>
 								<option disabled selected value="">{$i18n.t('Select a engine')}</option>
 								{#each webSearchEngines as engine}
-									<option value={engine}>{engine}</option>
+									{#if engine === 'duckduckgo' || engine === 'ddgs'}
+										<option value={engine}>DDGS</option>
+									{:else}
+										<option value={engine}>{engine}</option>
+									{/if}
 								{/each}
 							</select>
 						</div>
@@ -471,11 +475,11 @@
 									/>
 
 									<datalist id="perplexity-model-list">
-										<option value="sonar">Sonar</option>
-										<option value="sonar-pro">Sonar Pro</option>
-										<option value="sonar-reasoning">Sonar Reasoning</option>
-										<option value="sonar-reasoning-pro">Sonar Reasoning Pro</option>
-										<option value="sonar-deep-research">Sonar Deep Research</option>
+										<option value="sonar">{$i18n.t('Sonar')}</option>
+										<option value="sonar-pro">{$i18n.t('Sonar Pro')}</option>
+										<option value="sonar-reasoning">{$i18n.t('Sonar Reasoning')}</option>
+										<option value="sonar-reasoning-pro">{$i18n.t('Sonar Reasoning Pro')}</option>
+										<option value="sonar-deep-research">{$i18n.t('Sonar Deep Research')}</option>
 									</datalist>
 								</div>
 							</div>
@@ -489,9 +493,9 @@
 										class="w-full rounded-lg py-2 px-4 text-sm bg-gray-50 dark:text-gray-300 dark:bg-gray-850 outline-hidden"
 										bind:value={webConfig.PERPLEXITY_SEARCH_CONTEXT_USAGE}
 									>
-										<option value="low">Low</option>
-										<option value="medium">Medium</option>
-										<option value="high">High</option>
+										<option value="low">{$i18n.t('Low')}</option>
+										<option value="medium">{$i18n.t('Medium')}</option>
+										<option value="high">{$i18n.t('High')}</option>
 									</select>
 								</div>
 							</div>

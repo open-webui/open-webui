@@ -19,7 +19,7 @@ from concurrent.futures import ThreadPoolExecutor
 
 
 from fastapi import Request, HTTPException
-from starlette.responses import Response, StreamingResponse
+from starlette.responses import Response, StreamingResponse, JSONResponse
 
 
 from open_webui.models.chats import Chats
@@ -989,25 +989,24 @@ async def process_chat_payload(request, form_data, user, metadata, model):
         if prompt is None:
             raise Exception("No user message found")
 
-        if context_string == "":
-            if request.app.state.config.RELEVANCE_THRESHOLD == 0:
-                log.debug(
-                    f"With a 0 relevancy threshold for RAG, the context cannot be empty"
-                )
-        else:
+        if context_string != "":
             # Workaround for Ollama 2.0+ system prompt issue
             # TODO: replace with add_or_update_system_message
             if model.get("owned_by") == "ollama":
                 form_data["messages"] = prepend_to_first_user_message_content(
                     rag_template(
-                        request.app.state.config.RAG_TEMPLATE, context_string, prompt
+                        request.app.state.config.RAG_TEMPLATE,
+                        context_string,
+                        prompt,
                     ),
                     form_data["messages"],
                 )
             else:
                 form_data["messages"] = add_or_update_system_message(
                     rag_template(
-                        request.app.state.config.RAG_TEMPLATE, context_string, prompt
+                        request.app.state.config.RAG_TEMPLATE,
+                        context_string,
+                        prompt,
                     ),
                     form_data["messages"],
                 )
@@ -1254,91 +1253,111 @@ async def process_chat_response(
     # Non-streaming response
     if not isinstance(response, StreamingResponse):
         if event_emitter:
-            if "error" in response:
-                error = response["error"].get("detail", response["error"])
-                Chats.upsert_message_to_chat_by_id_and_message_id(
-                    metadata["chat_id"],
-                    metadata["message_id"],
-                    {
-                        "error": {"content": error},
-                    },
-                )
+            if isinstance(response, dict) or isinstance(response, JSONResponse):
 
-            if "selected_model_id" in response:
-                Chats.upsert_message_to_chat_by_id_and_message_id(
-                    metadata["chat_id"],
-                    metadata["message_id"],
-                    {
-                        "selectedModelId": response["selected_model_id"],
-                    },
-                )
+                if isinstance(response, JSONResponse) and isinstance(
+                    response.body, bytes
+                ):
+                    try:
+                        response_data = json.loads(response.body.decode("utf-8"))
+                    except json.JSONDecodeError:
+                        response_data = {"error": {"detail": "Invalid JSON response"}}
+                else:
+                    response_data = response
 
-            choices = response.get("choices", [])
-            if choices and choices[0].get("message", {}).get("content"):
-                content = response["choices"][0]["message"]["content"]
-
-                if content:
-
-                    await event_emitter(
-                        {
-                            "type": "chat:completion",
-                            "data": response,
-                        }
-                    )
-
-                    title = Chats.get_chat_title_by_id(metadata["chat_id"])
-
-                    await event_emitter(
-                        {
-                            "type": "chat:completion",
-                            "data": {
-                                "done": True,
-                                "content": content,
-                                "title": title,
-                            },
-                        }
-                    )
-
-                    # Save message in the database
+                if "error" in response_data:
+                    error = response_data["error"].get("detail", response_data["error"])
                     Chats.upsert_message_to_chat_by_id_and_message_id(
                         metadata["chat_id"],
                         metadata["message_id"],
                         {
-                            "role": "assistant",
-                            "content": content,
+                            "error": {"content": error},
                         },
                     )
 
-                    # Send a webhook notification if the user is not active
-                    if not get_active_status_by_user_id(user.id):
-                        webhook_url = Users.get_user_webhook_url_by_id(user.id)
-                        if webhook_url:
-                            post_webhook(
-                                request.app.state.WEBUI_NAME,
-                                webhook_url,
-                                f"{title} - {request.app.state.config.WEBUI_URL}/c/{metadata['chat_id']}\n\n{content}",
-                                {
-                                    "action": "chat",
-                                    "message": content,
+                if "selected_model_id" in response_data:
+                    Chats.upsert_message_to_chat_by_id_and_message_id(
+                        metadata["chat_id"],
+                        metadata["message_id"],
+                        {
+                            "selectedModelId": response_data["selected_model_id"],
+                        },
+                    )
+
+                choices = response_data.get("choices", [])
+                if choices and choices[0].get("message", {}).get("content"):
+                    content = response_data["choices"][0]["message"]["content"]
+
+                    if content:
+                        await event_emitter(
+                            {
+                                "type": "chat:completion",
+                                "data": response_data,
+                            }
+                        )
+
+                        title = Chats.get_chat_title_by_id(metadata["chat_id"])
+
+                        await event_emitter(
+                            {
+                                "type": "chat:completion",
+                                "data": {
+                                    "done": True,
+                                    "content": content,
                                     "title": title,
-                                    "url": f"{request.app.state.config.WEBUI_URL}/c/{metadata['chat_id']}",
                                 },
-                            )
+                            }
+                        )
 
-                    await background_tasks_handler()
+                        # Save message in the database
+                        Chats.upsert_message_to_chat_by_id_and_message_id(
+                            metadata["chat_id"],
+                            metadata["message_id"],
+                            {
+                                "role": "assistant",
+                                "content": content,
+                            },
+                        )
 
-            if events and isinstance(events, list) and isinstance(response, dict):
-                extra_response = {}
-                for event in events:
-                    if isinstance(event, dict):
-                        extra_response.update(event)
-                    else:
-                        extra_response[event] = True
+                        # Send a webhook notification if the user is not active
+                        if not get_active_status_by_user_id(user.id):
+                            webhook_url = Users.get_user_webhook_url_by_id(user.id)
+                            if webhook_url:
+                                post_webhook(
+                                    request.app.state.WEBUI_NAME,
+                                    webhook_url,
+                                    f"{title} - {request.app.state.config.WEBUI_URL}/c/{metadata['chat_id']}\n\n{content}",
+                                    {
+                                        "action": "chat",
+                                        "message": content,
+                                        "title": title,
+                                        "url": f"{request.app.state.config.WEBUI_URL}/c/{metadata['chat_id']}",
+                                    },
+                                )
 
-                response = {
-                    **extra_response,
-                    **response,
-                }
+                        await background_tasks_handler()
+
+                if events and isinstance(events, list):
+                    extra_response = {}
+                    for event in events:
+                        if isinstance(event, dict):
+                            extra_response.update(event)
+                        else:
+                            extra_response[event] = True
+
+                    response_data = {
+                        **extra_response,
+                        **response_data,
+                    }
+
+                if isinstance(response, dict):
+                    response = response_data
+                if isinstance(response, JSONResponse):
+                    response = JSONResponse(
+                        content=response_data,
+                        headers=response.headers,
+                        status_code=response.status_code,
+                    )
 
             return response
         else:
@@ -1600,9 +1619,13 @@ async def process_chat_response(
 
                         match = re.search(start_tag_pattern, content)
                         if match:
-                            attr_content = (
-                                match.group(1) if match.group(1) else ""
-                            )  # Ensure it's not None
+                            try:
+                                attr_content = (
+                                    match.group(1) if match.group(1) else ""
+                                )  # Ensure it's not None
+                            except:
+                                attr_content = ""
+
                             attributes = extract_attributes(
                                 attr_content
                             )  # Extract attributes safely

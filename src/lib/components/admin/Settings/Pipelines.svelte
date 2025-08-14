@@ -152,7 +152,7 @@
 			const res = await uploadPipeline(localStorage.token, file, selectedPipelinesUrlIdx).catch(
 				(error) => {
 					console.error(error);
-					toast.error('Something went wrong :/');
+					toast.error($i18n.t('Something went wrong :/'));
 					return null;
 				}
 			);
@@ -514,7 +514,9 @@
 															{:else if (valves_spec.properties[property]?.type ?? null) === 'boolean'}
 																<div class="flex justify-between items-center">
 																	<div class="text-xs text-gray-500">
-																		{valves[property] ? 'Enabled' : 'Disabled'}
+																		{valves[property]
+																			? $i18n.t('Enabled')
+																			: $i18n.t('Disabled')}
 																	</div>
 
 																	<div class=" pr-2">
@@ -540,12 +542,12 @@
 										<Spinner className="size-5" />
 									{/if}
 								{:else}
-									<div>No valves</div>
+									<div>{$i18n.t('No valves')}</div>
 								{/if}
 							</div>
 						</div>
 					{:else if pipelines.length === 0}
-						<div>Pipelines Not Detected</div>
+						<div>{$i18n.t('Pipelines Not Detected')}</div>
 					{/if}
 				{:else}
 					<div class="flex justify-center">
