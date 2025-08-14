@@ -3,7 +3,7 @@ import os
 from pprint import pprint
 from typing import Optional
 import requests
-from open_webui.retrieval.web.main import SearchResult, get_filtered_results
+from open_webui.retrieval.web.main import SearchResult
 from open_webui.env import SRC_LOG_LEVELS
 import argparse
 
@@ -23,6 +23,8 @@ def search_bing(
     filter_list: Optional[list[str]] = None,
 ) -> list[SearchResult]:
     mkt = locale
+    if filter_list:
+        query = query + " site:"+" OR site:".join(filter_list)
     params = {"q": query, "mkt": mkt, "count": count}
     headers = {"Ocp-Apim-Subscription-Key": subscription_key}
 
@@ -31,8 +33,6 @@ def search_bing(
         response.raise_for_status()
         json_response = response.json()
         results = json_response.get("webPages", {}).get("value", [])
-        if filter_list:
-            results = get_filtered_results(results, filter_list)
         return [
             SearchResult(
                 link=result["url"],

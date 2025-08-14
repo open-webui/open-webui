@@ -2,7 +2,7 @@ import logging
 from typing import Optional
 
 import requests
-from open_webui.retrieval.web.main import SearchResult, get_filtered_results
+from open_webui.retrieval.web.main import SearchResult
 from open_webui.env import SRC_LOG_LEVELS
 
 log = logging.getLogger(__name__)
@@ -36,6 +36,8 @@ def search_google_pse(
 
     while count > 0:
         num_results_this_page = min(count, 10)  # Google PSE max results per page is 10
+        if filter_list:
+            query = query + " site:"+" OR site:".join(filter_list)
         params = {
             "cx": search_engine_id,
             "q": query,
@@ -55,9 +57,6 @@ def search_google_pse(
             start_index += 10  # Increment start index for the next page
         else:
             break  # No more results from Google PSE, break the loop
-
-    if filter_list:
-        all_results = get_filtered_results(all_results, filter_list)
 
     return [
         SearchResult(
