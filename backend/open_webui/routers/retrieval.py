@@ -2196,7 +2196,7 @@ def delete_entries_from_collection(form_data: DeleteForm, user=Depends(get_admin
 @router.post("/reset/db")
 def reset_vector_db(user=Depends(get_admin_user)):
     VECTOR_DB_CLIENT.reset()
-    Knowledges.delete_all_knowledge()
+    await Knowledges.delete_all_knowledge()
 
 
 @router.post("/reset/uploads")

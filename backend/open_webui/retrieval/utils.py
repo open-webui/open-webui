@@ -577,7 +577,7 @@ def get_sources_from_items(
                 or request.app.state.config.BYPASS_EMBEDDING_AND_RETRIEVAL
             ):
                 # Manual Full Mode Toggle for Collection
-                knowledge_base = Knowledges.get_knowledge_by_id(item.get("id"))
+                knowledge_base = await Knowledges.get_knowledge_by_id(item.get("id"))
 
                 if knowledge_base and (
                     user.role == "admin"

@@ -44,16 +44,18 @@ async def get_knowledge(user=Depends(get_verified_user)):
     knowledge_bases = []
 
     if user.role == "admin" and ENABLE_ADMIN_WORKSPACE_CONTENT_ACCESS:
-        knowledge_bases = Knowledges.get_knowledge_bases()
+        knowledge_bases = await Knowledges.get_knowledge_bases()
     else:
-        knowledge_bases = Knowledges.get_knowledge_bases_by_user_id(user.id, "read")
+        knowledge_bases = await Knowledges.get_knowledge_bases_by_user_id(
+            user.id, "read"
+        )
 
     # Get files for each knowledge base
     knowledge_with_files = []
     for knowledge_base in knowledge_bases:
         files = []
         if knowledge_base.data:
-            files = Files.get_file_metadatas_by_ids(
+            files = await Files.get_file_metadatas_by_ids(
                 knowledge_base.data.get("file_ids", [])
             )
 
@@ -71,11 +73,11 @@ async def get_knowledge(user=Depends(get_verified_user)):
                         file_ids.remove(missing_file)
 
                     data["file_ids"] = file_ids
-                    Knowledges.update_knowledge_data_by_id(
+                    await Knowledges.update_knowledge_data_by_id(
                         id=knowledge_base.id, data=data
                     )
 
-                    files = Files.get_file_metadatas_by_ids(file_ids)
+                    files = await Files.get_file_metadatas_by_ids(file_ids)
 
         knowledge_with_files.append(
             KnowledgeUserResponse(
@@ -92,9 +94,11 @@ async def get_knowledge_list(user=Depends(get_verified_user)):
     knowledge_bases = []
 
     if user.role == "admin" and ENABLE_ADMIN_WORKSPACE_CONTENT_ACCESS:
-        knowledge_bases = Knowledges.get_knowledge_bases()
+        knowledge_bases = await Knowledges.get_knowledge_bases()
     else:
-        knowledge_bases = Knowledges.get_knowledge_bases_by_user_id(user.id, "write")
+        knowledge_bases = await Knowledges.get_knowledge_bases_by_user_id(
+            user.id, "write"
+        )
 
     # Get files for each knowledge base
     knowledge_with_files = []
@@ -119,11 +123,11 @@ async def get_knowledge_list(user=Depends(get_verified_user)):
                         file_ids.remove(missing_file)
 
                     data["file_ids"] = file_ids
-                    Knowledges.update_knowledge_data_by_id(
+                    await Knowledges.update_knowledge_data_by_id(
                         id=knowledge_base.id, data=data
                     )
 
-                    files = Files.get_file_metadatas_by_ids(file_ids)
+                    files = await Files.get_file_metadatas_by_ids(file_ids)
 
         knowledge_with_files.append(
             KnowledgeUserResponse(
@@ -151,7 +155,7 @@ async def create_new_knowledge(
             detail=ERROR_MESSAGES.UNAUTHORIZED,
         )
 
-    knowledge = Knowledges.insert_new_knowledge(user.id, form_data)
+    knowledge = await Knowledges.insert_new_knowledge(user.id, form_data)
 
     if knowledge:
         return knowledge
@@ -175,7 +179,7 @@ async def reindex_knowledge_files(request: Request, user=Depends(get_verified_us
             detail=ERROR_MESSAGES.UNAUTHORIZED,
         )
 
-    knowledge_bases = Knowledges.get_knowledge_bases()
+    knowledge_bases = await Knowledges.get_knowledge_bases()
 
     log.info(f"Starting reindexing for {len(knowledge_bases)} knowledge bases")
 
@@ -188,7 +192,7 @@ async def reindex_knowledge_files(request: Request, user=Depends(get_verified_us
                 f"Knowledge base {knowledge_base.id} has no data or invalid data ({knowledge_base.data!r}). Deleting."
             )
             try:
-                Knowledges.delete_knowledge_by_id(id=knowledge_base.id)
+                await Knowledges.delete_knowledge_by_id(id=knowledge_base.id)
                 deleted_knowledge_bases.append(knowledge_base.id)
             except Exception as e:
                 log.error(
@@ -254,7 +258,7 @@ class KnowledgeFilesResponse(KnowledgeResponse):
 
 @router.get("/{id}", response_model=Optional[KnowledgeFilesResponse])
 async def get_knowledge_by_id(id: str, user=Depends(get_verified_user)):
-    knowledge = Knowledges.get_knowledge_by_id(id=id)
+    knowledge = await Knowledges.get_knowledge_by_id(id=id)
 
     if knowledge:
 
@@ -289,7 +293,7 @@ async def update_knowledge_by_id(
     form_data: KnowledgeForm,
     user=Depends(get_verified_user),
 ):
-    knowledge = Knowledges.get_knowledge_by_id(id=id)
+    knowledge = await Knowledges.get_knowledge_by_id(id=id)
     if not knowledge:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
@@ -306,7 +310,7 @@ async def update_knowledge_by_id(
             detail=ERROR_MESSAGES.ACCESS_PROHIBITED,
         )
 
-    knowledge = Knowledges.update_knowledge_by_id(id=id, form_data=form_data)
+    knowledge = await Knowledges.update_knowledge_by_id(id=id, form_data=form_data)
     if knowledge:
         file_ids = knowledge.data.get("file_ids", []) if knowledge.data else []
         files = Files.get_files_by_ids(file_ids)
@@ -338,7 +342,7 @@ def add_file_to_knowledge_by_id(
     form_data: KnowledgeFileIdForm,
     user=Depends(get_verified_user),
 ):
-    knowledge = Knowledges.get_knowledge_by_id(id=id)
+    knowledge = await Knowledges.get_knowledge_by_id(id=id)
 
     if not knowledge:
         raise HTTPException(
@@ -390,7 +394,7 @@ def add_file_to_knowledge_by_id(
             file_ids.append(form_data.file_id)
             data["file_ids"] = file_ids
 
-            knowledge = Knowledges.update_knowledge_data_by_id(id=id, data=data)
+            knowledge = await Knowledges.update_knowledge_data_by_id(id=id, data=data)
 
             if knowledge:
                 files = Files.get_file_metadatas_by_ids(file_ids)
@@ -423,7 +427,7 @@ def update_file_from_knowledge_by_id(
     form_data: KnowledgeFileIdForm,
     user=Depends(get_verified_user),
 ):
-    knowledge = Knowledges.get_knowledge_by_id(id=id)
+    knowledge = await Knowledges.get_knowledge_by_id(id=id)
     if not knowledge:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
@@ -494,7 +498,7 @@ def remove_file_from_knowledge_by_id(
     form_data: KnowledgeFileIdForm,
     user=Depends(get_verified_user),
 ):
-    knowledge = Knowledges.get_knowledge_by_id(id=id)
+    knowledge = await Knowledges.get_knowledge_by_id(id=id)
     if not knowledge:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
@@ -549,7 +553,7 @@ def remove_file_from_knowledge_by_id(
             file_ids.remove(form_data.file_id)
             data["file_ids"] = file_ids
 
-            knowledge = Knowledges.update_knowledge_data_by_id(id=id, data=data)
+            knowledge = await Knowledges.update_knowledge_data_by_id(id=id, data=data)
 
             if knowledge:
                 files = Files.get_file_metadatas_by_ids(file_ids)
@@ -582,7 +586,7 @@ def remove_file_from_knowledge_by_id(
 
 @router.delete("/{id}/delete", response_model=bool)
 async def delete_knowledge_by_id(id: str, user=Depends(get_verified_user)):
-    knowledge = Knowledges.get_knowledge_by_id(id=id)
+    knowledge = await Knowledges.get_knowledge_by_id(id=id)
     if not knowledge:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
@@ -634,7 +638,7 @@ async def delete_knowledge_by_id(id: str, user=Depends(get_verified_user)):
     except Exception as e:
         log.debug(e)
         pass
-    result = Knowledges.delete_knowledge_by_id(id=id)
+    result = await Knowledges.delete_knowledge_by_id(id=id)
     return result
 
 
@@ -645,7 +649,7 @@ async def delete_knowledge_by_id(id: str, user=Depends(get_verified_user)):
 
 @router.post("/{id}/reset", response_model=Optional[KnowledgeResponse])
 async def reset_knowledge_by_id(id: str, user=Depends(get_verified_user)):
-    knowledge = Knowledges.get_knowledge_by_id(id=id)
+    knowledge = await Knowledges.get_knowledge_by_id(id=id)
     if not knowledge:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
@@ -668,7 +672,9 @@ async def reset_knowledge_by_id(id: str, user=Depends(get_verified_user)):
         log.debug(e)
         pass
 
-    knowledge = Knowledges.update_knowledge_data_by_id(id=id, data={"file_ids": []})
+    knowledge = await Knowledges.update_knowledge_data_by_id(
+        id=id, data={"file_ids": []}
+    )
 
     return knowledge
 
@@ -688,7 +694,7 @@ def add_files_to_knowledge_batch(
     """
     Add multiple files to a knowledge base
     """
-    knowledge = Knowledges.get_knowledge_by_id(id=id)
+    knowledge = await Knowledges.get_knowledge_by_id(id=id)
     if not knowledge:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
@@ -741,7 +747,7 @@ def add_files_to_knowledge_batch(
             existing_file_ids.append(file_id)
 
     data["file_ids"] = existing_file_ids
-    knowledge = Knowledges.update_knowledge_data_by_id(id=id, data=data)
+    knowledge = await Knowledges.update_knowledge_data_by_id(id=id, data=data)
 
     # If there were any errors, include them in the response
     if result.errors:
