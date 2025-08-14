@@ -328,10 +328,10 @@ class PromptsTable:
             engine_name = db.bind.dialect.name
 
             if engine_name == "postgresql":
-                # PostgreSQL: JSON null values need special handling with raw SQL
+                # PostgreSQL: JSON null values need explicit type casting
                 query = db.query(Prompt).filter(
                     text(
-                        "(access_control IS NULL OR access_control = 'null') OR prompt.user_id = :user_id"
+                        "(access_control IS NULL OR access_control::text = 'null') OR prompt.user_id = :user_id"
                     ).params(user_id=user_id)
                 )
             else:
@@ -416,10 +416,10 @@ class PromptsTable:
             engine_name = db.bind.dialect.name
 
             if engine_name == "postgresql":
-                # PostgreSQL: JSON null values need special handling with raw SQL
+                # PostgreSQL: JSON null values need explicit type casting
                 query = db.query(Prompt).filter(
                     text(
-                        "(access_control IS NULL OR access_control = 'null') OR prompt.user_id = :user_id"
+                        "(access_control IS NULL OR access_control::text = 'null') OR prompt.user_id = :user_id"
                     ).params(user_id=user_id)
                 )
             else:
