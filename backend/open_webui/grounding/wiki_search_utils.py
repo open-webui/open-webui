@@ -34,6 +34,30 @@ class WikiSearchGrounder:
         self.translator = None
         self.model_loaded = False
         self.translation_loaded = False
+        self._initialized = False
+
+    async def initialize(self) -> bool:
+        """Initialize models (call once before using search methods)"""
+        if self._initialized:
+            return True
+
+        success = True
+
+        # Initialize txtai model
+        if not self._load_txtai_model():
+            success = False
+
+        # Initialize translation model (optional)
+        self._load_translation_model()
+
+        self._initialized = success
+        return success
+
+    async def ensure_initialized(self) -> bool:
+        """Ensure models are initialized before use"""
+        if not self._initialized:
+            return await self.initialize()
+        return True
 
     def _should_ground_query(self, query: str) -> bool:
         """
@@ -74,8 +98,8 @@ class WikiSearchGrounder:
             r"\b(write|create|generate|build)\s+(code|program|script|function|class)",
             r"\bhelp\s+(me\s+)?(code|program|debug)",
             # Explanations of concepts (without "latest" or "current")
-            r"\bexplain\s+(?!.*\b(latest|current|recent|today|now|2024|2025)\b)",
-            r"\btell\s+me\s+about\s+(?!.*\b(latest|current|recent|today|now|2024|2025)\b)",
+            r"\bexplain\s+(?!.*\b(latest|current|recent|today|now|202[4-9])\b)",
+            r"\btell\s+me\s+about\s+(?!.*\b(latest|current|recent|today|now|202[4-9])\b)",
             # Role playing
             r"\bact\s+(like|as)\s+",
             r"\bpretend\s+(you\s+are|to\s+be)",
@@ -171,7 +195,7 @@ class WikiSearchGrounder:
             r"\b(combien\s+(de|d\')|statistiques|données|faits|informations\s+sur)",
             r"\b(population|température|météo|prix|coût|taux)",
             # Research/lookup queries
-            r"\b(trouver?\s+(informations?|données)|recherch(e|er)|chercher)",
+            r"\b(trouvez?\s+(informations?|données)|recherch(e|er|ez)|cherch(e|er|ez))",
             r"\b(définition\s+(de|d\')|signification\s+(de|d\')|qu\'est(-ce\s+que|ce\s+qui)|expliqu(e|ez)\s+ce\s+que)",
             # Specific entities
             r"\b(entreprise|organisation|gouvernement|politique|économie|marché)",
@@ -181,8 +205,11 @@ class WikiSearchGrounder:
             # Technology/science
             r"\b(technologie|logiciel|IA|intelligence\s+artificielle|apprentissage\s+(automatique|machine)|recherche)",
             # Comparative queries
-            r"\b(meilleur|pire|mieux|comparer|comparaison|contre|vs\.?)",
+            r"\b(meilleur|pire|mieux|comparer|comparaison|contre|vs\.?|comparez)",
             r"\b(différence\s+entre|similitudes\s+entre)",
+            # Additional formal conjugations (vous forms)
+            r"\b(pouvez-vous\s+(me\s+)?(dire|expliquer|donner)|savez-vous)",
+            r"\b(connaissez-vous|avez-vous\s+(des\s+)?informations)",
         ]
 
         # Check factual patterns
@@ -196,8 +223,8 @@ class WikiSearchGrounder:
         log.info("🔍 Query doesn't match clear factual patterns, skipping grounding")
         return False
 
-    def _initialize_translation(self):
-        """Initialize HuggingFace translation pipeline"""
+    def _load_translation_model(self) -> bool:
+        """Load HuggingFace translation pipeline"""
         if self.translation_loaded:
             return True
 
@@ -260,7 +287,7 @@ class WikiSearchGrounder:
 
     def _translate_to_english(self, text: str) -> str:
         """Translate text to English if French is detected"""
-        if not self.translation_loaded and not self._initialize_translation():
+        if not self.translation_loaded:
             return text
 
         try:
@@ -276,7 +303,7 @@ class WikiSearchGrounder:
             log.warning(f"Translation failed, using original query: {e}")
             return text
 
-    def _initialize_txtai(self):
+    def _load_txtai_model(self) -> bool:
         """Load txtai-wikipedia from HuggingFace Hub"""
         if self.model_loaded:
             return True
@@ -304,11 +331,9 @@ class WikiSearchGrounder:
 
     async def search(self, query: str) -> List[Dict]:
         """Pure txtai search with translation support"""
-        if not self.model_loaded and not self._initialize_txtai():
+        # Ensure models are initialized
+        if not await self.ensure_initialized():
             return []
-
-        # Initialize translation if available
-        self._initialize_translation()
 
         try:
             # Translate query to English for better search results

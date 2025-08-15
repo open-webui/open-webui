@@ -751,8 +751,10 @@ async def chat_wiki_grounding_handler(
             grounding_context = wiki_search_grounder.format_grounding_context(
                 grounding_data
             )
-            log.info(f"🔍 Generated grounding context length: {len(grounding_context)}")
-            log.info(f"🔍 Grounding context preview: {grounding_context[:200]}...")
+            log.debug(
+                f"🔍 Generated grounding context length: {len(grounding_context)}"
+            )
+            log.debug(f"🔍 Grounding context preview: {grounding_context[:200]}...")
 
             # Add the grounding context to the system message or create one
             system_message_found = False

@@ -473,7 +473,7 @@ class ConfigUpdateForm(BaseModel):
     RAG_FULL_CONTEXT: Optional[bool] = None
     pdf_extract_images: Optional[bool] = None
     enable_google_drive_integration: Optional[bool] = None
-    ENABLE_WIKIPEDIA_GROUNDING: Optional[bool] = None
+    enable_wikipedia_grounding: Optional[bool] = None
     file: Optional[FileConfig] = None
     content_extraction: Optional[ContentExtractionConfig] = None
     chunk: Optional[ChunkParamUpdateForm] = None
@@ -582,19 +582,19 @@ async def update_rag_config(
         )
 
     # Wikipedia grounding configuration (simple boolean like MCP)
-    if form_data.ENABLE_WIKIPEDIA_GROUNDING is not None:
+    if form_data.enable_wikipedia_grounding is not None:
         request.app.state.config.ENABLE_WIKIPEDIA_GROUNDING = (
-            form_data.ENABLE_WIKIPEDIA_GROUNDING
+            form_data.enable_wikipedia_grounding
         )
         log.info(
-            f"Wikipedia grounding updated to: {form_data.ENABLE_WIKIPEDIA_GROUNDING}"
+            f"Wikipedia grounding updated to: {form_data.enable_wikipedia_grounding}"
         )
 
     return {
         "status": True,
         "pdf_extract_images": request.app.state.config.PDF_EXTRACT_IMAGES,
         "RAG_FULL_CONTEXT": request.app.state.config.RAG_FULL_CONTEXT,
-        "ENABLE_WIKIPEDIA_GROUNDING": request.app.state.config.ENABLE_WIKIPEDIA_GROUNDING,
+        "enable_wikipedia_grounding": request.app.state.config.ENABLE_WIKIPEDIA_GROUNDING,
         "file": {
             "max_size": request.app.state.config.FILE_MAX_SIZE,
             "max_count": request.app.state.config.FILE_MAX_COUNT,

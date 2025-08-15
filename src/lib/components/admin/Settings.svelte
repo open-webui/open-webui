@@ -16,7 +16,7 @@
 	import MCP from './Settings/MCP.svelte';
 	import Documents from './Settings/Documents.svelte';
 	import WebSearch from './Settings/WebSearch.svelte';
-	import WikipediaGrounding from './Settings/WikipediaGrounding.svelte';
+	import Grounding from './Settings/Grounding.svelte';
 	import ChartBar from '../icons/ChartBar.svelte';
 	import DocumentChartBar from '../icons/DocumentChartBar.svelte';
 	import Evaluations from './Settings/Evaluations.svelte';
@@ -220,11 +220,11 @@
 
 		<button
 			class="px-0.5 py-1 min-w-fit rounded-lg flex-1 md:flex-none flex text-right transition {selectedTab ===
-			'wikipedia'
+			'grounding'
 				? ''
 				: ' text-gray-600 dark:text-gray-600 hover:text-gray-700 dark:hover:text-white'}"
 			on:click={() => {
-				selectedTab = 'wikipedia';
+				selectedTab = 'grounding';
 			}}
 		>
 			<div class=" self-center mr-2">
@@ -239,7 +239,7 @@
 					/>
 				</svg>
 			</div>
-			<div class=" self-center">{$i18n.t('Wiki Grounding')}</div>
+			<div class=" self-center">{$i18n.t('Grounding')}</div>
 		</button>
 
 		<button
@@ -424,8 +424,8 @@
 					await config.set(await getBackendConfig());
 				}}
 			/>
-		{:else if selectedTab === 'wikipedia'}
-			<WikipediaGrounding
+		{:else if selectedTab === 'grounding'}
+			<Grounding
 				saveHandler={async () => {
 					toast.success($i18n.t('Settings saved successfully!'));
 

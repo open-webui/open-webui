@@ -62,10 +62,15 @@ dependencies = [
     "qdrant-client~=1.12.0",
     "opensearch-py==2.7.1",
 
-    "transformers",
+    "transformers>=4.46.0,<5.0.0",
     "sentence-transformers==3.3.1",
     "colbert-ai==0.2.21",
     "einops==0.8.0",
+
+    # txtai-wikipedia Wiki Grounding dependencies
+    "torch>=2.5.0",
+    "txtai[graph]>=8.6.0",
+    "sacremoses==0.1.1",
 
     "ftfy==6.2.3",
     "pypdf>=5.0.0",
