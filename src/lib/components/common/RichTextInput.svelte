@@ -68,7 +68,17 @@
 	$: if (value === null && html !== null && editor) {
 		editor.commands.setContent(html);
 	}
+	export function insertLiteral(text: string) {
+		if (!editor?.view || !editor?.state) return;
 
+		const { state, view } = editor;
+		const { from, to } = state.selection;
+
+		// ProseMirror transaction: insert raw text at the current selection
+		const tr = state.tr.insertText(text, from, to);
+		view.dispatch(tr);
+		view.focus();
+    }
 	// Function to find the next template in the document
 	function findNextTemplate(doc, from = 0) {
 		const patterns = [{ start: '{{', end: '}}' }];

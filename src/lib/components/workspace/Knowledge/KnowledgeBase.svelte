@@ -201,7 +201,7 @@
 			handleUploadError(error);
 		}
 	};
-
+	
 	// Helper function to check if a path contains hidden folders
 	const hasHiddenFolder = (path) => {
 		return path.split('/').some((part) => part.startsWith('.'));
@@ -227,7 +227,7 @@
 
 				if (entry.kind === 'file') {
 					totalFiles++;
-				} else if (entry.kind === 'directory') {
+				} else if (entry.kind === 'directory' || entry.kind === 'daemon-directory') {
 					// Only process non-hidden directories
 					if (!entry.name.startsWith('.')) {
 						await countFiles(entry);
@@ -875,7 +875,10 @@
 										on:upload={(e) => {
 											if (e.detail.type === 'directory') {
 												uploadDirectoryHandler();
-											} else if (e.detail.type === 'text') {
+											} 
+											else if (e.detail.type === 'daemon-directory') {
+												daemonUploadDirectoryHandler();
+											}else if (e.detail.type === 'text') {
 												showAddTextContentModal = true;
 											} else {
 												document.getElementById('files-input').click();
