@@ -4,7 +4,7 @@
 	import { getLanguages } from '$lib/i18n';
 	const dispatch = createEventDispatcher();
 
-	import { ariaMessage, models, settings, theme, user } from '$lib/stores';
+	import { ariaMessage, models, settings, theme, user, config } from '$lib/stores';
 
 	const i18n = getContext('i18n');
 
@@ -20,6 +20,7 @@
 
 	let languages: Awaited<ReturnType<typeof getLanguages>> = [];
 	let notificationEnabled = false;
+	let wikipediaGrounding = false;
 	let system = '';
 
 	let showAdvanced = false;
@@ -81,6 +82,7 @@
 		languages = await getLanguages();
 
 		notificationEnabled = $settings.notificationEnabled ?? false;
+		wikipediaGrounding = $settings.wikipediaGrounding ?? false;
 		system = $settings.system ?? '';
 
 		requestFormat = $settings.requestFormat ?? '';
@@ -177,6 +179,32 @@
 					</button>
 				</div>
 			</div>
+
+			{#if $config?.features?.enable_wiki_grounding}
+				<div>
+					<div class=" py-0.5 flex w-full justify-between">
+						<div class=" self-center text-xs font-medium">{$i18n.t('Wikipedia Grounding')}</div>
+
+						<button
+							class="p-1 px-3 text-xs flex rounded transition"
+							on:click={() => {
+								wikipediaGrounding = !wikipediaGrounding;
+								saveSettings({ wikipediaGrounding: wikipediaGrounding });
+							}}
+							type="button"
+						>
+							{#if wikipediaGrounding === true}
+								<span class="ml-2 self-center">{$i18n.t('On')}</span>
+							{:else}
+								<span class="ml-2 self-center">{$i18n.t('Off')}</span>
+							{/if}
+						</button>
+					</div>
+					<div class="text-xs text-gray-500 dark:text-gray-400 mt-1">
+						{$i18n.t('Enhance responses with Wikipedia knowledge for factual queries')}
+					</div>
+				</div>
+			{/if}
 		</div>
 
 		{#if $user.role === 'admin' || $user?.permissions.chat?.controls}

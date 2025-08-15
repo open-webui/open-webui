@@ -361,7 +361,7 @@ async def get_rag_config(request: Request, user=Depends(get_admin_user)):
         "pdf_extract_images": request.app.state.config.PDF_EXTRACT_IMAGES,
         "RAG_FULL_CONTEXT": request.app.state.config.RAG_FULL_CONTEXT,
         "enable_google_drive_integration": request.app.state.config.ENABLE_GOOGLE_DRIVE_INTEGRATION,
-        "ENABLE_WIKIPEDIA_GROUNDING": request.app.state.config.ENABLE_WIKIPEDIA_GROUNDING,
+        "enable_wikipedia_grounding": request.app.state.config.ENABLE_WIKIPEDIA_GROUNDING,
         "content_extraction": {
             "engine": request.app.state.config.CONTENT_EXTRACTION_ENGINE,
             "tika_server_url": request.app.state.config.TIKA_SERVER_URL,

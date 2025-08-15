@@ -692,9 +692,19 @@ async def chat_wiki_grounding_handler(
 
     log.info("🔍 Wiki grounding handler called")
 
-    # Check admin configuration only (user session state already verified)
+    # Check admin configuration first
     if not request.app.state.config.ENABLE_WIKIPEDIA_GROUNDING:
         log.info("🔍 Wikipedia grounding disabled by admin, skipping")
+        return form_data
+
+    # Check user's personal setting (defaults to True if not set)
+    user_grounding_enabled = True
+    if user and hasattr(user, "settings") and user.settings:
+        ui_settings = user.settings.ui if hasattr(user.settings, "ui") else {}
+        user_grounding_enabled = ui_settings.get("wikipediaGrounding", True)
+
+    if not user_grounding_enabled:
+        log.info("🔍 Wikipedia grounding disabled by user preference, skipping")
         return form_data
 
     # Get the user's message

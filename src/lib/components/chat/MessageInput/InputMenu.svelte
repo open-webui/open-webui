@@ -3,7 +3,7 @@
 	import { flyAndScale } from '$lib/utils/transitions';
 	import { getContext, onMount, tick } from 'svelte';
 
-	import { config, user, tools as _tools, mobile } from '$lib/stores';
+	import { config, user, tools as _tools, mobile, settings } from '$lib/stores';
 	import { createPicker } from '$lib/utils/google-drive-picker';
 	import { getTools } from '$lib/apis/tools';
 	import { getToolTooltipContent, getMCPToolName } from '$lib/utils/mcp-tools';
@@ -77,7 +77,8 @@
 
 	$: showWikiGrounding =
 		$config?.features?.enable_wiki_grounding &&
-		($user.role === 'admin' || $user?.permissions?.features?.wiki_grounding);
+		($user.role === 'admin' || $user?.permissions?.features?.wiki_grounding) &&
+		($settings?.wikipediaGrounding ?? true);
 
 	$: if (show) {
 		init();
