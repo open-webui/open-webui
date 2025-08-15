@@ -1,7 +1,10 @@
+from google.oauth2 import service_account
+from pydub.utils import mediainfo
 import hashlib
 import json
 import logging
 import os
+from typing import Iterable
 import uuid
 from functools import lru_cache
 from pathlib import Path
@@ -49,6 +52,10 @@ import base64
 import time
 import datetime
 
+import wave
+from google.cloud import texttospeech
+from google.cloud.texttospeech_v1beta1.services.text_to_speech import client
+
 router = APIRouter()
 
 # Constants
@@ -67,9 +74,6 @@ SPEECH_CACHE_DIR.mkdir(parents=True, exist_ok=True)
 # Utility functions
 #
 ##########################################
-
-from pydub import AudioSegment
-from pydub.utils import mediainfo
 
 
 def is_mp4_audio(file_path):
@@ -245,13 +249,13 @@ def load_speech_pipeline(request):
 
 def create_wave_header(sample_rate):
     num_channels = 1
-    sample_width = 2 # (16-bit = 2 bytes)
+    sample_width = 2  # (16-bit = 2 bytes)
     frame_rate = sample_rate
 
     wav_header = io.BytesIO()
     with wave.open(wav_header, "wb") as wav_file:
         wav_file.setnchannels(num_channels)
-        wav_file.setsampwidth(sample_width) 
+        wav_file.setsampwidth(sample_width)
         wav_file.setframerate(frame_rate)
 
     wav_header.seek(0)
@@ -270,6 +274,7 @@ def extract_pcm_frames(wav_bytes):
     with wave.open(io.BytesIO(wav_bytes)) as wf:
         return wf.readframes(wf.getnframes())
 
+
 file_path = SPEECH_CACHE_DIR.joinpath(f"irishcropped3.mp3")
 
 with open(file_path, "rb") as audio_file:
@@ -280,31 +285,92 @@ with open(file_path, "rb") as audio_file:
 async def stream_deepdub_audio_generator(text):
     wav_header = create_wave_header(sample_rate=48000)
     yield wav_header
-    
+
     t1 = time.time()
     ttfa = True
     dd = deepdub.DeepdubClient(api_key=os.environ.get("DEEPDUB_API_KEY", ""))
-    
+
     async with dd.async_connect():
         print(f"{datetime.datetime.now()} Initial connect time: {time.time() - t1}")
         t1 = time.time()
-        async for chunk in dd.async_tts(text=text, 
-            voicePromptId="bb767ac8-6166-44c3-b344-6429c070a7b0_spontaneous-speech-neutral", 
-            realtime=True,
-            model="dd-etts-2.5", 
-            locale="en-GB", 
-            voice_reference=audio_b64,
-            ):
-                if ttfa:
-                    print(f"{datetime.datetime.now()} TTFA: {time.time() - t1}")
-                    ttfa = False
-                pcm_data = extract_pcm_frames(chunk)
-                yield pcm_data
+        async for chunk in dd.async_tts(text=text,
+                                        voicePromptId="bb767ac8-6166-44c3-b344-6429c070a7b0_spontaneous-speech-neutral",
+                                        realtime=True,
+                                        model="dd-etts-2.5",
+                                        locale="en-GB",
+                                        voice_reference=audio_b64,
+                                        ):
+            if ttfa:
+                print(f"{datetime.datetime.now()} TTFA: {time.time() - t1}")
+                ttfa = False
+            pcm_data = extract_pcm_frames(chunk)
+            yield pcm_data
         print(f"TTFL: {time.time() - t1}")
 
 
 class TTSRequest(BaseModel):
     text: str
+
+
+creds = service_account.Credentials.from_service_account_file(
+    './temp_secrets/gcp-chirp-service-account.json',
+    scopes=['https://www.googleapis.com/auth/cloud-platform']
+)
+
+chirp_client = texttospeech.TextToSpeechClient(credentials=creds)
+with open('./temp_secrets/voice_cloning_highdoh-1.txt', 'r') as f:
+    voice_cloning_key = f.read()
+
+
+@router.post("/speech/chirp")
+async def chirp_endpoint(body: TTSRequest):
+    print(f"{datetime.datetime.now()} @text", body.text)
+    return StreamingResponse(perform_voice_cloning_with_simulated_streaming(voice_cloning_key=voice_cloning_key, 
+                                                                            text=body.text, 
+                                                                            language_code="en-US", 
+                                                                            tts_client=chirp_client),
+                            media_type="application/octet-stream")
+
+
+def perform_voice_cloning_with_simulated_streaming(
+    voice_cloning_key: str,
+    text: str,
+    language_code: str,
+    tts_client: client.TextToSpeechClient,
+) -> Iterable[bytes]:
+    """Perform voice cloning for a given reference audio, voice talent consent, and consent script.
+
+    Args:
+      voice_cloning_key: The voice cloning key.
+      simulated_streamed_text: text
+      language_code: The language code.
+      tts_client: The TTS client to use.
+    """
+    voice_clone_params = texttospeech.VoiceCloneParams(
+        voice_cloning_key=voice_cloning_key
+    )
+    streaming_config = texttospeech.StreamingSynthesizeConfig(
+        voice=texttospeech.VoiceSelectionParams(
+            language_code=language_code, voice_clone=voice_clone_params
+        ),
+        streaming_audio_config=texttospeech.StreamingAudioConfig(
+            audio_encoding=texttospeech.AudioEncoding.PCM,
+            sample_rate_hertz=48000,
+        ),
+    )
+
+    def request_generator():
+        # yield config_request
+        yield texttospeech.StreamingSynthesizeRequest(
+            streaming_config=streaming_config
+        )
+        yield texttospeech.StreamingSynthesizeRequest(
+            input=texttospeech.StreamingSynthesisInput(text=text)
+        )
+
+    for resp in tts_client.streaming_synthesize(request_generator()):
+        if resp.audio_content:
+            yield resp.audio_content
 
 
 @router.post("/speech/deepdub")
@@ -317,7 +383,7 @@ async def deepdub_endpoint(body: TTSRequest):
 async def speech(request: Request, user=Depends(get_verified_user)):
     body = await request.body()
     print('!!!body@2', body)
-    
+
     name = hashlib.sha256(
         body
         + str(request.app.state.config.TTS_ENGINE).encode("utf-8")
@@ -328,7 +394,7 @@ async def speech(request: Request, user=Depends(get_verified_user)):
     file_body_path = SPEECH_CACHE_DIR.joinpath(f"{name}.json")
 
     print('!!!file_path', file_path)
-    
+
     # Check if the file already exists in the cache
     if file_path.is_file():
         print('file already exists')
@@ -537,7 +603,8 @@ async def speech(request: Request, user=Depends(get_verified_user)):
             forward_params={"speaker_embeddings": speaker_embedding},
         )
 
-        sf.write(file_path, speech["audio"], samplerate=speech["sampling_rate"])
+        sf.write(file_path, speech["audio"],
+                 samplerate=speech["sampling_rate"])
 
         async with aiofiles.open(file_body_path, "w") as f:
             await f.write(json.dumps(payload))
@@ -612,7 +679,8 @@ def transcribe(request: Request, file_path):
                 except Exception:
                     detail = f"External: {e}"
 
-            raise Exception(detail if detail else "Open WebUI: Server Connection Error")
+            raise Exception(
+                detail if detail else "Open WebUI: Server Connection Error")
 
     elif request.app.state.config.STT_ENGINE == "deepgram":
         try:
@@ -675,7 +743,8 @@ def transcribe(request: Request, file_path):
                         detail = f"External: {res['error'].get('message', '')}"
                 except Exception:
                     detail = f"External: {e}"
-            raise Exception(detail if detail else "Open WebUI: Server Connection Error")
+            raise Exception(
+                detail if detail else "Open WebUI: Server Connection Error")
 
 
 def compress_audio(file_path):
@@ -690,7 +759,8 @@ def compress_audio(file_path):
         if (
             os.path.getsize(compressed_path) > MAX_FILE_SIZE
         ):  # Still larger than MAX_FILE_SIZE after compression
-            raise Exception(ERROR_MESSAGES.FILE_TOO_LARGE(size=f"{MAX_FILE_SIZE_MB}MB"))
+            raise Exception(ERROR_MESSAGES.FILE_TOO_LARGE(
+                size=f"{MAX_FILE_SIZE_MB}MB"))
         return compressed_path
     else:
         return file_path
@@ -770,7 +840,8 @@ def get_available_models(request: Request) -> list[dict]:
                 data = response.json()
                 available_models = data.get("models", [])
             except Exception as e:
-                log.error(f"Error fetching models from custom endpoint: {str(e)}")
+                log.error(
+                    f"Error fetching models from custom endpoint: {str(e)}")
                 available_models = [{"id": "tts-1"}, {"id": "tts-1-hd"}]
         else:
             available_models = [{"id": "tts-1"}, {"id": "tts-1-hd"}]
@@ -815,9 +886,11 @@ def get_available_voices(request) -> dict:
                 response.raise_for_status()
                 data = response.json()
                 voices_list = data.get("voices", [])
-                available_voices = {voice["id"]: voice["name"] for voice in voices_list}
+                available_voices = {voice["id"]: voice["name"]
+                                    for voice in voices_list}
             except Exception as e:
-                log.error(f"Error fetching voices from custom endpoint: {str(e)}")
+                log.error(
+                    f"Error fetching voices from custom endpoint: {str(e)}")
                 available_voices = {
                     "alloy": "alloy",
                     "echo": "echo",

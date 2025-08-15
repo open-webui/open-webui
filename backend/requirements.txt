@@ -101,6 +101,7 @@ duckduckgo-search~=7.3.2
 google-api-python-client
 google-auth-httplib2
 google-auth-oauthlib
+google-cloud-texttospeech==2.27.0
 
 ## Tests
 docker~=7.1.0

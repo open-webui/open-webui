@@ -55,6 +55,9 @@ run-prod:
 	docker pull 654281453265.dkr.ecr.us-east-1.amazonaws.com/artificial-insanity:0.0.1
 	docker run -d -p 3002:8080 --gpus all --add-host=host.docker.internal:host-gateway -v openwebui-modified-cuda:/app/backend/data --name openwebui-modified-cuda --restart always 654281453265.dkr.ecr.us-east-1.amazonaws.com/artificial-insanity:0.0.1
 
+	docker run -d -p 8006:8080 --gpus all --add-host=host.docker.internal:host-gateway -v openwebui-modified-cuda-volume:/app/backend/data --name openwebui-modified-cuda-2 --restart always 654281453265.dkr.ecr.us-east-1.amazonaws.com/artificial-insanity:0.0.2
+
 run:
 	docker run -d -p 3000:8080 --add-host=host.docker.internal:host-gateway -v openwebui-modified:/app/backend/data --name openwebui-modified --restart always openwebui-modified
+
 

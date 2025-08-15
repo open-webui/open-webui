@@ -218,7 +218,7 @@ export const synthesizeStreamingSpeech = async (
 ) => {
 	console.log(`hitting tts endpoint with text: `, text)
 
-	const response = await fetch(`${AUDIO_API_BASE_URL}/speech/deepdub`, {
+	const response = await fetch(`${AUDIO_API_BASE_URL}/speech/chirp`, {
 		method: 'POST',
 		headers: {
 			Authorization: `Bearer ${localStorage.token}`,
@@ -226,7 +226,6 @@ export const synthesizeStreamingSpeech = async (
 		},
 		body: JSON.stringify({ text: text }),
 	});
-
 
 	if (!response.ok || !response.body) {
 		console.log('!!response not ok', text)
