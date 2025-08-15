@@ -139,6 +139,7 @@ dependencies = [
     "moto[s3]>=5.0.26",
     "oracledb>=3.2.0",
     "posthog==5.4.0",
+    "mcp==1.12.3",
 
 ]
 readme = "README.md"
