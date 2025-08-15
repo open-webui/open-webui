@@ -436,20 +436,19 @@
 	let activeToolServerSpecs = [];
 	$: {
 		const availableSpecs = new Set();
-		toolServers.forEach(server => {
+		toolServers.forEach((server) => {
 			if (!server.specs) return;
-			
-			server.specs.forEach(spec => {
+
+			server.specs.forEach((spec) => {
 				availableSpecs.add(`${server.url}:${spec.name}`);
 			});
 		});
-		activeToolServerSpecs = selectedToolServerSpecs.filter(specId => 
-			availableSpecs.has(specId)
-		);
+		activeToolServerSpecs = selectedToolServerSpecs.filter((specId) => availableSpecs.has(specId));
 	}
 
 	let showToolsButton = false;
-	$: showToolsButton = selectedToolIds.length + activeToolServerSpecs.length > 0 || toolServers.length > 0;
+	$: showToolsButton =
+		selectedToolIds.length + activeToolServerSpecs.length > 0 || toolServers.length > 0;
 
 	let showWebSearchButton = false;
 	$: showWebSearchButton =
@@ -825,7 +824,12 @@
 </script>
 
 <FilesOverlay show={dragged} />
-<ToolServersModal bind:show={showTools} {selectedToolIds} />
+<ToolServersModal
+	bind:show={showTools}
+	{selectedToolIds}
+	selectedToolServerSpecs={activeToolServerSpecs}
+	{toolServers}
+/>
 <InputVariablesModal
 	bind:show={showInputVariablesModal}
 	variables={inputVariables}
@@ -1673,7 +1677,7 @@
 											<div class="flex gap-1 items-center overflow-x-auto scrollbar-none flex-1">
 												{#if showToolsButton}
 													<Tooltip
-														content={$i18n.t('{{COUNT}} Selected Tools', {
+														content={$i18n.t('{{COUNT}} Available Tools', {
 															COUNT: selectedToolIds.length + activeToolServerSpecs.length
 														})}
 													>

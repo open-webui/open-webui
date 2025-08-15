@@ -918,7 +918,7 @@
 
 			if (chatContent) {
 				console.log(chatContent);
-				
+
 				// Load tool selections from chat data
 				if (chatContent.data) {
 					if (chatContent.data.selectedToolIds) {
@@ -1407,15 +1407,17 @@
 	//////////////////////////
 
 	const filterToolServersBySelectedSpecs = (toolServers, selectedSpecs) => {
-		return toolServers.map(server => {
-			const enabledSpecs = server.specs.filter(spec => 
-				selectedSpecs.includes(`${server.url}:${spec.name}`)
-			);
-			return {
-				...server,
-				specs: enabledSpecs
-			};
-		}).filter(server => server.specs.length > 0);
+		return toolServers
+			.map((server) => {
+				const enabledSpecs = server.specs.filter((spec) =>
+					selectedSpecs.includes(`${server.url}:${spec.name}`)
+				);
+				return {
+					...server,
+					specs: enabledSpecs
+				};
+			})
+			.filter((server) => server.specs.length > 0);
 	};
 
 	const submitPrompt = async (userPrompt, { _raw = false } = {}) => {

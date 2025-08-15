@@ -65,8 +65,8 @@
 		}, {});
 
 		// Add tool server specs
-		$_toolServers.forEach(server => {
-			server.specs?.forEach(spec => {
+		$_toolServers.forEach((server) => {
+			server.specs?.forEach((spec) => {
 				const specId = `${server.url}:${spec.name}`;
 				tools[specId] = {
 					name: spec.name,
@@ -153,19 +153,21 @@
 									on:change={async (e) => {
 										const state = e.detail;
 										await tick();
-										
+
 										const isToolServer = tools[toolId].isToolServer;
-										
+
 										// Update tool server specs
 										if (isToolServer && state) {
 											selectedToolServerSpecs = [...selectedToolServerSpecs, toolId];
 											return;
 										}
 										if (isToolServer && !state) {
-											selectedToolServerSpecs = selectedToolServerSpecs.filter((id) => id !== toolId);
+											selectedToolServerSpecs = selectedToolServerSpecs.filter(
+												(id) => id !== toolId
+											);
 											return;
 										}
-										
+
 										// Update regular tools
 										if (!isToolServer && state) {
 											selectedToolIds = [...selectedToolIds, toolId];
