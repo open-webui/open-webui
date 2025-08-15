@@ -1475,7 +1475,7 @@
 					scrollToBottom();
 
 
-					await sendPromptSocket(_history, model, responseMessageId, _chatId);
+					await sendPromptSocket(_history, model, responseMessageId, _chatId); //1
 
 					if (chatEventEmitter) clearInterval(chatEventEmitter);
 				} else {
@@ -1506,7 +1506,7 @@
 		);
 
 		scrollToBottom();
-		eventTarget.dispatchEvent(
+		eventTarget.dispatchEvent( //2
 			new CustomEvent('chat:start', {
 				detail: {
 					id: responseMessageId

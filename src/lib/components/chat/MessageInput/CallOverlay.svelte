@@ -344,6 +344,7 @@
 	let currentUtterance = null;
 
 	const speakSpeechSynthesisHandler = (content) => {
+		//4 speaking robot voice
 		if ($showCallOverlay) {
 			return new Promise((resolve) => {
 				let voices = [];
@@ -457,6 +458,8 @@
 
 			assistantSpeaking = true;
 		}
+
+		//3 			monitorAndPlayAudio(id, audioAbortController.signal);
 	};
 
 

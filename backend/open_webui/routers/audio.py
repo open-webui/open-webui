@@ -318,7 +318,7 @@ creds = service_account.Credentials.from_service_account_file(
 )
 
 chirp_client = texttospeech.TextToSpeechClient(credentials=creds)
-with open('./temp_secrets/voice_cloning_highdoh-1.txt', 'r') as f:
+with open('./temp_secrets/voice_cloning_key_irish.txt', 'r') as f:
     voice_cloning_key = f.read()
 
 
@@ -390,7 +390,7 @@ async def speech(request: Request, user=Depends(get_verified_user)):
         + str(request.app.state.config.TTS_MODEL).encode("utf-8")
     ).hexdigest()
 
-    file_path = SPEECH_CACHE_DIR.joinpath(f"{name}.mp3")
+    file_path = SPEECH_CACHE_DIR.joinpath(f"{name}.wav")
     file_body_path = SPEECH_CACHE_DIR.joinpath(f"{name}.json")
 
     print('!!!file_path', file_path)
@@ -613,6 +613,7 @@ async def speech(request: Request, user=Depends(get_verified_user)):
 
 
 def transcribe(request: Request, file_path):
+    # TODO: is there a way to not transcribe the audio using file_path so we don't build up a really big volume?
     log.info(f"transcribe: {file_path}")
     filename = os.path.basename(file_path)
     file_dir = os.path.dirname(file_path)
