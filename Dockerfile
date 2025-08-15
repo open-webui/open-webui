@@ -160,6 +160,15 @@ EXPOSE 8080
 
 HEALTHCHECK CMD curl --silent --fail http://localhost:${PORT:-8080}/health | jq -ne 'input.status == true' || exit 1
 
+# Minimal, atomic permission hardening for OpenShift (arbitrary UID):
+# - Group 0 owns /app and /root
+# - Directories are group-writable and have SGID so new files inherit GID 0
+RUN set -eux; \
+    chgrp -R 0 /app /root || true; \
+    chmod -R g+rwX /app /root || true; \
+    find /app -type d -exec chmod g+s {} + || true; \
+    find /root -type d -exec chmod g+s {} + || true
+
 USER $UID:$GID
 
 ARG BUILD_HASH
