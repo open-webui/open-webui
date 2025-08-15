@@ -1331,7 +1331,7 @@ async def healthcheck():
 
 
 @app.get("/health/db")
-def healthcheck_with_db():
+async def healthcheck_with_db():
     try:
         Session.execute(text("SELECT 1;")).all()
         return {"status": True}

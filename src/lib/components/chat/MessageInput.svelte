@@ -1330,7 +1330,7 @@
 							aria-label="Disclaimer"
 						>
 							{$i18n.t(
-								'Reminder: it is your responsibility to verify the accuracy any information provided by CANChat.'
+								'Reminder: it is your responsibility to verify the accuracy of any information provided by CANChat.'
 							)}
 						</div>
 					</div>
