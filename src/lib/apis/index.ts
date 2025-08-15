@@ -168,7 +168,7 @@ type ChatCompletedForm = {
 export const chatCompleted = async (token: string, body: ChatCompletedForm) => {
 	let error = null;
 
-	const res = await fetch(`${WEBUI_BASE_URL}/api/chat/completed`, {
+	const res = await fetch(`${WEBUI_API_BASE_URL}/chats/completed`, {
 		method: 'POST',
 		headers: {
 			Accept: 'application/json',

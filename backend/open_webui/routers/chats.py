@@ -1,9 +1,9 @@
 import json
 import logging
-from typing import Optional
-
+from typing import Optional, Any
 
 from open_webui.utils.misc import get_message_list
+from open_webui.utils.chat import chat_completed
 from open_webui.socket.main import get_event_emitter
 from open_webui.models.chats import (
     ChatForm,
@@ -268,6 +268,35 @@ async def create_new_chat(form_data: ChatForm, user=Depends(get_verified_user)):
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST, detail=ERROR_MESSAGES.DEFAULT()
         )
+
+
+class ChatCompletedForm(BaseModel):
+    model: str
+    messages: list[Any]
+    chat_id: str
+    session_id: str
+    id: str
+    filter_ids: Optional[list[str]] = None
+    model_item: Optional[dict] = None
+
+
+############################
+# ChatCompleted
+############################
+
+
+@router.post("/completed", response_model=Optional[bool])
+async def on_chat_completed(
+    request: Request, form_data: ChatCompletedForm, user=Depends(get_verified_user)
+):
+    # This endpoint is called by the frontend after a chat is completed.
+    # It is used to trigger post-chat processing, like automatic memory creation.
+    # The actual chat response is handled by the streaming endpoints.
+    # This endpoint just needs to acknowledge the request and return True.
+    # The actual processing will be done in the background.
+
+    await chat_completed(request, form_data.model_dump(), user)
+    return True
 
 
 ############################

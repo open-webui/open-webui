@@ -15,9 +15,11 @@
 
 	// Addons
 	let enableMemory = false;
+	let enableAutomaticMemory = false;
 
 	onMount(async () => {
 		enableMemory = $settings?.memory ?? false;
+		enableAutomaticMemory = $settings?.automaticMemory ?? false;
 	});
 </script>
 
@@ -56,34 +58,43 @@
 			</div>
 		</div>
 
-		<div class="text-xs text-gray-600 dark:text-gray-400">
-			<div>
-				{$i18n.t(
-					"You can personalize your interactions with LLMs by adding memories through the 'Manage' button below, making them more helpful and tailored to you."
-				)}
+		{#if enableMemory}
+			<div class="text-xs text-gray-600 dark:text-gray-400 mt-3">
+				<div>
+					{$i18n.t(
+						"You can personalize your interactions with LLMs by adding memories through the 'Manage' button below, making them more helpful and tailored to you."
+					)}
+				</div>
 			</div>
 
-			<!-- <div class="mt-3">
-				To understand what LLM remembers or teach it something new, just chat with it:
+			<div class="mt-3 mb-1 ml-1">
+				<button
+					type="button"
+					class=" px-3.5 py-1.5 font-medium hover:bg-black/5 dark:hover:bg-white/5 outline outline-1 outline-gray-300 dark:outline-gray-800 rounded-3xl"
+					on:click={() => {
+						showManageModal = true;
+					}}
+				>
+					{$i18n.t('Manage')}
+				</button>
+			</div>
 
-				<div>- “Remember that I like concise responses.”</div>
-				<div>- “I just got a puppy!”</div>
-				<div>- “What do you remember about me?”</div>
-				<div>- “Where did we leave off on my last project?”</div>
-			</div> -->
-		</div>
+			<div class="flex items-center justify-between mb-1 mt-3">
+				<div class="text-sm font-medium">
+					{$i18n.t('Automatic Memory Creation')}
+				</div>
 
-		<div class="mt-3 mb-1 ml-1">
-			<button
-				type="button"
-				class=" px-3.5 py-1.5 font-medium hover:bg-black/5 dark:hover:bg-white/5 outline outline-1 outline-gray-300 dark:outline-gray-800 rounded-3xl"
-				on:click={() => {
-					showManageModal = true;
-				}}
-			>
-				{$i18n.t('Manage')}
-			</button>
-		</div>
+				<div class="">
+					<Switch
+						bind:state={enableAutomaticMemory}
+						on:change={async () => {
+							saveSettings({ automaticMemory: enableAutomaticMemory });
+						}}
+					/>
+				</div>
+			</div>
+		{/if}
+
 	</div>
 
 	<div class="flex justify-end text-sm font-medium">

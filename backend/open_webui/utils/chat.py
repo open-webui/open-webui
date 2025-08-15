@@ -14,7 +14,9 @@ from fastapi import Request, status
 from starlette.responses import Response, StreamingResponse, JSONResponse
 
 
-from open_webui.models.users import UserModel
+from open_webui.models.users import UserModel, Users
+from open_webui.models.memories import Memories
+from open_webui.retrieval.vector.factory import VECTOR_DB_CLIENT
 
 from open_webui.socket.main import (
     sio,
@@ -61,6 +63,43 @@ from open_webui.env import SRC_LOG_LEVELS, GLOBAL_LOG_LEVEL, BYPASS_MODEL_ACCESS
 logging.basicConfig(stream=sys.stdout, level=GLOBAL_LOG_LEVEL)
 log = logging.getLogger(__name__)
 log.setLevel(SRC_LOG_LEVELS["MAIN"])
+
+
+async def get_memory_topics(request: Request, form_data: dict, user: Any, chat_completion_func) -> list[str]:
+    user_message = ""
+    if len(form_data["messages"]) > 0:
+        # Get the last user message
+        for message in reversed(form_data["messages"]):
+            if message['role'] == 'user':
+                user_message = message['content']
+                break
+
+    if not user_message:
+        return []
+
+    prompt = f"Extract the main topics from the following user query. Return the topics as a comma-separated list. For example, if the query is 'What is my budget for the hiking trip?', you should return 'budget, hiking trip'.\n\nUser query: '{user_message}'"
+
+    topic_extraction_payload = {
+        "model": form_data.get("model"),
+        "messages": [{"role": "user", "content": prompt}],
+        "stream": False,
+        "features": {"memory": False},  # Avoid recursion
+    }
+
+    try:
+        response = await chat_completion_func(
+            request,
+            topic_extraction_payload,
+            user,
+            bypass_filter=True,
+        )
+
+        content = response['choices'][0]['message']['content']
+        topics = [topic.strip() for topic in content.split(',')]
+        return topics
+    except Exception as e:
+        log.error(f"Error extracting memory topics: {e}")
+        return []
 
 
 async def generate_direct_chat_completion(
@@ -167,7 +206,48 @@ async def generate_chat_completion(
     form_data: dict,
     user: Any,
     bypass_filter: bool = False,
+    enable_memory_retrieval: bool = True,
 ):
+    if enable_memory_retrieval and form_data.get("features", {}).get("memory", False):
+        log.info("Memory feature enabled, retrieving relevant memories.")
+
+        topics = await get_memory_topics(
+            request, form_data, user, generate_chat_completion
+        )
+        log.info(f"Extracted topics: {topics}")
+
+        if topics:
+            all_results = []
+            embedding_function = getattr(request.app.state, "EMBEDDING_FUNCTION", None)
+
+            if embedding_function:
+                for topic in topics:
+                    try:
+                        embedding = embedding_function(topic, user=user)
+                        results = VECTOR_DB_CLIENT.search(
+                            collection_name=f"user-memory-{user.id}",
+                            vectors=[embedding],
+                            limit=3,
+                        )
+                        all_results.extend(results)
+                    except Exception as e:
+                        log.error(f"Error during memory search for topic '{topic}': {e}")
+
+            if all_results:
+                unique_memories = {item["id"]: item for item in all_results}.values()
+                sorted_memories = sorted(unique_memories, key=lambda x: x["score"], reverse=True)
+                top_memories = sorted_memories[:5]
+
+                if top_memories:
+                    memory_context = "Here are some relevant memories from our past conversations:\n"
+                    for mem in top_memories:
+                        memory_context += f"- {mem['text']}\n"
+                    
+                    if form_data["messages"] and form_data["messages"][0]["role"] == "system":
+                        form_data["messages"][0]["content"] += f"\n{memory_context}"
+                    else:
+                        form_data["messages"].insert(0, {"role": "system", "content": memory_context})
+
     log.debug(f"generate_chat_completion: {form_data}")
     if BYPASS_MODEL_ACCESS_CONTROL:
         bypass_filter = True
@@ -290,7 +370,114 @@ async def generate_chat_completion(
 chat_completion = generate_chat_completion
 
 
+async def extract_memories_from_conversation(
+    request: Request,
+    form_data: dict,
+    user: Any,
+    chat_completion_func,
+) -> list[str]:
+    # Extract user message and all subsequent assistant responses
+    conversation_history = ""
+    user_message_content = ""
+    assistant_responses = []
+
+    # Find the last user message
+    for i in range(len(form_data["messages"]) - 1, -1, -1):
+        if form_data["messages"][i]["role"] == "user":
+            user_message_content = form_data["messages"][i]["content"]
+            # Get all assistant messages that follow
+            for j in range(i + 1, len(form_data["messages"])):
+                if form_data["messages"][j]["role"] == "assistant":
+                    assistant_responses.append(form_data["messages"][j]["content"])
+            break
+
+    if not user_message_content or not assistant_responses:
+        return []
+
+    conversation_history = f"User: {user_message_content}\n"
+    for i, response in enumerate(assistant_responses):
+        conversation_history += f"Assistant {i+1}: {response}\n"
+
+    prompt = f"Analyze the following conversation and identify any key facts, user preferences, or important pieces of information that should be saved as a memory. Return the memories as a JSON array of strings. For example, if the user says 'I prefer concise responses', you should return '[\"User prefers concise responses.\"]'. If nothing new or important is mentioned, return an empty array.\n\nConversation:\n{conversation_history}"
+
+    memory_extraction_payload = {
+        "model": form_data.get("model"),
+        "messages": [{"role": "user", "content": prompt}],
+        "stream": False,
+    }
+
+    try:
+        response = await chat_completion_func(
+            request,
+            memory_extraction_payload,
+            user,
+            bypass_filter=True,
+            enable_memory_retrieval=False,  # Disable memory retrieval for this call
+        )
+
+        if isinstance(response, JSONResponse):
+            try:
+                error_content = response.body.decode("utf-8")
+                log.error(
+                    f"Error from chat completion for memory extraction: {error_content}"
+                )
+            except Exception:
+                log.error(
+                    f"Error from chat completion for memory extraction: status_code={response.status_code}"
+                )
+            return []
+
+        content = response["choices"][0]["message"]["content"]
+
+        # Find the JSON array in the response
+        start_index = content.find('[')
+        end_index = content.rfind(']')
+        if start_index != -1 and end_index != -1:
+            json_str = content[start_index:end_index+1]
+            memories = json.loads(json_str)
+            return memories
+        else:
+            return []
+    except Exception as e:
+        log.error(f"Error extracting memories from conversation: {e}")
+        return []
+
+
 async def chat_completed(request: Request, form_data: dict, user: Any):
+    # Automatic memory creation
+    user_with_settings = Users.get_user_by_id(user.id)
+    if (
+        user_with_settings
+        and user_with_settings.settings
+        and user_with_settings.settings.ui.get("automaticMemory", False)
+    ):
+        log.info("Automatic memory creation enabled.")
+        memories = await extract_memories_from_conversation(
+            request, form_data, user, chat_completion
+        )
+        if memories:
+            log.info(f"Adding {len(memories)} new memories.")
+            embedding_function = getattr(request.app.state, "EMBEDDING_FUNCTION", None)
+            for memory_content in memories:
+                new_memory = Memories.insert_new_memory(user.id, memory_content)
+                if new_memory and embedding_function:
+                    try:
+                        VECTOR_DB_CLIENT.upsert(
+                            collection_name=f"user-memory-{user.id}",
+                            items=[
+                                {
+                                    "id": new_memory.id,
+                                    "text": new_memory.content,
+                                    "vector": embedding_function(
+                                        new_memory.content, user=user
+                                    ),
+                                    "metadata": {"created_at": new_memory.created_at},
+                                }
+                            ],
+                        )
+                    except Exception as e:
+                        log.error(f"Error upserting new memory to vector DB: {e}")
+
     if not request.app.state.MODELS:
         await get_all_models(request, user=user)
 
