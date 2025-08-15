@@ -49,7 +49,7 @@ from open_webui.utils.task import (
     tools_function_calling_generation_template,
 )
 
-from open_webui.grounding.web_search_utils import web_search_grounder
+from open_webui.grounding.wiki_search_utils import wiki_search_grounder
 from open_webui.utils.misc import (
     get_message_list,
     add_or_update_system_message,
@@ -666,12 +666,12 @@ async def chat_web_search_handler(
     return form_data
 
 
-async def chat_web_grounding_handler(
+async def chat_wiki_grounding_handler(
     request: Request,
     form_data: dict,
     extra_params: dict,
     user,
-    web_grounding_mode: str = "auto",
+    wiki_grounding_mode: str = "auto",
 ):
     """
     Wikipedia Knowledge Grounding Handler
@@ -680,7 +680,7 @@ async def chat_web_grounding_handler(
     Handles both English and French queries with intelligent content analysis.
 
     Args:
-        web_grounding_mode: Controls grounding behavior:
+        wiki_grounding_mode: Controls grounding behavior:
             - "off": Disabled (should not reach this handler)
             - "auto": Use intelligent filtering to determine if grounding is needed
             - "always": Always apply grounding regardless of query type
@@ -690,7 +690,7 @@ async def chat_web_grounding_handler(
     """
     __event_emitter__ = extra_params["__event_emitter__"]
 
-    log.info("🔍 Web grounding handler called")
+    log.info("🔍 Wiki grounding handler called")
 
     # Check admin configuration only (user session state already verified)
     if not request.app.state.config.ENABLE_WIKIPEDIA_GROUNDING:
@@ -715,21 +715,21 @@ async def chat_web_grounding_handler(
         return form_data
 
     log.info(
-        f"🔍 Processing user message for grounding (mode: {web_grounding_mode}): {user_message}"
+        f"🔍 Processing user message for grounding (mode: {wiki_grounding_mode}): {user_message}"
     )
 
     try:
         # Handle different grounding modes
-        if web_grounding_mode == "always":
+        if wiki_grounding_mode == "always":
             # Always mode: force grounding without intelligent filtering
             log.info("🔍 Always mode: forcing grounding without filtering")
-            grounding_data = await web_search_grounder.ground_query_always(
+            grounding_data = await wiki_search_grounder.ground_query_always(
                 user_message, request, user
             )
         else:
             # Auto mode: use intelligent filtering to determine if grounding is needed
             log.info("🔍 Auto mode: using intelligent filtering")
-            grounding_data = await web_search_grounder.ground_query(
+            grounding_data = await wiki_search_grounder.ground_query(
                 user_message, request, user
             )
 
@@ -740,7 +740,7 @@ async def chat_web_grounding_handler(
                 {
                     "type": "status",
                     "data": {
-                        "action": "web_grounding",
+                        "action": "wiki_grounding",
                         "description": "Gathering current factual information",
                         "done": False,
                     },
@@ -748,7 +748,7 @@ async def chat_web_grounding_handler(
             )
 
             # Format the grounding context
-            grounding_context = web_search_grounder.format_grounding_context(
+            grounding_context = wiki_search_grounder.format_grounding_context(
                 grounding_data
             )
             log.info(f"🔍 Generated grounding context length: {len(grounding_context)}")
@@ -779,7 +779,7 @@ async def chat_web_grounding_handler(
                 {
                     "type": "status",
                     "data": {
-                        "action": "web_grounding",
+                        "action": "wiki_grounding",
                         "description": "Enhanced with current information",
                         "count": len(grounding_data["grounding_data"]),
                         "done": True,
@@ -788,7 +788,7 @@ async def chat_web_grounding_handler(
             )
 
     except Exception as e:
-        log.error(f"Error in web grounding handler: {e}")
+        log.error(f"Error in wiki grounding handler: {e}")
         # Don't emit error status as this shouldn't break the chat flow
         pass
 
@@ -1060,11 +1060,11 @@ async def process_chat_payload(request, form_data, metadata, user, model):
                 request, form_data, extra_params, user
             )
 
-        if "web_grounding" in features and features["web_grounding"]:
-            # Pass web grounding mode to handler
-            web_grounding_mode = features.get("web_grounding_mode", "auto")
-            form_data = await chat_web_grounding_handler(
-                request, form_data, extra_params, user, web_grounding_mode
+        if "wiki_grounding" in features and features["wiki_grounding"]:
+            # Pass wiki grounding mode to handler
+            wiki_grounding_mode = features.get("wiki_grounding_mode", "auto")
+            form_data = await chat_wiki_grounding_handler(
+                request, form_data, extra_params, user, wiki_grounding_mode
             )
 
         if "image_generation" in features and features["image_generation"]:

@@ -610,7 +610,7 @@
 												})}
 											</div>
 										</div>
-									{:else if status?.action === 'web_grounding'}
+									{:else if status?.action === 'wiki_grounding'}
 										<div class="flex flex-col justify-center -space-y-0.5">
 											<div
 												class="{status?.done === false

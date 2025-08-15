@@ -37,33 +37,33 @@
 	class="flex flex-col h-full justify-between space-y-3 text-sm"
 	on:submit|preventDefault={submitHandler}
 	role="form"
-	aria-label={$i18n.t('Web Grounding Configuration')}
+	aria-label={$i18n.t('Wiki Grounding Configuration')}
 >
 	<div class="space-y-3 overflow-y-scroll scrollbar-hidden h-full">
 		<div>
-			<div class=" mb-1 text-sm font-medium text-gray-900 dark:text-gray-100">
-				{$i18n.t('Web Grounding')}
+			<div class=" mb-1 text-sm font-medium">
+				{$i18n.t('Wiki Grounding')}
 			</div>
 
 			<div
 				class="flex w-full justify-between items-center"
 				role="group"
-				aria-labelledby="web-grounding-label"
+				aria-labelledby="wiki-grounding-label"
 			>
 				<div
-					id="web-grounding-label"
+					id="wiki-grounding-label"
 					class=" self-center text-xs font-medium text-gray-800 dark:text-gray-200"
 				>
-					{$i18n.t('Enable Web Grounding')}
+					{$i18n.t('Enable Wiki Grounding')}
 				</div>
 
 				<Switch
 					bind:state={wikipediaGroundingEnabled}
-					aria-describedby="web-grounding-description"
-					aria-labelledby="web-grounding-label"
+					aria-describedby="wiki-grounding-description"
+					aria-labelledby="wiki-grounding-label"
 				/>
 			</div>
-			<div id="web-grounding-description" class="text-xs text-gray-600 dark:text-gray-400 mt-1">
+			<div id="wiki-grounding-description" class="text-xs text-gray-600 dark:text-gray-400 mt-1">
 				{$i18n.t(
 					'Automatically enhance responses with current, factual information. Works for both English and French queries.'
 				)}
@@ -107,8 +107,8 @@
 			type="submit"
 			disabled={loading}
 			aria-label={loading
-				? $i18n.t('Saving Web Grounding settings...')
-				: $i18n.t('Save Web Grounding settings')}
+				? $i18n.t('Saving Wiki Grounding settings...')
+				: $i18n.t('Save Wiki Grounding settings')}
 		>
 			{$i18n.t('Save')}
 

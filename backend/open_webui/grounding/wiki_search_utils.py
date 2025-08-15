@@ -24,7 +24,7 @@ except ImportError:
     TRANSLATION_AVAILABLE = False
 
 
-class WebSearchGrounder:
+class WikiSearchGrounder:
     """Pure txtai-wikipedia implementation"""
 
     def __init__(self):
@@ -448,14 +448,4 @@ class WebSearchGrounder:
 
 
 # Global instance
-web_search_grounder = WebSearchGrounder()
-
-
-async def search_web(query: str, request=None, user=None) -> Optional[Dict]:
-    """Main entry point"""
-    return await web_search_grounder.ground_query(query, request, user)
-
-
-async def web_search(query: str, request=None, user=None) -> Optional[Dict]:
-    """Legacy support"""
-    return await search_web(query, request, user)
+wiki_search_grounder = WikiSearchGrounder()

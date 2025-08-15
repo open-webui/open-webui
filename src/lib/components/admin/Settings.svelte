@@ -239,7 +239,7 @@
 					/>
 				</svg>
 			</div>
-			<div class=" self-center">{$i18n.t('Web Grounding')}</div>
+			<div class=" self-center">{$i18n.t('Wiki Grounding')}</div>
 		</button>
 
 		<button

@@ -115,8 +115,8 @@
 	let selectedToolIds: string[] = [];
 	let imageGenerationEnabled = false;
 	let webSearchEnabled = false;
-	let webGroundingEnabled = false;
-	let webGroundingMode = 'off'; // 'off', 'auto', 'always'
+	let wikiGroundingEnabled = false;
+	let wikiGroundingMode = 'off'; // 'off', 'auto', 'always'
 
 	let chat = null;
 	let tags = [];
@@ -150,8 +150,8 @@
 			files = storedInput?.files || [];
 			selectedToolIds = storedInput?.selectedToolIds || [];
 			webSearchEnabled = storedInput?.webSearchEnabled || false;
-			webGroundingEnabled = storedInput?.webGroundingEnabled || false;
-			webGroundingMode = storedInput?.webGroundingMode || 'off';
+			wikiGroundingEnabled = storedInput?.wikiGroundingEnabled || false;
+			wikiGroundingMode = storedInput?.wikiGroundingMode || 'off';
 			imageGenerationEnabled = storedInput?.imageGenerationEnabled || false;
 
 			loaded = false;
@@ -406,7 +406,7 @@
 					files = input.files;
 					selectedToolIds = input.selectedToolIds;
 					webSearchEnabled = input.webSearchEnabled;
-					webGroundingEnabled = input.webGroundingEnabled || false;
+					wikiGroundingEnabled = input.wikiGroundingEnabled || false;
 					imageGenerationEnabled = input.imageGenerationEnabled;
 				}
 			} catch (e) {
@@ -414,7 +414,7 @@
 				files = [];
 				selectedToolIds = [];
 				webSearchEnabled = false;
-				webGroundingEnabled = false;
+				wikiGroundingEnabled = false;
 				imageGenerationEnabled = false;
 			}
 		}
@@ -1604,8 +1604,8 @@
 				features: {
 					image_generation: imageGenerationEnabled,
 					web_search: webSearchEnabled,
-					web_grounding: webGroundingEnabled,
-					web_grounding_mode: webGroundingMode
+					wiki_grounding: wikiGroundingEnabled,
+					wiki_grounding_mode: wikiGroundingMode
 				},
 
 				session_id: $socket?.id,
@@ -1991,8 +1991,8 @@
 								bind:selectedToolIds
 								bind:imageGenerationEnabled
 								bind:webSearchEnabled
-								bind:webGroundingEnabled
-								bind:webGroundingMode
+								bind:wikiGroundingEnabled
+								bind:wikiGroundingMode
 								bind:atSelectedModel
 								{stopResponse}
 								{createMessagePair}
@@ -2043,8 +2043,8 @@
 								bind:selectedToolIds
 								bind:imageGenerationEnabled
 								bind:webSearchEnabled
-								bind:webGroundingEnabled
-								bind:webGroundingMode
+								bind:wikiGroundingEnabled
+								bind:wikiGroundingMode
 								bind:atSelectedModel
 								{stopResponse}
 								{createMessagePair}

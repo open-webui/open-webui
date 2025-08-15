@@ -40,23 +40,25 @@
 	export let selectedToolIds: string[] = [];
 
 	export let webSearchEnabled: boolean;
-	export let webGroundingEnabled: boolean;
-	export let webGroundingMode: string = 'off'; // 'off', 'auto', 'always'
+	export let wikiGroundingEnabled: boolean;
+	export let wikiGroundingMode: string = 'off'; // 'off', 'auto', 'always'
 	export let imageGenerationEnabled: boolean;
 
 	export let onClose: Function;
 
 	// Reactive statement for tooltip content
 	$: tooltipContent =
-		webGroundingMode === 'off'
-			? $i18n.t('Off Mode: No web information added to responses')
-			: webGroundingMode === 'auto'
+		wikiGroundingMode === 'off'
+			? $i18n.t('Off Mode: No wiki information added to responses')
+			: wikiGroundingMode === 'auto'
 				? $i18n.t('Auto Mode: Smart enhancement for English/French queries')
-				: webGroundingMode === 'always'
-					? $i18n.t('Always Mode: Enhance every response with web information')
+				: wikiGroundingMode === 'always'
+					? $i18n.t('Always Mode: Enhance every response with wiki information')
 					: '';
 
 	let tools = {};
+	let wikiGroundingTooltip;
+	let wikiGroundingButton;
 	let show = false;
 
 	let showImageGeneration = false;
@@ -71,11 +73,11 @@
 		$config?.features?.enable_web_search &&
 		($user.role === 'admin' || $user?.permissions?.features?.web_search);
 
-	let showWebGrounding = false;
+	let showWikiGrounding = false;
 
-	$: showWebGrounding =
-		$config?.features?.enable_web_grounding &&
-		($user.role === 'admin' || $user?.permissions?.features?.web_grounding);
+	$: showWikiGrounding =
+		$config?.features?.enable_wiki_grounding &&
+		($user.role === 'admin' || $user?.permissions?.features?.wiki_grounding);
 
 	$: if (show) {
 		init();
@@ -97,6 +99,18 @@
 			return a;
 		}, {});
 	};
+
+	// Function to update tooltip content while keeping it visible
+	const updateTooltipContent = () => {
+		if (wikiGroundingTooltip && wikiGroundingTooltip._tippy) {
+			wikiGroundingTooltip._tippy.setContent(tooltipContent);
+		}
+	};
+
+	// Watch for tooltip content changes and update immediately
+	$: if (tooltipContent && wikiGroundingTooltip) {
+		updateTooltipContent();
+	}
 </script>
 
 <Dropdown
@@ -244,81 +258,97 @@
 				</button>
 			{/if}
 
-			{#if showWebGrounding}
-				<button
-					class="flex w-full justify-between gap-2 items-center px-3 py-2 text-sm font-medium cursor-pointer rounded-xl"
-					on:click={() => {
-						// Cycle through: off -> auto -> always -> off
-						if (webGroundingMode === 'off') {
-							webGroundingMode = 'auto';
-							webGroundingEnabled = true;
-						} else if (webGroundingMode === 'auto') {
-							webGroundingMode = 'always';
-							webGroundingEnabled = true;
-						} else {
-							webGroundingMode = 'off';
-							webGroundingEnabled = false;
+			{#if showWikiGrounding}
+				<Tooltip
+					bind:this={wikiGroundingTooltip}
+					content={tooltipContent}
+					placement="right"
+					className="w-full"
+					tippyOptions={{
+						placement: 'right',
+						offset: [0, 0],
+						flip: false,
+						hideOnClick: false,
+						trigger: 'mouseenter',
+						getReferenceClientRect: () => {
+							const menu = document.querySelector('[data-melt-dropdown-menu][data-state="open"]');
+							if (menu && wikiGroundingButton) {
+								const menuRect = menu.getBoundingClientRect();
+								const buttonRect = wikiGroundingButton.getBoundingClientRect();
+								return {
+									width: 0,
+									height: buttonRect.height,
+									top: buttonRect.top,
+									bottom: buttonRect.bottom,
+									left: menuRect.right,
+									right: menuRect.right
+								};
+							}
+							return null;
 						}
 					}}
 				>
-					<div class="flex-1 flex items-center gap-3">
-						<div class="flex items-center justify-center">
-							<BookOpen class="w-5 h-5" />
-						</div>
-						<div class="flex flex-col items-start">
+					<button
+						bind:this={wikiGroundingButton}
+						class="flex w-full justify-between gap-2 items-center px-3 py-2 text-sm font-medium cursor-pointer rounded-xl"
+						on:click={() => {
+							// Cycle through: off -> auto -> always -> off
+							if (wikiGroundingMode === 'off') {
+								wikiGroundingMode = 'auto';
+								wikiGroundingEnabled = true;
+							} else if (wikiGroundingMode === 'auto') {
+								wikiGroundingMode = 'always';
+								wikiGroundingEnabled = true;
+							} else {
+								wikiGroundingMode = 'off';
+								wikiGroundingEnabled = false;
+							}
+						}}
+					>
+						<div class="flex-1 flex items-center gap-2">
+							<BookOpen />
 							<div class="line-clamp-1">
-								{$i18n.t('Web Grounding')}
-								{#if webGroundingMode !== 'off'}
+								{$i18n.t('Wiki Grounding')}
+								{#if wikiGroundingMode !== 'off'}
 									<span class="opacity-60">
-										{#if webGroundingMode === 'auto'}
+										{#if wikiGroundingMode === 'auto'}
 											({$i18n.t('Auto')})
-										{:else if webGroundingMode === 'always'}
+										{:else if wikiGroundingMode === 'always'}
 											({$i18n.t('Always')})
 										{/if}
 									</span>
 								{/if}
 							</div>
-							<Tooltip content={tooltipContent} placement="bottom" class="w-full">
-								<div class="text-xs opacity-60 line-clamp-1 cursor-help">
-									{#if webGroundingMode === 'off'}
-										{$i18n.t('Off Mode: No web information added to responses')}
-									{:else if webGroundingMode === 'auto'}
-										{$i18n.t('Auto Mode: Smart enhancement for English/French queries')}
-									{:else if webGroundingMode === 'always'}
-										{$i18n.t('Always Mode: Enhance every response with web information')}
-									{/if}
-								</div>
-							</Tooltip>
 						</div>
-					</div>
 
-					<div class="flex items-center">
-						{#key webGroundingMode}
-							{#if webGroundingMode === 'off'}
-								<div
-									class="w-4 h-4 rounded-full bg-gray-400 dark:bg-gray-500 border-2 border-gray-300 dark:border-gray-600"
-								></div>
-							{:else if webGroundingMode === 'auto'}
-								<div
-									class="w-4 h-4 rounded-full bg-blue-500 border-2 border-blue-300 shadow-sm"
-								></div>
-							{:else if webGroundingMode === 'always'}
-								<div
-									class="w-4 h-4 rounded-full bg-green-500 border-2 border-green-300 shadow-sm"
-								></div>
-							{:else}
-								<!-- Fallback for any unexpected states -->
-								<div
-									class="w-4 h-4 rounded-full bg-red-500 border-2 border-red-300 shadow-sm"
-									title="Debug: {webGroundingMode}"
-								></div>
-							{/if}
-						{/key}
-					</div>
-				</button>
+						<div class="flex items-center">
+							{#key wikiGroundingMode}
+								{#if wikiGroundingMode === 'off'}
+									<div
+										class="w-4 h-4 rounded-full bg-gray-400 dark:bg-gray-500 border-2 border-gray-300 dark:border-gray-600"
+									></div>
+								{:else if wikiGroundingMode === 'auto'}
+									<div
+										class="w-4 h-4 rounded-full bg-blue-500 border-2 border-blue-300 shadow-sm"
+									></div>
+								{:else if wikiGroundingMode === 'always'}
+									<div
+										class="w-4 h-4 rounded-full bg-green-500 border-2 border-green-300 shadow-sm"
+									></div>
+								{:else}
+									<!-- Fallback for any unexpected states -->
+									<div
+										class="w-4 h-4 rounded-full bg-red-500 border-2 border-red-300 shadow-sm"
+										title="Debug: {wikiGroundingMode}"
+									></div>
+								{/if}
+							{/key}
+						</div>
+					</button>
+				</Tooltip>
 			{/if}
 
-			{#if showImageGeneration || showWebSearch || showWebGrounding}
+			{#if showImageGeneration || showWebSearch || showWikiGrounding}
 				<hr class="border-black/5 dark:border-white/5 my-1" />
 			{/if}
 

@@ -76,8 +76,8 @@
 
 	export let imageGenerationEnabled = false;
 	export let webSearchEnabled = false;
-	export let webGroundingEnabled = false;
-	export let webGroundingMode = 'off'; // 'off', 'auto', 'always'
+	export let wikiGroundingEnabled = false;
+	export let wikiGroundingMode = 'off'; // 'off', 'auto', 'always'
 
 	$: onChange({
 		prompt,
@@ -85,8 +85,8 @@
 		selectedToolIds,
 		imageGenerationEnabled,
 		webSearchEnabled,
-		webGroundingEnabled,
-		webGroundingMode
+		wikiGroundingEnabled,
+		wikiGroundingMode
 	});
 
 	let loaded = false;
@@ -383,7 +383,7 @@
 				</div>
 
 				<div class="w-full relative">
-					{#if atSelectedModel !== undefined || selectedToolIds.length > 0 || webSearchEnabled || webGroundingEnabled || imageGenerationEnabled}
+					{#if atSelectedModel !== undefined || selectedToolIds.length > 0 || webSearchEnabled || wikiGroundingEnabled || imageGenerationEnabled}
 						<div
 							class="px-3 pb-0.5 pt-1.5 text-left w-full flex flex-col absolute bottom-0 left-0 right-0 bg-gradient-to-t from-white dark:from-gray-900 z-10"
 						>
@@ -451,17 +451,17 @@
 								</div>
 							{/if}
 
-							{#if webGroundingEnabled}
+							{#if wikiGroundingEnabled}
 								<div class="flex items-center justify-between w-full">
 									<div class="flex items-center gap-2.5 text-sm dark:text-gray-500">
 										<div class="pl-1">
 											<span class="relative flex size-2">
-												{#if webGroundingMode === 'auto'}
+												{#if wikiGroundingMode === 'auto'}
 													<span
 														class="animate-ping absolute inline-flex h-full w-full rounded-full bg-blue-400 opacity-75"
 													/>
 													<span class="relative inline-flex rounded-full size-2 bg-blue-500" />
-												{:else if webGroundingMode === 'always'}
+												{:else if wikiGroundingMode === 'always'}
 													<span
 														class="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"
 													/>
@@ -474,18 +474,45 @@
 												{/if}
 											</span>
 										</div>
-										<div class=" ">
-											{$i18n.t('Web Grounding')}
-											{#if webGroundingMode !== 'off'}
-												<span class="opacity-60">
-													{#if webGroundingMode === 'auto'}
-														({$i18n.t('Auto')})
-													{:else if webGroundingMode === 'always'}
-														({$i18n.t('Always')})
-													{/if}
-												</span>
-											{/if}
-										</div>
+										<Tooltip
+											content={wikiGroundingMode === 'auto'
+												? $i18n.t('Smart Wikipedia context when relevant')
+												: $i18n.t('Wikipedia context on every query')}
+											placement="right"
+											tippyOptions={{
+												placement: 'right',
+												offset: [-4, 10],
+												arrow: false,
+												theme: 'dark',
+												maxWidth: 'none',
+												hideOnClick: false,
+												trigger: 'mouseenter focus',
+												interactive: false,
+												animation: 'fade',
+												duration: [200, 150],
+												onCreate: (instance) => {
+													if (instance.popper) {
+														instance.popper.style.fontSize = '12px';
+														instance.popper.style.padding = '4px 8px';
+														instance.popper.style.borderRadius = '4px';
+														instance.popper.style.whiteSpace = 'nowrap';
+													}
+												}
+											}}
+										>
+											<div class=" ">
+												{$i18n.t('Wiki Grounding')}
+												{#if wikiGroundingMode !== 'off'}
+													<span class="opacity-60">
+														{#if wikiGroundingMode === 'auto'}
+															({$i18n.t('Auto')})
+														{:else if wikiGroundingMode === 'always'}
+															({$i18n.t('Always')})
+														{/if}
+													</span>
+												{/if}
+											</div>
+										</Tooltip>
 									</div>
 								</div>
 							{/if}
@@ -698,8 +725,8 @@
 										<InputMenu
 											bind:imageGenerationEnabled
 											bind:webSearchEnabled
-											bind:webGroundingEnabled
-											bind:webGroundingMode
+											bind:wikiGroundingEnabled
+											bind:wikiGroundingMode
 											bind:selectedToolIds
 											{screenCaptureHandler}
 											uploadFilesHandler={() => {
@@ -895,7 +922,7 @@
 														atSelectedModel = undefined;
 														selectedToolIds = [];
 														webSearchEnabled = false;
-														webGroundingEnabled = false;
+														wikiGroundingEnabled = false;
 														imageGenerationEnabled = false;
 													}
 												}}
@@ -1079,7 +1106,7 @@
 													atSelectedModel = undefined;
 													selectedToolIds = [];
 													webSearchEnabled = false;
-													webGroundingEnabled = false;
+													wikiGroundingEnabled = false;
 													imageGenerationEnabled = false;
 												}
 											}}
