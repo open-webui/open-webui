@@ -18,10 +18,10 @@ from open_webui.constants import ERROR_MESSAGES
 ####################################
 
 # Use .resolve() to get the canonical path, removing any '..' or '.' components
-_this_file_path_resolved = Path(__file__).resolve()
+ENV_FILE_PATH = Path(__file__).resolve()
 
 # OPEN_WEBUI_DIR should be the directory where env.py resides (open_webui/)
-OPEN_WEBUI_DIR = _this_file_path_resolved.parent
+OPEN_WEBUI_DIR = ENV_FILE_PATH.parent
 
 # BACKEND_DIR is the parent of OPEN_WEBUI_DIR (backend/)
 BACKEND_DIR = OPEN_WEBUI_DIR.parent
