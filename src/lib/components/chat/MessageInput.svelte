@@ -97,6 +97,7 @@
 	export let toolServers = [];
 
 	export let selectedToolIds = [];
+	export let selectedToolServerSpecs = [];
 	export let selectedFilterIds = [];
 
 	export let imageGenerationEnabled = false;
@@ -119,6 +120,7 @@
 				};
 			}),
 		selectedToolIds,
+		selectedToolServerSpecs,
 		selectedFilterIds,
 		imageGenerationEnabled,
 		webSearchEnabled,
@@ -430,8 +432,24 @@
 		.map((id) => ($models.find((model) => model.id === id) || {})?.filters ?? [])
 		.reduce((acc, filters) => acc.filter((f1) => filters.some((f2) => f2.id === f1.id)));
 
+	// Filter selectedToolServerSpecs to only count those from enabled (available) servers
+	let activeToolServerSpecs = [];
+	$: {
+		const availableSpecs = new Set();
+		toolServers.forEach(server => {
+			if (!server.specs) return;
+			
+			server.specs.forEach(spec => {
+				availableSpecs.add(`${server.url}:${spec.name}`);
+			});
+		});
+		activeToolServerSpecs = selectedToolServerSpecs.filter(specId => 
+			availableSpecs.has(specId)
+		);
+	}
+
 	let showToolsButton = false;
-	$: showToolsButton = toolServers.length + selectedToolIds.length > 0;
+	$: showToolsButton = selectedToolIds.length + activeToolServerSpecs.length > 0 || toolServers.length > 0;
 
 	let showWebSearchButton = false;
 	$: showWebSearchButton =
@@ -1580,6 +1598,7 @@
 									<div class="ml-1 self-end flex items-center flex-1 max-w-[80%]">
 										<InputMenu
 											bind:selectedToolIds
+											bind:selectedToolServerSpecs
 											selectedModels={atSelectedModel ? [atSelectedModel.id] : selectedModels}
 											{fileUploadCapableModels}
 											{screenCaptureHandler}
@@ -1654,8 +1673,8 @@
 											<div class="flex gap-1 items-center overflow-x-auto scrollbar-none flex-1">
 												{#if showToolsButton}
 													<Tooltip
-														content={$i18n.t('{{COUNT}} Available Tools', {
-															COUNT: toolServers.length + selectedToolIds.length
+														content={$i18n.t('{{COUNT}} Selected Tools', {
+															COUNT: selectedToolIds.length + activeToolServerSpecs.length
 														})}
 													>
 														<button
@@ -1669,7 +1688,7 @@
 															<Wrench className="size-4" strokeWidth="1.75" />
 
 															<span class="text-sm font-medium text-gray-600 dark:text-gray-300">
-																{toolServers.length + selectedToolIds.length}
+																{selectedToolIds.length + activeToolServerSpecs.length}
 															</span>
 														</button>
 													</Tooltip>

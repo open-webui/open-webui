@@ -3,7 +3,7 @@
 	import { flyAndScale } from '$lib/utils/transitions';
 	import { getContext, onMount, tick } from 'svelte';
 
-	import { config, user, tools as _tools, mobile } from '$lib/stores';
+	import { config, user, tools as _tools, mobile, toolServers as _toolServers } from '$lib/stores';
 	import { createPicker } from '$lib/utils/google-drive-picker';
 
 	import { getTools } from '$lib/apis/tools';
@@ -21,6 +21,7 @@
 	const i18n = getContext('i18n');
 
 	export let selectedToolIds: string[] = [];
+	export let selectedToolServerSpecs: string[] = [];
 
 	export let selectedModels: string[] = [];
 	export let fileUploadCapableModels: string[] = [];
@@ -52,14 +53,30 @@
 			await _tools.set(await getTools(localStorage.token));
 		}
 
+		// Add regular tools
 		tools = $_tools.reduce((a, tool, i, arr) => {
 			a[tool.id] = {
 				name: tool.name,
 				description: tool.meta.description,
-				enabled: selectedToolIds.includes(tool.id)
+				enabled: selectedToolIds.includes(tool.id),
+				isToolServer: false
 			};
 			return a;
 		}, {});
+
+		// Add tool server specs
+		$_toolServers.forEach(server => {
+			server.specs?.forEach(spec => {
+				const specId = `${server.url}:${spec.name}`;
+				tools[specId] = {
+					name: spec.name,
+					description: spec.description,
+					enabled: selectedToolServerSpecs.includes(specId),
+					isToolServer: true,
+					serverUrl: server.url
+				};
+			});
+		});
 	};
 
 	const detectMobile = () => {
@@ -136,10 +153,27 @@
 									on:change={async (e) => {
 										const state = e.detail;
 										await tick();
-										if (state) {
+										
+										const isToolServer = tools[toolId].isToolServer;
+										
+										// Update tool server specs
+										if (isToolServer && state) {
+											selectedToolServerSpecs = [...selectedToolServerSpecs, toolId];
+											return;
+										}
+										if (isToolServer && !state) {
+											selectedToolServerSpecs = selectedToolServerSpecs.filter((id) => id !== toolId);
+											return;
+										}
+										
+										// Update regular tools
+										if (!isToolServer && state) {
 											selectedToolIds = [...selectedToolIds, toolId];
-										} else {
+											return;
+										}
+										if (!isToolServer && !state) {
 											selectedToolIds = selectedToolIds.filter((id) => id !== toolId);
+											return;
 										}
 									}}
 								/>

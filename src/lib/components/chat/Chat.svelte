@@ -123,6 +123,7 @@
 	$: selectedModelIds = atSelectedModel !== undefined ? [atSelectedModel.id] : selectedModels;
 
 	let selectedToolIds = [];
+	let selectedToolServerSpecs = [];
 	let selectedFilterIds = [];
 	let imageGenerationEnabled = false;
 	let webSearchEnabled = false;
@@ -161,6 +162,7 @@
 
 		files = [];
 		selectedToolIds = [];
+		selectedToolServerSpecs = [];
 		selectedFilterIds = [];
 		webSearchEnabled = false;
 		imageGenerationEnabled = false;
@@ -184,6 +186,7 @@
 						messageInput?.setText(input.prompt);
 						files = input.files;
 						selectedToolIds = input.selectedToolIds;
+						selectedToolServerSpecs = input.selectedToolServerSpecs || [];
 						selectedFilterIds = input.selectedFilterIds;
 						webSearchEnabled = input.webSearchEnabled;
 						imageGenerationEnabled = input.imageGenerationEnabled;
@@ -236,6 +239,7 @@
 		console.debug('resetInput');
 		setToolIds();
 
+		selectedToolServerSpecs = [];
 		selectedFilterIds = [];
 		webSearchEnabled = false;
 		imageGenerationEnabled = false;
@@ -498,6 +502,7 @@
 					messageInput?.setText(input.prompt);
 					files = input.files;
 					selectedToolIds = input.selectedToolIds;
+					selectedToolServerSpecs = input.selectedToolServerSpecs || [];
 					selectedFilterIds = input.selectedFilterIds;
 					webSearchEnabled = input.webSearchEnabled;
 					imageGenerationEnabled = input.imageGenerationEnabled;
@@ -913,6 +918,16 @@
 
 			if (chatContent) {
 				console.log(chatContent);
+				
+				// Load tool selections from chat data
+				if (chatContent.data) {
+					if (chatContent.data.selectedToolIds) {
+						selectedToolIds = chatContent.data.selectedToolIds;
+					}
+					if (chatContent.data.selectedToolServerSpecs) {
+						selectedToolServerSpecs = chatContent.data.selectedToolServerSpecs;
+					}
+				}
 
 				selectedModels =
 					(chatContent?.models ?? undefined) !== undefined
@@ -1029,7 +1044,11 @@
 					messages: messages,
 					history: history,
 					params: params,
-					files: chatFiles
+					files: chatFiles,
+					data: {
+						selectedToolIds: selectedToolIds,
+						selectedToolServerSpecs: selectedToolServerSpecs
+					}
 				});
 
 				currentChatPage.set(1);
@@ -1084,7 +1103,11 @@
 					messages: messages,
 					history: history,
 					params: params,
-					files: chatFiles
+					files: chatFiles,
+					data: {
+						selectedToolIds: selectedToolIds,
+						selectedToolServerSpecs: selectedToolServerSpecs
+					}
 				});
 
 				currentChatPage.set(1);
@@ -1382,6 +1405,18 @@
 	//////////////////////////
 	// Chat functions
 	//////////////////////////
+
+	const filterToolServersBySelectedSpecs = (toolServers, selectedSpecs) => {
+		return toolServers.map(server => {
+			const enabledSpecs = server.specs.filter(spec => 
+				selectedSpecs.includes(`${server.url}:${spec.name}`)
+			);
+			return {
+				...server,
+				specs: enabledSpecs
+			};
+		}).filter(server => server.specs.length > 0);
+	};
 
 	const submitPrompt = async (userPrompt, { _raw = false } = {}) => {
 		console.log('submitPrompt', userPrompt, $chatId);
@@ -1721,7 +1756,7 @@
 
 				filter_ids: selectedFilterIds.length > 0 ? selectedFilterIds : undefined,
 				tool_ids: selectedToolIds.length > 0 ? selectedToolIds : undefined,
-				tool_servers: $toolServers,
+				tool_servers: filterToolServersBySelectedSpecs($toolServers, selectedToolServerSpecs),
 
 				features: {
 					image_generation:
@@ -2055,7 +2090,11 @@
 					history: history,
 					messages: createMessagesList(history, history.currentId),
 					tags: [],
-					timestamp: Date.now()
+					timestamp: Date.now(),
+					data: {
+						selectedToolIds: selectedToolIds,
+						selectedToolServerSpecs: selectedToolServerSpecs
+					}
 				},
 				$selectedFolder?.id
 			);
@@ -2088,7 +2127,11 @@
 					history: history,
 					messages: createMessagesList(history, history.currentId),
 					params: params,
-					files: chatFiles
+					files: chatFiles,
+					data: {
+						selectedToolIds: selectedToolIds,
+						selectedToolServerSpecs: selectedToolServerSpecs
+					}
 				});
 				currentChatPage.set(1);
 				await chats.set(await getChatList(localStorage.token, $currentChatPage));
@@ -2246,6 +2289,7 @@
 									bind:prompt
 									bind:autoScroll
 									bind:selectedToolIds
+									bind:selectedToolServerSpecs
 									bind:selectedFilterIds
 									bind:imageGenerationEnabled
 									bind:codeInterpreterEnabled
@@ -2301,6 +2345,7 @@
 									bind:prompt
 									bind:autoScroll
 									bind:selectedToolIds
+									bind:selectedToolServerSpecs
 									bind:selectedFilterIds
 									bind:imageGenerationEnabled
 									bind:codeInterpreterEnabled
