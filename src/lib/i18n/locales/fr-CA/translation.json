@@ -1293,6 +1293,8 @@
 	"Wiki Grounding": "Ancrage Wiki",
 	"Wikipedia context on every query": "Contexte Wikipédia à chaque requête",
 	"Wikipedia Grounding": "Ancrage Wikipedia",
+	"Wikipedia Sources": "Sources Wikipedia",
+	"French equivalent not found": "Équivalent français introuvable",
 	"Won": "Gagné",
 	"Works together with top-k. A higher value (e.g., 0.95) will lead to more diverse text, while a lower value (e.g., 0.5) will generate more focused and conservative text. (Default: 0.9)": "Fonctionne de pair avec top-k. Une valeur plus élevée (par exemple, 0,95) entraînera un texte plus diversifié, tandis qu'une valeur plus basse (par exemple, 0,5) générera un texte plus concentré et conservateur. (Par défaut : 0,9)",
 	"Workspace": "Espace de travail",

@@ -1,6 +1,8 @@
 import time
 import logging
 import sys
+import requests
+import re
 
 import asyncio
 from typing import Optional
@@ -74,6 +76,83 @@ from open_webui.constants import TASKS
 logging.basicConfig(stream=sys.stdout, level=GLOBAL_LOG_LEVEL)
 log = logging.getLogger(__name__)
 log.setLevel(SRC_LOG_LEVELS["MAIN"])
+
+
+def fetch_wikipedia_title_and_excerpt(url: str) -> tuple[str, str]:
+    """
+    Fetch the actual title and excerpt from a Wikipedia URL.
+    Returns tuple of (title, excerpt) or falls back to original if fetch fails.
+    """
+    try:
+        # Extract the page title from the URL
+        if "/wiki/" not in url:
+            return "", ""
+
+        page_title = url.split("/wiki/")[-1]
+
+        # Determine language from URL
+        if "fr.wikipedia.org" in url:
+            api_url = f"https://fr.wikipedia.org/api/rest_v1/page/summary/{page_title}"
+        elif "en.wikipedia.org" in url:
+            api_url = f"https://en.wikipedia.org/api/rest_v1/page/summary/{page_title}"
+        else:
+            return "", ""
+
+        # Make request with timeout
+        response = requests.get(api_url, timeout=3)
+        if response.status_code == 200:
+            data = response.json()
+            title = data.get("title", "")
+            extract = data.get("extract", "")
+            return title, extract
+        else:
+            log.warning(
+                f"Failed to fetch Wikipedia summary for {url}: {response.status_code}"
+            )
+            return "", ""
+
+    except Exception as e:
+        log.warning(f"Error fetching Wikipedia summary for {url}: {e}")
+        return "", ""
+
+
+def detect_query_language(query: str) -> str:
+    """
+    Detect if a query is in French or English using the existing WikiSearchUtils.
+    Returns 'fr' for French, 'en' for English.
+    """
+    if not query:
+        return "en"
+
+    # Use the existing wiki search grounder's language detection
+    try:
+        return wiki_search_grounder._detect_language(query)
+    except Exception as e:
+        log.warning(f"Language detection failed, defaulting to English: {e}")
+        return "en"
+
+
+def convert_wikipedia_url_for_language(
+    url: str, target_language: str
+) -> tuple[str, str]:
+    """
+    Convert Wikipedia URL to target language if possible.
+    Returns tuple of (converted_url, actual_language)
+    """
+    if not url or "wikipedia.org" not in url:
+        return url, "en"
+
+    # Convert English Wikipedia URL to French if target is French
+    if target_language == "fr" and "en.wikipedia.org" in url:
+        french_url = url.replace("en.wikipedia.org", "fr.wikipedia.org")
+        return french_url, "fr"
+
+    # If URL is already French, keep it
+    if "fr.wikipedia.org" in url:
+        return url, "fr"
+
+    # For all other cases (including target_language == "en"), return as English
+    return url, "en"
 
 
 async def chat_completion_filter_functions_handler(request, body, model, extra_params):
@@ -786,7 +865,73 @@ async def chat_wiki_grounding_handler(
                 form_data["messages"].insert(0, grounding_system_message)
                 log.info("🔍 Created new system message with grounding")
 
-            # Emit completion status with source count for frontend to handle translation
+            # Detect user query language and convert Wikipedia URLs accordingly
+            user_query = (
+                form_data["messages"][-1]["content"] if form_data["messages"] else ""
+            )
+            detected_language = detect_query_language(user_query)
+
+            # Emit completion status with source count for frontend
+            sources_summary = []
+            for source in grounding_data["grounding_data"]:
+                original_url = source.get("url", "")
+                converted_url, source_language = convert_wikipedia_url_for_language(
+                    original_url, detected_language
+                )
+
+                # If we converted to a French URL, try to fetch the French title and content
+                if source_language == "fr" and converted_url != original_url:
+                    french_title, french_excerpt = fetch_wikipedia_title_and_excerpt(
+                        converted_url
+                    )
+                    if french_title and french_excerpt:
+                        # Successfully fetched French content
+                        title = french_title
+                        content = (
+                            french_excerpt[:200] + "..."
+                            if len(french_excerpt) > 200
+                            else french_excerpt
+                        )
+                        final_url = converted_url
+                        final_language = "fr"
+                        fallback_reason = None
+                    else:
+                        # French page doesn't exist or failed to fetch - revert to English
+                        title = source.get("title", "")
+                        content = (
+                            source.get("content", "")[:200] + "..."
+                            if len(source.get("content", "")) > 200
+                            else source.get("content", "")
+                        )
+                        final_url = original_url  # Revert to English URL
+                        final_language = "en"  # Show English indicator
+                        fallback_reason = "french_equivalent_not_found"
+                else:
+                    # Use original English content
+                    title = source.get("title", "")
+                    content = (
+                        source.get("content", "")[:200] + "..."
+                        if len(source.get("content", "")) > 200
+                        else source.get("content", "")
+                    )
+                    final_url = converted_url
+                    final_language = source_language
+                    fallback_reason = None
+
+                source_data = {
+                    "title": title,
+                    "content": content,
+                    "url": final_url,
+                    "score": source.get("score", 0),
+                    "language": final_language,
+                }
+
+                # Add fallback reason if applicable
+                if fallback_reason:
+                    source_data["fallback_reason"] = fallback_reason
+
+                sources_summary.append(source_data)
+
             await __event_emitter__(
                 {
                     "type": "status",
@@ -794,6 +939,7 @@ async def chat_wiki_grounding_handler(
                         "action": "wiki_grounding",
                         "description": "Enhanced with current information",
                         "count": len(grounding_data["grounding_data"]),
+                        "sources": sources_summary,
                         "done": True,
                     },
                 }

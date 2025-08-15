@@ -30,6 +30,7 @@
 	import RateComment from './RateComment.svelte';
 	import Spinner from '$lib/components/common/Spinner.svelte';
 	import WebSearchResults from './ResponseMessage/WebSearchResults.svelte';
+	import WikipediaGroundingSources from './ResponseMessage/WikipediaGroundingSources.svelte';
 	import Sparkles from '$lib/components/icons/Sparkles.svelte';
 	import Error from './Error.svelte';
 	import Citations from './Citations.svelte';
@@ -45,6 +46,7 @@
 	import LightBlub from '$lib/components/icons/LightBlub.svelte';
 	import IssueModal from '$lib/components/common/IssueModal.svelte';
 	import SuggestionModal from '$lib/components/common/SuggestionModal.svelte';
+	import Modal from '$lib/components/common/Modal.svelte';
 
 	interface MessageType {
 		id: string;
@@ -59,14 +61,52 @@
 			description: string;
 			urls?: string[];
 			query?: string;
+			sources?: Array<{
+				title: string;
+				content?: string;
+				url: string;
+				score: number;
+				language?: string;
+				fallback_reason?: string;
+			}>;
+			count?: number;
+			hidden?: boolean;
 		}[];
-		status?: {
-			done: boolean;
-			action: string;
-			description: string;
-			urls?: string[];
-			query?: string;
-		};
+		status?:
+			| {
+					done: boolean;
+					action: string;
+					description: string;
+					urls?: string[];
+					query?: string;
+					sources?: Array<{
+						title: string;
+						content?: string;
+						url: string;
+						score: number;
+						language?: string;
+						fallback_reason?: string;
+					}>;
+					count?: number;
+					hidden?: boolean;
+			  }
+			| Array<{
+					done: boolean;
+					action: string;
+					description: string;
+					urls?: string[];
+					query?: string;
+					sources?: Array<{
+						title: string;
+						content?: string;
+						url: string;
+						score: number;
+						language?: string;
+						fallback_reason?: string;
+					}>;
+					count?: number;
+					hidden?: boolean;
+			  }>;
 		done: boolean;
 		error?: boolean | { content: string };
 		sources?: string[];
@@ -131,6 +171,8 @@
 
 	let model = null;
 	$: model = $models.find((m) => m.id === message.model);
+
+	// Capture Wikipedia sources from status events
 
 	let edit = false;
 	let editedContent = '';
@@ -611,23 +653,45 @@
 											</div>
 										</div>
 									{:else if status?.action === 'wiki_grounding'}
-										<div class="flex flex-col justify-center -space-y-0.5">
-											<div
-												class="{status?.done === false
-													? 'shimmer'
-													: ''} text-gray-500 dark:text-gray-500 text-base line-clamp-1 text-wrap"
-											>
-												{#if status?.description === 'Gathering current factual information'}
-													{$i18n.t('Gathering current factual information')}
-												{:else if status?.description === 'Enhanced with current information'}
-													{$i18n.t('Enhanced with {{COUNT}} sources', {
-														COUNT: status?.count || 0
-													})}
-												{:else}
-													{$i18n.t(status?.description)}
-												{/if}
+										{#if status?.sources && status?.sources.length > 0}
+											<WikipediaGroundingSources sources={status.sources}>
+												<div class="flex flex-col justify-center -space-y-0.5">
+													<div
+														class="{status?.done === false
+															? 'shimmer'
+															: ''} text-gray-500 dark:text-gray-500 text-base line-clamp-1 text-wrap"
+													>
+														{#if status?.description === 'Gathering current factual information'}
+															{$i18n.t('Gathering current factual information')}
+														{:else if status?.description === 'Enhanced with current information'}
+															{$i18n.t('Enhanced with {{COUNT}} sources', {
+																COUNT: status?.count || status?.sources?.length || 0
+															})}
+														{:else}
+															{$i18n.t(status?.description)}
+														{/if}
+													</div>
+												</div>
+											</WikipediaGroundingSources>
+										{:else}
+											<div class="flex flex-col justify-center -space-y-0.5">
+												<div
+													class="{status?.done === false
+														? 'shimmer'
+														: ''} text-gray-500 dark:text-gray-500 text-base line-clamp-1 text-wrap"
+												>
+													{#if status?.description === 'Gathering current factual information'}
+														{$i18n.t('Gathering current factual information')}
+													{:else if status?.description === 'Enhanced with current information'}
+														{$i18n.t('Enhanced with {{COUNT}} sources', {
+															COUNT: status?.count || 0
+														})}
+													{:else}
+														{$i18n.t(status?.description)}
+													{/if}
+												</div>
 											</div>
-										</div>
+										{/if}
 									{:else}
 										<div class="flex flex-col justify-center -space-y-0.5">
 											<div
