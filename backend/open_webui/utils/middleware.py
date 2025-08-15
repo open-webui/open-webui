@@ -77,6 +77,13 @@ from open_webui.utils.misc import (
     convert_logit_bias_input_to_json,
 )
 from open_webui.utils.tools import get_tools
+# MCP imports (optional)
+try:
+    from open_webui.models.tools import Tools as ToolsModel
+    from open_webui.utils.mcp.manager import MCPClientManager
+except Exception:
+    MCPClientManager = None  # type: ignore
+
 from open_webui.utils.plugin import load_function_module_by_id
 from open_webui.utils.filter import (
     get_sorted_filter_ids,
@@ -123,6 +130,94 @@ async def chat_completion_tools_handler(
         else:
             content = response["choices"][0]["message"]["content"]
         return content
+
+    # Inject MCP callables for MCP tools in the set
+    if MCPClientManager:
+        try:
+            for tname, t in list(tools.items()):
+                tool_id = t.get("tool_id", "")
+                if tool_id.startswith("mcp:"):
+                    # tool_id format: mcp:{server_id}:{tool_name}
+                    parts = tool_id.split(":", 2)
+                    if len(parts) == 3:
+                        server_id, mcp_tool_name = parts[1], parts[2]
+                        client = MCPClientManager().get_client(server_id)
+                        if client:
+                            async def make_callable(server_id=server_id, mcp_tool_name=mcp_tool_name):
+                                async def _call(**kwargs):
+                                    try:
+                                        c = MCPClientManager().get_client(server_id)
+                                        if not c:
+                                            return "MCP server unavailable"
+                                        return await c.call_tool(mcp_tool_name, kwargs)
+                                    except Exception as e:
+                                        # Handle MCP authentication errors with elicitation
+                                        try:
+                                            from open_webui.utils.mcp.exceptions import MCPAuthenticationError
+                                            if isinstance(e, MCPAuthenticationError):
+                                                log.info(f"MCP authentication required for {e.server_name} tool {e.tool_name}")
+                                                
+                                                # Create elicitation request following Open WebUI pattern
+                                                if e.challenge_type == "oauth":
+                                                    title = f"OAuth Authentication Required - {e.server_name}"
+                                                    message = f"The MCP tool '{e.tool_name}' requires OAuth authentication. Complete authentication, then ask the LLM to retry the tool or click the regenerate button."
+                                                    elicitation_type = "oauth_authentication"
+                                                    can_auto_auth = True
+                                                else:
+                                                    title = f"Authentication Required - {e.server_name}"
+                                                    message = f"The MCP tool '{e.tool_name}' requires manual authentication setup. {e.instructions or 'Please check your server configuration.'}"
+                                                    elicitation_type = "manual_authentication"
+                                                    can_auto_auth = False
+                                                
+                                                # Extract better error message
+                                                display_error = e.message
+                                                if "TaskGroup" in e.message or "ExceptionGroup" in e.message:
+                                                    if hasattr(e, 'original_exception') and e.original_exception:
+                                                        original_str = str(e.original_exception)
+                                                        if "401 Unauthorized" in original_str:
+                                                            display_error = "401 Unauthorized - Authentication required"
+                                                
+                                                elicitation_data = {
+                                                    "type": "elicitation",
+                                                    "data": {
+                                                        "title": title,
+                                                        "message": message,
+                                                        "elicitation_type": elicitation_type,
+                                                        "challenge_type": e.challenge_type,
+                                                        "can_auto_auth": can_auto_auth,
+                                                        "requires_reauth": can_auto_auth,
+                                                        "auth_url": e.auth_url,
+                                                        "instructions": e.instructions,
+                                                        "server_id": e.server_id,
+                                                        "server_name": e.server_name,
+                                                        "tool_name": e.tool_name,
+                                                        "error_message": display_error
+                                                    }
+                                                }
+                                                
+                                                # Send elicitation through event system if available
+                                                try:
+                                                    event_caller = extra_params.get("__event_call__")
+                                                    if event_caller:
+                                                        import asyncio
+                                                        asyncio.create_task(event_caller(elicitation_data))
+                                                        log.info(f"Sent MCP authentication elicitation for {e.server_name} tool {e.tool_name}")
+                                                    else:
+                                                        log.warning("Event caller not available in tool context")
+                                                except Exception as event_error:
+                                                    log.warning(f"Could not send elicitation event: {event_error}")
+                                                
+                                                # Return pending message
+                                                return f"⏳ Authentication required for {e.server_name}. Please check the popup to authenticate and retry."
+                                        except ImportError:
+                                            pass
+                                        
+                                        # Re-raise other exceptions to be handled by middleware
+                                        raise e
+                                return _call
+                            tools[tname]["callable"] = await make_callable()
+        except Exception:
+            pass
 
     def get_tools_function_calling_payload(messages, task_model_id, content):
         user_message = get_last_user_message(messages)
@@ -238,7 +333,7 @@ async def chat_completion_tools_handler(
                         if isinstance(item, str) and item.startswith("data:"):
                             tool_result_files.append(item)
                             tool_result.remove(item)
-
+                    
                 if isinstance(tool_result, dict) or isinstance(tool_result, list):
                     tool_result = json.dumps(tool_result, indent=2)
 
@@ -2265,7 +2360,6 @@ async def process_chat_response(
                                 if isinstance(item, str) and item.startswith("data:"):
                                     tool_result_files.append(item)
                                     tool_result.remove(item)
-
                         if isinstance(tool_result, dict) or isinstance(
                             tool_result, list
                         ):

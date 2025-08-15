@@ -43,6 +43,30 @@ async def export_config(user=Depends(get_admin_user)):
 
 
 ############################
+# MCP Config
+############################
+
+
+class MCPConfigForm(BaseModel):
+    MCP_ENABLED: bool
+
+
+@router.get("/mcp", response_model=MCPConfigForm)
+async def get_mcp_config(request: Request, user=Depends(get_admin_user)):
+    return {"MCP_ENABLED": request.app.state.config.MCP_ENABLED}
+
+
+@router.post("/mcp", response_model=MCPConfigForm)
+async def set_mcp_config(
+    request: Request,
+    form_data: MCPConfigForm,
+    user=Depends(get_admin_user),
+):
+    request.app.state.config.MCP_ENABLED = form_data.MCP_ENABLED
+    return {"MCP_ENABLED": request.app.state.config.MCP_ENABLED}
+
+
+############################
 # Connections Config
 ############################
 
@@ -331,3 +355,18 @@ async def get_banners(
     user=Depends(get_verified_user),
 ):
     return request.app.state.config.BANNERS
+
+
+@router.get("/mcp_allowlist")
+async def get_mcp_allowlist(request: Request, user=Depends(get_admin_user)):
+    return {"MCP_SERVER_ALLOWLIST": request.app.state.config.MCP_SERVER_ALLOWLIST}
+
+
+class MCPAllowlistForm(BaseModel):
+    MCP_SERVER_ALLOWLIST: list[str]
+
+
+@router.post("/mcp_allowlist")
+async def set_mcp_allowlist(request: Request, form_data: MCPAllowlistForm, user=Depends(get_admin_user)):
+    request.app.state.config.MCP_SERVER_ALLOWLIST = form_data.MCP_SERVER_ALLOWLIST
+    return {"MCP_SERVER_ALLOWLIST": request.app.state.config.MCP_SERVER_ALLOWLIST}

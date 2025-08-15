@@ -123,6 +123,9 @@ from open_webui.config import (
     THREAD_POOL_SIZE,
     # Tool Server Configs
     TOOL_SERVER_CONNECTIONS,
+    # MCP configuration
+    MCP_ENABLED,
+    MCP_SERVER_ALLOWLIST,
     # Code Execution
     ENABLE_CODE_EXECUTION,
     CODE_EXECUTION_ENGINE,
@@ -646,6 +649,10 @@ app.state.OPENAI_MODELS = {}
 
 app.state.config.TOOL_SERVER_CONNECTIONS = TOOL_SERVER_CONNECTIONS
 app.state.TOOL_SERVERS = []
+
+# MCP configuration
+app.state.config.MCP_ENABLED = MCP_ENABLED
+app.state.config.MCP_SERVER_ALLOWLIST = MCP_SERVER_ALLOWLIST
 
 ########################################
 #
@@ -1223,7 +1230,17 @@ app.include_router(notes.router, prefix="/api/v1/notes", tags=["notes"])
 app.include_router(models.router, prefix="/api/v1/models", tags=["models"])
 app.include_router(knowledge.router, prefix="/api/v1/knowledge", tags=["knowledge"])
 app.include_router(prompts.router, prefix="/api/v1/prompts", tags=["prompts"])
-app.include_router(tools.router, prefix="/api/v1/tools", tags=["tools"])
+app.include_router(tools.router, prefix="/api/v1/tools", tags=["tools"])  # existing tools
+
+# MCP routers (conditional)
+if app.state.config.MCP_ENABLED:
+    try:
+        from open_webui.routers import mcp_servers as _mcp_servers
+        from open_webui.routers import mcp_oauth as _mcp_oauth
+        app.include_router(_mcp_servers.router, prefix="/api/v1/mcp-servers", tags=["mcp-servers"])  # type: ignore
+        app.include_router(_mcp_oauth.router, prefix="/api/v1/mcp-servers", tags=["mcp-oauth"])  # type: ignore
+    except Exception as _mcp_err:
+        log.warning(f"MCP enabled but routers failed to load: {_mcp_err}")
 
 app.include_router(memories.router, prefix="/api/v1/memories", tags=["memories"])
 app.include_router(folders.router, prefix="/api/v1/folders", tags=["folders"])
@@ -1647,6 +1664,7 @@ async def get_app_config(request: Request):
                     "enable_admin_chat_access": ENABLE_ADMIN_CHAT_ACCESS,
                     "enable_google_drive_integration": app.state.config.ENABLE_GOOGLE_DRIVE_INTEGRATION,
                     "enable_onedrive_integration": app.state.config.ENABLE_ONEDRIVE_INTEGRATION,
+                    "enable_mcp": app.state.config.MCP_ENABLED,
                 }
                 if user is not None
                 else {}
