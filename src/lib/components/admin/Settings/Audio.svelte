@@ -752,6 +752,7 @@
 										class="w-full rounded-lg py-2 px-4 text-sm bg-gray-50 dark:text-gray-300 dark:bg-gray-850 outline-hidden"
 										bind:value={TTS_MODEL}
 										placeholder={$i18n.t('CMU ARCTIC speaker embedding name')}
+										required
 									/>
 
 									<datalist id="model-list">
@@ -794,6 +795,7 @@
 											class="w-full rounded-lg py-2 px-4 text-sm bg-gray-50 dark:text-gray-300 dark:bg-gray-850 outline-hidden"
 											bind:value={TTS_VOICE}
 											placeholder={$i18n.t('Select a voice')}
+											required
 										/>
 
 										<datalist id="voice-list">
@@ -813,6 +815,7 @@
 											class="w-full rounded-lg py-2 px-4 text-sm bg-gray-50 dark:text-gray-300 dark:bg-gray-850 outline-hidden"
 											bind:value={TTS_MODEL}
 											placeholder={$i18n.t('Select a model')}
+											required
 										/>
 
 										<datalist id="tts-model-list">
@@ -835,6 +838,7 @@
 											class="w-full rounded-lg py-2 px-4 text-sm bg-gray-50 dark:text-gray-300 dark:bg-gray-850 outline-hidden"
 											bind:value={TTS_VOICE}
 											placeholder={$i18n.t('Select a voice')}
+											required
 										/>
 
 										<datalist id="voice-list">
@@ -854,6 +858,7 @@
 											class="w-full rounded-lg py-2 px-4 text-sm bg-gray-50 dark:text-gray-300 dark:bg-gray-850 outline-hidden"
 											bind:value={TTS_MODEL}
 											placeholder={$i18n.t('Select a model')}
+											required
 										/>
 
 										<datalist id="tts-model-list">
@@ -987,6 +992,7 @@
 											class="w-full rounded-lg py-2 px-4 text-sm bg-gray-50 dark:text-gray-300 dark:bg-gray-850 outline-hidden"
 											bind:value={TTS_VOICE}
 											placeholder={$i18n.t('Select a voice')}
+											required
 										/>
 
 										<datalist id="voice-list">
