@@ -4,8 +4,10 @@ from typing import Optional
 from open_webui.internal.db import Base, JSONField, get_db
 
 
+from open_webui.env import DATABASE_DEDUPLICATE_INTERVAL
 from open_webui.models.chats import Chats
 from open_webui.models.groups import Groups
+from open_webui.utils.misc import deduplicate
 
 
 from pydantic import BaseModel, ConfigDict
@@ -311,6 +313,7 @@ class UsersTable:
         except Exception:
             return None
 
+    @deduplicate(DATABASE_DEDUPLICATE_INTERVAL)
     def update_user_last_active_by_id(self, id: str) -> Optional[UserModel]:
         try:
             with get_db() as db:
