@@ -24,6 +24,7 @@
 		isLastActiveTab,
 		isApp,
 		appInfo,
+		tools,
 		toolServers,
 		playingNotificationSound
 	} from '$lib/stores';
@@ -33,6 +34,7 @@
 
 	import { executeToolServer, getBackendConfig } from '$lib/apis';
 	import { getSessionUser, userSignOut } from '$lib/apis/auths';
+	import { getTools as apiGetTools } from '$lib/apis/tools';
 
 	import '../tailwind.css';
 	import '../app.css';
@@ -105,6 +107,15 @@
 			console.log(`Socket ${_socket.id} disconnected due to ${reason}`);
 			if (details) {
 				console.log('Additional details:', details);
+			}
+		});
+
+		_socket.on('tools:update', async (_data) => {
+			try {
+				const updated = await apiGetTools(localStorage.token || '');
+				tools.set(updated);
+			} catch (e) {
+				console.error('failed to refresh tools list', e);
 			}
 		});
 	};

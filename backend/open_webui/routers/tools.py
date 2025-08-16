@@ -19,6 +19,7 @@ from open_webui.utils.plugin import load_tool_module_by_id, replace_imports
 from open_webui.utils.tools import get_tool_specs
 from open_webui.utils.auth import get_admin_user, get_verified_user
 from open_webui.utils.access_control import has_access, has_permission
+from open_webui.socket.main import sio
 from open_webui.utils.tools import get_tool_servers_data
 
 from open_webui.env import SRC_LOG_LEVELS
@@ -325,6 +326,18 @@ async def update_tools_by_id(
         tools = Tools.update_tool_by_id(id, updated)
 
         if tools:
+            try:
+                await sio.emit(
+                    'tools:update',
+                    {
+                        'id': id,
+                        'name': tools.name,
+                    },
+                    namespace='/',
+                    broadcast=True,
+                )
+            except Exception as e:
+                log.warning(f"Failed to emit tools:update event: {e}")
             return tools
         else:
             raise HTTPException(
