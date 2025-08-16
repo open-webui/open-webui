@@ -361,9 +361,14 @@ async def get_all_models_responses(request: Request, user: UserModel) -> list:
             prefix_id = api_config.get("prefix_id", None)
             tags = api_config.get("tags", [])
 
-            for model in (
+            model_list = (
                 response if isinstance(response, list) else response.get("data", [])
-            ):
+            )
+            if not isinstance(model_list, list):
+                # Catch non-list responses
+                model_list = []
+
+            for model in model_list:
                 if prefix_id:
                     model["id"] = (
                         f"{prefix_id}.{model.get('id', model.get('name', ''))}"
