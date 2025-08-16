@@ -48,8 +48,7 @@
 				'user.name', // Ensures Fuse looks into item.user.name
 				'user.email' // Ensures Fuse looks into item.user.email
 			],
-			threshold: 0.0 // You might want to adjust this. Lower is more strict. Default is 0.6.
-			// 0.0 is exact match.
+			threshold: 0.3
 		});
 	} else {
 		fuse = null; // Reset fuse if knowledgeBases is empty

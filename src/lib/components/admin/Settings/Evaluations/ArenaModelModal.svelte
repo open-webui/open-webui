@@ -62,7 +62,7 @@
 
 		if (!name || !id) {
 			loading = false;
-			toast.error('Name and ID are required, please fill them out');
+			toast.error($i18n.t('Name and ID are required, please fill them out'));
 			return;
 		}
 
@@ -70,7 +70,7 @@
 			if ($models.find((model) => model.name === name)) {
 				loading = false;
 				name = '';
-				toast.error('Model name already exists, please choose a different one');
+				toast.error($i18n.t('Model name already exists, please choose a different one'));
 				return;
 			}
 		}

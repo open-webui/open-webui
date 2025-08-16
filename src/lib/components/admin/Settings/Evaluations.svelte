@@ -26,7 +26,7 @@
 		});
 
 		if (evaluationConfig) {
-			toast.success('Settings saved successfully');
+			toast.success($i18n.t('Settings saved successfully!'));
 			models.set(
 				await getModels(
 					localStorage.token,

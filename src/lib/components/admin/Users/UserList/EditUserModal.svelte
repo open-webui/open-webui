@@ -4,6 +4,8 @@
 	import { createEventDispatcher } from 'svelte';
 	import { onMount, getContext } from 'svelte';
 
+	import { goto } from '$app/navigation';
+
 	import { updateUserById, getUserGroupsById } from '$lib/apis/users';
 
 	import Modal from '$lib/components/common/Modal.svelte';
@@ -127,7 +129,13 @@
 										<div class="flex flex-wrap gap-1 my-0.5 -mx-1">
 											{#each userGroups as userGroup}
 												<span class="px-2 py-0.5 rounded-full bg-gray-100 dark:bg-gray-850 text-xs">
-													{userGroup.name}
+													<a
+														href={'/admin/users/groups?id=' + userGroup.id}
+														on:click|preventDefault={() =>
+															goto('/admin/users/groups?id=' + userGroup.id)}
+													>
+														{userGroup.name}
+													</a>
 												</span>
 											{/each}
 										</div>

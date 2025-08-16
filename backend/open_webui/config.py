@@ -510,7 +510,7 @@ OAUTH_EMAIL_CLAIM = PersistentConfig(
 OAUTH_GROUPS_CLAIM = PersistentConfig(
     "OAUTH_GROUPS_CLAIM",
     "oauth.oidc.group_claim",
-    os.environ.get("OAUTH_GROUP_CLAIM", "groups"),
+    os.environ.get("OAUTH_GROUPS_CLAIM", os.environ.get("OAUTH_GROUP_CLAIM", "groups")),
 )
 
 ENABLE_OAUTH_ROLE_MANAGEMENT = PersistentConfig(

@@ -360,7 +360,7 @@ export const getToolServersData = async (i18n, servers: object[]) => {
 							: `${server?.url}${(server?.path ?? '').startsWith('/') ? '' : '/'}${server?.path}`
 					).catch((err) => {
 						toast.error(
-							i18n.t(`Failed to connect to {{URL}} OpenAPI tool server`, {
+							$i18n.t(`Failed to connect to {{URL}} OpenAPI tool server`, {
 								URL: (server?.path ?? '').includes('://')
 									? server?.path
 									: `${server?.url}${(server?.path ?? '').startsWith('/') ? '' : '/'}${server?.path}`
@@ -480,7 +480,14 @@ export const executeToolServer = async (
 			throw new Error(`HTTP error! Status: ${res.status}. Message: ${resText}`);
 		}
 
-		return await res.json();
+		let responseData;
+		try {
+			responseData = await res.json();
+		} catch (err) {
+			responseData = await res.text();
+		}
+
+		return responseData;
 	} catch (err: any) {
 		error = err.message;
 		console.error('API Request Error:', error);

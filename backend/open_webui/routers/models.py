@@ -117,7 +117,7 @@ async def get_model_by_id(id: str, user=Depends(get_verified_user)):
     model = Models.get_model_by_id(id)
     if model:
         if (
-            user.role == "admin"
+            (user.role == "admin" and ENABLE_ADMIN_WORKSPACE_CONTENT_ACCESS)
             or model.user_id == user.id
             or has_access(user.id, "read", model.access_control)
         ):

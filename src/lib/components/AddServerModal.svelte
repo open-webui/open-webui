@@ -278,8 +278,8 @@
 											class={`w-full text-sm bg-transparent pr-5 ${($settings?.highContrastMode ?? false) ? 'placeholder:text-gray-700 dark:placeholder:text-gray-100' : 'outline-hidden placeholder:text-gray-300 dark:placeholder:text-gray-700'}`}
 											bind:value={auth_type}
 										>
-											<option value="bearer">Bearer</option>
-											<option value="session">Session</option>
+											<option value="bearer">{$i18n.t('Bearer')}</option>
+											<option value="session">{$i18n.t('Session')}</option>
 										</select>
 									</div>
 

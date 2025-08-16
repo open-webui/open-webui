@@ -143,7 +143,7 @@
 
 		if (config?.comfyui?.COMFYUI_WORKFLOW) {
 			if (!validateJSON(config.comfyui.COMFYUI_WORKFLOW)) {
-				toast.error('Invalid JSON format for ComfyUI Workflow.');
+				toast.error($i18n.t('Invalid JSON format for ComfyUI Workflow.'));
 				loading = false;
 				return;
 			}
@@ -566,10 +566,10 @@
 											</div>
 										</div>
 										<div class="">
-											<Tooltip content="Input Key (e.g. text, unet_name, steps)">
+											<Tooltip content={$i18n.t('Input Key (e.g. text, unet_name, steps)')}>
 												<input
 													class="py-1 px-3 w-24 text-xs text-center bg-transparent outline-hidden border-r border-gray-50 dark:border-gray-850"
-													placeholder="Key"
+													placeholder={$i18n.t('Key')}
 													bind:value={node.key}
 													required
 												/>
@@ -578,12 +578,12 @@
 
 										<div class="w-full">
 											<Tooltip
-												content="Comma separated Node Ids (e.g. 1 or 1,2)"
+												content={$i18n.t('Comma separated Node Ids (e.g. 1 or 1,2)')}
 												placement="top-start"
 											>
 												<input
 													class="w-full py-1 px-4 text-xs bg-transparent outline-hidden"
-													placeholder="Node Ids"
+													placeholder={$i18n.t('Node Ids')}
 													bind:value={node.node_ids}
 												/>
 											</Tooltip>
@@ -650,7 +650,7 @@
 											list="model-list"
 											class="w-full rounded-lg py-2 px-4 text-sm bg-gray-50 dark:text-gray-300 dark:bg-gray-850 outline-hidden"
 											bind:value={imageGenerationConfig.MODEL}
-											placeholder="Select a model"
+											placeholder={$i18n.t('Select a model')}
 											required
 										/>
 

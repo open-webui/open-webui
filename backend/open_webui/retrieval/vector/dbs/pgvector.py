@@ -111,11 +111,35 @@ class PgvectorClient(VectorDBBase):
 
         try:
             # Ensure the pgvector extension is available
-            self.session.execute(text("CREATE EXTENSION IF NOT EXISTS vector;"))
+            # Use a conditional check to avoid permission issues on Azure PostgreSQL
+            self.session.execute(
+                text(
+                    """
+                DO $$
+                BEGIN
+                   IF NOT EXISTS (SELECT 1 FROM pg_extension WHERE extname = 'vector') THEN
+                      CREATE EXTENSION IF NOT EXISTS vector;
+                   END IF;
+                END $$;
+            """
+                )
+            )
 
             if PGVECTOR_PGCRYPTO:
                 # Ensure the pgcrypto extension is available for encryption
-                self.session.execute(text("CREATE EXTENSION IF NOT EXISTS pgcrypto;"))
+                # Use a conditional check to avoid permission issues on Azure PostgreSQL
+                self.session.execute(
+                    text(
+                        """
+                    DO $$
+                    BEGIN
+                       IF NOT EXISTS (SELECT 1 FROM pg_extension WHERE extname = 'pgcrypto') THEN
+                          CREATE EXTENSION IF NOT EXISTS pgcrypto;
+                       END IF;
+                    END $$;
+                """
+                    )
+                )
 
                 if not PGVECTOR_PGCRYPTO_KEY:
                     raise ValueError(

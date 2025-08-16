@@ -34,7 +34,7 @@
 		});
 
 		if (res) {
-			toast.success('Channel updated successfully');
+			toast.success($i18n.t('Channel updated successfully'));
 		}
 
 		onUpdate();
