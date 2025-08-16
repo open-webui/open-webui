@@ -529,8 +529,9 @@
 		if (!details) {
 			showRateComment = true;
 
-			if (!updatedMessage.annotation?.tags) {
-				// attempt to generate tags
+			const isImageOnlyMessage = (updatedMessage?.files ?? []).length > 0 && updatedMessage.files!.every((f) => f.type === 'image') && ((updatedMessage.content ?? '').trim().length === 0);
+
+			if (!isImageOnlyMessage && !updatedMessage.annotation?.tags) {
 				const tags = await generateTags(localStorage.token, message.model, messages, chatId).catch(
 					(error) => {
 						console.error(error);
