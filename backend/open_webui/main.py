@@ -1324,8 +1324,8 @@ async def get_models(
         # Sort models by order list priority, with fallback for those not in the list
         models.sort(
             key=lambda model: (
-                model_order_dict.get(model.get("id"), float("inf")),
-                model.get("name"),
+                model_order_dict.get(model.get("id", ""), float("inf")),
+                (model.get("name", "") or ""),
             )
         )
 
