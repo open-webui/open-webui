@@ -42,7 +42,7 @@ router = APIRouter()
 
 @router.get("/", response_model=list[ChatTitleIdResponse])
 @router.get("/list", response_model=list[ChatTitleIdResponse])
-async def get_session_user_chat_list(
+def get_session_user_chat_list(
     user=Depends(get_verified_user), page: Optional[int] = None
 ):
     try:

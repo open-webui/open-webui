@@ -14,6 +14,7 @@
 	import { createMessagesList } from '$lib/utils';
 	import { user } from '$lib/stores';
 	import Messages from '../chat/Messages.svelte';
+	import { goto } from '$app/navigation';
 	dayjs.extend(calendar);
 
 	export let show = false;
@@ -29,8 +30,7 @@
 
 	let searchDebounceTimeout;
 
-	let selectedIdx = 0;
-
+	let selectedIdx = null;
 	let selectedChat = null;
 
 	let selectedModels = [''];
@@ -42,7 +42,12 @@
 	}
 
 	const loadChatPreview = async (selectedIdx) => {
-		if (!chatList || chatList.length === 0 || chatList[selectedIdx] === undefined) {
+		if (
+			!chatList ||
+			chatList.length === 0 ||
+			selectedIdx === null ||
+			chatList[selectedIdx] === undefined
+		) {
 			selectedChat = null;
 			messages = null;
 			history = null;
@@ -217,6 +222,10 @@
 				on:input={searchHandler}
 				placeholder={$i18n.t('Search')}
 				showClearButton={true}
+				onFocus={() => {
+					selectedIdx = null;
+					messages = null;
+				}}
 				onKeydown={(e) => {
 					console.log('e', e);
 
@@ -295,7 +304,8 @@
 							on:mouseenter={() => {
 								selectedIdx = idx;
 							}}
-							on:click={() => {
+							on:click={async () => {
+								await goto(`/c/${chat.id}`);
 								show = false;
 								onClose();
 							}}
@@ -320,7 +330,7 @@
 								}
 							}}
 						>
-							<div class="w-full flex justify-center py-1 text-xs animate-pulse items-center gap-2">
+							<div class="w-full flex justify-center py-4 text-xs animate-pulse items-center gap-2">
 								<Spinner className=" size-4" />
 								<div class=" ">Loading...</div>
 							</div>
@@ -346,6 +356,7 @@
 					<div class="w-full h-full flex flex-col">
 						<Messages
 							className="h-full flex pt-4 pb-8 w-full"
+							chatId={`chat-preview-${selectedChat?.id ?? ''}`}
 							user={$user}
 							readOnly={true}
 							{selectedModels}

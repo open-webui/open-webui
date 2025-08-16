@@ -1783,11 +1783,24 @@
 			},
 			`${WEBUI_BASE_URL}/api`
 		).catch(async (error) => {
-			toast.error(`${error}`);
+			console.log(error);
 
+			let errorMessage = error;
+			if (error?.error?.message) {
+				errorMessage = error.error.message;
+			} else if (error?.message) {
+				errorMessage = error.message;
+			}
+
+			if (typeof errorMessage === 'object') {
+				errorMessage = $i18n.t(`Uh-oh! There was an issue with the response.`);
+			}
+
+			toast.error(`${errorMessage}`);
 			responseMessage.error = {
 				content: error
 			};
+
 			responseMessage.done = true;
 
 			history.messages[responseMessageId] = responseMessage;
@@ -2085,6 +2098,7 @@
 
 	const MAX_DRAFT_LENGTH = 5000;
 	let saveDraftTimeout = null;
+
 	const saveDraft = async (draft, chatId = null) => {
 		if (saveDraftTimeout) {
 			clearTimeout(saveDraftTimeout);
@@ -2100,6 +2114,13 @@
 		} else {
 			sessionStorage.removeItem(`chat-input${chatId ? `-${chatId}` : ''}`);
 		}
+	};
+
+	const clearDraft = async (chatId = null) => {
+		if (saveDraftTimeout) {
+			clearTimeout(saveDraftTimeout);
+		}
+		await sessionStorage.removeItem(`chat-input${chatId ? `-${chatId}` : ''}`);
 	};
 </script>
 
@@ -2208,6 +2229,7 @@
 										{mergeResponses}
 										{chatActionHandler}
 										{addMessages}
+										topPadding={true}
 										bottomPadding={files.length > 0}
 										{onSelect}
 									/>
@@ -2251,6 +2273,7 @@
 										}
 									}}
 									on:submit={async (e) => {
+										clearDraft();
 										if (e.detail || files.length > 0) {
 											await tick();
 											submitPrompt(
@@ -2303,6 +2326,7 @@
 										}
 									}}
 									on:submit={async (e) => {
+										clearDraft();
 										if (e.detail || files.length > 0) {
 											await tick();
 											submitPrompt(

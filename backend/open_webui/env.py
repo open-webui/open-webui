@@ -18,10 +18,10 @@ from open_webui.constants import ERROR_MESSAGES
 ####################################
 
 # Use .resolve() to get the canonical path, removing any '..' or '.' components
-_this_file_path_resolved = Path(__file__).resolve()
+ENV_FILE_PATH = Path(__file__).resolve()
 
 # OPEN_WEBUI_DIR should be the directory where env.py resides (open_webui/)
-OPEN_WEBUI_DIR = _this_file_path_resolved.parent
+OPEN_WEBUI_DIR = ENV_FILE_PATH.parent
 
 # BACKEND_DIR is the parent of OPEN_WEBUI_DIR (backend/)
 BACKEND_DIR = OPEN_WEBUI_DIR.parent
@@ -291,6 +291,9 @@ DB_VARS = {
 
 if all(DB_VARS.values()):
     DATABASE_URL = f"{DB_VARS['db_type']}://{DB_VARS['db_cred']}@{DB_VARS['db_host']}:{DB_VARS['db_port']}/{DB_VARS['db_name']}"
+elif DATABASE_TYPE == "sqlite+sqlcipher" and not os.environ.get("DATABASE_URL"):
+    # Handle SQLCipher with local file when DATABASE_URL wasn't explicitly set
+    DATABASE_URL = f"sqlite+sqlcipher:///{DATA_DIR}/webui.db"
 
 # Replace the postgres:// with postgresql://
 if "postgres://" in DATABASE_URL:
@@ -491,6 +494,25 @@ else:
 
 
 ####################################
+# CHAT
+####################################
+
+CHAT_RESPONSE_STREAM_DELTA_CHUNK_SIZE = os.environ.get(
+    "CHAT_RESPONSE_STREAM_DELTA_CHUNK_SIZE", "1"
+)
+
+if CHAT_RESPONSE_STREAM_DELTA_CHUNK_SIZE == "":
+    CHAT_RESPONSE_STREAM_DELTA_CHUNK_SIZE = 1
+else:
+    try:
+        CHAT_RESPONSE_STREAM_DELTA_CHUNK_SIZE = int(
+            CHAT_RESPONSE_STREAM_DELTA_CHUNK_SIZE
+        )
+    except Exception:
+        CHAT_RESPONSE_STREAM_DELTA_CHUNK_SIZE = 1
+
+
+####################################
 # WEBSOCKET SUPPORT
 ####################################
 
@@ -674,10 +696,16 @@ OTEL_EXPORTER_OTLP_INSECURE = (
     os.environ.get("OTEL_EXPORTER_OTLP_INSECURE", "False").lower() == "true"
 )
 OTEL_METRICS_EXPORTER_OTLP_INSECURE = (
-    os.environ.get("OTEL_METRICS_EXPORTER_OTLP_INSECURE", "False").lower() == "true"
+    os.environ.get(
+        "OTEL_METRICS_EXPORTER_OTLP_INSECURE", str(OTEL_EXPORTER_OTLP_INSECURE)
+    ).lower()
+    == "true"
 )
 OTEL_LOGS_EXPORTER_OTLP_INSECURE = (
-    os.environ.get("OTEL_LOGS_EXPORTER_OTLP_INSECURE", "False").lower() == "true"
+    os.environ.get(
+        "OTEL_LOGS_EXPORTER_OTLP_INSECURE", str(OTEL_EXPORTER_OTLP_INSECURE)
+    ).lower()
+    == "true"
 )
 OTEL_SERVICE_NAME = os.environ.get("OTEL_SERVICE_NAME", "open-webui")
 OTEL_RESOURCE_ATTRIBUTES = os.environ.get(

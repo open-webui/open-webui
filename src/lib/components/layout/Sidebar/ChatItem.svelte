@@ -340,9 +340,13 @@
 				disabled={generating}
 				on:keydown={chatTitleInputKeydownHandler}
 				on:blur={async (e) => {
+					// check if target is generate button
 					if (ignoreBlur) {
 						ignoreBlur = false;
 
+						if (e.relatedTarget?.id === 'generate-title-button') {
+							generateTitleHandler();
+						}
 						return;
 					}
 
@@ -447,13 +451,6 @@
 						disabled={generating}
 						on:mouseenter={() => {
 							ignoreBlur = true;
-						}}
-						on:click={(e) => {
-							e.preventDefault();
-							e.stopImmediatePropagation();
-							e.stopPropagation();
-
-							generateTitleHandler();
 						}}
 					>
 						<Sparkles strokeWidth="2" />

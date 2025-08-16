@@ -10,6 +10,7 @@
 		showSettings,
 		chatId,
 		tags,
+		folders as _folders,
 		showSidebar,
 		chatsUpdated,
 		showSearch,
@@ -86,6 +87,7 @@
 			toast.error(`${error}`);
 			return [];
 		});
+		_folders.set(folderList);
 
 		folders = {};
 
@@ -383,6 +385,11 @@
 					navElement.style['-webkit-app-region'] = 'drag';
 				}
 			}
+
+			if (!value) {
+				await initChannels();
+				await initChatList();
+			}
 		});
 
 		chats.subscribe((value) => {
@@ -527,8 +534,6 @@
 		<button
 			class="flex flex-col flex-1 cursor-[e-resize]"
 			on:click={async () => {
-				await initChannels();
-				await initChatList();
 				showSidebar.set(!$showSidebar);
 			}}
 		>

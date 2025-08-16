@@ -1,11 +1,18 @@
 <script lang="ts">
 	import { DropdownMenu } from 'bits-ui';
+	import VirtualList from '@sveltejs/svelte-virtual-list';
+
+	import { getContext } from 'svelte';
+
 	import { flyAndScale } from '$lib/utils/transitions';
+	import { WEBUI_BASE_URL } from '$lib/constants';
+
+	import Tooltip from '$lib/components/common/Tooltip.svelte';
+
 	import emojiGroups from '$lib/emoji-groups.json';
 	import emojiShortCodes from '$lib/emoji-shortcodes.json';
-	import Tooltip from '$lib/components/common/Tooltip.svelte';
-	import VirtualList from '@sveltejs/svelte-virtual-list';
-	import { WEBUI_BASE_URL } from '$lib/constants';
+
+	const i18n = getContext('i18n');
 
 	export let onClose = () => {};
 	export let onSubmit = (name) => {};
@@ -118,7 +125,7 @@
 			<input
 				type="text"
 				class="w-full text-sm bg-transparent outline-hidden"
-				placeholder="Search all emojis"
+				placeholder={$i18n.t('Search all emojis')}
 				bind:value={search}
 			/>
 		</div>

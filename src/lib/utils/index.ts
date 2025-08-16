@@ -1583,3 +1583,9 @@ export const extractContentFromFile = async (file, pdfjsLib = null) => {
 		throw new Error('Unsupported or non-text file type: ' + (file.name || type));
 	}
 };
+
+export const querystringValue = (key: string): string | null => {
+	const querystring = window.location.search;
+	const urlParams = new URLSearchParams(querystring);
+	return urlParams.get(key);
+};

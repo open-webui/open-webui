@@ -58,7 +58,7 @@
 		});
 
 		if (res) {
-			toast.success('Channel deleted successfully');
+			toast.success($i18n.t('Channel deleted successfully'));
 			onUpdate();
 
 			if ($page.url.pathname === `/channels/${channel.id}`) {

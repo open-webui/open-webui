@@ -48,6 +48,8 @@
 
 	export let triggerScroll: Function;
 
+	export let topPadding = false;
+
 	const dispatch = createEventDispatcher();
 
 	let currentMessageId;
@@ -321,6 +323,7 @@
 									}}
 									{addMessages}
 									{readOnly}
+									{topPadding}
 								/>
 							{/if}
 						{/key}
@@ -376,6 +379,7 @@
 										}}
 										{addMessages}
 										{readOnly}
+										{topPadding}
 									/>
 								{/if}
 							{/key}

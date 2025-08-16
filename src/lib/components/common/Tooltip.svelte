@@ -24,9 +24,23 @@
 		if (contentElement && contentElement.innerHTML.trim() !== '') {
 			tooltipContentSource = contentElement;
 		}
-		// Fallback to content prop
-		else if (content) {
-			tooltipContentSource = DOMPurify.sanitize(content);
+
+		if (tooltipInstance) {
+			tooltipInstance.setContent(tooltipContent);
+		} else {
+			if (content) {
+				tooltipInstance = tippy(tooltipElement, {
+					content: tooltipContent,
+					placement: placement,
+					allowHTML: allowHTML,
+					touch: touch,
+					...(theme !== '' ? { theme } : { theme: 'dark' }),
+					arrow: false,
+					offset: offset,
+					...(interactive ? { interactive: true } : {}),
+					...tippyOptions
+				});
+			}
 		}
 
 		// Destroy old instance if it exists

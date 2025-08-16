@@ -230,7 +230,7 @@
 		// Function to update the UI with the progress
 		const updateProgress = () => {
 			const percentage = (uploadedFiles / totalFiles) * 100;
-			toast.info(`Upload Progress: ${uploadedFiles}/${totalFiles} (${percentage.toFixed(2)}%)`);
+			toast.info($i18n.t("Upload Progress: {{uploadedFiles}}/{{totalFiles}} ({{percentage}}%)", { uploadedFiles: uploadedFiles, totalFiles: totalFiles, percentage: percentage.toFixed(2) }));
 		};
 
 		// Recursive function to count all files excluding hidden ones
@@ -314,7 +314,8 @@
 					const updateProgress = () => {
 						const percentage = (uploadedFiles / totalFiles) * 100;
 						toast.info(
-							`Upload Progress: ${uploadedFiles}/${totalFiles} (${percentage.toFixed(2)}%)`
+							$i18n.t("Upload Progress: {{uploadedFiles}}/{{totalFiles}} ({{percentage}}%)", 
+							{ uploadedFiles: uploadedFiles, totalFiles: totalFiles, percentage: percentage.toFixed(2) })
 						);
 					};
 
@@ -354,9 +355,9 @@
 	// Error handler
 	const handleUploadError = (error) => {
 		if (error.name === 'AbortError') {
-			toast.info('Directory selection was cancelled');
+			toast.info($i18n.t('Directory selection was cancelled'));
 		} else {
-			toast.error('Error accessing directory');
+			toast.error($i18n.t('Error accessing directory'));
 			console.error('Directory access error:', error);
 		}
 	};
@@ -692,7 +693,7 @@
 								type="text"
 								class="text-left w-full font-semibold text-2xl font-primary bg-transparent outline-hidden"
 								bind:value={knowledge.name}
-								placeholder="Knowledge Name"
+								placeholder={$i18n.t('Knowledge Name')}
 								on:input={() => {
 									changeDebounceHandler();
 								}}
@@ -721,7 +722,7 @@
 							type="text"
 							class="text-left text-xs w-full text-gray-500 bg-transparent outline-hidden"
 							bind:value={knowledge.description}
-							placeholder="Knowledge Description"
+							placeholder={$i18n.t('Knowledge Description')}
 							on:input={() => {
 								changeDebounceHandler();
 							}}

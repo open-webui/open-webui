@@ -328,6 +328,7 @@ from open_webui.config import (
     ENABLE_MESSAGE_RATING,
     ENABLE_USER_WEBHOOKS,
     ENABLE_EVALUATION_ARENA_MODELS,
+    ENABLE_ADMIN_WORKSPACE_CONTENT_ACCESS,
     USER_PERMISSIONS,
     DEFAULT_USER_ROLE,
     PENDING_USER_OVERLAY_CONTENT,
@@ -376,6 +377,7 @@ from open_webui.config import (
     RESPONSE_WATERMARK,
     # Admin
     ENABLE_ADMIN_CHAT_ACCESS,
+    ENABLE_ADMIN_WORKSPACE_CONTENT_ACCESS,
     ENABLE_ADMIN_EXPORT,
     # Tasks
     TASK_MODEL,
@@ -1263,6 +1265,7 @@ if audit_level != AuditLevel.NONE:
 
 
 @app.get("/api/models")
+@app.get("/api/v1/models")  # Experimental: Compatibility with OpenAI API
 async def get_models(
     request: Request, refresh: bool = False, user=Depends(get_verified_user)
 ):
@@ -1282,8 +1285,12 @@ async def get_models(
 
             model_info = Models.get_model_by_id(model["id"])
             if model_info:
-                if user.id == model_info.user_id or has_access(
-                    user.id, type="read", access_control=model_info.access_control
+                if (
+                    (user.role == "admin" and ENABLE_ADMIN_WORKSPACE_CONTENT_ACCESS)
+                    or user.id == model_info.user_id
+                    or has_access(
+                        user.id, type="read", access_control=model_info.access_control
+                    )
                 ):
                     filtered_models.append(model)
 
@@ -1318,11 +1325,17 @@ async def get_models(
         model_order_dict = {model_id: i for i, model_id in enumerate(model_order_list)}
         # Sort models by order list priority, with fallback for those not in the list
         models.sort(
-            key=lambda x: (model_order_dict.get(x["id"], float("inf")), x["name"])
+            key=lambda model: (
+                model_order_dict.get(model.get("id"), float("inf")),
+                model.get("name"),
+            )
         )
 
     # Filter out models that the user does not have access to
-    if user.role == "user" and not BYPASS_MODEL_ACCESS_CONTROL:
+    if (
+        user.role == "user"
+        or (user.role == "admin" and not ENABLE_ADMIN_WORKSPACE_CONTENT_ACCESS)
+    ) and not BYPASS_MODEL_ACCESS_CONTROL:
         models = get_filtered_models(models, user)
 
     log.debug(
@@ -1343,6 +1356,7 @@ async def get_base_models(request: Request, user=Depends(get_admin_user)):
 
 
 @app.post("/api/embeddings")
+@app.post("/api/v1/embeddings")  # Experimental: Compatibility with OpenAI API
 async def embeddings(
     request: Request, form_data: dict, user=Depends(get_verified_user)
 ):
@@ -1369,6 +1383,7 @@ async def embeddings(
 
 
 @app.post("/api/chat/completions")
+@app.post("/api/v1/chat/completions")  # Experimental: Compatibility with OpenAI API
 async def chat_completion(
     request: Request,
     form_data: dict,
@@ -1377,13 +1392,13 @@ async def chat_completion(
     if not request.app.state.MODELS:
         await get_all_models(request, user=user)
 
+    model_id = form_data.get("model", None)
     model_item = form_data.pop("model_item", {})
     tasks = form_data.pop("background_tasks", None)
 
     metadata = {}
     try:
         if not model_item.get("direct", False):
-            model_id = form_data.get("model", None)
             if model_id not in request.app.state.MODELS:
                 raise Exception("Model not found")
 
@@ -1391,7 +1406,9 @@ async def chat_completion(
             model_info = Models.get_model_by_id(model_id)
 
             # Check if user has access to the model
-            if not BYPASS_MODEL_ACCESS_CONTROL and user.role == "user":
+            if not BYPASS_MODEL_ACCESS_CONTROL and (
+                user.role != "admin" or not ENABLE_ADMIN_WORKSPACE_CONTENT_ACCESS
+            ):
                 try:
                     check_model_access(user, model)
                 except Exception as e:
@@ -1402,6 +1419,19 @@ async def chat_completion(
 
             request.state.direct = True
             request.state.model = model
+
+        model_info_params = (
+            model_info.params.model_dump() if model_info and model_info.params else {}
+        )
+
+        # Chat Params
+        stream_delta_chunk_size = form_data.get("params", {}).get(
+            "stream_delta_chunk_size"
+        )
+
+        # Model Params
+        if model_info_params.get("stream_delta_chunk_size"):
+            stream_delta_chunk_size = model_info_params.get("stream_delta_chunk_size")
 
         metadata = {
             "user_id": user.id,
@@ -1416,25 +1446,27 @@ async def chat_completion(
             "variables": form_data.get("variables", {}),
             "model": model,
             "direct": model_item.get("direct", False),
-            **(
-                {"function_calling": "native"}
-                if form_data.get("params", {}).get("function_calling") == "native"
-                or (
-                    model_info
-                    and model_info.params.model_dump().get("function_calling")
-                    == "native"
-                )
-                else {}
-            ),
+            "params": {
+                "stream_delta_chunk_size": stream_delta_chunk_size,
+                "function_calling": (
+                    "native"
+                    if (
+                        form_data.get("params", {}).get("function_calling") == "native"
+                        or model_info_params.get("function_calling") == "native"
+                    )
+                    else "default"
+                ),
+            },
         }
 
         if metadata.get("chat_id") and (user and user.role != "admin"):
-            chat = Chats.get_chat_by_id_and_user_id(metadata["chat_id"], user.id)
-            if chat is None:
-                raise HTTPException(
-                    status_code=status.HTTP_404_NOT_FOUND,
-                    detail=ERROR_MESSAGES.DEFAULT(),
-                )
+            if metadata["chat_id"] != "local":
+                chat = Chats.get_chat_by_id_and_user_id(metadata["chat_id"], user.id)
+                if chat is None:
+                    raise HTTPException(
+                        status_code=status.HTTP_404_NOT_FOUND,
+                        detail=ERROR_MESSAGES.DEFAULT(),
+                    )
 
         request.state.metadata = metadata
         form_data["metadata"] = metadata
@@ -1446,13 +1478,16 @@ async def chat_completion(
         log.debug(f"Error processing chat payload: {e}")
         if metadata.get("chat_id") and metadata.get("message_id"):
             # Update the chat message with the error
-            Chats.upsert_message_to_chat_by_id_and_message_id(
-                metadata["chat_id"],
-                metadata["message_id"],
-                {
-                    "error": {"content": str(e)},
-                },
-            )
+            try:
+                Chats.upsert_message_to_chat_by_id_and_message_id(
+                    metadata["chat_id"],
+                    metadata["message_id"],
+                    {
+                        "error": {"content": str(e)},
+                    },
+                )
+            except:
+                pass
 
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
@@ -1462,13 +1497,16 @@ async def chat_completion(
     try:
         response = await chat_completion_handler(request, form_data, user)
         if metadata.get("chat_id") and metadata.get("message_id"):
-            Chats.upsert_message_to_chat_by_id_and_message_id(
-                metadata["chat_id"],
-                metadata["message_id"],
-                {
-                    "model": model_id,
-                },
-            )
+            try:
+                Chats.upsert_message_to_chat_by_id_and_message_id(
+                    metadata["chat_id"],
+                    metadata["message_id"],
+                    {
+                        "model": model_id,
+                    },
+                )
+            except:
+                pass
 
         return await process_chat_response(
             request, response, form_data, user, metadata, model, events, tasks
@@ -1477,13 +1515,16 @@ async def chat_completion(
         log.debug(f"Error in chat completion: {e}")
         if metadata.get("chat_id") and metadata.get("message_id"):
             # Update the chat message with the error
-            Chats.upsert_message_to_chat_by_id_and_message_id(
-                metadata["chat_id"],
-                metadata["message_id"],
-                {
-                    "error": {"content": str(e)},
-                },
-            )
+            try:
+                Chats.upsert_message_to_chat_by_id_and_message_id(
+                    metadata["chat_id"],
+                    metadata["message_id"],
+                    {
+                        "error": {"content": str(e)},
+                    },
+                )
+            except:
+                pass
 
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
@@ -1692,6 +1733,16 @@ async def get_app_config(request: Request):
             else {
                 **(
                     {
+                        "ui": {
+                            "pending_user_overlay_title": app.state.config.PENDING_USER_OVERLAY_TITLE,
+                            "pending_user_overlay_content": app.state.config.PENDING_USER_OVERLAY_CONTENT,
+                        }
+                    }
+                    if user and user.role == "pending"
+                    else {}
+                ),
+                **(
+                    {
                         "metadata": {
                             "login_footer": app.state.LICENSE_METADATA.get(
                                 "login_footer", ""
@@ -1703,7 +1754,7 @@ async def get_app_config(request: Request):
                     }
                     if app.state.LICENSE_METADATA
                     else {}
-                )
+                ),
             }
         ),
     }

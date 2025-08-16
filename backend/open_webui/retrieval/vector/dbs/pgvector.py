@@ -111,11 +111,35 @@ class PgvectorClient(VectorDBBase):
 
         try:
             # Ensure the pgvector extension is available
-            self.session.execute(text("CREATE EXTENSION IF NOT EXISTS vector;"))
+            # Use a conditional check to avoid permission issues on Azure PostgreSQL
+            self.session.execute(
+                text(
+                    """
+                DO $$
+                BEGIN
+                   IF NOT EXISTS (SELECT 1 FROM pg_extension WHERE extname = 'vector') THEN
+                      CREATE EXTENSION IF NOT EXISTS vector;
+                   END IF;
+                END $$;
+            """
+                )
+            )
 
             if PGVECTOR_PGCRYPTO:
                 # Ensure the pgcrypto extension is available for encryption
-                self.session.execute(text("CREATE EXTENSION IF NOT EXISTS pgcrypto;"))
+                # Use a conditional check to avoid permission issues on Azure PostgreSQL
+                self.session.execute(
+                    text(
+                        """
+                    DO $$
+                    BEGIN
+                       IF NOT EXISTS (SELECT 1 FROM pg_extension WHERE extname = 'pgcrypto') THEN
+                          CREATE EXTENSION IF NOT EXISTS pgcrypto;
+                       END IF;
+                    END $$;
+                """
+                    )
+                )
 
                 if not PGVECTOR_PGCRYPTO_KEY:
                     raise ValueError(
@@ -421,10 +445,12 @@ class PgvectorClient(VectorDBBase):
                 documents[qid].append(row.text)
                 metadatas[qid].append(row.vmetadata)
 
+            self.session.rollback()  # read-only transaction
             return SearchResult(
                 ids=ids, distances=distances, documents=documents, metadatas=metadatas
             )
         except Exception as e:
+            self.session.rollback()
             log.exception(f"Error during search: {e}")
             return None
 
@@ -477,12 +503,14 @@ class PgvectorClient(VectorDBBase):
             documents = [[result.text for result in results]]
             metadatas = [[result.vmetadata for result in results]]
 
+            self.session.rollback()  # read-only transaction
             return GetResult(
                 ids=ids,
                 documents=documents,
                 metadatas=metadatas,
             )
         except Exception as e:
+            self.session.rollback()
             log.exception(f"Error during query: {e}")
             return None
 
@@ -523,8 +551,10 @@ class PgvectorClient(VectorDBBase):
                 documents = [[result.text for result in results]]
                 metadatas = [[result.vmetadata for result in results]]
 
+            self.session.rollback()  # read-only transaction
             return GetResult(ids=ids, documents=documents, metadatas=metadatas)
         except Exception as e:
+            self.session.rollback()
             log.exception(f"Error during get: {e}")
             return None
 
@@ -592,8 +622,10 @@ class PgvectorClient(VectorDBBase):
                 .first()
                 is not None
             )
+            self.session.rollback()  # read-only transaction
             return exists
         except Exception as e:
+            self.session.rollback()
             log.exception(f"Error checking collection existence: {e}")
             return False
 
