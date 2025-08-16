@@ -196,6 +196,38 @@ def create_api_key():
     return f"sk-{key}"
 
 
+# Encryption helpers expected by MCP modules
+# Uses AES-GCM with a key derived from WEBUI_SECRET_KEY. The output is base64(nonce + ciphertext).
+
+def _derive_aes_key(secret: str) -> bytes:
+    return hashlib.sha256((secret or "").encode("utf-8")).digest()
+
+
+def encrypt_data(data: str, secret_key: str | None = None) -> str:
+    try:
+        key = _derive_aes_key(secret_key or WEBUI_SECRET_KEY)
+        aesgcm = AESGCM(key)
+        nonce = os.urandom(12)
+        ciphertext = aesgcm.encrypt(nonce, data.encode("utf-8"), None)
+        return base64.b64encode(nonce + ciphertext).decode("utf-8")
+    except Exception:
+        # Fallback to returning original data if encryption fails
+        return data
+
+
+def decrypt_data(encrypted_data: str, secret_key: str | None = None) -> str:
+    try:
+        raw = base64.b64decode(encrypted_data)
+        nonce, ciphertext = raw[:12], raw[12:]
+        key = _derive_aes_key(secret_key or WEBUI_SECRET_KEY)
+        aesgcm = AESGCM(key)
+        plaintext = aesgcm.decrypt(nonce, ciphertext, None)
+        return plaintext.decode("utf-8")
+    except Exception:
+        # Return original string on failure to maintain backward compatibility
+        return encrypted_data
+
+
 def get_http_authorization_cred(auth_header: Optional[str]):
     if not auth_header:
         return None

@@ -32,6 +32,37 @@ log.setLevel(SRC_LOG_LEVELS["MAIN"])
 
 router = APIRouter()
 
+
+def filter_mcp_tools(tools: list, user_id: str | None = None) -> list:
+    """
+    Filter MCP tools from the tool list, keeping:
+    - All non-MCP tools
+    - MCP tools that are public (server.access_control is None)
+    - MCP tools that belong to the requesting user (personal)
+    """
+    filtered_tools = []
+    for tool in tools:
+        meta_dict = tool.meta.model_dump() if tool.meta else {}
+        manifest = meta_dict.get("manifest", {})
+        if manifest.get("type") == "mcp":
+            server_is_public = False
+            try:
+                if manifest.get("mcp_server_id"):
+                    from open_webui.models.mcp_servers import MCPServers
+                    server_id = manifest["mcp_server_id"]
+                    server = MCPServers.get_mcp_server_by_id(server_id)
+                    server_is_public = bool(server and server.access_control is None)
+            except Exception:
+                server_is_public = False
+
+            is_personal_for_user = user_id is not None and getattr(tool, "user_id", None) == user_id
+
+            if server_is_public or is_personal_for_user:
+                filtered_tools.append(tool)
+        else:
+            filtered_tools.append(tool)
+    return filtered_tools
+
 ############################
 # GetTools
 ############################
@@ -76,8 +107,8 @@ async def get_tools(request: Request, user=Depends(get_verified_user)):
         )
 
     if user.role == "admin" and ENABLE_ADMIN_WORKSPACE_CONTENT_ACCESS:
-        # Admin can see all tools
-        return tools
+        # Admin can see all tools; include global MCP and any personal MCP for this admin
+        return filter_mcp_tools(tools, user_id=user.id)
     else:
         tools = [
             tool
@@ -85,7 +116,8 @@ async def get_tools(request: Request, user=Depends(get_verified_user)):
             if tool.user_id == user.id
             or has_access(user.id, "read", tool.access_control)
         ]
-        return tools
+        # Include global MCP and this user's personal MCP tools
+        return filter_mcp_tools(tools, user_id=user.id)
 
 
 ############################
@@ -99,7 +131,9 @@ async def get_tool_list(user=Depends(get_verified_user)):
         tools = Tools.get_tools()
     else:
         tools = Tools.get_tools_by_user_id(user.id, "write")
-    return tools
+    
+    # Include global MCP and this user's personal MCP tools
+    return filter_mcp_tools(tools, user_id=user.id)
 
 
 ############################

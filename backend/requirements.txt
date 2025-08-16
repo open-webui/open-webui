@@ -132,9 +132,12 @@ ldap3==2.9.1
 ## Firecrawl
 firecrawl-py==1.12.0
 
+# MCP (Model Context Protocol)
+mcp==1.12.3
+ 
 # Sougou API SDK(Tencentcloud SDK)
 tencentcloud-sdk-python==3.0.1336
-
+ 
 ## Trace
 opentelemetry-api==1.36.0
 opentelemetry-sdk==1.36.0

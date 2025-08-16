@@ -1,4 +1,6 @@
-# Open WebUI 👋
+# Open WebUI 👋 - Native MCP 2025-06-18 Framework Fork by @welabbar
+
+> For a detailed overview of the MCP (Model Context Protocol) architecture and workflows, see [`MCP_IMPLEMENTATION.md`](./MCP_IMPLEMENTATION.md). 
 
 ![GitHub stars](https://img.shields.io/github/stars/open-webui/open-webui?style=social)
 ![GitHub forks](https://img.shields.io/github/forks/open-webui/open-webui?style=social)

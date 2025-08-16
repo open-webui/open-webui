@@ -2,6 +2,7 @@
 	import { DropdownMenu } from 'bits-ui';
 	import { flyAndScale } from '$lib/utils/transitions';
 	import { getContext, onMount, tick } from 'svelte';
+	import type { Readable } from 'svelte/store';
 
 	import { config, user, tools as _tools, mobile } from '$lib/stores';
 	import { createPicker } from '$lib/utils/google-drive-picker';
@@ -18,7 +19,7 @@
 	import PhotoSolid from '$lib/components/icons/PhotoSolid.svelte';
 	import CommandLineSolid from '$lib/components/icons/CommandLineSolid.svelte';
 
-	const i18n = getContext('i18n');
+	const i18n = getContext<Readable<any>>('i18n');
 
 	export let selectedToolIds: string[] = [];
 
@@ -34,7 +35,7 @@
 
 	export let onClose: Function;
 
-	let tools = {};
+	let tools: Record<string, { name: string; description: string; enabled: boolean }> = {};
 	let show = false;
 	let showAllTools = false;
 
@@ -52,14 +53,17 @@
 			await _tools.set(await getTools(localStorage.token));
 		}
 
-		tools = $_tools.reduce((a, tool, i, arr) => {
+		// Exclude MCP tools from the legacy tools menu; these are managed via the MCP selector
+		const legacyTools = ($_tools || []).filter((tool: any) => !(tool.id || '').startsWith('mcp:'));
+
+		tools = legacyTools.reduce((a: Record<string, { name: string; description: string; enabled: boolean }>, tool: any) => {
 			a[tool.id] = {
 				name: tool.name,
-				description: tool.meta.description,
+				description: tool.meta?.description,
 				enabled: selectedToolIds.includes(tool.id)
 			};
 			return a;
-		}, {});
+		}, {} as Record<string, { name: string; description: string; enabled: boolean }>);
 	};
 
 	const detectMobile = () => {
@@ -67,8 +71,9 @@
 		return /android|iphone|ipad|ipod|windows phone/i.test(userAgent);
 	};
 
-	function handleFileChange(event) {
-		const inputFiles = Array.from(event.target?.files);
+	function handleFileChange(event: Event) {
+		const input = event.target as HTMLInputElement | null;
+		const inputFiles = Array.from(input?.files ?? []);
 		if (inputFiles && inputFiles.length > 0) {
 			console.log(inputFiles);
 			inputFilesHandler(inputFiles);

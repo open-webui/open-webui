@@ -1,7 +1,7 @@
 <script lang="ts">
 	import DOMPurify from 'dompurify';
 
-	import { getVersionUpdates, getWebhookUrl, updateWebhookUrl } from '$lib/apis';
+	import { getVersionUpdates, getWebhookUrl, updateWebhookUrl, getBackendConfig } from '$lib/apis';
 	import {
 		getAdminConfig,
 		getLdapConfig,
@@ -19,6 +19,7 @@
 	import { onMount, getContext } from 'svelte';
 	import { toast } from 'svelte-sonner';
 	import Textarea from '$lib/components/common/Textarea.svelte';
+	import { getMcpConfig, setMcpConfig } from '$lib/apis/configs';
 
 	const i18n = getContext('i18n');
 
@@ -32,6 +33,9 @@
 
 	let adminConfig = null;
 	let webhookUrl = '';
+
+	// MCP
+	let MCP_ENABLED: boolean | null = null;
 
 	// LDAP
 	let ENABLE_LDAP = false;
@@ -90,6 +94,13 @@
 	};
 
 	onMount(async () => {
+		// Load MCP persisted flag
+		try {
+			const mcp = await getMcpConfig(localStorage.token);
+			MCP_ENABLED = mcp.MCP_ENABLED;
+		} catch (e) {
+			MCP_ENABLED = false;
+		}
 		if ($config?.features?.enable_version_update_check) {
 			checkForVersionUpdates();
 		}
@@ -110,6 +121,43 @@
 		const ldapConfig = await getLdapConfig(localStorage.token);
 		ENABLE_LDAP = ldapConfig.ENABLE_LDAP;
 	});
+
+	const saveWebhookUrl = async () => {
+		await updateWebhookUrl(localStorage.token, webhookUrl)
+			.then((res) => {
+				toast.success($i18n.t('Updated!'));
+			})
+			.catch((error) => {
+				toast.error($i18n.t('Error!'));
+			});
+	};
+
+	const checkIfValidUrl = (url: string) => {
+		try {
+			new URL(url);
+			return true;
+		} catch (e) {
+			return false;
+		}
+	};
+
+	$: ENABLE_LDAP, LDAP_SERVER;
+
+	const saveLdapConfig = async () => {
+		if (!ENABLE_LDAP) return;
+		await updateLdapConfig(localStorage.token, ENABLE_LDAP);
+		await updateLdapServer(localStorage.token, LDAP_SERVER);
+	};
+
+	const saveMcpConfig = async () => {
+		if (MCP_ENABLED === null) return;
+		await setMcpConfig(localStorage.token, MCP_ENABLED)
+			.then(async () => {
+				toast.success($i18n.t('Settings saved successfully!'));
+				await config.set(await getBackendConfig());
+			})
+			.catch(() => toast.error($i18n.t('Error!')));
+	};
 </script>
 
 <form
@@ -278,6 +326,7 @@
 						</div>
 					</div>
 				</div>
+
 
 				<div class="mb-3">
 					<div class=" mb-2.5 text-base font-medium">{$i18n.t('Authentication')}</div>
@@ -667,6 +716,12 @@
 							placeholder={$i18n.t('Enter a watermark for the response. Leave empty for none.')}
 							bind:value={adminConfig.RESPONSE_WATERMARK}
 						/>
+					</div>
+
+					<!-- MCP feature toggle -->
+					<div class="mb-2.5 flex w-full items-center justify-between pr-2">
+						<div class=" self-center text-xs font-medium">{$i18n.t('Enable MCP')}</div>
+						<Switch bind:state={MCP_ENABLED} on:change={saveMcpConfig} />
 					</div>
 
 					<div class="mb-2.5 w-full justify-between">

@@ -23,6 +23,7 @@
 	import Evaluations from './Settings/Evaluations.svelte';
 	import CodeExecution from './Settings/CodeExecution.svelte';
 	import Tools from './Settings/Tools.svelte';
+	import MCPServers from '../mcp/MCPServers.svelte';
 
 	const i18n = getContext('i18n');
 
@@ -45,7 +46,8 @@
 			'audio',
 			'images',
 			'pipelines',
-			'db'
+			'db',
+			'mcp-servers'
 		].includes(tabFromPath)
 			? tabFromPath
 			: 'general';
@@ -205,6 +207,26 @@
 				</svg>
 			</div>
 			<div class=" self-center">{$i18n.t('Tools')}</div>
+		</button>
+
+		<button
+			id="mcp-servers"
+			class="px-0.5 py-1 min-w-fit rounded-lg flex-1 md:flex-none flex text-left transition {selectedTab ===
+			'mcp-servers'
+				? ''
+				: ' text-gray-300 dark:text-gray-600 hover:text-gray-700 dark:hover:text-white'}"
+			on:click={() => {
+				goto('/admin/settings/mcp-servers');
+			}}
+		>
+			{#if $config?.features?.enable_mcp ?? false}
+				<div class=" self-center mr-2">
+					<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" class="size-4">
+						<path d="m3.75 13.5 10.5-11.25L12 10.5h8.25L9.75 21.75 12 13.5H3.75Z"/>
+					</svg>
+				</div>
+				<div class=" self-center">{$i18n.t('MCP Servers')}</div>
+			{/if}
 		</button>
 
 		<button
@@ -455,6 +477,10 @@
 			<Evaluations />
 		{:else if selectedTab === 'tools'}
 			<Tools />
+		{:else if selectedTab === 'mcp-servers'}
+			{#if $config?.features?.enable_mcp ?? false}
+				<MCPServers />
+			{/if}
 		{:else if selectedTab === 'documents'}
 			<Documents
 				on:save={async () => {
