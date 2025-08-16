@@ -624,11 +624,11 @@ async def signup(request: Request, response: Response, form_data: SignupForm):
                 secure=WEBUI_AUTH_COOKIE_SECURE,
             )
 
-            # Trigger new webhook system
-            from open_webui.utils.webhook import trigger_webhooks
+            # Trigger new webhook system (fire-and-forget with store-and-forward)
+            from open_webui.utils.webhook import trigger_webhooks_fire_and_forget
             from open_webui.utils.webhook_events import WebhookEvent
 
-            trigger_webhooks(
+            trigger_webhooks_fire_and_forget(
                 event_type=WebhookEvent.USER_SIGNUP.value,
                 message=WEBHOOK_MESSAGES.USER_SIGNUP(user.name),
                 event_data={

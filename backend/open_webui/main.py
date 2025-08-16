@@ -537,6 +537,12 @@ async def lifespan(app: FastAPI):
     from open_webui.utils.webhook import migrate_legacy_webhooks
 
     migrate_legacy_webhooks()
+    
+    # Start webhook retry scheduler
+    log.info("Starting webhook retry scheduler...")
+    from open_webui.utils.webhook_scheduler import start_webhook_scheduler
+    
+    await start_webhook_scheduler()
 
     app.state.redis = get_redis_connection(
         redis_url=REDIS_URL,
@@ -580,6 +586,12 @@ async def lifespan(app: FastAPI):
         )
 
     yield
+
+    # Stop webhook retry scheduler
+    log.info("Stopping webhook retry scheduler...")
+    from open_webui.utils.webhook_scheduler import stop_webhook_scheduler
+    
+    await stop_webhook_scheduler()
 
     if hasattr(app.state, "redis_task_command_listener"):
         app.state.redis_task_command_listener.cancel()

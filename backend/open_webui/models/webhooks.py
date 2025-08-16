@@ -3,7 +3,7 @@ from typing import List, Optional
 
 from open_webui.internal.db import Base, JSONField, get_db
 from pydantic import BaseModel, ConfigDict
-from sqlalchemy import BigInteger, Boolean, Column, String, Text
+from sqlalchemy import BigInteger, Boolean, Column, String, Text, Integer
 
 
 ####################
@@ -27,6 +27,22 @@ class WebhookConfig(Base):
 
     created_at = Column(BigInteger)
     updated_at = Column(BigInteger)
+
+
+####################
+# Webhook Events DB Schema (for store-and-forward)
+####################
+
+
+class WebhookEventRecord(Base):
+    __tablename__ = "webhook_events"
+
+    id = Column(String, primary_key=True)  # UUID
+    event = Column(JSONField, nullable=False)  # Complete event payload
+    url = Column(Text, nullable=False)  # Webhook URL to post to
+    tries = Column(Integer, default=0, nullable=False)  # Number of attempts
+    created_at = Column(BigInteger, nullable=False)  # When event was created
+    updated_at = Column(BigInteger, nullable=False)  # Last attempt time
 
 
 ####################
@@ -55,6 +71,20 @@ class WebhookConfigResponse(BaseModel):
     enabled: bool
     events: List[str]
     user_id: Optional[str]
+    created_at: int
+    updated_at: int
+
+
+class WebhookEventForm(BaseModel):
+    event: dict
+    url: str
+
+
+class WebhookEventResponse(BaseModel):
+    id: str
+    event: dict
+    url: str
+    tries: int
     created_at: int
     updated_at: int
 
@@ -237,6 +267,141 @@ class WebhookConfigModel(BaseModel):
     enabled: bool = True
     events: List[str]
     user_id: Optional[str] = None
+    created_at: int = int(time.time())
+    updated_at: int = int(time.time())
+
+    model_config = ConfigDict(from_attributes=True)
+
+
+####################
+# WebhookEvents (for store-and-forward)
+####################
+
+
+class WebhookEvents:
+    def __init__(self, db):
+        self.db = db
+
+    def store_webhook_event(
+        self, id: str, event: dict, url: str
+    ) -> Optional[WebhookEventResponse]:
+        """Store a webhook event for later processing"""
+        try:
+            current_time = int(time.time())
+            webhook_event_item = WebhookEventRecord(
+                id=id,
+                event=event,
+                url=url,
+                tries=0,
+                created_at=current_time,
+                updated_at=current_time,
+            )
+            self.db.add(webhook_event_item)
+            self.db.commit()
+            self.db.refresh(webhook_event_item)
+            return WebhookEventResponse(
+                id=webhook_event_item.id,
+                event=webhook_event_item.event,
+                url=webhook_event_item.url,
+                tries=webhook_event_item.tries,
+                created_at=webhook_event_item.created_at,
+                updated_at=webhook_event_item.updated_at,
+            )
+        except Exception:
+            return None
+
+    def get_pending_webhook_events(self, max_tries: int = 5) -> List[WebhookEventResponse]:
+        """Get webhook events that need to be retried"""
+        try:
+            events = (
+                self.db.query(WebhookEventRecord)
+                .filter(WebhookEventRecord.tries < max_tries)
+                .all()
+            )
+            return [
+                WebhookEventResponse(
+                    id=event.id,
+                    event=event.event,
+                    url=event.url,
+                    tries=event.tries,
+                    created_at=event.created_at,
+                    updated_at=event.updated_at,
+                )
+                for event in events
+            ]
+        except Exception:
+            return []
+
+    def update_webhook_event_tries(self, id: str) -> Optional[WebhookEventResponse]:
+        """Increment the tries counter and updated_at timestamp"""
+        try:
+            current_time = int(time.time())
+            self.db.query(WebhookEventRecord).filter_by(id=id).update(
+                {
+                    "tries": WebhookEventRecord.tries + 1,
+                    "updated_at": current_time,
+                }
+            )
+            self.db.commit()
+            
+            # Return updated event
+            event = self.db.query(WebhookEventRecord).filter_by(id=id).first()
+            if event:
+                return WebhookEventResponse(
+                    id=event.id,
+                    event=event.event,
+                    url=event.url,
+                    tries=event.tries,
+                    created_at=event.created_at,
+                    updated_at=event.updated_at,
+                )
+            return None
+        except Exception:
+            return None
+
+    def delete_webhook_event(self, id: str) -> bool:
+        """Delete a webhook event (on success or max tries reached)"""
+        try:
+            self.db.query(WebhookEventRecord).filter_by(id=id).delete()
+            self.db.commit()
+            return True
+        except Exception:
+            return False
+
+    def get_events_for_retry(self, max_tries: int = 5) -> List[WebhookEventResponse]:
+        """Get events that should be retried based on exponential backoff"""
+        try:
+            current_time = int(time.time())
+            events = []
+            
+            for event in self.db.query(WebhookEventRecord).filter(WebhookEventRecord.tries < max_tries).all():
+                # Calculate next retry time using exponential backoff: 2^tries minutes
+                retry_delay_minutes = 2 ** event.tries
+                retry_delay_seconds = retry_delay_minutes * 60
+                next_retry_time = event.updated_at + retry_delay_seconds
+                
+                if current_time >= next_retry_time:
+                    events.append(
+                        WebhookEventResponse(
+                            id=event.id,
+                            event=event.event,
+                            url=event.url,
+                            tries=event.tries,
+                            created_at=event.created_at,
+                            updated_at=event.updated_at,
+                        )
+                    )
+            
+            return events
+        except Exception:
+            return []
+
+
+class WebhookEventModel(BaseModel):
+    id: str
+    event: dict
+    url: str
+    tries: int = 0
     created_at: int = int(time.time())
     updated_at: int = int(time.time())
 

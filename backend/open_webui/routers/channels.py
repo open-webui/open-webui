@@ -208,11 +208,11 @@ async def send_notification(name, webui_url, channel, message, active_user_ids):
                     "webhook_url", None
                 )
 
-                # Trigger new webhook system for user-specific webhooks
-                from open_webui.utils.webhook import trigger_webhooks
+                # Trigger new webhook system for user-specific webhooks (fire-and-forget with store-and-forward)
+                from open_webui.utils.webhook import trigger_webhooks_fire_and_forget
                 from open_webui.utils.webhook_events import WebhookEvent
 
-                trigger_webhooks(
+                trigger_webhooks_fire_and_forget(
                     event_type=WebhookEvent.CHANNEL_MESSAGE_CREATED.value,
                     message=f"#{channel.name} - {webui_url}/channels/{channel.id}\n\n{message.content}",
                     event_data={
