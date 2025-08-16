@@ -365,7 +365,7 @@
 							<p class="font-medium">External Tool Warning</p>
 							<p class="mt-1">
 								MCP tools connect to external services and may share data. Use with caution and
-								verify tool sources. You can add your own MCP servers through Settings.
+								verify tool sources. More tools can be added via Workspace - MCP Servers.
 							</p>
 						</div>
 					</div>
