@@ -222,7 +222,10 @@
 
 		const content = removeAllDetails(message.content);
 
-		if ($config.audio.tts.engine === '') {
+		const ttsEngine = $config?.audio?.tts?.engine;
+		const ttsSplitOn = $config?.audio?.tts?.split_on ?? 'punctuation';
+
+		if (ttsEngine === '') {
 			let voices = [];
 			const getVoicesLoop = setInterval(() => {
 				voices = speechSynthesis.getVoices();
@@ -262,7 +265,7 @@
 
 			const messageContentParts: string[] = getMessageContentParts(
 				content,
-				$config?.audio?.tts?.split_on ?? 'punctuation'
+				ttsSplitOn
 			);
 
 			if (!messageContentParts.length) {
@@ -286,10 +289,11 @@
 
 			let lastPlayedAudioPromise = Promise.resolve(); // Initialize a promise that resolves immediately
 
-			if ($settings.audio?.tts?.engine === 'browser-kokoro') {
+			if ($settings?.audio?.tts?.engine === 'browser-kokoro') {
 				if (!$TTSWorker) {
 					await TTSWorker.set(
 						new KokoroWorker({
+							baseUrl: $config?.audio?.tts?.kokoro_api_base_url,
 							dtype: $settings.audio?.tts?.engineConfig?.dtype ?? 'fp32'
 						})
 					);
@@ -301,7 +305,8 @@
 					const blob = await $TTSWorker
 						.generate({
 							text: sentence,
-							voice: $settings?.audio?.tts?.voice ?? $config?.audio?.tts?.voice
+							voice: $settings?.audio?.tts?.voice ?? $config?.audio?.tts?.voice,
+							model: $settings?.audio?.tts?.model ?? $config?.audio?.tts?.model
 						})
 						.catch((error) => {
 							console.error(error);
@@ -324,7 +329,7 @@
 				for (const [idx, sentence] of messageContentParts.entries()) {
 					const res = await synthesizeOpenAISpeech(
 						localStorage.token,
-						$settings?.audio?.tts?.defaultVoice === $config.audio.tts.voice
+						$settings?.audio?.tts?.defaultVoice === $config?.audio?.tts?.voice
 							? ($settings?.audio?.tts?.voice ?? $config?.audio?.tts?.voice)
 							: $config?.audio?.tts?.voice,
 						sentence
