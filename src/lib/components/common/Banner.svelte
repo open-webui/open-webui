@@ -36,6 +36,16 @@
 		dispatch('dismiss', id);
 	};
 
+	const getBannerContent = (banner: Banner, currentLanguage: string): string => {
+		// If translations exist and we have a translation for the current language, use it
+		if (banner.translations && banner.translations[currentLanguage]) {
+			return banner.translations[currentLanguage];
+		}
+
+		// Fall back to default content
+		return banner.content ?? '';
+	};
+
 	onMount(() => {
 		mounted = true;
 
@@ -98,7 +108,9 @@
 					{/if}
 				</div>
 				<div class="flex-1 text-xs text-gray-700 dark:text-white max-h-60 overflow-y-auto">
-					{@html marked.parse(DOMPurify.sanitize((banner?.content ?? '').replace(/\n/g, '<br>')))}
+					{@html marked.parse(
+						DOMPurify.sanitize(getBannerContent(banner, $i18n.language).replace(/\n/g, '<br>'))
+					)}
 				</div>
 			</div>
 
