@@ -87,9 +87,13 @@ def get_tools(
                         tool_server_data = server
                         break
                 assert tool_server_data is not None
+                # Extracting the Tool Server name from the OpenAPI spec
+                tool_server_name = tool_server_data["openapi"].get("info", {}).get("title", "UnknownTool")
+                tool_server_name = re.sub(r'[^a-zA-Z0-9]', '', tool_server_name)
                 specs = tool_server_data.get("specs", [])
 
                 for spec in specs:
+                    unique_name = f"{tool_server_name}_{spec['name']}"
                     function_name = spec["name"]
 
                     auth_type = tool_server_connection.get("auth_type", "bearer")
@@ -121,20 +125,23 @@ def get_tools(
                         {},
                     )
 
+                    # The specs are shared and stored in memory so cannot be safely modified
+                    spec_copy = copy.deepcopy(spec)
+                    spec_copy["name"] = unique_name
                     tool_dict = {
                         "tool_id": tool_id,
                         "callable": callable,
-                        "spec": spec,
+                        "spec": spec_copy,
                     }
 
                     # TODO: if collision, prepend toolkit name
-                    if function_name in tools_dict:
+                    if unique_name in tools_dict:
                         log.warning(
-                            f"Tool {function_name} already exists in another tools!"
+                            f"Tool {unique_name} already exists in another tools!"
                         )
-                        log.warning(f"Discarding {tool_id}.{function_name}")
+                        log.warning(f"Discarding {tool_id}.{unique_name}")
                     else:
-                        tools_dict[function_name] = tool_dict
+                        tools_dict[unique_name] = tool_dict
             else:
                 continue
         else:
@@ -153,6 +160,7 @@ def get_tools(
                 extra_params["__user__"]["valves"] = module.UserValves(  # type: ignore
                     **Tools.get_user_valves_by_id_and_user_id(tool_id, user.id)
                 )
+            cleaned_name = re.sub(r'[^a-zA-Z0-9]', '', tool.name)
 
             for spec in tool.specs:
                 # TODO: Fix hack for OpenAI API
@@ -170,6 +178,7 @@ def get_tools(
 
                 # convert to function that takes only model params and inserts custom params
                 function_name = spec["name"]
+                unique_name = cleaned_name + "_" + spec["name"]
                 tool_function = getattr(module, function_name)
                 callable = get_async_tool_function_and_apply_extra_params(
                     tool_function, extra_params
@@ -182,10 +191,12 @@ def get_tools(
                 else:
                     spec["description"] = function_name
 
+                spec_copy = copy.deepcopy(spec)
+                spec_copy["name"] = unique_name
                 tool_dict = {
                     "tool_id": tool_id,
                     "callable": callable,
-                    "spec": spec,
+                    "spec": spec_copy,
                     # Misc info
                     "metadata": {
                         "file_handler": hasattr(module, "file_handler")
@@ -194,14 +205,13 @@ def get_tools(
                     },
                 }
 
-                # TODO: if collision, prepend toolkit name
-                if function_name in tools_dict:
+                if unique_name in tools_dict:
                     log.warning(
-                        f"Tool {function_name} already exists in another tools!"
+                        f"Tool {unique_name} already exists in another tools!"
                     )
-                    log.warning(f"Discarding {tool_id}.{function_name}")
+                    log.warning(f"Discarding {tool_id}.{unique_name}")
                 else:
-                    tools_dict[function_name] = tool_dict
+                    tools_dict[unique_name] = tool_dict
 
     return tools_dict
 
