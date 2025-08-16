@@ -255,6 +255,7 @@
 			}}
 		>
 			<button
+				aria-label={`${$i18n.t('More Options')}`}
 				class="flex"
 				on:click={(e) => {
 					e.preventDefault();

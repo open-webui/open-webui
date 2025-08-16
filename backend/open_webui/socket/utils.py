@@ -7,13 +7,24 @@ import pycrdt as Y
 
 
 class RedisLock:
-    def __init__(self, redis_url, lock_name, timeout_secs, redis_sentinels=[]):
+    def __init__(
+        self,
+        redis_url,
+        lock_name,
+        timeout_secs,
+        redis_sentinels=[],
+        redis_cluster=False,
+    ):
+
         self.lock_name = lock_name
         self.lock_id = str(uuid.uuid4())
         self.timeout_secs = timeout_secs
         self.lock_obtained = False
         self.redis = get_redis_connection(
-            redis_url, redis_sentinels, decode_responses=True
+            redis_url,
+            redis_sentinels,
+            redis_cluster=redis_cluster,
+            decode_responses=True,
         )
 
     def aquire_lock(self):
@@ -36,10 +47,13 @@ class RedisLock:
 
 
 class RedisDict:
-    def __init__(self, name, redis_url, redis_sentinels=[]):
+    def __init__(self, name, redis_url, redis_sentinels=[], redis_cluster=False):
         self.name = name
         self.redis = get_redis_connection(
-            redis_url, redis_sentinels, decode_responses=True
+            redis_url,
+            redis_sentinels,
+            redis_cluster=redis_cluster,
+            decode_responses=True,
         )
 
     def __setitem__(self, key, value):

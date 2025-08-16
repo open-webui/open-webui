@@ -146,15 +146,14 @@ async def sync_functions(
                 function.id,
                 content=function.content,
             )
+
+        return Functions.sync_functions(user.id, form_data.functions)
     except Exception as e:
         log.exception(f"Failed to load a function: {e}")
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=ERROR_MESSAGES.DEFAULT(e),
         )
-    
-
-    return Functions.sync_functions(user.id, form_data.functions)
 
 
 ############################

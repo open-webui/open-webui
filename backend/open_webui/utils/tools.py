@@ -38,6 +38,7 @@ from open_webui.models.users import UserModel
 from open_webui.utils.plugin import load_tool_module_by_id
 from open_webui.env import (
     SRC_LOG_LEVELS,
+    AIOHTTP_CLIENT_TIMEOUT,
     AIOHTTP_CLIENT_TIMEOUT_TOOL_SERVER_DATA,
     AIOHTTP_CLIENT_SESSION_TOOL_SERVER_SSL,
 )
@@ -377,7 +378,6 @@ def convert_openapi_to_tool_payload(openapi_spec):
         for method, operation in methods.items():
             if operation.get("operationId"):
                 tool = {
-                    "type": "function",
                     "name": operation.get("operationId"),
                     "description": operation.get(
                         "description",
@@ -399,10 +399,16 @@ def convert_openapi_to_tool_payload(openapi_spec):
                         description += (
                             f". Possible values: {', '.join(param_schema.get('enum'))}"
                         )
-                    tool["parameters"]["properties"][param_name] = {
+                    param_property = {
                         "type": param_schema.get("type"),
                         "description": description,
                     }
+
+                    # Include items property for array types (required by OpenAI)
+                    if param_schema.get("type") == "array" and "items" in param_schema:
+                        param_property["items"] = param_schema["items"]
+
+                    tool["parameters"]["properties"][param_name] = param_property
                     if param.get("required"):
                         tool["parameters"]["required"].append(param_name)
 
@@ -489,15 +495,7 @@ async def get_tool_servers_data(
         if server.get("config", {}).get("enable"):
             # Path (to OpenAPI spec URL) can be either a full URL or a path to append to the base URL
             openapi_path = server.get("path", "openapi.json")
-            if "://" in openapi_path:
-                # If it contains "://", it's a full URL
-                full_url = openapi_path
-            else:
-                if not openapi_path.startswith("/"):
-                    # Ensure the path starts with a slash
-                    openapi_path = f"/{openapi_path}"
-
-                full_url = f"{server.get('url')}{openapi_path}"
+            full_url = get_tool_server_url(server.get("url"), openapi_path)
 
             info = server.get("info", {})
 
@@ -528,6 +526,8 @@ async def get_tool_servers_data(
         openapi_data = response.get("openapi", {})
 
         if info and isinstance(openapi_data, dict):
+            openapi_data["info"] = openapi_data.get("info", {})
+
             if "name" in info:
                 openapi_data["info"]["title"] = info.get("name", "Tool Server")
 
@@ -614,7 +614,9 @@ async def execute_tool_server(
         if token:
             headers["Authorization"] = f"Bearer {token}"
 
-        async with aiohttp.ClientSession(trust_env=True) as session:
+        async with aiohttp.ClientSession(
+            trust_env=True, timeout=aiohttp.ClientTimeout(total=AIOHTTP_CLIENT_TIMEOUT)
+        ) as session:
             request_method = getattr(session, http_method.lower())
 
             if http_method in ["post", "put", "patch"]:
@@ -627,7 +629,13 @@ async def execute_tool_server(
                     if response.status >= 400:
                         text = await response.text()
                         raise Exception(f"HTTP error {response.status}: {text}")
-                    return await response.json()
+
+                    try:
+                        response_data = await response.json()
+                    except Exception:
+                        response_data = await response.text()
+
+                    return response_data
             else:
                 async with request_method(
                     final_url,
@@ -637,9 +645,28 @@ async def execute_tool_server(
                     if response.status >= 400:
                         text = await response.text()
                         raise Exception(f"HTTP error {response.status}: {text}")
-                    return await response.json()
+
+                    try:
+                        response_data = await response.json()
+                    except Exception:
+                        response_data = await response.text()
+
+                    return response_data
 
     except Exception as err:
         error = str(err)
         log.exception(f"API Request Error: {error}")
         return {"error": error}
+
+
+def get_tool_server_url(url: Optional[str], path: str) -> str:
+    """
+    Build the full URL for a tool server, given a base url and a path.
+    """
+    if "://" in path:
+        # If it contains "://", it's a full URL
+        return path
+    if not path.startswith("/"):
+        # Ensure the path starts with a slash
+        path = f"/{path}"
+    return f"{url}{path}"

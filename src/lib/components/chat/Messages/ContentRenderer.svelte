@@ -17,7 +17,10 @@
 
 	export let id;
 	export let content;
+
 	export let history;
+	export let messageId;
+
 	export let selectedModels = [];
 
 	export let done = true;
@@ -27,6 +30,7 @@
 	export let save = false;
 	export let preview = false;
 	export let floatingButtons = true;
+	export let topPadding = false;
 
 	export let onSave = (e) => {};
 	export let onSourceClick = (e) => {};
@@ -34,7 +38,6 @@
 	export let onAddMessages = (e) => {};
 
 	let contentContainerElement;
-
 	let floatingButtonsElement;
 
 	const updateButtonPosition = (event) => {
@@ -135,15 +138,16 @@
 		{save}
 		{preview}
 		{done}
-		sourceIds={(sources ?? []).reduce((acc, s) => {
+		{topPadding}
+		sourceIds={(sources ?? []).reduce((acc, source) => {
 			let ids = [];
-			s.document.forEach((document, index) => {
+			source.document.forEach((document, index) => {
 				if (model?.info?.meta?.capabilities?.citations == false) {
 					ids.push('N/A');
 					return ids;
 				}
 
-				const metadata = s.metadata?.[index];
+				const metadata = source.metadata?.[index];
 				const id = metadata?.source ?? 'N/A';
 
 				if (metadata?.name) {
@@ -154,7 +158,7 @@
 				if (id.startsWith('http://') || id.startsWith('https://')) {
 					ids.push(id);
 				} else {
-					ids.push(s?.source?.name ?? id);
+					ids.push(source?.source?.name ?? id);
 				}
 
 				return ids;
@@ -195,6 +199,8 @@
 	<FloatingButtons
 		bind:this={floatingButtonsElement}
 		{id}
+		{messageId}
+		actions={$settings?.floatingActionButtons ?? []}
 		model={(selectedModels ?? []).includes(model?.id)
 			? model?.id
 			: (selectedModels ?? []).length > 0

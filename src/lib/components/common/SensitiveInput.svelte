@@ -2,8 +2,10 @@
 	const i18n = getContext('i18n');
 	import { getContext } from 'svelte';
 	import { settings } from '$lib/stores';
+	export let id = 'password-input';
 	export let value: string = '';
 	export let placeholder = '';
+	export let type = 'text';
 	export let required = true;
 	export let readOnly = false;
 	export let outerClassName = 'flex flex-1 bg-transparent';
@@ -14,16 +16,19 @@
 </script>
 
 <div class={outerClassName}>
-	<label class="sr-only" for="password-input">{placeholder || $i18n.t('Password')}</label>
+	<label class="sr-only" for={id}>{placeholder || $i18n.t('Password')}</label>
 	<input
-		class={`${inputClassName} ${show ? '' : 'password'} ${($settings?.highContrastMode ?? false) ? 'placeholder:text-gray-700 dark:placeholder:text-gray-100' : ' outline-hidden placeholder:text-gray-300 dark:placeholder:text-gray-700'}`}
+		{id}
+		class={`${inputClassName} ${show ? '' : 'password'} ${($settings?.highContrastMode ?? false) ? 'placeholder:text-gray-700 dark:placeholder:text-gray-100' : ' outline-hidden placeholder:text-gray-300 dark:placeholder:text-gray-600'}`}
 		{placeholder}
-		id="password-input"
-		bind:value
+		type={type === 'password' && !show ? 'password' : 'text'}
+		{value}
 		required={required && !readOnly}
 		disabled={readOnly}
+		on:change={(e) => {
+			value = e.target.value;
+		}}
 		autocomplete="off"
-		type="text"
 	/>
 	<button
 		class={showButtonClassName}
