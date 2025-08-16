@@ -529,28 +529,33 @@
 		if (!details) {
 			showRateComment = true;
 
-			if (!updatedMessage.annotation?.tags) {
-				// attempt to generate tags
-				const tags = await generateTags(localStorage.token, message.model, messages, chatId).catch(
-					(error) => {
-						console.error(error);
-						return [];
-					}
-				);
-				console.log(tags);
-
-				if (tags) {
-					updatedMessage.annotation.tags = tags;
-					feedbackItem.data.tags = tags;
-
-					saveMessage(message.id, updatedMessage);
-					await updateFeedbackById(
+			t const caps = model?.info?.meta?.capabilities ?? {};
+			const onlySupportImageGenerations = !(Object.keys(caps).length === 1 && caps.image_generation === true);
+			if (!onlySupportImageGenerations && !updatedMessage.annotation?.tags) {
+				try {
+					const tags = await generateTags(
 						localStorage.token,
-						updatedMessage.feedbackId,
-						feedbackItem
-					).catch((error) => {
-						toast.error(`${error}`);
-					});
+						message.model,
+						messages,
+						chatId
+					);
+					console.log(tags);
+
+					if (tags && tags.length) {
+						updatedMessage.annotation.tags = tags;
+						feedbackItem.data.tags = tags;
+
+						saveMessage(message.id, updatedMessage);
+						await updateFeedbackById(
+							localStorage.token,
+							updatedMessage.feedbackId,
+							feedbackItem
+						).catch((error) => {
+							toast.error(`${error}`);
+						});
+					}
+				} catch (error) {
+					console.error(error);
 				}
 			}
 		}
@@ -1322,7 +1327,7 @@
 													<path
 														stroke-linecap="round"
 														stroke-linejoin="round"
-														d="M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z"
+														d="M21 12a9 9 0 1 1-18 0 9 9 0 0118 0Z"
 													/>
 													<path
 														stroke-linecap="round"
