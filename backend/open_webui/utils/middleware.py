@@ -1849,6 +1849,21 @@ async def process_chat_response(
                             or 1
                         ),
                     )
+                    last_delta_data = None
+
+                    async def flush_pending_delta_data(threshold: int = 0):
+                        nonlocal delta_count
+                        nonlocal last_delta_data
+
+                        if delta_count >= threshold and last_delta_data:
+                            await event_emitter(
+                                {
+                                    "type": "chat:completion",
+                                    "data": last_delta_data,
+                                }
+                            )
+                            delta_count = 0
+                            last_delta_data = None
 
                     async for line in response.body_iterator:
                         line = line.decode("utf-8") if isinstance(line, bytes) else line
@@ -2099,14 +2114,9 @@ async def process_chat_response(
 
                                 if delta:
                                     delta_count += 1
+                                    last_delta_data = data
                                     if delta_count >= delta_chunk_size:
-                                        await event_emitter(
-                                            {
-                                                "type": "chat:completion",
-                                                "data": data,
-                                            }
-                                        )
-                                        delta_count = 0
+                                        await flush_pending_delta_data(delta_chunk_size)
                                 else:
                                     await event_emitter(
                                         {
@@ -2121,6 +2131,7 @@ async def process_chat_response(
                             else:
                                 log.debug(f"Error: {e}")
                                 continue
+                    await flush_pending_delta_data()
 
                     if content_blocks:
                         # Clean up the last text block
