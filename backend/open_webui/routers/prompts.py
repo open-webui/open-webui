@@ -22,9 +22,9 @@ router = APIRouter()
 @router.get("/", response_model=list[PromptModel])
 async def get_prompts(user=Depends(get_verified_user)):
     if user.role == "admin" and ENABLE_ADMIN_WORKSPACE_CONTENT_ACCESS:
-        prompts = Prompts.get_prompts()
+        prompts = await Prompts.get_prompts()
     else:
-        prompts = Prompts.get_prompts_by_user_id(user.id, "read")
+        prompts = await Prompts.get_prompts_by_user_id(user.id, "read")
 
     return prompts
 
@@ -32,9 +32,9 @@ async def get_prompts(user=Depends(get_verified_user)):
 @router.get("/list", response_model=list[PromptUserResponse])
 async def get_prompt_list(user=Depends(get_verified_user)):
     if user.role == "admin" and ENABLE_ADMIN_WORKSPACE_CONTENT_ACCESS:
-        prompts = Prompts.get_prompts()
+        prompts = await Prompts.get_prompts()
     else:
-        prompts = Prompts.get_prompts_by_user_id(user.id, "write")
+        prompts = await Prompts.get_prompts_by_user_id(user.id, "write")
 
     return prompts
 
@@ -56,9 +56,9 @@ async def create_new_prompt(
             detail=ERROR_MESSAGES.UNAUTHORIZED,
         )
 
-    prompt = Prompts.get_prompt_by_command(form_data.command)
+    prompt = await Prompts.get_prompt_by_command(form_data.command)
     if prompt is None:
-        prompt = Prompts.insert_new_prompt(user.id, form_data)
+        prompt = await Prompts.insert_new_prompt(user.id, form_data)
 
         if prompt:
             return prompt
@@ -79,13 +79,13 @@ async def create_new_prompt(
 
 @router.get("/command/{command}", response_model=Optional[PromptModel])
 async def get_prompt_by_command(command: str, user=Depends(get_verified_user)):
-    prompt = Prompts.get_prompt_by_command(f"/{command}")
+    prompt = await Prompts.get_prompt_by_command(f"/{command}")
 
     if prompt:
         if (
             user.role == "admin"
             or prompt.user_id == user.id
-            or has_access(user.id, "read", prompt.access_control)
+            or await has_access(user.id, "read", prompt.access_control)
         ):
             return prompt
     else:
@@ -106,7 +106,7 @@ async def update_prompt_by_command(
     form_data: PromptForm,
     user=Depends(get_verified_user),
 ):
-    prompt = Prompts.get_prompt_by_command(f"/{command}")
+    prompt = await Prompts.get_prompt_by_command(f"/{command}")
     if not prompt:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
@@ -116,7 +116,7 @@ async def update_prompt_by_command(
     # Is the user the original creator, in a group with write access, or an admin
     if (
         prompt.user_id != user.id
-        and not has_access(user.id, "write", prompt.access_control)
+        and not await has_access(user.id, "write", prompt.access_control)
         and user.role != "admin"
     ):
         raise HTTPException(
@@ -124,7 +124,7 @@ async def update_prompt_by_command(
             detail=ERROR_MESSAGES.ACCESS_PROHIBITED,
         )
 
-    prompt = Prompts.update_prompt_by_command(f"/{command}", form_data)
+    prompt = await Prompts.update_prompt_by_command(f"/{command}", form_data)
     if prompt:
         return prompt
     else:
@@ -141,7 +141,7 @@ async def update_prompt_by_command(
 
 @router.delete("/command/{command}/delete", response_model=bool)
 async def delete_prompt_by_command(command: str, user=Depends(get_verified_user)):
-    prompt = Prompts.get_prompt_by_command(f"/{command}")
+    prompt = await Prompts.get_prompt_by_command(f"/{command}")
     if not prompt:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
@@ -150,7 +150,7 @@ async def delete_prompt_by_command(command: str, user=Depends(get_verified_user)
 
     if (
         prompt.user_id != user.id
-        and not has_access(user.id, "write", prompt.access_control)
+        and not await has_access(user.id, "write", prompt.access_control)
         and user.role != "admin"
     ):
         raise HTTPException(
@@ -158,5 +158,5 @@ async def delete_prompt_by_command(command: str, user=Depends(get_verified_user)
             detail=ERROR_MESSAGES.ACCESS_PROHIBITED,
         )
 
-    result = Prompts.delete_prompt_by_command(f"/{command}")
+    result = await Prompts.delete_prompt_by_command(f"/{command}")
     return result

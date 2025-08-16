@@ -45,10 +45,12 @@ async def get_notes(request: Request, user=Depends(get_verified_user)):
         NoteUserResponse(
             **{
                 **note.model_dump(),
-                "user": UserResponse(**Users.get_user_by_id(note.user_id).model_dump()),
+                "user": UserResponse(
+                    **((await Users.get_user_by_id(note.user_id)).model_dump())
+                ),
             }
         )
-        for note in Notes.get_notes_by_user_id(user.id, "write")
+        for note in await Notes.get_notes_by_user_id(user.id, "write")
     ]
 
     return notes
@@ -74,7 +76,7 @@ async def get_note_list(request: Request, user=Depends(get_verified_user)):
 
     notes = [
         NoteTitleIdResponse(**note.model_dump())
-        for note in Notes.get_notes_by_user_id(user.id, "write")
+        for note in await Notes.get_notes_by_user_id(user.id, "write")
     ]
 
     return notes
@@ -99,7 +101,7 @@ async def create_new_note(
         )
 
     try:
-        note = Notes.insert_new_note(form_data, user.id)
+        note = await Notes.insert_new_note(form_data, user.id)
         return note
     except Exception as e:
         log.exception(e)
@@ -123,7 +125,7 @@ async def get_note_by_id(request: Request, id: str, user=Depends(get_verified_us
             detail=ERROR_MESSAGES.UNAUTHORIZED,
         )
 
-    note = Notes.get_note_by_id(id)
+    note = await Notes.get_note_by_id(id)
     if not note:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND, detail=ERROR_MESSAGES.NOT_FOUND
@@ -131,7 +133,11 @@ async def get_note_by_id(request: Request, id: str, user=Depends(get_verified_us
 
     if user.role != "admin" and (
         user.id != note.user_id
-        and (not has_access(user.id, type="read", access_control=note.access_control))
+        and (
+            not await has_access(
+                user.id, type="read", access_control=note.access_control
+            )
+        )
     ):
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN, detail=ERROR_MESSAGES.DEFAULT()
@@ -157,7 +163,7 @@ async def update_note_by_id(
             detail=ERROR_MESSAGES.UNAUTHORIZED,
         )
 
-    note = Notes.get_note_by_id(id)
+    note = await Notes.get_note_by_id(id)
     if not note:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND, detail=ERROR_MESSAGES.NOT_FOUND
@@ -165,14 +171,16 @@ async def update_note_by_id(
 
     if user.role != "admin" and (
         user.id != note.user_id
-        and not has_access(user.id, type="write", access_control=note.access_control)
+        and not await has_access(
+            user.id, type="write", access_control=note.access_control
+        )
     ):
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN, detail=ERROR_MESSAGES.DEFAULT()
         )
 
     try:
-        note = Notes.update_note_by_id(id, form_data)
+        note = await Notes.update_note_by_id(id, form_data)
         await sio.emit(
             "note-events",
             note.model_dump(),
@@ -202,7 +210,7 @@ async def delete_note_by_id(request: Request, id: str, user=Depends(get_verified
             detail=ERROR_MESSAGES.UNAUTHORIZED,
         )
 
-    note = Notes.get_note_by_id(id)
+    note = await Notes.get_note_by_id(id)
     if not note:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND, detail=ERROR_MESSAGES.NOT_FOUND
@@ -210,14 +218,16 @@ async def delete_note_by_id(request: Request, id: str, user=Depends(get_verified
 
     if user.role != "admin" and (
         user.id != note.user_id
-        and not has_access(user.id, type="write", access_control=note.access_control)
+        and not await has_access(
+            user.id, type="write", access_control=note.access_control
+        )
     ):
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN, detail=ERROR_MESSAGES.DEFAULT()
         )
 
     try:
-        note = Notes.delete_note_by_id(id)
+        note = await Notes.delete_note_by_id(id)
         return True
     except Exception as e:
         log.exception(e)

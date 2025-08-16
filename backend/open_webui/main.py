@@ -477,7 +477,8 @@ from open_webui.constants import ERROR_MESSAGES
 
 if SAFE_MODE:
     print("SAFE MODE ENABLED")
-    Functions.deactivate_all_functions()
+    loop = asyncio.get_event_loop()
+    loop.run_until_complete(Functions.deactivate_all_functions())
 
 logging.basicConfig(stream=sys.stdout, level=GLOBAL_LOG_LEVEL)
 log = logging.getLogger(__name__)
@@ -530,7 +531,7 @@ async def lifespan(app: FastAPI):
     # This should be blocking (sync) so functions are not deactivated on first /get_models calls
     # when the first user lands on the / route.
     log.info("Installing external dependencies of functions and tools...")
-    install_tool_and_function_dependencies()
+    await install_tool_and_function_dependencies()
 
     app.state.redis = get_redis_connection(
         redis_url=REDIS_URL,
@@ -1267,11 +1268,11 @@ if audit_level != AuditLevel.NONE:
 async def get_models(
     request: Request, refresh: bool = False, user=Depends(get_verified_user)
 ):
-    def get_filtered_models(models, user):
+    async def get_filtered_models(models, user):
         filtered_models = []
         for model in models:
             if model.get("arena"):
-                if has_access(
+                if await has_access(
                     user.id,
                     type="read",
                     access_control=model.get("info", {})
@@ -1281,12 +1282,12 @@ async def get_models(
                     filtered_models.append(model)
                 continue
 
-            model_info = Models.get_model_by_id(model["id"])
+            model_info = await Models.get_model_by_id(model["id"])
             if model_info:
                 if (
                     (user.role == "admin" and ENABLE_ADMIN_WORKSPACE_CONTENT_ACCESS)
                     or user.id == model_info.user_id
-                    or has_access(
+                    or await has_access(
                         user.id, type="read", access_control=model_info.access_control
                     )
                 ):
@@ -1334,7 +1335,7 @@ async def get_models(
         user.role == "user"
         or (user.role == "admin" and not ENABLE_ADMIN_WORKSPACE_CONTENT_ACCESS)
     ) and not BYPASS_MODEL_ACCESS_CONTROL:
-        models = get_filtered_models(models, user)
+        models = await get_filtered_models(models, user)
 
     log.debug(
         f"/api/models returned filtered models accessible to the user: {json.dumps([model.get('id') for model in models])}"
@@ -1401,14 +1402,14 @@ async def chat_completion(
                 raise Exception("Model not found")
 
             model = request.app.state.MODELS[model_id]
-            model_info = Models.get_model_by_id(model_id)
+            model_info = await Models.get_model_by_id(model_id)
 
             # Check if user has access to the model
             if not BYPASS_MODEL_ACCESS_CONTROL and (
                 user.role != "admin" or not ENABLE_ADMIN_WORKSPACE_CONTENT_ACCESS
             ):
                 try:
-                    check_model_access(user, model)
+                    await check_model_access(user, model)
                 except Exception as e:
                     raise e
         else:
@@ -1459,7 +1460,9 @@ async def chat_completion(
 
         if metadata.get("chat_id") and (user and user.role != "admin"):
             if metadata["chat_id"] != "local":
-                chat = Chats.get_chat_by_id_and_user_id(metadata["chat_id"], user.id)
+                chat = await Chats.get_chat_by_id_and_user_id(
+                    metadata["chat_id"], user.id
+                )
                 if chat is None:
                     raise HTTPException(
                         status_code=status.HTTP_404_NOT_FOUND,
@@ -1477,7 +1480,7 @@ async def chat_completion(
         if metadata.get("chat_id") and metadata.get("message_id"):
             # Update the chat message with the error
             try:
-                Chats.upsert_message_to_chat_by_id_and_message_id(
+                await Chats.upsert_message_to_chat_by_id_and_message_id(
                     metadata["chat_id"],
                     metadata["message_id"],
                     {
@@ -1496,7 +1499,7 @@ async def chat_completion(
         response = await chat_completion_handler(request, form_data, user)
         if metadata.get("chat_id") and metadata.get("message_id"):
             try:
-                Chats.upsert_message_to_chat_by_id_and_message_id(
+                await Chats.upsert_message_to_chat_by_id_and_message_id(
                     metadata["chat_id"],
                     metadata["message_id"],
                     {
@@ -1514,7 +1517,7 @@ async def chat_completion(
         if metadata.get("chat_id") and metadata.get("message_id"):
             # Update the chat message with the error
             try:
-                Chats.upsert_message_to_chat_by_id_and_message_id(
+                await Chats.upsert_message_to_chat_by_id_and_message_id(
                     metadata["chat_id"],
                     metadata["message_id"],
                     {
@@ -1593,7 +1596,7 @@ async def list_tasks_endpoint(request: Request, user=Depends(get_verified_user))
 async def list_tasks_by_chat_id_endpoint(
     request: Request, chat_id: str, user=Depends(get_verified_user)
 ):
-    chat = Chats.get_chat_by_id(chat_id)
+    chat = await Chats.get_chat_by_id(chat_id)
     if chat is None or chat.user_id != user.id:
         return {"task_ids": []}
 
@@ -1624,9 +1627,9 @@ async def get_app_config(request: Request):
                 detail="Invalid token",
             )
         if data is not None and "id" in data:
-            user = Users.get_user_by_id(data["id"])
+            user = await Users.get_user_by_id(data["id"])
 
-    user_count = Users.get_num_users()
+    user_count = await Users.get_num_users()
     onboarding = False
 
     if user is None:

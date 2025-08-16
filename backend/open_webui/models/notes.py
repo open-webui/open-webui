@@ -74,12 +74,12 @@ class NoteUserResponse(NoteModel):
 
 
 class NoteTable:
-    def insert_new_note(
+    async def insert_new_note(
         self,
         form_data: NoteForm,
         user_id: str,
     ) -> Optional[NoteModel]:
-        with get_db() as db:
+        async with get_db() as db:
             note = NoteModel(
                 **{
                     "id": str(uuid.uuid4()),
@@ -92,36 +92,36 @@ class NoteTable:
 
             new_note = Note(**note.model_dump())
 
-            db.add(new_note)
-            db.commit()
+            await db.add(new_note)
+            await db.commit()
             return note
 
-    def get_notes(self) -> list[NoteModel]:
-        with get_db() as db:
-            notes = db.query(Note).order_by(Note.updated_at.desc()).all()
+    async def get_notes(self) -> list[NoteModel]:
+        async with get_db() as db:
+            notes = await db.query(Note).order_by(Note.updated_at.desc()).all()
             return [NoteModel.model_validate(note) for note in notes]
 
-    def get_notes_by_user_id(
+    async def get_notes_by_user_id(
         self, user_id: str, permission: str = "write"
     ) -> list[NoteModel]:
-        notes = self.get_notes()
+        notes = await self.get_notes()
         return [
             note
             for note in notes
             if note.user_id == user_id
-            or has_access(user_id, permission, note.access_control)
+            or await has_access(user_id, permission, note.access_control)
         ]
 
-    def get_note_by_id(self, id: str) -> Optional[NoteModel]:
-        with get_db() as db:
-            note = db.query(Note).filter(Note.id == id).first()
+    async def get_note_by_id(self, id: str) -> Optional[NoteModel]:
+        async with get_db() as db:
+            note = await db.query(Note).filter(Note.id == id).first()
             return NoteModel.model_validate(note) if note else None
 
-    def update_note_by_id(
+    async def update_note_by_id(
         self, id: str, form_data: NoteUpdateForm
     ) -> Optional[NoteModel]:
-        with get_db() as db:
-            note = db.query(Note).filter(Note.id == id).first()
+        async with get_db() as db:
+            note = await db.query(Note).filter(Note.id == id).first()
             if not note:
                 return None
 
@@ -139,13 +139,13 @@ class NoteTable:
 
             note.updated_at = int(time.time_ns())
 
-            db.commit()
+            await db.commit()
             return NoteModel.model_validate(note) if note else None
 
-    def delete_note_by_id(self, id: str):
-        with get_db() as db:
-            db.query(Note).filter(Note.id == id).delete()
-            db.commit()
+    async def delete_note_by_id(self, id: str):
+        async with get_db() as db:
+            await db.query(Note).filter(Note.id == id).delete()
+            await db.commit()
             return True
 
 

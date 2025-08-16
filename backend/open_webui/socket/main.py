@@ -263,7 +263,7 @@ async def connect(sid, environ, auth):
         data = decode_token(auth["token"])
 
         if data is not None and "id" in data:
-            user = Users.get_user_by_id(data["id"])
+            user = await Users.get_user_by_id(data["id"])
 
         if user:
             SESSION_POOL[sid] = user.model_dump()
@@ -284,7 +284,7 @@ async def user_join(sid, data):
     if data is None or "id" not in data:
         return
 
-    user = Users.get_user_by_id(data["id"])
+    user = await Users.get_user_by_id(data["id"])
     if not user:
         return
 
@@ -295,7 +295,7 @@ async def user_join(sid, data):
         USER_POOL[user.id] = [sid]
 
     # Join all the channels
-    channels = Channels.get_channels_by_user_id(user.id)
+    channels = await Channels.get_channels_by_user_id(user.id)
     log.debug(f"{channels=}")
     for channel in channels:
         await sio.enter_room(sid, f"channel:{channel.id}")
@@ -312,12 +312,12 @@ async def join_channel(sid, data):
     if data is None or "id" not in data:
         return
 
-    user = Users.get_user_by_id(data["id"])
+    user = await Users.get_user_by_id(data["id"])
     if not user:
         return
 
     # Join all the channels
-    channels = Channels.get_channels_by_user_id(user.id)
+    channels = await Channels.get_channels_by_user_id(user.id)
     log.debug(f"{channels=}")
     for channel in channels:
         await sio.enter_room(sid, f"channel:{channel.id}")
@@ -333,11 +333,11 @@ async def join_note(sid, data):
     if token_data is None or "id" not in token_data:
         return
 
-    user = Users.get_user_by_id(token_data["id"])
+    user = await Users.get_user_by_id(token_data["id"])
     if not user:
         return
 
-    note = Notes.get_note_by_id(data["note_id"])
+    note = await Notes.get_note_by_id(data["note_id"])
     if not note:
         log.error(f"Note {data['note_id']} not found for user {user.id}")
         return
@@ -345,7 +345,9 @@ async def join_note(sid, data):
     if (
         user.role != "admin"
         and user.id != note.user_id
-        and not has_access(user.id, type="read", access_control=note.access_control)
+        and not await has_access(
+            user.id, type="read", access_control=note.access_control
+        )
     ):
         log.error(f"User {user.id} does not have access to note {data['note_id']}")
         return
@@ -392,7 +394,7 @@ async def ydoc_document_join(sid, data):
 
         if document_id.startswith("note:"):
             note_id = document_id.split(":")[1]
-            note = Notes.get_note_by_id(note_id)
+            note = await Notes.get_note_by_id(note_id)
             if not note:
                 log.error(f"Note {note_id} not found")
                 return
@@ -400,7 +402,7 @@ async def ydoc_document_join(sid, data):
             if (
                 user.get("role") != "admin"
                 and user.get("id") != note.user_id
-                and not has_access(
+                and not await has_access(
                     user.get("id"), type="read", access_control=note.access_control
                 )
             ):
@@ -462,7 +464,7 @@ async def ydoc_document_join(sid, data):
 async def document_save_handler(document_id, data, user):
     if document_id.startswith("note:"):
         note_id = document_id.split(":")[1]
-        note = Notes.get_note_by_id(note_id)
+        note = await Notes.get_note_by_id(note_id)
         if not note:
             log.error(f"Note {note_id} not found")
             return
@@ -470,14 +472,14 @@ async def document_save_handler(document_id, data, user):
         if (
             user.get("role") != "admin"
             and user.get("id") != note.user_id
-            and not has_access(
+            and not await has_access(
                 user.get("id"), type="read", access_control=note.access_control
             )
         ):
             log.error(f"User {user.get('id')} does not have access to note {note_id}")
             return
 
-        Notes.update_note_by_id(note_id, NoteUpdateForm(data=data))
+        await Notes.update_note_by_id(note_id, NoteUpdateForm(data=data))
 
 
 @sio.on("ydoc:document:state")
@@ -668,14 +670,14 @@ def get_event_emitter(request_info, update_db=True):
 
         if update_db:
             if "type" in event_data and event_data["type"] == "status":
-                Chats.add_message_status_to_chat_by_id_and_message_id(
+                await Chats.add_message_status_to_chat_by_id_and_message_id(
                     request_info["chat_id"],
                     request_info["message_id"],
                     event_data.get("data", {}),
                 )
 
             if "type" in event_data and event_data["type"] == "message":
-                message = Chats.get_message_by_id_and_message_id(
+                message = await Chats.get_message_by_id_and_message_id(
                     request_info["chat_id"],
                     request_info["message_id"],
                 )
@@ -684,7 +686,7 @@ def get_event_emitter(request_info, update_db=True):
                     content = message.get("content", "")
                     content += event_data.get("data", {}).get("content", "")
 
-                    Chats.upsert_message_to_chat_by_id_and_message_id(
+                    await Chats.upsert_message_to_chat_by_id_and_message_id(
                         request_info["chat_id"],
                         request_info["message_id"],
                         {
@@ -695,7 +697,7 @@ def get_event_emitter(request_info, update_db=True):
             if "type" in event_data and event_data["type"] == "replace":
                 content = event_data.get("data", {}).get("content", "")
 
-                Chats.upsert_message_to_chat_by_id_and_message_id(
+                await Chats.upsert_message_to_chat_by_id_and_message_id(
                     request_info["chat_id"],
                     request_info["message_id"],
                     {

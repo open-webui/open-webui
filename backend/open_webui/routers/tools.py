@@ -49,7 +49,7 @@ async def get_tools(request: Request, user=Depends(get_verified_user)):
             request.app.state.config.TOOL_SERVER_CONNECTIONS
         )
 
-    tools = Tools.get_tools()
+    tools = await Tools.get_tools()
     for server in request.app.state.TOOL_SERVERS:
         tools.append(
             ToolUserResponse(
@@ -83,7 +83,7 @@ async def get_tools(request: Request, user=Depends(get_verified_user)):
             tool
             for tool in tools
             if tool.user_id == user.id
-            or has_access(user.id, "read", tool.access_control)
+            or await has_access(user.id, "read", tool.access_control)
         ]
         return tools
 
@@ -96,9 +96,9 @@ async def get_tools(request: Request, user=Depends(get_verified_user)):
 @router.get("/list", response_model=list[ToolUserResponse])
 async def get_tool_list(user=Depends(get_verified_user)):
     if user.role == "admin" and ENABLE_ADMIN_WORKSPACE_CONTENT_ACCESS:
-        tools = Tools.get_tools()
+        tools = await Tools.get_tools()
     else:
-        tools = Tools.get_tools_by_user_id(user.id, "write")
+        tools = await Tools.get_tools_by_user_id(user.id, "write")
     return tools
 
 
@@ -184,7 +184,7 @@ async def load_tool_from_url(
 
 @router.get("/export", response_model=list[ToolModel])
 async def export_tools(user=Depends(get_admin_user)):
-    tools = Tools.get_tools()
+    tools = await Tools.get_tools()
     return tools
 
 
@@ -215,11 +215,11 @@ async def create_new_tools(
 
     form_data.id = form_data.id.lower()
 
-    tools = Tools.get_tool_by_id(form_data.id)
+    tools = await Tools.get_tool_by_id(form_data.id)
     if tools is None:
         try:
             form_data.content = replace_imports(form_data.content)
-            tool_module, frontmatter = load_tool_module_by_id(
+            tool_module, frontmatter = await load_tool_module_by_id(
                 form_data.id, content=form_data.content
             )
             form_data.meta.manifest = frontmatter
@@ -228,7 +228,7 @@ async def create_new_tools(
             TOOLS[form_data.id] = tool_module
 
             specs = get_tool_specs(TOOLS[form_data.id])
-            tools = Tools.insert_new_tool(user.id, form_data, specs)
+            tools = await Tools.insert_new_tool(user.id, form_data, specs)
 
             tool_cache_dir = CACHE_DIR / "tools" / form_data.id
             tool_cache_dir.mkdir(parents=True, exist_ok=True)
@@ -260,13 +260,13 @@ async def create_new_tools(
 
 @router.get("/id/{id}", response_model=Optional[ToolModel])
 async def get_tools_by_id(id: str, user=Depends(get_verified_user)):
-    tools = Tools.get_tool_by_id(id)
+    tools = await Tools.get_tool_by_id(id)
 
     if tools:
         if (
             user.role == "admin"
             or tools.user_id == user.id
-            or has_access(user.id, "read", tools.access_control)
+            or await has_access(user.id, "read", tools.access_control)
         ):
             return tools
     else:
@@ -288,7 +288,7 @@ async def update_tools_by_id(
     form_data: ToolForm,
     user=Depends(get_verified_user),
 ):
-    tools = Tools.get_tool_by_id(id)
+    tools = await Tools.get_tool_by_id(id)
     if not tools:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
@@ -298,7 +298,7 @@ async def update_tools_by_id(
     # Is the user the original creator, in a group with write access, or an admin
     if (
         tools.user_id != user.id
-        and not has_access(user.id, "write", tools.access_control)
+        and not await has_access(user.id, "write", tools.access_control)
         and user.role != "admin"
     ):
         raise HTTPException(
@@ -308,7 +308,9 @@ async def update_tools_by_id(
 
     try:
         form_data.content = replace_imports(form_data.content)
-        tool_module, frontmatter = load_tool_module_by_id(id, content=form_data.content)
+        tool_module, frontmatter = await load_tool_module_by_id(
+            id, content=form_data.content
+        )
         form_data.meta.manifest = frontmatter
 
         TOOLS = request.app.state.TOOLS
@@ -322,7 +324,7 @@ async def update_tools_by_id(
         }
 
         log.debug(updated)
-        tools = Tools.update_tool_by_id(id, updated)
+        tools = await Tools.update_tool_by_id(id, updated)
 
         if tools:
             return tools
@@ -348,7 +350,7 @@ async def update_tools_by_id(
 async def delete_tools_by_id(
     request: Request, id: str, user=Depends(get_verified_user)
 ):
-    tools = Tools.get_tool_by_id(id)
+    tools = await Tools.get_tool_by_id(id)
     if not tools:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
@@ -357,7 +359,7 @@ async def delete_tools_by_id(
 
     if (
         tools.user_id != user.id
-        and not has_access(user.id, "write", tools.access_control)
+        and not await has_access(user.id, "write", tools.access_control)
         and user.role != "admin"
     ):
         raise HTTPException(
@@ -365,7 +367,7 @@ async def delete_tools_by_id(
             detail=ERROR_MESSAGES.UNAUTHORIZED,
         )
 
-    result = Tools.delete_tool_by_id(id)
+    result = await Tools.delete_tool_by_id(id)
     if result:
         TOOLS = request.app.state.TOOLS
         if id in TOOLS:
@@ -381,10 +383,10 @@ async def delete_tools_by_id(
 
 @router.get("/id/{id}/valves", response_model=Optional[dict])
 async def get_tools_valves_by_id(id: str, user=Depends(get_verified_user)):
-    tools = Tools.get_tool_by_id(id)
+    tools = await Tools.get_tool_by_id(id)
     if tools:
         try:
-            valves = Tools.get_tool_valves_by_id(id)
+            valves = await Tools.get_tool_valves_by_id(id)
             return valves
         except Exception as e:
             raise HTTPException(
@@ -407,12 +409,12 @@ async def get_tools_valves_by_id(id: str, user=Depends(get_verified_user)):
 async def get_tools_valves_spec_by_id(
     request: Request, id: str, user=Depends(get_verified_user)
 ):
-    tools = Tools.get_tool_by_id(id)
+    tools = await Tools.get_tool_by_id(id)
     if tools:
         if id in request.app.state.TOOLS:
             tools_module = request.app.state.TOOLS[id]
         else:
-            tools_module, _ = load_tool_module_by_id(id)
+            tools_module, _ = await load_tool_module_by_id(id)
             request.app.state.TOOLS[id] = tools_module
 
         if hasattr(tools_module, "Valves"):
@@ -435,7 +437,7 @@ async def get_tools_valves_spec_by_id(
 async def update_tools_valves_by_id(
     request: Request, id: str, form_data: dict, user=Depends(get_verified_user)
 ):
-    tools = Tools.get_tool_by_id(id)
+    tools = await Tools.get_tool_by_id(id)
     if not tools:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
@@ -444,7 +446,7 @@ async def update_tools_valves_by_id(
 
     if (
         tools.user_id != user.id
-        and not has_access(user.id, "write", tools.access_control)
+        and not await has_access(user.id, "write", tools.access_control)
         and user.role != "admin"
     ):
         raise HTTPException(
@@ -455,7 +457,7 @@ async def update_tools_valves_by_id(
     if id in request.app.state.TOOLS:
         tools_module = request.app.state.TOOLS[id]
     else:
-        tools_module, _ = load_tool_module_by_id(id)
+        tools_module, _ = await load_tool_module_by_id(id)
         request.app.state.TOOLS[id] = tools_module
 
     if not hasattr(tools_module, "Valves"):
@@ -468,7 +470,7 @@ async def update_tools_valves_by_id(
     try:
         form_data = {k: v for k, v in form_data.items() if v is not None}
         valves = Valves(**form_data)
-        Tools.update_tool_valves_by_id(id, valves.model_dump())
+        await Tools.update_tool_valves_by_id(id, valves.model_dump())
         return valves.model_dump()
     except Exception as e:
         log.exception(f"Failed to update tool valves by id {id}: {e}")
@@ -485,10 +487,10 @@ async def update_tools_valves_by_id(
 
 @router.get("/id/{id}/valves/user", response_model=Optional[dict])
 async def get_tools_user_valves_by_id(id: str, user=Depends(get_verified_user)):
-    tools = Tools.get_tool_by_id(id)
+    tools = await Tools.get_tool_by_id(id)
     if tools:
         try:
-            user_valves = Tools.get_user_valves_by_id_and_user_id(id, user.id)
+            user_valves = await Tools.get_user_valves_by_id_and_user_id(id, user.id)
             return user_valves
         except Exception as e:
             raise HTTPException(
@@ -506,12 +508,12 @@ async def get_tools_user_valves_by_id(id: str, user=Depends(get_verified_user)):
 async def get_tools_user_valves_spec_by_id(
     request: Request, id: str, user=Depends(get_verified_user)
 ):
-    tools = Tools.get_tool_by_id(id)
+    tools = await Tools.get_tool_by_id(id)
     if tools:
         if id in request.app.state.TOOLS:
             tools_module = request.app.state.TOOLS[id]
         else:
-            tools_module, _ = load_tool_module_by_id(id)
+            tools_module, _ = await load_tool_module_by_id(id)
             request.app.state.TOOLS[id] = tools_module
 
         if hasattr(tools_module, "UserValves"):
@@ -529,13 +531,13 @@ async def get_tools_user_valves_spec_by_id(
 async def update_tools_user_valves_by_id(
     request: Request, id: str, form_data: dict, user=Depends(get_verified_user)
 ):
-    tools = Tools.get_tool_by_id(id)
+    tools = await Tools.get_tool_by_id(id)
 
     if tools:
         if id in request.app.state.TOOLS:
             tools_module = request.app.state.TOOLS[id]
         else:
-            tools_module, _ = load_tool_module_by_id(id)
+            tools_module, _ = await load_tool_module_by_id(id)
             request.app.state.TOOLS[id] = tools_module
 
         if hasattr(tools_module, "UserValves"):
@@ -544,7 +546,7 @@ async def update_tools_user_valves_by_id(
             try:
                 form_data = {k: v for k, v in form_data.items() if v is not None}
                 user_valves = UserValves(**form_data)
-                Tools.update_user_valves_by_id_and_user_id(
+                await Tools.update_user_valves_by_id_and_user_id(
                     id, user.id, user_valves.model_dump()
                 )
                 return user_valves.model_dump()

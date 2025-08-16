@@ -69,7 +69,7 @@ class PromptForm(BaseModel):
 
 
 class PromptsTable:
-    def insert_new_prompt(
+    async def insert_new_prompt(
         self, user_id: str, form_data: PromptForm
     ) -> Optional[PromptModel]:
         prompt = PromptModel(
@@ -81,11 +81,11 @@ class PromptsTable:
         )
 
         try:
-            with get_db() as db:
+            async with get_db() as db:
                 result = Prompt(**prompt.model_dump())
-                db.add(result)
-                db.commit()
-                db.refresh(result)
+                await db.add(result)
+                await db.commit()
+                await db.refresh(result)
                 if result:
                     return PromptModel.model_validate(result)
                 else:
@@ -93,20 +93,22 @@ class PromptsTable:
         except Exception:
             return None
 
-    def get_prompt_by_command(self, command: str) -> Optional[PromptModel]:
+    async def get_prompt_by_command(self, command: str) -> Optional[PromptModel]:
         try:
-            with get_db() as db:
-                prompt = db.query(Prompt).filter_by(command=command).first()
+            async with get_db() as db:
+                prompt = await db.query(Prompt).filter_by(command=command).first()
                 return PromptModel.model_validate(prompt)
         except Exception:
             return None
 
-    def get_prompts(self) -> list[PromptUserResponse]:
-        with get_db() as db:
+    async def get_prompts(self) -> list[PromptUserResponse]:
+        async with get_db() as db:
             prompts = []
 
-            for prompt in db.query(Prompt).order_by(Prompt.timestamp.desc()).all():
-                user = Users.get_user_by_id(prompt.user_id)
+            for prompt in (
+                await db.query(Prompt).order_by(Prompt.timestamp.desc()).all()
+            ):
+                user = await Users.get_user_by_id(prompt.user_id)
                 prompts.append(
                     PromptUserResponse.model_validate(
                         {
@@ -118,38 +120,38 @@ class PromptsTable:
 
             return prompts
 
-    def get_prompts_by_user_id(
+    async def get_prompts_by_user_id(
         self, user_id: str, permission: str = "write"
     ) -> list[PromptUserResponse]:
-        prompts = self.get_prompts()
+        prompts = await self.get_prompts()
 
         return [
             prompt
             for prompt in prompts
             if prompt.user_id == user_id
-            or has_access(user_id, permission, prompt.access_control)
+            or await has_access(user_id, permission, prompt.access_control)
         ]
 
-    def update_prompt_by_command(
+    async def update_prompt_by_command(
         self, command: str, form_data: PromptForm
     ) -> Optional[PromptModel]:
         try:
-            with get_db() as db:
-                prompt = db.query(Prompt).filter_by(command=command).first()
+            async with get_db() as db:
+                prompt = await db.query(Prompt).filter_by(command=command).first()
                 prompt.title = form_data.title
                 prompt.content = form_data.content
                 prompt.access_control = form_data.access_control
                 prompt.timestamp = int(time.time())
-                db.commit()
+                await db.commit()
                 return PromptModel.model_validate(prompt)
         except Exception:
             return None
 
-    def delete_prompt_by_command(self, command: str) -> bool:
+    async def delete_prompt_by_command(self, command: str) -> bool:
         try:
-            with get_db() as db:
-                db.query(Prompt).filter_by(command=command).delete()
-                db.commit()
+            async with get_db() as db:
+                await db.query(Prompt).filter_by(command=command).delete()
+                await db.commit()
 
                 return True
         except Exception:

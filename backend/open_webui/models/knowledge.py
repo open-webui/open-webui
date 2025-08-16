@@ -100,10 +100,10 @@ class KnowledgeForm(BaseModel):
 
 
 class KnowledgeTable:
-    def insert_new_knowledge(
+    async def insert_new_knowledge(
         self, user_id: str, form_data: KnowledgeForm
     ) -> Optional[KnowledgeModel]:
-        with get_db() as db:
+        async with get_db() as db:
             knowledge = KnowledgeModel(
                 **{
                     **form_data.model_dump(),
@@ -116,9 +116,9 @@ class KnowledgeTable:
 
             try:
                 result = Knowledge(**knowledge.model_dump())
-                db.add(result)
-                db.commit()
-                db.refresh(result)
+                await db.add(result)
+                await db.commit()
+                await db.refresh(result)
                 if result:
                     return KnowledgeModel.model_validate(result)
                 else:
@@ -126,13 +126,13 @@ class KnowledgeTable:
             except Exception:
                 return None
 
-    def get_knowledge_bases(self) -> list[KnowledgeUserModel]:
-        with get_db() as db:
+    async def get_knowledge_bases(self) -> list[KnowledgeUserModel]:
+        async with get_db() as db:
             knowledge_bases = []
             for knowledge in (
-                db.query(Knowledge).order_by(Knowledge.updated_at.desc()).all()
+                await db.query(Knowledge).order_by(Knowledge.updated_at.desc()).all()
             ):
-                user = Users.get_user_by_id(knowledge.user_id)
+                user = await Users.get_user_by_id(knowledge.user_id)
                 knowledge_bases.append(
                     KnowledgeUserModel.model_validate(
                         {
@@ -143,75 +143,75 @@ class KnowledgeTable:
                 )
             return knowledge_bases
 
-    def get_knowledge_bases_by_user_id(
+    async def get_knowledge_bases_by_user_id(
         self, user_id: str, permission: str = "write"
     ) -> list[KnowledgeUserModel]:
-        knowledge_bases = self.get_knowledge_bases()
+        knowledge_bases = await self.get_knowledge_bases()
         return [
             knowledge_base
             for knowledge_base in knowledge_bases
             if knowledge_base.user_id == user_id
-            or has_access(user_id, permission, knowledge_base.access_control)
+            or await has_access(user_id, permission, knowledge_base.access_control)
         ]
 
-    def get_knowledge_by_id(self, id: str) -> Optional[KnowledgeModel]:
+    async def get_knowledge_by_id(self, id: str) -> Optional[KnowledgeModel]:
         try:
-            with get_db() as db:
-                knowledge = db.query(Knowledge).filter_by(id=id).first()
+            async with get_db() as db:
+                knowledge = await db.query(Knowledge).filter_by(id=id).first()
                 return KnowledgeModel.model_validate(knowledge) if knowledge else None
         except Exception:
             return None
 
-    def update_knowledge_by_id(
+    async def update_knowledge_by_id(
         self, id: str, form_data: KnowledgeForm, overwrite: bool = False
     ) -> Optional[KnowledgeModel]:
         try:
-            with get_db() as db:
-                knowledge = self.get_knowledge_by_id(id=id)
-                db.query(Knowledge).filter_by(id=id).update(
+            async with get_db() as db:
+                knowledge = await self.get_knowledge_by_id(id=id)
+                await db.query(Knowledge).filter_by(id=id).update(
                     {
                         **form_data.model_dump(),
                         "updated_at": int(time.time()),
                     }
                 )
-                db.commit()
-                return self.get_knowledge_by_id(id=id)
+                await db.commit()
+                return await self.get_knowledge_by_id(id=id)
         except Exception as e:
             log.exception(e)
             return None
 
-    def update_knowledge_data_by_id(
+    async def update_knowledge_data_by_id(
         self, id: str, data: dict
     ) -> Optional[KnowledgeModel]:
         try:
-            with get_db() as db:
-                knowledge = self.get_knowledge_by_id(id=id)
-                db.query(Knowledge).filter_by(id=id).update(
+            async with get_db() as db:
+                knowledge = await self.get_knowledge_by_id(id=id)
+                await db.query(Knowledge).filter_by(id=id).update(
                     {
                         "data": data,
                         "updated_at": int(time.time()),
                     }
                 )
-                db.commit()
-                return self.get_knowledge_by_id(id=id)
+                await db.commit()
+                return await self.get_knowledge_by_id(id=id)
         except Exception as e:
             log.exception(e)
             return None
 
-    def delete_knowledge_by_id(self, id: str) -> bool:
+    async def delete_knowledge_by_id(self, id: str) -> bool:
         try:
-            with get_db() as db:
-                db.query(Knowledge).filter_by(id=id).delete()
-                db.commit()
+            async with get_db() as db:
+                await db.query(Knowledge).filter_by(id=id).delete()
+                await db.commit()
                 return True
         except Exception:
             return False
 
-    def delete_all_knowledge(self) -> bool:
-        with get_db() as db:
+    async def delete_all_knowledge(self) -> bool:
+        async with get_db() as db:
             try:
-                db.query(Knowledge).delete()
-                db.commit()
+                await db.query(Knowledge).delete()
+                await db.commit()
 
                 return True
             except Exception:

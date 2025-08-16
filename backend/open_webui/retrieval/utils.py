@@ -512,12 +512,12 @@ def get_sources_from_items(
 
         elif item.get("type") == "note":
             # Note Attached
-            note = Notes.get_note_by_id(item.get("id"))
+            note = await Notes.get_note_by_id(item.get("id"))
 
             if note and (
                 user.role == "admin"
                 or note.user_id == user.id
-                or has_access(user.id, "read", note.access_control)
+                or await has_access(user.id, "read", note.access_control)
             ):
                 # User has access to the note
                 query_result = {
@@ -577,11 +577,11 @@ def get_sources_from_items(
                 or request.app.state.config.BYPASS_EMBEDDING_AND_RETRIEVAL
             ):
                 # Manual Full Mode Toggle for Collection
-                knowledge_base = Knowledges.get_knowledge_by_id(item.get("id"))
+                knowledge_base = await Knowledges.get_knowledge_by_id(item.get("id"))
 
                 if knowledge_base and (
                     user.role == "admin"
-                    or has_access(user.id, "read", knowledge_base.access_control)
+                    or await has_access(user.id, "read", knowledge_base.access_control)
                 ):
 
                     file_ids = knowledge_base.data.get("file_ids", [])

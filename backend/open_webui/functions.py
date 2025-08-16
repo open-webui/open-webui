@@ -30,7 +30,6 @@ from open_webui.models.functions import Functions
 from open_webui.models.models import Models
 
 from open_webui.utils.plugin import (
-    load_function_module_by_id,
     get_function_module_from_cache,
 )
 from open_webui.utils.tools import get_tools
@@ -56,17 +55,17 @@ log = logging.getLogger(__name__)
 log.setLevel(SRC_LOG_LEVELS["MAIN"])
 
 
-def get_function_module_by_id(request: Request, pipe_id: str):
-    function_module, _, _ = get_function_module_from_cache(request, pipe_id)
+async def get_function_module_by_id(request: Request, pipe_id: str):
+    function_module, _, _ = await get_function_module_from_cache(request, pipe_id)
 
     if hasattr(function_module, "valves") and hasattr(function_module, "Valves"):
-        valves = Functions.get_function_valves_by_id(pipe_id)
+        valves = await Functions.get_function_valves_by_id(pipe_id)
         function_module.valves = function_module.Valves(**(valves if valves else {}))
     return function_module
 
 
 async def get_function_models(request):
-    pipes = Functions.get_functions_by_type("pipe", active_only=True)
+    pipes = await Functions.get_functions_by_type("pipe", active_only=True)
     pipe_models = []
 
     for pipe in pipes:
@@ -174,7 +173,7 @@ async def generate_function_chat_completion(
             pipe_id, _ = pipe_id.split(".", 1)
         return pipe_id
 
-    def get_function_params(function_module, form_data, user, extra_params=None):
+    async def get_function_params(function_module, form_data, user, extra_params=None):
         if extra_params is None:
             extra_params = {}
 
@@ -187,7 +186,9 @@ async def generate_function_chat_completion(
         }
 
         if "__user__" in params and hasattr(function_module, "UserValves"):
-            user_valves = Functions.get_user_valves_by_id_and_user_id(pipe_id, user.id)
+            user_valves = await Functions.get_user_valves_by_id_and_user_id(
+                pipe_id, user.id
+            )
             try:
                 params["__user__"]["valves"] = function_module.UserValves(**user_valves)
             except Exception as e:
@@ -197,7 +198,7 @@ async def generate_function_chat_completion(
         return params
 
     model_id = form_data.get("model")
-    model_info = Models.get_model_by_id(model_id)
+    model_info = await Models.get_model_by_id(model_id)
 
     metadata = form_data.pop("metadata", {})
 
@@ -232,7 +233,7 @@ async def generate_function_chat_completion(
         "__metadata__": metadata,
         "__request__": request,
     }
-    extra_params["__tools__"] = get_tools(
+    extra_params["__tools__"] = await get_tools(
         request,
         tool_ids,
         user,
@@ -261,7 +262,7 @@ async def generate_function_chat_completion(
     function_module = get_function_module_by_id(request, pipe_id)
 
     pipe = function_module.pipe
-    params = get_function_params(function_module, form_data, user, extra_params)
+    params = await get_function_params(function_module, form_data, user, extra_params)
 
     if form_data.get("stream", False):
 

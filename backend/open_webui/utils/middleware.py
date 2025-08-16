@@ -77,7 +77,6 @@ from open_webui.utils.misc import (
     convert_logit_bias_input_to_json,
 )
 from open_webui.utils.tools import get_tools
-from open_webui.utils.plugin import load_function_module_by_id
 from open_webui.utils.filter import (
     get_sorted_filter_ids,
     process_filter_functions,
@@ -771,9 +770,9 @@ async def process_chat_payload(request, form_data, user, metadata, model):
     # Check if the request has chat_id and is inside of a folder
     chat_id = metadata.get("chat_id", None)
     if chat_id and user:
-        chat = Chats.get_chat_by_id_and_user_id(chat_id, user.id)
+        chat = await Chats.get_chat_by_id_and_user_id(chat_id, user.id)
         if chat and chat.folder_id:
-            folder = Folders.get_folder_by_id_and_user_id(chat.folder_id, user.id)
+            folder = await Folders.get_folder_by_id_and_user_id(chat.folder_id, user.id)
 
             if folder and folder.data:
                 if "system_prompt" in folder.data:
@@ -840,8 +839,8 @@ async def process_chat_payload(request, form_data, user, metadata, model):
 
     try:
         filter_functions = [
-            Functions.get_function_by_id(filter_id)
-            for filter_id in get_sorted_filter_ids(
+            await Functions.get_function_by_id(filter_id)
+            for filter_id in await get_sorted_filter_ids(
                 request, model, metadata.get("filter_ids", [])
             )
         ]
@@ -908,7 +907,7 @@ async def process_chat_payload(request, form_data, user, metadata, model):
     tools_dict = {}
 
     if tool_ids:
-        tools_dict = get_tools(
+        tools_dict = await get_tools(
             request,
             tool_ids,
             user,
@@ -1042,7 +1041,7 @@ async def process_chat_response(
     request, response, form_data, user, metadata, model, events, tasks
 ):
     async def background_tasks_handler():
-        message_map = Chats.get_messages_by_chat_id(metadata["chat_id"])
+        message_map = await Chats.get_messages_by_chat_id(metadata["chat_id"])
         message = message_map.get(metadata["message_id"]) if message_map else None
 
         if message:
@@ -1115,7 +1114,7 @@ async def process_chat_response(
                                 "follow_ups", []
                             )
 
-                            Chats.upsert_message_to_chat_by_id_and_message_id(
+                            await Chats.upsert_message_to_chat_by_id_and_message_id(
                                 metadata["chat_id"],
                                 metadata["message_id"],
                                 {
@@ -1177,7 +1176,9 @@ async def process_chat_response(
                             if not title:
                                 title = messages[0].get("content", user_message)
 
-                            Chats.update_chat_title_by_id(metadata["chat_id"], title)
+                            await Chats.update_chat_title_by_id(
+                                metadata["chat_id"], title
+                            )
 
                             await event_emitter(
                                 {
@@ -1188,7 +1189,7 @@ async def process_chat_response(
                     elif len(messages) == 2:
                         title = messages[0].get("content", user_message)
 
-                        Chats.update_chat_title_by_id(metadata["chat_id"], title)
+                        await Chats.update_chat_title_by_id(metadata["chat_id"], title)
 
                         await event_emitter(
                             {
@@ -1224,7 +1225,7 @@ async def process_chat_response(
 
                         try:
                             tags = json.loads(tags_string).get("tags", [])
-                            Chats.update_chat_tags_by_id(
+                            await Chats.update_chat_tags_by_id(
                                 metadata["chat_id"], tags, user
                             )
 
@@ -1267,7 +1268,7 @@ async def process_chat_response(
 
                 if "error" in response_data:
                     error = response_data["error"].get("detail", response_data["error"])
-                    Chats.upsert_message_to_chat_by_id_and_message_id(
+                    await Chats.upsert_message_to_chat_by_id_and_message_id(
                         metadata["chat_id"],
                         metadata["message_id"],
                         {
@@ -1276,7 +1277,7 @@ async def process_chat_response(
                     )
 
                 if "selected_model_id" in response_data:
-                    Chats.upsert_message_to_chat_by_id_and_message_id(
+                    await Chats.upsert_message_to_chat_by_id_and_message_id(
                         metadata["chat_id"],
                         metadata["message_id"],
                         {
@@ -1296,7 +1297,7 @@ async def process_chat_response(
                             }
                         )
 
-                        title = Chats.get_chat_title_by_id(metadata["chat_id"])
+                        title = await Chats.get_chat_title_by_id(metadata["chat_id"])
 
                         await event_emitter(
                             {
@@ -1310,7 +1311,7 @@ async def process_chat_response(
                         )
 
                         # Save message in the database
-                        Chats.upsert_message_to_chat_by_id_and_message_id(
+                        await Chats.upsert_message_to_chat_by_id_and_message_id(
                             metadata["chat_id"],
                             metadata["message_id"],
                             {
@@ -1321,7 +1322,9 @@ async def process_chat_response(
 
                         # Send a webhook notification if the user is not active
                         if not get_active_status_by_user_id(user.id):
-                            webhook_url = Users.get_user_webhook_url_by_id(user.id)
+                            webhook_url = await Users.get_user_webhook_url_by_id(
+                                user.id
+                            )
                             if webhook_url:
                                 await post_webhook(
                                     request.app.state.WEBUI_NAME,
@@ -1392,8 +1395,8 @@ async def process_chat_response(
         "__model__": model,
     }
     filter_functions = [
-        Functions.get_function_by_id(filter_id)
-        for filter_id in get_sorted_filter_ids(
+        await Functions.get_function_by_id(filter_id)
+        for filter_id in await get_sorted_filter_ids(
             request, model, metadata.get("filter_ids", [])
         )
     ]
@@ -1767,7 +1770,7 @@ async def process_chat_response(
 
                 return content, content_blocks, end_flag
 
-            message = Chats.get_message_by_id_and_message_id(
+            message = await Chats.get_message_by_id_and_message_id(
                 metadata["chat_id"], metadata["message_id"]
             )
 
@@ -1827,7 +1830,7 @@ async def process_chat_response(
                     )
 
                     # Save message in the database
-                    Chats.upsert_message_to_chat_by_id_and_message_id(
+                    await Chats.upsert_message_to_chat_by_id_and_message_id(
                         metadata["chat_id"],
                         metadata["message_id"],
                         {
@@ -1897,7 +1900,7 @@ async def process_chat_response(
 
                                 if "selected_model_id" in data:
                                     model_id = data["selected_model_id"]
-                                    Chats.upsert_message_to_chat_by_id_and_message_id(
+                                    await Chats.upsert_message_to_chat_by_id_and_message_id(
                                         metadata["chat_id"],
                                         metadata["message_id"],
                                         {
@@ -2096,7 +2099,7 @@ async def process_chat_response(
 
                                         if ENABLE_REALTIME_CHAT_SAVE:
                                             # Save message in the database
-                                            Chats.upsert_message_to_chat_by_id_and_message_id(
+                                            await Chats.upsert_message_to_chat_by_id_and_message_id(
                                                 metadata["chat_id"],
                                                 metadata["message_id"],
                                                 {
@@ -2513,7 +2516,7 @@ async def process_chat_response(
                             log.debug(e)
                             break
 
-                title = Chats.get_chat_title_by_id(metadata["chat_id"])
+                title = await Chats.get_chat_title_by_id(metadata["chat_id"])
                 data = {
                     "done": True,
                     "content": serialize_content_blocks(content_blocks),
@@ -2522,7 +2525,7 @@ async def process_chat_response(
 
                 if not ENABLE_REALTIME_CHAT_SAVE:
                     # Save message in the database
-                    Chats.upsert_message_to_chat_by_id_and_message_id(
+                    await Chats.upsert_message_to_chat_by_id_and_message_id(
                         metadata["chat_id"],
                         metadata["message_id"],
                         {
@@ -2532,7 +2535,7 @@ async def process_chat_response(
 
                 # Send a webhook notification if the user is not active
                 if not get_active_status_by_user_id(user.id):
-                    webhook_url = Users.get_user_webhook_url_by_id(user.id)
+                    webhook_url = await Users.get_user_webhook_url_by_id(user.id)
                     if webhook_url:
                         await post_webhook(
                             request.app.state.WEBUI_NAME,
@@ -2560,7 +2563,7 @@ async def process_chat_response(
 
                 if not ENABLE_REALTIME_CHAT_SAVE:
                     # Save message in the database
-                    Chats.upsert_message_to_chat_by_id_and_message_id(
+                    await Chats.upsert_message_to_chat_by_id_and_message_id(
                         metadata["chat_id"],
                         metadata["message_id"],
                         {
