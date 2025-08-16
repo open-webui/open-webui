@@ -1180,6 +1180,10 @@ USER_PERMISSIONS_WORKSPACE_TOOLS_ALLOW_PUBLIC_SHARING = (
     == "true"
 )
 
+USER_PERMISSIONS_SHARING_PUBLIC_CHAT = (
+    os.environ.get("USER_PERMISSIONS_SHARING_PUBLIC_CHAT", "False").lower() == "true"
+)
+
 
 USER_PERMISSIONS_CHAT_CONTROLS = (
     os.environ.get("USER_PERMISSIONS_CHAT_CONTROLS", "True").lower() == "true"
@@ -1211,6 +1215,10 @@ USER_PERMISSIONS_CHAT_EDIT = (
 
 USER_PERMISSIONS_CHAT_SHARE = (
     os.environ.get("USER_PERMISSIONS_CHAT_SHARE", "True").lower() == "true"
+)
+
+USER_PERMISSIONS_CHAT_CLONE = (
+    os.environ.get("USER_PERMISSIONS_CHAT_CLONE", "True").lower() == "true"
 )
 
 USER_PERMISSIONS_CHAT_EXPORT = (
@@ -1279,6 +1287,7 @@ DEFAULT_USER_PERMISSIONS = {
         "public_knowledge": USER_PERMISSIONS_WORKSPACE_KNOWLEDGE_ALLOW_PUBLIC_SHARING,
         "public_prompts": USER_PERMISSIONS_WORKSPACE_PROMPTS_ALLOW_PUBLIC_SHARING,
         "public_tools": USER_PERMISSIONS_WORKSPACE_TOOLS_ALLOW_PUBLIC_SHARING,
+        "public_chat": USER_PERMISSIONS_SHARING_PUBLIC_CHAT,
     },
     "chat": {
         "controls": USER_PERMISSIONS_CHAT_CONTROLS,
@@ -1289,6 +1298,7 @@ DEFAULT_USER_PERMISSIONS = {
         "delete": USER_PERMISSIONS_CHAT_DELETE,
         "edit": USER_PERMISSIONS_CHAT_EDIT,
         "share": USER_PERMISSIONS_CHAT_SHARE,
+        "clone": USER_PERMISSIONS_CHAT_CLONE,
         "export": USER_PERMISSIONS_CHAT_EXPORT,
         "stt": USER_PERMISSIONS_CHAT_STT,
         "tts": USER_PERMISSIONS_CHAT_TTS,
@@ -1363,6 +1373,12 @@ ENABLE_COMMUNITY_SHARING = PersistentConfig(
     "ENABLE_COMMUNITY_SHARING",
     "ui.enable_community_sharing",
     os.environ.get("ENABLE_COMMUNITY_SHARING", "True").lower() == "true",
+)
+
+ENABLE_SHARED_CHATS_ACCESS = PersistentConfig(
+    "ENABLE_SHARED_CHATS_ACCESS",
+    "ui.enable_shared_chats_access",
+    os.environ.get("ENABLE_SHARED_CHATS_ACCESS", "True").lower() == "true",
 )
 
 ENABLE_MESSAGE_RATING = PersistentConfig(

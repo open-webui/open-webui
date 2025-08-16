@@ -5,10 +5,14 @@
 
 	import dayjs from 'dayjs';
 
-	import { settings, chatId, WEBUI_NAME, models, config } from '$lib/stores';
+	import { settings, chatId, WEBUI_NAME, models, config, user as userStore } from '$lib/stores';
 	import { convertMessagesToHistory, createMessagesList } from '$lib/utils';
 
-	import { getChatByShareId, cloneSharedChatById } from '$lib/apis/chats';
+	import {
+		getChatByShareId,
+		cloneSharedChatById,
+		incrementCloneCountById
+	} from '$lib/apis/chats';
 
 	import Messages from '$lib/components/chat/Messages.svelte';
 
@@ -31,7 +35,7 @@
 	let selectedModels = [''];
 
 	let chat = null;
-	let user = null;
+	let chat_owner = null;
 
 	let title = '';
 	let files = [];
@@ -60,13 +64,23 @@
 	//////////////////////////
 
 	const loadSharedChat = async () => {
-		const userSettings = await getUserSettings(localStorage.token).catch((error) => {
-			console.error(error);
-			return null;
-		});
+		const token = localStorage.token;
+		if (token) {
+			const userSettings = await getUserSettings(token).catch((error) => {
+				console.error(error);
+				return null;
+			});
 
-		if (userSettings) {
-			settings.set(userSettings.ui);
+			if (userSettings) {
+				settings.set(userSettings.ui);
+			}
+
+			await models.set(
+				await getModels(
+					token,
+					$config?.features?.enable_direct_connections && ($settings?.directConnections ?? null)
+				)
+			);
 		} else {
 			let localStorageSettings = {} as Parameters<(typeof settings)['set']>[0];
 
@@ -79,23 +93,19 @@
 			settings.set(localStorageSettings);
 		}
 
-		await models.set(
-			await getModels(
-				localStorage.token,
-				$config?.features?.enable_direct_connections && ($settings?.directConnections ?? null)
-			)
-		);
 		await chatId.set($page.params.id);
-		chat = await getChatByShareId(localStorage.token, $chatId).catch(async (error) => {
-			await goto('/');
+		chat = await getChatByShareId(token, $chatId).catch(async (error) => {
+			await goto(`/auth?redirect=${encodeURIComponent($page.url.pathname)}`);
 			return null;
 		});
 
 		if (chat) {
-			user = await getUserById(localStorage.token, chat.user_id).catch((error) => {
-				console.error(error);
-				return null;
-			});
+			if (token) {
+				chat_owner = await getUserById(token, chat.user_id).catch((error) => {
+					console.error(error);
+					return null;
+				});
+			}
 
 			const chatContent = chat.chat;
 
@@ -130,12 +140,14 @@
 	const cloneSharedChat = async () => {
 		if (!chat) return;
 
-		const res = await cloneSharedChatById(localStorage.token, chat.id).catch((error) => {
+		const res = await cloneSharedChatById(localStorage.token, chat.share_id).catch((error) => {
 			toast.error(`${error}`);
 			return null;
 		});
 
 		if (res) {
+			const originalChatId = chat.id;
+			await incrementCloneCountById(localStorage.token, originalChatId);
 			goto(`/c/${res.id}`);
 		}
 	};
@@ -167,9 +179,47 @@
 
 						<div class="flex text-sm justify-between items-center mt-1">
 							<div class="text-gray-400">
-								{dayjs(chat.chat.timestamp).format('LLL')}
+								{$i18n.t('Conversation from')}: {dayjs(chat.chat.timestamp).format('LLL')}
 							</div>
 						</div>
+
+						{#if chat_owner}
+							<div class="flex items-center space-x-2 text-sm text-gray-500 mt-2">
+								<img
+									src={chat_owner.profile_image_url}
+									alt={chat_owner.name}
+									class="w-6 h-6 rounded-full"
+								/>
+								<span>Shared by {chat_owner.name}</span>
+							</div>
+						{/if}
+					</div>
+
+					<div class="px-3 mt-4">
+						<details>
+							<summary class="cursor-pointer text-sm font-medium"
+								>{$i18n.t('Chat Recipe')}</summary
+							>
+							<div class="mt-2 p-2 bg-gray-100 dark:bg-gray-800 rounded-lg text-sm space-y-1">
+								<p>
+									<strong>{$i18n.t('Model')}:</strong>
+									{selectedModels.join(', ')}
+								</p>
+
+								{#if chat.chat.params && Object.values(chat.chat.params).some(v => v !== null)}
+									<div class="pt-2">
+										<p class="font-medium">{$i18n.t('Advanced Parameters')}:</p>
+										<ul class="list-disc list-inside">
+											{#each Object.entries(chat.chat.params) as [key, value]}
+												{#if value !== null}
+													<li><strong>{key}:</strong> {value}</li>
+												{/if}
+											{/each}
+										</ul>
+									</div>
+								{/if}
+							</div>
+						</details>
 					</div>
 				</div>
 
@@ -177,7 +227,7 @@
 					<div class="w-full">
 						<Messages
 							className="h-full flex pt-4 pb-8 "
-							{user}
+							user={chat_owner}
 							chatId={$chatId}
 							readOnly={true}
 							{selectedModels}
@@ -197,13 +247,18 @@
 			<div
 				class="absolute bottom-0 right-0 left-0 flex justify-center w-full bg-linear-to-b from-transparent to-white dark:to-gray-900"
 			>
-				<div class="pb-5">
-					<button
-						class="px-4 py-2 text-sm font-medium bg-black hover:bg-gray-900 text-white dark:bg-white dark:text-black dark:hover:bg-gray-100 transition rounded-full"
-						on:click={cloneSharedChat}
-					>
-						{$i18n.t('Clone Chat')}
-					</button>
+				<div class="pb-5 text-center">
+					{#if $userStore?.role === 'admin' || $userStore?.permissions?.chat?.clone}
+						<button
+							class="px-4 py-2 text-sm font-medium bg-black hover:bg-gray-900 text-white dark:bg-white dark:text-black dark:hover:bg-gray-100 transition rounded-full"
+							on:click={cloneSharedChat}
+						>
+							{$i18n.t('Clone Chat')}
+						</button>
+						<div class="text-xs text-gray-500 mt-2">
+							{$i18n.t('Continue this conversation in your own account.')}
+						</div>
+					{/if}
 				</div>
 			</div>
 		</div>

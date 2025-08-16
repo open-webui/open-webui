@@ -137,6 +137,8 @@ class SharingPermissions(BaseModel):
     public_knowledge: bool = True
     public_prompts: bool = True
     public_tools: bool = True
+    public_chat: bool = True
+    shared_chats: bool = False
 
 
 class ChatPermissions(BaseModel):
@@ -148,6 +150,7 @@ class ChatPermissions(BaseModel):
     delete: bool = True
     edit: bool = True
     share: bool = True
+    clone: bool = True
     export: bool = True
     stt: bool = True
     tts: bool = True
@@ -304,10 +307,16 @@ class UserResponse(BaseModel):
     active: Optional[bool] = None
 
 
+from open_webui.utils.auth import (
+    get_admin_user,
+    get_password_hash,
+    get_verified_user,
+    get_optional_user,
+)
+
+
 @router.get("/{user_id}", response_model=UserResponse)
-async def get_user_by_id(user_id: str, user=Depends(get_verified_user)):
-    # Check if user_id is a shared chat
-    # If it is, get the user_id from the chat
+async def get_user_by_id(user_id: str, user=Depends(get_optional_user)):
     if user_id.startswith("shared-"):
         chat_id = user_id.replace("shared-", "")
         chat = Chats.get_chat_by_id(chat_id)

@@ -8,7 +8,7 @@ export const getUserGroups = async (token: string) => {
 		method: 'GET',
 		headers: {
 			'Content-Type': 'application/json',
-			Authorization: `Bearer ${token}`
+			...(token && { Authorization: `Bearer ${token}` })
 		}
 	})
 		.then(async (res) => {
