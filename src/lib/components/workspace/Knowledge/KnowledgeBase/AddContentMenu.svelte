@@ -1,19 +1,22 @@
 <script lang="ts">
-	import { DropdownMenu } from 'bits-ui';
 	import { flyAndScale } from '$lib/utils/transitions';
-	import { getContext, createEventDispatcher } from 'svelte';
+	import { DropdownMenu } from 'bits-ui';
+	import { createEventDispatcher, getContext, onMount } from 'svelte';
 	const dispatch = createEventDispatcher();
 
 	import Dropdown from '$lib/components/common/Dropdown.svelte';
 	import Tooltip from '$lib/components/common/Tooltip.svelte';
+	import ArrowPath from '$lib/components/icons/ArrowPath.svelte';
 	import ArrowUpCircle from '$lib/components/icons/ArrowUpCircle.svelte';
 	import BarsArrowUp from '$lib/components/icons/BarsArrowUp.svelte';
 	import FolderOpen from '$lib/components/icons/FolderOpen.svelte';
-	import ArrowPath from '$lib/components/icons/ArrowPath.svelte';
+	import type { ContentSourceProvider } from '$lib/types';
+	import { getProviderIcon } from '$lib/utils/content-sources';
 
 	const i18n = getContext('i18n');
 
 	export let onClose: Function = () => {};
+	export let availableProviders: ContentSourceProvider[] = [];
 
 	let show = false;
 </script>
@@ -102,6 +105,48 @@
 				<BarsArrowUp strokeWidth="2" />
 				<div class="flex items-center">{$i18n.t('Add text content')}</div>
 			</DropdownMenu.Item>
+
+			{#if availableProviders.length > 0}
+				<DropdownMenu.Separator class="h-px bg-gray-200 dark:bg-gray-700 my-1" />
+				<div class="px-3 py-1 text-xs text-gray-500 dark:text-gray-400">
+					{$i18n.t('Cloud Storage')}
+				</div>
+				{#each availableProviders as provider}
+					<DropdownMenu.Item
+						class="flex gap-2 items-center px-3 py-2 text-sm cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 rounded-md"
+						on:click={() => {
+							dispatch('sync', { type: 'content-source', provider });
+						}}
+					>
+						{#if getProviderIcon(provider.name)}
+							<svg
+								xmlns="http://www.w3.org/2000/svg"
+								viewBox="0 0 24 24"
+								fill="currentColor"
+								class="w-4 h-4"
+							>
+								<path d={getProviderIcon(provider.name)} />
+							</svg>
+						{:else}
+							<svg
+								xmlns="http://www.w3.org/2000/svg"
+								viewBox="0 0 20 20"
+								fill="currentColor"
+								class="w-4 h-4"
+							>
+								<path
+									fill-rule="evenodd"
+									d="M5.5 3A2.5 2.5 0 003 5.5v2.879a2.5 2.5 0 00.732 1.767l6.5 6.5a2.5 2.5 0 003.536 0l2.878-2.878a2.5 2.5 0 000-3.536l-6.5-6.5A2.5 2.5 0 008.38 3H5.5zM6 7a1 1 0 100-2 1 1 0 000 2z"
+									clip-rule="evenodd"
+								/>
+							</svg>
+						{/if}
+						<div class="flex items-center">
+							{$i18n.t(`Sync ${provider.display_name} folder`)}
+						</div>
+					</DropdownMenu.Item>
+				{/each}
+			{/if}
 		</DropdownMenu.Content>
 	</div>
 </Dropdown>
