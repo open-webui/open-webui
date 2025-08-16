@@ -72,6 +72,7 @@ async def post_webhook(name: str, url: str, message: str, event_data: dict) -> b
 def post_webhook_sync(name: str, url: str, message: str, event_data: dict) -> bool:
     """Synchronous wrapper for post_webhook - for legacy compatibility"""
     import asyncio
+
     try:
         # Run the async function in the current event loop if it exists
         try:
@@ -90,7 +91,9 @@ def post_webhook_sync(name: str, url: str, message: str, event_data: dict) -> bo
         return False
 
 
-async def store_webhook_event_async(url: str, name: str, message: str, event_data: dict) -> str:
+async def store_webhook_event_async(
+    url: str, name: str, message: str, event_data: dict
+) -> str:
     """Store webhook event for later processing and return the event ID"""
     try:
         # Import here to avoid circular imports
@@ -98,12 +101,12 @@ async def store_webhook_event_async(url: str, name: str, message: str, event_dat
 
         db = next(get_db())
         webhook_events = WebhookEvents(db)
-        
+
         event_id = str(uuid.uuid4())
-        
+
         # Create complete event payload
         payload = {}
-        
+
         # Slack and Google Chat Webhooks
         if "https://hooks.slack.com" in url or "https://chat.googleapis.com" in url:
             payload["text"] = message
@@ -139,7 +142,7 @@ async def store_webhook_event_async(url: str, name: str, message: str, event_dat
         # Default Payload
         else:
             payload = {**event_data}
-        
+
         # Store the event
         result = webhook_events.store_webhook_event(event_id, payload, url)
         if result:
@@ -158,7 +161,7 @@ async def trigger_webhooks_async(
 ) -> List[bool]:
     """
     Trigger webhooks for a specific event type asynchronously
-    
+
     This function uses a fire-and-forget approach with store-and-forward for failed deliveries.
     Successful deliveries complete immediately, failed deliveries are stored for retry.
 
@@ -202,7 +205,7 @@ async def trigger_webhooks_async(
         # Process all webhooks concurrently
         async def process_webhook(config):
             log.debug(f"Triggering webhook: {config.name} for event: {event_type}")
-            
+
             # Try immediate delivery
             success = await post_webhook(
                 name=config.name,
@@ -210,7 +213,7 @@ async def trigger_webhooks_async(
                 message=message,
                 event_data=enhanced_event_data,
             )
-            
+
             if success:
                 log.info(
                     f"Successfully triggered webhook '{config.name}' for event '{event_type}'"
@@ -225,7 +228,7 @@ async def trigger_webhooks_async(
                     url=config.url,
                     name=config.name,
                     message=message,
-                    event_data=enhanced_event_data
+                    event_data=enhanced_event_data,
                 )
                 if event_id:
                     log.info(
@@ -233,20 +236,15 @@ async def trigger_webhooks_async(
                     )
                     return True  # Consider stored events as "successful" for the caller
                 else:
-                    log.error(
-                        f"Failed to store webhook '{config.name}' for retry"
-                    )
+                    log.error(f"Failed to store webhook '{config.name}' for retry")
                     return False
 
         # Execute all webhooks concurrently
         tasks = [process_webhook(config) for config in configs]
         results = await asyncio.gather(*tasks, return_exceptions=True)
-        
+
         # Convert exceptions to False
-        results = [
-            result if isinstance(result, bool) else False 
-            for result in results
-        ]
+        results = [result if isinstance(result, bool) else False for result in results]
 
         return results
 
@@ -397,42 +395,50 @@ async def process_webhook_retries():
 
         db = next(get_db())
         webhook_events = WebhookEvents(db)
-        
+
         # Get events that are ready for retry
         events_to_retry = webhook_events.get_events_for_retry(max_tries=5)
-        
+
         if not events_to_retry:
             log.debug("No webhook events ready for retry")
             return
-        
+
         log.info(f"Processing {len(events_to_retry)} webhook events for retry")
-        
+
         for event in events_to_retry:
             try:
-                log.debug(f"Retrying webhook event {event.id} (attempt {event.tries + 1})")
-                
+                log.debug(
+                    f"Retrying webhook event {event.id} (attempt {event.tries + 1})"
+                )
+
                 # Try to deliver the webhook
                 async with aiohttp.ClientSession() as session:
                     async with session.post(event.url, json=event.event) as response:
                         response.raise_for_status()
-                    
+
                     # Success - remove the event from retry queue
                     webhook_events.delete_webhook_event(event.id)
-                    log.info(f"Successfully delivered webhook event {event.id} on retry")
-                    
+                    log.info(
+                        f"Successfully delivered webhook event {event.id} on retry"
+                    )
+
             except Exception as e:
                 log.warning(f"Retry failed for webhook event {event.id}: {e}")
-                
+
                 # Update the tries counter
                 updated_event = webhook_events.update_webhook_event_tries(event.id)
-                
+
                 if updated_event and updated_event.tries >= 5:
                     # Max tries reached, remove from queue
                     webhook_events.delete_webhook_event(event.id)
-                    log.error(f"Max retries reached for webhook event {event.id}, removing from queue")
+                    log.error(
+                        f"Max retries reached for webhook event {event.id}, removing from queue"
+                    )
                 else:
-                    log.info(f"Webhook event {event.id} will be retried again later (attempt {updated_event.tries if updated_event else 'unknown'})")
-    
+                    log.info(
+                        f"Webhook event {event.id} will be retried again later (attempt {updated_event.tries if updated_event else 'unknown'})"
+                    )
+
     except Exception as e:
         log.exception(f"Error processing webhook retries: {e}")
 
@@ -489,15 +495,15 @@ def trigger_webhooks_fire_and_forget(
 
         for config in configs:
             log.debug(f"Processing webhook: {config.name} for event: {event_type}")
-            
+
             # Store event immediately for processing by background worker
             # This ensures delivery attempts even if initial attempt fails
             event_id = str(uuid.uuid4())
-            
+
             # Create payload for this specific webhook
             payload = {}
             url = config.url
-            
+
             # Slack and Google Chat Webhooks
             if "https://hooks.slack.com" in url or "https://chat.googleapis.com" in url:
                 payload["text"] = message
@@ -513,7 +519,9 @@ def trigger_webhooks_fire_and_forget(
                 action = enhanced_event_data.get("action", "undefined")
                 facts = [
                     {"name": config.name, "value": value}
-                    for name, value in json.loads(enhanced_event_data.get("user", "{}")).items()
+                    for name, value in json.loads(
+                        enhanced_event_data.get("user", "{}")
+                    ).items()
                 ]
                 payload = {
                     "@type": "MessageCard",
@@ -533,7 +541,7 @@ def trigger_webhooks_fire_and_forget(
             # Default Payload
             else:
                 payload = {**enhanced_event_data}
-            
+
             # Store the event for background processing
             result = webhook_events.store_webhook_event(event_id, payload, url)
             if result:

@@ -310,7 +310,9 @@ class WebhookEvents:
         except Exception:
             return None
 
-    def get_pending_webhook_events(self, max_tries: int = 5) -> List[WebhookEventResponse]:
+    def get_pending_webhook_events(
+        self, max_tries: int = 5
+    ) -> List[WebhookEventResponse]:
         """Get webhook events that need to be retried"""
         try:
             events = (
@@ -343,7 +345,7 @@ class WebhookEvents:
                 }
             )
             self.db.commit()
-            
+
             # Return updated event
             event = self.db.query(WebhookEventRecord).filter_by(id=id).first()
             if event:
@@ -373,13 +375,17 @@ class WebhookEvents:
         try:
             current_time = int(time.time())
             events = []
-            
-            for event in self.db.query(WebhookEventRecord).filter(WebhookEventRecord.tries < max_tries).all():
+
+            for event in (
+                self.db.query(WebhookEventRecord)
+                .filter(WebhookEventRecord.tries < max_tries)
+                .all()
+            ):
                 # Calculate next retry time using exponential backoff: 2^tries minutes
-                retry_delay_minutes = 2 ** event.tries
+                retry_delay_minutes = 2**event.tries
                 retry_delay_seconds = retry_delay_minutes * 60
                 next_retry_time = event.updated_at + retry_delay_seconds
-                
+
                 if current_time >= next_retry_time:
                     events.append(
                         WebhookEventResponse(
@@ -391,7 +397,7 @@ class WebhookEvents:
                             updated_at=event.updated_at,
                         )
                     )
-            
+
             return events
         except Exception:
             return []
