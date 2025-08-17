@@ -492,7 +492,7 @@ def freeze(value):
     return value
 
 
-def deduplicate(interval: float = 10.0):
+def throttle(interval: float = 10.0):
     """
     Decorator to prevent a function from being called more than once within a specified duration.
     If the function is called again within the duration, it returns None. To avoid returning
@@ -506,6 +506,9 @@ def deduplicate(interval: float = 10.0):
         lock = threading.Lock()
 
         def wrapper(*args, **kwargs):
+            if interval is None:
+                return func(*args, **kwargs)
+
             key = (args, freeze(kwargs))
             now = time.time()
             if now - last_calls.get(key, 0) < interval:
