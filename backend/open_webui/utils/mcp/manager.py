@@ -86,7 +86,7 @@ class MCPClientManager:
                 # "Accept": "application/json, text/event-stream",  # SDK sets this
                 # "MCP-Protocol-Version": "2025-06-18",  # SDK sets this  
                 # "Content-Type": "application/json",  # SDK sets this
-                "User-Agent": "Ballys Interactive - Nova AI MCP Client/1.0",
+                "User-Agent": "Open WebUI - MCP Client/0.6.22",
             }
 
             # Add OAuth authentication if configured
