@@ -2033,8 +2033,10 @@ async def process_chat_response(
                                         }
 
                                     if value:
+                                        # close reasoning block if tool call inside reasoning
                                         if (
-                                            content_blocks
+                                            delta_tool_calls
+                                            and content_blocks
                                             and content_blocks[-1]["type"]
                                             == "reasoning"
                                             and content_blocks[-1]
