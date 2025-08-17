@@ -9,7 +9,7 @@
 	import FileItem from '$lib/components/common/FileItem.svelte';
 	import Collapsible from '$lib/components/common/Collapsible.svelte';
 
-	import { user, settings, isRestarting } from '$lib/stores';
+	import { user, settings, isRestarting, isAborting } from '$lib/stores';
 	export let models = [];
 	export let chatFiles = [];
 	export let params = {};
@@ -80,6 +80,7 @@
                 }
         }
 	export async function abortTaskOpu() {
+		isAborting.set(true);
                 try {
                         const response = await fetch('/ollama/api/aborttaskopu', {
                                 method: 'POST',
@@ -97,6 +98,9 @@
                         alert('Something went wrong while aborting task on OPU.');
                         return null;
                 }
+		finally {
+			isAborting.set(false);
+		}
         }
 	export async function handleRestartClick() {
 		const confirmed = window.confirm("Are you sure you want to restart the OPU?");
@@ -184,7 +188,7 @@
                         <hr class="border-gray-50 dark:border-gray-850 my-3" />
                         <div class="mt-2 space-y-3 pr-1.5">
                                 <div class="flex justify-between items-center text-sm">
-                                        <div class="  font-medium">{$i18n.t('Restart Opu')}</div>
+                                        <div class="  font-medium">{$i18n.t('Abort Job')}</div>
 
                                 <button
                                         disabled={$isRestarting}
@@ -193,13 +197,13 @@
                                                 ($settings.highContrastMode ?
                                                 ' border-2 border-gray-300 dark : border-gray-700 bg-gray-50 dark:bg-gray-850 text-gray-900 dark:text-gray-100 ' +
                                                 ($isRestarting ? 'opacity-50 cursor-not-allowed' :
-                                                'hover:bg-red-100 dark:hover:bg-red-900') : ' bg-red-600 text-white ' +
-                                                ($isRestarting ? 'opacity-50 cursor-not-allowed' : 'hover:bg-red-700 dark:bg-red-600'))
+                                                'hover:bg-blue-100 dark:hover:bg-blue-900') : ' bg-blue-600 text-white ' +
+                                                ($isRestarting ? 'opacity-50 cursor-not-allowed' : 'hover:bg-blue-700 dark:bg-blue-600'))
                                         }
                                         on:click={() => {
-						handleRestartClick();  //Pop up confirmation dialog and instantiate restart once confirmed
+						handleAbortClick();  //Pop up confirmation dialog and instantiate restart once confirmed
 						}
-                                        }>{$isRestarting ? $i18n.t('OPU Restarting...') : $i18n.t('Restart OPU Now')}
+                                        }>{$isAborting ? $i18n.t('Job being aborted...') : $i18n.t('Abort Job Now')}
                                 </button>
                                 </div>
                         </div>

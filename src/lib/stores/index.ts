@@ -89,6 +89,7 @@ export const isLastActiveTab = writable(true);
 export const playingNotificationSound = writable(false);
 
 export let isRestarting = writable(false);
+export let isAborting = writable(false);
 
 export type Model = OpenAIModel | OllamaModel;
 
