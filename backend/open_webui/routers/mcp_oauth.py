@@ -127,7 +127,20 @@ async def start_oauth_flow_with_discovery(
         )
 
         if result.get("success"):
-            return {**result, "server_id": permanent_server.id}
+            # Immediately start OAuth flow and return authorization URL
+            oauth_start = await mcp_oauth_manager.start_oauth_flow(
+                server_id=permanent_server.id,
+                user_id=user.id,
+                base_url=base_url,
+            )
+            if oauth_start.get("success"):
+                return {**oauth_start, "server_id": permanent_server.id}
+            # If OAuth start failed, clean up and return the error
+            try:
+                MCPServers.delete_mcp_server_by_id(permanent_server.id, user.id)
+            except Exception:
+                pass
+            return oauth_start
         # If discovery failed, delete the created server
         try:
             MCPServers.delete_mcp_server_by_id(permanent_server.id, user.id)
