@@ -48,12 +48,6 @@
 		lastEditingId = null;
 	}
 
-	// Keep default visibility in sync when switching tabs between Global/Personal for new server
-	$: if (!editingServer && isAdmin) {
-		// Always default to private on creation; do not auto-set public
-		access_control = access_control ?? {};
-	}
-
 	const handleSubmit = async () => {
 		if (!form.name || !form.http_url) {
 			toast.error('Please fill in all required fields');

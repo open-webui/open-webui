@@ -354,8 +354,8 @@ class MCPServers:
             # Convert form data and handle JSON serialization
             form_dict = form_data.model_dump()
 
-            # Ensure default private access if not explicitly provided
-            if "access_control" not in form_dict or form_dict["access_control"] is None:
+            # Preserve explicit None (public) from admins; only default when missing
+            if "access_control" not in form_dict:
                 form_dict["access_control"] = {}
 
             # Normalize oauth_config with expected keys for refresh
