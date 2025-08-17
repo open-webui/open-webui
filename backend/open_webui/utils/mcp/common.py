@@ -95,6 +95,11 @@ def encrypt_headers_if_present(headers: Dict[str, str]) -> Dict[str, Any]:
     """
     if not headers:
         return headers
+    
+    # If headers are already stored in encrypted container, return as-is
+    # Expected format: { "encrypted": "<ciphertext>" }
+    if isinstance(headers, dict) and "encrypted" in headers and isinstance(headers.get("encrypted"), str):
+        return headers
         
     import json
     from open_webui.utils.auth import encrypt_data
