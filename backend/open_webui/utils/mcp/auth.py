@@ -338,7 +338,7 @@ class MCPOAuthManager:
 
             # Create OAuth client metadata following the SDK example
             client_metadata = OAuthClientMetadata(
-                client_name="Ballys Interactive - Nova AI MCP Client",
+                client_name="Open WebUI",
                 redirect_uris=[f"{base_url}/api/v1/mcp-servers/oauth/callback"],
                 grant_types=["authorization_code", "refresh_token"],
                 response_types=["code"],
@@ -852,7 +852,7 @@ class MCPOAuthManager:
             import httpx
             
             dcr_request = {
-                "client_name": "Ballys Interactive - Nova AI MCP Client",
+                "client_name": "Open WebUI",
                 "redirect_uris": [f"{base_url}/api/v1/mcp-servers/oauth/callback"],
                 "grant_types": ["authorization_code", "refresh_token"],
                 "response_types": ["code"],
