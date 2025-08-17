@@ -1906,6 +1906,12 @@ async def process_chat_response(
                                             "selectedModelId": model_id,
                                         },
                                     )
+                                    await event_emitter(
+                                        {
+                                            "type": "chat:completion",
+                                            "data": data,
+                                        }
+                                    )
                                 else:
                                     choices = data.get("choices", [])
                                     if not choices:
