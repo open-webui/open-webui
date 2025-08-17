@@ -484,10 +484,8 @@ class MCPServers:
                 "oauth_config" in update_data
                 and update_data["oauth_config"] is not None
             ):
-                import json
-
-                oauth_json = json.dumps(update_data["oauth_config"])
-                update_data["oauth_config"] = encrypt_data(oauth_json, WEBUI_SECRET_KEY)
+                from open_webui.utils.mcp.common import encrypt_oauth_config_if_needed
+                update_data["oauth_config"] = encrypt_oauth_config_if_needed(update_data["oauth_config"])
 
             for key, value in update_data.items():
                 setattr(server, key, value)

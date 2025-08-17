@@ -107,3 +107,33 @@ def encrypt_headers_if_present(headers: Dict[str, str]) -> Dict[str, Any]:
     
     headers_json = json.dumps(headers)
     return {"encrypted": encrypt_data(headers_json, WEBUI_SECRET_KEY)}
+
+
+def encrypt_oauth_config_if_needed(oauth_config) -> str:
+    """
+    Encrypt OAuth config only if it's not already encrypted.
+    
+    Args:
+        oauth_config: OAuth configuration dict or encrypted string
+        
+    Returns:
+        Encrypted OAuth config string, or None if empty
+    """
+    if not oauth_config:
+        return None
+        
+    # If it's already a string, it's likely already encrypted - return as-is
+    if isinstance(oauth_config, str):
+        return oauth_config
+        
+    # If it's a dict, it's plaintext - encrypt it
+    if isinstance(oauth_config, dict):
+        import json
+        from open_webui.utils.auth import encrypt_data
+        from open_webui.env import WEBUI_SECRET_KEY
+        
+        oauth_json = json.dumps(oauth_config)
+        return encrypt_data(oauth_json, WEBUI_SECRET_KEY)
+    
+    # Fallback: convert to string and return (should not happen)
+    return str(oauth_config) if oauth_config else None
