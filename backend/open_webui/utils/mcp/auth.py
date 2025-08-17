@@ -486,10 +486,7 @@ class MCPOAuthManager:
         }
 
         # Create or update permanent server with OAuth config
-        if server_id.startswith("temp_mcp_"):
-            return self._create_permanent_server(server_id, mcp_server_url, oauth_config, user_id)
-        else:
-            return self._update_existing_server(server_id, oauth_config, user_id)
+        return self._update_existing_server(server_id, oauth_config, user_id)
 
     def _create_permanent_server(
         self, server_id: str, mcp_server_url: str, oauth_config: Dict, user_id: str

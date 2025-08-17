@@ -93,15 +93,11 @@ async def create_permanent_server_from_temp(
 async def start_oauth_flow_with_discovery(
     request: Request, user: UserModel = Depends(get_verified_user)
 ):
-    """Start OAuth flow with discovery for a new MCP server (stores temporarily in Redis until OAuth completes)"""
-    temp_server_id = None  # Initialize to avoid UnboundLocalError
-
+    """Start OAuth flow with discovery for a new MCP server (direct DB record)."""
     try:
         body = await request.json()
-        server_name = body.get("serverName", "").strip()  # Frontend sends "serverName"
-        mcp_server_url = body.get(
-            "mcpServerUrl", ""
-        ).strip()  # Frontend sends "mcpServerUrl"
+        server_name = body.get("serverName", "").strip()
+        mcp_server_url = body.get("mcpServerUrl", "").strip()
         headers = body.get("headers", {})
 
         if not server_name:
@@ -109,136 +105,40 @@ async def start_oauth_flow_with_discovery(
         if not mcp_server_url:
             raise HTTPException(400, "MCP server URL is required")
 
-        # Store server data temporarily in Redis instead of permanent DB
-        temp_server_id = f"temp_mcp_{uuid.uuid4().hex[:8]}"
+        # Create permanent server directly
+        server_form = MCPServerForm(
+            name=server_name,
+            http_url=mcp_server_url,
+            headers=headers,
+        )
+        permanent_server = MCPServers.insert_new_mcp_server(user.id, server_form)
+        if not permanent_server:
+            raise HTTPException(500, "Failed to create server")
 
-        temp_server_data = {
-            "id": temp_server_id,
-            "name": server_name,
-            "http_url": mcp_server_url,
-            "headers": headers,
-            "user_id": user.id,
-            "created_at": time.time(),
-            "status": "pending_oauth",
-        }
-
-        # Store in Redis with 30-minute expiration (no permanent DB record yet)
-        redis_key = f"open-webui:temp_mcp_server:{temp_server_id}"
-        if mcp_oauth_manager.redis_client:
-            mcp_oauth_manager.redis_client.setex(
-                redis_key, 1800, json.dumps(temp_server_data)  # 30 minutes
-            )
-            log.info(
-                f"Stored temporary server {temp_server_id} in Redis (no DB record yet)"
-            )
-        else:
-            # Do not create temporary DB records; require temporary storage
-            log.error("Redis not available, cannot store temporary OAuth state")
-            raise HTTPException(
-                status_code=503,
-                detail="Temporary OAuth storage unavailable. Please enable Redis/Valkey.",
-            )
-
-        # Perform OAuth discovery with temporary data
-        # Use configured WEBUI_URL instead of request.base_url for proper HTTPS support
+        # Use configured WEBUI_URL for proper HTTPS support
         base_url = str(WEBUI_URL).rstrip("/")
 
-        # Create a mock server object for OAuth discovery
-        from types import SimpleNamespace
-
-        mock_server = SimpleNamespace(
-            id=temp_server_id, http_url=mcp_server_url, oauth_config=None
-        )
-
-        # Perform OAuth discovery
-        discovery_result = await mcp_oauth_manager.discover_oauth_from_mcp_server(
-            server_id=temp_server_id,
+        # Begin discovery/update against the new server id
+        result = await mcp_oauth_manager.discover_oauth_from_mcp_server(
+            server_id=permanent_server.id,
             mcp_server_url=mcp_server_url,
             base_url=base_url,
             user_id=user.id,
         )
 
-        if not discovery_result["success"]:
-            # Clean up temporary data if discovery failed
-            if mcp_oauth_manager.redis_client:
-                mcp_oauth_manager.redis_client.delete(redis_key)
-            raise HTTPException(
-                400, f"OAuth discovery failed: {discovery_result['error']}"
-            )
-
-        # Get the permanent server ID from discovery result
-        permanent_server_id = discovery_result.get("server_id", temp_server_id)
-        log.info(f"Using permanent server ID for OAuth flow: {permanent_server_id}")
-
-        # Start OAuth flow with permanent server ID
-        oauth_result = await mcp_oauth_manager.start_oauth_flow(
-            server_id=permanent_server_id, user_id=user.id, base_url=base_url
-        )
-
-        if not oauth_result["success"]:
-            # Clean up temporary data if OAuth flow failed
-            if mcp_oauth_manager.redis_client:
-                mcp_oauth_manager.redis_client.delete(redis_key)
-            raise HTTPException(400, f"OAuth flow failed: {oauth_result['error']}")
-
-        # Clean up temporary Redis data since we're using permanent server now
-        if mcp_oauth_manager.redis_client:
-            mcp_oauth_manager.redis_client.delete(redis_key)
-            log.info(f"Cleaned up temporary server data from Redis: {temp_server_id}")
-
-        log.info(
-            f"OAuth flow with discovery started for server {server_name} (permanent ID: {permanent_server_id}) by user {user.email}"
-        )
-        return {
-            **oauth_result,
-            "server_id": permanent_server_id,  # Return the permanent server ID
-            "temporary": False,  # Server is now permanent
-        }
-
+        if result.get("success"):
+            return {**result, "server_id": permanent_server.id}
+        # If discovery failed, delete the created server
+        try:
+            MCPServers.delete_mcp_server_by_id(permanent_server.id, user.id)
+        except Exception:
+            pass
+        return result
+    except HTTPException:
+        raise
     except Exception as e:
-        log.error(f"Error starting OAuth flow with discovery: {e}")
-
-        # Clean up temporary server if it exists
-        if temp_server_id and temp_server_id.startswith("temp_mcp_"):
-            try:
-                if mcp_oauth_manager.redis_client:
-                    mcp_oauth_manager.redis_client.delete(
-                        f"open-webui:temp_mcp_server:{temp_server_id}"
-                    )
-            except Exception as cleanup_error:
-                log.warning(
-                    f"Failed to cleanup temporary server {temp_server_id}: {cleanup_error}"
-                )
-
-        # Check if this is a "needs manual config" error
-        error_str = str(e)
-        is_manual_config_needed = (
-            "does not support Dynamic Client Registration" in error_str
-            or "needs_manual_config" in error_str
-            or "OAuth metadata discovery failed - server does not support automatic OAuth configuration" in error_str
-            or hasattr(e, 'needs_manual_config')
-        )
-        
-        if is_manual_config_needed:
-            # Provide a clear, actionable error message
-            server_info = "This MCP server"
-            if "github" in mcp_server_url.lower():
-                server_info = "GitHub's MCP server"
-            elif "neon" in mcp_server_url.lower():
-                server_info = "Neon's MCP server"
-                
-            raise HTTPException(
-                status_code=400,
-                detail={
-                    "error": "OAuth configuration required",
-                    "message": f"{server_info} requires OAuth authentication but doesn't support automatic setup.\n\nNext steps:\n• Contact your administrator to set up OAuth client credentials\n• Or check if the server supports API key authentication instead",
-                    "needs_manual_config": True,
-                    "show_alternatives": True,
-                    "server_type": "oauth_manual",
-                },
-            )
-        else:
-            raise HTTPException(500, f"OAuth setup failed: {str(e)}")
+        log.exception(f"Error in start_oauth_flow_with_discovery: {e}")
+        raise HTTPException(500, "Failed to start OAuth flow")
 
 
 @router.post("/{server_id}/oauth/start")

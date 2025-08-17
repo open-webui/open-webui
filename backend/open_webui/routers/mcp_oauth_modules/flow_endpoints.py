@@ -43,7 +43,7 @@ async def start_oauth_flow_with_discovery(
 ):
     """Start OAuth flow with server discovery for new servers."""
     
-    temp_server_id = None
+    
     
     try:
         body = await request.json()
@@ -91,17 +91,7 @@ async def start_oauth_flow_with_discovery(
     except Exception as e:
         log.error(f"Error starting OAuth flow with discovery: {e}")
 
-        # Clean up temporary server if it exists
-        if temp_server_id and temp_server_id.startswith("temp_mcp_"):
-            try:
-                if mcp_oauth_manager.redis_client:
-                    mcp_oauth_manager.redis_client.delete(
-                        f"open-webui:temp_mcp_server:{temp_server_id}"
-                    )
-            except Exception as cleanup_error:
-                log.warning(
-                    f"Failed to cleanup temporary server {temp_server_id}: {cleanup_error}"
-                )
+       
 
         # Check if this is a "needs manual config" error
         error_str = str(e)
