@@ -8,6 +8,7 @@ import shutil
 import sys
 import time
 import random
+import re
 from uuid import uuid4
 
 
@@ -22,6 +23,8 @@ import aiohttp
 import anyio.to_thread
 import requests
 from redis import Redis
+
+from pprint import pprint
 
 
 from fastapi import (
@@ -1143,7 +1146,6 @@ app.state.config.AUTOCOMPLETE_GENERATION_INPUT_MAX_LENGTH = (
 
 app.state.MODELS = {}
 
-
 class RedirectMiddleware(BaseHTTPMiddleware):
     async def dispatch(self, request: Request, call_next):
         # Check if the request is a GET request
@@ -1152,12 +1154,31 @@ class RedirectMiddleware(BaseHTTPMiddleware):
             query_params = dict(parse_qs(urlparse(str(request.url)).query))
 
             # Check for the specific watch path and the presence of 'v' parameter
-            if path.endswith("/watch") and "v" in query_params:
-                # Extract the first 'v' parameter
-                video_id = query_params["v"][0]
-                encoded_video_id = urlencode({"youtube": video_id})
-                redirect_url = f"/?{encoded_video_id}"
-                return RedirectResponse(url=redirect_url)
+            if path.endswith("/watch"):
+                redirect_params = None
+                if "v" in query_params:
+                    # Extract the first 'v' parameter
+                    video_id = query_params["v"][0]
+                    redirect_params = {"youtube": video_id}
+                elif "shared" in query_params:
+                    # PWA share_target support
+                    text = query_params["shared"][0]
+                    if text != '':
+                        urls = re.match(r'https://\S+', text)
+                        if urls:
+                            from open_webui.retrieval.loaders.youtube import _parse_video_id
+                            video_id = _parse_video_id(urls[0])
+                            if (video_id and video_id != ''):
+                                redirect_params = {"youtube": video_id}
+                            else:
+                                redirect_params = {"load-url": urls[0]}
+                        else:
+                            redirect_params = {"q": text}
+
+                if redirect_params:
+                    redirect_params["temporary-chat"] = "true"  # TODO: configurable?
+                    redirect_url = f"/?{urlencode(redirect_params)}"
+                    return RedirectResponse(url=redirect_url)
 
         # Proceed with the normal flow of other requests
         response = await call_next(request)
@@ -1916,6 +1937,13 @@ async def get_manifest_json():
                     "purpose": "maskable",
                 },
             ],
+            "share_target": {
+                "action": "/watch",
+                "method": "GET",
+                "params": {
+                    "text": "shared"
+                }
+            }
         }
 
 
