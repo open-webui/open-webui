@@ -364,6 +364,11 @@ async def get_all_models_responses(request: Request, user: UserModel) -> list:
             for model in (
                 response if isinstance(response, list) else response.get("data", [])
             ):
+                # Some providers are known to have the "name" attributes set to null, either by error or when custom models are
+                # used or trained. The easiest way to treat this is just by removing the name key.
+                if "name" in model and model["name"] is None:
+                    del model["name"]
+
                 if prefix_id:
                     model["id"] = (
                         f"{prefix_id}.{model.get('id', model.get('name', ''))}"
