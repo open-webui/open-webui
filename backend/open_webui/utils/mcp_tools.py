@@ -182,10 +182,8 @@ async def delete_mcp_server_tools_from_database(server_id: str) -> None:
             deleted_count = len(mcp_tools)
             
             if deleted_count > 0:
-                log.info(f"Found {deleted_count} MCP tools to delete for server {server_id}")
-                for tool in mcp_tools:
-                    log.info(f"Deleting MCP tool: {tool.id}")
-                
+                log.info(f"Deleting {deleted_count} MCP tools for server {server_id}")
+
                 # Bulk delete all matching tools
                 db.query(Tool).filter(Tool.id.like(f"mcp:{server_id}:%")).delete(synchronize_session=False)
                 db.commit()
