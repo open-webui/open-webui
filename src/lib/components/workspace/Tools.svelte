@@ -136,7 +136,14 @@
 	};
 
 	const init = async () => {
-		tools = await getToolList(localStorage.token);
+		// Load tools and exclude MCP tools from workspace view
+		tools = (await getToolList(localStorage.token)).filter((t) => {
+			try {
+				return (t?.meta?.manifest?.type || '').toLowerCase() !== 'mcp';
+			} catch {
+				return true;
+			}
+		});
 		_tools.set(await getTools(localStorage.token));
 	};
 
