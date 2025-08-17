@@ -72,8 +72,8 @@ except ImportError as e:
 def create_mcp_client_info() -> Implementation:
     """Create MCP client implementation info following official SDK examples."""
     return Implementation(
-        name="nova-ai-mcp-client",
-        version="1.0.0"
+        name="open-webui-mcp-client",
+        version="0.6.22"
     )
 
 

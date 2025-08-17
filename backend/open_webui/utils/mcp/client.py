@@ -136,7 +136,7 @@ class MCPStreamHTTPClient:
     async def _get_headers(self):
         """Prepare authentication headers for MCP requests with OAuth + manual headers support"""
         headers = {
-            "User-Agent": "Ballys Interactive - Nova AI MCP Client/1.0",
+            "User-Agent": "Open WebUI - MCP Client/1.0",
         }
 
         oauth_failed = False
