@@ -284,7 +284,6 @@ class MCPServerModel(BaseModel):
         return v
 
     @field_validator(
-        "access_control",
         "headers",
         "error_message",
         mode="before",
@@ -294,16 +293,33 @@ class MCPServerModel(BaseModel):
         # Handle string 'null' from database
         if v == "null" or v == "":
             return None
-        # Handle empty dict/object from database for headers, access_control, capabilities
+        # For headers/error_message: treat empty dict/object as None
         if isinstance(v, dict) and len(v) == 0:
             return None
-        # Handle JSON string from database (not including oauth_config which has its own validator)
+        # Handle JSON string from database
         if isinstance(v, str) and v.strip():
             try:
                 import json
                 return json.loads(v)
             except (json.JSONDecodeError, ValueError):
-                # If it's not valid JSON, return as-is (for error_message, etc.)
+                return v
+        return v
+
+    @field_validator("access_control", mode="before")
+    @classmethod
+    def validate_access_control(cls, v):
+        # Treat explicit string null/empty as None (public), but keep empty dict as private {}
+        if v == "null" or v == "":
+            return None
+        # Preserve {} to represent private access control
+        if isinstance(v, dict):
+            return v
+        # Parse JSON string if necessary
+        if isinstance(v, str) and v.strip():
+            try:
+                import json
+                return json.loads(v)
+            except (json.JSONDecodeError, ValueError):
                 return v
         return v
 
@@ -436,7 +452,7 @@ class MCPServers:
         return [
             server
             for server in servers
-            if server.user_id == user_id and has_access(user_id, "read", server.access_control)
+            if server.user_id == user_id
         ]
 
     def get_global_mcp_servers(self) -> List[MCPServerModel]:

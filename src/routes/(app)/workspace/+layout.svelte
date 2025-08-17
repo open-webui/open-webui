@@ -38,8 +38,8 @@
 			} else if ($page.url.pathname.includes('/tools') && !$user?.permissions?.workspace?.tools) {
 				goto('/');
 			} else if (
-				$page.url.pathname.includes('/mcp-servers') &&
-				($user?.role !== 'admin' || !($config?.features?.enable_mcp ?? false))
+				$page.url.pathname.includes('/mcp-servers') && 
+				!($config?.features?.enable_mcp ?? false)
 			) {
 				goto('/');
 			}
@@ -128,7 +128,7 @@
 							</a>
 						{/if}
 
-						{#if $user?.role === 'admin' && ($config?.features?.enable_mcp ?? false)}
+						{#if $config?.features?.enable_mcp ?? false}
 							<a
 								class="min-w-fit p-1.5 {$page.url.pathname.includes('/workspace/mcp-servers')
 									? ''

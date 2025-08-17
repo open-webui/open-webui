@@ -72,6 +72,9 @@
 
 			if (isAdmin) {
 				serverData.access_control = access_control;
+			} else {
+				// Explicitly default to private for non-admins
+				serverData.access_control = {};
 			}
 
 			let result;

@@ -54,7 +54,12 @@
 	async function loadServers() {
 		try {
 			loading = true;
-			servers = await mcpServersApi.getMCPServers(localStorage.token);
+			// Non-admin users should only see their own (private) servers in workspace
+			if ($user?.role === 'admin') {
+				servers = await mcpServersApi.getMCPServers(localStorage.token);
+			} else {
+				servers = await mcpServersApi.getUserMCPServers(localStorage.token);
+			}
 		} catch (e) {
 			console.error(e);
 			toast.error($i18n.t('mcp.workspace.failed_load'));
