@@ -29,7 +29,7 @@ from open_webui.env import (
     REDIS_KEY_PREFIX,
 )
 from open_webui.utils.auth import decode_token
-from open_webui.socket.utils import RedisDict, RedisLock, YdocManager
+from open_webui.socket.utils import RedisDict, RedisLock, YdocManager, InMemoryTTLStore
 from open_webui.tasks import create_task, stop_item_tasks
 from open_webui.utils.redis import get_redis_connection
 from open_webui.utils.access_control import has_access, get_users_with_access
@@ -75,8 +75,12 @@ else:
     )
 
 
-# Timeout duration in seconds
+# Engine usage-pool check interval in seconds
 TIMEOUT_DURATION = 3
+
+# Session timeout in seconds
+SESSION_TIMEOUT_DURATION = 60
+
 
 # Dictionary to maintain the user pool
 
@@ -113,6 +117,8 @@ if WEBSOCKET_MANAGER == "redis":
         redis_cluster=WEBSOCKET_REDIS_CLUSTER,
     )
 
+    SESSION_EXPIRY_POOL = REDIS
+
     clean_up_lock = RedisLock(
         redis_url=WEBSOCKET_REDIS_URL,
         lock_name="usage_cleanup_lock",
@@ -127,6 +133,8 @@ else:
     SESSION_POOL = {}
     USER_POOL = {}
     USAGE_POOL = {}
+
+    SESSION_EXPIRY_POOL = InMemoryTTLStore()
 
     aquire_func = release_func = renew_func = lambda: True
 
@@ -267,6 +275,7 @@ async def connect(sid, environ, auth):
 
         if user:
             SESSION_POOL[sid] = user.model_dump()
+            await touch_session_ttl(sid)
             if user.id in USER_POOL:
                 USER_POOL[user.id] = USER_POOL[user.id] + [sid]
             else:
@@ -289,6 +298,7 @@ async def user_join(sid, data):
         return
 
     SESSION_POOL[sid] = user.model_dump()
+    await touch_session_ttl(sid)
     if user.id in USER_POOL:
         USER_POOL[user.id] = USER_POOL[user.id] + [sid]
     else:
@@ -723,3 +733,55 @@ def get_event_call(request_info):
 
 
 get_event_caller = get_event_call
+
+async def touch_session_ttl(sid: str):
+    try:
+        await SESSION_EXPIRY_POOL.setex(
+            f"{REDIS_KEY_PREFIX}:sid:{sid}", SESSION_TIMEOUT_DURATION, 1
+        )
+    except Exception as e:
+        log.debug(f"Error refreshing TTL for sid {sid}: {e}")
+
+    log.debug(f"TTL refreshed for sid={sid}")
+
+
+@sio.on("heartbeat")
+async def heartbeat(sid):
+
+    await touch_session_ttl(sid)
+
+
+async def periodic_session_ttl_cleanup():
+
+    while True:
+        try:
+            active_sids: Set[str] = set()
+            try:
+                async for key in SESSION_EXPIRY_POOL.scan_iter(match=f"{REDIS_KEY_PREFIX}:sid:*"):
+                    active_sids.add(key.split(":")[-1])
+            except Exception as e:
+                log.debug(f"Error scanning sid keys: {e}")
+
+            stale_sids = [sid for sid in list(SESSION_POOL.keys()) if sid not in active_sids]
+
+            for sid in stale_sids:
+                user = SESSION_POOL.pop(sid, None)
+                if not user:
+                    continue
+                uid = user["id"]
+                if uid in USER_POOL:
+                    USER_POOL[uid] = [s for s in USER_POOL[uid] if s != sid]
+                    if not USER_POOL[uid]:
+                        del USER_POOL[uid]
+
+                try:
+                    await YDOC_MANAGER.remove_user_from_all_documents(sid)
+                except Exception as e:
+                    log.debug(f"Error removing user documents in ttl cleanup: {e}")
+
+            if stale_sids:
+                log.info("TTL cleanup removed %s stale sessions", len(stale_sids))
+        except Exception as e:
+            log.error(f"Error in periodic_session_ttl_cleanup: {e}")
+
+        await asyncio.sleep(SESSION_TIMEOUT_DURATION)

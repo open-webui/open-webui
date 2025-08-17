@@ -57,6 +57,7 @@ from open_webui.utils.logger import start_logger
 from open_webui.socket.main import (
     app as socket_app,
     periodic_usage_pool_cleanup,
+    periodic_session_ttl_cleanup,
     get_models_in_use,
     get_active_user_ids,
 )
@@ -551,6 +552,7 @@ async def lifespan(app: FastAPI):
         limiter.total_tokens = THREAD_POOL_SIZE
 
     asyncio.create_task(periodic_usage_pool_cleanup())
+    asyncio.create_task(periodic_session_ttl_cleanup())
 
     if app.state.config.ENABLE_BASE_MODELS_CACHE:
         await get_all_models(

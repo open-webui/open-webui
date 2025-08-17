@@ -4,7 +4,10 @@ from open_webui.utils.redis import get_redis_connection
 from open_webui.env import REDIS_KEY_PREFIX
 from typing import Optional, List, Tuple
 import pycrdt as Y
-
+import time
+import threading
+import re
+import asyncio
 
 class RedisLock:
     def __init__(
@@ -107,6 +110,53 @@ class RedisDict:
             self[key] = default
         return self[key]
 
+class InMemoryTTLStore:
+    def __init__(self):
+        self.store = {}
+        self.expiry = {}
+        self.lock = threading.Lock()
+
+    def setex(self, key, seconds, value):
+        with self.lock:
+            self.store[key] = value
+            self.expiry[key] = time.time() + seconds
+
+    def get(self, key):
+        with self.lock:
+            if key in self.expiry and time.time() > self.expiry[key]:
+                self._delete_internal(key)
+                return None
+            return self.store.get(key, None)
+
+    def items(self):
+        with self.lock:
+            self._delete_expired()
+            return list(self.store.items())
+
+    async def scan_iter(self, match="*"):
+        regex = re.compile("^" + re.escape(match).replace("\\*", ".*") + "$")
+        idx = 0
+        while True:
+            with self.lock:
+                self._delete_expired()
+                keys = list(self.store.keys())
+            if idx >= len(keys):
+                break
+            key = keys[idx]
+            idx += 1
+            if regex.match(key):
+                yield key
+            await asyncio.sleep(0)
+
+    def _delete_internal(self, key):
+        self.store.pop(key, None)
+        self.expiry.pop(key, None)
+
+    def _delete_expired(self):
+        now = time.time()
+        expired_keys = [k for k, t in self.expiry.items() if now > t]
+        for k in expired_keys:
+            self._delete_internal(k)
 
 class YdocManager:
     def __init__(
