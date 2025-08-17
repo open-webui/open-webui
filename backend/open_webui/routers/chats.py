@@ -10,6 +10,7 @@ from open_webui.models.chats import (
     ChatResponse,
     Chats,
     ChatTitleIdResponse,
+    ChatModel,
 )
 from open_webui.models.tags import TagModel, Tags
 from open_webui.models.folders import Folders
@@ -17,8 +18,10 @@ from open_webui.models.folders import Folders
 from open_webui.config import ENABLE_ADMIN_CHAT_ACCESS, ENABLE_ADMIN_EXPORT
 from open_webui.constants import ERROR_MESSAGES
 from open_webui.env import SRC_LOG_LEVELS
-from fastapi import APIRouter, Depends, HTTPException, Request, status
+from fastapi import APIRouter, Depends, HTTPException, Request, status, Response
 from pydantic import BaseModel
+from open_webui.utils.auth import create_token
+from datetime import timedelta
 
 
 class SharedChatListResponse(BaseModel):
@@ -27,13 +30,30 @@ class SharedChatListResponse(BaseModel):
     chats: list[ChatTitleIdResponse]
 
 
-from open_webui.utils.auth import get_admin_user, get_verified_user, get_optional_user
+from open_webui.utils.auth import (
+    get_admin_user,
+    get_verified_user,
+    get_optional_user,
+    pwd_context,
+    decode_token,
+)
 from open_webui.utils.access_control import has_permission
 
 log = logging.getLogger(__name__)
 log.setLevel(SRC_LOG_LEVELS["MODELS"])
 
 router = APIRouter()
+
+def to_chat_response(chat: ChatModel, is_new_share: Optional[bool] = None) -> ChatResponse:
+    response_data = chat.model_dump()
+    response_data["has_password"] = response_data.get("password") is not None
+    if "password" in response_data:
+        del response_data["password"]
+    
+    if is_new_share is not None:
+        response_data["is_new_share"] = is_new_share
+        
+    return ChatResponse(**response_data)
 
 ############################
 # GetChatList
@@ -91,7 +111,7 @@ async def delete_all_user_chats(request: Request, user=Depends(get_verified_user
 async def reset_chat_stats_by_id(id: str, user=Depends(get_verified_user)):
     chat = Chats.reset_chat_stats_by_id(id, user.id)
     if chat:
-        return ChatResponse(**chat.model_dump())
+        return to_chat_response(chat)
     else:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
@@ -147,7 +167,7 @@ async def get_user_chat_list_by_user_id(
 async def create_new_chat(form_data: ChatForm, user=Depends(get_verified_user)):
     try:
         chat = Chats.insert_new_chat(user.id, form_data)
-        return ChatResponse(**chat.model_dump())
+        return to_chat_response(chat)
     except Exception as e:
         log.exception(e)
         raise HTTPException(
@@ -175,7 +195,7 @@ async def import_chat(form_data: ChatImportForm, user=Depends(get_verified_user)
                 ):
                     Tags.insert_new_tag(tag_name, user.id)
 
-        return ChatResponse(**chat.model_dump())
+        return to_chat_response(chat)
     except Exception as e:
         log.exception(e)
         raise HTTPException(
@@ -232,7 +252,7 @@ async def get_chats_by_folder_id(folder_id: str, user=Depends(get_verified_user)
         folder_ids.extend([folder.id for folder in children_folders])
 
     return [
-        ChatResponse(**chat.model_dump())
+        to_chat_response(chat)
         for chat in Chats.get_chats_by_folder_ids_and_user_id(folder_ids, user.id)
     ]
 
@@ -258,7 +278,7 @@ async def get_user_pinned_chats(user=Depends(get_verified_user)):
 @router.get("/all", response_model=list[ChatResponse])
 async def get_user_chats(user=Depends(get_verified_user)):
     return [
-        ChatResponse(**chat.model_dump())
+        to_chat_response(chat)
         for chat in Chats.get_chats_by_user_id(user.id)
     ]
 
@@ -271,7 +291,7 @@ async def get_user_chats(user=Depends(get_verified_user)):
 @router.get("/all/archived", response_model=list[ChatResponse])
 async def get_user_archived_chats(user=Depends(get_verified_user)):
     return [
-        ChatResponse(**chat.model_dump())
+        to_chat_response(chat)
         for chat in Chats.get_archived_chats_by_user_id(user.id)
     ]
 
@@ -305,7 +325,7 @@ async def get_all_user_chats_in_db(user=Depends(get_admin_user)):
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail=ERROR_MESSAGES.ACCESS_PROHIBITED,
         )
-    return [ChatResponse(**chat.model_dump()) for chat in Chats.get_chats()]
+    return [to_chat_response(chat) for chat in Chats.get_chats()]
 
 
 ############################
@@ -318,6 +338,19 @@ async def revoke_all_shared_chats(user=Depends(get_verified_user)):
     try:
         count = Chats.revoke_all_shared_chats_by_user_id(user.id)
         return {"revoked": count}
+    except Exception as e:
+        log.exception(e)
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=ERROR_MESSAGES.DEFAULT(),
+        )
+
+
+@router.delete("/shared/revoked", response_model=dict)
+async def clear_revoked_shared_chats(user=Depends(get_verified_user)):
+    try:
+        count = Chats.clear_revoked_shared_chats_by_user_id(user.id)
+        return {"cleared": count}
     except Exception as e:
         log.exception(e)
         raise HTTPException(
@@ -426,6 +459,45 @@ async def archive_all_chats(user=Depends(get_verified_user)):
     return Chats.archive_all_chats_by_user_id(user.id)
 
 
+class VerifyPasswordForm(BaseModel):
+    password: str
+
+
+@router.post("/share/{share_id}/verify", response_model=dict)
+async def verify_shared_chat_password(
+    share_id: str, form_data: VerifyPasswordForm, response: Response
+):
+    chat = Chats.get_chat_by_share_id_unrestricted(share_id)
+    if not chat or not chat.password:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail=ERROR_MESSAGES.NOT_FOUND
+        )
+
+    if not pwd_context.verify(form_data.password, chat.password):
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail=ERROR_MESSAGES.INVALID_PASSWORD,
+        )
+
+    # Password is correct, create a short-lived token
+    token = create_token(
+        data={
+            "sub": f"shared-chat-{chat.id}",
+            "password_updated_at": chat.password_updated_at,
+        },
+        expires_delta=timedelta(hours=1),
+    )
+
+    response.set_cookie(
+        key=f"shared-chat-{chat.id}-token",
+        value=token,
+        httponly=True,
+        samesite="lax",
+        secure=True,  # Set to True in production
+    )
+    return {"status": "ok"}
+
+
 ############################
 # GetSharedChatById
 ############################
@@ -433,12 +505,50 @@ async def archive_all_chats(user=Depends(get_verified_user)):
 
 @router.get("/share/{share_id}", response_model=Optional[ChatResponse])
 async def get_shared_chat_by_id(
-    share_id: str, user: Optional[dict] = Depends(get_optional_user)
+    share_id: str,
+    request: Request,
+    response: Response,
+    user: Optional[dict] = Depends(get_optional_user),
 ):
     if user and user.role == "pending":
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED, detail=ERROR_MESSAGES.NOT_FOUND
         )
+
+    # First, get the chat unrestricted to check for a password
+    chat_unrestricted = Chats.get_chat_by_share_id_unrestricted(share_id)
+
+    if not chat_unrestricted:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail=ERROR_MESSAGES.NOT_FOUND
+        )
+
+    # If the chat is password-protected
+    if chat_unrestricted.password:
+        token_name = f"shared-chat-{chat_unrestricted.id}-token"
+        token = request.cookies.get(token_name)
+
+        if not token:
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED, detail="password_required"
+            )
+
+        data = decode_token(token)
+        if not data or data.get("sub") != f"shared-chat-{chat_unrestricted.id}":
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid token"
+            )
+
+        # Check if the password has been updated since the token was issued
+        if (
+            chat_unrestricted.password_updated_at
+            and data.get("password_updated_at") != chat_unrestricted.password_updated_at
+        ):
+            response.delete_cookie(key=token_name)
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED, detail="password_required"
+            )
+        # If token is valid, proceed to get the chat
 
     chat = None
     if user and user.role == "admin" and ENABLE_ADMIN_CHAT_ACCESS:
@@ -448,7 +558,7 @@ async def get_shared_chat_by_id(
         chat = Chats.get_chat_by_share_id(share_id, user)
 
     if chat:
-        return ChatResponse(**chat.model_dump())
+        return to_chat_response(chat)
     else:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND, detail=ERROR_MESSAGES.NOT_FOUND
@@ -492,7 +602,7 @@ async def get_chat_by_id(id: str, user=Depends(get_verified_user)):
     chat = Chats.get_chat_by_id_and_user_id(id, user.id)
 
     if chat:
-        return ChatResponse(**chat.model_dump())
+        return to_chat_response(chat)
 
     else:
         raise HTTPException(
@@ -513,7 +623,7 @@ async def update_chat_by_id(
     if chat:
         updated_chat = {**chat.chat, **form_data.chat}
         chat = Chats.update_chat_by_id(id, updated_chat)
-        return ChatResponse(**chat.model_dump())
+        return to_chat_response(chat)
     else:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
@@ -575,7 +685,7 @@ async def update_chat_message_by_id(
             }
         )
 
-    return ChatResponse(**chat.model_dump())
+    return to_chat_response(chat)
 
 
 ############################
@@ -682,7 +792,7 @@ async def pin_chat_by_id(id: str, user=Depends(get_verified_user)):
     chat = Chats.get_chat_by_id_and_user_id(id, user.id)
     if chat:
         chat = Chats.toggle_chat_pinned_by_id(id)
-        return chat
+        return to_chat_response(chat)
     else:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED, detail=ERROR_MESSAGES.DEFAULT()
@@ -733,7 +843,7 @@ async def clone_chat_by_id(
             ),
         )
 
-        return ChatResponse(**chat.model_dump())
+        return to_chat_response(chat)
     else:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED, detail=ERROR_MESSAGES.DEFAULT()
@@ -744,7 +854,7 @@ async def clone_chat_by_id(
 async def increment_clone_count_by_id(id: str, user=Depends(get_verified_user)):
     chat = Chats.increment_clone_count_by_id(id, user)
     if chat:
-        return ChatResponse(**chat.model_dump())
+        return to_chat_response(chat)
     else:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED, detail=ERROR_MESSAGES.DEFAULT()
@@ -770,6 +880,11 @@ async def clone_shared_chat_by_id(request: Request, id: str, user=Depends(get_ve
 
     chat = Chats.get_chat_by_share_id(id, user=user, increment_view=False)
     if chat:
+        if not chat.allow_cloning:
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail=ERROR_MESSAGES.ACCESS_PROHIBITED,
+            )
         updated_chat = {
             **chat.chat,
             "originalChatId": chat.id,
@@ -789,7 +904,7 @@ async def clone_shared_chat_by_id(request: Request, id: str, user=Depends(get_ve
             ),
         )
 
-        return ChatResponse(**new_chat.model_dump())
+        return to_chat_response(new_chat)
     else:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED, detail=ERROR_MESSAGES.DEFAULT()
@@ -820,7 +935,7 @@ async def archive_chat_by_id(id: str, user=Depends(get_verified_user)):
                     log.debug(f"inserting tag: {tag_id}")
                     tag = Tags.insert_new_tag(tag_id, user.id)
 
-        return ChatResponse(**chat.model_dump())
+        return to_chat_response(chat)
     else:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED, detail=ERROR_MESSAGES.DEFAULT()
@@ -837,6 +952,10 @@ class ShareChatForm(BaseModel):
     expires_at: Optional[int] = None
     expire_on_views: Optional[int] = None
     is_public: bool = False
+    display_username: bool = True
+    allow_cloning: bool = True
+    password: Optional[str] = None
+    current_password: Optional[str] = None
 
 
 @router.post("/{id}/share", response_model=Optional[ChatResponse])
@@ -859,6 +978,21 @@ async def share_chat_by_id(
     chat = Chats.get_chat_by_id_and_user_id(id, user.id)
 
     if chat:
+        # Check if the user is trying to change the password
+        password_is_being_changed = (form_data.password and (not chat.password or not pwd_context.verify(form_data.password, chat.password))) or (not form_data.password and chat.password)
+
+        if chat.password and password_is_being_changed:
+            if not form_data.current_password:
+                raise HTTPException(
+                    status_code=status.HTTP_401_UNAUTHORIZED,
+                    detail=ERROR_MESSAGES.INVALID_CRED,
+                )
+            if not pwd_context.verify(form_data.current_password, chat.password):
+                raise HTTPException(
+                    status_code=status.HTTP_401_UNAUTHORIZED,
+                    detail=ERROR_MESSAGES.INVALID_CRED,
+                )
+
         if form_data.share_id:
             if "/" in form_data.share_id:
                 raise HTTPException(
@@ -880,6 +1014,9 @@ async def share_chat_by_id(
             expires_at=form_data.expires_at,
             expire_on_views=form_data.expire_on_views,
             is_public=form_data.is_public,
+            display_username=form_data.display_username,
+            allow_cloning=form_data.allow_cloning,
+            password=form_data.password,
         )
 
         if not result:
@@ -889,10 +1026,7 @@ async def share_chat_by_id(
             )
 
         shared_chat, is_new_share = result
-        response_data = shared_chat.model_dump()
-        response_data["is_new_share"] = is_new_share
-
-        return ChatResponse(**response_data)
+        return to_chat_response(shared_chat, is_new_share)
 
     else:
         raise HTTPException(
@@ -940,7 +1074,7 @@ async def update_chat_folder_id_by_id(
         chat = Chats.update_chat_folder_id_by_id_and_user_id(
             id, user.id, form_data.folder_id
         )
-        return ChatResponse(**chat.model_dump())
+        return to_chat_response(chat)
     else:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED, detail=ERROR_MESSAGES.DEFAULT()
@@ -1051,7 +1185,7 @@ async def restore_shared_chat_by_id(id: str, user=Depends(get_verified_user)):
     if chat:
         restored_chat = Chats.restore_shared_chat_by_chat_id(id)
         if restored_chat:
-            return ChatResponse(**restored_chat.model_dump())
+            return to_chat_response(restored_chat)
         return None
     else:
         raise HTTPException(

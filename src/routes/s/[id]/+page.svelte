@@ -11,10 +11,12 @@
 	import {
 		getChatByShareId,
 		cloneSharedChatById,
-		incrementCloneCountById
+		incrementCloneCountById,
+		verifySharedChatPassword
 	} from '$lib/apis/chats';
 
 	import Messages from '$lib/components/chat/Messages.svelte';
+	import SensitiveInput from '$lib/components/common/SensitiveInput.svelte';
 
 	import { getUserById, getUserSettings } from '$lib/apis/users';
 	import { getModels } from '$lib/apis';
@@ -25,6 +27,8 @@
 	dayjs.extend(localizedFormat);
 
 	let loaded = false;
+	let passwordRequired = false;
+	let password = '';
 
 	let autoScroll = true;
 	let processing = '';
@@ -54,7 +58,9 @@
 				await tick();
 				loaded = true;
 			} else {
-				await goto('/');
+				if (!passwordRequired) {
+					await goto('/');
+				}
 			}
 		})();
 	}
@@ -62,6 +68,24 @@
 	//////////////////////////
 	// Web functions
 	//////////////////////////
+
+	const verifyPassword = async () => {
+		const res = await verifySharedChatPassword($chatId, password).catch((error) => {
+			toast.error(error?.detail ?? $i18n.t('The password provided is incorrect. Please check for typos and try again.'));
+			return null;
+		});
+
+		if (res) {
+			passwordRequired = false;
+			if (await loadSharedChat()) {
+				await tick();
+				loaded = true;
+			} else {
+				passwordRequired = true;
+				toast.error($i18n.t('Failed to load chat. Please try again.'));
+			}
+		}
+	};
 
 	const loadSharedChat = async () => {
 		const token = localStorage.token;
@@ -95,6 +119,11 @@
 
 		await chatId.set($page.params.id);
 		chat = await getChatByShareId(token, $chatId).catch(async (error) => {
+			if (error.detail === 'password_required') {
+				passwordRequired = true;
+				return null;
+			}
+
 			await goto(`/auth?redirect=${encodeURIComponent($page.url.pathname)}`);
 			return null;
 		});
@@ -183,7 +212,7 @@
 							</div>
 						</div>
 
-						{#if chat_owner}
+						{#if chat.display_username && chat_owner}
 							<div class="flex items-center space-x-2 text-sm text-gray-500 mt-2">
 								<img
 									src={chat_owner.profile_image_url}
@@ -230,6 +259,7 @@
 							user={chat_owner}
 							chatId={$chatId}
 							readOnly={true}
+							displayUsername={chat.display_username}
 							{selectedModels}
 							{processing}
 							bind:history
@@ -248,7 +278,7 @@
 				class="absolute bottom-0 right-0 left-0 flex justify-center w-full bg-linear-to-b from-transparent to-white dark:to-gray-900"
 			>
 				<div class="pb-5 text-center">
-					{#if $userStore?.role === 'admin' || $userStore?.permissions?.chat?.clone}
+					{#if ($userStore?.role === 'admin' || $userStore?.permissions?.chat?.clone) && chat.allow_cloning}
 						<button
 							class="px-4 py-2 text-sm font-medium bg-black hover:bg-gray-900 text-white dark:bg-white dark:text-black dark:hover:bg-gray-100 transition rounded-full"
 							on:click={cloneSharedChat}
@@ -262,5 +292,35 @@
 				</div>
 			</div>
 		</div>
+	</div>
+{:else if passwordRequired}
+	<div class="h-screen max-h-[100dvh] w-full flex justify-center items-center">
+		<form
+			class="w-full max-w-sm p-8 space-y-4 bg-white dark:bg-gray-800 rounded-xl shadow-lg"
+			on:submit|preventDefault={verifyPassword}
+		>
+			<div class="text-xl font-medium text-center">{$i18n.t('Password Required')}</div>
+			<p class="text-sm text-center text-gray-500">
+				{$i18n.t('This chat is protected by a password.')}
+			</p>
+			<div>
+				<label for="password" class="block text-sm font-medium text-gray-700 dark:text-gray-300"
+					>{$i18n.t('Password')}</label
+				>
+				<div class="mt-1">
+					<SensitiveInput
+						id="password"
+						placeholder={$i18n.t('Enter password')}
+						bind:value={password}
+					/>
+				</div>
+			</div>
+			<button
+				type="submit"
+				class="w-full px-4 py-2 text-sm font-medium bg-black hover:bg-gray-900 text-white dark:bg-white dark:text-black dark:hover:bg-gray-100 transition rounded-full"
+			>
+				{$i18n.t('Unlock Chat')}
+			</button>
+		</form>
 	</div>
 {/if}

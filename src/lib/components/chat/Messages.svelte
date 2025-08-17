@@ -49,6 +49,7 @@
 	export let addMessages: Function = () => {};
 
 	export let readOnly = false;
+	export let displayUsername = true;
 
 	export let topPadding = false;
 	export let bottomPadding = false;
@@ -446,6 +447,7 @@
 							{addMessages}
 							{triggerScroll}
 							{readOnly}
+							{displayUsername}
 							{topPadding}
 						/>
 					{/each}

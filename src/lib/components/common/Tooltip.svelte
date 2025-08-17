@@ -17,51 +17,36 @@
 	let contentElement;
 	let tooltipInstance;
 
-	$: if (triggerElement) {
-		let tooltipContentSource = null;
+	$: {
+		if (triggerElement) {
+			if (tooltipInstance) {
+				tooltipInstance.destroy();
+				tooltipInstance = null;
+			}
 
-		// Prioritize slotted content
-		if (contentElement && contentElement.innerHTML.trim() !== '') {
-			tooltipContentSource = contentElement;
-		}
+			let tooltipContentSource = null;
 
-		if (tooltipInstance) {
-			tooltipInstance.setContent(tooltipContent);
-		} else {
-			if (content) {
-				tooltipInstance = tippy(tooltipElement, {
-					content: tooltipContent,
+			// Prioritize slotted content
+			if (contentElement && contentElement.innerHTML.trim() !== '') {
+				tooltipContentSource = contentElement;
+			} else if (content) {
+				tooltipContentSource = content;
+			}
+
+			// Create new instance if we have content
+			if (tooltipContentSource) {
+				tooltipInstance = tippy(triggerElement, {
+					content: tooltipContentSource,
 					placement: placement,
 					allowHTML: allowHTML,
 					touch: touch,
 					...(theme !== '' ? { theme } : { theme: 'dark' }),
 					arrow: false,
 					offset: offset,
-					...(interactive ? { interactive: true } : {}),
+					interactive: interactive,
 					...tippyOptions
 				});
 			}
-		}
-
-		// Destroy old instance if it exists
-		if (tooltipInstance) {
-			tooltipInstance.destroy();
-			tooltipInstance = null;
-		}
-
-		// Create new instance if we have content
-		if (tooltipContentSource) {
-			tooltipInstance = tippy(triggerElement, {
-				content: tooltipContentSource,
-				placement: placement,
-				allowHTML: allowHTML,
-				touch: touch,
-				...(theme !== '' ? { theme } : { theme: 'dark' }),
-				arrow: false,
-				offset: offset,
-				interactive: interactive,
-				...tippyOptions
-			});
 		}
 	}
 

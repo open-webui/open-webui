@@ -33,6 +33,64 @@ export const createNewChat = async (token: string, chat: object, folderId: strin
 	return res;
 };
 
+export const verifySharedChatPassword = async (share_id: string, password: string) => {
+	let error = null;
+
+	const res = await fetch(`${WEBUI_API_BASE_URL}/chats/share/${share_id}/verify`, {
+		method: 'POST',
+		headers: {
+			'Content-Type': 'application/json'
+		},
+		body: JSON.stringify({
+			password: password
+		}),
+		credentials: 'include'
+	})
+		.then(async (res) => {
+			if (!res.ok) throw await res.json();
+			return res.json();
+		})
+		.catch((err) => {
+			error = err.detail;
+			console.error(err);
+			return null;
+		});
+
+	if (error) {
+		throw error;
+	}
+
+	return res;
+};
+
+export const clearRevokedSharedChats = async (token: string) => {
+	let error = null;
+
+	const res = await fetch(`${WEBUI_API_BASE_URL}/chats/shared/revoked`, {
+		method: 'DELETE',
+		headers: {
+			Accept: 'application/json',
+			'Content-Type': 'application/json',
+			...(token && { authorization: `Bearer ${token}` })
+		}
+	})
+		.then(async (res) => {
+			if (!res.ok) throw await res.json();
+			return res.json();
+		})
+		.catch((err) => {
+			error = err.detail;
+			console.error(err);
+			return null;
+		});
+
+	if (error) {
+		throw error;
+	}
+
+	return res;
+};
+
 export const restoreSharedChat = async (token: string, id: string) => {
 	let error = null;
 
@@ -657,7 +715,8 @@ export const getChatByShareId = async (token: string, share_id: string) => {
 			Accept: 'application/json',
 			'Content-Type': 'application/json',
 			...(token && { authorization: `Bearer ${token}` })
-		}
+		},
+		credentials: 'include'
 	})
 		.then(async (res) => {
 			if (!res.ok) throw await res.json();
@@ -835,15 +894,16 @@ export const cloneSharedChatById = async (token: string, id: string) => {
 	return res;
 };
 
-import { sharedChats } from '$lib/stores';
-
 export const shareChatById = async (
 	token: string,
 	id: string,
 	share_id: string = '',
 	expires_at: number | null = null,
 	expire_on_views: number | null = null,
-	is_public: boolean = false
+	is_public: boolean = false,
+	display_username: boolean = true,
+	allow_cloning: boolean = true,
+	password: string | null = null
 ) => {
 	let error = null;
 
@@ -858,7 +918,10 @@ export const shareChatById = async (
 			share_id: share_id,
 			expires_at: expires_at,
 			expire_on_views: expire_on_views,
-			is_public: is_public
+			is_public: is_public,
+			display_username: display_username,
+			allow_cloning: allow_cloning,
+			password: password
 		})
 	})
 		.then(async (res) => {

@@ -27,6 +27,7 @@
 		chatsUpdated
 	} from '$lib/stores';
 	import { getModels } from '$lib/apis';
+	import { clearRevokedSharedChats } from '$lib/apis/chats';
 	import ShareChatModal from '$lib/components/chat/ShareChatModal.svelte';
 	import Pagination from '$lib/components/common/Pagination.svelte';
 	import ConfirmDialog from '$lib/components/common/ConfirmDialog.svelte';
@@ -45,6 +46,7 @@
 	let showConfirmResetSelected = false;
 	let showConfirmResetAllStats = false;
 	let showPrimaryResetAllStatsConfirm = false;
+	let showConfirmClearRevoked = false;
 
 	let showConfirmResetStats = false;
 	let chatToResetStats = null;
@@ -328,6 +330,17 @@
 		showConfirmResetAllStats = false;
 	};
 
+	const doClearRevoked = async () => {
+		const res = await clearRevokedSharedChats(localStorage.token);
+		if (res) {
+			toast.success(`${res.cleared} revoked link(s) cleared.`);
+			getSharedChatList();
+		} else {
+			toast.error('Failed to clear revoked links.');
+		}
+		showConfirmClearRevoked = false;
+	};
+
 	const selectAll = (event) => {
 		const checked = event.target.checked;
 		sharedChatsStore.update((chats) =>
@@ -521,31 +534,38 @@
 			</div>
 				{#if totalSelectedCount > 0}
 					<button
-						class="px-4 py-2 bg-red-500 text-white rounded-lg whitespace-nowrap"
+						class="px-4 py-2 text-red-500 border border-red-500 rounded-lg whitespace-nowrap hover:bg-red-500 hover:text-white"
 						on:click={revokeSelected}
 					>
 						Revoke Selected
 					</button>
 					<button
-						class="px-4 py-2 bg-yellow-500 text-white rounded-lg whitespace-nowrap"
+						class="px-4 py-2 text-yellow-500 border border-yellow-500 rounded-lg whitespace-nowrap hover:bg-yellow-500 hover:text-white"
 						on:click={() => (showConfirmResetSelected = true)}
 					>
 						Reset Stats for Selected
 					</button>
 				{/if}
 				<button
-					class="px-4 py-2 bg-red-500 text-white rounded-lg whitespace-nowrap disabled:opacity-50 disabled:cursor-not-allowed"
+					class="px-4 py-2 text-red-500 border border-red-500 rounded-lg whitespace-nowrap hover:bg-red-500 hover:text-white disabled:opacity-50 disabled:cursor-not-allowed"
 					on:click={() => {
 						showPrimaryRevokeAllConfirm = true;
 					}}
 					disabled={grandTotal === 0}>Revoke All</button
 				>
 				<button
-					class="px-4 py-2 bg-yellow-500 text-white rounded-lg whitespace-nowrap disabled:opacity-50 disabled:cursor-not-allowed"
+					class="px-4 py-2 text-yellow-500 border border-yellow-500 rounded-lg whitespace-nowrap hover:bg-yellow-500 hover:text-white disabled:opacity-50 disabled:cursor-not-allowed"
 					on:click={() => (showPrimaryResetAllStatsConfirm = true)}
 					disabled={grandTotal === 0}
 				>
 					Reset All Stats
+				</button>
+				<button
+					class="px-4 py-2 text-red-600 border border-red-600 rounded-lg whitespace-nowrap hover:bg-red-600 hover:text-white disabled:opacity-50 disabled:cursor-not-allowed"
+					on:click={() => (showConfirmClearRevoked = true)}
+					disabled={grandTotal === 0 || $sharedChatsStore.filter(c => c.status === 'revoked').length === 0}
+				>
+					Clear Revoked
 				</button>
 			</div>
 		</div>
@@ -1005,7 +1025,7 @@
 									{#if chat.status === 'active'}
 										<Tooltip content="Revoke Link" className="inline-block">
 											<button
-												class="text-red-600 dark:text-red-400 hover:text-red-900 dark:hover:text-red-200"
+												class="text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200"
 												on:click={() => {
 													revokeLink(chat.id);
 												}}>Revoke</button
@@ -1014,7 +1034,7 @@
 									{:else}
 										<Tooltip content="Restore Link" className="inline-block">
 											<button
-												class="text-green-600 dark:text-green-400 hover:text-green-900 dark:hover:text-green-200"
+												class="text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200"
 												on:click={() => {
 													restoreLink(chat.id);
 												}}>Restore</button
@@ -1023,7 +1043,7 @@
 									{/if}
 									<Tooltip content="Modify Share Link" className="inline-block">
 										<button
-											class="text-blue-600 dark:text-blue-400 hover:text-blue-900 dark:hover:text-blue-200 ml-4"
+											class="text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 ml-4"
 											on:click={() => {
 												selectedChatId = chat.id;
 												showShareChatModal = true;
@@ -1032,7 +1052,7 @@
 									</Tooltip>
 									<Tooltip content="Reset Statistics" className="inline-block">
 										<button
-											class="text-yellow-600 dark:text-yellow-400 hover:text-yellow-900 dark:hover:text-yellow-200 ml-4"
+											class="text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 ml-4"
 											on:click={() => {
 												chatToResetStats = chat;
 												showConfirmResetStats = true;
@@ -1042,7 +1062,7 @@
 									{#if $user?.role === 'admin' || $user?.permissions?.chat?.clone}
 										<Tooltip content="Clone Chat" className="inline-block">
 											<button
-												class="text-green-600 dark:text-green-400 hover:text-green-900 dark:hover:text-green-200 ml-4"
+												class="text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 ml-4"
 												on:click={() => {
 													cloneChat(chat.share_id);
 												}}>Clone</button
@@ -1123,4 +1143,11 @@
 	title="Reset All Stats"
 	message={`Are you sure you want to reset the stats for all ${grandTotal} shared chats? This action cannot be undone.`}
 	on:confirm={doResetAllStats}
+/>
+
+<ConfirmDialog
+	bind:show={showConfirmClearRevoked}
+	title="Clear Revoked Links"
+	message={`Are you sure you want to clear all revoked shared links? This will permanently remove their sharing information.`}
+	on:confirm={doClearRevoked}
 />

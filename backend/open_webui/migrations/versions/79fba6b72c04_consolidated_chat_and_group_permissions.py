@@ -22,7 +22,6 @@ depends_on: Union[str, Sequence[str], None] = None
 
 def upgrade():
     conn = op.get_bind()
-    
     inspector = sa.inspect(conn)
     columns = inspector.get_columns("chat")
     if "share_id" not in [c["name"] for c in columns]:
@@ -30,7 +29,6 @@ def upgrade():
 
     op.add_column('chat', sa.Column('views', sa.Integer(), nullable=False, server_default='0'))
     op.add_column('chat', sa.Column('clones', sa.Integer(), nullable=False, server_default='0'))
-    
     # Merged column additions
     op.add_column('chat', sa.Column('expires_at', sa.BigInteger(), nullable=True))
     op.add_column('chat', sa.Column('expire_on_views', sa.Integer(), nullable=True))
@@ -56,10 +54,32 @@ def upgrade():
                 {'permissions': json.dumps(permissions), 'id': group_id}
             )
 
+    with op.batch_alter_table('chat', schema=None) as batch_op:
+        batch_op.add_column(sa.Column('revoked_at', sa.BigInteger(), nullable=True))
+
+    op.add_column('chat', sa.Column('display_username', sa.Boolean(), nullable=False, server_default=sa.text('1')))
+
+    op.add_column('chat', sa.Column('allow_cloning', sa.Boolean(), nullable=False, server_default=sa.text('true')))
+
+    op.add_column('chat', sa.Column('password', sa.String(), nullable=True))
+
+    op.add_column('chat', sa.Column('password_updated_at', sa.BigInteger(), nullable=True))
+
 
 def downgrade():
     conn = op.get_bind()
-    
+
+    op.drop_column('chat', 'password_updated_at')
+
+    op.drop_column('chat', 'password')
+
+    op.drop_column('chat', 'allow_cloning')
+
+    op.drop_column('chat', 'display_username')
+
+    with op.batch_alter_table('chat', schema=None) as batch_op:
+        batch_op.drop_column('revoked_at')
+
     groups = conn.execute(sa.text("SELECT id, permissions FROM \"group\"")).fetchall()
 
     for group_id, permissions_str in groups:
@@ -73,13 +93,9 @@ def downgrade():
                 )
 
     with op.batch_alter_table('chat', schema=None) as batch_op:
-        try:
-            batch_op.drop_index('chat_share_id')
-        except Exception as e:
-            print(f"Warning: Could not drop index chat_share_id. It might not exist or another error occurred: {e}")
-            pass
+        # This line was removed to fix the downgrade error. Keep it removed.
+        # batch_op.drop_index('chat_share_id')
 
-        # Merged column drops (in reverse order of upgrade additions)
         batch_op.drop_column('is_public')
         batch_op.drop_column('expire_on_views')
         batch_op.drop_column('expires_at')

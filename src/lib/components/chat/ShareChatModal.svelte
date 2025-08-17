@@ -16,6 +16,7 @@
 	import Modal from '../common/Modal.svelte';
 	import Tooltip from '../common/Tooltip.svelte';
 	import Switch from '../common/Switch.svelte';
+	import SensitiveInput from '../common/SensitiveInput.svelte';
 	import Link from '../icons/Link.svelte';
 	import XMark from '$lib/components/icons/XMark.svelte';
 	import ArrowPath from '$lib/components/icons/ArrowPath.svelte';
@@ -26,6 +27,7 @@
 	import GarbageBin from '$lib/components/icons/GarbageBin.svelte';
 	import Clipboard from '$lib/components/icons/Clipboard.svelte';
 	import ChevronDown from '$lib/components/icons/ChevronDown.svelte';
+	import LockClosed from '$lib/components/icons/LockClosed.svelte';
 	import QuestionMarkCircle from '$lib/components/icons/QuestionMarkCircle.svelte';
 	import dayjs from 'dayjs';
 	import customParseFormat from 'dayjs/plugin/customParseFormat';
@@ -111,7 +113,15 @@
 	let initialExpireOnViewsCount = 1;
 	let is_public = false;
 	let initial_is_public = false;
+	let display_username = true;
+	let initial_display_username = true;
+	let allow_cloning = true;
+	let initial_allow_cloning = true;
+	let password = '';
+	let initial_password = '';
+	let current_password = '';
 	let useGradient = true;
+	let showQrCode = false;
 	let currentViews = 0;
 	const i18n = getContext('i18n');
 
@@ -123,8 +133,8 @@
 		{ value: '1h', label: $i18n.t('1 Hour') },
 		{ value: '24h', label: $i18n.t('24 Hours') },
 		{ value: '7d', label: $i18n.t('7 Days') },
-		{ value: 'expire-on-views', label: $i18n.t('Expire after a number of views') },
-		{ value: 'custom', label: $i18n.t('Custom') }
+		{ value: 'expire-on-views', label: $i18n.t('Expire after a maximum number of views') },
+		{ value: 'custom', label: $i18n.t('Expire after a custom time') }
 	];
 
 	$: selectedExpirationIndex = expirationOptions.findIndex((o) => o.value === expirationOption);
@@ -351,6 +361,15 @@
 		if (is_public !== initial_is_public) {
 			return true;
 		}
+		if (display_username !== initial_display_username) {
+			return true;
+		}
+		if (allow_cloning !== initial_allow_cloning) {
+			return true;
+		}
+		if (password !== initial_password) {
+			return true;
+		}
 		return false;
 	};
 
@@ -419,25 +438,39 @@
 				share_id,
 				expires_at,
 				expire_on_views,
-				is_public
+				is_public,
+				display_username,
+				allow_cloning,
+				password,
+				current_password
 			);
 
 			// Update all state directly and atomically from the single API response.
 			share_id = sharedChat.id;
 			initial_share_id = sharedChat.id;
 
+			// Update local state from server response, which will update the UI
+			display_username = sharedChat.display_username;
+			is_public = sharedChat.is_public;
+			allow_cloning = sharedChat.allow_cloning;
+
+			// Update initial state for change detection on next action
 			initialExpirationOption = expirationOption;
 			initialCustomExpirationDate = customExpirationDate;
 			initialExpireOnViewsCount = expireOnViewsCount;
-			initial_is_public = is_public;
+			initial_is_public = sharedChat.is_public;
+			initial_display_username = sharedChat.display_username;
+			initial_allow_cloning = sharedChat.allow_cloning;
+			initial_password = password;
 
-			// Update the main chat object to reflect the new share status.
+			// Update the main chat object to reflect the new share status
 			chat = {
 				...chat,
 				share_id: sharedChat.id,
 				expires_at: sharedChat.expires_at,
 				expire_on_views: sharedChat.expire_on_views,
-				is_public: sharedChat.is_public
+				is_public: sharedChat.is_public,
+				display_username: sharedChat.display_username
 			};
 
 			sharedChatsUpdated.set(true);
@@ -529,6 +562,10 @@
 
 					is_public = _chat.share_id ? _chat.is_public ?? false : false;
 					initial_is_public = is_public;
+					display_username = _chat.share_id ? _chat.display_username ?? true : true;
+					initial_display_username = display_username;
+					allow_cloning = _chat.share_id ? _chat.allow_cloning ?? true : true;
+					initial_allow_cloning = allow_cloning;
 
 					// Snapshot the newly set initial state
 					initialExpirationOption = expirationOption;
@@ -572,6 +609,13 @@
 		customExpirationDate = '';
 		is_public = false;
 		initial_is_public = false;
+		display_username = true;
+		initial_display_username = true;
+		allow_cloning = true;
+		initial_allow_cloning = true;
+		password = '';
+		initial_password = '';
+		current_password = '';
 		expireOnViewsCount = 1;
 		initialExpirationOption = 'never';
 		initialCustomExpirationDate = '';
@@ -592,7 +636,7 @@
 	<div>
 		<div class=" flex justify-between dark:text-gray-300 px-5 pt-4 pb-0.5">
 			<div class=" text-lg font-medium self-center flex items-center space-x-2">
-				{$i18n.t('Share Chat')}
+
 				<Tooltip placement="right" interactive={true}>
 					<QuestionMarkCircle class="cursor-pointer text-gray-500 size-5" />
 					<div class="p-2 text-sm" slot="tooltip">
@@ -625,6 +669,7 @@
 						</ul>
 					</div>
 				</Tooltip>
+				{$i18n.t('Share Chat')}
 			</div>
 			<button
 				class="self-center"
@@ -643,286 +688,401 @@
 		{/if}
 
 		{#if chat}
-			<div class="px-5 pt-4 pb-5 w-full flex flex-col">
-				{#if $user.role === 'admin' || ($user.permissions.sharing?.public_chat ?? false)}
+			<div class="p-5 w-full flex flex-col space-y-4">
+				<!-- Access Settings -->
+				<div class="p-4 rounded-lg bg-gray-100 dark:bg-gray-850">
+					<div class="font-medium mb-2">{$i18n.t('Access Settings')}</div>
+
+					{#if $user.role === 'admin' || ($user.permissions.sharing?.public_chat ?? false)}
+						<div class="flex items-start space-x-3">
+							<div class="pt-0.5">
+								<Switch bind:state={is_public} tooltip={true} />
+							</div>
+							<div class="flex-1">
+								<label
+									for="is_public"
+									class="block text-sm font-medium text-gray-700 dark:text-gray-300"
+								>
+									{$i18n.t('Public Access')}
+								</label>
+								<p class="text-xs text-gray-500 dark:text-gray-400">
+									{$i18n.t(
+										'When enabled, anyone with the link can view the chat. When disabled, only logged-in users can view the chat.'
+									)}
+								</p>
+							</div>
+						</div>
+					{/if}
+					{#if !is_public}
+						<div class="mt-4 flex items-start space-x-3">
+							<div class="pt-0.5">
+								<Switch bind:state={display_username} tooltip={true} />
+							</div>
+							<div class="flex-1">
+								<label
+									for="display_username"
+									class="block text-sm font-medium text-gray-700 dark:text-gray-300"
+								>
+									{$i18n.t('Display Username')}
+								</label>
+								<p class="text-xs text-gray-500 dark:text-gray-400">
+									{$i18n.t("When enabled, the chat owner's username will be displayed on the shared chat.")}
+								</p>
+							</div>
+						</div>
+						<div class="mt-4 flex items-start space-x-3">
+							<div class="pt-0.5">
+								<Switch bind:state={allow_cloning} tooltip={true} />
+							</div>
+							<div class="flex-1">
+								<label
+									for="allow_cloning"
+									class="block text-sm font-medium text-gray-700 dark:text-gray-300"
+								>
+									{$i18n.t('Allow Cloning')}
+								</label>
+								<p class="text-xs text-gray-500 dark:text-gray-400">
+									{$i18n.t('When enabled, users with the link can clone this chat to their own account. When disabled, the snapshot of the chat effectively becomes read only.')}
+								</p>
+							</div>
+						</div>
+					{/if}
+
 					<div class="mt-4">
-						<div class="flex items-center justify-between">
+						<div class="flex justify-between">
 							<label
-								for="is_public"
+								for="password"
 								class="block text-sm font-medium text-gray-700 dark:text-gray-300"
 							>
-								{$i18n.t('Public Access')}
+								{$i18n.t('Password')}
 							</label>
-							<Switch bind:state={is_public} tooltip={true} />
+
+							{#if chat.has_password}
+								<div class="flex items-center space-x-1 text-xs text-gray-500">
+									<LockClosed class="size-3" />
+									<span>{$i18n.t('Protected')}</span>
+								</div>
+							{/if}
 						</div>
-						<p class="text-xs text-gray-500 dark:text-gray-400 mt-1">
-							{$i18n.t(
-								'When enabled, anyone with the link can view the chat. When disabled, only logged-in users can view the chat.'
-							)}
+
+						<div class="mt-1">
+							<SensitiveInput
+								id="password"
+								placeholder={chat.has_password
+									? $i18n.t('Enter new password (optional)')
+									: $i18n.t('Create a password (optional)')}
+								bind:value={password}
+							/>
+						</div>
+
+						{#if chat.has_password}
+							<div class="mt-1">
+								<SensitiveInput
+									id="current_password"
+									placeholder={$i18n.t('Enter current password to update')}
+									bind:value={current_password}
+								/>
+							</div>
+						{/if}
+						<p class="mt-1 text-xs text-gray-500 dark:text-gray-400">
+							{$i18n.t('Protect your shared link with a password.')}
 						</p>
 					</div>
-				{/if}
-
-				<div class="mt-4 relative" use:clickOutside>
-					<label for="expiration" class="block text-sm font-medium text-gray-700 dark:text-gray-300"
-						>{$i18n.t('Link Expiration')}</label
-					>
-					<button
-						type="button"
-						class="mt-1 relative block w-full cursor-pointer text-left pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm rounded-md dark:bg-gray-700 dark:border-gray-600 dark:text-white"
-						on:click={() => (isExpirationDropdownOpen = !isExpirationDropdownOpen)}
-						on:wheel|preventDefault={handleExpirationScroll}
-					>
-						<span class="block truncate">{expirationOptions[selectedExpirationIndex]?.label ?? ''}</span>
-						<span class="pointer-events-none absolute inset-y-0 right-0 flex items-center pr-2">
-							<ChevronDown class="h-5 w-5 text-gray-400" />
-						</span>
-					</button>
-
-					{#if isExpirationDropdownOpen}
-						<ul
-							class="absolute z-10 mt-1 w-full rounded-md bg-white shadow-lg border border-gray-200 dark:bg-gray-700 dark:border-gray-600"
-						>
-							{#each expirationOptions as option, i}
-								<li
-									class="relative cursor-pointer select-none py-2 pl-3 pr-9 text-gray-900 dark:text-white hover:bg-indigo-600 hover:text-white"
-									on:click={() => {
-										expirationOption = option.value;
-										isExpirationDropdownOpen = false;
-									}}
-								>
-									<span class="block truncate">{option.label}</span>
-								</li>
-							{/each}
-						</ul>
-					{/if}
 				</div>
 
-				{#if expirationOption === 'custom'}
-					<div class="mt-4 relative">
-						<div
-							class="flex items-center mt-1 w-full pl-3 pr-2 py-0.5 text-base border border-gray-300 focus-within:ring-2 focus-within:ring-indigo-500 focus-within:border-indigo-500 sm:text-sm rounded-md dark:bg-gray-700 dark:border-gray-600 dark:text-white"
-						>
-							<div class="flex-1">
-								{#if customExpirationDate}
-									<span class="flex items-center">
-										<span
-											class="cursor-pointer px-1 rounded hover:bg-gray-200 dark:hover:bg-gray-600"
-											on:wheel|preventDefault={(e) => handleDateScroll(e, 'month')}
-											>{expirationDateParts.month}</span
-										>
-										<span>/</span>
-										<span
-											class="cursor-pointer px-1 rounded hover:bg-gray-200 dark:hover:bg-gray-600"
-											on:wheel|preventDefault={(e) => handleDateScroll(e, 'day')}
-											>{expirationDateParts.day}</span
-										>
-										<span>/</span>
-										<span
-											class="cursor-pointer px-1 rounded hover:bg-gray-200 dark:hover:bg-gray-600"
-											on:wheel|preventDefault={(e) => handleDateScroll(e, 'year')}
-											>{expirationDateParts.year}</span
-										>
-										<span
-											class="ml-2 cursor-pointer px-1 rounded hover:bg-gray-200 dark:hover:bg-gray-600"
-											on:wheel|preventDefault={(e) => handleDateScroll(e, 'hour')}
-											>{expirationDateParts.hour}</span
-										>
-										<span>:</span>
-										<span
-											class="cursor-pointer px-1 rounded hover:bg-gray-200 dark:hover:bg-gray-600"
-											on:wheel|preventDefault={(e) => handleDateScroll(e, 'minute')}
-											>{expirationDateParts.minute}</span
-										>
-										<span
-											class="ml-1 cursor-pointer px-1 rounded hover:bg-gray-200 dark:hover:bg-gray-600"
-											on:wheel|preventDefault={(e) => handleDateScroll(e, 'ampm')}
-											>{expirationDateParts.ampm}</span
-										>
+				<!-- Expiration Settings -->
+				<div class="p-4 rounded-lg bg-gray-100 dark:bg-gray-850">
+					<div class="font-medium mb-2">{$i18n.t('Expiration Settings')}</div>
+
+					<div class="flex items-end gap-2 mt-4">
+						<div class="flex-1">
+							<label for="expiration" class="block text-sm font-medium text-gray-700 dark:text-gray-300"
+								>{$i18n.t('Link Expiration')}</label
+							>
+							<div class="relative" use:clickOutside>
+								<button
+									type="button"
+									class="mt-1 relative block w-full cursor-pointer text-left pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm rounded-md dark:bg-gray-700 dark:border-gray-600 dark:text-white"
+									on:click={() => (isExpirationDropdownOpen = !isExpirationDropdownOpen)}
+									on:wheel|preventDefault={handleExpirationScroll}
+								>
+									<span class="block truncate"
+										>{expirationOptions[selectedExpirationIndex]?.label ?? ''}</span
+									>
+									<span
+										class="pointer-events-none absolute inset-y-0 right-0 flex items-center pr-2"
+									>
+										<ChevronDown class="h-5 w-5 text-gray-400" />
 									</span>
-								{:else}
-									<span class="text-gray-400 select-none py-2">Select a date and time</span>
+								</button>
+
+								{#if isExpirationDropdownOpen}
+									<ul
+										class="absolute z-10 mt-1 w-full rounded-md bg-white shadow-lg border border-gray-200 dark:bg-gray-700 dark:border-gray-600"
+									>
+										{#each expirationOptions as option, i}
+											<li
+												class="relative cursor-pointer select-none py-2 pl-3 pr-9 text-gray-900 dark:text-white hover:bg-indigo-600 hover:text-white"
+												on:click={() => {
+													expirationOption = option.value;
+													isExpirationDropdownOpen = false;
+												}}
+											>
+												<span class="block truncate">{option.label}</span>
+											</li>
+										{/each}
+									</ul>
 								{/if}
 							</div>
-
-							<button
-								type="button"
-								class="p-2 rounded-md hover:bg-gray-200 dark:hover:bg-gray-600"
-								on:click={openDatePicker}
-								aria-label="Open date picker"
-							>
-								<Calendar class="size-5" />
-							</button>
 						</div>
-						<input
-							type="datetime-local"
-							bind:value={customExpirationDate}
-							id="hidden-datetime-picker"
-							class="absolute bottom-0 left-0 w-px h-px opacity-0"
-							min={minDateTime}
-						/>
-					</div>
-				{/if}
+						<div class="flex-1">
+							{#if expirationOption === 'custom'}
+								<div class="relative">
+									<div
+										class="flex items-center mt-1 w-full pl-3 pr-2 py-0.5 text-base border border-gray-300 focus-within:ring-2 focus-within:ring-indigo-500 focus-within:border-indigo-500 sm:text-sm rounded-md dark:bg-gray-700 dark:border-gray-600 dark:text-white"
+									>
+										<div class="flex-1">
+											{#if customExpirationDate}
+												<span class="flex items-center">
+													<span
+														class="cursor-pointer px-1 rounded hover:bg-gray-200 dark:hover:bg-gray-600"
+														on:wheel|preventDefault={(e) => handleDateScroll(e, 'month')}
+														>{expirationDateParts.month}</span
+													>
+													<span>/</span>
+													<span
+														class="cursor-pointer px-1 rounded hover:bg-gray-200 dark:hover:bg-gray-600"
+														on:wheel|preventDefault={(e) => handleDateScroll(e, 'day')}
+														>{expirationDateParts.day}</span
+													>
+													<span>/</span>
+													<span
+														class="cursor-pointer px-1 rounded hover:bg-gray-200 dark:hover:bg-gray-600"
+														on:wheel|preventDefault={(e) => handleDateScroll(e, 'year')}
+														>{expirationDateParts.year}</span
+													>
+													<span
+														class="ml-2 cursor-pointer px-1 rounded hover:bg-gray-200 dark:hover:bg-gray-600"
+														on:wheel|preventDefault={(e) => handleDateScroll(e, 'hour')}
+														>{expirationDateParts.hour}</span
+													>
+													<span>:</span>
+													<span
+														class="cursor-pointer px-1 rounded hover:bg-gray-200 dark:hover:bg-gray-600"
+														on:wheel|preventDefault={(e) => handleDateScroll(e, 'minute')}
+														>{expirationDateParts.minute}</span
+													>
+													<span
+														class="ml-1 cursor-pointer px-1 rounded hover:bg-gray-200 dark:hover:bg-gray-600"
+														on:wheel|preventDefault={(e) => handleDateScroll(e, 'ampm')}
+														>{expirationDateParts.ampm}</span
+													>
+												</span>
+											{:else}
+												<span class="text-gray-400 select-none py-2"
+													>Select a date and time</span
+												>
+											{/if}
+										</div>
 
+										<button
+											type="button"
+											class="p-2 rounded-md hover:bg-gray-200 dark:hover:bg-gray-600"
+											on:click={openDatePicker}
+											aria-label="Open date picker"
+										>
+											<Calendar class="size-5" />
+										</button>
+									</div>
+									<input
+										type="datetime-local"
+										bind:value={customExpirationDate}
+										id="hidden-datetime-picker"
+										class="absolute bottom-0 left-0 w-px h-px opacity-0"
+										min={minDateTime}
+									/>
+								</div>
+							{/if}
 
-				{#if expirationOption === 'expire-on-views'}
-					<div class="mt-4">
-						<input
-							type="number"
-							min="1"
-							bind:value={expireOnViewsCount}
-							on:blur={validateViewsCount}
-							on:wheel|preventDefault={handleViewsScroll}
-							class="mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm rounded-md dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white"
-							placeholder="Enter number of views"
-						/>
-					</div>
-				{/if}
-
-				{#if chat.share_id && chat.expires_at}
-					<div class="mt-2 text-sm text-gray-500 dark:text-gray-400">
-						{$i18n.t('Expires on')} {new Date(chat.expires_at * 1000).toLocaleString()}
-						{#if timeRemaining}
-							<span class="font-semibold ml-1">({timeRemaining})</span>
-						{/if}
-					</div>
-				{/if}
-
-				{#if chat.share_id && chat.expire_on_views}
-					<div class="mt-2 text-sm text-gray-500 dark:text-gray-400">
-						{$i18n.t('Expires after')} {chat.expire_on_views} {$i18n.t('views')}
-					</div>
-				{/if}
-
-				<div class="mt-2 flex items-center gap-2">
-					<div class="flex-1">
-						<div
-							class="flex items-center border rounded-lg dark:border-gray-700 focus-within:ring-2 focus-within:ring-blue-500 focus-within:border-blue-500 overflow-hidden"
-						>
-							<span class="pl-3 pr-1 py-2 text-gray-500 dark:text-gray-400 select-none">/s/</span>
-							<input
-								class="flex-1 min-w-0 bg-transparent py-2 px-1 focus:outline-none dark:text-white"
-								placeholder={$i18n.t('Enter a custom name (optional)')}
-								value={share_id}
-								maxlength="144"
-								on:input={(e) => {
-									const sanitized = e.target.value.replace(/ /g, '-').replace(/[^a-zA-Z0-9-._~]/g, '');
-									if (share_id !== sanitized) {
-										share_id = sanitized;
-										generateQrCodesDebounced(
-											share_id ? `${window.location.origin}/s/${share_id}` : null
-										);
-									}
-								}}
-							/>
-							<span class="pr-3 text-xs text-gray-500 dark:text-gray-400 shrink-0"
-								>{share_id.length} / 144</span
-							>
+							{#if expirationOption === 'expire-on-views'}
+								<div>
+									<input
+										type="number"
+										min="1"
+										bind:value={expireOnViewsCount}
+										on:blur={validateViewsCount}
+										on:wheel|preventDefault={handleViewsScroll}
+										class="mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm rounded-md dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white"
+										placeholder="Enter number of views"
+									/>
+								</div>
+							{/if}
 						</div>
 					</div>
 
-					<div class="flex items-center gap-2">
-						{#if chat.share_id}
-							<Tooltip content={$i18n.t('Generate New ID')}>
-								<button
-									class="flex items-center justify-center p-2 rounded-lg dark:text-white bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors"
-									on:click={() => {
-										share_id = uuidv4();
-									}}
-								>
-									<ArrowPath class="size-5" />
-								</button>
-							</Tooltip>
-							<Tooltip content={$i18n.t('Copy Link')}>
-								<button
-									class="flex items-center justify-center p-2 rounded-lg dark:text-white bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors"
-									on:click={() => {
-										copyToClipboard(shareUrl);
-										toast.success($i18n.t('Copied shared chat URL to clipboard!'));
-									}}
-								>
-									<Clipboard class="size-5" />
-								</button>
-							</Tooltip>
-							<Tooltip content={$i18n.t('View Link')}>
-								<a
-									href={shareUrl}
-									target="_blank"
-									class="flex items-center justify-center p-2 rounded-lg dark:text-white bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors"
-								>
-									<Eye class="size-5" />
-								</a>
-							</Tooltip>
-							<Tooltip content={$i18n.t('Revoke Link')}>
-								<button
-									class="flex items-center justify-center p-2 rounded-lg text-red-600 dark:text-red-500 bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors"
-									on:click={async () => {
-										const res = await deleteSharedChatById(localStorage.token, chatId);
-										if (res) {
-											chat = await getChatById(localStorage.token, chatId);
-											share_id = '';
-											initial_share_id = '';
-											previewQrCodeUrl = '';
-											downloadQrCodeUrl = '';
-											is_public = false;
-											toast.success($i18n.t('Link deleted successfully'));
-											sharedChatsUpdated.set(true);
-											if (closeOnDelete) {
-												show = false;
-											}
-										}
-									}}
-								>
-									<GarbageBin class="size-5" />
-								</button>
-							</Tooltip>
-						{:else}
-							<Tooltip content={$i18n.t('Generate Random ID')}>
-								<button
-									class="flex items-center justify-center p-2 rounded-lg dark:text-white bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors"
-									on:click={() => {
-										share_id = uuidv4();
-									}}
-								>
-									<ArrowPath class="size-5" />
-								</button>
-							</Tooltip>
-						{/if}
-					</div>
+					{#if chat.share_id && chat.expires_at}
+						<div class="mt-2 text-sm text-gray-500 dark:text-gray-400">
+							{$i18n.t('Expires on')} {new Date(chat.expires_at * 1000).toLocaleString()}
+							{#if timeRemaining}
+								<span class="font-semibold ml-1">({timeRemaining})</span>
+							{/if}
+						</div>
+					{/if}
+
+					{#if chat.share_id && chat.expire_on_views}
+						<div class="mt-2 text-sm text-gray-500 dark:text-gray-400">
+							{$i18n.t('Expires after')} {chat.expire_on_views} {$i18n.t('views')}
+						</div>
+					{/if}
 				</div>
 
-				<div class="my-4 flex flex-col items-center justify-center">
-					<div class="flex items-center justify-between w-full">
-						<label
-							for="is_public"
-							class="block text-sm font-medium text-gray-700 dark:text-gray-300"
-						>
-							{$i18n.t('Gradient QR Code')}
-						</label>
-						<Switch bind:state={useGradient} tooltip={true} />
-					</div>
-					{#if previewQrCodeUrl}
-						<a
-							class="qr-code-container mt-4"
-							href={downloadQrCodeUrl}
-							download="qrcode.png"
-							on:click={() => {
-								toast.success($i18n.t('Downloading QR code...'));
-							}}
-						>
-							{#if useGradient}
-								<div class="w-48 h-48 rounded-md" style="background: {previewGradient};">
-									<img class="w-full h-full" src={previewQrCodeUrl} alt="QR Code" />
-								</div>
-							{:else}
-								<img class="w-48 h-48 rounded-md" src={previewQrCodeUrl} alt="QR Code" />
+				<!-- Link and QR Code -->
+				<div class="p-4 rounded-lg bg-gray-100 dark:bg-gray-850">
+					<div class="font-medium mb-2">{$i18n.t('Share Link and QR Code')}</div>
+					<div class="mt-2 flex items-center gap-2">
+						<div class="flex-1">
+							<div
+								class="flex items-center border rounded-lg dark:border-gray-700 focus-within:ring-2 focus-within:ring-blue-500 focus-within:border-blue-500 overflow-hidden"
+							>
+								<span class="pl-3 pr-1 py-2 text-gray-500 dark:text-gray-400 select-none"
+									>/s/</span
+								>
+								<input
+									class="flex-1 min-w-0 bg-transparent py-2 px-1 focus:outline-none dark:text-white"
+									placeholder={$i18n.t('Enter a custom name (optional)')}
+									value={share_id}
+									maxlength="144"
+									on:input={(e) => {
+										const sanitized = e.target.value
+											.replace(/ /g, '-')
+											.replace(/[^a-zA-Z0-9-._~]/g, '');
+										if (share_id !== sanitized) {
+											share_id = sanitized;
+											generateQrCodesDebounced(
+												share_id ? `${window.location.origin}/s/${share_id}` : null
+											);
+										}
+									}}
+								/>
+								<Tooltip content={$i18n.t('Generate New ID')}>
+									<button
+										class="flex items-center justify-center h-full p-2 rounded-lg dark:text-white bg-transparent hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors"
+										on:click={() => {
+											share_id = uuidv4();
+										}}
+									>
+										<ArrowPath class="size-5" />
+									</button>
+								</Tooltip>
+								<span class="pr-3 text-xs text-gray-500 dark:text-gray-400 shrink-0"
+									>{share_id.length} / 144</span
+								>
+							</div>
+						</div>
+
+						<div class="flex items-center gap-2">
+							{#if chat.share_id}
+								<Tooltip content={$i18n.t('Copy Link')}>
+									<button
+										class="flex items-center justify-center h-full p-2 rounded-lg dark:text-white bg-transparent hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors"
+										on:click={() => {
+											copyToClipboard(shareUrl);
+											toast.success($i18n.t('Copied shared chat URL to clipboard!'));
+										}}
+									>
+										<Clipboard class="size-5" />
+									</button>
+								</Tooltip>
+								<Tooltip content={$i18n.t('View Link')}>
+									<a
+										href={shareUrl}
+										target="_blank"
+										class="flex items-center justify-center h-full p-2 rounded-lg dark:text-white bg-transparent hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors"
+									>
+										<Eye class="size-5" />
+									</a>
+								</Tooltip>
+								<Tooltip content={$i18n.t('Revoke Link')}>
+									<button
+										class="flex items-center justify-center h-full p-2 rounded-lg text-red-600 dark:text-red-500 bg-transparent hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors"
+										on:click={async () => {
+											const res = await deleteSharedChatById(localStorage.token, chatId);
+											if (res) {
+												chat = await getChatById(localStorage.token, chatId);
+												share_id = '';
+												initial_share_id = '';
+												previewQrCodeUrl = '';
+												downloadQrCodeUrl = '';
+												is_public = false;
+												toast.success($i18n.t('Link deleted successfully'));
+												sharedChatsUpdated.set(true);
+												if (closeOnDelete) {
+													show = false;
+												}
+											}
+										}}
+									>
+										<GarbageBin class="size-5" />
+									</button>
+								</Tooltip>
 							{/if}
-						</a>
-					{/if}
+						</div>
+					</div>
+
+					<div class="my-4 flex flex-col items-center justify-center">
+						<div class="w-full flex items-start space-x-3">
+							<div class="pt-0.5">
+								<Switch bind:state={showQrCode} tooltip={true} />
+							</div>
+							<div class="flex-1">
+								<label
+									for="show_qr_code"
+									class="block text-sm font-medium text-gray-700 dark:text-gray-300"
+								>
+									{$i18n.t('Show QR Code')}
+								</label>
+							</div>
+						</div>
+
+						{#if showQrCode}
+							<div class="w-full flex items-start space-x-3 mt-4">
+								<div class="pt-0.5">
+									<Switch bind:state={useGradient} tooltip={true} />
+								</div>
+								<div class="flex-1">
+									<label
+										for="use_gradient"
+										class="block text-sm font-medium text-gray-700 dark:text-gray-300"
+									>
+										{$i18n.t('Gradient QR Code')}
+									</label>
+								</div>
+							</div>
+
+							{#if previewQrCodeUrl}
+								<a
+									class="qr-code-container mt-4"
+									href={downloadQrCodeUrl}
+									download="qrcode.png"
+									on:click={() => {
+										toast.success($i18n.t('Downloading QR code...'));
+									}}
+								>
+									{#if useGradient}
+										<div class="w-48 h-48 rounded-md" style="background: {previewGradient};">
+											<img class="w-full h-full" src={previewQrCodeUrl} alt="QR Code" />
+										</div>
+									{:else}
+										<img class="w-48 h-48 rounded-md" src={previewQrCodeUrl} alt="QR Code" />
+									{/if}
+								</a>
+							{/if}
+						{/if}
+					</div>
 				</div>
 
 				<div class="flex justify-center mt-3">
-					<div class="flex gap-1">
+					<div class="flex gap-42">
 						{#if $config?.features.enable_community_sharing}
 							<button
 								class="self-center flex items-center gap-1 px-3.5 py-2 text-sm font-medium bg-gray-100 hover:bg-gray-200 text-gray-800 dark:bg-gray-850 dark:text-white dark:hover:bg-gray-800 transition rounded-full"

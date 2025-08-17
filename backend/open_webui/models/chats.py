@@ -1,4 +1,5 @@
 import logging
+from passlib.context import CryptContext
 import json
 import time
 import uuid
@@ -22,6 +23,8 @@ from sqlalchemy.sql.expression import bindparam
 log = logging.getLogger(__name__)
 log.setLevel(SRC_LOG_LEVELS["MODELS"])
 
+pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
+
 
 class Chat(Base):
     __tablename__ = "chat"
@@ -39,6 +42,8 @@ class Chat(Base):
     revoked_at = Column(BigInteger, nullable=True)
     expire_on_views = Column(Integer, nullable=True)
     is_public = Column(Boolean, default=False, nullable=False)
+    display_username = Column(Boolean, default=True, nullable=False)
+    allow_cloning = Column(Boolean, default=True, nullable=False)
     archived = Column(Boolean, default=False)
     pinned = Column(Boolean, default=False, nullable=True)
 
@@ -46,6 +51,8 @@ class Chat(Base):
     folder_id = Column(Text, nullable=True)
     views = Column(Integer, server_default="0", nullable=False)
     clones = Column(Integer, server_default="0", nullable=False)
+    password = Column(String, nullable=True)
+    password_updated_at = Column(BigInteger, nullable=True)
 
 
 class ChatModel(BaseModel):
@@ -64,6 +71,8 @@ class ChatModel(BaseModel):
     revoked_at: Optional[int] = None
     expire_on_views: Optional[int] = None
     is_public: bool = False
+    display_username: bool = True
+    allow_cloning: bool = True
     archived: bool = False
     pinned: Optional[bool] = False
 
@@ -71,6 +80,8 @@ class ChatModel(BaseModel):
     folder_id: Optional[str] = None
     views: int = 0
     clones: int = 0
+    password: Optional[str] = None
+    password_updated_at: Optional[int] = None
 
 
 ####################
@@ -111,12 +122,15 @@ class ChatResponse(BaseModel):
     revoked_at: Optional[int] = None
     expire_on_views: Optional[int] = None
     is_public: bool
+    display_username: bool
+    allow_cloning: bool
     archived: bool
     pinned: Optional[bool] = False
     meta: dict = {}
     folder_id: Optional[str] = None
     views: int
     clones: int
+    has_password: bool = False
     is_new_share: Optional[bool] = None
 
 
@@ -132,6 +146,7 @@ class ChatTitleIdResponse(BaseModel):
     is_public: Optional[bool] = None
     views: Optional[int] = 0
     clones: Optional[int] = 0
+    allow_cloning: Optional[bool] = True
 
 
 class ChatTable:
@@ -316,6 +331,9 @@ class ChatTable:
         expires_at: Optional[int] = None,
         expire_on_views: Optional[int] = None,
         is_public: bool = False,
+        display_username: bool = True,
+        allow_cloning: bool = True,
+        password: Optional[str] = None,
     ) -> Optional[tuple[ChatModel, bool]]:
         with get_db() as db:
             chat = db.get(Chat, chat_id)
@@ -330,8 +348,20 @@ class ChatTable:
             chat.expires_at = expires_at
             chat.expire_on_views = expire_on_views
             chat.is_public = is_public
+            chat.display_username = display_username
+            chat.allow_cloning = allow_cloning
             chat.revoked_at = None
             chat.updated_at = int(time.time())
+
+            if password:
+                # Check if the password is being set for the first time or changed
+                if not chat.password or not pwd_context.verify(password, chat.password):
+                    chat.password = pwd_context.hash(password)
+                    chat.password_updated_at = int(time.time())
+            elif chat.password:
+                # Password is being removed
+                chat.password = None
+                chat.password_updated_at = int(time.time())
 
             db.commit()
             db.refresh(chat)
@@ -637,6 +667,7 @@ class ChatTable:
                 Chat.views,
                 Chat.clones,
                 Chat.revoked_at,
+                Chat.allow_cloning,
             )
 
             if skip:
@@ -664,6 +695,7 @@ class ChatTable:
                             "views": chat[8],
                             "clones": chat[9],
                             "revoked_at": chat[10],
+                            "allow_cloning": chat[11],
                         }
                     )
                     for chat in all_chats
@@ -1341,6 +1373,41 @@ class ChatTable:
                 return True
         except Exception:
             return False
+
+    def clear_revoked_shared_chats_by_user_id(self, user_id: str) -> bool:
+        try:
+            with get_db() as db:
+                # Find all chats for the user that are revoked
+                chats_to_clear = (
+                    db.query(Chat)
+                    .filter(Chat.user_id == user_id, Chat.revoked_at.isnot(None))
+                    .all()
+                )
+
+                if not chats_to_clear:
+                    return 0
+
+                count = len(chats_to_clear)
+
+                # Clear the sharing information
+                for chat in chats_to_clear:
+                    chat.share_id = None
+                    chat.expires_at = None
+                    chat.expire_on_views = None
+                    chat.is_public = False
+                    chat.display_username = True
+                    chat.allow_cloning = True
+                    chat.revoked_at = None
+                    chat.views = 0
+                    chat.clones = 0
+
+                db.commit()
+
+                return count
+        except Exception as e:
+            log.error(f"Error clearing revoked shared chats for user {user_id}: {e}")
+            db.rollback()
+            return 0
 
 
 Chats = ChatTable()

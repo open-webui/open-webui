@@ -41,6 +41,7 @@
 	export let addMessages;
 	export let triggerScroll;
 	export let readOnly = false;
+	export let displayUsername = true;
 	export let topPadding = false;
 </script>
 
@@ -68,6 +69,7 @@
 				{editMessage}
 				{deleteMessage}
 				{readOnly}
+				{displayUsername}
 				{topPadding}
 			/>
 		{:else if (history.messages[history.messages[messageId].parentId]?.models?.length ?? 1) === 1}

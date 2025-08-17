@@ -38,6 +38,7 @@
 
 	export let isFirstMessage: boolean;
 	export let readOnly: boolean;
+	export let displayUsername = true;
 	export let topPadding = false;
 
 	let showDeleteConfirm = false;
@@ -126,7 +127,9 @@
 				src={message.user
 					? ($models.find((m) => m.id === message.user)?.info?.meta?.profile_image_url ??
 						`${WEBUI_BASE_URL}/user.png`)
-					: (user?.profile_image_url ?? `${WEBUI_BASE_URL}/user.png`)}
+					: readOnly && !displayUsername
+						? `${WEBUI_BASE_URL}/user.png`
+						: user?.profile_image_url ?? `${WEBUI_BASE_URL}/user.png`}
 				className={'size-8 user-message-profile-image'}
 			/>
 		</div>
@@ -138,8 +141,10 @@
 					{#if message.user}
 						{$i18n.t('You')}
 						<span class=" text-gray-500 text-sm font-medium">{message?.user ?? ''}</span>
-					{:else if $settings.showUsername || $_user.name !== user.name}
+					{:else if readOnly ? displayUsername && user : user && ($settings.showUsername || ($_user && $_user.name !== user.name))}
 						{user.name}
+					{:else if !user}
+						<!-- Don't show anything if user is not available (e.g., anonymous shared chat) -->
 					{:else}
 						{$i18n.t('You')}
 					{/if}
