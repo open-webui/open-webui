@@ -73,11 +73,18 @@
 
 			let result;
 			if (editingServer) {
-				await mcpServersApi.updateMCPServer(
-					localStorage.token,
-					editingServer.id,
-					serverData
-				);
+				await mcpServersApi
+					.updateMCPServer(localStorage.token, editingServer.id, serverData)
+					.catch(async (err) => {
+						const msg = err instanceof Error ? err.message : String(err);
+						// Detect 401 or auth-related failures and prompt reconnect
+						if (/401|Unauthorized|requires\s*reauth|Authentication\s*required/i.test(msg)) {
+							toast.error('Authentication expired. Please reconnect OAuth and try again.');
+						} else {
+							toast.error(`Failed to update: ${msg}`);
+						}
+						throw err;
+					});
 			} else {
 				result = await mcpServersApi.createMCPServer(localStorage.token, serverData);
 			}
@@ -178,7 +185,7 @@
 									<label class="block text-sm font-medium text-gray-700 dark:text-gray-300">Visibility & Permissions</label>
 				<AccessControl
 					bind:accessControl={access_control}
-					accessRoles={["read", "write"]}
+					accessRoles={["read"]}
 					allowPublic={true}
 					on:change={() => { /* bound via bind already */ }}
 				/>

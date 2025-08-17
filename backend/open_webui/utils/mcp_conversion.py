@@ -1,6 +1,19 @@
 # MCP conversion utilities
 
 from typing import Dict
+import re
+
+
+def _sanitize_function_name(name: str) -> str:
+    """Sanitize a function name for use in specs and Python wrapper methods."""
+    if not name:
+        return "mcp_tool"
+    # Replace invalid characters with underscore
+    sanitized = re.sub(r"[^0-9a-zA-Z_]", "_", name)
+    # Ensure it doesn't start with a digit
+    if not re.match(r"[A-Za-z_]", sanitized[0]):
+        sanitized = f"fn_{sanitized}"
+    return sanitized
 
 
 def convert_mcp_tool_to_openai_spec(mcp_spec: dict, server_name: str) -> dict:
@@ -30,7 +43,7 @@ def convert_mcp_tool_to_openai_spec(mcp_spec: dict, server_name: str) -> dict:
             openai_properties[key]["items"] = val["items"]
 
     return {
-        "name": name,
+        "name": _sanitize_function_name(name),
         "description": description,
         "parameters": {
             "type": schema_type,

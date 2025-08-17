@@ -4,6 +4,9 @@
 	import { getContext } from 'svelte';
 	import { type Writable } from 'svelte/store';
 	import type { i18n as i18nType } from 'i18next';
+	import { user } from '$lib/stores';
+
+	import { mcpServersApi } from '$lib/apis/mcp_servers';
 
 	const i18n: Writable<i18nType> = getContext('i18n');
 
@@ -13,6 +16,27 @@
 	const dispatch = createEventDispatcher();
 
 	let authenticating = false;
+
+	// Determine if current user can manage (admin or write access). For now, non-admins are read-only in MCP UI.
+	$: isAdmin = ($user?.role === 'admin');
+	let userHasManageRights = isAdmin;
+
+	async function determineManageRights() {
+		try {
+			userHasManageRights = isAdmin;
+			if (userHasManageRights) return;
+			if (!serverId) return;
+			// Fetch server details and allow owner to manage
+			const server = await mcpServersApi.getMCPServerById(localStorage.token, serverId);
+			userHasManageRights = Boolean(server && server.user_id === $user?.id);
+		} catch (_) {
+			userHasManageRights = isAdmin;
+		}
+	}
+
+	$: if (show && serverId) {
+		determineManageRights();
+	}
 
 	// Extract data from elicitation structure
 	$: serverId = elicitationData?.data?.server_id || '';
@@ -175,14 +199,19 @@
 				>
 					<p class="text-blue-800 dark:text-blue-200">
 						<span class="font-medium">{$i18n.t('mcp.auth.what_happens_next')}</span><br />
-						{#if challengeType === 'oauth' && canAutoAuth}
+						{#if (challengeType === 'oauth' && canAutoAuth && userHasManageRights)}
 							1. {$i18n.t('mcp.auth.steps.oauth.1')}<br />
 							2. {$i18n.t('mcp.auth.steps.oauth.2', { serverName })}<br />
 							3. {$i18n.t('mcp.auth.steps.oauth.3')} 
 						{:else}
-							1. {$i18n.t('mcp.auth.steps.manual.1')}<br />
-							2. {instructions || $i18n.t('mcp.auth.steps.manual.2', { serverName })}<br />
-							3. {$i18n.t('mcp.auth.steps.manual.3')}
+							{#if !userHasManageRights}
+								1. Ask your administrator to re-authenticate this MCP server<br />
+								2. Once re-authenticated, click regenerate or try again
+							{:else}
+								1. {$i18n.t('mcp.auth.steps.manual.1')}<br />
+								2. {instructions || $i18n.t('mcp.auth.steps.manual.2', { serverName })}<br />
+								3. {$i18n.t('mcp.auth.steps.manual.3')}
+							{/if}
 						{/if}
 					</p>
 				</div>
@@ -190,8 +219,8 @@
 
 			<div class="flex space-x-3">
 				<button
-					on:click={startAuthentication}
-					disabled={authenticating || !serverId}
+					on:click={(userHasManageRights && challengeType === 'oauth' && canAutoAuth) ? startAuthentication : cancel}
+					disabled={(userHasManageRights && challengeType === 'oauth' && canAutoAuth) ? (authenticating || !serverId) : false}
 					class="flex-1 bg-blue-600 hover:bg-blue-700 disabled:bg-blue-400 text-white px-4 py-2 rounded font-medium transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
 				>
 					{#if authenticating}
@@ -201,7 +230,7 @@
 							></div>
 							<span>{$i18n.t('mcp.auth.authenticating')}</span>
 						</div>
-					{:else if challengeType === 'oauth' && canAutoAuth}
+					{:else if (challengeType === 'oauth' && canAutoAuth && userHasManageRights)}
 						🔗 {$i18n.t('mcp.auth.authenticate_and_retry')}
 					{:else}
 						✅ {$i18n.t('mcp.auth.ok')}

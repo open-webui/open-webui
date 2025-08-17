@@ -39,25 +39,31 @@ def filter_mcp_tools(tools: list, user_id: str | None = None) -> list:
     - All non-MCP tools
     - MCP tools that are public (server.access_control is None)
     - MCP tools that belong to the requesting user (personal)
+    - MCP tools where the requesting user has read access via server access_control (e.g., group-shared)
     """
     filtered_tools = []
     for tool in tools:
         meta_dict = tool.meta.model_dump() if tool.meta else {}
         manifest = meta_dict.get("manifest", {})
         if manifest.get("type") == "mcp":
-            server_is_public = False
+            server_is_accessible = False
             try:
                 if manifest.get("mcp_server_id"):
                     from open_webui.models.mcp_servers import MCPServers
                     server_id = manifest["mcp_server_id"]
                     server = MCPServers.get_mcp_server_by_id(server_id)
-                    server_is_public = bool(server and server.access_control is None)
+                    if server:
+                        # Public servers or group-shared/private where user has read access
+                        server_is_accessible = (
+                            server.access_control is None
+                            or (user_id is not None and has_access(user_id, "read", server.access_control))
+                        )
             except Exception:
-                server_is_public = False
+                server_is_accessible = False
 
             is_personal_for_user = user_id is not None and getattr(tool, "user_id", None) == user_id
 
-            if server_is_public or is_personal_for_user:
+            if server_is_accessible or is_personal_for_user:
                 filtered_tools.append(tool)
         else:
             filtered_tools.append(tool)
