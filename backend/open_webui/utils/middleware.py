@@ -92,7 +92,7 @@ from open_webui.config import (
     CACHE_DIR,
     DEFAULT_TOOLS_FUNCTION_CALLING_PROMPT_TEMPLATE,
     DEFAULT_CODE_INTERPRETER_PROMPT,
-    CODE_INTERPRETER_BLACKLISTED_MODULES,
+    CODE_INTERPRETER_BLOCKED_MODULES,
 )
 from open_webui.env import (
     SRC_LOG_LEVELS,
@@ -2371,15 +2371,16 @@ async def process_chat_response(
                         try:
                             if content_blocks[-1]["attributes"].get("type") == "code":
                                 code = content_blocks[-1]["content"]
-                                if CODE_INTERPRETER_BLACKLISTED_MODULES:
-                                    blocking_code = textwrap.dedent(f"""
+                                if CODE_INTERPRETER_BLOCKED_MODULES:
+                                    blocking_code = textwrap.dedent(
+                                        f"""
                                         import builtins
 
-                                        BLACKLISTED_MODULES = {CODE_INTERPRETER_BLACKLISTED_MODULES}
+                                        BLOCKED_MODULES = {CODE_INTERPRETER_BLOCKED_MODULES}
 
                                         _real_import = builtins.__import__
                                         def restricted_import(name, globals=None, locals=None, fromlist=(), level=0):
-                                            if name.split('.')[0] in BLACKLISTED_MODULES:
+                                            if name.split('.')[0] in BLOCKED_MODULES:
                                                 importer_name = globals.get('__name__') if globals else None
                                                 if importer_name == '__main__':
                                                     raise ImportError(
@@ -2388,7 +2389,8 @@ async def process_chat_response(
                                             return _real_import(name, globals, locals, fromlist, level)
 
                                         builtins.__import__ = restricted_import
-                                    """)
+                                    """
+                                    )
                                     code = blocking_code + "\n" + code
 
                                 if (
