@@ -133,8 +133,7 @@
 		{ value: '1h', label: $i18n.t('1 Hour') },
 		{ value: '24h', label: $i18n.t('24 Hours') },
 		{ value: '7d', label: $i18n.t('7 Days') },
-		{ value: 'expire-on-views', label: $i18n.t('Expire after a maximum number of views') },
-		{ value: 'custom', label: $i18n.t('Expire after a custom time') }
+		{ value: 'custom', label: $i18n.t('Custom') }
 	];
 
 	$: selectedExpirationIndex = expirationOptions.findIndex((o) => o.value === expirationOption);
@@ -172,10 +171,6 @@
 			if (!customExpirationDate || date.isBefore(dayjs())) {
 				customExpirationDate = dayjs().add(1, 'hour').format('YYYY-MM-DDTHH:mm');
 			}
-		} else if (expirationOption === 'expire-on-views') {
-			if (expireOnViewsCount <= currentViews) {
-				expireOnViewsCount = currentViews + 1;
-			}
 		}
 	};
 
@@ -184,7 +179,8 @@
 	}
 
 	const validateViewsCount = () => {
-		if (Number(expireOnViewsCount) <= currentViews) {
+		const count = Number(expireOnViewsCount);
+		if (count > 0 && count <= currentViews) {
 			toast.warning(
 				`Max views must be greater than the current view count (${currentViews}). Setting to ${
 					currentViews + 1
@@ -196,13 +192,19 @@
 
 	const handleViewsScroll = (event) => {
 		const direction = event.deltaY < 0 ? 1 : -1;
-		const newCount = Number(expireOnViewsCount) + direction;
-
-		if (newCount > currentViews) {
-			expireOnViewsCount = newCount;
-		} else {
-			expireOnViewsCount = currentViews + 1;
+		let newCount = Number(expireOnViewsCount) + direction;
+		if (newCount < 0) {
+			newCount = 0;
 		}
+		// If scrolling down, and we are about to enter the "invalid" zone (1 to currentViews)
+		if (direction === -1 && newCount > 0 && newCount <= currentViews) {
+			newCount = 0;
+		}
+		// If scrolling up from 0 into the invalid zone
+		if (direction === 1 && expireOnViewsCount === 0 && newCount > 0 && newCount <= currentViews) {
+			newCount = currentViews + 1;
+		}
+		expireOnViewsCount = newCount;
 	};
 
 	let expirationDateParts = {
@@ -352,10 +354,7 @@
 		if (expirationOption === 'custom' && customExpirationDate !== initialCustomExpirationDate) {
 			return true;
 		}
-		if (
-			expirationOption === 'expire-on-views' &&
-			expireOnViewsCount !== initialExpireOnViewsCount
-		) {
+		if (expireOnViewsCount !== initialExpireOnViewsCount) {
 			return true;
 		}
 		if (is_public !== initial_is_public) {
@@ -375,8 +374,8 @@
 
 	const shareLocalChat = async () => {
 		if (
-			expirationOption === 'expire-on-views' &&
 			initial_share_id &&
+			Number(expireOnViewsCount) > 0 &&
 			Number(expireOnViewsCount) <= currentViews
 		) {
 			toast.error(
@@ -397,17 +396,7 @@
 
 		try {
 			let expires_at = null;
-			let expire_on_views = null;
-
-			if (expirationOption === 'expire-on-views') {
-				const count = Number(expireOnViewsCount);
-				if (!isNaN(count) && count > 0) {
-					expire_on_views = count;
-				} else {
-					toast.error('Number of views must be a valid number greater than 0.');
-					return null;
-				}
-			} else if (expirationOption !== 'never') {
+			if (expirationOption !== 'never') {
 				if (expirationOption === 'custom') {
 					const selectedDate = new Date(customExpirationDate);
 					const now = new Date();
@@ -430,6 +419,9 @@
 					expires_at = Math.floor(now.getTime() / 1000);
 				}
 			}
+
+			const expire_on_views =
+				Number(expireOnViewsCount) > 0 ? Number(expireOnViewsCount) : null;
 
 
 			const sharedChat = await shareChatById(
@@ -518,7 +510,11 @@
 		if (!_chat) {
 			return false;
 		}
-		return chat.id !== _chat.id || chat.share_id !== _chat.share_id;
+		return (
+			chat.id !== _chat.id ||
+			chat.share_id !== _chat.share_id ||
+			chat.expire_on_views !== _chat.expire_on_views
+		);
 	};
 
 	$: if (show) {
@@ -546,19 +542,14 @@
 					}
 
 					// New logic to correctly set expiration form state
-					if (_chat.expire_on_views) {
-						expirationOption = 'expire-on-views';
-						expireOnViewsCount = _chat.expire_on_views;
-						customExpirationDate = '';
-					} else if (_chat.expires_at) {
+					if (_chat.expires_at) {
 						expirationOption = 'custom';
 						customExpirationDate = formatISODate(_chat.expires_at);
-						expireOnViewsCount = 1;
 					} else {
 						expirationOption = 'never';
 						customExpirationDate = '';
-						expireOnViewsCount = 1;
 					}
+					expireOnViewsCount = _chat.expire_on_views ?? 0;
 
 					is_public = _chat.share_id ? _chat.is_public ?? false : false;
 					initial_is_public = is_public;
@@ -598,7 +589,7 @@
 
 				initialExpirationOption = 'never';
 				initialCustomExpirationDate = '';
-				initialExpireOnViewsCount = 1;
+				initialExpireOnViewsCount = 0;
 				console.log(chat);
 			}
 		})();
@@ -621,10 +612,10 @@
 		password = '';
 		initial_password = '';
 		current_password = '';
-		expireOnViewsCount = 1;
+		expireOnViewsCount = 0;
 		initialExpirationOption = 'never';
 		initialCustomExpirationDate = '';
-		initialExpireOnViewsCount = 1;
+		initialExpireOnViewsCount = 0;
 
 		if (intervalId) clearInterval(intervalId);
 		timeRemaining = '';
@@ -802,7 +793,7 @@
 					<div class="flex items-end gap-2 mt-4">
 						<div class="flex-1">
 							<label for="expiration" class="block text-sm font-medium text-gray-700 dark:text-gray-300"
-								>{$i18n.t('Link Expiration')}</label
+								>{$i18n.t('Expires After')}</label
 							>
 							<div class="relative" use:clickOutside>
 								<button
@@ -908,21 +899,25 @@
 									/>
 								</div>
 							{/if}
-
-							{#if expirationOption === 'expire-on-views'}
-								<div>
-									<input
-										type="number"
-										min="1"
-										bind:value={expireOnViewsCount}
-										on:blur={validateViewsCount}
-										on:wheel|preventDefault={handleViewsScroll}
-										class="mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm rounded-md dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white"
-										placeholder="Enter number of views"
-									/>
-								</div>
-							{/if}
 						</div>
+					</div>
+
+					<div class="mt-4">
+						<label
+							for="expire-on-views"
+							class="block text-sm font-medium text-gray-700 dark:text-gray-300"
+							>{$i18n.t('Max Number of Views')}</label
+						>
+						<input
+							id="expire-on-views"
+							type="number"
+							min="0"
+							bind:value={expireOnViewsCount}
+							on:blur={validateViewsCount}
+							on:wheel|preventDefault={handleViewsScroll}
+							class="mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm rounded-md dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white"
+							placeholder="0 for unlimited"
+						/>
 					</div>
 
 					{#if chat.share_id && chat.expires_at}
