@@ -9,8 +9,8 @@ from open_webui.config import BannerModel
 
 from open_webui.utils.tools import (
     get_tool_server_data,
-    get_tool_servers_data,
     get_tool_server_url,
+    set_tool_servers,
 )
 
 
@@ -114,10 +114,7 @@ async def set_tool_servers_config(
     request.app.state.config.TOOL_SERVER_CONNECTIONS = [
         connection.model_dump() for connection in form_data.TOOL_SERVER_CONNECTIONS
     ]
-
-    request.app.state.TOOL_SERVERS = await get_tool_servers_data(
-        request.app.state.config.TOOL_SERVER_CONNECTIONS
-    )
+    await set_tool_servers(request)
 
     return {
         "TOOL_SERVER_CONNECTIONS": request.app.state.config.TOOL_SERVER_CONNECTIONS,

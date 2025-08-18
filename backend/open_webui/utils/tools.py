@@ -68,7 +68,7 @@ def get_async_tool_function_and_apply_extra_params(
         return new_function
 
 
-def get_tools(
+async def get_tools(
     request: Request, tool_ids: list[str], user: UserModel, extra_params: dict
 ) -> dict[str, dict]:
     tools_dict = {}
@@ -80,7 +80,7 @@ def get_tools(
                 server_id = tool_id.split(":")[1]
 
                 tool_server_data = None
-                for server in request.app.state.TOOL_SERVERS:
+                for server in await get_tool_servers(request):
                     if server["id"] == server_id:
                         tool_server_data = server
                         break
@@ -445,6 +445,31 @@ def convert_openapi_to_tool_payload(openapi_spec):
                 tool_payload.append(tool)
 
     return tool_payload
+
+
+async def set_tool_servers(request: Request):
+    request.app.state.TOOL_SERVERS = await get_tool_servers_data(
+        request.app.state.config.TOOL_SERVER_CONNECTIONS
+    )
+
+    if request.app.state.redis is not None:
+        await request.app.state.redis.hmset(
+            "tool_servers", request.app.state.TOOL_SERVERS
+        )
+
+    return request.app.state.TOOL_SERVERS
+
+
+async def get_tool_servers(request: Request):
+    tool_servers = []
+    if request.app.state.redis is not None:
+        tool_servers = await request.app.state.redis.hgetall("tool_servers")
+
+    if not tool_servers:
+        await set_tool_servers(request)
+
+    request.app.state.TOOL_SERVERS = tool_servers
+    return request.app.state.TOOL_SERVERS
 
 
 async def get_tool_server_data(token: str, url: str) -> Dict[str, Any]:
