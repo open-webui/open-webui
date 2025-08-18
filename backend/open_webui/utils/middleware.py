@@ -86,7 +86,6 @@ from open_webui.utils.filter import (
 from open_webui.utils.code_interpreter import execute_code_jupyter
 from open_webui.utils.payload import apply_model_system_prompt_to_body
 
-from open_webui.tasks import create_task
 
 from open_webui.config import (
     CACHE_DIR,
@@ -2600,13 +2599,7 @@ async def process_chat_response(
             if response.background is not None:
                 await response.background()
 
-        # background_tasks.add_task(response_handler, response, events)
-        task_id, _ = await create_task(
-            request.app.state.redis,
-            response_handler(response, events),
-            id=metadata["chat_id"],
-        )
-        return {"status": True, "task_id": task_id}
+        return await response_handler(response, events)
 
     else:
         # Fallback to the original response
