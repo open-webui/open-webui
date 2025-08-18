@@ -1,1 +1,0 @@
-請參考 https://datar-ai.atlassian.net/browse/ACP-3784

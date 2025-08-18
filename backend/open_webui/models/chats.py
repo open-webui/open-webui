@@ -3,23 +3,13 @@ import json
 import time
 import uuid
 from typing import Optional
-from datetime import datetime
 
 from open_webui.internal.db import Base, get_db
 from open_webui.models.tags import TagModel, Tag, Tags
 from open_webui.env import SRC_LOG_LEVELS
 
-from pydantic import BaseModel, ConfigDict, field_serializer
-from sqlalchemy import (
-    BigInteger,
-    Boolean,
-    Column,
-    String,
-    Text,
-    JSON,
-    DateTime,
-    func,
-)
+from pydantic import BaseModel, ConfigDict
+from sqlalchemy import BigInteger, Boolean, Column, String, Text, JSON
 from sqlalchemy import or_, func, select, and_, text
 from sqlalchemy.sql import exists
 
@@ -39,10 +29,8 @@ class Chat(Base):
     title = Column(Text)
     chat = Column(JSON)
 
-    created_at = Column(DateTime(timezone=True), server_default=func.now())
-    updated_at = Column(
-        DateTime(timezone=True), server_default=func.now(), onupdate=func.now()
-    )
+    created_at = Column(BigInteger)
+    updated_at = Column(BigInteger)
 
     share_id = Column(Text, unique=True, nullable=True)
     archived = Column(Boolean, default=False)
@@ -60,8 +48,8 @@ class ChatModel(BaseModel):
     title: str
     chat: dict
 
-    created_at: datetime
-    updated_at: datetime
+    created_at: int  # timestamp in epoch
+    updated_at: int  # timestamp in epoch
 
     share_id: Optional[str] = None
     archived: bool = False
@@ -100,28 +88,20 @@ class ChatResponse(BaseModel):
     user_id: str
     title: str
     chat: dict
-    updated_at: datetime
-    created_at: datetime
+    updated_at: int  # timestamp in epoch
+    created_at: int  # timestamp in epoch
     share_id: Optional[str] = None  # id of the chat to be shared
     archived: bool
     pinned: Optional[bool] = False
     meta: dict = {}
     folder_id: Optional[str] = None
 
-    @field_serializer("updated_at", "created_at")
-    def serialize_dt(self, dt: datetime, _info):
-        return dt.isoformat()
-
 
 class ChatTitleIdResponse(BaseModel):
     id: str
     title: str
-    updated_at: datetime
-    created_at: datetime
-
-    @field_serializer("updated_at", "created_at")
-    def serialize_dt(self, dt: datetime, _info):
-        return dt.isoformat()
+    updated_at: int
+    created_at: int
 
 
 class ChatTable:
@@ -138,8 +118,8 @@ class ChatTable:
                         else "New Chat"
                     ),
                     "chat": form_data.chat,
-                    "created_at": datetime.now(),
-                    "updated_at": datetime.now(),
+                    "created_at": int(time.time()),
+                    "updated_at": int(time.time()),
                 }
             )
 
@@ -167,8 +147,8 @@ class ChatTable:
                     "meta": form_data.meta,
                     "pinned": form_data.pinned,
                     "folder_id": form_data.folder_id,
-                    "created_at": datetime.now(),
-                    "updated_at": datetime.now(),
+                    "created_at": int(time.time()),
+                    "updated_at": int(time.time()),
                 }
             )
 
@@ -182,17 +162,13 @@ class ChatTable:
         try:
             with get_db() as db:
                 chat_item = db.get(Chat, id)
-                if chat_item:
-                    setattr(chat_item, "chat", chat)
-                    setattr(
-                        chat_item,
-                        "title",
-                        chat["title"] if "title" in chat else "New Chat",
-                    )
-                    db.commit()
-                    db.refresh(chat_item)
-                    return ChatModel.model_validate(chat_item)
-                return None
+                chat_item.chat = chat
+                chat_item.title = chat["title"] if "title" in chat else "New Chat"
+                chat_item.updated_at = int(time.time())
+                db.commit()
+                db.refresh(chat_item)
+
+                return ChatModel.model_validate(chat_item)
         except Exception:
             return None
 
@@ -294,11 +270,9 @@ class ChatTable:
         with get_db() as db:
             # Get the existing chat to share
             chat = db.get(Chat, chat_id)
-            if not chat:
-                return None
             # Check if the chat is already shared
-            if chat.share_id is not None:
-                return self.get_chat_by_id_and_user_id(str(chat.share_id), "shared")
+            if chat.share_id:
+                return self.get_chat_by_id_and_user_id(chat.share_id, "shared")
             # Create a new chat with the same data, but with a new ID
             shared_chat = ChatModel(
                 **{
@@ -307,7 +281,7 @@ class ChatTable:
                     "title": chat.title,
                     "chat": chat.chat,
                     "created_at": chat.created_at,
-                    "updated_at": datetime.now(),
+                    "updated_at": int(time.time()),
                 }
             )
             shared_result = Chat(**shared_chat.model_dump())
@@ -328,8 +302,6 @@ class ChatTable:
         try:
             with get_db() as db:
                 chat = db.get(Chat, chat_id)
-                if not chat:
-                    return None
                 shared_chat = (
                     db.query(Chat).filter_by(user_id=f"shared-{chat_id}").first()
                 )
@@ -337,9 +309,10 @@ class ChatTable:
                 if shared_chat is None:
                     return self.insert_shared_chat_by_chat_id(chat_id)
 
-                setattr(shared_chat, "title", chat.title)
-                setattr(shared_chat, "chat", chat.chat)
+                shared_chat.title = chat.title
+                shared_chat.chat = chat.chat
 
+                shared_chat.updated_at = int(time.time())
                 db.commit()
                 db.refresh(shared_chat)
 
@@ -363,12 +336,10 @@ class ChatTable:
         try:
             with get_db() as db:
                 chat = db.get(Chat, id)
-                if chat:
-                    setattr(chat, "share_id", share_id)
-                    db.commit()
-                    db.refresh(chat)
-                    return ChatModel.model_validate(chat)
-                return None
+                chat.share_id = share_id
+                db.commit()
+                db.refresh(chat)
+                return ChatModel.model_validate(chat)
         except Exception:
             return None
 
@@ -376,12 +347,11 @@ class ChatTable:
         try:
             with get_db() as db:
                 chat = db.get(Chat, id)
-                if chat:
-                    setattr(chat, "pinned", not bool(chat.pinned))
-                    db.commit()
-                    db.refresh(chat)
-                    return ChatModel.model_validate(chat)
-                return None
+                chat.pinned = not chat.pinned
+                chat.updated_at = int(time.time())
+                db.commit()
+                db.refresh(chat)
+                return ChatModel.model_validate(chat)
         except Exception:
             return None
 
@@ -389,12 +359,11 @@ class ChatTable:
         try:
             with get_db() as db:
                 chat = db.get(Chat, id)
-                if chat:
-                    setattr(chat, "archived", not bool(chat.archived))
-                    db.commit()
-                    db.refresh(chat)
-                    return ChatModel.model_validate(chat)
-                return None
+                chat.archived = not chat.archived
+                chat.updated_at = int(time.time())
+                db.commit()
+                db.refresh(chat)
+                return ChatModel.model_validate(chat)
         except Exception:
             return None
 
@@ -497,7 +466,7 @@ class ChatTable:
         try:
             with get_db() as db:
                 chat = db.get(Chat, id)
-                return ChatModel.model_validate(chat) if chat else None
+                return ChatModel.model_validate(chat)
         except Exception:
             return None
 
@@ -519,7 +488,7 @@ class ChatTable:
         try:
             with get_db() as db:
                 chat = db.query(Chat).filter_by(id=id, user_id=user_id).first()
-                return ChatModel.model_validate(chat) if chat else None
+                return ChatModel.model_validate(chat)
         except Exception:
             return None
 
@@ -599,8 +568,6 @@ class ChatTable:
             query = query.order_by(Chat.updated_at.desc())
 
             # Check if the database dialect is either 'sqlite' or 'postgresql'
-            if not db.bind:
-                raise NotImplementedError("Database bind is not configured")
             dialect_name = db.bind.dialect.name
             if dialect_name == "sqlite":
                 # SQLite case: using JSON1 extension for JSON searching
@@ -699,54 +666,6 @@ class ChatTable:
                             ]
                         )
                     )
-            elif dialect_name == "mssql":
-                # MS SQL Server case: using OPENJSON and JSON_VALUE for JSON searching
-                query = query.filter(
-                    (
-                        Chat.title.ilike(
-                            f"%{search_text}%"
-                        )  # Case-insensitive search in title
-                        | text(
-                            """
-                            EXISTS (
-                                SELECT 1
-                                FROM OPENJSON(Chat.chat, '$.messages') AS message
-                                WHERE LOWER(JSON_VALUE(message.value, '$.content')) LIKE '%' + :search_text + '%'
-                            )
-                            """
-                        )
-                    ).params(search_text=search_text)
-                )
-
-                # Check if there are any tags to filter, it should have all the tags
-                if "none" in tag_ids:
-                    query = query.filter(
-                        text(
-                            """
-                            NOT EXISTS (
-                                SELECT 1
-                                FROM OPENJSON(Chat.meta, '$.tags') AS tag
-                            )
-                            """
-                        )
-                    )
-                elif tag_ids:
-                    query = query.filter(
-                        and_(
-                            *[
-                                text(
-                                    f"""
-                                    EXISTS (
-                                        SELECT 1
-                                        FROM OPENJSON(Chat.meta, '$.tags') AS tag
-                                        WHERE JSON_VALUE(tag.value, '$') = :tag_id_{tag_idx}
-                                    )
-                                    """
-                                ).params(**{f"tag_id_{tag_idx}": tag_id})
-                                for tag_idx, tag_id in enumerate(tag_ids)
-                            ]
-                        )
-                    )
             else:
                 raise NotImplementedError(
                     f"Unsupported dialect: {db.bind.dialect.name}"
@@ -794,28 +713,20 @@ class ChatTable:
         try:
             with get_db() as db:
                 chat = db.get(Chat, id)
-                if chat:
-                    setattr(chat, "folder_id", folder_id)
-                    setattr(chat, "pinned", False)
-                    db.commit()
-                    db.refresh(chat)
-                    return ChatModel.model_validate(chat)
-                return None
+                chat.folder_id = folder_id
+                chat.updated_at = int(time.time())
+                chat.pinned = False
+                db.commit()
+                db.refresh(chat)
+                return ChatModel.model_validate(chat)
         except Exception:
             return None
 
     def get_chat_tags_by_id_and_user_id(self, id: str, user_id: str) -> list[TagModel]:
         with get_db() as db:
             chat = db.get(Chat, id)
-            if not chat:
-                return []
             tags = chat.meta.get("tags", [])
-            return [
-                tag
-                for tag_name in tags
-                if (tag := Tags.get_tag_by_name_and_user_id(tag_name, user_id))
-                is not None
-            ]
+            return [Tags.get_tag_by_name_and_user_id(tag, user_id) for tag in tags]
 
     def get_chat_list_by_user_id_and_tag_name(
         self, user_id: str, tag_name: str, skip: int = 0, limit: int = 50
@@ -824,8 +735,6 @@ class ChatTable:
             query = db.query(Chat).filter_by(user_id=user_id)
             tag_id = tag_name.replace(" ", "_").lower()
 
-            if not db.bind:
-                raise NotImplementedError("Database bind is not configured")
             log.info(f"DB dialect name: {db.bind.dialect.name}")
             if db.bind.dialect.name == "sqlite":
                 # SQLite JSON1 querying for tags within the meta JSON field
@@ -839,13 +748,6 @@ class ChatTable:
                 query = query.filter(
                     text(
                         "EXISTS (SELECT 1 FROM json_array_elements_text(Chat.meta->'tags') elem WHERE elem = :tag_id)"
-                    )
-                ).params(tag_id=tag_id)
-            elif db.bind.dialect.name == "mssql":
-                # MS SQL Server JSON query for tags within the meta JSON field
-                query = query.filter(
-                    text(
-                        "EXISTS (SELECT 1 FROM OPENJSON(Chat.meta, '$.tags') WHERE JSON_VALUE(value, '$') = :tag_id)"
                     )
                 ).params(tag_id=tag_id)
             else:
@@ -863,23 +765,20 @@ class ChatTable:
         tag = Tags.get_tag_by_name_and_user_id(tag_name, user_id)
         if tag is None:
             tag = Tags.insert_new_tag(tag_name, user_id)
-        if tag is None:
-            return None
         try:
             with get_db() as db:
                 chat = db.get(Chat, id)
-                if chat:
-                    tag_id = tag.id
-                    new_meta = dict(chat.meta) if chat.meta else {}
-                    tags = new_meta.get("tags", [])
-                    if tag_id not in tags:
-                        tags.append(tag_id)
-                        new_meta["tags"] = tags
-                        setattr(chat, "meta", new_meta)
-                        db.commit()
-                        db.refresh(chat)
-                    return ChatModel.model_validate(chat)
-                return None
+
+                tag_id = tag.id
+                if tag_id not in chat.meta.get("tags", []):
+                    chat.meta = {
+                        **chat.meta,
+                        "tags": list(set(chat.meta.get("tags", []) + [tag_id])),
+                    }
+
+                db.commit()
+                db.refresh(chat)
+                return ChatModel.model_validate(chat)
         except Exception:
             return None
 
@@ -890,8 +789,6 @@ class ChatTable:
             # Normalize the tag_name for consistency
             tag_id = tag_name.replace(" ", "_").lower()
 
-            if not db.bind:
-                raise NotImplementedError("Database bind is not configured")
             if db.bind.dialect.name == "sqlite":
                 # SQLite JSON1 support for querying the tags inside the `meta` JSON field
                 query = query.filter(
@@ -927,17 +824,16 @@ class ChatTable:
         try:
             with get_db() as db:
                 chat = db.get(Chat, id)
-                if chat:
-                    new_meta = dict(chat.meta) if chat.meta else {}
-                    tags = new_meta.get("tags", [])
-                    tag_id = tag_name.replace(" ", "_").lower()
-                    if tag_id in tags:
-                        tags.remove(tag_id)
-                        new_meta["tags"] = tags
-                        setattr(chat, "meta", new_meta)
-                        db.commit()
-                    return True
-                return False
+                tags = chat.meta.get("tags", [])
+                tag_id = tag_name.replace(" ", "_").lower()
+
+                tags = [tag for tag in tags if tag != tag_id]
+                chat.meta = {
+                    **chat.meta,
+                    "tags": list(set(tags)),
+                }
+                db.commit()
+                return True
         except Exception:
             return False
 
@@ -945,13 +841,13 @@ class ChatTable:
         try:
             with get_db() as db:
                 chat = db.get(Chat, id)
-                if chat:
-                    new_meta = dict(chat.meta) if chat.meta else {}
-                    new_meta["tags"] = []
-                    setattr(chat, "meta", new_meta)
-                    db.commit()
-                    return True
-                return False
+                chat.meta = {
+                    **chat.meta,
+                    "tags": [],
+                }
+                db.commit()
+
+                return True
         except Exception:
             return False
 

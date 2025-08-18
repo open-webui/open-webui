@@ -33,28 +33,26 @@ def is_secure_group(group_name: str) -> bool:
     return group_name.startswith(SECURE_GROUP_PREFIX) if group_name else False
 
 # SQL Server Connection Configuration
-# SQL Server Connection Configuration for Group Sync
 # Priority: Environment Variables > Default Values
-# Using GROUP_SYNC_MSSQL_ prefix to distinguish from backend database configuration
-GROUP_SYNC_MSSQL_SERVER = os.getenv("GROUP_SYNC_MSSQL_SERVER", os.getenv("SQL_SERVER", ""))
-GROUP_SYNC_MSSQL_DATABASE = os.getenv("GROUP_SYNC_MSSQL_DATABASE", os.getenv("SQL_DATABASE", ""))
-GROUP_SYNC_MSSQL_USERNAME = os.getenv("GROUP_SYNC_MSSQL_USERNAME", os.getenv("SQL_USERNAME", ""))
-GROUP_SYNC_MSSQL_PASSWORD = os.getenv("GROUP_SYNC_MSSQL_PASSWORD", os.getenv("SQL_PASSWORD", ""))
-GROUP_SYNC_MSSQL_DRIVER = os.getenv("GROUP_SYNC_MSSQL_DRIVER", os.getenv("SQL_DRIVER", "ODBC Driver 17 for SQL Server"))
-GROUP_SYNC_MSSQL_TIMEOUT = int(os.getenv("GROUP_SYNC_MSSQL_TIMEOUT", os.getenv("SQL_TIMEOUT", "5")))
-GROUP_SYNC_MSSQL_ENCRYPT = "yes" if os.getenv("GROUP_SYNC_MSSQL_ENCRYPT", os.getenv("SQL_ENCRYPT", "yes")).lower() == "yes" else "no"
-GROUP_SYNC_MSSQL_TRUST_CERT = "yes" if os.getenv("GROUP_SYNC_MSSQL_TRUST_CERT", os.getenv("SQL_TRUST_SERVER_CERT", "no")).lower() == "yes" else "no"
+SQL_SERVER = os.getenv("SQL_SERVER", "")
+SQL_DATABASE = os.getenv("SQL_DATABASE", "")
+SQL_USERNAME = os.getenv("SQL_USERNAME", "")
+SQL_PASSWORD = os.getenv("SQL_PASSWORD", "")
+SQL_DRIVER = os.getenv("SQL_DRIVER", "ODBC Driver 17 for SQL Server")
+SQL_TIMEOUT = int(os.getenv("SQL_TIMEOUT", "5"))
+SQL_ENCRYPT = "yes" if os.getenv("SQL_ENCRYPT", "yes").lower() == "yes" else "no"
+SQL_TRUST_SERVER_CERT = "yes" if os.getenv("SQL_TRUST_SERVER_CERT", "no").lower() == "yes" else "no"
 
 # Connection string with extended options
 SQL_CONNECTION_STRING = (
-    f"DRIVER={{{GROUP_SYNC_MSSQL_DRIVER}}};"
-    f"SERVER={GROUP_SYNC_MSSQL_SERVER};"
-    f"DATABASE={GROUP_SYNC_MSSQL_DATABASE};"
-    f"UID={GROUP_SYNC_MSSQL_USERNAME};"
-    f"PWD={GROUP_SYNC_MSSQL_PASSWORD};"
-    f"Encrypt={GROUP_SYNC_MSSQL_ENCRYPT};"
-    f"TrustServerCertificate={GROUP_SYNC_MSSQL_TRUST_CERT};"
-    f"Connection Timeout={GROUP_SYNC_MSSQL_TIMEOUT}"
+    f"DRIVER={{{SQL_DRIVER}}};"
+    f"SERVER={SQL_SERVER};"
+    f"DATABASE={SQL_DATABASE};"
+    f"UID={SQL_USERNAME};"
+    f"PWD={SQL_PASSWORD};"
+    f"Encrypt={SQL_ENCRYPT};"
+    f"TrustServerCertificate={SQL_TRUST_SERVER_CERT};"
+    f"Connection Timeout={SQL_TIMEOUT}"
 )
 
 # Connection monitoring
@@ -72,7 +70,7 @@ def get_connection_string() -> str:
     Get the current connection string configuration
     Returns sanitized version (password hidden) for logging
     """
-    sanitized = SQL_CONNECTION_STRING.replace(GROUP_SYNC_MSSQL_PASSWORD, "********")
+    sanitized = SQL_CONNECTION_STRING.replace(SQL_PASSWORD, "********")
     log.debug(f"Current connection string (sanitized): {sanitized}")
     return SQL_CONNECTION_STRING
 
@@ -114,7 +112,7 @@ def diagnose_connection() -> Dict[str, any]:
 
     # Check if server is reachable
     try:
-        host = GROUP_SYNC_MSSQL_SERVER.split(',')[0]  # Handle named instances
+        host = SQL_SERVER.split(',')[0]  # Handle named instances
         port = 1433  # Default SQL Server port
         socket.create_connection((host, port), timeout=3)
         diagnostics["server_reachable"] = True
@@ -137,9 +135,9 @@ def diagnose_connection() -> Dict[str, any]:
     try:
         base_conn_string = (
             f"DRIVER={{{SQL_DRIVER}}};"
-            f"SERVER={GROUP_SYNC_MSSQL_SERVER};"
-            f"UID={GROUP_SYNC_MSSQL_USERNAME};"
-            f"PWD={GROUP_SYNC_MSSQL_PASSWORD}"
+            f"SERVER={SQL_SERVER};"
+            f"UID={SQL_USERNAME};"
+            f"PWD={SQL_PASSWORD}"
         )
         with pyodbc.connect(base_conn_string, timeout=5) as conn:
             diagnostics["connection_possible"] = True
