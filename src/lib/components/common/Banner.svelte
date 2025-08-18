@@ -57,12 +57,14 @@
 					>
 						{#if banner.type.toLowerCase() === 'info'}
 							{$i18n.t('Info')}
-						{/if}
-						{#if banner.type.toLowerCase() === 'warning'}
+						{:else if banner.type.toLowerCase() === 'warning'}
 							{$i18n.t('Warning')}
-						{/if}
-						{#if banner.type.toLowerCase() === 'error'}
+						{:else if banner.type.toLowerCase() === 'error'}
 							{$i18n.t('Error')}
+						{:else if banner.type.toLowerCase() === 'success'}
+							{$i18n.t('Success')}
+						{:else}
+							{banner.type}
 						{/if}
 					</div>
 

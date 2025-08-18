@@ -83,9 +83,14 @@
 				logo.style =
 					'position: absolute; width: auto; height: 6rem; top: 44%; left: 50%; transform: translateX(-50%); display:block;';
 				logo.src = isDarkMode ? '/static/splash-dark.png' : '/static/splash.png';
+				
 
 				document.addEventListener('DOMContentLoaded', function () {
 					const splash = document.getElementById('splash-screen');
+					if (document.documentElement.classList.contains('her')) {
+						return;
+					}
+
 					if (splash) splash.prepend(logo);
 				});
 			})();
@@ -167,6 +172,7 @@
 <style type="text/css" nonce="">
 	html {
 		overflow-y: hidden !important;
+		overscroll-behavior-y: none;
 	}
 
 	#splash-screen {

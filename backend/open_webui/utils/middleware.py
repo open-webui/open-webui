@@ -3,6 +3,7 @@ import logging
 import sys
 import os
 import base64
+import textwrap
 
 import asyncio
 from aiocache import cached
@@ -91,6 +92,7 @@ from open_webui.config import (
     CACHE_DIR,
     DEFAULT_TOOLS_FUNCTION_CALLING_PROMPT_TEMPLATE,
     DEFAULT_CODE_INTERPRETER_PROMPT,
+    CODE_INTERPRETER_BLOCKED_MODULES,
 )
 from open_webui.env import (
     SRC_LOG_LEVELS,
@@ -989,25 +991,24 @@ async def process_chat_payload(request, form_data, user, metadata, model):
         if prompt is None:
             raise Exception("No user message found")
 
-        if context_string == "":
-            if request.app.state.config.RELEVANCE_THRESHOLD == 0:
-                log.debug(
-                    f"With a 0 relevancy threshold for RAG, the context cannot be empty"
-                )
-        else:
+        if context_string != "":
             # Workaround for Ollama 2.0+ system prompt issue
             # TODO: replace with add_or_update_system_message
             if model.get("owned_by") == "ollama":
                 form_data["messages"] = prepend_to_first_user_message_content(
                     rag_template(
-                        request.app.state.config.RAG_TEMPLATE, context_string, prompt
+                        request.app.state.config.RAG_TEMPLATE,
+                        context_string,
+                        prompt,
                     ),
                     form_data["messages"],
                 )
             else:
                 form_data["messages"] = add_or_update_system_message(
                     rag_template(
-                        request.app.state.config.RAG_TEMPLATE, context_string, prompt
+                        request.app.state.config.RAG_TEMPLATE,
+                        context_string,
+                        prompt,
                     ),
                     form_data["messages"],
                 )
@@ -1324,7 +1325,7 @@ async def process_chat_response(
                         if not get_active_status_by_user_id(user.id):
                             webhook_url = Users.get_user_webhook_url_by_id(user.id)
                             if webhook_url:
-                                post_webhook(
+                                await post_webhook(
                                     request.app.state.WEBUI_NAME,
                                     webhook_url,
                                     f"{title} - {request.app.state.config.WEBUI_URL}/c/{metadata['chat_id']}\n\n{content}",
@@ -1620,9 +1621,13 @@ async def process_chat_response(
 
                         match = re.search(start_tag_pattern, content)
                         if match:
-                            attr_content = (
-                                match.group(1) if match.group(1) else ""
-                            )  # Ensure it's not None
+                            try:
+                                attr_content = (
+                                    match.group(1) if match.group(1) else ""
+                                )  # Ensure it's not None
+                            except:
+                                attr_content = ""
+
                             attributes = extract_attributes(
                                 attr_content
                             )  # Extract attributes safely
@@ -1846,6 +1851,21 @@ async def process_chat_response(
                             or 1
                         ),
                     )
+                    last_delta_data = None
+
+                    async def flush_pending_delta_data(threshold: int = 0):
+                        nonlocal delta_count
+                        nonlocal last_delta_data
+
+                        if delta_count >= threshold and last_delta_data:
+                            await event_emitter(
+                                {
+                                    "type": "chat:completion",
+                                    "data": last_delta_data,
+                                }
+                            )
+                            delta_count = 0
+                            last_delta_data = None
 
                     async for line in response.body_iterator:
                         line = line.decode("utf-8") if isinstance(line, bytes) else line
@@ -1885,6 +1905,12 @@ async def process_chat_response(
                                         {
                                             "selectedModelId": model_id,
                                         },
+                                    )
+                                    await event_emitter(
+                                        {
+                                            "type": "chat:completion",
+                                            "data": data,
+                                        }
                                     )
                                 else:
                                     choices = data.get("choices", [])
@@ -2096,14 +2122,9 @@ async def process_chat_response(
 
                                 if delta:
                                     delta_count += 1
+                                    last_delta_data = data
                                     if delta_count >= delta_chunk_size:
-                                        await event_emitter(
-                                            {
-                                                "type": "chat:completion",
-                                                "data": data,
-                                            }
-                                        )
-                                        delta_count = 0
+                                        await flush_pending_delta_data(delta_chunk_size)
                                 else:
                                     await event_emitter(
                                         {
@@ -2118,6 +2139,7 @@ async def process_chat_response(
                             else:
                                 log.debug(f"Error: {e}")
                                 continue
+                    await flush_pending_delta_data()
 
                     if content_blocks:
                         # Clean up the last text block
@@ -2355,6 +2377,27 @@ async def process_chat_response(
                         try:
                             if content_blocks[-1]["attributes"].get("type") == "code":
                                 code = content_blocks[-1]["content"]
+                                if CODE_INTERPRETER_BLOCKED_MODULES:
+                                    blocking_code = textwrap.dedent(
+                                        f"""
+                                        import builtins
+
+                                        BLOCKED_MODULES = {CODE_INTERPRETER_BLOCKED_MODULES}
+
+                                        _real_import = builtins.__import__
+                                        def restricted_import(name, globals=None, locals=None, fromlist=(), level=0):
+                                            if name.split('.')[0] in BLOCKED_MODULES:
+                                                importer_name = globals.get('__name__') if globals else None
+                                                if importer_name == '__main__':
+                                                    raise ImportError(
+                                                        f"Direct import of module {{name}} is restricted."
+                                                    )
+                                            return _real_import(name, globals, locals, fromlist, level)
+
+                                        builtins.__import__ = restricted_import
+                                    """
+                                    )
+                                    code = blocking_code + "\n" + code
 
                                 if (
                                     request.app.state.config.CODE_INTERPRETER_ENGINE
@@ -2520,7 +2563,7 @@ async def process_chat_response(
                 if not get_active_status_by_user_id(user.id):
                     webhook_url = Users.get_user_webhook_url_by_id(user.id)
                     if webhook_url:
-                        post_webhook(
+                        await post_webhook(
                             request.app.state.WEBUI_NAME,
                             webhook_url,
                             f"{title} - {request.app.state.config.WEBUI_URL}/c/{metadata['chat_id']}\n\n{content}",
