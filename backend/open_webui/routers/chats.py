@@ -547,6 +547,13 @@ async def get_shared_chat_by_id(
             },
         )
 
+    # If the chat is not public, user must be authenticated
+    if not chat_unrestricted.is_public and user is None:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Login required to access this shared chat.",
+        )
+
     # If the chat is password-protected
     if chat_unrestricted.password:
         token_name = f"shared-chat-{chat_unrestricted.id}-token"

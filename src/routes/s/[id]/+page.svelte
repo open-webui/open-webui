@@ -122,7 +122,9 @@
 		await chatId.set($page.params.id);
 		chat = await getChatByShareId(token, $chatId).catch(async (err) => {
 			console.error(err);
-			if (err.detail === 'password_required') {
+			if (err.detail === 'Login required to access this shared chat.') {
+				await goto('/auth');
+			} else if (err.detail === 'password_required') {
 				passwordRequired = true;
 			} else if (typeof err.detail === 'object' && err.detail !== null) {
 				error = err.detail;
