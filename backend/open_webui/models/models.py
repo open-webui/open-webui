@@ -43,6 +43,13 @@ class ModelMeta(BaseModel):
     """
 
     capabilities: Optional[dict] = None
+    
+    # TTS Configuration
+    tts_voice_id: Optional[str] = None
+    """
+        Assigned TTS voice ID for this model. Falls back to global voice if not set.
+        Reserved for future provider mapping; currently voice name only.
+    """
 
     model_config = ConfigDict(extra="allow")
 

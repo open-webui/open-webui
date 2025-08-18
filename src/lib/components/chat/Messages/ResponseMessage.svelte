@@ -228,10 +228,17 @@
 				if (voices.length > 0) {
 					clearInterval(getVoicesLoop);
 
+					// Get model-specific TTS configuration if available
+					const currentModel = $models.find((m) => m.id === message.model);
+					const modelVoice = currentModel?.meta?.tts_voice_id;
+					
+					// Use model-specific voice, fallback to global
+					const selectedVoice = modelVoice || $settings?.audio?.tts?.voice || $config?.audio?.tts?.voice;
+					
 					const voice =
 						voices
 							?.filter(
-								(v) => v.voiceURI === ($settings?.audio?.tts?.voice ?? $config?.audio?.tts?.voice)
+								(v) => v.voiceURI === selectedVoice
 							)
 							?.at(0) ?? undefined;
 
@@ -297,10 +304,17 @@
 				}
 
 				for (const [idx, sentence] of messageContentParts.entries()) {
+					// Get model-specific TTS configuration for Kokoro TTS
+					const currentModel = $models.find((m) => m.id === message.model);
+					const modelVoice = currentModel?.meta?.tts_voice_id;
+					
+					// Use model-specific voice, fallback to global
+					const voiceToUse = modelVoice || $settings?.audio?.tts?.voice || $config?.audio?.tts?.voice;
+					
 					const blob = await $TTSWorker
 						.generate({
 							text: sentence,
-							voice: $settings?.audio?.tts?.voice ?? $config?.audio?.tts?.voice
+							voice: voiceToUse
 						})
 						.catch((error) => {
 							console.error(error);
@@ -321,11 +335,20 @@
 				}
 			} else {
 				for (const [idx, sentence] of messageContentParts.entries()) {
-					const res = await synthesizeOpenAISpeech(
-						localStorage.token,
+					// Get model-specific TTS configuration for external TTS
+					const currentModel = $models.find((m) => m.id === message.model);
+					const modelVoice = currentModel?.meta?.tts_voice_id;
+					
+					// Use model-specific voice, fallback to global
+					const voiceToUse = modelVoice || (
 						$settings?.audio?.tts?.defaultVoice === $config.audio.tts.voice
 							? ($settings?.audio?.tts?.voice ?? $config?.audio?.tts?.voice)
-							: $config?.audio?.tts?.voice,
+							: $config?.audio?.tts?.voice
+					);
+					
+					const res = await synthesizeOpenAISpeech(
+						localStorage.token,
+						voiceToUse,
 						sentence
 					).catch((error) => {
 						console.error(error);
