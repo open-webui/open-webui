@@ -48,9 +48,7 @@
 		($user?.role === 'admin' || $user?.permissions?.chat?.file_upload);
 
 	const init = async () => {
-		if ($_tools === null) {
-			await _tools.set(await getTools(localStorage.token));
-		}
+		await _tools.set(await getTools(localStorage.token));
 
 		tools = $_tools.reduce((a, tool, i, arr) => {
 			a[tool.id] = {
