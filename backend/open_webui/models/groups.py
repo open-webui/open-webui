@@ -185,7 +185,7 @@ class GroupTable:
                 ) and not new_permissions.get("sharing", {}).get("public_chat", False):
                     user_ids = existing_group.user_ids or []
                     for user_id in user_ids:
-                        Chats.revoke_public_chats_by_user_id(user_id)
+                        Chats.make_all_public_chats_private_by_user_id(user_id)
 
                 return self.get_group_by_id(id=id)
         except Exception as e:

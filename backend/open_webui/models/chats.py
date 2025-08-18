@@ -444,7 +444,7 @@ class ChatTable:
         except Exception:
             return None
 
-    def delete_shared_chat_by_chat_id(self, chat_id: str) -> bool:
+    def revoke_shared_chat_by_chat_id(self, chat_id: str) -> bool:
         try:
             with get_db() as db:
                 chat = db.query(Chat).filter_by(id=chat_id).first()
@@ -1286,7 +1286,7 @@ class ChatTable:
                 db.query(Chat).filter_by(id=id).delete()
                 db.commit()
 
-                return True and self.delete_shared_chat_by_chat_id(id)
+                return True and self.revoke_shared_chat_by_chat_id(id)
         except Exception:
             return False
 
@@ -1296,7 +1296,7 @@ class ChatTable:
                 db.query(Chat).filter_by(id=id, user_id=user_id).delete()
                 db.commit()
 
-                return True and self.delete_shared_chat_by_chat_id(id)
+                return True and self.revoke_shared_chat_by_chat_id(id)
         except Exception:
             return False
 
@@ -1427,7 +1427,7 @@ class ChatTable:
             db.rollback()
             return 0
 
-    def revoke_public_chats_by_user_id(self, user_id: str) -> bool:
+    def make_all_public_chats_private_by_user_id(self, user_id: str) -> bool:
         try:
             with get_db() as db:
                 db.query(Chat).filter_by(user_id=user_id, is_public=True).update(

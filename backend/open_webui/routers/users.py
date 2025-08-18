@@ -208,7 +208,7 @@ async def update_default_user_permissions(
         users = Users.get_users()
         for user in users.users:
             if user.role == "user":
-                Chats.revoke_public_chats_by_user_id(user.id)
+                Chats.make_all_public_chats_private_by_user_id(user.id)
 
     return request.app.state.config.USER_PERMISSIONS
 

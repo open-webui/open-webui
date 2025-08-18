@@ -1101,7 +1101,7 @@ async def delete_shared_chat_by_id(id: str, user=Depends(get_verified_user)):
         if not chat.share_id:
             return False
 
-        result = Chats.delete_shared_chat_by_chat_id(id)
+        result = Chats.revoke_shared_chat_by_chat_id(id)
         return result
     else:
         raise HTTPException(
