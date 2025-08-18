@@ -43,19 +43,19 @@ class JsonColumnFactory:
     Factory class for creating appropriate JSON column types based on database capabilities.
     This ensures compatibility across different database systems and existing installations.
     """
-    
+
     @staticmethod
     def get_column_type(column_name: str = None):
         """
         Returns the appropriate column type for JSON data.
-        
+
         This factory method always returns JSON type. The actual column type
         (JSON vs JSONB) is determined and set by database migrations based on
         the database capabilities.
-        
+
         Args:
             column_name: Name of the column (chat or meta)
-            
+
         Returns:
             SQLAlchemy column type (always JSON for model definition)
         """
@@ -71,7 +71,7 @@ class Chat(Base):
     id = Column(String, primary_key=True)
     user_id = Column(String)
     title = Column(Text)
-    
+
     # Use factory for column type - migrations will handle actual type conversion
     chat = Column(JsonColumnFactory.get_column_type(COLUMN_CHAT))
 
@@ -175,10 +175,7 @@ class ChatTable:
         if db.bind.dialect.name != "postgresql":
             return {
                 "supports_jsonb": False,
-                "columns": {
-                    COLUMN_CHAT: "json",
-                    COLUMN_META: "json"
-                }
+                "columns": {COLUMN_CHAT: "json", COLUMN_META: "json"},
             }
 
         # Create a cache key using connection details
@@ -216,13 +213,13 @@ class ChatTable:
                 "supports_jsonb": True,  # PostgreSQL always supports JSONB
                 "columns": columns,
                 "chat_is_jsonb": columns.get(COLUMN_CHAT) == "jsonb",
-                "meta_is_jsonb": columns.get(COLUMN_META) == "jsonb"
+                "meta_is_jsonb": columns.get(COLUMN_META) == "jsonb",
             }
 
             # Thread-safe cache update
             with self._capabilities_lock:
                 self._capabilities_cache[cache_key] = capabilities
-            
+
             log.debug(f"Database capabilities cached: {capabilities}")
             return capabilities
 
@@ -231,20 +228,15 @@ class ChatTable:
             # Fallback to JSON for safety
             fallback = {
                 "supports_jsonb": False,
-                "columns": {
-                    COLUMN_CHAT: "json",
-                    COLUMN_META: "json"
-                },
+                "columns": {COLUMN_CHAT: "json", COLUMN_META: "json"},
                 "chat_is_jsonb": False,
-                "meta_is_jsonb": False
+                "meta_is_jsonb": False,
             }
-            
+
             with self._capabilities_lock:
                 self._capabilities_cache[cache_key] = fallback
-            
+
             return fallback
-
-
 
     def _get_json_functions(self, db) -> dict:
         """
@@ -265,7 +257,9 @@ class ChatTable:
         # Determine functions based on actual column types
         return {
             "chat_array_elements": (
-                "jsonb_array_elements" if capabilities.get("chat_is_jsonb") else "json_array_elements"
+                "jsonb_array_elements"
+                if capabilities.get("chat_is_jsonb")
+                else "json_array_elements"
             ),
             "meta_array_elements_text": (
                 "jsonb_array_elements_text"
@@ -317,8 +311,6 @@ class ChatTable:
                 )
 
             return and_(*conditions) if operator == "AND" else or_(*conditions)
-
-
 
     def insert_new_chat(self, user_id: str, form_data: ChatForm) -> Optional[ChatModel]:
         with get_db() as db:
