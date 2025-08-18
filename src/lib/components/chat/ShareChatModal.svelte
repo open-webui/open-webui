@@ -637,7 +637,7 @@
 
 	$: useGradient, generateQrCodesDebounced(shareUrl);
 </script>
-
+    
 <Modal bind:show size="md">
 	<div>
 		<div class=" flex justify-between dark:text-gray-300 px-5 pt-4 pb-0.5">
@@ -651,25 +651,42 @@
 							<li>
 								<strong>{$i18n.t('Creates a Snapshot:')}</strong>
 								{$i18n.t(
-									'Sharing creates a static, public snapshot of your conversation up to this point.'
+									'Sharing creates a static, public snapshot of your entire conversation up to this point, including all prompts and responses.'
 								)}
 							</li>
-							<li>
+
+							<li class="mt-2">
 								<strong>{$i18n.t('Future Messages Not Included:')}</strong>
 								{$i18n.t(
 									'Any new messages you send after creating the link will not be added to the shared chat.'
 								)}
 							</li>
-							<li>
+
+							<li class="mt-2">
 								<strong>{$i18n.t('Updating the Link:')}</strong>
 								{$i18n.t(
 									'You can update the link at any time to reflect the latest state of the conversation.'
 								)}
 							</li>
-							<li>
+
+							<li class="mt-2">
 								<strong>{$i18n.t('Link Persistence:')}</strong>
 								{$i18n.t(
 									'The link remains active as long as the original chat exists and the expiration, if set, has not been reached.'
+								)}
+							</li>
+
+							<li class="mt-2">
+								<strong>{$i18n.t('Deletion Impact:')}</strong>
+								{$i18n.t(
+									'If you delete the original conversation, the shared link will also be deleted and the content will no longer be accessible via the shared link.'
+								)}
+							</li>
+
+							<li class="mt-2">
+								<strong>{$i18n.t('Cloning and Deletion:')}</strong>
+								{$i18n.t(
+									'If a viewer clones the shared conversation into their own chat history (if "Allow Cloning" is enabled), deleting your chat\'s share link will not remove the conversation from their chat history.'
 								)}
 							</li>
 						</ul>
