@@ -17,6 +17,24 @@ class TestModels(AbstractPostgresTest):
         assert response.status_code == 200
         assert len(response.json()) == 0
 
+    def test_tts_voice_resolution(self):
+        """Test TTS voice fallback logic: modelVoice ?? globalVoice"""
+        def resolve_voice(model_voice, global_voice):
+            """Resolve TTS voice with fallback logic"""
+            return model_voice if model_voice else global_voice
+        
+        # Test model voice takes precedence
+        assert resolve_voice("model_voice", "global_voice") == "model_voice"
+        
+        # Test fallback to global when model voice is None
+        assert resolve_voice(None, "global_voice") == "global_voice"
+        
+        # Test fallback to global when model voice is empty string
+        assert resolve_voice("", "global_voice") == "global_voice"
+        
+        # Test both None returns None (no voice configured)
+        assert resolve_voice(None, None) is None
+
         with mock_webui_user(id="2"):
             response = self.fast_api_client.post(
                 self.create_url("/add"),
@@ -59,3 +77,21 @@ class TestModels(AbstractPostgresTest):
             response = self.fast_api_client.get(self.create_url("/"))
         assert response.status_code == 200
         assert len(response.json()) == 0
+
+    def test_tts_voice_resolution(self):
+        """Test TTS voice fallback logic: modelVoice ?? globalVoice"""
+        def resolve_voice(model_voice, global_voice):
+            """Resolve TTS voice with fallback logic"""
+            return model_voice if model_voice else global_voice
+        
+        # Test model voice takes precedence
+        assert resolve_voice("model_voice", "global_voice") == "model_voice"
+        
+        # Test fallback to global when model voice is None
+        assert resolve_voice(None, "global_voice") == "global_voice"
+        
+        # Test fallback to global when model voice is empty string
+        assert resolve_voice("", "global_voice") == "global_voice"
+        
+        # Test both None returns None (no voice configured)
+        assert resolve_voice(None, None) is None
