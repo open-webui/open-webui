@@ -30,6 +30,12 @@
 	import Banner from '../common/Banner.svelte';
 	import Sidebar from '../icons/Sidebar.svelte';
 
+	import ChatBubbleDotted from '../icons/ChatBubbleDotted.svelte';
+	import ChatBubbleDottedChecked from '../icons/ChatBubbleDottedChecked.svelte';
+
+	import EllipsisHorizontal from '../icons/EllipsisHorizontal.svelte';
+	import { goto } from '$app/navigation';
+
 	const i18n = getContext('i18n');
 
 	export let initNewChat: Function;
@@ -98,6 +104,34 @@
 
 				<div class="self-start flex flex-none items-center text-gray-600 dark:text-gray-400">
 					<!-- <div class="md:hidden flex self-center w-[1px] h-5 mx-2 bg-gray-300 dark:bg-stone-700" /> -->
+
+					{#if !chat?.id && ($user?.role === 'user' ? ($user?.permissions?.chat?.temporary ?? true) && !($user?.permissions?.chat?.temporary_enforced ?? false) : true)}
+						<Tooltip content={$i18n.t(`Temporary Chat`)}>
+							<button
+								class="flex cursor-pointer px-2 py-2 rounded-xl hover:bg-gray-50 dark:hover:bg-gray-850 transition"
+								id="temporary-chat-button"
+								on:click={async () => {
+									temporaryChatEnabled.set(!$temporaryChatEnabled);
+									await goto('/');
+									// add 'temporary-chat=true' to the URL
+									if ($temporaryChatEnabled) {
+										window.history.replaceState(null, '', '?temporary-chat=true');
+									} else {
+										window.history.replaceState(null, '', location.pathname);
+									}
+								}}
+							>
+								<div class=" m-auto self-center">
+									{#if $temporaryChatEnabled}
+										<ChatBubbleDottedChecked className=" size-4.5" strokeWidth="1.5" />
+									{:else}
+										<ChatBubbleDotted className=" size-4.5" strokeWidth="1.5" />
+									{/if}
+								</div>
+							</button>
+						</Tooltip>
+					{/if}
+
 					{#if shareEnabled && chat && (chat.id || $temporaryChatEnabled)}
 						<Menu
 							{chat}
@@ -114,20 +148,7 @@
 								id="chat-context-menu-button"
 							>
 								<div class=" m-auto self-center">
-									<svg
-										xmlns="http://www.w3.org/2000/svg"
-										fill="none"
-										viewBox="0 0 24 24"
-										stroke-width="1.5"
-										stroke="currentColor"
-										class="size-5"
-									>
-										<path
-											stroke-linecap="round"
-											stroke-linejoin="round"
-											d="M6.75 12a.75.75 0 1 1-1.5 0 .75.75 0 0 1 1.5 0ZM12.75 12a.75.75 0 1 1-1.5 0 .75.75 0 0 1 1.5 0ZM18.75 12a.75.75 0 1 1-1.5 0 .75.75 0 0 1 1.5 0Z"
-										/>
-									</svg>
+									<EllipsisHorizontal className=" size-5" strokeWidth="1.5" />
 								</div>
 							</button>
 						</Menu>
@@ -143,7 +164,7 @@
 								aria-label="Controls"
 							>
 								<div class=" m-auto self-center">
-									<AdjustmentsHorizontal className=" size-5" strokeWidth="0.5" />
+									<AdjustmentsHorizontal className=" size-5" strokeWidth="1" />
 								</div>
 							</button>
 						</Tooltip>
