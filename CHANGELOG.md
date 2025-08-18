@@ -7,6 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [0.6.22] - 2025-08-11
 
+- **MCP Framework** (opt-in through Admin -> General):
+  - MCP server CRUD operations, manual headers, testing, and tool synchronization
+  - OAuth integration with discovery (WWW-Authenticate, OIDC), manual/direct configuration, Dynamic Client Registration (DCR)
+  - Mid-chat authentication handling with token auto-refresh and reauthentication prompts
+  - Tools synchronization to database with conversion to function-calling and runtime execution
+  - Admin-only MCP allowlist panel in Admin → Settings → MCP Servers
+
 ### Added
 
 - 🔗 **OpenAI API '/v1' Endpoint Compatibility**: Enhanced API compatibility by supporting requests to paths like '/v1/models', '/v1/embeddings', and '/v1/chat/completions'. This allows Open WebUI to integrate more seamlessly with tools that expect OpenAI's '/v1' API structure.

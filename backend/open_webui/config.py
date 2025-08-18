@@ -1022,6 +1022,20 @@ TOOL_SERVER_CONNECTIONS = PersistentConfig(
     tool_server_connections,
 )
 
+# New: MCP feature flag (backward-compatible, disabled by default)
+MCP_ENABLED = PersistentConfig(
+    "MCP_ENABLED",
+    "mcp.enable",
+    False,
+)
+
+# MCP Server Allowlist (list of allowed domains for MCP servers)
+MCP_SERVER_ALLOWLIST = PersistentConfig(
+    "MCP_SERVER_ALLOWLIST",
+    "mcp.allowlist",
+    [],
+)
+
 ####################################
 # WEBUI
 ####################################

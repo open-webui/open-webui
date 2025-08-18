@@ -259,8 +259,8 @@ def install_tool_and_function_dependencies():
             if dependencies := frontmatter.get("requirements"):
                 all_dependencies += f"{dependencies}, "
         for tool in tool_list:
-            # Only install requirements for admin tools
-            if tool.user.role == "admin":
+            # Skip MCP tools (they run externally) and only install requirements for admin tools
+            if tool.user and tool.user.role == "admin":
                 frontmatter = extract_frontmatter(replace_imports(tool.content))
                 if dependencies := frontmatter.get("requirements"):
                     all_dependencies += f"{dependencies}, "
