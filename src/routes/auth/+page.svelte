@@ -218,12 +218,18 @@
 									{$i18n.t(`Sign in to {{WEBUI_NAME}} with LDAP`, { WEBUI_NAME: $WEBUI_NAME })}
 								{:else if mode === 'signin'}
 									{$i18n.t(`Sign in to {{WEBUI_NAME}}`, { WEBUI_NAME: $WEBUI_NAME })}
-								{:else}
-									{$i18n.t(`Sign up to {{WEBUI_NAME}}`, { WEBUI_NAME: $WEBUI_NAME })}
-								{/if}
-							</div>
+{:else}
+{$i18n.t(`Sign up to {{WEBUI_NAME}}`, { WEBUI_NAME: $WEBUI_NAME })}
+{/if}
+</div>
 
-							{#if $config?.onboarding ?? false}
+{#if mode === 'signin'}
+<div class="mt-1 text-sm font-medium text-gray-400">
+AMD Employees please use Microsoft Login
+</div>
+{/if}
+
+{#if $config?.onboarding ?? false}
 								<div class="mt-1 text-xs font-medium text-gray-500">
 									ⓘ {$WEBUI_NAME}
 									{$i18n.t(
@@ -332,16 +338,16 @@
 								{/if}
 							</div>
 
-							<div class="inline-flex w-full items-center justify-center">
-								<hr class="my-4 h-px w-32 border-0 bg-gray-700/10 dark:bg-gray-100/10" />
-								{#if $config?.features.enable_login_form || $config?.features.enable_ldap}
-									<span class="bg-transparent px-3 text-sm font-medium text-gray-900 dark:text-white"
-										>{$i18n.t('or')}</span
-									>
-								{/if}
+<div class="inline-flex w-full items-center justify-center">
+<hr class="my-4 h-px w-32 border-0 bg-gray-700/20 dark:bg-gray-100/20" />
+{#if $config?.features.enable_login_form || $config?.features.enable_ldap}
+<span class="bg-transparent px-3 text-sm font-medium text-gray-900 dark:text-white"
+>{$i18n.t('or')}</span
+>
+{/if}
 
-								<hr class="my-4 h-px w-32 border-0 bg-gray-700/10 dark:bg-gray-100/10" />
-							</div>
+<hr class="my-4 h-px w-32 border-0 bg-gray-700/20 dark:bg-gray-100/20" />
+</div>
 						{/if}
 
 						<form
