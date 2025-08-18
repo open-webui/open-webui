@@ -17,6 +17,7 @@
 
 	import Messages from '$lib/components/chat/Messages.svelte';
 	import SensitiveInput from '$lib/components/common/SensitiveInput.svelte';
+	import SharedLinkError from '$lib/components/chat/SharedLinkError.svelte';
 
 	import { getUserById, getUserSettings } from '$lib/apis/users';
 	import { getModels } from '$lib/apis';
@@ -29,6 +30,7 @@
 	let loaded = false;
 	let passwordRequired = false;
 	let password = '';
+	let error = null;
 
 	let autoScroll = true;
 	let processing = '';
@@ -52,13 +54,13 @@
 
 	$: messages = createMessagesList(history, history.currentId);
 
-	$: if ($page.params.id) {
+	$: if ($page.params.id && !error) {
 		(async () => {
 			if (await loadSharedChat()) {
 				await tick();
 				loaded = true;
 			} else {
-				if (!passwordRequired) {
+				if (!passwordRequired && !error) {
 					await goto('/');
 				}
 			}
@@ -118,13 +120,15 @@
 		}
 
 		await chatId.set($page.params.id);
-		chat = await getChatByShareId(token, $chatId).catch(async (error) => {
-			if (error.detail === 'password_required') {
+		chat = await getChatByShareId(token, $chatId).catch(async (err) => {
+			console.error(err);
+			if (err.detail === 'password_required') {
 				passwordRequired = true;
-				return null;
+			} else if (typeof err.detail === 'object' && err.detail !== null) {
+				error = err.detail;
+			} else {
+				error = { code: 'UNKNOWN_ERROR', message: err.detail };
 			}
-
-			await goto(`/auth?redirect=${encodeURIComponent($page.url.pathname)}`);
 			return null;
 		});
 
@@ -323,4 +327,6 @@
 			</button>
 		</form>
 	</div>
+{:else if error}
+	<SharedLinkError {error} />
 {/if}

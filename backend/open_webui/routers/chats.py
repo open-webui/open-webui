@@ -1,5 +1,6 @@
 import json
 import logging
+import time
 from typing import Optional
 
 
@@ -520,7 +521,30 @@ async def get_shared_chat_by_id(
 
     if not chat_unrestricted:
         raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND, detail=ERROR_MESSAGES.NOT_FOUND
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail={
+                "code": "SHARE_LINK_NOT_FOUND",
+                "message": ERROR_MESSAGES.SHARE_LINK_NOT_FOUND,
+            },
+        )
+    if (
+        chat_unrestricted.expires_at
+        and chat_unrestricted.expires_at < int(time.time())
+    ):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail={
+                "code": "SHARE_LINK_EXPIRED",
+                "message": ERROR_MESSAGES.SHARE_LINK_EXPIRED,
+            },
+        )
+    if chat_unrestricted.revoked_at:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail={
+                "code": "SHARE_LINK_REVOKED",
+                "message": ERROR_MESSAGES.SHARE_LINK_REVOKED,
+            },
         )
 
     # If the chat is password-protected
