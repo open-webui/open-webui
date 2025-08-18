@@ -10,6 +10,7 @@
 	import FiltersSelector from '$lib/components/workspace/Models/FiltersSelector.svelte';
 	import ActionsSelector from '$lib/components/workspace/Models/ActionsSelector.svelte';
 	import Capabilities from '$lib/components/workspace/Models/Capabilities.svelte';
+	import TTSVoiceSelector from '$lib/components/workspace/Models/TTSVoiceSelector.svelte';
 	import Textarea from '$lib/components/common/Textarea.svelte';
 	import { getTools } from '$lib/apis/tools';
 	import { getFunctions } from '$lib/apis/functions';
@@ -95,6 +96,9 @@
 	let actionIds = [];
 
 	let accessControl = {};
+	
+	// TTS Configuration
+	let ttsVoiceId = '';
 
 	const addUsage = (base_model_id) => {
 		const baseModel = $models.find((m) => m.id === base_model_id);
@@ -179,6 +183,9 @@
 			}
 		}
 
+		// TTS Configuration
+		info.meta.tts_voice_id = ttsVoiceId.trim() === '' ? null : ttsVoiceId;
+
 		info.params.system = system.trim() === '' ? null : system;
 		info.params.stop = params.stop ? params.stop.split(',').filter((s) => s.trim()) : null;
 		Object.keys(info.params).forEach((key) => {
@@ -238,6 +245,9 @@
 			toolIds = model?.meta?.toolIds ?? [];
 			filterIds = model?.meta?.filterIds ?? [];
 			actionIds = model?.meta?.actionIds ?? [];
+			
+			// Initialize TTS configuration
+			ttsVoiceId = model?.meta?.tts_voice_id ?? '';
 			knowledge = (model?.meta?.knowledge ?? []).map((item) => {
 				if (item?.collection_name && item?.type !== 'file') {
 					return {
@@ -731,6 +741,16 @@
 
 					<div class="my-2">
 						<Capabilities bind:capabilities />
+					</div>
+
+					<div class="my-4">
+						<div class="flex w-full justify-between mb-2">
+							<div class="self-center text-sm font-semibold">{$i18n.t('TTS Configuration')}</div>
+						</div>
+						
+						<TTSVoiceSelector 
+							bind:selectedVoice={ttsVoiceId}
+						/>
 					</div>
 
 					<div class="my-2 text-gray-300 dark:text-gray-700">

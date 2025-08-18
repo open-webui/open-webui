@@ -55,6 +55,10 @@
 	let voices: SpeechSynthesisVoice[] = [];
 	let models: Awaited<ReturnType<typeof _getModels>>['models'] = [];
 
+	// Connection testing state
+	let connectionTesting = false;
+	let connectionStatus = { success: false, message: '', tested: false };
+
 	const getModels = async () => {
 		if (TTS_ENGINE === '') {
 			models = [];
@@ -137,6 +141,118 @@
 		STT_WHISPER_MODEL_LOADING = true;
 		await updateConfigHandler();
 		STT_WHISPER_MODEL_LOADING = false;
+	};
+
+	const testTTSConnection = async () => {
+		if (TTS_ENGINE !== 'openai' || !TTS_OPENAI_API_BASE_URL) {
+			connectionStatus = { success: false, message: 'Please enter a valid API Base URL', tested: true };
+			return;
+		}
+
+		connectionTesting = true;
+		connectionStatus = { success: false, message: 'Testing connection...', tested: false };
+
+		try {
+			// Clean up the URL - remove trailing slashes and /v1 suffixes
+			let baseUrl = TTS_OPENAI_API_BASE_URL.trim();
+			if (baseUrl.endsWith('/')) {
+				baseUrl = baseUrl.slice(0, -1);
+			}
+			if (baseUrl.endsWith('/v1')) {
+				baseUrl = baseUrl.slice(0, -3);
+			}
+
+			// Test models endpoint
+			const modelsUrl = `${baseUrl}/v1/models`;
+			const modelsHeaders = {
+				'Content-Type': 'application/json'
+			};
+			
+			// Add API key if provided
+			if (TTS_OPENAI_API_KEY) {
+				modelsHeaders['Authorization'] = `Bearer ${TTS_OPENAI_API_KEY}`;
+			}
+
+			const modelsResponse = await fetch(modelsUrl, {
+				method: 'GET',
+				headers: modelsHeaders
+			});
+
+			if (!modelsResponse.ok) {
+				throw new Error(`Models endpoint failed: ${modelsResponse.status} ${modelsResponse.statusText}`);
+			}
+
+			const modelsData = await modelsResponse.json();
+			console.log('Models data:', modelsData);
+
+			// Test voices endpoint
+			const voicesUrl = `${baseUrl}/v1/audio/voices`;
+			const voicesResponse = await fetch(voicesUrl, {
+				method: 'GET',
+				headers: modelsHeaders
+			});
+
+			if (!voicesResponse.ok) {
+				throw new Error(`Voices endpoint failed: ${voicesResponse.status} ${voicesResponse.statusText}`);
+			}
+
+			const voicesData = await voicesResponse.json();
+			console.log('Voices data:', voicesData);
+
+			// Update models dropdown
+			if (modelsData?.data && Array.isArray(modelsData.data)) {
+				models = modelsData.data.map(model => ({ 
+					id: model.id, 
+					name: model.name || model.id 
+				}));
+			} else {
+				models = [];
+			}
+
+			// Update voices dropdown
+			if (voicesData?.voices && Array.isArray(voicesData.voices)) {
+				voices = voicesData.voices.map(voice => ({
+					id: voice.id || voice.name,
+					name: voice.name || voice.id
+				}));
+			} else {
+				voices = [];
+			}
+
+			// Special handling for no voices found
+			if (voices.length === 0) {
+				connectionStatus = { 
+					success: false, 
+					message: `❌ No voices found. If using Kokoro/OpenAI-compatible backends, ensure the voices endpoint is enabled and returns valid data.`, 
+					tested: true 
+				};
+				return;
+			}
+
+			// Reset selections to ensure admin makes conscious choices
+			connectionStatus = { 
+				success: true, 
+				message: `✅ Connection successful! Found ${models.length} models and ${voices.length} voices. Please select your preferences.`, 
+				tested: true 
+			};
+
+		} catch (error) {
+			console.error('TTS connection test failed:', error);
+			
+			// Provide specific guidance for common issues
+			let errorMessage = `❌ Connection failed: ${error.message}`;
+			if (error.message.includes('voices')) {
+				errorMessage += '. If using Kokoro/OpenAI-compatible backends, ensure the voices endpoint is enabled.';
+			}
+			
+			connectionStatus = { 
+				success: false, 
+				message: errorMessage, 
+				tested: true 
+			};
+		} finally {
+			connectionTesting = false;
+		}
 	};
 
 	onMount(async () => {
@@ -456,10 +572,41 @@
 								placeholder={$i18n.t('API Base URL')}
 								bind:value={TTS_OPENAI_API_BASE_URL}
 								required
+								on:input={() => {
+									connectionStatus = { success: false, message: '', tested: false };
+								}}
 							/>
 
 							<SensitiveInput placeholder={$i18n.t('API Key')} bind:value={TTS_OPENAI_API_KEY} />
+
+							<button
+								type="button"
+								class="px-2 py-1 text-xs text-gray-600 hover:text-gray-800 dark:text-gray-400 dark:hover:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-800 rounded transition flex items-center gap-1"
+								on:click={testTTSConnection}
+								disabled={connectionTesting || !TTS_OPENAI_API_BASE_URL}
+								title="Test connection and populate models/voices"
+							>
+								{#if connectionTesting}
+									<svg class="animate-spin size-3" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+										<circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+										<path class="opacity-75" fill="currentColor" d="m4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+									</svg>
+									Test
+								{:else}
+									<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" fill="currentColor" class="size-3">
+										<path d="M8 3a5 5 0 1 0 4.546 2.914.5.5 0 0 1 .908-.417A6 6 0 1 1 8 2z"/>
+										<path d="M8 4.466V.534a.25.25 0 0 1 .41-.192l2.36 1.966c.12.1.12.284 0 .384L8.41 4.658A.25.25 0 0 1 8 4.466"/>
+									</svg>
+									Test
+								{/if}
+							</button>
 						</div>
+
+						{#if connectionStatus.tested}
+							<div class="mt-2 p-2 rounded-lg text-sm {connectionStatus.success ? 'bg-green-50 text-green-700 dark:bg-green-900/20 dark:text-green-300' : 'bg-red-50 text-red-700 dark:bg-red-900/20 dark:text-red-300'}">
+								{connectionStatus.message}
+							</div>
+						{/if}
 					</div>
 				{:else if TTS_ENGINE === 'elevenlabs'}
 					<div>
@@ -577,18 +724,15 @@
 								<div class=" mb-1.5 text-xs font-medium">{$i18n.t('TTS Voice')}</div>
 								<div class="flex w-full">
 									<div class="flex-1">
-										<input
-											list="voice-list"
+										<select
 											class="w-full rounded-lg py-2 px-4 text-sm bg-gray-50 dark:text-gray-300 dark:bg-gray-850 outline-hidden"
 											bind:value={TTS_VOICE}
-											placeholder="Select a voice"
-										/>
-
-										<datalist id="voice-list">
+										>
+											<option value="">{$i18n.t('Select a voice')}</option>
 											{#each voices as voice}
-												<option value={voice.id}>{voice.name}</option>
+												<option value={voice.id} class="bg-gray-50 dark:bg-gray-700">{voice.name}</option>
 											{/each}
-										</datalist>
+										</select>
 									</div>
 								</div>
 							</div>
@@ -596,18 +740,15 @@
 								<div class=" mb-1.5 text-xs font-medium">{$i18n.t('TTS Model')}</div>
 								<div class="flex w-full">
 									<div class="flex-1">
-										<input
-											list="tts-model-list"
+										<select
 											class="w-full rounded-lg py-2 px-4 text-sm bg-gray-50 dark:text-gray-300 dark:bg-gray-850 outline-hidden"
 											bind:value={TTS_MODEL}
-											placeholder="Select a model"
-										/>
-
-										<datalist id="tts-model-list">
+										>
+											<option value="">{$i18n.t('Select a model')}</option>
 											{#each models as model}
-												<option value={model.id} class="bg-gray-50 dark:bg-gray-700" />
+												<option value={model.id} class="bg-gray-50 dark:bg-gray-700">{model.name || model.id}</option>
 											{/each}
-										</datalist>
+										</select>
 									</div>
 								</div>
 							</div>
