@@ -21,7 +21,7 @@
 	import Code from '$lib/components/icons/Code.svelte';
 	import UserGroup from '$lib/components/icons/UserGroup.svelte';
 	import SignOut from '$lib/components/icons/SignOut.svelte';
-	import ShareIcon from '$lib/components/icons/Share.svelte';
+	import ArrowUpTray from '$lib/components/icons/ArrowUpTray.svelte';
 
 	const i18n = getContext('i18n');
 
@@ -123,7 +123,7 @@
 					}}
 				>
 					<div class=" self-center mr-3">
-						<ShareIcon className="size-5" strokeWidth="1.5" />
+						<ArrowUpTray className="size-5" strokeWidth="1.5" />
 					</div>
 					<div class=" self-center truncate">{$i18n.t('Shared Chats')}</div>
 				</DropdownMenu.Item>
