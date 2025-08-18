@@ -555,6 +555,19 @@
 									/>
 								</div>
 							</div>
+						{:else if webConfig.WEB_SEARCH_ENGINE === 'ddgs' || webConfig.WEB_SEARCH_ENGINE === 'duckduckgo'}
+							<div class="w-full mb-2.5">
+								<div class=" self-center text-xs font-medium mb-1">
+									{$i18n.t('Concurrent Requests')}
+								</div>
+
+								<input
+									class="w-full rounded-lg py-2 px-4 text-sm bg-gray-50 dark:text-gray-300 dark:bg-gray-850 outline-hidden"
+									placeholder={$i18n.t('Concurrent Requests')}
+									bind:value={webConfig.WEB_SEARCH_CONCURRENT_REQUESTS}
+									required
+								/>
+							</div>
 						{:else if webConfig.WEB_SEARCH_ENGINE === 'external'}
 							<div class="mb-2.5 flex w-full flex-col">
 								<div>
@@ -601,19 +614,6 @@
 										class="w-full rounded-lg py-2 px-4 text-sm bg-gray-50 dark:text-gray-300 dark:bg-gray-850 outline-hidden"
 										placeholder={$i18n.t('Search Result Count')}
 										bind:value={webConfig.WEB_SEARCH_RESULT_COUNT}
-										required
-									/>
-								</div>
-
-								<div class="w-full">
-									<div class=" self-center text-xs font-medium mb-1">
-										{$i18n.t('Concurrent Requests')}
-									</div>
-
-									<input
-										class="w-full rounded-lg py-2 px-4 text-sm bg-gray-50 dark:text-gray-300 dark:bg-gray-850 outline-hidden"
-										placeholder={$i18n.t('Concurrent Requests')}
-										bind:value={webConfig.WEB_SEARCH_CONCURRENT_REQUESTS}
 										required
 									/>
 								</div>
@@ -852,6 +852,19 @@
 							</div>
 						</div>
 					{/if}
+
+					<div class="mb-2.5 w-full">
+						<div class=" self-center text-xs font-medium mb-1">
+							{$i18n.t('Concurrent Requests')}
+						</div>
+
+						<input
+							class="w-full rounded-lg py-2 px-4 text-sm bg-gray-50 dark:text-gray-300 dark:bg-gray-850 outline-hidden"
+							placeholder={$i18n.t('Concurrent Requests')}
+							bind:value={webConfig.WEB_LOADER_CONCURRENT_REQUESTS}
+							required
+						/>
+					</div>
 
 					<div class="  mb-2.5 flex w-full justify-between">
 						<div class=" self-center text-xs font-medium">

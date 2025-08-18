@@ -2616,6 +2616,14 @@ WEB_LOADER_ENGINE = PersistentConfig(
     os.environ.get("WEB_LOADER_ENGINE", ""),
 )
 
+
+WEB_LOADER_CONCURRENT_REQUESTS = PersistentConfig(
+    "WEB_LOADER_CONCURRENT_REQUESTS",
+    "rag.web.loader.concurrent_requests",
+    int(os.getenv("WEB_LOADER_CONCURRENT_REQUESTS", "10")),
+)
+
+
 ENABLE_WEB_LOADER_SSL_VERIFICATION = PersistentConfig(
     "ENABLE_WEB_LOADER_SSL_VERIFICATION",
     "rag.web.loader.ssl_verification",
