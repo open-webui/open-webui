@@ -477,7 +477,10 @@ async def verify_shared_chat_password(
     if not pwd_context.verify(form_data.password, chat.password):
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
-            detail=ERROR_MESSAGES.INVALID_PASSWORD,
+            detail={
+                "code": "INVALID_PASSWORD",
+                "message": ERROR_MESSAGES.INVALID_PASSWORD,
+            },
         )
 
     # Password is correct, create a short-lived token
@@ -551,7 +554,10 @@ async def get_shared_chat_by_id(
     if not chat_unrestricted.is_public and user is None:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Login required to access this shared chat.",
+            detail={
+                "code": "LOGIN_REQUIRED",
+                "message": "Login required to access this shared chat.",
+            },
         )
 
     # If the chat is password-protected
@@ -561,13 +567,18 @@ async def get_shared_chat_by_id(
 
         if not token:
             raise HTTPException(
-                status_code=status.HTTP_401_UNAUTHORIZED, detail="password_required"
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail={
+                    "code": "PASSWORD_REQUIRED",
+                    "message": "Password required to access this shared chat.",
+                },
             )
 
         data = decode_token(token)
         if not data or data.get("sub") != f"shared-chat-{chat_unrestricted.id}":
             raise HTTPException(
-                status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid token"
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail={"code": "INVALID_TOKEN", "message": "Invalid token."},
             )
 
         # Check if the password has been updated since the token was issued
@@ -577,7 +588,11 @@ async def get_shared_chat_by_id(
         ):
             response.delete_cookie(key=token_name)
             raise HTTPException(
-                status_code=status.HTTP_401_UNAUTHORIZED, detail="password_required"
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail={
+                    "code": "PASSWORD_REQUIRED",
+                    "message": "Password required to access this shared chat.",
+                },
             )
         # If token is valid, proceed to get the chat
 

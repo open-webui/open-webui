@@ -73,7 +73,10 @@
 
 	const verifyPassword = async () => {
 		const res = await verifySharedChatPassword($chatId, password).catch((error) => {
-			toast.error(error?.detail ?? $i18n.t('The password provided is incorrect. Please check for typos and try again.'));
+			toast.error(
+				error.detail?.message ??
+					$i18n.t('The password provided is incorrect. Please check for typos and try again.')
+			);
 			return null;
 		});
 
@@ -129,7 +132,7 @@
 			} else if (typeof err.detail === 'object' && err.detail !== null) {
 				error = err.detail;
 			} else {
-				error = { code: 'UNKNOWN_ERROR', message: err.detail };
+				error = { code: 'UNKNOWN_ERROR', message: err.detail ?? 'Something went wrong' };
 			}
 			return null;
 		});

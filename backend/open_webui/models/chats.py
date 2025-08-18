@@ -1409,5 +1409,18 @@ class ChatTable:
             db.rollback()
             return 0
 
+    def revoke_public_chats_by_user_id(self, user_id: str) -> bool:
+        try:
+            with get_db() as db:
+                db.query(Chat).filter_by(user_id=user_id, is_public=True).update(
+                    {"is_public": False}
+                )
+                db.commit()
+                return True
+        except Exception as e:
+            log.error(f"Error revoking public chats for user {user_id}: {e}")
+            db.rollback()
+            return False
+
 
 Chats = ChatTable()
