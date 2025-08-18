@@ -2196,6 +2196,42 @@
 						shareEnabled={!!history.currentId}
 						{initNewChat}
 						showBanners={!showCommands}
+						onSaveTempChat={async () => {
+							try {
+								if (!history?.currentId || !Object.keys(history.messages).length) {
+									toast.error($i18n.t('No conversation to save'));
+									return;
+								}
+								const messages = createMessagesList(history, history.currentId);
+								const title =
+									messages.find((m) => m.role === 'user')?.content ?? $i18n.t('New Chat');
+
+								const savedChat = await createNewChat(
+									localStorage.token,
+									{
+										id: uuidv4(),
+										title: title.length > 50 ? `${title.slice(0, 50)}...` : title,
+										models: selectedModels,
+										history: history,
+										messages: messages,
+										timestamp: Date.now()
+									},
+									null
+								);
+
+								if (savedChat) {
+									temporaryChatEnabled.set(false);
+									chatId.set(savedChat.id);
+									chats.set(await getChatList(localStorage.token, $currentChatPage));
+
+									await goto(`/c/${savedChat.id}`);
+									toast.success($i18n.t('Conversation saved successfully'));
+								}
+							} catch (error) {
+								console.error('Error saving conversation:', error);
+								toast.error($i18n.t('Failed to save conversation'));
+							}
+						}}
 					/>
 
 					<div class="flex flex-col flex-auto z-10 w-full @container overflow-auto">
