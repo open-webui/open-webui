@@ -1,5 +1,6 @@
 import json
 import logging
+import threading
 import time
 import uuid
 from typing import Optional
@@ -25,15 +26,6 @@ from sqlalchemy import (
 from sqlalchemy.sql import exists
 from sqlalchemy.sql.expression import bindparam
 
-# Import JSONB for PostgreSQL support - gracefully handle absence
-try:
-    from sqlalchemy.dialects.postgresql import JSONB
-
-    HAS_JSONB = True
-except ImportError:
-    JSONB = None
-    HAS_JSONB = False
-
 # Constants for database column types
 COLUMN_CHAT = "chat"
 COLUMN_META = "meta"
@@ -46,14 +38,42 @@ log = logging.getLogger(__name__)
 log.setLevel(SRC_LOG_LEVELS["MODELS"])
 
 
+class JsonColumnFactory:
+    """
+    Factory class for creating appropriate JSON column types based on database capabilities.
+    This ensures compatibility across different database systems and existing installations.
+    """
+    
+    @staticmethod
+    def get_column_type(column_name: str = None):
+        """
+        Returns the appropriate column type for JSON data.
+        
+        This factory method always returns JSON type. The actual column type
+        (JSON vs JSONB) is determined and set by database migrations based on
+        the database capabilities.
+        
+        Args:
+            column_name: Name of the column (chat or meta)
+            
+        Returns:
+            SQLAlchemy column type (always JSON for model definition)
+        """
+        # Always return JSON for model definition
+        # Migrations handle the actual column type conversion
+        # This ensures consistency and avoids import/runtime detection issues
+        return JSON
+
+
 class Chat(Base):
     __tablename__ = "chat"
 
     id = Column(String, primary_key=True)
     user_id = Column(String)
     title = Column(Text)
-    # Use JSONB for PostgreSQL, JSON for others
-    chat = Column(JSONB if HAS_JSONB else JSON)
+    
+    # Use factory for column type - migrations will handle actual type conversion
+    chat = Column(JsonColumnFactory.get_column_type(COLUMN_CHAT))
 
     created_at = Column(BigInteger)
     updated_at = Column(BigInteger)
@@ -62,8 +82,8 @@ class Chat(Base):
     archived = Column(Boolean, default=False)
     pinned = Column(Boolean, default=False, nullable=True)
 
-    # Use JSONB for PostgreSQL, JSON for others
-    meta = Column(JSONB if HAS_JSONB else JSON, server_default="{}")
+    # Use factory for column type - migrations will handle actual type conversion
+    meta = Column(JsonColumnFactory.get_column_type(COLUMN_META), server_default="{}")
     folder_id = Column(Text, nullable=True)
 
 
@@ -135,15 +155,15 @@ class ChatTitleIdResponse(BaseModel):
 
 class ChatTable:
     def __init__(self):
-        # Cache for JSONB column checks to avoid repeated database queries
-        self._jsonb_cache = {}
-        # Cache for database capabilities to avoid repeated checks
-        self._db_capabilities = {}
+        # Thread-safe caches with locks
+        self._capabilities_cache = {}
+        self._capabilities_lock = threading.Lock()
 
     def _get_db_capabilities(self, db) -> dict:
         """
         Get database capabilities including JSONB support for columns.
         Results are cached per database connection to avoid repeated queries.
+        Thread-safe implementation.
 
         Args:
             db: Database session
@@ -151,61 +171,80 @@ class ChatTable:
         Returns:
             dict: Database capabilities with column types
         """
-        if not HAS_JSONB or db.bind.dialect.name != "postgresql":
-            return {"supports_jsonb": False, "columns": {}}
+        # Check if PostgreSQL
+        if db.bind.dialect.name != "postgresql":
+            return {
+                "supports_jsonb": False,
+                "columns": {
+                    COLUMN_CHAT: "json",
+                    COLUMN_META: "json"
+                }
+            }
 
-        # Create a more robust cache key using connection details
+        # Create a cache key using connection details
         cache_key = f"{db.bind.dialect.name}_{hash(str(db.bind.url))}"
 
-        if cache_key in self._db_capabilities:
-            return self._db_capabilities[cache_key]
+        # Thread-safe cache access
+        with self._capabilities_lock:
+            if cache_key in self._capabilities_cache:
+                return self._capabilities_cache[cache_key]
 
         try:
-            # Query all relevant columns at once for efficiency
+            # Query only chat table columns for efficiency
             result = db.execute(
                 text(
                     """
                     SELECT column_name, data_type 
                     FROM information_schema.columns 
                     WHERE table_name = 'chat' 
-                    AND column_name IN ('chat', 'meta')
-                """
-                )
+                    AND column_name IN (:chat_col, :meta_col)
+                    """
+                ).params(chat_col=COLUMN_CHAT, meta_col=COLUMN_META)
             )
 
             columns = {}
             for row in result:
                 columns[row[0]] = row[1].lower()
 
-            capabilities = {"supports_jsonb": True, "columns": columns}
+            # Default to json if columns don't exist yet (new installation)
+            if COLUMN_CHAT not in columns:
+                columns[COLUMN_CHAT] = "json"
+            if COLUMN_META not in columns:
+                columns[COLUMN_META] = "json"
 
-            # Cache the result
-            self._db_capabilities[cache_key] = capabilities
+            capabilities = {
+                "supports_jsonb": True,  # PostgreSQL always supports JSONB
+                "columns": columns,
+                "chat_is_jsonb": columns.get(COLUMN_CHAT) == "jsonb",
+                "meta_is_jsonb": columns.get(COLUMN_META) == "jsonb"
+            }
+
+            # Thread-safe cache update
+            with self._capabilities_lock:
+                self._capabilities_cache[cache_key] = capabilities
+            
             log.debug(f"Database capabilities cached: {capabilities}")
             return capabilities
 
         except Exception as e:
             log.warning(f"Error checking database capabilities: {e}")
-            fallback = {"supports_jsonb": False, "columns": {}}
-            self._db_capabilities[cache_key] = fallback
+            # Fallback to JSON for safety
+            fallback = {
+                "supports_jsonb": False,
+                "columns": {
+                    COLUMN_CHAT: "json",
+                    COLUMN_META: "json"
+                },
+                "chat_is_jsonb": False,
+                "meta_is_jsonb": False
+            }
+            
+            with self._capabilities_lock:
+                self._capabilities_cache[cache_key] = fallback
+            
             return fallback
 
-    def _is_jsonb_column(self, db, column_name: str) -> bool:
-        """
-        Check if a column is using JSONB type.
 
-        Args:
-            db: Database session
-            column_name: Name of the column to check
-
-        Returns:
-            bool: True if column is JSONB, False otherwise
-        """
-        capabilities = self._get_db_capabilities(db)
-        if not capabilities["supports_jsonb"]:
-            return False
-
-        return capabilities["columns"].get(column_name) == "jsonb"
 
     def _get_json_functions(self, db) -> dict:
         """
@@ -216,7 +255,7 @@ class ChatTable:
         """
         capabilities = self._get_db_capabilities(db)
 
-        if not capabilities["supports_jsonb"]:
+        if db.bind.dialect.name != "postgresql":
             return {
                 "array_elements": "json_array_elements",
                 "array_elements_text": "json_array_elements_text",
@@ -224,21 +263,18 @@ class ChatTable:
             }
 
         # Determine functions based on actual column types
-        chat_is_jsonb = capabilities["columns"].get(COLUMN_CHAT) == "jsonb"
-        meta_is_jsonb = capabilities["columns"].get(COLUMN_META) == "jsonb"
-
         return {
             "chat_array_elements": (
-                "jsonb_array_elements" if chat_is_jsonb else "json_array_elements"
+                "jsonb_array_elements" if capabilities.get("chat_is_jsonb") else "json_array_elements"
             ),
             "meta_array_elements_text": (
                 "jsonb_array_elements_text"
-                if meta_is_jsonb
+                if capabilities.get("meta_is_jsonb")
                 else "json_array_elements_text"
             ),
-            "meta_supports_containment": meta_is_jsonb,
-            "chat_is_jsonb": chat_is_jsonb,
-            "meta_is_jsonb": meta_is_jsonb,
+            "meta_supports_containment": capabilities.get("meta_is_jsonb", False),
+            "chat_is_jsonb": capabilities.get("chat_is_jsonb", False),
+            "meta_is_jsonb": capabilities.get("meta_is_jsonb", False),
         }
 
     def _build_tag_query(self, db, tag_ids: list[str], operator: str = "AND") -> text:
@@ -282,88 +318,7 @@ class ChatTable:
 
             return and_(*conditions) if operator == "AND" else or_(*conditions)
 
-    def create_optimized_indexes(self) -> dict:
-        """
-        Create optimized indexes based on actual database capabilities.
 
-        Returns:
-            dict: Results of index creation with details
-        """
-        result = {
-            "success": False,
-            "indexes_created": [],
-            "indexes_skipped": [],
-            "errors": [],
-        }
-
-        try:
-            with get_db() as db:
-                capabilities = self._get_db_capabilities(db)
-
-                if not capabilities["supports_jsonb"]:
-                    result["indexes_skipped"].append(
-                        "Non-PostgreSQL database - GIN indexes not supported"
-                    )
-                    log.info(
-                        "Skipping index creation: GIN indexes only supported on PostgreSQL"
-                    )
-                    return result
-
-                functions = self._get_json_functions(db)
-
-                # Create indexes based on actual column types
-                index_definitions = []
-
-                if functions.get("meta_is_jsonb"):
-                    index_definitions.extend(
-                        [
-                            (
-                                "idx_chat_meta_tags_gin",
-                                "CREATE INDEX IF NOT EXISTS idx_chat_meta_tags_gin ON chat USING GIN ((meta->'tags'))",
-                            ),
-                            (
-                                "idx_chat_meta_gin",
-                                "CREATE INDEX IF NOT EXISTS idx_chat_meta_gin ON chat USING GIN (meta)",
-                            ),
-                        ]
-                    )
-
-                if functions.get("chat_is_jsonb"):
-                    index_definitions.append(
-                        (
-                            "idx_chat_messages_gin",
-                            "CREATE INDEX IF NOT EXISTS idx_chat_messages_gin ON chat USING GIN ((chat->'history'->'messages'))",
-                        )
-                    )
-
-                # Create indexes
-                for index_name, sql in index_definitions:
-                    try:
-                        db.execute(text(sql))
-                        result["indexes_created"].append(index_name)
-                        log.debug(f"Created index: {index_name}")
-                    except Exception as e:
-                        error_msg = f"Failed to create {index_name}: {e}"
-                        result["errors"].append(error_msg)
-                        log.warning(error_msg)
-
-                db.commit()
-                result["success"] = len(result["indexes_created"]) > 0
-
-                if result["indexes_created"]:
-                    log.info(
-                        f"Successfully created GIN indexes: {', '.join(result['indexes_created'])}"
-                    )
-                elif not result["errors"]:
-                    log.info("No JSONB columns found - skipped GIN index creation")
-
-                return result
-
-        except Exception as e:
-            error_msg = f"Error during index creation: {e}"
-            result["errors"].append(error_msg)
-            log.error(error_msg)
-            return result
 
     def insert_new_chat(self, user_id: str, form_data: ChatForm) -> Optional[ChatModel]:
         with get_db() as db:
