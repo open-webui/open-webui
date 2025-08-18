@@ -1229,7 +1229,7 @@ def validate_cors_origin(origin):
 # To test CORS_ALLOW_ORIGIN locally, you can set something like
 # CORS_ALLOW_ORIGIN=http://localhost:5173;http://localhost:8080
 # in your .env file depending on your frontend port, 5173 in this case.
-CORS_ALLOW_ORIGIN = os.environ.get("CORS_ALLOW_ORIGIN", "https://cepm.amd.com:3443;https://dev.cepm.amd.com:3443/;http://localhost:5173").split(";")
+CORS_ALLOW_ORIGIN = os.environ.get("CORS_ALLOW_ORIGIN", "*").split(";")
 
 if "*" in CORS_ALLOW_ORIGIN:
     log.warning(
