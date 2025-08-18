@@ -79,7 +79,7 @@
 	"Allow Chat Params": "允许设置模型高级参数",
 	"Allow Chat Share": "允许分享对话",
 	"Allow Chat System Prompt": "允许使用对话系统提示词",
-	"Allow Chat Valves": "允许修改配置项（Valves）",
+	"Allow Chat Valves": "允许修改工具和函数的配置项（Valves）",
 	"Allow File Upload": "允许上传文件",
 	"Allow Multiple Models in Chat": "允许同时与多个模型对话",
 	"Allow non-local voices": "允许调用非本地音色",
