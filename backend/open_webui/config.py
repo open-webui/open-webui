@@ -64,12 +64,7 @@ def run_migrations():
         log.exception(f"Error running migrations: {e}")
 
 
-from open_webui.env import DISABLE_MIGRATIONS
-
-if not DISABLE_MIGRATIONS:
-    run_migrations()
-else:
-    log.info("Alembic migrations disabled (DISABLE_MIGRATIONS=True)")
+run_migrations()
 
 
 class Config(Base):
