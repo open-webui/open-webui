@@ -96,7 +96,7 @@ def has_permission(
     user_groups = Groups.get_groups_by_member_id(user_id)
 
     for group in user_groups:
-        group_permissions = group.permissions
+        group_permissions = group.permissions or {}
         if get_permission(group_permissions, permission_hierarchy):
             return True
 
