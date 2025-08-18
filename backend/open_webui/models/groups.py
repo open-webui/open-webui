@@ -8,6 +8,7 @@ from open_webui.internal.db import Base, get_db
 from open_webui.env import SRC_LOG_LEVELS
 
 from open_webui.models.files import FileMetadataResponse
+from open_webui.models.chats import Chats
 
 
 from pydantic import BaseModel, ConfigDict
@@ -161,6 +162,14 @@ class GroupTable:
     ) -> Optional[GroupModel]:
         try:
             with get_db() as db:
+                # Get the existing group to compare permissions later
+                existing_group = db.query(Group).filter_by(id=id).first()
+                if not existing_group:
+                    return None
+
+                existing_permissions = existing_group.permissions or {}
+
+                # Update the group
                 db.query(Group).filter_by(id=id).update(
                     {
                         **form_data.model_dump(exclude_none=True),
@@ -168,6 +177,16 @@ class GroupTable:
                     }
                 )
                 db.commit()
+
+                # Check if public chat sharing was disabled
+                new_permissions = form_data.permissions or {}
+                if existing_permissions.get("sharing", {}).get(
+                    "public_chat", False
+                ) and not new_permissions.get("sharing", {}).get("public_chat", False):
+                    user_ids = existing_group.user_ids or []
+                    for user_id in user_ids:
+                        Chats.revoke_public_chats_by_user_id(user_id)
+
                 return self.get_group_by_id(id=id)
         except Exception as e:
             log.exception(e)

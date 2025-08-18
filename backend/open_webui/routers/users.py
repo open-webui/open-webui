@@ -197,7 +197,19 @@ async def get_default_user_permissions(request: Request, user=Depends(get_admin_
 async def update_default_user_permissions(
     request: Request, form_data: UserPermissions, user=Depends(get_admin_user)
 ):
+    old_permissions = request.app.state.config.USER_PERMISSIONS
     request.app.state.config.USER_PERMISSIONS = form_data.model_dump()
+
+    if old_permissions.get("sharing", {}).get(
+        "public_chat", False
+    ) and not request.app.state.config.USER_PERMISSIONS.get("sharing", {}).get(
+        "public_chat", False
+    ):
+        users = Users.get_users()
+        for user in users.users:
+            if user.role == "user":
+                Chats.revoke_public_chats_by_user_id(user.id)
+
     return request.app.state.config.USER_PERMISSIONS
 
 
