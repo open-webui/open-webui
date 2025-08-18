@@ -264,11 +264,48 @@ else:
 
 DATABASE_URL = os.environ.get("DATABASE_URL", f"sqlite:///{DATA_DIR}/webui.db")
 
+# MS SQL Server specific environment variables for backend database
+BACKEND_MSSQL_SERVER = os.environ.get("BACKEND_MSSQL_SERVER", "")
+BACKEND_MSSQL_DATABASE = os.environ.get("BACKEND_MSSQL_DATABASE", "")
+BACKEND_MSSQL_USERNAME = os.environ.get("BACKEND_MSSQL_USERNAME", "")
+BACKEND_MSSQL_PASSWORD = os.environ.get("BACKEND_MSSQL_PASSWORD", "")
+BACKEND_MSSQL_DRIVER = os.environ.get("BACKEND_MSSQL_DRIVER", "ODBC Driver 17 for SQL Server")
+BACKEND_MSSQL_ENCRYPT = os.environ.get("BACKEND_MSSQL_ENCRYPT", "yes")
+BACKEND_MSSQL_TRUST_CERT = os.environ.get("BACKEND_MSSQL_TRUST_CERT", "no")
+
+# Check if MS SQL Server is configured
+if BACKEND_MSSQL_SERVER and BACKEND_MSSQL_DATABASE and BACKEND_MSSQL_USERNAME:
+    # Construct MS SQL Server connection string
+    DATABASE_URL = (
+        f"mssql+pyodbc://{BACKEND_MSSQL_USERNAME}:{BACKEND_MSSQL_PASSWORD}@"
+        f"{BACKEND_MSSQL_SERVER}/{BACKEND_MSSQL_DATABASE}?"
+        f"driver={BACKEND_MSSQL_DRIVER.replace(' ', '+')}&"
+        f"Encrypt={BACKEND_MSSQL_ENCRYPT}&"
+        f"TrustServerCertificate={BACKEND_MSSQL_TRUST_CERT}"
+    )
+    log.info("Using MS SQL Server database backend")
+    log.info(f"MS SQL Server: {BACKEND_MSSQL_SERVER}")
+    log.info(f"MS SQL Database: {BACKEND_MSSQL_DATABASE}")
+    print(f"[ENV] Configured MS SQL Server backend: {BACKEND_MSSQL_SERVER}/{BACKEND_MSSQL_DATABASE}")
+else:
+    log.debug(f"MS SQL Server not configured - Server: {BACKEND_MSSQL_SERVER}, Database: {BACKEND_MSSQL_DATABASE}, Username: {BACKEND_MSSQL_USERNAME}")
+    if not BACKEND_MSSQL_SERVER:
+        print("[ENV] BACKEND_MSSQL_SERVER not set")
+    if not BACKEND_MSSQL_DATABASE:
+        print("[ENV] BACKEND_MSSQL_DATABASE not set")
+    if not BACKEND_MSSQL_USERNAME:
+        print("[ENV] BACKEND_MSSQL_USERNAME not set")
+
 # Replace the postgres:// with postgresql://
 if "postgres://" in DATABASE_URL:
     DATABASE_URL = DATABASE_URL.replace("postgres://", "postgresql://")
 
 DATABASE_SCHEMA = os.environ.get("DATABASE_SCHEMA", None)
+
+# Disable migrations when using MS SQL Server (useful when importing pre-existing database)
+DISABLE_MIGRATIONS = os.environ.get("DISABLE_MIGRATIONS", "False").lower() == "true"
+if "mssql" in DATABASE_URL:
+    DISABLE_MIGRATIONS = os.environ.get("DISABLE_MIGRATIONS", "True").lower() == "true"
 
 DATABASE_POOL_SIZE = os.environ.get("DATABASE_POOL_SIZE", 0)
 

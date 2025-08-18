@@ -118,9 +118,7 @@ class GroupTable:
             return [
                 GroupModel.model_validate(group)
                 for group in db.query(Group)
-                .filter(
-                    func.json_array_length(Group.user_ids) > 0
-                )  # Ensure array exists
+                .filter(func.len(Group.user_ids) > 2)  # Ensure array exists
                 .filter(
                     Group.user_ids.cast(String).like(f'%"{user_id}"%')
                 )  # String-based check
@@ -136,7 +134,7 @@ class GroupTable:
         except Exception:
             return None
 
-    def get_group_user_ids_by_id(self, id: str) -> Optional[str]:
+    def get_group_user_ids_by_id(self, id: str) -> Optional[list[str]]:
         group = self.get_group_by_id(id)
         if group:
             return group.user_ids
