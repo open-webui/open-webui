@@ -904,7 +904,9 @@ export const shareChatById = async (
 	display_username: boolean = true,
 	allow_cloning: boolean = true,
 	password: string | null = null,
-	current_password: string | null = null
+	current_password: string | null = null,
+	share_show_qr_code: boolean = false,
+	share_use_gradient: boolean = false
 ) => {
 	let error = null;
 
@@ -923,7 +925,9 @@ export const shareChatById = async (
 			display_username: display_username,
 			allow_cloning: allow_cloning,
 			password: password,
-			current_password: current_password
+			current_password: current_password,
+			share_show_qr_code: share_show_qr_code,
+			share_use_gradient: share_use_gradient
 		})
 	})
 		.then(async (res) => {

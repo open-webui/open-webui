@@ -1002,6 +1002,8 @@ class ShareChatForm(BaseModel):
     allow_cloning: bool = True
     password: Optional[str] = None
     current_password: Optional[str] = None
+    share_show_qr_code: bool = False
+    share_use_gradient: bool = False
 
 
 @router.post("/{id}/share", response_model=Optional[ChatResponse])
@@ -1067,6 +1069,8 @@ async def share_chat_by_id(
             display_username=form_data.display_username,
             allow_cloning=form_data.allow_cloning,
             password=form_data.password,
+            share_show_qr_code=form_data.share_show_qr_code,
+            share_use_gradient=form_data.share_use_gradient,
         )
 
         if not result:

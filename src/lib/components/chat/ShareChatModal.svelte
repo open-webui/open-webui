@@ -369,6 +369,12 @@
 		if (password !== initial_password) {
 			return true;
 		}
+		if (showQrCode !== (chat.share_show_qr_code ?? !!chat.share_id)) {
+			return true;
+		}
+		if (useGradient !== (chat.share_use_gradient ?? false)) {
+			return true;
+		}
 		return false;
 	};
 
@@ -434,7 +440,9 @@
 				display_username,
 				allow_cloning,
 				password,
-				current_password
+				current_password,
+				showQrCode,
+				useGradient
 			);
 
 			// Update all state directly and atomically from the single API response.
@@ -513,7 +521,9 @@
 		return (
 			chat.id !== _chat.id ||
 			chat.share_id !== _chat.share_id ||
-			chat.expire_on_views !== _chat.expire_on_views
+			chat.expire_on_views !== _chat.expire_on_views ||
+			chat.share_show_qr_code !== _chat.share_show_qr_code ||
+			chat.share_use_gradient !== _chat.share_use_gradient
 		);
 	};
 
@@ -563,8 +573,8 @@
 					initialCustomExpirationDate = customExpirationDate;
 					initialExpireOnViewsCount = expireOnViewsCount;
 
-					showQrCode = !!chat.share_id;
-					useGradient = false;
+					showQrCode = _chat.share_show_qr_code ?? !!_chat.share_id;
+					useGradient = _chat.share_use_gradient ?? false;
 
 					if (intervalId) clearInterval(intervalId);
 					if (chat.expires_at) {

@@ -54,6 +54,9 @@ class Chat(Base):
     password = Column(String, nullable=True)
     password_updated_at = Column(BigInteger, nullable=True)
 
+    share_show_qr_code = Column(Boolean, default=False, nullable=False)
+    share_use_gradient = Column(Boolean, default=False, nullable=False)
+
 
 class ChatModel(BaseModel):
     model_config = ConfigDict(from_attributes=True)
@@ -82,6 +85,9 @@ class ChatModel(BaseModel):
     clones: int = 0
     password: Optional[str] = None
     password_updated_at: Optional[int] = None
+
+    share_show_qr_code: bool = False
+    share_use_gradient: bool = False
 
 
 ####################
@@ -132,6 +138,8 @@ class ChatResponse(BaseModel):
     clones: int
     has_password: bool = False
     is_new_share: Optional[bool] = None
+    share_show_qr_code: bool
+    share_use_gradient: bool
 
 
 class ChatTitleIdResponse(BaseModel):
@@ -147,6 +155,8 @@ class ChatTitleIdResponse(BaseModel):
     views: Optional[int] = 0
     clones: Optional[int] = 0
     allow_cloning: Optional[bool] = True
+    share_show_qr_code: Optional[bool] = None
+    share_use_gradient: Optional[bool] = None
 
 
 class ChatTable:
@@ -334,6 +344,8 @@ class ChatTable:
         display_username: bool = True,
         allow_cloning: bool = True,
         password: Optional[str] = None,
+        share_show_qr_code: bool = False,
+        share_use_gradient: bool = False,
     ) -> Optional[tuple[ChatModel, bool]]:
         with get_db() as db:
             chat = db.get(Chat, chat_id)
@@ -350,6 +362,8 @@ class ChatTable:
             chat.is_public = is_public
             chat.display_username = display_username
             chat.allow_cloning = allow_cloning
+            chat.share_show_qr_code = share_show_qr_code
+            chat.share_use_gradient = share_use_gradient
             chat.revoked_at = None
             chat.updated_at = int(time.time())
 
@@ -668,6 +682,8 @@ class ChatTable:
                 Chat.clones,
                 Chat.revoked_at,
                 Chat.allow_cloning,
+                Chat.share_show_qr_code,
+                Chat.share_use_gradient,
             )
 
             if skip:
@@ -696,6 +712,8 @@ class ChatTable:
                             "clones": chat[9],
                             "revoked_at": chat[10],
                             "allow_cloning": chat[11],
+                            "share_show_qr_code": chat[12],
+                            "share_use_gradient": chat[13],
                         }
                     )
                     for chat in all_chats
