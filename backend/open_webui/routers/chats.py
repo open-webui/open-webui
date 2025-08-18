@@ -97,7 +97,7 @@ async def get_user_chat_list_by_user_id(
 async def create_new_chat(form_data: ChatForm, user=Depends(get_verified_user)):
     try:
         chat = Chats.insert_new_chat(user.id, form_data)
-        return ChatResponse(**chat.model_dump())
+        log.info(f"Inserted chat: {chat}")
     except Exception as e:
         log.exception(e)
         raise HTTPException(
@@ -298,6 +298,40 @@ async def get_shared_chat_by_id(share_id: str, user=Depends(get_verified_user)):
         chat = Chats.get_chat_by_id(share_id)
 
     if chat:
+        if user.role == "admin":
+            try:
+                from open_webui.models.models import Models  # lazy import to avoid cycles
+
+                # Infer model info
+                model_id = None
+                base_model_id = None
+                messages = Chats.get_messages_by_chat_id(chat.id)
+                if messages:
+                    current_id = chat.chat.get("history", {}).get("currentId")
+                    if current_id and current_id in messages:
+                        model_id = messages[current_id].get("model")
+                    else:
+                        try:
+                            model_id = list(messages.values())[-1].get("model")
+                        except Exception:
+                            pass
+
+                model_name = None
+                base_model_name = None
+                if model_id:
+                    m = Models.get_model_by_id(model_id)
+                    if m:
+                        model_name = m.name
+                        base_model_id = m.base_model_id
+                        if base_model_id:
+                            bm = Models.get_model_by_id(base_model_id)
+                            base_model_name = bm.name if bm else None
+
+                log.info(
+                    f"[ADMIN] Chat meta for chat_id={chat.id}, owner={chat.user_id}: model_id={model_id}, model_name={model_name}, base_model_id={base_model_id}, base_model_name={base_model_name}, meta={json.dumps(chat.meta, ensure_ascii=False)}"
+                )
+            except Exception as e:
+                log.exception(f"Failed to log chat meta/model info for chat_id={chat.id}: {e}")
         return ChatResponse(**chat.model_dump())
 
     else:
@@ -364,11 +398,78 @@ async def update_chat_by_id(
     if chat:
         updated_chat = {**chat.chat, **form_data.chat}
         chat = Chats.update_chat_by_id(id, updated_chat)
+
+        # ### update metadata for chat filtering ###
+        # user_id = chat.user_id
+        # total_time_taken = chat.updated_at - chat.created_at  # This is in seconds
+        # messages = chat.chat.get("messages", {})
+        # num_of_messages = len(messages) if messages else 0
+        
+        # model_name = None
+        # base_model_name = None
+        # if chat.chat.get("models") and len(chat.chat["models"]) > 0:
+        #     model_id = chat.chat["models"][0]
+        #     from open_webui.models.models import Models  # lazy import to avoid cycles
+        #     if model_id:
+        #         m = Models.get_model_by_id(model_id)
+        #         if m:
+        #             model_name = m.name
+        #             base_model_id = m.base_model_id
+        #             if base_model_id:
+        #                 bm = Models.get_model_by_id(base_model_id)
+        #                 base_model_name = bm.name if bm else None
+        
+        # updated_meta = {
+        #     "user_id": user_id, 
+        #     "total_time_taken": total_time_taken, 
+        #     "num_of_messages": num_of_messages, 
+        #     "model_name": model_name, 
+        #     "base_model_name": base_model_name
+        # }
+        
+        # chat = Chats.update_chat_meta_by_id_and_user_id(id, user_id, updated_meta)
+        # ######
+        
         return ChatResponse(**chat.model_dump())
     else:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail=ERROR_MESSAGES.ACCESS_PROHIBITED,
+        )
+    
+
+############################
+# FilterChatByMeta
+############################
+
+
+class ChatMetaFilterForm(BaseModel):
+    model_name: Optional[str] = None
+    base_model_name: Optional[str] = None
+    min_messages: Optional[int] = None
+    max_messages: Optional[int] = None
+    min_time_taken: Optional[int] = None  # in seconds
+    max_time_taken: Optional[int] = None  # in seconds
+    skip: Optional[int] = 0
+    limit: Optional[int] = 50
+
+
+@router.post("/filter/meta", response_model=list[ChatTitleIdResponse])
+async def filter_chats_by_meta(
+    form_data: ChatMetaFilterForm, user=Depends(get_verified_user)
+):
+    try:
+        chats = Chats.get_chats_by_user_id_and_meta_filter(
+            user.id, form_data.model_dump(), form_data.skip, form_data.limit
+        )
+        return [
+            ChatTitleIdResponse(**chat.model_dump())
+            for chat in chats
+        ]
+    except Exception as e:
+        log.exception(e)
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST, detail=ERROR_MESSAGES.DEFAULT()
         )
 
 
