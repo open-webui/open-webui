@@ -31,8 +31,7 @@
 	import ShareChatModal from '$lib/components/chat/ShareChatModal.svelte';
 	import Pagination from '$lib/components/common/Pagination.svelte';
 	import ConfirmDialog from '$lib/components/common/ConfirmDialog.svelte';
-	import RevokeAllConfirmationModal from '$lib/components/common/RevokeAllConfirmationModal.svelte';
-	import ResetAllStatsConfirmationModal from '$lib/components/common/ResetAllStatsConfirmationModal.svelte';
+	import DangerZoneConfirmationModal from '$lib/components/common/DangerZoneConfirmationModal.svelte';
 	import MenuLines from '$lib/components/icons/MenuLines.svelte';
 	import Tooltip from '$lib/components/common/Tooltip.svelte';
 	import Clipboard from '$lib/components/icons/Clipboard.svelte';
@@ -1108,10 +1107,13 @@
 	}}
 />
 
-<RevokeAllConfirmationModal
+<DangerZoneConfirmationModal
 	bind:show={showConfirmRevokeAll}
 	title="Revoke All Links"
 	message={`Are you sure you want to revoke all ${grandTotal} shared links? This action cannot be undone.`}
+	confirmText="REVOKE"
+	confirmButtonText="Revoke All"
+	confirmButtonClass="bg-red-600 hover:bg-red-700"
 	on:confirm={doRevokeAll}
 />
 
@@ -1138,10 +1140,13 @@
 	}}
 />
 
-<ResetAllStatsConfirmationModal
+<DangerZoneConfirmationModal
 	bind:show={showConfirmResetAllStats}
 	title="Reset All Stats"
 	message={`Are you sure you want to reset the stats for all ${grandTotal} shared chats? This action cannot be undone.`}
+	confirmText="RESET"
+	confirmButtonText="Reset All Stats"
+	confirmButtonClass="bg-yellow-500 hover:bg-yellow-600"
 	on:confirm={doResetAllStats}
 />
 

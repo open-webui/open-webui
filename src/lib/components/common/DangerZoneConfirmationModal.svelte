@@ -5,13 +5,16 @@
 	export let show = false;
 	export let title = '';
 	export let message = '';
+	export let confirmText = '';
+	export let confirmButtonText = '';
+	export let confirmButtonClass = '';
 
-	let confirmText = '';
+	let enteredText = '';
 
 	const dispatch = createEventDispatcher();
 
 	const onConfirm = () => {
-		if (confirmText === 'REVOKE') {
+		if (enteredText === confirmText) {
 			dispatch('confirm');
 		}
 	};
@@ -29,9 +32,9 @@
 		<div class="mt-4">
 			<input
 				type="text"
-				bind:value={confirmText}
+				bind:value={enteredText}
 				class="w-full px-3 py-2 text-gray-700 bg-gray-100 border border-gray-300 rounded-md dark:bg-gray-800 dark:text-gray-200 dark:border-gray-600 focus:outline-none focus:ring-2 focus:ring-blue-500"
-				placeholder="Type REVOKE to confirm"
+				placeholder="Type {confirmText} to confirm"
 			/>
 		</div>
 
@@ -45,11 +48,11 @@
 			</button>
 			<button
 				type="button"
-				class="px-4 py-2 text-sm font-medium text-white bg-red-600 border border-transparent rounded-md hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500 disabled:opacity-50"
-				disabled={confirmText !== 'REVOKE'}
+				class="px-4 py-2 text-sm font-medium text-white border border-transparent rounded-md focus:outline-none focus:ring-2 focus:ring-offset-2 disabled:opacity-50 {confirmButtonClass}"
+				disabled={enteredText !== confirmText}
 				on:click={onConfirm}
 			>
-				Revoke All
+				{confirmButtonText}
 			</button>
 		</div>
 	</div>
