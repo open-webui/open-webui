@@ -358,7 +358,7 @@ class ChatTable:
                 if not chat.password or not pwd_context.verify(password, chat.password):
                     chat.password = pwd_context.hash(password)
                     chat.password_updated_at = int(time.time())
-            elif chat.password:
+            elif password == "" and chat.password:
                 # Password is being removed
                 chat.password = None
                 chat.password_updated_at = int(time.time())

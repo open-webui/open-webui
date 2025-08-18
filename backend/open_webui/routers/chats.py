@@ -1005,6 +1005,10 @@ async def share_chat_by_id(
         # Check if the user is trying to change the password
         password_is_being_changed = (form_data.password and (not chat.password or not pwd_context.verify(form_data.password, chat.password))) or (not form_data.password and chat.password)
 
+        if password_is_being_changed and not form_data.password and not form_data.current_password:
+            password_is_being_changed = False
+            form_data.password = None
+
         if chat.password and password_is_being_changed:
             if not form_data.current_password:
                 raise HTTPException(
