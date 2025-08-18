@@ -76,6 +76,7 @@ def get_async_tool_function_and_apply_extra_params(
         # https://github.com/googleapis/python-genai/issues/907
         async def new_function(*args, **kwargs):
             return await partial_func(*args, **kwargs)
+
     else:
         # Make it a coroutine function when it is not already
         async def new_function(*args, **kwargs):
