@@ -120,7 +120,7 @@
 	let password = '';
 	let initial_password = '';
 	let current_password = '';
-	let useGradient = true;
+	let useGradient = false;
 	let showQrCode = false;
 	let currentViews = 0;
 	const i18n = getContext('i18n');
@@ -572,6 +572,9 @@
 					initialCustomExpirationDate = customExpirationDate;
 					initialExpireOnViewsCount = expireOnViewsCount;
 
+					showQrCode = !!chat.share_id;
+					useGradient = false;
+
 					if (intervalId) clearInterval(intervalId);
 					if (chat.expires_at) {
 						timeRemaining = formatTimeRemaining(chat.expires_at);
@@ -601,6 +604,8 @@
 		})();
 	} else {
 		chat = null;
+		showQrCode = false;
+		useGradient = false;
 		share_id = '';
 		initial_share_id = '';
 		previewQrCodeUrl = '';
