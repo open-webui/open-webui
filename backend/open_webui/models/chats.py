@@ -1431,7 +1431,7 @@ class ChatTable:
         try:
             with get_db() as db:
                 db.query(Chat).filter_by(user_id=user_id, is_public=True).update(
-                    {"is_public": False, "revoked_at": int(time.time())}
+                    {"is_public": False}
                 )
                 db.commit()
                 return True
