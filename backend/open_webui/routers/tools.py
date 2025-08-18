@@ -54,8 +54,8 @@ async def get_tools(request: Request, user=Depends(get_verified_user)):
         tools.append(
             ToolUserResponse(
                 **{
-                    "id": f"server:{server['idx']}",
-                    "user_id": f"server:{server['idx']}",
+                    "id": f"server:{server.get('id')}",
+                    "user_id": f"server:{server.get('id')}",
                     "name": server.get("openapi", {})
                     .get("info", {})
                     .get("title", "Tool Server"),
@@ -65,7 +65,7 @@ async def get_tools(request: Request, user=Depends(get_verified_user)):
                         .get("description", ""),
                     },
                     "access_control": request.app.state.config.TOOL_SERVER_CONNECTIONS[
-                        server["idx"]
+                        server.get("idx", 0)
                     ]
                     .get("config", {})
                     .get("access_control", None),

@@ -77,18 +77,22 @@ def get_tools(
         tool = Tools.get_tool_by_id(tool_id)
         if tool is None:
             if tool_id.startswith("server:"):
-                server_idx = int(tool_id.split(":")[1])
-                tool_server_connection = (
-                    request.app.state.config.TOOL_SERVER_CONNECTIONS[server_idx]
-                )
+                server_id = tool_id.split(":")[1]
+
                 tool_server_data = None
                 for server in request.app.state.TOOL_SERVERS:
-                    if server["idx"] == server_idx:
+                    if server["id"] == server_id:
                         tool_server_data = server
                         break
-                assert tool_server_data is not None
-                specs = tool_server_data.get("specs", [])
 
+                assert tool_server_data is not None
+
+                tool_server_idx = tool_server_data.get("idx", 0)
+                tool_server_connection = (
+                    request.app.state.config.TOOL_SERVER_CONNECTIONS[tool_server_idx]
+                )
+
+                specs = tool_server_data.get("specs", [])
                 for spec in specs:
                     function_name = spec["name"]
 
@@ -506,11 +510,13 @@ async def get_tool_servers_data(
                 token = server.get("key", "")
             elif auth_type == "session":
                 token = session_token
-            server_entries.append((idx, server, full_url, info, token))
+
+            id = info.get("id", idx)
+            server_entries.append((id, idx, server, full_url, info, token))
 
     # Create async tasks to fetch data
     tasks = [
-        get_tool_server_data(token, url) for (_, _, url, _, token) in server_entries
+        get_tool_server_data(token, url) for (_, _, _, url, _, token) in server_entries
     ]
 
     # Execute tasks concurrently
@@ -518,7 +524,7 @@ async def get_tool_servers_data(
 
     # Build final results with index and server metadata
     results = []
-    for (idx, server, url, info, _), response in zip(server_entries, responses):
+    for (id, idx, server, url, info, _), response in zip(server_entries, responses):
         if isinstance(response, Exception):
             log.error(f"Failed to connect to {url} OpenAPI tool server")
             continue
@@ -536,6 +542,7 @@ async def get_tool_servers_data(
 
         results.append(
             {
+                "id": str(id),
                 "idx": idx,
                 "url": server.get("url"),
                 "openapi": openapi_data,
