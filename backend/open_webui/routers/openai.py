@@ -369,6 +369,10 @@ async def get_all_models_responses(request: Request, user: UserModel) -> list:
                 model_list = []
 
             for model in model_list:
+                # Remove name key if its value is None #16689
+                if "name" in model and model["name"] is None:
+                    del model["name"]
+
                 if prefix_id:
                     model["id"] = (
                         f"{prefix_id}.{model.get('id', model.get('name', ''))}"
