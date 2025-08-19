@@ -167,7 +167,7 @@
 
 		// Check for force form display parameter
 		forceShowForm = querystringValue('force_form') === 'true';
-		
+
 		// Check if this is first-time setup (no users exist)
 		isFirstTimeSetup = $config?.onboarding ?? false;
 
