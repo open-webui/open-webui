@@ -43,7 +43,9 @@ async def redis_task_command_listener(app):
             try:
                 command = json.loads(message["data"])
             except json.JSONDecodeError as json_error:
-                log.warning(f"Invalid JSON in Redis message: {message['data'][:100]}... Error: {json_error}")
+                log.warning(
+                    f"Invalid JSON in Redis message: {message['data'][:100]}... Error: {json_error}"
+                )
                 continue
 
             if command.get("action") == "stop":
@@ -58,7 +60,9 @@ async def redis_task_command_listener(app):
                         log.error(f"Error cancelling task {task_id}: {cancel_error}")
         except ExceptionGroup as eg:
             # Handle multiple concurrent exceptions
-            log.error(f"Multiple errors in task command processing: {len(eg.exceptions)} exceptions")
+            log.error(
+                f"Multiple errors in task command processing: {len(eg.exceptions)} exceptions"
+            )
             for i, exc in enumerate(eg.exceptions):
                 log.error(f"  Exception {i+1}: {type(exc).__name__}: {exc}")
         except Exception as e:
@@ -127,7 +131,9 @@ async def cleanup_task(redis, task_id: str, id=None):
 
     # If multiple errors occurred, group them
     if len(cleanup_errors) > 1 and ExceptionGroup:
-        raise ExceptionGroup(f"Multiple cleanup errors for task {task_id}", cleanup_errors)
+        raise ExceptionGroup(
+            f"Multiple cleanup errors for task {task_id}", cleanup_errors
+        )
     elif cleanup_errors:
         raise cleanup_errors[0]
 
