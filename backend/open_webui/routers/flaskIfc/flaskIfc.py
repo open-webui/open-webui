@@ -35,6 +35,8 @@ DEFAULT_LAST_N = 5
 DEFAULT_CONTEXT_LENGTH = 12288
 DEFAULT_TEMP = 0.0
 
+DEFAULT_MODEL_COMMAND_RUN_TIMEOUT = 14400
+
 parameters = {    'target': 'opu',
                   'num_predict': DEFAULT_TOKEN,
                   'repeat_penalty': DEFAULT_REPEAT_PENALTY,
@@ -702,17 +704,25 @@ def chats():
         try:
             is_job_running()
             job_status["running"] = True
-            result = serial_script.send_serial_command(port,baudrate,command)
+            result = serial_script.send_serial_command(port,baudrate,command, timeout=DEFAULT_MODEL_COMMAND_RUN_TIMEOUT)
             if result:
                 response_text = result
-                start_phrase = "llama_perf_sampler_print: "
-                if start_phrase in response_text:
-                    filtered_text = response_text.split(start_phrase, 1)[0] # Split once and drop the second part
-                    formatted_text = response_text.split(start_phrase, 1)[1]
+                start_phrases = [
+                    "llama_perf_sampler_print: ",
+                    "GGML Tsavorite Profiling Results:"
+                ]
+
+                matched_phrase = next((phrase for phrase in start_phrases if phrase in response_text), None)
+
+                if matched_phrase:
+                    filtered_text = response_text.split(matched_phrase, 1)[0]
+                    formatted_text = response_text.split(matched_phrase, 1)[1]
                 else:
                     filtered_text = result
+                    formatted_text = None
             else:
                 filtered_text = "Result Empty: Desired phrase not found in the response."
+                formatted_text = None  # Or None, depending on your use case
                 job_status["result"] = filtered_text
 
             job_status["running"] = False
@@ -796,13 +806,18 @@ def chat():
         try:
             is_job_running()
             job_status["running"] = True
-            result = serial_script.send_serial_command(port,baudrate,command)
+            result = serial_script.send_serial_command(port,baudrate,command, timeout=DEFAULT_MODEL_COMMAND_RUN_TIMEOUT)
             if result:
                 response_text = result
-                start_phrase = "llama_perf_sampler_print: "
-                if start_phrase in response_text:
-                    filtered_text = response_text.split(start_phrase, 1)[0] # Split once and drop the second part
-                    formatted_text = response_text.split(start_phrase, 1)[1]
+                start_phrases = [
+                    "llama_perf_sampler_print: ",
+                    "GGML Tsavorite Profiling Results:"
+                ]
+                matched_phrase = next((phrase for phrase in start_phrases if phrase in response_text), None)
+
+                if matched_phrase:
+                    filtered_text = response_text.split(matched_phrase, 1)[0]
+                    formatted_text = response_text.split(matched_phrase, 1)[1]
                 else:
                     filtered_text = result
                     formatted_text = None

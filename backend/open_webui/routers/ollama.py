@@ -81,6 +81,7 @@ DEFAULT_FLASK_URL = "http://localhost:5001"
 
 async def send_get_request(url, key=None, user: UserModel = None):
     timeout = aiohttp.ClientTimeout(total=AIOHTTP_CLIENT_TIMEOUT_MODEL_LIST)
+    print("Get Request Url:", url)
     try:
         async with aiohttp.ClientSession(timeout=timeout, trust_env=True) as session:
             async with session.get(
@@ -133,6 +134,7 @@ async def send_post_request(
         session = aiohttp.ClientSession(
             trust_env=True, timeout=aiohttp.ClientTimeout(total=AIOHTTP_CLIENT_TIMEOUT)
         )
+        print("Post Request Url:", url, "Payload:", payload)
 
         r = await session.post(
             url,
