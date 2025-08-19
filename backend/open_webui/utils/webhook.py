@@ -2,7 +2,7 @@ import json
 import logging
 
 import requests
-from open_webui.config import WEBUI_FAVICON_URL
+from open_webui.config import WEBUI_FAVICON_URL, WEBHOOK_URL_TIMEOUT
 from open_webui.env import SRC_LOG_LEVELS, VERSION
 
 log = logging.getLogger(__name__)
@@ -51,7 +51,7 @@ def post_webhook(name: str, url: str, message: str, event_data: dict) -> bool:
             payload = {**event_data}
 
         log.debug(f"payload: {payload}")
-        r = requests.post(url, json=payload, timeout=30)
+        r = requests.post(url, json=payload, timeout=WEBHOOK_URL_TIMEOUT)
         r.raise_for_status()
         log.debug(f"r.text: {r.text}")
         return True

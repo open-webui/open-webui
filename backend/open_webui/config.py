@@ -1349,6 +1349,10 @@ WEBHOOK_URL = PersistentConfig(
     "WEBHOOK_URL", "webhook_url", os.environ.get("WEBHOOK_URL", "")
 )
 
+WEBHOOK_URL_TIMEOUT = PersistentConfig(
+    "WEBHOOK_URL_TIMEOUT", "webhook_url_timeout", os.environ.get("WEBHOOK_URL_TIMEOUT", "30")
+)
+
 ENABLE_ADMIN_EXPORT = os.environ.get("ENABLE_ADMIN_EXPORT", "True").lower() == "true"
 
 ENABLE_ADMIN_WORKSPACE_CONTENT_ACCESS = (
