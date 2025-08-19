@@ -51,7 +51,7 @@ def post_webhook(name: str, url: str, message: str, event_data: dict) -> bool:
             payload = {**event_data}
 
         log.debug(f"payload: {payload}")
-        r = requests.post(url, json=payload)
+        r = requests.post(url, json=payload, timeout=30)
         r.raise_for_status()
         log.debug(f"r.text: {r.text}")
         return True
