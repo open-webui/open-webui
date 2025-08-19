@@ -578,8 +578,19 @@ async def lifespan(app: FastAPI):
 
     yield
 
-    if hasattr(app.state, "redis_task_command_listener"):
-        app.state.redis_task_command_listener.cancel()
+# In the lifespan shutdown  
+    if hasattr(app.state, "redis_task_command_listener"):  
+        try:  
+            app.state.redis_task_command_listener.cancel()  
+            await app.state.redis_task_command_listener  
+        except ExceptionGroup as eg:  
+            log.error(f"Multiple errors during listener shutdown: {len(eg.exceptions)} exceptions")  
+            for exc in eg.exceptions:  
+                log.error(f"Shutdown error: {type(exc).__name__}: {exc}")  
+        except asyncio.CancelledError:  
+            pass  # Expected during shutdown  
+        except Exception as e:  
+            log.error(f"Error during listener shutdown: {e}")
 
 
 app = FastAPI(
