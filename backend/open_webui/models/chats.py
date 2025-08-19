@@ -536,8 +536,8 @@ class ChatTable:
                 db.refresh(chat_item)
 
                 return ChatModel.model_validate(chat_item)
-        except Exception:
-            # Log error in production for debugging
+        except Exception as e:
+            log.error(f"Failed to update chat {id}: {e}")
             return None
 
     def update_chat_title_by_id(self, id: str, title: str) -> Optional[ChatModel]:
@@ -1011,6 +1011,16 @@ class ChatTable:
             - Applies pagination at SQL level for efficiency
             - Leverages indexes for tag and content searches
         """
+        # Input validation
+        if not user_id or not isinstance(user_id, str):
+            log.warning("Invalid user_id provided to search")
+            return []
+
+        if skip < 0:
+            skip = 0
+        if limit <= 0 or limit > 1000:  # Prevent excessive queries
+            limit = 60
+
         search_text = search_text.replace("\u0000", "").lower().strip()
 
         if not search_text:
@@ -1195,7 +1205,7 @@ class ChatTable:
             # Perform pagination at the SQL level
             all_chats = query.offset(skip).limit(limit).all()
 
-            log.info(f"The number of chats: {len(all_chats)}")
+            log.debug(f"Search returned {len(all_chats)} chats for user {user_id}")
 
             # Validate and return chats
             return [ChatModel.model_validate(chat) for chat in all_chats]
@@ -1271,7 +1281,7 @@ class ChatTable:
             query = db.query(Chat).filter_by(user_id=user_id)
             tag_id = tag_name.replace(" ", "_").lower()
 
-            log.info(f"DB dialect name: {db.bind.dialect.name}")
+            log.debug(f"DB dialect name: {db.bind.dialect.name}")
             if db.bind.dialect.name == "sqlite":
                 # SQLite JSON1 querying for tags within the meta JSON field
                 query = query.filter(
@@ -1366,7 +1376,7 @@ class ChatTable:
             count = query.count()
 
             # Debugging output for inspection
-            log.info(f"Count of chats for tag '{tag_name}': {count}")
+            log.debug(f"Count of chats for tag '{tag_name}': {count}")
 
             return count
 
