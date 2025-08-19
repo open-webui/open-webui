@@ -591,7 +591,7 @@ async def lifespan(app: FastAPI):
                 log.error(f"Shutdown error: {type(exc).__name__}: {exc}")
         except asyncio.CancelledError:
             pass  # Expected during shutdown
-        except Exception as e:  
+        except Exception as e:
             log.error(f"Error during listener shutdown: {e}")
 
 
