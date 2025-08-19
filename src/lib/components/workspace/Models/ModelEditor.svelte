@@ -70,7 +70,7 @@
 	};
 	let capabilities = {
 		vision: true,
-		usage: undefined,
+		usage: true,
 		citations: true
 	};
 
