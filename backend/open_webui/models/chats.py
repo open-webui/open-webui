@@ -810,42 +810,46 @@ class ChatTable:
     ) -> Optional[ChatModel]:
         try:
             with get_db() as db:
-                # it is possible that the shared link was deleted. hence,
-                # we check if the chat is still shared by checking if a chat with the share_id exists
                 chat = db.query(Chat).filter_by(share_id=id).first()
 
-                if chat:
-                    if chat.revoked_at:
-                        return None
-                    if not chat.is_public and user is None:
-                        return None
+                if not chat:
+                    return None
 
-                    if chat.expires_at and chat.expires_at < int(time.time()):
-                        return None
+                if chat.revoked_at:
+                    return None
+                if not chat.is_public and user is None:
+                    return None
+                if chat.expires_at and chat.expires_at < int(time.time()):
+                    return None
 
-                    if (
-                        chat.expire_on_views is not None
-                        and chat.views >= chat.expire_on_views
-                    ):
-                        return None
+                # Check if the view limit has already been reached before this view
+                if (
+                    chat.expire_on_views is not None
+                    and chat.views >= chat.expire_on_views
+                ):
+                    return None
 
-                    if increment_view and (user is None or chat.user_id != user.id):
-                        chat.views = (chat.views or 0) + 1
-                        db.commit()
+                # If we are here, the user is allowed to view the chat.
+                # Increment the view count for this user.
+                if increment_view and (user is None or chat.user_id != user.id):
+                    chat.views = (chat.views or 0) + 1
+                    db.commit()
 
-                    if (
-                        chat.expire_on_views is not None
-                        and chat.views >= chat.expire_on_views
-                    ):
+                # Now, get the chat content to return to the user.
+                chat_to_return = self.get_chat_by_id(chat.id)
+
+                # After this view, if the limit is now reached, revoke the link for future requests.
+                if (
+                    chat.expire_on_views is not None
+                    and chat.views >= chat.expire_on_views
+                ):
+                    if not chat.revoked_at:
                         chat.revoked_at = int(time.time())
                         db.commit()
-                        return None
 
-                    return self.get_chat_by_id(chat.id)
-                else:
-                    return None
+                return chat_to_return
         except Exception as e:
-            log.error(f"Error incrementing view count for share_id {id}: {e}")
+            log.error(f"Error getting shared chat for share_id {id}: {e}")
             return None
 
     def get_chat_by_share_id_unrestricted(self, id: str) -> Optional[ChatModel]:

@@ -556,11 +556,13 @@
 							);
 
 							if (res) {
+								localStorage.removeItem('postLoginAction');
 								await goto(`/c/${res.id}`);
 							}
 						})();
+					} else {
+						localStorage.removeItem('postLoginAction');
 					}
-					localStorage.removeItem('postLoginAction');
 				}
 			} else {
 				$socket?.off('chat-events', chatEventHandler);
