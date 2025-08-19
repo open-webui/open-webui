@@ -14,7 +14,7 @@
 
 	const defaultParams = {
 		// Advanced
-		target: 'native',
+		target: 'opu',
 		stream_response: null, // Set stream responses for this model individually
 		stream_delta_chunk_size: null, // Set the chunk size for streaming responses
 		function_calling: null,
@@ -105,9 +105,9 @@
 					class="p-1 px-3 text-xs flex rounded-sm transition shrink-0 outline-hidden bg-white text-black dark:bg-gray-800 dark:text-white"
 					bind:value={params.target}
 				>
-					<option value="native">{$i18n.t('Native')}</option>
 					<option value="opu">{$i18n.t('OPU')}</option>
 					<option value="cpu">{$i18n.t('CPU')}</option>
+					<option value="native">{$i18n.t('Native')}</option>
 				</select>
 			</div>
 		</Tooltip>
