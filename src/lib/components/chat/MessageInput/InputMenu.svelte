@@ -75,10 +75,8 @@
 
 	let showWikiGrounding = false;
 
-	$: showWikiGrounding =
-		$config?.features?.enable_wiki_grounding &&
-		($user.role === 'admin' || $user?.permissions?.features?.wiki_grounding) &&
-		($settings?.wikipediaGrounding ?? true);
+	$: showWikiGrounding = $config?.features?.enable_wiki_grounding || false;
+	$settings?.wikipediaGrounding ?? true;
 
 	$: if (show) {
 		init();
