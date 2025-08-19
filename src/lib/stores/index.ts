@@ -261,6 +261,12 @@ type Config = {
 		enable_direct_connections: boolean;
 		enable_version_update_check: boolean;
 	};
+	// Environment variables for patches
+	extended_features: {
+		// PATCH REDIRECT TO WAS
+		was_redirect: string;
+		// /PATCH REDIRECT TO WAS
+	};
 	oauth: {
 		providers: {
 			[key: string]: string;

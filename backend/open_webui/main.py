@@ -334,6 +334,9 @@ from open_webui.config import (
     PENDING_USER_OVERLAY_TITLE,
     DEFAULT_PROMPT_SUGGESTIONS,
     DEFAULT_MODELS,
+    # PATCH REDIRECT TO WAS
+    WAS_REDIRECT,
+    # /PATCH REDIRECT TO WAS
     DEFAULT_ARENA_MODEL,
     MODEL_ORDER_LIST,
     EVALUATION_ARENA_MODELS,
@@ -700,6 +703,10 @@ app.state.config.ADMIN_EMAIL = ADMIN_EMAIL
 app.state.config.DEFAULT_MODELS = DEFAULT_MODELS
 app.state.config.DEFAULT_PROMPT_SUGGESTIONS = DEFAULT_PROMPT_SUGGESTIONS
 app.state.config.DEFAULT_USER_ROLE = DEFAULT_USER_ROLE
+
+# PATCH REDIRECT TO WAS
+app.state.config.WAS_REDIRECT = WAS_REDIRECT
+# /PATCH REDIRECT TO WAS
 
 app.state.config.PENDING_USER_OVERLAY_CONTENT = PENDING_USER_OVERLAY_CONTENT
 app.state.config.PENDING_USER_OVERLAY_TITLE = PENDING_USER_OVERLAY_TITLE
@@ -1643,6 +1650,12 @@ async def get_app_config(request: Request):
                 name: config.get("name", name)
                 for name, config in OAUTH_PROVIDERS.items()
             }
+        },
+        # Environment variables for patches
+        "extended_features": {
+            # PATCH REDIRECT TO WAS
+            "was_redirect": app.state.config.WAS_REDIRECT,
+            # /PATCH REDIRECT TO WAS
         },
         "features": {
             "auth": WEBUI_AUTH,
