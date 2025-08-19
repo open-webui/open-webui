@@ -11,7 +11,7 @@ from open_webui.models.folders import Folders
 from open_webui.env import SRC_LOG_LEVELS
 
 from pydantic import BaseModel, ConfigDict
-from sqlalchemy import BigInteger, Boolean, Column, String, Text, JSON, Integer
+from sqlalchemy import BigInteger, Boolean, Column, String, Text, JSON, Index, Integer
 from sqlalchemy import or_, func, select, and_, text
 from sqlalchemy.sql import exists
 from sqlalchemy.sql.expression import bindparam
