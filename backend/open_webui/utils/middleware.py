@@ -604,7 +604,7 @@ async def chat_image_generation_handler(
 
 
 async def chat_completion_files_handler(
-    request: Request, body: dict, user: UserModel
+    request: Request, body: dict, user: UserModel, model_knowledge
 ) -> tuple[dict, dict[str, list]]:
     sources = []
 
@@ -642,6 +642,21 @@ async def chat_completion_files_handler(
             queries = [get_last_user_message(body["messages"])]
 
         try:
+            # check if individual rag config is used
+            rag_config = {}
+            if model_knowledge and not model_knowledge[0].get("rag_config").get("DEFAULT_RAG_SETTINGS", True):
+                rag_config = model_knowledge[0].get("rag_config")
+
+            k=rag_config.get("TOP_K", request.app.state.config.TOP_K)
+            reranking_model = rag_config.get("RAG_RERANKING_MODEL", request.app.state.config.RAG_RERANKING_MODEL)
+            reranking_function=request.app.state.rf[reranking_model] if reranking_model else None
+            k_reranker=rag_config.get("TOP_K_RERANKER", request.app.state.config.TOP_K_RERANKER)
+            r=rag_config.get("RELEVANCE_THRESHOLD", request.app.state.config.RELEVANCE_THRESHOLD)
+            hybrid_bm25_weight=rag_config.get("HYBRID_BM25_WEIGHT", request.app.state.config.HYBRID_BM25_WEIGHT),
+            hybrid_search=rag_config.get("ENABLE_RAG_HYBRID_SEARCH", request.app.state.config.ENABLE_RAG_HYBRID_SEARCH)
+            full_context=rag_config.get("RAG_FULL_CONTEXT", request.app.state.config.RAG_FULL_CONTEXT)
+            embedding_model = rag_config.get("RAG_EMBEDDING_MODEL", request.app.state.config.RAG_EMBEDDING_MODEL)
+
             # Offload get_sources_from_items to a separate thread
             loop = asyncio.get_running_loop()
             with ThreadPoolExecutor() as executor:
@@ -654,21 +669,21 @@ async def chat_completion_files_handler(
                         embedding_function=lambda query, prefix: request.app.state.EMBEDDING_FUNCTION(
                             query, prefix=prefix, user=user
                         ),
-                        k=request.app.state.config.TOP_K,
+                        k=k,
                         reranking_function=(
                             (
-                                lambda sentences: request.app.state.RERANKING_FUNCTION(
+                                lambda sentences: request.app.state.RERANKING_FUNCTION[reranking_model](
                                     sentences, user=user
                                 )
                             )
-                            if request.app.state.RERANKING_FUNCTION
+                            if request.app.state.RERANKING_FUNCTION[reranking_model]
                             else None
                         ),
-                        k_reranker=request.app.state.config.TOP_K_RERANKER,
-                        r=request.app.state.config.RELEVANCE_THRESHOLD,
-                        hybrid_bm25_weight=request.app.state.config.HYBRID_BM25_WEIGHT,
-                        hybrid_search=request.app.state.config.ENABLE_RAG_HYBRID_SEARCH,
-                        full_context=request.app.state.config.RAG_FULL_CONTEXT,
+                        k_reranker=k_reranker,
+                        r=r,
+                        hybrid_bm25_weight=hybrid_bm25_weight,
+                        hybrid_search=hybrid_search,
+                        full_context=full_context,
                         user=user,
                     ),
                 )
@@ -951,7 +966,7 @@ async def process_chat_payload(request, form_data, user, metadata, model):
                 log.exception(e)
 
     try:
-        form_data, flags = await chat_completion_files_handler(request, form_data, user)
+        form_data, flags = await chat_completion_files_handler(request, form_data, user, model_knowledge)
         sources.extend(flags.get("sources", []))
     except Exception as e:
         log.exception(e)
@@ -989,28 +1004,37 @@ async def process_chat_payload(request, form_data, user, metadata, model):
         prompt = get_last_user_message(form_data["messages"])
         if prompt is None:
             raise Exception("No user message found")
+        if context_string != ""::
+            log.debug(
+                f"With a 0 relevancy threshold for RAG, the context cannot be empty"
+            )
 
-        if context_string != "":
-            # Workaround for Ollama 2.0+ system prompt issue
-            # TODO: replace with add_or_update_system_message
-            if model.get("owned_by") == "ollama":
-                form_data["messages"] = prepend_to_first_user_message_content(
-                    rag_template(
-                        request.app.state.config.RAG_TEMPLATE,
-                        context_string,
-                        prompt,
-                    ),
-                    form_data["messages"],
-                )
-            else:
-                form_data["messages"] = add_or_update_system_message(
-                    rag_template(
-                        request.app.state.config.RAG_TEMPLATE,
-                        context_string,
-                        prompt,
-                    ),
-                    form_data["messages"],
-                )
+        # Adjusted RAG template step to use knowledge-base-specific configuration
+        rag_template_config = request.app.state.config.RAG_TEMPLATE
+
+        if model_knowledge and not model_knowledge[0].get("rag_config").get("DEFAULT_RAG_SETTINGS", True):
+            rag_template_config = model_knowledge[0].get("rag_config").get(
+                "RAG_TEMPLATE", request.app.state.config.RAG_TEMPLATE
+            )
+
+        # Workaround for Ollama 2.0+ system prompt issue
+        # TODO: replace with add_or_update_system_message
+        if model.get("owned_by") == "ollama":
+            form_data["messages"] = prepend_to_first_user_message_content(
+                rag_template(rag_template_config, 
+                    context_string, 
+                    prompt
+                ),
+,
+            )
+        else:
+            form_data["messages"] = add_or_update_system_message(
+                rag_template(rag_template_config, 
+                    context_string, 
+                    prompt
+                ),
+,
+            )
 
     # If there are citations, add them to the data_items
     sources = [

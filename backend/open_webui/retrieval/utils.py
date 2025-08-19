@@ -275,13 +275,15 @@ def get_all_items_from_collections(collection_names: list[str]) -> dict:
 def query_collection(
     collection_names: list[str],
     queries: list[str],
-    embedding_function,
+    user,
+    ef,
+    embedding_model,
     k: int,
 ) -> dict:
     results = []
     error = False
 
-    def process_query_collection(collection_name, query_embedding):
+    def process_query_collection(collection_name, query_embedding, k):
         try:
             if collection_name:
                 result = query_doc(
@@ -296,18 +298,30 @@ def query_collection(
             log.exception(f"Error when querying the collection: {e}")
             return None, e
 
-    # Generate all query embeddings (in one call)
-    query_embeddings = embedding_function(queries, prefix=RAG_EMBEDDING_QUERY_PREFIX)
     log.debug(
         f"query_collection: processing {len(queries)} queries across {len(collection_names)} collections"
     )
 
+    from open_webui.models.knowledge import Knowledges
     with ThreadPoolExecutor() as executor:
         future_results = []
-        for query_embedding in query_embeddings:
-            for collection_name in collection_names:
+        for collection_name in collection_names:
+            rag_config = {}
+            knowledge_base = Knowledges.get_knowledge_by_id(collection_name)
+
+            if knowledge_base and not knowledge_base.rag_config.get("DEFAULT_RAG_SETTINGS", True):
+                rag_config = knowledge_base.rag_config
+                embedding_model = rag_config.get("embedding_model", embedding_model)
+                k = rag_config.get("TOP_K", k)
+
+            embedding_function=lambda query, prefix: ef[embedding_model](
+                query, prefix=prefix, user=user
+            )
+            # Generate embeddings for each query using the collection's embedding function
+            query_embeddings = embedding_function(queries, prefix=RAG_EMBEDDING_QUERY_PREFIX)
+            for query_embedding in query_embeddings:
                 result = executor.submit(
-                    process_query_collection, collection_name, query_embedding
+                    process_query_collection, collection_name, query_embedding, k
                 )
                 future_results.append(result)
         task_results = [future.result() for future in future_results]
@@ -327,12 +341,14 @@ def query_collection(
 def query_collection_with_hybrid_search(
     collection_names: list[str],
     queries: list[str],
-    embedding_function,
+    user,
+    ef,
     k: int,
     reranking_function,
     k_reranker: int,
     r: float,
     hybrid_bm25_weight: float,
+    embedding_model: str,
 ) -> dict:
     results = []
     error = False
@@ -361,13 +377,32 @@ def query_collection_with_hybrid_search(
 
     def process_query(collection_name, query):
         try:
+            from open_webui.models.knowledge import Knowledges
+
+            # Use Knowledges to get per-collection RAG config
+            knowledge_base = Knowledges.get_knowledge_by_id(collection_name)
+
+            if knowledge_base and not knowledge_base.rag_config.get("DEFAULT_RAG_SETTINGS", True):
+                rag_config = knowledge_base.rag_config
+                # Use config from rag_config if present, else fallback to global config
+                embedding_model = rag_config.get("embedding_model", embedding_model)
+                reranking_model = rag_config.get("reranking_function", reranking_model)
+                k = rag_config.get("TOP_K", k)
+                k_reranker = rag_config.get("TOP_K_RERANKER", k_reranker)
+                r = rag_config.get("RELEVANCE_THRESHOLD", r)
+                hybrid_bm25_weight = rag_config.get("HYBRID_BM25_WEIGHT", hybrid_bm25_weight)
+            
+            embedding_function=lambda query, prefix: ef[embedding_model](
+                query, prefix=prefix, user=user
+            ),
+            
             result = query_doc_with_hybrid_search(
                 collection_name=collection_name,
                 collection_result=collection_results[collection_name],
                 query=query,
                 embedding_function=embedding_function,
                 k=k,
-                reranking_function=reranking_function,
+                reranking_function=reranking_function[reranking_model],
                 k_reranker=k_reranker,
                 r=r,
                 hybrid_bm25_weight=hybrid_bm25_weight,
@@ -466,7 +501,8 @@ def get_sources_from_items(
     request,
     items,
     queries,
-    embedding_function,
+    user,
+    ef,
     k,
     reranking_function,
     k_reranker,
@@ -475,9 +511,10 @@ def get_sources_from_items(
     hybrid_search,
     full_context=False,
     user: Optional[UserModel] = None,
+    embedding_model=None
 ):
     log.debug(
-        f"items: {items} {queries} {embedding_function} {reranking_function} {full_context}"
+        f"items: {items} {queries} {ef[embedding_model]} {reranking_function} {full_context}"
     )
 
     extracted_collections = []
@@ -643,12 +680,14 @@ def get_sources_from_items(
                             query_result = query_collection_with_hybrid_search(
                                 collection_names=collection_names,
                                 queries=queries,
-                                embedding_function=embedding_function,
+                                user=user,
+                                ef=ef,
                                 k=k,
                                 reranking_function=reranking_function,
                                 k_reranker=k_reranker,
                                 r=r,
                                 hybrid_bm25_weight=hybrid_bm25_weight,
+                                embedding_model=embedding_model,
                             )
                         except Exception as e:
                             log.debug(
@@ -660,8 +699,10 @@ def get_sources_from_items(
                         query_result = query_collection(
                             collection_names=collection_names,
                             queries=queries,
-                            embedding_function=embedding_function,
+                            user=user,
+                            ef=ef,
                             k=k,
+                            embedding_model=embedding_model
                         )
             except Exception as e:
                 log.exception(e)
