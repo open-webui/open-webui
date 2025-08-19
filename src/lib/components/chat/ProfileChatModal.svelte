@@ -107,14 +107,11 @@
 					{#if usages.length > 0}
 						{#each allUnique as usage, i}
 							<pre class="text-left"><strong  class="block mb-2">Message #{i + 1}:</strong></pre>
-							<div class="grid grid-cols-[205px_1fr] gap-x-6 gap-y-2 border rounded p-4 bg-gray-50">
-								{#each Object.entries(usage) as [key, value]}
-									<div class="text-left text-gray-700">{key}</div>
+							{#each Object.entries(usage) as [key, value]}
+								{#if key === 'raw'}
 									<pre class="overflow-auto whitespace-pre-wrap font-mono text-sm bg-gray-100 border rounded p-4">{String(value)}</pre>
-								{/each}
-							</div>
-
-
+								{/if}
+							{/each}
 						{/each}
 					{:else}
 						<p>No usage blocks found yet.</p>
