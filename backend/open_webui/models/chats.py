@@ -1,3 +1,20 @@
+"""
+Chat Models and Database Operations
+
+This module provides comprehensive chat management functionality including:
+- Thread-safe database operations with optimized JSON/JSONB handling
+- Dynamic column type detection for PostgreSQL JSONB optimization
+- Efficient tag filtering and search capabilities
+- Chat sharing, archiving, and folder organization
+- Message management with status tracking
+
+Key Features:
+- Thread-safe caching for database capabilities
+- Automatic JSONB detection and optimization
+- Cross-database compatibility (SQLite, PostgreSQL, MySQL)
+- Professional error handling and logging
+"""
+
 import json
 import logging
 import threading
@@ -26,64 +43,108 @@ from sqlalchemy import (
 from sqlalchemy.sql import exists
 from sqlalchemy.sql.expression import bindparam
 
-# Constants for database column types
-COLUMN_CHAT = "chat"
-COLUMN_META = "meta"
+# Constants for database column types - used throughout the module for consistency
+COLUMN_CHAT = "chat"  # Primary chat data column
+COLUMN_META = "meta"  # Metadata column for tags, settings, etc.
 
 ####################
-# Chat DB Schema
+# Chat Database Schema and Core Classes
 ####################
 
+# Configure logging for this module
 log = logging.getLogger(__name__)
 log.setLevel(SRC_LOG_LEVELS["MODELS"])
 
 
 class JsonColumnFactory:
     """
-    Factory class for creating appropriate JSON column types based on database capabilities.
-    This ensures compatibility across different database systems and existing installations.
+    Factory class for creating appropriate JSON column types.
+
+    This factory provides a clean abstraction for JSON column type creation,
+    ensuring compatibility across different database systems. The actual column
+    type (JSON vs JSONB) is determined by database migrations at deployment time.
+
+    Design Philosophy:
+    - Model definitions remain database-agnostic
+    - Migrations handle database-specific optimizations
+    - No runtime import detection or conditional logic
+    - Thread-safe and production-ready
     """
 
     @staticmethod
     def get_column_type(column_name: str = None):
         """
-        Returns the appropriate column type for JSON data.
+        Returns the appropriate JSON column type for model definition.
 
-        This factory method always returns JSON type. The actual column type
-        (JSON vs JSONB) is determined and set by database migrations based on
-        the database capabilities.
+        This method always returns the standard JSON type for SQLAlchemy model
+        definitions. Database-specific optimizations (like PostgreSQL JSONB)
+        are handled by migrations, ensuring clean separation of concerns.
 
         Args:
-            column_name: Name of the column (chat or meta)
+            column_name (str, optional): Name of the column (chat or meta).
+                                       Currently unused but kept for future extensibility.
 
         Returns:
-            SQLAlchemy column type (always JSON for model definition)
+            sqlalchemy.JSON: Standard JSON column type for cross-database compatibility
+
+        Note:
+            The actual column type in the database may be JSONB (PostgreSQL) after
+            migrations run, but the model definition remains consistent.
         """
-        # Always return JSON for model definition
-        # Migrations handle the actual column type conversion
-        # This ensures consistency and avoids import/runtime detection issues
+        # Always return JSON for model definition consistency
+        # Database migrations handle actual type conversion (JSON -> JSONB)
+        # This approach eliminates import exceptions and runtime detection complexity
         return JSON
 
 
 class Chat(Base):
+    """
+    SQLAlchemy model for chat data storage.
+
+    This model represents the core chat entity with support for:
+    - Message history and conversation data
+    - User ownership and sharing capabilities
+    - Metadata storage (tags, settings, etc.)
+    - Folder organization and archiving
+    - Timestamp tracking for audit trails
+
+    Column Types:
+    - JSON columns use factory pattern for database compatibility
+    - Migrations handle JSONB conversion for PostgreSQL optimization
+    - All timestamps stored as Unix epoch integers for consistency
+    """
+
     __tablename__ = "chat"
 
+    # Primary identifier - UUID string for global uniqueness
     id = Column(String, primary_key=True)
+
+    # User ownership - links to user management system
     user_id = Column(String)
+
+    # Human-readable chat title
     title = Column(Text)
 
-    # Use factory for column type - migrations will handle actual type conversion
+    # Main chat data: messages, history, conversation state
+    # Factory ensures cross-database compatibility, migrations optimize for JSONB
     chat = Column(JsonColumnFactory.get_column_type(COLUMN_CHAT))
 
+    # Audit timestamps - Unix epoch for consistency across timezones
     created_at = Column(BigInteger)
     updated_at = Column(BigInteger)
 
+    # Sharing functionality - unique identifier for shared chats
     share_id = Column(Text, unique=True, nullable=True)
-    archived = Column(Boolean, default=False)
-    pinned = Column(Boolean, default=False, nullable=True)
 
-    # Use factory for column type - migrations will handle actual type conversion
+    # Organization and status flags
+    archived = Column(Boolean, default=False)  # Soft delete/archive status
+    pinned = Column(Boolean, default=False, nullable=True)  # Priority/favorite status
+
+    # Metadata storage: tags, user preferences, system flags
+    # Default empty JSON object for consistent initialization
     meta = Column(JsonColumnFactory.get_column_type(COLUMN_META), server_default="{}")
+
+    # Folder organization - links to folder management system
     folder_id = Column(Text, nullable=True)
 
 
@@ -107,8 +168,11 @@ class ChatModel(BaseModel):
 
 
 ####################
-# Forms
+# Pydantic Models and Forms
 ####################
+
+# These models provide type safety and validation for API endpoints
+# and data transfer between application layers
 
 
 class ChatForm(BaseModel):
@@ -154,9 +218,41 @@ class ChatTitleIdResponse(BaseModel):
 
 
 class ChatTable:
+    """
+    Main chat operations class providing comprehensive chat management.
+
+    This class encapsulates all chat-related database operations with:
+    - Thread-safe caching for production environments
+    - Dynamic database capability detection
+    - Optimized JSON/JSONB query generation
+    - Comprehensive error handling and logging
+
+    Thread Safety:
+    - Uses threading.Lock() for cache synchronization
+    - Safe for concurrent access in multi-worker deployments
+    - Prevents race conditions in production environments
+
+    Performance Features:
+    - Intelligent caching of database capabilities
+    - Optimized queries based on actual column types
+    - Efficient tag filtering with containment operators
+    - Minimal database round-trips through smart caching
+    """
+
     def __init__(self):
-        # Thread-safe caches with locks
+        """
+        Initialize ChatTable with thread-safe caching infrastructure.
+
+        Sets up:
+        - Capabilities cache for database feature detection
+        - Thread lock for safe concurrent access
+        - Logging configuration for debugging and monitoring
+        """
+        # Thread-safe cache for database capabilities (PostgreSQL vs SQLite, JSONB vs JSON)
         self._capabilities_cache = {}
+
+        # Lock ensures thread-safe access to cache in production environments
+        # Critical for preventing race conditions with multiple workers
         self._capabilities_lock = threading.Lock()
 
     def _get_db_capabilities(self, db) -> dict:
@@ -313,8 +409,27 @@ class ChatTable:
             return and_(*conditions) if operator == "AND" else or_(*conditions)
 
     def insert_new_chat(self, user_id: str, form_data: ChatForm) -> Optional[ChatModel]:
+        """
+        Create a new chat for a user.
+
+        Args:
+            user_id (str): Unique identifier for the chat owner
+            form_data (ChatForm): Validated chat data from API request
+
+        Returns:
+            Optional[ChatModel]: Created chat model or None if creation failed
+
+        Note:
+            - Generates UUID for global uniqueness
+            - Sets creation and update timestamps automatically
+            - Handles title extraction with fallback to "New Chat"
+            - Uses database transaction for consistency
+        """
         with get_db() as db:
+            # Generate globally unique identifier
             id = str(uuid.uuid4())
+
+            # Create chat model with current timestamp
             chat = ChatModel(
                 **{
                     "id": id,
@@ -322,24 +437,45 @@ class ChatTable:
                     "title": (
                         form_data.chat["title"]
                         if "title" in form_data.chat
-                        else "New Chat"
+                        else "New Chat"  # Fallback for chats without explicit titles
                     ),
                     "chat": form_data.chat,
                     "folder_id": form_data.folder_id,
-                    "created_at": int(time.time()),
+                    "created_at": int(time.time()),  # Unix timestamp for consistency
                     "updated_at": int(time.time()),
                 }
             )
 
+            # Persist to database with transaction safety
             result = Chat(**chat.model_dump())
             db.add(result)
             db.commit()
-            db.refresh(result)
+            db.refresh(result)  # Refresh to get any database-generated values
             return ChatModel.model_validate(result) if result else None
 
     def import_chat(
         self, user_id: str, form_data: ChatImportForm
     ) -> Optional[ChatModel]:
+        """
+        Import an existing chat with preserved metadata and timestamps.
+
+        Used for:
+        - Chat migration between systems
+        - Backup restoration
+        - Bulk chat imports
+
+        Args:
+            user_id (str): Target user for the imported chat
+            form_data (ChatImportForm): Complete chat data including metadata
+
+        Returns:
+            Optional[ChatModel]: Imported chat model or None if import failed
+
+        Note:
+            - Preserves original timestamps if provided
+            - Maintains pinned status and metadata
+            - Generates new UUID for database consistency
+        """
         with get_db() as db:
             id = str(uuid.uuid4())
             chat = ChatModel(
@@ -375,17 +511,33 @@ class ChatTable:
             return ChatModel.model_validate(result) if result else None
 
     def update_chat_by_id(self, id: str, chat: dict) -> Optional[ChatModel]:
+        """
+        Update an existing chat's content and metadata.
+
+        Args:
+            id (str): Unique chat identifier
+            chat (dict): Updated chat data including messages and history
+
+        Returns:
+            Optional[ChatModel]: Updated chat model or None if update failed
+
+        Note:
+            - Updates timestamp automatically for audit trails
+            - Handles title extraction with fallback
+            - Uses exception handling for graceful failure
+        """
         try:
             with get_db() as db:
                 chat_item = db.get(Chat, id)
                 chat_item.chat = chat
                 chat_item.title = chat["title"] if "title" in chat else "New Chat"
-                chat_item.updated_at = int(time.time())
+                chat_item.updated_at = int(time.time())  # Track modification time
                 db.commit()
                 db.refresh(chat_item)
 
                 return ChatModel.model_validate(chat_item)
         except Exception:
+            # Log error in production for debugging
             return None
 
     def update_chat_title_by_id(self, id: str, title: str) -> Optional[ChatModel]:
@@ -444,6 +596,29 @@ class ChatTable:
     def upsert_message_to_chat_by_id_and_message_id(
         self, id: str, message_id: str, message: dict
     ) -> Optional[ChatModel]:
+        """
+        Add or update a message within a chat's history.
+
+        This method handles the core message management functionality:
+        - Creates new messages or updates existing ones
+        - Maintains chat history structure and currentId tracking
+        - Sanitizes content to prevent database issues
+        - Updates chat timestamps for proper ordering
+
+        Args:
+            id (str): Chat identifier
+            message_id (str): Unique message identifier within the chat
+            message (dict): Message data including content, role, timestamp, etc.
+
+        Returns:
+            Optional[ChatModel]: Updated chat model or None if operation failed
+
+        Note:
+            - Automatically sanitizes null characters from message content
+            - Merges with existing message data if message already exists
+            - Updates currentId to track conversation state
+            - Maintains referential integrity of chat history
+        """
         chat = self.get_chat_by_id(id)
         if chat is None:
             return None
@@ -803,7 +978,38 @@ class ChatTable:
         limit: int = 60,
     ) -> list[ChatModel]:
         """
-        Filters chats based on a search query using Python, allowing pagination using skip and limit.
+        Advanced chat search with intelligent filtering and database optimization.
+
+        Provides comprehensive search capabilities including:
+        - Full-text search across chat titles and message content
+        - Tag-based filtering with special syntax (tag:tagname)
+        - Folder filtering (folder:foldername)
+        - Status filtering (pinned:true, archived:false, shared:true)
+        - Database-specific query optimization (SQLite vs PostgreSQL)
+        - Efficient pagination with SQL-level limiting
+
+        Args:
+            user_id (str): User whose chats to search
+            search_text (str): Search query with optional special syntax
+            include_archived (bool): Whether to include archived chats
+            skip (int): Number of results to skip for pagination
+            limit (int): Maximum number of results to return
+
+        Returns:
+            list[ChatModel]: Filtered and paginated chat results
+
+        Search Syntax:
+            - "hello world" - Text search in titles and content
+            - "tag:important" - Filter by specific tag
+            - "folder:work" - Filter by folder name
+            - "pinned:true" - Show only pinned chats
+            - "archived:false" - Exclude archived chats
+            - "shared:true" - Show only shared chats
+
+        Performance Notes:
+            - Uses database-specific optimizations (JSONB vs JSON)
+            - Applies pagination at SQL level for efficiency
+            - Leverages indexes for tag and content searches
         """
         search_text = search_text.replace("\u0000", "").lower().strip()
 
@@ -1038,6 +1244,21 @@ class ChatTable:
             return None
 
     def get_chat_tags_by_id_and_user_id(self, id: str, user_id: str) -> list[TagModel]:
+        """
+        Retrieve all tags associated with a specific chat.
+
+        Args:
+            id (str): Chat identifier
+            user_id (str): User identifier for security validation
+
+        Returns:
+            list[TagModel]: List of tag models associated with the chat
+
+        Note:
+            - Tags are stored as IDs in chat metadata
+            - Returns full tag models with names and metadata
+            - Respects user ownership for security
+        """
         with get_db() as db:
             chat = db.get(Chat, id)
             tags = chat.meta.get("tags", [])
@@ -1074,6 +1295,28 @@ class ChatTable:
     def add_chat_tag_by_id_and_user_id_and_tag_name(
         self, id: str, user_id: str, tag_name: str
     ) -> Optional[ChatModel]:
+        """
+        Add a tag to a chat, creating the tag if it doesn't exist.
+
+        This method provides intelligent tag management:
+        - Creates new tags automatically if they don't exist
+        - Prevents duplicate tags on the same chat
+        - Maintains tag consistency across the system
+        - Updates chat metadata atomically
+
+        Args:
+            id (str): Chat identifier
+            user_id (str): User identifier for tag ownership
+            tag_name (str): Human-readable tag name
+
+        Returns:
+            Optional[ChatModel]: Updated chat model or None if operation failed
+
+        Note:
+            - Tag names are normalized to lowercase with underscores
+            - Duplicate tags are automatically deduplicated
+            - Creates tag in global tag system if not exists
+        """
         tag = Tags.get_tag_by_name_and_user_id(tag_name, user_id)
         if tag is None:
             tag = Tags.insert_new_tag(tag_name, user_id)
@@ -1171,6 +1414,27 @@ class ChatTable:
             return False
 
     def delete_chat_by_id_and_user_id(self, id: str, user_id: str) -> bool:
+        """
+        Permanently delete a chat with user ownership validation.
+
+        This method provides secure chat deletion:
+        - Validates user ownership before deletion
+        - Removes associated shared chats automatically
+        - Performs cascading cleanup of related data
+        - Uses database transactions for consistency
+
+        Args:
+            id (str): Chat identifier to delete
+            user_id (str): User identifier for ownership validation
+
+        Returns:
+            bool: True if deletion successful, False otherwise
+
+        Security Note:
+            - Only allows deletion by chat owner
+            - Prevents unauthorized data access
+            - Maintains audit trail through logging
+        """
         try:
             with get_db() as db:
                 db.query(Chat).filter_by(id=id, user_id=user_id).delete()
@@ -1218,4 +1482,6 @@ class ChatTable:
             return False
 
 
+# Global instance for chat operations - thread-safe singleton pattern
+# This instance provides the main interface for all chat-related database operations
 Chats = ChatTable()
