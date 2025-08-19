@@ -5,8 +5,8 @@
 	import { config } from '$lib/stores';
 
 	onMount(async () => {
-		const WAS_REDIRECT = $config?.extended_features?.was_redirect || false;
-		if (WAS_REDIRECT) window.open(JSON.parse(WAS_REDIRECT), '_blank');
+		const WAS_REDIRECT_URL = $config?.extended_features?.was_redirect_url || false;
+		if (WAS_REDIRECT_URL) window.open(JSON.parse(WAS_REDIRECT_URL), '_blank');
 		goto('/');
 	});
 </script>

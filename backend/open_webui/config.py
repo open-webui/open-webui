@@ -1041,10 +1041,10 @@ ENABLE_SIGNUP = PersistentConfig(
 )
 
 # PATCH REDIRECT TO WAS
-WAS_REDIRECT = PersistentConfig(
-    "WAS_REDIRECT",
-    "ui.WAS_REDIRECT",
-    os.environ.get("WAS_REDIRECT", ""),
+WAS_REDIRECT_URL = PersistentConfig(
+    "WAS_REDIRECT_URL",
+    "ui.WAS_REDIRECT_URL",
+    os.environ.get("WAS_REDIRECT_URL", ""),
 )
 # /PATCH REDIRECT TO WAS
 

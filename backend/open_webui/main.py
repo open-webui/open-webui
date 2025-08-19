@@ -335,7 +335,7 @@ from open_webui.config import (
     DEFAULT_PROMPT_SUGGESTIONS,
     DEFAULT_MODELS,
     # PATCH REDIRECT TO WAS
-    WAS_REDIRECT,
+    WAS_REDIRECT_URL,
     # /PATCH REDIRECT TO WAS
     DEFAULT_ARENA_MODEL,
     MODEL_ORDER_LIST,
@@ -705,7 +705,7 @@ app.state.config.DEFAULT_PROMPT_SUGGESTIONS = DEFAULT_PROMPT_SUGGESTIONS
 app.state.config.DEFAULT_USER_ROLE = DEFAULT_USER_ROLE
 
 # PATCH REDIRECT TO WAS
-app.state.config.WAS_REDIRECT = WAS_REDIRECT
+app.state.config.WAS_REDIRECT_URL = WAS_REDIRECT_URL
 # /PATCH REDIRECT TO WAS
 
 app.state.config.PENDING_USER_OVERLAY_CONTENT = PENDING_USER_OVERLAY_CONTENT
@@ -1654,7 +1654,7 @@ async def get_app_config(request: Request):
         # Environment variables for patches
         "extended_features": {
             # PATCH REDIRECT TO WAS
-            "was_redirect": app.state.config.WAS_REDIRECT,
+            "was_redirect_url": app.state.config.WAS_REDIRECT_URL,
             # /PATCH REDIRECT TO WAS
         },
         "features": {

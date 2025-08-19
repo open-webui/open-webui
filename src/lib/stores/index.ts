@@ -264,7 +264,7 @@ type Config = {
 	// Environment variables for patches
 	extended_features: {
 		// PATCH REDIRECT TO WAS
-		was_redirect: string;
+		was_redirect_url: string;
 		// /PATCH REDIRECT TO WAS
 	};
 	oauth: {
