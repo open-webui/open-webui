@@ -40,11 +40,13 @@
 					<Selector
 						id={`${selectedModelIdx}`}
 						placeholder={$i18n.t('Select a model')}
-						items={$models.map((model) => ({
-							value: model.id,
-							label: model.name,
-							model: model
-						}))}
+						items={$models
+							.sort((a, b) => a.name.localeCompare(b.name))
+							.map((model) => ({
+								value: model.id,
+								label: model.name,
+								model: model
+							}))}
 						showTemporaryChatControl={$user.role === 'user'
 							? ($user?.permissions?.chat?.temporary ?? true)
 							: true}

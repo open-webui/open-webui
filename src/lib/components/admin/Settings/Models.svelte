@@ -60,23 +60,25 @@
 		workspaceModels = await getBaseModels(localStorage.token);
 		baseModels = await getModels(localStorage.token, true);
 
-		models = baseModels.map((m) => {
-			const workspaceModel = workspaceModels.find((wm) => wm.id === m.id);
+		models = baseModels
+			.map((m) => {
+				const workspaceModel = workspaceModels.find((wm) => wm.id === m.id);
 
-			if (workspaceModel) {
-				return {
-					...m,
-					...workspaceModel
-				};
-			} else {
-				return {
-					...m,
-					id: m.id,
-					name: m.name,
-					is_active: true
-				};
-			}
-		});
+				if (workspaceModel) {
+					return {
+						...m,
+						...workspaceModel
+					};
+				} else {
+					return {
+						...m,
+						id: m.id,
+						name: m.name,
+						is_active: true
+					};
+				}
+			})
+			.sort((a, b) => a.name.localeCompare(b.name));
 	};
 
 	const upsertModelHandler = async (model) => {

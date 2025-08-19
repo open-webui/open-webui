@@ -469,7 +469,9 @@
 									<option value={null} class=" text-gray-900"
 										>{$i18n.t('Select a base model')}</option
 									>
-									{#each $models.filter((m) => (model ? m.id !== model.id : true) && !m?.preset && m?.owned_by !== 'arena') as model}
+									{#each $models
+										.sort((a, b) => a.name.localeCompare(b.name))
+										.filter((m) => (model ? m.id !== model.id : true) && !m?.preset && m?.owned_by !== 'arena') as model}
 										<option value={model.id} class=" text-gray-900">{model.name}</option>
 									{/each}
 								</select>
