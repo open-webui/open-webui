@@ -2,6 +2,7 @@
 Pure txtai-wikipedia semantic search - absolutely generic
 """
 
+import importlib.util
 import logging
 import re
 from typing import Dict, List, Optional
@@ -9,23 +10,40 @@ from datetime import datetime
 
 log = logging.getLogger(__name__)
 
-try:
-    from txtai.embeddings import Embeddings
 
-    TXTAI_AVAILABLE = True
-except ImportError:
-    TXTAI_AVAILABLE = False
+def _get_txtai_embeddings():
+    """Lazy load txtai.embeddings.Embeddings with clear error message"""
+    try:
+        from txtai.embeddings import Embeddings
 
-try:
-    from transformers import pipeline
+        return Embeddings
+    except ImportError:
+        raise ImportError(
+            "txtai is required for Wikipedia grounding. "
+            "Install with: pip install txtai[similarity]"
+        )
 
-    TRANSLATION_AVAILABLE = True
-except ImportError:
-    TRANSLATION_AVAILABLE = False
+
+def _get_transformers_pipeline():
+    """Lazy load transformers.pipeline with clear error message"""
+    try:
+        from transformers import pipeline
+
+        return pipeline
+    except ImportError:
+        raise ImportError(
+            "transformers is required for language detection. "
+            "Install with: pip install transformers"
+        )
+
+
+def _check_optional_dependency(module_name: str) -> bool:
+    """Check if an optional dependency is available"""
+    return importlib.util.find_spec(module_name) is not None
 
 
 class WikiSearchGrounder:
-    """Pure txtai-wikipedia implementation"""
+    """Pure txtai-wikipedia implementation with lazy loading"""
 
     def __init__(self):
         self.max_content_length = 4000
@@ -228,14 +246,14 @@ class WikiSearchGrounder:
         if self.translation_loaded:
             return True
 
-        if not TRANSLATION_AVAILABLE:
+        if not _check_optional_dependency("transformers"):
             log.warning(
                 "transformers not available for translation. Install with: pip install transformers>=4.46.0"
             )
             return False
 
         try:
-            from transformers import pipeline
+            pipeline = _get_transformers_pipeline()
 
             log.info("Loading French-to-English translation pipeline...")
             # Use a lightweight multilingual translation model
@@ -308,14 +326,14 @@ class WikiSearchGrounder:
         if self.model_loaded:
             return True
 
-        if not TXTAI_AVAILABLE:
+        if not _check_optional_dependency("txtai"):
             log.error(
                 "txtai is not available. Please install with: pip install txtai[graph]>=8.6.0"
             )
             return False
 
         try:
-            from txtai.embeddings import Embeddings
+            Embeddings = _get_txtai_embeddings()
 
             log.info("Loading txtai-wikipedia model from HuggingFace Hub...")
             self.embeddings = Embeddings()

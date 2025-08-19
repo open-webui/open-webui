@@ -33,6 +33,65 @@ COPY . .
 ENV APP_BUILD_HASH=${BUILD_HASH}
 RUN npm run build
 
+######## Model download stage (parallel and cacheable) ########
+FROM python:3.11-slim-bookworm AS models
+
+# Use args for model downloading
+ARG USE_CUDA
+ARG USE_CUDA_VER
+ARG USE_EMBEDDING_MODEL
+ARG USE_RERANKING_MODEL
+
+# Environment variables for model downloads
+ENV USE_CUDA_DOCKER=${USE_CUDA} \
+    USE_CUDA_DOCKER_VER=${USE_CUDA_VER} \
+    USE_EMBEDDING_MODEL_DOCKER=${USE_EMBEDDING_MODEL} \
+    USE_RERANKING_MODEL_DOCKER=${USE_RERANKING_MODEL}
+
+## Model cache directories ##
+ENV RAG_EMBEDDING_MODEL="$USE_EMBEDDING_MODEL_DOCKER" \
+    RAG_RERANKING_MODEL="$USE_RERANKING_MODEL_DOCKER" \
+    SENTENCE_TRANSFORMERS_HOME="/models/embedding" \
+    WHISPER_MODEL="base" \
+    WHISPER_MODEL_DIR="/models/whisper" \
+    TXTAI_WIKIPEDIA_MODEL="neuml/txtai-wikipedia" \
+    TXTAI_CACHE_DIR="/models/txtai" \
+    TRANSFORMERS_CACHE="/models/transformers" \
+    TIKTOKEN_ENCODING_NAME="cl100k_base" \
+    TIKTOKEN_CACHE_DIR="/models/tiktoken" \
+    HF_HOME="/models/embedding"
+
+# Install system dependencies for model downloads
+RUN apt-get update && \
+    apt-get install -y --no-install-recommends gcc python3-dev curl && \
+    rm -rf /var/lib/apt/lists/*
+
+# Create model directories
+RUN mkdir -p /models/embedding /models/whisper /models/txtai /models/transformers /models/tiktoken
+
+# Copy only requirements for model downloads
+COPY ./backend/requirements.txt /tmp/requirements.txt
+
+# Install dependencies and download all models in parallel-friendly layers
+RUN pip3 install uv && \
+    if [ "$USE_CUDA" = "true" ]; then \
+    pip3 install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/$USE_CUDA_DOCKER_VER --no-cache-dir; \
+    else \
+    pip3 install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cpu --no-cache-dir; \
+    fi && \
+    uv pip install --system -r /tmp/requirements.txt --no-cache-dir
+
+# Download models in separate RUN commands for better caching
+RUN python -c "import os; from sentence_transformers import SentenceTransformer; SentenceTransformer(os.environ['RAG_EMBEDDING_MODEL'], device='cpu')"
+
+RUN python -c "import os; from faster_whisper import WhisperModel; WhisperModel(os.environ['WHISPER_MODEL'], device='cpu', compute_type='int8', download_root=os.environ['WHISPER_MODEL_DIR'])"
+
+RUN python -c "import os; import tiktoken; tiktoken.get_encoding(os.environ['TIKTOKEN_ENCODING_NAME'])"
+
+RUN python -c "import os; from txtai.embeddings import Embeddings; e = Embeddings({'path': os.environ['TXTAI_WIKIPEDIA_MODEL']}); e.load()"
+
+RUN python -c "import os; from transformers import pipeline; pipeline('translation', model='Helsinki-NLP/opus-mt-fr-en', device='cpu')"
+
 ######## WebUI backend ########
 FROM python:3.11-slim-bookworm AS base
 
@@ -137,30 +196,18 @@ RUN if [ "$USE_OLLAMA" = "true" ]; then \
 # install python dependencies
 COPY --chown=$UID:$GID ./backend/requirements.txt ./requirements.txt
 
-# Layer 1: Install dependencies and download core models (sentence-transformers, whisper, tiktoken)
+# Install dependencies without model downloads (models copied from parallel stage)
 RUN pip3 install uv && \
     if [ "$USE_CUDA" = "true" ]; then \
     pip3 install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/$USE_CUDA_DOCKER_VER --no-cache-dir && \
-    uv pip install --system -r requirements.txt --no-cache-dir && \
-    python -c "import os; from sentence_transformers import SentenceTransformer; SentenceTransformer(os.environ['RAG_EMBEDDING_MODEL'], device='cpu')" && \
-    python -c "import os; from faster_whisper import WhisperModel; WhisperModel(os.environ['WHISPER_MODEL'], device='cpu', compute_type='int8', download_root=os.environ['WHISPER_MODEL_DIR'])" && \
-    python -c "import os; import tiktoken; tiktoken.get_encoding(os.environ['TIKTOKEN_ENCODING_NAME'])"; \
+    uv pip install --system -r requirements.txt --no-cache-dir; \
     else \
     pip3 install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cpu --no-cache-dir && \
-    uv pip install --system -r requirements.txt --no-cache-dir && \
-    python -c "import os; from sentence_transformers import SentenceTransformer; SentenceTransformer(os.environ['RAG_EMBEDDING_MODEL'], device='cpu')" && \
-    python -c "import os; from faster_whisper import WhisperModel; WhisperModel(os.environ['WHISPER_MODEL'], device='cpu', compute_type='int8', download_root=os.environ['WHISPER_MODEL_DIR'])" && \
-    python -c "import os; import tiktoken; tiktoken.get_encoding(os.environ['TIKTOKEN_ENCODING_NAME'])"; \
+    uv pip install --system -r requirements.txt --no-cache-dir; \
     fi
 
-# Layer 2: Download txtai-wikipedia models (separate layer for better caching)
-RUN if [ "$USE_CUDA" = "true" ]; then \
-    python -c "import os; from txtai.embeddings import Embeddings; e = Embeddings({'path': os.environ['TXTAI_WIKIPEDIA_MODEL']}); e.load()" && \
-    python -c "import os; from transformers import pipeline; pipeline('translation', model='Helsinki-NLP/opus-mt-fr-en', device='cpu')"; \
-    else \
-    python -c "import os; from txtai.embeddings import Embeddings; e = Embeddings({'path': os.environ['TXTAI_WIKIPEDIA_MODEL']}); e.load()" && \
-    python -c "import os; from transformers import pipeline; pipeline('translation', model='Helsinki-NLP/opus-mt-fr-en', device='cpu')"; \
-    fi
+# Copy pre-downloaded models from parallel build stage
+COPY --from=models --chown=$UID:$GID /models/ /app/backend/data/cache/
 
 # Set ownership after all model downloads
 RUN chown -R $UID:$GID /app/backend/data/

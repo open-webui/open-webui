@@ -369,6 +369,32 @@ async def lifespan(app: FastAPI):
     except Exception as e:
         log.error(f"Failed to initialize FastMCP manager: {e}")
 
+    # Initialize Wikipedia grounding models in background
+    async def initialize_wiki_grounding():
+        """Initialize Wikipedia grounding models in background to avoid first-user delay"""
+        try:
+            from open_webui.grounding.wiki_search_utils import wiki_search_grounder
+
+            log.info(
+                "Starting background initialization of Wikipedia grounding models..."
+            )
+            success = await wiki_search_grounder.initialize()
+            if success:
+                log.info(
+                    "Wikipedia grounding models initialized successfully in background"
+                )
+            else:
+                log.warning(
+                    "Wikipedia grounding models failed to initialize in background"
+                )
+        except Exception as e:
+            log.error(
+                f"Error during background Wikipedia grounding initialization: {e}"
+            )
+
+    # Start background initialization (non-blocking)
+    wiki_init_task = asyncio.create_task(initialize_wiki_grounding())
+
     # Start periodic cleanup task in background (should not affect app lifecycle)
     cleanup_task = asyncio.create_task(periodic_usage_pool_cleanup())
 
@@ -391,6 +417,19 @@ async def lifespan(app: FastAPI):
     try:
         yield
     finally:
+        # Cancel background tasks if they're still running
+        if not wiki_init_task.done():
+            log.info("Cancelling Wikipedia grounding initialization task")
+            wiki_init_task.cancel()
+            try:
+                await wiki_init_task
+            except asyncio.CancelledError:
+                log.info(
+                    "Wikipedia grounding initialization task cancelled successfully"
+                )
+            except Exception as e:
+                log.error(f"Error cancelling Wikipedia initialization task: {e}")
+
         # Cancel the cleanup task if it's still running
         if not cleanup_task.done():
             log.info("Cancelling periodic usage pool cleanup task")
