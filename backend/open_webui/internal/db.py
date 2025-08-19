@@ -21,6 +21,7 @@ from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import scoped_session, sessionmaker
 from sqlalchemy.pool import QueuePool, NullPool
 from sqlalchemy.sql.type_api import _T
+from sqlalchemy.sql import func
 from typing_extensions import Self
 
 log = logging.getLogger(__name__)
@@ -118,3 +119,15 @@ def get_session():
 
 
 get_db = contextmanager(get_session)
+
+
+def get_length_function(session):
+    """
+    Returns the appropriate length function based on the database dialect.
+    - `func.len` for MSSQL
+    - `func.length` for other databases (e.g., SQLite, PostgreSQL)
+    """
+    dialect_name = session.bind.dialect.name
+    if dialect_name == "mssql":
+        return func.len
+    return func.length
