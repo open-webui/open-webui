@@ -746,7 +746,7 @@
 									<select
 										class="dark:bg-gray-900 w-fit pr-8 rounded-sm px-2 p-1 text-xs bg-transparent outline-hidden text-right"
 										bind:value={embeddingEngine}
-										placeholder="Select an embedding model engine"
+										placeholder={$i18n.t('Select an embedding model engine')}
 										on:change={(e) => {
 											if (e.target.value === 'ollama') {
 												embeddingModel = '';
@@ -811,7 +811,7 @@
 									<div class="flex gap-2">
 										<input
 											class="flex-1 w-full text-sm bg-transparent outline-hidden"
-											placeholder="Version"
+											placeholder={$i18n.t('Version')}
 											bind:value={AzureOpenAIVersion}
 											required
 										/>
@@ -947,7 +947,7 @@
 											<select
 												class="dark:bg-gray-900 w-fit pr-8 rounded-sm px-2 p-1 text-xs bg-transparent outline-hidden text-right"
 												bind:value={RAGConfig.RAG_RERANKING_ENGINE}
-												placeholder="Select a reranking model engine"
+												placeholder={$i18n.t('Select a reranking model engine')}
 												on:change={(e) => {
 													if (e.target.value === 'external') {
 														RAGConfig.RAG_RERANKING_MODEL = '';

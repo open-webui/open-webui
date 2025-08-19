@@ -469,7 +469,9 @@ def upload_image(request, image_data, content_type, metadata, user):
             "content-type": content_type,
         },
     )
-    file_item = upload_file(request, file, metadata=metadata, internal=True, user=user)
+    file_item = upload_file(
+        request, file=file, metadata=metadata, process=False, user=user
+    )
     url = request.app.url_path_for("get_file_content_by_id", id=file_item.id)
     return url
 
@@ -483,11 +485,15 @@ async def image_generations(
     # if IMAGE_SIZE = 'auto', default WidthxHeight to the 512x512 default
     # This is only relevant when the user has set IMAGE_SIZE to 'auto' with an
     # image model other than gpt-image-1, which is warned about on settings save
-    width, height = (
-        tuple(map(int, request.app.state.config.IMAGE_SIZE.split("x")))
-        if "x" in request.app.state.config.IMAGE_SIZE
-        else (512, 512)
-    )
+
+    size = "512x512"
+    if "x" in request.app.state.config.IMAGE_SIZE:
+        size = request.app.state.config.IMAGE_SIZE
+
+    if "x" in form_data.size:
+        size = form_data.size
+
+    width, height = tuple(map(int, size.split("x")))
 
     r = None
     try:
