@@ -1149,7 +1149,7 @@
 									const lineStart = $from.before($from.depth);
 									const lineEnd = $from.after($from.depth);
 									const lineText = state.doc.textBetween(lineStart, lineEnd, '\n', '\0').trim();
-									if (lineText === '```') {
+									if (lineText.startsWith('```')) {
 										// Fix GitHub issue #16337: prevent backtick removal for lines starting with ```
 										return false; // Let ProseMirror handle the Enter key normally
 									}

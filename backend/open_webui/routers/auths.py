@@ -626,7 +626,7 @@ async def signup(request: Request, response: Response, form_data: SignupForm):
             )
 
             if request.app.state.config.WEBHOOK_URL:
-                post_webhook(
+                await post_webhook(
                     request.app.state.WEBUI_NAME,
                     request.app.state.config.WEBHOOK_URL,
                     WEBHOOK_MESSAGES.USER_SIGNUP(user.name),

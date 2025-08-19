@@ -1141,7 +1141,7 @@
 								aria-labelledby="image-comp-width"
 								class="w-20 bg-transparent outline-hidden text-center"
 								min="0"
-								placeholder="Width"
+								placeholder={$i18n.t('Width')}
 							/>x
 							<label class="sr-only" for="image-comp-height"
 								>{$i18n.t('Image Max Compression Size height')}</label
@@ -1152,7 +1152,7 @@
 								aria-labelledby="image-comp-height"
 								class="w-20 bg-transparent outline-hidden text-center"
 								min="0"
-								placeholder="Height"
+								placeholder={$i18n.t('Height')}
 							/>
 						</div>
 					</div>

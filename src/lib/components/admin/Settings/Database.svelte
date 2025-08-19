@@ -76,7 +76,7 @@
 						);
 
 						if (res) {
-							toast.success('Config imported successfully');
+							toast.success($i18n.t('Config imported successfully'));
 						}
 						e.target.value = null;
 					};
