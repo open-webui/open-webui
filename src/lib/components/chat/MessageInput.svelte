@@ -1130,7 +1130,20 @@
 														return res;
 													}}
 													oncompositionstart={() => (isComposing = true)}
-													oncompositionend={() => (isComposing = false)}
+													oncompositionend={() => {
+														const isSafari = /^((?!chrome|android).)*safari/i.test(
+															navigator.userAgent
+														);
+
+														if (isSafari) {
+															// Safari has a bug where compositionend is not triggered correctly #16615
+															// when using the virtual keyboard on iOS.
+															// We use a timeout to ensure that the composition is ended after a short delay.
+															setTimeout(() => (isComposing = false));
+														} else {
+															isComposing = false;
+														}
+													}}
 													on:keydown={async (e) => {
 														e = e.detail.event;
 
@@ -1341,7 +1354,18 @@
 												command = getCommand();
 											}}
 											on:compositionstart={() => (isComposing = true)}
-											on:compositionend={() => setTimeout(() => (isComposing = false))}
+											on:compositionend={() => {
+												const isSafari = /^((?!chrome|android).)*safari/i.test(navigator.userAgent);
+
+												if (isSafari) {
+													// Safari has a bug where compositionend is not triggered correctly #16615
+													// when using the virtual keyboard on iOS.
+													// We use a timeout to ensure that the composition is ended after a short delay.
+													setTimeout(() => (isComposing = false));
+												} else {
+													isComposing = false;
+												}
+											}}
 											on:keydown={async (e) => {
 												const isCtrlPressed = e.ctrlKey || e.metaKey; // metaKey is for Cmd key on Mac
 
