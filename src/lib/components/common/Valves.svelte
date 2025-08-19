@@ -139,7 +139,7 @@
 										<input
 											type="text"
 											class=" w-full rounded-lg py-1 text-left text-sm dark:text-gray-300 dark:bg-gray-850 outline-hidden border border-gray-100 dark:border-gray-850"
-											placeholder={$i18n.t("Enter hex color (e.g. #FF0000)")}
+											placeholder={$i18n.t("Enter coordinates (e.g. 51.505, -0.09)")}
 											bind:value={valves[property]}
 											autocomplete="off"
 											on:change={() => {
