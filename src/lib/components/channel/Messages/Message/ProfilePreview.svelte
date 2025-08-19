@@ -1,5 +1,8 @@
 <script lang="ts">
 	import { DropdownMenu } from 'bits-ui';
+	import { getContext } from 'svelte';
+
+	const i18n = getContext('i18n');
 
 	import { flyAndScale } from '$lib/utils/transitions';
 	import { WEBUI_BASE_URL } from '$lib/constants';
@@ -76,7 +79,7 @@
 								</div>
 
 								<div class=" -translate-y-[1px]">
-									<span class="text-xs"> Active </span>
+									<span class="text-xs"> {$i18n.t('Active')} </span>
 								</div>
 							{:else}
 								<div>
@@ -86,7 +89,7 @@
 								</div>
 
 								<div class=" -translate-y-[1px]">
-									<span class="text-xs"> Away </span>
+									<span class="text-xs"> {$i18n.t('Away')} </span>
 								</div>
 							{/if}
 						</div>

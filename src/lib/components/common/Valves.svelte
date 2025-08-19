@@ -70,7 +70,7 @@
 						{:else if (valvesSpec.properties[property]?.type ?? null) === 'boolean'}
 							<div class="flex justify-between items-center">
 								<div class="text-xs text-gray-500">
-									{valves[property] ? 'Enabled' : 'Disabled'}
+									{valves[property] ? $i18n.t('Enabled') : $i18n.t('Disabled')}
 								</div>
 
 								<div class=" pr-2">
@@ -173,5 +173,5 @@
 		</div>
 	{/each}
 {:else}
-	<div class="text-xs">No valves</div>
+	<div class="text-xs">{$i18n.t('No valves')}</div>
 {/if}

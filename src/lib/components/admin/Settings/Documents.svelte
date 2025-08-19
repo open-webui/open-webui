@@ -762,7 +762,7 @@
 										<option value="">{$i18n.t('Default (SentenceTransformers)')}</option>
 										<option value="ollama">{$i18n.t('Ollama')}</option>
 										<option value="openai">{$i18n.t('OpenAI')}</option>
-										<option value="azure_openai">Azure OpenAI</option>
+										<option value="azure_openai">{$i18n.t('Azure OpenAI')}</option>
 									</select>
 								</div>
 							</div>
