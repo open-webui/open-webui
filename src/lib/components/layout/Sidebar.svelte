@@ -893,6 +893,13 @@
 								return null;
 							});
 							if (!chat && item) {
+								// This is a clone/import operation, check permission
+								const canClone = ($user?.role === 'admin' || $user?.permissions?.chat?.clone) ?? true;
+								if (!canClone) {
+									toast.error($i18n.t("You don't have permission to clone chats."));
+									return;
+								}
+
 								chat = await importChat(
 									localStorage.token,
 									item.chat,

@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { onMount } from 'svelte';
+	import { onMount, getContext } from 'svelte';
 	import {
 		getSharedChats,
 		deleteSharedChatById,
@@ -46,6 +46,7 @@
 	let showConfirmResetAllStats = false;
 	let showPrimaryResetAllStatsConfirm = false;
 	let showConfirmClearRevoked = false;
+	const i18n = getContext('i18n');
 
 	let showConfirmResetStats = false;
 	let chatToResetStats = null;
@@ -387,6 +388,12 @@
 					selectedChatId = id;
 					showShareChatModal = true;
 				} else {
+					const canClone = ($user?.role === 'admin' || $user?.permissions?.chat?.clone) ?? true;
+					if (!canClone) {
+						toast.error($i18n.t("You don't have permission to clone chats."));
+						return;
+					}
+
 					const res = await importChat(
 						localStorage.token,
 						item.chat,
