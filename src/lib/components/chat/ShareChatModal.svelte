@@ -1106,33 +1106,25 @@
 						{#if maxClonesCount > 0}
 							<div class="mt-4 flex items-start space-x-3">
 								<div class="pt-0.5">
-									<Switch bind:state={keep_link_active_after_max_clones}>
-										<Tooltip>
-											<div class="p-2 text-sm" slot="tooltip">
-												<div class="font-medium mb-2">
-													{$i18n.t('Keep Link Active')}
-												</div>
-												<p>
-													{$i18n.t(
-														'If checked, the share link will remain active for viewing even after the maximum number of clones has been reached. Cloning will be disabled.'
-													)}
-												</p>
-												<p class="mt-2">
-													{$i18n.t(
-														'If unchecked, the share link will be automatically revoked once the clone limit is reached.'
-													)}
-												</p>
-											</div>
-										</Tooltip>
-									</Switch>
+									<Switch bind:state={keep_link_active_after_max_clones} />
 								</div>
 								<div class="flex-1">
-									<label
-										for="keep-link-active"
-										class="block text-sm font-medium text-gray-700 dark:text-gray-300"
-									>
-										{$i18n.t('Keep link active but prevent further cloning')}
-									</label>
+									<div class="flex items-center space-x-1">
+										<label
+											for="keep-link-active"
+											class="block text-sm font-medium text-gray-700 dark:text-gray-300"
+										>
+											{$i18n.t('Allow viewing after clone limit')}
+										</label>
+										<Tooltip placement="top">
+											<QuestionMarkCircle class="cursor-pointer text-gray-500 size-4" />
+											<div class="p-2 text-sm" slot="tooltip">
+												{$i18n.t(
+													'When enabled, the chat will remain viewable even after the maximum number of clones is reached. If disabled, the share link will be deactivated upon reaching the clone limit.'
+												)}
+											</div>
+										</Tooltip>
+									</div>
 								</div>
 							</div>
 						{/if}
