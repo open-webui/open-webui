@@ -88,7 +88,7 @@ RUN python -c "import os; from faster_whisper import WhisperModel; WhisperModel(
 
 RUN python -c "import os; import tiktoken; tiktoken.get_encoding(os.environ['TIKTOKEN_ENCODING_NAME'])"
 
-RUN python -c "import os; from txtai.embeddings import Embeddings; e = Embeddings({'path': os.environ['TXTAI_WIKIPEDIA_MODEL']}); e.load()"
+RUN python -c "from txtai.embeddings import Embeddings; e = Embeddings(); e.load(provider='huggingface-hub', container='neuml/txtai-wikipedia')"
 
 RUN python -c "import os; from transformers import pipeline; pipeline('translation', model='Helsinki-NLP/opus-mt-fr-en', device='cpu')"
 
