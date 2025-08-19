@@ -1130,7 +1130,7 @@
 														return res;
 													}}
 													oncompositionstart={() => (isComposing = true)}
-													oncompositionend={() => setTimeout(() => (isComposing = false))}
+													oncompositionend={() => (isComposing = false)}
 													on:keydown={async (e) => {
 														e = e.detail.event;
 
