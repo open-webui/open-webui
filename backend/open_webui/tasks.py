@@ -106,7 +106,7 @@ async def redis_send_command(redis: Redis, command: dict):
 
 async def cleanup_task(redis, task_id: str, id=None):
     """
-    Remove a completed or canceled task with proper exception handling.
+    Remove a completed or canceled task from the global `tasks` dictionary with proper exception handling.
     """
     cleanup_errors = []
 
