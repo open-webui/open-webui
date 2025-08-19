@@ -81,6 +81,7 @@ from open_webui.routers import (
     memories,
     models,
     knowledge,
+    content_sources,
     prompts,
     evaluations,
     tools,
@@ -297,6 +298,8 @@ from open_webui.config import (
     GOOGLE_PSE_ENGINE_ID,
     GOOGLE_DRIVE_CLIENT_ID,
     GOOGLE_DRIVE_API_KEY,
+    GOOGLE_DRIVE_SERVICE_ACCOUNT_JSON,
+    ENABLE_GOOGLE_DRIVE_FOLDER_SYNC,
     ONEDRIVE_CLIENT_ID,
     ONEDRIVE_SHAREPOINT_URL,
     ONEDRIVE_SHAREPOINT_TENANT_ID,
@@ -405,6 +408,7 @@ from open_webui.env import (
     AUDIT_EXCLUDED_PATHS,
     AUDIT_LOG_LEVEL,
     CHANGELOG,
+    ENV,
     REDIS_URL,
     REDIS_CLUSTER,
     REDIS_KEY_PREFIX,
@@ -471,6 +475,8 @@ from open_webui.tasks import (
     stop_task,
     list_tasks,
 )  # Import from tasks.py
+
+from open_webui.content_sources.scheduler import scheduler as content_source_scheduler
 
 from open_webui.utils.redis import get_sentinels_from_env
 
@@ -576,10 +582,26 @@ async def lifespan(app: FastAPI):
             None,
         )
 
+    # Start content source sync scheduler if any providers are configured
+    # The scheduler will automatically check which providers need syncing
+    try:
+        await content_source_scheduler.start()
+        log.info("Content source sync scheduler started successfully")
+    except Exception as e:
+        log.error(f"Failed to start content source sync scheduler: {e}")
+        # Non-critical failure - continue application startup
+
     yield
 
     if hasattr(app.state, "redis_task_command_listener"):
         app.state.redis_task_command_listener.cancel()
+
+    # Stop content source sync scheduler
+    try:
+        await content_source_scheduler.stop()
+        log.info("Content source sync scheduler stopped")
+    except Exception as e:
+        log.error(f"Error stopping content source sync scheduler: {e}")
 
 
 app = FastAPI(
@@ -869,6 +891,10 @@ app.state.config.BYPASS_WEB_SEARCH_EMBEDDING_AND_RETRIEVAL = (
 app.state.config.BYPASS_WEB_SEARCH_WEB_LOADER = BYPASS_WEB_SEARCH_WEB_LOADER
 
 app.state.config.ENABLE_GOOGLE_DRIVE_INTEGRATION = ENABLE_GOOGLE_DRIVE_INTEGRATION
+app.state.config.GOOGLE_DRIVE_API_KEY = GOOGLE_DRIVE_API_KEY
+app.state.config.GOOGLE_DRIVE_CLIENT_ID = GOOGLE_DRIVE_CLIENT_ID
+app.state.config.GOOGLE_DRIVE_SERVICE_ACCOUNT_JSON = GOOGLE_DRIVE_SERVICE_ACCOUNT_JSON
+app.state.config.ENABLE_GOOGLE_DRIVE_FOLDER_SYNC = ENABLE_GOOGLE_DRIVE_FOLDER_SYNC
 app.state.config.ENABLE_ONEDRIVE_INTEGRATION = ENABLE_ONEDRIVE_INTEGRATION
 app.state.config.SEARXNG_QUERY_URL = SEARXNG_QUERY_URL
 app.state.config.YACY_QUERY_URL = YACY_QUERY_URL
@@ -1230,6 +1256,7 @@ app.include_router(notes.router, prefix="/api/v1/notes", tags=["notes"])
 
 app.include_router(models.router, prefix="/api/v1/models", tags=["models"])
 app.include_router(knowledge.router, prefix="/api/v1/knowledge", tags=["knowledge"])
+app.include_router(content_sources.router, prefix="/api/v1/content-sources", tags=["content_sources"])
 app.include_router(prompts.router, prefix="/api/v1/prompts", tags=["prompts"])
 app.include_router(tools.router, prefix="/api/v1/tools", tags=["tools"])
 
@@ -1657,6 +1684,7 @@ async def get_app_config(request: Request):
         "name": app.state.WEBUI_NAME,
         "version": VERSION,
         "default_locale": str(DEFAULT_LOCALE),
+        "environment": ENV,
         "oauth": {
             "providers": {
                 name: config.get("name", name)
@@ -1689,6 +1717,7 @@ async def get_app_config(request: Request):
                     "enable_admin_export": ENABLE_ADMIN_EXPORT,
                     "enable_admin_chat_access": ENABLE_ADMIN_CHAT_ACCESS,
                     "enable_google_drive_integration": app.state.config.ENABLE_GOOGLE_DRIVE_INTEGRATION,
+                    "enable_google_drive_folder_sync": app.state.config.ENABLE_GOOGLE_DRIVE_FOLDER_SYNC,
                     "enable_onedrive_integration": app.state.config.ENABLE_ONEDRIVE_INTEGRATION,
                 }
                 if user is not None
@@ -1725,6 +1754,9 @@ async def get_app_config(request: Request):
                 "google_drive": {
                     "client_id": GOOGLE_DRIVE_CLIENT_ID.value,
                     "api_key": GOOGLE_DRIVE_API_KEY.value,
+                },
+                "google_drive_folder_sync": {
+                    "service_account_json": GOOGLE_DRIVE_SERVICE_ACCOUNT_JSON.value,
                 },
                 "onedrive": {
                     "client_id": ONEDRIVE_CLIENT_ID.value,
