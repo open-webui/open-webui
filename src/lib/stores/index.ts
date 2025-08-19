@@ -50,6 +50,9 @@ export const channels = writable([]);
 export const chats = writable(null);
 export const pinnedChats = writable([]);
 export const tags = writable([]);
+export const folders = writable([]);
+
+export const selectedFolder = writable(null);
 
 export const models: Writable<Model[]> = writable([]);
 
@@ -67,6 +70,7 @@ export const settings: Writable<Settings> = writable({});
 export const showSidebar = writable(false);
 export const showSearch = writable(false);
 export const showSettings = writable(false);
+export const showShortcuts = writable(false);
 export const showArchivedChats = writable(false);
 export const showChangelog = writable(false);
 
@@ -255,6 +259,7 @@ type Config = {
 		enable_community_sharing: boolean;
 		enable_autocomplete_generation: boolean;
 		enable_direct_connections: boolean;
+		enable_version_update_check: boolean;
 	};
 	oauth: {
 		providers: {

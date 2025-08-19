@@ -7,6 +7,7 @@
 	import relativeTime from 'dayjs/plugin/relativeTime';
 	dayjs.extend(relativeTime);
 
+	import Spinner from '$lib/components/common/Spinner.svelte';
 	import { flyAndScale } from '$lib/utils/transitions';
 	import { createEventDispatcher, onMount, getContext, tick } from 'svelte';
 	import { goto } from '$app/navigation';
@@ -40,7 +41,7 @@
 
 	export let id = '';
 	export let value = '';
-	export let placeholder = 'Select a model';
+	export let placeholder = $i18n.t('Select a model');
 	export let searchEnabled = true;
 	export let searchPlaceholder = $i18n.t('Search a model');
 
@@ -313,7 +314,7 @@
 				...$MODEL_DOWNLOAD_POOL
 			});
 			await deleteModel(localStorage.token, model);
-			toast.success(`${model} download has been canceled`);
+			toast.success($i18n.t("{{model}} download has been canceled", { model: model }));
 		}
 	};
 
@@ -345,12 +346,17 @@
 	closeFocus={false}
 >
 	<DropdownMenu.Trigger
-		class="relative w-full font-primary"
+		class="relative w-full font-primary {($settings?.highContrastMode ?? false)
+			? ''
+			: 'outline-hidden focus:outline-hidden'}"
 		aria-label={placeholder}
 		id="model-selector-{id}-button"
 	>
-		<button
-			class="flex w-full text-left px-0.5 outline-hidden bg-transparent truncate {triggerClassName} justify-between font-medium placeholder-gray-400 focus:outline-hidden"
+		<div
+			class="flex w-full text-left px-0.5 bg-transparent truncate {triggerClassName} justify-between {($settings?.highContrastMode ??
+			false)
+				? 'dark:placeholder-gray-100 placeholder-gray-800'
+				: 'placeholder-gray-400'}"
 			on:mouseenter={async () => {
 				models.set(
 					await getModels(
@@ -359,7 +365,6 @@
 					)
 				);
 			}}
-			type="button"
 		>
 			{#if selectedModel}
 				{selectedModel.label}
@@ -367,7 +372,7 @@
 				{placeholder}
 			{/if}
 			<ChevronDown className=" self-center ml-2 size-3" strokeWidth="2.5" />
-		</button>
+		</div>
 	</DropdownMenu.Trigger>
 
 	<DropdownMenu.Content
@@ -389,14 +394,17 @@
 						class="w-full text-sm bg-transparent outline-hidden"
 						placeholder={searchPlaceholder}
 						autocomplete="off"
+						aria-label={$i18n.t('Search In Models')}
 						on:keydown={(e) => {
 							if (e.code === 'Enter' && filteredItems.length > 0) {
 								value = filteredItems[selectedModelIdx].value;
 								show = false;
 								return; // dont need to scroll on selection
 							} else if (e.code === 'ArrowDown') {
+								e.stopPropagation();
 								selectedModelIdx = Math.min(selectedModelIdx + 1, filteredItems.length - 1);
 							} else if (e.code === 'ArrowUp') {
+								e.stopPropagation();
 								selectedModelIdx = Math.max(selectedModelIdx - 1, 0);
 							} else {
 								// if the user types something, reset to the top selection.
@@ -431,6 +439,7 @@
 									selectedConnectionType === ''
 										? ''
 										: 'text-gray-300 dark:text-gray-600 hover:text-gray-700 dark:hover:text-white'} transition capitalize"
+									aria-pressed={selectedTag === '' && selectedConnectionType === ''}
 									on:click={() => {
 										selectedConnectionType = '';
 										selectedTag = '';
@@ -445,6 +454,7 @@
 									class="min-w-fit outline-none p-1.5 {selectedConnectionType === 'local'
 										? ''
 										: 'text-gray-300 dark:text-gray-600 hover:text-gray-700 dark:hover:text-white'} transition capitalize"
+									aria-pressed={selectedConnectionType === 'local'}
 									on:click={() => {
 										selectedTag = '';
 										selectedConnectionType = 'local';
@@ -459,6 +469,7 @@
 									class="min-w-fit outline-none p-1.5 {selectedConnectionType === 'external'
 										? ''
 										: 'text-gray-300 dark:text-gray-600 hover:text-gray-700 dark:hover:text-white'} transition capitalize"
+									aria-pressed={selectedConnectionType === 'external'}
 									on:click={() => {
 										selectedTag = '';
 										selectedConnectionType = 'external';
@@ -473,6 +484,7 @@
 									class="min-w-fit outline-none p-1.5 {selectedConnectionType === 'direct'
 										? ''
 										: 'text-gray-300 dark:text-gray-600 hover:text-gray-700 dark:hover:text-white'} transition capitalize"
+									aria-pressed={selectedConnectionType === 'direct'}
 									on:click={() => {
 										selectedTag = '';
 										selectedConnectionType = 'direct';
@@ -487,6 +499,7 @@
 									class="min-w-fit outline-none p-1.5 {selectedTag === tag
 										? ''
 										: 'text-gray-300 dark:text-gray-600 hover:text-gray-700 dark:hover:text-white'} transition capitalize"
+									aria-pressed={selectedTag === tag}
 									on:click={() => {
 										selectedConnectionType = '';
 										selectedTag = tag;
@@ -550,29 +563,7 @@
 					>
 						<div class="flex">
 							<div class="-ml-2 mr-2.5 translate-y-0.5">
-								<svg
-									class="size-4"
-									viewBox="0 0 24 24"
-									fill="currentColor"
-									xmlns="http://www.w3.org/2000/svg"
-									><style>
-										.spinner_ajPY {
-											transform-origin: center;
-											animation: spinner_AtaB 0.75s infinite linear;
-										}
-										@keyframes spinner_AtaB {
-											100% {
-												transform: rotate(360deg);
-											}
-										}
-									</style><path
-										d="M12,1A11,11,0,1,0,23,12,11,11,0,0,0,12,1Zm0,19a8,8,0,1,1,8-8A8,8,0,0,1,12,20Z"
-										opacity=".25"
-									/><path
-										d="M10.14,1.16a11,11,0,0,0-9,8.92A1.59,1.59,0,0,0,2.46,12,1.52,1.52,0,0,0,4.11,10.7a8,8,0,0,1,6.66-6.61A1.42,1.42,0,0,0,12,2.69h0A1.57,1.57,0,0,0,10.14,1.16Z"
-										class="spinner_ajPY"
-									/></svg
-								>
+								<Spinner />
 							</div>
 
 							<div class="flex flex-col self-start">
@@ -630,7 +621,7 @@
 
 			{#if showTemporaryChatControl}
 				<div class="flex items-center mx-2 mt-1 mb-2">
-					<button
+					<DropdownMenu.Item
 						class="flex justify-between w-full font-medium line-clamp-1 select-none items-center rounded-button py-2 px-3 text-sm text-gray-700 dark:text-gray-100 outline-hidden transition-all duration-75 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg cursor-pointer data-highlighted:bg-muted"
 						on:click={async () => {
 							temporaryChatEnabled.set(!$temporaryChatEnabled);
@@ -659,7 +650,7 @@
 						<div>
 							<Switch state={$temporaryChatEnabled} />
 						</div>
-					</button>
+					</DropdownMenu.Item>
 				</div>
 			{:else}
 				<div class="mb-3"></div>

@@ -3,20 +3,6 @@ import { defineConfig } from 'vite';
 
 import { viteStaticCopy } from 'vite-plugin-static-copy';
 
-// /** @type {import('vite').Plugin} */
-// const viteServerConfig = {
-// 	name: 'log-request-middleware',
-// 	configureServer(server) {
-// 		server.middlewares.use((req, res, next) => {
-// 			res.setHeader('Access-Control-Allow-Origin', '*');
-// 			res.setHeader('Access-Control-Allow-Methods', 'GET');
-// 			res.setHeader('Cross-Origin-Opener-Policy', 'same-origin');
-// 			res.setHeader('Cross-Origin-Embedder-Policy', 'require-corp');
-// 			next();
-// 		});
-// 	}
-// };
-
 export default defineConfig({
 	plugins: [
 		sveltekit(),
@@ -41,6 +27,6 @@ export default defineConfig({
 		format: 'es'
 	},
 	esbuild: {
-		pure: ['console.log', 'console.debug']
+		pure: process.env.ENV === 'dev' ? [] : ['console.log', 'console.debug']
 	}
 });

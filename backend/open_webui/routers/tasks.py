@@ -695,11 +695,11 @@ async def generate_emoji(
                 "max_completion_tokens": 4,
             }
         ),
-        "chat_id": form_data.get("chat_id", None),
         "metadata": {
             **(request.state.metadata if hasattr(request.state, "metadata") else {}),
             "task": str(TASKS.EMOJI_GENERATION),
             "task_body": form_data,
+            "chat_id": form_data.get("chat_id", None),
         },
     }
 

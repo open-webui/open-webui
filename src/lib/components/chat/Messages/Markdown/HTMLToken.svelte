@@ -84,6 +84,23 @@
 		{:else}
 			{token.text}
 		{/if}
+	{:else if token.text && token.text.includes('<status')}
+		{@const match = token.text.match(/<status title="([^"]+)" done="(true|false)" ?\/?>/)}
+		{@const statusTitle = match && match[1]}
+		{@const statusDone = match && match[2] === 'true'}
+		{#if statusTitle}
+			<div class="flex flex-col justify-center -space-y-0.5">
+				<div
+					class="{statusDone === false
+						? 'shimmer'
+						: ''} text-gray-500 dark:text-gray-500 line-clamp-1 text-wrap"
+				>
+					{statusTitle}
+				</div>
+			</div>
+		{:else}
+			{token.text}
+		{/if}
 	{:else if token.text.includes(`<file type="html"`)}
 		{@const match = token.text.match(/<file type="html" id="([^"]+)"/)}
 		{@const fileId = match && match[1]}
@@ -105,6 +122,11 @@
 	{:else if token.text.includes(`<source_id`)}
 		<Source {id} {token} onClick={onSourceClick} />
 	{:else}
-		{token.text}
+		{@const br = token.text.match(/<br\s*\/?>/)}
+		{#if br}
+			<br />
+		{:else}
+			{token.text}
+		{/if}
 	{/if}
 {/if}

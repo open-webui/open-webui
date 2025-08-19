@@ -1,6 +1,6 @@
 <script lang="ts">
 	export let className = 'size-4';
-	export let strokeWidth = '2';
+	export let strokeWidth = '1.5';
 </script>
 
 <svg
@@ -10,10 +10,11 @@
 	stroke-width={strokeWidth}
 	stroke="currentColor"
 	class={className}
->
-	<path
+	><path
+		d="M6.75 12H16.75M16.75 12L14 14.75M16.75 12L14 9.25"
 		stroke-linecap="round"
 		stroke-linejoin="round"
-		d="m21 21-5.197-5.197m0 0A7.5 7.5 0 1 0 5.196 5.196a7.5 7.5 0 0 0 10.607 10.607Z"
-	/>
-</svg>
+	></path><path
+		d="M2 15V9C2 6.79086 3.79086 5 6 5H18C20.2091 5 22 6.79086 22 9V15C22 17.2091 20.2091 19 18 19H6C3.79086 19 2 17.2091 2 15Z"
+	></path></svg
+>

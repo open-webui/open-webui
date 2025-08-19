@@ -5,6 +5,7 @@
 	import { blobToFile, calculateSHA256, extractCurlyBraceWords } from '$lib/utils';
 
 	import { transcribeAudio } from '$lib/apis/audio';
+	import XMark from '$lib/components/icons/XMark.svelte';
 
 	import dayjs from 'dayjs';
 	import LocalizedFormat from 'dayjs/plugin/localizedFormat';
@@ -15,6 +16,10 @@
 	export let recording = false;
 	export let transcribe = true;
 	export let displayMedia = false;
+
+	export let echoCancellation = true;
+	export let noiseSuppression = true;
+	export let autoGainControl = true;
 
 	export let className = ' p-2.5 w-full max-w-full';
 
@@ -191,9 +196,9 @@
 			} else {
 				stream = await navigator.mediaDevices.getUserMedia({
 					audio: {
-						echoCancellation: true,
-						noiseSuppression: true,
-						autoGainControl: true
+						echoCancellation: echoCancellation,
+						noiseSuppression: noiseSuppression,
+						autoGainControl: autoGainControl
 					}
 				});
 			}
@@ -406,16 +411,7 @@
 				onCancel();
 			}}
 		>
-			<svg
-				xmlns="http://www.w3.org/2000/svg"
-				fill="none"
-				viewBox="0 0 24 24"
-				stroke-width="3"
-				stroke="currentColor"
-				class="size-4"
-			>
-				<path stroke-linecap="round" stroke-linejoin="round" d="M6 18 18 6M6 6l12 12" />
-			</svg>
+			<XMark className={'size-4'} />
 		</button>
 	</div>
 

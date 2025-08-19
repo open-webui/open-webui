@@ -4,6 +4,7 @@
 
 	import { user, config, settings } from '$lib/stores';
 	import { updateUserProfile, createAPIKey, getAPIKey, getSessionUser } from '$lib/apis/auths';
+	import { WEBUI_BASE_URL } from '$lib/constants';
 
 	import UpdatePassword from './Account/UpdatePassword.svelte';
 	import { getGravatarUrl } from '$lib/apis/utils';
@@ -223,7 +224,7 @@
 						<button
 							class=" text-xs text-center text-gray-800 dark:text-gray-400 rounded-lg px-2 py-1"
 							on:click={async () => {
-								profileImageUrl = '/user.png';
+								profileImageUrl = `${WEBUI_BASE_URL}/user.png`;
 							}}>{$i18n.t('Remove')}</button
 						>
 					</div>
@@ -267,9 +268,11 @@
 
 		<hr class="border-gray-50 dark:border-gray-850 my-2" />
 
-		<div class="my-2">
-			<UpdatePassword />
-		</div>
+		{#if $config?.features.enable_login_form}
+			<div class="my-2">
+				<UpdatePassword />
+			</div>
+		{/if}
 
 		{#if ($config?.features?.enable_api_key ?? true) || $user?.role === 'admin'}
 			<div class="flex justify-between items-center text-sm mb-2">

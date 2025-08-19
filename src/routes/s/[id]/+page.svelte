@@ -11,7 +11,6 @@
 	import { getChatByShareId, cloneSharedChatById } from '$lib/apis/chats';
 
 	import Messages from '$lib/components/chat/Messages.svelte';
-	import Navbar from '$lib/components/layout/Navbar.svelte';
 
 	import { getUserById, getUserSettings } from '$lib/apis/users';
 	import { getModels } from '$lib/apis';
@@ -116,8 +115,8 @@
 				autoScroll = true;
 				await tick();
 
-				if (messages.length > 0) {
-					history.messages[messages.at(-1).id].done = true;
+				if (messages.length > 0 && messages.at(-1)?.id && messages.at(-1)?.id in history.messages) {
+					history.messages[messages.at(-1)?.id].done = true;
 				}
 				await tick();
 
@@ -187,7 +186,7 @@
 							bind:messages
 							bind:autoScroll
 							bottomPadding={files.length > 0}
-							sendPrompt={() => {}}
+							sendMessage={() => {}}
 							continueResponse={() => {}}
 							regenerateResponse={() => {}}
 						/>

@@ -12,6 +12,8 @@
 
 **Open WebUI is an [extensible](https://docs.openwebui.com/features/plugin/), feature-rich, and user-friendly self-hosted AI platform designed to operate entirely offline.** It supports various LLM runners like **Ollama** and **OpenAI-compatible APIs**, with **built-in inference engine** for RAG, making it a **powerful AI deployment solution**.
 
+Passionate about open-source AI? [Join our team →](https://careers.openwebui.com/)
+
 ![Open WebUI Demo](./demo.gif)
 
 > [!TIP]  
@@ -28,6 +30,8 @@ For more information, be sure to check out our [Open WebUI Documentation](https:
 - 🤝 **Ollama/OpenAI API Integration**: Effortlessly integrate OpenAI-compatible APIs for versatile conversations alongside Ollama models. Customize the OpenAI API URL to link with **LMStudio, GroqCloud, Mistral, OpenRouter, and more**.
 
 - 🛡️ **Granular Permissions and User Groups**: By allowing administrators to create detailed user roles and permissions, we ensure a secure user environment. This granularity not only enhances security but also allows for customized user experiences, fostering a sense of ownership and responsibility amongst users.
+
+- 🔄 **SCIM 2.0 Support**: Enterprise-grade user and group provisioning through SCIM 2.0 protocol, enabling seamless integration with identity providers like Okta, Azure AD, and Google Workspace for automated user lifecycle management.
 
 - 📱 **Responsive Design**: Enjoy a seamless experience across Desktop PC, Laptop, and Mobile devices.
 
@@ -66,7 +70,7 @@ Want to learn more about Open WebUI's features? Check out our [Open WebUI docume
 #### Emerald
 
 <table>
-  <tr>
+  <!-- <tr>
     <td>
       <a href="https://n8n.io/" target="_blank">
         <img src="https://docs.openwebui.com/sponsors/logos/n8n.png" alt="n8n" style="width: 8rem; height: 8rem; border-radius: .75rem;" />
@@ -75,17 +79,7 @@ Want to learn more about Open WebUI's features? Check out our [Open WebUI docume
     <td>
       <a href="https://n8n.io/">n8n</a> • Does your interface have a backend yet?<br>Try <a href="https://n8n.io/">n8n</a>
     </td>
-  </tr>
-  <tr>
-    <td>
-      <a href="https://warp.dev/open-webui" target="_blank">
-        <img src="https://docs.openwebui.com/sponsors/logos/warp.png" alt="Warp" style="width: 8rem; height: 8rem; border-radius: .75rem;" />
-      </a>
-    </td>
-    <td>
-      <a href="https://warp.dev/open-webui">Warp</a> • The intelligent terminal for developers
-    </td>
-  </tr>
+  </tr> -->
   <tr>
     <td>
       <a href="https://tailscale.com/blog/self-host-a-local-ai-stack/?utm_source=OpenWebUI&utm_medium=paid-ad-placement&utm_campaign=OpenWebUI-Docs" target="_blank">
@@ -94,6 +88,16 @@ Want to learn more about Open WebUI's features? Check out our [Open WebUI docume
     </td>
     <td>
       <a href="https://tailscale.com/blog/self-host-a-local-ai-stack/?utm_source=OpenWebUI&utm_medium=paid-ad-placement&utm_campaign=OpenWebUI-Docs">Tailscale</a> • Connect self-hosted AI to any device with Tailscale
+    </td>
+  </tr>
+   <tr>
+    <td>
+      <a href="https://warp.dev/open-webui" target="_blank">
+        <img src="https://docs.openwebui.com/sponsors/logos/warp.png" alt="Warp" style="width: 8rem; height: 8rem; border-radius: .75rem;" />
+      </a>
+    </td>
+    <td>
+      <a href="https://warp.dev/open-webui">Warp</a> • The intelligent terminal for developers
     </td>
   </tr>
 </table>

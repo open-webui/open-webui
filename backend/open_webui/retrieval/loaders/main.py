@@ -14,7 +14,7 @@ from langchain_community.document_loaders import (
     TextLoader,
     UnstructuredEPubLoader,
     UnstructuredExcelLoader,
-    UnstructuredMarkdownLoader,
+    UnstructuredODTLoader,
     UnstructuredPowerPointLoader,
     UnstructuredRSTLoader,
     UnstructuredXMLLoader,
@@ -181,7 +181,7 @@ class DoclingLoader:
                         if lang.strip()
                     ]
 
-            endpoint = f"{self.url}/v1alpha/convert/file"
+            endpoint = f"{self.url}/v1/convert/file"
             r = requests.post(endpoint, files=files, data=params)
 
         if r.ok:
@@ -226,7 +226,10 @@ class Loader:
 
     def _is_text_file(self, file_ext: str, file_content_type: str) -> bool:
         return file_ext in known_source_ext or (
-            file_content_type and file_content_type.find("text/") >= 0
+            file_content_type
+            and file_content_type.find("text/") >= 0
+            # Avoid text/html files being detected as text
+            and not file_content_type.find("html") >= 0
         )
 
     def _get_loader(self, filename: str, file_content_type: str, file_path: str):
@@ -278,10 +281,15 @@ class Loader:
                 "tiff",
             ]
         ):
+            api_base_url = self.kwargs.get("DATALAB_MARKER_API_BASE_URL", "")
+            if not api_base_url or api_base_url.strip() == "":
+                api_base_url = "https://www.datalab.to/api/v1"
+
             loader = DatalabMarkerLoader(
                 file_path=file_path,
                 api_key=self.kwargs["DATALAB_MARKER_API_KEY"],
-                langs=self.kwargs.get("DATALAB_MARKER_LANGS"),
+                api_base_url=api_base_url,
+                additional_config=self.kwargs.get("DATALAB_MARKER_ADDITIONAL_CONFIG"),
                 use_llm=self.kwargs.get("DATALAB_MARKER_USE_LLM", False),
                 skip_cache=self.kwargs.get("DATALAB_MARKER_SKIP_CACHE", False),
                 force_ocr=self.kwargs.get("DATALAB_MARKER_FORCE_OCR", False),
@@ -292,6 +300,7 @@ class Loader:
                 disable_image_extraction=self.kwargs.get(
                     "DATALAB_MARKER_DISABLE_IMAGE_EXTRACTION", False
                 ),
+                format_lines=self.kwargs.get("DATALAB_MARKER_FORMAT_LINES", False),
                 output_format=self.kwargs.get(
                     "DATALAB_MARKER_OUTPUT_FORMAT", "markdown"
                 ),
@@ -389,6 +398,8 @@ class Loader:
                 loader = UnstructuredPowerPointLoader(file_path)
             elif file_ext == "msg":
                 loader = OutlookMessageLoader(file_path)
+            elif file_ext == "odt":
+                loader = UnstructuredODTLoader(file_path)
             elif self._is_text_file(file_ext, file_content_type):
                 loader = TextLoader(file_path, autodetect_encoding=True)
             else:

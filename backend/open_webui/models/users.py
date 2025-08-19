@@ -4,8 +4,10 @@ from typing import Optional
 from open_webui.internal.db import Base, JSONField, get_db
 
 
+from open_webui.env import DATABASE_USER_ACTIVE_STATUS_UPDATE_INTERVAL
 from open_webui.models.chats import Chats
 from open_webui.models.groups import Groups
+from open_webui.utils.misc import throttle
 
 
 from pydantic import BaseModel, ConfigDict
@@ -71,6 +73,18 @@ class UserModel(BaseModel):
 
 class UserListResponse(BaseModel):
     users: list[UserModel]
+    total: int
+
+
+class UserInfoResponse(BaseModel):
+    id: str
+    name: str
+    email: str
+    role: str
+
+
+class UserInfoListResponse(BaseModel):
+    users: list[UserInfoResponse]
     total: int
 
 
@@ -246,6 +260,10 @@ class UsersTable:
         with get_db() as db:
             return db.query(User).count()
 
+    def has_users(self) -> bool:
+        with get_db() as db:
+            return db.query(db.query(User).exists()).scalar()
+
     def get_first_user(self) -> UserModel:
         try:
             with get_db() as db:
@@ -295,6 +313,7 @@ class UsersTable:
         except Exception:
             return None
 
+    @throttle(DATABASE_USER_ACTIVE_STATUS_UPDATE_INTERVAL)
     def update_user_last_active_by_id(self, id: str) -> Optional[UserModel]:
         try:
             with get_db() as db:
