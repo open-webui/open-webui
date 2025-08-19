@@ -981,11 +981,12 @@ try:
                 model["RAG_EXTERNAL_RERANKER_API_KEY"],
             )
 
-            app.state.RERANKING_FUNCTION[model["RAG_RERANKING_MODEL"]] = (
+            app.state.RERANKING_FUNCTION[model["RAG_RERANKING_MODEL"]] = get_reranking_function(
                 engine,
                 model["RAG_RERANKING_MODEL"],
-                get_reranking_function=app.state.rf[model["RAG_RERANKING_MODEL"]],
+                reranking_function=app.state.rf[model["RAG_RERANKING_MODEL"]],
             )
+
 
 except Exception as e:
     log.error(f"Error updating models: {e}")
