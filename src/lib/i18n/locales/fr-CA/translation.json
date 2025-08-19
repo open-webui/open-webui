@@ -399,7 +399,6 @@
 	"End Date": "Date de fin",
 	"Engine": "Moteur",
 	"Enhance responses with Wikipedia knowledge": "Améliorer les réponses avec les connaissances de Wikipedia",
-	"Enhance responses with Wikipedia knowledge for factual queries": "Améliorer les réponses avec les connaissances de Wikipedia pour les requêtes factuelles",
 	"Enhanced with {{COUNT}} sources": "Enrichi avec {{COUNT}} sources",
 	"Enrolled Users": "Utilisateurs inscrits",
 	"Ensure your CSV file includes 4 columns in this order: Name, Email, Password, Role.": "Vérifiez que votre fichier CSV comprenne les 4 colonnes dans cet ordre : Name, Email, Password, Role.",
