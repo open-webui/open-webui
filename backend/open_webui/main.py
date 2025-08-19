@@ -437,7 +437,7 @@ async def lifespan(app: FastAPI):
 
 
 app = FastAPI(
-    title="Open WebUI",
+    title="NEAR AI Private Chat",
     docs_url="/docs" if ENV == "dev" else None,
     openapi_url="/openapi.json" if ENV == "dev" else None,
     redoc_url=None,
@@ -1183,6 +1183,182 @@ async def chat_completed(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=str(e),
         )
+
+
+# Get attestation report of intel quote and nvidia payload
+@app.get("/api/attestation/report")
+async def chat_attestation(
+    request: Request, model: str, user=Depends(get_verified_user)
+):
+    """
+    Get attestation report for a model.
+
+    Args:
+        request: FastAPI request object
+        model: Model identifier
+        user: Authenticated user
+
+    Returns:
+        ModelAttestationReport: Attestation report with signing address, nvidia payload, and intel quote
+    """
+    try:
+        # Get the model configuration
+        if model not in request.app.state.MODELS:
+            await get_all_models(request, user=user)
+
+        if model not in request.app.state.MODELS:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND, detail=f"Model {model} not found"
+            )
+
+        model_config = request.app.state.MODELS[model]
+
+        # Check if user has access to the model
+        if not BYPASS_MODEL_ACCESS_CONTROL and user.role == "user":
+            try:
+                check_model_access(user, model_config)
+            except Exception as e:
+                raise e
+
+        idx = model_config.get("urlIdx")
+        base_url = request.app.state.config.OPENAI_API_BASE_URLS[idx]
+        key = request.app.state.config.OPENAI_API_KEYS[idx]
+
+        headers = {"Authorization": f"Bearer {key}", "Content-Type": "application/json"}
+
+        # Forward the request to the model provider
+        async with aiohttp.ClientSession() as session, session.get(
+                f"{base_url}/attestation/report",
+                headers=headers,
+                params={"model": model},
+            ) as response:
+                if response.status != 200:
+                    raise HTTPException(
+                        status_code=response.status,
+                        detail=f"Model provider returned error: {response.status}",
+                    )
+
+                # Handle responses that return JSON but with text/plain content-type
+                try:
+                    attestation_data = await response.json()
+                except Exception as json_error:
+                    log.warning(f"Failed to parse response as JSON: {json_error}")
+                    # Try to read as text and parse manually
+                    text_content = await response.text()
+                    try:
+                        attestation_data = json.loads(text_content)
+                    except json.JSONDecodeError as e:
+                        log.error(f"Failed to parse response text as JSON: {e}")
+                        raise HTTPException(
+                            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                            detail=f"Invalid JSON response from model provider: {text_content}",
+                        )
+
+                return attestation_data
+
+    except aiohttp.ClientError as e:
+        log.error(f"Error connecting to model provider: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="Unable to connect to model provider",
+        ) from e
+    except Exception as e:
+        log.error(f"Error getting attestation report: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Internal server error",
+        ) from e
+
+
+# Get the signature of chat
+@app.get("/api/signature/{chat_completion_id}")
+async def chat_signature(
+    request: Request,
+    chat_completion_id: str,
+    model: str,
+    signing_algo: str = "ecdsa",
+    user=Depends(get_verified_user),
+):
+    """
+    Get signature for a chat completion.
+
+    Args:
+        request: FastAPI request object
+        chat_completion_id: Chat completion ID from LLM provider
+        model: Model identifier
+        signing_algo: Signing algorithm (default: ecdsa)
+        user: Authenticated user
+
+    Returns:
+        MessageSignature: Signature with text, signature, signing address, and algorithm
+    """
+    try:
+        # Get the model configuration
+        if model not in request.app.state.MODELS:
+            await get_all_models(request, user=user)
+
+        if model not in request.app.state.MODELS:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND, detail=f"Model {model} not found"
+            )
+
+        model_config = request.app.state.MODELS[model]
+
+        # Check if user has access to the model
+        if not BYPASS_MODEL_ACCESS_CONTROL and user.role == "user":
+            try:
+                check_model_access(user, model_config)
+            except Exception as e:
+                raise e
+
+        idx = model_config.get("urlIdx")
+        base_url = request.app.state.config.OPENAI_API_BASE_URLS[idx]
+        key = request.app.state.config.OPENAI_API_KEYS[idx]
+
+        headers = {"Authorization": f"Bearer {key}", "Content-Type": "application/json"}
+
+        # Forward the request to the model provider
+        async with aiohttp.ClientSession() as session, session.get(
+                f"{base_url}/signature/{chat_completion_id}",
+                headers=headers,
+                params={"model": model, "signing_algo": signing_algo},
+            ) as response:
+                if response.status != 200:
+                    raise HTTPException(
+                        status_code=response.status,
+                        detail=f"Model provider returned error: {response.status}",
+                    )
+
+                # Handle responses that return JSON but with text/plain content-type
+                try:
+                    signature_data = await response.json()
+                except Exception as json_error:
+                    log.warning(f"Failed to parse response as JSON: {json_error}")
+                    # Try to read as text and parse manually
+                    text_content = await response.text()
+                    try:
+                        signature_data = json.loads(text_content)
+                    except json.JSONDecodeError as e:
+                        log.error(f"Failed to parse response text as JSON: {e}")
+                        raise HTTPException(
+                            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                            detail=f"Invalid JSON response from model provider: {text_content}",
+                        )
+
+                return signature_data
+
+    except aiohttp.ClientError as e:
+        log.error(f"Error connecting to model provider: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="Unable to connect to model provider",
+        ) from e
+    except Exception as e:
+        log.error(f"Error getting signature: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Internal server error",
+        ) from e
 
 
 @app.post("/api/chat/actions/{action_id}")

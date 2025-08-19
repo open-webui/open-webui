@@ -88,6 +88,7 @@
 	import Placeholder from './Placeholder.svelte';
 	import NotificationToast from '../NotificationToast.svelte';
 	import Spinner from '../common/Spinner.svelte';
+	import ChatVerifier from './ChatVerifier.svelte';
 
 	export let chatIdProp = '';
 
@@ -110,6 +111,9 @@
 	let eventConfirmationInputPlaceholder = '';
 	let eventConfirmationInputValue = '';
 	let eventCallback = null;
+
+	// Chat verification state
+	let showChatVerifier = true;
 
 	let chatIdUnsubscriber: Unsubscriber | undefined;
 
@@ -1107,6 +1111,11 @@
 			message.sources = sources;
 		}
 
+		// Store the chat completion ID if provided
+		if (id && !message.chatCompletionId) {
+			message.chatCompletionId = id;
+		}
+
 		if (choices) {
 			if (choices[0]?.message?.content) {
 				// Non-stream response
@@ -1378,6 +1387,7 @@
 				let responseMessage = {
 					parentId: parentId,
 					id: responseMessageId,
+					chatCompletionId: null,
 					childrenIds: [],
 					role: 'assistant',
 					content: '',
@@ -1942,6 +1952,16 @@
 	}}
 	on:cancel={() => {
 		eventCallback(false);
+	}}
+/>
+
+<ChatVerifier
+	{history}
+	token={localStorage.token}
+	selectedModels={selectedModels}
+	bind:expanded={showChatVerifier}
+	on:toggle={(e) => {
+		showChatVerifier = e.detail.expanded;
 	}}
 />
 
