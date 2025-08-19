@@ -29,12 +29,15 @@ def upgrade():
 
     op.add_column('chat', sa.Column('views', sa.Integer(), nullable=False, server_default='0'))
     op.add_column('chat', sa.Column('clones', sa.Integer(), nullable=False, server_default='0'))
-    # Merged column additions
     op.add_column('chat', sa.Column('expires_at', sa.BigInteger(), nullable=True))
     op.add_column('chat', sa.Column('expire_on_views', sa.Integer(), nullable=True))
 
     with op.batch_alter_table('chat', schema=None) as batch_op:
         batch_op.add_column(sa.Column('is_public', sa.Boolean(), server_default=sa.text('0'), nullable=False))
+        batch_op.add_column(sa.Column('share_show_qr_code', sa.Boolean(), nullable=False, server_default=sa.text('0')))
+        batch_op.add_column(sa.Column('share_use_gradient', sa.Boolean(), nullable=False, server_default=sa.text('0')))
+        batch_op.add_column(sa.Column('max_clones', sa.Integer(), nullable=True))
+        batch_op.add_column(sa.Column('keep_link_active_after_max_clones', sa.Boolean(), server_default=sa.text('0'), nullable=False))
 
     groups = conn.execute(sa.text("SELECT id, permissions FROM \"group\"")).fetchall()
 
@@ -58,11 +61,8 @@ def upgrade():
         batch_op.add_column(sa.Column('revoked_at', sa.BigInteger(), nullable=True))
 
     op.add_column('chat', sa.Column('display_username', sa.Boolean(), nullable=False, server_default=sa.text('1')))
-
     op.add_column('chat', sa.Column('allow_cloning', sa.Boolean(), nullable=False, server_default=sa.text('true')))
-
     op.add_column('chat', sa.Column('password', sa.String(), nullable=True))
-
     op.add_column('chat', sa.Column('password_updated_at', sa.BigInteger(), nullable=True))
 
 
@@ -70,15 +70,16 @@ def downgrade():
     conn = op.get_bind()
 
     op.drop_column('chat', 'password_updated_at')
-
     op.drop_column('chat', 'password')
-
     op.drop_column('chat', 'allow_cloning')
-
     op.drop_column('chat', 'display_username')
 
     with op.batch_alter_table('chat', schema=None) as batch_op:
         batch_op.drop_column('revoked_at')
+        batch_op.drop_column('keep_link_active_after_max_clones')
+        batch_op.drop_column('max_clones')
+        batch_op.drop_column('share_use_gradient')
+        batch_op.drop_column('share_show_qr_code')
 
     groups = conn.execute(sa.text("SELECT id, permissions FROM \"group\"")).fetchall()
 
@@ -93,13 +94,9 @@ def downgrade():
                 )
 
     with op.batch_alter_table('chat', schema=None) as batch_op:
-        # This line was removed to fix the downgrade error. Keep it removed.
-        # batch_op.drop_index('chat_share_id')
-
         batch_op.drop_column('is_public')
         batch_op.drop_column('expire_on_views')
         batch_op.drop_column('expires_at')
-
         batch_op.drop_column('clones')
         batch_op.drop_column('views')
         batch_op.drop_column("share_id")

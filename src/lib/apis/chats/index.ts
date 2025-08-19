@@ -141,41 +141,6 @@ export const resetChatStatsById = async (token: string, chatId: string): Promise
 	return res?.ok ?? false;
 };
 
-export const incrementCloneCountById = async (token: string, id: string) => {
-	let error = null;
-
-	const res = await fetch(`${WEBUI_API_BASE_URL}/chats/${id}/clone/inc`, {
-		method: 'POST',
-		headers: {
-			Accept: 'application/json',
-			'Content-Type': 'application/json',
-			...(token && { authorization: `Bearer ${token}` })
-		}
-	})
-		.then(async (res) => {
-			if (!res.ok) throw await res.json();
-			return res.json();
-		})
-		.catch((err) => {
-			error = err;
-
-			if ('detail' in err) {
-				error = err.detail;
-			} else {
-				error = err;
-			}
-
-			console.error(err);
-			return null;
-		});
-
-	if (error) {
-		throw error;
-	}
-
-	return res;
-};
-
 export const getSharedChats = async (
 	token: string = '',
 	page: number = 1,
@@ -900,9 +865,11 @@ export const shareChatById = async (
 	share_id: string = '',
 	expires_at: number | null = null,
 	expire_on_views: number | null = null,
+	max_clones: number | null = null,
 	is_public: boolean = false,
 	display_username: boolean = true,
 	allow_cloning: boolean = true,
+	keep_link_active_after_max_clones: boolean = false,
 	password: string | null = null,
 	current_password: string | null = null,
 	share_show_qr_code: boolean = false,
@@ -921,9 +888,11 @@ export const shareChatById = async (
 			share_id: share_id,
 			expires_at: expires_at,
 			expire_on_views: expire_on_views,
+			max_clones: max_clones,
 			is_public: is_public,
 			display_username: display_username,
 			allow_cloning: allow_cloning,
+			keep_link_active_after_max_clones: keep_link_active_after_max_clones,
 			password: password,
 			current_password: current_password,
 			share_show_qr_code: share_show_qr_code,

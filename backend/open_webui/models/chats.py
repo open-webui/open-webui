@@ -41,9 +41,11 @@ class Chat(Base):
     expires_at = Column(BigInteger, nullable=True)
     revoked_at = Column(BigInteger, nullable=True)
     expire_on_views = Column(Integer, nullable=True)
+    max_clones = Column(Integer, nullable=True)
     is_public = Column(Boolean, default=False, nullable=False)
     display_username = Column(Boolean, default=True, nullable=False)
     allow_cloning = Column(Boolean, default=True, nullable=False)
+    keep_link_active_after_max_clones = Column(Boolean, default=False, nullable=False)
     archived = Column(Boolean, default=False)
     pinned = Column(Boolean, default=False, nullable=True)
 
@@ -87,9 +89,11 @@ class ChatModel(BaseModel):
     expires_at: Optional[int] = None
     revoked_at: Optional[int] = None
     expire_on_views: Optional[int] = None
+    max_clones: Optional[int] = None
     is_public: bool = False
     display_username: bool = True
     allow_cloning: bool = True
+    keep_link_active_after_max_clones: bool = False
     archived: bool = False
     pinned: Optional[bool] = False
 
@@ -141,9 +145,11 @@ class ChatResponse(BaseModel):
     expires_at: Optional[int] = None
     revoked_at: Optional[int] = None
     expire_on_views: Optional[int] = None
+    max_clones: Optional[int] = None
     is_public: bool
     display_username: bool
     allow_cloning: bool
+    keep_link_active_after_max_clones: bool
     archived: bool
     pinned: Optional[bool] = False
     meta: dict = {}
@@ -165,10 +171,12 @@ class ChatTitleIdResponse(BaseModel):
     expires_at: Optional[int] = None
     revoked_at: Optional[int] = None
     expire_on_views: Optional[int] = None
+    max_clones: Optional[int] = None
     is_public: Optional[bool] = None
     views: Optional[int] = 0
     clones: Optional[int] = 0
     allow_cloning: Optional[bool] = True
+    keep_link_active_after_max_clones: Optional[bool] = False
     share_show_qr_code: Optional[bool] = None
     share_use_gradient: Optional[bool] = None
 
@@ -354,9 +362,11 @@ class ChatTable:
         share_id: Optional[str] = None,
         expires_at: Optional[int] = None,
         expire_on_views: Optional[int] = None,
+        max_clones: Optional[int] = None,
         is_public: bool = False,
         display_username: bool = True,
         allow_cloning: bool = True,
+        keep_link_active_after_max_clones: bool = False,
         password: Optional[str] = None,
         share_show_qr_code: bool = False,
         share_use_gradient: bool = False,
@@ -373,9 +383,11 @@ class ChatTable:
 
             chat.expires_at = expires_at
             chat.expire_on_views = expire_on_views
+            chat.max_clones = max_clones
             chat.is_public = is_public
             chat.display_username = display_username
             chat.allow_cloning = allow_cloning
+            chat.keep_link_active_after_max_clones = keep_link_active_after_max_clones
             chat.share_show_qr_code = share_show_qr_code
             chat.share_use_gradient = share_use_gradient
             chat.revoked_at = None
@@ -853,6 +865,12 @@ class ChatTable:
                 if chat:
                     if user is None or chat.user_id != user.id:
                         chat.clones = (chat.clones or 0) + 1
+                        if (
+                            chat.max_clones is not None
+                            and chat.clones >= chat.max_clones
+                            and not chat.keep_link_active_after_max_clones
+                        ):
+                            chat.revoked_at = int(time.time())
                         db.commit()
                         db.refresh(chat)
                     return ChatModel.model_validate(chat)

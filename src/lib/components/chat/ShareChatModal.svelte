@@ -34,10 +34,17 @@
 	dayjs.extend(customParseFormat);
 
 	const getRandomGradient = () => {
-		const randomColor = () => '#' + Math.floor(Math.random() * 16777215).toString(16).padStart(6, '0');
-		const color1 = randomColor();
-		const color2 = randomColor();
-		return `linear-gradient(45deg, ${color1}, ${color2})`;
+		const hue = Math.floor(Math.random() * 360);
+		const saturation = '70%';
+		const lightness = '50%';
+
+		const color1 = `hsl(${hue}, ${saturation}, ${lightness})`;
+
+		const hue2 = (hue + Math.floor(Math.random() * 121) + 120) % 360; // Shift between 120 and 240 degrees
+		const color2 = `hsl(${hue2}, ${saturation}, ${lightness})`;
+
+		const degree = Math.floor(Math.random() * 360);
+		return `linear-gradient(${degree}deg, ${color1}, ${color2})`;
 	};
 
 	let previewGradient = '';
@@ -122,7 +129,13 @@
 	let current_password = '';
 	let useGradient = false;
 	let showQrCode = false;
+	let showExpandedQr = false;
 	let currentViews = 0;
+	let currentClones = 0;
+	let maxClonesCount = 1;
+	let initialMaxClonesCount = 1;
+	let keep_link_active_after_max_clones = false;
+	let initial_keep_link_active_after_max_clones = false;
 	const i18n = getContext('i18n');
 
 	let isExpirationDropdownOpen = false;
@@ -179,7 +192,14 @@
 	}
 
 	const validateViewsCount = () => {
-		const count = Number(expireOnViewsCount);
+		const MAX_INT = 2147483647;
+		let count = Number(expireOnViewsCount);
+
+		if (count > MAX_INT) {
+			toast.warning(`Value cannot exceed ${MAX_INT}.`);
+			count = MAX_INT;
+		}
+
 		if (count > 0 && count <= currentViews) {
 			toast.warning(
 				`Max views must be greater than the current view count (${currentViews}). Setting to ${
@@ -187,12 +207,40 @@
 				}.`
 			);
 			expireOnViewsCount = currentViews + 1;
+		} else {
+			expireOnViewsCount = count;
+		}
+	};
+
+	const validateClonesCount = () => {
+		const MAX_INT = 2147483647;
+		let count = Number(maxClonesCount);
+
+		if (count > MAX_INT) {
+			toast.warning(`Value cannot exceed ${MAX_INT}.`);
+			count = MAX_INT;
+		}
+
+		if (count > 0 && count <= currentClones) {
+			toast.warning(
+				`Max clones must be greater than the current clone count (${currentClones}). Setting to ${
+					currentClones + 1
+				}.`
+			);
+			maxClonesCount = currentClones + 1;
+		} else {
+			maxClonesCount = count;
 		}
 	};
 
 	const handleViewsScroll = (event) => {
+		const MAX_INT = 2147483647;
 		const direction = event.deltaY < 0 ? 1 : -1;
 		let newCount = Number(expireOnViewsCount) + direction;
+
+		if (newCount > MAX_INT) {
+			newCount = MAX_INT;
+		}
 		if (newCount < 0) {
 			newCount = 0;
 		}
@@ -205,6 +253,28 @@
 			newCount = currentViews + 1;
 		}
 		expireOnViewsCount = newCount;
+	};
+
+	const handleClonesScroll = (event) => {
+		const MAX_INT = 2147483647;
+		const direction = event.deltaY < 0 ? 1 : -1;
+		let newCount = Number(maxClonesCount) + direction;
+
+		if (newCount > MAX_INT) {
+			newCount = MAX_INT;
+		}
+		if (newCount < 0) {
+			newCount = 0;
+		}
+		// If scrolling down, and we are about to enter the "invalid" zone (1 to currentClones)
+		if (direction === -1 && newCount > 0 && newCount <= currentClones) {
+			newCount = 0;
+		}
+		// If scrolling up from 0 into the invalid zone
+		if (direction === 1 && maxClonesCount === 0 && newCount > 0 && newCount <= currentClones) {
+			newCount = currentClones + 1;
+		}
+		maxClonesCount = newCount;
 	};
 
 	let expirationDateParts = {
@@ -309,8 +379,10 @@
 				previewQrCodeUrl = await generateTransparentQRCode(url, 192);
 				downloadQrCodeUrl = await generateTransparentQRCode(url, 512);
 
-				previewGradient = getRandomGradient();
-				downloadGradient = getRandomGradient();
+				if (!previewGradient) {
+					previewGradient = getRandomGradient();
+				}
+				downloadGradient = previewGradient;
 			} else {
 				previewQrCodeUrl = await QRCode.toDataURL(url, {
 					width: 192,
@@ -357,6 +429,9 @@
 		if (expireOnViewsCount !== initialExpireOnViewsCount) {
 			return true;
 		}
+		if (maxClonesCount !== initialMaxClonesCount) {
+			return true;
+		}
 		if (is_public !== initial_is_public) {
 			return true;
 		}
@@ -364,6 +439,11 @@
 			return true;
 		}
 		if (allow_cloning !== initial_allow_cloning) {
+			return true;
+		}
+		if (
+			keep_link_active_after_max_clones !== initial_keep_link_active_after_max_clones
+		) {
 			return true;
 		}
 		if (password !== initial_password) {
@@ -379,18 +459,8 @@
 	};
 
 	const shareLocalChat = async () => {
-		if (
-			initial_share_id &&
-			Number(expireOnViewsCount) > 0 &&
-			Number(expireOnViewsCount) <= currentViews
-		) {
-			toast.error(
-				$i18n.t('Max views must be greater than the current view count ({{currentViews}}).', {
-					currentViews: currentViews
-				})
-			);
-			return null;
-		}
+		validateViewsCount();
+		validateClonesCount();
 
 		const idChanged = initial_share_id !== '' && share_id !== initial_share_id;
 		const expirationChanged = expirationSettingsChanged();
@@ -428,7 +498,7 @@
 
 			const expire_on_views =
 				Number(expireOnViewsCount) > 0 ? Number(expireOnViewsCount) : null;
-
+			const max_clones = Number(maxClonesCount) > 0 ? Number(maxClonesCount) : null;
 
 			const sharedChat = await shareChatById(
 				localStorage.token,
@@ -436,9 +506,11 @@
 				share_id,
 				expires_at,
 				expire_on_views,
+				max_clones,
 				is_public,
 				display_username,
 				allow_cloning,
+				keep_link_active_after_max_clones,
 				password,
 				current_password,
 				showQrCode,
@@ -469,6 +541,7 @@
 				share_id: sharedChat.id,
 				expires_at: sharedChat.expires_at,
 				expire_on_views: sharedChat.expire_on_views,
+				max_clones: sharedChat.max_clones,
 				is_public: sharedChat.is_public,
 				display_username: sharedChat.display_username
 			};
@@ -522,6 +595,8 @@
 			chat.id !== _chat.id ||
 			chat.share_id !== _chat.share_id ||
 			chat.expire_on_views !== _chat.expire_on_views ||
+			chat.max_clones !== _chat.max_clones ||
+			chat.keep_link_active_after_max_clones !== _chat.keep_link_active_after_max_clones ||
 			chat.share_show_qr_code !== _chat.share_show_qr_code ||
 			chat.share_use_gradient !== _chat.share_use_gradient
 		);
@@ -538,17 +613,14 @@
 					share_id = chat.share_id ?? '';
 					initial_share_id = share_id;
 
-					if (share_id) {
-						generateQrCodesImmediate(`${window.location.origin}/s/${share_id}`);
-					} else {
-						generateQrCodesDebounced(null);
-					}
 
 					const sharedChatFromStore = $sharedChatsStore.find((c) => c.id === _chat.id);
 					if (sharedChatFromStore) {
 						currentViews = sharedChatFromStore.views;
+						currentClones = sharedChatFromStore.clones;
 					} else {
 						currentViews = 0;
+						currentClones = 0;
 					}
 
 					// New logic to correctly set expiration form state
@@ -560,6 +632,7 @@
 						customExpirationDate = '';
 					}
 					expireOnViewsCount = _chat.expire_on_views ?? 0;
+					maxClonesCount = _chat.max_clones ?? 0;
 
 					is_public = _chat.share_id ? _chat.is_public ?? false : false;
 					initial_is_public = is_public;
@@ -567,11 +640,15 @@
 					initial_display_username = display_username;
 					allow_cloning = _chat.share_id ? _chat.allow_cloning ?? true : true;
 					initial_allow_cloning = allow_cloning;
+					keep_link_active_after_max_clones =
+						_chat.keep_link_active_after_max_clones ?? false;
+					initial_keep_link_active_after_max_clones = keep_link_active_after_max_clones;
 
 					// Snapshot the newly set initial state
 					initialExpirationOption = expirationOption;
 					initialCustomExpirationDate = customExpirationDate;
 					initialExpireOnViewsCount = expireOnViewsCount;
+					initialMaxClonesCount = maxClonesCount;
 
 					showQrCode = _chat.share_show_qr_code ?? !!_chat.share_id;
 					useGradient = _chat.share_use_gradient ?? false;
@@ -600,6 +677,7 @@
 				initialExpirationOption = 'never';
 				initialCustomExpirationDate = '';
 				initialExpireOnViewsCount = 0;
+				initialMaxClonesCount = 0;
 				console.log(chat);
 			}
 		})();
@@ -611,6 +689,8 @@
 		initial_share_id = '';
 		previewQrCodeUrl = '';
 		downloadQrCodeUrl = '';
+		previewGradient = '';
+		downloadGradient = '';
 		expirationOption = 'never';
 		customExpirationDate = '';
 		is_public = false;
@@ -619,13 +699,17 @@
 		initial_display_username = true;
 		allow_cloning = true;
 		initial_allow_cloning = true;
+		keep_link_active_after_max_clones = false;
+		initial_keep_link_active_after_max_clones = false;
 		password = '';
 		initial_password = '';
 		current_password = '';
 		expireOnViewsCount = 0;
+		maxClonesCount = 0;
 		initialExpirationOption = 'never';
 		initialCustomExpirationDate = '';
 		initialExpireOnViewsCount = 0;
+		initialMaxClonesCount = 0;
 
 		if (intervalId) clearInterval(intervalId);
 		timeRemaining = '';
@@ -636,6 +720,38 @@
 	}
 
 	$: useGradient, generateQrCodesDebounced(shareUrl);
+
+	let expirationText = '';
+	$: {
+		if (chat && chat.share_id) {
+			const conditions = [];
+			if (chat.expires_at) {
+				const expirationDate = new Date(chat.expires_at * 1000).toLocaleString();
+				const remaining = timeRemaining ? ` (${timeRemaining})` : '';
+				conditions.push(`${$i18n.t('on')} ${expirationDate}${remaining}`);
+			}
+			if (chat.expire_on_views) {
+				conditions.push(`${$i18n.t('after')} ${chat.expire_on_views} ${$i18n.t('views')}`);
+			}
+			if (allow_cloning && chat.max_clones && !keep_link_active_after_max_clones) {
+				conditions.push(`${$i18n.t('after')} ${chat.max_clones} ${$i18n.t('clones')}`);
+			}
+
+			if (conditions.length > 1) {
+				const last = conditions.pop();
+				expirationText = $i18n.t('Expires {{conditions}} or {{last}}', {
+					conditions: conditions.join(', '),
+					last
+				});
+			} else if (conditions.length === 1) {
+				expirationText = `${$i18n.t('Expires')} ${conditions[0]}`;
+			} else {
+				expirationText = '';
+			}
+		} else {
+			expirationText = '';
+		}
+	}
 </script>
     
 <Modal bind:show size="md">
@@ -716,60 +832,77 @@
 				<div class="p-4 rounded-lg bg-gray-100 dark:bg-gray-850">
 					<div class="font-medium mb-2">{$i18n.t('Access Settings')}</div>
 
-					{#if $user.role === 'admin' || ($user.permissions.sharing?.public_chat ?? false)}
-						<div class="flex items-start space-x-3">
-							<div class="pt-0.5">
-								<Switch bind:state={is_public} tooltip={true} />
+					<div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+						{#if $user.role === 'admin' || ($user.permissions.sharing?.public_chat ?? false)}
+							<div class="flex items-start space-x-3">
+								<div class="pt-0.5">
+									<Switch bind:state={is_public} tooltip={true} />
+								</div>
+								<div class="flex-1">
+									<div class="flex items-center space-x-1">
+										<label
+											for="is_public"
+											class="block text-sm font-medium text-gray-700 dark:text-gray-300"
+										>
+											{$i18n.t('Public Access')}
+										</label>
+										<Tooltip placement="top">
+											<QuestionMarkCircle class="cursor-pointer text-gray-500 size-4" />
+											<div class="p-2 text-sm" slot="tooltip">
+												{$i18n.t(
+													'When enabled, anyone with the link can view the chat. When disabled, only logged-in users can view the chat.'
+												)}
+											</div>
+										</Tooltip>
+									</div>
+								</div>
 							</div>
-							<div class="flex-1">
-								<label
-									for="is_public"
-									class="block text-sm font-medium text-gray-700 dark:text-gray-300"
-								>
-									{$i18n.t('Public Access')}
-								</label>
-								<p class="text-xs text-gray-500 dark:text-gray-400">
-									{$i18n.t(
-										'When enabled, anyone with the link can view the chat. When disabled, only logged-in users can view the chat.'
-									)}
-								</p>
+						{/if}
+							<div class="flex items-start space-x-3">
+								<div class="pt-0.5">
+									<Switch bind:state={allow_cloning} tooltip={true} />
+								</div>
+								<div class="flex-1">
+									<div class="flex items-center space-x-1">
+										<label
+											for="allow_cloning"
+											class="block text-sm font-medium text-gray-700 dark:text-gray-300"
+										>
+											{$i18n.t('Allow Cloning')}
+										</label>
+										<Tooltip placement="top">
+											<QuestionMarkCircle class="cursor-pointer text-gray-500 size-4" />
+											<div class="p-2 text-sm" slot="tooltip">
+												{$i18n.t(
+													'When enabled, users with the link can clone this chat to their own account. When disabled, the snapshot of the chat effectively becomes read only.'
+												)}
+											</div>
+										</Tooltip>
+									</div>
+								</div>
 							</div>
-						</div>
-					{/if}
-					{#if !is_public}
-						<div class="mt-4 flex items-start space-x-3">
-							<div class="pt-0.5">
-								<Switch bind:state={display_username} tooltip={true} />
+							<div class="flex items-start space-x-3">
+								<div class="pt-0.5">
+									<Switch bind:state={display_username} tooltip={true} />
+								</div>
+								<div class="flex-1">
+									<div class="flex items-center space-x-1">
+										<label
+											for="display_username"
+											class="block text-sm font-medium text-gray-700 dark:text-gray-300 whitespace-nowrap"
+										>
+											{$i18n.t('Display Username')}
+										</label>
+										<Tooltip placement="top">
+											<QuestionMarkCircle class="cursor-pointer text-gray-500 size-4" />
+											<div class="p-2 text-sm" slot="tooltip">
+												{$i18n.t("When enabled, the chat owner's username will be displayed on the shared chat.")}
+											</div>
+										</Tooltip>
+									</div>
+								</div>
 							</div>
-							<div class="flex-1">
-								<label
-									for="display_username"
-									class="block text-sm font-medium text-gray-700 dark:text-gray-300"
-								>
-									{$i18n.t('Display Username')}
-								</label>
-								<p class="text-xs text-gray-500 dark:text-gray-400">
-									{$i18n.t("When enabled, the chat owner's username will be displayed on the shared chat.")}
-								</p>
-							</div>
-						</div>
-						<div class="mt-4 flex items-start space-x-3">
-							<div class="pt-0.5">
-								<Switch bind:state={allow_cloning} tooltip={true} />
-							</div>
-							<div class="flex-1">
-								<label
-									for="allow_cloning"
-									class="block text-sm font-medium text-gray-700 dark:text-gray-300"
-								>
-									{$i18n.t('Allow Cloning')}
-								</label>
-								<p class="text-xs text-gray-500 dark:text-gray-400">
-									{$i18n.t('When enabled, users with the link can clone this chat to their own account. When disabled, the snapshot of the chat effectively becomes read only.')}
-								</p>
-							</div>
-						</div>
-					{/if}
+					</div>
 
 					<div class="mt-4">
 						<div class="flex justify-between">
@@ -929,36 +1062,85 @@
 						</div>
 					</div>
 
-					<div class="mt-4">
-						<label
-							for="expire-on-views"
-							class="block text-sm font-medium text-gray-700 dark:text-gray-300"
-							>{$i18n.t('Max Number of Views')}</label
-						>
-						<input
-							id="expire-on-views"
-							type="number"
-							min="0"
-							bind:value={expireOnViewsCount}
-							on:blur={validateViewsCount}
-							on:wheel|preventDefault={handleViewsScroll}
-							class="mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm rounded-md dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white"
-							placeholder="0 for unlimited"
-						/>
+					<div class="flex items-start gap-4 mt-4">
+						<div class="flex-1">
+							<label
+								for="expire-on-views"
+								class="block text-sm font-medium text-gray-700 dark:text-gray-300"
+								>{$i18n.t('Max Number of Views')}</label
+							>
+							<input
+								id="expire-on-views"
+								type="number"
+								min="0"
+								bind:value={expireOnViewsCount}
+								on:blur={validateViewsCount}
+								on:wheel|preventDefault={handleViewsScroll}
+								class="mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm rounded-md dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white"
+							/>
+							<p class="text-xs text-gray-500 mt-1">{$i18n.t('0 = Unlimited')}</p>
+						</div>
+
+						{#if allow_cloning}
+							<div class="flex-1">
+								<label
+									for="max-clones"
+									class="block text-sm font-medium text-gray-700 dark:text-gray-300"
+									>{$i18n.t('Max Number of Clones')}</label
+								>
+								<input
+									id="max-clones"
+									type="number"
+									min="0"
+									bind:value={maxClonesCount}
+									on:blur={validateClonesCount}
+									on:wheel|preventDefault={handleClonesScroll}
+									class="mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm rounded-md dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white"
+								/>
+								<p class="text-xs text-gray-500 mt-1">{$i18n.t('0 = Unlimited')}</p>
+							</div>
+						{/if}
 					</div>
 
-					{#if chat.share_id && chat.expires_at}
-						<div class="mt-2 text-sm text-gray-500 dark:text-gray-400">
-							{$i18n.t('Expires on')} {new Date(chat.expires_at * 1000).toLocaleString()}
-							{#if timeRemaining}
-								<span class="font-semibold ml-1">({timeRemaining})</span>
-							{/if}
-						</div>
+					{#if allow_cloning}
+						{#if maxClonesCount > 0}
+							<div class="mt-4 flex items-start space-x-3">
+								<div class="pt-0.5">
+									<Switch bind:state={keep_link_active_after_max_clones}>
+										<Tooltip>
+											<div class="p-2 text-sm" slot="tooltip">
+												<div class="font-medium mb-2">
+													{$i18n.t('Keep Link Active')}
+												</div>
+												<p>
+													{$i18n.t(
+														'If checked, the share link will remain active for viewing even after the maximum number of clones has been reached. Cloning will be disabled.'
+													)}
+												</p>
+												<p class="mt-2">
+													{$i18n.t(
+														'If unchecked, the share link will be automatically revoked once the clone limit is reached.'
+													)}
+												</p>
+											</div>
+										</Tooltip>
+									</Switch>
+								</div>
+								<div class="flex-1">
+									<label
+										for="keep-link-active"
+										class="block text-sm font-medium text-gray-700 dark:text-gray-300"
+									>
+										{$i18n.t('Keep link active but prevent further cloning')}
+									</label>
+								</div>
+							</div>
+						{/if}
 					{/if}
 
-					{#if chat.share_id && chat.expire_on_views}
+					{#if expirationText}
 						<div class="mt-2 text-sm text-gray-500 dark:text-gray-400">
-							{$i18n.t('Expires after')} {chat.expire_on_views} {$i18n.t('views')}
+							{expirationText}
 						</div>
 					{/if}
 				</div>
@@ -1087,12 +1269,10 @@
 							</div>
 
 							{#if previewQrCodeUrl}
-								<a
+								<button
 									class="qr-code-container mt-4"
-									href={downloadQrCodeUrl}
-									download="qrcode.png"
 									on:click={() => {
-										toast.success($i18n.t('Downloading QR code...'));
+										showExpandedQr = true;
 									}}
 								>
 									{#if useGradient}
@@ -1102,78 +1282,103 @@
 									{:else}
 										<img class="w-48 h-48 rounded-md" src={previewQrCodeUrl} alt="QR Code" />
 									{/if}
-								</a>
+								</button>
 							{/if}
 						{/if}
 					</div>
-				</div>
+					<div class="flex justify-center mt-3">
+						<div class="flex gap-38">
+							{#if $config?.features.enable_community_sharing}
+								<button
+									class="self-center flex items-center gap-1 px-3 py-1.5 text-sm font-medium bg-gray-100 hover:bg-gray-200 text-gray-800 dark:bg-gray-850 dark:text-white dark:hover:bg-gray-800 transition rounded-full whitespace-nowrap"
+									type="button"
+									on:click={() => {
+										shareChat();
+										show = false;
+									}}
+								>
+									<ArrowUpTray />
+									{$i18n.t('Share to Open WebUI Community')}
+								</button>
+							{/if}
 
-				<div class="flex justify-center mt-3">
-					<div class="flex gap-42">
-						{#if $config?.features.enable_community_sharing}
 							<button
-								class="self-center flex items-center gap-1 px-3.5 py-2 text-sm font-medium bg-gray-100 hover:bg-gray-200 text-gray-800 dark:bg-gray-850 dark:text-white dark:hover:bg-gray-800 transition rounded-full"
+								class="self-center flex items-center gap-1 px-3 py-1.5 text-sm font-medium bg-gray-100 hover:bg-gray-200 text-gray-800 dark:bg-gray-850 dark:text-white dark:hover:bg-gray-800 transition rounded-full whitespace-nowrap"
 								type="button"
-								on:click={() => {
-									shareChat();
-									show = false;
-								}}
-							>
-								<ArrowUpTray />
-								{$i18n.t('Share to Open WebUI Community')}
-							</button>
-						{/if}
+								id="copy-and-share-chat-button"
+								on:click={async () => {
+									const isSafari = /^((?!chrome|android).)*safari/i.test(navigator.userAgent);
 
-						<button
-							class="self-center flex items-center gap-1 px-3.5 py-2 text-sm font-medium bg-black hover:bg-gray-900 text-white dark:bg-white dark:text-black dark:hover:bg-gray-100 transition rounded-full"
-							type="button"
-							id="copy-and-share-chat-button"
-							on:click={async () => {
-								const isSafari = /^((?!chrome|android).)*safari/i.test(navigator.userAgent);
+									if (isSafari) {
+										// Oh, Safari, you're so special, let's give you some extra love and attention
+										console.log('isSafari');
 
-								if (isSafari) {
-									// Oh, Safari, you're so special, let's give you some extra love and attention
-									console.log('isSafari');
+										const getUrlPromise = async () => {
+											const url = await shareLocalChat();
+											if (url) {
+												return new Blob([url], { type: 'text/plain' });
+											}
+											return new Blob([]);
+										};
 
-									const getUrlPromise = async () => {
+										navigator.clipboard
+											.write([
+												new ClipboardItem({
+													'text/plain': getUrlPromise()
+												})
+											])
+											.then(() => {
+												console.log('Async: Copying to clipboard was successful!');
+												toast.success($i18n.t('Copied shared chat URL to clipboard!'));
+											})
+											.catch((error) => {
+												console.error('Async: Could not copy text: ', error);
+											});
+									} else {
 										const url = await shareLocalChat();
 										if (url) {
-											return new Blob([url], { type: 'text/plain' });
-										}
-										return new Blob([]);
-									};
-
-									navigator.clipboard
-										.write([
-											new ClipboardItem({
-												'text/plain': getUrlPromise()
-											})
-										])
-										.then(() => {
-											console.log('Async: Copying to clipboard was successful!');
+											copyToClipboard(url);
 											toast.success($i18n.t('Copied shared chat URL to clipboard!'));
-										})
-										.catch((error) => {
-											console.error('Async: Could not copy text: ', error);
-										});
-								} else {
-									const url = await shareLocalChat();
-									if (url) {
-										copyToClipboard(url);
-										toast.success($i18n.t('Copied shared chat URL to clipboard!'));
+										}
 									}
-								}
-							}}
-						>
-							<Link />
-							{$i18n.t(chat.share_id ? 'Update Link Settings' : 'Create Link')}
-						</button>
+								}}
+							>
+								<Link />
+								{$i18n.t(chat.share_id ? 'Update Link Settings' : 'Create Link')}
+							</button>
+						</div>
 					</div>
 				</div>
 			</div>
 		{/if}
 	</div>
 </Modal>
+
+{#if showExpandedQr}
+	<Modal bind:show={showExpandedQr} size="sm">
+		<div class="flex flex-col items-center p-4">
+			<h2 class="text-lg font-medium mb-4">{$i18n.t('Scan QR Code')}</h2>
+			{#if useGradient}
+				<div class="w-64 h-64 rounded-md" style="background: {downloadGradient};">
+					<img class="w-full h-full" src={downloadQrCodeUrl} alt="QR Code" />
+				</div>
+			{:else}
+				<img class="w-64 h-64 rounded-md" src={downloadQrCodeUrl} alt="QR Code" />
+			{/if}
+
+			<a
+				class="mt-4 px-4 py-2 bg-gray-100 dark:bg-gray-800 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors"
+				href={downloadQrCodeUrl}
+				download="qrcode.png"
+				on:click={() => {
+					toast.success($i18n.t('Downloading QR code...'));
+				}}
+			>
+				{$i18n.t('Download QR Code')}
+			</a>
+		</div>
+	</Modal>
+{/if}
 
 <style>
 	.qr-code-container {

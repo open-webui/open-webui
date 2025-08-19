@@ -1113,7 +1113,7 @@
 	message={`Are you sure you want to revoke all ${grandTotal} shared links? This action cannot be undone.`}
 	confirmText="REVOKE"
 	confirmButtonText="Revoke All"
-	confirmButtonClass="bg-red-600 hover:bg-red-700"
+	confirmButtonClass="text-red-500 border-red-500 hover:bg-red-500 hover:text-white"
 	on:confirm={doRevokeAll}
 />
 
@@ -1146,7 +1146,7 @@
 	message={`Are you sure you want to reset the stats for all ${grandTotal} shared chats? This action cannot be undone.`}
 	confirmText="RESET"
 	confirmButtonText="Reset All Stats"
-	confirmButtonClass="bg-yellow-500 hover:bg-yellow-600"
+	confirmButtonClass="text-yellow-500 border-yellow-500 hover:bg-yellow-500 hover:text-white"
 	on:confirm={doResetAllStats}
 />
 

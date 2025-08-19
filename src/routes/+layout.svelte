@@ -33,6 +33,7 @@
 
 	import { executeToolServer, getBackendConfig } from '$lib/apis';
 	import { getSessionUser, userSignOut } from '$lib/apis/auths';
+	import { cloneSharedChatById } from '$lib/apis/chats';
 
 	import '../tailwind.css';
 	import '../app.css';
@@ -541,6 +542,26 @@
 					clearInterval(tokenTimer);
 				}
 				tokenTimer = setInterval(checkTokenExpiry, 15000);
+
+				const postLoginActionStr = localStorage.getItem('postLoginAction');
+				if (postLoginActionStr) {
+					const postLoginAction = JSON.parse(postLoginActionStr);
+					if (postLoginAction.action === 'clone' && postLoginAction.shareId) {
+						(async () => {
+							const res = await cloneSharedChatById(localStorage.token, postLoginAction.shareId).catch(
+								(error) => {
+									toast.error(`${error}`);
+									return null;
+								}
+							);
+
+							if (res) {
+								await goto(`/c/${res.id}`);
+							}
+						})();
+					}
+					localStorage.removeItem('postLoginAction');
+				}
 			} else {
 				$socket?.off('chat-events', chatEventHandler);
 				$socket?.off('channel-events', channelEventHandler);

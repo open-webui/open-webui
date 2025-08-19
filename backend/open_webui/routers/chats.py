@@ -562,38 +562,42 @@ async def get_shared_chat_by_id(
 
     # If the chat is password-protected
     if chat_unrestricted.password:
-        token_name = f"shared-chat-{chat_unrestricted.id}-token"
-        token = request.cookies.get(token_name)
+        is_owner = user and user.id == chat_unrestricted.user_id
 
-        if not token:
-            raise HTTPException(
-                status_code=status.HTTP_401_UNAUTHORIZED,
-                detail={
-                    "code": "PASSWORD_REQUIRED",
-                    "message": "Password required to access this shared chat.",
-                },
-            )
+        if not is_owner:
+            token_name = f"shared-chat-{chat_unrestricted.id}-token"
+            token = request.cookies.get(token_name)
 
-        data = decode_token(token)
-        if not data or data.get("sub") != f"shared-chat-{chat_unrestricted.id}":
-            raise HTTPException(
-                status_code=status.HTTP_401_UNAUTHORIZED,
-                detail={"code": "INVALID_TOKEN", "message": "Invalid token."},
-            )
+            if not token:
+                raise HTTPException(
+                    status_code=status.HTTP_401_UNAUTHORIZED,
+                    detail={
+                        "code": "PASSWORD_REQUIRED",
+                        "message": "Password required to access this shared chat.",
+                    },
+                )
 
-        # Check if the password has been updated since the token was issued
-        if (
-            chat_unrestricted.password_updated_at
-            and data.get("password_updated_at") != chat_unrestricted.password_updated_at
-        ):
-            response.delete_cookie(key=token_name)
-            raise HTTPException(
-                status_code=status.HTTP_401_UNAUTHORIZED,
-                detail={
-                    "code": "PASSWORD_REQUIRED",
-                    "message": "Password required to access this shared chat.",
-                },
-            )
+            data = decode_token(token)
+            if not data or data.get("sub") != f"shared-chat-{chat_unrestricted.id}":
+                raise HTTPException(
+                    status_code=status.HTTP_401_UNAUTHORIZED,
+                    detail={"code": "INVALID_TOKEN", "message": "Invalid token."},
+                )
+
+            # Check if the password has been updated since the token was issued
+            if (
+                chat_unrestricted.password_updated_at
+                and data.get("password_updated_at")
+                != chat_unrestricted.password_updated_at
+            ):
+                response.delete_cookie(key=token_name)
+                raise HTTPException(
+                    status_code=status.HTTP_401_UNAUTHORIZED,
+                    detail={
+                        "code": "PASSWORD_REQUIRED",
+                        "message": "Password required to access this shared chat.",
+                    },
+                )
         # If token is valid, proceed to get the chat
 
     chat = None
@@ -896,17 +900,6 @@ async def clone_chat_by_id(
         )
 
 
-@router.post("/{id}/clone/inc", response_model=Optional[ChatResponse])
-async def increment_clone_count_by_id(id: str, user=Depends(get_verified_user)):
-    chat = Chats.increment_clone_count_by_id(id, user)
-    if chat:
-        return to_chat_response(chat)
-    else:
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED, detail=ERROR_MESSAGES.DEFAULT()
-        )
-
-
 ############################
 # CloneSharedChatById
 ############################
@@ -931,6 +924,11 @@ async def clone_shared_chat_by_id(request: Request, id: str, user=Depends(get_ve
                 status_code=status.HTTP_401_UNAUTHORIZED,
                 detail=ERROR_MESSAGES.ACCESS_PROHIBITED,
             )
+        if chat.max_clones is not None and chat.clones >= chat.max_clones:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="This chat has reached the maximum number of clones.",
+            )
         updated_chat = {
             **chat.chat,
             "originalChatId": chat.id,
@@ -949,6 +947,8 @@ async def clone_shared_chat_by_id(request: Request, id: str, user=Depends(get_ve
                 }
             ),
         )
+        
+        Chats.increment_clone_count_by_id(chat.id, user)
 
         return to_chat_response(new_chat)
     else:
@@ -997,9 +997,11 @@ class ShareChatForm(BaseModel):
     share_id: Optional[str] = None
     expires_at: Optional[int] = None
     expire_on_views: Optional[int] = None
+    max_clones: Optional[int] = None
     is_public: bool = False
     display_username: bool = True
     allow_cloning: bool = True
+    keep_link_active_after_max_clones: bool = False
     password: Optional[str] = None
     current_password: Optional[str] = None
     share_show_qr_code: bool = False
@@ -1065,9 +1067,11 @@ async def share_chat_by_id(
             share_id=form_data.share_id,
             expires_at=form_data.expires_at,
             expire_on_views=form_data.expire_on_views,
+            max_clones=form_data.max_clones,
             is_public=form_data.is_public,
             display_username=form_data.display_username,
             allow_cloning=form_data.allow_cloning,
+            keep_link_active_after_max_clones=form_data.keep_link_active_after_max_clones,
             password=form_data.password,
             share_show_qr_code=form_data.share_show_qr_code,
             share_use_gradient=form_data.share_use_gradient,

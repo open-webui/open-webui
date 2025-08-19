@@ -11,7 +11,6 @@
 	import {
 		getChatByShareId,
 		cloneSharedChatById,
-		incrementCloneCountById,
 		verifySharedChatPassword
 	} from '$lib/apis/chats';
 
@@ -127,6 +126,8 @@
 			console.error(err);
 			if (err.detail === 'Login required to access this shared chat.') {
 				await goto('/auth');
+			} else if (err.detail?.message === 'Password required to access this shared chat.') {
+				passwordRequired = true;
 			} else if (err.detail === 'password_required') {
 				passwordRequired = true;
 			} else if (typeof err.detail === 'object' && err.detail !== null) {
@@ -184,9 +185,16 @@
 		});
 
 		if (res) {
-			const originalChatId = chat.id;
-			await incrementCloneCountById(localStorage.token, originalChatId);
 			goto(`/c/${res.id}`);
+		}
+	};
+
+	const handleCloneClick = () => {
+		if ($userStore) {
+			cloneSharedChat();
+		} else {
+			localStorage.setItem('postLoginAction', JSON.stringify({ action: 'clone', shareId: chat.share_id }));
+			goto('/auth');
 		}
 	};
 </script>
@@ -233,6 +241,7 @@
 						{/if}
 					</div>
 
+				{#if $userStore}
 					<div class="px-3 mt-4">
 						<details>
 							<summary class="cursor-pointer text-sm font-medium"
@@ -259,6 +268,7 @@
 							</div>
 						</details>
 					</div>
+				{/if}
 				</div>
 
 				<div class=" h-full w-full flex flex-col py-2">
@@ -287,10 +297,10 @@
 				class="absolute bottom-0 right-0 left-0 flex justify-center w-full bg-linear-to-b from-transparent to-white dark:to-gray-900"
 			>
 				<div class="pb-5 text-center">
-					{#if ($userStore?.role === 'admin' || $userStore?.permissions?.chat?.clone) && chat.allow_cloning}
+					{#if chat.allow_cloning && (!chat.max_clones || chat.clones < chat.max_clones)}
 						<button
 							class="px-4 py-2 text-sm font-medium bg-black hover:bg-gray-900 text-white dark:bg-white dark:text-black dark:hover:bg-gray-100 transition rounded-full"
-							on:click={cloneSharedChat}
+							on:click={handleCloneClick}
 						>
 							{$i18n.t('Clone Chat')}
 						</button>
