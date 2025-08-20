@@ -7,6 +7,7 @@
 		fill-rule="evenodd"
 		d="M8.914 6.025a.75.75 0 0 1 1.06 0 3.5 3.5 0 0 1 0 4.95l-2 2a3.5 3.5 0 0 1-5.396-4.402.75.75 0 0 1 1.251.827 2 2 0 0 0 3.085 2.514l2-2a2 2 0 0 0 0-2.828.75.75 0 0 1 0-1.06Z"
 		clip-rule="evenodd"
+		aria-hidden="true"
 	/>
 	<path
 		fill-rule="evenodd"

@@ -26,6 +26,8 @@ from pgvector.sqlalchemy import Vector
 from sqlalchemy.ext.mutable import MutableDict
 from sqlalchemy.exc import NoSuchTableError
 
+
+from open_webui.retrieval.vector.utils import stringify_metadata
 from open_webui.retrieval.vector.main import (
     VectorDBBase,
     VectorItem,
@@ -201,6 +203,8 @@ class PgvectorClient(VectorDBBase):
                 for item in items:
                     vector = self.adjust_vector_length(item["vector"])
                     # Use raw SQL for BYTEA/pgcrypto
+                    # Ensure metadata is converted to its JSON text representation
+                    json_metadata = json.dumps(item["metadata"])
                     self.session.execute(
                         text(
                             """
@@ -209,7 +213,7 @@ class PgvectorClient(VectorDBBase):
                             VALUES (
                                 :id, :vector, :collection_name,
                                 pgp_sym_encrypt(:text, :key),
-                                pgp_sym_encrypt(:metadata::text, :key)
+                                pgp_sym_encrypt(:metadata_text, :key)
                             )
                             ON CONFLICT (id) DO NOTHING
                         """
@@ -219,7 +223,7 @@ class PgvectorClient(VectorDBBase):
                             "vector": vector,
                             "collection_name": collection_name,
                             "text": item["text"],
-                            "metadata": json.dumps(item["metadata"]),
+                            "metadata_text": json_metadata,
                             "key": PGVECTOR_PGCRYPTO_KEY,
                         },
                     )
@@ -235,7 +239,7 @@ class PgvectorClient(VectorDBBase):
                         vector=vector,
                         collection_name=collection_name,
                         text=item["text"],
-                        vmetadata=item["metadata"],
+                        vmetadata=stringify_metadata(item["metadata"]),
                     )
                     new_items.append(new_chunk)
                 self.session.bulk_save_objects(new_items)
@@ -253,6 +257,7 @@ class PgvectorClient(VectorDBBase):
             if PGVECTOR_PGCRYPTO:
                 for item in items:
                     vector = self.adjust_vector_length(item["vector"])
+                    json_metadata = json.dumps(item["metadata"])
                     self.session.execute(
                         text(
                             """
@@ -261,7 +266,7 @@ class PgvectorClient(VectorDBBase):
                             VALUES (
                                 :id, :vector, :collection_name,
                                 pgp_sym_encrypt(:text, :key),
-                                pgp_sym_encrypt(:metadata::text, :key)
+                                pgp_sym_encrypt(:metadata_text, :key)
                             )
                             ON CONFLICT (id) DO UPDATE SET
                               vector = EXCLUDED.vector,
@@ -275,7 +280,7 @@ class PgvectorClient(VectorDBBase):
                             "vector": vector,
                             "collection_name": collection_name,
                             "text": item["text"],
-                            "metadata": json.dumps(item["metadata"]),
+                            "metadata_text": json_metadata,
                             "key": PGVECTOR_PGCRYPTO_KEY,
                         },
                     )
@@ -292,7 +297,7 @@ class PgvectorClient(VectorDBBase):
                     if existing:
                         existing.vector = vector
                         existing.text = item["text"]
-                        existing.vmetadata = item["metadata"]
+                        existing.vmetadata = stringify_metadata(item["metadata"])
                         existing.collection_name = (
                             collection_name  # Update collection_name if necessary
                         )
@@ -302,7 +307,7 @@ class PgvectorClient(VectorDBBase):
                             vector=vector,
                             collection_name=collection_name,
                             text=item["text"],
-                            vmetadata=item["metadata"],
+                            vmetadata=stringify_metadata(item["metadata"]),
                         )
                         self.session.add(new_chunk)
                 self.session.commit()
@@ -416,10 +421,12 @@ class PgvectorClient(VectorDBBase):
                 documents[qid].append(row.text)
                 metadatas[qid].append(row.vmetadata)
 
+            self.session.rollback()  # read-only transaction
             return SearchResult(
                 ids=ids, distances=distances, documents=documents, metadatas=metadatas
             )
         except Exception as e:
+            self.session.rollback()
             log.exception(f"Error during search: {e}")
             return None
 
@@ -472,12 +479,14 @@ class PgvectorClient(VectorDBBase):
             documents = [[result.text for result in results]]
             metadatas = [[result.vmetadata for result in results]]
 
+            self.session.rollback()  # read-only transaction
             return GetResult(
                 ids=ids,
                 documents=documents,
                 metadatas=metadatas,
             )
         except Exception as e:
+            self.session.rollback()
             log.exception(f"Error during query: {e}")
             return None
 
@@ -518,8 +527,10 @@ class PgvectorClient(VectorDBBase):
                 documents = [[result.text for result in results]]
                 metadatas = [[result.vmetadata for result in results]]
 
+            self.session.rollback()  # read-only transaction
             return GetResult(ids=ids, documents=documents, metadatas=metadatas)
         except Exception as e:
+            self.session.rollback()
             log.exception(f"Error during get: {e}")
             return None
 
@@ -587,8 +598,10 @@ class PgvectorClient(VectorDBBase):
                 .first()
                 is not None
             )
+            self.session.rollback()  # read-only transaction
             return exists
         except Exception as e:
+            self.session.rollback()
             log.exception(f"Error checking collection existence: {e}")
             return False
 

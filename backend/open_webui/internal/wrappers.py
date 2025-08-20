@@ -1,4 +1,5 @@
 import logging
+import os
 from contextvars import ContextVar
 
 from open_webui.env import SRC_LOG_LEVELS
@@ -43,24 +44,47 @@ class ReconnectingPostgresqlDatabase(CustomReconnectMixin, PostgresqlDatabase):
 
 
 def register_connection(db_url):
-    db = connect(db_url, unquote_user=True, unquote_password=True)
-    if isinstance(db, PostgresqlDatabase):
-        # Enable autoconnect for SQLite databases, managed by Peewee
+    # Check if using SQLCipher protocol
+    if db_url.startswith("sqlite+sqlcipher://"):
+        database_password = os.environ.get("DATABASE_PASSWORD")
+        if not database_password or database_password.strip() == "":
+            raise ValueError(
+                "DATABASE_PASSWORD is required when using sqlite+sqlcipher:// URLs"
+            )
+        from playhouse.sqlcipher_ext import SqlCipherDatabase
+
+        # Parse the database path from SQLCipher URL
+        # Convert sqlite+sqlcipher:///path/to/db.sqlite to /path/to/db.sqlite
+        db_path = db_url.replace("sqlite+sqlcipher://", "")
+        if db_path.startswith("/"):
+            db_path = db_path[1:]  # Remove leading slash for relative paths
+
+        # Use Peewee's native SqlCipherDatabase with encryption
+        db = SqlCipherDatabase(db_path, passphrase=database_password)
         db.autoconnect = True
         db.reuse_if_open = True
-        log.info("Connected to PostgreSQL database")
+        log.info("Connected to encrypted SQLite database using SQLCipher")
 
-        # Get the connection details
-        connection = parse(db_url, unquote_user=True, unquote_password=True)
-
-        # Use our custom database class that supports reconnection
-        db = ReconnectingPostgresqlDatabase(**connection)
-        db.connect(reuse_if_open=True)
-    elif isinstance(db, SqliteDatabase):
-        # Enable autoconnect for SQLite databases, managed by Peewee
-        db.autoconnect = True
-        db.reuse_if_open = True
-        log.info("Connected to SQLite database")
     else:
-        raise ValueError("Unsupported database connection")
+        # Standard database connection (existing logic)
+        db = connect(db_url, unquote_user=True, unquote_password=True)
+        if isinstance(db, PostgresqlDatabase):
+            # Enable autoconnect for SQLite databases, managed by Peewee
+            db.autoconnect = True
+            db.reuse_if_open = True
+            log.info("Connected to PostgreSQL database")
+
+            # Get the connection details
+            connection = parse(db_url, unquote_user=True, unquote_password=True)
+
+            # Use our custom database class that supports reconnection
+            db = ReconnectingPostgresqlDatabase(**connection)
+            db.connect(reuse_if_open=True)
+        elif isinstance(db, SqliteDatabase):
+            # Enable autoconnect for SQLite databases, managed by Peewee
+            db.autoconnect = True
+            db.reuse_if_open = True
+            log.info("Connected to SQLite database")
+        else:
+            raise ValueError("Unsupported database connection")
     return db

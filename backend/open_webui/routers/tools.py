@@ -5,6 +5,8 @@ import time
 import re
 import aiohttp
 from pydantic import BaseModel, HttpUrl
+from fastapi import APIRouter, Depends, HTTPException, Request, status
+
 
 from open_webui.models.tools import (
     ToolForm,
@@ -14,15 +16,14 @@ from open_webui.models.tools import (
     Tools,
 )
 from open_webui.utils.plugin import load_tool_module_by_id, replace_imports
-from open_webui.config import CACHE_DIR
-from open_webui.constants import ERROR_MESSAGES
-from fastapi import APIRouter, Depends, HTTPException, Request, status
 from open_webui.utils.tools import get_tool_specs
 from open_webui.utils.auth import get_admin_user, get_verified_user
 from open_webui.utils.access_control import has_access, has_permission
-from open_webui.env import SRC_LOG_LEVELS
-
 from open_webui.utils.tools import get_tool_servers_data
+
+from open_webui.env import SRC_LOG_LEVELS
+from open_webui.config import CACHE_DIR, ENABLE_ADMIN_WORKSPACE_CONTENT_ACCESS
+from open_webui.constants import ERROR_MESSAGES
 
 
 log = logging.getLogger(__name__)
@@ -74,15 +75,17 @@ async def get_tools(request: Request, user=Depends(get_verified_user)):
             )
         )
 
-    if user.role != "admin":
+    if user.role == "admin" and ENABLE_ADMIN_WORKSPACE_CONTENT_ACCESS:
+        # Admin can see all tools
+        return tools
+    else:
         tools = [
             tool
             for tool in tools
             if tool.user_id == user.id
             or has_access(user.id, "read", tool.access_control)
         ]
-
-    return tools
+        return tools
 
 
 ############################
@@ -92,7 +95,7 @@ async def get_tools(request: Request, user=Depends(get_verified_user)):
 
 @router.get("/list", response_model=list[ToolUserResponse])
 async def get_tool_list(user=Depends(get_verified_user)):
-    if user.role == "admin":
+    if user.role == "admin" and ENABLE_ADMIN_WORKSPACE_CONTENT_ACCESS:
         tools = Tools.get_tools()
     else:
         tools = Tools.get_tools_by_user_id(user.id, "write")

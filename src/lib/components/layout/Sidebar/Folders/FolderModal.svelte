@@ -30,6 +30,13 @@
 
 	const submitHandler = async () => {
 		loading = true;
+
+		if ((data?.files ?? []).some((file) => file.status === 'uploading')) {
+			toast.error($i18n.t('Please wait until all files are uploaded.'));
+			loading = false;
+			return;
+		}
+
 		await onSubmit({
 			name,
 			data
