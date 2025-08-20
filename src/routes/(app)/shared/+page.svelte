@@ -91,7 +91,6 @@
 		}
 		publicFilter = publicFilterOptions[newIndex].value;
 		page = 1;
-		getSharedChatList();
 	};
 
 	const handleStatusFilterScroll = (event) => {
@@ -106,14 +105,12 @@
 		}
 		statusFilter = statusFilterOptions[newIndex].value;
 		page = 1;
-		getSharedChatList();
 	};
 	let dateFilterApplied = false;
 
 	const handleDateFilter = () => {
 		if (startDate && endDate) {
 			page = 1;
-			getSharedChatList();
 			dateFilterApplied = true;
 		}
 	};
@@ -122,7 +119,6 @@
 		startDate = '';
 		endDate = '';
 		dateFilterApplied = false;
-		getSharedChatList();
 	};
 
 	const setSortKey = (key) => {
@@ -132,20 +128,30 @@
 			orderBy = key;
 			direction = 'asc';
 		}
+		page = 1;
 	};
 
-	const getSharedChatList = async () => {
+	const getSharedChatList = async (
+		_page,
+		_searchTerm,
+		_orderBy,
+		_direction,
+		_startDate,
+		_endDate,
+		_publicFilter,
+		_statusFilter
+	) => {
 		if ($user) {
 			const res = await getSharedChats(
 				localStorage.token,
-				page,
-				searchTerm,
-				orderBy,
-				direction,
-				startDate ? dayjs(startDate).startOf('day').unix() : undefined,
-				endDate ? dayjs(endDate).endOf('day').unix() : undefined,
-				publicFilter,
-				statusFilter
+				_page,
+				_searchTerm,
+				_orderBy,
+				_direction,
+				_startDate ? dayjs(_startDate).startOf('day').unix() : undefined,
+				_endDate ? dayjs(_endDate).endOf('day').unix() : undefined,
+				_publicFilter,
+				_statusFilter
 			);
 			total = res.total;
 			grandTotal = res.grand_total;
@@ -158,7 +164,7 @@
 				}))
 			);
 
-			if (res.chats.length === 0 && page > 1) {
+			if (res.chats.length === 0 && _page > 1) {
 				page = 1;
 			}
 		}
@@ -167,38 +173,38 @@
 	let previousShowShareChatModal = false;
 	onMount(async () => {
 		models.set(await getModels(localStorage.token));
-		getSharedChatList();
 		previousShowShareChatModal = showShareChatModal;
 
 		let timeoutId;
 
-		const checkExpiredLinks = async () => {
+		const pollSharedChats = async () => {
+			// First, check for and revoke any expired links
 			const now = Math.floor(Date.now() / 1000);
-			const chatsToProcess = [...$sharedChatsStore];
-			let revokedSomething = false;
-
-			for (const chat of chatsToProcess) {
+			const chatsToExpire = $sharedChatsStore.filter((chat) => {
 				const isExpiredByTime = chat.expires_at && chat.expires_at <= now;
 				const isExpiredByViews =
 					chat.expire_on_views && chat.views >= chat.expire_on_views;
+				return (isExpiredByTime || isExpiredByViews) && chat.status === 'active';
+			});
 
-				if ((isExpiredByTime || isExpiredByViews) && chat.status === 'active') {
+			if (chatsToExpire.length > 0) {
+				const revocationPromises = chatsToExpire.map(async (chat) => {
 					const res = await deleteSharedChatById(localStorage.token, chat.id);
 					if (res) {
 						toast.info(`Expired link for "${chat.title}" was automatically revoked.`);
-						revokedSomething = true;
 					}
-				}
+				});
+				await Promise.all(revocationPromises);
 			}
 
-			if (revokedSomething) {
-				getSharedChatList();
-			}
+			// Always refresh the list to get latest view/clone counts and statuses
+			getSharedChatList(page, searchTerm, orderBy, direction, startDate, endDate, publicFilter, statusFilter);
 
-			timeoutId = setTimeout(checkExpiredLinks, 1000);
+			// Poll every 5 seconds
+			timeoutId = setTimeout(pollSharedChats, 5000);
 		};
 
-		timeoutId = setTimeout(checkExpiredLinks, 1000);
+		timeoutId = setTimeout(pollSharedChats, 5000);
 
 		return () => {
 			clearTimeout(timeoutId);
@@ -211,19 +217,17 @@
 	}
 
 	$: if ($sharedChatsUpdated) {
-		getSharedChatList();
+		getSharedChatList(page, searchTerm, orderBy, direction, startDate, endDate, publicFilter, statusFilter);
 		sharedChatsUpdated.set(false);
 	}
 
 	$: if (previousShowShareChatModal && !showShareChatModal) {
-		getSharedChatList();
+		getSharedChatList(page, searchTerm, orderBy, direction, startDate, endDate, publicFilter, statusFilter);
 	}
 
 	$: previousShowShareChatModal = showShareChatModal;
 
-	$: if (page || searchTerm || orderBy || direction) {
-		getSharedChatList();
-	}
+	$: getSharedChatList(page, searchTerm, orderBy, direction, startDate, endDate, publicFilter, statusFilter);
 	$: totalSelectedCount = $selectedSharedChatIds.length;
 
 	let headerText = '';
@@ -257,7 +261,6 @@
 
 	const handleSearch = () => {
 		page = 1;
-		getSharedChatList();
 	};
 
 	const copyLink = (link) => {
@@ -572,7 +575,6 @@
 					bind:value={publicFilter}
 					on:change={() => {
 						page = 1;
-						getSharedChatList();
 					}}
 					on:wheel|preventDefault={handlePublicFilterScroll}
 				>
@@ -587,7 +589,6 @@
 					bind:value={statusFilter}
 					on:change={() => {
 						page = 1;
-						getSharedChatList();
 					}}
 					on:wheel|preventDefault={handleStatusFilterScroll}
 				>
