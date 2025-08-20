@@ -213,9 +213,9 @@
 		{:else}
 			<div>
 				<div class=" flex items-center gap-3 justify-between text-xs uppercase px-1 font-bold">
-					<div class="w-full basis-3/5">Group</div>
+					<div class="w-full basis-3/5">{$i18n.t('Group')}</div>
 
-					<div class="w-full basis-2/5 text-right">Users</div>
+					<div class="w-full basis-2/5 text-right">{$i18n.t('Users')}</div>
 				</div>
 
 				<hr class="mt-1.5 border-gray-100 dark:border-gray-850" />

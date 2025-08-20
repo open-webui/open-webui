@@ -310,7 +310,7 @@
 					/>
 				</svg>
 			</div>
-			<div class=" self-center text-sm font-medium">{'Back'}</div>
+			<div class=" self-center text-sm font-medium">{$i18n.t('Back')}</div>
 		</button>
 	{/if}
 
@@ -450,7 +450,7 @@
 								}}
 								type="button"
 							>
-								Reset Image</button
+								{$i18n.t('Reset Image')}</button
 							>
 						</div>
 					</div>
@@ -699,7 +699,7 @@
 										</div>
 									{/each}
 								{:else}
-									<div class="text-xs text-center">No suggestion prompts</div>
+									<div class="text-xs text-center">{$i18n.t('No suggestion prompts')}</div>
 								{/if}
 							</div>
 						{/if}
