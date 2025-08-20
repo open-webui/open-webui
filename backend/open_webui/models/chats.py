@@ -453,8 +453,8 @@ class ChatTable:
                     {
                         "id": chat[0],
                         "title": chat[1],
-                        "updated_at": int(chat[2].timestamp()),
-                        "created_at": int(chat[3].timestamp()),
+                        "updated_at": int(chat[2]),
+                        "created_at": int(chat[3]),
                     }
                 )
                 for chat in all_chats
