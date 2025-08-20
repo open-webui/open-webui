@@ -74,6 +74,7 @@ from open_webui.utils.misc import (
     add_or_update_user_message,
     get_last_user_message,
     get_last_assistant_message,
+    get_system_message,
     prepend_to_first_user_message_content,
     convert_logit_bias_input_to_json,
 )
@@ -84,7 +85,7 @@ from open_webui.utils.filter import (
     process_filter_functions,
 )
 from open_webui.utils.code_interpreter import execute_code_jupyter
-from open_webui.utils.payload import apply_model_system_prompt_to_body
+from open_webui.utils.payload import apply_system_prompt_to_body
 
 
 from open_webui.config import (
@@ -737,6 +738,12 @@ async def process_chat_payload(request, form_data, user, metadata, model):
     form_data = apply_params_to_form_data(form_data, model)
     log.debug(f"form_data: {form_data}")
 
+    system_message = get_system_message(form_data.get("messages", []))
+    if system_message:
+        form_data = apply_system_prompt_to_body(
+            system_message.get("content"), form_data, metadata, user
+        )
+
     event_emitter = get_event_emitter(metadata)
     event_call = get_event_call(metadata)
 
@@ -778,7 +785,7 @@ async def process_chat_payload(request, form_data, user, metadata, model):
 
             if folder and folder.data:
                 if "system_prompt" in folder.data:
-                    form_data = apply_model_system_prompt_to_body(
+                    form_data = apply_system_prompt_to_body(
                         folder.data["system_prompt"], form_data, metadata, user
                     )
                 if "files" in folder.data:
