@@ -702,6 +702,10 @@ def get_azure_allowed_params(api_version: str) -> set[str]:
     return allowed_params
 
 
+def is_openai_reasoning_model(model: str) -> bool:
+    return model.lower().startswith(("o1", "o3", "o4", "gpt-5"))
+
+
 def convert_to_azure_payload(url, payload: dict, api_version: str):
     model = payload.get("model", "")
 
@@ -709,7 +713,7 @@ def convert_to_azure_payload(url, payload: dict, api_version: str):
     allowed_params = get_azure_allowed_params(api_version)
 
     # Special handling for o-series models
-    if model.startswith("o") and model.endswith("-mini"):
+    if is_openai_reasoning_model(model):
         # Convert max_tokens to max_completion_tokens for o-series models
         if "max_tokens" in payload:
             payload["max_completion_tokens"] = payload["max_tokens"]
@@ -815,10 +819,7 @@ async def generate_chat_completion(
     key = request.app.state.config.OPENAI_API_KEYS[idx]
 
     # Check if model is a reasoning model that needs special handling
-    is_reasoning_model = (
-        payload["model"].lower().startswith(("o1", "o3", "o4", "gpt-5"))
-    )
-    if is_reasoning_model:
+    if is_openai_reasoning_model(payload["model"]):
         payload = openai_reasoning_model_handler(payload)
     elif "api.openai.com" not in url:
         # Remove "max_completion_tokens" from the payload for backward compatibility
