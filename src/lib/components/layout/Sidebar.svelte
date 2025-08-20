@@ -1111,7 +1111,7 @@
 				</Folder>
 			</div>
 
-			<div class="px-1.5 pt-1.5 pb-2 sticky bottom-0 z-10 bg-gray-50 dark:bg-gray-950 sidebar">
+			<div class="px-1.5 pt-1.5 pb-2 sticky bottom-0 z-10 bg-gray-50 dark:bg-gray-950 sidebar pb-[50px]">
 				<div class="flex flex-col font-primary">
 					{#if $user !== undefined && $user !== null}
 						<UserMenu
@@ -1139,14 +1139,16 @@
 					{/if}
 				</div>
 			</div>
-			<!-- PATCH ADD LOGO TO SIDEBAR -->
-			<div class="-mb-2 flex items-center py-2.5 px-4.5 w-full bg-gray-800">
+		</div>
+		<!-- PATCH ADD LOGO TO SIDEBAR -->
+		 <div class="relative">
+			<div class="-mb-2 flex items-center py-2.5 px-4.5 w-full bg-gray-800 absolute left-0 bottom-0 z-20">
 				<div class="self-center mr-3">
 					<img src={$config?.extended_features?.logo_url ? JSON.parse($config?.extended_features?.logo_url) : ""} class="max-w-[150px] object-cover" alt="" />
 				</div>
 			</div>
-			<!-- /PATCH ADD LOGO TO SIDEBAR -->
 		</div>
+		<!-- /PATCH ADD LOGO TO SIDEBAR -->
 	</div>
 {/if}
 
