@@ -85,7 +85,7 @@ def has_access_to_file(
 ############################
 
 
-def process_uploaded_file(request, file, file_item, file_metadata, user):
+def process_uploaded_file(request, file, file_path, file_item, file_metadata, user):
     try:
         if file.content_type:
             stt_supported_content_types = getattr(
@@ -218,6 +218,7 @@ def upload_file(
                 process_uploaded_file,
                 request,
                 file,
+                file_path,
                 file_item,
                 file_metadata,
                 user,
