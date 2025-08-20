@@ -1064,11 +1064,14 @@
 
 					<div class="flex items-start gap-4 mt-4">
 						<div class="flex-1">
-							<label
-								for="expire-on-views"
-								class="block text-sm font-medium text-gray-700 dark:text-gray-300"
-								>{$i18n.t('Max Number of Views')}</label
-							>
+							<div class="flex justify-between items-baseline">
+								<label
+									for="expire-on-views"
+									class="block text-sm font-medium text-gray-700 dark:text-gray-300"
+									>{$i18n.t('Max Number of Views')}</label
+								>
+								<p class="text-xs text-gray-500">{$i18n.t('0 = Unlimited')}</p>
+							</div>
 							<input
 								id="expire-on-views"
 								type="number"
@@ -1078,16 +1081,18 @@
 								on:wheel|preventDefault={handleViewsScroll}
 								class="mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm rounded-md dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white"
 							/>
-							<p class="text-xs text-gray-500 mt-1">{$i18n.t('0 = Unlimited')}</p>
 						</div>
 
 						{#if allow_cloning}
 							<div class="flex-1">
-								<label
-									for="max-clones"
-									class="block text-sm font-medium text-gray-700 dark:text-gray-300"
-									>{$i18n.t('Max Number of Clones')}</label
-								>
+								<div class="flex justify-between items-baseline">
+									<label
+										for="max-clones"
+										class="block text-sm font-medium text-gray-700 dark:text-gray-300"
+										>{$i18n.t('Max Number of Clones')}</label
+									>
+									<p class="text-xs text-gray-500">{$i18n.t('0 = Unlimited')}</p>
+								</div>
 								<input
 									id="max-clones"
 									type="number"
@@ -1097,7 +1102,6 @@
 									on:wheel|preventDefault={handleClonesScroll}
 									class="mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm rounded-md dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white"
 								/>
-								<p class="text-xs text-gray-500 mt-1">{$i18n.t('0 = Unlimited')}</p>
 							</div>
 						{/if}
 					</div>
