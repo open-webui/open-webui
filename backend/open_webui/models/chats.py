@@ -510,10 +510,10 @@ class ChatTable:
 
                     if is_expired_by_time:
                         chat.expires_at = None
-                    
+
                     if is_expired_by_views:
                         chat.expire_on_views = None
-                        
+
                     db.commit()
                     db.refresh(chat)
                     return ChatModel.model_validate(chat)

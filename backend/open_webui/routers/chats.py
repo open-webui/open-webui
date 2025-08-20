@@ -45,16 +45,20 @@ log.setLevel(SRC_LOG_LEVELS["MODELS"])
 
 router = APIRouter()
 
-def to_chat_response(chat: ChatModel, is_new_share: Optional[bool] = None) -> ChatResponse:
+
+def to_chat_response(
+    chat: ChatModel, is_new_share: Optional[bool] = None
+) -> ChatResponse:
     response_data = chat.model_dump()
     response_data["has_password"] = response_data.get("password") is not None
     if "password" in response_data:
         del response_data["password"]
-    
+
     if is_new_share is not None:
         response_data["is_new_share"] = is_new_share
-        
+
     return ChatResponse(**response_data)
+
 
 ############################
 # GetChatList
@@ -278,10 +282,7 @@ async def get_user_pinned_chats(user=Depends(get_verified_user)):
 
 @router.get("/all", response_model=list[ChatResponse])
 async def get_user_chats(user=Depends(get_verified_user)):
-    return [
-        to_chat_response(chat)
-        for chat in Chats.get_chats_by_user_id(user.id)
-    ]
+    return [to_chat_response(chat) for chat in Chats.get_chats_by_user_id(user.id)]
 
 
 ############################
@@ -292,8 +293,7 @@ async def get_user_chats(user=Depends(get_verified_user)):
 @router.get("/all/archived", response_model=list[ChatResponse])
 async def get_user_archived_chats(user=Depends(get_verified_user)):
     return [
-        to_chat_response(chat)
-        for chat in Chats.get_archived_chats_by_user_id(user.id)
+        to_chat_response(chat) for chat in Chats.get_archived_chats_by_user_id(user.id)
     ]
 
 
@@ -530,10 +530,7 @@ async def get_shared_chat_by_id(
                 "message": ERROR_MESSAGES.SHARE_LINK_NOT_FOUND,
             },
         )
-    if (
-        chat_unrestricted.expires_at
-        and chat_unrestricted.expires_at < int(time.time())
-    ):
+    if chat_unrestricted.expires_at and chat_unrestricted.expires_at < int(time.time()):
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail={
@@ -906,7 +903,9 @@ async def clone_chat_by_id(
 
 
 @router.post("/{id}/clone/shared", response_model=Optional[ChatResponse])
-async def clone_shared_chat_by_id(request: Request, id: str, user=Depends(get_verified_user)):
+async def clone_shared_chat_by_id(
+    request: Request, id: str, user=Depends(get_verified_user)
+):
     if (user.role != "admin") and (
         not has_permission(
             user.id, "chat.clone", request.app.state.config.USER_PERMISSIONS
@@ -947,7 +946,7 @@ async def clone_shared_chat_by_id(request: Request, id: str, user=Depends(get_ve
                 }
             ),
         )
-        
+
         Chats.increment_clone_count_by_id(chat.id, user)
 
         return to_chat_response(new_chat)
@@ -1029,9 +1028,19 @@ async def share_chat_by_id(
 
     if chat:
         # Check if the user is trying to change the password
-        password_is_being_changed = (form_data.password and (not chat.password or not pwd_context.verify(form_data.password, chat.password))) or (not form_data.password and chat.password)
+        password_is_being_changed = (
+            form_data.password
+            and (
+                not chat.password
+                or not pwd_context.verify(form_data.password, chat.password)
+            )
+        ) or (not form_data.password and chat.password)
 
-        if password_is_being_changed and not form_data.password and not form_data.current_password:
+        if (
+            password_is_being_changed
+            and not form_data.password
+            and not form_data.current_password
+        ):
             password_is_being_changed = False
             form_data.password = None
 
