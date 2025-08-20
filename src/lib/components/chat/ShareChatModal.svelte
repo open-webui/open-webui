@@ -1152,7 +1152,7 @@
 						{#if maxClonesCount > 0}
 							<div class="mt-4 flex items-start space-x-3">
 								<div class="pt-0.5">
-									<Switch bind:state={keep_link_active_after_max_clones} />
+									<Switch bind:state={keep_link_active_after_max_clones} tooltip={true} />
 								</div>
 								<div class="flex-1">
 									<div class="flex items-center space-x-1">

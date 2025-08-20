@@ -170,11 +170,14 @@
 		getSharedChatList();
 		previousShowShareChatModal = showShareChatModal;
 
-		const interval = setInterval(() => {
+		let timeoutId;
+
+		const checkExpiredLinks = async () => {
 			const now = Math.floor(Date.now() / 1000);
 			const chatsToProcess = [...$sharedChatsStore];
+			let revokedSomething = false;
 
-			chatsToProcess.forEach(async (chat) => {
+			for (const chat of chatsToProcess) {
 				const isExpiredByTime = chat.expires_at && chat.expires_at <= now;
 				const isExpiredByViews =
 					chat.expire_on_views && chat.views >= chat.expire_on_views;
@@ -183,14 +186,22 @@
 					const res = await deleteSharedChatById(localStorage.token, chat.id);
 					if (res) {
 						toast.info(`Expired link for "${chat.title}" was automatically revoked.`);
-						getSharedChatList();
+						revokedSomething = true;
 					}
 				}
-			});
-		}, 1000);
+			}
+
+			if (revokedSomething) {
+				getSharedChatList();
+			}
+
+			timeoutId = setTimeout(checkExpiredLinks, 1000);
+		};
+
+		timeoutId = setTimeout(checkExpiredLinks, 1000);
 
 		return () => {
-			clearInterval(interval);
+			clearTimeout(timeoutId);
 		};
 	});
 
