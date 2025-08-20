@@ -260,6 +260,7 @@ def install_tool_and_function_dependencies():
                 all_dependencies += f"{dependencies}, "
         for tool in tool_list:
             if tool.user is None:
+                log.info(f"User '{tool.user}' for tool {tool.name}(ID:{tool.id})is not recognized. Required dependencies will not be installed."
                 continue # Skip tool if user is none.
             # Only install requirements for admin tools
             if tool.user.role == "admin":
