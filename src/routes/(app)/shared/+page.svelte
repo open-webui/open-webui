@@ -63,6 +63,51 @@
 	let publicFilter = null;
 	let statusFilter = 'all';
 	let totalSelectedCount = 0;
+
+	const publicFilterOptions = [
+		{ value: null, label: 'Public: All' },
+		{ value: true, label: 'Public: Yes' },
+		{ value: false, label: 'Public: No' }
+	];
+
+	const statusFilterOptions = [
+		{ value: 'all', label: 'Status: All' },
+		{ value: 'active', label: 'Status: Active' },
+		{ value: 'revoked', label: 'Status: Revoked' }
+	];
+
+	$: selectedPublicFilterIndex = publicFilterOptions.findIndex((o) => o.value === publicFilter);
+	$: selectedStatusFilterIndex = statusFilterOptions.findIndex((o) => o.value === statusFilter);
+
+	const handlePublicFilterScroll = (event) => {
+		event.preventDefault();
+		const direction = event.deltaY < 0 ? -1 : 1;
+		let newIndex = selectedPublicFilterIndex + direction;
+
+		if (newIndex < 0) {
+			newIndex = publicFilterOptions.length - 1;
+		} else if (newIndex >= publicFilterOptions.length) {
+			newIndex = 0;
+		}
+		publicFilter = publicFilterOptions[newIndex].value;
+		page = 1;
+		getSharedChatList();
+	};
+
+	const handleStatusFilterScroll = (event) => {
+		event.preventDefault();
+		const direction = event.deltaY < 0 ? -1 : 1;
+		let newIndex = selectedStatusFilterIndex + direction;
+
+		if (newIndex < 0) {
+			newIndex = statusFilterOptions.length - 1;
+		} else if (newIndex >= statusFilterOptions.length) {
+			newIndex = 0;
+		}
+		statusFilter = statusFilterOptions[newIndex].value;
+		page = 1;
+		getSharedChatList();
+	};
 	let dateFilterApplied = false;
 
 	const handleDateFilter = () => {
@@ -518,10 +563,11 @@
 						page = 1;
 						getSharedChatList();
 					}}
+					on:wheel|preventDefault={handlePublicFilterScroll}
 				>
-					<option value={null}>Public: All</option>
-					<option value={true}>Public: Yes</option>
-					<option value={false}>Public: No</option>
+					{#each publicFilterOptions as option}
+						<option value={option.value}>{option.label}</option>
+					{/each}
 				</select>
 			</div>
 			<div class="relative">
@@ -532,10 +578,11 @@
 						page = 1;
 						getSharedChatList();
 					}}
+					on:wheel|preventDefault={handleStatusFilterScroll}
 				>
-					<option value="all">Status: All</option>
-					<option value="active">Status: Active</option>
-					<option value="revoked">Status: Revoked</option>
+					{#each statusFilterOptions as option}
+						<option value={option.value}>{option.label}</option>
+					{/each}
 				</select>
 			</div>
 				{#if totalSelectedCount > 0}
