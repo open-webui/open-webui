@@ -19,6 +19,7 @@
 	import Spinner from '$lib/components/common/Spinner.svelte';
 	import OnBoarding from '$lib/components/OnBoarding.svelte';
 	import SensitiveInput from '$lib/components/common/SensitiveInput.svelte';
+	import Banner from '$lib/components/common/Banner.svelte';
 
 	const i18n = getContext('i18n');
 
@@ -382,7 +383,20 @@
 									{/if}
 								</div>
 							</form>
-
+							<!-- PATCH EXTRA LOGIN INFO -->
+							{#if $config?.extended_features?.system_register_url && $config?.extended_features?.system_register_guide_url}
+								<Banner
+									banner={{
+										timestamp: Math.floor(Date.now() / 1000),
+										type: 'info',
+										id: '1',
+										dismissible: false,
+										title: 'Vigtigt før du logger ind første gang!',
+										content: `<div>Du skal have adgang til AI-Platform i Aarhus Kommunes Systemregister.</div><div><a target="_blank" rel="noopener noreferrer" class='underline' href='${JSON.parse($config?.extended_features?.system_register_url)}'>Anmod om adgang i systemregistret</a></div>.</div><div>Du kan <a target="_blank" rel="noopener noreferrer" class='underline' href='${JSON.parse($config?.extended_features?.system_register_guide_url)}'>hente en vejledning til hvordan man anmoder om adgang til systemregistret</a></div>`
+									}}
+								></Banner>
+							{/if}
+							<!-- /PATCH EXTRA LOGIN INFO -->
 							{#if Object.keys($config?.oauth?.providers ?? {}).length > 0}
 								<div class="inline-flex items-center justify-center w-full">
 									<hr class="w-32 h-px my-4 border-0 dark:bg-gray-100/10 bg-gray-700/10" />
