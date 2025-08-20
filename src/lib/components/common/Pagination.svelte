@@ -42,6 +42,15 @@
 	}
 
 	$: displayPages = getDisplayPages(page, totalPages);
+
+	const handlePageScroll = (event) => {
+		const direction = event.deltaY > 0 ? 1 : -1;
+		const newPage = page + direction;
+
+		if (newPage >= 1 && newPage <= totalPages) {
+			page = newPage;
+		}
+	};
 </script>
 
 <style>
@@ -56,7 +65,7 @@
 
 <div class="flex justify-center">
 	<Pagination.Root bind:page {count} {perPage} let:pages>
-		<div class="my-2 flex items-center">
+		<div class="my-2 flex items-center" on:wheel|preventDefault={handlePageScroll}>
 			<Pagination.PrevButton
 				class="mr-[25px] inline-flex size-8 items-center justify-center rounded-[9px] bg-transparent hover:bg-gray-50 dark:hover:bg-gray-850 active:scale-98 disabled:cursor-not-allowed disabled:text-gray-400 dark:disabled:text-gray-700 hover:disabled:bg-transparent dark:hover:disabled:bg-transparent"
 			>
