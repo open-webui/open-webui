@@ -742,6 +742,15 @@
 			await temporaryChatEnabled.set(true);
 		}
 
+		if ($settings?.temporaryChatByDefault ?? false) {
+			if ($temporaryChatEnabled === false) {
+				await temporaryChatEnabled.set(true);
+			} else {
+				// if set to null set to false; refer to temp chat toggle click handler
+				await temporaryChatEnabled.set(false);
+			}
+		}
+
 		const availableModels = $models
 			.filter((m) => !(m?.info?.meta?.hidden ?? false))
 			.map((m) => m.id);

@@ -115,8 +115,15 @@
 									class="flex cursor-pointer px-2 py-2 rounded-xl hover:bg-gray-50 dark:hover:bg-gray-850 transition"
 									id="temporary-chat-button"
 									on:click={async () => {
-										temporaryChatEnabled.set(!$temporaryChatEnabled);
+										if (($settings?.temporaryChatByDefault ?? false) && $temporaryChatEnabled) {
+											// for proper initNewChat handling
+											temporaryChatEnabled.set(null);
+										} else {
+											temporaryChatEnabled.set(!$temporaryChatEnabled);
+										}
+
 										await goto('/');
+
 										// add 'temporary-chat=true' to the URL
 										if ($temporaryChatEnabled) {
 											window.history.replaceState(null, '', '?temporary-chat=true');

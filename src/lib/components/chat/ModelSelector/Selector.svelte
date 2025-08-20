@@ -45,8 +45,6 @@
 	export let searchEnabled = true;
 	export let searchPlaceholder = $i18n.t('Search a model');
 
-	export let showTemporaryChatControl = false;
-
 	export let items: {
 		label: string;
 		value: string;
@@ -314,7 +312,7 @@
 				...$MODEL_DOWNLOAD_POOL
 			});
 			await deleteModel(localStorage.token, model);
-			toast.success($i18n.t("{{model}} download has been canceled", { model: model }));
+			toast.success($i18n.t('{{model}} download has been canceled', { model: model }));
 		}
 	};
 
@@ -619,42 +617,7 @@
 				{/each}
 			</div>
 
-			{#if showTemporaryChatControl}
-				<div class="flex items-center mx-2 mt-1 mb-2">
-					<DropdownMenu.Item
-						class="flex justify-between w-full font-medium line-clamp-1 select-none items-center rounded-button py-2 px-3 text-sm text-gray-700 dark:text-gray-100 outline-hidden transition-all duration-75 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg cursor-pointer data-highlighted:bg-muted"
-						on:click={async () => {
-							temporaryChatEnabled.set(!$temporaryChatEnabled);
-							await goto('/');
-							const newChatButton = document.getElementById('new-chat-button');
-							setTimeout(() => {
-								newChatButton?.click();
-							}, 0);
-
-							// add 'temporary-chat=true' to the URL
-							if ($temporaryChatEnabled) {
-								history.replaceState(null, '', '?temporary-chat=true');
-							} else {
-								history.replaceState(null, '', location.pathname);
-							}
-
-							show = false;
-						}}
-					>
-						<div class="flex gap-2.5 items-center">
-							<ChatBubbleOval className="size-4" strokeWidth="2.5" />
-
-							{$i18n.t(`Temporary Chat`)}
-						</div>
-
-						<div>
-							<Switch state={$temporaryChatEnabled} />
-						</div>
-					</DropdownMenu.Item>
-				</div>
-			{:else}
-				<div class="mb-3"></div>
-			{/if}
+			<div class="mb-3"></div>
 
 			<div class="hidden w-[42rem]" />
 			<div class="hidden w-[32rem]" />
