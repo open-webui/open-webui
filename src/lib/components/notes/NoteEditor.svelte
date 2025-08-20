@@ -827,7 +827,8 @@ Provide the enhanced notes in markdown format. Use markdown syntax for headings,
 			note.data.files = files;
 		}
 
-		if (_note.title && _note.title) {
+		// Avoid overwriting the local title while the user is actively editing it
+		if (_note.title !== undefined && !titleInputFocused && _note.title !== note.title) {
 			note.title = _note.title;
 		}
 
