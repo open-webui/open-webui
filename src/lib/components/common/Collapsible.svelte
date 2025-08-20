@@ -13,6 +13,9 @@
 	dayjs.extend(relativeTime);
 
 	async function loadLocale(locales) {
+		if (!locales || !Array.isArray(locales)) {
+			return;
+		}
 		for (const locale of locales) {
 			try {
 				dayjs.locale(locale);
@@ -111,7 +114,9 @@
 				<div class="">
 					{#if attributes?.type === 'reasoning'}
 						{#if attributes?.done === 'true' && attributes?.duration}
-							{#if attributes.duration < 60}
+							{#if attributes.duration < 1}
+								{$i18n.t('Thought for less than a second')}
+							{:else if attributes.duration < 60}
 								{$i18n.t('Thought for {{DURATION}} seconds', {
 									DURATION: attributes.duration
 								})}

@@ -18,13 +18,17 @@ IF /I "%WEB_LOADER_ENGINE%" == "playwright" (
 )
 
 SET "KEY_FILE=.webui_secret_key"
+IF NOT "%WEBUI_SECRET_KEY_FILE%" == "" (
+    SET "KEY_FILE=%WEBUI_SECRET_KEY_FILE%"
+)
+
 IF "%PORT%"=="" SET PORT=8080
 IF "%HOST%"=="" SET HOST=0.0.0.0
 SET "WEBUI_SECRET_KEY=%WEBUI_SECRET_KEY%"
 SET "WEBUI_JWT_SECRET_KEY=%WEBUI_JWT_SECRET_KEY%"
 
 :: Check if WEBUI_SECRET_KEY and WEBUI_JWT_SECRET_KEY are not set
-IF "%WEBUI_SECRET_KEY%%WEBUI_JWT_SECRET_KEY%" == " " (
+IF "%WEBUI_SECRET_KEY% %WEBUI_JWT_SECRET_KEY%" == " " (
     echo Loading WEBUI_SECRET_KEY from file, not provided as an environment variable.
 
     IF NOT EXIST "%KEY_FILE%" (

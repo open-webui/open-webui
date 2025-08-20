@@ -13,7 +13,6 @@
 	import Overview from './Overview.svelte';
 	import EllipsisVertical from '../icons/EllipsisVertical.svelte';
 	import Artifacts from './Artifacts.svelte';
-	import { min } from '@floating-ui/utils';
 
 	export let history;
 	export let models = [];

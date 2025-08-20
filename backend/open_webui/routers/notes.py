@@ -6,6 +6,9 @@ from typing import Optional
 from fastapi import APIRouter, Depends, HTTPException, Request, status, BackgroundTasks
 from pydantic import BaseModel
 
+from open_webui.socket.main import sio
+
+
 from open_webui.models.users import Users, UserResponse
 from open_webui.models.notes import Notes, NoteModel, NoteForm, NoteUserResponse
 
@@ -51,7 +54,14 @@ async def get_notes(request: Request, user=Depends(get_verified_user)):
     return notes
 
 
-@router.get("/list", response_model=list[NoteUserResponse])
+class NoteTitleIdResponse(BaseModel):
+    id: str
+    title: str
+    updated_at: int
+    created_at: int
+
+
+@router.get("/list", response_model=list[NoteTitleIdResponse])
 async def get_note_list(request: Request, user=Depends(get_verified_user)):
 
     if user.role != "admin" and not has_permission(
@@ -63,13 +73,8 @@ async def get_note_list(request: Request, user=Depends(get_verified_user)):
         )
 
     notes = [
-        NoteUserResponse(
-            **{
-                **note.model_dump(),
-                "user": UserResponse(**Users.get_user_by_id(note.user_id).model_dump()),
-            }
-        )
-        for note in Notes.get_notes_by_user_id(user.id, "read")
+        NoteTitleIdResponse(**note.model_dump())
+        for note in Notes.get_notes_by_user_id(user.id, "write")
     ]
 
     return notes
@@ -124,10 +129,9 @@ async def get_note_by_id(request: Request, id: str, user=Depends(get_verified_us
             status_code=status.HTTP_404_NOT_FOUND, detail=ERROR_MESSAGES.NOT_FOUND
         )
 
-    if (
-        user.role != "admin"
-        and user.id != note.user_id
-        and not has_access(user.id, type="read", access_control=note.access_control)
+    if user.role != "admin" and (
+        user.id != note.user_id
+        and (not has_access(user.id, type="read", access_control=note.access_control))
     ):
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN, detail=ERROR_MESSAGES.DEFAULT()
@@ -159,9 +163,8 @@ async def update_note_by_id(
             status_code=status.HTTP_404_NOT_FOUND, detail=ERROR_MESSAGES.NOT_FOUND
         )
 
-    if (
-        user.role != "admin"
-        and user.id != note.user_id
+    if user.role != "admin" and (
+        user.id != note.user_id
         and not has_access(user.id, type="write", access_control=note.access_control)
     ):
         raise HTTPException(
@@ -170,6 +173,12 @@ async def update_note_by_id(
 
     try:
         note = Notes.update_note_by_id(id, form_data)
+        await sio.emit(
+            "note-events",
+            note.model_dump(),
+            to=f"note:{note.id}",
+        )
+
         return note
     except Exception as e:
         log.exception(e)
@@ -199,9 +208,8 @@ async def delete_note_by_id(request: Request, id: str, user=Depends(get_verified
             status_code=status.HTTP_404_NOT_FOUND, detail=ERROR_MESSAGES.NOT_FOUND
         )
 
-    if (
-        user.role != "admin"
-        and user.id != note.user_id
+    if user.role != "admin" and (
+        user.id != note.user_id
         and not has_access(user.id, type="write", access_control=note.access_control)
     ):
         raise HTTPException(

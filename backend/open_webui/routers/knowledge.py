@@ -10,7 +10,7 @@ from open_webui.models.knowledge import (
     KnowledgeUserResponse,
 )
 from open_webui.models.files import Files, FileModel, FileMetadataResponse
-from open_webui.retrieval.vector.connector import VECTOR_DB_CLIENT
+from open_webui.retrieval.vector.factory import VECTOR_DB_CLIENT
 from open_webui.routers.retrieval import (
     process_file,
     ProcessFileForm,
@@ -25,6 +25,7 @@ from open_webui.utils.access_control import has_access, has_permission
 
 
 from open_webui.env import SRC_LOG_LEVELS
+from open_webui.config import ENABLE_ADMIN_WORKSPACE_CONTENT_ACCESS
 from open_webui.models.models import Models, ModelForm
 
 
@@ -42,7 +43,7 @@ router = APIRouter()
 async def get_knowledge(user=Depends(get_verified_user)):
     knowledge_bases = []
 
-    if user.role == "admin":
+    if user.role == "admin" and ENABLE_ADMIN_WORKSPACE_CONTENT_ACCESS:
         knowledge_bases = Knowledges.get_knowledge_bases()
     else:
         knowledge_bases = Knowledges.get_knowledge_bases_by_user_id(user.id, "read")
@@ -90,7 +91,7 @@ async def get_knowledge(user=Depends(get_verified_user)):
 async def get_knowledge_list(user=Depends(get_verified_user)):
     knowledge_bases = []
 
-    if user.role == "admin":
+    if user.role == "admin" and ENABLE_ADMIN_WORKSPACE_CONTENT_ACCESS:
         knowledge_bases = Knowledges.get_knowledge_bases()
     else:
         knowledge_bases = Knowledges.get_knowledge_bases_by_user_id(user.id, "write")

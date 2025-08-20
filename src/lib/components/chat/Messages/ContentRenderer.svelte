@@ -1,29 +1,43 @@
 <script>
-	import { onDestroy, onMount, tick, getContext, createEventDispatcher } from 'svelte';
+	import { onDestroy, onMount, tick, getContext } from 'svelte';
 	const i18n = getContext('i18n');
-	const dispatch = createEventDispatcher();
 
 	import Markdown from './Markdown.svelte';
-	import { chatId, mobile, settings, showArtifacts, showControls, showOverview } from '$lib/stores';
+	import {
+		artifactCode,
+		chatId,
+		mobile,
+		settings,
+		showArtifacts,
+		showControls,
+		showOverview
+	} from '$lib/stores';
 	import FloatingButtons from '../ContentRenderer/FloatingButtons.svelte';
 	import { createMessagesList } from '$lib/utils';
 
 	export let id;
 	export let content;
+
 	export let history;
+	export let messageId;
+
+	export let selectedModels = [];
+
+	export let done = true;
 	export let model = null;
 	export let sources = null;
 
 	export let save = false;
+	export let preview = false;
 	export let floatingButtons = true;
+	export let topPadding = false;
 
-	export let onSourceClick = () => {};
-	export let onTaskClick = () => {};
-
-	export let onAddMessages = () => {};
+	export let onSave = (e) => {};
+	export let onSourceClick = (e) => {};
+	export let onTaskClick = (e) => {};
+	export let onAddMessages = (e) => {};
 
 	let contentContainerElement;
-
 	let floatingButtonsElement;
 
 	const updateButtonPosition = (event) => {
@@ -122,6 +136,9 @@
 		{content}
 		{model}
 		{save}
+		{preview}
+		{done}
+		{topPadding}
 		sourceIds={(sources ?? []).reduce((acc, s) => {
 			let ids = [];
 			s.document.forEach((document, index) => {
@@ -154,11 +171,9 @@
 		}, [])}
 		{onSourceClick}
 		{onTaskClick}
-		onUpdate={(value) => {
-			dispatch('update', value);
-		}}
-		onCode={(value) => {
-			const { lang, code } = value;
+		{onSave}
+		onUpdate={(token) => {
+			const { lang, text: code } = token;
 
 			if (
 				($settings?.detectArtifacts ?? true) &&
@@ -170,6 +185,13 @@
 				showControls.set(true);
 			}
 		}}
+		onPreview={async (value) => {
+			console.log('Preview', value);
+			await artifactCode.set(value);
+			await showControls.set(true);
+			await showArtifacts.set(true);
+			await showOverview.set(false);
+		}}
 	/>
 </div>
 
@@ -177,7 +199,13 @@
 	<FloatingButtons
 		bind:this={floatingButtonsElement}
 		{id}
-		model={model?.id}
+		{messageId}
+		actions={$settings?.floatingActionButtons ?? []}
+		model={(selectedModels ?? []).includes(model?.id)
+			? model?.id
+			: (selectedModels ?? []).length > 0
+				? selectedModels.at(0)
+				: model?.id}
 		messages={createMessagesList(history, id)}
 		onAdd={({ modelId, parentId, messages }) => {
 			console.log(modelId, parentId, messages);

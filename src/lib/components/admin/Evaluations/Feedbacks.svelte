@@ -18,12 +18,21 @@
 	import CloudArrowUp from '$lib/components/icons/CloudArrowUp.svelte';
 	import Pagination from '$lib/components/common/Pagination.svelte';
 	import FeedbackMenu from './FeedbackMenu.svelte';
+	import FeedbackModal from './FeedbackModal.svelte';
 	import EllipsisHorizontal from '$lib/components/icons/EllipsisHorizontal.svelte';
+
+	import ChevronUp from '$lib/components/icons/ChevronUp.svelte';
+	import ChevronDown from '$lib/components/icons/ChevronDown.svelte';
+	import { WEBUI_BASE_URL } from '$lib/constants';
+	import { config } from '$lib/stores';
 
 	export let feedbacks = [];
 
 	let page = 1;
-	$: paginatedFeedbacks = feedbacks.slice((page - 1) * 10, page * 10);
+	$: paginatedFeedbacks = sortedFeedbacks.slice((page - 1) * 10, page * 10);
+
+	let orderBy: string = 'updated_at';
+	let direction: 'asc' | 'desc' = 'desc';
 
 	type Feedback = {
 		id: string;
@@ -46,6 +55,58 @@
 		rating: number;
 		won: number;
 		lost: number;
+	};
+
+	function setSortKey(key: string) {
+		if (orderBy === key) {
+			direction = direction === 'asc' ? 'desc' : 'asc';
+		} else {
+			orderBy = key;
+			if (key === 'user' || key === 'model_id') {
+				direction = 'asc';
+			} else {
+				direction = 'desc';
+			}
+		}
+		page = 1;
+	}
+
+	$: sortedFeedbacks = [...feedbacks].sort((a, b) => {
+		let aVal, bVal;
+
+		switch (orderBy) {
+			case 'user':
+				aVal = a.user?.name || '';
+				bVal = b.user?.name || '';
+				return direction === 'asc' ? aVal.localeCompare(bVal) : bVal.localeCompare(aVal);
+			case 'model_id':
+				aVal = a.data.model_id || '';
+				bVal = b.data.model_id || '';
+				return direction === 'asc' ? aVal.localeCompare(bVal) : bVal.localeCompare(aVal);
+			case 'rating':
+				aVal = a.data.rating;
+				bVal = b.data.rating;
+				return direction === 'asc' ? aVal - bVal : bVal - aVal;
+			case 'updated_at':
+				aVal = a.updated_at;
+				bVal = b.updated_at;
+				return direction === 'asc' ? aVal - bVal : bVal - aVal;
+			default:
+				return 0;
+		}
+	});
+
+	let showFeedbackModal = false;
+	let selectedFeedback = null;
+
+	const openFeedbackModal = (feedback) => {
+		showFeedbackModal = true;
+		selectedFeedback = feedback;
+	};
+
+	const closeFeedbackModal = () => {
+		showFeedbackModal = false;
+		selectedFeedback = null;
 	};
 
 	//////////////////////
@@ -106,6 +167,8 @@
 	};
 </script>
 
+<FeedbackModal bind:show={showFeedbackModal} {selectedFeedback} onClose={closeFeedbackModal} />
+
 <div class="mt-0.5 mb-2 gap-1 flex flex-row justify-between">
 	<div class="flex md:self-center text-lg font-medium px-0.5">
 		{$i18n.t('Feedback History')}
@@ -146,20 +209,96 @@
 				class="text-xs text-gray-700 uppercase bg-gray-50 dark:bg-gray-850 dark:text-gray-400 -translate-y-0.5"
 			>
 				<tr class="">
-					<th scope="col" class="px-3 text-right cursor-pointer select-none w-0">
-						{$i18n.t('User')}
+					<th
+						scope="col"
+						class="px-3 py-1.5 cursor-pointer select-none w-3"
+						on:click={() => setSortKey('user')}
+					>
+						<div class="flex gap-1.5 items-center justify-end">
+							{$i18n.t('User')}
+							{#if orderBy === 'user'}
+								<span class="font-normal">
+									{#if direction === 'asc'}
+										<ChevronUp className="size-2" />
+									{:else}
+										<ChevronDown className="size-2" />
+									{/if}
+								</span>
+							{:else}
+								<span class="invisible">
+									<ChevronUp className="size-2" />
+								</span>
+							{/if}
+						</div>
 					</th>
 
-					<th scope="col" class="px-3 pr-1.5 cursor-pointer select-none">
-						{$i18n.t('Models')}
+					<th
+						scope="col"
+						class="px-3 pr-1.5 cursor-pointer select-none"
+						on:click={() => setSortKey('model_id')}
+					>
+						<div class="flex gap-1.5 items-center">
+							{$i18n.t('Models')}
+							{#if orderBy === 'model_id'}
+								<span class="font-normal">
+									{#if direction === 'asc'}
+										<ChevronUp className="size-2" />
+									{:else}
+										<ChevronDown className="size-2" />
+									{/if}
+								</span>
+							{:else}
+								<span class="invisible">
+									<ChevronUp className="size-2" />
+								</span>
+							{/if}
+						</div>
 					</th>
 
-					<th scope="col" class="px-3 py-1.5 text-right cursor-pointer select-none w-fit">
-						{$i18n.t('Result')}
+					<th
+						scope="col"
+						class="px-3 py-1.5 text-right cursor-pointer select-none w-fit"
+						on:click={() => setSortKey('rating')}
+					>
+						<div class="flex gap-1.5 items-center justify-end">
+							{$i18n.t('Result')}
+							{#if orderBy === 'rating'}
+								<span class="font-normal">
+									{#if direction === 'asc'}
+										<ChevronUp className="size-2" />
+									{:else}
+										<ChevronDown className="size-2" />
+									{/if}
+								</span>
+							{:else}
+								<span class="invisible">
+									<ChevronUp className="size-2" />
+								</span>
+							{/if}
+						</div>
 					</th>
 
-					<th scope="col" class="px-3 py-1.5 text-right cursor-pointer select-none w-0">
-						{$i18n.t('Updated At')}
+					<th
+						scope="col"
+						class="px-3 py-1.5 text-right cursor-pointer select-none w-0"
+						on:click={() => setSortKey('updated_at')}
+					>
+						<div class="flex gap-1.5 items-center justify-end">
+							{$i18n.t('Updated At')}
+							{#if orderBy === 'updated_at'}
+								<span class="font-normal">
+									{#if direction === 'asc'}
+										<ChevronUp className="size-2" />
+									{:else}
+										<ChevronDown className="size-2" />
+									{/if}
+								</span>
+							{:else}
+								<span class="invisible">
+									<ChevronUp className="size-2" />
+								</span>
+							{/if}
+						</div>
 					</th>
 
 					<th scope="col" class="px-3 py-1.5 text-right cursor-pointer select-none w-0"> </th>
@@ -167,13 +306,16 @@
 			</thead>
 			<tbody class="">
 				{#each paginatedFeedbacks as feedback (feedback.id)}
-					<tr class="bg-white dark:bg-gray-900 dark:border-gray-850 text-xs">
+					<tr
+						class="bg-white dark:bg-gray-900 dark:border-gray-850 text-xs cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-850/50 transition"
+						on:click={() => openFeedbackModal(feedback)}
+					>
 						<td class=" py-0.5 text-right font-semibold">
 							<div class="flex justify-center">
 								<Tooltip content={feedback?.user?.name}>
 									<div class="shrink-0">
 										<img
-											src={feedback?.user?.profile_image_url ?? '/user.png'}
+											src={feedback?.user?.profile_image_url ?? `${WEBUI_BASE_URL}/user.png`}
 											alt={feedback?.user?.name}
 											class="size-5 rounded-full object-cover shrink-0"
 										/>
@@ -213,23 +355,26 @@
 								</div>
 							</div>
 						</td>
-						<td class="px-3 py-1 text-right font-medium text-gray-900 dark:text-white w-max">
-							<div class=" flex justify-end">
-								{#if feedback.data.rating.toString() === '1'}
-									<Badge type="info" content={$i18n.t('Won')} />
-								{:else if feedback.data.rating.toString() === '0'}
-									<Badge type="muted" content={$i18n.t('Draw')} />
-								{:else if feedback.data.rating.toString() === '-1'}
-									<Badge type="error" content={$i18n.t('Lost')} />
-								{/if}
-							</div>
-						</td>
+
+						{#if feedback?.data?.rating}
+							<td class="px-3 py-1 text-right font-medium text-gray-900 dark:text-white w-max">
+								<div class=" flex justify-end">
+									{#if feedback?.data?.rating.toString() === '1'}
+										<Badge type="info" content={$i18n.t('Won')} />
+									{:else if feedback?.data?.rating.toString() === '0'}
+										<Badge type="muted" content={$i18n.t('Draw')} />
+									{:else if feedback?.data?.rating.toString() === '-1'}
+										<Badge type="error" content={$i18n.t('Lost')} />
+									{/if}
+								</div>
+							</td>
+						{/if}
 
 						<td class=" px-3 py-1 text-right font-medium">
 							{dayjs(feedback.updated_at * 1000).fromNow()}
 						</td>
 
-						<td class=" px-3 py-1 text-right font-semibold">
+						<td class=" px-3 py-1 text-right font-semibold" on:click={(e) => e.stopPropagation()}>
 							<FeedbackMenu
 								on:delete={(e) => {
 									deleteFeedbackHandler(feedback.id);
@@ -249,7 +394,7 @@
 	{/if}
 </div>
 
-{#if feedbacks.length > 0}
+{#if feedbacks.length > 0 && $config?.features?.enable_community_sharing}
 	<div class=" flex flex-col justify-end w-full text-right gap-1">
 		<div class="line-clamp-1 text-gray-500 text-xs">
 			{$i18n.t('Help us create the best community leaderboard by sharing your feedback history!')}

@@ -4,6 +4,9 @@
 	import Tooltip from '$lib/components/common/Tooltip.svelte';
 	import { WEBUI_API_BASE_URL } from '$lib/constants';
 
+	import XMark from '$lib/components/icons/XMark.svelte';
+	import Textarea from '$lib/components/common/Textarea.svelte';
+
 	const i18n = getContext('i18n');
 
 	export let show = false;
@@ -67,16 +70,7 @@
 					show = false;
 				}}
 			>
-				<svg
-					xmlns="http://www.w3.org/2000/svg"
-					viewBox="0 0 20 20"
-					fill="currentColor"
-					class="w-5 h-5"
-				>
-					<path
-						d="M6.28 5.22a.75.75 0 00-1.06 1.06L8.94 10l-3.72 3.72a.75.75 0 101.06 1.06L10 11.06l3.72 3.72a.75.75 0 101.06-1.06L11.06 10l3.72-3.72a.75.75 0 00-1.06-1.06L10 8.94 6.28 5.22z"
-					/>
-				</svg>
+				<XMark className={'size-5'} />
 			</button>
 		</div>
 
@@ -109,7 +103,7 @@
 									>
 										{decodeString(document?.metadata?.name ?? document.source.name)}
 									</a>
-									{#if document?.metadata?.page}
+									{#if Number.isInteger(document?.metadata?.page)}
 										<span class="text-xs text-gray-500 dark:text-gray-400">
 											({$i18n.t('page')}
 											{document.metadata.page + 1})
@@ -117,6 +111,14 @@
 									{/if}
 								</div>
 							</Tooltip>
+							{#if document.metadata?.parameters}
+								<div class="text-sm font-medium dark:text-gray-300 mt-2 mb-0.5">
+									{$i18n.t('Parameters')}
+								</div>
+
+								<Textarea readonly value={JSON.stringify(document.metadata.parameters, null, 2)}
+								></Textarea>
+							{/if}
 							{#if showRelevance}
 								<div class="text-sm font-medium dark:text-gray-300 mt-2">
 									{$i18n.t('Relevance')}

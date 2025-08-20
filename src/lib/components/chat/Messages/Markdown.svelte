@@ -10,13 +10,18 @@
 
 	export let id = '';
 	export let content;
+	export let done = true;
 	export let model = null;
 	export let save = false;
+	export let preview = false;
+	export let topPadding = false;
 
 	export let sourceIds = [];
 
+	export let onSave = () => {};
 	export let onUpdate = () => {};
-	export let onCode = () => {};
+
+	export let onPreview = () => {};
 
 	export let onSourceClick = () => {};
 	export let onTaskClick = () => {};
@@ -24,7 +29,8 @@
 	let tokens = [];
 
 	const options = {
-		throwOnError: false
+		throwOnError: false,
+		breaks: true
 	};
 
 	marked.use(markedKatexExtension(options));
@@ -40,5 +46,17 @@
 </script>
 
 {#key id}
-	<MarkdownTokens {tokens} {id} {save} {onTaskClick} {onSourceClick} {onUpdate} {onCode} />
+	<MarkdownTokens
+		{tokens}
+		{id}
+		{done}
+		{save}
+		{preview}
+		{topPadding}
+		{onTaskClick}
+		{onSourceClick}
+		{onSave}
+		{onUpdate}
+		{onPreview}
+	/>
 {/key}

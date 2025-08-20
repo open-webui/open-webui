@@ -7,7 +7,7 @@
 		stiffness: 0.05
 	});
 
-	import { onMount, tick, setContext } from 'svelte';
+	import { onMount, tick, setContext, onDestroy } from 'svelte';
 	import {
 		config,
 		user,
@@ -16,8 +16,6 @@
 		WEBUI_NAME,
 		mobile,
 		socket,
-		activeUserIds,
-		USAGE_POOL,
 		chatId,
 		chats,
 		currentChatPage,
@@ -48,7 +46,16 @@
 	import NotificationToast from '$lib/components/NotificationToast.svelte';
 	import AppSidebar from '$lib/components/app/AppSidebar.svelte';
 	import { chatCompletion } from '$lib/apis/openai';
-	import { setupSocket } from '$lib/utils/websocket';
+
+	import { beforeNavigate } from '$app/navigation';
+	import { updated } from '$app/state';
+
+	// handle frontend updates (https://svelte.dev/docs/kit/configuration#version)
+	beforeNavigate(({ willUnload, to }) => {
+		if (updated.current && !willUnload && to?.url) {
+			location.href = to.url.href;
+		}
+	});
 
 	setContext('i18n', i18n);
 
@@ -58,6 +65,49 @@
 	let tokenTimer = null;
 
 	const BREAKPOINT = 768;
+
+	const setupSocket = async (enableWebsocket) => {
+		const _socket = io(`${WEBUI_BASE_URL}` || undefined, {
+			reconnection: true,
+			reconnectionDelay: 1000,
+			reconnectionDelayMax: 5000,
+			randomizationFactor: 0.5,
+			path: '/ws/socket.io',
+			transports: enableWebsocket ? ['websocket'] : ['polling', 'websocket'],
+			auth: { token: localStorage.token }
+		});
+
+		await socket.set(_socket);
+
+		_socket.on('connect_error', (err) => {
+			console.log('connect_error', err);
+		});
+
+		_socket.on('connect', () => {
+			console.log('connected', _socket.id);
+			if (localStorage.getItem('token')) {
+				// Emit user-join event with auth token
+				_socket.emit('user-join', { auth: { token: localStorage.token } });
+			} else {
+				console.warn('No token found in localStorage, user-join event not emitted');
+			}
+		});
+
+		_socket.on('reconnect_attempt', (attempt) => {
+			console.log('reconnect_attempt', attempt);
+		});
+
+		_socket.on('reconnect_failed', () => {
+			console.log('reconnect_failed');
+		});
+
+		_socket.on('disconnect', (reason, details) => {
+			console.log(`Socket ${_socket.id} disconnected due to ${reason}`);
+			if (details) {
+				console.log('Additional details:', details);
+			}
+		});
+	};
 
 	const executePythonAsWorker = async (id, code, cb) => {
 		let result = null;
@@ -399,13 +449,14 @@
 	};
 
 	const extractUserId = (email) => {
-		const localPart = email.split('@')[0];
+		const localPart = email.split('@')[0];	
 		if (localPart.includes('.')) {
 			const parts = localPart.split('.');
 			return parts[0].substring(0, 3).toUpperCase() + parts[1].substring(0, 3).toUpperCase();
 		}
 		return localPart.substring(0, 6).toUpperCase();
 	}
+	const TOKEN_EXPIRY_BUFFER = 60; // seconds
 	const checkTokenExpiry = async () => {
 		const exp = $user?.expires_at; // token expiry time in unix timestamp
 		const now = Math.floor(Date.now() / 1000); // current time in unix timestamp
@@ -415,12 +466,12 @@
 			return;
 		}
 
-		if (now >= exp) {
-			await userSignOut();
+		if (now >= exp - TOKEN_EXPIRY_BUFFER) {
+			const res = await userSignOut();
 			user.set(null);
-
 			localStorage.removeItem('token');
-			location.href = '/auth';
+
+			location.href = res?.redirect_url ?? '/auth';
 		}
 	};
 
@@ -473,6 +524,9 @@
 			if (document.visibilityState === 'visible') {
 				isLastActiveTab.set(true); // This tab is now the active tab
 				bc.postMessage('active'); // Notify other tabs that this tab is active
+
+				// Check token expiry when the tab becomes active
+				checkTokenExpiry();
 			}
 		};
 
@@ -502,6 +556,12 @@
 
 				$socket?.on('chat-events', chatEventHandler);
 				$socket?.on('channel-events', channelEventHandler);
+
+				// Set up the token expiry check
+				if (tokenTimer) {
+					clearInterval(tokenTimer);
+				}
+				tokenTimer = setInterval(checkTokenExpiry, 15000);
 			} else {
 				$socket?.off('chat-events', chatEventHandler);
 				$socket?.off('channel-events', channelEventHandler);
@@ -536,6 +596,8 @@
 			await WEBUI_NAME.set(backendConfig.name);
 
 			if ($config) {
+				await setupSocket($config.features?.enable_websocket ?? true);
+
 				const currentUrl = `${window.location.pathname}${window.location.search}`;
 				const encodedUrl = encodeURIComponent(currentUrl);
 
@@ -547,18 +609,8 @@
 					});
 
 					if (sessionUser) {
-						await setupSocket($config.features?.enable_websocket ?? true);
-						// Save Session User to Store
-						$socket.emit('user-join', { auth: { token: sessionUser.token } });
-
 						await user.set(sessionUser);
 						await config.set(await getBackendConfig());
-
-						// Set up the token expiry check
-						if (tokenTimer) {
-							clearInterval(tokenTimer);
-						}
-						tokenTimer = setInterval(checkTokenExpiry, 1000);
 					} else {
 						// Redirect Invalid Session User to /auth Page
 						localStorage.removeItem('token');
@@ -618,11 +670,6 @@
 <svelte:head>
 	<title>{APP_TITLE}</title>
 	<link crossorigin="anonymous" rel="icon" href="{WEBUI_BASE_URL}/static/favicon.png" />
-
-	<!-- rosepine themes have been disabled as it's not up to date with our latest version. -->
-	<!-- feel free to make a PR to fix if anyone wants to see it return -->
-	<!-- <link rel="stylesheet" type="text/css" href="/themes/rosepine.css" />
-	<link rel="stylesheet" type="text/css" href="/themes/rosepine-dawn.css" /> -->
 </svelte:head>
 
 {#if loaded}

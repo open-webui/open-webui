@@ -1,9 +1,4 @@
 <script>
-	import { createEventDispatcher, onMount } from 'svelte';
-	import { toast } from 'svelte-sonner';
-
-	const dispatch = createEventDispatcher();
-
 	import { knowledge, prompts } from '$lib/stores';
 
 	import { removeLastWordFromString } from '$lib/utils';
@@ -15,8 +10,15 @@
 	import Models from './Commands/Models.svelte';
 	import Spinner from '$lib/components/common/Spinner.svelte';
 
-	export let prompt = '';
+	export let show = false;
+
 	export let files = [];
+	export let command = '';
+
+	export let onSelect = (e) => {};
+	export let onUpload = (e) => {};
+
+	export let insertTextHandler = (text) => {};
 
 	let loading = false;
 	let commandElement = null;
@@ -28,12 +30,6 @@
 	export const selectDown = () => {
 		commandElement?.selectDown();
 	};
-
-	let command = '';
-	$: command = prompt?.split('\n').pop()?.split(' ')?.pop() ?? '';
-
-	let show = false;
-	$: show = ['/', '#', '@'].includes(command?.charAt(0)) || '\\#' === command.slice(0, 2);
 
 	$: if (show) {
 		init();
@@ -56,54 +52,63 @@
 {#if show}
 	{#if !loading}
 		{#if command?.charAt(0) === '/'}
-			<Prompts bind:this={commandElement} bind:prompt bind:files {command} />
+			<Prompts
+				bind:this={commandElement}
+				{command}
+				onSelect={(e) => {
+					const { type, data } = e;
+
+					if (type === 'prompt') {
+						insertTextHandler(data.content);
+					}
+				}}
+			/>
 		{:else if (command?.charAt(0) === '#' && command.startsWith('#') && !command.includes('# ')) || ('\\#' === command.slice(0, 2) && command.startsWith('#') && !command.includes('# '))}
 			<Knowledge
 				bind:this={commandElement}
-				bind:prompt
 				command={command.includes('\\#') ? command.slice(2) : command}
-				on:youtube={(e) => {
-					console.log(e);
-					dispatch('upload', {
-						type: 'youtube',
-						data: e.detail
-					});
-				}}
-				on:url={(e) => {
-					console.log(e);
-					dispatch('upload', {
-						type: 'web',
-						data: e.detail
-					});
-				}}
-				on:select={(e) => {
-					console.log(e);
-					if (files.find((f) => f.id === e.detail.id)) {
-						return;
+				onSelect={(e) => {
+					const { type, data } = e;
+
+					if (type === 'knowledge') {
+						insertTextHandler('');
+
+						onUpload({
+							type: 'file',
+							data: data
+						});
+					} else if (type === 'youtube') {
+						insertTextHandler('');
+
+						onUpload({
+							type: 'youtube',
+							data: data
+						});
+					} else if (type === 'web') {
+						insertTextHandler('');
+
+						onUpload({
+							type: 'web',
+							data: data
+						});
 					}
-
-					files = [
-						...files,
-						{
-							...e.detail,
-							status: 'processed'
-						}
-					];
-
-					dispatch('select');
 				}}
 			/>
 		{:else if command?.charAt(0) === '@'}
 			<Models
 				bind:this={commandElement}
 				{command}
-				on:select={(e) => {
-					prompt = removeLastWordFromString(prompt, command);
+				onSelect={(e) => {
+					const { type, data } = e;
 
-					dispatch('select', {
-						type: 'model',
-						data: e.detail
-					});
+					if (type === 'model') {
+						insertTextHandler('');
+
+						onSelect({
+							type: 'model',
+							data: data
+						});
+					}
 				}}
 			/>
 		{/if}

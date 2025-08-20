@@ -50,6 +50,9 @@ export const channels = writable([]);
 export const chats = writable(null);
 export const pinnedChats = writable([]);
 export const tags = writable([]);
+export const folders = writable([]);
+
+export const selectedFolder = writable(null);
 
 export const models: Writable<Model[]> = writable([]);
 
@@ -65,7 +68,9 @@ export const banners: Writable<Banner[]> = writable([]);
 export const settings: Writable<Settings> = writable({});
 
 export const showSidebar = writable(false);
+export const showSearch = writable(false);
 export const showSettings = writable(false);
+export const showShortcuts = writable(false);
 export const showArchivedChats = writable(false);
 export const showChangelog = writable(false);
 
@@ -73,6 +78,8 @@ export const showControls = writable(false);
 export const showOverview = writable(false);
 export const showArtifacts = writable(false);
 export const showCallOverlay = writable(false);
+
+export const artifactCode = writable(null);
 
 export const temporaryChatEnabled = writable(false);
 export const scrollPaginationEnabled = writable(false);
@@ -132,6 +139,42 @@ type OllamaModelDetails = {
 };
 
 type Settings = {
+	pinnedModels?: never[];
+	toolServers?: never[];
+	detectArtifacts?: boolean;
+	showUpdateToast?: boolean;
+	showChangelog?: boolean;
+	showEmojiInCall?: boolean;
+	voiceInterruption?: boolean;
+	collapseCodeBlocks?: boolean;
+	expandDetails?: boolean;
+	notificationSound?: boolean;
+	notificationSoundAlways?: boolean;
+	stylizedPdfExport?: boolean;
+	notifications?: any;
+	imageCompression?: boolean;
+	imageCompressionSize?: any;
+	widescreenMode?: null;
+	largeTextAsFile?: boolean;
+	promptAutocomplete?: boolean;
+	hapticFeedback?: boolean;
+	responseAutoCopy?: any;
+	richTextInput?: boolean;
+	params?: any;
+	userLocation?: any;
+	webSearch?: boolean;
+	memory?: boolean;
+	autoTags?: boolean;
+	autoFollowUps?: boolean;
+	splitLargeChunks?(body: any, splitLargeChunks: any): unknown;
+	backgroundImageUrl?: null;
+	landingPageMode?: string;
+	iframeSandboxAllowForms?: boolean;
+	iframeSandboxAllowSameOrigin?: boolean;
+	scrollOnBranchChange?: boolean;
+	directConnections?: null;
+	chatBubble?: boolean;
+	copyFormatted?: boolean;
 	models?: string[];
 	conversationMode?: boolean;
 	speechAutoSend?: boolean;
@@ -139,14 +182,13 @@ type Settings = {
 	audio?: AudioSettings;
 	showUsername?: boolean;
 	notificationEnabled?: boolean;
+	highContrastMode?: boolean;
 	title?: TitleSettings;
 	splitLargeDeltas?: boolean;
-	chatDirection: 'LTR' | 'RTL' | 'auto';
+	chatDirection?: 'LTR' | 'RTL' | 'auto';
 	ctrlEnterToSend?: boolean;
 
 	system?: string;
-	requestFormat?: string;
-	keepAlive?: string;
 	seed?: number;
 	temperature?: string;
 	repeat_penalty?: string;
@@ -163,6 +205,8 @@ type ModelOptions = {
 };
 
 type AudioSettings = {
+	stt: any;
+	tts: any;
 	STTEngine?: string;
 	TTSEngine?: string;
 	speaker?: string;
@@ -193,6 +237,7 @@ type Document = {
 };
 
 type Config = {
+	license_metadata: any;
 	status: boolean;
 	name: string;
 	version: string;
@@ -213,11 +258,17 @@ type Config = {
 		enable_admin_chat_access: boolean;
 		enable_community_sharing: boolean;
 		enable_autocomplete_generation: boolean;
+		enable_direct_connections: boolean;
+		enable_version_update_check: boolean;
 	};
 	oauth: {
 		providers: {
 			[key: string]: string;
 		};
+	};
+	ui?: {
+		pending_user_overlay_title?: string;
+		pending_user_overlay_description?: string;
 	};
 };
 
@@ -227,6 +278,7 @@ type PromptSuggestion = {
 };
 
 type SessionUser = {
+	permissions: any;
 	id: string;
 	email: string;
 	name: string;

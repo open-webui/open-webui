@@ -44,12 +44,14 @@ class JupyterCodeExecuter:
         :param password: Jupyter password (optional)
         :param timeout: WebSocket timeout in seconds (default: 60s)
         """
-        self.base_url = base_url.rstrip("/")
+        self.base_url = base_url
         self.code = code
         self.token = token
         self.password = password
         self.timeout = timeout
         self.kernel_id = ""
+        if self.base_url[-1] != "/":
+            self.base_url += "/"
         self.session = aiohttp.ClientSession(trust_env=True, base_url=self.base_url)
         self.params = {}
         self.result = ResultModel()
@@ -61,7 +63,7 @@ class JupyterCodeExecuter:
         if self.kernel_id:
             try:
                 async with self.session.delete(
-                    f"/api/kernels/{self.kernel_id}", params=self.params
+                    f"api/kernels/{self.kernel_id}", params=self.params
                 ) as response:
                     response.raise_for_status()
             except Exception as err:
@@ -81,7 +83,7 @@ class JupyterCodeExecuter:
     async def sign_in(self) -> None:
         # password authentication
         if self.password and not self.token:
-            async with self.session.get("/login") as response:
+            async with self.session.get("login") as response:
                 response.raise_for_status()
                 xsrf_token = response.cookies["_xsrf"].value
                 if not xsrf_token:
@@ -89,7 +91,7 @@ class JupyterCodeExecuter:
                 self.session.cookie_jar.update_cookies(response.cookies)
                 self.session.headers.update({"X-XSRFToken": xsrf_token})
             async with self.session.post(
-                "/login",
+                "login",
                 data={"_xsrf": xsrf_token, "password": self.password},
                 allow_redirects=False,
             ) as response:
@@ -101,17 +103,15 @@ class JupyterCodeExecuter:
             self.params.update({"token": self.token})
 
     async def init_kernel(self) -> None:
-        async with self.session.post(
-            url="/api/kernels", params=self.params
-        ) as response:
+        async with self.session.post(url="api/kernels", params=self.params) as response:
             response.raise_for_status()
             kernel_data = await response.json()
             self.kernel_id = kernel_data["id"]
 
     def init_ws(self) -> (str, dict):
-        ws_base = self.base_url.replace("http", "ws")
+        ws_base = self.base_url.replace("http", "ws", 1)
         ws_params = "?" + "&".join([f"{key}={val}" for key, val in self.params.items()])
-        websocket_url = f"{ws_base}/api/kernels/{self.kernel_id}/channels{ws_params if len(ws_params) > 1 else ''}"
+        websocket_url = f"{ws_base}api/kernels/{self.kernel_id}/channels{ws_params if len(ws_params) > 1 else ''}"
         ws_headers = {}
         if self.password and not self.token:
             ws_headers = {

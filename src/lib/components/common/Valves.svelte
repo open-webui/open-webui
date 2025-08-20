@@ -4,6 +4,8 @@
 	const i18n = getContext('i18n');
 
 	import Switch from './Switch.svelte';
+	import MapSelector from './Valves/MapSelector.svelte';
+	import { split } from 'postcss/lib/list';
 
 	export let valvesSpec = null;
 	export let valves = {};
@@ -49,7 +51,7 @@
 
 			{#if (valves[property] ?? null) !== null}
 				<!-- {valves[property]} -->
-				<div class="flex mt-0.5 mb-1.5 space-x-2">
+				<div class="flex mt-0.5 mb-0.5 space-x-2">
 					<div class=" flex-1">
 						{#if valvesSpec.properties[property]?.enum ?? null}
 							<select
@@ -92,6 +94,61 @@
 									dispatch('change');
 								}}
 							/>
+						{:else if valvesSpec.properties[property]?.input ?? null}
+							{#if valvesSpec.properties[property]?.input?.type === 'color'}
+								<div class="flex items-center space-x-2">
+									<div class="relative size-6">
+										<input
+											type="color"
+											class="size-6 rounded cursor-pointer border border-gray-200 dark:border-gray-700"
+											value={valves[property] ?? '#000000'}
+											on:input={(e) => {
+												// Convert the color value to uppercase immediately
+												valves[property] = e.target.value.toUpperCase();
+												dispatch('change');
+											}}
+										/>
+									</div>
+
+									<input
+										type="text"
+										class="flex-1 rounded-lg py-2 text-sm dark:text-gray-300 dark:bg-gray-850 outline-hidden border border-gray-100 dark:border-gray-850"
+										placeholder="Enter hex color (e.g. #FF0000)"
+										bind:value={valves[property]}
+										autocomplete="off"
+										disabled
+										on:change={() => {
+											dispatch('change');
+										}}
+									/>
+								</div>
+							{:else if valvesSpec.properties[property]?.input?.type === 'map'}
+								<!-- EXPERIMENTAL INPUT TYPE, DO NOT USE IN PRODUCTION -->
+								<div class="flex flex-col items-center gap-1">
+									<MapSelector
+										setViewLocation={((valves[property] ?? '').includes(',') ?? false)
+											? valves[property].split(',')
+											: null}
+										onClick={(value) => {
+											valves[property] = value;
+											dispatch('change');
+										}}
+									/>
+
+									{#if valves[property]}
+										<input
+											type="text"
+											class=" w-full rounded-lg py-1 text-left text-sm dark:text-gray-300 dark:bg-gray-850 outline-hidden border border-gray-100 dark:border-gray-850"
+											placeholder="Enter coordinates (e.g. 51.505, -0.09)"
+											bind:value={valves[property]}
+											autocomplete="off"
+											on:change={() => {
+												dispatch('change');
+											}}
+										/>
+									{/if}
+								</div>
+							{/if}
 						{:else}
 							<textarea
 								class="w-full rounded-lg py-2 px-4 text-sm dark:text-gray-300 dark:bg-gray-850 outline-hidden border border-gray-100 dark:border-gray-850"

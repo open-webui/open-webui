@@ -4,10 +4,12 @@
 	import { createEventDispatcher } from 'svelte';
 	import { onMount, getContext } from 'svelte';
 
-	import { updateUserById } from '$lib/apis/users';
+	import { updateUserById, getUserGroupsById } from '$lib/apis/users';
 
 	import Modal from '$lib/components/common/Modal.svelte';
 	import localizedFormat from 'dayjs/plugin/localizedFormat';
+	import XMark from '$lib/components/icons/XMark.svelte';
+	import SensitiveInput from '$lib/components/common/SensitiveInput.svelte';
 
 	const i18n = getContext('i18n');
 	const dispatch = createEventDispatcher();
@@ -19,10 +21,13 @@
 
 	let _user = {
 		profile_image_url: '',
+		role: 'pending',
 		name: '',
 		email: '',
 		password: ''
 	};
+
+	let userGroups: any[] | null = null;
 
 	const submitHandler = async () => {
 		const res = await updateUserById(localStorage.token, selectedUser.id, _user).catch((error) => {
@@ -35,10 +40,21 @@
 		}
 	};
 
+	const loadUserGroups = async () => {
+		if (!selectedUser?.id) return;
+		userGroups = null;
+
+		userGroups = await getUserGroupsById(localStorage.token, selectedUser.id).catch((error) => {
+			toast.error(`${error}`);
+			return null;
+		});
+	};
+
 	onMount(() => {
 		if (selectedUser) {
 			_user = selectedUser;
 			_user.password = '';
+			loadUserGroups();
 		}
 	});
 </script>
@@ -53,16 +69,7 @@
 					show = false;
 				}}
 			>
-				<svg
-					xmlns="http://www.w3.org/2000/svg"
-					viewBox="0 0 20 20"
-					fill="currentColor"
-					class="w-5 h-5"
-				>
-					<path
-						d="M6.28 5.22a.75.75 0 00-1.06 1.06L8.94 10l-3.72 3.72a.75.75 0 101.06 1.06L10 11.06l3.72 3.72a.75.75 0 101.06-1.06L11.06 10l3.72-3.72a.75.75 0 00-1.06-1.06L10 8.94 6.28 5.22z"
-					/>
-				</svg>
+				<XMark className={'size-5'} />
 			</button>
 		</div>
 
@@ -96,17 +103,51 @@
 					<div class=" px-5 pt-3 pb-5">
 						<div class=" flex flex-col space-y-1.5">
 							<div class="flex flex-col w-full">
+								<div class=" mb-1 text-xs text-gray-500">{$i18n.t('Role')}</div>
+
+								<div class="flex-1">
+									<select
+										class="w-full dark:bg-gray-900 text-sm bg-transparent disabled:text-gray-500 dark:disabled:text-gray-500 outline-hidden"
+										bind:value={_user.role}
+										disabled={_user.id == sessionUser.id}
+										required
+									>
+										<option value="admin">{$i18n.t('Admin')}</option>
+										<option value="user">{$i18n.t('User')}</option>
+										<option value="pending">{$i18n.t('Pending')}</option>
+									</select>
+								</div>
+							</div>
+
+							{#if userGroups}
+								<div class="flex flex-col w-full text-sm">
+									<div class="mb-1 text-xs text-gray-500">{$i18n.t('User Groups')}</div>
+
+									{#if userGroups.length}
+										<div class="flex flex-wrap gap-1 my-0.5 -mx-1">
+											{#each userGroups as userGroup}
+												<span class="px-2 py-0.5 rounded-full bg-gray-100 dark:bg-gray-850 text-xs">
+													{userGroup.name}
+												</span>
+											{/each}
+										</div>
+									{:else}
+										<span>-</span>
+									{/if}
+								</div>
+							{/if}
+
+							<div class="flex flex-col w-full">
 								<div class=" mb-1 text-xs text-gray-500">{$i18n.t('Email')}</div>
 
 								<div class="flex-1">
 									<input
-										class="w-full rounded-sm text-sm bg-transparent disabled:text-gray-500 dark:disabled:text-gray-500 outline-hidden"
+										class="w-full text-sm bg-transparent disabled:text-gray-500 dark:disabled:text-gray-500 outline-hidden"
 										type="email"
 										bind:value={_user.email}
 										placeholder={$i18n.t('Enter Your Email')}
 										autocomplete="off"
 										required
-										disabled={_user.id == sessionUser.id}
 									/>
 								</div>
 							</div>
@@ -116,7 +157,7 @@
 
 								<div class="flex-1">
 									<input
-										class="w-full rounded-sm text-sm bg-transparent outline-hidden"
+										class="w-full text-sm bg-transparent outline-hidden"
 										type="text"
 										bind:value={_user.name}
 										placeholder={$i18n.t('Enter Your Name')}
@@ -130,12 +171,13 @@
 								<div class=" mb-1 text-xs text-gray-500">{$i18n.t('New Password')}</div>
 
 								<div class="flex-1">
-									<input
-										class="w-full rounded-sm text-sm bg-transparent outline-hidden"
+									<SensitiveInput
+										class="w-full text-sm bg-transparent outline-hidden"
 										type="password"
 										placeholder={$i18n.t('Enter New Password')}
 										bind:value={_user.password}
 										autocomplete="new-password"
+										required={false}
 									/>
 								</div>
 							</div>

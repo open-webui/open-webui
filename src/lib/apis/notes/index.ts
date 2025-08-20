@@ -28,7 +28,7 @@ export const createNewNote = async (token: string, note: NoteItem) => {
 		})
 		.catch((err) => {
 			error = err.detail;
-			console.log(err);
+			console.error(err);
 			return null;
 		});
 
@@ -39,7 +39,7 @@ export const createNewNote = async (token: string, note: NoteItem) => {
 	return res;
 };
 
-export const getNotes = async (token: string = '') => {
+export const getNotes = async (token: string = '', raw: boolean = false) => {
 	let error = null;
 
 	const res = await fetch(`${WEBUI_API_BASE_URL}/notes/`, {
@@ -59,12 +59,16 @@ export const getNotes = async (token: string = '') => {
 		})
 		.catch((err) => {
 			error = err.detail;
-			console.log(err);
+			console.error(err);
 			return null;
 		});
 
 	if (error) {
 		throw error;
+	}
+
+	if (raw) {
+		return res; // Return raw response if requested
 	}
 
 	if (!Array.isArray(res)) {
@@ -85,6 +89,37 @@ export const getNotes = async (token: string = '') => {
 	}
 
 	return grouped;
+};
+
+export const getNoteList = async (token: string = '') => {
+	let error = null;
+
+	const res = await fetch(`${WEBUI_API_BASE_URL}/notes/list`, {
+		method: 'GET',
+		headers: {
+			Accept: 'application/json',
+			'Content-Type': 'application/json',
+			authorization: `Bearer ${token}`
+		}
+	})
+		.then(async (res) => {
+			if (!res.ok) throw await res.json();
+			return res.json();
+		})
+		.then((json) => {
+			return json;
+		})
+		.catch((err) => {
+			error = err.detail;
+			console.error(err);
+			return null;
+		});
+
+	if (error) {
+		throw error;
+	}
+
+	return res;
 };
 
 export const getNoteById = async (token: string, id: string) => {
@@ -108,7 +143,7 @@ export const getNoteById = async (token: string, id: string) => {
 		.catch((err) => {
 			error = err.detail;
 
-			console.log(err);
+			console.error(err);
 			return null;
 		});
 
@@ -143,7 +178,7 @@ export const updateNoteById = async (token: string, id: string, note: NoteItem) 
 		.catch((err) => {
 			error = err.detail;
 
-			console.log(err);
+			console.error(err);
 			return null;
 		});
 
@@ -175,7 +210,7 @@ export const deleteNoteById = async (token: string, id: string) => {
 		.catch((err) => {
 			error = err.detail;
 
-			console.log(err);
+			console.error(err);
 			return null;
 		});
 

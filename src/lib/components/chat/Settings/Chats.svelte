@@ -6,17 +6,16 @@
 
 	import {
 		archiveAllChats,
-		createNewChat,
 		deleteAllChats,
 		getAllChats,
-		getAllUserChats,
-		getChatList
+		getChatList,
+		importChat
 	} from '$lib/apis/chats';
 	import { getImportOrigin, convertOpenAIChats } from '$lib/utils';
 	import { onMount, getContext } from 'svelte';
 	import { goto } from '$app/navigation';
 	import { toast } from 'svelte-sonner';
-	import ArchivedChatsModal from '$lib/components/layout/Sidebar/ArchivedChatsModal.svelte';
+	import ArchivedChatsModal from '$lib/components/layout/ArchivedChatsModal.svelte';
 
 	const i18n = getContext('i18n');
 
@@ -58,9 +57,18 @@
 			console.log(chat);
 
 			if (chat.chat) {
-				await createNewChat(localStorage.token, chat.chat);
+				await importChat(
+					localStorage.token,
+					chat.chat,
+					chat.meta ?? {},
+					false,
+					null,
+					chat?.created_at ?? null,
+					chat?.updated_at ?? null
+				);
 			} else {
-				await createNewChat(localStorage.token, chat);
+				// Legacy format
+				await importChat(localStorage.token, chat, {}, false, null);
 			}
 		}
 
@@ -101,13 +109,14 @@
 	const handleArchivedChatsChange = async () => {
 		currentChatPage.set(1);
 		await chats.set(await getChatList(localStorage.token, $currentChatPage));
+
 		scrollPaginationEnabled.set(true);
 	};
 </script>
 
-<ArchivedChatsModal bind:show={showArchivedChatsModal} on:change={handleArchivedChatsChange} />
+<ArchivedChatsModal bind:show={showArchivedChatsModal} onUpdate={handleArchivedChatsChange} />
 
-<div class="flex flex-col h-full justify-between space-y-3 text-sm">
+<div id="tab-chats" class="flex flex-col h-full justify-between space-y-3 text-sm">
 	<div class=" space-y-2 overflow-y-scroll max-h-[28rem] lg:max-h-full">
 		<div class="flex flex-col">
 			<input

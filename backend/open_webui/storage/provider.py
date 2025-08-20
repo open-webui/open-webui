@@ -2,6 +2,7 @@ import os
 import shutil
 import json
 import logging
+import re
 from abc import ABC, abstractmethod
 from typing import BinaryIO, Tuple, Dict
 
@@ -17,6 +18,7 @@ from open_webui.config import (
     S3_SECRET_ACCESS_KEY,
     S3_USE_ACCELERATE_ENDPOINT,
     S3_ADDRESSING_STYLE,
+    S3_ENABLE_TAGGING,
     GCS_BUCKET_NAME,
     GOOGLE_APPLICATION_CREDENTIALS_JSON,
     AZURE_STORAGE_ENDPOINT,
@@ -135,23 +137,37 @@ class S3StorageProvider(StorageProvider):
         self.bucket_name = S3_BUCKET_NAME
         self.key_prefix = S3_KEY_PREFIX if S3_KEY_PREFIX else ""
 
+    @staticmethod
+    def sanitize_tag_value(s: str) -> str:
+        """Only include S3 allowed characters."""
+        return re.sub(r"[^a-zA-Z0-9 äöüÄÖÜß\+\-=\._:/@]", "", s)
+
     def upload_file(
         self, file: BinaryIO, filename: str, tags: Dict[str, str]
     ) -> Tuple[bytes, str]:
         """Handles uploading of the file to S3 storage."""
         _, file_path = LocalStorageProvider.upload_file(file, filename, tags)
-        tagging = {"TagSet": [{"Key": k, "Value": v} for k, v in tags.items()]}
+        s3_key = os.path.join(self.key_prefix, filename)
         try:
-            s3_key = os.path.join(self.key_prefix, filename)
             self.s3_client.upload_file(file_path, self.bucket_name, s3_key)
-            self.s3_client.put_object_tagging(
-                Bucket=self.bucket_name,
-                Key=s3_key,
-                Tagging=tagging,
-            )
+            if S3_ENABLE_TAGGING and tags:
+                sanitized_tags = {
+                    self.sanitize_tag_value(k): self.sanitize_tag_value(v)
+                    for k, v in tags.items()
+                }
+                tagging = {
+                    "TagSet": [
+                        {"Key": k, "Value": v} for k, v in sanitized_tags.items()
+                    ]
+                }
+                self.s3_client.put_object_tagging(
+                    Bucket=self.bucket_name,
+                    Key=s3_key,
+                    Tagging=tagging,
+                )
             return (
                 open(file_path, "rb").read(),
-                "s3://" + self.bucket_name + "/" + s3_key,
+                f"s3://{self.bucket_name}/{s3_key}",
             )
         except ClientError as e:
             raise RuntimeError(f"Error uploading file to S3: {e}")

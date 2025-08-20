@@ -8,19 +8,32 @@ import requests
 import os
 
 
+from cryptography.hazmat.primitives.ciphers.aead import AESGCM
+from cryptography.hazmat.primitives.asymmetric import ed25519
+from cryptography.hazmat.primitives import serialization
+import json
+
+
 from datetime import datetime, timedelta
 import pytz
 from pytz import UTC
 from typing import Optional, Union, List, Dict
 
+from opentelemetry import trace
+
 from open_webui.models.users import Users
 
 from open_webui.constants import ERROR_MESSAGES
+
 from open_webui.env import (
+    OFFLINE_MODE,
+    LICENSE_BLOB,
+    pk,
     WEBUI_SECRET_KEY,
     TRUSTED_SIGNATURE_KEY,
     STATIC_DIR,
     SRC_LOG_LEVELS,
+    WEBUI_AUTH_TRUSTED_EMAIL_HEADER,
 )
 
 from fastapi import BackgroundTasks, Depends, HTTPException, Request, Response, status
@@ -71,33 +84,73 @@ def override_static(path: str, content: str):
 
 
 def get_license_data(app, key):
-    if key:
-        try:
-            res = requests.post(
-                "https://api.openwebui.com/api/v1/license/",
-                json={"key": key, "version": "1"},
-                timeout=5,
+    def data_handler(data):
+        for k, v in data.items():
+            if k == "resources":
+                for p, c in v.items():
+                    globals().get("override_static", lambda a, b: None)(p, c)
+            elif k == "count":
+                setattr(app.state, "USER_COUNT", v)
+            elif k == "name":
+                setattr(app.state, "WEBUI_NAME", v)
+            elif k == "metadata":
+                setattr(app.state, "LICENSE_METADATA", v)
+
+    def handler(u):
+        res = requests.post(
+            f"{u}/api/v1/license/",
+            json={"key": key, "version": "1"},
+            timeout=5,
+        )
+
+        if getattr(res, "ok", False):
+            payload = getattr(res, "json", lambda: {})()
+            data_handler(payload)
+            return True
+        else:
+            log.error(
+                f"License: retrieval issue: {getattr(res, 'text', 'unknown error')}"
             )
 
-            if getattr(res, "ok", False):
-                payload = getattr(res, "json", lambda: {})()
-                for k, v in payload.items():
-                    if k == "resources":
-                        for p, c in v.items():
-                            globals().get("override_static", lambda a, b: None)(p, c)
-                    elif k == "count":
-                        setattr(app.state, "USER_COUNT", v)
-                    elif k == "name":
-                        setattr(app.state, "WEBUI_NAME", v)
-                    elif k == "metadata":
-                        setattr(app.state, "LICENSE_METADATA", v)
-                return True
-            else:
-                log.error(
-                    f"License: retrieval issue: {getattr(res, 'text', 'unknown error')}"
-                )
+    if key:
+        us = [
+            "https://api.openwebui.com",
+            "https://licenses.api.openwebui.com",
+        ]
+        try:
+            for u in us:
+                if handler(u):
+                    return True
         except Exception as ex:
             log.exception(f"License: Uncaught Exception: {ex}")
+
+    try:
+        if LICENSE_BLOB:
+            nl = 12
+            kb = hashlib.sha256((key.replace("-", "").upper()).encode()).digest()
+
+            def nt(b):
+                return b[:nl], b[nl:]
+
+            lb = base64.b64decode(LICENSE_BLOB)
+            ln, lt = nt(lb)
+
+            aesgcm = AESGCM(kb)
+            p = json.loads(aesgcm.decrypt(ln, lt, None))
+            pk.verify(base64.b64decode(p["s"]), p["p"].encode())
+
+            pb = base64.b64decode(p["p"])
+            pn, pt = nt(pb)
+
+            data = json.loads(aesgcm.decrypt(pn, pt, None).decode())
+            if not data.get("exp") and data.get("exp") < datetime.now().date():
+                return False
+
+            data_handler(data)
+            return True
+    except Exception as e:
+        log.error(f"License: {e}")
+
     return False
 
 
@@ -155,6 +208,7 @@ def get_http_authorization_cred(auth_header: Optional[str]):
 
 def get_current_user(
     request: Request,
+    response: Response,
     background_tasks: BackgroundTasks,
     auth_token: HTTPAuthorizationCredentials = Depends(bearer_security),
 ):
@@ -167,7 +221,7 @@ def get_current_user(
         token = request.cookies.get("token")
 
     if token is None:
-        raise HTTPException(status_code=403, detail="Not authenticated")
+        raise HTTPException(status_code=401, detail="Not authenticated")
 
     # auth by api key
     if token.startswith("sk-"):
@@ -194,7 +248,17 @@ def get_current_user(
                     status.HTTP_403_FORBIDDEN, detail=ERROR_MESSAGES.API_KEY_NOT_ALLOWED
                 )
 
-        return get_current_user_by_api_key(token)
+        user = get_current_user_by_api_key(token)
+
+        # Add user info to current span
+        current_span = trace.get_current_span()
+        if current_span:
+            current_span.set_attribute("client.user.id", user.id)
+            current_span.set_attribute("client.user.email", user.email)
+            current_span.set_attribute("client.user.role", user.role)
+            current_span.set_attribute("client.auth.type", "api_key")
+
+        return user
 
     # auth by jwt token
     try:
@@ -213,6 +277,29 @@ def get_current_user(
                 detail=ERROR_MESSAGES.INVALID_TOKEN,
             )
         else:
+            if WEBUI_AUTH_TRUSTED_EMAIL_HEADER:
+                trusted_email = request.headers.get(
+                    WEBUI_AUTH_TRUSTED_EMAIL_HEADER, ""
+                ).lower()
+                if trusted_email and user.email != trusted_email:
+                    # Delete the token cookie
+                    response.delete_cookie("token")
+                    # Delete OAuth token if present
+                    if request.cookies.get("oauth_id_token"):
+                        response.delete_cookie("oauth_id_token")
+                    raise HTTPException(
+                        status_code=status.HTTP_401_UNAUTHORIZED,
+                        detail="User mismatch. Please sign in again.",
+                    )
+
+            # Add user info to current span
+            current_span = trace.get_current_span()
+            if current_span:
+                current_span.set_attribute("client.user.id", user.id)
+                current_span.set_attribute("client.user.email", user.email)
+                current_span.set_attribute("client.user.role", user.role)
+                current_span.set_attribute("client.auth.type", "jwt")
+
             # Refresh the user's last active timestamp asynchronously
             # to prevent blocking the request
             if background_tasks:
@@ -234,6 +321,14 @@ def get_current_user_by_api_key(api_key: str):
             detail=ERROR_MESSAGES.INVALID_TOKEN,
         )
     else:
+        # Add user info to current span
+        current_span = trace.get_current_span()
+        if current_span:
+            current_span.set_attribute("client.user.id", user.id)
+            current_span.set_attribute("client.user.email", user.email)
+            current_span.set_attribute("client.user.role", user.role)
+            current_span.set_attribute("client.auth.type", "api_key")
+
         Users.update_user_last_active_by_id(user.id)
 
     return user

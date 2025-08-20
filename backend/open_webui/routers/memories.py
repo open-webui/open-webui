@@ -4,7 +4,7 @@ import logging
 from typing import Optional
 
 from open_webui.models.memories import Memories, MemoryModel
-from open_webui.retrieval.vector.connector import VECTOR_DB_CLIENT
+from open_webui.retrieval.vector.factory import VECTOR_DB_CLIENT
 from open_webui.utils.auth import get_verified_user
 from open_webui.env import SRC_LOG_LEVELS
 
@@ -82,6 +82,10 @@ class QueryMemoryForm(BaseModel):
 async def query_memory(
     request: Request, form_data: QueryMemoryForm, user=Depends(get_verified_user)
 ):
+    memories = Memories.get_memories_by_user_id(user.id)
+    if not memories:
+        raise HTTPException(status_code=404, detail="No memories found for user")
+
     results = VECTOR_DB_CLIENT.search(
         collection_name=f"user-memory-{user.id}",
         vectors=[request.app.state.EMBEDDING_FUNCTION(form_data.content, user=user)],

@@ -36,7 +36,8 @@
 		chatTitle,
 		showArtifacts,
 		tools,
-		toolServers
+		toolServers,
+		selectedFolder
 	} from '$lib/stores';
 	import {
 		convertMessagesToHistory,
@@ -49,15 +50,13 @@
 		sleep,
 		removeDetails,
 		getPromptVariables,
-		processDetails
+		processDetails,
+		removeAllDetails
 	} from '$lib/utils';
 
 	import { generateChatCompletion } from '$lib/apis/ollama';
 	import {
-		addTagById,
 		createNewChat,
-		deleteTagById,
-		deleteTagsById,
 		getAllTags,
 		getChatById,
 		getChatList,
@@ -88,6 +87,9 @@
 	import Placeholder from './Placeholder.svelte';
 	import NotificationToast from '../NotificationToast.svelte';
 	import Spinner from '../common/Spinner.svelte';
+	import { fade } from 'svelte/transition';
+	import Tooltip from '../common/Tooltip.svelte';
+	import Sidebar from '../icons/Sidebar.svelte';
 
 	export let chatIdProp = '';
 
@@ -96,6 +98,8 @@
 	const eventTarget = new EventTarget();
 	let controlPane;
 	let controlPaneComponent;
+
+	let messageInput;
 
 	let autoScroll = true;
 	let processing = '';
@@ -119,9 +123,15 @@
 	$: selectedModelIds = atSelectedModel !== undefined ? [atSelectedModel.id] : selectedModels;
 
 	let selectedToolIds = [];
+	let selectedFilterIds = [];
 	let imageGenerationEnabled = false;
 	let webSearchEnabled = false;
 	let codeInterpreterEnabled = false;
+
+	let showCommands = false;
+
+	let generating = false;
+	let generationController = null;
 
 	let chat = null;
 	let tags = [];
@@ -140,41 +150,63 @@
 	let params = {};
 
 	$: if (chatIdProp) {
-		(async () => {
-			loading = true;
+		navigateHandler();
+	}
 
-			prompt = '';
-			files = [];
-			selectedToolIds = [];
-			webSearchEnabled = false;
-			imageGenerationEnabled = false;
+	const navigateHandler = async () => {
+		loading = true;
 
-			if (localStorage.getItem(`chat-input${chatIdProp ? `-${chatIdProp}` : ''}`)) {
+		prompt = '';
+		messageInput?.setText('');
+
+		files = [];
+		selectedToolIds = [];
+		selectedFilterIds = [];
+		webSearchEnabled = false;
+		imageGenerationEnabled = false;
+
+		const storageChatInput = sessionStorage.getItem(
+			`chat-input${chatIdProp ? `-${chatIdProp}` : ''}`
+		);
+
+		if (chatIdProp && (await loadChat())) {
+			await tick();
+			loading = false;
+			window.setTimeout(() => scrollToBottom(), 0);
+
+			await tick();
+
+			if (storageChatInput) {
 				try {
-					const input = JSON.parse(
-						localStorage.getItem(`chat-input${chatIdProp ? `-${chatIdProp}` : ''}`)
-					);
+					const input = JSON.parse(storageChatInput);
 
-					prompt = input.prompt;
-					files = input.files;
-					selectedToolIds = input.selectedToolIds;
-					webSearchEnabled = input.webSearchEnabled;
-					imageGenerationEnabled = input.imageGenerationEnabled;
-					codeInterpreterEnabled = input.codeInterpreterEnabled;
+					if (!$temporaryChatEnabled) {
+						messageInput?.setText(input.prompt);
+						files = input.files;
+						selectedToolIds = input.selectedToolIds;
+						selectedFilterIds = input.selectedFilterIds;
+						webSearchEnabled = input.webSearchEnabled;
+						imageGenerationEnabled = input.imageGenerationEnabled;
+						codeInterpreterEnabled = input.codeInterpreterEnabled;
+					}
 				} catch (e) {}
 			}
 
-			if (chatIdProp && (await loadChat())) {
-				await tick();
-				loading = false;
-				window.setTimeout(() => scrollToBottom(), 0);
-				const chatInput = document.getElementById('chat-input');
-				chatInput?.focus();
-			} else {
-				await goto('/');
-			}
-		})();
-	}
+			const chatInput = document.getElementById('chat-input');
+			chatInput?.focus();
+		} else {
+			await goto('/');
+		}
+	};
+
+	const onSelect = async (e) => {
+		const { type, data } = e;
+
+		if (type === 'prompt') {
+			// Handle prompt selection
+			messageInput?.setText(data);
+		}
+	};
 
 	$: if (selectedModels && chatIdProp !== '') {
 		saveSessionSelectedModels();
@@ -188,13 +220,27 @@
 		console.log('saveSessionSelectedModels', selectedModels, sessionStorage.selectedModels);
 	};
 
-	$: if (selectedModels) {
-		setToolIds();
+	let oldSelectedModelIds = [''];
+	$: if (JSON.stringify(selectedModelIds) !== JSON.stringify(oldSelectedModelIds)) {
+		onSelectedModelIdsChange();
 	}
 
-	$: if (atSelectedModel || selectedModels) {
+	const onSelectedModelIdsChange = () => {
+		if (oldSelectedModelIds.filter((id) => id).length > 0) {
+			resetInput();
+		}
+		oldSelectedModelIds = selectedModelIds;
+	};
+
+	const resetInput = () => {
+		console.debug('resetInput');
 		setToolIds();
-	}
+
+		selectedFilterIds = [];
+		webSearchEnabled = false;
+		imageGenerationEnabled = false;
+		codeInterpreterEnabled = false;
+	};
 
 	const setToolIds = async () => {
 		if (!$tools) {
@@ -206,14 +252,20 @@
 		}
 
 		const model = atSelectedModel ?? $models.find((m) => m.id === selectedModels[0]);
-		if (model) {
-			selectedToolIds = (model?.info?.meta?.toolIds ?? []).filter((id) =>
-				$tools.find((t) => t.id === id)
-			);
+		if (model && model?.info?.meta?.toolIds) {
+			selectedToolIds = [
+				...new Set(
+					[...(model?.info?.meta?.toolIds ?? [])].filter((id) => $tools.find((t) => t.id === id))
+				)
+			];
+		} else {
+			selectedToolIds = [];
 		}
 	};
 
 	const showMessage = async (message) => {
+		await tick();
+
 		const _chatId = JSON.parse(JSON.stringify($chatId));
 		let _messageId = JSON.parse(JSON.stringify(message.id));
 
@@ -273,6 +325,12 @@
 					message.content = data.content;
 				} else if (type === 'chat:message:files' || type === 'files') {
 					message.files = data.files;
+				} else if (type === 'chat:message:follow_ups') {
+					message.followUps = data.follow_ups;
+
+					if (autoScroll) {
+						scrollToBottom('smooth');
+					}
 				} else if (type === 'chat:title') {
 					chatTitle.set(data);
 					currentChatPage.set(1);
@@ -375,7 +433,7 @@
 			const inputElement = document.getElementById('chat-input');
 
 			if (inputElement) {
-				prompt = event.data.text;
+				messageInput?.setText(event.data.text);
 				inputElement.focus();
 			}
 		}
@@ -399,49 +457,54 @@
 		}
 	};
 
+	let pageSubscribe = null;
 	onMount(async () => {
 		loading = true;
 		console.log('mounted');
 		window.addEventListener('message', onMessageHandler);
 		$socket?.on('chat-events', chatEventHandler);
 
-		if (!$chatId) {
-			chatIdUnsubscriber = chatId.subscribe(async (value) => {
-				if (!value) {
-					await tick(); // Wait for DOM updates
-					await initNewChat();
-				}
-			});
-		} else {
-			if ($temporaryChatEnabled) {
-				await goto('/');
+		pageSubscribe = page.subscribe(async (p) => {
+			if (p.url.pathname === '/') {
+				await tick();
+				initNewChat();
 			}
+		});
+
+		const storageChatInput = sessionStorage.getItem(
+			`chat-input${chatIdProp ? `-${chatIdProp}` : ''}`
+		);
+
+		if (!chatIdProp) {
+			loading = false;
+			await tick();
 		}
 
-		if (localStorage.getItem(`chat-input${chatIdProp ? `-${chatIdProp}` : ''}`)) {
+		if (storageChatInput) {
+			prompt = '';
+			messageInput?.setText('');
+
+			files = [];
+			selectedToolIds = [];
+			selectedFilterIds = [];
+			webSearchEnabled = false;
+			imageGenerationEnabled = false;
+			codeInterpreterEnabled = false;
+
 			try {
-				const input = JSON.parse(
-					localStorage.getItem(`chat-input${chatIdProp ? `-${chatIdProp}` : ''}`)
-				);
-				console.log('chat-input', input);
-				prompt = input.prompt;
-				files = input.files;
-				selectedToolIds = input.selectedToolIds;
-				webSearchEnabled = input.webSearchEnabled;
-				imageGenerationEnabled = input.imageGenerationEnabled;
-				codeInterpreterEnabled = input.codeInterpreterEnabled;
-			} catch (e) {
-				prompt = '';
-				files = [];
-				selectedToolIds = [];
-				webSearchEnabled = false;
-				imageGenerationEnabled = false;
-				codeInterpreterEnabled = false;
-			}
-		}
+				const input = JSON.parse(storageChatInput);
 
-		loading = false;
-		await tick();
+				if (!$temporaryChatEnabled) {
+					messageInput?.setText(input.prompt);
+					files = input.files;
+					selectedToolIds = input.selectedToolIds;
+					selectedFilterIds = input.selectedFilterIds;
+					webSearchEnabled = input.webSearchEnabled;
+					imageGenerationEnabled = input.imageGenerationEnabled;
+					codeInterpreterEnabled = input.codeInterpreterEnabled;
+				}
+			} catch (e) {}
+		}
 
 		showControls.subscribe(async (value) => {
 			if (controlPane && !$mobile) {
@@ -470,6 +533,7 @@
 	});
 
 	onDestroy(() => {
+		pageSubscribe();
 		chatIdUnsubscriber?.();
 		window.removeEventListener('message', onMessageHandler);
 		$socket?.off('chat-events', chatEventHandler);
@@ -560,9 +624,20 @@
 				throw new Error('Created file is empty');
 			}
 
+			// If the file is an audio file, provide the language for STT.
+			let metadata = null;
+			if (
+				(file.type.startsWith('audio/') || file.type.startsWith('video/')) &&
+				$settings?.audio?.stt?.language
+			) {
+				metadata = {
+					language: $settings?.audio?.stt?.language
+				};
+			}
+
 			// Upload file to server
 			console.log('Uploading file to server...');
-			const uploadedFile = await uploadFile(localStorage.token, file);
+			const uploadedFile = await uploadFile(localStorage.token, file, metadata);
 
 			if (!uploadedFile) {
 				throw new Error('Server returned null response for file upload');
@@ -662,10 +737,20 @@
 	//////////////////////////
 
 	const initNewChat = async () => {
-		if ($page.url.searchParams.get('models')) {
-			selectedModels = $page.url.searchParams.get('models')?.split(',');
-		} else if ($page.url.searchParams.get('model')) {
-			const urlModels = $page.url.searchParams.get('model')?.split(',');
+		if ($user?.role !== 'admin' && $user?.permissions?.chat?.temporary_enforced) {
+			await temporaryChatEnabled.set(true);
+		}
+
+		const availableModels = $models
+			.filter((m) => !(m?.info?.meta?.hidden ?? false))
+			.map((m) => m.id);
+
+		if ($page.url.searchParams.get('models') || $page.url.searchParams.get('model')) {
+			const urlModels = (
+				$page.url.searchParams.get('models') ||
+				$page.url.searchParams.get('model') ||
+				''
+			)?.split(',');
 
 			if (urlModels.length === 1) {
 				const m = $models.find((m) => m.id === urlModels[0]);
@@ -688,6 +773,10 @@
 			} else {
 				selectedModels = urlModels;
 			}
+
+			selectedModels = selectedModels.filter((modelId) =>
+				$models.map((m) => m.id).includes(modelId)
+			);
 		} else {
 			if (sessionStorage.selectedModels) {
 				selectedModels = JSON.parse(sessionStorage.selectedModels);
@@ -700,12 +789,12 @@
 					selectedModels = $config?.default_models.split(',');
 				}
 			}
+			selectedModels = selectedModels.filter((modelId) => availableModels.includes(modelId));
 		}
 
-		selectedModels = selectedModels.filter((modelId) => $models.map((m) => m.id).includes(modelId));
 		if (selectedModels.length === 0 || (selectedModels.length === 1 && selectedModels[0] === '')) {
-			if ($models.length > 0) {
-				selectedModels = [$models[0].id];
+			if (availableModels.length > 0) {
+				selectedModels = [availableModels?.at(0) ?? ''];
 			} else {
 				selectedModels = [''];
 			}
@@ -722,6 +811,7 @@
 
 		autoScroll = true;
 
+		resetInput();
 		await chatId.set('');
 		await chatTitle.set('');
 
@@ -738,12 +828,21 @@
 				`https://www.youtube.com/watch?v=${$page.url.searchParams.get('youtube')}`
 			);
 		}
+
+		if ($page.url.searchParams.get('load-url')) {
+			await uploadWeb($page.url.searchParams.get('load-url'));
+		}
+
 		if ($page.url.searchParams.get('web-search') === 'true') {
 			webSearchEnabled = true;
 		}
 
 		if ($page.url.searchParams.get('image-generation') === 'true') {
 			imageGenerationEnabled = true;
+		}
+
+		if ($page.url.searchParams.get('code-interpreter') === 'true') {
+			codeInterpreterEnabled = true;
 		}
 
 		if ($page.url.searchParams.get('tools')) {
@@ -766,11 +865,14 @@
 		}
 
 		if ($page.url.searchParams.get('q')) {
-			prompt = $page.url.searchParams.get('q') ?? '';
+			const q = $page.url.searchParams.get('q') ?? '';
+			messageInput?.setText(q);
 
-			if (prompt) {
-				await tick();
-				submitPrompt(prompt);
+			if (q) {
+				if (($page.url.searchParams.get('submit') ?? 'true') === 'true') {
+					await tick();
+					submitPrompt(q);
+				}
 			}
 		}
 
@@ -792,6 +894,11 @@
 
 	const loadChat = async () => {
 		chatId.set(chatIdProp);
+
+		if ($temporaryChatEnabled) {
+			temporaryChatEnabled.set(false);
+		}
+
 		chat = await getChatById(localStorage.token, $chatId).catch(async (error) => {
 			await goto('/');
 			return null;
@@ -811,6 +918,13 @@
 					(chatContent?.models ?? undefined) !== undefined
 						? chatContent.models
 						: [chatContent.models ?? ''];
+
+				if (!($user?.role === 'admin' || ($user?.permissions?.chat?.multiple_models ?? true))) {
+					selectedModels = selectedModels.length > 0 ? [selectedModels[0]] : [''];
+				}
+
+				oldSelectedModelIds = selectedModels;
+
 				history =
 					(chatContent?.history ?? undefined) !== undefined
 						? chatContent.history
@@ -857,10 +971,13 @@
 		}
 	};
 
-	const scrollToBottom = async () => {
+	const scrollToBottom = async (behavior = 'auto') => {
 		await tick();
 		if (messagesContainerElement) {
-			messagesContainerElement.scrollTop = messagesContainerElement.scrollHeight;
+			messagesContainerElement.scrollTo({
+				top: messagesContainerElement.scrollHeight,
+				behavior
+			});
 		}
 	};
 	const chatCompletedHandler = async (chatId, modelId, responseMessageId, messages) => {
@@ -875,6 +992,7 @@
 				...(m.usage ? { usage: m.usage } : {}),
 				...(m.sources ? { sources: m.sources } : {})
 			})),
+			filter_ids: selectedFilterIds.length > 0 ? selectedFilterIds : undefined,
 			model_item: $models.find((m) => m.id === modelId),
 			chat_id: chatId,
 			session_id: $socket?.id,
@@ -986,7 +1104,7 @@
 	};
 
 	const createMessagePair = async (userPrompt) => {
-		prompt = '';
+		messageInput?.setText('');
 		if (selectedModels.length === 0) {
 			toast.error($i18n.t('Model not selected'));
 		} else {
@@ -1115,7 +1233,7 @@
 			await handleOpenAIError(error, message);
 		}
 
-		if (sources) {
+		if (sources && !message?.sources) {
 			message.sources = sources;
 		}
 
@@ -1137,7 +1255,7 @@
 
 					// Emit chat event for TTS
 					const messageContentParts = getMessageContentParts(
-						message.content,
+						removeAllDetails(message.content),
 						$config?.audio?.tts?.split_on ?? 'punctuation'
 					);
 					messageContentParts.pop();
@@ -1171,7 +1289,7 @@
 
 			// Emit chat event for TTS
 			const messageContentParts = getMessageContentParts(
-				message.content,
+				removeAllDetails(message.content),
 				$config?.audio?.tts?.split_on ?? 'punctuation'
 			);
 			messageContentParts.pop();
@@ -1218,9 +1336,10 @@
 
 			// Emit chat event for TTS
 			let lastMessageContentPart =
-				getMessageContentParts(message.content, $config?.audio?.tts?.split_on ?? 'punctuation')?.at(
-					-1
-				) ?? '';
+				getMessageContentParts(
+					removeAllDetails(message.content),
+					$config?.audio?.tts?.split_on ?? 'punctuation'
+				)?.at(-1) ?? '';
 			if (lastMessageContentPart) {
 				eventTarget.dispatchEvent(
 					new CustomEvent('chat', {
@@ -1238,6 +1357,12 @@
 			);
 
 			history.messages[message.id] = message;
+
+			await tick();
+			if (autoScroll) {
+				scrollToBottom();
+			}
+
 			await chatCompletedHandler(
 				chatId,
 				message.model,
@@ -1247,6 +1372,8 @@
 		}
 
 		console.log(data);
+		await tick();
+
 		if (autoScroll) {
 			scrollToBottom();
 		}
@@ -1306,7 +1433,7 @@
 			return;
 		}
 
-		prompt = '';
+		messageInput?.setText('');
 
 		// Reset chat input textarea
 		if (!($settings?.richTextInput ?? true)) {
@@ -1327,7 +1454,7 @@
 		);
 
 		files = [];
-		prompt = '';
+		messageInput?.setText('');
 
 		// Create user message
 		let userMessageId = uuidv4();
@@ -1357,14 +1484,23 @@
 
 		saveSessionSelectedModels();
 
-		await sendPrompt(history, userPrompt, userMessageId, { newChat: true });
+		await sendMessage(history, userMessageId, { newChat: true });
 	};
 
-	const sendPrompt = async (
+	const sendMessage = async (
 		_history,
-		prompt: string,
 		parentId: string,
-		{ modelId = null, modelIdx = null, newChat = false } = {}
+		{
+			messages = null,
+			modelId = null,
+			modelIdx = null,
+			newChat = false
+		}: {
+			messages?: any[] | null;
+			modelId?: string | null;
+			modelIdx?: number | null;
+			newChat?: boolean;
+		} = {}
 	) => {
 		if (autoScroll) {
 			scrollToBottom();
@@ -1396,7 +1532,6 @@
 					model: model.id,
 					modelName: model.name ?? model.id,
 					modelIdx: modelIdx ? modelIdx : _modelIdx,
-					userContext: null,
 					timestamp: Math.floor(Date.now() / 1000) // Unix epoch
 				};
 
@@ -1435,9 +1570,8 @@
 				const model = $models.filter((m) => m.id === modelId).at(0);
 
 				if (model) {
-					const messages = createMessagesList(_history, parentId);
 					// If there are image files, check if model is vision capable
-					const hasImages = messages.some((message) =>
+					const hasImages = createMessagesList(_history, parentId).some((message) =>
 						message.files?.some((file) => file.type === 'image')
 					);
 
@@ -1451,36 +1585,18 @@
 
 					let responseMessageId =
 						responseMessageIds[`${modelId}-${modelIdx ? modelIdx : _modelIdx}`];
-					let responseMessage = _history.messages[responseMessageId];
-
-					let userContext = null;
-					if ($settings?.memory ?? false) {
-						if (userContext === null) {
-							const res = await queryMemory(localStorage.token, prompt).catch((error) => {
-								toast.error(`${error}`);
-								return null;
-							});
-							if (res) {
-								if (res.documents[0].length > 0) {
-									userContext = res.documents[0].reduce((acc, doc, index) => {
-										const createdAtTimestamp = res.metadatas[0][index].created_at;
-										const createdAtDate = new Date(createdAtTimestamp * 1000)
-											.toISOString()
-											.split('T')[0];
-										return `${acc}${index + 1}. [${createdAtDate}]. ${doc}\n`;
-									}, '');
-								}
-
-								console.log(userContext);
-							}
-						}
-					}
-					responseMessage.userContext = userContext;
-
 					const chatEventEmitter = await getChatEventEmitter(model.id, _chatId);
 
 					scrollToBottom();
-					await sendPromptSocket(_history, model, responseMessageId, _chatId);
+					await sendMessageSocket(
+						model,
+						messages && messages.length > 0
+							? messages
+							: createMessagesList(_history, responseMessageId),
+						_history,
+						responseMessageId,
+						_chatId
+					);
 
 					if (chatEventEmitter) clearInterval(chatEventEmitter);
 				} else {
@@ -1493,16 +1609,25 @@
 		chats.set(await getChatList(localStorage.token, $currentChatPage));
 	};
 
-	const sendPromptSocket = async (_history, model, responseMessageId, _chatId) => {
+	const sendMessageSocket = async (model, _messages, _history, responseMessageId, _chatId) => {
 		const responseMessage = _history.messages[responseMessageId];
 		const userMessage = _history.messages[responseMessage.parentId];
+
+		const chatMessageFiles = _messages
+			.filter((message) => message.files)
+			.flatMap((message) => message.files);
+
+		// Filter chatFiles to only include files that are in the chatMessageFiles
+		chatFiles = chatFiles.filter((item) => {
+			const fileExists = chatMessageFiles.some((messageFile) => messageFile.id === item.id);
+			return fileExists;
+		});
 
 		let files = JSON.parse(JSON.stringify(chatFiles));
 		files.push(
 			...(userMessage?.files ?? []).filter((item) =>
-				['doc', 'file', 'collection'].includes(item.type)
-			),
-			...(responseMessage?.files ?? []).filter((item) => ['web_search_results'].includes(item.type))
+				['doc', 'text', 'file', 'note', 'collection'].includes(item.type)
+			)
 		);
 		// Remove duplicates
 		files = files.filter(
@@ -1527,7 +1652,7 @@
 			true;
 
 		let messages = [
-			params?.system || $settings.system || (responseMessage?.userContext ?? null)
+			params?.system || $settings.system
 				? {
 						role: 'system',
 						content: `${promptTemplate(
@@ -1539,14 +1664,10 @@
 										return undefined;
 									})
 								: undefined
-						)}${
-							(responseMessage?.userContext ?? null)
-								? `\n\nUser Context:\n${responseMessage?.userContext ?? ''}`
-								: ''
-						}`
+						)}`
 					}
 				: undefined,
-			...createMessagesList(_history, responseMessageId).map((message) => ({
+			..._messages.map((message) => ({
 				...message,
 				content: processDetails(message.content)
 			}))
@@ -1588,9 +1709,6 @@
 				params: {
 					...$settings?.params,
 					...params,
-
-					format: $settings.requestFormat ?? undefined,
-					keep_alive: $settings.keepAlive ?? undefined,
 					stop:
 						(params?.stop ?? $settings?.params?.stop ?? undefined)
 							? (params?.stop.split(',').map((token) => token.trim()) ?? $settings.params.stop).map(
@@ -1600,6 +1718,8 @@
 				},
 
 				files: (files?.length ?? 0) > 0 ? files : undefined,
+
+				filter_ids: selectedFilterIds.length > 0 ? selectedFilterIds : undefined,
 				tool_ids: selectedToolIds.length > 0 ? selectedToolIds : undefined,
 				tool_servers: $toolServers,
 
@@ -1618,7 +1738,8 @@
 						$config?.features?.enable_web_search &&
 						($user?.role === 'admin' || $user?.permissions?.features?.web_search)
 							? webSearchEnabled || ($settings?.webSearch ?? false) === 'always'
-							: false
+							: false,
+					memory: $settings?.memory ?? false
 				},
 				variables: {
 					...getPromptVariables(
@@ -1637,19 +1758,20 @@
 				chat_id: $chatId,
 				id: responseMessageId,
 
-				...(!$temporaryChatEnabled &&
-				(messages.length == 1 ||
-					(messages.length == 2 &&
-						messages.at(0)?.role === 'system' &&
-						messages.at(1)?.role === 'user')) &&
-				(selectedModels[0] === model.id || atSelectedModel !== undefined)
-					? {
-							background_tasks: {
+				background_tasks: {
+					...(!$temporaryChatEnabled &&
+					(messages.length == 1 ||
+						(messages.length == 2 &&
+							messages.at(0)?.role === 'system' &&
+							messages.at(1)?.role === 'user')) &&
+					(selectedModels[0] === model.id || atSelectedModel !== undefined)
+						? {
 								title_generation: $settings?.title?.auto ?? true,
 								tags_generation: $settings?.autoTags ?? true
 							}
-						}
-					: {}),
+						: {}),
+					follow_up_generation: $settings?.autoFollowUps ?? true
+				},
 
 				...(stream && (model.info?.meta?.capabilities?.usage ?? false)
 					? {
@@ -1661,15 +1783,29 @@
 			},
 			`${WEBUI_BASE_URL}/api`
 		).catch(async (error) => {
-			toast.error(`${error}`);
+			console.log(error);
 
+			let errorMessage = error;
+			if (error?.error?.message) {
+				errorMessage = error.error.message;
+			} else if (error?.message) {
+				errorMessage = error.message;
+			}
+
+			if (typeof errorMessage === 'object') {
+				errorMessage = $i18n.t(`Uh-oh! There was an issue with the response.`);
+			}
+
+			toast.error(`${errorMessage}`);
 			responseMessage.error = {
 				content: error
 			};
+
 			responseMessage.done = true;
 
 			history.messages[responseMessageId] = responseMessage;
 			history.currentId = responseMessageId;
+
 			return null;
 		});
 
@@ -1754,6 +1890,12 @@
 				scrollToBottom();
 			}
 		}
+
+		if (generating) {
+			generating = false;
+			generationController?.abort();
+			generationController = null;
+		}
 	};
 
 	const submitMessage = async (parentId, prompt) => {
@@ -1766,7 +1908,8 @@
 			childrenIds: [],
 			role: 'user',
 			content: userPrompt,
-			models: selectedModels
+			models: selectedModels,
+			timestamp: Math.floor(Date.now() / 1000) // Unix epoch
 		};
 
 		if (parentId !== null) {
@@ -1785,31 +1928,39 @@
 			scrollToBottom();
 		}
 
-		await sendPrompt(history, userPrompt, userMessageId);
+		await sendMessage(history, userMessageId);
 	};
 
-	const regenerateResponse = async (message) => {
+	const regenerateResponse = async (message, suggestionPrompt = null) => {
 		console.log('regenerateResponse');
 
 		if (history.currentId) {
 			let userMessage = history.messages[message.parentId];
-			let userPrompt = userMessage.content;
 
 			if (autoScroll) {
 				scrollToBottom();
 			}
 
-			if ((userMessage?.models ?? [...selectedModels]).length == 1) {
-				// If user message has only one model selected, sendPrompt automatically selects it for regeneration
-				await sendPrompt(history, userPrompt, userMessage.id);
-			} else {
-				// If there are multiple models selected, use the model of the response message for regeneration
-				// e.g. many model chat
-				await sendPrompt(history, userPrompt, userMessage.id, {
-					modelId: message.model,
-					modelIdx: message.modelIdx
-				});
-			}
+			await sendMessage(history, userMessage.id, {
+				...(suggestionPrompt
+					? {
+							messages: [
+								...createMessagesList(history, message.id),
+								{
+									role: 'user',
+									content: suggestionPrompt
+								}
+							]
+						}
+					: {}),
+				...((userMessage?.models ?? [...selectedModels]).length > 1
+					? {
+							// If multiple models are selected, use the model from the message
+							modelId: message.model,
+							modelIdx: message.modelIdx
+						}
+					: {})
+			});
 		}
 	};
 
@@ -1827,7 +1978,13 @@
 				.at(0);
 
 			if (model) {
-				await sendPromptSocket(history, model, responseMessage.id, _chatId);
+				await sendMessageSocket(
+					model,
+					createMessagesList(history, responseMessage.id),
+					history,
+					responseMessage.id,
+					_chatId
+				);
 			}
 		}
 	};
@@ -1843,6 +2000,7 @@
 		history.messages[messageId] = message;
 
 		try {
+			generating = true;
 			const [res, controller] = await generateMoACompletion(
 				localStorage.token,
 				message.model,
@@ -1850,11 +2008,14 @@
 				responses
 			);
 
-			if (res && res.ok && res.body) {
+			if (res && res.ok && res.body && generating) {
+				generationController = controller;
 				const textStream = await createOpenAITextStream(res.body, $settings.splitLargeChunks);
 				for await (const update of textStream) {
 					const { value, done, sources, error, usage } = update;
 					if (error || done) {
+						generating = false;
+						generationController = null;
 						break;
 					}
 
@@ -1883,25 +2044,33 @@
 		let _chatId = $chatId;
 
 		if (!$temporaryChatEnabled) {
-			chat = await createNewChat(localStorage.token, {
-				id: _chatId,
-				title: $i18n.t('New Chat'),
-				models: selectedModels,
-				system: $settings.system ?? undefined,
-				params: params,
-				history: history,
-				messages: createMessagesList(history, history.currentId),
-				tags: [],
-				timestamp: Date.now()
-			});
+			chat = await createNewChat(
+				localStorage.token,
+				{
+					id: _chatId,
+					title: $i18n.t('New Chat'),
+					models: selectedModels,
+					system: $settings.system ?? undefined,
+					params: params,
+					history: history,
+					messages: createMessagesList(history, history.currentId),
+					tags: [],
+					timestamp: Date.now()
+				},
+				$selectedFolder?.id
+			);
 
 			_chatId = chat.id;
 			await chatId.set(_chatId);
 
+			window.history.replaceState(history.state, '', `/c/${_chatId}`);
+
+			await tick();
+
 			await chats.set(await getChatList(localStorage.token, $currentChatPage));
 			currentChatPage.set(1);
 
-			window.history.replaceState(history.state, '', `/c/${_chatId}`);
+			selectedFolder.set(null);
 		} else {
 			_chatId = 'local';
 			await chatId.set('local');
@@ -1925,6 +2094,33 @@
 				await chats.set(await getChatList(localStorage.token, $currentChatPage));
 			}
 		}
+	};
+
+	const MAX_DRAFT_LENGTH = 5000;
+	let saveDraftTimeout = null;
+
+	const saveDraft = async (draft, chatId = null) => {
+		if (saveDraftTimeout) {
+			clearTimeout(saveDraftTimeout);
+		}
+
+		if (draft.prompt !== null && draft.prompt.length < MAX_DRAFT_LENGTH) {
+			saveDraftTimeout = setTimeout(async () => {
+				await sessionStorage.setItem(
+					`chat-input${chatId ? `-${chatId}` : ''}`,
+					JSON.stringify(draft)
+				);
+			}, 500);
+		} else {
+			sessionStorage.removeItem(`chat-input${chatId ? `-${chatId}` : ''}`);
+		}
+	};
+
+	const clearDraft = async (chatId = null) => {
+		if (saveDraftTimeout) {
+			clearTimeout(saveDraftTimeout);
+		}
+		await sessionStorage.removeItem(`chat-input${chatId ? `-${chatId}` : ''}`);
 	};
 </script>
 
@@ -1964,198 +2160,215 @@
 	id="chat-container"
 >
 	{#if !loading}
-		{#if $settings?.backgroundImageUrl ?? null}
-			<div
-				class="absolute {$showSidebar
-					? 'md:max-w-[calc(100%-260px)] md:translate-x-[260px]'
-					: ''} top-0 left-0 w-full h-full bg-cover bg-center bg-no-repeat"
-				style="background-image: url({$settings.backgroundImageUrl})  "
-			/>
-
-			<div
-				class="absolute top-0 left-0 w-full h-full bg-linear-to-t from-white to-white/85 dark:from-gray-900 dark:to-gray-900/90 z-0"
-			/>
-		{/if}
-
-		<PaneGroup direction="horizontal" class="w-full h-full">
-			<Pane defaultSize={50} class="h-full flex relative max-w-full flex-col">
-				<Navbar
-					bind:this={navbarElement}
-					chat={{
-						id: $chatId,
-						chat: {
-							title: $chatTitle,
-							models: selectedModels,
-							system: $settings.system ?? undefined,
-							params: params,
-							history: history,
-							timestamp: Date.now()
-						}
-					}}
-					{history}
-					title={$chatTitle}
-					bind:selectedModels
-					shareEnabled={!!history.currentId}
-					{initNewChat}
+		<div in:fade={{ duration: 50 }} class="w-full h-full flex flex-col">
+			{#if $settings?.backgroundImageUrl ?? $config?.license_metadata?.background_image_url ?? null}
+				<div
+					class="absolute {$showSidebar
+						? 'md:max-w-[calc(100%-260px)] md:translate-x-[260px]'
+						: ''} top-0 left-0 w-full h-full bg-cover bg-center bg-no-repeat"
+					style="background-image: url({$settings?.backgroundImageUrl ??
+						$config?.license_metadata?.background_image_url})  "
 				/>
 
-				<div class="flex flex-col flex-auto z-10 w-full @container">
-					{#if $settings?.landingPageMode === 'chat' || createMessagesList(history, history.currentId).length > 0}
-						<div
-							class=" pb-2.5 flex flex-col justify-between w-full flex-auto overflow-auto h-0 max-w-full z-10 scrollbar-hidden"
-							id="messages-container"
-							bind:this={messagesContainerElement}
-							on:scroll={(e) => {
-								autoScroll =
-									messagesContainerElement.scrollHeight - messagesContainerElement.scrollTop <=
-									messagesContainerElement.clientHeight + 5;
-							}}
-						>
-							<div class=" h-full w-full flex flex-col">
-								<Messages
-									chatId={$chatId}
-									bind:history
-									bind:autoScroll
-									bind:prompt
+				<div
+					class="absolute top-0 left-0 w-full h-full bg-linear-to-t from-white to-white/85 dark:from-gray-900 dark:to-gray-900/90 z-0"
+				/>
+			{/if}
+
+			<PaneGroup direction="horizontal" class="w-full h-full">
+				<Pane defaultSize={50} class="h-full flex relative max-w-full flex-col">
+					<Navbar
+						bind:this={navbarElement}
+						chat={{
+							id: $chatId,
+							chat: {
+								title: $chatTitle,
+								models: selectedModels,
+								system: $settings.system ?? undefined,
+								params: params,
+								history: history,
+								timestamp: Date.now()
+							}
+						}}
+						{history}
+						title={$chatTitle}
+						bind:selectedModels
+						shareEnabled={!!history.currentId}
+						{initNewChat}
+						showBanners={!showCommands}
+					/>
+
+					<div class="flex flex-col flex-auto z-10 w-full @container overflow-auto">
+						{#if ($settings?.landingPageMode === 'chat' && !$selectedFolder) || createMessagesList(history, history.currentId).length > 0}
+							<div
+								class=" pb-2.5 flex flex-col justify-between w-full flex-auto overflow-auto h-0 max-w-full z-10 scrollbar-hidden"
+								id="messages-container"
+								bind:this={messagesContainerElement}
+								on:scroll={(e) => {
+									autoScroll =
+										messagesContainerElement.scrollHeight - messagesContainerElement.scrollTop <=
+										messagesContainerElement.clientHeight + 5;
+								}}
+							>
+								<div class=" h-full w-full flex flex-col">
+									<Messages
+										chatId={$chatId}
+										bind:history
+										bind:autoScroll
+										bind:prompt
+										setInputText={(text) => {
+											messageInput?.setText(text);
+										}}
+										{selectedModels}
+										{atSelectedModel}
+										{sendMessage}
+										{showMessage}
+										{submitMessage}
+										{continueResponse}
+										{regenerateResponse}
+										{mergeResponses}
+										{chatActionHandler}
+										{addMessages}
+										topPadding={true}
+										bottomPadding={files.length > 0}
+										{onSelect}
+									/>
+								</div>
+							</div>
+
+							<div class=" pb-2">
+								<MessageInput
+									bind:this={messageInput}
+									{history}
+									{taskIds}
 									{selectedModels}
-									{atSelectedModel}
-									{sendPrompt}
-									{showMessage}
-									{submitMessage}
-									{continueResponse}
-									{regenerateResponse}
-									{mergeResponses}
-									{chatActionHandler}
-									{addMessages}
-									bottomPadding={files.length > 0}
+									bind:files
+									bind:prompt
+									bind:autoScroll
+									bind:selectedToolIds
+									bind:selectedFilterIds
+									bind:imageGenerationEnabled
+									bind:codeInterpreterEnabled
+									bind:webSearchEnabled
+									bind:atSelectedModel
+									bind:showCommands
+									toolServers={$toolServers}
+									{generating}
+									{stopResponse}
+									{createMessagePair}
+									onChange={(data) => {
+										if (!$temporaryChatEnabled) {
+											saveDraft(data, $chatId);
+										}
+									}}
+									on:upload={async (e) => {
+										const { type, data } = e.detail;
+
+										if (type === 'web') {
+											await uploadWeb(data);
+										} else if (type === 'youtube') {
+											await uploadYoutubeTranscription(data);
+										} else if (type === 'google-drive') {
+											await uploadGoogleDriveFile(data);
+										}
+									}}
+									on:submit={async (e) => {
+										clearDraft();
+										if (e.detail || files.length > 0) {
+											await tick();
+											submitPrompt(
+												($settings?.richTextInput ?? true)
+													? e.detail.replaceAll('\n\n', '\n')
+													: e.detail
+											);
+										}
+									}}
+								/>
+
+								<div
+									class="absolute bottom-1 text-xs text-gray-500 text-center line-clamp-1 right-0 left-0"
+								>
+									<!-- {$i18n.t('LLMs can make mistakes. Verify important information.')} -->
+								</div>
+							</div>
+						{:else}
+							<div class="flex items-center h-full">
+								<Placeholder
+									{history}
+									{selectedModels}
+									bind:messageInput
+									bind:files
+									bind:prompt
+									bind:autoScroll
+									bind:selectedToolIds
+									bind:selectedFilterIds
+									bind:imageGenerationEnabled
+									bind:codeInterpreterEnabled
+									bind:webSearchEnabled
+									bind:atSelectedModel
+									bind:showCommands
+									toolServers={$toolServers}
+									{stopResponse}
+									{createMessagePair}
+									{onSelect}
+									onChange={(data) => {
+										if (!$temporaryChatEnabled) {
+											saveDraft(data);
+										}
+									}}
+									on:upload={async (e) => {
+										const { type, data } = e.detail;
+
+										if (type === 'web') {
+											await uploadWeb(data);
+										} else if (type === 'youtube') {
+											await uploadYoutubeTranscription(data);
+										}
+									}}
+									on:submit={async (e) => {
+										clearDraft();
+										if (e.detail || files.length > 0) {
+											await tick();
+											submitPrompt(
+												($settings?.richTextInput ?? true)
+													? e.detail.replaceAll('\n\n', '\n')
+													: e.detail
+											);
+										}
+									}}
 								/>
 							</div>
-						</div>
+						{/if}
+					</div>
+				</Pane>
 
-						<div class=" pb-[1rem]">
-							<MessageInput
-								{history}
-								{taskIds}
-								{selectedModels}
-								bind:files
-								bind:prompt
-								bind:autoScroll
-								bind:selectedToolIds
-								bind:imageGenerationEnabled
-								bind:codeInterpreterEnabled
-								bind:webSearchEnabled
-								bind:atSelectedModel
-								toolServers={$toolServers}
-								transparentBackground={$settings?.backgroundImageUrl ?? false}
-								{stopResponse}
-								{createMessagePair}
-								onChange={(input) => {
-									if (input.prompt !== null) {
-										localStorage.setItem(
-											`chat-input${$chatId ? `-${$chatId}` : ''}`,
-											JSON.stringify(input)
-										);
-									} else {
-										localStorage.removeItem(`chat-input${$chatId ? `-${$chatId}` : ''}`);
-									}
-								}}
-								on:upload={async (e) => {
-									const { type, data } = e.detail;
-
-									if (type === 'web') {
-										await uploadWeb(data);
-									} else if (type === 'youtube') {
-										await uploadYoutubeTranscription(data);
-									} else if (type === 'google-drive') {
-										await uploadGoogleDriveFile(data);
-									}
-								}}
-								on:submit={async (e) => {
-									if (e.detail || files.length > 0) {
-										await tick();
-										submitPrompt(
-											($settings?.richTextInput ?? true)
-												? e.detail.replaceAll('\n\n', '\n')
-												: e.detail
-										);
-									}
-								}}
-							/>
-
-							<div
-								class="absolute bottom-1 text-xs text-gray-500 text-center line-clamp-1 right-0 left-0"
-							>
-								<!-- {$i18n.t('LLMs can make mistakes. Verify important information.')} -->
-							</div>
-						</div>
-					{:else}
-						<div class="overflow-auto w-full h-full flex items-center">
-							<Placeholder
-								{history}
-								{selectedModels}
-								bind:files
-								bind:prompt
-								bind:autoScroll
-								bind:selectedToolIds
-								bind:imageGenerationEnabled
-								bind:codeInterpreterEnabled
-								bind:webSearchEnabled
-								bind:atSelectedModel
-								transparentBackground={$settings?.backgroundImageUrl ?? false}
-								toolServers={$toolServers}
-								{stopResponse}
-								{createMessagePair}
-								on:upload={async (e) => {
-									const { type, data } = e.detail;
-
-									if (type === 'web') {
-										await uploadWeb(data);
-									} else if (type === 'youtube') {
-										await uploadYoutubeTranscription(data);
-									}
-								}}
-								on:submit={async (e) => {
-									if (e.detail || files.length > 0) {
-										await tick();
-										submitPrompt(
-											($settings?.richTextInput ?? true)
-												? e.detail.replaceAll('\n\n', '\n')
-												: e.detail
-										);
-									}
-								}}
-							/>
-						</div>
-					{/if}
-				</div>
-			</Pane>
-
-			<ChatControls
-				bind:this={controlPaneComponent}
-				bind:history
-				bind:chatFiles
-				bind:params
-				bind:files
-				bind:pane={controlPane}
-				chatId={$chatId}
-				modelId={selectedModelIds?.at(0) ?? null}
-				models={selectedModelIds.reduce((a, e, i, arr) => {
-					const model = $models.find((m) => m.id === e);
-					if (model) {
-						return [...a, model];
-					}
-					return a;
-				}, [])}
-				{submitPrompt}
-				{stopResponse}
-				{showMessage}
-				{eventTarget}
-			/>
-		</PaneGroup>
+				<ChatControls
+					bind:this={controlPaneComponent}
+					bind:history
+					bind:chatFiles
+					bind:params
+					bind:files
+					bind:pane={controlPane}
+					chatId={$chatId}
+					modelId={selectedModelIds?.at(0) ?? null}
+					models={selectedModelIds.reduce((a, e, i, arr) => {
+						const model = $models.find((m) => m.id === e);
+						if (model) {
+							return [...a, model];
+						}
+						return a;
+					}, [])}
+					{submitPrompt}
+					{stopResponse}
+					{showMessage}
+					{eventTarget}
+				/>
+			</PaneGroup>
+		</div>
 	{:else if loading}
 		<div class=" flex items-center justify-center h-full w-full">
 			<div class="m-auto">
-				<Spinner />
+				<Spinner className="size-5" />
 			</div>
 		</div>
 	{/if}

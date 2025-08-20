@@ -27,6 +27,7 @@ from open_webui.config import (
     ENABLE_OAUTH_GROUP_CREATION,
     OAUTH_BLOCKED_GROUPS,
     OAUTH_ROLES_CLAIM,
+    OAUTH_SUB_CLAIM,
     OAUTH_GROUPS_CLAIM,
     OAUTH_EMAIL_CLAIM,
     OAUTH_PICTURE_CLAIM,
@@ -34,12 +35,14 @@ from open_webui.config import (
     OAUTH_ALLOWED_ROLES,
     OAUTH_ADMIN_ROLES,
     OAUTH_ALLOWED_DOMAINS,
+    OAUTH_UPDATE_PICTURE_ON_LOGIN,
     WEBHOOK_URL,
     JWT_EXPIRES_IN,
     AppConfig,
 )
 from open_webui.constants import ERROR_MESSAGES, WEBHOOK_MESSAGES
 from open_webui.env import (
+    AIOHTTP_CLIENT_SESSION_SSL,
     WEBUI_NAME,
     WEBUI_AUTH_COOKIE_SAME_SITE,
     WEBUI_AUTH_COOKIE_SECURE,
@@ -63,6 +66,7 @@ auth_manager_config.ENABLE_OAUTH_GROUP_MANAGEMENT = ENABLE_OAUTH_GROUP_MANAGEMEN
 auth_manager_config.ENABLE_OAUTH_GROUP_CREATION = ENABLE_OAUTH_GROUP_CREATION
 auth_manager_config.OAUTH_BLOCKED_GROUPS = OAUTH_BLOCKED_GROUPS
 auth_manager_config.OAUTH_ROLES_CLAIM = OAUTH_ROLES_CLAIM
+auth_manager_config.OAUTH_SUB_CLAIM = OAUTH_SUB_CLAIM
 auth_manager_config.OAUTH_GROUPS_CLAIM = OAUTH_GROUPS_CLAIM
 auth_manager_config.OAUTH_EMAIL_CLAIM = OAUTH_EMAIL_CLAIM
 auth_manager_config.OAUTH_PICTURE_CLAIM = OAUTH_PICTURE_CLAIM
@@ -72,6 +76,7 @@ auth_manager_config.OAUTH_ADMIN_ROLES = OAUTH_ADMIN_ROLES
 auth_manager_config.OAUTH_ALLOWED_DOMAINS = OAUTH_ALLOWED_DOMAINS
 auth_manager_config.WEBHOOK_URL = WEBHOOK_URL
 auth_manager_config.JWT_EXPIRES_IN = JWT_EXPIRES_IN
+auth_manager_config.OAUTH_UPDATE_PICTURE_ON_LOGIN = OAUTH_UPDATE_PICTURE_ON_LOGIN
 
 
 class OAuthManager:
@@ -85,11 +90,12 @@ class OAuthManager:
         return self.oauth.create_client(provider_name)
 
     def get_user_role(self, user, user_data):
-        if user and Users.get_num_users() == 1:
+        user_count = Users.get_num_users()
+        if user and user_count == 1:
             # If the user is the only user, assign the role "admin" - actually repairs role for single user on login
             log.debug("Assigning the only user the admin role")
             return "admin"
-        if not user and Users.get_num_users() == 0:
+        if not user and user_count == 0:
             # If there are no users, assign the role "admin", as the first user will be an admin
             log.debug("Assigning the first user the admin role")
             return "admin"
@@ -282,6 +288,51 @@ class OAuthManager:
                     id=group_model.id, form_data=update_form, overwrite=False
                 )
 
+    async def _process_picture_url(
+        self, picture_url: str, access_token: str = None
+    ) -> str:
+        """Process a picture URL and return a base64 encoded data URL.
+
+        Args:
+            picture_url: The URL of the picture to process
+            access_token: Optional OAuth access token for authenticated requests
+
+        Returns:
+            A data URL containing the base64 encoded picture, or "/user.png" if processing fails
+        """
+        if not picture_url:
+            return "/user.png"
+
+        try:
+            get_kwargs = {}
+            if access_token:
+                get_kwargs["headers"] = {
+                    "Authorization": f"Bearer {access_token}",
+                }
+            async with aiohttp.ClientSession(trust_env=True) as session:
+                async with session.get(
+                    picture_url, **get_kwargs, ssl=AIOHTTP_CLIENT_SESSION_SSL
+                ) as resp:
+                    if resp.ok:
+                        picture = await resp.read()
+                        base64_encoded_picture = base64.b64encode(picture).decode(
+                            "utf-8"
+                        )
+                        guessed_mime_type = mimetypes.guess_type(picture_url)[0]
+                        if guessed_mime_type is None:
+                            guessed_mime_type = "image/jpeg"
+                        return (
+                            f"data:{guessed_mime_type};base64,{base64_encoded_picture}"
+                        )
+                    else:
+                        log.warning(
+                            f"Failed to fetch profile picture from {picture_url}"
+                        )
+                        return "/user.png"
+        except Exception as e:
+            log.error(f"Error processing profile picture '{picture_url}': {e}")
+            return "/user.png"
+
     async def handle_login(self, request, provider):
         if provider not in OAUTH_PROVIDERS:
             raise HTTPException(404)
@@ -310,11 +361,18 @@ class OAuthManager:
             log.warning(f"OAuth callback failed, user data is missing: {token}")
             raise HTTPException(400, detail=ERROR_MESSAGES.INVALID_CRED)
 
-        sub = user_data.get(OAUTH_PROVIDERS[provider].get("sub_claim", "sub"))
+        if auth_manager_config.OAUTH_SUB_CLAIM:
+            sub = user_data.get(auth_manager_config.OAUTH_SUB_CLAIM)
+        else:
+            # Fallback to the default sub claim if not configured
+            sub = user_data.get(OAUTH_PROVIDERS[provider].get("sub_claim", "sub"))
+
         if not sub:
             log.warning(f"OAuth callback failed, sub is missing: {user_data}")
             raise HTTPException(400, detail=ERROR_MESSAGES.INVALID_CRED)
+
         provider_sub = f"{provider}@{sub}"
+
         email_claim = auth_manager_config.OAUTH_EMAIL_CLAIM
         email = user_data.get(email_claim, "")
         # We currently mandate that email addresses are provided
@@ -326,7 +384,9 @@ class OAuthManager:
                     headers = {"Authorization": f"Bearer {access_token}"}
                     async with aiohttp.ClientSession(trust_env=True) as session:
                         async with session.get(
-                            "https://api.github.com/user/emails", headers=headers
+                            "https://api.github.com/user/emails",
+                            headers=headers,
+                            ssl=AIOHTTP_CLIENT_SESSION_SSL,
                         ) as resp:
                             if resp.ok:
                                 emails = await resp.json()
@@ -382,9 +442,23 @@ class OAuthManager:
             if user.role != determined_role:
                 Users.update_user_role_by_id(user.id, determined_role)
 
-        if not user:
-            user_count = Users.get_num_users()
+            # Update profile picture if enabled and different from current
+            if auth_manager_config.OAUTH_UPDATE_PICTURE_ON_LOGIN:
+                picture_claim = auth_manager_config.OAUTH_PICTURE_CLAIM
+                if picture_claim:
+                    new_picture_url = user_data.get(
+                        picture_claim, OAUTH_PROVIDERS[provider].get("picture_url", "")
+                    )
+                    processed_picture_url = await self._process_picture_url(
+                        new_picture_url, token.get("access_token")
+                    )
+                    if processed_picture_url != user.profile_image_url:
+                        Users.update_user_profile_image_url_by_id(
+                            user.id, processed_picture_url
+                        )
+                        log.debug(f"Updated profile picture for user {user.email}")
 
+        if not user:
             # If the user does not exist, check if signups are enabled
             if auth_manager_config.ENABLE_OAUTH_SIGNUP:
                 # Check if an existing user with the same email already exists
@@ -397,40 +471,9 @@ class OAuthManager:
                     picture_url = user_data.get(
                         picture_claim, OAUTH_PROVIDERS[provider].get("picture_url", "")
                     )
-                    if picture_url:
-                        # Download the profile image into a base64 string
-                        try:
-                            access_token = token.get("access_token")
-                            get_kwargs = {}
-                            if access_token:
-                                get_kwargs["headers"] = {
-                                    "Authorization": f"Bearer {access_token}",
-                                }
-                            async with aiohttp.ClientSession(trust_env=True) as session:
-                                async with session.get(
-                                    picture_url, **get_kwargs
-                                ) as resp:
-                                    if resp.ok:
-                                        picture = await resp.read()
-                                        base64_encoded_picture = base64.b64encode(
-                                            picture
-                                        ).decode("utf-8")
-                                        guessed_mime_type = mimetypes.guess_type(
-                                            picture_url
-                                        )[0]
-                                        if guessed_mime_type is None:
-                                            # assume JPG, browsers are tolerant enough of image formats
-                                            guessed_mime_type = "image/jpeg"
-                                        picture_url = f"data:{guessed_mime_type};base64,{base64_encoded_picture}"
-                                    else:
-                                        picture_url = "/user.png"
-                        except Exception as e:
-                            log.error(
-                                f"Error downloading profile image '{picture_url}': {e}"
-                            )
-                            picture_url = "/user.png"
-                    if not picture_url:
-                        picture_url = "/user.png"
+                    picture_url = await self._process_picture_url(
+                        picture_url, token.get("access_token")
+                    )
                 else:
                     picture_url = "/user.png"
 
@@ -486,7 +529,7 @@ class OAuthManager:
         response.set_cookie(
             key="token",
             value=jwt_token,
-            httponly=True,  # Ensures the cookie is not accessible via JavaScript
+            httponly=False,  # Required for frontend access
             samesite=WEBUI_AUTH_COOKIE_SAME_SITE,
             secure=WEBUI_AUTH_COOKIE_SECURE,
         )
@@ -501,5 +544,10 @@ class OAuthManager:
                 secure=WEBUI_AUTH_COOKIE_SECURE,
             )
         # Redirect back to the frontend with the JWT token
-        redirect_url = f"{request.base_url}auth#token={jwt_token}"
+
+        redirect_base_url = str(request.app.state.config.WEBUI_URL or request.base_url)
+        if redirect_base_url.endswith("/"):
+            redirect_base_url = redirect_base_url[:-1]
+        redirect_url = f"{redirect_base_url}/auth"
+
         return RedirectResponse(url=redirect_url, headers=response.headers)

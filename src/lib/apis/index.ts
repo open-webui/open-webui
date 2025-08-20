@@ -8,24 +8,33 @@ import { toast } from 'svelte-sonner';
 export const getModels = async (
 	token: string = '',
 	connections: object | null = null,
-	base: boolean = false
+	base: boolean = false,
+	refresh: boolean = false
 ) => {
+	const searchParams = new URLSearchParams();
+	if (refresh) {
+		searchParams.append('refresh', 'true');
+	}
+
 	let error = null;
-	const res = await fetch(`${WEBUI_BASE_URL}/api/models${base ? '/base' : ''}`, {
-		method: 'GET',
-		headers: {
-			Accept: 'application/json',
-			'Content-Type': 'application/json',
-			...(token && { authorization: `Bearer ${token}` })
+	const res = await fetch(
+		`${WEBUI_BASE_URL}/api/models${base ? '/base' : ''}?${searchParams.toString()}`,
+		{
+			method: 'GET',
+			headers: {
+				Accept: 'application/json',
+				'Content-Type': 'application/json',
+				...(token && { authorization: `Bearer ${token}` })
+			}
 		}
-	})
+	)
 		.then(async (res) => {
 			if (!res.ok) throw await res.json();
 			return res.json();
 		})
 		.catch((err) => {
 			error = err;
-			console.log(err);
+			console.error(err);
 			return null;
 		});
 
@@ -173,7 +182,7 @@ export const chatCompleted = async (token: string, body: ChatCompletedForm) => {
 			return res.json();
 		})
 		.catch((err) => {
-			console.log(err);
+			console.error(err);
 			if ('detail' in err) {
 				error = err.detail;
 			} else {
@@ -212,7 +221,7 @@ export const chatAction = async (token: string, action_id: string, body: ChatAct
 			return res.json();
 		})
 		.catch((err) => {
-			console.log(err);
+			console.error(err);
 			if ('detail' in err) {
 				error = err.detail;
 			} else {
@@ -244,7 +253,7 @@ export const stopTask = async (token: string, id: string) => {
 			return res.json();
 		})
 		.catch((err) => {
-			console.log(err);
+			console.error(err);
 			if ('detail' in err) {
 				error = err.detail;
 			} else {
@@ -276,7 +285,7 @@ export const getTaskIdsByChatId = async (token: string, chat_id: string) => {
 			return res.json();
 		})
 		.catch((err) => {
-			console.log(err);
+			console.error(err);
 			if ('detail' in err) {
 				error = err.detail;
 			} else {
@@ -315,7 +324,7 @@ export const getToolServerData = async (token: string, url: string) => {
 			}
 		})
 		.catch((err) => {
-			console.log(err);
+			console.error(err);
 			if ('detail' in err) {
 				error = err.detail;
 			} else {
@@ -346,11 +355,15 @@ export const getToolServersData = async (i18n, servers: object[]) => {
 				.map(async (server) => {
 					const data = await getToolServerData(
 						(server?.auth_type ?? 'bearer') === 'bearer' ? server?.key : localStorage.token,
-						server?.url + '/' + (server?.path ?? 'openapi.json')
+						(server?.path ?? '').includes('://')
+							? server?.path
+							: `${server?.url}${(server?.path ?? '').startsWith('/') ? '' : '/'}${server?.path}`
 					).catch((err) => {
 						toast.error(
 							i18n.t(`Failed to connect to {{URL}} OpenAPI tool server`, {
-								URL: server?.url + '/' + (server?.path ?? 'openapi.json')
+								URL: (server?.path ?? '').includes('://')
+									? server?.path
+									: `${server?.url}${(server?.path ?? '').startsWith('/') ? '' : '/'}${server?.path}`
 							})
 						);
 						return null;
@@ -452,7 +465,7 @@ export const executeToolServer = async (
 			...(token && { authorization: `Bearer ${token}` })
 		};
 
-		let requestOptions: RequestInit = {
+		const requestOptions: RequestInit = {
 			method: httpMethod.toUpperCase(),
 			headers
 		};
@@ -491,7 +504,7 @@ export const getTaskConfig = async (token: string = '') => {
 			return res.json();
 		})
 		.catch((err) => {
-			console.log(err);
+			console.error(err);
 			error = err;
 			return null;
 		});
@@ -520,7 +533,7 @@ export const updateTaskConfig = async (token: string, config: object) => {
 			return res.json();
 		})
 		.catch((err) => {
-			console.log(err);
+			console.error(err);
 			if ('detail' in err) {
 				error = err.detail;
 			} else {
@@ -562,7 +575,7 @@ export const generateTitle = async (
 			return res.json();
 		})
 		.catch((err) => {
-			console.log(err);
+			console.error(err);
 			if ('detail' in err) {
 				error = err.detail;
 			}
@@ -608,6 +621,78 @@ export const generateTitle = async (
 	}
 };
 
+export const generateFollowUps = async (
+	token: string = '',
+	model: string,
+	messages: string,
+	chat_id?: string
+) => {
+	let error = null;
+
+	const res = await fetch(`${WEBUI_BASE_URL}/api/v1/tasks/follow_ups/completions`, {
+		method: 'POST',
+		headers: {
+			Accept: 'application/json',
+			'Content-Type': 'application/json',
+			Authorization: `Bearer ${token}`
+		},
+		body: JSON.stringify({
+			model: model,
+			messages: messages,
+			...(chat_id && { chat_id: chat_id })
+		})
+	})
+		.then(async (res) => {
+			if (!res.ok) throw await res.json();
+			return res.json();
+		})
+		.catch((err) => {
+			console.error(err);
+			if ('detail' in err) {
+				error = err.detail;
+			}
+			return null;
+		});
+
+	if (error) {
+		throw error;
+	}
+
+	try {
+		// Step 1: Safely extract the response string
+		const response = res?.choices[0]?.message?.content ?? '';
+
+		// Step 2: Attempt to fix common JSON format issues like single quotes
+		const sanitizedResponse = response.replace(/['‘’`]/g, '"'); // Convert single quotes to double quotes for valid JSON
+
+		// Step 3: Find the relevant JSON block within the response
+		const jsonStartIndex = sanitizedResponse.indexOf('{');
+		const jsonEndIndex = sanitizedResponse.lastIndexOf('}');
+
+		// Step 4: Check if we found a valid JSON block (with both `{` and `}`)
+		if (jsonStartIndex !== -1 && jsonEndIndex !== -1) {
+			const jsonResponse = sanitizedResponse.substring(jsonStartIndex, jsonEndIndex + 1);
+
+			// Step 5: Parse the JSON block
+			const parsed = JSON.parse(jsonResponse);
+
+			// Step 6: If there's a "follow_ups" key, return the follow_ups array; otherwise, return an empty array
+			if (parsed && parsed.follow_ups) {
+				return Array.isArray(parsed.follow_ups) ? parsed.follow_ups : [];
+			} else {
+				return [];
+			}
+		}
+
+		// If no valid JSON block found, return an empty array
+		return [];
+	} catch (e) {
+		// Catch and safely return empty array on any parsing errors
+		console.error('Failed to parse response: ', e);
+		return [];
+	}
+};
+
 export const generateTags = async (
 	token: string = '',
 	model: string,
@@ -634,7 +719,7 @@ export const generateTags = async (
 			return res.json();
 		})
 		.catch((err) => {
-			console.log(err);
+			console.error(err);
 			if ('detail' in err) {
 				error = err.detail;
 			}
@@ -706,7 +791,7 @@ export const generateEmoji = async (
 			return res.json();
 		})
 		.catch((err) => {
-			console.log(err);
+			console.error(err);
 			if ('detail' in err) {
 				error = err.detail;
 			}
@@ -733,7 +818,7 @@ export const generateQueries = async (
 	model: string,
 	messages: object[],
 	prompt: string,
-	type?: string = 'web_search'
+	type: string = 'web_search'
 ) => {
 	let error = null;
 
@@ -756,7 +841,7 @@ export const generateQueries = async (
 			return res.json();
 		})
 		.catch((err) => {
-			console.log(err);
+			console.error(err);
 			if ('detail' in err) {
 				error = err.detail;
 			}
@@ -828,7 +913,7 @@ export const generateAutoCompletion = async (
 			return res.json();
 		})
 		.catch((err) => {
-			console.log(err);
+			console.error(err);
 			if ('detail' in err) {
 				error = err.detail;
 			}
@@ -892,7 +977,7 @@ export const generateMoACompletion = async (
 			stream: true
 		})
 	}).catch((err) => {
-		console.log(err);
+		console.error(err);
 		error = err;
 		return null;
 	});
@@ -920,7 +1005,7 @@ export const getPipelinesList = async (token: string = '') => {
 			return res.json();
 		})
 		.catch((err) => {
-			console.log(err);
+			console.error(err);
 			error = err;
 			return null;
 		});
@@ -929,7 +1014,7 @@ export const getPipelinesList = async (token: string = '') => {
 		throw error;
 	}
 
-	let pipelines = res?.data ?? [];
+	const pipelines = res?.data ?? [];
 	return pipelines;
 };
 
@@ -954,7 +1039,7 @@ export const uploadPipeline = async (token: string, file: File, urlIdx: string) 
 			return res.json();
 		})
 		.catch((err) => {
-			console.log(err);
+			console.error(err);
 			if ('detail' in err) {
 				error = err.detail;
 			} else {
@@ -990,7 +1075,7 @@ export const downloadPipeline = async (token: string, url: string, urlIdx: strin
 			return res.json();
 		})
 		.catch((err) => {
-			console.log(err);
+			console.error(err);
 			if ('detail' in err) {
 				error = err.detail;
 			} else {
@@ -1026,7 +1111,7 @@ export const deletePipeline = async (token: string, id: string, urlIdx: string) 
 			return res.json();
 		})
 		.catch((err) => {
-			console.log(err);
+			console.error(err);
 			if ('detail' in err) {
 				error = err.detail;
 			} else {
@@ -1063,7 +1148,7 @@ export const getPipelines = async (token: string, urlIdx?: string) => {
 			return res.json();
 		})
 		.catch((err) => {
-			console.log(err);
+			console.error(err);
 			error = err;
 			return null;
 		});
@@ -1072,7 +1157,7 @@ export const getPipelines = async (token: string, urlIdx?: string) => {
 		throw error;
 	}
 
-	let pipelines = res?.data ?? [];
+	const pipelines = res?.data ?? [];
 	return pipelines;
 };
 
@@ -1100,7 +1185,7 @@ export const getPipelineValves = async (token: string, pipeline_id: string, urlI
 			return res.json();
 		})
 		.catch((err) => {
-			console.log(err);
+			console.error(err);
 			error = err;
 			return null;
 		});
@@ -1136,7 +1221,7 @@ export const getPipelineValvesSpec = async (token: string, pipeline_id: string, 
 			return res.json();
 		})
 		.catch((err) => {
-			console.log(err);
+			console.error(err);
 			error = err;
 			return null;
 		});
@@ -1178,13 +1263,40 @@ export const updatePipelineValves = async (
 			return res.json();
 		})
 		.catch((err) => {
-			console.log(err);
+			console.error(err);
 
 			if ('detail' in err) {
 				error = err.detail;
 			} else {
 				error = err;
 			}
+			return null;
+		});
+
+	if (error) {
+		throw error;
+	}
+
+	return res;
+};
+
+export const getUsage = async (token: string = '') => {
+	let error = null;
+
+	const res = await fetch(`${WEBUI_BASE_URL}/api/usage`, {
+		method: 'GET',
+		headers: {
+			'Content-Type': 'application/json',
+			...(token && { Authorization: `Bearer ${token}` })
+		}
+	})
+		.then(async (res) => {
+			if (!res.ok) throw await res.json();
+			return res.json();
+		})
+		.catch((err) => {
+			console.error(err);
+			error = err;
 			return null;
 		});
 
@@ -1210,7 +1322,7 @@ export const getBackendConfig = async () => {
 			return res.json();
 		})
 		.catch((err) => {
-			console.log(err);
+			console.error(err);
 			error = err;
 			return null;
 		});
@@ -1236,7 +1348,7 @@ export const getChangelog = async () => {
 			return res.json();
 		})
 		.catch((err) => {
-			console.log(err);
+			console.error(err);
 			error = err;
 			return null;
 		});
@@ -1263,7 +1375,7 @@ export const getVersionUpdates = async (token: string) => {
 			return res.json();
 		})
 		.catch((err) => {
-			console.log(err);
+			console.error(err);
 			error = err;
 			return null;
 		});
@@ -1290,7 +1402,7 @@ export const getModelFilterConfig = async (token: string) => {
 			return res.json();
 		})
 		.catch((err) => {
-			console.log(err);
+			console.error(err);
 			error = err;
 			return null;
 		});
@@ -1325,7 +1437,7 @@ export const updateModelFilterConfig = async (
 			return res.json();
 		})
 		.catch((err) => {
-			console.log(err);
+			console.error(err);
 			error = err;
 			return null;
 		});
@@ -1352,7 +1464,7 @@ export const getWebhookUrl = async (token: string) => {
 			return res.json();
 		})
 		.catch((err) => {
-			console.log(err);
+			console.error(err);
 			error = err;
 			return null;
 		});
@@ -1382,7 +1494,7 @@ export const updateWebhookUrl = async (token: string, url: string) => {
 			return res.json();
 		})
 		.catch((err) => {
-			console.log(err);
+			console.error(err);
 			error = err;
 			return null;
 		});
@@ -1409,7 +1521,7 @@ export const getCommunitySharingEnabledStatus = async (token: string) => {
 			return res.json();
 		})
 		.catch((err) => {
-			console.log(err);
+			console.error(err);
 			error = err;
 			return null;
 		});
@@ -1436,7 +1548,7 @@ export const toggleCommunitySharingEnabledStatus = async (token: string) => {
 			return res.json();
 		})
 		.catch((err) => {
-			console.log(err);
+			console.error(err);
 			error = err.detail;
 			return null;
 		});
@@ -1463,7 +1575,7 @@ export const getModelConfig = async (token: string): Promise<GlobalModelConfig> 
 			return res.json();
 		})
 		.catch((err) => {
-			console.log(err);
+			console.error(err);
 			error = err;
 			return null;
 		});
@@ -1484,6 +1596,7 @@ export interface ModelConfig {
 }
 
 export interface ModelMeta {
+	toolIds: never[];
 	description?: string;
 	capabilities?: object;
 	profile_image_url?: string;
@@ -1511,7 +1624,7 @@ export const updateModelConfig = async (token: string, config: GlobalModelConfig
 			return res.json();
 		})
 		.catch((err) => {
-			console.log(err);
+			console.error(err);
 			error = err;
 			return null;
 		});

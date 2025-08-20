@@ -7,18 +7,21 @@ import redis
 
 from datetime import datetime
 from pathlib import Path
-from typing import Generic, Optional, TypeVar
+from typing import Generic, Union, Optional, TypeVar
 from urllib.parse import urlparse
 
 import requests
 from pydantic import BaseModel
 from sqlalchemy import JSON, Column, DateTime, Integer, func
+from authlib.integrations.starlette_client import OAuth
+
 
 from open_webui.env import (
     DATA_DIR,
     DATABASE_URL,
     ENV,
     REDIS_URL,
+    REDIS_KEY_PREFIX,
     REDIS_SENTINEL_HOSTS,
     REDIS_SENTINEL_PORT,
     FRONTEND_BUILD_DIR,
@@ -109,54 +112,7 @@ if os.path.exists(f"{DATA_DIR}/config.json"):
 
 DEFAULT_CONFIG = {
     "version": 0,
-    "ui": {
-        "default_locale": "",
-        "prompt_suggestions": [
-            {
-                "title": [
-                    "Help me study",
-                    "vocabulary for a college entrance exam",
-                ],
-                "content": "Help me study vocabulary: write a sentence for me to fill in the blank, and I'll try to pick the correct option.",
-            },
-            {
-                "title": [
-                    "Give me ideas",
-                    "for what to do with my kids' art",
-                ],
-                "content": "What are 5 creative things I could do with my kids' art? I don't want to throw them away, but it's also so much clutter.",
-            },
-            {
-                "title": ["Tell me a fun fact", "about the Roman Empire"],
-                "content": "Tell me a random fun fact about the Roman Empire",
-            },
-            {
-                "title": [
-                    "Show me a code snippet",
-                    "of a website's sticky header",
-                ],
-                "content": "Show me a code snippet of a website's sticky header in CSS and JavaScript.",
-            },
-            {
-                "title": [
-                    "Explain options trading",
-                    "if I'm familiar with buying and selling stocks",
-                ],
-                "content": "Explain options trading in simple terms if I'm familiar with buying and selling stocks.",
-            },
-            {
-                "title": ["Overcome procrastination", "give me tips"],
-                "content": "Could you start by asking me about instances when I procrastinate the most and then give me some suggestions to overcome it?",
-            },
-            {
-                "title": [
-                    "Grammar check",
-                    "rewrite it for better readability ",
-                ],
-                "content": 'Check the following sentence for grammar and clarity: "[sentence]". Rewrite it for better readability while maintaining its original meaning.',
-            },
-        ],
-    },
+    "ui": {},
 }
 
 
@@ -212,9 +168,19 @@ class PersistentConfig(Generic[T]):
         self.config_path = config_path
         self.env_value = env_value
         self.config_value = get_config_value(config_path)
+
         if self.config_value is not None and ENABLE_PERSISTENT_CONFIG:
-            log.info(f"'{env_name}' loaded from the latest database entry")
-            self.value = self.config_value
+            if (
+                self.config_path.startswith("oauth.")
+                and not ENABLE_OAUTH_PERSISTENT_CONFIG
+            ):
+                log.info(
+                    f"Skipping loading of '{env_name}' as OAuth persistent config is disabled"
+                )
+                self.value = env_value
+            else:
+                log.info(f"'{env_name}' loaded from the latest database entry")
+                self.value = self.config_value
         else:
             self.value = env_value
 
@@ -257,16 +223,27 @@ class PersistentConfig(Generic[T]):
 
 class AppConfig:
     _state: dict[str, PersistentConfig]
-    _redis: Optional[redis.Redis] = None
+    _redis: Union[redis.Redis, redis.cluster.RedisCluster] = None
+    _redis_key_prefix: str
 
     def __init__(
-        self, redis_url: Optional[str] = None, redis_sentinels: Optional[list] = []
+        self,
+        redis_url: Optional[str] = None,
+        redis_sentinels: Optional[list] = [],
+        redis_cluster: Optional[bool] = False,
+        redis_key_prefix: str = "open-webui",
     ):
         super().__setattr__("_state", {})
+        super().__setattr__("_redis_key_prefix", redis_key_prefix)
         if redis_url:
             super().__setattr__(
                 "_redis",
-                get_redis_connection(redis_url, redis_sentinels, decode_responses=True),
+                get_redis_connection(
+                    redis_url,
+                    redis_sentinels,
+                    redis_cluster,
+                    decode_responses=True,
+                ),
             )
 
     def __setattr__(self, key, value):
@@ -277,7 +254,7 @@ class AppConfig:
             self._state[key].save()
 
             if self._redis:
-                redis_key = f"open-webui:config:{key}"
+                redis_key = f"{self._redis_key_prefix}:config:{key}"
                 self._redis.set(redis_key, json.dumps(self._state[key].value))
 
     def __getattr__(self, key):
@@ -286,7 +263,7 @@ class AppConfig:
 
         # If Redis is available, check for an updated value
         if self._redis:
-            redis_key = f"open-webui:config:{key}"
+            redis_key = f"{self._redis_key_prefix}:config:{key}"
             redis_value = self._redis.get(redis_key)
 
             if redis_value is not None:
@@ -335,6 +312,9 @@ JWT_EXPIRES_IN = PersistentConfig(
 # OAuth config
 ####################################
 
+ENABLE_OAUTH_PERSISTENT_CONFIG = (
+    os.environ.get("ENABLE_OAUTH_PERSISTENT_CONFIG", "True").lower() == "true"
+)
 
 ENABLE_OAUTH_SIGNUP = PersistentConfig(
     "ENABLE_OAUTH_SIGNUP",
@@ -393,6 +373,24 @@ MICROSOFT_CLIENT_TENANT_ID = PersistentConfig(
     "oauth.microsoft.tenant_id",
     os.environ.get("MICROSOFT_CLIENT_TENANT_ID", ""),
 )
+
+MICROSOFT_CLIENT_LOGIN_BASE_URL = PersistentConfig(
+    "MICROSOFT_CLIENT_LOGIN_BASE_URL",
+    "oauth.microsoft.login_base_url",
+    os.environ.get(
+        "MICROSOFT_CLIENT_LOGIN_BASE_URL", "https://login.microsoftonline.com"
+    ),
+)
+
+MICROSOFT_CLIENT_PICTURE_URL = PersistentConfig(
+    "MICROSOFT_CLIENT_PICTURE_URL",
+    "oauth.microsoft.picture_url",
+    os.environ.get(
+        "MICROSOFT_CLIENT_PICTURE_URL",
+        "https://graph.microsoft.com/v1.0/me/photo/$value",
+    ),
+)
+
 
 MICROSOFT_OAUTH_SCOPE = PersistentConfig(
     "MICROSOFT_OAUTH_SCOPE",
@@ -460,6 +458,18 @@ OAUTH_SCOPES = PersistentConfig(
     os.environ.get("OAUTH_SCOPES", "openid email profile"),
 )
 
+OAUTH_TIMEOUT = PersistentConfig(
+    "OAUTH_TIMEOUT",
+    "oauth.oidc.oauth_timeout",
+    os.environ.get("OAUTH_TIMEOUT", ""),
+)
+
+OAUTH_TOKEN_ENDPOINT_AUTH_METHOD = PersistentConfig(
+    "OAUTH_TOKEN_ENDPOINT_AUTH_METHOD",
+    "oauth.oidc.token_endpoint_auth_method",
+    os.environ.get("OAUTH_TOKEN_ENDPOINT_AUTH_METHOD", None),
+)
+
 OAUTH_CODE_CHALLENGE_METHOD = PersistentConfig(
     "OAUTH_CODE_CHALLENGE_METHOD",
     "oauth.oidc.code_challenge_method",
@@ -470,6 +480,12 @@ OAUTH_PROVIDER_NAME = PersistentConfig(
     "OAUTH_PROVIDER_NAME",
     "oauth.oidc.provider_name",
     os.environ.get("OAUTH_PROVIDER_NAME", "SSO"),
+)
+
+OAUTH_SUB_CLAIM = PersistentConfig(
+    "OAUTH_SUB_CLAIM",
+    "oauth.oidc.sub_claim",
+    os.environ.get("OAUTH_SUB_CLAIM", None),
 )
 
 OAUTH_USERNAME_CLAIM = PersistentConfig(
@@ -552,18 +568,31 @@ OAUTH_ALLOWED_DOMAINS = PersistentConfig(
     ],
 )
 
+OAUTH_UPDATE_PICTURE_ON_LOGIN = PersistentConfig(
+    "OAUTH_UPDATE_PICTURE_ON_LOGIN",
+    "oauth.update_picture_on_login",
+    os.environ.get("OAUTH_UPDATE_PICTURE_ON_LOGIN", "False").lower() == "true",
+)
+
 
 def load_oauth_providers():
     OAUTH_PROVIDERS.clear()
     if GOOGLE_CLIENT_ID.value and GOOGLE_CLIENT_SECRET.value:
 
-        def google_oauth_register(client):
+        def google_oauth_register(client: OAuth):
             client.register(
                 name="google",
                 client_id=GOOGLE_CLIENT_ID.value,
                 client_secret=GOOGLE_CLIENT_SECRET.value,
                 server_metadata_url="https://accounts.google.com/.well-known/openid-configuration",
-                client_kwargs={"scope": GOOGLE_OAUTH_SCOPE.value},
+                client_kwargs={
+                    "scope": GOOGLE_OAUTH_SCOPE.value,
+                    **(
+                        {"timeout": int(OAUTH_TIMEOUT.value)}
+                        if OAUTH_TIMEOUT.value
+                        else {}
+                    ),
+                },
                 redirect_uri=GOOGLE_REDIRECT_URI.value,
             )
 
@@ -578,27 +607,32 @@ def load_oauth_providers():
         and MICROSOFT_CLIENT_TENANT_ID.value
     ):
 
-        def microsoft_oauth_register(client):
+        def microsoft_oauth_register(client: OAuth):
             client.register(
                 name="microsoft",
                 client_id=MICROSOFT_CLIENT_ID.value,
                 client_secret=MICROSOFT_CLIENT_SECRET.value,
-                server_metadata_url=f"https://login.microsoftonline.com/{MICROSOFT_CLIENT_TENANT_ID.value}/v2.0/.well-known/openid-configuration?appid={MICROSOFT_CLIENT_ID.value}",
+                server_metadata_url=f"{MICROSOFT_CLIENT_LOGIN_BASE_URL.value}/{MICROSOFT_CLIENT_TENANT_ID.value}/v2.0/.well-known/openid-configuration?appid={MICROSOFT_CLIENT_ID.value}",
                 client_kwargs={
                     "scope": MICROSOFT_OAUTH_SCOPE.value,
+                    **(
+                        {"timeout": int(OAUTH_TIMEOUT.value)}
+                        if OAUTH_TIMEOUT.value
+                        else {}
+                    ),
                 },
                 redirect_uri=MICROSOFT_REDIRECT_URI.value,
             )
 
         OAUTH_PROVIDERS["microsoft"] = {
             "redirect_uri": MICROSOFT_REDIRECT_URI.value,
-            "picture_url": "https://graph.microsoft.com/v1.0/me/photo/$value",
+            "picture_url": MICROSOFT_CLIENT_PICTURE_URL.value,
             "register": microsoft_oauth_register,
         }
 
     if GITHUB_CLIENT_ID.value and GITHUB_CLIENT_SECRET.value:
 
-        def github_oauth_register(client):
+        def github_oauth_register(client: OAuth):
             client.register(
                 name="github",
                 client_id=GITHUB_CLIENT_ID.value,
@@ -607,7 +641,14 @@ def load_oauth_providers():
                 authorize_url="https://github.com/login/oauth/authorize",
                 api_base_url="https://api.github.com",
                 userinfo_endpoint="https://api.github.com/user",
-                client_kwargs={"scope": GITHUB_CLIENT_SCOPE.value},
+                client_kwargs={
+                    "scope": GITHUB_CLIENT_SCOPE.value,
+                    **(
+                        {"timeout": int(OAUTH_TIMEOUT.value)}
+                        if OAUTH_TIMEOUT.value
+                        else {}
+                    ),
+                },
                 redirect_uri=GITHUB_CLIENT_REDIRECT_URI.value,
             )
 
@@ -623,9 +664,19 @@ def load_oauth_providers():
         and OPENID_PROVIDER_URL.value
     ):
 
-        def oidc_oauth_register(client):
+        def oidc_oauth_register(client: OAuth):
             client_kwargs = {
                 "scope": OAUTH_SCOPES.value,
+                **(
+                    {
+                        "token_endpoint_auth_method": OAUTH_TOKEN_ENDPOINT_AUTH_METHOD.value
+                    }
+                    if OAUTH_TOKEN_ENDPOINT_AUTH_METHOD.value
+                    else {}
+                ),
+                **(
+                    {"timeout": int(OAUTH_TIMEOUT.value)} if OAUTH_TIMEOUT.value else {}
+                ),
             }
 
             if (
@@ -654,6 +705,23 @@ def load_oauth_providers():
             "register": oidc_oauth_register,
         }
 
+    configured_providers = []
+    if GOOGLE_CLIENT_ID.value:
+        configured_providers.append("Google")
+    if MICROSOFT_CLIENT_ID.value:
+        configured_providers.append("Microsoft")
+    if GITHUB_CLIENT_ID.value:
+        configured_providers.append("GitHub")
+
+    if configured_providers and not OPENID_PROVIDER_URL.value:
+        provider_list = ", ".join(configured_providers)
+        log.warning(
+            f"⚠️  OAuth providers configured ({provider_list}) but OPENID_PROVIDER_URL not set - logout will not work!"
+        )
+        log.warning(
+            f"Set OPENID_PROVIDER_URL to your OAuth provider's OpenID Connect discovery endpoint to fix logout functionality."
+        )
+
 
 load_oauth_providers()
 
@@ -662,6 +730,17 @@ load_oauth_providers()
 ####################################
 
 STATIC_DIR = Path(os.getenv("STATIC_DIR", OPEN_WEBUI_DIR / "static")).resolve()
+
+try:
+    if STATIC_DIR.exists():
+        for item in STATIC_DIR.iterdir():
+            if item.is_file() or item.is_symlink():
+                try:
+                    item.unlink()
+                except Exception as e:
+                    pass
+except Exception as e:
+    pass
 
 for file_path in (FRONTEND_BUILD_DIR / "static").glob("**/*"):
     if file_path.is_file():
@@ -743,12 +822,6 @@ if CUSTOM_NAME:
 
 
 ####################################
-# LICENSE_KEY
-####################################
-
-LICENSE_KEY = os.environ.get("LICENSE_KEY", "")
-
-####################################
 # STORAGE PROVIDER
 ####################################
 
@@ -761,9 +834,10 @@ S3_BUCKET_NAME = os.environ.get("S3_BUCKET_NAME", None)
 S3_KEY_PREFIX = os.environ.get("S3_KEY_PREFIX", None)
 S3_ENDPOINT_URL = os.environ.get("S3_ENDPOINT_URL", None)
 S3_USE_ACCELERATE_ENDPOINT = (
-    os.environ.get("S3_USE_ACCELERATE_ENDPOINT", "False").lower() == "true"
+    os.environ.get("S3_USE_ACCELERATE_ENDPOINT", "false").lower() == "true"
 )
 S3_ADDRESSING_STYLE = os.environ.get("S3_ADDRESSING_STYLE", None)
+S3_ENABLE_TAGGING = os.getenv("S3_ENABLE_TAGGING", "false").lower() == "true"
 
 GCS_BUCKET_NAME = os.environ.get("GCS_BUCKET_NAME", None)
 GOOGLE_APPLICATION_CREDENTIALS_JSON = os.environ.get(
@@ -797,7 +871,7 @@ CACHE_DIR.mkdir(parents=True, exist_ok=True)
 ENABLE_DIRECT_CONNECTIONS = PersistentConfig(
     "ENABLE_DIRECT_CONNECTIONS",
     "direct.enable",
-    os.environ.get("ENABLE_DIRECT_CONNECTIONS", "True").lower() == "true",
+    os.environ.get("ENABLE_DIRECT_CONNECTIONS", "False").lower() == "true",
 )
 
 ####################################
@@ -917,6 +991,18 @@ except Exception:
     pass
 OPENAI_API_BASE_URL = "https://api.openai.com/v1"
 
+
+####################################
+# MODELS
+####################################
+
+ENABLE_BASE_MODELS_CACHE = PersistentConfig(
+    "ENABLE_BASE_MODELS_CACHE",
+    "models.base_models_cache",
+    os.environ.get("ENABLE_BASE_MODELS_CACHE", "False").lower() == "true",
+)
+
+
 ####################################
 # TOOL_SERVERS
 ####################################
@@ -941,9 +1027,7 @@ TOOL_SERVER_CONNECTIONS = PersistentConfig(
 ####################################
 
 
-WEBUI_URL = PersistentConfig(
-    "WEBUI_URL", "webui.url", os.environ.get("WEBUI_URL", "http://localhost:3000")
-)
+WEBUI_URL = PersistentConfig("WEBUI_URL", "webui.url", os.environ.get("WEBUI_URL", ""))
 
 
 ENABLE_SIGNUP = PersistentConfig(
@@ -1029,6 +1113,26 @@ DEFAULT_USER_ROLE = PersistentConfig(
     os.getenv("DEFAULT_USER_ROLE", "pending"),
 )
 
+PENDING_USER_OVERLAY_TITLE = PersistentConfig(
+    "PENDING_USER_OVERLAY_TITLE",
+    "ui.pending_user_overlay_title",
+    os.environ.get("PENDING_USER_OVERLAY_TITLE", ""),
+)
+
+PENDING_USER_OVERLAY_CONTENT = PersistentConfig(
+    "PENDING_USER_OVERLAY_CONTENT",
+    "ui.pending_user_overlay_content",
+    os.environ.get("PENDING_USER_OVERLAY_CONTENT", ""),
+)
+
+
+RESPONSE_WATERMARK = PersistentConfig(
+    "RESPONSE_WATERMARK",
+    "ui.watermark",
+    os.environ.get("RESPONSE_WATERMARK", ""),
+)
+
+
 USER_PERMISSIONS_WORKSPACE_MODELS_ACCESS = (
     os.environ.get("USER_PERMISSIONS_WORKSPACE_MODELS_ACCESS", "False").lower()
     == "true"
@@ -1079,6 +1183,18 @@ USER_PERMISSIONS_WORKSPACE_TOOLS_ALLOW_PUBLIC_SHARING = (
 
 USER_PERMISSIONS_CHAT_CONTROLS = (
     os.environ.get("USER_PERMISSIONS_CHAT_CONTROLS", "True").lower() == "true"
+)
+
+USER_PERMISSIONS_CHAT_VALVES = (
+    os.environ.get("USER_PERMISSIONS_CHAT_VALVES", "True").lower() == "true"
+)
+
+USER_PERMISSIONS_CHAT_SYSTEM_PROMPT = (
+    os.environ.get("USER_PERMISSIONS_CHAT_SYSTEM_PROMPT", "True").lower() == "true"
+)
+
+USER_PERMISSIONS_CHAT_PARAMS = (
+    os.environ.get("USER_PERMISSIONS_CHAT_PARAMS", "True").lower() == "true"
 )
 
 USER_PERMISSIONS_CHAT_FILE_UPLOAD = (
@@ -1166,6 +1282,9 @@ DEFAULT_USER_PERMISSIONS = {
     },
     "chat": {
         "controls": USER_PERMISSIONS_CHAT_CONTROLS,
+        "valves": USER_PERMISSIONS_CHAT_VALVES,
+        "system_prompt": USER_PERMISSIONS_CHAT_SYSTEM_PROMPT,
+        "params": USER_PERMISSIONS_CHAT_PARAMS,
         "file_upload": USER_PERMISSIONS_CHAT_FILE_UPLOAD,
         "delete": USER_PERMISSIONS_CHAT_DELETE,
         "edit": USER_PERMISSIONS_CHAT_EDIT,
@@ -1232,6 +1351,10 @@ WEBHOOK_URL = PersistentConfig(
 
 ENABLE_ADMIN_EXPORT = os.environ.get("ENABLE_ADMIN_EXPORT", "True").lower() == "true"
 
+ENABLE_ADMIN_WORKSPACE_CONTENT_ACCESS = (
+    os.environ.get("ENABLE_ADMIN_WORKSPACE_CONTENT_ACCESS", "True").lower() == "true"
+)
+
 ENABLE_ADMIN_CHAT_ACCESS = (
     os.environ.get("ENABLE_ADMIN_CHAT_ACCESS", "True").lower() == "true"
 )
@@ -1255,22 +1378,26 @@ ENABLE_USER_WEBHOOKS = PersistentConfig(
 )
 
 # FastAPI / AnyIO settings
-THREAD_POOL_SIZE = int(os.getenv("THREAD_POOL_SIZE", "0"))
+THREAD_POOL_SIZE = os.getenv("THREAD_POOL_SIZE", None)
 
-
-def validate_cors_origins(origins):
-    for origin in origins:
-        if origin != "*":
-            validate_cors_origin(origin)
+if THREAD_POOL_SIZE is not None and isinstance(THREAD_POOL_SIZE, str):
+    try:
+        THREAD_POOL_SIZE = int(THREAD_POOL_SIZE)
+    except ValueError:
+        log.warning(
+            f"THREAD_POOL_SIZE is not a valid integer: {THREAD_POOL_SIZE}. Defaulting to None."
+        )
+        THREAD_POOL_SIZE = None
 
 
 def validate_cors_origin(origin):
     parsed_url = urlparse(origin)
 
-    # Check if the scheme is either http or https
-    if parsed_url.scheme not in ["http", "https"]:
+    # Check if the scheme is either http or https, or a custom scheme
+    schemes = ["http", "https"] + CORS_ALLOW_CUSTOM_SCHEME
+    if parsed_url.scheme not in schemes:
         raise ValueError(
-            f"Invalid scheme in CORS_ALLOW_ORIGIN: '{origin}'. Only 'http' and 'https' are allowed."
+            f"Invalid scheme in CORS_ALLOW_ORIGIN: '{origin}'. Only 'http' and 'https' and CORS_ALLOW_CUSTOM_SCHEME are allowed."
         )
 
     # Ensure that the netloc (domain + port) is present, indicating it's a valid URL
@@ -1283,16 +1410,22 @@ def validate_cors_origin(origin):
 # To test CORS_ALLOW_ORIGIN locally, you can set something like
 # CORS_ALLOW_ORIGIN=http://localhost:5173;http://localhost:8080
 # in your .env file depending on your frontend port, 5173 in this case.
-CORS_ALLOW_ORIGIN = os.environ.get(
-    "CORS_ALLOW_ORIGIN", "*;http://localhost:5173;http://localhost:8080"
-).split(";")
+CORS_ALLOW_ORIGIN = os.environ.get("CORS_ALLOW_ORIGIN", "*").split(";")
 
-if "*" in CORS_ALLOW_ORIGIN:
+# Allows custom URL schemes (e.g., app://) to be used as origins for CORS.
+# Useful for local development or desktop clients with schemes like app:// or other custom protocols.
+# Provide a semicolon-separated list of allowed schemes in the environment variable CORS_ALLOW_CUSTOM_SCHEMES.
+CORS_ALLOW_CUSTOM_SCHEME = os.environ.get("CORS_ALLOW_CUSTOM_SCHEME", "").split(";")
+
+if CORS_ALLOW_ORIGIN == ["*"]:
     log.warning(
         "\n\nWARNING: CORS_ALLOW_ORIGIN IS SET TO '*' - NOT RECOMMENDED FOR PRODUCTION DEPLOYMENTS.\n"
     )
-
-validate_cors_origins(CORS_ALLOW_ORIGIN)
+else:
+    # You have to pick between a single wildcard or a list of origins.
+    # Doing both will result in CORS errors in the browser.
+    for origin in CORS_ALLOW_ORIGIN:
+        validate_cors_origin(origin)
 
 
 class BannerModel(BaseModel):
@@ -1357,6 +1490,9 @@ Generate a concise, 3-5 word title with an emoji summarizing the chat history.
 - Use emojis that enhance understanding of the topic, but avoid quotation marks or special formatting.
 - Write the title in the chat's primary language; default to English if multilingual.
 - Prioritize accuracy over excessive creativity; keep it clear and simple.
+- Your entire response must consist solely of the JSON object, without any introductory or concluding text.
+- The output must be a single, raw JSON object, without any markdown code fences or other encapsulating text.
+- Ensure no conversational text, affirmations, or explanations precede or follow the raw JSON output, as this will cause direct parsing failure.
 ### Output:
 JSON format: { "title": "your concise title here" }
 ### Examples:
@@ -1420,6 +1556,35 @@ Strictly return in JSON format:
 <chat_history>
 {{MESSAGES:END:6}}
 </chat_history>"""
+
+
+FOLLOW_UP_GENERATION_PROMPT_TEMPLATE = PersistentConfig(
+    "FOLLOW_UP_GENERATION_PROMPT_TEMPLATE",
+    "task.follow_up.prompt_template",
+    os.environ.get("FOLLOW_UP_GENERATION_PROMPT_TEMPLATE", ""),
+)
+
+DEFAULT_FOLLOW_UP_GENERATION_PROMPT_TEMPLATE = """### Task:
+Suggest 3-5 relevant follow-up questions or prompts that the user might naturally ask next in this conversation as a **user**, based on the chat history, to help continue or deepen the discussion.
+### Guidelines:
+- Write all follow-up questions from the user’s point of view, directed to the assistant.
+- Make questions concise, clear, and directly related to the discussed topic(s).
+- Only suggest follow-ups that make sense given the chat content and do not repeat what was already covered.
+- If the conversation is very short or not specific, suggest more general (but relevant) follow-ups the user might ask.
+- Use the conversation's primary language; default to English if multilingual.
+- Response must be a JSON array of strings, no extra text or formatting.
+### Output:
+JSON format: { "follow_ups": ["Question 1?", "Question 2?", "Question 3?"] }
+### Chat History:
+<chat_history>
+{{MESSAGES:END:6}}
+</chat_history>"""
+
+ENABLE_FOLLOW_UP_GENERATION = PersistentConfig(
+    "ENABLE_FOLLOW_UP_GENERATION",
+    "task.follow_up.enable",
+    os.environ.get("ENABLE_FOLLOW_UP_GENERATION", "True").lower() == "true",
+)
 
 ENABLE_TAGS_GENERATION = PersistentConfig(
     "ENABLE_TAGS_GENERATION",
@@ -1699,7 +1864,8 @@ DEFAULT_CODE_INTERPRETER_PROMPT = """
 1. **Code Interpreter**: `<code_interpreter type="code" lang="python"></code_interpreter>`
    - You have access to a Python shell that runs directly in the user's browser, enabling fast execution of code for analysis, calculations, or problem-solving.  Use it in this response.
    - The Python code you write can incorporate a wide array of libraries, handle data manipulation or visualization, perform API calls for web-related tasks, or tackle virtually any computational challenge. Use this flexibility to **think outside the box, craft elegant solutions, and harness Python's full potential**.
-   - To use it, **you must enclose your code within `<code_interpreter type="code" lang="python">` XML tags** and stop right away. If you don't, the code won't execute. Do NOT use triple backticks.
+   - To use it, **you must enclose your code within `<code_interpreter type="code" lang="python">` XML tags** and stop right away. If you don't, the code won't execute. 
+   - When writing code in the code_interpreter XML tag, Do NOT use the triple backticks code block for markdown formatting, example: ```py # python code ``` will cause an error because it is markdown formatting, it is not python code.
    - When coding, **always aim to print meaningful outputs** (e.g., results, tables, summaries, or visuals) to better interpret and verify the findings. Avoid relying on implicit outputs; prioritize explicit and clear print statements so the results are effectively communicated to the user.  
    - After obtaining the printed output, **always provide a concise analysis, interpretation, or next steps to help the user understand the findings or refine the outcome further.**  
    - If the results are unclear, unexpected, or require validation, refine the code and execute it again as needed. Always aim to deliver meaningful insights from the results, iterating if necessary.  
@@ -1746,12 +1912,24 @@ MILVUS_URI = os.environ.get("MILVUS_URI", f"{DATA_DIR}/vector_db/milvus.db")
 MILVUS_DB = os.environ.get("MILVUS_DB", "default")
 MILVUS_TOKEN = os.environ.get("MILVUS_TOKEN", None)
 
+MILVUS_INDEX_TYPE = os.environ.get("MILVUS_INDEX_TYPE", "HNSW")
+MILVUS_METRIC_TYPE = os.environ.get("MILVUS_METRIC_TYPE", "COSINE")
+MILVUS_HNSW_M = int(os.environ.get("MILVUS_HNSW_M", "16"))
+MILVUS_HNSW_EFCONSTRUCTION = int(os.environ.get("MILVUS_HNSW_EFCONSTRUCTION", "100"))
+MILVUS_IVF_FLAT_NLIST = int(os.environ.get("MILVUS_IVF_FLAT_NLIST", "128"))
+
 # Qdrant
 QDRANT_URI = os.environ.get("QDRANT_URI", None)
 QDRANT_API_KEY = os.environ.get("QDRANT_API_KEY", None)
 QDRANT_ON_DISK = os.environ.get("QDRANT_ON_DISK", "false").lower() == "true"
-QDRANT_PREFER_GRPC = os.environ.get("QDRANT_PREFER_GRPC", "False").lower() == "true"
+QDRANT_PREFER_GRPC = os.environ.get("QDRANT_PREFER_GRPC", "false").lower() == "true"
 QDRANT_GRPC_PORT = int(os.environ.get("QDRANT_GRPC_PORT", "6334"))
+QDRANT_TIMEOUT = int(os.environ.get("QDRANT_TIMEOUT", "5"))
+QDRANT_HNSW_M = int(os.environ.get("QDRANT_HNSW_M", "16"))
+ENABLE_QDRANT_MULTITENANCY_MODE = (
+    os.environ.get("ENABLE_QDRANT_MULTITENANCY_MODE", "true").lower() == "true"
+)
+QDRANT_COLLECTION_PREFIX = os.environ.get("QDRANT_COLLECTION_PREFIX", "open-webui")
 
 # OpenSearch
 OPENSEARCH_URI = os.environ.get("OPENSEARCH_URI", "https://localhost:9200")
@@ -1783,6 +1961,52 @@ PGVECTOR_INITIALIZE_MAX_VECTOR_LENGTH = int(
     os.environ.get("PGVECTOR_INITIALIZE_MAX_VECTOR_LENGTH", "1536")
 )
 
+PGVECTOR_PGCRYPTO = os.getenv("PGVECTOR_PGCRYPTO", "false").lower() == "true"
+PGVECTOR_PGCRYPTO_KEY = os.getenv("PGVECTOR_PGCRYPTO_KEY", None)
+if PGVECTOR_PGCRYPTO and not PGVECTOR_PGCRYPTO_KEY:
+    raise ValueError(
+        "PGVECTOR_PGCRYPTO is enabled but PGVECTOR_PGCRYPTO_KEY is not set. Please provide a valid key."
+    )
+
+
+PGVECTOR_POOL_SIZE = os.environ.get("PGVECTOR_POOL_SIZE", None)
+
+if PGVECTOR_POOL_SIZE != None:
+    try:
+        PGVECTOR_POOL_SIZE = int(PGVECTOR_POOL_SIZE)
+    except Exception:
+        PGVECTOR_POOL_SIZE = None
+
+PGVECTOR_POOL_MAX_OVERFLOW = os.environ.get("PGVECTOR_POOL_MAX_OVERFLOW", 0)
+
+if PGVECTOR_POOL_MAX_OVERFLOW == "":
+    PGVECTOR_POOL_MAX_OVERFLOW = 0
+else:
+    try:
+        PGVECTOR_POOL_MAX_OVERFLOW = int(PGVECTOR_POOL_MAX_OVERFLOW)
+    except Exception:
+        PGVECTOR_POOL_MAX_OVERFLOW = 0
+
+PGVECTOR_POOL_TIMEOUT = os.environ.get("PGVECTOR_POOL_TIMEOUT", 30)
+
+if PGVECTOR_POOL_TIMEOUT == "":
+    PGVECTOR_POOL_TIMEOUT = 30
+else:
+    try:
+        PGVECTOR_POOL_TIMEOUT = int(PGVECTOR_POOL_TIMEOUT)
+    except Exception:
+        PGVECTOR_POOL_TIMEOUT = 30
+
+PGVECTOR_POOL_RECYCLE = os.environ.get("PGVECTOR_POOL_RECYCLE", 3600)
+
+if PGVECTOR_POOL_RECYCLE == "":
+    PGVECTOR_POOL_RECYCLE = 3600
+else:
+    try:
+        PGVECTOR_POOL_RECYCLE = int(PGVECTOR_POOL_RECYCLE)
+    except Exception:
+        PGVECTOR_POOL_RECYCLE = 3600
+
 # Pinecone
 PINECONE_API_KEY = os.environ.get("PINECONE_API_KEY", None)
 PINECONE_ENVIRONMENT = os.environ.get("PINECONE_ENVIRONMENT", None)
@@ -1790,6 +2014,37 @@ PINECONE_INDEX_NAME = os.getenv("PINECONE_INDEX_NAME", "open-webui-index")
 PINECONE_DIMENSION = int(os.getenv("PINECONE_DIMENSION", 1536))  # or 3072, 1024, 768
 PINECONE_METRIC = os.getenv("PINECONE_METRIC", "cosine")
 PINECONE_CLOUD = os.getenv("PINECONE_CLOUD", "aws")  # or "gcp" or "azure"
+
+# ORACLE23AI (Oracle23ai Vector Search)
+
+ORACLE_DB_USE_WALLET = os.environ.get("ORACLE_DB_USE_WALLET", "false").lower() == "true"
+ORACLE_DB_USER = os.environ.get("ORACLE_DB_USER", None)  #
+ORACLE_DB_PASSWORD = os.environ.get("ORACLE_DB_PASSWORD", None)  #
+ORACLE_DB_DSN = os.environ.get("ORACLE_DB_DSN", None)  #
+ORACLE_WALLET_DIR = os.environ.get("ORACLE_WALLET_DIR", None)
+ORACLE_WALLET_PASSWORD = os.environ.get("ORACLE_WALLET_PASSWORD", None)
+ORACLE_VECTOR_LENGTH = os.environ.get("ORACLE_VECTOR_LENGTH", 768)
+
+ORACLE_DB_POOL_MIN = int(os.environ.get("ORACLE_DB_POOL_MIN", 2))
+ORACLE_DB_POOL_MAX = int(os.environ.get("ORACLE_DB_POOL_MAX", 10))
+ORACLE_DB_POOL_INCREMENT = int(os.environ.get("ORACLE_DB_POOL_INCREMENT", 1))
+
+
+if VECTOR_DB == "oracle23ai":
+    if not ORACLE_DB_USER or not ORACLE_DB_PASSWORD or not ORACLE_DB_DSN:
+        raise ValueError(
+            "Oracle23ai requires setting ORACLE_DB_USER, ORACLE_DB_PASSWORD, and ORACLE_DB_DSN."
+        )
+    if ORACLE_DB_USE_WALLET and (not ORACLE_WALLET_DIR or not ORACLE_WALLET_PASSWORD):
+        raise ValueError(
+            "Oracle23ai requires setting ORACLE_WALLET_DIR and ORACLE_WALLET_PASSWORD when using wallet authentication."
+        )
+
+log.info(f"VECTOR_DB: {VECTOR_DB}")
+
+# S3 Vector
+S3_VECTOR_BUCKET_NAME = os.environ.get("S3_VECTOR_BUCKET_NAME", None)
+S3_VECTOR_REGION = os.environ.get("S3_VECTOR_REGION", None)
 
 ####################################
 # Information Retrieval (RAG)
@@ -1833,12 +2088,96 @@ ONEDRIVE_SHAREPOINT_URL = PersistentConfig(
     os.environ.get("ONEDRIVE_SHAREPOINT_URL", ""),
 )
 
+ONEDRIVE_SHAREPOINT_TENANT_ID = PersistentConfig(
+    "ONEDRIVE_SHAREPOINT_TENANT_ID",
+    "onedrive.sharepoint_tenant_id",
+    os.environ.get("ONEDRIVE_SHAREPOINT_TENANT_ID", ""),
+)
 
 # RAG Content Extraction
 CONTENT_EXTRACTION_ENGINE = PersistentConfig(
     "CONTENT_EXTRACTION_ENGINE",
     "rag.CONTENT_EXTRACTION_ENGINE",
     os.environ.get("CONTENT_EXTRACTION_ENGINE", "").lower(),
+)
+
+DATALAB_MARKER_API_KEY = PersistentConfig(
+    "DATALAB_MARKER_API_KEY",
+    "rag.datalab_marker_api_key",
+    os.environ.get("DATALAB_MARKER_API_KEY", ""),
+)
+
+DATALAB_MARKER_API_BASE_URL = PersistentConfig(
+    "DATALAB_MARKER_API_BASE_URL",
+    "rag.datalab_marker_api_base_url",
+    os.environ.get("DATALAB_MARKER_API_BASE_URL", ""),
+)
+
+DATALAB_MARKER_ADDITIONAL_CONFIG = PersistentConfig(
+    "DATALAB_MARKER_ADDITIONAL_CONFIG",
+    "rag.datalab_marker_additional_config",
+    os.environ.get("DATALAB_MARKER_ADDITIONAL_CONFIG", ""),
+)
+
+DATALAB_MARKER_USE_LLM = PersistentConfig(
+    "DATALAB_MARKER_USE_LLM",
+    "rag.DATALAB_MARKER_USE_LLM",
+    os.environ.get("DATALAB_MARKER_USE_LLM", "false").lower() == "true",
+)
+
+DATALAB_MARKER_SKIP_CACHE = PersistentConfig(
+    "DATALAB_MARKER_SKIP_CACHE",
+    "rag.datalab_marker_skip_cache",
+    os.environ.get("DATALAB_MARKER_SKIP_CACHE", "false").lower() == "true",
+)
+
+DATALAB_MARKER_FORCE_OCR = PersistentConfig(
+    "DATALAB_MARKER_FORCE_OCR",
+    "rag.datalab_marker_force_ocr",
+    os.environ.get("DATALAB_MARKER_FORCE_OCR", "false").lower() == "true",
+)
+
+DATALAB_MARKER_PAGINATE = PersistentConfig(
+    "DATALAB_MARKER_PAGINATE",
+    "rag.datalab_marker_paginate",
+    os.environ.get("DATALAB_MARKER_PAGINATE", "false").lower() == "true",
+)
+
+DATALAB_MARKER_STRIP_EXISTING_OCR = PersistentConfig(
+    "DATALAB_MARKER_STRIP_EXISTING_OCR",
+    "rag.datalab_marker_strip_existing_ocr",
+    os.environ.get("DATALAB_MARKER_STRIP_EXISTING_OCR", "false").lower() == "true",
+)
+
+DATALAB_MARKER_DISABLE_IMAGE_EXTRACTION = PersistentConfig(
+    "DATALAB_MARKER_DISABLE_IMAGE_EXTRACTION",
+    "rag.datalab_marker_disable_image_extraction",
+    os.environ.get("DATALAB_MARKER_DISABLE_IMAGE_EXTRACTION", "false").lower()
+    == "true",
+)
+
+DATALAB_MARKER_FORMAT_LINES = PersistentConfig(
+    "DATALAB_MARKER_FORMAT_LINES",
+    "rag.datalab_marker_format_lines",
+    os.environ.get("DATALAB_MARKER_FORMAT_LINES", "false").lower() == "true",
+)
+
+DATALAB_MARKER_OUTPUT_FORMAT = PersistentConfig(
+    "DATALAB_MARKER_OUTPUT_FORMAT",
+    "rag.datalab_marker_output_format",
+    os.environ.get("DATALAB_MARKER_OUTPUT_FORMAT", "markdown"),
+)
+
+EXTERNAL_DOCUMENT_LOADER_URL = PersistentConfig(
+    "EXTERNAL_DOCUMENT_LOADER_URL",
+    "rag.external_document_loader_url",
+    os.environ.get("EXTERNAL_DOCUMENT_LOADER_URL", ""),
+)
+
+EXTERNAL_DOCUMENT_LOADER_API_KEY = PersistentConfig(
+    "EXTERNAL_DOCUMENT_LOADER_API_KEY",
+    "rag.external_document_loader_api_key",
+    os.environ.get("EXTERNAL_DOCUMENT_LOADER_API_KEY", ""),
 )
 
 TIKA_SERVER_URL = PersistentConfig(
@@ -1864,6 +2203,46 @@ DOCLING_OCR_LANG = PersistentConfig(
     "rag.docling_ocr_lang",
     os.getenv("DOCLING_OCR_LANG", "eng,fra,deu,spa"),
 )
+
+DOCLING_DO_PICTURE_DESCRIPTION = PersistentConfig(
+    "DOCLING_DO_PICTURE_DESCRIPTION",
+    "rag.docling_do_picture_description",
+    os.getenv("DOCLING_DO_PICTURE_DESCRIPTION", "False").lower() == "true",
+)
+
+DOCLING_PICTURE_DESCRIPTION_MODE = PersistentConfig(
+    "DOCLING_PICTURE_DESCRIPTION_MODE",
+    "rag.docling_picture_description_mode",
+    os.getenv("DOCLING_PICTURE_DESCRIPTION_MODE", ""),
+)
+
+
+docling_picture_description_local = os.getenv("DOCLING_PICTURE_DESCRIPTION_LOCAL", "")
+try:
+    docling_picture_description_local = json.loads(docling_picture_description_local)
+except json.JSONDecodeError:
+    docling_picture_description_local = {}
+
+
+DOCLING_PICTURE_DESCRIPTION_LOCAL = PersistentConfig(
+    "DOCLING_PICTURE_DESCRIPTION_LOCAL",
+    "rag.docling_picture_description_local",
+    docling_picture_description_local,
+)
+
+docling_picture_description_api = os.getenv("DOCLING_PICTURE_DESCRIPTION_API", "")
+try:
+    docling_picture_description_api = json.loads(docling_picture_description_api)
+except json.JSONDecodeError:
+    docling_picture_description_api = {}
+
+
+DOCLING_PICTURE_DESCRIPTION_API = PersistentConfig(
+    "DOCLING_PICTURE_DESCRIPTION_API",
+    "rag.docling_picture_description_api",
+    docling_picture_description_api,
+)
+
 
 DOCUMENT_INTELLIGENCE_ENDPOINT = PersistentConfig(
     "DOCUMENT_INTELLIGENCE_ENDPOINT",
@@ -1903,6 +2282,11 @@ RAG_RELEVANCE_THRESHOLD = PersistentConfig(
     "rag.relevance_threshold",
     float(os.environ.get("RAG_RELEVANCE_THRESHOLD", "0.0")),
 )
+RAG_HYBRID_BM25_WEIGHT = PersistentConfig(
+    "RAG_HYBRID_BM25_WEIGHT",
+    "rag.hybrid_bm25_weight",
+    float(os.environ.get("RAG_HYBRID_BM25_WEIGHT", "0.5")),
+)
 
 ENABLE_RAG_HYBRID_SEARCH = PersistentConfig(
     "ENABLE_RAG_HYBRID_SEARCH",
@@ -1934,6 +2318,37 @@ RAG_FILE_MAX_SIZE = PersistentConfig(
         if os.environ.get("RAG_FILE_MAX_SIZE")
         else None
     ),
+)
+
+FILE_IMAGE_COMPRESSION_WIDTH = PersistentConfig(
+    "FILE_IMAGE_COMPRESSION_WIDTH",
+    "file.image_compression_width",
+    (
+        int(os.environ.get("FILE_IMAGE_COMPRESSION_WIDTH"))
+        if os.environ.get("FILE_IMAGE_COMPRESSION_WIDTH")
+        else None
+    ),
+)
+
+FILE_IMAGE_COMPRESSION_HEIGHT = PersistentConfig(
+    "FILE_IMAGE_COMPRESSION_HEIGHT",
+    "file.image_compression_height",
+    (
+        int(os.environ.get("FILE_IMAGE_COMPRESSION_HEIGHT"))
+        if os.environ.get("FILE_IMAGE_COMPRESSION_HEIGHT")
+        else None
+    ),
+)
+
+
+RAG_ALLOWED_FILE_EXTENSIONS = PersistentConfig(
+    "RAG_ALLOWED_FILE_EXTENSIONS",
+    "rag.file.allowed_extensions",
+    [
+        ext.strip()
+        for ext in os.environ.get("RAG_ALLOWED_FILE_EXTENSIONS", "").split(",")
+        if ext.strip()
+    ],
 )
 
 RAG_EMBEDDING_ENGINE = PersistentConfig(
@@ -1981,6 +2396,12 @@ RAG_EMBEDDING_PREFIX_FIELD_NAME = os.environ.get(
     "RAG_EMBEDDING_PREFIX_FIELD_NAME", None
 )
 
+RAG_RERANKING_ENGINE = PersistentConfig(
+    "RAG_RERANKING_ENGINE",
+    "rag.reranking_engine",
+    os.environ.get("RAG_RERANKING_ENGINE", ""),
+)
+
 RAG_RERANKING_MODEL = PersistentConfig(
     "RAG_RERANKING_MODEL",
     "rag.reranking_model",
@@ -1989,6 +2410,7 @@ RAG_RERANKING_MODEL = PersistentConfig(
 if RAG_RERANKING_MODEL.value != "":
     log.info(f"Reranking model set: {RAG_RERANKING_MODEL.value}")
 
+
 RAG_RERANKING_MODEL_AUTO_UPDATE = (
     not OFFLINE_MODE
     and os.environ.get("RAG_RERANKING_MODEL_AUTO_UPDATE", "True").lower() == "true"
@@ -1996,6 +2418,18 @@ RAG_RERANKING_MODEL_AUTO_UPDATE = (
 
 RAG_RERANKING_MODEL_TRUST_REMOTE_CODE = (
     os.environ.get("RAG_RERANKING_MODEL_TRUST_REMOTE_CODE", "True").lower() == "true"
+)
+
+RAG_EXTERNAL_RERANKER_URL = PersistentConfig(
+    "RAG_EXTERNAL_RERANKER_URL",
+    "rag.external_reranker_url",
+    os.environ.get("RAG_EXTERNAL_RERANKER_URL", ""),
+)
+
+RAG_EXTERNAL_RERANKER_API_KEY = PersistentConfig(
+    "RAG_EXTERNAL_RERANKER_API_KEY",
+    "rag.external_reranker_api_key",
+    os.environ.get("RAG_EXTERNAL_RERANKER_API_KEY", ""),
 )
 
 
@@ -2070,6 +2504,22 @@ RAG_OPENAI_API_KEY = PersistentConfig(
     os.getenv("RAG_OPENAI_API_KEY", OPENAI_API_KEY),
 )
 
+RAG_AZURE_OPENAI_BASE_URL = PersistentConfig(
+    "RAG_AZURE_OPENAI_BASE_URL",
+    "rag.azure_openai.base_url",
+    os.getenv("RAG_AZURE_OPENAI_BASE_URL", ""),
+)
+RAG_AZURE_OPENAI_API_KEY = PersistentConfig(
+    "RAG_AZURE_OPENAI_API_KEY",
+    "rag.azure_openai.api_key",
+    os.getenv("RAG_AZURE_OPENAI_API_KEY", ""),
+)
+RAG_AZURE_OPENAI_API_VERSION = PersistentConfig(
+    "RAG_AZURE_OPENAI_API_VERSION",
+    "rag.azure_openai.api_version",
+    os.getenv("RAG_AZURE_OPENAI_API_VERSION", ""),
+)
+
 RAG_OLLAMA_BASE_URL = PersistentConfig(
     "RAG_OLLAMA_BASE_URL",
     "rag.ollama.url",
@@ -2123,6 +2573,12 @@ BYPASS_WEB_SEARCH_EMBEDDING_AND_RETRIEVAL = PersistentConfig(
 )
 
 
+BYPASS_WEB_SEARCH_WEB_LOADER = PersistentConfig(
+    "BYPASS_WEB_SEARCH_WEB_LOADER",
+    "rag.web.search.bypass_web_loader",
+    os.getenv("BYPASS_WEB_SEARCH_WEB_LOADER", "False").lower() == "true",
+)
+
 WEB_SEARCH_RESULT_COUNT = PersistentConfig(
     "WEB_SEARCH_RESULT_COUNT",
     "rag.web.search.result_count",
@@ -2147,6 +2603,7 @@ WEB_SEARCH_CONCURRENT_REQUESTS = PersistentConfig(
     "rag.web.search.concurrent_requests",
     int(os.getenv("WEB_SEARCH_CONCURRENT_REQUESTS", "10")),
 )
+
 
 WEB_LOADER_ENGINE = PersistentConfig(
     "WEB_LOADER_ENGINE",
@@ -2305,6 +2762,18 @@ PERPLEXITY_API_KEY = PersistentConfig(
     "PERPLEXITY_API_KEY",
     "rag.web.search.perplexity_api_key",
     os.getenv("PERPLEXITY_API_KEY", ""),
+)
+
+PERPLEXITY_MODEL = PersistentConfig(
+    "PERPLEXITY_MODEL",
+    "rag.web.search.perplexity_model",
+    os.getenv("PERPLEXITY_MODEL", "sonar"),
+)
+
+PERPLEXITY_SEARCH_CONTEXT_USAGE = PersistentConfig(
+    "PERPLEXITY_SEARCH_CONTEXT_USAGE",
+    "rag.web.search.perplexity_search_context_usage",
+    os.getenv("PERPLEXITY_SEARCH_CONTEXT_USAGE", "medium"),
 )
 
 SOUGOU_API_SID = PersistentConfig(
@@ -2671,6 +3140,18 @@ AUDIO_STT_MODEL = PersistentConfig(
     os.getenv("AUDIO_STT_MODEL", ""),
 )
 
+AUDIO_STT_SUPPORTED_CONTENT_TYPES = PersistentConfig(
+    "AUDIO_STT_SUPPORTED_CONTENT_TYPES",
+    "audio.stt.supported_content_types",
+    [
+        content_type.strip()
+        for content_type in os.environ.get(
+            "AUDIO_STT_SUPPORTED_CONTENT_TYPES", ""
+        ).split(",")
+        if content_type.strip()
+    ],
+)
+
 AUDIO_STT_AZURE_API_KEY = PersistentConfig(
     "AUDIO_STT_AZURE_API_KEY",
     "audio.stt.azure.api_key",
@@ -2836,6 +3317,31 @@ LDAP_CA_CERT_FILE = PersistentConfig(
     os.environ.get("LDAP_CA_CERT_FILE", ""),
 )
 
+LDAP_VALIDATE_CERT = PersistentConfig(
+    "LDAP_VALIDATE_CERT",
+    "ldap.server.validate_cert",
+    os.environ.get("LDAP_VALIDATE_CERT", "True").lower() == "true",
+)
+
 LDAP_CIPHERS = PersistentConfig(
     "LDAP_CIPHERS", "ldap.server.ciphers", os.environ.get("LDAP_CIPHERS", "ALL")
+)
+
+# For LDAP Group Management
+ENABLE_LDAP_GROUP_MANAGEMENT = PersistentConfig(
+    "ENABLE_LDAP_GROUP_MANAGEMENT",
+    "ldap.group.enable_management",
+    os.environ.get("ENABLE_LDAP_GROUP_MANAGEMENT", "False").lower() == "true",
+)
+
+ENABLE_LDAP_GROUP_CREATION = PersistentConfig(
+    "ENABLE_LDAP_GROUP_CREATION",
+    "ldap.group.enable_creation",
+    os.environ.get("ENABLE_LDAP_GROUP_CREATION", "False").lower() == "true",
+)
+
+LDAP_ATTRIBUTE_FOR_GROUPS = PersistentConfig(
+    "LDAP_ATTRIBUTE_FOR_GROUPS",
+    "ldap.server.attribute_for_groups",
+    os.environ.get("LDAP_ATTRIBUTE_FOR_GROUPS", "memberOf"),
 )

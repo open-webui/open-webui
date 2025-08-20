@@ -66,7 +66,7 @@
 
 	const updateModelsHandler = async () => {
 		for (const model of ollamaModels) {
-			console.log(model);
+			console.debug(model);
 
 			updateModelId = model.id;
 			const [res, controller] = await pullModel(localStorage.token, model.id, urlIdx).catch(
@@ -114,8 +114,8 @@
 								}
 							}
 						}
-					} catch (error) {
-						console.log(error);
+					} catch (err) {
+						console.error(err);
 					}
 				}
 			}
@@ -215,13 +215,13 @@
 							}
 						}
 					}
-				} catch (error) {
-					console.log(error);
-					if (typeof error !== 'string') {
-						error = error.message;
+				} catch (err) {
+					console.error(err);
+					if (typeof err !== 'string') {
+						err = err.message;
 					}
 
-					toast.error(`${error}`);
+					toast.error(`${err}`);
 					// opts.callback({ success: false, error, modelName: opts.modelName });
 				}
 			}
@@ -319,8 +319,8 @@
 							}
 						}
 					}
-				} catch (error) {
-					console.log(error);
+				} catch (err) {
+					console.error(err);
 				}
 			}
 		} else {
@@ -382,9 +382,9 @@
 								}
 							}
 						}
-					} catch (error) {
-						console.log(error);
-						toast.error(`${error}`);
+					} catch (err) {
+						console.error(err);
+						toast.error(`${err}`);
 					}
 				}
 			}
@@ -514,9 +514,9 @@
 							}
 						}
 					}
-				} catch (error) {
-					console.log(error);
-					toast.error(`${error}`);
+				} catch (err) {
+					console.error(err);
+					toast.error(`${err}`);
 				}
 			}
 		}
@@ -1057,6 +1057,6 @@
 	</div>
 {:else}
 	<div class="flex justify-center items-center w-full h-full py-3">
-		<Spinner />
+		<Spinner className="size-5" />
 	</div>
 {/if}
