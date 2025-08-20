@@ -19,7 +19,10 @@
 	import Spinner from '$lib/components/common/Spinner.svelte';
 	import OnBoarding from '$lib/components/OnBoarding.svelte';
 	import SensitiveInput from '$lib/components/common/SensitiveInput.svelte';
+
+	// PATCH EXTRA LOGIN INFO
 	import Banner from '$lib/components/common/Banner.svelte';
+	// /PATCH EXTRA LOGIN INFO
 
 	const i18n = getContext('i18n');
 
