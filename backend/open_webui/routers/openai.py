@@ -709,7 +709,7 @@ def convert_to_azure_payload(url, payload: dict, api_version: str):
     allowed_params = get_azure_allowed_params(api_version)
 
     # Special handling for o-series models
-    if model.startswith("o") and model.endswith("-mini"):
+    if (model.startswith("o") and model.endswith("-mini")) or model.startswith("gpt-5"):
         # Convert max_tokens to max_completion_tokens for o-series models
         if "max_tokens" in payload:
             payload["max_completion_tokens"] = payload["max_tokens"]
