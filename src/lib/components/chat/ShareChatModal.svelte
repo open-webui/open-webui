@@ -107,8 +107,15 @@
 	let chat = null;
 	let timeRemaining = '';
 	let intervalId = null;
+
 	let previewQrCodeUrl = '';
 	let downloadQrCodeUrl = '';
+
+	let transparentPreviewQrCodeUrl = '';
+	let solidPreviewQrCodeUrl = '';
+	let transparentDownloadQrCodeUrl = '';
+	let solidDownloadQrCodeUrl = '';
+
 	let share_id = '';
 	$: shareUrl = share_id ? `${window.location.origin}/s/${share_id}` : null;
 	let initial_share_id = '';
@@ -366,49 +373,74 @@
 
 	const generateQrCodesImmediate = async (url) => {
 		if (url) {
-			if (useGradient) {
-				const generateTransparentQRCode = async (url, width) => {
-					return await QRCode.toDataURL(url, {
-						width,
-						color: {
-							dark: '#000000',
-							light: '#00000000' // Transparent background
-						}
-					});
-				};
+			const generateTransparentQRCode = async (url, width) => {
+				return await QRCode.toDataURL(url, {
+					width,
+					color: {
+						dark: '#000000',
+						light: '#00000000' // Transparent background
+					}
+				});
+			};
 
-				previewQrCodeUrl = await generateTransparentQRCode(url, 192);
-				downloadQrCodeUrl = await generateTransparentQRCode(url, 512);
-
-				if (!previewGradient) {
-					previewGradient = getRandomGradient();
-				}
-				downloadGradient = previewGradient;
-			} else {
-				previewQrCodeUrl = await QRCode.toDataURL(url, {
-					width: 192,
+			const generateSolidQRCode = async (url, width) => {
+				return await QRCode.toDataURL(url, {
+					width,
 					color: {
 						light: '#FFFFFF' // White background
 					}
 				});
-				downloadQrCodeUrl = await QRCode.toDataURL(url, {
-					width: 512,
-					color: {
-						light: '#FFFFFF' // White background
-					}
-				});
-				previewGradient = '';
-				downloadGradient = '';
+			};
+
+			[
+				transparentPreviewQrCodeUrl,
+				solidPreviewQrCodeUrl,
+				transparentDownloadQrCodeUrl,
+				solidDownloadQrCodeUrl
+			] = await Promise.all([
+				generateTransparentQRCode(url, 192),
+				generateSolidQRCode(url, 192),
+				generateTransparentQRCode(url, 512),
+				generateSolidQRCode(url, 512)
+			]);
+
+			if (useGradient && !previewGradient) {
+				previewGradient = getRandomGradient();
 			}
+			downloadGradient = previewGradient;
+
+			updateDisplayedQrCode();
 		} else {
 			previewQrCodeUrl = '';
 			downloadQrCodeUrl = '';
+			transparentPreviewQrCodeUrl = '';
+			solidPreviewQrCodeUrl = '';
+			transparentDownloadQrCodeUrl = '';
+			solidDownloadQrCodeUrl = '';
 			previewGradient = '';
 			downloadGradient = '';
 		}
 	};
 
 	const generateQrCodesDebounced = debounce(generateQrCodesImmediate, 500);
+
+	$: useGradient, updateDisplayedQrCode();
+
+	function updateDisplayedQrCode() {
+		if (useGradient) {
+			previewQrCodeUrl = transparentPreviewQrCodeUrl;
+			downloadQrCodeUrl = transparentDownloadQrCodeUrl;
+			if (!previewGradient) {
+				previewGradient = getRandomGradient();
+			}
+			downloadGradient = previewGradient;
+		} else {
+			previewQrCodeUrl = solidPreviewQrCodeUrl;
+			downloadQrCodeUrl = solidDownloadQrCodeUrl;
+			previewGradient = '';
+			downloadGradient = '';
+		}
+	}
 
 	const formatISODate = (timestamp) => {
 		const date = new Date(timestamp * 1000);
@@ -690,6 +722,10 @@
 		initial_share_id = '';
 		previewQrCodeUrl = '';
 		downloadQrCodeUrl = '';
+		transparentPreviewQrCodeUrl = '';
+		solidPreviewQrCodeUrl = '';
+		transparentDownloadQrCodeUrl = '';
+		solidDownloadQrCodeUrl = '';
 		previewGradient = '';
 		downloadGradient = '';
 		expirationOption = 'never';
@@ -1223,6 +1259,10 @@
 												initial_share_id = '';
 												previewQrCodeUrl = '';
 												downloadQrCodeUrl = '';
+												transparentPreviewQrCodeUrl = '';
+												solidPreviewQrCodeUrl = '';
+												transparentDownloadQrCodeUrl = '';
+												solidDownloadQrCodeUrl = '';
 												is_public = false;
 												toast.success($i18n.t('Link deleted successfully'));
 												sharedChatsUpdated.set(true);
