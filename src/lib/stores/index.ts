@@ -266,6 +266,9 @@ type Config = {
 		// PATCH REDIRECT TO WAS
 		was_redirect_url: string;
 		// /PATCH REDIRECT TO WAS
+		// PATCH ADD LOGO TO SIDEBAR
+		logo_url: string;
+		// /PATCH ADD LOGO TO SIDEBAR
 	};
 	oauth: {
 		providers: {
