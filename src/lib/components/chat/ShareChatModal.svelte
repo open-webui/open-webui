@@ -29,6 +29,7 @@
 	import ChevronDown from '$lib/components/icons/ChevronDown.svelte';
 	import LockClosed from '$lib/components/icons/LockClosed.svelte';
 	import QuestionMarkCircle from '$lib/components/icons/QuestionMarkCircle.svelte';
+	import Spinner from '../common/Spinner.svelte';
 	import dayjs from 'dayjs';
 	import customParseFormat from 'dayjs/plugin/customParseFormat';
 	dayjs.extend(customParseFormat);
@@ -719,6 +720,10 @@
 		is_public = false;
 	}
 
+	$: if (showQrCode && shareUrl && !previewQrCodeUrl) {
+		generateQrCodesDebounced(shareUrl);
+	}
+
 	$: useGradient, generateQrCodesDebounced(shareUrl);
 
 	let expirationText = '';
@@ -1264,22 +1269,30 @@
 								</div>
 							</div>
 
-							{#if previewQrCodeUrl}
-								<button
-									class="qr-code-container mt-4"
-									on:click={() => {
-										showExpandedQr = true;
-									}}
-								>
-									{#if useGradient}
-										<div class="w-48 h-48 rounded-md" style="background: {previewGradient};">
-											<img class="w-full h-full" src={previewQrCodeUrl} alt="QR Code" />
-										</div>
-									{:else}
-										<img class="w-48 h-48 rounded-md" src={previewQrCodeUrl} alt="QR Code" />
-									{/if}
-								</button>
-							{/if}
+							<div class="mt-4 flex items-center justify-center">
+								{#if !previewQrCodeUrl && shareUrl}
+									<div
+										class="w-48 h-48 rounded-md flex items-center justify-center bg-gray-100 dark:bg-gray-800"
+									>
+										<Spinner />
+									</div>
+								{:else if previewQrCodeUrl}
+									<button
+										class="qr-code-container"
+										on:click={() => {
+											showExpandedQr = true;
+										}}
+									>
+										{#if useGradient}
+											<div class="w-48 h-48 rounded-md" style="background: {previewGradient};">
+												<img class="w-full h-full" src={previewQrCodeUrl} alt="QR Code" />
+											</div>
+										{:else}
+											<img class="w-48 h-48 rounded-md" src={previewQrCodeUrl} alt="QR Code" />
+										{/if}
+									</button>
+								{/if}
+							</div>
 						{/if}
 					</div>
 					<div class="flex justify-center mt-3">
