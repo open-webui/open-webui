@@ -1115,15 +1115,6 @@
 											}}>Modify</button
 										>
 									</Tooltip>
-									<Tooltip content="Reset Statistics" className="inline-block">
-										<button
-											class="text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 ml-4"
-											on:click={() => {
-												chatToResetStats = chat;
-												showConfirmResetStats = true;
-											}}>Reset Stats</button
-										>
-									</Tooltip>
 									{#if $user?.role === 'admin' || $user?.permissions?.chat?.clone}
 										<Tooltip content="Clone Chat" className="inline-block">
 											<button
@@ -1134,6 +1125,15 @@
 											>
 										</Tooltip>
 									{/if}
+									<Tooltip content="Reset Statistics" className="inline-block">
+										<button
+											class="text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 ml-4"
+											on:click={() => {
+												chatToResetStats = chat;
+												showConfirmResetStats = true;
+											}}>Reset Stats</button
+										>
+									</Tooltip>
 								</td>
 							</tr>
 						{/each}
