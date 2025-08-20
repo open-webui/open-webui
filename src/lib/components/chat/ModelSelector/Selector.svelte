@@ -419,7 +419,7 @@
 			<div class="px-3">
 				{#if tags && items.filter((item) => !(item.model?.info?.meta?.hidden ?? false)).length > 0}
 					<div
-						class=" flex w-full bg-white dark:bg-gray-850 overflow-x-auto scrollbar-none"
+						class=" flex w-full bg-white dark:bg-gray-850 overflow-x-auto scrollbar-none mb-0.5"
 						on:wheel={(e) => {
 							if (e.deltaY !== 0) {
 								e.preventDefault();
@@ -433,7 +433,7 @@
 						>
 							{#if items.find((item) => item.model?.connection_type === 'local') || items.find((item) => item.model?.connection_type === 'external') || items.find((item) => item.model?.direct) || tags.length > 0}
 								<button
-									class="min-w-fit outline-none p-1.5 {selectedTag === '' &&
+									class="min-w-fit outline-none px-1.5 {selectedTag === '' &&
 									selectedConnectionType === ''
 										? ''
 										: 'text-gray-300 dark:text-gray-600 hover:text-gray-700 dark:hover:text-white'} transition capitalize"
@@ -449,7 +449,7 @@
 
 							{#if items.find((item) => item.model?.connection_type === 'local')}
 								<button
-									class="min-w-fit outline-none p-1.5 {selectedConnectionType === 'local'
+									class="min-w-fit outline-none px-1.5 py-0.5 {selectedConnectionType === 'local'
 										? ''
 										: 'text-gray-300 dark:text-gray-600 hover:text-gray-700 dark:hover:text-white'} transition capitalize"
 									aria-pressed={selectedConnectionType === 'local'}
@@ -464,7 +464,7 @@
 
 							{#if items.find((item) => item.model?.connection_type === 'external')}
 								<button
-									class="min-w-fit outline-none p-1.5 {selectedConnectionType === 'external'
+									class="min-w-fit outline-none px-1.5 py-0.5 {selectedConnectionType === 'external'
 										? ''
 										: 'text-gray-300 dark:text-gray-600 hover:text-gray-700 dark:hover:text-white'} transition capitalize"
 									aria-pressed={selectedConnectionType === 'external'}
@@ -479,7 +479,7 @@
 
 							{#if items.find((item) => item.model?.direct)}
 								<button
-									class="min-w-fit outline-none p-1.5 {selectedConnectionType === 'direct'
+									class="min-w-fit outline-none px-1.5 py-0.5 {selectedConnectionType === 'direct'
 										? ''
 										: 'text-gray-300 dark:text-gray-600 hover:text-gray-700 dark:hover:text-white'} transition capitalize"
 									aria-pressed={selectedConnectionType === 'direct'}
@@ -494,7 +494,7 @@
 
 							{#each tags as tag}
 								<button
-									class="min-w-fit outline-none p-1.5 {selectedTag === tag
+									class="min-w-fit outline-none px-1.5 py-0.5 {selectedTag === tag
 										? ''
 										: 'text-gray-300 dark:text-gray-600 hover:text-gray-700 dark:hover:text-white'} transition capitalize"
 									aria-pressed={selectedTag === tag}
