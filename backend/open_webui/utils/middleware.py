@@ -1338,6 +1338,7 @@ async def process_chat_response(
                                 user,
                                 model_used,
                                 data["usage"],
+                                metadata.get("chat_id"),
                             )
 
                         if "selected_model_id" in data:

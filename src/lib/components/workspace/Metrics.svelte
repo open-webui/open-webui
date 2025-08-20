@@ -16,7 +16,8 @@
 		getModelPrompts,
 		getModelDailyPrompts,
 		getModelHistoricalPrompts,
-		getRangeMetrics
+		getRangeMetrics,
+		getInterPromptLatencyHistogram
 	} from '$lib/apis/metrics';
 	import { Chart, registerables } from 'chart.js';
 	import { user } from '$lib/stores';
@@ -55,6 +56,7 @@
 		dailyPromptsChart: any,
 		dailyTokensChart: any;
 	let modelPromptsChart: any;
+	let interPromptLatencyChart: any;
 
 	// Chart data
 	let enrolledUsersData: any[] = [];
@@ -62,6 +64,7 @@
 	let dailyPromptsData: any[] = [];
 	let dailyTokensData: any[] = [];
 	let modelPromptsData: any[] = [];
+	let interPromptLatencyData: any = { bins: [], counts: [], total_latencies: 0 };
 
 	// For chart options
 	const chartOptions = {
@@ -125,7 +128,8 @@
 			dailyActiveUsersChart,
 			dailyPromptsChart,
 			dailyTokensChart,
-			modelPromptsChart
+			modelPromptsChart,
+			interPromptLatencyChart
 		];
 		charts.forEach((chart) => {
 			if (chart) {
@@ -163,6 +167,15 @@
 		if (modelPromptsChart) {
 			modelPromptsChart.data.datasets[0].label = $i18n.t('Model Prompts');
 			modelPromptsChart.update();
+		}
+
+		if (interPromptLatencyChart) {
+			interPromptLatencyChart.data.datasets[0].label = $i18n.t('Number of Prompts');
+			interPromptLatencyChart.options.scales.x.title.text = $i18n.t(
+				'Time Between Prompts (logarithmic scale)'
+			);
+			interPromptLatencyChart.options.scales.y.title.text = $i18n.t('Number of Prompts');
+			interPromptLatencyChart.update();
 		}
 	}
 
@@ -264,6 +277,13 @@
 						updatedDomain
 					);
 				}
+
+				// Fetch inter-prompt latency data (don't filter by model since this is a user behavior metric)
+				interPromptLatencyData = await getInterPromptLatencyHistogram(
+					localStorage.token,
+					updatedDomain,
+					null // Don't filter by model for inter-prompt latency
+				);
 			} catch (err) {
 				console.error('Error fetching historical data:', err);
 			}
@@ -440,6 +460,70 @@
 				});
 			}
 		}
+
+		// Inter-prompt latency histogram - for behavior tab
+		if (activeTab === 'behavior' && interPromptLatencyData.counts.length > 0) {
+			const canvas = document.getElementById('interPromptLatencyChart');
+			const ctx = canvas?.getContext('2d');
+			if (ctx) {
+				if (interPromptLatencyChart) {
+					interPromptLatencyChart.destroy();
+				}
+				interPromptLatencyChart = new Chart(ctx, {
+					type: 'bar',
+					data: {
+						labels: interPromptLatencyData.bins,
+						datasets: [
+							{
+								label: $i18n.t('Number of Prompts'),
+								data: interPromptLatencyData.counts,
+								backgroundColor: 'rgba(147, 51, 234, 0.7)',
+								borderColor: 'rgb(147, 51, 234)',
+								borderWidth: 1
+							}
+						]
+					},
+					options: {
+						...chartOptions,
+						scales: {
+							...chartOptions.scales,
+							x: {
+								...chartOptions.scales.x,
+								type: 'category',
+								title: {
+									display: true,
+									text: $i18n.t('Time Between Prompts (logarithmic scale)'),
+									color: document.documentElement.classList.contains('dark') ? '#e5e7eb' : '#1f2937'
+								}
+							},
+							y: {
+								...chartOptions.scales.y,
+								title: {
+									display: true,
+									text: $i18n.t('Number of Prompts'),
+									color: document.documentElement.classList.contains('dark') ? '#e5e7eb' : '#1f2937'
+								}
+							}
+						},
+						plugins: {
+							...chartOptions.plugins,
+							tooltip: {
+								callbacks: {
+									label: function (context) {
+										const count = context.parsed.y;
+										const total = interPromptLatencyData.total_latencies;
+										const percentage = total > 0 ? ((count / total) * 100).toFixed(1) : '0.0';
+										return `${context.dataset.label}: ${count} (${percentage}%)`;
+									}
+								}
+							}
+						}
+					}
+				});
+			}
+		} else if (activeTab === 'behavior') {
+			// Chart not created - no data or wrong tab
+		}
 	}
 
 	// Improved setActiveTab function
@@ -466,6 +550,11 @@
 				.catch((error) => console.error('Error loading model data:', error));
 		} else if (tab === 'business') {
 			// Just update charts for now
+			setTimeout(() => {
+				initializeCharts();
+			}, 100);
+		} else if (tab === 'behavior') {
+			// Load inter-prompt latency data and update charts
 			setTimeout(() => {
 				initializeCharts();
 			}, 100);
@@ -596,6 +685,7 @@
 		if (dailyPromptsChart) dailyPromptsChart.destroy();
 		if (dailyTokensChart) dailyTokensChart.destroy();
 		if (modelPromptsChart) modelPromptsChart.destroy();
+		if (interPromptLatencyChart) interPromptLatencyChart.destroy();
 	});
 
 	// Update domain change handler to simplify
@@ -796,6 +886,18 @@
 							{$i18n.t('Model Analysis')}
 						</button>
 					</li>
+					<li class="mr-2">
+						<button
+							class={`inline-block p-4 rounded-t-lg border-b-2 ${
+								activeTab === 'behavior'
+									? 'border-blue-600 text-blue-600 dark:border-blue-500 dark:text-blue-500'
+									: 'border-transparent hover:text-gray-900 hover:border-gray-300 dark:hover:text-gray-100'
+							}`}
+							on:click={() => setActiveTab('behavior')}
+						>
+							{$i18n.t('User Behavior')}
+						</button>
+					</li>
 					<!-- Business Insights tab hidden for now
 				<li class="mr-2">
 					<button
@@ -991,6 +1093,56 @@
 							</div>
 						</div>
 					{/if}
+				</div>
+
+				<!-- Tab Content - User Behavior -->
+				<div class={`${activeTab === 'behavior' ? 'flex flex-col h-full' : 'hidden'}`}>
+					<div class="grid grid-cols-1 gap-6 mb-6 mt-6">
+						<div class="bg-white shadow-lg rounded-lg p-4 dark:bg-gray-800">
+							<h5 class="text-lg font-semibold text-gray-800 dark:text-gray-200 mb-3">
+								{$i18n.t('Inter-Prompt Latency Distribution')}
+							</h5>
+							<div class="text-sm text-gray-600 dark:text-gray-400 mb-4">
+								{$i18n.t(
+									'Time between consecutive user prompts in a chat session. Shows user engagement and cognitive load patterns.'
+								)}
+							</div>
+							{#if interPromptLatencyData.total_latencies > 0}
+								<div class="h-96">
+									<canvas id="interPromptLatencyChart"></canvas>
+								</div>
+								<div class="mt-4 text-sm text-gray-600 dark:text-gray-400 text-center">
+									{$i18n.t('Total analyzed prompt intervals')}: {interPromptLatencyData.total_latencies}
+								</div>
+							{:else}
+								<div class="flex items-center justify-center h-64">
+									<div class="text-center">
+										<div class="mb-4">
+											<svg
+												class="w-16 h-16 text-gray-400 mx-auto"
+												fill="none"
+												stroke="currentColor"
+												viewBox="0 0 24 24"
+											>
+												<path
+													stroke-linecap="round"
+													stroke-linejoin="round"
+													stroke-width="2"
+													d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"
+												></path>
+											</svg>
+										</div>
+										<p class="text-gray-500 dark:text-gray-400">
+											{$i18n.t('No inter-prompt latency data available')}
+										</p>
+										<p class="text-sm text-gray-400 dark:text-gray-500 mt-2">
+											{$i18n.t('Data will appear once users engage in multi-turn conversations')}
+										</p>
+									</div>
+								</div>
+							{/if}
+						</div>
+					</div>
 				</div>
 
 				<!-- Replace Cost Analysis Tab Content with Business Insights in matching style -->
