@@ -745,7 +745,7 @@
 		if ($settings?.temporaryChatByDefault ?? false) {
 			if ($temporaryChatEnabled === false) {
 				await temporaryChatEnabled.set(true);
-			} else {
+			} else if ($temporaryChatEnabled === null) {
 				// if set to null set to false; refer to temp chat toggle click handler
 				await temporaryChatEnabled.set(false);
 			}

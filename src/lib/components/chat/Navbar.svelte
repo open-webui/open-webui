@@ -117,9 +117,9 @@
 									on:click={async () => {
 										if (($settings?.temporaryChatByDefault ?? false) && $temporaryChatEnabled) {
 											// for proper initNewChat handling
-											temporaryChatEnabled.set(null);
+											await temporaryChatEnabled.set(null);
 										} else {
-											temporaryChatEnabled.set(!$temporaryChatEnabled);
+											await temporaryChatEnabled.set(!$temporaryChatEnabled);
 										}
 
 										await goto('/');
