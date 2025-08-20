@@ -981,6 +981,7 @@
 								/>
 							</div>
 						{/if}
+
 						<p class="mt-1 text-xs text-gray-500 dark:text-gray-400">
 							{$i18n.t('Protect your shared link with a password.')}
 						</p>
@@ -1416,13 +1417,14 @@
 			{/if}
 
 			<a
-				class="mt-4 px-4 py-2 bg-gray-100 dark:bg-gray-800 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors"
+				class="mt-4 flex items-center gap-2 px-4 py-2 bg-gray-100 dark:bg-gray-800 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors"
 				href={downloadQrCodeUrl}
 				download="qrcode.png"
 				on:click={() => {
 					toast.success($i18n.t('Downloading QR code...'));
 				}}
 			>
+				<ArrowDownTray class="size-5" />
 				{$i18n.t('Download QR Code')}
 			</a>
 		</div>
