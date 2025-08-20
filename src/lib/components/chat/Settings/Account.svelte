@@ -14,15 +14,22 @@
 	import Tooltip from '$lib/components/common/Tooltip.svelte';
 	import SensitiveInput from '$lib/components/common/SensitiveInput.svelte';
 	import Textarea from '$lib/components/common/Textarea.svelte';
+	import { getUserById } from '$lib/apis/users';
 
 	const i18n = getContext('i18n');
 
 	export let saveHandler: Function;
 	export let saveSettings: Function;
 
+	let loaded = false;
+
 	let profileImageUrl = '';
 	let name = '';
 	let bio = '';
+
+	let _gender = '';
+	let gender = '';
+	let dateOfBirth = '';
 
 	let webhookUrl = '';
 	let showAPIKeys = false;
@@ -49,11 +56,15 @@
 			});
 		}
 
-		const updatedUser = await updateUserProfile(localStorage.token, name, profileImageUrl).catch(
-			(error) => {
-				toast.error(`${error}`);
-			}
-		);
+		const updatedUser = await updateUserProfile(localStorage.token, {
+			name: name,
+			profile_image_url: profileImageUrl,
+			bio: bio ? bio : null,
+			gender: gender ? gender : null,
+			date_of_birth: dateOfBirth ? dateOfBirth : null
+		}).catch((error) => {
+			toast.error(`${error}`);
+		});
 
 		if (updatedUser) {
 			// Get Session User Info
@@ -78,14 +89,30 @@
 	};
 
 	onMount(async () => {
-		name = $user?.name;
-		profileImageUrl = $user?.profile_image_url;
+		const user = await getSessionUser(localStorage.token).catch((error) => {
+			toast.error(`${error}`);
+			return null;
+		});
+
+		if (user) {
+			name = user?.name ?? '';
+			profileImageUrl = user?.profile_image_url ?? '';
+			bio = user?.bio ?? '';
+
+			_gender = user?.gender ?? '';
+			gender = _gender;
+
+			dateOfBirth = user?.date_of_birth ?? '';
+		}
+
 		webhookUrl = $settings?.notifications?.webhook_url ?? '';
 
 		APIKey = await getAPIKey(localStorage.token).catch((error) => {
 			console.log(error);
 			return '';
 		});
+
+		loaded = true;
 	});
 </script>
 
@@ -164,7 +191,7 @@
 
 			<!-- <div class=" text-sm font-medium">{$i18n.t('Account')}</div> -->
 
-			<div class="flex space-x-5 mt-4">
+			<div class="flex space-x-5 my-4">
 				<div class="flex flex-col self-start group">
 					<div class="self-center flex">
 						<button
@@ -177,7 +204,7 @@
 							<img
 								src={profileImageUrl !== '' ? profileImageUrl : generateInitialsImage(name)}
 								alt="profile"
-								class=" rounded-full size-14 md:size-20 object-cover"
+								class=" rounded-full size-14 md:size-18 object-cover"
 							/>
 
 							<div class="absolute bottom-0 right-0 opacity-0 group-hover:opacity-100 transition">
@@ -254,9 +281,58 @@
 							<div class="flex-1">
 								<Textarea
 									className="w-full text-sm dark:text-gray-300 bg-transparent outline-hidden"
+									minSize={60}
 									bind:value={bio}
-									minSize={100}
 									placeholder={$i18n.t('Share your background and interests')}
+								/>
+							</div>
+						</div>
+
+						<div class="flex flex-col w-full mt-2">
+							<div class=" mb-1 text-xs font-medium">{$i18n.t('Gender')}</div>
+
+							<div class="flex-1">
+								<select
+									class="w-full text-sm dark:text-gray-300 bg-transparent outline-hidden"
+									bind:value={_gender}
+									on:change={(e) => {
+										console.log(_gender);
+
+										if (_gender === 'custom') {
+											// Handle custom gender input
+											gender = '';
+										} else {
+											gender = _gender;
+										}
+									}}
+								>
+									<option value="" selected>{$i18n.t('Prefer not to say')}</option>
+									<option value="male">{$i18n.t('Male')}</option>
+									<option value="female">{$i18n.t('Female')}</option>
+									<option value="custom">{$i18n.t('Custom')}</option>
+								</select>
+							</div>
+
+							{#if _gender === 'custom'}
+								<input
+									class="w-full text-sm dark:text-gray-300 bg-transparent outline-hidden mt-1"
+									type="text"
+									required
+									placeholder={$i18n.t('Enter your gender')}
+									bind:value={gender}
+								/>
+							{/if}
+						</div>
+
+						<div class="flex flex-col w-full mt-2">
+							<div class=" mb-1 text-xs font-medium">{$i18n.t('Birth Date')}</div>
+
+							<div class="flex-1">
+								<input
+									class="w-full text-sm dark:text-gray-300 dark:placeholder:text-gray-300 bg-transparent outline-hidden"
+									type="date"
+									bind:value={dateOfBirth}
+									required
 								/>
 							</div>
 						</div>
