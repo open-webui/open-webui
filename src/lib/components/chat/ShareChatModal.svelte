@@ -796,7 +796,7 @@
 </script>
     
 <Modal bind:show size="md">
-	<div>
+	<div class="flex flex-col h-full">
 		<div class=" flex justify-between dark:text-gray-300 px-5 pt-4 pb-0.5">
 			<div class=" text-lg font-medium self-center flex items-center space-x-2">
 
@@ -870,7 +870,7 @@
 		{#if chat}
 			<div class="p-5 w-full flex flex-col space-y-4">
 				<!-- Access Settings -->
-				<div class="p-4 rounded-lg bg-gray-100 dark:bg-gray-850">
+				<div class="p-4 rounded-lg bg-gray-100 dark:bg-gray-850 flex-1">
 					<div class="font-medium mb-2">{$i18n.t('Access Settings')}</div>
 
 					<div class="grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -989,7 +989,7 @@
 				</div>
 
 				<!-- Expiration Settings -->
-				<div class="p-4 rounded-lg bg-gray-100 dark:bg-gray-850">
+				<div class="p-4 rounded-lg bg-gray-100 dark:bg-gray-850 flex-1">
 					<div class="font-medium mb-2">{$i18n.t('Expiration Settings')}</div>
 
 					<div class="flex items-end gap-2 mt-4">
@@ -1184,7 +1184,7 @@
 				</div>
 
 				<!-- Link and QR Code -->
-				<div class="p-4 rounded-lg bg-gray-100 dark:bg-gray-850">
+				<div class="p-4 rounded-lg bg-gray-100 dark:bg-gray-850 flex-1">
 					<div class="font-medium mb-2">{$i18n.t('Share Link and QR Code')}</div>
 					<div class="mt-2 flex items-center gap-2">
 						<div class="flex-1">
