@@ -1142,7 +1142,7 @@
 			<!-- PATCH ADD LOGO TO SIDEBAR -->
 			<div class="-mb-2 flex items-center py-2.5 px-4.5 w-full bg-gray-800">
 				<div class="self-center mr-3">
-					<img src="{WEBUI_BASE_URL}/local-logo.png" class="max-w-[150px] object-cover" alt="" />
+					<img src={$config?.extended_features?.logo_url ? JSON.parse($config?.extended_features?.logo_url) : ""} class="max-w-[150px] object-cover" alt="" />
 				</div>
 			</div>
 			<!-- /PATCH ADD LOGO TO SIDEBAR -->

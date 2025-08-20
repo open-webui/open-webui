@@ -1050,6 +1050,15 @@ WAS_REDIRECT_URL = PersistentConfig(
 # /PATCH REDIRECT TO WAS
 
 
+# PATCH ADD LOGO TO SIDEBAR
+LOGO_URL = PersistentConfig(
+    "LOGO_URL",
+    "ui.LOGO_URL",
+    os.environ.get("LOGO_URL", ""),
+)
+# /PATCH ADD LOGO TO SIDEBAR
+
+
 ENABLE_LOGIN_FORM = PersistentConfig(
     "ENABLE_LOGIN_FORM",
     "ui.ENABLE_LOGIN_FORM",

@@ -337,6 +337,9 @@ from open_webui.config import (
     # PATCH REDIRECT TO WAS
     WAS_REDIRECT_URL,
     # /PATCH REDIRECT TO WAS
+    # PATCH ADD LOGO TO SIDEBAR
+    LOGO_URL,
+    # /PATCH ADD LOGO TO SIDEBAR
     DEFAULT_ARENA_MODEL,
     MODEL_ORDER_LIST,
     EVALUATION_ARENA_MODELS,
@@ -707,6 +710,10 @@ app.state.config.DEFAULT_USER_ROLE = DEFAULT_USER_ROLE
 # PATCH REDIRECT TO WAS
 app.state.config.WAS_REDIRECT_URL = WAS_REDIRECT_URL
 # /PATCH REDIRECT TO WAS
+
+# PATCH ADD LOGO TO SIDEBAR
+app.state.config.LOGO_URL = LOGO_URL
+# /PATCH ADD LOGO TO SIDEBAR
 
 app.state.config.PENDING_USER_OVERLAY_CONTENT = PENDING_USER_OVERLAY_CONTENT
 app.state.config.PENDING_USER_OVERLAY_TITLE = PENDING_USER_OVERLAY_TITLE
@@ -1656,6 +1663,9 @@ async def get_app_config(request: Request):
             # PATCH REDIRECT TO WAS
             "was_redirect_url": app.state.config.WAS_REDIRECT_URL,
             # /PATCH REDIRECT TO WAS
+            # PATCH ADD LOGO TO SIDEBAR
+            "logo_url": app.state.config.LOGO_URL,
+            # /PATCH ADD LOGO TO SIDEBAR
         },
         "features": {
             "auth": WEBUI_AUTH,
