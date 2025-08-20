@@ -1111,7 +1111,9 @@
 				</Folder>
 			</div>
 
-			<div class="px-1.5 pt-1.5 pb-2 sticky bottom-0 z-10 bg-gray-50 dark:bg-gray-950 sidebar pb-[50px]">
+ 			<!-- PATCH ADD LOGO TO SIDEBAR: pb-[50px]-class added -->
+			 <div class="px-1.5 pt-1.5 pb-2 sticky bottom-0 z-10 bg-gray-50 dark:bg-gray-950 sidebar pb-[50px]">
+				<!-- /PATCH ADD LOGO TO SIDEBAR -->
 				<div class="flex flex-col font-primary">
 					{#if $user !== undefined && $user !== null}
 						<UserMenu
