@@ -1042,7 +1042,7 @@ export const approximateToHumanReadable = (nanoseconds: number) => {
 
 export const getTimeRange = (timestamp) => {
 	const now = new Date();
-	const date = new Date(timestamp); 
+	const date = new Date(timestamp * 1000); // Convert Unix timestamp to milliseconds
 
 	// Calculate the difference in milliseconds
 	const diffTime = now.getTime() - date.getTime();
