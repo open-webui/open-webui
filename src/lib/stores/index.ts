@@ -143,6 +143,7 @@ type Settings = {
 	audio?: AudioSettings;
 	showUsername?: boolean;
 	notificationEnabled?: boolean;
+	wikipediaGrounding?: boolean;
 	title?: TitleSettings;
 	splitLargeDeltas?: boolean;
 

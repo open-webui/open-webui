@@ -4,7 +4,7 @@
 	import { getLanguages } from '$lib/i18n';
 	const dispatch = createEventDispatcher();
 
-	import { ariaMessage, models, settings, theme, user } from '$lib/stores';
+	import { ariaMessage, models, settings, theme, user, config } from '$lib/stores';
 
 	const i18n = getContext('i18n');
 
