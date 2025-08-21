@@ -36,8 +36,7 @@
 
 	export let shareEnabled: boolean = false;
 	export let shareHandler: Function;
-	export let downloadHandler: Function;
-
+	export let moveHandler: Function;
 	// export let tagHandler: Function;
 
 	export let chat;

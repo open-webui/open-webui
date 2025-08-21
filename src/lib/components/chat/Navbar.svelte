@@ -165,9 +165,6 @@
 							shareHandler={() => {
 								showShareChatModal = !showShareChatModal;
 							}}
-							downloadHandler={() => {
-								showDownloadChatModal = !showDownloadChatModal;
-							}}
 						>
 							<button
 								class="flex cursor-pointer px-2 py-2 rounded-xl hover:bg-gray-50 dark:hover:bg-gray-850 transition"
