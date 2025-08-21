@@ -280,14 +280,16 @@ async def update_embedding_config(
     log.info(
         f"Updating embedding model: {request.app.state.config.RAG_EMBEDDING_MODEL} to {form_data.embedding_model}"
     )
-    if request.app.state.config.RAG_EMBEDDING_ENGINE == '':
+    if request.app.state.config.RAG_EMBEDDING_ENGINE == "":
         # unloads current internal embedding model and clears VRAM cache
         request.app.state.ef = None
         request.app.state.EMBEDDING_FUNCTION = None
         import gc
+
         gc.collect()
-        if DEVICE_TYPE == 'cuda':
+        if DEVICE_TYPE == "cuda":
             import torch
+
             if torch.cuda.is_available():
                 torch.cuda.empty_cache()
     try:
@@ -815,14 +817,16 @@ async def update_rag_config(
     )
 
     # Reranking settings
-    if request.app.state.config.RAG_RERANKING_ENGINE == '':
+    if request.app.state.config.RAG_RERANKING_ENGINE == "":
         # Unloading the internal reranker and clear VRAM memory
         request.app.state.rf = None
         request.app.state.RERANKING_FUNCTION = None
         import gc
+
         gc.collect()
-        if DEVICE_TYPE == 'cuda':
+        if DEVICE_TYPE == "cuda":
             import torch
+
             if torch.cuda.is_available():
                 torch.cuda.empty_cache()
     request.app.state.config.RAG_RERANKING_ENGINE = (
@@ -854,7 +858,10 @@ async def update_rag_config(
         )
 
         try:
-            if request.app.state.config.ENABLE_RAG_HYBRID_SEARCH and not request.app.state.config.BYPASS_EMBEDDING_AND_RETRIEVAL:
+            if (
+                request.app.state.config.ENABLE_RAG_HYBRID_SEARCH
+                and not request.app.state.config.BYPASS_EMBEDDING_AND_RETRIEVAL
+                ):
                 request.app.state.rf = get_rf(
                     request.app.state.config.RAG_RERANKING_ENGINE,
                     request.app.state.config.RAG_RERANKING_MODEL,
