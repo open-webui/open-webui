@@ -5,6 +5,12 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.5.7-ccv2-1.6.2] - 2025-08-21
+
+### Fixed
+
+- **🚨 Add Missing Dependency**: Add missing tiktoken dependency.
+
 ## [0.5.7-ccv2-1.6.1] - 2025-08-14
 
 ### Fixed
@@ -19,7 +25,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - **📑 Prompt List Pagination and Dynamic Loading**: Improved the user experience when viewing prompts by including pagination.
 - **✍️ Feedback Management Features for Admins**: Allow for exporting or deleting all Feedback.
-- **🗂️ Indexes on Prompt and Feedback**: Added indexes on the `prompt` and `feedback` tables to increase database request speed.
+- **🗂️ Indexes on Prompt and Feedback**: Added indexes on the prompt and feedback tables to increase database request speed.
 - **🧹 Cleanup scripts for Qdrant**: Added scripts that allow for cleanups of collections.
 - **📚 Allowed for re-indexing of files**: Re-index files if a collection is not in place but the file is still available.
 

@@ -20,7 +20,7 @@ from fastapi import (
 )
 from fastapi.concurrency import run_in_threadpool
 from pydantic import BaseModel
-
+import tiktoken
 
 from langchain.text_splitter import RecursiveCharacterTextSplitter, TokenTextSplitter
 from langchain_core.documents import Document
