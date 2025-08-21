@@ -4,7 +4,7 @@ import mimetypes
 import os
 import shutil
 import asyncio
-
+import base64
 
 import uuid
 from datetime import datetime
@@ -400,6 +400,7 @@ async def get_rag_config(request: Request, user=Depends(get_admin_user)):
         # Content extraction settings
         "CONTENT_EXTRACTION_ENGINE": request.app.state.config.CONTENT_EXTRACTION_ENGINE,
         "PDF_EXTRACT_IMAGES": request.app.state.config.PDF_EXTRACT_IMAGES,
+        "ENABLE_OPENAI_PDF_PARSER": request.app.state.config.ENABLE_OPENAI_PDF_PARSER,
         "DATALAB_MARKER_API_KEY": request.app.state.config.DATALAB_MARKER_API_KEY,
         "DATALAB_MARKER_API_BASE_URL": request.app.state.config.DATALAB_MARKER_API_BASE_URL,
         "DATALAB_MARKER_ADDITIONAL_CONFIG": request.app.state.config.DATALAB_MARKER_ADDITIONAL_CONFIG,
@@ -569,6 +570,7 @@ class ConfigForm(BaseModel):
     # Content extraction settings
     CONTENT_EXTRACTION_ENGINE: Optional[str] = None
     PDF_EXTRACT_IMAGES: Optional[bool] = None
+    ENABLE_OPENAI_PDF_PARSER: Optional[bool] = None
     DATALAB_MARKER_API_KEY: Optional[str] = None
     DATALAB_MARKER_API_BASE_URL: Optional[str] = None
     DATALAB_MARKER_ADDITIONAL_CONFIG: Optional[str] = None
@@ -683,6 +685,11 @@ async def update_rag_config(
         form_data.PDF_EXTRACT_IMAGES
         if form_data.PDF_EXTRACT_IMAGES is not None
         else request.app.state.config.PDF_EXTRACT_IMAGES
+    )
+    request.app.state.config.ENABLE_OPENAI_PDF_PARSER = (
+        form_data.ENABLE_OPENAI_PDF_PARSER
+        if form_data.ENABLE_OPENAI_PDF_PARSER is not None
+        else request.app.state.config.ENABLE_OPENAI_PDF_PARSER
     )
     request.app.state.config.DATALAB_MARKER_API_KEY = (
         form_data.DATALAB_MARKER_API_KEY
@@ -1024,6 +1031,7 @@ async def update_rag_config(
         # Content extraction settings
         "CONTENT_EXTRACTION_ENGINE": request.app.state.config.CONTENT_EXTRACTION_ENGINE,
         "PDF_EXTRACT_IMAGES": request.app.state.config.PDF_EXTRACT_IMAGES,
+        "ENABLE_OPENAI_PDF_PARSER": request.app.state.config.ENABLE_OPENAI_PDF_PARSER,
         "DATALAB_MARKER_API_KEY": request.app.state.config.DATALAB_MARKER_API_KEY,
         "DATALAB_MARKER_API_BASE_URL": request.app.state.config.DATALAB_MARKER_API_BASE_URL,
         "DATALAB_MARKER_ADDITIONAL_CONFIG": request.app.state.config.DATALAB_MARKER_ADDITIONAL_CONFIG,
@@ -1478,6 +1486,15 @@ def process_file(
             file.id,
             {"status": "completed", "content": text_content},
         )
+        
+        # Store PDF base64 for OpenAI built-in file parser        
+        with open(file_path, "rb") as f:
+            upload_file_bytes = f.read()
+        uploaded_file_base64_string = base64.b64encode(upload_file_bytes).decode("utf-8")
+        Files.update_file_data_by_id(
+            file.id,
+            {"uploaded_file_base64_string": uploaded_file_base64_string},
+        )
 
         hash = calculate_sha256_string(text_content)
         Files.update_file_hash_by_id(file.id, hash)
@@ -1519,6 +1536,7 @@ def process_file(
                 "collection_name": None,
                 "filename": file.filename,
                 "content": text_content,
+                "uploaded_file_base64_string": uploaded_file_base64_string,
             }
 
     except Exception as e:
