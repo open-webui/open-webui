@@ -60,6 +60,7 @@
 	let ctrlEnterToSend = false;
 	let copyFormatted = false;
 
+	let temporaryChatByDefault = false;
 	let chatFadeStreamingText = true;
 	let collapseCodeBlocks = false;
 	let expandDetails = false;
@@ -215,6 +216,8 @@
 		widescreenMode = $settings?.widescreenMode ?? false;
 		splitLargeChunks = $settings?.splitLargeChunks ?? false;
 		scrollOnBranchChange = $settings?.scrollOnBranchChange ?? true;
+
+		temporaryChatByDefault = $settings?.temporaryChatByDefault ?? false;
 		chatDirection = $settings?.chatDirection ?? 'auto';
 		userLocation = $settings?.userLocation ?? false;
 
@@ -574,6 +577,25 @@
 							bind:state={widescreenMode}
 							on:change={() => {
 								saveSettings({ widescreenMode });
+							}}
+						/>
+					</div>
+				</div>
+			</div>
+
+			<div>
+				<div class=" py-0.5 flex w-full justify-between">
+					<div id="temp-chat-default-label" class=" self-center text-xs">
+						{$i18n.t('Temporary Chat by Default')}
+					</div>
+
+					<div class="flex items-center gap-2 p-1">
+						<Switch
+							ariaLabelledbyId="temp-chat-default-label"
+							tooltip={true}
+							bind:state={temporaryChatByDefault}
+							on:change={() => {
+								saveSettings({ temporaryChatByDefault });
 							}}
 						/>
 					</div>

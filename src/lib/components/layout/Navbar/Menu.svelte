@@ -20,9 +20,11 @@
 		temporaryChatEnabled,
 		theme,
 		user,
-		settings
+		settings,
+		folders
 	} from '$lib/stores';
 	import { flyAndScale } from '$lib/utils/transitions';
+	import { getChatById } from '$lib/apis/chats';
 
 	import Dropdown from '$lib/components/common/Dropdown.svelte';
 	import Tags from '$lib/components/chat/Tags.svelte';
@@ -30,13 +32,18 @@
 	import Clipboard from '$lib/components/icons/Clipboard.svelte';
 	import AdjustmentsHorizontal from '$lib/components/icons/AdjustmentsHorizontal.svelte';
 	import Cube from '$lib/components/icons/Cube.svelte';
-	import { getChatById } from '$lib/apis/chats';
+	import Folder from '$lib/components/icons/Folder.svelte';
+	import Share from '$lib/components/icons/Share.svelte';
+	import ArchiveBox from '$lib/components/icons/ArchiveBox.svelte';
 
 	const i18n = getContext('i18n');
 
 	export let shareEnabled: boolean = false;
+
 	export let shareHandler: Function;
-	export let downloadHandler: Function;
+	export let moveChatHandler: Function;
+
+	export let archiveChatHandler: Function;
 
 	// export let tagHandler: Function;
 
@@ -263,30 +270,6 @@
 				</DropdownMenu.Item>
 			{/if}
 
-			{#if !$temporaryChatEnabled && ($user?.role === 'admin' || ($user.permissions?.chat?.share ?? true))}
-				<DropdownMenu.Item
-					class="flex gap-2 items-center px-3 py-2 text-sm cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 rounded-md select-none w-full"
-					id="chat-share-button"
-					on:click={() => {
-						shareHandler();
-					}}
-				>
-					<svg
-						xmlns="http://www.w3.org/2000/svg"
-						viewBox="0 0 24 24"
-						fill="currentColor"
-						class="size-4"
-					>
-						<path
-							fill-rule="evenodd"
-							d="M15.75 4.5a3 3 0 1 1 .825 2.066l-8.421 4.679a3.002 3.002 0 0 1 0 1.51l8.421 4.679a3 3 0 1 1-.729 1.31l-8.421-4.678a3 3 0 1 1 0-4.132l8.421-4.679a3 3 0 0 1-.096-.755Z"
-							clip-rule="evenodd"
-						/>
-					</svg>
-					<div class="flex items-center">{$i18n.t('Share')}</div>
-				</DropdownMenu.Item>
-			{/if}
-
 			<DropdownMenu.Item
 				class="flex gap-2 items-center px-3 py-2 text-sm cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 rounded-md select-none w-full"
 				id="chat-overview-button"
@@ -311,6 +294,61 @@
 			>
 				<Cube className=" size-4" strokeWidth="1.5" />
 				<div class="flex items-center">{$i18n.t('Artifacts')}</div>
+			</DropdownMenu.Item>
+
+			<hr class="border-gray-100 dark:border-gray-800 my-1" />
+
+			{#if !$temporaryChatEnabled && ($user?.role === 'admin' || ($user.permissions?.chat?.share ?? true))}
+				<DropdownMenu.Item
+					class="flex gap-2 items-center px-3 py-2 text-sm cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 rounded-md select-none w-full"
+					id="chat-share-button"
+					on:click={() => {
+						shareHandler();
+					}}
+				>
+					<Share />
+					<div class="flex items-center">{$i18n.t('Share')}</div>
+				</DropdownMenu.Item>
+			{/if}
+
+			{#if chat?.id}
+				<DropdownMenu.Sub>
+					<DropdownMenu.SubTrigger
+						class="flex gap-2 items-center px-3 py-2 text-sm cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 rounded-md select-none w-full"
+					>
+						<Folder />
+
+						<div class="flex items-center">{$i18n.t('Move')}</div>
+					</DropdownMenu.SubTrigger>
+					<DropdownMenu.SubContent
+						class="w-full rounded-xl px-1 py-1.5 z-50 bg-white dark:bg-gray-850 dark:text-white shadow-lg max-h-52 overflow-y-auto scrollbar-hidden"
+						transition={flyAndScale}
+						sideOffset={8}
+					>
+						{#each $folders.sort((a, b) => b.updated_at - a.updated_at) as folder}
+							<DropdownMenu.Item
+								class="flex gap-2 items-center px-3 py-1.5 text-sm cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 rounded-md"
+								on:click={() => {
+									moveChatHandler(chat?.id, folder?.id);
+								}}
+							>
+								<Folder />
+
+								<div class="flex items-center">{folder?.name ?? 'Folder'}</div>
+							</DropdownMenu.Item>
+						{/each}
+					</DropdownMenu.SubContent>
+				</DropdownMenu.Sub>
+			{/if}
+
+			<DropdownMenu.Item
+				class="flex gap-2 items-center px-3 py-1.5 text-sm  cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 rounded-md"
+				on:click={() => {
+					archiveChatHandler();
+				}}
+			>
+				<ArchiveBox className="size-4" strokeWidth="2" />
+				<div class="flex items-center">{$i18n.t('Archive')}</div>
 			</DropdownMenu.Item>
 
 			<DropdownMenu.Sub>

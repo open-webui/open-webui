@@ -263,7 +263,7 @@
 							bind:value={TTSEngineConfig.dtype}
 							placeholder={$i18n.t('Select dtype')}
 						>
-							<option value="" disabled selected>Select dtype</option>
+							<option value="" disabled selected>{$i18n.t('Select dtype')}</option>
 							<option value="fp32">fp32</option>
 							<option value="fp16">fp16</option>
 							<option value="q8">q8</option>

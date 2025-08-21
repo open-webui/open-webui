@@ -50,6 +50,7 @@
 	import LockClosed from '$lib/components/icons/LockClosed.svelte';
 	import AccessControlModal from '../common/AccessControlModal.svelte';
 	import Search from '$lib/components/icons/Search.svelte';
+	import Textarea from '$lib/components/common/Textarea.svelte';
 
 	let largeScreen = true;
 
@@ -181,6 +182,12 @@
 
 			if (uploadedFile) {
 				console.log(uploadedFile);
+
+				if (uploadedFile.error) {
+					console.warn('File upload warning:', uploadedFile.error);
+					toast.warning(uploadedFile.error);
+				}
+
 				knowledge.files = knowledge.files.map((item) => {
 					if (item.itemId === tempItemId) {
 						item.id = uploadedFile.id;
@@ -230,7 +237,13 @@
 		// Function to update the UI with the progress
 		const updateProgress = () => {
 			const percentage = (uploadedFiles / totalFiles) * 100;
-			toast.info($i18n.t("Upload Progress: {{uploadedFiles}}/{{totalFiles}} ({{percentage}}%)", { uploadedFiles: uploadedFiles, totalFiles: totalFiles, percentage: percentage.toFixed(2) }));
+			toast.info(
+				$i18n.t('Upload Progress: {{uploadedFiles}}/{{totalFiles}} ({{percentage}}%)', {
+					uploadedFiles: uploadedFiles,
+					totalFiles: totalFiles,
+					percentage: percentage.toFixed(2)
+				})
+			);
 		};
 
 		// Recursive function to count all files excluding hidden ones
@@ -314,8 +327,11 @@
 					const updateProgress = () => {
 						const percentage = (uploadedFiles / totalFiles) * 100;
 						toast.info(
-							$i18n.t("Upload Progress: {{uploadedFiles}}/{{totalFiles}} ({{percentage}}%)", 
-							{ uploadedFiles: uploadedFiles, totalFiles: totalFiles, percentage: percentage.toFixed(2) })
+							$i18n.t('Upload Progress: {{uploadedFiles}}/{{totalFiles}} ({{percentage}}%)', {
+								uploadedFiles: uploadedFiles,
+								totalFiles: totalFiles,
+								percentage: percentage.toFixed(2)
+							})
 						);
 					};
 
@@ -673,7 +689,7 @@
 	}}
 />
 
-<div class="flex flex-col w-full translate-y-1" id="collection-container">
+<div class="flex flex-col w-full h-full translate-y-1" id="collection-container">
 	{#if id && knowledge}
 		<AccessControlModal
 			bind:show={showAccessControlModal}
@@ -777,11 +793,10 @@
 								class=" flex-1 w-full h-full max-h-full text-sm bg-transparent outline-hidden overflow-y-auto scrollbar-hidden"
 							>
 								{#key selectedFile.id}
-									<RichTextInput
-										className="input-prose-sm"
+									<textarea
+										class="w-full h-full outline-none resize-none"
 										bind:value={selectedFileContent}
 										placeholder={$i18n.t('Add content here')}
-										preserveBreaks={false}
 									/>
 								{/key}
 							</div>
@@ -835,11 +850,10 @@
 								class=" flex-1 w-full h-full max-h-full py-2.5 px-3.5 rounded-lg text-sm bg-transparent overflow-y-auto scrollbar-hidden"
 							>
 								{#key selectedFile.id}
-									<RichTextInput
-										className="input-prose-sm"
+									<textarea
+										class="w-full h-full outline-none resize-none"
 										bind:value={selectedFileContent}
 										placeholder={$i18n.t('Add content here')}
-										preserveBreaks={false}
 									/>
 								{/key}
 							</div>

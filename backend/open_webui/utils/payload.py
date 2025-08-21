@@ -9,7 +9,7 @@ import json
 
 
 # inplace function: form_data is modified
-def apply_model_system_prompt_to_body(
+def apply_system_prompt_to_body(
     system: Optional[str], form_data: dict, metadata: Optional[dict] = None, user=None
 ) -> dict:
     if not system:
@@ -22,15 +22,7 @@ def apply_model_system_prompt_to_body(
             system = prompt_variables_template(system, variables)
 
     # Legacy (API Usage)
-    if user:
-        template_params = {
-            "user_name": user.name,
-            "user_location": user.info.get("location") if user.info else None,
-        }
-    else:
-        template_params = {}
-
-    system = prompt_template(system, **template_params)
+    system = prompt_template(system, user)
 
     form_data["messages"] = add_or_update_system_message(
         system, form_data.get("messages", [])
