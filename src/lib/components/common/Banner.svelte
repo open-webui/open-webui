@@ -37,12 +37,12 @@
 	};
 
 	const getBannerContent = (banner: Banner, currentLanguage: string): string => {
-		// If translations exist and we have a translation for the current language, use it
+		// Always use translations - current language content is stored in translations
 		if (banner.translations && banner.translations[currentLanguage]) {
 			return banner.translations[currentLanguage];
 		}
 
-		// Fall back to default content
+		// Fallback to banner.content for backwards compatibility, then empty string
 		return banner.content ?? '';
 	};
 

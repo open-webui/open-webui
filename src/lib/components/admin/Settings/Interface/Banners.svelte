@@ -41,6 +41,8 @@
 
 	$: if (banners) {
 		init();
+		// Initialize translations for all banners
+		banners.forEach(banner => initializeBannerTranslations(banner));
 	}
 
 	// Load available languages
@@ -74,6 +76,11 @@
 	};
 
 	const addTranslation = (banner, langCode) => {
+		// Don't allow adding current language as it's managed in the main content field
+		if (langCode === $i18n.language) {
+			return;
+		}
+		
 		if (!banner.translations) {
 			banner.translations = {};
 		}
@@ -97,6 +104,25 @@
 		}
 	};
 
+	// Helper function to get/set current language content
+	const initializeBannerTranslations = (banner) => {
+		if (!banner.translations) {
+			banner.translations = {};
+		}
+		
+		// If current language content doesn't exist, initialize it with banner.content
+		if (!banner.translations[$i18n.language] && banner.content) {
+			banner.translations[$i18n.language] = banner.content;
+			banner.content = ''; // Clear old content field
+			banners = banners; // Trigger reactivity
+		}
+		
+		// Ensure current language always has an entry
+		if (!banner.translations[$i18n.language]) {
+			banner.translations[$i18n.language] = '';
+		}
+	};
+
 	// Reactive statement to ensure proper updates
 	$: getFilteredLanguages = (bannerId) => {
 		const searchTerm = languageSearchTerms.get(bannerId) || '';
@@ -113,8 +139,9 @@
 			const matchesSearch = titleLower.includes(searchLower) || codeLower.includes(searchLower);
 			const notAlreadyAdded =
 				!currentBanner?.translations || !currentBanner.translations[lang.code];
+			const notCurrentLanguage = lang.code !== $i18n.language;
 
-			return matchesSearch && notAlreadyAdded;
+			return matchesSearch && notAlreadyAdded && notCurrentLanguage;
 		});
 	};
 </script>
@@ -166,12 +193,12 @@
 						</select>
 					</div>
 
-					<!-- Content Textarea -->
+					<!-- Current Language Content -->
 					<div class="min-w-0 flex-1">
 						<Textarea
 							className="w-full resize-none border-0 bg-transparent p-0 text-sm outline-none focus:ring-0"
-							placeholder={$i18n.t('Content')}
-							bind:value={banner.content}
+							placeholder={$i18n.t('Content for') + ' ' + ($i18n.language === 'en-US' ? 'English' : availableLanguages.find((l) => l.code === $i18n.language)?.title || $i18n.language)}
+							bind:value={banner.translations[$i18n.language]}
 							maxSize={100}
 						/>
 					</div>
@@ -257,18 +284,18 @@
 									>
 										Current
 									</h4>
-									{#if banner.translations && Object.keys(banner.translations).length > 0}
+									{#if banner.translations && Object.keys(banner.translations).filter(code => code !== $i18n.language).length > 0}
 										<span
 											class="rounded-full bg-blue-100 px-1.5 py-0.5 text-xs text-blue-700 dark:bg-blue-900/30 dark:text-blue-300"
 										>
-											{Object.keys(banner.translations).length}
+											{Object.keys(banner.translations).filter(code => code !== $i18n.language).length}
 										</span>
 									{/if}
 								</div>
 
-								{#if banner.translations && Object.keys(banner.translations).length > 0}
+								{#if banner.translations && Object.keys(banner.translations).filter(code => code !== $i18n.language).length > 0}
 									<div class="space-y-1">
-										{#each Object.entries(banner.translations) as [langCode, translation]}
+										{#each Object.entries(banner.translations).filter(([langCode]) => langCode !== $i18n.language) as [langCode, translation]}
 											<div
 												class="group rounded border border-gray-200 bg-white p-2 shadow-sm transition-all duration-200 hover:shadow dark:border-gray-700 dark:bg-gray-900"
 											>
@@ -422,37 +449,22 @@
 											</div>
 										{/if}
 									{:else}
-										<div class="p-2">
-											<div
-												class="mb-2 flex items-center gap-1 px-1 text-xs text-gray-500 dark:text-gray-400"
+										<div class="p-4 text-center">
+											<svg
+												class="mx-auto mb-2 h-6 w-6 text-gray-300 dark:text-gray-600"
+												fill="none"
+												stroke="currentColor"
+												viewBox="0 0 24 24"
 											>
-												<svg class="h-3 w-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-													<path
-														stroke-linecap="round"
-														stroke-linejoin="round"
-														stroke-width="2"
-														d="M13 10V3L4 14h7v7l9-11h-7z"
-													/>
-												</svg>
-												Popular
-											</div>
-											<div class="space-y-0.5">
-												{#each availableLanguages
-													.filter((lang) => ['es-ES', 'fr-FR', 'de-DE', 'zh-CN', 'ja-JP', 'pt-BR'].includes(lang.code) && (!banner.translations || !banner.translations[lang.code]))
-													.slice(0, 4) as lang (lang.code)}
-													<button
-														type="button"
-														class="group flex w-full items-center justify-between rounded px-2 py-1.5 text-left text-xs text-gray-700 transition-all duration-200 hover:bg-blue-50 hover:text-blue-700 dark:text-gray-300 dark:hover:bg-blue-900/20 dark:hover:text-blue-300"
-														on:click={() => addTranslation(banner, lang.code)}
-													>
-														<span class="truncate">{lang.title}</span>
-														<span
-															class="ml-1 font-mono text-xs text-gray-400 group-hover:text-blue-500"
-															>{lang.code}</span
-														>
-													</button>
-												{/each}
-											</div>
+												<path
+													stroke-linecap="round"
+													stroke-linejoin="round"
+													stroke-width="2"
+													d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
+												/>
+											</svg>
+											<p class="text-xs text-gray-500 dark:text-gray-400 mb-1">Start typing to search</p>
+											<p class="text-xs text-gray-400 dark:text-gray-500">Find languages to add translations</p>
 										</div>
 									{/if}
 								</div>
