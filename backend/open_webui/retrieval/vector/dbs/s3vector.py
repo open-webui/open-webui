@@ -197,19 +197,23 @@ class S3VectorClient(VectorDBBase):
                         "metadata": metadata,
                     }
                 )
-            
+
             # Insert vectors in batches of 500 (S3 Vector API limit)
             batch_size = 500
             for i in range(0, len(vectors), batch_size):
-                batch = vectors[i:i + batch_size]
+                batch = vectors[i : i + batch_size]
                 self.client.put_vectors(
                     vectorBucketName=self.bucket_name,
                     indexName=collection_name,
                     vectors=batch,
                 )
-                log.info(f"Inserted batch {i//batch_size + 1}: {len(batch)} vectors into index '{collection_name}'.")
-            
-            log.info(f"Completed insertion of {len(vectors)} vectors into index '{collection_name}'.")
+                log.info(
+                    f"Inserted batch {i//batch_size + 1}: {len(batch)} vectors into index '{collection_name}'."
+                )
+
+            log.info(
+                f"Completed insertion of {len(vectors)} vectors into index '{collection_name}'."
+            )
         except Exception as e:
             log.error(f"Error inserting vectors: {e}")
             raise
@@ -264,25 +268,29 @@ class S3VectorClient(VectorDBBase):
                         "metadata": metadata,
                     }
                 )
-            
+
             # Upsert vectors in batches of 500 (S3 Vector API limit)
             batch_size = 500
             for i in range(0, len(vectors), batch_size):
-                batch = vectors[i:i + batch_size]
+                batch = vectors[i : i + batch_size]
                 if i == 0:  # Log sample info for first batch only
                     log.info(
                         f"Upserting batch 1: {len(batch)} vectors. First vector sample: key={batch[0]['key']}, data_type={type(batch[0]['data']['float32'])}, data_len={len(batch[0]['data']['float32'])}"
                     )
                 else:
-                    log.info(f"Upserting batch {i//batch_size + 1}: {len(batch)} vectors.")
-                
+                    log.info(
+                        f"Upserting batch {i//batch_size + 1}: {len(batch)} vectors."
+                    )
+
                 self.client.put_vectors(
                     vectorBucketName=self.bucket_name,
                     indexName=collection_name,
                     vectors=batch,
                 )
-            
-            log.info(f"Completed upsert of {len(vectors)} vectors into index '{collection_name}'.")
+
+            log.info(
+                f"Completed upsert of {len(vectors)} vectors into index '{collection_name}'."
+            )
         except Exception as e:
             log.error(f"Error upserting vectors: {e}")
             raise

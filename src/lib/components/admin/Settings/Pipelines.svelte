@@ -514,9 +514,7 @@
 															{:else if (valves_spec.properties[property]?.type ?? null) === 'boolean'}
 																<div class="flex justify-between items-center">
 																	<div class="text-xs text-gray-500">
-																		{valves[property]
-																			? $i18n.t('Enabled')
-																			: $i18n.t('Disabled')}
+																		{valves[property] ? $i18n.t('Enabled') : $i18n.t('Disabled')}
 																	</div>
 
 																	<div class=" pr-2">
