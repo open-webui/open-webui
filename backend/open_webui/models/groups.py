@@ -4,7 +4,7 @@ import time
 from typing import Optional
 import uuid
 
-from open_webui.internal.db import Base, get_db
+from open_webui.internal.db import Base, get_db, get_length_function
 from open_webui.env import SRC_LOG_LEVELS
 
 from open_webui.models.files import FileMetadataResponse
@@ -115,10 +115,11 @@ class GroupTable:
 
     def get_groups_by_member_id(self, user_id: str) -> list[GroupModel]:
         with get_db() as db:
+            length_function = get_length_function(db)
             return [
                 GroupModel.model_validate(group)
                 for group in db.query(Group)
-                .filter(func.len(Group.user_ids) > 2)  # Ensure array exists
+                .filter(length_function(Group.user_ids) > 2)  # Ensure array exists
                 .filter(
                     Group.user_ids.cast(String).like(f'%"{user_id}"%')
                 )  # String-based check

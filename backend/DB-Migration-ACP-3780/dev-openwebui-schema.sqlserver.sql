@@ -59,8 +59,8 @@ CREATE TABLE [chat] (
     [title] NVARCHAR(MAX) NOT NULL,
     [share_id] VARCHAR(255),
     [archived] INT NOT NULL,
-    [created_at] DATETIME2 NOT NULL,
-    [updated_at] DATETIME2 NOT NULL,
+    [created_at] BIGINT NOT NULL,
+    [updated_at] BIGINT NOT NULL,
     [chat] NVARCHAR(MAX),
     [pinned] BIT,
     [meta] NVARCHAR(MAX) DEFAULT '{}' NOT NULL,
@@ -81,8 +81,8 @@ CREATE TABLE [config] (
     [id] INT NOT NULL,
     [data] NVARCHAR(MAX) NOT NULL,
     [version] INT NOT NULL,
-    [created_at] DATETIME2 DEFAULT (GETDATE()) NOT NULL,
-    [updated_at] DATETIME2 DEFAULT (GETDATE()),
+    [created_at] DATETIME DEFAULT (GETDATE()) NOT NULL,
+    [updated_at] DATETIME DEFAULT (GETDATE()),
     PRIMARY KEY ([id])
 );
 
@@ -221,7 +221,7 @@ CREATE TABLE [message_reaction] (
 CREATE TABLE [migratehistory] (
     [id] INT NOT NULL PRIMARY KEY,
     [name] VARCHAR(255) NOT NULL,
-    [migrated_at] DATETIME2 NOT NULL
+    [migrated_at] DATETIME NOT NULL
 );
 
 -- Table: model

@@ -3,23 +3,13 @@ import json
 import time
 import uuid
 from typing import Optional
-from datetime import datetime
 
 from open_webui.internal.db import Base, get_db
 from open_webui.models.tags import TagModel, Tag, Tags
 from open_webui.env import SRC_LOG_LEVELS
 
-from pydantic import BaseModel, ConfigDict, field_serializer
-from sqlalchemy import (
-    BigInteger,
-    Boolean,
-    Column,
-    String,
-    Text,
-    JSON,
-    DateTime,
-    func,
-)
+from pydantic import BaseModel, ConfigDict
+from sqlalchemy import BigInteger, Boolean, Column, String, Text, JSON
 from sqlalchemy import or_, func, select, and_, text
 from sqlalchemy.sql import exists
 
@@ -39,10 +29,8 @@ class Chat(Base):
     title = Column(Text)
     chat = Column(JSON)
 
-    created_at = Column(DateTime(timezone=True), server_default=func.now())
-    updated_at = Column(
-        DateTime(timezone=True), server_default=func.now(), onupdate=func.now()
-    )
+    created_at = Column(BigInteger)
+    updated_at = Column(BigInteger)
 
     share_id = Column(Text, unique=True, nullable=True)
     archived = Column(Boolean, default=False)
@@ -60,8 +48,8 @@ class ChatModel(BaseModel):
     title: str
     chat: dict
 
-    created_at: datetime
-    updated_at: datetime
+    created_at: int  # timestamp in epoch
+    updated_at: int  # timestamp in epoch
 
     share_id: Optional[str] = None
     archived: bool = False
@@ -100,28 +88,20 @@ class ChatResponse(BaseModel):
     user_id: str
     title: str
     chat: dict
-    updated_at: datetime
-    created_at: datetime
+    updated_at: int  # timestamp in epoch
+    created_at: int  # timestamp in epoch
     share_id: Optional[str] = None  # id of the chat to be shared
     archived: bool
     pinned: Optional[bool] = False
     meta: dict = {}
     folder_id: Optional[str] = None
 
-    @field_serializer("updated_at", "created_at")
-    def serialize_dt(self, dt: datetime, _info):
-        return dt.isoformat()
-
 
 class ChatTitleIdResponse(BaseModel):
     id: str
     title: str
-    updated_at: datetime
-    created_at: datetime
-
-    @field_serializer("updated_at", "created_at")
-    def serialize_dt(self, dt: datetime, _info):
-        return dt.isoformat()
+    updated_at: int
+    created_at: int
 
 
 class ChatTable:
@@ -138,8 +118,8 @@ class ChatTable:
                         else "New Chat"
                     ),
                     "chat": form_data.chat,
-                    "created_at": datetime.now(),
-                    "updated_at": datetime.now(),
+                    "created_at": int(time.time()),
+                    "updated_at": int(time.time()),
                 }
             )
 
@@ -167,8 +147,8 @@ class ChatTable:
                     "meta": form_data.meta,
                     "pinned": form_data.pinned,
                     "folder_id": form_data.folder_id,
-                    "created_at": datetime.now(),
-                    "updated_at": datetime.now(),
+                    "created_at": int(time.time()),
+                    "updated_at": int(time.time()),
                 }
             )
 
@@ -183,12 +163,9 @@ class ChatTable:
             with get_db() as db:
                 chat_item = db.get(Chat, id)
                 if chat_item:
-                    setattr(chat_item, "chat", chat)
-                    setattr(
-                        chat_item,
-                        "title",
-                        chat["title"] if "title" in chat else "New Chat",
-                    )
+                    chat_item.chat = chat
+                    chat_item.title = chat["title"] if "title" in chat else "New Chat"
+                    chat_item.updated_at = int(time.time())
                     db.commit()
                     db.refresh(chat_item)
                     return ChatModel.model_validate(chat_item)
@@ -298,7 +275,7 @@ class ChatTable:
                 return None
             # Check if the chat is already shared
             if chat.share_id is not None:
-                return self.get_chat_by_id_and_user_id(str(chat.share_id), "shared")
+                return self.get_chat_by_id_and_user_id(chat.share_id, "shared")
             # Create a new chat with the same data, but with a new ID
             shared_chat = ChatModel(
                 **{
@@ -307,7 +284,7 @@ class ChatTable:
                     "title": chat.title,
                     "chat": chat.chat,
                     "created_at": chat.created_at,
-                    "updated_at": datetime.now(),
+                    "updated_at": int(time.time()),
                 }
             )
             shared_result = Chat(**shared_chat.model_dump())
@@ -337,9 +314,10 @@ class ChatTable:
                 if shared_chat is None:
                     return self.insert_shared_chat_by_chat_id(chat_id)
 
-                setattr(shared_chat, "title", chat.title)
-                setattr(shared_chat, "chat", chat.chat)
+                shared_chat.title = chat.title
+                shared_chat.chat = chat.chat
 
+                shared_chat.updated_at = int(time.time())
                 db.commit()
                 db.refresh(shared_chat)
 
@@ -364,7 +342,7 @@ class ChatTable:
             with get_db() as db:
                 chat = db.get(Chat, id)
                 if chat:
-                    setattr(chat, "share_id", share_id)
+                    chat.share_id = share_id
                     db.commit()
                     db.refresh(chat)
                     return ChatModel.model_validate(chat)
@@ -377,7 +355,8 @@ class ChatTable:
             with get_db() as db:
                 chat = db.get(Chat, id)
                 if chat:
-                    setattr(chat, "pinned", not bool(chat.pinned))
+                    chat.pinned = not bool(chat.pinned)
+                    chat.updated_at = int(time.time())
                     db.commit()
                     db.refresh(chat)
                     return ChatModel.model_validate(chat)
@@ -390,7 +369,8 @@ class ChatTable:
             with get_db() as db:
                 chat = db.get(Chat, id)
                 if chat:
-                    setattr(chat, "archived", not bool(chat.archived))
+                    chat.archived = not bool(chat.archived)
+                    chat.updated_at = int(time.time())
                     db.commit()
                     db.refresh(chat)
                     return ChatModel.model_validate(chat)
@@ -473,8 +453,8 @@ class ChatTable:
                     {
                         "id": chat[0],
                         "title": chat[1],
-                        "updated_at": chat[2],
-                        "created_at": chat[3],
+                        "updated_at": int(chat[2]),
+                        "created_at": int(chat[3]),
                     }
                 )
                 for chat in all_chats
@@ -795,8 +775,9 @@ class ChatTable:
             with get_db() as db:
                 chat = db.get(Chat, id)
                 if chat:
-                    setattr(chat, "folder_id", folder_id)
-                    setattr(chat, "pinned", False)
+                    chat.folder_id = folder_id
+                    chat.updated_at = int(time.time())
+                    chat.pinned = False
                     db.commit()
                     db.refresh(chat)
                     return ChatModel.model_validate(chat)
@@ -870,14 +851,13 @@ class ChatTable:
                 chat = db.get(Chat, id)
                 if chat:
                     tag_id = tag.id
-                    new_meta = dict(chat.meta) if chat.meta else {}
-                    tags = new_meta.get("tags", [])
-                    if tag_id not in tags:
-                        tags.append(tag_id)
-                        new_meta["tags"] = tags
-                        setattr(chat, "meta", new_meta)
-                        db.commit()
-                        db.refresh(chat)
+                    if tag_id not in chat.meta.get("tags", []):
+                        chat.meta = {
+                            **chat.meta,
+                            "tags": list(set(chat.meta.get("tags", []) + [tag_id])),
+                        }
+                    db.commit()
+                    db.refresh(chat)
                     return ChatModel.model_validate(chat)
                 return None
         except Exception:
@@ -928,14 +908,15 @@ class ChatTable:
             with get_db() as db:
                 chat = db.get(Chat, id)
                 if chat:
-                    new_meta = dict(chat.meta) if chat.meta else {}
-                    tags = new_meta.get("tags", [])
+                    tags = chat.meta.get("tags", [])
                     tag_id = tag_name.replace(" ", "_").lower()
-                    if tag_id in tags:
-                        tags.remove(tag_id)
-                        new_meta["tags"] = tags
-                        setattr(chat, "meta", new_meta)
-                        db.commit()
+
+                    tags = [tag for tag in tags if tag != tag_id]
+                    chat.meta = {
+                        **chat.meta,
+                        "tags": list(set(tags)),
+                    }
+                    db.commit()
                     return True
                 return False
         except Exception:
@@ -946,10 +927,12 @@ class ChatTable:
             with get_db() as db:
                 chat = db.get(Chat, id)
                 if chat:
-                    new_meta = dict(chat.meta) if chat.meta else {}
-                    new_meta["tags"] = []
-                    setattr(chat, "meta", new_meta)
+                    chat.meta = {
+                        **chat.meta,
+                        "tags": [],
+                    }
                     db.commit()
+
                     return True
                 return False
         except Exception:
