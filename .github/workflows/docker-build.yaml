@@ -165,7 +165,7 @@ jobs:
         uses: docker/setup-buildx-action@v3
         with:
           buildkitd-flags: --allow-insecure-entitlement security.insecure --allow-insecure-entitlement network.host
-          config-inline: |
+          buildkitd-config-inline: |
             [worker.oci]
               max-parallelism = 1
             [registry."docker.io"]
@@ -215,6 +215,8 @@ jobs:
           echo "=== Aggressive Docker cleanup before build ==="
           docker system prune -af --volumes
           docker builder prune -af --all
+          # Clear any remaining build cache
+          docker buildx prune -af --all || true
           echo ""
           echo "=== Final pre-build disk usage ==="
           df -h

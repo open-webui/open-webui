@@ -81,16 +81,22 @@ RUN pip3 install uv && \
     fi && \
     uv pip install --system -r /tmp/requirements.txt --no-cache-dir
 
-# Download models with cleanup between steps to minimize space usage
+# Download models with aggressive cleanup between each step to minimize space usage
 RUN python -c "import os; from sentence_transformers import SentenceTransformer; SentenceTransformer(os.environ['RAG_EMBEDDING_MODEL'], device='cpu')" && \
-    python -c "import os; from faster_whisper import WhisperModel; WhisperModel(os.environ['WHISPER_MODEL'], device='cpu', compute_type='int8', download_root=os.environ['WHISPER_MODEL_DIR'])" && \
-    python -c "import os; import tiktoken; tiktoken.get_encoding(os.environ['TIKTOKEN_ENCODING_NAME'])" && \
     rm -rf /tmp/* /var/tmp/* ~/.cache/pip/* 2>/dev/null || true
 
-# Download large models separately with aggressive cleanup
+RUN python -c "import os; from faster_whisper import WhisperModel; WhisperModel(os.environ['WHISPER_MODEL'], device='cpu', compute_type='int8', download_root=os.environ['WHISPER_MODEL_DIR'])" && \
+    rm -rf /tmp/* /var/tmp/* ~/.cache/pip/* 2>/dev/null || true
+
+RUN python -c "import os; import tiktoken; tiktoken.get_encoding(os.environ['TIKTOKEN_ENCODING_NAME'])" && \
+    rm -rf /tmp/* /var/tmp/* ~/.cache/pip/* 2>/dev/null || true
+
+# Download large txtai-wikipedia model with cleanup
 RUN python -c "from txtai.embeddings import Embeddings; e = Embeddings(); e.load(provider='huggingface-hub', container='neuml/txtai-wikipedia')" && \
-    rm -rf /tmp/* /var/tmp/* ~/.cache/pip/* 2>/dev/null || true && \
-    python -c "import os; from transformers import pipeline; pipeline('translation', model='Helsinki-NLP/opus-mt-fr-en', device='cpu')" && \
+    rm -rf /tmp/* /var/tmp/* ~/.cache/pip/* 2>/dev/null || true
+
+# Download Helsinki translation model with cleanup  
+RUN python -c "import os; from transformers import pipeline; pipeline('translation', model='Helsinki-NLP/opus-mt-fr-en', device='cpu')" && \
     rm -rf /tmp/* /var/tmp/* ~/.cache/pip/* 2>/dev/null || true
 
 ######## WebUI backend ########
@@ -207,11 +213,8 @@ RUN pip3 install uv && \
     uv pip install --system -r requirements.txt --no-cache-dir; \
     fi
 
-# Copy pre-downloaded models from parallel build stage
+# Copy pre-downloaded models from parallel build stage (ownership already set via COPY --chown)
 COPY --from=models --chown=$UID:$GID /models/ /app/backend/data/cache/
-
-# Set ownership after all model downloads
-RUN chown -R $UID:$GID /app/backend/data/
 
 # copy embedding weight from build
 # RUN mkdir -p /root/.cache/chroma/onnx_models/all-MiniLM-L6-v2
