@@ -36,7 +36,7 @@
 				goto('/');
 			}}
 		>
-			Go to Home
+			Go back Home
 		</button>
 	</div>
 </div>

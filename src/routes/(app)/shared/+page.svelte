@@ -1090,7 +1090,7 @@
 									{#if chat.status === 'active'}
 										<Tooltip content="Revoke Link" className="inline-block">
 											<button
-												class="text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200"
+												class="text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 hover:underline"
 												on:click={() => {
 													revokeLink(chat.id);
 												}}>Revoke</button
@@ -1099,7 +1099,7 @@
 									{:else}
 										<Tooltip content="Restore Link" className="inline-block">
 											<button
-												class="text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200"
+												class="text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 hover:underline"
 												on:click={() => {
 													restoreLink(chat.id);
 												}}>Restore</button
@@ -1108,7 +1108,7 @@
 									{/if}
 									<Tooltip content="Modify Share Link" className="inline-block">
 										<button
-											class="text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 ml-4"
+											class="text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 hover:underline ml-4"
 											on:click={() => {
 												selectedChatId = chat.id;
 												showShareChatModal = true;
@@ -1118,7 +1118,7 @@
 									{#if $user?.role === 'admin' || $user?.permissions?.chat?.clone}
 										<Tooltip content="Clone Chat" className="inline-block">
 											<button
-												class="text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 ml-4"
+												class="text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 hover:underline ml-4"
 												on:click={() => {
 													cloneChat(chat.share_id);
 												}}>Clone</button
@@ -1127,7 +1127,7 @@
 									{/if}
 									<Tooltip content="Reset Statistics" className="inline-block">
 										<button
-											class="text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 ml-4"
+											class="text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 hover:underline ml-4"
 											on:click={() => {
 												chatToResetStats = chat;
 												showConfirmResetStats = true;
