@@ -9,7 +9,12 @@
 	} from '$lib/stores';
 
 	import { toast } from 'svelte-sonner';
-	import { deleteSharedChatById, getChatById, shareChatById } from '$lib/apis/chats';
+	import {
+		deleteSharedChatById,
+		getChatById,
+		shareChatById,
+		restoreSharedChat
+	} from '$lib/apis/chats';
 	import { copyToClipboard } from '$lib/utils';
 	import { v4 as uuidv4 } from 'uuid';
 
@@ -882,7 +887,7 @@
 				<div class="p-4 rounded-lg bg-gray-100 dark:bg-gray-850 flex-1">
 					<div class="font-medium mb-2">{$i18n.t('Access Settings')}</div>
 
-					<div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+					<div class="grid grid-cols-1 md:grid-cols-3 gap-4 mt-4">
 						{#if $user.role === 'admin' || ($user.permissions.sharing?.public_chat ?? false)}
 							<div class="flex items-start space-x-3">
 								<div class="pt-0.5">
@@ -1007,9 +1012,21 @@
 
 					<div class="flex items-end gap-2 mt-4">
 						<div class="flex-1">
-							<label for="expiration" class="block text-sm font-medium text-gray-700 dark:text-gray-300"
-								>{$i18n.t('Expires After')}</label
-							>
+							<div class="flex items-center space-x-1">
+								<label
+									for="expiration"
+									class="block text-sm font-medium text-gray-700 dark:text-gray-300"
+									>{$i18n.t('Expires After')}</label
+								>
+								<Tooltip placement="top">
+									<QuestionMarkCircle class="cursor-pointer text-gray-500 size-4" />
+									<div class="p-2 text-sm" slot="tooltip">
+										{$i18n.t(
+											'Set a specific date and time for the shared link to expire. After this time, the link will no longer be accessible.'
+										)}
+									</div>
+								</Tooltip>
+							</div>
 							<div class="relative" use:clickOutside>
 								<button
 									type="button"
@@ -1032,6 +1049,8 @@
 										class="absolute z-10 mt-1 w-full rounded-md bg-white shadow-lg border border-gray-200 dark:bg-gray-700 dark:border-gray-600"
 									>
 										{#each expirationOptions as option, i}
+											<!-- svelte-ignore a11y-click-events-have-key-events -->
+											<!-- svelte-ignore a11y-no-noninteractive-element-interactions -->
 											<li
 												class="relative cursor-pointer select-none py-2 pl-3 pr-9 text-gray-900 dark:text-white hover:bg-indigo-600 hover:text-white"
 												on:click={() => {
@@ -1120,11 +1139,21 @@
 					<div class="flex items-start gap-4 mt-4">
 						<div class="flex-1">
 							<div class="flex justify-between items-baseline">
-								<label
-									for="expire-on-views"
-									class="block text-sm font-medium text-gray-700 dark:text-gray-300"
-									>{$i18n.t('Max Number of Views')}</label
-								>
+								<div class="flex items-center space-x-1">
+									<label
+										for="expire-on-views"
+										class="block text-sm font-medium text-gray-700 dark:text-gray-300"
+										>{$i18n.t('Max Number of Views')}</label
+									>
+									<Tooltip placement="top">
+										<QuestionMarkCircle class="cursor-pointer text-gray-500 size-4" />
+										<div class="p-2 text-sm" slot="tooltip">
+											{$i18n.t(
+												'Set a maximum number of times the shared link can be viewed. After this limit is reached, the link will be automatically revoked.'
+											)}
+										</div>
+									</Tooltip>
+								</div>
 								<p class="text-xs text-gray-500">{$i18n.t('0 = Unlimited')}</p>
 							</div>
 							<input
@@ -1141,11 +1170,21 @@
 						{#if allow_cloning}
 							<div class="flex-1">
 								<div class="flex justify-between items-baseline">
-									<label
-										for="max-clones"
-										class="block text-sm font-medium text-gray-700 dark:text-gray-300"
-										>{$i18n.t('Max Number of Clones')}</label
-									>
+									<div class="flex items-center space-x-1">
+										<label
+											for="max-clones"
+											class="block text-sm font-medium text-gray-700 dark:text-gray-300"
+											>{$i18n.t('Max Number of Clones')}</label
+										>
+										<Tooltip placement="top">
+											<QuestionMarkCircle class="cursor-pointer text-gray-500 size-4" />
+											<div class="p-2 text-sm" slot="tooltip">
+												{$i18n.t(
+													'Set a maximum number of times the shared chat can be cloned. After this limit is reached, the link will be automatically revoked, unless you allow viewing after the clone limit.'
+												)}
+											</div>
+										</Tooltip>
+									</div>
 									<p class="text-xs text-gray-500">{$i18n.t('0 = Unlimited')}</p>
 								</div>
 								<input
@@ -1199,7 +1238,7 @@
 				<!-- Link and QR Code -->
 				<div class="p-4 rounded-lg bg-gray-100 dark:bg-gray-850 flex-1">
 					<div class="font-medium mb-2">{$i18n.t('Share Link and QR Code')}</div>
-					<div class="mt-2 flex items-center gap-2">
+					<div class="mt-4 flex items-center gap-2">
 						<div class="flex-1">
 							<div
 								class="flex items-center border rounded-lg dark:border-gray-700 focus-within:ring-2 focus-within:ring-blue-500 focus-within:border-blue-500 overflow-hidden"
@@ -1262,33 +1301,39 @@
 										<Eye class="size-5" />
 									</a>
 								</Tooltip>
-								<Tooltip content={$i18n.t('Revoke Link')}>
-									<button
-										class="flex items-center justify-center h-full p-2 rounded-lg text-red-600 dark:text-red-500 bg-transparent hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors"
-										on:click={async () => {
-											const res = await deleteSharedChatById(localStorage.token, chatId);
-											if (res) {
-												chat = await getChatById(localStorage.token, chatId);
-												share_id = '';
-												initial_share_id = '';
-												previewQrCodeUrl = '';
-												downloadQrCodeUrl = '';
-												transparentPreviewQrCodeUrl = '';
-												solidPreviewQrCodeUrl = '';
-												transparentDownloadQrCodeUrl = '';
-												solidDownloadQrCodeUrl = '';
-												is_public = false;
-												toast.success($i18n.t('Link deleted successfully'));
-												sharedChatsUpdated.set(true);
-												if (closeOnDelete) {
-													show = false;
+								{#if chat.revoked_at}
+									<Tooltip content={$i18n.t('Restore Link')}>
+										<button
+											class="flex items-center justify-center h-full p-2 rounded-lg text-green-600 dark:text-green-500 bg-transparent hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors"
+											on:click={async () => {
+												const res = await restoreSharedChat(localStorage.token, chatId);
+												if (res) {
+													chat = await getChatById(localStorage.token, chatId);
+													toast.success($i18n.t('Link restored successfully'));
+													sharedChatsUpdated.set(true);
 												}
-											}
-										}}
-									>
-										<GarbageBin class="size-5" />
-									</button>
-								</Tooltip>
+											}}
+										>
+											<ArrowPath class="size-5" />
+										</button>
+									</Tooltip>
+								{:else}
+									<Tooltip content={$i18n.t('Revoke Link')}>
+										<button
+											class="flex items-center justify-center h-full p-2 rounded-lg text-red-600 dark:text-red-500 bg-transparent hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors"
+											on:click={async () => {
+												const res = await deleteSharedChatById(localStorage.token, chatId);
+												if (res) {
+													chat = await getChatById(localStorage.token, chatId);
+													toast.success($i18n.t('Link revoked successfully'));
+													sharedChatsUpdated.set(true);
+												}
+											}}
+										>
+											<GarbageBin class="size-5" />
+										</button>
+									</Tooltip>
+								{/if}
 							{/if}
 						</div>
 					</div>
@@ -1349,7 +1394,7 @@
 							</div>
 						{/if}
 					</div>
-					<div class="flex justify-center mt-3">
+					<div class="flex justify-center mt-6">
 						<div class="flex gap-38">
 							{#if $config?.features.enable_community_sharing}
 								<button

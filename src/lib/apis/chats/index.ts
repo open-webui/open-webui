@@ -33,6 +33,48 @@ export const createNewChat = async (token: string, chat: object, folderId: strin
 	return res;
 };
 
+export const getAllSharedChatIds = async (
+	token: string = '',
+	query: string = '',
+	startDate?: number,
+	endDate?: number,
+	is_public?: boolean | null,
+	status?: string
+) => {
+	let error = null;
+
+	const params = new URLSearchParams();
+	if (query) params.append('query', query);
+	if (startDate) params.append('start_date', startDate.toString());
+	if (endDate) params.append('end_date', endDate.toString());
+	if (is_public !== null && is_public !== undefined)
+		params.append('is_public', is_public.toString());
+	if (status) params.append('status', status);
+
+	const res = await fetch(`${WEBUI_API_BASE_URL}/chats/shared/ids?${params.toString()}`, {
+		method: 'GET',
+		headers: {
+			'Content-Type': 'application/json',
+			Authorization: `Bearer ${token}`
+		}
+	})
+		.then(async (res) => {
+			if (!res.ok) throw await res.json();
+			return res.json();
+		})
+		.catch((err) => {
+			console.log(err);
+			error = err.detail;
+			return null;
+		});
+
+	if (error) {
+		throw error;
+	}
+
+	return res;
+};
+
 export const verifySharedChatPassword = async (share_id: string, password: string) => {
 	let error = null;
 

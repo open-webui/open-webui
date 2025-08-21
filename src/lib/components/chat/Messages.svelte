@@ -55,6 +55,7 @@
 	export let autoScroll;
 
 	export let onSelect = (e) => {};
+	export let displayUsername = true;
 
 	let messagesCount = 20;
 	let messagesLoading = false;

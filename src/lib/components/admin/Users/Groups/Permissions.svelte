@@ -256,7 +256,7 @@
 		{#if $config.features.enable_shared_chats_access}
 			<div class="  flex w-full justify-between my-2 pr-2">
 				<div class=" self-center text-xs font-medium">
-					{$i18n.t('Shared Chats Access')}
+					{$i18n.t('Shared Chats Page Access')}
 				</div>
 				<Switch bind:state={permissions.sharing.shared_chats} />
 			</div>

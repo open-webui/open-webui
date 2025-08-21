@@ -80,14 +80,7 @@
 		});
 
 		if (res) {
-			passwordRequired = false;
-			if (await loadSharedChat()) {
-				await tick();
-				loaded = true;
-			} else {
-				passwordRequired = true;
-				toast.error($i18n.t('Failed to load chat. Please try again.'));
-			}
+			window.location.reload();
 		}
 	};
 

@@ -1,8 +1,10 @@
 <script lang="ts">
 	import { onMount, getContext } from 'svelte';
+	import { tick } from 'svelte';
 	import { get } from 'svelte/store';
 	import {
 		getSharedChats,
+		getAllSharedChatIds,
 		deleteSharedChatById,
 		revokeAllSharedChats,
 		resetChatStatsById,
@@ -36,6 +38,12 @@
 	import MenuLines from '$lib/components/icons/MenuLines.svelte';
 	import Tooltip from '$lib/components/common/Tooltip.svelte';
 	import Clipboard from '$lib/components/icons/Clipboard.svelte';
+	import SortIcon from '$lib/components/icons/SortIcon.svelte';
+	import Eye from '$lib/components/icons/Eye.svelte';
+	import EyeSlash from '$lib/components/icons/EyeSlash.svelte';
+	import Pencil from '$lib/components/icons/Pencil.svelte';
+	import DocumentDuplicate from '$lib/components/icons/DocumentDuplicate.svelte';
+	import ArrowPath from '$lib/components/icons/ArrowPath.svelte';
 
 	let showShareChatModal = false;
 	let selectedChatId = '';
@@ -74,7 +82,8 @@
 	const statusFilterOptions = [
 		{ value: 'all', label: 'Status: All' },
 		{ value: 'active', label: 'Status: Active' },
-		{ value: 'revoked', label: 'Status: Revoked' }
+		{ value: 'revoked', label: 'Status: Revoked' },
+		{ value: 'expired', label: 'Status: Expired' }
 	];
 
 	$: selectedPublicFilterIndex = publicFilterOptions.findIndex((o) => o.value === publicFilter);
@@ -106,6 +115,31 @@
 		}
 		statusFilter = statusFilterOptions[newIndex].value;
 		page = 1;
+	};
+
+	const handleDateScroll = (event, type) => {
+		event.preventDefault();
+		const direction = event.deltaY < 0 ? 1 : -1;
+
+		if (type === 'start') {
+			if (startDate) {
+				const newStartDate = dayjs(startDate).add(direction, 'day');
+				startDate = newStartDate.format('YYYY-MM-DD');
+
+				if (endDate && newStartDate.isAfter(dayjs(endDate))) {
+					endDate = startDate;
+				}
+			}
+		} else if (type === 'end') {
+			if (endDate) {
+				const newEndDate = dayjs(endDate).add(direction, 'day');
+				endDate = newEndDate.format('YYYY-MM-DD');
+
+				if (startDate && newEndDate.isBefore(dayjs(startDate))) {
+					startDate = endDate;
+				}
+			}
+		}
 	};
 	let dateFilterApplied = false;
 
@@ -157,13 +191,7 @@
 			total = res.total;
 			grandTotal = res.grand_total;
 
-			sharedChatsStore.set(
-				res.chats.map((chat) => ({
-					...chat,
-					status: chat.revoked_at ? 'revoked' : 'active',
-					selected: $selectedSharedChatIds.includes(chat.id)
-				}))
-			);
+			sharedChatsStore.set(res.chats);
 
 			if (res.chats.length === 0 && _page > 1) {
 				page = 1;
@@ -175,39 +203,6 @@
 	onMount(async () => {
 		models.set(await getModels(localStorage.token));
 		previousShowShareChatModal = showShareChatModal;
-
-		const interval = setInterval(() => {
-			const now = Math.floor(Date.now() / 1000);
-
-			const chatsToExpire = $sharedChatsStore.filter((chat) => {
-				const isExpiredByTime = chat.expires_at && chat.expires_at <= now;
-				const isExpiredByViews =
-					chat.expire_on_views && chat.views >= chat.expire_on_views;
-				return (isExpiredByTime || isExpiredByViews) && chat.status === 'active';
-			});
-
-			if (chatsToExpire.length > 0) {
-				chatsToExpire.forEach((chat) => {
-					deleteSharedChatById(localStorage.token, chat.id).then((res) => {
-						if (res) {
-							toast.info(`Expired link for "${chat.title}" was automatically revoked.`);
-							sharedChatsStore.update((chats) => {
-								return chats.map((c) => {
-									if (c.id === chat.id) {
-										return { ...c, status: 'revoked', revoked_at: now };
-									}
-									return c;
-								});
-							});
-						}
-					});
-				});
-			}
-		}, 1000);
-
-		return () => {
-			clearInterval(interval);
-		};
 	});
 
 	$: if ($user && !($user.role === 'admin' || $user.permissions?.sharing?.shared_chats)) {
@@ -228,6 +223,8 @@
 
 	$: getSharedChatList(page, searchTerm, orderBy, direction, startDate, endDate, publicFilter, statusFilter);
 	$: totalSelectedCount = $selectedSharedChatIds.length;
+
+	$: displayedChats = $sharedChatsStore;
 
 	let headerText = '';
 	$: {
@@ -273,8 +270,7 @@
 				const res = await shareChatById(localStorage.token, new_chat.id);
 				if (res) {
 					toast.success('Chat cloned and shared');
-					getSharedChatList();
-					chatsUpdated.set(true);
+					sharedChatsUpdated.set(true);
 				} else {
 					toast.error('Failed to share cloned chat');
 				}
@@ -399,21 +395,75 @@
 		showConfirmClearRevoked = false;
 	};
 
-	const selectAll = (event) => {
-		const checked = event.target.checked;
-		sharedChatsStore.update((chats) =>
-			chats.map((chat) => ({ ...chat, selected: checked }))
-		);
+	let selectionLevel = 'none'; // none, page, some, all
+	let masterCheckbox;
 
-		if (checked) {
-			selectedSharedChatIds.update((ids) => [
-				...new Set([...ids, ...$sharedChatsStore.map((chat) => chat.id)])
-			]);
+	const handleMasterCheckboxClick = async () => {
+		const currentLevel = selectionLevel;
+
+		if (currentLevel === 'all') {
+			selectedSharedChatIds.set([]);
+		} else if (currentLevel === 'page') {
+			const allIds = await getAllSharedChatIds(
+				localStorage.token,
+				searchTerm,
+				startDate ? dayjs(startDate).startOf('day').unix() : undefined,
+				endDate ? dayjs(endDate).endOf('day').unix() : undefined,
+				publicFilter,
+				statusFilter
+			);
+			selectedSharedChatIds.set(allIds);
 		} else {
-			const chatIdsToUnselect = $sharedChatsStore.map((chat) => chat.id);
-			selectedSharedChatIds.update((ids) => ids.filter((id) => !chatIdsToUnselect.includes(id)));
+			const currentPageIds = $sharedChatsStore.map((chat) => chat.id);
+			selectedSharedChatIds.update((ids) => [...new Set([...ids, ...currentPageIds])]);
 		}
+
+		await tick();
+
+		setTimeout(() => {
+			if (masterCheckbox) {
+				masterCheckbox.checked = selectionLevel === 'page' || selectionLevel === 'all';
+				masterCheckbox.indeterminate = selectionLevel === 'some';
+			}
+		}, 0);
 	};
+
+	$: displayedChats = $sharedChatsStore.map((chat) => ({
+		...chat,
+		selected: $selectedSharedChatIds.includes(chat.id)
+	}));
+
+	$: {
+		if (grandTotal > 0) {
+			const allSelected = $selectedSharedChatIds.length === total;
+			const allOnPage =
+				displayedChats.length > 0 && displayedChats.every((c) => c.selected);
+			const someOnPage = displayedChats.some((c) => c.selected);
+
+			if (allSelected && total > 0) {
+				selectionLevel = 'all';
+			} else if (allOnPage) {
+				selectionLevel = 'page';
+			} else if (someOnPage) {
+				selectionLevel = 'some';
+			} else {
+				selectionLevel = 'none';
+			}
+		} else {
+			selectionLevel = 'none';
+		}
+	}
+
+	let masterCheckboxTooltip = '';
+	$: {
+		if (selectionLevel === 'all') {
+			masterCheckboxTooltip = 'Deselect All';
+		} else if (selectionLevel === 'page') {
+			masterCheckboxTooltip = 'Select All';
+		} else {
+			masterCheckboxTooltip = 'Select Page';
+		}
+	}
 </script>
 
 <style>
@@ -438,39 +488,40 @@
 
 		const data = e.dataTransfer.getData('text/plain');
 		try {
-			const { type, id, item } = JSON.parse(data);
-			if (type === 'chat') {
-				const ownChat = await getChatById(localStorage.token, id).catch(() => null);
+			if (data) {
+				const { type, id, item } = JSON.parse(data);
+				if (type === 'chat') {
+					const ownChat = await getChatById(localStorage.token, id).catch(() => null);
 
-				if (ownChat) {
-					selectedChatId = id;
-					showShareChatModal = true;
-				} else {
-					const canClone = ($user?.role === 'admin' || $user?.permissions?.chat?.clone) ?? true;
-					if (!canClone) {
-						toast.error($i18n.t("You don't have permission to clone chats."));
-						return;
-					}
-
-					const res = await importChat(
-						localStorage.token,
-						item.chat,
-						item.meta,
-						item.pinned,
-						item.folder_id
-					);
-
-					if (res) {
-						toast.success('Chat imported successfully');
-						chatsUpdated.set(true);
-						selectedChatId = res.id;
+					if (ownChat) {
+						selectedChatId = id;
 						showShareChatModal = true;
+					} else {
+						const canClone = ($user?.role === 'admin' || $user?.permissions?.chat?.clone) ?? true;
+						if (!canClone) {
+							toast.error($i18n.t("You don't have permission to clone chats."));
+							return;
+						}
+
+						const res = await importChat(
+							localStorage.token,
+							item.chat,
+							item.meta,
+							item.pinned,
+							item.folder_id
+						);
+
+						if (res) {
+							toast.success('Chat imported successfully');
+							chatsUpdated.set(true);
+							selectedChatId = res.id;
+							showShareChatModal = true;
+						}
 					}
 				}
 			}
 		} catch (e) {
-			toast.error('Failed to share chat.');
-			console.error(e);
+			// This is a drag and drop of a non-chat item, so we don't need to show an error
 		}
 	}}
 >
@@ -541,6 +592,7 @@
 							endDate = startDate;
 						}
 					}}
+					on:wheel|preventDefault={(e) => handleDateScroll(e, 'start')}
 				/>
 				<input
 					type="date"
@@ -552,6 +604,7 @@
 							startDate = endDate;
 						}
 					}}
+					on:wheel|preventDefault={(e) => handleDateScroll(e, 'end')}
 				/>
 				<button
 					class="px-4 py-2 bg-gray-200 dark:bg-gray-700 rounded-lg disabled:opacity-50 disabled:cursor-not-allowed whitespace-nowrap"
@@ -627,7 +680,7 @@
 				<button
 					class="px-4 py-2 text-red-600 border border-red-600 rounded-lg whitespace-nowrap hover:bg-red-600 hover:text-white disabled:opacity-50 disabled:cursor-not-allowed"
 					on:click={() => (showConfirmClearRevoked = true)}
-					disabled={grandTotal === 0 || $sharedChatsStore.filter(c => c.status === 'revoked').length === 0}
+					disabled={grandTotal === 0 || displayedChats.filter(c => c.status === 'revoked').length === 0}
 				>
 					Clear Revoked
 				</button>
@@ -637,363 +690,108 @@
 			<table class="min-w-full bg-white dark:bg-gray-900 rounded-lg shadow-md">
 				<thead>
 					<tr class="w-full h-10 border-b border-gray-200 dark:border-gray-800">
-						{#if $sharedChatsStore.length > 0}
+						{#if displayedChats.length > 0}
 							<th
 								class="px-6 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider"
 							>
-								<input
-									type="checkbox"
-									class="form-checkbox"
-									on:change={selectAll}
-									checked={$selectedSharedChatIds.length > 0 &&
-										$selectedSharedChatIds.length === $sharedChatsStore.length}
-									indeterminate={$selectedSharedChatIds.length > 0 &&
-										$selectedSharedChatIds.length < $sharedChatsStore.length}
-								/>
+								<Tooltip content={masterCheckboxTooltip}>
+									<input
+										type="checkbox"
+										class="form-checkbox"
+										on:click|preventDefault={handleMasterCheckboxClick}
+										bind:this={masterCheckbox}
+									/>
+								</Tooltip>
 							</th>
 						{/if}
 						<th
 							class="px-6 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider cursor-pointer"
 							on:click={() => setSortKey('title')}
+							on:wheel|preventDefault={() => setSortKey('title')}
 						>
 							<div class="flex items-center">
 								<span>Title</span>
-								{#if orderBy === 'title'}
-									<span class="ml-1">
-										{#if direction === 'asc'}
-											<svg
-												xmlns="http://www.w3.org/2000/svg"
-												class="h-4 w-4"
-												fill="none"
-												viewBox="0 0 24 24"
-												stroke="currentColor"
-											>
-												<path
-													stroke-linecap="round"
-													stroke-linejoin="round"
-													stroke-width="2"
-													d="M5 15l7-7 7 7"
-												/>
-											</svg>
-										{:else}
-											<svg
-												xmlns="http://www.w3.org/2000/svg"
-												class="h-4 w-4"
-												fill="none"
-												viewBox="0 0 24 24"
-												stroke="currentColor"
-											>
-												<path
-													stroke-linecap="round"
-													stroke-linejoin="round"
-													stroke-width="2"
-													d="M19 9l-7 7-7-7"
-												/>
-											</svg>
-										{/if}
-									</span>
-								{/if}
+								<SortIcon direction={direction} active={orderBy === 'title'} />
 							</div>
 						</th>
 						<th
 							class="px-6 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider cursor-pointer"
 							on:click={() => setSortKey('created_at')}
+							on:wheel|preventDefault={() => setSortKey('created_at')}
 						>
 							<div class="flex items-center">
 								<span>Created On</span>
-								{#if orderBy === 'created_at'}
-									<span class="ml-1">
-										{#if direction === 'asc'}
-											<svg
-												xmlns="http://www.w3.org/2000/svg"
-												class="h-4 w-4"
-												fill="none"
-												viewBox="0 0 24 24"
-												stroke="currentColor"
-											>
-												<path
-													stroke-linecap="round"
-													stroke-linejoin="round"
-													stroke-width="2"
-													d="M5 15l7-7 7 7"
-												/>
-											</svg>
-										{:else}
-											<svg
-												xmlns="http://www.w3.org/2000/svg"
-												class="h-4 w-4"
-												fill="none"
-												viewBox="0 0 24 24"
-												stroke="currentColor"
-											>
-												<path
-													stroke-linecap="round"
-													stroke-linejoin="round"
-													stroke-width="2"
-													d="M19 9l-7 7-7-7"
-												/>
-											</svg>
-										{/if}
-									</span>
-								{/if}
+								<SortIcon direction={direction} active={orderBy === 'created_at'} />
 							</div>
 						</th>
 						<th
 							class="px-6 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider cursor-pointer"
 							on:click={() => setSortKey('updated_at')}
+							on:wheel|preventDefault={() => setSortKey('updated_at')}
 						>
 							<div class="flex items-center">
 								<span>Last Updated</span>
-								{#if orderBy === 'updated_at'}
-									<span class="ml-1">
-										{#if direction === 'asc'}
-											<svg
-												xmlns="http://www.w3.org/2000/svg"
-												class="h-4 w-4"
-												fill="none"
-												viewBox="0 0 24 24"
-												stroke="currentColor"
-											>
-												<path
-													stroke-linecap="round"
-													stroke-linejoin="round"
-													stroke-width="2"
-													d="M5 15l7-7 7 7"
-												/>
-											</svg>
-										{:else}
-											<svg
-												xmlns="http://www.w3.org/2000/svg"
-												class="h-4 w-4"
-												fill="none"
-												viewBox="0 0 24 24"
-												stroke="currentColor"
-											>
-												<path
-													stroke-linecap="round"
-													stroke-linejoin="round"
-													stroke-width="2"
-													d="M19 9l-7 7-7-7"
-												/>
-											</svg>
-										{/if}
-									</span>
-								{/if}
+								<SortIcon direction={direction} active={orderBy === 'updated_at'} />
 							</div>
 						</th>
 						<th
 							class="px-6 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider cursor-pointer"
 							on:click={() => setSortKey('share_id')}
+							on:wheel|preventDefault={() => setSortKey('share_id')}
 						>
 							<div class="flex items-center">
 								<span>Link</span>
-								{#if orderBy === 'share_id'}
-									<span class="ml-1">
-										{#if direction === 'asc'}
-											<svg
-												xmlns="http://www.w3.org/2000/svg"
-												class="h-4 w-4"
-												fill="none"
-												viewBox="0 0 24 24"
-												stroke="currentColor"
-											>
-												<path
-													stroke-linecap="round"
-													stroke-linejoin="round"
-													stroke-width="2"
-													d="M5 15l7-7 7 7"
-												/>
-											</svg>
-										{:else}
-											<svg
-												xmlns="http://www.w3.org/2000/svg"
-												class="h-4 w-4"
-												fill="none"
-												viewBox="0 0 24 24"
-												stroke="currentColor"
-											>
-												<path
-													stroke-linecap="round"
-													stroke-linejoin="round"
-													stroke-width="2"
-													d="M19 9l-7 7-7-7"
-												/>
-											</svg>
-										{/if}
-									</span>
-								{/if}
+								<SortIcon direction={direction} active={orderBy === 'share_id'} />
 							</div>
 						</th>
 						<th
 							class="px-6 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider cursor-pointer whitespace-nowrap"
 							on:click={() => setSortKey('is_public')}
+							on:wheel|preventDefault={() => setSortKey('is_public')}
 						>
 							<div class="flex items-center">
 								<span>Public</span>
-								{#if orderBy === 'is_public'}
-									<span class="ml-1">
-										{#if direction === 'asc'}
-											<svg
-												xmlns="http://www.w3.org/2000/svg"
-												class="h-4 w-4"
-												fill="none"
-												viewBox="0 0 24 24"
-												stroke="currentColor"
-											>
-												<path
-													stroke-linecap="round"
-													stroke-linejoin="round"
-													stroke-width="2"
-													d="M5 15l7-7 7 7"
-												/>
-											</svg>
-										{:else}
-											<svg
-												xmlns="http://www.w3.org/2000/svg"
-												class="h-4 w-4"
-												fill="none"
-												viewBox="0 0 24 24"
-												stroke="currentColor"
-											>
-												<path
-													stroke-linecap="round"
-													stroke-linejoin="round"
-													stroke-width="2"
-													d="M19 9l-7 7-7-7"
-												/>
-											</svg>
-										{/if}
-									</span>
-								{/if}
+								<SortIcon direction={direction} active={orderBy === 'is_public'} />
+							</div>
+						</th>
+						<th
+							class="px-6 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider cursor-pointer whitespace-nowrap"
+							on:click={() => setSortKey('password')}
+							on:wheel|preventDefault={() => setSortKey('password')}
+						>
+							<div class="flex items-center">
+								<span>Password</span>
+								<SortIcon direction={direction} active={orderBy === 'password'} />
 							</div>
 						</th>
 						<th
 							class="px-6 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider cursor-pointer whitespace-nowrap"
 							on:click={() => setSortKey('views')}
+							on:wheel|preventDefault={() => setSortKey('views')}
 						>
 							<div class="flex items-center">
 								<span>Views</span>
-								{#if orderBy === 'views'}
-									<span class="ml-1">
-										{#if direction === 'asc'}
-											<svg
-												xmlns="http://www.w3.org/2000/svg"
-												class="h-4 w-4"
-												fill="none"
-												viewBox="0 0 24 24"
-												stroke="currentColor"
-											>
-												<path
-													stroke-linecap="round"
-													stroke-linejoin="round"
-													stroke-width="2"
-													d="M5 15l7-7 7 7"
-												/>
-											</svg>
-										{:else}
-											<svg
-												xmlns="http://www.w3.org/2000/svg"
-												class="h-4 w-4"
-												fill="none"
-												viewBox="0 0 24 24"
-												stroke="currentColor"
-											>
-												<path
-													stroke-linecap="round"
-													stroke-linejoin="round"
-													stroke-width="2"
-													d="M19 9l-7 7-7-7"
-												/>
-											</svg>
-										{/if}
-									</span>
-								{/if}
+								<SortIcon direction={direction} active={orderBy === 'views'} />
 							</div>
 						</th>
 						<th
 							class="px-6 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider cursor-pointer whitespace-nowrap"
 							on:click={() => setSortKey('clones')}
+							on:wheel|preventDefault={() => setSortKey('clones')}
 						>
 							<div class="flex items-center">
 								<span>Clones</span>
-								{#if orderBy === 'clones'}
-									<span class="ml-1">
-										{#if direction === 'asc'}
-											<svg
-												xmlns="http://www.w3.org/2000/svg"
-												class="h-4 w-4"
-												fill="none"
-												viewBox="0 0 24 24"
-												stroke="currentColor"
-											>
-												<path
-													stroke-linecap="round"
-													stroke-linejoin="round"
-													stroke-width="2"
-													d="M5 15l7-7 7 7"
-												/>
-											</svg>
-										{:else}
-											<svg
-												xmlns="http://www.w3.org/2000/svg"
-												class="h-4 w-4"
-												fill="none"
-												viewBox="0 0 24 24"
-												stroke="currentColor"
-											>
-												<path
-													stroke-linecap="round"
-													stroke-linejoin="round"
-													stroke-width="2"
-													d="M19 9l-7 7-7-7"
-												/>
-											</svg>
-										{/if}
-									</span>
-								{/if}
+								<SortIcon direction={direction} active={orderBy === 'clones'} />
 							</div>
 						</th>
 						<th
 							class="px-6 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider cursor-pointer whitespace-nowrap"
 							on:click={() => setSortKey('revoked_at')}
+							on:wheel|preventDefault={() => setSortKey('revoked_at')}
 						>
 							<div class="flex items-center">
 								<span>Status</span>
-								{#if orderBy === 'revoked_at'}
-									<span class="ml-1">
-										{#if direction === 'asc'}
-											<svg
-												xmlns="http://www.w3.org/2000/svg"
-												class="h-4 w-4"
-												fill="none"
-												viewBox="0 0 24 24"
-												stroke="currentColor"
-											>
-												<path
-													stroke-linecap="round"
-													stroke-linejoin="round"
-													stroke-width="2"
-													d="M5 15l7-7 7 7"
-												/>
-											</svg>
-										{:else}
-											<svg
-												xmlns="http://www.w3.org/2000/svg"
-												class="h-4 w-4"
-												fill="none"
-												viewBox="0 0 24 24"
-												stroke="currentColor"
-											>
-												<path
-													stroke-linecap="round"
-													stroke-linejoin="round"
-													stroke-width="2"
-													d="M19 9l-7 7-7-7"
-												/>
-											</svg>
-										{/if}
-									</span>
-								{/if}
+								<SortIcon direction={direction} active={orderBy === 'revoked_at'} />
 							</div>
 						</th>
 						<th
@@ -1003,23 +801,25 @@
 					</tr>
 				</thead>
 				<tbody class="divide-y divide-gray-200 dark:divide-gray-800">
-					{#if $sharedChatsStore.length > 0}
-						{#each $sharedChatsStore as chat}
+					{#if displayedChats.length > 0}
+						{#each displayedChats as chat}
 							<tr class="hover:bg-gray-50 dark:hover:bg-gray-850">
-								{#if $sharedChatsStore.length > 0}
+								{#if displayedChats.length > 0}
 									<td class="px-6 py-3 whitespace-nowrap">
 										<input
 											type="checkbox"
 											class="form-checkbox"
-											bind:checked={chat.selected}
+											checked={chat.selected}
 											on:change={() => {
-												if (chat.selected) {
-													selectedSharedChatIds.update((ids) => [...ids, chat.id]);
-												} else {
-													selectedSharedChatIds.update((ids) =>
-														ids.filter((id) => id !== chat.id)
-													);
-												}
+												selectedSharedChatIds.update((ids) => {
+													const set = new Set(ids);
+													if (set.has(chat.id)) {
+														set.delete(chat.id);
+													} else {
+														set.add(chat.id);
+													}
+													return [...set];
+												});
 											}}
 										/>
 									</td>
@@ -1067,6 +867,9 @@
 									>{chat.is_public ? 'Yes' : 'No'}</td
 								>
 								<td class="px-6 py-3 whitespace-nowrap text-gray-500 dark:text-gray-400 whitespace-nowrap"
+									>{chat.has_password ? 'Yes' : 'No'}</td
+								>
+								<td class="px-6 py-3 whitespace-nowrap text-gray-500 dark:text-gray-400 whitespace-nowrap"
 									>{chat.views}</td
 								>
 								<td class="px-6 py-3 whitespace-nowrap text-gray-500 dark:text-gray-400 whitespace-nowrap"
@@ -1078,6 +881,11 @@
 											class="px-2 py-1 text-xs font-semibold leading-5 text-green-800 bg-green-100 rounded-full"
 											>Active</span
 										>
+									{:else if chat.status === 'expired'}
+										<span
+											class="px-2 py-1 text-xs font-semibold leading-5 text-yellow-800 bg-yellow-100 rounded-full"
+											>Expired</span
+										>
 									{:else}
 										<span
 											class="px-2 py-1 text-xs font-semibold leading-5 text-red-800 bg-red-100 rounded-full"
@@ -1086,59 +894,61 @@
 									{/if}
 								</td>
 								<td class="px-6 py-3 whitespace-nowrap text-sm font-medium">
-									{#if chat.status === 'active'}
-										<Tooltip content="Revoke Link" className="inline-block">
+									<div class="flex items-center">
+										{#if chat.status === 'active'}
+											<Tooltip content="Revoke Link" className="inline-block">
+												<button
+													class="text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 p-1 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800"
+													on:click={() => {
+														revokeLink(chat.id);
+													}}><EyeSlash class="size-4" /></button
+												>
+											</Tooltip>
+										{:else}
+											<Tooltip content="Restore Link" className="inline-block">
+												<button
+													class="text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 p-1 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800"
+													on:click={() => {
+														restoreLink(chat.id);
+													}}><Eye class="size-4" /></button
+												>
+											</Tooltip>
+										{/if}
+										<Tooltip content="Modify Share Link" className="inline-block">
 											<button
-												class="text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 hover:underline"
+												class="text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 p-1 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 ml-2"
 												on:click={() => {
-													revokeLink(chat.id);
-												}}>Revoke</button
+													selectedChatId = chat.id;
+													showShareChatModal = true;
+												}}><Pencil class="size-4" /></button
 											>
 										</Tooltip>
-									{:else}
-										<Tooltip content="Restore Link" className="inline-block">
+										{#if $user?.role === 'admin' || $user?.permissions?.chat?.clone}
+											<Tooltip content="Clone Chat" className="inline-block">
+												<button
+													class="text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 p-1 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 ml-2"
+													on:click={() => {
+														cloneChat(chat.share_id);
+													}}><DocumentDuplicate class="size-4" /></button
+												>
+											</Tooltip>
+										{/if}
+										<Tooltip content="Reset Statistics" className="inline-block">
 											<button
-												class="text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 hover:underline"
+												class="text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 p-1 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 ml-2"
 												on:click={() => {
-													restoreLink(chat.id);
-												}}>Restore</button
+													chatToResetStats = chat;
+													showConfirmResetStats = true;
+												}}><ArrowPath class="size-4" /></button
 											>
 										</Tooltip>
-									{/if}
-									<Tooltip content="Modify Share Link" className="inline-block">
-										<button
-											class="text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 hover:underline ml-4"
-											on:click={() => {
-												selectedChatId = chat.id;
-												showShareChatModal = true;
-											}}>Modify</button
-										>
-									</Tooltip>
-									{#if $user?.role === 'admin' || $user?.permissions?.chat?.clone}
-										<Tooltip content="Clone Chat" className="inline-block">
-											<button
-												class="text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 hover:underline ml-4"
-												on:click={() => {
-													cloneChat(chat.share_id);
-												}}>Clone</button
-											>
-										</Tooltip>
-									{/if}
-									<Tooltip content="Reset Statistics" className="inline-block">
-										<button
-											class="text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 hover:underline ml-4"
-											on:click={() => {
-												chatToResetStats = chat;
-												showConfirmResetStats = true;
-											}}>Reset Stats</button
-										>
-									</Tooltip>
+									</div>
 								</td>
 							</tr>
 						{/each}
 					{:else}
 						<tr>
-							<td colspan="6" class="text-center py-4 text-gray-500 dark:text-gray-400"
+							<td colspan="12" class="text-center py-4 text-gray-500 dark:text-gray-400"
 								>No results found</td
 							>
 						</tr>

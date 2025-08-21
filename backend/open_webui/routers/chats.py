@@ -87,6 +87,38 @@ def get_session_user_chat_list(
         )
 
 
+@router.get("/shared/ids", response_model=list[str])
+async def get_all_shared_chat_ids(
+    user=Depends(get_verified_user),
+    query: Optional[str] = None,
+    start_date: Optional[int] = None,
+    end_date: Optional[int] = None,
+    is_public: Optional[bool] = None,
+    status: Optional[str] = None,
+):
+    try:
+        filter = {}
+        if query:
+            filter["query"] = query
+        if start_date:
+            filter["start_date"] = start_date
+        if end_date:
+            filter["end_date"] = end_date
+        if is_public is not None:
+            filter["is_public"] = is_public
+        if status:
+            filter["status"] = status
+
+        return Chats.get_all_shared_chat_ids_by_user_id(
+            user.id, filter=filter
+        )
+    except Exception as e:
+        log.exception(e)
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST, detail=ERROR_MESSAGES.DEFAULT()
+        )
+
+
 ############################
 # DeleteAllChats
 ############################
@@ -483,6 +515,10 @@ async def verify_shared_chat_password(
             },
         )
 
+    if chat.password and not chat.password_updated_at:
+        log.warning(f"Fixing missing password_updated_at for chat {chat.id}")
+        chat = Chats.update_chat_password_updated_at(chat.id)
+
     # Password is correct, create a short-lived token
     token = create_token(
         data={
@@ -564,8 +600,14 @@ async def get_shared_chat_by_id(
         if not is_owner:
             token_name = f"shared-chat-{chat_unrestricted.id}-token"
             token = request.cookies.get(token_name)
+            data = decode_token(token) if token else None
 
-            if not token:
+            # If token is invalid or missing, or subject doesn't match, request password
+            if not data or data.get("sub") != f"shared-chat-{chat_unrestricted.id}":
+                if token:
+                    # If there was a token but it's invalid, delete it
+                    response.delete_cookie(key=token_name)
+
                 raise HTTPException(
                     status_code=status.HTTP_401_UNAUTHORIZED,
                     detail={
@@ -574,14 +616,7 @@ async def get_shared_chat_by_id(
                     },
                 )
 
-            data = decode_token(token)
-            if not data or data.get("sub") != f"shared-chat-{chat_unrestricted.id}":
-                raise HTTPException(
-                    status_code=status.HTTP_401_UNAUTHORIZED,
-                    detail={"code": "INVALID_TOKEN", "message": "Invalid token."},
-                )
-
-            # Check if the password has been updated since the token was issued
+            # Token is valid, now check if password has been updated
             if (
                 chat_unrestricted.password_updated_at
                 and data.get("password_updated_at")
@@ -604,6 +639,30 @@ async def get_shared_chat_by_id(
     if chat is None:
         chat, view_incremented = Chats.get_chat_by_share_id(share_id, user)
         if view_incremented:
+            # Re-fetch the chat to get the latest revoked_at status
+            updated_chat = Chats.get_chat_by_id(chat.id)
+
+            chat_status = "active"
+            if updated_chat.revoked_at:
+                is_expired_by_time = (
+                    updated_chat.expires_at
+                    and updated_chat.expires_at <= updated_chat.revoked_at
+                )
+                is_expired_by_views = (
+                    updated_chat.expire_on_views
+                    and updated_chat.views >= updated_chat.expire_on_views
+                )
+                is_expired_by_clones = (
+                    updated_chat.max_clones is not None
+                    and updated_chat.clones >= updated_chat.max_clones
+                    and not updated_chat.keep_link_active_after_max_clones
+                )
+
+                if is_expired_by_time or is_expired_by_views or is_expired_by_clones:
+                    chat_status = "expired"
+                else:
+                    chat_status = "revoked"
+
             event_emitter = get_event_emitter({"user_id": chat.user_id})
             if event_emitter:
                 await event_emitter(
@@ -611,7 +670,9 @@ async def get_shared_chat_by_id(
                         "type": "chat:view",
                         "data": {
                             "chat_id": chat.id,
-                            "views": chat.views,
+                            "views": updated_chat.views,
+                            "revoked_at": updated_chat.revoked_at,
+                            "status": chat_status,
                         },
                     }
                 )
@@ -961,6 +1022,29 @@ async def clone_shared_chat_by_id(
 
         updated_chat_with_clone_count = Chats.increment_clone_count_by_id(chat.id, user)
 
+        updated_chat = updated_chat_with_clone_count
+
+        chat_status = "active"
+        if updated_chat.revoked_at:
+            is_expired_by_time = (
+                updated_chat.expires_at
+                and updated_chat.expires_at <= updated_chat.revoked_at
+            )
+            is_expired_by_views = (
+                updated_chat.expire_on_views
+                and updated_chat.views >= updated_chat.expire_on_views
+            )
+            is_expired_by_clones = (
+                updated_chat.max_clones is not None
+                and updated_chat.clones >= updated_chat.max_clones
+                and not updated_chat.keep_link_active_after_max_clones
+            )
+
+            if is_expired_by_time or is_expired_by_views or is_expired_by_clones:
+                chat_status = "expired"
+            else:
+                chat_status = "revoked"
+
         event_emitter = get_event_emitter({"user_id": chat.user_id})
         if event_emitter:
             await event_emitter(
@@ -968,7 +1052,9 @@ async def clone_shared_chat_by_id(
                     "type": "chat:clone",
                     "data": {
                         "chat_id": chat.id,
-                        "clones": updated_chat_with_clone_count.clones,
+                        "clones": updated_chat.clones,
+                        "revoked_at": updated_chat.revoked_at,
+                        "status": chat_status,
                     },
                 }
             )

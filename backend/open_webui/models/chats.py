@@ -12,7 +12,7 @@ from open_webui.env import SRC_LOG_LEVELS
 
 from pydantic import BaseModel, ConfigDict
 from sqlalchemy import BigInteger, Boolean, Column, String, Text, JSON, Index, Integer
-from sqlalchemy import or_, func, select, and_, text
+from sqlalchemy import or_, func, select, and_, text, not_
 from sqlalchemy.sql import exists
 from sqlalchemy.sql.expression import bindparam
 
@@ -179,6 +179,8 @@ class ChatTitleIdResponse(BaseModel):
     keep_link_active_after_max_clones: Optional[bool] = False
     share_show_qr_code: Optional[bool] = None
     share_use_gradient: Optional[bool] = None
+    has_password: bool = False
+    status: str = "active"
 
 
 class ChatTable:
@@ -256,6 +258,20 @@ class ChatTable:
 
                 return ChatModel.model_validate(chat_item)
         except Exception:
+            return None
+
+    def update_chat_password_updated_at(self, id: str) -> Optional[ChatModel]:
+        try:
+            with get_db() as db:
+                chat = db.get(Chat, id)
+                if chat:
+                    chat.password_updated_at = int(time.time())
+                    db.commit()
+                    db.refresh(chat)
+                    return ChatModel.model_validate(chat)
+                return None
+        except Exception as e:
+            log.error(f"Error updating password_updated_at for chat {id}: {e}")
             return None
 
     def update_chat_title_by_id(self, id: str, title: str) -> Optional[ChatModel]:
@@ -657,8 +673,40 @@ class ChatTable:
 
                 if status == "active":
                     query = query.filter(Chat.revoked_at.is_(None))
+                elif status == "expired":
+                    # A chat is expired if it has a revoked_at timestamp and at least one of the expiration conditions is met.
+                    now = int(time.time())
+                    is_expired = or_(
+                        and_(Chat.expires_at.isnot(None), Chat.expires_at <= now),
+                        and_(
+                            Chat.expire_on_views.isnot(None),
+                            Chat.views >= Chat.expire_on_views,
+                        ),
+                        and_(
+                            Chat.max_clones.isnot(None),
+                            Chat.keep_link_active_after_max_clones == False,
+                            Chat.clones >= Chat.max_clones,
+                        ),
+                    )
+                    query = query.filter(and_(Chat.revoked_at.isnot(None), is_expired))
                 elif status == "revoked":
-                    query = query.filter(Chat.revoked_at.isnot(None))
+                    # A chat is revoked if it has a revoked_at timestamp but is not expired.
+                    now = int(time.time())
+                    is_expired = or_(
+                        and_(Chat.expires_at.isnot(None), Chat.expires_at <= now),
+                        and_(
+                            Chat.expire_on_views.isnot(None),
+                            Chat.views >= Chat.expire_on_views,
+                        ),
+                        and_(
+                            Chat.max_clones.isnot(None),
+                            Chat.keep_link_active_after_max_clones == False,
+                            Chat.clones >= Chat.max_clones,
+                        ),
+                    )
+                    query = query.filter(
+                        and_(Chat.revoked_at.isnot(None), not_(is_expired))
+                    )
 
                 if start_date and end_date:
                     query = query.filter(
@@ -703,11 +751,14 @@ class ChatTable:
                 Chat.share_id,
                 Chat.expires_at,
                 Chat.expire_on_views,
+                Chat.max_clones,
                 Chat.is_public,
+                Chat.password,
                 Chat.views,
                 Chat.clones,
                 Chat.revoked_at,
                 Chat.allow_cloning,
+                Chat.keep_link_active_after_max_clones,
                 Chat.share_show_qr_code,
                 Chat.share_use_gradient,
             )
@@ -720,30 +771,73 @@ class ChatTable:
             all_chats = query.all()
 
             # result has to be destructured from sqlalchemy `row` and mapped to a dict since the `ChatModel`is not the returned dataclass.
+
+            now = int(time.time())
+            chats_with_status = []
+            for chat in all_chats:
+                chat_data = {
+                    "id": chat[0],
+                    "title": chat[1],
+                    "updated_at": chat[2],
+                    "created_at": chat[3],
+                    "share_id": chat[4],
+                    "expires_at": chat[5],
+                    "expire_on_views": chat[6],
+                    "max_clones": chat[7],
+                    "is_public": chat[8],
+                    "has_password": chat[9] is not None,
+                    "views": chat[10],
+                    "clones": chat[11],
+                    "revoked_at": chat[12],
+                    "allow_cloning": chat[13],
+                    "keep_link_active_after_max_clones": chat[14],
+                    "share_show_qr_code": chat[15],
+                    "share_use_gradient": chat[16],
+                }
+
+                status = "active"
+                if chat_data["revoked_at"]:
+                    is_expired_by_time = (
+                        chat_data["expires_at"]
+                        and chat_data["expires_at"] <= chat_data["revoked_at"]
+                    )
+                    is_expired_by_views = (
+                        chat_data["expire_on_views"]
+                        and chat_data["views"] >= chat_data["expire_on_views"]
+                    )
+                    is_expired_by_clones = (
+                        chat_data["max_clones"] is not None
+                        and chat_data["clones"] >= chat_data["max_clones"]
+                        and not chat_data["keep_link_active_after_max_clones"]
+                    )
+
+                    if is_expired_by_time or is_expired_by_views or is_expired_by_clones:
+                        status = "expired"
+                    else:
+                        status = "revoked"
+                else:
+                    is_expired_by_time = (
+                        chat_data["expires_at"] and chat_data["expires_at"] <= now
+                    )
+                    is_expired_by_views = (
+                        chat_data["expire_on_views"]
+                        and chat_data["views"] >= chat_data["expire_on_views"]
+                    )
+                    is_expired_by_clones = (
+                        chat_data["max_clones"] is not None
+                        and chat_data["clones"] >= chat_data["max_clones"]
+                        and not chat_data["keep_link_active_after_max_clones"]
+                    )
+                    if is_expired_by_time or is_expired_by_views or is_expired_by_clones:
+                        status = "expired"
+
+                chat_data["status"] = status
+                chats_with_status.append(ChatTitleIdResponse.model_validate(chat_data))
+
             return {
                 "total": total,
                 "grand_total": grand_total,
-                "chats": [
-                    ChatTitleIdResponse.model_validate(
-                        {
-                            "id": chat[0],
-                            "title": chat[1],
-                            "updated_at": chat[2],
-                            "created_at": chat[3],
-                            "share_id": chat[4],
-                            "expires_at": chat[5],
-                            "expire_on_views": chat[6],
-                            "is_public": chat[7],
-                            "views": chat[8],
-                            "clones": chat[9],
-                            "revoked_at": chat[10],
-                            "allow_cloning": chat[11],
-                            "share_show_qr_code": chat[12],
-                            "share_use_gradient": chat[13],
-                        }
-                    )
-                    for chat in all_chats
-                ],
+                "chats": chats_with_status,
             }
 
     def get_chat_title_id_list_by_user_id(
@@ -1477,6 +1571,76 @@ class ChatTable:
             log.error(f"Error revoking public chats for user {user_id}: {e}")
             db.rollback()
             return False
+
+    def get_all_shared_chat_ids_by_user_id(
+        self,
+        user_id: str,
+        filter: Optional[dict] = None,
+    ) -> list[str]:
+        with get_db() as db:
+            query = (
+                db.query(Chat.id)
+                .filter_by(user_id=user_id)
+                .filter(Chat.share_id.isnot(None))
+            )
+
+            if filter:
+                query_key = filter.get("query")
+                if query_key:
+                    query = query.filter(Chat.title.ilike(f"%{query_key}%"))
+
+                start_date = filter.get("start_date")
+                end_date = filter.get("end_date")
+                is_public = filter.get("is_public")
+                status = filter.get("status")
+
+                if status == "active":
+                    query = query.filter(Chat.revoked_at.is_(None))
+                elif status == "expired":
+                    now = int(time.time())
+                    is_expired = or_(
+                        and_(Chat.expires_at.isnot(None), Chat.expires_at <= now),
+                        and_(
+                            Chat.expire_on_views.isnot(None),
+                            Chat.views >= Chat.expire_on_views,
+                        ),
+                        and_(
+                            Chat.max_clones.isnot(None),
+                            not_(Chat.keep_link_active_after_max_clones),
+                            Chat.clones >= Chat.max_clones,
+                        ),
+                    )
+                    query = query.filter(and_(Chat.revoked_at.isnot(None), is_expired))
+                elif status == "revoked":
+                    now = int(time.time())
+                    is_expired = or_(
+                        and_(Chat.expires_at.isnot(None), Chat.expires_at <= now),
+                        and_(
+                            Chat.expire_on_views.isnot(None),
+                            Chat.views >= Chat.expire_on_views,
+                        ),
+                        and_(
+                            Chat.max_clones.isnot(None),
+                            not_(Chat.keep_link_active_after_max_clones),
+                            Chat.clones >= Chat.max_clones,
+                        ),
+                    )
+                    query = query.filter(
+                        and_(Chat.revoked_at.isnot(None), not_(is_expired))
+                    )
+
+                if start_date and end_date:
+                    query = query.filter(
+                        and_(
+                            Chat.created_at >= start_date,
+                            Chat.created_at <= end_date,
+                        )
+                    )
+
+                if is_public is not None:
+                    query = query.filter(Chat.is_public == is_public)
+
+            return [id for (id,) in query.all()]
 
 
 Chats = ChatTable()
