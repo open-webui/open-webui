@@ -421,35 +421,36 @@
 							</div>
 						</Loader>
 					{/if}
-
-					{#each messages as message, messageIdx (message.id)}
-						<Message
-							{chatId}
-							bind:history
-							{selectedModels}
-							messageId={message.id}
-							idx={messageIdx}
-							{user}
-							{setInputText}
-							{gotoMessage}
-							{showPreviousMessage}
-							{showNextMessage}
-							{updateChat}
-							{editMessage}
-							{deleteMessage}
-							{rateMessage}
-							{actionMessage}
-							{saveMessage}
-							{submitMessage}
-							{regenerateResponse}
-							{continueResponse}
-							{mergeResponses}
-							{addMessages}
-							{triggerScroll}
-							{readOnly}
-							{topPadding}
-						/>
-					{/each}
+					<ul role="log" aria-live="polite" aria-relevant="additions" aria-atomic="false">
+						{#each messages as message, messageIdx (message.id)}
+							<Message
+								{chatId}
+								bind:history
+								{selectedModels}
+								messageId={message.id}
+								idx={messageIdx}
+								{user}
+								{setInputText}
+								{gotoMessage}
+								{showPreviousMessage}
+								{showNextMessage}
+								{updateChat}
+								{editMessage}
+								{deleteMessage}
+								{rateMessage}
+								{actionMessage}
+								{saveMessage}
+								{submitMessage}
+								{regenerateResponse}
+								{continueResponse}
+								{mergeResponses}
+								{addMessages}
+								{triggerScroll}
+								{readOnly}
+								{topPadding}
+							/>
+						{/each}
+					</ul>
 				</section>
 				<div class="pb-12" />
 				{#if bottomPadding}
