@@ -40,6 +40,11 @@ code {
 	width: auto;
 }
 
+.editor-selection {
+	background: rgba(180, 213, 255, 0.5);
+	border-radius: 2px;
+}
+
 .font-secondary {
 	font-family: 'InstrumentSerif', sans-serif;
 }
@@ -396,6 +401,17 @@ input[type='number'] {
 	}
 }
 
+.tiptap .mention {
+	border-radius: 0.4rem;
+	box-decoration-break: clone;
+	padding: 0.1rem 0.3rem;
+	@apply text-blue-900 dark:text-blue-100 bg-blue-300/20 dark:bg-blue-500/20;
+}
+
+.tiptap .mention::after {
+	content: '\200B';
+}
+
 .input-prose .tiptap ul[data-type='taskList'] {
 	list-style: none;
 	margin-left: 0;
@@ -610,4 +626,14 @@ input[type='number'] {
 	padding-left: 2px;
 	padding-right: 2px;
 	white-space: nowrap;
+}
+
+body {
+	background: #fff;
+	color: #000;
+}
+
+.dark body {
+	background: #171717;
+	color: #eee;
 }

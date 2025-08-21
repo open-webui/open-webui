@@ -1,12 +1,13 @@
 <script>
-	import { showSidebar, user } from '$lib/stores';
+	import { mobile, showArchivedChats, showSidebar, user } from '$lib/stores';
 	import { getContext } from 'svelte';
 
 	const i18n = getContext('i18n');
 
-	import MenuLines from '$lib/components/icons/MenuLines.svelte';
 	import UserMenu from '$lib/components/layout/Sidebar/UserMenu.svelte';
 	import Notes from '$lib/components/notes/Notes.svelte';
+	import Tooltip from '$lib/components/common/Tooltip.svelte';
+	import Sidebar from '$lib/components/icons/Sidebar.svelte';
 </script>
 
 <div
@@ -14,22 +15,28 @@
 		? 'md:max-w-[calc(100%-260px)]'
 		: ''} max-w-full"
 >
-	<nav class="   px-2 pt-1 backdrop-blur-xl w-full drag-region">
+	<nav class="   px-2 pt-1.5 backdrop-blur-xl w-full drag-region">
 		<div class=" flex items-center">
-			<div class="{$showSidebar ? 'md:hidden' : ''} flex flex-none items-center">
-				<button
-					id="sidebar-toggle-button"
-					class="cursor-pointer p-1.5 flex rounded-xl hover:bg-gray-100 dark:hover:bg-gray-850 transition"
-					on:click={() => {
-						showSidebar.set(!$showSidebar);
-					}}
-					aria-label="Toggle Sidebar"
-				>
-					<div class=" m-auto self-center">
-						<MenuLines />
-					</div>
-				</button>
-			</div>
+			{#if $mobile}
+				<div class="{$showSidebar ? 'md:hidden' : ''} flex flex-none items-center">
+					<Tooltip
+						content={$showSidebar ? $i18n.t('Close Sidebar') : $i18n.t('Open Sidebar')}
+						interactive={true}
+					>
+						<button
+							id="sidebar-toggle-button"
+							class=" cursor-pointer flex rounded-lg hover:bg-gray-100 dark:hover:bg-gray-850 transition cursor-"
+							on:click={() => {
+								showSidebar.set(!$showSidebar);
+							}}
+						>
+							<div class=" self-center p-1.5">
+								<Sidebar />
+							</div>
+						</button>
+					</Tooltip>
+				</div>
+			{/if}
 
 			<div class="ml-2 py-0.5 self-center flex items-center justify-between w-full">
 				<div class="">

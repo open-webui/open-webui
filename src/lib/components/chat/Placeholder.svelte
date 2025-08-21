@@ -12,7 +12,9 @@
 		user,
 		models as _models,
 		temporaryChatEnabled,
-		selectedFolder
+		selectedFolder,
+		chats,
+		currentChatPage
 	} from '$lib/stores';
 	import { sanitizeResponseContent, extractCurlyBraceWords } from '$lib/utils';
 	import { WEBUI_BASE_URL } from '$lib/constants';
@@ -21,13 +23,11 @@
 	import Tooltip from '$lib/components/common/Tooltip.svelte';
 	import EyeSlash from '$lib/components/icons/EyeSlash.svelte';
 	import MessageInput from './MessageInput.svelte';
-	import FolderOpen from '../icons/FolderOpen.svelte';
-	import XMark from '../icons/XMark.svelte';
-	import Folder from '../icons/Folder.svelte';
+	import FolderPlaceholder from './Placeholder/FolderPlaceholder.svelte';
+	import FolderTitle from './Placeholder/FolderTitle.svelte';
+	import { getChatList } from '$lib/apis/chats';
 
 	const i18n = getContext('i18n');
-
-	export let transparentBackground = false;
 
 	export let createMessagePair: Function;
 	export let stopResponse: Function;
@@ -53,6 +53,7 @@
 	export let webSearchEnabled = false;
 
 	export let onSelect = (e) => {};
+	export let onChange = (e) => {};
 
 	export let toolServers = [];
 
@@ -76,8 +77,8 @@
 			className="w-full flex justify-center mb-0.5"
 			placement="top"
 		>
-			<div class="flex items-center gap-2 text-gray-500 font-medium text-lg my-2 w-fit">
-				<EyeSlash strokeWidth="2.5" className="size-5" />{$i18n.t('Temporary Chat')}
+			<div class="flex items-center gap-2 text-gray-500 font-medium text-base my-2 w-fit">
+				<EyeSlash strokeWidth="2.5" className="size-4" />{$i18n.t('Temporary Chat')}
 			</div>
 		</Tooltip>
 	{/if}
@@ -87,29 +88,21 @@
 	>
 		<div class="w-full flex flex-col justify-center items-center">
 			{#if $selectedFolder}
-				<div class="mb-3 px-4 justify-center w-fit flex relative group">
-					<div class="text-center flex gap-3.5 items-center">
-						<div class=" rounded-full bg-gray-50 dark:bg-gray-800 p-3 w-fit">
-							<Folder className="size-4.5" strokeWidth="2" />
-						</div>
+				<FolderTitle
+					folder={$selectedFolder}
+					onUpdate={async (folder) => {
+						selectedFolder.set(folder);
 
-						<div class="text-3xl">
-							{$selectedFolder?.name}
-						</div>
-					</div>
+						await chats.set(await getChatList(localStorage.token, $currentChatPage));
+						currentChatPage.set(1);
+					}}
+					onDelete={async () => {
+						await chats.set(await getChatList(localStorage.token, $currentChatPage));
+						currentChatPage.set(1);
 
-					<div class="absolute -right-3">
-						<button
-							class="group-hover:visible invisible rounded-md"
-							type="button"
-							on:click={() => {
-								selectedFolder.set(null);
-							}}
-						>
-							<XMark className="size-4" />
-						</button>
-					</div>
-				</div>
+						selectedFolder.set(null);
+					}}
+				/>
 			{:else}
 				<div class="flex flex-row justify-center gap-3 @sm:gap-3.5 w-fit px-5 max-w-xl">
 					<div class="flex shrink-0 justify-center">
@@ -226,19 +219,10 @@
 					bind:atSelectedModel
 					bind:showCommands
 					{toolServers}
-					{transparentBackground}
 					{stopResponse}
 					{createMessagePair}
 					placeholder={$i18n.t('How can I help you today?')}
-					onChange={(input) => {
-						if (!$temporaryChatEnabled) {
-							if (input.prompt !== null) {
-								sessionStorage.setItem(`chat-input`, JSON.stringify(input));
-							} else {
-								sessionStorage.removeItem(`chat-input`);
-							}
-						}
-					}}
+					{onChange}
 					on:upload={(e) => {
 						dispatch('upload', e.detail);
 					}}
@@ -249,16 +233,26 @@
 			</div>
 		</div>
 	</div>
-	<div class="mx-auto max-w-2xl font-primary mt-2" in:fade={{ duration: 200, delay: 200 }}>
-		<div class="mx-5">
-			<Suggestions
-				suggestionPrompts={atSelectedModel?.info?.meta?.suggestion_prompts ??
-					models[selectedModelIdx]?.info?.meta?.suggestion_prompts ??
-					$config?.default_prompt_suggestions ??
-					[]}
-				inputValue={prompt}
-				{onSelect}
-			/>
+
+	{#if $selectedFolder}
+		<div
+			class="mx-auto px-4 md:max-w-3xl md:px-6 font-primary min-h-62"
+			in:fade={{ duration: 200, delay: 200 }}
+		>
+			<FolderPlaceholder folder={$selectedFolder} />
 		</div>
-	</div>
+	{:else}
+		<div class="mx-auto max-w-2xl font-primary mt-2" in:fade={{ duration: 200, delay: 200 }}>
+			<div class="mx-5">
+				<Suggestions
+					suggestionPrompts={atSelectedModel?.info?.meta?.suggestion_prompts ??
+						models[selectedModelIdx]?.info?.meta?.suggestion_prompts ??
+						$config?.default_prompt_suggestions ??
+						[]}
+					inputValue={prompt}
+					{onSelect}
+				/>
+			</div>
+		</div>
+	{/if}
 </div>

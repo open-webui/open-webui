@@ -1,6 +1,8 @@
 <script lang="ts">
 	import { DropdownMenu } from 'bits-ui';
-	import { createEventDispatcher } from 'svelte';
+	import { createEventDispatcher, getContext } from 'svelte';
+
+	const i18n = getContext('i18n');
 
 	import { flyAndScale } from '$lib/utils/transitions';
 
@@ -31,15 +33,15 @@
 			transition={flyAndScale}
 		>
 			<DropdownMenu.Item class="flex items-center px-3 py-2 text-sm  font-medium">
-				<div class="flex items-center">Profile</div>
+				<div class="flex items-center">{$i18n.t('Profile')}</div>
 			</DropdownMenu.Item>
 
 			<DropdownMenu.Item class="flex items-center px-3 py-2 text-sm  font-medium">
-				<div class="flex items-center">Profile</div>
+				<div class="flex items-center">{$i18n.t('Profile')}</div>
 			</DropdownMenu.Item>
 
 			<DropdownMenu.Item class="flex items-center px-3 py-2 text-sm  font-medium">
-				<div class="flex items-center">Profile</div>
+				<div class="flex items-center">{$i18n.t('Profile')}</div>
 			</DropdownMenu.Item>
 		</DropdownMenu.Content>
 	</slot>

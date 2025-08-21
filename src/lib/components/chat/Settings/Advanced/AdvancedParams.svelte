@@ -15,6 +15,7 @@
 	const defaultParams = {
 		// Advanced
 		stream_response: null, // Set stream responses for this model individually
+		stream_delta_chunk_size: null, // Set the chunk size for streaming responses
 		function_calling: null,
 		seed: null,
 		stop: null,
@@ -87,6 +88,63 @@
 			</div>
 		</Tooltip>
 	</div>
+
+	{#if admin}
+		<div>
+			<Tooltip
+				content={$i18n.t(
+					'The stream delta chunk size for the model. Increasing the chunk size will make the model respond with larger pieces of text at once.'
+				)}
+				placement="top-start"
+				className="inline-tooltip"
+			>
+				<div class="flex w-full justify-between">
+					<div class=" self-center text-xs font-medium">
+						{$i18n.t('Stream Delta Chunk Size')}
+					</div>
+					<button
+						class="p-1 px-3 text-xs flex rounded-sm transition shrink-0 outline-hidden"
+						type="button"
+						on:click={() => {
+							params.stream_delta_chunk_size =
+								(params?.stream_delta_chunk_size ?? null) === null ? 1 : null;
+						}}
+					>
+						{#if (params?.stream_delta_chunk_size ?? null) === null}
+							<span class="ml-2 self-center"> {$i18n.t('Default')} </span>
+						{:else}
+							<span class="ml-2 self-center"> {$i18n.t('Custom')} </span>
+						{/if}
+					</button>
+				</div>
+			</Tooltip>
+
+			{#if (params?.stream_delta_chunk_size ?? null) !== null}
+				<div class="flex mt-0.5 space-x-2">
+					<div class=" flex-1">
+						<input
+							id="steps-range"
+							type="range"
+							min="1"
+							max="128"
+							step="1"
+							bind:value={params.stream_delta_chunk_size}
+							class="w-full h-2 rounded-lg appearance-none cursor-pointer dark:bg-gray-700"
+						/>
+					</div>
+					<div>
+						<input
+							bind:value={params.stream_delta_chunk_size}
+							type="number"
+							class=" bg-transparent text-center w-14"
+							min="1"
+							step="any"
+						/>
+					</div>
+				</div>
+			{/if}
+		</div>
+	{/if}
 
 	<div>
 		<Tooltip
@@ -1044,7 +1102,7 @@
 			{#if (params?.use_mmap ?? null) !== null}
 				<div class="flex justify-between items-center mt-1">
 					<div class="text-xs text-gray-500">
-						{params.use_mmap ? 'Enabled' : 'Disabled'}
+						{params.use_mmap ? $i18n.t('Enabled') : $i18n.t('Disabled')}
 					</div>
 					<div class=" pr-2">
 						<Switch bind:state={params.use_mmap} />
@@ -1085,7 +1143,7 @@
 			{#if (params?.use_mlock ?? null) !== null}
 				<div class="flex justify-between items-center mt-1">
 					<div class="text-xs text-gray-500">
-						{params.use_mlock ? 'Enabled' : 'Disabled'}
+						{params.use_mlock ? $i18n.t('Enabled') : $i18n.t('Disabled')}
 					</div>
 
 					<div class=" pr-2">

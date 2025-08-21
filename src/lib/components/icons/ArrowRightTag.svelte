@@ -10,10 +10,11 @@
 	stroke-width={strokeWidth}
 	stroke="currentColor"
 	class={className}
->
-	<path
+	><path
+		d="M6.75 12H16.75M16.75 12L14 14.75M16.75 12L14 9.25"
 		stroke-linecap="round"
 		stroke-linejoin="round"
-		d="M3 16.5v2.25A2.25 2.25 0 0 0 5.25 21h13.5A2.25 2.25 0 0 0 21 18.75V16.5M16.5 12 12 16.5m0 0L7.5 12m4.5 4.5V3"
-	/>
-</svg>
+	></path><path
+		d="M2 15V9C2 6.79086 3.79086 5 6 5H18C20.2091 5 22 6.79086 22 9V15C22 17.2091 20.2091 19 18 19H6C3.79086 19 2 17.2091 2 15Z"
+	></path></svg
+>

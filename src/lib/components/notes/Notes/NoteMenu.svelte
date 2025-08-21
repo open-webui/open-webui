@@ -9,7 +9,7 @@
 
 	import Tooltip from '$lib/components/common/Tooltip.svelte';
 	import ArchiveBox from '$lib/components/icons/ArchiveBox.svelte';
-	import Download from '$lib/components/icons/Download.svelte';
+	import Download from '$lib/components/icons/ArrowDownTray.svelte';
 	import GarbageBin from '$lib/components/icons/GarbageBin.svelte';
 	import DocumentDuplicate from '$lib/components/icons/DocumentDuplicate.svelte';
 	import Share from '$lib/components/icons/Share.svelte';
@@ -44,7 +44,7 @@
 			class="w-full {className} text-sm rounded-xl px-1 py-1.5 z-50 bg-white dark:bg-gray-850 dark:text-white shadow-lg font-primary"
 			sideOffset={6}
 			side="bottom"
-			align="start"
+			align="end"
 			transition={(e) => fade(e, { duration: 100 })}
 		>
 			<DropdownMenu.Sub>
@@ -59,6 +59,7 @@
 					class="w-full rounded-xl px-1 py-1.5 z-50 bg-white dark:bg-gray-850 dark:text-white shadow-lg"
 					transition={flyAndScale}
 					sideOffset={8}
+					align="end"
 				>
 					<DropdownMenu.Item
 						class="flex gap-2 items-center px-3 py-2 text-sm  cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 rounded-md"
@@ -102,6 +103,7 @@
 						class="w-full rounded-xl px-1 py-1.5 z-50 bg-white dark:bg-gray-850 dark:text-white shadow-lg"
 						transition={flyAndScale}
 						sideOffset={8}
+						align="end"
 					>
 						{#if onCopyLink}
 							<DropdownMenu.Item

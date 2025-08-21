@@ -4,14 +4,15 @@ import sys
 from typing import TYPE_CHECKING
 
 from loguru import logger
-
-
+from opentelemetry import trace
 from open_webui.env import (
     AUDIT_UVICORN_LOGGER_NAMES,
     AUDIT_LOG_FILE_ROTATION_SIZE,
     AUDIT_LOG_LEVEL,
     AUDIT_LOGS_FILE_PATH,
     GLOBAL_LOG_LEVEL,
+    ENABLE_OTEL,
+    ENABLE_OTEL_LOGS,
 )
 
 
@@ -28,13 +29,16 @@ def stdout_format(record: "Record") -> str:
     Returns:
     str: A formatted log string intended for stdout.
     """
-    record["extra"]["extra_json"] = json.dumps(record["extra"])
+    if record["extra"]:
+        record["extra"]["extra_json"] = json.dumps(record["extra"])
+        extra_format = " - {extra[extra_json]}"
+    else:
+        extra_format = ""
     return (
         "<green>{time:YYYY-MM-DD HH:mm:ss.SSS}</green> | "
         "<level>{level: <8}</level> | "
         "<cyan>{name}</cyan>:<cyan>{function}</cyan>:<cyan>{line}</cyan> - "
-        "<level>{message}</level> - {extra[extra_json]}"
-        "\n{exception}"
+        "<level>{message}</level>" + extra_format + "\n{exception}"
     )
 
 
@@ -60,9 +64,24 @@ class InterceptHandler(logging.Handler):
             frame = frame.f_back
             depth += 1
 
-        logger.opt(depth=depth, exception=record.exc_info).log(
-            level, record.getMessage()
-        )
+        logger.opt(depth=depth, exception=record.exc_info).bind(
+            **self._get_extras()
+        ).log(level, record.getMessage())
+        if ENABLE_OTEL and ENABLE_OTEL_LOGS:
+            from open_webui.utils.telemetry.logs import otel_handler
+
+            otel_handler.emit(record)
+
+    def _get_extras(self):
+        if not ENABLE_OTEL:
+            return {}
+
+        extras = {}
+        context = trace.get_current_span().get_span_context()
+        if context.is_valid:
+            extras["trace_id"] = trace.format_trace_id(context.trace_id)
+            extras["span_id"] = trace.format_span_id(context.span_id)
+        return extras
 
 
 def file_format(record: "Record"):
@@ -113,7 +132,6 @@ def start_logger():
         format=stdout_format,
         filter=lambda record: "auditable" not in record["extra"],
     )
-
     if AUDIT_LOG_LEVEL != "NONE":
         try:
             logger.add(

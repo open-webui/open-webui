@@ -259,7 +259,7 @@
 	<div class="mb-5 gap-2 grid lg:grid-cols-2 xl:grid-cols-3">
 		{#each filteredItems as tool}
 			<div
-				class=" flex space-x-4 cursor-pointer w-full px-3 py-2 dark:hover:bg-white/5 hover:bg-black/5 rounded-xl transition"
+				class=" flex space-x-4 cursor-pointer w-full px-4 py-3 border border-gray-50 dark:border-gray-850 dark:hover:bg-white/5 hover:bg-black/5 rounded-2xl transition"
 			>
 				<a
 					class=" flex flex-1 space-x-3.5 cursor-pointer w-full"
@@ -496,7 +496,7 @@
 
 			<a
 				class=" flex cursor-pointer items-center justify-between hover:bg-gray-50 dark:hover:bg-gray-850 w-full mb-2 px-3.5 py-1.5 rounded-xl transition"
-				href="https://openwebui.com/#open-webui-community"
+				href="https://openwebui.com/tools"
 				target="_blank"
 			>
 				<div class=" self-center">

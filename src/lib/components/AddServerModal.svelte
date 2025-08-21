@@ -35,6 +35,7 @@
 
 	let accessControl = {};
 
+	let id = '';
 	let name = '';
 	let description = '';
 
@@ -76,6 +77,7 @@
 					access_control: accessControl
 				},
 				info: {
+					id,
 					name,
 					description
 				}
@@ -106,6 +108,7 @@
 				access_control: accessControl
 			},
 			info: {
+				id: id,
 				name: name,
 				description: description
 			}
@@ -121,6 +124,7 @@
 		key = '';
 		auth_type = 'bearer';
 
+		id = '';
 		name = '';
 		description = '';
 
@@ -136,6 +140,7 @@
 			auth_type = connection?.auth_type ?? 'bearer';
 			key = connection?.key ?? '';
 
+			id = connection.info?.id ?? '';
 			name = connection.info?.name ?? '';
 			description = connection.info?.description ?? '';
 
@@ -278,8 +283,8 @@
 											class={`w-full text-sm bg-transparent pr-5 ${($settings?.highContrastMode ?? false) ? 'placeholder:text-gray-700 dark:placeholder:text-gray-100' : 'outline-hidden placeholder:text-gray-300 dark:placeholder:text-gray-700'}`}
 											bind:value={auth_type}
 										>
-											<option value="bearer">Bearer</option>
-											<option value="session">Session</option>
+											<option value="bearer">{$i18n.t('Bearer')}</option>
+											<option value="session">{$i18n.t('Session')}</option>
 										</select>
 									</div>
 
@@ -308,10 +313,34 @@
 							<div class="flex gap-2">
 								<div class="flex flex-col w-full">
 									<label
+										for="enter-id"
+										class={`mb-0.5 text-xs ${($settings?.highContrastMode ?? false) ? 'text-gray-800 dark:text-gray-100' : 'text-gray-500'}`}
+										>{$i18n.t('ID')}
+										<span class="text-xs text-gray-200 dark:text-gray-800 ml-0.5"
+											>{$i18n.t('Optional')}</span
+										>
+									</label>
+
+									<div class="flex-1">
+										<input
+											id="enter-id"
+											class={`w-full text-sm bg-transparent ${($settings?.highContrastMode ?? false) ? 'placeholder:text-gray-700 dark:placeholder:text-gray-100' : 'outline-hidden placeholder:text-gray-300 dark:placeholder:text-gray-700'}`}
+											type="text"
+											bind:value={id}
+											placeholder={$i18n.t('Enter ID')}
+											autocomplete="off"
+										/>
+									</div>
+								</div>
+							</div>
+
+							<div class="flex gap-2 mt-2">
+								<div class="flex flex-col w-full">
+									<label
 										for="enter-name"
-										class={`mb-0.5 text-xs" ${($settings?.highContrastMode ?? false) ? 'text-gray-800 dark:text-gray-100' : 'text-gray-500'}`}
-										>{$i18n.t('Name')}</label
-									>
+										class={`mb-0.5 text-xs ${($settings?.highContrastMode ?? false) ? 'text-gray-800 dark:text-gray-100' : 'text-gray-500'}`}
+										>{$i18n.t('Name')}
+									</label>
 
 									<div class="flex-1">
 										<input

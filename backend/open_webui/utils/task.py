@@ -2,7 +2,7 @@ import logging
 import math
 import re
 from datetime import datetime
-from typing import Optional
+from typing import Optional, Any
 import uuid
 
 
@@ -38,9 +38,46 @@ def prompt_variables_template(template: str, variables: dict[str, str]) -> str:
     return template
 
 
-def prompt_template(
-    template: str, user_name: Optional[str] = None, user_location: Optional[str] = None
-) -> str:
+def prompt_template(template: str, user: Optional[Any] = None) -> str:
+
+    USER_VARIABLES = {}
+
+    if user:
+        if hasattr(user, "model_dump"):
+            user = user.model_dump()
+
+        if isinstance(user, dict):
+            user_info = user.get("info", {}) or {}
+            birth_date = user.get("date_of_birth")
+            age = None
+
+            if birth_date:
+                try:
+                    # If birth_date is str, convert to datetime
+                    if isinstance(birth_date, str):
+                        birth_date = datetime.strptime(birth_date, "%Y-%m-%d")
+
+                    today = datetime.now()
+                    age = (
+                        today.year
+                        - birth_date.year
+                        - (
+                            (today.month, today.day)
+                            < (birth_date.month, birth_date.day)
+                        )
+                    )
+                except Exception as e:
+                    pass
+
+            USER_VARIABLES = {
+                "name": str(user.get("name")),
+                "location": str(user_info.get("location")),
+                "bio": str(user.get("bio")),
+                "gender": str(user.get("gender")),
+                "birth_date": str(birth_date),
+                "age": str(age),
+            }
+
     # Get the current date
     current_date = datetime.now()
 
@@ -56,19 +93,20 @@ def prompt_template(
     )
     template = template.replace("{{CURRENT_WEEKDAY}}", formatted_weekday)
 
-    if user_name:
-        # Replace {{USER_NAME}} in the template with the user's name
-        template = template.replace("{{USER_NAME}}", user_name)
-    else:
-        # Replace {{USER_NAME}} in the template with "Unknown"
-        template = template.replace("{{USER_NAME}}", "Unknown")
-
-    if user_location:
-        # Replace {{USER_LOCATION}} in the template with the current location
-        template = template.replace("{{USER_LOCATION}}", user_location)
-    else:
-        # Replace {{USER_LOCATION}} in the template with "Unknown"
-        template = template.replace("{{USER_LOCATION}}", "Unknown")
+    template = template.replace("{{USER_NAME}}", USER_VARIABLES.get("name", "Unknown"))
+    template = template.replace("{{USER_BIO}}", USER_VARIABLES.get("bio", "Unknown"))
+    template = template.replace(
+        "{{USER_GENDER}}", USER_VARIABLES.get("gender", "Unknown")
+    )
+    template = template.replace(
+        "{{USER_BIRTH_DATE}}", USER_VARIABLES.get("birth_date", "Unknown")
+    )
+    template = template.replace(
+        "{{USER_AGE}}", str(USER_VARIABLES.get("age", "Unknown"))
+    )
+    template = template.replace(
+        "{{USER_LOCATION}}", USER_VARIABLES.get("location", "Unknown")
+    )
 
     return template
 
@@ -189,90 +227,56 @@ def rag_template(template: str, context: str, query: str):
 
 
 def title_generation_template(
-    template: str, messages: list[dict], user: Optional[dict] = None
+    template: str, messages: list[dict], user: Optional[Any] = None
 ) -> str:
+
     prompt = get_last_user_message(messages)
     template = replace_prompt_variable(template, prompt)
     template = replace_messages_variable(template, messages)
 
-    template = prompt_template(
-        template,
-        **(
-            {"user_name": user.get("name"), "user_location": user.get("location")}
-            if user
-            else {}
-        ),
-    )
+    template = prompt_template(template, user)
 
     return template
 
 
 def follow_up_generation_template(
-    template: str, messages: list[dict], user: Optional[dict] = None
+    template: str, messages: list[dict], user: Optional[Any] = None
 ) -> str:
     prompt = get_last_user_message(messages)
     template = replace_prompt_variable(template, prompt)
     template = replace_messages_variable(template, messages)
 
-    template = prompt_template(
-        template,
-        **(
-            {"user_name": user.get("name"), "user_location": user.get("location")}
-            if user
-            else {}
-        ),
-    )
+    template = prompt_template(template, user)
     return template
 
 
 def tags_generation_template(
-    template: str, messages: list[dict], user: Optional[dict] = None
+    template: str, messages: list[dict], user: Optional[Any] = None
 ) -> str:
     prompt = get_last_user_message(messages)
     template = replace_prompt_variable(template, prompt)
     template = replace_messages_variable(template, messages)
 
-    template = prompt_template(
-        template,
-        **(
-            {"user_name": user.get("name"), "user_location": user.get("location")}
-            if user
-            else {}
-        ),
-    )
+    template = prompt_template(template, user)
     return template
 
 
 def image_prompt_generation_template(
-    template: str, messages: list[dict], user: Optional[dict] = None
+    template: str, messages: list[dict], user: Optional[Any] = None
 ) -> str:
     prompt = get_last_user_message(messages)
     template = replace_prompt_variable(template, prompt)
     template = replace_messages_variable(template, messages)
 
-    template = prompt_template(
-        template,
-        **(
-            {"user_name": user.get("name"), "user_location": user.get("location")}
-            if user
-            else {}
-        ),
-    )
+    template = prompt_template(template, user)
     return template
 
 
 def emoji_generation_template(
-    template: str, prompt: str, user: Optional[dict] = None
+    template: str, prompt: str, user: Optional[Any] = None
 ) -> str:
     template = replace_prompt_variable(template, prompt)
-    template = prompt_template(
-        template,
-        **(
-            {"user_name": user.get("name"), "user_location": user.get("location")}
-            if user
-            else {}
-        ),
-    )
+    template = prompt_template(template, user)
 
     return template
 
@@ -282,38 +286,24 @@ def autocomplete_generation_template(
     prompt: str,
     messages: Optional[list[dict]] = None,
     type: Optional[str] = None,
-    user: Optional[dict] = None,
+    user: Optional[Any] = None,
 ) -> str:
     template = template.replace("{{TYPE}}", type if type else "")
     template = replace_prompt_variable(template, prompt)
     template = replace_messages_variable(template, messages)
 
-    template = prompt_template(
-        template,
-        **(
-            {"user_name": user.get("name"), "user_location": user.get("location")}
-            if user
-            else {}
-        ),
-    )
+    template = prompt_template(template, user)
     return template
 
 
 def query_generation_template(
-    template: str, messages: list[dict], user: Optional[dict] = None
+    template: str, messages: list[dict], user: Optional[Any] = None
 ) -> str:
     prompt = get_last_user_message(messages)
     template = replace_prompt_variable(template, prompt)
     template = replace_messages_variable(template, messages)
 
-    template = prompt_template(
-        template,
-        **(
-            {"user_name": user.get("name"), "user_location": user.get("location")}
-            if user
-            else {}
-        ),
-    )
+    template = prompt_template(template, user)
     return template
 
 

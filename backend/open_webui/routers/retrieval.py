@@ -401,12 +401,14 @@ async def get_rag_config(request: Request, user=Depends(get_admin_user)):
         "CONTENT_EXTRACTION_ENGINE": request.app.state.config.CONTENT_EXTRACTION_ENGINE,
         "PDF_EXTRACT_IMAGES": request.app.state.config.PDF_EXTRACT_IMAGES,
         "DATALAB_MARKER_API_KEY": request.app.state.config.DATALAB_MARKER_API_KEY,
-        "DATALAB_MARKER_LANGS": request.app.state.config.DATALAB_MARKER_LANGS,
+        "DATALAB_MARKER_API_BASE_URL": request.app.state.config.DATALAB_MARKER_API_BASE_URL,
+        "DATALAB_MARKER_ADDITIONAL_CONFIG": request.app.state.config.DATALAB_MARKER_ADDITIONAL_CONFIG,
         "DATALAB_MARKER_SKIP_CACHE": request.app.state.config.DATALAB_MARKER_SKIP_CACHE,
         "DATALAB_MARKER_FORCE_OCR": request.app.state.config.DATALAB_MARKER_FORCE_OCR,
         "DATALAB_MARKER_PAGINATE": request.app.state.config.DATALAB_MARKER_PAGINATE,
         "DATALAB_MARKER_STRIP_EXISTING_OCR": request.app.state.config.DATALAB_MARKER_STRIP_EXISTING_OCR,
         "DATALAB_MARKER_DISABLE_IMAGE_EXTRACTION": request.app.state.config.DATALAB_MARKER_DISABLE_IMAGE_EXTRACTION,
+        "DATALAB_MARKER_FORMAT_LINES": request.app.state.config.DATALAB_MARKER_FORMAT_LINES,
         "DATALAB_MARKER_USE_LLM": request.app.state.config.DATALAB_MARKER_USE_LLM,
         "DATALAB_MARKER_OUTPUT_FORMAT": request.app.state.config.DATALAB_MARKER_OUTPUT_FORMAT,
         "EXTERNAL_DOCUMENT_LOADER_URL": request.app.state.config.EXTERNAL_DOCUMENT_LOADER_URL,
@@ -447,6 +449,7 @@ async def get_rag_config(request: Request, user=Depends(get_admin_user)):
             "WEB_SEARCH_TRUST_ENV": request.app.state.config.WEB_SEARCH_TRUST_ENV,
             "WEB_SEARCH_RESULT_COUNT": request.app.state.config.WEB_SEARCH_RESULT_COUNT,
             "WEB_SEARCH_CONCURRENT_REQUESTS": request.app.state.config.WEB_SEARCH_CONCURRENT_REQUESTS,
+            "WEB_LOADER_CONCURRENT_REQUESTS": request.app.state.config.WEB_LOADER_CONCURRENT_REQUESTS,
             "WEB_SEARCH_DOMAIN_FILTER_LIST": request.app.state.config.WEB_SEARCH_DOMAIN_FILTER_LIST,
             "BYPASS_WEB_SEARCH_EMBEDDING_AND_RETRIEVAL": request.app.state.config.BYPASS_WEB_SEARCH_EMBEDDING_AND_RETRIEVAL,
             "BYPASS_WEB_SEARCH_WEB_LOADER": request.app.state.config.BYPASS_WEB_SEARCH_WEB_LOADER,
@@ -502,6 +505,7 @@ class WebConfig(BaseModel):
     WEB_SEARCH_TRUST_ENV: Optional[bool] = None
     WEB_SEARCH_RESULT_COUNT: Optional[int] = None
     WEB_SEARCH_CONCURRENT_REQUESTS: Optional[int] = None
+    WEB_LOADER_CONCURRENT_REQUESTS: Optional[int] = None
     WEB_SEARCH_DOMAIN_FILTER_LIST: Optional[List[str]] = []
     BYPASS_WEB_SEARCH_EMBEDDING_AND_RETRIEVAL: Optional[bool] = None
     BYPASS_WEB_SEARCH_WEB_LOADER: Optional[bool] = None
@@ -566,12 +570,14 @@ class ConfigForm(BaseModel):
     CONTENT_EXTRACTION_ENGINE: Optional[str] = None
     PDF_EXTRACT_IMAGES: Optional[bool] = None
     DATALAB_MARKER_API_KEY: Optional[str] = None
-    DATALAB_MARKER_LANGS: Optional[str] = None
+    DATALAB_MARKER_API_BASE_URL: Optional[str] = None
+    DATALAB_MARKER_ADDITIONAL_CONFIG: Optional[str] = None
     DATALAB_MARKER_SKIP_CACHE: Optional[bool] = None
     DATALAB_MARKER_FORCE_OCR: Optional[bool] = None
     DATALAB_MARKER_PAGINATE: Optional[bool] = None
     DATALAB_MARKER_STRIP_EXISTING_OCR: Optional[bool] = None
     DATALAB_MARKER_DISABLE_IMAGE_EXTRACTION: Optional[bool] = None
+    DATALAB_MARKER_FORMAT_LINES: Optional[bool] = None
     DATALAB_MARKER_USE_LLM: Optional[bool] = None
     DATALAB_MARKER_OUTPUT_FORMAT: Optional[str] = None
     EXTERNAL_DOCUMENT_LOADER_URL: Optional[str] = None
@@ -683,10 +689,15 @@ async def update_rag_config(
         if form_data.DATALAB_MARKER_API_KEY is not None
         else request.app.state.config.DATALAB_MARKER_API_KEY
     )
-    request.app.state.config.DATALAB_MARKER_LANGS = (
-        form_data.DATALAB_MARKER_LANGS
-        if form_data.DATALAB_MARKER_LANGS is not None
-        else request.app.state.config.DATALAB_MARKER_LANGS
+    request.app.state.config.DATALAB_MARKER_API_BASE_URL = (
+        form_data.DATALAB_MARKER_API_BASE_URL
+        if form_data.DATALAB_MARKER_API_BASE_URL is not None
+        else request.app.state.config.DATALAB_MARKER_API_BASE_URL
+    )
+    request.app.state.config.DATALAB_MARKER_ADDITIONAL_CONFIG = (
+        form_data.DATALAB_MARKER_ADDITIONAL_CONFIG
+        if form_data.DATALAB_MARKER_ADDITIONAL_CONFIG is not None
+        else request.app.state.config.DATALAB_MARKER_ADDITIONAL_CONFIG
     )
     request.app.state.config.DATALAB_MARKER_SKIP_CACHE = (
         form_data.DATALAB_MARKER_SKIP_CACHE
@@ -712,6 +723,11 @@ async def update_rag_config(
         form_data.DATALAB_MARKER_DISABLE_IMAGE_EXTRACTION
         if form_data.DATALAB_MARKER_DISABLE_IMAGE_EXTRACTION is not None
         else request.app.state.config.DATALAB_MARKER_DISABLE_IMAGE_EXTRACTION
+    )
+    request.app.state.config.DATALAB_MARKER_FORMAT_LINES = (
+        form_data.DATALAB_MARKER_FORMAT_LINES
+        if form_data.DATALAB_MARKER_FORMAT_LINES is not None
+        else request.app.state.config.DATALAB_MARKER_FORMAT_LINES
     )
     request.app.state.config.DATALAB_MARKER_OUTPUT_FORMAT = (
         form_data.DATALAB_MARKER_OUTPUT_FORMAT
@@ -815,7 +831,11 @@ async def update_rag_config(
         f"Updating reranking model: {request.app.state.config.RAG_RERANKING_MODEL} to {form_data.RAG_RERANKING_MODEL}"
     )
     try:
-        request.app.state.config.RAG_RERANKING_MODEL = form_data.RAG_RERANKING_MODEL
+        request.app.state.config.RAG_RERANKING_MODEL = (
+            form_data.RAG_RERANKING_MODEL
+            if form_data.RAG_RERANKING_MODEL is not None
+            else request.app.state.config.RAG_RERANKING_MODEL
+        )
 
         try:
             request.app.state.rf = get_rf(
@@ -897,6 +917,9 @@ async def update_rag_config(
         )
         request.app.state.config.WEB_SEARCH_CONCURRENT_REQUESTS = (
             form_data.web.WEB_SEARCH_CONCURRENT_REQUESTS
+        )
+        request.app.state.config.WEB_LOADER_CONCURRENT_REQUESTS = (
+            form_data.web.WEB_LOADER_CONCURRENT_REQUESTS
         )
         request.app.state.config.WEB_SEARCH_DOMAIN_FILTER_LIST = (
             form_data.web.WEB_SEARCH_DOMAIN_FILTER_LIST
@@ -1002,7 +1025,8 @@ async def update_rag_config(
         "CONTENT_EXTRACTION_ENGINE": request.app.state.config.CONTENT_EXTRACTION_ENGINE,
         "PDF_EXTRACT_IMAGES": request.app.state.config.PDF_EXTRACT_IMAGES,
         "DATALAB_MARKER_API_KEY": request.app.state.config.DATALAB_MARKER_API_KEY,
-        "DATALAB_MARKER_LANGS": request.app.state.config.DATALAB_MARKER_LANGS,
+        "DATALAB_MARKER_API_BASE_URL": request.app.state.config.DATALAB_MARKER_API_BASE_URL,
+        "DATALAB_MARKER_ADDITIONAL_CONFIG": request.app.state.config.DATALAB_MARKER_ADDITIONAL_CONFIG,
         "DATALAB_MARKER_SKIP_CACHE": request.app.state.config.DATALAB_MARKER_SKIP_CACHE,
         "DATALAB_MARKER_FORCE_OCR": request.app.state.config.DATALAB_MARKER_FORCE_OCR,
         "DATALAB_MARKER_PAGINATE": request.app.state.config.DATALAB_MARKER_PAGINATE,
@@ -1048,6 +1072,7 @@ async def update_rag_config(
             "WEB_SEARCH_TRUST_ENV": request.app.state.config.WEB_SEARCH_TRUST_ENV,
             "WEB_SEARCH_RESULT_COUNT": request.app.state.config.WEB_SEARCH_RESULT_COUNT,
             "WEB_SEARCH_CONCURRENT_REQUESTS": request.app.state.config.WEB_SEARCH_CONCURRENT_REQUESTS,
+            "WEB_LOADER_CONCURRENT_REQUESTS": request.app.state.config.WEB_LOADER_CONCURRENT_REQUESTS,
             "WEB_SEARCH_DOMAIN_FILTER_LIST": request.app.state.config.WEB_SEARCH_DOMAIN_FILTER_LIST,
             "BYPASS_WEB_SEARCH_EMBEDDING_AND_RETRIEVAL": request.app.state.config.BYPASS_WEB_SEARCH_EMBEDDING_AND_RETRIEVAL,
             "BYPASS_WEB_SEARCH_WEB_LOADER": request.app.state.config.BYPASS_WEB_SEARCH_WEB_LOADER,
@@ -1225,26 +1250,13 @@ def save_docs_to_vector_db(
         {
             **doc.metadata,
             **(metadata if metadata else {}),
-            "embedding_config": json.dumps(
-                {
-                    "engine": request.app.state.config.RAG_EMBEDDING_ENGINE,
-                    "model": request.app.state.config.RAG_EMBEDDING_MODEL,
-                }
-            ),
+            "embedding_config": {
+                "engine": request.app.state.config.RAG_EMBEDDING_ENGINE,
+                "model": request.app.state.config.RAG_EMBEDDING_MODEL,
+            },
         }
         for doc in docs
     ]
-
-    # ChromaDB does not like datetime formats
-    # for meta-data so convert them to string.
-    for metadata in metadatas:
-        for key, value in metadata.items():
-            if (
-                isinstance(value, datetime)
-                or isinstance(value, list)
-                or isinstance(value, dict)
-            ):
-                metadata[key] = str(value)
 
     try:
         if VECTOR_DB_CLIENT.has_collection(collection_name=collection_name):
@@ -1402,12 +1414,14 @@ def process_file(
                 loader = Loader(
                     engine=request.app.state.config.CONTENT_EXTRACTION_ENGINE,
                     DATALAB_MARKER_API_KEY=request.app.state.config.DATALAB_MARKER_API_KEY,
-                    DATALAB_MARKER_LANGS=request.app.state.config.DATALAB_MARKER_LANGS,
+                    DATALAB_MARKER_API_BASE_URL=request.app.state.config.DATALAB_MARKER_API_BASE_URL,
+                    DATALAB_MARKER_ADDITIONAL_CONFIG=request.app.state.config.DATALAB_MARKER_ADDITIONAL_CONFIG,
                     DATALAB_MARKER_SKIP_CACHE=request.app.state.config.DATALAB_MARKER_SKIP_CACHE,
                     DATALAB_MARKER_FORCE_OCR=request.app.state.config.DATALAB_MARKER_FORCE_OCR,
                     DATALAB_MARKER_PAGINATE=request.app.state.config.DATALAB_MARKER_PAGINATE,
                     DATALAB_MARKER_STRIP_EXISTING_OCR=request.app.state.config.DATALAB_MARKER_STRIP_EXISTING_OCR,
                     DATALAB_MARKER_DISABLE_IMAGE_EXTRACTION=request.app.state.config.DATALAB_MARKER_DISABLE_IMAGE_EXTRACTION,
+                    DATALAB_MARKER_FORMAT_LINES=request.app.state.config.DATALAB_MARKER_FORMAT_LINES,
                     DATALAB_MARKER_USE_LLM=request.app.state.config.DATALAB_MARKER_USE_LLM,
                     DATALAB_MARKER_OUTPUT_FORMAT=request.app.state.config.DATALAB_MARKER_OUTPUT_FORMAT,
                     EXTERNAL_DOCUMENT_LOADER_URL=request.app.state.config.EXTERNAL_DOCUMENT_LOADER_URL,
@@ -1462,7 +1476,7 @@ def process_file(
         log.debug(f"text_content: {text_content}")
         Files.update_file_data_by_id(
             file.id,
-            {"content": text_content},
+            {"status": "completed", "content": text_content},
         )
 
         hash = calculate_sha256_string(text_content)
@@ -1616,7 +1630,7 @@ def process_web(
         loader = get_web_loader(
             form_data.url,
             verify_ssl=request.app.state.config.ENABLE_WEB_LOADER_SSL_VERIFICATION,
-            requests_per_second=request.app.state.config.WEB_SEARCH_CONCURRENT_REQUESTS,
+            requests_per_second=request.app.state.config.WEB_LOADER_CONCURRENT_REQUESTS,
         )
         docs = loader.load()
         content = " ".join([doc.page_content for doc in docs])
@@ -1781,7 +1795,7 @@ def search_web(request: Request, engine: str, query: str) -> list[SearchResult]:
                 request.app.state.config.SERPLY_API_KEY,
                 query,
                 request.app.state.config.WEB_SEARCH_RESULT_COUNT,
-                request.app.state.config.WEB_SEARCH_DOMAIN_FILTER_LIST,
+                filter_list=request.app.state.config.WEB_SEARCH_DOMAIN_FILTER_LIST,
             )
         else:
             raise Exception("No SERPLY_API_KEY found in environment variables")
@@ -1790,6 +1804,7 @@ def search_web(request: Request, engine: str, query: str) -> list[SearchResult]:
             query,
             request.app.state.config.WEB_SEARCH_RESULT_COUNT,
             request.app.state.config.WEB_SEARCH_DOMAIN_FILTER_LIST,
+            concurrent_requests=request.app.state.config.WEB_SEARCH_CONCURRENT_REQUESTS,
         )
     elif engine == "tavily":
         if request.app.state.config.TAVILY_API_KEY:
@@ -1957,13 +1972,13 @@ async def process_web_search(
                     },
                 )
                 for result in search_results
-                if hasattr(result, "snippet")
+                if hasattr(result, "snippet") and result.snippet is not None
             ]
         else:
             loader = get_web_loader(
                 urls,
                 verify_ssl=request.app.state.config.ENABLE_WEB_LOADER_SSL_VERIFICATION,
-                requests_per_second=request.app.state.config.WEB_SEARCH_CONCURRENT_REQUESTS,
+                requests_per_second=request.app.state.config.WEB_LOADER_CONCURRENT_REQUESTS,
                 trust_env=request.app.state.config.WEB_SEARCH_TRUST_ENV,
             )
             docs = await loader.aload()
@@ -2050,11 +2065,13 @@ def query_doc_handler(
                 ),
                 k=form_data.k if form_data.k else request.app.state.config.TOP_K,
                 reranking_function=(
-                    lambda sentences: (
-                        request.app.state.RERANKING_FUNCTION(sentences, user=user)
-                        if request.app.state.RERANKING_FUNCTION
-                        else None
+                    (
+                        lambda sentences: request.app.state.RERANKING_FUNCTION(
+                            sentences, user=user
+                        )
                     )
+                    if request.app.state.RERANKING_FUNCTION
+                    else None
                 ),
                 k_reranker=form_data.k_reranker
                 or request.app.state.config.TOP_K_RERANKER,
@@ -2112,8 +2129,14 @@ def query_collection_handler(
                     query, prefix=prefix, user=user
                 ),
                 k=form_data.k if form_data.k else request.app.state.config.TOP_K,
-                reranking_function=lambda sentences: request.app.state.RERANKING_FUNCTION(
-                    sentences, user=user
+                reranking_function=(
+                    (
+                        lambda sentences: request.app.state.RERANKING_FUNCTION(
+                            sentences, user=user
+                        )
+                    )
+                    if request.app.state.RERANKING_FUNCTION
+                    else None
                 ),
                 k_reranker=form_data.k_reranker
                 or request.app.state.config.TOP_K_RERANKER,

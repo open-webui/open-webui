@@ -36,16 +36,24 @@ router = APIRouter()
 
 @router.get("/", response_model=list[ChatTitleIdResponse])
 @router.get("/list", response_model=list[ChatTitleIdResponse])
-async def get_session_user_chat_list(
+def get_session_user_chat_list(
     user=Depends(get_verified_user), page: Optional[int] = None
 ):
-    if page is not None:
-        limit = 60
-        skip = (page - 1) * limit
+    try:
+        if page is not None:
+            limit = 60
+            skip = (page - 1) * limit
 
-        return Chats.get_chat_title_id_list_by_user_id(user.id, skip=skip, limit=limit)
-    else:
-        return Chats.get_chat_title_id_list_by_user_id(user.id)
+            return Chats.get_chat_title_id_list_by_user_id(
+                user.id, skip=skip, limit=limit
+            )
+        else:
+            return Chats.get_chat_title_id_list_by_user_id(user.id)
+    except Exception as e:
+        log.exception(e)
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST, detail=ERROR_MESSAGES.DEFAULT()
+        )
 
 
 ############################
@@ -609,7 +617,18 @@ async def clone_chat_by_id(
             "title": form_data.title if form_data.title else f"Clone of {chat.title}",
         }
 
-        chat = Chats.insert_new_chat(user.id, ChatForm(**{"chat": updated_chat}))
+        chat = Chats.import_chat(
+            user.id,
+            ChatImportForm(
+                **{
+                    "chat": updated_chat,
+                    "meta": chat.meta,
+                    "pinned": chat.pinned,
+                    "folder_id": chat.folder_id,
+                }
+            ),
+        )
+
         return ChatResponse(**chat.model_dump())
     else:
         raise HTTPException(
@@ -638,7 +657,17 @@ async def clone_shared_chat_by_id(id: str, user=Depends(get_verified_user)):
             "title": f"Clone of {chat.title}",
         }
 
-        chat = Chats.insert_new_chat(user.id, ChatForm(**{"chat": updated_chat}))
+        chat = Chats.import_chat(
+            user.id,
+            ChatImportForm(
+                **{
+                    "chat": updated_chat,
+                    "meta": chat.meta,
+                    "pinned": chat.pinned,
+                    "folder_id": chat.folder_id,
+                }
+            ),
+        )
         return ChatResponse(**chat.model_dump())
     else:
         raise HTTPException(

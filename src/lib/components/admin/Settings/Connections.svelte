@@ -6,7 +6,7 @@
 
 	import { getOllamaConfig, updateOllamaConfig } from '$lib/apis/ollama';
 	import { getOpenAIConfig, updateOpenAIConfig, getOpenAIModels } from '$lib/apis/openai';
-	import { getModels as _getModels } from '$lib/apis';
+	import { getModels as _getModels, getBackendConfig } from '$lib/apis';
 	import { getConnectionsConfig, setConnectionsConfig } from '$lib/apis/configs';
 
 	import { config, models, settings, user } from '$lib/stores';
@@ -114,6 +114,7 @@
 		if (res) {
 			toast.success($i18n.t('Connections settings updated'));
 			await models.set(await getModels());
+			await config.set(await getBackendConfig());
 		}
 	};
 
@@ -196,9 +197,10 @@
 	const submitHandler = async () => {
 		updateOpenAIHandler();
 		updateOllamaHandler();
-		updateDirectConnectionsHandler();
 
 		dispatch('save');
+
+		await config.set(await getBackendConfig());
 	};
 </script>
 

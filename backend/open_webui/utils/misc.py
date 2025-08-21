@@ -1,5 +1,6 @@
 import hashlib
 import re
+import threading
 import time
 import uuid
 import logging
@@ -227,7 +228,7 @@ def openai_chat_chunk_message_template(
     if tool_calls:
         template["choices"][0]["delta"]["tool_calls"] = tool_calls
 
-    if not content and not tool_calls:
+    if not content and not reasoning_content and not tool_calls:
         template["choices"][0]["finish_reason"] = "stop"
 
     if usage:
@@ -478,3 +479,46 @@ def convert_logit_bias_input_to_json(user_input):
         bias = 100 if bias > 100 else -100 if bias < -100 else bias
         logit_bias_json[token] = bias
     return json.dumps(logit_bias_json)
+
+
+def freeze(value):
+    """
+    Freeze a value to make it hashable.
+    """
+    if isinstance(value, dict):
+        return frozenset((k, freeze(v)) for k, v in value.items())
+    elif isinstance(value, list):
+        return tuple(freeze(v) for v in value)
+    return value
+
+
+def throttle(interval: float = 10.0):
+    """
+    Decorator to prevent a function from being called more than once within a specified duration.
+    If the function is called again within the duration, it returns None. To avoid returning
+    different types, the return type of the function should be Optional[T].
+
+    :param interval: Duration in seconds to wait before allowing the function to be called again.
+    """
+
+    def decorator(func):
+        last_calls = {}
+        lock = threading.Lock()
+
+        def wrapper(*args, **kwargs):
+            if interval is None:
+                return func(*args, **kwargs)
+
+            key = (args, freeze(kwargs))
+            now = time.time()
+            if now - last_calls.get(key, 0) < interval:
+                return None
+            with lock:
+                if now - last_calls.get(key, 0) < interval:
+                    return None
+                last_calls[key] = now
+            return func(*args, **kwargs)
+
+        return wrapper
+
+    return decorator

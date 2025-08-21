@@ -17,6 +17,8 @@
 
 	import Tooltip from '../Tooltip.svelte';
 	import CheckBox from '$lib/components/icons/CheckBox.svelte';
+	import ArrowLeftTag from '$lib/components/icons/ArrowLeftTag.svelte';
+	import ArrowRightTag from '$lib/components/icons/ArrowRightTag.svelte';
 </script>
 
 <div
@@ -57,6 +59,30 @@
 			<H3 />
 		</button>
 	</Tooltip>
+
+	{#if editor?.isActive('bulletList') || editor?.isActive('orderedList') || editor?.isActive('taskList')}
+		<Tooltip placement="top" content={$i18n.t('Lift List')}>
+			<button
+				on:click={() => {
+					editor?.commands.liftListItem(editor?.isActive('taskList') ? 'taskItem' : 'listItem');
+				}}
+				class="hover:bg-gray-50 dark:hover:bg-gray-700 rounded-lg p-1.5 transition-all"
+				type="button"
+			>
+				<ArrowLeftTag />
+			</button>
+		</Tooltip>
+		<Tooltip placement="top" content={$i18n.t('Sink List')}>
+			<button
+				on:click={() =>
+					editor?.commands.sinkListItem(editor?.isActive('taskList') ? 'taskItem' : 'listItem')}
+				class="hover:bg-gray-50 dark:hover:bg-gray-700 rounded-lg p-1.5 transition-all"
+				type="button"
+			>
+				<ArrowRightTag />
+			</button>
+		</Tooltip>
+	{/if}
 
 	<Tooltip placement="top" content={$i18n.t('Bullet List')}>
 		<button
