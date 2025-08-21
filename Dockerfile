@@ -229,9 +229,15 @@ COPY --chown=$UID:$GID --from=build /app/package.json /app/package.json
 COPY --chown=$UID:$GID ./backend .
 
 # provide group with same permissions as user (OpenShift compatibility)
-# Skip only the large model cache directory to avoid space issues
+# Skip all large static asset directories to avoid space issues during permission changes
 RUN chmod -R g=u $HOME && \
-    find /app -path "/app/backend/data/cache" -prune -o -type f -exec chmod g=u {} \; -o -type d -exec chmod g=u {} \;
+    find /app \
+    -path "/app/backend/data/cache" -prune -o \
+    -path "/app/build/pyodide" -prune -o \
+    -path "/app/build/_app" -prune -o \
+    -path "/app/build/assets" -prune -o \
+    -type f -exec chmod g=u {} \; -o \
+    -type d -exec chmod g=u {} \;
 
 EXPOSE 8080
 
