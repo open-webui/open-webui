@@ -42,7 +42,7 @@
 	$: if (banners) {
 		init();
 		// Initialize translations for all banners
-		banners.forEach(banner => initializeBannerTranslations(banner));
+		banners.forEach((banner) => initializeBannerTranslations(banner));
 	}
 
 	// Load available languages
@@ -80,7 +80,7 @@
 		if (langCode === $i18n.language) {
 			return;
 		}
-		
+
 		if (!banner.translations) {
 			banner.translations = {};
 		}
@@ -109,14 +109,14 @@
 		if (!banner.translations) {
 			banner.translations = {};
 		}
-		
+
 		// If current language content doesn't exist, initialize it with banner.content
 		if (!banner.translations[$i18n.language] && banner.content) {
 			banner.translations[$i18n.language] = banner.content;
 			banner.content = ''; // Clear old content field
 			banners = banners; // Trigger reactivity
 		}
-		
+
 		// Ensure current language always has an entry
 		if (!banner.translations[$i18n.language]) {
 			banner.translations[$i18n.language] = '';
@@ -197,7 +197,12 @@
 					<div class="min-w-0 flex-1">
 						<Textarea
 							className="w-full resize-none border-0 bg-transparent p-0 text-sm outline-none focus:ring-0"
-							placeholder={$i18n.t('Content for') + ' ' + ($i18n.language === 'en-US' ? 'English' : availableLanguages.find((l) => l.code === $i18n.language)?.title || $i18n.language)}
+							placeholder={$i18n.t('Content for') +
+								' ' +
+								($i18n.language === 'en-US'
+									? 'English'
+									: availableLanguages.find((l) => l.code === $i18n.language)?.title ||
+										$i18n.language)}
 							bind:value={banner.translations[$i18n.language]}
 							maxSize={100}
 						/>
@@ -284,16 +289,17 @@
 									>
 										Current
 									</h4>
-									{#if banner.translations && Object.keys(banner.translations).filter(code => code !== $i18n.language).length > 0}
+									{#if banner.translations && Object.keys(banner.translations).filter((code) => code !== $i18n.language).length > 0}
 										<span
 											class="rounded-full bg-blue-100 px-1.5 py-0.5 text-xs text-blue-700 dark:bg-blue-900/30 dark:text-blue-300"
 										>
-											{Object.keys(banner.translations).filter(code => code !== $i18n.language).length}
+											{Object.keys(banner.translations).filter((code) => code !== $i18n.language)
+												.length}
 										</span>
 									{/if}
 								</div>
 
-								{#if banner.translations && Object.keys(banner.translations).filter(code => code !== $i18n.language).length > 0}
+								{#if banner.translations && Object.keys(banner.translations).filter((code) => code !== $i18n.language).length > 0}
 									<div class="space-y-1">
 										{#each Object.entries(banner.translations).filter(([langCode]) => langCode !== $i18n.language) as [langCode, translation]}
 											<div
@@ -463,8 +469,12 @@
 													d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
 												/>
 											</svg>
-											<p class="text-xs text-gray-500 dark:text-gray-400 mb-1">Start typing to search</p>
-											<p class="text-xs text-gray-400 dark:text-gray-500">Find languages to add translations</p>
+											<p class="text-xs text-gray-500 dark:text-gray-400 mb-1">
+												Start typing to search
+											</p>
+											<p class="text-xs text-gray-400 dark:text-gray-500">
+												Find languages to add translations
+											</p>
 										</div>
 									{/if}
 								</div>
