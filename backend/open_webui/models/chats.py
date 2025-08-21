@@ -527,33 +527,47 @@ class ChatTable:
 
     def _get_db_capabilities(self, db) -> dict:
         """
-        Get database capabilities including JSONB support for columns.
-        Results are cached per database connection to avoid repeated queries.
-        Thread-safe implementation.
+        Get database capabilities including JSONB support for chat table columns.
+
+        Centralized capability detection that:
+        - Only queries the specific chat table (not all tables)
+        - Uses thread-safe caching for production environments
+        - Handles new installations gracefully
+        - Provides fallback for any detection failures
+
+        This is the SINGLE source of truth for JSONB capability detection.
+        All other JSONB logic should use this method's results.
 
         Args:
             db: Database session
 
         Returns:
             dict: Database capabilities with column types
+                - supports_jsonb: Whether database supports JSONB
+                - chat_is_jsonb: Whether chat column is JSONB type
+                - meta_is_jsonb: Whether meta column is JSONB type
+                - columns: Raw column type mapping
         """
-        # Check if PostgreSQL
+        # Non-PostgreSQL databases don't support JSONB
         if db.bind.dialect.name != "postgresql":
             return {
                 "supports_jsonb": False,
+                "chat_is_jsonb": False,
+                "meta_is_jsonb": False,
                 "columns": {COLUMN_CHAT: "json", COLUMN_META: "json"},
             }
 
-        # Create a cache key using connection details
+        # Create thread-safe cache key using connection details
         cache_key = f"{db.bind.dialect.name}_{hash(str(db.bind.url))}"
 
-        # Thread-safe cache access
+        # Thread-safe cache access - CRITICAL for production environments
         with self._capabilities_lock:
             if cache_key in self._capabilities_cache:
                 return self._capabilities_cache[cache_key]
 
         try:
-            # Query only chat table columns for efficiency
+            # Query ONLY chat table columns for efficiency (not all tables)
+            # This addresses the performance concern about iterating over all tables
             result = db.execute(
                 text(
                     """
@@ -569,36 +583,40 @@ class ChatTable:
             for row in result:
                 columns[row[0]] = row[1].lower()
 
-            # Default to json if columns don't exist yet (new installation)
+            # Handle new installations where table might not exist yet
+            # Default to JSON for safety and consistency
             if COLUMN_CHAT not in columns:
                 columns[COLUMN_CHAT] = "json"
             if COLUMN_META not in columns:
                 columns[COLUMN_META] = "json"
 
+            # Build comprehensive capabilities object
             capabilities = {
                 "supports_jsonb": True,  # PostgreSQL always supports JSONB
-                "columns": columns,
                 "chat_is_jsonb": columns.get(COLUMN_CHAT) == "jsonb",
                 "meta_is_jsonb": columns.get(COLUMN_META) == "jsonb",
+                "columns": columns,
             }
 
-            # Thread-safe cache update
+            # Thread-safe cache update - CRITICAL for preventing race conditions
             with self._capabilities_lock:
                 self._capabilities_cache[cache_key] = capabilities
 
-            log.debug(f"Database capabilities cached: {capabilities}")
+            log.debug(f"Database capabilities cached for {cache_key}: {capabilities}")
             return capabilities
 
         except (SQLAlchemyError, ProgrammingError) as e:
             log.warning(f"Error checking database capabilities: {e}")
-            # Fallback to JSON for safety
+
+            # Safe fallback - assume JSON for maximum compatibility
             fallback = {
                 "supports_jsonb": False,
-                "columns": {COLUMN_CHAT: "json", COLUMN_META: "json"},
                 "chat_is_jsonb": False,
                 "meta_is_jsonb": False,
+                "columns": {COLUMN_CHAT: "json", COLUMN_META: "json"},
             }
 
+            # Thread-safe fallback cache update
             with self._capabilities_lock:
                 self._capabilities_cache[cache_key] = fallback
 
