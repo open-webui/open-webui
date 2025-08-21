@@ -42,134 +42,11 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Analyze disk usage and cleanup
-        run: |
-          echo "=== Initial disk usage ==="
-          df -h
-          
-          echo "=== Checking what large directories exist ==="
-          [ -d "/usr/share/dotnet" ] && echo "Found: /usr/share/dotnet ($(du -sh /usr/share/dotnet | cut -f1))" || echo "Not found: /usr/share/dotnet"
-          [ -d "/usr/local/lib/android" ] && echo "Found: /usr/local/lib/android ($(du -sh /usr/local/lib/android | cut -f1))" || echo "Not found: /usr/local/lib/android"
-          [ -d "/opt/ghc" ] && echo "Found: /opt/ghc ($(du -sh /opt/ghc | cut -f1))" || echo "Not found: /opt/ghc"
-          [ -d "/opt/hostedtoolcache/CodeQL" ] && echo "Found: /opt/hostedtoolcache/CodeQL ($(du -sh /opt/hostedtoolcache/CodeQL | cut -f1))" || echo "Not found: /opt/hostedtoolcache/CodeQL"
-          [ -d "/opt/hostedtoolcache" ] && echo "Found: /opt/hostedtoolcache ($(du -sh /opt/hostedtoolcache | cut -f1))" || echo "Not found: /opt/hostedtoolcache"
-          [ -d "/usr/share/swift" ] && echo "Found: /usr/share/swift ($(du -sh /usr/share/swift | cut -f1))" || echo "Not found: /usr/share/swift"
-          [ -d "/usr/local/share/boost" ] && echo "Found: /usr/local/share/boost ($(du -sh /usr/local/share/boost | cut -f1))" || echo "Not found: /usr/local/share/boost"
-          [ -d "/usr/local/share/powershell" ] && echo "Found: /usr/local/share/powershell ($(du -sh /usr/local/share/powershell | cut -f1))" || echo "Not found: /usr/local/share/powershell"
-          [ -d "/opt/az" ] && echo "Found: /opt/az ($(du -sh /opt/az | cut -f1))" || echo "Not found: /opt/az"
-          [ -d "/opt/microsoft" ] && echo "Found: /opt/microsoft ($(du -sh /opt/microsoft | cut -f1))" || echo "Not found: /opt/microsoft"
-          
-          echo "=== Docker usage ==="
-          docker system df
-          
-          echo "=== Top 10 largest directories in /opt ==="
-          du -sh /opt/* 2>/dev/null | sort -hr | head -10 || true
-          
-          echo "=== Top 10 largest directories in /usr/share ==="
-          du -sh /usr/share/* 2>/dev/null | sort -hr | head -10 || true
-          
-          echo "=== Starting aggressive cleanup of confirmed large directories ==="
-          
-          # Remove Android SDK if it exists
-          if [ -d "/usr/local/lib/android" ]; then
-            echo "Removing Android SDK..."
-            sudo rm -rf /usr/local/lib/android
-          fi
-          
-          # Remove CodeQL if it exists
-          if [ -d "/opt/hostedtoolcache/CodeQL" ]; then
-            echo "Removing CodeQL..."
-            sudo rm -rf /opt/hostedtoolcache/CodeQL
-          fi
-          
-          # Remove most of hostedtoolcache (keep only essential tools)
-          if [ -d "/opt/hostedtoolcache" ]; then
-            echo "Removing large hostedtoolcache items..."
-            sudo rm -rf /opt/hostedtoolcache/go || true
-            sudo rm -rf /opt/hostedtoolcache/Python || true
-            sudo rm -rf /opt/hostedtoolcache/Ruby || true
-            sudo rm -rf /opt/hostedtoolcache/node || true
-          fi
-          
-          # Remove .NET if it exists
-          if [ -d "/usr/share/dotnet" ]; then
-            echo "Removing .NET SDK..."
-            sudo rm -rf /usr/share/dotnet
-          fi
-          
-          # Remove GHC if it exists
-          if [ -d "/opt/ghc" ]; then
-            echo "Removing GHC..."
-            sudo rm -rf /opt/ghc
-          fi
-          
-          # Remove Swift if it exists
-          if [ -d "/usr/share/swift" ]; then
-            echo "Removing Swift..."
-            sudo rm -rf /usr/share/swift
-          fi
-          
-          # Remove PowerShell if it exists
-          if [ -d "/usr/local/share/powershell" ]; then
-            echo "Removing PowerShell..."
-            sudo rm -rf /usr/local/share/powershell
-          fi
-          
-          # Remove Azure CLI if it exists
-          if [ -d "/opt/az" ]; then
-            echo "Removing Azure CLI..."
-            sudo rm -rf /opt/az
-          fi
-          
-          # Remove Microsoft tools if they exist
-          if [ -d "/opt/microsoft" ]; then
-            echo "Removing Microsoft tools..."
-            sudo rm -rf /opt/microsoft
-          fi
-          
-          # Remove large packages we don't need
-          echo "Removing unnecessary packages..."
-          sudo apt-get remove -y \
-            azure-cli \
-            google-cloud-cli \
-            google-chrome-stable \
-            firefox \
-            powershell \
-            mono-devel \
-            dotnet-sdk-* \
-            aspnetcore-runtime-* \
-            2>/dev/null || true
-          
-          # Docker cleanup
-          echo "Docker system cleanup..."
-          docker system prune -f --all --volumes
-          docker builder prune -f --all
-          
-          # Additional cleanup
-          echo "Additional cleanup..."
-          sudo apt-get clean
-          sudo apt-get autoremove -y --purge
-          
-          # Clear various caches
-          sudo rm -rf /var/cache/* || true
-          sudo rm -rf /tmp/* || true
-          sudo rm -rf /var/tmp/* || true
-          
-          echo "=== Final disk usage ==="
-          df -h
-
       - name: Set up QEMU
         uses: docker/setup-qemu-action@v3
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
-        with:
-          buildkitd-flags: --allow-insecure-entitlement security.insecure --allow-insecure-entitlement network.host
-          buildkitd-config-inline: |
-            [worker.oci]
-              max-parallelism = 1
-            [registry."docker.io"]
-              mirrors = ["mirror.gcr.io"]
 
       - name: Log in to the Container registry
         uses: docker/login-action@v3
@@ -204,23 +81,6 @@ jobs:
             prefix=cache-${{ matrix.platform }}-
             latest=false
 
-      - name: Monitor disk space during build
-        run: |
-          echo "=== Pre-build disk usage ==="
-          df -h
-          echo ""
-          echo "=== Docker system usage ==="
-          docker system df
-          echo ""
-          echo "=== Aggressive Docker cleanup before build ==="
-          docker system prune -af --volumes
-          docker builder prune -af --all
-          # Clear any remaining build cache
-          docker buildx prune -af --all || true
-          echo ""
-          echo "=== Final pre-build disk usage ==="
-          df -h
-
       - name: Build Docker image (latest)
         uses: docker/build-push-action@v5
         id: build
@@ -234,18 +94,6 @@ jobs:
           cache-to: type=registry,ref=${{ steps.cache-meta.outputs.tags }},mode=max
           build-args: |
             BUILD_HASH=${{ github.sha }}
-          provenance: false
-          sbom: false
-
-      - name: Post-build cleanup
-        run: |
-          echo "=== Post-build disk usage ==="
-          df -h
-          echo ""
-          echo "=== Cleaning up build artifacts ==="
-          docker system prune -f
-          echo "=== Final disk usage ==="
-          df -h
 
       - name: Export digest
         run: |
