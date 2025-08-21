@@ -37,7 +37,8 @@
 		showArtifacts,
 		tools,
 		toolServers,
-		selectedFolder
+		selectedFolder,
+		pinnedChats
 	} from '$lib/stores';
 	import {
 		convertMessagesToHistory,
@@ -55,8 +56,10 @@
 		getAllTags,
 		getChatById,
 		getChatList,
+		getPinnedChatList,
 		getTagsById,
-		updateChatById
+		updateChatById,
+		updateChatFolderIdById
 	} from '$lib/apis/chats';
 	import { generateOpenAIChatCompletion } from '$lib/apis/openai';
 	import { processWeb, processWebSearch, processYoutubeVideo } from '$lib/apis/retrieval';
@@ -2118,6 +2121,27 @@
 		}
 		await sessionStorage.removeItem(`chat-input${chatId ? `-${chatId}` : ''}`);
 	};
+
+	const moveChatHandler = async (chatId, folderId) => {
+		if (chatId && folderId) {
+			const res = await updateChatFolderIdById(localStorage.token, chatId, folderId).catch(
+				(error) => {
+					toast.error(`${error}`);
+					return null;
+				}
+			);
+
+			if (res) {
+				currentChatPage.set(1);
+				await chats.set(await getChatList(localStorage.token, $currentChatPage));
+				await pinnedChats.set(await getPinnedChatList(localStorage.token));
+
+				toast.success($i18n.t('Chat moved successfully'));
+			}
+		} else {
+			toast.error($i18n.t('Failed to move chat'));
+		}
+	};
 </script>
 
 <svelte:head>
@@ -2192,6 +2216,8 @@
 						shareEnabled={!!history.currentId}
 						{initNewChat}
 						showBanners={!showCommands}
+						archiveChatHandler={() => {}}
+						{moveChatHandler}
 						onSaveTempChat={async () => {
 							try {
 								if (!history?.currentId || !Object.keys(history.messages).length) {
