@@ -289,7 +289,8 @@
 							<div class="m-auto pb-44 flex flex-col justify-center">
 								<div class="max-w-md">
 									<div class="text-center dark:text-white text-2xl font-medium z-50">
-										Important Update<br /> Action Required for Chat Log Storage
+										{$i18n.t('Important Update')}<br />
+										{$i18n.t('Action Required for Chat Log Storage')}
 									</div>
 
 									<div class=" mt-4 text-center text-sm dark:text-gray-200 w-full">
@@ -319,7 +320,7 @@
 												localDBChats = [];
 											}}
 										>
-											Download & Delete
+											{$i18n.t('Download & Delete')}
 										</button>
 
 										<button

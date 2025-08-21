@@ -60,6 +60,7 @@
 	let ctrlEnterToSend = false;
 	let copyFormatted = false;
 
+	let temporaryChatByDefault = false;
 	let chatFadeStreamingText = true;
 	let collapseCodeBlocks = false;
 	let expandDetails = false;
@@ -215,6 +216,8 @@
 		widescreenMode = $settings?.widescreenMode ?? false;
 		splitLargeChunks = $settings?.splitLargeChunks ?? false;
 		scrollOnBranchChange = $settings?.scrollOnBranchChange ?? true;
+
+		temporaryChatByDefault = $settings?.temporaryChatByDefault ?? false;
 		chatDirection = $settings?.chatDirection ?? 'auto';
 		userLocation = $settings?.userLocation ?? false;
 
@@ -574,6 +577,25 @@
 							bind:state={widescreenMode}
 							on:change={() => {
 								saveSettings({ widescreenMode });
+							}}
+						/>
+					</div>
+				</div>
+			</div>
+
+			<div>
+				<div class=" py-0.5 flex w-full justify-between">
+					<div id="temp-chat-default-label" class=" self-center text-xs">
+						{$i18n.t('Temporary Chat by Default')}
+					</div>
+
+					<div class="flex items-center gap-2 p-1">
+						<Switch
+							ariaLabelledbyId="temp-chat-default-label"
+							tooltip={true}
+							bind:state={temporaryChatByDefault}
+							on:change={() => {
+								saveSettings({ temporaryChatByDefault });
 							}}
 						/>
 					</div>
@@ -1141,7 +1163,7 @@
 								aria-labelledby="image-comp-width"
 								class="w-20 bg-transparent outline-hidden text-center"
 								min="0"
-								placeholder="Width"
+								placeholder={$i18n.t('Width')}
 							/>x
 							<label class="sr-only" for="image-comp-height"
 								>{$i18n.t('Image Max Compression Size height')}</label
@@ -1152,7 +1174,7 @@
 								aria-labelledby="image-comp-height"
 								class="w-20 bg-transparent outline-hidden text-center"
 								min="0"
-								placeholder="Height"
+								placeholder={$i18n.t('Height')}
 							/>
 						</div>
 					</div>
