@@ -39,40 +39,43 @@ def prompt_variables_template(template: str, variables: dict[str, str]) -> str:
 
 
 def prompt_template(template: str, user: Optional[Any] = None) -> str:
-    if hasattr(user, "model_dump"):
-        user = user.model_dump()
 
     USER_VARIABLES = {}
 
-    if isinstance(user, dict):
-        birth_date = user.get("date_of_birth")
-        age = None
+    if user:
+        if hasattr(user, "model_dump"):
+            user = user.model_dump()
 
-        if birth_date:
-            try:
-                # If birth_date is str, convert to datetime
-                if isinstance(birth_date, str):
-                    birth_date = datetime.strptime(birth_date, "%Y-%m-%d")
+        if isinstance(user, dict):
+            birth_date = user.get("date_of_birth")
+            age = None
 
-                today = datetime.now()
-                age = (
-                    today.year
-                    - birth_date.year
-                    - ((today.month, today.day) < (birth_date.month, birth_date.day))
-                )
-            except Exception as e:
-                pass
+            if birth_date:
+                try:
+                    # If birth_date is str, convert to datetime
+                    if isinstance(birth_date, str):
+                        birth_date = datetime.strptime(birth_date, "%Y-%m-%d")
 
-        USER_VARIABLES = {
-            "name": str(user.get("name")),
-            "location": str(user.get("info", {}).get("location")),
-            "bio": str(user.get("bio")),
-            "gender": str(user.get("gender")),
-            "birth_date": str(birth_date),
-            "age": str(age),
-        }
+                    today = datetime.now()
+                    age = (
+                        today.year
+                        - birth_date.year
+                        - (
+                            (today.month, today.day)
+                            < (birth_date.month, birth_date.day)
+                        )
+                    )
+                except Exception as e:
+                    pass
 
-    print(USER_VARIABLES)
+            USER_VARIABLES = {
+                "name": str(user.get("name")),
+                "location": str(user.get("info", {}).get("location")),
+                "bio": str(user.get("bio")),
+                "gender": str(user.get("gender")),
+                "birth_date": str(birth_date),
+                "age": str(age),
+            }
 
     # Get the current date
     current_date = datetime.now()
