@@ -81,23 +81,16 @@ RUN pip3 install uv && \
     fi && \
     uv pip install --system -r /tmp/requirements.txt --no-cache-dir
 
-# Download models with aggressive cleanup between each step to minimize space usage
-RUN python -c "import os; from sentence_transformers import SentenceTransformer; SentenceTransformer(os.environ['RAG_EMBEDDING_MODEL'], device='cpu')" && \
-    rm -rf /tmp/* /var/tmp/* ~/.cache/pip/* 2>/dev/null || true
+# Download models in separate RUN commands for better caching
+RUN python -c "import os; from sentence_transformers import SentenceTransformer; SentenceTransformer(os.environ['RAG_EMBEDDING_MODEL'], device='cpu')"
 
-RUN python -c "import os; from faster_whisper import WhisperModel; WhisperModel(os.environ['WHISPER_MODEL'], device='cpu', compute_type='int8', download_root=os.environ['WHISPER_MODEL_DIR'])" && \
-    rm -rf /tmp/* /var/tmp/* ~/.cache/pip/* 2>/dev/null || true
+RUN python -c "import os; from faster_whisper import WhisperModel; WhisperModel(os.environ['WHISPER_MODEL'], device='cpu', compute_type='int8', download_root=os.environ['WHISPER_MODEL_DIR'])"
 
-RUN python -c "import os; import tiktoken; tiktoken.get_encoding(os.environ['TIKTOKEN_ENCODING_NAME'])" && \
-    rm -rf /tmp/* /var/tmp/* ~/.cache/pip/* 2>/dev/null || true
+RUN python -c "import os; import tiktoken; tiktoken.get_encoding(os.environ['TIKTOKEN_ENCODING_NAME'])"
 
-# Download large txtai-wikipedia model with cleanup
-RUN python -c "from txtai.embeddings import Embeddings; e = Embeddings(); e.load(provider='huggingface-hub', container='neuml/txtai-wikipedia')" && \
-    rm -rf /tmp/* /var/tmp/* ~/.cache/pip/* 2>/dev/null || true
+RUN python -c "from txtai.embeddings import Embeddings; e = Embeddings(); e.load(provider='huggingface-hub', container='neuml/txtai-wikipedia')"
 
-# Download Helsinki translation model with cleanup  
-RUN python -c "import os; from transformers import pipeline; pipeline('translation', model='Helsinki-NLP/opus-mt-fr-en', device='cpu')" && \
-    rm -rf /tmp/* /var/tmp/* ~/.cache/pip/* 2>/dev/null || true
+RUN python -c "import os; from transformers import pipeline; pipeline('translation', model='Helsinki-NLP/opus-mt-fr-en', device='cpu')"
 
 ######## WebUI backend ########
 FROM python:3.11-slim-bookworm AS base
@@ -213,8 +206,11 @@ RUN pip3 install uv && \
     uv pip install --system -r requirements.txt --no-cache-dir; \
     fi
 
-# Copy pre-downloaded models from parallel build stage (ownership already set via COPY --chown)
+# Copy pre-downloaded models from parallel build stage
 COPY --from=models --chown=$UID:$GID /models/ /app/backend/data/cache/
+
+# Set ownership after all model downloads
+RUN chown -R $UID:$GID /app/backend/data/
 
 # copy embedding weight from build
 # RUN mkdir -p /root/.cache/chroma/onnx_models/all-MiniLM-L6-v2
@@ -228,16 +224,9 @@ COPY --chown=$UID:$GID --from=build /app/package.json /app/package.json
 # copy backend files
 COPY --chown=$UID:$GID ./backend .
 
-# provide group with same permissions as user (OpenShift compatibility)
-# Skip all large static asset directories to avoid space issues during permission changes
-RUN chmod -R g=u $HOME && \
-    find /app \
-    -path "/app/backend/data/cache" -prune -o \
-    -path "/app/build/pyodide" -prune -o \
-    -path "/app/build/_app" -prune -o \
-    -path "/app/build/assets" -prune -o \
-    -type f -exec chmod g=u {} \; -o \
-    -type d -exec chmod g=u {} \;
+# provide group with same permissions as user
+# allows running in OpenShift
+RUN chmod -R g=u /app $HOME
 
 EXPOSE 8080
 
