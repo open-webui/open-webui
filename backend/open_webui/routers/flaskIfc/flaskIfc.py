@@ -26,7 +26,7 @@ exe_path = "/usr/bin/tsi/v0.1.1*/bin/"
 
 DEFAULT_MODEL = "TinyLlama:latest"
 DEFAULT_BACKEND = "tSavorite"
-DEFAULT_TOKEN = 12
+DEFAULT_TOKEN = 128 # This matches what we have on Open-WebUI
 DEFAULT_REPEAT_PENALTY = 1.5
 DEFAULT_BATCH_SIZE = 1024
 DEFAULT_TOP_K = 50
