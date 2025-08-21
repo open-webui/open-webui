@@ -16,13 +16,16 @@
 	const onSubmit = async (modelInfo) => {
 		if ($models.find((m) => m.id === modelInfo.id)) {
 			toast.error(
-				`Error: A model with the ID '${modelInfo.id}' already exists. Please select a different ID to proceed.`
+				i18n.t(
+					"Error: A model with the ID '{{modelId}}' already exists. Please select a different ID to proceed.",
+					{ modelId: modelInfo.id }
+				)
 			);
 			return;
 		}
 
 		if (modelInfo.id === '') {
-			toast.error('Error: Model ID cannot be empty. Please enter a valid ID to proceed.');
+			toast.error($i18n.t('Error: Model ID cannot be empty. Please enter a valid ID to proceed.'));
 			return;
 		}
 

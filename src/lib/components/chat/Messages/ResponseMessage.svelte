@@ -140,6 +140,7 @@
 	export let readOnly = false;
 	export let topPadding = false;
 
+	let citationsElement: HTMLDivElement;
 	let buttonsContainerElement: HTMLDivElement;
 	let showDeleteConfirm = false;
 
@@ -528,7 +529,7 @@
 		if (!details) {
 			showRateComment = true;
 
-			if (!updatedMessage.annotation?.tags) {
+			if (!updatedMessage.annotation?.tags && (message?.content ?? '') !== '') {
 				// attempt to generate tags
 				const tags = await generateTags(localStorage.token, message.model, messages, chatId).catch(
 					(error) => {
@@ -820,29 +821,9 @@
 										}}
 										onSourceClick={async (id, idx) => {
 											console.log(id, idx);
-											let sourceButton = document.getElementById(`source-${message.id}-${idx}`);
-											const sourcesCollapsible = document.getElementById(
-												`collapsible-${message.id}`
-											);
 
-											if (sourceButton) {
-												sourceButton.click();
-											} else if (sourcesCollapsible) {
-												// Open sources collapsible so we can click the source button
-												sourcesCollapsible
-													.querySelector('div:first-child')
-													.dispatchEvent(new PointerEvent('pointerup', {}));
-
-												// Wait for next frame to ensure DOM updates
-												await new Promise((resolve) => {
-													requestAnimationFrame(() => {
-														requestAnimationFrame(resolve);
-													});
-												});
-
-												// Try clicking the source button again
-												sourceButton = document.getElementById(`source-${message.id}-${idx}`);
-												sourceButton && sourceButton.click();
+											if (citationsElement) {
+												citationsElement?.showSourceModal(idx - 1);
 											}
 										}}
 										onAddMessages={({ modelId, parentId, messages }) => {
@@ -863,7 +844,11 @@
 								{/if}
 
 								{#if (message?.sources || message?.citations) && (model?.info?.meta?.capabilities?.citations ?? true)}
-									<Citations id={message?.id} sources={message?.sources ?? message?.citations} />
+									<Citations
+										bind:this={citationsElement}
+										id={message?.id}
+										sources={message?.sources ?? message?.citations}
+									/>
 								{/if}
 
 								{#if message.code_executions}
@@ -1556,12 +1541,6 @@
 					{/if}
 				{/if}
 			</div>
-
-			{#if message?.done}
-				<div aria-live="polite" class="sr-only">
-					{message?.content ?? ''}
-				</div>
-			{/if}
 		</div>
 	</div>
 {/key}
