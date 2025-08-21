@@ -110,7 +110,7 @@
 		>
 			{#if tools}
 				{#if Object.keys(tools).length > 0}
-					<div class="{showAllTools ? '' : 'max-h-28'} overflow-y-auto scrollbar-thin">
+					<div class="{showAllTools ? ' max-h-96' : 'max-h-28'} overflow-y-auto scrollbar-thin">
 						{#each Object.keys(tools) as toolId}
 							<button
 								class="flex w-full justify-between gap-2 items-center px-3 py-2 text-sm font-medium cursor-pointer rounded-xl"
