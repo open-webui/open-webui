@@ -283,7 +283,7 @@
 					{/if}
 
 					{#if showBanners}
-						{#each $banners.filter((b) => ![...JSON.parse(localStorage.getItem('dismissedBannerIds') ?? '[]'), ...closedBannerIds].includes(b.id)) as banner}
+						{#each $banners.filter((b) => ![...JSON.parse(localStorage.getItem('dismissedBannerIds') ?? '[]'), ...closedBannerIds].includes(b.id)) as banner (banner.id)}
 							<Banner
 								{banner}
 								on:dismiss={(e) => {
