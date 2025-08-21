@@ -47,6 +47,7 @@ def prompt_template(template: str, user: Optional[Any] = None) -> str:
             user = user.model_dump()
 
         if isinstance(user, dict):
+            user_info = user.get("info", {}) or {}
             birth_date = user.get("date_of_birth")
             age = None
 
@@ -70,7 +71,7 @@ def prompt_template(template: str, user: Optional[Any] = None) -> str:
 
             USER_VARIABLES = {
                 "name": str(user.get("name")),
-                "location": str(user.get("info", {}).get("location")),
+                "location": str(user_info.get("location")),
                 "bio": str(user.get("bio")),
                 "gender": str(user.get("gender")),
                 "birth_date": str(birth_date),
