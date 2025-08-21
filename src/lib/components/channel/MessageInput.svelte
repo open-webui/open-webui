@@ -118,7 +118,7 @@
 			text = text.replaceAll('{{USER_LOCATION}}', String(location));
 		}
 
-		const sessionUser = getSessionUser(localStorage.token);
+		const sessionUser = await getSessionUser(localStorage.token);
 
 		if (text.includes('{{USER_NAME}}')) {
 			const name = sessionUser?.name || 'User';
