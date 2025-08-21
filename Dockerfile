@@ -228,9 +228,10 @@ COPY --chown=$UID:$GID --from=build /app/package.json /app/package.json
 # copy backend files
 COPY --chown=$UID:$GID ./backend .
 
-# provide group with same permissions as user
-# allows running in OpenShift
-RUN chmod -R g=u /app $HOME
+# provide group with same permissions as user (OpenShift compatibility)
+# Skip only the large model cache directory to avoid space issues
+RUN chmod -R g=u $HOME && \
+    find /app -path "/app/backend/data/cache" -prune -o -type f -exec chmod g=u {} \; -o -type d -exec chmod g=u {} \;
 
 EXPOSE 8080
 
