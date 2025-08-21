@@ -135,6 +135,7 @@
 	let password = '';
 	let initial_password = '';
 	let current_password = '';
+	let removePasswordClicked = false;
 	let useGradient = false;
 	let showQrCode = false;
 	let showExpandedQr = false;
@@ -533,6 +534,8 @@
 				Number(expireOnViewsCount) > 0 ? Number(expireOnViewsCount) : null;
 			const max_clones = Number(maxClonesCount) > 0 ? Number(maxClonesCount) : null;
 
+			const passwordToSend = removePasswordClicked ? '' : password || undefined;
+
 			const sharedChat = await shareChatById(
 				localStorage.token,
 				chatId,
@@ -544,7 +547,7 @@
 				display_username,
 				allow_cloning,
 				keep_link_active_after_max_clones,
-				password,
+				passwordToSend,
 				current_password,
 				showQrCode,
 				useGradient
@@ -566,7 +569,9 @@
 			initial_is_public = sharedChat.is_public;
 			initial_display_username = sharedChat.display_username;
 			initial_allow_cloning = sharedChat.allow_cloning;
-			initial_password = password;
+			initial_password = sharedChat.has_password ? '********' : '';
+			password = '';
+			removePasswordClicked = false;
 
 			// Update the main chat object to reflect the new share status
 			chat = {
@@ -576,7 +581,8 @@
 				expire_on_views: sharedChat.expire_on_views,
 				max_clones: sharedChat.max_clones,
 				is_public: sharedChat.is_public,
-				display_username: sharedChat.display_username
+				display_username: sharedChat.display_username,
+				has_password: sharedChat.has_password
 			};
 
 			sharedChatsUpdated.set(true);
@@ -682,6 +688,8 @@
 					initialCustomExpirationDate = customExpirationDate;
 					initialExpireOnViewsCount = expireOnViewsCount;
 					initialMaxClonesCount = maxClonesCount;
+					initial_password = _chat.has_password ? '********' : '';
+					password = '';
 
 					showQrCode = _chat.share_show_qr_code ?? !!_chat.share_id;
 					useGradient = _chat.share_use_gradient ?? false;
@@ -741,6 +749,7 @@
 		password = '';
 		initial_password = '';
 		current_password = '';
+		removePasswordClicked = false;
 		expireOnViewsCount = 0;
 		maxClonesCount = 0;
 		initialExpirationOption = 'never';
@@ -966,24 +975,28 @@
 							<SensitiveInput
 								id="password"
 								placeholder={chat.has_password
-									? $i18n.t('Enter new password (optional)')
+									? $i18n.t('Enter new password or leave blank to keep')
 									: $i18n.t('Create a password (optional)')}
 								bind:value={password}
+								on:input={() => {
+									removePasswordClicked = false;
+								}}
 							/>
 						</div>
 
-						{#if chat.has_password}
-							<div class="mt-1">
-								<SensitiveInput
-									id="current_password"
-									placeholder={$i18n.t('Enter current password to update')}
-									bind:value={current_password}
-								/>
-							</div>
-						{/if}
-
-						<p class="mt-1 text-xs text-gray-500 dark:text-gray-400">
-							{$i18n.t('Protect your shared link with a password.')}
+						<p class="mt-1 text-xs text-gray-500 dark:text-gray-400 flex justify-between">
+							<span>{$i18n.t('Protect your shared link with a password.')}</span>
+							{#if chat.has_password}
+								<button
+									class="text-blue-500 hover:underline"
+									on:click={() => {
+										removePasswordClicked = true;
+										toast.info('Password will be removed upon update.');
+									}}
+								>
+									{$i18n.t('Remove password')}
+								</button>
+							{/if}
 						</p>
 					</div>
 				</div>

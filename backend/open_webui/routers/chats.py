@@ -1060,25 +1060,7 @@ async def share_chat_by_id(
             )
         ) or (not form_data.password and chat.password)
 
-        if (
-            password_is_being_changed
-            and not form_data.password
-            and not form_data.current_password
-        ):
-            password_is_being_changed = False
-            form_data.password = None
 
-        if chat.password and password_is_being_changed:
-            if not form_data.current_password:
-                raise HTTPException(
-                    status_code=status.HTTP_401_UNAUTHORIZED,
-                    detail=ERROR_MESSAGES.INVALID_CRED,
-                )
-            if not pwd_context.verify(form_data.current_password, chat.password):
-                raise HTTPException(
-                    status_code=status.HTTP_401_UNAUTHORIZED,
-                    detail=ERROR_MESSAGES.INVALID_CRED,
-                )
 
         if form_data.share_id:
             if "/" in form_data.share_id:
