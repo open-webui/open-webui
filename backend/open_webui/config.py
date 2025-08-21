@@ -953,6 +953,9 @@ GEMINI_API_BASE_URL = os.environ.get("GEMINI_API_BASE_URL", "")
 
 if OPENAI_API_BASE_URL == "":
     OPENAI_API_BASE_URL = "https://api.openai.com/v1"
+else:
+    if OPENAI_API_BASE_URL.endswith("/"):
+        OPENAI_API_BASE_URL = OPENAI_API_BASE_URL[:-1]
 
 OPENAI_API_KEYS = os.environ.get("OPENAI_API_KEYS", "")
 OPENAI_API_KEYS = OPENAI_API_KEYS if OPENAI_API_KEYS != "" else OPENAI_API_KEY
