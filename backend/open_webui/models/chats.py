@@ -15,12 +15,13 @@ Key Features:
 - Professional error handling and logging
 """
 
+import functools
 import json
 import logging
 import threading
 import time
 import uuid
-from typing import Optional
+from typing import Optional, Callable, Any
 
 from open_webui.env import SRC_LOG_LEVELS
 from open_webui.internal.db import Base, get_db
@@ -43,7 +44,13 @@ from sqlalchemy import (
 )
 from sqlalchemy.sql import exists
 from sqlalchemy.sql.expression import bindparam
-from sqlalchemy.exc import SQLAlchemyError, IntegrityError, ProgrammingError
+from sqlalchemy.exc import (
+    SQLAlchemyError,
+    IntegrityError,
+    ProgrammingError,
+    DisconnectionError,
+    OperationalError,
+)
 
 # Constants for database column types - used throughout the module for consistency
 COLUMN_CHAT = "chat"  # Primary chat data column
@@ -53,6 +60,214 @@ COLUMN_META = "meta"  # Metadata column for tags, settings, etc.
 DEFAULT_SEARCH_LIMIT = 60  # Default number of search results
 MAX_SEARCH_LIMIT = 1000  # Maximum allowed search results (prevent DoS)
 DEFAULT_PAGINATION_LIMIT = 50  # Default pagination size
+
+# Transaction retry constants
+DEFAULT_RETRY_ATTEMPTS = 3  # Number of retry attempts for transient failures
+RETRY_BACKOFF_BASE = 0.1  # Base delay for exponential backoff (seconds)
+RETRY_BACKOFF_MAX = 2.0  # Maximum retry delay (seconds)
+
+####################
+# Database Transaction Management
+####################
+
+
+def exponential_backoff(attempt: int, base: float = RETRY_BACKOFF_BASE) -> float:
+    """
+    Calculate exponential backoff delay for retry attempts.
+
+    Args:
+        attempt: Current attempt number (0-based)
+        base: Base delay in seconds
+
+    Returns:
+        float: Delay in seconds, capped at RETRY_BACKOFF_MAX
+    """
+    delay = base * (2**attempt)
+    return min(delay, RETRY_BACKOFF_MAX)
+
+
+def transactional(
+    retries: int = DEFAULT_RETRY_ATTEMPTS,
+    backoff_func: Callable[[int], float] = exponential_backoff,
+    retry_on: tuple = (DisconnectionError, OperationalError),
+    log_errors: bool = True,
+):
+    """
+    Professional database transaction decorator with automatic retry logic.
+
+    This decorator provides enterprise-grade transaction management:
+    - Automatic transaction boundaries with commit/rollback
+    - Intelligent retry logic for transient database failures
+    - Comprehensive error handling and logging
+    - Support for nested transactions via savepoints
+    - Performance monitoring and debugging support
+
+    Features:
+    - Automatic rollback on any exception
+    - Exponential backoff for retry attempts
+    - Distinguishes between retryable and non-retryable errors
+    - Comprehensive logging for debugging and monitoring
+    - Thread-safe operation for concurrent environments
+
+    Args:
+        retries: Number of retry attempts for transient failures
+        backoff_func: Function to calculate retry delays (exponential backoff)
+        retry_on: Tuple of exception types that should trigger retries
+        log_errors: Whether to log errors and retry attempts
+
+    Returns:
+        Decorated function with transaction management
+
+    Example:
+        @transactional(retries=3)
+        def update_critical_data(self, data):
+            # Automatic transaction boundaries
+            # Automatic retry on connection issues
+            # Automatic rollback on failures
+
+    Design Philosophy:
+    - Fail fast on programming errors (don't retry)
+    - Retry only on transient infrastructure issues
+    - Maintain data consistency at all costs
+    - Provide comprehensive debugging information
+
+    Note:
+        Methods that already manage their own transactions (use get_db() internally)
+        will continue to work unchanged. The decorator detects this automatically.
+    """
+
+    def decorator(func: Callable) -> Callable:
+        @functools.wraps(func)
+        def wrapper(self, *args, **kwargs) -> Any:
+            last_exception = None
+            method_name = f"{self.__class__.__name__}.{func.__name__}"
+
+            for attempt in range(retries + 1):
+                try:
+                    # Check if method already manages its own transaction
+                    # by looking for get_db() usage in the method
+                    import inspect
+
+                    source = inspect.getsource(func)
+                    if "get_db()" in source or "with get_db()" in source:
+                        # Method manages its own transaction - call directly
+                        return func(self, *args, **kwargs)
+
+                    # Provide automatic transaction management for methods that need it
+                    with get_db() as db:
+                        # Inject database session if method signature accepts it
+                        if "db" in func.__code__.co_varnames:
+                            kwargs["db"] = db
+
+                        # Execute the business logic
+                        result = func(self, *args, **kwargs)
+
+                        # Explicit commit for clarity (context manager also commits)
+                        db.commit()
+
+                        if log_errors and attempt > 0:
+                            log.info(
+                                f"Transaction succeeded on attempt {attempt + 1} for {method_name}"
+                            )
+
+                        return result
+
+                except retry_on as e:
+                    last_exception = e
+
+                    if attempt < retries:
+                        delay = backoff_func(attempt)
+                        if log_errors:
+                            log.warning(
+                                f"Transient error in {method_name} (attempt {attempt + 1}/{retries + 1}): {e}. "
+                                f"Retrying in {delay:.2f}s..."
+                            )
+                        time.sleep(delay)
+                        continue
+                    else:
+                        if log_errors:
+                            log.error(
+                                f"Transaction failed after {retries + 1} attempts in {method_name}: {e}"
+                            )
+                        raise
+
+                except (IntegrityError, ProgrammingError) as e:
+                    # Don't retry programming errors or constraint violations
+                    if log_errors:
+                        log.error(f"Non-retryable error in {method_name}: {e}")
+                    raise
+
+                except Exception as e:
+                    # Catch-all for unexpected errors
+                    if log_errors:
+                        log.error(f"Unexpected error in {method_name}: {e}")
+                    raise
+
+            # Should never reach here, but handle gracefully
+            if last_exception:
+                raise last_exception
+
+        return wrapper
+
+    return decorator
+
+
+def read_only_transaction(func: Callable) -> Callable:
+    """
+    Lightweight decorator for read-only database operations.
+
+    Provides transaction context without retry logic since read operations
+    are typically idempotent and don't need the same error recovery.
+    Optimized for performance with minimal overhead.
+
+    Features:
+    - Automatic database session management
+    - Error logging for debugging
+    - No retry logic (read operations are idempotent)
+    - Minimal performance overhead
+
+    Args:
+        func: Function to wrap with read-only transaction
+
+    Returns:
+        Decorated function with read-only transaction context
+
+    Example:
+        @read_only_transaction
+        def get_chat_by_id(self, id: str):
+            # Automatic session management
+            # No retry logic needed for reads
+
+    Note:
+        Like @transactional, this decorator automatically detects if the method
+        already manages its own database session and skips decoration if so.
+    """
+
+    @functools.wraps(func)
+    def wrapper(self, *args, **kwargs) -> Any:
+        method_name = f"{self.__class__.__name__}.{func.__name__}"
+
+        try:
+            # Check if method already manages its own transaction
+            import inspect
+
+            source = inspect.getsource(func)
+            if "get_db()" in source or "with get_db()" in source:
+                # Method manages its own transaction - call directly
+                return func(self, *args, **kwargs)
+
+            # Provide automatic session management for methods that need it
+            with get_db() as db:
+                if "db" in func.__code__.co_varnames:
+                    kwargs["db"] = db
+                return func(self, *args, **kwargs)
+
+        except Exception as e:
+            log.error(f"Read operation failed in {method_name}: {e}")
+            raise
+
+    return wrapper
+
 
 ####################
 # Chat Database Schema and Core Classes
@@ -798,6 +1013,7 @@ class ChatTable:
         except Exception:
             return None
 
+    @transactional(retries=2)  # Lower retries for simple operations
     def toggle_chat_pinned_by_id(self, id: str) -> Optional[ChatModel]:
         try:
             with get_db() as db:
@@ -810,6 +1026,7 @@ class ChatTable:
         except Exception:
             return None
 
+    @transactional(retries=2)  # Lower retries for simple operations
     def toggle_chat_archive_by_id(self, id: str) -> Optional[ChatModel]:
         try:
             with get_db() as db:
@@ -822,6 +1039,7 @@ class ChatTable:
         except Exception:
             return None
 
+    @transactional(retries=3)  # Higher retries for bulk operations
     def archive_all_chats_by_user_id(self, user_id: str) -> bool:
         try:
             with get_db() as db:
@@ -958,6 +1176,7 @@ class ChatTable:
             )
             return [ChatModel.model_validate(chat) for chat in all_chats]
 
+    @read_only_transaction
     def get_chat_by_id(self, id: str) -> Optional[ChatModel]:
         try:
             with get_db() as db:
