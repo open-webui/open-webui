@@ -329,10 +329,10 @@ def is_webhook_migration_needed():
     """
     try:
         from open_webui.models.webhooks import WebhookConfigs
-        
+
         db = next(get_db())
         webhook_configs = WebhookConfigs(db)
-        
+
         # Check if any webhook configs exist - if so, migration is done
         existing_configs = webhook_configs.get_webhook_configs()
         return len(existing_configs) == 0

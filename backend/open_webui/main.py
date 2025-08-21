@@ -534,10 +534,11 @@ async def lifespan(app: FastAPI):
 
     # Migrate legacy webhooks to new system (if needed)
     from open_webui.utils.webhook import is_webhook_migration_needed
-    
+
     if is_webhook_migration_needed():
         log.info("Migrating legacy webhooks...")
         from open_webui.utils.webhook import migrate_legacy_webhooks
+
         migrate_legacy_webhooks()
     else:
         log.debug("Webhook migration not needed, skipping")
