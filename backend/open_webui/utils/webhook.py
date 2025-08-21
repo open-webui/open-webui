@@ -322,26 +322,45 @@ def trigger_webhooks(
         return []
 
 
+def is_webhook_migration_needed():
+    """
+    Lightweight check to see if webhook migration is needed
+    Returns True if migration is needed, False if already completed
+    """
+    try:
+        from open_webui.models.webhooks import WebhookConfigs
+        
+        db = next(get_db())
+        webhook_configs = WebhookConfigs(db)
+        
+        # Check if any webhook configs exist - if so, migration is done
+        existing_configs = webhook_configs.get_webhook_configs()
+        return len(existing_configs) == 0
+    except Exception as e:
+        log.warning(f"Error checking webhook migration status: {e}")
+        return True  # Assume migration is needed if we can't check
+
+
 def migrate_legacy_webhooks():
     """
     Migrate existing webhook configurations to the new system
     This function should be called during application startup
     """
     try:
-        from open_webui.models.webhooks import WebhookConfigs
+        # Early check to avoid heavy imports if migration already done
+        if not is_webhook_migration_needed():
+            log.info("Webhook migration already completed, skipping")
+            return
+
+        # Heavy imports only when migration is actually needed
         from open_webui.config import WEBHOOK_URL
         from open_webui.models.users import Users
+        from open_webui.models.webhooks import WebhookConfigs
         import uuid
 
         db = next(get_db())
         webhook_configs = WebhookConfigs(db)
         users = Users(db)
-
-        # Check if migration has already been done
-        existing_configs = webhook_configs.get_webhook_configs()
-        if existing_configs:
-            log.info("Webhook migration already completed, skipping")
-            return
 
         # Migrate global webhook URL if it exists
         if WEBHOOK_URL and WEBHOOK_URL.strip():

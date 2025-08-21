@@ -532,11 +532,15 @@ async def lifespan(app: FastAPI):
     log.info("Installing external dependencies of functions and tools...")
     install_tool_and_function_dependencies()
 
-    # Migrate legacy webhooks to new system
-    log.info("Migrating legacy webhooks...")
-    from open_webui.utils.webhook import migrate_legacy_webhooks
-
-    migrate_legacy_webhooks()
+    # Migrate legacy webhooks to new system (if needed)
+    from open_webui.utils.webhook import is_webhook_migration_needed
+    
+    if is_webhook_migration_needed():
+        log.info("Migrating legacy webhooks...")
+        from open_webui.utils.webhook import migrate_legacy_webhooks
+        migrate_legacy_webhooks()
+    else:
+        log.debug("Webhook migration not needed, skipping")
 
     # Start webhook retry scheduler
     log.info("Starting webhook retry scheduler...")
