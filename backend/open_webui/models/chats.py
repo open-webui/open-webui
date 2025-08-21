@@ -43,10 +43,16 @@ from sqlalchemy import (
 )
 from sqlalchemy.sql import exists
 from sqlalchemy.sql.expression import bindparam
+from sqlalchemy.exc import SQLAlchemyError, IntegrityError, ProgrammingError
 
 # Constants for database column types - used throughout the module for consistency
 COLUMN_CHAT = "chat"  # Primary chat data column
 COLUMN_META = "meta"  # Metadata column for tags, settings, etc.
+
+# Search and pagination constants
+DEFAULT_SEARCH_LIMIT = 60  # Default number of search results
+MAX_SEARCH_LIMIT = 1000  # Maximum allowed search results (prevent DoS)
+DEFAULT_PAGINATION_LIMIT = 50  # Default pagination size
 
 ####################
 # Chat Database Schema and Core Classes
@@ -270,6 +276,40 @@ class ChatTable:
         # Critical for preventing race conditions with multiple workers
         self._capabilities_lock = threading.Lock()
 
+    def _validate_pagination_params(self, skip: int, limit: int) -> tuple[int, int]:
+        """
+        Validate and normalize pagination parameters.
+
+        Args:
+            skip: Number of records to skip
+            limit: Maximum number of records to return
+
+        Returns:
+            tuple[int, int]: Validated (skip, limit) parameters
+        """
+        skip = max(0, skip)  # Ensure non-negative
+        limit = max(1, min(limit, MAX_SEARCH_LIMIT))  # Clamp to valid range
+        return skip, limit
+
+    def _apply_base_chat_filters(
+        self, query, user_id: str, include_archived: bool = False
+    ):
+        """
+        Apply common chat filtering logic to reduce code duplication.
+
+        Args:
+            query: SQLAlchemy query object
+            user_id: User identifier for filtering
+            include_archived: Whether to include archived chats
+
+        Returns:
+            Modified query with base filters applied
+        """
+        query = query.filter(Chat.user_id == user_id)
+        if not include_archived:
+            query = query.filter(Chat.archived == False)
+        return query.order_by(Chat.updated_at.desc())
+
     def _get_db_capabilities(self, db) -> dict:
         """
         Get database capabilities including JSONB support for columns.
@@ -334,7 +374,7 @@ class ChatTable:
             log.debug(f"Database capabilities cached: {capabilities}")
             return capabilities
 
-        except Exception as e:
+        except (SQLAlchemyError, ProgrammingError) as e:
             log.warning(f"Error checking database capabilities: {e}")
             # Fallback to JSON for safety
             fallback = {
@@ -551,7 +591,7 @@ class ChatTable:
                 db.refresh(chat_item)
 
                 return ChatModel.model_validate(chat_item)
-        except Exception as e:
+        except (SQLAlchemyError, IntegrityError) as e:
             log.error(f"Failed to update chat {id}: {e}")
             return None
 
@@ -796,7 +836,7 @@ class ChatTable:
         user_id: str,
         filter: Optional[dict] = None,
         skip: int = 0,
-        limit: int = 50,
+        limit: int = DEFAULT_PAGINATION_LIMIT,
     ) -> list[ChatModel]:
 
         with get_db() as db:
@@ -834,7 +874,7 @@ class ChatTable:
         include_archived: bool = False,
         filter: Optional[dict] = None,
         skip: int = 0,
-        limit: int = 50,
+        limit: int = DEFAULT_PAGINATION_LIMIT,
     ) -> list[ChatModel]:
         with get_db() as db:
             query = db.query(Chat).filter_by(user_id=user_id)
@@ -990,7 +1030,7 @@ class ChatTable:
         search_text: str,
         include_archived: bool = False,
         skip: int = 0,
-        limit: int = 60,
+        limit: int = DEFAULT_SEARCH_LIMIT,
     ) -> list[ChatModel]:
         """
         Advanced chat search with intelligent filtering and database optimization.
@@ -1031,10 +1071,7 @@ class ChatTable:
             log.warning("Invalid user_id provided to search")
             return []
 
-        if skip < 0:
-            skip = 0
-        if limit <= 0 or limit > 1000:  # Prevent excessive queries
-            limit = 60
+        skip, limit = self._validate_pagination_params(skip, limit)
 
         search_text = search_text.replace("\u0000", "").lower().strip()
 
