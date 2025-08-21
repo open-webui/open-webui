@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { onMount, getContext } from 'svelte';
+	import { get } from 'svelte/store';
 	import {
 		getSharedChats,
 		deleteSharedChatById,
@@ -175,11 +176,9 @@
 		models.set(await getModels(localStorage.token));
 		previousShowShareChatModal = showShareChatModal;
 
-		let timeoutId;
-
-		const pollSharedChats = async () => {
-			// First, check for and revoke any expired links
+		const interval = setInterval(() => {
 			const now = Math.floor(Date.now() / 1000);
+
 			const chatsToExpire = $sharedChatsStore.filter((chat) => {
 				const isExpiredByTime = chat.expires_at && chat.expires_at <= now;
 				const isExpiredByViews =
@@ -188,26 +187,26 @@
 			});
 
 			if (chatsToExpire.length > 0) {
-				const revocationPromises = chatsToExpire.map(async (chat) => {
-					const res = await deleteSharedChatById(localStorage.token, chat.id);
-					if (res) {
-						toast.info(`Expired link for "${chat.title}" was automatically revoked.`);
-					}
+				chatsToExpire.forEach((chat) => {
+					deleteSharedChatById(localStorage.token, chat.id).then((res) => {
+						if (res) {
+							toast.info(`Expired link for "${chat.title}" was automatically revoked.`);
+							sharedChatsStore.update((chats) => {
+								return chats.map((c) => {
+									if (c.id === chat.id) {
+										return { ...c, status: 'revoked', revoked_at: now };
+									}
+									return c;
+								});
+							});
+						}
+					});
 				});
-				await Promise.all(revocationPromises);
 			}
-
-			// Always refresh the list to get latest view/clone counts and statuses
-			getSharedChatList(page, searchTerm, orderBy, direction, startDate, endDate, publicFilter, statusFilter);
-
-			// Poll every 5 seconds
-			timeoutId = setTimeout(pollSharedChats, 5000);
-		};
-
-		timeoutId = setTimeout(pollSharedChats, 5000);
+		}, 1000);
 
 		return () => {
-			clearTimeout(timeoutId);
+			clearInterval(interval);
 		};
 	});
 

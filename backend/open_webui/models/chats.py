@@ -807,33 +807,35 @@ class ChatTable:
 
     def get_chat_by_share_id(
         self, id: str, user: Optional["UserModel"] = None, increment_view: bool = True
-    ) -> Optional[ChatModel]:
+    ) -> Optional[tuple[ChatModel, bool]]:
         try:
             with get_db() as db:
                 chat = db.query(Chat).filter_by(share_id=id).first()
+                view_incremented = False
 
                 if not chat:
-                    return None
+                    return None, view_incremented
 
                 if chat.revoked_at:
-                    return None
+                    return None, view_incremented
                 if not chat.is_public and user is None:
-                    return None
+                    return None, view_incremented
                 if chat.expires_at and chat.expires_at < int(time.time()):
-                    return None
+                    return None, view_incremented
 
                 # Check if the view limit has already been reached before this view
                 if (
                     chat.expire_on_views is not None
                     and chat.views >= chat.expire_on_views
                 ):
-                    return None
+                    return None, view_incremented
 
                 # If we are here, the user is allowed to view the chat.
                 # Increment the view count for this user.
                 if increment_view and (user is None or chat.user_id != user.id):
                     chat.views = (chat.views or 0) + 1
                     db.commit()
+                    view_incremented = True
 
                 # Now, get the chat content to return to the user.
                 chat_to_return = self.get_chat_by_id(chat.id)
@@ -847,10 +849,10 @@ class ChatTable:
                         chat.revoked_at = int(time.time())
                         db.commit()
 
-                return chat_to_return
+                return chat_to_return, view_incremented
         except Exception as e:
             log.error(f"Error getting shared chat for share_id {id}: {e}")
-            return None
+            return None, False
 
     def get_chat_by_share_id_unrestricted(self, id: str) -> Optional[ChatModel]:
         try:

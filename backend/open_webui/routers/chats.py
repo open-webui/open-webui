@@ -602,7 +602,19 @@ async def get_shared_chat_by_id(
         chat = Chats.get_chat_by_id(share_id)
 
     if chat is None:
-        chat = Chats.get_chat_by_share_id(share_id, user)
+        chat, view_incremented = Chats.get_chat_by_share_id(share_id, user)
+        if view_incremented:
+            event_emitter = get_event_emitter({"user_id": chat.user_id})
+            if event_emitter:
+                await event_emitter(
+                    {
+                        "type": "chat:view",
+                        "data": {
+                            "chat_id": chat.id,
+                            "views": chat.views,
+                        },
+                    }
+                )
 
     if chat:
         return to_chat_response(chat)
@@ -916,7 +928,7 @@ async def clone_shared_chat_by_id(
             detail=ERROR_MESSAGES.ACCESS_PROHIBITED,
         )
 
-    chat = Chats.get_chat_by_share_id(id, user=user, increment_view=False)
+    chat, _ = Chats.get_chat_by_share_id(id, user=user, increment_view=False)
     if chat:
         if not chat.allow_cloning:
             raise HTTPException(
@@ -947,7 +959,19 @@ async def clone_shared_chat_by_id(
             ),
         )
 
-        Chats.increment_clone_count_by_id(chat.id, user)
+        updated_chat_with_clone_count = Chats.increment_clone_count_by_id(chat.id, user)
+
+        event_emitter = get_event_emitter({"user_id": chat.user_id})
+        if event_emitter:
+            await event_emitter(
+                {
+                    "type": "chat:clone",
+                    "data": {
+                        "chat_id": chat.id,
+                        "clones": updated_chat_with_clone_count.clones,
+                    },
+                }
+            )
 
         return to_chat_response(new_chat)
     else:

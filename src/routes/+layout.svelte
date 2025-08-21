@@ -25,7 +25,8 @@
 		isApp,
 		appInfo,
 		toolServers,
-		playingNotificationSound
+		playingNotificationSound,
+		sharedChats
 	} from '$lib/stores';
 	import { goto } from '$app/navigation';
 	import { page } from '$app/stores';
@@ -260,6 +261,18 @@
 		await tick();
 		const type = event?.data?.type ?? null;
 		const data = event?.data?.data ?? null;
+
+		if (type === 'chat:view' || type === 'chat:clone') {
+			sharedChats.update((chats) => {
+				return chats.map((chat) => {
+					if (chat.id === data.chat_id) {
+						return { ...chat, ...data };
+					}
+					return chat;
+				});
+			});
+			return;
+		}
 
 		if ((event.chat_id !== $chatId && !$temporaryChatEnabled) || isFocused) {
 			if (type === 'chat:completion') {
