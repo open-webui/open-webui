@@ -47,7 +47,7 @@ from open_webui.utils.misc import (
 from open_webui.utils.payload import (
     apply_model_params_to_body_ollama,
     apply_model_params_to_body_openai,
-    apply_model_system_prompt_to_body,
+    apply_system_prompt_to_body,
 )
 from open_webui.utils.auth import get_admin_user, get_verified_user
 from open_webui.utils.access_control import has_access
@@ -415,15 +415,15 @@ async def get_all_models(request: Request, user: UserModel = None):
         try:
             loaded_models = await get_ollama_loaded_models(request, user=user)
             expires_map = {
-                m["name"]: m["expires_at"]
+                m["model"]: m["expires_at"]
                 for m in loaded_models["models"]
                 if "expires_at" in m
             }
 
             for m in models["models"]:
-                if m["name"] in expires_map:
+                if m["model"] in expires_map:
                     # Parse ISO8601 datetime with offset, get unix timestamp as int
-                    dt = datetime.fromisoformat(expires_map[m["name"]])
+                    dt = datetime.fromisoformat(expires_map[m["model"]])
                     m["expires_at"] = int(dt.timestamp())
         except Exception as e:
             log.debug(f"Failed to get loaded models: {e}")
@@ -1330,7 +1330,7 @@ async def generate_chat_completion(
             system = params.pop("system", None)
 
             payload = apply_model_params_to_body_ollama(params, payload)
-            payload = apply_model_system_prompt_to_body(system, payload, metadata, user)
+            payload = apply_system_prompt_to_body(system, payload, metadata, user)
 
         # Check if user has access to the model
         if not bypass_filter and user.role == "user":
@@ -1519,7 +1519,7 @@ async def generate_openai_chat_completion(
             system = params.pop("system", None)
 
             payload = apply_model_params_to_body_openai(params, payload)
-            payload = apply_model_system_prompt_to_body(system, payload, metadata, user)
+            payload = apply_system_prompt_to_body(system, payload, metadata, user)
 
         # Check if user has access to the model
         if user.role == "user":

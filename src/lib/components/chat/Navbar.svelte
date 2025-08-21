@@ -50,6 +50,8 @@
 	export let showBanners = true;
 
 	export let onSaveTempChat: () => {};
+	export let archiveChatHandler: (id: string) => void;
+	export let moveChatHandler: (id: string, folderId: string) => void;
 
 	let closedBannerIds = [];
 
@@ -115,8 +117,15 @@
 									class="flex cursor-pointer px-2 py-2 rounded-xl hover:bg-gray-50 dark:hover:bg-gray-850 transition"
 									id="temporary-chat-button"
 									on:click={async () => {
-										temporaryChatEnabled.set(!$temporaryChatEnabled);
+										if (($settings?.temporaryChatByDefault ?? false) && $temporaryChatEnabled) {
+											// for proper initNewChat handling
+											await temporaryChatEnabled.set(null);
+										} else {
+											await temporaryChatEnabled.set(!$temporaryChatEnabled);
+										}
+
 										await goto('/');
+
 										// add 'temporary-chat=true' to the URL
 										if ($temporaryChatEnabled) {
 											window.history.replaceState(null, '', '?temporary-chat=true');
@@ -158,9 +167,10 @@
 							shareHandler={() => {
 								showShareChatModal = !showShareChatModal;
 							}}
-							downloadHandler={() => {
-								showDownloadChatModal = !showDownloadChatModal;
+							archiveChatHandler={() => {
+								archiveChatHandler(chat.id);
 							}}
+							{moveChatHandler}
 						>
 							<button
 								class="flex cursor-pointer px-2 py-2 rounded-xl hover:bg-gray-50 dark:hover:bg-gray-850 transition"
@@ -273,7 +283,7 @@
 					{/if}
 
 					{#if showBanners}
-						{#each $banners.filter((b) => ![...JSON.parse(localStorage.getItem('dismissedBannerIds') ?? '[]'), ...closedBannerIds].includes(b.id)) as banner}
+						{#each $banners.filter((b) => ![...JSON.parse(localStorage.getItem('dismissedBannerIds') ?? '[]'), ...closedBannerIds].includes(b.id)) as banner (banner.id)}
 							<Banner
 								{banner}
 								on:dismiss={(e) => {

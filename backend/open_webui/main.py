@@ -329,7 +329,7 @@ from open_webui.config import (
     ENABLE_MESSAGE_RATING,
     ENABLE_USER_WEBHOOKS,
     ENABLE_EVALUATION_ARENA_MODELS,
-    ENABLE_ADMIN_WORKSPACE_CONTENT_ACCESS,
+    BYPASS_ADMIN_ACCESS_CONTROL,
     USER_PERMISSIONS,
     DEFAULT_USER_ROLE,
     PENDING_USER_OVERLAY_CONTENT,
@@ -378,7 +378,7 @@ from open_webui.config import (
     RESPONSE_WATERMARK,
     # Admin
     ENABLE_ADMIN_CHAT_ACCESS,
-    ENABLE_ADMIN_WORKSPACE_CONTENT_ACCESS,
+    BYPASS_ADMIN_ACCESS_CONTROL,
     ENABLE_ADMIN_EXPORT,
     # Tasks
     TASK_MODEL,
@@ -924,14 +924,19 @@ try:
         app.state.config.RAG_EMBEDDING_MODEL,
         RAG_EMBEDDING_MODEL_AUTO_UPDATE,
     )
-
-    app.state.rf = get_rf(
-        app.state.config.RAG_RERANKING_ENGINE,
-        app.state.config.RAG_RERANKING_MODEL,
-        app.state.config.RAG_EXTERNAL_RERANKER_URL,
-        app.state.config.RAG_EXTERNAL_RERANKER_API_KEY,
-        RAG_RERANKING_MODEL_AUTO_UPDATE,
-    )
+    if (
+        app.state.config.ENABLE_RAG_HYBRID_SEARCH
+        and not app.state.config.BYPASS_EMBEDDING_AND_RETRIEVAL
+    ):
+        app.state.rf = get_rf(
+            app.state.config.RAG_RERANKING_ENGINE,
+            app.state.config.RAG_RERANKING_MODEL,
+            app.state.config.RAG_EXTERNAL_RERANKER_URL,
+            app.state.config.RAG_EXTERNAL_RERANKER_API_KEY,
+            RAG_RERANKING_MODEL_AUTO_UPDATE,
+        )
+    else:
+        app.state.rf = None
 except Exception as e:
     log.error(f"Error updating models: {e}")
     pass
@@ -1290,7 +1295,7 @@ async def get_models(
             model_info = Models.get_model_by_id(model["id"])
             if model_info:
                 if (
-                    (user.role == "admin" and ENABLE_ADMIN_WORKSPACE_CONTENT_ACCESS)
+                    (user.role == "admin" and BYPASS_ADMIN_ACCESS_CONTROL)
                     or user.id == model_info.user_id
                     or has_access(
                         user.id, type="read", access_control=model_info.access_control
@@ -1338,7 +1343,7 @@ async def get_models(
     # Filter out models that the user does not have access to
     if (
         user.role == "user"
-        or (user.role == "admin" and not ENABLE_ADMIN_WORKSPACE_CONTENT_ACCESS)
+        or (user.role == "admin" and not BYPASS_ADMIN_ACCESS_CONTROL)
     ) and not BYPASS_MODEL_ACCESS_CONTROL:
         models = get_filtered_models(models, user)
 
@@ -1411,7 +1416,7 @@ async def chat_completion(
 
             # Check if user has access to the model
             if not BYPASS_MODEL_ACCESS_CONTROL and (
-                user.role != "admin" or not ENABLE_ADMIN_WORKSPACE_CONTENT_ACCESS
+                user.role != "admin" or not BYPASS_ADMIN_ACCESS_CONTROL
             ):
                 try:
                     check_model_access(user, model)
