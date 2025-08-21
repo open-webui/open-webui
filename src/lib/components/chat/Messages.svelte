@@ -404,7 +404,8 @@
 	{:else}
 		<div class="w-full pt-2">
 			{#key chatId}
-				<div class="w-full">
+				<section class="w-full" aria-labelledby="chat-conversation">
+					<h2 class="sr-only" id="chat-conversation">{$i18n.t('Chat Conversation')}</h2>
 					{#if messages.at(0)?.parentId !== null}
 						<Loader
 							on:visible={(e) => {
@@ -449,7 +450,7 @@
 							{topPadding}
 						/>
 					{/each}
-				</div>
+				</section>
 				<div class="pb-12" />
 				{#if bottomPadding}
 					<div class="  pb-6" />
