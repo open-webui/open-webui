@@ -34,6 +34,7 @@ from sqlalchemy import (
     Column,
     String,
     Text,
+    Index,
     and_,
     func,
     or_,
@@ -146,6 +147,20 @@ class Chat(Base):
 
     # Folder organization - links to folder management system
     folder_id = Column(Text, nullable=True)
+
+    __table_args__ = (
+        # Performance indexes for common queries
+        # WHERE folder_id = ...
+        Index("folder_id_idx", "folder_id"),
+        # WHERE user_id = ... AND pinned = ...
+        Index("user_id_pinned_idx", "user_id", "pinned"),
+        # WHERE user_id = ... AND archived = ...
+        Index("user_id_archived_idx", "user_id", "archived"),
+        # WHERE user_id = ... ORDER BY updated_at DESC
+        Index("updated_at_user_id_idx", "updated_at", "user_id"),
+        # WHERE folder_id = ... AND user_id = ...
+        Index("folder_id_user_id_idx", "folder_id", "user_id"),
+    )
 
 
 class ChatModel(BaseModel):
