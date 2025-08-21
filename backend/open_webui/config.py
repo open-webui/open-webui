@@ -1358,6 +1358,14 @@ ENABLE_ADMIN_WORKSPACE_CONTENT_ACCESS = (
     os.environ.get("ENABLE_ADMIN_WORKSPACE_CONTENT_ACCESS", "True").lower() == "true"
 )
 
+BYPASS_ADMIN_ACCESS_CONTROL = (
+    os.environ.get(
+        "BYPASS_ADMIN_ACCESS_CONTROL",
+        os.environ.get("ENABLE_ADMIN_WORKSPACE_CONTENT_ACCESS", "True"),
+    ).lower()
+    == "true"
+)
+
 ENABLE_ADMIN_CHAT_ACCESS = (
     os.environ.get("ENABLE_ADMIN_CHAT_ACCESS", "True").lower() == "true"
 )
