@@ -228,9 +228,9 @@ COPY --chown=$UID:$GID --from=build /app/package.json /app/package.json
 # copy backend files
 COPY --chown=$UID:$GID ./backend .
 
-# provide group with same permissions as user
-# allows running in OpenShift
-RUN chmod -R g=u /app $HOME
+# provide group with same permissions as user (skip large model cache to save space)
+# allows running in OpenShift - model files already have correct ownership from COPY --chown
+RUN chmod -R g=u /app/backend/open_webui /app/backend/start.sh /app/backend/main.py /app/build $HOME 2>/dev/null || true
 
 EXPOSE 8080
 
