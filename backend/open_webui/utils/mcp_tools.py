@@ -37,6 +37,41 @@ async def sync_mcp_server_tools_to_database(user: UserModel, server_id: str) -> 
         if hasattr(tool, "outputSchema"):
             tool_dict["outputSchema"] = tool.outputSchema
         tools.append(tool_dict)
+    
+    # If the server returns no tools, remove all existing tools for this server
+    if len(tools) == 0:
+        try:
+            log.info(f"Server {server.id} returned no tools; deleting all associated MCP tools")
+            await delete_mcp_server_tools_from_database(server.id)
+        except Exception as e:
+            log.error(f"Failed to delete tools for server {server.id} when no tools returned: {e}")
+        return
+
+    # Remove stale tools that are no longer returned by the server
+    try:
+        from open_webui.internal.db import get_db
+        from open_webui.models.tools import Tool
+
+        current_tool_ids = set(
+            f"mcp:{server.id}:{t.get('name')}" for t in tools if t.get("name")
+        )
+
+        with get_db() as db:
+            existing_tools = db.query(Tool).filter(Tool.id.like(f"mcp:{server.id}:%")).all()
+            existing_tool_ids = set(t.id for t in existing_tools)
+            stale_tool_ids = existing_tool_ids - current_tool_ids
+
+            if stale_tool_ids:
+                log.info(
+                    f"Deleting {len(stale_tool_ids)} stale MCP tools for server {server.id}"
+                )
+                db.query(Tool).filter(Tool.id.in_(list(stale_tool_ids))).delete(
+                    synchronize_session=False
+                )
+                db.commit()
+    except Exception as e:
+        log.error(f"Failed to remove stale MCP tools for server {server.id}: {e}")
+
     for tool in tools:
         name = tool.get("name")
         if not name:
