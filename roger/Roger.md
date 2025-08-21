@@ -70,11 +70,14 @@ The backend server will start on http://localhost:8080.
 ## Docker Build
 
 - docker login
-- docker build --build-arg BUILD_HASH=v1.3.4 -t tech-sense .
-- docker tag tech-sense deliah/tech-sense:v1.3.4
-- docker push deliah/tech-sense:v1.3.4
+- docker build --build-arg BUILD_HASH=v1.3.8 -t tech-sense .
+- docker tag tech-sense deliah/tech-sense:v1.3.8
+- docker push deliah/tech-sense:v1.3.8
 - docker tag tech-sense deliah/tech-sense:latest
 - docker push deliah/tech-sense:latest
+
+git tag -a v1.3.8 -m "Release v1.3.8"
+git push origin v1.3.8
 
 # Debug mode
 $env:WEBUI_DEBUG=1 ; .\start_windows.bat
