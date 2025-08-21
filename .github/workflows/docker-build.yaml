@@ -42,6 +42,70 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
+      - name: Analyze disk usage and cleanup
+        run: |
+          echo "=== Initial disk usage ==="
+          df -h
+          echo ""
+          echo "=== Checking what large directories exist ==="
+          
+          # Check each directory and show size if it exists
+          for dir in "/usr/share/dotnet" "/usr/local/lib/android" "/opt/ghc" "/opt/hostedtoolcache/CodeQL" "/opt/hostedtoolcache" "/usr/share/swift" "/usr/local/share/boost"; do
+            if [ -d "$dir" ]; then
+              size=$(sudo du -sh "$dir" 2>/dev/null | cut -f1)
+              echo "Found: $dir ($size)"
+            else
+              echo "Not found: $dir"
+            fi
+          done
+          
+          echo ""
+          echo "=== Docker usage ==="
+          docker system df || true
+          
+          echo ""
+          echo "=== Top 10 largest directories in /opt ==="
+          sudo du -h /opt 2>/dev/null | sort -hr | head -10 || true
+          
+          echo ""
+          echo "=== Top 10 largest directories in /usr/share ==="
+          sudo du -h /usr/share 2>/dev/null | sort -hr | head -10 || true
+          
+          echo ""
+          echo "=== Starting cleanup of confirmed large directories ==="
+          
+          # Only remove directories that exist and are large
+          if [ -d "/usr/share/dotnet" ]; then
+            echo "Removing .NET SDK..."
+            sudo rm -rf /usr/share/dotnet
+          fi
+          
+          if [ -d "/usr/local/lib/android" ]; then
+            echo "Removing Android SDK..."
+            sudo rm -rf /usr/local/lib/android
+          fi
+          
+          if [ -d "/opt/ghc" ]; then
+            echo "Removing GHC..."
+            sudo rm -rf /opt/ghc
+          fi
+          
+          if [ -d "/opt/hostedtoolcache/CodeQL" ]; then
+            echo "Removing CodeQL..."
+            sudo rm -rf /opt/hostedtoolcache/CodeQL
+          fi
+          
+          # Additional cleanup
+          echo "Docker system cleanup..."
+          sudo docker system prune -af
+          
+          echo "APT cleanup..."
+          sudo apt-get clean
+          
+          echo ""
+          echo "=== Final disk usage ==="
+          df -h
+
       - name: Set up QEMU
         uses: docker/setup-qemu-action@v3
 
