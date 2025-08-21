@@ -608,7 +608,7 @@
 				</a>
 			</div>
 		{/if}
-
+<!-- 
 		<div class="relative {$temporaryChatEnabled ? 'opacity-20' : ''}">
 			{#if $temporaryChatEnabled}
 				<div class="absolute z-40 w-full h-full flex justify-center"></div>
@@ -620,7 +620,7 @@
 				placeholder={$i18n.t('Search')}
 				showClearButton={true}
 			/>
-		</div>
+		</div> -->
 
 		<div
 			class="relative flex flex-col flex-1 overflow-y-auto overflow-x-hidden {$temporaryChatEnabled

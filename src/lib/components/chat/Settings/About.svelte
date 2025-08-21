@@ -48,7 +48,7 @@
 			<div class=" mb-2.5 text-sm font-medium flex space-x-2 items-center">
 				<div>
 					{$WEBUI_NAME}
-					{$i18n.t('Version')}
+					<!-- {$i18n.t('Version')} -->
 				</div>
 			</div>
 			<div class="flex w-full justify-between items-center">
@@ -58,7 +58,7 @@
 							v{WEBUI_VERSION}
 						</Tooltip>
 
-						<a
+						<!-- <a
 							href="https://github.com/open-webui/open-webui/releases/tag/v{version.latest}"
 							target="_blank"
 						>
@@ -67,27 +67,27 @@
 								: updateAvailable
 									? `(v${version.latest} ${$i18n.t('available!')})`
 									: $i18n.t('(latest)')}
-						</a>
+						</a> -->
 					</div>
 
-					<button
+					<!-- <button
 						class=" underline flex items-center space-x-1 text-xs text-gray-500 dark:text-gray-500"
 						on:click={() => {
 							showChangelog.set(true);
 						}}
 					>
 						<div>{$i18n.t("See what's new")}</div>
-					</button>
+					</button> -->
 				</div>
 
-				<button
+				<!-- <button
 					class=" text-xs px-3 py-1.5 bg-gray-100 hover:bg-gray-200 dark:bg-gray-850 dark:hover:bg-gray-800 transition rounded-lg font-medium"
 					on:click={() => {
 						checkForVersionUpdates();
 					}}
 				>
 					{$i18n.t('Check for updates')}
-				</button>
+				</button> -->
 			</div>
 		</div>
 
@@ -106,7 +106,31 @@
 
 		<hr class=" border-gray-100 dark:border-gray-850" />
 
-		{#if $config?.license_metadata}
+		<div class="flex space-x-1">
+			<a
+				href="https://x.com/near_ai"
+				target="_blank"
+				rel="noopener noreferrer"
+				class="inline-flex items-center gap-1 rounded-lg bg-black text-white px-2 py-1 hover:opacity-80 transition"
+			>
+				<svg
+					xmlns="http://www.w3.org/2000/svg"
+					width={15}
+					height={15}
+					viewBox="0 0 24 24"
+					fill="currentColor"
+					aria-hidden="true"
+				>
+					<path d="M18.244 2H21.5l-7.19 8.21L22 22h-6.845l-5.36-7.49L3.64 22H.5l7.64-8.72L2 2h6.963l4.922 6.934L18.244 2Zm-2.395 18.25h1.807L8.06 3.64H6.117l9.732 16.61Z" />
+				</svg>
+
+				<span class="font-semibold text-sm">@near_ai</span>
+			</a>
+
+		</div>
+
+
+		<!-- {#if $config?.license_metadata}
 			<div class="mb-2 text-xs">
 				{#if !$WEBUI_NAME.includes('Open WebUI')}
 					<span class=" text-gray-500 dark:text-gray-300 font-medium">{$WEBUI_NAME}</span> -
@@ -138,9 +162,9 @@
 					/>
 				</a>
 			</div>
-		{/if}
+		{/if} -->
 
-		<div class="mt-2 text-xs text-gray-400 dark:text-gray-500">
+		<!-- <div class="mt-2 text-xs text-gray-400 dark:text-gray-500">
 			Emoji graphics provided by
 			<a href="https://github.com/jdecked/twemoji" target="_blank">Twemoji</a>, licensed under
 			<a href="https://creativecommons.org/licenses/by/4.0/" target="_blank">CC-BY 4.0</a>.
@@ -189,6 +213,6 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 				href="https://github.com/tjbck"
 				target="_blank">Timothy J. Baek</a
 			>
-		</div>
+		</div> -->
 	</div>
 </div>

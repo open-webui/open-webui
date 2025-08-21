@@ -170,7 +170,7 @@
 						</div>
 					</div>
 
-					<div class="mb-2.5">
+					<!-- <div class="mb-2.5">
 						<div class="flex w-full justify-between items-center">
 							<div class="text-xs pr-2">
 								<div class="">
@@ -214,7 +214,7 @@
 								</a>
 							</div>
 						</div>
-					</div>
+					</div> -->
 
 					<div class="mb-2.5">
 						<div class="flex w-full justify-between items-center">
