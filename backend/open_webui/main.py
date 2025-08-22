@@ -450,6 +450,7 @@ from open_webui.utils.chat import (
 )
 from open_webui.utils.embeddings import generate_embeddings
 from open_webui.utils.middleware import process_chat_payload, process_chat_response
+from open_webui.utils.payload import normalize_chat_payload
 from open_webui.utils.access_control import has_access
 
 from open_webui.utils.auth import (
@@ -1400,6 +1401,13 @@ async def chat_completion(
 ):
     if not request.app.state.MODELS:
         await get_all_models(request, user=user)
+
+    form_data, has_non_text = normalize_chat_payload(form_data)
+    if has_non_text:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="message.content contains non text parts for example images not supported by this endpoint. Send text only content or use a multimodal capable route.",
+        )
 
     model_id = form_data.get("model", None)
     model_item = form_data.pop("model_item", {})

@@ -8,6 +8,64 @@ from typing import Callable, Optional
 import json
 
 
+def coerce_text_from_content(content):
+    """Flatten list/dict based content into a single string.
+
+    Returns:
+        tuple[str, bool]: (joined text, has_non_text_parts)
+    """
+    has_non_text = False
+
+    if content is None:
+        return "", False
+
+    if isinstance(content, str):
+        return content, False
+
+    if isinstance(content, list):
+        parts = []
+        for item in content:
+            if isinstance(item, str):
+                parts.append(item)
+            elif isinstance(item, dict):
+                text = None
+                if isinstance(item.get("text"), str):
+                    text = item.get("text")
+                elif item.get("type") == "text" and isinstance(item.get("text"), str):
+                    text = item.get("text")
+
+                if text is not None:
+                    parts.append(text)
+                else:
+                    has_non_text = True
+            else:
+                has_non_text = True
+        return "".join(parts), has_non_text
+
+    return str(content), True
+
+
+def normalize_chat_payload(body: dict):
+    """Normalize chat payload messages and system fields to plain strings."""
+    has_non_text = False
+    messages = body.get("messages", []) or []
+
+    if "system" in body:
+        sys_text, non_text = coerce_text_from_content(body.get("system"))
+        has_non_text |= non_text
+        if sys_text.strip():
+            messages = [{"role": "system", "content": sys_text}] + messages
+        del body["system"]
+
+    for msg in messages:
+        text, non_text = coerce_text_from_content(msg.get("content"))
+        msg["content"] = text
+        has_non_text |= non_text
+
+    body["messages"] = messages
+    return body, has_non_text
+
+
 # inplace function: form_data is modified
 def apply_system_prompt_to_body(
     system: Optional[str], form_data: dict, metadata: Optional[dict] = None, user=None

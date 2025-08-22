@@ -40,6 +40,7 @@ from open_webui.env import SRC_LOG_LEVELS
 from open_webui.utils.payload import (
     apply_model_params_to_body_openai,
     apply_system_prompt_to_body,
+    normalize_chat_payload,
 )
 from open_webui.utils.misc import (
     convert_logit_bias_input_to_json,
@@ -747,8 +748,19 @@ async def generate_chat_completion(
 
     payload = {**form_data}
     metadata = payload.pop("metadata", None)
+    payload, has_non_text = normalize_chat_payload(payload)
+    if has_non_text:
+        return JSONResponse(
+            status_code=400,
+            content={
+                "error": {
+                    "type": "invalid_request_error",
+                    "message": "message.content contains non text parts for example images not supported by this endpoint. Send text only content or use a multimodal capable route.",
+                }
+            },
+        )
 
-    model_id = form_data.get("model")
+    model_id = payload.get("model")
     model_info = Models.get_model_by_id(model_id)
 
     # Check model info and override the payload

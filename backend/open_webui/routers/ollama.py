@@ -35,7 +35,7 @@ from fastapi import (
     APIRouter,
 )
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import StreamingResponse
+from fastapi.responses import StreamingResponse, JSONResponse
 from pydantic import BaseModel, ConfigDict, validator
 from starlette.background import BackgroundTask
 
@@ -48,6 +48,7 @@ from open_webui.utils.payload import (
     apply_model_params_to_body_ollama,
     apply_model_params_to_body_openai,
     apply_system_prompt_to_body,
+    normalize_chat_payload,
 )
 from open_webui.utils.auth import get_admin_user, get_verified_user
 from open_webui.utils.access_control import has_access
@@ -1503,6 +1504,18 @@ async def generate_openai_chat_completion(
     payload = {**completion_form.model_dump(exclude_none=True, exclude=["metadata"])}
     if "metadata" in payload:
         del payload["metadata"]
+
+    payload, has_non_text = normalize_chat_payload(payload)
+    if has_non_text:
+        return JSONResponse(
+            status_code=400,
+            content={
+                "error": {
+                    "type": "invalid_request_error",
+                    "message": "message.content contains non text parts for example images not supported by this endpoint. Send text only content or use a multimodal capable route.",
+                }
+            },
+        )
 
     model_id = completion_form.model
     if ":" not in model_id:
