@@ -487,10 +487,13 @@ async def image_generations(
     # image model other than gpt-image-1, which is warned about on settings save
 
     size = "512x512"
-    if "x" in request.app.state.config.IMAGE_SIZE:
+    if (
+        request.app.state.config.IMAGE_SIZE
+        and "x" in request.app.state.config.IMAGE_SIZE
+    ):
         size = request.app.state.config.IMAGE_SIZE
 
-    if "x" in form_data.size:
+    if form_data.size and "x" in form_data.size:
         size = form_data.size
 
     width, height = tuple(map(int, size.split("x")))
