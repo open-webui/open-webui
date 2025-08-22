@@ -3,7 +3,7 @@ from pydantic import BaseModel
 import logging
 from typing import Optional
 
-from open_webui.models.memories import Memories, MemoryModel
+from open_webui.models.memories import Memories, MemoryCountResponse, MemoryModel
 from open_webui.models.users import Users
 from open_webui.retrieval.vector.factory import VECTOR_DB_CLIENT
 from open_webui.socket.main import REINDEX_STATE
@@ -31,6 +31,22 @@ async def get_embeddings(request: Request):
 @router.get("/", response_model=list[MemoryModel])
 async def get_memories(user=Depends(get_verified_user)):
     return Memories.get_memories_by_user_id(user.id)
+
+
+############################
+# countMemories
+############################
+
+@router.get("/count", response_model=Optional[MemoryCountResponse])
+async def count_knowledges(user=Depends(get_admin_user)):
+    count = 0
+    try:
+        count = Memories.get_memory_count()
+    except Exception as e:
+        log.error(
+            f"Failed to get memory count."
+        )
+    return count
 
 
 ############################

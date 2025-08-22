@@ -99,6 +99,10 @@ class KnowledgeForm(BaseModel):
     access_control: Optional[dict] = None
 
 
+class KnowledgeCountResponse(BaseModel):
+    count: int
+
+
 class KnowledgeTable:
     def insert_new_knowledge(
         self, user_id: str, form_data: KnowledgeForm
@@ -142,6 +146,39 @@ class KnowledgeTable:
                     )
                 )
             return knowledge_bases
+
+    def get_knowledge_bases_paginated(self, limit: int, offset: int) -> list[KnowledgeUserModel]:
+        """Get knowledge bases with pagination"""
+        with get_db() as db:
+            knowledge_bases = []
+            knowledges = (
+                db.query(Knowledge)
+                .order_by(Knowledge.updated_at.desc())
+                .limit(limit)
+                .offset(offset)
+                .all()
+            )
+
+        for knowledge in knowledges:
+            user = Users.get_user_by_id(knowledge.user_id)
+            knowledge_bases.append(
+                KnowledgeUserModel.model_validate(
+                    {
+                        **KnowledgeModel.model_validate(knowledge).model_dump(),
+                        "user": user.model_dump() if user else None,
+                    }
+                )
+            )
+        return knowledge_bases
+
+    def get_knowledge_bases_count(self) -> KnowledgeCountResponse:
+        """ Get the total count of knowledge bases """
+        with get_db() as db:
+            return KnowledgeCountResponse.model_validate(
+                {
+                    "count": db.query(Knowledge).count()
+                }
+            )
 
     def get_knowledge_bases_by_user_id(
         self, user_id: str, permission: str = "write"

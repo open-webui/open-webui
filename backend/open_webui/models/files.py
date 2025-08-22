@@ -97,6 +97,10 @@ class FileForm(BaseModel):
     access_control: Optional[dict] = None
 
 
+class FileCountResponse(BaseModel):
+    count: int
+
+
 class FilesTable:
     def insert_new_file(self, user_id: str, form_data: FileForm) -> Optional[FileModel]:
         with get_db() as db:
@@ -146,6 +150,33 @@ class FilesTable:
     def get_files(self) -> list[FileModel]:
         with get_db() as db:
             return [FileModel.model_validate(file) for file in db.query(File).all()]
+
+    def get_files_paginated(self, limit: int, offset: int) -> list[FileModel]:
+        """Get knowledge bases with pagination"""
+        with get_db() as db:
+            file_list = []
+            files = (
+                db.query(File)
+                .order_by(File.updated_at.desc())
+                .limit(limit)
+                .offset(offset)
+                .all()
+            )
+
+        for file in files:
+            file_list.append(
+                FileModel.model_validate(file)
+            )
+        return file_list
+
+    def get_files_count(self) -> FileCountResponse:
+        """ Get the total count of files """
+        with get_db() as db:
+            return FileCountResponse.model_validate(
+                {
+                    "count": db.query(File).count()
+                }
+            )
 
     def get_files_by_ids(self, ids: list[str]) -> list[FileModel]:
         with get_db() as db:

@@ -31,6 +31,10 @@ class MemoryModel(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
 
+class MemoryCountResponse(BaseModel):
+    count: int
+
+
 ####################
 # Forms
 ####################
@@ -90,6 +94,33 @@ class MemoriesTable:
                 return [MemoryModel.model_validate(memory) for memory in memories]
             except Exception:
                 return None
+
+    def get_memories_paginated(self, limit: int, offset: int) -> list[MemoryModel]:
+        """Get knowledge bases with pagination"""
+        with get_db() as db:
+            memory_list = []
+            memories = (
+                db.query(Memory)
+                .order_by(Memory.updated_at.desc())
+                .limit(limit)
+                .offset(offset)
+                .all()
+            )
+
+        for memory in memories:
+            memory_list.append(
+                MemoryModel.model_validate(memory)
+            )
+        return memory_list
+
+    def get_memory_count(self) -> MemoryCountResponse:
+        """ Get the total count of memories """
+        with get_db() as db:
+            return MemoryCountResponse.model_validate(
+                {
+                    "count": db.query(Memory).count()
+                }
+            )
 
     def get_memories_by_user_id(self, user_id: str) -> list[MemoryModel]:
         with get_db() as db:

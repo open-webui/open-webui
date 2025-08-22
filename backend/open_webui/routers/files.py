@@ -28,6 +28,7 @@ from open_webui.retrieval.vector.factory import VECTOR_DB_CLIENT
 
 from open_webui.models.users import Users
 from open_webui.models.files import (
+    FileCountResponse,
     FileForm,
     FileModel,
     FileModelResponse,
@@ -262,6 +263,22 @@ async def list_files(user=Depends(get_verified_user), content: bool = Query(True
                 del file.data["content"]
 
     return files
+
+
+############################
+# countFiles
+############################
+
+@router.get("/count", response_model=Optional[FileCountResponse])
+async def count_files(user=Depends(get_admin_user)):
+    count = 0
+    try:
+        count = Files.get_files_count()
+    except Exception as e:
+        log.error(
+            f"Failed to get files count."
+        )
+    return count
 
 
 ############################

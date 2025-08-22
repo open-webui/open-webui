@@ -6,6 +6,7 @@ from asyncio import sleep
 
 from open_webui.models.knowledge import (
     Knowledges,
+    KnowledgeCountResponse,
     KnowledgeForm,
     KnowledgeResponse,
     KnowledgeUserResponse,
@@ -134,6 +135,22 @@ async def get_knowledge_list(user=Depends(get_verified_user)):
             )
         )
     return knowledge_with_files
+
+
+############################
+# countKnowledgeBases
+############################
+
+@router.get("/count", response_model=Optional[KnowledgeCountResponse])
+async def count_knowledges(user=Depends(get_admin_user)):
+    count = 0
+    try:
+        count = Knowledges.get_knowledge_bases_count()
+    except Exception as e:
+        log.error(
+            f"Failed to get knowledge bases count."
+        )
+    return count
 
 
 ############################
