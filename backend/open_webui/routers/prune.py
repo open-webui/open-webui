@@ -749,6 +749,8 @@ async def prune_data(form_data: PruneDataForm, dry_run: bool = True, user=Depend
     If dry_run=True (default), returns preview counts without deleting anything.
     If dry_run=False, performs actual deletion and returns True on success.
     """
+    log.info(f"DEBUG: dry_run parameter = {dry_run}")
+    log.info(f"DEBUG: form_data.dry_run = {form_data.dry_run}")
     try:
         if dry_run:
             log.info("Starting data pruning preview (dry run)")
