@@ -147,6 +147,7 @@ class ChatPermissions(BaseModel):
     file_upload: bool = True
     delete: bool = True
     edit: bool = True
+    continuation: bool = True
     share: bool = True
     export: bool = True
     stt: bool = True

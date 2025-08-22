@@ -1300,7 +1300,7 @@
 										</Tooltip>
 									{/if}
 
-									{#if isLastMessage}
+									{#if isLastMessage && ($user?.role === 'admin' || ($user?.permissions?.chat?.continuation ?? true))}
 										<Tooltip content={$i18n.t('Continue Response')} placement="bottom">
 											<button
 												aria-label={$i18n.t('Continue Response')}

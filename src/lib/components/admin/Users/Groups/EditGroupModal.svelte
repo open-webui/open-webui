@@ -54,6 +54,7 @@
 			file_upload: true,
 			delete: true,
 			edit: true,
+			continuation: true,
 			share: true,
 			export: true,
 			stt: true,
