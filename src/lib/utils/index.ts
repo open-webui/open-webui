@@ -981,77 +981,6 @@ export const getPromptVariables = (user_name, user_location) => {
 };
 
 /**
- * @param {string} template - The template string containing placeholders.
- * @returns {string} The template string with the placeholders replaced by the prompt.
- */
-export const promptTemplate = (
-	template: string,
-	user_name?: string,
-	user_location?: string
-): string => {
-	// Get the current date
-	const currentDate = new Date();
-
-	// Format the date to YYYY-MM-DD
-	const formattedDate =
-		currentDate.getFullYear() +
-		'-' +
-		String(currentDate.getMonth() + 1).padStart(2, '0') +
-		'-' +
-		String(currentDate.getDate()).padStart(2, '0');
-
-	// Format the time to HH:MM:SS AM/PM
-	const currentTime = currentDate.toLocaleTimeString('en-US', {
-		hour: 'numeric',
-		minute: 'numeric',
-		second: 'numeric',
-		hour12: true
-	});
-
-	// Get the current weekday
-	const currentWeekday = getWeekday();
-
-	// Get the user's timezone
-	const currentTimezone = getUserTimezone();
-
-	// Get the user's language
-	const userLanguage = localStorage.getItem('locale') || 'en-US';
-
-	// Replace {{CURRENT_DATETIME}} in the template with the formatted datetime
-	template = template.replace('{{CURRENT_DATETIME}}', `${formattedDate} ${currentTime}`);
-
-	// Replace {{CURRENT_DATE}} in the template with the formatted date
-	template = template.replace('{{CURRENT_DATE}}', formattedDate);
-
-	// Replace {{CURRENT_TIME}} in the template with the formatted time
-	template = template.replace('{{CURRENT_TIME}}', currentTime);
-
-	// Replace {{CURRENT_WEEKDAY}} in the template with the current weekday
-	template = template.replace('{{CURRENT_WEEKDAY}}', currentWeekday);
-
-	// Replace {{CURRENT_TIMEZONE}} in the template with the user's timezone
-	template = template.replace('{{CURRENT_TIMEZONE}}', currentTimezone);
-
-	// Replace {{USER_LANGUAGE}} in the template with the user's language
-	template = template.replace('{{USER_LANGUAGE}}', userLanguage);
-
-	if (user_name) {
-		// Replace {{USER_NAME}} in the template with the user's name
-		template = template.replace('{{USER_NAME}}', user_name);
-	}
-
-	if (user_location) {
-		// Replace {{USER_LOCATION}} in the template with the current location
-		template = template.replace('{{USER_LOCATION}}', user_location);
-	} else {
-		// Replace {{USER_LOCATION}} in the template with 'Unknown' if no location is provided
-		template = template.replace('{{USER_LOCATION}}', 'LOCATION_UNKNOWN');
-	}
-
-	return template;
-};
-
-/**
  * This function is used to replace placeholders in a template string with the provided prompt.
  * The placeholders can be in the following formats:
  * - `{{prompt}}`: This will be replaced with the entire prompt.
@@ -1084,8 +1013,6 @@ export const titleGenerationTemplate = (template: string, prompt: string): strin
 			return '';
 		}
 	);
-
-	template = promptTemplate(template);
 
 	return template;
 };
@@ -1582,4 +1509,22 @@ export const extractContentFromFile = async (file, pdfjsLib = null) => {
 	} catch (err) {
 		throw new Error('Unsupported or non-text file type: ' + (file.name || type));
 	}
+};
+
+export const querystringValue = (key: string): string | null => {
+	const querystring = window.location.search;
+	const urlParams = new URLSearchParams(querystring);
+	return urlParams.get(key);
+};
+
+export const getAge = (birthDate) => {
+	const today = new Date();
+	const bDate = new Date(birthDate);
+	let age = today.getFullYear() - bDate.getFullYear();
+	const m = today.getMonth() - bDate.getMonth();
+
+	if (m < 0 || (m === 0 && today.getDate() < bDate.getDate())) {
+		age--;
+	}
+	return age.toString();
 };

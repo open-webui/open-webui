@@ -147,14 +147,14 @@
 								dismissible={true}
 								on:dismiss={() => {
 									// Remove the file from the chatFiles array
-								chatFiles.splice(fileIdx, 1);
-								chatFiles = chatFiles;
-							}}
-							on:click={() => {
-								console.log(file);
-							}}
-						/>
-					{/each}
+									chatFiles.splice(fileIdx, 1);
+									chatFiles = chatFiles;
+								}}
+								on:click={() => {
+									console.log(file);
+								}}
+							/>
+						{/each}
 				</div>
 			</Collapsible>
 
@@ -189,7 +189,6 @@
                         <div class="mt-2 space-y-3 pr-1.5">
                                 <div class="flex justify-between items-center text-sm">
                                         <div class="  font-medium">{$i18n.t('Abort Job')}</div>
-
                                 <button
                                         disabled={$isRestarting}
                                         class={
@@ -207,16 +206,14 @@
                                 </button>
                                 </div>
                         </div>
-
 		{/if}
+			{#if $user?.role === 'admin' || ($user?.permissions.chat?.params ?? true)}
+				<Collapsible title={$i18n.t('Advanced Params')} open={true} buttonClassName="w-full">
+					<div class="text-sm mt-1.5" slot="content">
+						<div>
+							<AdvancedParams admin={$user?.role === 'admin'} custom={true} bind:params />
+						</div>
 
-		{#if $user?.role === 'admin' || ($user?.permissions.chat?.controls ?? true)}
-			<hr class="my-2 border-gray-50 dark:border-gray-700/10" />
-
-			<Collapsible title={$i18n.t('Advanced Params')} open={true} buttonClassName="w-full">
-				<div class="text-sm mt-1.5" slot="content">
-					<div>
-						<AdvancedParams admin={$user?.role === 'admin'} custom={true} bind:params />
 					</div>
 				</Collapsible>
 

@@ -215,7 +215,7 @@
 							? ''
 							: 'outline-hidden'}"
 						bind:value={selectedTheme}
-						placeholder="Select a theme"
+						placeholder={$i18n.t('Select a theme')}
 						on:change={() => themeChangeHandler(selectedTheme)}
 					>
 						<option value="system">⚙️ {$i18n.t('System')}</option>
@@ -237,7 +237,7 @@
 							? ''
 							: 'outline-hidden'}"
 						bind:value={lang}
-						placeholder="Select a language"
+						placeholder={$i18n.t('Select a language')}
 						on:change={(e) => {
 							changeLanguage(lang);
 						}}

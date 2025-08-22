@@ -76,13 +76,14 @@
 
 	onMount(async () => {
 		window.addEventListener('resize', adjustHeight);
-		adjustHeight();
 
 		await tick();
 		const chatInputElement = document.getElementById('chat-input');
 		await tick();
 		chatInputElement?.focus();
 		await tick();
+
+		adjustHeight();
 	});
 
 	onDestroy(() => {

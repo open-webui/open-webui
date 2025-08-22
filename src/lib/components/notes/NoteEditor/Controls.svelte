@@ -39,7 +39,7 @@
 <div class="mt-1">
 	<div class="pb-10">
 		{#if files.length > 0}
-			<div class=" text-xs font-medium pb-1">Files</div>
+			<div class=" text-xs font-medium pb-1">{$i18n.t('Files')}</div>
 
 			<div class="flex flex-col gap-1">
 				{#each files.filter((file) => file.type !== 'image') as file, fileIdx}
@@ -87,7 +87,7 @@
 			<hr class="my-2 border-gray-50 dark:border-gray-700/10" />
 		{/if}
 
-		<div class=" text-xs font-medium mb-1">Model</div>
+		<div class=" text-xs font-medium mb-1">{$i18n.t('Model')}</div>
 
 		<div class="w-full">
 			<select class="w-full bg-transparent text-sm outline-hidden" bind:value={selectedModelId}>
