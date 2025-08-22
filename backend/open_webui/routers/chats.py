@@ -80,6 +80,11 @@ async def get_user_chat_list_by_user_id(
     skip: int = 0,
     limit: int = 50,
 ):
+    # We just disable this for private chat
+    raise HTTPException(
+        status_code=status.HTTP_501_NOT_IMPLEMENTED,
+        detail=ERROR_MESSAGES.ACTION_PROHIBITED,
+    )
     if not ENABLE_ADMIN_CHAT_ACCESS:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
@@ -252,12 +257,11 @@ async def get_all_user_tags(user=Depends(get_verified_user)):
 
 @router.get("/all/db", response_model=list[ChatResponse])
 async def get_all_user_chats_in_db(user=Depends(get_admin_user)):
-    if not ENABLE_ADMIN_EXPORT:
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail=ERROR_MESSAGES.ACCESS_PROHIBITED,
-        )
-    return [ChatResponse(**chat.model_dump()) for chat in Chats.get_chats()]
+    # We just disable this for private chat
+    raise HTTPException(
+        status_code=status.HTTP_501_NOT_IMPLEMENTED,
+        detail=ERROR_MESSAGES.ACTION_PROHIBITED,
+    )
 
 
 ############################

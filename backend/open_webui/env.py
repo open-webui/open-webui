@@ -3,8 +3,8 @@ import json
 import logging
 import os
 import pkgutil
-import sys
 import shutil
+import sys
 from pathlib import Path
 
 import markdown
@@ -242,6 +242,15 @@ if FROM_INIT_PY:
 STATIC_DIR = Path(os.getenv("STATIC_DIR", OPEN_WEBUI_DIR / "static"))
 
 FONTS_DIR = Path(os.getenv("FONTS_DIR", OPEN_WEBUI_DIR / "static" / "fonts"))
+
+####################################
+# MODELS_CACHE_TTL
+####################################
+
+try:
+    MODELS_CACHE_TTL = int(os.environ.get("MODELS_CACHE_TTL") or 300)
+except ValueError:
+    MODELS_CACHE_TTL = 300
 
 FRONTEND_BUILD_DIR = Path(os.getenv("FRONTEND_BUILD_DIR", BASE_DIR / "build")).resolve()
 

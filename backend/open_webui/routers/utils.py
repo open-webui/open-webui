@@ -107,6 +107,11 @@ async def download_chat_as_pdf(
 
 @router.get("/db/download")
 async def download_db(user=Depends(get_admin_user)):
+    # We just disable this for private chat
+    raise HTTPException(
+        status_code=status.HTTP_501_NOT_IMPLEMENTED,
+        detail=ERROR_MESSAGES.ACTION_PROHIBITED,
+    )
     if not ENABLE_ADMIN_EXPORT:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,

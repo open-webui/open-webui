@@ -1,15 +1,15 @@
+import logging
 import time
 from typing import Optional
 
 from open_webui.internal.db import Base, JSONField, get_db
-
-
 from open_webui.models.chats import Chats
 from open_webui.models.groups import Groups
-
-
 from pydantic import BaseModel, ConfigDict
-from sqlalchemy import BigInteger, Column, String, Text
+from sqlalchemy import BigInteger, Column, String, Text, or_
+
+log = logging.getLogger(__name__)
+
 
 ####################
 # User DB Schema
@@ -123,6 +123,20 @@ class UsersTable:
             db.commit()
             db.refresh(result)
             if result:
+                # Generate data encryption key for the new user
+                try:
+                    from open_webui.utils.user_encryption import (
+                        get_user_data_encryption_key,
+                    )
+
+                    get_user_data_encryption_key(id)
+                    log.info(f"Generated data encryption key for new user: {id}")
+                except Exception as e:
+                    log.warning(
+                        f"Failed to generate data encryption key for user {id}: {e}"
+                    )
+                    # Don't fail user creation if key generation fails
+
                 return user
             else:
                 return None

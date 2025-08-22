@@ -1,0 +1,22 @@
+services:
+  # key service
+  key-service:
+    image: danielwpz/seal-cvm:0.5
+    container_name: key-service
+    volumes:
+      - /var/run/dstack.sock:/var/run/dstack.sock
+    restart: unless-stopped
+
+  # private chat
+  private-chat:
+    image: danielwpz/private-chat:0.4
+    container_name: private-chat
+    ports:
+      - "8080:8080"
+    environment:
+      PORT: 8080
+      ENABLE_CHAT_ENCRYPTION: true
+      MODELS_CACHE_TTL: 300
+      KEY_SERVICE_BASE_URL: http://key-service:3001
+      DATABASE_URL: ${DATABASE_URL}
+    restart: unless-stopped
