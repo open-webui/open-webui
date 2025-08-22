@@ -10,15 +10,15 @@
  Starting with the homework: see who is participating; -> What they've done, click one of the students -> preview the chat ->multiple homeworks, see one student's multiple chats; -> Export it;
 
  To summarize Start with a multi-student homework overview, then drill down into all student questions for one homework, and finally show a granular view of one student’s interactions across multiple homeworks.
- -->
 
-<!-- 
- 1. Add Chat Titles
 
+ 0822: How to get "Questions Asked?"
  -->
 <script lang="ts">
 	import { toast } from 'svelte-sonner';
 	import { getContext, onMount } from 'svelte';
+	import { user } from '$lib/stores'; // This is how you get user data
+
 	const i18n = getContext('i18n');
 
 	import Modal from '$lib/components/common/Modal.svelte';
@@ -31,6 +31,75 @@
 	export let show = false;
 	export let users = [];
 	export let group = null;
+
+	// Simplified API function for debugging
+	const fetchGroupChatData = async (groupId) => {
+		try {
+			console.log('🔍 Simplified Debug:');
+			console.log('Group ID:', groupId);
+
+			// Minimal filter to test what data exists
+			const filterData = {
+				group_id: groupId,
+				skip: 0,
+				limit: 100
+				// Remove all other filters temporarily
+			};
+
+			console.log('📤 Minimal filter request:', filterData);
+
+			const response = await fetch('/api/v1/chats/filter/meta', {
+				method: 'POST',
+				headers: {
+					'Content-Type': 'application/json',
+					'Authorization': `Bearer ${localStorage.token}`
+				},
+				body: JSON.stringify(filterData)
+			});
+
+			if (!response.ok) {
+				throw new Error(`HTTP error! status: ${response.status}`);
+			}
+
+			const chatData = await response.json();
+			console.log('✅ Received chat data:', chatData);
+			
+			return chatData;
+		} catch (error) {
+			console.error('💥 Error:', error);
+			throw error;
+		}
+	};
+
+	// Transform API response to match your data structure
+	const transformChatData = (apiChats) => {
+		return apiChats.map((chat, index) => {
+			// Find user info from the users array
+			const user = users.find(u => u.id === chat.user_id) || {
+				name: `User ${chat.user_id}`,
+				email: `user${chat.user_id}@example.com`
+			};
+
+			return {
+				id: chat.id,
+				chatName: chat.title || `Chat ${index + 1}`,
+				name: user.name || `User ${chat.user_id}`,
+				email: user.email || `user${chat.user_id}@example.com`,
+				model: chat.meta?.model_name || chat.meta?.base_model_name || 'Unknown Model',
+				messageCount: chat.meta?.num_of_messages || 0,
+				questionsAsked: Math.floor(Math.random() * 20) + 5, // You'll need to calculate this
+				lastUpdated: new Date(chat.updated_at * 1000).toLocaleDateString(),
+				timeTaken: formatTimeTaken(chat.meta?.total_time_taken)
+			};
+		});
+	};
+
+	// Helper function to format time taken
+	const formatTimeTaken = (timeInSeconds) => {
+		if (!timeInSeconds) return '0min';
+		const minutes = Math.floor(timeInSeconds / 60);
+		return `${minutes}min`;
+	};
 
 	let loading = false;
 	let memberStats = [];
@@ -95,57 +164,66 @@
 		}));
 	};
 
-	// Fetch conversation data for the group
+	// Update fetchConversationData to pass user IDs
 	const fetchConversationData = async () => {
-		if (!group) return;
+		if (!group) {
+			toast.warning('No group selected');
+			return;
+		}
+
+		console.log('🚀 Group object:', group);
+		console.log('🚀 Group ID:', group.id);
 
 		loading = true;
 		try {
-			// TODO: Replace with actual API call
-			// const response = await getGroupConversationStats(group.id);
+			// Test 1: Try your current approach
+			console.log('Testing current filter approach...');
+			let chatData = await fetchGroupChatData(group.id);
 
-			// Mock data based on group users - replace with actual API response
-			if (group.user_ids && group.user_ids.length > 0) {
-				memberStats = group.user_ids.map((userId, index) => {
-					const user = users.find((u) => u.id === userId) || {
-						name: `User ${userId}`,
-						email: `user${userId}@example.com`
-					};
-					return {
-						id: userId,
-						chatName: `Chat ${index + 1}`,
-						name: user.name || `User ${userId}`,
-						email: user.email || `user${userId}@example.com`,
-						model: ['GPT-4', 'Claude-3', 'Gemini', 'Llama-2'][index % 4],
-						messageCount: Math.floor(Math.random() * 200) + 10,
-						questionsAsked: Math.floor(Math.random() * 50) + 5,
-						questions: Array.from(
-							{ length: Math.floor(Math.random() * 5) + 3 },
-							() => sampleQuestions[Math.floor(Math.random() * sampleQuestions.length)]
-						),
-						lastUpdated: new Date(
-							Date.now() - Math.random() * 30 * 24 * 60 * 60 * 1000
-						).toLocaleDateString(),
-						timeTaken: `${Math.floor(Math.random() * 120) + 10}min`
-					};
+			if (chatData.length === 0) {
+				console.log('❌ No data with group filter, testing without group filter...');
+				
+				// Test 2: Try without group filter to see if ANY chats exist
+				const testResponse = await fetch('/api/v1/chats/filter/meta', {
+					method: 'POST',
+					headers: {
+						'Content-Type': 'application/json',
+						'Authorization': `Bearer ${localStorage.token}`
+					},
+					body: JSON.stringify({
+						skip: 0,
+						limit: 10
+						// No group_id filter
+					})
 				});
-			} else {
-				// Generate placeholder data when no users are available
+
+				if (testResponse.ok) {
+					const allChats = await testResponse.json();
+					console.log('📊 Total chats in system:', allChats.length);
+					console.log('📊 Sample chat data:', allChats[0] || 'No chats exist');
+				}
+			}
+
+			memberStats = transformChatData(chatData);
+			
+			if (memberStats.length === 0) {
+				toast.warning('No conversation data found, showing placeholder data');
 				memberStats = generatePlaceholderData();
+			} else {
+				toast.success(`Successfully loaded ${memberStats.length} conversations`);
 			}
 		} catch (error) {
-			toast.error('Failed to fetch conversation data');
-			console.error(error);
-			// Generate placeholder data on error
+			console.error('Failed to fetch chat data:', error);
+			toast.error('Failed to fetch conversation data, showing demo data');
 			memberStats = generatePlaceholderData();
 		} finally {
 			loading = false;
 		}
 	};
-
 	// Filtered member stats based on search and model filter
 	$: filteredMemberStats = memberStats.filter((chat) => {
 		// Apply member search filter
+
 		const matchesSearch =
 			!searchQuery ||
 			chat.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -154,8 +232,7 @@
 
 		// Apply chat search filter
 		const matchesChatSearch =
-			!chatSearchQuery ||
-			chat.chatName.toLowerCase().includes(chatSearchQuery.toLowerCase());
+			!chatSearchQuery || chat.chatName.toLowerCase().includes(chatSearchQuery.toLowerCase());
 
 		// Apply model filter
 		const matchesModel = !filteredModel || chat.model === filteredModel;
@@ -229,13 +306,95 @@
 	};
 
 	// Export functionality
-	const handleExport = () => {
-		if (selectedMembers.size === 0) return;
+	const handleExportPDF = () => {
+		if (selectedMembers.size === 0) {
+			toast.error('Please select at least one conversation to export as PDF');
+			return;
+		}
 
 		const selectedData = filteredMemberStats.filter((chat) => selectedMembers.has(chat.id));
-		console.log('Exporting data for:', selectedData);
-		toast.success(`Exporting data for ${selectedMembers.size} members`);
-		// TODO: Implement actual export functionality
+		console.log('Exporting PDF for:', selectedData);
+		toast.success(`Preparing PDF export for ${selectedMembers.size} conversations...`);
+		
+		// TODO: Implement PDF export functionality
+		// This would typically generate a PDF report of the selected conversations
+	};
+
+	const handleExportCSV = () => {
+		if (filteredMemberStats.length === 0) {
+			toast.error('No conversation data to export');
+			return;
+		}
+
+		try {
+			// Prepare the data for export (all currently shown/filtered data)
+			const exportData = {
+				group: {
+					id: group?.id || 'unknown',
+					name: group?.name || 'Unknown Group'
+				},
+				exportInfo: {
+					exportedAt: new Date().toISOString(),
+					totalConversations: filteredMemberStats.length,
+					appliedFilters: {
+						memberSearch: searchQuery || null,
+						chatSearch: chatSearchQuery || null,
+						modelFilter: filteredModel || null
+					}
+				},
+				conversations: filteredMemberStats.map(chat => ({
+					id: chat.id,
+					chatName: chat.chatName,
+					user: {
+						name: chat.name,
+						email: chat.email
+					},
+					model: chat.model,
+					messageCount: chat.messageCount,
+					questionsAsked: chat.questionsAsked,
+					lastUpdated: chat.lastUpdated,
+					timeTaken: chat.timeTaken,
+					// Include questions if available
+					questions: chat.questions || []
+				}))
+			};
+
+			// Create filename based on group ID and current timestamp
+			const timestamp = new Date().toISOString().split('T')[0]; // YYYY-MM-DD format
+			const filename = `${group?.id || 'group'}-conversations-${timestamp}.json`;
+
+			// Create and download the JSON file
+			const dataStr = JSON.stringify(exportData, null, 2);
+			const dataBlob = new Blob([dataStr], { type: 'application/json' });
+			
+			const url = URL.createObjectURL(dataBlob);
+			const link = document.createElement('a');
+			link.href = url;
+			link.download = filename;
+			
+			// Trigger download
+			document.body.appendChild(link);
+			link.click();
+			document.body.removeChild(link);
+			
+			// Cleanup
+			URL.revokeObjectURL(url);
+
+			toast.success(`Successfully exported ${filteredMemberStats.length} conversations as ${filename}`);
+			console.log('CSV/JSON Export completed:', {
+				filename,
+				conversations: filteredMemberStats.length,
+				filters: {
+					memberSearch: searchQuery,
+					chatSearch: chatSearchQuery,
+					modelFilter: filteredModel
+				}
+			});
+
+        } catch (error) {
+            console.error('Export failed:', error);
+            toast.error('Failed to export data. Please try again.');
+        }
 	};
 
 	// Action dropdown options
@@ -310,58 +469,48 @@
 	};
 </script>
 
-<Modal size="12xl" bind:show>
+<Modal size="6xl" bind:show>
 	<div class="h-[85vh] flex flex-col">
 		<!-- Header -->
 		<div class="flex justify-between items-center dark:text-gray-100 px-5 pt-4 mb-4 flex-shrink-0">
-			<div class="flex items-center gap-4">
-				<div class="flex flex-col">
-					<div class="text-lg font-medium font-primary">
-						{group?.name || 'Group'}
-					</div>
-					<div class="text-sm text-gray-500 dark:text-gray-400">Conversation History</div>
-				</div>
-				<div class="relative" bind:this={actionDropdownRef}>
-					<button
-						class="text-xs text-gray-500 dark:text-gray-400 uppercase tracking-wider hover:text-gray-700 dark:hover:text-gray-200 flex items-center gap-2"
-						on:click|stopPropagation={() => {
-							actionDropdownOpen = !actionDropdownOpen;
-							modelDropdownOpen = false; // Close other dropdown
-						}}
-					>
-						<span
-							class="text-xs font-bold text-gray-700 dark:text-gray-400 uppercase tracking-wider"
-						>
-							Export
-						</span>
-						<ChevronDown className="size-3.5" />
-					</button>
-					{#if actionDropdownOpen}
-						<div
-							class="absolute top-full left-0 mt-1 w-32 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-md shadow-lg z-10"
-						>
-							<button
-								class="block w-full text-left px-3 py-2 text-xs hover:bg-gray-100 dark:hover:bg-gray-700"
-								on:click={() => handleAction('export')}
-							>
-								Export as .txt
-							</button>
-							<button
-								class="block w-full text-left px-3 py-2 text-xs hover:bg-gray-100 dark:hover:bg-gray-700"
-								on:click={() => handleAction('delete')}
-							>
-								Export as .json
-							</button>
-							<button
-								class="block w-full text-left px-3 py-2 text-xs hover:bg-gray-100 dark:hover:bg-gray-700"
-								on:click={() => handleAction('archive')}
-							>
-								Export as .pdf
-							</button>
-						</div>
-					{/if}
-				</div>
-			</div>
+<!-- Replace the current export button section with this -->
+<div class="flex items-center gap-4">
+    <div class="flex flex-col">
+        <div class="text-lg font-medium font-primary">
+            {group?.name || 'Group'}
+        </div>
+        <div class="text-sm text-gray-500 dark:text-gray-400">Conversation History</div>
+    </div>
+    
+    <!-- Export Buttons - Two Parallel Buttons -->
+    <div class="flex items-center gap-3">
+        <button
+            class="text-xs text-gray-500 dark:text-gray-400 uppercase tracking-wider hover:text-gray-700 dark:hover:text-gray-200 flex items-center gap-2 px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors"
+            on:click={handleExportPDF}
+            disabled={selectedMembers.size === 0}
+            class:opacity-50={selectedMembers.size === 0}
+            class:cursor-not-allowed={selectedMembers.size === 0}
+        >
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+            </svg>
+            <span class="font-bold">Export as PDF</span>
+        </button>
+
+        <button
+            class="text-xs text-gray-500 dark:text-gray-400 uppercase tracking-wider hover:text-gray-700 dark:hover:text-gray-200 flex items-center gap-2 px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors"
+            on:click={handleExportCSV}
+            disabled={filteredMemberStats.length === 0}
+            class:opacity-50={filteredMemberStats.length === 0}
+            class:cursor-not-allowed={filteredMemberStats.length === 0}
+        >
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+            </svg>
+            <span class="font-bold">Export as CSV</span>
+        </button>
+    </div>
+</div>
 			<button
 				class="self-start"
 				on:click={() => {
@@ -403,12 +552,11 @@
 										</th>
 
 										<!-- Chat column - Fixed width -->
-										<th
+										<!-- <th
 											scope="col"
 											class="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider w-[120px]"
 										>
 											<div class="w-[90px]">
-												<!-- Fixed width container -->
 												<div class="flex items-center gap-2 w-full">
 													{#if isChatSearching}
 														<input
@@ -448,7 +596,7 @@
 													{/if}
 												</div>
 											</div>
-										</th>
+										</th> -->
 
 										<!-- Members column with search - Fixed width with consistent container -->
 										<th scope="col" class="px-4 py-3 text-left w-[160px]">
@@ -622,12 +770,7 @@
 											<td
 												class="px-4 py-4 whitespace-nowrap text-sm font-medium text-gray-900 dark:text-gray-100"
 											>
-												<div class="w-[90px] truncate">{chat.chatName}</div>
-											</td>
-											<td
-												class="px-4 py-4 whitespace-nowrap text-sm font-medium text-gray-900 dark:text-gray-100 truncate"
-											>
-												{chat.name}
+												<div class="w-[90px] truncate">{chat.name}</div>
 											</td>
 											<td
 												class="px-4 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400 truncate"
