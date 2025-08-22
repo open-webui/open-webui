@@ -1,6 +1,7 @@
 from typing import List, Optional
 from pydantic import BaseModel
 from fastapi import APIRouter, Depends, HTTPException, status, Request
+from fastapi.concurrency import run_in_threadpool
 import logging
 from asyncio import sleep
 
@@ -23,7 +24,7 @@ from open_webui.socket.main import REINDEX_STATE
 from open_webui.storage.provider import Storage
 
 from open_webui.constants import ERROR_MESSAGES
-from open_webui.utils.auth import get_verified_user
+from open_webui.utils.auth import get_admin_user, get_verified_user
 from open_webui.utils.access_control import has_access, has_permission
 
 
@@ -187,82 +188,86 @@ async def create_new_knowledge(
 
 
 @router.post("/reindex", response_model=bool)
-async def reindex_knowledge_files(request: Request, user=Depends(get_verified_user)):
-    if user.role != "admin":
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail=ERROR_MESSAGES.UNAUTHORIZED,
-        )
+async def reindex_knowledge_files(request: Request, user=Depends(get_admin_user)):
     if REINDEX_STATE.get("knowledge_progress", 0) > 0:
         return False
     
     REINDEX_STATE["knowledge_progress"] = 1  # marking as started, before the first knowledge is done
-    knowledge_bases = Knowledges.get_knowledge_bases()
+    knowledge_bases_count = Knowledges.get_knowledge_bases_count().count
+    batch_size = 10
 
-    log.info(f"Starting reindexing for {len(knowledge_bases)} knowledge bases")
+    log.info(f"Starting reindexing for {knowledge_bases_count} knowledge bases.")
 
     deleted_knowledge_bases = []
+    for offset in range(0, knowledge_bases_count, batch_size):
+        knowledge_bases_batch = Knowledges.get_knowledge_bases_paginated(
+            limit=batch_size, offset=offset
+        )
+        if len(knowledge_bases_batch) == 0:
+            break
 
-    for i, knowledge_base in enumerate(knowledge_bases, start=1):
-        # -- Robust error handling for missing or invalid data
-        if not knowledge_base.data or not isinstance(knowledge_base.data, dict):
-            log.warning(
-                f"Knowledge base {knowledge_base.id} has no data or invalid data ({knowledge_base.data!r}). Deleting."
-            )
-            try:
-                Knowledges.delete_knowledge_by_id(id=knowledge_base.id)
-                deleted_knowledge_bases.append(knowledge_base.id)
-            except Exception as e:
-                log.error(
-                    f"Failed to delete invalid knowledge base {knowledge_base.id}: {e}"
+        for i, knowledge_base in enumerate(knowledge_bases_batch, start=1):
+            # -- Robust error handling for missing or invalid data
+            if not knowledge_base.data or not isinstance(knowledge_base.data, dict):
+                log.warning(
+                    f"Knowledge base {knowledge_base.id} has no data or invalid data ({knowledge_base.data!r}). Deleting."
                 )
-            continue
-
-        try:
-            file_ids = knowledge_base.data.get("file_ids", [])
-            files = Files.get_files_by_ids(file_ids)
-            try:
-                if VECTOR_DB_CLIENT.has_collection(collection_name=knowledge_base.id):
-                    VECTOR_DB_CLIENT.delete_collection(
-                        collection_name=knowledge_base.id
-                    )
-            except Exception as e:
-                log.error(f"Error deleting collection {knowledge_base.id}: {str(e)}")
-                continue  # Skip, don't raise
-
-            failed_files = []
-            for file in files:
                 try:
-                    process_file(
-                        request,
-                        ProcessFileForm(
-                            file_id=file.id, collection_name=knowledge_base.id
-                        ),
-                        user=user,
-                    )
+                    Knowledges.delete_knowledge_by_id(id=knowledge_base.id)
+                    deleted_knowledge_bases.append(knowledge_base.id)
                 except Exception as e:
                     log.error(
-                        f"Error processing file {file.filename} (ID: {file.id}): {str(e)}"
+                        f"Failed to delete invalid knowledge base {knowledge_base.id}: {e}"
                     )
-                    failed_files.append({"file_id": file.id, "error": str(e)})
-                    continue
+                continue
 
-        except Exception as e:
-            log.error(f"Error processing knowledge base {knowledge_base.id}: {str(e)}")
-            # Don't raise, just continue
-            continue
+            try:
+                file_ids = knowledge_base.data.get("file_ids", [])
+                files = Files.get_files_by_ids(file_ids)
+                try:
+                    if VECTOR_DB_CLIENT.has_collection(collection_name=knowledge_base.id):
+                        VECTOR_DB_CLIENT.delete_collection(
+                            collection_name=knowledge_base.id
+                        )
+                except Exception as e:
+                    log.error(f"Error deleting collection {knowledge_base.id}: {str(e)}")
+                    continue  # Skip, don't raise
 
-        finally:
-            REINDEX_STATE["knowledge_progress"] = max(int(i/len(knowledge_bases)*100), 1)  # never go below 1 again to mark as working
+                failed_files = []
+                for file in files:
+                    try:
+                        await run_in_threadpool(
+                            process_file,
+                            request,
+                            ProcessFileForm(
+                                file_id=file.id, collection_name=knowledge_base.id
+                            ),
+                            user=user,
+                        )
+                    except Exception as e:
+                        log.error(
+                            f"Error processing file {file.filename} (ID: {file.id}): {str(e)}"
+                        )
+                        failed_files.append({"file_id": file.id, "error": str(e)})
+                        continue
+
+            except Exception as e:
+                log.error(f"Error processing knowledge base {knowledge_base.id}: {str(e)}")
+                # Don't raise, just continue
+                continue
+
+            REINDEX_STATE["knowledge_progress"] = max(
+                    int((i + offset) / knowledge_bases_count * 100), 1
+                )  # never go below 1 again to mark as working
             # this line un-blocks the API for the GET progress bar call
             await sleep(0.1)
-        if failed_files:
-            log.warning(
-                f"Failed to process {len(failed_files)} files in knowledge base {knowledge_base.id}"
-            )
-            for failed in failed_files:
-                log.warning(f"File ID: {failed['file_id']}, Error: {failed['error']}")
-    
+            if failed_files:
+                log.warning(
+                    f"Failed to process {len(failed_files)} files in knowledge base {knowledge_base.id}"
+                )
+                for failed in failed_files:
+                    log.warning(f"File ID: {failed['file_id']}, Error: {failed['error']}")
+
     REINDEX_STATE["knowledge_progress"] = 100
     await sleep(2)  # allow UI to fetch final value
     REINDEX_STATE["knowledge_progress"] = 0

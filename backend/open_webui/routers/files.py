@@ -21,6 +21,7 @@ from fastapi import (
     Query,
 )
 
+from fastapi.concurrency import run_in_threadpool
 from fastapi.responses import FileResponse, StreamingResponse
 from open_webui.constants import ERROR_MESSAGES
 from open_webui.env import SRC_LOG_LEVELS
@@ -44,7 +45,7 @@ from open_webui.socket.main import REINDEX_STATE
 from open_webui.storage.provider import Storage
 from open_webui.utils.auth import get_admin_user, get_verified_user
 from pydantic import BaseModel
-from asyncio import sleep, to_thread
+from asyncio import sleep
 
 log = logging.getLogger(__name__)
 log.setLevel(SRC_LOG_LEVELS["MODELS"])
@@ -334,53 +335,64 @@ async def reindex_all_files(request: Request, user=Depends(get_admin_user)):
         return False
 
     REINDEX_STATE["files_progress"] = 1  # marking as started, before the first file is done
-    files = Files.get_files()
-    total_files = len(files)
 
-    log.info(f"Starting reindexing for {len(files)} files")
-    for i, file in enumerate(files, start=1):
-        try:
-            if VECTOR_DB_CLIENT.has_collection(collection_name=f"file-{file.id}"):
-                VECTOR_DB_CLIENT.delete_collection(collection_name=f"file-{file.id}")
-        except Exception as e:
-            log.error(f"Error deleting file 'file-{file.id}' from vector store: {str(e)}")
-        try:
-            if file.meta['content_type'] in [
-                    "audio/mpeg",
-                    "audio/wav",
-                    "audio/ogg",
-                    "audio/x-m4a",
-                    ]:
+    files_count = Files.get_files_count().count
+    batch_size = 10
 
-                await to_thread(
-                    process_file,
-                    request,
-                    ProcessFileForm(
-                        file_id=file.id,
-                        content=file.data['content']),
-                    user=user,
-                )
-            else:
-                await to_thread(
-                    process_file,
-                    request,
-                    ProcessFileForm(
-                        file_id=file.id
-                    ),
-                    user=user
-                )
-            REINDEX_STATE["files_progress"] = max(int(i/total_files*100), 1)  # never go below 1 again to mark as working
-            # this line un-blocks the API for the GET progress bar call
-            await sleep(0.1)
-        except Exception as e:
-            log.error(
-                    f"Error processing file {file.filename} (ID: {file.id}): {str(e)}"
-                )
+    log.info(f"Starting reindexing for {files_count} files")
+
+    for offset in range(0, files_count, batch_size):
+        files_batch = Files.get_files_paginated(
+            limit=batch_size, offset=offset
+        )
+        if len(files_batch) == 0:
+            break
+
+        for i, file in enumerate(files_batch, start=1):
+            try:
+                if VECTOR_DB_CLIENT.has_collection(collection_name=f"file-{file.id}"):
+                    VECTOR_DB_CLIENT.delete_collection(collection_name=f"file-{file.id}")
+            except Exception as e:
+                log.error(f"Error deleting file 'file-{file.id}' from vector store: {str(e)}")
+            try:
+                if file.meta['content_type'] in [
+                        "audio/mpeg",
+                        "audio/wav",
+                        "audio/ogg",
+                        "audio/x-m4a",
+                        ]:
+
+                    await run_in_threadpool(
+                        process_file,
+                        request,
+                        ProcessFileForm(
+                            file_id=file.id,
+                            content=file.data['content']),
+                        user=user,
+                    )
+                else:
+                    await run_in_threadpool(
+                        process_file,
+                        request,
+                        ProcessFileForm(
+                            file_id=file.id
+                        ),
+                        user=user
+                    )
+                REINDEX_STATE["files_progress"] = max(
+                        int((i + offset) / files_count * 100), 1
+                    )  # never go below 1 again to mark as working
+                # this line un-blocks the API for the GET progress bar call
+                await sleep(0.1)
+            except Exception as e:
+                log.error(
+                        f"Error processing file {file.filename} (ID: {file.id}): {str(e)}"
+                    )
+
     REINDEX_STATE["files_progress"] = 100
     await sleep(2)  # allow UI to fetch final value
     REINDEX_STATE["files_progress"] = 0
-    log.info("Reindexing files completed sucessfully.")
-
+    log.info("Reindexing files completed successfully.")
     return True
 
 
