@@ -5,7 +5,7 @@ import shutil
 import json
 import re
 import sqlite3
-from typing import Optional, Set
+from typing import Optional, Set, Union
 from pathlib import Path
 
 from fastapi import APIRouter, Depends, HTTPException, status
@@ -51,6 +51,263 @@ class PruneDataForm(BaseModel):
     delete_inactive_users_days: Optional[int] = None
     exempt_admin_users: bool = True
     exempt_pending_users: bool = True
+
+
+class PrunePreviewResult(BaseModel):
+    inactive_users: int = 0
+    old_chats: int = 0
+    orphaned_chats: int = 0
+    orphaned_files: int = 0
+    orphaned_tools: int = 0
+    orphaned_functions: int = 0
+    orphaned_prompts: int = 0
+    orphaned_knowledge_bases: int = 0
+    orphaned_models: int = 0
+    orphaned_notes: int = 0
+    orphaned_folders: int = 0
+    orphaned_uploads: int = 0
+    orphaned_vector_collections: int = 0
+    audio_cache_files: int = 0
+
+
+# Counting helper functions for dry-run preview
+def count_inactive_users(inactive_days: Optional[int], exempt_admin: bool, exempt_pending: bool) -> int:
+    """Count users that would be deleted for inactivity."""
+    if inactive_days is None:
+        return 0
+        
+    cutoff_time = int(time.time()) - (inactive_days * 86400)
+    count = 0
+    
+    try:
+        all_users = Users.get_users()["users"]
+        for user in all_users:
+            if exempt_admin and user.role == "admin":
+                continue
+            if exempt_pending and user.role == "pending":
+                continue
+            if user.last_active_at < cutoff_time:
+                count += 1
+    except Exception as e:
+        log.debug(f"Error counting inactive users: {e}")
+        
+    return count
+
+
+def count_old_chats(days: Optional[int], exempt_archived: bool, exempt_in_folders: bool) -> int:
+    """Count chats that would be deleted by age."""
+    if days is None:
+        return 0
+        
+    cutoff_time = int(time.time()) - (days * 86400)
+    count = 0
+    
+    try:
+        for chat in Chats.get_chats():
+            if chat.updated_at < cutoff_time:
+                if exempt_archived and chat.archived:
+                    continue
+                if exempt_in_folders and (
+                    getattr(chat, "folder_id", None) is not None
+                    or getattr(chat, "pinned", False)
+                ):
+                    continue
+                count += 1
+    except Exception as e:
+        log.debug(f"Error counting old chats: {e}")
+        
+    return count
+
+
+def count_orphaned_records(form_data: PruneDataForm) -> dict:
+    """Count orphaned database records that would be deleted."""
+    counts = {
+        "chats": 0,
+        "files": 0,
+        "tools": 0,
+        "functions": 0,
+        "prompts": 0,
+        "knowledge_bases": 0,
+        "models": 0,
+        "notes": 0,
+        "folders": 0
+    }
+    
+    try:
+        # Get active user IDs
+        active_user_ids = {user.id for user in Users.get_users()["users"]}
+        
+        # Get active file IDs for file orphan detection
+        active_file_ids = get_active_file_ids()
+        
+        # Count orphaned files
+        for file_record in Files.get_files():
+            should_delete = (
+                file_record.id not in active_file_ids
+                or file_record.user_id not in active_user_ids
+            )
+            if should_delete:
+                counts["files"] += 1
+        
+        # Count other orphaned records
+        if form_data.delete_orphaned_chats:
+            for chat in Chats.get_chats():
+                if chat.user_id not in active_user_ids:
+                    counts["chats"] += 1
+                    
+        if form_data.delete_orphaned_tools:
+            for tool in Tools.get_tools():
+                if tool.user_id not in active_user_ids:
+                    counts["tools"] += 1
+                    
+        if form_data.delete_orphaned_functions:
+            for function in Functions.get_functions():
+                if function.user_id not in active_user_ids:
+                    counts["functions"] += 1
+                    
+        if form_data.delete_orphaned_prompts:
+            for prompt in Prompts.get_prompts():
+                if prompt.user_id not in active_user_ids:
+                    counts["prompts"] += 1
+                    
+        if form_data.delete_orphaned_knowledge_bases:
+            for kb in Knowledges.get_knowledge_bases():
+                if kb.user_id not in active_user_ids:
+                    counts["knowledge_bases"] += 1
+                    
+        if form_data.delete_orphaned_models:
+            for model in Models.get_all_models():
+                if model.user_id not in active_user_ids:
+                    counts["models"] += 1
+                    
+        if form_data.delete_orphaned_notes:
+            for note in Notes.get_notes():
+                if note.user_id not in active_user_ids:
+                    counts["notes"] += 1
+                    
+        if form_data.delete_orphaned_folders:
+            for folder in Folders.get_all_folders():
+                if folder.user_id not in active_user_ids:
+                    counts["folders"] += 1
+                    
+    except Exception as e:
+        log.debug(f"Error counting orphaned records: {e}")
+        
+    return counts
+
+
+def count_orphaned_uploads(active_file_ids: Set[str]) -> int:
+    """Count orphaned files in uploads directory."""
+    upload_dir = Path(CACHE_DIR).parent / "uploads"
+    if not upload_dir.exists():
+        return 0
+        
+    count = 0
+    try:
+        for file_path in upload_dir.iterdir():
+            if not file_path.is_file():
+                continue
+                
+            filename = file_path.name
+            file_id = None
+            
+            # Extract file ID from filename patterns
+            if len(filename) > 36:
+                potential_id = filename[:36]
+                if potential_id.count("-") == 4:
+                    file_id = potential_id
+                    
+            if not file_id and filename.count("-") == 4 and len(filename) == 36:
+                file_id = filename
+                
+            if not file_id:
+                for active_id in active_file_ids:
+                    if active_id in filename:
+                        file_id = active_id
+                        break
+                        
+            if file_id and file_id not in active_file_ids:
+                count += 1
+    except Exception as e:
+        log.debug(f"Error counting orphaned uploads: {e}")
+        
+    return count
+
+
+def count_orphaned_vector_collections(active_file_ids: Set[str], active_kb_ids: Set[str]) -> int:
+    """Count orphaned vector collections."""
+    if "chroma" not in VECTOR_DB.lower():
+        return 0
+        
+    vector_dir = Path(CACHE_DIR).parent / "vector_db"
+    if not vector_dir.exists():
+        return 0
+        
+    chroma_db_path = vector_dir / "chroma.sqlite3"
+    if not chroma_db_path.exists():
+        return 0
+        
+    expected_collections = set()
+    for file_id in active_file_ids:
+        expected_collections.add(f"file-{file_id}")
+    for kb_id in active_kb_ids:
+        expected_collections.add(kb_id)
+        
+    count = 0
+    try:
+        uuid_to_collection = {}
+        with sqlite3.connect(str(chroma_db_path)) as conn:
+            collection_id_to_name = {}
+            cursor = conn.execute("SELECT id, name FROM collections")
+            for collection_id, collection_name in cursor.fetchall():
+                collection_id_to_name[collection_id] = collection_name
+                
+            cursor = conn.execute("SELECT id, collection FROM segments WHERE scope = 'VECTOR'")
+            for segment_id, collection_id in cursor.fetchall():
+                if collection_id in collection_id_to_name:
+                    collection_name = collection_id_to_name[collection_id]
+                    uuid_to_collection[segment_id] = collection_name
+                    
+        for collection_dir in vector_dir.iterdir():
+            if not collection_dir.is_dir() or collection_dir.name.startswith("."):
+                continue
+                
+            dir_uuid = collection_dir.name
+            collection_name = uuid_to_collection.get(dir_uuid)
+            
+            if collection_name is None or collection_name not in expected_collections:
+                count += 1
+    except Exception as e:
+        log.debug(f"Error counting orphaned vector collections: {e}")
+        
+    return count
+
+
+def count_audio_cache_files(max_age_days: Optional[int]) -> int:
+    """Count audio cache files that would be deleted."""
+    if max_age_days is None:
+        return 0
+        
+    cutoff_time = time.time() - (max_age_days * 86400)
+    count = 0
+    
+    audio_dirs = [
+        Path(CACHE_DIR) / "audio" / "speech",
+        Path(CACHE_DIR) / "audio" / "transcriptions",
+    ]
+    
+    for audio_dir in audio_dirs:
+        if not audio_dir.exists():
+            continue
+            
+        try:
+            for file_path in audio_dir.iterdir():
+                if file_path.is_file() and file_path.stat().st_mtime < cutoff_time:
+                    count += 1
+        except Exception as e:
+            log.debug(f"Error counting audio files in {audio_dir}: {e}")
+            
+    return count
 
 
 def get_active_file_ids() -> Set[str]:
@@ -483,49 +740,54 @@ def cleanup_audio_cache(max_age_days: Optional[int] = 30) -> None:
         )
 
 
-@router.post("/", response_model=bool)
-async def prune_data(form_data: PruneDataForm, user=Depends(get_admin_user)):
+@router.post("/", response_model=Union[bool, PrunePreviewResult])
+async def prune_data(form_data: PruneDataForm, dry_run: bool = True, user=Depends(get_admin_user)):
     """
     Prunes old and orphaned data using a safe, multi-stage process.
-
-    Parameters:
-    - days: Optional[int] = None
-      - If None: Skip chat deletion entirely
-      - If 0: Delete all chats (older than 0 days = all chats)
-      - If >= 1: Delete chats older than specified number of days
-    - exempt_archived_chats: bool = False
-      - If True: Exempt archived chats from deletion (only applies when days is not None)
-    - exempt_chats_in_folders: bool = False
-      - If True: Exempt chats that are in folders OR pinned chats from deletion (only applies when days is not None)
-        Note: Pinned chats behave the same as chats in folders
-    - delete_orphaned_chats: bool = True
-      - If True: Delete chats from deleted users
-    - delete_orphaned_tools: bool = True
-      - If True: Delete tools from deleted users
-    - delete_orphaned_functions: bool = True
-      - If True: Delete functions from deleted users
-    - delete_orphaned_prompts: bool = True
-      - If True: Delete prompts from deleted users
-    - delete_orphaned_knowledge_bases: bool = True
-      - If True: Delete knowledge bases from deleted users
-    - delete_orphaned_models: bool = True
-      - If True: Delete models from deleted users
-    - delete_orphaned_notes: bool = True
-      - If True: Delete notes from deleted users
-    - delete_orphaned_folders: bool = True
-      - If True: Delete folders from deleted users
-    - audio_cache_max_age_days: Optional[int] = 30
-      - If None: Skip audio cache cleanup
-      - If >= 0: Delete audio cache files (TTS, STT) older than specified days
-    - delete_inactive_users_days: Optional[int] = None
-      - If None: Skip inactive user deletion
-      - If >= 1: Delete users inactive for more than specified days
-    - exempt_admin_users: bool = True
-      - If True: Exempt admin users from deletion (recommended for safety)
-    - exempt_pending_users: bool = True
-      - If True: Exempt pending users from deletion (recommended for safety)
+    
+    If dry_run=True (default), returns preview counts without deleting anything.
+    If dry_run=False, performs actual deletion and returns True on success.
     """
     try:
+        if dry_run:
+            log.info("Starting data pruning preview (dry run)")
+            
+            # Get counts for all enabled operations
+            active_file_ids = get_active_file_ids()
+            active_user_ids = {user.id for user in Users.get_users()["users"]}
+            active_kb_ids = {kb.id for kb in Knowledges.get_knowledge_bases() if kb.user_id in active_user_ids}
+            
+            orphaned_counts = count_orphaned_records(form_data)
+            
+            result = PrunePreviewResult(
+                inactive_users=count_inactive_users(
+                    form_data.delete_inactive_users_days,
+                    form_data.exempt_admin_users,
+                    form_data.exempt_pending_users
+                ),
+                old_chats=count_old_chats(
+                    form_data.days,
+                    form_data.exempt_archived_chats,
+                    form_data.exempt_chats_in_folders
+                ),
+                orphaned_chats=orphaned_counts["chats"],
+                orphaned_files=orphaned_counts["files"],
+                orphaned_tools=orphaned_counts["tools"],
+                orphaned_functions=orphaned_counts["functions"],
+                orphaned_prompts=orphaned_counts["prompts"],
+                orphaned_knowledge_bases=orphaned_counts["knowledge_bases"],
+                orphaned_models=orphaned_counts["models"],
+                orphaned_notes=orphaned_counts["notes"],
+                orphaned_folders=orphaned_counts["folders"],
+                orphaned_uploads=count_orphaned_uploads(active_file_ids),
+                orphaned_vector_collections=count_orphaned_vector_collections(active_file_ids, active_kb_ids),
+                audio_cache_files=count_audio_cache_files(form_data.audio_cache_max_age_days)
+            )
+            
+            log.info("Data pruning preview completed")
+            return result
+
+        # Actual deletion logic (dry_run=False)
         log.info("Starting data pruning process")
 
         # Stage 0: Delete inactive users (if enabled)
