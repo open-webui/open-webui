@@ -121,14 +121,14 @@
 					fill="currentColor"
 					aria-hidden="true"
 				>
-					<path d="M18.244 2H21.5l-7.19 8.21L22 22h-6.845l-5.36-7.49L3.64 22H.5l7.64-8.72L2 2h6.963l4.922 6.934L18.244 2Zm-2.395 18.25h1.807L8.06 3.64H6.117l9.732 16.61Z" />
+					<path
+						d="M18.244 2H21.5l-7.19 8.21L22 22h-6.845l-5.36-7.49L3.64 22H.5l7.64-8.72L2 2h6.963l4.922 6.934L18.244 2Zm-2.395 18.25h1.807L8.06 3.64H6.117l9.732 16.61Z"
+					/>
 				</svg>
 
 				<span class="font-semibold text-sm">@near_ai</span>
 			</a>
-
 		</div>
-
 
 		<!-- {#if $config?.license_metadata}
 			<div class="mb-2 text-xs">
