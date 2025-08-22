@@ -164,19 +164,13 @@ class FilesTable:
             )
 
         for file in files:
-            file_list.append(
-                FileModel.model_validate(file)
-            )
+            file_list.append(FileModel.model_validate(file))
         return file_list
 
     def get_files_count(self) -> FileCountResponse:
-        """ Get the total count of files """
+        """Get the total count of files"""
         with get_db() as db:
-            return FileCountResponse.model_validate(
-                {
-                    "count": db.query(File).count()
-                }
-            )
+            return FileCountResponse.model_validate({"count": db.query(File).count()})
 
     def get_files_by_ids(self, ids: list[str]) -> list[FileModel]:
         with get_db() as db:

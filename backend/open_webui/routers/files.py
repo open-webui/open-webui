@@ -270,15 +270,14 @@ async def list_files(user=Depends(get_verified_user), content: bool = Query(True
 # countFiles
 ############################
 
+
 @router.get("/count", response_model=Optional[FileCountResponse])
 async def count_files(user=Depends(get_admin_user)):
     count = 0
     try:
         count = Files.get_files_count()
     except Exception as e:
-        log.error(
-            f"Failed to get files count."
-        )
+        log.error(f"Failed to get files count.")
     return count
 
 
@@ -329,12 +328,14 @@ async def search_files(
 ############################
 
 
-@router.post('/reindex', response_model=bool)
+@router.post("/reindex", response_model=bool)
 async def reindex_all_files(request: Request, user=Depends(get_admin_user)):
     if REINDEX_STATE.get("files_progress", 0) > 0:
         return False
 
-    REINDEX_STATE["files_progress"] = 1  # marking as started, before the first file is done
+    REINDEX_STATE["files_progress"] = (
+        1  # marking as started, before the first file is done
+    )
 
     files_count = Files.get_files_count().count
     batch_size = 10
@@ -342,52 +343,50 @@ async def reindex_all_files(request: Request, user=Depends(get_admin_user)):
     log.info(f"Starting reindexing for {files_count} files")
 
     for offset in range(0, files_count, batch_size):
-        files_batch = Files.get_files_paginated(
-            limit=batch_size, offset=offset
-        )
+        files_batch = Files.get_files_paginated(limit=batch_size, offset=offset)
         if len(files_batch) == 0:
             break
 
         for i, file in enumerate(files_batch, start=1):
             try:
                 if VECTOR_DB_CLIENT.has_collection(collection_name=f"file-{file.id}"):
-                    VECTOR_DB_CLIENT.delete_collection(collection_name=f"file-{file.id}")
+                    VECTOR_DB_CLIENT.delete_collection(
+                        collection_name=f"file-{file.id}"
+                    )
             except Exception as e:
-                log.error(f"Error deleting file 'file-{file.id}' from vector store: {str(e)}")
+                log.error(
+                    f"Error deleting file 'file-{file.id}' from vector store: {str(e)}"
+                )
             try:
                 if file.meta['content_type'] in [
-                        "audio/mpeg",
-                        "audio/wav",
-                        "audio/ogg",
-                        "audio/x-m4a",
-                        ]:
+                    "audio/mpeg",
+                    "audio/wav",
+                    "audio/ogg",
+                    "audio/x-m4a",
+                ]:
 
                     await run_in_threadpool(
                         process_file,
                         request,
-                        ProcessFileForm(
-                            file_id=file.id,
-                            content=file.data['content']),
+                        ProcessFileForm(file_id=file.id, content=file.data['content']),
                         user=user,
                     )
                 else:
                     await run_in_threadpool(
                         process_file,
                         request,
-                        ProcessFileForm(
-                            file_id=file.id
-                        ),
-                        user=user
+                        ProcessFileForm(file_id=file.id),
+                        user=user,
                     )
                 REINDEX_STATE["files_progress"] = max(
-                        int((i + offset) / files_count * 100), 1
-                    )  # never go below 1 again to mark as working
+                    int((i + offset) / files_count * 100), 1
+                )  # never go below 1 again to mark as working
                 # this line un-blocks the API for the GET progress bar call
                 await sleep(0.1)
             except Exception as e:
                 log.error(
-                        f"Error processing file {file.filename} (ID: {file.id}): {str(e)}"
-                    )
+                    f"Error processing file {file.filename} (ID: {file.id}): {str(e)}"
+                )
 
     REINDEX_STATE["files_progress"] = 100
     await sleep(2)  # allow UI to fetch final value

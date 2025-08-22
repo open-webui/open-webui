@@ -135,7 +135,8 @@ else:
     REINDEX_STATE = {
         "memories_progress": 0,
         "files_progress": 0,
-        "knowledge_progress": 0}
+        "knowledge_progress": 0,
+    }
     aquire_func = release_func = renew_func = lambda: True
 
 

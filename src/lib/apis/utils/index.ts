@@ -216,7 +216,9 @@ export const downloadLiteLLMConfig = async (token: string) => {
 	}
 };
 
-export const listenToReindexProgress = (onProgress: (data: { source: string | null; progress: number }) => void) => {
+export const listenToReindexProgress = (
+	onProgress: (data: { source: string | null; progress: number }) => void
+) => {
 	
 	const eventSource = new EventSource(`${WEBUI_API_BASE_URL}/utils/reindex/stream`);
 

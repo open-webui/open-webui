@@ -345,20 +345,20 @@ export const reindexFiles = async (token: string) => {
 };
 
 export const countFiles = async (token: string) => {
-  const res = await fetch(`${WEBUI_API_BASE_URL}/files/count`, {
-    method: 'GET',
-    headers: {
-      Accept: 'application/json',
-      'Content-Type': 'application/json',
-      authorization: `Bearer ${token}`,
-    },
-  });
+	const res = await fetch(`${WEBUI_API_BASE_URL}/files/count`, {
+		method: 'GET',
+		headers: {
+		Accept: 'application/json',
+		'Content-Type': 'application/json',
+		authorization: `Bearer ${token}`,
+		},
+	});
 
-  if (!res.ok) {
-    const err = await res.json();
-    throw err.detail || err;
-  }
+	if (!res.ok) {
+		const err = await res.json();
+		throw err.detail || err;
+	}
 
-  const data = await res.json();
-  return data.count;
+	const data = await res.json();
+	return data.count;
 };

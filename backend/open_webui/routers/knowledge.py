@@ -142,15 +142,14 @@ async def get_knowledge_list(user=Depends(get_verified_user)):
 # countKnowledgeBases
 ############################
 
+
 @router.get("/count", response_model=Optional[KnowledgeCountResponse])
 async def count_knowledges(user=Depends(get_admin_user)):
     count = 0
     try:
         count = Knowledges.get_knowledge_bases_count()
     except Exception as e:
-        log.error(
-            f"Failed to get knowledge bases count."
-        )
+        log.error(f"Failed to get knowledge bases count.")
     return count
 
 
@@ -191,8 +190,10 @@ async def create_new_knowledge(
 async def reindex_knowledge_files(request: Request, user=Depends(get_admin_user)):
     if REINDEX_STATE.get("knowledge_progress", 0) > 0:
         return False
-    
-    REINDEX_STATE["knowledge_progress"] = 1  # marking as started, before the first knowledge is done
+
+    REINDEX_STATE["knowledge_progress"] = (
+        1  # marking as started, before the first knowledge is done
+    )
     knowledge_bases_count = Knowledges.get_knowledge_bases_count().count
     batch_size = 10
 
@@ -225,12 +226,16 @@ async def reindex_knowledge_files(request: Request, user=Depends(get_admin_user)
                 file_ids = knowledge_base.data.get("file_ids", [])
                 files = Files.get_files_by_ids(file_ids)
                 try:
-                    if VECTOR_DB_CLIENT.has_collection(collection_name=knowledge_base.id):
+                    if VECTOR_DB_CLIENT.has_collection(
+                        collection_name=knowledge_base.id
+                    ):
                         VECTOR_DB_CLIENT.delete_collection(
                             collection_name=knowledge_base.id
                         )
                 except Exception as e:
-                    log.error(f"Error deleting collection {knowledge_base.id}: {str(e)}")
+                    log.error(
+                        f"Error deleting collection {knowledge_base.id}: {str(e)}"
+                    )
                     continue  # Skip, don't raise
 
                 failed_files = []
@@ -252,13 +257,15 @@ async def reindex_knowledge_files(request: Request, user=Depends(get_admin_user)
                         continue
 
             except Exception as e:
-                log.error(f"Error processing knowledge base {knowledge_base.id}: {str(e)}")
+                log.error(
+                    f"Error processing knowledge base {knowledge_base.id}: {str(e)}"
+                )
                 # Don't raise, just continue
                 continue
 
             REINDEX_STATE["knowledge_progress"] = max(
-                    int((i + offset) / knowledge_bases_count * 100), 1
-                )  # never go below 1 again to mark as working
+                int((i + offset) / knowledge_bases_count * 100), 1
+            )  # never go below 1 again to mark as working
             # this line un-blocks the API for the GET progress bar call
             await sleep(0.1)
             if failed_files:
@@ -266,7 +273,9 @@ async def reindex_knowledge_files(request: Request, user=Depends(get_admin_user)
                     f"Failed to process {len(failed_files)} files in knowledge base {knowledge_base.id}"
                 )
                 for failed in failed_files:
-                    log.warning(f"File ID: {failed['file_id']}, Error: {failed['error']}")
+                    log.warning(
+                        f"File ID: {failed['file_id']}, Error: {failed['error']}"
+                    )
 
     REINDEX_STATE["knowledge_progress"] = 100
     await sleep(2)  # allow UI to fetch final value

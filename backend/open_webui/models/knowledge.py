@@ -147,7 +147,9 @@ class KnowledgeTable:
                 )
             return knowledge_bases
 
-    def get_knowledge_bases_paginated(self, limit: int, offset: int) -> list[KnowledgeUserModel]:
+    def get_knowledge_bases_paginated(
+        self, limit: int, offset: int
+    ) -> list[KnowledgeUserModel]:
         """Get knowledge bases with pagination"""
         with get_db() as db:
             knowledge_bases = []
@@ -172,12 +174,10 @@ class KnowledgeTable:
         return knowledge_bases
 
     def get_knowledge_bases_count(self) -> KnowledgeCountResponse:
-        """ Get the total count of knowledge bases """
+        """Get the total count of knowledge bases"""
         with get_db() as db:
             return KnowledgeCountResponse.model_validate(
-                {
-                    "count": db.query(Knowledge).count()
-                }
+                {"count": db.query(Knowledge).count()}
             )
 
     def get_knowledge_bases_by_user_id(

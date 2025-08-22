@@ -38,15 +38,14 @@ async def get_memories(user=Depends(get_verified_user)):
 # countMemories
 ############################
 
+
 @router.get("/count", response_model=Optional[MemoryCountResponse])
 async def count_knowledges(user=Depends(get_admin_user)):
     count = 0
     try:
         count = Memories.get_memory_count()
     except Exception as e:
-        log.error(
-            f"Failed to get memory count."
-        )
+        log.error(f"Failed to get memory count.")
     return count
 
 
@@ -119,12 +118,15 @@ async def query_memory(
 # ReindexMemory
 ############################
 
+
 @router.post("/reindex", response_model=bool)
 async def reindex_all_memory(request: Request, user=Depends(get_admin_user)):
     if REINDEX_STATE.get("memories_progress", 0) > 0:
         return False
-    
-    REINDEX_STATE["memories_progress"] = 1  # marking as started, before the first memory is done
+
+    REINDEX_STATE["memories_progress"] = (
+        1  # marking as started, before the first memory is done
+    )
     memories_count = Memories.get_memory_count().count
     batch_size = 10
 
@@ -142,12 +144,14 @@ async def reindex_all_memory(request: Request, user=Depends(get_admin_user)):
                     collection_name=f"user-memory-{memory.user_id}", ids=[memory.id]
                 )
             except Exception as e:
-                log.error(f"Error deleting memory 'file-{memory.id}' from vector store: {str(e)}")
+                log.error(
+                    f"Error deleting memory 'file-{memory.id}' from vector store: {str(e)}"
+                )
             try:
                 vector = await run_in_threadpool(
                     request.app.state.EMBEDDING_FUNCTION,
                     memory.content,
-                    user=Users.get_user_by_id(memory.user_id)
+                    user=Users.get_user_by_id(memory.user_id),
                 )
                 VECTOR_DB_CLIENT.upsert(
                     collection_name=f"user-memory-{memory.user_id}",
@@ -165,7 +169,7 @@ async def reindex_all_memory(request: Request, user=Depends(get_admin_user)):
                 )
                 REINDEX_STATE["memories_progress"] = max(
                     int((i + offset) / memories_count * 100), 1
-                    )  # never go below 1 again to mark as working
+                )  # never go below 1 again to mark as working
                 await sleep(0.1)
             except Exception as e:
                 log.error(

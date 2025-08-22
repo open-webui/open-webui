@@ -114,12 +114,10 @@ class MemoriesTable:
         return memory_list
 
     def get_memory_count(self) -> MemoryCountResponse:
-        """ Get the total count of memories """
+        """Get the total count of memories"""
         with get_db() as db:
             return MemoryCountResponse.model_validate(
-                {
-                    "count": db.query(Memory).count()
-                }
+                {"count": db.query(Memory).count()}
             )
 
     def get_memories_by_user_id(self, user_id: str) -> list[MemoryModel]:

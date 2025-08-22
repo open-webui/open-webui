@@ -18,15 +18,8 @@
 	} from '$lib/apis/retrieval';
 
 	import { reindexMemories } from '$lib/apis/memories';
-	import { 
-		reindexKnowledge,
-		countKnowledges
-	} from '$lib/apis/knowledge';
-	import { 
-		deleteAllFiles,
-		reindexFiles,
-		countFiles
-	} from '$lib/apis/files';
+	import { reindexKnowledge, countKnowledges } from '$lib/apis/knowledge';
+	import { deleteAllFiles, reindexFiles, countFiles } from '$lib/apis/files';
 	import { listenToReindexProgress, checkIfReindexing } from '$lib/apis/utils';
 
 	import ResetUploadDirConfirmDialog from '$lib/components/common/ConfirmDialog.svelte';
@@ -255,19 +248,19 @@
 	};
 
 	const openReindexDialog = async () => {
-        const token = localStorage.token;
-        if (!token) {
-            toast.error($i18n.t('No token found'));
-            return;
-        }
+		const token = localStorage.token;
+		if (!token) {
+			toast.error($i18n.t('No token found'));
+			return;
+		}
 
 		filesCountMessage = $i18n.t('Counting files to reindex..')
 		showFilesReindexConfirm = true;
-        // Fetch the file count
-        try {
+		// Fetch the file count
+		try {
 			const fileCount = await countFiles(token);
 			const knowledgeCount = await countKnowledges(token)
-            
+
 			filesCountMessage = $i18n.t(
 				'You are about to reindex all memories, all {{files}} files and {{knowledges}} Knowledges. This could take a while. Do you want to proceed?',
 				{ 
@@ -275,34 +268,39 @@
 					knowledges: knowledgeCount
 				}
 			);
-        } catch (error) {
-            filesCountMessage = $i18n.t('Error fetching file/knowledge count');
-            toast.error(`${error}`);
-        }
-    };
+			} catch (error) {
+				filesCountMessage = $i18n.t('Error fetching file/knowledge count');
+				toast.error(`${error}`);
+			}
+		};
 
-	const handleReindexProgress = ({ source, progress }: { source: string | null; progress: number }) => {
+	const handleReindexProgress = ({
+			source,
+			progress
+	}: { 
+			source: string | null;
+			progress: number;
+	}) => {
 		reindexProgress = progress;
 		reindexSource = source;
-		switch (reindexSource){
+		switch (reindexSource) {
 			case 'memories':
 				memoriesMessage = `${progress}%`;
 				break;
 			case 'files':
 				memoriesMessage = $i18n.t('Done');
 				filesMessage = `${progress}%`;
-				break
+				break;
 			case 'knowledge':
 				memoriesMessage = $i18n.t('Done');
 				filesMessage = $i18n.t('Done');
 				knowledgeMessage = `${progress}%`;
-				break
+				break;
 			default:
 				knowledgeMessage = $i18n.t('Done');
-				break
+				break;
 		}
 		if (source === null) {
-			
 			isReindexing = false;
 		}
 	};
@@ -1446,7 +1444,6 @@
 							{$i18n.t('Knowledge')}: {knowledgeMessage}.
 						</p>
 					{/if}
-
 				</div>
 			</div>
 		</div>
