@@ -145,6 +145,17 @@ def upload_file(
     process: bool = Query(True),
     user=Depends(get_verified_user),
 ):
+    return upload_file_handler(request, file, metadata, process, user, background_tasks)
+
+
+def upload_file_handler(
+    request: Request,
+    file: UploadFile = File(...),
+    metadata: Optional[dict | str] = Form(None),
+    process: bool = Query(True),
+    user=Depends(get_verified_user),
+    background_tasks: Optional[BackgroundTasks] = None,
+):
     log.info(f"file.content_type: {file.content_type}")
 
     if isinstance(metadata, str):
@@ -214,16 +225,27 @@ def upload_file(
         )
 
         if process:
-            background_tasks.add_task(
-                process_uploaded_file,
-                request,
-                file,
-                file_path,
-                file_item,
-                file_metadata,
-                user,
-            )
-            return {"status": True, **file_item.model_dump()}
+            if background_tasks:
+                background_tasks.add_task(
+                    process_uploaded_file,
+                    request,
+                    file,
+                    file_path,
+                    file_item,
+                    file_metadata,
+                    user,
+                )
+                return {"status": True, **file_item.model_dump()}
+            else:
+                process_uploaded_file(
+                    request,
+                    file,
+                    file_path,
+                    file_item,
+                    file_metadata,
+                    user,
+                )
+                return {"status": True, **file_item.model_dump()}
         else:
             if file_item:
                 return file_item
