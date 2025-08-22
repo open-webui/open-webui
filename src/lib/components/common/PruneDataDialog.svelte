@@ -39,8 +39,8 @@
 
   const dispatch = createEventDispatcher();
 
-  const confirm = () => {
-    dispatch('confirm', { 
+  const preview = () => {
+    dispatch('preview', { 
       days: deleteChatsByAge ? days : null, 
       exempt_archived_chats,
       exempt_chats_in_folders,
@@ -60,28 +60,64 @@
     show = false;
   };
 
-  // Generate API call preview
-  $: apiCallPreview = `POST /api/v1/admin/prune
-Content-Type: application/json
-Authorization: Bearer <your-api-key>
+  // Generate API call preview with helpful comments
+  $: apiCallPreview = `# Open WebUI Data Pruning API Call
+# Use this template for automated maintenance scripts (cron jobs, etc.)
 
-{
-  "days": ${deleteChatsByAge ? days : null},
-  "exempt_archived_chats": ${exempt_archived_chats},
-  "exempt_chats_in_folders": ${exempt_chats_in_folders},
-  "delete_orphaned_chats": ${delete_orphaned_chats},
-  "delete_orphaned_tools": ${delete_orphaned_tools},
-  "delete_orphaned_functions": ${delete_orphaned_functions},
-  "delete_orphaned_prompts": ${delete_orphaned_prompts},
-  "delete_orphaned_knowledge_bases": ${delete_orphaned_knowledge_bases},
-  "delete_orphaned_models": ${delete_orphaned_models},
-  "delete_orphaned_notes": ${delete_orphaned_notes},
-  "delete_orphaned_folders": ${delete_orphaned_folders},
-  "audio_cache_max_age_days": ${cleanupAudioCache ? audio_cache_max_age_days : null},
-  "delete_inactive_users_days": ${deleteInactiveUsers ? delete_inactive_users_days : null},
-  "exempt_admin_users": ${exempt_admin_users},
-  "exempt_pending_users": ${exempt_pending_users}
-}`;
+# AUTHENTICATION: Use API Key (not JWT token) for automation
+# Get your API key from: Settings → Account → API Key → Generate new key
+# Format: sk-xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+
+curl -X POST "${window.location.origin}/api/v1/prune/" \\
+  -H "Content-Type: application/json" \\
+  -H "Authorization: Bearer <your-api-key>" \\
+  -d '{
+    // SAFETY: Always test with dry_run=true first to preview results
+    "dry_run": false,
+    
+    // AGE-BASED CHAT DELETION (null = disabled)
+    "days": ${deleteChatsByAge ? days : null},
+    "exempt_archived_chats": ${exempt_archived_chats},  // Keep archived chats even if old
+    "exempt_chats_in_folders": ${exempt_chats_in_folders},  // Keep organized/pinned chats
+    
+    // INACTIVE USER DELETION (null = disabled, VERY DESTRUCTIVE)
+    "delete_inactive_users_days": ${deleteInactiveUsers ? delete_inactive_users_days : null},
+    "exempt_admin_users": ${exempt_admin_users},  // Strongly recommended: true
+    "exempt_pending_users": ${exempt_pending_users},  // Recommended for user approval workflows
+    
+    // ORPHANED DATA CLEANUP (from deleted users)
+    "delete_orphaned_chats": ${delete_orphaned_chats},
+    "delete_orphaned_tools": ${delete_orphaned_tools},
+    "delete_orphaned_functions": ${delete_orphaned_functions},  // Actions, Pipes, Filters
+    "delete_orphaned_prompts": ${delete_orphaned_prompts},
+    "delete_orphaned_knowledge_bases": ${delete_orphaned_knowledge_bases},
+    "delete_orphaned_models": ${delete_orphaned_models},
+    "delete_orphaned_notes": ${delete_orphaned_notes},
+    "delete_orphaned_folders": ${delete_orphaned_folders},
+    
+    // AUDIO CACHE CLEANUP (null = disabled)
+    "audio_cache_max_age_days": ${cleanupAudioCache ? audio_cache_max_age_days : null}  // TTS/STT files
+  }'
+
+# API KEY vs JWT TOKEN:
+# - API Key: Persistent, use for automation (sk-xxxxxxxx...)
+# - JWT Token: Session-bound, temporary, use for web UI only
+# - ALWAYS use API Key for scripts/cron jobs
+
+# AUTOMATION TIPS:
+# 1. Run with dry_run=true first to preview what will be deleted
+# 2. Schedule during low-usage hours to minimize performance impact  
+# 3. Monitor logs: tail -f /path/to/open-webui/logs
+# 4. Consider database backup before large cleanup operations
+# 5. Test on staging environment with similar data size first
+
+# EXAMPLE CRON JOB (runs weekly on Sunday at 2 AM):
+# 0 2 * * 0 /path/to/your/prune-script.sh >> /var/log/openwebui-prune.log 2>&1
+
+# RESPONSE HANDLING:
+# - dry_run=true: Returns counts object with preview numbers
+# - dry_run=false: Returns true on success, throws error on failure
+# - Always check HTTP status code and response for errors`;
 
   // Warning for short inactive user deletion periods
   $: shortUserDeletionWarning = deleteInactiveUsers && delete_inactive_users_days < 30;
@@ -778,10 +814,10 @@ Authorization: Bearer <your-api-key>
           {$i18n.t('Cancel')}
         </button>
         <button
-          class="px-4 py-2 text-sm font-medium text-white bg-yellow-600 border border-transparent rounded-lg hover:bg-yellow-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-yellow-500 transition-colors"
-          on:click={confirm}
+          class="px-4 py-2 text-sm font-medium text-white bg-blue-600 border border-transparent rounded-lg hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors"
+          on:click={preview}
         >
-          {$i18n.t('Prune Data')}
+          {$i18n.t('Preview')}
         </button>
       </div>
     </div>
