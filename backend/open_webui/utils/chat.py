@@ -55,7 +55,7 @@ from open_webui.utils.filter import (
     process_filter_functions,
 )
 
-from open_webui.env import SRC_LOG_LEVELS, GLOBAL_LOG_LEVEL, BYPASS_MODEL_ACCESS_CONTROL
+from open_webui.env import SRC_LOG_LEVELS, ENABLE_REALTIME_CHAT_SAVE, GLOBAL_LOG_LEVEL, BYPASS_MODEL_ACCESS_CONTROL
 
 
 logging.basicConfig(stream=sys.stdout, level=GLOBAL_LOG_LEVEL)
@@ -318,7 +318,7 @@ async def chat_completed(request: Request, form_data: dict, user: Any):
     }
 
     extra_params = {
-        "__event_emitter__": get_event_emitter(metadata),
+        "__event_emitter__": get_event_emitter(metadata, update_db=ENABLE_REALTIME_CHAT_SAVE),
         "__event_call__": get_event_call(metadata),
         "__user__": user.model_dump() if isinstance(user, UserModel) else {},
         "__metadata__": metadata,
@@ -379,7 +379,8 @@ async def chat_action(request: Request, action_id: str, form_data: dict, user: A
             "message_id": data["id"],
             "session_id": data["session_id"],
             "user_id": user.id,
-        }
+        },
+        update_db=ENABLE_REALTIME_CHAT_SAVE
     )
     __event_call__ = get_event_call(
         {

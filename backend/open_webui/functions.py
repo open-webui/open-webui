@@ -36,7 +36,7 @@ from open_webui.utils.plugin import (
 from open_webui.utils.tools import get_tools
 from open_webui.utils.access_control import has_access
 
-from open_webui.env import SRC_LOG_LEVELS, GLOBAL_LOG_LEVEL
+from open_webui.env import SRC_LOG_LEVELS, GLOBAL_LOG_LEVEL, ENABLE_REALTIME_CHAT_SAVE
 
 from open_webui.utils.misc import (
     add_or_update_system_message,
@@ -214,7 +214,7 @@ async def generate_function_chat_completion(
 
     if metadata:
         if all(k in metadata for k in ("session_id", "chat_id", "message_id")):
-            __event_emitter__ = get_event_emitter(metadata)
+            __event_emitter__ = get_event_emitter(metadata, update_db=ENABLE_REALTIME_CHAT_SAVE)
             __event_call__ = get_event_call(metadata)
         __task__ = metadata.get("task", None)
         __task_body__ = metadata.get("task_body", None)
