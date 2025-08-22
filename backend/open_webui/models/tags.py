@@ -8,7 +8,7 @@ from open_webui.internal.db import Base, get_db
 
 from open_webui.env import SRC_LOG_LEVELS
 from pydantic import BaseModel, ConfigDict
-from sqlalchemy import BigInteger, Column, String, JSON, PrimaryKeyConstraint
+from sqlalchemy import BigInteger, Column, String, JSON, PrimaryKeyConstraint, Index
 
 log = logging.getLogger(__name__)
 log.setLevel(SRC_LOG_LEVELS["MODELS"])
@@ -23,6 +23,11 @@ class Tag(Base):
     name = Column(String)
     user_id = Column(String)
     meta = Column(JSON, nullable=True)
+
+    __table_args__ = (
+        PrimaryKeyConstraint("id", "user_id", name="pk_id_user_id"),
+        Index("user_id_idx", "user_id"),
+    )
 
     # Unique constraint ensuring (id, user_id) is unique, not just the `id` column
     __table_args__ = (PrimaryKeyConstraint("id", "user_id", name="pk_id_user_id"),)

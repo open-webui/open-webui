@@ -627,3 +627,13 @@ input[type='number'] {
 	padding-right: 2px;
 	white-space: nowrap;
 }
+
+body {
+	background: #fff;
+	color: #000;
+}
+
+.dark body {
+	background: #171717;
+	color: #eee;
+}

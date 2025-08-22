@@ -19,10 +19,10 @@ from open_webui.utils.plugin import load_tool_module_by_id, replace_imports
 from open_webui.utils.tools import get_tool_specs
 from open_webui.utils.auth import get_admin_user, get_verified_user
 from open_webui.utils.access_control import has_access, has_permission
-from open_webui.utils.tools import get_tool_servers_data
+from open_webui.utils.tools import get_tool_servers
 
 from open_webui.env import SRC_LOG_LEVELS
-from open_webui.config import CACHE_DIR, ENABLE_ADMIN_WORKSPACE_CONTENT_ACCESS
+from open_webui.config import CACHE_DIR, BYPASS_ADMIN_ACCESS_CONTROL
 from open_webui.constants import ERROR_MESSAGES
 
 
@@ -32,6 +32,7 @@ log.setLevel(SRC_LOG_LEVELS["MAIN"])
 
 router = APIRouter()
 
+
 ############################
 # GetTools
 ############################
@@ -39,23 +40,14 @@ router = APIRouter()
 
 @router.get("/", response_model=list[ToolUserResponse])
 async def get_tools(request: Request, user=Depends(get_verified_user)):
-
-    if not request.app.state.TOOL_SERVERS:
-        # If the tool servers are not set, we need to set them
-        # This is done only once when the server starts
-        # This is done to avoid loading the tool servers every time
-
-        request.app.state.TOOL_SERVERS = await get_tool_servers_data(
-            request.app.state.config.TOOL_SERVER_CONNECTIONS
-        )
-
     tools = Tools.get_tools()
-    for server in request.app.state.TOOL_SERVERS:
+
+    for server in await get_tool_servers(request):
         tools.append(
             ToolUserResponse(
                 **{
-                    "id": f"server:{server['idx']}",
-                    "user_id": f"server:{server['idx']}",
+                    "id": f"server:{server.get('id')}",
+                    "user_id": f"server:{server.get('id')}",
                     "name": server.get("openapi", {})
                     .get("info", {})
                     .get("title", "Tool Server"),
@@ -65,7 +57,7 @@ async def get_tools(request: Request, user=Depends(get_verified_user)):
                         .get("description", ""),
                     },
                     "access_control": request.app.state.config.TOOL_SERVER_CONNECTIONS[
-                        server["idx"]
+                        server.get("idx", 0)
                     ]
                     .get("config", {})
                     .get("access_control", None),
@@ -75,7 +67,7 @@ async def get_tools(request: Request, user=Depends(get_verified_user)):
             )
         )
 
-    if user.role == "admin" and ENABLE_ADMIN_WORKSPACE_CONTENT_ACCESS:
+    if user.role == "admin" and BYPASS_ADMIN_ACCESS_CONTROL:
         # Admin can see all tools
         return tools
     else:
@@ -95,7 +87,7 @@ async def get_tools(request: Request, user=Depends(get_verified_user)):
 
 @router.get("/list", response_model=list[ToolUserResponse])
 async def get_tool_list(user=Depends(get_verified_user)):
-    if user.role == "admin" and ENABLE_ADMIN_WORKSPACE_CONTENT_ACCESS:
+    if user.role == "admin" and BYPASS_ADMIN_ACCESS_CONTROL:
         tools = Tools.get_tools()
     else:
         tools = Tools.get_tools_by_user_id(user.id, "write")

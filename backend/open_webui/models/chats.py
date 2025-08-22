@@ -6,10 +6,11 @@ from typing import Optional
 
 from open_webui.internal.db import Base, get_db
 from open_webui.models.tags import TagModel, Tag, Tags
+from open_webui.models.folders import Folders
 from open_webui.env import SRC_LOG_LEVELS
 
 from pydantic import BaseModel, ConfigDict
-from sqlalchemy import BigInteger, Boolean, Column, String, Text, JSON
+from sqlalchemy import BigInteger, Boolean, Column, String, Text, JSON, Index
 from sqlalchemy import or_, func, select, and_, text
 from sqlalchemy.sql import exists
 from sqlalchemy.sql.expression import bindparam
@@ -39,6 +40,20 @@ class Chat(Base):
 
     meta = Column(JSON, server_default="{}")
     folder_id = Column(Text, nullable=True)
+
+    __table_args__ = (
+        # Performance indexes for common queries
+        # WHERE folder_id = ...
+        Index("folder_id_idx", "folder_id"),
+        # WHERE user_id = ... AND pinned = ...
+        Index("user_id_pinned_idx", "user_id", "pinned"),
+        # WHERE user_id = ... AND archived = ...
+        Index("user_id_archived_idx", "user_id", "archived"),
+        # WHERE user_id = ... ORDER BY updated_at DESC
+        Index("updated_at_user_id_idx", "updated_at", "user_id"),
+        # WHERE folder_id = ... AND user_id = ...
+        Index("folder_id_user_id_idx", "folder_id", "user_id"),
+    )
 
 
 class ChatModel(BaseModel):
@@ -617,6 +632,17 @@ class ChatTable:
             if word.startswith("tag:")
         ]
 
+        # Extract folder names - handle spaces and case insensitivity
+        folders = Folders.search_folders_by_names(
+            user_id,
+            [
+                word.replace("folder:", "")
+                for word in search_text_words
+                if word.startswith("folder:")
+            ],
+        )
+        folder_ids = [folder.id for folder in folders]
+
         is_pinned = None
         if "pinned:true" in search_text_words:
             is_pinned = True
@@ -665,6 +691,9 @@ class ChatTable:
                     query = query.filter(Chat.share_id.isnot(None))
                 else:
                     query = query.filter(Chat.share_id.is_(None))
+
+            if folder_ids:
+                query = query.filter(Chat.folder_id.in_(folder_ids))
 
             query = query.order_by(Chat.updated_at.desc())
 

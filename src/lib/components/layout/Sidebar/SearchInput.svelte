@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { getAllTags } from '$lib/apis/chats';
-	import { tags } from '$lib/stores';
+	import { folders, tags } from '$lib/stores';
 	import { getContext, createEventDispatcher, onMount, onDestroy, tick } from 'svelte';
 	import { fade } from 'svelte/transition';
 	import Search from '$lib/components/icons/Search.svelte';
@@ -12,6 +12,8 @@
 	export let placeholder = '';
 	export let value = '';
 	export let showClearButton = false;
+
+	export let onFocus = () => {};
 	export let onKeydown = (e) => {};
 
 	let selectedIdx = 0;
@@ -24,6 +26,10 @@
 		{
 			name: 'tag:',
 			description: $i18n.t('search for tags')
+		},
+		{
+			name: 'folder:',
+			description: $i18n.t('search for folders')
 		},
 		{
 			name: 'pinned:',
@@ -86,6 +92,30 @@
 						id: tag.id,
 						name: tag.name,
 						type: 'tag'
+					};
+				});
+		} else if (lastWord.startsWith('folder:')) {
+			filteredItems = [...$folders]
+				.filter((folder) => {
+					const folderName = lastWord.slice(7);
+					if (folderName) {
+						const id = folder.name.replace(' ', '_').toLowerCase();
+						const folderId = folderName.replace(' ', '_').toLowerCase();
+
+						if (id !== folderId) {
+							return id.startsWith(folderId);
+						} else {
+							return false;
+						}
+					} else {
+						return true;
+					}
+				})
+				.map((folder) => {
+					return {
+						id: folder.name.replace(' ', '_').toLowerCase(),
+						name: folder.name,
+						type: 'folder'
 					};
 				});
 		} else if (lastWord.startsWith('pinned:')) {
@@ -163,6 +193,7 @@
 				dispatch('input');
 			}}
 			on:focus={() => {
+				onFocus();
 				hovering = false;
 				focused = true;
 				initTags();
@@ -211,6 +242,9 @@
 					selectedIdx = 0;
 				}
 
+				const item = document.querySelector(`[data-selected="true"]`);
+				item?.scrollIntoView({ block: 'center', inline: 'nearest', behavior: 'instant' });
+
 				if (!document.getElementById('search-options-container')) {
 					onKeydown(e);
 				}
@@ -257,6 +291,7 @@
 								itemIdx
 									? 'bg-gray-100 dark:bg-gray-900'
 									: ''}"
+								data-selected={selectedIdx === itemIdx}
 								id="search-item-{itemIdx}"
 								on:click|stopPropagation={async () => {
 									const words = value.split(' ');

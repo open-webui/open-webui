@@ -116,7 +116,9 @@
 							<div>
 								<Textarea
 									className=" text-sm w-full bg-transparent outline-hidden "
-									placeholder={`Write your model system prompt content here\ne.g.) You are Mario from Super Mario Bros, acting as an assistant.`}
+									placeholder={$i18n.t(
+										'Write your model system prompt content here\ne.g.) You are Mario from Super Mario Bros, acting as an assistant.'
+									)}
 									maxSize={200}
 									bind:value={data.system_prompt}
 								/>

@@ -104,7 +104,9 @@
 						}
 					}
 
-					toast.success(`Successfully imported ${userCount} users.`);
+					toast.success(
+						$i18n.t('Successfully imported {{userCount}} users.', { userCount: userCount })
+					);
 					inputFiles = null;
 					const uploadInputElement = document.getElementById('upload-user-csv-input');
 

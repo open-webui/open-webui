@@ -41,7 +41,7 @@
 					...(theme !== '' ? { theme } : { theme: 'dark' }),
 					arrow: false,
 					offset: offset,
-					interactive: interactive,
+					...(interactive ? { interactive: true } : {}),
 					...tippyOptions
 				});
 			}

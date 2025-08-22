@@ -29,8 +29,6 @@
 
 	const i18n = getContext('i18n');
 
-	export let transparentBackground = false;
-
 	export let createMessagePair: Function;
 	export let stopResponse: Function;
 
@@ -221,7 +219,6 @@
 					bind:atSelectedModel
 					bind:showCommands
 					{toolServers}
-					{transparentBackground}
 					{stopResponse}
 					{createMessagePair}
 					placeholder={$i18n.t('How can I help you today?')}

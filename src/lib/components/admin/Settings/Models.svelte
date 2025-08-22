@@ -63,7 +63,7 @@
 				// 	return (b.is_active ?? true) - (a.is_active ?? true);
 				// }
 				// If both models' active states are the same, sort alphabetically
-				return a.name.localeCompare(b.name);
+				return (a?.name ?? a?.id ?? '').localeCompare(b?.name ?? b?.id ?? '');
 			});
 	}
 

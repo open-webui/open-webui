@@ -168,9 +168,19 @@ class PersistentConfig(Generic[T]):
         self.config_path = config_path
         self.env_value = env_value
         self.config_value = get_config_value(config_path)
+
         if self.config_value is not None and ENABLE_PERSISTENT_CONFIG:
-            log.info(f"'{env_name}' loaded from the latest database entry")
-            self.value = self.config_value
+            if (
+                self.config_path.startswith("oauth.")
+                and not ENABLE_OAUTH_PERSISTENT_CONFIG
+            ):
+                log.info(
+                    f"Skipping loading of '{env_name}' as OAuth persistent config is disabled"
+                )
+                self.value = env_value
+            else:
+                log.info(f"'{env_name}' loaded from the latest database entry")
+                self.value = self.config_value
         else:
             self.value = env_value
 
@@ -302,6 +312,9 @@ JWT_EXPIRES_IN = PersistentConfig(
 # OAuth config
 ####################################
 
+ENABLE_OAUTH_PERSISTENT_CONFIG = (
+    os.environ.get("ENABLE_OAUTH_PERSISTENT_CONFIG", "True").lower() == "true"
+)
 
 ENABLE_OAUTH_SIGNUP = PersistentConfig(
     "ENABLE_OAUTH_SIGNUP",
@@ -469,6 +482,12 @@ OAUTH_PROVIDER_NAME = PersistentConfig(
     os.environ.get("OAUTH_PROVIDER_NAME", "SSO"),
 )
 
+OAUTH_SUB_CLAIM = PersistentConfig(
+    "OAUTH_SUB_CLAIM",
+    "oauth.oidc.sub_claim",
+    os.environ.get("OAUTH_SUB_CLAIM", None),
+)
+
 OAUTH_USERNAME_CLAIM = PersistentConfig(
     "OAUTH_USERNAME_CLAIM",
     "oauth.oidc.username_claim",
@@ -491,7 +510,7 @@ OAUTH_EMAIL_CLAIM = PersistentConfig(
 OAUTH_GROUPS_CLAIM = PersistentConfig(
     "OAUTH_GROUPS_CLAIM",
     "oauth.oidc.group_claim",
-    os.environ.get("OAUTH_GROUP_CLAIM", "groups"),
+    os.environ.get("OAUTH_GROUPS_CLAIM", os.environ.get("OAUTH_GROUP_CLAIM", "groups")),
 )
 
 ENABLE_OAUTH_ROLE_MANAGEMENT = PersistentConfig(
@@ -852,7 +871,7 @@ CACHE_DIR.mkdir(parents=True, exist_ok=True)
 ENABLE_DIRECT_CONNECTIONS = PersistentConfig(
     "ENABLE_DIRECT_CONNECTIONS",
     "direct.enable",
-    os.environ.get("ENABLE_DIRECT_CONNECTIONS", "True").lower() == "true",
+    os.environ.get("ENABLE_DIRECT_CONNECTIONS", "False").lower() == "true",
 )
 
 ####################################
@@ -934,6 +953,9 @@ GEMINI_API_BASE_URL = os.environ.get("GEMINI_API_BASE_URL", "")
 
 if OPENAI_API_BASE_URL == "":
     OPENAI_API_BASE_URL = "https://api.openai.com/v1"
+else:
+    if OPENAI_API_BASE_URL.endswith("/"):
+        OPENAI_API_BASE_URL = OPENAI_API_BASE_URL[:-1]
 
 OPENAI_API_KEYS = os.environ.get("OPENAI_API_KEYS", "")
 OPENAI_API_KEYS = OPENAI_API_KEYS if OPENAI_API_KEYS != "" else OPENAI_API_KEY
@@ -1336,6 +1358,14 @@ ENABLE_ADMIN_WORKSPACE_CONTENT_ACCESS = (
     os.environ.get("ENABLE_ADMIN_WORKSPACE_CONTENT_ACCESS", "True").lower() == "true"
 )
 
+BYPASS_ADMIN_ACCESS_CONTROL = (
+    os.environ.get(
+        "BYPASS_ADMIN_ACCESS_CONTROL",
+        os.environ.get("ENABLE_ADMIN_WORKSPACE_CONTENT_ACCESS", "True"),
+    ).lower()
+    == "true"
+)
+
 ENABLE_ADMIN_CHAT_ACCESS = (
     os.environ.get("ENABLE_ADMIN_CHAT_ACCESS", "True").lower() == "true"
 )
@@ -1546,7 +1576,7 @@ FOLLOW_UP_GENERATION_PROMPT_TEMPLATE = PersistentConfig(
 )
 
 DEFAULT_FOLLOW_UP_GENERATION_PROMPT_TEMPLATE = """### Task:
-Suggest 3-5 relevant follow-up questions or prompts that the user might naturally ask next in this conversation as a **user**, based on the chat history, to help continue or deepen the discussion.
+Suggest 3-5 relevant follow-up questions or prompts in the chat's primary language that the user might naturally ask next in this conversation as a **user**, based on the chat history, to help continue or deepen the discussion.
 ### Guidelines:
 - Write all follow-up questions from the user’s point of view, directed to the assistant.
 - Make questions concise, clear, and directly related to the discussed topic(s).
@@ -1838,6 +1868,11 @@ CODE_INTERPRETER_JUPYTER_TIMEOUT = PersistentConfig(
     ),
 )
 
+CODE_INTERPRETER_BLOCKED_MODULES = [
+    library.strip()
+    for library in os.environ.get("CODE_INTERPRETER_BLOCKED_MODULES", "").split(",")
+    if library.strip()
+]
 
 DEFAULT_CODE_INTERPRETER_PROMPT = """
 #### Tools Available
@@ -1905,6 +1940,8 @@ QDRANT_API_KEY = os.environ.get("QDRANT_API_KEY", None)
 QDRANT_ON_DISK = os.environ.get("QDRANT_ON_DISK", "false").lower() == "true"
 QDRANT_PREFER_GRPC = os.environ.get("QDRANT_PREFER_GRPC", "false").lower() == "true"
 QDRANT_GRPC_PORT = int(os.environ.get("QDRANT_GRPC_PORT", "6334"))
+QDRANT_TIMEOUT = int(os.environ.get("QDRANT_TIMEOUT", "5"))
+QDRANT_HNSW_M = int(os.environ.get("QDRANT_HNSW_M", "16"))
 ENABLE_QDRANT_MULTITENANCY_MODE = (
     os.environ.get("ENABLE_QDRANT_MULTITENANCY_MODE", "true").lower() == "true"
 )
@@ -2589,6 +2626,14 @@ WEB_LOADER_ENGINE = PersistentConfig(
     "rag.web.loader.engine",
     os.environ.get("WEB_LOADER_ENGINE", ""),
 )
+
+
+WEB_LOADER_CONCURRENT_REQUESTS = PersistentConfig(
+    "WEB_LOADER_CONCURRENT_REQUESTS",
+    "rag.web.loader.concurrent_requests",
+    int(os.getenv("WEB_LOADER_CONCURRENT_REQUESTS", "10")),
+)
+
 
 ENABLE_WEB_LOADER_SSL_VERIFICATION = PersistentConfig(
     "ENABLE_WEB_LOADER_SSL_VERIFICATION",

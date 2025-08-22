@@ -126,7 +126,7 @@
 						{:else if (valvesSpec.properties[property]?.type ?? null) === 'boolean'}
 							<div class="flex justify-between items-center">
 								<div class="text-xs text-gray-500">
-									{valves[property] ? 'Enabled' : 'Disabled'}
+									{valves[property] ? $i18n.t('Enabled') : $i18n.t('Disabled')}
 								</div>
 
 								<div class=" pr-2">
@@ -207,7 +207,7 @@
 									<input
 										type="text"
 										class="flex-1 rounded-lg py-2 text-sm dark:text-gray-300 dark:bg-gray-850 outline-hidden border border-gray-100 dark:border-gray-850"
-										placeholder="Enter hex color (e.g. #FF0000)"
+										placeholder={$i18n.t('Enter hex color (e.g. #FF0000)')}
 										bind:value={valves[property]}
 										autocomplete="off"
 										disabled
@@ -233,7 +233,7 @@
 										<input
 											type="text"
 											class=" w-full rounded-lg py-1 text-left text-sm dark:text-gray-300 dark:bg-gray-850 outline-hidden border border-gray-100 dark:border-gray-850"
-											placeholder="Enter coordinates (e.g. 51.505, -0.09)"
+											placeholder={$i18n.t('Enter coordinates (e.g. 51.505, -0.09)')}
 											bind:value={valves[property]}
 											autocomplete="off"
 											on:change={() => {
@@ -310,7 +310,7 @@
 		</div>
 	{/each}
 {:else}
-	<div class="text-xs">No valves</div>
+	<div class="text-xs">{$i18n.t('No valves')}</div>
 {/if}
 
 <style>

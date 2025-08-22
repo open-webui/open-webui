@@ -48,6 +48,8 @@
 
 	export let triggerScroll: Function;
 
+	export let topPadding = false;
+
 	const dispatch = createEventDispatcher();
 
 	let currentMessageId;
@@ -313,14 +315,15 @@
 									{actionMessage}
 									{submitMessage}
 									{continueResponse}
-									regenerateResponse={async (message) => {
-										regenerateResponse(message);
+									regenerateResponse={async (message, prompt = null) => {
+										regenerateResponse(message, prompt);
 										await tick();
 										groupedMessageIdsIdx[selectedModelIdx] =
 											groupedMessageIds[selectedModelIdx].messageIds.length - 1;
 									}}
 									{addMessages}
 									{readOnly}
+									{topPadding}
 								/>
 							{/if}
 						{/key}
@@ -368,14 +371,15 @@
 										{actionMessage}
 										{submitMessage}
 										{continueResponse}
-										regenerateResponse={async (message) => {
-											regenerateResponse(message);
+										regenerateResponse={async (message, prompt = null) => {
+											regenerateResponse(message, prompt);
 											await tick();
 											groupedMessageIdsIdx[modelIdx] =
 												groupedMessageIds[modelIdx].messageIds.length - 1;
 										}}
 										{addMessages}
 										{readOnly}
+										{topPadding}
 									/>
 								{/if}
 							{/key}
@@ -428,7 +432,7 @@
 									id="merge-response-button"
 									class="{true
 										? 'visible'
-										: 'invisible group-hover:visible'} p-1 hover:bg-black/5 dark:hover:bg-white/5 rounded-lg dark:hover:text-white hover:text-black transition regenerate-response-button"
+										: 'invisible group-hover:visible'} p-1 hover:bg-black/5 dark:hover:bg-white/5 rounded-lg dark:hover:text-white hover:text-black transition"
 									on:click={() => {
 										mergeResponsesHandler();
 									}}

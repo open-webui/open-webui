@@ -17,14 +17,17 @@ from open_webui.constants import ERROR_MESSAGES
 # Load .env file
 ####################################
 
-OPEN_WEBUI_DIR = Path(__file__).parent  # the path containing this file
-print(OPEN_WEBUI_DIR)
+# Use .resolve() to get the canonical path, removing any '..' or '.' components
+ENV_FILE_PATH = Path(__file__).resolve()
 
-BACKEND_DIR = OPEN_WEBUI_DIR.parent  # the path containing this file
-BASE_DIR = BACKEND_DIR.parent  # the path containing the backend/
+# OPEN_WEBUI_DIR should be the directory where env.py resides (open_webui/)
+OPEN_WEBUI_DIR = ENV_FILE_PATH.parent
 
-print(BACKEND_DIR)
-print(BASE_DIR)
+# BACKEND_DIR is the parent of OPEN_WEBUI_DIR (backend/)
+BACKEND_DIR = OPEN_WEBUI_DIR.parent
+
+# BASE_DIR is the parent of BACKEND_DIR (open-webui-dev/)
+BASE_DIR = BACKEND_DIR.parent
 
 try:
     from dotenv import find_dotenv, load_dotenv
@@ -288,6 +291,9 @@ DB_VARS = {
 
 if all(DB_VARS.values()):
     DATABASE_URL = f"{DB_VARS['db_type']}://{DB_VARS['db_cred']}@{DB_VARS['db_host']}:{DB_VARS['db_port']}/{DB_VARS['db_name']}"
+elif DATABASE_TYPE == "sqlite+sqlcipher" and not os.environ.get("DATABASE_URL"):
+    # Handle SQLCipher with local file when DATABASE_URL wasn't explicitly set
+    DATABASE_URL = f"sqlite+sqlcipher:///{DATA_DIR}/webui.db"
 
 # Replace the postgres:// with postgresql://
 if "postgres://" in DATABASE_URL:
@@ -332,6 +338,21 @@ else:
         DATABASE_POOL_RECYCLE = int(DATABASE_POOL_RECYCLE)
     except Exception:
         DATABASE_POOL_RECYCLE = 3600
+
+DATABASE_ENABLE_SQLITE_WAL = (
+    os.environ.get("DATABASE_ENABLE_SQLITE_WAL", "False").lower() == "true"
+)
+
+DATABASE_USER_ACTIVE_STATUS_UPDATE_INTERVAL = os.environ.get(
+    "DATABASE_USER_ACTIVE_STATUS_UPDATE_INTERVAL", None
+)
+if DATABASE_USER_ACTIVE_STATUS_UPDATE_INTERVAL is not None:
+    try:
+        DATABASE_USER_ACTIVE_STATUS_UPDATE_INTERVAL = float(
+            DATABASE_USER_ACTIVE_STATUS_UPDATE_INTERVAL
+        )
+    except Exception:
+        DATABASE_USER_ACTIVE_STATUS_UPDATE_INTERVAL = 0.0
 
 RESET_CONFIG_ON_START = (
     os.environ.get("RESET_CONFIG_ON_START", "False").lower() == "true"
@@ -485,6 +506,25 @@ else:
         MODELS_CACHE_TTL = int(MODELS_CACHE_TTL)
     except Exception:
         MODELS_CACHE_TTL = 1
+
+
+####################################
+# CHAT
+####################################
+
+CHAT_RESPONSE_STREAM_DELTA_CHUNK_SIZE = os.environ.get(
+    "CHAT_RESPONSE_STREAM_DELTA_CHUNK_SIZE", "1"
+)
+
+if CHAT_RESPONSE_STREAM_DELTA_CHUNK_SIZE == "":
+    CHAT_RESPONSE_STREAM_DELTA_CHUNK_SIZE = 1
+else:
+    try:
+        CHAT_RESPONSE_STREAM_DELTA_CHUNK_SIZE = int(
+            CHAT_RESPONSE_STREAM_DELTA_CHUNK_SIZE
+        )
+    except Exception:
+        CHAT_RESPONSE_STREAM_DELTA_CHUNK_SIZE = 1
 
 
 ####################################
@@ -655,6 +695,7 @@ AUDIT_EXCLUDED_PATHS = [path.lstrip("/") for path in AUDIT_EXCLUDED_PATHS]
 ####################################
 
 ENABLE_OTEL = os.environ.get("ENABLE_OTEL", "False").lower() == "true"
+ENABLE_OTEL_TRACES = os.environ.get("ENABLE_OTEL_TRACES", "False").lower() == "true"
 ENABLE_OTEL_METRICS = os.environ.get("ENABLE_OTEL_METRICS", "False").lower() == "true"
 ENABLE_OTEL_LOGS = os.environ.get("ENABLE_OTEL_LOGS", "False").lower() == "true"
 
@@ -671,10 +712,16 @@ OTEL_EXPORTER_OTLP_INSECURE = (
     os.environ.get("OTEL_EXPORTER_OTLP_INSECURE", "False").lower() == "true"
 )
 OTEL_METRICS_EXPORTER_OTLP_INSECURE = (
-    os.environ.get("OTEL_METRICS_EXPORTER_OTLP_INSECURE", "False").lower() == "true"
+    os.environ.get(
+        "OTEL_METRICS_EXPORTER_OTLP_INSECURE", str(OTEL_EXPORTER_OTLP_INSECURE)
+    ).lower()
+    == "true"
 )
 OTEL_LOGS_EXPORTER_OTLP_INSECURE = (
-    os.environ.get("OTEL_LOGS_EXPORTER_OTLP_INSECURE", "False").lower() == "true"
+    os.environ.get(
+        "OTEL_LOGS_EXPORTER_OTLP_INSECURE", str(OTEL_EXPORTER_OTLP_INSECURE)
+    ).lower()
+    == "true"
 )
 OTEL_SERVICE_NAME = os.environ.get("OTEL_SERVICE_NAME", "open-webui")
 OTEL_RESOURCE_ATTRIBUTES = os.environ.get(

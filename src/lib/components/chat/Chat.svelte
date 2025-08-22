@@ -37,18 +37,14 @@
 		showArtifacts,
 		tools,
 		toolServers,
-		selectedFolder
+		selectedFolder,
+		pinnedChats
 	} from '$lib/stores';
 	import {
 		convertMessagesToHistory,
 		copyToClipboard,
 		getMessageContentParts,
 		createMessagesList,
-		extractSentencesForAudio,
-		promptTemplate,
-		splitStream,
-		sleep,
-		removeDetails,
 		getPromptVariables,
 		processDetails,
 		removeAllDetails
@@ -60,8 +56,10 @@
 		getAllTags,
 		getChatById,
 		getChatList,
+		getPinnedChatList,
 		getTagsById,
-		updateChatById
+		updateChatById,
+		updateChatFolderIdById
 	} from '$lib/apis/chats';
 	import { generateOpenAIChatCompletion } from '$lib/apis/openai';
 	import { processWeb, processWebSearch, processYoutubeVideo } from '$lib/apis/retrieval';
@@ -90,6 +88,7 @@
 	import { fade } from 'svelte/transition';
 	import Tooltip from '../common/Tooltip.svelte';
 	import Sidebar from '../icons/Sidebar.svelte';
+	import { uploadFile } from '$lib/apis/files';
 
 	export let chatIdProp = '';
 
@@ -739,6 +738,15 @@
 	const initNewChat = async () => {
 		if ($user?.role !== 'admin' && $user?.permissions?.chat?.temporary_enforced) {
 			await temporaryChatEnabled.set(true);
+		}
+
+		if ($settings?.temporaryChatByDefault ?? false) {
+			if ($temporaryChatEnabled === false) {
+				await temporaryChatEnabled.set(true);
+			} else if ($temporaryChatEnabled === null) {
+				// if set to null set to false; refer to temp chat toggle click handler
+				await temporaryChatEnabled.set(false);
+			}
 		}
 
 		const availableModels = $models
@@ -1434,6 +1442,7 @@
 		}
 
 		messageInput?.setText('');
+		prompt = '';
 
 		// Reset chat input textarea
 		if (!($settings?.richTextInput ?? true)) {
@@ -1484,14 +1493,23 @@
 
 		saveSessionSelectedModels();
 
-		await sendPrompt(history, userPrompt, userMessageId, { newChat: true });
+		await sendMessage(history, userMessageId, { newChat: true });
 	};
 
-	const sendPrompt = async (
+	const sendMessage = async (
 		_history,
-		prompt: string,
 		parentId: string,
-		{ modelId = null, modelIdx = null, newChat = false } = {}
+		{
+			messages = null,
+			modelId = null,
+			modelIdx = null,
+			newChat = false
+		}: {
+			messages?: any[] | null;
+			modelId?: string | null;
+			modelIdx?: number | null;
+			newChat?: boolean;
+		} = {}
 	) => {
 		if (autoScroll) {
 			scrollToBottom();
@@ -1561,9 +1579,8 @@
 				const model = $models.filter((m) => m.id === modelId).at(0);
 
 				if (model) {
-					const messages = createMessagesList(_history, parentId);
 					// If there are image files, check if model is vision capable
-					const hasImages = messages.some((message) =>
+					const hasImages = createMessagesList(_history, parentId).some((message) =>
 						message.files?.some((file) => file.type === 'image')
 					);
 
@@ -1580,7 +1597,15 @@
 					const chatEventEmitter = await getChatEventEmitter(model.id, _chatId);
 
 					scrollToBottom();
-					await sendPromptSocket(_history, model, responseMessageId, _chatId);
+					await sendMessageSocket(
+						model,
+						messages && messages.length > 0
+							? messages
+							: createMessagesList(_history, responseMessageId),
+						_history,
+						responseMessageId,
+						_chatId
+					);
 
 					if (chatEventEmitter) clearInterval(chatEventEmitter);
 				} else {
@@ -1593,12 +1618,11 @@
 		chats.set(await getChatList(localStorage.token, $currentChatPage));
 	};
 
-	const sendPromptSocket = async (_history, model, responseMessageId, _chatId) => {
-		const chatMessages = createMessagesList(history, history.currentId);
+	const sendMessageSocket = async (model, _messages, _history, responseMessageId, _chatId) => {
 		const responseMessage = _history.messages[responseMessageId];
 		const userMessage = _history.messages[responseMessage.parentId];
 
-		const chatMessageFiles = chatMessages
+		const chatMessageFiles = _messages
 			.filter((message) => message.files)
 			.flatMap((message) => message.files);
 
@@ -1630,6 +1654,14 @@
 		);
 		await tick();
 
+		let userLocation;
+		if ($settings?.userLocation) {
+			userLocation = await getAndUpdateUserLocation(localStorage.token).catch((err) => {
+				console.error(err);
+				return undefined;
+			});
+		}
+
 		const stream =
 			model?.info?.params?.stream_response ??
 			$settings?.params?.stream_response ??
@@ -1640,19 +1672,10 @@
 			params?.system || $settings.system
 				? {
 						role: 'system',
-						content: `${promptTemplate(
-							params?.system ?? $settings?.system ?? '',
-							$user?.name,
-							$settings?.userLocation
-								? await getAndUpdateUserLocation(localStorage.token).catch((err) => {
-										console.error(err);
-										return undefined;
-									})
-								: undefined
-						)}`
+						content: `${params?.system ?? $settings?.system ?? ''}`
 					}
 				: undefined,
-			...createMessagesList(_history, responseMessageId).map((message) => ({
+			..._messages.map((message) => ({
 				...message,
 				content: processDetails(message.content)
 			}))
@@ -1727,15 +1750,7 @@
 					memory: $settings?.memory ?? false
 				},
 				variables: {
-					...getPromptVariables(
-						$user?.name,
-						$settings?.userLocation
-							? await getAndUpdateUserLocation(localStorage.token).catch((err) => {
-									console.error(err);
-									return undefined;
-								})
-							: undefined
-					)
+					...getPromptVariables($user?.name, $settings?.userLocation ? userLocation : undefined)
 				},
 				model_item: $models.find((m) => m.id === model.id),
 
@@ -1768,11 +1783,24 @@
 			},
 			`${WEBUI_BASE_URL}/api`
 		).catch(async (error) => {
-			toast.error(`${error}`);
+			console.log(error);
 
+			let errorMessage = error;
+			if (error?.error?.message) {
+				errorMessage = error.error.message;
+			} else if (error?.message) {
+				errorMessage = error.message;
+			}
+
+			if (typeof errorMessage === 'object') {
+				errorMessage = $i18n.t(`Uh-oh! There was an issue with the response.`);
+			}
+
+			toast.error(`${errorMessage}`);
 			responseMessage.error = {
 				content: error
 			};
+
 			responseMessage.done = true;
 
 			history.messages[responseMessageId] = responseMessage;
@@ -1900,31 +1928,39 @@
 			scrollToBottom();
 		}
 
-		await sendPrompt(history, userPrompt, userMessageId);
+		await sendMessage(history, userMessageId);
 	};
 
-	const regenerateResponse = async (message) => {
+	const regenerateResponse = async (message, suggestionPrompt = null) => {
 		console.log('regenerateResponse');
 
 		if (history.currentId) {
 			let userMessage = history.messages[message.parentId];
-			let userPrompt = userMessage.content;
 
 			if (autoScroll) {
 				scrollToBottom();
 			}
 
-			if ((userMessage?.models ?? [...selectedModels]).length == 1) {
-				// If user message has only one model selected, sendPrompt automatically selects it for regeneration
-				await sendPrompt(history, userPrompt, userMessage.id);
-			} else {
-				// If there are multiple models selected, use the model of the response message for regeneration
-				// e.g. many model chat
-				await sendPrompt(history, userPrompt, userMessage.id, {
-					modelId: message.model,
-					modelIdx: message.modelIdx
-				});
-			}
+			await sendMessage(history, userMessage.id, {
+				...(suggestionPrompt
+					? {
+							messages: [
+								...createMessagesList(history, message.id),
+								{
+									role: 'user',
+									content: suggestionPrompt
+								}
+							]
+						}
+					: {}),
+				...((userMessage?.models ?? [...selectedModels]).length > 1
+					? {
+							// If multiple models are selected, use the model from the message
+							modelId: message.model,
+							modelIdx: message.modelIdx
+						}
+					: {})
+			});
 		}
 	};
 
@@ -1942,7 +1978,13 @@
 				.at(0);
 
 			if (model) {
-				await sendPromptSocket(history, model, responseMessage.id, _chatId);
+				await sendMessageSocket(
+					model,
+					createMessagesList(history, responseMessage.id),
+					history,
+					responseMessage.id,
+					_chatId
+				);
 			}
 		}
 	};
@@ -2056,6 +2098,7 @@
 
 	const MAX_DRAFT_LENGTH = 5000;
 	let saveDraftTimeout = null;
+
 	const saveDraft = async (draft, chatId = null) => {
 		if (saveDraftTimeout) {
 			clearTimeout(saveDraftTimeout);
@@ -2070,6 +2113,34 @@
 			}, 500);
 		} else {
 			sessionStorage.removeItem(`chat-input${chatId ? `-${chatId}` : ''}`);
+		}
+	};
+
+	const clearDraft = async (chatId = null) => {
+		if (saveDraftTimeout) {
+			clearTimeout(saveDraftTimeout);
+		}
+		await sessionStorage.removeItem(`chat-input${chatId ? `-${chatId}` : ''}`);
+	};
+
+	const moveChatHandler = async (chatId, folderId) => {
+		if (chatId && folderId) {
+			const res = await updateChatFolderIdById(localStorage.token, chatId, folderId).catch(
+				(error) => {
+					toast.error(`${error}`);
+					return null;
+				}
+			);
+
+			if (res) {
+				currentChatPage.set(1);
+				await chats.set(await getChatList(localStorage.token, $currentChatPage));
+				await pinnedChats.set(await getPinnedChatList(localStorage.token));
+
+				toast.success($i18n.t('Chat moved successfully'));
+			}
+		} else {
+			toast.error($i18n.t('Failed to move chat'));
 		}
 	};
 </script>
@@ -2146,6 +2217,44 @@
 						shareEnabled={!!history.currentId}
 						{initNewChat}
 						showBanners={!showCommands}
+						archiveChatHandler={() => {}}
+						{moveChatHandler}
+						onSaveTempChat={async () => {
+							try {
+								if (!history?.currentId || !Object.keys(history.messages).length) {
+									toast.error($i18n.t('No conversation to save'));
+									return;
+								}
+								const messages = createMessagesList(history, history.currentId);
+								const title =
+									messages.find((m) => m.role === 'user')?.content ?? $i18n.t('New Chat');
+
+								const savedChat = await createNewChat(
+									localStorage.token,
+									{
+										id: uuidv4(),
+										title: title.length > 50 ? `${title.slice(0, 50)}...` : title,
+										models: selectedModels,
+										history: history,
+										messages: messages,
+										timestamp: Date.now()
+									},
+									null
+								);
+
+								if (savedChat) {
+									temporaryChatEnabled.set(false);
+									chatId.set(savedChat.id);
+									chats.set(await getChatList(localStorage.token, $currentChatPage));
+
+									await goto(`/c/${savedChat.id}`);
+									toast.success($i18n.t('Conversation saved successfully'));
+								}
+							} catch (error) {
+								console.error('Error saving conversation:', error);
+								toast.error($i18n.t('Failed to save conversation'));
+							}
+						}}
 					/>
 
 					<div class="flex flex-col flex-auto z-10 w-full @container overflow-auto">
@@ -2171,7 +2280,7 @@
 										}}
 										{selectedModels}
 										{atSelectedModel}
-										{sendPrompt}
+										{sendMessage}
 										{showMessage}
 										{submitMessage}
 										{continueResponse}
@@ -2179,6 +2288,7 @@
 										{mergeResponses}
 										{chatActionHandler}
 										{addMessages}
+										topPadding={true}
 										bottomPadding={files.length > 0}
 										{onSelect}
 									/>
@@ -2202,9 +2312,6 @@
 									bind:atSelectedModel
 									bind:showCommands
 									toolServers={$toolServers}
-									transparentBackground={$settings?.backgroundImageUrl ??
-										$config?.license_metadata?.background_image_url ??
-										false}
 									{generating}
 									{stopResponse}
 									{createMessagePair}
@@ -2225,8 +2332,10 @@
 										}
 									}}
 									on:submit={async (e) => {
+										clearDraft();
 										if (e.detail || files.length > 0) {
 											await tick();
+
 											submitPrompt(
 												($settings?.richTextInput ?? true)
 													? e.detail.replaceAll('\n\n', '\n')
@@ -2258,9 +2367,6 @@
 									bind:webSearchEnabled
 									bind:atSelectedModel
 									bind:showCommands
-									transparentBackground={$settings?.backgroundImageUrl ??
-										$config?.license_metadata?.background_image_url ??
-										false}
 									toolServers={$toolServers}
 									{stopResponse}
 									{createMessagePair}
@@ -2280,6 +2386,7 @@
 										}
 									}}
 									on:submit={async (e) => {
+										clearDraft();
 										if (e.detail || files.length > 0) {
 											await tick();
 											submitPrompt(
