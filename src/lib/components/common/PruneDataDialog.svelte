@@ -336,23 +336,8 @@ Authorization: Bearer <your-api-key>
                       <Switch bind:state={deleteInactiveUsers} />
                     </div>
                     <div>
-                      <div class="flex items-center text-sm font-medium text-gray-900 dark:text-gray-100">
-                        <span>{$i18n.t('Delete inactive user accounts')}</span>
-                        <div class="relative group ml-2">
-                          <svg class="h-4 w-4 text-red-500 cursor-help" fill="currentColor" viewBox="0 0 20 20">
-                            <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a.75.75 0 000 1.5v3a.75.75 0 001.5 0v-3A.75.75 0 009 9z" clip-rule="evenodd" />
-                          </svg>
-                          <div class="absolute left-1/2 transform -translate-x-1/2 bottom-full mb-2 w-64 px-3 py-2 text-xs text-white bg-red-600 rounded-lg shadow-lg opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none z-10">
-                            <div class="font-medium mb-1">{$i18n.t('⚠️ MOST DESTRUCTIVE OPERATION')}</div>
-                            <div class="space-y-0.5">
-                              <div>{$i18n.t('Deleting users removes ALL their data:')}</div>
-                              <div>• {$i18n.t('Chats, files, models, prompts')}</div>
-                              <div>• {$i18n.t('Knowledge bases, tools, notes')}</div>
-                              <div>• {$i18n.t('This action is irreversible!')}</div>
-                            </div>
-                            <div class="absolute top-full left-1/2 transform -translate-x-1/2 border-4 border-transparent border-t-red-600"></div>
-                          </div>
-                        </div>
+                      <div class="text-sm font-medium text-gray-900 dark:text-gray-100">
+                        {$i18n.t('Delete inactive user accounts')}
                       </div>
                       <div class="text-xs text-gray-500 dark:text-gray-400">
                         {$i18n.t('Remove user accounts inactive for specified days')}
