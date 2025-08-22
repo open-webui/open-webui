@@ -2,7 +2,6 @@
 	import { getContext } from 'svelte';
 	import { toast } from 'svelte-sonner';
 	import { updateUserPassword } from '$lib/apis/auths';
-	import SensitiveInput from '$lib/components/common/SensitiveInput.svelte';
 
 	const i18n = getContext('i18n');
 
@@ -29,7 +28,7 @@
 			newPasswordConfirm = '';
 		} else {
 			toast.error(
-				$i18n.t("The passwords you entered don't quite match. Please double-check and try again.")
+				`The passwords you entered don't quite match. Please double-check and try again.`
 			);
 			newPassword = '';
 			newPasswordConfirm = '';
@@ -60,8 +59,8 @@
 				<div class=" mb-1 text-xs text-gray-500">{$i18n.t('Current Password')}</div>
 
 				<div class="flex-1">
-					<SensitiveInput
-						class="w-full bg-transparent text-sm dark:text-gray-300 outline-hidden placeholder:opacity-30"
+					<input
+						class="w-full bg-transparent dark:text-gray-300 outline-hidden placeholder:opacity-30"
 						type="password"
 						bind:value={currentPassword}
 						placeholder={$i18n.t('Enter your current password')}
@@ -75,7 +74,7 @@
 				<div class=" mb-1 text-xs text-gray-500">{$i18n.t('New Password')}</div>
 
 				<div class="flex-1">
-					<SensitiveInput
+					<input
 						class="w-full bg-transparent text-sm dark:text-gray-300 outline-hidden placeholder:opacity-30"
 						type="password"
 						bind:value={newPassword}
@@ -90,7 +89,7 @@
 				<div class=" mb-1 text-xs text-gray-500">{$i18n.t('Confirm Password')}</div>
 
 				<div class="flex-1">
-					<SensitiveInput
+					<input
 						class="w-full bg-transparent text-sm dark:text-gray-300 outline-hidden placeholder:opacity-30"
 						type="password"
 						bind:value={newPasswordConfirm}

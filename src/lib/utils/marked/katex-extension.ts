@@ -10,11 +10,6 @@ const DELIMITER_LIST = [
 	{ left: '\\begin{equation}', right: '\\end{equation}', display: true }
 ];
 
-// Defines characters that are allowed to immediately precede or follow a math delimiter.
-const ALLOWED_SURROUNDING_CHARS =
-	'\\s。，、､;；„“‘’“”（）「」『』［］《》【】‹›«»…⋯:：？！～⇒?!-\\/:-@\\[-`{-~\\p{Script=Han}\\p{Script=Hiragana}\\p{Script=Katakana}\\p{Script=Hangul}';
-// Modified to fit more formats in different languages. Originally: '\\s?。，、；!-\\/:-@\\[-`{-~\\p{Script=Han}\\p{Script=Hiragana}\\p{Script=Katakana}\\p{Script=Hangul}';
-
 // const DELIMITER_LIST = [
 //     { left: '$$', right: '$$', display: false },
 //     { left: '$', right: '$', display: false },
@@ -23,8 +18,8 @@ const ALLOWED_SURROUNDING_CHARS =
 // const inlineRule = /^(\${1,2})(?!\$)((?:\\.|[^\\\n])*?(?:\\.|[^\\\n\$]))\1(?=[\s?!\.,:？！。，：]|$)/;
 // const blockRule = /^(\${1,2})\n((?:\\[^]|[^\\])+?)\n\1(?:\n|$)/;
 
-const inlinePatterns = [];
-const blockPatterns = [];
+let inlinePatterns = [];
+let blockPatterns = [];
 
 function escapeRegex(string) {
 	return string.replace(/[-\/\\^$*+?.()|[\]{}]/g, '\\$&');
@@ -49,13 +44,10 @@ function generateRegexRules(delimiters) {
 
 	// Math formulas can end in special characters
 	const inlineRule = new RegExp(
-		`^(${inlinePatterns.join('|')})(?=[${ALLOWED_SURROUNDING_CHARS}]|$)`,
+		`^(${inlinePatterns.join('|')})(?=[\\s?。，!-\/:-@[-\`{-~]|$)`,
 		'u'
 	);
-	const blockRule = new RegExp(
-		`^(${blockPatterns.join('|')})(?=[${ALLOWED_SURROUNDING_CHARS}]|$)`,
-		'u'
-	);
+	const blockRule = new RegExp(`^(${blockPatterns.join('|')})(?=[\\s?。，!-\/:-@[-\`{-~]|$)`, 'u');
 
 	return { inlineRule, blockRule };
 }
@@ -69,7 +61,7 @@ export default function (options = {}) {
 }
 
 function katexStart(src, displayMode: boolean) {
-	const ruleReg = displayMode ? blockRule : inlineRule;
+	let ruleReg = displayMode ? blockRule : inlineRule;
 
 	let indexSrc = src;
 
@@ -78,7 +70,7 @@ function katexStart(src, displayMode: boolean) {
 		let startIndex = -1;
 		let startDelimiter = '';
 		let endDelimiter = '';
-		for (const delimiter of DELIMITER_LIST) {
+		for (let delimiter of DELIMITER_LIST) {
 			if (delimiter.display !== displayMode) {
 				continue;
 			}
@@ -99,9 +91,7 @@ function katexStart(src, displayMode: boolean) {
 
 		// Check if the delimiter is preceded by a special character.
 		// If it does, then it's potentially a math formula.
-		const f =
-			index === 0 ||
-			indexSrc.charAt(index - 1).match(new RegExp(`[${ALLOWED_SURROUNDING_CHARS}]`, 'u'));
+		const f = index === 0 || indexSrc.charAt(index - 1).match(/[\s?。，!-\/:-@[-`{-~]/);
 		if (f) {
 			const possibleKatex = indexSrc.substring(index);
 
@@ -115,8 +105,8 @@ function katexStart(src, displayMode: boolean) {
 }
 
 function katexTokenizer(src, tokens, displayMode: boolean) {
-	const ruleReg = displayMode ? blockRule : inlineRule;
-	const type = displayMode ? 'blockKatex' : 'inlineKatex';
+	let ruleReg = displayMode ? blockRule : inlineRule;
+	let type = displayMode ? 'blockKatex' : 'inlineKatex';
 
 	const match = src.match(ruleReg);
 

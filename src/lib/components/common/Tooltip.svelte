@@ -2,10 +2,10 @@
 	import DOMPurify from 'dompurify';
 
 	import { onDestroy } from 'svelte';
+	import { marked } from 'marked';
 
 	import tippy from 'tippy.js';
-
-	export let elementId = '';
+	import { roundArrow } from 'tippy.js';
 
 	export let placement = 'top';
 	export let content = `I'm a tooltip!`;
@@ -15,36 +15,24 @@
 	export let offset = [0, 4];
 	export let allowHTML = true;
 	export let tippyOptions = {};
-	export let interactive = false;
 
 	let tooltipElement;
 	let tooltipInstance;
 
-	$: if (tooltipElement && (content || elementId)) {
-		let tooltipContent = null;
-
-		if (elementId) {
-			tooltipContent = document.getElementById(`${elementId}`);
-		} else {
-			tooltipContent = DOMPurify.sanitize(content);
-		}
-
+	$: if (tooltipElement && content) {
 		if (tooltipInstance) {
-			tooltipInstance.setContent(tooltipContent);
+			tooltipInstance.setContent(DOMPurify.sanitize(content));
 		} else {
-			if (content) {
-				tooltipInstance = tippy(tooltipElement, {
-					content: tooltipContent,
-					placement: placement,
-					allowHTML: allowHTML,
-					touch: touch,
-					...(theme !== '' ? { theme } : { theme: 'dark' }),
-					arrow: false,
-					offset: offset,
-					...(interactive ? { interactive: true } : {}),
-					...tippyOptions
-				});
-			}
+			tooltipInstance = tippy(tooltipElement, {
+				content: DOMPurify.sanitize(content),
+				placement: placement,
+				allowHTML: allowHTML,
+				touch: touch,
+				...(theme !== '' ? { theme } : { theme: 'dark' }),
+				arrow: false,
+				offset: offset,
+				...tippyOptions
+			});
 		}
 	} else if (tooltipInstance && content === '') {
 		if (tooltipInstance) {
@@ -59,8 +47,6 @@
 	});
 </script>
 
-<div bind:this={tooltipElement} class={className}>
+<div bind:this={tooltipElement} aria-label={DOMPurify.sanitize(content)} class={className}>
 	<slot />
 </div>
-
-<slot name="tooltip"></slot>

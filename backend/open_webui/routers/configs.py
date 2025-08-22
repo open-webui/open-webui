@@ -7,11 +7,7 @@ from open_webui.utils.auth import get_admin_user, get_verified_user
 from open_webui.config import get_config, save_config
 from open_webui.config import BannerModel
 
-from open_webui.utils.tools import (
-    get_tool_server_data,
-    get_tool_server_url,
-    set_tool_servers,
-)
+from open_webui.utils.tools import get_tool_server_data, get_tool_servers_data
 
 
 router = APIRouter()
@@ -43,39 +39,32 @@ async def export_config(user=Depends(get_admin_user)):
 
 
 ############################
-# Connections Config
+# Direct Connections Config
 ############################
 
 
-class ConnectionsConfigForm(BaseModel):
+class DirectConnectionsConfigForm(BaseModel):
     ENABLE_DIRECT_CONNECTIONS: bool
-    ENABLE_BASE_MODELS_CACHE: bool
 
 
-@router.get("/connections", response_model=ConnectionsConfigForm)
-async def get_connections_config(request: Request, user=Depends(get_admin_user)):
+@router.get("/direct_connections", response_model=DirectConnectionsConfigForm)
+async def get_direct_connections_config(request: Request, user=Depends(get_admin_user)):
     return {
         "ENABLE_DIRECT_CONNECTIONS": request.app.state.config.ENABLE_DIRECT_CONNECTIONS,
-        "ENABLE_BASE_MODELS_CACHE": request.app.state.config.ENABLE_BASE_MODELS_CACHE,
     }
 
 
-@router.post("/connections", response_model=ConnectionsConfigForm)
-async def set_connections_config(
+@router.post("/direct_connections", response_model=DirectConnectionsConfigForm)
+async def set_direct_connections_config(
     request: Request,
-    form_data: ConnectionsConfigForm,
+    form_data: DirectConnectionsConfigForm,
     user=Depends(get_admin_user),
 ):
     request.app.state.config.ENABLE_DIRECT_CONNECTIONS = (
         form_data.ENABLE_DIRECT_CONNECTIONS
     )
-    request.app.state.config.ENABLE_BASE_MODELS_CACHE = (
-        form_data.ENABLE_BASE_MODELS_CACHE
-    )
-
     return {
         "ENABLE_DIRECT_CONNECTIONS": request.app.state.config.ENABLE_DIRECT_CONNECTIONS,
-        "ENABLE_BASE_MODELS_CACHE": request.app.state.config.ENABLE_BASE_MODELS_CACHE,
     }
 
 
@@ -114,7 +103,10 @@ async def set_tool_servers_config(
     request.app.state.config.TOOL_SERVER_CONNECTIONS = [
         connection.model_dump() for connection in form_data.TOOL_SERVER_CONNECTIONS
     ]
-    await set_tool_servers(request)
+
+    request.app.state.TOOL_SERVERS = await get_tool_servers_data(
+        request.app.state.config.TOOL_SERVER_CONNECTIONS
+    )
 
     return {
         "TOOL_SERVER_CONNECTIONS": request.app.state.config.TOOL_SERVER_CONNECTIONS,
@@ -136,7 +128,7 @@ async def verify_tool_servers_config(
         elif form_data.auth_type == "session":
             token = request.state.token.credentials
 
-        url = get_tool_server_url(form_data.url, form_data.path)
+        url = f"{form_data.url}/{form_data.path}"
         return await get_tool_server_data(token, url)
     except Exception as e:
         raise HTTPException(

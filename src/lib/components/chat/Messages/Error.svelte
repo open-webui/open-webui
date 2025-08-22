@@ -10,20 +10,6 @@
 	</div>
 
 	<div class=" self-center text-sm">
-		{#if typeof content === 'string'}
-			{content}
-		{:else if typeof content === 'object' && content !== null}
-			{#if content?.error && content?.error?.message}
-				{content.error.message}
-			{:else if content?.detail}
-				{content.detail}
-			{:else if content?.message}
-				{content.message}
-			{:else}
-				{JSON.stringify(content)}
-			{/if}
-		{:else}
-			{JSON.stringify(content)}
-		{/if}
+		{typeof content === 'string' ? content : JSON.stringify(content)}
 	</div>
 </div>

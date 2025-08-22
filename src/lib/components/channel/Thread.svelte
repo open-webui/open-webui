@@ -8,10 +8,8 @@
 	import XMark from '$lib/components/icons/XMark.svelte';
 	import MessageInput from './MessageInput.svelte';
 	import Messages from './Messages.svelte';
-	import { onDestroy, onMount, tick, getContext } from 'svelte';
+	import { onDestroy, onMount, tick } from 'svelte';
 	import { toast } from 'svelte-sonner';
-
-	const i18n = getContext('i18n');
 
 	export let threadId = null;
 	export let channel = null;
@@ -56,7 +54,7 @@
 	};
 
 	const channelEventHandler = async (event) => {
-		console.debug(event);
+		console.log(event);
 		if (event.channel_id === channel.id) {
 			const type = event?.data?.type ?? null;
 			const data = event?.data?.data ?? null;
@@ -121,7 +119,7 @@
 	};
 
 	const submitHandler = async ({ content, data }) => {
-		if (!content && (data?.files ?? []).length === 0) {
+		if (!content) {
 			return;
 		}
 
@@ -160,7 +158,7 @@
 {#if channel}
 	<div class="flex flex-col w-full h-full bg-gray-50 dark:bg-gray-850">
 		<div class="flex items-center justify-between px-3.5 pt-3">
-			<div class=" font-medium text-lg">{$i18n.t('Thread')}</div>
+			<div class=" font-medium text-lg">Thread</div>
 
 			<div>
 				<button
@@ -198,7 +196,7 @@
 				}}
 			/>
 
-			<div class=" pb-[1rem] px-2.5">
+			<div class=" pb-[1rem]">
 				<MessageInput id={threadId} {typingUsers} {onChange} onSubmit={submitHandler} />
 			</div>
 		</div>

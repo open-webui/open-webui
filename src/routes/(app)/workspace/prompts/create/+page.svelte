@@ -9,22 +9,14 @@
 	import { createNewPrompt, getPrompts } from '$lib/apis/prompts';
 	import PromptEditor from '$lib/components/workspace/Prompts/PromptEditor.svelte';
 
-	let prompt: {
-		title: string;
-		command: string;
-		content: string;
-		access_control: any | null;
-	} | null = null;
-
-	let clone = false;
-
+	let prompt = null;
 	const onSubmit = async (_prompt) => {
-		const res = await createNewPrompt(localStorage.token, _prompt).catch((error) => {
+		const prompt = await createNewPrompt(localStorage.token, _prompt).catch((error) => {
 			toast.error(`${error}`);
 			return null;
 		});
 
-		if (res) {
+		if (prompt) {
 			toast.success($i18n.t('Prompt created successfully'));
 
 			await prompts.set(await getPrompts(localStorage.token));
@@ -41,9 +33,8 @@
 			)
 				return;
 			const _prompt = JSON.parse(event.data);
-			console.log('Received prompt via window message:', _prompt);
+			console.log(_prompt);
 
-			clone = true;
 			prompt = {
 				title: _prompt.title,
 				command: _prompt.command,
@@ -58,21 +49,18 @@
 
 		if (sessionStorage.prompt) {
 			const _prompt = JSON.parse(sessionStorage.prompt);
-			sessionStorage.removeItem('prompt');
 
-			console.log('Received prompt via sessionStorage:', _prompt);
-
-			clone = true;
 			prompt = {
 				title: _prompt.title,
 				command: _prompt.command,
 				content: _prompt.content,
 				access_control: null
 			};
+			sessionStorage.removeItem('prompt');
 		}
 	});
 </script>
 
 {#key prompt}
-	<PromptEditor {prompt} {onSubmit} {clone} />
+	<PromptEditor {prompt} {onSubmit} />
 {/key}

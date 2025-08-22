@@ -72,10 +72,6 @@
 		"title": "French (France)"
 	},
 	{
-		"code": "gl-ES",
-		"title": "Galician (Galego)"
-	},
-	{
 		"code": "ka-GE",
 		"title": "Georgian (ქართული)"
 	},
@@ -114,10 +110,6 @@
 	{
 		"code": "ja-JP",
 		"title": "Japanese (日本語)"
-	},
-	{
-		"code": "kab-DZ",
-		"title": "Kabyle (Taqbaylit)"
 	},
 	{
 		"code": "ko-KR",
@@ -188,7 +180,7 @@
 		"title": "Turkish (Türkçe)"
 	},
 	{
-		"code": "tk-TM",
+		"code": "tk-TW",
 		"title": "Turkmen (Türkmençe)"
 	},
 	{
@@ -198,18 +190,6 @@
 	{
 		"code": "ur-PK",
 		"title": "Urdu (اردو)"
-	},
-	{
-		"code": "ug-CN",
-		"title": "Uyghur (ئۇيغۇرچە)"
-	},
-	{
-		"code": "uz-Cyrl-UZ",
-		"title": "Uzbek (Cyrillic)"
-	},
-	{
-		"code": "uz-Latn-UZ",
-		"title": "Uzbek (Latin)"
 	},
 	{
 		"code": "vi-VN",

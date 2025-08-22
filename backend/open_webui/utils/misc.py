@@ -1,6 +1,5 @@
 import hashlib
 import re
-import threading
 import time
 import uuid
 import logging
@@ -35,15 +34,11 @@ def get_message_list(messages, message_id):
     :return: List of ordered messages starting from the root to the given message
     """
 
-    # Handle case where messages is None
-    if not messages:
-        return []  # Return empty list instead of None to prevent iteration errors
-
     # Find the message by its id
     current_message = messages.get(message_id)
 
     if not current_message:
-        return []  # Return empty list instead of None to prevent iteration errors
+        return None
 
     # Reconstruct the chain by following the parentId links
     message_list = []
@@ -52,7 +47,7 @@ def get_message_list(messages, message_id):
         message_list.insert(
             0, current_message
         )  # Insert the message at the beginning of the list
-        parent_id = current_message.get("parentId")  # Use .get() for safety
+        parent_id = current_message["parentId"]
         current_message = messages.get(parent_id) if parent_id else None
 
     return message_list
@@ -75,12 +70,12 @@ def get_last_user_message_item(messages: list[dict]) -> Optional[dict]:
 
 
 def get_content_from_message(message: dict) -> Optional[str]:
-    if isinstance(message.get("content"), list):
+    if isinstance(message["content"], list):
         for item in message["content"]:
             if item["type"] == "text":
                 return item["text"]
     else:
-        return message.get("content")
+        return message["content"]
     return None
 
 
@@ -135,9 +130,7 @@ def prepend_to_first_user_message_content(
     return messages
 
 
-def add_or_update_system_message(
-    content: str, messages: list[dict], append: bool = False
-):
+def add_or_update_system_message(content: str, messages: list[dict]):
     """
     Adds a new system message at the beginning of the messages list
     or updates the existing system message at the beginning.
@@ -148,10 +141,7 @@ def add_or_update_system_message(
     """
 
     if messages and messages[0].get("role") == "system":
-        if append:
-            messages[0]["content"] = f"{messages[0]['content']}\n{content}"
-        else:
-            messages[0]["content"] = f"{content}\n{messages[0]['content']}"
+        messages[0]["content"] = f"{content}\n{messages[0]['content']}"
     else:
         # Insert at the beginning
         messages.insert(0, {"role": "system", "content": content})
@@ -209,7 +199,6 @@ def openai_chat_message_template(model: str):
 def openai_chat_chunk_message_template(
     model: str,
     content: Optional[str] = None,
-    reasoning_content: Optional[str] = None,
     tool_calls: Optional[list[dict]] = None,
     usage: Optional[dict] = None,
 ) -> dict:
@@ -222,13 +211,10 @@ def openai_chat_chunk_message_template(
     if content:
         template["choices"][0]["delta"]["content"] = content
 
-    if reasoning_content:
-        template["choices"][0]["delta"]["reasoning_content"] = reasoning_content
-
     if tool_calls:
         template["choices"][0]["delta"]["tool_calls"] = tool_calls
 
-    if not content and not reasoning_content and not tool_calls:
+    if not content and not tool_calls:
         template["choices"][0]["finish_reason"] = "stop"
 
     if usage:
@@ -239,7 +225,6 @@ def openai_chat_chunk_message_template(
 def openai_chat_completion_message_template(
     model: str,
     message: Optional[str] = None,
-    reasoning_content: Optional[str] = None,
     tool_calls: Optional[list[dict]] = None,
     usage: Optional[dict] = None,
 ) -> dict:
@@ -247,9 +232,8 @@ def openai_chat_completion_message_template(
     template["object"] = "chat.completion"
     if message is not None:
         template["choices"][0]["message"] = {
-            "role": "assistant",
             "content": message,
-            **({"reasoning_content": reasoning_content} if reasoning_content else {}),
+            "role": "assistant",
             **({"tool_calls": tool_calls} if tool_calls else {}),
         }
 
@@ -479,46 +463,3 @@ def convert_logit_bias_input_to_json(user_input):
         bias = 100 if bias > 100 else -100 if bias < -100 else bias
         logit_bias_json[token] = bias
     return json.dumps(logit_bias_json)
-
-
-def freeze(value):
-    """
-    Freeze a value to make it hashable.
-    """
-    if isinstance(value, dict):
-        return frozenset((k, freeze(v)) for k, v in value.items())
-    elif isinstance(value, list):
-        return tuple(freeze(v) for v in value)
-    return value
-
-
-def throttle(interval: float = 10.0):
-    """
-    Decorator to prevent a function from being called more than once within a specified duration.
-    If the function is called again within the duration, it returns None. To avoid returning
-    different types, the return type of the function should be Optional[T].
-
-    :param interval: Duration in seconds to wait before allowing the function to be called again.
-    """
-
-    def decorator(func):
-        last_calls = {}
-        lock = threading.Lock()
-
-        def wrapper(*args, **kwargs):
-            if interval is None:
-                return func(*args, **kwargs)
-
-            key = (args, freeze(kwargs))
-            now = time.time()
-            if now - last_calls.get(key, 0) < interval:
-                return None
-            with lock:
-                if now - last_calls.get(key, 0) < interval:
-                    return None
-                last_calls[key] = now
-            return func(*args, **kwargs)
-
-        return wrapper
-
-    return decorator

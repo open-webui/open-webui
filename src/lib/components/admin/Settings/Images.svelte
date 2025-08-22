@@ -13,11 +13,9 @@
 		updateConfig,
 		verifyConfigUrl
 	} from '$lib/apis/images';
-	import Spinner from '$lib/components/common/Spinner.svelte';
 	import SensitiveInput from '$lib/components/common/SensitiveInput.svelte';
 	import Switch from '$lib/components/common/Switch.svelte';
 	import Tooltip from '$lib/components/common/Tooltip.svelte';
-	import Textarea from '$lib/components/common/Textarea.svelte';
 	const dispatch = createEventDispatcher();
 
 	const i18n = getContext('i18n');
@@ -143,7 +141,7 @@
 
 		if (config?.comfyui?.COMFYUI_WORKFLOW) {
 			if (!validateJSON(config.comfyui.COMFYUI_WORKFLOW)) {
-				toast.error($i18n.t('Invalid JSON format for ComfyUI Workflow.'));
+				toast.error('Invalid JSON format for ComfyUI Workflow.');
 				loading = false;
 				return;
 			}
@@ -200,14 +198,14 @@
 						2
 					);
 				} catch (e) {
-					console.error(e);
+					console.log(e);
 				}
 			}
 
 			requiredWorkflowNodes = requiredWorkflowNodes.map((node) => {
 				const n = config.comfyui.COMFYUI_WORKFLOW_NODES.find((n) => n.type === node.type) ?? node;
 
-				console.debug(n);
+				console.log(n);
 
 				return {
 					type: n.type,
@@ -506,7 +504,7 @@
 						<div class=" mb-2 text-sm font-medium">{$i18n.t('ComfyUI Workflow')}</div>
 
 						{#if config.comfyui.COMFYUI_WORKFLOW}
-							<Textarea
+							<textarea
 								class="w-full rounded-lg mb-1 py-2 px-4 text-xs bg-gray-50 dark:text-gray-300 dark:bg-gray-850 outline-hidden disabled:text-gray-600 resize-none"
 								rows="10"
 								bind:value={config.comfyui.COMFYUI_WORKFLOW}
@@ -535,7 +533,7 @@
 								/>
 
 								<button
-									class="w-full text-sm font-medium py-2 bg-transparent hover:bg-gray-50 border border-dashed border-gray-50 dark:border-gray-850 dark:hover:bg-gray-850 text-center rounded-xl"
+									class="w-full text-sm font-medium py-2 bg-transparent hover:bg-gray-100 border border-dashed dark:border-gray-850 dark:hover:bg-gray-850 text-center rounded-xl"
 									type="button"
 									on:click={() => {
 										document.getElementById('upload-comfyui-workflow-input')?.click();
@@ -557,19 +555,19 @@
 
 							<div class="text-xs flex flex-col gap-1.5">
 								{#each requiredWorkflowNodes as node}
-									<div class="flex w-full items-center">
+									<div class="flex w-full items-center border dark:border-gray-850 rounded-lg">
 										<div class="shrink-0">
 											<div
-												class=" capitalize line-clamp-1 font-medium px-3 py-1 w-20 text-center bg-green-500/10 text-green-700 dark:text-green-200"
+												class=" capitalize line-clamp-1 font-medium px-3 py-1 w-20 text-center rounded-l-lg bg-green-500/10 text-green-700 dark:text-green-200"
 											>
 												{node.type}{node.type === 'prompt' ? '*' : ''}
 											</div>
 										</div>
 										<div class="">
-											<Tooltip content={$i18n.t('Input Key (e.g. text, unet_name, steps)')}>
+											<Tooltip content="Input Key (e.g. text, unet_name, steps)">
 												<input
-													class="py-1 px-3 w-24 text-xs text-center bg-transparent outline-hidden border-r border-gray-50 dark:border-gray-850"
-													placeholder={$i18n.t('Key')}
+													class="py-1 px-3 w-24 text-xs text-center bg-transparent outline-hidden border-r dark:border-gray-850"
+													placeholder="Key"
 													bind:value={node.key}
 													required
 												/>
@@ -578,12 +576,12 @@
 
 										<div class="w-full">
 											<Tooltip
-												content={$i18n.t('Comma separated Node Ids (e.g. 1 or 1,2)')}
+												content="Comma separated Node Ids (e.g. 1 or 1,2)"
 												placement="top-start"
 											>
 												<input
-													class="w-full py-1 px-4 text-xs bg-transparent outline-hidden"
-													placeholder={$i18n.t('Node Ids')}
+													class="w-full py-1 px-4 rounded-r-lg text-xs bg-transparent outline-hidden"
+													placeholder="Node Ids"
 													bind:value={node.node_ids}
 												/>
 											</Tooltip>
@@ -650,7 +648,7 @@
 											list="model-list"
 											class="w-full rounded-lg py-2 px-4 text-sm bg-gray-50 dark:text-gray-300 dark:bg-gray-850 outline-hidden"
 											bind:value={imageGenerationConfig.MODEL}
-											placeholder={$i18n.t('Select a model')}
+											placeholder="Select a model"
 											required
 										/>
 
@@ -713,7 +711,29 @@
 
 			{#if loading}
 				<div class="ml-2 self-center">
-					<Spinner />
+					<svg
+						class=" w-4 h-4"
+						viewBox="0 0 24 24"
+						fill="currentColor"
+						xmlns="http://www.w3.org/2000/svg"
+						><style>
+							.spinner_ajPY {
+								transform-origin: center;
+								animation: spinner_AtaB 0.75s infinite linear;
+							}
+							@keyframes spinner_AtaB {
+								100% {
+									transform: rotate(360deg);
+								}
+							}
+						</style><path
+							d="M12,1A11,11,0,1,0,23,12,11,11,0,0,0,12,1Zm0,19a8,8,0,1,1,8-8A8,8,0,0,1,12,20Z"
+							opacity=".25"
+						/><path
+							d="M10.14,1.16a11,11,0,0,0-9,8.92A1.59,1.59,0,0,0,2.46,12,1.52,1.52,0,0,0,4.11,10.7a8,8,0,0,1,6.66-6.61A1.42,1.42,0,0,0,12,2.69h0A1.57,1.57,0,0,0,10.14,1.16Z"
+							class="spinner_ajPY"
+						/></svg
+					>
 				</div>
 			{/if}
 		</button>

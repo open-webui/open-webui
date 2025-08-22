@@ -28,7 +28,7 @@
 	import Image from '$lib/components/common/Image.svelte';
 	import FileItem from '$lib/components/common/FileItem.svelte';
 	import ProfilePreview from './Message/ProfilePreview.svelte';
-	import ChatBubbleOvalEllipsis from '$lib/components/icons/ChatBubble.svelte';
+	import ChatBubbleOvalEllipsis from '$lib/components/icons/ChatBubbleOvalEllipsis.svelte';
 	import FaceSmile from '$lib/components/icons/FaceSmile.svelte';
 	import ReactionPicker from './Message/ReactionPicker.svelte';
 	import ChevronRight from '$lib/components/icons/ChevronRight.svelte';
@@ -144,9 +144,7 @@
 					<ProfilePreview user={message.user}>
 						<ProfileImage
 							src={message.user?.profile_image_url ??
-								($i18n.language === 'dg-DG'
-									? `${WEBUI_BASE_URL}/doge.png`
-									: `${WEBUI_BASE_URL}/static/favicon.png`)}
+								($i18n.language === 'dg-DG' ? `/doge.png` : `${WEBUI_BASE_URL}/static/favicon.png`)}
 							className={'size-8 translate-y-1 ml-0.5'}
 						/>
 					</ProfilePreview>
@@ -277,7 +275,7 @@
 										>
 											{#if $shortCodesToEmojis[reaction.name]}
 												<img
-													src="{WEBUI_BASE_URL}/assets/emojis/{$shortCodesToEmojis[
+													src="/assets/emojis/{$shortCodesToEmojis[
 														reaction.name
 													].toLowerCase()}.svg"
 													alt={reaction.name}

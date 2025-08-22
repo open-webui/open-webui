@@ -2,8 +2,8 @@ import logging
 from typing import Optional
 
 from open_webui.retrieval.web.main import SearchResult, get_filtered_results
-from ddgs import DDGS
-from ddgs.exceptions import RatelimitException
+from duckduckgo_search import DDGS
+from duckduckgo_search.exceptions import RatelimitException
 from open_webui.env import SRC_LOG_LEVELS
 
 log = logging.getLogger(__name__)
@@ -11,10 +11,7 @@ log.setLevel(SRC_LOG_LEVELS["RAG"])
 
 
 def search_duckduckgo(
-    query: str,
-    count: int,
-    filter_list: Optional[list[str]] = None,
-    concurrent_requests: Optional[int] = None,
+    query: str, count: int, filter_list: Optional[list[str]] = None
 ) -> list[SearchResult]:
     """
     Search using DuckDuckGo's Search API and return the results as a list of SearchResult objects.
@@ -28,9 +25,6 @@ def search_duckduckgo(
     # Use the DDGS context manager to create a DDGS object
     search_results = []
     with DDGS() as ddgs:
-        if concurrent_requests:
-            ddgs.threads = concurrent_requests
-
         # Use the ddgs.text() method to perform the search
         try:
             search_results = ddgs.text(

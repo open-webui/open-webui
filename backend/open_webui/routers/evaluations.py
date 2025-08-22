@@ -56,7 +56,7 @@ async def update_config(
     }
 
 
-class UserResponse(BaseModel):
+class FeedbackUserReponse(BaseModel):
     id: str
     name: str
     email: str
@@ -68,23 +68,21 @@ class UserResponse(BaseModel):
 
 
 class FeedbackUserResponse(FeedbackResponse):
-    user: Optional[UserResponse] = None
+    user: Optional[FeedbackUserReponse] = None
 
 
 @router.get("/feedbacks/all", response_model=list[FeedbackUserResponse])
 async def get_all_feedbacks(user=Depends(get_admin_user)):
     feedbacks = Feedbacks.get_all_feedbacks()
-
-    feedback_list = []
-    for feedback in feedbacks:
-        user = Users.get_user_by_id(feedback.user_id)
-        feedback_list.append(
-            FeedbackUserResponse(
-                **feedback.model_dump(),
-                user=UserResponse(**user.model_dump()) if user else None,
-            )
+    return [
+        FeedbackUserResponse(
+            **feedback.model_dump(),
+            user=FeedbackUserReponse(
+                **Users.get_user_by_id(feedback.user_id).model_dump()
+            ),
         )
-    return feedback_list
+        for feedback in feedbacks
+    ]
 
 
 @router.delete("/feedbacks/all")
@@ -96,7 +94,12 @@ async def delete_all_feedbacks(user=Depends(get_admin_user)):
 @router.get("/feedbacks/all/export", response_model=list[FeedbackModel])
 async def get_all_feedbacks(user=Depends(get_admin_user)):
     feedbacks = Feedbacks.get_all_feedbacks()
-    return feedbacks
+    return [
+        FeedbackModel(
+            **feedback.model_dump(), user=Users.get_user_by_id(feedback.user_id)
+        )
+        for feedback in feedbacks
+    ]
 
 
 @router.get("/feedbacks/user", response_model=list[FeedbackUserResponse])
@@ -129,10 +132,7 @@ async def create_feedback(
 
 @router.get("/feedback/{id}", response_model=FeedbackModel)
 async def get_feedback_by_id(id: str, user=Depends(get_verified_user)):
-    if user.role == "admin":
-        feedback = Feedbacks.get_feedback_by_id(id=id)
-    else:
-        feedback = Feedbacks.get_feedback_by_id_and_user_id(id=id, user_id=user.id)
+    feedback = Feedbacks.get_feedback_by_id_and_user_id(id=id, user_id=user.id)
 
     if not feedback:
         raise HTTPException(
@@ -146,12 +146,9 @@ async def get_feedback_by_id(id: str, user=Depends(get_verified_user)):
 async def update_feedback_by_id(
     id: str, form_data: FeedbackForm, user=Depends(get_verified_user)
 ):
-    if user.role == "admin":
-        feedback = Feedbacks.update_feedback_by_id(id=id, form_data=form_data)
-    else:
-        feedback = Feedbacks.update_feedback_by_id_and_user_id(
-            id=id, user_id=user.id, form_data=form_data
-        )
+    feedback = Feedbacks.update_feedback_by_id_and_user_id(
+        id=id, user_id=user.id, form_data=form_data
+    )
 
     if not feedback:
         raise HTTPException(

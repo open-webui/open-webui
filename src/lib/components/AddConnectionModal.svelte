@@ -3,7 +3,7 @@
 	import { getContext, onMount } from 'svelte';
 	const i18n = getContext('i18n');
 
-	import { settings } from '$lib/stores';
+	import { models } from '$lib/stores';
 	import { verifyOpenAIConnection } from '$lib/apis/openai';
 	import { verifyOllamaConnection } from '$lib/apis/ollama';
 
@@ -15,8 +15,6 @@
 	import Tooltip from '$lib/components/common/Tooltip.svelte';
 	import Switch from '$lib/components/common/Switch.svelte';
 	import Tags from './common/Tags.svelte';
-	import Spinner from '$lib/components/common/Spinner.svelte';
-	import XMark from '$lib/components/icons/XMark.svelte';
 
 	export let onSubmit: Function = () => {};
 	export let onDelete: Function = () => {};
@@ -32,15 +30,8 @@
 	let url = '';
 	let key = '';
 
-	let connectionType = 'external';
-	let azure = false;
-	$: azure =
-		(url.includes('azure.') || url.includes('cognitive.microsoft.com')) && !direct ? true : false;
-
 	let prefixId = '';
 	let enable = true;
-	let apiVersion = '';
-
 	let tags = [];
 
 	let modelId = '';
@@ -49,13 +40,7 @@
 	let loading = false;
 
 	const verifyOllamaHandler = async () => {
-		// remove trailing slash from url
-		url = url.replace(/\/$/, '');
-
-		const res = await verifyOllamaConnection(localStorage.token, {
-			url,
-			key
-		}).catch((error) => {
+		const res = await verifyOllamaConnection(localStorage.token, url, key).catch((error) => {
 			toast.error(`${error}`);
 		});
 
@@ -65,23 +50,11 @@
 	};
 
 	const verifyOpenAIHandler = async () => {
-		// remove trailing slash from url
-		url = url.replace(/\/$/, '');
-
-		const res = await verifyOpenAIConnection(
-			localStorage.token,
-			{
-				url,
-				key,
-				config: {
-					azure: azure,
-					api_version: apiVersion
-				}
-			},
-			direct
-		).catch((error) => {
-			toast.error(`${error}`);
-		});
+		const res = await verifyOpenAIConnection(localStorage.token, url, key, direct).catch(
+			(error) => {
+				toast.error(`${error}`);
+			}
+		);
 
 		if (res) {
 			toast.success($i18n.t('Server connection verified'));
@@ -108,30 +81,8 @@
 
 		if (!ollama && !url) {
 			loading = false;
-			toast.error($i18n.t('URL is required'));
+			toast.error('URL is required');
 			return;
-		}
-
-		if (azure) {
-			if (!apiVersion) {
-				loading = false;
-
-				toast.error($i18n.t('API Version is required'));
-				return;
-			}
-
-			if (!key) {
-				loading = false;
-
-				toast.error($i18n.t('Key is required'));
-				return;
-			}
-
-			if (modelIds.length === 0) {
-				loading = false;
-				toast.error($i18n.t('Deployment names are required for Azure OpenAI'));
-				return;
-			}
 		}
 
 		// remove trailing slash from url
@@ -144,9 +95,7 @@
 				enable: enable,
 				tags: tags,
 				prefix_id: prefixId,
-				model_ids: modelIds,
-				connection_type: connectionType,
-				...(!ollama && azure ? { azure: true, api_version: apiVersion } : {})
+				model_ids: modelIds
 			}
 		};
 
@@ -171,14 +120,6 @@
 			tags = connection.config?.tags ?? [];
 			prefixId = connection.config?.prefix_id ?? '';
 			modelIds = connection.config?.model_ids ?? [];
-
-			if (ollama) {
-				connectionType = connection.config?.connection_type ?? 'local';
-			} else {
-				connectionType = connection.config?.connection_type ?? 'external';
-				azure = connection.config?.azure ?? false;
-				apiVersion = connection.config?.api_version ?? '';
-			}
 		}
 	};
 
@@ -193,22 +134,30 @@
 
 <Modal size="sm" bind:show>
 	<div>
-		<div class=" flex justify-between dark:text-gray-100 px-5 pt-4 pb-1.5">
-			<h1 class="text-lg font-medium self-center font-primary">
+		<div class=" flex justify-between dark:text-gray-100 px-5 pt-4 pb-2">
+			<div class=" text-lg font-medium self-center font-primary">
 				{#if edit}
 					{$i18n.t('Edit Connection')}
 				{:else}
 					{$i18n.t('Add Connection')}
 				{/if}
-			</h1>
+			</div>
 			<button
 				class="self-center"
-				aria-label={$i18n.t('Close modal')}
 				on:click={() => {
 					show = false;
 				}}
 			>
-				<XMark className={'size-5'} />
+				<svg
+					xmlns="http://www.w3.org/2000/svg"
+					viewBox="0 0 20 20"
+					fill="currentColor"
+					class="w-5 h-5"
+				>
+					<path
+						d="M6.28 5.22a.75.75 0 00-1.06 1.06L8.94 10l-3.72 3.72a.75.75 0 101.06 1.06L10 11.06l3.72 3.72a.75.75 0 101.06-1.06L11.06 10l3.72-3.72a.75.75 0 00-1.06-1.06L10 8.94 6.28 5.22z"
+					/>
+				</svg>
 			</button>
 		</div>
 
@@ -222,43 +171,13 @@
 					}}
 				>
 					<div class="px-1">
-						{#if !direct}
-							<div class="flex gap-2">
-								<div class="flex w-full justify-between items-center">
-									<div class=" text-xs text-gray-500">{$i18n.t('Connection Type')}</div>
-
-									<div class="">
-										<button
-											on:click={() => {
-												connectionType = connectionType === 'local' ? 'external' : 'local';
-											}}
-											type="button"
-											class=" text-xs text-gray-700 dark:text-gray-300"
-										>
-											{#if connectionType === 'local'}
-												{$i18n.t('Local')}
-											{:else}
-												{$i18n.t('External')}
-											{/if}
-										</button>
-									</div>
-								</div>
-							</div>
-						{/if}
-
-						<div class="flex gap-2 mt-1.5">
+						<div class="flex gap-2">
 							<div class="flex flex-col w-full">
-								<label
-									for="url-input"
-									class={`mb-0.5 text-xs text-gray-500
-								${($settings?.highContrastMode ?? false) ? 'text-gray-800 dark:text-gray-100' : ''}`}
-									>{$i18n.t('URL')}</label
-								>
+								<div class=" mb-0.5 text-xs text-gray-500">{$i18n.t('URL')}</div>
 
 								<div class="flex-1">
 									<input
-										id="url-input"
-										class={`w-full text-sm bg-transparent ${($settings?.highContrastMode ?? false) ? 'placeholder:text-gray-700 dark:placeholder:text-gray-100' : 'outline-hidden placeholder:text-gray-300 dark:placeholder:text-gray-700'}`}
+										class="w-full text-sm bg-transparent placeholder:text-gray-300 dark:placeholder:text-gray-700 outline-hidden"
 										type="text"
 										bind:value={url}
 										placeholder={$i18n.t('API Base URL')}
@@ -275,13 +194,11 @@
 										verifyHandler();
 									}}
 									type="button"
-									aria-label={$i18n.t('Verify Connection')}
 								>
 									<svg
 										xmlns="http://www.w3.org/2000/svg"
 										viewBox="0 0 20 20"
 										fill="currentColor"
-										aria-hidden="true"
 										class="w-4 h-4"
 									>
 										<path
@@ -294,27 +211,19 @@
 							</Tooltip>
 
 							<div class="flex flex-col shrink-0 self-end">
-								<label class="sr-only" for="toggle-connection"
-									>{$i18n.t('Toggle whether current connection is active.')}</label
-								>
 								<Tooltip content={enable ? $i18n.t('Enabled') : $i18n.t('Disabled')}>
-									<Switch id="toggle-connection" bind:state={enable} />
+									<Switch bind:state={enable} />
 								</Tooltip>
 							</div>
 						</div>
 
 						<div class="flex gap-2 mt-2">
 							<div class="flex flex-col w-full">
-								<div
-									class={`mb-0.5 text-xs text-gray-500
-								${($settings?.highContrastMode ?? false) ? 'text-gray-800 dark:text-gray-100' : ''}`}
-								>
-									{$i18n.t('Key')}
-								</div>
+								<div class=" mb-0.5 text-xs text-gray-500">{$i18n.t('Key')}</div>
 
 								<div class="flex-1">
 									<SensitiveInput
-										inputClassName={`w-full text-sm bg-transparent ${($settings?.highContrastMode ?? false) ? 'placeholder:text-gray-700 dark:placeholder:text-gray-100' : 'outline-hidden placeholder:text-gray-300 dark:placeholder:text-gray-700'}`}
+										className="w-full text-sm bg-transparent placeholder:text-gray-300 dark:placeholder:text-gray-700 outline-hidden"
 										bind:value={key}
 										placeholder={$i18n.t('API Key')}
 										required={false}
@@ -323,12 +232,7 @@
 							</div>
 
 							<div class="flex flex-col w-full">
-								<label
-									for="prefix-id-input"
-									class={`mb-0.5 text-xs text-gray-500
-								${($settings?.highContrastMode ?? false) ? 'text-gray-800 dark:text-gray-100' : ''}`}
-									>{$i18n.t('Prefix ID')}</label
-								>
+								<div class=" mb-1 text-xs text-gray-500">{$i18n.t('Prefix ID')}</div>
 
 								<div class="flex-1">
 									<Tooltip
@@ -337,9 +241,8 @@
 										)}
 									>
 										<input
-											class={`w-full text-sm bg-transparent ${($settings?.highContrastMode ?? false) ? 'placeholder:text-gray-700 dark:placeholder:text-gray-100' : 'outline-hidden placeholder:text-gray-300 dark:placeholder:text-gray-700'}`}
+											class="w-full text-sm bg-transparent placeholder:text-gray-300 dark:placeholder:text-gray-700 outline-hidden"
 											type="text"
-											id="prefix-id-input"
 											bind:value={prefixId}
 											placeholder={$i18n.t('Prefix ID')}
 											autocomplete="off"
@@ -349,39 +252,9 @@
 							</div>
 						</div>
 
-						{#if azure}
-							<div class="flex gap-2 mt-2">
-								<div class="flex flex-col w-full">
-									<label
-										for="api-version-input"
-										class={`mb-0.5 text-xs text-gray-500
-								${($settings?.highContrastMode ?? false) ? 'text-gray-800 dark:text-gray-100' : ''}`}
-										>{$i18n.t('API Version')}</label
-									>
-
-									<div class="flex-1">
-										<input
-											id="api-version-input"
-											class={`w-full text-sm bg-transparent placeholder:text-gray-300 dark:placeholder:text-gray-700 ${($settings?.highContrastMode ?? false) ? 'placeholder:text-gray-700 dark:placeholder:text-gray-100' : 'outline-hidden placeholder:text-gray-300 dark:placeholder:text-gray-700'}`}
-											type="text"
-											bind:value={apiVersion}
-											placeholder={$i18n.t('API Version')}
-											autocomplete="off"
-											required
-										/>
-									</div>
-								</div>
-							</div>
-						{/if}
-
 						<div class="flex gap-2 mt-2">
 							<div class="flex flex-col w-full">
-								<div
-									class={`mb-0.5 text-xs text-gray-500
-								${($settings?.highContrastMode ?? false) ? 'text-gray-800 dark:text-gray-100' : ''}`}
-								>
-									{$i18n.t('Tags')}
-								</div>
+								<div class=" mb-1.5 text-xs text-gray-500">{$i18n.t('Tags')}</div>
 
 								<div class="flex-1">
 									<Tags
@@ -406,26 +279,18 @@
 
 						<div class="flex flex-col w-full">
 							<div class="mb-1 flex justify-between">
-								<div
-									class={`mb-0.5 text-xs text-gray-500
-								${($settings?.highContrastMode ?? false) ? 'text-gray-800 dark:text-gray-100' : ''}`}
-								>
-									{$i18n.t('Model IDs')}
-								</div>
+								<div class="text-xs text-gray-500">{$i18n.t('Model IDs')}</div>
 							</div>
 
 							{#if modelIds.length > 0}
-								<ul class="flex flex-col">
+								<div class="flex flex-col">
 									{#each modelIds as modelId, modelIdx}
-										<li class=" flex gap-2 w-full justify-between items-center">
+										<div class=" flex gap-2 w-full justify-between items-center">
 											<div class=" text-sm flex-1 py-1 rounded-lg">
 												{modelId}
 											</div>
 											<div class="shrink-0">
 												<button
-													aria-label={$i18n.t(`Remove {{MODELID}} from list.`, {
-														MODELID: modelId
-													})}
 													type="button"
 													on:click={() => {
 														modelIds = modelIds.filter((_, idx) => idx !== modelIdx);
@@ -434,23 +299,15 @@
 													<Minus strokeWidth="2" className="size-3.5" />
 												</button>
 											</div>
-										</li>
+										</div>
 									{/each}
-								</ul>
+								</div>
 							{:else}
-								<div
-									class={`text-gray-500 text-xs text-center py-2 px-10
-								${($settings?.highContrastMode ?? false) ? 'text-gray-800 dark:text-gray-100' : ''}`}
-								>
+								<div class="text-gray-500 text-xs text-center py-2 px-10">
 									{#if ollama}
 										{$i18n.t('Leave empty to include all models from "{{url}}/api/tags" endpoint', {
 											url: url
 										})}
-									{:else if azure}
-										{$i18n.t('Deployment names are required for Azure OpenAI')}
-										<!-- {$i18n.t('Leave empty to include all models from "{{url}}" endpoint', {
-											url: `${url}/openai/deployments`
-										})} -->
 									{:else}
 										{$i18n.t('Leave empty to include all models from "{{url}}/models" endpoint', {
 											url: url
@@ -460,25 +317,20 @@
 							{/if}
 						</div>
 
-						<hr class=" border-gray-100 dark:border-gray-700/10 my-1.5 w-full" />
+						<hr class=" border-gray-100 dark:border-gray-700/10 my-2.5 w-full" />
 
 						<div class="flex items-center">
-							<label class="sr-only" for="add-model-id-input">{$i18n.t('Add a model ID')}</label>
 							<input
 								class="w-full py-1 text-sm rounded-lg bg-transparent {modelId
 									? ''
-									: 'text-gray-500'} {($settings?.highContrastMode ?? false)
-									? 'dark:placeholder:text-gray-100 placeholder:text-gray-700'
-									: 'placeholder:text-gray-300 dark:placeholder:text-gray-700 outline-hidden'}"
+									: 'text-gray-500'} placeholder:text-gray-300 dark:placeholder:text-gray-700 outline-hidden"
 								bind:value={modelId}
-								id="add-model-id-input"
 								placeholder={$i18n.t('Add a model ID')}
 							/>
 
 							<div>
 								<button
 									type="button"
-									aria-label={$i18n.t('Add')}
 									on:click={() => {
 										addModelHandler();
 									}}
@@ -514,7 +366,29 @@
 
 							{#if loading}
 								<div class="ml-2 self-center">
-									<Spinner />
+									<svg
+										class=" w-4 h-4"
+										viewBox="0 0 24 24"
+										fill="currentColor"
+										xmlns="http://www.w3.org/2000/svg"
+										><style>
+											.spinner_ajPY {
+												transform-origin: center;
+												animation: spinner_AtaB 0.75s infinite linear;
+											}
+											@keyframes spinner_AtaB {
+												100% {
+													transform: rotate(360deg);
+												}
+											}
+										</style><path
+											d="M12,1A11,11,0,1,0,23,12,11,11,0,0,0,12,1Zm0,19a8,8,0,1,1,8-8A8,8,0,0,1,12,20Z"
+											opacity=".25"
+										/><path
+											d="M10.14,1.16a11,11,0,0,0-9,8.92A1.59,1.59,0,0,0,2.46,12,1.52,1.52,0,0,0,4.11,10.7a8,8,0,0,1,6.66-6.61A1.42,1.42,0,0,0,12,2.69h0A1.57,1.57,0,0,0,10.14,1.16Z"
+											class="spinner_ajPY"
+										/></svg
+									>
 								</div>
 							{/if}
 						</button>

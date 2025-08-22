@@ -18,7 +18,7 @@
 	export let models = [];
 	export let atSelectedModel;
 
-	export let onSelect = (e) => {};
+	export let submitPrompt;
 
 	let mounted = false;
 	let selectedModelIdx = 0;
@@ -46,9 +46,7 @@
 					>
 						<Tooltip
 							content={marked.parse(
-								sanitizeResponseContent(
-									models[selectedModelIdx]?.info?.meta?.description ?? ''
-								).replaceAll('\n', '<br>')
+								sanitizeResponseContent(models[selectedModelIdx]?.info?.meta?.description ?? '')
 							)}
 							placement="right"
 						>
@@ -56,7 +54,7 @@
 								crossorigin="anonymous"
 								src={model?.info?.meta?.profile_image_url ??
 									($i18n.language === 'dg-DG'
-										? `${WEBUI_BASE_URL}/doge.png`
+										? `/doge.png`
 										: `${WEBUI_BASE_URL}/static/favicon.png`)}
 								class=" size-[2.7rem] rounded-full border-[1px] border-gray-100 dark:border-none"
 								alt="logo"
@@ -70,11 +68,11 @@
 
 		{#if $temporaryChatEnabled}
 			<Tooltip
-				content={$i18n.t("This chat won't appear in history and your messages will not be saved.")}
-				className="w-full flex justify-start mb-0.5"
+				content={$i18n.t('This chat won’t appear in history and your messages will not be saved.')}
+				className="w-full flex justify-center mb-0.5"
 				placement="top"
 			>
-				<div class="flex items-center gap-2 text-gray-500 font-medium text-lg mt-2 w-fit">
+				<div class="flex items-center gap-2 text-gray-500 font-medium text-lg my-2 w-fit">
 					<EyeSlash strokeWidth="2.5" className="size-5" />{$i18n.t('Temporary Chat')}
 				</div>
 			</Tooltip>
@@ -98,9 +96,7 @@
 							class="mt-0.5 text-base font-normal text-gray-500 dark:text-gray-400 line-clamp-3 markdown"
 						>
 							{@html marked.parse(
-								sanitizeResponseContent(
-									models[selectedModelIdx]?.info?.meta?.description
-								).replaceAll('\n', '<br>')
+								sanitizeResponseContent(models[selectedModelIdx]?.info?.meta?.description)
 							)}
 						</div>
 						{#if models[selectedModelIdx]?.info?.meta?.user}
@@ -135,7 +131,9 @@
 					models[selectedModelIdx]?.info?.meta?.suggestion_prompts ??
 					$config?.default_prompt_suggestions ??
 					[]}
-				{onSelect}
+				on:select={(e) => {
+					submitPrompt(e.detail);
+				}}
 			/>
 		</div>
 	</div>

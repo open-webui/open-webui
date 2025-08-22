@@ -66,7 +66,7 @@
 
 	const updateModelsHandler = async () => {
 		for (const model of ollamaModels) {
-			console.debug(model);
+			console.log(model);
 
 			updateModelId = model.id;
 			const [res, controller] = await pullModel(localStorage.token, model.id, urlIdx).catch(
@@ -114,8 +114,8 @@
 								}
 							}
 						}
-					} catch (err) {
-						console.error(err);
+					} catch (error) {
+						console.log(error);
 					}
 				}
 			}
@@ -215,13 +215,13 @@
 							}
 						}
 					}
-				} catch (err) {
-					console.error(err);
-					if (typeof err !== 'string') {
-						err = err.message;
+				} catch (error) {
+					console.log(error);
+					if (typeof error !== 'string') {
+						error = error.message;
 					}
 
-					toast.error(`${err}`);
+					toast.error(`${error}`);
 					// opts.callback({ success: false, error, modelName: opts.modelName });
 				}
 			}
@@ -319,8 +319,8 @@
 							}
 						}
 					}
-				} catch (err) {
-					console.error(err);
+				} catch (error) {
+					console.log(error);
 				}
 			}
 		} else {
@@ -382,9 +382,9 @@
 								}
 							}
 						}
-					} catch (err) {
-						console.error(err);
-						toast.error(`${err}`);
+					} catch (error) {
+						console.log(error);
+						toast.error(`${error}`);
 					}
 				}
 			}
@@ -437,7 +437,7 @@
 				...$MODEL_DOWNLOAD_POOL
 			});
 			await deleteModel(localStorage.token, model);
-			toast.success($i18n.t('{{model}} download has been canceled', { model: model }));
+			toast.success(`${model} download has been canceled`);
 		}
 	};
 
@@ -514,9 +514,9 @@
 							}
 						}
 					}
-				} catch (err) {
-					console.error(err);
-					toast.error(`${err}`);
+				} catch (error) {
+					console.log(error);
+					toast.error(`${error}`);
 				}
 			}
 		}
@@ -1057,6 +1057,6 @@
 	</div>
 {:else}
 	<div class="flex justify-center items-center w-full h-full py-3">
-		<Spinner className="size-5" />
+		<Spinner />
 	</div>
 {/if}

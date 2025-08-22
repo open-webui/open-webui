@@ -51,7 +51,7 @@
 		{#if !top}
 			<Loader
 				on:visible={(e) => {
-					console.info('visible');
+					console.log('visible');
 					if (!messagesLoading) {
 						loadMoreMessages();
 					}
@@ -59,7 +59,7 @@
 			>
 				<div class="w-full flex justify-center py-1 text-xs animate-pulse items-center gap-2">
 					<Spinner className=" size-4" />
-					<div class=" ">{$i18n.t('Loading...')}</div>
+					<div class=" ">Loading...</div>
 				</div>
 			</Loader>
 		{:else if !thread}
@@ -84,7 +84,7 @@
 					</div>
 				{:else}
 					<div class="flex justify-center text-xs items-center gap-2 py-5">
-						<div class=" ">{$i18n.t('Start of the channel')}</div>
+						<div class=" ">Start of the channel</div>
 					</div>
 				{/if}
 

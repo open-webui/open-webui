@@ -19,10 +19,10 @@
 
 			if (isDarkMode) {
 				const darkImage = new Image();
-				darkImage.src = `${WEBUI_BASE_URL}/static/favicon-dark.png`;
+				darkImage.src = '/static/favicon-dark.png';
 
 				darkImage.onload = () => {
-					logo.src = `${WEBUI_BASE_URL}/static/favicon-dark.png`;
+					logo.src = '/static/favicon-dark.png';
 					logo.style.filter = ''; // Ensure no inversion is applied if splash-dark.png exists
 				};
 
@@ -39,7 +39,7 @@
 </script>
 
 {#if show}
-	<div class="w-full h-screen max-h-[100dvh] text-white relative">
+	<div class="w-full h-[calc(100dvh-56px)] max-h-[calc(100dvh-56px)] text-white relative" >
 		<div class="fixed m-10 z-50">
 			<div class="flex space-x-2">
 				<div class=" self-center">
@@ -54,15 +54,15 @@
 			</div>
 		</div>
 
-		<SlideShow duration={5000} />
+		<!-- <SlideShow duration={5000} /> -->
 
 		<div
-			class="w-full h-full absolute top-0 left-0 bg-linear-to-t from-20% from-black to-transparent"
+			class="w-full h-[calc(100dvh-56px)] absolute top-0 left-0 bg-linear-to-t from-20% from-black to-transparent"
 		></div>
 
-		<div class="w-full h-full absolute top-0 left-0 backdrop-blur-xs bg-black/50"></div>
+		<div class="w-full h-[calc(100dvh-56px)] absolute top-0 left-0 backdrop-blur-xs bg-black/50"></div>
 
-		<div class="relative bg-transparent w-full h-screen max-h-[100dvh] flex z-10">
+		<div class="relative bg-transparent w-full min-h-[calc(100dvh-56px)] max-h-[calc(100dvh-56px)] flex z-10">
 			<div class="flex flex-col justify-end w-full items-center pb-10 text-center">
 				<div class="text-5xl lg:text-7xl font-secondary">
 					<Marquee
@@ -87,7 +87,6 @@
 				<div class="flex justify-center mt-8">
 					<div class="flex flex-col justify-center items-center">
 						<button
-							aria-labelledby="get-started"
 							class="relative z-20 flex p-1 rounded-full bg-white/5 hover:bg-white/10 transition font-medium text-sm"
 							on:click={() => {
 								getStartedHandler();
@@ -95,12 +94,12 @@
 						>
 							<ArrowRightCircle className="size-6" />
 						</button>
-						<div id="get-started" class="mt-1.5 font-primary text-base font-medium">
-							{$i18n.t(`Get started`)}
-						</div>
+						<div class="mt-1.5 font-primary text-base font-medium">{$i18n.t(`Get started`)}</div>
 					</div>
 				</div>
 			</div>
+
+			<!-- <div class="absolute bottom-12 left-0 right-0 w-full"></div> -->
 		</div>
 	</div>
 {/if}

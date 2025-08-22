@@ -13,6 +13,7 @@
 	import Overview from './Overview.svelte';
 	import EllipsisVertical from '../icons/EllipsisVertical.svelte';
 	import Artifacts from './Artifacts.svelte';
+	import { min } from '@floating-ui/utils';
 
 	export let history;
 	export let models = [];
@@ -139,7 +140,7 @@
 		{#if $showControls}
 			<Drawer
 				show={$showControls}
-				onClose={() => {
+				on:close={() => {
 					showControls.set(false);
 				}}
 			>
@@ -230,7 +231,6 @@
 						class="w-full {($showOverview || $showArtifacts) && !$showCallOverlay
 							? ' '
 							: 'px-4 py-4 bg-white dark:shadow-lg dark:bg-gray-850  border border-gray-100 dark:border-gray-850'} z-40 pointer-events-auto overflow-y-auto scrollbar-hidden"
-						id="controls-container"
 					>
 						{#if $showCallOverlay}
 							<div class="w-full h-full flex justify-center">

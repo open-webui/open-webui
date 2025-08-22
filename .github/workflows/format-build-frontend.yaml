@@ -5,18 +5,10 @@ on:
     branches:
       - main
       - dev
-    paths-ignore:
-      - 'backend/**'
-      - 'pyproject.toml'
-      - 'uv.lock'
   pull_request:
     branches:
       - main
       - dev
-    paths-ignore:
-      - 'backend/**'
-      - 'pyproject.toml'
-      - 'uv.lock'
 
 jobs:
   build:
@@ -29,10 +21,10 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: '22'
+          node-version: '22' # Or specify any other version you want to use
 
       - name: Install Dependencies
-        run: npm install --force
+        run: npm install
 
       - name: Format Frontend
         run: npm run format
@@ -59,7 +51,7 @@ jobs:
           node-version: '22'
 
       - name: Install Dependencies
-        run: npm ci --force
+        run: npm ci
 
       - name: Run vitest
         run: npm run test:frontend

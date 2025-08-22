@@ -1,0 +1,137 @@
+name: Test Change AccelBrain
+
+on:
+  workflow_dispatch:
+
+jobs:
+  test-update:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Check for changes in package.json
+        run: |
+          git diff --cached --diff-filter=d package.json || {
+            echo "No changes to package.json"
+            exit 1
+          }
+      - name: Get version number from package.json
+        id: get_version
+        run: |
+          VERSION=$(jq -r '.version' package.json)
+          echo "::set-output name=version::$VERSION"
+
+      - name: Checkout AccelBrain-dev__confidential repository
+        uses: actions/checkout@v4
+        with:
+          repository: ChangLijie/AccelBrain-dev__confidential
+          ref: dev
+          token: ${{ secrets.PERSONAL_ACCESS_TOKEN }}
+          path: accelbrain-confidential
+
+      - name: Get latest release tag from accelbrain-confidential repo
+        id: get_release
+        run: |
+          cd accelbrain-confidential
+          git fetch --tags
+          TAG=$(git tag --sort=-v:refname | head -n 1)
+          echo "release_tag=$TAG" >> $GITHUB_OUTPUT
+          echo "release_tag=$TAG"
+
+      # - name: Update docker-compose.yml image tag
+      #   run: |
+      #     cd accelbrain-confidential || (echo "Directory not found" && exit 1)
+      #     sed -i "s|innodiskorg/open-webui:.*|innodiskorg/open-webui:v${{ steps.get_version.outputs.version }}|g" docker-compose.yml
+
+      - name: Update CHANGELOG.md
+        run: |
+          cd accelbrain-confidential || (echo "Directory not found" && exit 1)
+          echo "Reading current version from CHANGELOG.md"
+
+          # 先取出上一個版本號（第一個 [vX.X]）
+          PREVIOUS_VERSION=$(grep -oP '^## \[\K[0-9]+\.[0-9]+\.[0-9]+' CHANGELOG.md | head -n 1)
+          echo "Previous version: $PREVIOUS_VERSION"
+          if [ "v$PREVIOUS_VERSION" = "${{ steps.get_release.outputs.release_tag }}" ]; then
+            echo "✅ Versions match!"
+            # 分離 major.minor.patch
+            MAJOR_VERSION=$(echo $PREVIOUS_VERSION | cut -d. -f1)
+            MINOR_VERSION=$(echo $PREVIOUS_VERSION | cut -d. -f2)
+            PATCH_VERSION=$(echo $PREVIOUS_VERSION | cut -d. -f3)
+
+            # Patch +1
+            NEW_PATCH_VERSION=$((PATCH_VERSION + 1))
+            NEW_VERSION="v${MAJOR_VERSION}.${MINOR_VERSION}.${NEW_PATCH_VERSION}"
+
+            echo "🔁 New patch version: $NEW_VERSION"
+
+            # 插入新版本區塊
+            awk -v accelbrain_version="$NEW_VERSION" -v chatbot_version="v${{ steps.get_version.outputs.version }}" -v date="$(date +'%Y-%m-%d')" '
+            BEGIN { inserted=0 }
+            {
+              print $0
+              if (!inserted && $0 ~ /Semantic Versioning/) {
+                print ""
+                print "## [" accelbrain_version "] - " date
+                print ""
+                print "### Fixed"
+                print ""
+                print "- **Update the chatbot to " chatbot_version "**"
+                print ""
+                inserted=1
+              }
+            }' CHANGELOG.md > CHANGELOG.tmp && mv CHANGELOG.tmp CHANGELOG.md
+
+            cat CHANGELOG.md
+          elif [ "$(printf '%s\n' "$PREVIOUS_VERSION" "$RELEASE_TAG" | sort -V | head -n1)" = "$RELEASE_TAG" ]; then
+            awk -v chatbot_version="v${{ steps.get_version.outputs.version }}" '
+            BEGIN {
+              in_latest_section = 0
+              inserted = 0
+              done = 0
+            }
+            {
+              # 碰到新的版本標題（## [X.X.X]），僅第一次開啟 latest 區域
+              if ($0 ~ /^## \[/) {
+                if (done == 0) {
+                  in_latest_section = 1
+                  done = 1
+                } else {
+                  in_latest_section = 0
+                }
+              }
+
+              # 如果這行是舊的 chatbot 更新記錄，略過它（不輸出）
+              if (in_latest_section == 1 && $0 ~ /^- \*\*Update the chatbot to v[0-9]+\.[0-9]+(\.[0-9]+)?\*\*$/) {
+                next
+              }
+
+
+              # 如果還沒插入新版本，且遇到 ### Fixed，就插入新版
+              if (in_latest_section == 1 && inserted == 0 && $0 ~ /^### Fixed$/) {
+                print $0
+                print "- **Update the chatbot to " chatbot_version "**"
+                inserted = 1
+                next
+              }
+
+              # 其他行照常印出
+              print $0
+            }
+            ' CHANGELOG.md > CHANGELOG.tmp && mv CHANGELOG.tmp CHANGELOG.md
+
+            rm -f CHANGELOG.tmp
+            cat CHANGELOG.md
+          else
+            echo "❌ Version incorrect Please check AccelBrain release tag and ChangeLOG!"
+            exit 1
+          fi
+
+      
+
+      # - name: Commit and push changes
+      #   uses: stefanzweifel/git-auto-commit-action@v5
+      #   with:
+      #     commit_message: "chore: bump open-webui image to v${{ steps.get_version.outputs.version }}"
+      #     repository: ./accelbrain-confidential

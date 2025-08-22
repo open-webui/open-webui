@@ -1,5 +1,4 @@
 from typing import Optional
-from fastapi import APIRouter, Depends, HTTPException, status, Request
 
 from open_webui.models.prompts import (
     PromptForm,
@@ -8,9 +7,9 @@ from open_webui.models.prompts import (
     Prompts,
 )
 from open_webui.constants import ERROR_MESSAGES
+from fastapi import APIRouter, Depends, HTTPException, status, Request
 from open_webui.utils.auth import get_admin_user, get_verified_user
 from open_webui.utils.access_control import has_access, has_permission
-from open_webui.config import BYPASS_ADMIN_ACCESS_CONTROL
 
 router = APIRouter()
 
@@ -21,7 +20,7 @@ router = APIRouter()
 
 @router.get("/", response_model=list[PromptModel])
 async def get_prompts(user=Depends(get_verified_user)):
-    if user.role == "admin" and BYPASS_ADMIN_ACCESS_CONTROL:
+    if user.role == "admin":
         prompts = Prompts.get_prompts()
     else:
         prompts = Prompts.get_prompts_by_user_id(user.id, "read")
@@ -31,7 +30,7 @@ async def get_prompts(user=Depends(get_verified_user)):
 
 @router.get("/list", response_model=list[PromptUserResponse])
 async def get_prompt_list(user=Depends(get_verified_user)):
-    if user.role == "admin" and BYPASS_ADMIN_ACCESS_CONTROL:
+    if user.role == "admin":
         prompts = Prompts.get_prompts()
     else:
         prompts = Prompts.get_prompts_by_user_id(user.id, "write")

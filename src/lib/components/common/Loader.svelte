@@ -33,9 +33,7 @@
 	});
 
 	onDestroy(() => {
-		if (observer) {
-			observer.disconnect();
-		}
+		observer.disconnect();
 
 		if (intervalId) {
 			clearInterval(intervalId);

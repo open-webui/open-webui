@@ -1,7 +1,7 @@
 <script lang="ts">
 	import DOMPurify from 'dompurify';
 
-	import { getVersionUpdates, getWebhookUrl, updateWebhookUrl } from '$lib/apis';
+	import { getBackendConfig, getVersionUpdates, getWebhookUrl, updateWebhookUrl } from '$lib/apis';
 	import {
 		getAdminConfig,
 		getLdapConfig,
@@ -18,7 +18,6 @@
 	import { compareVersion } from '$lib/utils';
 	import { onMount, getContext } from 'svelte';
 	import { toast } from 'svelte-sonner';
-	import Textarea from '$lib/components/common/Textarea.svelte';
 
 	const i18n = getContext('i18n');
 
@@ -50,20 +49,6 @@
 		ciphers: ''
 	};
 
-	const checkForVersionUpdates = async () => {
-		updateAvailable = null;
-		version = await getVersionUpdates(localStorage.token).catch((error) => {
-			return {
-				current: WEBUI_VERSION,
-				latest: WEBUI_VERSION
-			};
-		});
-
-		console.info(version);
-
-		updateAvailable = compareVersion(version.latest, version.current);
-		console.info(updateAvailable);
-	};
 
 	const updateLdapServerHandler = async () => {
 		if (!ENABLE_LDAP) return;
@@ -79,20 +64,16 @@
 	const updateHandler = async () => {
 		webhookUrl = await updateWebhookUrl(localStorage.token, webhookUrl);
 		const res = await updateAdminConfig(localStorage.token, adminConfig);
-		await updateLdapConfig(localStorage.token, ENABLE_LDAP);
 		await updateLdapServerHandler();
 
 		if (res) {
 			saveHandler();
 		} else {
-			toast.error($i18n.t('Failed to update settings'));
+			toast.error(i18n.t('Failed to update settings'));
 		}
 	};
 
 	onMount(async () => {
-		if ($config?.features?.enable_version_update_check) {
-			checkForVersionUpdates();
-		}
 
 		await Promise.all([
 			(async () => {
@@ -137,20 +118,7 @@
 								<div class="flex gap-1">
 									<Tooltip content={WEBUI_BUILD_HASH}>
 										v{WEBUI_VERSION}
-									</Tooltip>
-
-									{#if $config?.features?.enable_version_update_check}
-										<a
-											href="https://github.com/open-webui/open-webui/releases/tag/v{version.latest}"
-											target="_blank"
-										>
-											{updateAvailable === null
-												? $i18n.t('Checking for updates...')
-												: updateAvailable
-													? `(v${version.latest} ${$i18n.t('available!')})`
-													: $i18n.t('(latest)')}
-										</a>
-									{/if}
+									</Tooltip>								
 								</div>
 
 								<button
@@ -162,119 +130,7 @@
 								>
 									<div>{$i18n.t("See what's new")}</div>
 								</button>
-							</div>
-
-							{#if $config?.features?.enable_version_update_check}
-								<button
-									class=" text-xs px-3 py-1.5 bg-gray-50 hover:bg-gray-100 dark:bg-gray-850 dark:hover:bg-gray-800 transition rounded-lg font-medium"
-									type="button"
-									on:click={() => {
-										checkForVersionUpdates();
-									}}
-								>
-									{$i18n.t('Check for updates')}
-								</button>
-							{/if}
-						</div>
-					</div>
-
-					<div class="mb-2.5">
-						<div class="flex w-full justify-between items-center">
-							<div class="text-xs pr-2">
-								<div class="">
-									{$i18n.t('Help')}
-								</div>
-								<div class=" text-xs text-gray-500">
-									{$i18n.t('Discover how to use Open WebUI and seek support from the community.')}
-								</div>
-							</div>
-
-							<a
-								class="flex-shrink-0 text-xs font-medium underline"
-								href="https://docs.openwebui.com/"
-								target="_blank"
-							>
-								{$i18n.t('Documentation')}
-							</a>
-						</div>
-
-						<div class="mt-1">
-							<div class="flex space-x-1">
-								<a href="https://discord.gg/5rJgQTnV4s" target="_blank">
-									<img
-										alt="Discord"
-										src="https://img.shields.io/badge/Discord-Open_WebUI-blue?logo=discord&logoColor=white"
-									/>
-								</a>
-
-								<a href="https://twitter.com/OpenWebUI" target="_blank">
-									<img
-										alt="X (formerly Twitter) Follow"
-										src="https://img.shields.io/twitter/follow/OpenWebUI"
-									/>
-								</a>
-
-								<a href="https://github.com/open-webui/open-webui" target="_blank">
-									<img
-										alt="Github Repo"
-										src="https://img.shields.io/github/stars/open-webui/open-webui?style=social&label=Star us on Github"
-									/>
-								</a>
-							</div>
-						</div>
-					</div>
-
-					<div class="mb-2.5">
-						<div class="flex w-full justify-between items-center">
-							<div class="text-xs pr-2">
-								<div class="">
-									{$i18n.t('License')}
-								</div>
-
-								{#if $config?.license_metadata}
-									<a
-										href="https://docs.openwebui.com/enterprise"
-										target="_blank"
-										class="text-gray-500 mt-0.5"
-									>
-										<span class=" capitalize text-black dark:text-white"
-											>{$config?.license_metadata?.type}
-											license</span
-										>
-										registered to
-										<span class=" capitalize text-black dark:text-white"
-											>{$config?.license_metadata?.organization_name}</span
-										>
-										for
-										<span class=" font-medium text-black dark:text-white"
-											>{$config?.license_metadata?.seats ?? 'Unlimited'} users.</span
-										>
-									</a>
-									{#if $config?.license_metadata?.html}
-										<div class="mt-0.5">
-											{@html DOMPurify.sanitize($config?.license_metadata?.html)}
-										</div>
-									{/if}
-								{:else}
-									<a
-										class=" text-xs hover:underline"
-										href="https://docs.openwebui.com/enterprise"
-										target="_blank"
-									>
-										<span class="text-gray-500">
-											{$i18n.t(
-												'Upgrade to a licensed plan for enhanced capabilities, including custom theming and branding, and dedicated support.'
-											)}
-										</span>
-									</a>
-								{/if}
-							</div>
-
-							<!-- <button
-								class="flex-shrink-0 text-xs px-3 py-1.5 bg-gray-50 hover:bg-gray-100 dark:bg-gray-850 dark:hover:bg-gray-800 transition rounded-lg font-medium"
-							>
-								{$i18n.t('Activate')}
-							</button> -->
+							</div>							
 						</div>
 					</div>
 				</div>
@@ -290,7 +146,7 @@
 							<select
 								class="dark:bg-gray-900 w-fit pr-8 rounded-sm px-2 text-xs bg-transparent outline-hidden text-right"
 								bind:value={adminConfig.DEFAULT_USER_ROLE}
-								placeholder={$i18n.t('Select a role')}
+								placeholder="Select a role"
 							>
 								<option value="pending">{$i18n.t('pending')}</option>
 								<option value="user">{$i18n.t('user')}</option>
@@ -311,30 +167,6 @@
 						</div>
 
 						<Switch bind:state={adminConfig.SHOW_ADMIN_DETAILS} />
-					</div>
-
-					<div class="mb-2.5">
-						<div class=" self-center text-xs font-medium mb-2">
-							{$i18n.t('Pending User Overlay Title')}
-						</div>
-						<Textarea
-							placeholder={$i18n.t(
-								'Enter a title for the pending user info overlay. Leave empty for default.'
-							)}
-							bind:value={adminConfig.PENDING_USER_OVERLAY_TITLE}
-						/>
-					</div>
-
-					<div class="mb-2.5">
-						<div class=" self-center text-xs font-medium mb-2">
-							{$i18n.t('Pending User Overlay Content')}
-						</div>
-						<Textarea
-							placeholder={$i18n.t(
-								'Enter content for the pending user info overlay. Leave empty for default.'
-							)}
-							bind:value={adminConfig.PENDING_USER_OVERLAY_CONTENT}
-						/>
 					</div>
 
 					<div class="mb-2.5 flex w-full justify-between pr-2">
@@ -407,7 +239,12 @@
 								<div class="  font-medium">{$i18n.t('LDAP')}</div>
 
 								<div class="mt-1">
-									<Switch bind:state={ENABLE_LDAP} />
+									<Switch
+										bind:state={ENABLE_LDAP}
+										on:change={async () => {
+											updateLdapConfig(localStorage.token, ENABLE_LDAP);
+										}}
+									/>
 								</div>
 							</div>
 
@@ -586,13 +423,6 @@
 													/>
 												</div>
 											</div>
-											<div class="flex justify-between items-center text-xs">
-												<div class=" font-medium">{$i18n.t('Validate certificate')}</div>
-
-												<div class="mt-1">
-													<Switch bind:state={LDAP_SERVER.validate_cert} />
-												</div>
-											</div>
 											<div class="flex w-full gap-2">
 												<div class="w-full">
 													<div class=" self-center text-xs font-medium min-w-fit mb-1">
@@ -620,27 +450,11 @@
 					<div class=" mb-2.5 text-base font-medium">{$i18n.t('Features')}</div>
 
 					<hr class=" border-gray-100 dark:border-gray-850 my-2" />
-
-					<div class="mb-2.5 flex w-full items-center justify-between pr-2">
-						<div class=" self-center text-xs font-medium">
-							{$i18n.t('Enable Community Sharing')}
-						</div>
-
-						<Switch bind:state={adminConfig.ENABLE_COMMUNITY_SHARING} />
-					</div>
-
+					
 					<div class="mb-2.5 flex w-full items-center justify-between pr-2">
 						<div class=" self-center text-xs font-medium">{$i18n.t('Enable Message Rating')}</div>
 
 						<Switch bind:state={adminConfig.ENABLE_MESSAGE_RATING} />
-					</div>
-
-					<div class="mb-2.5 flex w-full items-center justify-between pr-2">
-						<div class=" self-center text-xs font-medium">
-							{$i18n.t('Notes')} ({$i18n.t('Beta')})
-						</div>
-
-						<Switch bind:state={adminConfig.ENABLE_NOTES} />
 					</div>
 
 					<div class="mb-2.5 flex w-full items-center justify-between pr-2">
@@ -657,16 +471,6 @@
 						</div>
 
 						<Switch bind:state={adminConfig.ENABLE_USER_WEBHOOKS} />
-					</div>
-
-					<div class="mb-2.5">
-						<div class=" self-center text-xs font-medium mb-2">
-							{$i18n.t('Response Watermark')}
-						</div>
-						<Textarea
-							placeholder={$i18n.t('Enter a watermark for the response. Leave empty for none.')}
-							bind:value={adminConfig.RESPONSE_WATERMARK}
-						/>
 					</div>
 
 					<div class="mb-2.5 w-full justify-between">

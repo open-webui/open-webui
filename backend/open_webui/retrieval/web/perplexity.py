@@ -1,19 +1,9 @@
 import logging
-from typing import Optional, Literal
+from typing import Optional, List
 import requests
 
 from open_webui.retrieval.web.main import SearchResult, get_filtered_results
 from open_webui.env import SRC_LOG_LEVELS
-
-MODELS = Literal[
-    "sonar",
-    "sonar-pro",
-    "sonar-reasoning",
-    "sonar-reasoning-pro",
-    "sonar-deep-research",
-]
-SEARCH_CONTEXT_USAGE_LEVELS = Literal["low", "medium", "high"]
-
 
 log = logging.getLogger(__name__)
 log.setLevel(SRC_LOG_LEVELS["RAG"])
@@ -24,8 +14,6 @@ def search_perplexity(
     query: str,
     count: int,
     filter_list: Optional[list[str]] = None,
-    model: MODELS = "sonar",
-    search_context_usage: SEARCH_CONTEXT_USAGE_LEVELS = "medium",
 ) -> list[SearchResult]:
     """Search using Perplexity API and return the results as a list of SearchResult objects.
 
@@ -33,9 +21,6 @@ def search_perplexity(
       api_key (str): A Perplexity API key
       query (str): The query to search for
       count (int): Maximum number of results to return
-      filter_list (Optional[list[str]]): List of domains to filter results
-      model (str): The Perplexity model to use (sonar, sonar-pro)
-      search_context_usage (str): Search context usage level (low, medium, high)
 
     """
 
@@ -48,7 +33,7 @@ def search_perplexity(
 
         # Create payload for the API call
         payload = {
-            "model": model,
+            "model": "sonar",
             "messages": [
                 {
                     "role": "system",
@@ -58,9 +43,6 @@ def search_perplexity(
             ],
             "temperature": 0.2,  # Lower temperature for more factual responses
             "stream": False,
-            "web_search_options": {
-                "search_context_usage": search_context_usage,
-            },
         }
 
         headers = {

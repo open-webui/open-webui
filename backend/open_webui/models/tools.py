@@ -175,7 +175,7 @@ class ToolsTable:
                 tool = db.get(Tool, id)
                 return tool.valves if tool.valves else {}
         except Exception as e:
-            log.exception(f"Error getting tool valves by id {id}")
+            log.exception(f"Error getting tool valves by id {id}: {e}")
             return None
 
     def update_tool_valves_by_id(self, id: str, valves: dict) -> Optional[ToolValves]:

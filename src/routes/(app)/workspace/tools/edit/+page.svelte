@@ -82,7 +82,7 @@
 {:else}
 	<div class="flex items-center justify-center h-full">
 		<div class=" pb-16">
-			<Spinner className="size-5" />
+			<Spinner />
 		</div>
 	</div>
 {/if}

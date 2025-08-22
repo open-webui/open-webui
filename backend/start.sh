@@ -14,11 +14,7 @@ if [[ "${WEB_LOADER_ENGINE,,}" == "playwright" ]]; then
     python -c "import nltk; nltk.download('punkt_tab')"
 fi
 
-if [ -n "${WEBUI_SECRET_KEY_FILE}" ]; then
-    KEY_FILE="${WEBUI_SECRET_KEY_FILE}"
-else
-    KEY_FILE=".webui_secret_key"
-fi
+KEY_FILE=.webui_secret_key
 
 PORT="${PORT:-8080}"
 HOST="${HOST:-0.0.0.0}"
@@ -69,6 +65,4 @@ if [ -n "$SPACE_ID" ]; then
   export WEBUI_URL=${SPACE_HOST}
 fi
 
-PYTHON_CMD=$(command -v python3 || command -v python)
-
-WEBUI_SECRET_KEY="$WEBUI_SECRET_KEY" exec "$PYTHON_CMD" -m uvicorn open_webui.main:app --host "$HOST" --port "$PORT" --forwarded-allow-ips '*' --workers "${UVICORN_WORKERS:-1}"
+WEBUI_SECRET_KEY="$WEBUI_SECRET_KEY" exec uvicorn open_webui.main:app --host "$HOST" --port "$PORT" --forwarded-allow-ips '*' --workers "${UVICORN_WORKERS:-1}"

@@ -42,7 +42,6 @@
 <AddServerModal bind:show={showConnectionModal} onSubmit={addConnectionHandler} direct />
 
 <form
-	id="tab-tools"
 	class="flex flex-col h-full justify-between text-sm"
 	on:submit|preventDefault={() => {
 		updateHandler();
@@ -61,7 +60,6 @@
 
 							<Tooltip content={$i18n.t(`Add Connection`)}>
 								<button
-									aria-label={$i18n.t(`Add Connection`)}
 									class="px-1"
 									on:click={() => {
 										showConnectionModal = true;
@@ -91,10 +89,7 @@
 					</div>
 
 					<div class="my-1.5">
-						<div
-							class={`text-xs 
-								${($settings?.highContrastMode ?? false) ? 'text-gray-800 dark:text-gray-100' : 'text-gray-500'}`}
-						>
+						<div class="text-xs text-gray-500">
 							{$i18n.t('Connect to your own OpenAPI compatible external tool servers.')}
 							<br />
 							{$i18n.t(

@@ -5,18 +5,10 @@ on:
     branches:
       - main
       - dev
-    paths:
-      - 'backend/**'
-      - 'pyproject.toml'
-      - 'uv.lock'
   pull_request:
     branches:
       - main
       - dev
-    paths:
-      - 'backend/**'
-      - 'pyproject.toml'
-      - 'uv.lock'
 
 jobs:
   build:
@@ -25,9 +17,7 @@ jobs:
 
     strategy:
       matrix:
-        python-version:
-          - 3.11.x
-          - 3.12.x
+        python-version: [3.11]
 
     steps:
       - uses: actions/checkout@v4
@@ -35,7 +25,7 @@ jobs:
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
-          python-version: '${{ matrix.python-version }}'
+          python-version: ${{ matrix.python-version }}
 
       - name: Install dependencies
         run: |

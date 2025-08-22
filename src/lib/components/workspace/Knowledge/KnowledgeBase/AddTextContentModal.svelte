@@ -9,7 +9,7 @@
 	import Modal from '$lib/components/common/Modal.svelte';
 	import RichTextInput from '$lib/components/common/RichTextInput.svelte';
 	import XMark from '$lib/components/icons/XMark.svelte';
-	import MicSolid from '$lib/components/icons/MicSolid.svelte';
+	import Mic from '$lib/components/icons/Mic.svelte';
 	import Tooltip from '$lib/components/common/Tooltip.svelte';
 	import VoiceRecording from '$lib/components/chat/MessageInput/VoiceRecording.svelte';
 	export let show = false;
@@ -85,11 +85,11 @@
 							<VoiceRecording
 								bind:recording={voiceInput}
 								className="p-1"
-								onCancel={() => {
+								on:cancel={() => {
 									voiceInput = false;
 								}}
-								onConfirm={(data) => {
-									const { text, filename } = data;
+								on:confirm={(e) => {
+									const { text, filename } = e.detail;
 									content = `${content}${text} `;
 
 									voiceInput = false;
@@ -125,7 +125,7 @@
 									}
 								}}
 							>
-								<MicSolid className="size-5" />
+								<Mic className="size-5" />
 							</button>
 						</Tooltip>
 					{/if}

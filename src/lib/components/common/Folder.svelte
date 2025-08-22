@@ -69,22 +69,12 @@
 						}
 					} else {
 						open = true;
-						try {
-							const dataTransfer = e.dataTransfer.getData('text/plain');
-							if (dataTransfer) {
-								const data = JSON.parse(dataTransfer);
-								console.log(data);
-								dispatch('drop', data);
-							} else {
-								console.log('Dropped text data is empty or not text/plain.');
-							}
-						} catch (error) {
-							console.log(
-								'Dropped data is not valid JSON text or is empty. Ignoring drop event for this type of data.'
-							);
-						} finally {
-							draggedOver = false;
-						}
+
+						const dataTransfer = e.dataTransfer.getData('text/plain');
+						const data = JSON.parse(dataTransfer);
+
+						console.log(data);
+						dispatch('drop', data);
 					}
 				}
 			}
@@ -113,7 +103,7 @@
 		if (!dragAndDrop) {
 			return;
 		}
-		folderElement.removeEventListener('dragover', onDragOver);
+		folderElement.addEventListener('dragover', onDragOver);
 		folderElement.removeEventListener('drop', onDrop);
 		folderElement.removeEventListener('dragleave', onDragLeave);
 	});
@@ -131,8 +121,8 @@
 			bind:open
 			className="w-full "
 			buttonClassName="w-full"
-			onChange={(state) => {
-				dispatch('change', state);
+			on:change={(e) => {
+				dispatch('change', e.detail);
 			}}
 		>
 			<!-- svelte-ignore a11y-no-static-element-interactions -->

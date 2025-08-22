@@ -1,13 +1,8 @@
 import { WEBUI_API_BASE_URL } from '$lib/constants';
-import { splitStream } from '$lib/utils';
 
-export const uploadFile = async (token: string, file: File, metadata?: object | null) => {
+export const uploadFile = async (token: string, file: File) => {
 	const data = new FormData();
 	data.append('file', file);
-	if (metadata) {
-		data.append('metadata', JSON.stringify(metadata));
-	}
-
 	let error = null;
 
 	const res = await fetch(`${WEBUI_API_BASE_URL}/files/`, {
@@ -24,78 +19,9 @@ export const uploadFile = async (token: string, file: File, metadata?: object | 
 		})
 		.catch((err) => {
 			error = err.detail;
-			console.error(err);
+			console.log(err);
 			return null;
 		});
-
-	if (error) {
-		throw error;
-	}
-
-	if (res) {
-		const status = await getFileProcessStatus(token, res.id);
-
-		if (status && status.ok) {
-			const reader = status.body
-				.pipeThrough(new TextDecoderStream())
-				.pipeThrough(splitStream('\n'))
-				.getReader();
-
-			while (true) {
-				const { value, done } = await reader.read();
-				if (done) {
-					break;
-				}
-
-				try {
-					let lines = value.split('\n');
-
-					for (const line of lines) {
-						if (line !== '') {
-							console.log(line);
-							if (line === 'data: [DONE]') {
-								console.log(line);
-							} else {
-								let data = JSON.parse(line.replace(/^data: /, ''));
-								console.log(data);
-
-								if (data?.error) {
-									console.error(data.error);
-									res.error = data.error;
-								}
-							}
-						}
-					}
-				} catch (error) {
-					console.log(error);
-				}
-			}
-		}
-	}
-
-	if (error) {
-		throw error;
-	}
-
-	return res;
-};
-
-export const getFileProcessStatus = async (token: string, id: string) => {
-	const queryParams = new URLSearchParams();
-	queryParams.append('stream', 'true');
-
-	let error = null;
-	const res = await fetch(`${WEBUI_API_BASE_URL}/files/${id}/process/status?${queryParams}`, {
-		method: 'GET',
-		headers: {
-			Accept: 'application/json',
-			authorization: `Bearer ${token}`
-		}
-	}).catch((err) => {
-		error = err.detail;
-		console.error(err);
-		return null;
-	});
 
 	if (error) {
 		throw error;
@@ -150,7 +76,7 @@ export const getFiles = async (token: string = '') => {
 		})
 		.catch((err) => {
 			error = err.detail;
-			console.error(err);
+			console.log(err);
 			return null;
 		});
 
@@ -181,7 +107,7 @@ export const getFileById = async (token: string, id: string) => {
 		})
 		.catch((err) => {
 			error = err.detail;
-			console.error(err);
+			console.log(err);
 			return null;
 		});
 
@@ -215,7 +141,7 @@ export const updateFileDataContentById = async (token: string, id: string, conte
 		})
 		.catch((err) => {
 			error = err.detail;
-			console.error(err);
+			console.log(err);
 			return null;
 		});
 
@@ -242,7 +168,7 @@ export const getFileContentById = async (id: string) => {
 		})
 		.catch((err) => {
 			error = err.detail;
-			console.error(err);
+			console.log(err);
 
 			return null;
 		});
@@ -274,7 +200,7 @@ export const deleteFileById = async (token: string, id: string) => {
 		})
 		.catch((err) => {
 			error = err.detail;
-			console.error(err);
+			console.log(err);
 			return null;
 		});
 
@@ -305,7 +231,7 @@ export const deleteAllFiles = async (token: string) => {
 		})
 		.catch((err) => {
 			error = err.detail;
-			console.error(err);
+			console.log(err);
 			return null;
 		});
 

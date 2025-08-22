@@ -5,14 +5,7 @@ from chromadb.utils.batch_utils import create_batches
 
 from typing import Optional
 
-from open_webui.retrieval.vector.main import (
-    VectorDBBase,
-    VectorItem,
-    SearchResult,
-    GetResult,
-)
-from open_webui.retrieval.vector.utils import stringify_metadata
-
+from open_webui.retrieval.vector.main import VectorItem, SearchResult, GetResult
 from open_webui.config import (
     CHROMA_DATA_PATH,
     CHROMA_HTTP_HOST,
@@ -30,7 +23,7 @@ log = logging.getLogger(__name__)
 log.setLevel(SRC_LOG_LEVELS["RAG"])
 
 
-class ChromaClient(VectorDBBase):
+class ChromaClient:
     def __init__(self):
         settings_dict = {
             "allow_reset": True,
@@ -146,7 +139,7 @@ class ChromaClient(VectorDBBase):
         ids = [item["id"] for item in items]
         documents = [item["text"] for item in items]
         embeddings = [item["vector"] for item in items]
-        metadatas = [stringify_metadata(item["metadata"]) for item in items]
+        metadatas = [item["metadata"] for item in items]
 
         for batch in create_batches(
             api=self.client,
@@ -166,7 +159,7 @@ class ChromaClient(VectorDBBase):
         ids = [item["id"] for item in items]
         documents = [item["text"] for item in items]
         embeddings = [item["vector"] for item in items]
-        metadatas = [stringify_metadata(item["metadata"]) for item in items]
+        metadatas = [item["metadata"] for item in items]
 
         collection.upsert(
             ids=ids, documents=documents, embeddings=embeddings, metadatas=metadatas

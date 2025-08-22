@@ -15,7 +15,6 @@
 	import ArrowUpCircle from '$lib/components/icons/ArrowUpCircle.svelte';
 
 	import { config } from '$lib/stores';
-	import Link from '$lib/components/icons/Link.svelte';
 
 	const i18n = getContext('i18n');
 
@@ -24,7 +23,6 @@
 
 	export let exportHandler: Function;
 	export let hideHandler: Function;
-	export let copyLinkHandler: Function;
 
 	export let onClose: Function;
 
@@ -45,7 +43,7 @@
 
 	<div slot="content">
 		<DropdownMenu.Content
-			class="w-full max-w-[170px] rounded-xl px-1 py-1.5 border border-gray-300/30 dark:border-gray-700/50 z-50 bg-white dark:bg-gray-850 dark:text-white shadow-sm"
+			class="w-full max-w-[160px] rounded-xl px-1 py-1.5 border border-gray-300/30 dark:border-gray-700/50 z-50 bg-white dark:bg-gray-850 dark:text-white shadow-sm"
 			sideOffset={-2}
 			side="bottom"
 			align="start"
@@ -101,17 +99,6 @@
 						{$i18n.t('Hide Model')}
 					{/if}
 				</div>
-			</DropdownMenu.Item>
-
-			<DropdownMenu.Item
-				class="flex gap-2 items-center px-3 py-2 text-sm  font-medium cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 rounded-md"
-				on:click={() => {
-					copyLinkHandler();
-				}}
-			>
-				<Link />
-
-				<div class="flex items-center">{$i18n.t('Copy Link')}</div>
 			</DropdownMenu.Item>
 
 			<DropdownMenu.Item

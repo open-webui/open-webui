@@ -18,7 +18,7 @@ from pydantic import BaseModel
 from starlette.responses import FileResponse
 from typing import Optional
 
-from open_webui.env import SRC_LOG_LEVELS, AIOHTTP_CLIENT_SESSION_SSL
+from open_webui.env import SRC_LOG_LEVELS
 from open_webui.config import CACHE_DIR
 from open_webui.constants import ERROR_MESSAGES
 
@@ -66,13 +66,10 @@ async def process_pipeline_inlet_filter(request, payload, user, models):
     if "pipeline" in model:
         sorted_filters.append(model)
 
-    async with aiohttp.ClientSession(trust_env=True) as session:
+    async with aiohttp.ClientSession() as session:
         for filter in sorted_filters:
             urlIdx = filter.get("urlIdx")
-
-            try:
-                urlIdx = int(urlIdx)
-            except:
+            if urlIdx is None:
                 continue
 
             url = request.app.state.config.OPENAI_API_BASE_URLS[urlIdx]
@@ -92,7 +89,6 @@ async def process_pipeline_inlet_filter(request, payload, user, models):
                     f"{url}/{filter['id']}/filter/inlet",
                     headers=headers,
                     json=request_data,
-                    ssl=AIOHTTP_CLIENT_SESSION_SSL,
                 ) as response:
                     payload = await response.json()
                     response.raise_for_status()
@@ -119,13 +115,10 @@ async def process_pipeline_outlet_filter(request, payload, user, models):
     if "pipeline" in model:
         sorted_filters = [model] + sorted_filters
 
-    async with aiohttp.ClientSession(trust_env=True) as session:
+    async with aiohttp.ClientSession() as session:
         for filter in sorted_filters:
             urlIdx = filter.get("urlIdx")
-
-            try:
-                urlIdx = int(urlIdx)
-            except:
+            if urlIdx is None:
                 continue
 
             url = request.app.state.config.OPENAI_API_BASE_URLS[urlIdx]
@@ -145,7 +138,6 @@ async def process_pipeline_outlet_filter(request, payload, user, models):
                     f"{url}/{filter['id']}/filter/outlet",
                     headers=headers,
                     json=request_data,
-                    ssl=AIOHTTP_CLIENT_SESSION_SSL,
                 ) as response:
                     payload = await response.json()
                     response.raise_for_status()
@@ -205,10 +197,8 @@ async def upload_pipeline(
     user=Depends(get_admin_user),
 ):
     log.info(f"upload_pipeline: urlIdx={urlIdx}, filename={file.filename}")
-    filename = os.path.basename(file.filename)
-
     # Check if the uploaded file is a python file
-    if not (filename and filename.endswith(".py")):
+    if not (file.filename and file.filename.endswith(".py")):
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Only Python (.py) files are allowed.",
@@ -216,7 +206,7 @@ async def upload_pipeline(
 
     upload_folder = f"{CACHE_DIR}/pipelines"
     os.makedirs(upload_folder, exist_ok=True)
-    file_path = os.path.join(upload_folder, filename)
+    file_path = os.path.join(upload_folder, file.filename)
 
     r = None
     try:

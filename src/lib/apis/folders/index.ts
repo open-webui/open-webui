@@ -1,11 +1,6 @@
 import { WEBUI_API_BASE_URL } from '$lib/constants';
 
-type FolderForm = {
-	name: string;
-	data?: Record<string, any>;
-};
-
-export const createNewFolder = async (token: string, folderForm: FolderForm) => {
+export const createNewFolder = async (token: string, name: string) => {
 	let error = null;
 
 	const res = await fetch(`${WEBUI_API_BASE_URL}/folders/`, {
@@ -15,7 +10,9 @@ export const createNewFolder = async (token: string, folderForm: FolderForm) => 
 			'Content-Type': 'application/json',
 			authorization: `Bearer ${token}`
 		},
-		body: JSON.stringify(folderForm)
+		body: JSON.stringify({
+			name: name
+		})
 	})
 		.then(async (res) => {
 			if (!res.ok) throw await res.json();
@@ -53,7 +50,7 @@ export const getFolders = async (token: string = '') => {
 		})
 		.catch((err) => {
 			error = err.detail;
-			console.error(err);
+			console.log(err);
 			return null;
 		});
 
@@ -84,7 +81,7 @@ export const getFolderById = async (token: string, id: string) => {
 		})
 		.catch((err) => {
 			error = err.detail;
-			console.error(err);
+			console.log(err);
 			return null;
 		});
 
@@ -95,7 +92,7 @@ export const getFolderById = async (token: string, id: string) => {
 	return res;
 };
 
-export const updateFolderById = async (token: string, id: string, folderForm: FolderForm) => {
+export const updateFolderNameById = async (token: string, id: string, name: string) => {
 	let error = null;
 
 	const res = await fetch(`${WEBUI_API_BASE_URL}/folders/${id}/update`, {
@@ -105,7 +102,9 @@ export const updateFolderById = async (token: string, id: string, folderForm: Fo
 			'Content-Type': 'application/json',
 			authorization: `Bearer ${token}`
 		},
-		body: JSON.stringify(folderForm)
+		body: JSON.stringify({
+			name: name
+		})
 	})
 		.then(async (res) => {
 			if (!res.ok) throw await res.json();
@@ -116,7 +115,7 @@ export const updateFolderById = async (token: string, id: string, folderForm: Fo
 		})
 		.catch((err) => {
 			error = err.detail;
-			console.error(err);
+			console.log(err);
 			return null;
 		});
 
@@ -154,7 +153,7 @@ export const updateFolderIsExpandedById = async (
 		})
 		.catch((err) => {
 			error = err.detail;
-			console.error(err);
+			console.log(err);
 			return null;
 		});
 
@@ -188,7 +187,7 @@ export const updateFolderParentIdById = async (token: string, id: string, parent
 		})
 		.catch((err) => {
 			error = err.detail;
-			console.error(err);
+			console.log(err);
 			return null;
 		});
 
@@ -227,7 +226,7 @@ export const updateFolderItemsById = async (token: string, id: string, items: Fo
 		})
 		.catch((err) => {
 			error = err.detail;
-			console.error(err);
+			console.log(err);
 			return null;
 		});
 
@@ -258,7 +257,7 @@ export const deleteFolderById = async (token: string, id: string) => {
 		})
 		.catch((err) => {
 			error = err.detail;
-			console.error(err);
+			console.log(err);
 			return null;
 		});
 

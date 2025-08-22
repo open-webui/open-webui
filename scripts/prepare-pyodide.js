@@ -12,9 +12,7 @@ const packages = [
 	'sympy',
 	'tiktoken',
 	'seaborn',
-	'pytz',
-	'black',
-	'openai'
+	'pytz'
 ];
 
 import { loadPyodide } from 'pyodide';
@@ -75,8 +73,8 @@ async function downloadPackages() {
 			console.log('Pyodide version mismatch, removing static/pyodide directory');
 			await rmdir('static/pyodide', { recursive: true });
 		}
-	} catch (err) {
-		console.log('Pyodide package not found, proceeding with download.', err);
+	} catch (e) {
+		console.log('Pyodide package not found, proceeding with download.');
 	}
 
 	try {
