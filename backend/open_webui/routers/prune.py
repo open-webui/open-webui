@@ -51,6 +51,7 @@ class PruneDataForm(BaseModel):
     delete_inactive_users_days: Optional[int] = None
     exempt_admin_users: bool = True
     exempt_pending_users: bool = True
+    dry_run: bool = True
 
 
 class PrunePreviewResult(BaseModel):
