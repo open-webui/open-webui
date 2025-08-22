@@ -219,7 +219,6 @@ export const downloadLiteLLMConfig = async (token: string) => {
 export const listenToReindexProgress = (
 	onProgress: (data: { source: string | null; progress: number }) => void
 ) => {
-	
 	const eventSource = new EventSource(`${WEBUI_API_BASE_URL}/utils/reindex/stream`);
 
 	eventSource.onmessage = (event) => {
@@ -245,7 +244,7 @@ export const checkIfReindexing = (): Promise<boolean> => {
 
 		const handleMessage = (event: MessageEvent) => {
 			const data = JSON.parse(event.data);
-        	const progress = data.progress;
+			const progress = data.progress;
 
 			eventSource.close();
 			resolve(progress > 0 && progress < 100); // treat as "in progress"

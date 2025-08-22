@@ -254,32 +254,32 @@
 			return;
 		}
 
-		filesCountMessage = $i18n.t('Counting files to reindex..')
+		filesCountMessage = $i18n.t('Counting files to reindex..');
 		showFilesReindexConfirm = true;
 		// Fetch the file count
 		try {
 			const fileCount = await countFiles(token);
-			const knowledgeCount = await countKnowledges(token)
+			const knowledgeCount = await countKnowledges(token);
 
 			filesCountMessage = $i18n.t(
 				'You are about to reindex all memories, all {{files}} files and {{knowledges}} Knowledges. This could take a while. Do you want to proceed?',
-				{ 
+				{
 					files: fileCount,
 					knowledges: knowledgeCount
 				}
 			);
-			} catch (error) {
-				filesCountMessage = $i18n.t('Error fetching file/knowledge count');
-				toast.error(`${error}`);
-			}
-		};
+		} catch (error) {
+			filesCountMessage = $i18n.t('Error fetching file/knowledge count');
+			toast.error(`${error}`);
+		}
+	};
 
 	const handleReindexProgress = ({
-			source,
-			progress
-	}: { 
-			source: string | null;
-			progress: number;
+		source,
+		progress
+	}: {
+		source: string | null;
+		progress: number;
 	}) => {
 		reindexProgress = progress;
 		reindexSource = source;

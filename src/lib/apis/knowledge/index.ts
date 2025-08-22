@@ -378,10 +378,10 @@ export const countKnowledges = async (token: string) => {
 	const res = await fetch(`${WEBUI_API_BASE_URL}/knowledge/count`, {
 		method: 'GET',
 		headers: {
-		Accept: 'application/json',
-		'Content-Type': 'application/json',
-		authorization: `Bearer ${token}`,
-		},
+			Accept: 'application/json',
+			'Content-Type': 'application/json',
+			authorization: `Bearer ${token}`,
+		}
 	});
 
 	if (!res.ok) {
