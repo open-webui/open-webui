@@ -26,6 +26,7 @@ class Chat(Base):
 
     id = Column(String, primary_key=True)
     user_id = Column(String)
+    group_id = Column(String, nullable=True)  # Add group_id column
     title = Column(Text)
     chat = Column(JSON)
 
@@ -45,6 +46,7 @@ class ChatModel(BaseModel):
 
     id: str
     user_id: str
+    group_id: Optional[str] = None  # Add group_id field
     title: str
     chat: dict
 
@@ -86,6 +88,7 @@ class ChatTitleForm(BaseModel):
 class ChatResponse(BaseModel):
     id: str
     user_id: str
+    group_id: Optional[str] = None  # Add group_id field
     title: str
     chat: dict
     updated_at: int  # timestamp in epoch
@@ -97,6 +100,16 @@ class ChatResponse(BaseModel):
     folder_id: Optional[str] = None
 
 
+class ChatFilterResponse(BaseModel):
+    id: str
+    user_id: str
+    group_id: Optional[str] = None  
+    title: str
+    updated_at: int  
+    created_at: int  
+    meta: dict = {}
+
+
 class ChatTitleIdResponse(BaseModel):
     id: str
     title: str
@@ -105,13 +118,31 @@ class ChatTitleIdResponse(BaseModel):
 
 
 class ChatTable:
+    def _get_user_primary_group_id(self, user_id: str) -> Optional[str]:
+        """Get the user's primary (first) group ID for automatic assignment"""
+        try:
+            from open_webui.models.groups import Groups  # lazy import to avoid cycles
+            user_groups = Groups.get_groups_by_member_id(user_id)
+            if user_groups:
+                # Return the first group (most recently updated)
+                return user_groups[0].id
+            return None
+        except Exception:
+            return None
+
     def insert_new_chat(self, user_id: str, form_data: ChatForm) -> Optional[ChatModel]:
         with get_db() as db:
             id = str(uuid.uuid4())
+            
+            # Get user's primary group for automatic assignment
+            group_id = self._get_user_primary_group_id(user_id)
+            log.info(f"User's primary group: {group_id}")
+            
             chat = ChatModel(
                 **{
                     "id": id,
                     "user_id": user_id,
+                    "group_id": group_id,  # Assign primary group
                     "title": (
                         form_data.chat["title"]
                         if "title" in form_data.chat
@@ -134,10 +165,15 @@ class ChatTable:
     ) -> Optional[ChatModel]:
         with get_db() as db:
             id = str(uuid.uuid4())
+            
+            # Get user's primary group for automatic assignment
+            group_id = self._get_user_primary_group_id(user_id)
+            
             chat = ChatModel(
                 **{
                     "id": id,
                     "user_id": user_id,
+                    "group_id": group_id,  # Assign primary group
                     "title": (
                         form_data.chat["title"]
                         if "title" in form_data.chat
@@ -722,6 +758,22 @@ class ChatTable:
         except Exception:
             return None
 
+    def update_chat_meta_by_id_and_user_id(self, id: str, user_id: str, meta: dict) -> Optional[ChatModel]:
+        try:
+            with get_db() as db:
+                chat = db.query(Chat).filter_by(id=id, user_id=user_id).first()
+                if chat is None:
+                    return None
+                current_meta = chat.meta or {}
+                filtered_meta = {k: v for k, v in (meta or {}).items() if v is not None}
+                chat.meta = {**current_meta, **filtered_meta}
+                chat.updated_at = int(time.time())
+                db.commit()
+                db.refresh(chat)
+                return ChatModel.model_validate(chat)
+        except Exception:
+            return None
+
     def get_chat_tags_by_id_and_user_id(self, id: str, user_id: str) -> list[TagModel]:
         with get_db() as db:
             chat = db.get(Chat, id)
@@ -758,6 +810,120 @@ class ChatTable:
             all_chats = query.all()
             log.debug(f"all_chats: {all_chats}")
             return [ChatModel.model_validate(chat) for chat in all_chats]
+
+    def get_chats_by_user_id_and_meta_filter(
+        self, filters: dict, skip: int = 0, limit: int = 50
+    ) -> list[ChatModel]:
+        try:
+            with get_db() as db:                
+                query = db.query(Chat)
+                
+                # Filter by group_id FIRST (direct column filter)
+                if filters.get("group_id"):
+                    # Validate that the group exists before proceeding
+                    from open_webui.models.groups import Groups  # lazy import to avoid cycles
+                    group = Groups.get_group_by_id(filters["group_id"])
+                    if not group:
+                        # Group doesn't exist, return empty result without processing other filters
+                        log.debug(f"Group {filters['group_id']} not found, returning empty result")
+                        return []
+                    
+                    query = query.filter_by(group_id=filters["group_id"])
+                else:
+                    # No group id provided, return empty result without processing other filters
+                    log.debug(f"group_id not provided")
+                    return []
+                    
+                
+                # Filter by user_id
+                if filters.get("user_id"):
+                    query = query.filter_by(user_id=filters["user_id"])
+                
+                # Filter by model_name
+                if filters.get("model_name"):
+                    if db.bind.dialect.name == "sqlite":
+                        query = query.filter(
+                            text("json_extract(Chat.meta, '$.model_name') = :model_name")
+                        ).params(model_name=filters["model_name"])
+                    elif db.bind.dialect.name == "postgresql":
+                        query = query.filter(
+                            text("Chat.meta->>'model_name' = :model_name")
+                        ).params(model_name=filters["model_name"])
+                    else:
+                        raise NotImplementedError(f"Unsupported dialect: {db.bind.dialect.name}")
+                
+                # Filter by base_model_name
+                if filters.get("base_model_name"):
+                    if db.bind.dialect.name == "sqlite":
+                        query = query.filter(
+                            text("json_extract(Chat.meta, '$.base_model_name') = :base_model_name")
+                        ).params(base_model_name=filters["base_model_name"])
+                    elif db.bind.dialect.name == "postgresql":
+                        query = query.filter(
+                            text("Chat.meta->>'base_model_name' = :base_model_name")
+                        ).params(base_model_name=filters["base_model_name"])
+                    else:
+                        raise NotImplementedError(f"Unsupported dialect: {db.bind.dialect.name}")
+                
+                # Filter by number of messages
+                if filters.get("min_messages") is not None:
+                    if db.bind.dialect.name == "sqlite":
+                        query = query.filter(
+                            text("CAST(json_extract(Chat.meta, '$.num_of_messages') AS INTEGER) >= :min_messages")
+                        ).params(min_messages=filters["min_messages"])
+                    elif db.bind.dialect.name == "postgresql":
+                        query = query.filter(
+                            text("CAST(Chat.meta->>'num_of_messages' AS INTEGER) >= :min_messages")
+                        ).params(min_messages=filters["min_messages"])
+                    else:
+                        raise NotImplementedError(f"Unsupported dialect: {db.bind.dialect.name}")
+                
+                if filters.get("max_messages") is not None:
+                    if db.bind.dialect.name == "sqlite":
+                        query = query.filter(
+                            text("CAST(json_extract(Chat.meta, '$.num_of_messages') AS INTEGER) <= :max_messages")
+                        ).params(max_messages=filters["max_messages"])
+                    elif db.bind.dialect.name == "postgresql":
+                        query = query.filter(
+                            text("CAST(Chat.meta->>'num_of_messages' AS INTEGER) <= :max_messages")
+                        ).params(max_messages=filters["max_messages"])
+                    else:
+                        raise NotImplementedError(f"Unsupported dialect: {db.bind.dialect.name}")
+                
+                # Filter by total time taken (stored as total_seconds)
+                if filters.get("min_time_taken") is not None:
+                    if db.bind.dialect.name == "sqlite":
+                        query = query.filter(
+                            text("CAST(json_extract(Chat.meta, '$.total_time_taken') AS REAL) >= :min_time_taken")
+                        ).params(min_time_taken=filters["min_time_taken"])
+                    elif db.bind.dialect.name == "postgresql":
+                        query = query.filter(
+                            text("CAST(Chat.meta->>'total_time_taken' AS FLOAT) >= :min_time_taken")
+                        ).params(min_time_taken=filters["min_time_taken"])
+                    else:
+                        raise NotImplementedError(f"Unsupported dialect: {db.bind.dialect.name}")
+                
+                if filters.get("max_time_taken") is not None:
+                    if db.bind.dialect.name == "sqlite":
+                        query = query.filter(
+                            text("CAST(json_extract(Chat.meta, '$.total_time_taken') AS REAL) <= :max_time_taken")
+                        ).params(max_time_taken=filters["max_time_taken"])
+                    elif db.bind.dialect.name == "postgresql":
+                        query = query.filter(
+                            text("CAST(Chat.meta->>'total_time_taken' AS FLOAT) <= :max_time_taken")
+                        ).params(max_time_taken=filters["max_time_taken"])
+                    else:
+                        raise NotImplementedError(f"Unsupported dialect: {db.bind.dialect.name}")
+                
+                # Apply pagination and ordering
+                query = query.order_by(Chat.updated_at.desc())
+                all_chats = query.offset(skip).limit(limit).all()
+                
+                log.debug(f"Filtered chats count: {len(all_chats)}")
+                return [ChatModel.model_validate(chat) for chat in all_chats]
+        except Exception as e:
+            log.exception(f"Error filtering chats by meta: {e}")
+            return []
 
     def add_chat_tag_by_id_and_user_id_and_tag_name(
         self, id: str, user_id: str, tag_name: str
