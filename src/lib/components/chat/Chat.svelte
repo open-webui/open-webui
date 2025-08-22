@@ -632,15 +632,13 @@
 				selectedModels = urlModels;
 			}
 		} else {
-			if (sessionStorage.selectedModels) {
-				selectedModels = JSON.parse(sessionStorage.selectedModels);
-				sessionStorage.removeItem('selectedModels');
-			} else {
-				if ($settings?.models) {
-					selectedModels = $settings?.models;
-				} else if ($config?.default_models) {
-					selectedModels = $config?.default_models.split(',');
-				}
+			// Clear sessionStorage to ensure we use default models for new chats
+			sessionStorage.removeItem('selectedModels');
+
+			if ($settings?.models) {
+				selectedModels = $settings?.models;
+			} else if ($config?.default_models) {
+				selectedModels = $config?.default_models.split(',');
 			}
 		}
 
