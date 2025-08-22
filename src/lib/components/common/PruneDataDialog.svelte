@@ -205,21 +205,10 @@ Authorization: Bearer <your-api-key>
                           <div class="space-y-1">
                             <p><strong>{$i18n.t('Inactive User Account Deletion:')}</strong></p>
                             <p>• {$i18n.t('Removes user accounts that have been inactive for a specified period based on their last activity timestamp')}</p>
-                            <p>• {$i18n.t('When a user account is deleted, ALL associated data is permanently removed:')}</p>
-                            <p class="ml-4">◦ {$i18n.t('All conversations and chat history')}</p>
-                            <p class="ml-4">◦ {$i18n.t('All uploaded files and documents')}</p>
-                            <p class="ml-4">◦ {$i18n.t('All custom models, prompts, tools, and functions')}</p>
-                            <p class="ml-4">◦ {$i18n.t('All knowledge bases and vector embeddings')}</p>
-                            <p class="ml-4">◦ {$i18n.t('All notes, folders, and workspace items')}</p>
                             
                             <p class="pt-2"><strong>{$i18n.t('Safety Exemptions:')}</strong></p>
                             <p>• {$i18n.t('Admin users: Can be exempted from deletion (recommended)')}</p>
-                            <p>• {$i18n.t('Pending users: Can be exempted from deletion (recommended)')}</p>
-                            
-                            <p class="pt-2 text-red-600 dark:text-red-400"><strong>{$i18n.t('⚠️ CRITICAL WARNING:')}</strong></p>
-                            <p class="text-red-600 dark:text-red-400">• {$i18n.t('User deletion is irreversible and cascades to ALL user data')}</p>
-                            <p class="text-red-600 dark:text-red-400">• {$i18n.t('This is the most destructive operation in the pruning system')}</p>
-                            <p class="text-red-600 dark:text-red-400">• {$i18n.t('Always verify inactive periods and exemptions before use')}</p>
+                            <p>• {$i18n.t('Pending users: Can be exempted from deletion')}</p>
                           </div>
                         {:else if activeDetailsTab === 'chats'}
                           <div class="space-y-1">
@@ -441,20 +430,9 @@ Authorization: Bearer <your-api-key>
                             {$i18n.t('Exempt pending users')}
                           </div>
                           <div class="text-xs text-gray-500 dark:text-gray-400">
-                            {$i18n.t('Never delete pending/unapproved users (recommended)')}
+                            {$i18n.t('Never delete pending/unapproved users')}
                           </div>
                         </div>
-                      </div>
-                    </div>
-
-                    <div class="bg-red-50 dark:bg-red-900/20 rounded-lg p-3">
-                      <h5 class="text-sm font-medium text-red-900 dark:text-red-200 mb-2">
-                        {$i18n.t('User Deletion Impact:')}
-                      </h5>
-                      <div class="space-y-1 text-xs text-red-800 dark:text-red-300">
-                        <p>• <strong>{$i18n.t('Complete Data Loss:')}</strong> {$i18n.t('All user data is permanently deleted')}</p>
-                        <p>• <strong>{$i18n.t('Cascading Effect:')}</strong> {$i18n.t('Removes chats, files, models, knowledge bases')}</p>
-                        <p>• <strong>{$i18n.t('Irreversible:')}</strong> {$i18n.t('Cannot be undone - backup before use')}</p>
                       </div>
                     </div>
                   </div>
