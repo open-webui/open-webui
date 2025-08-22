@@ -246,7 +246,7 @@
 				</div>
 			</div>
 
-			{#if $config?.features?.enable_user_webhooks}
+			<!-- {#if $config?.features?.enable_user_webhooks}
 				<div class="pt-2">
 					<div class="flex flex-col w-full">
 						<div class=" mb-1 text-xs font-medium">{$i18n.t('Notification Webhook')}</div>
@@ -262,14 +262,14 @@
 						</div>
 					</div>
 				</div>
-			{/if}
+			{/if} -->
 		</div>
 
 		<div class="py-0.5">
 			<UpdatePassword />
 		</div>
 
-		<hr class="border-gray-50 dark:border-gray-850 my-2" />
+		<!-- <hr class="border-gray-50 dark:border-gray-850 my-2" />
 
 		<div class="flex justify-between items-center text-sm">
 			<div class="  font-medium">{$i18n.t('API keys')}</div>
@@ -429,7 +429,7 @@
 					</div>
 				{/if}
 			</div>
-		{/if}
+		{/if} -->
 	</div>
 
 	<div class="flex justify-end pt-3 text-sm font-medium">

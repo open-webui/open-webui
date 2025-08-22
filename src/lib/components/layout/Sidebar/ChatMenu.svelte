@@ -292,7 +292,7 @@
 				<GarbageBin strokeWidth="2" />
 				<div class="flex items-center">{$i18n.t('Delete')}</div>
 			</DropdownMenu.Item>
-
+<!-- 
 			<hr class="border-gray-100 dark:border-gray-850 my-0.5" />
 
 			<div class="flex p-1">
@@ -319,7 +319,7 @@
 						onClose();
 					}}
 				/>
-			</div>
+			</div> -->
 		</DropdownMenu.Content>
 	</div>
 </Dropdown>
