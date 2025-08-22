@@ -742,17 +742,15 @@ def cleanup_audio_cache(max_age_days: Optional[int] = 30) -> None:
 
 
 @router.post("/", response_model=Union[bool, PrunePreviewResult])
-async def prune_data(form_data: PruneDataForm, dry_run: bool = True, user=Depends(get_admin_user)):
+async def prune_data(form_data: PruneDataForm, user=Depends(get_admin_user)):
     """
     Prunes old and orphaned data using a safe, multi-stage process.
     
     If dry_run=True (default), returns preview counts without deleting anything.
     If dry_run=False, performs actual deletion and returns True on success.
     """
-    log.info(f"DEBUG: dry_run parameter = {dry_run}")
-    log.info(f"DEBUG: form_data.dry_run = {form_data.dry_run}")
     try:
-        if dry_run:
+        if form_data.dry_run:
             log.info("Starting data pruning preview (dry run)")
             
             # Get counts for all enabled operations
