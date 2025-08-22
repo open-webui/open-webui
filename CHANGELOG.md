@@ -5,6 +5,13 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.6.25] - 2025-08-22
+
+### Fixed
+
+- 🖼️ **Image Generation Reliability Restored**: Fixed a key issue causing image generation failures.
+- 🏆 **Reranking Functionality Restored**: Resolved errors with rerank feature.
+
 ## [0.6.24] - 2025-08-21
 
 ### Added
