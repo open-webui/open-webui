@@ -351,7 +351,7 @@
 			<div class=" self-center">{$i18n.t('Pipelines')}</div>
 		</button>
 
-		<button
+		<!-- <button
 			class="px-0.5 py-1 min-w-fit rounded-lg flex-1 md:flex-none flex text-left transition {selectedTab ===
 			'db'
 				? ''
@@ -377,7 +377,7 @@
 				</svg>
 			</div>
 			<div class=" self-center">{$i18n.t('Database')}</div>
-		</button>
+		</button> -->
 	</div>
 
 	<div class="flex-1 mt-3 lg:mt-0 overflow-y-scroll pr-1 scrollbar-hidden">

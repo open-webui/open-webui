@@ -147,7 +147,7 @@
                                         </div>
 
                                         <div class="self-end flex space-x-1 mr-1 shrink-0">
-                                            <Tooltip content={$i18n.t('Dictate')}>
+                                            <!-- <Tooltip content={$i18n.t('Dictate')}>
 												<button
 													id="voice-input-button"
 													class=" text-gray-600 dark:text-gray-300 hover:text-gray-700 dark:hover:text-gray-200 transition rounded-full p-1.5 mr-0.5 self-center"
@@ -167,7 +167,7 @@
 														/>
 													</svg>
 												</button>
-											</Tooltip>
+											</Tooltip> -->
                                             {#if inputValue === '' }
                                                 <div class="flex items-center">
                                                     <Tooltip content={$i18n.t('Voice mode')}>

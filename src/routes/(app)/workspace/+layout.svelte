@@ -87,7 +87,7 @@
 							>
 						{/if}
 
-						{#if $user?.role === 'admin' || $user?.permissions?.workspace?.knowledge}
+						<!-- {#if $user?.role === 'admin' || $user?.permissions?.workspace?.knowledge}
 							<a
 								class="min-w-fit rounded-full p-1.5 {$page.url.pathname.includes(
 									'/workspace/knowledge'
@@ -120,7 +120,7 @@
 							>
 								{$i18n.t('Tools')}
 							</a>
-						{/if}
+						{/if} -->
 					</div>
 				</div>
 

@@ -408,7 +408,7 @@
 					<td class=" px-3 py-1"> {user.oauth_sub ?? ''} </td>
 
 					<td class="px-3 py-1 text-right">
-						<div class="flex justify-end w-full">
+						<!-- <div class="flex justify-end w-full">
 							{#if $config.features.enable_admin_chat_access && user.role !== 'admin'}
 								<Tooltip content={$i18n.t('Chats')}>
 									<button
@@ -474,7 +474,7 @@
 									</button>
 								</Tooltip>
 							{/if}
-						</div>
+						</div> -->
 					</td>
 				</tr>
 			{/each}
