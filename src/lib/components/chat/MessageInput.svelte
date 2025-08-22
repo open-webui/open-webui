@@ -1816,7 +1816,7 @@
 														</button>
 													</Tooltip>
 												{/if}
-
+												{#if false}
 												{#if showCodeInterpreterButton}
 													<Tooltip content={$i18n.t('Execute code for analysis')} placement="top">
 														<button
@@ -1841,6 +1841,7 @@
 															>
 														</button>
 													</Tooltip>
+												{/if}
 												{/if}
 											</div>
 										{/if}
