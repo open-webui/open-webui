@@ -37,7 +37,10 @@
 			delete_orphaned_models,
 			delete_orphaned_notes,
 			delete_orphaned_folders,
-			audio_cache_max_age_days
+			audio_cache_max_age_days,
+			delete_inactive_users_days,
+			exempt_admin_users,
+			exempt_pending_users
 		} = event.detail;
 		
 		const res = await pruneData(
@@ -53,7 +56,10 @@
 			delete_orphaned_models,
 			delete_orphaned_notes,
 			delete_orphaned_folders,
-			audio_cache_max_age_days
+			audio_cache_max_age_days,
+			delete_inactive_users_days,
+			exempt_admin_users,
+			exempt_pending_users
 		).catch((error) => {
 			toast.error(`${error}`);
 			return null;
@@ -265,15 +271,15 @@
 							<path
 								fill-rule="evenodd"
 								d="M13 6H3v6a2 2 0 0 0 2 2h6a2 2 0 0 0 2-2V6ZM8.75 7.75a.75.75 0 0 0-1.5 0v2.69L6.03 9.22a.75.75 0 0 0-1.06 1.06l2.5 2.5a.75.75 0 0 0 1.06 0l2.5-2.5a.75.75 0 1 0-1.06-1.06l-1.22 1.22V7.75Z"
-									clip-rule="evenodd"
-								/>
-							</svg>
-						</div>
-						<div class=" self-center text-sm font-medium">
-							{$i18n.t('Export Users')}
-						</div>
-					</button>
-				{/if}
+								clip-rule="evenodd"
+							/>
+						</svg>
+					</div>
+					<div class=" self-center text-sm font-medium">
+						{$i18n.t('Export Users')}
+					</div>
+				</button>
+			{/if}
 			<hr class="border-gray-100 dark:border-gray-850 my-1" />
 			<button
 				type="button"
