@@ -55,7 +55,7 @@
 				>
 					<div>
 						<div class="text-xs flex items-center justify-between mb-2">
-							<div class="font-medium">Actions</div>
+							<div class="font-medium">{$i18n.t('Actions')}</div>
 
 							<div class="flex items-center gap-2 text-gray-700 dark:text-gray-300">
 								<button

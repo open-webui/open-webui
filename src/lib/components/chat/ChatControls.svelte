@@ -193,7 +193,10 @@
 		<!-- if $showControls -->
 
 		{#if $showControls}
-			<PaneResizer class="relative flex w-2 items-center justify-center bg-background group">
+			<PaneResizer
+				class="relative flex w-2 items-center justify-center bg-background group"
+				id="controls-resizer"
+			>
 				<div class="z-10 flex h-7 w-5 items-center justify-center rounded-xs">
 					<EllipsisVertical className="size-4 invisible group-hover:visible" />
 				</div>
@@ -230,6 +233,7 @@
 						class="w-full {($showOverview || $showArtifacts) && !$showCallOverlay
 							? ' '
 							: 'px-4 py-4 bg-white dark:shadow-lg dark:bg-gray-850  border border-gray-100 dark:border-gray-850'} z-40 pointer-events-auto overflow-y-auto scrollbar-hidden"
+						id="controls-container"
 					>
 						{#if $showCallOverlay}
 							<div class="w-full h-full flex justify-center">

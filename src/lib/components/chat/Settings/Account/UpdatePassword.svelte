@@ -29,7 +29,7 @@
 			newPasswordConfirm = '';
 		} else {
 			toast.error(
-				`The passwords you entered don't quite match. Please double-check and try again.`
+				$i18n.t("The passwords you entered don't quite match. Please double-check and try again.")
 			);
 			newPassword = '';
 			newPasswordConfirm = '';

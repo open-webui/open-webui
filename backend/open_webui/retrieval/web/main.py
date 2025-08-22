@@ -11,7 +11,7 @@ def get_filtered_results(results, filter_list):
         return results
     filtered_results = []
     for result in results:
-        url = result.get("url") or result.get("link", "")
+        url = result.get("url") or result.get("link", "") or result.get("href", "")
         if not validators.url(url):
             continue
         domain = urlparse(url).netloc

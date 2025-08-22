@@ -14,9 +14,10 @@ from open_webui.env import (
     DATABASE_POOL_RECYCLE,
     DATABASE_POOL_SIZE,
     DATABASE_POOL_TIMEOUT,
+    DATABASE_ENABLE_SQLITE_WAL,
 )
 from peewee_migrate import Router
-from sqlalchemy import Dialect, create_engine, MetaData, types
+from sqlalchemy import Dialect, create_engine, MetaData, event, types
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import scoped_session, sessionmaker
 from sqlalchemy.pool import QueuePool, NullPool
@@ -114,6 +115,16 @@ elif "sqlite" in SQLALCHEMY_DATABASE_URL:
     engine = create_engine(
         SQLALCHEMY_DATABASE_URL, connect_args={"check_same_thread": False}
     )
+
+    def on_connect(dbapi_connection, connection_record):
+        cursor = dbapi_connection.cursor()
+        if DATABASE_ENABLE_SQLITE_WAL:
+            cursor.execute("PRAGMA journal_mode=WAL")
+        else:
+            cursor.execute("PRAGMA journal_mode=DELETE")
+        cursor.close()
+
+    event.listen(engine, "connect", on_connect)
 else:
     if isinstance(DATABASE_POOL_SIZE, int):
         if DATABASE_POOL_SIZE > 0:

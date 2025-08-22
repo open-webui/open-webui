@@ -234,7 +234,7 @@ export const getOllamaModels = async (token: string = '', urlIdx: null | number 
 	return (res?.models ?? [])
 		.map((model) => ({ id: model.model, name: model.name ?? model.model, ...model }))
 		.sort((a, b) => {
-			return a.name.localeCompare(b.name);
+			return (a?.name ?? a?.id ?? '').localeCompare(b?.name ?? b?.id ?? '');
 		});
 };
 
