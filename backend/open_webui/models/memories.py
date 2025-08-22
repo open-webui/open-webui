@@ -108,9 +108,7 @@ class MemoriesTable:
             )
 
         for memory in memories:
-            memory_list.append(
-                MemoryModel.model_validate(memory)
-            )
+            memory_list.append(MemoryModel.model_validate(memory))
         return memory_list
 
     def get_memory_count(self) -> MemoryCountResponse:

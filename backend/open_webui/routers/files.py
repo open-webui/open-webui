@@ -358,7 +358,7 @@ async def reindex_all_files(request: Request, user=Depends(get_admin_user)):
                     f"Error deleting file 'file-{file.id}' from vector store: {str(e)}"
                 )
             try:
-                if file.meta['content_type'] in [
+                if file.meta["content_type"] in [
                     "audio/mpeg",
                     "audio/wav",
                     "audio/ogg",
@@ -368,7 +368,7 @@ async def reindex_all_files(request: Request, user=Depends(get_admin_user)):
                     await run_in_threadpool(
                         process_file,
                         request,
-                        ProcessFileForm(file_id=file.id, content=file.data['content']),
+                        ProcessFileForm(file_id=file.id, content=file.data["content"]),
                         user=user,
                     )
                 else:
