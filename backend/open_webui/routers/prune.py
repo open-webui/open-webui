@@ -48,6 +48,9 @@ class PruneDataForm(BaseModel):
     delete_orphaned_notes: bool = True
     delete_orphaned_folders: bool = True
     audio_cache_max_age_days: Optional[int] = 30
+    delete_inactive_users_days: Optional[int] = None
+    exempt_admin_users: bool = True
+    exempt_pending_users: bool = True
 
 
 def get_active_file_ids() -> Set[str]:
@@ -385,6 +388,55 @@ def cleanup_orphaned_vector_collections(
         log.info(f"Deleted {deleted_count} orphaned vector collections")
 
 
+def delete_inactive_users(
+    inactive_days: int, 
+    exempt_admin: bool = True, 
+    exempt_pending: bool = True
+) -> int:
+    """
+    Delete users who have been inactive for the specified number of days.
+    
+    Returns the number of users deleted.
+    """
+    if inactive_days is None:
+        return 0
+        
+    cutoff_time = int(time.time()) - (inactive_days * 86400)
+    deleted_count = 0
+    
+    try:
+        users_to_delete = []
+        
+        # Get all users and check activity
+        all_users = Users.get_users()["users"]
+        
+        for user in all_users:
+            # Skip if user is exempt
+            if exempt_admin and user.role == "admin":
+                continue
+            if exempt_pending and user.role == "pending":
+                continue
+                
+            # Check if user is inactive based on last_active_at
+            if user.last_active_at < cutoff_time:
+                users_to_delete.append(user)
+        
+        # Delete inactive users
+        for user in users_to_delete:
+            try:
+                # Delete the user - this will cascade to all their data
+                Users.delete_user_by_id(user.id)
+                deleted_count += 1
+                log.info(f"Deleted inactive user: {user.email} (last active: {user.last_active_at})")
+            except Exception as e:
+                log.error(f"Failed to delete user {user.id}: {e}")
+                
+    except Exception as e:
+        log.error(f"Error during inactive user deletion: {e}")
+        
+    return deleted_count
+
+
 def cleanup_audio_cache(max_age_days: Optional[int] = 30) -> None:
     """
     Clean up audio cache files older than specified days.
@@ -465,9 +517,32 @@ async def prune_data(form_data: PruneDataForm, user=Depends(get_admin_user)):
     - audio_cache_max_age_days: Optional[int] = 30
       - If None: Skip audio cache cleanup
       - If >= 0: Delete audio cache files (TTS, STT) older than specified days
+    - delete_inactive_users_days: Optional[int] = None
+      - If None: Skip inactive user deletion
+      - If >= 1: Delete users inactive for more than specified days
+    - exempt_admin_users: bool = True
+      - If True: Exempt admin users from deletion (recommended for safety)
+    - exempt_pending_users: bool = True
+      - If True: Exempt pending users from deletion (recommended for safety)
     """
     try:
         log.info("Starting data pruning process")
+
+        # Stage 0: Delete inactive users (if enabled)
+        deleted_users = 0
+        if form_data.delete_inactive_users_days is not None:
+            log.info(f"Deleting users inactive for more than {form_data.delete_inactive_users_days} days")
+            deleted_users = delete_inactive_users(
+                form_data.delete_inactive_users_days,
+                form_data.exempt_admin_users,
+                form_data.exempt_pending_users
+            )
+            if deleted_users > 0:
+                log.info(f"Deleted {deleted_users} inactive users")
+            else:
+                log.info("No inactive users found to delete")
+        else:
+            log.info("Skipping inactive user deletion (disabled)")
 
         # Stage 1: Delete old chats based on user criteria
         if form_data.days is not None:
