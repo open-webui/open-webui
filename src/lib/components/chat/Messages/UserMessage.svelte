@@ -146,7 +146,10 @@
 
 					{#if message.timestamp}
 						<div
-							class=" self-center text-xs invisible group-hover:visible text-gray-400 font-medium first-letter:capitalize ml-0.5 translate-y-[1px]"
+							class="self-center text-xs font-medium first-letter:capitalize ml-0.5 translate-y-[1px] {($settings?.highContrastMode ??
+							false)
+								? 'dark:text-gray-900 text-gray-100'
+								: 'invisible group-hover:visible transition'}"
 						>
 							<Tooltip content={dayjs(message.timestamp * 1000).format('LLLL')}>
 								<span class="line-clamp-1">{formatDate(message.timestamp * 1000)}</span>
@@ -158,7 +161,10 @@
 		{:else if message.timestamp}
 			<div class="flex justify-end pr-2 text-xs">
 				<div
-					class="text-[0.65rem] invisible group-hover:visible text-gray-400 font-medium first-letter:capitalize mb-0.5"
+					class="text-[0.65rem] font-medium first-letter:capitalize mb-0.5 {($settings?.highContrastMode ??
+					false)
+						? 'dark:text-gray-100 text-gray-900'
+						: 'invisible group-hover:visible transition text-gray-400'}"
 				>
 					<Tooltip content={dayjs(message.timestamp * 1000).format('LLLL')}>
 						<span class="line-clamp-1">{formatDate(message.timestamp * 1000)}</span>
@@ -207,7 +213,10 @@
 										</div>
 										<div class=" absolute -top-1 -right-1">
 											<button
-												class=" bg-white text-black border border-white rounded-full group-hover:visible invisible transition"
+												class=" bg-white text-black border border-white rounded-full {($settings?.highContrastMode ??
+												false)
+													? ''
+													: 'group-hover:visible invisible transition'}"
 												type="button"
 												on:click={() => {
 													editedFiles.splice(fileIdx, 1);
@@ -433,7 +442,9 @@
 					{#if !readOnly}
 						<Tooltip content={$i18n.t('Edit')} placement="bottom">
 							<button
-								class="invisible group-hover:visible p-1.5 hover:bg-black/5 dark:hover:bg-white/5 rounded-lg dark:hover:text-white hover:text-black transition edit-user-message-button"
+								class="{($settings?.highContrastMode ?? false)
+									? ''
+									: 'invisible group-hover:visible'} p-1.5 hover:bg-black/5 dark:hover:bg-white/5 rounded-lg dark:hover:text-white hover:text-black transition edit-user-message-button"
 								on:click={() => {
 									editMessageHandler();
 								}}
@@ -459,7 +470,9 @@
 					{#if message?.content}
 						<Tooltip content={$i18n.t('Copy')} placement="bottom">
 							<button
-								class="invisible group-hover:visible p-1.5 hover:bg-black/5 dark:hover:bg-white/5 rounded-lg dark:hover:text-white hover:text-black transition"
+								class="{($settings?.highContrastMode ?? false)
+									? ''
+									: 'invisible group-hover:visible'} p-1.5 hover:bg-black/5 dark:hover:bg-white/5 rounded-lg dark:hover:text-white hover:text-black transition"
 								on:click={() => {
 									copyToClipboard(message.content);
 								}}
@@ -485,7 +498,9 @@
 					{#if !readOnly && (!isFirstMessage || siblings.length > 1)}
 						<Tooltip content={$i18n.t('Delete')} placement="bottom">
 							<button
-								class="invisible group-hover:visible p-1 rounded-sm dark:hover:text-white hover:text-black transition"
+								class="{($settings?.highContrastMode ?? false)
+									? ''
+									: 'invisible group-hover:visible'} p-1 rounded-sm dark:hover:text-white hover:text-black transition"
 								on:click={() => {
 									showDeleteConfirm = true;
 								}}
