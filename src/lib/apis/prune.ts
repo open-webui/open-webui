@@ -16,7 +16,8 @@ export const pruneData = async (
   audio_cache_max_age_days: number | null = 30,
   delete_inactive_users_days: number | null = null,
   exempt_admin_users: boolean = true,
-  exempt_pending_users: boolean = true
+  exempt_pending_users: boolean = true,
+  dry_run: boolean = true
 ) => {
   let error = null;
 
@@ -41,7 +42,8 @@ export const pruneData = async (
       audio_cache_max_age_days,
       delete_inactive_users_days,
       exempt_admin_users,
-      exempt_pending_users
+      exempt_pending_users,
+      dry_run
     })
   })
     .then(async (res) => {
