@@ -13,7 +13,7 @@ env:
 
 jobs:
   build-main-image:
-    runs-on: ubuntu-latest
+    runs-on: arc-ssc-dsai
     permissions:
       contents: read
       packages: write
@@ -23,7 +23,7 @@ jobs:
         platform:
           - linux/amd64
           # Add more platforms if needed, e.g., - linux/arm64
-    
+
     steps:
       # GitHub Packages requires the entire repository name to be in lowercase
       # although the repository owner has a lowercase username, this prevents some people from running actions after forking
@@ -110,7 +110,7 @@ jobs:
           retention-days: 1
 
   merge-main-images:
-    runs-on: ubuntu-latest
+    runs-on: arc-ssc-dsai
     needs: [build-main-image]
     steps:
       # GitHub Packages requires the entire repository name to be in lowercase
