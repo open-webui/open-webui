@@ -35,6 +35,55 @@ log.setLevel(SRC_LOG_LEVELS["MODELS"])
 router = APIRouter()
 
 
+class JSONFileIDExtractor:
+    """
+    Utility for extracting and validating file IDs from JSON content.
+    
+    Replaces duplicated regex compilation and validation logic used throughout
+    the file scanning functions. Compiles patterns once for better performance.
+    """
+    
+    # Compile patterns once at class level for performance
+    _FILE_ID_PATTERN = re.compile(
+        r'"id":\s*"([a-fA-F0-9]{8}-[a-fA-F0-9]{4}-[a-fA-F0-9]{4}-[a-fA-F0-9]{4}-[a-fA-F0-9]{12})"'
+    )
+    _URL_PATTERN = re.compile(
+        r"/api/v1/files/([a-fA-F0-9]{8}-[a-fA-F0-9]{4}-[a-fA-F0-9]{4}-[a-fA-F0-9]{4}-[a-fA-F0-9]{12})"
+    )
+    
+    @classmethod
+    def extract_and_validate_file_ids(cls, json_string: str) -> Set[str]:
+        """
+        Extract file IDs from JSON string and validate they exist in database.
+        
+        Args:
+            json_string: JSON content as string (or any string to scan)
+            
+        Returns:
+            Set of validated file IDs that exist in the Files table
+            
+        Note:
+            This method replaces the repeated pattern of:
+            1. Compiling the same regex patterns
+            2. Extracting potential IDs 
+            3. Validating each ID exists via Files.get_file_by_id()
+            4. Building a set of validated IDs
+        """
+        validated_ids = set()
+        
+        # Extract potential IDs using both patterns
+        potential_ids = []
+        potential_ids.extend(cls._FILE_ID_PATTERN.findall(json_string))
+        potential_ids.extend(cls._URL_PATTERN.findall(json_string))
+        
+        # Validate each ID exists in database
+        for file_id in potential_ids:
+            if Files.get_file_by_id(file_id):
+                validated_ids.add(file_id)
+                
+        return validated_ids
+
+
 class PruneDataForm(BaseModel):
     days: Optional[int] = None
     exempt_archived_chats: bool = False
@@ -354,22 +403,9 @@ def get_active_file_ids() -> Set[str]:
 
             try:
                 chat_json_str = json.dumps(chat.chat)
-
-                # Extract file IDs using regex patterns
-                file_id_pattern = re.compile(
-                    r'"id":\s*"([a-fA-F0-9]{8}-[a-fA-F0-9]{4}-[a-fA-F0-9]{4}-[a-fA-F0-9]{4}-[a-fA-F0-9]{12})"'
-                )
-                url_pattern = re.compile(
-                    r"/api/v1/files/([a-fA-F0-9]{8}-[a-fA-F0-9]{4}-[a-fA-F0-9]{4}-[a-fA-F0-9]{4}-[a-fA-F0-9]{12})"
-                )
-
-                potential_file_ids = file_id_pattern.findall(chat_json_str)
-                url_file_ids = url_pattern.findall(chat_json_str)
-
-                all_potential_ids = set(potential_file_ids + url_file_ids)
-                for file_id in all_potential_ids:
-                    if Files.get_file_by_id(file_id):
-                        active_file_ids.add(file_id)
+                # Use utility to extract and validate file IDs
+                validated_ids = JSONFileIDExtractor.extract_and_validate_file_ids(chat_json_str)
+                active_file_ids.update(validated_ids)
 
             except Exception as e:
                 log.debug(f"Error processing chat {chat.id} for file references: {e}")
@@ -382,38 +418,18 @@ def get_active_file_ids() -> Set[str]:
                 if folder.items:
                     try:
                         items_str = json.dumps(folder.items)
-                        file_id_pattern = re.compile(
-                            r'"id":\s*"([a-fA-F0-9]{8}-[a-fA-F0-9]{4}-[a-fA-F0-9]{4}-[a-fA-F0-9]{4}-[a-fA-F0-9]{12})"'
-                        )
-                        url_pattern = re.compile(
-                            r"/api/v1/files/([a-fA-F0-9]{8}-[a-fA-F0-9]{4}-[a-fA-F0-9]{4}-[a-fA-F0-9]{4}-[a-fA-F0-9]{12})"
-                        )
-
-                        potential_ids = file_id_pattern.findall(
-                            items_str
-                        ) + url_pattern.findall(items_str)
-                        for file_id in potential_ids:
-                            if Files.get_file_by_id(file_id):
-                                active_file_ids.add(file_id)
+                        # Use utility to extract and validate file IDs
+                        validated_ids = JSONFileIDExtractor.extract_and_validate_file_ids(items_str)
+                        active_file_ids.update(validated_ids)
                     except Exception as e:
                         log.debug(f"Error processing folder {folder.id} items: {e}")
 
                 if hasattr(folder, "data") and folder.data:
                     try:
                         data_str = json.dumps(folder.data)
-                        file_id_pattern = re.compile(
-                            r'"id":\s*"([a-fA-F0-9]{8}-[a-fA-F0-9]{4}-[a-fA-F0-9]{4}-[a-fA-F0-9]{4}-[a-fA-F0-9]{12})"'
-                        )
-                        url_pattern = re.compile(
-                            r"/api/v1/files/([a-fA-F0-9]{8}-[a-fA-F0-9]{4}-[a-fA-F0-9]{4}-[a-fA-F0-9]{4}-[a-fA-F0-9]{12})"
-                        )
-
-                        potential_ids = file_id_pattern.findall(
-                            data_str
-                        ) + url_pattern.findall(data_str)
-                        for file_id in potential_ids:
-                            if Files.get_file_by_id(file_id):
-                                active_file_ids.add(file_id)
+                        # Use utility to extract and validate file IDs
+                        validated_ids = JSONFileIDExtractor.extract_and_validate_file_ids(data_str)
+                        active_file_ids.update(validated_ids)
                     except Exception as e:
                         log.debug(f"Error processing folder {folder.id} data: {e}")
 
@@ -435,20 +451,9 @@ def get_active_file_ids() -> Set[str]:
                                 if isinstance(message_data_json, dict)
                                 else str(message_data_json)
                             )
-
-                            file_id_pattern = re.compile(
-                                r'"id":\s*"([a-fA-F0-9]{8}-[a-fA-F0-9]{4}-[a-fA-F0-9]{4}-[a-fA-F0-9]{4}-[a-fA-F0-9]{12})"'
-                            )
-                            url_pattern = re.compile(
-                                r"/api/v1/files/([a-fA-F0-9]{8}-[a-fA-F0-9]{4}-[a-fA-F0-9]{4}-[a-fA-F0-9]{4}-[a-fA-F0-9]{12})"
-                            )
-
-                            potential_ids = file_id_pattern.findall(
-                                data_str
-                            ) + url_pattern.findall(data_str)
-                            for file_id in potential_ids:
-                                if Files.get_file_by_id(file_id):
-                                    active_file_ids.add(file_id)
+                            # Use utility to extract and validate file IDs
+                            validated_ids = JSONFileIDExtractor.extract_and_validate_file_ids(data_str)
+                            active_file_ids.update(validated_ids)
                         except Exception as e:
                             log.debug(
                                 f"Error processing message {message_id} data: {e}"
