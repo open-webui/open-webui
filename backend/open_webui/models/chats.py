@@ -26,6 +26,7 @@ class Chat(Base):
 
     id = Column(String, primary_key=True)
     user_id = Column(String)
+    group_id = Column(String, nullable=True)  # Add group_id column
     title = Column(Text)
     chat = Column(JSON)
 
@@ -45,6 +46,7 @@ class ChatModel(BaseModel):
 
     id: str
     user_id: str
+    group_id: Optional[str] = None  # Add group_id field
     title: str
     chat: dict
 
@@ -86,6 +88,7 @@ class ChatTitleForm(BaseModel):
 class ChatResponse(BaseModel):
     id: str
     user_id: str
+    group_id: Optional[str] = None  # Add group_id field
     title: str
     chat: dict
     updated_at: int  # timestamp in epoch
@@ -97,6 +100,16 @@ class ChatResponse(BaseModel):
     folder_id: Optional[str] = None
 
 
+class ChatFilterResponse(BaseModel):
+    id: str
+    user_id: str
+    group_id: Optional[str] = None  
+    title: str
+    updated_at: int  
+    created_at: int  
+    meta: dict = {}
+
+
 class ChatTitleIdResponse(BaseModel):
     id: str
     title: str
@@ -105,13 +118,31 @@ class ChatTitleIdResponse(BaseModel):
 
 
 class ChatTable:
+    def _get_user_primary_group_id(self, user_id: str) -> Optional[str]:
+        """Get the user's primary (first) group ID for automatic assignment"""
+        try:
+            from open_webui.models.groups import Groups  # lazy import to avoid cycles
+            user_groups = Groups.get_groups_by_member_id(user_id)
+            if user_groups:
+                # Return the first group (most recently updated)
+                return user_groups[0].id
+            return None
+        except Exception:
+            return None
+
     def insert_new_chat(self, user_id: str, form_data: ChatForm) -> Optional[ChatModel]:
         with get_db() as db:
             id = str(uuid.uuid4())
+            
+            # Get user's primary group for automatic assignment
+            group_id = self._get_user_primary_group_id(user_id)
+            log.info(f"User's primary group: {group_id}")
+            
             chat = ChatModel(
                 **{
                     "id": id,
                     "user_id": user_id,
+                    "group_id": group_id,  # Assign primary group
                     "title": (
                         form_data.chat["title"]
                         if "title" in form_data.chat
@@ -134,10 +165,15 @@ class ChatTable:
     ) -> Optional[ChatModel]:
         with get_db() as db:
             id = str(uuid.uuid4())
+            
+            # Get user's primary group for automatic assignment
+            group_id = self._get_user_primary_group_id(user_id)
+            
             chat = ChatModel(
                 **{
                     "id": id,
                     "user_id": user_id,
+                    "group_id": group_id,  # Assign primary group
                     "title": (
                         form_data.chat["title"]
                         if "title" in form_data.chat
@@ -776,11 +812,32 @@ class ChatTable:
             return [ChatModel.model_validate(chat) for chat in all_chats]
 
     def get_chats_by_user_id_and_meta_filter(
-        self, user_id: str, filters: dict, skip: int = 0, limit: int = 50
+        self, filters: dict, skip: int = 0, limit: int = 50
     ) -> list[ChatModel]:
         try:
-            with get_db() as db:
-                query = db.query(Chat).filter_by(user_id=user_id)
+            with get_db() as db:                
+                query = db.query(Chat)
+                
+                # Filter by group_id FIRST (direct column filter)
+                if filters.get("group_id"):
+                    # Validate that the group exists before proceeding
+                    from open_webui.models.groups import Groups  # lazy import to avoid cycles
+                    group = Groups.get_group_by_id(filters["group_id"])
+                    if not group:
+                        # Group doesn't exist, return empty result without processing other filters
+                        log.debug(f"Group {filters['group_id']} not found, returning empty result")
+                        return []
+                    
+                    query = query.filter_by(group_id=filters["group_id"])
+                else:
+                    # No group id provided, return empty result without processing other filters
+                    log.debug(f"group_id not provided")
+                    return []
+                    
+                
+                # Filter by user_id
+                if filters.get("user_id"):
+                    query = query.filter_by(user_id=filters["user_id"])
                 
                 # Filter by model_name
                 if filters.get("model_name"):

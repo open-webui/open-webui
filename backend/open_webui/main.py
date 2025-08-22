@@ -463,6 +463,22 @@ def ensure_model_created_by_column():
             print(" Column 'created_by' already exists")
 
 
+def ensure_chat_group_id_column():
+    from open_webui.config import DATABASE_URL
+
+    engine = create_engine(DATABASE_URL)
+    with engine.connect() as conn:
+        inspector = inspect(conn)
+        columns = [col["name"] for col in inspector.get_columns("chat")]
+
+        if "group_id" not in columns:
+            print("Adding missing column: chat.group_id")
+            conn.execute(text('ALTER TABLE "chat" ADD COLUMN group_id TEXT;'))
+            print("Column 'group_id' added successfully")
+        else:
+            print("Column 'group_id' already exists")
+
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     start_logger()
@@ -477,6 +493,7 @@ async def lifespan(app: FastAPI):
     ensure_model_created_by_column()
     ensure_tool_created_by_column()
     ensure_function_created_by_column()
+    ensure_chat_group_id_column()
     yield
 
 
