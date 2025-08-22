@@ -115,7 +115,7 @@
 				if (a.rating === '-' && b.rating !== '-') return 1;
 				if (b.rating === '-' && a.rating !== '-') return -1;
 				if (a.rating !== '-' && b.rating !== '-') return b.rating - a.rating;
-				return a.name.localeCompare(b.name);
+				return (a?.name ?? a?.id ?? '').localeCompare(b?.name ?? b?.id ?? '');
 			});
 
 		loadingLeaderboard = false;

@@ -15,7 +15,8 @@
 		getChatList,
 		getChatListByTagName,
 		getPinnedChatList,
-		updateChatById
+		updateChatById,
+		updateChatFolderIdById
 	} from '$lib/apis/chats';
 	import {
 		chatId,
@@ -134,6 +135,29 @@
 	const archiveChatHandler = async (id) => {
 		await archiveChatById(localStorage.token, id);
 		dispatch('change');
+	};
+
+	const moveChatHandler = async (chatId, folderId) => {
+		if (chatId && folderId) {
+			const res = await updateChatFolderIdById(localStorage.token, chatId, folderId).catch(
+				(error) => {
+					toast.error(`${error}`);
+					return null;
+				}
+			);
+
+			if (res) {
+				currentChatPage.set(1);
+				await chats.set(await getChatList(localStorage.token, $currentChatPage));
+				await pinnedChats.set(await getPinnedChatList(localStorage.token));
+
+				dispatch('change');
+
+				toast.success($i18n.t('Chat moved successfully'));
+			}
+		} else {
+			toast.error($i18n.t('Failed to move chat'));
+		}
 	};
 
 	let itemElement;
@@ -485,6 +509,7 @@
 					shareHandler={() => {
 						showShareChatModal = true;
 					}}
+					{moveChatHandler}
 					archiveChatHandler={() => {
 						archiveChatHandler(id);
 					}}

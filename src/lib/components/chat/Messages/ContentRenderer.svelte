@@ -139,15 +139,15 @@
 		{preview}
 		{done}
 		{topPadding}
-		sourceIds={(sources ?? []).reduce((acc, s) => {
+		sourceIds={(sources ?? []).reduce((acc, source) => {
 			let ids = [];
-			s.document.forEach((document, index) => {
+			source.document.forEach((document, index) => {
 				if (model?.info?.meta?.capabilities?.citations == false) {
 					ids.push('N/A');
 					return ids;
 				}
 
-				const metadata = s.metadata?.[index];
+				const metadata = source.metadata?.[index];
 				const id = metadata?.source ?? 'N/A';
 
 				if (metadata?.name) {
@@ -158,7 +158,7 @@
 				if (id.startsWith('http://') || id.startsWith('https://')) {
 					ids.push(id);
 				} else {
-					ids.push(s?.source?.name ?? id);
+					ids.push(source?.source?.name ?? id);
 				}
 
 				return ids;

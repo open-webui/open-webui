@@ -1102,7 +1102,7 @@
 			{#if (params?.use_mmap ?? null) !== null}
 				<div class="flex justify-between items-center mt-1">
 					<div class="text-xs text-gray-500">
-						{params.use_mmap ? 'Enabled' : 'Disabled'}
+						{params.use_mmap ? $i18n.t('Enabled') : $i18n.t('Disabled')}
 					</div>
 					<div class=" pr-2">
 						<Switch bind:state={params.use_mmap} />
@@ -1143,7 +1143,7 @@
 			{#if (params?.use_mlock ?? null) !== null}
 				<div class="flex justify-between items-center mt-1">
 					<div class="text-xs text-gray-500">
-						{params.use_mlock ? 'Enabled' : 'Disabled'}
+						{params.use_mlock ? $i18n.t('Enabled') : $i18n.t('Disabled')}
 					</div>
 
 					<div class=" pr-2">

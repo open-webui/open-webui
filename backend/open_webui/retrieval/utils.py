@@ -124,12 +124,14 @@ def query_doc_with_hybrid_search(
     hybrid_bm25_weight: float,
 ) -> dict:
     try:
-        log.debug(f"query_doc_with_hybrid_search:doc {collection_name}")
-        bm25_retriever = BM25Retriever.from_texts(
-            texts=collection_result.documents[0],
-            metadatas=collection_result.metadatas[0],
-        )
-        bm25_retriever.k = k
+        # BM_25 required only if weight is greater than 0
+        if hybrid_bm25_weight > 0:
+            log.debug(f"query_doc_with_hybrid_search:doc {collection_name}")
+            bm25_retriever = BM25Retriever.from_texts(
+                texts=collection_result.documents[0],
+                metadatas=collection_result.metadatas[0],
+            )
+            bm25_retriever.k = k
 
         vector_search_retriever = VectorSearchRetriever(
             collection_name=collection_name,
@@ -337,18 +339,22 @@ def query_collection_with_hybrid_search(
     # Fetch collection data once per collection sequentially
     # Avoid fetching the same data multiple times later
     collection_results = {}
-    for collection_name in collection_names:
-        try:
-            log.debug(
-                f"query_collection_with_hybrid_search:VECTOR_DB_CLIENT.get:collection {collection_name}"
-            )
-            collection_results[collection_name] = VECTOR_DB_CLIENT.get(
-                collection_name=collection_name
-            )
-        except Exception as e:
-            log.exception(f"Failed to fetch collection {collection_name}: {e}")
-            collection_results[collection_name] = None
-
+    # Only retrieve entire collection if bm_25 calculation is required
+    if hybrid_bm25_weight > 0:
+        for collection_name in collection_names:
+            try:
+                log.debug(
+                    f"query_collection_with_hybrid_search:VECTOR_DB_CLIENT.get:collection {collection_name}"
+                )
+                collection_results[collection_name] = VECTOR_DB_CLIENT.get(
+                    collection_name=collection_name
+                )
+            except Exception as e:
+                log.exception(f"Failed to fetch collection {collection_name}: {e}")
+                collection_results[collection_name] = None
+    else:
+        for collection_name in collection_names:
+            collection_results[collection_name] = []
     log.info(
         f"Starting hybrid search for {len(queries)} queries in {len(collection_names)} collections..."
     )
@@ -946,6 +952,7 @@ class RerankCompressor(BaseDocumentCompressor):
     ) -> Sequence[Document]:
         reranking = self.reranking_function is not None
 
+        scores = None
         if reranking:
             scores = self.reranking_function(
                 [(query, doc.page_content) for doc in documents]
@@ -959,22 +966,31 @@ class RerankCompressor(BaseDocumentCompressor):
             )
             scores = util.cos_sim(query_embedding, document_embedding)[0]
 
-        docs_with_scores = list(
-            zip(documents, scores.tolist() if not isinstance(scores, list) else scores)
-        )
-        if self.r_score:
-            docs_with_scores = [
-                (d, s) for d, s in docs_with_scores if s >= self.r_score
-            ]
-
-        result = sorted(docs_with_scores, key=operator.itemgetter(1), reverse=True)
-        final_results = []
-        for doc, doc_score in result[: self.top_n]:
-            metadata = doc.metadata
-            metadata["score"] = doc_score
-            doc = Document(
-                page_content=doc.page_content,
-                metadata=metadata,
+        if scores is not None:
+            docs_with_scores = list(
+                zip(
+                    documents,
+                    scores.tolist() if not isinstance(scores, list) else scores,
+                )
             )
-            final_results.append(doc)
-        return final_results
+            if self.r_score:
+                docs_with_scores = [
+                    (d, s) for d, s in docs_with_scores if s >= self.r_score
+                ]
+
+            result = sorted(docs_with_scores, key=operator.itemgetter(1), reverse=True)
+            final_results = []
+            for doc, doc_score in result[: self.top_n]:
+                metadata = doc.metadata
+                metadata["score"] = doc_score
+                doc = Document(
+                    page_content=doc.page_content,
+                    metadata=metadata,
+                )
+                final_results.append(doc)
+            return final_results
+        else:
+            log.warning(
+                "No valid scores found, check your reranking function. Returning original documents."
+            )
+            return documents
