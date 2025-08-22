@@ -193,7 +193,10 @@
 
 					<div class="w-full">Users</div>
 
-					<div class="w-full"></div>
+					<div class="w-full">Last Active</div>
+
+					<div class="w-full">Created At</div>
+					<div class="w-full">Actions</div>
 				</div>
 
 				<hr class="mt-1.5 border-gray-100 dark:border-gray-850" />
