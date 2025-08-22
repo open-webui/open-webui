@@ -770,6 +770,7 @@ async def pull_model(
         result_response = await pull_model_helper(user, key, model_name)
         yield json.dumps({"result": result_response}) + "\n"
         
+
     GOLDEN_NAME = None
     async def stream():
         nonlocal GOLDEN_NAME
@@ -927,6 +928,24 @@ async def copy_model(
             detail=detail if detail else "Open WebUI: Server Connection Error",
         )
 
+async def delete_model_from_opu(
+    request: Request,
+    model_name: str = "",
+    user=Depends(get_admin_user),
+):
+    url = DEFAULT_FLASK_URL
+
+    # Admin should be able to pull models from any source
+    payload = {'model_name':model_name}
+
+    return await send_post_request(
+        url=f"{url}/api/opu-delete-model",
+        payload=json.dumps(payload),
+        stream=False,
+        key=None,
+        content_type="application/x-ndjson",
+        user=user,
+    )
 
 @router.delete("/api/delete")
 @router.delete("/api/delete/{url_idx}")
@@ -979,6 +998,7 @@ async def delete_model(
         r.raise_for_status()
 
         log.debug(f"r.text: {r.text}")
+        await delete_model_from_opu(request=request, model_name=model, user=user)
         return True
     except Exception as e:
         log.exception(e)

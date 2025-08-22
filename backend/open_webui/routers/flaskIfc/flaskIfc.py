@@ -409,6 +409,31 @@ def receive_pull_model():
       
     return manual_response(content="File Download Done",thinking="File Download Done", incoming_headers=incoming_headers), 200
 
+def denormalize_model_name(model_name):
+    if model_name.endswith(":latest"):
+        return model_name.split(":")[0]
+    return model_name
+
+
+@app.route('/api/opu-delete-model', methods=['GET', 'POST'])
+def opu_delete_model():
+    serial_script.pre_and_post_check(port,baudrate)
+    data = request.get_json()
+
+    incoming_headers = dict(request.headers)
+
+    try:
+        model_name = data['model_name']
+        print("model_name: ", model_name, "destn_path", destn_path)
+    except (TypeError, KeyError) as e:
+        return manual_response(content=f"Invalid JSON data: {e}",thinking=f"Invalid JSON data: {e}", incoming_headers=incoming_headers), 400
+
+    file_name = denormalize_model_name(data['model_name'])
+
+    read_cmd_from_serial(port,baudrate,f"cd {destn_path}; rm -fr {file_name} && find . -type d -empty | while read -r dir; do rmdir \"$dir\"; done")
+
+    return manual_response(content="Model deleted",thinking="Model deleted", incoming_headers=incoming_headers), 200
+
 
 @app.route('/upload-file', methods=['GET', 'POST'])
 def upload_file():
