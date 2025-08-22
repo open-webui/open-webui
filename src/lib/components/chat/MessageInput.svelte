@@ -1847,6 +1847,7 @@
 									</div>
 
 									<div class="self-end flex space-x-1 mr-1 shrink-0">
+										{#if false} //Disable functionality not implemented for TSI
 										{#if (!history?.currentId || history.messages[history.currentId]?.done == true) && ($_user?.role === 'admin' || ($_user?.permissions?.chat?.stt ?? true))}
 											<!-- {$i18n.t('Record voice')} -->
 											<Tooltip content={$i18n.t('Dictate')}>
@@ -1896,6 +1897,7 @@
 												</button>
 											</Tooltip>
 										{/if}
+										{/if}
 
 										{#if (taskIds && taskIds.length > 0) || (history.currentId && history.messages[history.currentId]?.done != true) || generating}
 											<div class=" flex items-center">
@@ -1922,6 +1924,7 @@
 													</button>
 												</Tooltip>
 											</div>
+										{#if false} // remove unsupported functionality for TSI
 										{:else if prompt === '' && files.length === 0 && ($_user?.role === 'admin' || ($_user?.permissions?.chat?.call ?? true))}
 											<div class=" flex items-center">
 												<!-- {$i18n.t('Call')} -->
@@ -1985,6 +1988,7 @@
 													</button>
 												</Tooltip>
 											</div>
+										{/if}
 										{:else}
 											<div class=" flex items-center">
 												<Tooltip content={$i18n.t('Send message')}>
