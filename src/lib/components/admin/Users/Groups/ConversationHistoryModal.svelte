@@ -40,10 +40,15 @@
 	let modelDropdownOpen = false;
 	let availableModels = [];
 
-	// Search functionality
+	// Search functionality for Members
 	let isSearching = false;
 	let searchQuery = '';
 	let searchInputRef;
+
+	// Add chat search functionality
+	let isChatSearching = false;
+	let chatSearchQuery = '';
+	let chatSearchInputRef;
 
 	// Model filtering
 	let filteredModel = null; // null means show all, string means show only this model
@@ -140,17 +145,22 @@
 
 	// Filtered member stats based on search and model filter
 	$: filteredMemberStats = memberStats.filter((chat) => {
-		// Apply search filter
+		// Apply member search filter
 		const matchesSearch =
 			!searchQuery ||
 			chat.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
 			chat.chatName.toLowerCase().includes(searchQuery.toLowerCase()) ||
 			chat.email.toLowerCase().includes(searchQuery.toLowerCase());
 
+		// Apply chat search filter
+		const matchesChatSearch =
+			!chatSearchQuery ||
+			chat.chatName.toLowerCase().includes(chatSearchQuery.toLowerCase());
+
 		// Apply model filter
 		const matchesModel = !filteredModel || chat.model === filteredModel;
 
-		return matchesSearch && matchesModel;
+		return matchesSearch && matchesChatSearch && matchesModel;
 	});
 
 	// Handle select all checkbox
@@ -193,6 +203,28 @@
 	const handleSearchKeydown = (event) => {
 		if (event.key === 'Escape') {
 			toggleSearch();
+		}
+	};
+
+	// Chat search functionality
+	const toggleChatSearch = () => {
+		isChatSearching = !isChatSearching;
+		if (isChatSearching) {
+			// Focus the chat search input after a tick
+			setTimeout(() => {
+				if (chatSearchInputRef) {
+					chatSearchInputRef.focus();
+				}
+			}, 0);
+		} else {
+			// Clear chat search when hiding
+			chatSearchQuery = '';
+		}
+	};
+
+	const handleChatSearchKeydown = (event) => {
+		if (event.key === 'Escape') {
+			toggleChatSearch();
 		}
 	};
 
@@ -375,7 +407,47 @@
 											scope="col"
 											class="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider w-[120px]"
 										>
-											Chat
+											<div class="w-[90px]">
+												<!-- Fixed width container -->
+												<div class="flex items-center gap-2 w-full">
+													{#if isChatSearching}
+														<input
+															bind:this={chatSearchInputRef}
+															bind:value={chatSearchQuery}
+															on:keydown={handleChatSearchKeydown}
+															placeholder="Search..."
+															class="text-xs font-medium bg-transparent border-none outline-none text-gray-900 dark:text-gray-100 placeholder-gray-400 flex-1 min-w-0"
+														/>
+														<button
+															class="text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 flex-shrink-0"
+															on:click={toggleChatSearch}
+															aria-label="Close chat search"
+														>
+															<svg
+																class="w-3 h-3"
+																fill="none"
+																stroke="currentColor"
+																viewBox="0 0 20 20"
+															>
+																<path
+																	stroke-linecap="round"
+																	stroke-linejoin="round"
+																	stroke-width="2"
+																	d="M6 18L18 6M6 6l12 12"
+																/>
+															</svg>
+														</button>
+													{:else}
+														<button
+															class="flex items-center gap-2 text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider hover:text-gray-700 dark:hover:text-gray-200 w-full justify-start"
+															on:click={toggleChatSearch}
+														>
+															<span class="truncate">Chat</span>
+															<Search className="size-3.5 flex-shrink-0" />
+														</button>
+													{/if}
+												</div>
+											</div>
 										</th>
 
 										<!-- Members column with search - Fixed width with consistent container -->
@@ -548,9 +620,9 @@
 												/>
 											</td>
 											<td
-												class="px-4 py-4 whitespace-nowrap text-sm font-medium text-gray-900 dark:text-gray-100 truncate"
+												class="px-4 py-4 whitespace-nowrap text-sm font-medium text-gray-900 dark:text-gray-100"
 											>
-												{chat.chatName}
+												<div class="w-[90px] truncate">{chat.chatName}</div>
 											</td>
 											<td
 												class="px-4 py-4 whitespace-nowrap text-sm font-medium text-gray-900 dark:text-gray-100 truncate"
@@ -617,8 +689,8 @@
 												colspan="9"
 												class="px-4 py-8 text-center text-gray-500 dark:text-gray-400"
 											>
-												{#if searchQuery}
-													No chats found matching "{searchQuery}"
+												{#if searchQuery || chatSearchQuery}
+													No chats found matching search criteria
 												{:else if filteredModel}
 													No chats found for {filteredModel}
 												{:else}
