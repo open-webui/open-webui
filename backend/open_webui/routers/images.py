@@ -10,11 +10,18 @@ from typing import Optional
 
 from urllib.parse import quote
 import requests
-from fastapi import APIRouter, Depends, HTTPException, Request, UploadFile
+from fastapi import (
+    APIRouter,
+    Depends,
+    HTTPException,
+    Request,
+    UploadFile,
+)
+
 from open_webui.config import CACHE_DIR
 from open_webui.constants import ERROR_MESSAGES
 from open_webui.env import ENABLE_FORWARD_USER_INFO_HEADERS, SRC_LOG_LEVELS
-from open_webui.routers.files import upload_file
+from open_webui.routers.files import upload_file_handler
 from open_webui.utils.auth import get_admin_user, get_verified_user
 from open_webui.utils.images.comfyui import (
     ComfyUIGenerateImageForm,
@@ -469,8 +476,12 @@ def upload_image(request, image_data, content_type, metadata, user):
             "content-type": content_type,
         },
     )
-    file_item = upload_file(
-        request, file=file, metadata=metadata, process=False, user=user
+    file_item = upload_file_handler(
+        request,
+        file=file,
+        metadata=metadata,
+        process=False,
+        user=user,
     )
     url = request.app.url_path_for("get_file_content_by_id", id=file_item.id)
     return url
