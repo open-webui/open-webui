@@ -17,7 +17,7 @@ export const pruneData = async (
   delete_inactive_users_days: number | null = null,
   exempt_admin_users: boolean = true,
   exempt_pending_users: boolean = true,
-  dry_run: boolean = true
+  dry_run: boolean // Removed default value to ensure explicit passing
 ) => {
   let error = null;
 
