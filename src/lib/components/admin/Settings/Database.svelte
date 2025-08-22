@@ -32,6 +32,7 @@
 		const settings = event.detail;
 		lastPruneSettings = settings;
 		
+		console.log('Preview call - dry_run should be TRUE');
 		const res = await pruneData(
 			localStorage.token, 
 			settings.days, 
@@ -64,6 +65,7 @@
 	const handleConfirmPrune = async () => {
 		if (!lastPruneSettings) return;
 		
+		console.log('Confirm call - dry_run should be FALSE');
 		const res = await pruneData(
 			localStorage.token, 
 			lastPruneSettings.days, 
