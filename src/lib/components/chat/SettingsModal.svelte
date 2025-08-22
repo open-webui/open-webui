@@ -272,7 +272,7 @@
 				'about',
 				'info',
 				'information',
-				'version',
+				'version'
 				// 'documentation',
 				// 'help',
 				// 'support',

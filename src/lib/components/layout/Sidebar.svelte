@@ -608,7 +608,7 @@
 				</a>
 			</div>
 		{/if}
-<!-- 
+		<!-- 
 		<div class="relative {$temporaryChatEnabled ? 'opacity-20' : ''}">
 			{#if $temporaryChatEnabled}
 				<div class="absolute z-40 w-full h-full flex justify-center"></div>

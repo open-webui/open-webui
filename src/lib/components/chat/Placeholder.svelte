@@ -107,8 +107,10 @@
 		<div class="w-full flex flex-col justify-center items-center">
 			<!-- title -->
 			<div class="flex flex-col justify-center gap-3 items-center sm:gap-3.5 w-fit px-5 max-w-2xl">
-					<h1 class="text-3xl sm:text-3xl flex items-center">NEAR AI</h1>
-					<p class="text-base dark:text-gray-300">Chat with your personal assistant without worrying about leaking private information.</p>
+				<h1 class="text-3xl sm:text-3xl flex items-center">NEAR AI</h1>
+				<p class="text-base dark:text-gray-300">
+					Chat with your personal assistant without worrying about leaking private information.
+				</p>
 			</div>
 
 			<div class="flex mt-1 mb-2">
