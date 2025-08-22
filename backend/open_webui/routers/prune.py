@@ -421,8 +421,7 @@ class ChromaDatabaseCleaner(VectorDatabaseCleaner):
                 conn.execute("DROP TABLE IF EXISTS temp_valid_fts")
                 return -1  # Signal FTS cleanup was skipped
             
-            # Step 5: Atomic FTS cleanup operation
-            conn.execute("BEGIN IMMEDIATE")
+            # Step 5: FTS cleanup operation (already in transaction)
             try:
                 # Delete all FTS content
                 conn.execute("DELETE FROM embedding_fulltext_search")
@@ -440,13 +439,8 @@ class ChromaDatabaseCleaner(VectorDatabaseCleaner):
                 # Rebuild FTS index
                 conn.execute("INSERT INTO embedding_fulltext_search(embedding_fulltext_search) VALUES('rebuild')")
                 
-                # Commit the atomic operation
-                conn.execute("COMMIT")
-                
             except Exception as e:
-                # Rollback on any failure to preserve existing FTS data
-                conn.execute("ROLLBACK")
-                log.error(f"FTS cleanup failed, rolled back changes: {e}")
+                log.error(f"FTS cleanup failed: {e}")
                 conn.execute("DROP TABLE IF EXISTS temp_valid_fts")
                 return -1  # Signal FTS cleanup failed
             
