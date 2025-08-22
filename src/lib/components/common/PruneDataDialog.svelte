@@ -12,6 +12,12 @@
   let exempt_archived_chats = true;
   let exempt_chats_in_folders = false;
   
+  // Inactive user deletion
+  let deleteInactiveUsers = false;
+  let delete_inactive_users_days = 90;
+  let exempt_admin_users = true;
+  let exempt_pending_users = true;
+  
   // Orphaned resource deletion toggles
   let delete_orphaned_chats = true;
   let delete_orphaned_tools = false;
@@ -27,8 +33,8 @@
   let audio_cache_max_age_days = 30;
   
   let showDetailsExpanded = false;
-  let activeDetailsTab = 'chats';
-  let activeSettingsTab = 'chats';
+  let activeDetailsTab = 'users';
+  let activeSettingsTab = 'users';
   let showApiPreview = false;
 
   const dispatch = createEventDispatcher();
@@ -46,7 +52,10 @@
       delete_orphaned_models,
       delete_orphaned_notes,
       delete_orphaned_folders,
-      audio_cache_max_age_days: cleanupAudioCache ? audio_cache_max_age_days : null
+      audio_cache_max_age_days: cleanupAudioCache ? audio_cache_max_age_days : null,
+      delete_inactive_users_days: deleteInactiveUsers ? delete_inactive_users_days : null,
+      exempt_admin_users,
+      exempt_pending_users
     });
     show = false;
   };
@@ -68,8 +77,14 @@ Authorization: Bearer <your-api-key>
   "delete_orphaned_models": ${delete_orphaned_models},
   "delete_orphaned_notes": ${delete_orphaned_notes},
   "delete_orphaned_folders": ${delete_orphaned_folders},
-  "audio_cache_max_age_days": ${cleanupAudioCache ? audio_cache_max_age_days : null}
+  "audio_cache_max_age_days": ${cleanupAudioCache ? audio_cache_max_age_days : null},
+  "delete_inactive_users_days": ${deleteInactiveUsers ? delete_inactive_users_days : null},
+  "exempt_admin_users": ${exempt_admin_users},
+  "exempt_pending_users": ${exempt_pending_users}
 }`;
+
+  // Warning for short inactive user deletion periods
+  $: shortUserDeletionWarning = deleteInactiveUsers && delete_inactive_users_days < 30;
 
   const copyApiCall = () => {
     navigator.clipboard.writeText(apiCallPreview).then(() => {
@@ -147,6 +162,12 @@ Authorization: Bearer <your-api-key>
                       <!-- Tab Navigation -->
                       <div class="flex flex-wrap gap-1 mb-3 border-b border-red-300 dark:border-red-700">
                         <button
+                          class="px-2 py-1 text-xs font-medium rounded-t transition-colors {activeDetailsTab === 'users' ? 'bg-red-100 dark:bg-red-800 text-red-800 dark:text-red-200' : 'text-red-600 dark:text-red-400 hover:text-red-800 dark:hover:text-red-200'}"
+                          on:click={() => activeDetailsTab = 'users'}
+                        >
+                          {$i18n.t('Users')}
+                        </button>
+                        <button
                           class="px-2 py-1 text-xs font-medium rounded-t transition-colors {activeDetailsTab === 'chats' ? 'bg-red-100 dark:bg-red-800 text-red-800 dark:text-red-200' : 'text-red-600 dark:text-red-400 hover:text-red-800 dark:hover:text-red-200'}"
                           on:click={() => activeDetailsTab = 'chats'}
                         >
@@ -180,7 +201,27 @@ Authorization: Bearer <your-api-key>
 
                       <!-- Tab Content -->
                       <div class="space-y-2">
-                        {#if activeDetailsTab === 'chats'}
+                        {#if activeDetailsTab === 'users'}
+                          <div class="space-y-1">
+                            <p><strong>{$i18n.t('Inactive User Account Deletion:')}</strong></p>
+                            <p>• {$i18n.t('Removes user accounts that have been inactive for a specified period based on their last activity timestamp')}</p>
+                            <p>• {$i18n.t('When a user account is deleted, ALL associated data is permanently removed:')}</p>
+                            <p class="ml-4">◦ {$i18n.t('All conversations and chat history')}</p>
+                            <p class="ml-4">◦ {$i18n.t('All uploaded files and documents')}</p>
+                            <p class="ml-4">◦ {$i18n.t('All custom models, prompts, tools, and functions')}</p>
+                            <p class="ml-4">◦ {$i18n.t('All knowledge bases and vector embeddings')}</p>
+                            <p class="ml-4">◦ {$i18n.t('All notes, folders, and workspace items')}</p>
+                            
+                            <p class="pt-2"><strong>{$i18n.t('Safety Exemptions:')}</strong></p>
+                            <p>• {$i18n.t('Admin users: Can be exempted from deletion (recommended)')}</p>
+                            <p>• {$i18n.t('Pending users: Can be exempted from deletion (recommended)')}</p>
+                            
+                            <p class="pt-2 text-red-600 dark:text-red-400"><strong>{$i18n.t('⚠️ CRITICAL WARNING:')}</strong></p>
+                            <p class="text-red-600 dark:text-red-400">• {$i18n.t('User deletion is irreversible and cascades to ALL user data')}</p>
+                            <p class="text-red-600 dark:text-red-400">• {$i18n.t('This is the most destructive operation in the pruning system')}</p>
+                            <p class="text-red-600 dark:text-red-400">• {$i18n.t('Always verify inactive periods and exemptions before use')}</p>
+                          </div>
+                        {:else if activeDetailsTab === 'chats'}
                           <div class="space-y-1">
                             <p><strong>{$i18n.t('Age-Based Chat Deletion:')}</strong></p>
                             <p>• {$i18n.t('Removes conversations older than specified days based on when they were last modified or updated (not when they were created)')}</p>
@@ -270,6 +311,12 @@ Authorization: Bearer <your-api-key>
           <!-- Settings Tab Navigation -->
           <div class="flex flex-wrap gap-1 mb-4 border-b border-blue-300 dark:border-blue-700">
             <button
+              class="px-3 py-2 text-sm font-medium rounded-t transition-colors {activeSettingsTab === 'users' ? 'bg-blue-100 dark:bg-blue-800 text-blue-800 dark:text-blue-200' : 'text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-200'}"
+              on:click={() => activeSettingsTab = 'users'}
+            >
+              {$i18n.t('Users')}
+            </button>
+            <button
               class="px-3 py-2 text-sm font-medium rounded-t transition-colors {activeSettingsTab === 'chats' ? 'bg-blue-100 dark:bg-blue-800 text-blue-800 dark:text-blue-200' : 'text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-200'}"
               on:click={() => activeSettingsTab = 'chats'}
             >
@@ -291,7 +338,130 @@ Authorization: Bearer <your-api-key>
 
           <!-- Settings Tab Content -->
           <div class="space-y-4">
-            {#if activeSettingsTab === 'chats'}
+            {#if activeSettingsTab === 'users'}
+              <!-- Inactive User Deletion -->
+              <div class="space-y-4">
+                <div class="flex items-start py-2">
+                  <div class="flex items-center">
+                    <div class="mr-3">
+                      <Switch bind:state={deleteInactiveUsers} />
+                    </div>
+                    <div>
+                      <div class="flex items-center text-sm font-medium text-gray-900 dark:text-gray-100">
+                        <span>{$i18n.t('Delete inactive user accounts')}</span>
+                        <div class="relative group ml-2">
+                          <svg class="h-4 w-4 text-red-500 cursor-help" fill="currentColor" viewBox="0 0 20 20">
+                            <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a.75.75 0 000 1.5v3a.75.75 0 001.5 0v-3A.75.75 0 009 9z" clip-rule="evenodd" />
+                          </svg>
+                          <div class="absolute left-1/2 transform -translate-x-1/2 bottom-full mb-2 w-64 px-3 py-2 text-xs text-white bg-red-600 rounded-lg shadow-lg opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none z-10">
+                            <div class="font-medium mb-1">{$i18n.t('⚠️ MOST DESTRUCTIVE OPERATION')}</div>
+                            <div class="space-y-0.5">
+                              <div>{$i18n.t('Deleting users removes ALL their data:')}</div>
+                              <div>• {$i18n.t('Chats, files, models, prompts')}</div>
+                              <div>• {$i18n.t('Knowledge bases, tools, notes')}</div>
+                              <div>• {$i18n.t('This action is irreversible!')}</div>
+                            </div>
+                            <div class="absolute top-full left-1/2 transform -translate-x-1/2 border-4 border-transparent border-t-red-600"></div>
+                          </div>
+                        </div>
+                      </div>
+                      <div class="text-xs text-gray-500 dark:text-gray-400">
+                        {$i18n.t('Remove user accounts inactive for specified days')}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                <!-- User Deletion Options (when enabled) -->
+                {#if deleteInactiveUsers}
+                  <div class="ml-8 space-y-4 border-l-2 border-red-200 dark:border-red-700 pl-4">
+                    <div class="space-y-2">
+                      <label class="text-sm font-medium text-gray-700 dark:text-gray-300">
+                        {$i18n.t('Delete users inactive for more than')}
+                      </label>
+                      <div class="flex items-center space-x-2">
+                        <input
+                          id="user-days"
+                          type="number"
+                          min="1"
+                          bind:value={delete_inactive_users_days}
+                          class="w-20 px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                        />
+                        <span class="text-sm text-gray-700 dark:text-gray-300">{$i18n.t('days')}</span>
+                      </div>
+                      <p class="text-xs text-gray-500 dark:text-gray-400">
+                        {$i18n.t('Based on last_active_at timestamp. Minimum 1 day.')}
+                      </p>
+                      
+                      <!-- Warning for short periods -->
+                      {#if shortUserDeletionWarning}
+                        <div class="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg p-3">
+                          <div class="flex">
+                            <div class="flex-shrink-0">
+                              <svg class="h-4 w-4 text-red-400" viewBox="0 0 20 20" fill="currentColor">
+                                <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.28 7.22a.75.75 0 00-1.06 1.06L8.94 10l-1.72 1.72a.75.75 0 101.06 1.06L10 11.06l1.72 1.72a.75.75 0 101.06-1.06L11.06 10l1.72-1.72a.75.75 0 00-1.06-1.06L10 8.94 8.28 7.22z" clip-rule="evenodd" />
+                              </svg>
+                            </div>
+                            <div class="ml-2">
+                              <p class="text-xs text-red-800 dark:text-red-200 font-medium">
+                                {$i18n.t('⚠️ Warning: Deletion period less than 30 days!')}
+                              </p>
+                              <p class="text-xs text-red-700 dark:text-red-300 mt-1">
+                                {$i18n.t('Very short periods may accidentally delete active users. Consider using 30+ days for safety.')}
+                              </p>
+                            </div>
+                          </div>
+                        </div>
+                      {/if}
+                    </div>
+                    
+                    <div class="flex items-start py-2">
+                      <div class="flex items-center">
+                        <div class="mr-3">
+                          <Switch bind:state={exempt_admin_users} />
+                        </div>
+                        <div>
+                          <div class="text-sm font-medium text-gray-900 dark:text-gray-100">
+                            {$i18n.t('Exempt admin users')}
+                          </div>
+                          <div class="text-xs text-gray-500 dark:text-gray-400">
+                            {$i18n.t('Never delete admin users (strongly recommended)')}
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div class="flex items-start py-2">
+                      <div class="flex items-center">
+                        <div class="mr-3">
+                          <Switch bind:state={exempt_pending_users} />
+                        </div>
+                        <div>
+                          <div class="text-sm font-medium text-gray-900 dark:text-gray-100">
+                            {$i18n.t('Exempt pending users')}
+                          </div>
+                          <div class="text-xs text-gray-500 dark:text-gray-400">
+                            {$i18n.t('Never delete pending/unapproved users (recommended)')}
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div class="bg-red-50 dark:bg-red-900/20 rounded-lg p-3">
+                      <h5 class="text-sm font-medium text-red-900 dark:text-red-200 mb-2">
+                        {$i18n.t('User Deletion Impact:')}
+                      </h5>
+                      <div class="space-y-1 text-xs text-red-800 dark:text-red-300">
+                        <p>• <strong>{$i18n.t('Complete Data Loss:')}</strong> {$i18n.t('All user data is permanently deleted')}</p>
+                        <p>• <strong>{$i18n.t('Cascading Effect:')}</strong> {$i18n.t('Removes chats, files, models, knowledge bases')}</p>
+                        <p>• <strong>{$i18n.t('Irreversible:')}</strong> {$i18n.t('Cannot be undone - backup before use')}</p>
+                      </div>
+                    </div>
+                  </div>
+                {/if}
+              </div>
+
+            {:else if activeSettingsTab === 'chats'}
               <!-- Age-Based Chat Deletion -->
               <div class="space-y-4">
                 <div class="flex items-start py-2">
