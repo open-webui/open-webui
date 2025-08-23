@@ -46,4 +46,4 @@
 
 # Misc
 *.env text eol=lf
-*.lock text eol=lf
+*.lock text eol=lf*.sh text eol=lf
