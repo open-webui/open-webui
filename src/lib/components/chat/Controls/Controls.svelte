@@ -23,6 +23,84 @@
 </script>
 
 <script context="module">
+        export async function downloadOpenWebUiLog() {
+		let error = null;
+
+		const res = await fetch('/ollama/api/opu-openwebui-log', {
+			method: 'GET',
+			headers: {
+			}
+		})	
+
+		.then(async (response) => {
+			if (!response.ok) {
+				throw await response.json();
+			}
+			return response.blob();
+		})
+		.then((blob) => {
+			const url = window.URL.createObjectURL(blob);
+			const a = document.createElement('a');
+			a.href = url;
+			a.download = `open-webui${new Date().toISOString()}.log`;
+			document.body.appendChild(a);
+			a.click();
+			window.URL.revokeObjectURL(url);
+		})
+		.catch((err) => {
+			console.error(err);
+			error = err.detail;
+                        alert('Something went wrong while downloading OPU Open-WebUi log');
+			return null;
+		});
+
+		if (error) {
+                        console.error('Error Download OPU Open-WebUi log failed:', error);
+                        alert('Something went wrong while downloading OPU Open-WebUi log');
+			throw error;
+		};
+                alert('OPU Open-WebUi log downloaded successfully');
+        }
+
+        export async function downloadFlaskLog() {
+                let error = null;
+
+                const res = await fetch('/ollama/api/opu-flask-log', {
+                        method: 'GET',
+                        headers: {
+                        }
+                })
+
+                .then(async (response) => {
+                        if (!response.ok) { 
+                                throw await response.json();
+                        }
+                        return response.blob();
+                })
+                .then((blob) => {
+                        const url = window.URL.createObjectURL(blob);
+                        const a = document.createElement('a');
+                        a.href = url;
+                        a.download = `flask${new Date().toISOString()}.log`;
+                        document.body.appendChild(a);
+                        a.click();
+                        window.URL.revokeObjectURL(url);
+                })
+                .catch((err) => {
+                        console.error(err);
+                        error = err.detail;
+                        alert('Something went wrong while downloading OPU flask log');
+                        return null;
+                });
+
+                if (error) {
+                        console.error('Error Download OPU flask log failed:', error);
+                        alert('Something went wrong while downloading OPU flask log');
+                        throw error;
+                };
+                alert('OPU flask log downloaded successfully');
+        }
+
 	export async function restartOpu() {
 		isRestarting.set(true);
 		try {

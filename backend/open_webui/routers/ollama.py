@@ -7,6 +7,7 @@ import asyncio
 import json
 import logging
 import os
+import shutil
 import random
 import re
 import time
@@ -35,6 +36,7 @@ from fastapi import (
     UploadFile,
     APIRouter,
 )
+from fastapi.responses import FileResponse
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel, ConfigDict, validator
@@ -1496,6 +1498,67 @@ async def systeminfo_opu(
         content_type="application/x-ndjson",
         user=user,
     )
+
+def ollama_download_openwebui_log_command():
+    original_path = 'open-webui.log'
+    copied_path = 'open-webui-copy.log'  # You can change this name if needed
+
+    # Check if original file exists
+    if not os.path.exists(original_path):
+        print("file_path:", original_path, "does not exist")
+        raise HTTPException(status_code=404, detail="Log file not found")
+
+    # Copy the file
+    shutil.copyfile(original_path, copied_path)
+
+    # Serve the copied file
+    return FileResponse(
+        path=copied_path,
+        media_type="application/octet-stream",
+        filename="open-webui.log",  # You can rename for download if needed
+        headers={
+            "Content-Disposition": "attachment; filename=open-webui.log",
+            "Cache-Control": "no-store, no-cache, must-revalidate",
+            "Pragma": "no-cache",
+            "Expires": "0"
+        }
+    )
+
+def ollama_download_flask_log_command():
+    file_path = 'backend/open_webui/routers/flaskIfc/flask.log'  # Replace with your actual file path
+    if not os.path.exists(file_path):
+        print("file_path: ", file_path, "does not exists")
+        raise HTTPException(status_code=404, detail="Log file not found")
+
+    return FileResponse(path=file_path,
+            media_type="application/octet-stream",  # Forces download
+            filename="flask.log",
+            headers={
+                "Content-Disposition": "attachment; filename=flask.log",
+                "Cache-Control": "no-store, no-cache, must-revalidate",
+                "Pragma": "no-cache",
+                "Expires": "0"
+            })
+
+@router.get("/api/opu-flask-log", response_class=FileResponse)
+async def download_flask_log(
+    request: Request,
+    url_idx: Optional[int] = None,
+    user=Depends(get_verified_user),
+    bypass_filter: Optional[bool] = False,
+):
+    url = DEFAULT_FLASK_URL
+    return ollama_download_flask_log_command()
+
+@router.get("/api/opu-openwebui-log", response_class=FileResponse)
+async def download_open_webui_log(
+    request: Request,
+    url_idx: Optional[int] = None,
+    user=Depends(get_verified_user),
+    bypass_filter: Optional[bool] = False,
+):
+    url = DEFAULT_FLASK_URL
+    return ollama_download_openwebui_log_command()
 
 @router.post("/api/healthcheckopu")
 async def healthcheck_opu(
