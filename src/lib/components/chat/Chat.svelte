@@ -891,11 +891,18 @@
 		const userSettings = await getUserSettings(localStorage.token);
 
 		if (userSettings) {
-			settings.set({ ...userSettings.ui, autoFollowUps: false });
+			settings.set({
+				...userSettings.ui,
+				autoFollowUps: false,
+				title: { auto: false },
+				autoTags: false });
 
 		} else {
-			settings.set({ ...JSON.parse(localStorage.getItem('settings') ?? '{}'), autoFollowUps: false });
-
+			settings.set({
+				...JSON.parse(localStorage.getItem('settings') ?? '{}'),
+				autoFollowUps: false,
+				title: { auto: false },
+				autoTags: false});
 		}
 
 		const chatInput = document.getElementById('chat-input');
@@ -951,6 +958,22 @@
 				} else {
 					await settings.set({ ...JSON.parse(localStorage.getItem('settings') ?? '{}'), autoFollowUps: false });
 
+				}
+				if (userSettings) {
+    					await settings.set({
+        					...userSettings.ui,
+        					autoFollowUps: false,
+        					autoTags: false,
+        					autoTitle: false
+    					});
+				} else {
+    					const localSettings = JSON.parse(localStorage.getItem('settings') ?? '{}');
+    					await settings.set({
+        					...localSettings,
+        					autoFollowUps: false,
+        					autoTags: false,
+        					autoTitle: false
+    					});
 				}
 
 				params = chatContent?.params ?? {};
@@ -1771,8 +1794,8 @@
 							messages.at(1)?.role === 'user')) &&
 					(selectedModels[0] === model.id || atSelectedModel !== undefined)
 						? {
-								title_generation: $settings?.title?.auto ?? true,
-								tags_generation: $settings?.autoTags ?? true
+								title_generation: false,
+								tags_generation: false
 							}
 						: {}),
 					follow_up_generation: false
