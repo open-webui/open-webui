@@ -7,6 +7,11 @@ services:
     tty: true
     restart: unless-stopped
     image: ollama/ollama:${OLLAMA_DOCKER_TAG-latest}
+    ports:
+      - "11434:11434"
+    environment:
+      - OLLAMA_KEEP_ALIVE=24h
+      - OLLAMA_HOST=0.0.0.0
 
   open-webui:
     build:
@@ -18,17 +23,121 @@ services:
     container_name: open-webui
     volumes:
       - open-webui:/app/backend/data
+      - ./extensions:/app/extensions  # Mount extensions directory
     depends_on:
       - ollama
     ports:
       - ${OPEN_WEBUI_PORT-3000}:8080
     environment:
+      # Core Configuration
       - 'OLLAMA_BASE_URL=http://ollama:11434'
-      - 'WEBUI_SECRET_KEY='
+      - 'WEBUI_SECRET_KEY=${WEBUI_SECRET_KEY}'
+      
+      # Authentication & Security
+      - 'ENABLE_SIGNUP=${ENABLE_SIGNUP-true}'
+      - 'DEFAULT_USER_ROLE=${DEFAULT_USER_ROLE-pending}'
+      - 'WEBUI_AUTH=${WEBUI_AUTH-true}'
+      
+      # File Handling
+      - 'ENABLE_RAG_HYBRID_SEARCH=${ENABLE_RAG_HYBRID_SEARCH-true}'
+      - 'ENABLE_RAG_WEB_LOADER_SSL_VERIFICATION=${ENABLE_RAG_WEB_LOADER_SSL_VERIFICATION-true}'
+      - 'RAG_EMBEDDING_ENGINE=${RAG_EMBEDDING_ENGINE-ollama}'
+      - 'RAG_EMBEDDING_MODEL=${RAG_EMBEDDING_MODEL-mxbai-embed-large}'
+      
+      # Web Search Integration
+      - 'ENABLE_RAG_WEB_SEARCH=${ENABLE_RAG_WEB_SEARCH-true}'
+      - 'RAG_WEB_SEARCH_ENGINE=${RAG_WEB_SEARCH_ENGINE-searxng}'
+      - 'SEARXNG_QUERY_URL=${SEARXNG_QUERY_URL}'
+      
+      # OpenAI API Integration
+      - 'OPENAI_API_BASE_URL=${OPENAI_API_BASE_URL}'
+      - 'OPENAI_API_KEY=${OPENAI_API_KEY}'
+      
+      # Image Generation
+      - 'ENABLE_IMAGE_GENERATION=${ENABLE_IMAGE_GENERATION-true}'
+      - 'AUTOMATIC1111_BASE_URL=${AUTOMATIC1111_BASE_URL}'
+      - 'COMFYUI_BASE_URL=${COMFYUI_BASE_URL}'
+      
+      # Audio/TTS
+      - 'AUDIO_TTS_ENGINE=${AUDIO_TTS_ENGINE-openai}'
+      - 'AUDIO_TTS_API_KEY=${AUDIO_TTS_API_KEY}'
+      - 'AUDIO_STT_ENGINE=${AUDIO_STT_ENGINE-openai}'
+      - 'AUDIO_STT_API_KEY=${AUDIO_STT_API_KEY}'
+      
+      # Task and Function Calling
+      - 'ENABLE_COMMUNITY_SHARING=${ENABLE_COMMUNITY_SHARING-true}'
+      - 'TASK_MODEL=${TASK_MODEL-llama3.1:8b}'
+      - 'TITLE_GENERATION_PROMPT_TEMPLATE=${TITLE_GENERATION_PROMPT_TEMPLATE}'
+      
+      # Advanced Features
+      - 'ENABLE_EVALUATION_ARENA_MODELS=${ENABLE_EVALUATION_ARENA_MODELS-true}'
+      - 'ENABLE_RETRIEVAL_QUERY_GENERATION=${ENABLE_RETRIEVAL_QUERY_GENERATION-true}'
+      - 'CHUNK_SIZE=${CHUNK_SIZE-1000}'
+      - 'CHUNK_OVERLAP=${CHUNK_OVERLAP-100}'
+      
+      # UI Customization
+      - 'DEFAULT_MODELS=${DEFAULT_MODELS}'
+      - 'DEFAULT_PROMPT_SUGGESTIONS=${DEFAULT_PROMPT_SUGGESTIONS}'
+      - 'ENABLE_COMMUNITY_SHARING=${ENABLE_COMMUNITY_SHARING-true}'
+      - 'SHOW_ADMIN_DETAILS=${SHOW_ADMIN_DETAILS-true}'
+      
+      # Performance
+      - 'CACHE_DIR=/app/backend/data/cache'
+      - 'UPLOAD_DIR=/app/backend/data/uploads'
+      
     extra_hosts:
       - host.docker.internal:host-gateway
     restart: unless-stopped
 
+  # SearXNG for web search (optional but recommended)
+  searxng:
+    container_name: searxng
+    image: searxng/searxng:latest
+    ports:
+      - "8081:8080"
+    volumes:
+      - ./searxng:/etc/searxng
+    environment:
+      - SEARXNG_BASE_URL=http://localhost:8081/
+    restart: unless-stopped
+
+  # Redis for caching (optional but improves performance)
+  redis:
+    container_name: redis
+    image: redis:7-alpine
+    restart: unless-stopped
+    volumes:
+      - redis_data:/data
+    command: redis-server --appendonly yes
+
+  # PostgreSQL for advanced data storage (optional)
+  postgres:
+    container_name: postgres
+    image: postgres:15-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: openwebui
+      POSTGRES_USER: ${POSTGRES_USER-openwebui}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+
+  # Automatic1111 for image generation (optional)
+  # Uncomment if you want local image generation
+  # automatic1111:
+  #   container_name: automatic1111
+  #   image: automatic1111/stable-diffusion-webui:latest
+  #   ports:
+  #     - "7860:7860"
+  #   volumes:
+  #     - automatic1111_data:/app/models
+  #   restart: unless-stopped
+
 volumes:
   ollama: {}
   open-webui: {}
+  redis_data: {}
+  postgres_data: {}
+  # automatic1111_data: {}
