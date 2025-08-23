@@ -891,9 +891,11 @@
 		const userSettings = await getUserSettings(localStorage.token);
 
 		if (userSettings) {
-			settings.set(userSettings.ui);
+			settings.set({ ...userSettings.ui, autoFollowUps: false });
+
 		} else {
-			settings.set(JSON.parse(localStorage.getItem('settings') ?? '{}'));
+			settings.set({ ...JSON.parse(localStorage.getItem('settings') ?? '{}'), autoFollowUps: false });
+
 		}
 
 		const chatInput = document.getElementById('chat-input');
@@ -943,9 +945,12 @@
 				const userSettings = await getUserSettings(localStorage.token);
 
 				if (userSettings) {
-					await settings.set(userSettings.ui);
+					await settings.set({ ...userSettings.ui, autoFollowUps: false });
+
+
 				} else {
-					await settings.set(JSON.parse(localStorage.getItem('settings') ?? '{}'));
+					await settings.set({ ...JSON.parse(localStorage.getItem('settings') ?? '{}'), autoFollowUps: false });
+
 				}
 
 				params = chatContent?.params ?? {};
@@ -1770,7 +1775,7 @@
 								tags_generation: $settings?.autoTags ?? true
 							}
 						: {}),
-					follow_up_generation: $settings?.autoFollowUps ?? true
+					follow_up_generation: false
 				},
 
 				...(stream && (model.info?.meta?.capabilities?.usage ?? false)
