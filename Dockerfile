@@ -21,16 +21,20 @@ ARG GID=0
 
 ######## WebUI frontend ########
 FROM --platform=$BUILDPLATFORM node:22-alpine3.20 AS build
+# for local docker test runs, enable alpine below
+# FROM node:22-alpine3.20 AS build
 ARG BUILD_HASH
 
 WORKDIR /app
 
 COPY package.json package-lock.json ./
-RUN npm ci
+RUN npm ci && npm cache clean --force
 
 COPY . .
 ENV APP_BUILD_HASH=${BUILD_HASH}
-RUN npm run build
+RUN npm run build && \
+    # Cleanup node_modules and other build artifacts to reduce layer size
+    rm -rf node_modules .svelte-kit src static/pyodide package-lock.json
 
 ######## Model download stage (parallel and cacheable) ########
 FROM python:3.11-slim-bookworm AS models
@@ -63,7 +67,7 @@ ENV RAG_EMBEDDING_MODEL="$USE_EMBEDDING_MODEL_DOCKER" \
 # Install system dependencies for model downloads
 RUN apt-get update && \
     apt-get install -y --no-install-recommends gcc python3-dev curl && \
-    rm -rf /var/lib/apt/lists/*
+    rm -rf /var/lib/apt/lists/* /var/cache/apt/*
 
 # Create model directories
 RUN mkdir -p /models/embedding /models/whisper /models/txtai /models/transformers /models/tiktoken
@@ -72,24 +76,29 @@ RUN mkdir -p /models/embedding /models/whisper /models/txtai /models/transformer
 COPY ./backend/requirements.txt /tmp/requirements.txt
 
 # Install dependencies and download all models in parallel-friendly layers
-RUN pip3 install uv && \
+RUN pip3 install --no-cache-dir uv && \
     if [ "$USE_CUDA" = "true" ]; then \
-    pip3 install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/$USE_CUDA_DOCKER_VER --no-cache-dir; \
+    pip3 install --no-cache-dir torch torchvision torchaudio --index-url https://download.pytorch.org/whl/$USE_CUDA_DOCKER_VER; \
     else \
-    pip3 install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cpu --no-cache-dir; \
+    pip3 install --no-cache-dir torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cpu; \
     fi && \
-    uv pip install --system -r /tmp/requirements.txt --no-cache-dir
+    uv pip install --system --no-cache-dir -r /tmp/requirements.txt && \
+    rm -rf /tmp/requirements.txt /root/.cache /tmp/* /var/tmp/*
 
-# Download models in separate RUN commands for better caching
-RUN python -c "import os; from sentence_transformers import SentenceTransformer; SentenceTransformer(os.environ['RAG_EMBEDDING_MODEL'], device='cpu')"
-
-RUN python -c "import os; from faster_whisper import WhisperModel; WhisperModel(os.environ['WHISPER_MODEL'], device='cpu', compute_type='int8', download_root=os.environ['WHISPER_MODEL_DIR'])"
-
-RUN python -c "import os; import tiktoken; tiktoken.get_encoding(os.environ['TIKTOKEN_ENCODING_NAME'])"
-
-RUN python -c "from txtai.embeddings import Embeddings; e = Embeddings(); e.load(provider='huggingface-hub', container='neuml/txtai-wikipedia')"
-
-RUN python -c "import os; from transformers import pipeline; pipeline('translation', model='Helsinki-NLP/opus-mt-fr-en', device='cpu')"
+# Download models in separate RUN commands for better caching and cleanup
+RUN python -c "import os; from sentence_transformers import SentenceTransformer; SentenceTransformer(os.environ['RAG_EMBEDDING_MODEL'], device='cpu')" && \
+    python -c "import os; from faster_whisper import WhisperModel; WhisperModel(os.environ['WHISPER_MODEL'], device='cpu', compute_type='int8', download_root=os.environ['WHISPER_MODEL_DIR'])" && \
+    python -c "import os; import tiktoken; tiktoken.get_encoding(os.environ['TIKTOKEN_ENCODING_NAME'])" && \
+    python -c "from txtai.embeddings import Embeddings; e = Embeddings(); e.load(provider='huggingface-hub', container='neuml/txtai-wikipedia')" && \
+    python -c "import os; from transformers import pipeline; pipeline('translation', model='Helsinki-NLP/opus-mt-fr-en', device='cpu')" && \
+    # Cleanup after model downloads
+    pip3 cache purge && \
+    rm -rf /root/.cache /tmp/* /var/tmp/* && \
+    # Remove build dependencies to reduce size
+    apt-get remove -y gcc python3-dev && \
+    apt-get autoremove -y && \
+    apt-get clean && \
+    rm -rf /var/lib/apt/lists/* /var/cache/apt/*
 
 ######## WebUI backend ########
 FROM python:3.11-slim-bookworm AS base
@@ -172,44 +181,59 @@ RUN if [ "$USE_OLLAMA" = "true" ]; then \
     apt-get update && \
     # Install pandoc and netcat
     apt-get install -y --no-install-recommends git build-essential pandoc netcat-openbsd curl && \
-    apt-get install -y --no-install-recommends gcc python3-dev && \
     # for RAG OCR
     apt-get install -y --no-install-recommends ffmpeg libsm6 libxext6 && \
     # install helper tools
     apt-get install -y --no-install-recommends curl jq && \
     # install ollama
     curl -fsSL https://ollama.com/install.sh | sh && \
-    # cleanup
-    rm -rf /var/lib/apt/lists/*; \
+    # Aggressive cleanup: remove build deps, clean all caches, remove docs/man pages
+    apt-get remove -y --purge build-essential && \
+    apt-get autoremove -y --purge && \
+    apt-get autoclean && \
+    apt-get clean && \
+    rm -rf /var/lib/apt/lists/* /var/cache/apt/* /tmp/* /var/tmp/* && \
+    rm -rf /usr/share/doc /usr/share/man /usr/share/locale && \
+    rm -rf /root/.cache /root/.npm /root/.pip; \
     else \
     apt-get update && \
-    # Install pandoc, netcat and gcc
-    apt-get install -y --no-install-recommends git build-essential pandoc gcc netcat-openbsd curl jq && \
-    apt-get install -y --no-install-recommends gcc python3-dev && \
+    # Install pandoc, netcat and minimal dependencies
+    apt-get install -y --no-install-recommends git build-essential pandoc netcat-openbsd curl jq && \
     # for RAG OCR
     apt-get install -y --no-install-recommends ffmpeg libsm6 libxext6 && \
-    # cleanup
-    rm -rf /var/lib/apt/lists/*; \
+    # Remove build dependencies after installation
+    apt-get remove -y --purge build-essential && \
+    apt-get autoremove -y --purge && \
+    apt-get autoclean && \
+    apt-get clean && \
+    rm -rf /var/lib/apt/lists/* /var/cache/apt/* /tmp/* /var/tmp/* && \
+    rm -rf /usr/share/doc /usr/share/man /usr/share/locale && \
+    rm -rf /root/.cache /root/.npm /root/.pip; \
     fi
 
-# install python dependencies
-COPY --chown=$UID:$GID ./backend/requirements.txt ./requirements.txt
+# Copy Python packages from models stage to avoid duplicate installation (saves ~1.4GB)
+COPY --from=models /usr/local/lib/python3.11/site-packages/ /usr/local/lib/python3.11/site-packages/
+COPY --from=models /usr/local/bin/ /usr/local/bin/
 
-# Install dependencies without model downloads (models copied from parallel stage)
-RUN pip3 install uv && \
-    if [ "$USE_CUDA" = "true" ]; then \
-    pip3 install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/$USE_CUDA_DOCKER_VER --no-cache-dir && \
-    uv pip install --system -r requirements.txt --no-cache-dir; \
-    else \
-    pip3 install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cpu --no-cache-dir && \
-    uv pip install --system -r requirements.txt --no-cache-dir; \
-    fi
+# Aggressive system cleanup for additional space savings (~300MB)
+RUN apt-get autoremove -y && \
+    apt-get clean && \
+    rm -rf /var/lib/apt/lists/* /var/cache/apt/* /var/cache/debconf/* && \
+    rm -rf /usr/share/doc /usr/share/man /usr/share/locale /usr/share/info && \
+    rm -rf /root/.cache /tmp/* /var/tmp/* /root/.npm /root/.pip && \
+    find /usr/local -name "*.pyc" -delete && \
+    find /usr/local -name "__pycache__" -exec rm -rf {} + 2>/dev/null || true
 
-# Copy pre-downloaded models from parallel build stage
+# Copy pre-downloaded models from parallel build stage and set permissions in single layer
 COPY --from=models --chown=$UID:$GID /models/ /app/backend/data/cache/
-
-# Set ownership after all model downloads
-RUN chown -R $UID:$GID /app/backend/data/
+# Remove any .git directories from model downloads to reduce size (avoid chmod on models to prevent duplication)
+RUN find /app/backend/data/cache -name ".git" -type d -exec rm -rf {} + 2>/dev/null || true && \
+    # Remove any __pycache__ directories
+    find /app/backend/data/cache -name "__pycache__" -type d -exec rm -rf {} + 2>/dev/null || true && \
+    # Remove any temporary files
+    find /app/backend/data/cache -name "*.tmp" -delete 2>/dev/null || true && \
+    # Set permissions only on home directory to avoid duplicating models
+    chmod -R g=u $HOME
 
 # copy embedding weight from build
 # RUN mkdir -p /root/.cache/chroma/onnx_models/all-MiniLM-L6-v2
@@ -222,10 +246,6 @@ COPY --chown=$UID:$GID --from=build /app/package.json /app/package.json
 
 # copy backend files
 COPY --chown=$UID:$GID ./backend .
-
-# provide group with same permissions as user
-# allows running in OpenShift
-RUN chmod -R g=u /app $HOME
 
 EXPOSE 8080
 
