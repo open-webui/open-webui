@@ -75,6 +75,7 @@
 			continuation: true,
 			share: true,
 			export: true,
+			rating: true,
 			stt: true,
 			tts: true,
 			call: true,

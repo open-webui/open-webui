@@ -150,6 +150,7 @@ class ChatPermissions(BaseModel):
     continuation: bool = True
     share: bool = True
     export: bool = True
+    rating: bool = True
     stt: bool = True
     tts: bool = True
     call: bool = True

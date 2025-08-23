@@ -1224,6 +1224,10 @@ USER_PERMISSIONS_CHAT_EXPORT = (
     os.environ.get("USER_PERMISSIONS_CHAT_EXPORT", "True").lower() == "true"
 )
 
+USER_PERMISSIONS_CHAT_RATING = (
+    os.environ.get("USER_PERMISSIONS_CHAT_RATING", "True").lower() == "true"
+)
+
 USER_PERMISSIONS_CHAT_STT = (
     os.environ.get("USER_PERMISSIONS_CHAT_STT", "True").lower() == "true"
 )
@@ -1298,6 +1302,7 @@ DEFAULT_USER_PERMISSIONS = {
         "share": USER_PERMISSIONS_CHAT_SHARE,
         "continuation": USER_PERMISSIONS_CHAT_CONTINUATION,
         "export": USER_PERMISSIONS_CHAT_EXPORT,
+        "rating": USER_PERMISSIONS_CHAT_RATING,
         "stt": USER_PERMISSIONS_CHAT_STT,
         "tts": USER_PERMISSIONS_CHAT_TTS,
         "call": USER_PERMISSIONS_CHAT_CALL,
