@@ -55,6 +55,7 @@
 			delete: true,
 			edit: true,
 			continuation: true,
+			regeneration: true,
 			share: true,
 			export: true,
 			rating: true,

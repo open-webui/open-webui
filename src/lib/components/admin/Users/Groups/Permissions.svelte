@@ -28,6 +28,7 @@
 			delete: true,
 			edit: true,
 			continuation: true,
+			regeneration: true,
 			share: true,
 			export: true,
 			rating: true,
@@ -308,6 +309,14 @@
 			</div>
 
 			<Switch bind:state={permissions.chat.edit} />
+		</div>
+
+		<div class="  flex w-full justify-between my-2 pr-2">
+			<div class=" self-center text-xs font-medium">
+				{$i18n.t('Allow Response Regeneration')}
+			</div>
+
+			<Switch bind:state={permissions.chat.regeneration} />
 		</div>
 
 		<div class="  flex w-full justify-between my-2 pr-2">

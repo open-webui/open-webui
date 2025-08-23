@@ -735,24 +735,26 @@
 				</div>
 			</div>
 
-			<div>
-				<div class=" py-0.5 flex w-full justify-between">
-					<div id="regenerate-menu-label" class=" self-center text-xs">
-						{$i18n.t('Regenerate Menu')}
-					</div>
+			{#if $user?.role === 'admin' || ($user?.permissions?.chat?.regeneration ?? true)}
+				<div>
+					<div class=" py-0.5 flex w-full justify-between">
+						<div id="regenerate-menu-label" class=" self-center text-xs">
+							{$i18n.t('Regenerate Menu')}
+						</div>
 
-					<div class="flex items-center gap-2 p-1">
-						<Switch
-							ariaLabelledbyId="regenerate-menu-label"
-							tooltip={true}
-							bind:state={regenerateMenu}
-							on:change={() => {
-								saveSettings({ regenerateMenu });
-							}}
-						/>
+						<div class="flex items-center gap-2 p-1">
+							<Switch
+								ariaLabelledbyId="regenerate-menu-label"
+								tooltip={true}
+								bind:state={regenerateMenu}
+								on:change={() => {
+									saveSettings({ regenerateMenu });
+								}}
+							/>
+						</div>
 					</div>
 				</div>
-			</div>
+			{/if}
 
 			<div>
 				<div class=" py-0.5 flex w-full justify-between">

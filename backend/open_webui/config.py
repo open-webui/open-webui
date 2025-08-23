@@ -1216,6 +1216,10 @@ USER_PERMISSIONS_CHAT_CONTINUATION = (
     os.environ.get("USER_PERMISSIONS_CHAT_CONTINUATION", "True").lower() == "true"
 )
 
+USER_PERMISSIONS_CHAT_REGENERATION = (
+    os.environ.get("USER_PERMISSIONS_CHAT_REGENERATION", "True").lower() == "true"
+)
+
 USER_PERMISSIONS_CHAT_SHARE = (
     os.environ.get("USER_PERMISSIONS_CHAT_SHARE", "True").lower() == "true"
 )
@@ -1299,8 +1303,9 @@ DEFAULT_USER_PERMISSIONS = {
         "file_upload": USER_PERMISSIONS_CHAT_FILE_UPLOAD,
         "delete": USER_PERMISSIONS_CHAT_DELETE,
         "edit": USER_PERMISSIONS_CHAT_EDIT,
-        "share": USER_PERMISSIONS_CHAT_SHARE,
         "continuation": USER_PERMISSIONS_CHAT_CONTINUATION,
+        "regeneration": USER_PERMISSIONS_CHAT_REGENERATION,
+        "share": USER_PERMISSIONS_CHAT_SHARE,
         "export": USER_PERMISSIONS_CHAT_EXPORT,
         "rating": USER_PERMISSIONS_CHAT_RATING,
         "stt": USER_PERMISSIONS_CHAT_STT,

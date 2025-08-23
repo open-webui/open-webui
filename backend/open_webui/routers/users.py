@@ -148,6 +148,7 @@ class ChatPermissions(BaseModel):
     delete: bool = True
     edit: bool = True
     continuation: bool = True
+    regeneration: bool = True
     share: bool = True
     export: bool = True
     rating: bool = True
