@@ -46,6 +46,9 @@
 	import NotificationToast from '$lib/components/NotificationToast.svelte';
 	import AppSidebar from '$lib/components/app/AppSidebar.svelte';
 	import { chatCompletion } from '$lib/apis/openai';
+	import ToolApprovalModal from '$lib/components/chat/ToolApprovalModal.svelte';
+	import { setApprovalRequest, clearApprovals } from '$lib/stores/toolApproval';
+	import { approvalCoordinator } from '$lib/utils/toolApprovalChannel';
 
 	import { beforeNavigate } from '$app/navigation';
 	import { updated } from '$app/state';
@@ -214,10 +217,7 @@
 		const toolServer = $settings?.toolServers?.find((server) => server.url === data.server?.url);
 		const toolServerData = $toolServers?.find((server) => server.url === data.server?.url);
 
-		console.log('executeTool', data, toolServer);
-
 		if (toolServer) {
-			console.log(toolServer);
 			const res = await executeToolServer(
 				(toolServer?.auth_type ?? 'bearer') === 'bearer' ? toolServer?.key : localStorage.token,
 				toolServer.url,
@@ -259,6 +259,45 @@
 		await tick();
 		const type = event?.data?.type ?? null;
 		const data = event?.data?.data ?? null;
+
+		// ✅ Always handle tool approval events immediately
+		if (type === 'tool:approval_required') {
+			console.log('🔧 Tool approval required:', data);
+
+			// Only show modal if this tab is viewing the relevant chat
+			const approvalChatId = data.chat_id || event.chat_id || '';
+			const currentChatId = $chatId;
+			
+			if (approvalChatId && currentChatId && approvalChatId === currentChatId) {
+				console.log(`✅ Showing approval modal for current chat: ${currentChatId}`);
+				setApprovalRequest({
+					session_id: data.session_id || $socket?.id || '',
+					chat_id: data.chat_id || event.chat_id || '',
+					message_id: data.message_id || event.message_id || '',
+					tools: data.tools || [],
+					});
+			} else {
+				console.log(`🚫 Ignoring approval for different chat. Current: ${currentChatId}, Approval: ${approvalChatId}`);
+			}
+
+			return; // stop here so it doesn't go into other branches
+		}
+
+		if (type === 'tool:approval_status') {
+			// Handle approval status updates
+			console.log('✅ Tool approval status:', data);
+			
+			const { tool_name, status } = data;
+			
+			// Show toast based on status
+			if (status === 'approved') {
+				toast.success(`Executing ${tool_name}...`);
+			} else if (status === 'denied') {
+				toast.error(`${tool_name} execution denied`);
+			}
+
+			return; // stop here so it doesn't go into other branches
+		}
 
 		if ((event.chat_id !== $chatId && !$temporaryChatEnabled) || isFocused) {
 			if (type === 'chat:completion') {
@@ -307,7 +346,6 @@
 				console.log('execute:python', data);
 				executePythonAsWorker(data.id, data.code, cb);
 			} else if (type === 'execute:tool') {
-				console.log('execute:tool', data);
 				executeTool(data, cb);
 			} else if (type === 'request:chat:completion') {
 				console.log(data, $socket.id);
@@ -642,6 +680,8 @@
 
 		return () => {
 			window.removeEventListener('resize', onResize);
+			clearApprovals();
+			approvalCoordinator.destroy();
 		};
 	});
 </script>
@@ -677,3 +717,6 @@
 	position="top-right"
 	closeButton
 />
+
+<!-- Tool Approval Modal -->
+<ToolApprovalModal />

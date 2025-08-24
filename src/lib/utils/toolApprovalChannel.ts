@@ -12,10 +12,14 @@ export class ToolApprovalCoordinator {
         };
     }
     
-    private handleMessage(data: any) {
-        switch (data.type) {
+    private handleMessage(data: unknown) {
+        if (!data || typeof data !== 'object' || !('type' in data)) return;
+        
+        const msg = data as { type: string; tabId?: string; hasApprovals?: boolean };
+        
+        switch (msg.type) {
             case 'APPROVAL_CLAIMED':
-                if (data.tabId !== this.tabId) {
+                if (msg.tabId !== this.tabId) {
                     // Another tab is handling it
                     this.isHandlingApproval = false;
                 }
@@ -28,7 +32,7 @@ export class ToolApprovalCoordinator {
                 
             case 'TAB_CLOSING':
                 // Tab is closing with pending approvals
-                if (data.hasApprovals && !this.isHandlingApproval) {
+                if (msg.hasApprovals && !this.isHandlingApproval) {
                     // Could take over, but we'll let it timeout per requirements
                 }
                 break;
