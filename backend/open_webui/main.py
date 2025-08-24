@@ -57,7 +57,6 @@ from open_webui.utils.logger import start_logger
 from open_webui.socket.main import (
     app as socket_app,
     periodic_usage_pool_cleanup,
-    get_event_emitter,
     get_models_in_use,
     get_active_user_ids,
 )
@@ -186,7 +185,6 @@ from open_webui.config import (
     FIRECRAWL_API_BASE_URL,
     FIRECRAWL_API_KEY,
     WEB_LOADER_ENGINE,
-    WEB_LOADER_CONCURRENT_REQUESTS,
     WHISPER_MODEL,
     WHISPER_VAD_FILTER,
     WHISPER_LANGUAGE,
@@ -325,11 +323,12 @@ from open_webui.config import (
     API_KEY_ALLOWED_ENDPOINTS,
     ENABLE_CHANNELS,
     ENABLE_NOTES,
+    ENABLE_TOOL_APPROVAL,
     ENABLE_COMMUNITY_SHARING,
     ENABLE_MESSAGE_RATING,
     ENABLE_USER_WEBHOOKS,
     ENABLE_EVALUATION_ARENA_MODELS,
-    BYPASS_ADMIN_ACCESS_CONTROL,
+    ENABLE_ADMIN_WORKSPACE_CONTENT_ACCESS,
     USER_PERMISSIONS,
     DEFAULT_USER_ROLE,
     PENDING_USER_OVERLAY_CONTENT,
@@ -378,7 +377,7 @@ from open_webui.config import (
     RESPONSE_WATERMARK,
     # Admin
     ENABLE_ADMIN_CHAT_ACCESS,
-    BYPASS_ADMIN_ACCESS_CONTROL,
+    ENABLE_ADMIN_WORKSPACE_CONTENT_ACCESS,
     ENABLE_ADMIN_EXPORT,
     # Tasks
     TASK_MODEL,
@@ -467,7 +466,6 @@ from open_webui.utils.redis import get_redis_connection
 from open_webui.tasks import (
     redis_task_command_listener,
     list_task_ids_by_item_id,
-    create_task,
     stop_task,
     list_tasks,
 )  # Import from tasks.py
@@ -717,6 +715,7 @@ app.state.config.MODEL_ORDER_LIST = MODEL_ORDER_LIST
 
 app.state.config.ENABLE_CHANNELS = ENABLE_CHANNELS
 app.state.config.ENABLE_NOTES = ENABLE_NOTES
+app.state.config.ENABLE_TOOL_APPROVAL = ENABLE_TOOL_APPROVAL
 app.state.config.ENABLE_COMMUNITY_SHARING = ENABLE_COMMUNITY_SHARING
 app.state.config.ENABLE_MESSAGE_RATING = ENABLE_MESSAGE_RATING
 app.state.config.ENABLE_USER_WEBHOOKS = ENABLE_USER_WEBHOOKS
@@ -858,10 +857,7 @@ app.state.config.WEB_SEARCH_ENGINE = WEB_SEARCH_ENGINE
 app.state.config.WEB_SEARCH_DOMAIN_FILTER_LIST = WEB_SEARCH_DOMAIN_FILTER_LIST
 app.state.config.WEB_SEARCH_RESULT_COUNT = WEB_SEARCH_RESULT_COUNT
 app.state.config.WEB_SEARCH_CONCURRENT_REQUESTS = WEB_SEARCH_CONCURRENT_REQUESTS
-
 app.state.config.WEB_LOADER_ENGINE = WEB_LOADER_ENGINE
-app.state.config.WEB_LOADER_CONCURRENT_REQUESTS = WEB_LOADER_CONCURRENT_REQUESTS
-
 app.state.config.WEB_SEARCH_TRUST_ENV = WEB_SEARCH_TRUST_ENV
 app.state.config.BYPASS_WEB_SEARCH_EMBEDDING_AND_RETRIEVAL = (
     BYPASS_WEB_SEARCH_EMBEDDING_AND_RETRIEVAL
@@ -924,19 +920,14 @@ try:
         app.state.config.RAG_EMBEDDING_MODEL,
         RAG_EMBEDDING_MODEL_AUTO_UPDATE,
     )
-    if (
-        app.state.config.ENABLE_RAG_HYBRID_SEARCH
-        and not app.state.config.BYPASS_EMBEDDING_AND_RETRIEVAL
-    ):
-        app.state.rf = get_rf(
-            app.state.config.RAG_RERANKING_ENGINE,
-            app.state.config.RAG_RERANKING_MODEL,
-            app.state.config.RAG_EXTERNAL_RERANKER_URL,
-            app.state.config.RAG_EXTERNAL_RERANKER_API_KEY,
-            RAG_RERANKING_MODEL_AUTO_UPDATE,
-        )
-    else:
-        app.state.rf = None
+
+    app.state.rf = get_rf(
+        app.state.config.RAG_RERANKING_ENGINE,
+        app.state.config.RAG_RERANKING_MODEL,
+        app.state.config.RAG_EXTERNAL_RERANKER_URL,
+        app.state.config.RAG_EXTERNAL_RERANKER_API_KEY,
+        RAG_RERANKING_MODEL_AUTO_UPDATE,
+    )
 except Exception as e:
     log.error(f"Error updating models: {e}")
     pass
@@ -1295,7 +1286,7 @@ async def get_models(
             model_info = Models.get_model_by_id(model["id"])
             if model_info:
                 if (
-                    (user.role == "admin" and BYPASS_ADMIN_ACCESS_CONTROL)
+                    (user.role == "admin" and ENABLE_ADMIN_WORKSPACE_CONTENT_ACCESS)
                     or user.id == model_info.user_id
                     or has_access(
                         user.id, type="read", access_control=model_info.access_control
@@ -1335,15 +1326,15 @@ async def get_models(
         # Sort models by order list priority, with fallback for those not in the list
         models.sort(
             key=lambda model: (
-                model_order_dict.get(model.get("id", ""), float("inf")),
-                (model.get("name", "") or ""),
+                model_order_dict.get(model.get("id"), float("inf")),
+                model.get("name"),
             )
         )
 
     # Filter out models that the user does not have access to
     if (
         user.role == "user"
-        or (user.role == "admin" and not BYPASS_ADMIN_ACCESS_CONTROL)
+        or (user.role == "admin" and not ENABLE_ADMIN_WORKSPACE_CONTENT_ACCESS)
     ) and not BYPASS_MODEL_ACCESS_CONTROL:
         models = get_filtered_models(models, user)
 
@@ -1416,7 +1407,7 @@ async def chat_completion(
 
             # Check if user has access to the model
             if not BYPASS_MODEL_ACCESS_CONTROL and (
-                user.role != "admin" or not BYPASS_ADMIN_ACCESS_CONTROL
+                user.role != "admin" or not ENABLE_ADMIN_WORKSPACE_CONTENT_ACCESS
             ):
                 try:
                     check_model_access(user, model)
@@ -1480,78 +1471,65 @@ async def chat_completion(
         request.state.metadata = metadata
         form_data["metadata"] = metadata
 
+        form_data, metadata, events = await process_chat_payload(
+            request, form_data, user, metadata, model
+        )
     except Exception as e:
-        log.debug(f"Error processing chat metadata: {e}")
+        log.debug(f"Error processing chat payload: {e}")
+        if metadata.get("chat_id") and metadata.get("message_id"):
+            # Update the chat message with the error
+            try:
+                Chats.upsert_message_to_chat_by_id_and_message_id(
+                    metadata["chat_id"],
+                    metadata["message_id"],
+                    {
+                        "error": {"content": str(e)},
+                    },
+                )
+            except:
+                pass
+
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=str(e),
         )
 
-    async def process_chat(request, form_data, user, metadata, model):
-        try:
-            form_data, metadata, events = await process_chat_payload(
-                request, form_data, user, metadata, model
-            )
-
-            response = await chat_completion_handler(request, form_data, user)
-            if metadata.get("chat_id") and metadata.get("message_id"):
-                try:
-                    Chats.upsert_message_to_chat_by_id_and_message_id(
-                        metadata["chat_id"],
-                        metadata["message_id"],
-                        {
-                            "model": model_id,
-                        },
-                    )
-                except:
-                    pass
-
-            return await process_chat_response(
-                request, response, form_data, user, metadata, model, events, tasks
-            )
-        except asyncio.CancelledError:
-            log.info("Chat processing was cancelled")
+    try:
+        response = await chat_completion_handler(request, form_data, user)
+        if metadata.get("chat_id") and metadata.get("message_id"):
             try:
-                event_emitter = get_event_emitter(metadata)
-                await event_emitter(
-                    {"type": "task-cancelled"},
+                Chats.upsert_message_to_chat_by_id_and_message_id(
+                    metadata["chat_id"],
+                    metadata["message_id"],
+                    {
+                        "model": model_id,
+                    },
                 )
-            except Exception as e:
+            except:
                 pass
-        except Exception as e:
-            log.debug(f"Error processing chat payload: {e}")
-            if metadata.get("chat_id") and metadata.get("message_id"):
-                # Update the chat message with the error
-                try:
-                    Chats.upsert_message_to_chat_by_id_and_message_id(
-                        metadata["chat_id"],
-                        metadata["message_id"],
-                        {
-                            "error": {"content": str(e)},
-                        },
-                    )
-                except:
-                    pass
 
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail=str(e),
-            )
-
-    if (
-        metadata.get("session_id")
-        and metadata.get("chat_id")
-        and metadata.get("message_id")
-    ):
-        # Asynchronous Chat Processing
-        task_id, _ = await create_task(
-            request.app.state.redis,
-            process_chat(request, form_data, user, metadata, model),
-            id=metadata["chat_id"],
+        return await process_chat_response(
+            request, response, form_data, user, metadata, model, events, tasks
         )
-        return {"status": True, "task_id": task_id}
-    else:
-        return await process_chat(request, form_data, user, metadata, model)
+    except Exception as e:
+        log.debug(f"Error in chat completion: {e}")
+        if metadata.get("chat_id") and metadata.get("message_id"):
+            # Update the chat message with the error
+            try:
+                Chats.upsert_message_to_chat_by_id_and_message_id(
+                    metadata["chat_id"],
+                    metadata["message_id"],
+                    {
+                        "error": {"content": str(e)},
+                    },
+                )
+            except:
+                pass
+
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=str(e),
+        )
 
 
 # Alias for chat_completion (Legacy)
@@ -1762,7 +1740,7 @@ async def get_app_config(request: Request):
                     if user and user.role == "pending"
                     else {}
                 ),
-                **(
+                ** (
                     {
                         "metadata": {
                             "login_footer": app.state.LICENSE_METADATA.get(

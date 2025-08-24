@@ -3,7 +3,6 @@ import logging
 import sys
 import os
 import base64
-import textwrap
 
 import asyncio
 from aiocache import cached
@@ -74,7 +73,6 @@ from open_webui.utils.misc import (
     add_or_update_user_message,
     get_last_user_message,
     get_last_assistant_message,
-    get_system_message,
     prepend_to_first_user_message_content,
     convert_logit_bias_input_to_json,
 )
@@ -85,14 +83,15 @@ from open_webui.utils.filter import (
     process_filter_functions,
 )
 from open_webui.utils.code_interpreter import execute_code_jupyter
-from open_webui.utils.payload import apply_system_prompt_to_body
+from open_webui.utils.payload import apply_model_system_prompt_to_body
+from open_webui.utils.tool_approval import approval_manager
 
+from open_webui.tasks import create_task
 
 from open_webui.config import (
     CACHE_DIR,
     DEFAULT_TOOLS_FUNCTION_CALLING_PROMPT_TEMPLATE,
     DEFAULT_CODE_INTERPRETER_PROMPT,
-    CODE_INTERPRETER_BLOCKED_MODULES,
 )
 from open_webui.env import (
     SRC_LOG_LEVELS,
@@ -146,6 +145,7 @@ async def chat_completion_tools_handler(
         }
 
     event_caller = extra_params["__event_call__"]
+    event_emitter = extra_params["__event_emitter__"] 
     metadata = extra_params["__metadata__"]
 
     task_model_id = get_task_model_id(
@@ -189,6 +189,109 @@ async def chat_completion_tools_handler(
 
             result = json.loads(content)
 
+            # APPROVAL LOGIC
+            
+            tool_calls_list = []
+            if result.get("tool_calls"):
+                tool_calls_list = result.get("tool_calls")
+            else:
+                tool_calls_list = [result]
+            
+            # Generate IDs for each tool call
+            for tool_call in tool_calls_list:
+                if "id" not in tool_call:
+                    tool_call["id"] = str(uuid4())
+            
+            
+            # Check if approval is required
+            require_approval = request.app.state.config.ENABLE_TOOL_APPROVAL
+            approval_results = {}
+            
+            
+            chat_id = metadata.get("chat_id", "")
+            chat_auto_approval = approval_manager.is_chat_auto_approval(chat_id)
+            
+            if chat_auto_approval:
+                for tool_call in tool_calls_list:
+                    tool_id = tool_call.get("id", "")
+                    approval_results[tool_id] = "approved"
+            elif require_approval:
+                tools_to_approve = []
+                
+                for tool_call in tool_calls_list:
+                    tool_id = tool_call.get("id", "")
+                    tool_name = tool_call.get("name", None)
+                    tool_args_str = json.dumps(tool_call.get("parameters", {}))
+                    
+                    # Parse arguments safely
+                    try:
+                        tool_args = json.loads(tool_args_str)
+                    except:
+                        try:
+                            tool_args = ast.literal_eval(tool_args_str)
+                        except:
+                            tool_args = {}
+                    
+                    approval_id = str(uuid4())
+                    approval_results[tool_id] = approval_id
+                    
+                    tools_to_approve.append({
+                        "approval_id": approval_id,
+                        "tool_id": tool_id,
+                        "tool_name": tool_name,
+                        "tool_params": tool_args
+                    })
+                
+                # If any tools need approval, request it
+                if tools_to_approve:
+                    await event_emitter({
+                        "type": "tool:approval_required",
+                        "data": {
+                            "chat_id": metadata.get("chat_id", ""),
+                            "message_id": metadata.get("message_id", ""),
+                            "tools": tools_to_approve
+                        }
+                    })
+                    
+                    async def wait_for_tool_approval(tool):
+                        tool_id = tool["tool_id"]
+                        approval_id = tool["approval_id"]
+                        
+                        
+                        decision = await approval_manager.wait_for_approval(
+                            chat_id=metadata.get("chat_id", ""),
+                            approval_id=approval_id,
+                            tool_data={
+                                "tool_id": tool_id,
+                                "tool_name": tool["tool_name"],
+                                "tool_params": tool["tool_params"]
+                            }
+                        )
+                        
+                        
+                        await event_emitter({
+                            "type": "tool:approval_status",
+                            "data": {
+                                "tool_id": tool_id,
+                                "tool_name": tool["tool_name"],
+                                "status": decision
+                            }
+                        })
+                        
+                        return tool_id, decision
+                    
+                    # Execute all approval waits concurrently
+                    approval_tasks = [wait_for_tool_approval(tool) for tool in tools_to_approve]
+                    approval_responses = await asyncio.gather(*approval_tasks)
+                    
+                    # Store all approval results
+                    for tool_id, decision in approval_responses:
+                        approval_results[tool_id] = decision
+            else:
+                for tool_call in tool_calls_list:
+                    approval_results[tool_call.get("id", "")] = "approved"
+            # ===== END: APPROVAL LOGIC =====
+
             async def tool_call_handler(tool_call):
                 nonlocal skip_files
 
@@ -199,6 +302,32 @@ async def chat_completion_tools_handler(
                     return body, {}
 
                 tool_function_params = tool_call.get("parameters", {})
+                tool_id = tool_call.get("id", "")  # Get the tool ID
+
+                # CHECK APPROVAL 
+                approval_status = approval_results.get(tool_id, "denied")
+                
+                
+                if approval_status == "denied":
+                    # Add denied result to sources
+                    sources.append({
+                        "source": {"name": f"TOOL:{tool_function_name}"},
+                        "document": [f"Tool execution denied: User did not approve execution of {tool_function_name}"],
+                        "metadata": [{"source": f"TOOL:{tool_function_name}", "parameters": tool_function_params}],
+                        "tool_result": True,
+                    })
+                    return
+                
+                if approval_status != "approved":
+                    # Unknown status, skip for safety
+                    sources.append({
+                        "source": {"name": f"TOOL:{tool_function_name}"},
+                        "document": [f"Tool execution skipped: Invalid approval status for {tool_function_name}"],
+                        "metadata": [{"source": f"TOOL:{tool_function_name}", "parameters": tool_function_params}],
+                        "tool_result": True,
+                    })
+                    return
+                
 
                 try:
                     tool = tools[tool_function_name]
@@ -738,15 +867,6 @@ async def process_chat_payload(request, form_data, user, metadata, model):
     form_data = apply_params_to_form_data(form_data, model)
     log.debug(f"form_data: {form_data}")
 
-    system_message = get_system_message(form_data.get("messages", []))
-    if system_message:
-        try:
-            form_data = apply_system_prompt_to_body(
-                system_message.get("content"), form_data, metadata, user
-            )
-        except:
-            pass
-
     event_emitter = get_event_emitter(metadata)
     event_call = get_event_call(metadata)
 
@@ -788,7 +908,7 @@ async def process_chat_payload(request, form_data, user, metadata, model):
 
             if folder and folder.data:
                 if "system_prompt" in folder.data:
-                    form_data = apply_system_prompt_to_body(
+                    form_data = apply_model_system_prompt_to_body(
                         folder.data["system_prompt"], form_data, metadata, user
                     )
                 if "files" in folder.data:
@@ -919,7 +1039,7 @@ async def process_chat_payload(request, form_data, user, metadata, model):
     tools_dict = {}
 
     if tool_ids:
-        tools_dict = await get_tools(
+        tools_dict = get_tools(
             request,
             tool_ids,
             user,
@@ -942,6 +1062,10 @@ async def process_chat_payload(request, form_data, user, metadata, model):
                     "server": tool_server,
                 }
 
+    # Add debugging for external API models only
+    model = metadata.get("model", {})
+    is_external_api = model.get("owned_by") != "ollama" and not model.get("pipe")
+    
     if tools_dict:
         if metadata.get("params", {}).get("function_calling") == "native":
             # If the function calling is native, then call the tools function calling handler
@@ -1000,24 +1124,25 @@ async def process_chat_payload(request, form_data, user, metadata, model):
         if prompt is None:
             raise Exception("No user message found")
 
-        if context_string != "":
+        if context_string == "":
+            if request.app.state.config.RELEVANCE_THRESHOLD == 0:
+                log.debug(
+                    f"With a 0 relevancy threshold for RAG, the context cannot be empty"
+                )
+        else:
             # Workaround for Ollama 2.0+ system prompt issue
             # TODO: replace with add_or_update_system_message
             if model.get("owned_by") == "ollama":
                 form_data["messages"] = prepend_to_first_user_message_content(
                     rag_template(
-                        request.app.state.config.RAG_TEMPLATE,
-                        context_string,
-                        prompt,
+                        request.app.state.config.RAG_TEMPLATE, context_string, prompt
                     ),
                     form_data["messages"],
                 )
             else:
                 form_data["messages"] = add_or_update_system_message(
                     rag_template(
-                        request.app.state.config.RAG_TEMPLATE,
-                        context_string,
-                        prompt,
+                        request.app.state.config.RAG_TEMPLATE, context_string, prompt
                     ),
                     form_data["messages"],
                 )
@@ -1334,7 +1459,7 @@ async def process_chat_response(
                         if not get_active_status_by_user_id(user.id):
                             webhook_url = Users.get_user_webhook_url_by_id(user.id)
                             if webhook_url:
-                                await post_webhook(
+                                post_webhook(
                                     request.app.state.WEBUI_NAME,
                                     webhook_url,
                                     f"{title} - {request.app.state.config.WEBUI_URL}/c/{metadata['chat_id']}\n\n{content}",
@@ -1630,13 +1755,9 @@ async def process_chat_response(
 
                         match = re.search(start_tag_pattern, content)
                         if match:
-                            try:
-                                attr_content = (
-                                    match.group(1) if match.group(1) else ""
-                                )  # Ensure it's not None
-                            except:
-                                attr_content = ""
-
+                            attr_content = (
+                                match.group(1) if match.group(1) else ""
+                            )  # Ensure it's not None
                             attributes = extract_attributes(
                                 attr_content
                             )  # Extract attributes safely
@@ -1860,21 +1981,6 @@ async def process_chat_response(
                             or 1
                         ),
                     )
-                    last_delta_data = None
-
-                    async def flush_pending_delta_data(threshold: int = 0):
-                        nonlocal delta_count
-                        nonlocal last_delta_data
-
-                        if delta_count >= threshold and last_delta_data:
-                            await event_emitter(
-                                {
-                                    "type": "chat:completion",
-                                    "data": last_delta_data,
-                                }
-                            )
-                            delta_count = 0
-                            last_delta_data = None
 
                     async for line in response.body_iterator:
                         line = line.decode("utf-8") if isinstance(line, bytes) else line
@@ -1914,12 +2020,6 @@ async def process_chat_response(
                                         {
                                             "selectedModelId": model_id,
                                         },
-                                    )
-                                    await event_emitter(
-                                        {
-                                            "type": "chat:completion",
-                                            "data": data,
-                                        }
                                     )
                                 else:
                                     choices = data.get("choices", [])
@@ -2131,9 +2231,14 @@ async def process_chat_response(
 
                                 if delta:
                                     delta_count += 1
-                                    last_delta_data = data
                                     if delta_count >= delta_chunk_size:
-                                        await flush_pending_delta_data(delta_chunk_size)
+                                        await event_emitter(
+                                            {
+                                                "type": "chat:completion",
+                                                "data": data,
+                                            }
+                                        )
+                                        delta_count = 0
                                 else:
                                     await event_emitter(
                                         {
@@ -2148,7 +2253,6 @@ async def process_chat_response(
                             else:
                                 log.debug(f"Error: {e}")
                                 continue
-                    await flush_pending_delta_data()
 
                     if content_blocks:
                         # Clean up the last text block
@@ -2193,7 +2297,89 @@ async def process_chat_response(
                     tool_call_retries += 1
 
                     response_tool_calls = tool_calls.pop(0)
-
+                    
+                    
+                    # ===== NEW CODE: APPROVAL SECTION START =====
+                    # Check if approval is required
+                    require_approval = request.app.state.config.ENABLE_TOOL_APPROVAL
+                    approval_results = {}
+                    
+                    chat_id = metadata.get("chat_id", "")
+                    chat_auto_approval = approval_manager.is_chat_auto_approval(chat_id)
+                    
+                    if chat_auto_approval:
+                        for tool_call in response_tool_calls:
+                            tool_id = tool_call.get("id", "")
+                            approval_results[tool_id] = "approved"
+                    elif require_approval:
+                        tools_to_approve = []
+                        
+                        for tool_call in response_tool_calls:
+                            tool_id = tool_call.get("id", "")
+                            tool_name = tool_call.get("function", {}).get("name", "")
+                            tool_args_str = tool_call.get("function", {}).get("arguments", "{}")
+                            
+                            # Parse arguments safely
+                            try:
+                                tool_args = json.loads(tool_args_str)
+                            except:
+                                try:
+                                    tool_args = ast.literal_eval(tool_args_str)
+                                except:
+                                    tool_args = {}
+                            
+                            approval_id = str(uuid4())
+                            approval_results[tool_id] = approval_id
+                            
+                            tools_to_approve.append({
+                                "approval_id": approval_id,
+                                "tool_id": tool_id,
+                                "tool_name": tool_name,
+                                "tool_params": tool_args
+                            })
+                        
+                        # If any tools need approval, request it
+                        if tools_to_approve:
+                            await event_emitter({
+                                "type": "tool:approval_required",
+                                "data": {
+                                    "chat_id": metadata.get("chat_id", ""),
+                                    "message_id": metadata.get("message_id", ""),
+                                    "tools": tools_to_approve
+                                }
+                            })
+                            
+                            # Wait for each approval
+                            for tool in tools_to_approve:
+                                tool_id = tool["tool_id"]
+                                approval_id = tool["approval_id"]
+                                
+                                decision = await approval_manager.wait_for_approval(
+                                    chat_id=metadata.get("chat_id", ""),
+                                    approval_id=approval_id,
+                                    tool_data={
+                                        "tool_id": tool_id,
+                                        "tool_name": tool["tool_name"],
+                                        "tool_params": tool["tool_params"]
+                                    }
+                                )
+                                
+                                approval_results[tool_id] = decision
+                                
+                                await event_emitter({
+                                    "type": "tool:approval_status",
+                                    "data": {
+                                        "tool_id": tool_id,
+                                        "tool_name": tool["tool_name"],
+                                        "status": decision
+                                    }
+                                })
+                    else:
+                        for tool_call in response_tool_calls:
+                            approval_results[tool_call.get("id", "")] = "approved"
+                    # ===== NEW CODE: APPROVAL SECTION END =====
+                    
+                    # Continue with existing code but check approval before execution
                     content_blocks.append(
                         {
                             "type": "tool_calls",
@@ -2245,6 +2431,27 @@ async def process_chat_response(
                             tool_function_params
                         )
 
+                        # ===== NEW CODE: CHECK APPROVAL =====
+                        approval_status = approval_results.get(tool_call_id, "denied")
+                        
+                        
+                        if approval_status == "denied":
+                            results.append({
+                                "tool_call_id": tool_call_id,
+                                "role": "tool",
+                                "content": f"Tool execution denied: User did not approve execution of {tool_name}"
+                            })
+                            continue
+                        
+                        if approval_status != "approved":
+                            # Unknown status, skip for safety
+                            results.append({
+                                "tool_call_id": tool_call_id,
+                                "role": "tool",
+                                "content": f"Tool execution skipped: Invalid approval status for {tool_name}"
+                            })
+                            continue
+                        
                         tool_result = None
 
                         if tool_name in tools:
@@ -2386,27 +2593,6 @@ async def process_chat_response(
                         try:
                             if content_blocks[-1]["attributes"].get("type") == "code":
                                 code = content_blocks[-1]["content"]
-                                if CODE_INTERPRETER_BLOCKED_MODULES:
-                                    blocking_code = textwrap.dedent(
-                                        f"""
-                                        import builtins
-
-                                        BLOCKED_MODULES = {CODE_INTERPRETER_BLOCKED_MODULES}
-
-                                        _real_import = builtins.__import__
-                                        def restricted_import(name, globals=None, locals=None, fromlist=(), level=0):
-                                            if name.split('.')[0] in BLOCKED_MODULES:
-                                                importer_name = globals.get('__name__') if globals else None
-                                                if importer_name == '__main__':
-                                                    raise ImportError(
-                                                        f"Direct import of module {{name}} is restricted."
-                                                    )
-                                            return _real_import(name, globals, locals, fromlist, level)
-
-                                        builtins.__import__ = restricted_import
-                                    """
-                                    )
-                                    code = blocking_code + "\n" + code
 
                                 if (
                                     request.app.state.config.CODE_INTERPRETER_ENGINE
@@ -2572,7 +2758,7 @@ async def process_chat_response(
                 if not get_active_status_by_user_id(user.id):
                     webhook_url = Users.get_user_webhook_url_by_id(user.id)
                     if webhook_url:
-                        await post_webhook(
+                        post_webhook(
                             request.app.state.WEBUI_NAME,
                             webhook_url,
                             f"{title} - {request.app.state.config.WEBUI_URL}/c/{metadata['chat_id']}\n\n{content}",
@@ -2609,7 +2795,13 @@ async def process_chat_response(
             if response.background is not None:
                 await response.background()
 
-        return await response_handler(response, events)
+        # background_tasks.add_task(response_handler, response, events)
+        task_id, _ = await create_task(
+            request.app.state.redis,
+            response_handler(response, events),
+            id=metadata["chat_id"],
+        )
+        return {"status": True, "task_id": task_id}
 
     else:
         # Fallback to the original response
