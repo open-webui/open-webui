@@ -81,6 +81,11 @@
             const success = await setBackendAutoApprove(chatId, true);
             if (success) {
                 toast.success('Auto-approval enabled for this chat');
+                
+                // Trigger a refresh of auto-approval status in MessageInput
+                window.dispatchEvent(new CustomEvent('autoApprovalChanged', { 
+                    detail: { chatId, enabled: true } 
+                }));
             } else {
                 toast.error('Failed to enable auto-approval');
                 return;

@@ -30,6 +30,7 @@
 		TTSWorker,
 		temporaryChatEnabled
 	} from '$lib/stores';
+	import { hasAutoApproval, setBackendAutoApprove, getBackendAutoApprove } from '$lib/stores/toolApproval';
 
 	import {
 		blobToFile,
@@ -38,7 +39,6 @@
 		extractContentFromFile,
 		extractCurlyBraceWords,
 		extractInputVariables,
-		getAge,
 		getCurrentDateTime,
 		getFormattedDate,
 		getFormattedTime,
@@ -74,7 +74,6 @@
 	import { KokoroWorker } from '$lib/workers/KokoroWorker';
 	import InputVariablesModal from './MessageInput/InputVariablesModal.svelte';
 	import Voice from '../icons/Voice.svelte';
-	import { getSessionUser } from '$lib/apis/auths';
 	const i18n = getContext('i18n');
 
 	export let onChange: Function = () => {};
@@ -108,6 +107,44 @@
 	let showInputVariablesModal = false;
 	let inputVariables = {};
 	let inputVariableValues = {};
+
+	// Add this reactive variable to track auto-approval status
+	export let chatId = '';  // This should be passed as a prop from the parent
+	let autoApprovalEnabled = false;
+	
+	// Function to refresh auto-approval status
+	async function refreshAutoApprovalStatus() {
+		if (chatId) {
+			console.log('Checking auto-approval for chatId:', chatId);
+			try {
+				const enabled = await getBackendAutoApprove(chatId);
+				console.log('Auto-approval status:', enabled);
+				autoApprovalEnabled = enabled;
+			} catch (err) {
+				console.error('Error getting auto-approval status:', err);
+			}
+		}
+	}
+
+	// Refresh auto-approval status when chatId changes
+	$: if (chatId) {
+		refreshAutoApprovalStatus();
+	}
+
+	// Listen for auto-approval changes from ToolApprovalModal
+	onMount(() => {
+		const handleAutoApprovalChange = (event) => {
+			if (event.detail.chatId === chatId) {
+				autoApprovalEnabled = event.detail.enabled;
+			}
+		};
+		
+		window.addEventListener('autoApprovalChanged', handleAutoApprovalChange);
+		
+		return () => {
+			window.removeEventListener('autoApprovalChanged', handleAutoApprovalChange);
+		};
+	});
 
 	$: onChange({
 		prompt,
@@ -178,45 +215,9 @@
 			text = text.replaceAll('{{USER_LOCATION}}', String(location));
 		}
 
-		const sessionUser = await getSessionUser(localStorage.token);
-
 		if (text.includes('{{USER_NAME}}')) {
-			const name = sessionUser?.name || 'User';
+			const name = $_user?.name || 'User';
 			text = text.replaceAll('{{USER_NAME}}', name);
-		}
-
-		if (text.includes('{{USER_BIO}}')) {
-			const bio = sessionUser?.bio || '';
-
-			if (bio) {
-				text = text.replaceAll('{{USER_BIO}}', bio);
-			}
-		}
-
-		if (text.includes('{{USER_GENDER}}')) {
-			const gender = sessionUser?.gender || '';
-
-			if (gender) {
-				text = text.replaceAll('{{USER_GENDER}}', gender);
-			}
-		}
-
-		if (text.includes('{{USER_BIRTH_DATE}}')) {
-			const birthDate = sessionUser?.date_of_birth || '';
-
-			if (birthDate) {
-				text = text.replaceAll('{{USER_BIRTH_DATE}}', birthDate);
-			}
-		}
-
-		if (text.includes('{{USER_AGE}}')) {
-			const birthDate = sessionUser?.date_of_birth || '';
-
-			if (birthDate) {
-				// calculate age using date
-				const age = getAge(birthDate);
-				text = text.replaceAll('{{USER_AGE}}', age);
-			}
 		}
 
 		if (text.includes('{{USER_LANGUAGE}}')) {
@@ -910,8 +911,7 @@
 												: `${WEBUI_BASE_URL}/static/favicon.png`)}
 									/>
 									<div class="translate-y-[0.5px]">
-										{$i18n.t('Talk to model')}:
-										<span class=" font-medium">{atSelectedModel.name}</span>
+										Talking to <span class=" font-medium">{atSelectedModel.name}</span>
 									</div>
 								</div>
 								<div>
@@ -1169,20 +1169,7 @@
 														return res;
 													}}
 													oncompositionstart={() => (isComposing = true)}
-													oncompositionend={() => {
-														const isSafari = /^((?!chrome|android).)*safari/i.test(
-															navigator.userAgent
-														);
-
-														if (isSafari) {
-															// Safari has a bug where compositionend is not triggered correctly #16615
-															// when using the virtual keyboard on iOS.
-															// We use a timeout to ensure that the composition is ended after a short delay.
-															setTimeout(() => (isComposing = false));
-														} else {
-															isComposing = false;
-														}
-													}}
+													oncompositionend={() => (isComposing = false)}
 													on:keydown={async (e) => {
 														e = e.detail.event;
 
@@ -1393,18 +1380,7 @@
 												command = getCommand();
 											}}
 											on:compositionstart={() => (isComposing = true)}
-											on:compositionend={() => {
-												const isSafari = /^((?!chrome|android).)*safari/i.test(navigator.userAgent);
-
-												if (isSafari) {
-													// Safari has a bug where compositionend is not triggered correctly #16615
-													// when using the virtual keyboard on iOS.
-													// We use a timeout to ensure that the composition is ended after a short delay.
-													setTimeout(() => (isComposing = false));
-												} else {
-													isComposing = false;
-												}
-											}}
+											on:compositionend={() => (isComposing = false)}
 											on:keydown={async (e) => {
 												const isCtrlPressed = e.ctrlKey || e.metaKey; // metaKey is for Cmd key on Mac
 
@@ -1639,7 +1615,7 @@
 									{/if}
 								</div>
 
-								<div class=" flex justify-between mt-0.5 mb-2.5 mx-0.5 max-w-full" dir="ltr">
+								<div class="relative flex justify-between mt-0.5 mb-2.5 mx-0.5 max-w-full" dir="ltr">
 									<div class="ml-1 self-end flex items-center flex-1 max-w-[80%]">
 										<InputMenu
 											bind:selectedToolIds
@@ -2012,6 +1988,44 @@
 											</div>
 										{/if}
 									</div>
+
+									<!-- Center: Auto-approval badge with absolute positioning -->
+									{#if autoApprovalEnabled}
+										<div class="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 pointer-events-none">
+											<div class="inline-flex items-center gap-1 px-2 py-1 bg-green-50 dark:bg-green-900/20 text-green-700 dark:text-green-300 rounded-full text-xs font-medium pointer-events-auto">
+												<span class="relative flex h-2 w-2">
+													<span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
+													<span class="relative inline-flex rounded-full h-2 w-2 bg-green-500"></span>
+												</span>
+												{$i18n.t('Auto tool execution enabled')}
+												<button
+													type="button"
+													on:click={async () => {
+														if (chatId) {
+															const success = await setBackendAutoApprove(chatId, false);
+															if (success) {
+																autoApprovalEnabled = false;
+																toast.info($i18n.t('Tool auto execution disabled for this chat'));
+															} else {
+																toast.error($i18n.t('Failed to disable tool auto execution'));
+															}
+														}
+													}}
+													class="ml-1 hover:text-green-900 dark:hover:text-green-100 transition-colors"
+													aria-label="Disable auto execution"
+												>
+													<svg
+														xmlns="http://www.w3.org/2000/svg"
+														viewBox="0 0 16 16"
+														fill="currentColor"
+														class="w-3 h-3"
+													>
+														<path d="M5.28 4.22a.75.75 0 00-1.06 1.06L6.94 8l-2.72 2.72a.75.75 0 101.06 1.06L8 9.06l2.72 2.72a.75.75 0 101.06-1.06L9.06 8l2.72-2.72a.75.75 0 00-1.06-1.06L8 6.94 5.28 4.22z" />
+													</svg>
+												</button>
+											</div>
+										</div>
+									{/if}
 								</div>
 							</div>
 
