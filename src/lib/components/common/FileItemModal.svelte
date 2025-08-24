@@ -3,6 +3,7 @@
 	import { formatFileSize, getLineCount } from '$lib/utils';
 	import { WEBUI_API_BASE_URL } from '$lib/constants';
 	import { getKnowledgeById } from '$lib/apis/knowledge';
+	import { getFileById } from '$lib/apis/files';
 
 	const i18n = getContext('i18n');
 
@@ -47,6 +48,22 @@
 
 			if (knowledge) {
 				item.files = knowledge.files || [];
+			}
+			loading = false;
+		}
+
+		if (item?.type === 'file') {
+			loading = true;
+
+			const file = await getFileById(localStorage.token, item.id).catch((e) => {
+				console.error('Error fetching File:', e);
+				return null;
+			});
+
+			if (file) {
+				item.file.data.content = file.data.content;
+			} else {
+				toast.error($i18n.t('No content found in file.'));
 			}
 			loading = false;
 		}
