@@ -266,9 +266,7 @@ async def connect(sid, environ, auth):
             user = Users.get_user_by_id(data["id"])
 
         if user:
-            SESSION_POOL[sid] = user.model_dump(
-                exclude=["date_of_birth", "bio", "gender"]
-            )
+            SESSION_POOL[sid] = user.model_dump()
             if user.id in USER_POOL:
                 USER_POOL[user.id] = USER_POOL[user.id] + [sid]
             else:
@@ -290,7 +288,7 @@ async def user_join(sid, data):
     if not user:
         return
 
-    SESSION_POOL[sid] = user.model_dump(exclude=["date_of_birth", "bio", "gender"])
+    SESSION_POOL[sid] = user.model_dump()
     if user.id in USER_POOL:
         USER_POOL[user.id] = USER_POOL[user.id] + [sid]
     else:
@@ -706,6 +704,115 @@ def get_event_emitter(request_info, update_db=True):
                 )
 
     return __event_emitter__
+
+
+
+@sio.on("tool:check_pending")
+async def handle_check_pending_approvals(sid, data):
+    """Check if there are pending approvals for a chat."""
+    
+    session_data = SESSION_POOL.get(sid)
+    if not session_data:
+        log.error(f"Invalid session for pending check: {sid}")
+        return
+    
+    chat_id = data.get("chat_id")
+    if not chat_id:
+        log.error(f"No chat_id provided for pending check: {sid}")
+        return
+    
+    from open_webui.utils.tool_approval import approval_manager
+    
+    pending_approvals = approval_manager.get_pending_approvals_for_chat(chat_id)
+    
+    if pending_approvals:
+        await sio.emit('tool:pending_found', pending_approvals, room=sid)
+
+
+@sio.on("tool:approval_response")
+async def handle_tool_approval_response(sid, data):
+    """Handle tool approval response from frontend."""
+    
+    
+    session_data = SESSION_POOL.get(sid)
+    if not session_data:
+        log.error(f"Invalid session for approval response: {sid}")
+        return {"status": "error", "message": "Invalid session"}
+    
+    user_id = session_data.get("id")
+    if not user_id:
+        log.error(f"No user ID found in session: {sid}")
+        return {"status": "error", "message": "User not found"}
+    
+    chat_id = data.get("chat_id")
+    approval_id = data.get("approval_id")
+    decision = data.get("decision")  # "approved" or "denied"
+    
+    if not all([chat_id, approval_id, decision]):
+        return {"status": "error", "message": "Missing required fields"}
+    
+    if decision not in ["approved", "denied"]:
+        return {"status": "error", "message": "Invalid decision"}
+    
+    from open_webui.utils.tool_approval import approval_manager
+    
+    await approval_manager.handle_approval_response(
+        chat_id=chat_id,
+        approval_id=approval_id,
+        decision=decision
+    )
+    
+    
+    return {"status": "success", "message": f"Approval {decision}"}
+
+
+@sio.on("tool:toggle_auto_approval")
+async def handle_toggle_auto_approval(sid, data):
+    """Toggle auto-approval setting for a specific chat."""
+    
+    session_data = SESSION_POOL.get(sid)
+    if not session_data:
+        log.error(f"Invalid session for auto-approval toggle: {sid}")
+        return {"status": "error", "message": "Invalid session"}
+    
+    user_id = session_data.get("id")
+    chat_id = data.get("chat_id")
+    enabled = data.get("enabled", False)
+    
+    if not chat_id:
+        log.error(f"No chat_id provided for auto-approval toggle: {sid}")
+        return {"status": "error", "message": "Missing chat_id"}
+    
+    from open_webui.utils.tool_approval import approval_manager
+    
+    if enabled:
+        approval_manager.set_chat_auto_approval(chat_id, True)
+        return {"status": "success", "message": "Auto-approval enabled", "enabled": True}
+    else:
+        approval_manager.remove_chat_auto_approval(chat_id)
+        return {"status": "success", "message": "Auto-approval disabled", "enabled": False}
+
+
+@sio.on("tool:get_auto_approval_status")
+async def handle_get_auto_approval_status(sid, data):
+    """Get auto-approval status for a specific chat."""
+    
+    session_data = SESSION_POOL.get(sid)
+    if not session_data:
+        log.error(f"Invalid session for auto-approval status check: {sid}")
+        return {"status": "error", "message": "Invalid session"}
+    
+    chat_id = data.get("chat_id")
+    
+    if not chat_id:
+        log.error(f"No chat_id provided for auto-approval status check: {sid}")
+        return {"status": "error", "message": "Missing chat_id"}
+    
+    from open_webui.utils.tool_approval import approval_manager
+    
+    enabled = approval_manager.is_chat_auto_approval(chat_id)
+    
+    return {"status": "success", "enabled": enabled}
 
 
 def get_event_call(request_info):
