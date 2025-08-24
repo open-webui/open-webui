@@ -106,6 +106,7 @@
 	export let codeInterpreterEnabled = false;
 
 	let showInputVariablesModal = false;
+	let showVoiceMode = false;
 	let inputVariables = {};
 	let inputVariableValues = {};
 
@@ -1927,6 +1928,7 @@
 											</div>
 										{#if false} // remove unsupported functionality for TSI
 										{:else if prompt === '' && files.length === 0 && ($_user?.role === 'admin' || ($_user?.permissions?.chat?.call ?? true))}
+										{#if showVoiceMode} // remove unsupported functionality for TSI
 											<div class=" flex items-center">
 												<!-- {$i18n.t('Call')} -->
 												<Tooltip content={$i18n.t('Voice mode')}>
@@ -1989,6 +1991,7 @@
 													</button>
 												</Tooltip>
 											</div>
+										{/if}
 										{/if}
 										{:else}
 											<div class=" flex items-center">
