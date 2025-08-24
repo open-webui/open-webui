@@ -290,7 +290,7 @@
 							<select
 								class="dark:bg-gray-900 w-fit pr-8 rounded-sm px-2 text-xs bg-transparent outline-hidden text-right"
 								bind:value={adminConfig.DEFAULT_USER_ROLE}
-								placeholder={$i18n.t('Select a role')}
+								placeholder="Select a role"
 							>
 								<option value="pending">{$i18n.t('pending')}</option>
 								<option value="user">{$i18n.t('user')}</option>
@@ -587,7 +587,7 @@
 												</div>
 											</div>
 											<div class="flex justify-between items-center text-xs">
-												<div class=" font-medium">{$i18n.t('Validate certificate')}</div>
+												<div class=" font-medium">Validate certificate</div>
 
 												<div class="mt-1">
 													<Switch bind:state={LDAP_SERVER.validate_cert} />
@@ -620,6 +620,14 @@
 					<div class=" mb-2.5 text-base font-medium">{$i18n.t('Features')}</div>
 
 					<hr class=" border-gray-100 dark:border-gray-850 my-2" />
+
+					<div class="mb-2.5 flex w-full items-center justify-between pr-2">
+						<div class=" self-center text-xs font-medium">
+							{$i18n.t('Global Tool Approval')}
+						</div>
+
+						<Switch bind:state={adminConfig.ENABLE_TOOL_APPROVAL} />
+					</div>
 
 					<div class="mb-2.5 flex w-full items-center justify-between pr-2">
 						<div class=" self-center text-xs font-medium">

@@ -15,9 +15,10 @@ from open_webui.models.auths import (
     SigninResponse,
     SignupForm,
     UpdatePasswordForm,
+    UpdateProfileForm,
     UserResponse,
 )
-from open_webui.models.users import Users, UpdateProfileForm
+from open_webui.models.users import Users
 from open_webui.models.groups import Groups
 
 from open_webui.constants import ERROR_MESSAGES, WEBHOOK_MESSAGES
@@ -72,13 +73,7 @@ class SessionUserResponse(Token, UserResponse):
     permissions: Optional[dict] = None
 
 
-class SessionUserInfoResponse(SessionUserResponse):
-    bio: Optional[str] = None
-    gender: Optional[str] = None
-    date_of_birth: Optional[datetime.date] = None
-
-
-@router.get("/", response_model=SessionUserInfoResponse)
+@router.get("/", response_model=SessionUserResponse)
 async def get_session_user(
     request: Request, response: Response, user=Depends(get_current_user)
 ):
@@ -126,9 +121,6 @@ async def get_session_user(
         "name": user.name,
         "role": user.role,
         "profile_image_url": user.profile_image_url,
-        "bio": user.bio,
-        "gender": user.gender,
-        "date_of_birth": user.date_of_birth,
         "permissions": user_permissions,
     }
 
@@ -145,7 +137,7 @@ async def update_profile(
     if session_user:
         user = Users.update_user_by_id(
             session_user.id,
-            form_data.model_dump(),
+            {"profile_image_url": form_data.profile_image_url, "name": form_data.name},
         )
         if user:
             return user
@@ -633,7 +625,7 @@ async def signup(request: Request, response: Response, form_data: SignupForm):
             )
 
             if request.app.state.config.WEBHOOK_URL:
-                await post_webhook(
+                post_webhook(
                     request.app.state.WEBUI_NAME,
                     request.app.state.config.WEBHOOK_URL,
                     WEBHOOK_MESSAGES.USER_SIGNUP(user.name),
@@ -819,6 +811,7 @@ async def get_admin_config(request: Request, user=Depends(get_admin_user)):
         "API_KEY_ALLOWED_ENDPOINTS": request.app.state.config.API_KEY_ALLOWED_ENDPOINTS,
         "DEFAULT_USER_ROLE": request.app.state.config.DEFAULT_USER_ROLE,
         "JWT_EXPIRES_IN": request.app.state.config.JWT_EXPIRES_IN,
+        "ENABLE_TOOL_APPROVAL": request.app.state.config.ENABLE_TOOL_APPROVAL,
         "ENABLE_COMMUNITY_SHARING": request.app.state.config.ENABLE_COMMUNITY_SHARING,
         "ENABLE_MESSAGE_RATING": request.app.state.config.ENABLE_MESSAGE_RATING,
         "ENABLE_CHANNELS": request.app.state.config.ENABLE_CHANNELS,
@@ -839,6 +832,7 @@ class AdminConfig(BaseModel):
     API_KEY_ALLOWED_ENDPOINTS: str
     DEFAULT_USER_ROLE: str
     JWT_EXPIRES_IN: str
+    ENABLE_TOOL_APPROVAL: bool
     ENABLE_COMMUNITY_SHARING: bool
     ENABLE_MESSAGE_RATING: bool
     ENABLE_CHANNELS: bool
@@ -876,6 +870,8 @@ async def update_admin_config(
     # Check if the input string matches the pattern
     if re.match(pattern, form_data.JWT_EXPIRES_IN):
         request.app.state.config.JWT_EXPIRES_IN = form_data.JWT_EXPIRES_IN
+
+    request.app.state.config.ENABLE_TOOL_APPROVAL = form_data.ENABLE_TOOL_APPROVAL
 
     request.app.state.config.ENABLE_COMMUNITY_SHARING = (
         form_data.ENABLE_COMMUNITY_SHARING
