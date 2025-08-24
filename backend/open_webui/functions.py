@@ -214,7 +214,9 @@ async def generate_function_chat_completion(
 
     if metadata:
         if all(k in metadata for k in ("session_id", "chat_id", "message_id")):
-            __event_emitter__ = get_event_emitter(metadata, update_db=ENABLE_REALTIME_CHAT_SAVE)
+            __event_emitter__ = get_event_emitter(
+                metadata, update_db=ENABLE_REALTIME_CHAT_SAVE
+            )
             __event_call__ = get_event_call(metadata)
         __task__ = metadata.get("task", None)
         __task_body__ = metadata.get("task_body", None)
