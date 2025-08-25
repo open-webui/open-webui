@@ -643,6 +643,14 @@
 
 					<div class="mb-2.5 flex w-full items-center justify-between pr-2">
 						<div class=" self-center text-xs font-medium">
+							{$i18n.t('Global Tool Approval')}
+						</div>
+
+						<Switch bind:state={adminConfig.ENABLE_TOOL_APPROVAL} />
+					</div>
+
+					<div class="mb-2.5 flex w-full items-center justify-between pr-2">
+						<div class=" self-center text-xs font-medium">
 							{$i18n.t('Enable Community Sharing')}
 						</div>
 
