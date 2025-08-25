@@ -79,15 +79,14 @@
 				name: `User ${chat.user_id}`,
 				email: `user${chat.user_id}@example.com`
 			};
-
 			return {
 				id: chat.id,
 				chatName: chat.title || `Chat ${index + 1}`,
 				name: user.name || `User ${chat.user_id}`,
 				email: user.email || `user${chat.user_id}@example.com`,
-				model: chat.meta?.model_name || chat.meta?.base_model_name || 'Unknown Model',
+				model: chat.meta?.model_name || chat.meta?.base_model_name || 'Unknown',
 				messageCount: chat.meta?.num_of_messages || 0,
-				questionsAsked: Math.floor(Math.random() * 20) + 5, // You'll need to calculate this
+				questionsAsked: chat.meta?.questions_asked || 0,
 				lastUpdated: new Date(chat.updated_at * 1000).toLocaleDateString(),
 				timeTaken: formatTimeTaken(chat.meta?.total_time_taken)
 			};
@@ -804,7 +803,7 @@
 														on:click|stopPropagation={() => showQuestions(chat)}
 														aria-label="View questions asked by {chat.name}"
 													>
-														<span class="min-w-[20px] text-center">{chat.questionsAsked}</span>
+														<span class="min-w-[20px] text-center">{chat.questionsAsked?.length||0}</span>
 														<div
 															class=" rounded p-1 hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors"
 														>
