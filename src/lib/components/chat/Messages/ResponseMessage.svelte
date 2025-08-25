@@ -639,7 +639,12 @@
 			</Name>
 
 			<div>
-				<div class="chat-{message.role} w-full min-w-full markdown-prose">
+				<div
+					class="chat-{message.role} w-full min-w-full markdown-prose {$settings.chatDirection ===
+					'RTL'
+						? 'text-right'
+						: ''}"
+				>
 					<div>
 						{#if (message?.statusHistory ?? [...(message?.status ? [message?.status] : [])]).length > 0}
 							{@const status = (

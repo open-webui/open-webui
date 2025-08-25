@@ -329,7 +329,7 @@
 								? `max-w-[90%] px-5 py-2  bg-gray-50 dark:bg-gray-850 ${
 										message.files ? 'rounded-tr-lg' : ''
 									}`
-								: ' w-full'}"
+								: ' w-full'} {$settings.chatDirection === 'RTL' ? 'text-right' : ''}"
 						>
 							{#if message.content}
 								<Markdown id={`${chatId}-${message.id}`} content={message.content} {topPadding} />

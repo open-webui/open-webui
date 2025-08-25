@@ -13,6 +13,7 @@
 	import Tooltip from './Tooltip.svelte';
 	import dayjs from 'dayjs';
 	import Spinner from './Spinner.svelte';
+	import { getFileById } from '$lib/apis/files';
 
 	export let item;
 	export let show = false;
@@ -47,6 +48,18 @@
 
 			if (knowledge) {
 				item.files = knowledge.files || [];
+			}
+			loading = false;
+		} else if (item?.type === 'file') {
+			loading = true;
+
+			const file = await getFileById(localStorage.token, item.id).catch((e) => {
+				console.error('Error fetching file:', e);
+				return null;
+			});
+
+			if (file) {
+				item.file = file || {};
 			}
 			loading = false;
 		}
