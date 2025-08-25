@@ -225,27 +225,25 @@ RUN apt-get autoremove -y && \
     find /usr/local -name "__pycache__" -exec rm -rf {} + 2>/dev/null || true
 
 # Copy pre-downloaded models from parallel build stage and set permissions in single layer
-COPY --from=models --chown=$UID:$GID /models/ /app/backend/data/cache/
-# Remove any .git directories from model downloads to reduce size (avoid chmod on models to prevent duplication)
+COPY --from=models --chown=$UID:$GID --chmod=g=u /models/ /app/backend/data/cache/
+# Remove any .git directories from model downloads to reduce size
 RUN find /app/backend/data/cache -name ".git" -type d -exec rm -rf {} + 2>/dev/null || true && \
     # Remove any __pycache__ directories
     find /app/backend/data/cache -name "__pycache__" -type d -exec rm -rf {} + 2>/dev/null || true && \
     # Remove any temporary files
-    find /app/backend/data/cache -name "*.tmp" -delete 2>/dev/null || true && \
-    # Set permissions only on home directory to avoid duplicating models
-    chmod -R g=u $HOME
+    find /app/backend/data/cache -name "*.tmp" -delete 2>/dev/null || true
 
 # copy embedding weight from build
 # RUN mkdir -p /root/.cache/chroma/onnx_models/all-MiniLM-L6-v2
 # COPY --from=build /app/onnx /root/.cache/chroma/onnx_models/all-MiniLM-L6-v2/onnx
 
 # copy built frontend files
-COPY --chown=$UID:$GID --from=build /app/build /app/build
-COPY --chown=$UID:$GID --from=build /app/CHANGELOG.md /app/CHANGELOG.md
-COPY --chown=$UID:$GID --from=build /app/package.json /app/package.json
+COPY --chown=$UID:$GID --chmod=g=u --from=build /app/build /app/build
+COPY --chown=$UID:$GID --chmod=g=u --from=build /app/CHANGELOG.md /app/CHANGELOG.md
+COPY --chown=$UID:$GID --chmod=g=u --from=build /app/package.json /app/package.json
 
 # copy backend files
-COPY --chown=$UID:$GID ./backend .
+COPY --chown=$UID:$GID --chmod=g=u ./backend .
 
 EXPOSE 8080
 
