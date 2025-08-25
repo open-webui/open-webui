@@ -67,6 +67,7 @@ from open_webui.env import (
 )
 from open_webui.constants import ERROR_MESSAGES
 
+from backend.open_webui.utils.prompt_counter import process_prompt_usage
 log = logging.getLogger(__name__)
 log.setLevel(SRC_LOG_LEVELS["OLLAMA"])
 
@@ -1298,6 +1299,12 @@ async def generate_chat_completion(
     user=Depends(get_verified_user),
     bypass_filter: Optional[bool] = False,
 ):
+    log.debug("=== DEBUG: generate_chat_completion вызвана ===")
+    try:
+        process_prompt_usage(request, user, form_data)
+    except Exception as e:
+        log.error(f"ERROR: Ошибка при обработке счетчика промптов: {e}")
+
     if BYPASS_MODEL_ACCESS_CONTROL:
         bypass_filter = True
 
