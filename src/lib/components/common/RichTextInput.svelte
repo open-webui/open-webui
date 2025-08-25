@@ -27,14 +27,57 @@
 	});
 
 	import TurndownService from 'turndown';
-	import { gfm } from 'turndown-plugin-gfm';
+	import { gfm } from '@joplin/turndown-plugin-gfm';
 	const turndownService = new TurndownService({
 		codeBlockStyle: 'fenced',
 		headingStyle: 'atx'
 	});
 	turndownService.escape = (string) => string;
+
 	// Use turndown-plugin-gfm for proper GFM table support
 	turndownService.use(gfm);
+
+	// Add custom table header rule before using GFM plugin
+	turndownService.addRule('tableHeaders', {
+		filter: 'th',
+		replacement: function (content, node) {
+			return content;
+		}
+	});
+
+	// Add custom table rule to handle headers properly
+	turndownService.addRule('tables', {
+		filter: 'table',
+		replacement: function (content, node) {
+			// Extract rows
+			const rows = Array.from(node.querySelectorAll('tr'));
+			if (rows.length === 0) return content;
+
+			let markdown = '\n';
+
+			rows.forEach((row, rowIndex) => {
+				const cells = Array.from(row.querySelectorAll('th, td'));
+				const cellContents = cells.map((cell) => {
+					// Get the text content and clean it up
+					let cellContent = turndownService.turndown(cell.innerHTML).trim();
+					// Remove extra paragraph tags that might be added
+					cellContent = cellContent.replace(/^\n+|\n+$/g, '');
+					return cellContent;
+				});
+
+				// Add the row
+				markdown += '| ' + cellContents.join(' | ') + ' |\n';
+
+				// Add separator after first row (which should be headers)
+				if (rowIndex === 0) {
+					const separator = cells.map(() => '---').join(' | ');
+					markdown += '| ' + separator + ' |\n';
+				}
+			});
+
+			return markdown + '\n';
+		}
+	});
 
 	turndownService.addRule('taskListItems', {
 		filter: (node) =>
@@ -56,6 +99,7 @@
 
 	import { Fragment, DOMParser } from 'prosemirror-model';
 	import { EditorState, Plugin, PluginKey, TextSelection, Selection } from 'prosemirror-state';
+	import { Decoration, DecorationSet } from 'prosemirror-view';
 	import { Editor, Extension } from '@tiptap/core';
 
 	// Yjs imports
@@ -72,32 +116,34 @@
 	import { keymap } from 'prosemirror-keymap';
 
 	import { AIAutocompletion } from './RichTextInput/AutoCompletion.js';
-	import Table from '@tiptap/extension-table';
-	import TableRow from '@tiptap/extension-table-row';
-	import TableHeader from '@tiptap/extension-table-header';
-	import TableCell from '@tiptap/extension-table-cell';
 
-	import Link from '@tiptap/extension-link';
-	import Underline from '@tiptap/extension-underline';
-	import TaskItem from '@tiptap/extension-task-item';
-	import TaskList from '@tiptap/extension-task-list';
-
-	import CharacterCount from '@tiptap/extension-character-count';
-
-	import CodeBlockLowlight from '@tiptap/extension-code-block-lowlight';
-	import Placeholder from '@tiptap/extension-placeholder';
 	import StarterKit from '@tiptap/starter-kit';
-	import Highlight from '@tiptap/extension-highlight';
-	import Typography from '@tiptap/extension-typography';
 
+	// Bubble and Floating menus are currently fixed to v2 due to styling issues in v3
+	// TODO: Update to v3 when styling issues are resolved
 	import BubbleMenu from '@tiptap/extension-bubble-menu';
 	import FloatingMenu from '@tiptap/extension-floating-menu';
+
+	import { TableKit } from '@tiptap/extension-table';
+	import { ListKit } from '@tiptap/extension-list';
+	import { Placeholder, CharacterCount } from '@tiptap/extensions';
+
+	import Image from './RichTextInput/Image/index.js';
+	// import TiptapImage from '@tiptap/extension-image';
+
+	import FileHandler from '@tiptap/extension-file-handler';
+	import Typography from '@tiptap/extension-typography';
+	import Highlight from '@tiptap/extension-highlight';
+	import CodeBlockLowlight from '@tiptap/extension-code-block-lowlight';
+
+	import Mention from '@tiptap/extension-mention';
 
 	import { all, createLowlight } from 'lowlight';
 
 	import { PASTED_TEXT_CHARACTER_LIMIT } from '$lib/constants';
 
 	import FormattingButtons from './RichTextInput/FormattingButtons.svelte';
+	import { duration } from 'dayjs';
 
 	export let oncompositionstart = (e) => {};
 	export let oncompositionend = (e) => {};
@@ -110,11 +156,64 @@
 
 	export let socket = null;
 	export let user = null;
+	export let files = [];
+
 	export let documentId = '';
 
 	export let className = 'input-prose';
 	export let placeholder = 'Type here...';
 	export let link = false;
+	export let image = false;
+	export let fileHandler = false;
+
+	export let onFileDrop = (currentEditor, files, pos) => {
+		files.forEach((file) => {
+			const fileReader = new FileReader();
+
+			fileReader.readAsDataURL(file);
+			fileReader.onload = () => {
+				currentEditor
+					.chain()
+					.insertContentAt(pos, {
+						type: 'image',
+						attrs: {
+							src: fileReader.result
+						}
+					})
+					.focus()
+					.run();
+			};
+		});
+	};
+
+	export let onFilePaste = (currentEditor, files, htmlContent) => {
+		files.forEach((file) => {
+			if (htmlContent) {
+				// if there is htmlContent, stop manual insertion & let other extensions handle insertion via inputRule
+				// you could extract the pasted file from this url string and upload it to a server for example
+				console.log(htmlContent); // eslint-disable-line no-console
+				return false;
+			}
+
+			const fileReader = new FileReader();
+
+			fileReader.readAsDataURL(file);
+			fileReader.onload = () => {
+				currentEditor
+					.chain()
+					.insertContentAt(currentEditor.state.selection.anchor, {
+						type: 'image',
+						attrs: {
+							src: fileReader.result
+						}
+					})
+					.focus()
+					.run();
+			};
+		});
+	};
+
+	export let onSelectionUpdate = (e) => {};
 
 	export let id = '';
 	export let value = '';
@@ -125,7 +224,7 @@
 	export let editable = true;
 	export let collaboration = false;
 
-	export let showFormattingButtons = true;
+	export let showFormattingToolbar = true;
 
 	export let preserveBreaks = false;
 	export let generateAutoCompletion: Function = async () => null;
@@ -141,10 +240,20 @@
 	let jsonValue = '';
 	let mdValue = '';
 
+	let lastSelectionBookmark = null;
+
 	// Yjs setup
 	let ydoc = null;
 	let yXmlFragment = null;
 	let awareness = null;
+
+	const getEditorInstance = async () => {
+		return new Promise((resolve) => {
+			setTimeout(() => {
+				resolve(editor);
+			}, 0);
+		});
+	};
 
 	// Custom Yjs Socket.IO provider
 	class SocketIOProvider {
@@ -217,11 +326,27 @@
 							if (state.length === 2 && state[0] === 0 && state[1] === 0) {
 								// Empty state, check if we have content to initialize
 								// check if editor empty as well
+								// const editor = await getEditorInstance();
+
 								const isEmptyEditor = !editor || editor.getText().trim() === '';
-								if (content && isEmptyEditor && (data?.sessions ?? ['']).length === 1) {
-									const editorYdoc = prosemirrorJSONToYDoc(editor.schema, content);
-									if (editorYdoc) {
-										Y.applyUpdate(this.doc, Y.encodeStateAsUpdate(editorYdoc));
+								if (isEmptyEditor) {
+									if (content && (data?.sessions ?? ['']).length === 1) {
+										const editorYdoc = prosemirrorJSONToYDoc(editor.schema, content);
+										if (editorYdoc) {
+											Y.applyUpdate(this.doc, Y.encodeStateAsUpdate(editorYdoc));
+										}
+									}
+								} else {
+									// If the editor already has content, we don't need to send an empty state
+									if (this.doc.getXmlFragment('prosemirror').length > 0) {
+										this.socket.emit('ydoc:document:update', {
+											document_id: this.documentId,
+											user_id: this.user?.id,
+											socket_id: this.socket.id,
+											update: Y.encodeStateAsUpdate(this.doc)
+										});
+									} else {
+										console.warn('Yjs document is empty, not sending state.');
 									}
 								}
 							} else {
@@ -580,6 +705,10 @@
 	export const setText = (text: string) => {
 		if (!editor) return;
 		text = text.replaceAll('\n\n', '\n');
+
+		// reset the editor content
+		editor.commands.clearContent();
+
 		const { state, view } = editor;
 		const { schema, tr } = state;
 
@@ -748,6 +877,33 @@
 		}
 	};
 
+	const SelectionDecoration = Extension.create({
+		name: 'selectionDecoration',
+		addProseMirrorPlugins() {
+			return [
+				new Plugin({
+					key: new PluginKey('selection'),
+					props: {
+						decorations: (state) => {
+							const { selection } = state;
+							const { focused } = this.editor;
+
+							if (focused || selection.empty) {
+								return null;
+							}
+
+							return DecorationSet.create(state.doc, [
+								Decoration.inline(selection.from, selection.to, {
+									class: 'editor-selection'
+								})
+							]);
+						}
+					}
+				})
+			];
+		}
+	});
+
 	onMount(async () => {
 		content = value;
 
@@ -794,35 +950,48 @@
 			initializeCollaboration();
 		}
 
+		console.log(bubbleMenuElement, floatingMenuElement);
+
 		editor = new Editor({
 			element: element,
 			extensions: [
-				StarterKit,
+				StarterKit.configure({
+					link: link
+				}),
+				Placeholder.configure({ placeholder }),
+				SelectionDecoration,
+
 				CodeBlockLowlight.configure({
 					lowlight
 				}),
 				Highlight,
 				Typography,
-				Underline,
 
-				Placeholder.configure({ placeholder }),
-				Table.configure({ resizable: true }),
-				TableRow,
-				TableHeader,
-				TableCell,
-				TaskList,
-				TaskItem.configure({
-					nested: true
+				Mention.configure({
+					HTMLAttributes: {
+						class: 'mention'
+					}
+				}),
+
+				TableKit.configure({
+					table: { resizable: true }
+				}),
+				ListKit.configure({
+					taskItem: {
+						nested: true
+					}
 				}),
 				CharacterCount.configure({}),
-				...(link
+				...(image ? [Image] : []),
+				...(fileHandler
 					? [
-							Link.configure({
-								openOnClick: true,
-								linkOnPaste: true
+							FileHandler.configure({
+								onDrop: onFileDrop,
+								onPaste: onFilePaste
 							})
 						]
 					: []),
+
 				...(autocomplete
 					? [
 							AIAutocompletion.configure({
@@ -842,7 +1011,7 @@
 						]
 					: []),
 
-				...(showFormattingButtons
+				...(showFormattingToolbar
 					? [
 							BubbleMenu.configure({
 								element: bubbleMenuElement,
@@ -873,6 +1042,7 @@
 			onTransaction: () => {
 				// force re-render so `editor.isActive` works as expected
 				editor = editor;
+				if (!editor) return;
 
 				htmlValue = editor.getHTML();
 				jsonValue = editor.getJSON();
@@ -974,6 +1144,16 @@
 							if (event.key === 'Enter') {
 								const isCtrlPressed = event.ctrlKey || event.metaKey; // metaKey is for Cmd key on Mac
 								if (event.shiftKey && !isCtrlPressed) {
+									const { state } = view;
+									const { $from } = state.selection;
+									const lineStart = $from.before($from.depth);
+									const lineEnd = $from.after($from.depth);
+									const lineText = state.doc.textBetween(lineStart, lineEnd, '\n', '\0').trim();
+									if (lineText.startsWith('```')) {
+										// Fix GitHub issue #16337: prevent backtick removal for lines starting with ```
+										return false; // Let ProseMirror handle the Enter key normally
+									}
+
 									editor.commands.enter(); // Insert a new line
 									view.dispatch(view.state.tr.scrollIntoView()); // Move viewport to the cursor
 									event.preventDefault();
@@ -1063,7 +1243,10 @@
 							const hasImageItem = Array.from(event.clipboardData.items).some((item) =>
 								item.type.startsWith('image/')
 							);
-							if (hasImageFile || hasImageItem) {
+
+							const hasFile = Array.from(event.clipboardData.files).length > 0;
+
+							if (hasImageFile || hasImageItem || hasFile) {
 								eventDispatch('paste', { event });
 								event.preventDefault();
 								return true;
@@ -1074,7 +1257,13 @@
 						return false;
 					}
 				}
-			}
+			},
+			onBeforeCreate: ({ editor }) => {
+				if (files) {
+					editor.storage.files = files;
+				}
+			},
+			onSelectionUpdate: onSelectionUpdate
 		});
 
 		if (messageInput) {
@@ -1145,12 +1334,12 @@
 	};
 </script>
 
-{#if showFormattingButtons}
-	<div bind:this={bubbleMenuElement} class="p-0">
+{#if showFormattingToolbar}
+	<div bind:this={bubbleMenuElement} id="bubble-menu" class="p-0">
 		<FormattingButtons {editor} />
 	</div>
 
-	<div bind:this={floatingMenuElement} class="p-0">
+	<div bind:this={floatingMenuElement} id="floating-menu" class="p-0">
 		<FormattingButtons {editor} />
 	</div>
 {/if}

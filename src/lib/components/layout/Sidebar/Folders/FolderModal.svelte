@@ -10,10 +10,13 @@
 	import { goto } from '$app/navigation';
 	import Textarea from '$lib/components/common/Textarea.svelte';
 	import Knowledge from '$lib/components/workspace/Models/Knowledge.svelte';
+	import { user } from '$lib/stores';
 	const i18n = getContext('i18n');
 
 	export let show = false;
 	export let onSubmit: Function = (e) => {};
+
+	export let edit = false;
 
 	export let folder = null;
 
@@ -27,6 +30,13 @@
 
 	const submitHandler = async () => {
 		loading = true;
+
+		if ((data?.files ?? []).some((file) => file.status === 'uploading')) {
+			toast.error($i18n.t('Please wait until all files are uploaded.'));
+			loading = false;
+			return;
+		}
+
 		await onSubmit({
 			name,
 			data
@@ -46,13 +56,25 @@
 	$: if (folder) {
 		init();
 	}
+
+	$: if (!show && !edit) {
+		name = '';
+		data = {
+			system_prompt: '',
+			files: []
+		};
+	}
 </script>
 
 <Modal size="md" bind:show>
 	<div>
 		<div class=" flex justify-between dark:text-gray-300 px-5 pt-4 pb-1">
 			<div class=" text-lg font-medium self-center">
-				{$i18n.t('Edit Folder')}
+				{#if edit}
+					{$i18n.t('Edit Folder')}
+				{:else}
+					{$i18n.t('Create Folder')}
+				{/if}
 			</div>
 			<button
 				class="self-center"
@@ -88,17 +110,21 @@
 
 					<hr class=" border-gray-50 dark:border-gray-850 my-2.5 w-full" />
 
-					<div class="my-1">
-						<div class="mb-2 text-xs text-gray-500">{$i18n.t('System Prompt')}</div>
-						<div>
-							<Textarea
-								className=" text-sm w-full bg-transparent outline-hidden "
-								placeholder={`Write your model system prompt content here\ne.g.) You are Mario from Super Mario Bros, acting as an assistant.`}
-								maxSize={200}
-								bind:value={data.system_prompt}
-							/>
+					{#if $user?.role === 'admin' || ($user?.permissions.chat?.system_prompt ?? true)}
+						<div class="my-1">
+							<div class="mb-2 text-xs text-gray-500">{$i18n.t('System Prompt')}</div>
+							<div>
+								<Textarea
+									className=" text-sm w-full bg-transparent outline-hidden "
+									placeholder={$i18n.t(
+										'Write your model system prompt content here\ne.g.) You are Mario from Super Mario Bros, acting as an assistant.'
+									)}
+									maxSize={200}
+									bind:value={data.system_prompt}
+								/>
+							</div>
 						</div>
-					</div>
+					{/if}
 
 					<div class="my-2">
 						<Knowledge bind:selectedItems={data.files}>

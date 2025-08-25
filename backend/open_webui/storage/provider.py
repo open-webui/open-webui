@@ -112,6 +112,9 @@ class S3StorageProvider(StorageProvider):
                 "use_accelerate_endpoint": S3_USE_ACCELERATE_ENDPOINT,
                 "addressing_style": S3_ADDRESSING_STYLE,
             },
+            # KIT change - see https://github.com/boto/boto3/issues/4400#issuecomment-2600742103∆
+            request_checksum_calculation="when_required",
+            response_checksum_validation="when_required",
         )
 
         # If access key and secret are provided, use them for authentication

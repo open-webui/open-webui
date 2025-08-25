@@ -21,6 +21,7 @@
 
 	export let user;
 
+	export let setInputText: Function = () => {};
 	export let gotoMessage;
 	export let showPreviousMessage;
 	export let showNextMessage;
@@ -40,9 +41,10 @@
 	export let addMessages;
 	export let triggerScroll;
 	export let readOnly = false;
+	export let topPadding = false;
 </script>
 
-<div
+<li
 	class="flex flex-col justify-between px-5 mb-3 w-full {($settings?.widescreenMode ?? null)
 		? 'max-w-full'
 		: 'max-w-5xl'} mx-auto rounded-lg group"
@@ -51,6 +53,7 @@
 		{#if history.messages[messageId].role === 'user'}
 			<UserMessage
 				{user}
+				{chatId}
 				{history}
 				{messageId}
 				isFirstMessage={idx === 0}
@@ -65,6 +68,7 @@
 				{editMessage}
 				{deleteMessage}
 				{readOnly}
+				{topPadding}
 			/>
 		{:else if (history.messages[history.messages[messageId].parentId]?.models?.length ?? 1) === 1}
 			<ResponseMessage
@@ -74,6 +78,7 @@
 				{selectedModels}
 				isLastMessage={messageId === history.currentId}
 				siblings={history.messages[history.messages[messageId].parentId]?.childrenIds ?? []}
+				{setInputText}
 				{gotoMessage}
 				{showPreviousMessage}
 				{showNextMessage}
@@ -88,6 +93,7 @@
 				{regenerateResponse}
 				{addMessages}
 				{readOnly}
+				{topPadding}
 			/>
 		{:else}
 			<MultiResponseMessages
@@ -96,6 +102,7 @@
 				{messageId}
 				{selectedModels}
 				isLastMessage={messageId === history?.currentId}
+				{setInputText}
 				{updateChat}
 				{editMessage}
 				{saveMessage}
@@ -109,7 +116,8 @@
 				{triggerScroll}
 				{addMessages}
 				{readOnly}
+				{topPadding}
 			/>
 		{/if}
 	{/if}
-</div>
+</li>

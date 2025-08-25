@@ -10,9 +10,11 @@
 
 	export let id = '';
 	export let content;
+	export let done = true;
 	export let model = null;
 	export let save = false;
 	export let preview = false;
+	export let topPadding = false;
 
 	export let sourceIds = [];
 
@@ -47,8 +49,10 @@
 	<MarkdownTokens
 		{tokens}
 		{id}
+		{done}
 		{save}
 		{preview}
+		{topPadding}
 		{onTaskClick}
 		{onSourceClick}
 		{onSave}

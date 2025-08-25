@@ -117,11 +117,24 @@
 		info.name = getTitleForBackend();
 
 		if (id === '') {
-			toast.error('Model ID is required.');
+			toast.error($i18n.t('Model ID is required.'));
+			loading = false;
+
+			return;
 		}
 
 		if (name === '') {
-			toast.error('Model Name is required.');
+			toast.error($i18n.t('Model Name is required.'));
+			loading = false;
+
+			return;
+		}
+
+		if (knowledge.some((item) => item.status === 'uploading')) {
+			toast.error($i18n.t('Please wait until all files are uploaded.'));
+			loading = false;
+
+			return;
 		}
 
 		info.params = { ...info.params, ...params };
@@ -227,7 +240,7 @@
 			filterIds = model?.meta?.filterIds ?? [];
 			actionIds = model?.meta?.actionIds ?? [];
 			knowledge = (model?.meta?.knowledge ?? []).map((item) => {
-				if (item?.collection_name) {
+				if (item?.collection_name && item?.type !== 'file') {
 					return {
 						id: item.collection_name,
 						name: item.name,
@@ -352,7 +365,7 @@
 					/>
 				</svg>
 			</div>
-			<div class=" self-center text-sm font-medium">{'Back'}</div>
+			<div class=" self-center text-sm font-medium">{$i18n.t('Back')}</div>
 		</button>
 	{/if}
 
@@ -492,7 +505,7 @@
 								}}
 								type="button"
 							>
-								Reset Image</button
+								{$i18n.t('Reset Image')}</button
 							>
 						</div>
 					</div>
@@ -535,14 +548,126 @@
 									</div>
 								</div>
 							</div>
-							<div class="flex-1">
+						</div>
+
+						<div class="flex-1">
+							<div>
+								<input
+									class="text-xs w-full bg-transparent text-gray-500 outline-hidden"
+									placeholder={$i18n.t('Model ID')}
+									bind:value={id}
+									disabled={edit}
+									required
+								/>
+							</div>
+						</div>
+					</div>
+
+					{#if preset}
+						<div class="my-1">
+							<div class=" text-sm font-semibold mb-1">{$i18n.t('Base Model (From)')}</div>
+
+							<div>
+								<select
+									class="text-sm w-full bg-transparent outline-hidden"
+									placeholder={$i18n.t('Select a base model (e.g. llama3, gpt-4o)')}
+									bind:value={info.base_model_id}
+									on:change={(e) => {
+										addUsage(e.target.value);
+									}}
+									required
+								>
+									<option value={null} class=" text-gray-900"
+										>{$i18n.t('Select a base model')}</option
+									>
+									{#each $models.filter((m) => (model ? m.id !== model.id : true) && !m?.preset && m?.owned_by !== 'arena') as model}
+										<option value={model.id} class=" text-gray-900">{model.name}</option>
+									{/each}
+								</select>
+							</div>
+						</div>
+					{/if}
+
+					<div class="my-1">
+						<div class="mb-1 flex w-full justify-between items-center">
+							<div class=" self-center text-sm font-semibold">{$i18n.t('Description')}</div>
+
+							<button
+								class="p-1 text-xs flex rounded-sm transition"
+								type="button"
+								aria-pressed={enableDescription ? 'true' : 'false'}
+								aria-label={enableDescription
+									? $i18n.t('Custom description enabled')
+									: $i18n.t('Default description enabled')}
+								on:click={() => {
+									enableDescription = !enableDescription;
+								}}
+							>
+								{#if !enableDescription}
+									<span class="ml-2 self-center">{$i18n.t('Default')}</span>
+								{:else}
+									<span class="ml-2 self-center">{$i18n.t('Custom')}</span>
+								{/if}
+							</button>
+						</div>
+
+						{#if enableDescription}
+							<Textarea
+								className=" text-sm w-full bg-transparent outline-hidden resize-none overflow-y-hidden "
+								placeholder={$i18n.t('Add a short description about what this model does')}
+								bind:value={info.meta.description}
+							/>
+						{/if}
+					</div>
+
+					<div class=" mt-2 my-1">
+						<div class="">
+							<Tags
+								tags={info?.meta?.tags ?? []}
+								on:delete={(e) => {
+									const tagName = e.detail;
+									info.meta.tags = info.meta.tags.filter((tag) => tag.name !== tagName);
+								}}
+								on:add={(e) => {
+									const tagName = e.detail;
+									if (!(info?.meta?.tags ?? null)) {
+										info.meta.tags = [{ name: tagName }];
+									} else {
+										info.meta.tags = [...info.meta.tags, { name: tagName }];
+									}
+								}}
+							/>
+						</div>
+					</div>
+
+					<div class="my-2">
+						<div class="px-3 py-2 bg-gray-50 dark:bg-gray-950 rounded-lg">
+							<AccessControl
+								bind:accessControl
+								accessRoles={['read', 'write']}
+								allowPublic={$user?.permissions?.sharing?.public_models || $user?.role === 'admin'}
+							/>
+						</div>
+					</div>
+
+					<hr class=" border-gray-100 dark:border-gray-850 my-1.5" />
+
+					<div class="my-2">
+						<div class="flex w-full justify-between">
+							<div class=" self-center text-sm font-semibold">{$i18n.t('Model Params')}</div>
+						</div>
+
+						<div class="mt-2">
+							<div class="my-1">
+								<div class=" text-xs font-semibold mb-2">{$i18n.t('System Prompt')}</div>
 								<div>
-									<input
-										class="text-xs w-full bg-transparent text-gray-500 outline-hidden"
-										placeholder={$i18n.t('Model ID')}
-										bind:value={id}
-										disabled={edit}
-										required
+									<Textarea
+										className=" text-sm w-full bg-transparent outline-hidden resize-none overflow-y-hidden "
+										placeholder={$i18n.t(
+											'Write your model system prompt content here\ne.g.) You are Mario from Super Mario Bros, acting as an assistant.'
+										)}
+										rows={4}
+										bind:value={system}
 									/>
 								</div>
 							</div>
