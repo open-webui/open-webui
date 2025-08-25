@@ -93,6 +93,8 @@
 
 	let showManageFloatingActionButtonsModal = false;
 
+	let codeEditorUseTabs = false;
+
 	const toggleLandingPageMode = async () => {
 		landingPageMode = landingPageMode === '' ? 'chat' : '';
 		saveSettings({ landingPageMode: landingPageMode });
@@ -175,6 +177,11 @@
 		saveSettings({ webSearch: webSearch });
 	};
 
+	const toggleCodeEditorUseTabs = async () => {
+		codeEditorUseTabs = !codeEditorUseTabs;
+		saveSettings({ codeEditorUseTabs });
+	};
+
 	onMount(async () => {
 		titleAutoGenerate = $settings?.title?.auto ?? true;
 		autoTags = $settings?.autoTags ?? true;
@@ -246,6 +253,8 @@
 
 		backgroundImageUrl = $settings?.backgroundImageUrl ?? null;
 		webSearch = $settings?.webSearch ?? null;
+
+		codeEditorUseTabs = $settings?.codeEditorUseTabs ?? false;
 	});
 </script>
 
@@ -1023,6 +1032,29 @@
 							}}
 						/>
 					</div>
+				</div>
+			</div>
+
+			<div>
+				<div class=" py-0.5 flex w-full justify-between">
+					<div id="code_editor_use_tabs code_editor_use_tabs-state" class=" self-center text-xs">
+						{$i18n.t('Code Editor Use Tabs')}
+					</div>
+
+					<button
+						aria-labelledby="code_editor_use_tabs"
+						class="p-1 px-3 text-xs flex rounded transition"
+						on:click={() => {
+							toggleCodeEditorUseTabs();
+						}}
+						type="button"
+					>
+						<span class="ml-2 self-center" id="code_editor_use_tabs-state"
+						>{codeEditorUseTabs === true
+							? $i18n.t('Use Tabs')
+							: $i18n.t('Use spaces')}</span
+						>
+					</button>
 				</div>
 			</div>
 
