@@ -1050,9 +1050,7 @@
 						type="button"
 					>
 						<span class="ml-2 self-center" id="code_editor_use_tabs-state"
-						>{codeEditorUseTabs === true
-							? $i18n.t('Use Tabs')
-							: $i18n.t('Use spaces')}</span
+							>{codeEditorUseTabs === true ? $i18n.t('Use Tabs') : $i18n.t('Use spaces')}</span
 						>
 					</button>
 				</div>
