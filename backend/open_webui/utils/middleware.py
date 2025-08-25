@@ -1822,6 +1822,7 @@ async def process_chat_response(
                 ("<Thought>", "</Thought>"),
                 ("<|begin_of_thought|>", "<|end_of_thought|>"),
                 ("◁think▷", "◁/think▷"),
+                ("<seed:think>", "</seed:think>"),
             ]
 
             code_interpreter_tags = [("<code_interpreter>", "</code_interpreter>")]
