@@ -1,12 +1,16 @@
 from fastapi import APIRouter, Depends, HTTPException, Request
+from fastapi.concurrency import run_in_threadpool
 from pydantic import BaseModel
 import logging
 from typing import Optional
 
-from open_webui.models.memories import Memories, MemoryModel
+from open_webui.models.memories import Memories, MemoryCountResponse, MemoryModel
+from open_webui.models.users import Users
 from open_webui.retrieval.vector.factory import VECTOR_DB_CLIENT
-from open_webui.utils.auth import get_verified_user
+from open_webui.socket.main import REINDEX_STATE
+from open_webui.utils.auth import get_admin_user, get_verified_user
 from open_webui.env import SRC_LOG_LEVELS
+from asyncio import sleep
 
 
 log = logging.getLogger(__name__)
@@ -28,6 +32,21 @@ async def get_embeddings(request: Request):
 @router.get("/", response_model=list[MemoryModel])
 async def get_memories(user=Depends(get_verified_user)):
     return Memories.get_memories_by_user_id(user.id)
+
+
+############################
+# countMemories
+############################
+
+
+@router.get("/count", response_model=Optional[MemoryCountResponse])
+async def count_knowledges(user=Depends(get_admin_user)):
+    count = 0
+    try:
+        count = Memories.get_memory_count()
+    except Exception as e:
+        log.error(f"Failed to get memory count.")
+    return count
 
 
 ############################
@@ -93,6 +112,75 @@ async def query_memory(
     )
 
     return results
+
+
+############################
+# ReindexMemory
+############################
+
+
+@router.post("/reindex", response_model=bool)
+async def reindex_all_memory(request: Request, user=Depends(get_admin_user)):
+    if REINDEX_STATE.get("memories_progress", 0) > 0:
+        return False
+
+    REINDEX_STATE["memories_progress"] = (
+        1  # marking as started, before the first memory is done
+    )
+    memories_count = Memories.get_memory_count().count
+    batch_size = 10
+
+    log.info(f"Starting reindexing for {memories_count} memories.")
+    for offset in range(0, memories_count, batch_size):
+        memories_batch = Memories.get_memories_paginated(
+            limit=batch_size, offset=offset
+        )
+        if len(memories_batch) == 0:
+            break
+
+        for i, memory in enumerate(memories_batch, start=1):
+            try:
+                VECTOR_DB_CLIENT.delete(
+                    collection_name=f"user-memory-{memory.user_id}", ids=[memory.id]
+                )
+            except Exception as e:
+                log.error(
+                    f"Error deleting memory 'file-{memory.id}' from vector store: {str(e)}"
+                )
+            try:
+                vector = await run_in_threadpool(
+                    request.app.state.EMBEDDING_FUNCTION,
+                    memory.content,
+                    user=Users.get_user_by_id(memory.user_id),
+                )
+                VECTOR_DB_CLIENT.upsert(
+                    collection_name=f"user-memory-{memory.user_id}",
+                    items=[
+                        {
+                            "id": memory.id,
+                            "text": memory.content,
+                            "vector": vector,
+                            "metadata": {
+                                "created_at": memory.created_at,
+                                "updated_at": memory.updated_at,
+                            },
+                        }
+                    ],
+                )
+                REINDEX_STATE["memories_progress"] = max(
+                    int((i + offset) / memories_count * 100), 1
+                )  # never go below 1 again to mark as working
+                await sleep(0.1)
+            except Exception as e:
+                log.error(
+                    f"Error processing memory {memory.id} (user-id: {memory.user_id}): {str(e)}"
+                )
+
+    REINDEX_STATE["memories_progress"] = 100
+    await sleep(2)  # allow UI to fetch final value
+    REINDEX_STATE["memories_progress"] = 0
+    log.info("Reindexing memories completed successfully.")
+    return True
 
 
 ############################
