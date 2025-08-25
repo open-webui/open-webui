@@ -10,7 +10,6 @@ from open_webui.models.knowledge import (
     KnowledgeUserResponse,
 )
 
-from open_webui.routers.retrieval import get_file_id
 from open_webui.utils.parser import PARSER_TYPE
 from open_webui.models.files import Files, FileModel, FileMetadataResponse
 from open_webui.retrieval.vector.connector import VECTOR_DB_CLIENT
@@ -339,8 +338,9 @@ def add_file_to_knowledge_by_id(
         request: Request,
         id: str,
         form_data: KnowledgeFileIdForm,
-        user=Depends(get_verified_user),
+        user=Depends(get_verified_user)
 ):
+
     knowledge = Knowledges.get_knowledge_by_id(id=id)
 
     if not knowledge:
@@ -509,6 +509,8 @@ def remove_file_from_knowledge_by_id(
         form_data: KnowledgeFileIdForm,
         user=Depends(get_verified_user),
 ):
+
+
     knowledge = Knowledges.get_knowledge_by_id(id=id)
     if not knowledge:
         raise HTTPException(
@@ -533,14 +535,13 @@ def remove_file_from_knowledge_by_id(
             detail=ERROR_MESSAGES.NOT_FOUND,
         )
 
+
     file_collection = f"file-{form_data.file_id}"
     parsers = get_file_relevant_parsers(request, file.filename)
     for parser in parsers:
-        parser.delete_segment_by_file_id(file_collection, file.filename)
-        parser.delete_doc(file_collection)
+        parser.delete_doc(knowledge.id, form_data.file_id)
         # note that this is only deleting the file-specific collection
         parser.delete_collection(file_collection)
-        parser.compact_chroma_fts()
     # Delete file from database
     Files.delete_file_by_id(form_data.file_id)
 
@@ -591,6 +592,7 @@ def endduringembedding(
         id: str,
         user=Depends(get_verified_user),
 ):
+    
     knowledge = Knowledges.get_knowledge_by_id(id=id)
     if (
         knowledge.user_id != user.id
@@ -602,9 +604,21 @@ def endduringembedding(
             detail=ERROR_MESSAGES.ACCESS_PROHIBITED,
         )
 
+    
+    
+    #get files from this user
+    # then pick ones with id matching knowledge
+    # then pick ones with correct metadata
+    files = Files.get_files()
+    mid_upload_files = []
+    for f in files:
+        if "upload_complete" in f.meta.keys() and f.meta["upload_complete"] == False:
+            if f.user_id == user.id:
+                mid_upload_files.append(f)
+                Files.delete_file_by_id(id=f.id)
+
     endWhileRun()
-    file_id = get_file_id()
-    Files.delete_file_by_id(id=file_id)
+
 
             
 ############################

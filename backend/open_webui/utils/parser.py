@@ -38,11 +38,11 @@ class PARSER_TYPE(Enum):  # noqa
 
 class ParserInterface(ABC):
     def is_applicable_to_item(self, item_id):
-        print(f"item id: {item_id}")
+        log.debug(f"item id: {item_id}")
         return True
 
     @abstractmethod
-    def delete_doc(self, collection_name):
+    def delete_doc(self, collection_name, file_id):
         assert NotImplementedError
 
     @abstractmethod
@@ -67,14 +67,6 @@ class ParserInterface(ABC):
     def store(self, request, collection_name, texts, embeddings, metadatas, overwrite=False, add=True):
         assert NotImplementedError
 
-    @abstractmethod
-    def delete_segment_by_file_id(self, file_id_to_remove, collection_name):
-        assert NotImplementedError
-
-    @abstractmethod
-    def compact_chroma_fts(self):
-        assert NotImplementedError
-
         
 class DefaultParser(ParserInterface):
 
@@ -84,16 +76,16 @@ class DefaultParser(ParserInterface):
         self.parser_type = parser_type
 
     def delete_doc(self, collection_name, file_id=None):
-        try:
-            VECTOR_DB_CLIENT.delete(
-                collection_name=collection_name
-            )
-        except Exception as e:
-            print(e)
+        VECTOR_DB_CLIENT.delete(
+            filter={"file_id": file_id},
+            collection_name=collection_name
+        )
 
     def delete_collection(self, file_collection):
         if VECTOR_DB_CLIENT.has_collection(collection_name=file_collection):
             VECTOR_DB_CLIENT.delete_collection(collection_name=file_collection)
+
+            self.compact_chroma_fts()
 
     def reset(self):
         VECTOR_DB_CLIENT.reset()
@@ -113,7 +105,7 @@ class DefaultParser(ParserInterface):
         try:
             embeddings = self.embed(request, texts, user)
         except RuntimeError as e:
-            print("embedding was cancelled")
+            log.debug("embedding was cancelled")
             raise
         
         assert len(metadatas) == len(texts) and f"length mismatch: metadata {metadatas} vs texts {texts}"
@@ -213,7 +205,6 @@ class DefaultParser(ParserInterface):
                 VECTOR_DB_CLIENT.delete_collection(collection_name=collection_name)
                 log.info(f"deleting existing collection {collection_name}")
             elif not add:
-                print("collection {collection_name} already exists, overwrite is False and add is False")
                 log.info(
                     f"collection {collection_name} already exists, overwrite is False and add is False"
                 )
@@ -235,64 +226,11 @@ class DefaultParser(ParserInterface):
         )
 
 
-
-    #Searchs for and deletes all pysical vector folder paths
-    #Uses a few presumtions about program operation ie what it is looking for will always be in the first array index
-    def delete_segment_by_file_id(self, file_id_to_remove: str, collection_name: str):
-        assert VECTOR_DB == "chroma", "Vector DB is not Chroma. Skipping segment deletion."
-
-        try:
-            db_path = Path(CHROMA_DATA_PATH) / "chroma.sqlite3"
-            conn = sqlite3.connect(str(db_path))
-            cursor = conn.cursor()
-
-            cursor.execute("SELECT id FROM collections WHERE name = ?", (file_id_to_remove,))
-            collection_row = cursor.fetchone()
-
-            if not collection_row:
-                print(f"No collection found with name: {file_id_to_remove}")
-                return
-
-            collection_id = collection_row[0]
-            print(f"Collection ID for '{file_id_to_remove}': {collection_id}")
-
-            cursor.execute("SELECT id FROM segments WHERE collection = ?", (collection_id,))
-            segment_rows = cursor.fetchall()
-
-            if not segment_rows:
-                print(f"No segments found for collection ID: {collection_id}")
-                return
-
-            segment_path = Path(CHROMA_DATA_PATH) / segment_rows[0][0]
-            print(f"Segment path: {segment_path}")
-
-            if not os.path.isdir(segment_path):
-                print(f"Segment path does not exist: {segment_path}")
-                
-
-            for root, dirs, files in os.walk(segment_path, topdown=False):
-                for file in files:
-                    os.remove(Path(root) / file)
-                for dir in dirs:
-                    os.rmdir(Path(root) / dir)
-
-            os.rmdir(segment_path)
-            print(f"Deleted phyiscal segment path: {segment_path}")
-
-            print("Deleting segment metadatas")
-
-            cursor.execute("DELETE FROM collection_metadata WHERE collection_id = ?", (collection_id,))
-
-            cursor.execute("DELETE FROM segment_metadata WHERE segment_id = ?", (segment_rows[0][0],))
-            conn.commit()
-            conn.close()
-        except Exception as e:
-            print(f"Error during segment deletion: {e}")
-
-
     #Removes empty data cells. Slows down system, but decreases file size
     def compact_chroma_fts(self):
-        assert VECTOR_DB == "chroma", "Vector DB is not Chroma. Skipping segment deletion."
+        if VECTOR_DB != "chroma":
+            log.debug("Vector DB is not Chroma. Skipping segment deletion.")
+            return
         
         sqlite_path = Path(CHROMA_DATA_PATH) / "chroma.sqlite3"
         conn = sqlite3.connect(sqlite_path)
@@ -300,9 +238,9 @@ class DefaultParser(ParserInterface):
         try:
             # Vacuum to shrink file
             cursor.execute("VACUUM;")
-            print("FTS index rebuilt and database vacuumed.")
+            log.debug("FTS index rebuilt and database vacuumed.")
         except Exception as e:
-            print(f"Error during cleanup: {e}")
+            log.info(f"Error during cleanup: {e}")
         finally:
             conn.commit()
             conn.close()

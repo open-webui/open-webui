@@ -1,24 +1,28 @@
 import logging
 import os
 from typing import Optional, Union
-
+from typing import Any
 import requests
 import hashlib
 from concurrent.futures import ThreadPoolExecutor
 
 from huggingface_hub import snapshot_download
+
 from langchain.retrievers import ContextualCompressionRetriever, EnsembleRetriever
 from langchain_community.retrievers import BM25Retriever
 from langchain_core.documents import Document
+from langchain_core.callbacks import CallbackManagerForRetrieverRun
+from langchain_core.retrievers import BaseRetriever
 
 from open_webui.config import VECTOR_DB
+
 from open_webui.retrieval.vector.connector import VECTOR_DB_CLIENT
+from open_webui.retrieval.vector.main import GetResult
+
+from open_webui.routers.progress import update_progress, getStop, resetStop  # global progress queue
 
 from open_webui.models.users import UserModel
 from open_webui.models.files import Files
-
-from open_webui.retrieval.vector.main import GetResult
-
 
 from open_webui.env import (
     SRC_LOG_LEVELS,
@@ -35,10 +39,6 @@ log = logging.getLogger(__name__)
 log.setLevel(SRC_LOG_LEVELS["RAG"])
 
 
-from typing import Any
-
-from langchain_core.callbacks import CallbackManagerForRetrieverRun
-from langchain_core.retrievers import BaseRetriever
 
 
 class VectorSearchRetriever(BaseRetriever):
@@ -389,7 +389,6 @@ def get_embedding_function(
     track_embedding = False,
 ):
 
-    from open_webui.routers.progress import update_progress, getStop, resetStop  # global progress queue
     print("INFO *************************")
     print(embedding_engine)
     print(embedding_model)

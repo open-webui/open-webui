@@ -178,22 +178,27 @@ class ChromaClient(VectorDBBase):
         # Delete the items from the collection based on the ids.
         try:
             #Changed to where program will search for proper ids to delete (ids from the embedding rather than collection name) in order to delete proper files
+        
+            collection = self.client.get_collection(name=collection_name)
+            result = collection.get()
 
-            if not ids or not filter:
-                collection = self.client.get_collection(name=collection_name)
-                result = collection.get()
+            if not ids and not filter: # or not filter:
                 ids = result["ids"]
-            
-            if ids:
+
+            if filter is None and ids:
                 collection.delete(ids=ids)
-            elif filter:
+            if ids is None and filter:
                 collection.delete(where=filter)
+
+            else:
+                collection.delete(ids=ids, where=filter)
+
         except Exception as e:
             # If collection doesn't exist, that's fine - nothing to delete
-            log.debug(
+            log.info(
                 f"Attempted to delete from non-existent collection {collection_name}. Ignoring."
             )
-            pass
+            
 
     def reset(self):
         # Resets the database. This will delete all collections and item entries.
