@@ -97,7 +97,7 @@
 		sessionStorage.model = JSON.stringify({
 			...model,
 			id: `${model.id}-clone`,
-			name: `${model.name} (Clone)`
+			name: `${getTranslatedLabel(model.name, langCode)} (Clone)`
 		});
 		goto('/workspace/models/create');
 	};

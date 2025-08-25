@@ -123,6 +123,8 @@
 			return;
 		}
 
+		name = info.name;
+		
 		if (name === '') {
 			toast.error($i18n.t('Model Name is required.'));
 			loading = false;

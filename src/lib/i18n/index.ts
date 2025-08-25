@@ -2,7 +2,10 @@ import i18next from 'i18next';
 import resourcesToBackend from 'i18next-resources-to-backend';
 import LanguageDetector from 'i18next-browser-languagedetector';
 import type { i18n as i18nType } from 'i18next';
-import { writable } from 'svelte/store';
+import { writable, type Writable } from 'svelte/store';
+import { setContext } from 'svelte';
+
+let i18nStore: Writable<any> | undefined;
 
 const createI18nStore = (i18n: i18nType) => {
 	const i18nWritable = writable(i18n);
@@ -69,10 +72,25 @@ export const initI18n = (defaultLocale?: string | undefined) => {
 
 	const lang = i18next?.language || defaultLocale || 'en-US';
 	document.documentElement.setAttribute('lang', lang);
+
+	if (!i18nStore) {
+		i18nStore = createI18nStore(i18next);
+	}
+	return i18nStore;
 };
 
-const i18n = createI18nStore(i18next);
-const isLoadingStore = createIsLoadingStore(i18next);
+
+
+
+// ---- accessors ----
+export const getI18nStore = () => {
+	if (!i18nStore) {
+		// fallback dummy store until initI18n runs
+		i18nStore = writable(i18next);
+	}
+	return i18nStore;
+};
+
 
 export const getLanguages = async () => {
 	const languages = (await import(`./locales/languages.json`)).default;
@@ -83,5 +101,16 @@ export const changeLanguage = (lang: string) => {
 	i18next.changeLanguage(lang);
 };
 
-export default i18n;
-export const isLoading = isLoadingStore;
+// ---- context support (optional) ----
+export function initI18nContext() {
+	const store = writable({
+		locale: i18next.language ?? 'de',
+		t: (key: string) => key
+	});
+	setContext('i18n', store);
+	return store;
+}
+
+// ---- exports ----
+export const isLoading = createIsLoadingStore(i18next);
+export default getI18nStore();
