@@ -125,7 +125,9 @@ def query_doc_with_hybrid_search(
 ) -> dict:
     try:
         if not collection_result.documents[0]:  
-            log.warning(f"Collection {collection_name} is empty, falling back to vector search only")  
+            log.info(
+                f"Collection {collection_name} is empty, falling back to vector search only"
+            )  
             # Use only vector search when no documents are available  
             vector_search_retriever = VectorSearchRetriever(  
                 collection_name=collection_name,  
