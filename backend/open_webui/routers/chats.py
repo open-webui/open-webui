@@ -405,6 +405,11 @@ async def update_chat_by_id(
         messages = chat.chat.get("messages", [])
         num_of_messages = len(messages)        
         total_time_taken = messages[-1].get("timestamp", 0) - messages[0].get("timestamp", 0)
+        questions_asked = []
+        for m in messages:
+            if m["role"] == "user":
+                questions_asked.append(m["content"])
+
         
         model_name = None
         base_model_name = None
@@ -427,7 +432,8 @@ async def update_chat_by_id(
             "total_time_taken": total_time_taken, 
             "num_of_messages": num_of_messages, 
             "model_name": model_name, 
-            "base_model_name": base_model_name
+            "base_model_name": base_model_name,
+            "questions_asked": questions_asked,
         }
         
         chat = Chats.update_chat_meta_by_id_and_user_id(id, user_id, updated_meta)
