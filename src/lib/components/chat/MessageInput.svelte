@@ -1620,6 +1620,43 @@
 											{/if}
 										</div>
 									</div>
+									<!-- Center: Auto-approval badge with absolute positioning -->
+									{#if autoApprovalEnabled}
+										 <div class="absolute left-1/2 transform -translate-x-1/2 pointer-events-none">
+											<div class="inline-flex items-center gap-1 px-2 py-1 bg-green-50 dark:bg-green-900/20 text-green-700 dark:text-green-300 rounded-full text-xs font-medium pointer-events-auto">
+												<span class="relative flex h-2 w-2">
+													<span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
+													<span class="relative inline-flex rounded-full h-2 w-2 bg-green-500"></span>
+												</span>
+												{$i18n.t('Auto tool execution enabled')}
+												<button
+													type="button"
+													on:click={async () => {
+														if (chatId) {
+															const success = await setBackendAutoApprove(chatId, false);
+															if (success) {
+																autoApprovalEnabled = false;
+																toast.info($i18n.t('Tool auto execution disabled for this chat'));
+															} else {
+																toast.error($i18n.t('Failed to disable tool auto execution'));
+															}
+														}
+													}}
+													class="ml-1 hover:text-green-900 dark:hover:text-green-100 transition-colors"
+													aria-label="Disable auto execution"
+												>
+													<svg
+														xmlns="http://www.w3.org/2000/svg"
+														viewBox="0 0 16 16"
+														fill="currentColor"
+														class="w-3 h-3"
+													>
+														<path d="M5.28 4.22a.75.75 0 00-1.06 1.06L6.94 8l-2.72 2.72a.75.75 0 101.06 1.06L8 9.06l2.72 2.72a.75.75 0 101.06-1.06L9.06 8l2.72-2.72a.75.75 0 00-1.06-1.06L8 6.94 5.28 4.22z" />
+													</svg>
+												</button>
+											</div>
+										</div>
+									{/if}
 
 									<div class="self-end flex space-x-1 mr-1 shrink-0">
 										{#if (!history?.currentId || history.messages[history.currentId]?.done == true) && ($_user?.role === 'admin' || ($_user?.permissions?.chat?.stt ?? true))}
@@ -1787,43 +1824,6 @@
 											</div>
 										{/if}
 									</div>
-									<!-- Center: Auto-approval badge with absolute positioning -->
-									{#if autoApprovalEnabled}
-										<div class="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 pointer-events-none">
-											<div class="inline-flex items-center gap-1 px-2 py-1 bg-green-50 dark:bg-green-900/20 text-green-700 dark:text-green-300 rounded-full text-xs font-medium pointer-events-auto">
-												<span class="relative flex h-2 w-2">
-													<span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
-													<span class="relative inline-flex rounded-full h-2 w-2 bg-green-500"></span>
-												</span>
-												{$i18n.t('Auto tool execution enabled')}
-												<button
-													type="button"
-													on:click={async () => {
-														if (chatId) {
-															const success = await setBackendAutoApprove(chatId, false);
-															if (success) {
-																autoApprovalEnabled = false;
-																toast.info($i18n.t('Tool auto execution disabled for this chat'));
-															} else {
-																toast.error($i18n.t('Failed to disable tool auto execution'));
-															}
-														}
-													}}
-													class="ml-1 hover:text-green-900 dark:hover:text-green-100 transition-colors"
-													aria-label="Disable auto execution"
-												>
-													<svg
-														xmlns="http://www.w3.org/2000/svg"
-														viewBox="0 0 16 16"
-														fill="currentColor"
-														class="w-3 h-3"
-													>
-														<path d="M5.28 4.22a.75.75 0 00-1.06 1.06L6.94 8l-2.72 2.72a.75.75 0 101.06 1.06L8 9.06l2.72 2.72a.75.75 0 101.06-1.06L9.06 8l2.72-2.72a.75.75 0 00-1.06-1.06L8 6.94 5.28 4.22z" />
-													</svg>
-												</button>
-											</div>
-										</div>
-									{/if}
 								</div>
 							</div>
 
