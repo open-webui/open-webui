@@ -747,7 +747,7 @@ async def process_chat_payload(request, form_data, user, metadata, model):
         except:
             pass
 
-    event_emitter = get_event_emitter(metadata)
+    event_emitter = get_event_emitter(metadata, update_db=ENABLE_REALTIME_CHAT_SAVE)
     event_call = get_event_call(metadata)
 
     extra_params = {
@@ -1258,7 +1258,7 @@ async def process_chat_response(
         and "message_id" in metadata
         and metadata["message_id"]
     ):
-        event_emitter = get_event_emitter(metadata)
+        event_emitter = get_event_emitter(metadata, update_db=ENABLE_REALTIME_CHAT_SAVE)
         event_caller = get_event_call(metadata)
 
     # Non-streaming response
