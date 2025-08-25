@@ -878,7 +878,7 @@ class ChatTable:
                     else:
                         raise NotImplementedError(f"Unsupported dialect: {db.bind.dialect.name}")
                 
-                if filters.get("max_messages") is not None:
+                if filters.get("max_messages") is not None and filters.get("max_messages") > 0:
                     if db.bind.dialect.name == "sqlite":
                         query = query.filter(
                             text("CAST(json_extract(Chat.meta, '$.num_of_messages') AS INTEGER) <= :max_messages")
@@ -903,7 +903,7 @@ class ChatTable:
                     else:
                         raise NotImplementedError(f"Unsupported dialect: {db.bind.dialect.name}")
                 
-                if filters.get("max_time_taken") is not None:
+                if filters.get("max_time_taken") is not None and filters.get("max_time_taken") > 0:
                     if db.bind.dialect.name == "sqlite":
                         query = query.filter(
                             text("CAST(json_extract(Chat.meta, '$.total_time_taken') AS REAL) <= :max_time_taken")
