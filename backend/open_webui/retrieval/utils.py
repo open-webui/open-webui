@@ -124,20 +124,20 @@ def query_doc_with_hybrid_search(
     hybrid_bm25_weight: float,
 ) -> dict:
     try:
-        if not collection_result.documents[0]:  
+        if not collection_result.documents[0]:
             log.info(
                 f"Collection {collection_name} is empty, falling back to vector search only"
-            )  
-            # Use only vector search when no documents are available  
-            vector_search_retriever = VectorSearchRetriever(  
-                collection_name=collection_name,  
-                embedding_function=embedding_function,  
-                top_k=k,  
-            )  
-            ensemble_retriever = EnsembleRetriever(  
-                retrievers=[vector_search_retriever], weights=[1.0]  
-            )  
-        else:  
+            )
+            # Use only vector search when no documents are available
+            vector_search_retriever = VectorSearchRetriever(
+                collection_name=collection_name,
+                embedding_function=embedding_function,
+                top_k=k,
+            )
+            ensemble_retriever = EnsembleRetriever(
+                retrievers=[vector_search_retriever], weights=[1.0]
+            )
+        else:
             # BM_25 required only if weight is greater than 0
             if hybrid_bm25_weight > 0:
                 log.debug(f"query_doc_with_hybrid_search:doc {collection_name}")
