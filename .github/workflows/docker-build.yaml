@@ -13,7 +13,7 @@ env:
 
 jobs:
   build-main-image:
-    runs-on: arc-ssc-dsai
+    runs-on: ubuntu-latest
     permissions:
       contents: read
       packages: write
@@ -107,7 +107,7 @@ jobs:
           retention-days: 1
 
   merge-main-images:
-    runs-on: arc-ssc-dsai
+    runs-on: ubuntu-latest
     needs: [build-main-image]
     steps:
       # GitHub Packages requires the entire repository name to be in lowercase
