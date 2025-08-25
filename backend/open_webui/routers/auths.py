@@ -565,7 +565,8 @@ async def signup(request: Request, response: Response, form_data: SignupForm):
     has_users = Users.has_users()
 
     if WEBUI_AUTH:
-        if (
+        # Allow first-time admin creation even if ENABLE_LOGIN_FORM is false
+        if has_users and (
             not request.app.state.config.ENABLE_SIGNUP
             or not request.app.state.config.ENABLE_LOGIN_FORM
         ):
