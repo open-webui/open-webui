@@ -732,7 +732,7 @@ load_oauth_providers()
 STATIC_DIR = Path(os.getenv("STATIC_DIR", OPEN_WEBUI_DIR / "static")).resolve()
 
 try:
-    if STATIC_DIR.exists():
+    if STATIC_DIR.exists() and (FRONTEND_BUILD_DIR / "static").exists():
         for item in STATIC_DIR.iterdir():
             if item.is_file() or item.is_symlink():
                 try:
