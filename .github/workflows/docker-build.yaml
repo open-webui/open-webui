@@ -88,7 +88,7 @@ jobs:
           labels: ${{ steps.meta.outputs.labels }}
           outputs: type=image,name=${{ env.FULL_IMAGE_NAME }},push-by-digest=true,name-canonical=true,push=true
           cache-from: type=registry,ref=${{ steps.cache-meta.outputs.tags }}
-          cache-to: type=registry,ref=${{ steps.cache-meta.outputs.tags }},mode=max
+          # cache-to: type=registry,ref=${{ steps.cache-meta.outputs.tags }},mode=max  # Disabled to avoid disk space issues
           build-args: |
             BUILD_HASH=${{ github.sha }}
 
