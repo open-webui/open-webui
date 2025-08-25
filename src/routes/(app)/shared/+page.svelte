@@ -141,14 +141,7 @@
 			}
 		}
 	};
-	let dateFilterApplied = false;
-
-	const handleDateFilter = () => {
-		if (startDate && endDate) {
-			page = 1;
-			dateFilterApplied = true;
-		}
-	};
+	$: dateFilterApplied = !!(startDate && endDate);
 
 	const clearDateFilter = () => {
 		startDate = '';
@@ -627,13 +620,6 @@
 					}}
 					on:wheel|preventDefault={(e) => handleDateScroll(e, 'end')}
 				/>
-				<button
-					class="px-4 py-2 bg-gray-200 dark:bg-gray-700 rounded-lg disabled:opacity-50 disabled:cursor-not-allowed whitespace-nowrap"
-					on:click={handleDateFilter}
-					disabled={!startDate || !endDate}
-				>
-					Filter by Date
-				</button>
 				{#if dateFilterApplied}
 					<button
 						class="px-4 py-2 bg-gray-200 dark:bg-gray-700 rounded-lg whitespace-nowrap"
