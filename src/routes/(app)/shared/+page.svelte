@@ -222,7 +222,28 @@
 	$: previousShowShareChatModal = showShareChatModal;
 
 	$: getSharedChatList(page, searchTerm, orderBy, direction, startDate, endDate, publicFilter, statusFilter);
-	$: totalSelectedCount = $selectedSharedChatIds.length;
+
+	$: (async () => {
+		if (
+			searchTerm ||
+			(startDate && endDate) ||
+			publicFilter !== null ||
+			statusFilter !== 'all'
+		) {
+			const filteredIds = await getAllSharedChatIds(
+				localStorage.token,
+				searchTerm,
+				startDate ? dayjs(startDate).startOf('day').unix() : undefined,
+				endDate ? dayjs(endDate).endOf('day').unix() : undefined,
+				publicFilter,
+				statusFilter
+			);
+			const filteredIdSet = new Set(filteredIds);
+			totalSelectedCount = $selectedSharedChatIds.filter((id) => filteredIdSet.has(id)).length;
+		} else {
+			totalSelectedCount = $selectedSharedChatIds.length;
+		}
+	})();
 
 	$: displayedChats = $sharedChatsStore;
 
