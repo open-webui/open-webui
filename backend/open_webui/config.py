@@ -1470,6 +1470,12 @@ ADMIN_EMAIL = PersistentConfig(
     os.environ.get("ADMIN_EMAIL", None),
 )
 
+CODE_EDITOR_USE_TABS = PersistentConfig(  
+    "CODE_EDITOR_USE_TABS",  
+    "ui.code_editor_use_tabs",  
+    os.environ.get("CODE_EDITOR_USE_TABS", "False").lower() == "true",  
+)
+
 
 ####################################
 # TASKS
