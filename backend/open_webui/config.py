@@ -1212,12 +1212,24 @@ USER_PERMISSIONS_CHAT_EDIT = (
     os.environ.get("USER_PERMISSIONS_CHAT_EDIT", "True").lower() == "true"
 )
 
+USER_PERMISSIONS_CHAT_CONTINUATION = (
+    os.environ.get("USER_PERMISSIONS_CHAT_CONTINUATION", "True").lower() == "true"
+)
+
+USER_PERMISSIONS_CHAT_REGENERATION = (
+    os.environ.get("USER_PERMISSIONS_CHAT_REGENERATION", "True").lower() == "true"
+)
+
 USER_PERMISSIONS_CHAT_SHARE = (
     os.environ.get("USER_PERMISSIONS_CHAT_SHARE", "True").lower() == "true"
 )
 
 USER_PERMISSIONS_CHAT_EXPORT = (
     os.environ.get("USER_PERMISSIONS_CHAT_EXPORT", "True").lower() == "true"
+)
+
+USER_PERMISSIONS_CHAT_RATING = (
+    os.environ.get("USER_PERMISSIONS_CHAT_RATING", "True").lower() == "true"
 )
 
 USER_PERMISSIONS_CHAT_STT = (
@@ -1291,8 +1303,11 @@ DEFAULT_USER_PERMISSIONS = {
         "file_upload": USER_PERMISSIONS_CHAT_FILE_UPLOAD,
         "delete": USER_PERMISSIONS_CHAT_DELETE,
         "edit": USER_PERMISSIONS_CHAT_EDIT,
+        "continuation": USER_PERMISSIONS_CHAT_CONTINUATION,
+        "regeneration": USER_PERMISSIONS_CHAT_REGENERATION,
         "share": USER_PERMISSIONS_CHAT_SHARE,
         "export": USER_PERMISSIONS_CHAT_EXPORT,
+        "rating": USER_PERMISSIONS_CHAT_RATING,
         "stt": USER_PERMISSIONS_CHAT_STT,
         "tts": USER_PERMISSIONS_CHAT_TTS,
         "call": USER_PERMISSIONS_CHAT_CALL,
