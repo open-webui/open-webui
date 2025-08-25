@@ -13,7 +13,7 @@ env:
 
 jobs:
   build-main-image:
-    runs-on: arc-ssc-dsai
+    runs-on: ubuntu-latest
     permissions:
       contents: read
       packages: write
