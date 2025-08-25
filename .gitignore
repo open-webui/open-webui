@@ -310,3 +310,12 @@ dist
 cypress/videos
 cypress/screenshots
 .vscode/settings.json
+
+# claude
+.claude/
+CLAUDE.md
+
+MD/
+*.bak
+frontend.bat
+backend/condarun.bat
