@@ -124,34 +124,46 @@ def query_doc_with_hybrid_search(
     hybrid_bm25_weight: float,
 ) -> dict:
     try:
-        # BM_25 required only if weight is greater than 0
-        if hybrid_bm25_weight > 0:
-            log.debug(f"query_doc_with_hybrid_search:doc {collection_name}")
-            bm25_retriever = BM25Retriever.from_texts(
-                texts=collection_result.documents[0],
-                metadatas=collection_result.metadatas[0],
-            )
-            bm25_retriever.k = k
+        if not collection_result.documents[0]:  
+            log.warning(f"Collection {collection_name} is empty, falling back to vector search only")  
+            # Use only vector search when no documents are available  
+            vector_search_retriever = VectorSearchRetriever(  
+                collection_name=collection_name,  
+                embedding_function=embedding_function,  
+                top_k=k,  
+            )  
+            ensemble_retriever = EnsembleRetriever(  
+                retrievers=[vector_search_retriever], weights=[1.0]  
+            )  
+        else:  
+            # BM_25 required only if weight is greater than 0
+            if hybrid_bm25_weight > 0:
+                log.debug(f"query_doc_with_hybrid_search:doc {collection_name}")
+                bm25_retriever = BM25Retriever.from_texts(
+                    texts=collection_result.documents[0],
+                    metadatas=collection_result.metadatas[0],
+                )
+                bm25_retriever.k = k
 
-        vector_search_retriever = VectorSearchRetriever(
-            collection_name=collection_name,
-            embedding_function=embedding_function,
-            top_k=k,
-        )
+            vector_search_retriever = VectorSearchRetriever(
+                collection_name=collection_name,
+                embedding_function=embedding_function,
+                top_k=k,
+            )
 
-        if hybrid_bm25_weight <= 0:
-            ensemble_retriever = EnsembleRetriever(
-                retrievers=[vector_search_retriever], weights=[1.0]
-            )
-        elif hybrid_bm25_weight >= 1:
-            ensemble_retriever = EnsembleRetriever(
-                retrievers=[bm25_retriever], weights=[1.0]
-            )
-        else:
-            ensemble_retriever = EnsembleRetriever(
-                retrievers=[bm25_retriever, vector_search_retriever],
-                weights=[hybrid_bm25_weight, 1.0 - hybrid_bm25_weight],
-            )
+            if hybrid_bm25_weight <= 0:
+                ensemble_retriever = EnsembleRetriever(
+                    retrievers=[vector_search_retriever], weights=[1.0]
+                )
+            elif hybrid_bm25_weight >= 1:
+                ensemble_retriever = EnsembleRetriever(
+                    retrievers=[bm25_retriever], weights=[1.0]
+                )
+            else:
+                ensemble_retriever = EnsembleRetriever(
+                    retrievers=[bm25_retriever, vector_search_retriever],
+                    weights=[hybrid_bm25_weight, 1.0 - hybrid_bm25_weight],
+                )
 
         compressor = RerankCompressor(
             embedding_function=embedding_function,
