@@ -224,7 +224,7 @@ print("${endTag}")
 	let extensions = [
 		basicSetup,
 		keymap.of([{ key: 'Tab', run: acceptCompletion }, indentWithTab]),
-		indentUnit.of(($settings?.codeEditorUseTabs === true) ? '\t' : '    '),
+		indentUnit.of($settings?.codeEditorUseTabs === true) ? '\t' : '    ',
 		placeholder($i18n.t('Enter your code here...')),
 		EditorView.updateListener.of((e) => {
 			if (e.docChanged) {
