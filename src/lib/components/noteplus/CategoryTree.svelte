@@ -12,10 +12,63 @@
 	const dispatch = createEventDispatcher();
 
 	export let selectedCategory = null;
+	export let searchQuery = '';
 
 	let categoryTree = {};
 	let expandedCategories = new Set(['General']); // 기본으로 General 카테고리 열기
 	let isLoading = false;
+	
+	// Filter categories based on search query
+	function filterCategories(tree, query) {
+		if (!query) return tree;
+		
+		const lowerQuery = query.toLowerCase();
+		const filtered = {};
+		
+		for (const [majorName, majorCategory] of Object.entries(tree)) {
+			if (majorName.toLowerCase().includes(lowerQuery)) {
+				// Include entire major category if name matches
+				filtered[majorName] = majorCategory;
+				expandedCategories.add(majorName);
+			} else if (majorCategory.children) {
+				// Check middle categories
+				const filteredMiddle = {};
+				for (const [middleName, middleCategory] of Object.entries(majorCategory.children)) {
+					if (middleName.toLowerCase().includes(lowerQuery)) {
+						filteredMiddle[middleName] = middleCategory;
+						expandedCategories.add(majorName);
+						expandedCategories.add(`${majorName}/${middleName}`);
+					} else if (middleCategory.children) {
+						// Check minor categories
+						const filteredMinor = {};
+						for (const [minorName, minorCategory] of Object.entries(middleCategory.children)) {
+							if (minorName.toLowerCase().includes(lowerQuery)) {
+								filteredMinor[minorName] = minorCategory;
+								expandedCategories.add(majorName);
+								expandedCategories.add(`${majorName}/${middleName}`);
+							}
+						}
+						if (Object.keys(filteredMinor).length > 0) {
+							filteredMiddle[middleName] = {
+								...middleCategory,
+								children: filteredMinor
+							};
+						}
+					}
+				}
+				if (Object.keys(filteredMiddle).length > 0) {
+					filtered[majorName] = {
+						...majorCategory,
+						children: filteredMiddle
+					};
+				}
+			}
+		}
+		
+		return filtered;
+	}
+	
+	$: filteredTree = filterCategories(categoryTree, searchQuery);
 
 	const toggleCategory = (path) => {
 		if (expandedCategories.has(path)) {
@@ -87,22 +140,6 @@
 </script>
 
 <div class="h-full">
-	<!-- Header with refresh button -->
-	<div class="flex items-center justify-between px-3 py-2 border-b border-gray-200 dark:border-gray-800 mb-2">
-		<span class="text-sm font-semibold text-gray-700 dark:text-gray-300">{$i18n.t('Categories')}</span>
-		<button
-			class="p-1 rounded hover:bg-gray-200 dark:hover:bg-gray-800 transition disabled:opacity-50"
-			title={$i18n.t('Refresh categories')}
-			on:click={refresh}
-			disabled={isLoading}
-		>
-			<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" 
-				class="size-4 {isLoading ? 'animate-spin' : ''}">
-				<path stroke-linecap="round" stroke-linejoin="round" d="M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0 3.181 3.183a8.25 8.25 0 0 0 13.803-3.7M4.031 9.865a8.25 8.25 0 0 1 13.803-3.7l3.181 3.182m0-4.991v4.99" />
-			</svg>
-		</button>
-	</div>
-
 	<!-- All Notes -->
 	<button
 		class="w-full text-left px-3 py-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 transition mb-1 {selectedCategory === null ? 'bg-blue-50 dark:bg-gray-800 border-l-2 border-blue-500' : ''}"
@@ -118,7 +155,7 @@
 
 	<!-- Category Tree -->
 	<div class="space-y-1">
-		{#each Object.entries(categoryTree) as [majorName, majorCategory]}
+		{#each Object.entries(filteredTree) as [majorName, majorCategory]}
 			<div class="mb-1">
 				<!-- Major Category -->
 				<button

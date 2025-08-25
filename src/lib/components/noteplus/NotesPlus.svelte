@@ -338,7 +338,7 @@
 
 <svelte:head>
 	<title>
-		{$i18n.t('Notes+')} • {$WEBUI_NAME}
+		{$i18n.t('Note+')} • {$WEBUI_NAME}
 	</title>
 </svelte:head>
 
@@ -359,40 +359,49 @@
 			</div>
 		</DeleteConfirmDialog>
 
-		<div class="flex h-full">
-			<!-- Main Content -->
-			<div class="flex-1 flex flex-col">
-				<!-- Search Bar -->
-				<div class="flex flex-col gap-1 px-3.5 py-2 border-b border-gray-200 dark:border-gray-800">
-					<div class=" flex flex-1 items-center w-full space-x-2">
-						<div class="flex flex-1 items-center">
-							<div class=" self-center ml-1 mr-3">
-								<Search className="size-3.5" />
-							</div>
-							<input
-								class=" w-full text-sm py-1 rounded-r-xl outline-hidden bg-transparent"
-								bind:value={query}
-								placeholder={$i18n.t('Search Notes+')}
-							/>
-
-							{#if query}
-								<div class="self-center pl-1.5 translate-y-[0.5px] rounded-l-xl bg-transparent">
-									<button
-										class="p-0.5 rounded-full hover:bg-gray-100 dark:hover:bg-gray-900 transition"
-										on:click={() => {
-											query = '';
-										}}
-									>
-										<XMark className="size-3" strokeWidth="2" />
-									</button>
-								</div>
-						{/if}
-					</div>
+		<div class="flex h-full flex-col">
+			<!-- Search Bar -->
+			<div class="flex items-center px-4 py-3 border-b border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900">
+				<div class="flex-1 relative">
+					<input
+						type="text"
+						class="w-full pl-10 pr-10 py-2 text-sm bg-gray-50 dark:bg-gray-800 rounded-lg outline-none focus:ring-2 focus:ring-blue-500 transition-all"
+						bind:value={query}
+						placeholder={$i18n.t('Search notes by title, content, or category...')}
+					/>
+					<Search className="size-4 absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+					{#if query}
+						<button
+							class="absolute right-3 top-1/2 -translate-y-1/2 p-0.5 rounded-full hover:bg-gray-200 dark:hover:bg-gray-700 transition"
+							on:click={() => {
+								query = '';
+							}}
+						>
+							<XMark className="size-3.5" strokeWidth="2" />
+						</button>
+					{/if}
+				</div>
+				
+				<!-- Quick Stats -->
+				<div class="flex items-center gap-4 ml-4 text-xs text-gray-500 dark:text-gray-400">
+					<span>{noteItems.length} {$i18n.t('notes')}</span>
+					{#if selectedCategory}
+						<span class="flex items-center gap-1">
+							<ChevronRight className="size-3" />
+							<span class="font-medium">
+								{#if typeof selectedCategory === 'object'}
+									{selectedCategory.minor || selectedCategory.middle || selectedCategory.major}
+								{:else if typeof selectedCategory === 'string'}
+									{selectedCategory.split('/').pop()}
+								{/if}
+							</span>
+						</span>
+					{/if}
 				</div>
 			</div>
 
-				<!-- Notes Content -->
-				<div class="px-4.5 @container flex-1 overflow-y-auto pt-2">
+			<!-- Notes Content -->
+			<div class="px-4.5 @container flex-1 overflow-y-auto pt-4">
 			{#if Object.keys(notes).length > 0}
 				<div class="pb-10">
 					{#each Object.keys(notes) as timeRange}
@@ -498,30 +507,15 @@
 						</div>
 
 						<div class="mt-1 text-sm text-gray-300 dark:text-gray-700">
-							{$i18n.t('Create your first note by clicking on the plus button below.')}
+							{$i18n.t('Create your first note by clicking the New Note+ button in the sidebar.')}
 						</div>
 					</div>
 				</div>
 			{/if}
 			</div>
 		</div>
-
-		<div class="absolute bottom-5 right-5">
-			<div class="flex gap-0.5 justify-end w-full">
-				<Tooltip content={$i18n.t('Create Note')}>
-					<button
-						class="cursor-pointer p-2.5 flex rounded-full border border-gray-50 bg-white dark:border-none dark:bg-gray-850 hover:bg-gray-50 dark:hover:bg-gray-800 transition shadow-xl"
-						type="button"
-						on:click={async () => {
-							createNoteHandler();
-						}}
-					>
-						<Plus className="size-4.5" strokeWidth="2.5" />
-					</button>
-				</Tooltip>
-			</div>
-		</div>
-		</div>
+		
+		<!-- Floating button removed - now in sidebar -->
 	{:else}
 		<div class="w-full h-full flex flex-col items-center justify-center">
 			<Spinner className="size-6" />

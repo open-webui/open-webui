@@ -608,7 +608,7 @@
 
 				{#if ($config?.features?.enable_noteplus ?? false) && ($user?.role === 'admin' || ($user?.permissions?.features?.noteplus ?? true))}
 					<div class="">
-						<Tooltip content={$i18n.t('Notes+')} placement="right">
+						<Tooltip content={$i18n.t('Note+')} placement="right">
 							<a
 								class=" cursor-pointer flex rounded-lg hover:bg-gray-100 dark:hover:bg-gray-850 transition group"
 								href="/noteplus"
@@ -825,7 +825,7 @@
 							</div>
 
 							<div class="flex self-center translate-y-[0.5px]">
-								<div class=" self-center text-sm font-primary">{$i18n.t('Notes+')}</div>
+								<div class=" self-center text-sm font-primary">{$i18n.t('Note+')}</div>
 							</div>
 						</a>
 					</div>
