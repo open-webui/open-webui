@@ -1472,6 +1472,12 @@ ENABLE_ADMIN_CHAT_ACCESS = (
     os.environ.get("ENABLE_ADMIN_CHAT_ACCESS", "True").lower() == "true"
 )
 
+ENABLE_TOOL_APPROVAL = PersistentConfig(
+    "ENABLE_TOOL_APPROVAL",
+    "ui.enable_tool_approval",
+    os.environ.get("ENABLE_TOOL_APPROVAL", "true").lower() == "true",
+)
+
 ENABLE_COMMUNITY_SHARING = PersistentConfig(
     "ENABLE_COMMUNITY_SHARING",
     "ui.enable_community_sharing",
