@@ -1,34 +1,70 @@
 import { WEBUI_API_BASE_URL } from '$lib/constants';
 
-export const uploadFile = async (token: string, file: File, process: boolean = true) => {
+// Refactored uploading function that supports upload cancellation
+// Old but supports needed functionality
+export const uploadFile = (
+	token: string,
+	file: File,
+	process: boolean = true,
+	onProgress?: (percent: number) => void,
+	metadata?: any
+): { xhr: XMLHttpRequest; promise: Promise<any> } => {
 	const data = new FormData();
 	data.append('file', file);
-	let error = null;
-
-	const res = await fetch(`${WEBUI_API_BASE_URL}/files/`, {
-		method: 'POST',
-		headers: {
-			Accept: 'application/json',
-			authorization: `Bearer ${token}`
-		},
-		body: data
-	})
-		.then(async (res) => {
-			if (!res.ok) throw await res.json();
-			return res.json();
-		})
-		.catch((err) => {
-			error = err.detail;
-			console.log(err);
-			return null;
-		});
-
-	if (error) {
-		throw error;
+	if (typeof metadata !== 'undefined') {
+		data.append('metadata', JSON.stringify(metadata));
 	}
 
-	return res;
+	const xhr = new XMLHttpRequest();
+
+	const promise = new Promise((resolve, reject) => {
+		// Opens request for uploading to server
+		xhr.open('POST', `${WEBUI_API_BASE_URL}/files/?process=${process}`, true);
+
+		xhr.setRequestHeader('Authorization', `Bearer ${token}`);
+		xhr.setRequestHeader('Accept', 'application/json');
+		//Incriments progress bar
+		xhr.upload.onprogress = (event) => {
+			if (onProgress && event.lengthComputable) {
+				let percent = Math.round(((event.loaded * 100) / event.total) / 2);
+				if (percent > 50) percent = 50;
+				onProgress(percent);
+			}
+		};
+		//Error checking
+		xhr.onload = () => {
+			if (xhr.status >= 200 && xhr.status < 300) {
+				try {
+					const responseJson = JSON.parse(xhr.responseText);
+					resolve(responseJson);
+				} catch (e) {
+					reject('Failed to parse server response.');
+				}
+			} else {
+				try {
+					const errorJson = JSON.parse(xhr.responseText);
+					reject(errorJson?.detail ?? 'Upload failed.');
+				} catch {
+					reject('Upload failed.');
+				}
+			}
+		};
+
+		xhr.onerror = () => reject('Upload failed.');
+		xhr.onabort = () => reject('Upload canceled.');
+
+		xhr.send(data);
+	});
+
+	return { xhr, promise };
 };
+
+
+
+
+
+
+
 
 export const uploadDir = async (token: string) => {
 	let error = null;

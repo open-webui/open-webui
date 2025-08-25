@@ -9,6 +9,7 @@ from abc import ABC, abstractmethod
 from fastapi import Request
 
 import tiktoken
+from open_webui.config import VECTOR_DB, CHROMA_DATA_PATH
 
 from langchain.text_splitter import RecursiveCharacterTextSplitter, TokenTextSplitter
 from langchain_core.documents import Document
@@ -17,6 +18,10 @@ from open_webui.env import SRC_LOG_LEVELS
 from open_webui.constants import ERROR_MESSAGES
 from open_webui.retrieval.utils import get_embedding_function
 from open_webui.retrieval.vector.connector import VECTOR_DB_CLIENT
+
+import sqlite3
+from pathlib import Path
+import os
 
 log = logging.getLogger(__name__)
 log.setLevel(SRC_LOG_LEVELS["RAG"])
@@ -33,7 +38,7 @@ class PARSER_TYPE(Enum):  # noqa
 
 class ParserInterface(ABC):
     def is_applicable_to_item(self, item_id):
-        print(f"item id: {item_id}")
+        log.debug(f"item id: {item_id}")
         return True
 
     @abstractmethod
@@ -62,24 +67,25 @@ class ParserInterface(ABC):
     def store(self, request, collection_name, texts, embeddings, metadatas, overwrite=False, add=True):
         assert NotImplementedError
 
-
+        
 class DefaultParser(ParserInterface):
+
     # Update valves/ environment variables based on your selected database
     def __init__(self, parser_type=PARSER_TYPE.ALL):
         self.name = "Default Parser"
         self.parser_type = parser_type
 
-    def delete_doc(self, collection_name, file_id):
-        try:
-            VECTOR_DB_CLIENT.delete(
-                collection_name=collection_name, filter={"file_id": file_id}
-            )
-        except Exception as e:
-            print(e)
+    def delete_doc(self, collection_name, file_id=None):
+        VECTOR_DB_CLIENT.delete(
+            filter={"file_id": file_id},
+            collection_name=collection_name
+        )
 
     def delete_collection(self, file_collection):
         if VECTOR_DB_CLIENT.has_collection(collection_name=file_collection):
             VECTOR_DB_CLIENT.delete_collection(collection_name=file_collection)
+
+            self.compact_chroma_fts()
 
     def reset(self):
         VECTOR_DB_CLIENT.reset()
@@ -96,9 +102,12 @@ class DefaultParser(ParserInterface):
         metadatas = self.metadata(request, docs, metadata)
 
         assert texts is not None
-
-        embeddings = self.embed(request, texts, user)
-
+        try:
+            embeddings = self.embed(request, texts, user)
+        except RuntimeError as e:
+            log.debug("embedding was cancelled")
+            raise
+        
         assert len(metadatas) == len(texts) and f"length mismatch: metadata {metadatas} vs texts {texts}"
         assert len(metadatas) == len(embeddings) and f"length mismatch: metadata {metadatas} vs embeddings {embeddings}"
 
@@ -177,6 +186,7 @@ class DefaultParser(ParserInterface):
                 else request.app.state.config.RAG_OLLAMA_API_KEY
             ),
             request.app.state.config.RAG_EMBEDDING_BATCH_SIZE,
+            track_embedding=True,
         )
 
         embeddings = embedding_function(
@@ -195,7 +205,6 @@ class DefaultParser(ParserInterface):
                 VECTOR_DB_CLIENT.delete_collection(collection_name=collection_name)
                 log.info(f"deleting existing collection {collection_name}")
             elif not add:
-                print("collection {collection_name} already exists, overwrite is False and add is False")
                 log.info(
                     f"collection {collection_name} already exists, overwrite is False and add is False"
                 )
@@ -215,3 +224,23 @@ class DefaultParser(ParserInterface):
             collection_name=collection_name,
             items=items,
         )
+
+
+    #Removes empty data cells. Slows down system, but decreases file size
+    def compact_chroma_fts(self):
+        if VECTOR_DB != "chroma":
+            log.debug("Vector DB is not Chroma. Skipping segment deletion.")
+            return
+        
+        sqlite_path = Path(CHROMA_DATA_PATH) / "chroma.sqlite3"
+        conn = sqlite3.connect(sqlite_path)
+        cursor = conn.cursor()
+        try:
+            # Vacuum to shrink file
+            cursor.execute("VACUUM;")
+            log.debug("FTS index rebuilt and database vacuumed.")
+        except Exception as e:
+            log.info(f"Error during cleanup: {e}")
+        finally:
+            conn.commit()
+            conn.close()

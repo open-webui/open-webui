@@ -9,7 +9,14 @@
 
 	import { goto } from '$app/navigation';
 	import { page } from '$app/stores';
-	import { mobile, showSidebar, knowledge as _knowledge, config, user } from '$lib/stores';
+	import {
+		mobile,
+		showSidebar,
+		knowledge as _knowledge,
+		config,
+		user,
+		settings
+	} from '$lib/stores';
 
 	import {
 		updateFileDataContentById,
@@ -24,7 +31,8 @@
 		removeFileFromKnowledgeById,
 		resetKnowledgeById,
 		updateFileFromKnowledgeById,
-		updateKnowledgeById
+		updateKnowledgeById,
+		endEmbed
 	} from '$lib/apis/knowledge';
 
 	import { transcribeAudio } from '$lib/apis/audio';
@@ -131,9 +139,12 @@
 			size: file.size,
 			status: 'uploading',
 			error: '',
-			itemId: tempItemId
+			progress: 0,
+			itemId: tempItemId,
+			xhr: null,
+			
 		};
-
+		
 		if (fileItem.size == 0) {
 			toast.error($i18n.t('You cannot upload an empty file.'));
 			return null;
@@ -153,36 +164,69 @@
 				})
 			);
 			return;
+
 		}
 
+		// Add fileItem to knowledge.files
 		knowledge.files = [...(knowledge.files ?? []), fileItem];
 
-		try {
-			// marking not to process the files being uploaded here as they will be process when added to knowledge
-			// don't want to process twice
-			const uploadedFile = await uploadFile(localStorage.token, file).catch((e) => {
-				toast.error(`${e}`);
-				return null;
-			});
 
-			if (uploadedFile) {
-				knowledge.files = knowledge.files.map((item) => {
+
+		let uploadedFile = null;
+		try {
+			const { xhr, promise } = uploadFile(localStorage.token, file, true, (percent) => {
+				// Update upload progress, capped at 50%
+				knowledge.files = knowledge.files.map(item => {
 					if (item.itemId === tempItemId) {
-						item.id = uploadedFile.id;
+						item.progress = percent > 50 ? 50 : percent;
+						if (item.progress === 50){
+							item.status = 'processing'
+						}
 					}
 
-					// Remove temporary item id
-					delete item.itemId;
 					return item;
 				});
 
-				await addFileHandler(uploadedFile.id);
-			} else {
-				toast.error($i18n.t('Failed to upload file.'));
-			}
+			});
+			knowledge.files = knowledge.files.map(item => {
+				if (item.itemId === tempItemId) {
+					item.xhr = xhr;
+				}
+				return item;
+			});
+
+
+			uploadedFile = await promise;
+
 		} catch (e) {
-			toast.error(`${e}`);
+			toast.error(`Failed to upload: ${e}`);
+
+			// Mark file as error
+			knowledge.files = knowledge.files.map(item => {
+				if (item.itemId === tempItemId) {
+					item.status = e === 'Upload canceled.' ? 'cancelled' : 'error';
+				}
+				return item;
+			});
+
+
+			return;  // Exit early on error
 		}
+
+		// Finalize file in knowledge.files
+		knowledge.files = knowledge.files.map(item => {
+			if (item.itemId === tempItemId) {
+				item.id = uploadedFile.id;
+				delete item.itemId;
+				item.status = 'ready';
+				item.progress = 100;  // Ensure progress shows 100%
+			}
+			
+			return item;
+		});
+
+		// Final API call to add to knowledge base
+		await addFileHandler(uploadedFile.id);
 	};
 
 	const uploadDirectoryHandler = async () => {
@@ -382,6 +426,12 @@
 			knowledge.files = knowledge.files.filter((file) => file.id !== fileId);
 		}
 	};
+	//  Function that deletes unnecessary files after cancelation
+	const deleteTempUpload = async (fileId) => {
+		if (knowledge?.files) {
+			knowledge.files = knowledge.files.filter(file => file.itemId !== fileId);
+		}
+	}; 						
 
 	const deleteFileHandler = async (fileId) => {
 		try {
@@ -401,18 +451,25 @@
 			toast.error(`${e}`);
 		}
 	};
-
+	const deleteWhileEmbed = async () => {
+		try {
+			// Remove from knowledge base only
+ 			await endEmbed(localStorage.token, id);
+		} catch (e) {
+			console.error('Error in deleteWhileEmbed:', e);
+			toast.error(`${e}`);
+		}
+	};
+		
 	const updateFileContentHandler = async () => {
 		const fileId = selectedFile.id;
 		const content = selectedFileContent;
-
 		// Clear the cache for this file since we're updating it
 		fileContentCache.delete(fileId);
 
 		const res = updateFileDataContentById(localStorage.token, fileId, content).catch((e) => {
 			toast.error(`${e}`);
 		});
-
 		const updatedKnowledge = await updateFileFromKnowledgeById(
 			localStorage.token,
 			id,
@@ -420,8 +477,7 @@
 		).catch((e) => {
 			toast.error(`${e}`);
 		});
-
-		if (res && updatedKnowledge) {
+		if (updatedKnowledge) {
 			knowledge = updatedKnowledge;
 			toast.success($i18n.t('File content updated successfully.'));
 		}
@@ -723,27 +779,18 @@
 					{#if selectedFile}
 						<div class=" flex flex-col w-full h-full max-h-full">
 							<div class="shrink-0 mb-2 flex items-center">
-								{#if !showSidepanel}
-									<div class="-translate-x-2">
-										<button
-											class="w-full text-left text-sm p-1.5 rounded-lg dark:text-gray-300 dark:hover:text-white hover:bg-black/5 dark:hover:bg-gray-850"
-											on:click={() => {
-												pane.expand();
-											}}
-										>
-											<ChevronLeft strokeWidth="2.5" />
-										</button>
-									</div>
-								{/if}
-
-								<div class=" flex-1 text-xl font-medium">
-									<a
-										class="hover:text-gray-500 dark:hover:text-gray-100 hover:underline grow line-clamp-1"
-										href={selectedFile.id ? `/api/v1/files/${selectedFile.id}/content` : '#'}
-										target="_blank"
+								<div class="mr-2">
+									<button
+										class="w-full text-left text-sm p-1.5 rounded-lg dark:text-gray-300 dark:hover:text-white hover:bg-black/5 dark:hover:bg-gray-850"
+										on:click={() => {
+											selectedFileId = null;
+										}}
 									>
-										{decodeString(selectedFile?.meta?.name)}
-									</a>
+										<ChevronLeft strokeWidth="2.5" />
+									</button>
+								</div>
+								<div class=" flex-1 text-xl line-clamp-1">
+									{selectedFile?.meta?.name}
 								</div>
 
 								<div>
@@ -902,10 +949,23 @@
 										selectedFileId = selectedFileId === e.detail ? null : e.detail;
 									}}
 									on:delete={(e) => {
-										console.log(e.detail);
+										if( e.detail.status === 'uploading'){
+											console.log(e.detail.id);
+											selectedFileId = null;
+											deleteTempUpload(e.detail.id);
 
-										selectedFileId = null;
-										deleteFileHandler(e.detail);
+										}else if(e.detail.status === 'processing' ){
+											console.log(e.detail.id);
+											deleteWhileEmbed();
+											selectedFileId = null;
+											deleteTempUpload(e.detail.id);
+										}else{
+											console.log(e.detail.id);
+
+											selectedFileId = null;
+											deleteFileHandler(e.detail.id);
+
+										}
 									}}
 								/>
 							</div>

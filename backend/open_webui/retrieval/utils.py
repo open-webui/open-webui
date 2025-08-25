@@ -1,24 +1,28 @@
 import logging
 import os
 from typing import Optional, Union
-
+from typing import Any
 import requests
 import hashlib
 from concurrent.futures import ThreadPoolExecutor
 
 from huggingface_hub import snapshot_download
+
 from langchain.retrievers import ContextualCompressionRetriever, EnsembleRetriever
 from langchain_community.retrievers import BM25Retriever
 from langchain_core.documents import Document
+from langchain_core.callbacks import CallbackManagerForRetrieverRun
+from langchain_core.retrievers import BaseRetriever
 
 from open_webui.config import VECTOR_DB
+
 from open_webui.retrieval.vector.connector import VECTOR_DB_CLIENT
+from open_webui.retrieval.vector.main import GetResult
+
+from open_webui.routers.progress import update_progress, getStop, resetStop  # global progress queue
 
 from open_webui.models.users import UserModel
 from open_webui.models.files import Files
-
-from open_webui.retrieval.vector.main import GetResult
-
 
 from open_webui.env import (
     SRC_LOG_LEVELS,
@@ -35,10 +39,6 @@ log = logging.getLogger(__name__)
 log.setLevel(SRC_LOG_LEVELS["RAG"])
 
 
-from typing import Any
-
-from langchain_core.callbacks import CallbackManagerForRetrieverRun
-from langchain_core.retrievers import BaseRetriever
 
 
 class VectorSearchRetriever(BaseRetriever):
@@ -386,16 +386,42 @@ def get_embedding_function(
     url,
     key,
     embedding_batch_size,
+    track_embedding = False,
 ):
+
     print("INFO *************************")
     print(embedding_engine)
     print(embedding_model)
     print(embedding_function)
-
+    
     if embedding_engine == "":
-        return lambda query, prefix=None, user=None: embedding_function.encode(
-            query, **({"prompt": prefix} if prefix else {})
-        ).tolist()
+        def generate_multiple(query, prefix, user):
+            total = len(query)
+            embeddings = []
+
+            for i in range(0, total, embedding_batch_size):
+                if(getStop()):
+                   resetStop()
+                   raise RuntimeError("Embedding cancelled by user")
+                batch = query[i : i + embedding_batch_size]
+
+                # Encode this batch
+                batch_embeddings = embedding_function.encode(batch).tolist()
+                embeddings.extend(batch_embeddings)
+
+                # Update SSE progress (safely from sync context)
+                update_progress(min(i + embedding_batch_size, total), total)
+            return embeddings
+        #Variable to not impede on querying. The embedding needs to use initial function when embedding queries
+        if track_embedding:
+            return lambda query, prefix=None, user=None: generate_multiple(
+                query, prefix, user
+            )
+        else:
+            return lambda query, prefix=None, user=None: embedding_function.encode(
+                query, **({"prompt": prefix} if prefix else {})
+            ).tolist()
+        
     elif embedding_engine in ["ollama", "openai"]:
         func = lambda query, prefix=None, user=None: generate_embeddings(
             engine=embedding_engine,
@@ -411,6 +437,9 @@ def get_embedding_function(
             if isinstance(query, list):
                 embeddings = []
                 for i in range(0, len(query), embedding_batch_size):
+                    if(getStop()):
+                        resetStop()
+                        raise RuntimeError("Embedding cancelled by user")
                     embeddings.extend(
                         func(
                             query[i : i + embedding_batch_size],
@@ -418,6 +447,7 @@ def get_embedding_function(
                             user=user,
                         )
                     )
+                    update_progress(min(i + embedding_batch_size, len(query)), len(query))
                 return embeddings
             else:
                 return func(query, prefix, user)

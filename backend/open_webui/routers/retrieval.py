@@ -867,13 +867,21 @@ def process_file(
         file = Files.get_file_by_id(form_data.file_id)
         collection_name = f"file-{file.id}"
 
+        Files.update_file_metadata_by_id(
+            file.id,
+            {
+                "collection_name": collection_name,
+                "upload_complete": False # used to catch files that are killed mid-upload
+            },
+        )
+
         if form_data.content:
             # Update the content in the file
             # Usage: /files/{file_id}/data/content/update, /files/ (audio file upload pipeline)
 
             # /files/{file_id}/data/content/update
-            VECTOR_DB_CLIENT.delete_collection(collection_name=f"file-{file.id}")
-
+            VECTOR_DB_CLIENT.delete_collection(collection_name=collection_name)
+            VECTOR_DB_CLIENT.delete(collection_name=collection_name)
             docs = [
                 Document(
                     page_content=form_data.content.replace("<br/>", "\n"),
@@ -948,12 +956,7 @@ def process_file(
             file.id,
             {"content": text_content},
         )
-        Files.update_file_metadata_by_id(
-            file.id,
-            {
-                "collection_name": collection_name,
-            },
-        )
+
 
         parsers = get_parsers_by_type(request, PARSER_TYPE.FILE, file.filename)
 
@@ -961,21 +964,41 @@ def process_file(
             try:
                 for parser in parsers:
                     parser.is_applicable_to_item(file.filename)
-                    result_dict = parser.parse(
-                        request,
-                        docs=docs,
-                        metadata={
-                            "file_id": file.id,
-                            "name": file.filename,
-                            "hash": hash,
-                        },
-                        user=user,
-                        file_path=file.path
-                    )
-
+                    try:
+                        result_dict = parser.parse(
+                            request,
+                            docs=docs,
+                            metadata={
+                                "file_id": file.id,
+                                "name": file.filename,
+                                "hash": hash,
+                            },
+                            user=user,
+                            file_path=file.path
+                        )
+                    #Error occurs when embedding is cancelled. removes the downloaded file if this occurs
+                    except RuntimeError as e:
+                        
+                        if os.path.exists(file_path):
+                            print("Remove downloaded file")
+                            os.remove(file_path)
+                        else:
+                            print("No file to remove")
+                        raise HTTPException(status_code=499, detail= "Embedding cancelled by user.")
+                    
                     Files.update_file_data_by_id(
                         file.id,
                         {f"parser_{parser.name}_content": result_dict},
+                    )
+
+                    # remove "uploading" metadata tag here
+                    #meta data is a dict, so pull current md, remove 'uploading' key, and put back in
+                    Files.update_file_metadata_by_id(
+                        file.id,
+                        {
+                            "upload_complete": True
+                            # add "uploading" metadata tag here
+                        },
                     )
 
                     parser.store(request, collection_name, result_dict['texts'], result_dict['embeddings'], result_dict['metadatas'])
@@ -1014,7 +1037,6 @@ class ProcessTextForm(BaseModel):
     name: str
     content: str
     collection_name: Optional[str] = None
-
 
 @router.post("/process/text")
 def process_text(
