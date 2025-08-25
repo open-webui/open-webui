@@ -10,7 +10,7 @@
 
 	import { toast } from 'svelte-sonner';
 
-	import { chatId, mobile, selectedFolder, showSidebar } from '$lib/stores';
+	import { chatId, mobile, selectedFolder, showSidebar, user } from '$lib/stores';
 
 	import {
 		deleteFolderById,
@@ -143,7 +143,16 @@
 								let chat = await getChatById(localStorage.token, id).catch((error) => {
 									return null;
 								});
+
 								if (!chat && item) {
+									// This is a clone/import operation, check permission
+									const canClone = ($user?.role === 'admin' || $user?.permissions?.chat?.clone) ?? true;
+									if (!canClone) {
+										toast.error($i18n.t("You don't have permission to clone chats."));
+										draggedOver = false;
+										return;
+									}
+
 									chat = await importChat(
 										localStorage.token,
 										item.chat,
@@ -156,6 +165,12 @@
 										toast.error(`${error}`);
 										return null;
 									});
+								}
+
+								// If chat is still null here, it means import failed.
+								if (!chat) {
+									draggedOver = false;
+									return;
 								}
 
 								// Move the chat

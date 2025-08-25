@@ -312,6 +312,27 @@ def get_current_user(
         )
 
 
+def get_optional_user(
+    request: Request,
+    auth_token: HTTPAuthorizationCredentials = Depends(bearer_security),
+):
+    token = None
+    if auth_token is not None:
+        token = auth_token.credentials
+
+    if token is None and "token" in request.cookies:
+        token = request.cookies.get("token")
+
+    if token:
+        data = decode_token(token)
+        if data and "id" in data:
+            user = Users.get_user_by_id(data["id"])
+            if user:
+                return user
+
+    return None
+
+
 def get_current_user_by_api_key(api_key: str):
     user = Users.get_user_by_api_key(api_key)
 

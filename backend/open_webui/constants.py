@@ -62,6 +62,9 @@ class ERROR_MESSAGES(str, Enum):
 
     NOT_FOUND = "We could not find what you're looking for :/"
     USER_NOT_FOUND = "We could not find what you're looking for :/"
+    SHARE_LINK_NOT_FOUND = "Oops! The shared link you're trying to access doesn't exist. It might have been deleted or there might be a typo in the URL."
+    SHARE_LINK_REVOKED = "The owner of this chat has revoked this sharing link."
+    SHARE_LINK_EXPIRED = "This shared link has expired and is no longer accessible."
     API_KEY_NOT_FOUND = "Oops! It looks like there's a hiccup. The API key is missing. Please make sure to provide a valid API key to access this feature."
     API_KEY_NOT_ALLOWED = "Use of API key is not enabled in the environment."
 
