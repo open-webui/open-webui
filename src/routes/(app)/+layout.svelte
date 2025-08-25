@@ -21,6 +21,7 @@
 
 	import { WEBUI_VERSION } from '$lib/constants';
 	import { compareVersion } from '$lib/utils';
+	import { customHeadersFetch } from '../../hooks.client';
 
 	import {
 		config,
@@ -105,6 +106,7 @@
 				settings.set(localStorageSettings);
 			}
 
+			customHeadersFetch();
 			models.set(
 				await getModels(
 					localStorage.token,
