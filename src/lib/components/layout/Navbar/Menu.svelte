@@ -333,13 +333,13 @@
 				<div class="flex items-center">{$i18n.t('Copy')}</div>
 			</DropdownMenu.Item>
 
-			{#if !$temporaryChatEnabled}
+			<!-- {#if !$temporaryChatEnabled}
 				<hr class="border-gray-100 dark:border-gray-850 my-0.5" />
 
 				<div class="flex p-1">
 					<Tags chatId={chat.id} />
 				</div>
-			{/if}
+			{/if} -->
 		</DropdownMenu.Content>
 	</div>
 </Dropdown>
