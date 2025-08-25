@@ -6,6 +6,7 @@ export type Banner = {
 	url?: string;
 	dismissible?: boolean;
 	timestamp: number;
+	translations?: Record<string, string>; // Maps language codes to content translations
 };
 
 export enum TTS_RESPONSE_SPLIT {
