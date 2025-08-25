@@ -160,3 +160,61 @@ async def delete_prompt_by_command(command: str, user=Depends(get_verified_user)
 
     result = Prompts.delete_prompt_by_command(f"/{command}")
     return result
+
+
+############################
+# Prompt Usage Statistics
+############################
+
+@router.get("/usage/stats", response_model=dict)
+async def get_prompt_usage_stats(user=Depends(get_verified_user)):
+    """Возвращает общую статистику использования промптов"""
+    request: Request
+
+    return {
+        "total_usage": request.app.state.PROMPT_USAGE_COUNTER["total_usage"],
+        "by_prompt": request.app.state.PROMPT_USAGE_COUNTER["by_prompt"],
+        "by_user": request.app.state.PROMPT_USAGE_COUNTER["by_user"],
+        "by_date": request.app.state.PROMPT_USAGE_COUNTER["by_date"]
+    }
+
+
+@router.get("/usage/prompt/{prompt_command}", response_model=dict)
+async def get_prompt_usage_by_command(
+        prompt_command: str,
+        user=Depends(get_verified_user)
+):
+    """Возвращает статистику использования конкретного промпта"""
+    from open_webui.main import app
+
+    usage_count = app.state.PROMPT_USAGE_COUNTER["by_prompt"].get(prompt_command, 0)
+
+    return {
+        "prompt_command": prompt_command,
+        "usage_count": usage_count,
+        "total_usage": app.state.PROMPT_USAGE_COUNTER["total_usage"]
+    }
+
+
+@router.get("/usage/user/{user_id}", response_model=dict)
+async def get_prompt_usage_by_user(
+        user_id: str,
+        user=Depends(get_verified_user)
+):
+    """Возвращает статистику использования промптов конкретным пользователем"""
+    from open_webui.main import app
+
+    # Проверяем права доступа (только админ или сам пользователь)
+    if user.role != "admin" and user.id != user_id:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail=ERROR_MESSAGES.ACCESS_PROHIBITED,
+        )
+
+    usage_count = app.state.PROMPT_USAGE_COUNTER["by_user"].get(user_id, 0)
+
+    return {
+        "user_id": user_id,
+        "usage_count": usage_count,
+        "total_usage": app.state.PROMPT_USAGE_COUNTER["total_usage"]
+    }

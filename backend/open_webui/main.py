@@ -767,6 +767,13 @@ app.state.TOOL_CONTENTS = {}
 app.state.FUNCTIONS = {}
 app.state.FUNCTION_CONTENTS = {}
 
+app.state.PROMPT_USAGE_COUNTER = {
+    "total_usage": 0,
+    "by_prompt":{},
+    "by_user":{},
+    "by_date":{}
+}
+
 ########################################
 #
 # RETRIEVAL
