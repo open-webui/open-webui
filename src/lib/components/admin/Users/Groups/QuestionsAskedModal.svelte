@@ -9,15 +9,14 @@
 	export let member = null;
 
 	// Generate placeholder questions based on member data
-	const generateQuestions = (memberData) => {
-		if (!memberData) return [];
+	const generateQuestions = (questionsAsked) => {
+		if (!questionsAsked) return [];
 
-		const questionCount = memberData.questionsAsked || 5;
+		const questionCount = questionsAsked.length || 5;
 		return Array.from({ length: questionCount }, (_, index) => ({
 			id: index + 1,
-			question: `Question ${index + 1}`,
+			question: questionsAsked[index] || `Sample question ${index + 1}`,
 			timestamp: new Date(Date.now() - Math.random() * 7 * 24 * 60 * 60 * 1000).toLocaleString(),
-			difficulty: ['Easy', 'Medium', 'Hard'][Math.floor(Math.random() * 3)]
 		}));
 	};
 
@@ -25,7 +24,7 @@
 
 	// Update questions when member changes
 	$: if (member && show) {
-		questions = generateQuestions(member);
+		questions = generateQuestions(member.questionsAsked);
 	}
 
 	// Close modal function

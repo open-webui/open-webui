@@ -16,32 +16,10 @@ export ENABLE_OLLAMA_API=true
 export PORT=8080
 export HOST=0.0.0.0
 
-# 🔑 KEY SETTINGS TO ALLOW ALL USERS TO USE LOCAL MODELS
-# Disable model restrictions
-export ENABLE_MODEL_FILTER=false
-export MODEL_FILTER_ENABLED=false
+# 🔑 CRITICAL: This is the key environment variable from env.py line 385
+export BYPASS_MODEL_ACCESS_CONTROL=true
 
-# Allow non-admin users to access models
-export ENABLE_ADMIN_EXPORT=false
-export ENABLE_ADMIN_CHAT_ACCESS=false
-
-# Enable local model access for all users
-export ENABLE_LOCAL_WEB_FETCH=true
-export ENABLE_RAG_LOCAL_WEB_LOADER=true
-
-# Optional: Set default models that all users can see
-export DEFAULT_MODELS="tinyllama:latest,deepseek-r1:1.5b"
-
-# User permissions - Allow all users to use models
-export DEFAULT_USER_ROLE="user"
-export ENABLE_SIGNUP=true
-export ENABLE_LOGIN_FORM=true
-
-# Model access permissions
-export MODELS_ACCESS_ALL_USERS=true
-export OLLAMA_MODELS_ACCESS_ALL=true
-
-# WebUI Secret Key
+# WebUI Secret Key (required)
 KEY_FILE=.webui_secret_key
 if test "$WEBUI_SECRET_KEY $WEBUI_JWT_SECRET_KEY" = " "; then
   echo "Loading WEBUI_SECRET_KEY from file..."
@@ -58,8 +36,8 @@ fi
 echo "Configuration:"
 echo "  🤖 OLLAMA_BASE_URL: $OLLAMA_BASE_URL"
 echo "  ✅ ENABLE_OLLAMA_API: $ENABLE_OLLAMA_API"
-echo "  🔓 MODEL_FILTER_ENABLED: $MODEL_FILTER_ENABLED"
-echo "  👥 Models accessible to all users: YES"
+echo "  🔓 BYPASS_MODEL_ACCESS_CONTROL: $BYPASS_MODEL_ACCESS_CONTROL"
+echo "  👥 All users can access local models: YES"
 echo "  🌐 Server: $HOST:$PORT"
 echo ""
 
@@ -82,4 +60,4 @@ echo "   Backend API docs at: http://localhost:8080/docs"
 echo ""
 
 # Start the server
-WEBUI_SECRET_KEY="$WEBUI_SECRET_KEY" exec uvicorn open_webui.main:app --host "$HOST" --port "$PORT" --reload
+WEBUI_SECRET_KEY="$WEBUI_SECRET_KEY" exec python -m uvicorn open_webui.main:app --host "$HOST" --port "$PORT" --reload

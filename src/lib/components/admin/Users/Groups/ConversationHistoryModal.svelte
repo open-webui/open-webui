@@ -35,7 +35,6 @@
 	// Simplified API function for debugging
 	const fetchGroupChatData = async (groupId) => {
 		try {
-			console.log('🔍 Simplified Debug:');
 			console.log('Group ID:', groupId);
 
 			// Minimal filter to test what data exists
@@ -79,6 +78,7 @@
 				name: `User ${chat.user_id}`,
 				email: `user${chat.user_id}@example.com`
 			};
+			console.log('Transforming chat:', chat);
 			return {
 				id: chat.id,
 				chatName: chat.title || `Chat ${index + 1}`,
