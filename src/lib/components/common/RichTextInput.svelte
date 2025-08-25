@@ -119,10 +119,9 @@
 
 	import StarterKit from '@tiptap/starter-kit';
 
-	// Bubble and Floating menus are currently fixed to v2 due to styling issues in v3
+	// Bubble menu is currently fixed to v2 due to styling issues in v3
 	// TODO: Update to v3 when styling issues are resolved
 	import BubbleMenu from '@tiptap/extension-bubble-menu';
-	import FloatingMenu from '@tiptap/extension-floating-menu';
 
 	import { TableKit } from '@tiptap/extension-table';
 	import { ListKit } from '@tiptap/extension-list';
@@ -556,7 +555,6 @@
 		provider = new SocketIOProvider(ydoc, documentId, socket, user);
 	}
 
-	let floatingMenuElement = null;
 	let bubbleMenuElement = null;
 	let element;
 
@@ -950,7 +948,7 @@
 			initializeCollaboration();
 		}
 
-		console.log(bubbleMenuElement, floatingMenuElement);
+		console.log(bubbleMenuElement);
 
 		editor = new Editor({
 			element: element,
@@ -1021,16 +1019,6 @@
 									placement: 'top',
 									theme: 'transparent',
 									offset: [0, 2]
-								}
-							}),
-							FloatingMenu.configure({
-								element: floatingMenuElement,
-								tippyOptions: {
-									duration: 100,
-									arrow: false,
-									placement: floatingMenuPlacement,
-									theme: 'transparent',
-									offset: [-12, 4]
 								}
 							})
 						]
@@ -1287,6 +1275,11 @@
 
 	const onValueChange = () => {
 		if (!editor) return;
+		
+		// Ensure value is defined, default to empty string
+		if (value === null || value === undefined) {
+			value = '';
+		}
 
 		const jsonValue = editor.getJSON();
 		const htmlValue = editor.getHTML();
@@ -1319,10 +1312,12 @@
 				}
 			} else {
 				if (value !== mdValue) {
+					// Ensure value is a string before using string methods
+					const stringValue = value?.toString() || '';
 					editor.commands.setContent(
 						preserveBreaks
-							? value
-							: marked.parse(value.replaceAll(`\n<br/>`, `<br/>`), {
+							? stringValue
+							: marked.parse(stringValue.replaceAll(`\n<br/>`, `<br/>`), {
 									breaks: false
 								})
 					);
@@ -1336,10 +1331,6 @@
 
 {#if showFormattingToolbar}
 	<div bind:this={bubbleMenuElement} id="bubble-menu" class="p-0">
-		<FormattingButtons {editor} />
-	</div>
-
-	<div bind:this={floatingMenuElement} id="floating-menu" class="p-0">
 		<FormattingButtons {editor} />
 	</div>
 {/if}

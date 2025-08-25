@@ -315,7 +315,8 @@ cypress/screenshots
 .claude/
 CLAUDE.md
 
-MD/
+NOTEPLUS_README.md
 *.bak
 frontend.bat
 backend/condarun.bat
+start_dev.bat

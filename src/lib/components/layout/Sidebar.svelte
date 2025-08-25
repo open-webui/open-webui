@@ -606,6 +606,29 @@
 					</div>
 				{/if}
 
+				{#if ($config?.features?.enable_noteplus ?? false) && ($user?.role === 'admin' || ($user?.permissions?.features?.noteplus ?? true))}
+					<div class="">
+						<Tooltip content={$i18n.t('Notes+')} placement="right">
+							<a
+								class=" cursor-pointer flex rounded-lg hover:bg-gray-100 dark:hover:bg-gray-850 transition group"
+								href="/noteplus"
+								on:click={async (e) => {
+									e.stopImmediatePropagation();
+									e.preventDefault();
+
+									goto('/noteplus');
+									itemClickHandler();
+								}}
+								draggable="false"
+							>
+								<div class=" self-center flex items-center justify-center size-9">
+									<Note className="size-4.5" />
+								</div>
+							</a>
+						</Tooltip>
+					</div>
+				{/if}
+
 				{#if $user?.role === 'admin' || $user?.permissions?.workspace?.models || $user?.permissions?.workspace?.knowledge || $user?.permissions?.workspace?.prompts || $user?.permissions?.workspace?.tools}
 					<div class="">
 						<Tooltip content={$i18n.t('Workspace')} placement="right">
@@ -784,6 +807,25 @@
 
 							<div class="flex self-center translate-y-[0.5px]">
 								<div class=" self-center text-sm font-primary">{$i18n.t('Notes')}</div>
+							</div>
+						</a>
+					</div>
+				{/if}
+
+				{#if ($config?.features?.enable_noteplus ?? false) && ($user?.role === 'admin' || ($user?.permissions?.features?.noteplus ?? true))}
+					<div class="px-[7px] flex justify-center text-gray-800 dark:text-gray-200">
+						<a
+							class="grow flex items-center space-x-3 rounded-lg px-2 py-2 hover:bg-gray-100 dark:hover:bg-gray-900 transition"
+							href="/noteplus"
+							on:click={itemClickHandler}
+							draggable="false"
+						>
+							<div class="self-center">
+								<Note className="size-4.5" strokeWidth="2" />
+							</div>
+
+							<div class="flex self-center translate-y-[0.5px]">
+								<div class=" self-center text-sm font-primary">{$i18n.t('Notes+')}</div>
 							</div>
 						</a>
 					</div>
