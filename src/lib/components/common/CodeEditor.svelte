@@ -17,7 +17,7 @@
 
 	import { formatPythonCode } from '$lib/apis/utils';
 	import { toast } from 'svelte-sonner';
-	import { user } from '$lib/stores';
+	import { user, settings } from '$lib/stores';
 
 	const dispatch = createEventDispatcher();
 	const i18n = getContext('i18n');
@@ -224,7 +224,7 @@ print("${endTag}")
 	let extensions = [
 		basicSetup,
 		keymap.of([{ key: 'Tab', run: acceptCompletion }, indentWithTab]),
-		indentUnit.of('    '),
+		indentUnit.of(($settings?.codeEditorUseTabs === true) ? '\t' : '    '),
 		placeholder($i18n.t('Enter your code here...')),
 		EditorView.updateListener.of((e) => {
 			if (e.docChanged) {
