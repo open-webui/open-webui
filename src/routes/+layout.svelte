@@ -44,6 +44,9 @@
 	import { getSessionUser, userSignOut } from '$lib/apis/auths';
 	import { getAllTags, getChatList } from '$lib/apis/chats';
 	import { chatCompletion } from '$lib/apis/openai';
+	import ToolApprovalModal from '$lib/components/chat/ToolApprovalModal.svelte';
+	import { setApprovalRequest, clearApprovals } from '$lib/stores/toolApproval';
+	import { approvalCoordinator } from '$lib/utils/toolApprovalChannel';
 
 	import { WEBUI_BASE_URL, WEBUI_HOSTNAME } from '$lib/constants';
 	import { bestMatchingLanguage } from '$lib/utils';
@@ -285,6 +288,37 @@
 		await tick();
 		const type = event?.data?.type ?? null;
 		const data = event?.data?.data ?? null;
+
+		// Always handle tool approval events immediately
+		if (type === 'tool:approval_required') {
+
+			// Only show modal if this tab is viewing the relevant chat
+			const approvalChatId = data.chat_id || event.chat_id || '';
+			const currentChatId = $chatId;
+			
+			if (approvalChatId && currentChatId && approvalChatId === currentChatId) {
+				setApprovalRequest({
+					session_id: data.session_id || $socket?.id || '',
+					chat_id: data.chat_id || event.chat_id || '',
+					message_id: data.message_id || event.message_id || '',
+					tools: data.tools || [],
+					});
+			} else {
+			}
+			return; // stop here so it doesn't go into other branches
+		}
+		if (type === 'tool:approval_status') {
+			// Handle approval status updates		
+			const { tool_name, status } = data;
+			
+			// Show toast based on status
+			if (status === 'approved') {
+				toast.success(`Executing ${tool_name}...`);
+			} else if (status === 'denied') {
+				toast.error(`${tool_name} execution denied`);
+			}
+			return; // stop here so it doesn't go into other branches
+		}
 
 		if ((event.chat_id !== $chatId && !$temporaryChatEnabled) || isFocused) {
 			if (type === 'chat:completion') {
@@ -698,6 +732,8 @@
 
 		return () => {
 			window.removeEventListener('resize', onResize);
+			clearApprovals();
+			approvalCoordinator.destroy();
 		};
 	});
 </script>
@@ -749,3 +785,6 @@
 	position="top-right"
 	closeButton
 />
+
+<!-- Tool Approval Modal -->
+<ToolApprovalModal />
