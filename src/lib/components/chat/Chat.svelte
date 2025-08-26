@@ -126,6 +126,7 @@
 	let imageGenerationEnabled = false;
 	let webSearchEnabled = false;
 	let codeInterpreterEnabled = false;
+	let useKnowledgeEnabled = true;
 
 	let showCommands = false;
 
@@ -187,6 +188,7 @@
 						webSearchEnabled = input.webSearchEnabled;
 						imageGenerationEnabled = input.imageGenerationEnabled;
 						codeInterpreterEnabled = input.codeInterpreterEnabled;
+						useKnowledgeEnabled = input.useKnowledgeEnabled ?? true;
 					}
 				} catch (e) {}
 			}
@@ -501,6 +503,7 @@
 					webSearchEnabled = input.webSearchEnabled;
 					imageGenerationEnabled = input.imageGenerationEnabled;
 					codeInterpreterEnabled = input.codeInterpreterEnabled;
+					useKnowledgeEnabled = input.useKnowledgeEnabled ?? true;
 				}
 			} catch (e) {}
 		}
@@ -1644,6 +1647,11 @@
 				array.findIndex((i) => JSON.stringify(i) === JSON.stringify(item)) === index
 		);
 
+		// If knowledge is disabled, strip knowledge-bearing files from the payload
+		if (!useKnowledgeEnabled) {
+			files = [];
+		}
+
 		scrollToBottom();
 		eventTarget.dispatchEvent(
 			new CustomEvent('chat:start', {
@@ -1747,6 +1755,7 @@
 						($user?.role === 'admin' || $user?.permissions?.features?.web_search)
 							? webSearchEnabled || ($settings?.webSearch ?? false) === 'always'
 							: false,
+					knowledge: useKnowledgeEnabled,
 					memory: $settings?.memory ?? false
 				},
 				variables: {
@@ -2309,6 +2318,7 @@
 									bind:imageGenerationEnabled
 									bind:codeInterpreterEnabled
 									bind:webSearchEnabled
+									bind:useKnowledgeEnabled
 									bind:atSelectedModel
 									bind:showCommands
 									toolServers={$toolServers}
@@ -2365,6 +2375,7 @@
 									bind:imageGenerationEnabled
 									bind:codeInterpreterEnabled
 									bind:webSearchEnabled
+									bind:useKnowledgeEnabled
 									bind:atSelectedModel
 									bind:showCommands
 									toolServers={$toolServers}

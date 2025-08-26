@@ -104,6 +104,7 @@
 	export let imageGenerationEnabled = false;
 	export let webSearchEnabled = false;
 	export let codeInterpreterEnabled = false;
+	export let useKnowledgeEnabled = true;
 
 	let showInputVariablesModal = false;
 	let inputVariables = {};
@@ -124,7 +125,8 @@
 		selectedFilterIds,
 		imageGenerationEnabled,
 		webSearchEnabled,
-		codeInterpreterEnabled
+		codeInterpreterEnabled,
+		useKnowledgeEnabled
 	});
 
 	const inputVariableHandler = async (text: string) => {
@@ -492,6 +494,8 @@
 		$config?.features?.enable_code_interpreter &&
 		($_user.role === 'admin' || $_user?.permissions?.features?.code_interpreter);
 
+	let showKnowledgeButton = true;
+
 	const scrollToBottom = () => {
 		const element = document.getElementById('messages-container');
 		element.scrollTo({
@@ -690,7 +694,7 @@
 				}
 
 				const compressImageHandler = async (imageUrl, settings = {}, config = {}) => {
-					// Quick shortcut so we don’t do unnecessary work.
+					// Quick shortcut so we don't do unnecessary work.
 					const settingsCompression = settings?.imageCompression ?? false;
 					const configWidth = config?.file?.image_compression?.width ?? null;
 					const configHeight = config?.file?.image_compression?.height ?? null;
@@ -1838,6 +1842,29 @@
 															<span
 																class="hidden @xl:block whitespace-nowrap overflow-hidden text-ellipsis leading-none pr-0.5"
 																>{$i18n.t('Code Interpreter')}</span
+															>
+														</button>
+													</Tooltip>
+												{/if}
+
+												{#if showKnowledgeButton}
+													<Tooltip content={$i18n.t('Use Knowledge (RAG)')} placement="top">
+														<button
+															aria-label={useKnowledgeEnabled ? $i18n.t('Disable Knowledge') : $i18n.t('Enable Knowledge')}
+															aria-pressed={useKnowledgeEnabled}
+															on:click|preventDefault={() => (useKnowledgeEnabled = !useKnowledgeEnabled)}
+															type="button"
+															class="px-2 @xl:px-2.5 py-2 flex gap-1.5 items-center text-sm transition-colors duration-300 max-w-full overflow-hidden hover:bg-gray-50 dark:hover:bg-gray-800 {useKnowledgeEnabled
+																? ' text-sky-500 dark:text-sky-300 bg-sky-50 dark:bg-sky-200/5'
+																: 'bg-transparent text-gray-600 dark:text-gray-300 '} {($settings?.highContrastMode ??
+																false)
+																? 'm-1'
+																: 'focus:outline-hidden rounded-full'}"
+														>
+															<Sparkles className="size-4" strokeWidth="1.75" />
+															<span
+																class="hidden @xl:block whitespace-nowrap overflow-hidden text-ellipsis leading-none pr-0.5"
+																>{$i18n.t('Use Knowledge')}</span
 															>
 														</button>
 													</Tooltip>
