@@ -255,43 +255,60 @@
 	});
 
 	let previousChats = [];
-	let expirationTimers = [];
+	let expirationTimers = {};
 
-	const getExpirationReason = (chat) => {
-		if (chat.expires_at && chat.expires_at <= Date.now() / 1000) {
-			return 'it reached its expiration time';
-		}
-		if (chat.expire_on_views && chat.views >= chat.expire_on_views) {
+	const getExpirationReason = (chat, previousChat) => {
+		if (
+			chat.expire_on_views &&
+			chat.views >= chat.expire_on_views &&
+			(!previousChat || chat.views > previousChat.views)
+		) {
 			return 'it reached its maximum number of views';
 		}
-		if (chat.max_clones && chat.clones >= chat.max_clones) {
+		if (
+			chat.max_clones &&
+			chat.clones >= chat.max_clones &&
+			(!previousChat || chat.clones > previousChat.clones)
+		) {
 			return 'it reached its maximum number of clones';
+		}
+		if (chat.expires_at && chat.expires_at <= Date.now() / 1000) {
+			return 'it reached its expiration time';
 		}
 		return 'it has expired';
 	};
 
 	const setupExpirationTimers = (chats) => {
-		// Clear existing timers
-		expirationTimers.forEach(clearTimeout);
-		expirationTimers = [];
+		if (!chats) return;
 
-		if (chats) {
-			chats.forEach((chat) => {
-				if (chat.expires_at) {
-					const expirationTime = chat.expires_at * 1000;
-					const now = Date.now();
-					const delay = expirationTime - now;
+		const chatIdsWithTimers = Object.keys(expirationTimers);
+		const currentChatIds = new Set(chats.map((c) => c.id));
 
-					if (delay > 0) {
-						const timerId = setTimeout(async () => {
-							const res = await getSharedChats(localStorage.token);
-							sharedChats.set(res.chats);
-						}, delay);
-						expirationTimers.push(timerId);
-					}
+		// Clear timers for removed chats
+		chatIdsWithTimers.forEach((chatId) => {
+			if (!currentChatIds.has(chatId)) {
+				clearTimeout(expirationTimers[chatId]);
+				delete expirationTimers[chatId];
+			}
+		});
+
+		// Set timers for new chats
+		chats.forEach((chat) => {
+			if (chat.expires_at && !expirationTimers[chat.id]) {
+				const expirationTime = chat.expires_at * 1000;
+				const now = Date.now();
+				const delay = expirationTime - now;
+
+				if (delay > 0) {
+					const timerId = setTimeout(async () => {
+						const res = await getSharedChats(localStorage.token);
+						sharedChats.set(res.chats);
+						delete expirationTimers[chat.id]; // Remove timer after it has fired
+					}, delay);
+					expirationTimers[chat.id] = timerId;
 				}
-			});
-		}
+			}
+		});
 	};
 
 	$: {
@@ -303,7 +320,7 @@
 				currentChats.forEach((chat) => {
 					const previousChat = previousChats.find((p) => p.id === chat.id);
 					if (previousChat && previousChat.status === 'active' && chat.status === 'expired') {
-						const reason = getExpirationReason(chat);
+						const reason = getExpirationReason(chat, previousChat);
 						toast.info(`Chat "${chat.title}" has expired because ${reason}.`);
 					}
 				});
@@ -313,7 +330,7 @@
 	}
 
 	onDestroy(() => {
-		expirationTimers.forEach(clearTimeout);
+		Object.values(expirationTimers).forEach(clearTimeout);
 	});
 
 	const checkForVersionUpdates = async () => {
