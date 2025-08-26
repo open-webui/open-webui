@@ -174,12 +174,16 @@ RUN if [ $UID -ne 0 ]; then \
     adduser --uid $UID --gid $GID --home $HOME --disabled-password --no-create-home app; \
     fi
 
-RUN mkdir -p $HOME/.cache/chroma
+RUN mkdir -p $HOME/.cache/chroma /app/backend/data/cache
 RUN echo -n 00000000-0000-0000-0000-000000000000 > $HOME/.cache/chroma/telemetry_user_id
 
-# Make sure the user has access to the app and root directory
+# Make sure the user has access to the app, backend data cache, and root directory  
 RUN chown -R $UID:$GID /app $HOME && \
-    chmod -R g=u $HOME
+    if [ ! -z "$BUILDKIT_VERSION" ]; then \
+        chmod -R g=u $HOME /app/backend/data/cache; \
+    else \
+        chmod -R g+rwX $HOME /app/backend/data/cache; \
+    fi
 
 RUN if [ "$USE_OLLAMA" = "true" ]; then \
     apt-get update && \
@@ -230,8 +234,14 @@ RUN apt-get autoremove -y && \
 
 # Copy pre-downloaded models from parallel build stage and set permissions in single layer
 COPY --from=models --chown=$UID:$GID --chmod=g=u /models/ /app/backend/data/cache/
-# Remove any .git directories from model downloads to reduce size
-RUN find /app/backend/data/cache -name ".git" -type d -exec rm -rf {} + 2>/dev/null || true && \
+# Set proper permissions and clean up in single layer
+RUN if [ ! -z "$BUILDKIT_VERSION" ]; then \
+        chmod -R g=u /app/backend/data/cache; \
+    else \
+        chmod -R g+rwX /app/backend/data/cache; \
+    fi && \
+    # Remove any .git directories from model downloads to reduce size
+    find /app/backend/data/cache -name ".git" -type d -exec rm -rf {} + 2>/dev/null || true && \
     # Remove any __pycache__ directories
     find /app/backend/data/cache -name "__pycache__" -type d -exec rm -rf {} + 2>/dev/null || true && \
     # Remove any temporary files
@@ -248,6 +258,13 @@ COPY --chown=$UID:$GID --chmod=g=u --from=build /app/package.json /app/package.j
 
 # copy backend files
 COPY --chown=$UID:$GID --chmod=g=u ./backend .
+
+# Set g=u permissions on all copied application files
+RUN if [ ! -z "$BUILDKIT_VERSION" ]; then \
+        chmod -R g=u /app/build /app/backend; \
+    else \
+        chmod -R g+rwX /app/build /app/backend; \
+    fi
 
 EXPOSE 8080
 
