@@ -140,10 +140,17 @@ class PdftotextLoaderAsync:
         Synchronously retrieves the extracted text once the task is completed.
         """
         status = ''
+        start_time = time.time()
+        timeout = 300  # 5 minutes timeout
         while status != 'completed' and status != 'failed':
             status = get_status(task_id)
             log.info(f"Checking status for task {task_id} {status}...")
             time.sleep(7)
+
+            # Timeout check
+            if time.time() - start_time > timeout:
+                raise Exception(
+                    f"OCR task {task_id} timed out after {timeout} seconds")
 
         if status == 'completed':
             result = self.check_status(task_id)
