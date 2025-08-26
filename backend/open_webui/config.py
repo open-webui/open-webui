@@ -1645,7 +1645,7 @@ ENABLE_RETRIEVAL_QUERY_GENERATION = PersistentConfig(
 
 ENABLE_QUERIES_CACHE = PersistentConfig(
     "ENABLE_QUERIES_CACHE",
-    "task.queries.cache.enable",
+    "task.query.cache.enable",
     os.environ.get("ENABLE_QUERIES_CACHE", "False").lower() == "true",
 )
 
