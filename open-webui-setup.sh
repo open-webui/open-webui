@@ -1,3 +1,4 @@
+sudo -v
 if [ -e .venv ] && [ "$1" != "-f" ]
 then
 source .venv/bin/activate
