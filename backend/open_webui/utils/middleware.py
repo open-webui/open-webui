@@ -390,6 +390,9 @@ async def chat_web_search_handler(
         except Exception as e:
             queries = [response]
 
+        if request.app.state.config.ENABLE_QUERIES_CACHE:
+            request.state.cached_queries = queries
+    
     except Exception as e:
         log.exception(e)
         queries = [user_message]
