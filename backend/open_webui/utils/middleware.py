@@ -98,6 +98,7 @@ from open_webui.env import (
     SRC_LOG_LEVELS,
     GLOBAL_LOG_LEVEL,
     CHAT_RESPONSE_STREAM_DELTA_CHUNK_SIZE,
+    CHAT_RESPONSE_MAX_TOOL_CALL_RETRIES,
     BYPASS_MODEL_ACCESS_CONTROL,
     ENABLE_REALTIME_CHAT_SAVE,
 )
@@ -2185,10 +2186,12 @@ async def process_chat_response(
 
                 await stream_body_handler(response, form_data)
 
-                MAX_TOOL_CALL_RETRIES = 10
                 tool_call_retries = 0
 
-                while len(tool_calls) > 0 and tool_call_retries < MAX_TOOL_CALL_RETRIES:
+                while (
+                    len(tool_calls) > 0
+                    and tool_call_retries < CHAT_RESPONSE_MAX_TOOL_CALL_RETRIES
+                ):
 
                     tool_call_retries += 1
 
