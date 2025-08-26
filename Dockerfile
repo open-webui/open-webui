@@ -175,7 +175,8 @@ RUN mkdir -p $HOME/.cache/chroma
 RUN echo -n 00000000-0000-0000-0000-000000000000 > $HOME/.cache/chroma/telemetry_user_id
 
 # Make sure the user has access to the app and root directory
-RUN chown -R $UID:$GID /app $HOME
+RUN chown -R $UID:$GID /app $HOME && \
+    chmod -R g+rwx $HOME
 
 RUN if [ "$USE_OLLAMA" = "true" ]; then \
     apt-get update && \
