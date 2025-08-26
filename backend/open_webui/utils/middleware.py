@@ -740,9 +740,12 @@ async def process_chat_payload(request, form_data, user, metadata, model):
 
     system_message = get_system_message(form_data.get("messages", []))
     if system_message:
-        form_data = apply_system_prompt_to_body(
-            system_message.get("content"), form_data, metadata, user
-        )
+        try:
+            form_data = apply_system_prompt_to_body(
+                system_message.get("content"), form_data, metadata, user
+            )
+        except:
+            pass
 
     event_emitter = get_event_emitter(metadata)
     event_call = get_event_call(metadata)

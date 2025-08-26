@@ -49,6 +49,7 @@
 	export let addMessages: Function = () => {};
 
 	export let readOnly = false;
+	export let editCodeBlock = true;
 
 	export let topPadding = false;
 	export let bottomPadding = false;
@@ -57,7 +58,7 @@
 	export let onSelect = (e) => {};
 	export let displayUsername = true;
 
-	let messagesCount = 20;
+	export let messagesCount: number | null = 20;
 	let messagesLoading = false;
 
 	const loadMoreMessages = async () => {
@@ -77,7 +78,7 @@
 		let _messages = [];
 
 		let message = history.messages[history.currentId];
-		while (message && _messages.length <= messagesCount) {
+		while (message && (messagesCount !== null ? _messages.length <= messagesCount : true)) {
 			_messages.unshift({ ...message });
 			message = message.parentId !== null ? history.messages[message.parentId] : null;
 		}
@@ -449,6 +450,7 @@
 								{triggerScroll}
 								{readOnly}
 								{displayUsername}
+								{editCodeBlock}
 								{topPadding}
 							/>
 						{/each}
