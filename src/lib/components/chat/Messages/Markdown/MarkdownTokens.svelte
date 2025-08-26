@@ -201,6 +201,7 @@
 					id={`${id}-${tokenIdx}`}
 					tokens={token.tokens}
 					{done}
+					{editCodeBlock}
 					{onTaskClick}
 					{onSourceClick}
 				/>
@@ -234,6 +235,7 @@
 							tokens={item.tokens}
 							top={token.loose}
 							{done}
+							{editCodeBlock}
 							{onTaskClick}
 							{onSourceClick}
 						/>
@@ -267,6 +269,7 @@
 									tokens={item.tokens}
 									top={token.loose}
 									{done}
+									{editCodeBlock}
 									{onTaskClick}
 									{onSourceClick}
 								/>
@@ -277,6 +280,7 @@
 								tokens={item.tokens}
 								top={token.loose}
 								{done}
+								{editCodeBlock}
 								{onTaskClick}
 								{onSourceClick}
 							/>
@@ -299,6 +303,7 @@
 					tokens={marked.lexer(token.text)}
 					attributes={token?.attributes}
 					{done}
+					{editCodeBlock}
 					{onTaskClick}
 					{onSourceClick}
 				/>
