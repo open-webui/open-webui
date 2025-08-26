@@ -19,8 +19,8 @@
 			public_knowledge: false,
 			public_prompts: false,
 			public_tools: false,
-			public_chat: true,
-			shared_chats: false
+			public_chat: false,
+			shared_chats: true
 		},
 		chat: {
 			controls: true,

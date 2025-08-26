@@ -18,6 +18,9 @@
 		case 'SHARE_LINK_EXPIRED':
 			title = 'Link Expired';
 			break;
+		case 'LOGIN_REQUIRED':
+			title = 'Login Required';
+			break;
 	}
 </script>
 

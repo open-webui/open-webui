@@ -405,7 +405,7 @@
 												}
 											}}
 											class="bg-transparent font-semibold self-center dark:text-gray-100 min-w-fit outline-hidden"
-							Allow Rate Response			/>/{siblings.length}
+										/>/{siblings.length}
 									</div>
 								{:else}
 									<!-- svelte-ignore a11y-no-static-element-interactions -->

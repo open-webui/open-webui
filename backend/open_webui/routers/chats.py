@@ -642,26 +642,7 @@ async def get_shared_chat_by_id(
             # Re-fetch the chat to get the latest revoked_at status
             updated_chat = Chats.get_chat_by_id(chat.id)
 
-            chat_status = "active"
-            if updated_chat.revoked_at:
-                is_expired_by_time = (
-                    updated_chat.expires_at
-                    and updated_chat.expires_at <= updated_chat.revoked_at
-                )
-                is_expired_by_views = (
-                    updated_chat.expire_on_views
-                    and updated_chat.views >= updated_chat.expire_on_views
-                )
-                is_expired_by_clones = (
-                    updated_chat.max_clones is not None
-                    and updated_chat.clones >= updated_chat.max_clones
-                    and not updated_chat.keep_link_active_after_max_clones
-                )
-
-                if is_expired_by_time or is_expired_by_views or is_expired_by_clones:
-                    chat_status = "expired"
-                else:
-                    chat_status = "revoked"
+            chat_status = Chats._get_chat_status(updated_chat)
 
             event_emitter = get_event_emitter({"user_id": chat.user_id})
             if event_emitter:
@@ -1024,26 +1005,7 @@ async def clone_shared_chat_by_id(
 
         updated_chat = updated_chat_with_clone_count
 
-        chat_status = "active"
-        if updated_chat.revoked_at:
-            is_expired_by_time = (
-                updated_chat.expires_at
-                and updated_chat.expires_at <= updated_chat.revoked_at
-            )
-            is_expired_by_views = (
-                updated_chat.expire_on_views
-                and updated_chat.views >= updated_chat.expire_on_views
-            )
-            is_expired_by_clones = (
-                updated_chat.max_clones is not None
-                and updated_chat.clones >= updated_chat.max_clones
-                and not updated_chat.keep_link_active_after_max_clones
-            )
-
-            if is_expired_by_time or is_expired_by_views or is_expired_by_clones:
-                chat_status = "expired"
-            else:
-                chat_status = "revoked"
+        chat_status = Chats._get_chat_status(updated_chat)
 
         event_emitter = get_event_emitter({"user_id": chat.user_id})
         if event_emitter:

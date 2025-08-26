@@ -1302,7 +1302,7 @@
 									</a>
 								</Tooltip>
 								{#if chat.revoked_at}
-									<Tooltip content={$i18n.t('Restore Link')}>
+									<Tooltip content={$i18n.t('Re-activate Link')}>
 										<button
 											class="flex items-center justify-center h-full p-2 rounded-lg text-green-600 dark:text-green-500 bg-transparent hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors"
 											on:click={async () => {

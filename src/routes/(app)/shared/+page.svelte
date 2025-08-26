@@ -912,7 +912,7 @@
 												>
 											</Tooltip>
 										{:else}
-											<Tooltip content="Restore Link" className="inline-block">
+											<Tooltip content="Re-activate Link" className="inline-block">
 												<button
 													class="text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 p-1 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800"
 													on:click={() => {
