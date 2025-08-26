@@ -205,49 +205,50 @@
 							</button>
 						</div>
 						
-						<div class="flex-1 overflow-y-auto">
-							<!-- Search Bar -->
-							<div class="px-3 py-2 border-b border-gray-200 dark:border-gray-800">
-								<div class="flex items-center gap-2">
-									<div class="relative flex-1">
-										<input
-											type="text"
-											placeholder={$i18n.t('Search categories...')}
-											class="w-full px-8 py-1.5 text-sm bg-gray-100 dark:bg-gray-800 rounded-lg outline-none focus:ring-2 focus:ring-blue-500"
-											bind:value={categorySearchQuery}
-										/>
-										<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" class="w-4 h-4 absolute left-2 top-1/2 -translate-y-1/2 text-gray-400">
-											<path fill-rule="evenodd" d="M9 3.5a5.5 5.5 0 100 11 5.5 5.5 0 000-11zM2 9a7 7 0 1112.452 4.391l3.328 3.329a.75.75 0 11-1.06 1.06l-3.329-3.328A7 7 0 012 9z" clip-rule="evenodd" />
-										</svg>
-										{#if categorySearchQuery}
-											<button
-												class="absolute right-2 top-1/2 -translate-y-1/2 p-0.5 rounded-full hover:bg-gray-200 dark:hover:bg-gray-700 transition"
-												on:click={() => {
-													categorySearchQuery = '';
-												}}
-											>
-												<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" class="w-3 h-3">
-													<path d="M6.28 5.22a.75.75 0 00-1.06 1.06L8.94 10l-3.72 3.72a.75.75 0 101.06 1.06L10 11.06l3.72 3.72a.75.75 0 101.06-1.06L11.06 10l3.72-3.72a.75.75 0 00-1.06-1.06L10 8.94 6.28 5.22z" />
-												</svg>
-											</button>
-										{/if}
-									</div>
-									<!-- Refresh Button -->
-									<button
-										class="p-1.5 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-800 transition"
-										title={$i18n.t('Refresh categories')}
-										on:click={async () => {
-											const tree = await getNotePlusCategoryTree(localStorage.token);
-											categoryTree.set(tree);
-										}}
-									>
-										<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="size-4">
-											<path stroke-linecap="round" stroke-linejoin="round" d="M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0 3.181 3.183a8.25 8.25 0 0 0 13.803-3.7M4.031 9.865a8.25 8.25 0 0 1 13.803-3.7l3.181 3.182m0-4.991v4.99" />
-										</svg>
-									</button>
+						<!-- Search Bar - Fixed at top -->
+						<div class="px-3 py-2 border-b border-gray-200 dark:border-gray-800">
+							<div class="flex items-center gap-2">
+								<div class="relative flex-1">
+									<input
+										type="text"
+										placeholder={$i18n.t('Search categories...')}
+										class="w-full px-8 py-1.5 text-sm bg-gray-100 dark:bg-gray-800 rounded-lg outline-none focus:ring-2 focus:ring-blue-500"
+										bind:value={categorySearchQuery}
+									/>
+									<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" class="w-4 h-4 absolute left-2 top-1/2 -translate-y-1/2 text-gray-400">
+										<path fill-rule="evenodd" d="M9 3.5a5.5 5.5 0 100 11 5.5 5.5 0 000-11zM2 9a7 7 0 1112.452 4.391l3.328 3.329a.75.75 0 11-1.06 1.06l-3.329-3.328A7 7 0 012 9z" clip-rule="evenodd" />
+									</svg>
+									{#if categorySearchQuery}
+										<button
+											class="absolute right-2 top-1/2 -translate-y-1/2 p-0.5 rounded-full hover:bg-gray-200 dark:hover:bg-gray-700 transition"
+											on:click={() => {
+												categorySearchQuery = '';
+											}}
+										>
+											<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" class="w-3 h-3">
+												<path d="M6.28 5.22a.75.75 0 00-1.06 1.06L8.94 10l-3.72 3.72a.75.75 0 101.06 1.06L10 11.06l3.72 3.72a.75.75 0 101.06-1.06L11.06 10l3.72-3.72a.75.75 0 00-1.06-1.06L10 8.94 6.28 5.22z" />
+											</svg>
+										</button>
+									{/if}
 								</div>
+								<!-- Refresh Button -->
+								<button
+									class="p-1.5 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-800 transition"
+									title={$i18n.t('Refresh categories')}
+									on:click={async () => {
+										const tree = await getNotePlusCategoryTree(localStorage.token);
+										categoryTree.set(tree);
+									}}
+								>
+									<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="size-4">
+										<path stroke-linecap="round" stroke-linejoin="round" d="M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0 3.181 3.183a8.25 8.25 0 0 0 13.803-3.7M4.031 9.865a8.25 8.25 0 0 1 13.803-3.7l3.181 3.182m0-4.991v4.99" />
+									</svg>
+								</button>
+							</div>
 						</div>
-							
+						
+						<!-- Scrollable content area -->
+						<div class="flex-1 overflow-y-auto">
 							<!-- Categories Tree -->
 							<div class="p-3">
 								<CategoryTree 
