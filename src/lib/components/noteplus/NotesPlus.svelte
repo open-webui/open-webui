@@ -328,6 +328,17 @@
 		await init();
 		loaded = true;
 
+		// Check if there's a saved selected category from navigation
+		const savedCategory = sessionStorage.getItem('noteplus_selected_category');
+		if (savedCategory) {
+			try {
+				selectedCategory = JSON.parse(savedCategory);
+				sessionStorage.removeItem('noteplus_selected_category'); // Clean up after use
+			} catch (e) {
+				console.error('Error parsing saved category:', e);
+			}
+		}
+
 		const dropzoneElement = document.getElementById('notes-container');
 
 		dropzoneElement?.addEventListener('dragover', onDragOver);
