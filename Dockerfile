@@ -185,7 +185,7 @@ RUN if [ "$USE_OLLAMA" = "true" ]; then \
     # for RAG OCR
     apt-get install -y --no-install-recommends ffmpeg libsm6 libxext6 && \
     # install helper tools
-    apt-get install -y --no-install-recommends curl jq && \
+    apt-get install -y --no-install-recommends curl jq rsync && \
     # install ollama
     curl -fsSL https://ollama.com/install.sh | sh && \
     # Aggressive cleanup: remove build deps, clean all caches, remove docs/man pages
