@@ -12,6 +12,25 @@
 	export let inputValue = '';
 	export let onSelect = (e) => {};
 
+    const handlePromptClick = async (prompt) => {
+
+		console.log('Клик по промпту сработал! Отправляю запрос для:', prompt.content);
+
+		onSelect({ type: 'prompt', data: prompt.content });
+
+		try {
+			await fetch('http://localhost:8080/api/v1/prompts/suggested/increment', {
+				method: 'POST',
+				headers: {
+					'Content-Type': 'application/json'
+				},
+				body: JSON.stringify({ content: prompt.content })
+			});
+		} catch (error) {
+			console.error('Failed to increment prompt counter:', error);
+		}
+	};
+
 	let sortedPrompts = [];
 
 	const fuseOptions = {
@@ -92,7 +111,7 @@
 				       px-3 py-2 rounded-xl bg-transparent hover:bg-black/5
 				       dark:hover:bg-white/5 transition group"
 					style="animation-delay: {idx * 60}ms"
-					on:click={() => onSelect({ type: 'prompt', data: prompt.content })}
+					on:click={() => handlePromptClick(prompt)}
 				>
 					<div class="flex flex-col text-left">
 						{#if prompt.title && prompt.title[0] !== ''}

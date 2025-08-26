@@ -1,5 +1,5 @@
-from typing import Optional
-from fastapi import APIRouter, Depends, HTTPException, status, Request
+from typing import Optional, Dict
+from fastapi import APIRouter, Depends, HTTPException, status, Request, Body
 
 from open_webui.models.prompts import (
     PromptForm,
@@ -11,6 +11,7 @@ from open_webui.constants import ERROR_MESSAGES
 from open_webui.utils.auth import get_admin_user, get_verified_user
 from open_webui.utils.access_control import has_access, has_permission
 from open_webui.config import BYPASS_ADMIN_ACCESS_CONTROL
+from pydantic import BaseModel
 
 router = APIRouter()
 
@@ -160,3 +161,44 @@ async def delete_prompt_by_command(command: str, user=Depends(get_verified_user)
 
     result = Prompts.delete_prompt_by_command(f"/{command}")
     return result
+
+
+############################
+# increment
+############################
+
+prompt_usage_counter: Dict[str, int] = {}
+
+
+
+class PromptUsagePayload(BaseModel):
+    content: str
+
+
+
+@router.post("/suggested/increment", tags=["prompts_usage"])
+async def increment_suggested_prompt_usage(payload: PromptUsagePayload = Body(...)):
+    """
+    Увеличивает счетчик использования предложенного промпта.
+    """
+    prompt_content = payload.content
+
+    # Увеличиваем счетчик для данного промпта
+    current_count = prompt_usage_counter.get(prompt_content, 0) + 1
+    prompt_usage_counter[prompt_content] = current_count
+
+    print(f"Prompt used: '{prompt_content}'. New count: {current_count}")
+
+    return {"status": "success", "content": prompt_content, "count": current_count}
+
+
+############################
+# counts
+############################
+
+@router.get("/suggested/counts", tags=["prompts_usage"])
+async def get_suggested_prompt_usage_counts():
+    """
+    Возвращает словарь со всеми счетчиками использования промптов.
+    """
+    return prompt_usage_counter

@@ -81,6 +81,7 @@
 		"@tiptap/extensions": "^3.0.7",
 		"@tiptap/pm": "^3.0.7",
 		"@tiptap/starter-kit": "^3.0.7",
+		"@tiptap/suggestion": "^3.3.0",
 		"@xyflow/svelte": "^0.1.19",
 		"async": "^3.2.5",
 		"bits-ui": "^0.21.15",
@@ -137,6 +138,7 @@
 		"uuid": "^9.0.1",
 		"vite-plugin-static-copy": "^2.2.0",
 		"y-prosemirror": "^1.3.7",
+		"y-protocols": "^1.0.6",
 		"yaml": "^2.7.1",
 		"yjs": "^13.6.27"
 	},
