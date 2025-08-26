@@ -305,7 +305,7 @@
 	};
 
 	// Export functionality
-	const handleExportPDF = () => {
+	const handleExportPDF = async () => {
 		if (selectedMembers.size === 0) {
 			toast.error('Please select at least one conversation to export as PDF');
 			return;
@@ -315,84 +315,85 @@
 		console.log('Exporting PDF for:', selectedData);
 		toast.success(`Preparing PDF export for ${selectedMembers.size} conversations...`);
 		
-		// TODO: Implement PDF export functionality
-		// This would typically generate a PDF report of the selected conversations
+		// Call the new API
+		const response = await fetch('/api/v1/chats/export/zip', {
+			method: 'POST',
+			headers: {
+				'Content-Type': 'application/json',
+				'Authorization': `Bearer ${localStorage.token}`
+			},
+			body: JSON.stringify({
+				group_id: group.id,
+				chat_ids: Array.from(selectedMembers)
+			})
+		});
+
+		const blob = await response.blob();
+		const url = URL.createObjectURL(blob);
+		const link = document.createElement('a');
+		link.href = url;
+		link.download = `conversations.zip`;
+		document.body.appendChild(link);
+		link.click();
+		document.body.removeChild(link);
+		URL.revokeObjectURL(url);
 	};
 
-	const handleExportCSV = () => {
-		if (filteredMemberStats.length === 0) {
-			toast.error('No conversation data to export');
+	const handleExportCSV = async () => {
+		if (!group) {
+			toast.error('No group selected');
 			return;
 		}
 
 		try {
-			// Prepare the data for export (all currently shown/filtered data)
-			const exportData = {
-				group: {
-					id: group?.id || 'unknown',
-					name: group?.name || 'Unknown Group'
-				},
-				exportInfo: {
-					exportedAt: new Date().toISOString(),
-					totalConversations: filteredMemberStats.length,
-					appliedFilters: {
-						memberSearch: searchQuery || null,
-						chatSearch: chatSearchQuery || null,
-						modelFilter: filteredModel || null
-					}
-				},
-				conversations: filteredMemberStats.map(chat => ({
-					id: chat.id,
-					chatName: chat.chatName,
-					user: {
-						name: chat.name,
-						email: chat.email
-					},
-					model: chat.model,
-					messageCount: chat.messageCount,
-					questionsAsked: chat.questionsAsked,
-					lastUpdated: chat.lastUpdated,
-					timeTaken: chat.timeTaken,
-					// Include questions if available
-					questions: chat.questions || []
-				}))
+			toast.info('Preparing CSV export...');
+
+			// Prepare filter data matching current UI filters
+			const filterData = {
+				group_id: group.id,
+				model_name: filteredModel || "",
+				skip: 0,
+				limit: 1000
 			};
 
-			// Create filename based on group ID and current timestamp
-			const timestamp = new Date().toISOString().split('T')[0]; // YYYY-MM-DD format
-			const filename = `${group?.id || 'group'}-conversations-${timestamp}.json`;
+			const response = await fetch('/api/v1/chats/export/csv', {
+				method: 'POST',
+				headers: {
+					'Content-Type': 'application/json',
+					'Authorization': `Bearer ${localStorage.token}`
+				},
+				body: JSON.stringify(filterData)
+			});
 
-			// Create and download the JSON file
-			const dataStr = JSON.stringify(exportData, null, 2);
-			const dataBlob = new Blob([dataStr], { type: 'application/json' });
-			
-			const url = URL.createObjectURL(dataBlob);
+			if (!response.ok) {
+				const errorData = await response.json().catch(() => ({}));
+				throw new Error(errorData.detail || `HTTP error! status: ${response.status}`);
+			}
+
+			// Get the CSV content and filename
+			const csvContent = await response.text();
+			const contentDisposition = response.headers.get('Content-Disposition');
+			const filename = contentDisposition 
+				? contentDisposition.split('filename=')[1]?.replace(/"/g, '')
+				: `group-${group.id}-conversations.csv`;
+
+			// Create and download the CSV file
+			const blob = new Blob([csvContent], { type: 'text/csv' });
+			const url = URL.createObjectURL(blob);
 			const link = document.createElement('a');
 			link.href = url;
 			link.download = filename;
 			
-			// Trigger download
 			document.body.appendChild(link);
 			link.click();
 			document.body.removeChild(link);
-			
-			// Cleanup
 			URL.revokeObjectURL(url);
 
-			toast.success(`Successfully exported ${filteredMemberStats.length} conversations as ${filename}`);
-			console.log('CSV/JSON Export completed:', {
-				filename,
-				conversations: filteredMemberStats.length,
-				filters: {
-					memberSearch: searchQuery,
-					chatSearch: chatSearchQuery,
-					modelFilter: filteredModel
-				}
-			});
+			toast.success(`Successfully exported CSV: ${filename}`);
 
         } catch (error) {
-            console.error('Export failed:', error);
-            toast.error('Failed to export data. Please try again.');
+            console.error('CSV export failed:', error);
+            toast.error(`Failed to export CSV: ${error.message}`);
         }
 	};
 

@@ -85,6 +85,25 @@ class ChatTitleForm(BaseModel):
     title: str
 
 
+class ChatExportZipForm(BaseModel):
+    group_id: str
+    chat_ids: list[str]
+
+
+class ChatExportCSVForm(BaseModel):
+    group_id: str
+    user_id: Optional[str] = ""
+    model_name: Optional[str] = ""
+    base_model_name: Optional[str] = ""
+    min_messages: Optional[int] = None
+    max_messages: Optional[int] = None
+    min_time_taken: Optional[int] = None
+    max_time_taken: Optional[int] = None
+    skip: Optional[int] = 0
+    limit: Optional[int] = 1000
+    include_metadata: Optional[bool] = True
+
+
 class ChatResponse(BaseModel):
     id: str
     user_id: str
