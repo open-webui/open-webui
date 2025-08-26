@@ -330,7 +330,7 @@
 
 		<div class="  flex w-full justify-between my-2 pr-2">
 			<div class=" self-center text-xs font-medium">
-				{$i18n.t('Allow Response Regeneration')}
+				{$i18n.t('Allow Regenerate Response')}
 			</div>
 
 			<Switch bind:state={permissions.chat.regenerate_response} />
@@ -338,7 +338,7 @@
 
 		<div class="  flex w-full justify-between my-2 pr-2">
 			<div class=" self-center text-xs font-medium">
-				{$i18n.t('Allow Response Rating')}
+				{$i18n.t('Allow Rate Response')}
 			</div>
 
 			<Switch bind:state={permissions.chat.rating_response} />
