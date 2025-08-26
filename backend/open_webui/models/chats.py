@@ -516,10 +516,8 @@ class ChatTable:
                 chat = db.query(Chat).filter_by(id=chat_id).first()
                 if chat:
                     chat.revoked_at = None
-
-                    chat.expires_at = None
-                    chat.expire_on_views = None
-
+                    chat.views = 0
+                    chat.clones = 0
                     db.commit()
                     db.refresh(chat)
                     return ChatModel.model_validate(chat)
