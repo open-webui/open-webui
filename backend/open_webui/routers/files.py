@@ -20,7 +20,7 @@ from fastapi import (
 )
 from fastapi.responses import FileResponse, StreamingResponse
 from open_webui.constants import ERROR_MESSAGES
-from open_webui.env import SRC_LOG_LEVELS, CELERY_RESULT_BACKEND
+from open_webui.env import SRC_LOG_LEVELS, REDIS_URL
 from open_webui.models.files import (
     FileForm,
     FileModel,
@@ -39,7 +39,7 @@ import redis
 
 
 # Conectando ao Redis usando a URL
-redis_url = os.getenv('CELERY_RESULT_BACKEND')
+redis_url = os.getenv('REDIS_URL')
 # decode_responses=True retorna string direto
 redis_client = redis.StrictRedis.from_url(redis_url, decode_responses=True)
 

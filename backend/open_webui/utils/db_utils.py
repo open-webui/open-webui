@@ -1,8 +1,8 @@
 import redis
-from open_webui.env import CELERY_RESULT_BACKEND
+from open_webui.env import REDIS_URL
 
 redis_client = redis.StrictRedis.from_url(
-    CELERY_RESULT_BACKEND, decode_responses=True)
+    REDIS_URL, decode_responses=True)
 
 
 def get_status(task_id):
