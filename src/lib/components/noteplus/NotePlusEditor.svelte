@@ -78,7 +78,8 @@
 		getNotePlusById, 
 		updateNotePlusById, 
 		generateNotePlusTitle, 
-		generateNotePlusCategory 
+		generateNotePlusCategory,
+		autoCategorizePlus 
 	} from '$lib/apis/noteplus';
 
 	import RichTextInput from '../common/RichTextInput.svelte';
@@ -157,6 +158,7 @@
 	let titleInputFocused = false;
 	let titleGenerating = false;
 	let categoryGenerating = false;
+	let categoryMethod = 'llm'; // 'llm', 'code', or 'hybrid'
 
 	let dragged = false;
 	let loading = false;
@@ -273,13 +275,21 @@
 
 		try {
 			const DEFAULT_TITLE_GENERATION_PROMPT_TEMPLATE = `### Task:
-Generate a concise, 3-5 word title with an emoji summarizing the content in the content's primary language.
+Generate a concise, 3-5 word title with an emoji summarizing the content in the SAME LANGUAGE as the content.
+
 ### Guidelines:
-- The title should clearly represent the main theme or subject of the content.
-- Keep the title focused on the content rather than instructions.
-- Choose an emoji that best represents the overall theme.
-- Only output the title without quotes or additional explanation.
-- If unsure about the primary language, use English.
+- First, detect the primary language of the content
+- Generate the title in that detected language
+- The title should clearly represent the main theme or subject
+- Keep the title focused on the content rather than instructions
+- Choose an emoji that best represents the overall theme
+- Only output the title without quotes or additional explanation
+
+### Examples:
+- Korean content → Korean title: "🚀 리액트 훅 사용법"
+- English content → English title: "🚀 React Hooks Usage"
+- Japanese content → Japanese title: "🚀 Reactフックの使い方"
+
 ### Content:
 {{CONTENT}}`;
 
@@ -321,6 +331,12 @@ Generate a concise, 3-5 word title with an emoji summarizing the content in the 
 	};
 
 	const generateCategoryHandler = async () => {
+		// Prevent multiple simultaneous calls
+		if (categoryGenerating) {
+			console.log('Category generation already in progress');
+			return;
+		}
+
 		const content = note.data.content.md;
 		const title = note.title;
 
@@ -329,53 +345,106 @@ Generate a concise, 3-5 word title with an emoji summarizing the content in the 
 			return;
 		}
 
-		if (!selectedModelId || selectedModelId === '') {
-			toast.error($i18n.t('Model not selected'));
-			return;
+		if (categoryMethod === 'llm' || categoryMethod === 'hybrid') {
+			if (!selectedModelId || selectedModelId === '') {
+				toast.error($i18n.t('Model not selected'));
+				return;
+			}
 		}
 
+		console.log('Starting category generation with method:', categoryMethod);
 		categoryGenerating = true;
 
 		try {
-			const DEFAULT_CATEGORY_GENERATION_PROMPT_TEMPLATE = `### Task:
-Categorize the following note content into a 3-level hierarchy.
+			// Try code-based categorization first if in code or hybrid mode
+			if (categoryMethod === 'code' || categoryMethod === 'hybrid') {
+				try {
+					console.log('Attempting code-based categorization...');
+					const categoryData = await autoCategorizePlus(
+						localStorage.token,
+						title || '',
+						content
+					);
+
+					if (categoryData) {
+						console.log('Code-based categorization successful:', categoryData);
+						note.category_major = categoryData.major || 'General';
+						note.category_middle = categoryData.middle || 'Notes';
+						note.category_minor = categoryData.minor || 'Default';
+						// Save immediately without triggering debounce
+						await saveHandler();
+						categoryGenerating = false;
+						return;
+					}
+				} catch (error) {
+					console.error('Code-based categorization failed:', error);
+					if (categoryMethod === 'hybrid') {
+						console.log('Falling back to LLM...');
+					}
+				}
+
+				// If code-based failed and we're not in hybrid mode, we're done
+				if (categoryMethod === 'code') {
+					toast.error($i18n.t('Failed to generate categories'));
+					categoryGenerating = false;
+					return;
+				}
+			}
+
+			// Use LLM-based categorization
+			if (categoryMethod === 'llm' || categoryMethod === 'hybrid') {
+				console.log('Using LLM-based categorization...');
+				const DEFAULT_CATEGORY_GENERATION_PROMPT_TEMPLATE = `### Task:
+Analyze the language of the content below and categorize it into a 3-level hierarchy using the SAME LANGUAGE as the content.
+
 ### Guidelines:
-- Major category: High-level domain (e.g., Technology, Business, Personal, Education, Health)
-- Middle category: Specific area within the domain (e.g., Programming, Marketing, Journal, Course, Fitness)
-- Minor category: Detailed classification (e.g., Python, SEO, Daily, Mathematics, Workout)
-- Output format: Return ONLY a JSON object with this exact structure:
+1. First, detect the primary language of the content (e.g., English, Korean, Japanese, Chinese, etc.)
+2. Generate ALL category names in that detected language
+3. Category hierarchy:
+   - Major category: High-level domain (Technology/기술, Business/비즈니스, Personal/개인, Education/교육, Health/건강, etc.)
+   - Middle category: Specific area within the domain (Programming/프로그래밍, Marketing/마케팅, Journal/일기, Course/강좌, etc.)
+   - Minor category: Detailed classification (Python/파이썬, SEO/검색엔진최적화, Daily/일일, Mathematics/수학, etc.)
+
+### Output Format:
+Return ONLY a JSON object with this exact structure:
 {
-  "major": "category name",
-  "middle": "category name",
-  "minor": "category name"
+  "major": "category name in content's language",
+  "middle": "category name in content's language",
+  "minor": "category name in content's language"
 }
-- Use English for category names.
+
+### Important:
+- If content is in Korean, use Korean category names (e.g., "개발", "프론트엔드", "리액트")
+- If content is in English, use English category names (e.g., "Development", "Frontend", "React")
+- If content is in Japanese, use Japanese category names (e.g., "開発", "フロントエンド", "React")
+- If content is mixed language, use the dominant language for categories
+
 ### Title:
 {{TITLE}}
 ### Content:
 {{CONTENT}}`;
 
-			const prompt = DEFAULT_CATEGORY_GENERATION_PROMPT_TEMPLATE
-				.replace('{{TITLE}}', title || 'Untitled')
-				.replace('{{CONTENT}}', content);
+				const prompt = DEFAULT_CATEGORY_GENERATION_PROMPT_TEMPLATE
+					.replace('{{TITLE}}', title || 'Untitled')
+					.replace('{{CONTENT}}', content);
 
-			const res = await generateOpenAIChatCompletion(
-				localStorage.token,
-				{
-					model: selectedModelId,
-					messages: [
-						{
-							role: 'user',
-							content: prompt
-						}
-					],
-					stream: false
-				},
-				`${WEBUI_BASE_URL}/api`
-			);
+				const res = await generateOpenAIChatCompletion(
+					localStorage.token,
+					{
+						model: selectedModelId,
+						messages: [
+							{
+								role: 'user',
+								content: prompt
+							}
+						],
+						stream: false
+					},
+					`${WEBUI_BASE_URL}/api`
+				);
 			
-			if (res) {
-				console.log('Category generation response:', res);
+				if (res) {
+					console.log('Category generation response:', res);
 				
 				// Try to parse JSON response
 				let categoryData;
@@ -404,21 +473,24 @@ Categorize the following note content into a 3-level hierarchy.
 					note.category_major = categoryData.major || 'General';
 					note.category_middle = categoryData.middle || 'Notes';
 					note.category_minor = categoryData.minor || 'Default';
+					// Save immediately without triggering debounce
+					await saveHandler();
 				} else {
 					// Fallback to default categories
 					note.category_major = 'General';
 					note.category_middle = 'Notes';
 					note.category_minor = 'Default';
 					toast.error($i18n.t('Failed to parse category data, using defaults'));
+					// Save immediately without triggering debounce
+					await saveHandler();
 				}
 			}
+		}
 		} catch (error) {
 			console.error('Category generation error:', error);
 			toast.error($i18n.t('Failed to generate categories'));
 		} finally {
 			categoryGenerating = false;
-			await tick();
-			changeDebounceHandler();
 		}
 	};
 
@@ -1027,9 +1099,10 @@ Provide the enhanced notes in markdown format. Use markdown syntax for headings,
 									<Tooltip content={$i18n.t('Auto Categorize')}>
 										<button
 											class="p-1 bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700 rounded transition"
-											disabled={!selectedModelId || categoryGenerating}
+											disabled={(categoryMethod === 'llm' || categoryMethod === 'hybrid') && !selectedModelId || categoryGenerating}
 											on:click={(e) => {
 												e.preventDefault();
+												e.stopPropagation();
 												generateCategoryHandler();
 											}}
 										>
@@ -1248,7 +1321,14 @@ Provide the enhanced notes in markdown format. Use markdown syntax for headings,
 						selectedModelId = e.detail;
 						changeDebounceHandler();
 					}}
+					on:categoryMethodChange={(e) => {
+						categoryMethod = e.detail;
+					}}
+					on:close={() => {
+						showPanel = false;
+					}}
 					{selectedModelId}
+					bind:categoryMethod
 				/>
 			{/if}
 		</Pane>

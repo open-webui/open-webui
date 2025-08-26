@@ -1,6 +1,7 @@
 <script lang="ts">
-	import { getContext } from 'svelte';
+	import { getContext, createEventDispatcher } from 'svelte';
 	const i18n = getContext('i18n');
+	const dispatch = createEventDispatcher();
 
 	import XMark from '$lib/components/icons/XMark.svelte';
 	import { models } from '$lib/stores';
@@ -11,6 +12,7 @@
 	export let show = false;
 	export let selectedModelId = '';
 	export let files = [];
+	export let categoryMethod = 'llm'; // 'llm' or 'code'
 
 	export let onUpdate = (files: any[]) => {
 		// Default no-op function
@@ -22,7 +24,7 @@
 		<button
 			class="p-0.5 bg-transparent transition rounded-lg"
 			on:click={() => {
-				show = !show;
+				dispatch('close');
 			}}
 		>
 			<XMark className="size-5" strokeWidth="2.5" />
@@ -98,6 +100,38 @@
 					<option value={model.id} class="bg-gray-50 dark:bg-gray-700">{model.name}</option>
 				{/each}
 			</select>
+		</div>
+
+		<hr class="my-2 border-gray-50 dark:border-gray-700/10" />
+
+		<div class=" text-xs font-medium mb-1">{$i18n.t('Auto Categorization Method')}</div>
+
+		<div class="w-full">
+			<select 
+				class="w-full bg-transparent text-sm outline-hidden" 
+				bind:value={categoryMethod}
+				on:change={() => dispatch('categoryMethodChange', categoryMethod)}
+			>
+				<option value="llm" class="bg-gray-50 dark:bg-gray-700">
+					{$i18n.t('AI Model (LLM)')}
+				</option>
+				<option value="code" class="bg-gray-50 dark:bg-gray-700">
+					{$i18n.t('Rule-based (Fast)')}
+				</option>
+				<option value="hybrid" class="bg-gray-50 dark:bg-gray-700">
+					{$i18n.t('Hybrid (Try rule-based first, then LLM)')}
+				</option>
+			</select>
+		</div>
+
+		<div class="mt-1 text-xs text-gray-500 dark:text-gray-400">
+			{#if categoryMethod === 'llm'}
+				{$i18n.t('Uses the selected AI model to intelligently categorize your notes.')}
+			{:else if categoryMethod === 'code'}
+				{$i18n.t('Uses keyword matching for fast categorization without AI.')}
+			{:else if categoryMethod === 'hybrid'}
+				{$i18n.t('Tries rule-based first, falls back to AI if no match found.')}
+			{/if}
 		</div>
 	</div>
 </div>

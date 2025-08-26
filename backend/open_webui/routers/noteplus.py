@@ -420,7 +420,37 @@ async def generate_noteplus_title(
 
 
 ############################
-# GenerateNotePlusCategory
+# AutoCategorizeNotePlus (Code-based)
+############################
+
+
+@router.post("/category/auto")
+async def auto_categorize_noteplus(
+    request: Request, form_data: dict, user=Depends(get_verified_user)
+):
+    if user.role != "admin" and not has_permission(
+        user.id, "features.noteplus", request.app.state.config.USER_PERMISSIONS
+    ):
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail=ERROR_MESSAGES.UNAUTHORIZED,
+        )
+
+    title = form_data.get("title", "")
+    content = form_data.get("content", "")
+    
+    # Use the code-based auto-categorization
+    major, middle, minor = auto_categorize(title, content)
+    
+    return {
+        "major": major,
+        "middle": middle,
+        "minor": minor
+    }
+
+
+############################
+# GenerateNotePlusCategory (LLM-based)
 ############################
 
 
@@ -471,18 +501,25 @@ async def generate_noteplus_category(
     content_data = form_data.get("content", "")
     
     # Create prompt for category generation
-    prompt_content = f"""Analyze this note and suggest appropriate categories in a 3-level hierarchy (Major/Middle/Minor).
+    prompt_content = f"""Analyze the language of the content below and categorize it into a 3-level hierarchy using the SAME LANGUAGE as the content.
+
+Guidelines:
+1. First, detect the primary language of the content
+2. Generate ALL category names in that detected language
+3. Category examples:
+   - Korean: 개발/프론트엔드/리액트, 개인/일기/일일
+   - English: Development/Frontend/React, Personal/Journal/Daily
+   - Japanese: 開発/フロントエンド/React, 個人/日記/日々
+
 Return ONLY a JSON object with this exact structure:
 {{
-  "major": "category name",
-  "middle": "category name",
-  "minor": "category name"
+  "major": "category name in content's language",
+  "middle": "category name in content's language",
+  "minor": "category name in content's language"
 }}
 
 Title: {title}
-Content: {content_data}
-
-Categories should be relevant, specific, and help organize the note effectively."""
+Content: {content_data}"""
 
     max_tokens = 100
 
