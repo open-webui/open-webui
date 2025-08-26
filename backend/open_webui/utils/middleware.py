@@ -101,6 +101,7 @@ from open_webui.env import (
     CHAT_RESPONSE_MAX_TOOL_CALL_RETRIES,
     BYPASS_MODEL_ACCESS_CONTROL,
     ENABLE_REALTIME_CHAT_SAVE,
+    ENABLE_QUERIES_CACHE,
 )
 from open_webui.constants import TASKS
 
@@ -390,6 +391,9 @@ async def chat_web_search_handler(
             queries = queries.get("queries", [])
         except Exception as e:
             queries = [response]
+
+        if ENABLE_QUERIES_CACHE:
+            request.state.cached_queries = queries
 
     except Exception as e:
         log.exception(e)
