@@ -335,40 +335,54 @@ class WikiSearchGrounder:
         try:
             import os
             import glob
+
             Embeddings = _get_txtai_embeddings()
 
             # Try loading from local filesystem cache first
-            cache_base = "/app/backend/data/cache/txtai/hub/models--neuml--txtai-wikipedia"
+            cache_base = (
+                "/app/backend/data/cache/txtai/hub/models--neuml--txtai-wikipedia"
+            )
             snapshots_dir = os.path.join(cache_base, "snapshots")
-            
+
             if os.path.exists(snapshots_dir):
                 # Find the latest snapshot directory
                 snapshot_dirs = glob.glob(os.path.join(snapshots_dir, "*"))
                 if snapshot_dirs:
                     # Use the first available snapshot (there should typically be only one)
                     latest_snapshot = sorted(snapshot_dirs)[-1]
-                    
+
                     # Check if required files exist
                     embeddings_file = os.path.join(latest_snapshot, "embeddings")
-                    documents_file = os.path.join(latest_snapshot, "documents") 
+                    documents_file = os.path.join(latest_snapshot, "documents")
                     config_file = os.path.join(latest_snapshot, "config.json")
-                    
-                    if all(os.path.exists(f) for f in [embeddings_file, documents_file, config_file]):
-                        log.info(f"Loading txtai-wikipedia model from local cache: {latest_snapshot}")
+
+                    if all(
+                        os.path.exists(f)
+                        for f in [embeddings_file, documents_file, config_file]
+                    ):
+                        log.info(
+                            f"Loading txtai-wikipedia model from local cache: {latest_snapshot}"
+                        )
                         self.embeddings = Embeddings()
                         self.embeddings.load(latest_snapshot)
                         self.model_loaded = True
-                        log.info("txtai-wikipedia model loaded successfully from local cache")
+                        log.info(
+                            "txtai-wikipedia model loaded successfully from local cache"
+                        )
                         return True
                     else:
-                        log.warning(f"Required files missing in cache snapshot: {latest_snapshot}")
+                        log.warning(
+                            f"Required files missing in cache snapshot: {latest_snapshot}"
+                        )
                 else:
                     log.debug(f"No snapshots found in: {snapshots_dir}")
             else:
                 log.debug(f"Cache directory not found: {snapshots_dir}")
 
             # Fallback to HuggingFace Hub if local cache is not available
-            log.info("Local cache not found, loading txtai-wikipedia model from HuggingFace Hub...")
+            log.info(
+                "Local cache not found, loading txtai-wikipedia model from HuggingFace Hub..."
+            )
             self.embeddings = Embeddings()
             self.embeddings.load(
                 provider="huggingface-hub", container="neuml/txtai-wikipedia"
