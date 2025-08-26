@@ -145,7 +145,7 @@
 							sliceHeight
 						);
 
-						const imgData = pageCanvas.toDataURL('image/jpeg', 0.8);
+						const imgData = pageCanvas.toDataURL('image/jpeg', 0.7);
 
 						// Calculate image height in PDF units keeping aspect ratio
 						const imgHeightMM = (sliceHeight * pageWidthMM) / canvas.width;
