@@ -12,7 +12,6 @@ from open_webui.models.files import FileMetadataResponse
 
 from pydantic import BaseModel, ConfigDict
 from sqlalchemy import BigInteger, Column, String, Text, JSON, func
-from sqlalchemy.ext.mutable import MutableList
 
 
 log = logging.getLogger(__name__)
@@ -36,7 +35,7 @@ class Group(Base):
     meta = Column(JSON, nullable=True)
 
     permissions = Column(JSON, nullable=True)
-    user_ids = Column(MutableList.as_mutable(JSON), nullable=True)
+    user_ids = Column(JSON, nullable=True)
 
     created_at = Column(BigInteger)
     updated_at = Column(BigInteger)
