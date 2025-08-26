@@ -5,6 +5,7 @@ import inspect
 import aiohttp
 import asyncio
 import yaml
+import json
 
 from pydantic import BaseModel
 from pydantic.fields import FieldInfo
@@ -38,6 +39,7 @@ from open_webui.models.users import UserModel
 from open_webui.utils.plugin import load_tool_module_by_id
 from open_webui.env import (
     SRC_LOG_LEVELS,
+    AIOHTTP_CLIENT_TIMEOUT,
     AIOHTTP_CLIENT_TIMEOUT_TOOL_SERVER_DATA,
     AIOHTTP_CLIENT_SESSION_TOOL_SERVER_SSL,
 )
@@ -55,19 +57,38 @@ def get_async_tool_function_and_apply_extra_params(
     extra_params = {k: v for k, v in extra_params.items() if k in sig.parameters}
     partial_func = partial(function, **extra_params)
 
+    # Remove the 'frozen' keyword arguments from the signature
+    # python-genai uses the signature to infer the tool properties for native function calling
+    parameters = []
+    for name, parameter in sig.parameters.items():
+        # Exclude keyword arguments that are frozen
+        if name in extra_params:
+            continue
+        # Keep remaining parameters
+        parameters.append(parameter)
+
+    new_sig = inspect.Signature(
+        parameters=parameters, return_annotation=sig.return_annotation
+    )
+
     if inspect.iscoroutinefunction(function):
-        update_wrapper(partial_func, function)
-        return partial_func
+        # wrap the functools.partial as python-genai has trouble with it
+        # https://github.com/googleapis/python-genai/issues/907
+        async def new_function(*args, **kwargs):
+            return await partial_func(*args, **kwargs)
+
     else:
-        # Make it a coroutine function
+        # Make it a coroutine function when it is not already
         async def new_function(*args, **kwargs):
             return partial_func(*args, **kwargs)
 
-        update_wrapper(new_function, function)
-        return new_function
+    update_wrapper(new_function, function)
+    new_function.__signature__ = new_sig
+
+    return new_function
 
 
-def get_tools(
+async def get_tools(
     request: Request, tool_ids: list[str], user: UserModel, extra_params: dict
 ) -> dict[str, dict]:
     tools_dict = {}
@@ -76,18 +97,24 @@ def get_tools(
         tool = Tools.get_tool_by_id(tool_id)
         if tool is None:
             if tool_id.startswith("server:"):
-                server_idx = int(tool_id.split(":")[1])
-                tool_server_connection = (
-                    request.app.state.config.TOOL_SERVER_CONNECTIONS[server_idx]
-                )
+                server_id = tool_id.split(":")[1]
+
                 tool_server_data = None
-                for server in request.app.state.TOOL_SERVERS:
-                    if server["idx"] == server_idx:
+                for server in await get_tool_servers(request):
+                    if server["id"] == server_id:
                         tool_server_data = server
                         break
-                assert tool_server_data is not None
-                specs = tool_server_data.get("specs", [])
 
+                if tool_server_data is None:
+                    log.warning(f"Tool server data not found for {server_id}")
+                    continue
+
+                tool_server_idx = tool_server_data.get("idx", 0)
+                tool_server_connection = (
+                    request.app.state.config.TOOL_SERVER_CONNECTIONS[tool_server_idx]
+                )
+
+                specs = tool_server_data.get("specs", [])
                 for spec in specs:
                     function_name = spec["name"]
 
@@ -126,14 +153,15 @@ def get_tools(
                         "spec": spec,
                     }
 
-                    # TODO: if collision, prepend toolkit name
-                    if function_name in tools_dict:
+                    # Handle function name collisions
+                    while function_name in tools_dict:
                         log.warning(
                             f"Tool {function_name} already exists in another tools!"
                         )
-                        log.warning(f"Discarding {tool_id}.{function_name}")
-                    else:
-                        tools_dict[function_name] = tool_dict
+                        # Prepend server ID to function name
+                        function_name = f"{server_id}_{function_name}"
+
+                    tools_dict[function_name] = tool_dict
             else:
                 continue
         else:
@@ -193,14 +221,15 @@ def get_tools(
                     },
                 }
 
-                # TODO: if collision, prepend toolkit name
-                if function_name in tools_dict:
+                # Handle function name collisions
+                while function_name in tools_dict:
                     log.warning(
                         f"Tool {function_name} already exists in another tools!"
                     )
-                    log.warning(f"Discarding {tool_id}.{function_name}")
-                else:
-                    tools_dict[function_name] = tool_dict
+                    # Prepend tool ID to function name
+                    function_name = f"{tool_id}_{function_name}"
+
+                tools_dict[function_name] = tool_dict
 
     return tools_dict
 
@@ -283,15 +312,15 @@ def convert_function_to_pydantic_model(func: Callable) -> type[BaseModel]:
 
     field_defs = {}
     for name, param in parameters.items():
-
         type_hint = type_hints.get(name, Any)
         default_value = param.default if param.default is not param.empty else ...
 
         param_description = function_param_descriptions.get(name, None)
 
         if param_description:
-            field_defs[name] = type_hint, Field(
-                default_value, description=param_description
+            field_defs[name] = (
+                type_hint,
+                Field(default_value, description=param_description),
             )
         else:
             field_defs[name] = type_hint, default_value
@@ -377,7 +406,6 @@ def convert_openapi_to_tool_payload(openapi_spec):
         for method, operation in methods.items():
             if operation.get("operationId"):
                 tool = {
-                    "type": "function",
                     "name": operation.get("operationId"),
                     "description": operation.get(
                         "description",
@@ -399,10 +427,16 @@ def convert_openapi_to_tool_payload(openapi_spec):
                         description += (
                             f". Possible values: {', '.join(param_schema.get('enum'))}"
                         )
-                    tool["parameters"]["properties"][param_name] = {
+                    param_property = {
                         "type": param_schema.get("type"),
                         "description": description,
                     }
+
+                    # Include items property for array types (required by OpenAI)
+                    if param_schema.get("type") == "array" and "items" in param_schema:
+                        param_property["items"] = param_schema["items"]
+
+                    tool["parameters"]["properties"][param_name] = param_property
                     if param.get("required"):
                         tool["parameters"]["required"].append(param_name)
 
@@ -435,6 +469,34 @@ def convert_openapi_to_tool_payload(openapi_spec):
                 tool_payload.append(tool)
 
     return tool_payload
+
+
+async def set_tool_servers(request: Request):
+    request.app.state.TOOL_SERVERS = await get_tool_servers_data(
+        request.app.state.config.TOOL_SERVER_CONNECTIONS
+    )
+
+    if request.app.state.redis is not None:
+        await request.app.state.redis.set(
+            "tool_servers", json.dumps(request.app.state.TOOL_SERVERS)
+        )
+
+    return request.app.state.TOOL_SERVERS
+
+
+async def get_tool_servers(request: Request):
+    tool_servers = []
+    if request.app.state.redis is not None:
+        try:
+            tool_servers = json.loads(await request.app.state.redis.get("tool_servers"))
+            request.app.state.TOOL_SERVERS = tool_servers
+        except Exception as e:
+            log.error(f"Error fetching tool_servers from Redis: {e}")
+
+    if not tool_servers:
+        tool_servers = await set_tool_servers(request)
+
+    return tool_servers
 
 
 async def get_tool_server_data(token: str, url: str) -> Dict[str, Any]:
@@ -489,15 +551,7 @@ async def get_tool_servers_data(
         if server.get("config", {}).get("enable"):
             # Path (to OpenAPI spec URL) can be either a full URL or a path to append to the base URL
             openapi_path = server.get("path", "openapi.json")
-            if "://" in openapi_path:
-                # If it contains "://", it's a full URL
-                full_url = openapi_path
-            else:
-                if not openapi_path.startswith("/"):
-                    # Ensure the path starts with a slash
-                    openapi_path = f"/{openapi_path}"
-
-                full_url = f"{server.get('url')}{openapi_path}"
+            full_url = get_tool_server_url(server.get("url"), openapi_path)
 
             info = server.get("info", {})
 
@@ -508,11 +562,16 @@ async def get_tool_servers_data(
                 token = server.get("key", "")
             elif auth_type == "session":
                 token = session_token
-            server_entries.append((idx, server, full_url, info, token))
+
+            id = info.get("id")
+            if not id:
+                id = str(idx)
+
+            server_entries.append((id, idx, server, full_url, info, token))
 
     # Create async tasks to fetch data
     tasks = [
-        get_tool_server_data(token, url) for (_, _, url, _, token) in server_entries
+        get_tool_server_data(token, url) for (_, _, _, url, _, token) in server_entries
     ]
 
     # Execute tasks concurrently
@@ -520,7 +579,7 @@ async def get_tool_servers_data(
 
     # Build final results with index and server metadata
     results = []
-    for (idx, server, url, info, _), response in zip(server_entries, responses):
+    for (id, idx, server, url, info, _), response in zip(server_entries, responses):
         if isinstance(response, Exception):
             log.error(f"Failed to connect to {url} OpenAPI tool server")
             continue
@@ -528,6 +587,8 @@ async def get_tool_servers_data(
         openapi_data = response.get("openapi", {})
 
         if info and isinstance(openapi_data, dict):
+            openapi_data["info"] = openapi_data.get("info", {})
+
             if "name" in info:
                 openapi_data["info"]["title"] = info.get("name", "Tool Server")
 
@@ -536,6 +597,7 @@ async def get_tool_servers_data(
 
         results.append(
             {
+                "id": str(id),
                 "idx": idx,
                 "url": server.get("url"),
                 "openapi": openapi_data,
@@ -614,7 +676,9 @@ async def execute_tool_server(
         if token:
             headers["Authorization"] = f"Bearer {token}"
 
-        async with aiohttp.ClientSession(trust_env=True) as session:
+        async with aiohttp.ClientSession(
+            trust_env=True, timeout=aiohttp.ClientTimeout(total=AIOHTTP_CLIENT_TIMEOUT)
+        ) as session:
             request_method = getattr(session, http_method.lower())
 
             if http_method in ["post", "put", "patch"]:
@@ -627,7 +691,13 @@ async def execute_tool_server(
                     if response.status >= 400:
                         text = await response.text()
                         raise Exception(f"HTTP error {response.status}: {text}")
-                    return await response.json()
+
+                    try:
+                        response_data = await response.json()
+                    except Exception:
+                        response_data = await response.text()
+
+                    return response_data
             else:
                 async with request_method(
                     final_url,
@@ -637,9 +707,28 @@ async def execute_tool_server(
                     if response.status >= 400:
                         text = await response.text()
                         raise Exception(f"HTTP error {response.status}: {text}")
-                    return await response.json()
+
+                    try:
+                        response_data = await response.json()
+                    except Exception:
+                        response_data = await response.text()
+
+                    return response_data
 
     except Exception as err:
         error = str(err)
         log.exception(f"API Request Error: {error}")
         return {"error": error}
+
+
+def get_tool_server_url(url: Optional[str], path: str) -> str:
+    """
+    Build the full URL for a tool server, given a base url and a path.
+    """
+    if "://" in path:
+        # If it contains "://", it's a full URL
+        return path
+    if not path.startswith("/"):
+        # Ensure the path starts with a slash
+        path = f"/{path}"
+    return f"{url}{path}"

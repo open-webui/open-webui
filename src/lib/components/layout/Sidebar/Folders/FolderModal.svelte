@@ -16,6 +16,8 @@
 	export let show = false;
 	export let onSubmit: Function = (e) => {};
 
+	export let edit = false;
+
 	export let folder = null;
 
 	let name = '';
@@ -28,6 +30,13 @@
 
 	const submitHandler = async () => {
 		loading = true;
+
+		if ((data?.files ?? []).some((file) => file.status === 'uploading')) {
+			toast.error($i18n.t('Please wait until all files are uploaded.'));
+			loading = false;
+			return;
+		}
+
 		await onSubmit({
 			name,
 			data
@@ -47,13 +56,25 @@
 	$: if (folder) {
 		init();
 	}
+
+	$: if (!show && !edit) {
+		name = '';
+		data = {
+			system_prompt: '',
+			files: []
+		};
+	}
 </script>
 
 <Modal size="md" bind:show>
 	<div>
 		<div class=" flex justify-between dark:text-gray-300 px-5 pt-4 pb-1">
 			<div class=" text-lg font-medium self-center">
-				{$i18n.t('Edit Folder')}
+				{#if edit}
+					{$i18n.t('Edit Folder')}
+				{:else}
+					{$i18n.t('Create Folder')}
+				{/if}
 			</div>
 			<button
 				class="self-center"
@@ -95,7 +116,9 @@
 							<div>
 								<Textarea
 									className=" text-sm w-full bg-transparent outline-hidden "
-									placeholder={`Write your model system prompt content here\ne.g.) You are Mario from Super Mario Bros, acting as an assistant.`}
+									placeholder={$i18n.t(
+										'Write your model system prompt content here\ne.g.) You are Mario from Super Mario Bros, acting as an assistant.'
+									)}
 									maxSize={200}
 									bind:value={data.system_prompt}
 								/>

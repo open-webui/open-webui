@@ -50,6 +50,7 @@ export const channels = writable([]);
 export const chats = writable(null);
 export const pinnedChats = writable([]);
 export const tags = writable([]);
+export const folders = writable([]);
 
 export const selectedFolder = writable(null);
 
@@ -69,6 +70,7 @@ export const settings: Writable<Settings> = writable({});
 export const showSidebar = writable(false);
 export const showSearch = writable(false);
 export const showSettings = writable(false);
+export const showShortcuts = writable(false);
 export const showArchivedChats = writable(false);
 export const showChangelog = writable(false);
 

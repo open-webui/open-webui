@@ -1,3 +1,4 @@
+import os
 import json
 import logging
 from contextlib import contextmanager
@@ -13,9 +14,10 @@ from open_webui.env import (
     DATABASE_POOL_RECYCLE,
     DATABASE_POOL_SIZE,
     DATABASE_POOL_TIMEOUT,
+    DATABASE_ENABLE_SQLITE_WAL,
 )
 from peewee_migrate import Router
-from sqlalchemy import Dialect, create_engine, MetaData, types
+from sqlalchemy import Dialect, create_engine, MetaData, event, types
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import scoped_session, sessionmaker
 from sqlalchemy.pool import QueuePool, NullPool
@@ -79,10 +81,50 @@ handle_peewee_migration(DATABASE_URL)
 
 
 SQLALCHEMY_DATABASE_URL = DATABASE_URL
-if "sqlite" in SQLALCHEMY_DATABASE_URL:
+
+# Handle SQLCipher URLs
+if SQLALCHEMY_DATABASE_URL.startswith("sqlite+sqlcipher://"):
+    database_password = os.environ.get("DATABASE_PASSWORD")
+    if not database_password or database_password.strip() == "":
+        raise ValueError(
+            "DATABASE_PASSWORD is required when using sqlite+sqlcipher:// URLs"
+        )
+
+    # Extract database path from SQLCipher URL
+    db_path = SQLALCHEMY_DATABASE_URL.replace("sqlite+sqlcipher://", "")
+    if db_path.startswith("/"):
+        db_path = db_path[1:]  # Remove leading slash for relative paths
+
+    # Create a custom creator function that uses sqlcipher3
+    def create_sqlcipher_connection():
+        import sqlcipher3
+
+        conn = sqlcipher3.connect(db_path, check_same_thread=False)
+        conn.execute(f"PRAGMA key = '{database_password}'")
+        return conn
+
+    engine = create_engine(
+        "sqlite://",  # Dummy URL since we're using creator
+        creator=create_sqlcipher_connection,
+        echo=False,
+    )
+
+    log.info("Connected to encrypted SQLite database using SQLCipher")
+
+elif "sqlite" in SQLALCHEMY_DATABASE_URL:
     engine = create_engine(
         SQLALCHEMY_DATABASE_URL, connect_args={"check_same_thread": False}
     )
+
+    def on_connect(dbapi_connection, connection_record):
+        cursor = dbapi_connection.cursor()
+        if DATABASE_ENABLE_SQLITE_WAL:
+            cursor.execute("PRAGMA journal_mode=WAL")
+        else:
+            cursor.execute("PRAGMA journal_mode=DELETE")
+        cursor.close()
+
+    event.listen(engine, "connect", on_connect)
 else:
     if isinstance(DATABASE_POOL_SIZE, int):
         if DATABASE_POOL_SIZE > 0:

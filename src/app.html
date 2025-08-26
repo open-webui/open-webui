@@ -56,7 +56,6 @@
 					document.documentElement.classList.add('light');
 					metaThemeColorTag.setAttribute('content', '#ffffff');
 				} else if (localStorage.theme === 'her') {
-					document.documentElement.classList.add('dark');
 					document.documentElement.classList.add('her');
 					metaThemeColorTag.setAttribute('content', '#983724');
 				} else {
@@ -87,6 +86,10 @@
 
 				document.addEventListener('DOMContentLoaded', function () {
 					const splash = document.getElementById('splash-screen');
+					if (document.documentElement.classList.contains('her')) {
+						return;
+					}
+
 					if (splash) splash.prepend(logo);
 				});
 			})();
@@ -168,6 +171,7 @@
 <style type="text/css" nonce="">
 	html {
 		overflow-y: hidden !important;
+		overscroll-behavior-y: none;
 	}
 
 	#splash-screen {

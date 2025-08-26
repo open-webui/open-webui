@@ -59,8 +59,8 @@
 	};
 
 	const validateCommandString = (inputString) => {
-		// Regular expression to match only alphanumeric characters and hyphen
-		const regex = /^[a-zA-Z0-9-]+$/;
+		// Regular expression to match only alphanumeric characters, hyphen, and underscore
+		const regex = /^[a-zA-Z0-9-_]+$/;
 
 		// Test the input string against the regular expression
 		return regex.test(inputString);
@@ -171,11 +171,10 @@
 					<span class=" text-gray-600 dark:text-gray-300 font-medium">{'}}'}</span>.
 				</div>
 
-				<div class="text-xs text-gray-400 dark:text-gray-500">
-					{$i18n.t('Utilize')}<span class=" text-gray-600 dark:text-gray-300 font-medium">
-						{` {{CLIPBOARD}}`}</span
-					>
-					{$i18n.t('variable to have them replaced with clipboard content.')}
+				<div class="text-xs text-gray-400 dark:text-gray-500 underline">
+					<a href="https://docs.openwebui.com/features/workspace/prompts" target="_blank">
+						{$i18n.t('To learn more about powerful prompt variables, click here')}
+					</a>
 				</div>
 			</div>
 		</div>

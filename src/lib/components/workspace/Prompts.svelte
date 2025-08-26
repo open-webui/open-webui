@@ -24,6 +24,9 @@
 	import Tooltip from '../common/Tooltip.svelte';
 	import { capitalizeFirstLetter, slugify } from '$lib/utils';
 	import XMark from '../icons/XMark.svelte';
+	import GarbageBin from '../icons/GarbageBin.svelte';
+
+	let shiftKey = false;
 
 	const i18n = getContext('i18n');
 	let promptsImportInputElement: HTMLInputElement;
@@ -89,7 +92,16 @@
 
 	const deleteHandler = async (prompt) => {
 		const command = prompt.command;
-		await deletePromptByCommand(localStorage.token, command);
+
+		const res = await deletePromptByCommand(localStorage.token, command).catch((err) => {
+			toast.error(err);
+			return null;
+		});
+
+		if (res) {
+			toast.success($i18n.t(`Deleted {{name}}`, { name: command }));
+		}
+
 		await init();
 	};
 
@@ -101,6 +113,32 @@
 	onMount(async () => {
 		await init();
 		loaded = true;
+
+		const onKeyDown = (event) => {
+			if (event.key === 'Shift') {
+				shiftKey = true;
+			}
+		};
+
+		const onKeyUp = (event) => {
+			if (event.key === 'Shift') {
+				shiftKey = false;
+			}
+		};
+
+		const onBlur = () => {
+			shiftKey = false;
+		};
+
+		window.addEventListener('keydown', onKeyDown);
+		window.addEventListener('keyup', onKeyUp);
+		window.addEventListener('blur', onBlur);
+
+		return () => {
+			window.removeEventListener('keydown', onKeyDown);
+			window.removeEventListener('keyup', onKeyUp);
+			window.removeEventListener('blur', onBlur);
+		};
 	});
 </script>
 
@@ -173,7 +211,7 @@
 	<div class="mb-5 gap-2 grid lg:grid-cols-2 xl:grid-cols-3">
 		{#each filteredItems as prompt}
 			<div
-				class=" flex space-x-4 cursor-pointer w-full px-3 py-2 dark:hover:bg-white/5 hover:bg-black/5 rounded-xl transition"
+				class=" flex space-x-4 cursor-pointer w-full px-4 py-3 border border-gray-50 dark:border-gray-850 dark:hover:bg-white/5 hover:bg-black/5 rounded-2xl transition"
 			>
 				<div class=" flex flex-1 space-x-4 cursor-pointer w-full">
 					<a href={`/workspace/prompts/edit?command=${encodeURIComponent(prompt.command)}`}>
@@ -202,50 +240,64 @@
 					</a>
 				</div>
 				<div class="flex flex-row gap-0.5 self-center">
-					<a
-						class="self-center w-fit text-sm px-2 py-2 dark:text-gray-300 dark:hover:text-white hover:bg-black/5 dark:hover:bg-white/5 rounded-xl"
-						type="button"
-						href={`/workspace/prompts/edit?command=${encodeURIComponent(prompt.command)}`}
-					>
-						<svg
-							xmlns="http://www.w3.org/2000/svg"
-							fill="none"
-							viewBox="0 0 24 24"
-							stroke-width="1.5"
-							stroke="currentColor"
-							class="w-4 h-4"
-						>
-							<path
-								stroke-linecap="round"
-								stroke-linejoin="round"
-								d="M16.862 4.487l1.687-1.688a1.875 1.875 0 112.652 2.652L6.832 19.82a4.5 4.5 0 01-1.897 1.13l-2.685.8.8-2.685a4.5 4.5 0 011.13-1.897L16.863 4.487zm0 0L19.5 7.125"
-							/>
-						</svg>
-					</a>
-
-					<PromptMenu
-						shareHandler={() => {
-							shareHandler(prompt);
-						}}
-						cloneHandler={() => {
-							cloneHandler(prompt);
-						}}
-						exportHandler={() => {
-							exportHandler(prompt);
-						}}
-						deleteHandler={async () => {
-							deletePrompt = prompt;
-							showDeleteConfirm = true;
-						}}
-						onClose={() => {}}
-					>
-						<button
-							class="self-center w-fit text-sm p-1.5 dark:text-gray-300 dark:hover:text-white hover:bg-black/5 dark:hover:bg-white/5 rounded-xl"
+					{#if shiftKey}
+						<Tooltip content={$i18n.t('Delete')}>
+							<button
+								class="self-center w-fit text-sm px-2 py-2 dark:text-gray-300 dark:hover:text-white hover:bg-black/5 dark:hover:bg-white/5 rounded-xl"
+								type="button"
+								on:click={() => {
+									deleteHandler(prompt);
+								}}
+							>
+								<GarbageBin />
+							</button>
+						</Tooltip>
+					{:else}
+						<a
+							class="self-center w-fit text-sm px-2 py-2 dark:text-gray-300 dark:hover:text-white hover:bg-black/5 dark:hover:bg-white/5 rounded-xl"
 							type="button"
+							href={`/workspace/prompts/edit?command=${encodeURIComponent(prompt.command)}`}
 						>
-							<EllipsisHorizontal className="size-5" />
-						</button>
-					</PromptMenu>
+							<svg
+								xmlns="http://www.w3.org/2000/svg"
+								fill="none"
+								viewBox="0 0 24 24"
+								stroke-width="1.5"
+								stroke="currentColor"
+								class="w-4 h-4"
+							>
+								<path
+									stroke-linecap="round"
+									stroke-linejoin="round"
+									d="M16.862 4.487l1.687-1.688a1.875 1.875 0 112.652 2.652L6.832 19.82a4.5 4.5 0 01-1.897 1.13l-2.685.8.8-2.685a4.5 4.5 0 011.13-1.897L16.863 4.487zm0 0L19.5 7.125"
+								/>
+							</svg>
+						</a>
+
+						<PromptMenu
+							shareHandler={() => {
+								shareHandler(prompt);
+							}}
+							cloneHandler={() => {
+								cloneHandler(prompt);
+							}}
+							exportHandler={() => {
+								exportHandler(prompt);
+							}}
+							deleteHandler={async () => {
+								deletePrompt = prompt;
+								showDeleteConfirm = true;
+							}}
+							onClose={() => {}}
+						>
+							<button
+								class="self-center w-fit text-sm p-1.5 dark:text-gray-300 dark:hover:text-white hover:bg-black/5 dark:hover:bg-white/5 rounded-xl"
+								type="button"
+							>
+								<EllipsisHorizontal className="size-5" />
+							</button>
+						</PromptMenu>
+					{/if}
 				</div>
 			</div>
 		{/each}
@@ -358,7 +410,7 @@
 
 			<a
 				class=" flex cursor-pointer items-center justify-between hover:bg-gray-50 dark:hover:bg-gray-850 w-full mb-2 px-3.5 py-1.5 rounded-xl transition"
-				href="https://openwebui.com/#open-webui-community"
+				href="https://openwebui.com/prompts"
 				target="_blank"
 			>
 				<div class=" self-center">

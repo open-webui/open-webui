@@ -13,7 +13,7 @@
 	import GarbageBin from '$lib/components/icons/GarbageBin.svelte';
 	import Pencil from '$lib/components/icons/Pencil.svelte';
 	import Tooltip from '$lib/components/common/Tooltip.svelte';
-	import Download from '$lib/components/icons/Download.svelte';
+	import Download from '$lib/components/icons/ArrowDownTray.svelte';
 
 	let show = false;
 </script>

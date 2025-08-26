@@ -22,9 +22,11 @@ from open_webui.env import (
     ENABLE_WEBSOCKET_SUPPORT,
     WEBSOCKET_MANAGER,
     WEBSOCKET_REDIS_URL,
+    WEBSOCKET_REDIS_CLUSTER,
     WEBSOCKET_REDIS_LOCK_TIMEOUT,
     WEBSOCKET_SENTINEL_PORT,
     WEBSOCKET_SENTINEL_HOSTS,
+    REDIS_KEY_PREFIX,
 )
 from open_webui.utils.auth import decode_token
 from open_webui.socket.utils import RedisDict, RedisLock, YdocManager
@@ -85,6 +87,7 @@ if WEBSOCKET_MANAGER == "redis":
         redis_sentinels=get_sentinels_from_env(
             WEBSOCKET_SENTINEL_HOSTS, WEBSOCKET_SENTINEL_PORT
         ),
+        redis_cluster=WEBSOCKET_REDIS_CLUSTER,
         async_mode=True,
     )
 
@@ -92,19 +95,22 @@ if WEBSOCKET_MANAGER == "redis":
         WEBSOCKET_SENTINEL_HOSTS, WEBSOCKET_SENTINEL_PORT
     )
     SESSION_POOL = RedisDict(
-        "open-webui:session_pool",
+        f"{REDIS_KEY_PREFIX}:session_pool",
         redis_url=WEBSOCKET_REDIS_URL,
         redis_sentinels=redis_sentinels,
+        redis_cluster=WEBSOCKET_REDIS_CLUSTER,
     )
     USER_POOL = RedisDict(
-        "open-webui:user_pool",
+        f"{REDIS_KEY_PREFIX}:user_pool",
         redis_url=WEBSOCKET_REDIS_URL,
         redis_sentinels=redis_sentinels,
+        redis_cluster=WEBSOCKET_REDIS_CLUSTER,
     )
     USAGE_POOL = RedisDict(
-        "open-webui:usage_pool",
+        f"{REDIS_KEY_PREFIX}:usage_pool",
         redis_url=WEBSOCKET_REDIS_URL,
         redis_sentinels=redis_sentinels,
+        redis_cluster=WEBSOCKET_REDIS_CLUSTER,
     )
 
     clean_up_lock = RedisLock(
@@ -112,6 +118,7 @@ if WEBSOCKET_MANAGER == "redis":
         lock_name="usage_cleanup_lock",
         timeout_secs=WEBSOCKET_REDIS_LOCK_TIMEOUT,
         redis_sentinels=redis_sentinels,
+        redis_cluster=WEBSOCKET_REDIS_CLUSTER,
     )
     aquire_func = clean_up_lock.aquire_lock
     renew_func = clean_up_lock.renew_lock
@@ -126,7 +133,7 @@ else:
 
 YDOC_MANAGER = YdocManager(
     redis=REDIS,
-    redis_key_prefix="open-webui:ydoc:documents",
+    redis_key_prefix=f"{REDIS_KEY_PREFIX}:ydoc:documents",
 )
 
 
@@ -259,7 +266,9 @@ async def connect(sid, environ, auth):
             user = Users.get_user_by_id(data["id"])
 
         if user:
-            SESSION_POOL[sid] = user.model_dump()
+            SESSION_POOL[sid] = user.model_dump(
+                exclude=["date_of_birth", "bio", "gender"]
+            )
             if user.id in USER_POOL:
                 USER_POOL[user.id] = USER_POOL[user.id] + [sid]
             else:
@@ -281,7 +290,7 @@ async def user_join(sid, data):
     if not user:
         return
 
-    SESSION_POOL[sid] = user.model_dump()
+    SESSION_POOL[sid] = user.model_dump(exclude=["date_of_birth", "bio", "gender"])
     if user.id in USER_POOL:
         USER_POOL[user.id] = USER_POOL[user.id] + [sid]
     else:
@@ -314,6 +323,37 @@ async def join_channel(sid, data):
     log.debug(f"{channels=}")
     for channel in channels:
         await sio.enter_room(sid, f"channel:{channel.id}")
+
+
+@sio.on("join-note")
+async def join_note(sid, data):
+    auth = data["auth"] if "auth" in data else None
+    if not auth or "token" not in auth:
+        return
+
+    token_data = decode_token(auth["token"])
+    if token_data is None or "id" not in token_data:
+        return
+
+    user = Users.get_user_by_id(token_data["id"])
+    if not user:
+        return
+
+    note = Notes.get_note_by_id(data["note_id"])
+    if not note:
+        log.error(f"Note {data['note_id']} not found for user {user.id}")
+        return
+
+    if (
+        user.role != "admin"
+        and user.id != note.user_id
+        and not has_access(user.id, type="read", access_control=note.access_control)
+    ):
+        log.error(f"User {user.id} does not have access to note {data['note_id']}")
+        return
+
+    log.debug(f"Joining note {note.id} for user {user.id}")
+    await sio.enter_room(sid, f"note:{note.id}")
 
 
 @sio.on("channel-events")
@@ -550,7 +590,7 @@ async def yjs_document_leave(sid, data):
         )
 
         if (
-            YDOC_MANAGER.document_exists(document_id)
+            await YDOC_MANAGER.document_exists(document_id)
             and len(await YDOC_MANAGER.get_users(document_id)) == 0
         ):
             log.info(f"Cleaning up document {document_id} as no users are left")
