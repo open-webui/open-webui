@@ -152,8 +152,11 @@ ENV TXTAI_WIKIPEDIA_MODEL="neuml/txtai-wikipedia" \
 ENV TIKTOKEN_ENCODING_NAME="cl100k_base" \
     TIKTOKEN_CACHE_DIR="/app/backend/data/cache/tiktoken"
 
-## Hugging Face download cache ##
-ENV HF_HOME="/app/backend/data/cache/embedding/models"
+## Hugging Face download cache - point to txtai cache for Wikipedia grounding ##
+## Note: Multiple variables set for compatibility across HF library versions
+ENV HF_HOME="/app/backend/data/cache/txtai" \
+    HF_HUB_CACHE="/app/backend/data/cache/txtai" \
+    HUGGINGFACE_HUB_CACHE="/app/backend/data/cache/txtai"
 
 ## Torch Extensions ##
 # ENV TORCH_EXTENSIONS_DIR="/.cache/torch_extensions"
