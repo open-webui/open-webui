@@ -1101,10 +1101,10 @@ def process_file_async(
             )
 
             if is_pdf2text:
-                task_id, queue_id = loader.load(file.filename, file.meta.get(
+                task_id = loader.load(file.filename, file.meta.get(
                     "content_type"), file_path, is_async=True)
 
-                text_content = loader.loader.get_text(task_id, queue_id)
+                text_content = loader.loader.get_text(task_id)
 
                 log.info(f"task_id: {task_id}")
                 log.info(f"text_content: {text_content}")
@@ -1156,7 +1156,6 @@ def process_file_async(
                     },
                 )
             ]
-    
 
         if not is_pdf2text:
             text_content = " ".join([doc.page_content for doc in docs])

@@ -15,23 +15,16 @@ from urllib.parse import urlencode, parse_qs, urlparse
 from pydantic import BaseModel
 from sqlalchemy import text
 
-from typing import Optional
-from aiocache import cached
 import aiohttp
-import requests
 
 
 from fastapi import (
     Depends,
     FastAPI,
-    File,
-    Form,
     HTTPException,
     Request,
-    UploadFile,
     status,
     applications,
-    BackgroundTasks,
 )
 
 from fastapi.openapi.docs import get_swagger_ui_html
@@ -343,8 +336,6 @@ from open_webui.utils.security_headers import SecurityHeadersMiddleware
 
 from open_webui.tasks import stop_task, list_tasks  # Import from tasks.py
 
-from open_webui.utils.db_utils import init_db
-from open_webui.retrieval.loaders.pdftotext import consume_and_store
 
 if SAFE_MODE:
     print("SAFE MODE ENABLED")
@@ -396,9 +387,6 @@ async def lifespan(app: FastAPI):
         get_license_data(app, app.state.config.LICENSE_KEY)
 
     asyncio.create_task(periodic_usage_pool_cleanup())
-    init_db()
-    consumer_thread = threading.Thread(target=consume_and_store, daemon=True)
-    consumer_thread.start()
     yield
 
 

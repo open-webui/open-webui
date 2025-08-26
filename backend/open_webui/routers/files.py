@@ -20,7 +20,7 @@ from fastapi import (
 )
 from fastapi.responses import FileResponse, StreamingResponse
 from open_webui.constants import ERROR_MESSAGES
-from open_webui.env import SRC_LOG_LEVELS
+from open_webui.env import SRC_LOG_LEVELS, CELERY_RESULT_BACKEND
 from open_webui.models.files import (
     FileForm,
     FileModel,
@@ -35,6 +35,14 @@ from open_webui.routers.retrieval import (
 from open_webui.storage.provider import Storage
 from open_webui.utils.auth import get_admin_user, get_verified_user
 from pydantic import BaseModel
+import redis
+
+
+# Conectando ao Redis usando a URL
+redis_url = os.getenv('CELERY_RESULT_BACKEND')
+# decode_responses=True retorna string direto
+redis_client = redis.StrictRedis.from_url(redis_url, decode_responses=True)
+
 
 log = logging.getLogger(__name__)
 log.setLevel(SRC_LOG_LEVELS["MODELS"])
@@ -113,32 +121,29 @@ def upload_file(
 # Async Files routes
 ############################
 
-
-tasks_cache = {}  # Dictionary to store task results
-
-# # Cache temporário para exemplo (substituir por um sistema persistente)
-cache_lock = Lock()
-
-
 def process_tasks(request, form_data, user, task_id):
-    """Executa OCR e processamento do PDF de forma assíncrona."""
+    """
+    Executa OCR e processamento do PDF de forma assíncrona,
+    utilizando Redis para armazenamento de status e resultados (apenas texto).
+    """
+    redis_key = f"task:{task_id}"
 
-    global tasks_cache
-    with cache_lock:
-        task = tasks_cache.get(task_id, {})
+    # Armazenando um dicionário como JSON (simples e legível)
+    state = {'status': "Processing Document"}
+    redis_client.set(redis_key, json.dumps(state))
 
-    task['status'] = "Processing PDF..."
+    # try:
+    text = process_file_async(request, form_data, task_id, user)
+    # except Exception as e:
+    #     log.exception(e)
+    #     state['error'] = str(e)
+    #     state['status'] = "Processing Failed"
+    #     redis_client.set(redis_key, json.dumps(state))
+    #     return
 
-    try:
-        text = process_file_async(
-            request, form_data, task_id, user)
-    except Exception as e:
-        log.exception(e)
-        task['error'] = str(e)
-        task['status'] = "Processing Failed"
-        return
-    task['text'] = text
-    task['status'] = "Processing Completed"
+    state['text'] = text
+    state['status'] = "Processing Completed"
+    redis_client.set(redis_key, json.dumps(state))
 
 
 @router.post("/async")
@@ -148,7 +153,6 @@ async def upload_file_async(
     file: UploadFile = File(...),
     user=Depends(get_verified_user),
 ):
-    global tasks_cache
     log.info(f"file.content_type: {file.content_type}")
 
     unsanitized_filename = file.filename
@@ -156,9 +160,12 @@ async def upload_file_async(
 
     # replace filename with uuid
     task_id = str(uuid.uuid4())
-    with cache_lock:
-        tasks_cache[task_id] = {"status": "queued",
-                                "result": None, "error": None}
+
+    # Salva estado inicial no Redis
+    redis_key = f"task:{task_id}"
+    state = {"status": "queued", "result": None, "error": None}
+    redis_client.set(redis_key, json.dumps(state))
+
     name = filename
     filename = f"{id}_{filename}"
     try:
@@ -192,12 +199,13 @@ async def upload_file_async(
         return {"task_id": task_id}
     except Exception as e:
         log.exception(e)
-        with cache_lock:
-            tasks_cache[task_id] = {
-                "status": "Processing Failed",
-                "result": None,
-                "error": str(e),
-            }
+        # Atualiza status da task em caso de erro
+        error_state = {
+            "status": "Processing Failed",
+            "result": None,
+            "error": str(e),
+        }
+        redis_client.set(redis_key, json.dumps(error_state))
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=ERROR_MESSAGES.DEFAULT(e),
@@ -209,28 +217,36 @@ async def upload_file_async(
 ############################
 
 
-# Rota opcional para verificar status da task
 @router.get("/task_status/{task_id}")
 async def get_task_status(task_id: str):
-    global tasks_cache
-    with cache_lock:
-        task = tasks_cache.get(task_id, {})
+    redis_key = f"task:{task_id}"
+    state_json = redis_client.get(redis_key)
+    if state_json:
+        state = json.loads(state_json)
+        return {
+            "task_id": task_id,
+            "status": state.get("status", "not_found"),
+            "result": state.get("result"),
+            "error": state.get("error"),
+            "task": state,
+        }
     return {
         "task_id": task_id,
-        "status": task.get("status", "not_found"),
-        "result": task.get("result"),
-        "error": task.get("error"),
-        "task": task,
+        "status": "not_found",
+        "result": None,
+        "error": "Task ID not found",
+        "task": {},
     }
 
 
 @router.get("/get_tasks")
-def get_task_status():
-    if tasks_cache:
-        # Retorna apenas os task_ids
-        return {"task_ids": list(tasks_cache.keys())}
+def get_tasks():
+    # Busca todas as chaves de tasks
+    keys = redis_client.keys("task:*")
+    task_ids = [k.split("task:")[1] for k in keys]
+    if task_ids:
+        return {"task_ids": task_ids}
     return {"message": "No tasks found"}
-
 
 ############################
 # List Files

@@ -1,13 +1,10 @@
-from open_webui.utils.db_utils import store_status
+
 import logging
 import requests
-import time
-import pika
-import json
 from tenacity import retry, stop_after_attempt, wait_exponential, retry_if_exception_type
+import time
 
-
-from open_webui.env import SRC_LOG_LEVELS, CELERY_BROKER_URL
+from open_webui.env import SRC_LOG_LEVELS
 from open_webui.utils.db_utils import get_status
 
 log = logging.getLogger(__name__)
@@ -26,35 +23,6 @@ def post_with_retry(url, headers=None, files=None, data=None):
     r = requests.post(url=url, headers=headers, files=files, data=data)
     r.raise_for_status()  # Lança um HTTPError se o status não for 2xx
     return r
-
-
-def consume_and_store():
-    params = pika.URLParameters(CELERY_BROKER_URL)
-    while True:
-        try:
-            connection = pika.BlockingConnection(params)
-            channel = connection.channel()
-            channel.queue_declare(queue='pdf2text_status')
-
-            def callback(ch, method, properties, body):
-                try:
-                    msg = json.loads(body)
-                    task_id = msg['task_id']
-                    status = msg['status']
-                    store_status(task_id, status)
-                except Exception as e:
-                    print(f"Erro ao processar mensagem: {e}")
-                ch.basic_ack(delivery_tag=method.delivery_tag)
-
-            channel.basic_qos(prefetch_count=10)
-            channel.basic_consume(queue='pdf2text_status',
-                                  on_message_callback=callback)
-            print("Consumidor iniciado, aguardando mensagens...")
-            channel.start_consuming()
-        except Exception as e:
-            print(
-                f"Erro no consumidor RabbitMQ, tentando reconectar em 5s...: {e}")
-            time.sleep(5)
 
 
 class PdftotextLoader():
@@ -83,7 +51,7 @@ class PdftotextLoader():
         }
 
         r = requests.post(url=self.url, headers=headers,
-                          files=files, data=data, timeout=240)
+                          files=files, data=data, timeout=(60, 60))
         log.info(r)
 
         response = r.json()
@@ -132,12 +100,11 @@ class PdftotextLoaderAsync:
         log.info(r)
         response = r.json()
         task_id = response.get("task_id", "")
-        queue_id = response.get("queue_id", "")
 
         log.info(
-            f"Extracted text from pdf using OCR, task_id -> {task_id} queue_id -> {queue_id}")
+            f"Extracted text from pdf using OCR, task_id -> {task_id}")
 
-        return task_id, queue_id
+        return task_id
 
     def send_pdf_ocr(self, files, data, headers):
         try:
@@ -168,13 +135,16 @@ class PdftotextLoaderAsync:
 
         return response
 
-    def get_text(self, task_id, queue_id):
+    def get_text(self, task_id):
         """
         Synchronously retrieves the extracted text once the task is completed.
         """
         status = ''
         while status != 'completed' and status != 'failed':
-            status = get_status(queue_id)
+            status = get_status(task_id)
+            log.info(f"Checking status for task {task_id} {status}...")
+            time.sleep(7)
+
         if status == 'completed':
             result = self.check_status(task_id)
             if result.get("result").get("status") == "completed":
@@ -182,4 +152,5 @@ class PdftotextLoaderAsync:
         elif status == 'failed':
             raise Exception(f"OCR task {task_id} failed")
         else:
-            log.info(f"OCR task {task_id} is still in progress, waiting...")
+            log.info(
+                f"OCR task {task_id} is still in progress, waiting...")
