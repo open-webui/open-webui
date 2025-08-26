@@ -84,7 +84,7 @@
 
 	const copyCode = async () => {
 		copied = true;
-		await copyToClipboard(code);
+		await copyToClipboard(_code);
 
 		setTimeout(() => {
 			copied = false;
