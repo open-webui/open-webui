@@ -338,9 +338,12 @@ class WikiSearchGrounder:
 
             Embeddings = _get_txtai_embeddings()
 
-            # Try loading from local filesystem cache first
-            cache_base = (
-                "/app/backend/data/cache/txtai/hub/models--neuml--txtai-wikipedia"
+            # Import TXTAI_CACHE_DIR from config for proper environment variable support
+            from open_webui.config import TXTAI_CACHE_DIR
+
+            # Try loading from local filesystem cache first using configurable cache directory
+            cache_base = os.path.join(
+                TXTAI_CACHE_DIR, "hub", "models--neuml--txtai-wikipedia"
             )
             snapshots_dir = os.path.join(cache_base, "snapshots")
 

@@ -1726,6 +1726,7 @@ RAG_TEXT_SPLITTER = PersistentConfig(
 
 
 TIKTOKEN_CACHE_DIR = os.environ.get("TIKTOKEN_CACHE_DIR", f"{CACHE_DIR}/tiktoken")
+TXTAI_CACHE_DIR = os.environ.get("TXTAI_CACHE_DIR", f"{CACHE_DIR}/txtai")
 TIKTOKEN_ENCODING_NAME = PersistentConfig(
     "TIKTOKEN_ENCODING_NAME",
     "rag.tiktoken_encoding_name",
