@@ -517,18 +517,8 @@ class ChatTable:
                 if chat:
                     chat.revoked_at = None
 
-                    now = int(time.time())
-                    is_expired_by_time = chat.expires_at and chat.expires_at <= now
-                    is_expired_by_views = (
-                        chat.expire_on_views is not None
-                        and chat.views >= chat.expire_on_views
-                    )
-
-                    if is_expired_by_time:
-                        chat.expires_at = None
-
-                    if is_expired_by_views:
-                        chat.expire_on_views = None
+                    chat.expires_at = None
+                    chat.expire_on_views = None
 
                     db.commit()
                     db.refresh(chat)
