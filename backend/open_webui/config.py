@@ -1643,6 +1643,11 @@ ENABLE_RETRIEVAL_QUERY_GENERATION = PersistentConfig(
     os.environ.get("ENABLE_RETRIEVAL_QUERY_GENERATION", "True").lower() == "true",
 )
 
+ENABLE_QUERIES_CACHE = PersistentConfig(
+    "ENABLE_QUERIES_CACHE",
+    "task.queries.cache.enable",
+    os.environ.get("ENABLE_QUERIES_CACHE", "False").lower() == "true",
+)
 
 QUERY_GENERATION_PROMPT_TEMPLATE = PersistentConfig(
     "QUERY_GENERATION_PROMPT_TEMPLATE",
