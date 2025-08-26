@@ -11,6 +11,10 @@ from open_webui.constants import ERROR_MESSAGES
 from open_webui.utils.auth import get_admin_user, get_verified_user
 from open_webui.utils.access_control import has_access, has_permission
 from open_webui.config import BYPASS_ADMIN_ACCESS_CONTROL
+from open_webui.utils.prompt_counter import update_prompt_counter
+from open_webui.internal.db import SessionLocal
+from sqlalchemy import select, func
+from open_webui.models.prompt_usage import PromptUsage
 
 router = APIRouter()
 
@@ -163,58 +167,126 @@ async def delete_prompt_by_command(command: str, user=Depends(get_verified_user)
 
 
 ############################
-# Prompt Usage Statistics
+# Prompt Usage Statistics (DB-based)
 ############################
 
 @router.get("/usage/stats", response_model=dict)
-async def get_prompt_usage_stats(user=Depends(get_verified_user)):
-    """Возвращает общую статистику использования промптов"""
-    request: Request
+async def get_prompt_usage_stats(request: Request, user=Depends(get_verified_user)):
+    """Возвращает общую статистику использования промптов (агрегация из БД)."""
 
-    return {
-        "total_usage": request.app.state.PROMPT_USAGE_COUNTER["total_usage"],
-        "by_prompt": request.app.state.PROMPT_USAGE_COUNTER["by_prompt"],
-        "by_user": request.app.state.PROMPT_USAGE_COUNTER["by_user"],
-        "by_date": request.app.state.PROMPT_USAGE_COUNTER["by_date"]
-    }
+    db = SessionLocal()
+    try:
+        total_usage = db.execute(select(func.coalesce(func.sum(PromptUsage.count), 0))).scalar() or 0
+
+        by_prompt_rows = db.execute(
+            select(PromptUsage.prompt, func.sum(PromptUsage.count)).group_by(PromptUsage.prompt)
+        ).all()
+        by_prompt = {row[0]: int(row[1]) for row in by_prompt_rows}
+
+        by_user_rows = db.execute(
+            select(PromptUsage.user_id, func.sum(PromptUsage.count)).group_by(PromptUsage.user_id)
+        ).all()
+        by_user = {row[0]: int(row[1]) for row in by_user_rows}
+
+        by_date_rows = db.execute(
+            select(PromptUsage.used_date, func.sum(PromptUsage.count)).group_by(PromptUsage.used_date)
+        ).all()
+        by_date = {row[0].isoformat(): int(row[1]) for row in by_date_rows}
+
+        return {
+            "total_usage": int(total_usage),
+            "by_prompt": by_prompt,
+            "by_user": by_user,
+            "by_date": by_date,
+        }
+    finally:
+        db.close()
 
 
 @router.get("/usage/prompt/{prompt_command}", response_model=dict)
 async def get_prompt_usage_by_command(
+        request: Request,
         prompt_command: str,
         user=Depends(get_verified_user)
 ):
-    """Возвращает статистику использования конкретного промпта"""
-    from open_webui.main import app
+    """Возвращает статистику использования конкретного промпта (из БД)."""
 
-    usage_count = app.state.PROMPT_USAGE_COUNTER["by_prompt"].get(prompt_command, 0)
+    db = SessionLocal()
+    try:
+        usage_count = db.execute(
+            select(func.coalesce(func.sum(PromptUsage.count), 0)).where(PromptUsage.prompt == prompt_command)
+        ).scalar() or 0
 
-    return {
-        "prompt_command": prompt_command,
-        "usage_count": usage_count,
-        "total_usage": app.state.PROMPT_USAGE_COUNTER["total_usage"]
-    }
+        total_usage = db.execute(select(func.coalesce(func.sum(PromptUsage.count), 0))).scalar() or 0
+
+        return {
+            "prompt_command": prompt_command,
+            "usage_count": int(usage_count),
+            "total_usage": int(total_usage),
+        }
+    finally:
+        db.close()
 
 
 @router.get("/usage/user/{user_id}", response_model=dict)
 async def get_prompt_usage_by_user(
+        request: Request,
         user_id: str,
         user=Depends(get_verified_user)
 ):
-    """Возвращает статистику использования промптов конкретным пользователем"""
-    from open_webui.main import app
+    """Возвращает статистику использования промптов конкретным пользователем (из БД)."""
 
-    # Проверяем права доступа (только админ или сам пользователь)
     if user.role != "admin" and user.id != user_id:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail=ERROR_MESSAGES.ACCESS_PROHIBITED,
         )
 
-    usage_count = app.state.PROMPT_USAGE_COUNTER["by_user"].get(user_id, 0)
+    db = SessionLocal()
+    try:
+        usage_count = db.execute(
+            select(func.coalesce(func.sum(PromptUsage.count), 0)).where(PromptUsage.user_id == user_id)
+        ).scalar() or 0
 
-    return {
-        "user_id": user_id,
-        "usage_count": usage_count,
-        "total_usage": app.state.PROMPT_USAGE_COUNTER["total_usage"]
+        total_usage = db.execute(select(func.coalesce(func.sum(PromptUsage.count), 0))).scalar() or 0
+
+        return {
+            "user_id": user_id,
+            "usage_count": int(usage_count),
+            "total_usage": int(total_usage),
+        }
+    finally:
+        db.close()
+
+
+@router.post("/usage/click", response_model=dict)
+async def record_prompt_click(
+    request: Request,
+    payload: dict,
+    user=Depends(get_verified_user),
+):
+    """Фиксирует клик по предложенному промпту и инкрементирует счетчик.
+
+    Ожидает payload вида:
+    {
+        "command": "/fun_fact"  # опционально
+        "content": "Tell me a fun fact about the Roman Empire"  # опционально
     }
+    Приоритет: command, иначе content.
+    """
+
+    command = (payload.get("command") or "").strip()
+    content = (payload.get("content") or "").strip()
+
+    prompts_used: list[str] = []
+    if command:
+        prompts_used = [command if command.startswith("/") else f"/{command}"]
+    elif content:
+        # Ключом будет сам текст подсказки
+        prompts_used = [content]
+    else:
+        return {"ok": False}
+
+    update_prompt_counter(request, user.id, prompts_used)
+
+    return {"ok": True}

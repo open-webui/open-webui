@@ -2,28 +2,31 @@
 	import Fuse from 'fuse.js';
 	import Bolt from '$lib/components/icons/Bolt.svelte';
 	import { onMount, getContext } from 'svelte';
-	import { settings, WEBUI_NAME } from '$lib/stores';
+	import { settings, WEBUI_NAME, user } from '$lib/stores';
 	import { WEBUI_VERSION } from '$lib/constants';
+	import { recordPromptClick } from '$lib/apis/prompts';
+
+	type SuggestionPrompt = { id?: string; content: string; title?: [string, string] };
 
 	const i18n = getContext('i18n');
 
-	export let suggestionPrompts = [];
-	export let className = '';
-	export let inputValue = '';
-	export let onSelect = (e) => {};
+	export let suggestionPrompts: SuggestionPrompt[] = [];
+	export let className: string = '';
+	export let inputValue: string = '';
+	export let onSelect: (e: { type: 'prompt'; data: string }) => void = (e) => {};
 
-	let sortedPrompts = [];
+	let sortedPrompts: SuggestionPrompt[] = [];
 
 	const fuseOptions = {
 		keys: ['content', 'title'],
 		threshold: 0.5
 	};
 
-	let fuse;
-	let filteredPrompts = [];
+	let fuse: Fuse<SuggestionPrompt>;
+	let filteredPrompts: SuggestionPrompt[] = [];
 
 	// Initialize Fuse
-	$: fuse = new Fuse(sortedPrompts, fuseOptions);
+	$: fuse = new Fuse(sortedPrompts, fuseOptions as any);
 
 	// Update the filteredPrompts if inputValue changes
 	// Only increase version if something wirklich geändert hat
@@ -31,7 +34,7 @@
 
 	// Helper function to check if arrays are the same
 	// (based on unique IDs oder content)
-	function arraysEqual(a, b) {
+	function arraysEqual(a: SuggestionPrompt[], b: SuggestionPrompt[]) {
 		if (a.length !== b.length) return false;
 		for (let i = 0; i < a.length; i++) {
 			if ((a[i].id ?? a[i].content) !== (b[i].id ?? b[i].content)) {
@@ -41,7 +44,7 @@
 		return true;
 	}
 
-	const getFilteredPrompts = (inputValue) => {
+	const getFilteredPrompts = (inputValue: string) => {
 		if (inputValue.length > 500) {
 			filteredPrompts = [];
 		} else {
@@ -62,6 +65,28 @@
 		sortedPrompts = [...(suggestionPrompts ?? [])].sort(() => Math.random() - 0.5);
 		getFilteredPrompts(inputValue);
 	}
+
+	const handleClick = async (content: string) => {
+
+		console.log("--- handleClick TRIGGERED! ---");
+        console.log("Prompt data:", prompt);
+
+		try {
+			const token = typeof localStorage !== 'undefined' ? (localStorage.getItem('token') ?? '') : '';
+			console.log("Token found:", token);
+			if (token) {
+				await recordPromptClick(token, { content });
+			}
+			else {
+			   console.error("Token NOT found! API call skipped.");
+            }
+		} catch (e) {
+			// fail-safe: не блокируем UX
+			console.error(e);
+		} finally {
+			onSelect({ type: 'prompt', data: content });
+		}
+	};
 </script>
 
 <div class="mb-1 flex gap-1 text-xs font-medium items-center text-gray-600 dark:text-gray-400">
@@ -92,7 +117,7 @@
 				       px-3 py-2 rounded-xl bg-transparent hover:bg-black/5
 				       dark:hover:bg-white/5 transition group"
 					style="animation-delay: {idx * 60}ms"
-					on:click={() => onSelect({ type: 'prompt', data: prompt.content })}
+					on:click={() => handleClick(prompt.content)}
 				>
 					<div class="flex flex-col text-left">
 						{#if prompt.title && prompt.title[0] !== ''}

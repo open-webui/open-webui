@@ -202,3 +202,32 @@ export const deletePromptByCommand = async (token: string, command: string) => {
 
 	return res;
 };
+
+export const recordPromptClick = async (token: string, payload: { command?: string; content?: string }) => {
+    let error = null;
+
+    const res = await fetch(`${WEBUI_API_BASE_URL}/prompts/usage/click`, {
+        method: 'POST',
+        headers: {
+            Accept: 'application/json',
+            'Content-Type': 'application/json',
+            authorization: `Bearer ${token}`
+        },
+        body: JSON.stringify(payload)
+    })
+        .then(async (res) => {
+            if (!res.ok) throw await res.json();
+            return res.json();
+        })
+        .catch((err) => {
+            error = err.detail;
+            console.error(err);
+            return null;
+        });
+
+    if (error) {
+        throw error;
+    }
+
+    return res;
+};
