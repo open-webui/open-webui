@@ -290,9 +290,10 @@ class GroupTable:
                     return None
 
                 group_user_ids = group.user_ids
-
                 if not group_user_ids or not isinstance(group_user_ids, list):
                     group_user_ids = []
+
+                group_user_ids = list(set(group_user_ids))  # Deduplicate
 
                 for user_id in user_ids:
                     if user_id not in group_user_ids:
@@ -320,6 +321,8 @@ class GroupTable:
 
                 if not group_user_ids or not isinstance(group_user_ids, list):
                     return GroupModel.model_validate(group)
+
+                group_user_ids = list(set(group_user_ids))  # Deduplicate
 
                 for user_id in user_ids:
                     if user_id in group_user_ids:
