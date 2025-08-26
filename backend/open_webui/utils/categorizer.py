@@ -245,7 +245,6 @@ def auto_categorize(title: str, content: Optional[str] = None) -> Tuple[str, str
     
     # Combine title and content for analysis
     text = title + " " + (content[:1000] if content else "")
-    text_lower = text.lower()
     
     # Detect language
     lang = detect_language(text)
@@ -265,8 +264,14 @@ def auto_categorize(title: str, content: Optional[str] = None) -> Tuple[str, str
         
         # Check major category keywords
         for keyword in major_data["keywords"]:
-            if keyword.lower() in text_lower:
-                score += 2
+            # For non-English languages, don't convert to lowercase for comparison
+            # as it may affect character matching
+            if lang == 'en':
+                if keyword.lower() in text.lower():
+                    score += 2
+            else:
+                if keyword in text:
+                    score += 2
         
         # Check middle category keywords
         best_middle_for_major = None
@@ -275,8 +280,13 @@ def auto_categorize(title: str, content: Optional[str] = None) -> Tuple[str, str
         for middle, middle_data in major_data.get("middle", {}).items():
             middle_score = 0
             for keyword in middle_data["keywords"]:
-                if keyword.lower() in text_lower:
-                    middle_score += 1
+                # For non-English languages, don't convert to lowercase for comparison
+                if lang == 'en':
+                    if keyword.lower() in text.lower():
+                        middle_score += 1
+                else:
+                    if keyword in text:
+                        middle_score += 1
             
             if middle_score > best_middle_score:
                 best_middle_score = middle_score
@@ -287,7 +297,7 @@ def auto_categorize(title: str, content: Optional[str] = None) -> Tuple[str, str
             if score > max_score:
                 best_major = major
                 best_middle = best_middle_for_major
-                best_minor = _get_minor_category(text_lower, best_middle, major_data["middle"][best_middle_for_major], lang)
+                best_minor = _get_minor_category(text, best_middle, major_data["middle"][best_middle_for_major], lang)
                 max_score = score
         elif score > max_score:
             best_major = major
@@ -339,7 +349,6 @@ def suggest_categories(title: str, content: Optional[str] = None) -> dict:
     """
     suggestions = []
     text = title + " " + (content[:1000] if content else "")
-    text_lower = text.lower()
     
     # Detect language
     lang = detect_language(text)
@@ -351,8 +360,13 @@ def suggest_categories(title: str, content: Optional[str] = None) -> dict:
         score = 0
         
         for keyword in major_data["keywords"]:
-            if keyword.lower() in text_lower:
-                score += 1
+            # For non-English languages, don't convert to lowercase for comparison
+            if lang == 'en':
+                if keyword.lower() in text.lower():
+                    score += 1
+            else:
+                if keyword in text:
+                    score += 1
         
         if score > 0:
             suggestions.append({

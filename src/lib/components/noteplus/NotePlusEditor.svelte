@@ -53,10 +53,10 @@
 		WEBUI_NAME
 	} from '$lib/stores';
 
-	import NotePanel from '$lib/components/notes/NotePanel.svelte';
+	// import NotePanel from '$lib/components/notes/NotePanel.svelte';
 
-	import Controls from '$lib/components/notes/NoteEditor/Controls.svelte';
-	import Chat from '$lib/components/notes/NoteEditor/Chat.svelte';
+	import Controls from '$lib/components/noteplus/NotePlusEditor/Controls.svelte';
+	import Chat from '$lib/components/noteplus/NotePlusEditor/Chat.svelte';
 
 	import AccessControlModal from '$lib/components/workspace/common/AccessControlModal.svelte';
 
@@ -1219,6 +1219,14 @@ Provide the enhanced notes in markdown format. Use markdown syntax for headings,
 					bind:files
 					{selectedModelId}
 					{selectedContent}
+					{editor}
+					{note}
+					onInsert={(content) => {
+						if (editor && content) {
+							const selection = editor.view.state.selection;
+							editor.commands.insertContentAt(selection.anchor, content);
+						}
+					}}
 					on:select={(e) => {
 						if (e.detail !== '') {
 							selectedContent = e.detail;
