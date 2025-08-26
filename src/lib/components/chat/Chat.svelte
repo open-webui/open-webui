@@ -2000,23 +2000,29 @@
 							}}
 						>
 							<div class=" h-full w-full flex flex-col">
-								<Messages
-									chatId={$chatId}
-									bind:history
-									bind:autoScroll
-									bind:prompt
-									{selectedModels}
-									{atSelectedModel}
-									{sendPrompt}
-									{showMessage}
-									{submitMessage}
-									{continueResponse}
-									{regenerateResponse}
-									{mergeResponses}
-									{chatActionHandler}
-									{addMessages}
-									bottomPadding={files.length > 0}
-								/>
+<Messages
+chatId={$chatId}
+bind:history
+bind:autoScroll
+bind:prompt
+{selectedModels}
+{atSelectedModel}
+{sendPrompt}
+{showMessage}
+{submitMessage}
+{continueResponse}
+{regenerateResponse}
+{mergeResponses}
+{chatActionHandler}
+{addMessages}
+bottomPadding={files.length > 0}
+on:requestCorrection={async () => {
+prompt = 'I want to correct this: ';
+await tick();
+const chatInput = document.getElementById('chat-input');
+chatInput?.focus();
+}}
+/>
 							</div>
 						</div>
 

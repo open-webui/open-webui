@@ -430,29 +430,30 @@
 					{/if}
 
 					{#each messages as message, messageIdx (message.id)}
-						<Message
-							{chatId}
-							bind:history
-							messageId={message.id}
-							idx={messageIdx}
-							{user}
-							{gotoMessage}
-							{showPreviousMessage}
-							{showNextMessage}
-							{updateChat}
-							{editMessage}
-							{deleteMessage}
-							{rateMessage}
-							{actionMessage}
-							{saveMessage}
-							{submitMessage}
-							{regenerateResponse}
-							{continueResponse}
-							{mergeResponses}
-							{addMessages}
-							{triggerScroll}
-							{readOnly}
-						/>
+<Message
+{chatId}
+bind:history
+messageId={message.id}
+idx={messageIdx}
+{user}
+{gotoMessage}
+{showPreviousMessage}
+{showNextMessage}
+{updateChat}
+{editMessage}
+{deleteMessage}
+{rateMessage}
+{actionMessage}
+{saveMessage}
+{submitMessage}
+{regenerateResponse}
+{continueResponse}
+{mergeResponses}
+{addMessages}
+{triggerScroll}
+{readOnly}
+on:requestCorrection={() => dispatch('requestCorrection')}
+/>
 					{/each}
 				</div>
 				<div class="pb-12" />
