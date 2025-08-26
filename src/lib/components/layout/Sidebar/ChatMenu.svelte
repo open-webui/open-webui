@@ -90,66 +90,91 @@
 			if (containerElement) {
 				try {
 					const isDarkMode = document.documentElement.classList.contains('dark');
-					const virtualWidth = 800; // Fixed width in px
-					const pagePixelHeight = 1200; // Each slice height (adjust to avoid canvas bugs; generally 2–4k is safe)
+					const virtualWidth = 800; // px, fixed width for cloned element
 
-					// Clone & style once
+					// Clone and style
 					const clonedElement = containerElement.cloneNode(true);
 					clonedElement.classList.add('text-black');
 					clonedElement.classList.add('dark:text-white');
 					clonedElement.style.width = `${virtualWidth}px`;
 					clonedElement.style.position = 'absolute';
-					clonedElement.style.left = '-9999px'; // Offscreen
+					clonedElement.style.left = '-9999px';
 					clonedElement.style.height = 'auto';
 					document.body.appendChild(clonedElement);
 
-					// Get total height after attached to DOM
-					const totalHeight = clonedElement.scrollHeight;
+					// Wait for DOM update/layout
+					await new Promise((r) => setTimeout(r, 100));
+
+					// Render entire content once
+					const canvas = await html2canvas(clonedElement, {
+						backgroundColor: isDarkMode ? '#000' : '#fff',
+						useCORS: true,
+						scale: 2, // increase resolution
+						width: virtualWidth
+					});
+
+					document.body.removeChild(clonedElement);
+
+					const pdf = new jsPDF('p', 'mm', 'a4');
+					const pageWidthMM = 210;
+					const pageHeightMM = 297;
+
+					// Convert page height in mm to px on canvas scale for cropping
+					// Get canvas DPI scale:
+					const pxPerMM = canvas.width / virtualWidth; // width in px / width in px?
+					// Since 1 page width is 210 mm, but canvas width is 800 px at scale 2
+					// Assume 1 mm = px / (pageWidthMM scaled)
+					// Actually better: Calculate scale factor from px/mm:
+					// virtualWidth px corresponds directly to 210mm in PDF, so pxPerMM:
+					const pxPerPDFMM = canvas.width / pageWidthMM; // canvas px per PDF mm
+
+					// Height in px for one page slice:
+					const pagePixelHeight = Math.floor(pxPerPDFMM * pageHeightMM);
+
 					let offsetY = 0;
 					let page = 0;
 
-					// Prepare PDF
-					const pdf = new jsPDF('p', 'mm', 'a4');
-					const imgWidth = 210; // A4 mm
-					const pageHeight = 297; // A4 mm
+					while (offsetY < canvas.height) {
+						// Height of slice
+						const sliceHeight = Math.min(pagePixelHeight, canvas.height - offsetY);
 
-					while (offsetY < totalHeight) {
-						// For each slice, adjust scrollTop to show desired part
-						clonedElement.scrollTop = offsetY;
+						// Create temp canvas for slice
+						const pageCanvas = document.createElement('canvas');
+						pageCanvas.width = canvas.width;
+						pageCanvas.height = sliceHeight;
 
-						// Optionally: mask/hide overflowing content via CSS if needed
-						clonedElement.style.maxHeight = `${pagePixelHeight}px`;
-						// Only render the visible part
-						const canvas = await html2canvas(clonedElement, {
-							backgroundColor: isDarkMode ? '#000' : '#fff',
-							useCORS: true,
-							scale: 2,
-							width: virtualWidth,
-							height: Math.min(pagePixelHeight, totalHeight - offsetY),
-							// Optionally: y offset for correct region?
-							windowWidth: virtualWidth
-							//windowHeight: pagePixelHeight,
-						});
-						const imgData = canvas.toDataURL('image/png');
-						// Maintain aspect ratio
-						const imgHeight = (canvas.height * imgWidth) / canvas.width;
-						const position = 0; // Always first line, since we've clipped vertically
+						const ctx = pageCanvas.getContext('2d');
+
+						// Draw the slice of original canvas onto pageCanvas
+						ctx.drawImage(
+							canvas,
+							0,
+							offsetY,
+							canvas.width,
+							sliceHeight,
+							0,
+							0,
+							canvas.width,
+							sliceHeight
+						);
+
+						const imgData = pageCanvas.toDataURL('image/jpeg', 0.7);
+
+						// Calculate image height in PDF units keeping aspect ratio
+						const imgHeightMM = (sliceHeight * pageWidthMM) / canvas.width;
 
 						if (page > 0) pdf.addPage();
 
-						// Set page background for dark mode
 						if (isDarkMode) {
 							pdf.setFillColor(0, 0, 0);
-							pdf.rect(0, 0, imgWidth, pageHeight, 'F'); // black bg
+							pdf.rect(0, 0, pageWidthMM, pageHeightMM, 'F'); // black bg
 						}
 
-						pdf.addImage(imgData, 'PNG', 0, position, imgWidth, imgHeight);
+						pdf.addImage(imgData, 'JPEG', 0, 0, pageWidthMM, imgHeightMM);
 
-						offsetY += pagePixelHeight;
+						offsetY += sliceHeight;
 						page++;
 					}
-
-					document.body.removeChild(clonedElement);
 
 					pdf.save(`chat-${chat.chat.title}.pdf`);
 				} catch (error) {
@@ -359,15 +384,6 @@
 						}}
 					>
 						<div class="flex items-center line-clamp-1">{$i18n.t('Plain text (.txt)')}</div>
-					</DropdownMenu.Item>
-
-					<DropdownMenu.Item
-						class="flex gap-2 items-center px-3 py-2 text-sm  cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 rounded-md"
-						on:click={() => {
-							downloadPdf();
-						}}
-					>
-						<div class="flex items-center line-clamp-1">{$i18n.t('PDF document (.pdf)')}</div>
 					</DropdownMenu.Item>
 				</DropdownMenu.SubContent>
 			</DropdownMenu.Sub>
