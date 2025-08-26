@@ -51,7 +51,7 @@ CATEGORIES = {
             "keywords": ["code", "programming", "api", "function", "class", "method", "bug", "fix", "feature", "development", "software", "app", "application"],
             "middle": {
                 "Frontend": {
-                    "keywords": ["react", "vue", "angular", "svelte", "html", "css", "javascript", "typescript", "ui", "ux", "frontend", "web"],
+                    "keywords": ["react", "vue", "angular", "svelte", "html", "css", "javascript", "typescript", "ui", "ux", "frontend", "web", "component", "hooks", "state", "props", "dom", "jsx"],
                     "minors": ["Components", "Styling", "State Management", "General"]
                 },
                 "Backend": {
@@ -82,10 +82,10 @@ CATEGORIES = {
             }
         },
         "Meeting": {
-            "keywords": ["meeting", "minutes", "agenda", "discussion", "conference", "call"],
+            "keywords": ["meeting", "minutes", "agenda", "discussion", "conference", "call", "standup", "retrospective"],
             "middle": {
                 "Planning": {
-                    "keywords": ["planning", "roadmap", "strategy", "goal", "objective"],
+                    "keywords": ["planning", "roadmap", "strategy", "goal", "objective", "sprint"],
                     "minors": ["Sprint", "Quarterly", "Roadmap", "General"]
                 },
                 "Review": {
@@ -138,11 +138,11 @@ CATEGORIES = {
             "keywords": ["코드", "프로그래밍", "개발", "함수", "클래스", "메소드", "버그", "수정", "기능", "소프트웨어", "앱", "애플리케이션"],
             "middle": {
                 "프론트엔드": {
-                    "keywords": ["리액트", "뷰", "앵귤러", "스벨트", "html", "css", "자바스크립트", "타입스크립트", "ui", "ux", "프론트엔드", "웹"],
+                    "keywords": ["리액트", "뷰", "앵귤러", "스벨트", "html", "css", "자바스크립트", "타입스크립트", "ui", "ux", "프론트엔드", "웹", "react", "vue", "angular", "svelte", "javascript", "typescript", "컴포넌트", "component", "usememo", "usestate", "hooks"],
                     "minors": ["컴포넌트", "스타일링", "상태관리", "일반"]
                 },
                 "백엔드": {
-                    "keywords": ["파이썬", "자바", "노드", "장고", "fastapi", "데이터베이스", "sql", "api", "서버", "백엔드"],
+                    "keywords": ["파이썬", "자바", "노드", "장고", "fastapi", "데이터베이스", "sql", "api", "서버", "백엔드", "크롤링", "스크래핑", "requests", "beautifulsoup"],
                     "minors": ["API", "데이터베이스", "보안", "일반"]
                 },
                 "데브옵스": {
@@ -260,7 +260,7 @@ def auto_categorize(title: str, content: Optional[str] = None) -> Tuple[str, str
     max_score = 0
     
     for major, major_data in categories.items():
-        score = 0
+        major_score = 0
         
         # Check major category keywords
         for keyword in major_data["keywords"]:
@@ -268,10 +268,10 @@ def auto_categorize(title: str, content: Optional[str] = None) -> Tuple[str, str
             # as it may affect character matching
             if lang == 'en':
                 if keyword.lower() in text.lower():
-                    score += 2
+                    major_score += 2
             else:
                 if keyword in text:
-                    score += 2
+                    major_score += 2
         
         # Check middle category keywords
         best_middle_for_major = None
@@ -283,29 +283,30 @@ def auto_categorize(title: str, content: Optional[str] = None) -> Tuple[str, str
                 # For non-English languages, don't convert to lowercase for comparison
                 if lang == 'en':
                     if keyword.lower() in text.lower():
-                        middle_score += 1
+                        middle_score += 3  # Give higher weight to middle category matches
                 else:
                     if keyword in text:
-                        middle_score += 1
+                        middle_score += 3
             
             if middle_score > best_middle_score:
                 best_middle_score = middle_score
                 best_middle_for_major = middle
         
-        if best_middle_for_major:
-            score += best_middle_score
-            if score > max_score:
-                best_major = major
+        # Calculate total score
+        total_score = major_score + best_middle_score
+        
+        # Only consider this category if we have meaningful matches
+        if total_score > max_score and (major_score > 0 or best_middle_score > 0):
+            max_score = total_score
+            best_major = major
+            if best_middle_for_major and best_middle_score > 0:
                 best_middle = best_middle_for_major
                 best_minor = _get_minor_category(text, best_middle, major_data["middle"][best_middle_for_major], lang)
-                max_score = score
-        elif score > max_score:
-            best_major = major
-            # Get first middle category as default
-            middle_cats = list(major_data.get("middle", {}).keys())
-            best_middle = middle_cats[0] if middle_cats else default[1]
-            best_minor = default[2]
-            max_score = score
+            else:
+                # Get first middle category as default if no specific match
+                middle_cats = list(major_data.get("middle", {}).keys())
+                best_middle = middle_cats[0] if middle_cats else default[1]
+                best_minor = default[2]
     
     # Date-based categorization for daily notes
     if re.match(r'^\d{4}-\d{2}-\d{2}', title):
@@ -330,14 +331,13 @@ def _get_minor_category(text: str, middle_category: str, middle_data: Dict, lang
     # Get available minors for this middle category
     minors = middle_data.get("minors", [])
     if not minors:
-        return DEFAULT_CATEGORIES[lang][2]
+        return DEFAULT_CATEGORIES.get(lang, DEFAULT_CATEGORIES['en'])[2]
     
     # Simple keyword matching for minor categories
     # This could be enhanced with more sophisticated logic
     
-    # For now, return the first minor as default
-    # You can enhance this with specific keyword matching
-    return minors[-1]  # Return "General" or "일반" which is typically last
+    # For now, return the last minor as default (usually "General" or "일반")
+    return minors[-1]
 
 def suggest_categories(title: str, content: Optional[str] = None) -> dict:
     """

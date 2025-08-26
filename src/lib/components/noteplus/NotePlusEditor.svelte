@@ -688,20 +688,14 @@ Provide the enhanced notes in markdown format. Use markdown syntax for headings,
 		}
 	});
 
-	onMount(async () => {
-		const dropzoneElement = document.getElementById('note-editor');
-
-		dropzoneElement?.addEventListener('dragover', onDragOver);
-		dropzoneElement?.addEventListener('drop', onDrop);
-		dropzoneElement?.addEventListener('dragleave', onDragLeave);
-
-		if (!id) {
+	const loadNote = async (noteId) => {
+		if (!noteId) {
 			note = JSON.parse(JSON.stringify(newNote));
 			selectedModelId = $models?.find((m) => m?.id === $settings?.models?.[0] ?? '')?.id ?? '';
 		} else {
 			loading = true;
 			try {
-				note = await getNotePlusById(localStorage.token, id);
+				note = await getNotePlusById(localStorage.token, noteId);
 
 				if (note) {
 					files = note.data?.files ?? [];
@@ -721,8 +715,22 @@ Provide the enhanced notes in markdown format. Use markdown syntax for headings,
 				loading = false;
 			}
 		}
+	};
+
+	onMount(async () => {
+		const dropzoneElement = document.getElementById('note-editor');
+
+		dropzoneElement?.addEventListener('dragover', onDragOver);
+		dropzoneElement?.addEventListener('drop', onDrop);
+		dropzoneElement?.addEventListener('dragleave', onDragLeave);
+
+		await loadNote(id);
 	});
 
+	// React to id prop changes
+	$: if (id !== undefined) {
+		loadNote(id);
+	}
 
 	$: if (note) {
 		console.log('note', note);

@@ -132,12 +132,27 @@
 	<div class="w-full h-full flex {$showSidebar ? 'md:max-w-[calc(100%-260px)]' : ''}">
 		<PaneGroup direction="horizontal" class="w-full h-full">
 			{#if localShowCategoryPane}
-				<Pane defaultSize={20} minSize={15} maxSize={30} class="h-full bg-gray-50 dark:bg-gray-900 border-r border-gray-200 dark:border-gray-800">
-					<div class="h-full flex flex-col">
-						<!-- Action Bar -->
-						<div class="px-3 py-2 border-b border-gray-200 dark:border-gray-800">
+				<Pane defaultSize={20} minSize={15} maxSize={30} class="h-full relative overflow-hidden">
+					<!-- Background pattern for distinction -->
+					<div class="absolute inset-0 bg-gradient-to-br from-blue-50/50 to-purple-50/50 dark:from-blue-950/20 dark:to-purple-950/20 pointer-events-none"></div>
+					<div class="absolute inset-0 opacity-5 dark:opacity-10 pointer-events-none" 
+						style="background-image: repeating-linear-gradient(0deg, transparent, transparent 39px, rgba(59, 130, 246, 0.1) 39px, rgba(59, 130, 246, 0.1) 40px),
+							   repeating-linear-gradient(90deg, transparent, transparent 39px, rgba(59, 130, 246, 0.1) 39px, rgba(59, 130, 246, 0.1) 40px)">
+					</div>
+					
+					<div class="h-full flex flex-col relative bg-white/90 dark:bg-gray-900/90 backdrop-blur-sm border-r-2 border-blue-200/30 dark:border-blue-800/30">
+						<!-- Action Bar with accent -->
+						<div class="px-3 py-2 border-b-2 border-blue-200/20 dark:border-blue-800/20 bg-gradient-to-r from-blue-50/50 to-transparent dark:from-blue-950/30 dark:to-transparent">
 							<div class="flex items-center justify-between mb-2">
-								<h3 class="text-sm font-medium">{$i18n.t('Note+')}</h3>
+								<div class="flex items-center gap-2">
+									<!-- Note+ Icon -->
+									<div class="w-6 h-6 rounded-md bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center shadow-sm">
+										<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" class="w-4 h-4 text-white">
+											<path fill-rule="evenodd" d="M4.5 2A1.5 1.5 0 003 3.5v13A1.5 1.5 0 004.5 18h11a1.5 1.5 0 001.5-1.5V7.621a1.5 1.5 0 00-.44-1.06l-4.12-4.122A1.5 1.5 0 0011.379 2H4.5zm4.75 6.75a.75.75 0 011.5 0v1.5h1.5a.75.75 0 010 1.5h-1.5v1.5a.75.75 0 01-1.5 0v-1.5h-1.5a.75.75 0 010-1.5h1.5v-1.5z" clip-rule="evenodd" />
+										</svg>
+									</div>
+									<h3 class="text-sm font-semibold bg-gradient-to-r from-blue-600 to-purple-600 dark:from-blue-400 dark:to-purple-400 bg-clip-text text-transparent">{$i18n.t('Note+')}</h3>
+								</div>
 								<button
 									class="p-1 hover:bg-gray-200 dark:hover:bg-gray-800 rounded transition-colors"
 									on:click={() => {
@@ -149,9 +164,9 @@
 									</svg>
 								</button>
 							</div>
-							<!-- New Note Button -->
+							<!-- New Note Button with enhanced styling -->
 							<button
-								class="w-full px-3 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium rounded-lg transition-colors flex items-center justify-center gap-2"
+								class="w-full px-3 py-2 bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white text-sm font-medium rounded-lg transition-all shadow-md hover:shadow-lg flex items-center justify-center gap-2 transform hover:scale-[1.02]"
 								on:click={async () => {
 									const { createNewNotePlus } = await import('$lib/apis/noteplus');
 									const dayjs = (await import('$lib/dayjs')).default;
@@ -205,14 +220,14 @@
 							</button>
 						</div>
 						
-						<!-- Search Bar - Fixed at top -->
-						<div class="px-3 py-2 border-b border-gray-200 dark:border-gray-800">
+						<!-- Search Bar - Fixed at top with accent -->
+						<div class="px-3 py-2 border-b border-blue-100/30 dark:border-blue-800/20 bg-gradient-to-b from-transparent to-blue-50/20 dark:to-blue-950/10">
 							<div class="flex items-center gap-2">
 								<div class="relative flex-1">
 									<input
 										type="text"
 										placeholder={$i18n.t('Search categories...')}
-										class="w-full px-8 py-1.5 text-sm bg-gray-100 dark:bg-gray-800 rounded-lg outline-none focus:ring-2 focus:ring-blue-500"
+										class="w-full px-8 py-1.5 text-sm bg-white/70 dark:bg-gray-800/70 backdrop-blur-sm rounded-lg outline-none focus:ring-2 focus:ring-purple-500 border border-blue-200/30 dark:border-blue-800/30"
 										bind:value={categorySearchQuery}
 									/>
 									<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" class="w-4 h-4 absolute left-2 top-1/2 -translate-y-1/2 text-gray-400">
@@ -231,9 +246,9 @@
 										</button>
 									{/if}
 								</div>
-								<!-- Refresh Button -->
+								<!-- Refresh Button with accent -->
 								<button
-									class="p-1.5 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-800 transition"
+									class="p-1.5 rounded-lg hover:bg-blue-100 dark:hover:bg-blue-900/30 transition-all hover:scale-105"
 									title={$i18n.t('Refresh categories')}
 									on:click={async () => {
 										const tree = await getNotePlusCategoryTree(localStorage.token);
@@ -262,16 +277,20 @@
 								/>
 							</div>
 							
-							<!-- Related Notes Section -->
+							<!-- Related Notes Section with accent -->
 							{#if localRelatedNotes.length > 0}
 								<div class="px-3 pb-3">
-									<h4 class="text-xs font-medium text-gray-500 dark:text-gray-400 mb-2 uppercase tracking-wider">
+									<h4 class="text-xs font-semibold text-blue-600 dark:text-blue-400 mb-2 uppercase tracking-wider flex items-center gap-1">
+										<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" class="w-3 h-3">
+											<path d="M12.232 4.232a2.5 2.5 0 013.536 3.536l-1.225 1.224a.75.75 0 001.061 1.06l1.224-1.224a4 4 0 00-5.656-5.656l-3 3a4 4 0 00.225 5.865.75.75 0 00.977-1.138 2.5 2.5 0 01-.142-3.667l3-3z" />
+											<path d="M11.603 7.963a.75.75 0 00-.977 1.138 2.5 2.5 0 01.142 3.667l-3 3a2.5 2.5 0 01-3.536-3.536l1.225-1.224a.75.75 0 00-1.061-1.06l-1.224 1.224a4 4 0 105.656 5.656l3-3a4 4 0 00-.225-5.865z" />
+										</svg>
 										{$i18n.t('Related Notes')}
 									</h4>
 									<div class="space-y-1">
 										{#each localRelatedNotes as note}
 											<button
-												class="w-full text-left px-2 py-1.5 text-sm hover:bg-gray-100 dark:hover:bg-gray-800 rounded transition-colors {$page.params.id === note.id ? 'bg-gray-100 dark:bg-gray-800' : ''}"
+												class="w-full text-left px-2 py-1.5 text-sm hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-lg transition-all {$page.params.id === note.id ? 'bg-gradient-to-r from-blue-100 to-purple-100 dark:from-blue-900/30 dark:to-purple-900/30 border-l-2 border-purple-500' : ''}"
 												on:click={() => {
 													goto(`/noteplus/${note.id}`);
 												}}
@@ -299,10 +318,10 @@
 					</div>
 				</PaneResizer>
 			{:else}
-				<!-- Collapsed sidebar toggle -->
-				<div class="flex items-start pt-2 pl-1 bg-gray-50 dark:bg-gray-900 border-r border-gray-200 dark:border-gray-800">
+				<!-- Collapsed sidebar toggle with accent -->
+				<div class="flex items-start pt-2 pl-1 bg-gradient-to-b from-blue-50/50 to-purple-50/50 dark:from-blue-950/20 dark:to-purple-950/20 border-r-2 border-blue-200/30 dark:border-blue-800/30">
 					<button
-						class="p-1 hover:bg-gray-200 dark:hover:bg-gray-800 rounded transition-colors"
+						class="p-1 hover:bg-blue-100 dark:hover:bg-blue-900/30 rounded transition-all hover:scale-110"
 						on:click={() => {
 							showCategoryPane.set(true);
 						}}
