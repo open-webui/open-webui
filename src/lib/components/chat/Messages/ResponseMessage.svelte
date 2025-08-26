@@ -138,6 +138,7 @@
 
 	export let isLastMessage = true;
 	export let readOnly = false;
+	export let editCodeBlock = true;
 	export let topPadding = false;
 
 	let citationsElement: HTMLDivElement;
@@ -819,6 +820,7 @@
 											($settings?.showFloatingActionButtons ?? true)}
 										save={!readOnly}
 										preview={!readOnly}
+										{editCodeBlock}
 										{topPadding}
 										done={($settings?.chatFadeStreamingText ?? true)
 											? (message?.done ?? false)

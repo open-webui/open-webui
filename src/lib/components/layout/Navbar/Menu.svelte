@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { toast } from 'svelte-sonner';
 	import { DropdownMenu } from 'bits-ui';
-	import { getContext } from 'svelte';
+	import { getContext, tick } from 'svelte';
 
 	import fileSaver from 'file-saver';
 	const { saveAs } = fileSaver;
@@ -35,6 +35,7 @@
 	import Folder from '$lib/components/icons/Folder.svelte';
 	import Share from '$lib/components/icons/Share.svelte';
 	import ArchiveBox from '$lib/components/icons/ArchiveBox.svelte';
+	import Messages from '$lib/components/chat/Messages.svelte';
 
 	const i18n = getContext('i18n');
 
@@ -49,6 +50,8 @@
 
 	export let chat;
 	export let onClose: Function = () => {};
+
+	let showFullMessages = false;
 
 	const getChatAsText = async () => {
 		const history = chat.chat.history;
@@ -72,8 +75,10 @@
 
 	const downloadPdf = async () => {
 		if ($settings?.stylizedPdfExport ?? true) {
-			const containerElement = document.getElementById('messages-container');
+			showFullMessages = true;
+			await tick();
 
+			const containerElement = document.getElementById('full-messages-container');
 			if (containerElement) {
 				try {
 					const isDarkMode = document.documentElement.classList.contains('dark');
@@ -164,6 +169,8 @@
 					}
 
 					pdf.save(`chat-${chat.chat.title}.pdf`);
+
+					showFullMessages = false;
 				} catch (error) {
 					console.error('Error generating PDF', error);
 				}
@@ -234,6 +241,27 @@
 		}
 	};
 </script>
+
+{#if showFullMessages}
+	<div class="hidden w-full h-full flex-col">
+		<div id="full-messages-container">
+			<Messages
+				className="h-full flex pt-4 pb-8 w-full"
+				chatId={`chat-preview-${chat?.id ?? ''}`}
+				user={$user}
+				readOnly={true}
+				history={chat.chat.history}
+				messages={chat.chat.messages}
+				autoScroll={true}
+				sendMessage={() => {}}
+				continueResponse={() => {}}
+				regenerateResponse={() => {}}
+				messagesCount={null}
+				editCodeBlock={false}
+			/>
+		</div>
+	</div>
+{/if}
 
 <Dropdown
 	on:change={(e) => {

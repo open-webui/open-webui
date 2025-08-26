@@ -38,6 +38,7 @@
 
 	export let isFirstMessage: boolean;
 	export let readOnly: boolean;
+	export let editCodeBlock = true;
 	export let topPadding = false;
 
 	let showDeleteConfirm = false;
@@ -332,7 +333,12 @@
 								: ' w-full'} {$settings.chatDirection === 'RTL' ? 'text-right' : ''}"
 						>
 							{#if message.content}
-								<Markdown id={`${chatId}-${message.id}`} content={message.content} {topPadding} />
+								<Markdown
+									id={`${chatId}-${message.id}`}
+									content={message.content}
+									{editCodeBlock}
+									{topPadding}
+								/>
 							{/if}
 						</div>
 					</div>

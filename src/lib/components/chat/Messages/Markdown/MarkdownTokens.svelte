@@ -32,6 +32,8 @@
 
 	export let save = false;
 	export let preview = false;
+
+	export let editCodeBlock = true;
 	export let topPadding = false;
 
 	export let onSave: Function = () => {};
@@ -106,6 +108,7 @@
 				{attributes}
 				{save}
 				{preview}
+				edit={editCodeBlock}
 				stickyButtonsClassName={topPadding ? 'top-8' : 'top-0'}
 				onSave={(value) => {
 					onSave({
