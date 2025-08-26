@@ -88,6 +88,8 @@ export const playingNotificationSound = writable(false);
 
 export type Model = OpenAIModel | OllamaModel;
 
+export const doclingEnabled = writable(false);
+
 type BaseModel = {
 	id: string;
 	name: string;

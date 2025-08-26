@@ -50,6 +50,7 @@
 	import LockClosed from '$lib/components/icons/LockClosed.svelte';
 	import AccessControlModal from '../common/AccessControlModal.svelte';
 	import Search from '$lib/components/icons/Search.svelte';
+	import { doclingEnabled } from '$lib/stores';
 
 	let largeScreen = true;
 
@@ -174,6 +175,10 @@
 				};
 			}
 
+			// Include if docling is activated for the file upload
+			metadata = {
+					docling_activated: $doclingEnabled 
+			};
 			const uploadedFile = await uploadFile(localStorage.token, file, metadata).catch((e) => {
 				toast.error(`${e}`);
 				return null;

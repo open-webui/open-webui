@@ -104,6 +104,7 @@ from open_webui.env import (
 )
 
 from open_webui.constants import ERROR_MESSAGES
+from typing import Any
 
 log = logging.getLogger(__name__)
 log.setLevel(SRC_LOG_LEVELS["RAG"])
@@ -114,6 +115,37 @@ log.setLevel(SRC_LOG_LEVELS["RAG"])
 #
 ##########################################
 
+def meta_to_dict(m: Any) -> dict:
+    """Return a plain dict regardless of whether `m` is a Pydantic v2 model,
+    a Pydantic v1 model, or already a dict."""
+    if m is None:
+        return {}
+    if isinstance(m, dict):
+        return m
+    # Pydantic v2
+    try:
+        return m.model_dump()
+    except Exception:
+        pass
+    # Pydantic v1
+    try:
+        return m.dict()
+    except Exception:
+        pass
+    # Fallback: best effort
+    try:
+        return dict(m)
+    except Exception:
+        return {}
+
+def get_docling_activated(meta: Any, default: bool = False) -> bool:
+    md = meta_to_dict(meta)
+    # Prefer top-level key if present, otherwise look under nested "data"
+    return bool(
+        md.get("docling_activated", None)
+        if "docling_activated" in md
+        else (md.get("data") or {}).get("docling_activated", default)
+    )
 
 def get_ef(
     engine: str,
@@ -1427,6 +1459,12 @@ def process_file(
                     DOCUMENT_INTELLIGENCE_KEY=request.app.state.config.DOCUMENT_INTELLIGENCE_KEY,
                     MISTRAL_OCR_API_KEY=request.app.state.config.MISTRAL_OCR_API_KEY,
                 )
+                
+                # Check if docling is activated
+                is_activated = get_docling_activated(file.meta)
+                if is_activated:
+                    loader.engine = "docling"
+                
                 docs = loader.load(
                     file.filename, file.meta.get("content_type"), file_path
                 )

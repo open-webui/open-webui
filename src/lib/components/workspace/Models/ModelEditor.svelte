@@ -86,7 +86,8 @@
 		image_generation: true,
 		code_interpreter: true,
 		citations: true,
-		usage: undefined
+		usage: undefined,
+		enable_docling: true
 	};
 
 	let knowledge = [];
@@ -176,6 +177,17 @@
 
 		await onSubmit(info);
 
+		// Update the store reactively
+		models.update((currentModels) => {
+		    const idx = currentModels.findIndex((m) => m.id === info.id);
+		    if (idx !== -1) {
+		        currentModels[idx] = { ...currentModels[idx], info };
+		    } else {
+		        currentModels.push({ id: info.id, info });
+		    }
+		    return currentModels;
+		});
+
 		loading = false;
 		success = false;
 	};
@@ -243,7 +255,12 @@
 					return item;
 				}
 			});
-			capabilities = { ...capabilities, ...(model?.meta?.capabilities ?? {}) };
+			// prefer model.info.meta.capabilities, fall back to model.meta.capabilities if neededed
+			const modelCaps =
+  				(model?.info?.meta?.capabilities) ??
+  				(model?.meta?.capabilities) ??
+  			{};
+			capabilities = { ...capabilities, ...modelCaps };
 
 			if ('access_control' in model) {
 				accessControl = model.access_control;

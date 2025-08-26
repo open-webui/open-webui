@@ -38,12 +38,17 @@ from open_webui.storage.provider import Storage
 from open_webui.utils.auth import get_admin_user, get_verified_user
 from pydantic import BaseModel
 
+from open_webui.routers.retrieval import get_docling_activated
+
 log = logging.getLogger(__name__)
 log.setLevel(SRC_LOG_LEVELS["MODELS"])
 
 
 router = APIRouter()
 
+# TODO: This should be included in the settings / admin documents panel
+# List of allowed file extensions for docling processing
+ALLOWED_EXTENSIONS_DOCLING = ["pdf", "doc", "docx", "xls", "xlsx", "pptx", "mkd", "mdown", "asciidoc", "adoc", "asc", "html", "xhtml", "csv",  "png", "jpg", "jpeg", "tiff", "bmp", "webp", "webp", "xml", "json"]
 
 ############################
 # Check if the current user has access to a file through any knowledge bases the user may be in.
@@ -115,8 +120,15 @@ def upload_file(
             request.app.state.config.ALLOWED_FILE_EXTENSIONS = [
                 ext for ext in request.app.state.config.ALLOWED_FILE_EXTENSIONS if ext
             ]
+            
+            allowed_extensions = request.app.state.config.ALLOWED_FILE_EXTENSIONS
+            
+            # Check if docling is activated
+            is_activated = get_docling_activated(file_metadata)
+            if is_activated:
+                allowed_extensions = ALLOWED_EXTENSIONS_DOCLING
 
-            if file_extension not in request.app.state.config.ALLOWED_FILE_EXTENSIONS:
+            if file_extension not in allowed_extensions:
                 raise HTTPException(
                     status_code=status.HTTP_400_BAD_REQUEST,
                     detail=ERROR_MESSAGES.DEFAULT(

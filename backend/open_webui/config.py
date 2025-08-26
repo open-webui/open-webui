@@ -2064,7 +2064,7 @@ TIKA_SERVER_URL = PersistentConfig(
 DOCLING_SERVER_URL = PersistentConfig(
     "DOCLING_SERVER_URL",
     "rag.docling_server_url",
-    os.getenv("DOCLING_SERVER_URL", "http://docling:5001"),
+    os.getenv("DOCLING_SERVER_URL", "http://0.0.0.0:5001"),
 )
 
 DOCLING_OCR_ENGINE = PersistentConfig(

@@ -16,6 +16,7 @@
 	import { onMount, tick, getContext, createEventDispatcher, onDestroy } from 'svelte';
 	const dispatch = createEventDispatcher();
 
+	import { doclingEnabled } from '$lib/stores';
 	import {
 		type Model,
 		mobile,
@@ -454,6 +455,19 @@
 		$config?.features?.enable_code_interpreter &&
 		($_user.role === 'admin' || $_user?.permissions?.features?.code_interpreter);
 
+	let showDoclingButton = false;
+	$: {
+		if (atSelectedModel?.id) {
+			const model = $models.find((m) => m.id === atSelectedModel.id);
+			showDoclingButton = model?.info?.meta?.capabilities?.enable_docling === true;
+		} else {
+			showDoclingButton = selectedModels.some(modelId => {
+				const model = $models.find((m) => m.id === modelId);
+				return model?.info?.meta?.capabilities?.enable_docling === true;
+			});
+		}
+	}
+
 	const scrollToBottom = () => {
 		const element = document.getElementById('messages-container');
 		element.scrollTo({
@@ -539,6 +553,11 @@
 						language: $settings?.audio?.stt?.language
 					};
 				}
+
+				// Include if docling is activated for the file upload
+				metadata = {
+						docling_activated: $doclingEnabled 
+				};
 
 				// During the file upload, file content is automatically extracted.
 				const uploadedFile = await uploadFile(localStorage.token, file, metadata);
@@ -1611,7 +1630,7 @@
 											</div>
 										</InputMenu>
 
-										{#if $_user && (showToolsButton || (toggleFilters && toggleFilters.length > 0) || showWebSearchButton || showImageGenerationButton || showCodeInterpreterButton)}
+										{#if $_user && (showToolsButton || (toggleFilters && toggleFilters.length > 0) || showWebSearchButton || showImageGenerationButton || showCodeInterpreterButton || showDoclingButton)}
 											<div
 												class="flex self-center w-[1px] h-4 mx-1.5 bg-gray-50 dark:bg-gray-800"
 											/>
@@ -1744,6 +1763,33 @@
 														</button>
 													</Tooltip>
 												{/if}
+												
+												{#if showDoclingButton}
+												  <Tooltip content={$i18n.t('Advanced document understanding')} placement="top">
+												    <button
+												      aria-label={$doclingEnabled
+												        ? $i18n.t('Disable Think longer')
+												        : $i18n.t('Enable Think longer')}
+												      aria-pressed={$doclingEnabled}
+												      on:click|preventDefault={() => doclingEnabled.update(v => !v)}
+												      type="button"
+												      class="px-2 @xl:px-2.5 py-2 flex gap-1.5 items-center text-sm transition-colors duration-300 max-w-full overflow-hidden hover:bg-gray-50 dark:hover:bg-gray-800
+												        { $doclingEnabled
+												          ? 'text-sky-500 dark:text-sky-300 bg-sky-50 dark:bg-sky-200/5'
+												          : 'bg-transparent text-gray-600 dark:text-gray-300' }
+												        { ($settings?.highContrastMode ?? false)
+												          ? 'm-1'
+												          : 'focus:outline-hidden rounded-full' }"
+												    >
+												      <CommandLine className="size-4" strokeWidth="1.75" />
+												      <span
+												        class="hidden @xl:block whitespace-nowrap overflow-hidden text-ellipsis leading-none pr-0.5"
+												      >
+												        {$i18n.t('Think longer')}
+												      </span>
+												    </button>
+												  </Tooltip>
+												{/if}												
 											</div>
 										{/if}
 									</div>

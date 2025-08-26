@@ -36,6 +36,10 @@
 		citations: {
 			label: $i18n.t('Citations'),
 			description: $i18n.t('Displays citations in the response')
+		},
+		enable_docling: {
+			label: $i18n.t('Enable Docling'),
+			description: $i18n.t('Model can upload a document using Docling')
 		}
 	};
 
@@ -47,6 +51,7 @@
 		code_interpreter?: boolean;
 		usage?: boolean;
 		citations?: boolean;
+		enable_docling?: boolean;
 	} = {};
 </script>
 
