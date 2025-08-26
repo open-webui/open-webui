@@ -300,7 +300,7 @@
 		const res = await deleteSharedChatById(localStorage.token, chatId);
 		if (res) {
 			toast.success('Link revoked');
-			getSharedChatList();
+			getSharedChatList(page, searchTerm, orderBy, direction, startDate, endDate, publicFilter, statusFilter);
 			selectedSharedChatIds.update((ids) => ids.filter((id) => id !== chatId));
 		} else {
 			toast.error('Failed to revoke link');
@@ -311,7 +311,7 @@
 		const res = await restoreSharedChat(localStorage.token, chatId);
 		if (res) {
 			toast.success('Link restored');
-			getSharedChatList();
+			getSharedChatList(page, searchTerm, orderBy, direction, startDate, endDate, publicFilter, statusFilter);
 		} else {
 			toast.error('Failed to restore link');
 		}
@@ -335,7 +335,7 @@
 			}
 		}
 		toast.success(`${revokedCount} links revoked`);
-		getSharedChatList();
+		getSharedChatList(page, searchTerm, orderBy, direction, startDate, endDate, publicFilter, statusFilter);
 		selectedSharedChatIds.set([]);
 		showConfirmRevokeSelected = false;
 	};
@@ -344,7 +344,7 @@
 		const res = await revokeAllSharedChats(localStorage.token);
 		if (res) {
 			toast.success(`${res.revoked} links revoked`);
-			getSharedChatList();
+			getSharedChatList(page, searchTerm, orderBy, direction, startDate, endDate, publicFilter, statusFilter);
 		} else {
 			toast.error('Failed to revoke all links');
 		}
@@ -357,7 +357,7 @@
 		const res = await resetChatStatsById(localStorage.token, chatToResetStats.id);
 		if (res) {
 			toast.success('Statistics have been reset.');
-			getSharedChatList(); // This will refresh the list with the updated data
+			getSharedChatList(page, searchTerm, orderBy, direction, startDate, endDate, publicFilter, statusFilter); // This will refresh the list with the updated data
 		} else {
 			toast.error('Failed to reset statistics.');
 		}
@@ -378,7 +378,7 @@
 
 		if (resetCount > 0) {
 			toast.success(`${resetCount} chat(s) have had their statistics reset.`);
-			getSharedChatList();
+			getSharedChatList(page, searchTerm, orderBy, direction, startDate, endDate, publicFilter, statusFilter);
 			selectedSharedChatIds.set([]);
 		} else {
 			toast.error('Failed to reset statistics for any selected chats.');
@@ -391,7 +391,7 @@
 		const res = await resetAllChatStats(localStorage.token);
 		if (res) {
 			toast.success(`${res.reset} chat(s) have had their statistics reset.`);
-			getSharedChatList();
+			getSharedChatList(page, searchTerm, orderBy, direction, startDate, endDate, publicFilter, statusFilter);
 		} else {
 			toast.error('Failed to reset all chat statistics.');
 		}
@@ -402,7 +402,7 @@
 		const res = await clearRevokedSharedChats(localStorage.token);
 		if (res) {
 			toast.success(`${res.cleared} revoked link(s) cleared.`);
-			getSharedChatList();
+			getSharedChatList(page, searchTerm, orderBy, direction, startDate, endDate, publicFilter, statusFilter);
 		} else {
 			toast.error('Failed to clear revoked links.');
 		}
