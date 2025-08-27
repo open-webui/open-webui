@@ -873,7 +873,7 @@ async def generate_chat_completion(
         request_url = f"{url}/chat/completions"
         headers["Authorization"] = f"Bearer {key}"
 
-    payload = json.dumps(payload)
+    payload = json.dumps(payload, ensure_ascii=False)
 
     r = None
     session = None
