@@ -37,7 +37,7 @@
 	export let code = '';
 	export let attributes = {};
 
-	export let className = 'my-2 !text-left !direction-ltr';
+	export let className = 'my-2';
 	export let editorClassName = '';
 	export let stickyButtonsClassName = 'top-0';
 
