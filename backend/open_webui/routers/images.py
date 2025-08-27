@@ -8,12 +8,20 @@ import re
 from pathlib import Path
 from typing import Optional
 
+from urllib.parse import quote
 import requests
-from fastapi import APIRouter, Depends, HTTPException, Request, UploadFile
+from fastapi import (
+    APIRouter,
+    Depends,
+    HTTPException,
+    Request,
+    UploadFile,
+)
+
 from open_webui.config import CACHE_DIR
 from open_webui.constants import ERROR_MESSAGES
 from open_webui.env import ENABLE_FORWARD_USER_INFO_HEADERS, SRC_LOG_LEVELS
-from open_webui.routers.files import upload_file
+from open_webui.routers.files import upload_file_handler
 from open_webui.utils.auth import get_admin_user, get_verified_user
 from open_webui.utils.images.comfyui import (
     ComfyUIGenerateImageForm,
@@ -302,8 +310,16 @@ async def update_image_config(
 ):
     set_image_model(request, form_data.MODEL)
 
+    if form_data.IMAGE_SIZE == "auto" and form_data.MODEL != "gpt-image-1":
+        raise HTTPException(
+            status_code=400,
+            detail=ERROR_MESSAGES.INCORRECT_FORMAT(
+                "  (auto is only allowed with gpt-image-1)."
+            ),
+        )
+
     pattern = r"^\d+x\d+$"
-    if re.match(pattern, form_data.IMAGE_SIZE):
+    if form_data.IMAGE_SIZE == "auto" or re.match(pattern, form_data.IMAGE_SIZE):
         request.app.state.config.IMAGE_SIZE = form_data.IMAGE_SIZE
     else:
         raise HTTPException(
@@ -460,7 +476,13 @@ def upload_image(request, image_data, content_type, metadata, user):
             "content-type": content_type,
         },
     )
-    file_item = upload_file(request, file, metadata=metadata, internal=True, user=user)
+    file_item = upload_file_handler(
+        request,
+        file=file,
+        metadata=metadata,
+        process=False,
+        user=user,
+    )
     url = request.app.url_path_for("get_file_content_by_id", id=file_item.id)
     return url
 
@@ -471,7 +493,21 @@ async def image_generations(
     form_data: GenerateImageForm,
     user=Depends(get_verified_user),
 ):
-    width, height = tuple(map(int, request.app.state.config.IMAGE_SIZE.split("x")))
+    # if IMAGE_SIZE = 'auto', default WidthxHeight to the 512x512 default
+    # This is only relevant when the user has set IMAGE_SIZE to 'auto' with an
+    # image model other than gpt-image-1, which is warned about on settings save
+
+    size = "512x512"
+    if (
+        request.app.state.config.IMAGE_SIZE
+        and "x" in request.app.state.config.IMAGE_SIZE
+    ):
+        size = request.app.state.config.IMAGE_SIZE
+
+    if form_data.size and "x" in form_data.size:
+        size = form_data.size
+
+    width, height = tuple(map(int, size.split("x")))
 
     r = None
     try:
@@ -483,7 +519,7 @@ async def image_generations(
             headers["Content-Type"] = "application/json"
 
             if ENABLE_FORWARD_USER_INFO_HEADERS:
-                headers["X-OpenWebUI-User-Name"] = user.name
+                headers["X-OpenWebUI-User-Name"] = quote(user.name, safe=" ")
                 headers["X-OpenWebUI-User-Id"] = user.id
                 headers["X-OpenWebUI-User-Email"] = user.email
                 headers["X-OpenWebUI-User-Role"] = user.role

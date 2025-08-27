@@ -12,6 +12,7 @@
 	const i18n = getContext('i18n');
 
 	import { WEBUI_NAME, config, mobile, models as _models, settings, user } from '$lib/stores';
+	import { WEBUI_BASE_URL } from '$lib/constants';
 	import {
 		createNewModel,
 		deleteModelById,
@@ -42,9 +43,13 @@
 
 	let importFiles;
 	let modelsImportInputElement: HTMLInputElement;
+	let tagsContainerElement: HTMLDivElement;
+
 	let loaded = false;
 
 	let models = [];
+	let tags = [];
+	let selectedTag = '';
 
 	let filteredModels = [];
 	let selectedModel = null;
@@ -55,12 +60,14 @@
 
 	$: if (models) {
 		filteredModels = models.filter((m) => {
-			if (query === '') return true;
+			if (query === '' && selectedTag === '') return true;
 			const lowerQuery = query.toLowerCase();
 			return (
-				(m.name || '').toLowerCase().includes(lowerQuery) ||
-				(m.user?.name || '').toLowerCase().includes(lowerQuery) || // Search by user name
-				(m.user?.email || '').toLowerCase().includes(lowerQuery) // Search by user email
+				((m.name || '').toLowerCase().includes(lowerQuery) ||
+					(m.user?.name || '').toLowerCase().includes(lowerQuery) || // Search by user name
+					(m.user?.email || '').toLowerCase().includes(lowerQuery)) && // Search by user email
+				(selectedTag === '' ||
+					m?.meta?.tags?.some((tag) => tag.name.toLowerCase() === selectedTag.toLowerCase()))
 			);
 		});
 	}
@@ -171,6 +178,16 @@
 		let groups = await getGroups(localStorage.token);
 		group_ids = groups.map((group) => group.id);
 
+		if (models) {
+			tags = models
+				.filter((model) => !(model?.meta?.hidden ?? false))
+				.flatMap((model) => model?.meta?.tags ?? [])
+				.map((tag) => tag.name);
+
+			// Remove duplicates and sort
+			tags = Array.from(new Set(tags)).sort((a, b) => a.localeCompare(b));
+		}
+
 		loaded = true;
 
 		const onKeyDown = (event) => {
@@ -215,7 +232,7 @@
 		}}
 	/>
 
-	<div class="flex flex-col gap-1 my-1.5">
+	<div class="flex flex-col gap-1 mt-1.5">
 		<div class="flex justify-between items-center">
 			<div class="flex items-center md:self-center text-xl font-medium px-0.5">
 				{$i18n.t('Models')}
@@ -262,21 +279,61 @@
 		</div>
 	</div>
 
+	{#if tags.length > 0}
+		<div
+			class=" flex w-full bg-transparent overflow-x-auto scrollbar-none"
+			on:wheel={(e) => {
+				if (e.deltaY !== 0) {
+					e.preventDefault();
+					e.currentTarget.scrollLeft += e.deltaY;
+				}
+			}}
+		>
+			<div
+				class="flex gap-1 w-fit text-center text-sm font-medium rounded-full"
+				bind:this={tagsContainerElement}
+			>
+				<button
+					class="min-w-fit outline-none p-1.5 {selectedTag === ''
+						? ''
+						: 'text-gray-300 dark:text-gray-600 hover:text-gray-700 dark:hover:text-white'} transition capitalize"
+					on:click={() => {
+						selectedTag = '';
+					}}
+				>
+					{$i18n.t('All')}
+				</button>
+
+				{#each tags as tag}
+					<button
+						class="min-w-fit outline-none p-1.5 {selectedTag === tag
+							? ''
+							: 'text-gray-300 dark:text-gray-600 hover:text-gray-700 dark:hover:text-white'} transition capitalize"
+						on:click={() => {
+							selectedTag = tag;
+						}}
+					>
+						{tag}
+					</button>
+				{/each}
+			</div>
+		</div>
+	{/if}
 	<div class=" my-2 mb-5 gap-2 grid lg:grid-cols-2 xl:grid-cols-3" id="model-list">
 		{#each filteredModels as model (model.id)}
 			<div
-				class=" flex flex-col cursor-pointer w-full px-3 py-2 dark:hover:bg-white/5 hover:bg-black/5 rounded-xl transition"
+				class=" flex flex-col cursor-pointer w-full px-4 py-3 border border-gray-50 dark:border-gray-850 dark:hover:bg-white/5 hover:bg-black/5 rounded-2xl transition"
 				id="model-item-{model.id}"
 			>
 				<div class="flex gap-4 mt-1 mb-0.5">
-					<div class=" w-[44px]">
+					<div class=" w-10">
 						<div
 							class=" rounded-full object-cover {model.is_active
 								? ''
 								: 'opacity-50 dark:opacity-50'} "
 						>
 							<img
-								src={model?.meta?.profile_image_url ?? '/static/favicon.png'}
+								src={model?.meta?.profile_image_url ?? `${WEBUI_BASE_URL}/static/favicon.png`}
 								alt="modelfile profile"
 								class=" rounded-full w-full h-auto object-cover"
 							/>
@@ -552,7 +609,7 @@
 
 			<a
 				class=" flex cursor-pointer items-center justify-between hover:bg-gray-50 dark:hover:bg-gray-850 w-full mb-2 px-3.5 py-1.5 rounded-xl transition"
-				href="https://openwebui.com/#open-webui-community"
+				href="https://openwebui.com/models"
 				target="_blank"
 			>
 				<div class=" self-center">
@@ -572,6 +629,6 @@
 	{/if}
 {:else}
 	<div class="w-full h-full flex justify-center items-center">
-		<Spinner />
+		<Spinner className="size-5" />
 	</div>
 {/if}

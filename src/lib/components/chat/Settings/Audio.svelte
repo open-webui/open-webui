@@ -1,7 +1,6 @@
 <script lang="ts">
 	import { toast } from 'svelte-sonner';
 	import { createEventDispatcher, onMount, getContext } from 'svelte';
-	import { KokoroTTS } from 'kokoro-js';
 
 	import { user, settings, config } from '$lib/stores';
 	import { getVoices as _getVoices } from '$lib/apis/audio';
@@ -128,6 +127,7 @@
 
 				const model_id = 'onnx-community/Kokoro-82M-v1.0-ONNX';
 
+				const { KokoroTTS } = await import('kokoro-js');
 				TTSModel = await KokoroTTS.from_pretrained(model_id, {
 					dtype: TTSEngineConfig.dtype, // Options: "fp32", "fp16", "q8", "q4", "q4f16"
 					device: !!navigator?.gpu ? 'webgpu' : 'wasm', // Detect WebGPU
@@ -187,7 +187,7 @@
 						<select
 							class="dark:bg-gray-900 w-fit pr-8 rounded-sm px-2 p-1 text-xs bg-transparent outline-hidden text-right"
 							bind:value={STTEngine}
-							placeholder="Select an engine"
+							placeholder={$i18n.t('Select an engine')}
 						>
 							<option value="">{$i18n.t('Default')}</option>
 							<option value="web">{$i18n.t('Web API')}</option>
@@ -246,7 +246,7 @@
 					<select
 						class="dark:bg-gray-900 w-fit pr-8 rounded-sm px-2 p-1 text-xs bg-transparent outline-hidden text-right"
 						bind:value={TTSEngine}
-						placeholder="Select an engine"
+						placeholder={$i18n.t('Select an engine')}
 					>
 						<option value="">{$i18n.t('Default')}</option>
 						<option value="browser-kokoro">{$i18n.t('Kokoro.js (Browser)')}</option>
@@ -261,9 +261,9 @@
 						<select
 							class="dark:bg-gray-900 w-fit pr-8 rounded-sm px-2 p-1 text-xs bg-transparent outline-hidden text-right"
 							bind:value={TTSEngineConfig.dtype}
-							placeholder="Select dtype"
+							placeholder={$i18n.t('Select dtype')}
 						>
-							<option value="" disabled selected>Select dtype</option>
+							<option value="" disabled selected>{$i18n.t('Select dtype')}</option>
 							<option value="fp32">fp32</option>
 							<option value="fp16">fp16</option>
 							<option value="q8">q8</option>
@@ -319,7 +319,7 @@
 								list="voice-list"
 								class="w-full text-sm bg-transparent dark:text-gray-300 outline-hidden"
 								bind:value={voice}
-								placeholder="Select a voice"
+								placeholder={$i18n.t('Select a voice')}
 							/>
 
 							<datalist id="voice-list">
@@ -387,7 +387,7 @@
 							list="voice-list"
 							class="w-full text-sm bg-transparent dark:text-gray-300 outline-hidden"
 							bind:value={voice}
-							placeholder="Select a voice"
+							placeholder={$i18n.t('Select a voice')}
 						/>
 
 						<datalist id="voice-list">

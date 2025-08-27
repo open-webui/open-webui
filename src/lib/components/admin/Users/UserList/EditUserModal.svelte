@@ -4,10 +4,14 @@
 	import { createEventDispatcher } from 'svelte';
 	import { onMount, getContext } from 'svelte';
 
-	import { updateUserById } from '$lib/apis/users';
+	import { goto } from '$app/navigation';
+
+	import { updateUserById, getUserGroupsById } from '$lib/apis/users';
 
 	import Modal from '$lib/components/common/Modal.svelte';
 	import localizedFormat from 'dayjs/plugin/localizedFormat';
+	import XMark from '$lib/components/icons/XMark.svelte';
+	import SensitiveInput from '$lib/components/common/SensitiveInput.svelte';
 
 	const i18n = getContext('i18n');
 	const dispatch = createEventDispatcher();
@@ -25,6 +29,8 @@
 		password: ''
 	};
 
+	let userGroups: any[] | null = null;
+
 	const submitHandler = async () => {
 		const res = await updateUserById(localStorage.token, selectedUser.id, _user).catch((error) => {
 			toast.error(`${error}`);
@@ -36,10 +42,21 @@
 		}
 	};
 
+	const loadUserGroups = async () => {
+		if (!selectedUser?.id) return;
+		userGroups = null;
+
+		userGroups = await getUserGroupsById(localStorage.token, selectedUser.id).catch((error) => {
+			toast.error(`${error}`);
+			return null;
+		});
+	};
+
 	onMount(() => {
 		if (selectedUser) {
 			_user = selectedUser;
 			_user.password = '';
+			loadUserGroups();
 		}
 	});
 </script>
@@ -54,16 +71,7 @@
 					show = false;
 				}}
 			>
-				<svg
-					xmlns="http://www.w3.org/2000/svg"
-					viewBox="0 0 20 20"
-					fill="currentColor"
-					class="w-5 h-5"
-				>
-					<path
-						d="M6.28 5.22a.75.75 0 00-1.06 1.06L8.94 10l-3.72 3.72a.75.75 0 101.06 1.06L10 11.06l3.72 3.72a.75.75 0 101.06-1.06L11.06 10l3.72-3.72a.75.75 0 00-1.06-1.06L10 8.94 6.28 5.22z"
-					/>
-				</svg>
+				<XMark className={'size-5'} />
 			</button>
 		</div>
 
@@ -113,6 +121,30 @@
 								</div>
 							</div>
 
+							{#if userGroups}
+								<div class="flex flex-col w-full text-sm">
+									<div class="mb-1 text-xs text-gray-500">{$i18n.t('User Groups')}</div>
+
+									{#if userGroups.length}
+										<div class="flex flex-wrap gap-1 my-0.5 -mx-1">
+											{#each userGroups as userGroup}
+												<span class="px-2 py-0.5 rounded-full bg-gray-100 dark:bg-gray-850 text-xs">
+													<a
+														href={'/admin/users/groups?id=' + userGroup.id}
+														on:click|preventDefault={() =>
+															goto('/admin/users/groups?id=' + userGroup.id)}
+													>
+														{userGroup.name}
+													</a>
+												</span>
+											{/each}
+										</div>
+									{:else}
+										<span>-</span>
+									{/if}
+								</div>
+							{/if}
+
 							<div class="flex flex-col w-full">
 								<div class=" mb-1 text-xs text-gray-500">{$i18n.t('Email')}</div>
 
@@ -147,12 +179,13 @@
 								<div class=" mb-1 text-xs text-gray-500">{$i18n.t('New Password')}</div>
 
 								<div class="flex-1">
-									<input
+									<SensitiveInput
 										class="w-full text-sm bg-transparent outline-hidden"
 										type="password"
 										placeholder={$i18n.t('Enter New Password')}
 										bind:value={_user.password}
 										autocomplete="new-password"
+										required={false}
 									/>
 								</div>
 							</div>

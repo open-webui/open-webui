@@ -6,6 +6,8 @@
 	import GarbageBin from '../icons/GarbageBin.svelte';
 	import Spinner from './Spinner.svelte';
 	import Tooltip from './Tooltip.svelte';
+	import XMark from '$lib/components/icons/XMark.svelte';
+	import { settings } from '$lib/stores';
 
 	const i18n = getContext('i18n');
 	const dispatch = createEventDispatcher();
@@ -15,6 +17,7 @@
 	export let url: string | null = null;
 
 	export let dismissible = false;
+	export let modal = false;
 	export let loading = false;
 
 	export let item = null;
@@ -48,7 +51,7 @@
 		: 'rounded-2xl'} text-left"
 	type="button"
 	on:click={async () => {
-		if (item?.file?.data?.content) {
+		if (item?.file?.data?.content || modal) {
 			showModal = !showModal;
 		} else {
 			if (url) {
@@ -64,13 +67,16 @@
 	}}
 >
 	{#if !small}
-		<div class="p-3 bg-black/20 dark:bg-white/10 text-white rounded-xl">
+		<div
+			class="size-10 shrink-0 flex justify-center items-center bg-black/20 dark:bg-white/10 text-white rounded-xl"
+		>
 			{#if !loading}
 				<svg
 					xmlns="http://www.w3.org/2000/svg"
 					viewBox="0 0 24 24"
 					fill="currentColor"
-					class=" size-5"
+					aria-hidden="true"
+					class=" size-4.5"
 				>
 					<path
 						fill-rule="evenodd"
@@ -93,7 +99,11 @@
 				{decodeString(name)}
 			</div>
 
-			<div class=" flex justify-between text-gray-500 text-xs line-clamp-1">
+			<div
+				class=" flex justify-between text-xs line-clamp-1 {($settings?.highContrastMode ?? false)
+					? 'text-gray-800 dark:text-gray-100'
+					: 'text-gray-500'}"
+			>
 				{#if type === 'file'}
 					{$i18n.t('File')}
 				{:else if type === 'doc'}
@@ -127,22 +137,17 @@
 	{#if dismissible}
 		<div class=" absolute -top-1 -right-1">
 			<button
-				class=" bg-white text-black border border-gray-50 rounded-full group-hover:visible invisible transition"
+				aria-label={$i18n.t('Remove File')}
+				class=" bg-white text-black border border-gray-50 rounded-full {($settings?.highContrastMode ??
+				false)
+					? ''
+					: 'outline-hidden focus:outline-hidden group-hover:visible invisible transition'}"
 				type="button"
 				on:click|stopPropagation={() => {
 					dispatch('dismiss');
 				}}
 			>
-				<svg
-					xmlns="http://www.w3.org/2000/svg"
-					viewBox="0 0 20 20"
-					fill="currentColor"
-					class="w-4 h-4"
-				>
-					<path
-						d="M6.28 5.22a.75.75 0 00-1.06 1.06L8.94 10l-3.72 3.72a.75.75 0 101.06 1.06L10 11.06l3.72 3.72a.75.75 0 101.06-1.06L11.06 10l3.72-3.72a.75.75 0 00-1.06-1.06L10 8.94 6.28 5.22z"
-					/>
-				</svg>
+				<XMark className={'size-4'} />
 			</button>
 
 			<!-- <button

@@ -49,6 +49,8 @@
 	import ChevronLeft from '$lib/components/icons/ChevronLeft.svelte';
 	import LockClosed from '$lib/components/icons/LockClosed.svelte';
 	import AccessControlModal from '../common/AccessControlModal.svelte';
+	import Search from '$lib/components/icons/Search.svelte';
+	import Textarea from '$lib/components/common/Textarea.svelte';
 
 	let largeScreen = true;
 
@@ -180,6 +182,12 @@
 
 			if (uploadedFile) {
 				console.log(uploadedFile);
+
+				if (uploadedFile.error) {
+					console.warn('File upload warning:', uploadedFile.error);
+					toast.warning(uploadedFile.error);
+				}
+
 				knowledge.files = knowledge.files.map((item) => {
 					if (item.itemId === tempItemId) {
 						item.id = uploadedFile.id;
@@ -229,7 +237,13 @@
 		// Function to update the UI with the progress
 		const updateProgress = () => {
 			const percentage = (uploadedFiles / totalFiles) * 100;
-			toast.info(`Upload Progress: ${uploadedFiles}/${totalFiles} (${percentage.toFixed(2)}%)`);
+			toast.info(
+				$i18n.t('Upload Progress: {{uploadedFiles}}/{{totalFiles}} ({{percentage}}%)', {
+					uploadedFiles: uploadedFiles,
+					totalFiles: totalFiles,
+					percentage: percentage.toFixed(2)
+				})
+			);
 		};
 
 		// Recursive function to count all files excluding hidden ones
@@ -313,7 +327,11 @@
 					const updateProgress = () => {
 						const percentage = (uploadedFiles / totalFiles) * 100;
 						toast.info(
-							`Upload Progress: ${uploadedFiles}/${totalFiles} (${percentage.toFixed(2)}%)`
+							$i18n.t('Upload Progress: {{uploadedFiles}}/{{totalFiles}} ({{percentage}}%)', {
+								uploadedFiles: uploadedFiles,
+								totalFiles: totalFiles,
+								percentage: percentage.toFixed(2)
+							})
 						);
 					};
 
@@ -353,9 +371,9 @@
 	// Error handler
 	const handleUploadError = (error) => {
 		if (error.name === 'AbortError') {
-			toast.info('Directory selection was cancelled');
+			toast.info($i18n.t('Directory selection was cancelled'));
 		} else {
-			toast.error('Error accessing directory');
+			toast.error($i18n.t('Error accessing directory'));
 			console.error('Directory access error:', error);
 		}
 	};
@@ -671,7 +689,7 @@
 	}}
 />
 
-<div class="flex flex-col w-full translate-y-1" id="collection-container">
+<div class="flex flex-col w-full h-full translate-y-1" id="collection-container">
 	{#if id && knowledge}
 		<AccessControlModal
 			bind:show={showAccessControlModal}
@@ -691,7 +709,7 @@
 								type="text"
 								class="text-left w-full font-semibold text-2xl font-primary bg-transparent outline-hidden"
 								bind:value={knowledge.name}
-								placeholder="Knowledge Name"
+								placeholder={$i18n.t('Knowledge Name')}
 								on:input={() => {
 									changeDebounceHandler();
 								}}
@@ -720,7 +738,7 @@
 							type="text"
 							class="text-left text-xs w-full text-gray-500 bg-transparent outline-hidden"
 							bind:value={knowledge.description}
-							placeholder="Knowledge Description"
+							placeholder={$i18n.t('Knowledge Description')}
 							on:input={() => {
 								changeDebounceHandler();
 							}}
@@ -775,11 +793,10 @@
 								class=" flex-1 w-full h-full max-h-full text-sm bg-transparent outline-hidden overflow-y-auto scrollbar-hidden"
 							>
 								{#key selectedFile.id}
-									<RichTextInput
-										className="input-prose-sm"
+									<textarea
+										class="w-full h-full outline-none resize-none"
 										bind:value={selectedFileContent}
 										placeholder={$i18n.t('Add content here')}
-										preserveBreaks={false}
 									/>
 								{/key}
 							</div>
@@ -833,11 +850,10 @@
 								class=" flex-1 w-full h-full max-h-full py-2.5 px-3.5 rounded-lg text-sm bg-transparent overflow-y-auto scrollbar-hidden"
 							>
 								{#key selectedFile.id}
-									<RichTextInput
-										className="input-prose-sm"
+									<textarea
+										class="w-full h-full outline-none resize-none"
 										bind:value={selectedFileContent}
 										placeholder={$i18n.t('Add content here')}
-										preserveBreaks={false}
 									/>
 								{/key}
 							</div>
@@ -861,18 +877,7 @@
 						<div class=" px-3">
 							<div class="flex mb-0.5">
 								<div class=" self-center ml-1 mr-3">
-									<svg
-										xmlns="http://www.w3.org/2000/svg"
-										viewBox="0 0 20 20"
-										fill="currentColor"
-										class="w-4 h-4"
-									>
-										<path
-											fill-rule="evenodd"
-											d="M9 3.5a5.5 5.5 0 100 11 5.5 5.5 0 000-11zM2 9a7 7 0 1112.452 4.391l3.328 3.329a.75.75 0 11-1.06 1.06l-3.329-3.328A7 7 0 012 9z"
-											clip-rule="evenodd"
-										/>
-									</svg>
+									<Search />
 								</div>
 								<input
 									class=" w-full text-sm pr-4 py-1 rounded-r-xl outline-hidden bg-transparent"
@@ -931,6 +936,6 @@
 			</div>
 		</div>
 	{:else}
-		<Spinner />
+		<Spinner className="size-5" />
 	{/if}
 </div>

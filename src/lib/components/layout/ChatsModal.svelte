@@ -317,7 +317,7 @@
 										class="w-full flex justify-center py-1 text-xs animate-pulse items-center gap-2"
 									>
 										<Spinner className=" size-4" />
-										<div class=" ">Loading...</div>
+										<div class=" ">{$i18n.t('Loading...')}</div>
 									</div>
 								</Loader>
 							{/if}
@@ -329,7 +329,7 @@
 					</div>
 				{:else}
 					<div class="w-full h-full flex justify-center items-center min-h-20">
-						<Spinner />
+						<Spinner className="size-5" />
 					</div>
 				{/if}
 

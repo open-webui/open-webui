@@ -126,7 +126,7 @@ export const getUsers = async (
 	let error = null;
 	let res = null;
 
-	let searchParams = new URLSearchParams();
+	const searchParams = new URLSearchParams();
 
 	searchParams.set('page', `${page}`);
 
@@ -403,6 +403,7 @@ export const deleteUserById = async (token: string, userId: string) => {
 };
 
 type UserUpdateForm = {
+	role: string;
 	profile_image_url: string;
 	email: string;
 	name: string;
@@ -425,6 +426,33 @@ export const updateUserById = async (token: string, userId: string, user: UserUp
 			name: user.name,
 			password: user.password !== '' ? user.password : undefined
 		})
+	})
+		.then(async (res) => {
+			if (!res.ok) throw await res.json();
+			return res.json();
+		})
+		.catch((err) => {
+			console.error(err);
+			error = err.detail;
+			return null;
+		});
+
+	if (error) {
+		throw error;
+	}
+
+	return res;
+};
+
+export const getUserGroupsById = async (token: string, userId: string) => {
+	let error = null;
+
+	const res = await fetch(`${WEBUI_API_BASE_URL}/users/${userId}/groups`, {
+		method: 'GET',
+		headers: {
+			'Content-Type': 'application/json',
+			Authorization: `Bearer ${token}`
+		}
 	})
 		.then(async (res) => {
 			if (!res.ok) throw await res.json();

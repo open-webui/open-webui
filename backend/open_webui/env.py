@@ -7,6 +7,7 @@ import sys
 import shutil
 from uuid import uuid4
 from pathlib import Path
+from cryptography.hazmat.primitives import serialization
 
 import markdown
 from bs4 import BeautifulSoup
@@ -16,14 +17,17 @@ from open_webui.constants import ERROR_MESSAGES
 # Load .env file
 ####################################
 
-OPEN_WEBUI_DIR = Path(__file__).parent  # the path containing this file
-print(OPEN_WEBUI_DIR)
+# Use .resolve() to get the canonical path, removing any '..' or '.' components
+ENV_FILE_PATH = Path(__file__).resolve()
 
-BACKEND_DIR = OPEN_WEBUI_DIR.parent  # the path containing this file
-BASE_DIR = BACKEND_DIR.parent  # the path containing the backend/
+# OPEN_WEBUI_DIR should be the directory where env.py resides (open_webui/)
+OPEN_WEBUI_DIR = ENV_FILE_PATH.parent
 
-print(BACKEND_DIR)
-print(BASE_DIR)
+# BACKEND_DIR is the parent of OPEN_WEBUI_DIR (backend/)
+BACKEND_DIR = OPEN_WEBUI_DIR.parent
+
+# BASE_DIR is the parent of BACKEND_DIR (open-webui-dev/)
+BASE_DIR = BACKEND_DIR.parent
 
 try:
     from dotenv import find_dotenv, load_dotenv
@@ -199,6 +203,7 @@ CHANGELOG = changelog_json
 
 SAFE_MODE = os.environ.get("SAFE_MODE", "false").lower() == "true"
 
+
 ####################################
 # ENABLE_FORWARD_USER_INFO_HEADERS
 ####################################
@@ -266,21 +271,43 @@ else:
 
 DATABASE_URL = os.environ.get("DATABASE_URL", f"sqlite:///{DATA_DIR}/webui.db")
 
+DATABASE_TYPE = os.environ.get("DATABASE_TYPE")
+DATABASE_USER = os.environ.get("DATABASE_USER")
+DATABASE_PASSWORD = os.environ.get("DATABASE_PASSWORD")
+
+DATABASE_CRED = ""
+if DATABASE_USER:
+    DATABASE_CRED += f"{DATABASE_USER}"
+if DATABASE_PASSWORD:
+    DATABASE_CRED += f":{DATABASE_PASSWORD}"
+
+DB_VARS = {
+    "db_type": DATABASE_TYPE,
+    "db_cred": DATABASE_CRED,
+    "db_host": os.environ.get("DATABASE_HOST"),
+    "db_port": os.environ.get("DATABASE_PORT"),
+    "db_name": os.environ.get("DATABASE_NAME"),
+}
+
+if all(DB_VARS.values()):
+    DATABASE_URL = f"{DB_VARS['db_type']}://{DB_VARS['db_cred']}@{DB_VARS['db_host']}:{DB_VARS['db_port']}/{DB_VARS['db_name']}"
+elif DATABASE_TYPE == "sqlite+sqlcipher" and not os.environ.get("DATABASE_URL"):
+    # Handle SQLCipher with local file when DATABASE_URL wasn't explicitly set
+    DATABASE_URL = f"sqlite+sqlcipher:///{DATA_DIR}/webui.db"
+
 # Replace the postgres:// with postgresql://
 if "postgres://" in DATABASE_URL:
     DATABASE_URL = DATABASE_URL.replace("postgres://", "postgresql://")
 
 DATABASE_SCHEMA = os.environ.get("DATABASE_SCHEMA", None)
 
-DATABASE_POOL_SIZE = os.environ.get("DATABASE_POOL_SIZE", 0)
+DATABASE_POOL_SIZE = os.environ.get("DATABASE_POOL_SIZE", None)
 
-if DATABASE_POOL_SIZE == "":
-    DATABASE_POOL_SIZE = 0
-else:
+if DATABASE_POOL_SIZE != None:
     try:
         DATABASE_POOL_SIZE = int(DATABASE_POOL_SIZE)
     except Exception:
-        DATABASE_POOL_SIZE = 0
+        DATABASE_POOL_SIZE = None
 
 DATABASE_POOL_MAX_OVERFLOW = os.environ.get("DATABASE_POOL_MAX_OVERFLOW", 0)
 
@@ -312,6 +339,21 @@ else:
     except Exception:
         DATABASE_POOL_RECYCLE = 3600
 
+DATABASE_ENABLE_SQLITE_WAL = (
+    os.environ.get("DATABASE_ENABLE_SQLITE_WAL", "False").lower() == "true"
+)
+
+DATABASE_USER_ACTIVE_STATUS_UPDATE_INTERVAL = os.environ.get(
+    "DATABASE_USER_ACTIVE_STATUS_UPDATE_INTERVAL", None
+)
+if DATABASE_USER_ACTIVE_STATUS_UPDATE_INTERVAL is not None:
+    try:
+        DATABASE_USER_ACTIVE_STATUS_UPDATE_INTERVAL = float(
+            DATABASE_USER_ACTIVE_STATUS_UPDATE_INTERVAL
+        )
+    except Exception:
+        DATABASE_USER_ACTIVE_STATUS_UPDATE_INTERVAL = 0.0
+
 RESET_CONFIG_ON_START = (
     os.environ.get("RESET_CONFIG_ON_START", "False").lower() == "true"
 )
@@ -325,8 +367,21 @@ ENABLE_REALTIME_CHAT_SAVE = (
 ####################################
 
 REDIS_URL = os.environ.get("REDIS_URL", "")
+REDIS_CLUSTER = os.environ.get("REDIS_CLUSTER", "False").lower() == "true"
+
+REDIS_KEY_PREFIX = os.environ.get("REDIS_KEY_PREFIX", "open-webui")
+
 REDIS_SENTINEL_HOSTS = os.environ.get("REDIS_SENTINEL_HOSTS", "")
 REDIS_SENTINEL_PORT = os.environ.get("REDIS_SENTINEL_PORT", "26379")
+
+# Maximum number of retries for Redis operations when using Sentinel fail-over
+REDIS_SENTINEL_MAX_RETRY_COUNT = os.environ.get("REDIS_SENTINEL_MAX_RETRY_COUNT", "2")
+try:
+    REDIS_SENTINEL_MAX_RETRY_COUNT = int(REDIS_SENTINEL_MAX_RETRY_COUNT)
+    if REDIS_SENTINEL_MAX_RETRY_COUNT < 1:
+        REDIS_SENTINEL_MAX_RETRY_COUNT = 2
+except ValueError:
+    REDIS_SENTINEL_MAX_RETRY_COUNT = 2
 
 ####################################
 # UVICORN WORKERS
@@ -347,6 +402,10 @@ except ValueError:
 ####################################
 
 WEBUI_AUTH = os.environ.get("WEBUI_AUTH", "True").lower() == "true"
+ENABLE_SIGNUP_PASSWORD_CONFIRMATION = (
+    os.environ.get("ENABLE_SIGNUP_PASSWORD_CONFIRMATION", "False").lower() == "true"
+)
+
 WEBUI_AUTH_TRUSTED_EMAIL_HEADER = os.environ.get(
     "WEBUI_AUTH_TRUSTED_EMAIL_HEADER", None
 )
@@ -396,18 +455,104 @@ WEBUI_AUTH_COOKIE_SECURE = (
 if WEBUI_AUTH and WEBUI_SECRET_KEY == "":
     raise ValueError(ERROR_MESSAGES.ENV_VAR_NOT_FOUND)
 
+ENABLE_COMPRESSION_MIDDLEWARE = (
+    os.environ.get("ENABLE_COMPRESSION_MIDDLEWARE", "True").lower() == "true"
+)
+
+
+####################################
+# SCIM Configuration
+####################################
+
+SCIM_ENABLED = os.environ.get("SCIM_ENABLED", "False").lower() == "true"
+SCIM_TOKEN = os.environ.get("SCIM_TOKEN", "")
+
+####################################
+# LICENSE_KEY
+####################################
+
+LICENSE_KEY = os.environ.get("LICENSE_KEY", "")
+
+LICENSE_BLOB = None
+LICENSE_BLOB_PATH = os.environ.get("LICENSE_BLOB_PATH", DATA_DIR / "l.data")
+if LICENSE_BLOB_PATH and os.path.exists(LICENSE_BLOB_PATH):
+    with open(LICENSE_BLOB_PATH, "rb") as f:
+        LICENSE_BLOB = f.read()
+
+LICENSE_PUBLIC_KEY = os.environ.get("LICENSE_PUBLIC_KEY", "")
+
+pk = None
+if LICENSE_PUBLIC_KEY:
+    pk = serialization.load_pem_public_key(
+        f"""
+-----BEGIN PUBLIC KEY-----
+{LICENSE_PUBLIC_KEY}
+-----END PUBLIC KEY-----
+""".encode(
+            "utf-8"
+        )
+    )
+
+
+####################################
+# MODELS
+####################################
+
+MODELS_CACHE_TTL = os.environ.get("MODELS_CACHE_TTL", "1")
+if MODELS_CACHE_TTL == "":
+    MODELS_CACHE_TTL = None
+else:
+    try:
+        MODELS_CACHE_TTL = int(MODELS_CACHE_TTL)
+    except Exception:
+        MODELS_CACHE_TTL = 1
+
+
+####################################
+# CHAT
+####################################
+
+CHAT_RESPONSE_STREAM_DELTA_CHUNK_SIZE = os.environ.get(
+    "CHAT_RESPONSE_STREAM_DELTA_CHUNK_SIZE", "1"
+)
+
+if CHAT_RESPONSE_STREAM_DELTA_CHUNK_SIZE == "":
+    CHAT_RESPONSE_STREAM_DELTA_CHUNK_SIZE = 1
+else:
+    try:
+        CHAT_RESPONSE_STREAM_DELTA_CHUNK_SIZE = int(
+            CHAT_RESPONSE_STREAM_DELTA_CHUNK_SIZE
+        )
+    except Exception:
+        CHAT_RESPONSE_STREAM_DELTA_CHUNK_SIZE = 1
+
+
+####################################
+# WEBSOCKET SUPPORT
+####################################
+
 ENABLE_WEBSOCKET_SUPPORT = (
     os.environ.get("ENABLE_WEBSOCKET_SUPPORT", "True").lower() == "true"
 )
 
+
 WEBSOCKET_MANAGER = os.environ.get("WEBSOCKET_MANAGER", "")
 
 WEBSOCKET_REDIS_URL = os.environ.get("WEBSOCKET_REDIS_URL", REDIS_URL)
-WEBSOCKET_REDIS_LOCK_TIMEOUT = os.environ.get("WEBSOCKET_REDIS_LOCK_TIMEOUT", 60)
+WEBSOCKET_REDIS_CLUSTER = (
+    os.environ.get("WEBSOCKET_REDIS_CLUSTER", str(REDIS_CLUSTER)).lower() == "true"
+)
+
+websocket_redis_lock_timeout = os.environ.get("WEBSOCKET_REDIS_LOCK_TIMEOUT", "60")
+
+try:
+    WEBSOCKET_REDIS_LOCK_TIMEOUT = int(websocket_redis_lock_timeout)
+except ValueError:
+    WEBSOCKET_REDIS_LOCK_TIMEOUT = 60
 
 WEBSOCKET_SENTINEL_HOSTS = os.environ.get("WEBSOCKET_SENTINEL_HOSTS", "")
-
 WEBSOCKET_SENTINEL_PORT = os.environ.get("WEBSOCKET_SENTINEL_PORT", "26379")
+
 
 AIOHTTP_CLIENT_TIMEOUT = os.environ.get("AIOHTTP_CLIENT_TIMEOUT", "")
 
@@ -506,11 +651,14 @@ else:
 # OFFLINE_MODE
 ####################################
 
+ENABLE_VERSION_UPDATE_CHECK = (
+    os.environ.get("ENABLE_VERSION_UPDATE_CHECK", "true").lower() == "true"
+)
 OFFLINE_MODE = os.environ.get("OFFLINE_MODE", "false").lower() == "true"
 
 if OFFLINE_MODE:
     os.environ["HF_HUB_OFFLINE"] = "1"
-
+    ENABLE_VERSION_UPDATE_CHECK = False
 
 ####################################
 # AUDIT LOGGING
@@ -519,6 +667,14 @@ if OFFLINE_MODE:
 AUDIT_LOGS_FILE_PATH = f"{DATA_DIR}/audit.log"
 # Maximum size of a file before rotating into a new log file
 AUDIT_LOG_FILE_ROTATION_SIZE = os.getenv("AUDIT_LOG_FILE_ROTATION_SIZE", "10MB")
+
+# Comma separated list of logger names to use for audit logging
+# Default is "uvicorn.access" which is the access log for Uvicorn
+# You can add more logger names to this list if you want to capture more logs
+AUDIT_UVICORN_LOGGER_NAMES = os.getenv(
+    "AUDIT_UVICORN_LOGGER_NAMES", "uvicorn.access"
+).split(",")
+
 # METADATA | REQUEST | REQUEST_RESPONSE
 AUDIT_LOG_LEVEL = os.getenv("AUDIT_LOG_LEVEL", "NONE").upper()
 try:
@@ -539,9 +695,33 @@ AUDIT_EXCLUDED_PATHS = [path.lstrip("/") for path in AUDIT_EXCLUDED_PATHS]
 ####################################
 
 ENABLE_OTEL = os.environ.get("ENABLE_OTEL", "False").lower() == "true"
+ENABLE_OTEL_TRACES = os.environ.get("ENABLE_OTEL_TRACES", "False").lower() == "true"
 ENABLE_OTEL_METRICS = os.environ.get("ENABLE_OTEL_METRICS", "False").lower() == "true"
+ENABLE_OTEL_LOGS = os.environ.get("ENABLE_OTEL_LOGS", "False").lower() == "true"
+
 OTEL_EXPORTER_OTLP_ENDPOINT = os.environ.get(
     "OTEL_EXPORTER_OTLP_ENDPOINT", "http://localhost:4317"
+)
+OTEL_METRICS_EXPORTER_OTLP_ENDPOINT = os.environ.get(
+    "OTEL_METRICS_EXPORTER_OTLP_ENDPOINT", OTEL_EXPORTER_OTLP_ENDPOINT
+)
+OTEL_LOGS_EXPORTER_OTLP_ENDPOINT = os.environ.get(
+    "OTEL_LOGS_EXPORTER_OTLP_ENDPOINT", OTEL_EXPORTER_OTLP_ENDPOINT
+)
+OTEL_EXPORTER_OTLP_INSECURE = (
+    os.environ.get("OTEL_EXPORTER_OTLP_INSECURE", "False").lower() == "true"
+)
+OTEL_METRICS_EXPORTER_OTLP_INSECURE = (
+    os.environ.get(
+        "OTEL_METRICS_EXPORTER_OTLP_INSECURE", str(OTEL_EXPORTER_OTLP_INSECURE)
+    ).lower()
+    == "true"
+)
+OTEL_LOGS_EXPORTER_OTLP_INSECURE = (
+    os.environ.get(
+        "OTEL_LOGS_EXPORTER_OTLP_INSECURE", str(OTEL_EXPORTER_OTLP_INSECURE)
+    ).lower()
+    == "true"
 )
 OTEL_SERVICE_NAME = os.environ.get("OTEL_SERVICE_NAME", "open-webui")
 OTEL_RESOURCE_ATTRIBUTES = os.environ.get(
@@ -550,6 +730,33 @@ OTEL_RESOURCE_ATTRIBUTES = os.environ.get(
 OTEL_TRACES_SAMPLER = os.environ.get(
     "OTEL_TRACES_SAMPLER", "parentbased_always_on"
 ).lower()
+OTEL_BASIC_AUTH_USERNAME = os.environ.get("OTEL_BASIC_AUTH_USERNAME", "")
+OTEL_BASIC_AUTH_PASSWORD = os.environ.get("OTEL_BASIC_AUTH_PASSWORD", "")
+
+OTEL_METRICS_BASIC_AUTH_USERNAME = os.environ.get(
+    "OTEL_METRICS_BASIC_AUTH_USERNAME", OTEL_BASIC_AUTH_USERNAME
+)
+OTEL_METRICS_BASIC_AUTH_PASSWORD = os.environ.get(
+    "OTEL_METRICS_BASIC_AUTH_PASSWORD", OTEL_BASIC_AUTH_PASSWORD
+)
+OTEL_LOGS_BASIC_AUTH_USERNAME = os.environ.get(
+    "OTEL_LOGS_BASIC_AUTH_USERNAME", OTEL_BASIC_AUTH_USERNAME
+)
+OTEL_LOGS_BASIC_AUTH_PASSWORD = os.environ.get(
+    "OTEL_LOGS_BASIC_AUTH_PASSWORD", OTEL_BASIC_AUTH_PASSWORD
+)
+
+OTEL_OTLP_SPAN_EXPORTER = os.environ.get(
+    "OTEL_OTLP_SPAN_EXPORTER", "grpc"
+).lower()  # grpc or http
+
+OTEL_METRICS_OTLP_SPAN_EXPORTER = os.environ.get(
+    "OTEL_METRICS_OTLP_SPAN_EXPORTER", OTEL_OTLP_SPAN_EXPORTER
+).lower()  # grpc or http
+
+OTEL_LOGS_OTLP_SPAN_EXPORTER = os.environ.get(
+    "OTEL_LOGS_OTLP_SPAN_EXPORTER", OTEL_OTLP_SPAN_EXPORTER
+).lower()  # grpc or http
 
 ####################################
 # TOOLS/FUNCTIONS PIP OPTIONS

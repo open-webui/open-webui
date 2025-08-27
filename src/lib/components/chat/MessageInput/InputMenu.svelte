@@ -17,6 +17,7 @@
 	import CameraSolid from '$lib/components/icons/CameraSolid.svelte';
 	import PhotoSolid from '$lib/components/icons/PhotoSolid.svelte';
 	import CommandLineSolid from '$lib/components/icons/CommandLineSolid.svelte';
+	import Spinner from '$lib/components/common/Spinner.svelte';
 
 	const i18n = getContext('i18n');
 
@@ -34,7 +35,7 @@
 
 	export let onClose: Function;
 
-	let tools = {};
+	let tools = null;
 	let show = false;
 	let showAllTools = false;
 
@@ -48,18 +49,18 @@
 		($user?.role === 'admin' || $user?.permissions?.chat?.file_upload);
 
 	const init = async () => {
-		if ($_tools === null) {
-			await _tools.set(await getTools(localStorage.token));
+		await _tools.set(await getTools(localStorage.token));
+		if ($_tools) {
+			tools = $_tools.reduce((a, tool, i, arr) => {
+				a[tool.id] = {
+					name: tool.name,
+					description: tool.meta.description,
+					enabled: selectedToolIds.includes(tool.id)
+				};
+				return a;
+			}, {});
+			selectedToolIds = selectedToolIds.filter((id) => $_tools?.some((tool) => tool.id === id));
 		}
-
-		tools = $_tools.reduce((a, tool, i, arr) => {
-			a[tool.id] = {
-				name: tool.name,
-				description: tool.meta.description,
-				enabled: selectedToolIds.includes(tool.id)
-			};
-			return a;
-		}, {});
 	};
 
 	const detectMobile = () => {
@@ -100,76 +101,84 @@
 
 	<div slot="content">
 		<DropdownMenu.Content
-			class="w-full max-w-[200px] rounded-xl px-1 py-1 border border-gray-300/30 dark:border-gray-700/50 z-50 bg-white dark:bg-gray-850 dark:text-white shadow-sm"
+			class="w-full max-w-[240px] rounded-xl px-1 py-1 border border-gray-300/30 dark:border-gray-700/50 z-50 bg-white dark:bg-gray-850 dark:text-white shadow-sm"
 			sideOffset={10}
 			alignOffset={-8}
 			side="top"
 			align="start"
 			transition={flyAndScale}
 		>
-			{#if Object.keys(tools).length > 0}
-				<div class="{showAllTools ? '' : 'max-h-28'} overflow-y-auto scrollbar-thin">
-					{#each Object.keys(tools) as toolId}
+			{#if tools}
+				{#if Object.keys(tools).length > 0}
+					<div class="{showAllTools ? ' max-h-96' : 'max-h-28'} overflow-y-auto scrollbar-thin">
+						{#each Object.keys(tools) as toolId}
+							<button
+								class="flex w-full justify-between gap-2 items-center px-3 py-2 text-sm font-medium cursor-pointer rounded-xl"
+								on:click={() => {
+									tools[toolId].enabled = !tools[toolId].enabled;
+								}}
+							>
+								<div class="flex-1 truncate">
+									<Tooltip
+										content={tools[toolId]?.description ?? ''}
+										placement="top-start"
+										className="flex flex-1 gap-2 items-center"
+									>
+										<div class="shrink-0">
+											<WrenchSolid />
+										</div>
+
+										<div class=" truncate">{tools[toolId].name}</div>
+									</Tooltip>
+								</div>
+
+								<div class=" shrink-0">
+									<Switch
+										state={tools[toolId].enabled}
+										on:change={async (e) => {
+											const state = e.detail;
+											await tick();
+											if (state) {
+												selectedToolIds = [...selectedToolIds, toolId];
+											} else {
+												selectedToolIds = selectedToolIds.filter((id) => id !== toolId);
+											}
+										}}
+									/>
+								</div>
+							</button>
+						{/each}
+					</div>
+					{#if Object.keys(tools).length > 3}
 						<button
-							class="flex w-full justify-between gap-2 items-center px-3 py-2 text-sm font-medium cursor-pointer rounded-xl"
+							class="flex w-full justify-center items-center text-sm font-medium cursor-pointer rounded-lg hover:bg-gray-50 dark:hover:bg-gray-800"
 							on:click={() => {
-								tools[toolId].enabled = !tools[toolId].enabled;
+								showAllTools = !showAllTools;
 							}}
+							title={showAllTools ? $i18n.t('Show Less') : $i18n.t('Show All')}
 						>
-							<div class="flex-1 truncate">
-								<Tooltip
-									content={tools[toolId]?.description ?? ''}
-									placement="top-start"
-									className="flex flex-1 gap-2 items-center"
-								>
-									<div class="shrink-0">
-										<WrenchSolid />
-									</div>
-
-									<div class=" truncate">{tools[toolId].name}</div>
-								</Tooltip>
-							</div>
-
-							<div class=" shrink-0">
-								<Switch
-									state={tools[toolId].enabled}
-									on:change={async (e) => {
-										const state = e.detail;
-										await tick();
-										if (state) {
-											selectedToolIds = [...selectedToolIds, toolId];
-										} else {
-											selectedToolIds = selectedToolIds.filter((id) => id !== toolId);
-										}
-									}}
-								/>
-							</div>
+							<svg
+								xmlns="http://www.w3.org/2000/svg"
+								fill="none"
+								viewBox="0 0 24 24"
+								stroke-width="2.5"
+								stroke="currentColor"
+								class="size-3 transition-transform duration-200 {showAllTools
+									? 'rotate-180'
+									: ''} text-gray-300 dark:text-gray-600"
+							>
+								<path stroke-linecap="round" stroke-linejoin="round" d="m19.5 8.25-7.5 7.5-7.5-7.5"
+								></path>
+							</svg>
 						</button>
-					{/each}
-				</div>
-				{#if Object.keys(tools).length > 3}
-					<button
-						class="flex w-full justify-center items-center text-sm font-medium cursor-pointer rounded-lg hover:bg-gray-50 dark:hover:bg-gray-800"
-						on:click={() => {
-							showAllTools = !showAllTools;
-						}}
-						title={showAllTools ? $i18n.t('Show Less') : $i18n.t('Show All')}
-					>
-						<svg
-							xmlns="http://www.w3.org/2000/svg"
-							fill="none"
-							viewBox="0 0 24 24"
-							stroke-width="2.5"
-							stroke="currentColor"
-							class="size-3 transition-transform duration-200 {showAllTools
-								? 'rotate-180'
-								: ''} text-gray-300 dark:text-gray-600"
-						>
-							<path stroke-linecap="round" stroke-linejoin="round" d="m19.5 8.25-7.5 7.5-7.5-7.5"
-							></path>
-						</svg>
-					</button>
+					{/if}
+					<hr class="border-black/5 dark:border-white/5 my-1" />
 				{/if}
+			{:else}
+				<div class="py-4">
+					<Spinner />
+				</div>
+
 				<hr class="border-black/5 dark:border-white/5 my-1" />
 			{/if}
 
@@ -379,7 +388,7 @@
 							>
 								<div class="flex flex-col">
 									<div class="line-clamp-1">{$i18n.t('Microsoft OneDrive (work/school)')}</div>
-									<div class="text-xs text-gray-500">Includes SharePoint</div>
+									<div class="text-xs text-gray-500">{$i18n.t('Includes SharePoint')}</div>
 								</div>
 							</DropdownMenu.Item>
 						</DropdownMenu.SubContent>
