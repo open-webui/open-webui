@@ -222,13 +222,11 @@ async def get_task_status(task_id: str):
         return {
             "task_id": task_id,
             "status": state.get("status", "not_found"),
-            "result": state.get("result"),
             "error": state.get("error"),
         }
     return {
         "task_id": task_id,
         "status": "not_found",
-        "result": None,
         "error": "Task ID not found",
     }
 
