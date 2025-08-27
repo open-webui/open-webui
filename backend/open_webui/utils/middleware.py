@@ -1305,6 +1305,13 @@ async def process_chat_response(
                             "error": {"content": error},
                         },
                     )
+                    if isinstance(error, str) or isinstance(error, dict):
+                        await event_emitter(
+                            {
+                                "type": "chat:message:error",
+                                "data": {"error": {"content": error}},
+                            },
+                        )
 
                 if "selected_model_id" in response_data:
                     Chats.upsert_message_to_chat_by_id_and_message_id(
