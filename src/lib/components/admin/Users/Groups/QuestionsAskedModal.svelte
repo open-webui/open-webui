@@ -8,23 +8,40 @@
 	export let show = false;
 	export let member = null;
 
-	// Generate placeholder questions based on member data
-	const generateQuestions = (questionsAsked) => {
-		if (!questionsAsked) return [];
+	// Generate structured questions from the questions array
+	const generateQuestions = (questionsArray) => {
+		if (!Array.isArray(questionsArray) || questionsArray.length === 0) {
+			return [];
+		}
 
-		const questionCount = questionsAsked.length || 5;
-		return Array.from({ length: questionCount }, (_, index) => ({
+		return questionsArray.map((questionText, index) => ({
 			id: index + 1,
-			question: questionsAsked[index] || `Sample question ${index + 1}`,
+			question: questionText || `Question ${index + 1}`,
 			timestamp: new Date(Date.now() - Math.random() * 7 * 24 * 60 * 60 * 1000).toLocaleString(),
+			timeTaken: `${Math.floor(Math.random() * 5) + 1}min`,
 		}));
 	};
 
 	let questions = [];
+	let isGrouped = false;
 
 	// Update questions when member changes
 	$: if (member && show) {
-		questions = generateQuestions(member.questionsAsked);
+		// Check if this is a grouped member (has multiple chats)
+		isGrouped = member.chatCount > 1;
+
+		// Use member.questions (array) instead of member.questionsAsked (count)
+		questions = generateQuestions(member.questions || []);
+
+		console.log('QuestionsAskedModal - Member data:', {
+			name: member.name,
+			model: member.model,
+			isGrouped,
+			chatCount: member.chatCount,
+			questionsAsked: member.questionsAsked, // This is the count
+			questionsArray: member.questions, // This is the actual questions
+			questionsLength: member.questions?.length || 0,
+		});
 	}
 
 	// Close modal function
@@ -35,7 +52,7 @@
 
 <Modal
 	bind:show
-	size="sm"
+	size="lg"
 	containerClassName="p-4 flex justify-start items-center"
 	className="bg-white dark:bg-gray-900 rounded-lg ml-4 h-[90vh] overflow-hidden flex flex-col"
 >
@@ -43,15 +60,28 @@
 	<div class="flex justify-between items-center p-6 border-b border-gray-200 dark:border-gray-700">
 		<div class="flex flex-col">
 			{#if member}
-				<div class="text-sm text-gray-500 dark:text-gray-400 mt-1">
-					<span class="font-medium">Questions by</span>
-					<span class="font-bold">{member.name}</span>
-					<span class="font-medium">in</span>
+				<h2 class="text-lg font-semibold text-gray-900 dark:text-gray-100">
+					Questions by {member.name}
+				</h2>
+				<div class="text-sm text-gray-500 dark:text-gray-400 mt-1 flex flex-wrap items-center gap-2">
+					<span class="font-medium">Model:</span>
 					<span
 						class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800 dark:bg-blue-800 dark:text-blue-100"
 					>
 						{member.model}
 					</span>
+
+					{#if isGrouped}
+						<span class="text-gray-400">•</span>
+						<span class="font-medium">
+							{member.questionsAsked} total questions
+						</span>
+					{:else}
+						<span class="text-gray-400">•</span>
+						<span class="font-medium">
+							{member.questionsAsked} questions
+						</span>
+					{/if}
 				</div>
 			{/if}
 		</div>
@@ -67,6 +97,7 @@
 	<!-- Questions List -->
 	<div class="flex-1 overflow-hidden flex flex-col">
 		{#if member}
+
 			<!-- Questions List -->
 			<div
 				class="flex-1 overflow-y-auto p-4 space-y-3"
@@ -75,40 +106,50 @@
 			>
 				{#each questions as question, index}
 					<article
-						class=" p-3 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
+						class="border border-gray-200 dark:border-gray-700 p-4 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors"
 					>
-						<div class="flex items-start gap-3 mb-2">
+						<div class="flex items-start gap-3 mb-3">
 							<!-- Question Number -->
-							<div class="flex-shrink-0 text-gray-800 dark:text-gray-200 text-xs font-bold">
+							<div class="flex-shrink-0 w-8 h-8 bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-200 rounded-full flex items-center justify-center text-sm font-bold">
 								{index + 1}
 							</div>
-							<!-- Question Content - Height Adaptive -->
-							<div
-								class="flex-1 text-sm font-medium text-gray-900 dark:text-gray-100 leading-relaxed"
-							>
-								{question.question}
-							</div>
-						</div>
-						<div class="flex justify-between items-start">
-							<!-- Timestamp -->
-							<div class="flex-shrink-0 text-xs text-gray-500 dark:text-gray-400">
-								{question.timestamp}
-							</div>
-							<!-- Time Taken -->
-							<div class="text-xs text-gray-500 dark:text-gray-400">
-								In: {question.timeTaken || `${Math.floor(Math.random() * 5) + 1}min`}
+							<!-- Question Content -->
+							<div class="flex-1">
+								<div class="text-sm font-medium text-gray-900 dark:text-gray-100 leading-relaxed mb-2">
+									{question.question}
+								</div>
+								<div class="flex justify-between items-center text-xs text-gray-500 dark:text-gray-400">
+									<span class="font-medium">Asked on: {question.timestamp}</span>
+									<span class="bg-gray-100 dark:bg-gray-700 px-2 py-1 rounded">
+										⏱️ {question.timeTaken}
+									</span>
+								</div>
 							</div>
 						</div>
 					</article>
 				{/each}
 
 				{#if questions.length === 0}
-					<div class="text-center py-8 text-gray-500 dark:text-gray-400">No questions found</div>
+					<div class="text-center py-12">
+						<div class="text-gray-400 text-lg mb-2">🤔</div>
+						<div class="text-gray-500 dark:text-gray-400 font-medium">No questions found</div>
+						<div class="text-sm text-gray-400 dark:text-gray-500 mt-1">
+							{#if isGrouped}
+								No questions were recorded in any of the {member.chatCount} conversations
+							{:else}
+								No questions were recorded in this conversation
+							{/if}
+						</div>
+					</div>
 				{/if}
 			</div>
 		{:else}
 			<div class="flex-1 flex items-center justify-center text-gray-500 dark:text-gray-400">
-				No member selected
+				<div class="text-center">
+					<div class="text-gray-400 text-2xl mb-2">💬</div>
+					<div class="font-medium">No member selected</div>
+					<div class="text-sm mt-1">Select a conversation to view questions</div>
+				</div>
 			</div>
 		{/if}
 	</div>
@@ -120,7 +161,7 @@
 				Press <kbd class="px-2 py-1 bg-gray-200 dark:bg-gray-700 rounded text-xs">Esc</kbd> to close
 			</div>
 			<button
-				class="px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white text-xs font-medium rounded-md transition"
+				class="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium rounded-md transition"
 				on:click={closeModal}
 			>
 				Close

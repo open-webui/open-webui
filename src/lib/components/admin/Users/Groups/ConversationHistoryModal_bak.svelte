@@ -1,3 +1,19 @@
+<!-- TODO:
+ 1. Last Exported Time
+ 2. Download as Zip Mockup: Question: how to make sure conversation download is controlled?
+ *. Instructor: homework has start and end date -> download at the last day -> able to see the student interactions like how many days, time of conversation "40minutes?" 
+ 3. Export as CSV;
+ 4. Select One Students' all homework;
+ 5. Select the status of all info related to one single homework;
+ 6. Preview of Conversation History;
+
+ Starting with the homework: see who is participating; -> What they've done, click one of the students -> preview the chat ->multiple homeworks, see one student's multiple chats; -> Export it;
+
+ To summarize Start with a multi-student homework overview, then drill down into all student questions for one homework, and finally show a granular view of one student’s interactions across multiple homeworks.
+
+
+ 0822: How to get "Questions Asked?"
+ -->
 <script lang="ts">
 	import { toast } from 'svelte-sonner';
 	import { getContext, onMount } from 'svelte';
@@ -35,7 +51,7 @@
 				method: 'POST',
 				headers: {
 					'Content-Type': 'application/json',
-					Authorization: `Bearer ${localStorage.token}`
+					'Authorization': `Bearer ${localStorage.token}`
 				},
 				body: JSON.stringify(filterData)
 			});
@@ -46,7 +62,7 @@
 
 			const chatData = await response.json();
 			console.log('✅ Received chat data:', chatData);
-
+			
 			return chatData;
 		} catch (error) {
 			console.error('💥 Error:', error);
@@ -54,56 +70,15 @@
 		}
 	};
 
-	$: groupedChats = (() => {
-		const map = new Map();
-		for (const chat of filteredMemberStats) {
-			const key = chat.name + '||' + chat.model;
-			if (!map.has(key)) {
-				map.set(key, {
-					name: chat.name,
-					model: chat.model,
-					email: chat.email,
-					ids: [],
-					messageCount: 0,
-					questionsAsked: 0,
-					lastUpdated: chat.lastUpdated,
-					chats: []
-				});
-			}
-			const group = map.get(key);
-			group.ids.push(chat.id);
-			group.messageCount += Number(chat.messageCount) || 0;
-
-			const qCount = Array.isArray(chat.questionsAsked)
-				? chat.questionsAsked.length
-				: typeof chat.questionsAsked === 'number'
-					? chat.questionsAsked
-					: 0;
-			group.questionsAsked += qCount;
-
-			if (new Date(chat.lastUpdated) > new Date(group.lastUpdated)) {
-				group.lastUpdated = chat.lastUpdated;
-			}
-			group.chats.push(chat);
-		}
-		return Array.from(map.values());
-	})();
 	// Transform API response to match your data structure
-	// Fixed transform function
 	const transformChatData = (apiChats) => {
 		return apiChats.map((chat, index) => {
 			// Find user info from the users array
-			const user = users.find((u) => u.id === chat.user_id) || {
+			const user = users.find(u => u.id === chat.user_id) || {
 				name: `User ${chat.user_id}`,
 				email: `user${chat.user_id}@example.com`
 			};
-
-			// console.log('Transforming chat:', chat);
-
-			// Extract questions properly from meta
-			const questionsArray = chat.meta?.questions_asked || [];
-			const questionsCount = Array.isArray(questionsArray) ? questionsArray.length : 0;
-			console.log('Extracted questions:', questionsArray);
+			console.log('Transforming chat:', chat);
 			return {
 				id: chat.id,
 				chatName: chat.title || `Chat ${index + 1}`,
@@ -111,8 +86,7 @@
 				email: user.email || `user${chat.user_id}@example.com`,
 				model: chat.meta?.model_name || chat.meta?.base_model_name || 'Unknown',
 				messageCount: chat.meta?.num_of_messages || 0,
-				questionsAsked: questionsCount, // This should be a number (count)
-				questions: questionsArray, // This should be the array of question texts
+				questionsAsked: chat.meta?.questions_asked || 0,
 				lastUpdated: new Date(chat.updated_at * 1000).toLocaleDateString(),
 				timeTaken: formatTimeTaken(chat.meta?.total_time_taken)
 			};
@@ -207,13 +181,13 @@
 
 			if (chatData.length === 0) {
 				console.log('❌ No data with group filter, testing without group filter...');
-
+				
 				// Test 2: Try without group filter to see if ANY chats exist
 				const testResponse = await fetch('/api/v1/chats/filter/meta', {
 					method: 'POST',
 					headers: {
 						'Content-Type': 'application/json',
-						Authorization: `Bearer ${localStorage.token}`
+						'Authorization': `Bearer ${localStorage.token}`
 					},
 					body: JSON.stringify({
 						skip: 0,
@@ -230,7 +204,7 @@
 			}
 
 			memberStats = transformChatData(chatData);
-
+			
 			if (memberStats.length === 0) {
 				toast.warning('No conversation data found, showing placeholder data');
 				memberStats = generatePlaceholderData();
@@ -248,109 +222,43 @@
 	// Filtered member stats based on search and model filter
 	$: filteredMemberStats = memberStats.filter((chat) => {
 		// Apply member search filter
+
 		const matchesSearch =
-			!searchQuery || chat.name.toLowerCase().includes(searchQuery.toLowerCase());
+			!searchQuery ||
+			chat.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+			chat.chatName.toLowerCase().includes(searchQuery.toLowerCase()) ||
+			chat.email.toLowerCase().includes(searchQuery.toLowerCase());
+
+		// Apply chat search filter
+		const matchesChatSearch =
+			!chatSearchQuery || chat.chatName.toLowerCase().includes(chatSearchQuery.toLowerCase());
 
 		// Apply model filter
 		const matchesModel = !filteredModel || chat.model === filteredModel;
 
-		return matchesSearch && matchesModel;
+		return matchesSearch && matchesChatSearch && matchesModel;
 	});
 
-	$: filteredGroupedChats = (() => {
-		const map = new Map();
-		for (const chat of filteredMemberStats) {
-			const key = chat.name + '||' + chat.model;
-			if (!map.has(key)) {
-				map.set(key, {
-					name: chat.name,
-					model: chat.model,
-					email: chat.email,
-					ids: [],
-					messageCount: 0,
-					questionsAsked: 0, // This will be the total count
-					questions: [], // This will be all questions combined
-					lastUpdated: chat.lastUpdated,
-					chats: []
-				});
-			}
-			const group = map.get(key);
-
-			// Add chat ID
-			group.ids.push(chat.id);
-
-			// Add message count
-			group.messageCount += Number(chat.messageCount) || 0;
-
-			// Add questions count (questionsAsked should be a number)
-			const chatQuestionsCount =
-				typeof chat.questionsAsked === 'number'
-					? chat.questionsAsked
-					: Array.isArray(chat.questionsAsked)
-						? chat.questionsAsked.length
-						: 0;
-			group.questionsAsked += chatQuestionsCount;
-
-			// Combine all questions from all chats (questions should be arrays)
-			if (Array.isArray(chat.questions)) {
-				group.questions.push(...chat.questions);
-			}
-
-			// Update last updated time
-			if (new Date(chat.lastUpdated) > new Date(group.lastUpdated)) {
-				group.lastUpdated = chat.lastUpdated;
-			}
-
-			// Store the original chat for reference
-			group.chats.push(chat);
-		}
-		return Array.from(map.values());
-	})();
-
-	// Update handleMemberSelect to work with grouped chats
-	const handleMemberSelect = (groupIds) => {
-		// Handle both single ID and array of IDs
-		const ids = Array.isArray(groupIds) ? groupIds : [groupIds];
-
-		// Check if all IDs in this group are currently selected
-		const allSelected = ids.every((id) => selectedMembers.has(id));
-
-		if (allSelected) {
-			// Remove all IDs from selection
-			ids.forEach((id) => selectedMembers.delete(id));
-		} else {
-			// Add all IDs to selection
-			ids.forEach((id) => selectedMembers.add(id));
-		}
-
-		selectedMembers = selectedMembers; // Trigger reactivity
-		updateSelectAllState();
-	};
-
-	// Update select all to work with grouped chats
-
+	// Handle select all checkbox
 	const handleSelectAll = () => {
 		if (selectAll) {
-			selectedMembers = new Set();
-			filteredGroupedChats.forEach((group) => {
-				group.ids.forEach((id) => selectedMembers.add(id));
-			});
+			selectedMembers = new Set(filteredMemberStats.map((chat) => chat.id));
 		} else {
 			selectedMembers = new Set();
 		}
-		selectedMembers = selectedMembers;
 	};
 
-	// Helper function to update select all state
-	const updateSelectAllState = () => {
-		const allGroupIds = filteredGroupedChats.flatMap((group) => group.ids);
-		selectAll = allGroupIds.length > 0 && allGroupIds.every((id) => selectedMembers.has(id));
+	// Handle individual chat selection
+	const handleMemberSelect = (memberId) => {
+		if (selectedMembers.has(memberId)) {
+			selectedMembers.delete(memberId);
+		} else {
+			selectedMembers.add(memberId);
+		}
+		selectedMembers = selectedMembers; // Trigger reactivity
+		selectAll =
+			selectedMembers.size === filteredMemberStats.length && filteredMemberStats.length > 0;
 	};
-
-	// Update reactivity for select all
-	$: if (filteredGroupedChats.length > 0) {
-		updateSelectAllState();
-	}
 
 	// Search functionality
 	const toggleSearch = () => {
@@ -403,44 +311,32 @@
 			return;
 		}
 
-		try {
-			toast.info(`Preparing PDF export for ${selectedMembers.size} conversations...`);
+		const selectedData = filteredMemberStats.filter((chat) => selectedMembers.has(chat.id));
+		console.log('Exporting PDF for:', selectedData);
+		toast.success(`Preparing PDF export for ${selectedMembers.size} conversations...`);
+		
+		// Call the new API
+		const response = await fetch('/api/v1/chats/export/zip', {
+			method: 'POST',
+			headers: {
+				'Content-Type': 'application/json',
+				'Authorization': `Bearer ${localStorage.token}`
+			},
+			body: JSON.stringify({
+				group_id: group.id,
+				chat_ids: Array.from(selectedMembers)
+			})
+		});
 
-			const response = await fetch('/api/v1/chats/export/zip', {
-				method: 'POST',
-				headers: {
-					'Content-Type': 'application/json',
-					Authorization: `Bearer ${localStorage.token}`
-				},
-				body: JSON.stringify({
-					group_id: group.id,
-					chat_ids: Array.from(selectedMembers) // This now contains all selected chat IDs
-				})
-			});
-
-			if (!response.ok) {
-				throw new Error(`Export failed: ${response.status}`);
-			}
-
-			const blob = await response.blob();
-			const url = URL.createObjectURL(blob);
-			const link = document.createElement('a');
-			link.href = url;
-
-			// Create filename with timestamp
-			const timestamp = new Date().toISOString().split('T')[0];
-			link.download = `conversations_${group.id}_${timestamp}.zip`;
-
-			document.body.appendChild(link);
-			link.click();
-			document.body.removeChild(link);
-			URL.revokeObjectURL(url);
-
-			toast.success(`Successfully exported ${selectedMembers.size} conversations`);
-		} catch (error) {
-			console.error('PDF export failed:', error);
-			toast.error(`Failed to export PDF: ${error.message}`);
-		}
+		const blob = await response.blob();
+		const url = URL.createObjectURL(blob);
+		const link = document.createElement('a');
+		link.href = url;
+		link.download = `conversations.zip`;
+		document.body.appendChild(link);
+		link.click();
+		document.body.removeChild(link);
+		URL.revokeObjectURL(url);
 	};
 
 	const handleExportCSV = async () => {
@@ -452,22 +348,19 @@
 		try {
 			toast.info('Preparing CSV export...');
 
-			// Updated filter data to include search query
+			// Prepare filter data matching current UI filters
 			const filterData = {
 				group_id: group.id,
-				model_name: filteredModel || '',
-				user_name: searchQuery || '',  // ✅ Add search query
+				model_name: filteredModel || "",
 				skip: 0,
 				limit: 1000
 			};
-
-			console.log('📤 CSV Export filter data:', filterData); // Debug log
 
 			const response = await fetch('/api/v1/chats/export/csv', {
 				method: 'POST',
 				headers: {
 					'Content-Type': 'application/json',
-					Authorization: `Bearer ${localStorage.token}`
+					'Authorization': `Bearer ${localStorage.token}`
 				},
 				body: JSON.stringify(filterData)
 			});
@@ -480,9 +373,9 @@
 			// Get the CSV content and filename
 			const csvContent = await response.text();
 			const contentDisposition = response.headers.get('Content-Disposition');
-			const filename = contentDisposition
+			const filename = contentDisposition 
 				? contentDisposition.split('filename=')[1]?.replace(/"/g, '')
-				: `group-${group.id}-conversations-filtered.csv`;
+				: `group-${group.id}-conversations.csv`;
 
 			// Create and download the CSV file
 			const blob = new Blob([csvContent], { type: 'text/csv' });
@@ -490,24 +383,18 @@
 			const link = document.createElement('a');
 			link.href = url;
 			link.download = filename;
-
+			
 			document.body.appendChild(link);
 			link.click();
 			document.body.removeChild(link);
 			URL.revokeObjectURL(url);
 
-			// Enhanced success message
-			const filterInfo = [];
-			if (searchQuery) filterInfo.push(`search: "${searchQuery}"`);
-			if (filteredModel) filterInfo.push(`model: "${filteredModel}"`);
-			
-			const filterText = filterInfo.length > 0 ? ` (${filterInfo.join(', ')})` : '';
-			toast.success(`Successfully exported filtered CSV: ${filename}${filterText}`);
+			toast.success(`Successfully exported CSV: ${filename}`);
 
-		} catch (error) {
-			console.error('CSV export failed:', error);
-			toast.error(`Failed to export CSV: ${error.message}`);
-		}
+        } catch (error) {
+            console.error('CSV export failed:', error);
+            toast.error(`Failed to export CSV: ${error.message}`);
+        }
 	};
 
 	// Action dropdown options
@@ -576,30 +463,8 @@
 	let selectedMemberForQuestions = null;
 
 	// Show questions modal
-	const showQuestions = (group) => {
-		console.log('Showing questions for group:', group);
-
-		// Add safety check for group structure
-		if (!group.chats || !Array.isArray(group.chats)) {
-			console.error('Invalid group.chats:', group);
-			toast.error('Unable to load questions - invalid data structure');
-			return;
-		}
-
-		// Create a combined member object with all questions from all chats in the group
-		const combinedMember = {
-			name: group.name,
-			model: group.model,
-			email: group.email,
-			questionsAsked: group.questionsAsked, // This is now the correct total count
-			questions: group.chats.flatMap((chat) => chat.questions), // This is now the combined array of all questions
-			chatCount: group.chats.length,
-			chatNames: group.chats.map((chat) => chat.chatName || 'Unnamed Chat'),
-			totalMessageCount: group.messageCount
-		};
-
-		console.log('Combined member for questions modal:', combinedMember);
-		selectedMemberForQuestions = combinedMember;
+	const showQuestions = (chat) => {
+		selectedMemberForQuestions = chat;
 		showQuestionsModal = true;
 	};
 </script>
@@ -608,54 +473,44 @@
 	<div class="h-[85vh] flex flex-col">
 		<!-- Header -->
 		<div class="flex justify-between items-center dark:text-gray-100 px-5 pt-4 mb-4 flex-shrink-0">
-			<!-- Replace the current export button section with this -->
-			<div class="flex items-center gap-4">
-				<div class="flex flex-col">
-					<div class="text-lg font-medium font-primary">
-						{group?.name || 'Group'}
-					</div>
-					<div class="text-sm text-gray-500 dark:text-gray-400">Conversation History</div>
-				</div>
+<!-- Replace the current export button section with this -->
+<div class="flex items-center gap-4">
+    <div class="flex flex-col">
+        <div class="text-lg font-medium font-primary">
+            {group?.name || 'Group'}
+        </div>
+        <div class="text-sm text-gray-500 dark:text-gray-400">Conversation History</div>
+    </div>
+    
+    <!-- Export Buttons - Two Parallel Buttons -->
+    <div class="flex items-center gap-3">
+        <button
+            class="text-xs text-gray-500 dark:text-gray-400 uppercase tracking-wider hover:text-gray-700 dark:hover:text-gray-200 flex items-center gap-2 px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors"
+            on:click={handleExportPDF}
+            disabled={selectedMembers.size === 0}
+            class:opacity-50={selectedMembers.size === 0}
+            class:cursor-not-allowed={selectedMembers.size === 0}
+        >
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+            </svg>
+            <span class="font-bold">Export as PDF</span>
+        </button>
 
-				<!-- Export Buttons - Two Parallel Buttons -->
-				<div class="flex items-center gap-3">
-					<button
-						class="text-xs text-gray-500 dark:text-gray-400 uppercase tracking-wider hover:text-gray-700 dark:hover:text-gray-200 flex items-center gap-2 px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors"
-						on:click={handleExportPDF}
-						disabled={selectedMembers.size === 0}
-						class:opacity-50={selectedMembers.size === 0}
-						class:cursor-not-allowed={selectedMembers.size === 0}
-					>
-						<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-							<path
-								stroke-linecap="round"
-								stroke-linejoin="round"
-								stroke-width="2"
-								d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
-							/>
-						</svg>
-						<span class="font-bold">Export as PDF</span>
-					</button>
-
-					<button
-						class="text-xs text-gray-500 dark:text-gray-400 uppercase tracking-wider hover:text-gray-700 dark:hover:text-gray-200 flex items-center gap-2 px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors"
-						on:click={handleExportCSV}
-						disabled={filteredMemberStats.length === 0}
-						class:opacity-50={filteredMemberStats.length === 0}
-						class:cursor-not-allowed={filteredMemberStats.length === 0}
-					>
-						<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-							<path
-								stroke-linecap="round"
-								stroke-linejoin="round"
-								stroke-width="2"
-								d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
-							/>
-						</svg>
-						<span class="font-bold">Export as CSV</span>
-					</button>
-				</div>
-			</div>
+        <button
+            class="text-xs text-gray-500 dark:text-gray-400 uppercase tracking-wider hover:text-gray-700 dark:hover:text-gray-200 flex items-center gap-2 px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors"
+            on:click={handleExportCSV}
+            disabled={filteredMemberStats.length === 0}
+            class:opacity-50={filteredMemberStats.length === 0}
+            class:cursor-not-allowed={filteredMemberStats.length === 0}
+        >
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+            </svg>
+            <span class="font-bold">Export as CSV</span>
+        </button>
+    </div>
+</div>
 			<button
 				class="self-start"
 				on:click={() => {
@@ -902,25 +757,25 @@
 								<tbody
 									class="bg-white dark:bg-gray-900 divide-y divide-gray-200 dark:divide-gray-700"
 								>
-									{#each groupedChats as group}
+									{#each filteredMemberStats as chat}
 										<tr class="hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors">
 											<td class="px-4 py-4 whitespace-nowrap">
 												<input
 													type="checkbox"
-													checked={group.ids.every((id) => selectedMembers.has(id))}
-													on:change={() => handleMemberSelect(group.ids)}
+													checked={selectedMembers.has(chat.id)}
+													on:change={() => handleMemberSelect(chat.id)}
 													class="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
 												/>
 											</td>
 											<td
 												class="px-4 py-4 whitespace-nowrap text-sm font-medium text-gray-900 dark:text-gray-100"
 											>
-												<div class="w-[90px] truncate">{group.name}</div>
+												<div class="w-[90px] truncate">{chat.name}</div>
 											</td>
 											<td
 												class="px-4 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400 truncate"
 											>
-												{group.email}
+												{chat.email}
 											</td>
 											<td
 												class="px-4 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400"
@@ -930,28 +785,28 @@
 													<span
 														class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800 dark:bg-blue-800 dark:text-blue-100 truncate"
 													>
-														{group.model}
+														{chat.model}
 													</span>
 												</div>
 											</td>
 											<td
 												class="px-4 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400"
 											>
-												{group.messageCount.toLocaleString()}
+												{chat.messageCount.toLocaleString()}
 											</td>
 											<td
 												class="px-4 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400"
 											>
 												<div class="w-[90px] flex justify-center">
-													<!-- Fix this line in the tbody: -->
+													<!-- Fixed width container matching header -->
 													<button
 														class="flex items-center gap-2 px-2 py-1"
-														on:click|stopPropagation={() => showQuestions(group)}
-														aria-label="View questions asked by {group.name}"
+														on:click|stopPropagation={() => showQuestions(chat)}
+														aria-label="View questions asked by {chat.name}"
 													>
-														<span class="min-w-[20px] text-center">{group.questionsAsked}</span>
+														<span class="min-w-[20px] text-center">{chat.questionsAsked?.length||0}</span>
 														<div
-															class="rounded p-1 hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors"
+															class=" rounded p-1 hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors"
 														>
 															<Eye className="size-3.5 flex-shrink-0" />
 														</div>
@@ -961,15 +816,16 @@
 											<td
 												class="px-4 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400 truncate"
 											>
-												{group.lastUpdated}
+												{chat.lastUpdated}
 											</td>
 											<!-- <td
 												class="px-4 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400"
 											>
-												{group.timeTaken}
+												{chat.timeTaken}
 											</td> -->
 										</tr>
 									{/each}
+
 									{#if filteredMemberStats.length === 0}
 										<tr>
 											<td

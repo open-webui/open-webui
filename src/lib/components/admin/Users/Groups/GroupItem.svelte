@@ -13,7 +13,7 @@
 	import UserCircleSolid from '$lib/components/icons/UserCircleSolid.svelte';
 	import GroupModal from './EditGroupModal.svelte';
 	import ConversationHistoryModal from './ConversationHistoryModal.svelte';
-
+	import { getChatById } from '$lib/apis/chats';
 	export let users = [];
 	export let group = {
 		name: 'Admins',
@@ -103,7 +103,9 @@
 		</button>
 
 		<!-- Existing edit button -->
-		<div class="rounded-lg p-1 hover:bg-gray-100 dark:hover:bg-gray-850 transition flex items-center gap-1.5">
+		<div
+			class="rounded-lg p-1 hover:bg-gray-100 dark:hover:bg-gray-850 transition flex items-center gap-1.5"
+		>
 			<span class="text-xs text-gray-750 dark:text-gray-400 font-medium">Edit</span>
 			<Pencil className="size-3.5" />
 		</div>
