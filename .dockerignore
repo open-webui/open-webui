@@ -1,3 +1,4 @@
+.gitignore
 .github
 .DS_Store
 docs
@@ -11,10 +12,25 @@ vite.config.js.timestamp-*
 vite.config.ts.timestamp-*
 __pycache__
 .idea
-venv
 _old
 uploads
 .ipynb_checkpoints
 **/*.db
 _test
 backend/data/*
+
+# Dockerfiles
+Dockerfile
+docker-compose*
+
+# Python
+__pycache__
+.pytest_cache
+.venv
+venv
+
+# Qdrant
+qdrant_storage/
+
+# VSCode
+.vscode

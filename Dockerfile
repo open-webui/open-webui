@@ -70,7 +70,7 @@ RUN apt-get update && \
     rm -rf /var/lib/apt/lists/* /var/cache/apt/*
 
 # Create model directories
-RUN mkdir -p /models/embedding /models/whisper /models/txtai /models/transformers /models/tiktoken
+RUN mkdir -m=g+rwX -p /models/audio /models/embedding /models/whisper /models/txtai /models/transformers /models/tiktoken
 
 # Copy only requirements for model downloads
 COPY ./backend/requirements.txt /tmp/requirements.txt
@@ -177,7 +177,7 @@ RUN if [ $UID -ne 0 ]; then \
 RUN mkdir -p $HOME/.cache/chroma /app/backend/data/cache
 RUN echo -n 00000000-0000-0000-0000-000000000000 > $HOME/.cache/chroma/telemetry_user_id
 
-# Make sure the user has access to the app, backend data cache, and root directory  
+# Make sure the user has access to the app, backend data cache, and root directory
 RUN chown -R $UID:$GID /app $HOME && \
     if [ ! -z "$BUILDKIT_VERSION" ]; then \
         chmod -R g=u $HOME /app/backend/data/cache; \
