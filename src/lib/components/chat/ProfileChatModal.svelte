@@ -88,16 +88,16 @@
 </script>
 
 <Modal bind:show size="2xl">
-	<div>
-		<div class=" flex justify-between w-full dark:text-gray-300 px-5 pt-4 pb-0.5">
-			<div class=" text-lg font-medium self-center">{$i18n.t('Chat Profile Data')}</div>
+	<div class="bg-white dark:bg-gray-900 text-black dark:text-gray-300">
+		<div class="flex justify-between w-full px-5 pt-4 pb-0.5">
+			<div class="text-lg font-medium self-center">{$i18n.t('Chat Profile Data')}</div>
 			<button
 				class="self-center"
 				on:click={() => {
 					show = false;
 				}}
 			>
-				<XMark className={'size-5'} />
+				<XMark className="size-5" />
 			</button>
 		</div>
 
@@ -106,18 +106,21 @@
 				<div class="w-full flex flex-col space-y-4 text-left">
 					{#if usages.length > 0}
 						{#each allUnique as usage, i}
-							<pre class="text-left"><strong  class="block mb-2">Message #{i + 1}:</strong></pre>
+							<pre class="text-left font-semibold mb-2">Message #{i + 1}:</pre>
 							{#each Object.entries(usage) as [key, value]}
 								{#if key === 'raw'}
-									<pre class="overflow-auto whitespace-pre-wrap font-mono text-sm bg-gray-100 border rounded p-4">{String(value)}</pre>
+									<pre class="overflow-auto whitespace-pre-wrap font-mono text-sm bg-gray-100 dark:bg-gray-800 border border-gray-300 dark:border-gray-700 rounded p-4 text-black dark:text-gray-200">
+										{String(value)}
+									</pre>
 								{/if}
 							{/each}
 						{/each}
 					{:else}
-						<p>No usage blocks found yet.</p>
+						<p class="text-gray-600 dark:text-gray-400">No usage blocks found yet.</p>
 					{/if}
 				</div>
 			</div>
 		{/if}
 	</div>
 </Modal>
+
