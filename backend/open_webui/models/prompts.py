@@ -104,15 +104,32 @@ class PromptsTable:
 
     def get_prompts(self) -> list[PromptUserResponse]:
         with get_db() as db:
-            prompts = []
+            # Import User model to do the join
+            from open_webui.models.users import User
 
-            for prompt in db.query(Prompt).order_by(Prompt.timestamp.desc()).all():
-                user = Users.get_user_by_id(prompt.user_id)
+            # Single query with JOIN to avoid N+1 problem and nested connections
+            results = (
+                db.query(Prompt, User)
+                .join(
+                    User, Prompt.user_id == User.id, isouter=True
+                )  # LEFT JOIN in case user is deleted
+                .order_by(Prompt.timestamp.desc())
+                .all()
+            )
+
+            prompts = []
+            for prompt, user in results:
+                user_data = None
+                if user:
+                    from open_webui.models.users import UserModel
+
+                    user_data = UserModel.model_validate(user).model_dump()
+
                 prompts.append(
                     PromptUserResponse.model_validate(
                         {
                             **PromptModel.model_validate(prompt).model_dump(),
-                            "user": user.model_dump() if user else None,
+                            "user": user_data,
                         }
                     )
                 )
@@ -151,7 +168,13 @@ class PromptsTable:
     ) -> list[PromptUserResponse]:
         """Get paginated prompts with user info and optional search"""
         with get_db() as db:
-            query = db.query(Prompt)
+            # Import User model for the join
+            from open_webui.models.users import User
+
+            # Start with joined query to avoid N+1 problem
+            query = db.query(Prompt, User).join(
+                User, Prompt.user_id == User.id, isouter=True
+            )
 
             # Apply search filter if provided
             if search and search.strip():
@@ -164,7 +187,7 @@ class PromptsTable:
 
             # Apply pagination
             offset = (page - 1) * limit
-            prompts_data = (
+            results = (
                 query.order_by(Prompt.timestamp.desc())
                 .offset(offset)
                 .limit(limit)
@@ -172,13 +195,18 @@ class PromptsTable:
             )
 
             prompts = []
-            for prompt in prompts_data:
-                user = Users.get_user_by_id(prompt.user_id)
+            for prompt, user in results:
+                user_data = None
+                if user:
+                    from open_webui.models.users import UserModel
+
+                    user_data = UserModel.model_validate(user).model_dump()
+
                 prompts.append(
                     PromptUserResponse.model_validate(
                         {
                             **PromptModel.model_validate(prompt).model_dump(),
-                            "user": user.model_dump() if user else None,
+                            "user": user_data,
                         }
                     )
                 )
@@ -245,21 +273,50 @@ class PromptsTable:
         search: str = None,
     ) -> list[PromptUserResponse]:
         """Get paginated prompts by user with user info - users only see their own prompts"""
-        # Get prompts first
-        prompts = self.get_prompts_by_user_id_paginated(user_id, page, limit, search)
+        # Use JOIN query to avoid N+1 problem
+        with get_db() as db:
+            from open_webui.models.users import User, UserModel
 
-        # Add user info
-        result = []
-        for prompt in prompts:
-            user = Users.get_user_by_id(prompt.user_id)
-            result.append(
-                PromptUserResponse.model_validate(
-                    {
-                        **prompt.model_dump(),
-                        "user": user.model_dump() if user else None,
-                    }
-                )
+            # Single query with JOIN
+            query = db.query(Prompt, User).join(
+                User, Prompt.user_id == User.id, isouter=True
             )
+
+            # Filter by user ID
+            query = query.filter(Prompt.user_id == user_id)
+
+            # Apply search filter if provided
+            if search and search.strip():
+                search_term = f"%{search.strip().lower()}%"
+                query = query.filter(
+                    Prompt.command.ilike(search_term)
+                    | Prompt.title.ilike(search_term)
+                    | Prompt.content.ilike(search_term)
+                )
+
+            # Apply pagination
+            offset = (page - 1) * limit
+            results = (
+                query.order_by(Prompt.timestamp.desc())
+                .offset(offset)
+                .limit(limit)
+                .all()
+            )
+
+            result = []
+            for prompt, user in results:
+                user_data = None
+                if user:
+                    user_data = UserModel.model_validate(user).model_dump()
+
+                result.append(
+                    PromptUserResponse.model_validate(
+                        {
+                            **PromptModel.model_validate(prompt).model_dump(),
+                            "user": user_data,
+                        }
+                    )
+                )
 
         return result
 
