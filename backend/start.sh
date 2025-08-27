@@ -28,7 +28,7 @@ if test "$WEBUI_SECRET_KEY $WEBUI_JWT_SECRET_KEY" = " "; then
   if ! [ -e "$KEY_FILE" ]; then
     echo "Generating WEBUI_SECRET_KEY"
     # Generate a random value to use as a WEBUI_SECRET_KEY in case the user didn't provide one.
-    echo $(head -c 12 /dev/random | base64) > "$KEY_FILE"
+    head -c 12 /dev/random | base64 > "$KEY_FILE"
   fi
 
   echo "Loading WEBUI_SECRET_KEY from $KEY_FILE"
@@ -71,4 +71,6 @@ fi
 
 PYTHON_CMD=$(command -v python3 || command -v python)
 
-WEBUI_SECRET_KEY="$WEBUI_SECRET_KEY" exec "$PYTHON_CMD" -m uvicorn open_webui.main:app --host "$HOST" --port "$PORT" --forwarded-allow-ips '*' --workers "${UVICORN_WORKERS:-1}"
+WEBUI_SECRET_KEY="$WEBUI_SECRET_KEY" exec "$PYTHON_CMD" -m uvicorn open_webui.main:app \
+  --host "$HOST" --port "$PORT" --forwarded-allow-ips '*' \
+  --workers "${UVICORN_WORKERS:-1}"
