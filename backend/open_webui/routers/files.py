@@ -362,11 +362,11 @@ async def search_files(
 
 @router.post("/reindex", response_model=bool)
 async def reindex_all_files(request: Request, user=Depends(get_admin_user)):
-    if REINDEX_STATE.get("files_progress", 0) > 0:
+    if REINDEX_STATE.get("files", {}).get("status", "idle") != "idle":
         return False
 
-    REINDEX_STATE["files_progress"] = (
-        1  # marking as started, before the first file is done
+    REINDEX_STATE["files"]["status"] = (
+        "running"  # marking as started, before the first file is done
     )
 
     files_count = Files.get_files_count().count
@@ -410,19 +410,15 @@ async def reindex_all_files(request: Request, user=Depends(get_admin_user)):
                         ProcessFileForm(file_id=file.id),
                         user=user,
                     )
-                REINDEX_STATE["files_progress"] = max(
-                    int((i + offset) / files_count * 100), 1
-                )  # never go below 1 again to mark as working
-                # this line un-blocks the API for the GET progress bar call
-                await sleep(0.1)
+                REINDEX_STATE["files"]["progress"] =  int((i + offset) / files_count * 100)
+                await sleep(0.1)  # this line un-blocks the API for the GET progress bar call
             except Exception as e:
                 log.error(
                     f"Error processing file {file.filename} (ID: {file.id}): {str(e)}"
                 )
 
-    REINDEX_STATE["files_progress"] = 100
-    await sleep(2)  # allow UI to fetch final value
-    REINDEX_STATE["files_progress"] = 0
+    REINDEX_STATE["files"]["progress"] = 100
+    REINDEX_STATE["files"]["status"] = "done"
     log.info("Reindexing files completed successfully.")
     return True
 

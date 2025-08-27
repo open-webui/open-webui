@@ -121,11 +121,11 @@ async def query_memory(
 
 @router.post("/reindex", response_model=bool)
 async def reindex_all_memory(request: Request, user=Depends(get_admin_user)):
-    if REINDEX_STATE.get("memories_progress", 0) > 0:
+    if REINDEX_STATE.get("memories", {}).get("status", "idle") != "idle":
         return False
 
-    REINDEX_STATE["memories_progress"] = (
-        1  # marking as started, before the first memory is done
+    REINDEX_STATE["memories"]["status"] = (
+        "running"  # marking as started, before the first memory is done
     )
     memories_count = Memories.get_memory_count().count
     batch_size = 10
@@ -167,18 +167,15 @@ async def reindex_all_memory(request: Request, user=Depends(get_admin_user)):
                         }
                     ],
                 )
-                REINDEX_STATE["memories_progress"] = max(
-                    int((i + offset) / memories_count * 100), 1
-                )  # never go below 1 again to mark as working
-                await sleep(0.1)
+                REINDEX_STATE["memories"]["progress"] = int((i + offset) / memories_count * 100)
+                await sleep(0.1)  # this line un-blocks the API for the GET progress bar call
             except Exception as e:
                 log.error(
                     f"Error processing memory {memory.id} (user-id: {memory.user_id}): {str(e)}"
                 )
 
-    REINDEX_STATE["memories_progress"] = 100
-    await sleep(2)  # allow UI to fetch final value
-    REINDEX_STATE["memories_progress"] = 0
+    REINDEX_STATE["memories"]["progress"] = 100
+    REINDEX_STATE["memories"]["status"] = "done"
     log.info("Reindexing memories completed successfully.")
     return True
 

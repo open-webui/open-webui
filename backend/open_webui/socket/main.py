@@ -133,9 +133,9 @@ else:
     USER_POOL = {}
     USAGE_POOL = {}
     REINDEX_STATE = {
-        "memories_progress": 0,
-        "files_progress": 0,
-        "knowledge_progress": 0,
+        "memories": {"progress": 0, "status": "idle"},
+        "files": {"progress": 0, "status": "idle"},
+        "knowledge": {"progress": 0, "status": "idle"},
     }
     aquire_func = release_func = renew_func = lambda: True
 

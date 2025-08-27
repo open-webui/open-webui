@@ -17,10 +17,9 @@
 		updateRAGConfig
 	} from '$lib/apis/retrieval';
 
-	import { reindexMemories } from '$lib/apis/memories';
-	import { reindexKnowledge, countKnowledges } from '$lib/apis/knowledge';
-	import { deleteAllFiles, reindexFiles, countFiles } from '$lib/apis/files';
-	import { listenToReindexProgress, checkIfReindexing } from '$lib/apis/utils';
+	import { countKnowledges } from '$lib/apis/knowledge';
+	import { deleteAllFiles, countFiles } from '$lib/apis/files';
+	import { checkIfReindexing, listenToReindexProgress, reindexData } from '$lib/apis/utils';
 
 	import ResetUploadDirConfirmDialog from '$lib/components/common/ConfirmDialog.svelte';
 	import ResetVectorDBConfirmDialog from '$lib/components/common/ConfirmDialog.svelte';
@@ -41,11 +40,9 @@
 	let showResetUploadDirConfirm = false;
 	let showFilesReindexConfirm = false;
 	let filesCountMessage = '';
-	let reindexProgress = 0;
-	let reindexSource: string | null = '';
-	let memoriesMessage = '0%';
-	let filesMessage = '0%';
-	let knowledgeMessage = '0%';
+	let memories = { progress: 0, status: 'idle' };
+	let files = { progress: 0, status: 'idle' };
+	let knowledge = { progress: 0, status: 'idle' };
 	let isReindexing = false;
 	let showReindexBar = false;
 
@@ -273,69 +270,37 @@
 		}
 	};
 
-	const handleReindexProgress = ({
-		source,
-		progress
-	}: {
-		source: string | null;
-		progress: number;
+	const handleReindexProgress = (data: {
+		memories: { progress: number; status: string };
+		files: { progress: number; status: string };
+		knowledge: { progress: number; status: string };
 	}) => {
-		reindexProgress = progress;
-		reindexSource = source;
-		switch (reindexSource) {
-			case 'memories':
-				memoriesMessage = `${progress}%`;
-				break;
-			case 'files':
-				memoriesMessage = $i18n.t('Done');
-				filesMessage = `${progress}%`;
-				break;
-			case 'knowledge':
-				memoriesMessage = $i18n.t('Done');
-				filesMessage = $i18n.t('Done');
-				knowledgeMessage = `${progress}%`;
-				break;
-			default:
-				knowledgeMessage = $i18n.t('Done');
-				break;
-		}
-		if (source === null) {
-			isReindexing = false;
-		}
+		memories = data.memories;
+		files = data.files;
+		knowledge = data.knowledge;
+
+		isReindexing = memories.status === 'running' || files.status === 'running' || knowledge.status === 'running';
 	};
 
 	const startReindexing = async () => {
-		memoriesMessage = '0%';
-		filesMessage = '0%';
-		knowledgeMessage = '0%';
 		showReindexBar = true;
 		isReindexing = true;
-		reindexProgress = 0;
 
-		const res_memories = await reindexMemories(localStorage.token).catch((error) => {
+		// setTimeout(() => {
+		// 	listenToReindexProgress(handleReindexProgress);
+		// }, 2000);
+
+		const res_files = await reindexData(localStorage.token).catch((error) => {
 			toast.error(`${error}`);
 			return null;
 		});
 
-		setTimeout(() => {
-			listenToReindexProgress(handleReindexProgress);
-		}, 1000);
-
-		const res_files = await reindexFiles(localStorage.token).catch((error) => {
-			toast.error(`${error}`);
-			return null;
+		listenToReindexProgress(handleReindexProgress, () => {
+			toast.success($i18n.t('Reindexing complete'));
+			isReindexing = false;
 		});
-
-		const res_knowleges = await reindexKnowledge(localStorage.token).catch((error) => {
-			toast.error(`${error}`);
-			return null;
-		});
-
-		if (res_memories && res_files && res_knowleges) {
-			toast.success($i18n.t('Success'));
-		}
-		isReindexing = false;
 	};
+
 	onMount(async () => {
 		await setEmbeddingConfig();
 
@@ -1433,15 +1398,37 @@
 						</div>
 					</div>
 					{#if showReindexBar}
-						<div class="w-full bg-gray-200 rounded-full h-3 mt-4">
-							<div class="bg-blue-600 h-3 rounded-full" style="width: {reindexProgress}%"></div>
+						<div class="w-full bg-gray-200 rounded-full h-3 mt-4 flex overflow-hidden">
+							<!-- Memories -->
+							<div
+							class={`h-3 transition-all duration-300 rounded-l-full ${
+								memories.status === "done" ? "bg-green-600" : "bg-blue-600"
+							}`}
+							style="width: {33 * (memories.progress / 100)}%"
+							></div>
+
+							<!-- Files -->
+							<div
+							class={`h-3 transition-all duration-300 ${
+								files.status === "done" ? "bg-green-600" : "bg-blue-600"
+							}`}
+							style="width: {33 * (files.progress / 100)}%"
+							></div>
+
+							<!-- Knowledge -->
+							<div
+							class={`h-3 transition-all duration-300 rounded-r-full ${
+								knowledge.status === "done" ? "bg-green-600" : "bg-blue-600"
+							}`}
+							style="width: {34 * (knowledge.progress / 100)}%"
+							></div>
 						</div>
-						<!-- <p class="text-sm mt-2 text-gray-600">'Reindexing... {fileProgress}%' -->
+
 						<p class="text-sm mt-2 text-gray-600">
-							{$i18n.t('Reindexing')}:
-							{$i18n.t('Memory')}: {memoriesMessage},
-							{$i18n.t('Files')}: {filesMessage},
-							{$i18n.t('Knowledge')}: {knowledgeMessage}.
+							{$i18n.t("Reindexing")}:
+							{$i18n.t("Memory")}: {memories.status === 'done' ? $i18n.t("Done") : `${memories.progress}%`}, 
+							{$i18n.t("Files")}: {files.status === 'done' ? $i18n.t("Done") : `${files.progress}%`}, 
+							{$i18n.t("Knowledge")}: {knowledge.status === 'done' ? $i18n.t("Done") : `${knowledge.progress}%`}.
 						</p>
 					{/if}
 				</div>

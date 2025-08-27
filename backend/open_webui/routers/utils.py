@@ -9,9 +9,12 @@ from fastapi import APIRouter, Depends, HTTPException, Request, Response, status
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel
 from starlette.responses import FileResponse
-from asyncio import sleep
+from asyncio import create_task, sleep
 from json import dumps
 
+from open_webui.routers.files import reindex_all_files
+from open_webui.routers.knowledge import reindex_knowledge_files
+from open_webui.routers.memories import reindex_all_memory
 from open_webui.utils.misc import get_gravatar_url
 from open_webui.utils.pdf_generator import PDFGenerator
 from open_webui.utils.auth import get_admin_user, get_verified_user
@@ -137,28 +140,61 @@ async def download_litellm_config_yaml(user=Depends(get_admin_user)):
     )
 
 
+############################
+# Reindex All Data
+############################
+
+
+async def run_reindex_pipeline(request: Request, user):
+    try:
+        for key in REINDEX_STATE.keys():
+            REINDEX_STATE[key]["progress"] = 0
+            REINDEX_STATE[key]["status"] = "idle"
+
+        await reindex_all_memory(request, user)
+        await reindex_all_files(request, user)
+        await reindex_knowledge_files(request, user)
+
+        log.info("Reindexing everything completed successfully.")
+    except Exception as e:
+        log.exception("Reindexing failed")
+
+
+@router.post("/reindex", response_model=bool)
+async def reindex_everything(
+        request: Request,
+        user=Depends(get_admin_user)
+    ):
+    if any(state.get("status", "idle") == "running" for state in REINDEX_STATE.values()):
+        log.info("Reindexing seems to be already in progress.")
+        return False
+
+    create_task(run_reindex_pipeline(request, user))
+    log.info("Reindexing pipeline started in background.")
+    return True
+
+
+############################
+# Reindex updater stream
+############################
+
+
 @router.get("/reindex/stream")
 async def stream_progress():
     async def event_generator():
         no_progress_counter = 0
         while True:
-            active_source = None
+            # Send the entire REINDEX_STATE
+            yield f"data: {dumps(REINDEX_STATE)}\n\n"
 
-            for key, value in REINDEX_STATE.items():
-                if key.endswith("_progress") and 0 < value <= 100:
-                    active_source = key.removesuffix("_progress")
-                    progress_value = value
-                    break  # only one can be active by design
-
-            if not active_source:
-                # Add delay to not immediately end the stream when jumping from one reindex task to another
+            # Check if all tasks are idle (or done) to eventually end the stream
+            if all(state.get("status", "idle") != "running" for state in REINDEX_STATE.values()):
                 no_progress_counter += 1
                 if no_progress_counter >= 3:
-                    yield f"data: {dumps({'source': None, 'progress': 0})}\n\n"
                     break
             else:
                 no_progress_counter = 0
-                yield f"data: {dumps({'source': active_source, 'progress': progress_value})}\n\n"
-            await sleep(2)  # stream every two second
+
+            await sleep(2)
 
     return StreamingResponse(event_generator(), media_type="text/event-stream")
