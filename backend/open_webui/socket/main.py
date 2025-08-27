@@ -705,6 +705,23 @@ def get_event_emitter(request_info, update_db=True):
                     },
                 )
 
+            if "type" in event_data and event_data["type"] == "files":
+                message = Chats.get_message_by_id_and_message_id(
+                    request_info["chat_id"],
+                    request_info["message_id"],
+                )
+
+                files = event_data.get("data", {}).get("files", [])
+                files.extend(message.get("files", []))
+
+                Chats.upsert_message_to_chat_by_id_and_message_id(
+                    request_info["chat_id"],
+                    request_info["message_id"],
+                    {
+                        "files": files,
+                    },
+                )
+
     return __event_emitter__
 
 
