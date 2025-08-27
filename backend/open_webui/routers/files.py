@@ -129,20 +129,20 @@ def process_tasks(request, form_data, user, task_id):
     redis_key = f"task:{task_id}"
 
     # Armazenando um dicionário como JSON (simples e legível)
-    state = {'status': "Processing Document"}
+    state = {'status': "Processing document"}
     redis_client.set(redis_key, json.dumps(state))
 
-    # try:
-    text = process_file_async(request, form_data, task_id, user)
-    # except Exception as e:
-    #     log.exception(e)
-    #     state['error'] = str(e)
-    #     state['status'] = "Processing Failed"
-    #     redis_client.set(redis_key, json.dumps(state))
-    #     return
+    try:
+        text = process_file_async(request, form_data, task_id, user)
+    except Exception as e:
+        log.exception(e)
+        state['error'] = str(e)
+        state['status'] = "Process failed"
+        redis_client.set(redis_key, json.dumps(state))
+        raise e
 
     state['text'] = text
-    state['status'] = "Processing Completed"
+    state['status'] = "Process completed"
     redis_client.set(redis_key, json.dumps(state))
 
 
@@ -160,11 +160,6 @@ async def upload_file_async(
 
     # replace filename with uuid
     task_id = str(uuid.uuid4())
-
-    # Salva estado inicial no Redis
-    redis_key = f"task:{task_id}"
-    state = {"status": "queued", "result": None, "error": None}
-    redis_client.set(redis_key, json.dumps(state))
 
     name = filename
     filename = f"{id}_{filename}"

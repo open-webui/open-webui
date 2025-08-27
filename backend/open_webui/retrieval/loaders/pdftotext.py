@@ -5,7 +5,7 @@ from tenacity import retry, stop_after_attempt, wait_exponential, retry_if_excep
 import time
 
 from open_webui.env import SRC_LOG_LEVELS
-from open_webui.utils.db_utils import get_status
+from open_webui.utils.redis_utils import get_status
 
 log = logging.getLogger(__name__)
 log.setLevel(SRC_LOG_LEVELS["RAG"])
