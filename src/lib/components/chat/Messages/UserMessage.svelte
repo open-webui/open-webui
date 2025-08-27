@@ -330,7 +330,7 @@
 								? `max-w-[90%] px-5 py-2  bg-gray-50 dark:bg-gray-850 ${
 										message.files ? 'rounded-tr-lg' : ''
 									}`
-								: ' w-full'} {$settings.chatDirection === 'RTL' ? 'text-right' : ''}"
+								: ' w-full'}"
 						>
 							{#if message.content}
 								<Markdown
