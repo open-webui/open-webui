@@ -1442,6 +1442,7 @@
 		}
 
 		messageInput?.setText('');
+		prompt = '';
 
 		// Reset chat input textarea
 		if (!($settings?.richTextInput ?? true)) {
@@ -2334,6 +2335,7 @@
 										clearDraft();
 										if (e.detail || files.length > 0) {
 											await tick();
+
 											submitPrompt(
 												($settings?.richTextInput ?? true)
 													? e.detail.replaceAll('\n\n', '\n')

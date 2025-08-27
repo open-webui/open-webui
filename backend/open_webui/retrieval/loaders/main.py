@@ -4,6 +4,7 @@ import ftfy
 import sys
 import json
 
+from azure.identity import DefaultAzureCredential
 from langchain_community.document_loaders import (
     AzureAIDocumentIntelligenceLoader,
     BSHTMLLoader,
@@ -327,7 +328,6 @@ class Loader:
         elif (
             self.engine == "document_intelligence"
             and self.kwargs.get("DOCUMENT_INTELLIGENCE_ENDPOINT") != ""
-            and self.kwargs.get("DOCUMENT_INTELLIGENCE_KEY") != ""
             and (
                 file_ext in ["pdf", "xls", "xlsx", "docx", "ppt", "pptx"]
                 or file_content_type
@@ -340,11 +340,18 @@ class Loader:
                 ]
             )
         ):
-            loader = AzureAIDocumentIntelligenceLoader(
-                file_path=file_path,
-                api_endpoint=self.kwargs.get("DOCUMENT_INTELLIGENCE_ENDPOINT"),
-                api_key=self.kwargs.get("DOCUMENT_INTELLIGENCE_KEY"),
-            )
+            if self.kwargs.get("DOCUMENT_INTELLIGENCE_KEY") != "":
+                loader = AzureAIDocumentIntelligenceLoader(
+                    file_path=file_path,
+                    api_endpoint=self.kwargs.get("DOCUMENT_INTELLIGENCE_ENDPOINT"),
+                    api_key=self.kwargs.get("DOCUMENT_INTELLIGENCE_KEY"),
+                )
+            else:
+                loader = AzureAIDocumentIntelligenceLoader(
+                    file_path=file_path,
+                    api_endpoint=self.kwargs.get("DOCUMENT_INTELLIGENCE_ENDPOINT"),
+                    azure_credential=DefaultAzureCredential(),
+                )
         elif (
             self.engine == "mistral_ocr"
             and self.kwargs.get("MISTRAL_OCR_API_KEY") != ""
