@@ -230,7 +230,6 @@ async def get_task_status(task_id: str):
         "status": "not_found",
         "result": None,
         "error": "Task ID not found",
-        "task": {},
     }
 
 
