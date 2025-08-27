@@ -144,7 +144,7 @@ RUN pip3 install --no-cache-dir uv && \
     chown -R $UID:$GID /app/backend/data/
 
 # Install Ollama if requested
-RUN if [ [ "$USE_OLLAMA" = "true" ] && [ "$USE_SLIM" != "true" ] ]; then \
+RUN if [ "$USE_OLLAMA" = "true" ] && [ "$USE_SLIM" != "true" ]; then \
     date +%s > /tmp/ollama_build_hash && \
     echo "Cache broken at timestamp: `cat /tmp/ollama_build_hash`" && \
     curl -fsSL https://ollama.com/install.sh | sh && \
