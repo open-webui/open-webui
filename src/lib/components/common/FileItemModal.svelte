@@ -25,6 +25,8 @@
 	let isAudio = false;
 	let loading = false;
 
+	let selectedTab = '';
+
 	$: isPDF =
 		item?.meta?.content_type === 'application/pdf' ||
 		(item?.name && item?.name.toLowerCase().endsWith('.pdf'));
@@ -115,7 +117,7 @@
 
 			<div>
 				<div class="flex flex-col items-center md:flex-row gap-1 justify-between w-full">
-					<div class=" flex flex-wrap text-sm gap-1 text-gray-500">
+					<div class=" flex flex-wrap text-xs gap-1 text-gray-500">
 						{#if item?.type === 'collection'}
 							{#if item?.type}
 								<div class="capitalize shrink-0">{item.type}</div>
@@ -202,11 +204,41 @@
 						{/each}
 					</div>
 				{:else if isPDF}
-					<iframe
-						title={item?.name}
-						src={`${WEBUI_API_BASE_URL}/files/${item.id}/content`}
-						class="w-full h-[70vh] border-0 rounded-lg mt-4"
-					/>
+					<div
+						class="flex mb-2.5 scrollbar-none overflow-x-auto w-full border-b border-gray-100 dark:border-gray-800 text-center text-sm font-medium bg-transparent dark:text-gray-200"
+					>
+						<button
+							class="min-w-fit py-1.5 px-4 border-b {selectedTab === ''
+								? ' '
+								: ' border-transparent text-gray-300 dark:text-gray-600 hover:text-gray-700 dark:hover:text-white'} transition"
+							type="button"
+							on:click={() => {
+								selectedTab = '';
+							}}>{$i18n.t('Content')}</button
+						>
+
+						<button
+							class="min-w-fit py-1.5 px-4 border-b {selectedTab === 'preview'
+								? ' '
+								: ' border-transparent text-gray-300 dark:text-gray-600 hover:text-gray-700 dark:hover:text-white'} transition"
+							type="button"
+							on:click={() => {
+								selectedTab = 'preview';
+							}}>{$i18n.t('Preview')}</button
+						>
+					</div>
+
+					{#if selectedTab === 'preview'}
+						<iframe
+							title={item?.name}
+							src={`${WEBUI_API_BASE_URL}/files/${item.id}/content`}
+							class="w-full h-[70vh] border-0 rounded-lg"
+						/>
+					{:else}
+						<div class="max-h-96 overflow-scroll scrollbar-hidden text-xs whitespace-pre-wrap">
+							{item?.file?.data?.content ?? 'No content'}
+						</div>
+					{/if}
 				{:else}
 					{#if isAudio}
 						<audio
