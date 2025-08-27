@@ -133,7 +133,7 @@ def process_tasks(request, form_data, user, task_id):
     redis_client.set(redis_key, json.dumps(state))
 
     try:
-        text = process_file_async(request, form_data, task_id, user)
+        process_file_async(request, form_data, task_id, user)
     except Exception as e:
         log.exception(e)
         state['error'] = str(e)
@@ -141,7 +141,6 @@ def process_tasks(request, form_data, user, task_id):
         redis_client.set(redis_key, json.dumps(state))
         raise e
 
-    state['text'] = text
     state['status'] = "Process completed"
     redis_client.set(redis_key, json.dumps(state))
 
@@ -160,6 +159,8 @@ async def upload_file_async(
 
     # replace filename with uuid
     task_id = str(uuid.uuid4())
+
+    redis_key = f"task:{task_id}"
 
     name = filename
     filename = f"{id}_{filename}"

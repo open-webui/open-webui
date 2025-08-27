@@ -1190,12 +1190,6 @@ def process_file_async(
                     },
                 )
 
-                return {
-                    "status": True,
-                    "collection_name": collection_name,
-                    "filename": file.filename,
-                    "content": text_content,
-                }
         except Exception as e:
             raise e
 
