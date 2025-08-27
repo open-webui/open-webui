@@ -146,9 +146,9 @@
 	const getPromptGroupName = (prompt) => {
 		if (prompt.access_control === null) return null;
 
-		// Check for both read and write group access
-		const writeGroupId = prompt.access_control.write.group_ids[0];
-		const readGroupId = prompt.access_control.read.group_ids[0];
+		// Check for both read and write group access with safe property access
+		const writeGroupId = prompt.access_control?.write?.group_ids?.[0];
+		const readGroupId = prompt.access_control?.read?.group_ids?.[0];
 		const groupId = writeGroupId || readGroupId;
 
 		if (groupId) {
@@ -163,8 +163,8 @@
 	const isGroupPrompt = (prompt) => {
 		return (
 			prompt.access_control !== null &&
-			(prompt.access_control.read.group_ids.length > 0 ||
-				prompt.access_control.write.group_ids.length > 0)
+			(prompt.access_control?.read?.group_ids?.length > 0 ||
+				prompt.access_control?.write?.group_ids?.length > 0)
 		);
 	};
 
