@@ -115,7 +115,7 @@ if WEBSOCKET_MANAGER == "redis":
 
     clean_up_lock = RedisLock(
         redis_url=WEBSOCKET_REDIS_URL,
-        lock_name="usage_cleanup_lock",
+        lock_name=f"{REDIS_KEY_PREFIX}:usage_cleanup_lock",
         timeout_secs=WEBSOCKET_REDIS_LOCK_TIMEOUT,
         redis_sentinels=redis_sentinels,
         redis_cluster=WEBSOCKET_REDIS_CLUSTER,
