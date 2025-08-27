@@ -139,7 +139,7 @@ RUN pip3 install --no-cache-dir uv && \
     python -c "import os; import tiktoken; tiktoken.get_encoding(os.environ['TIKTOKEN_ENCODING_NAME'])"; \
     fi; \
     else \
-    uv pip install --system -r requirements.txt --no-cache-dir && \
+    uv pip install --system -r requirements.txt --no-cache-dir; \
     fi; \
     chown -R $UID:$GID /app/backend/data/
 
