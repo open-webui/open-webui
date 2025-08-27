@@ -640,12 +640,7 @@
 			</Name>
 
 			<div>
-				<div
-					class="chat-{message.role} w-full min-w-full markdown-prose {$settings.chatDirection ===
-					'RTL'
-						? 'text-right'
-						: ''}"
-				>
+				<div class="chat-{message.role} w-full min-w-full markdown-prose">
 					<div>
 						{#if (message?.statusHistory ?? [...(message?.status ? [message?.status] : [])]).length > 0}
 							{@const status = (
