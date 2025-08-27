@@ -143,13 +143,13 @@
 
 						{#if item?.file?.data?.content}
 							<div class="capitalize shrink-0">
-								{getLineCount(item?.file?.data?.content ?? '')} extracted lines
+								{$i18n.t('{{COUNT}} extracted lines', {
+									COUNT: getLineCount(item?.file?.data?.content ?? '')
+								})}
 							</div>
 
 							<div class="flex items-center gap-1 shrink-0">
-								<Info />
-
-								Formatting may be inconsistent from source.
+								• {$i18n.t('Formatting may be inconsistent from source.')}
 							</div>
 						{/if}
 
