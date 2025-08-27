@@ -3,7 +3,7 @@
 	import { toast } from 'svelte-sonner';
 	import mermaid from 'mermaid';
 	import { PaneGroup, Pane, PaneResizer } from 'paneforge';
-	import StalledResponseToast from '$lib/components/layout/StalledResponseToast.svelte';
+
 	import { getContext, onDestroy, onMount, tick } from 'svelte';
 	const i18n: Writable<i18nType> = getContext('i18n');
 
@@ -141,14 +141,7 @@
 	let chatFiles = [];
 	let files = [];
 	let params = {};
-	let showStallPopup = false;
 
-	// Only show once per tab session
-	function maybeShowStallPopup() {
-	if (sessionStorage.getItem('stall_toast_shown') === '1') return;
-	showStallPopup = true;
-	sessionStorage.setItem('stall_toast_shown', '1');
-	}
 	$: if (chatIdProp) {
 		(async () => {
 			loading = true;
@@ -184,7 +177,6 @@
 				window.setTimeout(() => scrollToBottom(), 0);
 				const chatInput = document.getElementById('chat-input');
 				chatInput?.focus();
-				maybeShowStallPopup();
 			} else {
 				await goto('/');
 			}
@@ -2038,11 +2030,6 @@
 	id="chat-container"
 >
 	{#if !loading}
-		{#if showStallPopup}
-			<div class="fixed top-4 right-4 z-[1000]">
-			<StalledResponseToast on:close={() => (showStallPopup = false)} />
-			</div>
-		{/if}
 		<div in:fade={{ duration: 50 }} class="w-full h-full flex flex-col">
 			{#if $settings?.backgroundImageUrl ?? null}
 				<div
