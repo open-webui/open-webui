@@ -224,7 +224,6 @@ async def get_task_status(task_id: str):
             "status": state.get("status", "not_found"),
             "result": state.get("result"),
             "error": state.get("error"),
-            "task": state,
         }
     return {
         "task_id": task_id,
