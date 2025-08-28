@@ -727,7 +727,7 @@ def get_sources_from_items(
                         query=queries[0],  # Use first query for now
                         query_embedding=query_embeddings[0],
                         retrieved_documents=documents,
-                        embedding_function=lambda texts, prefix=None, user=user: embedding_function(texts, prefix=prefix, user=user),
+                        embedding_function=lambda texts, prefix=None: embedding_function(texts, prefix=prefix, user=user),
                         threshold=RAG_GROUNDING_THRESHOLD.value,
                         user=user,
                     )
