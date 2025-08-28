@@ -4,6 +4,7 @@
 ARG USE_CUDA=false
 ARG USE_OLLAMA=false
 ARG USE_SLIM=false
+ARG USE_PERMISSION_HARDENING=false
 # Tested with cu117 for CUDA 11 and cu121 for CUDA 12 (default)
 ARG USE_CUDA_VER=cu128
 # any sentence transformer model; models to use can be found at https://huggingface.co/models?library=sentence-transformers
@@ -25,6 +26,9 @@ ARG GID=0
 FROM --platform=$BUILDPLATFORM node:22-alpine3.20 AS build
 ARG BUILD_HASH
 
+# Set Node.js options (heap limit Allocation failed - JavaScript heap out of memory)
+# ENV NODE_OPTIONS="--max-old-space-size=4096"
+
 WORKDIR /app
 
 # to store git revision in build
@@ -45,6 +49,7 @@ ARG USE_CUDA
 ARG USE_OLLAMA
 ARG USE_CUDA_VER
 ARG USE_SLIM
+ARG USE_PERMISSION_HARDENING
 ARG USE_EMBEDDING_MODEL
 ARG USE_RERANKING_MODEL
 ARG UID
@@ -169,11 +174,13 @@ HEALTHCHECK CMD curl --silent --fail http://localhost:${PORT:-8080}/health | jq 
 # Minimal, atomic permission hardening for OpenShift (arbitrary UID):
 # - Group 0 owns /app and /root
 # - Directories are group-writable and have SGID so new files inherit GID 0
-RUN set -eux; \
+RUN if [ "$USE_PERMISSION_HARDENING" = "true" ]; then \
+    set -eux; \
     chgrp -R 0 /app /root || true; \
     chmod -R g+rwX /app /root || true; \
     find /app -type d -exec chmod g+s {} + || true; \
-    find /root -type d -exec chmod g+s {} + || true
+    find /root -type d -exec chmod g+s {} + || true; \
+    fi
 
 USER $UID:$GID
 
