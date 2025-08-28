@@ -26,6 +26,7 @@ class File(Base):
 
     data = Column(JSON, nullable=True)
     meta = Column(JSON, nullable=True)
+    image_refs = Column(JSON, nullable=True)
 
     access_control = Column(JSON, nullable=True)
 
@@ -45,6 +46,7 @@ class FileModel(BaseModel):
 
     data: Optional[dict] = None
     meta: Optional[dict] = None
+    image_refs: Optional[list[str]] = None
 
     access_control: Optional[dict] = None
 
@@ -209,6 +211,22 @@ class FilesTable:
                 db.commit()
                 return FileModel.model_validate(file)
             except Exception:
+                return None
+
+    def update_file_image_refs_by_id(
+        self, id: str, image_refs: list[str]
+    ) -> Optional[FileModel]:
+        with get_db() as db:
+            try:
+                file = db.query(File).filter_by(id=id).first()
+                if file:
+                    file.image_refs = image_refs
+                    db.commit()
+                    db.refresh(file)
+                    return FileModel.model_validate(file)
+                return None
+            except Exception as e:
+                log.error(f"Error updating file image_refs: {e}")
                 return None
 
     def delete_file_by_id(self, id: str) -> bool:

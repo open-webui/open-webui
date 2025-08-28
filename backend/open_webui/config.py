@@ -2400,6 +2400,9 @@ PDF_EXTRACT_IMAGES = PersistentConfig(
     os.environ.get("PDF_EXTRACT_IMAGES", "False").lower() == "true",
 )
 
+PDF_EXTRACT_IMAGES_DIR = DATA_DIR / "images"
+PDF_EXTRACT_IMAGES_DIR.mkdir(parents=True, exist_ok=True)
+
 RAG_EMBEDDING_MODEL = PersistentConfig(
     "RAG_EMBEDDING_MODEL",
     "rag.embedding_model",

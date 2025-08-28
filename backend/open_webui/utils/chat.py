@@ -13,6 +13,10 @@ import asyncio
 from fastapi import Request, status
 from starlette.responses import Response, StreamingResponse, JSONResponse
 
+from open_webui.models.files import Files
+from open_webui.env import DATA_DIR
+import os
+import base64
 
 from open_webui.models.users import UserModel
 
@@ -190,6 +194,42 @@ async def generate_chat_completion(
         raise Exception("Model not found")
 
     model = models[model_id]
+    
+    if model.get("vision", False):
+        documents = form_data.pop("documents", None)
+        if documents:
+            last_user_message = None
+            for message in reversed(form_data["messages"]):
+                if message.get("role") == "user":
+                    last_user_message = message
+                    break
+
+            if last_user_message:
+                if "images" not in last_user_message:
+                    last_user_message["images"] = []
+
+                for doc in documents:
+                    doc_id = doc.get("id")
+                    if not doc_id:
+                        continue
+
+                    file_model = Files.get_file_by_id(doc_id)
+                    if file_model and file_model.image_refs:
+                        for image_ref in file_model.image_refs:
+                            try:
+                                image_path = os.path.join(DATA_DIR, image_ref)
+                                if os.path.exists(image_path):
+                                    with open(image_path, "rb") as image_file:
+                                        encoded_string = base64.b64encode(
+                                            image_file.read()
+                                        ).decode("utf-8")
+                                        last_user_message["images"].append(
+                                            encoded_string
+                                        )
+                            except Exception as e:
+                                log.error(
+                                    f"Error reading or encoding image {image_ref}: {e}"
+                                )
 
     if getattr(request.state, "direct", False):
         return await generate_direct_chat_completion(
