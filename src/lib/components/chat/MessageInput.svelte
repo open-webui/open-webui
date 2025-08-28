@@ -82,15 +82,24 @@
 
 	export let imageGenerationEnabled = false;
 	export let webSearchEnabled = false;
-	export let codeInterpreterEnabled = false;
+export let codeInterpreterEnabled = false;
+export let selectedKnowledgeSources = [];
 
-	$: onChange({
-		prompt,
-		files,
-		selectedToolIds,
-		imageGenerationEnabled,
-		webSearchEnabled
-	});
+let knowledgeSources = [];
+$: knowledgeSources =
+  ($config?.model_id_to_knowledge_source_mapping?.[
+    atSelectedModel?.id ?? selectedModels[0]
+  ] as string[]) ?? [];
+
+$: onChange({
+prompt,
+files,
+selectedToolIds,
+imageGenerationEnabled,
+webSearchEnabled,
+codeInterpreterEnabled,
+selectedKnowledgeSources
+});
 
 	let showTools = false;
 
@@ -768,13 +777,15 @@
 														}
 													}
 
-													if (e.key === 'Escape') {
-														console.log('Escape');
-														atSelectedModel = undefined;
-														selectedToolIds = [];
-														webSearchEnabled = false;
-														imageGenerationEnabled = false;
-													}
+if (e.key === 'Escape') {
+console.log('Escape');
+atSelectedModel = undefined;
+selectedToolIds = [];
+webSearchEnabled = false;
+imageGenerationEnabled = false;
+codeInterpreterEnabled = false;
+selectedKnowledgeSources = [];
+}
 												}}
 												on:paste={async (e) => {
 													e = e.detail.event;
@@ -1176,16 +1187,54 @@
 																? 'bg-gray-50 dark:bg-gray-400/10 border-gray-100  dark:border-gray-700 text-gray-600 dark:text-gray-400  '
 																: 'bg-transparent border-transparent text-gray-600 dark:text-gray-300  hover:bg-gray-100 dark:hover:bg-gray-800 '}"
 														>
-															<CommandLine className="size-5" strokeWidth="1.75" />
-															<span
-																class="hidden @xl:block whitespace-nowrap overflow-hidden text-ellipsis translate-y-[0.5px]"
-																>{$i18n.t('Code Interpreter')}</span
-															>
-														</button>
-													</Tooltip>
-												{/if}
-											{/if}
-										</div>
+<CommandLine className="size-5" strokeWidth="1.75" />
+<span
+class="hidden @xl:block whitespace-nowrap overflow-hidden text-ellipsis translate-y-[0.5px]"
+>{$i18n.t('Code Interpreter')}</span
+>
+</button>
+</Tooltip>
+{/if}
+
+{#if knowledgeSources.length > 0}
+{#each knowledgeSources as source}
+<Tooltip content={source} placement="top">
+<button
+on:click|preventDefault={() => {
+if (selectedKnowledgeSources.includes(source)) {
+selectedKnowledgeSources = selectedKnowledgeSources.filter(
+(s) => s !== source
+);
+} else {
+selectedKnowledgeSources = [...selectedKnowledgeSources, source];
+}
+}}
+type="button"
+class="px-1.5 @xl:px-2.5 py-1.5 flex gap-1.5 items-center text-sm rounded-full font-medium transition-colors duration-300 focus:outline-hidden max-w-full overflow-hidden border {selectedKnowledgeSources.includes(
+source
+)
+? 'bg-gray-50 dark:bg-gray-400/10 border-gray-100  dark:border-gray-700 text-gray-600 dark:text-gray-400  '
+: 'bg-transparent border-transparent text-gray-600 dark:text-gray-300  hover:bg-gray-100 dark:hover:bg-gray-800 '}"
+>
+<svg
+xmlns="http://www.w3.org/2000/svg"
+viewBox="0 0 20 20"
+fill="currentColor"
+class="size-5"
+><path
+d="M3.5 2.75a.75.75 0 00-1.5 0v14.5a.75.75 0 001.5 0v-4.392l1.657-.348a6.449 6.449 0 014.271.572 7.948 7.948 0 005.965.524l.338-.054a.75.75 0 00-.533-1.423l-.338.053a6.448 6.448 0 01-4.986-.454c-1.21-.44-2.522-.44-3.732 0l-1.657.348V2.75z"
+></path></svg
+>
+<span
+class="hidden @xl:block whitespace-nowrap overflow-hidden text-ellipsis translate-y-[0.5px]"
+>{source}</span
+>
+</button>
+</Tooltip>
+{/each}
+{/if}
+{/if}
+</div>
 									</div>
 
 									<div class="self-end flex space-x-1 mr-1 shrink-0">
