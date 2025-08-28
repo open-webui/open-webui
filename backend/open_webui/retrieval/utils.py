@@ -23,7 +23,10 @@ from open_webui.models.notes import Notes
 
 from open_webui.retrieval.vector.main import GetResult
 from open_webui.utils.access_control import has_access
-from open_webui.retrieval.grounding import apply_grounding_step, format_documents_for_retrieval
+from open_webui.retrieval.grounding import (
+    apply_grounding_step,
+    format_documents_for_retrieval,
+)
 
 
 from open_webui.env import (
@@ -700,7 +703,10 @@ def get_sources_from_items(
     # Apply grounding step if enabled
     if RAG_ENABLE_GROUNDING_STEP.value and sources and embedding_function:
         try:
-            log.debug(f"Applying grounding step to {len(sources)} sources with threshold {RAG_GROUNDING_THRESHOLD.value}")
+            log.debug(
+                f"Applying grounding step to {len(sources)} sources with threshold {RAG_GROUNDING_THRESHOLD.value}"
+            )
+
             
             # Generate query embeddings for grounding
             query_embeddings = []
