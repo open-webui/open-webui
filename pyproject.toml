@@ -48,7 +48,7 @@ dependencies = [
     "tiktoken",
     "openai",
     "anthropic",
-    "google-genai==1.28.0",
+    "google-genai==1.32.0",
     "google-generativeai==0.8.5",
 
     "langchain==0.3.26",
