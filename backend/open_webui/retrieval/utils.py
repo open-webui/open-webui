@@ -707,14 +707,15 @@ def get_sources_from_items(
                 f"Applying grounding step to {len(sources)} sources with threshold {RAG_GROUNDING_THRESHOLD.value}"
             )
 
-            
             # Generate query embeddings for grounding
             query_embeddings = []
             for query in queries:
-                query_embedding = embedding_function([query], prefix=RAG_EMBEDDING_QUERY_PREFIX, user=user)
+                query_embedding = embedding_function(
+                    [query], prefix=RAG_EMBEDDING_QUERY_PREFIX, user=user
+                )
                 if query_embedding:
                     query_embeddings.append(query_embedding[0])
-            
+
             if query_embeddings:
                 # Apply grounding step to each source
                 grounded_sources = []
@@ -722,40 +723,64 @@ def get_sources_from_items(
                     # Convert source to document format for grounding
                     documents = []
                     for i, doc in enumerate(source["document"]):
-                        documents.append({
-                            "document": doc,
-                            "metadata": source["metadata"][i] if i < len(source["metadata"]) else {},
-                            "distance": source.get("distances", [0.0])[i] if "distances" in source and i < len(source.get("distances", [])) else 0.0,
-                        })
-                    
+                        documents.append(
+                            {
+                                "document": doc,
+                                "metadata": (
+                                    source["metadata"][i]
+                                    if i < len(source["metadata"])
+                                    else {}
+                                ),
+                                "distance": (
+                                    source.get("distances", [0.0])[i]
+                                    if "distances" in source
+                                    and i < len(source.get("distances", []))
+                                    else 0.0
+                                ),
+                            }
+                        )
+
                     # Apply grounding with first query embedding (could be enhanced to use all queries)
                     grounding_result = apply_grounding_step(
                         query=queries[0],  # Use first query for now
                         query_embedding=query_embeddings[0],
                         retrieved_documents=documents,
-                        embedding_function=lambda texts, prefix=None: embedding_function(texts, prefix=prefix, user=user),
+                        embedding_function=lambda texts, prefix=None: embedding_function(
+                            texts, prefix=prefix, user=user
+                        ),
                         threshold=RAG_GROUNDING_THRESHOLD.value,
                         user=user,
                     )
-                    
+
                     if grounding_result.validated_documents:
                         # Convert back to source format
                         grounded_source = {
                             "source": source["source"],
-                            "document": [doc.get("document", "") for doc in grounding_result.validated_documents],
-                            "metadata": [doc.get("metadata", {}) for doc in grounding_result.validated_documents],
+                            "document": [
+                                doc.get("document", "")
+                                for doc in grounding_result.validated_documents
+                            ],
+                            "metadata": [
+                                doc.get("metadata", {})
+                                for doc in grounding_result.validated_documents
+                            ],
                         }
                         if "distances" in source:
-                            grounded_source["distances"] = [doc.get("distance", 0.0) for doc in grounding_result.validated_documents]
-                        
+                            grounded_source["distances"] = [
+                                doc.get("distance", 0.0)
+                                for doc in grounding_result.validated_documents
+                            ]
+
                         grounded_sources.append(grounded_source)
-                        
+
                         if grounding_result.filtered_count > 0:
-                            log.info(f"Grounding step filtered {grounding_result.filtered_count} documents from source {source['source'].get('name', 'unknown')}")
-                
+                            log.info(
+                                f"Grounding step filtered {grounding_result.filtered_count} documents from source {source['source'].get('name', 'unknown')}"
+                            )
+
                 sources = grounded_sources
                 log.debug(f"Grounding step completed, {len(sources)} sources remaining")
-        
+
         except Exception as e:
             log.warning(f"Grounding step failed, using original sources: {e}")
 
@@ -914,21 +939,19 @@ def generate_google_batch_embeddings(
         log.debug(
             f"generate_google_batch_embeddings:model {model} batch size: {len(texts)}"
         )
-        
+
         # Google's embedding API uses a different request format
         json_data = {
             "requests": [
-                {
-                    "model": f"models/{model}",
-                    "content": {"parts": [{"text": text}]}
-                } for text in texts
+                {"model": f"models/{model}", "content": {"parts": [{"text": text}]}}
+                for text in texts
             ]
         }
-        
+
         # Google's embeddings endpoint doesn't need /embeddings appended
         # Use the batch embeddings endpoint
         endpoint_url = f"{url}/models/{model}:batchEmbedContents"
-        
+
         r = requests.post(
             endpoint_url,
             headers={
@@ -949,7 +972,7 @@ def generate_google_batch_embeddings(
         )
         r.raise_for_status()
         data = r.json()
-        
+
         # Google's response format: {"embeddings": [{"values": [...]}, ...]}
         if "embeddings" in data:
             return [embedding["values"] for embedding in data["embeddings"]]
