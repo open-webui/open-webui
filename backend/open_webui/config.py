@@ -920,6 +920,13 @@ TOOL_SERVER_CONNECTIONS = PersistentConfig(
     [],
 )
 
+MODEL_ID_TO_KNOWLEDGE_SOURCE_MAPPING = PersistentConfig(
+    "MODEL_ID_TO_KNOWLEDGE_SOURCE_MAPPING",
+    "ui.model_id_to_knowledge_source_mapping",
+    os.environ.get("MODEL_ID_TO_KNOWLEDGE_SOURCE_MAPPING", "{}"),
+)
+
+
 ####################################
 # WEBUI
 ####################################
