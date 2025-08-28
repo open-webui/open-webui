@@ -63,6 +63,7 @@ def remove_open_webui_params(params: dict) -> dict:
         "stream_response": bool,
         "stream_delta_chunk_size": int,
         "function_calling": str,
+        "reasoning_tags": list,
         "system": str,
     }
 
