@@ -722,6 +722,25 @@ def get_event_emitter(request_info, update_db=True):
                     },
                 )
 
+            if event_data.get("type") in ["source", "citation"]:
+                data = event_data.get("data", {})
+                if data.get("type") == None:
+                    message = Chats.get_message_by_id_and_message_id(
+                        request_info["chat_id"],
+                        request_info["message_id"],
+                    )
+
+                    sources = message.get("sources", [])
+                    sources.append(data)
+
+                    Chats.upsert_message_to_chat_by_id_and_message_id(
+                        request_info["chat_id"],
+                        request_info["message_id"],
+                        {
+                            "sources": sources,
+                        },
+                    )
+
     return __event_emitter__
 
 
