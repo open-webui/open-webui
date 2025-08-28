@@ -660,7 +660,7 @@ def load_oauth_providers():
 
     if (
         OAUTH_CLIENT_ID.value
-        and OAUTH_CLIENT_SECRET.value
+        and (OAUTH_CLIENT_SECRET.value or OAUTH_CODE_CHALLENGE_METHOD.value)
         and OPENID_PROVIDER_URL.value
     ):
 
