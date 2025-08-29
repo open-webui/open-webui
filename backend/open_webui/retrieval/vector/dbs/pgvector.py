@@ -43,6 +43,8 @@ from open_webui.config import (
     PGVECTOR_POOL_MAX_OVERFLOW,
     PGVECTOR_POOL_TIMEOUT,
     PGVECTOR_POOL_RECYCLE,
+    PGVECTOR_SKIP_EXTENSION_CREATION,
+    VECTOR_DB,
 )
 
 from open_webui.env import SRC_LOG_LEVELS
@@ -110,20 +112,27 @@ class PgvectorClient(VectorDBBase):
             self.session = scoped_session(SessionLocal)
 
         try:
-            # Ensure the pgvector extension is available
+            # Check the pgvector extension is available, create it if the PGVECTOR_SKIP_EXTENSION_CREATION flag is set to False
             # Use a conditional check to avoid permission issues on Azure PostgreSQL
-            self.session.execute(
-                text(
-                    """
-                DO $$
-                BEGIN
-                   IF NOT EXISTS (SELECT 1 FROM pg_extension WHERE extname = 'vector') THEN
-                      CREATE EXTENSION IF NOT EXISTS vector;
-                   END IF;
-                END $$;
-            """
+            if PGVECTOR_SKIP_EXTENSION_CREATION:
+                if not self._is_extension_enabled(VECTOR_DB.removeprefix("pg")):
+                    raise ValueError(
+                        "PGVECTOR_SKIP_EXTENSION_CREATION is set but vector extension is not present."
+                    )
+            else:
+                self.session.execute(
+                    text(
+                        """
+                    DO $$
+                    BEGIN
+                    IF NOT EXISTS (SELECT 1 FROM pg_extension WHERE extname = 'vector') THEN
+                        CREATE EXTENSION IF NOT EXISTS vector;
+                    END IF;
+                    END $$;
+                """
+                    )
                 )
-            )
+            
 
             if PGVECTOR_PGCRYPTO:
                 # Ensure the pgcrypto extension is available for encryption
@@ -632,3 +641,22 @@ class PgvectorClient(VectorDBBase):
     def delete_collection(self, collection_name: str) -> None:
         self.delete(collection_name)
         log.info(f"Collection '{collection_name}' deleted.")
+
+    def _is_extension_enabled(self, extension_name: str) -> bool:
+        """
+        Checks if a PostgreSQL extension is enabled in the current database.
+
+        Args:
+            extension_name: The name of the extension to check.
+
+        Returns:
+            True if the extension is enabled, False otherwise.
+        """
+        try:
+            query = text("SELECT 1 FROM pg_extension WHERE extname = :ext_name")
+            result = self.session.execute(query, {'ext_name': extension_name})
+            
+            return bool(result.scalar())
+        except Exception as e:
+            print(f"An error occurred: {e}")
+            return False
