@@ -362,6 +362,8 @@ ENABLE_REALTIME_CHAT_SAVE = (
     os.environ.get("ENABLE_REALTIME_CHAT_SAVE", "False").lower() == "true"
 )
 
+ENABLE_QUERIES_CACHE = os.environ.get("ENABLE_QUERIES_CACHE", "False").lower() == "true"
+
 ####################################
 # REDIS
 ####################################
@@ -402,6 +404,10 @@ except ValueError:
 ####################################
 
 WEBUI_AUTH = os.environ.get("WEBUI_AUTH", "True").lower() == "true"
+
+ENABLE_INITIAL_ADMIN_SIGNUP = (
+    os.environ.get("ENABLE_INITIAL_ADMIN_SIGNUP", "False").lower() == "true"
+)
 ENABLE_SIGNUP_PASSWORD_CONFIRMATION = (
     os.environ.get("ENABLE_SIGNUP_PASSWORD_CONFIRMATION", "False").lower() == "true"
 )
@@ -525,6 +531,19 @@ else:
         )
     except Exception:
         CHAT_RESPONSE_STREAM_DELTA_CHUNK_SIZE = 1
+
+
+CHAT_RESPONSE_MAX_TOOL_CALL_RETRIES = os.environ.get(
+    "CHAT_RESPONSE_MAX_TOOL_CALL_RETRIES", "10"
+)
+
+if CHAT_RESPONSE_MAX_TOOL_CALL_RETRIES == "":
+    CHAT_RESPONSE_MAX_TOOL_CALL_RETRIES = 10
+else:
+    try:
+        CHAT_RESPONSE_MAX_TOOL_CALL_RETRIES = int(CHAT_RESPONSE_MAX_TOOL_CALL_RETRIES)
+    except Exception:
+        CHAT_RESPONSE_MAX_TOOL_CALL_RETRIES = 10
 
 
 ####################################
