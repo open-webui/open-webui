@@ -1437,10 +1437,14 @@ async def chat_completion(
         stream_delta_chunk_size = form_data.get("params", {}).get(
             "stream_delta_chunk_size"
         )
+        reasoning_tags = form_data.get("params", {}).get("reasoning_tags")
 
         # Model Params
         if model_info_params.get("stream_delta_chunk_size"):
             stream_delta_chunk_size = model_info_params.get("stream_delta_chunk_size")
+
+        if model_info_params.get("reasoning_tags") is not None:
+            reasoning_tags = model_info_params.get("reasoning_tags")
 
         metadata = {
             "user_id": user.id,
@@ -1457,6 +1461,7 @@ async def chat_completion(
             "direct": model_item.get("direct", False),
             "params": {
                 "stream_delta_chunk_size": stream_delta_chunk_size,
+                "reasoning_tags": reasoning_tags,
                 "function_calling": (
                     "native"
                     if (
