@@ -21,6 +21,7 @@ class MessageMetric(Base):
     completion_tokens = Column(BigInteger)
     prompt_tokens = Column(BigInteger)
     total_tokens = Column(BigInteger)
+    chat_id = Column(Text, nullable=True)
     created_at = Column(BigInteger)
 
 
@@ -32,6 +33,7 @@ class MessageMetricsModel(BaseModel):
     completion_tokens: float
     prompt_tokens: float
     total_tokens: float
+    chat_id: Optional[str] = None
     created_at: int
 
 
@@ -42,7 +44,9 @@ class UsageModel(BaseModel):
 
 
 class MessageMetricsTable:
-    def insert_new_metrics(self, user: dict, model: str, usage: dict):
+    def insert_new_metrics(
+        self, user: dict, model: str, usage: dict, chat_id: Optional[str] = None
+    ):
         with get_db() as db:
             id = str(uuid.uuid4())
             ts = int(time.time())
@@ -57,6 +61,7 @@ class MessageMetricsTable:
                     "completion_tokens": tokens.completion_tokens,
                     "prompt_tokens": tokens.prompt_tokens,
                     "total_tokens": tokens.total_tokens,
+                    "chat_id": chat_id,
                     "created_at": ts,
                 }
             )
@@ -530,6 +535,124 @@ class MessageMetricsTable:
                 date_str = time.strftime("%Y-%m-%d", time.localtime(day_start))
                 fallback.append({"date": date_str, "count": 0})
             return sorted(fallback, key=lambda x: x["date"])
+
+    def get_inter_prompt_latency_histogram(
+        self, domain: Optional[str] = None, model: Optional[str] = None
+    ) -> dict:
+        """
+        Calculate inter-prompt latency histogram for user behavior analysis.
+
+        Returns the time between user prompts in a session (chat), presented as
+        histogram data with logarithmic bins from 0-2s up to 1024-2048s.
+
+        Only considers second or subsequent prompts in a chat session.
+        """
+        try:
+            with get_db() as db:
+                # Query all metrics with chat_id, ordered by chat_id and created_at
+                query = db.query(
+                    MessageMetric.chat_id, MessageMetric.created_at
+                ).filter(MessageMetric.chat_id.isnot(None))
+
+                if domain:
+                    query = query.filter(MessageMetric.user_domain == domain)
+                if model:
+                    query = query.filter(MessageMetric.model == model)
+
+                query = query.order_by(MessageMetric.chat_id, MessageMetric.created_at)
+                results = query.all()
+
+                if not results:
+                    return self._get_empty_histogram()
+
+                # Group by chat_id and calculate inter-prompt latencies
+                chat_sessions = {}
+                for chat_id, created_at in results:
+                    if chat_id not in chat_sessions:
+                        chat_sessions[chat_id] = []
+                    chat_sessions[chat_id].append(created_at)
+
+                # Calculate latencies between consecutive prompts in each session
+                latencies = []
+                for chat_id, timestamps in chat_sessions.items():
+                    if len(timestamps) >= 2:  # Need at least 2 prompts
+                        for i in range(1, len(timestamps)):
+                            # Convert to milliseconds and calculate difference
+                            prev_time = timestamps[i - 1] * 1000  # Convert to ms
+                            curr_time = timestamps[i] * 1000  # Convert to ms
+                            latency_ms = curr_time - prev_time
+
+                            # Only include latencies up to 2048 seconds (2048000 ms)
+                            if 0 <= latency_ms <= 2048000:
+                                latencies.append(latency_ms)
+
+                # Create histogram with logarithmic bins
+                return self._create_latency_histogram(latencies)
+
+        except Exception as e:
+            logger.error(f"Failed to get inter-prompt latency histogram: {e}")
+            return self._get_empty_histogram()
+
+    def _get_empty_histogram(self) -> dict:
+        """Return empty histogram structure"""
+        bins = [
+            "0-2s",
+            "2-4s",
+            "4-8s",
+            "8-16s",
+            "16-32s",
+            "32-64s",
+            "64-128s",
+            "128-256s",
+            "256-512s",
+            "512-1024s",
+            "1024-2048s",
+        ]
+        return {"bins": bins, "counts": [0] * len(bins), "total_latencies": 0}
+
+    def _create_latency_histogram(self, latencies: list) -> dict:
+        """Create histogram from latency values in milliseconds"""
+        # Define bin edges in milliseconds (logarithmic scale)
+        bin_edges = [
+            0,  # 0s
+            2000,  # 2s
+            4000,  # 4s
+            8000,  # 8s
+            16000,  # 16s
+            32000,  # 32s
+            64000,  # 64s
+            128000,  # 128s
+            256000,  # 256s
+            512000,  # 512s
+            1024000,  # 1024s
+            2048000,  # 2048s
+        ]
+
+        bin_labels = [
+            "0-2s",
+            "2-4s",
+            "4-8s",
+            "8-16s",
+            "16-32s",
+            "32-64s",
+            "64-128s",
+            "128-256s",
+            "256-512s",
+            "512-1024s",
+            "1024-2048s",
+        ]
+
+        # Initialize counts
+        counts = [0] * len(bin_labels)
+
+        # Count latencies in each bin
+        for latency in latencies:
+            for i in range(len(bin_edges) - 1):
+                if bin_edges[i] <= latency < bin_edges[i + 1]:
+                    counts[i] += 1
+                    break
+
+        return {"bins": bin_labels, "counts": counts, "total_latencies": len(latencies)}
 
 
 MessageMetrics = MessageMetricsTable()

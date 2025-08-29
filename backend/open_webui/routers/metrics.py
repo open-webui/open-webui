@@ -409,3 +409,69 @@ async def get_range_metrics(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Failed to get range metrics: {str(e)}",
         )
+
+
+############################
+# GetInterPromptLatencyHistogram
+############################
+
+
+@router.get("/inter-prompt-latency")
+async def get_inter_prompt_latency_histogram(
+    domain: str = None, model: str = None, user=Depends(get_metrics_user)
+):
+    """
+    Get inter-prompt latency histogram for user behavior analysis.
+
+    Returns the time between user prompts in a session (chat), presented as
+    histogram data with logarithmic bins from 0-2s up to 1024-2048s.
+
+    Only considers second or subsequent prompts in a chat session.
+    """
+    # For analyst role, enforce domain restriction
+    if user.role == "analyst":
+        # Force domain to user's domain for analysts
+        domain = user.domain
+
+    try:
+        histogram_data = MessageMetrics.get_inter_prompt_latency_histogram(
+            domain, model
+        )
+        return histogram_data
+    except Exception as e:
+        log.exception(f"Error getting inter-prompt latency histogram: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to get inter-prompt latency histogram: {str(e)}",
+        )
+
+
+############################
+# GetInterPromptLatencyHistogram
+############################
+
+
+@router.get("/inter-prompt-latency")
+async def get_inter_prompt_latency_histogram(
+    domain: str = None, model: str = None, user=Depends(get_metrics_user)
+):
+    """
+    Get inter-prompt latency histogram for user behavior analysis.
+
+    This endpoint returns a histogram showing the time between user prompts
+    in chat sessions. Only considers second or subsequent prompts in a session.
+    Data is presented with logarithmic time bins from 0-2s up to 1024-2048s.
+    """
+    # For analyst role, enforce domain restriction
+    if user.role == "analyst":
+        # Force domain to user's domain for analysts
+        domain = user.domain
+
+    # Admin and global_analyst can see all domains or filter by domain
+
+    histogram_data = MessageMetrics.get_inter_prompt_latency_histogram(domain, model)
+
+    return {
+        "histogram": histogram_data,
+        "description": "Time between user prompts in chat sessions (inter-prompt latency)",
+    }
