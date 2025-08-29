@@ -1,8 +1,7 @@
 <script>
-	import { onDestroy, onMount, tick, getContext } from 'svelte';
+	import { getContext, onDestroy, onMount, tick } from 'svelte';
 	const i18n = getContext('i18n');
 
-	import Markdown from './Markdown.svelte';
 	import {
 		artifactCode,
 		chatId,
@@ -12,8 +11,9 @@
 		showControls,
 		showOverview
 	} from '$lib/stores';
-	import FloatingButtons from '../ContentRenderer/FloatingButtons.svelte';
 	import { createMessagesList } from '$lib/utils';
+	import FloatingButtons from '../ContentRenderer/FloatingButtons.svelte';
+	import Markdown from './Markdown.svelte';
 
 	export let id;
 	export let content;
@@ -180,7 +180,7 @@
 
 			if (
 				($settings?.detectArtifacts ?? true) &&
-				(['html', 'svg'].includes(lang) || (lang === 'xml' && code.includes('svg'))) &&
+				(['html', 'svg', 'md', 'markdown'].includes(lang) || (lang === 'xml' && code.includes('svg'))) &&
 				!$mobile &&
 				$chatId
 			) {

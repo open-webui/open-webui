@@ -1,25 +1,23 @@
 <script lang="ts">
-	import DOMPurify from 'dompurify';
-	import { onMount, getContext } from 'svelte';
+	import { getContext } from 'svelte';
 	const i18n = getContext('i18n');
 
 	import fileSaver from 'file-saver';
 	const { saveAs } = fileSaver;
 
-	import { marked, type Token } from 'marked';
 	import { unescapeHtml } from '$lib/utils';
+	import { marked, type Token } from 'marked';
 
 	import { WEBUI_BASE_URL } from '$lib/constants';
 
 	import CodeBlock from '$lib/components/chat/Messages/CodeBlock.svelte';
 	import MarkdownInlineTokens from '$lib/components/chat/Messages/Markdown/MarkdownInlineTokens.svelte';
-	import KatexRenderer from './KatexRenderer.svelte';
-	import AlertRenderer, { alertComponent } from './AlertRenderer.svelte';
 	import Collapsible from '$lib/components/common/Collapsible.svelte';
 	import Tooltip from '$lib/components/common/Tooltip.svelte';
 	import ArrowDownTray from '$lib/components/icons/ArrowDownTray.svelte';
+	import AlertRenderer, { alertComponent } from './AlertRenderer.svelte';
+	import KatexRenderer from './KatexRenderer.svelte';
 
-	import Source from './Source.svelte';
 	import { settings } from '$lib/stores';
 	import HtmlToken from './HTMLToken.svelte';
 
@@ -99,27 +97,31 @@
 		</svelte:element>
 	{:else if token.type === 'code'}
 		{#if token.raw.includes('```')}
-			<CodeBlock
-				id={`${id}-${tokenIdx}`}
-				collapsed={$settings?.collapseCodeBlocks ?? false}
-				{token}
-				lang={token?.lang ?? ''}
-				code={token?.text ?? ''}
-				{attributes}
-				{save}
-				{preview}
-				edit={editCodeBlock}
-				stickyButtonsClassName={topPadding ? 'top-8' : 'top-0'}
-				onSave={(value) => {
-					onSave({
-						raw: token.raw,
-						oldContent: token.text,
-						newContent: value
-					});
-				}}
-				{onUpdate}
-				{onPreview}
-			/>
+			{#if token.lang === 'markdown' || token.lang === 'md'}
+				<div>I've updated the document for you.</div>
+			{:else}
+				<CodeBlock
+					id={`${id}-${tokenIdx}`}
+					collapsed={$settings?.collapseCodeBlocks ?? false}
+					{token}
+					lang={token?.lang ?? ''}
+					code={token?.text ?? ''}
+					{attributes}
+					{save}
+					{preview}
+					edit={editCodeBlock}
+					stickyButtonsClassName={topPadding ? 'top-8' : 'top-0'}
+					onSave={(value) => {
+						onSave({
+							raw: token.raw,
+							oldContent: token.text,
+							newContent: value
+						});
+					}}
+					{onUpdate}
+					{onPreview}
+				/>
+			{/if}
 		{:else}
 			{token.text}
 		{/if}

@@ -1,18 +1,18 @@
 <script lang="ts">
-	import { toast } from 'svelte-sonner';
-	import { onMount, getContext, createEventDispatcher } from 'svelte';
+	import { createEventDispatcher, getContext, onMount } from 'svelte';
 	const i18n = getContext('i18n');
 	const dispatch = createEventDispatcher();
 
 	import { artifactCode, chatId, settings, showArtifacts, showControls } from '$lib/stores';
 	import { copyToClipboard, createMessagesList } from '$lib/utils';
 
-	import XMark from '../icons/XMark.svelte';
-	import ArrowsPointingOut from '../icons/ArrowsPointingOut.svelte';
-	import Tooltip from '../common/Tooltip.svelte';
 	import SvgPanZoom from '../common/SVGPanZoom.svelte';
-	import ArrowLeft from '../icons/ArrowLeft.svelte';
+	import Tooltip from '../common/Tooltip.svelte';
 	import ArrowDownTray from '../icons/ArrowDownTray.svelte';
+	import ArrowLeft from '../icons/ArrowLeft.svelte';
+	import ArrowsPointingOut from '../icons/ArrowsPointingOut.svelte';
+	import XMark from '../icons/XMark.svelte';
+	import BlockNoteWrapper from '../common/BlockNoteWrapper';
 
 	export let overlay = false;
 	export let history;
@@ -50,6 +50,7 @@
 				let htmlContent = '';
 				let cssContent = '';
 				let jsContent = '';
+				let markdownContent = '';
 
 				codeBlocks.forEach((block) => {
 					const { lang, code } = block;
@@ -60,6 +61,8 @@
 						cssContent += code + '\n';
 					} else if (lang === 'javascript' || lang === 'js') {
 						jsContent += code + '\n';
+					} else if (lang === 'md' || lang === 'markdown') {
+						markdownContent += code + '\n';
 					}
 				});
 
@@ -111,6 +114,9 @@
                         </html>
                     `;
 					contents = [...contents, { type: 'iframe', content: renderedContent }];
+				} else if (markdownContent.trim()) {
+					contents = [...contents, { type: 'markdown', content: markdownContent.trim() }];
+					console.log("MARKDOWN CONTENT", markdownContent);
 				} else {
 					// Check for SVG content
 					for (const block of codeBlocks) {
@@ -350,6 +356,10 @@
 								className=" w-full h-full max-h-full overflow-hidden"
 								svg={contents[selectedContentIdx].content}
 							/>
+							{:else if contents[selectedContentIdx].type === 'markdown'}
+							<div class="w-full h-full max-h-full overflow-hidden bg-white dark:bg-gray-900">
+								<blocknote-wrapper content={contents[selectedContentIdx].content} />
+							</div>
 						{/if}
 					</div>
 				{:else}

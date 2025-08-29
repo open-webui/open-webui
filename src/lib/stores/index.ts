@@ -1,8 +1,8 @@
-import { APP_NAME } from '$lib/constants';
-import { type Writable, writable } from 'svelte/store';
 import type { ModelConfig } from '$lib/apis';
+import { APP_NAME } from '$lib/constants';
 import type { Banner } from '$lib/types';
 import type { Socket } from 'socket.io-client';
+import { type Writable, writable } from 'svelte/store';
 
 import emojiShortCodes from '$lib/emoji-shortcodes.json';
 
