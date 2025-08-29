@@ -477,6 +477,40 @@ async def chat_completion_tools_handler(
                 log.debug(f"{tool_call=}")
 
                 tool_function_name = tool_call.get("name", None)
+                tool_id = tool_call.get("id", "")
+
+                approval_status = approval_results.get(tool_id, "denied")
+
+                if approval_status == "denied":
+       
+                    tool_name = f"TOOL:{tool_function_name}"
+                    sources.append({
+                        "source": {"name": tool_name},
+                        "document": [f"Tool execution {approval_status}: User did not approve execution of {tool_function_name}"],
+                        "metadata": [{"source": tool_name, "parameters": {}, "status": approval_status}],
+                        "tool_result": True,
+                    })
+                    body["messages"] = add_or_update_user_message(
+                        f"\nTool `{tool_function_name}` Output: Tool execution {approval_status}: User did not approve execution",
+                        body["messages"],
+                    )
+                    return 
+                
+                if approval_status != "approved":
+                    # Pending status (default mode way)
+                    tool_name = f"TOOL:{tool_function_name}"
+                    sources.append({
+                        "source": {"name": tool_name},
+                        "document": [f"Tool execution skipped: Invalid approval status for {tool_function_name}"],
+                        "metadata": [{"source": tool_name, "parameters": {}, "status": "invalid"}],
+                        "tool_result": True,
+                    })
+                    body["messages"] = add_or_update_user_message(
+                        f"\nTool `{tool_function_name}` Output: Tool execution skipped: Invalid approval status",
+                        body["messages"],
+                    )
+                    return
+
                 if tool_function_name not in tools:
                     return body, {}
 
