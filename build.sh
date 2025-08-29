@@ -1,10 +1,14 @@
 #!/bin/bash
 
-IMAGE_NAME=cybertech/open-webui
-IMAGE_VERSION=latest
+source .config
 
-read -p "Enter the registry url: " REGISTRY_URL
+echo "Building image $REGISTRY_URL/$IMAGE_NAME:$IMAGE_VERSION"
 
 # This script builds the project using the specified build tool.
-docker build -t $REGISTRY_URL/$IMAGE_NAME:$IMAGE_VERSION . 
+docker build -t $REGISTRY_URL/$IMAGE_NAME:$IMAGE_VERSION .  \
+              --build-arg USE_SLIM=true \
+              --build-arg USE_CUDA=false \
+              --build-arg USE_OLLAMA=false \
+              && \
+
 docker push $REGISTRY_URL/$IMAGE_NAME:$IMAGE_VERSION

@@ -1,0 +1,6 @@
+#!/bin/bash
+
+IMAGE_NAME=
+IMAGE_VERSION=
+
+REGISTRY_URL=
