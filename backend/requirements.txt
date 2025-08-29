@@ -27,6 +27,7 @@ bcrypt==4.3.0
 
 pymongo
 redis
+fastapi-limiter==0.1.6
 boto3==1.40.5
 
 argon2-cffi==23.1.0

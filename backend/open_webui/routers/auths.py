@@ -16,6 +16,9 @@ from open_webui.models.auths import (
     SignupForm,
     UpdatePasswordForm,
     UserResponse,
+    EmailRequestForm,
+    PasswordResetForm,
+    EmailVerificationForm,
 )
 from open_webui.models.users import Users, UpdateProfileForm
 from open_webui.models.groups import Groups
@@ -38,6 +41,12 @@ from open_webui.config import OPENID_PROVIDER_URL, ENABLE_OAUTH_SIGNUP, ENABLE_L
 from pydantic import BaseModel
 
 from open_webui.utils.misc import parse_duration, validate_email_format
+from open_webui.utils.email import (
+    generate_token_expiry,
+    send_verification_email,
+    send_password_reset_email,
+    is_token_expired,
+)
 from open_webui.utils.auth import (
     decode_token,
     create_api_key,
@@ -57,6 +66,8 @@ from ssl import CERT_NONE, CERT_REQUIRED, PROTOCOL_TLS
 
 from ldap3 import Server, Connection, NONE, Tls
 from ldap3.utils.conv import escape_filter_chars
+
+from fastapi_limiter.depends import RateLimiter
 
 router = APIRouter()
 
@@ -607,6 +618,15 @@ async def signup(request: Request, response: Response, form_data: SignupForm):
             role,
         )
 
+        if user and role == "pending":
+            return JSONResponse(
+                status_code=200,
+                content={
+                    "message": "Account created successfully. Please verify your email address to complete registration.",
+                    "email": user.email
+                },
+            )
+
         if user:
             expires_delta = parse_duration(request.app.state.config.JWT_EXPIRES_IN)
             expires_at = None
@@ -1016,6 +1036,231 @@ async def update_ldap_config(
 ):
     request.app.state.config.ENABLE_LDAP = form_data.enable_ldap
     return {"ENABLE_LDAP": request.app.state.config.ENABLE_LDAP}
+
+
+############################
+# Email Verification
+############################
+
+
+@router.post("/verify-email", response_model=SessionUserResponse)
+async def verify_email(
+    request: Request, response: Response, form_data: EmailVerificationForm
+):
+    user = Users.verify_email_with_code(form_data.email, form_data.code)
+    if not user:
+        raise HTTPException(400, detail="Invalid email or verification code.")
+
+    # Create authentication token for the verified user
+    expires_delta = parse_duration(request.app.state.config.JWT_EXPIRES_IN)
+    expires_at = None
+    if expires_delta:
+        expires_at = int(time.time()) + int(expires_delta.total_seconds())
+
+    token = create_token(
+        data={"id": user.id},
+        expires_delta=expires_delta,
+    )
+
+    datetime_expires_at = (
+        datetime.datetime.fromtimestamp(expires_at, datetime.timezone.utc)
+        if expires_at
+        else None
+    )
+
+    # Set the cookie token
+    response.set_cookie(
+        key="token",
+        value=token,
+        expires=datetime_expires_at,
+        httponly=True,
+        samesite=WEBUI_AUTH_COOKIE_SAME_SITE,
+        secure=WEBUI_AUTH_COOKIE_SECURE,
+    )
+
+    if request.app.state.config.WEBHOOK_URL:
+        post_webhook(
+            request.app.state.WEBUI_NAME,
+            request.app.state.config.WEBHOOK_URL,
+            WEBHOOK_MESSAGES.USER_SIGNUP(user.name, user.email),
+            {
+                "action": "signup",
+                "message": WEBHOOK_MESSAGES.USER_SIGNUP(user.name, user.email),
+                "user": user.model_dump_json(exclude_none=True),
+            },
+        )
+
+    return SessionUserResponse(
+        **{
+            "id": user.id,
+            "email": user.email,
+            "name": user.name,
+            "role": user.role,
+            "profile_image_url": user.profile_image_url,
+        },
+        token=token,
+        token_type="Bearer",
+        expires_at=expires_at,
+    )
+
+
+@router.post(
+    "/send-verification", dependencies=[Depends(RateLimiter(times=1, minutes=1))]
+)
+async def send_verification_code(form_data: EmailRequestForm):
+    """
+    Send email verification code to user.
+    Only works for users with pending verification status.
+    """
+    # Validate email format
+    if not validate_email_format(form_data.email.lower()):
+        raise HTTPException(
+            status.HTTP_400_BAD_REQUEST, detail=ERROR_MESSAGES.INVALID_EMAIL_FORMAT
+        )
+
+    # Check if user exists and is in pending status
+    user = Users.get_user_by_email(form_data.email.lower())
+    if not user:
+        # Don't reveal whether email exists or not for security
+        return JSONResponse(
+            status_code=200,
+            content={"message": "User not found."},
+        )
+
+    # Only resend if user role is pending (not yet verified)
+    if user.role != "pending":
+        return JSONResponse(
+            status_code=200,
+            content={"message": "User has already been verified."},
+        )
+
+    try:
+        # Send new verification email
+        success, verification_code = send_verification_email(user.email)
+
+        if success:
+            # Set 10-minute expiry for email verification
+            expires_at = generate_token_expiry(10)  # 10 minutes
+
+            # Store the new verification code
+            Users.set_email_verification_token(user.id, verification_code, expires_at)
+
+            return JSONResponse(
+                status_code=200,
+                content={"message": "Verification code sent to email address."},
+            )
+        else:
+            # Email sending failed, but don't reveal this to the user
+            return JSONResponse(
+                status_code=200,
+                content={"message": "Failed to send verification code."},
+            )
+    except Exception as e:
+        log.error(f"Error resending verification email: {str(e)}")
+        # Don't reveal internal errors to the user
+        return JSONResponse(
+            status_code=200,
+            content={"message": "Failed to send verification code."},
+        )
+
+
+############################
+# Password Reset
+############################
+
+
+@router.post(
+    "/password-reset/request", dependencies=[Depends(RateLimiter(times=1, minutes=1))]
+)
+async def request_password_reset(request: Request, form_data: EmailRequestForm):
+    user = Users.get_user_by_email(form_data.email.lower())
+    if not user:
+        return JSONResponse(
+            status_code=200,
+            content={
+                "message": "If an account with that email exists, a password reset link has been sent."
+            },
+        )
+
+    expires_at = generate_token_expiry(10)  # 10 minutes
+    success, reset_code = send_password_reset_email(user.email)
+
+    # Store the numeric reset code instead of the token
+    Users.set_password_reset_token(user.email, reset_code, expires_at)
+
+    return JSONResponse(
+        status_code=200,
+        content={
+            "message": "Password reset code has been sent."
+        },
+    )
+
+
+@router.post("/password-reset/confirm", response_model=SessionUserResponse)
+async def confirm_password_reset(
+    request: Request, response: Response, form_data: PasswordResetForm
+):
+    user = Users.get_user_by_password_reset_code(form_data.email, form_data.code)
+    if not user or not user.password_reset_token_expires_at:
+        raise HTTPException(400, detail="Invalid email, code, or expired reset code.")
+
+    if is_token_expired(user.password_reset_token_expires_at):
+        Users.clear_password_reset_token(user.id)
+        raise HTTPException(400, detail="Reset code has expired.")
+
+    if len(form_data.new_password.encode("utf-8")) > 72:
+        raise HTTPException(
+            status.HTTP_400_BAD_REQUEST,
+            detail=ERROR_MESSAGES.PASSWORD_TOO_LONG,
+        )
+
+    hashed = get_password_hash(form_data.new_password)
+    success = Auths.update_user_password_by_id(user.id, hashed)
+
+    if not success:
+        raise HTTPException(500, detail="Failed to reset password.")
+
+    Users.clear_password_reset_token(user.id)
+
+    # Create authentication token for the user after successful password reset
+    expires_delta = parse_duration(request.app.state.config.JWT_EXPIRES_IN)
+    expires_at = None
+    if expires_delta:
+        expires_at = int(time.time()) + int(expires_delta.total_seconds())
+
+    token = create_token(
+        data={"id": user.id},
+        expires_delta=expires_delta,
+    )
+
+    datetime_expires_at = (
+        datetime.datetime.fromtimestamp(expires_at, datetime.timezone.utc)
+        if expires_at
+        else None
+    )
+
+    # Set the cookie token
+    response.set_cookie(
+        key="token",
+        value=token,
+        expires=datetime_expires_at,
+        httponly=True,
+        samesite=WEBUI_AUTH_COOKIE_SAME_SITE,
+        secure=WEBUI_AUTH_COOKIE_SECURE,
+    )
+
+    return SessionUserResponse(
+        **{
+            "id": user.id,
+            "email": user.email,
+            "name": user.name,
+            "role": user.role,
+            "profile_image_url": user.profile_image_url,
+        },
+        token=token,
+        token_type="Bearer",
+        expires_at=expires_at,
+    )
 
 
 ############################

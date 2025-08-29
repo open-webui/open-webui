@@ -23,6 +23,7 @@ import anyio.to_thread
 import requests
 from redis import Redis
 
+from fastapi_limiter import FastAPILimiter
 
 from fastapi import (
     Depends,
@@ -548,6 +549,13 @@ async def lifespan(app: FastAPI):
         app.state.redis_task_command_listener = asyncio.create_task(
             redis_task_command_listener(app)
         )
+
+        # Initialize FastAPILimiter
+        try:
+            await FastAPILimiter.init(app.state.redis)
+            log.info("FastAPILimiter initialized successfully")
+        except Exception as e:
+            log.error(f"Failed to initialize FastAPILimiter: {e}")
 
     if THREAD_POOL_SIZE and THREAD_POOL_SIZE > 0:
         limiter = anyio.to_thread.current_default_thread_limiter()

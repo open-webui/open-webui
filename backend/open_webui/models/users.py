@@ -42,6 +42,11 @@ class User(Base):
 
     api_key = Column(String, nullable=True, unique=True)
     oauth_sub = Column(Text, unique=True)
+	
+    email_verification_token = Column(Text, nullable=True)
+    email_verified_at = Column(BigInteger, nullable=True)
+    password_reset_token = Column(Text, nullable=True)
+    password_reset_token_expires_at = Column(BigInteger, nullable=True)
 
     last_active_at = Column(BigInteger)
 
@@ -75,6 +80,11 @@ class UserModel(BaseModel):
     api_key: Optional[str] = None
     oauth_sub: Optional[str] = None
 
+    email_verification_token: Optional[str] = None
+    email_verified_at: Optional[int] = None
+    password_reset_token: Optional[str] = None
+    password_reset_token_expires_at: Optional[int] = None
+	
     last_active_at: int  # timestamp in epoch
     updated_at: int  # timestamp in epoch
     created_at: int  # timestamp in epoch
@@ -443,6 +453,116 @@ class UsersTable:
                 return UserModel.model_validate(user)
             else:
                 return None
+
+    def set_email_verification_token(
+        self, id: str, token: str, expires_at: int = None
+    ) -> bool:
+        try:
+            with get_db() as db:
+                # Store both token and expiry time
+                update_data = {"email_verification_token": token}
+                if expires_at:
+                    # We can use email_verified_at as a temporary field to store expiry
+                    # This is a bit of a hack, but avoids needing a new database migration
+                    update_data["email_verified_at"] = expires_at
+
+                result = db.query(User).filter_by(id=id).update(update_data)
+                db.commit()
+                return True if result == 1 else False
+        except Exception:
+            return False
+
+    def set_password_reset_token(self, email: str, token: str, expires_at: int) -> bool:
+        try:
+            with get_db() as db:
+                result = (
+                    db.query(User)
+                    .filter_by(email=email)
+                    .update(
+                        {
+                            "password_reset_token": token,
+                            "password_reset_token_expires_at": expires_at,
+                        }
+                    )
+                )
+                db.commit()
+                return True if result == 1 else False
+        except Exception:
+            return False
+
+    def clear_password_reset_token(self, id: str) -> bool:
+        try:
+            with get_db() as db:
+                result = (
+                    db.query(User)
+                    .filter_by(id=id)
+                    .update(
+                        {
+                            "password_reset_token": None,
+                            "password_reset_token_expires_at": None,
+                        }
+                    )
+                )
+                db.commit()
+                return True if result == 1 else False
+        except Exception:
+            return False
+
+    def verify_email_with_code(self, email: str, code: str) -> Optional[UserModel]:
+        """Verify email using email address and 6-digit code combination."""
+        try:
+            with get_db() as db:
+                user = (
+                    db.query(User)
+                    .filter_by(email=email, email_verification_token=code)
+                    .first()
+                )
+                if user:
+                    # Check if verification has expired (if email_verified_at contains expiry time)
+                    if (
+                        user.email_verified_at
+                        and int(time.time()) > user.email_verified_at
+                    ):
+                        # Clear expired token
+                        db.query(User).filter_by(id=user.id).update(
+                            {
+                                "email_verification_token": None,
+                                "email_verified_at": None,
+                            }
+                        )
+                        db.commit()
+                        return None  # Expired
+
+                    # Verification successful
+                    db.query(User).filter_by(id=user.id).update(
+                        {
+                            "email_verification_token": None,
+                            "email_verified_at": int(time.time()),
+                            "role": "user",  # Change from pending to user
+                        }
+                    )
+                    db.commit()
+                    return UserModel.model_validate(user)
+                return None
+        except Exception:
+            return None
+
+    def get_user_by_password_reset_code(
+        self, email: str, code: str
+    ) -> Optional[UserModel]:
+        """Get user by email and password reset code combination."""
+        try:
+            with get_db() as db:
+                user = (
+                    db.query(User)
+                    .filter_by(email=email, password_reset_token=code)
+                    .first()
+                )
+                if user:
+                    return UserModel.model_validate(user)
+                return None
+        except Exception:
+            return None
 
 
 Users = UsersTable()
