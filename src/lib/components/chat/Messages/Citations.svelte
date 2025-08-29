@@ -56,9 +56,9 @@
 				return acc;
 			}
 
-			source.document.forEach((document, index) => {
-				const metadata = source.metadata?.[index];
-				const distance = source.distances?.[index];
+			source?.document?.forEach((document, index) => {
+				const metadata = source?.metadata?.[index];
+				const distance = source?.distances?.[index];
 
 				// Within the same citation there could be multiple documents
 				const id = metadata?.source ?? source?.source?.id ?? 'N/A';
@@ -88,6 +88,7 @@
 					});
 				}
 			});
+
 			return acc;
 		}, []);
 		console.log('citations', citations);

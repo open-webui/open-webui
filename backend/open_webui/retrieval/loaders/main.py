@@ -284,7 +284,7 @@ class Loader:
         ):
             api_base_url = self.kwargs.get("DATALAB_MARKER_API_BASE_URL", "")
             if not api_base_url or api_base_url.strip() == "":
-                api_base_url = "https://www.datalab.to/api/v1"
+                api_base_url = "https://www.datalab.to/api/v1/marker"  # https://github.com/open-webui/open-webui/pull/16867#issuecomment-3218424349
 
             loader = DatalabMarkerLoader(
                 file_path=file_path,

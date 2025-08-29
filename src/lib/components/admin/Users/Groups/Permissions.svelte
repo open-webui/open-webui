@@ -341,7 +341,7 @@
 				{$i18n.t('Allow Rate Response')}
 			</div>
 
-			<Switch bind:state={permissions.chat.rating_response} />
+			<Switch bind:state={permissions.chat.rate_response} />
 		</div>
 
 		<div class="  flex w-full justify-between my-2 pr-2">
