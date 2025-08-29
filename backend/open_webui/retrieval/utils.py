@@ -501,7 +501,6 @@ def get_sources_from_items(
     request,
     items,
     queries,
-    user,
     ef,
     k,
     reranking_function,

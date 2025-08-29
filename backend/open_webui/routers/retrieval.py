@@ -990,87 +990,87 @@ async def update_rag_config(
         form_data.DATALAB_MARKER_API_KEY
         if form_data.DATALAB_MARKER_API_KEY is not None
         else request.app.state.config.DATALAB_MARKER_API_KEY
-    )
-    request.app.state.config.DATALAB_MARKER_API_BASE_URL = (
-        form_data.DATALAB_MARKER_API_BASE_URL
-        if form_data.DATALAB_MARKER_API_BASE_URL is not None
-        else request.app.state.config.DATALAB_MARKER_API_BASE_URL
-    )
-    request.app.state.config.DATALAB_MARKER_ADDITIONAL_CONFIG = (
-        form_data.DATALAB_MARKER_ADDITIONAL_CONFIG
-        if form_data.DATALAB_MARKER_ADDITIONAL_CONFIG is not None
-        else request.app.state.config.DATALAB_MARKER_ADDITIONAL_CONFIG
-    )
-    request.app.state.config.DATALAB_MARKER_SKIP_CACHE = (
-        form_data.DATALAB_MARKER_SKIP_CACHE
-        if form_data.DATALAB_MARKER_SKIP_CACHE is not None
-        else request.app.state.config.DATALAB_MARKER_SKIP_CACHE
-    )
-    request.app.state.config.DATALAB_MARKER_FORCE_OCR = (
-        form_data.DATALAB_MARKER_FORCE_OCR
-        if form_data.DATALAB_MARKER_FORCE_OCR is not None
-        else request.app.state.config.DATALAB_MARKER_FORCE_OCR
-    )
-    request.app.state.config.DATALAB_MARKER_PAGINATE = (
-        form_data.DATALAB_MARKER_PAGINATE
-        if form_data.DATALAB_MARKER_PAGINATE is not None
-        else request.app.state.config.DATALAB_MARKER_PAGINATE
-    )
-    request.app.state.config.DATALAB_MARKER_STRIP_EXISTING_OCR = (
-        form_data.DATALAB_MARKER_STRIP_EXISTING_OCR
-        if form_data.DATALAB_MARKER_STRIP_EXISTING_OCR is not None
-        else request.app.state.config.DATALAB_MARKER_STRIP_EXISTING_OCR
-    )
-    request.app.state.config.DATALAB_MARKER_DISABLE_IMAGE_EXTRACTION = (
-        form_data.DATALAB_MARKER_DISABLE_IMAGE_EXTRACTION
-        if form_data.DATALAB_MARKER_DISABLE_IMAGE_EXTRACTION is not None
-        else request.app.state.config.DATALAB_MARKER_DISABLE_IMAGE_EXTRACTION
-    )
-    request.app.state.config.DATALAB_MARKER_FORMAT_LINES = (
-        form_data.DATALAB_MARKER_FORMAT_LINES
-        if form_data.DATALAB_MARKER_FORMAT_LINES is not None
-        else request.app.state.config.DATALAB_MARKER_FORMAT_LINES
-    )
-    request.app.state.config.DATALAB_MARKER_OUTPUT_FORMAT = (
-        form_data.DATALAB_MARKER_OUTPUT_FORMAT
-        if form_data.DATALAB_MARKER_OUTPUT_FORMAT is not None
-        else request.app.state.config.DATALAB_MARKER_OUTPUT_FORMAT
-    )
-    request.app.state.config.DATALAB_MARKER_USE_LLM = (
-        form_data.DATALAB_MARKER_USE_LLM
-        if form_data.DATALAB_MARKER_USE_LLM is not None
-        else request.app.state.config.DATALAB_MARKER_USE_LLM
-    )
-    request.app.state.config.EXTERNAL_DOCUMENT_LOADER_URL = (
-        form_data.EXTERNAL_DOCUMENT_LOADER_URL
-        if form_data.EXTERNAL_DOCUMENT_LOADER_URL is not None
-        else request.app.state.config.EXTERNAL_DOCUMENT_LOADER_URL
-    )
-    request.app.state.config.EXTERNAL_DOCUMENT_LOADER_API_KEY = (
-        form_data.EXTERNAL_DOCUMENT_LOADER_API_KEY
-        if form_data.EXTERNAL_DOCUMENT_LOADER_API_KEY is not None
-        else request.app.state.config.EXTERNAL_DOCUMENT_LOADER_API_KEY
-    )
-    request.app.state.config.TIKA_SERVER_URL = (
-        form_data.TIKA_SERVER_URL
-        if form_data.TIKA_SERVER_URL is not None
-        else request.app.state.config.TIKA_SERVER_URL
-    )
-    request.app.state.config.DOCLING_SERVER_URL = (
-        form_data.DOCLING_SERVER_URL
-        if form_data.DOCLING_SERVER_URL is not None
-        else request.app.state.config.DOCLING_SERVER_URL
-    )
-    request.app.state.config.DOCLING_OCR_ENGINE = (
-        form_data.DOCLING_OCR_ENGINE
-        if form_data.DOCLING_OCR_ENGINE is not None
-        else request.app.state.config.DOCLING_OCR_ENGINE
-    )
-    request.app.state.config.DOCLING_OCR_LANG = (
-        form_data.DOCLING_OCR_LANG
-        if form_data.DOCLING_OCR_LANG is not None
-        else request.app.state.config.DOCLING_OCR_LANG
-    )
+        )
+        request.app.state.config.DATALAB_MARKER_API_BASE_URL = (
+            form_data.DATALAB_MARKER_API_BASE_URL
+            if form_data.DATALAB_MARKER_API_BASE_URL is not None
+            else request.app.state.config.DATALAB_MARKER_API_BASE_URL
+        )
+        request.app.state.config.DATALAB_MARKER_ADDITIONAL_CONFIG = (
+            form_data.DATALAB_MARKER_ADDITIONAL_CONFIG
+            if form_data.DATALAB_MARKER_ADDITIONAL_CONFIG is not None
+            else request.app.state.config.DATALAB_MARKER_ADDITIONAL_CONFIG
+        )
+        request.app.state.config.DATALAB_MARKER_SKIP_CACHE = (
+            form_data.DATALAB_MARKER_SKIP_CACHE
+            if form_data.DATALAB_MARKER_SKIP_CACHE is not None
+            else request.app.state.config.DATALAB_MARKER_SKIP_CACHE
+        )
+        request.app.state.config.DATALAB_MARKER_FORCE_OCR = (
+            form_data.DATALAB_MARKER_FORCE_OCR
+            if form_data.DATALAB_MARKER_FORCE_OCR is not None
+            else request.app.state.config.DATALAB_MARKER_FORCE_OCR
+        )
+        request.app.state.config.DATALAB_MARKER_PAGINATE = (
+            form_data.DATALAB_MARKER_PAGINATE
+            if form_data.DATALAB_MARKER_PAGINATE is not None
+            else request.app.state.config.DATALAB_MARKER_PAGINATE
+        )
+        request.app.state.config.DATALAB_MARKER_STRIP_EXISTING_OCR = (
+            form_data.DATALAB_MARKER_STRIP_EXISTING_OCR
+            if form_data.DATALAB_MARKER_STRIP_EXISTING_OCR is not None
+            else request.app.state.config.DATALAB_MARKER_STRIP_EXISTING_OCR
+        )
+        request.app.state.config.DATALAB_MARKER_DISABLE_IMAGE_EXTRACTION = (
+            form_data.DATALAB_MARKER_DISABLE_IMAGE_EXTRACTION
+            if form_data.DATALAB_MARKER_DISABLE_IMAGE_EXTRACTION is not None
+            else request.app.state.config.DATALAB_MARKER_DISABLE_IMAGE_EXTRACTION
+        )
+        request.app.state.config.DATALAB_MARKER_FORMAT_LINES = (
+            form_data.DATALAB_MARKER_FORMAT_LINES
+            if form_data.DATALAB_MARKER_FORMAT_LINES is not None
+            else request.app.state.config.DATALAB_MARKER_FORMAT_LINES
+        )
+        request.app.state.config.DATALAB_MARKER_OUTPUT_FORMAT = (
+            form_data.DATALAB_MARKER_OUTPUT_FORMAT
+            if form_data.DATALAB_MARKER_OUTPUT_FORMAT is not None
+            else request.app.state.config.DATALAB_MARKER_OUTPUT_FORMAT
+        )
+        request.app.state.config.DATALAB_MARKER_USE_LLM = (
+            form_data.DATALAB_MARKER_USE_LLM
+            if form_data.DATALAB_MARKER_USE_LLM is not None
+            else request.app.state.config.DATALAB_MARKER_USE_LLM
+        )
+        request.app.state.config.EXTERNAL_DOCUMENT_LOADER_URL = (
+            form_data.EXTERNAL_DOCUMENT_LOADER_URL
+            if form_data.EXTERNAL_DOCUMENT_LOADER_URL is not None
+            else request.app.state.config.EXTERNAL_DOCUMENT_LOADER_URL
+        )
+        request.app.state.config.EXTERNAL_DOCUMENT_LOADER_API_KEY = (
+            form_data.EXTERNAL_DOCUMENT_LOADER_API_KEY
+            if form_data.EXTERNAL_DOCUMENT_LOADER_API_KEY is not None
+            else request.app.state.config.EXTERNAL_DOCUMENT_LOADER_API_KEY
+        )
+        request.app.state.config.TIKA_SERVER_URL = (
+            form_data.TIKA_SERVER_URL
+            if form_data.TIKA_SERVER_URL is not None
+            else request.app.state.config.TIKA_SERVER_URL
+        )
+        request.app.state.config.DOCLING_SERVER_URL = (
+            form_data.DOCLING_SERVER_URL
+            if form_data.DOCLING_SERVER_URL is not None
+            else request.app.state.config.DOCLING_SERVER_URL
+        )
+        request.app.state.config.DOCLING_OCR_ENGINE = (
+            form_data.DOCLING_OCR_ENGINE
+            if form_data.DOCLING_OCR_ENGINE is not None
+            else request.app.state.config.DOCLING_OCR_ENGINE
+        )
+        request.app.state.config.DOCLING_OCR_LANG = (
+            form_data.DOCLING_OCR_LANG
+            if form_data.DOCLING_OCR_LANG is not None
+            else request.app.state.config.DOCLING_OCR_LANG
+        )
 
         request.app.state.config.DOCLING_DO_PICTURE_DESCRIPTION = (
             form_data.DOCLING_DO_PICTURE_DESCRIPTION
@@ -1111,6 +1111,19 @@ async def update_rag_config(
         )
 
         # Reranking settings
+        if request.app.state.config.RAG_RERANKING_ENGINE == "":
+            # Unloading the internal reranker and clear VRAM memory
+            request.app.state.rf = None
+            request.app.state.RERANKING_FUNCTION = None
+            import gc
+
+            gc.collect()
+            if DEVICE_TYPE == "cuda":
+                import torch
+
+                if torch.cuda.is_available():
+                    torch.cuda.empty_cache()
+
         request.app.state.config.RAG_RERANKING_ENGINE = (
             form_data.RAG_RERANKING_ENGINE
             if form_data.RAG_RERANKING_ENGINE is not None
@@ -1123,11 +1136,11 @@ async def update_rag_config(
             else request.app.state.config.RAG_EXTERNAL_RERANKER_URL
         )
 
-    request.app.state.config.RAG_EXTERNAL_RERANKER_API_KEY = (
-        form_data.RAG_EXTERNAL_RERANKER_API_KEY
-        if form_data.RAG_EXTERNAL_RERANKER_API_KEY is not None
-        else request.app.state.config.RAG_EXTERNAL_RERANKER_API_KEY
-    )
+        request.app.state.config.RAG_EXTERNAL_RERANKER_API_KEY = (
+            form_data.RAG_EXTERNAL_RERANKER_API_KEY
+            if form_data.RAG_EXTERNAL_RERANKER_API_KEY is not None
+            else request.app.state.config.RAG_EXTERNAL_RERANKER_API_KEY
+        )
 
         log.info(
             f"Updating reranking model: {request.app.state.config.RAG_RERANKING_MODEL} to {form_data.RAG_RERANKING_MODEL}"
@@ -1165,14 +1178,12 @@ async def update_rag_config(
                     rag_config["LOADED_RERANKING_MODELS"] = request.app.state.config.LOADED_RERANKING_MODELS
                     rag_config["DOWNLOADED_RERANKING_MODELS"] = request.app.state.config.DOWNLOADED_RERANKING_MODELS
 
-
-    
-            request.app.state.RERANKING_FUNCTION = get_reranking_function(
-                request.app.state.config.RAG_RERANKING_ENGINE,
-                request.app.state.config.RAG_RERANKING_MODEL,
-                request.app.state.rf,
-            )
-        except Exception as e:
+                request.app.state.RERANKING_FUNCTION = get_reranking_function(
+                    request.app.state.config.RAG_RERANKING_ENGINE,
+                    request.app.state.config.RAG_RERANKING_MODEL,
+                    request.app.state.rf,
+                )
+            except Exception as e:
                 log.error(f"Error loading reranking model: {e}")
                 request.app.state.config.ENABLE_RAG_HYBRID_SEARCH = False
         except Exception as e:
@@ -1226,30 +1237,30 @@ async def update_rag_config(
             else request.app.state.config.ENABLE_ONEDRIVE_INTEGRATION
         )
 
-    if form_data.web is not None:
-        # Web search settings
-        request.app.state.config.ENABLE_WEB_SEARCH = form_data.web.ENABLE_WEB_SEARCH
-        request.app.state.config.WEB_SEARCH_ENGINE = form_data.web.WEB_SEARCH_ENGINE
-        request.app.state.config.WEB_SEARCH_TRUST_ENV = (
-            form_data.web.WEB_SEARCH_TRUST_ENV
-        )
-        request.app.state.config.WEB_SEARCH_RESULT_COUNT = (
-            form_data.web.WEB_SEARCH_RESULT_COUNT
-        )
-        request.app.state.config.WEB_SEARCH_CONCURRENT_REQUESTS = (
-            form_data.web.WEB_SEARCH_CONCURRENT_REQUESTS
-        )
-        request.app.state.config.WEB_LOADER_CONCURRENT_REQUESTS = (
-            form_data.web.WEB_LOADER_CONCURRENT_REQUESTS
-        )
-        request.app.state.config.WEB_SEARCH_DOMAIN_FILTER_LIST = (
-            form_data.web.WEB_SEARCH_DOMAIN_FILTER_LIST
-        )
-        request.app.state.config.BYPASS_WEB_SEARCH_EMBEDDING_AND_RETRIEVAL = (
-            form_data.web.BYPASS_WEB_SEARCH_EMBEDDING_AND_RETRIEVAL
-        )
-        request.app.state.config.BYPASS_WEB_SEARCH_WEB_LOADER = (
-            form_data.web.BYPASS_WEB_SEARCH_WEB_LOADER
+        if form_data.web is not None:
+            # Web search settings
+            request.app.state.config.ENABLE_WEB_SEARCH = form_data.web.ENABLE_WEB_SEARCH
+            request.app.state.config.WEB_SEARCH_ENGINE = form_data.web.WEB_SEARCH_ENGINE
+            request.app.state.config.WEB_SEARCH_TRUST_ENV = (
+                form_data.web.WEB_SEARCH_TRUST_ENV
+            )
+            request.app.state.config.WEB_SEARCH_RESULT_COUNT = (
+                form_data.web.WEB_SEARCH_RESULT_COUNT
+            )
+            request.app.state.config.WEB_SEARCH_CONCURRENT_REQUESTS = (
+                form_data.web.WEB_SEARCH_CONCURRENT_REQUESTS
+            )
+            request.app.state.config.WEB_LOADER_CONCURRENT_REQUESTS = (
+                form_data.web.WEB_LOADER_CONCURRENT_REQUESTS
+            )
+            request.app.state.config.WEB_SEARCH_DOMAIN_FILTER_LIST = (
+                form_data.web.WEB_SEARCH_DOMAIN_FILTER_LIST
+            )
+            request.app.state.config.BYPASS_WEB_SEARCH_EMBEDDING_AND_RETRIEVAL = (
+                form_data.web.BYPASS_WEB_SEARCH_EMBEDDING_AND_RETRIEVAL
+            )
+            request.app.state.config.BYPASS_WEB_SEARCH_WEB_LOADER = (
+                form_data.web.BYPASS_WEB_SEARCH_WEB_LOADER
             )
             request.app.state.config.SEARXNG_QUERY_URL = form_data.web.SEARXNG_QUERY_URL
             request.app.state.config.YACY_QUERY_URL = form_data.web.YACY_QUERY_URL
