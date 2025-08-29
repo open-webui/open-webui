@@ -93,23 +93,39 @@
 	}
 
 	let filteredUsers;
+	let paginatedUsers;
 
+	// First filter and sort users
 	$: filteredUsers = users
 		.filter((user) => {
 			if (search === '') {
 				return true;
 			} else {
-				let name = user.name.toLowerCase();
 				const query = search.toLowerCase();
-				return name.includes(query);
+				// Search by name, email, or domain (extracted from email)
+				return (
+					user.name.toLowerCase().includes(query) ||
+					user.email.toLowerCase().includes(query) ||
+					user.email.toLowerCase().split('@')[1]?.includes(query)
+				);
 			}
 		})
 		.sort((a, b) => {
 			if (a[sortKey] < b[sortKey]) return sortOrder === 'asc' ? -1 : 1;
 			if (a[sortKey] > b[sortKey]) return sortOrder === 'asc' ? 1 : -1;
 			return 0;
-		})
-		.slice((page - 1) * 20, page * 20);
+		});
+
+	// Reset page to 1 when search changes
+	$: if (search) {
+		page = 1;
+	}
+
+	// Then paginate the filtered results
+	$: paginatedUsers = filteredUsers.slice((page - 1) * 20, page * 20);
+
+	// Calculate total pages based on filtered results
+	$: totalPages = Math.ceil(filteredUsers.length / 20);
 </script>
 
 <ConfirmDialog
@@ -143,7 +159,7 @@
 		{$i18n.t('Users')}
 		<div class="flex self-center w-[1px] h-6 mx-2.5 bg-gray-50 dark:bg-gray-850" />
 
-		<span class="text-lg font-medium text-gray-500 dark:text-gray-300">{users.length}</span>
+		<span class="text-lg font-medium text-gray-500 dark:text-gray-300">{filteredUsers.length}</span>
 	</div>
 
 	<div class="flex gap-1">
@@ -339,7 +355,7 @@
 			</tr>
 		</thead>
 		<tbody class="">
-			{#each filteredUsers as user, userIdx}
+			{#each paginatedUsers as user, userIdx}
 				<tr class="bg-white dark:bg-gray-900 dark:border-gray-850 text-xs">
 					<td class="px-3 py-1 min-w-[7rem] w-28">
 						<button
@@ -479,4 +495,4 @@
 	ⓘ {$i18n.t("Click on the user role button to change a user's role.")}
 </div>
 
-<Pagination bind:page count={users.length} />
+<Pagination bind:page count={filteredUsers.length} />
