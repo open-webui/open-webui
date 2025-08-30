@@ -17,7 +17,7 @@
 	export let searchQuery = '';
 
 	let categoryTree = {};
-	let expandedCategories = new Set(['General']); // 기본으로 General 카테고리 열기
+	let expandedCategories = new Set(); // 노트가 있을 때만 카테고리 표시
 	let isLoading = false;
 	let totalNoteCount = 0;
 	
@@ -111,24 +111,15 @@
 			for (const majorCategory of Object.values(categoryTree)) {
 				totalNoteCount += majorCategory.note_count || 0;
 			}
+			
+			// If no notes exist, clear the category tree
+			if (totalNoteCount === 0) {
+				categoryTree = {};
+			}
 		} catch (error) {
 			console.error('Failed to load category tree:', error);
-			// 기본 카테고리 구조
-			categoryTree = {
-				'General': {
-					note_count: 0,
-					children: {
-						'Notes': {
-							note_count: 0,
-							children: {
-								'Default': {
-									note_count: 0
-								}
-							}
-						}
-					}
-				}
-			};
+			// Don't show default categories when there are no notes
+			categoryTree = {};
 			totalNoteCount = 0;
 		} finally {
 			isLoading = false;
@@ -183,8 +174,13 @@
 
 	<!-- Category Tree -->
 	<div class="space-y-1">
-		{#each Object.entries(filteredTree) as [majorName, majorCategory]}
-			<div class="mb-1">
+		{#if totalNoteCount === 0}
+			<div class="px-3 py-4 text-center text-sm text-gray-500 dark:text-gray-400">
+				{$i18n.t('No categories yet. Create your first note to see categories here.')}
+			</div>
+		{:else}
+			{#each Object.entries(filteredTree) as [majorName, majorCategory]}
+				<div class="mb-1">
 				<!-- Major Category -->
 				<div
 					class="w-full text-left px-2 py-1.5 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 transition flex items-center justify-between {selectedCategory?.level === 'major' && selectedCategory?.name === majorName ? 'bg-blue-50 dark:bg-gray-800 border-l-2 border-blue-500' : ''}"
@@ -289,5 +285,6 @@
 				{/if}
 			</div>
 		{/each}
+		{/if}
 	</div>
 </div>
