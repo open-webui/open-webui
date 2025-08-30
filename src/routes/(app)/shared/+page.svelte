@@ -4,7 +4,7 @@
 	import { get } from 'svelte/store';
 	import {
 		getSharedChats,
-		getAllSharedChatIds,
+		getAllSharedChatsMeta,
 		deleteSharedChatById,
 		revokeAllSharedChats,
 		resetChatStatsById,
@@ -28,7 +28,10 @@
 		selectedSharedChatIds,
 		showSidebar,
 		chatsUpdated,
-		settings
+		settings,
+
+		WEBUI_NAME
+
 	} from '$lib/stores';
 	import { getModels } from '$lib/apis';
 	import { clearRevokedSharedChats } from '$lib/apis/chats';
@@ -57,6 +60,7 @@
 	let showPrimaryResetAllStatsConfirm = false;
 	let showConfirmClearRevoked = false;
 	let showPrimaryClearRevokedConfirm = false;
+	let revokedCount = 0;
 	const i18n = getContext('i18n');
 
 	let showConfirmResetStats = false;
@@ -74,7 +78,10 @@
 	let publicFilter = null;
 	let passwordFilter = null;
 	let statusFilter = 'all';
+	let typeFilter = 'all';
 	let totalSelectedCount = 0;
+	let allSharedChatsMeta = [];
+	let hasRevokedChats = false;
 
 	const publicFilterOptions = [
 		{ value: null, label: 'Public: All' },
@@ -95,11 +102,29 @@
 		{ value: 'revoked', label: 'Status: Revoked' }
 	];
 
+	const typeFilterOptions = [
+		{ value: 'all', label: 'Type: All' },
+		{ value: 'snapshot', label: 'Type: Snapshot' },
+		{ value: 'live', label: 'Type: Live' }
+	];
+
 	$: selectedPublicFilterIndex = publicFilterOptions.findIndex((o) => o.value === publicFilter);
 	$: selectedPasswordFilterIndex = passwordFilterOptions.findIndex(
 		(o) => o.value === passwordFilter
 	);
 	$: selectedStatusFilterIndex = statusFilterOptions.findIndex((o) => o.value === statusFilter);
+	$: selectedTypeFilterIndex = typeFilterOptions.findIndex((o) => o.value === typeFilter);
+
+	let apiTypeFilter = null;
+	$: {
+		if (typeFilter === 'all') {
+			apiTypeFilter = null;
+		} else if (typeFilter === 'snapshot') {
+			apiTypeFilter = true;
+		} else {
+			apiTypeFilter = false;
+		}
+	}
 
 	const handlePublicFilterScroll = (event) => {
 		event.preventDefault();
@@ -143,6 +168,20 @@
 		page = 1;
 	};
 
+	const handleTypeFilterScroll = (event) => {
+		event.preventDefault();
+		const direction = event.deltaY < 0 ? -1 : 1;
+		let newIndex = selectedTypeFilterIndex + direction;
+
+		if (newIndex < 0) {
+			newIndex = typeFilterOptions.length - 1;
+		} else if (newIndex >= typeFilterOptions.length) {
+			newIndex = 0;
+		}
+		typeFilter = typeFilterOptions[newIndex].value;
+		page = 1;
+	};
+
 	const handleDateScroll = (event, type) => {
 		event.preventDefault();
 		const direction = event.deltaY < 0 ? 1 : -1;
@@ -176,11 +215,26 @@
 	};
 
 	const setSortKey = (key) => {
-		if (orderBy === key) {
-			direction = direction === 'asc' ? 'desc' : 'asc';
+		if (key === 'status') {
+			if (orderBy !== 'status') {
+				orderBy = 'status';
+				direction = 'active';
+			} else {
+				if (direction === 'active') {
+					direction = 'expired';
+				} else if (direction === 'expired') {
+					direction = 'revoked';
+				} else {
+					direction = 'active';
+				}
+			}
 		} else {
-			orderBy = key;
-			direction = 'asc';
+			if (orderBy === key) {
+				direction = direction === 'asc' ? 'desc' : 'asc';
+			} else {
+				orderBy = key;
+				direction = 'asc';
+			}
 		}
 	};
 
@@ -193,7 +247,8 @@
 		_endDate,
 		_publicFilter,
 		_passwordFilter,
-		_statusFilter
+		_statusFilter,
+		_typeFilter
 	) => {
 		if ($user) {
 			const res = await getSharedChats(
@@ -206,7 +261,8 @@
 				_endDate ? dayjs(_endDate).endOf('day').unix() : undefined,
 				_publicFilter,
 				_passwordFilter,
-				_statusFilter
+				_statusFilter,
+				_typeFilter
 			);
 			total = res.total;
 			grandTotal = res.grand_total;
@@ -216,6 +272,19 @@
 			if (res.chats.length === 0 && _page > 1) {
 				page = 1;
 			}
+
+			const revokedRes = await getAllSharedChatsMeta(
+				localStorage.token,
+				'',
+				undefined,
+				undefined,
+				null,
+				null,
+				'revoked'
+			);
+			if (revokedRes) {
+				revokedCount = revokedRes.length;
+			}
 		}
 	};
 
@@ -223,6 +292,19 @@
 	onMount(async () => {
 		models.set(await getModels(localStorage.token));
 		previousShowShareChatModal = showShareChatModal;
+
+		const res = await getAllSharedChatsMeta(
+			localStorage.token,
+			'',
+			undefined,
+			undefined,
+			null,
+			null,
+			'revoked'
+		);
+		if (res) {
+			revokedCount = res.length;
+		}
 	});
 
 	$: if ($user && !($user.role === 'admin' || $user.permissions?.sharing?.shared_chats)) {
@@ -231,17 +313,17 @@
 	}
 
 	$: if ($sharedChatsUpdated) {
-		getSharedChatList(page, searchTerm, orderBy, direction, startDate, endDate, publicFilter, passwordFilter, statusFilter);
+		getSharedChatList(page, searchTerm, orderBy, direction, startDate, endDate, publicFilter, passwordFilter, statusFilter, apiTypeFilter);
 		sharedChatsUpdated.set(false);
 	}
 
 	$: if (previousShowShareChatModal && !showShareChatModal) {
-		getSharedChatList(page, searchTerm, orderBy, direction, startDate, endDate, publicFilter, passwordFilter, statusFilter);
+		getSharedChatList(page, searchTerm, orderBy, direction, startDate, endDate, publicFilter, passwordFilter, statusFilter, apiTypeFilter);
 	}
 
 	$: previousShowShareChatModal = showShareChatModal;
 
-	$: getSharedChatList(page, searchTerm, orderBy, direction, startDate, endDate, publicFilter, passwordFilter, statusFilter);
+	$: getSharedChatList(page, searchTerm, orderBy, direction, startDate, endDate, publicFilter, passwordFilter, statusFilter, apiTypeFilter);
 
 	$: (async () => {
 		if (
@@ -251,7 +333,7 @@
 			passwordFilter !== null ||
 			statusFilter !== 'all'
 		) {
-			const filteredIds = await getAllSharedChatIds(
+			const filteredChats = await getAllSharedChatsMeta(
 				localStorage.token,
 				searchTerm,
 				startDate ? dayjs(startDate).startOf('day').unix() : undefined,
@@ -260,10 +342,22 @@
 				passwordFilter,
 				statusFilter
 			);
-			const filteredIdSet = new Set(filteredIds);
+			const filteredIdSet = new Set(filteredChats.map((c) => c.id));
 			totalSelectedCount = $selectedSharedChatIds.filter((id) => filteredIdSet.has(id)).length;
+			allSharedChatsMeta = filteredChats;
 		} else {
 			totalSelectedCount = $selectedSharedChatIds.length;
+			if (selectionLevel === 'all') {
+				allSharedChatsMeta = await getAllSharedChatsMeta(localStorage.token);
+			} else {
+				allSharedChatsMeta = [];
+			}
+		}
+
+		if (selectionLevel === 'all') {
+			hasRevokedChats = allSharedChatsMeta.some((chat) => chat.status === 'revoked');
+		} else {
+			hasRevokedChats = $sharedChatsStore.some((chat) => chat.status === 'revoked');
 		}
 	})();
 
@@ -432,6 +526,7 @@
 		if (res) {
 			toast.success(`${res.cleared} revoked link(s) cleared.`);
 			getSharedChatList(page, searchTerm, orderBy, direction, startDate, endDate, publicFilter, passwordFilter, statusFilter);
+			selectedSharedChatIds.set([]);
 		} else {
 			toast.error('Failed to clear revoked links.');
 		}
@@ -447,7 +542,7 @@
 		if (currentLevel === 'all') {
 			selectedSharedChatIds.set([]);
 		} else if (currentLevel === 'page') {
-			const allIds = await getAllSharedChatIds(
+			const allChats = await getAllSharedChatsMeta(
 				localStorage.token,
 				searchTerm,
 				startDate ? dayjs(startDate).startOf('day').unix() : undefined,
@@ -456,7 +551,7 @@
 				passwordFilter,
 				statusFilter
 			);
-			selectedSharedChatIds.set(allIds);
+			selectedSharedChatIds.set(allChats.map((c) => c.id));
 		} else {
 			const currentPageIds = $sharedChatsStore.map((chat) => chat.id);
 			selectedSharedChatIds.update((ids) => [...new Set([...ids, ...currentPageIds])]);
@@ -518,6 +613,12 @@
 		text-overflow: ellipsis;
 	}
 </style>
+
+<svelte:head>
+	<title>
+		{$i18n.t('Shared Chats')} • {$WEBUI_NAME}
+	</title>
+</svelte:head>
 
 <!-- svelte-ignore a11y-no-static-element-interactions -->
 <div
@@ -714,6 +815,20 @@
 					{/each}
 				</select>
 			</div>
+			<div class="relative">
+				<select
+					class="pl-4 pr-10 py-2 border border-gray-300 rounded-lg dark:bg-gray-800 dark:border-gray-700"
+					bind:value={typeFilter}
+					on:change={() => {
+						page = 1;
+					}}
+					on:wheel|preventDefault={handleTypeFilterScroll}
+				>
+					{#each typeFilterOptions as option}
+						<option value={option.value}>{option.label}</option>
+					{/each}
+				</select>
+			</div>
 				{#if totalSelectedCount > 0}
 					<button
 						class="px-4 py-2 text-red-500 border border-red-500 rounded-lg whitespace-nowrap hover:bg-red-500 hover:text-white"
@@ -745,7 +860,7 @@
 				<button
 					class="px-4 py-2 text-red-600 border border-red-600 rounded-lg whitespace-nowrap hover:bg-red-600 hover:text-white disabled:opacity-50 disabled:cursor-not-allowed"
 					on:click={() => (showPrimaryClearRevokedConfirm = true)}
-					disabled={grandTotal === 0 || displayedChats.filter(c => c.status === 'revoked').length === 0}
+					disabled={!hasRevokedChats}
 				>
 					Clear Revoked
 				</button>
@@ -853,12 +968,22 @@
 						</th>
 						<th
 							class="px-6 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider cursor-pointer whitespace-nowrap"
-							on:click={() => setSortKey('revoked_at')}
-							on:wheel|preventDefault={() => setSortKey('revoked_at')}
+							on:click={() => setSortKey('status')}
+							on:wheel|preventDefault={() => setSortKey('status')}
 						>
 							<div class="flex items-center">
 								<span>Status</span>
-								<SortIcon direction={direction} active={orderBy === 'revoked_at'} />
+								<SortIcon direction={direction} active={orderBy === 'status'} />
+							</div>
+						</th>
+						<th
+							class="px-6 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider cursor-pointer whitespace-nowrap"
+							on:click={() => setSortKey('is_snapshot')}
+							on:wheel|preventDefault={() => setSortKey('is_snapshot')}
+						>
+							<div class="flex items-center">
+								<span>Type</span>
+								<SortIcon direction={direction} active={orderBy === 'is_snapshot'} />
 							</div>
 						</th>
 						<th
@@ -957,6 +1082,19 @@
 										<span
 											class="px-2 py-1 text-xs font-semibold leading-5 text-red-800 bg-red-100 rounded-full"
 											>Revoked</span
+										>
+									{/if}
+								</td>
+								<td class="px-6 py-3 whitespace-nowrap text-gray-500 dark:text-gray-400 whitespace-nowrap">
+									{#if chat.is_snapshot}
+										<span
+											class="px-2 py-1 text-xs font-semibold leading-5 text-blue-800 bg-blue-100 rounded-full"
+											>Snapshot</span
+										>
+									{:else}
+										<span
+											class="px-2 py-1 text-xs font-semibold leading-5 text-purple-800 bg-purple-100 rounded-full"
+											>Live</span
 										>
 									{/if}
 								</td>
@@ -1095,7 +1233,7 @@
 <ConfirmDialog
 	bind:show={showPrimaryClearRevokedConfirm}
 	title="Clear Revoked Links"
-	message={`Are you sure you want to clear all revoked shared links? This will permanently remove their sharing information.`}
+	message={`Are you sure you want to clear all ${revokedCount} revoked shared links? This will permanently remove their sharing information.`}
 	on:confirm={() => {
 		showConfirmClearRevoked = true;
 	}}
@@ -1104,7 +1242,7 @@
 <DangerZoneConfirmationModal
 	bind:show={showConfirmClearRevoked}
 	title="Clear Revoked Links"
-	message={`Are you sure you want to clear all revoked shared links? This will permanently remove their sharing information.`}
+	message={`Are you sure you want to clear all ${revokedCount} revoked shared links? This will permanently remove their sharing information.`}
 	confirmText="CLEAR"
 	confirmButtonText="Clear Revoked"
 	confirmButtonClass="text-red-600 border-red-600 hover:bg-red-600 hover:text-white"

@@ -33,7 +33,7 @@ export const createNewChat = async (token: string, chat: object, folderId: strin
 	return res;
 };
 
-export const getAllSharedChatIds = async (
+export const getAllSharedChatsMeta = async (
 	token: string = '',
 	query: string = '',
 	startDate?: number,
@@ -41,7 +41,7 @@ export const getAllSharedChatIds = async (
 	is_public?: boolean | null,
 	password?: boolean | null,
 	status?: string
-) => {
+): Promise<Array<{ id: string; status: string }>> => {
 	let error = null;
 
 	const params = new URLSearchParams();
@@ -54,7 +54,7 @@ export const getAllSharedChatIds = async (
 		params.append('password', password.toString());
 	if (status) params.append('status', status);
 
-	const res = await fetch(`${WEBUI_API_BASE_URL}/chats/shared/ids?${params.toString()}`, {
+	const res = await fetch(`${WEBUI_API_BASE_URL}/chats/shared/meta?${params.toString()}`, {
 		method: 'GET',
 		headers: {
 			'Content-Type': 'application/json',
@@ -196,7 +196,8 @@ export const getSharedChats = async (
 	endDate?: number,
 	is_public?: boolean | null,
 	password?: boolean | null,
-	status?: string
+	status?: string,
+	is_snapshot?: boolean | null
 ) => {
 	let error = null;
 
@@ -212,6 +213,8 @@ export const getSharedChats = async (
 	if (password !== null && password !== undefined)
 		params.append('password', password.toString());
 	if (status) params.append('status', status);
+	if (is_snapshot !== null && is_snapshot !== undefined)
+		params.append('is_snapshot', is_snapshot.toString());
 
 	const res = await fetch(`${WEBUI_API_BASE_URL}/chats/shared?${params.toString()}`, {
 		method: 'GET',
@@ -921,7 +924,8 @@ export const shareChatById = async (
 	password: string | null = null,
 	current_password: string | null = null,
 	share_show_qr_code: boolean = false,
-	share_use_gradient: boolean = false
+	share_use_gradient: boolean = false,
+	is_snapshot: boolean = false
 ) => {
 	let error = null;
 
@@ -944,7 +948,8 @@ export const shareChatById = async (
 			password: password,
 			current_password: current_password,
 			share_show_qr_code: share_show_qr_code,
-			share_use_gradient: share_use_gradient
+			share_use_gradient: share_use_gradient,
+			is_snapshot: is_snapshot
 		})
 	})
 		.then(async (res) => {

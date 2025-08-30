@@ -12,7 +12,7 @@ from open_webui.env import SRC_LOG_LEVELS
 
 from pydantic import BaseModel, ConfigDict
 from sqlalchemy import BigInteger, Boolean, Column, String, Text, JSON, Index, Integer
-from sqlalchemy import or_, func, select, and_, text, not_
+from sqlalchemy import or_, func, select, and_, text, not_, case
 from sqlalchemy.sql import exists
 from sqlalchemy.sql.expression import bindparam
 
@@ -58,6 +58,8 @@ class Chat(Base):
 
     share_show_qr_code = Column(Boolean, default=False, nullable=False)
     share_use_gradient = Column(Boolean, default=False, nullable=False)
+    is_snapshot = Column(Boolean, default=False, nullable=False)
+    snapshot_chat = Column(JSON, nullable=True)
 
     __table_args__ = (
         # Performance indexes for common queries
@@ -106,6 +108,8 @@ class ChatModel(BaseModel):
 
     share_show_qr_code: bool = False
     share_use_gradient: bool = False
+    is_snapshot: bool = False
+    snapshot_chat: Optional[dict] = None
 
 
 ####################
@@ -160,6 +164,7 @@ class ChatResponse(BaseModel):
     is_new_share: Optional[bool] = None
     share_show_qr_code: bool
     share_use_gradient: bool
+    is_snapshot: bool
 
 
 class ChatTitleIdResponse(BaseModel):
@@ -179,6 +184,7 @@ class ChatTitleIdResponse(BaseModel):
     keep_link_active_after_max_clones: Optional[bool] = False
     share_show_qr_code: Optional[bool] = None
     share_use_gradient: Optional[bool] = None
+    is_snapshot: Optional[bool] = None
     has_password: bool = False
     status: str = "active"
 
@@ -386,6 +392,7 @@ class ChatTable:
         password: Optional[str] = None,
         share_show_qr_code: bool = False,
         share_use_gradient: bool = False,
+        is_snapshot: bool = False,
     ) -> Optional[tuple[ChatModel, bool]]:
         with get_db() as db:
             chat = db.get(Chat, chat_id)
@@ -406,8 +413,12 @@ class ChatTable:
             chat.keep_link_active_after_max_clones = keep_link_active_after_max_clones
             chat.share_show_qr_code = share_show_qr_code
             chat.share_use_gradient = share_use_gradient
+            chat.is_snapshot = is_snapshot
             chat.revoked_at = None
             chat.updated_at = int(time.time())
+
+            if is_snapshot:
+                chat.snapshot_chat = chat.chat
 
             if password:
                 # Check if the password is being set for the first time or changed
@@ -753,17 +764,48 @@ class ChatTable:
                         query = query.filter(Chat.password.isnot(None))
                     else:
                         query = query.filter(Chat.password.is_(None))
+                
+                is_snapshot = filter.get("is_snapshot")
+                if is_snapshot is not None:
+                    query = query.filter(Chat.is_snapshot == is_snapshot)
 
                 order_by = filter.get("order_by")
                 direction = filter.get("direction")
 
-                if order_by and direction and getattr(Chat, order_by):
-                    if direction.lower() == "asc":
-                        query = query.order_by(getattr(Chat, order_by).asc())
-                    elif direction.lower() == "desc":
-                        query = query.order_by(getattr(Chat, order_by).desc())
-                    else:
-                        raise ValueError("Invalid direction for ordering")
+                if order_by and direction:
+                    if order_by == "status":
+                        is_expired = self._get_is_expired_clause()
+                        if direction == "active":
+                            status_order = case(
+                                (and_(Chat.revoked_at.is_(None), not_(is_expired)), 1),
+                                (is_expired, 2),
+                                (and_(Chat.revoked_at.isnot(None), not_(is_expired)), 3),
+                                else_=4,
+                            ).asc()
+                        elif direction == "expired":
+                            status_order = case(
+                                (is_expired, 1),
+                                (and_(Chat.revoked_at.is_(None), not_(is_expired)), 2),
+                                (and_(Chat.revoked_at.isnot(None), not_(is_expired)), 3),
+                                else_=4,
+                            ).asc()
+                        elif direction == "revoked":
+                            status_order = case(
+                                (and_(Chat.revoked_at.isnot(None), not_(is_expired)), 1),
+                                (is_expired, 2),
+                                (and_(Chat.revoked_at.is_(None), not_(is_expired)), 3),
+                                else_=4,
+                            ).asc()
+                        else:
+                            raise ValueError("Invalid direction for status ordering")
+                        query = query.order_by(status_order)
+                    elif getattr(Chat, order_by):
+                        if direction.lower() == "asc":
+                            query = query.order_by(getattr(Chat, order_by).asc())
+                        elif direction.lower() == "desc":
+                            query = query.order_by(getattr(Chat, order_by).desc())
+                        else:
+                            raise ValueError("Invalid direction for ordering")
                 else:
                     query = query.order_by(Chat.updated_at.desc())
             else:
@@ -796,6 +838,7 @@ class ChatTable:
                 Chat.keep_link_active_after_max_clones,
                 Chat.share_show_qr_code,
                 Chat.share_use_gradient,
+                Chat.is_snapshot,
             )
 
             if skip:
@@ -827,6 +870,7 @@ class ChatTable:
                     "keep_link_active_after_max_clones": chat[14],
                     "share_show_qr_code": chat[15],
                     "share_use_gradient": chat[16],
+                    "is_snapshot": chat[17],
                 }
                 chat_data["status"] = self._get_chat_status(chat_data)
                 chats_with_status.append(ChatTitleIdResponse.model_validate(chat_data))
@@ -930,6 +974,9 @@ class ChatTable:
 
                 # Now, get the chat content to return to the user.
                 chat_to_return = self.get_chat_by_id(chat.id)
+
+                if chat_to_return.is_snapshot:
+                    chat_to_return.chat = chat_to_return.snapshot_chat
 
                 # After this view, if the limit is now reached, revoke the link for future requests.
                 if (
@@ -1569,14 +1616,27 @@ class ChatTable:
             db.rollback()
             return False
 
-    def get_all_shared_chat_ids_by_user_id(
+    def get_all_shared_chats_meta_by_user_id(
         self,
         user_id: str,
         filter: Optional[dict] = None,
-    ) -> list[str]:
+    ) -> list[dict]:
         with get_db() as db:
             query = (
-                db.query(Chat.id)
+                db.query(
+                    Chat.id,
+                    Chat.revoked_at,
+                    Chat.expires_at,
+                    Chat.expire_on_views,
+                    Chat.views,
+                    Chat.max_clones,
+                    Chat.clones,
+                    Chat.keep_link_active_after_max_clones,
+                    Chat.title,
+                    Chat.created_at,
+                    Chat.is_public,
+                    Chat.password,
+                )
                 .filter_by(user_id=user_id)
                 .filter(Chat.share_id.isnot(None))
             )
@@ -1622,8 +1682,25 @@ class ChatTable:
                         query = query.filter(Chat.password.isnot(None))
                     else:
                         query = query.filter(Chat.password.is_(None))
+            
+            all_chats = query.all()
 
-            return [id for (id,) in query.all()]
+            chats_meta = []
+            for chat in all_chats:
+                chat_data = {
+                    "id": chat.id,
+                    "revoked_at": chat.revoked_at,
+                    "expires_at": chat.expires_at,
+                    "expire_on_views": chat.expire_on_views,
+                    "views": chat.views,
+                    "max_clones": chat.max_clones,
+                    "clones": chat.clones,
+                    "keep_link_active_after_max_clones": chat.keep_link_active_after_max_clones,
+                }
+                status = self._get_chat_status(chat_data)
+                chats_meta.append({"id": chat_data["id"], "status": status})
+
+            return chats_meta
 
 
 Chats = ChatTable()

@@ -87,8 +87,8 @@ def get_session_user_chat_list(
         )
 
 
-@router.get("/shared/ids", response_model=list[str])
-async def get_all_shared_chat_ids(
+@router.get("/shared/meta", response_model=list[dict])
+async def get_all_shared_chats_meta(
     user=Depends(get_verified_user),
     query: Optional[str] = None,
     start_date: Optional[int] = None,
@@ -112,7 +112,7 @@ async def get_all_shared_chat_ids(
         if status:
             filter["status"] = status
 
-        return Chats.get_all_shared_chat_ids_by_user_id(
+        return Chats.get_all_shared_chats_meta_by_user_id(
             user.id, filter=filter
         )
     except Exception as e:
@@ -420,6 +420,7 @@ async def get_session_user_shared_chat_list(
     is_public: Optional[bool] = None,
     password: Optional[bool] = None,
     status: Optional[str] = None,
+    is_snapshot: Optional[bool] = None,
 ):
     try:
         limit = 20
@@ -442,6 +443,8 @@ async def get_session_user_shared_chat_list(
             filter["password"] = password
         if status:
             filter["status"] = status
+        if is_snapshot is not None:
+            filter["is_snapshot"] = is_snapshot
 
         return Chats.get_shared_chat_list_by_user_id(
             user.id, skip=skip, limit=limit, filter=filter
@@ -1083,6 +1086,7 @@ class ShareChatForm(BaseModel):
     current_password: Optional[str] = None
     share_show_qr_code: bool = False
     share_use_gradient: bool = False
+    is_snapshot: bool = False
 
 
 @router.post("/{id}/share", response_model=Optional[ChatResponse])
@@ -1144,6 +1148,7 @@ async def share_chat_by_id(
             password=form_data.password,
             share_show_qr_code=form_data.share_show_qr_code,
             share_use_gradient=form_data.share_use_gradient,
+            is_snapshot=form_data.is_snapshot,
         )
 
         if not result:

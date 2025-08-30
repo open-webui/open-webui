@@ -142,6 +142,8 @@
 	let current_password = '';
 	let removePasswordClicked = false;
 	let useGradient = false;
+	let is_live = false;
+	let initial_is_live = false;
 	let showQrCode = false;
 	let showExpandedQr = false;
 	let currentViews = 0;
@@ -494,6 +496,9 @@
 		if (useGradient !== (chat.share_use_gradient ?? false)) {
 			return true;
 		}
+		if (is_live !== initial_is_live) {
+			return true;
+		}
 		return false;
 	};
 
@@ -555,7 +560,8 @@
 				passwordToSend,
 				current_password,
 				showQrCode,
-				useGradient
+				useGradient,
+				!is_live
 			);
 
 			// Update all state directly and atomically from the single API response.
@@ -699,6 +705,14 @@
 					showQrCode = _chat.share_show_qr_code ?? !!_chat.share_id;
 					useGradient = _chat.share_use_gradient ?? false;
 
+					if (_chat.share_id) {
+						is_live = !(_chat.is_snapshot ?? false);
+					} else {
+						is_live = false;
+					}
+					initial_is_live = is_live;
+
+
 					if (intervalId) clearInterval(intervalId);
 					if (chat.expires_at) {
 						timeRemaining = formatTimeRemaining(chat.expires_at);
@@ -820,19 +834,17 @@
 						<div class="font-medium mb-2">{$i18n.t('How Sharing Works:')}</div>
 						<ul class="list-disc list-inside space-y-1">
 							<li>
-								<strong>{$i18n.t('Creates a Snapshot:')}</strong>
+								<strong>{$i18n.t('Default Behavior (Snapshot):')}</strong>
 								{$i18n.t(
-									'Sharing creates a static, public snapshot of your entire conversation up to this point, including all prompts and responses.'
+									'By default, sharing creates a static snapshot of your conversation up to this point, including all prompts and responses. Future messages will not be included.'
 								)}
 							</li>
-
 							<li class="mt-2">
-								<strong>{$i18n.t('Future Messages Not Included:')}</strong>
+								<strong>{$i18n.t('Live Updates (Optional):')}</strong>
 								{$i18n.t(
-									'Any new messages you send after creating the link will not be added to the shared chat.'
+									'You can enable live updates for the shared link. If you do, the shared chat will update as you continue the conversation.'
 								)}
 							</li>
-
 							<li class="mt-2">
 								<strong>{$i18n.t('Updating the Link:')}</strong>
 								{$i18n.t(
@@ -952,6 +964,29 @@
 											<QuestionMarkCircle class="cursor-pointer text-gray-500 size-4" />
 											<div class="p-2 text-sm" slot="tooltip">
 												{$i18n.t("When enabled, the chat owner's username will be displayed on the shared chat.")}
+											</div>
+										</Tooltip>
+									</div>
+								</div>
+							</div>
+							<div class="flex items-start space-x-3">
+								<div class="pt-0.5">
+									<Switch bind:state={is_live} tooltip={true} />
+								</div>
+								<div class="flex-1">
+									<div class="flex items-center space-x-1">
+										<label
+											for="is_live"
+											class="block text-sm font-medium text-gray-700 dark:text-gray-300 whitespace-nowrap"
+										>
+											{$i18n.t('Enable Live Updates')}
+										</label>
+										<Tooltip placement="top">
+											<QuestionMarkCircle class="cursor-pointer text-gray-500 size-4" />
+											<div class="p-2 text-sm" slot="tooltip">
+												{$i18n.t(
+													'When enabled, the shared link will update with the conversation. When disabled, the shared link will be a snapshot of the conversation at the time of sharing.'
+												)}
 											</div>
 										</Tooltip>
 									</div>
