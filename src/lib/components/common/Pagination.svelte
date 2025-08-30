@@ -67,7 +67,7 @@
 	<Pagination.Root bind:page {count} {perPage} let:pages>
 		<div class="my-2 flex items-center" on:wheel|preventDefault={handlePageScroll}>
 			<Pagination.PrevButton
-				class="mr-[25px] inline-flex size-8 items-center justify-center rounded-[9px] bg-transparent hover:bg-gray-50 dark:hover:bg-gray-850 active:scale-98 disabled:cursor-not-allowed disabled:text-gray-400 dark:disabled:text-gray-700 hover:disabled:bg-transparent dark:hover:disabled:bg-transparent"
+				class="mr-[10px] inline-flex size-8 items-center justify-center rounded-[9px] bg-transparent hover:bg-gray-50 dark:hover:bg-gray-850 active:scale-98 disabled:cursor-not-allowed disabled:text-gray-400 dark:disabled:text-gray-700 hover:disabled:bg-transparent dark:hover:disabled:bg-transparent"
 			>
 				<ChevronLeft className="size-4" strokeWidth="2" />
 			</Pagination.PrevButton>
@@ -86,7 +86,7 @@
 				{/each}
 			</div>
 			<Pagination.NextButton
-				class="ml-[25px]  inline-flex size-8 items-center justify-center rounded-[9px] bg-transparent hover:bg-gray-50 dark:hover:bg-gray-850 active:scale-98 disabled:cursor-not-allowed disabled:text-gray-400 dark:disabled:text-gray-700 hover:disabled:bg-transparent dark:hover:disabled:bg-transparent"
+				class="ml-[10px]  inline-flex size-8 items-center justify-center rounded-[9px] bg-transparent hover:bg-gray-50 dark:hover:bg-gray-850 active:scale-98 disabled:cursor-not-allowed disabled:text-gray-400 dark:disabled:text-gray-700 hover:disabled:bg-transparent dark:hover:disabled:bg-transparent"
 			>
 				<ChevronRight className="size-4" strokeWidth="2" />
 			</Pagination.NextButton>

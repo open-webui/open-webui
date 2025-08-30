@@ -94,6 +94,7 @@ async def get_all_shared_chat_ids(
     start_date: Optional[int] = None,
     end_date: Optional[int] = None,
     is_public: Optional[bool] = None,
+    password: Optional[bool] = None,
     status: Optional[str] = None,
 ):
     try:
@@ -106,6 +107,8 @@ async def get_all_shared_chat_ids(
             filter["end_date"] = end_date
         if is_public is not None:
             filter["is_public"] = is_public
+        if password is not None:
+            filter["password"] = password
         if status:
             filter["status"] = status
 
@@ -415,6 +418,7 @@ async def get_session_user_shared_chat_list(
     order_by: Optional[str] = None,
     direction: Optional[str] = None,
     is_public: Optional[bool] = None,
+    password: Optional[bool] = None,
     status: Optional[str] = None,
 ):
     try:
@@ -434,6 +438,8 @@ async def get_session_user_shared_chat_list(
             filter["direction"] = direction
         if is_public is not None:
             filter["is_public"] = is_public
+        if password is not None:
+            filter["password"] = password
         if status:
             filter["status"] = status
 

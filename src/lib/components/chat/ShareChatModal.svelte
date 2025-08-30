@@ -1301,7 +1301,7 @@
 										<Eye class="size-5" />
 									</a>
 								</Tooltip>
-								{#if chat.revoked_at}
+								{#if chat.revoked_at || timeRemaining === 'Expired'}
 									<Tooltip content={$i18n.t('Re-activate Link')}>
 										<button
 											class="flex items-center justify-center h-full p-2 rounded-lg text-green-600 dark:text-green-500 bg-transparent hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors"

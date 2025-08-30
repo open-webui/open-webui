@@ -39,6 +39,7 @@ export const getAllSharedChatIds = async (
 	startDate?: number,
 	endDate?: number,
 	is_public?: boolean | null,
+	password?: boolean | null,
 	status?: string
 ) => {
 	let error = null;
@@ -49,6 +50,8 @@ export const getAllSharedChatIds = async (
 	if (endDate) params.append('end_date', endDate.toString());
 	if (is_public !== null && is_public !== undefined)
 		params.append('is_public', is_public.toString());
+	if (password !== null && password !== undefined)
+		params.append('password', password.toString());
 	if (status) params.append('status', status);
 
 	const res = await fetch(`${WEBUI_API_BASE_URL}/chats/shared/ids?${params.toString()}`, {
@@ -192,6 +195,7 @@ export const getSharedChats = async (
 	startDate?: number,
 	endDate?: number,
 	is_public?: boolean | null,
+	password?: boolean | null,
 	status?: string
 ) => {
 	let error = null;
@@ -205,6 +209,8 @@ export const getSharedChats = async (
 	if (endDate) params.append('end_date', endDate.toString());
 	if (is_public !== null && is_public !== undefined)
 		params.append('is_public', is_public.toString());
+	if (password !== null && password !== undefined)
+		params.append('password', password.toString());
 	if (status) params.append('status', status);
 
 	const res = await fetch(`${WEBUI_API_BASE_URL}/chats/shared?${params.toString()}`, {
