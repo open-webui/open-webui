@@ -76,10 +76,7 @@
 	import { 
 		deleteNotePlusById, 
 		getNotePlusById, 
-		updateNotePlusById, 
-		generateNotePlusTitle, 
-		generateNotePlusCategory,
-		autoCategorizePlus 
+		updateNotePlusById
 	} from '$lib/apis/noteplus';
 
 	import RichTextInput from '../common/RichTextInput.svelte';
@@ -158,7 +155,6 @@
 	let titleInputFocused = false;
 	let titleGenerating = false;
 	let categoryGenerating = false;
-	let categoryMethod = 'llm'; // 'llm', 'code', or 'hybrid'
 
 	let dragged = false;
 	let loading = false;
@@ -260,238 +256,183 @@
 
 	const generateTitleHandler = async () => {
 		const content = note.data.content.md;
+		const DEFAULT_TITLE_GENERATION_PROMPT_TEMPLATE = `### Task:
+Generate a concise, 3-5 word title with an emoji summarizing the content in the content's primary language.
+### Guidelines:
+- The title should clearly represent the main theme or subject of the content.
+- Use emojis that enhance understanding of the topic, but avoid quotation marks or special formatting.
+- Write the title in the content's primary language.
+- Prioritize accuracy over excessive creativity; keep it clear and simple.
+- Your entire response must consist solely of the JSON object, without any introductory or concluding text.
+- The output must be a single, raw JSON object, without any markdown code fences or other encapsulating text.
+- Ensure no conversational text, affirmations, or explanations precede or follow the raw JSON output, as this will cause direct parsing failure.
+### Output:
+JSON format: { "title": "your concise title here" }
+### Examples:
+- { "title": "📉 Stock Market Trends" },
+- { "title": "🍪 Perfect Chocolate Chip Recipe" },
+- { "title": "Evolution of Music Streaming" },
+- { "title": "Remote Work Productivity Tips" },
+- { "title": "Artificial Intelligence in Healthcare" },
+- { "title": "🎮 Video Game Development Insights" }
+### Content:
+<content>
+${content}
+</content>`;
 
-		if (!content || content.trim() === '') {
-			toast.error($i18n.t('Please add some content first'));
-			return;
-		}
-
-		if (!selectedModelId || selectedModelId === '') {
-			toast.error($i18n.t('Model not selected'));
-			return;
-		}
-
+		const oldTitle = JSON.parse(JSON.stringify(note.title));
+		note.title = '';
 		titleGenerating = true;
 
-		try {
-			const DEFAULT_TITLE_GENERATION_PROMPT_TEMPLATE = `### Task:
-Generate a concise, 3-5 word title with an emoji summarizing the content in the SAME LANGUAGE as the content.
+		const res = await generateOpenAIChatCompletion(
+			localStorage.token,
+			{
+				model: selectedModelId,
+				stream: false,
+				messages: [
+					{
+						role: 'user',
+						content: DEFAULT_TITLE_GENERATION_PROMPT_TEMPLATE
+					}
+				]
+			},
+			`${WEBUI_BASE_URL}/api`
+		);
+		if (res) {
+			// Step 1: Safely extract the response string
+			const response = res?.choices[0]?.message?.content ?? '';
 
-### Guidelines:
-- First, detect the primary language of the content
-- Generate the title in that detected language
-- The title should clearly represent the main theme or subject
-- Keep the title focused on the content rather than instructions
-- Choose an emoji that best represents the overall theme
-- Only output the title without quotes or additional explanation
+			try {
+				const jsonStartIndex = response.indexOf('{');
+				const jsonEndIndex = response.lastIndexOf('}');
 
-### Examples:
-- Korean content → Korean title: "🚀 리액트 훅 사용법"
-- English content → English title: "🚀 React Hooks Usage"
-- Japanese content → Japanese title: "🚀 Reactフックの使い方"
+				if (jsonStartIndex !== -1 && jsonEndIndex !== -1) {
+					const jsonResponse = response.substring(jsonStartIndex, jsonEndIndex + 1);
+					const parsed = JSON.parse(jsonResponse);
 
-### Content:
-{{CONTENT}}`;
-
-			const prompt = DEFAULT_TITLE_GENERATION_PROMPT_TEMPLATE.replace('{{CONTENT}}', content);
-
-			const res = await generateOpenAIChatCompletion(
-				localStorage.token,
-				{
-					model: selectedModelId,
-					messages: [
-						{
-							role: 'user',
-							content: prompt
-						}
-					],
-					stream: false
-				},
-				`${WEBUI_BASE_URL}/api`
-			);
-			
-			if (res) {
-				console.log('Title generation response:', res);
-				const generatedTitle = res?.choices?.[0]?.message?.content || '';
-				
-				if (generatedTitle) {
-					note.title = generatedTitle.trim();
+					if (parsed && parsed.title) {
+						note.title = parsed.title.trim();
+					}
+				}
+			} catch (parseError) {
+				// Fallback: use raw response if JSON parsing fails
+				console.error('Failed to parse JSON response:', parseError);
+				if (response && response.trim() !== '') {
+					note.title = response.trim();
 				} else {
-					toast.error($i18n.t('Failed to generate title'));
+					note.title = oldTitle;
 				}
 			}
-		} catch (error) {
-			console.error('Title generation error:', error);
-			toast.error($i18n.t('Failed to generate title'));
-		} finally {
-			titleGenerating = false;
-			await tick();
-			changeDebounceHandler();
+		} else {
+			note.title = oldTitle;
 		}
+
+		titleGenerating = false;
+		await tick();
+		changeDebounceHandler();
 	};
 
 	const generateCategoryHandler = async () => {
-		// Prevent multiple simultaneous calls
-		if (categoryGenerating) {
-			console.log('Category generation already in progress');
-			return;
-		}
-
 		const content = note.data.content.md;
 		const title = note.title;
 
-		if (!content || content.trim() === '') {
-			toast.error($i18n.t('Please add some content first'));
-			return;
-		}
+		const DEFAULT_CATEGORY_GENERATION_PROMPT_TEMPLATE = `### Task:
+Analyze the content below and categorize it into a 3-level hierarchy. IMPORTANT: The categories MUST be in the SAME LANGUAGE as the content.
 
-		if (categoryMethod === 'llm' || categoryMethod === 'hybrid') {
-			if (!selectedModelId || selectedModelId === '') {
-				toast.error($i18n.t('Model not selected'));
-				return;
-			}
-		}
+### Step-by-step Instructions:
+1. FIRST: Detect the primary language of the content
+2. THEN: Generate ALL category names ONLY in that detected language
+3. NEVER mix languages in the output
 
-		console.log('Starting category generation with method:', categoryMethod);
-		categoryGenerating = true;
-
-		try {
-			// Try code-based categorization first if in code or hybrid mode
-			if (categoryMethod === 'code' || categoryMethod === 'hybrid') {
-				try {
-					console.log('Attempting code-based categorization...');
-					const categoryData = await autoCategorizePlus(
-						localStorage.token,
-						title || '',
-						content
-					);
-
-					if (categoryData) {
-						console.log('Code-based categorization successful:', categoryData);
-						note.category_major = categoryData.major || 'General';
-						note.category_middle = categoryData.middle || 'Notes';
-						note.category_minor = categoryData.minor || 'Default';
-						// Save immediately without triggering debounce
-						await saveHandler();
-						categoryGenerating = false;
-						return;
-					}
-				} catch (error) {
-					console.error('Code-based categorization failed:', error);
-					if (categoryMethod === 'hybrid') {
-						console.log('Falling back to LLM...');
-					}
-				}
-
-				// If code-based failed and we're not in hybrid mode, we're done
-				if (categoryMethod === 'code') {
-					toast.error($i18n.t('Failed to generate categories'));
-					categoryGenerating = false;
-					return;
-				}
-			}
-
-			// Use LLM-based categorization
-			if (categoryMethod === 'llm' || categoryMethod === 'hybrid') {
-				console.log('Using LLM-based categorization...');
-				const DEFAULT_CATEGORY_GENERATION_PROMPT_TEMPLATE = `### Task:
-Analyze the language of the content below and categorize it into a 3-level hierarchy using the SAME LANGUAGE as the content.
-
-### Guidelines:
-1. First, detect the primary language of the content (e.g., English, Korean, Japanese, Chinese, etc.)
-2. Generate ALL category names in that detected language
-3. Category hierarchy:
-   - Major category: High-level domain (Technology/기술, Business/비즈니스, Personal/개인, Education/교육, Health/건강, etc.)
-   - Middle category: Specific area within the domain (Programming/프로그래밍, Marketing/마케팅, Journal/일기, Course/강좌, etc.)
-   - Minor category: Detailed classification (Python/파이썬, SEO/검색엔진최적화, Daily/일일, Mathematics/수학, etc.)
+### Category Hierarchy:
+- Major category: High-level domain (e.g., Technology, Business, Personal, Education, Health)
+- Middle category: Specific area within the domain (e.g., Programming, Marketing, Journal, Course)
+- Minor category: Detailed classification (e.g., Python, SEO, Daily, Mathematics)
 
 ### Output Format:
 Return ONLY a JSON object with this exact structure:
 {
-  "major": "category name in content's language",
-  "middle": "category name in content's language",
-  "minor": "category name in content's language"
+  "major": "category name",
+  "middle": "category name",
+  "minor": "category name"
 }
 
-### Important:
-- If content is in Korean, use Korean category names (e.g., "개발", "프론트엔드", "리액트")
-- If content is in English, use English category names (e.g., "Development", "Frontend", "React")
-- If content is in Japanese, use Japanese category names (e.g., "開発", "フロントエンド", "React")
-- If content is mixed language, use the dominant language for categories
+### Language Rules:
+- English content → English categories only (e.g., "Technology", "Programming", "Python")
+- Korean content → Korean categories only (e.g., "기술", "프로그래밍", "파이썬")
+- Japanese content → Japanese categories only (e.g., "技術", "プログラミング", "Python")
+- Mixed content → Use the dominant language
+
+### Examples:
+- English: {"major": "Technology", "middle": "Programming", "minor": "Python"}
+- Korean: {"major": "기술", "middle": "프로그래밍", "minor": "파이썬"}
+- Japanese: {"major": "技術", "middle": "プログラミング", "minor": "Python"}
 
 ### Title:
 {{TITLE}}
 ### Content:
 {{CONTENT}}`;
 
-				const prompt = DEFAULT_CATEGORY_GENERATION_PROMPT_TEMPLATE
-					.replace('{{TITLE}}', title || 'Untitled')
-					.replace('{{CONTENT}}', content);
+		const prompt = DEFAULT_CATEGORY_GENERATION_PROMPT_TEMPLATE
+			.replace('{{TITLE}}', title || 'Untitled')
+			.replace('{{CONTENT}}', content);
 
-				const res = await generateOpenAIChatCompletion(
-					localStorage.token,
+		categoryGenerating = true;
+
+		const res = await generateOpenAIChatCompletion(
+			localStorage.token,
+			{
+				model: selectedModelId,
+				messages: [
 					{
-						model: selectedModelId,
-						messages: [
-							{
-								role: 'user',
-								content: prompt
-							}
-						],
-						stream: false
-					},
-					`${WEBUI_BASE_URL}/api`
-				);
+						role: 'user',
+						content: prompt
+					}
+				],
+				stream: false
+			},
+			`${WEBUI_BASE_URL}/api`
+		);
+		
+		if (res) {
+			// Try to parse JSON response
+			let categoryData;
+			const responseContent = res?.choices?.[0]?.message?.content || '';
 			
-				if (res) {
-					console.log('Category generation response:', res);
-				
-				// Try to parse JSON response
-				let categoryData;
-				const responseContent = res?.choices?.[0]?.message?.content || '';
-				
-				try {
-					// Extract JSON from the response
-					const jsonMatch = responseContent.match(/\{[\s\S]*\}/);
-					if (jsonMatch) {
-						categoryData = JSON.parse(jsonMatch[0]);
-					}
-				} catch (jsonError) {
-					// If JSON parsing fails, try pipe-separated format
-					console.log('JSON parsing failed, trying pipe-separated format');
-					if (responseContent.includes('|')) {
-						const categories = responseContent.split('|');
-						categoryData = {
-							major: categories[0]?.trim() || 'General',
-							middle: categories[1]?.trim() || 'Notes',
-							minor: categories[2]?.trim() || 'Default'
-						};
-					}
+			try {
+				// Extract JSON from the response
+				const jsonMatch = responseContent.match(/\{[\s\S]*\}/);
+				if (jsonMatch) {
+					categoryData = JSON.parse(jsonMatch[0]);
 				}
-
-				if (categoryData) {
-					note.category_major = categoryData.major || 'General';
-					note.category_middle = categoryData.middle || 'Notes';
-					note.category_minor = categoryData.minor || 'Default';
-					// Save immediately without triggering debounce
-					await saveHandler();
-				} else {
-					// Fallback to default categories
-					note.category_major = 'General';
-					note.category_middle = 'Notes';
-					note.category_minor = 'Default';
-					toast.error($i18n.t('Failed to parse category data, using defaults'));
-					// Save immediately without triggering debounce
-					await saveHandler();
+			} catch (jsonError) {
+				// If JSON parsing fails, try pipe-separated format
+				console.log('JSON parsing failed, trying pipe-separated format');
+				if (responseContent.includes('|')) {
+					const categories = responseContent.split('|');
+					categoryData = {
+						major: categories[0]?.trim() || 'General',
+						middle: categories[1]?.trim() || 'Notes',
+						minor: categories[2]?.trim() || 'Default'
+					};
 				}
 			}
+
+			if (categoryData) {
+				note.category_major = categoryData.major || 'General';
+				note.category_middle = categoryData.middle || 'Notes';
+				note.category_minor = categoryData.minor || 'Default';
+			} else {
+				// Fallback to default categories
+				note.category_major = 'General';
+				note.category_middle = 'Notes';
+				note.category_minor = 'Default';
+			}
 		}
-		} catch (error) {
-			console.error('Category generation error:', error);
-			toast.error($i18n.t('Failed to generate categories'));
-		} finally {
-			categoryGenerating = false;
-		}
+
+		categoryGenerating = false;
+		await tick();
+		changeDebounceHandler();
 	};
 
 	const stopResponseHandler = async () => {
@@ -1099,7 +1040,7 @@ Provide the enhanced notes in markdown format. Use markdown syntax for headings,
 									<Tooltip content={$i18n.t('Auto Categorize')}>
 										<button
 											class="p-1 bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700 rounded transition"
-											disabled={(categoryMethod === 'llm' || categoryMethod === 'hybrid') && !selectedModelId || categoryGenerating}
+											disabled={!selectedModelId || categoryGenerating}
 											on:click={(e) => {
 												e.preventDefault();
 												e.stopPropagation();
@@ -1321,14 +1262,10 @@ Provide the enhanced notes in markdown format. Use markdown syntax for headings,
 						selectedModelId = e.detail;
 						changeDebounceHandler();
 					}}
-					on:categoryMethodChange={(e) => {
-						categoryMethod = e.detail;
-					}}
 					on:close={() => {
 						showPanel = false;
 					}}
 					{selectedModelId}
-					bind:categoryMethod
 				/>
 			{/if}
 		</Pane>
