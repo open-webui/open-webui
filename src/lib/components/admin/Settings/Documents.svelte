@@ -1104,10 +1104,10 @@
 												<div class="py-0.5">
 													<div class="flex w-full justify-between">
 														<div class=" text-left text-xs font-small">
-															{$i18n.t('lexical')}
+															{$i18n.t('semantic')}
 														</div>
 														<div class=" text-right text-xs font-small">
-															{$i18n.t('semantic')}
+															{$i18n.t('lexical')}
 														</div>
 													</div>
 												</div>
