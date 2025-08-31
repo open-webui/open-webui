@@ -616,8 +616,21 @@ def get_sources_from_items(
                 else:
                     collection_names.append(item["id"])
 
+        elif item.get("type") == "doc" and (
+            item.get("context") == "full"
+            or request.app.state.config.BYPASS_WEB_SEARCH_EMBEDDING_AND_RETRIEVAL
+        ):
+            # Web doc with full context or BYPASS_WEB_SEARCH_EMBEDDING_AND_RETRIEVAL
+            query_result = {
+                "documents": [
+                    [item.get("file", {}).get("data", {}).get("content")]
+                ],
+                "metadatas": [
+                    [item.get("file", {}).get("meta", {})]
+                ]
+            }
         elif item.get("docs"):
-            # BYPASS_WEB_SEARCH_EMBEDDING_AND_RETRIEVAL
+            # Web search with BYPASS_WEB_SEARCH_EMBEDDING_AND_RETRIEVAL
             query_result = {
                 "documents": [[doc.get("content") for doc in item.get("docs")]],
                 "metadatas": [[doc.get("metadata") for doc in item.get("docs")]],
