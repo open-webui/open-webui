@@ -1297,7 +1297,11 @@ async def process_chat_response(
                     response_data = response
 
                 if "error" in response_data:
-                    error = response_data["error"].get("detail", response_data["error"])
+                    raw_error = response_data["error"]
+                    if isinstance(raw_error, dict):
+                        error = raw_error.get("detail") or raw_error.get("message") or str(raw_error)
+                    else:
+                        error = raw_error  # It's a string
                     Chats.upsert_message_to_chat_by_id_and_message_id(
                         metadata["chat_id"],
                         metadata["message_id"],
