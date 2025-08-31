@@ -3,6 +3,7 @@ import json
 import logging
 import os
 import uuid
+
 from functools import lru_cache
 from pydub import AudioSegment
 from pydub.silence import split_on_silence
@@ -14,7 +15,7 @@ import aiohttp
 import aiofiles
 import requests
 import mimetypes
-from urllib.parse import urljoin
+from urllib.parse import urljoin, quote
 
 from fastapi import (
     Depends,
