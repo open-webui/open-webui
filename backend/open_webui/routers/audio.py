@@ -4,7 +4,7 @@ import logging
 import os
 import uuid
 from functools import lru_cache
-from pathlib import Path
+
 from pydub import AudioSegment
 from pydub.silence import split_on_silence
 from concurrent.futures import ThreadPoolExecutor
@@ -15,7 +15,7 @@ import aiohttp
 import aiofiles
 import requests
 import mimetypes
-from urllib.parse import quote
+from urllib.parse import urljoin
 
 from fastapi import (
     Depends,
@@ -308,6 +308,7 @@ def load_speech_pipeline(request):
 @router.post("/speech")
 async def speech(request: Request, user=Depends(get_verified_user)):
     body = await request.body()
+    tts_model = request.app.state.config.TTS_MODEL
     name = hashlib.sha256(
         body
         + str(request.app.state.config.TTS_ENGINE).encode("utf-8")
@@ -337,8 +338,9 @@ async def speech(request: Request, user=Depends(get_verified_user)):
             async with aiohttp.ClientSession(
                 timeout=timeout, trust_env=True
             ) as session:
+                
                 r = await session.post(
-                    url=f"{request.app.state.config.TTS_OPENAI_API_BASE_URL}/audio/speech",
+                    url=urljoin(request.app.state.config.TTS_OPENAI_API_BASE_URL, "/audio/speech"),
                     json=payload,
                     headers={
                         "Content-Type": "application/json",
@@ -466,8 +468,7 @@ async def speech(request: Request, user=Depends(get_verified_user)):
                 timeout=timeout, trust_env=True
             ) as session:
                 async with session.post(
-                    (base_url or f"https://{region}.tts.speech.microsoft.com")
-                    + "/cognitiveservices/v1",
+                    urljoin(base_url or f"https://{region}.tts.speech.microsoft.com", "/cognitiveservices/v1"),
                     headers={
                         "Ocp-Apim-Subscription-Key": request.app.state.config.TTS_API_KEY,
                         "Content-Type": "application/ssml+xml",
