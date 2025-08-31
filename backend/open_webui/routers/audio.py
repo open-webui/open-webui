@@ -307,7 +307,6 @@ def load_speech_pipeline(request):
 @router.post("/speech")
 async def speech(request: Request, user=Depends(get_verified_user)):
     body = await request.body()
-    tts_model = request.app.state.config.TTS_MODEL
     name = hashlib.sha256(
         body
         + str(request.app.state.config.TTS_ENGINE).encode("utf-8")
