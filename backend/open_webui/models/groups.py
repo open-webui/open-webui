@@ -288,13 +288,17 @@ class GroupTable:
                 if not group:
                     return None
 
-                if not group.user_ids:
-                    group.user_ids = []
+                group_user_ids = group.user_ids
+                if not group_user_ids or not isinstance(group_user_ids, list):
+                    group_user_ids = []
+
+                group_user_ids = list(set(group_user_ids))  # Deduplicate
 
                 for user_id in user_ids:
-                    if user_id not in group.user_ids:
-                        group.user_ids.append(user_id)
+                    if user_id not in group_user_ids:
+                        group_user_ids.append(user_id)
 
+                group.user_ids = group_user_ids
                 group.updated_at = int(time.time())
                 db.commit()
                 db.refresh(group)
@@ -312,14 +316,20 @@ class GroupTable:
                 if not group:
                     return None
 
-                if not group.user_ids:
+                group_user_ids = group.user_ids
+
+                if not group_user_ids or not isinstance(group_user_ids, list):
                     return GroupModel.model_validate(group)
 
-                for user_id in user_ids:
-                    if user_id in group.user_ids:
-                        group.user_ids.remove(user_id)
+                group_user_ids = list(set(group_user_ids))  # Deduplicate
 
+                for user_id in user_ids:
+                    if user_id in group_user_ids:
+                        group_user_ids.remove(user_id)
+
+                group.user_ids = group_user_ids
                 group.updated_at = int(time.time())
+
                 db.commit()
                 db.refresh(group)
                 return GroupModel.model_validate(group)

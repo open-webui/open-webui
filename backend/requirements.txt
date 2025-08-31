@@ -42,7 +42,7 @@ asgiref==3.8.1
 # AI libraries
 openai
 anthropic
-google-genai==1.28.0
+google-genai==1.32.0
 google-generativeai==0.8.5
 tiktoken
 
@@ -102,7 +102,6 @@ PyJWT[crypto]==2.10.1
 authlib==1.6.1
 
 black==25.1.0
-langfuse==2.44.0
 youtube-transcript-api==1.1.0
 pytube==15.0.0
 

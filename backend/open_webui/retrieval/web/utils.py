@@ -614,7 +614,7 @@ def get_web_loader(
         WebLoaderClass = SafeWebBaseLoader
     if WEB_LOADER_ENGINE.value == "playwright":
         WebLoaderClass = SafePlaywrightURLLoader
-        web_loader_args["playwright_timeout"] = PLAYWRIGHT_TIMEOUT.value * 1000
+        web_loader_args["playwright_timeout"] = PLAYWRIGHT_TIMEOUT.value
         if PLAYWRIGHT_WS_URL.value:
             web_loader_args["playwright_ws_url"] = PLAYWRIGHT_WS_URL.value
 

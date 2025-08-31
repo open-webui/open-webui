@@ -610,7 +610,7 @@ ${content}
 				document.body.removeChild(node);
 			}
 
-			const imgData = canvas.toDataURL('image/png');
+			const imgData = canvas.toDataURL('image/jpeg', 0.7);
 
 			// A4 page settings
 			const pdf = new jsPDF('p', 'mm', 'a4');
@@ -622,7 +622,7 @@ ${content}
 			let heightLeft = imgHeight;
 			let position = 0;
 
-			pdf.addImage(imgData, 'PNG', 0, position, imgWidth, imgHeight);
+			pdf.addImage(imgData, 'JPEG', 0, position, imgWidth, imgHeight);
 			heightLeft -= pageHeight;
 
 			// Handle additional pages
@@ -630,7 +630,7 @@ ${content}
 				position -= pageHeight;
 				pdf.addPage();
 
-				pdf.addImage(imgData, 'PNG', 0, position, imgWidth, imgHeight);
+				pdf.addImage(imgData, 'JPEG', 0, position, imgWidth, imgHeight);
 				heightLeft -= pageHeight;
 			}
 

@@ -143,9 +143,18 @@ def upload_file(
     file: UploadFile = File(...),
     metadata: Optional[dict | str] = Form(None),
     process: bool = Query(True),
+    process_in_background: bool = Query(True),
     user=Depends(get_verified_user),
 ):
-    return upload_file_handler(request, file, metadata, process, user, background_tasks)
+    return upload_file_handler(
+        request,
+        file=file,
+        metadata=metadata,
+        process=process,
+        process_in_background=process_in_background,
+        user=user,
+        background_tasks=background_tasks,
+    )
 
 
 def upload_file_handler(
@@ -153,6 +162,7 @@ def upload_file_handler(
     file: UploadFile = File(...),
     metadata: Optional[dict | str] = Form(None),
     process: bool = Query(True),
+    process_in_background: bool = Query(True),
     user=Depends(get_verified_user),
     background_tasks: Optional[BackgroundTasks] = None,
 ):
@@ -225,7 +235,7 @@ def upload_file_handler(
         )
 
         if process:
-            if background_tasks:
+            if background_tasks and process_in_background:
                 background_tasks.add_task(
                     process_uploaded_file,
                     request,

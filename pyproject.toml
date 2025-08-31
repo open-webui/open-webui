@@ -15,6 +15,10 @@ dependencies = [
     "python-jose==3.4.0",
     "passlib[bcrypt]==1.7.4",
     "cryptography",
+    "bcrypt==4.3.0",
+    "argon2-cffi==23.1.0",
+    "PyJWT[crypto]==2.10.1",
+    "authlib==1.6.1",
 
     "requests==2.32.4",
     "aiohttp==3.12.15",
@@ -28,31 +32,24 @@ dependencies = [
     "alembic==1.14.0",
     "peewee==3.18.1",
     "peewee-migrate==1.12.2",
-    "psycopg2-binary==2.9.9",
-    "pgvector==0.4.0",
-    "PyMySQL==1.1.1",
-    "bcrypt==4.3.0",
-
-    "pymongo",
-    "redis",
-    "boto3==1.40.5",
-
-    "argon2-cffi==23.1.0",
-    "APScheduler==3.10.4",
 
     "pycrdt==0.12.25",
+    "redis",
 
+    "PyMySQL==1.1.1",
+    "boto3==1.40.5",
 
+    "APScheduler==3.10.4",
     "RestrictedPython==8.0",
 
     "loguru==0.7.3",
     "asgiref==3.8.1",
 
+    "tiktoken",
     "openai",
     "anthropic",
-    "google-genai==1.28.0",
+    "google-genai==1.32.0",
     "google-generativeai==0.8.5",
-    "tiktoken",
 
     "langchain==0.3.26",
     "langchain-community==0.3.26",
@@ -100,14 +97,9 @@ dependencies = [
     "rank-bm25==0.2.2",
 
     "onnxruntime==1.20.1",
-
     "faster-whisper==1.1.1",
 
-    "PyJWT[crypto]==2.10.1",
-    "authlib==1.6.1",
-
     "black==25.1.0",
-    "langfuse==2.44.0",
     "youtube-transcript-api==1.1.0",
     "pytube==15.0.0",
 
@@ -118,9 +110,7 @@ dependencies = [
     "google-auth-httplib2",
     "google-auth-oauthlib",
 
-    "docker~=7.1.0",
-    "pytest~=8.3.2",
-    "pytest-docker~=3.1.1",
+    
 
     "googleapis-common-protos==1.63.2",
     "google-cloud-storage==2.19.0",
@@ -131,12 +121,8 @@ dependencies = [
     "ldap3==2.9.1",
 
     "firecrawl-py==1.12.0",
-
     "tencentcloud-sdk-python==3.0.1336",
-
-    "gcp-storage-emulator>=2024.8.3",
-
-    "moto[s3]>=5.0.26",
+    
     "oracledb>=3.2.0",
     "posthog==5.4.0",
 
@@ -152,6 +138,23 @@ classifiers = [
     "Programming Language :: Python :: 3.12",
     "Topic :: Communications :: Chat",
     "Topic :: Multimedia",
+]
+
+[project.optional-dependencies]
+postgres = [
+    "psycopg2-binary==2.9.9",
+    "pgvector==0.4.0",
+]
+
+all = [
+    "pymongo",
+    "psycopg2-binary==2.9.9",
+    "pgvector==0.4.0",
+    "moto[s3]>=5.0.26",
+    "gcp-storage-emulator>=2024.8.3",
+    "docker~=7.1.0",
+    "pytest~=8.3.2",
+    "pytest-docker~=3.1.1",
 ]
 
 [project.scripts]

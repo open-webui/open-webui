@@ -1,4 +1,6 @@
 <script lang="ts">
+	import hljs from 'highlight.js';
+
 	import mermaid from 'mermaid';
 
 	import { v4 as uuidv4 } from 'uuid';
@@ -22,6 +24,7 @@
 	const i18n = getContext('i18n');
 
 	export let id = '';
+	export let edit = true;
 
 	export let onSave = (e) => {};
 	export let onUpdate = (e) => {};
@@ -84,7 +87,7 @@
 
 	const copyCode = async () => {
 		copied = true;
-		await copyToClipboard(code);
+		await copyToClipboard(_code);
 
 		setTimeout(() => {
 			copied = false;
@@ -512,17 +515,31 @@
 				<div class=" pt-7 bg-gray-50 dark:bg-gray-850"></div>
 
 				{#if !collapsed}
-					<CodeEditor
-						value={code}
-						{id}
-						{lang}
-						onSave={() => {
-							saveCode();
-						}}
-						onChange={(value) => {
-							_code = value;
-						}}
-					/>
+					{#if edit}
+						<CodeEditor
+							value={code}
+							{id}
+							{lang}
+							onSave={() => {
+								saveCode();
+							}}
+							onChange={(value) => {
+								_code = value;
+							}}
+						/>
+					{:else}
+						<pre
+							class=" hljs p-4 px-5 overflow-x-auto"
+							style="border-top-left-radius: 0px; border-top-right-radius: 0px; {(executing ||
+								stdout ||
+								stderr ||
+								result) &&
+								'border-bottom-left-radius: 0px; border-bottom-right-radius: 0px;'}"><code
+								class="language-{lang} rounded-t-none whitespace-pre text-sm"
+								>{@html hljs.highlightAuto(code, hljs.getLanguage(lang)?.aliases).value ||
+									code}</code
+							></pre>
+					{/if}
 				{:else}
 					<div
 						class="bg-gray-50 dark:bg-black dark:text-white rounded-b-lg! pt-2 pb-2 px-4 flex flex-col gap-2 text-xs"
