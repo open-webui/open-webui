@@ -25,8 +25,13 @@ def upgrade():
     conn = op.get_bind()
     inspector = sa.inspect(conn)
     columns = inspector.get_columns("chat")
+
     if "share_id" not in [c["name"] for c in columns]:
         op.add_column("chat", sa.Column("share_id", sa.TEXT(), nullable=True))
+        # Important: If you intended to add an index for share_id here,
+        # you should add it explicitly in upgrade() if not done elsewhere.
+        # e.g., op.create_index('chat_share_id', 'chat', ['share_id'], unique=True)
+        # If 018012973d35 already handles this, then it's fine.
 
     op.add_column(
         "chat", sa.Column("views", sa.Integer(), nullable=False, server_default="0")
@@ -113,22 +118,55 @@ def upgrade():
         "chat", sa.Column("password_updated_at", sa.BigInteger(), nullable=True)
     )
 
+    # --- New operations from 5345e5be2fa7 ---
+    op.add_column('chat', sa.Column('is_snapshot', sa.Boolean(), server_default=sa.text('false'), nullable=False))
+    op.add_column('chat', sa.Column('snapshot_chat', sa.JSON(), nullable=True))
+
 
 def downgrade():
-    conn = op.get_bind()
+    conn = op.get_bind() # Get connection early
 
+    # --- New operations from 5345e5be2fa7 (in reverse order) ---
+    op.drop_column('chat', 'snapshot_chat')
+    op.drop_column('chat', 'is_snapshot')
+
+    # --- Original 79fba6b72c04 downgrade operations (in reverse order) ---
     op.drop_column("chat", "password_updated_at")
     op.drop_column("chat", "password")
     op.drop_column("chat", "allow_cloning")
     op.drop_column("chat", "display_username")
 
+    # IMPORTANT: Explicitly drop the unique index before dropping the column if it exists.
+    # This might be the source of the batch_alter_table error.
+    inspector = sa.inspect(conn)
+    indexes = inspector.get_indexes("chat")
+    for index in indexes:
+        if index['name'] == 'chat_share_id' and 'share_id' in index['column_names']:
+            op.drop_index('chat_share_id', table_name='chat')
+            break
+
+    # Re-evaluate batch operations. It's safer to have single drops or specific groups.
+    # Let's try to break these out of batch_alter_table if they are causing issues.
+
+    # First batch block of drops
+    # It might be safer to drop these columns individually if batch_alter_table is failing.
+    # For SQLite, `op.drop_column` inside a `batch_alter_table` is generally recommended,
+    # but the error suggests an issue with an index in a *different* part of the downgrade logic.
+    # Let's keep these as batch operations for now, but be aware they are potential culprits.
     with op.batch_alter_table("chat", schema=None) as batch_op:
         batch_op.drop_column("revoked_at")
         batch_op.drop_column("keep_link_active_after_max_clones")
         batch_op.drop_column("max_clones")
         batch_op.drop_column("share_use_gradient")
         batch_op.drop_column("share_show_qr_code")
+        batch_op.drop_column("is_public") # Moved from the second batch to consolidate
+        batch_op.drop_column("expire_on_views") # Moved from the second batch
+        batch_op.drop_column("expires_at") # Moved from the second batch
+        batch_op.drop_column("clones") # Moved from the second batch
+        batch_op.drop_column("views") # Moved from the second batch
+        batch_op.drop_column("share_id") # Moved from the second batch
 
+    # Now handle the data migration for groups permissions
     groups = conn.execute(sa.text('SELECT id, permissions FROM "group"')).fetchall()
 
     for group_id, permissions_str in groups:
@@ -146,11 +184,3 @@ def downgrade():
                     ),
                     {"permissions": json.dumps(permissions), "id": group_id},
                 )
-
-    with op.batch_alter_table("chat", schema=None) as batch_op:
-        batch_op.drop_column("is_public")
-        batch_op.drop_column("expire_on_views")
-        batch_op.drop_column("expires_at")
-        batch_op.drop_column("clones")
-        batch_op.drop_column("views")
-        batch_op.drop_column("share_id")
