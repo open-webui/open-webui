@@ -1407,7 +1407,7 @@
 												command = getCommand();
 											}}
 											on:compositionstart={() => (isComposing = true)}
-											oncompositionend={(e) => {
+											on:compositionend={(e) => {
 												compositionEndedAt = e.timeStamp;
 												isComposing = false;
 											}}
