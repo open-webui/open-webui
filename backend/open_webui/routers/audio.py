@@ -4,7 +4,6 @@ import logging
 import os
 import uuid
 from functools import lru_cache
-
 from pydub import AudioSegment
 from pydub.silence import split_on_silence
 from concurrent.futures import ThreadPoolExecutor
@@ -338,7 +337,6 @@ async def speech(request: Request, user=Depends(get_verified_user)):
             async with aiohttp.ClientSession(
                 timeout=timeout, trust_env=True
             ) as session:
-                
                 r = await session.post(
                     url=urljoin(request.app.state.config.TTS_OPENAI_API_BASE_URL, "/audio/speech"),
                     json=payload,
