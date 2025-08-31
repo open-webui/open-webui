@@ -123,7 +123,7 @@ async def get_tools(
 
                     if auth_type == "bearer":
                         headers["Authorization"] = (
-                            f"Bearer {tool_server_connection.get("key", "")}"
+                            f"Bearer {tool_server_connection.get('key', '')}"
                         )
                     elif auth_type == "session":
                         headers["Authorization"] = (

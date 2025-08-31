@@ -313,7 +313,7 @@ JWT_EXPIRES_IN = PersistentConfig(
 ####################################
 
 ENABLE_OAUTH_PERSISTENT_CONFIG = (
-    os.environ.get("ENABLE_OAUTH_PERSISTENT_CONFIG", "True").lower() == "true"
+    os.environ.get("ENABLE_OAUTH_PERSISTENT_CONFIG", "False").lower() == "true"
 )
 
 ENABLE_OAUTH_SIGNUP = PersistentConfig(
