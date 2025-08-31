@@ -671,7 +671,7 @@
 		console.log(url);
 
 		const fileItem = {
-			type: 'doc',
+			type: 'text',
 			name: url,
 			collection_name: '',
 			status: 'uploading',
@@ -704,7 +704,7 @@
 		console.log(url);
 
 		const fileItem = {
-			type: 'doc',
+			type: 'text',
 			name: url,
 			collection_name: '',
 			status: 'uploading',

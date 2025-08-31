@@ -487,9 +487,12 @@ def get_sources_from_items(
 
         if item.get("type") == "text":
             # Raw Text
-            # Used during temporary chat file uploads
+            # Used during temporary chat file uploads or web page & youtube attachements
 
-            if item.get("file"):
+            if item.get("collection_name"):
+                # If item has a collection name, use it
+                collection_names.append(item.get("collection_name"))
+            elif item.get("file"):
                 # if item has file data, use it
                 query_result = {
                     "documents": [
