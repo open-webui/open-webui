@@ -341,19 +341,18 @@ def query_collection_with_hybrid_search(
     # Fetch collection data once per collection sequentially
     # Avoid fetching the same data multiple times later
     collection_results = {}
+    for collection_name in collection_names:
+        try:
+            log.debug(
+                f"query_collection_with_hybrid_search:VECTOR_DB_CLIENT.get:collection {collection_name}"
+            )
+            collection_results[collection_name] = VECTOR_DB_CLIENT.get(
+                collection_name=collection_name
+            )
+        except Exception as e:
+            log.exception(f"Failed to fetch collection {collection_name}: {e}")
+            collection_results[collection_name] = None
 
-        for collection_name in collection_names:
-            try:
-                log.debug(
-                    f"query_collection_with_hybrid_search:VECTOR_DB_CLIENT.get:collection {collection_name}"
-                )
-                collection_results[collection_name] = VECTOR_DB_CLIENT.get(
-                    collection_name=collection_name
-                )
-            except Exception as e:
-                log.exception(f"Failed to fetch collection {collection_name}: {e}")
-                collection_results[collection_name] = None
-                
     log.info(
         f"Starting hybrid search for {len(queries)} queries in {len(collection_names)} collections..."
     )
