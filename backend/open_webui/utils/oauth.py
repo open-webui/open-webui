@@ -553,6 +553,15 @@ class OAuthManager:
         )
 
         if ENABLE_OAUTH_SIGNUP.value:
+            oauth_access_token = token.get("access_token")
+            response.set_cookie(
+                key="oauth_access_token",
+                value=oauth_access_token,
+                httponly=True,
+                samesite=WEBUI_AUTH_COOKIE_SAME_SITE,
+                secure=WEBUI_AUTH_COOKIE_SECURE,
+            )
+
             oauth_id_token = token.get("id_token")
             response.set_cookie(
                 key="oauth_id_token",
