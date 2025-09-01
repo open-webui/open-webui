@@ -87,7 +87,7 @@ jobs:
         if: steps.trigger_and_wait.outputs.conclusion == 'success'
         uses: actions/checkout@v4
         with:
-          repository: ChangLijie/AccelBrain-dev__confidential
+          repository: InnoIPA/AccelBrain-dev__confidential
           ref: dev
           token: ${{ secrets.PERSONAL_ACCESS_TOKEN }}
           path: accelbrain-confidential
