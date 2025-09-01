@@ -4,6 +4,8 @@ import mimetypes
 import sys
 import uuid
 import json
+import re
+import fnmatch
 
 import aiohttp
 from authlib.integrations.starlette_client import OAuth
@@ -77,6 +79,47 @@ auth_manager_config.OAUTH_ALLOWED_DOMAINS = OAUTH_ALLOWED_DOMAINS
 auth_manager_config.WEBHOOK_URL = WEBHOOK_URL
 auth_manager_config.JWT_EXPIRES_IN = JWT_EXPIRES_IN
 auth_manager_config.OAUTH_UPDATE_PICTURE_ON_LOGIN = OAUTH_UPDATE_PICTURE_ON_LOGIN
+
+
+def is_group_blocked(group_name: str, blocked_patterns: list) -> bool:
+    """
+    Check if a group name matches any blocked pattern.
+    Supports exact matches, shell-style wildcards (*, ?), and regex patterns.
+    
+    Args:
+        group_name: The group name to check
+        blocked_patterns: List of patterns to match against
+        
+    Returns:
+        True if the group is blocked, False otherwise
+    """
+    if not blocked_patterns:
+        return False
+        
+    for pattern in blocked_patterns:
+        if not pattern:  # Skip empty patterns
+            continue
+            
+        # Exact match
+        if group_name == pattern:
+            return True
+            
+        # Try as regex pattern first if it contains regex-specific characters
+        if any(char in pattern for char in ['^', '$', '[', ']', '(', ')', '{', '}', '+', '\\', '|']):
+            try:
+                # Use the original pattern as-is for regex matching
+                if re.search(pattern, group_name):
+                    return True
+            except re.error:
+                # If regex is invalid, fall through to wildcard check
+                pass
+                
+        # Shell-style wildcard match (supports * and ?)
+        if '*' in pattern or '?' in pattern:
+            if fnmatch.fnmatch(group_name, pattern):
+                return True
+    
+    return False
 
 
 class OAuthManager:
@@ -238,7 +281,7 @@ class OAuthManager:
             if (
                 user_oauth_groups
                 and group_model.name not in user_oauth_groups
-                and group_model.name not in blocked_groups
+                and not is_group_blocked(group_model.name, blocked_groups)
             ):
                 # Remove group from user
                 log.debug(
@@ -269,7 +312,7 @@ class OAuthManager:
                 user_oauth_groups
                 and group_model.name in user_oauth_groups
                 and not any(gm.name == group_model.name for gm in user_current_groups)
-                and group_model.name not in blocked_groups
+                and not is_group_blocked(group_model.name, blocked_groups)
             ):
                 # Add user to group
                 log.debug(
