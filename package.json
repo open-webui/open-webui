@@ -126,7 +126,7 @@
 		"prosemirror-state": "^1.4.3",
 		"prosemirror-tables": "^1.7.1",
 		"prosemirror-view": "^1.34.3",
-		"pyodide": "^0.27.3",
+		"pyodide": "^0.28.2",
 		"socket.io-client": "^4.2.0",
 		"sortablejs": "^1.15.6",
 		"svelte-sonner": "^0.3.19",
