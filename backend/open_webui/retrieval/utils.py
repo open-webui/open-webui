@@ -499,9 +499,7 @@ def get_sources_from_items(
                     "documents": [
                         [item.get("file", {}).get("data", {}).get("content")]
                     ],
-                    "metadatas": [
-                        [item.get("file", {}).get("data", {}).get("meta", {})]
-                    ],
+                    "metadatas": [[item.get("file", {}).get("meta", {})]],
                 }
             else:
                 # Fallback to item content
