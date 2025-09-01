@@ -318,6 +318,13 @@
 					}
 				} else if (type === 'chat:completion') {
 					chatCompletionEventHandler(data, message, event.chat_id);
+				} else if (type === 'chat:tasks:cancel') {
+					taskIds = null;
+					const responseMessage = history.messages[history.currentId];
+					// Set all response messages to done
+					for (const messageId of history.messages[responseMessage.parentId].childrenIds) {
+						history.messages[messageId].done = true;
+					}
 				} else if (type === 'chat:message:delta' || type === 'message') {
 					message.content += data.content;
 				} else if (type === 'chat:message' || type === 'replace') {
