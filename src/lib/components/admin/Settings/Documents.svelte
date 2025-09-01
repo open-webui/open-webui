@@ -185,10 +185,9 @@
 
 		if (
 			RAGConfig.CONTENT_EXTRACTION_ENGINE === 'document_intelligence' &&
-			(RAGConfig.DOCUMENT_INTELLIGENCE_ENDPOINT === '' ||
-				RAGConfig.DOCUMENT_INTELLIGENCE_KEY === '')
+			RAGConfig.DOCUMENT_INTELLIGENCE_ENDPOINT === ''
 		) {
-			toast.error($i18n.t('Document Intelligence endpoint and key required.'));
+			toast.error($i18n.t('Document Intelligence endpoint required.'));
 			return;
 		}
 		if (
@@ -644,6 +643,7 @@
 								<SensitiveInput
 									placeholder={$i18n.t('Enter Document Intelligence Key')}
 									bind:value={RAGConfig.DOCUMENT_INTELLIGENCE_KEY}
+									required={false}
 								/>
 							</div>
 						{:else if RAGConfig.CONTENT_EXTRACTION_ENGINE === 'mistral_ocr'}
@@ -1104,10 +1104,10 @@
 												<div class="py-0.5">
 													<div class="flex w-full justify-between">
 														<div class=" text-left text-xs font-small">
-															{$i18n.t('lexical')}
+															{$i18n.t('semantic')}
 														</div>
 														<div class=" text-right text-xs font-small">
-															{$i18n.t('semantic')}
+															{$i18n.t('lexical')}
 														</div>
 													</div>
 												</div>

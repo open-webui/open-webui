@@ -4,6 +4,7 @@ import ftfy
 import sys
 import json
 
+from azure.identity import DefaultAzureCredential
 from langchain_community.document_loaders import (
     AzureAIDocumentIntelligenceLoader,
     BSHTMLLoader,
@@ -283,7 +284,7 @@ class Loader:
         ):
             api_base_url = self.kwargs.get("DATALAB_MARKER_API_BASE_URL", "")
             if not api_base_url or api_base_url.strip() == "":
-                api_base_url = "https://www.datalab.to/api/v1"
+                api_base_url = "https://www.datalab.to/api/v1/marker"  # https://github.com/open-webui/open-webui/pull/16867#issuecomment-3218424349
 
             loader = DatalabMarkerLoader(
                 file_path=file_path,
@@ -327,7 +328,6 @@ class Loader:
         elif (
             self.engine == "document_intelligence"
             and self.kwargs.get("DOCUMENT_INTELLIGENCE_ENDPOINT") != ""
-            and self.kwargs.get("DOCUMENT_INTELLIGENCE_KEY") != ""
             and (
                 file_ext in ["pdf", "xls", "xlsx", "docx", "ppt", "pptx"]
                 or file_content_type
@@ -340,11 +340,18 @@ class Loader:
                 ]
             )
         ):
-            loader = AzureAIDocumentIntelligenceLoader(
-                file_path=file_path,
-                api_endpoint=self.kwargs.get("DOCUMENT_INTELLIGENCE_ENDPOINT"),
-                api_key=self.kwargs.get("DOCUMENT_INTELLIGENCE_KEY"),
-            )
+            if self.kwargs.get("DOCUMENT_INTELLIGENCE_KEY") != "":
+                loader = AzureAIDocumentIntelligenceLoader(
+                    file_path=file_path,
+                    api_endpoint=self.kwargs.get("DOCUMENT_INTELLIGENCE_ENDPOINT"),
+                    api_key=self.kwargs.get("DOCUMENT_INTELLIGENCE_KEY"),
+                )
+            else:
+                loader = AzureAIDocumentIntelligenceLoader(
+                    file_path=file_path,
+                    api_endpoint=self.kwargs.get("DOCUMENT_INTELLIGENCE_ENDPOINT"),
+                    azure_credential=DefaultAzureCredential(),
+                )
         elif (
             self.engine == "mistral_ocr"
             and self.kwargs.get("MISTRAL_OCR_API_KEY") != ""
