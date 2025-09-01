@@ -252,9 +252,7 @@ class FunctionsTable:
 
             return user_settings["functions"]["valves"].get(id, {})
         except Exception as e:
-            log.exception(
-                f"Error getting user values by id {id} and user id {user_id}: {e}"
-            )
+            log.exception(f"Error getting user values by id {id} and user id {user_id}")
             return None
 
     def update_user_valves_by_id_and_user_id(

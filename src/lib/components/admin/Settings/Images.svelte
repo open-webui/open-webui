@@ -682,21 +682,23 @@
 					</div>
 				</div>
 
-				<div>
-					<div class=" mb-2.5 text-sm font-medium">{$i18n.t('Set Steps')}</div>
-					<div class="flex w-full">
-						<div class="flex-1 mr-2">
-							<Tooltip content={$i18n.t('Enter Number of Steps (e.g. 50)')} placement="top-start">
-								<input
-									class="w-full rounded-lg py-2 px-4 text-sm bg-gray-50 dark:text-gray-300 dark:bg-gray-850 outline-hidden"
-									placeholder={$i18n.t('Enter Number of Steps (e.g. 50)')}
-									bind:value={imageGenerationConfig.IMAGE_STEPS}
-									required
-								/>
-							</Tooltip>
+				{#if ['comfyui', 'automatic1111', ''].includes(config?.engine)}
+					<div>
+						<div class=" mb-2.5 text-sm font-medium">{$i18n.t('Set Steps')}</div>
+						<div class="flex w-full">
+							<div class="flex-1 mr-2">
+								<Tooltip content={$i18n.t('Enter Number of Steps (e.g. 50)')} placement="top-start">
+									<input
+										class="w-full rounded-lg py-2 px-4 text-sm bg-gray-50 dark:text-gray-300 dark:bg-gray-850 outline-hidden"
+										placeholder={$i18n.t('Enter Number of Steps (e.g. 50)')}
+										bind:value={imageGenerationConfig.IMAGE_STEPS}
+										required
+									/>
+								</Tooltip>
+							</div>
 						</div>
 					</div>
-				</div>
+				{/if}
 			{/if}
 		{/if}
 	</div>

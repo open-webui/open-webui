@@ -489,14 +489,14 @@ async def get_tool_servers(request: Request):
     if request.app.state.redis is not None:
         try:
             tool_servers = json.loads(await request.app.state.redis.get("tool_servers"))
+            request.app.state.TOOL_SERVERS = tool_servers
         except Exception as e:
             log.error(f"Error fetching tool_servers from Redis: {e}")
 
     if not tool_servers:
-        await set_tool_servers(request)
+        tool_servers = await set_tool_servers(request)
 
-    request.app.state.TOOL_SERVERS = tool_servers
-    return request.app.state.TOOL_SERVERS
+    return tool_servers
 
 
 async def get_tool_server_data(token: str, url: str) -> Dict[str, Any]:

@@ -51,7 +51,7 @@
 		: 'rounded-2xl'} text-left"
 	type="button"
 	on:click={async () => {
-		if (item?.file?.data?.content || modal) {
+		if (item?.file?.data?.content || item?.type === 'file' || modal) {
 			showModal = !showModal;
 		} else {
 			if (url) {
@@ -67,14 +67,16 @@
 	}}
 >
 	{#if !small}
-		<div class="p-3 bg-black/20 dark:bg-white/10 text-white rounded-xl">
+		<div
+			class="size-10 shrink-0 flex justify-center items-center bg-black/20 dark:bg-white/10 text-white rounded-xl"
+		>
 			{#if !loading}
 				<svg
 					xmlns="http://www.w3.org/2000/svg"
 					viewBox="0 0 24 24"
 					fill="currentColor"
 					aria-hidden="true"
-					class=" size-5"
+					class=" size-4.5"
 				>
 					<path
 						fill-rule="evenodd"

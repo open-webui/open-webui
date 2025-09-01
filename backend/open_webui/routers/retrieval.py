@@ -5,7 +5,6 @@ import os
 import shutil
 import asyncio
 
-
 import uuid
 from datetime import datetime
 from pathlib import Path
@@ -308,6 +307,19 @@ async def update_embedding_config(
                 f"Updating embedding model: {rag_config.get('embedding_model')} to {form_data.embedding_model}"
             )
 
+            if [rag_config["embedding_engine"]] == "":
+                # unloads current internal embedding model and clears VRAM cache
+                request.app.state.ef[rag_config["embedding_model"]] = None
+                request.app.state.EMBEDDING_FUNCTION[rag_config["embedding_model"]] = None
+                import gc
+
+                gc.collect()
+                if DEVICE_TYPE == "cuda":
+                    import torch
+
+                    if torch.cuda.is_available():
+                        torch.cuda.empty_cache()
+
             # Check if model is in use elsewhere, otherwise free up memory
             in_use =  Knowledges.is_model_in_use_elsewhere(model=rag_config.get('embedding_model'), model_type="embedding_model", id=form_data.knowledge_id)
 
@@ -418,6 +430,18 @@ async def update_embedding_config(
             log.info(
                 f"Updating embedding model: {request.app.state.config.RAG_EMBEDDING_MODEL} to {form_data.embedding_model}"
             )
+            if request.app.state.config.RAG_EMBEDDING_ENGINE == "":
+                # unloads current internal embedding model and clears VRAM cache
+                request.app.state.ef = None
+                request.app.state.EMBEDDING_FUNCTION = None
+                import gc
+
+                gc.collect()
+                if DEVICE_TYPE == "cuda":
+                    import torch
+
+                    if torch.cuda.is_available():
+                        torch.cuda.empty_cache()
 
             # Check if model is in use elsewhere, otherwise free up memory
             in_use =  Knowledges.is_model_in_use_elsewhere(model=request.app.state.config.RAG_EMBEDDING_MODEL, model_type="embedding_model")
@@ -943,6 +967,7 @@ async def update_rag_config(
             not in_use and \
             request.app.state.rf.get(request.app.state.config.RAG_RERANKING_MODEL):
             del request.app.state.rf[request.app.state.config.RAG_RERANKING_MODEL]
+            del request.app.state.RERANKING_FUNCTION[request.app.state.config.RAG_RERANKING_MODEL]
             engine = request.app.state.config.RAG_RERANKING_ENGINE
             target_model = request.app.state.config.RAG_RERANKING_MODEL
             models_list = request.app.state.config.LOADED_RERANKING_MODELS[engine]
@@ -1111,24 +1136,11 @@ async def update_rag_config(
         )
 
         # Reranking settings
-        if request.app.state.config.RAG_RERANKING_ENGINE == "":
-            # Unloading the internal reranker and clear VRAM memory
-            request.app.state.rf = None
-            request.app.state.RERANKING_FUNCTION = None
-            import gc
-
-            gc.collect()
-            if DEVICE_TYPE == "cuda":
-                import torch
-
-                if torch.cuda.is_available():
-                    torch.cuda.empty_cache()
-
         request.app.state.config.RAG_RERANKING_ENGINE = (
-            form_data.RAG_RERANKING_ENGINE
-            if form_data.RAG_RERANKING_ENGINE is not None
-            else request.app.state.config.RAG_RERANKING_ENGINE
-        )
+                form_data.RAG_RERANKING_ENGINE
+                if form_data.RAG_RERANKING_ENGINE is not None
+                else request.app.state.config.RAG_RERANKING_ENGINE
+            )
 
         request.app.state.config.RAG_EXTERNAL_RERANKER_URL = (
             form_data.RAG_EXTERNAL_RERANKER_URL
@@ -1927,7 +1939,7 @@ def process_file(
         log.debug(f"text_content: {text_content}")
         Files.update_file_data_by_id(
             file.id,
-            {"content": text_content},
+            {"status": "completed", "content": text_content},
         )
 
         hash = calculate_sha256_string(text_content)
@@ -2579,7 +2591,9 @@ def query_collection_handler(
     user=Depends(get_verified_user),
 ):
     try:
-        if request.app.state.config.ENABLE_RAG_HYBRID_SEARCH:
+        if request.app.state.config.ENABLE_RAG_HYBRID_SEARCH and (
+            form_data.hybrid is None or form_data.hybrid
+        ):
             return query_collection_with_hybrid_search(
                 collection_names=form_data.collection_names,
                 queries=[form_data.query],

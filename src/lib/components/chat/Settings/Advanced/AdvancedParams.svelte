@@ -17,6 +17,7 @@
 		stream_response: null, // Set stream responses for this model individually
 		stream_delta_chunk_size: null, // Set the chunk size for streaming responses
 		function_calling: null,
+		reasoning_tags: null,
 		seed: null,
 		stop: null,
 		temperature: null,
@@ -173,6 +174,71 @@
 				</button>
 			</div>
 		</Tooltip>
+	</div>
+
+	<div class=" py-0.5 w-full justify-between">
+		<Tooltip
+			content={$i18n.t(
+				'Enable, disable, or customize the reasoning tags used by the model. "Enabled" uses default tags, "Disabled" turns off reasoning tags, and "Custom" lets you specify your own start and end tags.'
+			)}
+			placement="top-start"
+			className="inline-tooltip"
+		>
+			<div class="flex w-full justify-between">
+				<div class=" self-center text-xs font-medium">
+					{$i18n.t('Reasoning Tags')}
+				</div>
+				<button
+					class="p-1 px-3 text-xs flex rounded-sm transition shrink-0 outline-hidden"
+					type="button"
+					on:click={() => {
+						if ((params?.reasoning_tags ?? null) === null) {
+							params.reasoning_tags = ['', ''];
+						} else if ((params?.reasoning_tags ?? []).length === 2) {
+							params.reasoning_tags = true;
+						} else if ((params?.reasoning_tags ?? null) !== false) {
+							params.reasoning_tags = false;
+						} else {
+							params.reasoning_tags = null;
+						}
+					}}
+				>
+					{#if (params?.reasoning_tags ?? null) === null}
+						<span class="ml-2 self-center"> {$i18n.t('Default')} </span>
+					{:else if (params?.reasoning_tags ?? null) === true}
+						<span class="ml-2 self-center"> {$i18n.t('Enabled')} </span>
+					{:else if (params?.reasoning_tags ?? null) === false}
+						<span class="ml-2 self-center"> {$i18n.t('Disabled')} </span>
+					{:else}
+						<span class="ml-2 self-center"> {$i18n.t('Custom')} </span>
+					{/if}
+				</button>
+			</div>
+		</Tooltip>
+
+		{#if ![true, false, null].includes(params?.reasoning_tags ?? null) && (params?.reasoning_tags ?? []).length === 2}
+			<div class="flex mt-0.5 space-x-2">
+				<div class=" flex-1">
+					<input
+						class="text-sm w-full bg-transparent outline-hidden outline-none"
+						type="text"
+						placeholder={$i18n.t('Start Tag')}
+						bind:value={params.reasoning_tags[0]}
+						autocomplete="off"
+					/>
+				</div>
+
+				<div class=" flex-1">
+					<input
+						class="text-sm w-full bg-transparent outline-hidden outline-none"
+						type="text"
+						placeholder={$i18n.t('End Tag')}
+						bind:value={params.reasoning_tags[1]}
+						autocomplete="off"
+					/>
+				</div>
+			</div>
+		{/if}
 	</div>
 
 	<div class=" py-0.5 w-full justify-between">
@@ -1102,7 +1168,7 @@
 			{#if (params?.use_mmap ?? null) !== null}
 				<div class="flex justify-between items-center mt-1">
 					<div class="text-xs text-gray-500">
-						{params.use_mmap ? 'Enabled' : 'Disabled'}
+						{params.use_mmap ? $i18n.t('Enabled') : $i18n.t('Disabled')}
 					</div>
 					<div class=" pr-2">
 						<Switch bind:state={params.use_mmap} />
@@ -1143,7 +1209,7 @@
 			{#if (params?.use_mlock ?? null) !== null}
 				<div class="flex justify-between items-center mt-1">
 					<div class="text-xs text-gray-500">
-						{params.use_mlock ? 'Enabled' : 'Disabled'}
+						{params.use_mlock ? $i18n.t('Enabled') : $i18n.t('Disabled')}
 					</div>
 
 					<div class=" pr-2">

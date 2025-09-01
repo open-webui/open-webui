@@ -212,7 +212,7 @@
 		},
 		{
 			id: 'tools',
-			title: 'Tools',
+			title: 'External Tools',
 			keywords: [
 				'addconnection',
 				'add connection',
@@ -743,7 +743,7 @@
 											/>
 										</svg>
 									</div>
-									<div class=" self-center">{$i18n.t('Tools')}</div>
+									<div class=" self-center">{$i18n.t('External Tools')}</div>
 								</button>
 							{/if}
 						{:else if tabId === 'personalization'}

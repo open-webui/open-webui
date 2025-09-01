@@ -37,18 +37,14 @@
 		showArtifacts,
 		tools,
 		toolServers,
-		selectedFolder
+		selectedFolder,
+		pinnedChats
 	} from '$lib/stores';
 	import {
 		convertMessagesToHistory,
 		copyToClipboard,
 		getMessageContentParts,
 		createMessagesList,
-		extractSentencesForAudio,
-		promptTemplate,
-		splitStream,
-		sleep,
-		removeDetails,
 		getPromptVariables,
 		processDetails,
 		removeAllDetails
@@ -60,8 +56,10 @@
 		getAllTags,
 		getChatById,
 		getChatList,
+		getPinnedChatList,
 		getTagsById,
-		updateChatById
+		updateChatById,
+		updateChatFolderIdById
 	} from '$lib/apis/chats';
 	import { generateOpenAIChatCompletion } from '$lib/apis/openai';
 	import { processWeb, processWebSearch, processYoutubeVideo } from '$lib/apis/retrieval';
@@ -90,6 +88,7 @@
 	import { fade } from 'svelte/transition';
 	import Tooltip from '../common/Tooltip.svelte';
 	import Sidebar from '../icons/Sidebar.svelte';
+	import { uploadFile } from '$lib/apis/files';
 
 	export let chatIdProp = '';
 
@@ -325,6 +324,8 @@
 					message.content = data.content;
 				} else if (type === 'chat:message:files' || type === 'files') {
 					message.files = data.files;
+				} else if (type === 'chat:message:error') {
+					message.error = data.error;
 				} else if (type === 'chat:message:follow_ups') {
 					message.followUps = data.follow_ups;
 
@@ -739,6 +740,15 @@
 	const initNewChat = async () => {
 		if ($user?.role !== 'admin' && $user?.permissions?.chat?.temporary_enforced) {
 			await temporaryChatEnabled.set(true);
+		}
+
+		if ($settings?.temporaryChatByDefault ?? false) {
+			if ($temporaryChatEnabled === false) {
+				await temporaryChatEnabled.set(true);
+			} else if ($temporaryChatEnabled === null) {
+				// if set to null set to false; refer to temp chat toggle click handler
+				await temporaryChatEnabled.set(false);
+			}
 		}
 
 		const availableModels = $models
@@ -1386,10 +1396,10 @@
 	const submitPrompt = async (userPrompt, { _raw = false } = {}) => {
 		console.log('submitPrompt', userPrompt, $chatId);
 
-		const messages = createMessagesList(history, history.currentId);
 		const _selectedModels = selectedModels.map((modelId) =>
 			$models.map((m) => m.id).includes(modelId) ? modelId : ''
 		);
+
 		if (JSON.stringify(selectedModels) !== JSON.stringify(_selectedModels)) {
 			selectedModels = _selectedModels;
 		}
@@ -1403,15 +1413,6 @@
 			return;
 		}
 
-		if (messages.length != 0 && messages.at(-1).done != true) {
-			// Response not done
-			return;
-		}
-		if (messages.length != 0 && messages.at(-1).error && !messages.at(-1).content) {
-			// Error in response
-			toast.error($i18n.t(`Oops! There was an error in the previous response.`));
-			return;
-		}
 		if (
 			files.length > 0 &&
 			files.filter((file) => file.type !== 'image' && file.status === 'uploading').length > 0
@@ -1421,6 +1422,7 @@
 			);
 			return;
 		}
+
 		if (
 			($config?.file?.max_count ?? null) !== null &&
 			files.length + chatFiles.length > $config?.file?.max_count
@@ -1433,7 +1435,24 @@
 			return;
 		}
 
+		if (history?.currentId) {
+			const lastMessage = history.messages[history.currentId];
+			if (lastMessage.done != true) {
+				// Response not done
+				return;
+			}
+
+			if (lastMessage.error && !lastMessage.content) {
+				// Error in response
+				toast.error($i18n.t(`Oops! There was an error in the previous response.`));
+				return;
+			}
+		}
+
 		messageInput?.setText('');
+		prompt = '';
+
+		const messages = createMessagesList(history, history.currentId);
 
 		// Reset chat input textarea
 		if (!($settings?.richTextInput ?? true)) {
@@ -1645,6 +1664,14 @@
 		);
 		await tick();
 
+		let userLocation;
+		if ($settings?.userLocation) {
+			userLocation = await getAndUpdateUserLocation(localStorage.token).catch((err) => {
+				console.error(err);
+				return undefined;
+			});
+		}
+
 		const stream =
 			model?.info?.params?.stream_response ??
 			$settings?.params?.stream_response ??
@@ -1655,16 +1682,7 @@
 			params?.system || $settings.system
 				? {
 						role: 'system',
-						content: `${promptTemplate(
-							params?.system ?? $settings?.system ?? '',
-							$user?.name,
-							$settings?.userLocation
-								? await getAndUpdateUserLocation(localStorage.token).catch((err) => {
-										console.error(err);
-										return undefined;
-									})
-								: undefined
-						)}`
+						content: `${params?.system ?? $settings?.system ?? ''}`
 					}
 				: undefined,
 			..._messages.map((message) => ({
@@ -1742,15 +1760,7 @@
 					memory: $settings?.memory ?? false
 				},
 				variables: {
-					...getPromptVariables(
-						$user?.name,
-						$settings?.userLocation
-							? await getAndUpdateUserLocation(localStorage.token).catch((err) => {
-									console.error(err);
-									return undefined;
-								})
-							: undefined
-					)
+					...getPromptVariables($user?.name, $settings?.userLocation ? userLocation : undefined)
 				},
 				model_item: $models.find((m) => m.id === model.id),
 
@@ -2122,6 +2132,27 @@
 		}
 		await sessionStorage.removeItem(`chat-input${chatId ? `-${chatId}` : ''}`);
 	};
+
+	const moveChatHandler = async (chatId, folderId) => {
+		if (chatId && folderId) {
+			const res = await updateChatFolderIdById(localStorage.token, chatId, folderId).catch(
+				(error) => {
+					toast.error(`${error}`);
+					return null;
+				}
+			);
+
+			if (res) {
+				currentChatPage.set(1);
+				await chats.set(await getChatList(localStorage.token, $currentChatPage));
+				await pinnedChats.set(await getPinnedChatList(localStorage.token));
+
+				toast.success($i18n.t('Chat moved successfully'));
+			}
+		} else {
+			toast.error($i18n.t('Failed to move chat'));
+		}
+	};
 </script>
 
 <svelte:head>
@@ -2196,6 +2227,8 @@
 						shareEnabled={!!history.currentId}
 						{initNewChat}
 						showBanners={!showCommands}
+						archiveChatHandler={() => {}}
+						{moveChatHandler}
 						onSaveTempChat={async () => {
 							try {
 								if (!history?.currentId || !Object.keys(history.messages).length) {
@@ -2312,6 +2345,7 @@
 										clearDraft();
 										if (e.detail || files.length > 0) {
 											await tick();
+
 											submitPrompt(
 												($settings?.richTextInput ?? true)
 													? e.detail.replaceAll('\n\n', '\n')
