@@ -408,7 +408,7 @@
 											id: uuidv4(),
 											type: '',
 											title: '',
-											content: '',
+											content: JSON.stringify({ de: '', en: '', fr: '', it: '' }),
 											dismissible: true,
 											timestamp: Math.floor(Date.now() / 1000)
 										}

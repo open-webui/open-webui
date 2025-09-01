@@ -233,6 +233,7 @@ async def get_all_models(request, refresh: bool = False, user: UserModel = None)
                 if "filterIds" in meta:
                     filter_ids.extend(meta["filterIds"])
 
+            custom_model.name = translate_model_title(custom_model.name, request.headers.get("X-Language"))
             models.append(
                 {
                     "id": f"{custom_model.id}",

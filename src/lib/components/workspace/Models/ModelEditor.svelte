@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { onMount, getContext, tick } from 'svelte';
-	import { models, tools, functions, knowledge as knowledgeCollections, user } from '$lib/stores';
+	import { models, tools, functions, knowledge as knowledgeCollections, user, config } from '$lib/stores';
 	import { WEBUI_BASE_URL } from '$lib/constants';
 
 	import AdvancedParams from '$lib/components/chat/Settings/Advanced/AdvancedParams.svelte';
@@ -306,32 +306,77 @@
 		it: ''
 	};
 
-	// Call this when the component loads with existing data
+	// Dynamic languages from config
+	$: LANGS = Array.isArray($config.features.translation_languages)
+		? $config.features.translation_languages
+		: ['de']; // fallback if missing
+
+	// Utility function to create empty translation object
+	function createEmptyTranslations() {
+		const translations = {};
+		LANGS.forEach(lang => {
+			translations[lang] = '';
+		});
+		return translations;
+	}
+
+	// Parse content to object with dynamic languages
+	function parseContentToObj(content) {
+		let parsed = {};
+		try {
+			parsed = typeof content === 'string' ? JSON.parse(content) : { ...content };
+		} catch {
+			parsed = { [LANGS[0] || 'de']: content || '' };
+		}
+		
+		// ensure all languages from config exist
+		for (const lang of LANGS) {
+			if (parsed[lang] == null) parsed[lang] = '';
+		}
+		return parsed;
+	}
+
+	// Call this when the component loads with existing data 
 	function initializeTitleTranslations(existingName) {
 		if (existingName) {
-			try {
-				// If existingName is already an object, use it directly
-				if (typeof existingName === 'object') {
-					titleTranslations = { de: '', en: '', fr: '', it: '', ...existingName };
-				} else {
-					// If it's a JSON string, parse it
-					const parsed = JSON.parse(existingName);
-					titleTranslations = { de: '', en: '', fr: '', it: '', ...parsed };
-				}
-			} catch (e) {
-				// If parsing fails, treat as a simple string and put it in the default language
-				titleTranslations = { de: existingName, en: '', fr: '', it: '' };
-			}
+			titleTranslations = parseContentToObj(existingName);
 		} else {
-			titleTranslations = { de: '', en: '', fr: '', it: '' };
+			titleTranslations = createEmptyTranslations();
 		}
 	}
 
+	// Get translated text with fallback logic
+	function getTranslatedText(translationObj, targetLang = langCode) {
+		if (!translationObj) return '';
+		
+		const parsed = parseContentToObj(translationObj);
+		
+		// Try target language first
+		if (parsed[targetLang] && parsed[targetLang].trim()) {
+			return parsed[targetLang];
+		}
+		
+		// Try German as fallback (if it exists in LANGS)
+		if (LANGS.includes('de') && parsed['de'] && parsed['de'].trim()) {
+			return parsed['de'];
+		}
+		
+		// Try first available language from LANGS
+		for (const lang of LANGS) {
+			if (parsed[lang] && parsed[lang].trim()) {
+				return parsed[lang];
+			}
+		}
+		
+		return '';
+	}
+
+	// Initialize when info.name changes
 	$: if (info?.name) {
 		initializeTitleTranslations(info.name);
 	}
 
-	// Keep info.name in sync as JSON string
+		// Keep info.name in sync as JSON string
 	$: info.name = JSON.stringify(titleTranslations);
 
 	// Function to get the JSON string for the backend
@@ -339,9 +384,12 @@
 		return JSON.stringify(titleTranslations);
 	}
 
-	// Function to get the display value for the current language
-	function getTitleDisplayValue(langCode) {
-		return titleTranslations[langCode] || titleTranslations.de || '';
+	// Initialize translation objects dynamically
+	$: if (LANGS.length > 0) {
+		// Initialize newPrompt if not already done
+		if (!newPrompt || Object.keys(newPrompt).length !== LANGS.length) {
+			newPrompt = createEmptyTranslations();
+		}
 	}
 </script>
 
@@ -677,27 +725,18 @@
 
 						<!-- MODAL: Full translation editor -->
 						{#if showTitleModal}
-							<div
-								class="fixed inset-0 bg-black bg-opacity-50 flex justify-center items-center z-50"
-							>
+							<div class="fixed inset-0 bg-black bg-opacity-50 flex justify-center items-center z-50">
 								<div class="bg-white dark:bg-gray-800 p-4 rounded-md shadow-md w-[90%] max-w-md">
 									<div class="flex justify-between dark:text-gray-300 pt-4 pb-1 s--7fsHGLC475o">
 										<h2 class="text-sm font-bold mb-2">{$i18n.t('Edit Title Translations')}</h2>
 										<button class="text-xs px-2 py-1" on:click={() => (showTitleModal = false)}>
-											<svg
-												xmlns="http://www.w3.org/2000/svg"
-												viewBox="0 0 20 20"
-												fill="currentColor"
-												class="w-4 h-4"
-											>
-												<path
-													d="M6.28 5.22a.75.75 0 00-1.06 1.06L8.94 10l-3.72 3.72a.75.75 0 101.06 1.06L10 11.06l3.72 3.72a.75.75 0 101.06-1.06L11.06 10l3.72-3.72a.75.75 0 00-1.06-1.06L10 8.94 6.28 5.22z"
-												/>
+											<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" class="w-4 h-4">
+												<path d="M6.28 5.22a.75.75 0 00-1.06 1.06L8.94 10l-3.72 3.72a.75.75 0 101.06 1.06L10 11.06l3.72 3.72a.75.75 0 101.06-1.06L11.06 10l3.72-3.72a.75.75 0 00-1.06-1.06L10 8.94 6.28 5.22z" />
 											</svg>
 										</button>
 									</div>
-
-									{#each Object.keys(titleTranslations) as lang}
+								
+									{#each LANGS as lang}
 										<div class="mb-2">
 											<label class="text-xs font-semibold block mb-1">{lang.toUpperCase()}</label>
 											<input
@@ -890,19 +929,12 @@
 										type="button"
 										on:click={() => {
 											editingIndex = null;
-											newPrompt = { de: '', en: '', fr: '', it: '' };
+											newPrompt = createEmptyTranslations(); // Changed: use dynamic function
 											showPromptModal = true;
 										}}
 									>
-										<svg
-											xmlns="http://www.w3.org/2000/svg"
-											viewBox="0 0 20 20"
-											fill="currentColor"
-											class="w-4 h-4"
-										>
-											<path
-												d="M10.75 4.75a.75.75 0 00-1.5 0v4.5h-4.5a.75.75 0 000 1.5h4.5v4.5a.75.75 0 001.5 0v-4.5h4.5a.75.75 0 000-1.5h-4.5v-4.5z"
-											/>
+										<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" class="w-4 h-4">
+											<path d="M10.75 4.75a.75.75 0 00-1.5 0v4.5h-4.5a.75.75 0 000 1.5h4.5v4.5a.75.75 0 001.5 0v-4.5h4.5a.75.75 0 000-1.5h-4.5v-4.5z" />
 										</svg>
 									</button>
 								{/if}
@@ -916,24 +948,24 @@
 												<input
 													class="text-sm w-full bg-transparent outline-none border border-gray-200 dark:border-gray-800 rounded px-2 py-1"
 													readonly
-													value={prompt.content?.[langCode] || prompt.content?.de || ''}
+													value={prompt.content?.[langCode] || prompt.content?.[LANGS[0]] || ''}
 												/>
-
+											
 												<button
 													class="p-1 text-gray-500 hover:text-yellow-600"
 													type="button"
 													on:click={() => {
 														editingIndex = promptIdx;
-														newPrompt = { ...prompt.content };
+														newPrompt = parseContentToObj(prompt.content); // Changed: use parseContentToObj
 														showPromptModal = true;
 													}}
 													title="Edit"
 												>
 													<div class=" self-center mr-2">
 														<PencilSolid />
-													</div></button
-												>
-
+													</div>
+												</button>
+											
 												<button
 													class="text-xs px-2 py-1 bg-red-200 hover:bg-red-300 rounded"
 													type="button"
@@ -952,12 +984,10 @@
 								</div>
 							{/if}
 						</div>
-
+					
 						<!-- MODAL for adding/editing prompt translations -->
 						{#if showPromptModal}
-							<div
-								class="fixed inset-0 bg-black bg-opacity-50 flex justify-center items-center z-50"
-							>
+							<div class="fixed inset-0 bg-black bg-opacity-50 flex justify-center items-center z-50">
 								<div class="bg-white dark:bg-gray-800 p-4 rounded-md shadow-md w-[90%] max-w-md">
 									<div class="flex justify-between dark:text-gray-300 pt-4 pb-1 s--7fsHGLC475o">
 										<h2 class="text-sm font-bold mb-2">
@@ -970,39 +1000,33 @@
 											on:click={() => {
 												showPromptModal = false;
 												editingIndex = null;
-												newPrompt = { de: '', en: '', fr: '', it: '' };
+												newPrompt = createEmptyTranslations(); // Changed: use dynamic function
 											}}
 										>
-											<svg
-												xmlns="http://www.w3.org/2000/svg"
-												viewBox="0 0 20 20"
-												fill="currentColor"
-												class="w-4 h-4"
-											>
-												<path
-													d="M6.28 5.22a.75.75 0 00-1.06 1.06L8.94 10l-3.72 3.72a.75.75 0 101.06 1.06L10 11.06l3.72 3.72a.75.75 0 101.06-1.06L11.06 10l3.72-3.72a.75.75 0 00-1.06-1.06L10 8.94 6.28 5.22z"
-												/>
+											<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" class="w-4 h-4">
+												<path d="M6.28 5.22a.75.75 0 00-1.06 1.06L8.94 10l-3.72 3.72a.75.75 0 101.06 1.06L10 11.06l3.72 3.72a.75.75 0 101.06-1.06L11.06 10l3.72-3.72a.75.75 0 00-1.06-1.06L10 8.94 6.28 5.22z" />
 											</svg>
 										</button>
 									</div>
-
-									{#each Object.keys(newPrompt) as lang}
+								
+									{#each LANGS as lang}
 										<div class="mb-2">
 											<label class="text-xs font-semibold block mb-1">{lang.toUpperCase()}</label>
 											<input
 												class="w-full text-sm p-1 border border-gray-300 dark:border-gray-700 rounded"
-												value={newPrompt[lang]}
+												value={newPrompt[lang] || ''}
 												on:input={(e) => (newPrompt[lang] = e.target.value)}
 												placeholder={`Enter ${lang.toUpperCase()} translation`}
 											/>
 										</div>
 									{/each}
-
+									
 									<div class="flex justify-end space-x-2 mt-3">
 										<button
 											class="px-3.5 py-1.5 text-sm font-medium bg-black hover:bg-gray-900 text-white dark:bg-white dark:text-black dark:hover:bg-gray-100 transition rounded-full"
 											on:click={() => {
-												if (newPrompt.de.trim()) {
+												const firstLang = LANGS[0] || 'de';
+												if (newPrompt[firstLang]?.trim()) {
 													if (editingIndex === null) {
 														info.meta.suggestion_prompts = [
 															...(info.meta.suggestion_prompts ?? []),
@@ -1013,13 +1037,12 @@
 														info.meta.suggestion_prompts = [...info.meta.suggestion_prompts];
 													}
 													showPromptModal = false;
-													newPrompt = { de: '', en: '', fr: '', it: '' };
+													newPrompt = createEmptyTranslations(); // Changed: use dynamic function
 													editingIndex = null;
 												} else {
-													alert('German translation is required.');
+													alert(`${firstLang.toUpperCase()} translation is required.`); // Changed: dynamic language
 												}
-											}}>{editingIndex === null ? 'Add' : 'Save'}</button
-										>
+											}}>{editingIndex === null ? 'Add' : 'Save'}</button>
 									</div>
 								</div>
 							</div>

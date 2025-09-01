@@ -5,6 +5,7 @@
 	import DOMPurify from 'dompurify';
 	import { marked } from 'marked';
 	import { WEBUI_BASE_URL } from '$lib/constants';
+	import { getLangCode, getTranslatedLabel } from '$lib/i18n';
 
 	const dispatch = createEventDispatcher();
 	const i18n = getContext('i18n');
@@ -41,6 +42,7 @@
 
 		console.log('Banner mounted:', banner);
 	});
+$: langCode = getLangCode($i18n.language, 'en');
 </script>
 
 {#if !dismissed}
@@ -100,7 +102,7 @@
 					{/if}
 				</div>
 				<div class="flex-1 text-xs text-gray-700 dark:text-white max-h-60 overflow-y-auto">
-					{@html marked.parse(DOMPurify.sanitize((banner?.content ?? '').replace(/\n/g, '<br>')))}
+					{@html marked.parse(DOMPurify.sanitize((getTranslatedLabel(banner?.content, langCode) ?? '').replace(/\n/g, '<br>')))}
 				</div>
 			</div>
 

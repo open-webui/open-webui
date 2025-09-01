@@ -114,3 +114,69 @@ export function initI18nContext() {
 // ---- exports ----
 export const isLoading = createIsLoadingStore(i18next);
 export default getI18nStore();
+
+// Utils for translations
+export interface Translations {
+  [key: string]: string;
+}
+
+/**
+ * Extracts the language code from a locale string (e.g., 'en-US' -> 'en')
+ * @param language - Full language code (e.g., 'en-US', 'es-ES')
+ * @param fallback - Default language code if parsing fails
+ * @returns Language code (e.g., 'en', 'es', 'de')
+ */
+export function getLangCode(language?: string, fallback: string = 'de'): string {
+  return language?.split('-')[0] || fallback;
+}
+
+/**
+ * Gets translated label from translation object or JSON string
+ * @param label - Translation object or JSON string containing translations
+ * @param langCode - Target language code (e.g., 'en', 'es', 'de')
+ * @returns Translated string or empty string if not found
+ */
+export function getTranslatedLabel(
+  label: string | Translations | null | undefined, 
+  langCode: string
+): string {
+  if (!label) return '';
+
+  try {
+    // If it's already an object, use it directly
+    const translations: Translations = typeof label === 'object' ? label : JSON.parse(label);
+    
+    return (
+      translations[langCode] ||
+      translations.en ||
+      translations.de ||
+      translations.fr ||
+      translations.it ||
+      ''
+    );
+  } catch (error) {
+    // Log parsing errors for debugging in development
+    if (process.env.NODE_ENV === 'development') {
+      console.warn('Failed to parse translation label:', label, error);
+    }
+    
+    // If parsing fails, return the original value if it's a string
+    return typeof label === 'string' ? label : '';
+  }
+}
+
+/**
+ * Convenience function that combines getLangCode and getTranslatedLabel
+ * @param label - Translation object or JSON string
+ * @param language - Full language code (e.g., 'en-US')
+ * @param fallback - Fallback language code
+ * @returns Translated string
+ */
+export function translate(
+  label: string | Translations | null | undefined,
+  language?: string,
+  fallback: string = 'de'
+): string {
+  const langCode = getLangCode(language, fallback);
+  return getTranslatedLabel(label, langCode);
+}
