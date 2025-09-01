@@ -1319,7 +1319,13 @@ async def process_chat_response(
                     response_data = response
 
                 if "error" in response_data:
-                    error = response_data["error"].get("detail", response_data["error"])
+                    error = response_data.get("error")
+
+                    if isinstance(error, dict):
+                        error = error.get("detail", error)
+                    else:
+                        error = str(error)
+
                     Chats.upsert_message_to_chat_by_id_and_message_id(
                         metadata["chat_id"],
                         metadata["message_id"],
