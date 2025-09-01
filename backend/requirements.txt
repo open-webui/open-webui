@@ -65,8 +65,8 @@ transformers
 sentence-transformers==4.1.0
 accelerate
 colbert-ai==0.2.21
-pyarrow==20.0.0
-einops==0.8.1
+pyarrow==20.0.0 # fix: pin pyarrow version to 20 for rpi compatibility #15897
+einops==0.8.1 
 
 
 ftfy==6.2.3
