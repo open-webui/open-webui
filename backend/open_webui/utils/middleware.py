@@ -1958,6 +1958,8 @@ async def process_chat_response(
                                                 }
                                             )
                                         usage = data.get("usage", {})
+                                        timings = data.get("timings", {})
+                                        usage.append(timings)
                                         if usage:
                                             await event_emitter(
                                                 {
