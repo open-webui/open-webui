@@ -37,7 +37,7 @@
 		"eslint-plugin-cypress": "^3.4.0",
 		"eslint-plugin-svelte": "^2.43.0",
 		"i18next-parser": "^9.0.1",
-		"postcss": "^8.4.31",
+		"postcss": "^8.5.6",
 		"prettier": "^3.3.3",
 		"prettier-plugin-svelte": "^3.2.6",
 		"sass-embedded": "^1.81.0",
