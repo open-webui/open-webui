@@ -485,7 +485,7 @@ def get_sources_from_items(
         query_result = None
         collection_names = []
 
-        if item.get("type") == "text":
+        if item.get("type") == "text" or item.get("type") == "doc":
             # Raw Text
             # Used during temporary chat file uploads or web page & youtube attachements
 
