@@ -318,6 +318,13 @@
 					}
 				} else if (type === 'chat:completion') {
 					chatCompletionEventHandler(data, message, event.chat_id);
+				} else if (type === 'chat:tasks:cancel') {
+					taskIds = null;
+					const responseMessage = history.messages[history.currentId];
+					// Set all response messages to done
+					for (const messageId of history.messages[responseMessage.parentId].childrenIds) {
+						history.messages[messageId].done = true;
+					}
 				} else if (type === 'chat:message:delta' || type === 'message') {
 					message.content += data.content;
 				} else if (type === 'chat:message' || type === 'replace') {
@@ -671,7 +678,7 @@
 		console.log(url);
 
 		const fileItem = {
-			type: 'doc',
+			type: 'text',
 			name: url,
 			collection_name: '',
 			status: 'uploading',
@@ -704,7 +711,7 @@
 		console.log(url);
 
 		const fileItem = {
-			type: 'doc',
+			type: 'text',
 			name: url,
 			collection_name: '',
 			status: 'uploading',
@@ -1396,10 +1403,10 @@
 	const submitPrompt = async (userPrompt, { _raw = false } = {}) => {
 		console.log('submitPrompt', userPrompt, $chatId);
 
-		const messages = createMessagesList(history, history.currentId);
 		const _selectedModels = selectedModels.map((modelId) =>
 			$models.map((m) => m.id).includes(modelId) ? modelId : ''
 		);
+
 		if (JSON.stringify(selectedModels) !== JSON.stringify(_selectedModels)) {
 			selectedModels = _selectedModels;
 		}
@@ -1413,15 +1420,6 @@
 			return;
 		}
 
-		if (messages.length != 0 && messages.at(-1).done != true) {
-			// Response not done
-			return;
-		}
-		if (messages.length != 0 && messages.at(-1).error && !messages.at(-1).content) {
-			// Error in response
-			toast.error($i18n.t(`Oops! There was an error in the previous response.`));
-			return;
-		}
 		if (
 			files.length > 0 &&
 			files.filter((file) => file.type !== 'image' && file.status === 'uploading').length > 0
@@ -1431,6 +1429,7 @@
 			);
 			return;
 		}
+
 		if (
 			($config?.file?.max_count ?? null) !== null &&
 			files.length + chatFiles.length > $config?.file?.max_count
@@ -1443,8 +1442,24 @@
 			return;
 		}
 
+		if (history?.currentId) {
+			const lastMessage = history.messages[history.currentId];
+			if (lastMessage.done != true) {
+				// Response not done
+				return;
+			}
+
+			if (lastMessage.error && !lastMessage.content) {
+				// Error in response
+				toast.error($i18n.t(`Oops! There was an error in the previous response.`));
+				return;
+			}
+		}
+
 		messageInput?.setText('');
 		prompt = '';
+
+		const messages = createMessagesList(history, history.currentId);
 
 		// Reset chat input textarea
 		if (!($settings?.richTextInput ?? true)) {

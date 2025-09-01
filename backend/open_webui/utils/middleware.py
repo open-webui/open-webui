@@ -885,7 +885,7 @@ async def process_chat_payload(request, form_data, user, metadata, model):
             extra_params=extra_params,
         )
     except Exception as e:
-        raise Exception(f"Error: {e}")
+        raise Exception(f"{e}")
 
     features = form_data.pop("features", None)
     if features:
@@ -1297,7 +1297,13 @@ async def process_chat_response(
                     response_data = response
 
                 if "error" in response_data:
-                    error = response_data["error"].get("detail", response_data["error"])
+                    error = response_data.get("error")
+
+                    if isinstance(error, dict):
+                        error = error.get("detail", error)
+                    else:
+                        error = str(error)
+
                     Chats.upsert_message_to_chat_by_id_and_message_id(
                         metadata["chat_id"],
                         metadata["message_id"],
@@ -1310,7 +1316,7 @@ async def process_chat_response(
                             {
                                 "type": "chat:message:error",
                                 "data": {"error": {"content": error}},
-                            },
+                            }
                         )
 
                 if "selected_model_id" in response_data:
@@ -2618,7 +2624,7 @@ async def process_chat_response(
                 await background_tasks_handler()
             except asyncio.CancelledError:
                 log.warning("Task was cancelled!")
-                await event_emitter({"type": "task-cancelled"})
+                await event_emitter({"type": "chat:tasks:cancel"})
 
                 if not ENABLE_REALTIME_CHAT_SAVE:
                     # Save message in the database

@@ -1519,7 +1519,7 @@ async def chat_completion(
             try:
                 event_emitter = get_event_emitter(metadata)
                 await event_emitter(
-                    {"type": "task-cancelled"},
+                    {"type": "chat:tasks:cancel"},
                 )
             except Exception as e:
                 pass
@@ -1535,13 +1535,20 @@ async def chat_completion(
                             "error": {"content": str(e)},
                         },
                     )
+
+                    event_emitter = get_event_emitter(metadata)
+                    await event_emitter(
+                        {
+                            "type": "chat:message:error",
+                            "data": {"error": {"content": str(e)}},
+                        }
+                    )
+                    await event_emitter(
+                        {"type": "chat:tasks:cancel"},
+                    )
+
                 except:
                     pass
-
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail=str(e),
-            )
 
     if (
         metadata.get("session_id")
