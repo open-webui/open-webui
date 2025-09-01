@@ -86,7 +86,7 @@ def has_access_to_file(
 ############################
 
 
-def process_uploaded_file(request, file, file_path, file_item, file_metadata, user):
+def process_uploaded_file(request, file, file_path, file_item, file_metadata, user, knowledge_id):
     try:
         if file.content_type:
             stt_supported_content_types = getattr(
@@ -115,12 +115,12 @@ def process_uploaded_file(request, file, file_path, file_item, file_metadata, us
             elif (not file.content_type.startswith(("image/", "video/"))) or (
                 request.app.state.config.CONTENT_EXTRACTION_ENGINE == "external"
             ):
-                process_file(request, ProcessFileForm(file_id=file_item.id), user=user)
+                process_file(request, ProcessFileForm(file_id=file_item.id, knowledge_id=knowledge_id), user=user)
         else:
             log.info(
                 f"File type {file.content_type} is not provided, but trying to process anyway"
             )
-            process_file(request, ProcessFileForm(file_id=file_item.id), user=user)
+            process_file(request, ProcessFileForm(file_id=file_item.id, knowledge_id=knowledge_id), user=user)
 
         Files.update_file_data_by_id(
             file_item.id,
@@ -146,7 +146,7 @@ def upload_file(
     process: bool = Query(True),
     process_in_background: bool = Query(True),
     user=Depends(get_verified_user),
-    knowledge_id: Optional[str] = Form(None
+    knowledge_id: Optional[str] = Form(None)
 ):
     return upload_file_handler(
         request,
@@ -248,6 +248,7 @@ def upload_file_handler(
                     file_item,
                     file_metadata,
                     user,
+                    knowledge_id
                 )
                 return {"status": True, **file_item.model_dump()}
             else:
@@ -258,6 +259,7 @@ def upload_file_handler(
                     file_item,
                     file_metadata,
                     user,
+                    knowledge_id
                 )
                 return {"status": True, **file_item.model_dump()}
         else:
