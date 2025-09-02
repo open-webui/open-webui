@@ -878,7 +878,7 @@
 					<tr class="w-full h-10 border-b border-gray-200 dark:border-gray-800">
 						{#if displayedChats.length > 0}
 							<th
-								class="px-6 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider"
+								class="px-6 py-2 text-left text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider"
 							>
 								<Tooltip content={masterCheckboxTooltip}>
 									<input
@@ -891,7 +891,7 @@
 							</th>
 						{/if}
 						<th
-							class="px-6 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider cursor-pointer"
+							class="px-6 py-2 text-left text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider cursor-pointer"
 							on:click={() => setSortKey('title')}
 							on:wheel|preventDefault={() => setSortKey('title')}
 						>
@@ -901,7 +901,7 @@
 							</div>
 						</th>
 						<th
-							class="px-6 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider cursor-pointer"
+							class="px-6 py-2 text-left text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider cursor-pointer"
 							on:click={() => setSortKey('created_at')}
 							on:wheel|preventDefault={() => setSortKey('created_at')}
 						>
@@ -911,7 +911,7 @@
 							</div>
 						</th>
 						<th
-							class="px-6 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider cursor-pointer"
+							class="px-6 py-2 text-left text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider cursor-pointer"
 							on:click={() => setSortKey('updated_at')}
 							on:wheel|preventDefault={() => setSortKey('updated_at')}
 						>
@@ -921,7 +921,7 @@
 							</div>
 						</th>
 						<th
-							class="px-6 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider cursor-pointer"
+							class="px-6 py-2 text-left text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider cursor-pointer"
 							on:click={() => setSortKey('share_id')}
 							on:wheel|preventDefault={() => setSortKey('share_id')}
 						>
@@ -931,7 +931,7 @@
 							</div>
 						</th>
 						<th
-							class="px-6 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider cursor-pointer whitespace-nowrap"
+							class="px-6 py-2 text-left text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider cursor-pointer whitespace-nowrap"
 							on:click={() => setSortKey('is_public')}
 							on:wheel|preventDefault={() => setSortKey('is_public')}
 						>
@@ -941,7 +941,7 @@
 							</div>
 						</th>
 						<th
-							class="px-6 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider cursor-pointer whitespace-nowrap"
+							class="px-6 py-2 text-left text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider cursor-pointer whitespace-nowrap"
 							on:click={() => setSortKey('password')}
 							on:wheel|preventDefault={() => setSortKey('password')}
 						>
@@ -951,7 +951,7 @@
 							</div>
 						</th>
 						<th
-							class="px-6 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider cursor-pointer whitespace-nowrap"
+							class="px-6 py-2 text-left text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider cursor-pointer whitespace-nowrap"
 							on:click={() => setSortKey('views')}
 							on:wheel|preventDefault={() => setSortKey('views')}
 						>
@@ -961,7 +961,7 @@
 							</div>
 						</th>
 						<th
-							class="px-6 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider cursor-pointer whitespace-nowrap"
+							class="px-6 py-2 text-left text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider cursor-pointer whitespace-nowrap"
 							on:click={() => setSortKey('clones')}
 							on:wheel|preventDefault={() => setSortKey('clones')}
 						>
@@ -971,7 +971,7 @@
 							</div>
 						</th>
 						<th
-							class="px-6 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider cursor-pointer whitespace-nowrap"
+							class="px-6 py-2 text-left text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider cursor-pointer whitespace-nowrap"
 							on:click={() => setSortKey('status')}
 							on:wheel|preventDefault={() => setSortKey('status')}
 						>
@@ -981,7 +981,7 @@
 							</div>
 						</th>
 						<th
-							class="px-6 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider cursor-pointer whitespace-nowrap"
+							class="px-6 py-2 text-left text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider cursor-pointer whitespace-nowrap"
 							on:click={() => setSortKey('is_snapshot')}
 							on:wheel|preventDefault={() => setSortKey('is_snapshot')}
 						>
@@ -991,7 +991,7 @@
 							</div>
 						</th>
 						<th
-							class="px-6 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider"
+							class="px-6 py-2 text-left text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider"
 							>Actions</th
 						>
 					</tr>
