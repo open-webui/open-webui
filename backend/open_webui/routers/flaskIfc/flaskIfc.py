@@ -259,6 +259,8 @@ def receive_upload_model():
 
     data = request.get_json()
     incoming_headers = dict(request.headers)
+    if is_job_running() == True:
+        return manual_response(content="Server is busy. Please try again later.",thinking=None,profile_data=None, incoming_headers=incoming_headers), 200
 
     file_name = os.path.basename(data['actual_name'])
 
@@ -330,6 +332,9 @@ def receive_pull_model():
 
     data = request.get_json()
     incoming_headers = dict(request.headers)
+
+    if is_job_running() == True:
+        return manual_response(content="Server is busy. Please try again later.",thinking=None,profile_data=None, incoming_headers=incoming_headers), 200
 
     try:
         test1 = data['human_name']
@@ -418,11 +423,13 @@ def denormalize_model_name(model_name):
 
 @app.route('/api/opu-delete-model', methods=['GET', 'POST'])
 def opu_delete_model():
-    serial_script.pre_and_post_check(port,baudrate)
     data = request.get_json()
 
     incoming_headers = dict(request.headers)
+    if is_job_running() == True:
+        return manual_response(content="Server is busy. Please try again later.",thinking=None,profile_data=None, incoming_headers=incoming_headers), 200
 
+    serial_script.pre_and_post_check(port,baudrate)
     try:
         model_name = data['model_name']
         print("model_name: ", model_name, "destn_path", destn_path)
@@ -883,12 +890,18 @@ def restart_txe_ollama_serial_command():
 @app.route('/api/system-info', methods=['GET', 'POST'])
 def system_info_ollama_serial_command():
     incoming_headers = dict(request.headers)
+    if is_job_running() == True:
+        return manual_response(content="Server is busy. Please try again later.",thinking=None,profile_data=None, incoming_headers=incoming_headers), 200
+
     result, error = system_info_serial_command()
     return manual_response(content=result,thinking="System Info", incoming_headers=incoming_headers), error
 
 @app.route('/api/health-check', methods=['GET', 'POST'])
 def health_check_ollama_serial_command():
     incoming_headers = dict(request.headers)
+    if is_job_running() == True:
+        return manual_response(content="Server is busy. Please try again later.",thinking=None,profile_data=None, incoming_headers=incoming_headers), 200
+
     result, error = health_check_serial_command()
     return manual_response(content=result,thinking="Health Check", incoming_headers=incoming_headers), error
 
