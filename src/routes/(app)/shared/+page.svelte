@@ -384,12 +384,12 @@
 			if (totalSelectedCount > 0) {
 				text += `, ${totalSelectedCount} selected`;
 			}
-			text += ` / ${grandTotal} share links`;
+			text += ` / ${grandTotal} shared chats`;
 		} else {
 			if (totalSelectedCount > 0) {
-				text += `${totalSelectedCount} selected / ${grandTotal} share links`;
+				text += `${totalSelectedCount} selected / ${grandTotal} shared chats`;
 			} else {
-				text += `${grandTotal} share links`;
+				text += `${grandTotal} shared chats`;
 			}
 		}
 		headerText = text;
