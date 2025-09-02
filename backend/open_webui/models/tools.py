@@ -161,12 +161,13 @@ class ToolsTable:
         self, user_id: str, permission: str = "write"
     ) -> list[ToolUserModel]:
         tools = self.get_tools()
+        user_group_ids = {group.id for group in Groups.get_groups_by_member_id(user_id)}
 
         return [
             tool
             for tool in tools
             if tool.user_id == user_id
-            or has_access(user_id, permission, tool.access_control)
+            or has_access(user_id, permission, tool.access_control, user_group_ids)
         ]
 
     def get_tool_valves_by_id(self, id: str) -> Optional[dict]:

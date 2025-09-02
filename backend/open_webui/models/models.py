@@ -5,6 +5,7 @@ from typing import Optional
 from open_webui.internal.db import Base, JSONField, get_db
 from open_webui.env import SRC_LOG_LEVELS
 
+from open_webui.models.groups import Groups
 from open_webui.models.users import Users, UserResponse
 
 
@@ -199,11 +200,12 @@ class ModelsTable:
         self, user_id: str, permission: str = "write"
     ) -> list[ModelUserResponse]:
         models = self.get_models()
+        user_group_ids = {group.id for group in Groups.get_groups_by_member_id(user_id)}
         return [
             model
             for model in models
             if model.user_id == user_id
-            or has_access(user_id, permission, model.access_control)
+            or has_access(user_id, permission, model.access_control, user_group_ids)
         ]
 
     def get_model_by_id(self, id: str) -> Optional[ModelModel]:
