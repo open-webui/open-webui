@@ -9,7 +9,7 @@
 	import { onMount, getContext } from 'svelte';
 	const i18n = getContext('i18n');
 
-	import { WEBUI_NAME, knowledge } from '$lib/stores';
+	import { WEBUI_NAME, knowledge, knowledgeFiltered } from '$lib/stores';
 	import {
 		getKnowledgeBases,
 		deleteKnowledgeById,
@@ -52,6 +52,8 @@
 			: knowledgeBases;
 	}
 
+	$: knowledgeFiltered.set(filteredItems);
+	
 	const deleteHandler = async (item) => {
 		const res = await deleteKnowledgeById(localStorage.token, item.id).catch((e) => {
 			toast.error(`${e}`);

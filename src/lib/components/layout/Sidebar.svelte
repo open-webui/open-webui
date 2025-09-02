@@ -20,7 +20,8 @@
 		channels,
 		socket,
 		config,
-		isApp
+		isApp,
+		knowledgeFiltered
 	} from '$lib/stores';
 	import { onMount, getContext, tick, onDestroy } from 'svelte';
 
@@ -655,7 +656,10 @@
 			<div class="px-1.5 flex justify-center text-gray-800 dark:text-gray-200">
 				<a
 					class="grow flex items-center space-x-3 rounded-lg px-2 py-[7px] hover:bg-gray-100 dark:hover:bg-gray-900 transition"
-					href="/workspace/knowledge"
+					href={$knowledgeFiltered.length === 0 
+						? "/workspace/knowledge/create" 
+						: "/workspace/knowledge"}
+	
 					on:click={() => {
 						selectedChatId = null;
 						chatId.set('');
