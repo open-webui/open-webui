@@ -88,9 +88,9 @@
 	let hasRevokedChats = false;
 
 	const publicFilterOptions = [
-		{ value: null, label: 'Public: All' },
-		{ value: true, label: 'Public: Yes' },
-		{ value: false, label: 'Public: No' }
+		{ value: null, label: 'Visibility: All' },
+		{ value: true, label: 'Visibility: Public' },
+		{ value: false, label: 'Visibility: Private' }
 	];
 
 	const passwordFilterOptions = [
@@ -936,7 +936,7 @@
 							on:wheel|preventDefault={() => setSortKey('is_public')}
 						>
 							<div class="flex items-center">
-								<span>Public</span>
+								<span>Visibility</span>
 								<SortIcon direction={direction} active={orderBy === 'is_public'} />
 							</div>
 						</th>
