@@ -624,7 +624,7 @@
 							</div>
 						</div>
 					</div>
-					
+
 					<div>
 						<div class=" mb-2 text-sm font-medium">{$i18n.t('API Version')}</div>
 						<div class="flex w-full">
