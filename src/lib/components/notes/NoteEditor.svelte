@@ -978,7 +978,6 @@ Provide the enhanced notes in markdown format. Use markdown syntax for headings,
 								disabled={(note?.user_id !== $user?.id && $user?.role !== 'admin') ||
 									titleGenerating}
 								required
-								on:input={changeDebounceHandler}
 								on:focus={() => {
 									titleInputFocused = true;
 								}}
