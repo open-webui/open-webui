@@ -48,12 +48,12 @@
 						<Collapsible buttonClassName="w-full mb-0.5">
 							<div>
 								<div class="text-sm font-medium dark:text-gray-100 text-gray-800">
-									{tool?.name}
+									{$i18n.t(tool?.name)}
 								</div>
 
 								{#if tool?.meta?.description}
 									<div class="text-xs text-gray-500">
-										{tool?.meta?.description}
+										{$i18n.t(tool?.meta?.description)}
 									</div>
 								{/if}
 							</div>
