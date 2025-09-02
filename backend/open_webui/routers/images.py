@@ -549,10 +549,12 @@ async def image_generations(
                     else {"response_format": "b64_json"}
                 ),
             }
-            
+
             api_version_query_param = ""
-            if (request.app.state.config.IMAGES_OPENAI_API_VERSION):
-                api_version_query_param = f"?api-version={request.app.state.config.IMAGES_OPENAI_API_VERSION}"
+            if request.app.state.config.IMAGES_OPENAI_API_VERSION:
+                api_version_query_param = (
+                    f"?api-version={request.app.state.config.IMAGES_OPENAI_API_VERSION}"
+                )
 
             # Use asyncio.to_thread for the requests.post call
             r = await asyncio.to_thread(
