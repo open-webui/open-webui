@@ -49,9 +49,10 @@ parameters = {    'target': 'opu',
                 }
 
 def is_job_running():
-    if job_status['running'] == True:
+    if job_status["running"] == True:
         time.sleep(0.1)
-    return
+        return True
+    return False
 @app.route('/')
 def index():
 
@@ -103,9 +104,9 @@ def llama_cli_serial_command():
     script_path = "./run_llama_cli.sh"
     command = f"cd {exe_path}; {script_path} \"{prompt}\" {tokens} {model_path} {backend} {repeat_penalty} {batch_size} {top_k} {top_p} {last_n} {context_length} {temp}"
     try:
-        job_status['running'] = True
+        job_status["running"] = True
         result = serial_script.send_serial_command(port,baudrate,command)
-        job_status['running'] = False
+        job_status["running"] = False
         return result,200
     except subprocess.CalledProcessError as e:
         return f"Error executing script: {e.stderr}", 500
@@ -117,10 +118,10 @@ app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
 os.makedirs(UPLOAD_FOLDER, exist_ok=True) # Create the upload folder if it doesn't exist
 
 def read_cmd_from_serial(port,baudrate,command):
-    job_status['running'] = True
+    job_status["running"] = True
     temp = serial_script.send_serial_command(port,baudrate,command, timeout=300) 
     print(temp)
-    job_status['running'] = False
+    job_status["running"] = False
 
 @app.route('/delete-file', methods=['POST', 'GET'])
 def delete_file():
@@ -669,8 +670,6 @@ def extract_json_output(text):
 def chats():
     global job_status
     global parameters
-
-    serial_script.pre_and_post_check(port,baudrate)
     
     data = request.get_json()
     incoming_headers = dict(request.headers)
@@ -725,9 +724,12 @@ def chats():
     #]
     script_path = "./run_llama_cli.sh"
     command = f"cd {exe_path}; {script_path} \"{prompt}\" {tokens} {model_path} {backend} {repeat_penalty} {batch_size} {top_k} {top_p} {last_n} {context_length} {temp}"
+    if is_job_running() == True:
+        return manual_response(content="Server is busy. Please try again later.",thinking=None,profile_data=None, incoming_headers=incoming_headers), 200
+
+    serial_script.pre_and_post_check(port,baudrate)
     def run_script(command):
         try:
-            is_job_running()
             job_status["running"] = True
             result = serial_script.send_serial_command(port,baudrate,command, timeout=DEFAULT_MODEL_COMMAND_RUN_TIMEOUT)
             if result:
@@ -771,8 +773,6 @@ def chats():
 def chat():
     global job_status
     global parameters
-
-    serial_script.pre_and_post_check(port,baudrate)
     
     data = request.get_json()
     incoming_headers = dict(request.headers)
@@ -827,9 +827,12 @@ def chat():
     #]
     script_path = "./run_llama_cli.sh"
     command = f"cd {exe_path}; {script_path} \"{prompt}\" {tokens} {model_path} {backend} {repeat_penalty} {batch_size} {top_k} {top_p} {last_n} {context_length} {temp}"
+    if is_job_running() == True:
+        return manual_response(content="Server is busy. Please try again later.",thinking=None,profile_data=None, incoming_headers=incoming_headers), 200
+
+    serial_script.pre_and_post_check(port,baudrate)
     def run_script(command):
         try:
-            is_job_running()
             job_status["running"] = True
             result = serial_script.send_serial_command(port,baudrate,command, timeout=DEFAULT_MODEL_COMMAND_RUN_TIMEOUT)
             if result:
