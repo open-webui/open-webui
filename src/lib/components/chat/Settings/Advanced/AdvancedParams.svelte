@@ -70,8 +70,10 @@
 					bind:value={params.target}
 				>
 					<option value="opu">{$i18n.t('OPU')}</option>
-					<option value="cpu">{$i18n.t('CPU')}</option>
-					<option value="native">{$i18n.t('Native')}</option>
+					<!-- Limit Option to OPU only for customer releases
+						<option value="cpu">{$i18n.t('CPU')}</option>
+						<option value="native">{$i18n.t('Native')}</option>
+					-->
 				</select>
 			</div>
 		</Tooltip>
