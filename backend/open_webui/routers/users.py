@@ -298,6 +298,31 @@ async def update_user_info_by_session_user(
 
 
 ############################
+# DeleteOwnAccount
+############################
+
+
+@router.delete("/user/info", response_model=bool)
+async def delete_own_account(user=Depends(get_verified_user)):
+    user_id = user.id
+    first_user = Users.get_first_user()
+    if first_user and user_id == first_user.id:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail=ERROR_MESSAGES.ACTION_PROHIBITED,
+        )
+
+    result = Auths.delete_auth_by_id(user_id)
+    if result:
+        return True
+
+    raise HTTPException(
+        status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+        detail=ERROR_MESSAGES.DELETE_USER_ERROR,
+    )
+
+
+############################
 # GetUserById
 ############################
 
