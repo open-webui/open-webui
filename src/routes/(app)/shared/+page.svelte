@@ -698,10 +698,10 @@
 
 	<div class="p-4 space-y-4 flex-grow flex flex-col z-10">
 		<div class="flex justify-between items-center">
-			<div class="relative w-full max-w-xs">
+			<div class="relative w-full max-w-[250px]">
 				<input
 					type="text"
-					placeholder="Search by title..."
+					placeholder="Search Shared Chats"
 					class="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg dark:bg-gray-800 dark:border-gray-700"
 					bind:value={searchTerm}
 					on:change={handleSearch}
