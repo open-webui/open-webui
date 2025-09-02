@@ -3100,6 +3100,12 @@ IMAGES_OPENAI_API_BASE_URL = PersistentConfig(
     "image_generation.openai.api_base_url",
     os.getenv("IMAGES_OPENAI_API_BASE_URL", OPENAI_API_BASE_URL),
 )
+IMAGES_OPENAI_API_VERSION = PersistentConfig(
+    "IMAGES_OPENAI_API_VERSION",
+    "image_generation.openai.api_version",
+    os.getenv("IMAGES_OPENAI_API_VERSION", ""),
+)
+
 IMAGES_OPENAI_API_KEY = PersistentConfig(
     "IMAGES_OPENAI_API_KEY",
     "image_generation.openai.api_key",
