@@ -175,9 +175,16 @@ class ModelsTable:
 
     def get_models(self) -> list[ModelUserResponse]:
         with get_db() as db:
+            all_models = db.query(Model).filter(Model.base_model_id != None).all()
+
+            user_ids = list(set(model.user_id for model in all_models))
+
+            users = Users.get_users_by_user_ids(user_ids) if user_ids else []
+            users_dict = {user.id: user for user in users}
+
             models = []
-            for model in db.query(Model).filter(Model.base_model_id != None).all():
-                user = Users.get_user_by_id(model.user_id)
+            for model in all_models:
+                user = users_dict.get(model.user_id)
                 models.append(
                     ModelUserResponse.model_validate(
                         {
