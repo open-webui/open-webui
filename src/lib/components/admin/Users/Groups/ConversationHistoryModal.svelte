@@ -873,13 +873,13 @@
 					<div class="text-lg font-medium font-primary">
 						{group?.name || 'Group'}
 					</div>
-					<div class="text-sm text-gray-500 dark:text-gray-400">Conversation History</div>
+					<div class="text-sm text-gray-650 dark:text-gray-400">Conversation History</div>
 				</div>
 
 				<!-- Export Buttons - Two Parallel Buttons -->
 				<div class="flex items-center gap-3">
 					<button
-						class="text-xs text-gray-500 dark:text-gray-400 uppercase tracking-wider hover:text-gray-700 dark:hover:text-gray-200 flex items-center gap-2 px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors"
+						class="text-xs text-gray-650 dark:text-gray-400 uppercase tracking-wider hover:text-gray-700 dark:hover:text-gray-200 flex items-center gap-2 px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors"
 						on:click={handleExportPDF}
 						disabled={selectedMembers.size === 0}
 						class:opacity-50={selectedMembers.size === 0}
@@ -897,7 +897,7 @@
 					</button>
 
 					<button
-						class="text-xs text-gray-500 dark:text-gray-400 uppercase tracking-wider hover:text-gray-700 dark:hover:text-gray-200 flex items-center gap-2 px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors"
+						class="text-xs text-gray-650 dark:text-gray-400 uppercase tracking-wider hover:text-gray-700 dark:hover:text-gray-200 flex items-center gap-2 px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors"
 						on:click={handleExportCSV}
 						disabled={filteredMemberStats.length === 0}
 						class:opacity-50={filteredMemberStats.length === 0}
@@ -921,7 +921,7 @@
 					show = false;
 				}}
 			>
-				<Cross className="size-4.5" />
+				<Cross className="size-4.5 text-gray-800 dark:text-gray-400" />
 			</button>
 		</div>
 
@@ -944,7 +944,7 @@
 										checked={selectAll || isPartialSelection}
 										indeterminate={isPartialSelection}
 										on:change={handleSelectAll}
-										class="rounded border-gray-300 text-gray-600 focus:ring-gray-500"
+										class="rounded border-gray-300 text-gray-600 focus:ring-gray-650"
 										title={isPartialSelection
 											? `${Array.from(selectedMembers).length} of ${filteredGroupedChats.flatMap((g) => g.ids).length} conversations selected (click to unselect all)`
 											: selectAll
@@ -979,7 +979,7 @@
 											</button>
 										{:else}
 											<button
-												class="flex items-center gap-2 text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider hover:text-gray-700 dark:hover:text-gray-200 w-full justify-start min-w-0"
+												class="flex items-center gap-2 text-xs font-medium text-gray-650 dark:text-gray-400 uppercase tracking-wider hover:text-gray-700 dark:hover:text-gray-200 w-full justify-start min-w-0"
 												on:click={toggleSearch}
 											>
 												<span class="truncate">Members</span>
@@ -1003,7 +1003,7 @@
 							<!-- Email column -->
 							<th
 								scope="col"
-								class="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider relative"
+								class="px-4 py-3 text-left text-xs font-medium text-gray-650 dark:text-gray-400 uppercase tracking-wider relative"
 								style="width: {columnWidths.email}px; min-width: {columnWidths.email}px; max-width: {columnWidths.email}px;"
 							>
 								<span class="truncate block">Email</span>
@@ -1029,13 +1029,13 @@
 									<div class="flex items-center gap-2 w-full">
 										<div class="flex items-center gap-2 min-w-0 flex-1">
 											<span
-												class="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider"
+												class="text-xs font-medium text-gray-650 dark:text-gray-400 uppercase tracking-wider"
 											>
 												Model
 											</span>
 											{#if filteredModel}
 												<span
-													class="inline-flex items-center px-2.5 py-0 rounded-full text-xs font-medium bg-blue-100 text-blue-800 dark:bg-blue-800 dark:text-blue-100 truncate"
+													class="inline-flex items-center px-2.5 py-0 rounded-full text-xs font-medium bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-100 truncate"
 												>
 													{filteredModel}
 												</span>
@@ -1049,7 +1049,7 @@
 										>
 											{#if filteredModel}
 												<button
-													class="model-dropdown-button text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider hover:text-gray-700 dark:hover:text-gray-200 flex items-center gap-1"
+													class="model-dropdown-button text-xs font-medium text-gray-650 dark:text-gray-400 uppercase tracking-wider hover:text-gray-700 dark:hover:text-gray-200 flex items-center gap-1"
 													on:click|stopPropagation={clearModelFilter}
 													title="Clear {filteredModel} filter"
 												>
@@ -1057,7 +1057,7 @@
 												</button>
 											{:else}
 												<button
-													class="model-dropdown-button text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider hover:text-gray-700 dark:hover:text-gray-200 flex items-center gap-1"
+													class="model-dropdown-button text-xs font-medium text-gray-650 dark:text-gray-400 uppercase tracking-wider hover:text-gray-700 dark:hover:text-gray-200 flex items-center gap-1"
 													on:click|stopPropagation={(e) => {
 														console.log('🖱️ ChevronDown clicked!', e);
 														console.log('🖱️ Before - modelDropdownOpen:', modelDropdownOpen);
@@ -1085,6 +1085,11 @@
 														<button
 															class="block w-full text-left px-3 py-2 text-xs hover:bg-gray-100 dark:hover:bg-gray-700 border-b border-gray-100 dark:border-gray-600 last:border-b-0"
 															on:click={() => showOnlyModel(model)}
+															role="menuitem"
+															aria-label="Show only {model} conversations ({memberStats.filter(
+																(m) => m.model === model
+															).length} conversations)"
+															title="Filter to show only {model} conversations"
 														>
 															<div class="font-medium flex items-center gap-1">
 																<span class="text-gray-400 text-[10px]">Show</span>
@@ -1119,7 +1124,7 @@
 							<!-- Messages column -->
 							<th
 								scope="col"
-								class="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider relative"
+								class="px-4 py-3 text-left text-xs font-medium text-gray-650 dark:text-gray-400 uppercase tracking-wider relative"
 								style="width: {columnWidths.messages}px; min-width: {columnWidths.messages}px; max-width: {columnWidths.messages}px;"
 							>
 								<span class="truncate block">Messages</span>
@@ -1138,7 +1143,7 @@
 							<!-- Questions column -->
 							<th
 								scope="col"
-								class="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider relative"
+								class="px-4 py-3 text-left text-xs font-medium text-gray-650 dark:text-gray-400 uppercase tracking-wider relative"
 								style="width: {columnWidths.questions}px; min-width: {columnWidths.questions}px; max-width: {columnWidths.questions}px;"
 							>
 								<span class="truncate block">Questions</span>
@@ -1157,7 +1162,7 @@
 							<!-- Updated column (no resizer on last column) -->
 							<th
 								scope="col"
-								class="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider relative"
+								class="px-4 py-3 text-left text-xs font-medium text-gray-650 dark:text-gray-400 uppercase tracking-wider relative"
 								style="width: {columnWidths.updated}px; min-width: {columnWidths.updated}px;"
 							>
 								<span class="truncate block">Updated</span>
@@ -1178,7 +1183,8 @@
 										type="checkbox"
 										checked={group.ids.every((id) => selectedMembers.has(id))}
 										on:change={() => handleMemberSelect(group.ids)}
-										class="rounded border-gray-300 text-gray-600 focus:ring-gray-500"
+										class="rounded border-gray-300 text-gray-600 focus:ring-gray-650"
+										aria-label="Select conversations for {group.name} using {group.model}"
 									/>
 								</td>
 
@@ -1192,7 +1198,7 @@
 
 								<!-- Email -->
 								<td
-									class="px-4 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400"
+									class="px-4 py-4 whitespace-nowrap text-sm text-gray-650 dark:text-gray-400"
 									style="width: {columnWidths.email}px; min-width: {columnWidths.email}px; max-width: {columnWidths.email}px;"
 								>
 									<div class="truncate" title={group.email}>{group.email}</div>
@@ -1200,7 +1206,7 @@
 
 								<!-- Model -->
 								<td
-									class="px-4 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400"
+									class="px-4 py-4 whitespace-nowrap text-sm text-gray-650 dark:text-gray-400"
 									style="width: {columnWidths.model}px; min-width: {columnWidths.model}px; max-width: {columnWidths.model}px;"
 								>
 									<div class="overflow-hidden">
@@ -1214,7 +1220,7 @@
 
 								<!-- Messages -->
 								<td
-									class="px-4 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400"
+									class="px-4 py-4 whitespace-nowrap text-sm text-gray-650 dark:text-gray-400"
 									style="width: {columnWidths.messages}px; min-width: {columnWidths.messages}px; max-width: {columnWidths.messages}px;"
 								>
 									{group.messageCount.toLocaleString()}
@@ -1222,7 +1228,7 @@
 
 								<!-- Questions -->
 								<td
-									class="px-4 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400"
+									class="px-4 py-4 whitespace-nowrap text-sm text-gray-650 dark:text-gray-400"
 									style="width: {columnWidths.questions}px; min-width: {columnWidths.questions}px; max-width: {columnWidths.questions}px;"
 								>
 									<div class="flex items-start px-0">
@@ -1243,7 +1249,7 @@
 
 								<!-- Updated -->
 								<td
-									class="px-4 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400"
+									class="px-4 py-4 whitespace-nowrap text-sm text-gray-650 dark:text-gray-400"
 									style="width: {columnWidths.updated}px; min-width: {columnWidths.updated}px;"
 								>
 									<div class="truncate" title={group.lastUpdated}>{group.lastUpdated}</div>
@@ -1261,7 +1267,7 @@
 						<!-- No data message -->
 						{#if paginatedChats.length === 0}
 							<tr>
-								<td colspan="7" class="px-4 py-8 text-center text-gray-500 dark:text-gray-400 h-32">
+								<td colspan="7" class="px-4 py-8 text-center text-gray-650 dark:text-gray-400 h-32">
 									{#if searchQuery || chatSearchQuery}
 										No conversations found matching search criteria
 									{:else if filteredModel}
@@ -1295,12 +1301,13 @@
 				<div class="flex items-center gap-3">
 					<!-- Previous button -->
 					<button
-						class="p-2 rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-500 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+						class="p-2 rounded-md border border-gray-450 dark:border-gray-600 bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-750 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
 						disabled={currentPage <= 1}
 						on:click={prevPage}
-						title="Previous page"
+						aria-label="Go to previous page"
+						title="Go to previous page"
 					>
-						<ChevronLeft className="size-4" />
+						<ChevronLeft className="size-4 text-gray-800 dark:text-gray-400" />
 					</button>
 					<!-- Page indicator -->
 					<div class="flex items-center gap-2">
@@ -1311,12 +1318,13 @@
 
 					<!-- Next button -->
 					<button
-						class="p-2 rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-500 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+						class="p-2 rounded-md border border-gray-450 dark:border-gray-600 bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-750 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
 						disabled={currentPage >= totalPages}
 						on:click={nextPage}
-						title="Next page"
+						aria-label="Go to next page"
+						title="Go to next page"
 					>
-						<ChevronRight className="size-4" />
+						<ChevronRight className="size-4 text-gray-800 dark:text-gray-400" />
 					</button>
 				</div>
 			</div>
