@@ -8,6 +8,7 @@ from open_webui.internal.db import Base, get_db
 from open_webui.env import SRC_LOG_LEVELS
 
 from open_webui.models.files import FileMetadataResponse
+from open_webui.models.groups import Groups
 from open_webui.models.users import Users, UserResponse
 
 
@@ -152,11 +153,12 @@ class KnowledgeTable:
         self, user_id: str, permission: str = "write"
     ) -> list[KnowledgeUserModel]:
         knowledge_bases = self.get_knowledge_bases()
+        user_group_ids = {group.id for group in Groups.get_groups_by_member_id(user_id)}
         return [
             knowledge_base
             for knowledge_base in knowledge_bases
             if knowledge_base.user_id == user_id
-            or has_access(user_id, permission, knowledge_base.access_control)
+            or has_access(user_id, permission, knowledge_base.access_control, user_group_ids)
         ]
 
     def get_knowledge_by_id(self, id: str) -> Optional[KnowledgeModel]:
