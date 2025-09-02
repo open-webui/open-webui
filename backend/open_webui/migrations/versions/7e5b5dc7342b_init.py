@@ -41,6 +41,7 @@ def upgrade() -> None:
             "chat",
             sa.Column("id", sa.String(), nullable=False),
             sa.Column("user_id", sa.String(), nullable=True),
+            sa.Column("group_id", sa.Text(), nullable=True),
             sa.Column("title", sa.Text(), nullable=True),
             sa.Column("chat", sa.Text(), nullable=True),
             sa.Column("created_at", sa.BigInteger(), nullable=True),

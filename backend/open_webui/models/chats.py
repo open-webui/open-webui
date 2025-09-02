@@ -26,7 +26,7 @@ class Chat(Base):
 
     id = Column(String, primary_key=True)
     user_id = Column(String)
-    group_id = Column(String, nullable=True)  # Add group_id column
+    group_id = Column(Text, nullable=True)  # Add group_id column
     title = Column(Text)
     chat = Column(JSON)
 
