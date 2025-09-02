@@ -125,16 +125,6 @@
 		});
 	};
 
-	const debugClick = (event) => {
-		console.log('🖱️ Click event:', event);
-		console.log('🖱️ Target element:', event.target);
-		console.log('🖱️ Target classes:', event.target.className);
-		console.log(
-			'🖱️ Elements at click point:',
-			document.elementsFromPoint(event.clientX, event.clientY)
-		);
-	};
-
 	// Helper function to format time taken
 	const formatTimeTaken = (timeInSeconds) => {
 		if (!timeInSeconds) return '0min';
@@ -619,17 +609,13 @@
 
 	// Click outside handler
 	const handleClickOutside = (event) => {
-		console.log('🖱️ Click outside detected:', event.target);
-
 		// Close action dropdown if clicked outside
 		if (actionDropdownRef && !actionDropdownRef.contains(event.target)) {
-			console.log('🖱️ Closing action dropdown');
 			actionDropdownOpen = false;
 		}
 
 		// Close model dropdown if clicked outside
 		if (modelDropdownRef && !modelDropdownRef.contains(event.target)) {
-			console.log('🖱️ Closing model dropdown');
 			modelDropdownOpen = false;
 		}
 	};
@@ -689,42 +675,20 @@
 	// Default column widths (in pixels)
 	let columnWidths = {
 		checkbox: 60,
-		members: 240,
+		members: 160,
 		email: 200,
-		model: 240,
+		model: 180,
 		messages: 140,
 		questions: 120,
 		updated: 120
 	};
 
-	// Updated column resizing functions
+	// Column resizing functions
 	const startResize = (event, columnKey) => {
 		isResizing = true;
 		resizingColumn = columnKey;
 		startX = event.clientX;
 		startWidth = columnWidths[columnKey];
-
-		// Get the next column for two-column resizing
-		const columnOrder = [
-			'checkbox',
-			'members',
-			'email',
-			'model',
-			'messages',
-			'questions',
-			'updated'
-		];
-		const currentIndex = columnOrder.indexOf(columnKey);
-		const nextColumnKey =
-			currentIndex < columnOrder.length - 1 ? columnOrder[currentIndex + 1] : null;
-
-		// Store next column info for resizing
-		if (nextColumnKey) {
-			startResize.nextColumn = nextColumnKey;
-			startResize.nextColumnStartWidth = columnWidths[nextColumnKey];
-		} else {
-			startResize.nextColumn = null;
-		}
 
 		// Prevent text selection during resize
 		document.body.style.userSelect = 'none';
@@ -741,31 +705,15 @@
 		if (!isResizing || !resizingColumn) return;
 
 		const deltaX = event.clientX - startX;
-		const minWidth = 120; // Minimum column width
+		const newWidth = Math.max(60, startWidth + deltaX); // Minimum width of 60px
 
-		// Calculate new width for current column
-		const newCurrentWidth = Math.max(minWidth, startWidth + deltaX);
-		const actualDelta = newCurrentWidth - startWidth;
-
-		// Update current column width
-		columnWidths[resizingColumn] = newCurrentWidth;
-
-		// If there's a next column, adjust it inversely (but respect minimum width)
-		if (startResize.nextColumn) {
-			const newNextWidth = Math.max(minWidth, startResize.nextColumnStartWidth - actualDelta);
-			columnWidths[startResize.nextColumn] = newNextWidth;
-		}
-
+		columnWidths[resizingColumn] = newWidth;
 		columnWidths = { ...columnWidths }; // Trigger reactivity
 	};
 
 	const stopResize = () => {
 		isResizing = false;
 		resizingColumn = null;
-
-		// Clean up resize data
-		startResize.nextColumn = null;
-		startResize.nextColumnStartWidth = null;
 
 		// Restore normal cursor and text selection
 		document.body.style.userSelect = '';
@@ -774,78 +722,6 @@
 		// Remove global mouse event listeners
 		document.removeEventListener('mousemove', handleResize);
 		document.removeEventListener('mouseup', stopResize);
-	};
-
-	// Updated keyboard resizing to work with neighboring columns
-	const handleResizerKeyboard = (event, columnKey) => {
-		const step = 10; // pixels to resize per key press
-		const minWidth = 60;
-
-		// Get column order for neighbor detection
-		const columnOrder = [
-			'checkbox',
-			'members',
-			'email',
-			'model',
-			'messages',
-			'questions',
-			'updated'
-		];
-		const currentIndex = columnOrder.indexOf(columnKey);
-		const nextColumnKey =
-			currentIndex < columnOrder.length - 1 ? columnOrder[currentIndex + 1] : null;
-
-		if (event.key === 'ArrowLeft') {
-			// Shrink current column, expand next column
-			const newCurrentWidth = Math.max(minWidth, columnWidths[columnKey] - step);
-			const actualChange = columnWidths[columnKey] - newCurrentWidth;
-
-			columnWidths[columnKey] = newCurrentWidth;
-
-			if (nextColumnKey && actualChange > 0) {
-				columnWidths[nextColumnKey] = Math.max(
-					minWidth,
-					columnWidths[nextColumnKey] + actualChange
-				);
-			}
-
-			columnWidths = { ...columnWidths };
-			event.preventDefault();
-		} else if (event.key === 'ArrowRight') {
-			// Expand current column, shrink next column
-			if (nextColumnKey) {
-				const maxExpansion = columnWidths[nextColumnKey] - minWidth;
-				const actualStep = Math.min(step, maxExpansion);
-
-				if (actualStep > 0) {
-					columnWidths[columnKey] += actualStep;
-					columnWidths[nextColumnKey] -= actualStep;
-					columnWidths = { ...columnWidths };
-				}
-			} else {
-				// Last column, just expand
-				columnWidths[columnKey] += step;
-				columnWidths = { ...columnWidths };
-			}
-			event.preventDefault();
-		} else if (event.key === 'Enter' || event.key === ' ') {
-			// Reset to default widths
-			const defaults = {
-				checkbox: 60,
-				members: 160,
-				email: 200,
-				model: 180,
-				messages: 140,
-				questions: 120,
-				updated: 120
-			};
-			columnWidths[columnKey] = defaults[columnKey];
-			if (nextColumnKey) {
-				columnWidths[nextColumnKey] = defaults[nextColumnKey];
-			}
-			columnWidths = { ...columnWidths };
-			event.preventDefault();
-		}
 	};
 
 	// Cleanup on component destroy
@@ -863,8 +739,7 @@
 </script>
 
 <Modal size="6xl" bind:show>
-	<!-- Table section with resizable columns -->
-	<div class="flex-1 px-5 flex flex-col min-h-0">
+	<div class="h-[93.5vh] flex flex-col">
 		<!-- Header -->
 		<div class="flex justify-between items-center dark:text-gray-100 px-5 pt-4 mb-4 flex-shrink-0">
 			<!-- Replace the current export button section with this -->
@@ -925,358 +800,358 @@
 			</button>
 		</div>
 
-		<!-- Table container with horizontal scroll -->
-		<div class="flex-1 overflow-hidden">
-			<div class="h-full table-container">
-				<table class="resizable-table divide-y divide-gray-200 dark:divide-gray-700">
-					<!-- Resizable table header -->
-					<thead class="bg-gray-50 dark:bg-gray-800 sticky top-0 z-20">
-						<tr>
-							<!-- Checkbox column -->
-							<th
-								scope="col"
-								class="px-4 py-3 text-left relative"
-								style="width: {columnWidths.checkbox}px; min-width: {columnWidths.checkbox}px; max-width: {columnWidths.checkbox}px;"
-							>
-								<div class="flex items-center gap-2">
-									<input
-										type="checkbox"
-										checked={selectAll || isPartialSelection}
-										indeterminate={isPartialSelection}
-										on:change={handleSelectAll}
-										class="rounded border-gray-300 text-gray-600 focus:ring-gray-500"
-										title={isPartialSelection
-											? `${Array.from(selectedMembers).length} of ${filteredGroupedChats.flatMap((g) => g.ids).length} conversations selected (click to unselect all)`
-											: selectAll
-												? 'All conversations selected (click to unselect all)'
-												: 'No conversations selected (click to select all)'}
-									/>
-								</div>
-							</th>
-
-							<!-- Members column -->
-							<th
-								scope="col"
-								class="px-4 py-3 text-left relative"
-								style="width: {columnWidths.members}px; min-width: {columnWidths.members}px; max-width: {columnWidths.members}px;"
-							>
-								<div class="overflow-hidden">
-									<div class="flex items-center gap-2 w-full">
-										{#if isSearching}
-											<input
-												bind:this={searchInputRef}
-												bind:value={searchQuery}
-												on:keydown={handleSearchKeydown}
-												placeholder="Search..."
-												class="text-xs font-medium bg-transparent border-none outline-none text-gray-900 dark:text-gray-100 placeholder-gray-400 flex-1 min-w-0"
-											/>
-											<button
-												class="text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 flex-shrink-0"
-												on:click={toggleSearch}
-												aria-label="Close search"
-											>
-												<Cross className="w-3 h-3" />
-											</button>
-										{:else}
-											<button
-												class="flex items-center gap-2 text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider hover:text-gray-700 dark:hover:text-gray-200 w-full justify-start min-w-0"
-												on:click={toggleSearch}
-											>
-												<span class="truncate">Members</span>
-												<Search className="size-3.5 flex-shrink-0" />
-											</button>
-										{/if}
-									</div>
-								</div>
-								<!-- Column resizer -->
-								<button
-									type="button"
-									class="column-resizer"
-									class:resizing={isResizing && resizingColumn === 'members'}
-									on:mousedown={(e) => startResize(e, 'members')}
-									on:keydown={(e) => handleResizerKeyboard(e, 'members')}
-									aria-label="Resize members column"
-									title="Drag to resize members column, or use arrow keys"
-								></button>
-							</th>
-
-							<!-- Email column -->
-							<th
-								scope="col"
-								class="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider relative"
-								style="width: {columnWidths.email}px; min-width: {columnWidths.email}px; max-width: {columnWidths.email}px;"
-							>
-								<span class="truncate block">Email</span>
-								<!-- Column resizer -->
-								<button
-									type="button"
-									class="column-resizer"
-									class:resizing={isResizing && resizingColumn === 'email'}
-									on:mousedown={(e) => startResize(e, 'email')}
-									on:keydown={(e) => handleResizerKeyboard(e, 'email')}
-									aria-label="Resize email column"
-									title="Drag to resize email column, or use arrow keys"
-								></button>
-							</th>
-
-							<!-- Model column -->
-							<th
-								scope="col"
-								class="px-4 py-3 text-left relative"
-								style="width: {columnWidths.model}px; min-width: {columnWidths.model}px; max-width: {columnWidths.model}px;"
-							>
-								<div class="overflow-hidden">
-									<div class="flex items-center gap-2 w-full">
-										<div class="flex items-center gap-2 min-w-0 flex-1">
-											<span
-												class="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider"
-											>
-												Model
-											</span>
-											{#if filteredModel}
-												<span
-													class="inline-flex items-center px-2.5 py-0 rounded-full text-xs font-medium bg-blue-100 text-blue-800 dark:bg-blue-800 dark:text-blue-100 truncate"
-												>
-													{filteredModel}
-												</span>
-											{/if}
-										</div>
-										<!-- ✅ Enhanced model dropdown container -->
-										<div
-											class="relative flex-shrink-0 model-dropdown"
-											bind:this={modelDropdownRef}
-											style="z-index: 40; position: relative;"
-										>
-											{#if filteredModel}
-												<button
-													class="model-dropdown-button text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider hover:text-gray-700 dark:hover:text-gray-200 flex items-center gap-1"
-													on:click|stopPropagation={clearModelFilter}
-													title="Clear {filteredModel} filter"
-												>
-													<Cross className="size-3.5" />
-												</button>
-											{:else}
-												<button
-													class="model-dropdown-button text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider hover:text-gray-700 dark:hover:text-gray-200 flex items-center gap-1"
-													on:click|stopPropagation={(e) => {
-														console.log('🖱️ ChevronDown clicked!', e);
-														console.log('🖱️ Before - modelDropdownOpen:', modelDropdownOpen);
-														console.log('🖱️ Before - actionDropdownOpen:', actionDropdownOpen);
-
-														e.preventDefault();
-														e.stopPropagation();
-														modelDropdownOpen = !modelDropdownOpen;
-														actionDropdownOpen = false;
-													}}
-													title="Filter by model"
-												>
-													<ChevronDown className="size-3.5" />
-												</button>
-											{/if}
-
-											{#if modelDropdownOpen && !filteredModel}
-												<div
-													class="fixed bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-md shadow-lg max-h-72 overflow-y-auto"
-													style="z-index: 1000; min-width: 200px; 
-                   left: {modelDropdownRef?.getBoundingClientRect()?.left}px; 
-                   top: {modelDropdownRef?.getBoundingClientRect()?.bottom + 4}px;"
-												>
-													{#each availableModels as model}
-														<button
-															class="block w-full text-left px-3 py-2 text-xs hover:bg-gray-100 dark:hover:bg-gray-700 border-b border-gray-100 dark:border-gray-600 last:border-b-0"
-															on:click={() => showOnlyModel(model)}
-														>
-															<div class="font-medium flex items-center gap-1">
-																<span class="text-gray-400 text-[10px]">Show</span>
-																<span
-																	class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-100"
-																>
-																	{model}
-																</span>
-																<span class="text-gray-400 text-[10px]">
-																	({memberStats.filter((m) => m.model === model).length})
-																</span>
-															</div>
-														</button>
-													{/each}
-												</div>
-											{/if}
-										</div>
-									</div>
-								</div>
-								<!-- Column resizer -->
-								<button
-									type="button"
-									class="column-resizer"
-									class:resizing={isResizing && resizingColumn === 'model'}
-									on:mousedown={(e) => startResize(e, 'model')}
-									on:keydown={(e) => handleResizerKeyboard(e, 'model')}
-									aria-label="Resize model column"
-									title="Drag to resize model column, or use arrow keys"
-								></button>
-							</th>
-
-							<!-- Messages column -->
-							<th
-								scope="col"
-								class="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider relative"
-								style="width: {columnWidths.messages}px; min-width: {columnWidths.messages}px; max-width: {columnWidths.messages}px;"
-							>
-								<span class="truncate block">Messages</span>
-								<!-- Column resizer -->
-								<button
-									type="button"
-									class="column-resizer"
-									class:resizing={isResizing && resizingColumn === 'messages'}
-									on:mousedown={(e) => startResize(e, 'messages')}
-									on:keydown={(e) => handleResizerKeyboard(e, 'messages')}
-									aria-label="Resize messages column"
-									title="Drag to resize messages column, or use arrow keys"
-								></button>
-							</th>
-
-							<!-- Questions column -->
-							<th
-								scope="col"
-								class="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider relative"
-								style="width: {columnWidths.questions}px; min-width: {columnWidths.questions}px; max-width: {columnWidths.questions}px;"
-							>
-								<span class="truncate block">Questions</span>
-								<!-- Column resizer -->
-								<button
-									type="button"
-									class="column-resizer"
-									class:resizing={isResizing && resizingColumn === 'questions'}
-									on:mousedown={(e) => startResize(e, 'questions')}
-									on:keydown={(e) => handleResizerKeyboard(e, 'questions')}
-									aria-label="Resize questions column"
-									title="Drag to resize questions column, or use arrow keys"
-								></button>
-							</th>
-
-							<!-- Updated column (no resizer on last column) -->
-							<th
-								scope="col"
-								class="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider relative"
-								style="width: {columnWidths.updated}px; min-width: {columnWidths.updated}px;"
-							>
-								<span class="truncate block">Updated</span>
-							</th>
-						</tr>
-					</thead>
-
-					<!-- Table body with matching column widths -->
-					<tbody class="bg-white dark:bg-gray-900 divide-y divide-gray-200 dark:divide-gray-700">
-						{#each paginatedChats as group}
-							<tr class="hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors h-16">
-								<!-- Checkbox -->
-								<td
-									class="px-4 py-4 whitespace-nowrap"
-									style="width: {columnWidths.checkbox}px; min-width: {columnWidths.checkbox}px; max-width: {columnWidths.checkbox}px;"
-								>
-									<input
-										type="checkbox"
-										checked={group.ids.every((id) => selectedMembers.has(id))}
-										on:change={() => handleMemberSelect(group.ids)}
-										class="rounded border-gray-300 text-gray-600 focus:ring-gray-500"
-									/>
-								</td>
-
-								<!-- Members -->
-								<td
-									class="px-4 py-4 whitespace-nowrap text-sm font-medium text-gray-900 dark:text-gray-100"
-									style="width: {columnWidths.members}px; min-width: {columnWidths.members}px; max-width: {columnWidths.members}px;"
-								>
-									<div class="truncate" title={group.name}>{group.name}</div>
-								</td>
-
-								<!-- Email -->
-								<td
-									class="px-4 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400"
-									style="width: {columnWidths.email}px; min-width: {columnWidths.email}px; max-width: {columnWidths.email}px;"
-								>
-									<div class="truncate" title={group.email}>{group.email}</div>
-								</td>
-
-								<!-- Model -->
-								<td
-									class="px-4 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400"
-									style="width: {columnWidths.model}px; min-width: {columnWidths.model}px; max-width: {columnWidths.model}px;"
-								>
-									<div class="overflow-hidden">
-										<span
-											class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-100 truncate max-w-full"
-										>
-											{group.model}
-										</span>
-									</div>
-								</td>
-
-								<!-- Messages -->
-								<td
-									class="px-4 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400"
-									style="width: {columnWidths.messages}px; min-width: {columnWidths.messages}px; max-width: {columnWidths.messages}px;"
-								>
-									{group.messageCount.toLocaleString()}
-								</td>
-
-								<!-- Questions -->
-								<td
-									class="px-4 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400"
-									style="width: {columnWidths.questions}px; min-width: {columnWidths.questions}px; max-width: {columnWidths.questions}px;"
-								>
-									<div class="flex items-start px-0">
-										<button
-											class="flex items-center gap-2 px-0 py-1"
-											on:click|stopPropagation={() => showQuestions(group)}
-											aria-label="View questions asked by {group.name}"
-										>
-											<span class="min-w-[20px] text-center">{group.questionsAsked}</span>
-											<div
-												class="rounded p-1 hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors"
-											>
-												<Eye className="size-3.5 flex-shrink-0" />
+		<!-- Table Container with fixed height -->
+		<div class="px-5 pb-4 flex-1 flex flex-col min-h-0">
+			{#if loading}
+				<div class="flex justify-center items-center flex-1">
+					<div
+						class="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900 dark:border-white"
+					></div>
+				</div>
+			{:else}
+				<!-- Table - Always show, with placeholder data if needed -->
+				<div class="flex-1 flex flex-col min-h-0">
+					<div
+						class="flex-1 border border-gray-200 dark:border-gray-700 rounded-lg overflow-hidden"
+					>
+						<div class="h-full overflow-auto">
+							<table class="min-w-full divide-y divide-gray-200 dark:divide-gray-700 table-fixed">
+								<thead class="bg-gray-50 dark:bg-gray-800 sticky top-0">
+									<tr>
+										<!-- Actions dropdown column - Fixed width -->
+										<th scope="col" class="px-4 py-3 text-left w-[60px]">
+											<div class="flex items-center gap-2">
+												<input
+													type="checkbox"
+													checked={selectAll || isPartialSelection}
+													indeterminate={isPartialSelection}
+													on:change={handleSelectAll}
+													class="rounded border-gray-300 text-gray-600 focus:ring-gray-500"
+													title={isPartialSelection
+														? `${Array.from(selectedMembers).length} of ${filteredGroupedChats.flatMap((g) => g.ids).length} conversations selected (click to unselect all)`
+														: selectAll
+															? 'All conversations selected (click to unselect all)'
+															: 'No conversations selected (click to select all)'}
+												/>
 											</div>
-										</button>
-									</div>
-								</td>
+										</th>
 
-								<!-- Updated -->
-								<td
-									class="px-4 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400"
-									style="width: {columnWidths.updated}px; min-width: {columnWidths.updated}px;"
+										<!-- Chat column - Fixed width -->
+										<!-- <th
+											scope="col"
+											class="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider w-[120px]"
+										>
+											<div class="w-[90px]">
+												<div class="flex items-center gap-2 w-full">
+													{#if isChatSearching}
+														<input
+															bind:this={chatSearchInputRef}
+															bind:value={chatSearchQuery}
+															on:keydown={handleChatSearchKeydown}
+															placeholder="Search..."
+															class="text-xs font-medium bg-transparent border-none outline-none text-gray-900 dark:text-gray-100 placeholder-gray-400 flex-1 min-w-0"
+														/>
+														<button
+															class="text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 flex-shrink-0"
+															on:click={toggleChatSearch}
+															aria-label="Close chat search"
+														>
+															<svg
+																class="w-3 h-3"
+																fill="none"
+																stroke="currentColor"
+																viewBox="0 0 20 20"
+															>
+																<path
+																	stroke-linecap="round"
+																	stroke-linejoin="round"
+																	stroke-width="2"
+																	d="M6 18L18 6M6 6l12 12"
+																/>
+															</svg>
+														</button>
+													{:else}
+														<button
+															class="flex items-center gap-2 text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider hover:text-gray-700 dark:hover:text-gray-200 w-full justify-start"
+															on:click={toggleChatSearch}
+														>
+															<span class="truncate">Chat</span>
+															<Search className="size-3.5 flex-shrink-0" />
+														</button>
+													{/if}
+												</div>
+											</div>
+										</th> -->
+
+										<!-- Members column with search - Fixed width with consistent container -->
+										<th scope="col" class="px-4 py-3 text-left w-[160px]">
+											<div class="w-[130px]">
+												<!-- Fixed width container -->
+												<div class="flex items-center gap-2 w-full">
+													{#if isSearching}
+														<input
+															bind:this={searchInputRef}
+															bind:value={searchQuery}
+															on:keydown={handleSearchKeydown}
+															placeholder="Search..."
+															class="text-xs font-medium bg-transparent border-none outline-none text-gray-900 dark:text-gray-100 placeholder-gray-400 flex-1 min-w-0"
+														/>
+														<button
+															class="text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 flex-shrink-0"
+															on:click={toggleSearch}
+															aria-label="Close search"
+														>
+															<svg
+																class="w-3 h-3"
+																fill="none"
+																stroke="currentColor"
+																viewBox="0 0 20 20"
+															>
+																<path
+																	stroke-linecap="round"
+																	stroke-linejoin="round"
+																	stroke-width="2"
+																	d="M6 18L18 6M6 6l12 12"
+																/>
+															</svg>
+														</button>
+													{:else}
+														<button
+															class="flex items-center gap-2 text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider hover:text-gray-700 dark:hover:text-gray-200 w-full justify-start"
+															on:click={toggleSearch}
+														>
+															<span class="truncate">Members</span>
+															<Search className="size-3.5 flex-shrink-0" />
+														</button>
+													{/if}
+												</div>
+											</div>
+										</th>
+
+										<!-- Email column - Fixed width -->
+										<th
+											scope="col"
+											class="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider w-[200px]"
+										>
+											Email
+										</th>
+
+										<!-- Model column - Updated header to show filtered model -->
+										<th scope="col" class="px-4 py-3 text-left w-[180px]">
+											<div class="w-[150px]">
+												<!-- Fixed width container -->
+												<div class="flex items-center gap-2 w-full">
+													<div class="flex items-center gap-2 min-w-0 flex-1">
+														<span
+															class="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider"
+														>
+															Model
+														</span>
+														{#if filteredModel}
+															<!-- Show the filtered model in the header -->
+															<span
+																class="inline-flex items-center px-2.5 py-0 rounded-full text-xs font-medium bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-100 truncate"
+															>
+																{filteredModel}
+															</span>
+														{/if}
+													</div>
+													<div class="relative flex-shrink-0" bind:this={modelDropdownRef}>
+														{#if filteredModel}
+															<!-- Clear filter button when filtered -->
+															<button
+																class="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider hover:text-gray-700 dark:hover:text-gray-200 flex items-center gap-1"
+																on:click={clearModelFilter}
+																title="Clear {filteredModel} filter"
+															>
+																<Cross className="size-3.5" />
+															</button>
+														{:else}
+															<!-- Normal dropdown button when not filtered -->
+															<button
+																class="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider hover:text-gray-700 dark:hover:text-gray-200 flex items-center gap-1"
+																on:click|stopPropagation={() => {
+																	modelDropdownOpen = !modelDropdownOpen;
+																	actionDropdownOpen = false; // Close other dropdown
+																}}
+															>
+																<ChevronDown className="size-3.5" />
+															</button>
+														{/if}
+
+														{#if modelDropdownOpen && !filteredModel}
+															<div
+																class="absolute top-full left-0 mt-1 w-max bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-md shadow-lg z-10 max-h-72 overflow-y-auto"
+															>
+																{#each availableModels as model}
+																	<button
+																		class="block w-full text-left px-2 py-2 text-xs hover:bg-gray-100 dark:hover:bg-gray-700 border-b border-gray-100 dark:border-gray-600 last:border-b-0"
+																		on:click={() => showOnlyModel(model)}
+																	>
+																		<div class="font-medium flex items-center gap-1">
+																			<span class="text-gray-400 text-[10px]">Show</span>
+																			<span
+																				class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-100"
+																			>
+																				{model}
+																			</span>
+																			<span class="text-gray-400 text-[10px]">
+																				({memberStats.filter((m) => m.model === model).length})
+																			</span>
+																		</div>
+																	</button>
+																{/each}
+																{#if availableModels.length === 0}
+																	<div class="px-3 py-2 text-xs text-gray-500">
+																		No models available
+																	</div>
+																{/if}
+															</div>
+														{/if}
+													</div>
+												</div>
+											</div>
+										</th>
+
+										<!-- Messages column - Fixed width -->
+										<th
+											scope="col"
+											class="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider w-[140px]"
+										>
+											Messages
+										</th>
+
+										<!-- Questions column - Fixed width with container -->
+										<th
+											scope="col"
+											class="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider w-[120px]"
+										>
+											<div class="w-[90px]">
+												<!-- Fixed width container -->
+												Questions
+											</div>
+										</th>
+
+										<!-- Last Updated column - Fixed width -->
+										<th
+											scope="col"
+											class="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider w-[120px]"
+										>
+											Updated
+										</th>
+
+										<!-- Time Taken column - Fixed width -->
+										<!-- <th
+											scope="col"
+											class="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider w-[100px]"
+										>
+											Duration
+										</th> -->
+									</tr>
+								</thead>
+								<tbody
+									class="bg-white dark:bg-gray-900 divide-y divide-gray-200 dark:divide-gray-700"
 								>
-									<div class="truncate" title={group.lastUpdated}>{group.lastUpdated}</div>
-								</td>
-							</tr>
-						{/each}
+									{#each paginatedChats as group}
+										<tr class="hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors">
+											<td class="px-4 py-4 whitespace-nowrap">
+												<input
+													type="checkbox"
+													checked={group.ids.every((id) => selectedMembers.has(id))}
+													on:change={() => handleMemberSelect(group.ids)}
+													class="rounded border-gray-300 text-gray-600 focus:ring-gray-500"
+												/>
+											</td>
+											<td
+												class="px-4 py-4 whitespace-nowrap text-sm font-medium text-gray-900 dark:text-gray-100"
+											>
+												<div class="w-[90px] truncate">{group.name}</div>
+											</td>
+											<td
+												class="px-4 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400 truncate"
+											>
+												{group.email}
+											</td>
+											<td
+												class="px-4 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400"
+											>
+												<div class="w-[150px]">
+													<!-- Fixed width container matching header -->
+													<span
+														class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-100 truncate"
+													>
+														{group.model}
+													</span>
+												</div>
+											</td>
+											<td
+												class="px-4 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400"
+											>
+												{group.messageCount.toLocaleString()}
+											</td>
+											<td
+												class="px-4 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400"
+											>
+												<div class="w-[90px] flex justify-center">
+													<!-- Fix this line in the tbody: -->
+													<button
+														class="flex items-center gap-2 px-2 py-1"
+														on:click|stopPropagation={() => showQuestions(group)}
+														aria-label="View questions asked by {group.name}"
+													>
+														<span class="min-w-[20px] text-center">{group.questionsAsked}</span>
+														<div
+															class="rounded p-1 hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors"
+														>
+															<Eye className="size-3.5 flex-shrink-0" />
+														</div>
+													</button>
+												</div>
+											</td>
+											<td
+												class="px-4 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400 truncate"
+											>
+												{group.lastUpdated}
+											</td>
+											<!-- <td
+												class="px-4 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400"
+											>
+												{group.timeTaken}
+											</td> -->
+										</tr>
+									{/each}
 
-						<!-- Fill empty rows -->
-						{#each Array(Math.max(0, itemsPerPage - paginatedChats.length)) as _}
-							<tr class="h-16">
-								<td colspan="7" class="px-4 py-4"></td>
-							</tr>
-						{/each}
-
-						<!-- No data message -->
-						{#if paginatedChats.length === 0}
-							<tr>
-								<td colspan="7" class="px-4 py-8 text-center text-gray-500 dark:text-gray-400 h-32">
-									{#if searchQuery || chatSearchQuery}
-										No conversations found matching search criteria
-									{:else if filteredModel}
-										No conversations found for {filteredModel}
-									{:else}
-										No conversation data available
+									<!-- Fill empty rows to maintain consistent height for 10 items -->
+									{#each Array(Math.max(0, itemsPerPage - paginatedChats.length)) as _}
+										<tr class="h-16">
+											<!-- Fixed row height matching data rows -->
+											<td colspan="7" class="px-4 py-4"></td>
+										</tr>
+									{/each}
+									<!-- No data message -->
+									{#if paginatedChats.length === 0}
+										<tr>
+											<td
+												colspan="7"
+												class="px-4 py-8 text-center text-gray-500 dark:text-gray-400 h-32"
+											>
+												{#if searchQuery || chatSearchQuery}
+													No conversations found matching search criteria
+												{:else if filteredModel}
+													No conversations found for {filteredModel}
+												{:else}
+													No conversation data available
+												{/if}
+											</td>
+										</tr>
 									{/if}
-								</td>
-							</tr>
-						{/if}
-					</tbody>
-				</table>
-			</div>
+								</tbody>
+							</table>
+						</div>
+					</div>
+				</div>
+			{/if}
 		</div>
-
 		<!-- Pagination section -->
 		<div class="px-5 py-4 border-t border-gray-200 dark:border-gray-700 flex-shrink-0">
 			<div class="flex items-center justify-between">
@@ -1319,6 +1194,21 @@
 						<ChevronRight className="size-4" />
 					</button>
 				</div>
+
+				<!-- Right side - Quick page jump (optional) -->
+				<div class="flex items-center gap-2">
+					{#if totalPages > 1}
+						<label class="text-sm text-gray-600 dark:text-gray-400">Go to:</label>
+						<select
+							bind:value={currentPage}
+							class="text-sm border border-gray-300 dark:border-gray-600 rounded-md px-2 py-1 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100"
+						>
+							{#each Array(totalPages) as _, i}
+								<option value={i + 1}>Page {i + 1}</option>
+							{/each}
+						</select>
+					{/if}
+				</div>
 			</div>
 		</div>
 	</div>
@@ -1330,55 +1220,33 @@
 <style>
 	.column-resizer {
 		position: absolute;
-		top: 25%;
-		bottom: 25%;
-		right: -1px; /* ✅ Changed from -2px to -1px */
-		width: 3px; /* ✅ Reduced from 4px to 3px */
-		height: 50%;
+		top: 0;
+		right: -2px;
+		width: 4px;
+		height: 100%;
 		cursor: col-resize;
 		background: transparent;
-		z-index: 5;
-		border-right: 1px solid;
-		border-right-color: #bdbdbd;
+		z-index: 10;
+		border-right: 1px solid transparent;
 		transition: border-color 0.2s ease;
-		outline: none;
-		pointer-events: auto;
 	}
 
 	.column-resizer:hover {
-		border-right: 1.2px solid;
-		z-index: 15;
+		border-right-color: #3b82f6;
+		background: rgba(59, 130, 246, 0.1);
 	}
 
 	.column-resizer.resizing {
-		border-right: 1.2px solid;
-		z-index: 15;
-	}
-
-	.column-resizer:focus {
-		border-right: 1.2px solid;
-		z-index: 15;
+		border-right-color: #3b82f6;
+		background: rgba(59, 130, 246, 0.2);
 	}
 
 	.table-container {
 		overflow-x: auto;
-		overflow-y: visible; /* ✅ Allow vertical overflow for dropdowns */
 	}
 
 	.resizable-table {
 		table-layout: fixed;
 		min-width: 100%;
-	}
-
-	/* ✅ Ensure dropdown escapes table constraints */
-	.model-dropdown {
-		position: relative;
-		z-index: 20;
-	}
-
-	/* ✅ Make sure dropdown container doesn't clip */
-	.table-container,
-	.h-full {
-		overflow-y: visible !important;
 	}
 </style>

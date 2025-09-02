@@ -66,7 +66,7 @@
 				<div class="text-sm text-gray-500 dark:text-gray-400 mt-1 flex flex-wrap items-center gap-2">
 					<span class="font-medium">Model:</span>
 					<span
-						class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800 dark:bg-blue-800 dark:text-blue-100"
+						class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-100"
 					>
 						{member.model}
 					</span>
@@ -110,7 +110,7 @@
 					>
 						<div class="flex items-start gap-3 mb-3">
 							<!-- Question Number -->
-							<div class="flex-shrink-0 w-8 h-8 bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-200 rounded-full flex items-center justify-center text-sm font-bold">
+							<div class="flex-shrink-0 w-8 h-8 bg-gray-100 dark:bg-gray-900 text-gray-800 dark:text-gray-200 rounded-full flex items-center justify-center text-sm font-bold">
 								{index + 1}
 							</div>
 							<!-- Question Content -->
@@ -161,7 +161,7 @@
 				Press <kbd class="px-2 py-1 bg-gray-200 dark:bg-gray-700 rounded text-xs">Esc</kbd> to close
 			</div>
 			<button
-				class="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium rounded-md transition"
+				class="px-4 py-2 bg-gray-600 hover:bg-gray-700 text-white text-sm font-medium rounded-md transition"
 				on:click={closeModal}
 			>
 				Close
