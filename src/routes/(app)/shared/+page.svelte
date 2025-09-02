@@ -1001,7 +1001,7 @@
 						{#each displayedChats as chat}
 							<tr class="hover:bg-gray-50/80 dark:hover:bg-gray-850/80">
 								{#if displayedChats.length > 0}
-									<td class="px-6 py-2.5 whitespace-nowrap">
+									<td class="px-6 py-3 whitespace-nowrap">
 										<input
 											type="checkbox"
 											class="form-checkbox"
@@ -1020,18 +1020,18 @@
 										/>
 									</td>
 								{/if}
-								<td class="px-6 py-2.5 text-gray-900 dark:text-gray-100 truncate-text">
+								<td class="px-6 py-3 text-gray-900 dark:text-gray-100 truncate-text">
 									<a href={`/c/${chat.id}`} class="hover:underline">
 										{chat.title}
 									</a>
 								</td>
-								<td class="px-6 py-2.5 whitespace-nowrap text-gray-500 dark:text-gray-400"
+								<td class="px-6 py-3 whitespace-nowrap text-gray-500 dark:text-gray-400"
 									>{dayjs(chat.created_at * 1000).format('YYYY-MM-DD h:mm A')}</td
 								>
-								<td class="px-6 py-2.5 whitespace-nowrap text-gray-500 dark:text-gray-400"
+								<td class="px-6 py-3 whitespace-nowrap text-gray-500 dark:text-gray-400"
 									>{dayjs(chat.updated_at * 1000).format('YYYY-MM-DD h:mm A')}</td
 								>
-								<td class="px-6 py-2.5 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
+								<td class="px-6 py-3 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
 									{#if chat.status === 'active'}
 										<div class="flex items-center">
 											<div class="w-80 truncate">
@@ -1060,7 +1060,7 @@
 									{/if}
 								</td>
 								<td
-									class="px-6 py-2.5 whitespace-nowrap text-gray-500 dark:text-gray-400 whitespace-nowrap"
+									class="px-6 py-3 whitespace-nowrap text-gray-500 dark:text-gray-400 whitespace-nowrap"
 								>
 									{#if chat.is_public}
 										<Tooltip content="Public">
@@ -1073,7 +1073,7 @@
 									{/if}
 								</td>
 								<td
-									class="px-6 py-2.5 whitespace-nowrap text-gray-500 dark:text-gray-400 whitespace-nowrap"
+									class="px-6 py-3 whitespace-nowrap text-gray-500 dark:text-gray-400 whitespace-nowrap"
 								>
 									{#if chat.has_password}
 										<Tooltip content="Password Protected">
@@ -1085,13 +1085,13 @@
 										</Tooltip>
 									{/if}
 								</td>
-								<td class="px-6 py-2.5 whitespace-nowrap text-gray-500 dark:text-gray-400 whitespace-nowrap"
+								<td class="px-6 py-3 whitespace-nowrap text-gray-500 dark:text-gray-400 whitespace-nowrap"
 									>{chat.views}</td
 								>
-								<td class="px-6 py-2.5 whitespace-nowrap text-gray-500 dark:text-gray-400 whitespace-nowrap"
+								<td class="px-6 py-3 whitespace-nowrap text-gray-500 dark:text-gray-400 whitespace-nowrap"
 									>{chat.clones}</td
 								>
-								<td class="px-6 py-2.5 whitespace-nowrap text-gray-500 dark:text-gray-400 whitespace-nowrap">
+								<td class="px-6 py-3 whitespace-nowrap text-gray-500 dark:text-gray-400 whitespace-nowrap">
 									{#if chat.status === 'active'}
 										<span
 											class="px-2 py-1 text-xs font-semibold leading-5 text-green-800 bg-green-100 rounded-full"
@@ -1109,7 +1109,7 @@
 										>
 									{/if}
 								</td>
-								<td class="px-6 py-2.5 whitespace-nowrap text-gray-500 dark:text-gray-400 whitespace-nowrap">
+								<td class="px-6 py-3 whitespace-nowrap text-gray-500 dark:text-gray-400 whitespace-nowrap">
 									{#if chat.is_snapshot}
 										<span
 											class="px-2 py-1 text-xs font-semibold leading-5 text-blue-800 bg-blue-100 rounded-full"
@@ -1122,7 +1122,7 @@
 										>
 									{/if}
 								</td>
-								<td class="px-6 py-2.5 whitespace-nowrap text-sm font-medium">
+								<td class="px-6 py-3 whitespace-nowrap text-sm font-medium">
 									<div class="flex items-center">
 										{#if chat.status === 'active'}
 											<Tooltip content="Revoke Link" className="inline-block">
