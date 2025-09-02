@@ -1,6 +1,6 @@
 {
-  "name": "Open WebUI",
-  "short_name": "WebUI",
+  "name": "AI.Digsol",
+  "short_name": "AI.Digsol",
   "icons": [
     {
       "src": "/static/web-app-manifest-192x192.png",
