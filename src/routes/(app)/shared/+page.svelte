@@ -48,6 +48,10 @@
 	import Pencil from '$lib/components/icons/Pencil.svelte';
 	import DocumentDuplicate from '$lib/components/icons/DocumentDuplicate.svelte';
 	import ArrowPath from '$lib/components/icons/ArrowPath.svelte';
+	import GlobeAltSolid from '$lib/components/icons/GlobeAltSolid.svelte';
+	import User from '$lib/components/icons/User.svelte';
+	import LockClosed from '$lib/components/icons/LockClosed.svelte';
+	import LockOpen from '$lib/components/icons/LockOpen.svelte';
 
 	let showShareChatModal = false;
 	let selectedChatId = '';
@@ -1055,12 +1059,32 @@
 										<div class="w-48 truncate">/s/{chat.share_id}</div>
 									{/if}
 								</td>
-								<td class="px-6 py-3 whitespace-nowrap text-gray-500 dark:text-gray-400 whitespace-nowrap"
-									>{chat.is_public ? 'Yes' : 'No'}</td
+								<td
+									class="px-6 py-3 whitespace-nowrap text-gray-500 dark:text-gray-400 whitespace-nowrap"
 								>
-								<td class="px-6 py-3 whitespace-nowrap text-gray-500 dark:text-gray-400 whitespace-nowrap"
-									>{chat.has_password ? 'Yes' : 'No'}</td
+									{#if chat.is_public}
+										<Tooltip content="Public">
+											<GlobeAltSolid class="size-5" />
+										</Tooltip>
+									{:else}
+										<Tooltip content="Private">
+											<User class="size-5" />
+										</Tooltip>
+									{/if}
+								</td>
+								<td
+									class="px-6 py-3 whitespace-nowrap text-gray-500 dark:text-gray-400 whitespace-nowrap"
 								>
+									{#if chat.has_password}
+										<Tooltip content="Password Protected">
+											<LockClosed class="size-5" />
+										</Tooltip>
+									{:else}
+										<Tooltip content="No Password">
+											<LockOpen class="size-5" />
+										</Tooltip>
+									{/if}
+								</td>
 								<td class="px-6 py-3 whitespace-nowrap text-gray-500 dark:text-gray-400 whitespace-nowrap"
 									>{chat.views}</td
 								>
