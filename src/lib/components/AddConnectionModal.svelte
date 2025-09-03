@@ -349,6 +349,29 @@
 							</div>
 						</div>
 
+						{#if !ollama && !direct}
+							<div class="flex flex-row justify-between items-center w-full mt-2">
+								<label
+									for="prefix-id-input"
+									class={`mb-0.5 text-xs text-gray-500
+								${($settings?.highContrastMode ?? false) ? 'text-gray-800 dark:text-gray-100' : ''}`}
+									>{$i18n.t('Provider')}</label
+								>
+
+								<div>
+									<button
+										on:click={() => {
+											azure = !azure;
+										}}
+										type="button"
+										class=" text-xs text-gray-700 dark:text-gray-300"
+									>
+										{azure ? $i18n.t('Azure OpenAI') : $i18n.t('OpenAI')}
+									</button>
+								</div>
+							</div>
+						{/if}
+
 						{#if azure}
 							<div class="flex gap-2 mt-2">
 								<div class="flex flex-col w-full">
