@@ -308,7 +308,7 @@
 		{#if ($user?.role === 'admin' || ($user?.permissions.chat?.controls ?? true)) && (params.target === 'cpu' || params.target === 'opu') }
                         <div class="mt-2 space-y-3 pr-1.5">
                                 <div class="flex justify-between items-center text-sm">
-                                        <div class="  font-medium">{$i18n.t('Restart Opu')}</div>
+                                        <div class="  font-medium">{$i18n.t('Restart OPU')}</div>
 
 				<button
 					disabled={$isRestarting}
@@ -332,7 +332,7 @@
                 {#if ($user?.role === 'admin' || ($user?.permissions.chat?.controls ?? true)) && (params.target === 'cpu' || params.target === 'opu') }
                         <div class="mt-2 space-y-3 pr-1.5">
                                 <div class="flex justify-between items-center text-sm">
-                                        <div class="  font-medium">{$i18n.t('Opu System Info')}</div>
+                                        <div class="  font-medium">{$i18n.t('OPU System Info')}</div>
                                 <button
                                         class={
 						'w-auto text-sm px-2 py-1 rounded-md transition-colors duration-200' +
@@ -359,7 +359,7 @@
                 {#if ($user?.role === 'admin' || ($user?.permissions.chat?.controls ?? true)) && (params.target === 'cpu' || params.target === 'opu') }
                         <div class="mt-2 space-y-3 pr-1.5">
                                 <div class="flex justify-between items-center text-sm">
-                                        <div class="  font-medium">{$i18n.t('Opu Health Check')}</div>
+                                        <div class="  font-medium">{$i18n.t('OPU Health Check')}</div>
                                 <button
                                         class={
                                                 'w-auto text-sm px-2 py-1 rounded-md transition-colors duration-200' +

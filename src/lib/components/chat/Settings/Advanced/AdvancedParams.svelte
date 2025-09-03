@@ -447,7 +447,8 @@
 					class="p-1 px-3 text-xs flex rounded-sm transition shrink-0 outline-hidden"
 					type="button"
 					on:click={() => {
-						params.max_tokens = (params?.max_tokens ?? null) === null ? 128 : null;
+						//params.max_tokens = (params?.max_tokens ?? null) === null ? 128 : null; Reduce Max tokens to 20 instead of 128
+						params.max_tokens = (params?.max_tokens ?? null) === null ? 20 : null;
 					}}
 				>
 					{#if (params?.max_tokens ?? null) === null}
@@ -501,7 +502,8 @@
 					class="p-1 px-3 text-xs flex rounded-sm transition shrink-0 outline-hidden"
 					type="button"
 					on:click={() => {
-						params.top_k = (params?.top_k ?? null) === null ? 40 : null;
+						//params.top_k = (params?.top_k ?? null) === null ? 40 : null; Reduce top_k to 4 instead of 40
+						params.top_k = (params?.top_k ?? null) === null ? 4 : null;
 					}}
 				>
 					{#if (params?.top_k ?? null) === null}
