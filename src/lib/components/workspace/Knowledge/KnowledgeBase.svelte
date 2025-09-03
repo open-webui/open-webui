@@ -760,7 +760,7 @@
 			{#if largeScreen}
 				<div class="flex-1 flex justify-start w-full h-full max-h-full">
 					{#if selectedFile}
-						<div class=" flex flex-col w-full h-full max-h-full">
+						<div class=" flex flex-col w-full">
 							<div class="shrink-0 mb-2 flex items-center">
 								{#if !showSidepanel}
 									<div class="-translate-x-2">
@@ -902,7 +902,7 @@
 								<input
 									class=" w-full text-sm pr-4 py-1 rounded-r-xl outline-hidden bg-transparent"
 									bind:value={query}
-									placeholder={$i18n.t('Search Collection')}
+									placeholder={`${$i18n.t('Search Collection')}${(knowledge?.files ?? []).length ? ` (${(knowledge?.files ?? []).length})` : ''}`}
 									on:focus={() => {
 										selectedFileId = null;
 									}}
