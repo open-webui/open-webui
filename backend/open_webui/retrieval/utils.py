@@ -129,6 +129,7 @@ def query_doc_with_hybrid_search(
             return {"documents": [], "metadatas": [], "distances": []}
 
         log.debug(f"query_doc_with_hybrid_search:doc {collection_name}")
+
         bm25_retriever = BM25Retriever.from_texts(
             texts=collection_result.documents[0],
             metadatas=collection_result.metadatas[0],
@@ -552,9 +553,7 @@ def get_sources_from_items(
                     "documents": [
                         [item.get("file", {}).get("data", {}).get("content")]
                     ],
-                    "metadatas": [
-                        [item.get("file", {}).get("data", {}).get("meta", {})]
-                    ],
+                    "metadatas": [[item.get("file", {}).get("meta", {})]],
                 }
             else:
                 # Fallback to item content
