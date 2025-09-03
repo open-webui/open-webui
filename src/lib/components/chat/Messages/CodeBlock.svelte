@@ -222,7 +222,7 @@
 			code.includes('pandas') ? 'pandas' : null,
 			code.includes('sklearn') ? 'scikit-learn' : null,
 			code.includes('scipy') ? 'scipy' : null,
-			code.includes('re') ? 'regex' : null,
+			/\bimport\s+re\b|\bfrom\s+re\b/.test(code) ? 'regex' : null,
 			code.includes('seaborn') ? 'seaborn' : null,
 			code.includes('sympy') ? 'sympy' : null,
 			code.includes('tiktoken') ? 'tiktoken' : null,
