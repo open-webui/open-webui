@@ -514,18 +514,12 @@
 		try {
 			toast.info('Preparing CSV export...');
 
-			//
-
-			// Updated filter data to include search query
 			const filterData = {
 				group_id: group.id,
 				model_name: filteredModel || '',
-				// user_id: searchQuery || '', //NEW
 				skip: 0,
 				limit: 1000
 			};
-
-			console.log('📤 CSV Export filter data:', filterData); // Debug log
 
 			const response = await fetch('/api/v1/chats/export/csv', {
 				method: 'POST',

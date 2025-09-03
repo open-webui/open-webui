@@ -112,6 +112,7 @@
 			console.log('Extracted questions:', questionsArray);
 			return {
 				id: chat.id,
+				user_id: chat.user_id, // ← ADDED THIS LINE
 				chatName: chat.title || `Chat ${index + 1}`,
 				name: user.name || `User ${chat.user_id}`,
 				email: user.email || `user${chat.user_id}@example.com`,
@@ -524,18 +525,14 @@
 		try {
 			toast.info('Preparing CSV export...');
 
-			//
-
-			// Updated filter data to include search query
+			const uniqueUserIds = [...new Set(filteredMemberStats.map((chat) => chat.user_id))];
 			const filterData = {
 				group_id: group.id,
+				user_ids: uniqueUserIds, // ← ADDED THIS LINE
 				model_name: filteredModel || '',
-				// user_id: searchQuery || '', //NEW
 				skip: 0,
 				limit: 1000
 			};
-
-			console.log('📤 CSV Export filter data:', filterData); // Debug log
 
 			const response = await fetch('/api/v1/chats/export/csv', {
 				method: 'POST',
@@ -1287,7 +1284,7 @@
 		<div class="px-5 py-4 border-t border-gray-200 dark:border-gray-700 flex-shrink-0">
 			<div class="flex items-center justify-between">
 				<!-- Left side - Items info -->
-				<div class="text-sm text-gray-600 dark:text-gray-400">
+				<!-- <div class="text-sm text-gray-600 dark:text-gray-400">
 					{#if totalItems > 0}
 						Showing <span class="font-medium">{startIndex + 1}</span> to
 						<span class="font-medium">{Math.min(endIndex, totalItems)}</span>
@@ -1295,7 +1292,7 @@
 					{:else}
 						No conversations to display
 					{/if}
-				</div>
+				</div> -->
 
 				<!-- Center - Page navigation -->
 				<div class="flex items-center gap-3">
