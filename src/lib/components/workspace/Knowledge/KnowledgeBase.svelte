@@ -793,7 +793,12 @@
 											updateFileContentHandler();
 										}}
 									>
-										{isSaving ? $i18n.t('Running...') : $i18n.t('Save')}
+										{$i18n.t('Save')}
+										{#if isSaving}
+											<div class="ml-2 self-center">
+												<Spinner />
+											</div>
+										{/if}
 									</button>
 								</div>
 							</div>
@@ -851,7 +856,12 @@
 											updateFileContentHandler();
 										}}
 									>
-										{isSaving ? $i18n.t('Running...') : $i18n.t('Save')}
+										{$i18n.t('Save')}
+										{#if isSaving}
+											<div class="ml-2 self-center">
+												<Spinner />
+											</div>
+										{/if}
 									</button>
 								</div>
 							</div>
