@@ -124,10 +124,10 @@
 				}}
 			>
 				{#if pinned}
-					<BookmarkSlash strokeWidth="2" />
+					<BookmarkSlash strokeWidth="1.5" />
 					<div class="flex items-center">{$i18n.t('Unpin')}</div>
 				{:else}
-					<Bookmark strokeWidth="2" />
+					<Bookmark strokeWidth="1.5" />
 					<div class="flex items-center">{$i18n.t('Pin')}</div>
 				{/if}
 			</DropdownMenu.Item>
@@ -168,7 +168,7 @@
 					renameHandler();
 				}}
 			>
-				<Pencil strokeWidth="2" />
+				<Pencil strokeWidth="1.5" />
 				<div class="flex items-center">{$i18n.t('Rename')}</div>
 			</DropdownMenu.Item>
 
@@ -178,7 +178,7 @@
 					cloneChatHandler();
 				}}
 			>
-				<DocumentDuplicate strokeWidth="2" />
+				<DocumentDuplicate strokeWidth="1.5" />
 				<div class="flex items-center">{$i18n.t('Clone')}</div>
 			</DropdownMenu.Item>
 
@@ -188,7 +188,7 @@
 					archiveChatHandler();
 				}}
 			>
-				<ArchiveBox strokeWidth="2" />
+				<ArchiveBox strokeWidth="1.5" />
 				<div class="flex items-center">{$i18n.t('Archive')}</div>
 			</DropdownMenu.Item>
 
@@ -199,7 +199,7 @@
 						shareHandler();
 					}}
 				>
-					<Share />
+					<Share strokeWidth="1.5" />
 					<div class="flex items-center">{$i18n.t('Share')}</div>
 				</DropdownMenu.Item>
 			{/if}
@@ -208,7 +208,7 @@
 				<DropdownMenu.SubTrigger
 					class="flex gap-2 items-center px-3 py-2 text-sm  cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 rounded-md"
 				>
-					<Download strokeWidth="2" />
+					<Download strokeWidth="1.5" />
 
 					<div class="flex items-center">{$i18n.t('Download')}</div>
 				</DropdownMenu.SubTrigger>
@@ -244,11 +244,11 @@
 					deleteHandler();
 				}}
 			>
-				<GarbageBin strokeWidth="2" />
+				<GarbageBin strokeWidth="1.5" />
 				<div class="flex items-center">{$i18n.t('Delete')}</div>
 			</DropdownMenu.Item>
 
-			<hr class="border-gray-100 dark:border-gray-850 my-0.5" />
+			<hr class="border-gray-50 dark:border-gray-800 my-1" />
 
 			<div class="flex p-1">
 				<Tags
