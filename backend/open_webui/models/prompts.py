@@ -103,10 +103,16 @@ class PromptsTable:
 
     def get_prompts(self) -> list[PromptUserResponse]:
         with get_db() as db:
-            prompts = []
+            all_prompts = db.query(Prompt).order_by(Prompt.timestamp.desc()).all()
 
-            for prompt in db.query(Prompt).order_by(Prompt.timestamp.desc()).all():
-                user = Users.get_user_by_id(prompt.user_id)
+            user_ids = list(set(prompt.user_id for prompt in all_prompts))
+
+            users = Users.get_users_by_user_ids(user_ids) if user_ids else []
+            users_dict = {user.id: user for user in users}
+
+            prompts = []
+            for prompt in all_prompts:
+                user = users_dict.get(prompt.user_id)
                 prompts.append(
                     PromptUserResponse.model_validate(
                         {
