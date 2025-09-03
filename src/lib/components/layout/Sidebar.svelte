@@ -847,6 +847,7 @@
 					<Folder
 						className="px-2 mt-0.5"
 						name={$i18n.t('Channels')}
+						chevron={false}
 						dragAndDrop={false}
 						onAdd={async () => {
 							if ($user?.role === 'admin') {
@@ -873,6 +874,7 @@
 				<Folder
 					className="px-2 mt-0.5"
 					name={$i18n.t('Chats')}
+					chevron={false}
 					onAdd={() => {
 						showCreateFolderModal = true;
 					}}
