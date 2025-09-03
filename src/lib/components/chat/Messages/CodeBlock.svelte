@@ -416,11 +416,11 @@
 </script>
 
 <div>
-	<div class="relative {className} flex flex-col rounded-lg" dir="ltr">
+	<div class="relative {className} flex flex-col rounded-xl pt-2" dir="ltr">
 		{#if lang === 'mermaid'}
 			{#if mermaidHtml}
 				<SvgPanZoom
-					className=" border border-gray-100 dark:border-gray-850 rounded-lg max-h-fit overflow-hidden"
+					className=" border border-gray-100 dark:border-gray-850 rounded-xl max-h-fit overflow-hidden"
 					svg={mermaidHtml}
 					content={_token.text}
 				/>
@@ -428,14 +428,14 @@
 				<pre class="mermaid">{code}</pre>
 			{/if}
 		{:else}
-			<div class="text-text-300 absolute pl-4 py-1.5 text-xs font-medium dark:text-white">
+			<div class="text-text-300 absolute pl-4 text-xs font-medium dark:text-white">
 				{lang}
 			</div>
 
 			<div
-				class="sticky {stickyButtonsClassName} mb-1 py-1 pr-2.5 flex items-center justify-end z-10 text-xs text-black dark:text-white"
+				class="sticky {stickyButtonsClassName} mb-1 pr-2.5 flex items-center justify-end z-10 text-xs text-black dark:text-white"
 			>
-				<div class="flex items-center gap-0.5 translate-y-[1px]">
+				<div class="flex items-center gap-0.5">
 					<button
 						class="flex gap-1 items-center bg-none border-none bg-gray-50 dark:bg-black transition rounded-md px-1.5 py-0.5"
 						on:click={collapseCodeBlock}
@@ -506,13 +506,13 @@
 			</div>
 
 			<div
-				class="language-{lang} rounded-t-lg -mt-8 {editorClassName
+				class="language-{lang} rounded-t-xl -mt-8 {editorClassName
 					? editorClassName
 					: executing || stdout || stderr || result
 						? ''
-						: 'rounded-b-lg'} overflow-hidden"
+						: 'rounded-b-xl'} overflow-hidden"
 			>
-				<div class=" pt-7 bg-gray-50 dark:bg-black"></div>
+				<div class=" pt-8 bg-gray-50 dark:bg-black"></div>
 
 				{#if !collapsed}
 					{#if edit}
@@ -542,7 +542,7 @@
 					{/if}
 				{:else}
 					<div
-						class="bg-gray-50 dark:bg-black dark:text-white rounded-b-lg! pt-2 pb-2 px-4 flex flex-col gap-2 text-xs"
+						class="bg-gray-50 dark:bg-black dark:text-white rounded-b-xl! pt-2 pb-2 px-4 flex flex-col gap-2 text-xs"
 					>
 						<span class="text-gray-500 italic">
 							{$i18n.t('{{COUNT}} hidden lines', {
@@ -561,7 +561,7 @@
 
 				{#if executing || stdout || stderr || result || files}
 					<div
-						class="bg-gray-50 dark:bg-[#202123] dark:text-white rounded-b-lg! py-4 px-4 flex flex-col gap-2"
+						class="bg-gray-50 dark:bg-[#202123] dark:text-white rounded-b-xl! py-4 px-4 flex flex-col gap-2"
 					>
 						{#if executing}
 							<div class=" ">
