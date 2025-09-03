@@ -174,16 +174,22 @@ export const resetChatStatsById = async (token: string, chatId: string): Promise
 			'Content-Type': 'application/json',
 			Authorization: `Bearer ${token}`
 		}
-	}).catch((e) => {
-		error = e;
-		return null;
-	});
+	})
+		.then(async (res) => {
+			if (!res.ok) throw await res.json();
+			return res.ok;
+		})
+		.catch((err) => {
+			error = err;
+			console.error(err);
+			return false;
+		});
 
 	if (error) {
 		throw error;
 	}
 
-	return res?.ok ?? false;
+	return res;
 };
 
 export const getSharedChats = async (

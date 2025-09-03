@@ -530,7 +530,6 @@
 		if (res) {
 			toast.success(`${res.cleared} revoked link(s) cleared.`);
 			getSharedChatList(page, searchTerm, orderBy, direction, startDate, endDate, publicFilter, passwordFilter, statusFilter);
-			selectedSharedChatIds.set([]);
 		} else {
 			toast.error('Failed to clear revoked links.');
 		}

@@ -144,10 +144,13 @@
 			if (chatContent) {
 				console.log(chatContent);
 
-				selectedModels =
-					(chatContent?.models ?? undefined) !== undefined
+				if (chatContent?.models) {
+					selectedModels = Array.isArray(chatContent.models)
 						? chatContent.models
-						: [chatContent.models ?? ''];
+						: [chatContent.models];
+				} else {
+					selectedModels = [''];
+				}
 				history =
 					(chatContent?.history ?? undefined) !== undefined
 						? chatContent.history
