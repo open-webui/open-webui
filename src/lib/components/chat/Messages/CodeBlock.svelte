@@ -556,12 +556,12 @@
 			{#if !collapsed}
 				<div
 					id="plt-canvas-{id}"
-					class="bg-gray-50 dark:bg-[#202123] dark:text-white max-w-full overflow-x-auto scrollbar-hidden"
+					class="bg-gray-50 dark:bg-black dark:text-white max-w-full overflow-x-auto scrollbar-hidden"
 				/>
 
 				{#if executing || stdout || stderr || result || files}
 					<div
-						class="bg-gray-50 dark:bg-[#202123] dark:text-white rounded-b-xl! py-4 px-4 flex flex-col gap-2"
+						class="bg-gray-50 dark:bg-black dark:text-white rounded-b-xl! py-4 px-4 flex flex-col gap-2"
 					>
 						{#if executing}
 							<div class=" ">
