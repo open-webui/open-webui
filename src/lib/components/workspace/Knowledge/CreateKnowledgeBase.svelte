@@ -262,16 +262,11 @@
                         ALLOWED_FILE_EXTENSIONS: backendRAGConfig.ALLOWED_FILE_EXTENSIONS.split(',')
                             .map((ext) => ext.trim())
                             .filter((ext) => ext !== ''),
-                        DATALAB_MARKER_LANGS: backendRAGConfig.DATALAB_MARKER_LANGS.split(',')
-                            .map((code) => code.trim())
-                            .filter((code) => code !== '')
-                            .join(', '),
                         DOCLING_PICTURE_DESCRIPTION_LOCAL: JSON.parse(
                             backendRAGConfig.DOCLING_PICTURE_DESCRIPTION_LOCAL || '{}'
                         ),
                         DOCLING_PICTURE_DESCRIPTION_API: JSON.parse(backendRAGConfig.DOCLING_PICTURE_DESCRIPTION_API || '{}')
-                    }
-                    );
+                    });
 				}
 			}
         }
@@ -281,7 +276,21 @@
     onMount(async () => {
 		await setEmbeddingConfig();
 
-		RAGConfig = await getRAGConfig(localStorage.token);
+		const config = await getRAGConfig(localStorage.token);
+		config.ALLOWED_FILE_EXTENSIONS = (config?.ALLOWED_FILE_EXTENSIONS ?? []).join(', ');
+
+		config.DOCLING_PICTURE_DESCRIPTION_LOCAL = JSON.stringify(
+			config.DOCLING_PICTURE_DESCRIPTION_LOCAL ?? {},
+			null,
+			2
+		);
+		config.DOCLING_PICTURE_DESCRIPTION_API = JSON.stringify(
+			config.DOCLING_PICTURE_DESCRIPTION_API ?? {},
+			null,
+			2
+		);
+
+		RAGConfig = config;
 
 	});
 </script>
@@ -412,19 +421,6 @@
                             placeholder={$i18n.t('Enter Datalab Marker API Key')}
                             required={false}
                             bind:value={RAGConfig.DATALAB_MARKER_API_KEY}
-                        />
-                    </div>
-
-                    <div class="flex justify-between w-full mt-2">
-                        <div class="text-xs font-medium">
-                            {$i18n.t('Languages')}
-                        </div>
-
-                        <input
-                            class="text-sm bg-transparent outline-hidden"
-                            type="text"
-                            bind:value={RAGConfig.DATALAB_MARKER_LANGS}
-                            placeholder={$i18n.t('e.g.) en,fr,de')}
                         />
                     </div>
 
@@ -1171,7 +1167,6 @@
 					{/if}
 				</button>
 			</div>
-		</div>
 	</form>
 </div>
     

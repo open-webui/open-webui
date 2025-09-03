@@ -128,12 +128,12 @@ def query_doc_with_hybrid_search(
             log.warning(f"query_doc_with_hybrid_search:no_docs {collection_name}")
             return {"documents": [], "metadatas": [], "distances": []}
 
-            log.debug(f"query_doc_with_hybrid_search:doc {collection_name}")
-            bm25_retriever = BM25Retriever.from_texts(
-                texts=collection_result.documents[0],
-                metadatas=collection_result.metadatas[0],
-            )
-            bm25_retriever.k = k
+        log.debug(f"query_doc_with_hybrid_search:doc {collection_name}")
+        bm25_retriever = BM25Retriever.from_texts(
+            texts=collection_result.documents[0],
+            metadatas=collection_result.metadatas[0],
+        )
+        bm25_retriever.k = k
 
         vector_search_retriever = VectorSearchRetriever(
             collection_name=collection_name,
@@ -278,7 +278,7 @@ def query_collection(
     collection_names: list[str],
     queries: list[str],
     user,
-    ef,
+    embedding_function,
     embedding_model,
     k: int,
 ) -> dict:
@@ -316,7 +316,8 @@ def query_collection(
                 embedding_model = rag_config.get("embedding_model", embedding_model)
                 k = rag_config.get("TOP_K", k)
 
-            embedding_function=lambda query, prefix: ef[embedding_model](
+            ef = embedding_function[embedding_model]
+            embedding_function=lambda query, prefix: ef(
                 query, prefix=prefix, user=user
             )
             # Generate embeddings for each query using the collection's embedding function
@@ -344,13 +345,14 @@ def query_collection_with_hybrid_search(
     collection_names: list[str],
     queries: list[str],
     user,
-    ef,
+    embedding_function,
     k: int,
     reranking_function,
     k_reranker: int,
     r: float,
     hybrid_bm25_weight: float,
     embedding_model: str,
+    reranking_model: str,
 ) -> dict:
     results = []
     error = False
@@ -373,7 +375,17 @@ def query_collection_with_hybrid_search(
         f"Starting hybrid search for {len(queries)} queries in {len(collection_names)} collections..."
     )
 
-    def process_query(collection_name, query):
+    def process_query(collection_name, 
+                    query,
+                    user,
+                    embedding_function,
+                    k: int,
+                    reranking_function,
+                    k_reranker: int,
+                    r: float,
+                    hybrid_bm25_weight: float,
+                    embedding_model: str,
+                    reranking_model: str):
         try:
             from open_webui.models.knowledge import Knowledges
 
@@ -389,10 +401,15 @@ def query_collection_with_hybrid_search(
                 k_reranker = rag_config.get("TOP_K_RERANKER", k_reranker)
                 r = rag_config.get("RELEVANCE_THRESHOLD", r)
                 hybrid_bm25_weight = rag_config.get("HYBRID_BM25_WEIGHT", hybrid_bm25_weight)
-            
-            embedding_function=lambda query, prefix: ef[embedding_model](
+            ef = embedding_function[embedding_model]
+            embedding_function=lambda query, prefix: ef(
                 query, prefix=prefix, user=user
-            ),
+            )
+            rf = reranking_function[reranking_model]
+            reranking_function=lambda sentences: rf(
+                sentences, user=user
+            )
+
             
             result = query_doc_with_hybrid_search(
                 collection_name=collection_name,
@@ -400,7 +417,7 @@ def query_collection_with_hybrid_search(
                 query=query,
                 embedding_function=embedding_function,
                 k=k,
-                reranking_function=reranking_function[reranking_model],
+                reranking_function=reranking_function,
                 k_reranker=k_reranker,
                 r=r,
                 hybrid_bm25_weight=hybrid_bm25_weight,
@@ -420,7 +437,7 @@ def query_collection_with_hybrid_search(
     ]
 
     with ThreadPoolExecutor() as executor:
-        future_results = [executor.submit(process_query, cn, q) for cn, q in tasks]
+        future_results = [executor.submit(process_query, cn, q, user, embedding_function, k, reranking_function, k_reranker, r, hybrid_bm25_weight, embedding_model, reranking_model) for cn, q in tasks]
         task_results = [future.result() for future in future_results]
 
     for result, err in task_results:
@@ -499,7 +516,7 @@ def get_sources_from_items(
     request,
     items,
     queries,
-    ef,
+    embedding_function,
     k,
     reranking_function,
     k_reranker,
@@ -508,10 +525,11 @@ def get_sources_from_items(
     hybrid_search,
     full_context=False,
     user: Optional[UserModel] = None,
-    embedding_model=None
+    embedding_model=None,
+    reranking_model=None
 ):
     log.debug(
-        f"items: {items} {queries} {ef[embedding_model]} {reranking_function} {full_context}"
+        f"items: {items} {queries} {embedding_function[embedding_model]} {reranking_function} {full_context}"
     )
 
     extracted_collections = []
@@ -681,13 +699,14 @@ def get_sources_from_items(
                                 collection_names=collection_names,
                                 queries=queries,
                                 user=user,
-                                ef=ef,
+                                embedding_function=embedding_function,
                                 k=k,
                                 reranking_function=reranking_function,
                                 k_reranker=k_reranker,
                                 r=r,
                                 hybrid_bm25_weight=hybrid_bm25_weight,
                                 embedding_model=embedding_model,
+                                reranking_model=reranking_model,
                             )
                         except Exception as e:
                             log.debug(
@@ -700,7 +719,7 @@ def get_sources_from_items(
                             collection_names=collection_names,
                             queries=queries,
                             user=user,
-                            ef=ef,
+                            embedding_function=embedding_function,
                             k=k,
                             embedding_model=embedding_model
                         )

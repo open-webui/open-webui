@@ -307,24 +307,12 @@ async def update_embedding_config(
                 f"Updating embedding model: {rag_config.get('embedding_model')} to {form_data.embedding_model}"
             )
 
-            if [rag_config["embedding_engine"]] == "":
-                # unloads current internal embedding model and clears VRAM cache
-                request.app.state.ef[rag_config["embedding_model"]] = None
-                request.app.state.EMBEDDING_FUNCTION[rag_config["embedding_model"]] = None
-                import gc
-
-                gc.collect()
-                if DEVICE_TYPE == "cuda":
-                    import torch
-
-                    if torch.cuda.is_available():
-                        torch.cuda.empty_cache()
-
             # Check if model is in use elsewhere, otherwise free up memory
             in_use =  Knowledges.is_model_in_use_elsewhere(model=rag_config.get('embedding_model'), model_type="embedding_model", id=form_data.knowledge_id)
 
             if not in_use and not request.app.state.ef.get(request.app.state.config.RAG_EMBEDDING_MODEL) == rag_config.get("embedding_model") and rag_config.get("embedding_model"):
                 del request.app.state.ef[rag_config["embedding_model"]]
+                del request.app.state.EMBEDDING_FUNCTION[rag_config["embedding_model"]]
                 engine = rag_config["embedding_engine"]
                 target_model = rag_config["embedding_model"]
                 models_list = request.app.state.config.LOADED_EMBEDDING_MODELS[engine]
@@ -335,11 +323,15 @@ async def update_embedding_config(
                         models_list.remove(model)
                         
                 request.app.state.config._state["LOADED_EMBEDDING_MODELS"].save()
-
                 import gc
-                import torch
+
                 gc.collect()
-                torch.cuda.empty_cache()
+                if DEVICE_TYPE == "cuda":
+                    import torch
+
+                    if torch.cuda.is_available():
+                        torch.cuda.empty_cache()
+
 
             # Update embedding-related fields
             rag_config["embedding_engine"] = form_data.embedding_engine
@@ -427,26 +419,11 @@ async def update_embedding_config(
             }
         else:
             # Update the global configuration
-            log.info(
-                f"Updating embedding model: {request.app.state.config.RAG_EMBEDDING_MODEL} to {form_data.embedding_model}"
-            )
-            if request.app.state.config.RAG_EMBEDDING_ENGINE == "":
-                # unloads current internal embedding model and clears VRAM cache
-                request.app.state.ef = None
-                request.app.state.EMBEDDING_FUNCTION = None
-                import gc
-
-                gc.collect()
-                if DEVICE_TYPE == "cuda":
-                    import torch
-
-                    if torch.cuda.is_available():
-                        torch.cuda.empty_cache()
-
             # Check if model is in use elsewhere, otherwise free up memory
             in_use =  Knowledges.is_model_in_use_elsewhere(model=request.app.state.config.RAG_EMBEDDING_MODEL, model_type="embedding_model")
             if not in_use:
                 del request.app.state.ef[request.app.state.config.RAG_EMBEDDING_MODEL]
+                del request.app.state.EMBEDDING_FUNCTION[request.app.state.config.RAG_EMBEDDING_MODEL]
                 engine = request.app.state.config.RAG_EMBEDDING_ENGINE
                 target_model = request.app.state.config.RAG_EMBEDDING_MODEL
                 models_list = request.app.state.config.LOADED_EMBEDDING_MODELS[engine]
@@ -457,11 +434,14 @@ async def update_embedding_config(
                         models_list.remove(model)
                         
                 request.app.state.config._state["LOADED_EMBEDDING_MODELS"].save()
-
                 import gc
-                import torch
+
                 gc.collect()
-                torch.cuda.empty_cache()
+                if DEVICE_TYPE == "cuda":
+                    import torch
+
+                    if torch.cuda.is_available():
+                        torch.cuda.empty_cache()
 
             request.app.state.config.RAG_EMBEDDING_ENGINE = form_data.embedding_engine
             request.app.state.config.RAG_EMBEDDING_MODEL = form_data.embedding_model
@@ -504,6 +484,9 @@ async def update_embedding_config(
 
             # Update the embedding function
             if not form_data.embedding_model in request.app.state.ef:
+                log.info(
+                    f"Updating embedding model: {request.app.state.config.RAG_EMBEDDING_MODEL} to {form_data.embedding_model}"
+                )
                 request.app.state.ef[request.app.state.config.RAG_EMBEDDING_MODEL] = get_ef(
                     request.app.state.config.RAG_EMBEDDING_ENGINE,
                     request.app.state.config.RAG_EMBEDDING_MODEL,
@@ -861,6 +844,7 @@ async def update_rag_config(
             request.app.state.rf.get(rag_config["RAG_RERANKING_MODEL"]):
             if rag_config.get("RAG_RERANKING_MODEL"):
                 del request.app.state.rf[rag_config["RAG_RERANKING_MODEL"]]
+                del request.app.state.RERANKING_FUNCTION[rag_config["RAG_RERANKING_MODEL"]]
                 engine = request.app.state.config.RAG_RERANKING_ENGINE
                 target_model = rag_config["RAG_RERANKING_MODEL"]
                 models_list = request.app.state.config.LOADED_RERANKING_MODELS[engine]
@@ -871,11 +855,14 @@ async def update_rag_config(
                         models_list.remove(model_config)
                         
                 request.app.state.config._state["LOADED_RERANKING_MODELS"].save()
-
                 import gc
-                import torch
+
                 gc.collect()
-                torch.cuda.empty_cache()
+                if DEVICE_TYPE == "cuda":
+                    import torch
+
+                    if torch.cuda.is_available():
+                        torch.cuda.empty_cache()
 
         # Update only the provided fields in the rag_config
         for field, value in form_data.model_dump(exclude_unset=True).items():
@@ -885,9 +872,6 @@ async def update_rag_config(
                 rag_config[field] = value
 
 
-        log.info(
-            f"Updating reranking model: {request.app.state.config.RAG_RERANKING_MODEL} to {form_data.RAG_RERANKING_MODEL}"
-        )
         try:
             try:
                 if not rag_config["RAG_RERANKING_MODEL"] in request.app.state.rf and not rag_config["RAG_RERANKING_MODEL"] == "":
@@ -898,7 +882,11 @@ async def update_rag_config(
                         rag_config["RAG_EXTERNAL_RERANKER_API_KEY"],
                         True,
                     )
-
+                    
+                    if rag_config.get("RAG_RERANKING_MODEL"):
+                        log.info(
+                            f"Updating reranking model: {rag_config['RAG_RERANKING_MODEL']} to {form_data.RAG_RERANKING_MODEL}"
+                        )
                     # add model to state for reloading on startup
                     request.app.state.config.LOADED_RERANKING_MODELS[rag_config["RAG_RERANKING_ENGINE"]].append({
                         "RAG_RERANKING_MODEL": rag_config["RAG_RERANKING_MODEL"],
@@ -914,6 +902,13 @@ async def update_rag_config(
                     rag_config["LOADED_RERANKING_MODELS"] = request.app.state.config.LOADED_RERANKING_MODELS
                     rag_config["DOWNLOADED_RERANKING_MODELS"] = request.app.state.config.DOWNLOADED_RERANKING_MODELS
 
+
+                    request.app.state.RERANKING_FUNCTION[rag_config["RAG_RERANKING_MODEL"]] = get_reranking_function(
+                        rag_config["RAG_RERANKING_ENGINE"],
+                        rag_config["RAG_RERANKING_MODEL"],
+                        request.app.state.rf[rag_config["RAG_RERANKING_MODEL"]],
+                    )
+
             except Exception as e:
                 log.error(f"Error loading reranking model: {e}")
                 request.app.state.config.ENABLE_RAG_HYBRID_SEARCH = False
@@ -927,7 +922,7 @@ async def update_rag_config(
         Knowledges.update_rag_config_by_id(
             id=knowledge_base.id, rag_config=rag_config
         )
-
+                
         return rag_config
     else:
         # Update the global configuration
@@ -978,11 +973,14 @@ async def update_rag_config(
                     models_list.remove(model_config)
                     
             request.app.state.config._state["LOADED_RERANKING_MODELS"].save()
-
             import gc
-            import torch
+
             gc.collect()
-            torch.cuda.empty_cache()
+            if DEVICE_TYPE == "cuda":
+                import torch
+
+                if torch.cuda.is_available():
+                    torch.cuda.empty_cache()
 
         request.app.state.config.TOP_K_RERANKER = (
             form_data.TOP_K_RERANKER
@@ -1190,10 +1188,10 @@ async def update_rag_config(
                     rag_config["LOADED_RERANKING_MODELS"] = request.app.state.config.LOADED_RERANKING_MODELS
                     rag_config["DOWNLOADED_RERANKING_MODELS"] = request.app.state.config.DOWNLOADED_RERANKING_MODELS
 
-                request.app.state.RERANKING_FUNCTION = get_reranking_function(
+                request.app.state.RERANKING_FUNCTION[request.app.state.config.RAG_RERANKING_MODEL] = get_reranking_function(
                     request.app.state.config.RAG_RERANKING_ENGINE,
                     request.app.state.config.RAG_RERANKING_MODEL,
-                    request.app.state.rf,
+                    request.app.state.rf[request.app.state.config.RAG_RERANKING_MODEL],
                 )
             except Exception as e:
                 log.error(f"Error loading reranking model: {e}")

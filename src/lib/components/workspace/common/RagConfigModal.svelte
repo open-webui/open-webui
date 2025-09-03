@@ -254,15 +254,11 @@
             ALLOWED_FILE_EXTENSIONS: backendRAGConfig.ALLOWED_FILE_EXTENSIONS.split(',')
                 .map((ext) => ext.trim())
                 .filter((ext) => ext !== ''),
-            DATALAB_MARKER_LANGS: backendRAGConfig.DATALAB_MARKER_LANGS.split(',')
-                .map((code) => code.trim())
-                .filter((code) => code !== '')
-                .join(', '),
             DOCLING_PICTURE_DESCRIPTION_LOCAL: JSON.parse(
                 backendRAGConfig.DOCLING_PICTURE_DESCRIPTION_LOCAL || '{}'
             ),
             DOCLING_PICTURE_DESCRIPTION_API: JSON.parse(backendRAGConfig.DOCLING_PICTURE_DESCRIPTION_API || '{}')
-        })
+        });
 
         if (!localRAGConfig.BYPASS_EMBEDDING_AND_RETRIEVAL) {
             await embeddingModelUpdateHandler();
@@ -358,19 +354,6 @@
                         placeholder={$i18n.t('Enter Datalab Marker API Key')}
                         required={false}
                         bind:value={localRAGConfig.DATALAB_MARKER_API_KEY}
-                    />
-                </div>
-
-                <div class="flex justify-between w-full mt-2">
-                    <div class="text-xs font-medium">
-                        {$i18n.t('Languages')}
-                    </div>
-
-                    <input
-                        class="text-sm bg-transparent outline-hidden"
-                        type="text"
-                        bind:value={localRAGConfig.DATALAB_MARKER_LANGS}
-                        placeholder={$i18n.t('e.g.) en,fr,de')}
                     />
                 </div>
 

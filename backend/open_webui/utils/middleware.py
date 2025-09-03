@@ -669,7 +669,6 @@ async def chat_completion_files_handler(
 
             k=rag_config.get("TOP_K", request.app.state.config.TOP_K)
             reranking_model = rag_config.get("RAG_RERANKING_MODEL", request.app.state.config.RAG_RERANKING_MODEL)
-            reranking_function=request.app.state.rf[reranking_model] if reranking_model else None
             k_reranker=rag_config.get("TOP_K_RERANKER", request.app.state.config.TOP_K_RERANKER)
             r=rag_config.get("RELEVANCE_THRESHOLD", request.app.state.config.RELEVANCE_THRESHOLD)
             hybrid_bm25_weight=rag_config.get("HYBRID_BM25_WEIGHT", request.app.state.config.HYBRID_BM25_WEIGHT),
@@ -686,25 +685,17 @@ async def chat_completion_files_handler(
                         request=request,
                         items=files,
                         queries=queries,
-                        embedding_function=lambda query, prefix: request.app.state.EMBEDDING_FUNCTION(
-                            query, prefix=prefix, user=user
-                        ),
+                        embedding_function=request.app.state.EMBEDDING_FUNCTION,
                         k=k,
-                        reranking_function=(
-                            (
-                                lambda sentences: request.app.state.RERANKING_FUNCTION[reranking_model](
-                                    sentences, user=user
-                                )
-                            )
-                            if request.app.state.RERANKING_FUNCTION[reranking_model]
-                            else None
-                        ),
+                        reranking_function=request.app.state.RERANKING_FUNCTION,
                         k_reranker=k_reranker,
                         r=r,
                         hybrid_bm25_weight=hybrid_bm25_weight,
                         hybrid_search=hybrid_search,
                         full_context=full_context,
                         user=user,
+                        embedding_model=embedding_model,
+                        reranking_model=reranking_model
                     ),
                 )
         except Exception as e:
@@ -1055,6 +1046,7 @@ async def process_chat_payload(request, form_data, user, metadata, model):
                     context_string, 
                     prompt
                 ),
+                form_data["messages"],
             )
         else:
             form_data["messages"] = add_or_update_system_message(
@@ -1062,6 +1054,7 @@ async def process_chat_payload(request, form_data, user, metadata, model):
                     context_string, 
                     prompt
                 ),
+                form_data["messages"],
             )
 
     # If there are citations, add them to the data_items
