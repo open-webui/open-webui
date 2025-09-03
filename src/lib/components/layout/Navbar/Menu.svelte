@@ -349,7 +349,7 @@
 				<div class="flex items-center">{$i18n.t('Artifacts')}</div>
 			</DropdownMenu.Item>
 
-			<hr class="border-gray-100 dark:border-gray-800 my-1" />
+			<hr class="border-gray-50 dark:border-gray-800 my-1" />
 
 			{#if !$temporaryChatEnabled && ($user?.role === 'admin' || ($user.permissions?.chat?.share ?? true))}
 				<DropdownMenu.Item
