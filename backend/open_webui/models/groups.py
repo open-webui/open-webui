@@ -14,6 +14,20 @@ from sqlalchemy import BigInteger, Column, String, Text, JSON, func
 log = logging.getLogger(__name__)
 log.setLevel(SRC_LOG_LEVELS["MODELS"])
 
+
+def extract_domain_from_email(email: str) -> Optional[str]:
+    """Extract domain from email address. Returns None if invalid."""
+    if not email or "@" not in email:
+        return None
+    try:
+        parts = email.split("@")
+        if len(parts) != 2 or not parts[0] or not parts[1]:
+            return None
+        return parts[1].lower()
+    except (IndexError, AttributeError):
+        return None
+
+
 ####################
 # UserGroup DB Schema
 ####################
@@ -139,19 +153,44 @@ class GroupTable:
             ]
 
     def get_groups_by_member_id(self, user_id: str) -> list[GroupModel]:
+        """
+        Get groups where user is either:
+        1. Explicitly added to user_ids list, OR
+        2. User's email domain matches any allowed_domains in the group
+        """
+        from open_webui.models.users import (
+            Users,
+        )  # Import here to avoid circular imports
+
         with get_db() as db:
-            return [
-                GroupModel.model_validate(group)
-                for group in db.query(Group)
-                .filter(
-                    func.json_array_length(Group.user_ids) > 0
-                )  # Ensure array exists
-                .filter(
-                    Group.user_ids.cast(String).like(f'%"{user_id}"%')
-                )  # String-based check
-                .order_by(Group.updated_at.desc())
-                .all()
-            ]
+            # Get all groups
+            all_groups = db.query(Group).all()
+            matching_groups = []
+
+            # Get user info once for domain checking
+            user = Users.get_user_by_id(user_id)
+            user_domain = (
+                extract_domain_from_email(user.email) if user and user.email else None
+            )
+
+            for group in all_groups:
+                # Check 1: Explicit membership in user_ids
+                user_ids = group.user_ids or []
+                is_explicit_member = user_id in user_ids
+
+                # Check 2: Domain-based membership
+                is_domain_member = False
+                if user_domain and group.allowed_domains:
+                    allowed_domains = group.allowed_domains or []
+                    is_domain_member = user_domain in allowed_domains
+
+                # Include group if user matches either condition
+                if is_explicit_member or is_domain_member:
+                    matching_groups.append(group)
+
+            # Sort by updated_at and return as models
+            matching_groups.sort(key=lambda g: g.updated_at or 0, reverse=True)
+            return [GroupModel.model_validate(group) for group in matching_groups]
 
     def get_group_by_id(self, id: str) -> Optional[GroupModel]:
         try:
@@ -161,12 +200,33 @@ class GroupTable:
         except Exception:
             return None
 
-    def get_group_user_ids_by_id(self, id: str) -> Optional[str]:
+    def get_group_user_ids_by_id(self, id: str) -> Optional[list[str]]:
+        """
+        Get all user IDs for a group, including both:
+        1. Explicitly added users in user_ids
+        2. All users whose email domain matches allowed_domains
+        """
+        from open_webui.models.users import (
+            Users,
+        )  # Import here to avoid circular imports
+
         group = self.get_group_by_id(id)
-        if group:
-            return group.user_ids
-        else:
+        if not group:
             return None
+
+        # Start with explicit user_ids
+        user_ids = set(group.user_ids or [])
+
+        # Add domain-based users
+        if group.allowed_domains:
+            all_users = Users.get_users()
+            for user in all_users:
+                if user.email:
+                    user_domain = extract_domain_from_email(user.email)
+                    if user_domain and user_domain in group.allowed_domains:
+                        user_ids.add(user.id)
+
+        return list(user_ids)
 
     def update_group_by_id(
         self, id: str, form_data: GroupUpdateForm, overwrite: bool = False
@@ -187,152 +247,6 @@ class GroupTable:
 
                 # Get updated group
                 updated_group = self.get_group_by_id(id=id)
-
-                # Handle immediate domain-based user changes if domains were changed
-                if (
-                    updated_group
-                    and current_group
-                    and hasattr(form_data, "allowed_domains")
-                    and form_data.allowed_domains is not None
-                    and current_group.allowed_domains != updated_group.allowed_domains
-                ):
-
-                    from open_webui.utils.domain_group_assignment import (
-                        domain_assignment_service,
-                    )
-                    from open_webui.models.users import Users
-
-                    log.info(
-                        f"Domain change detected for group '{updated_group.name}'. Processing immediate user updates..."
-                    )
-
-                    # Handle user removals (users no longer matching domains)
-                    users_to_check = updated_group.user_ids or []
-                    users_removed = []
-
-                    for user_id in users_to_check:
-                        # Get user details
-                        user_info = Users.get_user_by_id(user_id)
-                        if user_info and user_info.email:
-                            # Skip non-user roles - they should not be auto-removed even if domains don't match
-                            # Only users with 'user' role are subject to automatic domain-based management
-                            if user_info.role != "user":
-                                log.debug(
-                                    f"Skipping domain-based removal for user {user_info.email} with non-user role: {user_info.role}"
-                                )
-                                continue
-
-                            # Check if user's domain still matches any allowed domains
-                            should_be_in_group = (
-                                domain_assignment_service.should_user_be_in_group(
-                                    user_info.email, updated_group.allowed_domains or []
-                                )
-                            )
-
-                            if not should_be_in_group:
-                                # Remove user immediately
-                                if domain_assignment_service.remove_user_from_group(
-                                    updated_group.id, user_id
-                                ):
-                                    users_removed.append(user_info.email)
-
-                    # Handle user additions (existing users who now match the new domains)
-                    users_added = []
-
-                    # Get all existing users with 'user' role
-                    all_users = domain_assignment_service.get_all_users()
-                    current_user_ids = set(updated_group.user_ids or [])
-
-                    for user in all_users:
-                        # Skip if user is already in the group
-                        if user["id"] in current_user_ids:
-                            continue
-
-                        # Check if user should be added based on new domains
-                        should_be_in_group = (
-                            domain_assignment_service.should_user_be_in_group(
-                                user["email"], updated_group.allowed_domains or []
-                            )
-                        )
-
-                        if should_be_in_group:
-                            # Add user immediately
-                            if domain_assignment_service.add_user_to_group(
-                                updated_group.id, user["id"]
-                            ):
-                                users_added.append(user["email"])
-
-                    # Log the immediate changes
-                    if users_removed:
-                        log.info(
-                            f"Immediately removed {len(users_removed)} users from group '{updated_group.name}': {users_removed}"
-                        )
-                    if users_added:
-                        log.info(
-                            f"Immediately added {len(users_added)} users to group '{updated_group.name}': {users_added}"
-                        )
-
-                    # Emit real-time updates via Socket.IO
-                    try:
-                        import asyncio
-                        from open_webui.socket.main import emit_group_membership_update
-
-                        # Get the current user count after changes
-                        final_group = self.get_group_by_id(id=id)
-                        current_user_count = (
-                            len(final_group.user_ids)
-                            if final_group and final_group.user_ids
-                            else 0
-                        )
-
-                        # Emit events for the changes
-                        if users_removed:
-                            # Try to emit the socket event (will fail gracefully if not in async context)
-                            try:
-                                loop = asyncio.get_event_loop()
-                                if loop.is_running():
-                                    # We're in an async context, schedule the emission
-                                    asyncio.create_task(
-                                        emit_group_membership_update(
-                                            updated_group.id,
-                                            updated_group.name,
-                                            current_user_count,
-                                            "removed",
-                                            users_removed,
-                                        )
-                                    )
-                            except:
-                                log.debug(
-                                    "Could not emit socket event for removals - not in async context"
-                                )
-
-                        if users_added:
-                            try:
-                                loop = asyncio.get_event_loop()
-                                if loop.is_running():
-                                    # We're in an async context, schedule the emission
-                                    asyncio.create_task(
-                                        emit_group_membership_update(
-                                            updated_group.id,
-                                            updated_group.name,
-                                            current_user_count,
-                                            "added",
-                                            users_added,
-                                        )
-                                    )
-                            except:
-                                log.debug(
-                                    "Could not emit socket event for additions - not in async context"
-                                )
-
-                    except ImportError:
-                        log.debug("Socket.IO not available for real-time updates")
-                    except Exception as e:
-                        log.warning(f"Failed to emit real-time updates: {e}")
-
-                    # Refresh the group to get the updated user list after all changes
-                    if users_removed or users_added:
-                        updated_group = self.get_group_by_id(id=id)
 
                 return updated_group
         except Exception as e:

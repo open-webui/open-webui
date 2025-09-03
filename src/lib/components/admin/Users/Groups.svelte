@@ -233,6 +233,8 @@
 
 					<div class="w-full">Users</div>
 
+					<div class="w-full">Domains</div>
+
 					<div class="w-full"></div>
 				</div>
 

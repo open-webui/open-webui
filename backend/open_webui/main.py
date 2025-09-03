@@ -48,6 +48,7 @@ from open_webui.routers import (
     auths,
     channels,
     chats,
+    domains,
     folders,
     configs,
     groups,
@@ -398,12 +399,6 @@ async def lifespan(app: FastAPI):
     # Start periodic cleanup task in background (should not affect app lifecycle)
     cleanup_task = asyncio.create_task(periodic_usage_pool_cleanup())
 
-    # Start domain assignment task in background
-    from open_webui.tasks import domain_assignment_worker
-
-    domain_assignment_task = asyncio.create_task(domain_assignment_worker())
-    log.info("Domain assignment background task started")
-
     # Add task completion callback to log if it exits
     def on_cleanup_done(task):
         try:
@@ -446,17 +441,6 @@ async def lifespan(app: FastAPI):
                 log.info("Periodic usage pool cleanup task cancelled successfully")
             except Exception as e:
                 log.error(f"Error cancelling cleanup task: {e}")
-
-        # Cancel the domain assignment task if it's still running
-        if not domain_assignment_task.done():
-            log.info("Cancelling domain assignment task")
-            domain_assignment_task.cancel()
-            try:
-                await domain_assignment_task
-            except asyncio.CancelledError:
-                log.info("Domain assignment task cancelled successfully")
-            except Exception as e:
-                log.error(f"Error cancelling domain assignment task: {e}")
 
         # Cleanup MCP manager and all its server processes
         if hasattr(app.state, "mcp_manager") and app.state.mcp_manager:
@@ -1025,6 +1009,7 @@ app.include_router(tools.router, prefix="/api/v1/tools", tags=["tools"])
 
 app.include_router(memories.router, prefix="/api/v1/memories", tags=["memories"])
 app.include_router(folders.router, prefix="/api/v1/folders", tags=["folders"])
+app.include_router(domains.router, prefix="/api/v1/domains", tags=["domains"])
 app.include_router(groups.router, prefix="/api/v1/groups", tags=["groups"])
 app.include_router(files.router, prefix="/api/v1/files", tags=["files"])
 app.include_router(functions.router, prefix="/api/v1/functions", tags=["functions"])

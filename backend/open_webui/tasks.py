@@ -9,15 +9,6 @@ tasks: Dict[str, asyncio.Task] = {}
 
 log = logging.getLogger(__name__)
 
-# Import domain assignment function at module level
-try:
-    from open_webui.utils.domain_group_assignment import run_domain_assignment_job
-
-    log.info("Successfully imported domain assignment module")
-except Exception as e:
-    log.exception(f"Failed to import domain assignment module: {e}")
-    run_domain_assignment_job = None
-
 
 def cleanup_task(task_id: str):
     """
@@ -71,87 +62,3 @@ async def stop_task(task_id: str):
         return {"status": True, "message": f"Task {task_id} successfully stopped."}
 
     return {"status": False, "message": f"Failed to stop task {task_id}."}
-
-
-# Domain Assignment Task
-domain_assignment_task_id = None
-
-
-async def domain_assignment_worker():
-    """
-    Background worker that periodically runs domain-based group assignments.
-    Runs every 30 seconds to check for new users that should be assigned to groups.
-    """
-    log.info("Domain assignment worker starting...")
-
-    # Import the async service here to avoid circular imports
-    try:
-        from open_webui.utils.domain_group_assignment import domain_assignment_service
-
-        log.info("Domain assignment service imported successfully")
-    except ImportError as e:
-        log.error(f"Failed to import domain assignment service: {e}")
-        return
-
-    log.info("Domain assignment worker started")
-
-    # Run immediately on startup
-    try:
-        stats = await domain_assignment_service.process_domain_assignments()
-        log.info(f"Initial domain assignment completed: {stats}")
-    except Exception as e:
-        log.exception(f"Error in initial domain assignment: {e}")
-
-    while True:
-        try:
-            # Wait 30 seconds before next run
-            await asyncio.sleep(30)
-
-            print("DOMAIN WORKER: Running periodic domain assignment...")
-            stats = await domain_assignment_service.process_domain_assignments()
-            print(f"DOMAIN WORKER: Completed: {stats}")
-        except Exception as e:
-            log.exception(f"Error in periodic domain assignment: {e}")
-
-
-def start_domain_assignment_task():
-    """
-    Start the domain assignment background task.
-    """
-    global domain_assignment_task_id
-
-    log.info("start_domain_assignment_task() called")
-
-    if (
-        domain_assignment_task_id
-        and not tasks.get(domain_assignment_task_id, {}).done()
-    ):
-        log.info("Domain assignment task is already running")
-        return domain_assignment_task_id
-
-    log.info("Starting domain assignment background task")
-
-    try:
-        domain_assignment_task_id, task = create_task(domain_assignment_worker())
-        log.info(f"Domain assignment task created with ID: {domain_assignment_task_id}")
-        return domain_assignment_task_id
-    except Exception as e:
-        log.exception(f"Error creating domain assignment task: {e}")
-        return None
-
-
-def stop_domain_assignment_task():
-    """
-    Stop the domain assignment background task.
-    """
-    global domain_assignment_task_id
-
-    if domain_assignment_task_id:
-        task = tasks.get(domain_assignment_task_id)
-        if task and not task.done():
-            task.cancel()
-            log.info("Domain assignment task stopped")
-            return True
-
-    log.info("No domain assignment task to stop")
-    return False

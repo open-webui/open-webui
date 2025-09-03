@@ -1,18 +1,19 @@
 import { WEBUI_API_BASE_URL } from '$lib/constants';
 
-export const createNewGroup = async (token: string, group: object) => {
+export const createDomain = async (
+	token: string,
+	domain: { domain: string; description?: string }
+) => {
 	let error = null;
 
-	const res = await fetch(`${WEBUI_API_BASE_URL}/groups/create`, {
+	const res = await fetch(`${WEBUI_API_BASE_URL}/domains/create`, {
 		method: 'POST',
 		headers: {
 			Accept: 'application/json',
 			'Content-Type': 'application/json',
 			authorization: `Bearer ${token}`
 		},
-		body: JSON.stringify({
-			...group
-		})
+		body: JSON.stringify(domain)
 	})
 		.then(async (res) => {
 			if (!res.ok) throw await res.json();
@@ -31,10 +32,10 @@ export const createNewGroup = async (token: string, group: object) => {
 	return res;
 };
 
-export const getGroups = async (token: string = '') => {
+export const getDomains = async (token: string = '') => {
 	let error = null;
 
-	const res = await fetch(`${WEBUI_API_BASE_URL}/groups/`, {
+	const res = await fetch(`${WEBUI_API_BASE_URL}/domains/`, {
 		method: 'GET',
 		headers: {
 			Accept: 'application/json',
@@ -46,9 +47,6 @@ export const getGroups = async (token: string = '') => {
 			if (!res.ok) throw await res.json();
 			return res.json();
 		})
-		.then((json) => {
-			return json;
-		})
 		.catch((err) => {
 			error = err.detail;
 			console.log(err);
@@ -62,10 +60,10 @@ export const getGroups = async (token: string = '') => {
 	return res;
 };
 
-export const getGroupById = async (token: string, id: string) => {
+export const getAvailableDomains = async (token: string = '') => {
 	let error = null;
 
-	const res = await fetch(`${WEBUI_API_BASE_URL}/groups/id/${id}`, {
+	const res = await fetch(`${WEBUI_API_BASE_URL}/domains/available`, {
 		method: 'GET',
 		headers: {
 			Accept: 'application/json',
@@ -77,12 +75,8 @@ export const getGroupById = async (token: string, id: string) => {
 			if (!res.ok) throw await res.json();
 			return res.json();
 		})
-		.then((json) => {
-			return json;
-		})
 		.catch((err) => {
 			error = err.detail;
-
 			console.log(err);
 			return null;
 		});
@@ -94,30 +88,28 @@ export const getGroupById = async (token: string, id: string) => {
 	return res;
 };
 
-export const updateGroupById = async (token: string, id: string, group: object) => {
+export const updateDomainById = async (
+	token: string,
+	domainId: string,
+	domain: { domain: string; description?: string }
+) => {
 	let error = null;
 
-	const res = await fetch(`${WEBUI_API_BASE_URL}/groups/id/${id}/update`, {
+	const res = await fetch(`${WEBUI_API_BASE_URL}/domains/id/${domainId}/update`, {
 		method: 'POST',
 		headers: {
 			Accept: 'application/json',
 			'Content-Type': 'application/json',
 			authorization: `Bearer ${token}`
 		},
-		body: JSON.stringify({
-			...group
-		})
+		body: JSON.stringify(domain)
 	})
 		.then(async (res) => {
 			if (!res.ok) throw await res.json();
 			return res.json();
 		})
-		.then((json) => {
-			return json;
-		})
 		.catch((err) => {
 			error = err.detail;
-
 			console.log(err);
 			return null;
 		});
@@ -129,10 +121,10 @@ export const updateGroupById = async (token: string, id: string, group: object) 
 	return res;
 };
 
-export const deleteGroupById = async (token: string, id: string) => {
+export const deleteDomainById = async (token: string, domainId: string) => {
 	let error = null;
 
-	const res = await fetch(`${WEBUI_API_BASE_URL}/groups/id/${id}/delete`, {
+	const res = await fetch(`${WEBUI_API_BASE_URL}/domains/id/${domainId}/delete`, {
 		method: 'DELETE',
 		headers: {
 			Accept: 'application/json',
@@ -144,12 +136,8 @@ export const deleteGroupById = async (token: string, id: string) => {
 			if (!res.ok) throw await res.json();
 			return res.json();
 		})
-		.then((json) => {
-			return json;
-		})
 		.catch((err) => {
 			error = err.detail;
-
 			console.log(err);
 			return null;
 		});

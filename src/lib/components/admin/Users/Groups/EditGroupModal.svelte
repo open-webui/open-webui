@@ -11,8 +11,6 @@
 	import UserPlusSolid from '$lib/components/icons/UserPlusSolid.svelte';
 	import WrenchSolid from '$lib/components/icons/WrenchSolid.svelte';
 
-	import { lockGroupForEditing, unlockGroupFromEditing } from '$lib/apis/groups';
-
 	export let onSubmit: Function = () => {};
 	export let onDelete: Function = () => {};
 
@@ -83,17 +81,6 @@
 
 	$: if (show) {
 		init();
-		// Lock the group for editing to prevent race conditions with background tasks
-		if (group?.id) {
-			lockGroupForEditing(localStorage.token, group.id).catch((error) => {
-				console.error('Failed to lock group for editing:', error);
-			});
-		}
-	} else if (group?.id) {
-		// Unlock the group when modal closes
-		unlockGroupFromEditing(localStorage.token, group.id).catch((error) => {
-			console.error('Failed to unlock group from editing:', error);
-		});
 	}
 
 	onMount(() => {
@@ -250,7 +237,7 @@
 							{:else if selectedTab == 'permissions'}
 								<Permissions bind:permissions />
 							{:else if selectedTab == 'users'}
-								<Users bind:userIds {users} />
+								<Users bind:userIds {users} disabled={allowedDomains.length > 0} />
 							{:else if selectedTab == 'domains'}
 								<Domains bind:allowedDomains />
 							{/if}
