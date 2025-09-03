@@ -4,10 +4,10 @@
 	import relativeTime from 'dayjs/plugin/relativeTime';
 	dayjs.extend(relativeTime);
 
-	import { onMount, getContext } from 'svelte';
+	import { onMount, onDestroy, getContext } from 'svelte';
 	import { goto } from '$app/navigation';
 
-	import { WEBUI_NAME, config, user, showSidebar, knowledge } from '$lib/stores';
+	import { WEBUI_NAME, config, user, showSidebar, knowledge, socket } from '$lib/stores';
 	import { WEBUI_BASE_URL } from '$lib/constants';
 
 	import Tooltip from '$lib/components/common/Tooltip.svelte';
@@ -106,6 +106,49 @@
 			defaultPermissions = await getUserDefaultPermissions(localStorage.token);
 		}
 		loaded = true;
+
+		// Set up Socket.IO event listeners for real-time group updates
+		if ($socket) {
+			$socket.on('group-membership-update', handleGroupMembershipUpdate);
+		}
+	});
+
+	// Handle real-time group membership updates
+	const handleGroupMembershipUpdate = async (data) => {
+		const { group_id, group_name, user_count, action, users_affected, users_count, timestamp } =
+			data;
+
+		// Find and update the group in our local state
+		const groupIndex = groups.findIndex((g) => g.id === group_id);
+		if (groupIndex !== -1) {
+			// Refresh the groups data to get the accurate user list
+			// This ensures we have the correct user IDs and count
+			try {
+				groups = await getGroups(localStorage.token);
+			} catch (error) {
+				console.error('Failed to refresh groups after membership update:', error);
+				// Fallback: just update the count if we can't fetch fresh data
+				groups[groupIndex] = {
+					...groups[groupIndex],
+					user_ids: Array(user_count)
+						.fill(null)
+						.map((_, i) => `placeholder_${i}`)
+				};
+				groups = [...groups];
+			}
+
+			// Show a toast notification
+			const actionText = action === 'added' ? 'added to' : 'removed from';
+			const userText = users_count === 1 ? 'user' : 'users';
+			toast.info(`${users_count} ${userText} ${actionText} group "${group_name}"`);
+		}
+	};
+
+	// Clean up Socket.IO event listeners when component is destroyed
+	onDestroy(() => {
+		if ($socket) {
+			$socket.off('group-membership-update', handleGroupMembershipUpdate);
+		}
 	});
 </script>
 

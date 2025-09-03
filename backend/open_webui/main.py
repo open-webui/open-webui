@@ -398,6 +398,12 @@ async def lifespan(app: FastAPI):
     # Start periodic cleanup task in background (should not affect app lifecycle)
     cleanup_task = asyncio.create_task(periodic_usage_pool_cleanup())
 
+    # Start domain assignment task in background
+    from open_webui.tasks import domain_assignment_worker
+
+    domain_assignment_task = asyncio.create_task(domain_assignment_worker())
+    log.info("Domain assignment background task started")
+
     # Add task completion callback to log if it exits
     def on_cleanup_done(task):
         try:
@@ -440,6 +446,17 @@ async def lifespan(app: FastAPI):
                 log.info("Periodic usage pool cleanup task cancelled successfully")
             except Exception as e:
                 log.error(f"Error cancelling cleanup task: {e}")
+
+        # Cancel the domain assignment task if it's still running
+        if not domain_assignment_task.done():
+            log.info("Cancelling domain assignment task")
+            domain_assignment_task.cancel()
+            try:
+                await domain_assignment_task
+            except asyncio.CancelledError:
+                log.info("Domain assignment task cancelled successfully")
+            except Exception as e:
+                log.error(f"Error cancelling domain assignment task: {e}")
 
         # Cleanup MCP manager and all its server processes
         if hasattr(app.state, "mcp_manager") and app.state.mcp_manager:
