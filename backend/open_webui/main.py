@@ -1649,8 +1649,18 @@ async def list_tasks_by_chat_id_endpoint(
 @app.get("/api/config")
 async def get_app_config(request: Request):
     user = None
-    if "token" in request.cookies:
+    token = None
+
+    auth_header = request.headers.get("Authorization")
+    if auth_header:
+        cred = get_http_authorization_cred(auth_header)
+        if cred:
+            token = cred.credentials
+
+    if not token and "token" in request.cookies:
         token = request.cookies.get("token")
+
+    if token:
         try:
             data = decode_token(token)
         except Exception as e:
