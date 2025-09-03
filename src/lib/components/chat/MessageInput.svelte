@@ -1745,7 +1745,7 @@
 												{/if}
 
 												{#each toggleFilters as filter, filterIdx (filter.id)}
-													<Tooltip content={filter?.description} placement="top">
+													<Tooltip content={$i18n.t(filter?.description)} placement="top">
 														<button
 															on:click|preventDefault={() => {
 																if (selectedFilterIds.includes(filter.id)) {
@@ -1779,7 +1779,7 @@
 															{/if}
 															<span
 																class="hidden @xl:block whitespace-nowrap overflow-hidden text-ellipsis leading-none pr-0.5"
-																>{filter?.name}</span
+																>{$i18n.t(filter?.name)}</span
 															>
 														</button>
 													</Tooltip>

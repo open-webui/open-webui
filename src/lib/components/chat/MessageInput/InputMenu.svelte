@@ -120,7 +120,7 @@
 							>
 								<div class="flex-1 truncate">
 									<Tooltip
-										content={tools[toolId]?.description ?? ''}
+										content={$i18n.t(tools[toolId]?.description) ?? ''}
 										placement="top-start"
 										className="flex flex-1 gap-2 items-center"
 									>
@@ -128,7 +128,7 @@
 											<WrenchSolid />
 										</div>
 
-										<div class=" truncate">{tools[toolId].name}</div>
+										<div class=" truncate">{$i18n.t(tools[toolId].name)}</div>
 									</Tooltip>
 								</div>
 
