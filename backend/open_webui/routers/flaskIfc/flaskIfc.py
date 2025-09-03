@@ -26,10 +26,10 @@ exe_path = "/usr/bin/tsi/v0.1.1*/bin/"
 
 DEFAULT_MODEL = "TinyLlama:latest"
 DEFAULT_BACKEND = "tSavorite"
-DEFAULT_TOKEN = 128 # This matches what we have on Open-WebUI
+DEFAULT_TOKEN = 20 # This matches what we have on Open-WebUI
 DEFAULT_REPEAT_PENALTY = 1.1
 DEFAULT_BATCH_SIZE = 512
-DEFAULT_TOP_K = 40
+DEFAULT_TOP_K = 4 # This matches what we have on Open-WebUI
 DEFAULT_TOP_P = 0.9
 DEFAULT_LAST_N = 64
 DEFAULT_CONTEXT_LENGTH = 2048
@@ -743,7 +743,7 @@ def chats():
                 response_text = result
                 start_phrases = [
                     "llama_perf_sampler_print: ",
-                    "GGML Tsavorite Profiling Results:"
+                    "OPU Profiling Results:"
                 ]
 
                 matched_phrase = next((phrase for phrase in start_phrases if phrase in response_text), None)
@@ -846,7 +846,7 @@ def chat():
                 response_text = result
                 start_phrases = [
                     "llama_perf_sampler_print: ",
-                    "GGML Tsavorite Profiling Results:"
+                    "OPU Profiling Results:"
                 ]
                 matched_phrase = next((phrase for phrase in start_phrases if phrase in response_text), None)
 
