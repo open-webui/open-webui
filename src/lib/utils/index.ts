@@ -983,17 +983,32 @@ export const bestMatchingLanguage = (supportedLanguages, preferredLanguages, def
 
 // Get the date in the format YYYY-MM-DD
 export const getFormattedDate = () => {
+	// Use Eastern Time (America/New_York) which handles EST/EDT automatically
 	const date = new Date();
-	return date.toISOString().split('T')[0];
+	const easternDate = new Intl.DateTimeFormat('en-CA', {
+		timeZone: 'America/New_York',
+		year: 'numeric',
+		month: '2-digit',
+		day: '2-digit'
+	}).format(date);
+	return easternDate;
 };
 
-// Get the time in the format HH:MM:SS
+// Get the time in the format HH:MM:SS AM/PM EST/EDT
 export const getFormattedTime = () => {
 	const date = new Date();
-	return date.toTimeString().split(' ')[0];
+	const easternTime = new Intl.DateTimeFormat('en-US', {
+		timeZone: 'America/New_York',
+		hour: '2-digit',
+		minute: '2-digit',
+		second: '2-digit',
+		hour12: true,
+		timeZoneName: 'short'
+	}).format(date);
+	return easternTime;
 };
 
-// Get the current date and time in the format YYYY-MM-DD HH:MM:SS
+// Get the current date and time in Eastern Time format
 export const getCurrentDateTime = () => {
 	return `${getFormattedDate()} ${getFormattedTime()}`;
 };
@@ -1003,11 +1018,14 @@ export const getUserTimezone = () => {
 	return Intl.DateTimeFormat().resolvedOptions().timeZone;
 };
 
-// Get the weekday
+// Get the weekday in Eastern Time
 export const getWeekday = () => {
 	const date = new Date();
-	const weekdays = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
-	return weekdays[date.getDay()];
+	const easternWeekday = new Intl.DateTimeFormat('en-US', {
+		timeZone: 'America/New_York',
+		weekday: 'long'
+	}).format(date);
+	return easternWeekday;
 };
 
 export const createMessagesList = (history, messageId) => {
