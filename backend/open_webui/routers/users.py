@@ -312,8 +312,10 @@ async def delete_own_account(user=Depends(get_verified_user)):
             detail=ERROR_MESSAGES.ACTION_PROHIBITED,
         )
 
-    result = Auths.delete_auth_by_id(user_id)
-    if result:
+    auth_result = Auths.delete_auth_by_id(user_id)
+    user_result = Users.delete_user_by_id(user_id)
+
+    if auth_result and user_result:
         return True
 
     raise HTTPException(
