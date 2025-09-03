@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { getContext, onMount } from 'svelte';
 	const i18n = getContext('i18n');
+	import { config } from '$lib/stores';
 
 	import Switch from '$lib/components/common/Switch.svelte';
 	import Tooltip from '$lib/components/common/Tooltip.svelte';
@@ -17,7 +18,9 @@
 			public_models: false,
 			public_knowledge: false,
 			public_prompts: false,
-			public_tools: false
+			public_tools: false,
+			public_chat: false,
+			shared_chats: true
 		},
 		chat: {
 			controls: true,
@@ -32,6 +35,7 @@
 			rate_response: true,
 			edit: true,
 			share: true,
+			clone: true,
 			export: true,
 			stt: true,
 			tts: true,
@@ -57,14 +61,19 @@
 	}
 
 	function fillMissingProperties(obj: any, defaults: any) {
-		return {
-			...defaults,
-			...obj,
-			workspace: { ...defaults.workspace, ...obj.workspace },
-			sharing: { ...defaults.sharing, ...obj.sharing },
-			chat: { ...defaults.chat, ...obj.chat },
-			features: { ...defaults.features, ...obj.features }
-		};
+		const newObj = { ...defaults };
+		if (obj) {
+			for (const key in defaults) {
+				if (obj.hasOwnProperty(key)) {
+					if (typeof defaults[key] === 'object' && defaults[key] !== null && !Array.isArray(defaults[key])) {
+						newObj[key] = { ...defaults[key], ...obj[key] };
+					} else {
+						newObj[key] = obj[key];
+					}
+				}
+			}
+		}
+		return newObj;
 	}
 
 	onMount(() => {
@@ -247,6 +256,23 @@
 			</div>
 			<Switch bind:state={permissions.sharing.public_tools} />
 		</div>
+
+		{#if $config.features.enable_shared_chats_access}
+			<div class="  flex w-full justify-between my-2 pr-2">
+				<div class=" self-center text-xs font-medium">
+					{$i18n.t('Shared Chats Page Access')}
+				</div>
+				<Switch bind:state={permissions.sharing.shared_chats} />
+			</div>
+			{#if permissions.sharing.shared_chats}
+				<div class="  flex w-full justify-between my-2 pr-2">
+					<div class=" self-center text-xs font-medium">
+						{$i18n.t('Allow Public Chat Sharing')}
+					</div>
+					<Switch bind:state={permissions.sharing.public_chat} />
+				</div>
+			{/if}
+		{/if}
 	</div>
 
 	<hr class=" border-gray-100 dark:border-gray-850 my-2" />
@@ -350,6 +376,14 @@
 			</div>
 
 			<Switch bind:state={permissions.chat.share} />
+		</div>
+
+		<div class="  flex w-full justify-between my-2 pr-2">
+			<div class=" self-center text-xs font-medium">
+				{$i18n.t('Allow Chat Clone')}
+			</div>
+
+			<Switch bind:state={permissions.chat.clone} />
 		</div>
 
 		<div class="  flex w-full justify-between my-2 pr-2">

@@ -33,6 +33,213 @@ export const createNewChat = async (token: string, chat: object, folderId: strin
 	return res;
 };
 
+export const getAllSharedChatsMeta = async (
+	token: string = '',
+	query: string = '',
+	startDate?: number,
+	endDate?: number,
+	is_public?: boolean | null,
+	password?: boolean | null,
+	status?: string
+): Promise<Array<{ id: string; status: string }>> => {
+	let error = null;
+
+	const params = new URLSearchParams();
+	if (query) params.append('query', query);
+	if (startDate) params.append('start_date', startDate.toString());
+	if (endDate) params.append('end_date', endDate.toString());
+	if (is_public !== null && is_public !== undefined)
+		params.append('is_public', is_public.toString());
+	if (password !== null && password !== undefined)
+		params.append('password', password.toString());
+	if (status) params.append('status', status);
+
+	const res = await fetch(`${WEBUI_API_BASE_URL}/chats/shared/meta?${params.toString()}`, {
+		method: 'GET',
+		headers: {
+			'Content-Type': 'application/json',
+			Authorization: `Bearer ${token}`
+		}
+	})
+		.then(async (res) => {
+			if (!res.ok) throw await res.json();
+			return res.json();
+		})
+		.catch((err) => {
+			console.log(err);
+			error = err.detail;
+			return null;
+		});
+
+	if (error) {
+		throw error;
+	}
+
+	return res;
+};
+
+export const verifySharedChatPassword = async (share_id: string, password: string) => {
+	let error = null;
+
+	const res = await fetch(`${WEBUI_API_BASE_URL}/chats/share/${share_id}/verify`, {
+		method: 'POST',
+		headers: {
+			'Content-Type': 'application/json'
+		},
+		body: JSON.stringify({
+			password: password
+		}),
+		credentials: 'include'
+	})
+		.then(async (res) => {
+			if (!res.ok) throw await res.json();
+			return res.json();
+		})
+		.catch((err) => {
+			error = err.detail;
+			console.error(err);
+			return null;
+		});
+
+	if (error) {
+		throw error;
+	}
+
+	return res;
+};
+
+export const clearRevokedSharedChats = async (token: string) => {
+	let error = null;
+
+	const res = await fetch(`${WEBUI_API_BASE_URL}/chats/shared/revoked`, {
+		method: 'DELETE',
+		headers: {
+			Accept: 'application/json',
+			'Content-Type': 'application/json',
+			...(token && { authorization: `Bearer ${token}` })
+		}
+	})
+		.then(async (res) => {
+			if (!res.ok) throw await res.json();
+			return res.json();
+		})
+		.catch((err) => {
+			error = err.detail;
+			console.error(err);
+			return null;
+		});
+
+	if (error) {
+		throw error;
+	}
+
+	return res;
+};
+
+export const restoreSharedChat = async (token: string, id: string) => {
+	let error = null;
+
+	const res = await fetch(`${WEBUI_API_BASE_URL}/chats/${id}/share/restore`, {
+		method: 'POST',
+		headers: {
+			Accept: 'application/json',
+			'Content-Type': 'application/json',
+			...(token && { authorization: `Bearer ${token}` })
+		}
+	})
+		.then(async (res) => {
+			if (!res.ok) throw await res.json();
+			return res.json();
+		})
+		.catch((err) => {
+			error = err;
+			console.error(err);
+			return null;
+		});
+
+	if (error) {
+		throw error;
+	}
+
+	return res;
+};
+
+export const resetChatStatsById = async (token: string, chatId: string): Promise<boolean> => {
+	let error = null;
+
+	const res = await fetch(`${WEBUI_API_BASE_URL}/chats/${chatId}/reset_stats`, {
+		method: 'POST',
+		headers: {
+			Accept: 'application/json',
+			'Content-Type': 'application/json',
+			Authorization: `Bearer ${token}`
+		}
+	}).catch((e) => {
+		error = e;
+		return null;
+	});
+
+	if (error) {
+		throw error;
+	}
+
+	return res?.ok ?? false;
+};
+
+export const getSharedChats = async (
+	token: string = '',
+	page: number = 1,
+	query: string = '',
+	orderBy?: string,
+	direction?: string,
+	startDate?: number,
+	endDate?: number,
+	is_public?: boolean | null,
+	password?: boolean | null,
+	status?: string,
+	is_snapshot?: boolean | null
+) => {
+	let error = null;
+
+	const params = new URLSearchParams();
+	params.append('page', page.toString());
+	if (query) params.append('query', query);
+	if (orderBy) params.append('order_by', orderBy);
+	if (direction) params.append('direction', direction);
+	if (startDate) params.append('start_date', startDate.toString());
+	if (endDate) params.append('end_date', endDate.toString());
+	if (is_public !== null && is_public !== undefined)
+		params.append('is_public', is_public.toString());
+	if (password !== null && password !== undefined)
+		params.append('password', password.toString());
+	if (status) params.append('status', status);
+	if (is_snapshot !== null && is_snapshot !== undefined)
+		params.append('is_snapshot', is_snapshot.toString());
+
+	const res = await fetch(`${WEBUI_API_BASE_URL}/chats/shared?${params.toString()}`, {
+		method: 'GET',
+		headers: {
+			'Content-Type': 'application/json',
+			Authorization: `Bearer ${token}`
+		}
+	})
+		.then(async (res) => {
+			if (!res.ok) throw await res.json();
+			return res.json();
+		})
+		.catch((err) => {
+			console.log(err);
+			error = err.detail;
+			return null;
+		});
+
+	if (error) {
+		throw error;
+	}
+
+	return res;
+};
+
 export const importChat = async (
 	token: string,
 	chat: object,
@@ -524,7 +731,8 @@ export const getChatByShareId = async (token: string, share_id: string) => {
 			Accept: 'application/json',
 			'Content-Type': 'application/json',
 			...(token && { authorization: `Bearer ${token}` })
-		}
+		},
+		credentials: 'include'
 	})
 		.then(async (res) => {
 			if (!res.ok) throw await res.json();
@@ -702,7 +910,23 @@ export const cloneSharedChatById = async (token: string, id: string) => {
 	return res;
 };
 
-export const shareChatById = async (token: string, id: string) => {
+export const shareChatById = async (
+	token: string,
+	id: string,
+	share_id: string = '',
+	expires_at: number | null = null,
+	expire_on_views: number | null = null,
+	max_clones: number | null = null,
+	is_public: boolean = false,
+	display_username: boolean = true,
+	allow_cloning: boolean = true,
+	keep_link_active_after_max_clones: boolean = false,
+	password: string | null = null,
+	current_password: string | null = null,
+	share_show_qr_code: boolean = false,
+	share_use_gradient: boolean = false,
+	is_snapshot: boolean = false
+) => {
 	let error = null;
 
 	const res = await fetch(`${WEBUI_API_BASE_URL}/chats/${id}/share`, {
@@ -711,14 +935,26 @@ export const shareChatById = async (token: string, id: string) => {
 			Accept: 'application/json',
 			'Content-Type': 'application/json',
 			...(token && { authorization: `Bearer ${token}` })
-		}
+		},
+		body: JSON.stringify({
+			share_id: share_id,
+			expires_at: expires_at,
+			expire_on_views: expire_on_views,
+			max_clones: max_clones,
+			is_public: is_public,
+			display_username: display_username,
+			allow_cloning: allow_cloning,
+			keep_link_active_after_max_clones: keep_link_active_after_max_clones,
+			password: password,
+			current_password: current_password,
+			share_show_qr_code: share_show_qr_code,
+			share_use_gradient: share_use_gradient,
+			is_snapshot: is_snapshot
+		})
 	})
 		.then(async (res) => {
 			if (!res.ok) throw await res.json();
 			return res.json();
-		})
-		.then((json) => {
-			return json;
 		})
 		.catch((err) => {
 			error = err;
@@ -1021,6 +1257,62 @@ export const deleteTagsById = async (token: string, id: string) => {
 		.catch((err) => {
 			error = err;
 
+			console.error(err);
+			return null;
+		});
+
+	if (error) {
+		throw error;
+	}
+
+	return res;
+};
+
+export const revokeAllSharedChats = async (token: string) => {
+	let error = null;
+
+	const res = await fetch(`${WEBUI_API_BASE_URL}/chats/shared/all`, {
+		method: 'DELETE',
+		headers: {
+			Accept: 'application/json',
+			'Content-Type': 'application/json',
+			...(token && { authorization: `Bearer ${token}` })
+		}
+	})
+		.then(async (res) => {
+			if (!res.ok) throw await res.json();
+			return res.json();
+		})
+		.catch((err) => {
+			error = err.detail;
+			console.error(err);
+			return null;
+		});
+
+	if (error) {
+		throw error;
+	}
+
+	return res;
+};
+
+export const resetAllChatStats = async (token: string) => {
+	let error = null;
+
+	const res = await fetch(`${WEBUI_API_BASE_URL}/chats/shared/all/reset_stats`, {
+		method: 'POST',
+		headers: {
+			Accept: 'application/json',
+			'Content-Type': 'application/json',
+			...(token && { authorization: `Bearer ${token}` })
+		}
+	})
+		.then(async (res) => {
+			if (!res.ok) throw await res.json();
+			return res.json();
+		})
+		.catch((err) => {
+			error = err.detail;
 			console.error(err);
 			return null;
 		});

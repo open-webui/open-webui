@@ -56,6 +56,7 @@
 	export let autoScroll;
 
 	export let onSelect = (e) => {};
+	export let displayUsername = true;
 
 	export let messagesCount: number | null = 20;
 	let messagesLoading = false;
@@ -448,6 +449,7 @@
 								{addMessages}
 								{triggerScroll}
 								{readOnly}
+								{displayUsername}
 								{editCodeBlock}
 								{topPadding}
 							/>

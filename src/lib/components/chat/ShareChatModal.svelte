@@ -1,30 +1,608 @@
 <script lang="ts">
-	import { getContext, onMount } from 'svelte';
-	import { models, config } from '$lib/stores';
+	import { getContext, onMount, tick } from 'svelte';
+	import {
+		models,
+		config,
+		sharedChats as sharedChatsStore,
+		sharedChatsUpdated,
+		user
+	} from '$lib/stores';
 
 	import { toast } from 'svelte-sonner';
-	import { deleteSharedChatById, getChatById, shareChatById } from '$lib/apis/chats';
+	import {
+		deleteSharedChatById,
+		getChatById,
+		shareChatById,
+		restoreSharedChat
+	} from '$lib/apis/chats';
 	import { copyToClipboard } from '$lib/utils';
+	import { v4 as uuidv4 } from 'uuid';
 
 	import Modal from '../common/Modal.svelte';
+	import Tooltip from '../common/Tooltip.svelte';
+	import Switch from '../common/Switch.svelte';
+	import SensitiveInput from '../common/SensitiveInput.svelte';
 	import Link from '../icons/Link.svelte';
 	import XMark from '$lib/components/icons/XMark.svelte';
+	import ArrowPath from '$lib/components/icons/ArrowPath.svelte';
+	import ArrowDownTray from '$lib/components/icons/ArrowDownTray.svelte';
+	import ArrowUpTray from '$lib/components/icons/ArrowUpTray.svelte';
+	import Calendar from '$lib/components/icons/Calendar.svelte';
+	import Eye from '$lib/components/icons/Eye.svelte';
+	import GarbageBin from '$lib/components/icons/GarbageBin.svelte';
+	import Clipboard from '$lib/components/icons/Clipboard.svelte';
+	import ChevronDown from '$lib/components/icons/ChevronDown.svelte';
+	import LockClosed from '$lib/components/icons/LockClosed.svelte';
+	import QuestionMarkCircle from '$lib/components/icons/QuestionMarkCircle.svelte';
+	import Spinner from '../common/Spinner.svelte';
+	import dayjs from 'dayjs';
+	import customParseFormat from 'dayjs/plugin/customParseFormat';
+	dayjs.extend(customParseFormat);
+
+	const getRandomGradient = () => {
+		const hue = Math.floor(Math.random() * 360);
+		const saturation = '70%';
+		const lightness = '50%';
+
+		const color1 = `hsl(${hue}, ${saturation}, ${lightness})`;
+
+		const hue2 = (hue + Math.floor(Math.random() * 121) + 120) % 360; // Shift between 120 and 240 degrees
+		const color2 = `hsl(${hue2}, ${saturation}, ${lightness})`;
+
+		const degree = Math.floor(Math.random() * 360);
+		return `linear-gradient(${degree}deg, ${color1}, ${color2})`;
+	};
+
+	let previewGradient = '';
+	let downloadGradient = '';
+
+	const formatTimeRemaining = (expires_at) => {
+		const now = new Date();
+		const expirationDate = new Date(expires_at * 1000);
+		const secondsRemaining = (expirationDate.getTime() - now.getTime()) / 1000;
+
+		if (secondsRemaining <= 0) {
+			return $i18n.t('Expired');
+		}
+
+		const days = Math.floor(secondsRemaining / (3600 * 24));
+		const years = Math.floor(days / 365);
+		if (years > 0) {
+			return years === 1
+				? $i18n.t('in {{count}} year', { count: years })
+				: $i18n.t('in {{count}} years', { count: years });
+		}
+
+		const weeks = Math.floor(days / 7);
+		if (weeks > 0) {
+			return weeks === 1
+				? $i18n.t('in {{count}} week', { count: weeks })
+				: $i18n.t('in {{count}} weeks', { count: weeks });
+		}
+
+		if (days > 0) {
+			return days === 1
+				? $i18n.t('in {{count}} day', { count: days })
+				: $i18n.t('in {{count}} days', { count: days });
+		}
+
+		const hours = Math.floor(secondsRemaining / 3600);
+		if (hours > 0) {
+			return hours === 1
+				? $i18n.t('in {{count}} hour', { count: hours })
+				: $i18n.t('in {{count}} hours', { count: hours });
+		}
+
+		const minutes = Math.floor(secondsRemaining / 60);
+		if (minutes > 0) {
+			return minutes === 1
+				? $i18n.t('in {{count}} minute', { count: minutes })
+				: $i18n.t('in {{count}} minutes', { count: minutes });
+		}
+
+		const seconds = Math.floor(secondsRemaining);
+		return seconds === 1
+			? $i18n.t('in {{count}} second', { count: seconds })
+			: $i18n.t('in {{count}} seconds', { count: seconds });
+	};
 
 	export let chatId;
+	export let closeOnDelete = false;
 
 	let chat = null;
-	let shareUrl = null;
+	let timeRemaining = '';
+	let intervalId = null;
+
+	let previewQrCodeUrl = '';
+	let downloadQrCodeUrl = '';
+
+	let transparentPreviewQrCodeUrl = '';
+	let solidPreviewQrCodeUrl = '';
+	let transparentDownloadQrCodeUrl = '';
+	let solidDownloadQrCodeUrl = '';
+
+	let share_id = '';
+	$: shareUrl = share_id ? `${window.location.origin}/s/${share_id}` : null;
+	let initial_share_id = '';
+	let expirationOption = 'never';
+	let customExpirationDate = '';
+	let minDateTime = '';
+	let expireOnViewsCount = 1;
+	let initialExpirationOption = 'never';
+	let initialCustomExpirationDate = '';
+	let initialExpireOnViewsCount = 1;
+	let is_public = false;
+	let initial_is_public = false;
+	let display_username = true;
+	let initial_display_username = true;
+	let allow_cloning = true;
+	let initial_allow_cloning = true;
+	let password = '';
+	let initial_password = '';
+	let current_password = '';
+	let removePasswordClicked = false;
+	let useGradient = false;
+	let is_live = false;
+	let initial_is_live = false;
+	let showQrCode = false;
+	let showExpandedQr = false;
+	let currentViews = 0;
+	let currentClones = 0;
+	let maxClonesCount = 1;
+	let initialMaxClonesCount = 1;
+	let keep_link_active_after_max_clones = false;
+	let initial_keep_link_active_after_max_clones = false;
 	const i18n = getContext('i18n');
 
+	let isExpirationDropdownOpen = false;
+
+	let expirationOptions = [];
+	$: expirationOptions = [
+		{ value: 'never', label: $i18n.t('Never') },
+		{ value: '1h', label: $i18n.t('1 Hour') },
+		{ value: '24h', label: $i18n.t('24 Hours') },
+		{ value: '7d', label: $i18n.t('7 Days') },
+		{ value: 'custom', label: $i18n.t('Custom') }
+	];
+
+	$: selectedExpirationIndex = expirationOptions.findIndex((o) => o.value === expirationOption);
+
+	const handleExpirationScroll = (event) => {
+		event.preventDefault();
+		const direction = event.deltaY < 0 ? -1 : 1;
+		let newIndex = selectedExpirationIndex + direction;
+
+		if (newIndex < 0) {
+			newIndex = expirationOptions.length - 1;
+		} else if (newIndex >= expirationOptions.length) {
+			newIndex = 0;
+		}
+		expirationOption = expirationOptions[newIndex].value;
+	};
+
+	function clickOutside(node) {
+		const handleClick = (event) => {
+			if (node && !node.contains(event.target) && !event.defaultPrevented) {
+				isExpirationDropdownOpen = false;
+			}
+		};
+		document.addEventListener('click', handleClick, true);
+		return {
+			destroy() {
+				document.removeEventListener('click', handleClick, true);
+			}
+		};
+	}
+
+	const handleExpirationChange = () => {
+		if (expirationOption === 'custom') {
+			const date = dayjs(customExpirationDate, 'YYYY-MM-DDTHH:mm');
+			if (!customExpirationDate || date.isBefore(dayjs())) {
+				customExpirationDate = dayjs().add(1, 'hour').format('YYYY-MM-DDTHH:mm');
+			}
+		}
+	};
+
+	$: if (expirationOption) {
+		handleExpirationChange();
+	}
+
+	const validateViewsCount = () => {
+		const MAX_INT = 2147483647;
+		let count = Number(expireOnViewsCount);
+
+		if (count > MAX_INT) {
+			toast.warning(`Value cannot exceed ${MAX_INT}.`);
+			count = MAX_INT;
+		}
+
+		if (count > 0 && count <= currentViews) {
+			toast.warning(
+				`Max views must be greater than the current view count (${currentViews}). Setting to ${
+					currentViews + 1
+				}.`
+			);
+			expireOnViewsCount = currentViews + 1;
+		} else {
+			expireOnViewsCount = count;
+		}
+	};
+
+	const validateClonesCount = () => {
+		const MAX_INT = 2147483647;
+		let count = Number(maxClonesCount);
+
+		if (count > MAX_INT) {
+			toast.warning(`Value cannot exceed ${MAX_INT}.`);
+			count = MAX_INT;
+		}
+
+		if (count > 0 && count <= currentClones) {
+			toast.warning(
+				`Max clones must be greater than the current clone count (${currentClones}). Setting to ${
+					currentClones + 1
+				}.`
+			);
+			maxClonesCount = currentClones + 1;
+		} else {
+			maxClonesCount = count;
+		}
+	};
+
+	const handleViewsScroll = (event) => {
+		const MAX_INT = 2147483647;
+		const direction = event.deltaY < 0 ? 1 : -1;
+		let newCount = Number(expireOnViewsCount) + direction;
+
+		if (newCount > MAX_INT) {
+			newCount = MAX_INT;
+		}
+		if (newCount < 0) {
+			newCount = 0;
+		}
+		// If scrolling down, and we are about to enter the "invalid" zone (1 to currentViews)
+		if (direction === -1 && newCount > 0 && newCount <= currentViews) {
+			newCount = 0;
+		}
+		// If scrolling up from 0 into the invalid zone
+		if (direction === 1 && expireOnViewsCount === 0 && newCount > 0 && newCount <= currentViews) {
+			newCount = currentViews + 1;
+		}
+		expireOnViewsCount = newCount;
+	};
+
+	const handleClonesScroll = (event) => {
+		const MAX_INT = 2147483647;
+		const direction = event.deltaY < 0 ? 1 : -1;
+		let newCount = Number(maxClonesCount) + direction;
+
+		if (newCount > MAX_INT) {
+			newCount = MAX_INT;
+		}
+		if (newCount < 0) {
+			newCount = 0;
+		}
+		// If scrolling down, and we are about to enter the "invalid" zone (1 to currentClones)
+		if (direction === -1 && newCount > 0 && newCount <= currentClones) {
+			newCount = 0;
+		}
+		// If scrolling up from 0 into the invalid zone
+		if (direction === 1 && maxClonesCount === 0 && newCount > 0 && newCount <= currentClones) {
+			newCount = currentClones + 1;
+		}
+		maxClonesCount = newCount;
+	};
+
+	let expirationDateParts = {
+		year: '',
+		month: '',
+		day: '',
+		hour: '',
+		minute: '',
+		ampm: ''
+	};
+
+	$: {
+		if (customExpirationDate) {
+			const date = dayjs(customExpirationDate, 'YYYY-MM-DDTHH:mm');
+			if (date.isValid()) {
+				expirationDateParts = {
+					year: date.format('YYYY'),
+					month: date.format('MM'),
+					day: date.format('DD'),
+					hour: date.format('hh'),
+					minute: date.format('mm'),
+					ampm: date.format('A')
+				};
+			}
+		}
+	}
+
+
+	const handleDateScroll = (event, part) => {
+		event.preventDefault();
+
+		if (!customExpirationDate) {
+			// For empty dates, set to current time before adjusting
+			customExpirationDate = dayjs().format('YYYY-MM-DDTHH:mm');
+		}
+
+		const date = dayjs(customExpirationDate, 'YYYY-MM-DDTHH:mm');
+		const direction = event.deltaY < 0 ? 1 : -1; // scroll up increases, scroll down decreases
+
+		let newDate;
+
+		if (part === 'month') {
+			newDate = date.add(direction, 'month');
+		} else if (part === 'day') {
+			newDate = date.add(direction, 'day');
+		} else if (part === 'year') {
+			newDate = date.add(direction, 'year');
+		} else if (part === 'hour') {
+			newDate = date.add(direction, 'hour');
+		} else if (part === 'minute') {
+			newDate = date.add(direction, 'minute');
+		} else if (part === 'ampm') {
+			const currentHour = date.hour();
+			if (currentHour < 12) {
+				newDate = date.hour(currentHour + 12); // Switch to PM
+			} else {
+				newDate = date.hour(currentHour - 12); // Switch to AM
+			}
+		}
+
+		if (newDate && newDate.isValid() && !newDate.isBefore(dayjs())) {
+			customExpirationDate = newDate.format('YYYY-MM-DDTHH:mm');
+		}
+	};
+
+	const openDatePicker = () => {
+		const picker = document.getElementById('hidden-datetime-picker');
+		if (picker) {
+			try {
+				picker.showPicker();
+			} catch (error) {
+				// Fallback for browsers that don't support showPicker()
+				console.error('showPicker() is not supported by this browser, falling back to click().', error);
+				picker.click();
+			}
+		}
+	};
+
+	const debounce = (func, timeout = 300) => {
+		let timer;
+		return (...args) => {
+			clearTimeout(timer);
+			timer = setTimeout(() => {
+				func.apply(this, args);
+			}, timeout);
+		};
+	};
+
+	const generateQrCodesImmediate = async (url) => {
+		if (url) {
+			const generateTransparentQRCode = async (url, width) => {
+				return await QRCode.toDataURL(url, {
+					width,
+					color: {
+						dark: '#000000',
+						light: '#00000000' // Transparent background
+					}
+				});
+			};
+
+			const generateSolidQRCode = async (url, width) => {
+				return await QRCode.toDataURL(url, {
+					width,
+					color: {
+						light: '#FFFFFF' // White background
+					}
+				});
+			};
+
+			[
+				transparentPreviewQrCodeUrl,
+				solidPreviewQrCodeUrl,
+				transparentDownloadQrCodeUrl,
+				solidDownloadQrCodeUrl
+			] = await Promise.all([
+				generateTransparentQRCode(url, 192),
+				generateSolidQRCode(url, 192),
+				generateTransparentQRCode(url, 512),
+				generateSolidQRCode(url, 512)
+			]);
+
+			if (useGradient && !previewGradient) {
+				previewGradient = getRandomGradient();
+			}
+			downloadGradient = previewGradient;
+
+			updateDisplayedQrCode();
+		} else {
+			previewQrCodeUrl = '';
+			downloadQrCodeUrl = '';
+			transparentPreviewQrCodeUrl = '';
+			solidPreviewQrCodeUrl = '';
+			transparentDownloadQrCodeUrl = '';
+			solidDownloadQrCodeUrl = '';
+			previewGradient = '';
+			downloadGradient = '';
+		}
+	};
+
+	const generateQrCodesDebounced = debounce(generateQrCodesImmediate, 500);
+
+	$: useGradient, updateDisplayedQrCode();
+
+	function updateDisplayedQrCode() {
+		if (useGradient) {
+			previewQrCodeUrl = transparentPreviewQrCodeUrl;
+			downloadQrCodeUrl = transparentDownloadQrCodeUrl;
+			if (!previewGradient) {
+				previewGradient = getRandomGradient();
+			}
+			downloadGradient = previewGradient;
+		} else {
+			previewQrCodeUrl = solidPreviewQrCodeUrl;
+			downloadQrCodeUrl = solidDownloadQrCodeUrl;
+			previewGradient = '';
+			downloadGradient = '';
+		}
+	}
+
+	const formatISODate = (timestamp) => {
+		const date = new Date(timestamp * 1000);
+		const year = date.getFullYear();
+		const month = (date.getMonth() + 1).toString().padStart(2, '0');
+		const day = date.getDate().toString().padStart(2, '0');
+		const hours = date.getHours().toString().padStart(2, '0');
+		const minutes = date.getMinutes().toString().padStart(2, '0');
+		return `${year}-${month}-${day}T${hours}:${minutes}`;
+	};
+
+	const expirationSettingsChanged = () => {
+		if (expirationOption !== initialExpirationOption) {
+			return true;
+		}
+		if (expirationOption === 'custom' && customExpirationDate !== initialCustomExpirationDate) {
+			return true;
+		}
+		if (expireOnViewsCount !== initialExpireOnViewsCount) {
+			return true;
+		}
+		if (maxClonesCount !== initialMaxClonesCount) {
+			return true;
+		}
+		if (is_public !== initial_is_public) {
+			return true;
+		}
+		if (display_username !== initial_display_username) {
+			return true;
+		}
+		if (allow_cloning !== initial_allow_cloning) {
+			return true;
+		}
+		if (
+			keep_link_active_after_max_clones !== initial_keep_link_active_after_max_clones
+		) {
+			return true;
+		}
+		if (password !== initial_password) {
+			return true;
+		}
+		if (showQrCode !== (chat.share_show_qr_code ?? !!chat.share_id)) {
+			return true;
+		}
+		if (useGradient !== (chat.share_use_gradient ?? false)) {
+			return true;
+		}
+		if (is_live !== initial_is_live) {
+			return true;
+		}
+		return false;
+	};
+
 	const shareLocalChat = async () => {
-		const _chat = chat;
+		validateViewsCount();
+		validateClonesCount();
 
-		const sharedChat = await shareChatById(localStorage.token, chatId);
-		shareUrl = `${window.location.origin}/s/${sharedChat.id}`;
-		console.log(shareUrl);
-		chat = await getChatById(localStorage.token, chatId);
+		const idChanged = initial_share_id !== '' && share_id !== initial_share_id;
+		const expirationChanged = expirationSettingsChanged();
 
-		return shareUrl;
+		if (initial_share_id && !idChanged && !expirationChanged) {
+			toast.info($i18n.t('No changes detected'));
+			return null;
+		}
+
+		try {
+			let expires_at = null;
+			if (expirationOption !== 'never') {
+				if (expirationOption === 'custom') {
+					const selectedDate = new Date(customExpirationDate);
+					const now = new Date();
+					selectedDate.setSeconds(now.getSeconds());
+
+					if (selectedDate < now) {
+						toast.error($i18n.t('The selected date and time cannot be in the past.'));
+						return null;
+					}
+					expires_at = selectedDate.getTime() / 1000;
+				} else {
+					const now = new Date();
+					if (expirationOption === '1h') {
+						now.setHours(now.getHours() + 1);
+					} else if (expirationOption === '24h') {
+						now.setHours(now.getHours() + 24);
+					} else if (expirationOption === '7d') {
+						now.setDate(now.getDate() + 7);
+					}
+					expires_at = Math.floor(now.getTime() / 1000);
+				}
+			}
+
+			const expire_on_views =
+				Number(expireOnViewsCount) > 0 ? Number(expireOnViewsCount) : null;
+			const max_clones = Number(maxClonesCount) > 0 ? Number(maxClonesCount) : null;
+
+			const passwordToSend = removePasswordClicked ? '' : password || undefined;
+
+			const sharedChat = await shareChatById(
+				localStorage.token,
+				chatId,
+				share_id,
+				expires_at,
+				expire_on_views,
+				max_clones,
+				is_public,
+				display_username,
+				allow_cloning,
+				keep_link_active_after_max_clones,
+				passwordToSend,
+				current_password,
+				showQrCode,
+				useGradient,
+				!is_live
+			);
+
+			// Update all state directly and atomically from the single API response.
+			share_id = sharedChat.id;
+			initial_share_id = sharedChat.id;
+
+			// Update local state from server response, which will update the UI
+			display_username = sharedChat.display_username;
+			is_public = sharedChat.is_public;
+			allow_cloning = sharedChat.allow_cloning;
+
+			// Update initial state for change detection on next action
+			initialExpirationOption = expirationOption;
+			initialCustomExpirationDate = customExpirationDate;
+			initialExpireOnViewsCount = expireOnViewsCount;
+			initial_is_public = sharedChat.is_public;
+			initial_display_username = sharedChat.display_username;
+			initial_allow_cloning = sharedChat.allow_cloning;
+			initial_password = sharedChat.has_password ? '********' : '';
+			password = '';
+			removePasswordClicked = false;
+
+			// Update the main chat object to reflect the new share status
+			chat = {
+				...chat,
+				share_id: sharedChat.id,
+				expires_at: sharedChat.expires_at,
+				expire_on_views: sharedChat.expire_on_views,
+				max_clones: sharedChat.max_clones,
+				is_public: sharedChat.is_public,
+				display_username: sharedChat.display_username,
+				has_password: sharedChat.has_password
+			};
+
+			sharedChatsUpdated.set(true);
+
+			return shareUrl;
+		} catch (error) {
+			toast.error(error.detail);
+			return null;
+		}
 	};
 
 	const shareChat = async () => {
@@ -63,28 +641,242 @@
 		if (!_chat) {
 			return false;
 		}
-		return chat.id !== _chat.id || chat.share_id !== _chat.share_id;
+		return (
+			chat.id !== _chat.id ||
+			chat.share_id !== _chat.share_id ||
+			chat.expire_on_views !== _chat.expire_on_views ||
+			chat.max_clones !== _chat.max_clones ||
+			chat.keep_link_active_after_max_clones !== _chat.keep_link_active_after_max_clones ||
+			chat.share_show_qr_code !== _chat.share_show_qr_code ||
+			chat.share_use_gradient !== _chat.share_use_gradient
+		);
 	};
 
 	$: if (show) {
+		minDateTime = dayjs().format('YYYY-MM-DDTHH:mm');
+
 		(async () => {
 			if (chatId) {
 				const _chat = await getChatById(localStorage.token, chatId);
 				if (isDifferentChat(_chat)) {
 					chat = _chat;
+					share_id = chat.share_id ?? '';
+					initial_share_id = share_id;
+
+
+					const sharedChatFromStore = $sharedChatsStore.find((c) => c.id === _chat.id);
+					if (sharedChatFromStore) {
+						currentViews = sharedChatFromStore.views;
+						currentClones = sharedChatFromStore.clones;
+					} else {
+						currentViews = 0;
+						currentClones = 0;
+					}
+
+					// New logic to correctly set expiration form state
+					if (_chat.expires_at) {
+						expirationOption = 'custom';
+						customExpirationDate = formatISODate(_chat.expires_at);
+					} else {
+						expirationOption = 'never';
+						customExpirationDate = '';
+					}
+					expireOnViewsCount = _chat.expire_on_views ?? 0;
+					maxClonesCount = _chat.max_clones ?? 0;
+
+					is_public = _chat.share_id ? _chat.is_public ?? false : false;
+					initial_is_public = is_public;
+					display_username = _chat.share_id ? _chat.display_username ?? true : true;
+					initial_display_username = display_username;
+					allow_cloning = _chat.share_id ? _chat.allow_cloning ?? true : true;
+					initial_allow_cloning = allow_cloning;
+					keep_link_active_after_max_clones =
+						_chat.keep_link_active_after_max_clones ?? false;
+					initial_keep_link_active_after_max_clones = keep_link_active_after_max_clones;
+
+					// Snapshot the newly set initial state
+					initialExpirationOption = expirationOption;
+					initialCustomExpirationDate = customExpirationDate;
+					initialExpireOnViewsCount = expireOnViewsCount;
+					initialMaxClonesCount = maxClonesCount;
+					initial_password = _chat.has_password ? '********' : '';
+					password = '';
+
+					showQrCode = _chat.share_show_qr_code ?? !!_chat.share_id;
+					useGradient = _chat.share_use_gradient ?? false;
+
+					if (_chat.share_id) {
+						is_live = !(_chat.is_snapshot ?? false);
+					} else {
+						is_live = false;
+					}
+					initial_is_live = is_live;
+
+
+					if (intervalId) clearInterval(intervalId);
+					if (chat.expires_at) {
+						timeRemaining = formatTimeRemaining(chat.expires_at);
+						intervalId = setInterval(() => {
+							timeRemaining = formatTimeRemaining(chat.expires_at);
+							if (timeRemaining === 'Expired') {
+								if (expirationOption === 'custom') {
+									customExpirationDate = dayjs().add(1, 'hour').format('YYYY-MM-DDTHH:mm');
+								}
+								clearInterval(intervalId);
+							}
+						}, 1000);
+					} else {
+						timeRemaining = '';
+					}
 				}
 			} else {
 				chat = null;
+				share_id = '';
+				initial_share_id = '';
+
+				initialExpirationOption = 'never';
+				initialCustomExpirationDate = '';
+				initialExpireOnViewsCount = 0;
+				initialMaxClonesCount = 0;
 				console.log(chat);
 			}
 		})();
+	} else {
+		chat = null;
+		showQrCode = false;
+		useGradient = false;
+		share_id = '';
+		initial_share_id = '';
+		previewQrCodeUrl = '';
+		downloadQrCodeUrl = '';
+		transparentPreviewQrCodeUrl = '';
+		solidPreviewQrCodeUrl = '';
+		transparentDownloadQrCodeUrl = '';
+		solidDownloadQrCodeUrl = '';
+		previewGradient = '';
+		downloadGradient = '';
+		expirationOption = 'never';
+		customExpirationDate = '';
+		is_public = false;
+		initial_is_public = false;
+		display_username = true;
+		initial_display_username = true;
+		allow_cloning = true;
+		initial_allow_cloning = true;
+		keep_link_active_after_max_clones = false;
+		initial_keep_link_active_after_max_clones = false;
+		password = '';
+		initial_password = '';
+		current_password = '';
+		removePasswordClicked = false;
+		expireOnViewsCount = 0;
+		maxClonesCount = 0;
+		initialExpirationOption = 'never';
+		initialCustomExpirationDate = '';
+		initialExpireOnViewsCount = 0;
+		initialMaxClonesCount = 0;
+
+		if (intervalId) clearInterval(intervalId);
+		timeRemaining = '';
+	}
+
+	$: if ($user && ($user.role !== 'admin' && !($user.permissions.sharing?.public_chat ?? false))) {
+		is_public = false;
+	}
+
+	$: if (showQrCode && shareUrl && !previewQrCodeUrl) {
+		generateQrCodesDebounced(shareUrl);
+	}
+
+	$: useGradient, generateQrCodesDebounced(shareUrl);
+
+	let expirationText = '';
+	$: {
+		if (chat && chat.share_id) {
+			const conditions = [];
+			if (chat.expires_at) {
+				const expirationDate = new Date(chat.expires_at * 1000).toLocaleString();
+				const remaining = timeRemaining ? ` (${timeRemaining})` : '';
+				conditions.push(`${$i18n.t('on')} ${expirationDate}${remaining}`);
+			}
+			if (chat.expire_on_views) {
+				conditions.push(`${$i18n.t('after')} ${chat.expire_on_views} ${$i18n.t('views')}`);
+			}
+			if (allow_cloning && chat.max_clones && !keep_link_active_after_max_clones) {
+				conditions.push(`${$i18n.t('after')} ${chat.max_clones} ${$i18n.t('clones')}`);
+			}
+
+			if (conditions.length > 1) {
+				const last = conditions.pop();
+				expirationText = $i18n.t('Expires {{conditions}} or {{last}}', {
+					conditions: conditions.join(', '),
+					last
+				});
+			} else if (conditions.length === 1) {
+				expirationText = `${$i18n.t('Expires')} ${conditions[0]}`;
+			} else {
+				expirationText = '';
+			}
+		} else {
+			expirationText = '';
+		}
 	}
 </script>
-
+    
 <Modal bind:show size="md">
-	<div>
+	<div class="flex flex-col h-full">
 		<div class=" flex justify-between dark:text-gray-300 px-5 pt-4 pb-0.5">
-			<div class=" text-lg font-medium self-center">{$i18n.t('Share Chat')}</div>
+			<div class=" text-lg font-medium self-center flex items-center space-x-2">
+
+				<Tooltip placement="right" interactive={true}>
+					<QuestionMarkCircle class="cursor-pointer text-gray-500 size-5" />
+					<div class="p-2 text-sm" slot="tooltip">
+						<div class="font-medium mb-2">{$i18n.t('How Sharing Works:')}</div>
+						<ul class="list-disc list-inside space-y-1">
+							<li>
+								<strong>{$i18n.t('Default Behavior (Snapshot):')}</strong>
+								{$i18n.t(
+									'By default, sharing creates a static snapshot of your conversation up to this point, including all prompts and responses. Future messages will not be included.'
+								)}
+							</li>
+							<li class="mt-2">
+								<strong>{$i18n.t('Live Updates (Optional):')}</strong>
+								{$i18n.t(
+									'You can enable live updates for the shared link. If you do, the shared chat will update as you continue the conversation.'
+								)}
+							</li>
+							<li class="mt-2">
+								<strong>{$i18n.t('Updating the Link:')}</strong>
+								{$i18n.t(
+									'You can update the link at any time to reflect the latest state of the conversation.'
+								)}
+							</li>
+
+							<li class="mt-2">
+								<strong>{$i18n.t('Link Persistence:')}</strong>
+								{$i18n.t(
+									'The link remains active as long as the original chat exists and the expiration, if set, has not been reached.'
+								)}
+							</li>
+
+							<li class="mt-2">
+								<strong>{$i18n.t('Deletion Impact:')}</strong>
+								{$i18n.t(
+									'If you delete the original conversation, the shared link will also be deleted and the content will no longer be accessible via the shared link.'
+								)}
+							</li>
+
+							<li class="mt-2">
+								<strong>{$i18n.t('Cloning and Deletion:')}</strong>
+								{$i18n.t(
+									'If a viewer clones the shared conversation into their own chat history (if "Allow Cloning" is enabled), deleting your chat\'s share link will not remove the conversation from their chat history.'
+								)}
+							</li>
+						</ul>
+					</div>
+				</Tooltip>
+				{$i18n.t('Share Chat')}
+			</div>
 			<button
 				class="self-center"
 				on:click={() => {
@@ -95,52 +887,566 @@
 			</button>
 		</div>
 
-		{#if chat}
-			<div class="px-5 pt-4 pb-5 w-full flex flex-col justify-center">
-				<div class=" text-sm dark:text-gray-300 mb-1">
-					{#if chat.share_id}
-						<a href="/s/{chat.share_id}" target="_blank"
-							>{$i18n.t('You have shared this chat')}
-							<span class=" underline">{$i18n.t('before')}</span>.</a
-						>
-						{$i18n.t('Click here to')}
-						<button
-							class="underline"
-							on:click={async () => {
-								const res = await deleteSharedChatById(localStorage.token, chatId);
+		{#if chat && chat.chat}
+			<div class="px-5 pt-2 text-sm text-gray-500 dark:text-gray-400 truncate">
+				{chat.chat.title}
+			</div>
+		{/if}
 
-								if (res) {
-									chat = await getChatById(localStorage.token, chatId);
-								}
-							}}
-							>{$i18n.t('delete this link')}
-						</button>
-						{$i18n.t('and create a new shared link.')}
-					{:else}
-						{$i18n.t(
-							"Messages you send after creating your link won't be shared. Users with the URL will be able to view the shared chat."
-						)}
+		{#if chat}
+			<div class="p-5 w-full flex flex-col space-y-4">
+				<!-- Access Settings -->
+				<div class="p-4 rounded-lg bg-gray-100 dark:bg-gray-850 flex-1">
+					<div class="font-medium mb-2">{$i18n.t('Access Settings')}</div>
+
+					<div class="grid grid-cols-1 md:grid-cols-3 gap-4 mt-4">
+						{#if $user.role === 'admin' || ($user.permissions.sharing?.public_chat ?? false)}
+							<div class="flex items-start space-x-3">
+								<div class="pt-0.5">
+									<Switch bind:state={is_public} tooltip={true} />
+								</div>
+								<div class="flex-1">
+									<div class="flex items-center space-x-1">
+										<label
+											for="is_public"
+											class="block text-sm font-medium text-gray-700 dark:text-gray-300"
+										>
+											{$i18n.t('Public Access')}
+										</label>
+										<Tooltip placement="top">
+											<QuestionMarkCircle class="cursor-pointer text-gray-500 size-4" />
+											<div class="p-2 text-sm" slot="tooltip">
+												{$i18n.t(
+													'When enabled, anyone with the link can view the chat. When disabled, only logged-in users can view the chat.'
+												)}
+											</div>
+										</Tooltip>
+									</div>
+								</div>
+							</div>
+						{/if}
+							<div class="flex items-start space-x-3">
+								<div class="pt-0.5">
+									<Switch bind:state={allow_cloning} tooltip={true} />
+								</div>
+								<div class="flex-1">
+									<div class="flex items-center space-x-1">
+										<label
+											for="allow_cloning"
+											class="block text-sm font-medium text-gray-700 dark:text-gray-300"
+										>
+											{$i18n.t('Allow Cloning')}
+										</label>
+										<Tooltip placement="top">
+											<QuestionMarkCircle class="cursor-pointer text-gray-500 size-4" />
+											<div class="p-2 text-sm" slot="tooltip">
+												{$i18n.t(
+													'When enabled, users with the link can clone this chat to their own account. When disabled, the snapshot of the chat effectively becomes read only.'
+												)}
+											</div>
+										</Tooltip>
+									</div>
+								</div>
+							</div>
+							<div class="flex items-start space-x-3">
+								<div class="pt-0.5">
+									<Switch bind:state={display_username} tooltip={true} />
+								</div>
+								<div class="flex-1">
+									<div class="flex items-center space-x-1">
+										<label
+											for="display_username"
+											class="block text-sm font-medium text-gray-700 dark:text-gray-300 whitespace-nowrap"
+										>
+											{$i18n.t('Display Username')}
+										</label>
+										<Tooltip placement="top">
+											<QuestionMarkCircle class="cursor-pointer text-gray-500 size-4" />
+											<div class="p-2 text-sm" slot="tooltip">
+												{$i18n.t("When enabled, the chat owner's username will be displayed on the shared chat.")}
+											</div>
+										</Tooltip>
+									</div>
+								</div>
+							</div>
+							<div class="flex items-start space-x-3">
+								<div class="pt-0.5">
+									<Switch bind:state={is_live} tooltip={true} />
+								</div>
+								<div class="flex-1">
+									<div class="flex items-center space-x-1">
+										<label
+											for="is_live"
+											class="block text-sm font-medium text-gray-700 dark:text-gray-300 whitespace-nowrap"
+										>
+											{$i18n.t('Enable Live Updates')}
+										</label>
+										<Tooltip placement="top">
+											<QuestionMarkCircle class="cursor-pointer text-gray-500 size-4" />
+											<div class="p-2 text-sm" slot="tooltip">
+												{$i18n.t(
+													'When enabled, the shared link will update with the conversation. When disabled, the shared link will be a snapshot of the conversation at the time of sharing.'
+												)}
+											</div>
+										</Tooltip>
+									</div>
+								</div>
+							</div>
+					</div>
+
+					<div class="mt-4">
+						<div class="flex justify-between">
+							<label
+								for="password"
+								class="block text-sm font-medium text-gray-700 dark:text-gray-300"
+							>
+								{$i18n.t('Password')}
+							</label>
+
+							{#if chat.has_password}
+								<div class="flex items-center space-x-1 text-xs text-gray-500">
+									<LockClosed class="size-3" />
+									<span>{$i18n.t('Protected')}</span>
+								</div>
+							{/if}
+						</div>
+
+						<div class="mt-1">
+							<SensitiveInput
+								id="password"
+								placeholder={chat.has_password
+									? $i18n.t('Enter new password or leave blank to keep')
+									: $i18n.t('Create a password (optional)')}
+								bind:value={password}
+								on:input={() => {
+									removePasswordClicked = false;
+								}}
+							/>
+						</div>
+
+						<p class="mt-1 text-xs text-gray-500 dark:text-gray-400 flex justify-between">
+							<span>{$i18n.t('Protect your shared link with a password.')}</span>
+							{#if chat.has_password}
+								<button
+									class="text-blue-500 hover:underline"
+									on:click={() => {
+										removePasswordClicked = true;
+										toast.info('Password will be removed upon update.');
+									}}
+								>
+									{$i18n.t('Remove password')}
+								</button>
+							{/if}
+						</p>
+					</div>
+				</div>
+
+				<!-- Expiration Settings -->
+				<div class="p-4 rounded-lg bg-gray-100 dark:bg-gray-850 flex-1">
+					<div class="font-medium mb-2">{$i18n.t('Expiration Settings')}</div>
+
+					<div class="flex items-end gap-2 mt-4">
+						<div class="flex-1">
+							<div class="flex items-center space-x-1">
+								<label
+									for="expiration"
+									class="block text-sm font-medium text-gray-700 dark:text-gray-300"
+									>{$i18n.t('Expires After')}</label
+								>
+								<Tooltip placement="top">
+									<QuestionMarkCircle class="cursor-pointer text-gray-500 size-4" />
+									<div class="p-2 text-sm" slot="tooltip">
+										{$i18n.t(
+											'Set a specific date and time for the shared link to expire. After this time, the link will no longer be accessible.'
+										)}
+									</div>
+								</Tooltip>
+							</div>
+							<div class="relative" use:clickOutside>
+								<button
+									type="button"
+									class="mt-1 relative block w-full cursor-pointer text-left pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm rounded-md dark:bg-gray-700 dark:border-gray-600 dark:text-white"
+									on:click={() => (isExpirationDropdownOpen = !isExpirationDropdownOpen)}
+									on:wheel|preventDefault={handleExpirationScroll}
+								>
+									<span class="block truncate"
+										>{expirationOptions[selectedExpirationIndex]?.label ?? ''}</span
+									>
+									<span
+										class="pointer-events-none absolute inset-y-0 right-0 flex items-center pr-2"
+									>
+										<ChevronDown class="h-5 w-5 text-gray-400" />
+									</span>
+								</button>
+
+								{#if isExpirationDropdownOpen}
+									<ul
+										class="absolute z-10 mt-1 w-full rounded-md bg-white shadow-lg border border-gray-200 dark:bg-gray-700 dark:border-gray-600"
+									>
+										{#each expirationOptions as option, i}
+											<!-- svelte-ignore a11y-click-events-have-key-events -->
+											<!-- svelte-ignore a11y-no-noninteractive-element-interactions -->
+											<li
+												class="relative cursor-pointer select-none py-2 pl-3 pr-9 text-gray-900 dark:text-white hover:bg-indigo-600 hover:text-white"
+												on:click={() => {
+													expirationOption = option.value;
+													isExpirationDropdownOpen = false;
+												}}
+											>
+												<span class="block truncate">{option.label}</span>
+											</li>
+										{/each}
+									</ul>
+								{/if}
+							</div>
+						</div>
+						<div class="flex-1">
+							{#if expirationOption === 'custom'}
+								<div class="relative">
+									<div
+										class="flex items-center mt-1 w-full pl-3 pr-2 py-0.5 text-base border border-gray-300 focus-within:ring-2 focus-within:ring-indigo-500 focus-within:border-indigo-500 sm:text-sm rounded-md dark:bg-gray-700 dark:border-gray-600 dark:text-white"
+									>
+										<div class="flex-1">
+											{#if customExpirationDate}
+												<span class="flex items-center">
+													<span
+														class="cursor-pointer px-1 rounded hover:bg-gray-200 dark:hover:bg-gray-600"
+														on:wheel|preventDefault={(e) => handleDateScroll(e, 'month')}
+														>{expirationDateParts.month}</span
+													>
+													<span>/</span>
+													<span
+														class="cursor-pointer px-1 rounded hover:bg-gray-200 dark:hover:bg-gray-600"
+														on:wheel|preventDefault={(e) => handleDateScroll(e, 'day')}
+														>{expirationDateParts.day}</span
+													>
+													<span>/</span>
+													<span
+														class="cursor-pointer px-1 rounded hover:bg-gray-200 dark:hover:bg-gray-600"
+														on:wheel|preventDefault={(e) => handleDateScroll(e, 'year')}
+														>{expirationDateParts.year}</span
+													>
+													<span
+														class="ml-2 cursor-pointer px-1 rounded hover:bg-gray-200 dark:hover:bg-gray-600"
+														on:wheel|preventDefault={(e) => handleDateScroll(e, 'hour')}
+														>{expirationDateParts.hour}</span
+													>
+													<span>:</span>
+													<span
+														class="cursor-pointer px-1 rounded hover:bg-gray-200 dark:hover:bg-gray-600"
+														on:wheel|preventDefault={(e) => handleDateScroll(e, 'minute')}
+														>{expirationDateParts.minute}</span
+													>
+													<span
+														class="ml-1 cursor-pointer px-1 rounded hover:bg-gray-200 dark:hover:bg-gray-600"
+														on:wheel|preventDefault={(e) => handleDateScroll(e, 'ampm')}
+														>{expirationDateParts.ampm}</span
+													>
+												</span>
+											{:else}
+												<span class="text-gray-400 select-none py-2"
+													>Select a date and time</span
+												>
+											{/if}
+										</div>
+
+										<button
+											type="button"
+											class="p-2 rounded-md hover:bg-gray-200 dark:hover:bg-gray-600"
+											on:click={openDatePicker}
+											aria-label="Open date picker"
+										>
+											<Calendar class="size-5" />
+										</button>
+									</div>
+									<input
+										type="datetime-local"
+										bind:value={customExpirationDate}
+										id="hidden-datetime-picker"
+										class="absolute bottom-0 left-0 w-px h-px opacity-0"
+										min={minDateTime}
+									/>
+								</div>
+							{/if}
+						</div>
+					</div>
+
+					<div class="flex items-start gap-4 mt-4">
+						<div class="flex-1">
+							<div class="flex justify-between items-baseline">
+								<div class="flex items-center space-x-1">
+									<label
+										for="expire-on-views"
+										class="block text-sm font-medium text-gray-700 dark:text-gray-300"
+										>{$i18n.t('Max Number of Views')}</label
+									>
+									<Tooltip placement="top">
+										<QuestionMarkCircle class="cursor-pointer text-gray-500 size-4" />
+										<div class="p-2 text-sm" slot="tooltip">
+											{$i18n.t(
+												'Set a maximum number of times the shared link can be viewed. After this limit is reached, the link will be automatically revoked.'
+											)}
+										</div>
+									</Tooltip>
+								</div>
+								<p class="text-xs text-gray-500">{$i18n.t('0 = Unlimited')}</p>
+							</div>
+							<input
+								id="expire-on-views"
+								type="number"
+								min="0"
+								bind:value={expireOnViewsCount}
+								on:blur={validateViewsCount}
+								on:wheel|preventDefault={handleViewsScroll}
+								class="mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm rounded-md dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white"
+							/>
+						</div>
+
+						{#if allow_cloning}
+							<div class="flex-1">
+								<div class="flex justify-between items-baseline">
+									<div class="flex items-center space-x-1">
+										<label
+											for="max-clones"
+											class="block text-sm font-medium text-gray-700 dark:text-gray-300"
+											>{$i18n.t('Max Number of Clones')}</label
+										>
+										<Tooltip placement="top">
+											<QuestionMarkCircle class="cursor-pointer text-gray-500 size-4" />
+											<div class="p-2 text-sm" slot="tooltip">
+												{$i18n.t(
+													'Set a maximum number of times the shared chat can be cloned. After this limit is reached, the link will be automatically revoked, unless you allow viewing after the clone limit.'
+												)}
+											</div>
+										</Tooltip>
+									</div>
+									<p class="text-xs text-gray-500">{$i18n.t('0 = Unlimited')}</p>
+								</div>
+								<input
+									id="max-clones"
+									type="number"
+									min="0"
+									bind:value={maxClonesCount}
+									on:blur={validateClonesCount}
+									on:wheel|preventDefault={handleClonesScroll}
+									class="mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm rounded-md dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white"
+								/>
+							</div>
+						{/if}
+					</div>
+
+					{#if allow_cloning}
+						{#if maxClonesCount > 0}
+							<div class="mt-4 flex items-start space-x-3">
+								<div class="pt-0.5">
+									<Switch bind:state={keep_link_active_after_max_clones} tooltip={true} />
+								</div>
+								<div class="flex-1">
+									<div class="flex items-center space-x-1">
+										<label
+											for="keep-link-active"
+											class="block text-sm font-medium text-gray-700 dark:text-gray-300"
+										>
+											{$i18n.t('Allow viewing after clone limit')}
+										</label>
+										<Tooltip placement="top">
+											<QuestionMarkCircle class="cursor-pointer text-gray-500 size-4" />
+											<div class="p-2 text-sm" slot="tooltip">
+												{$i18n.t(
+													'When enabled, the chat will remain viewable even after the maximum number of clones is reached. If disabled, the share link will be deactivated upon reaching the clone limit.'
+												)}
+											</div>
+										</Tooltip>
+									</div>
+								</div>
+							</div>
+						{/if}
+					{/if}
+
+					{#if expirationText}
+						<div class="mt-2 text-sm text-gray-500 dark:text-gray-400">
+							{expirationText}
+						</div>
 					{/if}
 				</div>
 
-				<div class="flex justify-end">
-					<div class="flex flex-col items-end space-x-1 mt-3">
-						<div class="flex gap-1">
+				<!-- Link and QR Code -->
+				<div class="p-4 rounded-lg bg-gray-100 dark:bg-gray-850 flex-1">
+					<div class="font-medium mb-2">{$i18n.t('Share Link and QR Code')}</div>
+					<div class="mt-4 flex items-center gap-2">
+						<div class="flex-1">
+							<div
+								class="flex items-center border rounded-lg dark:border-gray-700 focus-within:ring-2 focus-within:ring-blue-500 focus-within:border-blue-500 overflow-hidden"
+							>
+								<span class="pl-3 pr-1 py-2 text-gray-500 dark:text-gray-400 select-none"
+									>/s/</span
+								>
+								<input
+									class="flex-1 min-w-0 bg-transparent py-2 px-1 focus:outline-none dark:text-white"
+									placeholder={$i18n.t('Enter a custom name (optional)')}
+									value={share_id}
+									maxlength="144"
+									on:input={(e) => {
+										const sanitized = e.target.value
+											.replace(/ /g, '-')
+											.replace(/[^a-zA-Z0-9-._~]/g, '');
+										if (share_id !== sanitized) {
+											share_id = sanitized;
+											generateQrCodesDebounced(
+												share_id ? `${window.location.origin}/s/${share_id}` : null
+											);
+										}
+									}}
+								/>
+								<Tooltip content={$i18n.t('Generate New ID')}>
+									<button
+										class="flex items-center justify-center h-full p-2 rounded-lg dark:text-white bg-transparent hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors"
+										on:click={() => {
+											share_id = uuidv4();
+										}}
+									>
+										<ArrowPath class="size-5" />
+									</button>
+								</Tooltip>
+								<span class="pr-3 text-xs text-gray-500 dark:text-gray-400 shrink-0"
+									>{share_id.length} / 144</span
+								>
+							</div>
+						</div>
+
+						<div class="flex items-center gap-2">
+							{#if chat.share_id}
+								<Tooltip content={$i18n.t('Copy Link')}>
+									<button
+										class="flex items-center justify-center h-full p-2 rounded-lg dark:text-white bg-transparent hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors"
+										on:click={() => {
+											copyToClipboard(shareUrl);
+											toast.success($i18n.t('Copied shared chat URL to clipboard!'));
+										}}
+									>
+										<Clipboard class="size-5" />
+									</button>
+								</Tooltip>
+								<Tooltip content={$i18n.t('View Link')}>
+									<a
+										href={shareUrl}
+										target="_blank"
+										class="flex items-center justify-center h-full p-2 rounded-lg dark:text-white bg-transparent hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors"
+									>
+										<Eye class="size-5" />
+									</a>
+								</Tooltip>
+								{#if chat.revoked_at || timeRemaining === 'Expired'}
+									<Tooltip content={$i18n.t('Re-activate Link')}>
+										<button
+											class="flex items-center justify-center h-full p-2 rounded-lg text-green-600 dark:text-green-500 bg-transparent hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors"
+											on:click={async () => {
+												const res = await restoreSharedChat(localStorage.token, chatId);
+												if (res) {
+													chat = await getChatById(localStorage.token, chatId);
+													toast.success($i18n.t('Link restored successfully'));
+													sharedChatsUpdated.set(true);
+												}
+											}}
+										>
+											<ArrowPath class="size-5" />
+										</button>
+									</Tooltip>
+								{:else}
+									<Tooltip content={$i18n.t('Revoke Link')}>
+										<button
+											class="flex items-center justify-center h-full p-2 rounded-lg text-red-600 dark:text-red-500 bg-transparent hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors"
+											on:click={async () => {
+												const res = await deleteSharedChatById(localStorage.token, chatId);
+												if (res) {
+													chat = await getChatById(localStorage.token, chatId);
+													toast.success($i18n.t('Link revoked successfully'));
+													sharedChatsUpdated.set(true);
+												}
+											}}
+										>
+											<GarbageBin class="size-5" />
+										</button>
+									</Tooltip>
+								{/if}
+							{/if}
+						</div>
+					</div>
+
+					<div class="my-4 flex flex-col items-center justify-center">
+						<div class="w-full flex items-start space-x-3">
+							<div class="pt-0.5">
+								<Switch bind:state={showQrCode} tooltip={true} />
+							</div>
+							<div class="flex-1">
+								<label
+									for="show_qr_code"
+									class="block text-sm font-medium text-gray-700 dark:text-gray-300"
+								>
+									{$i18n.t('Show QR Code')}
+								</label>
+							</div>
+						</div>
+
+						{#if showQrCode}
+							<div class="w-full flex items-start space-x-3 mt-4">
+								<div class="pt-0.5">
+									<Switch bind:state={useGradient} tooltip={true} />
+								</div>
+								<div class="flex-1">
+									<label
+										for="use_gradient"
+										class="block text-sm font-medium text-gray-700 dark:text-gray-300"
+									>
+										{$i18n.t('Gradient QR Code')}
+									</label>
+								</div>
+							</div>
+
+							<div class="mt-4 flex items-center justify-center">
+								{#if !previewQrCodeUrl && shareUrl}
+									<div
+										class="w-48 h-48 rounded-md flex items-center justify-center bg-gray-100 dark:bg-gray-800"
+									>
+										<Spinner />
+									</div>
+								{:else if previewQrCodeUrl}
+									<button
+										class="qr-code-container"
+										on:click={() => {
+											showExpandedQr = true;
+										}}
+									>
+										{#if useGradient}
+											<div class="w-48 h-48 rounded-md" style="background: {previewGradient};">
+												<img class="w-full h-full" src={previewQrCodeUrl} alt="QR Code" />
+											</div>
+										{:else}
+											<img class="w-48 h-48 rounded-md" src={previewQrCodeUrl} alt="QR Code" />
+										{/if}
+									</button>
+								{/if}
+							</div>
+						{/if}
+					</div>
+					<div class="flex justify-center mt-6">
+						<div class="flex gap-38">
 							{#if $config?.features.enable_community_sharing}
 								<button
-									class="self-center flex items-center gap-1 px-3.5 py-2 text-sm font-medium bg-gray-100 hover:bg-gray-200 text-gray-800 dark:bg-gray-850 dark:text-white dark:hover:bg-gray-800 transition rounded-full"
+									class="self-center flex items-center gap-1 px-3 py-1.5 text-sm font-medium bg-gray-100 hover:bg-gray-200 text-gray-800 dark:bg-gray-850 dark:text-white dark:hover:bg-gray-800 transition rounded-full whitespace-nowrap"
 									type="button"
 									on:click={() => {
 										shareChat();
 										show = false;
 									}}
 								>
+									<ArrowUpTray />
 									{$i18n.t('Share to Open WebUI Community')}
 								</button>
 							{/if}
 
 							<button
-								class="self-center flex items-center gap-1 px-3.5 py-2 text-sm font-medium bg-black hover:bg-gray-900 text-white dark:bg-white dark:text-black dark:hover:bg-gray-100 transition rounded-full"
+								class="self-center flex items-center gap-1 px-3 py-1.5 text-sm font-medium bg-gray-100 hover:bg-gray-200 text-gray-800 dark:bg-gray-850 dark:text-white dark:hover:bg-gray-800 transition rounded-full whitespace-nowrap"
 								type="button"
 								id="copy-and-share-chat-button"
 								on:click={async () => {
@@ -152,7 +1458,10 @@
 
 										const getUrlPromise = async () => {
 											const url = await shareLocalChat();
-											return new Blob([url], { type: 'text/plain' });
+											if (url) {
+												return new Blob([url], { type: 'text/plain' });
+											}
+											return new Blob([]);
 										};
 
 										navigator.clipboard
@@ -163,27 +1472,22 @@
 											])
 											.then(() => {
 												console.log('Async: Copying to clipboard was successful!');
-												return true;
+												toast.success($i18n.t('Copied shared chat URL to clipboard!'));
 											})
 											.catch((error) => {
 												console.error('Async: Could not copy text: ', error);
-												return false;
 											});
 									} else {
-										copyToClipboard(await shareLocalChat());
+										const url = await shareLocalChat();
+										if (url) {
+											copyToClipboard(url);
+											toast.success($i18n.t('Copied shared chat URL to clipboard!'));
+										}
 									}
-
-									toast.success($i18n.t('Copied shared chat URL to clipboard!'));
-									show = false;
 								}}
 							>
 								<Link />
-
-								{#if chat.share_id}
-									{$i18n.t('Update and Copy Link')}
-								{:else}
-									{$i18n.t('Copy Link')}
-								{/if}
+								{$i18n.t(chat.share_id ? 'Update Link Settings' : 'Create Link')}
 							</button>
 						</div>
 					</div>
@@ -192,3 +1496,71 @@
 		{/if}
 	</div>
 </Modal>
+
+{#if showExpandedQr}
+	<Modal bind:show={showExpandedQr} size="sm">
+		<div class="flex flex-col items-center p-4">
+			<h2 class="text-lg font-medium mb-4">{$i18n.t('Scan QR Code')}</h2>
+			{#if useGradient}
+				<div class="w-64 h-64 rounded-md" style="background: {downloadGradient};">
+					<img class="w-full h-full" src={downloadQrCodeUrl} alt="QR Code" />
+				</div>
+			{:else}
+				<img class="w-64 h-64 rounded-md" src={downloadQrCodeUrl} alt="QR Code" />
+			{/if}
+
+			<a
+				class="mt-4 flex items-center gap-2 px-4 py-2 bg-gray-100 dark:bg-gray-800 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors"
+				href={downloadQrCodeUrl}
+				download="qrcode.png"
+				on:click={() => {
+					toast.success($i18n.t('Downloading QR code...'));
+				}}
+			>
+				<ArrowDownTray class="size-5" />
+				{$i18n.t('Download QR Code')}
+			</a>
+		</div>
+	</Modal>
+{/if}
+
+<style>
+	.qr-code-container {
+		position: relative;
+		display: inline-block;
+	}
+
+	.qr-code-container::before {
+		content: '';
+		position: absolute;
+		top: 0;
+		left: 0;
+		width: 100%;
+		height: 100%;
+		background-color: rgba(0, 0, 0, 0);
+		transition: background-color 0.2s ease-in-out;
+	}
+
+	.qr-code-container:hover::before {
+		background-color: rgba(0, 0, 0, 0.5);
+	}
+
+	.qr-code-container::after {
+		content: '';
+		position: absolute;
+		top: 50%;
+		left: 50%;
+		transform: translate(-50%, -50%);
+		width: 48px;
+		height: 48px;
+		background-image: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="white" class="w-12 h-12"><path stroke-linecap="round" stroke-linejoin="round" d="M3 16.5v2.25A2.25 2.25 0 0 0 5.25 21h13.5A2.25 2.25 0 0 0 21 18.75V16.5M16.5 12 12 16.5m0 0L7.5 12m4.5 4.5V3" /></svg>');
+		background-size: contain;
+		background-repeat: no-repeat;
+		opacity: 0;
+		transition: opacity 0.2s ease-in-out;
+	}
+
+	.qr-code-container:hover::after {
+		opacity: 1;
+	}
+</style>

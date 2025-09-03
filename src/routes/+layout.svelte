@@ -25,7 +25,8 @@
 		isApp,
 		appInfo,
 		toolServers,
-		playingNotificationSound
+		playingNotificationSound,
+		sharedChats
 	} from '$lib/stores';
 	import { goto } from '$app/navigation';
 	import { page } from '$app/stores';
@@ -33,6 +34,7 @@
 
 	import { executeToolServer, getBackendConfig } from '$lib/apis';
 	import { getSessionUser, userSignOut } from '$lib/apis/auths';
+	import { cloneSharedChatById } from '$lib/apis/chats';
 
 	import '../tailwind.css';
 	import '../app.css';
@@ -262,6 +264,18 @@
 		await tick();
 		const type = event?.data?.type ?? null;
 		const data = event?.data?.data ?? null;
+
+		if (type === 'chat:view' || type === 'chat:clone') {
+			sharedChats.update((chats) => {
+				return chats.map((chat) => {
+					if (chat.id === data.chat_id) {
+						return { ...chat, ...data };
+					}
+					return chat;
+				});
+			});
+			return;
+		}
 
 		if ((event.chat_id !== $chatId && !$temporaryChatEnabled) || isFocused) {
 			if (type === 'chat:completion') {
@@ -574,6 +588,28 @@
 					clearInterval(tokenTimer);
 				}
 				tokenTimer = setInterval(checkTokenExpiry, 15000);
+
+				const postLoginActionStr = localStorage.getItem('postLoginAction');
+				if (postLoginActionStr) {
+					const postLoginAction = JSON.parse(postLoginActionStr);
+					if (postLoginAction.action === 'clone' && postLoginAction.shareId) {
+						(async () => {
+							const res = await cloneSharedChatById(localStorage.token, postLoginAction.shareId).catch(
+								(error) => {
+									toast.error(`${error}`);
+									return null;
+								}
+							);
+
+							if (res) {
+								localStorage.removeItem('postLoginAction');
+								await goto(`/c/${res.id}`);
+							}
+						})();
+					} else {
+						localStorage.removeItem('postLoginAction');
+					}
+				}
 			} else {
 				$socket?.off('chat-events', chatEventHandler);
 				$socket?.off('channel-events', channelEventHandler);
@@ -631,7 +667,7 @@
 				} else {
 					// Don't redirect if we're already on the auth page
 					// Needed because we pass in tokens from OAuth logins via URL fragments
-					if ($page.url.pathname !== '/auth') {
+					if ($page.url.pathname !== '/auth' && !$page.url.pathname.startsWith('/s/')) {
 						await goto(`/auth?redirect=${encodedUrl}`);
 					}
 				}

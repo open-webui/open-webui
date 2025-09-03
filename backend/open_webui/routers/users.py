@@ -137,6 +137,8 @@ class SharingPermissions(BaseModel):
     public_knowledge: bool = True
     public_prompts: bool = True
     public_tools: bool = True
+    public_chat: bool = False
+    shared_chats: bool = True
 
 
 class ChatPermissions(BaseModel):
@@ -152,6 +154,7 @@ class ChatPermissions(BaseModel):
     rate_response: bool = True
     edit: bool = True
     share: bool = True
+    clone: bool = True
     export: bool = True
     stt: bool = True
     tts: bool = True
@@ -198,7 +201,19 @@ async def get_default_user_permissions(request: Request, user=Depends(get_admin_
 async def update_default_user_permissions(
     request: Request, form_data: UserPermissions, user=Depends(get_admin_user)
 ):
+    old_permissions = request.app.state.config.USER_PERMISSIONS
     request.app.state.config.USER_PERMISSIONS = form_data.model_dump()
+
+    if old_permissions.get("sharing", {}).get(
+        "public_chat", False
+    ) and not request.app.state.config.USER_PERMISSIONS.get("sharing", {}).get(
+        "public_chat", False
+    ):
+        users = Users.get_users()
+        for user in users.users:
+            if user.role == "user":
+                Chats.make_all_public_chats_private_by_user_id(user.id)
+
     return request.app.state.config.USER_PERMISSIONS
 
 
@@ -308,10 +323,16 @@ class UserResponse(BaseModel):
     active: Optional[bool] = None
 
 
+from open_webui.utils.auth import (
+    get_admin_user,
+    get_password_hash,
+    get_verified_user,
+    get_optional_user,
+)
+
+
 @router.get("/{user_id}", response_model=UserResponse)
-async def get_user_by_id(user_id: str, user=Depends(get_verified_user)):
-    # Check if user_id is a shared chat
-    # If it is, get the user_id from the chat
+async def get_user_by_id(user_id: str, user=Depends(get_optional_user)):
     if user_id.startswith("shared-"):
         chat_id = user_id.replace("shared-", "")
         chat = Chats.get_chat_by_id(chat_id)

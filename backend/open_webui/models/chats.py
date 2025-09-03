@@ -1,4 +1,5 @@
 import logging
+from passlib.context import CryptContext
 import json
 import time
 import uuid
@@ -10,8 +11,8 @@ from open_webui.models.folders import Folders
 from open_webui.env import SRC_LOG_LEVELS
 
 from pydantic import BaseModel, ConfigDict
-from sqlalchemy import BigInteger, Boolean, Column, String, Text, JSON, Index
-from sqlalchemy import or_, func, select, and_, text
+from sqlalchemy import BigInteger, Boolean, Column, String, Text, JSON, Index, Integer
+from sqlalchemy import or_, func, select, and_, text, not_, case
 from sqlalchemy.sql import exists
 from sqlalchemy.sql.expression import bindparam
 
@@ -21,6 +22,8 @@ from sqlalchemy.sql.expression import bindparam
 
 log = logging.getLogger(__name__)
 log.setLevel(SRC_LOG_LEVELS["MODELS"])
+
+pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
 
 class Chat(Base):
@@ -35,11 +38,28 @@ class Chat(Base):
     updated_at = Column(BigInteger)
 
     share_id = Column(Text, unique=True, nullable=True)
+    expires_at = Column(BigInteger, nullable=True)
+    revoked_at = Column(BigInteger, nullable=True)
+    expire_on_views = Column(Integer, nullable=True)
+    max_clones = Column(Integer, nullable=True)
+    is_public = Column(Boolean, default=False, nullable=False)
+    display_username = Column(Boolean, default=True, nullable=False)
+    allow_cloning = Column(Boolean, default=True, nullable=False)
+    keep_link_active_after_max_clones = Column(Boolean, default=False, nullable=False)
     archived = Column(Boolean, default=False)
     pinned = Column(Boolean, default=False, nullable=True)
 
     meta = Column(JSON, server_default="{}")
     folder_id = Column(Text, nullable=True)
+    views = Column(Integer, server_default="0", nullable=False)
+    clones = Column(Integer, server_default="0", nullable=False)
+    password = Column(String, nullable=True)
+    password_updated_at = Column(BigInteger, nullable=True)
+
+    share_show_qr_code = Column(Boolean, default=False, nullable=False)
+    share_use_gradient = Column(Boolean, default=False, nullable=False)
+    is_snapshot = Column(Boolean, default=False, nullable=False)
+    snapshot_chat = Column(JSON, nullable=True)
 
     __table_args__ = (
         # Performance indexes for common queries
@@ -68,11 +88,28 @@ class ChatModel(BaseModel):
     updated_at: int  # timestamp in epoch
 
     share_id: Optional[str] = None
+    expires_at: Optional[int] = None
+    revoked_at: Optional[int] = None
+    expire_on_views: Optional[int] = None
+    max_clones: Optional[int] = None
+    is_public: bool = False
+    display_username: bool = True
+    allow_cloning: bool = True
+    keep_link_active_after_max_clones: bool = False
     archived: bool = False
     pinned: Optional[bool] = False
 
     meta: dict = {}
     folder_id: Optional[str] = None
+    views: int = 0
+    clones: int = 0
+    password: Optional[str] = None
+    password_updated_at: Optional[int] = None
+
+    share_show_qr_code: bool = False
+    share_use_gradient: bool = False
+    is_snapshot: bool = False
+    snapshot_chat: Optional[dict] = None
 
 
 ####################
@@ -109,10 +146,25 @@ class ChatResponse(BaseModel):
     updated_at: int  # timestamp in epoch
     created_at: int  # timestamp in epoch
     share_id: Optional[str] = None  # id of the chat to be shared
+    expires_at: Optional[int] = None
+    revoked_at: Optional[int] = None
+    expire_on_views: Optional[int] = None
+    max_clones: Optional[int] = None
+    is_public: bool
+    display_username: bool
+    allow_cloning: bool
+    keep_link_active_after_max_clones: bool
     archived: bool
     pinned: Optional[bool] = False
     meta: dict = {}
     folder_id: Optional[str] = None
+    views: int
+    clones: int
+    has_password: bool = False
+    is_new_share: Optional[bool] = None
+    share_show_qr_code: bool
+    share_use_gradient: bool
+    is_snapshot: bool
 
 
 class ChatTitleIdResponse(BaseModel):
@@ -120,6 +172,21 @@ class ChatTitleIdResponse(BaseModel):
     title: str
     updated_at: int
     created_at: int
+    share_id: Optional[str] = None
+    expires_at: Optional[int] = None
+    revoked_at: Optional[int] = None
+    expire_on_views: Optional[int] = None
+    max_clones: Optional[int] = None
+    is_public: Optional[bool] = None
+    views: Optional[int] = 0
+    clones: Optional[int] = 0
+    allow_cloning: Optional[bool] = True
+    keep_link_active_after_max_clones: Optional[bool] = False
+    share_show_qr_code: Optional[bool] = None
+    share_use_gradient: Optional[bool] = None
+    is_snapshot: Optional[bool] = None
+    has_password: bool = False
+    status: str = "active"
 
 
 class ChatTable:
@@ -197,6 +264,20 @@ class ChatTable:
 
                 return ChatModel.model_validate(chat_item)
         except Exception:
+            return None
+
+    def update_chat_password_updated_at(self, id: str) -> Optional[ChatModel]:
+        try:
+            with get_db() as db:
+                chat = db.get(Chat, id)
+                if chat:
+                    chat.password_updated_at = int(time.time())
+                    db.commit()
+                    db.refresh(chat)
+                    return ChatModel.model_validate(chat)
+                return None
+        except Exception as e:
+            log.error(f"Error updating password_updated_at for chat {id}: {e}")
             return None
 
     def update_chat_title_by_id(self, id: str, title: str) -> Optional[ChatModel]:
@@ -297,7 +378,65 @@ class ChatTable:
         chat["history"] = history
         return self.update_chat_by_id(id, chat)
 
-    def insert_shared_chat_by_chat_id(self, chat_id: str) -> Optional[ChatModel]:
+    def share_chat_by_id(
+        self,
+        chat_id: str,
+        share_id: Optional[str] = None,
+        expires_at: Optional[int] = None,
+        expire_on_views: Optional[int] = None,
+        max_clones: Optional[int] = None,
+        is_public: bool = False,
+        display_username: bool = True,
+        allow_cloning: bool = True,
+        keep_link_active_after_max_clones: bool = False,
+        password: Optional[str] = None,
+        share_show_qr_code: bool = False,
+        share_use_gradient: bool = False,
+        is_snapshot: bool = False,
+    ) -> Optional[tuple[ChatModel, bool]]:
+        with get_db() as db:
+            chat = db.get(Chat, chat_id)
+
+            is_new_share = not chat.share_id
+
+            if share_id:
+                chat.share_id = share_id
+            elif not chat.share_id:
+                chat.share_id = str(uuid.uuid4())
+
+            chat.expires_at = expires_at
+            chat.expire_on_views = expire_on_views
+            chat.max_clones = max_clones
+            chat.is_public = is_public
+            chat.display_username = display_username
+            chat.allow_cloning = allow_cloning
+            chat.keep_link_active_after_max_clones = keep_link_active_after_max_clones
+            chat.share_show_qr_code = share_show_qr_code
+            chat.share_use_gradient = share_use_gradient
+            chat.is_snapshot = is_snapshot
+            chat.revoked_at = None
+            chat.updated_at = int(time.time())
+
+            if is_snapshot:
+                chat.snapshot_chat = chat.chat
+
+            if password:
+                # Check if the password is being set for the first time or changed
+                if not chat.password or not pwd_context.verify(password, chat.password):
+                    chat.password = pwd_context.hash(password)
+                    chat.password_updated_at = int(time.time())
+            elif password == "" and chat.password:
+                # Password is being removed
+                chat.password = None
+                chat.password_updated_at = int(time.time())
+
+            db.commit()
+            db.refresh(chat)
+            return (ChatModel.model_validate(chat), is_new_share)
+
+    def insert_shared_chat_by_chat_id(
+        self, chat_id: str, share_id: Optional[str] = None
+    ) -> Optional[ChatModel]:
         with get_db() as db:
             # Get the existing chat to share
             chat = db.get(Chat, chat_id)
@@ -307,7 +446,7 @@ class ChatTable:
             # Create a new chat with the same data, but with a new ID
             shared_chat = ChatModel(
                 **{
-                    "id": str(uuid.uuid4()),
+                    "id": share_id if share_id else str(uuid.uuid4()),
                     "user_id": f"shared-{chat_id}",
                     "title": chat.title,
                     "chat": chat.chat,
@@ -324,15 +463,16 @@ class ChatTable:
             db.refresh(shared_result)
 
             # Update the original chat with the share_id
-            result = (
-                db.query(Chat)
-                .filter_by(id=chat_id)
-                .update({"share_id": shared_chat.id})
-            )
+            chat.share_id = shared_chat.id
+            chat.updated_at = int(time.time())
             db.commit()
-            return shared_chat if (shared_result and result) else None
 
-    def update_shared_chat_by_chat_id(self, chat_id: str) -> Optional[ChatModel]:
+            db.refresh(chat)
+            return shared_chat if shared_result else None
+
+    def update_shared_chat_by_chat_id(
+        self, chat_id: str, share_id: Optional[str] = None
+    ) -> Optional[ChatModel]:
         try:
             with get_db() as db:
                 chat = db.get(Chat, chat_id)
@@ -341,10 +481,11 @@ class ChatTable:
                 )
 
                 if shared_chat is None:
-                    return self.insert_shared_chat_by_chat_id(chat_id)
+                    return self.insert_shared_chat_by_chat_id(chat_id, share_id)
 
                 shared_chat.title = chat.title
                 shared_chat.chat = chat.chat
+                shared_chat.id = share_id
                 shared_chat.meta = chat.meta
                 shared_chat.pinned = chat.pinned
                 shared_chat.folder_id = chat.folder_id
@@ -356,12 +497,13 @@ class ChatTable:
         except Exception:
             return None
 
-    def delete_shared_chat_by_chat_id(self, chat_id: str) -> bool:
+    def revoke_shared_chat_by_chat_id(self, chat_id: str) -> bool:
         try:
             with get_db() as db:
-                db.query(Chat).filter_by(user_id=f"shared-{chat_id}").delete()
-                db.commit()
-
+                chat = db.query(Chat).filter_by(id=chat_id).first()
+                if chat:
+                    chat.revoked_at = int(time.time())
+                    db.commit()
                 return True
         except Exception:
             return False
@@ -377,6 +519,23 @@ class ChatTable:
                 db.refresh(chat)
                 return ChatModel.model_validate(chat)
         except Exception:
+            return None
+
+    def restore_shared_chat_by_chat_id(self, chat_id: str) -> Optional[ChatModel]:
+        try:
+            with get_db() as db:
+                chat = db.query(Chat).filter_by(id=chat_id).first()
+                if chat:
+                    chat.revoked_at = None
+                    chat.expires_at = None
+                    chat.views = 0
+                    chat.clones = 0
+                    db.commit()
+                    db.refresh(chat)
+                    return ChatModel.model_validate(chat)
+                return None
+        except Exception as e:
+            log.error(f"Error restoring shared chat for chat_id {chat_id}: {e}")
             return None
 
     def toggle_chat_pinned_by_id(self, id: str) -> Optional[ChatModel]:
@@ -449,6 +608,66 @@ class ChatTable:
             all_chats = query.all()
             return [ChatModel.model_validate(chat) for chat in all_chats]
 
+    @staticmethod
+    def _get_is_expired_clause() -> "or_":
+        now = int(time.time())
+        return or_(
+            and_(Chat.expires_at.isnot(None), Chat.expires_at <= now),
+            and_(
+                Chat.expire_on_views.isnot(None),
+                Chat.views >= Chat.expire_on_views,
+            ),
+            and_(
+                Chat.max_clones.isnot(None),
+                not_(Chat.keep_link_active_after_max_clones),
+                Chat.clones >= Chat.max_clones,
+            ),
+        )
+
+    @staticmethod
+    def _get_chat_status(chat: "ChatModel") -> str:
+        now = int(time.time())
+
+        # The chat object can be a model or a dict-like structure from sqlalchemy query results
+        chat_data = chat if isinstance(chat, dict) else chat.model_dump()
+
+        if chat_data.get("revoked_at"):
+            is_expired_by_time = (
+                chat_data.get("expires_at") and chat_data.get("expires_at") <= now
+            )
+            is_expired_by_views = (
+                chat_data.get("expire_on_views")
+                and chat_data.get("views", 0) >= chat_data.get("expire_on_views")
+            )
+            is_expired_by_clones = (
+                chat_data.get("max_clones") is not None
+                and chat_data.get("clones", 0) >= chat_data.get("max_clones")
+                and not chat_data.get("keep_link_active_after_max_clones")
+            )
+
+            if is_expired_by_time or is_expired_by_views or is_expired_by_clones:
+                return "expired"
+            else:
+                return "revoked"
+        else:
+            is_expired_by_time = (
+                chat_data.get("expires_at") and chat_data.get("expires_at") <= now
+            )
+            is_expired_by_views = (
+                chat_data.get("expire_on_views")
+                and chat_data.get("views", 0) >= chat_data.get("expire_on_views")
+            )
+            is_expired_by_clones = (
+                chat_data.get("max_clones") is not None
+                and chat_data.get("clones", 0) >= chat_data.get("max_clones")
+                and not chat_data.get("keep_link_active_after_max_clones")
+            )
+
+            if is_expired_by_time or is_expired_by_views or is_expired_by_clones:
+                return "expired"
+
+        return "active"
+
     def get_chat_list_by_user_id(
         self,
         user_id: str,
@@ -487,6 +706,180 @@ class ChatTable:
 
             all_chats = query.all()
             return [ChatModel.model_validate(chat) for chat in all_chats]
+
+    def get_shared_chat_list_by_user_id(
+        self,
+        user_id: str,
+        skip: Optional[int] = None,
+        limit: Optional[int] = None,
+        filter: Optional[dict] = None,
+    ) -> list[ChatTitleIdResponse]:
+        with get_db() as db:
+            query = (
+                db.query(Chat)
+                .filter_by(user_id=user_id)
+                .filter(Chat.share_id.isnot(None))
+            )
+
+            if filter:
+                query_key = filter.get("query")
+                if query_key:
+                    query = query.filter(Chat.title.ilike(f"%{query_key}%"))
+
+                start_date = filter.get("start_date")
+                end_date = filter.get("end_date")
+                is_public = filter.get("is_public")
+                password = filter.get("password")
+                status = filter.get("status")
+
+                if status == "active":
+                    is_expired = self._get_is_expired_clause()
+                    query = query.filter(
+                        and_(Chat.revoked_at.is_(None), not_(is_expired))
+                    )
+                elif status == "expired":
+                    # A chat is expired if any of its expiration conditions are met.
+                    is_expired = self._get_is_expired_clause()
+                    query = query.filter(is_expired)
+                elif status == "revoked":
+                    # A chat is revoked if it has a revoked_at timestamp but is not expired.
+                    is_expired = self._get_is_expired_clause()
+                    query = query.filter(
+                        and_(Chat.revoked_at.isnot(None), not_(is_expired))
+                    )
+
+                if start_date and end_date:
+                    query = query.filter(
+                        and_(
+                            Chat.created_at >= start_date,
+                            Chat.created_at <= end_date,
+                        )
+                    )
+
+                if is_public is not None:
+                    query = query.filter(Chat.is_public == is_public)
+
+                if password is not None:
+                    if password:
+                        query = query.filter(Chat.password.isnot(None))
+                    else:
+                        query = query.filter(Chat.password.is_(None))
+                
+                is_snapshot = filter.get("is_snapshot")
+                if is_snapshot is not None:
+                    query = query.filter(Chat.is_snapshot == is_snapshot)
+
+                order_by = filter.get("order_by")
+                direction = filter.get("direction")
+
+                if order_by and direction:
+                    if order_by == "status":
+                        is_expired = self._get_is_expired_clause()
+                        if direction == "active":
+                            status_order = case(
+                                (and_(Chat.revoked_at.is_(None), not_(is_expired)), 1),
+                                (is_expired, 2),
+                                (and_(Chat.revoked_at.isnot(None), not_(is_expired)), 3),
+                                else_=4,
+                            ).asc()
+                        elif direction == "expired":
+                            status_order = case(
+                                (is_expired, 1),
+                                (and_(Chat.revoked_at.is_(None), not_(is_expired)), 2),
+                                (and_(Chat.revoked_at.isnot(None), not_(is_expired)), 3),
+                                else_=4,
+                            ).asc()
+                        elif direction == "revoked":
+                            status_order = case(
+                                (and_(Chat.revoked_at.isnot(None), not_(is_expired)), 1),
+                                (is_expired, 2),
+                                (and_(Chat.revoked_at.is_(None), not_(is_expired)), 3),
+                                else_=4,
+                            ).asc()
+                        else:
+                            raise ValueError("Invalid direction for status ordering")
+                        query = query.order_by(status_order)
+                    elif getattr(Chat, order_by):
+                        if direction.lower() == "asc":
+                            query = query.order_by(getattr(Chat, order_by).asc())
+                        elif direction.lower() == "desc":
+                            query = query.order_by(getattr(Chat, order_by).desc())
+                        else:
+                            raise ValueError("Invalid direction for ordering")
+                else:
+                    query = query.order_by(Chat.updated_at.desc())
+            else:
+                query = query.order_by(Chat.updated_at.desc())
+
+            total = query.count()
+
+            grand_total_query = (
+                db.query(Chat)
+                .filter_by(user_id=user_id)
+                .filter(Chat.share_id.isnot(None))
+            )
+            grand_total = grand_total_query.count()
+
+            query = query.with_entities(
+                Chat.id,
+                Chat.title,
+                Chat.updated_at,
+                Chat.created_at,
+                Chat.share_id,
+                Chat.expires_at,
+                Chat.expire_on_views,
+                Chat.max_clones,
+                Chat.is_public,
+                Chat.password,
+                Chat.views,
+                Chat.clones,
+                Chat.revoked_at,
+                Chat.allow_cloning,
+                Chat.keep_link_active_after_max_clones,
+                Chat.share_show_qr_code,
+                Chat.share_use_gradient,
+                Chat.is_snapshot,
+            )
+
+            if skip:
+                query = query.offset(skip)
+            if limit:
+                query = query.limit(limit)
+
+            all_chats = query.all()
+
+            # result has to be destructured from sqlalchemy `row` and mapped to a dict since the `ChatModel`is not the returned dataclass.
+
+            chats_with_status = []
+            for chat in all_chats:
+                chat_data = {
+                    "id": chat[0],
+                    "title": chat[1],
+                    "updated_at": chat[2],
+                    "created_at": chat[3],
+                    "share_id": chat[4],
+                    "expires_at": chat[5],
+                    "expire_on_views": chat[6],
+                    "max_clones": chat[7],
+                    "is_public": chat[8],
+                    "has_password": chat[9] is not None,
+                    "views": chat[10],
+                    "clones": chat[11],
+                    "revoked_at": chat[12],
+                    "allow_cloning": chat[13],
+                    "keep_link_active_after_max_clones": chat[14],
+                    "share_show_qr_code": chat[15],
+                    "share_use_gradient": chat[16],
+                    "is_snapshot": chat[17],
+                }
+                chat_data["status"] = self._get_chat_status(chat_data)
+                chats_with_status.append(ChatTitleIdResponse.model_validate(chat_data))
+
+            return {
+                "total": total,
+                "grand_total": grand_total,
+                "chats": chats_with_status,
+            }
 
     def get_chat_title_id_list_by_user_id(
         self,
@@ -547,18 +940,105 @@ class ChatTable:
         except Exception:
             return None
 
-    def get_chat_by_share_id(self, id: str) -> Optional[ChatModel]:
+    def get_chat_by_share_id(
+        self, id: str, user: Optional["UserModel"] = None, increment_view: bool = True
+    ) -> Optional[tuple[ChatModel, bool]]:
         try:
             with get_db() as db:
-                # it is possible that the shared link was deleted. hence,
-                # we check if the chat is still shared by checking if a chat with the share_id exists
                 chat = db.query(Chat).filter_by(share_id=id).first()
+                view_incremented = False
 
+                if not chat:
+                    return None, view_incremented
+
+                if chat.revoked_at:
+                    return None, view_incremented
+                if not chat.is_public and user is None:
+                    return None, view_incremented
+                if chat.expires_at and chat.expires_at < int(time.time()):
+                    return None, view_incremented
+
+                # Check if the view limit has already been reached before this view
+                if (
+                    chat.expire_on_views is not None
+                    and chat.views >= chat.expire_on_views
+                ):
+                    return None, view_incremented
+
+                # If we are here, the user is allowed to view the chat.
+                # Increment the view count for this user.
+                if increment_view and (user is None or chat.user_id != user.id):
+                    chat.views = (chat.views or 0) + 1
+                    db.commit()
+                    view_incremented = True
+
+                # Now, get the chat content to return to the user.
+                chat_to_return = self.get_chat_by_id(chat.id)
+
+                if chat_to_return.is_snapshot:
+                    chat_to_return.chat = chat_to_return.snapshot_chat
+
+                # After this view, if the limit is now reached, revoke the link for future requests.
+                if (
+                    chat.expire_on_views is not None
+                    and chat.views >= chat.expire_on_views
+                ):
+                    if not chat.revoked_at:
+                        chat.revoked_at = int(time.time())
+                        db.commit()
+
+                return chat_to_return, view_incremented
+        except Exception as e:
+            log.error(f"Error getting shared chat for share_id {id}: {e}")
+            return None, False
+
+    def get_chat_by_share_id_unrestricted(self, id: str) -> Optional[ChatModel]:
+        try:
+            with get_db() as db:
+                chat = db.query(Chat).filter_by(share_id=id).first()
+                return ChatModel.model_validate(chat) if chat else None
+        except Exception:
+            return None
+
+    def increment_clone_count_by_id(
+        self, id: str, user: Optional["UserModel"] = None
+    ) -> Optional[ChatModel]:
+        try:
+            with get_db() as db:
+                chat = db.get(Chat, id)
                 if chat:
-                    return self.get_chat_by_id(id)
+                    if user is None or chat.user_id != user.id:
+                        chat.clones = (chat.clones or 0) + 1
+                        if (
+                            chat.max_clones is not None
+                            and chat.clones >= chat.max_clones
+                            and not chat.keep_link_active_after_max_clones
+                        ):
+                            chat.revoked_at = int(time.time())
+                        db.commit()
+                        db.refresh(chat)
+                    return ChatModel.model_validate(chat)
                 else:
                     return None
-        except Exception:
+        except Exception as e:
+            log.error(f"Error incrementing clone count for chat {id}: {e}")
+            return None
+
+    def reset_chat_stats_by_id(self, id: str, user_id: str) -> Optional[ChatModel]:
+        try:
+            with get_db() as db:
+                chat = db.query(Chat).filter_by(id=id, user_id=user_id).first()
+                if chat:
+                    chat.views = 0
+                    chat.clones = 0
+                    db.commit()
+                    db.refresh(chat)
+                    return ChatModel.model_validate(chat)
+                else:
+                    # User is not the owner or chat does not exist
+                    return None
+        except Exception as e:
+            log.error(f"Error resetting stats for chat {id}: {e}")
             return None
 
     def get_chat_by_id_and_user_id(self, id: str, user_id: str) -> Optional[ChatModel]:
@@ -982,7 +1462,7 @@ class ChatTable:
                 db.query(Chat).filter_by(id=id).delete()
                 db.commit()
 
-                return True and self.delete_shared_chat_by_chat_id(id)
+                return True and self.revoke_shared_chat_by_chat_id(id)
         except Exception:
             return False
 
@@ -992,9 +1472,64 @@ class ChatTable:
                 db.query(Chat).filter_by(id=id, user_id=user_id).delete()
                 db.commit()
 
-                return True and self.delete_shared_chat_by_chat_id(id)
+                return True and self.revoke_shared_chat_by_chat_id(id)
         except Exception:
             return False
+
+    def revoke_all_shared_chats_by_user_id(self, user_id: str) -> int:
+        try:
+            with get_db() as db:
+                # Find all chats for the user that are shared
+                chats_to_revoke = (
+                    db.query(Chat)
+                    .filter(Chat.user_id == user_id, Chat.share_id.isnot(None))
+                    .all()
+                )
+
+                if not chats_to_revoke:
+                    return 0
+
+                count = len(chats_to_revoke)
+
+                # Set the revoked_at timestamp on the original chats
+                for chat in chats_to_revoke:
+                    chat.revoked_at = int(time.time())
+
+                db.commit()
+
+                return count
+        except Exception as e:
+            log.error(f"Error revoking all shared chats for user {user_id}: {e}")
+            db.rollback()
+            return 0
+
+    def reset_all_chat_stats_by_user_id(self, user_id: str) -> int:
+        try:
+            with get_db() as db:
+                # Find all chats for the user that are shared
+                chats_to_reset = (
+                    db.query(Chat)
+                    .filter(Chat.user_id == user_id, Chat.share_id.isnot(None))
+                    .all()
+                )
+
+                if not chats_to_reset:
+                    return 0
+
+                count = len(chats_to_reset)
+
+                # Reset the stats on the original chats
+                for chat in chats_to_reset:
+                    chat.views = 0
+                    chat.clones = 0
+
+                db.commit()
+
+                return count
+        except Exception as e:
+            log.error(f"Error resetting all chat stats for user {user_id}: {e}")
+            db.rollback()
+            return 0
 
     def delete_chats_by_user_id(self, user_id: str) -> bool:
         try:
@@ -1032,6 +1567,140 @@ class ChatTable:
                 return True
         except Exception:
             return False
+
+    def clear_revoked_shared_chats_by_user_id(self, user_id: str) -> bool:
+        try:
+            with get_db() as db:
+                # Find all chats for the user that are revoked
+                chats_to_clear = (
+                    db.query(Chat)
+                    .filter(Chat.user_id == user_id, Chat.revoked_at.isnot(None))
+                    .all()
+                )
+
+                if not chats_to_clear:
+                    return 0
+
+                count = len(chats_to_clear)
+
+                # Clear the sharing information
+                for chat in chats_to_clear:
+                    chat.share_id = None
+                    chat.expires_at = None
+                    chat.expire_on_views = None
+                    chat.is_public = False
+                    chat.display_username = True
+                    chat.allow_cloning = True
+                    chat.revoked_at = None
+                    chat.views = 0
+                    chat.clones = 0
+
+                db.commit()
+
+                return count
+        except Exception as e:
+            log.error(f"Error clearing revoked shared chats for user {user_id}: {e}")
+            db.rollback()
+            return 0
+
+    def make_all_public_chats_private_by_user_id(self, user_id: str) -> bool:
+        try:
+            with get_db() as db:
+                db.query(Chat).filter_by(user_id=user_id, is_public=True).update(
+                    {"is_public": False}
+                )
+                db.commit()
+                return True
+        except Exception as e:
+            log.error(f"Error revoking public chats for user {user_id}: {e}")
+            db.rollback()
+            return False
+
+    def get_all_shared_chats_meta_by_user_id(
+        self,
+        user_id: str,
+        filter: Optional[dict] = None,
+    ) -> list[dict]:
+        with get_db() as db:
+            query = (
+                db.query(
+                    Chat.id,
+                    Chat.revoked_at,
+                    Chat.expires_at,
+                    Chat.expire_on_views,
+                    Chat.views,
+                    Chat.max_clones,
+                    Chat.clones,
+                    Chat.keep_link_active_after_max_clones,
+                    Chat.title,
+                    Chat.created_at,
+                    Chat.is_public,
+                    Chat.password,
+                )
+                .filter_by(user_id=user_id)
+                .filter(Chat.share_id.isnot(None))
+            )
+
+            if filter:
+                query_key = filter.get("query")
+                if query_key:
+                    query = query.filter(Chat.title.ilike(f"%{query_key}%"))
+
+                start_date = filter.get("start_date")
+                end_date = filter.get("end_date")
+                is_public = filter.get("is_public")
+                password = filter.get("password")
+                status = filter.get("status")
+
+                if status == "active":
+                    is_expired = self._get_is_expired_clause()
+                    query = query.filter(
+                        and_(Chat.revoked_at.is_(None), not_(is_expired))
+                    )
+                elif status == "expired":
+                    is_expired = self._get_is_expired_clause()
+                    query = query.filter(is_expired)
+                elif status == "revoked":
+                    is_expired = self._get_is_expired_clause()
+                    query = query.filter(
+                        and_(Chat.revoked_at.isnot(None), not_(is_expired))
+                    )
+
+                if start_date and end_date:
+                    query = query.filter(
+                        and_(
+                            Chat.created_at >= start_date,
+                            Chat.created_at <= end_date,
+                        )
+                    )
+
+                if is_public is not None:
+                    query = query.filter(Chat.is_public == is_public)
+
+                if password is not None:
+                    if password:
+                        query = query.filter(Chat.password.isnot(None))
+                    else:
+                        query = query.filter(Chat.password.is_(None))
+            
+            all_chats = query.all()
+
+            chats_meta = []
+            for chat in all_chats:
+                chat_data = {
+                    "id": chat.id,
+                    "revoked_at": chat.revoked_at,
+                    "expires_at": chat.expires_at,
+                    "expire_on_views": chat.expire_on_views,
+                    "views": chat.views,
+                    "max_clones": chat.max_clones,
+                    "clones": chat.clones,
+                    "keep_link_active_after_max_clones": chat.keep_link_active_after_max_clones,
+                }
+                status = self._get_chat_status(chat_data)
+                chats_meta.append({"id": chat_data["id"], "status": status})
+
+            return chats_meta
 
 
 Chats = ChatTable()

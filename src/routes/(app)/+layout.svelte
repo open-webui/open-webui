@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { toast } from 'svelte-sonner';
-	import { onMount, tick, getContext } from 'svelte';
+	import { onMount, tick, getContext, onDestroy } from 'svelte';
 	import { openDB, deleteDB } from 'idb';
 	import fileSaver from 'file-saver';
 	const { saveAs } = fileSaver;
@@ -13,7 +13,7 @@
 	import { getKnowledgeBases } from '$lib/apis/knowledge';
 	import { getFunctions } from '$lib/apis/functions';
 	import { getModels, getToolServersData, getVersionUpdates } from '$lib/apis';
-	import { getAllTags } from '$lib/apis/chats';
+	import { getAllTags, getSharedChats } from '$lib/apis/chats';
 	import { getPrompts } from '$lib/apis/prompts';
 	import { getTools } from '$lib/apis/tools';
 	import { getBanners } from '$lib/apis/configs';
@@ -39,7 +39,8 @@
 		temporaryChatEnabled,
 		toolServers,
 		showSearch,
-		showSidebar
+		showSidebar,
+		sharedChats
 	} from '$lib/stores';
 
 	import Sidebar from '$lib/components/layout/Sidebar.svelte';
@@ -259,6 +260,90 @@
 		}
 
 		loaded = true;
+
+		if ($user?.permissions?.sharing?.shared_chats) {
+			const res = await getSharedChats(localStorage.token);
+			sharedChats.set(res.chats);
+		}
+	});
+
+	let previousChats = [];
+	let expirationTimers = {};
+
+	const getExpirationReason = (chat, previousChat) => {
+		if (
+			chat.expire_on_views &&
+			chat.views >= chat.expire_on_views &&
+			(!previousChat || chat.views > previousChat.views)
+		) {
+			return 'it reached its maximum number of views';
+		}
+		if (
+			chat.max_clones &&
+			chat.clones >= chat.max_clones &&
+			(!previousChat || chat.clones > previousChat.clones)
+		) {
+			return 'it reached its maximum number of clones';
+		}
+		if (chat.expires_at && chat.expires_at <= Date.now() / 1000) {
+			return 'it reached its expiration time';
+		}
+		return 'it has expired';
+	};
+
+	const setupExpirationTimers = (chats) => {
+		if (!chats) return;
+
+		const chatIdsWithTimers = Object.keys(expirationTimers);
+		const currentChatIds = new Set(chats.map((c) => c.id));
+
+		// Clear timers for removed chats
+		chatIdsWithTimers.forEach((chatId) => {
+			if (!currentChatIds.has(chatId)) {
+				clearTimeout(expirationTimers[chatId]);
+				delete expirationTimers[chatId];
+			}
+		});
+
+		// Set timers for new chats
+		chats.forEach((chat) => {
+			if (chat.expires_at && !expirationTimers[chat.id]) {
+				const expirationTime = chat.expires_at * 1000;
+				const now = Date.now();
+				const delay = expirationTime - now;
+
+				if (delay > 0) {
+					const timerId = setTimeout(async () => {
+						const res = await getSharedChats(localStorage.token);
+						sharedChats.set(res.chats);
+						delete expirationTimers[chat.id]; // Remove timer after it has fired
+					}, delay);
+					expirationTimers[chat.id] = timerId;
+				}
+			}
+		});
+	};
+
+	$: {
+		if ($sharedChats) {
+			setupExpirationTimers($sharedChats);
+
+			const currentChats = $sharedChats;
+			if (previousChats.length > 0) {
+				currentChats.forEach((chat) => {
+					const previousChat = previousChats.find((p) => p.id === chat.id);
+					if (previousChat && previousChat.status === 'active' && chat.status === 'expired') {
+						const reason = getExpirationReason(chat, previousChat);
+						toast.info(`Chat "${chat.title}" has expired because ${reason}.`);
+					}
+				});
+			}
+			previousChats = currentChats.map((chat) => ({ ...chat }));
+		}
+	}
+
+	onDestroy(() => {
+		Object.values(expirationTimers).forEach(clearTimeout);
 	});
 
 	const checkForVersionUpdates = async () => {

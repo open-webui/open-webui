@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { toast } from 'svelte-sonner';
 	import { goto, invalidate, invalidateAll } from '$app/navigation';
+	import { page } from '$app/stores';
 	import { onMount, getContext, createEventDispatcher, tick, onDestroy } from 'svelte';
 	const i18n = getContext('i18n');
 
@@ -27,7 +28,9 @@
 		showSidebar,
 		currentChatPage,
 		tags,
-		selectedFolder
+		selectedFolder,
+		sharedChatsUpdated,
+		user
 	} from '$lib/stores';
 
 	import ChatMenu from './ChatMenu.svelte';
@@ -88,6 +91,7 @@
 			await chats.set(await getChatList(localStorage.token, $currentChatPage));
 			await pinnedChats.set(await getPinnedChatList(localStorage.token));
 
+			sharedChatsUpdated.set(true);
 			dispatch('change');
 		}
 	};
@@ -105,7 +109,11 @@
 		});
 
 		if (res) {
-			goto(`/c/${res.id}`);
+			if ($page.url.pathname !== '/shared') {
+				goto(`/c/${res.id}`);
+			} else {
+				toast.success('Chat cloned successfully');
+			}
 
 			currentChatPage.set(1);
 			await chats.set(await getChatList(localStorage.token, $currentChatPage));
@@ -127,7 +135,7 @@
 				await chatId.set('');
 				await tick();
 			}
-
+			sharedChatsUpdated.set(true);
 			dispatch('change');
 		}
 	};
@@ -506,6 +514,7 @@
 					cloneChatHandler={() => {
 						cloneChatHandler(id);
 					}}
+					showCloneChat={($user?.role === 'admin' || $user?.permissions?.chat?.clone) ?? true}
 					shareHandler={() => {
 						showShareChatModal = true;
 					}}

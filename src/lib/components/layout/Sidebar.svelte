@@ -12,6 +12,7 @@
 		tags,
 		folders as _folders,
 		showSidebar,
+		chatsUpdated,
 		showSearch,
 		mobile,
 		showArchivedChats,
@@ -197,7 +198,16 @@
 
 		// once the bottom of the list has been reached (no results) there is no need to continue querying
 		allChatsLoaded = newChatList.length === 0;
-		await chats.set([...($chats ? $chats : []), ...newChatList]);
+
+		if (allChatsLoaded) {
+			chatListLoading = false;
+			return;
+		}
+
+		const existingChatIds = new Set($chats.map((chat) => chat.id));
+		const uniqueNewChats = newChatList.filter((chat) => !existingChatIds.has(chat.id));
+
+		await chats.set([...($chats ? $chats : []), ...uniqueNewChats]);
 
 		chatListLoading = false;
 	};
@@ -332,6 +342,13 @@
 
 	onMount(async () => {
 		showPinnedChat = localStorage?.showPinnedChat ? localStorage.showPinnedChat === 'true' : true;
+
+		chatsUpdated.subscribe((updated) => {
+			if (updated) {
+				initChatList();
+				chatsUpdated.set(false);
+			}
+		});
 
 		mobile.subscribe((value) => {
 			if ($showSidebar && value) {
@@ -892,6 +909,13 @@
 								return null;
 							});
 							if (!chat && item) {
+								// This is a clone/import operation, check permission
+								const canClone = ($user?.role === 'admin' || $user?.permissions?.chat?.clone) ?? true;
+								if (!canClone) {
+									toast.error($i18n.t("You don't have permission to clone chats."));
+									return;
+								}
+
 								chat = await importChat(
 									localStorage.token,
 									item.chat,
