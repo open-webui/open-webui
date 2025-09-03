@@ -128,11 +128,16 @@ class KnowledgeTable:
 
     def get_knowledge_bases(self) -> list[KnowledgeUserModel]:
         with get_db() as db:
+            all_knowledge = db.query(Knowledge).order_by(Knowledge.updated_at.desc()).all()
+
+            user_ids = list(set(knowledge.user_id for knowledge in all_knowledge))
+
+            users = Users.get_users_by_user_ids(user_ids) if user_ids else []
+            users_dict = {user.id: user for user in users}
+
             knowledge_bases = []
-            for knowledge in (
-                db.query(Knowledge).order_by(Knowledge.updated_at.desc()).all()
-            ):
-                user = Users.get_user_by_id(knowledge.user_id)
+            for knowledge in all_knowledge:
+                user = users_dict.get(knowledge.user_id)
                 knowledge_bases.append(
                     KnowledgeUserModel.model_validate(
                         {
