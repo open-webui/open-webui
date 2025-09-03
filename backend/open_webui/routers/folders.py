@@ -10,6 +10,7 @@ import mimetypes
 
 from open_webui.models.folders import (
     FolderForm,
+    FolderUpdateForm,
     FolderModel,
     Folders,
 )
@@ -113,22 +114,24 @@ async def get_folder_by_id(id: str, user=Depends(get_verified_user)):
 
 @router.post("/{id}/update")
 async def update_folder_name_by_id(
-    id: str, form_data: FolderForm, user=Depends(get_verified_user)
+    id: str, form_data: FolderUpdateForm, user=Depends(get_verified_user)
 ):
     folder = Folders.get_folder_by_id_and_user_id(id, user.id)
     if folder:
-        existing_folder = Folders.get_folder_by_parent_id_and_user_id_and_name(
-            folder.parent_id, user.id, form_data.name
-        )
-        if existing_folder and existing_folder.id != id:
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail=ERROR_MESSAGES.DEFAULT("Folder already exists"),
+
+        if form_data.name is not None:
+            # Check if folder with same name exists
+            existing_folder = Folders.get_folder_by_parent_id_and_user_id_and_name(
+                folder.parent_id, user.id, form_data.name
             )
+            if existing_folder and existing_folder.id != id:
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail=ERROR_MESSAGES.DEFAULT("Folder already exists"),
+                )
 
         try:
             folder = Folders.update_folder_by_id_and_user_id(id, user.id, form_data)
-
             return folder
         except Exception as e:
             log.exception(e)

@@ -58,6 +58,14 @@ class FolderModel(BaseModel):
 class FolderForm(BaseModel):
     name: str
     data: Optional[dict] = None
+    meta: Optional[dict] = None
+    model_config = ConfigDict(extra="allow")
+
+
+class FolderUpdateForm(BaseModel):
+    name: Optional[str] = None
+    data: Optional[dict] = None
+    meta: Optional[dict] = None
     model_config = ConfigDict(extra="allow")
 
 
@@ -191,7 +199,7 @@ class FolderTable:
             return
 
     def update_folder_by_id_and_user_id(
-        self, id: str, user_id: str, form_data: FolderForm
+        self, id: str, user_id: str, form_data: FolderUpdateForm
     ) -> Optional[FolderModel]:
         try:
             with get_db() as db:
@@ -222,8 +230,13 @@ class FolderTable:
                         **form_data["data"],
                     }
 
-                folder.updated_at = int(time.time())
+                if "meta" in form_data:
+                    folder.meta = {
+                        **(folder.meta or {}),
+                        **form_data["meta"],
+                    }
 
+                folder.updated_at = int(time.time())
                 db.commit()
 
                 return FolderModel.model_validate(folder)
