@@ -115,6 +115,7 @@
 	let debounceTimeout = null;
 	let mediaQuery;
 	let dragged = false;
+	let isSaving = false;
 
 	const createFileFromText = (name, content) => {
 		const blob = new Blob([content], { type: 'text/plain' });
@@ -434,27 +435,34 @@
 	};
 
 	const updateFileContentHandler = async () => {
-		const fileId = selectedFile.id;
-		const content = selectedFileContent;
-
-		// Clear the cache for this file since we're updating it
-		fileContentCache.delete(fileId);
-
-		const res = updateFileDataContentById(localStorage.token, fileId, content).catch((e) => {
-			toast.error(`${e}`);
-		});
-
-		const updatedKnowledge = await updateFileFromKnowledgeById(
-			localStorage.token,
-			id,
-			fileId
-		).catch((e) => {
-			toast.error(`${e}`);
-		});
-
-		if (res && updatedKnowledge) {
-			knowledge = updatedKnowledge;
-			toast.success($i18n.t('File content updated successfully.'));
+		if (isSaving) {
+			console.log('Save operation already in progress, skipping...');
+			return;
+		}
+		isSaving = true;
+		try {
+			const fileId = selectedFile.id;
+			const content = selectedFileContent;
+			// Clear the cache for this file since we're updating it
+			fileContentCache.delete(fileId);
+			const res = await updateFileDataContentById(localStorage.token, fileId, content).catch(
+				(e) => {
+					toast.error(`${e}`);
+				}
+			);
+			const updatedKnowledge = await updateFileFromKnowledgeById(
+				localStorage.token,
+				id,
+				fileId
+			).catch((e) => {
+				toast.error(`${e}`);
+			});
+			if (res && updatedKnowledge) {
+				knowledge = updatedKnowledge;
+				toast.success($i18n.t('File content updated successfully.'));
+			}
+		} finally {
+			isSaving = false;
 		}
 	};
 
@@ -779,12 +787,13 @@
 
 								<div>
 									<button
-										class="self-center w-fit text-sm py-1 px-2.5 dark:text-gray-300 dark:hover:text-white hover:bg-black/5 dark:hover:bg-white/5 rounded-lg"
+										class="self-center w-fit text-sm py-1 px-2.5 dark:text-gray-300 dark:hover:text-white hover:bg-black/5 dark:hover:bg-white/5 rounded-lg disabled:opacity-50 disabled:cursor-not-allowed"
+										disabled={isSaving}
 										on:click={() => {
 											updateFileContentHandler();
 										}}
 									>
-										{$i18n.t('Save')}
+										{isSaving ? $i18n.t('Running...') : $i18n.t('Save')}
 									</button>
 								</div>
 							</div>
@@ -836,12 +845,13 @@
 
 								<div>
 									<button
-										class="self-center w-fit text-sm py-1 px-2.5 dark:text-gray-300 dark:hover:text-white hover:bg-black/5 dark:hover:bg-white/5 rounded-lg"
+										class="self-center w-fit text-sm py-1 px-2.5 dark:text-gray-300 dark:hover:text-white hover:bg-black/5 dark:hover:bg-white/5 rounded-lg disabled:opacity-50 disabled:cursor-not-allowed"
+										disabled={isSaving}
 										on:click={() => {
 											updateFileContentHandler();
 										}}
 									>
-										{$i18n.t('Save')}
+										{isSaving ? $i18n.t('Running...') : $i18n.t('Save')}
 									</button>
 								</div>
 							</div>
