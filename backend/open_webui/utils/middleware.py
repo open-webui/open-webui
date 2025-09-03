@@ -1501,7 +1501,7 @@ async def process_chat_response(
                                         tool_result_files = result.get("files", None)
                                         break
 
-                                if tool_result:
+                                if tool_result is not None:
                                     tool_calls_display_content = f'{tool_calls_display_content}<details type="tool_calls" done="true" id="{tool_call_id}" name="{tool_name}" arguments="{html.escape(json.dumps(tool_arguments))}" result="{html.escape(json.dumps(tool_result, ensure_ascii=False))}" files="{html.escape(json.dumps(tool_result_files)) if tool_result_files else ""}">\n<summary>Tool Executed</summary>\n</details>\n'
                                 else:
                                     tool_calls_display_content = f'{tool_calls_display_content}<details type="tool_calls" done="false" id="{tool_call_id}" name="{tool_name}" arguments="{html.escape(json.dumps(tool_arguments))}">\n<summary>Executing...</summary>\n</details>\n'
@@ -1616,7 +1616,7 @@ async def process_chat_response(
                                 {
                                     "role": "tool",
                                     "tool_call_id": result["tool_call_id"],
-                                    "content": result["content"],
+                                    "content": result.get("content", "") or "",
                                 }
                             )
                         temp_blocks = []
@@ -2341,7 +2341,7 @@ async def process_chat_response(
                         results.append(
                             {
                                 "tool_call_id": tool_call_id,
-                                "content": tool_result,
+                                "content": tool_result or "",
                                 **(
                                     {"files": tool_result_files}
                                     if tool_result_files
