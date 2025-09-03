@@ -776,48 +776,46 @@ export const promptTemplate = (
 	user_name?: string,
 	user_location?: string
 ): string => {
-	// Get the current date
+	// Get the current date/time in Eastern Time zone (same as backend)
 	const currentDate = new Date();
+	const easternDate = new Date(
+		currentDate.toLocaleString('en-US', { timeZone: 'America/New_York' })
+	);
 
 	// Format the date to YYYY-MM-DD
-	const formattedDate =
-		currentDate.getFullYear() +
-		'-' +
-		String(currentDate.getMonth() + 1).padStart(2, '0') +
-		'-' +
-		String(currentDate.getDate()).padStart(2, '0');
+	const formattedDate = easternDate.toLocaleDateString('en-CA'); // en-CA uses YYYY-MM-DD format
 
-	// Format the time to HH:MM:SS AM/PM
-	const currentTime = currentDate.toLocaleTimeString('en-US', {
+	// Format the time to HH:MM:SS AM/PM EDT/EST
+	const formattedTime = easternDate.toLocaleTimeString('en-US', {
 		hour: 'numeric',
 		minute: 'numeric',
 		second: 'numeric',
-		hour12: true
+		hour12: true,
+		timeZone: 'America/New_York',
+		timeZoneName: 'short'
 	});
 
-	// Get the current weekday
-	const currentWeekday = getWeekday();
-
-	// Get the user's timezone
-	const currentTimezone = getUserTimezone();
+	// Get the current weekday in Eastern Time
+	const currentWeekday = easternDate.toLocaleDateString('en-US', {
+		weekday: 'long',
+		timeZone: 'America/New_York'
+	});
 
 	// Get the user's language
 	const userLanguage = localStorage.getItem('locale') || 'en-US';
 
-	// Replace {{CURRENT_DATETIME}} in the template with the formatted datetime
-	template = template.replace('{{CURRENT_DATETIME}}', `${formattedDate} ${currentTime}`);
-
-	// Replace {{CURRENT_DATE}} in the template with the formatted date
+	// Replace template variables
+	template = template.replace('{{CURRENT_DATETIME}}', `${formattedDate} ${formattedTime}`);
 	template = template.replace('{{CURRENT_DATE}}', formattedDate);
-
-	// Replace {{CURRENT_TIME}} in the template with the formatted time
-	template = template.replace('{{CURRENT_TIME}}', currentTime);
-
-	// Replace {{CURRENT_WEEKDAY}} in the template with the current weekday
+	template = template.replace('{{CURRENT_TIME}}', formattedTime);
 	template = template.replace('{{CURRENT_WEEKDAY}}', currentWeekday);
+	template = template.replace('{{CURRENT_TIMEZONE}}', 'America/New_York');
 
-	// Replace {{CURRENT_TIMEZONE}} in the template with the user's timezone
-	template = template.replace('{{CURRENT_TIMEZONE}}', currentTimezone);
+	// Auto-append current time to system prompts for temporal context
+	// This ensures models always have access to current time without user needing to add template variables
+	if (template && !template.includes('current date and time') && !template.includes('{{CURRENT_')) {
+		template = `${template}${template.trim() ? '\n\n' : ''}The current date and time is ${formattedDate} ${formattedTime}. Today is ${currentWeekday}.`;
+	}
 
 	// Replace {{USER_LANGUAGE}} in the template with the user's language
 	template = template.replace('{{USER_LANGUAGE}}', userLanguage);

@@ -10,7 +10,8 @@ import json
 import inspect
 from uuid import uuid4
 from concurrent.futures import ThreadPoolExecutor
-
+from datetime import datetime
+from zoneinfo import ZoneInfo
 
 from open_webui.models.message_metrics import MessageMetrics
 from fastapi import Request
@@ -1359,6 +1360,27 @@ async def process_chat_payload(request, form_data, metadata, user, model):
                 },
             }
         )
+
+    # Add current time information to all chat requests
+    eastern = ZoneInfo("America/New_York")
+    now = datetime.now(eastern)
+    current_datetime = now.strftime("%A, %B %d, %Y at %I:%M %p %Z")
+    current_weekday = now.strftime("%A")
+
+    time_context = (
+        f"The current date and time is {current_datetime}. Today is {current_weekday}."
+    )
+
+    # Add time information to system message
+    messages = form_data.get("messages", [])
+    if messages and messages[0].get("role") == "system":
+        # Update existing system message
+        messages[0]["content"] = f"{time_context}\n\n{messages[0]['content']}"
+    else:
+        # Insert new system message at beginning
+        messages.insert(0, {"role": "system", "content": time_context})
+
+    form_data["messages"] = messages
 
     return form_data, events
 
