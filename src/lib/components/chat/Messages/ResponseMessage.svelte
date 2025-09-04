@@ -38,6 +38,7 @@
 	import RateComment from './RateComment.svelte';
 	import Spinner from '$lib/components/common/Spinner.svelte';
 	import WebSearchResults from './ResponseMessage/WebSearchResults.svelte';
+	import QueryGenerationResults from './ResponseMessage/QueryGenerationResults.svelte';
 	import Sparkles from '$lib/components/icons/Sparkles.svelte';
 
 	import DeleteConfirmDialog from '$lib/components/common/ConfirmDialog.svelte';
@@ -643,10 +644,8 @@
 				<div class="chat-{message.role} w-full min-w-full markdown-prose">
 					<div>
 						{#if (message?.statusHistory ?? [...(message?.status ? [message?.status] : [])]).length > 0}
-							{@const status = (
-								message?.statusHistory ?? [...(message?.status ? [message?.status] : [])]
-							).at(-1)}
-							{#if !status?.hidden}
+							{@const allStatuses = message?.statusHistory ?? [...(message?.status ? [message?.status] : [])]}
+							{#each allStatuses.filter(s => !s?.hidden) as status}
 								<div class="status-description flex items-center gap-2 py-0.5">
 									{#if status?.action === 'web_search' && status?.urls}
 										<WebSearchResults {status}>
@@ -674,6 +673,24 @@
 												</div>
 											</div>
 										</WebSearchResults>
+									{:else if status?.action === 'retrieval_query_generation'}
+										<QueryGenerationResults {status}>
+											<div class="flex flex-col justify-center -space-y-0.5">
+												<div
+													class="{status?.done === false
+														? 'shimmer'
+														: ''} text-base line-clamp-1 text-wrap"
+												>
+													{#if status?.description.includes('{{count}}')}
+														{$i18n.t(status?.description, {
+															count: status?.queries?.length || 0
+														})}
+													{:else}
+														{status?.description}
+													{/if}
+												</div>
+											</div>
+										</QueryGenerationResults>
 									{:else if status?.action === 'knowledge_search'}
 										<div class="flex flex-col justify-center -space-y-0.5">
 											<div
@@ -711,7 +728,7 @@
 										</div>
 									{/if}
 								</div>
-							{/if}
+							{/each}
 						{/if}
 
 						{#if message?.files && message.files?.filter((f) => f.type === 'image').length > 0}

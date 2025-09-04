@@ -312,7 +312,15 @@
 
 				if (type === 'status') {
 					if (message?.statusHistory) {
-						message.statusHistory.push(data);
+						// Check if we already have a status with the same action
+						const existingIndex = message.statusHistory.findIndex(s => s.action === data.action);
+						if (existingIndex !== -1) {
+							// Update existing status
+							message.statusHistory[existingIndex] = data;
+						} else {
+							// Add new status
+							message.statusHistory.push(data);
+						}
 					} else {
 						message.statusHistory = [data];
 					}

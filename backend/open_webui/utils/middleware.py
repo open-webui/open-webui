@@ -93,6 +93,7 @@ from open_webui.config import (
     DEFAULT_TOOLS_FUNCTION_CALLING_PROMPT_TEMPLATE,
     DEFAULT_CODE_INTERPRETER_PROMPT,
     CODE_INTERPRETER_BLOCKED_MODULES,
+    ENABLE_RETRIEVAL_QUERY_GENERATION,
 )
 from open_webui.env import (
     SRC_LOG_LEVELS,
@@ -624,7 +625,7 @@ async def chat_image_generation_handler(
 
 
 async def chat_completion_files_handler(
-    request: Request, body: dict, user: UserModel
+    request: Request, body: dict, user: UserModel, event_emitter=None
 ) -> tuple[dict, dict[str, list]]:
     sources = []
 
@@ -660,6 +661,21 @@ async def chat_completion_files_handler(
 
         if len(queries) == 0:
             queries = [get_last_user_message(body["messages"])]
+
+        # Emit query generation status immediately after queries are generated
+        if event_emitter and len(queries) > 1 and ENABLE_RETRIEVAL_QUERY_GENERATION:
+            await event_emitter(
+                {
+                    "type": "status",
+                    "data": {
+                        "action": "retrieval_query_generation",
+                        "description": "Generated {{count}} queries",
+                        "queries": queries,
+                        "done": True,
+                        "hidden": False,
+                    },
+                }
+            )
 
         try:
             # Offload get_sources_from_items to a separate thread
@@ -981,8 +997,9 @@ async def process_chat_payload(request, form_data, user, metadata, model):
                 log.exception(e)
 
     try:
-        form_data, flags = await chat_completion_files_handler(request, form_data, user)
+        form_data, flags = await chat_completion_files_handler(request, form_data, user, event_emitter)
         sources.extend(flags.get("sources", []))
+        
     except Exception as e:
         log.exception(e)
 
@@ -1053,7 +1070,8 @@ async def process_chat_payload(request, form_data, user, metadata, model):
     if len(sources) > 0:
         events.append({"sources": sources})
 
-    if model_knowledge:
+    # Complete any pending knowledge search status if we have sources or model knowledge
+    if len(sources) > 0 or model_knowledge:
         await event_emitter(
             {
                 "type": "status",

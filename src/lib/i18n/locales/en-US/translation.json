@@ -1261,6 +1261,7 @@
 	"SearchApi API Key": "",
 	"SearchApi Engine": "",
 	"Searched {{count}} sites": "",
+	"Generated {{count}} queries": "",
 	"Searching \"{{searchQuery}}\"": "",
 	"Searching Knowledge for \"{{searchQuery}}\"": "",
 	"Searching the web...": "",
