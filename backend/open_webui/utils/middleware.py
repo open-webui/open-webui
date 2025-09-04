@@ -31,6 +31,7 @@ from open_webui.socket.main import (
     get_event_emitter,
     get_active_status_by_user_id,
 )
+from open_webui.utils.token_forwarding import token_forwarding_service
 from open_webui.routers.tasks import (
     generate_queries,
     generate_title,
@@ -770,6 +771,14 @@ async def process_chat_payload(request, form_data, user, metadata, model):
     event_emitter = get_event_emitter(metadata)
     event_call = get_event_call(metadata)
 
+    oauth_token = None
+    try:
+        oauth_token = await token_forwarding_service.get_oauth_token_for_service(
+            request, user, "tools"
+        )
+    except Exception as e:
+        log.error(f"Error getting OAuth token for tools: {e}")
+
     extra_params = {
         "__event_emitter__": event_emitter,
         "__event_call__": event_call,
@@ -777,6 +786,7 @@ async def process_chat_payload(request, form_data, user, metadata, model):
         "__metadata__": metadata,
         "__request__": request,
         "__model__": model,
+        "__oauth_token__": oauth_token,  # NEW: Direct OAuth token access for tools
     }
 
     # Initialize events to store additional event to be sent to the client
