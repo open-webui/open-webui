@@ -438,7 +438,7 @@ def opu_delete_model():
 
     file_name = denormalize_model_name(data['model_name'])
 
-    read_cmd_from_serial(port,baudrate,f"cd {destn_path}; rm -fr {file_name} && find . -type d -empty | while read -r dir; do rmdir \"$dir\"; done")
+    read_cmd_from_serial(port,baudrate,f"cd {destn_path}; rm -fr {file_name}* && find . -type d -empty | while read -r dir; do rmdir \"$dir\"; done")
 
     return manual_response(content="Model deleted",thinking="Model deleted", incoming_headers=incoming_headers), 200
 
