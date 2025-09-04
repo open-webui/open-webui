@@ -93,14 +93,21 @@ class GroupUpdateForm(GroupForm, UserIdsForm):
 
 class GroupTable:
     def insert_new_group(
-        self, user_id: str, form_data: GroupForm
+        self, user_id: str, form_data: GroupForm, oauth_source: Optional[str] = None
     ) -> Optional[GroupModel]:
         with get_db() as db:
+            # Set metadata for OAuth tracking
+            meta = {}
+            if oauth_source:
+                meta["oauth_source"] = oauth_source
+                meta["oauth_created_at"] = int(time.time())
+            
             group = GroupModel(
                 **{
                     **form_data.model_dump(exclude_none=True),
                     "id": str(uuid.uuid4()),
                     "user_id": user_id,
+                    "meta": meta if meta else None,
                     "created_at": int(time.time()),
                     "updated_at": int(time.time()),
                 }
@@ -242,6 +249,27 @@ class GroupTable:
                         log.exception(e)
                         continue
             return new_groups
+
+    def update_oauth_metadata(self, group_id: str, oauth_source: str) -> bool:
+        """Update group metadata to mark it as OAuth-managed"""
+        try:
+            with get_db() as db:
+                group = db.query(Group).filter_by(id=group_id).first()
+                if group:
+                    meta = group.meta or {}
+                    meta["oauth_source"] = oauth_source
+                    meta["oauth_last_sync"] = int(time.time())
+                    
+                    db.query(Group).filter_by(id=group_id).update({
+                        "meta": meta,
+                        "updated_at": int(time.time())
+                    })
+                    db.commit()
+                    return True
+                return False
+        except Exception as e:
+            log.exception(e)
+            return False
 
     def sync_groups_by_group_names(self, user_id: str, group_names: list[str]) -> bool:
         with get_db() as db:

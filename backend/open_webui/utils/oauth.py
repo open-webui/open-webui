@@ -25,6 +25,7 @@ from open_webui.config import (
     ENABLE_OAUTH_ROLE_MANAGEMENT,
     ENABLE_OAUTH_GROUP_MANAGEMENT,
     ENABLE_OAUTH_GROUP_CREATION,
+    OAUTH_PRESERVE_LOCAL_GROUPS,
     OAUTH_BLOCKED_GROUPS,
     OAUTH_ROLES_CLAIM,
     OAUTH_SUB_CLAIM,
@@ -64,6 +65,7 @@ auth_manager_config.OAUTH_MERGE_ACCOUNTS_BY_EMAIL = OAUTH_MERGE_ACCOUNTS_BY_EMAI
 auth_manager_config.ENABLE_OAUTH_ROLE_MANAGEMENT = ENABLE_OAUTH_ROLE_MANAGEMENT
 auth_manager_config.ENABLE_OAUTH_GROUP_MANAGEMENT = ENABLE_OAUTH_GROUP_MANAGEMENT
 auth_manager_config.ENABLE_OAUTH_GROUP_CREATION = ENABLE_OAUTH_GROUP_CREATION
+auth_manager_config.OAUTH_PRESERVE_LOCAL_GROUPS = OAUTH_PRESERVE_LOCAL_GROUPS
 auth_manager_config.OAUTH_BLOCKED_GROUPS = OAUTH_BLOCKED_GROUPS
 auth_manager_config.OAUTH_ROLES_CLAIM = OAUTH_ROLES_CLAIM
 auth_manager_config.OAUTH_SUB_CLAIM = OAUTH_SUB_CLAIM
@@ -181,6 +183,21 @@ class OAuthManager:
         user_current_groups: list[GroupModel] = Groups.get_groups_by_member_id(user.id)
         all_available_groups: list[GroupModel] = Groups.get_groups()
 
+        # Separate local and OAuth groups for different handling if preservation is enabled
+        if auth_manager_config.OAUTH_PRESERVE_LOCAL_GROUPS:
+            user_current_oauth_groups = [
+                g for g in user_current_groups 
+                if g.meta and g.meta.get("oauth_source")
+            ]
+            user_current_local_groups = [
+                g for g in user_current_groups 
+                if not g.meta or not g.meta.get("oauth_source")
+            ]
+        else:
+            # Legacy behavior: treat all groups the same
+            user_current_oauth_groups = user_current_groups
+            user_current_local_groups = []
+
         # Create groups if they don't exist and creation is enabled
         if auth_manager_config.ENABLE_OAUTH_GROUP_CREATION:
             log.debug("Checking for missing groups to create...")
@@ -192,7 +209,7 @@ class OAuthManager:
             log.debug(f"Using creator ID {creator_id} for potential group creation.")
 
             for group_name in user_oauth_groups:
-                if group_name not in all_group_names:
+                if group_name not in all_group_names and group_name not in blocked_groups:
                     log.info(
                         f"Group '{group_name}' not found via OAuth claim. Creating group..."
                     )
@@ -205,7 +222,7 @@ class OAuthManager:
                         )
                         # Use determined creator ID (admin or fallback to current user)
                         created_group = Groups.insert_new_group(
-                            creator_id, new_group_form
+                            creator_id, new_group_form, oauth_source="oauth"
                         )
                         if created_group:
                             log.info(
@@ -234,12 +251,25 @@ class OAuthManager:
         )
 
         # Remove groups that user is no longer a part of
-        for group_model in user_current_groups:
-            if (
+        groups_to_check_for_removal = (
+            user_current_oauth_groups if auth_manager_config.OAUTH_PRESERVE_LOCAL_GROUPS 
+            else user_current_groups
+        )
+
+        for group_model in groups_to_check_for_removal:
+            should_remove_user = (
                 user_oauth_groups
                 and group_model.name not in user_oauth_groups
                 and group_model.name not in blocked_groups
-            ):
+            )
+
+            # If preserving local groups, only remove from OAuth-managed groups
+            if auth_manager_config.OAUTH_PRESERVE_LOCAL_GROUPS:
+                should_remove_user = should_remove_user and (
+                    group_model.meta and group_model.meta.get("oauth_source")
+                )
+
+            if should_remove_user:
                 # Remove group from user
                 log.debug(
                     f"Removing user from group {group_model.name} as it is no longer in their oauth groups"
@@ -265,12 +295,27 @@ class OAuthManager:
 
         # Add user to new groups
         for group_model in all_available_groups:
-            if (
+            should_add_user = (
                 user_oauth_groups
                 and group_model.name in user_oauth_groups
                 and not any(gm.name == group_model.name for gm in user_current_groups)
                 and group_model.name not in blocked_groups
-            ):
+            )
+
+            # If preserving local groups, check for name conflicts
+            if auth_manager_config.OAUTH_PRESERVE_LOCAL_GROUPS and should_add_user:
+                # Check if there's a local group with the same name
+                conflicting_local_group = any(
+                    g.name == group_model.name and (not g.meta or not g.meta.get("oauth_source"))
+                    for g in user_current_local_groups
+                )
+                if conflicting_local_group:
+                    log.debug(
+                        f"Skipping OAuth group '{group_model.name}' to preserve existing local group"
+                    )
+                    continue
+
+            if should_add_user:
                 # Add user to group
                 log.debug(
                     f"Adding user to group {group_model.name} as it was found in their oauth groups"
@@ -283,6 +328,10 @@ class OAuthManager:
                 group_permissions = group_model.permissions
                 if not group_permissions:
                     group_permissions = default_permissions
+
+                # Mark group as OAuth-managed if not already marked
+                if not group_model.meta or not group_model.meta.get("oauth_source"):
+                    Groups.update_oauth_metadata(group_model.id, "oauth")
 
                 update_form = GroupUpdateForm(
                     name=group_model.name,
