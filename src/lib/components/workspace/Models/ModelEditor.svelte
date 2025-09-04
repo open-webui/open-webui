@@ -308,8 +308,8 @@
 
 	// Dynamic languages from config
 	$: LANGS = Array.isArray($config.features.translation_languages)
-		? $config.features.translation_languages
-		: ['de']; // fallback if missing
+    	? [...new Set([...$config.features.translation_languages, langCode])]
+    	: [langCode, 'de'];
 
 	// Utility function to create empty translation object
 	function createEmptyTranslations() {

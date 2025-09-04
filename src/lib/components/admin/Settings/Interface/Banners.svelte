@@ -11,38 +11,78 @@
 
   const i18n = getContext('i18n');
 
-
   export let banners: any[] = [];
 
   let sortable: any = null;
   let bannerListElement: HTMLDivElement | null = null;
 
-  // dynamic languages from config
-  $: LANGS = Array.isArray($config.features.translation_languages)
-    ? $config.features.translation_languages
-    : ['de']; // fallback if missing
-
   // reactive UI language code
   $: langCode = $i18n?.language?.split('-')[0] || 'de';
+
+  // dynamic languages from config
+  $: LANGS = Array.isArray($config.features.translation_languages)
+    ? [...new Set([...$config.features.translation_languages, langCode])]
+    : [langCode, 'de'];
 
   // contentObjs stores parsed content objects keyed by banner.id
   let contentObjs: Record<string, Record<string, string>> = {};
 
+  // Create a helper function to get/set content safely
+  function getContent(bannerId: string, lang: string): string {
+    ensureContentStructure(bannerId);
+    return contentObjs[bannerId][lang] || '';
+  }
+
+  function setContent(bannerId: string, lang: string, value: string) {
+    ensureContentStructure(bannerId);
+    contentObjs[bannerId][lang] = value;
+    contentObjs = { ...contentObjs };
+    
+    // Update the corresponding banner
+    const bannerIndex = banners.findIndex(b => b.id === bannerId);
+    if (bannerIndex !== -1) {
+      banners[bannerIndex].content = safeStringify(contentObjs[bannerId]);
+      banners = [...banners];
+      
+      // Sync to modal if open
+      if (showBannerModal && editingBannerIndex === bannerIndex) {
+        newBanner.content[lang] = value;
+        newBanner = { ...newBanner };
+      }
+    }
+  }
+
+  function ensureContentStructure(bannerId: string) {
+    if (!contentObjs[bannerId]) {
+      const banner = banners.find(b => b.id === bannerId);
+      contentObjs[bannerId] = banner ? parseContentToObj(banner.content) : {};
+    }
+    
+    // Ensure all required languages exist
+    const allLangs = [...new Set([...LANGS, langCode])];
+    for (const lang of allLangs) {
+      if (!contentObjs[bannerId][lang]) {
+        contentObjs[bannerId][lang] = '';
+      }
+    }
+  }
+
   // Initialize/Sync contentObjs with banners
-  $: if (banners) {
+  $: if (banners && banners.length > 0) {
     for (const b of banners) {
       if (!b) continue;
       const id = b.id ?? (b.id = crypto?.randomUUID ? crypto.randomUUID() : String(Date.now()));
-      if (!contentObjs[id]) {
+      
+      ensureContentStructure(id);
+      
+      // Sync from banner.content if it has changed
+      const currentString = safeStringify(contentObjs[id]);
+      const incomingString = typeof b.content === 'string'
+        ? b.content
+        : safeStringify(parseContentToObj(b.content));
+      if (incomingString !== currentString && incomingString !== '{}') {
         contentObjs[id] = parseContentToObj(b.content);
-      } else {
-        const currentString = safeStringify(contentObjs[id]);
-        const incomingString = typeof b.content === 'string'
-          ? b.content
-          : safeStringify(parseContentToObj(b.content));
-        if (incomingString !== currentString) {
-          contentObjs[id] = parseContentToObj(b.content);
-        }
+        ensureContentStructure(id); // Re-ensure after parsing
       }
     }
 
@@ -63,8 +103,9 @@
       parsed = { de: content || '' };
     }
 
-    // ensure all languages from config exist
-    for (const lang of LANGS) {
+    // keep current languages and check that LANGS are included
+    const allLangs = [...new Set([...LANGS, langCode, ...Object.keys(parsed)])];
+    for (const lang of allLangs) {
       if (parsed[lang] == null) parsed[lang] = '';
     }
     return parsed;
@@ -90,33 +131,48 @@
     }
   }
 
-  function handleInlineChange(e: any, idx: number, id: string) {
-    const val = e?.detail ?? e?.target?.value ?? '';
-    if (!contentObjs[id]) contentObjs[id] = Object.fromEntries(LANGS.map(l => [l, '']));
-    contentObjs[id][langCode] = val;
-    contentObjs = { ...contentObjs };
-    banners[idx].content = safeStringify(contentObjs[id]);
-    banners = [...banners];
-  }
-
   let showBannerModal = false;
   let editingBannerIndex: number | null = null;
-  let newBanner: { id: string; content: Record<string, string> } = { id: '', content: {} };
+  let newBanner: { id: string; content: Record<string, string>; workspaces: string[] } = { id: '', content: {}, workspaces: [] };
 
   function openEditModal(idx: number) {
     editingBannerIndex = idx;
     const b = banners[idx];
     if (!b) return;
+    
     const id = b.id;
-    if (!contentObjs[id]) contentObjs[id] = parseContentToObj(b.content);
-    newBanner = { id, content: { ...contentObjs[id] } };
+    const workspaces = b.workspaces || [];
+    
+    ensureContentStructure(id);
+    
+    // Copy current contentObjs to newBanner
+    newBanner = { 
+      id, 
+      content: JSON.parse(JSON.stringify(contentObjs[id])), // Deep copy of current state
+      workspaces: [...workspaces]
+    };
+    
     showBannerModal = true;
+  }
+
+  function syncModalToInline(changedLang: string) {
+    if (editingBannerIndex !== null) {
+      const id = banners[editingBannerIndex].id;
+      
+      ensureContentStructure(id);
+      contentObjs[id][changedLang] = newBanner.content[changedLang] || '';
+      contentObjs = { ...contentObjs };
+      
+      // Update banner content
+      banners[editingBannerIndex].content = safeStringify(contentObjs[id]);
+      banners = [...banners];
+    }
   }
 
   function closeModal() {
     showBannerModal = false;
     editingBannerIndex = null;
-    newBanner = { id: '', content: Object.fromEntries(LANGS.map(l => [l, ''])) };
+    newBanner = { id: '', content: Object.fromEntries(LANGS.map(l => [l, ''])), workspaces:[] };
   }
 
   function saveModal() {
@@ -133,6 +189,8 @@
 
     if (editingBannerIndex != null) {
       banners[editingBannerIndex].content = safeStringify(newBanner.content);
+      banners[editingBannerIndex].workspaces = newBanner.workspaces;
+
       contentObjs[newBanner.id] = { ...newBanner.content };
       contentObjs = { ...contentObjs };
       banners = [...banners];
@@ -163,14 +221,17 @@
           <option value="success" class="text-gray-900">{$i18n.t('Success')}</option>
         </select>
 
-        <Textarea
-          className="mr-2 text-xs w-full bg-transparent outline-hidden resize-none"
+        <!-- Use getter/setter approach instead of direct binding -->
+        <textarea
+          class="mr-2 text-xs w-full bg-transparent outline-hidden resize-none border-0 p-1"
           placeholder={$i18n.t('Content')}
-          value={(contentObjs[banner.id]?.[langCode]) ?? ''}
-          on:input={(e) => handleInlineChange(e, bannerIdx, banner.id)}
-          maxSize={100}
-          readonly
-        />
+          value={getContent(banner.id, langCode)}
+          on:input={(e) => {
+            const value = e.target?.value || '';
+            setContent(banner.id, langCode, value);
+          }}
+          rows="2"
+        ></textarea>
 
         <div class="relative -left-2">
           <Tooltip content={$i18n.t('Remember Dismissal')} class="flex h-fit items-center">
@@ -211,6 +272,7 @@
             bind:value={newBanner.content[lang]}
             placeholder={`Enter ${lang.toUpperCase()} content`}
             maxSize={200}
+            on:input={() => syncModalToInline(lang)}
           />
         </div>
       {/each}
