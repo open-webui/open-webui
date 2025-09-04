@@ -229,11 +229,11 @@
 		{:else}
 			<div>
 				<div class=" flex items-center gap-3 justify-between text-xs uppercase px-1 font-bold">
-					<div class="w-full">Group</div>
+					<div class="w-full">{$i18n.t('Group')}</div>
 
-					<div class="w-full">Users</div>
+					<div class="w-full">{$i18n.t('Users')}</div>
 
-					<div class="w-full">Domains</div>
+					<div class="w-full">{$i18n.t('Domains')}</div>
 
 					<div class="w-full"></div>
 				</div>
