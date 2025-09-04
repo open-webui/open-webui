@@ -38,6 +38,7 @@
 	export let shareHandler: Function;
 	export let moveChatHandler: Function;
 	export let profileHandler: Function;
+
 	export let cloneChatHandler: Function;
 	export let archiveChatHandler: Function;
 	export let renameHandler: Function;
