@@ -574,6 +574,35 @@ OAUTH_UPDATE_PICTURE_ON_LOGIN = PersistentConfig(
     os.environ.get("OAUTH_UPDATE_PICTURE_ON_LOGIN", "False").lower() == "true",
 )
 
+# OAuth Token Forwarding Configuration
+ENABLE_OAUTH_TOKEN_FORWARDING = PersistentConfig(
+    "ENABLE_OAUTH_TOKEN_FORWARDING",
+    "oauth.token_forwarding.enable",
+    os.environ.get("ENABLE_OAUTH_TOKEN_FORWARDING", "False").lower() == "true",
+)
+
+OAUTH_TOKEN_FORWARDING_SERVICES = PersistentConfig(
+    "OAUTH_TOKEN_FORWARDING_SERVICES",
+    "oauth.token_forwarding.services",
+    [
+        service.strip()
+        for service in os.environ.get("OAUTH_TOKEN_FORWARDING_SERVICES", "openai,tools,mcp").split(",")
+        if service.strip()
+    ],
+)
+
+OAUTH_TOKEN_ENCRYPTION_KEY = PersistentConfig(
+    "OAUTH_TOKEN_ENCRYPTION_KEY",
+    "oauth.token_encryption_key",
+    os.environ.get("OAUTH_TOKEN_ENCRYPTION_KEY", ""),
+)
+
+OAUTH_RESPONSE_MODE = PersistentConfig(
+    "OAUTH_RESPONSE_MODE",
+    "oauth.oidc.response_mode",
+    os.environ.get("OAUTH_RESPONSE_MODE", ""),
+)
+
 
 def load_oauth_providers():
     OAUTH_PROVIDERS.clear()
