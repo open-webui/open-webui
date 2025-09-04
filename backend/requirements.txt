@@ -50,6 +50,7 @@ langchain==0.3.26
 langchain-community==0.3.26
 
 fake-useragent==2.2.0
+weaviate-client==4.16.9
 chromadb==0.6.3
 posthog==5.4.0
 pymilvus==2.5.0
