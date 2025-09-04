@@ -1366,9 +1366,15 @@ async def process_chat_payload(request, form_data, metadata, user, model):
     now = datetime.now(eastern)
     current_datetime = now.strftime("%A, %B %d, %Y at %I:%M %p %Z")
     current_weekday = now.strftime("%A")
+    current_date = now.strftime("%B %d, %Y")
+    current_year = now.strftime("%Y")
 
     time_context = (
-        f"The current date and time is {current_datetime}. Today is {current_weekday}."
+        f"IMPORTANT: The current date is {current_date} ({current_year}). "
+        f"Today is {current_weekday}, {current_date}. "
+        f"The current time is {now.strftime('%I:%M %p %Z')}. "
+        f"When asked about the current date, time, or day, always use this information: "
+        f"Date: {current_date}, Day: {current_weekday}, Time: {now.strftime('%I:%M %p %Z')}."
     )
 
     # Add time information to system message
