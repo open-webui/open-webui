@@ -1,7 +1,11 @@
-
 import logging
 import requests
-from tenacity import retry, stop_after_attempt, wait_exponential, retry_if_exception_type
+from tenacity import (
+    retry,
+    stop_after_attempt,
+    wait_exponential,
+    retry_if_exception_type,
+)
 import time
 
 from open_webui.env import SRC_LOG_LEVELS
@@ -17,7 +21,7 @@ log.setLevel(SRC_LOG_LEVELS["RAG"])
     stop=stop_after_attempt(3),
     wait=wait_exponential(multiplier=1, min=1, max=4),
     retry=retry_if_exception_type(requests.RequestException),
-    reraise=True  # lança o erro após esgotar as tentativas
+    reraise=True,  # lança o erro após esgotar as tentativas
 )
 def post_with_retry(url, headers=None, files=None, data=None):
     r = requests.post(url=url, headers=headers, files=files, data=data)
@@ -25,7 +29,7 @@ def post_with_retry(url, headers=None, files=None, data=None):
     return r
 
 
-class PdftotextLoader():
+class PdftotextLoader:
     def __init__(self, pdf_path: str, url: str, max_pages: int):
         self.pdf_path = pdf_path
         url += "/api-ds-ocr/text_extract"
@@ -42,16 +46,12 @@ class PdftotextLoader():
             "accept": "application/json",
         }
 
-        files = {
-            "pdf_upload": pdf
-        }
-        data = {
-            'max_pages': self.max_pages,
-            'header_footer': True
-        }
+        files = {"pdf_upload": pdf}
+        data = {"max_pages": self.max_pages, "header_footer": True}
 
-        r = requests.post(url=self.url, headers=headers,
-                          files=files, data=data, timeout=(60, 60))
+        r = requests.post(
+            url=self.url, headers=headers, files=files, data=data, timeout=(60, 60)
+        )
         log.info(r)
 
         response = r.json()
@@ -79,41 +79,34 @@ class PdftotextLoaderAsync:
             "accept": "application/json",
         }
 
-        files = {
-            "pdf_upload": pdf
-        }
+        files = {"pdf_upload": pdf}
 
-        data = {
-            'max_pages': self.max_pages,
-            'header_footer': True,
-            'tesseract': False
-        }
+        data = {"max_pages": self.max_pages, "header_footer": True, "tesseract": False}
 
         r = self.send_pdf_ocr(files, data, headers)
 
         if r.status_code != 200:
             log.error(
-                f"Failed to extract text from PDF using OCR: {r.status_code} - {r.text}")
+                f"Failed to extract text from PDF using OCR: {r.status_code} - {r.text}"
+            )
             raise Exception(
-                f"Failed to extract text from PDF: {r.status_code} - {r.text}")
+                f"Failed to extract text from PDF: {r.status_code} - {r.text}"
+            )
 
         log.info(r)
         response = r.json()
         task_id = response.get("task_id", "")
 
-        log.info(
-            f"Extracted text from pdf using OCR, task_id -> {task_id}")
+        log.info(f"Extracted text from pdf using OCR, task_id -> {task_id}")
 
         return task_id
 
     def send_pdf_ocr(self, files, data, headers):
         try:
-            r = post_with_retry(url=self.url, headers=headers,
-                                files=files, data=data)
+            r = post_with_retry(url=self.url, headers=headers, files=files, data=data)
             return r
         except requests.RequestException as e:
-            log.error(
-                f"Failed to extract text from PDF using OCR after retries: {e}")
+            log.error(f"Failed to extract text from PDF using OCR after retries: {e}")
             raise e
 
     def check_status(self, task_id):
@@ -126,7 +119,8 @@ class PdftotextLoaderAsync:
 
         if r.status_code != 200:
             log.error(
-                f"Failed to check status for task {task_id}: {r.status_code} - {r.text}")
+                f"Failed to check status for task {task_id}: {r.status_code} - {r.text}"
+            )
             return None
 
         response = r.json()
@@ -139,25 +133,23 @@ class PdftotextLoaderAsync:
         """
         Synchronously retrieves the extracted text once the task is completed.
         """
-        status = ''
+        status = ""
         start_time = time.time()
-        timeout = 300  # 5 minutes timeout
-        while status != 'completed' and status != 'failed':
+        timeout = 60 * 40  # 40 minutes timeout
+        while status != "completed" and status != "failed":
             status = get_status(task_id)
             log.info(f"Checking status for task {task_id} {status}...")
-            time.sleep(7)
+            time.sleep(10)
 
             # Timeout check
             if time.time() - start_time > timeout:
-                raise Exception(
-                    f"OCR task {task_id} timed out after {timeout} seconds")
+                raise Exception(f"OCR task {task_id} timed out after {timeout} seconds")
 
-        if status == 'completed':
+        if status == "completed":
             result = self.check_status(task_id)
             if result.get("result").get("status") == "completed":
-                return result.get("result").get('result')
-        elif status == 'failed':
+                return result.get("result").get("result")
+        elif status == "failed":
             raise Exception(f"OCR task {task_id} failed")
         else:
-            log.info(
-                f"OCR task {task_id} is still in progress, waiting...")
+            log.info(f"OCR task {task_id} is still in progress, waiting...")

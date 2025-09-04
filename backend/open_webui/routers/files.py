@@ -137,11 +137,11 @@ def process_tasks(request, form_data, user, task_id):
     except Exception as e:
         log.exception(e)
         state['error'] = str(e)
-        state['status'] = "Process failed"
+        state['status'] = "Processing Failed"
         redis_client.set(redis_key, json.dumps(state))
         raise e
 
-    state['status'] = "Process completed"
+    state['status'] = "Processing Completed"
     redis_client.set(redis_key, json.dumps(state))
 
 
