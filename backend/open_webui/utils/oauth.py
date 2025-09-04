@@ -599,22 +599,42 @@ class OAuthManager:
             secure=WEBUI_AUTH_COOKIE_SECURE,
         )
 
-        if ENABLE_OAUTH_SIGNUP.value:
-            oauth_access_token = token.get("access_token")
-            response.set_cookie(
-                key="oauth_access_token",
-                value=oauth_access_token,
-                httponly=True,
-                samesite=WEBUI_AUTH_COOKIE_SAME_SITE,
-                secure=WEBUI_AUTH_COOKIE_SECURE,
-            )
-
+        # NEW: Store OAuth tokens server-side if forwarding is enabled
+        from open_webui.config import ENABLE_OAUTH_TOKEN_FORWARDING
+        if ENABLE_OAUTH_TOKEN_FORWARDING.value:
+            try:
+                from open_webui.utils.oauth_tokens import oauth_token_manager
+                
+                session_id = await oauth_token_manager.store_oauth_session(
+                    user_id=user.id,
+                    provider=provider,
+                    tokens=token  # Full OAuth token response
+                )
+                
+                # Store minimal session reference in cookie instead of full token
+                response.set_cookie(
+                    key="oauth_session_id",
+                    value=session_id,
+                    httponly=True,
+                    samesite=WEBUI_AUTH_COOKIE_SAME_SITE,
+                    secure=WEBUI_AUTH_COOKIE_SECURE,
+                    max_age=60 * 60 * 24 * 30,  # 30 days
+                )
+                log.info(f"Stored OAuth session server-side for user {user.id}, provider {provider}")
+            except Exception as e:
+                log.error(f"Failed to store OAuth session server-side: {e}")
+                # Continue with fallback cookie approach
+        
+        # Fallback to current behavior for backward compatibility or if server-side storage fails
+        if ENABLE_OAUTH_SIGNUP.value and not ENABLE_OAUTH_TOKEN_FORWARDING.value:
             oauth_id_token = token.get("id_token")
-            response.set_cookie(
-                key="oauth_id_token",
-                value=oauth_id_token,
-                httponly=True,
-                samesite=WEBUI_AUTH_COOKIE_SAME_SITE,
-                secure=WEBUI_AUTH_COOKIE_SECURE,
-            )
+            if oauth_id_token:
+                response.set_cookie(
+                    key="oauth_id_token",
+                    value=oauth_id_token,
+                    httponly=True,
+                    samesite=WEBUI_AUTH_COOKIE_SAME_SITE,
+                    secure=WEBUI_AUTH_COOKIE_SECURE,
+                )
+        
         return response
