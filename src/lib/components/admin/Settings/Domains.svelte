@@ -175,7 +175,7 @@
 	};
 </script>
 
-<div class="flex flex-col space-y-4">
+<div class="flex flex-col space-y-4 max-w-full overflow-hidden px-2 sm:px-4">
 	<div class="space-y-2">
 		<div class="text-lg font-medium dark:text-gray-100">
 			{$i18n.t('Government of Canada Domains')}
@@ -198,12 +198,12 @@
 		</button>
 
 		{#if showAddDomainForm}
-			<div class="space-y-3 p-4 bg-gray-50 dark:bg-gray-800 rounded-lg border">
+			<div class="space-y-3 p-4 bg-gray-50 dark:bg-gray-800 rounded-lg border max-w-full mr-4">
 				<div class="text-sm font-medium text-gray-700 dark:text-gray-300">
 					{$i18n.t('Add Government of Canada Domain')}
 				</div>
-				<div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-					<div>
+				<div class="grid grid-cols-1 xl:grid-cols-2 gap-4 w-full">
+					<div class="min-w-0">
 						<label
 							for="new-domain-input"
 							class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1"
@@ -219,7 +219,7 @@
 							on:keydown={(e) => e.key === 'Enter' && e.shiftKey === false && addDomain()}
 						/>
 					</div>
-					<div>
+					<div class="min-w-0">
 						<label
 							for="new-department-input"
 							class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1"
@@ -236,7 +236,7 @@
 						/>
 					</div>
 				</div>
-				<div class="flex space-x-2">
+				<div class="flex flex-wrap gap-2 pt-2">
 					<button
 						type="button"
 						class="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium rounded-lg"
@@ -268,7 +268,7 @@
 			<div class="bg-white dark:bg-gray-800 shadow rounded-lg overflow-hidden">
 				<div class="px-4 py-3 border-b border-gray-200 dark:border-gray-700">
 					<h3 class="text-sm font-medium text-gray-900 dark:text-gray-100">
-						{$i18n.t('Configured Domains ({count})', { count: dbDomains.length })}
+						{$i18n.t('Configured Domains')} ({dbDomains.length})
 					</h3>
 				</div>
 				<ul class="divide-y divide-gray-200 dark:divide-gray-700">
@@ -277,7 +277,7 @@
 							{#if showEditForm === domainObj.domain}
 								<!-- Edit form -->
 								<div class="space-y-3">
-									<div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+									<div class="grid grid-cols-1 lg:grid-cols-2 gap-4 max-w-full">
 										<div>
 											<label
 												for="edit-domain-input"
@@ -340,14 +340,14 @@
 									<div class="flex space-x-2">
 										<button
 											type="button"
-											class="text-blue-600 hover:text-blue-700 text-sm font-medium"
+											class="px-3 py-1 bg-blue-100 hover:bg-blue-200 dark:bg-blue-900/30 dark:hover:bg-blue-900/50 text-blue-700 dark:text-blue-300 text-sm font-medium rounded-lg border border-blue-200 dark:border-blue-800"
 											on:click={() => startEditDomain(domainObj.domain)}
 										>
 											{$i18n.t('Edit')}
 										</button>
 										<button
 											type="button"
-											class="text-red-600 hover:text-red-700 text-sm font-medium"
+											class="px-3 py-1 bg-red-100 hover:bg-red-200 dark:bg-red-900/30 dark:hover:bg-red-900/50 text-red-700 dark:text-red-300 text-sm font-medium rounded-lg border border-red-200 dark:border-red-800"
 											on:click={() => (showDeleteConfirm = domainObj.domain)}
 										>
 											{$i18n.t('Delete')}
