@@ -49,6 +49,7 @@ langchain-community==0.3.29
 
 fake-useragent==2.2.0
 chromadb==1.1.0
+weaviate-client==4.17.0
 opensearch-py==2.8.0
 
 transformers
