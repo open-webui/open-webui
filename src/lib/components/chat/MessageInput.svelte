@@ -418,6 +418,30 @@
 	let recording = false;
 
 	let isComposing = false;
+	// Safari has a bug where compositionend is not triggered correctly #16615
+	// when using the virtual keyboard on iOS.
+	let compositionEndedAt = -2e8;
+	const isSafari = /^((?!chrome|android).)*safari/i.test(navigator.userAgent);
+	function inOrNearComposition(event: Event) {
+		if (isComposing) {
+			return true;
+		}
+		// See https://www.stum.de/2016/06/24/handling-ime-events-in-javascript/.
+		// On Japanese input method editors (IMEs), the Enter key is used to confirm character
+		// selection. On Safari, when Enter is pressed, compositionend and keydown events are
+		// emitted. The keydown event triggers newline insertion, which we don't want.
+		// This method returns true if the keydown event should be ignored.
+		// We only ignore it once, as pressing Enter a second time *should* insert a newline.
+		// Furthermore, the keydown event timestamp must be close to the compositionEndedAt timestamp.
+		// This guards against the case where compositionend is triggered without the keyboard
+		// (e.g. character confirmation may be done with the mouse), and keydown is triggered
+		// afterwards- we wouldn't want to ignore the keydown event in this case.
+		if (isSafari && Math.abs(event.timeStamp - compositionEndedAt) < 500) {
+			compositionEndedAt = -2e8;
+			return true;
+		}
+		return false;
+	}
 
 	let chatInputContainerElement;
 	let chatInputElement;
@@ -1170,19 +1194,9 @@
 														return res;
 													}}
 													oncompositionstart={() => (isComposing = true)}
-													oncompositionend={() => {
-														const isSafari = /^((?!chrome|android).)*safari/i.test(
-															navigator.userAgent
-														);
-
-														if (isSafari) {
-															// Safari has a bug where compositionend is not triggered correctly #16615
-															// when using the virtual keyboard on iOS.
-															// We use a timeout to ensure that the composition is ended after a short delay.
-															setTimeout(() => (isComposing = false));
-														} else {
-															isComposing = false;
-														}
+													oncompositionend={(e) => {
+														compositionEndedAt = e.timeStamp;
+														isComposing = false;
 													}}
 													on:keydown={async (e) => {
 														e = e.detail.event;
@@ -1291,7 +1305,7 @@
 																	navigator.msMaxTouchPoints > 0
 																)
 															) {
-																if (isComposing) {
+																if (inOrNearComposition(e)) {
 																	return;
 																}
 
@@ -1394,17 +1408,9 @@
 												command = getCommand();
 											}}
 											on:compositionstart={() => (isComposing = true)}
-											on:compositionend={() => {
-												const isSafari = /^((?!chrome|android).)*safari/i.test(navigator.userAgent);
-
-												if (isSafari) {
-													// Safari has a bug where compositionend is not triggered correctly #16615
-													// when using the virtual keyboard on iOS.
-													// We use a timeout to ensure that the composition is ended after a short delay.
-													setTimeout(() => (isComposing = false));
-												} else {
-													isComposing = false;
-												}
+											oncompositionend={(e) => {
+												compositionEndedAt = e.timeStamp;
+												isComposing = false;
 											}}
 											on:keydown={async (e) => {
 												const isCtrlPressed = e.ctrlKey || e.metaKey; // metaKey is for Cmd key on Mac
@@ -1524,7 +1530,7 @@
 															navigator.msMaxTouchPoints > 0
 														)
 													) {
-														if (isComposing) {
+														if (inOrNearComposition(e)) {
 															return;
 														}
 

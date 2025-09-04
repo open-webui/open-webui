@@ -225,6 +225,7 @@
 								dismissible={true}
 								on:dismiss={() => {
 									// Remove the file from the chatFiles array
+
 									chatFiles.splice(fileIdx, 1);
 									chatFiles = chatFiles;
 								}}

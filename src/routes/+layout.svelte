@@ -49,6 +49,7 @@
 
 	import { beforeNavigate } from '$app/navigation';
 	import { updated } from '$app/state';
+	import Spinner from '$lib/components/common/Spinner.svelte';
 
 	// handle frontend updates (https://svelte.dev/docs/kit/configuration#version)
 	beforeNavigate(({ willUnload, to }) => {
@@ -63,6 +64,8 @@
 
 	let loaded = false;
 	let tokenTimer = null;
+
+	let showRefresh = false;
 
 	const BREAKPOINT = 768;
 
@@ -468,6 +471,36 @@
 	};
 
 	onMount(async () => {
+		let touchstartY = 0;
+
+		function isNavOrDescendant(el) {
+			const nav = document.querySelector('nav'); // change selector if needed
+			return nav && (el === nav || nav.contains(el));
+		}
+
+		document.addEventListener('touchstart', (e) => {
+			if (!isNavOrDescendant(e.target)) return;
+			touchstartY = e.touches[0].clientY;
+		});
+
+		document.addEventListener('touchmove', (e) => {
+			if (!isNavOrDescendant(e.target)) return;
+			const touchY = e.touches[0].clientY;
+			const touchDiff = touchY - touchstartY;
+			if (touchDiff > 50 && window.scrollY === 0) {
+				showRefresh = true;
+				e.preventDefault();
+			}
+		});
+
+		document.addEventListener('touchend', (e) => {
+			if (!isNavOrDescendant(e.target)) return;
+			if (showRefresh) {
+				showRefresh = false;
+				location.reload();
+			}
+		});
+
 		if (typeof window !== 'undefined' && window.applyTheme) {
 			window.applyTheme();
 		}
@@ -650,6 +683,12 @@
 	<title>{$WEBUI_NAME}</title>
 	<link crossorigin="anonymous" rel="icon" href="{WEBUI_BASE_URL}/static/favicon.png" />
 </svelte:head>
+
+{#if showRefresh}
+	<div class=" py-5">
+		<Spinner className="size-5" />
+	</div>
+{/if}
 
 {#if loaded}
 	{#if $isApp}
