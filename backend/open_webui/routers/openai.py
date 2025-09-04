@@ -867,7 +867,7 @@ async def generate_chat_completion(
         }
 
     url = request.app.state.config.OPENAI_API_BASE_URLS[idx]
-    key = request.app.state.config.OPENAI_API_KEYS[idx]
+    key = request.app.state.config.OPENAI_AI_KEYS[idx]
 
     # Check if model is a reasoning model that needs special handling
     if is_openai_reasoning_model(payload["model"]):
@@ -1029,6 +1029,7 @@ async def embeddings(request: Request, form_data: dict, user):
             url=f"{url}/embeddings",
             data=body,
             headers=await _build_headers_with_oauth(request, user, key),
+        )
 
         if "text/event-stream" in r.headers.get("Content-Type", ""):
             streaming = True
