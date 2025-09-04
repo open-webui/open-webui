@@ -47,6 +47,7 @@ from open_webui.utils.misc import (
 
 from open_webui.utils.auth import get_admin_user, get_verified_user
 from open_webui.utils.access_control import has_access
+from open_webui.utils.token_forwarding import token_forwarding_service
 
 
 log = logging.getLogger(__name__)
@@ -59,43 +60,78 @@ log.setLevel(SRC_LOG_LEVELS["OPENAI"])
 #
 ##########################################
 
+async def _build_headers_with_oauth(request: Request, user: UserModel, api_key: str) -> dict:
+    """Build headers with OAuth token if available, fallback to API key"""
+    headers = {
+        "Content-Type": "application/json",
+        **(
+            {
+                "X-OpenWebUI-User-Name": quote(user.name, safe=" "),
+                "X-OpenWebUI-User-Id": user.id,
+                "X-OpenWebUI-User-Email": user.email,
+                "X-OpenWebUI-User-Role": user.role,
+            }
+            if ENABLE_FORWARD_USER_INFO_HEADERS and user
+            else {}
+        ),
+    }
+    
+    # Try OAuth token first, fallback to API key
+    try:
+        oauth_token = await token_forwarding_service.get_oauth_token_for_service(
+            request, user, "openai"
+        )
+        
+        if oauth_token:
+            headers["Authorization"] = f"Bearer {oauth_token}"
+        else:
+            headers["Authorization"] = f"Bearer {api_key}"
+            
+    except Exception as e:
+        log.error(f"Error getting OAuth token, using API key: {e}")
+        headers["Authorization"] = f"Bearer {api_key}"
+    
+    return headers
 
-async def send_get_request(url, key=None, user: UserModel = None):
+
+async def send_get_request(request: Request, url, key=None, user: UserModel = None):
     timeout = aiohttp.ClientTimeout(total=AIOHTTP_CLIENT_TIMEOUT_MODEL_LIST)
+    
+    headers = {}
+    
+    # Check for OAuth token forwarding
+    try:
+        oauth_token = await token_forwarding_service.get_oauth_token_for_service(
+            request, user, "openai"
+        )
+        
+        if oauth_token:
+            headers["Authorization"] = f"Bearer {oauth_token}"
+            log.debug(f"Using OAuth token for OpenAI request")
+        elif key:
+            headers["Authorization"] = f"Bearer {key}"
+        
+    except Exception as e:
+        log.error(f"Error getting OAuth token, falling back to API key: {e}")
+        if key:
+            headers["Authorization"] = f"Bearer {key}"
+    
+    # Add user info headers if enabled
+    if ENABLE_FORWARD_USER_INFO_HEADERS and user:
+        headers.update({
+            "X-OpenWebUI-User-Name": quote(user.name, safe=" "),
+            "X-OpenWebUI-User-Id": user.id,
+            "X-OpenWebUI-User-Email": user.email,
+            "X-OpenWebUI-User-Role": user.role,
+        })
+    
     try:
         async with aiohttp.ClientSession(timeout=timeout, trust_env=True) as session:
-            async with session.get(
-                url,
-                headers={
-                    **({"Authorization": f"Bearer {key}"} if key else {}),
-                    **(
-                        {
-                            "X-OpenWebUI-User-Name": quote(user.name, safe=" "),
-                            "X-OpenWebUI-User-Id": user.id,
-                            "X-OpenWebUI-User-Email": user.email,
-                            "X-OpenWebUI-User-Role": user.role,
-                        }
-                        if ENABLE_FORWARD_USER_INFO_HEADERS and user
-                        else {}
-                    ),
-                },
-                ssl=AIOHTTP_CLIENT_SESSION_SSL,
-            ) as response:
+            async with session.get(url, headers=headers, ssl=AIOHTTP_CLIENT_SESSION_SSL) as response:
                 return await response.json()
     except Exception as e:
-        # Handle connection error here
         log.error(f"Connection error: {e}")
         return None
-
-
-async def cleanup_response(
-    response: Optional[aiohttp.ClientResponse],
-    session: Optional[aiohttp.ClientSession],
-):
-    if response:
-        response.close()
-    if session:
-        await session.close()
 
 
 def openai_reasoning_model_handler(payload):
@@ -299,6 +335,7 @@ async def get_all_models_responses(request: Request, user: UserModel) -> list:
         ):
             request_tasks.append(
                 send_get_request(
+                    request,
                     f"{url}/models",
                     request.app.state.config.OPENAI_API_KEYS[idx],
                     user=user,
@@ -319,6 +356,7 @@ async def get_all_models_responses(request: Request, user: UserModel) -> list:
                 if len(model_ids) == 0:
                     request_tasks.append(
                         send_get_request(
+                            request,
                             f"{url}/models",
                             request.app.state.config.OPENAI_API_KEYS[idx],
                             user=user,
@@ -493,10 +531,23 @@ async def get_models(
                     "Content-Type": "application/json",
                     **(
                         {
+                            "HTTP-Referer": "https://openwebui.com/",
+                            "X-Title": "Open WebUI",
+                        }
+                        if "openrouter.ai" in url
+                        else {}
+                    ),
+                    **(
+                        {
                             "X-OpenWebUI-User-Name": quote(user.name, safe=" "),
                             "X-OpenWebUI-User-Id": user.id,
                             "X-OpenWebUI-User-Email": user.email,
                             "X-OpenWebUI-User-Role": user.role,
+                            **(
+                                {"X-OpenWebUI-Chat-Id": metadata.get("chat_id")}
+                                if metadata and metadata.get("chat_id")
+                                else {}
+                            ),
                         }
                         if ENABLE_FORWARD_USER_INFO_HEADERS
                         else {}
@@ -871,7 +922,22 @@ async def generate_chat_completion(
         request_url = f"{request_url}/chat/completions?api-version={api_version}"
     else:
         request_url = f"{url}/chat/completions"
-        headers["Authorization"] = f"Bearer {key}"
+        
+        # Check for OAuth token forwarding
+        try:
+            oauth_token = await token_forwarding_service.get_oauth_token_for_service(
+                request, user, "openai"
+            )
+            
+            if oauth_token:
+                headers["Authorization"] = f"Bearer {oauth_token}"
+                log.debug(f"Using OAuth token for OpenAI chat completion")
+            else:
+                headers["Authorization"] = f"Bearer {key}"
+                
+        except Exception as e:
+            log.error(f"Error getting OAuth token for chat completion, using API key: {e}")
+            headers["Authorization"] = f"Bearer {key}"
 
     payload = json.dumps(payload)
 
@@ -962,21 +1028,7 @@ async def embeddings(request: Request, form_data: dict, user):
             method="POST",
             url=f"{url}/embeddings",
             data=body,
-            headers={
-                "Authorization": f"Bearer {key}",
-                "Content-Type": "application/json",
-                **(
-                    {
-                        "X-OpenWebUI-User-Name": quote(user.name, safe=" "),
-                        "X-OpenWebUI-User-Id": user.id,
-                        "X-OpenWebUI-User-Email": user.email,
-                        "X-OpenWebUI-User-Role": user.role,
-                    }
-                    if ENABLE_FORWARD_USER_INFO_HEADERS and user
-                    else {}
-                ),
-            },
-        )
+            headers=await _build_headers_with_oauth(request, user, key),
 
         if "text/event-stream" in r.headers.get("Content-Type", ""):
             streaming = True
