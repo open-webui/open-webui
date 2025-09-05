@@ -84,6 +84,8 @@
 	export let webSearchEnabled = false;
 	export let codeInterpreterEnabled = false;
 
+	let correctionHintActive = false;
+
 	$: onChange({
 		prompt,
 		files,
@@ -320,6 +322,12 @@
 		dragged = false;
 	};
 
+	const handleProvideCorrection = () => {
+		correctionHintActive = true;
+		const chatInput = document.getElementById('chat-input');
+		chatInput?.focus();
+	};
+
 	onMount(async () => {
 		loaded = true;
 
@@ -329,6 +337,7 @@
 		}, 0);
 
 		window.addEventListener('keydown', handleKeyDown);
+		window.addEventListener('provideCorrection', handleProvideCorrection);
 
 		await tick();
 
@@ -342,6 +351,7 @@
 	onDestroy(() => {
 		console.log('destroy');
 		window.removeEventListener('keydown', handleKeyDown);
+		window.removeEventListener('provideCorrection', handleProvideCorrection);
 
 		const dropzoneElement = document.getElementById('chat-container');
 
@@ -359,6 +369,13 @@
 
 {#if loaded}
 	<div class="w-full font-primary">
+		{#if correctionHintActive}
+			<div
+				class="max-w-6xl mx-auto px-3 text-sm text-gray-600 dark:text-gray-400 text-center pb-2"
+			>
+				Please provide a direction on how you want to the current search plan to be updated.
+			</div>
+		{/if}
 		<div class=" mx-auto inset-x-0 bg-transparent flex justify-center">
 			<div
 				class="flex flex-col px-3 {($settings?.widescreenMode ?? null)
@@ -505,8 +522,16 @@
 						<form
 							class="w-full flex gap-1.5"
 							on:submit|preventDefault={() => {
-								// check if selectedModels support image input
-								dispatch('submit', prompt);
+								if (correctionHintActive) {
+									dispatch(
+										'submit',
+										`Please revise your search plan, with the direction provided below: \n${prompt}`
+									);
+									correctionHintActive = false;
+								} else {
+									// check if selectedModels support image input
+									dispatch('submit', prompt);
+								}
 							}}
 						>
 							<div
