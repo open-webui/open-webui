@@ -284,15 +284,15 @@
 			memberStats = transformChatData(chatData);
 
 			if (memberStats.length === 0) {
-				toast.warning('No conversation data found, showing placeholder data');
-				memberStats = generatePlaceholderData();
+				toast.warning('No conversation data found.');
+				// memberStats = generatePlaceholderData();
 			} else {
 				toast.success(`Successfully loaded ${memberStats.length} conversations`);
 			}
 		} catch (error) {
 			console.error('Failed to fetch chat data:', error);
-			toast.error('Failed to fetch conversation data, showing demo data');
-			memberStats = generatePlaceholderData();
+			toast.error('Failed to fetch conversation data.');
+			// memberStats = generatePlaceholderData();
 		} finally {
 			loading = false;
 		}
@@ -397,6 +397,15 @@
 
 	// Add partial selection state
 	let isPartialSelection = false;
+
+	function formatDate(dateString) {
+		const date = new Date(dateString);
+		return date.toLocaleDateString('en-US', {
+			month: 'short',
+			day: 'numeric',
+			year: 'numeric'
+		});
+	}
 
 	// Update selection functions to work with all items (not just current page)
 	const updateSelectAllState = () => {
@@ -1249,7 +1258,9 @@
 									class="px-4 py-4 whitespace-nowrap text-sm text-gray-650 dark:text-gray-400"
 									style="width: {columnWidths.updated}px; min-width: {columnWidths.updated}px;"
 								>
-									<div class="truncate" title={group.lastUpdated}>{group.lastUpdated}</div>
+									<div class="truncate" title={formatDate(group.lastUpdated)}>
+										{formatDate(group.lastUpdated)}
+									</div>
 								</td>
 							</tr>
 						{/each}
