@@ -422,7 +422,7 @@ async def get_rag_config(request: Request, user=Depends(get_verified_user)):
                 "result_count": request.app.state.config.RAG_WEB_SEARCH_RESULT_COUNT.get(user.email),
                 "trust_env": request.app.state.config.RAG_WEB_SEARCH_TRUST_ENV.get(user.email),
                 "concurrent_requests": request.app.state.config.RAG_WEB_SEARCH_CONCURRENT_REQUESTS.get(user.email),
-                "domain_filter_list": request.app.state.config.RAG_WEB_SEARCH_DOMAIN_FILTER_LIST,
+                "domain_filter_list": request.app.state.config.RAG_WEB_SEARCH_DOMAIN_FILTER_LIST.get(user.email),
             },
         },
     }
@@ -648,7 +648,7 @@ async def update_rag_config(
         request.app.state.config.RAG_WEB_SEARCH_TRUST_ENV.set(user.email,
             form_data.web.search.trust_env
         )
-        request.app.state.config.RAG_WEB_SEARCH_DOMAIN_FILTER_LIST = (
+        request.app.state.config.RAG_WEB_SEARCH_DOMAIN_FILTER_LIST.set(user.email,
             form_data.web.search.domain_filter_list
         )
 
@@ -1531,7 +1531,7 @@ def search_web(request: Request, engine: str, query: str, email: str) -> list[Se
                 request.app.state.config.SEARXNG_QUERY_URL.get(email),
                 query,
                 request.app.state.config.RAG_WEB_SEARCH_RESULT_COUNT.get(email),
-                request.app.state.config.RAG_WEB_SEARCH_DOMAIN_FILTER_LIST,
+                request.app.state.config.RAG_WEB_SEARCH_DOMAIN_FILTER_LIST.get(email),
             )
         else:
             raise Exception("No SEARXNG_QUERY_URL found in environment variables")
@@ -1545,7 +1545,7 @@ def search_web(request: Request, engine: str, query: str, email: str) -> list[Se
                 request.app.state.config.GOOGLE_PSE_ENGINE_ID.get(email),
                 query,
                 request.app.state.config.RAG_WEB_SEARCH_RESULT_COUNT.get(email),
-                request.app.state.config.RAG_WEB_SEARCH_DOMAIN_FILTER_LIST,
+                request.app.state.config.RAG_WEB_SEARCH_DOMAIN_FILTER_LIST.get(email),
             )
         else:
             raise Exception(
@@ -1557,7 +1557,7 @@ def search_web(request: Request, engine: str, query: str, email: str) -> list[Se
                 request.app.state.config.BRAVE_SEARCH_API_KEY.get(email),
                 query,
                 request.app.state.config.RAG_WEB_SEARCH_RESULT_COUNT.get(email),
-                request.app.state.config.RAG_WEB_SEARCH_DOMAIN_FILTER_LIST,
+                request.app.state.config.RAG_WEB_SEARCH_DOMAIN_FILTER_LIST.get(email),
             )
         else:
             raise Exception("No BRAVE_SEARCH_API_KEY found in environment variables")
@@ -1567,7 +1567,7 @@ def search_web(request: Request, engine: str, query: str, email: str) -> list[Se
                 request.app.state.config.KAGI_SEARCH_API_KEY.get(email),
                 query,
                 request.app.state.config.RAG_WEB_SEARCH_RESULT_COUNT.get(email),
-                request.app.state.config.RAG_WEB_SEARCH_DOMAIN_FILTER_LIST,
+                request.app.state.config.RAG_WEB_SEARCH_DOMAIN_FILTER_LIST.get(email),
             )
         else:
             raise Exception("No KAGI_SEARCH_API_KEY found in environment variables")
@@ -1587,7 +1587,7 @@ def search_web(request: Request, engine: str, query: str, email: str) -> list[Se
                 request.app.state.config.BOCHA_SEARCH_API_KEY.get(email),
                 query,
                 request.app.state.config.RAG_WEB_SEARCH_RESULT_COUNT.get(email),
-                request.app.state.config.RAG_WEB_SEARCH_DOMAIN_FILTER_LIST,
+                request.app.state.config.RAG_WEB_SEARCH_DOMAIN_FILTER_LIST.get(email),
             )
         else:
             raise Exception("No BOCHA_SEARCH_API_KEY found in environment variables")
@@ -1597,7 +1597,7 @@ def search_web(request: Request, engine: str, query: str, email: str) -> list[Se
                 request.app.state.config.SERPSTACK_API_KEY.get(email),
                 query,
                 request.app.state.config.RAG_WEB_SEARCH_RESULT_COUNT.get(email),
-                request.app.state.config.RAG_WEB_SEARCH_DOMAIN_FILTER_LIST,
+                request.app.state.config.RAG_WEB_SEARCH_DOMAIN_FILTER_LIST.get(email),
                 https_enabled=request.app.state.config.SERPSTACK_HTTPS.get(email),
             )
         else:
@@ -1608,7 +1608,7 @@ def search_web(request: Request, engine: str, query: str, email: str) -> list[Se
                 request.app.state.config.SERPER_API_KEY.get(email),
                 query,
                 request.app.state.config.RAG_WEB_SEARCH_RESULT_COUNT.get(email),
-                request.app.state.config.RAG_WEB_SEARCH_DOMAIN_FILTER_LIST,
+                request.app.state.config.RAG_WEB_SEARCH_DOMAIN_FILTER_LIST.get(email),
             )
         else:
             raise Exception("No SERPER_API_KEY found in environment variables")
@@ -1618,7 +1618,7 @@ def search_web(request: Request, engine: str, query: str, email: str) -> list[Se
                 request.app.state.config.SERPLY_API_KEY.get(email),
                 query,
                 request.app.state.config.RAG_WEB_SEARCH_RESULT_COUNT.get(email),
-                request.app.state.config.RAG_WEB_SEARCH_DOMAIN_FILTER_LIST,
+                request.app.state.config.RAG_WEB_SEARCH_DOMAIN_FILTER_LIST.get(email),
             )
         else:
             raise Exception("No SERPLY_API_KEY found in environment variables")
@@ -1626,7 +1626,7 @@ def search_web(request: Request, engine: str, query: str, email: str) -> list[Se
         return search_duckduckgo(
             query,
             request.app.state.config.RAG_WEB_SEARCH_RESULT_COUNT.get(email),
-            request.app.state.config.RAG_WEB_SEARCH_DOMAIN_FILTER_LIST,
+            request.app.state.config.RAG_WEB_SEARCH_DOMAIN_FILTER_LIST.get(email),
         )
     elif engine == "tavily":
         if request.app.state.config.TAVILY_API_KEY:
@@ -1634,7 +1634,7 @@ def search_web(request: Request, engine: str, query: str, email: str) -> list[Se
                 request.app.state.config.TAVILY_API_KEY.get(email),
                 query,
                 request.app.state.config.RAG_WEB_SEARCH_RESULT_COUNT.get(email),
-                request.app.state.config.RAG_WEB_SEARCH_DOMAIN_FILTER_LIST,
+                request.app.state.config.RAG_WEB_SEARCH_DOMAIN_FILTER_LIST.get(email),
             )
         else:
             raise Exception("No TAVILY_API_KEY found in environment variables")
@@ -1645,7 +1645,7 @@ def search_web(request: Request, engine: str, query: str, email: str) -> list[Se
                 request.app.state.config.SEARCHAPI_ENGINE.get(email),
                 query,
                 request.app.state.config.RAG_WEB_SEARCH_RESULT_COUNT.get(email),
-                request.app.state.config.RAG_WEB_SEARCH_DOMAIN_FILTER_LIST,
+                request.app.state.config.RAG_WEB_SEARCH_DOMAIN_FILTER_LIST.get(email),
             )
         else:
             raise Exception("No SEARCHAPI_API_KEY found in environment variables")
@@ -1656,7 +1656,7 @@ def search_web(request: Request, engine: str, query: str, email: str) -> list[Se
                 request.app.state.config.SERPAPI_ENGINE.get(email),
                 query,
                 request.app.state.config.RAG_WEB_SEARCH_RESULT_COUNT.get(email),
-                request.app.state.config.RAG_WEB_SEARCH_DOMAIN_FILTER_LIST,
+                request.app.state.config.RAG_WEB_SEARCH_DOMAIN_FILTER_LIST.get(email),
             )
         else:
             raise Exception("No SERPAPI_API_KEY found in environment variables")
@@ -1673,14 +1673,14 @@ def search_web(request: Request, engine: str, query: str, email: str) -> list[Se
             str(DEFAULT_LOCALE),
             query,
             request.app.state.config.RAG_WEB_SEARCH_RESULT_COUNT.get(email),
-            request.app.state.config.RAG_WEB_SEARCH_DOMAIN_FILTER_LIST,
+            request.app.state.config.RAG_WEB_SEARCH_DOMAIN_FILTER_LIST.get(email),
         )
     elif engine == "exa":
         return search_exa(
             request.app.state.config.EXA_API_KEY.get(email),
             query,
             request.app.state.config.RAG_WEB_SEARCH_RESULT_COUNT.get(email),
-            request.app.state.config.RAG_WEB_SEARCH_DOMAIN_FILTER_LIST,
+            request.app.state.config.RAG_WEB_SEARCH_DOMAIN_FILTER_LIST.get(email),
         )
     else:
         raise Exception("No search engine API key found in environment variables")
