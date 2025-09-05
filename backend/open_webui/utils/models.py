@@ -184,8 +184,10 @@ async def get_all_models(request, refresh: bool = False, user: UserModel = None)
                         0
                     ]  # Ollama may return model ids in different formats (e.g., 'llama3' vs. 'llama3:7b')
                 ):
+                    # This is what is answered in the info part
+                    custom_model.name = translate_model_title(custom_model.name, request.headers.get("X-Language")),
                     if custom_model.is_active:
-                        model["name"] = translate_model_title(custom_model.name, request.headers.get("X-Language")),
+                        model["name"] = custom_model.name
                         model["info"] = custom_model.model_dump()
 
                         # Set action_ids and filter_ids
@@ -234,10 +236,12 @@ async def get_all_models(request, refresh: bool = False, user: UserModel = None)
                     filter_ids.extend(meta["filterIds"])
 
             custom_model.name = translate_model_title(custom_model.name, request.headers.get("X-Language"))
+            # This is what is answered in general endpoint part
             models.append(
                 {
                     "id": f"{custom_model.id}",
-                    "name": translate_model_title(custom_model.name, request.headers.get("X-Language")),
+                    "name": custom_model.name,
+                    "current_language" : custom_model.name,
                     "object": "model",
                     "created": custom_model.created_at,
                     "owned_by": owned_by,
