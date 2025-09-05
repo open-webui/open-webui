@@ -10,8 +10,11 @@ export default defineConfig({
 			targets: [
 				{
 					src: 'node_modules/onnxruntime-web/dist/*.jsep.*',
-
 					dest: 'wasm'
+				},
+				{
+					src: 'node_modules/@fortawesome/fontawesome-free/webfonts/*',
+					dest: 'webfonts'
 				}
 			]
 		})

@@ -1,0 +1,98 @@
+[
+  {
+    "name": "--color-black",
+    "defaultValue": "#000000"
+  },
+  {
+    "name": "--color-white",
+    "defaultValue": "#ffffff"
+  },
+  {
+    "name": "--color-gray-50",
+    "defaultValue": "#f9f9f9"
+  },
+  {
+    "name": "--color-gray-100",
+    "defaultValue": "#ececec"
+  },
+  {
+    "name": "--color-gray-200",
+    "defaultValue": "#e3e3e3"
+  },
+  {
+    "name": "--color-gray-300",
+    "defaultValue": "#cdcdcd"
+  },
+  {
+    "name": "--color-gray-400",
+    "defaultValue": "#b4b4b4"
+  },
+  {
+    "name": "--color-gray-500",
+    "defaultValue": "#9b9b9b"
+  },
+  {
+    "name": "--color-gray-600",
+    "defaultValue": "#676767"
+  },
+  {
+    "name": "--color-gray-700",
+    "defaultValue": "#4e4e4e"
+  },
+  {
+    "name": "--color-gray-800",
+    "defaultValue": "#333333"
+  },
+  {
+    "name": "--color-gray-850",
+    "defaultValue": "#262626"
+  },
+  {
+    "name": "--color-gray-900",
+    "defaultValue": "#171717"
+  },
+  {
+    "name": "--color-gray-950",
+    "defaultValue": "#0d0d0d"
+  },
+  {
+    "name": "--color-blue-100",
+    "defaultValue": "#dbeafe"
+  },
+  {
+    "name": "--color-blue-200",
+    "defaultValue": "#bfdbfe"
+  },
+  {
+    "name": "--color-blue-300",
+    "defaultValue": "#93c5fd"
+  },
+  {
+    "name": "--color-blue-400",
+    "defaultValue": "#60a5fa"
+  },
+  {
+    "name": "--color-blue-500",
+    "defaultValue": "#3b82f6"
+  },
+  {
+    "name": "--color-blue-600",
+    "defaultValue": "#2563eb"
+  },
+  {
+    "name": "--color-blue-700",
+    "defaultValue": "#1d4ed8"
+  },
+  {
+    "name": "--color-blue-800",
+    "defaultValue": "#1e40af"
+  },
+  {
+    "name": "--color-blue-900",
+    "defaultValue": "#1e3a8a"
+  },
+  {
+    "name": "--color-blue-950",
+    "defaultValue": "#172554"
+  }
+]
