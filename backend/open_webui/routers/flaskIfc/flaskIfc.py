@@ -260,7 +260,9 @@ def receive_upload_model():
     data = request.get_json()
     incoming_headers = dict(request.headers)
     if is_job_running() == True:
-        return manual_response(content="Server is busy. Please try again later.",thinking=None,profile_data=None, incoming_headers=incoming_headers), 200
+        return manual_response(content="Server is busy. Please try again later.",thinking=None,profile_data=None, incoming_headers=incoming_headers), 503
+
+    job_status["running"] = True
 
     file_name = os.path.basename(data['actual_name'])
 
@@ -275,6 +277,7 @@ def receive_upload_model():
     try:
         preliminary_host_check = subprocess.run(["md5sum", data['actual_name']],capture_output=True,text=True,check=True)
     except Exception as e:
+        job_status["running"] = False
         return manual_response(content=f"File checksum failed: {e}",thinking=f"File checksum failed: {e}", incoming_headers=incoming_headers), 500
 
     time.sleep(1)
@@ -283,6 +286,7 @@ def receive_upload_model():
     print('PRELIMINARY HOST/SHELL CHECK-SUM: ', preliminary_host_check.stdout)
 
     if preliminary_target_check.split()[0].replace('\x00', '') == preliminary_host_check.stdout.split()[0].replace('\x00', ''):
+        job_status["running"] = False
         return manual_response(content="File Already Exists",thinking="File Already Exists", incoming_headers=incoming_headers), 200
 
     time.sleep(1)
@@ -295,6 +299,7 @@ def receive_upload_model():
         file_size = os.path.getsize(data['actual_name'])
         file_obj = open(data['actual_name'], "rb")
     except Exception as e:
+        job_status["running"] = False
         return manual_response(content=f"File open failed: {e}",thinking=f"File open failed: {e}", incoming_headers=incoming_headers), 500
 
     time.sleep(1)
@@ -304,6 +309,7 @@ def receive_upload_model():
     try:
         actual_transfer(file_obj, file_size)
     except Exception as e:
+        job_status["running"] = False
         return manual_response(content=f"File transfer failed: {e}",thinking=f"File transfer failed: {e}", incoming_headers=incoming_headers), 500
     time.sleep(1)
 
@@ -321,6 +327,7 @@ def receive_upload_model():
 
     print('TARGET CHECK-SUM: ', target_check_sum)
     print('HOST/SHELL CHECK-SUM: ', preliminary_host_check.stdout)
+    job_status["running"] = False
 
     if target_check_sum.split()[0].replace('\x00', '') != preliminary_host_check.stdout.split()[0].replace('\x00', ''):
         return manual_response(content="Failed checksum match",thinking="Failed checksum match", incoming_headers=incoming_headers), 400
@@ -335,11 +342,13 @@ def receive_pull_model():
 
     if is_job_running() == True:
         return manual_response(content="Server is busy. Please try again later.",thinking=None,profile_data=None, incoming_headers=incoming_headers), 200
+    job_status["running"] = True
 
     try:
         test1 = data['human_name']
         test2 = data['actual_name']
     except (TypeError, KeyError) as e:
+        job_status["running"] = False
         return manual_response(content=f"Invalid JSON data: {e}",thinking=f"Invalid JSON data: {e}", incoming_headers=incoming_headers), 400
     
     if os.path.exists("/var/snap/ollama/common/models/blobs/"):
@@ -347,6 +356,7 @@ def receive_pull_model():
     elif os.path.exists("/usr/share/ollama/.ollama/models/blobs/"):
         path = "/usr/share/ollama/.ollama/models/blobs/" + data['actual_name']
     else:
+        job_status["running"] = False
         return manual_response(content=f"No valid path",thinking=f"No valid path", incoming_headers=incoming_headers), 500
 
     preliminary_target_check = serial_script.send_serial_command(port,baudrate,f"cd {destn_path}; md5sum {data['human_name']}")
@@ -354,6 +364,7 @@ def receive_pull_model():
     try:
         preliminary_host_check = subprocess.run(["md5sum", path],capture_output=True,text=True,check=True)
     except Exception as e:
+        job_status["running"] = False
         return manual_response(content=f"File checksum failed: {e}",thinking=f"File checksum failed: {e}", incoming_headers=incoming_headers), 500
 
     time.sleep(1)
@@ -362,6 +373,7 @@ def receive_pull_model():
     print('PRELIMINARY HOST/SHELL CHECK-SUM: ', preliminary_host_check.stdout)
 
     if preliminary_target_check.split()[0].replace('\x00', '') == preliminary_host_check.stdout.split()[0].replace('\x00', ''):
+        job_status["running"] = False
         return manual_response(content="File Already Exists",thinking="File Already Exists", incoming_headers=incoming_headers), 200
     
     time.sleep(1)
@@ -374,6 +386,7 @@ def receive_pull_model():
         file_size = os.path.getsize(path)
         file_obj = open(path, "rb")
     except Exception as e:
+        job_status["running"] = False
         return manual_response(content=f"File open failed: {e}",thinking=f"File open failed: {e}", incoming_headers=incoming_headers), 500
     
     time.sleep(1)
@@ -383,6 +396,7 @@ def receive_pull_model():
     try:
         actual_transfer(file_obj, file_size)
     except Exception as e:
+        job_status["running"] = False
         return manual_response(content=f"File transfer failed: {e}",thinking=f"File transfer failed: {e}", incoming_headers=incoming_headers), 500
     time.sleep(1)
 
@@ -410,9 +424,10 @@ def receive_pull_model():
     print('TARGET CHECK-SUM: ', target_check_sum)
     print('HOST/SHELL CHECK-SUM: ', preliminary_host_check.stdout)
 
+    job_status["running"] = False
     if target_check_sum.split()[0].replace('\x00', '') != preliminary_host_check.stdout.split()[0].replace('\x00', ''):
         return manual_response(content="Failed checksum match",thinking="Failed checksum match", incoming_headers=incoming_headers), 400
-      
+
     return manual_response(content="File Download Done",thinking="File Download Done", incoming_headers=incoming_headers), 200
 
 def denormalize_model_name(model_name):
@@ -428,18 +443,21 @@ def opu_delete_model():
     incoming_headers = dict(request.headers)
     if is_job_running() == True:
         return manual_response(content="Server is busy. Please try again later.",thinking=None,profile_data=None, incoming_headers=incoming_headers), 200
+    job_status["running"] = True
 
     serial_script.pre_and_post_check(port,baudrate)
     try:
         model_name = data['model_name']
         print("model_name: ", model_name, "destn_path", destn_path)
     except (TypeError, KeyError) as e:
+        job_status["running"] = False
         return manual_response(content=f"Invalid JSON data: {e}",thinking=f"Invalid JSON data: {e}", incoming_headers=incoming_headers), 400
 
     file_name = denormalize_model_name(data['model_name'])
 
     read_cmd_from_serial(port,baudrate,f"cd {destn_path}; rm -fr {file_name}* && find . -type d -empty | while read -r dir; do rmdir \"$dir\"; done")
 
+    job_status["running"] = False
     return manual_response(content="Model deleted",thinking="Model deleted", incoming_headers=incoming_headers), 200
 
 
@@ -733,11 +751,11 @@ def chats():
     command = f"cd {exe_path}; {script_path} \"{prompt}\" {tokens} {model_path} {backend} {repeat_penalty} {batch_size} {top_k} {top_p} {last_n} {context_length} {temp}"
     if is_job_running() == True:
         return manual_response(content="Server is busy. Please try again later.",thinking=None,profile_data=None, incoming_headers=incoming_headers), 200
+    job_status["running"] = True
 
     serial_script.pre_and_post_check(port,baudrate)
     def run_script(command):
         try:
-            job_status["running"] = True
             result = serial_script.send_serial_command(port,baudrate,command, timeout=DEFAULT_MODEL_COMMAND_RUN_TIMEOUT)
             if result:
                 response_text = result
@@ -757,9 +775,7 @@ def chats():
             else:
                 filtered_text = "Result Empty: Desired phrase not found in the response."
                 formatted_text = None  # Or None, depending on your use case
-                job_status["result"] = filtered_text
 
-            job_status["running"] = False
             return filtered_text, formatted_text
         except subprocess.CalledProcessError as e:
             filtered_text = f"Error: {e.stderr}"
@@ -771,6 +787,7 @@ def chats():
     extracted_json = extract_json_output(filtered_text)
     chat_history = extract_chat_history(filtered_text)
     final_chat_output = extract_final_output_after_chat_history(chat_history)
+    job_status["running"] = False
     return manual_response(content=final_chat_output,thinking=chat_history,profile_data=profile_text, incoming_headers=incoming_headers), 200
 
 @app.route('/api/chat', methods=['POST', 'GET'])
@@ -836,11 +853,11 @@ def chat():
     command = f"cd {exe_path}; {script_path} \"{prompt}\" {tokens} {model_path} {backend} {repeat_penalty} {batch_size} {top_k} {top_p} {last_n} {context_length} {temp}"
     if is_job_running() == True:
         return manual_response(content="Server is busy. Please try again later.",thinking=None,profile_data=None, incoming_headers=incoming_headers), 200
+    job_status["running"] = True
 
     serial_script.pre_and_post_check(port,baudrate)
     def run_script(command):
         try:
-            job_status["running"] = True
             result = serial_script.send_serial_command(port,baudrate,command, timeout=DEFAULT_MODEL_COMMAND_RUN_TIMEOUT)
             if result:
                 response_text = result
@@ -861,7 +878,6 @@ def chat():
                 formatted_text = None
                 job_status["result"] = filtered_text
 
-            job_status["running"] = False
             return filtered_text, formatted_text
         except subprocess.CalledProcessError as e:
             filtered_text = f"Error: {e.stderr}"
@@ -873,7 +889,8 @@ def chat():
     extracted_json = extract_json_output(filtered_text)
     chat_history = extract_chat_history(filtered_text)
     final_chat_output = extract_final_output_after_chat_history(chat_history)
-    
+    job_status["running"] = False
+
     return manual_response(content=final_chat_output,thinking=chat_history,profile_data=profile_text, incoming_headers=incoming_headers), 200
 
 @app.route('/api/restart-txe', methods=['GET', 'POST'])
@@ -893,7 +910,9 @@ def system_info_ollama_serial_command():
     if is_job_running() == True:
         return manual_response(content="Server is busy. Please try again later.",thinking=None,profile_data=None, incoming_headers=incoming_headers), 200
 
+    job_status["running"] = True
     result, error = system_info_serial_command()
+    job_status["running"] = False
     return manual_response(content=result,thinking="System Info", incoming_headers=incoming_headers), error
 
 @app.route('/api/health-check', methods=['GET', 'POST'])
@@ -902,7 +921,10 @@ def health_check_ollama_serial_command():
     if is_job_running() == True:
         return manual_response(content="Server is busy. Please try again later.",thinking=None,profile_data=None, incoming_headers=incoming_headers), 200
 
+    job_status["running"] = True
     result, error = health_check_serial_command()
+    job_status["running"] = False
+
     return manual_response(content=result,thinking="Health Check", incoming_headers=incoming_headers), error
 
 def aborttask():
