@@ -54,18 +54,19 @@
 	}
 </script>
 
-
 <div class=" space-y-1 text-xs pb-safe-bottom">
 	<div class="py-0.5 w-full justify-between">
 		<Tooltip
-			content={$i18n.t('Configure backend Ollama queries to go to Native (HOST), CPU (FPGA Host), and OPU (FPGA)')}
+			content={$i18n.t(
+				'Configure backend Ollama queries to go to Native (HOST), CPU (FPGA Host), and OPU (FPGA)'
+			)}
 			placement="top-start"
 			className="inline-tooltip"
-			>
+		>
 			<div class="flex w-full justify-between">
-			<div class="self-center text-xs font-medium">
+				<div class="self-center text-xs font-medium">
 					{$i18n.t('Target')}
-			</div>
+				</div>
 				<select
 					class="p-1 px-3 text-xs flex rounded-sm transition shrink-0 outline-hidden bg-white text-black dark:bg-gray-800 dark:text-white"
 					bind:value={params.target}

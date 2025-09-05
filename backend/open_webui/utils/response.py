@@ -80,7 +80,10 @@ def convert_ollama_usage_to_openai(data: dict) -> dict:
         },
     }
 
-def ms_to_seconds(ms): return round(ms / 1000, 3)
+
+def ms_to_seconds(ms):
+    return round(ms / 1000, 3)
+
 
 def seconds_to_hms(seconds):
     try:
@@ -88,7 +91,6 @@ def seconds_to_hms(seconds):
         return str(timedelta(seconds=seconds_int))
     except (ValueError, TypeError):
         return "0h0m0s"
-
 
 
 def safe_search(pattern, text, group_index=1, fallback="N/A", convert_func=lambda x: x):
@@ -100,43 +102,90 @@ def safe_search(pattern, text, group_index=1, fallback="N/A", convert_func=lambd
             return fallback
     return fallback
 
+
 def extract_llama_cpp_metrics(perf_text):
     # Replace fixed spacing with flexible whitespace handling
-    total_tokens = safe_search(r'total time\s*=\s*[\d.]+\s*ms\s*/\s*(\d+)', perf_text, convert_func=int, fallback=0)
-    prompt_tokens = safe_search(r'prompt eval time\s*=\s*[\d.]+\s*ms\s*/\s*(\d+)', perf_text, convert_func=int, fallback=0)
-    response_token_per_sec = safe_search(r'sampling time\s*=\s*[\d.]+\s*ms\s*/\s*[\d]+\s*runs\s*\(\s*[\d.]+ ms per token,\s*([\d.]+) tokens per second\)', perf_text, fallback="N/A")
-    prompt_token_per_sec = safe_search(r'prompt eval time\s*=\s*[\d.]+\s*ms\s*/\s*[\d]+\s*tokens\s*\(\s*[\d.]+\s*ms per token,\s*([\d.]+)\s*tokens per second\)', perf_text, fallback="N/A")
-    total_duration = safe_search(r'total time\s*=\s*([\d.]+)\s*ms', perf_text, convert_func=lambda x: ms_to_seconds(float(x)))
-    load_duration = safe_search(r'load time\s*=\s*([\d.]+)\s*ms', perf_text, convert_func=lambda x: ms_to_seconds(float(x)))
-    prompt_eval_count = safe_search(r'prompt eval time\s*=\s*[\d.]+\s*ms\s*/\s*(\d+)', perf_text, convert_func=int)
-    prompt_eval_duration = safe_search(r'prompt eval time\s*=\s*([\d.]+)\s*ms', perf_text, convert_func=lambda x: ms_to_seconds(float(x)))
-    eval_count = safe_search(r'eval time\s*=\s*[\d.]+\s*ms\s*/\s*(\d+)', perf_text, convert_func=int)
-    eval_duration = safe_search(r'eval time\s*=\s*([\d.]+)\s*ms', perf_text, convert_func=lambda x: ms_to_seconds(float(x)))
-    approximate_total = seconds_to_hms(safe_search(r'total time\s*=\s*([\d.]+)\s*ms', perf_text, convert_func=lambda x: ms_to_seconds(float(x))))
+    total_tokens = safe_search(
+        r"total time\s*=\s*[\d.]+\s*ms\s*/\s*(\d+)",
+        perf_text,
+        convert_func=int,
+        fallback=0,
+    )
+    prompt_tokens = safe_search(
+        r"prompt eval time\s*=\s*[\d.]+\s*ms\s*/\s*(\d+)",
+        perf_text,
+        convert_func=int,
+        fallback=0,
+    )
+    response_token_per_sec = safe_search(
+        r"sampling time\s*=\s*[\d.]+\s*ms\s*/\s*[\d]+\s*runs\s*\(\s*[\d.]+ ms per token,\s*([\d.]+) tokens per second\)",
+        perf_text,
+        fallback="N/A",
+    )
+    prompt_token_per_sec = safe_search(
+        r"prompt eval time\s*=\s*[\d.]+\s*ms\s*/\s*[\d]+\s*tokens\s*\(\s*[\d.]+\s*ms per token,\s*([\d.]+)\s*tokens per second\)",
+        perf_text,
+        fallback="N/A",
+    )
+    total_duration = safe_search(
+        r"total time\s*=\s*([\d.]+)\s*ms",
+        perf_text,
+        convert_func=lambda x: ms_to_seconds(float(x)),
+    )
+    load_duration = safe_search(
+        r"load time\s*=\s*([\d.]+)\s*ms",
+        perf_text,
+        convert_func=lambda x: ms_to_seconds(float(x)),
+    )
+    prompt_eval_count = safe_search(
+        r"prompt eval time\s*=\s*[\d.]+\s*ms\s*/\s*(\d+)", perf_text, convert_func=int
+    )
+    prompt_eval_duration = safe_search(
+        r"prompt eval time\s*=\s*([\d.]+)\s*ms",
+        perf_text,
+        convert_func=lambda x: ms_to_seconds(float(x)),
+    )
+    eval_count = safe_search(
+        r"eval time\s*=\s*[\d.]+\s*ms\s*/\s*(\d+)", perf_text, convert_func=int
+    )
+    eval_duration = safe_search(
+        r"eval time\s*=\s*([\d.]+)\s*ms",
+        perf_text,
+        convert_func=lambda x: ms_to_seconds(float(x)),
+    )
+    approximate_total = seconds_to_hms(
+        safe_search(
+            r"total time\s*=\s*([\d.]+)\s*ms",
+            perf_text,
+            convert_func=lambda x: ms_to_seconds(float(x)),
+        )
+    )
 
     metrics = {
-            "response_token/s": response_token_per_sec,
-            "prompt_token/s": prompt_token_per_sec,
-            "total_duration": total_duration,
-            "load_duration": load_duration,
-            "prompt_eval_count": prompt_eval_count,
-            "prompt_tokens": prompt_tokens,
-            "prompt_eval_duration": prompt_eval_duration,
-            "eval_count": eval_count,
-            "completion_tokens": total_tokens - prompt_tokens,
-            "eval_duration": eval_duration,
-            "approximate_total": approximate_total,
-            "total_tokens":total_tokens,
-            "completion_tokens_details": {
-                "reasoning_tokens": 0,
-                "accepted_prediction_tokens": 0,
-                "rejected_prediction_tokens": 0
-            },
-            "raw": perf_text
+        "response_token/s": response_token_per_sec,
+        "prompt_token/s": prompt_token_per_sec,
+        "total_duration": total_duration,
+        "load_duration": load_duration,
+        "prompt_eval_count": prompt_eval_count,
+        "prompt_tokens": prompt_tokens,
+        "prompt_eval_duration": prompt_eval_duration,
+        "eval_count": eval_count,
+        "completion_tokens": total_tokens - prompt_tokens,
+        "eval_duration": eval_duration,
+        "approximate_total": approximate_total,
+        "total_tokens": total_tokens,
+        "completion_tokens_details": {
+            "reasoning_tokens": 0,
+            "accepted_prediction_tokens": 0,
+            "rejected_prediction_tokens": 0,
+        },
+        "raw": perf_text,
     }
     return metrics
 
+
 # Print result
+
 
 def convert_response_ollama_to_openai(ollama_response: dict) -> dict:
     model = ollama_response.get("model", "ollama")
@@ -187,7 +236,7 @@ async def convert_streaming_response_ollama_to_openai(ollama_streaming_response)
         else:
             usage = None
 
-        if done and usage is None :
+        if done and usage is None:
             usage = convert_ollama_usage_to_openai(data)
 
         data = openai_chat_chunk_message_template(

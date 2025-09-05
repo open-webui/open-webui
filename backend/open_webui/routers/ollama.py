@@ -1,4 +1,3 @@
-
 # TODO: Implement a more intelligent load balancing mechanism for distributing requests among multiple backend instances.
 # Current implementation uses a simple round-robin approach (random.choice). Consider incorporating algorithms like weighted round-robin,
 # least connections, or least response time for better resource utilization and performance optimization.
@@ -723,25 +722,24 @@ async def unload_model(
 
 
 @router.post("/api/pullhelper")
-async def pull_model_helper(user=Depends(get_admin_user),gold:str = '',human_name:str = ''):
-    
+async def pull_model_helper(
+    user=Depends(get_admin_user), gold: str = "", human_name: str = ""
+):
 
-    url = DEFAULT_FLASK_URL #"http://127.0.0.1:5001 for now; change as necessary!"
+    url = DEFAULT_FLASK_URL  # "http://127.0.0.1:5001 for now; change as necessary!"
 
     # Admin should be able to pull models from any source
-    payload = {'actual_name':gold,'human_name':human_name}
-    
-    
+    payload = {"actual_name": gold, "human_name": human_name}
+
     return await send_post_request(
         url=f"{url}/api/receive",
         payload=json.dumps(payload),
         stream=False,
         key=None,
-        content_type = "application/x-ndjson",
+        content_type="application/x-ndjson",
         user=user,
     )
-    
-    
+
 
 @router.post("/api/pull")
 @router.post("/api/pull/{url_idx}")
@@ -767,17 +765,16 @@ async def pull_model(
         user=user,
     )
 
-
     async def pull_model_helper_stream(user, key, model_name):
         yield json.dumps({"status": "IGNORE ABOVE MESSAGE"}) + "\n"
         result_response = await pull_model_helper(user, key, model_name)
         yield json.dumps({"result": result_response}) + "\n"
-        
 
     GOLDEN_NAME = None
+
     async def stream():
         nonlocal GOLDEN_NAME
-        print('MODEL NAME: ',form_data)
+        print("MODEL NAME: ", form_data)
         async for line in original_post_request.body_iterator:
             decoded = line.decode("utf-8")
             if GOLDEN_NAME == None:
@@ -785,16 +782,16 @@ async def pull_model(
                 if "digest" in data:
                     GOLDEN_NAME = data["digest"]
             yield line
-            
+
         if GOLDEN_NAME:
-            key = '-'.join(GOLDEN_NAME.split(':'))
+            key = "-".join(GOLDEN_NAME.split(":"))
             async for output in pull_model_helper_stream(user, key, form_data["model"]):
-                yield output#.encode()
+                yield output  # .encode()
 
     async def userInterface():
         response = StreamingResponse(stream(), media_type="application/json")
         return response
-      
+
     return await userInterface()
 
 
@@ -931,6 +928,7 @@ async def copy_model(
             detail=detail if detail else "Open WebUI: Server Connection Error",
         )
 
+
 async def delete_model_from_opu(
     request: Request,
     model_name: str = "",
@@ -939,7 +937,7 @@ async def delete_model_from_opu(
     url = DEFAULT_FLASK_URL
 
     # Admin should be able to pull models from any source
-    payload = {'model_name':model_name}
+    payload = {"model_name": model_name}
 
     return await send_post_request(
         url=f"{url}/api/opu-delete-model",
@@ -949,6 +947,7 @@ async def delete_model_from_opu(
         content_type="application/x-ndjson",
         user=user,
     )
+
 
 @router.delete("/api/delete")
 @router.delete("/api/delete/{url_idx}")
@@ -1371,9 +1370,13 @@ async def get_ollama_url(request: Request, model: str, url_idx: Optional[int] = 
     except Exception:
         target_value = None
 
-    if str(target_value).lower() == 'native':
+    if str(target_value).lower() == "native":
         url = request.app.state.config.OLLAMA_BASE_URLS[url_idx]
-    if target_value == None or str(target_value).lower() == 'cpu' or str(target_value).lower() == 'opu':
+    if (
+        target_value == None
+        or str(target_value).lower() == "cpu"
+        or str(target_value).lower() == "opu"
+    ):
         url = DEFAULT_FLASK_URL
     else:
         url = request.app.state.config.OLLAMA_BASE_URLS[url_idx]
@@ -1465,6 +1468,7 @@ async def generate_chat_completion(
         metadata=metadata,
     )
 
+
 @router.post("/api/restartopu")
 async def restart_opu(
     request: Request,
@@ -1482,6 +1486,7 @@ async def restart_opu(
         content_type="application/x-ndjson",
         user=user,
     )
+
 
 @router.post("/api/systeminfoopu")
 async def systeminfo_opu(
@@ -1501,9 +1506,10 @@ async def systeminfo_opu(
         user=user,
     )
 
+
 def ollama_download_openwebui_log_command():
-    original_path = 'open-webui.log'
-    copied_path = 'open-webui-copy.log'  # You can change this name if needed
+    original_path = "open-webui.log"
+    copied_path = "open-webui-copy.log"  # You can change this name if needed
 
     # Check if original file exists
     if not os.path.exists(original_path):
@@ -1522,25 +1528,29 @@ def ollama_download_openwebui_log_command():
             "Content-Disposition": "attachment; filename=open-webui.log",
             "Cache-Control": "no-store, no-cache, must-revalidate",
             "Pragma": "no-cache",
-            "Expires": "0"
-        }
+            "Expires": "0",
+        },
     )
 
+
 def ollama_download_flask_log_command():
-    file_path = 'backend/open_webui/routers/flaskIfc/flask.log'  # Replace with your actual file path
+    file_path = "backend/open_webui/routers/flaskIfc/flask.log"  # Replace with your actual file path
     if not os.path.exists(file_path):
         print("file_path: ", file_path, "does not exists")
         raise HTTPException(status_code=404, detail="Log file not found")
 
-    return FileResponse(path=file_path,
-            media_type="application/octet-stream",  # Forces download
-            filename="flask.log",
-            headers={
-                "Content-Disposition": "attachment; filename=flask.log",
-                "Cache-Control": "no-store, no-cache, must-revalidate",
-                "Pragma": "no-cache",
-                "Expires": "0"
-            })
+    return FileResponse(
+        path=file_path,
+        media_type="application/octet-stream",  # Forces download
+        filename="flask.log",
+        headers={
+            "Content-Disposition": "attachment; filename=flask.log",
+            "Cache-Control": "no-store, no-cache, must-revalidate",
+            "Pragma": "no-cache",
+            "Expires": "0",
+        },
+    )
+
 
 @router.get("/api/opu-flask-log", response_class=FileResponse)
 async def download_flask_log(
@@ -1552,6 +1562,7 @@ async def download_flask_log(
     url = DEFAULT_FLASK_URL
     return ollama_download_flask_log_command()
 
+
 @router.get("/api/opu-openwebui-log", response_class=FileResponse)
 async def download_open_webui_log(
     request: Request,
@@ -1561,6 +1572,7 @@ async def download_open_webui_log(
 ):
     url = DEFAULT_FLASK_URL
     return ollama_download_openwebui_log_command()
+
 
 @router.post("/api/healthcheckopu")
 async def healthcheck_opu(
@@ -1580,6 +1592,7 @@ async def healthcheck_opu(
         user=user,
     )
 
+
 @router.post("/api/aborttaskopu")
 async def aborttask_opu(
     request: Request,
@@ -1597,6 +1610,7 @@ async def aborttask_opu(
         content_type="application/x-ndjson",
         user=user,
     )
+
 
 # TODO: we should update this part once Ollama supports other types
 class OpenAIChatMessageContent(BaseModel):
@@ -1966,22 +1980,23 @@ async def download_model(
     else:
         return None
 
+
 @router.post("/api/uploadhelper")
-async def upload_model_helper(user=Depends(get_admin_user),gold:str = '',human_name:str = ''):
+async def upload_model_helper(
+    user=Depends(get_admin_user), gold: str = "", human_name: str = ""
+):
 
-
-    url = DEFAULT_FLASK_URL #"http://127.0.0.1:5001 for now; change as necessary!"
+    url = DEFAULT_FLASK_URL  # "http://127.0.0.1:5001 for now; change as necessary!"
 
     # Admin should be able to pull models from any source
-    payload = {'actual_name':gold,'human_name':human_name}
-
+    payload = {"actual_name": gold, "human_name": human_name}
 
     return await send_post_request(
         url=f"{url}/api/receive-upload",
         payload=json.dumps(payload),
         stream=False,
         key=None,
-        content_type = "application/x-ndjson",
+        content_type="application/x-ndjson",
         user=user,
     )
 
@@ -2048,14 +2063,22 @@ async def upload_model(
                 print("file_path:", file_path, "model_name :", model_name)
 
                 try:
-                    result_response = await upload_model_helper(user, file_path, model_name)
+                    result_response = await upload_model_helper(
+                        user, file_path, model_name
+                    )
                     yield json.dumps({"result": result_response}) + "\n"
                     if result_response.ok:
                         log.info(f"API SUCCESS!")  # DEBUG
                     else:
-                        log.inf(f"Failed to create model in target. {result_response.text}")
+                        log.inf(
+                            f"Failed to create model in target. {result_response.text}"
+                        )
                 except Exception as e:
-                    res = {"error Ollama: Could not create model in target, Please try again.": str(e)}
+                    res = {
+                        "error Ollama: Could not create model in target, Please try again.": str(
+                            e
+                        )
+                    }
                     log.info(f"data: {json.dumps(res)}\n\n")
 
                 create_payload = {

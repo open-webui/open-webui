@@ -18,6 +18,8 @@ nvm use 20.18.1
 pip install --upgrade chromadb
 ln -s $(pwd)/build backend/open_webui/frontend
 fi
+black backend/
+npm run format
 cd backend/open_webui/routers/flaskIfc
 ./run_flask.sh > flask.log &
 cd -

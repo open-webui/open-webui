@@ -48,13 +48,13 @@
 		const results = [];
 		function recurse(item) {
 			if (Array.isArray(item)) {
-				item.forEach(recurse);  // 🟢 Recurse into array elements
+				item.forEach(recurse); // 🟢 Recurse into array elements
 			} else if (typeof item === 'object' && item !== null) {
 				for (const key in item) {
 					if (key === 'usage') {
-						results.push(item[key]);  // 🎯 Found a usage!
+						results.push(item[key]); // 🎯 Found a usage!
 					} else {
-						recurse(item[key]);      // 🔄 Recurse into nested objects
+						recurse(item[key]); // 🔄 Recurse into nested objects
 					}
 				}
 			}
@@ -73,7 +73,7 @@
 			usages = [];
 		}
 		const seen = new Set();
-		allUnique = usages.filter(obj => {
+		allUnique = usages.filter((obj) => {
 			const serialized = JSON.stringify(obj);
 			if (seen.has(serialized)) {
 				return false; // Duplicate
@@ -109,7 +109,8 @@
 							<pre class="text-left font-semibold mb-2">Message #{i + 1}:</pre>
 							{#each Object.entries(usage) as [key, value]}
 								{#if key === 'raw'}
-									<pre class="overflow-auto whitespace-pre-wrap font-mono text-sm bg-gray-100 dark:bg-gray-800 border border-gray-300 dark:border-gray-700 rounded p-4 text-black dark:text-gray-200">
+									<pre
+										class="overflow-auto whitespace-pre-wrap font-mono text-sm bg-gray-100 dark:bg-gray-800 border border-gray-300 dark:border-gray-700 rounded p-4 text-black dark:text-gray-200">
 										{String(value)}
 									</pre>
 								{/if}
@@ -123,4 +124,3 @@
 		{/if}
 	</div>
 </Modal>
-

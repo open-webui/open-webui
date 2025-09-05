@@ -11,7 +11,12 @@
 	import AdvancedParams from './Advanced/AdvancedParams.svelte';
 	import Textarea from '$lib/components/common/Textarea.svelte';
 
-	import { handleRestartClick, restartOpu, systemInfoOpu, healthCheckOpu } from '../Controls/Controls.svelte';
+	import {
+		handleRestartClick,
+		restartOpu,
+		systemInfoOpu,
+		healthCheckOpu
+	} from '../Controls/Controls.svelte';
 
 	export let saveSettings: Function;
 	export let getModels: Function;
@@ -305,82 +310,81 @@
 			</div>
 		{/if}
 
-		{#if ($user?.role === 'admin' || ($user?.permissions.chat?.controls ?? true)) && (params.target === 'cpu' || params.target === 'opu') }
-                        <div class="mt-2 space-y-3 pr-1.5">
-                                <div class="flex justify-between items-center text-sm">
-                                        <div class="  font-medium">{$i18n.t('Restart OPU')}</div>
+		{#if ($user?.role === 'admin' || ($user?.permissions.chat?.controls ?? true)) && (params.target === 'cpu' || params.target === 'opu')}
+			<div class="mt-2 space-y-3 pr-1.5">
+				<div class="flex justify-between items-center text-sm">
+					<div class="  font-medium">{$i18n.t('Restart OPU')}</div>
 
-				<button
-					disabled={$isRestarting}
-					class={
-						'w-auto text-sm px-2 py-1 rounded-md transition-colors duration-200' +
-						($settings.highContrastMode ?
-						' border-2 border-gray-300 dark : border-gray-700 bg-gray-50 dark:bg-gray-850 text-gray-900 dark:text-gray-100 ' +
-						($isRestarting ? 'opacity-50 cursor-not-allowed' :
-						'hover:bg-red-100 dark:hover:bg-red-900') : ' bg-red-600 text-white ' +
-						($isRestarting ? 'opacity-50 cursor-not-allowed' : 'hover:bg-red-700 dark:bg-red-600'))
-					}
-					on:click={() => {
-						handleRestartClick(); //Pop up confirmation dialog and instantiate restart once confirmed
-						}
-					}>{$isRestarting ? $i18n.t('OPU Restarting...') : $i18n.t('Restart OPU Now')}
-				</button>
+					<button
+						disabled={$isRestarting}
+						class={'w-auto text-sm px-2 py-1 rounded-md transition-colors duration-200' +
+							($settings.highContrastMode
+								? ' border-2 border-gray-300 dark : border-gray-700 bg-gray-50 dark:bg-gray-850 text-gray-900 dark:text-gray-100 ' +
+									($isRestarting
+										? 'opacity-50 cursor-not-allowed'
+										: 'hover:bg-red-100 dark:hover:bg-red-900')
+								: ' bg-red-600 text-white ' +
+									($isRestarting
+										? 'opacity-50 cursor-not-allowed'
+										: 'hover:bg-red-700 dark:bg-red-600'))}
+						on:click={() => {
+							handleRestartClick(); //Pop up confirmation dialog and instantiate restart once confirmed
+						}}
+						>{$isRestarting ? $i18n.t('OPU Restarting...') : $i18n.t('Restart OPU Now')}
+					</button>
 				</div>
-                        </div>
-                {/if}
+			</div>
+		{/if}
 
-                {#if ($user?.role === 'admin' || ($user?.permissions.chat?.controls ?? true)) && (params.target === 'cpu' || params.target === 'opu') }
-                        <div class="mt-2 space-y-3 pr-1.5">
-                                <div class="flex justify-between items-center text-sm">
-                                        <div class="  font-medium">{$i18n.t('OPU System Info')}</div>
-                                <button
-                                        class={
-						'w-auto text-sm px-2 py-1 rounded-md transition-colors duration-200' +
-						($settings.highContrastMode ?
-						' border-2 border-gray-300 dark:border-gray-700 bg-gray-50 dark:bg-gray-850 text-gray-900 dark:text-gray-100 hover:bg-blue-100 dark:hover:bg-blue-900'
-						: ' bg-blue-600 text-white hover:bg-blue-700 dark:bg-blue-600')
-                                        }
-                                        on:click={async() => {
+		{#if ($user?.role === 'admin' || ($user?.permissions.chat?.controls ?? true)) && (params.target === 'cpu' || params.target === 'opu')}
+			<div class="mt-2 space-y-3 pr-1.5">
+				<div class="flex justify-between items-center text-sm">
+					<div class="  font-medium">{$i18n.t('OPU System Info')}</div>
+					<button
+						class={'w-auto text-sm px-2 py-1 rounded-md transition-colors duration-200' +
+							($settings.highContrastMode
+								? ' border-2 border-gray-300 dark:border-gray-700 bg-gray-50 dark:bg-gray-850 text-gray-900 dark:text-gray-100 hover:bg-blue-100 dark:hover:bg-blue-900'
+								: ' bg-blue-600 text-white hover:bg-blue-700 dark:bg-blue-600')}
+						on:click={async () => {
 							systemInfoOutput = await systemInfoOpu(); // SystemInfo logic
-							showSystemInfoModal = true
-                                                        showSystemInfo = !showSystemInfo;
-                                                }
-                                        }>{showSystemInfo ? $i18n.t('Hide') : $i18n.t('Show')}
-                                </button>
-                                </div>
-                                {#if showSystemInfo && showSystemInfoModal && systemInfoOutput?.message?.content}
-                                        <div class="...">
-                                                <pre>{systemInfoOutput.message.content}</pre>
-                                        </div>
-                                {/if}
-                        </div>
-                {/if}
+							showSystemInfoModal = true;
+							showSystemInfo = !showSystemInfo;
+						}}
+						>{showSystemInfo ? $i18n.t('Hide') : $i18n.t('Show')}
+					</button>
+				</div>
+				{#if showSystemInfo && showSystemInfoModal && systemInfoOutput?.message?.content}
+					<div class="...">
+						<pre>{systemInfoOutput.message.content}</pre>
+					</div>
+				{/if}
+			</div>
+		{/if}
 
-                {#if ($user?.role === 'admin' || ($user?.permissions.chat?.controls ?? true)) && (params.target === 'cpu' || params.target === 'opu') }
-                        <div class="mt-2 space-y-3 pr-1.5">
-                                <div class="flex justify-between items-center text-sm">
-                                        <div class="  font-medium">{$i18n.t('OPU Health Check')}</div>
-                                <button
-                                        class={
-                                                'w-auto text-sm px-2 py-1 rounded-md transition-colors duration-200' +
-                                                ($settings.highContrastMode ?
-                                                ' border-2 border-gray-300 dark:border-gray-700 bg-gray-50 dark:bg-gray-850 text-gray-900 dark:text-gray-100 hover:bg-blue-100 dark:hover:bg-blue-900'
-                                                : ' bg-blue-600 text-white hover:bg-blue-700 dark:bg-blue-600')
-                                        }
-					on:click={async() => {
+		{#if ($user?.role === 'admin' || ($user?.permissions.chat?.controls ?? true)) && (params.target === 'cpu' || params.target === 'opu')}
+			<div class="mt-2 space-y-3 pr-1.5">
+				<div class="flex justify-between items-center text-sm">
+					<div class="  font-medium">{$i18n.t('OPU Health Check')}</div>
+					<button
+						class={'w-auto text-sm px-2 py-1 rounded-md transition-colors duration-200' +
+							($settings.highContrastMode
+								? ' border-2 border-gray-300 dark:border-gray-700 bg-gray-50 dark:bg-gray-850 text-gray-900 dark:text-gray-100 hover:bg-blue-100 dark:hover:bg-blue-900'
+								: ' bg-blue-600 text-white hover:bg-blue-700 dark:bg-blue-600')}
+						on:click={async () => {
 							healthOutput = await healthCheckOpu();
 							showHealthModal = true;
-                                                        showHealthCheck = !showHealthCheck;
-						}}>{showHealthCheck ? $i18n.t('Hide') : $i18n.t('Show')}
-				</button>
-                                </div>
+							showHealthCheck = !showHealthCheck;
+						}}
+						>{showHealthCheck ? $i18n.t('Hide') : $i18n.t('Show')}
+					</button>
+				</div>
 				{#if showHealthCheck && showHealthModal && healthOutput?.message?.content}
 					<div class="...">
 						<pre>{healthOutput.message.content}</pre>
 					</div>
 				{/if}
-                        </div>
-                {/if}
+			</div>
+		{/if}
 
 		{#if $user?.role === 'admin' || ($user?.permissions.chat?.controls ?? true)}
 			<div class="mt-2 space-y-3 pr-1.5">

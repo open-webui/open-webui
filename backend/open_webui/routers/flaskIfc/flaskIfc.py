@@ -18,18 +18,18 @@ job_status = {"running": False, "result": "", "thread": None}
 
 app = Flask(__name__)
 
-port = '/dev/ttyUSB3'
-#port = '/dev/ttyUSB2'
-baudrate = '921600'
-#baudrate = '115200'
+port = "/dev/ttyUSB3"
+# port = '/dev/ttyUSB2'
+baudrate = "921600"
+# baudrate = '115200'
 exe_path = "/usr/bin/tsi/v0.1.1*/bin/"
 
 DEFAULT_MODEL = "TinyLlama:latest"
 DEFAULT_BACKEND = "tSavorite"
-DEFAULT_TOKEN = 20 # This matches what we have on Open-WebUI
+DEFAULT_TOKEN = 20  # This matches what we have on Open-WebUI
 DEFAULT_REPEAT_PENALTY = 1.1
 DEFAULT_BATCH_SIZE = 512
-DEFAULT_TOP_K = 4 # This matches what we have on Open-WebUI
+DEFAULT_TOP_K = 4  # This matches what we have on Open-WebUI
 DEFAULT_TOP_P = 0.9
 DEFAULT_LAST_N = 64
 DEFAULT_CONTEXT_LENGTH = 2048
@@ -37,58 +37,63 @@ DEFAULT_TEMP = 0.8
 
 DEFAULT_MODEL_COMMAND_RUN_TIMEOUT = 14400
 
-parameters = {    'target': 'opu',
-                  'num_predict': DEFAULT_TOKEN,
-                  'repeat_penalty': DEFAULT_REPEAT_PENALTY,
-                  'num_batch': DEFAULT_BATCH_SIZE,
-                  'top_k': DEFAULT_TOP_K,
-                  'top_p': DEFAULT_TOP_P,
-                  'repeat_last_n': DEFAULT_LAST_N,
-                  'num_ctx': DEFAULT_CONTEXT_LENGTH,
-                  'temperature': DEFAULT_TEMP
-                }
+parameters = {
+    "target": "opu",
+    "num_predict": DEFAULT_TOKEN,
+    "repeat_penalty": DEFAULT_REPEAT_PENALTY,
+    "num_batch": DEFAULT_BATCH_SIZE,
+    "top_k": DEFAULT_TOP_K,
+    "top_p": DEFAULT_TOP_P,
+    "repeat_last_n": DEFAULT_LAST_N,
+    "num_ctx": DEFAULT_CONTEXT_LENGTH,
+    "temperature": DEFAULT_TEMP,
+}
+
 
 def is_job_running():
     if job_status["running"] == True:
         time.sleep(0.1)
         return True
     return False
-@app.route('/')
+
+
+@app.route("/")
 def index():
 
-    serial_script.pre_and_post_check(port,baudrate)
+    serial_script.pre_and_post_check(port, baudrate)
 
-    return render_template('index.html')
+    return render_template("index.html")
 
-@app.route('/llama-cli', methods=['GET'])
+
+@app.route("/llama-cli", methods=["GET"])
 def llama_cli_serial_command():
 
-    serial_script.pre_and_post_check(port,baudrate)
+    serial_script.pre_and_post_check(port, baudrate)
 
-    #./run_llama_cli.sh "my cat's name" "10" "tinyllama-vo-5m-para.gguf" "none"
-    model = request.args.get('model')
-    backend = request.args.get('backend')
-    tokens = request.args.get('tokens')
-    prompt = request.args.get('prompt')
-    repeat_penalty = request.args.get('repeat-penalty', DEFAULT_REPEAT_PENALTY)
-    batch_size = request.args.get('batch-size', DEFAULT_BATCH_SIZE)
-    top_k = request.args.get('top-k', DEFAULT_TOP_K)
-    top_p = request.args.get('top-p', DEFAULT_TOP_P)
-    last_n = request.args.get('last-n', DEFAULT_LAST_N)
-    context_length = request.args.get('context-length', DEFAULT_CONTEXT_LENGTH)
-    temp = request.args.get('temp', DEFAULT_TEMP)
+    # ./run_llama_cli.sh "my cat's name" "10" "tinyllama-vo-5m-para.gguf" "none"
+    model = request.args.get("model")
+    backend = request.args.get("backend")
+    tokens = request.args.get("tokens")
+    prompt = request.args.get("prompt")
+    repeat_penalty = request.args.get("repeat-penalty", DEFAULT_REPEAT_PENALTY)
+    batch_size = request.args.get("batch-size", DEFAULT_BATCH_SIZE)
+    top_k = request.args.get("top-k", DEFAULT_TOP_K)
+    top_p = request.args.get("top-p", DEFAULT_TOP_P)
+    last_n = request.args.get("last-n", DEFAULT_LAST_N)
+    context_length = request.args.get("context-length", DEFAULT_CONTEXT_LENGTH)
+    temp = request.args.get("temp", DEFAULT_TEMP)
 
     # Define the model path (update with actual paths)
     model_paths = {
         "tiny-llama": "tinyllama-vo-5m-para.gguf",
-        "Tiny-llama-F32": "Tiny-Llama-v0.3-FP32-1.1B-F32.gguf"
+        "Tiny-llama-F32": "Tiny-Llama-v0.3-FP32-1.1B-F32.gguf",
     }
 
     model_path = model_paths.get(model, "")
     if not model_path:
         model_path = model
     # Build llama-cli command
-    #command = [
+    # command = [
     #    "./llama-cli",
     #    "-p", prompt,
     #    "-m", model_path,
@@ -98,155 +103,177 @@ def llama_cli_serial_command():
     #    "--repeat-penalty", "1",
     #    "--top-k", "0",
     #    "--top-p", "1"
-    #]
+    # ]
     # URL to Test this end point is as follows
     # http://10.50.30.167:5001/llama-cli?model=tiny-llama&backend=tSavorite&tokens=5&prompt=Hello+How+are+you
     script_path = "./run_llama_cli.sh"
-    command = f"cd {exe_path}; {script_path} \"{prompt}\" {tokens} {model_path} {backend} {repeat_penalty} {batch_size} {top_k} {top_p} {last_n} {context_length} {temp}"
+    command = f'cd {exe_path}; {script_path} "{prompt}" {tokens} {model_path} {backend} {repeat_penalty} {batch_size} {top_k} {top_p} {last_n} {context_length} {temp}'
     try:
         job_status["running"] = True
-        result = serial_script.send_serial_command(port,baudrate,command)
+        result = serial_script.send_serial_command(port, baudrate, command)
         job_status["running"] = False
-        return result,200
+        return result, 200
     except subprocess.CalledProcessError as e:
         return f"Error executing script: {e.stderr}", 500
 
-UPLOAD_FOLDER = './' # Directory where recvFromHost is loaded 
-destn_path='/tsi/proj/model-cache/gguf/' # Destination Directory in FPGA where uploaded files will be stored
-file_transfer_path='/tsi/fpga_card/file-transfer'
-app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
-os.makedirs(UPLOAD_FOLDER, exist_ok=True) # Create the upload folder if it doesn't exist
 
-def read_cmd_from_serial(port,baudrate,command):
+UPLOAD_FOLDER = "./"  # Directory where recvFromHost is loaded
+destn_path = "/tsi/proj/model-cache/gguf/"  # Destination Directory in FPGA where uploaded files will be stored
+file_transfer_path = "/tsi/fpga_card/file-transfer"
+app.config["UPLOAD_FOLDER"] = UPLOAD_FOLDER
+os.makedirs(
+    UPLOAD_FOLDER, exist_ok=True
+)  # Create the upload folder if it doesn't exist
+
+
+def read_cmd_from_serial(port, baudrate, command):
     job_status["running"] = True
-    temp = serial_script.send_serial_command(port,baudrate,command, timeout=300) 
+    temp = serial_script.send_serial_command(port, baudrate, command, timeout=300)
     print(temp)
     job_status["running"] = False
 
-@app.route('/delete-file', methods=['POST', 'GET'])
+
+@app.route("/delete-file", methods=["POST", "GET"])
 def delete_file():
 
-    serial_script.pre_and_post_check(port,baudrate)
+    serial_script.pre_and_post_check(port, baudrate)
 
-    if request.method == 'POST':
-        
+    if request.method == "POST":
+
         d_path = request.form.get("deletion_file_path")
         filename = request.form.get("file_name")
         command = f"cd {d_path}; rm {filename}"
-        read_cmd_from_serial(port,baudrate,command)
-        return 'Done'
-    return render_template('delete.html')
+        read_cmd_from_serial(port, baudrate, command)
+        return "Done"
+    return render_template("delete.html")
 
-@app.route('/upload-gguf', methods=['POST', 'GET'])
+
+@app.route("/upload-gguf", methods=["POST", "GET"])
 def upload_serial_command():
 
-    serial_script.pre_and_post_check(port,baudrate)
+    serial_script.pre_and_post_check(port, baudrate)
 
-    if request.method == 'POST':
+    if request.method == "POST":
         # Check if a file was submitted
-        if 'file' not in request.files:
+        if "file" not in request.files:
             return "No file part"
-        file = request.files['file']
+        file = request.files["file"]
 
         # Check if the file is empty
-        if file.filename == '':
+        if file.filename == "":
             return "No file selected"
 
         # Save the file if it exists
         if file:
-            filename = file.filename #secure_filename(file.filename)
+            filename = file.filename  # secure_filename(file.filename)
             process = subprocess.Popen(["./copy2fpga-x86.sh", filename], text=True)
             copy2fpgax86prints = "Starting copy2fpga-x86 and sending file..."
-            print (copy2fpgax86prints)
-            file.save(os.path.join(app.config['UPLOAD_FOLDER'], filename))
+            print(copy2fpgax86prints)
+            file.save(os.path.join(app.config["UPLOAD_FOLDER"], filename))
             time.sleep(3)
             script_path = "./recvFromHost "
             command = f"cd {exe_path}; {script_path} {destn_path}{filename}"
+
             def scriptRecvFromHost():
-                 try:
-                     result = serial_script.send_serial_command(port,baudrate,command)
-                     job_status["result"] = result
-                     print(result)
-                     recv_output = result
-                 except subprocess.CalledProcessError as e:
-                     job_status["result"] = f"Error: {e.stderr}"
-                 finally:
-                     job_status["running"] = False
+                try:
+                    result = serial_script.send_serial_command(port, baudrate, command)
+                    job_status["result"] = result
+                    print(result)
+                    recv_output = result
+                except subprocess.CalledProcessError as e:
+                    job_status["result"] = f"Error: {e.stderr}"
+                finally:
+                    job_status["running"] = False
+
             thread = threading.Thread(target=scriptRecvFromHost)
             job_status = {"running": True, "result": "", "thread": thread}
             thread.start()
             thread.join()
             stdout, stderr = process.communicate()
-        
-        read_cmd_from_serial(port,baudrate,f"cd {destn_path}; ls -lt")
 
-        return render_template('uploadtofpga.html', apple = process, recvoutput=f"On FPGA Target, recvFromHost completed ; transfered file:{filename} received")
-    return render_template('upload.html') # Display the upload form
+        read_cmd_from_serial(port, baudrate, f"cd {destn_path}; ls -lt")
 
-DEFAULT_THREAD_TIMEOUT=900
-PER_1G_TIMEOUT_SECS=240
+        return render_template(
+            "uploadtofpga.html",
+            apple=process,
+            recvoutput=f"On FPGA Target, recvFromHost completed ; transfered file:{filename} received",
+        )
+    return render_template("upload.html")  # Display the upload form
+
+
+DEFAULT_THREAD_TIMEOUT = 900
+PER_1G_TIMEOUT_SECS = 240
 GB = 1024 * 1024 * 1024
+
 
 def actual_transfer(file, file_size):
     # Check if the file is empty
-        if file.name == '':
-            return "No file selected"
+    if file.name == "":
+        return "No file selected"
 
-        # Save the file if it exists
-        if file:
-            filename = os.path.basename(file.name)  #secure_filename(file.filename)
-            script_path = os.path.join(file_transfer_path, "copy2fpga-setup.sh")
+    # Save the file if it exists
+    if file:
+        filename = os.path.basename(file.name)  # secure_filename(file.filename)
+        script_path = os.path.join(file_transfer_path, "copy2fpga-setup.sh")
+        try:
+            process = subprocess.Popen(
+                [script_path], text=True
+            )  # subprocess.run(["{file_transfer_path}/copy2fpga-setup.sh"], text=True, capture_output=True)
+            print("process created")
+        except Exception as e:
+            print("process creation failed for copy2fpga-setup.sh")
+            return f"File-transfer setup failed: {e}", 500
+        stdout, stderr = process.communicate()
+        script_path = "./recvFromHost "
+        command = f"cd {exe_path}; {script_path} {destn_path}{filename}\n"
+
+        timeout = max(
+            PER_1G_TIMEOUT_SECS * file_size / GB, DEFAULT_THREAD_TIMEOUT
+        )  # 4 mins per 1 GB is the speed we observe
+
+        print("Command:", command, "Timeout:", timeout)
+
+        def scriptRecvFromHost():
             try:
-                process = subprocess.Popen([script_path], text=True) #subprocess.run(["{file_transfer_path}/copy2fpga-setup.sh"], text=True, capture_output=True) 
-                print("process created")
-            except Exception as e:
-                print("process creation failed for copy2fpga-setup.sh")
-                return f"File-transfer setup failed: {e}", 500
-            stdout, stderr = process.communicate()
-            script_path = "./recvFromHost "
-            command = f"cd {exe_path}; {script_path} {destn_path}{filename}\n"
+                result = serial_script.send_serial_command(
+                    port, baudrate, command, timeout=timeout
+                )
+                job_status["result"] = result
+                print("Success:", job_status["result"])
+                recv_output = result
+            except subprocess.CalledProcessError as e:
+                job_status["result"] = f"Error: {e.stderr}"
+                print("Err:", job_status["result"])
+            finally:
+                print("Thread Complete:", job_status["result"])
+                job_status["running"] = False
 
-            timeout = max(PER_1G_TIMEOUT_SECS * file_size / GB, DEFAULT_THREAD_TIMEOUT) #4 mins per 1 GB is the speed we observe
+        thread = threading.Thread(target=scriptRecvFromHost)
+        job_status = {"running": True, "result": "", "thread": thread}
 
-            print("Command:", command, "Timeout:", timeout)
+        time.sleep(1)
 
-            def scriptRecvFromHost():
-                 try:
-                     result = serial_script.send_serial_command(port,baudrate,command, timeout=timeout)
-                     job_status["result"] = result
-                     print("Success:", job_status["result"])
-                     recv_output = result
-                 except subprocess.CalledProcessError as e:
-                     job_status["result"] = f"Error: {e.stderr}"
-                     print("Err:", job_status["result"])
-                 finally:
-                     print("Thread Complete:", job_status["result"])
-                     job_status["running"] = False
-            thread = threading.Thread(target=scriptRecvFromHost)
-            job_status = {"running": True, "result": "", "thread": thread}
-            
-            time.sleep(1) 
+        try:
+            script_path = os.path.join(file_transfer_path, "copy2fpga-x86.sh")
+            print("file_transfer_path", script_path)
+            process = subprocess.Popen([script_path, file.name], text=True)
+            print("process completed")
+        except Exception as e:
+            print("process completed with exception")
+            return f"copy2fpga-x86.sh failed: {e}", 500
 
-            try:
-                script_path = os.path.join(file_transfer_path, "copy2fpga-x86.sh")
-                print("file_transfer_path", script_path)
-                process = subprocess.Popen([script_path, file.name], text=True)
-                print("process completed")
-            except Exception as e:
-                print("process completed with exception")
-                return f"copy2fpga-x86.sh failed: {e}", 500
+        print("Thread starting")
+        thread.start()
+        print("Thread started")
 
-            print("Thread starting")
-            thread.start()
-            print("Thread started")
+        start = time.time()
+        while (time.time() - start < timeout) and (job_status["running"] != False):
+            time.sleep(1)
+        if time.time() - start < timeout:
+            print("Thread exited normally", job_status["running"])
+        else:
+            print("Thread timed out", job_status["running"])
 
-            start = time.time()
-            while (time.time() - start < timeout) and (job_status["running"] != False):
-                time.sleep(1)
-            if(time.time() - start < timeout):
-                print("Thread exited normally", job_status["running"])
-            else:
-                print("Thread timed out", job_status["running"])
 
 def normalize_model_name(model_name):
     if ":" not in model_name:
@@ -254,53 +281,95 @@ def normalize_model_name(model_name):
     return model_name
 
 
-@app.route('/api/receive-upload', methods=['GET', 'POST'])
+@app.route("/api/receive-upload", methods=["GET", "POST"])
 def receive_upload_model():
 
     data = request.get_json()
     incoming_headers = dict(request.headers)
     if is_job_running() == True:
-        return manual_response(content="Server is busy. Please try again later.",thinking=None,profile_data=None, incoming_headers=incoming_headers), 503
+        return (
+            manual_response(
+                content="Server is busy. Please try again later.",
+                thinking=None,
+                profile_data=None,
+                incoming_headers=incoming_headers,
+            ),
+            503,
+        )
 
     job_status["running"] = True
 
-    file_name = os.path.basename(data['actual_name'])
+    file_name = os.path.basename(data["actual_name"])
 
-    filename_without_ext = os.path.splitext(os.path.basename(data['actual_name']))[0]
+    filename_without_ext = os.path.splitext(os.path.basename(data["actual_name"]))[0]
 
-    new_file_name = normalize_model_name(data['human_name'])
+    new_file_name = normalize_model_name(data["human_name"])
 
-    print("human_name:", data['human_name'], "actual_name", data['actual_name'], "new_file_name:", new_file_name)
+    print(
+        "human_name:",
+        data["human_name"],
+        "actual_name",
+        data["actual_name"],
+        "new_file_name:",
+        new_file_name,
+    )
 
-    preliminary_target_check = serial_script.send_serial_command(port,baudrate,f"cd {destn_path}; md5sum {new_file_name}")
-
-    try:
-        preliminary_host_check = subprocess.run(["md5sum", data['actual_name']],capture_output=True,text=True,check=True)
-    except Exception as e:
-        job_status["running"] = False
-        return manual_response(content=f"File checksum failed: {e}",thinking=f"File checksum failed: {e}", incoming_headers=incoming_headers), 500
-
-    time.sleep(1)
-
-    print('PRELIMINARY TARGET CHECK-SUM: ', preliminary_target_check)
-    print('PRELIMINARY HOST/SHELL CHECK-SUM: ', preliminary_host_check.stdout)
-
-    if preliminary_target_check.split()[0].replace('\x00', '') == preliminary_host_check.stdout.split()[0].replace('\x00', ''):
-        job_status["running"] = False
-        return manual_response(content="File Already Exists",thinking="File Already Exists", incoming_headers=incoming_headers), 200
-
-    time.sleep(1)
-
-    read_cmd_from_serial(port,baudrate,f"cd {destn_path}; rm {new_file_name}")
-
-    time.sleep(1)
+    preliminary_target_check = serial_script.send_serial_command(
+        port, baudrate, f"cd {destn_path}; md5sum {new_file_name}"
+    )
 
     try:
-        file_size = os.path.getsize(data['actual_name'])
-        file_obj = open(data['actual_name'], "rb")
+        preliminary_host_check = subprocess.run(
+            ["md5sum", data["actual_name"]], capture_output=True, text=True, check=True
+        )
     except Exception as e:
         job_status["running"] = False
-        return manual_response(content=f"File open failed: {e}",thinking=f"File open failed: {e}", incoming_headers=incoming_headers), 500
+        return (
+            manual_response(
+                content=f"File checksum failed: {e}",
+                thinking=f"File checksum failed: {e}",
+                incoming_headers=incoming_headers,
+            ),
+            500,
+        )
+
+    time.sleep(1)
+
+    print("PRELIMINARY TARGET CHECK-SUM: ", preliminary_target_check)
+    print("PRELIMINARY HOST/SHELL CHECK-SUM: ", preliminary_host_check.stdout)
+
+    if preliminary_target_check.split()[0].replace(
+        "\x00", ""
+    ) == preliminary_host_check.stdout.split()[0].replace("\x00", ""):
+        job_status["running"] = False
+        return (
+            manual_response(
+                content="File Already Exists",
+                thinking="File Already Exists",
+                incoming_headers=incoming_headers,
+            ),
+            200,
+        )
+
+    time.sleep(1)
+
+    read_cmd_from_serial(port, baudrate, f"cd {destn_path}; rm {new_file_name}")
+
+    time.sleep(1)
+
+    try:
+        file_size = os.path.getsize(data["actual_name"])
+        file_obj = open(data["actual_name"], "rb")
+    except Exception as e:
+        job_status["running"] = False
+        return (
+            manual_response(
+                content=f"File open failed: {e}",
+                thinking=f"File open failed: {e}",
+                incoming_headers=incoming_headers,
+            ),
+            500,
+        )
 
     time.sleep(1)
 
@@ -310,76 +379,146 @@ def receive_upload_model():
         actual_transfer(file_obj, file_size)
     except Exception as e:
         job_status["running"] = False
-        return manual_response(content=f"File transfer failed: {e}",thinking=f"File transfer failed: {e}", incoming_headers=incoming_headers), 500
+        return (
+            manual_response(
+                content=f"File transfer failed: {e}",
+                thinking=f"File transfer failed: {e}",
+                incoming_headers=incoming_headers,
+            ),
+            500,
+        )
     time.sleep(1)
 
-    read_cmd_from_serial(port,baudrate,f"cd {destn_path}; mv {file_name} {new_file_name}")
+    read_cmd_from_serial(
+        port, baudrate, f"cd {destn_path}; mv {file_name} {new_file_name}"
+    )
 
     print("Listing out existing files")
-    read_cmd_from_serial(port,baudrate,f"cd {destn_path}; ls -lt")
+    read_cmd_from_serial(port, baudrate, f"cd {destn_path}; ls -lt")
 
     time.sleep(1)
 
     print("Doing checksum of the upload file")
-    target_check_sum = serial_script.send_serial_command(port,baudrate,f"cd {destn_path}; md5sum {new_file_name}")
+    target_check_sum = serial_script.send_serial_command(
+        port, baudrate, f"cd {destn_path}; md5sum {new_file_name}"
+    )
 
     time.sleep(1)
 
-    print('TARGET CHECK-SUM: ', target_check_sum)
-    print('HOST/SHELL CHECK-SUM: ', preliminary_host_check.stdout)
+    print("TARGET CHECK-SUM: ", target_check_sum)
+    print("HOST/SHELL CHECK-SUM: ", preliminary_host_check.stdout)
     job_status["running"] = False
 
-    if target_check_sum.split()[0].replace('\x00', '') != preliminary_host_check.stdout.split()[0].replace('\x00', ''):
-        return manual_response(content="Failed checksum match",thinking="Failed checksum match", incoming_headers=incoming_headers), 400
+    if target_check_sum.split()[0].replace(
+        "\x00", ""
+    ) != preliminary_host_check.stdout.split()[0].replace("\x00", ""):
+        return (
+            manual_response(
+                content="Failed checksum match",
+                thinking="Failed checksum match",
+                incoming_headers=incoming_headers,
+            ),
+            400,
+        )
 
-    return manual_response(content="File Download Done",thinking="File Download Done", incoming_headers=incoming_headers), 200
+    return (
+        manual_response(
+            content="File Download Done",
+            thinking="File Download Done",
+            incoming_headers=incoming_headers,
+        ),
+        200,
+    )
 
-@app.route('/api/receive', methods=['GET', 'POST'])
+
+@app.route("/api/receive", methods=["GET", "POST"])
 def receive_pull_model():
 
     data = request.get_json()
     incoming_headers = dict(request.headers)
 
     if is_job_running() == True:
-        return manual_response(content="Server is busy. Please try again later.",thinking=None,profile_data=None, incoming_headers=incoming_headers), 200
+        return (
+            manual_response(
+                content="Server is busy. Please try again later.",
+                thinking=None,
+                profile_data=None,
+                incoming_headers=incoming_headers,
+            ),
+            200,
+        )
     job_status["running"] = True
 
     try:
-        test1 = data['human_name']
-        test2 = data['actual_name']
+        test1 = data["human_name"]
+        test2 = data["actual_name"]
     except (TypeError, KeyError) as e:
         job_status["running"] = False
-        return manual_response(content=f"Invalid JSON data: {e}",thinking=f"Invalid JSON data: {e}", incoming_headers=incoming_headers), 400
-    
+        return (
+            manual_response(
+                content=f"Invalid JSON data: {e}",
+                thinking=f"Invalid JSON data: {e}",
+                incoming_headers=incoming_headers,
+            ),
+            400,
+        )
+
     if os.path.exists("/var/snap/ollama/common/models/blobs/"):
-        path = "/var/snap/ollama/common/models/blobs/" + data['actual_name']
+        path = "/var/snap/ollama/common/models/blobs/" + data["actual_name"]
     elif os.path.exists("/usr/share/ollama/.ollama/models/blobs/"):
-        path = "/usr/share/ollama/.ollama/models/blobs/" + data['actual_name']
+        path = "/usr/share/ollama/.ollama/models/blobs/" + data["actual_name"]
     else:
         job_status["running"] = False
-        return manual_response(content=f"No valid path",thinking=f"No valid path", incoming_headers=incoming_headers), 500
+        return (
+            manual_response(
+                content=f"No valid path",
+                thinking=f"No valid path",
+                incoming_headers=incoming_headers,
+            ),
+            500,
+        )
 
-    preliminary_target_check = serial_script.send_serial_command(port,baudrate,f"cd {destn_path}; md5sum {data['human_name']}")
-    
+    preliminary_target_check = serial_script.send_serial_command(
+        port, baudrate, f"cd {destn_path}; md5sum {data['human_name']}"
+    )
+
     try:
-        preliminary_host_check = subprocess.run(["md5sum", path],capture_output=True,text=True,check=True)
+        preliminary_host_check = subprocess.run(
+            ["md5sum", path], capture_output=True, text=True, check=True
+        )
     except Exception as e:
         job_status["running"] = False
-        return manual_response(content=f"File checksum failed: {e}",thinking=f"File checksum failed: {e}", incoming_headers=incoming_headers), 500
+        return (
+            manual_response(
+                content=f"File checksum failed: {e}",
+                thinking=f"File checksum failed: {e}",
+                incoming_headers=incoming_headers,
+            ),
+            500,
+        )
 
     time.sleep(1)
-    
-    print('PRELIMINARY TARGET CHECK-SUM: ', preliminary_target_check)
-    print('PRELIMINARY HOST/SHELL CHECK-SUM: ', preliminary_host_check.stdout)
 
-    if preliminary_target_check.split()[0].replace('\x00', '') == preliminary_host_check.stdout.split()[0].replace('\x00', ''):
+    print("PRELIMINARY TARGET CHECK-SUM: ", preliminary_target_check)
+    print("PRELIMINARY HOST/SHELL CHECK-SUM: ", preliminary_host_check.stdout)
+
+    if preliminary_target_check.split()[0].replace(
+        "\x00", ""
+    ) == preliminary_host_check.stdout.split()[0].replace("\x00", ""):
         job_status["running"] = False
-        return manual_response(content="File Already Exists",thinking="File Already Exists", incoming_headers=incoming_headers), 200
-    
+        return (
+            manual_response(
+                content="File Already Exists",
+                thinking="File Already Exists",
+                incoming_headers=incoming_headers,
+            ),
+            200,
+        )
+
     time.sleep(1)
-    
-    read_cmd_from_serial(port,baudrate,f"cd {destn_path}; rm {data['human_name']}")
-    
+
+    read_cmd_from_serial(port, baudrate, f"cd {destn_path}; rm {data['human_name']}")
+
     time.sleep(1)
 
     try:
@@ -387,8 +526,15 @@ def receive_pull_model():
         file_obj = open(path, "rb")
     except Exception as e:
         job_status["running"] = False
-        return manual_response(content=f"File open failed: {e}",thinking=f"File open failed: {e}", incoming_headers=incoming_headers), 500
-    
+        return (
+            manual_response(
+                content=f"File open failed: {e}",
+                thinking=f"File open failed: {e}",
+                incoming_headers=incoming_headers,
+            ),
+            500,
+        )
+
     time.sleep(1)
 
     full_path = file_obj.name
@@ -397,38 +543,68 @@ def receive_pull_model():
         actual_transfer(file_obj, file_size)
     except Exception as e:
         job_status["running"] = False
-        return manual_response(content=f"File transfer failed: {e}",thinking=f"File transfer failed: {e}", incoming_headers=incoming_headers), 500
+        return (
+            manual_response(
+                content=f"File transfer failed: {e}",
+                thinking=f"File transfer failed: {e}",
+                incoming_headers=incoming_headers,
+            ),
+            500,
+        )
     time.sleep(1)
 
-    print("Renaming file", data['human_name'])
+    print("Renaming file", data["human_name"])
 
-    dir_path = os.path.dirname(data['human_name'])  # ✅ Python way
+    dir_path = os.path.dirname(data["human_name"])  # ✅ Python way
 
     # Create the directory structure on the target device
     read_cmd_from_serial(port, baudrate, f"cd {destn_path}; mkdir -p {dir_path}")
 
-    read_cmd_from_serial(port,baudrate,f"cd {destn_path}; mv {data['actual_name']} {data['human_name']}")
+    read_cmd_from_serial(
+        port,
+        baudrate,
+        f"cd {destn_path}; mv {data['actual_name']} {data['human_name']}",
+    )
 
     time.sleep(1)
 
     print("Listing out existing files")
-    read_cmd_from_serial(port,baudrate,f"cd {destn_path}; ls -lt")
+    read_cmd_from_serial(port, baudrate, f"cd {destn_path}; ls -lt")
 
     time.sleep(1)
 
     print("Doing checksum of the upload file")
-    target_check_sum = serial_script.send_serial_command(port,baudrate,f"cd {destn_path}; md5sum {data['human_name']}")
-    
+    target_check_sum = serial_script.send_serial_command(
+        port, baudrate, f"cd {destn_path}; md5sum {data['human_name']}"
+    )
+
     time.sleep(1)
-    
-    print('TARGET CHECK-SUM: ', target_check_sum)
-    print('HOST/SHELL CHECK-SUM: ', preliminary_host_check.stdout)
+
+    print("TARGET CHECK-SUM: ", target_check_sum)
+    print("HOST/SHELL CHECK-SUM: ", preliminary_host_check.stdout)
 
     job_status["running"] = False
-    if target_check_sum.split()[0].replace('\x00', '') != preliminary_host_check.stdout.split()[0].replace('\x00', ''):
-        return manual_response(content="Failed checksum match",thinking="Failed checksum match", incoming_headers=incoming_headers), 400
+    if target_check_sum.split()[0].replace(
+        "\x00", ""
+    ) != preliminary_host_check.stdout.split()[0].replace("\x00", ""):
+        return (
+            manual_response(
+                content="Failed checksum match",
+                thinking="Failed checksum match",
+                incoming_headers=incoming_headers,
+            ),
+            400,
+        )
 
-    return manual_response(content="File Download Done",thinking="File Download Done", incoming_headers=incoming_headers), 200
+    return (
+        manual_response(
+            content="File Download Done",
+            thinking="File Download Done",
+            incoming_headers=incoming_headers,
+        ),
+        200,
+    )
+
 
 def denormalize_model_name(model_name):
     if model_name.endswith(":latest"):
@@ -436,44 +612,70 @@ def denormalize_model_name(model_name):
     return model_name
 
 
-@app.route('/api/opu-delete-model', methods=['GET', 'POST'])
+@app.route("/api/opu-delete-model", methods=["GET", "POST"])
 def opu_delete_model():
     data = request.get_json()
 
     incoming_headers = dict(request.headers)
     if is_job_running() == True:
-        return manual_response(content="Server is busy. Please try again later.",thinking=None,profile_data=None, incoming_headers=incoming_headers), 200
+        return (
+            manual_response(
+                content="Server is busy. Please try again later.",
+                thinking=None,
+                profile_data=None,
+                incoming_headers=incoming_headers,
+            ),
+            200,
+        )
     job_status["running"] = True
 
-    serial_script.pre_and_post_check(port,baudrate)
+    serial_script.pre_and_post_check(port, baudrate)
     try:
-        model_name = data['model_name']
+        model_name = data["model_name"]
         print("model_name: ", model_name, "destn_path", destn_path)
     except (TypeError, KeyError) as e:
         job_status["running"] = False
-        return manual_response(content=f"Invalid JSON data: {e}",thinking=f"Invalid JSON data: {e}", incoming_headers=incoming_headers), 400
+        return (
+            manual_response(
+                content=f"Invalid JSON data: {e}",
+                thinking=f"Invalid JSON data: {e}",
+                incoming_headers=incoming_headers,
+            ),
+            400,
+        )
 
-    file_name = denormalize_model_name(data['model_name'])
+    file_name = denormalize_model_name(data["model_name"])
 
-    read_cmd_from_serial(port,baudrate,f"cd {destn_path}; rm -fr {file_name}* && find . -type d -empty | while read -r dir; do rmdir \"$dir\"; done")
+    read_cmd_from_serial(
+        port,
+        baudrate,
+        f'cd {destn_path}; rm -fr {file_name}* && find . -type d -empty | while read -r dir; do rmdir "$dir"; done',
+    )
 
     job_status["running"] = False
-    return manual_response(content="Model deleted",thinking="Model deleted", incoming_headers=incoming_headers), 200
+    return (
+        manual_response(
+            content="Model deleted",
+            thinking="Model deleted",
+            incoming_headers=incoming_headers,
+        ),
+        200,
+    )
 
 
-@app.route('/upload-file', methods=['GET', 'POST'])
+@app.route("/upload-file", methods=["GET", "POST"])
 def upload_file():
 
-    serial_script.pre_and_post_check(port,baudrate)
+    serial_script.pre_and_post_check(port, baudrate)
 
-    if request.method == 'POST':
+    if request.method == "POST":
         # Check if a file was submitted
-        if 'file' not in request.files:
+        if "file" not in request.files:
             return "No file part"
-        file = request.files['file']
+        file = request.files["file"]
 
         # Check if the file is empty
-        if file.filename == '':
+        if file.filename == "":
             return "No file selected"
 
         # Save the file if it exists
@@ -481,48 +683,70 @@ def upload_file():
             filename = secure_filename(file.filename)
             process = subprocess.Popen(["./copy2fpga-x86.sh", filename], text=True)
             copy2fpgax86prints = "Starting copy2fpga-x86 and sending file..."
-            print (copy2fpgax86prints)
-            file.save(os.path.join(app.config['UPLOAD_FOLDER'], filename))
+            print(copy2fpgax86prints)
+            file.save(os.path.join(app.config["UPLOAD_FOLDER"], filename))
 
             script_path = "./recvFromHost "
-            temporary_destination_path = request.form.get("destination_file_path") # I've tested this on fpga4 and it correctly gets the user-inputted file path
-            command = f"cd {exe_path}; {script_path} {temporary_destination_path}{filename}" 
+            temporary_destination_path = request.form.get(
+                "destination_file_path"
+            )  # I've tested this on fpga4 and it correctly gets the user-inputted file path
+            command = (
+                f"cd {exe_path}; {script_path} {temporary_destination_path}{filename}"
+            )
+
             def scriptRecvFromHost():
-                 try:
-                     result = serial_script.send_serial_command(port,baudrate,command)
-                     job_status["result"] = result
-                     
-                     print(result)
-                     
-                     recv_output = result
-                 except subprocess.CalledProcessError as e:
-                     job_status["result"] = f"Error: {e.stderr}"
-                 finally:
-                     job_status["running"] = False
+                try:
+                    result = serial_script.send_serial_command(port, baudrate, command)
+                    job_status["result"] = result
+
+                    print(result)
+
+                    recv_output = result
+                except subprocess.CalledProcessError as e:
+                    job_status["result"] = f"Error: {e.stderr}"
+                finally:
+                    job_status["running"] = False
+
             thread = threading.Thread(target=scriptRecvFromHost)
             job_status = {"running": True, "result": "", "thread": thread}
             thread.start()
             thread.join()
             stdout, stderr = process.communicate()
-        
-        read_cmd_from_serial(port,baudrate,f"cd {temporary_destination_path}; ls -lt")
-        
-        return render_template('uploadtofpga.html', apple = process, recvoutput=f'On FPGA Target, recvFromHost completed ; transfered file:{filename} received ')
-    return render_template('upload.html') # Display the upload form
+
+        read_cmd_from_serial(port, baudrate, f"cd {temporary_destination_path}; ls -lt")
+
+        return render_template(
+            "uploadtofpga.html",
+            apple=process,
+            recvoutput=f"On FPGA Target, recvFromHost completed ; transfered file:{filename} received ",
+        )
+    return render_template("upload.html")  # Display the upload form
+
 
 def internal_restart_txe():
     command = f"cd /tsi/fpga_card/latest_sof_release; sudo make all; make juart"
 
-    process = subprocess.Popen([command],shell=True,preexec_fn=os.setsid,stdout=subprocess.PIPE,stderr=subprocess.STDOUT,bufsize=1,text=True)
-    
+    process = subprocess.Popen(
+        [command],
+        shell=True,
+        preexec_fn=os.setsid,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.STDOUT,
+        bufsize=1,
+        text=True,
+    )
 
-
-    
     start = time.time()
     try:
         for line in process.stdout:
             print("HOST:" + line)
-            if any(phrase in line for phrase in ["Global Reset exercised", "release chip from reset called"]):
+            if any(
+                phrase in line
+                for phrase in [
+                    "Global Reset exercised",
+                    "release chip from reset called",
+                ]
+            ):
                 time.sleep(2)
                 os.killpg(os.getpgid(process.pid), signal.SIGTERM)
                 break
@@ -535,208 +759,226 @@ def internal_restart_txe():
         os.killpg(os.getpgid(process.pid), signal.SIGTERM)
 
     process.wait()
-    
-    
-    serial_script.restart_txe_serial_portion(port,baudrate,exe_path) 
-    
+
+    serial_script.restart_txe_serial_portion(port, baudrate, exe_path)
 
     print("Finished Everything Hooray")
 
-@app.route('/restart-txe', methods=['GET'])
+
+@app.route("/restart-txe", methods=["GET"])
 def restart_txe_serial_command():
 
-    serial_script.pre_and_post_check(port,baudrate)
+    serial_script.pre_and_post_check(port, baudrate)
 
     internal_restart_txe()
 
     return "Done"
 
-    
 
-
-    
-
-@app.route('/health-check', methods=['GET'])
+@app.route("/health-check", methods=["GET"])
 def health_check_serial_command():
 
-    serial_script.pre_and_post_check(port,baudrate)
+    serial_script.pre_and_post_check(port, baudrate)
 
     command = f"free -h; df -h; top -b -n1"
 
     try:
-        result = serial_script.send_serial_command(port,baudrate,command)
+        result = serial_script.send_serial_command(port, baudrate, command)
         return result, 200
     except subprocess.CalledProcessError as e:
         return f"Error executing script: {e.stderr}", 500
 
-@app.route('/test', methods=['GET'])
+
+@app.route("/test", methods=["GET"])
 def test_serial_command():
-    
-    serial_script.pre_and_post_check(port,baudrate)
-    
+
+    serial_script.pre_and_post_check(port, baudrate)
+
     command = f"test"
 
     try:
-        result = serial_script.send_serial_command(port,baudrate,command)
+        result = serial_script.send_serial_command(port, baudrate, command)
         return result, 200
     except subprocess.CalledProcessError as e:
         return f"Error executing script: {e.stderr}", 500
 
-@app.route('/system-info', methods=['GET'])
+
+@app.route("/system-info", methods=["GET"])
 def system_info_serial_command():
 
-    serial_script.pre_and_post_check(port,baudrate)
+    serial_script.pre_and_post_check(port, baudrate)
 
     command = f"{exe_path}../install/tsi-version;lsmod; lscpu; lsblk"
 
     try:
-        result = serial_script.send_serial_command(port,baudrate,command)
+        result = serial_script.send_serial_command(port, baudrate, command)
         return result, 200
     except subprocess.CalledProcessError as e:
         return f"Error executing script: {e.stderr}", 500
 
-def manual_response(status="success",model="ollama",content=None,thinking=None,tool_calls=None,openai_tool_calls=None,name="Alice",id="12345",email="alice@example.com",role="admin",some_key="some_value",profile_data=None, incoming_headers=None):
+
+def manual_response(
+    status="success",
+    model="ollama",
+    content=None,
+    thinking=None,
+    tool_calls=None,
+    openai_tool_calls=None,
+    name="Alice",
+    id="12345",
+    email="alice@example.com",
+    role="admin",
+    some_key="some_value",
+    profile_data=None,
+    incoming_headers=None,
+):
     desired_keys = [
         "Authorization",
         "X-OpenWebUI-User-Name",
         "X-OpenWebUI-User-Id",
         "X-OpenWebUI-User-Email",
         "X-OpenWebUI-User-Role",
-        "X-OpenWebUI-Chat-Id"
+        "X-OpenWebUI-Chat-Id",
     ]
 
     response_headers = {
-        key: incoming_headers[key]
-        for key in desired_keys
-        if key in incoming_headers
+        key: incoming_headers[key] for key in desired_keys if key in incoming_headers
     }
 
-
-    json_string ={
-            "status": status,
-            "model": model,
-            "message": {
-                "content": content,
-                "thinking": thinking,
-                "tool_calls": tool_calls,
-                "openai_tool_calls": openai_tool_calls,
-                "meta": profile_data
-                },
-            "data": {
-                "some_key": some_key,
-                },
-            "done_reason": "stop",
-            "done": True #This is to indicate that we are one command at a time, not interactive
-            }
+    json_string = {
+        "status": status,
+        "model": model,
+        "message": {
+            "content": content,
+            "thinking": thinking,
+            "tool_calls": tool_calls,
+            "openai_tool_calls": openai_tool_calls,
+            "meta": profile_data,
+        },
+        "data": {
+            "some_key": some_key,
+        },
+        "done_reason": "stop",
+        "done": True,  # This is to indicate that we are one command at a time, not interactive
+    }
     print("Response:\n", json.dumps(json_string), "\n")
     response = make_response(json.dumps(json_string))
     response_headers = {
-        key: incoming_headers[key]
-        for key in desired_keys
-        if key in incoming_headers
+        key: incoming_headers[key] for key in desired_keys if key in incoming_headers
     }
     response.headers = response_headers
     response.headers["Content-Type"] = "application/json"
     return response
 
+
 def clean_up_json_string(string):
     # 1️⃣ Extract just the JSON-looking portion
-    match = re.search(r'\{.*?\}', string)
+    match = re.search(r"\{.*?\}", string)
     if match:
         json_candidate = match.group(0)
 
         # 2️⃣ Replace escape sequences
-        cleaned = json_candidate.encode('utf-8').decode('unicode_escape')
+        cleaned = json_candidate.encode("utf-8").decode("unicode_escape")
 
         # 3️⃣ Load and parse JSON
         try:
             parsed = json.loads(cleaned)
-            #print(json.dumps(parsed, indent=2))
+            # print(json.dumps(parsed, indent=2))
             return parsed
         except json.JSONDecodeError as e:
-            #print("JSON parsing failed:", e)
+            # print("JSON parsing failed:", e)
             return cleaned
     else:
-        #print("No JSON object found")
+        # print("No JSON object found")
         return string
+
 
 def extract_final_output_after_chat_history(text):
     chat_history_phrase = "</chat_history>"
     if chat_history_phrase in text:
-        #parts = text.split(chat_history_phrase)
-        #filtered_text = parts[-1]  # content after the last tag
-        filtered_text = text.split(chat_history_phrase, 1)[1] # Split once and take the second part
+        # parts = text.split(chat_history_phrase)
+        # filtered_text = parts[-1]  # content after the last tag
+        filtered_text = text.split(chat_history_phrase, 1)[
+            1
+        ]  # Split once and take the second part
     else:
         filtered_text = text
     return filtered_text
+
 
 def extract_chat_history(text):
     chat_history_phrase = "Chat History:"
     if chat_history_phrase in text:
-        #parts = text.split(chat_history_phrase)
-        #filtered_text = parts[-1]  # content after the last tag
-        filtered_text = text.split(chat_history_phrase, 1)[1] # Split once and take the second part
+        # parts = text.split(chat_history_phrase)
+        # filtered_text = parts[-1]  # content after the last tag
+        filtered_text = text.split(chat_history_phrase, 1)[
+            1
+        ]  # Split once and take the second part
     else:
         filtered_text = text
     return filtered_text
 
+
 def extract_json_output(text):
     start_phrase = "JSON format:"
     if start_phrase in text:
-        #parts = text.split(start_phrase)
-        #filtered_text = parts[-1]  # content after the last tag
-        filtered_text = text.split(start_phrase, 1)[1] # Split once and take the second part
+        # parts = text.split(start_phrase)
+        # filtered_text = parts[-1]  # content after the last tag
+        filtered_text = text.split(start_phrase, 1)[
+            1
+        ]  # Split once and take the second part
     else:
         filtered_text = text
     return clean_up_json_string(filtered_text)
 
-@app.route('/_app', methods=['POST', 'GET'])
-@app.route('/api/chats', methods=['POST', 'GET'])
+
+@app.route("/_app", methods=["POST", "GET"])
+@app.route("/api/chats", methods=["POST", "GET"])
 def chats():
     global job_status
     global parameters
-    
+
     data = request.get_json()
     incoming_headers = dict(request.headers)
     print("Request:", data)
-    if 'options' in data:
+    if "options" in data:
         for item in parameters:
-            if item in data['options']:
-                parameters[item] = data['options'][item]
+            if item in data["options"]:
+                parameters[item] = data["options"][item]
 
-    original_prompt = data['messages'][-1]['content']
-    flattened_prompt = re.sub(r'\s+', ' ', original_prompt).strip()
-    tmpprompt = flattened_prompt.replace('"', '\\"').encode('utf-8')
-    prompt = tmpprompt.decode('utf-8')
+    original_prompt = data["messages"][-1]["content"]
+    flattened_prompt = re.sub(r"\s+", " ", original_prompt).strip()
+    tmpprompt = flattened_prompt.replace('"', '\\"').encode("utf-8")
+    prompt = tmpprompt.decode("utf-8")
 
     model = DEFAULT_MODEL
 
-    if parameters['target'] == 'cpu':
-        backend = 'none'
-    elif parameters['target'] == 'opu':
-        backend = 'tSavorite'
-    if 'model' in data:
-        model = data['model']
+    if parameters["target"] == "cpu":
+        backend = "none"
+    elif parameters["target"] == "opu":
+        backend = "tSavorite"
+    if "model" in data:
+        model = data["model"]
 
-    tokens = parameters['num_predict']
-    repeat_penalty = parameters['repeat_penalty']
-    batch_size = parameters['num_batch']
-    top_k = parameters['top_k']
-    top_p = parameters['top_p']
-    last_n = parameters['repeat_last_n']
-    context_length = parameters['num_ctx']
-    temp = parameters['temperature']
-    
+    tokens = parameters["num_predict"]
+    repeat_penalty = parameters["repeat_penalty"]
+    batch_size = parameters["num_batch"]
+    top_k = parameters["top_k"]
+    top_p = parameters["top_p"]
+    last_n = parameters["repeat_last_n"]
+    context_length = parameters["num_ctx"]
+    temp = parameters["temperature"]
+
     # Define the model path (update with actual paths)
     model_paths = {
         "tiny-llama": "tinyllama-vo-5m-para.gguf",
-        "TinyLlama:latest": "Tiny-Llama-v0.3-FP32-1.1B-F32.gguf"
+        "TinyLlama:latest": "Tiny-Llama-v0.3-FP32-1.1B-F32.gguf",
     }
     model_path = model_paths.get(model, "")
     if not model_path:
         model_path = model
     # Build llama-cli command
-    #command = [
+    # command = [
     #    "./llama-cli",
     #    "-p", prompt,
     #    "-m", model_path,
@@ -746,25 +988,36 @@ def chats():
     #    "--repeat-penalty", "1",
     #    "--top-k", "0",
     #    "--top-p", "1"
-    #]
+    # ]
     script_path = "./run_llama_cli.sh"
-    command = f"cd {exe_path}; {script_path} \"{prompt}\" {tokens} {model_path} {backend} {repeat_penalty} {batch_size} {top_k} {top_p} {last_n} {context_length} {temp}"
+    command = f'cd {exe_path}; {script_path} "{prompt}" {tokens} {model_path} {backend} {repeat_penalty} {batch_size} {top_k} {top_p} {last_n} {context_length} {temp}'
     if is_job_running() == True:
-        return manual_response(content="Server is busy. Please try again later.",thinking=None,profile_data=None, incoming_headers=incoming_headers), 200
+        return (
+            manual_response(
+                content="Server is busy. Please try again later.",
+                thinking=None,
+                profile_data=None,
+                incoming_headers=incoming_headers,
+            ),
+            200,
+        )
     job_status["running"] = True
 
-    serial_script.pre_and_post_check(port,baudrate)
+    serial_script.pre_and_post_check(port, baudrate)
+
     def run_script(command):
         try:
-            result = serial_script.send_serial_command(port,baudrate,command, timeout=DEFAULT_MODEL_COMMAND_RUN_TIMEOUT)
+            result = serial_script.send_serial_command(
+                port, baudrate, command, timeout=DEFAULT_MODEL_COMMAND_RUN_TIMEOUT
+            )
             if result:
                 response_text = result
-                start_phrases = [
-                    "llama_perf_sampler_print: ",
-                    "OPU Profiling Results:"
-                ]
+                start_phrases = ["llama_perf_sampler_print: ", "OPU Profiling Results:"]
 
-                matched_phrase = next((phrase for phrase in start_phrases if phrase in response_text), None)
+                matched_phrase = next(
+                    (phrase for phrase in start_phrases if phrase in response_text),
+                    None,
+                )
 
                 if matched_phrase:
                     filtered_text = response_text.split(matched_phrase, 1)[0]
@@ -773,7 +1026,9 @@ def chats():
                     filtered_text = result
                     formatted_text = None
             else:
-                filtered_text = "Result Empty: Desired phrase not found in the response."
+                filtered_text = (
+                    "Result Empty: Desired phrase not found in the response."
+                )
                 formatted_text = None  # Or None, depending on your use case
 
             return filtered_text, formatted_text
@@ -788,57 +1043,66 @@ def chats():
     chat_history = extract_chat_history(filtered_text)
     final_chat_output = extract_final_output_after_chat_history(chat_history)
     job_status["running"] = False
-    return manual_response(content=final_chat_output,thinking=chat_history,profile_data=profile_text, incoming_headers=incoming_headers), 200
+    return (
+        manual_response(
+            content=final_chat_output,
+            thinking=chat_history,
+            profile_data=profile_text,
+            incoming_headers=incoming_headers,
+        ),
+        200,
+    )
 
-@app.route('/api/chat', methods=['POST', 'GET'])
-@app.route('/api/chat/completion', methods=['POST', 'GET'])
-@app.route('/api/chat/completed', methods=['POST', 'GET'])
-@app.route('/api/generate', methods=['POST', 'GET'])
+
+@app.route("/api/chat", methods=["POST", "GET"])
+@app.route("/api/chat/completion", methods=["POST", "GET"])
+@app.route("/api/chat/completed", methods=["POST", "GET"])
+@app.route("/api/generate", methods=["POST", "GET"])
 def chat():
     global job_status
     global parameters
-    
+
     data = request.get_json()
     incoming_headers = dict(request.headers)
     print("Request:", data)
-    if 'options' in data:
+    if "options" in data:
         for item in parameters:
-            if item in data['options']:
-                parameters[item] = data['options'][item]
+            if item in data["options"]:
+                parameters[item] = data["options"][item]
 
-    original_prompt = data['messages'][-1]['content']
-    flattened_prompt = re.sub(r'\s+', ' ', original_prompt).strip()
-    tmpprompt = flattened_prompt.replace('"', '\\"').encode('utf-8')
-    prompt = tmpprompt.decode('utf-8')
-      
+    original_prompt = data["messages"][-1]["content"]
+    flattened_prompt = re.sub(r"\s+", " ", original_prompt).strip()
+    tmpprompt = flattened_prompt.replace('"', '\\"').encode("utf-8")
+    prompt = tmpprompt.decode("utf-8")
+
     model = DEFAULT_MODEL
 
-    if parameters['target'] == 'cpu':
-        backend = 'none'
-    elif parameters['target'] == 'opu':
-        backend = 'tSavorite'
-    if 'model' in data:
-        model = data['model']
+    if parameters["target"] == "cpu":
+        backend = "none"
+    elif parameters["target"] == "opu":
+        backend = "tSavorite"
+    if "model" in data:
+        model = data["model"]
 
-    tokens = parameters['num_predict']
-    repeat_penalty = parameters['repeat_penalty']
-    batch_size = parameters['num_batch']
-    top_k = parameters['top_k']
-    top_p = parameters['top_p']
-    last_n = parameters['repeat_last_n']
-    context_length = parameters['num_ctx']
-    temp = parameters['temperature']
-    
+    tokens = parameters["num_predict"]
+    repeat_penalty = parameters["repeat_penalty"]
+    batch_size = parameters["num_batch"]
+    top_k = parameters["top_k"]
+    top_p = parameters["top_p"]
+    last_n = parameters["repeat_last_n"]
+    context_length = parameters["num_ctx"]
+    temp = parameters["temperature"]
+
     # Define the model path (update with actual paths)
     model_paths = {
         "tiny-llama": "tinyllama-vo-5m-para.gguf",
-        "TinyLlama:latest": "Tiny-Llama-v0.3-FP32-1.1B-F32.gguf"
+        "TinyLlama:latest": "Tiny-Llama-v0.3-FP32-1.1B-F32.gguf",
     }
     model_path = model_paths.get(model, "")
     if not model_path:
         model_path = model
     # Build llama-cli command
-    #command = [
+    # command = [
     #    "./llama-cli",
     #    "-p", prompt,
     #    "-m", model_path,
@@ -848,24 +1112,35 @@ def chat():
     #    "--repeat-penalty", "1",
     #    "--top-k", "0",
     #    "--top-p", "1"
-    #]
+    # ]
     script_path = "./run_llama_cli.sh"
-    command = f"cd {exe_path}; {script_path} \"{prompt}\" {tokens} {model_path} {backend} {repeat_penalty} {batch_size} {top_k} {top_p} {last_n} {context_length} {temp}"
+    command = f'cd {exe_path}; {script_path} "{prompt}" {tokens} {model_path} {backend} {repeat_penalty} {batch_size} {top_k} {top_p} {last_n} {context_length} {temp}'
     if is_job_running() == True:
-        return manual_response(content="Server is busy. Please try again later.",thinking=None,profile_data=None, incoming_headers=incoming_headers), 200
+        return (
+            manual_response(
+                content="Server is busy. Please try again later.",
+                thinking=None,
+                profile_data=None,
+                incoming_headers=incoming_headers,
+            ),
+            200,
+        )
     job_status["running"] = True
 
-    serial_script.pre_and_post_check(port,baudrate)
+    serial_script.pre_and_post_check(port, baudrate)
+
     def run_script(command):
         try:
-            result = serial_script.send_serial_command(port,baudrate,command, timeout=DEFAULT_MODEL_COMMAND_RUN_TIMEOUT)
+            result = serial_script.send_serial_command(
+                port, baudrate, command, timeout=DEFAULT_MODEL_COMMAND_RUN_TIMEOUT
+            )
             if result:
                 response_text = result
-                start_phrases = [
-                    "llama_perf_sampler_print: ",
-                    "OPU Profiling Results:"
-                ]
-                matched_phrase = next((phrase for phrase in start_phrases if phrase in response_text), None)
+                start_phrases = ["llama_perf_sampler_print: ", "OPU Profiling Results:"]
+                matched_phrase = next(
+                    (phrase for phrase in start_phrases if phrase in response_text),
+                    None,
+                )
 
                 if matched_phrase:
                     filtered_text = response_text.split(matched_phrase, 1)[0]
@@ -874,7 +1149,9 @@ def chat():
                     filtered_text = result
                     formatted_text = None
             else:
-                filtered_text = "Result Empty: Desired phrase not found in the response."
+                filtered_text = (
+                    "Result Empty: Desired phrase not found in the response."
+                )
                 formatted_text = None
                 job_status["result"] = filtered_text
 
@@ -891,82 +1168,134 @@ def chat():
     final_chat_output = extract_final_output_after_chat_history(chat_history)
     job_status["running"] = False
 
-    return manual_response(content=final_chat_output,thinking=chat_history,profile_data=profile_text, incoming_headers=incoming_headers), 200
+    return (
+        manual_response(
+            content=final_chat_output,
+            thinking=chat_history,
+            profile_data=profile_text,
+            incoming_headers=incoming_headers,
+        ),
+        200,
+    )
 
-@app.route('/api/restart-txe', methods=['GET', 'POST'])
+
+@app.route("/api/restart-txe", methods=["GET", "POST"])
 def restart_txe_ollama_serial_command():
     global job_status
     global parameters
     incoming_headers = dict(request.headers)
 
-    serial_script.pre_and_post_check(port,baudrate)
+    serial_script.pre_and_post_check(port, baudrate)
     internal_restart_txe()
-    
-    return manual_response(content="Restarted OPU",thinking="Restarted OPU", incoming_headers=incoming_headers), 200
 
-@app.route('/api/system-info', methods=['GET', 'POST'])
+    return (
+        manual_response(
+            content="Restarted OPU",
+            thinking="Restarted OPU",
+            incoming_headers=incoming_headers,
+        ),
+        200,
+    )
+
+
+@app.route("/api/system-info", methods=["GET", "POST"])
 def system_info_ollama_serial_command():
     incoming_headers = dict(request.headers)
     if is_job_running() == True:
-        return manual_response(content="Server is busy. Please try again later.",thinking=None,profile_data=None, incoming_headers=incoming_headers), 200
+        return (
+            manual_response(
+                content="Server is busy. Please try again later.",
+                thinking=None,
+                profile_data=None,
+                incoming_headers=incoming_headers,
+            ),
+            200,
+        )
 
     job_status["running"] = True
     result, error = system_info_serial_command()
     job_status["running"] = False
-    return manual_response(content=result,thinking="System Info", incoming_headers=incoming_headers), error
+    return (
+        manual_response(
+            content=result, thinking="System Info", incoming_headers=incoming_headers
+        ),
+        error,
+    )
 
-@app.route('/api/health-check', methods=['GET', 'POST'])
+
+@app.route("/api/health-check", methods=["GET", "POST"])
 def health_check_ollama_serial_command():
     incoming_headers = dict(request.headers)
     if is_job_running() == True:
-        return manual_response(content="Server is busy. Please try again later.",thinking=None,profile_data=None, incoming_headers=incoming_headers), 200
+        return (
+            manual_response(
+                content="Server is busy. Please try again later.",
+                thinking=None,
+                profile_data=None,
+                incoming_headers=incoming_headers,
+            ),
+            200,
+        )
 
     job_status["running"] = True
     result, error = health_check_serial_command()
     job_status["running"] = False
 
-    return manual_response(content=result,thinking="Health Check", incoming_headers=incoming_headers), error
+    return (
+        manual_response(
+            content=result, thinking="Health Check", incoming_headers=incoming_headers
+        ),
+        error,
+    )
+
 
 def aborttask():
     try:
-        result = serial_script.abort_serial_portion(port,baudrate)
+        result = serial_script.abort_serial_portion(port, baudrate)
         return result, 200
     except subprocess.CalledProcessError as e:
         return f"Error executing script: {e.stderr}", 500
 
-@app.route('/api/abort-task', methods=['GET', 'POST'])
+
+@app.route("/api/abort-task", methods=["GET", "POST"])
 def abort_task_ollama_serial_command():
     incoming_headers = dict(request.headers)
     result, error = aborttask()
-    return manual_response(content=result,thinking="Abort Task", incoming_headers=incoming_headers), error
+    return (
+        manual_response(
+            content=result, thinking="Abort Task", incoming_headers=incoming_headers
+        ),
+        error,
+    )
 
-@app.route('/submit', methods=['POST'])
+
+@app.route("/submit", methods=["POST"])
 def submit():
 
-    serial_script.pre_and_post_check(port,baudrate)
+    serial_script.pre_and_post_check(port, baudrate)
 
     global job_status
 
     if job_status["running"]:
         return "<h2>A model is already running. Please wait or abort.</h2>"
 
-    #./run_llama_cli.sh "my cat's name" "10" "tinyllama-vo-5m-para.gguf" "none"
-    model = request.form.get('model')
-    backend = request.form.get('backend')
-    tokens = request.form.get('tokens')
-    prompt = request.form.get('prompt')
-    repeat_penalty = request.form.get('repeat-penalty', DEFAULT_REPEAT_PENALTY)
-    batch_size = request.form.get('batch-size', DEFAULT_BATCH_SIZE)
-    top_k = request.form.get('top-k', DEFAULT_TOP_K)
-    top_p = request.form.get('top-p', DEFAULT_TOP_P)
-    last_n = request.form.get('last-n', DEFAULT_LAST_N)
-    context_length = request.form.get('context-length', DEFAULT_CONTEXT_LENGTH)
-    temp = request.form.get('temp', DEFAULT_TEMP)
+    # ./run_llama_cli.sh "my cat's name" "10" "tinyllama-vo-5m-para.gguf" "none"
+    model = request.form.get("model")
+    backend = request.form.get("backend")
+    tokens = request.form.get("tokens")
+    prompt = request.form.get("prompt")
+    repeat_penalty = request.form.get("repeat-penalty", DEFAULT_REPEAT_PENALTY)
+    batch_size = request.form.get("batch-size", DEFAULT_BATCH_SIZE)
+    top_k = request.form.get("top-k", DEFAULT_TOP_K)
+    top_p = request.form.get("top-p", DEFAULT_TOP_P)
+    last_n = request.form.get("last-n", DEFAULT_LAST_N)
+    context_length = request.form.get("context-length", DEFAULT_CONTEXT_LENGTH)
+    temp = request.form.get("temp", DEFAULT_TEMP)
 
     # Define the model path (update with actual paths)
     model_paths = {
         "tiny-llama": "tinyllama-vo-5m-para.gguf",
-        "Tiny-llama-F32": "Tiny-Llama-v0.3-FP32-1.1B-F32.gguf"
+        "Tiny-llama-F32": "Tiny-Llama-v0.3-FP32-1.1B-F32.gguf",
     }
 
     model_path = model_paths.get(model, "")
@@ -974,7 +1303,7 @@ def submit():
         model_path = model
 
     # Build llama-cli command
-    #command = [
+    # command = [
     #    "./llama-cli",
     #    "-p", prompt,
     #    "-m", model_path,
@@ -984,19 +1313,19 @@ def submit():
     #    "--repeat-penalty", "1",
     #    "--top-k", "0",
     #    "--top-p", "1"
-    #]
+    # ]
 
     script_path = "./run_llama_cli.sh"
-    command = f"cd {exe_path}; {script_path} \"{prompt}\" {tokens} {model_path} {backend} {repeat_penalty} {batch_size} {top_k} {top_p} {last_n} {context_length} {temp}"
+    command = f'cd {exe_path}; {script_path} "{prompt}" {tokens} {model_path} {backend} {repeat_penalty} {batch_size} {top_k} {top_p} {last_n} {context_length} {temp}'
 
     def run_script():
         try:
-            result = serial_script.send_serial_command(port,baudrate,command)
+            result = serial_script.send_serial_command(port, baudrate, command)
             job_status["result"] = result
         except subprocess.CalledProcessError as e:
             job_status["result"] = f"Error: {e.stderr}"
         finally:
-            time.sleep(max(10,int(tokens)/5))
+            time.sleep(max(10, int(tokens) / 5))
             job_status["running"] = False
 
     thread = threading.Thread(target=run_script)
@@ -1006,23 +1335,24 @@ def submit():
     return render_template("processing.html")
 
 
-@app.route('/status')
+@app.route("/status")
 def status():
 
-    serial_script.pre_and_post_check(port,baudrate)
+    serial_script.pre_and_post_check(port, baudrate)
 
     if job_status["running"]:
         return "running"
     else:
         return "done"
 
-@app.route('/result')
+
+@app.route("/result")
 def result():
-    
+
     return render_template("result.html", output=job_status["result"])
 
 
-'''
+"""
 Need to revert to an older version of Werkzeug to work!:
 
 sudo python3 -m venv flasktest
@@ -1034,8 +1364,10 @@ MISC. INFORMATION:
 Takes around 2 minutes and 10 seconds to fully complete
 At the end you should see the message: Finished Everything Hooray
 
-'''
-@app.route('/abort')
+"""
+
+
+@app.route("/abort")
 def abort():
 
     global job_status
@@ -1044,10 +1376,11 @@ def abort():
         # Use subprocess.Popen + pid handling instead for real process termination
         job_status["running"] = False
         job_status["result"] = "Aborted by user."
-        serial_script.abort_serial_portion(port,baudrate)
+        serial_script.abort_serial_portion(port, baudrate)
         internal_restart_txe()
         return "<h2>Job aborted.</h2><a href='/'>Home</a>"
     return "<h2>No job running.</h2><a href='/'>Home</a>"
 
-if __name__ == '__main__':
+
+if __name__ == "__main__":
     app.run(debug=True, port=5001)

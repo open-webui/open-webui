@@ -3,21 +3,21 @@ This tool provides you an interface to Tsavorite FPGA via a serial console
 The tool consists of following files
 
 .
-├── flaskCommon.py    << Common code but currently not used
-├── flaskIfc.py       << Browser based console interface to TSI device
-├── flaskXterm.py     << Browser based terminal emulation
-├── README.md         << Readme file
-└── serial_script.py  << File with serial interface to console
-
+├── flaskCommon.py << Common code but currently not used
+├── flaskIfc.py << Browser based console interface to TSI device
+├── flaskXterm.py << Browser based terminal emulation
+├── README.md << Readme file
+└── serial_script.py << File with serial interface to console
 
 The command to run to run the service on FPGA machine is
+
 ```
 flask -A flaskIfc.py --debug run --port 5000
 ```
 
 This command runs a webserver at port number 500
 
-The curl command to connect to this server and communicate is as follows as 
+The curl command to connect to this server and communicate is as follows as
 an example
 
 ```
@@ -44,6 +44,7 @@ http://127.0.0.1:5000/terminal
 ```
 
 If your machine does not have flask terminal installed these are the typical packages you will have to install
+
 ```
 sudo apt install flask
 sudo pip install flask-terminal

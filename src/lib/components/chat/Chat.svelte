@@ -897,14 +897,15 @@
 				...userSettings.ui,
 				autoFollowUps: false,
 				title: { auto: false },
-				autoTags: false });
-
+				autoTags: false
+			});
 		} else {
 			settings.set({
 				...JSON.parse(localStorage.getItem('settings') ?? '{}'),
 				autoFollowUps: false,
 				title: { auto: false },
-				autoTags: false});
+				autoTags: false
+			});
 		}
 
 		const chatInput = document.getElementById('chat-input');
@@ -955,27 +956,27 @@
 
 				if (userSettings) {
 					await settings.set({ ...userSettings.ui, autoFollowUps: false });
-
-
 				} else {
-					await settings.set({ ...JSON.parse(localStorage.getItem('settings') ?? '{}'), autoFollowUps: false });
-
+					await settings.set({
+						...JSON.parse(localStorage.getItem('settings') ?? '{}'),
+						autoFollowUps: false
+					});
 				}
 				if (userSettings) {
-    					await settings.set({
-        					...userSettings.ui,
-        					autoFollowUps: false,
-        					autoTags: false,
-        					autoTitle: false
-    					});
+					await settings.set({
+						...userSettings.ui,
+						autoFollowUps: false,
+						autoTags: false,
+						autoTitle: false
+					});
 				} else {
-    					const localSettings = JSON.parse(localStorage.getItem('settings') ?? '{}');
-    					await settings.set({
-        					...localSettings,
-        					autoFollowUps: false,
-        					autoTags: false,
-        					autoTitle: false
-    					});
+					const localSettings = JSON.parse(localStorage.getItem('settings') ?? '{}');
+					await settings.set({
+						...localSettings,
+						autoFollowUps: false,
+						autoTags: false,
+						autoTitle: false
+					});
 				}
 
 				params = chatContent?.params ?? {};
