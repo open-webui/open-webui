@@ -86,6 +86,17 @@
 
 	let correctionHintActive = false;
 
+	const submitHandler = async () => {
+		if (correctionHintActive) {
+			prompt = `Please revise your search plan, with the direction provided below: \n${prompt}`;
+			await tick();
+			dispatch('submit', prompt);
+			correctionHintActive = false;
+		} else {
+			dispatch('submit', prompt);
+		}
+	};
+
 	$: onChange({
 		prompt,
 		files,
@@ -521,18 +532,7 @@
 					{:else}
 						<form
 							class="w-full flex gap-1.5"
-							on:submit|preventDefault={() => {
-								if (correctionHintActive) {
-									dispatch(
-										'submit',
-										`Please revise your search plan, with the direction provided below: \n${prompt}`
-									);
-									correctionHintActive = false;
-								} else {
-									// check if selectedModels support image input
-									dispatch('submit', prompt);
-								}
-							}}
+							on:submit|preventDefault={submitHandler}
 						>
 							<div
 								class="flex-1 flex flex-col relative w-full shadow-lg rounded-3xl border border-gray-50 dark:border-gray-850 hover:border-gray-100 focus-within:border-gray-100 hover:dark:border-gray-800 focus-within:dark:border-gray-800 transition px-1 bg-white/90 dark:bg-gray-400/5 dark:text-gray-100"
@@ -787,7 +787,7 @@
 															if (enterPressed) {
 																e.preventDefault();
 																if (prompt !== '' || files.length > 0) {
-																	dispatch('submit', prompt);
+																	submitHandler();
 																}
 															}
 														}
@@ -973,7 +973,7 @@
 
 														// Submit the prompt when Enter key is pressed
 														if ((prompt !== '' || files.length > 0) && enterPressed) {
-															dispatch('submit', prompt);
+															submitHandler();
 														}
 													}
 												}
