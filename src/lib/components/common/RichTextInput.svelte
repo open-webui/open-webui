@@ -138,7 +138,7 @@
 
 	import Mention from '@tiptap/extension-mention';
 
-	import { all, createLowlight } from 'lowlight';
+	import hljs from 'highlight.js';
 
 	import { PASTED_TEXT_CHARACTER_LIMIT } from '$lib/constants';
 
@@ -955,15 +955,17 @@
 		editor = new Editor({
 			element: element,
 			extensions: [
-				StarterKit.configure({
-					link: link
-				}),
+			StarterKit.configure({
+    			link: link,
+    			codeBlock: {
+        			HTMLAttributes: {
+            			class: 'hljs'
+        			}
+    			}
+			}),
 				Placeholder.configure({ placeholder }),
 				SelectionDecoration,
 
-				CodeBlockLowlight.configure({
-					lowlight
-				}),
 				Highlight,
 				Typography,
 
