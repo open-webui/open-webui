@@ -1509,6 +1509,18 @@ TASK_MODEL_EXTERNAL = PersistentConfig(
     os.environ.get("TASK_MODEL_EXTERNAL", ""),
 )
 
+TOOL_CALLING_MODEL = PersistentConfig(
+    "TOOL_CALLING_MODEL",
+    "task.model.tool_calling",
+    os.environ.get("TOOL_CALLING_MODEL", ""),
+)
+
+TOOL_CALLING_MODEL_EXTERNAL = PersistentConfig(
+    "TOOL_CALLING_MODEL_EXTERNAL",
+    "task.model.tool_calling_external",
+    os.environ.get("TOOL_CALLING_MODEL_EXTERNAL", ""),
+)
+
 TITLE_GENERATION_PROMPT_TEMPLATE = PersistentConfig(
     "TITLE_GENERATION_PROMPT_TEMPLATE",
     "task.title.prompt_template",

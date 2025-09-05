@@ -29,6 +29,8 @@
 	let taskConfig = {
 		TASK_MODEL: '',
 		TASK_MODEL_EXTERNAL: '',
+		TOOL_CALLING_MODEL: '',
+		TOOL_CALLING_MODEL_EXTERNAL: '',
 		ENABLE_TITLE_GENERATION: true,
 		TITLE_GENERATION_PROMPT_TEMPLATE: '',
 		ENABLE_FOLLOW_UP_GENERATION: true,
@@ -211,6 +213,78 @@
 					</div>
 				</div>
 
+				<div class=" mb-2.5 flex w-full gap-2">
+					<div class="flex-1">
+						<div class=" text-xs mb-1">{$i18n.t('Local Tool Calling Model')}</div>
+						<select
+							class="w-full rounded-lg py-2 px-4 text-sm bg-gray-50 dark:text-gray-300 dark:bg-gray-850 outline-hidden"
+							bind:value={taskConfig.TOOL_CALLING_MODEL}
+							placeholder={$i18n.t('Select a model')}
+							on:change={() => {
+								if (taskConfig.TOOL_CALLING_MODEL) {
+									const model = models.find((m) => m.id === taskConfig.TOOL_CALLING_MODEL);
+									if (model) {
+										if (model?.access_control !== null) {
+											toast.error(
+												$i18n.t(
+													'This model is not publicly available. Please select another model.'
+												)
+											);
+										}
+
+										taskConfig.TOOL_CALLING_MODEL = model.id;
+									} else {
+										taskConfig.TOOL_CALLING_MODEL = '';
+									}
+								}
+							}}
+						>
+							<option value="" selected>{$i18n.t('Current Model')}</option>
+							{#each models as model}
+								<option value={model.id} class="bg-gray-100 dark:bg-gray-700">
+									{model.name}
+									{model?.connection_type === 'local' ? `(${$i18n.t('Local')})` : ''}
+								</option>
+							{/each}
+						</select>
+					</div>
+
+					<div class="flex-1">
+						<div class=" text-xs mb-1">{$i18n.t('External Tool Calling Model')}</div>
+						<select
+							class="w-full rounded-lg py-2 px-4 text-sm bg-gray-50 dark:text-gray-300 dark:bg-gray-850 outline-hidden"
+							bind:value={taskConfig.TOOL_CALLING_MODEL_EXTERNAL}
+							placeholder={$i18n.t('Select a model')}
+							on:change={() => {
+								if (taskConfig.TOOL_CALLING_MODEL_EXTERNAL) {
+									const model = models.find((m) => m.id === taskConfig.TOOL_CALLING_MODEL_EXTERNAL);
+									if (model) {
+										if (model?.access_control !== null) {
+											toast.error(
+												$i18n.t(
+													'This model is not publicly available. Please select another model.'
+												)
+											);
+										}
+
+										taskConfig.TOOL_CALLING_MODEL_EXTERNAL = model.id;
+									} else {
+										taskConfig.TOOL_CALLING_MODEL_EXTERNAL = '';
+									}
+								}
+							}}
+						>
+							<option value="" selected>{$i18n.t('Current Model')}</option>
+							{#each models as model}
+								<option value={model.id} class="bg-gray-100 dark:bg-gray-700">
+									{model.name}
+									{model?.connection_type === 'local' ? `(${$i18n.t('Local')})` : ''}
+								</option>
+							{/each}
+						</select>
+					</div>
+				</div>
+				
 				<div class="mb-2.5 flex w-full items-center justify-between">
 					<div class=" self-center text-xs font-medium">
 						{$i18n.t('Title Generation')}

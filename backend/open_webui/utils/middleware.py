@@ -166,8 +166,8 @@ async def chat_completion_tools_handler(
 
     task_model_id = get_task_model_id(
         body["model"],
-        request.app.state.config.TASK_MODEL,
-        request.app.state.config.TASK_MODEL_EXTERNAL,
+        request.app.state.config.TOOL_CALLING_MODEL or request.app.state.config.TASK_MODEL,
+        request.app.state.config.TOOL_CALLING_MODEL_EXTERNAL or request.app.state.config.TASK_MODEL_EXTERNAL,
         models,
     )
 
