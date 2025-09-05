@@ -1,8 +1,4 @@
 <script lang="ts">
-	import * as pdfjs from 'pdfjs-dist';
-	import * as pdfWorker from 'pdfjs-dist/build/pdf.worker.mjs';
-	pdfjs.GlobalWorkerOptions.workerSrc = import.meta.url + 'pdfjs-dist/build/pdf.worker.mjs';
-
 	import DOMPurify from 'dompurify';
 	import { marked } from 'marked';
 	import heic2any from 'heic2any';
@@ -640,7 +636,7 @@
 		} else {
 			// If temporary chat is enabled, we just add the file to the list without uploading it.
 
-			const content = await extractContentFromFile(file, pdfjsLib).catch((error) => {
+			const content = await extractContentFromFile(file).catch((error) => {
 				toast.error(
 					$i18n.t('Failed to extract content from the file: {{error}}', { error: error })
 				);
