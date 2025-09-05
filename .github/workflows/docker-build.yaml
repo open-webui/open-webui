@@ -13,7 +13,7 @@ env:
 
 jobs:
   build-main-image:
-    runs-on: ubuntu-latest
+    runs-on: arc-ssc-dsai
     permissions:
       contents: read
       packages: write
@@ -23,7 +23,7 @@ jobs:
         platform:
           - linux/amd64
           # Add more platforms if needed, e.g., - linux/arm64
-    
+
     steps:
       # GitHub Packages requires the entire repository name to be in lowercase
       # although the repository owner has a lowercase username, this prevents some people from running actions after forking
@@ -41,9 +41,6 @@ jobs:
 
       - name: Checkout repository
         uses: actions/checkout@v4
-
-      - name: Set up QEMU
-        uses: docker/setup-qemu-action@v3
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
@@ -69,17 +66,18 @@ jobs:
           flavor: |
             latest=${{ github.ref == 'refs/heads/main' }}
 
-      - name: Extract metadata for Docker cache
-        id: cache-meta
-        uses: docker/metadata-action@v5
-        with:
-          images: ${{ env.FULL_IMAGE_NAME }}
-          tags: |
-            type=ref,event=branch
-            ${{ github.ref_type == 'tag' && 'type=raw,value=main' || '' }}
-          flavor: |
-            prefix=cache-${{ matrix.platform }}-
-            latest=false
+      # Cache metadata step disabled since we're using no-cache=true
+      # - name: Extract metadata for Docker cache
+      #   id: cache-meta
+      #   uses: docker/metadata-action@v5
+      #   with:
+      #     images: ${{ env.FULL_IMAGE_NAME }}
+      #     tags: |
+      #       type=ref,event=branch
+      #       ${{ github.ref_type == 'tag' && 'type=raw,value=main' || '' }}
+      #     flavor: |
+      #       prefix=cache-${{ matrix.platform }}-
+      #       latest=false
 
       - name: Build Docker image (latest)
         uses: docker/build-push-action@v5
@@ -90,8 +88,10 @@ jobs:
           platforms: ${{ matrix.platform }}
           labels: ${{ steps.meta.outputs.labels }}
           outputs: type=image,name=${{ env.FULL_IMAGE_NAME }},push-by-digest=true,name-canonical=true,push=true
-          cache-from: type=registry,ref=${{ steps.cache-meta.outputs.tags }}
-          cache-to: type=registry,ref=${{ steps.cache-meta.outputs.tags }},mode=max
+          no-cache: true  # Disable caching due to large/unstable images causing disk space issues
+          # cache-from: type=registry,ref=${{ steps.cache-meta.outputs.tags }}  # Disabled - not effective for large images
+          # cache-to: type=local,dest=/var/lib/docker/cache  # Disabled - causing "no space left on device" errors
+          # cache-to: type=registry,ref=${{ steps.cache-meta.outputs.tags }},mode=max  # Disabled to avoid disk space issues
           build-args: |
             BUILD_HASH=${{ github.sha }}
 
@@ -110,7 +110,7 @@ jobs:
           retention-days: 1
 
   merge-main-images:
-    runs-on: ubuntu-latest
+    runs-on: arc-ssc-dsai
     needs: [build-main-image]
     steps:
       # GitHub Packages requires the entire repository name to be in lowercase

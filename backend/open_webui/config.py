@@ -1726,6 +1726,7 @@ RAG_TEXT_SPLITTER = PersistentConfig(
 
 
 TIKTOKEN_CACHE_DIR = os.environ.get("TIKTOKEN_CACHE_DIR", f"{CACHE_DIR}/tiktoken")
+TXTAI_CACHE_DIR = os.environ.get("TXTAI_CACHE_DIR", f"{CACHE_DIR}/txtai")
 TIKTOKEN_ENCODING_NAME = PersistentConfig(
     "TIKTOKEN_ENCODING_NAME",
     "rag.tiktoken_encoding_name",
@@ -1845,6 +1846,13 @@ RAG_WEB_SEARCH_ENGINE = PersistentConfig(
     "RAG_WEB_SEARCH_ENGINE",
     "rag.web.search.engine",
     os.getenv("RAG_WEB_SEARCH_ENGINE", ""),
+)
+
+# Wikipedia Knowledge Grounding Configuration
+ENABLE_WIKIPEDIA_GROUNDING = PersistentConfig(
+    "ENABLE_WIKIPEDIA_GROUNDING",
+    "rag.wikipedia.grounding.enable",
+    os.getenv("ENABLE_WIKIPEDIA_GROUNDING", "True").lower() == "true",
 )
 
 # You can provide a list of your own websites to filter after performing a web search.

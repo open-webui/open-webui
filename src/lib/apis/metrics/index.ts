@@ -552,3 +552,54 @@ export const getRangeMetrics = async (
 		throw new Error(err.message || 'An unexpected error occurred');
 	}
 };
+
+export const getInterPromptLatencyHistogram = async (
+	token: string,
+	domain?: string,
+	model?: string
+): Promise<{
+	bins: string[];
+	counts: number[];
+	total_latencies: number;
+}> => {
+	try {
+		let url = `${WEBUI_API_BASE_URL}/metrics/inter-prompt-latency`;
+		const params = new URLSearchParams();
+
+		if (domain !== null && domain !== undefined) {
+			params.append('domain', domain);
+		}
+
+		if (model !== null && model !== undefined) {
+			params.append('model', model);
+		}
+
+		if (params.toString()) {
+			url += `?${params.toString()}`;
+		}
+
+		const res = await fetch(url, {
+			method: 'GET',
+			headers: {
+				Accept: 'application/json',
+				authorization: `Bearer ${token}`
+			}
+		});
+
+		if (!res.ok) {
+			if (res.status === 404) {
+				return { bins: [], counts: [], total_latencies: 0 };
+			}
+			const error = await res.json();
+			throw new Error(
+				`Error ${res.status}: ${error.detail || 'Failed to get inter-prompt latency histogram'}`
+			);
+		}
+
+		const data = await res.json();
+		return data;
+	} catch (err) {
+		console.error('Error fetching inter-prompt latency histogram:', err);
+		throw new Error(err.message || 'An unexpected error occurred');
+	}
+};

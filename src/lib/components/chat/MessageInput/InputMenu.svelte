@@ -3,7 +3,7 @@
 	import { flyAndScale } from '$lib/utils/transitions';
 	import { getContext, onMount, tick } from 'svelte';
 
-	import { config, user, tools as _tools, mobile } from '$lib/stores';
+	import { config, user, tools as _tools, mobile, settings } from '$lib/stores';
 	import { createPicker } from '$lib/utils/google-drive-picker';
 	import { getTools } from '$lib/apis/tools';
 	import { getToolTooltipContent, getMCPToolName } from '$lib/utils/mcp-tools';
@@ -13,6 +13,7 @@
 	import DocumentArrowUpSolid from '$lib/components/icons/DocumentArrowUpSolid.svelte';
 	import Switch from '$lib/components/common/Switch.svelte';
 	import GlobeAltSolid from '$lib/components/icons/GlobeAltSolid.svelte';
+	import BookOpen from '$lib/components/icons/BookOpen.svelte';
 	import WrenchSolid from '$lib/components/icons/WrenchSolid.svelte';
 	import Cog6Solid from '$lib/components/icons/Cog6Solid.svelte';
 	import CameraSolid from '$lib/components/icons/CameraSolid.svelte';
@@ -39,11 +40,25 @@
 	export let selectedToolIds: string[] = [];
 
 	export let webSearchEnabled: boolean;
+	export let wikiGroundingEnabled: boolean;
+	export let wikiGroundingMode: string = 'off'; // 'off', 'auto', 'always'
 	export let imageGenerationEnabled: boolean;
 
 	export let onClose: Function;
 
+	// Reactive statement for tooltip content
+	$: tooltipContent =
+		wikiGroundingMode === 'off'
+			? $i18n.t('Off Mode: No wiki information added to responses')
+			: wikiGroundingMode === 'auto'
+				? $i18n.t('Auto Mode: Smart enhancement for English/French queries')
+				: wikiGroundingMode === 'always'
+					? $i18n.t('Always Mode: Enhance every response with wiki information')
+					: '';
+
 	let tools = {};
+	let wikiGroundingTooltip;
+	let wikiGroundingButton;
 	let show = false;
 
 	let showImageGeneration = false;
@@ -57,6 +72,11 @@
 	$: showWebSearch =
 		$config?.features?.enable_web_search &&
 		($user.role === 'admin' || $user?.permissions?.features?.web_search);
+
+	let showWikiGrounding = false;
+
+	$: showWikiGrounding = $config?.features?.enable_wiki_grounding || false;
+	$settings?.wikipediaGrounding ?? true;
 
 	$: if (show) {
 		init();
@@ -78,6 +98,18 @@
 			return a;
 		}, {});
 	};
+
+	// Function to update tooltip content while keeping it visible
+	const updateTooltipContent = () => {
+		if (wikiGroundingTooltip && wikiGroundingTooltip._tippy) {
+			wikiGroundingTooltip._tippy.setContent(tooltipContent);
+		}
+	};
+
+	// Watch for tooltip content changes and update immediately
+	$: if (tooltipContent && wikiGroundingTooltip) {
+		updateTooltipContent();
+	}
 </script>
 
 <Dropdown
@@ -225,7 +257,97 @@
 				</button>
 			{/if}
 
-			{#if showImageGeneration || showWebSearch}
+			{#if showWikiGrounding}
+				<Tooltip
+					bind:this={wikiGroundingTooltip}
+					content={tooltipContent}
+					placement="right"
+					className="w-full"
+					tippyOptions={{
+						placement: 'right',
+						offset: [0, 0],
+						flip: false,
+						hideOnClick: false,
+						trigger: 'mouseenter',
+						getReferenceClientRect: () => {
+							const menu = document.querySelector('[data-melt-dropdown-menu][data-state="open"]');
+							if (menu && wikiGroundingButton) {
+								const menuRect = menu.getBoundingClientRect();
+								const buttonRect = wikiGroundingButton.getBoundingClientRect();
+								return {
+									width: 0,
+									height: buttonRect.height,
+									top: buttonRect.top,
+									bottom: buttonRect.bottom,
+									left: menuRect.right,
+									right: menuRect.right
+								};
+							}
+							return null;
+						}
+					}}
+				>
+					<button
+						bind:this={wikiGroundingButton}
+						class="flex w-full justify-between gap-2 items-center px-3 py-2 text-sm font-medium cursor-pointer rounded-xl"
+						on:click={() => {
+							// Cycle through: off -> auto -> always -> off
+							if (wikiGroundingMode === 'off') {
+								wikiGroundingMode = 'auto';
+								wikiGroundingEnabled = true;
+							} else if (wikiGroundingMode === 'auto') {
+								wikiGroundingMode = 'always';
+								wikiGroundingEnabled = true;
+							} else {
+								wikiGroundingMode = 'off';
+								wikiGroundingEnabled = false;
+							}
+						}}
+					>
+						<div class="flex-1 flex items-center gap-2">
+							<BookOpen />
+							<div class="line-clamp-1">
+								{$i18n.t('Wiki Grounding')}
+								{#if wikiGroundingMode !== 'off'}
+									<span class="opacity-60">
+										{#if wikiGroundingMode === 'auto'}
+											({$i18n.t('Auto')})
+										{:else if wikiGroundingMode === 'always'}
+											({$i18n.t('Always')})
+										{/if}
+									</span>
+								{/if}
+							</div>
+						</div>
+
+						<div class="flex items-center">
+							{#key wikiGroundingMode}
+								{#if wikiGroundingMode === 'off'}
+									<div
+										class="w-4 h-4 rounded-full bg-gray-400 dark:bg-gray-500 border-2 border-gray-300 dark:border-gray-600"
+									></div>
+								{:else if wikiGroundingMode === 'auto'}
+									<div
+										class="w-4 h-4 rounded-full bg-blue-500 border-2 border-blue-300 shadow-sm"
+									></div>
+								{:else if wikiGroundingMode === 'always'}
+									<div
+										class="w-4 h-4 rounded-full bg-green-500 border-2 border-green-300 shadow-sm"
+									></div>
+								{:else}
+									<!-- Fallback for any unexpected states -->
+									<div
+										class="w-4 h-4 rounded-full bg-red-500 border-2 border-red-300 shadow-sm"
+										title="Debug: {wikiGroundingMode}"
+									></div>
+								{/if}
+							{/key}
+						</div>
+					</button>
+				</Tooltip>
+			{/if}
+
+			{#if showImageGeneration || showWebSearch || showWikiGrounding}
 				<hr class="border-black/5 dark:border-white/5 my-1" />
 			{/if}
 

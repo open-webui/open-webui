@@ -1,3 +1,4 @@
+import asyncio
 from typing import Optional
 
 from open_webui.models.prompts import (
@@ -22,12 +23,16 @@ router = APIRouter()
 async def get_prompts(user=Depends(get_verified_user)):
     """Get all prompts (original behavior) - now with access control and public prompts"""
     if user.role == "admin":
-        prompts = Prompts.get_prompts()
+        prompts = await asyncio.to_thread(Prompts.get_prompts)
     else:
         # Non-admin users see public prompts + owned prompts + shared prompts
         # Use optimized method with large limit for backward compatibility
-        prompts = Prompts.get_prompts_with_access_control(
-            user.id, page=1, limit=10000, search=None
+        prompts = await asyncio.to_thread(
+            Prompts.get_prompts_with_access_control,
+            user.id,
+            page=1,
+            limit=10000,
+            search=None,
         )
 
     return prompts
@@ -37,12 +42,16 @@ async def get_prompts(user=Depends(get_verified_user)):
 async def get_prompt_list(user=Depends(get_verified_user)):
     """Get all prompts with user info (original behavior) - now with access control and public prompts"""
     if user.role == "admin":
-        prompts = Prompts.get_prompts()
+        prompts = await asyncio.to_thread(Prompts.get_prompts)
     else:
         # Non-admin users see public prompts + owned prompts + shared prompts
         # Use optimized method with large limit for backward compatibility
-        prompts = Prompts.get_prompts_with_access_control_and_users(
-            user.id, page=1, limit=10000, search=None
+        prompts = await asyncio.to_thread(
+            Prompts.get_prompts_with_access_control_and_users,
+            user.id,
+            page=1,
+            limit=10000,
+            search=None,
         )
 
     return prompts
@@ -58,11 +67,17 @@ async def get_prompts_paginated(
 ):
     """Get paginated prompts with optional search"""
     if user.role == "admin":
-        prompts = Prompts.get_prompts_paginated(page=page, limit=limit, search=search)
+        prompts = await asyncio.to_thread(
+            Prompts.get_prompts_paginated, page=page, limit=limit, search=search
+        )
     else:
         # Non-admin users see public prompts + owned prompts + shared prompts
-        prompts = Prompts.get_prompts_with_access_control(
-            user.id, page=page, limit=limit, search=search
+        prompts = await asyncio.to_thread(
+            Prompts.get_prompts_with_access_control,
+            user.id,
+            page=page,
+            limit=limit,
+            search=search,
         )
 
     return prompts
@@ -77,13 +92,20 @@ async def get_prompt_list_paginated(
 ):
     """Get paginated prompt list with user info and optional search"""
     if user.role == "admin":
-        prompts = Prompts.get_prompts_with_users_paginated(
-            page=page, limit=limit, search=search
+        prompts = await asyncio.to_thread(
+            Prompts.get_prompts_with_users_paginated,
+            page=page,
+            limit=limit,
+            search=search,
         )
     else:
         # Non-admin users see public prompts + owned prompts + shared prompts
-        prompts = Prompts.get_prompts_with_access_control_and_users(
-            user.id, page=page, limit=limit, search=search
+        prompts = await asyncio.to_thread(
+            Prompts.get_prompts_with_access_control_and_users,
+            user.id,
+            page=page,
+            limit=limit,
+            search=search,
         )
 
     return prompts
@@ -96,10 +118,12 @@ async def get_prompts_count(
 ):
     """Get total count of prompts with optional search filter"""
     if user.role == "admin":
-        count = Prompts.get_prompts_count(search=search)
+        count = await asyncio.to_thread(Prompts.get_prompts_count, search=search)
     else:
         # Non-admin users see count of accessible prompts
-        count = Prompts.get_prompts_count_with_access_control(user.id, search=search)
+        count = await asyncio.to_thread(
+            Prompts.get_prompts_count_with_access_control, user.id, search=search
+        )
 
     return {"count": count}
 
@@ -128,9 +152,9 @@ async def create_new_prompt(
             detail="Only administrators can create public prompts",
         )
 
-    prompt = Prompts.get_prompt_by_command(form_data.command)
+    prompt = await asyncio.to_thread(Prompts.get_prompt_by_command, form_data.command)
     if prompt is None:
-        prompt = Prompts.insert_new_prompt(user.id, form_data)
+        prompt = await asyncio.to_thread(Prompts.insert_new_prompt, user.id, form_data)
 
         if prompt:
             return prompt
@@ -151,7 +175,7 @@ async def create_new_prompt(
 
 @router.get("/command/{command}", response_model=Optional[PromptModel])
 async def get_prompt_by_command(command: str, user=Depends(get_verified_user)):
-    prompt = Prompts.get_prompt_by_command(f"/{command}")
+    prompt = await asyncio.to_thread(Prompts.get_prompt_by_command, f"/{command}")
 
     if prompt:
         if (
@@ -178,7 +202,7 @@ async def update_prompt_by_command(
     form_data: PromptForm,
     user=Depends(get_verified_user),
 ):
-    prompt = Prompts.get_prompt_by_command(f"/{command}")
+    prompt = await asyncio.to_thread(Prompts.get_prompt_by_command, f"/{command}")
     if not prompt:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
@@ -209,7 +233,9 @@ async def update_prompt_by_command(
             detail="Only administrators can create or modify public prompts",
         )
 
-    prompt = Prompts.update_prompt_by_command(f"/{command}", form_data)
+    prompt = await asyncio.to_thread(
+        Prompts.update_prompt_by_command, f"/{command}", form_data
+    )
     if prompt:
         return prompt
     else:
@@ -226,7 +252,7 @@ async def update_prompt_by_command(
 
 @router.delete("/command/{command}/delete", response_model=bool)
 async def delete_prompt_by_command(command: str, user=Depends(get_verified_user)):
-    prompt = Prompts.get_prompt_by_command(f"/{command}")
+    prompt = await asyncio.to_thread(Prompts.get_prompt_by_command, f"/{command}")
     if not prompt:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
@@ -250,5 +276,5 @@ async def delete_prompt_by_command(command: str, user=Depends(get_verified_user)
                 detail="Only administrators can delete public prompts",
             )
 
-    result = Prompts.delete_prompt_by_command(f"/{command}")
+    result = await asyncio.to_thread(Prompts.delete_prompt_by_command, f"/{command}")
     return result

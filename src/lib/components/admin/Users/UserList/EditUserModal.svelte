@@ -4,7 +4,7 @@
 	import { createEventDispatcher } from 'svelte';
 	import { onMount, getContext } from 'svelte';
 
-	import { updateUserById } from '$lib/apis/users';
+	import { updateUserById, updateUserRole } from '$lib/apis/users';
 
 	import Modal from '$lib/components/common/Modal.svelte';
 
@@ -16,6 +16,7 @@
 	export let sessionUser;
 
 	let _user = {
+		id: '',
 		profile_image_url: '',
 		name: '',
 		email: '',
@@ -24,20 +25,41 @@
 	};
 
 	const submitHandler = async () => {
+		// Check if role changed
+		const roleChanged = selectedUser.role !== _user.role;
+
+		// Update user basic info (name, email, password, profile_image_url)
 		const res = await updateUserById(localStorage.token, selectedUser.id, _user).catch((error) => {
 			toast.error(`${error}`);
+			return null;
 		});
 
-		if (res) {
-			dispatch('save');
-			show = false;
+		if (!res) {
+			return; // Exit if user update failed
 		}
+
+		// Update role if it changed
+		if (roleChanged) {
+			const roleRes = await updateUserRole(localStorage.token, selectedUser.id, _user.role).catch(
+				(error) => {
+					toast.error(`Role update failed: ${error}`);
+					return null;
+				}
+			);
+
+			if (!roleRes) {
+				return; // Exit if role update failed
+			}
+		}
+
+		dispatch('save');
+		show = false;
 	};
 
 	onMount(() => {
 		if (selectedUser) {
-			_user = selectedUser;
-			_user.password = '';
+			_user = { ...selectedUser }; // Copy all properties
+			_user.password = ''; // Clear password for security
 		}
 	});
 </script>

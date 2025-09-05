@@ -42,6 +42,8 @@
 	export let selectedToolIds = [];
 	export let imageGenerationEnabled = false;
 	export let webSearchEnabled = false;
+	export let wikiGroundingEnabled = false;
+	export let wikiGroundingMode = 'off'; // 'off', 'auto', 'always'
 
 	let models = [];
 	let modelDescription = '';
@@ -206,6 +208,8 @@
 					bind:selectedToolIds
 					bind:imageGenerationEnabled
 					bind:webSearchEnabled
+					bind:wikiGroundingEnabled
+					bind:wikiGroundingMode
 					bind:atSelectedModel
 					{transparentBackground}
 					{stopResponse}

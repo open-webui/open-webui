@@ -1,6 +1,8 @@
 import time
 import logging
 import sys
+import requests
+import re
 
 import asyncio
 from typing import Optional
@@ -48,6 +50,8 @@ from open_webui.utils.task import (
     rag_template,
     tools_function_calling_generation_template,
 )
+
+from open_webui.grounding.wiki_search_utils import wiki_search_grounder
 from open_webui.utils.misc import (
     get_message_list,
     add_or_update_system_message,
@@ -72,6 +76,88 @@ from open_webui.constants import TASKS
 logging.basicConfig(stream=sys.stdout, level=GLOBAL_LOG_LEVEL)
 log = logging.getLogger(__name__)
 log.setLevel(SRC_LOG_LEVELS["MAIN"])
+
+
+def fetch_wikipedia_title_and_excerpt(url: str) -> tuple[str, str]:
+    """
+    Fetch the actual title and excerpt from a Wikipedia URL.
+    Returns tuple of (title, excerpt) or falls back to original if fetch fails.
+    """
+    try:
+        # Extract the page title from the URL
+        if "/wiki/" not in url:
+            return "", ""
+
+        page_title = url.split("/wiki/")[-1]
+
+        # Determine language from URL
+        if "fr.wikipedia.org" in url:
+            api_url = f"https://fr.wikipedia.org/api/rest_v1/page/summary/{page_title}"
+        elif "en.wikipedia.org" in url:
+            api_url = f"https://en.wikipedia.org/api/rest_v1/page/summary/{page_title}"
+        else:
+            return "", ""
+
+        # Make request with timeout and proper headers
+        headers = {
+            "User-Agent": "CanChat/2.0 (https://github.com/ssc-dsai/canchat-v2; contact@example.com) requests/2.31.0",
+            "Accept": "application/json",
+            "Accept-Language": "en-US,en;q=0.9,fr;q=0.8",
+        }
+        response = requests.get(api_url, timeout=3, headers=headers)
+        if response.status_code == 200:
+            data = response.json()
+            title = data.get("title", "")
+            extract = data.get("extract", "")
+            return title, extract
+        else:
+            log.warning(
+                f"Failed to fetch Wikipedia summary for {url}: {response.status_code}"
+            )
+            return "", ""
+
+    except Exception as e:
+        log.warning(f"Error fetching Wikipedia summary for {url}: {e}")
+        return "", ""
+
+
+def detect_query_language(query: str) -> str:
+    """
+    Detect if a query is in French or English using the existing WikiSearchUtils.
+    Returns 'fr' for French, 'en' for English.
+    """
+    if not query:
+        return "en"
+
+    # Use the existing wiki search grounder's language detection
+    try:
+        return wiki_search_grounder._detect_language(query)
+    except Exception as e:
+        log.warning(f"Language detection failed, defaulting to English: {e}")
+        return "en"
+
+
+def convert_wikipedia_url_for_language(
+    url: str, target_language: str
+) -> tuple[str, str]:
+    """
+    Convert Wikipedia URL to target language if possible.
+    Returns tuple of (converted_url, actual_language)
+    """
+    if not url or "wikipedia.org" not in url:
+        return url, "en"
+
+    # Convert English Wikipedia URL to French if target is French
+    if target_language == "fr" and "en.wikipedia.org" in url:
+        french_url = url.replace("en.wikipedia.org", "fr.wikipedia.org")
+        return french_url, "fr"
+
+    # If URL is already French, keep it
+    if "fr.wikipedia.org" in url:
+        return url, "fr"
+
+    # For all other cases (including target_language == "en"), return as English
+    return url, "en"
 
 
 async def chat_completion_filter_functions_handler(request, body, model, extra_params):
@@ -664,6 +750,214 @@ async def chat_web_search_handler(
     return form_data
 
 
+async def chat_wiki_grounding_handler(
+    request: Request,
+    form_data: dict,
+    extra_params: dict,
+    user,
+    wiki_grounding_mode: str = "auto",
+):
+    """
+    Wikipedia Knowledge Grounding Handler
+
+    Augments LLM responses with current, factual information from txtai-wikipedia.
+    Handles both English and French queries with intelligent content analysis.
+
+    Args:
+        wiki_grounding_mode: Controls grounding behavior:
+            - "off": Disabled (should not reach this handler)
+            - "auto": Use intelligent filtering to determine if grounding is needed
+            - "always": Always apply grounding regardless of query type
+
+    Note: User session state (toggle) is already checked before this handler is called.
+    This handler only needs to verify admin configuration.
+    """
+    __event_emitter__ = extra_params["__event_emitter__"]
+
+    log.info("🔍 Wiki grounding handler called")
+
+    # Check admin configuration first
+    if not request.app.state.config.ENABLE_WIKIPEDIA_GROUNDING:
+        log.debug("🔍 Wikipedia grounding disabled by admin, skipping")
+        return form_data
+
+    # Check user's personal setting (defaults to True if not set)
+    user_grounding_enabled = True
+    if user and hasattr(user, "settings") and user.settings:
+        ui_settings = user.settings.ui if hasattr(user.settings, "ui") else {}
+        user_grounding_enabled = ui_settings.get("wikipediaGrounding", True)
+
+    if not user_grounding_enabled:
+        log.debug("🔍 Wikipedia grounding disabled by user preference, skipping")
+        return form_data
+
+    # Get the user's message
+    messages = form_data.get("messages", [])
+    if not messages:
+        log.info("🔍 No messages found, skipping grounding")
+        return form_data
+
+    # Get the last user message
+    user_message = ""
+    for message in reversed(messages):
+        if message.get("role") == "user":
+            user_message = message.get("content", "")
+            break
+
+    if not user_message:
+        log.info("🔍 No user message found, skipping grounding")
+        return form_data
+
+    log.info(
+        f"🔍 Processing user message for grounding (mode: {wiki_grounding_mode}): {user_message}"
+    )
+
+    try:
+        # Handle different grounding modes
+        if wiki_grounding_mode == "always":
+            # Always mode: force grounding without intelligent filtering
+            log.info("🔍 Always mode: forcing grounding without filtering")
+            grounding_data = await wiki_search_grounder.ground_query_always(
+                user_message, request, user
+            )
+        else:
+            # Auto mode: use intelligent filtering to determine if grounding is needed
+            log.info("🔍 Auto mode: using intelligent filtering")
+            grounding_data = await wiki_search_grounder.ground_query(
+                user_message, request, user
+            )
+
+        log.info(f"🔍 Grounding query result: {bool(grounding_data)}")
+
+        if grounding_data:
+            await __event_emitter__(
+                {
+                    "type": "status",
+                    "data": {
+                        "action": "wiki_grounding",
+                        "description": "Gathering current factual information",
+                        "done": False,
+                    },
+                }
+            )
+
+            # Format the grounding context
+            grounding_context = wiki_search_grounder.format_grounding_context(
+                grounding_data
+            )
+            log.debug(
+                f"🔍 Generated grounding context length: {len(grounding_context)}"
+            )
+            log.debug(f"🔍 Grounding context preview: {grounding_context[:200]}...")
+
+            # Add the grounding context to the system message or create one
+            system_message_found = False
+            for message in form_data["messages"]:
+                if message.get("role") == "system":
+                    # Append to existing system message
+                    current_content = message.get("content", "")
+                    message["content"] = current_content + "\n\n" + grounding_context
+                    system_message_found = True
+                    log.info("🔍 Added grounding to existing system message")
+                    break
+
+            if not system_message_found:
+                # Create a new system message with grounding context
+                grounding_system_message = {
+                    "role": "system",
+                    "content": grounding_context,
+                }
+                form_data["messages"].insert(0, grounding_system_message)
+                log.info("🔍 Created new system message with grounding")
+
+            # Detect user query language and convert Wikipedia URLs accordingly
+            user_query = (
+                form_data["messages"][-1]["content"] if form_data["messages"] else ""
+            )
+            detected_language = detect_query_language(user_query)
+
+            # Emit completion status with source count for frontend
+            sources_summary = []
+            for source in grounding_data["grounding_data"]:
+                original_url = source.get("url", "")
+                converted_url, source_language = convert_wikipedia_url_for_language(
+                    original_url, detected_language
+                )
+
+                # If we converted to a French URL, try to fetch the French title and content
+                if source_language == "fr" and converted_url != original_url:
+                    french_title, french_excerpt = fetch_wikipedia_title_and_excerpt(
+                        converted_url
+                    )
+                    if french_title and french_excerpt:
+                        # Successfully fetched French content
+                        title = french_title
+                        content = (
+                            french_excerpt[:200] + "..."
+                            if len(french_excerpt) > 200
+                            else french_excerpt
+                        )
+                        final_url = converted_url
+                        final_language = "fr"
+                        fallback_reason = None
+                    else:
+                        # French page doesn't exist or failed to fetch - revert to English
+                        title = source.get("title", "")
+                        content = (
+                            source.get("content", "")[:200] + "..."
+                            if len(source.get("content", "")) > 200
+                            else source.get("content", "")
+                        )
+                        final_url = original_url  # Revert to English URL
+                        final_language = "en"  # Show English indicator
+                        fallback_reason = "french_equivalent_not_found"
+                else:
+                    # Use original English content
+                    title = source.get("title", "")
+                    content = (
+                        source.get("content", "")[:200] + "..."
+                        if len(source.get("content", "")) > 200
+                        else source.get("content", "")
+                    )
+                    final_url = converted_url
+                    final_language = source_language
+                    fallback_reason = None
+
+                source_data = {
+                    "title": title,
+                    "content": content,
+                    "url": final_url,
+                    "score": source.get("score", 0),
+                    "language": final_language,
+                }
+
+                # Add fallback reason if applicable
+                if fallback_reason:
+                    source_data["fallback_reason"] = fallback_reason
+
+                sources_summary.append(source_data)
+
+            await __event_emitter__(
+                {
+                    "type": "status",
+                    "data": {
+                        "action": "wiki_grounding",
+                        "description": "Enhanced with current information",
+                        "count": len(grounding_data["grounding_data"]),
+                        "sources": sources_summary,
+                        "done": True,
+                    },
+                }
+            )
+
+    except Exception as e:
+        log.error(f"Error in wiki grounding handler: {e}")
+        # Don't emit error status as this shouldn't break the chat flow
+        pass
+
+    return form_data
+
+
 async def chat_image_generation_handler(
     request: Request, form_data: dict, extra_params: dict, user
 ):
@@ -881,6 +1175,7 @@ async def process_chat_payload(request, form_data, metadata, user, model):
     sources = []
 
     user_message = get_last_user_message(form_data["messages"])
+
     model_knowledge = model.get("info", {}).get("meta", {}).get("knowledge", False)
 
     if model_knowledge:
@@ -926,6 +1221,13 @@ async def process_chat_payload(request, form_data, metadata, user, model):
         if "web_search" in features and features["web_search"]:
             form_data = await chat_web_search_handler(
                 request, form_data, extra_params, user
+            )
+
+        if "wiki_grounding" in features and features["wiki_grounding"]:
+            # Pass wiki grounding mode to handler
+            wiki_grounding_mode = features.get("wiki_grounding_mode", "auto")
+            form_data = await chat_wiki_grounding_handler(
+                request, form_data, extra_params, user, wiki_grounding_mode
             )
 
         if "image_generation" in features and features["image_generation"]:
@@ -1338,6 +1640,7 @@ async def process_chat_response(
                                 user,
                                 model_used,
                                 data["usage"],
+                                metadata.get("chat_id"),
                             )
 
                         if "selected_model_id" in data:

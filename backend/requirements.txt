@@ -47,9 +47,13 @@ pymilvus==2.5.0
 qdrant-client~=1.12.0
 opensearch-py==2.7.1
 
-
-transformers
+# txtai-wikipedia Wiki Grounding dependencies
+transformers>=4.46.0,<5.0.0
+torch>=2.5.0
+txtai[graph]>=8.6.0
 sentence-transformers==3.3.1
+sacremoses==0.1.1
+
 colbert-ai==0.2.21
 einops==0.8.0
 

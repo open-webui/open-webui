@@ -115,6 +115,8 @@
 	let selectedToolIds: string[] = [];
 	let imageGenerationEnabled = false;
 	let webSearchEnabled = false;
+	let wikiGroundingEnabled = false;
+	let wikiGroundingMode = 'off'; // 'off', 'auto', 'always'
 
 	let chat = null;
 	let tags = [];
@@ -148,6 +150,8 @@
 			files = storedInput?.files || [];
 			selectedToolIds = storedInput?.selectedToolIds || [];
 			webSearchEnabled = storedInput?.webSearchEnabled || false;
+			wikiGroundingEnabled = storedInput?.wikiGroundingEnabled || false;
+			wikiGroundingMode = storedInput?.wikiGroundingMode || 'off';
 			imageGenerationEnabled = storedInput?.imageGenerationEnabled || false;
 
 			loaded = false;
@@ -402,6 +406,7 @@
 					files = input.files;
 					selectedToolIds = input.selectedToolIds;
 					webSearchEnabled = input.webSearchEnabled;
+					wikiGroundingEnabled = input.wikiGroundingEnabled || false;
 					imageGenerationEnabled = input.imageGenerationEnabled;
 				}
 			} catch (e) {
@@ -409,6 +414,7 @@
 				files = [];
 				selectedToolIds = [];
 				webSearchEnabled = false;
+				wikiGroundingEnabled = false;
 				imageGenerationEnabled = false;
 			}
 		}
@@ -626,15 +632,13 @@
 				selectedModels = urlModels;
 			}
 		} else {
-			if (sessionStorage.selectedModels) {
-				selectedModels = JSON.parse(sessionStorage.selectedModels);
-				sessionStorage.removeItem('selectedModels');
-			} else {
-				if ($settings?.models) {
-					selectedModels = $settings?.models;
-				} else if ($config?.default_models) {
-					selectedModels = $config?.default_models.split(',');
-				}
+			// Clear sessionStorage to ensure we use default models for new chats
+			sessionStorage.removeItem('selectedModels');
+
+			if ($settings?.models) {
+				selectedModels = $settings?.models;
+			} else if ($config?.default_models) {
+				selectedModels = $config?.default_models.split(',');
 			}
 		}
 
@@ -1597,7 +1601,9 @@
 				tool_ids: selectedToolIds.length > 0 ? selectedToolIds : undefined,
 				features: {
 					image_generation: imageGenerationEnabled,
-					web_search: webSearchEnabled
+					web_search: webSearchEnabled,
+					wiki_grounding: wikiGroundingEnabled,
+					wiki_grounding_mode: wikiGroundingMode
 				},
 
 				session_id: $socket?.id,
@@ -1983,6 +1989,8 @@
 								bind:selectedToolIds
 								bind:imageGenerationEnabled
 								bind:webSearchEnabled
+								bind:wikiGroundingEnabled
+								bind:wikiGroundingMode
 								bind:atSelectedModel
 								{stopResponse}
 								{createMessagePair}
@@ -2033,6 +2041,8 @@
 								bind:selectedToolIds
 								bind:imageGenerationEnabled
 								bind:webSearchEnabled
+								bind:wikiGroundingEnabled
+								bind:wikiGroundingMode
 								bind:atSelectedModel
 								{stopResponse}
 								{createMessagePair}
