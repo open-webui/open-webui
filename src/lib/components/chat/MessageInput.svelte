@@ -5,7 +5,6 @@
 
 	import DOMPurify from 'dompurify';
 	import { marked } from 'marked';
-	import heic2any from 'heic2any';
 
 	import { toast } from 'svelte-sonner';
 
@@ -32,7 +31,7 @@
 	} from '$lib/stores';
 
 	import {
-		blobToFile,
+		convertHeicToJpeg,
 		compressImage,
 		createMessagesList,
 		extractContentFromFile,
@@ -765,7 +764,7 @@
 				};
 				reader.readAsDataURL(
 					file['type'] === 'image/heic'
-						? await heic2any({ blob: file, toType: 'image/jpeg' })
+						? await convertHeicToJpeg(file)
 						: file
 				);
 			} else {
