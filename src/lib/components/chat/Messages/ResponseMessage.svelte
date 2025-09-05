@@ -136,6 +136,8 @@
 	let buttonsContainerElement: HTMLDivElement;
 	let showDeleteConfirm = false;
 
+	let showCorrectionButtons = true;
+
 	let model = null;
 	$: model = $models.find((m) => m.id === message.model);
 
@@ -557,6 +559,14 @@
 	onMount(async () => {
 		// console.log('ResponseMessage mounted');
 
+		const handleCorrectionSubmitted = (event) => {
+			if (event.detail.messageId === message.id) {
+				showCorrectionButtons = false;
+			}
+		};
+
+		window.addEventListener('correctionSubmitted', handleCorrectionSubmitted);
+
 		await tick();
 		if (buttonsContainerElement) {
 			console.log(buttonsContainerElement);
@@ -570,6 +580,10 @@
 				}
 			});
 		}
+
+		return () => {
+			window.removeEventListener('correctionSubmitted', handleCorrectionSubmitted);
+		};
 	});
 </script>
 
@@ -864,12 +878,15 @@
 					</div>
 				</div>
 
-				{#if message.done && message.content.includes("Is this understanding correct? Please answer with 'yes' to proceed or provide a correction.")}
+				{#if message.done && showCorrectionButtons && message.content.includes("Is this understanding correct? Please answer with 'yes' to proceed or provide a correction.")}
 					<div class="mt-2 mb-1 flex justify-start space-x-1.5 text-sm font-medium">
 						<button
 							class="px-4 py-2 bg-white dark:bg-gray-900 hover:bg-gray-100 text-gray-800 dark:text-gray-100 transition rounded-xl border border-gray-200 dark:border-gray-700"
 							on:click={() => {
-								window.dispatchEvent(new CustomEvent('provideCorrection'));
+								window.dispatchEvent(
+									new CustomEvent('provideCorrection', { detail: { messageId: message.id } })
+								);
+								showCorrectionButtons = false;
 							}}
 						>
 							{$i18n.t('Provide Correction')}
@@ -878,6 +895,7 @@
 							class="px-4 py-2 bg-gray-900 dark:bg-white hover:bg-gray-850 text-gray-100 dark:text-gray-800 transition rounded-xl"
 							on:click={() => {
 								submitMessage(message.id, 'yes');
+								showCorrectionButtons = false;
 							}}
 						>
 							{$i18n.t('Yes')}

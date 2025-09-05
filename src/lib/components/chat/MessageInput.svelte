@@ -85,12 +85,22 @@
 	export let codeInterpreterEnabled = false;
 
 	let correctionHintActive = false;
+	let messageIdForCorrection = null;
 
 	const submitHandler = async () => {
 		if (correctionHintActive) {
 			prompt = `Please revise your search plan, with the direction provided below: \n${prompt}`;
 			await tick();
 			dispatch('submit', prompt);
+
+			if (messageIdForCorrection) {
+				window.dispatchEvent(
+					new CustomEvent('correctionSubmitted', {
+						detail: { messageId: messageIdForCorrection }
+					})
+				);
+				messageIdForCorrection = null;
+			}
 			correctionHintActive = false;
 		} else {
 			dispatch('submit', prompt);
@@ -333,8 +343,11 @@
 		dragged = false;
 	};
 
-	const handleProvideCorrection = () => {
+	const handleProvideCorrection = (event) => {
 		correctionHintActive = true;
+		if (event.detail?.messageId) {
+			messageIdForCorrection = event.detail.messageId;
+		}
 		const chatInput = document.getElementById('chat-input');
 		chatInput?.focus();
 	};
