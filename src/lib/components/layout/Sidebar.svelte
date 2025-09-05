@@ -63,6 +63,46 @@
 	import Note from '../icons/Note.svelte';
 	import { slide } from 'svelte/transition';
 
+	// Resizable sidebar state
+	import { sidebarWidth } from '$lib/stores';
+	
+	const MIN_WIDTH = 220;
+	const MAX_WIDTH = 480;
+	let isResizing = false;
+	let startX = 0;
+	let startWidth = 0;
+	
+	const startResizing = (e: MouseEvent) => {
+		if ($mobile) return;
+		isResizing = true;
+		startX = e.clientX;
+		startWidth = $sidebarWidth ?? 260;
+		document.body.style.userSelect = 'none';
+		document.body.style.cursor = 'ew-resize';
+		window.addEventListener('mousemove', onResizeMouseMove);
+		window.addEventListener('mouseup', endResizing);
+	};
+	
+	const endResizing = () => {
+		if (!isResizing) return;
+		isResizing = false;
+		window.removeEventListener('mousemove', onResizeMouseMove);
+		window.removeEventListener('mouseup', endResizing);
+		document.body.style.userSelect = '';
+		document.body.style.cursor = '';
+		try {
+			localStorage.setItem('sidebarWidth', String($sidebarWidth));
+		} catch {}
+	};
+	
+	const onResizeMouseMove = (e: MouseEvent) => {
+		if (!isResizing) return;
+		const dx = e.clientX - startX;
+		let newWidth = Math.min(MAX_WIDTH, Math.max(MIN_WIDTH, startWidth + dx));
+		sidebarWidth.set(newWidth);
+		document.documentElement.style.setProperty('--sidebar-width', `${newWidth}px`);
+	};
+
 	const BREAKPOINT = 768;
 
 	let navElement;
@@ -331,6 +371,17 @@
 	};
 
 	onMount(async () => {
+		// Initialize sidebar width from localStorage and set CSS var
+		try {
+			const saved = Number(localStorage.getItem('sidebarWidth'));
+			if (!Number.isNaN(saved) && saved >= MIN_WIDTH && saved <= MAX_WIDTH) {
+				sidebarWidth.set(saved);
+			}
+		} catch {}
+		document.documentElement.style.setProperty('--sidebar-width', `${$sidebarWidth}px`);
+		sidebarWidth.subscribe((w) => {
+			document.documentElement.style.setProperty('--sidebar-width', `${w}px`);
+		});
 		showPinnedChat = localStorage?.showPinnedChat ? localStorage.showPinnedChat === 'true' : true;
 
 		mobile.subscribe((value) => {
@@ -677,10 +728,10 @@
 									/>
 								</div>
 							</div>
-						</UserMenu>
-					{/if}
+							</UserMenu>
+						{/if}
+					</div>
 				</div>
-			</div>
 		</div>
 	</div>
 {/if}
@@ -699,10 +750,20 @@
 		data-state={$showSidebar}
 	>
 		<div
-			class=" my-auto flex flex-col justify-between h-screen max-h-[100dvh] w-[260px] overflow-x-hidden scrollbar-hidden z-50 {$showSidebar
+			class=" relative my-auto flex flex-col justify-between h-screen max-h-[100dvh] overflow-x-hidden scrollbar-hidden z-50 {$showSidebar
 				? ''
 				: 'invisible'}"
+			style={`width: var(--sidebar-width, ${$sidebarWidth}px);`}
 		>
+			{#if !$mobile}
+				<!-- Resizer handler -->
+				<div
+					class="absolute top-0 right-0 h-full w-1.5 cursor-ew-resize select-none bg-transparent hover:bg-gray-200/40 dark:hover:bg-gray-700/30"
+					on:mousedown={startResizing}
+					aria-label="Resize sidebar"
+					role="separator"
+				/>
+			{/if}
 			<div
 				class="sidebar px-1.5 pt-2 pb-1.5 flex justify-between space-x-1 text-gray-600 dark:text-gray-400 sticky top-0 z-10 bg-gray-50 dark:bg-gray-950"
 			>
