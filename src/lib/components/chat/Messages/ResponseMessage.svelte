@@ -152,13 +152,9 @@
 	let loadingSpeech = false;
 	let generatingImage = false;
 
-let showRateComment = false;
+	let showRateComment = false;
 
-const searchPlanAgentRegex =
-	/My understanding is that you want to proceed with the query: '.*'.\n\nIs this understanding correct\? Please answer with 'yes' to proceed or provide a correction\./;
-$: isSearchPlanAgentResponse = searchPlanAgentRegex.test(message.content);
-
-const copyToClipboard = async (text) => {
+	const copyToClipboard = async (text) => {
 		text = removeAllDetails(text);
 
 		const res = await _copyToClipboard(text, $settings?.copyFormatted ?? false);
@@ -962,32 +958,15 @@ const copyToClipboard = async (text) => {
 												stroke-linejoin="round"
 												d="m8.25 4.5 7.5 7.5-7.5 7.5"
 											/>
-</svg>
-</button>
-</div>
-{/if}
+										</svg>
+									</button>
+								</div>
+							{/if}
 
-{#if message.done && !readOnly && isLastMessage && isSearchPlanAgentResponse}
-<div class="flex items-center space-x-2">
-<button
-class="px-3 py-1.5 bg-green-500 text-white rounded-lg hover:bg-green-600"
-on:click={() => submitMessage(message.id, 'yes')}
->
-{$i18n.t('Yes')}
-</button>
-<button
-class="px-3 py-1.5 bg-yellow-500 text-white rounded-lg hover:bg-yellow-600"
-on:click={() => dispatch('requestCorrection')}
->
-{$i18n.t('Provide Correction')}
-</button>
-</div>
-{/if}
-
-{#if message.done}
-{#if !readOnly}
-{#if $user?.role === 'user' ? ($user?.permissions?.chat?.edit ?? true) : true}
-<Tooltip content={$i18n.t('Edit')} placement="bottom">
+							{#if message.done}
+								{#if !readOnly}
+									{#if $user?.role === 'user' ? ($user?.permissions?.chat?.edit ?? true) : true}
+										<Tooltip content={$i18n.t('Edit')} placement="bottom">
 											<button
 												class="{isLastMessage
 													? 'visible'
