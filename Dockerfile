@@ -113,6 +113,7 @@ RUN apt-get update && \
     apt-get install -y --no-install-recommends \
     git build-essential pandoc gcc netcat-openbsd curl jq \
     python3-dev \
+    libreoffice-writer libreoffice-calc unoconv \
     ffmpeg libsm6 libxext6 \
     && rm -rf /var/lib/apt/lists/*
 
