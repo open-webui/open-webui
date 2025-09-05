@@ -2,7 +2,7 @@ name: Build and Push to Azure Container Registry
 
 on:
   push:
-    branches: [ "mina-test" ]      # Or whichever branch you want to trigger on
+    branches: [ "main" ]      # Or whichever branch you want to trigger on
   workflow_dispatch:          # Allows manual triggering in GitHub UI
 
 permissions:
