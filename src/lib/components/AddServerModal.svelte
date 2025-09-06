@@ -285,6 +285,7 @@
 										>
 											<option value="bearer">{$i18n.t('Bearer')}</option>
 											<option value="session">{$i18n.t('Session')}</option>
+											<option value="oauth">{$i18n.t('OAuth')}</option>
 
 											{#if !direct}
 												<option value="request_headers">{$i18n.t('Request Headers')}</option>
@@ -304,6 +305,12 @@
 												class={`text-xs self-center translate-y-[1px] ${($settings?.highContrastMode ?? false) ? 'text-gray-800 dark:text-gray-100' : 'text-gray-500'}`}
 											>
 												{$i18n.t('Forwards system user session credentials to authenticate')}
+											</div>
+										{:else if auth_type === 'oauth'}
+											<div
+												class={`text-xs self-center translate-y-[1px] ${($settings?.highContrastMode ?? false) ? 'text-gray-800 dark:text-gray-100' : 'text-gray-500'}`}
+											>
+												{$i18n.t('Forwards user OAuth token to authenticate')}
 											</div>
 										{:else if auth_type === 'request_headers'}
 											<div
