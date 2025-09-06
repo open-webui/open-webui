@@ -75,7 +75,7 @@
 						</div>
 
 						<div class="w-full text-sm line-clamp-1">
-							{item.title ? item.title : item.link}
+							{item?.title ?? item.link}
 						</div>
 					</div>
 
