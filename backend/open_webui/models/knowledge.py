@@ -129,7 +129,9 @@ class KnowledgeTable:
 
     def get_knowledge_bases(self) -> list[KnowledgeUserModel]:
         with get_db() as db:
-            all_knowledge = db.query(Knowledge).order_by(Knowledge.updated_at.desc()).all()
+            all_knowledge = (
+                db.query(Knowledge).order_by(Knowledge.updated_at.desc()).all()
+            )
 
             user_ids = list(set(knowledge.user_id for knowledge in all_knowledge))
 
@@ -149,6 +151,15 @@ class KnowledgeTable:
                 )
             return knowledge_bases
 
+    def check_access_by_user_id(self, id, user_id, permission="write") -> bool:
+        knowledge = self.get_knowledge_by_id(id)
+        if not knowledge:
+            return False
+        if knowledge.user_id == user_id:
+            return True
+        user_group_ids = {group.id for group in Groups.get_groups_by_member_id(user_id)}
+        return has_access(user_id, permission, knowledge.access_control, user_group_ids)
+
     def get_knowledge_bases_by_user_id(
         self, user_id: str, permission: str = "write"
     ) -> list[KnowledgeUserModel]:
@@ -158,7 +169,9 @@ class KnowledgeTable:
             knowledge_base
             for knowledge_base in knowledge_bases
             if knowledge_base.user_id == user_id
-            or has_access(user_id, permission, knowledge_base.access_control, user_group_ids)
+            or has_access(
+                user_id, permission, knowledge_base.access_control, user_group_ids
+            )
         ]
 
     def get_knowledge_by_id(self, id: str) -> Optional[KnowledgeModel]:
