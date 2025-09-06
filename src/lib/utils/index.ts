@@ -1521,12 +1521,6 @@ export const extractContentFromFile = async (file: File) => {
 	}
 };
 
-export const querystringValue = (key: string): string | null => {
-	const querystring = window.location.search;
-	const urlParams = new URLSearchParams(querystring);
-	return urlParams.get(key);
-};
-
 export const getAge = (birthDate) => {
 	const today = new Date();
 	const bDate = new Date(birthDate);
