@@ -44,6 +44,9 @@ from open_webui.env import (
     AIOHTTP_CLIENT_SESSION_TOOL_SERVER_SSL,
 )
 
+# Import the token forwarding service
+from open_webui.utils.token_forwarding import token_forwarding_service
+
 import copy
 
 log = logging.getLogger(__name__)
@@ -129,6 +132,14 @@ async def get_tools(
                         headers["Authorization"] = (
                             f"Bearer {request.state.token.credentials}"
                         )
+                    elif auth_type == "oauth":
+                        oauth_token = await token_forwarding_service.get_oauth_token_for_service(
+                            request, user, "tools"
+                        )
+                        if oauth_token:
+                            headers["Authorization"] = f"Bearer {oauth_token}"
+                        else:
+                            log.warning(f"OAuth token not found for user {user.id} for tool server {server_id}")
                     elif auth_type == "request_headers":
                         headers.update(dict(request.headers))
 
@@ -337,22 +348,6 @@ def convert_function_to_pydantic_model(func: Callable) -> type[BaseModel]:
     model.__doc__ = function_description
 
     return model
-
-
-def get_functions_from_tool(tool: object) -> list[Callable]:
-    return [
-        getattr(tool, func)
-        for func in dir(tool)
-        if callable(
-            getattr(tool, func)
-        )  # checks if the attribute is callable (a method or function).
-        and not func.startswith(
-            "__"
-        )  # filters out special (dunder) methods like init, str, etc. — these are usually built-in functions of an object that you might not need to use directly.
-        and not inspect.isclass(
-            getattr(tool, func)
-        )  # ensures that the callable is not a class itself, just a method or function.
-    ]
 
 
 def get_tool_specs(tool_module: object) -> list[dict]:
