@@ -21,14 +21,14 @@
 		{/if}
 	</div>
 	<div
-		class="text-sm border border-gray-300/30 dark:border-gray-700/50 rounded-xl mb-1.5"
+		class="text-sm border border-gray-50 dark:border-gray-850 rounded-xl mb-1.5 p-1"
 		slot="content"
 	>
 		{#if status?.query}
 			<a
 				href="https://www.google.com/search?q={status.query}"
 				target="_blank"
-				class="flex w-full items-center p-3 px-4 border-b border-gray-300/30 dark:border-gray-700/50 group/item justify-between font-normal text-gray-800 dark:text-gray-300 no-underline"
+				class="flex w-full items-center p-2 px-3 group/item justify-between font-normal text-gray-800 dark:text-gray-300 no-underline"
 			>
 				<div class="flex gap-2 items-center">
 					<Search />
@@ -62,9 +62,7 @@
 			<a
 				href={url}
 				target="_blank"
-				class="flex w-full items-center p-3 px-4 {urlIdx === status.urls.length - 1
-					? ''
-					: 'border-b border-gray-300/30 dark:border-gray-700/50'} group/item justify-between font-normal text-gray-800 dark:text-gray-300"
+				class="flex w-full items-center p-2 px-3 group/item justify-between font-normal text-gray-800 dark:text-gray-300"
 			>
 				<div class=" line-clamp-1">
 					{url}
