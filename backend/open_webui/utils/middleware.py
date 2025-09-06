@@ -895,9 +895,30 @@ async def process_chat_payload(request, form_data, user, metadata, model):
             )
 
         if "web_search" in features and features["web_search"]:
-            form_data = await chat_web_search_handler(
-                request, form_data, extra_params, user
-            )
+            if "native_web_search" in features and features["native_web_search"]:
+                # Model has built-in web search, inject web search function definition
+                if "tools" not in form_data:
+                    form_data["tools"] = []
+                
+                # Check if web_search tool is not already present
+                web_search_exists = any(
+                    tool.get("function", {}).get("name") == "web_search"
+                    for tool in form_data.get("tools", [])
+                    if tool.get("type") == "function"
+                )
+                
+                if not web_search_exists:
+                    form_data["tools"].append({
+                        "type": "function",
+                        "function": {
+                            "name": "web_search"
+                        }
+                    })
+            else:
+                # Use custom web search handler for models without native web search
+                form_data = await chat_web_search_handler(
+                    request, form_data, extra_params, user
+                )
 
         if "image_generation" in features and features["image_generation"]:
             form_data = await chat_image_generation_handler(

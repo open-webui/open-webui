@@ -19,6 +19,10 @@
 			label: $i18n.t('Web Search'),
 			description: $i18n.t('Model can search the web for information')
 		},
+		native_web_search: {
+			label: $i18n.t('Native Web Search'),
+			description: $i18n.t('Model has built-in web search capabilities')
+		},
 		image_generation: {
 			label: $i18n.t('Image Generation'),
 			description: $i18n.t('Model can generate images based on text prompts')
@@ -43,6 +47,7 @@
 		vision?: boolean;
 		file_upload?: boolean;
 		web_search?: boolean;
+		native_web_search?: boolean;
 		image_generation?: boolean;
 		code_interpreter?: boolean;
 		usage?: boolean;
