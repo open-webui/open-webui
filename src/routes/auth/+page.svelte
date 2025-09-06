@@ -1,4 +1,4 @@
-<script>
+<script lang="ts">
 	import DOMPurify from 'dompurify';
 	import { marked } from 'marked';
 
@@ -19,6 +19,7 @@
 	import Spinner from '$lib/components/common/Spinner.svelte';
 	import OnBoarding from '$lib/components/OnBoarding.svelte';
 	import SensitiveInput from '$lib/components/common/SensitiveInput.svelte';
+	import { redirect } from '@sveltejs/kit';
 
 	const i18n = getContext('i18n');
 
@@ -35,7 +36,7 @@
 
 	let ldapUsername = '';
 
-	const setSessionUser = async (sessionUser) => {
+	const setSessionUser = async (sessionUser, redirectPath: string | null = null) => {
 		if (sessionUser) {
 			console.log(sessionUser);
 			toast.success($i18n.t(`You're now logged in.`));
@@ -46,8 +47,12 @@
 			await user.set(sessionUser);
 			await config.set(await getBackendConfig());
 
-			const redirectPath = $page.url.searchParams.get('redirect') || '/';
+			if (!redirectPath) {
+				redirectPath = $page.url.searchParams.get('redirectPath') || '/';
+			}
+
 			goto(redirectPath);
+			sessionStorage.removeItem('redirectPath');
 		}
 	};
 
@@ -96,7 +101,7 @@
 		}
 	};
 
-	const checkOauthCallback = async () => {
+	const oauthCallbackHandler = async () => {
 		// Get the value of the 'token' cookie
 		function getCookie(name) {
 			const match = document.cookie.match(
@@ -114,12 +119,13 @@
 			toast.error(`${error}`);
 			return null;
 		});
+
 		if (!sessionUser) {
 			return;
 		}
 
 		localStorage.token = token;
-		await setSessionUser(sessionUser);
+		await setSessionUser(sessionUser, sessionStorage.getItem('redirectPath') || null);
 	};
 
 	let onboarding = false;
@@ -148,11 +154,15 @@
 	}
 
 	onMount(async () => {
+		const redirectPath = $page.url.searchParams.get('redirect');
 		if ($user !== undefined) {
-			const redirectPath = $page.url.searchParams.get('redirect') || '/';
-			goto(redirectPath);
+			goto(redirectPath || '/');
+		} else {
+			if (redirectPath) {
+				sessionStorage.setItem('redirectPath', redirectPath);
+			}
 		}
-		await checkOauthCallback();
+		await oauthCallbackHandler();
 
 		form = $page.url.searchParams.get('form');
 
