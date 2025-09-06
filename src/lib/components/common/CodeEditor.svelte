@@ -6,8 +6,8 @@
 	import { acceptCompletion } from '@codemirror/autocomplete';
 	import { indentWithTab } from '@codemirror/commands';
 
-	import { indentUnit, LanguageDescription } from '@codemirror/language';
-	import { languages } from '@codemirror/language-data';
+	import { highlightJSExtension } from './CodeEditor/HighlightJSExtension.js';
+    import { indentUnit } from '@codemirror/language';
 
 	import { oneDark } from '@codemirror/theme-one-dark';
 
@@ -84,30 +84,6 @@
 	let isDarkMode = false;
 	let editorTheme = new Compartment();
 	let editorLanguage = new Compartment();
-
-	languages.push(
-		LanguageDescription.of({
-			name: 'HCL',
-			extensions: ['hcl', 'tf'],
-			load() {
-				return import('codemirror-lang-hcl').then((m) => m.hcl());
-			}
-		})
-	);
-	languages.push(
-		LanguageDescription.of({
-			name: 'Elixir',
-			extensions: ['ex', 'exs'],
-			load() {
-				return import('codemirror-lang-elixir').then((m) => m.elixir());
-			}
-		})
-	);
-
-	const getLang = async () => {
-		const language = languages.find((l) => l.alias.includes(lang));
-		return await language?.load();
-	};
 
 	let pyodideWorkerInstance = null;
 
@@ -233,21 +209,8 @@ print("${endTag}")
 			}
 		}),
 		editorTheme.of([]),
-		editorLanguage.of([])
+		highlightJSExtension(lang)
 	];
-
-	$: if (lang) {
-		setLanguage();
-	}
-
-	const setLanguage = async () => {
-		const language = await getLang();
-		if (language && codeEditor) {
-			codeEditor.dispatch({
-				effects: editorLanguage.reconfigure(language)
-			});
-		}
-	};
 
 	onMount(() => {
 		console.log(value);
