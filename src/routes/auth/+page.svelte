@@ -162,8 +162,13 @@
 				localStorage.setItem('redirectPath', redirectPath);
 			}
 		}
-		await oauthCallbackHandler();
 
+		const error = $page.url.searchParams.get('error');
+		if (error) {
+			toast.error(error);
+		}
+
+		await oauthCallbackHandler();
 		form = $page.url.searchParams.get('form');
 
 		loaded = true;
