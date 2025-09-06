@@ -52,7 +52,7 @@
 			}
 
 			goto(redirectPath);
-			sessionStorage.removeItem('redirectPath');
+			localStorage.removeItem('redirectPath');
 		}
 	};
 
@@ -125,7 +125,7 @@
 		}
 
 		localStorage.token = token;
-		await setSessionUser(sessionUser, sessionStorage.getItem('redirectPath') || null);
+		await setSessionUser(sessionUser, localStorage.getItem('redirectPath') || null);
 	};
 
 	let onboarding = false;
@@ -159,7 +159,7 @@
 			goto(redirectPath || '/');
 		} else {
 			if (redirectPath) {
-				sessionStorage.setItem('redirectPath', redirectPath);
+				localStorage.setItem('redirectPath', redirectPath);
 			}
 		}
 		await oauthCallbackHandler();
