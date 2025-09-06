@@ -487,6 +487,7 @@ async def chat_web_search_handler(
                         "action": "web_search",
                         "description": "Searched {{count}} sites",
                         "urls": results["filenames"],
+                        "items": results.get("items", []),
                         "done": True,
                     },
                 }
