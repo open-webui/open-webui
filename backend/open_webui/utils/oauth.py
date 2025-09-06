@@ -554,6 +554,27 @@ class OAuthManager:
                     oauth_sub=provider_sub,
                 )
 
+                # Trigger new webhook system (fire-and-forget with store-and-forward)
+                from open_webui.utils.webhook import trigger_webhooks_fire_and_forget
+                from open_webui.utils.webhook_events import WebhookEvent
+
+                trigger_webhooks_fire_and_forget(
+                    event_type=WebhookEvent.USER_SIGNUP.value,
+                    message=WEBHOOK_MESSAGES.USER_SIGNUP(user.name),
+                    event_data={
+                        "action": "oauth_signup",
+                        "user_id": user.id,
+                        "name": user.name,
+                        "email": user.email,
+                        "role": user.role,
+                        "oauth_provider": provider,
+                        "created_at": user.created_at,
+                        "user": user.model_dump_json(exclude_none=True),
+                    },
+                    user_id=user.id,
+                )
+
+                # Keep legacy webhook for backward compatibility
                 if auth_manager_config.WEBHOOK_URL:
                     await post_webhook(
                         WEBUI_NAME,
