@@ -18,6 +18,59 @@
 	} else {
 		html = null;
 	}
+
+    //iframes detection
+    let iframes = [];
+    let iframeEls = [];
+
+    $: {
+        iframes = [];
+        if (token?.text) {
+            const tempDiv = document.createElement('div');
+            const parts = token.text.split(/(<iframe[^>]*>[\s\S]*?<\/iframe>)/gi);
+
+            parts.forEach(part => {
+                if (part.trim().startsWith('<iframe')) {
+                    // Parse this individual iframe
+                    const iframeDiv = document.createElement('div');
+                    iframeDiv.innerHTML = part;
+                    const iframe = iframeDiv.querySelector('iframe');
+
+                    if (iframe) {
+                        let src = iframe.getAttribute('src');
+                        let srcdoc = iframe.getAttribute('srcdoc');
+
+                        if (src) {
+                            iframes.push({ src, srcdoc: null });
+                        } else if (srcdoc) {
+                            // Replace quotes in srcdoc content
+                            srcdoc = srcdoc.replace(/"/g, "'");
+                            iframes.push({ src: null, srcdoc });
+                        }
+                    }
+                }
+            });
+        }
+    }
+
+    // AutoResize height of each iframe
+    function setupIframeAutofit(el) {
+        if (!el) return;
+
+        el.onload = () => {
+            try {
+                el.style.height = el.contentWindow.document.body.scrollHeight + 40 + 'px';
+                if (el.contentWindow.ResizeObserver) {
+                    const ro = new el.contentWindow.ResizeObserver(() => {
+                        el.style.height = el.contentWindow.document.body.scrollHeight + 40 + 'px';
+                    });
+                    ro.observe(el.contentWindow.document.body);
+                }
+            } catch {
+                el.style.minHeight = '40px';
+            }
+        };
+    }
 </script>
 
 {#if token.type === 'html'}
@@ -69,21 +122,28 @@
 			>
 			</iframe>
 		{/if}
-	{:else if token.text && token.text.includes('<iframe')}
-		{@const match = token.text.match(/<iframe\s+[^>]*src="([^"]+)"[^>]*><\/iframe>/)}
-		{@const iframeSrc = match && match[1]}
-		{#if iframeSrc}
-			<iframe
-				class="w-full my-2"
-				src={iframeSrc}
-				title="Embedded content"
-				frameborder="0"
-				sandbox
-				onload="this.style.height=(this.contentWindow.document.body.scrollHeight+20)+'px';"
-			></iframe>
-		{:else}
-			{token.text}
-		{/if}
+    {:else if token.text && token.text.includes('<iframe')}
+           {#if iframes.length > 0}
+                   {#each iframes as frame, i}
+                           <iframe
+                                   class="max-w-full my-2 flex flex-col w-full h-screen max-h-[100dvh]"
+                                   bind:this={iframeEls[i]}
+                                   use:setupIframeAutofit
+                                   {...(frame.src
+                                           ? { src: frame.src }
+                                           : frame.srcdoc
+                                           ? { srcdoc: frame.srcdoc }
+                                           : {})}
+                                   title="Embedded content"
+                                   frameborder="0"
+                                   allowfullscreen
+                                   sandbox="allow-scripts allow-downloads{($settings?.iframeSandboxAllowForms ?? false)
+                                           ? ' allow-forms'
+                                           : ''}{($settings?.iframeSandboxAllowSameOrigin ?? false) ? ' allow-same-origin' : ''}"
+                           ></iframe>
+                           <br>
+                   {/each}
+           {/if}
 	{:else if token.text && token.text.includes('<status')}
 		{@const match = token.text.match(/<status title="([^"]+)" done="(true|false)" ?\/?>/)}
 		{@const statusTitle = match && match[1]}
