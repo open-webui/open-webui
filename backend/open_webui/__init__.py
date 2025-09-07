@@ -33,7 +33,7 @@ def main(
 @app.command()
 def serve(
     host: str = "0.0.0.0",
-    port: int = 8080,
+    port: int = 8443,
 ):
     os.environ["FROM_INIT_PY"] = "true"
     if os.getenv("WEBUI_SECRET_KEY") is None:
@@ -79,6 +79,8 @@ def serve(
         "open_webui.main:app",
         host=host,
         port=port,
+        ssl_keyfile=os.path.join(os.getcwd(), "key.pem"),
+        ssl_certfile=os.path.join(os.getcwd(), "cert.pem"),
         forwarded_allow_ips="*",
         workers=UVICORN_WORKERS,
     )
@@ -87,7 +89,7 @@ def serve(
 @app.command()
 def dev(
     host: str = "0.0.0.0",
-    port: int = 8080,
+    port: int = 8443,
     reload: bool = True,
 ):
     uvicorn.run(
@@ -95,6 +97,8 @@ def dev(
         host=host,
         port=port,
         reload=reload,
+        ssl_keyfile=os.path.join(os.getcwd(), "key.pem"),
+        ssl_certfile=os.path.join(os.getcwd(), "cert.pem"),
         forwarded_allow_ips="*",
     )
 
