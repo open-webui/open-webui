@@ -710,9 +710,26 @@ async def chat_completion_files_handler(
 
         log.debug(f"rag_contexts:sources: {sources}")
 
-        sources_count = 0
-        for source in sources:
-            sources_count += len(source.get("document", []))
+        unique_ids = set()
+
+        for source in sources or []:
+            if not source or len(source.keys()) == 0:
+                continue
+
+            documents = source.get("document") or []
+            metadatas = source.get("metadata") or []
+            src_info = source.get("source") or {}
+
+            for index, _ in enumerate(documents):
+                metadata = metadatas[index] if index < len(metadatas) else None
+                _id = (
+                    (metadata or {}).get("source")
+                    or (src_info or {}).get("id")
+                    or "N/A"
+                )
+                unique_ids.add(_id)
+
+        sources_count = len(unique_ids)
 
         await __event_emitter__(
             {
