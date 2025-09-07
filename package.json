@@ -86,7 +86,7 @@
 		"async": "^3.2.5",
 		"bits-ui": "^0.21.15",
 		"chart.js": "^4.5.0",
-		"codemirror-lang-hcl": "^0.1.0",
+		"codemirror": "^6.0.1",
 		"crc-32": "^1.2.2",
 		"dayjs": "^1.11.10",
 		"dompurify": "^3.2.6",
