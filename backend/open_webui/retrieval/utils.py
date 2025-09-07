@@ -11,10 +11,8 @@ from langchain.retrievers import ContextualCompressionRetriever, EnsembleRetriev
 from langchain_community.retrievers import BM25Retriever
 from langchain_core.documents import Document
 
-from open_webui.config import VECTOR_DB
 from open_webui.retrieval.vector.connector import VECTOR_DB_CLIENT
 
-from open_webui.models.users import UserModel
 from open_webui.models.files import Files
 
 from open_webui.retrieval.vector.main import GetResult
@@ -23,7 +21,6 @@ from open_webui.retrieval.vector.main import GetResult
 from open_webui.env import (
     SRC_LOG_LEVELS,
     OFFLINE_MODE,
-    ENABLE_FORWARD_USER_INFO_HEADERS,
 )
 from open_webui.config import (
     RAG_EMBEDDING_QUERY_PREFIX,
@@ -74,7 +71,7 @@ class VectorSearchRetriever(BaseRetriever):
 
 
 def query_doc(
-    collection_name: str, query_embedding: list[float], k: int, user: UserModel = None
+    collection_name: str, query_embedding: list[float], k: int
 ):
     try:
         log.debug(f"query_doc:doc {collection_name}")
@@ -93,7 +90,7 @@ def query_doc(
         raise e
 
 
-def get_doc(collection_name: str, user: UserModel = None):
+def get_doc(collection_name: str):
     try:
         log.debug(f"get_doc:doc {collection_name}")
         result = VECTOR_DB_CLIENT.get(collection_name=collection_name)
@@ -364,21 +361,20 @@ def get_embedding_function(
     embedding_batch_size,
 ):
     if embedding_engine == "":
-        return lambda query, prefix=None, user=None: embedding_function.encode(
+        return lambda query, prefix=None: embedding_function.encode(
             query, **({"prompt": prefix} if prefix else {})
         ).tolist()
     elif embedding_engine in ["ollama", "openai"]:
-        func = lambda query, prefix=None, user=None: generate_embeddings(
+        func = lambda query, prefix=None: generate_embeddings(
             engine=embedding_engine,
             model=embedding_model,
             text=query,
             prefix=prefix,
             url=url,
             key=key,
-            user=user,
         )
 
-        def generate_multiple(query, prefix, user, func):
+        def generate_multiple(query, prefix, func):
             if isinstance(query, list):
                 embeddings = []
                 for i in range(0, len(query), embedding_batch_size):
@@ -386,15 +382,14 @@ def get_embedding_function(
                         func(
                             query[i : i + embedding_batch_size],
                             prefix=prefix,
-                            user=user,
                         )
                     )
                 return embeddings
             else:
-                return func(query, prefix, user)
+                return func(query, prefix)
 
-        return lambda query, prefix=None, user=None: generate_multiple(
-            query, prefix, user, func
+        return lambda query, prefix=None: generate_multiple(
+            query, prefix, func
         )
     else:
         raise ValueError(f"Unknown embedding engine: {embedding_engine}")
@@ -618,7 +613,6 @@ def generate_openai_batch_embeddings(
     url: str = "https://api.openai.com/v1",
     key: str = "",
     prefix: str = None,
-    user: UserModel = None,
 ) -> Optional[list[list[float]]]:
     try:
         log.debug(
@@ -633,16 +627,6 @@ def generate_openai_batch_embeddings(
             headers={
                 "Content-Type": "application/json",
                 "Authorization": f"Bearer {key}",
-                **(
-                    {
-                        "X-OpenWebUI-User-Name": user.name,
-                        "X-OpenWebUI-User-Id": user.id,
-                        "X-OpenWebUI-User-Email": user.email,
-                        "X-OpenWebUI-User-Role": user.role,
-                    }
-                    if ENABLE_FORWARD_USER_INFO_HEADERS and user
-                    else {}
-                ),
             },
             json=json_data,
         )
@@ -663,7 +647,6 @@ def generate_ollama_batch_embeddings(
     url: str,
     key: str = "",
     prefix: str = None,
-    user: UserModel = None,
 ) -> Optional[list[list[float]]]:
     try:
         log.debug(
@@ -678,16 +661,6 @@ def generate_ollama_batch_embeddings(
             headers={
                 "Content-Type": "application/json",
                 "Authorization": f"Bearer {key}",
-                **(
-                    {
-                        "X-OpenWebUI-User-Name": user.name,
-                        "X-OpenWebUI-User-Id": user.id,
-                        "X-OpenWebUI-User-Email": user.email,
-                        "X-OpenWebUI-User-Role": user.role,
-                    }
-                    if ENABLE_FORWARD_USER_INFO_HEADERS
-                    else {}
-                ),
             },
             json=json_data,
         )
@@ -712,7 +685,6 @@ def generate_embeddings(
 ):
     url = kwargs.get("url", "")
     key = kwargs.get("key", "")
-    user = kwargs.get("user")
 
     if prefix is not None and RAG_EMBEDDING_PREFIX_FIELD_NAME is None:
         if isinstance(text, list):
@@ -729,7 +701,6 @@ def generate_embeddings(
                     "url": url,
                     "key": key,
                     "prefix": prefix,
-                    "user": user,
                 }
             )
         else:
@@ -740,18 +711,17 @@ def generate_embeddings(
                     "url": url,
                     "key": key,
                     "prefix": prefix,
-                    "user": user,
                 }
             )
         return embeddings[0] if isinstance(text, str) else embeddings
     elif engine == "openai":
         if isinstance(text, list):
             embeddings = generate_openai_batch_embeddings(
-                model, text, url, key, prefix, user
+                model, text, url, key, prefix
             )
         else:
             embeddings = generate_openai_batch_embeddings(
-                model, [text], url, key, prefix, user
+                model, [text], url, key, prefix
             )
         return embeddings[0] if isinstance(text, str) else embeddings
 

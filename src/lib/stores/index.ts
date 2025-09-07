@@ -67,7 +67,6 @@ export const settings: Writable<Settings> = writable({});
 export const showSidebar = writable(false);
 export const showSettings = writable(false);
 export const showArchivedChats = writable(false);
-export const showChangelog = writable(false);
 
 export const showControls = writable(false);
 export const showOverview = writable(false);
@@ -209,8 +208,6 @@ type Config = {
 		enable_google_drive_integration: boolean;
 		enable_onedrive_integration: boolean;
 		enable_image_generation: boolean;
-		enable_admin_export: boolean;
-		enable_admin_chat_access: boolean;
 		enable_community_sharing: boolean;
 		enable_autocomplete_generation: boolean;
 	};

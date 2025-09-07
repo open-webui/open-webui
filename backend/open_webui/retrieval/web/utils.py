@@ -36,7 +36,7 @@ from open_webui.config import (
     TAVILY_API_KEY,
     TAVILY_EXTRACT_DEPTH,
 )
-from open_webui.env import SRC_LOG_LEVELS
+from open_webui.env import SRC_LOG_LEVELS, AIOHTTP_CLIENT_SESSION_SSL
 
 log = logging.getLogger(__name__)
 log.setLevel(SRC_LOG_LEVELS["RAG"])
@@ -501,6 +501,7 @@ class SafeWebBaseLoader(WebBaseLoader):
                 try:
                     kwargs: Dict = dict(
                         headers=self.session.headers,
+                        ssl=AIOHTTP_CLIENT_SESSION_SSL,
                         cookies=self.session.cookies.get_dict(),
                     )
                     if not self.session.verify:

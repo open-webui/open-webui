@@ -16,13 +16,13 @@ from open_webui.constants import ERROR_MESSAGES
 ####################################
 
 OPEN_WEBUI_DIR = Path(__file__).parent  # the path containing this file
-print(OPEN_WEBUI_DIR)
+print('OPEN_WEBUI_DIR', OPEN_WEBUI_DIR)
 
 BACKEND_DIR = OPEN_WEBUI_DIR.parent  # the path containing this file
 BASE_DIR = BACKEND_DIR.parent  # the path containing the backend/
 
-print(BACKEND_DIR)
-print(BASE_DIR)
+print('BACKEND_DIR', BACKEND_DIR)
+print('BASE_DIR', BASE_DIR)
 
 try:
     from dotenv import find_dotenv, load_dotenv
@@ -30,6 +30,8 @@ try:
     load_dotenv(find_dotenv(str(BASE_DIR / ".env")))
 except ImportError:
     print("dotenv not installed, skipping...")
+
+# print('os.environ', dict(os.environ))
 
 DOCKER = os.environ.get("DOCKER", "False").lower() == "true"
 
@@ -92,6 +94,7 @@ log_sources = [
     "WEBHOOK",
     "SOCKET",
     "OAUTH",
+    "WISP",
 ]
 
 SRC_LOG_LEVELS = {}
@@ -121,15 +124,7 @@ ENV = os.environ.get("ENV", "dev")
 
 FROM_INIT_PY = os.environ.get("FROM_INIT_PY", "False").lower() == "true"
 
-if FROM_INIT_PY:
-    PACKAGE_DATA = {"version": importlib.metadata.version("open-webui")}
-else:
-    try:
-        PACKAGE_DATA = json.loads((BASE_DIR / "package.json").read_text())
-    except Exception:
-        PACKAGE_DATA = {"version": "0.0.0"}
-
-VERSION = PACKAGE_DATA["version"]
+VERSION = '0.0.1'
 
 
 # Function to parse each section
@@ -151,59 +146,11 @@ def parse_section(section):
     return items
 
 
-try:
-    changelog_path = BASE_DIR / "CHANGELOG.md"
-    with open(str(changelog_path.absolute()), "r", encoding="utf8") as file:
-        changelog_content = file.read()
-
-except Exception:
-    changelog_content = (pkgutil.get_data("open_webui", "CHANGELOG.md") or b"").decode()
-
-# Convert markdown content to HTML
-html_content = markdown.markdown(changelog_content)
-
-# Parse the HTML content
-soup = BeautifulSoup(html_content, "html.parser")
-
-# Initialize JSON structure
-changelog_json = {}
-
-# Iterate over each version
-for version in soup.find_all("h2"):
-    version_number = version.get_text().strip().split(" - ")[0][1:-1]  # Remove brackets
-    date = version.get_text().strip().split(" - ")[1]
-
-    version_data = {"date": date}
-
-    # Find the next sibling that is a h3 tag (section title)
-    current = version.find_next_sibling()
-
-    while current and current.name != "h2":
-        if current.name == "h3":
-            section_title = current.get_text().lower()  # e.g., "added", "fixed"
-            section_items = parse_section(current.find_next_sibling("ul"))
-            version_data[section_title] = section_items
-
-        # Move to the next element
-        current = current.find_next_sibling()
-
-    changelog_json[version_number] = version_data
-
-CHANGELOG = changelog_json
-
 ####################################
 # SAFE_MODE
 ####################################
 
 SAFE_MODE = os.environ.get("SAFE_MODE", "false").lower() == "true"
-
-####################################
-# ENABLE_FORWARD_USER_INFO_HEADERS
-####################################
-
-ENABLE_FORWARD_USER_INFO_HEADERS = (
-    os.environ.get("ENABLE_FORWARD_USER_INFO_HEADERS", "False").lower() == "true"
-)
 
 ####################################
 # WEBUI_BUILD_HASH
@@ -310,21 +257,9 @@ else:
     except Exception:
         DATABASE_POOL_RECYCLE = 3600
 
-RESET_CONFIG_ON_START = (
-    os.environ.get("RESET_CONFIG_ON_START", "False").lower() == "true"
-)
-
 ENABLE_REALTIME_CHAT_SAVE = (
-    os.environ.get("ENABLE_REALTIME_CHAT_SAVE", "False").lower() == "true"
+        os.environ.get("ENABLE_REALTIME_CHAT_SAVE", "False").lower() == "true"
 )
-
-####################################
-# REDIS
-####################################
-
-REDIS_URL = os.environ.get("REDIS_URL", "")
-REDIS_SENTINEL_HOSTS = os.environ.get("REDIS_SENTINEL_HOSTS", "")
-REDIS_SENTINEL_PORT = os.environ.get("REDIS_SENTINEL_PORT", "26379")
 
 ####################################
 # UVICORN WORKERS
@@ -351,7 +286,7 @@ WEBUI_AUTH_TRUSTED_EMAIL_HEADER = os.environ.get(
 WEBUI_AUTH_TRUSTED_NAME_HEADER = os.environ.get("WEBUI_AUTH_TRUSTED_NAME_HEADER", None)
 
 BYPASS_MODEL_ACCESS_CONTROL = (
-    os.environ.get("BYPASS_MODEL_ACCESS_CONTROL", "False").lower() == "true"
+        os.environ.get("BYPASS_MODEL_ACCESS_CONTROL", "False").lower() == "true"
 )
 
 ####################################
@@ -368,7 +303,7 @@ WEBUI_SECRET_KEY = os.environ.get(
 WEBUI_SESSION_COOKIE_SAME_SITE = os.environ.get("WEBUI_SESSION_COOKIE_SAME_SITE", "lax")
 
 WEBUI_SESSION_COOKIE_SECURE = (
-    os.environ.get("WEBUI_SESSION_COOKIE_SECURE", "false").lower() == "true"
+        os.environ.get("WEBUI_SESSION_COOKIE_SECURE", "false").lower() == "true"
 )
 
 WEBUI_AUTH_COOKIE_SAME_SITE = os.environ.get(
@@ -376,23 +311,23 @@ WEBUI_AUTH_COOKIE_SAME_SITE = os.environ.get(
 )
 
 WEBUI_AUTH_COOKIE_SECURE = (
-    os.environ.get(
-        "WEBUI_AUTH_COOKIE_SECURE",
-        os.environ.get("WEBUI_SESSION_COOKIE_SECURE", "false"),
-    ).lower()
-    == "true"
+        os.environ.get(
+            "WEBUI_AUTH_COOKIE_SECURE",
+            os.environ.get("WEBUI_SESSION_COOKIE_SECURE", "false"),
+        ).lower()
+        == "true"
 )
 
 if WEBUI_AUTH and WEBUI_SECRET_KEY == "":
     raise ValueError(ERROR_MESSAGES.ENV_VAR_NOT_FOUND)
 
 ENABLE_WEBSOCKET_SUPPORT = (
-    os.environ.get("ENABLE_WEBSOCKET_SUPPORT", "True").lower() == "true"
+        os.environ.get("ENABLE_WEBSOCKET_SUPPORT", "True").lower() == "true"
 )
 
 WEBSOCKET_MANAGER = os.environ.get("WEBSOCKET_MANAGER", "")
 
-WEBSOCKET_REDIS_URL = os.environ.get("WEBSOCKET_REDIS_URL", REDIS_URL)
+WEBSOCKET_REDIS_URL = os.environ.get("WEBSOCKET_REDIS_URL", None)
 WEBSOCKET_REDIS_LOCK_TIMEOUT = os.environ.get("WEBSOCKET_REDIS_LOCK_TIMEOUT", 60)
 
 WEBSOCKET_SENTINEL_HOSTS = os.environ.get("WEBSOCKET_SENTINEL_HOSTS", "")
@@ -421,7 +356,6 @@ else:
         AIOHTTP_CLIENT_TIMEOUT_MODEL_LIST = int(AIOHTTP_CLIENT_TIMEOUT_MODEL_LIST)
     except Exception:
         AIOHTTP_CLIENT_TIMEOUT_MODEL_LIST = 10
-
 
 AIOHTTP_CLIENT_TIMEOUT_TOOL_SERVER_DATA = os.environ.get(
     "AIOHTTP_CLIENT_TIMEOUT_TOOL_SERVER_DATA", "10"
@@ -490,9 +424,10 @@ OTEL_TRACES_SAMPLER = os.environ.get(
 PIP_OPTIONS = os.getenv("PIP_OPTIONS", "").split()
 PIP_PACKAGE_INDEX_OPTIONS = os.getenv("PIP_PACKAGE_INDEX_OPTIONS", "").split()
 
-
 ####################################
 # PROGRESSIVE WEB APP OPTIONS
 ####################################
 
 EXTERNAL_PWA_MANIFEST_URL = os.environ.get("EXTERNAL_PWA_MANIFEST_URL")
+
+AIOHTTP_CLIENT_SESSION_SSL = False

@@ -5,14 +5,13 @@ import json
 import logging
 import mimetypes
 import re
-from pathlib import Path
 from typing import Optional
 
 import requests
 from fastapi import APIRouter, Depends, HTTPException, Request, UploadFile
 from open_webui.config import CACHE_DIR
 from open_webui.constants import ERROR_MESSAGES
-from open_webui.env import ENABLE_FORWARD_USER_INFO_HEADERS, SRC_LOG_LEVELS
+from open_webui.env import SRC_LOG_LEVELS
 from open_webui.routers.files import upload_file
 from open_webui.utils.auth import get_admin_user, get_verified_user
 from open_webui.utils.images.comfyui import (
@@ -468,7 +467,6 @@ def upload_image(request, image_metadata, image_data, content_type, user):
 async def image_generations(
     request: Request,
     form_data: GenerateImageForm,
-    user=Depends(get_verified_user),
 ):
     width, height = tuple(map(int, request.app.state.config.IMAGE_SIZE.split("x")))
 
@@ -480,12 +478,6 @@ async def image_generations(
                 f"Bearer {request.app.state.config.IMAGES_OPENAI_API_KEY}"
             )
             headers["Content-Type"] = "application/json"
-
-            if ENABLE_FORWARD_USER_INFO_HEADERS:
-                headers["X-OpenWebUI-User-Name"] = user.name
-                headers["X-OpenWebUI-User-Id"] = user.id
-                headers["X-OpenWebUI-User-Email"] = user.email
-                headers["X-OpenWebUI-User-Role"] = user.role
 
             data = {
                 "model": (

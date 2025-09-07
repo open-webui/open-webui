@@ -1,4 +1,5 @@
 import { OLLAMA_API_BASE_URL } from '$lib/constants';
+import { apiFetch } from '$lib/net/apiFetch';
 
 export const verifyOllamaConnection = async (
 	token: string = '',
@@ -7,7 +8,7 @@ export const verifyOllamaConnection = async (
 ) => {
 	let error = null;
 
-	const res = await fetch(`${OLLAMA_API_BASE_URL}/verify`, {
+	const res = await apiFetch(`${OLLAMA_API_BASE_URL}/verify`, {
 		method: 'POST',
 		headers: {
 			Accept: 'application/json',
@@ -38,7 +39,7 @@ export const verifyOllamaConnection = async (
 export const getOllamaConfig = async (token: string = '') => {
 	let error = null;
 
-	const res = await fetch(`${OLLAMA_API_BASE_URL}/config`, {
+	const res = await apiFetch(`${OLLAMA_API_BASE_URL}/config`, {
 		method: 'GET',
 		headers: {
 			Accept: 'application/json',
@@ -76,7 +77,7 @@ type OllamaConfig = {
 export const updateOllamaConfig = async (token: string = '', config: OllamaConfig) => {
 	let error = null;
 
-	const res = await fetch(`${OLLAMA_API_BASE_URL}/config/update`, {
+	const res = await apiFetch(`${OLLAMA_API_BASE_URL}/config/update`, {
 		method: 'POST',
 		headers: {
 			Accept: 'application/json',
@@ -111,7 +112,7 @@ export const updateOllamaConfig = async (token: string = '', config: OllamaConfi
 export const getOllamaUrls = async (token: string = '') => {
 	let error = null;
 
-	const res = await fetch(`${OLLAMA_API_BASE_URL}/urls`, {
+	const res = await apiFetch(`${OLLAMA_API_BASE_URL}/urls`, {
 		method: 'GET',
 		headers: {
 			Accept: 'application/json',
@@ -143,7 +144,7 @@ export const getOllamaUrls = async (token: string = '') => {
 export const updateOllamaUrls = async (token: string = '', urls: string[]) => {
 	let error = null;
 
-	const res = await fetch(`${OLLAMA_API_BASE_URL}/urls/update`, {
+	const res = await apiFetch(`${OLLAMA_API_BASE_URL}/urls/update`, {
 		method: 'POST',
 		headers: {
 			Accept: 'application/json',
@@ -178,7 +179,7 @@ export const updateOllamaUrls = async (token: string = '', urls: string[]) => {
 export const getOllamaVersion = async (token: string, urlIdx?: number) => {
 	let error = null;
 
-	const res = await fetch(`${OLLAMA_API_BASE_URL}/api/version${urlIdx ? `/${urlIdx}` : ''}`, {
+	const res = await apiFetch(`${OLLAMA_API_BASE_URL}/api/version${urlIdx ? `/${urlIdx}` : ''}`, {
 		method: 'GET',
 		headers: {
 			Accept: 'application/json',
@@ -210,7 +211,7 @@ export const getOllamaVersion = async (token: string, urlIdx?: number) => {
 export const getOllamaModels = async (token: string = '', urlIdx: null | number = null) => {
 	let error = null;
 
-	const res = await fetch(`${OLLAMA_API_BASE_URL}/api/tags${urlIdx !== null ? `/${urlIdx}` : ''}`, {
+	const res = await apiFetch(`${OLLAMA_API_BASE_URL}/api/tags${urlIdx !== null ? `/${urlIdx}` : ''}`, {
 		method: 'GET',
 		headers: {
 			Accept: 'application/json',
@@ -250,7 +251,7 @@ export const generatePrompt = async (token: string = '', model: string, conversa
 		conversation = '[no existing conversation]';
 	}
 
-	const res = await fetch(`${OLLAMA_API_BASE_URL}/api/generate`, {
+	const res = await apiFetch(`${OLLAMA_API_BASE_URL}/api/generate`, {
 		method: 'POST',
 		headers: {
 			Accept: 'application/json',
@@ -285,7 +286,7 @@ export const generatePrompt = async (token: string = '', model: string, conversa
 export const generateEmbeddings = async (token: string = '', model: string, text: string) => {
 	let error = null;
 
-	const res = await fetch(`${OLLAMA_API_BASE_URL}/api/embeddings`, {
+	const res = await apiFetch(`${OLLAMA_API_BASE_URL}/api/embeddings`, {
 		method: 'POST',
 		headers: {
 			Accept: 'application/json',
@@ -311,7 +312,7 @@ export const generateEmbeddings = async (token: string = '', model: string, text
 export const generateTextCompletion = async (token: string = '', model: string, text: string) => {
 	let error = null;
 
-	const res = await fetch(`${OLLAMA_API_BASE_URL}/api/generate`, {
+	const res = await apiFetch(`${OLLAMA_API_BASE_URL}/api/generate`, {
 		method: 'POST',
 		headers: {
 			Accept: 'application/json',
@@ -339,7 +340,7 @@ export const generateChatCompletion = async (token: string = '', body: object) =
 	let controller = new AbortController();
 	let error = null;
 
-	const res = await fetch(`${OLLAMA_API_BASE_URL}/api/chat`, {
+	const res = await apiFetch(`${OLLAMA_API_BASE_URL}/api/chat`, {
 		signal: controller.signal,
 		method: 'POST',
 		headers: {
@@ -363,7 +364,7 @@ export const generateChatCompletion = async (token: string = '', body: object) =
 export const createModel = async (token: string, payload: object, urlIdx: string | null = null) => {
 	let error = null;
 
-	const res = await fetch(
+	const res = await apiFetch(
 		`${OLLAMA_API_BASE_URL}/api/create${urlIdx !== null ? `/${urlIdx}` : ''}`,
 		{
 			method: 'POST',
@@ -389,7 +390,7 @@ export const createModel = async (token: string, payload: object, urlIdx: string
 export const deleteModel = async (token: string, tagName: string, urlIdx: string | null = null) => {
 	let error = null;
 
-	const res = await fetch(
+	const res = await apiFetch(
 		`${OLLAMA_API_BASE_URL}/api/delete${urlIdx !== null ? `/${urlIdx}` : ''}`,
 		{
 			method: 'DELETE',
@@ -433,7 +434,7 @@ export const pullModel = async (token: string, tagName: string, urlIdx: number |
 	let error = null;
 	const controller = new AbortController();
 
-	const res = await fetch(`${OLLAMA_API_BASE_URL}/api/pull${urlIdx !== null ? `/${urlIdx}` : ''}`, {
+	const res = await apiFetch(`${OLLAMA_API_BASE_URL}/api/pull${urlIdx !== null ? `/${urlIdx}` : ''}`, {
 		signal: controller.signal,
 		method: 'POST',
 		headers: {
@@ -467,7 +468,7 @@ export const downloadModel = async (
 ) => {
 	let error = null;
 
-	const res = await fetch(
+	const res = await apiFetch(
 		`${OLLAMA_API_BASE_URL}/models/download${urlIdx !== null ? `/${urlIdx}` : ''}`,
 		{
 			method: 'POST',
@@ -502,7 +503,7 @@ export const uploadModel = async (token: string, file: File, urlIdx: string | nu
 	const formData = new FormData();
 	formData.append('file', file);
 
-	const res = await fetch(
+	const res = await apiFetch(
 		`${OLLAMA_API_BASE_URL}/models/upload${urlIdx !== null ? `/${urlIdx}` : ''}`,
 		{
 			method: 'POST',
@@ -528,7 +529,7 @@ export const uploadModel = async (token: string, file: File, urlIdx: string | nu
 };
 
 // export const pullModel = async (token: string, tagName: string) => {
-// 	return await fetch(`${OLLAMA_API_BASE_URL}/pull`, {
+// 	return await apiFetch(`${OLLAMA_API_BASE_URL}/pull`, {
 // 		method: 'POST',
 // 		headers: {
 // 			'Content-Type': 'text/event-stream',

@@ -408,30 +408,30 @@
 								</button>
 							{/if}
 
-							{#if items.find((item) => item.model?.owned_by === 'ollama') && items.find((item) => item.model?.owned_by === 'openai')}
-								<button
-									class="min-w-fit outline-none p-1.5 {selectedConnectionType === 'ollama'
-										? ''
-										: 'text-gray-300 dark:text-gray-600 hover:text-gray-700 dark:hover:text-white'} transition capitalize"
-									on:click={() => {
-										selectedTag = '';
-										selectedConnectionType = 'ollama';
-									}}
-								>
-									{$i18n.t('Local')}
-								</button>
-								<button
-									class="min-w-fit outline-none p-1.5 {selectedConnectionType === 'openai'
-										? ''
-										: 'text-gray-300 dark:text-gray-600 hover:text-gray-700 dark:hover:text-white'} transition capitalize"
-									on:click={() => {
-										selectedTag = '';
-										selectedConnectionType = 'openai';
-									}}
-								>
-									{$i18n.t('External')}
-								</button>
-							{/if}
+							<!--{#if items.find((item) => item.model?.owned_by === 'ollama') && items.find((item) => item.model?.owned_by === 'openai')}-->
+							<!--	<button-->
+							<!--		class="min-w-fit outline-none p-1.5 {selectedConnectionType === 'ollama'-->
+							<!--			? ''-->
+							<!--			: 'text-gray-300 dark:text-gray-600 hover:text-gray-700 dark:hover:text-white'} transition capitalize"-->
+							<!--		on:click={() => {-->
+							<!--			selectedTag = '';-->
+							<!--			selectedConnectionType = 'ollama';-->
+							<!--		}}-->
+							<!--	>-->
+							<!--		{$i18n.t('Local')}-->
+							<!--	</button>-->
+							<!--	<button-->
+							<!--		class="min-w-fit outline-none p-1.5 {selectedConnectionType === 'openai'-->
+							<!--			? ''-->
+							<!--			: 'text-gray-300 dark:text-gray-600 hover:text-gray-700 dark:hover:text-white'} transition capitalize"-->
+							<!--		on:click={() => {-->
+							<!--			selectedTag = '';-->
+							<!--			selectedConnectionType = 'openai';-->
+							<!--		}}-->
+							<!--	>-->
+							<!--		{$i18n.t('External')}-->
+							<!--	</button>-->
+							<!--{/if}-->
 
 							{#if items.find((item) => item.model?.direct)}
 								<button
@@ -641,25 +641,25 @@
 					</div>
 				{/each}
 
-				{#if !(searchValue.trim() in $MODEL_DOWNLOAD_POOL) && searchValue && ollamaVersion && $user?.role === 'admin'}
-					<Tooltip
-						content={$i18n.t(`Pull "{{searchValue}}" from Ollama.com`, {
-							searchValue: searchValue
-						})}
-						placement="top-start"
-					>
-						<button
-							class="flex w-full font-medium line-clamp-1 select-none items-center rounded-button py-2 pl-3 pr-1.5 text-sm text-gray-700 dark:text-gray-100 outline-hidden transition-all duration-75 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg cursor-pointer data-highlighted:bg-muted"
-							on:click={() => {
-								pullModelHandler();
-							}}
-						>
-							<div class=" truncate">
-								{$i18n.t(`Pull "{{searchValue}}" from Ollama.com`, { searchValue: searchValue })}
-							</div>
-						</button>
-					</Tooltip>
-				{/if}
+				<!--{#if !(searchValue.trim() in $MODEL_DOWNLOAD_POOL) && searchValue && ollamaVersion && $user?.role === 'admin'}-->
+				<!--	<Tooltip-->
+				<!--		content={$i18n.t(`Pull "{{searchValue}}" from Ollama.com`, {-->
+				<!--			searchValue: searchValue-->
+				<!--		})}-->
+				<!--		placement="top-start"-->
+				<!--	>-->
+				<!--		<button-->
+				<!--			class="flex w-full font-medium line-clamp-1 select-none items-center rounded-button py-2 pl-3 pr-1.5 text-sm text-gray-700 dark:text-gray-100 outline-hidden transition-all duration-75 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg cursor-pointer data-highlighted:bg-muted"-->
+				<!--			on:click={() => {-->
+				<!--				pullModelHandler();-->
+				<!--			}}-->
+				<!--		>-->
+				<!--			<div class=" truncate">-->
+				<!--				{$i18n.t(`Pull "{{searchValue}}" from Ollama.com`, { searchValue: searchValue })}-->
+				<!--			</div>-->
+				<!--		</button>-->
+				<!--	</Tooltip>-->
+				<!--{/if}-->
 
 				{#each Object.keys($MODEL_DOWNLOAD_POOL) as model}
 					<div
@@ -745,43 +745,43 @@
 				{/each}
 			</div>
 
-			{#if showTemporaryChatControl}
-				<div class="flex items-center mx-2 mb-2">
-					<button
-						class="flex justify-between w-full font-medium line-clamp-1 select-none items-center rounded-button py-2 px-3 text-sm text-gray-700 dark:text-gray-100 outline-hidden transition-all duration-75 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg cursor-pointer data-highlighted:bg-muted"
-						on:click={async () => {
-							temporaryChatEnabled.set(!$temporaryChatEnabled);
-							await goto('/');
-							const newChatButton = document.getElementById('new-chat-button');
-							setTimeout(() => {
-								newChatButton?.click();
-							}, 0);
+			<!--{#if showTemporaryChatControl}-->
+			<!--	<div class="flex items-center mx-2 mb-2">-->
+			<!--		<button-->
+			<!--			class="flex justify-between w-full font-medium line-clamp-1 select-none items-center rounded-button py-2 px-3 text-sm text-gray-700 dark:text-gray-100 outline-hidden transition-all duration-75 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg cursor-pointer data-highlighted:bg-muted"-->
+			<!--			on:click={async () => {-->
+			<!--				temporaryChatEnabled.set(!$temporaryChatEnabled);-->
+			<!--				await goto('/');-->
+			<!--				const newChatButton = document.getElementById('new-chat-button');-->
+			<!--				setTimeout(() => {-->
+			<!--					newChatButton?.click();-->
+			<!--				}, 0);-->
 
-							// add 'temporary-chat=true' to the URL
-							if ($temporaryChatEnabled) {
-								history.replaceState(null, '', '?temporary-chat=true');
-							} else {
-								history.replaceState(null, '', location.pathname);
-							}
+			<!--				// add 'temporary-chat=true' to the URL-->
+			<!--				if ($temporaryChatEnabled) {-->
+			<!--					history.replaceState(null, '', '?temporary-chat=true');-->
+			<!--				} else {-->
+			<!--					history.replaceState(null, '', location.pathname);-->
+			<!--				}-->
 
-							show = false;
-						}}
-					>
-						<div class="flex gap-2.5 items-center">
-							<ChatBubbleOval className="size-4" strokeWidth="2.5" />
+			<!--				show = false;-->
+			<!--			}}-->
+			<!--		>-->
+			<!--			<div class="flex gap-2.5 items-center">-->
+			<!--				<ChatBubbleOval className="size-4" strokeWidth="2.5" />-->
 
-							{$i18n.t(`Temporary Chat`)}
-						</div>
+			<!--				{$i18n.t(`Temporary Chat`)}-->
+			<!--			</div>-->
 
-						<div>
-							<Switch state={$temporaryChatEnabled} />
-						</div>
-					</button>
-				</div>
-			{:else if filteredItems.length === 0}
-				<div class="mb-3"></div>
-			{/if}
-
+			<!--			<div>-->
+			<!--				<Switch state={$temporaryChatEnabled} />-->
+			<!--			</div>-->
+			<!--		</button>-->
+			<!--	</div>-->
+			<!--{:else if filteredItems.length === 0}-->
+			<!--	<div class="mb-3"></div>-->
+			<!--{/if}-->
+			<div class="mb-3"></div>
 			<div class="hidden w-[42rem]" />
 			<div class="hidden w-[32rem]" />
 		</slot>

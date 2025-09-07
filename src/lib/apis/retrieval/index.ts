@@ -1,9 +1,10 @@
 import { RETRIEVAL_API_BASE_URL } from '$lib/constants';
+import { apiFetch } from '$lib/net/apiFetch';
 
 export const getRAGConfig = async (token: string) => {
 	let error = null;
 
-	const res = await fetch(`${RETRIEVAL_API_BASE_URL}/config`, {
+	const res = await apiFetch(`${RETRIEVAL_API_BASE_URL}/config`, {
 		method: 'GET',
 		headers: {
 			'Content-Type': 'application/json',
@@ -62,7 +63,7 @@ type RAGConfigForm = {
 export const updateRAGConfig = async (token: string, payload: RAGConfigForm) => {
 	let error = null;
 
-	const res = await fetch(`${RETRIEVAL_API_BASE_URL}/config/update`, {
+	const res = await apiFetch(`${RETRIEVAL_API_BASE_URL}/config/update`, {
 		method: 'POST',
 		headers: {
 			'Content-Type': 'application/json',
@@ -92,7 +93,7 @@ export const updateRAGConfig = async (token: string, payload: RAGConfigForm) => 
 export const getQuerySettings = async (token: string) => {
 	let error = null;
 
-	const res = await fetch(`${RETRIEVAL_API_BASE_URL}/query/settings`, {
+	const res = await apiFetch(`${RETRIEVAL_API_BASE_URL}/query/settings`, {
 		method: 'GET',
 		headers: {
 			'Content-Type': 'application/json',
@@ -125,7 +126,7 @@ type QuerySettings = {
 export const updateQuerySettings = async (token: string, settings: QuerySettings) => {
 	let error = null;
 
-	const res = await fetch(`${RETRIEVAL_API_BASE_URL}/query/settings/update`, {
+	const res = await apiFetch(`${RETRIEVAL_API_BASE_URL}/query/settings/update`, {
 		method: 'POST',
 		headers: {
 			'Content-Type': 'application/json',
@@ -155,7 +156,7 @@ export const updateQuerySettings = async (token: string, settings: QuerySettings
 export const getEmbeddingConfig = async (token: string) => {
 	let error = null;
 
-	const res = await fetch(`${RETRIEVAL_API_BASE_URL}/embedding`, {
+	const res = await apiFetch(`${RETRIEVAL_API_BASE_URL}/embedding`, {
 		method: 'GET',
 		headers: {
 			'Content-Type': 'application/json',
@@ -194,7 +195,7 @@ type EmbeddingModelUpdateForm = {
 export const updateEmbeddingConfig = async (token: string, payload: EmbeddingModelUpdateForm) => {
 	let error = null;
 
-	const res = await fetch(`${RETRIEVAL_API_BASE_URL}/embedding/update`, {
+	const res = await apiFetch(`${RETRIEVAL_API_BASE_URL}/embedding/update`, {
 		method: 'POST',
 		headers: {
 			'Content-Type': 'application/json',
@@ -224,7 +225,7 @@ export const updateEmbeddingConfig = async (token: string, payload: EmbeddingMod
 export const getRerankingConfig = async (token: string) => {
 	let error = null;
 
-	const res = await fetch(`${RETRIEVAL_API_BASE_URL}/reranking`, {
+	const res = await apiFetch(`${RETRIEVAL_API_BASE_URL}/reranking`, {
 		method: 'GET',
 		headers: {
 			'Content-Type': 'application/json',
@@ -255,7 +256,7 @@ type RerankingModelUpdateForm = {
 export const updateRerankingConfig = async (token: string, payload: RerankingModelUpdateForm) => {
 	let error = null;
 
-	const res = await fetch(`${RETRIEVAL_API_BASE_URL}/reranking/update`, {
+	const res = await apiFetch(`${RETRIEVAL_API_BASE_URL}/reranking/update`, {
 		method: 'POST',
 		headers: {
 			'Content-Type': 'application/json',
@@ -295,7 +296,7 @@ export const processFile = async (
 ) => {
 	let error = null;
 
-	const res = await fetch(`${RETRIEVAL_API_BASE_URL}/process/file`, {
+	const res = await apiFetch(`${RETRIEVAL_API_BASE_URL}/process/file`, {
 		method: 'POST',
 		headers: {
 			Accept: 'application/json',
@@ -327,7 +328,7 @@ export const processFile = async (
 export const processYoutubeVideo = async (token: string, url: string) => {
 	let error = null;
 
-	const res = await fetch(`${RETRIEVAL_API_BASE_URL}/process/youtube`, {
+	const res = await apiFetch(`${RETRIEVAL_API_BASE_URL}/process/youtube`, {
 		method: 'POST',
 		headers: {
 			Accept: 'application/json',
@@ -358,7 +359,7 @@ export const processYoutubeVideo = async (token: string, url: string) => {
 export const processWeb = async (token: string, collection_name: string, url: string) => {
 	let error = null;
 
-	const res = await fetch(`${RETRIEVAL_API_BASE_URL}/process/web`, {
+	const res = await apiFetch(`${RETRIEVAL_API_BASE_URL}/process/web`, {
 		method: 'POST',
 		headers: {
 			Accept: 'application/json',
@@ -394,7 +395,7 @@ export const processWebSearch = async (
 ): Promise<SearchDocument | null> => {
 	let error = null;
 
-	const res = await fetch(`${RETRIEVAL_API_BASE_URL}/process/web/search`, {
+	const res = await apiFetch(`${RETRIEVAL_API_BASE_URL}/process/web/search`, {
 		method: 'POST',
 		headers: {
 			'Content-Type': 'application/json',
@@ -430,7 +431,7 @@ export const queryDoc = async (
 ) => {
 	let error = null;
 
-	const res = await fetch(`${RETRIEVAL_API_BASE_URL}/query/doc`, {
+	const res = await apiFetch(`${RETRIEVAL_API_BASE_URL}/query/doc`, {
 		method: 'POST',
 		headers: {
 			Accept: 'application/json',
@@ -467,7 +468,7 @@ export const queryCollection = async (
 ) => {
 	let error = null;
 
-	const res = await fetch(`${RETRIEVAL_API_BASE_URL}/query/collection`, {
+	const res = await apiFetch(`${RETRIEVAL_API_BASE_URL}/query/collection`, {
 		method: 'POST',
 		headers: {
 			Accept: 'application/json',
@@ -499,7 +500,7 @@ export const queryCollection = async (
 export const resetUploadDir = async (token: string) => {
 	let error = null;
 
-	const res = await fetch(`${RETRIEVAL_API_BASE_URL}/reset/uploads`, {
+	const res = await apiFetch(`${RETRIEVAL_API_BASE_URL}/reset/uploads`, {
 		method: 'POST',
 		headers: {
 			Accept: 'application/json',
@@ -525,7 +526,7 @@ export const resetUploadDir = async (token: string) => {
 export const resetVectorDB = async (token: string) => {
 	let error = null;
 
-	const res = await fetch(`${RETRIEVAL_API_BASE_URL}/reset/db`, {
+	const res = await apiFetch(`${RETRIEVAL_API_BASE_URL}/reset/db`, {
 		method: 'POST',
 		headers: {
 			Accept: 'application/json',

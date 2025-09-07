@@ -38,10 +38,9 @@ from open_webui.config import (
 from open_webui.constants import ERROR_MESSAGES
 from open_webui.env import (
     AIOHTTP_CLIENT_TIMEOUT,
-    ENV,
     SRC_LOG_LEVELS,
     DEVICE_TYPE,
-    ENABLE_FORWARD_USER_INFO_HEADERS,
+    AIOHTTP_CLIENT_SESSION_SSL,
 )
 
 
@@ -258,7 +257,7 @@ def load_speech_pipeline(request):
 
 
 @router.post("/speech")
-async def speech(request: Request, user=Depends(get_verified_user)):
+async def speech(request: Request):
     body = await request.body()
     name = hashlib.sha256(
         body
@@ -294,17 +293,8 @@ async def speech(request: Request, user=Depends(get_verified_user)):
                     headers={
                         "Content-Type": "application/json",
                         "Authorization": f"Bearer {request.app.state.config.TTS_OPENAI_API_KEY}",
-                        **(
-                            {
-                                "X-OpenWebUI-User-Name": user.name,
-                                "X-OpenWebUI-User-Id": user.id,
-                                "X-OpenWebUI-User-Email": user.email,
-                                "X-OpenWebUI-User-Role": user.role,
-                            }
-                            if ENABLE_FORWARD_USER_INFO_HEADERS
-                            else {}
-                        ),
                     },
+                    ssl=AIOHTTP_CLIENT_SESSION_SSL,
                 ) as r:
                     r.raise_for_status()
 
@@ -360,6 +350,7 @@ async def speech(request: Request, user=Depends(get_verified_user)):
                         "Content-Type": "application/json",
                         "xi-api-key": request.app.state.config.TTS_API_KEY,
                     },
+                    ssl=AIOHTTP_CLIENT_SESSION_SSL,
                 ) as r:
                     r.raise_for_status()
 
@@ -415,6 +406,7 @@ async def speech(request: Request, user=Depends(get_verified_user)):
                         "Content-Type": "application/ssml+xml",
                         "X-Microsoft-OutputFormat": output_format,
                     },
+                    ssl=AIOHTTP_CLIENT_SESSION_SSL,
                     data=data,
                 ) as r:
                     r.raise_for_status()

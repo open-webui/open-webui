@@ -9,7 +9,6 @@
 		createNewChat,
 		deleteAllChats,
 		getAllChats,
-		getAllUserChats,
 		getChatList
 	} from '$lib/apis/chats';
 	import { getImportOrigin, convertOpenAIChats } from '$lib/utils';

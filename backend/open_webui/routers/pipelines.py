@@ -18,7 +18,7 @@ from pydantic import BaseModel
 from starlette.responses import FileResponse
 from typing import Optional
 
-from open_webui.env import SRC_LOG_LEVELS
+from open_webui.env import SRC_LOG_LEVELS, AIOHTTP_CLIENT_SESSION_SSL
 from open_webui.config import CACHE_DIR
 from open_webui.constants import ERROR_MESSAGES
 
@@ -89,6 +89,7 @@ async def process_pipeline_inlet_filter(request, payload, user, models):
                     f"{url}/{filter['id']}/filter/inlet",
                     headers=headers,
                     json=request_data,
+                    ssl=AIOHTTP_CLIENT_SESSION_SSL
                 ) as response:
                     payload = await response.json()
                     response.raise_for_status()
@@ -138,6 +139,7 @@ async def process_pipeline_outlet_filter(request, payload, user, models):
                     f"{url}/{filter['id']}/filter/outlet",
                     headers=headers,
                     json=request_data,
+                    ssl=AIOHTTP_CLIENT_SESSION_SSL
                 ) as response:
                     payload = await response.json()
                     response.raise_for_status()
@@ -168,8 +170,8 @@ router = APIRouter()
 
 
 @router.get("/list")
-async def get_pipelines_list(request: Request, user=Depends(get_admin_user)):
-    responses = await get_all_models_responses(request, user)
+async def get_pipelines_list(request: Request):
+    responses = await get_all_models_responses(request)
     log.debug(f"get_pipelines_list: get_openai_models_responses returned {responses}")
 
     urlIdxs = [

@@ -1,9 +1,10 @@
 import { AUDIO_API_BASE_URL } from '$lib/constants';
+import { apiFetch } from '$lib/net/apiFetch';
 
 export const getAudioConfig = async (token: string) => {
 	let error = null;
 
-	const res = await fetch(`${AUDIO_API_BASE_URL}/config`, {
+	const res = await apiFetch(`${AUDIO_API_BASE_URL}/config`, {
 		method: 'GET',
 		headers: {
 			'Content-Type': 'application/json',
@@ -37,7 +38,7 @@ type OpenAIConfigForm = {
 export const updateAudioConfig = async (token: string, payload: OpenAIConfigForm) => {
 	let error = null;
 
-	const res = await fetch(`${AUDIO_API_BASE_URL}/config/update`, {
+	const res = await apiFetch(`${AUDIO_API_BASE_URL}/config/update`, {
 		method: 'POST',
 		headers: {
 			'Content-Type': 'application/json',
@@ -69,7 +70,7 @@ export const transcribeAudio = async (token: string, file: File) => {
 	data.append('file', file);
 
 	let error = null;
-	const res = await fetch(`${AUDIO_API_BASE_URL}/transcriptions`, {
+	const res = await apiFetch(`${AUDIO_API_BASE_URL}/transcriptions`, {
 		method: 'POST',
 		headers: {
 			Accept: 'application/json',
@@ -102,7 +103,7 @@ export const synthesizeOpenAISpeech = async (
 ) => {
 	let error = null;
 
-	const res = await fetch(`${AUDIO_API_BASE_URL}/speech`, {
+	const res = await apiFetch(`${AUDIO_API_BASE_URL}/speech`, {
 		method: 'POST',
 		headers: {
 			Authorization: `Bearer ${token}`,
@@ -139,7 +140,7 @@ interface AvailableModelsResponse {
 export const getModels = async (token: string = ''): Promise<AvailableModelsResponse> => {
 	let error = null;
 
-	const res = await fetch(`${AUDIO_API_BASE_URL}/models`, {
+	const res = await apiFetch(`${AUDIO_API_BASE_URL}/models`, {
 		method: 'GET',
 		headers: {
 			'Content-Type': 'application/json',
@@ -167,7 +168,7 @@ export const getModels = async (token: string = ''): Promise<AvailableModelsResp
 export const getVoices = async (token: string = '') => {
 	let error = null;
 
-	const res = await fetch(`${AUDIO_API_BASE_URL}/voices`, {
+	const res = await apiFetch(`${AUDIO_API_BASE_URL}/voices`, {
 		method: 'GET',
 		headers: {
 			'Content-Type': 'application/json',

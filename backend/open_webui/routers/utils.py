@@ -3,19 +3,17 @@ import logging
 import markdown
 
 from open_webui.models.chats import ChatTitleMessagesForm
-from open_webui.config import DATA_DIR, ENABLE_ADMIN_EXPORT
+from open_webui.config import DATA_DIR
 from open_webui.constants import ERROR_MESSAGES
 from fastapi import APIRouter, Depends, HTTPException, Request, Response, status
 from pydantic import BaseModel
 from starlette.responses import FileResponse
-
 
 from open_webui.utils.misc import get_gravatar_url
 from open_webui.utils.pdf_generator import PDFGenerator
 from open_webui.utils.auth import get_admin_user, get_verified_user
 from open_webui.utils.code_interpreter import execute_code_jupyter
 from open_webui.env import SRC_LOG_LEVELS
-
 
 log = logging.getLogger(__name__)
 log.setLevel(SRC_LOG_LEVELS["MAIN"])
@@ -45,7 +43,7 @@ async def format_code(form_data: CodeForm, user=Depends(get_verified_user)):
 
 @router.post("/code/execute")
 async def execute_code(
-    request: Request, form_data: CodeForm, user=Depends(get_verified_user)
+        request: Request, form_data: CodeForm, user=Depends(get_verified_user)
 ):
     if request.app.state.config.CODE_EXECUTION_ENGINE == "jupyter":
         output = await execute_code_jupyter(
@@ -78,7 +76,7 @@ class MarkdownForm(BaseModel):
 
 @router.post("/markdown")
 async def get_html_from_markdown(
-    form_data: MarkdownForm, user=Depends(get_verified_user)
+        form_data: MarkdownForm, user=Depends(get_verified_user)
 ):
     return {"html": markdown.markdown(form_data.md)}
 
@@ -90,7 +88,7 @@ class ChatForm(BaseModel):
 
 @router.post("/pdf")
 async def download_chat_as_pdf(
-    form_data: ChatTitleMessagesForm, user=Depends(get_verified_user)
+        form_data: ChatTitleMessagesForm, user=Depends(get_verified_user)
 ):
     try:
         pdf_bytes = PDFGenerator(form_data).generate_chat_pdf()
@@ -103,27 +101,6 @@ async def download_chat_as_pdf(
     except Exception as e:
         log.exception(f"Error generating PDF: {e}")
         raise HTTPException(status_code=400, detail=str(e))
-
-
-@router.get("/db/download")
-async def download_db(user=Depends(get_admin_user)):
-    if not ENABLE_ADMIN_EXPORT:
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail=ERROR_MESSAGES.ACCESS_PROHIBITED,
-        )
-    from open_webui.internal.db import engine
-
-    if engine.name != "sqlite":
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail=ERROR_MESSAGES.DB_NOT_SQLITE,
-        )
-    return FileResponse(
-        engine.url.database,
-        media_type="application/octet-stream",
-        filename="webui.db",
-    )
 
 
 @router.get("/litellm/config")

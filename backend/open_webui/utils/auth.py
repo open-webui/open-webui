@@ -4,17 +4,13 @@ import jwt
 import base64
 import hmac
 import hashlib
-import requests
 import os
 
-
 from datetime import datetime, timedelta
-import pytz
 from pytz import UTC
-from typing import Optional, Union, List, Dict
+from typing import Optional, Union
 
 from open_webui.models.users import Users
-
 from open_webui.constants import ERROR_MESSAGES
 from open_webui.env import (
     WEBUI_SECRET_KEY,
@@ -23,10 +19,9 @@ from open_webui.env import (
     SRC_LOG_LEVELS,
 )
 
-from fastapi import BackgroundTasks, Depends, HTTPException, Request, Response, status
+from fastapi import BackgroundTasks, Depends, HTTPException, Request, status
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from passlib.context import CryptContext
-
 
 logging.getLogger("passlib").setLevel(logging.ERROR)
 
@@ -35,6 +30,7 @@ log.setLevel(SRC_LOG_LEVELS["OAUTH"])
 
 SESSION_SECRET = WEBUI_SECRET_KEY
 ALGORITHM = "HS256"
+
 
 ##############
 # Auth Utils
@@ -68,37 +64,6 @@ def override_static(path: str, content: str):
 
     with open(file_path, "wb") as f:
         f.write(base64.b64decode(content))  # Convert Base64 back to raw binary
-
-
-def get_license_data(app, key):
-    if key:
-        try:
-            res = requests.post(
-                "https://api.openwebui.com/api/v1/license/",
-                json={"key": key, "version": "1"},
-                timeout=5,
-            )
-
-            if getattr(res, "ok", False):
-                payload = getattr(res, "json", lambda: {})()
-                for k, v in payload.items():
-                    if k == "resources":
-                        for p, c in v.items():
-                            globals().get("override_static", lambda a, b: None)(p, c)
-                    elif k == "count":
-                        setattr(app.state, "USER_COUNT", v)
-                    elif k == "name":
-                        setattr(app.state, "WEBUI_NAME", v)
-                    elif k == "metadata":
-                        setattr(app.state, "LICENSE_METADATA", v)
-                return True
-            else:
-                log.error(
-                    f"License: retrieval issue: {getattr(res, 'text', 'unknown error')}"
-                )
-        except Exception as ex:
-            log.exception(f"License: Uncaught Exception: {ex}")
-    return False
 
 
 bearer_security = HTTPBearer(auto_error=False)
@@ -135,7 +100,7 @@ def decode_token(token: str) -> Optional[dict]:
 
 
 def extract_token_from_auth_header(auth_header: str):
-    return auth_header[len("Bearer ") :]
+    return auth_header[len("Bearer "):]
 
 
 def create_api_key():
@@ -154,9 +119,9 @@ def get_http_authorization_cred(auth_header: Optional[str]):
 
 
 def get_current_user(
-    request: Request,
-    background_tasks: BackgroundTasks,
-    auth_token: HTTPAuthorizationCredentials = Depends(bearer_security),
+        request: Request,
+        background_tasks: BackgroundTasks,
+        auth_token: HTTPAuthorizationCredentials = Depends(bearer_security),
 ):
     token = None
 
@@ -186,9 +151,9 @@ def get_current_user(
 
             # Check if the request path matches any allowed endpoint.
             if not any(
-                request.url.path == allowed
-                or request.url.path.startswith(allowed + "/")
-                for allowed in allowed_paths
+                    request.url.path == allowed
+                    or request.url.path.startswith(allowed + "/")
+                    for allowed in allowed_paths
             ):
                 raise HTTPException(
                     status.HTTP_403_FORBIDDEN, detail=ERROR_MESSAGES.API_KEY_NOT_ALLOWED

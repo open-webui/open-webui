@@ -152,63 +152,39 @@
 						</button>
 					</Tooltip>
 
-					{#if $user !== undefined && $user !== null}
-						<UserMenu
-							className="max-w-[200px]"
-							role={$user?.role}
-							on:show={(e) => {
-								if (e.detail === 'archived-chat') {
-									showArchivedChats.set(true);
-								}
-							}}
-						>
-							<button
-								class="select-none flex rounded-xl p-1.5 w-full hover:bg-gray-50 dark:hover:bg-gray-850 transition"
-								aria-label="User Menu"
-							>
-								<div class=" self-center">
-									<img
-										src={$user?.profile_image_url}
-										class="size-6 object-cover rounded-full"
-										alt="User profile"
-										draggable="false"
-									/>
-								</div>
-							</button>
-						</UserMenu>
-					{/if}
+					<!--{#if $user !== undefined && $user !== null}-->
+					<!--	<UserMenu-->
+					<!--		className="max-w-[200px]"-->
+					<!--		role={$user?.role}-->
+					<!--		on:show={(e) => {-->
+					<!--			if (e.detail === 'archived-chat') {-->
+					<!--				showArchivedChats.set(true);-->
+					<!--			}-->
+					<!--		}}-->
+					<!--	>-->
+					<!--		<button-->
+					<!--			class="select-none flex rounded-xl p-1.5 w-full hover:bg-gray-50 dark:hover:bg-gray-850 transition"-->
+					<!--			aria-label="User Menu"-->
+					<!--		>-->
+					<!--			<div class=" self-center">-->
+					<!--				<img-->
+					<!--					src={$user?.profile_image_url}-->
+					<!--					class="size-6 object-cover rounded-full"-->
+					<!--					alt="User profile"-->
+					<!--					draggable="false"-->
+					<!--				/>-->
+					<!--			</div>-->
+					<!--		</button>-->
+					<!--	</UserMenu>-->
+					<!--{/if}-->
 				</div>
 			</div>
 		</div>
 	</div>
 
-	{#if !history.currentId && !$chatId && ($banners.length > 0 || ($config?.license_metadata?.type ?? null) === 'trial' || (($config?.license_metadata?.seats ?? null) !== null && $config?.user_count > $config?.license_metadata?.seats))}
+	{#if !history.currentId && !$chatId && ($banners.length > 0 )}
 		<div class=" w-full z-30 mt-5">
 			<div class=" flex flex-col gap-1 w-full">
-				{#if ($config?.license_metadata?.type ?? null) === 'trial'}
-					<Banner
-						banner={{
-							type: 'info',
-							title: 'Trial License',
-							content: $i18n.t(
-								'You are currently using a trial license. Please contact support to upgrade your license.'
-							)
-						}}
-					/>
-				{/if}
-
-				{#if ($config?.license_metadata?.seats ?? null) !== null && $config?.user_count > $config?.license_metadata?.seats}
-					<Banner
-						banner={{
-							type: 'error',
-							title: 'License Error',
-							content: $i18n.t(
-								'Exceeded the number of seats in your license. Please contact support to increase the number of seats.'
-							)
-						}}
-					/>
-				{/if}
-
 				{#each $banners.filter( (b) => (b.dismissible ? !JSON.parse(localStorage.getItem('dismissedBannerIds') ?? '[]').includes(b.id) : true) ) as banner}
 					<Banner
 						{banner}

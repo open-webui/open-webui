@@ -3,15 +3,14 @@ import socketio
 import logging
 import sys
 import time
-from redis import asyncio as aioredis
+from typing import Optional
+from starlette import status
+from fastapi import HTTPException
 
 from open_webui.models.users import Users, UserNameResponse
 from open_webui.models.channels import Channels
 from open_webui.models.chats import Chats
-from open_webui.utils.redis import (
-    get_sentinels_from_env,
-    get_sentinel_url_from_env,
-)
+from open_webui.utils.redis import get_sentinels_from_env, get_sentinel_url_from_env
 
 from open_webui.env import (
     ENABLE_WEBSOCKET_SUPPORT,
@@ -24,16 +23,18 @@ from open_webui.env import (
 from open_webui.utils.auth import decode_token
 from open_webui.socket.utils import RedisDict, RedisLock
 
+from open_webui.jms import SessionHandler, TokenHandler
+from wisp.exceptions import WispError
+from wisp.protobuf.common_pb2 import TokenAuthInfo
+
 from open_webui.env import (
     GLOBAL_LOG_LEVEL,
     SRC_LOG_LEVELS,
 )
 
-
 logging.basicConfig(stream=sys.stdout, level=GLOBAL_LOG_LEVEL)
 log = logging.getLogger(__name__)
 log.setLevel(SRC_LOG_LEVELS["SOCKET"])
-
 
 if WEBSOCKET_MANAGER == "redis":
     if WEBSOCKET_SENTINEL_HOSTS:
@@ -60,7 +61,6 @@ else:
         allow_upgrades=ENABLE_WEBSOCKET_SUPPORT,
         always_connect=True,
     )
-
 
 # Timeout duration in seconds
 TIMEOUT_DURATION = 3
@@ -102,6 +102,8 @@ else:
     USER_POOL = {}
     USAGE_POOL = {}
     aquire_func = release_func = renew_func = lambda: True
+
+SID_SESSION_HANDLER = {}
 
 
 async def periodic_usage_pool_cleanup():
@@ -173,10 +175,28 @@ async def usage(sid, data):
     await sio.emit("usage", {"models": get_models_in_use()})
 
 
+async def create_auth_info(token: Optional[str] = None) -> TokenAuthInfo:
+    token_handler = TokenHandler()
+    try:
+        auth_info = token_handler.get_token_auth_info(token)
+    except WispError as e:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail=str(e))
+    return auth_info
+
+
 @sio.event
 async def connect(sid, environ, auth):
+    # auth_info = await create_auth_info(auth["token"])
+    auth_info = await create_auth_info('a4db4953-c4a9-480b-95a9-48578cec069a')
+
+    scope = environ.get("asgi.scope", {})
+    session_handler = SessionHandler(sio=sio, sid=sid, scope=scope, auth_info=auth_info)
+
+    SID_SESSION_HANDLER[sid] = session_handler
+
     user = None
     if auth and "token" in auth:
+
         data = decode_token(auth["token"])
 
         if data is not None and "id" in data:
@@ -196,7 +216,6 @@ async def connect(sid, environ, auth):
 
 @sio.on("user-join")
 async def user_join(sid, data):
-
     auth = data["auth"] if "auth" in data else None
     if not auth or "token" not in auth:
         return

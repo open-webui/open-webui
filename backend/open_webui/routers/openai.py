@@ -9,9 +9,7 @@ import aiohttp
 from aiocache import cached
 import requests
 
-
-from fastapi import Depends, FastAPI, HTTPException, Request, APIRouter
-from fastapi.middleware.cors import CORSMiddleware
+from fastapi import Depends, HTTPException, Request, APIRouter
 from fastapi.responses import FileResponse, StreamingResponse
 from pydantic import BaseModel
 from starlette.background import BackgroundTask
@@ -23,14 +21,10 @@ from open_webui.config import (
 from open_webui.env import (
     AIOHTTP_CLIENT_TIMEOUT,
     AIOHTTP_CLIENT_TIMEOUT_MODEL_LIST,
-    ENABLE_FORWARD_USER_INFO_HEADERS,
-    BYPASS_MODEL_ACCESS_CONTROL,
+    BYPASS_MODEL_ACCESS_CONTROL, AIOHTTP_CLIENT_SESSION_SSL,
 )
-from open_webui.models.users import UserModel
-
 from open_webui.constants import ERROR_MESSAGES
 from open_webui.env import ENV, SRC_LOG_LEVELS
-
 
 from open_webui.utils.payload import (
     apply_model_params_to_body_openai,
@@ -43,7 +37,6 @@ from open_webui.utils.misc import (
 from open_webui.utils.auth import get_admin_user, get_verified_user
 from open_webui.utils.access_control import has_access
 
-
 log = logging.getLogger(__name__)
 log.setLevel(SRC_LOG_LEVELS["OPENAI"])
 
@@ -55,25 +48,16 @@ log.setLevel(SRC_LOG_LEVELS["OPENAI"])
 ##########################################
 
 
-async def send_get_request(url, key=None, user: UserModel = None):
+async def send_get_request(url, key=None):
     timeout = aiohttp.ClientTimeout(total=AIOHTTP_CLIENT_TIMEOUT_MODEL_LIST)
     try:
         async with aiohttp.ClientSession(timeout=timeout, trust_env=True) as session:
             async with session.get(
-                url,
-                headers={
-                    **({"Authorization": f"Bearer {key}"} if key else {}),
-                    **(
-                        {
-                            "X-OpenWebUI-User-Name": user.name,
-                            "X-OpenWebUI-User-Id": user.id,
-                            "X-OpenWebUI-User-Email": user.email,
-                            "X-OpenWebUI-User-Role": user.role,
-                        }
-                        if ENABLE_FORWARD_USER_INFO_HEADERS and user
-                        else {}
-                    ),
-                },
+                    url,
+                    headers={
+                        **({"Authorization": f"Bearer {key}"} if key else {}),
+                    },
+                    ssl=AIOHTTP_CLIENT_SESSION_SSL,
             ) as response:
                 return await response.json()
     except Exception as e:
@@ -83,8 +67,8 @@ async def send_get_request(url, key=None, user: UserModel = None):
 
 
 async def cleanup_response(
-    response: Optional[aiohttp.ClientResponse],
-    session: Optional[aiohttp.ClientSession],
+        response: Optional[aiohttp.ClientResponse],
+        session: Optional[aiohttp.ClientSession],
 ):
     if response:
         response.close()
@@ -142,7 +126,7 @@ class OpenAIConfigForm(BaseModel):
 
 @router.post("/config/update")
 async def update_config(
-    request: Request, form_data: OpenAIConfigForm, user=Depends(get_admin_user)
+        request: Request, form_data: OpenAIConfigForm, user=Depends(get_admin_user)
 ):
     request.app.state.config.ENABLE_OPENAI_API = form_data.ENABLE_OPENAI_API
     request.app.state.config.OPENAI_API_BASE_URLS = form_data.OPENAI_API_BASE_URLS
@@ -150,10 +134,10 @@ async def update_config(
 
     # Check if API KEYS length is same than API URLS length
     if len(request.app.state.config.OPENAI_API_KEYS) != len(
-        request.app.state.config.OPENAI_API_BASE_URLS
+            request.app.state.config.OPENAI_API_BASE_URLS
     ):
         if len(request.app.state.config.OPENAI_API_KEYS) > len(
-            request.app.state.config.OPENAI_API_BASE_URLS
+                request.app.state.config.OPENAI_API_BASE_URLS
         ):
             request.app.state.config.OPENAI_API_KEYS = (
                 request.app.state.config.OPENAI_API_KEYS[
@@ -162,8 +146,8 @@ async def update_config(
             )
         else:
             request.app.state.config.OPENAI_API_KEYS += [""] * (
-                len(request.app.state.config.OPENAI_API_BASE_URLS)
-                - len(request.app.state.config.OPENAI_API_KEYS)
+                    len(request.app.state.config.OPENAI_API_BASE_URLS)
+                    - len(request.app.state.config.OPENAI_API_KEYS)
             )
 
     request.app.state.config.OPENAI_API_CONFIGS = form_data.OPENAI_API_CONFIGS
@@ -216,20 +200,10 @@ async def speech(request: Request, user=Depends(get_verified_user)):
                     "Authorization": f"Bearer {request.app.state.config.OPENAI_API_KEYS[idx]}",
                     **(
                         {
-                            "HTTP-Referer": "https://openwebui.com/",
-                            "X-Title": "Open WebUI",
+                            "HTTP-Referer": "https://jumpserver.com/",
+                            "X-Title": "JumpServer Chat",
                         }
                         if "openrouter.ai" in url
-                        else {}
-                    ),
-                    **(
-                        {
-                            "X-OpenWebUI-User-Name": user.name,
-                            "X-OpenWebUI-User-Id": user.id,
-                            "X-OpenWebUI-User-Email": user.email,
-                            "X-OpenWebUI-User-Role": user.role,
-                        }
-                        if ENABLE_FORWARD_USER_INFO_HEADERS
                         else {}
                     ),
                 },
@@ -270,77 +244,16 @@ async def speech(request: Request, user=Depends(get_verified_user)):
         raise HTTPException(status_code=401, detail=ERROR_MESSAGES.OPENAI_NOT_FOUND)
 
 
-async def get_all_models_responses(request: Request, user: UserModel) -> list:
+async def get_all_models_responses(request: Request) -> list:
     if not request.app.state.config.ENABLE_OPENAI_API:
         return []
 
-    # Check if API KEYS length is same than API URLS length
-    num_urls = len(request.app.state.config.OPENAI_API_BASE_URLS)
-    num_keys = len(request.app.state.config.OPENAI_API_KEYS)
-
-    if num_keys != num_urls:
-        # if there are more keys than urls, remove the extra keys
-        if num_keys > num_urls:
-            new_keys = request.app.state.config.OPENAI_API_KEYS[:num_urls]
-            request.app.state.config.OPENAI_API_KEYS = new_keys
-        # if there are more urls than keys, add empty keys
-        else:
-            request.app.state.config.OPENAI_API_KEYS += [""] * (num_urls - num_keys)
-
-    request_tasks = []
-    for idx, url in enumerate(request.app.state.config.OPENAI_API_BASE_URLS):
-        if (str(idx) not in request.app.state.config.OPENAI_API_CONFIGS) and (
-            url not in request.app.state.config.OPENAI_API_CONFIGS  # Legacy support
-        ):
-            request_tasks.append(
-                send_get_request(
-                    f"{url}/models",
-                    request.app.state.config.OPENAI_API_KEYS[idx],
-                    user=user,
-                )
-            )
-        else:
-            api_config = request.app.state.config.OPENAI_API_CONFIGS.get(
-                str(idx),
-                request.app.state.config.OPENAI_API_CONFIGS.get(
-                    url, {}
-                ),  # Legacy support
-            )
-
-            enable = api_config.get("enable", True)
-            model_ids = api_config.get("model_ids", [])
-
-            if enable:
-                if len(model_ids) == 0:
-                    request_tasks.append(
-                        send_get_request(
-                            f"{url}/models",
-                            request.app.state.config.OPENAI_API_KEYS[idx],
-                            user=user,
-                        )
-                    )
-                else:
-                    model_list = {
-                        "object": "list",
-                        "data": [
-                            {
-                                "id": model_id,
-                                "name": model_id,
-                                "owned_by": "openai",
-                                "openai": {"id": model_id},
-                                "urlIdx": idx,
-                            }
-                            for model_id in model_ids
-                        ],
-                    }
-
-                    request_tasks.append(
-                        asyncio.ensure_future(asyncio.sleep(0, model_list))
-                    )
-            else:
-                request_tasks.append(asyncio.ensure_future(asyncio.sleep(0, None)))
-
-    responses = await asyncio.gather(*request_tasks)
+    responses = await asyncio.gather(
+        send_get_request(
+            f"{request.app.state.config.OPENAI_API_BASE_URLS[0]}/models",
+            request.app.state.config.OPENAI_API_KEYS[0],
+        )
+    )
 
     for idx, response in enumerate(responses):
         if response:
@@ -357,13 +270,13 @@ async def get_all_models_responses(request: Request, user: UserModel) -> list:
 
             if prefix_id:
                 for model in (
-                    response if isinstance(response, list) else response.get("data", [])
+                        response if isinstance(response, list) else response.get("data", [])
                 ):
                     model["id"] = f"{prefix_id}.{model['id']}"
 
             if tags:
                 for model in (
-                    response if isinstance(response, list) else response.get("data", [])
+                        response if isinstance(response, list) else response.get("data", [])
                 ):
                     model["tags"] = tags
 
@@ -378,20 +291,20 @@ async def get_filtered_models(models, user):
         model_info = Models.get_model_by_id(model["id"])
         if model_info:
             if user.id == model_info.user_id or has_access(
-                user.id, type="read", access_control=model_info.access_control
+                    user.id, type="read", access_control=model_info.access_control
             ):
                 filtered_models.append(model)
     return filtered_models
 
 
 @cached(ttl=1)
-async def get_all_models(request: Request, user: UserModel) -> dict[str, list]:
+async def get_all_models(request: Request) -> dict[str, list]:
     log.info("get_all_models()")
 
     if not request.app.state.config.ENABLE_OPENAI_API:
         return {"data": []}
 
-    responses = await get_all_models_responses(request, user=user)
+    responses = await get_all_models_responses(request)
 
     def extract_data(response):
         if response and "data" in response:
@@ -406,7 +319,6 @@ async def get_all_models(request: Request, user: UserModel) -> dict[str, list]:
 
         for idx, models in enumerate(model_lists):
             if models is not None and "error" not in models:
-
                 merged_list.extend(
                     [
                         {
@@ -418,21 +330,21 @@ async def get_all_models(request: Request, user: UserModel) -> dict[str, list]:
                         }
                         for model in models
                         if (model.get("id") or model.get("name"))
-                        and (
-                            "api.openai.com"
-                            not in request.app.state.config.OPENAI_API_BASE_URLS[idx]
-                            or not any(
-                                name in model["id"]
-                                for name in [
-                                    "babbage",
-                                    "dall-e",
-                                    "davinci",
-                                    "embedding",
-                                    "tts",
-                                    "whisper",
-                                ]
-                            )
-                        )
+                           and (
+                                   "api.openai.com"
+                                   not in request.app.state.config.OPENAI_API_BASE_URLS[idx]
+                                   or not any(
+                               name in model["id"]
+                               for name in [
+                                   "babbage",
+                                   "dall-e",
+                                   "davinci",
+                                   "embedding",
+                                   "tts",
+                                   "whisper",
+                               ]
+                           )
+                           )
                     ]
                 )
 
@@ -448,39 +360,30 @@ async def get_all_models(request: Request, user: UserModel) -> dict[str, list]:
 @router.get("/models")
 @router.get("/models/{url_idx}")
 async def get_models(
-    request: Request, url_idx: Optional[int] = None, user=Depends(get_verified_user)
+        request: Request, url_idx: Optional[int] = None, user=Depends(get_verified_user)
 ):
     models = {
         "data": [],
     }
 
     if url_idx is None:
-        models = await get_all_models(request, user=user)
+        models = await get_all_models(request)
     else:
         url = request.app.state.config.OPENAI_API_BASE_URLS[url_idx]
         key = request.app.state.config.OPENAI_API_KEYS[url_idx]
 
         r = None
         async with aiohttp.ClientSession(
-            timeout=aiohttp.ClientTimeout(total=AIOHTTP_CLIENT_TIMEOUT_MODEL_LIST)
+                timeout=aiohttp.ClientTimeout(total=AIOHTTP_CLIENT_TIMEOUT_MODEL_LIST)
         ) as session:
             try:
                 async with session.get(
-                    f"{url}/models",
-                    headers={
-                        "Authorization": f"Bearer {key}",
-                        "Content-Type": "application/json",
-                        **(
-                            {
-                                "X-OpenWebUI-User-Name": user.name,
-                                "X-OpenWebUI-User-Id": user.id,
-                                "X-OpenWebUI-User-Email": user.email,
-                                "X-OpenWebUI-User-Role": user.role,
-                            }
-                            if ENABLE_FORWARD_USER_INFO_HEADERS
-                            else {}
-                        ),
-                    },
+                        f"{url}/models",
+                        headers={
+                            "Authorization": f"Bearer {key}",
+                            "Content-Type": "application/json",
+                        },
+                        ssl=AIOHTTP_CLIENT_SESSION_SSL
                 ) as r:
                     if r.status != 200:
                         # Extract response error details if available
@@ -536,31 +439,22 @@ class ConnectionVerificationForm(BaseModel):
 
 @router.post("/verify")
 async def verify_connection(
-    form_data: ConnectionVerificationForm, user=Depends(get_admin_user)
+        form_data: ConnectionVerificationForm, user=Depends(get_admin_user)
 ):
     url = form_data.url
     key = form_data.key
 
     async with aiohttp.ClientSession(
-        timeout=aiohttp.ClientTimeout(total=AIOHTTP_CLIENT_TIMEOUT_MODEL_LIST)
+            timeout=aiohttp.ClientTimeout(total=AIOHTTP_CLIENT_TIMEOUT_MODEL_LIST)
     ) as session:
         try:
             async with session.get(
-                f"{url}/models",
-                headers={
-                    "Authorization": f"Bearer {key}",
-                    "Content-Type": "application/json",
-                    **(
-                        {
-                            "X-OpenWebUI-User-Name": user.name,
-                            "X-OpenWebUI-User-Id": user.id,
-                            "X-OpenWebUI-User-Email": user.email,
-                            "X-OpenWebUI-User-Role": user.role,
-                        }
-                        if ENABLE_FORWARD_USER_INFO_HEADERS
-                        else {}
-                    ),
-                },
+                    f"{url}/models",
+                    headers={
+                        "Authorization": f"Bearer {key}",
+                        "Content-Type": "application/json",
+                    },
+                    ssl=AIOHTTP_CLIENT_SESSION_SSL
             ) as r:
                 if r.status != 200:
                     # Extract response error details if available
@@ -587,10 +481,10 @@ async def verify_connection(
 
 @router.post("/chat/completions")
 async def generate_chat_completion(
-    request: Request,
-    form_data: dict,
-    user=Depends(get_verified_user),
-    bypass_filter: Optional[bool] = False,
+        request: Request,
+        form_data: dict,
+        user=Depends(get_verified_user),
+        bypass_filter: Optional[bool] = False,
 ):
     if BYPASS_MODEL_ACCESS_CONTROL:
         bypass_filter = True
@@ -616,10 +510,10 @@ async def generate_chat_completion(
         # Check if user has access to the model
         if not bypass_filter and user.role == "user":
             if not (
-                user.id == model_info.user_id
-                or has_access(
-                    user.id, type="read", access_control=model_info.access_control
-                )
+                    user.id == model_info.user_id
+                    or has_access(
+                user.id, type="read", access_control=model_info.access_control
+            )
             ):
                 raise HTTPException(
                     status_code=403,
@@ -632,7 +526,7 @@ async def generate_chat_completion(
                 detail="Model not found",
             )
 
-    await get_all_models(request, user=user)
+    await get_all_models(request)
     model = request.app.state.OPENAI_MODELS.get(model_id)
     if model:
         idx = model["urlIdx"]
@@ -706,23 +600,14 @@ async def generate_chat_completion(
                 "Content-Type": "application/json",
                 **(
                     {
-                        "HTTP-Referer": "https://openwebui.com/",
-                        "X-Title": "Open WebUI",
+                        "HTTP-Referer": "https://jumpserver.com/",
+                        "X-Title": "JumpServer Chat",
                     }
                     if "openrouter.ai" in url
                     else {}
                 ),
-                **(
-                    {
-                        "X-OpenWebUI-User-Name": user.name,
-                        "X-OpenWebUI-User-Id": user.id,
-                        "X-OpenWebUI-User-Email": user.email,
-                        "X-OpenWebUI-User-Role": user.role,
-                    }
-                    if ENABLE_FORWARD_USER_INFO_HEADERS
-                    else {}
-                ),
             },
+            ssl=AIOHTTP_CLIENT_SESSION_SSL
         )
 
         # Check if response is SSE
@@ -791,17 +676,8 @@ async def proxy(path: str, request: Request, user=Depends(get_verified_user)):
             headers={
                 "Authorization": f"Bearer {key}",
                 "Content-Type": "application/json",
-                **(
-                    {
-                        "X-OpenWebUI-User-Name": user.name,
-                        "X-OpenWebUI-User-Id": user.id,
-                        "X-OpenWebUI-User-Email": user.email,
-                        "X-OpenWebUI-User-Role": user.role,
-                    }
-                    if ENABLE_FORWARD_USER_INFO_HEADERS
-                    else {}
-                ),
             },
+            ssl=AIOHTTP_CLIENT_SESSION_SSL
         )
         r.raise_for_status()
 

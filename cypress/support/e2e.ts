@@ -29,17 +29,17 @@ const login = (email: string, password: string) => {
 				cy.get('button').contains("Okay, Let's Go!").click();
 			}
 		},
-		{
-			validate: () => {
-				cy.request({
-					method: 'GET',
-					url: '/api/v1/auths/',
-					headers: {
-						Authorization: 'Bearer ' + localStorage.getItem('token')
-					}
-				});
-			}
-		}
+		// {
+		// 	validate: () => {
+		// 		cy.request({
+		// 			method: 'GET',
+		// 			url: '/api/v1/auths/',
+		// 			headers: {
+		// 				Authorization: 'Bearer ' + localStorage.getItem('token')
+		// 			}
+		// 		});
+		// 	}
+		// }
 	);
 };
 

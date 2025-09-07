@@ -16,11 +16,7 @@ elif VECTOR_DB == "pgvector":
     from open_webui.retrieval.vector.dbs.pgvector import PgvectorClient
 
     VECTOR_DB_CLIENT = PgvectorClient()
-elif VECTOR_DB == "elasticsearch":
+else:
     from open_webui.retrieval.vector.dbs.elasticsearch import ElasticsearchClient
 
     VECTOR_DB_CLIENT = ElasticsearchClient()
-else:
-    from open_webui.retrieval.vector.dbs.chroma import ChromaClient
-
-    VECTOR_DB_CLIENT = ChromaClient()

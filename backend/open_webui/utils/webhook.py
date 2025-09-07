@@ -2,8 +2,7 @@ import json
 import logging
 
 import requests
-from open_webui.config import WEBUI_FAVICON_URL
-from open_webui.env import SRC_LOG_LEVELS, VERSION
+from open_webui.env import SRC_LOG_LEVELS, VERSION, WEBUI_FAVICON_URL
 
 log = logging.getLogger(__name__)
 log.setLevel(SRC_LOG_LEVELS["WEBHOOK"])

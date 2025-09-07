@@ -126,20 +126,18 @@
 />
 <UserChatsModal bind:show={showUserChatsModal} user={selectedUser} />
 
-{#if ($config?.license_metadata?.seats ?? null) !== null && users.length > $config?.license_metadata?.seats}
-	<div class=" mt-1 mb-2 text-xs text-red-500">
-		<Banner
-			className="mx-0"
-			banner={{
-				type: 'error',
-				title: 'License Error',
-				content:
-					'Exceeded the number of seats in your license. Please contact support to increase the number of seats.',
-				dismissable: true
-			}}
-		/>
-	</div>
-{/if}
+<div class=" mt-1 mb-2 text-xs text-red-500">
+	<Banner
+		className="mx-0"
+		banner={{
+			type: 'error',
+			title: 'License Error',
+			content:
+				'Exceeded the number of seats in your license. Please contact support to increase the number of seats.',
+			dismissable: true
+		}}
+	/>
+</div>
 
 <div class="mt-0.5 mb-2 gap-1 flex flex-col md:flex-row justify-between">
 	<div class="flex md:self-center text-lg font-medium px-0.5">
@@ -147,22 +145,7 @@
 			{$i18n.t('Users')}
 		</div>
 		<div class="flex self-center w-[1px] h-6 mx-2.5 bg-gray-50 dark:bg-gray-850" />
-
-		{#if ($config?.license_metadata?.seats ?? null) !== null}
-			{#if users.length > $config?.license_metadata?.seats}
-				<span class="text-lg font-medium text-red-500"
-					>{users.length} of {$config?.license_metadata?.seats}
-					<span class="text-sm font-normal">available users</span></span
-				>
-			{:else}
-				<span class="text-lg font-medium text-gray-500 dark:text-gray-300"
-					>{users.length} of {$config?.license_metadata?.seats}
-					<span class="text-sm font-normal">available users</span></span
-				>
-			{/if}
-		{:else}
-			<span class="text-lg font-medium text-gray-500 dark:text-gray-300">{users.length}</span>
-		{/if}
+		<span class="text-lg font-medium text-gray-500 dark:text-gray-300">{users.length}</span>
 	</div>
 
 	<div class="flex gap-1">
@@ -409,20 +392,6 @@
 
 					<td class="px-3 py-1 text-right">
 						<div class="flex justify-end w-full">
-							{#if $config.features.enable_admin_chat_access && user.role !== 'admin'}
-								<Tooltip content={$i18n.t('Chats')}>
-									<button
-										class="self-center w-fit text-sm px-2 py-2 hover:bg-black/5 dark:hover:bg-white/5 rounded-xl"
-										on:click={async () => {
-											showUserChatsModal = !showUserChatsModal;
-											selectedUser = user;
-										}}
-									>
-										<ChatBubbles />
-									</button>
-								</Tooltip>
-							{/if}
-
 							<Tooltip content={$i18n.t('Edit User')}>
 								<button
 									class="self-center w-fit text-sm px-2 py-2 hover:bg-black/5 dark:hover:bg-white/5 rounded-xl"
@@ -487,27 +456,3 @@
 </div>
 
 <Pagination bind:page count={users.length} />
-
-{#if !$config?.license_metadata}
-	{#if users.length > 50}
-		<div class="text-sm">
-			<Markdown
-				content={`
-> [!NOTE]
-> # **Hey there! 👋**
->
-> It looks like you have over 50 users — that usually falls under organizational usage.
-> 
-> Open WebUI is proudly open source and completely free, with no hidden limits — and we'd love to keep it that way. 🌱  
->
-> By supporting the project through sponsorship or an enterprise license, you’re not only helping us stay independent, you’re also helping us ship new features faster, improve stability, and grow the project for the long haul. With an *enterprise license*, you also get additional perks like dedicated support, customization options, and more — all at a fraction of what it would cost to build and maintain internally.  
-> 
-> Your support helps us stay independent and continue building great tools for everyone. 💛
-> 
-> - 👉 **[Click here to learn more about enterprise licensing](https://docs.openwebui.com/enterprise)**
-> - 👉 *[Click here to sponsor the project on GitHub](https://github.com/sponsors/tjbck)*
-`}
-			/>
-		</div>
-	{/if}
-{/if}

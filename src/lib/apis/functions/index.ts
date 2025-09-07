@@ -1,9 +1,10 @@
 import { WEBUI_API_BASE_URL } from '$lib/constants';
+import { apiFetch } from '$lib/net/apiFetch';
 
 export const createNewFunction = async (token: string, func: object) => {
 	let error = null;
 
-	const res = await fetch(`${WEBUI_API_BASE_URL}/functions/create`, {
+	const res = await apiFetch(`${WEBUI_API_BASE_URL}/functions/create`, {
 		method: 'POST',
 		headers: {
 			Accept: 'application/json',
@@ -34,7 +35,7 @@ export const createNewFunction = async (token: string, func: object) => {
 export const getFunctions = async (token: string = '') => {
 	let error = null;
 
-	const res = await fetch(`${WEBUI_API_BASE_URL}/functions/`, {
+	const res = await apiFetch(`${WEBUI_API_BASE_URL}/functions/`, {
 		method: 'GET',
 		headers: {
 			Accept: 'application/json',
@@ -65,7 +66,7 @@ export const getFunctions = async (token: string = '') => {
 export const exportFunctions = async (token: string = '') => {
 	let error = null;
 
-	const res = await fetch(`${WEBUI_API_BASE_URL}/functions/export`, {
+	const res = await apiFetch(`${WEBUI_API_BASE_URL}/functions/export`, {
 		method: 'GET',
 		headers: {
 			Accept: 'application/json',
@@ -96,7 +97,7 @@ export const exportFunctions = async (token: string = '') => {
 export const getFunctionById = async (token: string, id: string) => {
 	let error = null;
 
-	const res = await fetch(`${WEBUI_API_BASE_URL}/functions/id/${id}`, {
+	const res = await apiFetch(`${WEBUI_API_BASE_URL}/functions/id/${id}`, {
 		method: 'GET',
 		headers: {
 			Accept: 'application/json',
@@ -128,7 +129,7 @@ export const getFunctionById = async (token: string, id: string) => {
 export const updateFunctionById = async (token: string, id: string, func: object) => {
 	let error = null;
 
-	const res = await fetch(`${WEBUI_API_BASE_URL}/functions/id/${id}/update`, {
+	const res = await apiFetch(`${WEBUI_API_BASE_URL}/functions/id/${id}/update`, {
 		method: 'POST',
 		headers: {
 			Accept: 'application/json',
@@ -163,7 +164,7 @@ export const updateFunctionById = async (token: string, id: string, func: object
 export const deleteFunctionById = async (token: string, id: string) => {
 	let error = null;
 
-	const res = await fetch(`${WEBUI_API_BASE_URL}/functions/id/${id}/delete`, {
+	const res = await apiFetch(`${WEBUI_API_BASE_URL}/functions/id/${id}/delete`, {
 		method: 'DELETE',
 		headers: {
 			Accept: 'application/json',
@@ -195,7 +196,7 @@ export const deleteFunctionById = async (token: string, id: string) => {
 export const toggleFunctionById = async (token: string, id: string) => {
 	let error = null;
 
-	const res = await fetch(`${WEBUI_API_BASE_URL}/functions/id/${id}/toggle`, {
+	const res = await apiFetch(`${WEBUI_API_BASE_URL}/functions/id/${id}/toggle`, {
 		method: 'POST',
 		headers: {
 			Accept: 'application/json',
@@ -227,7 +228,7 @@ export const toggleFunctionById = async (token: string, id: string) => {
 export const toggleGlobalById = async (token: string, id: string) => {
 	let error = null;
 
-	const res = await fetch(`${WEBUI_API_BASE_URL}/functions/id/${id}/toggle/global`, {
+	const res = await apiFetch(`${WEBUI_API_BASE_URL}/functions/id/${id}/toggle/global`, {
 		method: 'POST',
 		headers: {
 			Accept: 'application/json',
@@ -259,7 +260,7 @@ export const toggleGlobalById = async (token: string, id: string) => {
 export const getFunctionValvesById = async (token: string, id: string) => {
 	let error = null;
 
-	const res = await fetch(`${WEBUI_API_BASE_URL}/functions/id/${id}/valves`, {
+	const res = await apiFetch(`${WEBUI_API_BASE_URL}/functions/id/${id}/valves`, {
 		method: 'GET',
 		headers: {
 			Accept: 'application/json',
@@ -291,7 +292,7 @@ export const getFunctionValvesById = async (token: string, id: string) => {
 export const getFunctionValvesSpecById = async (token: string, id: string) => {
 	let error = null;
 
-	const res = await fetch(`${WEBUI_API_BASE_URL}/functions/id/${id}/valves/spec`, {
+	const res = await apiFetch(`${WEBUI_API_BASE_URL}/functions/id/${id}/valves/spec`, {
 		method: 'GET',
 		headers: {
 			Accept: 'application/json',
@@ -323,7 +324,7 @@ export const getFunctionValvesSpecById = async (token: string, id: string) => {
 export const updateFunctionValvesById = async (token: string, id: string, valves: object) => {
 	let error = null;
 
-	const res = await fetch(`${WEBUI_API_BASE_URL}/functions/id/${id}/valves/update`, {
+	const res = await apiFetch(`${WEBUI_API_BASE_URL}/functions/id/${id}/valves/update`, {
 		method: 'POST',
 		headers: {
 			Accept: 'application/json',
@@ -358,7 +359,7 @@ export const updateFunctionValvesById = async (token: string, id: string, valves
 export const getUserValvesById = async (token: string, id: string) => {
 	let error = null;
 
-	const res = await fetch(`${WEBUI_API_BASE_URL}/functions/id/${id}/valves/user`, {
+	const res = await apiFetch(`${WEBUI_API_BASE_URL}/functions/id/${id}/valves/user`, {
 		method: 'GET',
 		headers: {
 			Accept: 'application/json',
@@ -390,7 +391,7 @@ export const getUserValvesById = async (token: string, id: string) => {
 export const getUserValvesSpecById = async (token: string, id: string) => {
 	let error = null;
 
-	const res = await fetch(`${WEBUI_API_BASE_URL}/functions/id/${id}/valves/user/spec`, {
+	const res = await apiFetch(`${WEBUI_API_BASE_URL}/functions/id/${id}/valves/user/spec`, {
 		method: 'GET',
 		headers: {
 			Accept: 'application/json',
@@ -422,7 +423,7 @@ export const getUserValvesSpecById = async (token: string, id: string) => {
 export const updateUserValvesById = async (token: string, id: string, valves: object) => {
 	let error = null;
 
-	const res = await fetch(`${WEBUI_API_BASE_URL}/functions/id/${id}/valves/user/update`, {
+	const res = await apiFetch(`${WEBUI_API_BASE_URL}/functions/id/${id}/valves/user/update`, {
 		method: 'POST',
 		headers: {
 			Accept: 'application/json',

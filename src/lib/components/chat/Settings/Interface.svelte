@@ -56,7 +56,6 @@
 
 	// Admin - Show Update Available Toast
 	let showUpdateToast = true;
-	let showChangelog = true;
 
 	let showEmojiInCall = false;
 	let voiceInterruption = false;
@@ -118,8 +117,6 @@
 	};
 
 	const toggleShowChangelog = async () => {
-		showChangelog = !showChangelog;
-		saveSettings({ showChangelog: showChangelog });
 	};
 
 	const toggleShowUsername = async () => {
@@ -273,7 +270,6 @@
 
 		showUsername = $settings.showUsername ?? false;
 		showUpdateToast = $settings.showUpdateToast ?? true;
-		showChangelog = $settings.showChangelog ?? true;
 
 		showEmojiInCall = $settings.showEmojiInCall ?? false;
 		voiceInterruption = $settings.voiceInterruption ?? false;
@@ -513,11 +509,7 @@
 							}}
 							type="button"
 						>
-							{#if showChangelog === true}
-								<span class="ml-2 self-center">{$i18n.t('On')}</span>
-							{:else}
-								<span class="ml-2 self-center">{$i18n.t('Off')}</span>
-							{/if}
+							<span class="ml-2 self-center">{$i18n.t('On')}</span>
 						</button>
 					</div>
 				</div>

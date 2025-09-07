@@ -3,13 +3,7 @@
 	import {
 		WEBUI_NAME,
 		showSidebar,
-		functions,
 		user,
-		mobile,
-		models,
-		prompts,
-		knowledge,
-		tools
 	} from '$lib/stores';
 	import { page } from '$app/stores';
 	import { goto } from '$app/navigation';
@@ -38,6 +32,7 @@
 				goto('/');
 			}
 		}
+
 
 		loaded = true;
 	});
@@ -123,8 +118,6 @@
 						{/if}
 					</div>
 				</div>
-
-				<!-- <div class="flex items-center text-xl font-semibold">{$i18n.t('Workspace')}</div> -->
 			</div>
 		</nav>
 

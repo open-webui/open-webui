@@ -3,17 +3,11 @@
 		addTagById,
 		deleteTagById,
 		getAllTags,
-		getChatList,
-		getChatListByTagName,
 		getTagsById,
 		updateChatById
 	} from '$lib/apis/chats';
 	import {
 		tags as _tags,
-		chats,
-		pinnedChats,
-		currentChatPage,
-		scrollPaginationEnabled
 	} from '$lib/stores';
 	import { createEventDispatcher, onMount } from 'svelte';
 
@@ -45,7 +39,7 @@
 			tags: tags
 		});
 
-		await _tags.set(await getAllTags(localStorage.token));
+		// await _tags.set(await getAllTags(localStorage.token));
 		dispatch('add', {
 			name: tagName
 		});

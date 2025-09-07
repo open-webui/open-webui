@@ -23,7 +23,6 @@
 	import { flyAndScale } from '$lib/utils/transitions';
 
 	import Dropdown from '$lib/components/common/Dropdown.svelte';
-	import Tags from '$lib/components/chat/Tags.svelte';
 	import Map from '$lib/components/icons/Map.svelte';
 	import Clipboard from '$lib/components/icons/Clipboard.svelte';
 	import AdjustmentsHorizontal from '$lib/components/icons/AdjustmentsHorizontal.svelte';
@@ -212,55 +211,55 @@
 				</DropdownMenu.Item>
 			{/if}
 
-			{#if !$temporaryChatEnabled}
-				<DropdownMenu.Item
-					class="flex gap-2 items-center px-3 py-2 text-sm  cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 rounded-md"
-					id="chat-share-button"
-					on:click={() => {
-						shareHandler();
-					}}
-				>
-					<svg
-						xmlns="http://www.w3.org/2000/svg"
-						viewBox="0 0 24 24"
-						fill="currentColor"
-						class="size-4"
-					>
-						<path
-							fill-rule="evenodd"
-							d="M15.75 4.5a3 3 0 1 1 .825 2.066l-8.421 4.679a3.002 3.002 0 0 1 0 1.51l8.421 4.679a3 3 0 1 1-.729 1.31l-8.421-4.678a3 3 0 1 1 0-4.132l8.421-4.679a3 3 0 0 1-.096-.755Z"
-							clip-rule="evenodd"
-						/>
-					</svg>
-					<div class="flex items-center">{$i18n.t('Share')}</div>
-				</DropdownMenu.Item>
-			{/if}
+			<!--{#if !$temporaryChatEnabled}-->
+			<!--	<DropdownMenu.Item-->
+			<!--		class="flex gap-2 items-center px-3 py-2 text-sm  cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 rounded-md"-->
+			<!--		id="chat-share-button"-->
+			<!--		on:click={() => {-->
+			<!--			shareHandler();-->
+			<!--		}}-->
+			<!--	>-->
+			<!--		<svg-->
+			<!--			xmlns="http://www.w3.org/2000/svg"-->
+			<!--			viewBox="0 0 24 24"-->
+			<!--			fill="currentColor"-->
+			<!--			class="size-4"-->
+			<!--		>-->
+			<!--			<path-->
+			<!--				fill-rule="evenodd"-->
+			<!--				d="M15.75 4.5a3 3 0 1 1 .825 2.066l-8.421 4.679a3.002 3.002 0 0 1 0 1.51l8.421 4.679a3 3 0 1 1-.729 1.31l-8.421-4.678a3 3 0 1 1 0-4.132l8.421-4.679a3 3 0 0 1-.096-.755Z"-->
+			<!--				clip-rule="evenodd"-->
+			<!--			/>-->
+			<!--		</svg>-->
+			<!--		<div class="flex items-center">{$i18n.t('Share')}</div>-->
+			<!--	</DropdownMenu.Item>-->
+			<!--{/if}-->
 
-			<DropdownMenu.Item
-				class="flex gap-2 items-center px-3 py-2 text-sm  cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 rounded-md"
-				id="chat-overview-button"
-				on:click={async () => {
-					await showControls.set(true);
-					await showOverview.set(true);
-					await showArtifacts.set(false);
-				}}
-			>
-				<Map className=" size-4" strokeWidth="1.5" />
-				<div class="flex items-center">{$i18n.t('Overview')}</div>
-			</DropdownMenu.Item>
+<!--			<DropdownMenu.Item-->
+<!--				class="flex gap-2 items-center px-3 py-2 text-sm  cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 rounded-md"-->
+<!--				id="chat-overview-button"-->
+<!--				on:click={async () => {-->
+<!--					await showControls.set(true);-->
+<!--					await showOverview.set(true);-->
+<!--					await showArtifacts.set(false);-->
+<!--				}}-->
+<!--			>-->
+<!--				<Map className=" size-4" strokeWidth="1.5" />-->
+<!--				<div class="flex items-center">{$i18n.t('Overview')}</div>-->
+<!--			</DropdownMenu.Item>-->
 
-			<DropdownMenu.Item
-				class="flex gap-2 items-center px-3 py-2 text-sm  cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 rounded-md"
-				id="chat-overview-button"
-				on:click={async () => {
-					await showControls.set(true);
-					await showArtifacts.set(true);
-					await showOverview.set(false);
-				}}
-			>
-				<Cube className=" size-4" strokeWidth="1.5" />
-				<div class="flex items-center">{$i18n.t('Artifacts')}</div>
-			</DropdownMenu.Item>
+<!--			<DropdownMenu.Item-->
+<!--				class="flex gap-2 items-center px-3 py-2 text-sm  cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 rounded-md"-->
+<!--				id="chat-overview-button"-->
+<!--				on:click={async () => {-->
+<!--					await showControls.set(true);-->
+<!--					await showArtifacts.set(true);-->
+<!--					await showOverview.set(false);-->
+<!--				}}-->
+<!--			>-->
+<!--				<Cube className=" size-4" strokeWidth="1.5" />-->
+<!--				<div class="flex items-center">{$i18n.t('Artifacts')}</div>-->
+<!--			</DropdownMenu.Item>-->
 
 			<DropdownMenu.Sub>
 				<DropdownMenu.SubTrigger
@@ -288,14 +287,14 @@
 					transition={flyAndScale}
 					sideOffset={8}
 				>
-					<DropdownMenu.Item
-						class="flex gap-2 items-center px-3 py-2 text-sm  cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 rounded-md"
-						on:click={() => {
-							downloadJSONExport();
-						}}
-					>
-						<div class="flex items-center line-clamp-1">{$i18n.t('Export chat (.json)')}</div>
-					</DropdownMenu.Item>
+<!--					<DropdownMenu.Item-->
+<!--						class="flex gap-2 items-center px-3 py-2 text-sm  cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 rounded-md"-->
+<!--						on:click={() => {-->
+<!--							downloadJSONExport();-->
+<!--						}}-->
+<!--					>-->
+<!--						<div class="flex items-center line-clamp-1">{$i18n.t('Export chat (.json)')}</div>-->
+<!--					</DropdownMenu.Item>-->
 					<DropdownMenu.Item
 						class="flex gap-2 items-center px-3 py-2 text-sm  cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 rounded-md"
 						on:click={() => {
@@ -333,13 +332,13 @@
 				<div class="flex items-center">{$i18n.t('Copy')}</div>
 			</DropdownMenu.Item>
 
-			{#if !$temporaryChatEnabled}
-				<hr class="border-gray-100 dark:border-gray-850 my-0.5" />
+			<!--{#if !$temporaryChatEnabled}-->
+			<!--	<hr class="border-gray-100 dark:border-gray-850 my-0.5" />-->
 
-				<div class="flex p-1">
-					<Tags chatId={chat.id} />
-				</div>
-			{/if}
+			<!--	<div class="flex p-1">-->
+			<!--		<Tags chatId={chat.id} />-->
+			<!--	</div>-->
+			<!--{/if}-->
 		</DropdownMenu.Content>
 	</div>
 </Dropdown>

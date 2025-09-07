@@ -113,8 +113,8 @@
 	{/each}
 </div>
 
-{#if showSetDefault}
-	<div class=" absolute text-left mt-[1px] ml-1 text-[0.7rem] text-gray-500 font-primary">
-		<button on:click={saveDefaultModel}> {$i18n.t('Set as default')}</button>
-	</div>
-{/if}
+<!--{#if showSetDefault}-->
+<!--	<div class=" absolute text-left mt-[1px] ml-1 text-[0.7rem] text-gray-500 font-primary">-->
+<!--		<button on:click={saveDefaultModel}> {$i18n.t('Set as default')}</button>-->
+<!--	</div>-->
+<!--{/if}-->

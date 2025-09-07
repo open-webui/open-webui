@@ -10,18 +10,16 @@ import inspect
 import uuid
 import asyncio
 
-from fastapi import Request, status
-from starlette.responses import Response, StreamingResponse, JSONResponse
+from fastapi import Request
+from starlette.responses import StreamingResponse
 
 
-from open_webui.models.users import UserModel
 
 from open_webui.socket.main import (
     sio,
     get_event_call,
     get_event_emitter,
 )
-from open_webui.functions import generate_function_chat_completion
 
 from open_webui.routers.openai import (
     generate_chat_completion as generate_openai_chat_completion,
@@ -37,11 +35,10 @@ from open_webui.routers.pipelines import (
 )
 
 from open_webui.models.functions import Functions
-from open_webui.models.models import Models
 
 
 from open_webui.utils.plugin import load_function_module_by_id
-from open_webui.utils.models import get_all_models, check_model_access
+from open_webui.utils.models import get_all_models
 from open_webui.utils.payload import convert_payload_openai_to_ollama
 from open_webui.utils.response import (
     convert_response_ollama_to_openai,
@@ -193,13 +190,6 @@ async def generate_chat_completion(
             request, form_data, user=user, models=models
         )
     else:
-        # Check if user has access to the model
-        if not bypass_filter and user.role == "user":
-            try:
-                check_model_access(user, model)
-            except Exception as e:
-                raise e
-
         if model.get("owned_by") == "arena":
             model_ids = model.get("info", {}).get("meta", {}).get("model_ids")
             filter_mode = model.get("info", {}).get("meta", {}).get("filter_mode")
@@ -247,12 +237,6 @@ async def generate_chat_completion(
                     ),
                     "selected_model_id": selected_model_id,
                 }
-
-        if model.get("pipe"):
-            # Below does not require bypass_filter because this is the only route the uses this function and it is already bypassing the filter
-            return await generate_function_chat_completion(
-                request, form_data, user=user, models=models
-            )
         if model.get("owned_by") == "ollama":
             # Using /ollama/api/chat endpoint
             form_data = convert_payload_openai_to_ollama(form_data)
@@ -285,7 +269,7 @@ chat_completion = generate_chat_completion
 
 async def chat_completed(request: Request, form_data: dict, user: Any):
     if not request.app.state.MODELS:
-        await get_all_models(request, user=user)
+        await get_all_models(request)
 
     if getattr(request.state, "direct", False) and hasattr(request.state, "model"):
         models = {
@@ -356,7 +340,7 @@ async def chat_action(request: Request, action_id: str, form_data: dict, user: A
         raise Exception(f"Action not found: {action_id}")
 
     if not request.app.state.MODELS:
-        await get_all_models(request, user=user)
+        await get_all_models(request)
 
     if getattr(request.state, "direct", False) and hasattr(request.state, "model"):
         models = {

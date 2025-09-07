@@ -1,6 +1,5 @@
 <script lang="ts">
 	import Tooltip from '$lib/components/common/Tooltip.svelte';
-	import Plus from '$lib/components/icons/Plus.svelte';
 
 	let selected = '';
 </script>
@@ -57,9 +56,4 @@
 		</button>
 	</div>
 
-	<!-- <div class="flex justify-center relative group text-gray-400">
-		<button class=" cursor-pointer p-2" on:click={() => {}}>
-			<Plus className="size-4" strokeWidth="2" />
-		</button>
-	</div> -->
 </div>
