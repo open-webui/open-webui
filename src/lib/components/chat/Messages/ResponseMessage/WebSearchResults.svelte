@@ -8,20 +8,13 @@
 	let state = false;
 </script>
 
-<Collapsible bind:open={state} className="w-full space-y-1">
-	<div
-		class="flex items-center gap-2 text-gray-500 hover:text-gray-700 dark:hover:text-gray-300 transition"
-	>
+<Collapsible grow={true} className="w-full" buttonClassName="w-full">
+	<div class="flex items-center gap-2 text-gray-500 transition">
 		<slot />
-
-		{#if state}
-			<ChevronUp strokeWidth="3.5" className="size-3.5 " />
-		{:else}
-			<ChevronDown strokeWidth="3.5" className="size-3.5 " />
-		{/if}
 	</div>
+
 	<div
-		class="text-sm border border-gray-50 dark:border-gray-850 rounded-xl mb-1.5 p-2"
+		class="text-sm border border-gray-50 dark:border-gray-850 rounded-xl my-1.5 p-2 w-full"
 		slot="content"
 	>
 		{#if status?.query}

@@ -1263,7 +1263,7 @@
 	"Searched {{count}} sites": "",
 	"Searching \"{{searchQuery}}\"": "Αναζήτηση \"{{searchQuery}}\"",
 	"Searching Knowledge for \"{{searchQuery}}\"": "Αναζήτηση Γνώσης για \"{{searchQuery}}\"",
-	"Searching the web...": "",
+	"Searching the web": "",
 	"Searxng Query URL": "URL Ερώτησης Searxng",
 	"See readme.md for instructions": "Δείτε readme.md για οδηγίες",
 	"See what's new": "Δείτε τι νέο υπάρχει",

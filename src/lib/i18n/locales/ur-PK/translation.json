@@ -1263,7 +1263,7 @@
 	"Searched {{count}} sites": "",
 	"Searching \"{{searchQuery}}\"": "\"{{searchQuery}}\" تلاش کر رہے ہیں",
 	"Searching Knowledge for \"{{searchQuery}}\"": "\"{{searchQuery}}\" کے لیے علم کی تلاش",
-	"Searching the web...": "",
+	"Searching the web": "",
 	"Searxng Query URL": "تلاش کا سوال URL",
 	"See readme.md for instructions": "ہدایات کے لیے readme.md دیکھیں",
 	"See what's new": "نیا کیا ہے دیکھیں",

@@ -1263,7 +1263,7 @@
 	"Searched {{count}} sites": "",
 	"Searching \"{{searchQuery}}\"": "",
 	"Searching Knowledge for \"{{searchQuery}}\"": "",
-	"Searching the web...": "",
+	"Searching the web": "",
 	"Searxng Query URL": "כתובת URL של שאילתת Searxng",
 	"See readme.md for instructions": "ראה את readme.md להוראות",
 	"See what's new": "ראה מה חדש",

@@ -1263,7 +1263,7 @@
 	"Searched {{count}} sites": "Поиск по {{count}} сайтам",
 	"Searching \"{{searchQuery}}\"": "Поиск по запросу \"{{searchQuery}}\"",
 	"Searching Knowledge for \"{{searchQuery}}\"": "Поиск знания для \"{{searchQuery}}\"",
-	"Searching the web...": "Поиск в интернете...",
+	"Searching the web": "Поиск в интернете...",
 	"Searxng Query URL": "URL-адрес запроса Searxng",
 	"See readme.md for instructions": "Смотрите readme.md для инструкций",
 	"See what's new": "Посмотреть, что нового",

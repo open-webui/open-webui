@@ -1263,7 +1263,7 @@
 	"Searched {{count}} sites": "{{count}} oldal keresése megtörtént",
 	"Searching \"{{searchQuery}}\"": "Keresés: \"{{searchQuery}}\"",
 	"Searching Knowledge for \"{{searchQuery}}\"": "Tudásbázis keresése: \"{{searchQuery}}\"",
-	"Searching the web...": "",
+	"Searching the web": "",
 	"Searxng Query URL": "Searxng lekérdezési URL",
 	"See readme.md for instructions": "Lásd a readme.md fájlt az útmutatásért",
 	"See what's new": "Újdonságok megtekintése",

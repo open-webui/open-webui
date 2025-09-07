@@ -1263,7 +1263,7 @@
 	"Searched {{count}} sites": "Etsitty {{count}} sivulta",
 	"Searching \"{{searchQuery}}\"": "Haetaan \"{{searchQuery}}\"",
 	"Searching Knowledge for \"{{searchQuery}}\"": "Haetaan tietämystä \"{{searchQuery}}\"",
-	"Searching the web...": "Haetaan verkosta...",
+	"Searching the web": "Haetaan verkosta...",
 	"Searxng Query URL": "Searxng-kyselyn verkko-osoite",
 	"See readme.md for instructions": "Katso ohjeet readme.md-tiedostosta",
 	"See what's new": "Katso, mitä uutta",

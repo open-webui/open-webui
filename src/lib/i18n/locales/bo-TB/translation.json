@@ -1263,7 +1263,7 @@
 	"Searched {{count}} sites": "དྲ་ཚིགས་ {{count}} འཚོལ་བཤེར་བྱས།",
 	"Searching \"{{searchQuery}}\"": "\"{{searchQuery}}\" འཚོལ་བཞིན་པ།",
 	"Searching Knowledge for \"{{searchQuery}}\"": "\"{{searchQuery}}\" ཆེད་དུ་ཤེས་བྱ་འཚོལ་བཞིན་པ།",
-	"Searching the web...": "",
+	"Searching the web": "",
 	"Searxng Query URL": "Searxng Query URL",
 	"See readme.md for instructions": "ལམ་སྟོན་ཆེད་དུ་ readme.md ལ་ལྟ་བ།",
 	"See what's new": "གསར་པ་ཅི་ཡོད་ལྟ་བ།",

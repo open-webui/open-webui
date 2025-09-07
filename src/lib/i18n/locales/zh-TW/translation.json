@@ -1267,7 +1267,7 @@
 	"Searched {{count}} sites": "搜尋到 {{count}} 個網站",
 	"Searching \"{{searchQuery}}\"": "正在搜尋「{{searchQuery}}」",
 	"Searching Knowledge for \"{{searchQuery}}\"": "正在搜尋知識庫中的「{{searchQuery}}」",
-	"Searching the web...": "正在搜尋網路...",
+	"Searching the web": "正在搜尋網路...",
 	"Searxng Query URL": "Searxng 查詢 URL",
 	"See readme.md for instructions": "檢視 readme.md 以取得說明",
 	"See what's new": "檢視新功能",
