@@ -19,35 +19,36 @@
 	
 </Collapsible> -->
 
-{#if statusHistory}
-	<div class="text-sm flex flex-col w-full">
-		{#if showHistory}
-			<div class="flex flex-row">
-				{#if statusHistory.length > 1}
-					<div class="w-1 border-r border-gray-50 dark:border-gray-800 mt-3 -mb-2.5" />
+{#if statusHistory && statusHistory.length > 0}
+	{@const status = statusHistory.at(-1)}
 
-					<div class="w-full -translate-x-[7.5px]">
-						{#each statusHistory as status, idx}
-							{#if idx !== statusHistory.length - 1}
-								<div class="flex items-start gap-2 mb-1">
-									<div class="pt-3 px-1">
-										<span class="relative flex size-2">
-											<span
-												class="relative inline-flex size-1.5 rounded-full bg-gray-200 dark:bg-gray-700"
-											></span>
-										</span>
+	{#if status?.hidden !== true}
+		<div class="text-sm flex flex-col w-full">
+			{#if showHistory}
+				<div class="flex flex-row">
+					{#if statusHistory.length > 1}
+						<div class="w-1 border-r border-gray-50 dark:border-gray-800 mt-3 -mb-2.5" />
+
+						<div class="w-full -translate-x-[7.5px]">
+							{#each statusHistory as status, idx}
+								{#if idx !== statusHistory.length - 1}
+									<div class="flex items-start gap-2 mb-1">
+										<div class="pt-3 px-1">
+											<span class="relative flex size-2">
+												<span
+													class="relative inline-flex size-1.5 rounded-full bg-gray-200 dark:bg-gray-700"
+												></span>
+											</span>
+										</div>
+										<StatusItem {status} done={true} />
 									</div>
-									<StatusItem {status} done={true} />
-								</div>
-							{/if}
-						{/each}
-					</div>
-				{/if}
-			</div>
-		{/if}
+								{/if}
+							{/each}
+						</div>
+					{/if}
+				</div>
+			{/if}
 
-		{#if statusHistory.length > 0}
-			{@const status = statusHistory.at(-1)}
 			<button
 				class="w-full -translate-x-[3.5px]"
 				on:click={() => {
@@ -69,6 +70,6 @@
 					<StatusItem {status} />
 				</div>
 			</button>
-		{/if}
-	</div>
+		</div>
+	{/if}
 {/if}
