@@ -8,9 +8,14 @@
 	let state = false;
 </script>
 
-<Collapsible grow={true} className="w-full" buttonClassName="w-full">
+<Collapsible grow={true} className="w-full" buttonClassName="w-full" bind:open={state}>
 	<div class="flex items-center gap-2 text-gray-500 transition">
 		<slot />
+		{#if state}
+			<ChevronUp strokeWidth="2.5" className="size-3.5 " />
+		{:else}
+			<ChevronDown strokeWidth="2.5" className="size-3.5 " />
+		{/if}
 	</div>
 
 	<div
