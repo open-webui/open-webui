@@ -643,7 +643,10 @@
 			<div>
 				<div class="chat-{message.role} w-full min-w-full markdown-prose">
 					<div>
-						<StatusHistory statusHistory={message?.statusHistory} />
+						<StatusHistory
+							statusHistory={message?.statusHistory}
+							showHistory={message?.content === ''}
+						/>
 
 						{#if message?.files && message.files?.filter((f) => f.type === 'image').length > 0}
 							<div class="my-1 w-full flex overflow-x-auto gap-2 flex-wrap">
@@ -729,7 +732,7 @@
 							</div>
 						{:else}
 							<div class="w-full flex flex-col relative" id="response-content-container">
-								{#if message.content === '' && !message.error && (message?.statusHistory ?? [...(message?.status ? [message?.status] : [])]).length === 0}
+								{#if message.content === '' && !message.error && ((message?.statusHistory ?? [...(message?.status ? [message?.status] : [])]).length === 0 || (message?.statusHistory?.at(-1)?.hidden ?? false))}
 									<Skeleton />
 								{:else if message.content && message.error !== true}
 									<!-- always show message contents even if there's an error -->
