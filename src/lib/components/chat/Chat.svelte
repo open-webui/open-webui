@@ -202,7 +202,12 @@
 
 		if (type === 'prompt') {
 			// Handle prompt selection
-			messageInput?.setText(data);
+			messageInput?.setText(data, async () => {
+				if (!($settings?.insertSuggestionPrompt ?? false)) {
+					await tick();
+					submitPrompt(prompt);
+				}
+			});
 		}
 	};
 
