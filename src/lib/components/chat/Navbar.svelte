@@ -105,6 +105,12 @@
 					{#if showModelSelector}
 						<ModelSelector bind:selectedModels showSetDefault={!shareEnabled} />
 					{/if}
+					
+	                <div class="flex-1 flex items-center justify-center overflow-hidden max-w-full py-0.5">
+                        <h1 class="text-sm font-medium text-gray-900 dark:text-white truncate text-center">
+                            {title}
+                        </h1>
+                    </div>
 				</div>
 
 				<div class="self-start flex flex-none items-center text-gray-600 dark:text-gray-400">
