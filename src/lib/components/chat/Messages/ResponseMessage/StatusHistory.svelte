@@ -4,7 +4,15 @@
 
 	import StatusItem from './StatusHistory/StatusItem.svelte';
 	export let statusHistory = [];
-	export let showHistory = true;
+	export let expand = false;
+
+	let showHistory = true;
+
+	$: if (expand) {
+		showHistory = true;
+	} else {
+		showHistory = false;
+	}
 
 	let history = [];
 	let status = null;
