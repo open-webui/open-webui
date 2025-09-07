@@ -645,7 +645,7 @@
 					<div>
 						<StatusHistory
 							statusHistory={message?.statusHistory}
-							showHistory={message?.content === ''}
+							expand={message?.content === ''}
 						/>
 
 						{#if message?.files && message.files?.filter((f) => f.type === 'image').length > 0}
