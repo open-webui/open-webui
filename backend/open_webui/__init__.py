@@ -82,6 +82,7 @@ def serve(
         ssl_keyfile=os.path.join(os.getcwd(), "key.pem"),
         ssl_certfile=os.path.join(os.getcwd(), "cert.pem"),
         forwarded_allow_ips="*",
+        proxy_headers=True,
         workers=UVICORN_WORKERS,
     )
 
@@ -97,6 +98,7 @@ def dev(
         host=host,
         port=port,
         reload=reload,
+        proxy_headers=True,
         ssl_keyfile=os.path.join(os.getcwd(), "key.pem"),
         ssl_certfile=os.path.join(os.getcwd(), "cert.pem"),
         forwarded_allow_ips="*",
