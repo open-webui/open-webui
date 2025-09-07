@@ -1267,7 +1267,7 @@
 	"Searched {{count}} sites": "已搜索 {{count}} 个网站",
 	"Searching \"{{searchQuery}}\"": "搜索 \"{{searchQuery}}\" 中",
 	"Searching Knowledge for \"{{searchQuery}}\"": "检索有关 \"{{searchQuery}}\" 的知识中",
-	"Searching the web...": "正在搜索网络...",
+	"Searching the web": "正在搜索网络...",
 	"Searxng Query URL": "Searxng 查询 URL",
 	"See readme.md for instructions": "查看 readme.md 以获取说明",
 	"See what's new": "查阅最新更新内容",

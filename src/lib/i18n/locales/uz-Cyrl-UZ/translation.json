@@ -1263,7 +1263,7 @@
 	"Searched {{count}} sites": "{{count}} та сайт қидирилди",
 	"Searching \"{{searchQuery}}\"": "“{{searchQuery}}” қидирилмоқда",
 	"Searching Knowledge for \"{{searchQuery}}\"": "“{{searchQuery}}” бўйича маълумотлар қидирилмоқда",
-	"Searching the web...": "Интернетда қидирилмоқда...",
+	"Searching the web": "Интернетда қидирилмоқда...",
 	"Searxng Query URL": "Searxng сўрови УРЛ",
 	"See readme.md for instructions": "Кўрсатмалар учун readme.md га қаранг",
 	"See what's new": "Нима янгиликлар борлигини кўринг",

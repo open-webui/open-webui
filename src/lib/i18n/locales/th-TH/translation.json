@@ -1263,7 +1263,7 @@
 	"Searched {{count}} sites": "",
 	"Searching \"{{searchQuery}}\"": "กำลังค้นหา \"{{searchQuery}}\"",
 	"Searching Knowledge for \"{{searchQuery}}\"": "",
-	"Searching the web...": "",
+	"Searching the web": "",
 	"Searxng Query URL": "URL คำค้นหา",
 	"See readme.md for instructions": "ดู readme.md สำหรับคำแนะนำ",
 	"See what's new": "ดูสิ่งที่ใหม่",

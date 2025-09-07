@@ -1263,7 +1263,7 @@
 	"Searched {{count}} sites": "{{count}} sites pesquisados",
 	"Searching \"{{searchQuery}}\"": "Pesquisando \"{{searchQuery}}\"",
 	"Searching Knowledge for \"{{searchQuery}}\"": "Buscando conhecimento para \"{{searchQuery}}\"",
-	"Searching the web...": "Pesquisando na Internet...",
+	"Searching the web": "Pesquisando na Internet...",
 	"Searxng Query URL": "URL da Consulta Searxng",
 	"See readme.md for instructions": "Veja readme.md para instruções",
 	"See what's new": "Veja o que há de novo",

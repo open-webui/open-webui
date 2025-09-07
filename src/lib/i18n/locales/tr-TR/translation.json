@@ -1263,7 +1263,7 @@
 	"Searched {{count}} sites": "{{count}} site arandı",
 	"Searching \"{{searchQuery}}\"": "\"{{searchQuery}}\" aranıyor",
 	"Searching Knowledge for \"{{searchQuery}}\"": "\"{{searchQuery}}\" için Bilgi aranıyor",
-	"Searching the web...": "İnternette aranıyor...",
+	"Searching the web": "İnternette aranıyor...",
 	"Searxng Query URL": "Searxng Sorgu URL'si",
 	"See readme.md for instructions": "Yönergeler için readme.md dosyasına bakın",
 	"See what's new": "Yeniliklere göz atın",

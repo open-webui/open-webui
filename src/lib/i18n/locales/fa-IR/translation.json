@@ -1263,7 +1263,7 @@
 	"Searched {{count}} sites": "جستجوی {{count}} سایت",
 	"Searching \"{{searchQuery}}\"": "جستجوی «{{searchQuery}}»",
 	"Searching Knowledge for \"{{searchQuery}}\"": "جستجوی دانش برای «{{searchQuery}}»",
-	"Searching the web...": "",
+	"Searching the web": "",
 	"Searxng Query URL": "نشانی وب جستجوی Searxng",
 	"See readme.md for instructions": "برای مشاهده دستورالعمل\u200cها به readme.md مراجعه کنید",
 	"See what's new": "ببینید موارد جدید چه بوده",

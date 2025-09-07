@@ -1263,7 +1263,7 @@
 	"Searched {{count}} sites": "",
 	"Searching \"{{searchQuery}}\"": "encari \"{{ searchQuery }}\"",
 	"Searching Knowledge for \"{{searchQuery}}\"": "",
-	"Searching the web...": "",
+	"Searching the web": "",
 	"Searxng Query URL": "URL Pertanyaan Searxng",
 	"See readme.md for instructions": "Lihat readme.md untuk arahan",
 	"See what's new": "Lihat apa yang terbaru",

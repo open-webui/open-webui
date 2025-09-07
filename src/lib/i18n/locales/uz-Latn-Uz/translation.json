@@ -1263,7 +1263,7 @@
 	"Searched {{count}} sites": "{{count}} ta sayt qidirildi",
 	"Searching \"{{searchQuery}}\"": "“{{searchQuery}}” qidirilmoqda",
 	"Searching Knowledge for \"{{searchQuery}}\"": "“{{searchQuery}}” boʻyicha maʼlumotlar qidirilmoqda",
-	"Searching the web...": "Internetda qidirilmoqda...",
+	"Searching the web": "Internetda qidirilmoqda...",
 	"Searxng Query URL": "Searchxng so'rovi URL",
 	"See readme.md for instructions": "Ko'rsatmalar uchun readme.md ga qarang",
 	"See what's new": "Nima yangiliklar borligini ko'ring",

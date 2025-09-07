@@ -1263,7 +1263,7 @@
 	"Searched {{count}} sites": "Cuardaíodh {{count}} suíomh",
 	"Searching \"{{searchQuery}}\"": "Ag cuardach \"{{searchQuery}}\"",
 	"Searching Knowledge for \"{{searchQuery}}\"": "Cuardach Eolas do \"{{searchQuery}}\"",
-	"Searching the web...": "Ag cuardach an ghréasáin...",
+	"Searching the web": "Ag cuardach an ghréasáin...",
 	"Searxng Query URL": "URL ceisteanna cuardaigh",
 	"See readme.md for instructions": "Féach readme.md le haghaidh treoracha",
 	"See what's new": "Féach cad atá nua",

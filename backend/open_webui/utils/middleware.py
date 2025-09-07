@@ -369,7 +369,7 @@ async def chat_web_search_handler(
             "type": "status",
             "data": {
                 "action": "web_search",
-                "description": "Generating search query",
+                "description": "Searching the web",
                 "done": False,
             },
         }
@@ -435,8 +435,8 @@ async def chat_web_search_handler(
         {
             "type": "status",
             "data": {
-                "action": "web_search",
-                "description": "Searching the web",
+                "action": "web_search_queries_generated",
+                "queries": queries,
                 "done": False,
             },
         }
@@ -530,7 +530,7 @@ async def chat_image_generation_handler(
     await __event_emitter__(
         {
             "type": "status",
-            "data": {"description": "Generating an image", "done": False},
+            "data": {"description": "Creating image", "done": False},
         }
     )
 
@@ -582,7 +582,7 @@ async def chat_image_generation_handler(
         await __event_emitter__(
             {
                 "type": "status",
-                "data": {"description": "Generated an image", "done": True},
+                "data": {"description": "Image created", "done": True},
             }
         )
 
@@ -625,8 +625,9 @@ async def chat_image_generation_handler(
 
 
 async def chat_completion_files_handler(
-    request: Request, body: dict, user: UserModel
+    request: Request, body: dict, extra_params: dict, user: UserModel
 ) -> tuple[dict, dict[str, list]]:
+    __event_emitter__ = extra_params["__event_emitter__"]
     sources = []
 
     if files := body.get("metadata", {}).get("files", None):
@@ -661,6 +662,17 @@ async def chat_completion_files_handler(
 
         if len(queries) == 0:
             queries = [get_last_user_message(body["messages"])]
+
+        # await __event_emitter__(
+        #     {
+        #         "type": "status",
+        #         "data": {
+        #             "action": "queries_generated",
+        #             "queries": queries,
+        #             "done": True,
+        #         },
+        #     }
+        # )
 
         try:
             # Offload get_sources_from_items to a separate thread
@@ -982,7 +994,9 @@ async def process_chat_payload(request, form_data, user, metadata, model):
                 log.exception(e)
 
     try:
-        form_data, flags = await chat_completion_files_handler(request, form_data, user)
+        form_data, flags = await chat_completion_files_handler(
+            request, form_data, extra_params, user
+        )
         sources.extend(flags.get("sources", []))
     except Exception as e:
         log.exception(e)

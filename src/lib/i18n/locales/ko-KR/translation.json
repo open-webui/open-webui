@@ -1263,7 +1263,7 @@
 	"Searched {{count}} sites": "{{count}}개 사이트 검색됨",
 	"Searching \"{{searchQuery}}\"": "\"{{searchQuery}}\" 검색 중",
 	"Searching Knowledge for \"{{searchQuery}}\"": "\"{{searchQuery}}\"에 대한 지식 기반 검색 중",
-	"Searching the web...": "웹에서 검색 중...",
+	"Searching the web": "웹에서 검색 중...",
 	"Searxng Query URL": "Searxng 쿼리 URL",
 	"See readme.md for instructions": "설명은 readme.md를 참조하세요.",
 	"See what's new": "새로운 기능 보기",
