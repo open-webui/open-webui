@@ -101,6 +101,7 @@
 	export let codeInterpreterEnabled = false;
 
 	let showInputVariablesModal = false;
+	let inputVariablesModalCallback = (variableValues) => {};
 	let inputVariables = {};
 	let inputVariableValues = {};
 
@@ -122,11 +123,24 @@
 		codeInterpreterEnabled
 	});
 
-	const inputVariableHandler = async (text: string) => {
+	const inputVariableHandler = async (text: string): Promise<string> => {
 		inputVariables = extractInputVariables(text);
-		if (Object.keys(inputVariables).length > 0) {
-			showInputVariablesModal = true;
+
+		// No variables? return the original text immediately.
+		if (Object.keys(inputVariables).length === 0) {
+			return text;
 		}
+
+		// Show modal and wait for the user's input.
+		showInputVariablesModal = true;
+		return await new Promise<string>((resolve) => {
+			inputVariablesModalCallback = (variableValues) => {
+				inputVariableValues = { ...inputVariableValues, ...variableValues };
+				replaceVariables(inputVariableValues);
+				showInputVariablesModal = false;
+				resolve(text);
+			};
+		});
 	};
 
 	const textVariableHandler = async (text: string) => {
@@ -244,7 +258,6 @@
 			text = text.replaceAll('{{CURRENT_WEEKDAY}}', weekday);
 		}
 
-		inputVariableHandler(text);
 		return text;
 	};
 
@@ -280,7 +293,7 @@
 		}
 	};
 
-	export const setText = async (text?: string) => {
+	export const setText = async (text?: string, cb?: (text: string) => void) => {
 		const chatInput = document.getElementById('chat-input');
 
 		if (chatInput) {
@@ -296,6 +309,10 @@
 				chatInput.focus();
 				chatInput.dispatchEvent(new Event('input'));
 			}
+
+			text = await inputVariableHandler(text);
+			await tick();
+			if (cb) await cb(text);
 		}
 	};
 
@@ -758,11 +775,7 @@
 						}
 					];
 				};
-				reader.readAsDataURL(
-					file['type'] === 'image/heic'
-						? await convertHeicToJpeg(file)
-						: file
-				);
+				reader.readAsDataURL(file['type'] === 'image/heic' ? await convertHeicToJpeg(file) : file);
 			} else {
 				uploadFileHandler(file);
 			}
@@ -868,10 +881,7 @@
 <InputVariablesModal
 	bind:show={showInputVariablesModal}
 	variables={inputVariables}
-	onSave={(variableValues) => {
-		inputVariableValues = { ...inputVariableValues, ...variableValues };
-		replaceVariables(inputVariableValues);
-	}}
+	onSave={inputVariablesModalCallback}
 />
 
 {#if loaded}
