@@ -30,7 +30,7 @@ class ExternalDocumentLoader(BaseLoader):
         self.mime_type = mime_type
         self.extract_images = extract_images
 
-    def load(self) -> List[Document]:
+    def load(self) -> tuple[List[Document], List[str]]:
         with open(self.file_path, "rb") as f:
             data = f.read()
 
@@ -49,9 +49,7 @@ class ExternalDocumentLoader(BaseLoader):
         if self.extract_images:
             headers["X-Extract-Images"] = "true"
 
-        url = self.url
-        if url.endswith("/"):
-            url = url[:-1]
+        url = self.url.rstrip("/")
 
         try:
             response = requests.put(f"{url}/process", data=data, headers=headers)
@@ -63,12 +61,13 @@ class ExternalDocumentLoader(BaseLoader):
             response_data = response.json()
             if not response_data:
                 raise Exception("Error loading document: No content returned")
+            
+            all_image_refs = []
 
             def process_doc_data(doc_data):
                 metadata = doc_data.get("metadata", {}) or {}
 
                 if self.extract_images and "images" in doc_data:
-                    image_refs = []
                     images_data = doc_data.get("images", [])
                     for b64_image in images_data:
                         try:
@@ -87,24 +86,28 @@ class ExternalDocumentLoader(BaseLoader):
                             with open(image_path, "wb") as img_file:
                                 img_file.write(image_data)
 
-                            relative_path = os.path.join("images", image_filename)
-                            image_refs.append(relative_path)
+                            relative_path = f"images/{image_filename}"
+                            all_image_refs.append(relative_path)
+                            log.info(f"Saved image to {image_path}, ref: {relative_path}")
                         except Exception as e:
                             log.error(f"Could not save extracted image: {e}")
 
-                    if image_refs:
-                        metadata["image_refs"] = image_refs
-
                 return Document(
-                    page_content=doc_data.get("page_content"), metadata=metadata
+                    page_content=doc_data.get("page_content"),
+                    metadata=metadata
                 )
 
+            docs = []
             if isinstance(response_data, dict):
-                return [process_doc_data(response_data)]
+                docs = [process_doc_data(response_data)]
             elif isinstance(response_data, list):
-                return [process_doc_data(doc) for doc in response_data]
+                docs = [process_doc_data(doc) for doc in response_data]
             else:
                 raise Exception("Error loading document: Unable to parse content")
+            
+            log.info(f"Returning {len(docs)} documents and {len(all_image_refs)} image refs")
+            return docs, all_image_refs
+        
         else:
             raise Exception(
                 f"Error loading document: {response.status_code} {response.text}"

@@ -214,16 +214,29 @@ class Loader:
 
     def load(
         self, filename: str, file_content_type: str, file_path: str
-    ) -> list[Document]:
+    ) -> tuple[list[Document], list[str]]:
         loader = self._get_loader(filename, file_content_type, file_path)
-        docs = loader.load()
 
-        return [
+        if isinstance(loader, ExternalDocumentLoader):
+            result = loader.load()
+            if isinstance(result, tuple):
+                docs, image_refs = result
+            else:
+                docs = result
+                image_refs = []
+        else:
+            docs = loader.load()
+            image_refs = []
+
+        docs = [
             Document(
-                page_content=ftfy.fix_text(doc.page_content), metadata=doc.metadata
+                page_content=ftfy.fix_text(doc.page_content),
+                metadata=doc.metadata
             )
             for doc in docs
         ]
+        
+        return docs, image_refs
 
     def _is_text_file(self, file_ext: str, file_content_type: str) -> bool:
         return file_ext in known_source_ext or (

@@ -198,6 +198,7 @@ async def generate_chat_completion(
     if model.get("vision", False):
         documents = form_data.pop("documents", None)
         if documents:
+            log.info(f"Processing {len(documents)} documents for vision model")
             last_user_message = None
             for message in reversed(form_data["messages"]):
                 if message.get("role") == "user":
@@ -205,8 +206,12 @@ async def generate_chat_completion(
                     break
 
             if last_user_message:
-                if "images" not in last_user_message:
-                    last_user_message["images"] = []
+                if isinstance(last_user_message.get("content"), str):
+                    last_user_message["content"] = [
+                        {"type": "text", "text": last_user_message["content"]}
+                    ]
+                elif not last_user_message.get("content"):
+                    last_user_message["content"] = []
 
                 for doc in documents:
                     doc_id = doc.get("id")
@@ -214,23 +219,47 @@ async def generate_chat_completion(
                         continue
 
                     file_model = Files.get_file_by_id(doc_id)
-                    if file_model and file_model.image_refs:
+                    if not file_model:
+                        log.warning(f"File not found: {doc_id}")
+                        continue
+
+                    if file_model.image_refs:
+                        log.info(f"Found {len(file_model.image_refs)} images in document {doc_id}")
+
                         for image_ref in file_model.image_refs:
                             try:
                                 image_path = os.path.join(DATA_DIR, image_ref)
+                                log.debug(f"Loading image from: {image_path}")
+
                                 if os.path.exists(image_path):
                                     with open(image_path, "rb") as image_file:
-                                        encoded_string = base64.b64encode(
-                                            image_file.read()
-                                        ).decode("utf-8")
-                                        last_user_message["images"].append(
-                                            encoded_string
-                                        )
-                            except Exception as e:
-                                log.error(
-                                    f"Error reading or encoding image {image_ref}: {e}"
-                                )
+                                        image_data = image_file.read()
+                                        encoded_string = base64.b64encode(image_data).decode("utf-8")
 
+                                        ext = os.path.splitext(image_path)[1].lower()
+                                        mime_type = {
+                                            '.png': 'image/png',
+                                            '.jpg': 'image/jpeg',
+                                            '.jpeg': 'image/jpeg',
+                                            '.gif': 'image/gif',
+                                            '.webp': 'image/webp'
+                                        }.get(ext, 'image/jpeg')
+
+                                        last_user_message["content"].append({
+                                            "type": "image_url",
+                                            "image_url": {
+                                                "url": f"data:{mime_type};base64,{encoded_string}",
+                                                "mime_type": mime_type
+                                            }
+                                        })
+                                        log.info(f"Successfully added image to message content")
+                                else:
+                                    log.error(f"Image file not found: {image_path}")
+                            except Exception as e:
+                                log.error(f"Error processing image {image_ref}: {e}")
+                    else:
+                        log.debug(f"No images found in document {doc_id}")
+                        
     if getattr(request.state, "direct", False):
         return await generate_direct_chat_completion(
             request, form_data, user=user, models=models

@@ -114,19 +114,27 @@ def process_uploaded_file(request, file, file_path, file_item, file_metadata, us
             elif (not file.content_type.startswith(("image/", "video/"))) or (
                 request.app.state.config.CONTENT_EXTRACTION_ENGINE == "external"
             ):
-                process_file(request, ProcessFileForm(file_id=file_item.id), user=user)
+
+                result = process_file(request, ProcessFileForm(file_id=file_item.id), user=user)
+
+                if result and isinstance(result, dict) and 'image_refs' in result:
+                    Files.update_file_image_refs_by_id(file_item.id, result['image_refs'])
+                    log.info(f"Updated file {file_item.id} with {len(result['image_refs'])} image refs")
         else:
             log.info(
                 f"File type {file.content_type} is not provided, but trying to process anyway"
             )
-            process_file(request, ProcessFileForm(file_id=file_item.id), user=user)
+            result = process_file(request, ProcessFileForm(file_id=file_item.id), user=user)
+
+            if result and isinstance(result, dict) and 'image_refs' in result:
+                Files.update_file_image_refs_by_id(file_item.id, result['image_refs'])
 
         Files.update_file_data_by_id(
             file_item.id,
             {"status": "completed"},
         )
     except Exception as e:
-        log.error(f"Error processing file: {file_item.id}")
+        log.error(f"Error processing file: {file_item.id}: {e}")
         Files.update_file_data_by_id(
             file_item.id,
             {

@@ -1372,6 +1372,8 @@ def process_file(
 
         if collection_name is None:
             collection_name = f"file-{file.id}"
+        
+        image_refs = []
 
         if form_data.content:
             # Update the content in the file
@@ -1450,6 +1452,7 @@ def process_file(
                     DATALAB_MARKER_OUTPUT_FORMAT=request.app.state.config.DATALAB_MARKER_OUTPUT_FORMAT,
                     EXTERNAL_DOCUMENT_LOADER_URL=request.app.state.config.EXTERNAL_DOCUMENT_LOADER_URL,
                     EXTERNAL_DOCUMENT_LOADER_API_KEY=request.app.state.config.EXTERNAL_DOCUMENT_LOADER_API_KEY,
+                    PDF_EXTRACT_IMAGES=request.app.state.config.PDF_EXTRACT_IMAGES,
                     TIKA_SERVER_URL=request.app.state.config.TIKA_SERVER_URL,
                     DOCLING_SERVER_URL=request.app.state.config.DOCLING_SERVER_URL,
                     DOCLING_PARAMS={
@@ -1465,10 +1468,17 @@ def process_file(
                     DOCUMENT_INTELLIGENCE_KEY=request.app.state.config.DOCUMENT_INTELLIGENCE_KEY,
                     MISTRAL_OCR_API_KEY=request.app.state.config.MISTRAL_OCR_API_KEY,
                 )
-                docs = loader.load(
+                result = loader.load(
                     file.filename, file.meta.get("content_type"), file_path
                 )
 
+                if isinstance(result, tuple):
+                    docs, image_refs = result
+                    log.info(f"Loaded {len(docs)} docs and {len(image_refs)} images")
+                else:
+                    docs = result
+                    image_refs = []
+                    
                 docs = [
                     Document(
                         page_content=doc.page_content,
@@ -1503,6 +1513,10 @@ def process_file(
             {"status": "completed", "content": text_content},
         )
 
+        if image_refs:
+            Files.update_file_image_refs_by_id(file.id, image_refs)
+            log.info(f"Updated file {file.id} with {len(image_refs)} image references")
+
         hash = calculate_sha256_string(text_content)
         Files.update_file_hash_by_id(file.id, hash)
 
@@ -1534,6 +1548,7 @@ def process_file(
                         "collection_name": collection_name,
                         "filename": file.filename,
                         "content": text_content,
+                        "image_refs": image_refs,
                     }
             except Exception as e:
                 raise e
@@ -1543,6 +1558,7 @@ def process_file(
                 "collection_name": None,
                 "filename": file.filename,
                 "content": text_content,
+                "image_refs": image_refs,
             }
 
     except Exception as e:
