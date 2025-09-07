@@ -663,16 +663,16 @@ async def chat_completion_files_handler(
         if len(queries) == 0:
             queries = [get_last_user_message(body["messages"])]
 
-        # await __event_emitter__(
-        #     {
-        #         "type": "status",
-        #         "data": {
-        #             "action": "queries_generated",
-        #             "queries": queries,
-        #             "done": True,
-        #         },
-        #     }
-        # )
+        await __event_emitter__(
+            {
+                "type": "status",
+                "data": {
+                    "action": "queries_generated",
+                    "queries": queries,
+                    "done": False,
+                },
+            }
+        )
 
         try:
             # Offload get_sources_from_items to a separate thread
@@ -709,6 +709,21 @@ async def chat_completion_files_handler(
             log.exception(e)
 
         log.debug(f"rag_contexts:sources: {sources}")
+
+        sources_count = 0
+        for source in sources:
+            sources_count += len(source.get("document", []))
+
+        await __event_emitter__(
+            {
+                "type": "status",
+                "data": {
+                    "action": "sources_retrieved",
+                    "count": sources_count,
+                    "done": True,
+                },
+            }
+        )
 
     return body, {"sources": sources}
 

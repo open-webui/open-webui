@@ -2,36 +2,33 @@
 	import { getContext } from 'svelte';
 	const i18n = getContext('i18n');
 
-	import Collapsible from '$lib/components/common/Collapsible.svelte';
 	import StatusItem from './StatusHistory/StatusItem.svelte';
 	export let statusHistory = [];
+	export let showHistory = true;
 
-	let showHistory = false;
+	let history = [];
+	let status = null;
+
+	$: if (history && history.length > 0) {
+		status = history.at(-1);
+	}
+
+	$: if (JSON.stringify(statusHistory) !== JSON.stringify(history)) {
+		history = statusHistory;
+	}
 </script>
 
-<!-- <Collapsible open={false} growDirection="up" className="w-full space-y-1" buttonClassName="w-full">
-	<div
-		class="flex items-center gap-2 text-gray-500 hover:text-gray-700 dark:hover:text-gray-300 transition w-full"
-	>
-		
-	</div>
-
-	
-</Collapsible> -->
-
-{#if statusHistory && statusHistory.length > 0}
-	{@const status = statusHistory.at(-1)}
-
+{#if history && history.length > 0}
 	{#if status?.hidden !== true}
 		<div class="text-sm flex flex-col w-full">
 			{#if showHistory}
 				<div class="flex flex-row">
-					{#if statusHistory.length > 1}
+					{#if history.length > 1}
 						<div class="w-1 border-r border-gray-50 dark:border-gray-800 mt-3 -mb-2.5" />
 
 						<div class="w-full -translate-x-[7.5px]">
-							{#each statusHistory as status, idx}
-								{#if idx !== statusHistory.length - 1}
+							{#each history as status, idx}
+								{#if idx !== history.length - 1}
 									<div class="flex items-start gap-2 mb-1">
 										<div class="pt-3 px-1">
 											<span class="relative flex size-2">
@@ -55,7 +52,7 @@
 					showHistory = !showHistory;
 				}}
 			>
-				<div class="flex items-start gap-2 mb-1">
+				<div class="flex items-start gap-2">
 					<div class="pt-3 px-1">
 						<span class="relative flex size-2">
 							{#if status?.done === false}
