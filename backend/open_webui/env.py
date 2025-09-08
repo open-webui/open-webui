@@ -465,6 +465,10 @@ ENABLE_COMPRESSION_MIDDLEWARE = (
     os.environ.get("ENABLE_COMPRESSION_MIDDLEWARE", "True").lower() == "true"
 )
 
+ENABLE_OAUTH_SESSION_TOKENS_COOKIES = (
+    os.environ.get("ENABLE_OAUTH_SESSION_TOKENS_COOKIES", "True").lower() == "true"
+)
+
 
 ####################################
 # SCIM Configuration

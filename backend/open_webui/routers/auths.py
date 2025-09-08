@@ -28,6 +28,7 @@ from open_webui.env import (
     WEBUI_AUTH_TRUSTED_GROUPS_HEADER,
     WEBUI_AUTH_COOKIE_SAME_SITE,
     WEBUI_AUTH_COOKIE_SECURE,
+    ENABLE_OAUTH_SESSION_TOKENS_COOKIES,
     WEBUI_AUTH_SIGNOUT_REDIRECT_URL,
     ENABLE_INITIAL_ADMIN_SIGNUP,
     SRC_LOG_LEVELS,
@@ -678,6 +679,7 @@ async def signout(request: Request, response: Response):
     response.delete_cookie("oui-session")
 
     if ENABLE_OAUTH_SIGNUP.value:
+        # TODO: update this to use oauth_session_tokens in User Object
         oauth_id_token = request.cookies.get("oauth_id_token")
         if oauth_id_token and OPENID_PROVIDER_URL.value:
             try:
@@ -687,7 +689,11 @@ async def signout(request: Request, response: Response):
                             openid_data = await resp.json()
                             logout_url = openid_data.get("end_session_endpoint")
                             if logout_url:
-                                response.delete_cookie("oauth_id_token")
+
+                                if ENABLE_OAUTH_SESSION_TOKENS_COOKIES:
+                                    response.delete_cookie("oauth_id_token")
+                                    response.delete_cookie("oauth_access_token")
+                                    response.delete_cookie("oauth_refresh_token")
 
                                 return JSONResponse(
                                     status_code=200,
