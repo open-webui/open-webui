@@ -681,15 +681,16 @@ async def signout(request: Request, response: Response):
     if ENABLE_OAUTH_SIGNUP.value:
         # TODO: update this to use oauth_session_tokens in User Object
         oauth_id_token = request.cookies.get("oauth_id_token")
+
         if oauth_id_token and OPENID_PROVIDER_URL.value:
             try:
                 async with ClientSession(trust_env=True) as session:
-                    async with session.get(OPENID_PROVIDER_URL.value) as resp:
-                        if resp.status == 200:
-                            openid_data = await resp.json()
+                    async with session.get(OPENID_PROVIDER_URL.value) as r:
+                        if r.status == 200:
+                            openid_data = await r.json()
                             logout_url = openid_data.get("end_session_endpoint")
-                            if logout_url:
 
+                            if logout_url:
                                 if ENABLE_OAUTH_SESSION_TOKENS_COOKIES:
                                     response.delete_cookie("oauth_id_token")
                                     response.delete_cookie("oauth_access_token")
@@ -710,7 +711,7 @@ async def signout(request: Request, response: Response):
                                 )
                         else:
                             raise HTTPException(
-                                status_code=resp.status,
+                                status_code=r.status,
                                 detail="Failed to fetch OpenID configuration",
                             )
             except Exception as e:
