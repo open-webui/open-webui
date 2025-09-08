@@ -285,8 +285,14 @@ def get_current_user(
                     # Delete the token cookie
                     response.delete_cookie("token")
                     # Delete OAuth token if present
+
                     if request.cookies.get("oauth_id_token"):
                         response.delete_cookie("oauth_id_token")
+                    if request.cookies.get("oauth_access_token"):
+                        response.delete_cookie("oauth_access_token")
+                    if request.cookies.get("oauth_refresh_token"):
+                        response.delete_cookie("oauth_refresh_token")
+
                     raise HTTPException(
                         status_code=status.HTTP_401_UNAUTHORIZED,
                         detail="User mismatch. Please sign in again.",
