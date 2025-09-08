@@ -2232,6 +2232,18 @@ DOCLING_SERVER_URL = PersistentConfig(
     os.getenv("DOCLING_SERVER_URL", "http://docling:5001"),
 )
 
+DOCLING_DO_OCR = PersistentConfig(
+    "DOCLING_DO_OCR",
+    "rag.docling_do_ocr",
+    os.getenv("DOCLING_DO_OCR", "True").lower() == "true",
+)
+
+DOCLING_FORCE_OCR = PersistentConfig(
+    "DOCLING_FORCE_OCR",
+    "rag.docling_force_ocr",
+    os.getenv("DOCLING_FORCE_OCR", "False").lower() == "true",
+)
+
 DOCLING_OCR_ENGINE = PersistentConfig(
     "DOCLING_OCR_ENGINE",
     "rag.docling_ocr_engine",
@@ -2242,6 +2254,24 @@ DOCLING_OCR_LANG = PersistentConfig(
     "DOCLING_OCR_LANG",
     "rag.docling_ocr_lang",
     os.getenv("DOCLING_OCR_LANG", "eng,fra,deu,spa"),
+)
+
+DOCLING_PDF_BACKEND = PersistentConfig(
+    "DOCLING_PDF_BACKEND",
+    "rag.docling_pdf_backend",
+    os.getenv("DOCLING_PDF_BACKEND", "dlparse_v4"),
+)
+
+DOCLING_TABLE_MODE = PersistentConfig(
+    "DOCLING_TABLE_MODE",
+    "rag.docling_table_mode",
+    os.getenv("DOCLING_TABLE_MODE", "accurate"),
+)
+
+DOCLING_PIPELINE = PersistentConfig(
+    "DOCLING_PIPELINE",
+    "rag.docling_pipeline",
+    os.getenv("DOCLING_PIPELINE", "standard"),
 )
 
 DOCLING_DO_PICTURE_DESCRIPTION = PersistentConfig(
