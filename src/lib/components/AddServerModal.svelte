@@ -289,7 +289,7 @@
 											<option value="session">{$i18n.t('Session')}</option>
 
 											{#if !direct}
-												<option value="oauth">{$i18n.t('OAuth')}</option>
+												<option value="system_oauth">{$i18n.t('OAuth')}</option>
 											{/if}
 										</select>
 									</div>

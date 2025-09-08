@@ -166,7 +166,7 @@ def get_headers_and_cookies(
     elif auth_type == "session":
         cookies = request.cookies
         token = request.state.token.credentials
-    elif auth_type == "oauth":
+    elif auth_type == "system_oauth":
         cookies = request.cookies
 
         oauth_token = None
