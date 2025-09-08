@@ -824,7 +824,7 @@ class OAuthManager:
             if "expires_in" in token and "expires_at" not in token:
                 token["expires_at"] = datetime.now().timestamp() + token["expires_in"]
 
-            session_id = await OAuthSessions.create_session(
+            session = OAuthSessions.create_session(
                 user_id=user.id,
                 provider=provider,
                 token=token,
@@ -832,7 +832,7 @@ class OAuthManager:
 
             response.set_cookie(
                 key="oauth_session_id",
-                value=session_id,
+                value=session.id,
                 httponly=True,
                 samesite=WEBUI_AUTH_COOKIE_SAME_SITE,
                 secure=WEBUI_AUTH_COOKIE_SECURE,
