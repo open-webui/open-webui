@@ -137,7 +137,7 @@ async def get_tools(
                         oauth_token = None
                         try:
                             oauth_token = (
-                                await request.app.state.oauth_manager.get_oauth_token(
+                                request.app.state.oauth_manager.get_oauth_token(
                                     user.id,
                                     request.cookies.get("oauth_session_id", None),
                                 )
@@ -715,6 +715,7 @@ async def execute_tool_server(
                     final_url,
                     json=body_params,
                     headers=headers,
+                    cookies=cookies,
                     ssl=AIOHTTP_CLIENT_SESSION_TOOL_SERVER_SSL,
                 ) as response:
                     if response.status >= 400:
@@ -731,6 +732,7 @@ async def execute_tool_server(
                 async with request_method(
                     final_url,
                     headers=headers,
+                    cookies=cookies,
                     ssl=AIOHTTP_CLIENT_SESSION_TOOL_SERVER_SSL,
                 ) as response:
                     if response.status >= 400:
