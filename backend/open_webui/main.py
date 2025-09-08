@@ -1408,6 +1408,14 @@ async def chat_completion(
     model_item = form_data.pop("model_item", {})
     tasks = form_data.pop("background_tasks", None)
 
+    oauth_token = None
+    try:
+        oauth_token = request.app.state.oauth_manager.get_oauth_token(
+            user.id, request.cookies.get("oauth_session_id", None)
+        )
+    except Exception as e:
+        log.error(f"Error getting OAuth token: {e}")
+
     metadata = {}
     try:
         if not model_item.get("direct", False):
