@@ -603,3 +603,57 @@ export const getInterPromptLatencyHistogram = async (
 		throw new Error(err.message || 'An unexpected error occurred');
 	}
 };
+
+export const exportMetricsData = async (
+	token: string,
+	startDate: string,
+	endDate: string,
+	domain?: string
+): Promise<Blob> => {
+	try {
+		const url = domain
+			? `${WEBUI_API_BASE_URL}/metrics/export?start_date=${startDate}&end_date=${endDate}&domain=${domain}`
+			: `${WEBUI_API_BASE_URL}/metrics/export?start_date=${startDate}&end_date=${endDate}`;
+
+		const res = await fetch(url, {
+			method: 'POST',
+			headers: {
+				Accept: 'text/csv',
+				authorization: `Bearer ${token}`
+			}
+		});
+
+		if (!res.ok) {
+			const error = await res.json();
+			throw new Error(`Error ${res.status}: ${error.detail || 'Failed to export metrics data'}`);
+		}
+
+		return await res.blob();
+	} catch (err) {
+		console.error('Error exporting metrics data:', err);
+		throw new Error(err.message || 'An unexpected error occurred');
+	}
+};
+
+export const getExportLogs = async (token: string): Promise<any[]> => {
+	try {
+		const res = await fetch(`${WEBUI_API_BASE_URL}/metrics/export/logs`, {
+			method: 'GET',
+			headers: {
+				Accept: 'application/json',
+				authorization: `Bearer ${token}`
+			}
+		});
+
+		if (!res.ok) {
+			const error = await res.json();
+			throw new Error(`Error ${res.status}: ${error.detail || 'Failed to get export logs'}`);
+		}
+
+		const data = await res.json();
+		return data.export_logs || [];
+	} catch (err) {
+		console.error('Error fetching export logs:', err);
+		throw new Error(err.message || 'An unexpected error occurred');
+	}
+};

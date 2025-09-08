@@ -17,7 +17,9 @@
 		getModelDailyPrompts,
 		getModelHistoricalPrompts,
 		getRangeMetrics,
-		getInterPromptLatencyHistogram
+		getInterPromptLatencyHistogram,
+		exportMetricsData,
+		getExportLogs
 	} from '$lib/apis/metrics';
 	import { Chart, registerables } from 'chart.js';
 	import { user } from '$lib/stores';
@@ -45,6 +47,22 @@
 		dailyTokens: number = 0;
 	let selectedDomain: string | null = null; // Allow null for "no domain"
 	let selectedModel: string | null = null; // Allow null for "no model"
+
+	// Export functionality variables
+	let showExportModal = false;
+	let exportStartDate = '';
+	let exportEndDate = '';
+	let isExporting = false;
+	let exportLogs: any[] = [];
+	let showExportLogs = false;
+
+	// Reactive date limits for export
+	$: maxExportDate = formatDate(new Date());
+	$: minExportDate = (() => {
+		const minDate = new Date();
+		minDate.setDate(minDate.getDate() - 89); // 89 days back to allow exactly 90 days inclusive
+		return formatDate(minDate);
+	})();
 
 	// Model specific metrics
 	let modelPrompts: number = 0,
@@ -701,6 +719,104 @@
 		selectedModel = newModel;
 		updateCharts(selectedDomain, selectedModel);
 	}
+
+	// Export functionality
+	function openExportModal() {
+		showExportModal = true;
+		// Set default dates to current date range if custom range is selected
+		if (showCustomDateRange) {
+			exportStartDate = startDate;
+			exportEndDate = endDate;
+		} else {
+			// Set to last 30 days by default
+			const end = new Date();
+			const start = new Date();
+			start.setDate(start.getDate() - 30);
+			exportStartDate = formatDate(start);
+			exportEndDate = formatDate(end);
+		}
+	}
+
+	function closeExportModal() {
+		showExportModal = false;
+		exportStartDate = '';
+		exportEndDate = '';
+		isExporting = false;
+	}
+
+	async function handleExportData() {
+		if (!exportStartDate || !exportEndDate) {
+			alert($i18n.t('Please select both start and end dates'));
+			return;
+		}
+
+		// Check if date range exceeds 90 days
+		const startDate = new Date(exportStartDate);
+		const endDate = new Date(exportEndDate);
+		const diffTime = Math.abs(endDate - startDate);
+		const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+
+		if (diffDays > 90) {
+			alert($i18n.t('Date range cannot exceed 90 days. Please select a shorter range.'));
+			return;
+		}
+
+		isExporting = true;
+		try {
+			// For analysts, always use their domain regardless of selectedDomain
+			const exportDomain = $user?.role === 'analyst' ? $user?.domain : selectedDomain;
+
+			const blob = await exportMetricsData(
+				localStorage.token,
+				exportStartDate,
+				exportEndDate,
+				exportDomain
+			);
+
+			// Create download link
+			const url = window.URL.createObjectURL(blob);
+			const a = document.createElement('a');
+			a.href = url;
+			a.download = `metrics_export_${exportStartDate}_to_${exportEndDate}.csv`;
+			document.body.appendChild(a);
+			a.click();
+			window.URL.revokeObjectURL(url);
+			document.body.removeChild(a);
+
+			closeExportModal();
+
+			// Refresh export logs (only for admin users)
+			if ($user?.role === 'admin') {
+				await loadExportLogs();
+			}
+		} catch (error) {
+			console.error('Export failed:', error);
+			alert($i18n.t('Export failed. Please try again.'));
+		} finally {
+			isExporting = false;
+		}
+	}
+
+	async function loadExportLogs() {
+		try {
+			exportLogs = await getExportLogs(localStorage.token);
+		} catch (error) {
+			console.error('Failed to load export logs:', error);
+		}
+	}
+
+	function openExportLogs() {
+		showExportLogs = true;
+		loadExportLogs();
+	}
+
+	function closeExportLogs() {
+		showExportLogs = false;
+	}
+
+	// Check if user can export (admin, global_analyst, or analyst)
+	$: canExport =
+		$user?.role === 'admin' || $user?.role === 'global_analyst' || $user?.role === 'analyst';
 </script>
 
 {#if componentLoaded && $user}
@@ -828,6 +944,43 @@
 									<option value={model}>{model}</option>
 								{/each}
 							</select>
+						</div>
+					{/if}
+					<!-- Export Data Button (for admin, global_analyst, and analyst) -->
+					{#if canExport}
+						<div class="flex flex-col">
+							<div class="flex items-center gap-2 mt-6">
+								<button
+									on:click={openExportModal}
+									class="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium rounded-md transition-colors duration-200 flex items-center gap-2"
+								>
+									<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+										<path
+											stroke-linecap="round"
+											stroke-linejoin="round"
+											stroke-width="2"
+											d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
+										/>
+									</svg>
+									{$i18n.t('Export Data')}
+								</button>
+								{#if $user?.role === 'admin'}
+									<button
+										on:click={openExportLogs}
+										class="px-3 py-2 bg-gray-600 hover:bg-gray-700 text-white text-sm font-medium rounded-md transition-colors duration-200 flex items-center gap-2"
+									>
+										<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+											<path
+												stroke-linecap="round"
+												stroke-linejoin="round"
+												stroke-width="2"
+												d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
+											/>
+										</svg>
+										{$i18n.t('Export Logs')}
+									</button>
+								{/if}
+							</div>
 						</div>
 					{/if}
 				</div>
@@ -1209,6 +1362,178 @@
 			</div>
 		</div>
 	</div>
+
+	<!-- Export Data Modal -->
+	{#if showExportModal}
+		<div class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+			<div class="bg-white dark:bg-gray-800 rounded-lg p-6 w-96 max-w-sm mx-4">
+				<h3 class="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4">
+					{$i18n.t('Export Metrics Data')}
+				</h3>
+
+				<div class="space-y-4">
+					<div>
+						<label
+							for="export-start-date"
+							class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2"
+						>
+							{$i18n.t('Start Date')}
+						</label>
+						<input
+							id="export-start-date"
+							type="date"
+							bind:value={exportStartDate}
+							max={maxExportDate}
+							min={minExportDate}
+							class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-gray-200"
+						/>
+					</div>
+
+					<div>
+						<label
+							for="export-end-date"
+							class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2"
+						>
+							{$i18n.t('End Date')}
+						</label>
+						<input
+							id="export-end-date"
+							type="date"
+							bind:value={exportEndDate}
+							max={maxExportDate}
+							min={exportStartDate || minExportDate}
+							class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-gray-200"
+						/>
+					</div>
+
+					<div class="text-sm text-gray-600 dark:text-gray-400">
+						{#if $user?.role === 'analyst'}
+							{$i18n.t('Exporting data for your domain')}:
+							<strong>{$user?.domain || $user?.email?.split('@')[1] || 'Unknown'}</strong>
+						{:else if selectedDomain}
+							{$i18n.t('Exporting data for domain')}: <strong>{selectedDomain}</strong>
+						{:else}
+							{$i18n.t('Exporting data for all domains')}
+						{/if}
+					</div>
+
+					<div class="text-xs text-gray-500 dark:text-gray-500 mt-2">
+						{$i18n.t('Note: Maximum date range allowed is 90 days')}
+					</div>
+				</div>
+
+				<div class="flex justify-end space-x-3 mt-6">
+					<button
+						on:click={closeExportModal}
+						class="px-4 py-2 text-gray-700 dark:text-gray-300 border border-gray-300 dark:border-gray-600 rounded-md hover:bg-gray-50 dark:hover:bg-gray-700"
+						disabled={isExporting}
+					>
+						{$i18n.t('Cancel')}
+					</button>
+					<button
+						on:click={handleExportData}
+						disabled={isExporting || !exportStartDate || !exportEndDate}
+						class="px-4 py-2 bg-blue-600 hover:bg-blue-700 disabled:bg-gray-400 text-white rounded-md transition-colors duration-200 flex items-center gap-2"
+					>
+						{#if isExporting}
+							<svg
+								class="animate-spin -ml-1 mr-2 h-4 w-4 text-white"
+								xmlns="http://www.w3.org/2000/svg"
+								fill="none"
+								viewBox="0 0 24 24"
+							>
+								<circle
+									class="opacity-25"
+									cx="12"
+									cy="12"
+									r="10"
+									stroke="currentColor"
+									stroke-width="4"
+								></circle>
+								<path
+									class="opacity-75"
+									fill="currentColor"
+									d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+								></path>
+							</svg>
+							{$i18n.t('Exporting...')}
+						{:else}
+							{$i18n.t('Export')}
+						{/if}
+					</button>
+				</div>
+			</div>
+		</div>
+	{/if}
+
+	<!-- Export Logs Modal -->
+	{#if showExportLogs}
+		<div class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+			<div class="bg-white dark:bg-gray-800 rounded-lg p-6 w-full max-w-4xl mx-4 max-h-96">
+				<div class="flex justify-between items-center mb-4">
+					<h3 class="text-lg font-semibold text-gray-900 dark:text-gray-100">
+						{$i18n.t('Export History')}
+					</h3>
+					<button
+						on:click={closeExportLogs}
+						class="text-gray-400 hover:text-gray-600 dark:hover:text-gray-200"
+					>
+						<svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+							<path
+								stroke-linecap="round"
+								stroke-linejoin="round"
+								stroke-width="2"
+								d="M6 18L18 6M6 6l12 12"
+							/>
+						</svg>
+					</button>
+				</div>
+
+				<div class="overflow-y-auto max-h-64">
+					{#if exportLogs.length > 0}
+						<table class="w-full text-sm text-left text-gray-500 dark:text-gray-400">
+							<thead
+								class="text-xs text-gray-700 uppercase bg-gray-50 dark:bg-gray-700 dark:text-gray-400"
+							>
+								<tr>
+									<th class="px-4 py-2">{$i18n.t('User')}</th>
+									<th class="px-4 py-2">{$i18n.t('Domain')}</th>
+									<th class="px-4 py-2">{$i18n.t('Export Date')}</th>
+									<th class="px-4 py-2">{$i18n.t('Date Range')}</th>
+									<th class="px-4 py-2">{$i18n.t('Records')}</th>
+									<th class="px-4 py-2">{$i18n.t('File Size')}</th>
+								</tr>
+							</thead>
+							<tbody>
+								{#each exportLogs as log}
+									<tr class="bg-white border-b dark:bg-gray-800 dark:border-gray-700">
+										<td class="px-4 py-2 font-medium text-gray-900 dark:text-white">
+											{log.user_id}
+										</td>
+										<td class="px-4 py-2">{log.email_domain}</td>
+										<td class="px-4 py-2">
+											{new Date(log.export_timestamp * 1000).toLocaleDateString()}
+										</td>
+										<td class="px-4 py-2">
+											{new Date(log.date_range_start * 1000).toLocaleDateString()} - {new Date(
+												log.date_range_end * 1000
+											).toLocaleDateString()}
+										</td>
+										<td class="px-4 py-2">{log.row_count.toLocaleString()}</td>
+										<td class="px-4 py-2">{(log.file_size / 1024).toFixed(1)} KB</td>
+									</tr>
+								{/each}
+							</tbody>
+						</table>
+					{:else}
+						<div class="text-center py-8 text-gray-500 dark:text-gray-400">
+							{$i18n.t('No export history found')}
+						</div>
+					{/if}
+				</div>
+			</div>
+		</div>
+	{/if}
 {:else}
 	<div class="flex justify-center items-center h-64">
 		<div class="text-gray-500 dark:text-gray-400">
