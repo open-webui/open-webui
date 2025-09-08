@@ -443,8 +443,6 @@
 							</div>
 						{/if}
 
-						<hr class=" border-gray-50 dark:border-gray-850 my-2.5 w-full" />
-
 						<div class="flex flex-col w-full">
 							<div class="mb-1 flex justify-between">
 								<div

@@ -138,12 +138,10 @@ async def get_tools(
                     elif auth_type == "oauth":
                         cookies = request.cookies
                         oauth_token = extra_params.get("__oauth_token__", None)
-                        headers["Authorization"] = (
-                            f"Bearer {oauth_token.get('access_token', '')}"
-                        )
-                    elif auth_type == "request_headers":
-                        cookies = request.cookies
-                        headers.update(dict(request.headers))
+                        if oauth_token:
+                            headers["Authorization"] = (
+                                f"Bearer {oauth_token.get('access_token', '')}"
+                            )
 
                     headers["Content-Type"] = "application/json"
 
@@ -564,9 +562,7 @@ async def get_tool_server_data(token: str, url: str) -> Dict[str, Any]:
     return data
 
 
-async def get_tool_servers_data(
-    servers: List[Dict[str, Any]], session_token: Optional[str] = None
-) -> List[Dict[str, Any]]:
+async def get_tool_servers_data(servers: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
     # Prepare list of enabled servers along with their original index
     server_entries = []
     for idx, server in enumerate(servers):
@@ -582,8 +578,9 @@ async def get_tool_servers_data(
 
             if auth_type == "bearer":
                 token = server.get("key", "")
-            elif auth_type == "session":
-                token = session_token
+            elif auth_type == "none":
+                # No authentication
+                pass
 
             id = info.get("id")
             if not id:
