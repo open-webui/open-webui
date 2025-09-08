@@ -150,7 +150,7 @@ class OAuthSessionTable:
                 if session:
                     session.token = self._decrypt_token(session.token)
                     return OAuthSessionModel.model_validate(session)
-                    
+
                 return None
         except Exception as e:
             log.error(f"Error getting OAuth session by ID: {e}")
@@ -170,7 +170,7 @@ class OAuthSessionTable:
                 if session:
                     session.token = self._decrypt_token(session.token)
                     return OAuthSessionModel.model_validate(session)
-                    )
+
                 return None
         except Exception as e:
             log.error(f"Error getting OAuth session by ID: {e}")
@@ -182,14 +182,13 @@ class OAuthSessionTable:
             with get_db() as db:
                 sessions = db.query(OAuthSession).filter_by(user_id=user_id).all()
 
-
                 results = []
                 for session in sessions:
                     session.token = self._decrypt_token(session.token)
                     results.append(OAuthSessionModel.model_validate(session))
 
                 return results
-            
+
         except Exception as e:
             log.error(f"Error getting OAuth sessions by user ID: {e}")
             return []
@@ -215,7 +214,7 @@ class OAuthSessionTable:
                 if session:
                     session.token = self._decrypt_token(session.token)
                     return OAuthSessionModel.model_validate(session)
-                    
+
                 return None
         except Exception as e:
             log.error(f"Error updating OAuth session tokens: {e}")
