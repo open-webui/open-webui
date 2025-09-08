@@ -63,16 +63,21 @@ class MemoriesTable:
             else:
                 return None
 
-    def update_memory_by_id(
+    def update_memory_by_id_and_user_id(
         self,
         id: str,
+        user_id: str,
         content: str,
     ) -> Optional[MemoryModel]:
         with get_db() as db:
             try:
-                db.query(Memory).filter_by(id=id).update(
-                    {"content": content, "updated_at": int(time.time())}
-                )
+                memory = db.get(Memory, id)
+                if not memory or memory.user_id != user_id:
+                    return None
+
+                memory.content = content
+                memory.updated_at = int(time.time())
+
                 db.commit()
                 return self.get_memory_by_id(id)
             except Exception:
@@ -126,7 +131,12 @@ class MemoriesTable:
     def delete_memory_by_id_and_user_id(self, id: str, user_id: str) -> bool:
         with get_db() as db:
             try:
-                db.query(Memory).filter_by(id=id, user_id=user_id).delete()
+                memory = db.get(Memory, id)
+                if not memory or memory.user_id != user_id:
+                    return None
+
+                # Delete the memory
+                db.delete(memory)
                 db.commit()
 
                 return True

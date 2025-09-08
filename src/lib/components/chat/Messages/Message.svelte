@@ -13,6 +13,7 @@
 	import UserMessage from './UserMessage.svelte';
 
 	export let chatId;
+	export let selectedModels = [];
 	export let idx = 0;
 
 	export let history;
@@ -20,6 +21,8 @@
 
 	export let user;
 
+	export let setInputText: Function = () => {};
+	export let gotoMessage;
 	export let showPreviousMessage;
 	export let showNextMessage;
 	export let updateChat;
@@ -38,6 +41,8 @@
 	export let addMessages;
 	export let triggerScroll;
 	export let readOnly = false;
+	export let editCodeBlock = true;
+	export let topPadding = false;
 </script>
 
 <div
@@ -49,6 +54,7 @@
 		{#if history.messages[messageId].role === 'user'}
 			<UserMessage
 				{user}
+				{chatId}
 				{history}
 				{messageId}
 				isFirstMessage={idx === 0}
@@ -57,19 +63,25 @@
 					: (Object.values(history.messages)
 							.filter((message) => message.parentId === null)
 							.map((message) => message.id) ?? [])}
+				{gotoMessage}
 				{showPreviousMessage}
 				{showNextMessage}
 				{editMessage}
 				{deleteMessage}
 				{readOnly}
+				{editCodeBlock}
+				{topPadding}
 			/>
 		{:else if (history.messages[history.messages[messageId].parentId]?.models?.length ?? 1) === 1}
 			<ResponseMessage
 				{chatId}
 				{history}
 				{messageId}
+				{selectedModels}
 				isLastMessage={messageId === history.currentId}
 				siblings={history.messages[history.messages[messageId].parentId]?.childrenIds ?? []}
+				{setInputText}
+				{gotoMessage}
 				{showPreviousMessage}
 				{showNextMessage}
 				{updateChat}
@@ -83,13 +95,17 @@
 				{regenerateResponse}
 				{addMessages}
 				{readOnly}
+				{editCodeBlock}
+				{topPadding}
 			/>
 		{:else}
 			<MultiResponseMessages
 				bind:history
 				{chatId}
 				{messageId}
+				{selectedModels}
 				isLastMessage={messageId === history?.currentId}
+				{setInputText}
 				{updateChat}
 				{editMessage}
 				{saveMessage}
@@ -103,6 +119,8 @@
 				{triggerScroll}
 				{addMessages}
 				{readOnly}
+				{editCodeBlock}
+				{topPadding}
 			/>
 		{/if}
 	{/if}

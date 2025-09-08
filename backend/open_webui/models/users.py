@@ -4,12 +4,17 @@ from typing import Optional
 from open_webui.internal.db import Base, JSONField, get_db
 
 
+from open_webui.env import DATABASE_USER_ACTIVE_STATUS_UPDATE_INTERVAL
 from open_webui.models.chats import Chats
 from open_webui.models.groups import Groups
+from open_webui.utils.misc import throttle
 
 
 from pydantic import BaseModel, ConfigDict
-from sqlalchemy import BigInteger, Column, String, Text
+from sqlalchemy import BigInteger, Column, String, Text, Date
+from sqlalchemy import or_
+
+import datetime
 
 ####################
 # User DB Schema
@@ -21,19 +26,27 @@ class User(Base):
 
     id = Column(String, primary_key=True)
     name = Column(String)
+
     email = Column(String)
+    username = Column(String(50), nullable=True)
+
     role = Column(String)
     profile_image_url = Column(Text)
 
-    last_active_at = Column(BigInteger)
-    updated_at = Column(BigInteger)
-    created_at = Column(BigInteger)
+    bio = Column(Text, nullable=True)
+    gender = Column(Text, nullable=True)
+    date_of_birth = Column(Date, nullable=True)
+
+    info = Column(JSONField, nullable=True)
+    settings = Column(JSONField, nullable=True)
 
     api_key = Column(String, nullable=True, unique=True)
-    settings = Column(JSONField, nullable=True)
-    info = Column(JSONField, nullable=True)
-
     oauth_sub = Column(Text, unique=True)
+
+    last_active_at = Column(BigInteger)
+
+    updated_at = Column(BigInteger)
+    created_at = Column(BigInteger)
 
 
 class UserSettings(BaseModel):
@@ -45,19 +58,26 @@ class UserSettings(BaseModel):
 class UserModel(BaseModel):
     id: str
     name: str
+
     email: str
+    username: Optional[str] = None
+
     role: str = "pending"
     profile_image_url: str
+
+    bio: Optional[str] = None
+    gender: Optional[str] = None
+    date_of_birth: Optional[datetime.date] = None
+
+    info: Optional[dict] = None
+    settings: Optional[UserSettings] = None
+
+    api_key: Optional[str] = None
+    oauth_sub: Optional[str] = None
 
     last_active_at: int  # timestamp in epoch
     updated_at: int  # timestamp in epoch
     created_at: int  # timestamp in epoch
-
-    api_key: Optional[str] = None
-    settings: Optional[UserSettings] = None
-    info: Optional[dict] = None
-
-    oauth_sub: Optional[str] = None
 
     model_config = ConfigDict(from_attributes=True)
 
@@ -65,6 +85,31 @@ class UserModel(BaseModel):
 ####################
 # Forms
 ####################
+
+
+class UpdateProfileForm(BaseModel):
+    profile_image_url: str
+    name: str
+    bio: Optional[str] = None
+    gender: Optional[str] = None
+    date_of_birth: Optional[datetime.date] = None
+
+
+class UserListResponse(BaseModel):
+    users: list[UserModel]
+    total: int
+
+
+class UserInfoResponse(BaseModel):
+    id: str
+    name: str
+    email: str
+    role: str
+
+
+class UserInfoListResponse(BaseModel):
+    users: list[UserInfoResponse]
+    total: int
 
 
 class UserResponse(BaseModel):
@@ -88,6 +133,7 @@ class UserRoleUpdateForm(BaseModel):
 
 
 class UserUpdateForm(BaseModel):
+    role: str
     name: str
     email: str
     profile_image_url: str
@@ -160,11 +206,63 @@ class UsersTable:
             return None
 
     def get_users(
-        self, skip: Optional[int] = None, limit: Optional[int] = None
-    ) -> list[UserModel]:
+        self,
+        filter: Optional[dict] = None,
+        skip: Optional[int] = None,
+        limit: Optional[int] = None,
+    ) -> UserListResponse:
         with get_db() as db:
+            query = db.query(User)
 
-            query = db.query(User).order_by(User.created_at.desc())
+            if filter:
+                query_key = filter.get("query")
+                if query_key:
+                    query = query.filter(
+                        or_(
+                            User.name.ilike(f"%{query_key}%"),
+                            User.email.ilike(f"%{query_key}%"),
+                        )
+                    )
+
+                order_by = filter.get("order_by")
+                direction = filter.get("direction")
+
+                if order_by == "name":
+                    if direction == "asc":
+                        query = query.order_by(User.name.asc())
+                    else:
+                        query = query.order_by(User.name.desc())
+                elif order_by == "email":
+                    if direction == "asc":
+                        query = query.order_by(User.email.asc())
+                    else:
+                        query = query.order_by(User.email.desc())
+
+                elif order_by == "created_at":
+                    if direction == "asc":
+                        query = query.order_by(User.created_at.asc())
+                    else:
+                        query = query.order_by(User.created_at.desc())
+
+                elif order_by == "last_active_at":
+                    if direction == "asc":
+                        query = query.order_by(User.last_active_at.asc())
+                    else:
+                        query = query.order_by(User.last_active_at.desc())
+
+                elif order_by == "updated_at":
+                    if direction == "asc":
+                        query = query.order_by(User.updated_at.asc())
+                    else:
+                        query = query.order_by(User.updated_at.desc())
+                elif order_by == "role":
+                    if direction == "asc":
+                        query = query.order_by(User.role.asc())
+                    else:
+                        query = query.order_by(User.role.desc())
+
+            else:
+                query = query.order_by(User.created_at.desc())
 
             if skip:
                 query = query.offset(skip)
@@ -172,8 +270,10 @@ class UsersTable:
                 query = query.limit(limit)
 
             users = query.all()
-
-            return [UserModel.model_validate(user) for user in users]
+            return {
+                "users": [UserModel.model_validate(user) for user in users],
+                "total": db.query(User).count(),
+            }
 
     def get_users_by_user_ids(self, user_ids: list[str]) -> list[UserModel]:
         with get_db() as db:
@@ -183,6 +283,10 @@ class UsersTable:
     def get_num_users(self) -> Optional[int]:
         with get_db() as db:
             return db.query(User).count()
+
+    def has_users(self) -> bool:
+        with get_db() as db:
+            return db.query(db.query(User).exists()).scalar()
 
     def get_first_user(self) -> UserModel:
         try:
@@ -233,6 +337,7 @@ class UsersTable:
         except Exception:
             return None
 
+    @throttle(DATABASE_USER_ACTIVE_STATUS_UPDATE_INTERVAL)
     def update_user_last_active_by_id(self, id: str) -> Optional[UserModel]:
         try:
             with get_db() as db:
@@ -268,7 +373,8 @@ class UsersTable:
                 user = db.query(User).filter_by(id=id).first()
                 return UserModel.model_validate(user)
                 # return UserModel(**user.dict())
-        except Exception:
+        except Exception as e:
+            print(e)
             return None
 
     def update_user_settings_by_id(self, id: str, updated: dict) -> Optional[UserModel]:
@@ -308,7 +414,7 @@ class UsersTable:
         except Exception:
             return False
 
-    def update_user_api_key_by_id(self, id: str, api_key: str) -> str:
+    def update_user_api_key_by_id(self, id: str, api_key: str) -> bool:
         try:
             with get_db() as db:
                 result = db.query(User).filter_by(id=id).update({"api_key": api_key})
@@ -329,6 +435,14 @@ class UsersTable:
         with get_db() as db:
             users = db.query(User).filter(User.id.in_(user_ids)).all()
             return [user.id for user in users]
+
+    def get_super_admin_user(self) -> Optional[UserModel]:
+        with get_db() as db:
+            user = db.query(User).filter_by(role="admin").first()
+            if user:
+                return UserModel.model_validate(user)
+            else:
+                return None
 
 
 Users = UsersTable()

@@ -13,17 +13,39 @@
 			prompts: false,
 			tools: false
 		},
+		sharing: {
+			public_models: false,
+			public_knowledge: false,
+			public_prompts: false,
+			public_tools: false
+		},
 		chat: {
 			controls: true,
+			valves: true,
+			system_prompt: true,
+			params: true,
+			file_upload: true,
 			delete: true,
+			delete_message: true,
+			continue_response: true,
+			regenerate_response: true,
+			rate_response: true,
 			edit: true,
+			share: true,
+			export: true,
+			stt: true,
+			tts: true,
+			call: true,
+			multiple_models: true,
 			temporary: true,
-			file_upload: true
+			temporary_enforced: false
 		},
 		features: {
+			direct_tool_servers: false,
 			web_search: true,
 			image_generation: true,
-			code_interpreter: true
+			code_interpreter: true,
+			notes: true
 		}
 	};
 
@@ -39,6 +61,7 @@
 			...defaults,
 			...obj,
 			workspace: { ...defaults.workspace, ...obj.workspace },
+			sharing: { ...defaults.sharing, ...obj.sharing },
 			chat: { ...defaults.chat, ...obj.chat },
 			features: { ...defaults.features, ...obj.features }
 		};
@@ -139,7 +162,7 @@
 				<select
 					class="w-full bg-transparent outline-hidden py-0.5 text-sm"
 					bind:value={permissions.model.default_id}
-					placeholder="Select a model"
+					placeholder={$i18n.t('Select a model')}
 				>
 					<option value="" disabled selected>{$i18n.t('Select a model')}</option>
 					{#each permissions.model.filter ? $models.filter( (model) => filterModelIds.includes(model.id) ) : $models.filter((model) => model.id) as model}
@@ -195,7 +218,49 @@
 	<hr class=" border-gray-100 dark:border-gray-850 my-2" />
 
 	<div>
+		<div class=" mb-2 text-sm font-medium">{$i18n.t('Sharing Permissions')}</div>
+
+		<div class="  flex w-full justify-between my-2 pr-2">
+			<div class=" self-center text-xs font-medium">
+				{$i18n.t('Models Public Sharing')}
+			</div>
+			<Switch bind:state={permissions.sharing.public_models} />
+		</div>
+
+		<div class="  flex w-full justify-between my-2 pr-2">
+			<div class=" self-center text-xs font-medium">
+				{$i18n.t('Knowledge Public Sharing')}
+			</div>
+			<Switch bind:state={permissions.sharing.public_knowledge} />
+		</div>
+
+		<div class="  flex w-full justify-between my-2 pr-2">
+			<div class=" self-center text-xs font-medium">
+				{$i18n.t('Prompts Public Sharing')}
+			</div>
+			<Switch bind:state={permissions.sharing.public_prompts} />
+		</div>
+
+		<div class="  flex w-full justify-between my-2 pr-2">
+			<div class=" self-center text-xs font-medium">
+				{$i18n.t('Tools Public Sharing')}
+			</div>
+			<Switch bind:state={permissions.sharing.public_tools} />
+		</div>
+	</div>
+
+	<hr class=" border-gray-100 dark:border-gray-850 my-2" />
+
+	<div>
 		<div class=" mb-2 text-sm font-medium">{$i18n.t('Chat Permissions')}</div>
+
+		<div class="  flex w-full justify-between my-2 pr-2">
+			<div class=" self-center text-xs font-medium">
+				{$i18n.t('Allow File Upload')}
+			</div>
+
+			<Switch bind:state={permissions.chat.file_upload} />
+		</div>
 
 		<div class="  flex w-full justify-between my-2 pr-2">
 			<div class=" self-center text-xs font-medium">
@@ -205,12 +270,38 @@
 			<Switch bind:state={permissions.chat.controls} />
 		</div>
 
-		<div class="  flex w-full justify-between my-2 pr-2">
-			<div class=" self-center text-xs font-medium">
-				{$i18n.t('Allow File Upload')}
+		{#if permissions.chat.controls}
+			<div class="  flex w-full justify-between my-2 pr-2">
+				<div class=" self-center text-xs font-medium">
+					{$i18n.t('Allow Chat Valves')}
+				</div>
+
+				<Switch bind:state={permissions.chat.valves} />
 			</div>
 
-			<Switch bind:state={permissions.chat.file_upload} />
+			<div class="  flex w-full justify-between my-2 pr-2">
+				<div class=" self-center text-xs font-medium">
+					{$i18n.t('Allow Chat System Prompt')}
+				</div>
+
+				<Switch bind:state={permissions.chat.system_prompt} />
+			</div>
+
+			<div class="  flex w-full justify-between my-2 pr-2">
+				<div class=" self-center text-xs font-medium">
+					{$i18n.t('Allow Chat Params')}
+				</div>
+
+				<Switch bind:state={permissions.chat.params} />
+			</div>
+		{/if}
+
+		<div class="  flex w-full justify-between my-2 pr-2">
+			<div class=" self-center text-xs font-medium">
+				{$i18n.t('Allow Chat Edit')}
+			</div>
+
+			<Switch bind:state={permissions.chat.edit} />
 		</div>
 
 		<div class="  flex w-full justify-between my-2 pr-2">
@@ -223,10 +314,81 @@
 
 		<div class="  flex w-full justify-between my-2 pr-2">
 			<div class=" self-center text-xs font-medium">
-				{$i18n.t('Allow Chat Edit')}
+				{$i18n.t('Allow Delete Messages')}
 			</div>
 
-			<Switch bind:state={permissions.chat.edit} />
+			<Switch bind:state={permissions.chat.delete_message} />
+		</div>
+
+		<div class="  flex w-full justify-between my-2 pr-2">
+			<div class=" self-center text-xs font-medium">
+				{$i18n.t('Allow Continue Response')}
+			</div>
+
+			<Switch bind:state={permissions.chat.continue_response} />
+		</div>
+
+		<div class="  flex w-full justify-between my-2 pr-2">
+			<div class=" self-center text-xs font-medium">
+				{$i18n.t('Allow Regenerate Response')}
+			</div>
+
+			<Switch bind:state={permissions.chat.regenerate_response} />
+		</div>
+
+		<div class="  flex w-full justify-between my-2 pr-2">
+			<div class=" self-center text-xs font-medium">
+				{$i18n.t('Allow Rate Response')}
+			</div>
+
+			<Switch bind:state={permissions.chat.rate_response} />
+		</div>
+
+		<div class="  flex w-full justify-between my-2 pr-2">
+			<div class=" self-center text-xs font-medium">
+				{$i18n.t('Allow Chat Share')}
+			</div>
+
+			<Switch bind:state={permissions.chat.share} />
+		</div>
+
+		<div class="  flex w-full justify-between my-2 pr-2">
+			<div class=" self-center text-xs font-medium">
+				{$i18n.t('Allow Chat Export')}
+			</div>
+
+			<Switch bind:state={permissions.chat.export} />
+		</div>
+
+		<div class="  flex w-full justify-between my-2 pr-2">
+			<div class=" self-center text-xs font-medium">
+				{$i18n.t('Allow Speech to Text')}
+			</div>
+
+			<Switch bind:state={permissions.chat.stt} />
+		</div>
+		<div class="  flex w-full justify-between my-2 pr-2">
+			<div class=" self-center text-xs font-medium">
+				{$i18n.t('Allow Text to Speech')}
+			</div>
+
+			<Switch bind:state={permissions.chat.tts} />
+		</div>
+
+		<div class="  flex w-full justify-between my-2 pr-2">
+			<div class=" self-center text-xs font-medium">
+				{$i18n.t('Allow Call')}
+			</div>
+
+			<Switch bind:state={permissions.chat.call} />
+		</div>
+
+		<div class="  flex w-full justify-between my-2 pr-2">
+			<div class=" self-center text-xs font-medium">
+				{$i18n.t('Allow Multiple Models in Chat')}
+			</div>
+
+			<Switch bind:state={permissions.chat.multiple_models} />
 		</div>
 
 		<div class="  flex w-full justify-between my-2 pr-2">
@@ -236,12 +398,30 @@
 
 			<Switch bind:state={permissions.chat.temporary} />
 		</div>
+
+		{#if permissions.chat.temporary}
+			<div class="  flex w-full justify-between my-2 pr-2">
+				<div class=" self-center text-xs font-medium">
+					{$i18n.t('Enforce Temporary Chat')}
+				</div>
+
+				<Switch bind:state={permissions.chat.temporary_enforced} />
+			</div>
+		{/if}
 	</div>
 
 	<hr class=" border-gray-100 dark:border-gray-850 my-2" />
 
 	<div>
 		<div class=" mb-2 text-sm font-medium">{$i18n.t('Features Permissions')}</div>
+
+		<div class="  flex w-full justify-between my-2 pr-2">
+			<div class=" self-center text-xs font-medium">
+				{$i18n.t('Direct Tool Servers')}
+			</div>
+
+			<Switch bind:state={permissions.features.direct_tool_servers} />
+		</div>
 
 		<div class="  flex w-full justify-between my-2 pr-2">
 			<div class=" self-center text-xs font-medium">
@@ -265,6 +445,14 @@
 			</div>
 
 			<Switch bind:state={permissions.features.code_interpreter} />
+		</div>
+
+		<div class="  flex w-full justify-between my-2 pr-2">
+			<div class=" self-center text-xs font-medium">
+				{$i18n.t('Notes')}
+			</div>
+
+			<Switch bind:state={permissions.features.notes} />
 		</div>
 	</div>
 </div>

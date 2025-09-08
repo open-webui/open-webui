@@ -1,4 +1,6 @@
 <script lang="ts">
+	import hljs from 'highlight.js';
+
 	import mermaid from 'mermaid';
 
 	import { v4 as uuidv4 } from 'uuid';
@@ -17,16 +19,21 @@
 	import ChevronUp from '$lib/components/icons/ChevronUp.svelte';
 	import ChevronUpDown from '$lib/components/icons/ChevronUpDown.svelte';
 	import CommandLine from '$lib/components/icons/CommandLine.svelte';
+	import Cube from '$lib/components/icons/Cube.svelte';
 
 	const i18n = getContext('i18n');
 
 	export let id = '';
+	export let edit = true;
 
 	export let onSave = (e) => {};
-	export let onCode = (e) => {};
+	export let onUpdate = (e) => {};
+	export let onPreview = (e) => {};
 
 	export let save = false;
 	export let run = true;
+	export let preview = false;
+	export let collapsed = false;
 
 	export let token;
 	export let lang = '';
@@ -35,7 +42,7 @@
 
 	export let className = 'my-2';
 	export let editorClassName = '';
-	export let stickyButtonsClassName = 'top-8';
+	export let stickyButtonsClassName = 'top-0';
 
 	let pyodideWorker = null;
 
@@ -60,7 +67,6 @@
 	let result = null;
 	let files = null;
 
-	let collapsed = false;
 	let copied = false;
 	let saved = false;
 
@@ -81,11 +87,15 @@
 
 	const copyCode = async () => {
 		copied = true;
-		await copyToClipboard(code);
+		await copyToClipboard(_code);
 
 		setTimeout(() => {
 			copied = false;
 		}, 1000);
+	};
+
+	const previewCode = () => {
+		onPreview(code);
 	};
 
 	const checkPythonCode = (str) => {
@@ -217,7 +227,8 @@
 			code.includes('sympy') ? 'sympy' : null,
 			code.includes('tiktoken') ? 'tiktoken' : null,
 			code.includes('matplotlib') ? 'matplotlib' : null,
-			code.includes('pytz') ? 'pytz' : null
+			code.includes('pytz') ? 'pytz' : null,
+			code.includes('openai') ? 'openai' : null
 		].filter(Boolean);
 
 		console.log(packages);
@@ -333,6 +344,8 @@
 				await drawMermaidDiagram();
 			})();
 		}
+
+		onUpdate(token);
 	};
 
 	$: if (token) {
@@ -344,8 +357,6 @@
 	$: if (_token) {
 		render();
 	}
-
-	$: onCode({ lang, code });
 
 	$: if (attributes) {
 		onAttributesUpdate();
@@ -378,11 +389,10 @@
 	};
 
 	onMount(async () => {
-		console.log('codeblock', lang, code);
-
-		if (lang) {
-			onCode({ lang, code });
+		if (token) {
+			onUpdate(token);
 		}
+
 		if (document.documentElement.classList.contains('dark')) {
 			mermaid.initialize({
 				startOnLoad: true,
@@ -430,7 +440,7 @@
 						class="flex gap-1 items-center bg-none border-none bg-gray-50 hover:bg-gray-100 dark:bg-gray-850 dark:hover:bg-gray-800 transition rounded-md px-1.5 py-0.5"
 						on:click={collapseCodeBlock}
 					>
-						<div>
+						<div class=" -translate-y-[0.5px]">
 							<ChevronUpDown className="size-3" />
 						</div>
 
@@ -439,9 +449,26 @@
 						</div>
 					</button>
 
+					{#if preview && ['html', 'svg'].includes(lang)}
+						<button
+							class="flex gap-1 items-center run-code-button bg-none border-none bg-gray-50 hover:bg-gray-100 dark:bg-gray-850 dark:hover:bg-gray-800 transition rounded-md px-1.5 py-0.5"
+							on:click={previewCode}
+						>
+							<div class=" -translate-y-[0.5px]">
+								<Cube className="size-3" />
+							</div>
+
+							<div>
+								{$i18n.t('Preview')}
+							</div>
+						</button>
+					{/if}
+
 					{#if ($config?.features?.enable_code_execution ?? true) && (lang.toLowerCase() === 'python' || lang.toLowerCase() === 'py' || (lang === '' && checkPythonCode(code)))}
 						{#if executing}
-							<div class="run-code-button bg-none border-none p-1 cursor-not-allowed">Running</div>
+							<div class="run-code-button bg-none border-none p-1 cursor-not-allowed">
+								{$i18n.t('Running')}
+							</div>
 						{:else if run}
 							<button
 								class="flex gap-1 items-center run-code-button bg-none border-none bg-gray-50 hover:bg-gray-100 dark:bg-gray-850 dark:hover:bg-gray-800 transition rounded-md px-1.5 py-0.5"
@@ -451,7 +478,7 @@
 									executePython(code);
 								}}
 							>
-								<div>
+								<div class=" -translate-y-[0.5px]">
 									<CommandLine className="size-3" />
 								</div>
 
@@ -488,17 +515,31 @@
 				<div class=" pt-7 bg-gray-50 dark:bg-gray-850"></div>
 
 				{#if !collapsed}
-					<CodeEditor
-						value={code}
-						{id}
-						{lang}
-						onSave={() => {
-							saveCode();
-						}}
-						onChange={(value) => {
-							_code = value;
-						}}
-					/>
+					{#if edit}
+						<CodeEditor
+							value={code}
+							{id}
+							{lang}
+							onSave={() => {
+								saveCode();
+							}}
+							onChange={(value) => {
+								_code = value;
+							}}
+						/>
+					{:else}
+						<pre
+							class=" hljs p-4 px-5 overflow-x-auto"
+							style="border-top-left-radius: 0px; border-top-right-radius: 0px; {(executing ||
+								stdout ||
+								stderr ||
+								result) &&
+								'border-bottom-left-radius: 0px; border-bottom-right-radius: 0px;'}"><code
+								class="language-{lang} rounded-t-none whitespace-pre text-sm"
+								>{@html hljs.highlightAuto(code, hljs.getLanguage(lang)?.aliases).value ||
+									code}</code
+							></pre>
+					{/if}
 				{:else}
 					<div
 						class="bg-gray-50 dark:bg-black dark:text-white rounded-b-lg! pt-2 pb-2 px-4 flex flex-col gap-2 text-xs"
@@ -524,13 +565,13 @@
 					>
 						{#if executing}
 							<div class=" ">
-								<div class=" text-gray-500 text-xs mb-1">STDOUT/STDERR</div>
-								<div class="text-sm">Running...</div>
+								<div class=" text-gray-500 text-xs mb-1">{$i18n.t('STDOUT/STDERR')}</div>
+								<div class="text-sm">{$i18n.t('Running...')}</div>
 							</div>
 						{:else}
 							{#if stdout || stderr}
 								<div class=" ">
-									<div class=" text-gray-500 text-xs mb-1">STDOUT/STDERR</div>
+									<div class=" text-gray-500 text-xs mb-1">{$i18n.t('STDOUT/STDERR')}</div>
 									<div
 										class="text-sm {stdout?.split('\n')?.length > 100
 											? `max-h-96`
@@ -542,7 +583,7 @@
 							{/if}
 							{#if result || files}
 								<div class=" ">
-									<div class=" text-gray-500 text-xs mb-1">RESULT</div>
+									<div class=" text-gray-500 text-xs mb-1">{$i18n.t('RESULT')}</div>
 									{#if result}
 										<div class="text-sm">{`${JSON.stringify(result)}`}</div>
 									{/if}

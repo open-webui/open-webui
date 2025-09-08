@@ -40,7 +40,7 @@ async function loadPyodideAndPackages(packages: string[] = []) {
 		packages: ['micropip']
 	});
 
-	let mountDir = '/mnt';
+	const mountDir = '/mnt';
 	self.pyodide.FS.mkdirTree(mountDir);
 	// self.pyodide.FS.mount(self.pyodide.FS.filesystems.IDBFS, {}, mountDir);
 

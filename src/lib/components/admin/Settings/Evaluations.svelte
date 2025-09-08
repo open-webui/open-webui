@@ -26,7 +26,7 @@
 		});
 
 		if (evaluationConfig) {
-			toast.success('Settings saved successfully');
+			toast.success($i18n.t('Settings saved successfully!'));
 			models.set(
 				await getModels(
 					localStorage.token,
@@ -77,7 +77,7 @@
 	};
 
 	onMount(async () => {
-		if ($user.role === 'admin') {
+		if ($user?.role === 'admin') {
 			evaluationConfig = await getConfig(localStorage.token).catch((err) => {
 				toast.error(err);
 				return null;

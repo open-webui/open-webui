@@ -1,10 +1,12 @@
 <script lang="ts">
 	import { DropdownMenu } from 'bits-ui';
-	import { createEventDispatcher } from 'svelte';
+	import { getContext } from 'svelte';
+
+	const i18n = getContext('i18n');
 
 	import { flyAndScale } from '$lib/utils/transitions';
 	import { WEBUI_BASE_URL } from '$lib/constants';
-	import { activeUserIds } from '$lib/stores';
+	import { getUserActiveStatusById } from '$lib/apis/users';
 
 	export let side = 'right';
 	export let align = 'top';
@@ -12,15 +14,29 @@
 	export let user = null;
 	let show = false;
 
-	const dispatch = createEventDispatcher();
+	let active = false;
+
+	const getActiveStatus = async () => {
+		const res = await getUserActiveStatusById(localStorage.token, user.id).catch((error) => {
+			console.error('Error fetching user active status:', error);
+		});
+
+		if (res) {
+			active = res.active;
+		} else {
+			active = false;
+		}
+	};
+
+	$: if (show) {
+		getActiveStatus();
+	}
 </script>
 
 <DropdownMenu.Root
 	bind:open={show}
 	closeFocus={false}
-	onOpenChange={(state) => {
-		dispatch('change', state);
-	}}
+	onOpenChange={(state) => {}}
 	typeahead={false}
 >
 	<DropdownMenu.Trigger>
@@ -52,7 +68,7 @@
 						</div>
 
 						<div class=" flex items-center gap-2">
-							{#if $activeUserIds.includes(user.id)}
+							{#if active}
 								<div>
 									<span class="relative flex size-2">
 										<span
@@ -63,7 +79,7 @@
 								</div>
 
 								<div class=" -translate-y-[1px]">
-									<span class="text-xs"> Active </span>
+									<span class="text-xs"> {$i18n.t('Active')} </span>
 								</div>
 							{:else}
 								<div>
@@ -73,7 +89,7 @@
 								</div>
 
 								<div class=" -translate-y-[1px]">
-									<span class="text-xs"> Away </span>
+									<span class="text-xs"> {$i18n.t('Away')} </span>
 								</div>
 							{/if}
 						</div>

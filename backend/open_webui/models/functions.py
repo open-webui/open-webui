@@ -6,7 +6,7 @@ from open_webui.internal.db import Base, JSONField, get_db
 from open_webui.models.users import Users
 from open_webui.env import SRC_LOG_LEVELS
 from pydantic import BaseModel, ConfigDict
-from sqlalchemy import BigInteger, Boolean, Column, String, Text
+from sqlalchemy import BigInteger, Boolean, Column, String, Text, Index
 
 log = logging.getLogger(__name__)
 log.setLevel(SRC_LOG_LEVELS["MODELS"])
@@ -30,6 +30,8 @@ class Function(Base):
     is_global = Column(Boolean)
     updated_at = Column(BigInteger)
     created_at = Column(BigInteger)
+
+    __table_args__ = (Index("is_global_idx", "is_global"),)
 
 
 class FunctionMeta(BaseModel):
@@ -107,6 +109,54 @@ class FunctionsTable:
         except Exception as e:
             log.exception(f"Error creating a new function: {e}")
             return None
+
+    def sync_functions(
+        self, user_id: str, functions: list[FunctionModel]
+    ) -> list[FunctionModel]:
+        # Synchronize functions for a user by updating existing ones, inserting new ones, and removing those that are no longer present.
+        try:
+            with get_db() as db:
+                # Get existing functions
+                existing_functions = db.query(Function).all()
+                existing_ids = {func.id for func in existing_functions}
+
+                # Prepare a set of new function IDs
+                new_function_ids = {func.id for func in functions}
+
+                # Update or insert functions
+                for func in functions:
+                    if func.id in existing_ids:
+                        db.query(Function).filter_by(id=func.id).update(
+                            {
+                                **func.model_dump(),
+                                "user_id": user_id,
+                                "updated_at": int(time.time()),
+                            }
+                        )
+                    else:
+                        new_func = Function(
+                            **{
+                                **func.model_dump(),
+                                "user_id": user_id,
+                                "updated_at": int(time.time()),
+                            }
+                        )
+                        db.add(new_func)
+
+                # Remove functions that are no longer present
+                for func in existing_functions:
+                    if func.id not in new_function_ids:
+                        db.delete(func)
+
+                db.commit()
+
+                return [
+                    FunctionModel.model_validate(func)
+                    for func in db.query(Function).all()
+                ]
+        except Exception as e:
+            log.exception(f"Error syncing functions for user {user_id}: {e}")
+            return []
 
     def get_function_by_id(self, id: str) -> Optional[FunctionModel]:
         try:
@@ -202,9 +252,7 @@ class FunctionsTable:
 
             return user_settings["functions"]["valves"].get(id, {})
         except Exception as e:
-            log.exception(
-                f"Error getting user values by id {id} and user id {user_id}: {e}"
-            )
+            log.exception(f"Error getting user values by id {id} and user id {user_id}")
             return None
 
     def update_user_valves_by_id_and_user_id(

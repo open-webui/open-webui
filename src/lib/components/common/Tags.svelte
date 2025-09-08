@@ -9,7 +9,7 @@
 	export let tags = [];
 </script>
 
-<div class="flex flex-row flex-wrap gap-1 line-clamp-1">
+<ul class="flex flex-row flex-wrap gap-1 line-clamp-1">
 	<TagList
 		{tags}
 		on:delete={(e) => {
@@ -23,4 +23,4 @@
 			dispatch('add', e.detail);
 		}}
 	/>
-</div>
+</ul>

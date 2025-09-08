@@ -6,18 +6,17 @@ from open_webui.utils.misc import (
 )
 
 
-def convert_ollama_tool_call_to_openai(tool_calls: dict) -> dict:
+def convert_ollama_tool_call_to_openai(tool_calls: list) -> list:
     openai_tool_calls = []
     for tool_call in tool_calls:
+        function = tool_call.get("function", {})
         openai_tool_call = {
-            "index": tool_call.get("index", 0),
+            "index": tool_call.get("index", function.get("index", 0)),
             "id": tool_call.get("id", f"call_{str(uuid4())}"),
             "type": "function",
             "function": {
-                "name": tool_call.get("function", {}).get("name", ""),
-                "arguments": json.dumps(
-                    tool_call.get("function", {}).get("arguments", {})
-                ),
+                "name": function.get("name", ""),
+                "arguments": json.dumps(function.get("arguments", {})),
             },
         }
         openai_tool_calls.append(openai_tool_call)
@@ -83,6 +82,7 @@ def convert_ollama_usage_to_openai(data: dict) -> dict:
 def convert_response_ollama_to_openai(ollama_response: dict) -> dict:
     model = ollama_response.get("model", "ollama")
     message_content = ollama_response.get("message", {}).get("content", "")
+    reasoning_content = ollama_response.get("message", {}).get("thinking", None)
     tool_calls = ollama_response.get("message", {}).get("tool_calls", None)
     openai_tool_calls = None
 
@@ -94,7 +94,7 @@ def convert_response_ollama_to_openai(ollama_response: dict) -> dict:
     usage = convert_ollama_usage_to_openai(data)
 
     response = openai_chat_completion_message_template(
-        model, message_content, openai_tool_calls, usage
+        model, message_content, reasoning_content, openai_tool_calls, usage
     )
     return response
 
@@ -105,6 +105,7 @@ async def convert_streaming_response_ollama_to_openai(ollama_streaming_response)
 
         model = data.get("model", "ollama")
         message_content = data.get("message", {}).get("content", None)
+        reasoning_content = data.get("message", {}).get("thinking", None)
         tool_calls = data.get("message", {}).get("tool_calls", None)
         openai_tool_calls = None
 
@@ -118,10 +119,71 @@ async def convert_streaming_response_ollama_to_openai(ollama_streaming_response)
             usage = convert_ollama_usage_to_openai(data)
 
         data = openai_chat_chunk_message_template(
-            model, message_content, openai_tool_calls, usage
+            model, message_content, reasoning_content, openai_tool_calls, usage
         )
 
         line = f"data: {json.dumps(data)}\n\n"
         yield line
 
     yield "data: [DONE]\n\n"
+
+
+def convert_embedding_response_ollama_to_openai(response) -> dict:
+    """
+    Convert the response from Ollama embeddings endpoint to the OpenAI-compatible format.
+
+    Args:
+        response (dict): The response from the Ollama API,
+            e.g. {"embedding": [...], "model": "..."}
+            or {"embeddings": [{"embedding": [...], "index": 0}, ...], "model": "..."}
+
+    Returns:
+        dict: Response adapted to OpenAI's embeddings API format.
+            e.g. {
+                "object": "list",
+                "data": [
+                    {"object": "embedding", "embedding": [...], "index": 0},
+                    ...
+                ],
+                "model": "...",
+            }
+    """
+    # Ollama batch-style output
+    if isinstance(response, dict) and "embeddings" in response:
+        openai_data = []
+        for i, emb in enumerate(response["embeddings"]):
+            openai_data.append(
+                {
+                    "object": "embedding",
+                    "embedding": emb.get("embedding"),
+                    "index": emb.get("index", i),
+                }
+            )
+        return {
+            "object": "list",
+            "data": openai_data,
+            "model": response.get("model"),
+        }
+    # Ollama single output
+    elif isinstance(response, dict) and "embedding" in response:
+        return {
+            "object": "list",
+            "data": [
+                {
+                    "object": "embedding",
+                    "embedding": response["embedding"],
+                    "index": 0,
+                }
+            ],
+            "model": response.get("model"),
+        }
+    # Already OpenAI-compatible?
+    elif (
+        isinstance(response, dict)
+        and "data" in response
+        and isinstance(response["data"], list)
+    ):
+        return response
+
+    # Fallback: return as is if unrecognized
+    return response

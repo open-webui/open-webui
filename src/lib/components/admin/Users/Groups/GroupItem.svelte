@@ -1,6 +1,6 @@
 <script>
 	import { toast } from 'svelte-sonner';
-	import { getContext } from 'svelte';
+	import { onMount, getContext } from 'svelte';
 
 	const i18n = getContext('i18n');
 
@@ -10,6 +10,7 @@
 	import User from '$lib/components/icons/User.svelte';
 	import UserCircleSolid from '$lib/components/icons/UserCircleSolid.svelte';
 	import GroupModal from './EditGroupModal.svelte';
+	import { querystringValue } from '$lib/utils';
 
 	export let users = [];
 	export let group = {
@@ -44,6 +45,13 @@
 			setGroups();
 		}
 	};
+
+	onMount(() => {
+		const groupId = querystringValue('id');
+		if (groupId && groupId === group.id) {
+			showEdit = true;
+		}
+	});
 </script>
 
 <GroupModal
@@ -61,22 +69,22 @@
 		showEdit = true;
 	}}
 >
-	<div class="flex items-center gap-1.5 w-full font-medium">
+	<div class="flex items-center gap-1.5 w-full font-medium flex-1">
 		<div>
 			<UserCircleSolid className="size-4" />
 		</div>
-		{group.name}
+		<div class="line-clamp-1">
+			{group.name}
+		</div>
 	</div>
 
-	<div class="flex items-center gap-1.5 w-full font-medium">
+	<div class="flex items-center gap-1.5 w-fit font-medium text-right justify-end">
 		{group.user_ids.length}
 
 		<div>
 			<User className="size-3.5" />
 		</div>
-	</div>
 
-	<div class="w-full flex justify-end">
 		<div class=" rounded-lg p-1 hover:bg-gray-100 dark:hover:bg-gray-850 transition">
 			<Pencil className="size-3.5" />
 		</div>

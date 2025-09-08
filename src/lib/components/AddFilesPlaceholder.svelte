@@ -21,7 +21,7 @@
 			{#if content}
 				{content}
 			{:else}
-				{$i18n.t('Drop any files here to add to the conversation')}
+				{$i18n.t('Drop any files here to upload')}
 			{/if}
 		</div>
 	</slot>
