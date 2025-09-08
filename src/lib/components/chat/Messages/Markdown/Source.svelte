@@ -21,6 +21,10 @@
 	// Helper function to return only the domain from a URL
 	function getDomain(url: string): string {
 		const domain = url.replace('http://', '').replace('https://', '').split(/[/?#]/)[0];
+
+		if (domain.startsWith('www.')) {
+			return domain.slice(4);
+		}
 		return domain;
 	}
 
@@ -44,7 +48,9 @@
 		}}
 	>
 		<span class="line-clamp-1">
-			{attributes.title ? formattedTitle(attributes.title) : ''}
+			{decodeURIComponent(attributes.title)
+				? formattedTitle(decodeURIComponent(attributes.title))
+				: ''}
 		</span>
 	</button>
 {/if}
