@@ -135,7 +135,7 @@ async def get_tools(
                         headers["Authorization"] = (
                             f"Bearer {request.state.token.credentials}"
                         )
-                    elif auth_type == "oauth":
+                    elif auth_type == "system_oauth":
                         cookies = request.cookies
                         oauth_token = extra_params.get("__oauth_token__", None)
                         if oauth_token:
