@@ -31,6 +31,7 @@
 
 	let url = '';
 	let key = '';
+	let auth_type = 'bearer';
 
 	let connectionType = 'external';
 	let azure = false;
@@ -73,6 +74,7 @@
 			{
 				url,
 				key,
+				auth_type,
 				config: {
 					azure: azure,
 					api_version: apiVersion
@@ -140,6 +142,7 @@
 		const connection = {
 			url,
 			key,
+			auth_type,
 			config: {
 				enable: enable,
 				tags: tags,
@@ -157,6 +160,7 @@
 
 		url = '';
 		key = '';
+		auth_type = 'bearer';
 		prefixId = '';
 		tags = [];
 		modelIds = [];
@@ -166,6 +170,8 @@
 		if (connection) {
 			url = connection.url;
 			key = connection.key;
+
+			auth_type = connection.auth_type ?? 'bearer';
 
 			enable = connection.config?.enable ?? true;
 			tags = connection.config?.tags ?? [];
@@ -305,23 +311,63 @@
 
 						<div class="flex gap-2 mt-2">
 							<div class="flex flex-col w-full">
-								<div
-									class={`mb-0.5 text-xs text-gray-500
-								${($settings?.highContrastMode ?? false) ? 'text-gray-800 dark:text-gray-100' : ''}`}
+								<label
+									for="select-bearer-or-session"
+									class={`text-xs ${($settings?.highContrastMode ?? false) ? 'text-gray-800 dark:text-gray-100' : 'text-gray-500'}`}
+									>{$i18n.t('Auth')}</label
 								>
-									{$i18n.t('Key')}
-								</div>
 
-								<div class="flex-1">
-									<SensitiveInput
-										inputClassName={`w-full text-sm bg-transparent ${($settings?.highContrastMode ?? false) ? 'placeholder:text-gray-700 dark:placeholder:text-gray-100' : 'outline-hidden placeholder:text-gray-300 dark:placeholder:text-gray-700'}`}
-										bind:value={key}
-										placeholder={$i18n.t('API Key')}
-										required={false}
-									/>
+								<div class="flex gap-2">
+									<div class="flex-shrink-0 self-start">
+										<select
+											id="select-bearer-or-session"
+											class={`w-full text-sm bg-transparent pr-5 ${($settings?.highContrastMode ?? false) ? 'placeholder:text-gray-700 dark:placeholder:text-gray-100' : 'outline-hidden placeholder:text-gray-300 dark:placeholder:text-gray-700'}`}
+											bind:value={auth_type}
+										>
+											<option value="none">{$i18n.t('None')}</option>
+											<option value="bearer">{$i18n.t('Bearer')}</option>
+
+											{#if !ollama}
+												<option value="session">{$i18n.t('Session')}</option>
+												{#if !direct}
+													<option value="oauth">{$i18n.t('OAuth')}</option>
+												{/if}
+											{/if}
+										</select>
+									</div>
+
+									<div class="flex flex-1 items-center">
+										{#if auth_type === 'bearer'}
+											<SensitiveInput
+												bind:value={key}
+												placeholder={$i18n.t('API Key')}
+												required={false}
+											/>
+										{:else if auth_type === 'none'}
+											<div
+												class={`text-xs self-center translate-y-[1px] ${($settings?.highContrastMode ?? false) ? 'text-gray-800 dark:text-gray-100' : 'text-gray-500'}`}
+											>
+												{$i18n.t('No authentication')}
+											</div>
+										{:else if auth_type === 'session'}
+											<div
+												class={`text-xs self-center translate-y-[1px] ${($settings?.highContrastMode ?? false) ? 'text-gray-800 dark:text-gray-100' : 'text-gray-500'}`}
+											>
+												{$i18n.t('Forwards system user session credentials to authenticate')}
+											</div>
+										{:else if auth_type === 'oauth'}
+											<div
+												class={`text-xs self-center translate-y-[1px] ${($settings?.highContrastMode ?? false) ? 'text-gray-800 dark:text-gray-100' : 'text-gray-500'}`}
+											>
+												{$i18n.t('Forwards system user OAuth access token to authenticate')}
+											</div>
+										{/if}
+									</div>
 								</div>
 							</div>
+						</div>
 
+						<div class="flex gap-2 mt-2">
 							<div class="flex flex-col w-full">
 								<label
 									for="prefix-id-input"
@@ -397,35 +443,7 @@
 							</div>
 						{/if}
 
-						<div class="flex gap-2 mt-2">
-							<div class="flex flex-col w-full">
-								<div
-									class={`mb-0.5 text-xs text-gray-500
-								${($settings?.highContrastMode ?? false) ? 'text-gray-800 dark:text-gray-100' : ''}`}
-								>
-									{$i18n.t('Tags')}
-								</div>
-
-								<div class="flex-1">
-									<Tags
-										bind:tags
-										on:add={(e) => {
-											tags = [
-												...tags,
-												{
-													name: e.detail
-												}
-											];
-										}}
-										on:delete={(e) => {
-											tags = tags.filter((tag) => tag.name !== e.detail);
-										}}
-									/>
-								</div>
-							</div>
-						</div>
-
-						<hr class=" border-gray-100 dark:border-gray-700/10 my-2.5 w-full" />
+						<hr class=" border-gray-50 dark:border-gray-850 my-2.5 w-full" />
 
 						<div class="flex flex-col w-full">
 							<div class="mb-1 flex justify-between">
@@ -508,6 +526,36 @@
 								>
 									<Plus className="size-3.5" strokeWidth="2" />
 								</button>
+							</div>
+						</div>
+					</div>
+
+					<hr class=" border-gray-50 dark:border-gray-850 my-2.5 w-full" />
+
+					<div class="flex gap-2">
+						<div class="flex flex-col w-full">
+							<div
+								class={`mb-0.5 text-xs text-gray-500
+								${($settings?.highContrastMode ?? false) ? 'text-gray-800 dark:text-gray-100' : ''}`}
+							>
+								{$i18n.t('Tags')}
+							</div>
+
+							<div class="flex-1 mt-0.5">
+								<Tags
+									bind:tags
+									on:add={(e) => {
+										tags = [
+											...tags,
+											{
+												name: e.detail
+											}
+										];
+									}}
+									on:delete={(e) => {
+										tags = tags.filter((tag) => tag.name !== e.detail);
+									}}
+								/>
 							</div>
 						</div>
 					</div>
