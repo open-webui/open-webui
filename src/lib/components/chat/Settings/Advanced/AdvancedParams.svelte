@@ -178,7 +178,9 @@
 
 	<div class=" py-0.5 w-full justify-between">
 		<Tooltip
-			content={$i18n.t('Custom reasoning tags to use for the model.')}
+			content={$i18n.t(
+				'Enable, disable, or customize the reasoning tags used by the model. "Enabled" uses default tags, "Disabled" turns off reasoning tags, and "Custom" lets you specify your own start and end tags.'
+			)}
 			placement="top-start"
 			className="inline-tooltip"
 		>

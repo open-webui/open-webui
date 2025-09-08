@@ -117,6 +117,65 @@
 			align="start"
 			transition={flyAndScale}
 		>
+			{#if $user?.role === 'admin' || ($user.permissions?.chat?.share ?? true)}
+				<DropdownMenu.Item
+					class="flex gap-2 items-center px-3 py-1.5 text-sm  cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800  rounded-md"
+					on:click={() => {
+						shareHandler();
+					}}
+				>
+					<Share strokeWidth="1.5" />
+					<div class="flex items-center">{$i18n.t('Share')}</div>
+				</DropdownMenu.Item>
+			{/if}
+
+			<DropdownMenu.Sub>
+				<DropdownMenu.SubTrigger
+					class="flex gap-2 items-center px-3 py-1.5 text-sm  cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 rounded-md"
+				>
+					<Download strokeWidth="1.5" />
+
+					<div class="flex items-center">{$i18n.t('Download')}</div>
+				</DropdownMenu.SubTrigger>
+				<DropdownMenu.SubContent
+					class="w-full rounded-xl px-1 py-1.5 z-50 bg-white dark:bg-gray-850 dark:text-white shadow-lg"
+					transition={flyAndScale}
+					sideOffset={8}
+				>
+					{#if $user?.role === 'admin' || ($user.permissions?.chat?.export ?? true)}
+						<DropdownMenu.Item
+							class="flex gap-2 items-center px-3 py-1.5 text-sm  cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 rounded-md"
+							on:click={() => {
+								downloadJSONExport();
+							}}
+						>
+							<div class="flex items-center line-clamp-1">{$i18n.t('Export chat (.json)')}</div>
+						</DropdownMenu.Item>
+					{/if}
+
+					<DropdownMenu.Item
+						class="flex gap-2 items-center px-3 py-1.5 text-sm  cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 rounded-md"
+						on:click={() => {
+							downloadTxt();
+						}}
+					>
+						<div class="flex items-center line-clamp-1">{$i18n.t('Plain text (.txt)')}</div>
+					</DropdownMenu.Item>
+				</DropdownMenu.SubContent>
+			</DropdownMenu.Sub>
+
+			<DropdownMenu.Item
+				class="flex gap-2 items-center px-3 py-1.5 text-sm  cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 rounded-md"
+				on:click={() => {
+					renameHandler();
+				}}
+			>
+				<Pencil strokeWidth="1.5" />
+				<div class="flex items-center">{$i18n.t('Rename')}</div>
+			</DropdownMenu.Item>
+
+			<hr class="border-gray-50 dark:border-gray-800 my-1" />
+
 			<DropdownMenu.Item
 				class="flex gap-2 items-center px-3 py-1.5 text-sm  cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 rounded-md"
 				on:click={() => {
@@ -124,10 +183,10 @@
 				}}
 			>
 				{#if pinned}
-					<BookmarkSlash strokeWidth="2" />
+					<BookmarkSlash strokeWidth="1.5" />
 					<div class="flex items-center">{$i18n.t('Unpin')}</div>
 				{:else}
-					<Bookmark strokeWidth="2" />
+					<Bookmark strokeWidth="1.5" />
 					<div class="flex items-center">{$i18n.t('Pin')}</div>
 				{/if}
 			</DropdownMenu.Item>
@@ -135,7 +194,7 @@
 			{#if chatId}
 				<DropdownMenu.Sub>
 					<DropdownMenu.SubTrigger
-						class="flex gap-2 items-center px-3 py-2 text-sm cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 rounded-md select-none w-full"
+						class="flex gap-2 items-center px-3 py-1.5 text-sm cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 rounded-md select-none w-full"
 					>
 						<Folder />
 
@@ -165,20 +224,10 @@
 			<DropdownMenu.Item
 				class="flex gap-2 items-center px-3 py-1.5 text-sm  cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 rounded-md"
 				on:click={() => {
-					renameHandler();
-				}}
-			>
-				<Pencil strokeWidth="2" />
-				<div class="flex items-center">{$i18n.t('Rename')}</div>
-			</DropdownMenu.Item>
-
-			<DropdownMenu.Item
-				class="flex gap-2 items-center px-3 py-1.5 text-sm  cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 rounded-md"
-				on:click={() => {
 					cloneChatHandler();
 				}}
 			>
-				<DocumentDuplicate strokeWidth="2" />
+				<DocumentDuplicate strokeWidth="1.5" />
 				<div class="flex items-center">{$i18n.t('Clone')}</div>
 			</DropdownMenu.Item>
 
@@ -188,93 +237,19 @@
 					archiveChatHandler();
 				}}
 			>
-				<ArchiveBox strokeWidth="2" />
+				<ArchiveBox strokeWidth="1.5" />
 				<div class="flex items-center">{$i18n.t('Archive')}</div>
 			</DropdownMenu.Item>
 
-			{#if $user?.role === 'admin' || ($user.permissions?.chat?.share ?? true)}
-				<DropdownMenu.Item
-					class="flex gap-2 items-center px-3 py-1.5 text-sm  cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800  rounded-md"
-					on:click={() => {
-						shareHandler();
-					}}
-				>
-					<Share />
-					<div class="flex items-center">{$i18n.t('Share')}</div>
-				</DropdownMenu.Item>
-			{/if}
-
-			<DropdownMenu.Sub>
-				<DropdownMenu.SubTrigger
-					class="flex gap-2 items-center px-3 py-2 text-sm  cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 rounded-md"
-				>
-					<Download strokeWidth="2" />
-
-					<div class="flex items-center">{$i18n.t('Download')}</div>
-				</DropdownMenu.SubTrigger>
-				<DropdownMenu.SubContent
-					class="w-full rounded-xl px-1 py-1.5 z-50 bg-white dark:bg-gray-850 dark:text-white shadow-lg"
-					transition={flyAndScale}
-					sideOffset={8}
-				>
-					{#if $user?.role === 'admin' || ($user.permissions?.chat?.export ?? true)}
-						<DropdownMenu.Item
-							class="flex gap-2 items-center px-3 py-2 text-sm  cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 rounded-md"
-							on:click={() => {
-								downloadJSONExport();
-							}}
-						>
-							<div class="flex items-center line-clamp-1">{$i18n.t('Export chat (.json)')}</div>
-						</DropdownMenu.Item>
-					{/if}
-
-					<DropdownMenu.Item
-						class="flex gap-2 items-center px-3 py-2 text-sm  cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 rounded-md"
-						on:click={() => {
-							downloadTxt();
-						}}
-					>
-						<div class="flex items-center line-clamp-1">{$i18n.t('Plain text (.txt)')}</div>
-					</DropdownMenu.Item>
-				</DropdownMenu.SubContent>
-			</DropdownMenu.Sub>
 			<DropdownMenu.Item
 				class="flex  gap-2  items-center px-3 py-1.5 text-sm  cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 rounded-md"
 				on:click={() => {
 					deleteHandler();
 				}}
 			>
-				<GarbageBin strokeWidth="2" />
+				<GarbageBin strokeWidth="1.5" />
 				<div class="flex items-center">{$i18n.t('Delete')}</div>
 			</DropdownMenu.Item>
-
-			<hr class="border-gray-100 dark:border-gray-850 my-0.5" />
-
-			<div class="flex p-1">
-				<Tags
-					{chatId}
-					on:add={(e) => {
-						dispatch('tag', {
-							type: 'add',
-							name: e.detail.name
-						});
-
-						show = false;
-					}}
-					on:delete={(e) => {
-						dispatch('tag', {
-							type: 'delete',
-							name: e.detail.name
-						});
-
-						show = false;
-					}}
-					on:close={() => {
-						show = false;
-						onClose();
-					}}
-				/>
-			</div>
 		</DropdownMenu.Content>
 	</div>
 </Dropdown>

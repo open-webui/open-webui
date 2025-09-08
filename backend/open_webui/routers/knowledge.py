@@ -1,6 +1,6 @@
 from typing import List, Optional
 from pydantic import BaseModel
-from fastapi import APIRouter, Depends, HTTPException, status, Request
+from fastapi import APIRouter, Depends, HTTPException, status, Request, Query
 from fastapi.concurrency import run_in_threadpool
 from langchain_core.documents import Document
 import logging
@@ -384,7 +384,7 @@ async def update_knowledge_by_id(
     knowledge = Knowledges.update_knowledge_by_id(id=id, form_data=form_data)
     if knowledge:
         file_ids = knowledge.data.get("file_ids", []) if knowledge.data else []
-        files = Files.get_files_by_ids(file_ids)
+        files = Files.get_file_metadatas_by_ids(file_ids)
 
         return KnowledgeFilesResponse(
             **knowledge.model_dump(),
@@ -567,6 +567,7 @@ def update_file_from_knowledge_by_id(
 def remove_file_from_knowledge_by_id(
     id: str,
     form_data: KnowledgeFileIdForm,
+    delete_file: bool = Query(True),
     user=Depends(get_verified_user),
 ):
     knowledge = Knowledges.get_knowledge_by_id(id=id)
@@ -603,18 +604,19 @@ def remove_file_from_knowledge_by_id(
         log.debug(e)
         pass
 
-    try:
-        # Remove the file's collection from vector database
-        file_collection = f"file-{form_data.file_id}"
-        if VECTOR_DB_CLIENT.has_collection(collection_name=file_collection):
-            VECTOR_DB_CLIENT.delete_collection(collection_name=file_collection)
-    except Exception as e:
-        log.debug("This was most likely caused by bypassing embedding processing")
-        log.debug(e)
-        pass
+    if delete_file:
+        try:
+            # Remove the file's collection from vector database
+            file_collection = f"file-{form_data.file_id}"
+            if VECTOR_DB_CLIENT.has_collection(collection_name=file_collection):
+                VECTOR_DB_CLIENT.delete_collection(collection_name=file_collection)
+        except Exception as e:
+            log.debug("This was most likely caused by bypassing embedding processing")
+            log.debug(e)
+            pass
 
-    # Delete file from database
-    Files.delete_file_by_id(form_data.file_id)
+        # Delete file from database
+        Files.delete_file_by_id(form_data.file_id)
 
     if knowledge:
         data = knowledge.data or {}

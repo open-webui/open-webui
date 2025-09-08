@@ -38,6 +38,7 @@
 	import DeleteConfirmDialog from '$lib/components/common/ConfirmDialog.svelte';
 	import FolderModal from './Folders/FolderModal.svelte';
 	import { goto } from '$app/navigation';
+	import Emoji from '$lib/components/common/Emoji.svelte';
 
 	export let open = false;
 
@@ -426,7 +427,7 @@
 		<div class="w-full group">
 			<button
 				id="folder-{folderId}-button"
-				class="relative w-full py-1.5 px-2 rounded-md flex items-center gap-1.5 text-xs text-gray-500 dark:text-gray-500 font-medium hover:bg-gray-100 dark:hover:bg-gray-900 transition {$selectedFolder?.id ===
+				class="relative w-full py-1.5 px-2 rounded-lg flex items-center gap-1.5 text-xs text-gray-500 dark:text-gray-500 font-medium hover:bg-gray-100 dark:hover:bg-gray-900 transition {$selectedFolder?.id ===
 				folderId
 					? 'bg-gray-100 dark:bg-gray-900'
 					: ''}"
@@ -444,15 +445,31 @@
 				}}
 			>
 				<button
-					class="text-gray-300 dark:text-gray-600"
+					class="text-gray-300 dark:text-gray-600 transition-all"
 					on:click={(e) => {
 						e.stopPropagation();
 					}}
 				>
-					{#if open}
-						<ChevronDown className=" size-3" strokeWidth="2.5" />
+					{#if folders[folderId]?.meta?.icon}
+						<div class="flex group-hover:hidden transition-all">
+							<Emoji className="size-4" shortCode={folders[folderId].meta.icon} />
+						</div>
+
+						<div class="hidden group-hover:flex transition-all p-[1px]">
+							{#if open}
+								<ChevronDown className=" size-3.5" strokeWidth="2.5" />
+							{:else}
+								<ChevronRight className=" size-3.5" strokeWidth="2.5" />
+							{/if}
+						</div>
 					{:else}
-						<ChevronRight className=" size-3" strokeWidth="2.5" />
+						<div class="p-[1px]">
+							{#if open}
+								<ChevronDown className=" size-3.5" strokeWidth="2.5" />
+							{:else}
+								<ChevronRight className=" size-3.5" strokeWidth="2.5" />
+							{/if}
+						</div>
 					{/if}
 				</button>
 

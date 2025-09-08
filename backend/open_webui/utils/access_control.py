@@ -1,4 +1,4 @@
-from typing import Optional, Union, List, Dict, Any
+from typing import Optional, Set, Union, List, Dict, Any
 from open_webui.models.users import Users, UserModel
 from open_webui.models.groups import Groups
 
@@ -109,12 +109,15 @@ def has_access(
     user_id: str,
     type: str = "write",
     access_control: Optional[dict] = None,
+    user_group_ids: Optional[Set[str]] = None,
 ) -> bool:
     if access_control is None:
         return type == "read"
 
-    user_groups = Groups.get_groups_by_member_id(user_id)
-    user_group_ids = [group.id for group in user_groups]
+    if user_group_ids is None:
+        user_groups = Groups.get_groups_by_member_id(user_id)
+        user_group_ids = {group.id for group in user_groups}
+
     permission_access = access_control.get(type, {})
     permitted_group_ids = permission_access.get("group_ids", [])
     permitted_user_ids = permission_access.get("user_ids", [])

@@ -144,9 +144,16 @@ class ToolsTable:
 
     def get_tools(self) -> list[ToolUserModel]:
         with get_db() as db:
+            all_tools = db.query(Tool).order_by(Tool.updated_at.desc()).all()
+
+            user_ids = list(set(tool.user_id for tool in all_tools))
+
+            users = Users.get_users_by_user_ids(user_ids) if user_ids else []
+            users_dict = {user.id: user for user in users}
+
             tools = []
-            for tool in db.query(Tool).order_by(Tool.updated_at.desc()).all():
-                user = Users.get_user_by_id(tool.user_id)
+            for tool in all_tools:
+                user = users_dict.get(tool.user_id)
                 tools.append(
                     ToolUserModel.model_validate(
                         {
@@ -161,12 +168,13 @@ class ToolsTable:
         self, user_id: str, permission: str = "write"
     ) -> list[ToolUserModel]:
         tools = self.get_tools()
+        user_group_ids = {group.id for group in Groups.get_groups_by_member_id(user_id)}
 
         return [
             tool
             for tool in tools
             if tool.user_id == user_id
-            or has_access(user_id, permission, tool.access_control)
+            or has_access(user_id, permission, tool.access_control, user_group_ids)
         ]
 
     def get_tool_valves_by_id(self, id: str) -> Optional[dict]:

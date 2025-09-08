@@ -404,6 +404,10 @@ except ValueError:
 ####################################
 
 WEBUI_AUTH = os.environ.get("WEBUI_AUTH", "True").lower() == "true"
+
+ENABLE_INITIAL_ADMIN_SIGNUP = (
+    os.environ.get("ENABLE_INITIAL_ADMIN_SIGNUP", "False").lower() == "true"
+)
 ENABLE_SIGNUP_PASSWORD_CONFIRMATION = (
     os.environ.get("ENABLE_SIGNUP_PASSWORD_CONFIRMATION", "False").lower() == "true"
 )
@@ -459,6 +463,10 @@ if WEBUI_AUTH and WEBUI_SECRET_KEY == "":
 
 ENABLE_COMPRESSION_MIDDLEWARE = (
     os.environ.get("ENABLE_COMPRESSION_MIDDLEWARE", "True").lower() == "true"
+)
+
+ENABLE_OAUTH_SESSION_TOKENS_COOKIES = (
+    os.environ.get("ENABLE_OAUTH_SESSION_TOKENS_COOKIES", "True").lower() == "true"
 )
 
 

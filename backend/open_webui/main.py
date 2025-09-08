@@ -157,6 +157,7 @@ from open_webui.config import (
     IMAGE_SIZE,
     IMAGE_STEPS,
     IMAGES_OPENAI_API_BASE_URL,
+    IMAGES_OPENAI_API_VERSION,
     IMAGES_OPENAI_API_KEY,
     IMAGES_GEMINI_API_BASE_URL,
     IMAGES_GEMINI_API_KEY,
@@ -1019,6 +1020,7 @@ app.state.config.ENABLE_IMAGE_GENERATION = ENABLE_IMAGE_GENERATION
 app.state.config.ENABLE_IMAGE_PROMPT_GENERATION = ENABLE_IMAGE_PROMPT_GENERATION
 
 app.state.config.IMAGES_OPENAI_API_BASE_URL = IMAGES_OPENAI_API_BASE_URL
+app.state.config.IMAGES_OPENAI_API_VERSION = IMAGES_OPENAI_API_VERSION
 app.state.config.IMAGES_OPENAI_API_KEY = IMAGES_OPENAI_API_KEY
 
 app.state.config.IMAGES_GEMINI_API_BASE_URL = IMAGES_GEMINI_API_BASE_URL
@@ -1519,7 +1521,7 @@ async def chat_completion(
             try:
                 event_emitter = get_event_emitter(metadata)
                 await event_emitter(
-                    {"type": "task-cancelled"},
+                    {"type": "chat:tasks:cancel"},
                 )
             except Exception as e:
                 pass
@@ -1535,13 +1537,20 @@ async def chat_completion(
                             "error": {"content": str(e)},
                         },
                     )
+
+                    event_emitter = get_event_emitter(metadata)
+                    await event_emitter(
+                        {
+                            "type": "chat:message:error",
+                            "data": {"error": {"content": str(e)}},
+                        }
+                    )
+                    await event_emitter(
+                        {"type": "chat:tasks:cancel"},
+                    )
+
                 except:
                     pass
-
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail=str(e),
-            )
 
     if (
         metadata.get("session_id")
@@ -1642,8 +1651,18 @@ async def list_tasks_by_chat_id_endpoint(
 @app.get("/api/config")
 async def get_app_config(request: Request):
     user = None
-    if "token" in request.cookies:
+    token = None
+
+    auth_header = request.headers.get("Authorization")
+    if auth_header:
+        cred = get_http_authorization_cred(auth_header)
+        if cred:
+            token = cred.credentials
+
+    if not token and "token" in request.cookies:
         token = request.cookies.get("token")
+
+    if token:
         try:
             data = decode_token(token)
         except Exception as e:
