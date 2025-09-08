@@ -355,7 +355,7 @@
 									for="prefix-id-input"
 									class={`mb-0.5 text-xs text-gray-500
 								${($settings?.highContrastMode ?? false) ? 'text-gray-800 dark:text-gray-100' : ''}`}
-									>{$i18n.t('Provider')}</label
+									>{$i18n.t('Provider Type')}</label
 								>
 
 								<div>
