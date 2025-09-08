@@ -283,6 +283,8 @@
 											class={`w-full text-sm bg-transparent pr-5 ${($settings?.highContrastMode ?? false) ? 'placeholder:text-gray-700 dark:placeholder:text-gray-100' : 'outline-hidden placeholder:text-gray-300 dark:placeholder:text-gray-700'}`}
 											bind:value={auth_type}
 										>
+											<option value="none">{$i18n.t('None')}</option>
+
 											<option value="bearer">{$i18n.t('Bearer')}</option>
 											<option value="session">{$i18n.t('Session')}</option>
 
@@ -299,6 +301,12 @@
 												placeholder={$i18n.t('API Key')}
 												required={false}
 											/>
+										{:else if auth_type === 'none'}
+											<div
+												class={`text-xs self-center translate-y-[1px] ${($settings?.highContrastMode ?? false) ? 'text-gray-800 dark:text-gray-100' : 'text-gray-500'}`}
+											>
+												{$i18n.t('No authentication')}
+											</div>
 										{:else if auth_type === 'session'}
 											<div
 												class={`text-xs self-center translate-y-[1px] ${($settings?.highContrastMode ?? false) ? 'text-gray-800 dark:text-gray-100' : 'text-gray-500'}`}

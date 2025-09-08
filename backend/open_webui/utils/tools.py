@@ -127,6 +127,9 @@ async def get_tools(
                         headers["Authorization"] = (
                             f"Bearer {tool_server_connection.get('key', '')}"
                         )
+                    elif auth_type == "none":
+                        # No authentication
+                        pass
                     elif auth_type == "session":
                         cookies = request.cookies
                         headers["Authorization"] = (
