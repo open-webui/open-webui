@@ -824,6 +824,12 @@ class OAuthManager:
             if "expires_in" in token and "expires_at" not in token:
                 token["expires_at"] = datetime.now().timestamp() + token["expires_in"]
 
+            # Clean up any existing sessions for this user/provider first
+            sessions = OAuthSessions.get_sessions_by_user_id(user.id)
+            for session in sessions:
+                if session.provider == provider:
+                    OAuthSessions.delete_session_by_id(session.id)
+
             session = OAuthSessions.create_session(
                 user_id=user.id,
                 provider=provider,
