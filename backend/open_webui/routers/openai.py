@@ -401,7 +401,7 @@ async def get_filtered_models(models, user):
     return filtered_models
 
 
-@cached(ttl=MODELS_CACHE_TTL)
+@cached(ttl=MODELS_CACHE_TTL, key=lambda _, user: f"openai_all_models_{user.id}" if user else "openai_all_models")
 async def get_all_models(request: Request, user: UserModel) -> dict[str, list]:
     log.info("get_all_models()")
 

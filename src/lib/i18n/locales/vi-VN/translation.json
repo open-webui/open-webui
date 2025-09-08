@@ -1263,7 +1263,7 @@
 	"Searched {{count}} sites": "Đã tìm kiếm {{count}} trang web",
 	"Searching \"{{searchQuery}}\"": "Đang tìm \"{{searchQuery}}\"",
 	"Searching Knowledge for \"{{searchQuery}}\"": "Đang tìm kiếm Kiến thức cho \"{{searchQuery}}\"",
-	"Searching the web...": "",
+	"Searching the web": "",
 	"Searxng Query URL": "URL truy vấn Searxng",
 	"See readme.md for instructions": "Xem readme.md để biết hướng dẫn",
 	"See what's new": "Xem những cập nhật mới",

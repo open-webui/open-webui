@@ -1263,7 +1263,7 @@
 	"Searched {{count}} sites": "Sökte på {{count}} webbplatser",
 	"Searching \"{{searchQuery}}\"": "Söker \"{{searchQuery}}\"",
 	"Searching Knowledge for \"{{searchQuery}}\"": "Söker kunskap efter \"{{searchQuery}}\"",
-	"Searching the web...": "Söker på webben...",
+	"Searching the web": "Söker på webben...",
 	"Searxng Query URL": "Searxng Query URL",
 	"See readme.md for instructions": "Se readme.md för instruktioner",
 	"See what's new": "Se vad som är nytt",

@@ -1263,7 +1263,7 @@
 	"Searched {{count}} sites": "",
 	"Searching \"{{searchQuery}}\"": "Hľadanie \"{{searchQuery}}\"",
 	"Searching Knowledge for \"{{searchQuery}}\"": "Vyhľadávanie znalostí pre \"{{searchQuery}}\"",
-	"Searching the web...": "",
+	"Searching the web": "",
 	"Searxng Query URL": "Adresa URL dotazu Searxng",
 	"See readme.md for instructions": "Pozrite si {{readme.md}} pre pokyny.",
 	"See what's new": "Pozrite sa, čo je nové",

@@ -1263,7 +1263,7 @@
 	"Searched {{count}} sites": "{{count}} サイトを検索しました",
 	"Searching \"{{searchQuery}}\"": "「{{searchQuery}}」を検索中...",
 	"Searching Knowledge for \"{{searchQuery}}\"": "「{{searchQuery}}」のナレッジを検索中...",
-	"Searching the web...": "ウェブを検索中...",
+	"Searching the web": "ウェブを検索中...",
 	"Searxng Query URL": "Searxng クエリ URL",
 	"See readme.md for instructions": "手順については readme.md を参照してください",
 	"See what's new": "新機能を見る",

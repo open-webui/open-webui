@@ -1263,7 +1263,7 @@
 	"Searched {{count}} sites": "მოძებნილია {{count}} საიტზე",
 	"Searching \"{{searchQuery}}\"": "მიმდინარეობს ძებნა \"{{searchQuery}}\"",
 	"Searching Knowledge for \"{{searchQuery}}\"": "",
-	"Searching the web...": "",
+	"Searching the web": "",
 	"Searxng Query URL": "Searxng Query URL",
 	"See readme.md for instructions": "ინსტრუქციებისთვის იხილეთ readme.md",
 	"See what's new": "ნახეთ, რა არის ახალი",

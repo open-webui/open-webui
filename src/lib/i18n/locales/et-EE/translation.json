@@ -1263,7 +1263,7 @@
 	"Searched {{count}} sites": "Otsiti {{count}} saidilt",
 	"Searching \"{{searchQuery}}\"": "Otsimine: \"{{searchQuery}}\"",
 	"Searching Knowledge for \"{{searchQuery}}\"": "Teadmistest otsimine: \"{{searchQuery}}\"",
-	"Searching the web...": "",
+	"Searching the web": "",
 	"Searxng Query URL": "Searxng päringu URL",
 	"See readme.md for instructions": "Juhiste saamiseks vaadake readme.md",
 	"See what's new": "Vaata, mis on uut",

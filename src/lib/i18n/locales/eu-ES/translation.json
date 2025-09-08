@@ -1263,7 +1263,7 @@
 	"Searched {{count}} sites": "",
 	"Searching \"{{searchQuery}}\"": "\"{{searchQuery}}\" bilatzen",
 	"Searching Knowledge for \"{{searchQuery}}\"": "\"{{searchQuery}}\"rentzako ezagutza bilatzen",
-	"Searching the web...": "",
+	"Searching the web": "",
 	"Searxng Query URL": "Searxng kontsulta URLa",
 	"See readme.md for instructions": "Ikusi readme.md argibideetarako",
 	"See what's new": "Ikusi berritasunak",

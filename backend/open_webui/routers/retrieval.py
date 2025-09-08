@@ -2383,6 +2383,8 @@ async def process_web_search(
 ):
 
     urls = []
+    result_items = []
+
     try:
         logging.info(
             f"trying to web search with {request.app.state.config.WEB_SEARCH_ENGINE, form_data.queries}"
@@ -2404,6 +2406,7 @@ async def process_web_search(
             if result:
                 for item in result:
                     if item and item.link:
+                        result_items.append(item)
                         urls.append(item.link)
 
         urls = list(dict.fromkeys(urls))
@@ -2448,12 +2451,16 @@ async def process_web_search(
         urls = [
             doc.metadata.get("source") for doc in docs if doc.metadata.get("source")
         ]  # only keep the urls returned by the loader
+        result_items = [
+            dict(item) for item in result_items if item.link in urls
+        ]  # only keep the search results that have been loaded
 
         if request.app.state.config.BYPASS_WEB_SEARCH_EMBEDDING_AND_RETRIEVAL:
             return {
                 "status": True,
                 "collection_name": None,
                 "filenames": urls,
+                "items": result_items,
                 "docs": [
                     {
                         "content": doc.page_content,
@@ -2486,6 +2493,7 @@ async def process_web_search(
             return {
                 "status": True,
                 "collection_names": [collection_name],
+                "items": result_items,
                 "filenames": urls,
                 "loaded_count": len(docs),
             }

@@ -1,7 +1,6 @@
 <script lang="ts">
 	import { toast } from 'svelte-sonner';
 	import { v4 as uuidv4 } from 'uuid';
-	import heic2any from 'heic2any';
 
 	import { tick, getContext, onMount, onDestroy } from 'svelte';
 
@@ -9,7 +8,7 @@
 
 	import { config, mobile, settings, socket, user } from '$lib/stores';
 	import {
-		blobToFile,
+		convertHeicToJpeg,
 		compressImage,
 		extractInputVariables,
 		getAge,
@@ -379,7 +378,7 @@
 
 				reader.readAsDataURL(
 					file['type'] === 'image/heic'
-						? await heic2any({ blob: file, toType: 'image/jpeg' })
+						? await convertHeicToJpeg(file)
 						: file
 				);
 			} else {

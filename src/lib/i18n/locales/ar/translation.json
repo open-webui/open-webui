@@ -1263,7 +1263,7 @@
 	"Searched {{count}} sites": "تم البحث في {{count}} مواقع",
 	"Searching \"{{searchQuery}}\"": "جارٍ البحث عن \"{{searchQuery}}\"",
 	"Searching Knowledge for \"{{searchQuery}}\"": "جارٍ البحث في المعرفة عن \"{{searchQuery}}\"",
-	"Searching the web...": "",
+	"Searching the web": "",
 	"Searxng Query URL": "عنوان URL لاستعلام Searxng",
 	"See readme.md for instructions": "readme.md للحصول على التعليمات",
 	"See what's new": "ما الجديد",

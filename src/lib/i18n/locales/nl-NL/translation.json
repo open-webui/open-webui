@@ -1263,7 +1263,7 @@
 	"Searched {{count}} sites": "Zocht op {{count}} sites",
 	"Searching \"{{searchQuery}}\"": "\"{{searchQuery}}\" aan het zoeken.",
 	"Searching Knowledge for \"{{searchQuery}}\"": "Zoek kennis bij \"{{searchQuery}}\"",
-	"Searching the web...": "",
+	"Searching the web": "",
 	"Searxng Query URL": "Searxng Query URL",
 	"See readme.md for instructions": "Zie readme.md voor instructies",
 	"See what's new": "Zie wat er nieuw is",
