@@ -42,53 +42,51 @@
 	let enable = true;
 
 	let loading = false;
-
-	const verifyHandler = async () => {
+	const verifyConnection = async () => {
 		if (url === '') {
 			toast.error($i18n.t('Please enter a valid URL'));
-			return;
+			return null;
 		}
-
 		if (path === '') {
 			toast.error($i18n.t('Please enter a valid path'));
-			return;
+			return null;
 		}
-
-		if (direct) {
-			const res = await getToolServerData(
-				auth_type === 'bearer' ? key : localStorage.token,
-				path.includes('://') ? path : `${url}${path.startsWith('/') ? '' : '/'}${path}`
-			).catch((err) => {
-				toast.error($i18n.t('Connection failed'));
-			});
-
-			if (res) {
-				toast.success($i18n.t('Connection successful'));
-				console.debug('Connection successful', res);
+		try {
+			if (direct) {
+				return await getToolServerData(
+					auth_type === 'bearer' ? key : localStorage.token,
+					path.includes('://') ? path : `${url}${path.startsWith('/') ? '' : '/'}${path}`
+				);
+			} else {
+				return await verifyToolServerConnection(localStorage.token, {
+					url,
+					path,
+					auth_type,
+					key,
+					config: {
+						enable,
+						access_control: accessControl
+					},
+					info: {
+						id,
+						name,
+						description
+					}
+				});
 			}
+		} catch (err) {
+			console.error('Connection test failed:', err);
+			return null;
+		}
+	};
+
+	const verifyHandler = async () => {
+		const res = await verifyConnection();
+		if (res) {
+			toast.success($i18n.t('Connection successful'));
+			console.debug('Connection successful', res);
 		} else {
-			const res = await verifyToolServerConnection(localStorage.token, {
-				url,
-				path,
-				auth_type,
-				key,
-				config: {
-					enable: enable,
-					access_control: accessControl
-				},
-				info: {
-					id,
-					name,
-					description
-				}
-			}).catch((err) => {
-				toast.error($i18n.t('Connection failed'));
-			});
-
-			if (res) {
-				toast.success($i18n.t('Connection successful'));
-				console.debug('Connection successful', res);
-			}
+			toast.error($i18n.t('Connection failed'));
 		}
 	};
 
@@ -97,6 +95,16 @@
 
 		// remove trailing slash from url
 		url = url.replace(/\/$/, '');
+
+		const verifyConnetionResult = await verifyConnection();
+		if (!verifyConnetionResult) {
+			toast.error(
+				$i18n.t('Cannot save - connection test failed. Please verify your URL and credentials.')
+			);
+			loading = false;
+			return;
+		}
+		toast.success($i18n.t('Connection verified successfully'));
 
 		const connection = {
 			url,
