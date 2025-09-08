@@ -3,7 +3,7 @@ import logging, os
 import base64
 import uuid
 from pathlib import Path
-from typing import List
+from typing import List, Tuple
 
 from langchain_core.document_loaders import BaseLoader
 from langchain_core.documents import Document
@@ -49,7 +49,9 @@ class ExternalDocumentLoader(BaseLoader):
         if self.extract_images:
             headers["X-Extract-Images"] = "true"
 
-        url = self.url.rstrip("/")
+        url = self.url
+        if url.endswith("/"):
+            url = url[:-1]
 
         try:
             response = requests.put(f"{url}/process", data=data, headers=headers)

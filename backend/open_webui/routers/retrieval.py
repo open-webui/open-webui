@@ -8,7 +8,7 @@ import asyncio
 import uuid
 from datetime import datetime
 from pathlib import Path
-from typing import Iterator, List, Optional, Sequence, Union
+from typing import Iterator, List, Optional, Sequence, Union, Tuple
 
 from fastapi import (
     Depends,
@@ -1472,7 +1472,7 @@ def process_file(
                     file.filename, file.meta.get("content_type"), file_path
                 )
 
-                if isinstance(result, tuple):
+                if isinstance(result, tuple) and len(result) == 2:
                     docs, image_refs = result
                     log.info(f"Loaded {len(docs)} docs and {len(image_refs)} images")
                 else:
