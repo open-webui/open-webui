@@ -74,8 +74,8 @@
 			{
 				url,
 				key,
-				auth_type,
 				config: {
+					auth_type,
 					azure: azure,
 					api_version: apiVersion
 				}
@@ -142,13 +142,13 @@
 		const connection = {
 			url,
 			key,
-			auth_type,
 			config: {
 				enable: enable,
 				tags: tags,
 				prefix_id: prefixId,
 				model_ids: modelIds,
 				connection_type: connectionType,
+				auth_type,
 				...(!ollama && azure ? { azure: true, api_version: apiVersion } : {})
 			}
 		};
@@ -171,7 +171,7 @@
 			url = connection.url;
 			key = connection.key;
 
-			auth_type = connection.auth_type ?? 'bearer';
+			auth_type = connection.config.auth_type ?? 'bearer';
 
 			enable = connection.config?.enable ?? true;
 			tags = connection.config?.tags ?? [];
