@@ -313,7 +313,7 @@
 											>
 												{$i18n.t('Forwards system user session credentials to authenticate')}
 											</div>
-										{:else if auth_type === 'oauth'}
+										{:else if auth_type === 'system_oauth'}
 											<div
 												class={`text-xs self-center translate-y-[1px] ${($settings?.highContrastMode ?? false) ? 'text-gray-800 dark:text-gray-100' : 'text-gray-500'}`}
 											>
