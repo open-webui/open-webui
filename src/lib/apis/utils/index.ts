@@ -216,8 +216,13 @@ export const downloadLiteLLMConfig = async (token: string) => {
 	}
 };
 
-export const reindexData = async (token: string) => {
+export const reindexData = async (
+	token: string,
+	options?: { process_from_disk: boolean; batch_size: number }
+) => {
 	let error = null;
+	const body = JSON.stringify(options || {});
+	console.log("Sending to backend:", body); // ← log the exact payload
 
 	const res = await fetch(`${WEBUI_API_BASE_URL}/utils/reindex`, {
 		method: 'POST',
@@ -225,7 +230,8 @@ export const reindexData = async (token: string) => {
 			Accept: 'application/json',
 			'Content-Type': 'application/json',
 			authorization: `Bearer ${token}`
-		}
+		},
+		body: JSON.stringify(options || {})
 	})
 		.then(async (res) => {
 			if (!res.ok) throw await res.json();
@@ -250,7 +256,7 @@ export const listenToReindexProgress = (
 		files: { progress: number; status: string };
 		knowledge: { progress: number; status: string };
 	}) => void,
-	onComplete:() => void
+	onComplete: (stopped: boolean) => void
 ) => {
 	const eventSource = new EventSource(`${WEBUI_API_BASE_URL}/utils/reindex/stream`);
 
@@ -263,15 +269,18 @@ export const listenToReindexProgress = (
 			knowledge: data.knowledge,
 		});
 
-		// optionally close if all tasks are done or idle
-		const allIdleOrDone = Object.values(
+		const statuses = Object.values(
 			data as Record<string, { progress: number; status: string }>
-		)
-			.every(task => task.status !== "running");
+		).map(task => task.status);
 
-		if (allIdleOrDone) {
+		// Determine if all tasks are finished or stopped
+		const allFinished = statuses.every(status => status === "done" || status === "stopped");
+
+		if (allFinished) {
 			eventSource.close();
-			onComplete();
+			// If any task is stopped, pass stopped=true
+			const stopped = statuses.some(status => status === "stopped");
+			onComplete(stopped);
 		}
 	};
 
@@ -280,6 +289,7 @@ export const listenToReindexProgress = (
 		eventSource.close();
 	};
 };
+
 
 export const checkIfReindexing = (): Promise<boolean> => {
 	return new Promise((resolve) => {
@@ -306,4 +316,34 @@ export const checkIfReindexing = (): Promise<boolean> => {
 		eventSource.onmessage = handleMessage;
 		eventSource.onerror = handleError;
 	});
+};
+
+export const stopReindex = async (token: string) => {
+    let error: any = null;
+
+    const res = await fetch(`${WEBUI_API_BASE_URL}/utils/reindex/stop`, {
+        method: 'POST',
+        headers: {
+            Accept: 'application/json',
+            'Content-Type': 'application/json',
+            authorization: `Bearer ${token}`,
+        },
+    })
+        .then(async (res) => {
+            if (!res.ok) {
+                throw await res.json();
+            }
+            return res.json();
+        })
+        .catch((err) => {
+            error = err.detail ?? err;
+            console.error("Failed to stop reindex:", err);
+            return null;
+        });
+
+    if (error) {
+        throw error;
+    }
+
+    return res;
 };

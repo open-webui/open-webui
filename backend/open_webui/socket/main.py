@@ -136,6 +136,7 @@ else:
         "memories": {"progress": 0, "status": "idle"},
         "files": {"progress": 0, "status": "idle"},
         "knowledge": {"progress": 0, "status": "idle"},
+        "manual_stop": False
     }
     aquire_func = release_func = renew_func = lambda: True
 

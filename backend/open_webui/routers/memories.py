@@ -6,6 +6,7 @@ from typing import Optional
 
 from open_webui.models.memories import Memories, MemoryCountResponse, MemoryModel
 from open_webui.models.users import Users
+from open_webui.models.utils import ReindexForm
 from open_webui.retrieval.vector.factory import VECTOR_DB_CLIENT
 from open_webui.socket.main import REINDEX_STATE
 from open_webui.utils.auth import get_admin_user, get_verified_user
@@ -120,15 +121,23 @@ async def query_memory(
 
 
 @router.post("/reindex", response_model=bool)
-async def reindex_all_memory(request: Request, user=Depends(get_admin_user)):
+async def reindex_all_memory(
+    request: Request,
+    form_data: ReindexForm,
+    user=Depends(get_admin_user)):
+    # if reindexing is already running, don't start again
     if REINDEX_STATE.get("memories", {}).get("status", "idle") != "idle":
+        return False
+    
+    if REINDEX_STATE.get("manual_stop", False) == True:
+        REINDEX_STATE["memories"]["status"] = "stopped"
         return False
 
     REINDEX_STATE["memories"]["status"] = (
         "running"  # marking as started, before the first memory is done
     )
     memories_count = Memories.get_memory_count().count
-    batch_size = 10
+    batch_size = form_data.batch_size
 
     log.info(f"Starting reindexing for {memories_count} memories.")
     for offset in range(0, memories_count, batch_size):
@@ -139,6 +148,10 @@ async def reindex_all_memory(request: Request, user=Depends(get_admin_user)):
             break
 
         for i, memory in enumerate(memories_batch, start=1):
+            # stop reindexing if user manually halted it
+            if REINDEX_STATE.get("manual_stop", False) == True:
+                REINDEX_STATE["memories"]["status"] = "stopped"
+                return False
             try:
                 VECTOR_DB_CLIENT.delete(
                     collection_name=f"user-memory-{memory.user_id}", ids=[memory.id]

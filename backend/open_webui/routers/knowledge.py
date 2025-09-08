@@ -2,6 +2,7 @@ from typing import List, Optional
 from pydantic import BaseModel
 from fastapi import APIRouter, Depends, HTTPException, status, Request
 from fastapi.concurrency import run_in_threadpool
+from langchain_core.documents import Document
 import logging
 from asyncio import sleep
 
@@ -13,12 +14,14 @@ from open_webui.models.knowledge import (
     KnowledgeUserResponse,
 )
 from open_webui.models.files import Files, FileModel, FileMetadataResponse
+from open_webui.models.utils import ReindexForm
 from open_webui.retrieval.vector.factory import VECTOR_DB_CLIENT
 from open_webui.routers.retrieval import (
     process_file,
     ProcessFileForm,
     process_files_batch,
     BatchProcessFilesForm,
+    save_docs_to_vector_db
 )
 from open_webui.socket.main import REINDEX_STATE
 from open_webui.storage.provider import Storage
@@ -187,15 +190,24 @@ async def create_new_knowledge(
 
 
 @router.post("/reindex", response_model=bool)
-async def reindex_knowledge_files(request: Request, user=Depends(get_admin_user)):
+async def reindex_knowledge_files(
+    request: Request,
+    form_data: ReindexForm,
+    user=Depends(get_admin_user)):
+    # if reindexing is already running, don't start again
     if REINDEX_STATE.get("knowledge", {}).get("status", "idle") != "idle":
+        return False
+
+    if REINDEX_STATE.get("manual_stop", False) == True:
+        REINDEX_STATE["knowledge"]["status"] = "stopped"
         return False
 
     REINDEX_STATE["knowledge"]["status"] = (
         "running"  # marking as started, before the first knowledge is done
     )
+
+    batch_size = form_data.batch_size
     knowledge_bases_count = Knowledges.get_knowledge_bases_count().count
-    batch_size = 10
 
     log.info(f"Starting reindexing for {knowledge_bases_count} knowledge bases.")
 
@@ -208,23 +220,11 @@ async def reindex_knowledge_files(request: Request, user=Depends(get_admin_user)
             break
 
         for i, knowledge_base in enumerate(knowledge_bases_batch, start=1):
-            # -- Robust error handling for missing or invalid data
-            if not knowledge_base.data or not isinstance(knowledge_base.data, dict):
-                log.warning(
-                    f"Knowledge base {knowledge_base.id} has no data or invalid data ({knowledge_base.data!r}). Deleting."
-                )
-                try:
-                    Knowledges.delete_knowledge_by_id(id=knowledge_base.id)
-                    deleted_knowledge_bases.append(knowledge_base.id)
-                except Exception as e:
-                    log.error(
-                        f"Failed to delete invalid knowledge base {knowledge_base.id}: {e}"
-                    )
-                continue
-
+            # stop reindexing if user manually halted it
+            if REINDEX_STATE.get("manual_stop", False) == True:
+                REINDEX_STATE["knowledge"]["status"] = "stopped"
+                return False
             try:
-                file_ids = knowledge_base.data.get("file_ids", [])
-                files = Files.get_files_by_ids(file_ids)
                 try:
                     if VECTOR_DB_CLIENT.has_collection(
                         collection_name=knowledge_base.id
@@ -236,25 +236,61 @@ async def reindex_knowledge_files(request: Request, user=Depends(get_admin_user)
                     log.error(
                         f"Error deleting collection {knowledge_base.id}: {str(e)}"
                     )
-                    continue  # Skip, don't raise
 
                 failed_files = []
-                for file in files:
-                    try:
-                        await run_in_threadpool(
-                            process_file,
-                            request,
-                            ProcessFileForm(
-                                file_id=file.id, collection_name=knowledge_base.id
-                            ),
-                            user=user,
-                        )
-                    except Exception as e:
-                        log.error(
-                            f"Error processing file {file.filename} (ID: {file.id}): {str(e)}"
-                        )
-                        failed_files.append({"file_id": file.id, "error": str(e)})
-                        continue
+                file_ids = (getattr(knowledge_base, "data", None) or {}).get("file_ids", [])
+                # iterate over a batch of files for each knowledge to
+                # not load all files at once for very large knowledges
+                for j in range(0, len(file_ids), batch_size):
+                    file_ids_batch = file_ids[j:j + batch_size]
+                    files = Files.get_files_by_ids(file_ids_batch)
+                    
+
+                    for file in files:
+                        if form_data.process_from_disk:
+                            try:
+                                await run_in_threadpool(
+                                    process_file,
+                                    request,
+                                    ProcessFileForm(
+                                        file_id=file.id, collection_name=knowledge_base.id
+                                    ),
+                                    user=user,
+                                )
+                            except Exception as e:
+                                log.error(
+                                    f"Error processing file {file.filename} (ID: {file.id}): {str(e)}"
+                                )
+                                failed_files.append({"file_id": file.id, "error": str(e)})
+                                continue
+                        else:
+                            text_content = file.data.get("content", "")
+
+                            docs: List[Document] = [
+                                Document(
+                                    page_content=text_content.replace("<br/>", "\n"),
+                                    metadata={
+                                        **file.meta,
+                                        "name": file.filename,
+                                        "created_by": file.user_id,
+                                        "file_id": file.id,
+                                        "source": file.filename,
+                                    },
+                                )
+                            ]
+                            await run_in_threadpool(
+                                save_docs_to_vector_db,
+                                request,
+                                docs=docs,
+                                collection_name=knowledge_base.id,
+                                metadata={
+                                    "file_id": file.id,
+                                    "name": file.filename,
+                                    "hash": file.hash,
+                                },
+                                add=True,
+                                user=user,
+                            )
 
             except Exception as e:
                 log.error(

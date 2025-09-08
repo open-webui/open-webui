@@ -3,6 +3,7 @@ import logging
 import markdown
 
 from open_webui.models.chats import ChatTitleMessagesForm
+from open_webui.models.utils import ReindexForm
 from open_webui.config import DATA_DIR, ENABLE_ADMIN_EXPORT
 from open_webui.constants import ERROR_MESSAGES
 from fastapi import APIRouter, Depends, HTTPException, Request, Response, status
@@ -145,17 +146,30 @@ async def download_litellm_config_yaml(user=Depends(get_admin_user)):
 ############################
 
 
-async def run_reindex_pipeline(request: Request, user):
+async def run_reindex_pipeline(
+        request: Request,
+        form_data: ReindexForm,
+        user=Depends(get_admin_user)
+    ):
     try:
         for key in REINDEX_STATE.keys():
+            if key == "manual_stop":
+                REINDEX_STATE[key] = False
+                continue
             REINDEX_STATE[key]["progress"] = 0
             REINDEX_STATE[key]["status"] = "idle"
 
-        await reindex_all_memory(request, user)
-        await reindex_all_files(request, user)
-        await reindex_knowledge_files(request, user)
+        await reindex_all_memory(request=request, form_data=form_data, user=user)
+        await reindex_all_files(request=request, form_data=form_data, user=user)
+        await reindex_knowledge_files(request=request, form_data=form_data, user=user)
 
-        log.info("Reindexing everything completed successfully.")
+        if REINDEX_STATE["manual_stop"] == True:
+            log.info("Reindexing was manually stopped.")
+        elif any(state.get("status", "idle") == "done" \
+            for state in REINDEX_STATE.values() if isinstance(state, dict)):
+            log.info("Reindexing everything completed successfully.")
+        else:
+            log.info("Reindexing was done but not all proceses returned 'done'. Something went wrong.")
     except Exception as e:
         log.exception("Reindexing failed")
 
@@ -163,14 +177,27 @@ async def run_reindex_pipeline(request: Request, user):
 @router.post("/reindex", response_model=bool)
 async def reindex_everything(
         request: Request,
+        form_data: ReindexForm,
         user=Depends(get_admin_user)
     ):
-    if any(state.get("status", "idle") == "running" for state in REINDEX_STATE.values()):
+    if any(state.get("status", "idle") == "running" \
+        for state in REINDEX_STATE.values() if isinstance(state, dict)):
         log.info("Reindexing seems to be already in progress.")
         return False
 
-    create_task(run_reindex_pipeline(request, user))
+    create_task(run_reindex_pipeline(
+        request=request,
+        form_data=form_data,
+        user=user
+    ))
     log.info("Reindexing pipeline started in background.")
+    return True
+
+
+@router.post("/reindex/stop")
+async def stop_reindex(user=Depends(get_admin_user)):
+    log.info("Stopping reindexing..")
+    REINDEX_STATE["manual_stop"] = True
     return True
 
 
@@ -188,7 +215,7 @@ async def stream_progress():
             yield f"data: {dumps(REINDEX_STATE)}\n\n"
 
             # Check if all tasks are idle (or done) to eventually end the stream
-            if all(state.get("status", "idle") != "running" for state in REINDEX_STATE.values()):
+            if all(state.get("status", "idle") != "running" for state in REINDEX_STATE.values() if isinstance(state, dict)):
                 no_progress_counter += 1
                 if no_progress_counter >= 3:
                     break

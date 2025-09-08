@@ -4,9 +4,10 @@ import uuid
 import json
 from fnmatch import fnmatch
 from pathlib import Path
-from typing import Optional
+from typing import List, Optional
 from urllib.parse import quote
 import asyncio
+from asyncio import sleep
 
 from fastapi import (
     BackgroundTasks,
@@ -23,11 +24,14 @@ from fastapi import (
 
 from fastapi.concurrency import run_in_threadpool
 from fastapi.responses import FileResponse, StreamingResponse
+from langchain_core.documents import Document
+
 from open_webui.constants import ERROR_MESSAGES
 from open_webui.env import SRC_LOG_LEVELS
 from open_webui.retrieval.vector.factory import VECTOR_DB_CLIENT
 
 from open_webui.models.users import Users
+from open_webui.models.utils import ReindexForm
 from open_webui.models.files import (
     FileCountResponse,
     FileForm,
@@ -39,13 +43,12 @@ from open_webui.models.knowledge import Knowledges
 
 from open_webui.retrieval.vector.factory import VECTOR_DB_CLIENT
 from open_webui.routers.knowledge import get_knowledge, get_knowledge_list
-from open_webui.routers.retrieval import ProcessFileForm, process_file
+from open_webui.routers.retrieval import ProcessFileForm, process_file, save_docs_to_vector_db
 from open_webui.routers.audio import transcribe
 from open_webui.socket.main import REINDEX_STATE
 from open_webui.storage.provider import Storage
 from open_webui.utils.auth import get_admin_user, get_verified_user
 from pydantic import BaseModel
-from asyncio import sleep
 
 log = logging.getLogger(__name__)
 log.setLevel(SRC_LOG_LEVELS["MODELS"])
@@ -361,16 +364,24 @@ async def search_files(
 
 
 @router.post("/reindex", response_model=bool)
-async def reindex_all_files(request: Request, user=Depends(get_admin_user)):
+async def reindex_all_files(
+    request: Request,
+    form_data: ReindexForm,
+    user=Depends(get_admin_user)):
+    # if reindexing is already running, don't start again
     if REINDEX_STATE.get("files", {}).get("status", "idle") != "idle":
+        return False
+    
+    if REINDEX_STATE.get("manual_stop", False) == True:
+        REINDEX_STATE["files"]["status"] = "stopped"
         return False
 
     REINDEX_STATE["files"]["status"] = (
         "running"  # marking as started, before the first file is done
     )
 
+    batch_size = form_data.batch_size
     files_count = Files.get_files_count().count
-    batch_size = 10
 
     log.info(f"Starting reindexing for {files_count} files")
 
@@ -380,34 +391,63 @@ async def reindex_all_files(request: Request, user=Depends(get_admin_user)):
             break
 
         for i, file in enumerate(files_batch, start=1):
+            # stop reindexing if user manually halted it
+            if REINDEX_STATE.get("manual_stop", False) == True:
+                REINDEX_STATE["files"]["status"] = "stopped"
+                return False
+
+            file_collection_name = f"file-{file.id}"
             try:
-                if VECTOR_DB_CLIENT.has_collection(collection_name=f"file-{file.id}"):
+                if VECTOR_DB_CLIENT.has_collection(collection_name=file_collection_name):
                     VECTOR_DB_CLIENT.delete_collection(
-                        collection_name=f"file-{file.id}"
+                        collection_name=file_collection_name
                     )
             except Exception as e:
                 log.error(
                     f"Error deleting file 'file-{file.id}' from vector store: {str(e)}"
                 )
             try:
-                if file.meta["content_type"] in [
-                    "audio/mpeg",
-                    "audio/wav",
-                    "audio/ogg",
-                    "audio/x-m4a",
-                ]:
-
+                if form_data.process_from_disk:
+                    file_content = None
+                    if file.meta["content_type"] in [
+                        "audio/mpeg",
+                        "audio/wav",
+                        "audio/ogg",
+                        "audio/x-m4a",
+                    ]:
+                        file_content = file.data["content"]
                     await run_in_threadpool(
                         process_file,
                         request,
-                        ProcessFileForm(file_id=file.id, content=file.data["content"]),
+                        ProcessFileForm(file_id=file.id, content=file_content),
                         user=user,
                     )
                 else:
+                    text_content = file.data.get("content", "")
+
+                    docs: List[Document] = [
+                        Document(
+                            page_content=text_content.replace("<br/>", "\n"),
+                            metadata={
+                                **file.meta,
+                                "name": file.filename,
+                                "created_by": file.user_id,
+                                "file_id": file.id,
+                                "source": file.filename,
+                            },
+                        )
+                    ]
                     await run_in_threadpool(
-                        process_file,
+                        save_docs_to_vector_db,
                         request,
-                        ProcessFileForm(file_id=file.id),
+                        docs=docs,
+                        collection_name=file_collection_name,
+                        metadata={
+                            "file_id": file.id,
+                            "name": file.filename,
+                            "hash": file.hash,
+                        },
+                        add=False,
                         user=user,
                     )
                 REINDEX_STATE["files"]["progress"] =  int((i + offset) / files_count * 100)
