@@ -592,6 +592,7 @@ app = FastAPI(
 )
 
 oauth_manager = OAuthManager(app)
+app.state.oauth_manager = oauth_manager
 
 app.state.instance_id = None
 app.state.config = AppConfig(

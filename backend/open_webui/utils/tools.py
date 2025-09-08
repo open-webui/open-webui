@@ -129,6 +129,21 @@ async def get_tools(
                         headers["Authorization"] = (
                             f"Bearer {request.state.token.credentials}"
                         )
+                    elif auth_type == "oauth":
+                        oauth_token = None
+                        try:
+                            oauth_token = (
+                                await request.app.state.oauth_manager.get_oauth_token(
+                                    user.id,
+                                    request.cookies.get("oauth_session_id", None),
+                                )
+                            )
+                        except Exception as e:
+                            log.error(f"Error getting OAuth token: {e}")
+
+                        headers["Authorization"] = (
+                            f"Bearer {oauth_token.get('access_token', '')}"
+                        )
                     elif auth_type == "request_headers":
                         headers.update(dict(request.headers))
 
