@@ -677,6 +677,7 @@ async def signup(request: Request, response: Response, form_data: SignupForm):
 async def signout(request: Request, response: Response):
     response.delete_cookie("token")
     response.delete_cookie("oui-session")
+    response.delete_cookie("oauth_id_token")
 
     oauth_session_id = request.cookies.get("oauth_session_id")
     if oauth_session_id:
