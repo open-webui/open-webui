@@ -134,17 +134,7 @@ async def get_tools(
                         )
                     elif auth_type == "oauth":
                         cookies = request.cookies
-                        oauth_token = None
-                        try:
-                            oauth_token = (
-                                request.app.state.oauth_manager.get_oauth_token(
-                                    user.id,
-                                    request.cookies.get("oauth_session_id", None),
-                                )
-                            )
-                        except Exception as e:
-                            log.error(f"Error getting OAuth token: {e}")
-
+                        oauth_token = extra_params.get("__oauth_token__", None)
                         headers["Authorization"] = (
                             f"Bearer {oauth_token.get('access_token', '')}"
                         )
