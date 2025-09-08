@@ -310,7 +310,7 @@
 											<div
 												class={`text-xs self-center translate-y-[1px] ${($settings?.highContrastMode ?? false) ? 'text-gray-800 dark:text-gray-100' : 'text-gray-500'}`}
 											>
-												{$i18n.t('Forwards user OAuth access token to authenticate')}
+												{$i18n.t('Forwards system user OAuth access token to authenticate')}
 											</div>
 										{:else if auth_type === 'request_headers'}
 											<div
