@@ -49,6 +49,7 @@ from open_webui.env import (
     WEBUI_NAME,
     WEBUI_AUTH_COOKIE_SAME_SITE,
     WEBUI_AUTH_COOKIE_SECURE,
+    ENABLE_OAUTH_SESSION_TOKENS_COOKIES,
 )
 from open_webui.utils.misc import parse_duration
 from open_webui.utils.auth import get_password_hash, create_token
@@ -410,6 +411,8 @@ class OAuthManager:
             except Exception as e:
                 log.warning(f"OAuth callback error: {e}")
                 raise HTTPException(400, detail=ERROR_MESSAGES.INVALID_CRED)
+
+            # Try to get userinfo from the token first, some providers include it there
             user_data: UserInfo = token.get("userinfo")
             if (
                 (not user_data)
@@ -421,18 +424,19 @@ class OAuthManager:
                 log.warning(f"OAuth callback failed, user data is missing: {token}")
                 raise HTTPException(400, detail=ERROR_MESSAGES.INVALID_CRED)
 
+            # Extract the "sub" claim, using custom claim if configured
             if auth_manager_config.OAUTH_SUB_CLAIM:
                 sub = user_data.get(auth_manager_config.OAUTH_SUB_CLAIM)
             else:
                 # Fallback to the default sub claim if not configured
                 sub = user_data.get(OAUTH_PROVIDERS[provider].get("sub_claim", "sub"))
-
             if not sub:
                 log.warning(f"OAuth callback failed, sub is missing: {user_data}")
                 raise HTTPException(400, detail=ERROR_MESSAGES.INVALID_CRED)
 
             provider_sub = f"{provider}@{sub}"
 
+            # Email extraction
             email_claim = auth_manager_config.OAUTH_EMAIL_CLAIM
             email = user_data.get(email_claim, "")
             # We currently mandate that email addresses are provided
@@ -480,6 +484,8 @@ class OAuthManager:
                     log.warning(f"OAuth callback failed, email is missing: {user_data}")
                     raise HTTPException(400, detail=ERROR_MESSAGES.INVALID_CRED)
             email = email.lower()
+
+            # If allowed domains are configured, check if the email domain is in the list
             if (
                 "*" not in auth_manager_config.OAUTH_ALLOWED_DOMAINS
                 and email.split("@")[-1]
@@ -492,7 +498,6 @@ class OAuthManager:
 
             # Check if the user exists
             user = Users.get_user_by_oauth_sub(provider_sub)
-
             if not user:
                 # If the user does not exist, check if merging is enabled
                 if auth_manager_config.OAUTH_MERGE_ACCOUNTS_BY_EMAIL:
@@ -506,7 +511,6 @@ class OAuthManager:
                 determined_role = self.get_user_role(user, user_data)
                 if user.role != determined_role:
                     Users.update_user_role_by_id(user.id, determined_role)
-
                 # Update profile picture if enabled and different from current
                 if auth_manager_config.OAUTH_UPDATE_PICTURE_ON_LOGIN:
                     picture_claim = auth_manager_config.OAUTH_PICTURE_CLAIM
@@ -523,8 +527,7 @@ class OAuthManager:
                                 user.id, processed_picture_url
                             )
                             log.debug(f"Updated profile picture for user {user.email}")
-
-            if not user:
+            else:
                 # If the user does not exist, check if signups are enabled
                 if auth_manager_config.ENABLE_OAUTH_SIGNUP:
                     # Check if an existing user with the same email already exists
@@ -543,15 +546,12 @@ class OAuthManager:
                         )
                     else:
                         picture_url = "/user.png"
-
                     username_claim = auth_manager_config.OAUTH_USERNAME_CLAIM
 
                     name = user_data.get(username_claim)
                     if not name:
                         log.warning("Username claim is missing, using email as name")
                         name = email
-
-                    role = self.get_user_role(None, user_data)
 
                     user = Auths.insert_new_auth(
                         email=email,
@@ -560,7 +560,7 @@ class OAuthManager:
                         ),  # Random password, not used
                         name=name,
                         profile_image_url=picture_url,
-                        role=role,
+                        role=self.get_user_role(None, user_data),
                         oauth_sub=provider_sub,
                     )
 
@@ -585,7 +585,6 @@ class OAuthManager:
                 data={"id": user.id},
                 expires_delta=parse_duration(auth_manager_config.JWT_EXPIRES_IN),
             )
-
             if (
                 auth_manager_config.ENABLE_OAUTH_GROUP_MANAGEMENT
                 and user.role != "admin"
@@ -626,31 +625,32 @@ class OAuthManager:
         )
 
         if ENABLE_OAUTH_SIGNUP.value:
-            oauth_id_token = token.get("id_token")
-            response.set_cookie(
-                key="oauth_id_token",
-                value=oauth_id_token,
-                httponly=True,
-                samesite=WEBUI_AUTH_COOKIE_SAME_SITE,
-                secure=WEBUI_AUTH_COOKIE_SECURE,
-            )
+            if ENABLE_OAUTH_SESSION_TOKENS_COOKIES:
+                oauth_id_token = token.get("id_token")
+                response.set_cookie(
+                    key="oauth_id_token",
+                    value=oauth_id_token,
+                    httponly=True,
+                    samesite=WEBUI_AUTH_COOKIE_SAME_SITE,
+                    secure=WEBUI_AUTH_COOKIE_SECURE,
+                )
 
-            oauth_access_token = token.get("access_token")
-            response.set_cookie(
-                key="oauth_access_token",
-                value=oauth_access_token,
-                httponly=True,
-                samesite=WEBUI_AUTH_COOKIE_SAME_SITE,
-                secure=WEBUI_AUTH_COOKIE_SECURE,
-            )
+                oauth_access_token = token.get("access_token")
+                response.set_cookie(
+                    key="oauth_access_token",
+                    value=oauth_access_token,
+                    httponly=True,
+                    samesite=WEBUI_AUTH_COOKIE_SAME_SITE,
+                    secure=WEBUI_AUTH_COOKIE_SECURE,
+                )
 
-            oauth_refresh_token = token.get("refresh_token")
-            response.set_cookie(
-                key="oauth_refresh_token",
-                value=oauth_refresh_token,
-                httponly=True,
-                samesite=WEBUI_AUTH_COOKIE_SAME_SITE,
-                secure=WEBUI_AUTH_COOKIE_SECURE,
-            )
+                oauth_refresh_token = token.get("refresh_token")
+                response.set_cookie(
+                    key="oauth_refresh_token",
+                    value=oauth_refresh_token,
+                    httponly=True,
+                    samesite=WEBUI_AUTH_COOKIE_SAME_SITE,
+                    secure=WEBUI_AUTH_COOKIE_SECURE,
+                )
 
         return response
