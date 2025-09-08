@@ -288,7 +288,6 @@
 
 											{#if !direct}
 												<option value="oauth">{$i18n.t('OAuth')}</option>
-												<option value="request_headers">{$i18n.t('Request Headers')}</option>
 											{/if}
 										</select>
 									</div>
@@ -311,12 +310,6 @@
 												class={`text-xs self-center translate-y-[1px] ${($settings?.highContrastMode ?? false) ? 'text-gray-800 dark:text-gray-100' : 'text-gray-500'}`}
 											>
 												{$i18n.t('Forwards system user OAuth access token to authenticate')}
-											</div>
-										{:else if auth_type === 'request_headers'}
-											<div
-												class={`text-xs self-center translate-y-[1px] ${($settings?.highContrastMode ?? false) ? 'text-gray-800 dark:text-gray-100' : 'text-gray-500'}`}
-											>
-												{$i18n.t('Forwards system user headers to authenticate')}
 											</div>
 										{/if}
 									</div>
