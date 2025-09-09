@@ -219,7 +219,7 @@ async def generate_chat_completion(
     
     if vision_capable and documents:
         log.info(f"Processing {len(documents)} documents for vision model")
-        documents = form_data.pop("documents", None)
+
         if documents:
             log.info(f"Processing {len(documents)} documents for vision model")
             last_user_message = None
