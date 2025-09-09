@@ -119,15 +119,25 @@ class GroupTable:
             except Exception:
                 return None
 
-    def get_groups(self, user_email: str) -> list[GroupModel]:
+    def get_groups(self, user_email: str = None) -> list[GroupModel]:
         with get_db() as db:
-            return [
-                GroupModel.model_validate(group)
-                for group in db.query(Group)
-                .filter(Group.created_by == user_email)
-                .order_by(Group.updated_at.desc())
-                .all()
-            ]
+            if user_email is None:
+                # Return ALL groups (for super admin)
+                return [
+                    GroupModel.model_validate(group)
+                    for group in db.query(Group)
+                    .order_by(Group.updated_at.desc())
+                    .all()
+                ]
+            else:
+                # Return only groups created by this email (existing logic)
+                return [
+                    GroupModel.model_validate(group)
+                    for group in db.query(Group)
+                    .filter(Group.created_by == user_email)
+                    .order_by(Group.updated_at.desc())
+                    .all()
+                ]
 
     def get_groups_by_member_id(self, user_id: str) -> list[GroupModel]:
         with get_db() as db:
