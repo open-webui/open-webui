@@ -62,7 +62,6 @@
 				        {@const isCollapsed = collapsedVersions.get(version) ?? (i > 0)}
 
 				        <div class="mb-3 pr-2">
-				            <!-- 1. Make the header a button to toggle the collapsed state -->
 				            <button
 				                class="w-full flex justify-between items-center text-left"
 				                on:click={() => {
