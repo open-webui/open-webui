@@ -1152,6 +1152,13 @@ USER_PERMISSIONS = PersistentConfig(
     DEFAULT_USER_PERMISSIONS,
 )
 
+SEARCH_PLAN_AGENT_BUTTONS_MAPPING = PersistentConfig(
+    "SEARCH_PLAN_AGENT_BUTTONS_MAPPING",
+    "ui.search_plan_agent_buttons_mapping",
+    json.loads(os.getenv("SEARCH_PLAN_AGENT_BUTTONS_MAPPING", "[]")),
+)
+
+
 ENABLE_CHANNELS = PersistentConfig(
     "ENABLE_CHANNELS",
     "channels.enable",

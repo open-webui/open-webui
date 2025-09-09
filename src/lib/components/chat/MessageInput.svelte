@@ -86,10 +86,12 @@
 
 	let correctionHintActive = false;
 	let messageIdForCorrection = null;
+	let correctionPrependText = '';
+	let correctionHintText = '';
 
 	const submitHandler = async () => {
 		if (correctionHintActive) {
-			prompt = `Please revise your search plan, with the direction provided below: \n${prompt}`;
+			prompt = `${correctionPrependText}${prompt}`;
 			await tick();
 			dispatch('submit', prompt);
 
@@ -348,6 +350,14 @@
 		if (event.detail?.messageId) {
 			messageIdForCorrection = event.detail.messageId;
 		}
+		if (event.detail?.prependText) {
+			correctionPrependText = event.detail.prependText;
+		}
+		if (event.detail?.hintText) {
+			correctionHintText = event.detail.hintText;
+		} else {
+			correctionHintText = 'Please provide a direction on how you want to the current search plan to be updated.';
+		}
 		const chatInput = document.getElementById('chat-input');
 		chatInput?.focus();
 	};
@@ -393,11 +403,11 @@
 
 {#if loaded}
 	<div class="w-full font-primary">
-		{#if correctionHintActive}
+				{#if correctionHintActive}
 			<div
-				class="max-w-6xl mx-auto px-3 text-sm text-gray-600 dark:text-gray-400 text-center pb-2"
+				class="max-w-6xl mx-auto px-4 py-2 text-lg text-center rounded-lg bg-yellow-200 dark:bg-yellow-800 text-yellow-900 dark:text-yellow-100 mb-2"
 			>
-				Please provide a direction on how you want to the current search plan to be updated.
+				{correctionHintText}
 			</div>
 		{/if}
 		<div class=" mx-auto inset-x-0 bg-transparent flex justify-center">
