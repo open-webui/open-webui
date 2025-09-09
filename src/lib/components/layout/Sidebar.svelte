@@ -71,6 +71,11 @@
 	let isResizing = false;
 	let startX = 0;
 	let startWidth = 0;
+
+	// rAF-based throttle state for smooth dragging
+	let rafId = null;
+	let framePending = false;
+	let lastClientX = 0;
 	
 	const startResizing = (e: MouseEvent) => {
 		if ($mobile) return;
@@ -79,15 +84,16 @@
 		startWidth = $sidebarWidth ?? 260;
 		document.body.style.userSelect = 'none';
 		document.body.style.cursor = 'ew-resize';
-		window.addEventListener('mousemove', onResizeMouseMove);
-		window.addEventListener('mouseup', endResizing);
 	};
 	
 	const endResizing = () => {
 		if (!isResizing) return;
 		isResizing = false;
-		window.removeEventListener('mousemove', onResizeMouseMove);
-		window.removeEventListener('mouseup', endResizing);
+		if (rafId) {
+			cancelAnimationFrame(rafId);
+			rafId = null;
+		}
+		framePending = false;
 		document.body.style.userSelect = '';
 		document.body.style.cursor = '';
 		try {
@@ -95,12 +101,30 @@
 		} catch {}
 	};
 	
-	const onResizeMouseMove = (e: MouseEvent) => {
-		if (!isResizing) return;
-		const dx = e.clientX - startX;
+	const applyResize = () => {
+		const dx = lastClientX - startX;
 		let newWidth = Math.min(MAX_WIDTH, Math.max(MIN_WIDTH, startWidth + dx));
 		sidebarWidth.set(newWidth);
 		document.documentElement.style.setProperty('--sidebar-width', `${newWidth}px`);
+	};
+
+	const scheduleResize = () => {
+		if (framePending) return;
+		framePending = true;
+		rafId = requestAnimationFrame(() => {
+			framePending = false;
+			applyResize();
+		});
+	};
+
+	const onMouseMove = (e: MouseEvent) => {
+		if (!isResizing) return;
+		lastClientX = e.clientX;
+		scheduleResize();
+	};
+
+	const onMouseUp = () => {
+		endResizing();
 	};
 
 	const BREAKPOINT = 768;
@@ -496,6 +520,8 @@
 
 	const isWindows = /Windows/i.test(navigator.userAgent);
 </script>
+
+<svelte:window on:mousemove={onMouseMove} on:mouseup={onMouseUp} />
 
 <ArchivedChatsModal
 	bind:show={$showArchivedChats}
