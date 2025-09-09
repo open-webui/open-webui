@@ -218,8 +218,6 @@
 			bind:pane
 			defaultSize={0}
 			onResize={(size) => {
-				console.log('size', size, minSize);
-
 				if ($showControls && pane.isExpanded()) {
 					if (size < minSize) {
 						pane.resize(minSize);
@@ -231,8 +229,6 @@
 						// save the size in  pixels to localStorage
 						const container = document.getElementById('chat-container');
 						localStorage.chatControlsSize = Math.floor((size / 100) * container.clientWidth);
-
-						console.log('saved size', localStorage.chatControlsSize);
 					}
 				}
 			}}
