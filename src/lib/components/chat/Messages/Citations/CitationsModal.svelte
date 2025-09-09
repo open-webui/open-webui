@@ -60,14 +60,14 @@
 				{#each citations as citation, idx}
 					<button
 						id={`source-${id}-${idx + 1}`}
-						class="no-toggle outline-hidden flex dark:text-gray-300 bg-white dark:bg-gray-900 rounded-xl gap-2 items-center"
+						class="no-toggle outline-hidden flex dark:text-gray-300 bg-white dark:bg-gray-900 rounded-xl gap-1.5 items-center"
 						on:click={() => {
 							showCitationModal = true;
 							selectedCitation = citation;
 						}}
 					>
-						<div class="bg-gray-50 dark:bg-gray-800 rounded-full size-5">
-							{idx + 1}
+						<div class=" font-medium">
+							{idx + 1}.
 						</div>
 						<div
 							class="flex-1 truncate text-black/60 hover:text-black dark:text-white/60 dark:hover:text-white transition text-left"
