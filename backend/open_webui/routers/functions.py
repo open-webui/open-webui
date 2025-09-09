@@ -10,6 +10,7 @@ from open_webui.models.functions import (
     FunctionForm,
     FunctionModel,
     FunctionResponse,
+    FunctionWithValvesModel,
     Functions,
 )
 from open_webui.utils.plugin import (
@@ -46,9 +47,9 @@ async def get_functions(user=Depends(get_verified_user)):
 ############################
 
 
-@router.get("/export", response_model=list[FunctionModel])
-async def get_functions(user=Depends(get_admin_user)):
-    return Functions.get_functions()
+@router.get("/export", response_model=list[FunctionModel | FunctionWithValvesModel])
+async def get_functions(include_valves: bool = False, user=Depends(get_admin_user)):
+    return Functions.get_functions(include_valves=include_valves)
 
 
 ############################
@@ -132,10 +133,10 @@ async def load_function_from_url(
 
 
 class SyncFunctionsForm(BaseModel):
-    functions: list[FunctionModel] = []
+    functions: list[FunctionWithValvesModel] = []
 
 
-@router.post("/sync", response_model=list[FunctionModel])
+@router.post("/sync", response_model=list[FunctionWithValvesModel])
 async def sync_functions(
     request: Request, form_data: SyncFunctionsForm, user=Depends(get_admin_user)
 ):
