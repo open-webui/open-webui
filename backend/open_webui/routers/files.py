@@ -114,25 +114,40 @@ def process_uploaded_file(request, file, file_path, file_item, file_metadata, us
             elif (not file.content_type.startswith(("image/", "video/"))) or (
                 request.app.state.config.CONTENT_EXTRACTION_ENGINE == "external"
             ):
-
                 result = process_file(request, ProcessFileForm(file_id=file_item.id), user=user)
-
-                if result and isinstance(result, dict) and 'image_refs' in result:
-                    Files.update_file_image_refs_by_id(file_item.id, result['image_refs'])
-                    log.info(f"Updated file {file_item.id} with {len(result['image_refs'])} image refs")
+                
+                # Log the result for debugging
+                log.info(f"Process file result: {result}")
+                
+                # Wait a moment for database transaction to complete
+                import time
+                time.sleep(0.1)  # 100ms delay
+                
+                # Verify the file was updated properly by fetching it again
+                updated_file = Files.get_file_by_id(file_item.id)
+                log.info(f"File {file_item.id} after processing - image_refs: {updated_file.image_refs}")
+                
         else:
             log.info(
                 f"File type {file.content_type} is not provided, but trying to process anyway"
             )
             result = process_file(request, ProcessFileForm(file_id=file_item.id), user=user)
+            
+            # Same verification for files without explicit content type
+            time.sleep(0.1)
+            updated_file = Files.get_file_by_id(file_item.id)
+            log.info(f"File {file_item.id} after processing - image_refs: {updated_file.image_refs}")
 
-            if result and isinstance(result, dict) and 'image_refs' in result:
-                Files.update_file_image_refs_by_id(file_item.id, result['image_refs'])
-
+        # Update status LAST, after everything else is complete
         Files.update_file_data_by_id(
             file_item.id,
             {"status": "completed"},
         )
+        
+        # Final verification
+        final_file = Files.get_file_by_id(file_item.id)
+        log.info(f"Final file state - ID: {file_item.id}, image_refs count: {len(final_file.image_refs) if final_file.image_refs else 0}")
+        
     except Exception as e:
         log.error(f"Error processing file: {file_item.id}: {e}")
         Files.update_file_data_by_id(

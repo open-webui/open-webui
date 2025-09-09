@@ -1477,6 +1477,9 @@ def process_file(
                 else:
                     docs = result
                     image_refs = []
+                    log.warning(f"Loader returned non-tuple result, no image_refs available")
+                
+                log.debug(f"Image refs before database update: {image_refs}")
                     
                 docs = [
                     Document(
@@ -1513,8 +1516,14 @@ def process_file(
         )
 
         if image_refs:
-            Files.update_file_image_refs_by_id(file.id, image_refs)
-            log.info(f"Updated file {file.id} with {len(image_refs)} image references")
+            log.info(f"Updating file {file.id} with {len(image_refs)} image_refs: {image_refs[:2] if len(image_refs) > 2 else image_refs}")
+            updated_file = Files.update_file_image_refs_by_id(file.id, image_refs)
+            if updated_file:
+                log.info(f"Successfully updated file {file.id} with {len(image_refs)} image references")
+            else:
+                log.warning(f"Failed to update file {file.id} with image references")
+        else:
+            log.info(f"No image_refs to update for file {file.id}")
 
         hash = calculate_sha256_string(text_content)
         Files.update_file_hash_by_id(file.id, hash)

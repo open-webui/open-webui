@@ -220,13 +220,25 @@ class FilesTable:
             try:
                 file = db.query(File).filter_by(id=id).first()
                 if file:
+                    log.info(f"Before update - File {id} image_refs: {file.image_refs}")
                     file.image_refs = image_refs
+                    file.updated_at = int(time.time())  # Update the timestamp
                     db.commit()
                     db.refresh(file)
-                    return FileModel.model_validate(file)
+                    log.info(f"After update - File {id} image_refs: {file.image_refs}")
+                    
+                    # Verify the update was successful
+                    verification_file = db.query(File).filter_by(id=id).first()
+                    if verification_file and verification_file.image_refs:
+                        log.info(f"Database update verified - File {id} has {len(verification_file.image_refs)} image_refs")
+                        return FileModel.model_validate(verification_file)
+                    else:
+                        log.error(f"Database update failed - File {id} image_refs not found after commit")
+                        return None
                 return None
             except Exception as e:
                 log.error(f"Error updating file image_refs: {e}")
+                db.rollback()  # Ensure rollback on error
                 return None
 
     def delete_file_by_id(self, id: str) -> bool:
