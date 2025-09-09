@@ -195,10 +195,11 @@ async def generate_chat_completion(
 
     model = models[model_id]
 
-    log.info(f"Model vision capability: {model.get('vision', False)}")
+    vision_capable = model.get('info', {}).get('meta', {}).get('capabilities', {}).get('vision', False)
+    log.info(f"Model vision capability: {vision_capable}")
     log.info(f"Documents in form_data: {form_data.get('documents', [])}")
     
-    if model.get("vision", False):
+    if vision_capable:
         documents = form_data.pop("documents", None)
         if documents:
             log.info(f"Processing {len(documents)} documents for vision model")
