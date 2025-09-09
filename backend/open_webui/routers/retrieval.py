@@ -874,7 +874,7 @@ async def update_rag_config(
 
         try:
             try:
-                if not rag_config["RAG_RERANKING_MODEL"] in request.app.state.rf and not rag_config["RAG_RERANKING_MODEL"] == "":
+                if not rag_config["RAG_RERANKING_MODEL"] in request.app.state.rf and rag_config["ENABLE_RAG_HYBRID_SEARCH"]:
                     request.app.state.rf[rag_config["RAG_RERANKING_MODEL"]] = get_rf(
                         rag_config["RAG_RERANKING_ENGINE"],
                         rag_config["RAG_RERANKING_MODEL"],
@@ -1152,9 +1152,6 @@ async def update_rag_config(
             else request.app.state.config.RAG_EXTERNAL_RERANKER_API_KEY
         )
 
-        log.info(
-            f"Updating reranking model: {request.app.state.config.RAG_RERANKING_MODEL} to {form_data.RAG_RERANKING_MODEL}"
-        )
         try:
             request.app.state.config.RAG_RERANKING_MODEL = (
             form_data.RAG_RERANKING_MODEL
@@ -1163,7 +1160,7 @@ async def update_rag_config(
         )
 
             try:
-                if not request.app.state.config.RAG_RERANKING_MODEL in request.app.state.rf and not request.app.state.config.RAG_RERANKING_MODEL == "":
+                if not request.app.state.config.RAG_RERANKING_MODEL in request.app.state.rf and request.app.state.config.ENABLE_RAG_HYBRID_SEARCH:
                     request.app.state.rf[request.app.state.config.RAG_RERANKING_MODEL] = get_rf(
                         request.app.state.config.RAG_RERANKING_ENGINE,
                         request.app.state.config.RAG_RERANKING_MODEL,
@@ -1172,6 +1169,9 @@ async def update_rag_config(
                         True,
                     )
 
+                    log.info(
+                        f"Updating reranking model: {request.app.state.config.RAG_RERANKING_MODEL} to {form_data.RAG_RERANKING_MODEL}"
+                    )
                     # add model to state for reloading on startup
                     request.app.state.config.LOADED_RERANKING_MODELS[request.app.state.config.RAG_RERANKING_ENGINE].append({
                         "RAG_RERANKING_MODEL": request.app.state.config.RAG_RERANKING_MODEL,
@@ -1188,11 +1188,11 @@ async def update_rag_config(
                     rag_config["LOADED_RERANKING_MODELS"] = request.app.state.config.LOADED_RERANKING_MODELS
                     rag_config["DOWNLOADED_RERANKING_MODELS"] = request.app.state.config.DOWNLOADED_RERANKING_MODELS
 
-                request.app.state.RERANKING_FUNCTION[request.app.state.config.RAG_RERANKING_MODEL] = get_reranking_function(
-                    request.app.state.config.RAG_RERANKING_ENGINE,
-                    request.app.state.config.RAG_RERANKING_MODEL,
-                    request.app.state.rf[request.app.state.config.RAG_RERANKING_MODEL],
-                )
+                    request.app.state.RERANKING_FUNCTION[request.app.state.config.RAG_RERANKING_MODEL] = get_reranking_function(
+                        request.app.state.config.RAG_RERANKING_ENGINE,
+                        request.app.state.config.RAG_RERANKING_MODEL,
+                        request.app.state.rf[request.app.state.config.RAG_RERANKING_MODEL],
+                    )
             except Exception as e:
                 log.error(f"Error loading reranking model: {e}")
                 request.app.state.config.ENABLE_RAG_HYBRID_SEARCH = False
