@@ -12,7 +12,8 @@
 	import { v4 as uuidv4 } from 'uuid';
 	import { createPicker, getAuthToken } from '$lib/utils/google-drive-picker';
 	import { pickAndDownloadFile } from '$lib/utils/onedrive-file-picker';
-	import { handleAbortClick } from './Controls/Controls.svelte';
+	import { abortTaskOpu } from './Controls/Controls.svelte';
+	import ConfirmDialog from '$lib/components/common/ConfirmDialog.svelte';
 	import { onMount, tick, getContext, createEventDispatcher, onDestroy } from 'svelte';
 	const dispatch = createEventDispatcher();
 
@@ -867,7 +868,17 @@
 			dropzoneElement?.removeEventListener('dragleave', onDragLeave);
 		}
 	});
+	let showAbortJobConfirmDialog = false;
 </script>
+
+<ConfirmDialog
+	bind:show={showAbortJobConfirmDialog}
+	title={$i18n.t('Abort Job Message')}
+	message={$i18n.t('Are you sure you want to abort this job?')}
+	onConfirm={async () => {
+		await abortTaskOpu();
+	}}
+/>
 
 <FilesOverlay show={dragged} />
 <ToolServersModal bind:show={showTools} {selectedToolIds} />
@@ -1914,7 +1925,7 @@
 													<button
 														class="bg-white hover:bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-white dark:hover:bg-gray-800 transition rounded-full p-1.5"
 														on:click={() => {
-															handleAbortClick();
+															showAbortJobConfirmDialog = true;
 															stopResponse();
 														}}
 													>

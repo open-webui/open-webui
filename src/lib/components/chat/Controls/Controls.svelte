@@ -150,18 +150,6 @@
 			isAborting.set(false);
 		}
 	}
-	export async function handleRestartClick() {
-		const confirmed = window.confirm('Are you sure you want to restart the OPU?');
-		if (confirmed) {
-			restartOpu(); // Restart logic
-		}
-	}
-	export async function handleAbortClick() {
-		const confirmed = window.confirm('Are you sure you want to abort the query?');
-		if (confirmed) {
-			abortTaskOpu(); // Abort logic
-		}
-	}
 </script>
 
 <script lang="ts">
@@ -174,7 +162,7 @@
 	import Valves from '$lib/components/chat/Controls/Valves.svelte';
 	import FileItem from '$lib/components/common/FileItem.svelte';
 	import Collapsible from '$lib/components/common/Collapsible.svelte';
-
+	import ConfirmDialog from '$lib/components/common/ConfirmDialog.svelte';
 	import { user, settings, isRestarting, isAborting } from '$lib/stores';
 	export let models = [];
 	export let chatFiles = [];
@@ -186,7 +174,17 @@
 	});
 
 	let showValves = false;
+	let showAbortJobConfirmDialog = false;
 </script>
+
+<ConfirmDialog
+	bind:show={showAbortJobConfirmDialog}
+	title={$i18n.t('Abort Job Message')}
+	message={$i18n.t('Are you sure you want to abort this job?')}
+	onConfirm={async () => {
+		await abortTaskOpu();
+	}}
+/>
 
 <div class=" dark:text-white">
 	<div class=" flex items-center justify-between dark:text-gray-100 mb-2">
@@ -274,7 +272,7 @@
 											? 'opacity-50 cursor-not-allowed'
 											: 'hover:bg-blue-700 dark:bg-blue-600'))}
 							on:click={() => {
-								handleAbortClick(); //Pop up confirmation dialog and instantiate restart once confirmed
+								showAbortJobConfirmDialog = true; //Pop up confirmation dialog and instantiate restart once confirmed
 							}}
 							>{$isAborting ? $i18n.t('Job being aborted...') : $i18n.t('Abort Job Now')}
 						</button>

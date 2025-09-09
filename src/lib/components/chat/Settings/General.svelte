@@ -11,12 +11,8 @@
 	import AdvancedParams from './Advanced/AdvancedParams.svelte';
 	import Textarea from '$lib/components/common/Textarea.svelte';
 
-	import {
-		handleRestartClick,
-		restartOpu,
-		systemInfoOpu,
-		healthCheckOpu
-	} from '../Controls/Controls.svelte';
+	import { restartOpu, systemInfoOpu, healthCheckOpu } from '../Controls/Controls.svelte';
+	import ConfirmDialog from '$lib/components/common/ConfirmDialog.svelte';
 
 	export let saveSettings: Function;
 	export let getModels: Function;
@@ -38,6 +34,7 @@
 	let showSystemInfo = false;
 	let showSystemInfoModal = false;
 	let systemInfoOutput = {};
+	let showRestartOPUConfirmDialog = false;
 
 	const toggleNotification = async () => {
 		const permission = await Notification.requestPermission();
@@ -207,6 +204,14 @@
 	};
 </script>
 
+<ConfirmDialog
+	bind:show={showRestartOPUConfirmDialog}
+	title={$i18n.t('Restart OPU Message')}
+	message={$i18n.t('Are you sure you want to restart the OPU?')}
+	onConfirm={async () => {
+		await restartOpu();
+	}}
+/>
 <div class="flex flex-col h-full justify-between text-sm" id="tab-general">
 	<div class="  overflow-y-scroll max-h-[28rem] lg:max-h-full">
 		<div class="">
@@ -328,7 +333,7 @@
 										? 'opacity-50 cursor-not-allowed'
 										: 'hover:bg-red-700 dark:bg-red-600'))}
 						on:click={() => {
-							handleRestartClick(); //Pop up confirmation dialog and instantiate restart once confirmed
+							showRestartOPUConfirmDialog = true; //Pop up confirmation dialog and instantiate restart once confirmed
 						}}
 						>{$isRestarting ? $i18n.t('OPU Restarting...') : $i18n.t('Restart OPU Now')}
 					</button>
