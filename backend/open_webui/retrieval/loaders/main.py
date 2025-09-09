@@ -178,7 +178,11 @@ class DoclingLoader:
 
                 params["force_ocr"] = self.params.get("force_ocr")
 
-                if self.params.get("do_ocr") and self.params.get("ocr_engine") and self.params.get("ocr_lang"):
+                if (
+                    self.params.get("do_ocr")
+                    and self.params.get("ocr_engine")
+                    and self.params.get("ocr_lang")
+                ):
                     params["ocr_engine"] = self.params.get("ocr_engine")
                     params["ocr_lang"] = [
                         lang.strip()
@@ -194,7 +198,6 @@ class DoclingLoader:
 
                 if self.params.get("pipeline"):
                     params["pipeline"] = self.params.get("pipeline")
-
 
             endpoint = f"{self.url}/v1/convert/file"
             r = requests.post(endpoint, files=files, data=params)
