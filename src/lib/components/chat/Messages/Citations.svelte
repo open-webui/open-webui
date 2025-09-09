@@ -11,14 +11,16 @@
 	let showPercentage = false;
 	let showRelevance = true;
 
+	let citationModal = null;
 	let showCitationModal = false;
 	let selectedCitation: any = null;
 	let isCollapsibleOpen = false;
 
 	export const showSourceModal = (sourceIdx) => {
 		if (citations[sourceIdx]) {
-			selectedCitation = citations[sourceIdx];
-			showCitationModal = true;
+			console.log('Showing citation modal for:', citations[sourceIdx]);
+			citationModal?.showCitation(citations[sourceIdx]);
+			// showCitationModal = true;
 		}
 	};
 
@@ -94,7 +96,14 @@
 	}
 </script>
 
-<CitationsModal bind:show={showCitationModal} {id} {citations} {showPercentage} {showRelevance} />
+<CitationsModal
+	bind:this={citationModal}
+	bind:show={showCitationModal}
+	{id}
+	{citations}
+	{showPercentage}
+	{showRelevance}
+/>
 
 {#if citations.length > 0}
 	{@const urlCitations = citations.filter((c) => c?.source?.name?.startsWith('http'))}
