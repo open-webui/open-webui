@@ -130,6 +130,7 @@
 		"socket.io-client": "^4.2.0",
 		"sortablejs": "^1.15.6",
 		"svelte-sonner": "^0.3.19",
+		"svelte-tiptap": "^3.0.0",
 		"tippy.js": "^6.3.7",
 		"turndown": "^7.2.0",
 		"turndown-plugin-gfm": "^1.0.2",

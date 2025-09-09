@@ -821,6 +821,15 @@ async def process_chat_payload(request, form_data, user, metadata, model):
     event_emitter = get_event_emitter(metadata)
     event_call = get_event_call(metadata)
 
+    oauth_token = None
+    try:
+        oauth_token = request.app.state.oauth_manager.get_oauth_token(
+            user.id,
+            request.cookies.get("oauth_session_id", None),
+        )
+    except Exception as e:
+        log.error(f"Error getting OAuth token: {e}")
+
     extra_params = {
         "__event_emitter__": event_emitter,
         "__event_call__": event_call,
@@ -828,6 +837,7 @@ async def process_chat_payload(request, form_data, user, metadata, model):
         "__metadata__": metadata,
         "__request__": request,
         "__model__": model,
+        "__oauth_token__": oauth_token,
     }
 
     # Initialize events to store additional event to be sent to the client
@@ -1499,11 +1509,21 @@ async def process_chat_response(
     ):
         return response
 
+    oauth_token = None
+    try:
+        oauth_token = request.app.state.oauth_manager.get_oauth_token(
+            user.id,
+            request.cookies.get("oauth_session_id", None),
+        )
+    except Exception as e:
+        log.error(f"Error getting OAuth token: {e}")
+
     extra_params = {
         "__event_emitter__": event_emitter,
         "__event_call__": event_caller,
         "__user__": user.model_dump() if isinstance(user, UserModel) else {},
         "__metadata__": metadata,
+        "__oauth_token__": oauth_token,
         "__request__": request,
         "__model__": model,
     }

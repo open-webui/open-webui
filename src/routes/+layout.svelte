@@ -222,8 +222,19 @@
 
 		if (toolServer) {
 			console.log(toolServer);
+
+			let toolServerToken = null;
+			const auth_type = toolServer?.auth_type ?? 'bearer';
+			if (auth_type === 'bearer') {
+				toolServerToken = toolServer?.key;
+			} else if (auth_type === 'none') {
+				// No authentication
+			} else if (auth_type === 'session') {
+				toolServerToken = localStorage.token;
+			}
+
 			const res = await executeToolServer(
-				(toolServer?.auth_type ?? 'bearer') === 'bearer' ? toolServer?.key : localStorage.token,
+				toolServerToken,
 				toolServer.url,
 				data?.name,
 				data?.params,

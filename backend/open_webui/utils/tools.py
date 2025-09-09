@@ -119,18 +119,29 @@ async def get_tools(
                     function_name = spec["name"]
 
                     auth_type = tool_server_connection.get("auth_type", "bearer")
+
+                    cookies = {}
                     headers = {}
 
                     if auth_type == "bearer":
                         headers["Authorization"] = (
                             f"Bearer {tool_server_connection.get('key', '')}"
                         )
+                    elif auth_type == "none":
+                        # No authentication
+                        pass
                     elif auth_type == "session":
+                        cookies = request.cookies
                         headers["Authorization"] = (
                             f"Bearer {request.state.token.credentials}"
                         )
-                    elif auth_type == "request_headers":
-                        headers.update(dict(request.headers))
+                    elif auth_type == "system_oauth":
+                        cookies = request.cookies
+                        oauth_token = extra_params.get("__oauth_token__", None)
+                        if oauth_token:
+                            headers["Authorization"] = (
+                                f"Bearer {oauth_token.get('access_token', '')}"
+                            )
 
                     headers["Content-Type"] = "application/json"
 
@@ -139,6 +150,7 @@ async def get_tools(
                             return await execute_tool_server(
                                 url=tool_server_data["url"],
                                 headers=headers,
+                                cookies=cookies,
                                 name=function_name,
                                 params=kwargs,
                                 server_data=tool_server_data,
@@ -550,9 +562,7 @@ async def get_tool_server_data(token: str, url: str) -> Dict[str, Any]:
     return data
 
 
-async def get_tool_servers_data(
-    servers: List[Dict[str, Any]], session_token: Optional[str] = None
-) -> List[Dict[str, Any]]:
+async def get_tool_servers_data(servers: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
     # Prepare list of enabled servers along with their original index
     server_entries = []
     for idx, server in enumerate(servers):
@@ -568,8 +578,9 @@ async def get_tool_servers_data(
 
             if auth_type == "bearer":
                 token = server.get("key", "")
-            elif auth_type == "session":
-                token = session_token
+            elif auth_type == "none":
+                # No authentication
+                pass
 
             id = info.get("id")
             if not id:
@@ -620,6 +631,7 @@ async def get_tool_servers_data(
 async def execute_tool_server(
     url: str,
     headers: Dict[str, str],
+    cookies: Dict[str, str],
     name: str,
     params: Dict[str, Any],
     server_data: Dict[str, Any],
@@ -693,6 +705,7 @@ async def execute_tool_server(
                     final_url,
                     json=body_params,
                     headers=headers,
+                    cookies=cookies,
                     ssl=AIOHTTP_CLIENT_SESSION_TOOL_SERVER_SSL,
                 ) as response:
                     if response.status >= 400:
@@ -709,6 +722,7 @@ async def execute_tool_server(
                 async with request_method(
                     final_url,
                     headers=headers,
+                    cookies=cookies,
                     ssl=AIOHTTP_CLIENT_SESSION_TOOL_SERVER_SSL,
                 ) as response:
                     if response.status >= 400:
