@@ -5,6 +5,24 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.5.7-ccv2-1.7.0] - 2025-09-05
+
+### Added
+
+- **🌐 Wiki-Grounding**: New functionality which can add information from Wikipedia to chats to enhance a model’s knowledge.
+- **📶 Inter-Prompt Latency**: Provide a histogram on inter-prompt latency in metrics.
+
+### Enhanced
+
+- **🤖 User Search**: Allows for more fields to be used when searching in users.
+- **🔠 Alphabetical Models List**: Ensured that models are in alphabetical order when displayed.
+
+### Fixed
+
+- **💬 Default Model on New Chat**: Fixed the default model not always being used when a new chat is created.
+- **🪪 Role Update**: Fixed setting a user's role via the Edit User modal.
+- **</> Prompt Retrieval**: Made the calls async to prevent lockup on large requests.
+
 ## [0.5.7-ccv2-1.6.2] - 2025-08-21
 
 ### Fixed

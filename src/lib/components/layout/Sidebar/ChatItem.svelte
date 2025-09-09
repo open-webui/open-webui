@@ -119,21 +119,28 @@
 		});
 
 		if (res) {
+			// Update stores reactively
 			tags.set(await getAllTags(localStorage.token));
+
+			// If deleting the current chat, navigate away first
 			if ($chatId === id) {
 				await goto('/');
-
 				await chatId.set('');
 				await tick();
 			}
 
-			dispatch('change');
+			// Update chat lists immediately to ensure reactive state
+			currentChatPage.set(1);
+			await chats.set(await getChatList(localStorage.token, $currentChatPage));
+			await pinnedChats.set(await getPinnedChatList(localStorage.token));
+
+			dispatch('change', { buttonID: null });
 		}
 	};
 
 	const archiveChatHandler = async (id) => {
 		await archiveChatById(localStorage.token, id);
-		dispatch('change');
+		dispatch('change', { buttonID: null });
 		toast.success($i18n.t('Chat archived successfully'));
 	};
 
