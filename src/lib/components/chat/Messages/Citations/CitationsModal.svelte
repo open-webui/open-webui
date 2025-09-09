@@ -5,12 +5,21 @@
 
 	import Modal from '$lib/components/common/Modal.svelte';
 	import XMark from '$lib/components/icons/XMark.svelte';
+	import CitationModal from './CitationModal.svelte';
 
 	export let id = '';
 	export let show = false;
 	export let citations = [];
 	export let showPercentage = false;
 	export let showRelevance = true;
+
+	let showCitationModal = false;
+	let selectedCitation: any = null;
+
+	export const showCitation = (citation) => {
+		selectedCitation = citation;
+		showCitationModal = true;
+	};
 
 	const decodeString = (str: string) => {
 		try {
@@ -20,6 +29,13 @@
 		}
 	};
 </script>
+
+<CitationModal
+	bind:show={showCitationModal}
+	citation={selectedCitation}
+	{showPercentage}
+	{showRelevance}
+/>
 
 <Modal size="lg" bind:show>
 	<div>
