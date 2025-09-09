@@ -993,10 +993,10 @@ except Exception as e:
     log.error(f"Error updating models: {e}")
     pass
 
-log.info(f"Loaded embedding models: {app.state.ef}")
-log.info(f"Loaded reranking models: {app.state.rf}")
-log.info(f"Embedding functions: {app.state.EMBEDDING_FUNCTION}")
-log.info(f"Reranking functions: {app.state.RERANKING_FUNCTION}")
+log.info(f"Loaded embedding models: {list(app.state.ef.keys())}")
+log.info(f"Loaded reranking models: {list(app.state.rf.keys())}")
+log.info(f"Embedding functions: {list(app.state.EMBEDDING_FUNCTION.keys())}")
+log.info(f"Reranking functions: {list(app.state.RERANKING_FUNCTION.keys())}")
 
 ########################################
 #
