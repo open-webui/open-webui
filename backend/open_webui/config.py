@@ -2057,6 +2057,12 @@ RAG_WEB_SEARCH_ENGINE = UserScopedConfig(
     os.getenv("RAG_WEB_SEARCH_ENGINE", ""),
 )
 
+# Facilities feature flag
+ENABLE_FACILITIES = UserScopedConfig(
+    "facilities.enable",
+    os.getenv("ENABLE_FACILITIES", "True").lower() == "true",
+)
+
 # BYPASS_WEB_SEARCH_EMBEDDING_AND_RETRIEVAL = PersistentConfig(
 #     "BYPASS_WEB_SEARCH_EMBEDDING_AND_RETRIEVAL",
 #     "rag.web.search.bypass_embedding_and_retrieval",
