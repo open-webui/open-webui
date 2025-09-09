@@ -544,11 +544,7 @@ ${content}
 					}
 				};
 
-				reader.readAsDataURL(
-					file['type'] === 'image/heic'
-						? await convertHeicToJpeg(file)
-						: file
-				);
+				reader.readAsDataURL(file['type'] === 'image/heic' ? await convertHeicToJpeg(file) : file);
 			});
 
 			return await uploadImagePromise;
