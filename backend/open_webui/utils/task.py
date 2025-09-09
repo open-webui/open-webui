@@ -4,6 +4,7 @@ import re
 from datetime import datetime
 from typing import Optional
 import uuid
+from zoneinfo import ZoneInfo
 
 
 from open_webui.utils.misc import get_last_user_message, get_messages_content
@@ -55,12 +56,13 @@ def get_task_model_id(
 def prompt_template(
     template: str, user_name: Optional[str] = None, user_location: Optional[str] = None
 ) -> str:
-    # Get the current date
-    current_date = datetime.now()
+    # Get the current date/time in Eastern Time zone (handles EST/EDT automatically)
+    eastern_tz = ZoneInfo("America/New_York")
+    current_date = datetime.now(eastern_tz)
 
     # Format the date to YYYY-MM-DD
     formatted_date = current_date.strftime("%Y-%m-%d")
-    formatted_time = current_date.strftime("%I:%M:%S %p")
+    formatted_time = current_date.strftime("%I:%M:%S %p %Z")
     formatted_weekday = current_date.strftime("%A")
 
     template = template.replace("{{CURRENT_DATE}}", formatted_date)

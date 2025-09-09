@@ -10,7 +10,8 @@ import json
 import inspect
 from uuid import uuid4
 from concurrent.futures import ThreadPoolExecutor
-
+from datetime import datetime
+from zoneinfo import ZoneInfo
 
 from open_webui.models.message_metrics import MessageMetrics
 from fastapi import Request
@@ -1359,6 +1360,48 @@ async def process_chat_payload(request, form_data, metadata, user, model):
                 },
             }
         )
+
+    # Add current time information to all chat requests using user's timezone preference
+    # Get user's timezone preference from settings, fallback to Eastern Time (Toronto)
+    user_timezone = "America/Toronto"  # Default fallback for Canadian users
+
+    if user and hasattr(user, "settings") and user.settings:
+        # UserSettings is a Pydantic model with extra="allow"
+        # We can access timezone as an attribute or via model_dump()
+        user_timezone = getattr(user.settings, "timezone", "America/Toronto")
+
+    try:
+        timezone = ZoneInfo(user_timezone)
+    except Exception:
+        # If user's timezone is invalid, fallback to Eastern Time (Toronto)
+        timezone = ZoneInfo("America/Toronto")
+        user_timezone = "America/Toronto"
+
+    now = datetime.now(timezone)
+    current_datetime = now.strftime("%A, %B %d, %Y at %I:%M %p %Z")
+    current_weekday = now.strftime("%A")
+    current_date = now.strftime("%B %d, %Y")
+    current_year = now.strftime("%Y")
+
+    time_context = (
+        f"IMPORTANT: The current date is {current_date} ({current_year}). "
+        f"Today is {current_weekday}, {current_date}. "
+        f"The current time is {now.strftime('%I:%M %p %Z')}. "
+        f"User timezone: {user_timezone}. "
+        f"When asked about the current date, time, or day, always use this information: "
+        f"Date: {current_date}, Day: {current_weekday}, Time: {now.strftime('%I:%M %p %Z')}."
+    )
+
+    # Add time information to system message
+    messages = form_data.get("messages", [])
+    if messages and messages[0].get("role") == "system":
+        # Update existing system message
+        messages[0]["content"] = f"{time_context}\n\n{messages[0]['content']}"
+    else:
+        # Insert new system message at beginning
+        messages.insert(0, {"role": "system", "content": time_context})
+
+    form_data["messages"] = messages
 
     return form_data, events
 
