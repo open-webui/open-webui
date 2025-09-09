@@ -133,4 +133,17 @@
     :global(.changelog-content a:hover) {
         text-decoration-line: underline;
     }
+
+	:global(.changelog-content a) {
+        color: theme('colors.blue.600') !important;
+        text-decoration-line: none; 
+    }
+
+    :global(.dark .changelog-content a) {
+        color: theme('colors.blue.400') !important;
+    }
+
+    :global(.changelog-content a:hover) {
+        text-decoration-line: underline !important;
+    }
 </style>
