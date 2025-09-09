@@ -197,9 +197,28 @@ async def generate_chat_completion(
 
     vision_capable = model.get('info', {}).get('meta', {}).get('capabilities', {}).get('vision', False)
     log.info(f"Model vision capability: {vision_capable}")
-    log.info(f"Documents in form_data: {form_data.get('documents', [])}")
+    # Extract documents from form_data (if present)
+    documents = form_data.get('documents', [])
+    # ALSO extract files from messages and metadata - THIS IS THE MISSING PIECE!
+    if not documents and vision_capable:
+        # Check if files are in metadata (they get moved there by middleware)
+        metadata_files = form_data.get('metadata', {}).get('files', [])
+        if metadata_files:
+            documents = metadata_files
+            log.info(f"Found {len(documents)} files in metadata")
+        
+        # Also check for files attached to individual messages
+        if not documents:
+            for message in form_data.get("messages", []):
+                if message.get("files"):
+                    documents.extend(message["files"])
+            if documents:
+                log.info(f"Found {len(documents)} files in message attachments")
     
-    if vision_capable:
+    log.info(f"Documents to process: {len(documents)}")
+    
+    if vision_capable and documents:
+        log.info(f"Processing {len(documents)} documents for vision model")
         documents = form_data.pop("documents", None)
         if documents:
             log.info(f"Processing {len(documents)} documents for vision model")
