@@ -46,6 +46,11 @@ output "redis_secret_arn" {
   sensitive   = true
 }
 
+output "execution_role_arn" {
+  description = "ARN of the dedicated ECS task execution role"
+  value       = aws_iam_role.openwebui_execution_role.arn
+}
+
 output "dashboard_url" {
   description = "CloudWatch dashboard URL"
   value       = "https://${var.aws_region}.console.aws.amazon.com/cloudwatch/home?region=${var.aws_region}#dashboards:name=${aws_cloudwatch_dashboard.webui_dashboard.dashboard_name}"

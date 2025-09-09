@@ -55,7 +55,7 @@ variable "task_family_name" {
 variable "container_image" {
   description = "Container image URI"
   type        = string
-  default     = "908027381725.dkr.ecr.us-east-1.amazonaws.com/github/open-webui/open-webui:v0.6.18-hybrid-search-2"
+  default     = "908027381725.dkr.ecr.us-east-1.amazonaws.com/github/open-webui/open-webui:v0.6.26-debug"
 }
 
 variable "desired_count" {
@@ -157,7 +157,7 @@ variable "docling_serve_security_group_id" {
 variable "mcpo_security_group_id" {
   description = "Security group ID for the mcpo service"
   type        = string
-  default     = "sg-0cdc36e6d551602e4"
+  default     = "sg-0175ae75dd821810a"
 }
 
 variable "jupyter_notebook_security_group_id" {

@@ -21,36 +21,58 @@ resource "aws_secretsmanager_secret_version" "webui_shared_secret" {
   secret_string = random_password.webui_secret_key.result
 }
 
-# Update IAM role policy to access new secrets
-data "aws_iam_role" "task_execution_role" {
-  name = "ecsTaskExecutionRole"
+# Dedicated ECS task execution role for OpenWebUI scaled service
+resource "aws_iam_role" "openwebui_execution_role" {
+  name = "openwebui-scaled-execution-role"
+  
+  assume_role_policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Action = "sts:AssumeRole"
+        Effect = "Allow"
+        Principal = {
+          Service = "ecs-tasks.amazonaws.com"
+        }
+      }
+    ]
+  })
+  
+  tags = {
+    Name = "OpenWebUI Scaled Execution Role"
+  }
 }
 
-# IAM policy for accessing the new secrets
-resource "aws_iam_policy" "secrets_access_policy" {
-  name        = "openwebui-secrets-access-policy"
-  description = "Policy for accessing OpenWebUI secrets"
+# Attach AWS managed ECS execution policy
+resource "aws_iam_role_policy_attachment" "openwebui_execution_role_policy" {
+  role       = aws_iam_role.openwebui_execution_role.name
+  policy_arn = "arn:aws:iam::aws:policy/service-role/AmazonECSTaskExecutionRolePolicy"
+}
 
+# Service-specific secrets access via inline policy
+resource "aws_iam_role_policy" "openwebui_secrets_policy" {
+  name = "openwebui-scaled-secrets-access"
+  role = aws_iam_role.openwebui_execution_role.id
+  
   policy = jsonencode({
     Version = "2012-10-17"
     Statement = [
       {
         Effect = "Allow"
-        Action = [
-          "secretsmanager:GetSecretValue"
-        ]
+        Action = ["secretsmanager:GetSecretValue"]
         Resource = [
           aws_secretsmanager_secret.webui_shared_secret.arn,
           aws_secretsmanager_secret.redis_connection.arn,
           var.existing_database_secret_arn
         ]
+      },
+      {
+        Effect = "Allow"
+        Action = [
+          "kms:Decrypt"
+        ]
+        Resource = "*"
       }
     ]
   })
-}
-
-# Attach policy to existing task execution role
-resource "aws_iam_role_policy_attachment" "secrets_access_attachment" {
-  role       = data.aws_iam_role.task_execution_role.name
-  policy_arn = aws_iam_policy.secrets_access_policy.arn
 }

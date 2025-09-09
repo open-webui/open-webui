@@ -77,8 +77,8 @@ resource "aws_ecs_task_definition" "webui_scaled" {
   requires_compatibilities = ["FARGATE"]
   cpu                      = var.cpu
   memory                   = var.memory
-  execution_role_arn       = var.existing_task_execution_role_arn
-  task_role_arn           = var.existing_task_execution_role_arn
+  execution_role_arn       = aws_iam_role.openwebui_execution_role.arn
+  task_role_arn           = aws_iam_role.openwebui_execution_role.arn
 
   container_definitions = jsonencode([
     {
