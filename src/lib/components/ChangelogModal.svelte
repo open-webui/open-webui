@@ -119,7 +119,17 @@
     :global(.changelog-content p) {
         margin: 0;
     }
+
     :global(.changelog-content a) {
-        @apply text-blue-600 dark:text-blue-400 hover:underline;
+        color: theme('colors.blue.600');
+        text-decoration-line: none; /* Start with no underline by default */
+    }
+
+    :global(.dark .changelog-content a) {
+        color: theme('colors.blue.400');
+    }
+
+    :global(.changelog-content a:hover) {
+        text-decoration-line: underline;
     }
 </style>
