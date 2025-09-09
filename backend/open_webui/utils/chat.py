@@ -215,12 +215,27 @@ async def generate_chat_completion(
 
                 for doc in documents:
                     doc_id = doc.get("id")
+
+                    log.info(f"File from chat message: {doc.get('file', {}).get('image_refs')}")
+                    fresh_file = Files.get_file_by_id(doc_id)
+                    log.info(f"File from database: {fresh_file.image_refs if fresh_file else 'Not found'}")
+
                     if not doc_id:
                         continue
 
                     file_model = Files.get_file_by_id(doc_id)
                     if not file_model:
                         log.warning(f"File not found: {doc_id}")
+                        continue
+                    
+                    log.info(f"Chat processing - File {doc_id}:")
+                    log.info(f"  - Filename: {file_model.filename}")
+                    log.info(f"  - Image refs: {file_model.image_refs}")
+                    log.info(f"  - Image refs count: {len(file_model.image_refs) if file_model.image_refs else 0}")
+                    log.info(f"  - Data status: {file_model.data.get('status') if file_model.data else 'No data'}")
+
+                    if file_model.data and file_model.data.get("status") == "pending":
+                        log.warning(f"File {doc_id} is still being processed, skipping image extraction")
                         continue
 
                     if file_model.image_refs:
@@ -259,6 +274,8 @@ async def generate_chat_completion(
                                 log.error(f"Error processing image {image_ref}: {e}")
                     else:
                         log.debug(f"No images found in document {doc_id}")
+                        if file_model.data and file_model.data.get("status") == "completed":
+                            log.warning(f"File {doc_id} is marked as completed but has no image_refs - possible processing issue")
                         
     if getattr(request.state, "direct", False):
         return await generate_direct_chat_completion(

@@ -143,6 +143,32 @@ def process_uploaded_file(request, file, file_path, file_item, file_metadata, us
             file_item.id,
             {"status": "completed"},
         )
+        try:
+            from open_webui.models.chats import Chats
+            import json
+            recent_chats = Chats.get_chat_list_by_user_id(user.id, skip=0, limit=10)
+            for chat in recent_chats:
+                chat_updated = False
+                chat_data = chat.chat
+                
+                if "history" in chat_data and "messages" in chat_data["history"]:
+                    for message_id, message in chat_data["history"]["messages"].items():
+                        if "files" in message:
+                            for file_ref in message["files"]:
+                                if isinstance(file_ref, dict) and file_ref.get("file", {}).get("id") == file_item.id:
+                                    # Update the file reference with fresh data
+                                    updated_file = Files.get_file_by_id(file_item.id)
+                                    if updated_file:
+                                        file_ref["file"] = updated_file.model_dump()
+                                        chat_updated = True
+                                        log.info(f"Updated file reference in chat {chat.id}, message {message_id}")
+                
+                if chat_updated:
+                    Chats.update_chat_by_id(chat.id, chat_data)
+                    log.info(f"Saved updated chat {chat.id} with fresh file data")
+        except Exception as e:
+            log.error(f"Error updating chat file references: {e}")
+            pass
         
         # Final verification
         final_file = Files.get_file_by_id(file_item.id)

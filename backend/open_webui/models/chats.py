@@ -1033,5 +1033,48 @@ class ChatTable:
         except Exception:
             return False
 
+    def get_chat_by_id_with_fresh_files(self, id: str) -> Optional[ChatModel]:
+        """Get chat by ID and ensure all file references have fresh data"""
+        chat = self.get_chat_by_id(id)
+        if not chat:
+            return None
+        
+        try:
+            from open_webui.models.files import Files
+            
+            chat_data = chat.chat
+            chat_updated = False
+            
+            # Refresh file data in messages
+            if "history" in chat_data and "messages" in chat_data["history"]:
+                for message_id, message in chat_data["history"]["messages"].items():
+                    if "files" in message:
+                        for file_ref in message["files"]:
+                            if isinstance(file_ref, dict) and "file" in file_ref:
+                                file_id = file_ref["file"].get("id")
+                                if file_id:
+                                    # Get fresh file data
+                                    fresh_file = Files.get_file_by_id(file_id)
+                                    if fresh_file:
+                                        old_image_refs = file_ref["file"].get("image_refs")
+                                        new_image_refs = fresh_file.image_refs
+                                        
+                                        # Update with fresh data
+                                        file_ref["file"] = fresh_file.model_dump()
+                                        
+                                        # Log if image_refs changed
+                                        if old_image_refs != new_image_refs:
+                                            log.info(f"Refreshed file {file_id} in chat {id}: image_refs updated from {old_image_refs} to {new_image_refs}")
+                                            chat_updated = True
+            
+            # Update the chat object with fresh data
+            if chat_updated:
+                chat.chat = chat_data
+                
+            return chat
+            
+        except Exception as e:
+            log.error(f"Error refreshing file data in chat {id}: {e}")
+            return chat
 
 Chats = ChatTable()

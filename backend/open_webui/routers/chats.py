@@ -395,9 +395,9 @@ async def get_user_chat_list_by_tag_name(
 
 @router.get("/{id}", response_model=Optional[ChatResponse])
 async def get_chat_by_id(id: str, user=Depends(get_verified_user)):
-    chat = Chats.get_chat_by_id_and_user_id(id, user.id)
+    chat = Chats.get_chat_by_id_with_fresh_files(id) if hasattr(Chats, 'get_chat_by_id_with_fresh_files') else Chats.get_chat_by_id_and_user_id(id, user.id)
 
-    if chat:
+    if chat and chat.user_id == user.id:
         return ChatResponse(**chat.model_dump())
 
     else:
