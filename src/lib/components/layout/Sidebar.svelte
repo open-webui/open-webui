@@ -755,15 +755,6 @@
 				: 'invisible'}"
 			style={`width: var(--sidebar-width, ${$sidebarWidth}px);`}
 		>
-			{#if !$mobile}
-				<!-- Resizer handler -->
-				<div
-					class="absolute top-0 right-0 h-full w-1.5 cursor-ew-resize select-none bg-transparent hover:bg-gray-200/40 dark:hover:bg-gray-700/30"
-					on:mousedown={startResizing}
-					aria-label="Resize sidebar"
-					role="separator"
-				/>
-			{/if}
 			<div
 				class="sidebar px-1.5 pt-2 pb-1.5 flex justify-between space-x-1 text-gray-600 dark:text-gray-400 sticky top-0 z-10 bg-gray-50 dark:bg-gray-950"
 			>
@@ -1187,6 +1178,16 @@
 					</div>
 				</Folder>
 			</div>
+
+			{#if !$mobile}
+				<!-- Resizer handler -->
+				<div
+					class="absolute top-0 right-0 h-full w-1.5 cursor-ew-resize select-none bg-transparent hover:bg-gray-200/40 dark:hover:bg-gray-700/30"
+					on:mousedown={startResizing}
+					aria-label="Resize sidebar"
+					role="separator"
+				/>
+			{/if}
 
 			<div class="px-1.5 pt-1.5 pb-2 sticky bottom-0 z-10 bg-gray-50 dark:bg-gray-950 sidebar">
 				<div class="flex flex-col font-primary">
