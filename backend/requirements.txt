@@ -56,7 +56,7 @@ pymilvus==2.5.0
 qdrant-client==1.14.3
 opensearch-py==2.8.0
 playwright==1.49.1 # Caution: version must match docker-compose.playwright.yaml
-elasticsearch==9.0.1
+elasticsearch==9.1.0
 pinecone==6.0.2
 oracledb==3.2.0
 
