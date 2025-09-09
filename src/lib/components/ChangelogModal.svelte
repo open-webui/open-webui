@@ -116,13 +116,14 @@
         list-style-type: none;
         padding-left: 0;
     }
+
     :global(.changelog-content p) {
         margin: 0;
     }
 
     :global(.changelog-content a) {
         color: theme('colors.blue.600');
-        text-decoration-line: none; /* Start with no underline by default */
+        text-decoration-line: none; 
     }
 
     :global(.dark .changelog-content a) {
