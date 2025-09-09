@@ -1532,13 +1532,20 @@
 			params?.system || $settings.system || (responseMessage?.userContext ?? null)
 				? {
 						role: 'system',
-						content: `${promptTemplate(
-							params?.system ?? $settings?.system ?? '',
-							$user.name,
-							$settings?.userLocation
-								? await getAndUpdateUserLocation(localStorage.token)
-								: undefined
-						)}${
+						content: `${await (async () => {
+							// Get user's timezone preference
+							const { timezoneService } = await import('$lib/services/timezone');
+							const userTimezone = timezoneService.getUserTimezone();
+
+							return promptTemplate(
+								params?.system ?? $settings?.system ?? '',
+								$user.name,
+								$settings?.userLocation
+									? await getAndUpdateUserLocation(localStorage.token)
+									: undefined,
+								userTimezone
+							);
+						})()}${
 							(responseMessage?.userContext ?? null)
 								? `\n\nUser Context:\n${responseMessage?.userContext ?? ''}`
 								: ''

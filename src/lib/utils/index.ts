@@ -774,32 +774,18 @@ export const blobToFile = (blob, fileName) => {
 export const promptTemplate = (
 	template: string,
 	user_name?: string,
-	user_location?: string
+	user_location?: string,
+	user_timezone?: string
 ): string => {
-	// Get the current date/time in Eastern Time zone (same as backend)
-	const currentDate = new Date();
-	const easternDate = new Date(
-		currentDate.toLocaleString('en-US', { timeZone: 'America/New_York' })
-	);
+	// Use user's timezone if provided, otherwise fall back to Eastern Time (Toronto)
+	const timeZone = user_timezone || 'America/Toronto';
 
-	// Format the date to YYYY-MM-DD
-	const formattedDate = easternDate.toLocaleDateString('en-CA'); // en-CA uses YYYY-MM-DD format
-
-	// Format the time to HH:MM:SS AM/PM EDT/EST
-	const formattedTime = easternDate.toLocaleTimeString('en-US', {
-		hour: 'numeric',
-		minute: 'numeric',
-		second: 'numeric',
-		hour12: true,
-		timeZone: 'America/New_York',
-		timeZoneName: 'short'
-	});
-
-	// Get the current weekday in Eastern Time
-	const currentWeekday = easternDate.toLocaleDateString('en-US', {
-		weekday: 'long',
-		timeZone: 'America/New_York'
-	});
+	// Get current date/time information for the specified timezone
+	const {
+		date: formattedDate,
+		time: formattedTime,
+		weekday: currentWeekday
+	} = getCurrentDateTimeForTimezone(timeZone);
 
 	// Get the user's language
 	const userLanguage = localStorage.getItem('locale') || 'en-US';
@@ -809,7 +795,7 @@ export const promptTemplate = (
 	template = template.replace('{{CURRENT_DATE}}', formattedDate);
 	template = template.replace('{{CURRENT_TIME}}', formattedTime);
 	template = template.replace('{{CURRENT_WEEKDAY}}', currentWeekday);
-	template = template.replace('{{CURRENT_TIMEZONE}}', 'America/New_York');
+	template = template.replace('{{CURRENT_TIMEZONE}}', timeZone);
 
 	// Auto-append current time to system prompts for temporal context
 	// This ensures models always have access to current time without user needing to add template variables
@@ -1016,14 +1002,39 @@ export const getUserTimezone = () => {
 	return Intl.DateTimeFormat().resolvedOptions().timeZone;
 };
 
-// Get the weekday in Eastern Time
-export const getWeekday = () => {
+// Get the weekday in specified timezone (defaults to Eastern Time - Toronto)
+export const getWeekday = (timeZone: string = 'America/Toronto') => {
 	const date = new Date();
-	const easternWeekday = new Intl.DateTimeFormat('en-US', {
-		timeZone: 'America/New_York',
+	const weekday = new Intl.DateTimeFormat('en-US', {
+		timeZone: timeZone,
 		weekday: 'long'
 	}).format(date);
-	return easternWeekday;
+	return weekday;
+};
+
+// Get current date and time formatted for a specific timezone
+export const getCurrentDateTimeForTimezone = (timeZone: string = 'America/Toronto') => {
+	const date = new Date();
+	const formattedDate = date.toLocaleDateString('en-CA', { timeZone }); // YYYY-MM-DD format
+	const formattedTime = date.toLocaleTimeString('en-US', {
+		hour: 'numeric',
+		minute: 'numeric',
+		second: 'numeric',
+		hour12: true,
+		timeZone: timeZone,
+		timeZoneName: 'short'
+	});
+	const weekday = date.toLocaleDateString('en-US', {
+		weekday: 'long',
+		timeZone: timeZone
+	});
+
+	return {
+		date: formattedDate,
+		time: formattedTime,
+		weekday: weekday,
+		datetime: `${formattedDate} ${formattedTime}`
+	};
 };
 
 export const createMessagesList = (history, messageId) => {

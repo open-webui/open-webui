@@ -1361,9 +1361,23 @@ async def process_chat_payload(request, form_data, metadata, user, model):
             }
         )
 
-    # Add current time information to all chat requests
-    eastern = ZoneInfo("America/New_York")
-    now = datetime.now(eastern)
+    # Add current time information to all chat requests using user's timezone preference
+    # Get user's timezone preference from settings, fallback to Eastern Time (Toronto)
+    user_timezone = "America/Toronto"  # Default fallback for Canadian users
+
+    if user and hasattr(user, "settings") and user.settings:
+        # UserSettings is a Pydantic model with extra="allow"
+        # We can access timezone as an attribute or via model_dump()
+        user_timezone = getattr(user.settings, "timezone", "America/Toronto")
+
+    try:
+        timezone = ZoneInfo(user_timezone)
+    except Exception:
+        # If user's timezone is invalid, fallback to Eastern Time (Toronto)
+        timezone = ZoneInfo("America/Toronto")
+        user_timezone = "America/Toronto"
+
+    now = datetime.now(timezone)
     current_datetime = now.strftime("%A, %B %d, %Y at %I:%M %p %Z")
     current_weekday = now.strftime("%A")
     current_date = now.strftime("%B %d, %Y")
@@ -1373,6 +1387,7 @@ async def process_chat_payload(request, form_data, metadata, user, model):
         f"IMPORTANT: The current date is {current_date} ({current_year}). "
         f"Today is {current_weekday}, {current_date}. "
         f"The current time is {now.strftime('%I:%M %p %Z')}. "
+        f"User timezone: {user_timezone}. "
         f"When asked about the current date, time, or day, always use this information: "
         f"Date: {current_date}, Day: {current_weekday}, Time: {now.strftime('%I:%M %p %Z')}."
     )

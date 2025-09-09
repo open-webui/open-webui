@@ -199,6 +199,53 @@ export const updateUserSettings = async (token: string, settings: object) => {
 	return res;
 };
 
+// Timezone-specific helper functions
+export const getUserTimezoneFromSettings = async (token: string): Promise<string | null> => {
+	try {
+		const settings = await getUserSettings(token);
+		return settings?.timezone || null;
+	} catch (error) {
+		console.error('Failed to get user timezone from settings:', error);
+		return null;
+	}
+};
+
+export const updateUserTimezone = async (token: string, timezone: string) => {
+	try {
+		const currentSettings = await getUserSettings(token);
+		const updatedSettings = {
+			...currentSettings,
+			timezone: timezone
+		};
+		return await updateUserSettings(token, updatedSettings);
+	} catch (error) {
+		console.error('Failed to update user timezone:', error);
+		throw error;
+	}
+};
+
+export const detectAndUpdateUserTimezone = async (token: string) => {
+	try {
+		// Get current user's timezone from browser
+		const detectedTimezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
+
+		// Get stored timezone preference
+		const storedTimezone = await getUserTimezoneFromSettings(token);
+
+		// Update only if timezone has changed or is not set
+		if (!storedTimezone || storedTimezone !== detectedTimezone) {
+			await updateUserTimezone(token, detectedTimezone);
+			console.log(`Updated user timezone to: ${detectedTimezone}`);
+		}
+
+		return detectedTimezone;
+	} catch (error) {
+		console.error('Failed to detect and update user timezone:', error);
+		// Return Toronto timezone as default for Canadian users
+		return 'America/Toronto';
+	}
+};
+
 export const getUserById = async (token: string, userId: string) => {
 	let error = null;
 
