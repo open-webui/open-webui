@@ -442,6 +442,8 @@
 
 		await tick();
 	};
+
+	const isWindows = /Windows/i.test(navigator.userAgent);
 </script>
 
 <ArchivedChatsModal
@@ -511,11 +513,11 @@
 
 {#if !$mobile && !$showSidebar}
 	<div
-		class=" py-2 px-1.5 flex flex-col justify-between text-black dark:text-white h-full border-e border-gray-50 dark:border-gray-850 z-10"
+		class=" py-2 px-1.5 flex flex-col justify-between text-black dark:text-white hover:bg-gray-50 dark:hover:bg-gray-950 h-full border-e border-gray-50 dark:border-gray-850 z-10 transition-all"
 		id="sidebar"
 	>
 		<button
-			class="flex flex-col flex-1 cursor-[e-resize]"
+			class="flex flex-col flex-1 {isWindows ? 'cursor-pointer' : 'cursor-[e-resize]'}"
 			on:click={async () => {
 				showSidebar.set(!$showSidebar);
 			}}
@@ -526,7 +528,10 @@
 					placement="right"
 				>
 					<button
-						class=" flex rounded-lg hover:bg-gray-100 dark:hover:bg-gray-850 transition group cursor-[e-resize]"
+						class="flex rounded-lg hover:bg-gray-100 dark:hover:bg-gray-850 transition group {isWindows
+							? 'cursor-pointer'
+							: 'cursor-[e-resize]'}"
+						aria-label={$showSidebar ? $i18n.t('Close Sidebar') : $i18n.t('Open Sidebar')}
 					>
 						<div class=" self-center flex items-center justify-center size-9">
 							<img
@@ -556,6 +561,7 @@
 								goto('/');
 								newChatHandler();
 							}}
+							aria-label={$i18n.t('New Chat')}
 						>
 							<div class=" self-center flex items-center justify-center size-9">
 								<PencilSquare className="size-4.5" />
@@ -575,6 +581,7 @@
 								showSearch.set(true);
 							}}
 							draggable="false"
+							aria-label={$i18n.t('Search')}
 						>
 							<div class=" self-center flex items-center justify-center size-9">
 								<Search className="size-4.5" />
@@ -597,6 +604,7 @@
 									itemClickHandler();
 								}}
 								draggable="false"
+								aria-label={$i18n.t('Notes')}
 							>
 								<div class=" self-center flex items-center justify-center size-9">
 									<Note className="size-4.5" />
@@ -619,6 +627,7 @@
 									goto('/workspace');
 									itemClickHandler();
 								}}
+								aria-label={$i18n.t('Workspace')}
 								draggable="false"
 							>
 								<div class=" self-center flex items-center justify-center size-9">
@@ -686,7 +695,7 @@
 			? `ml-[4.5rem] md:ml-0 `
 			: ' transition-all duration-300 '} shrink-0 text-gray-900 dark:text-gray-200 text-sm fixed top-0 left-0 overflow-x-hidden
         "
-		transition:slide={{ duration: 200, axis: 'x' }}
+		transition:slide={{ duration: 250, axis: 'x' }}
 		data-state={$showSidebar}
 	>
 		<div
@@ -721,10 +730,13 @@
 					placement="bottom"
 				>
 					<button
-						class=" flex rounded-lg hover:bg-gray-100 dark:hover:bg-gray-850 transition cursor-[w-resize]"
+						class="flex rounded-lg hover:bg-gray-100 dark:hover:bg-gray-850 transition {isWindows
+							? 'cursor-pointer'
+							: 'cursor-[w-resize]'}"
 						on:click={() => {
 							showSidebar.set(!$showSidebar);
 						}}
+						aria-label={$showSidebar ? $i18n.t('Close Sidebar') : $i18n.t('Open Sidebar')}
 					>
 						<div class=" self-center p-1.5">
 							<Sidebar />
@@ -741,6 +753,7 @@
 						href="/"
 						draggable="false"
 						on:click={newChatHandler}
+						aria-label={$i18n.t('New Chat')}
 					>
 						<div class="self-center">
 							<PencilSquare className=" size-4.5" strokeWidth="2" />
@@ -759,6 +772,7 @@
 							showSearch.set(true);
 						}}
 						draggable="false"
+						aria-label={$i18n.t('Search')}
 					>
 						<div class="self-center">
 							<Search strokeWidth="2" className="size-4.5" />
@@ -777,6 +791,7 @@
 							href="/notes"
 							on:click={itemClickHandler}
 							draggable="false"
+							aria-label={$i18n.t('Notes')}
 						>
 							<div class="self-center">
 								<Note className="size-4.5" strokeWidth="2" />
@@ -796,6 +811,7 @@
 							href="/workspace"
 							on:click={itemClickHandler}
 							draggable="false"
+							aria-label={$i18n.t('Workspace')}
 						>
 							<div class="self-center">
 								<svg
@@ -831,6 +847,7 @@
 					<Folder
 						className="px-2 mt-0.5"
 						name={$i18n.t('Channels')}
+						chevron={false}
 						dragAndDrop={false}
 						onAdd={async () => {
 							if ($user?.role === 'admin') {
@@ -857,6 +874,7 @@
 				<Folder
 					className="px-2 mt-0.5"
 					name={$i18n.t('Chats')}
+					chevron={false}
 					onAdd={() => {
 						showCreateFolderModal = true;
 					}}
@@ -1007,24 +1025,26 @@
 					{/if}
 
 					{#if folders}
-						<Folders
-							{folders}
-							{shiftKey}
-							onDelete={(folderId) => {
-								selectedFolder.set(null);
-								initChatList();
-							}}
-							on:update={() => {
-								initChatList();
-							}}
-							on:import={(e) => {
-								const { folderId, items } = e.detail;
-								importChatHandler(items, false, folderId);
-							}}
-							on:change={async () => {
-								initChatList();
-							}}
-						/>
+						<div class="mb-1">
+							<Folders
+								{folders}
+								{shiftKey}
+								onDelete={(folderId) => {
+									selectedFolder.set(null);
+									initChatList();
+								}}
+								on:update={() => {
+									initChatList();
+								}}
+								on:import={(e) => {
+									const { folderId, items } = e.detail;
+									importChatHandler(items, false, folderId);
+								}}
+								on:change={async () => {
+									initChatList();
+								}}
+							/>
+						</div>
 					{/if}
 
 					<div class=" flex-1 flex flex-col overflow-y-auto scrollbar-hidden">

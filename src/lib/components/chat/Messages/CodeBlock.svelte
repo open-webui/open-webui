@@ -1,4 +1,6 @@
 <script lang="ts">
+	import hljs from 'highlight.js';
+
 	import mermaid from 'mermaid';
 
 	import { v4 as uuidv4 } from 'uuid';
@@ -22,6 +24,7 @@
 	const i18n = getContext('i18n');
 
 	export let id = '';
+	export let edit = true;
 
 	export let onSave = (e) => {};
 	export let onUpdate = (e) => {};
@@ -84,7 +87,7 @@
 
 	const copyCode = async () => {
 		copied = true;
-		await copyToClipboard(code);
+		await copyToClipboard(_code);
 
 		setTimeout(() => {
 			copied = false;
@@ -213,19 +216,19 @@
 
 	const executePythonAsWorker = async (code) => {
 		let packages = [
-			code.includes('requests') ? 'requests' : null,
-			code.includes('bs4') ? 'beautifulsoup4' : null,
-			code.includes('numpy') ? 'numpy' : null,
-			code.includes('pandas') ? 'pandas' : null,
-			code.includes('sklearn') ? 'scikit-learn' : null,
-			code.includes('scipy') ? 'scipy' : null,
-			code.includes('re') ? 'regex' : null,
-			code.includes('seaborn') ? 'seaborn' : null,
-			code.includes('sympy') ? 'sympy' : null,
-			code.includes('tiktoken') ? 'tiktoken' : null,
-			code.includes('matplotlib') ? 'matplotlib' : null,
-			code.includes('pytz') ? 'pytz' : null,
-			code.includes('openai') ? 'openai' : null
+			/\bimport\s+requests\b|\bfrom\s+requests\b/.test(code) ? 'requests' : null,
+			/\bimport\s+bs4\b|\bfrom\s+bs4\b/.test(code) ? 'beautifulsoup4' : null,
+			/\bimport\s+numpy\b|\bfrom\s+numpy\b/.test(code) ? 'numpy' : null,
+			/\bimport\s+pandas\b|\bfrom\s+pandas\b/.test(code) ? 'pandas' : null,
+			/\bimport\s+matplotlib\b|\bfrom\s+matplotlib\b/.test(code) ? 'matplotlib' : null,
+			/\bimport\s+seaborn\b|\bfrom\s+seaborn\b/.test(code) ? 'seaborn' : null,
+			/\bimport\s+sklearn\b|\bfrom\s+sklearn\b/.test(code) ? 'scikit-learn' : null,
+			/\bimport\s+scipy\b|\bfrom\s+scipy\b/.test(code) ? 'scipy' : null,
+			/\bimport\s+re\b|\bfrom\s+re\b/.test(code) ? 'regex' : null,
+			/\bimport\s+seaborn\b|\bfrom\s+seaborn\b/.test(code) ? 'seaborn' : null,
+			/\bimport\s+sympy\b|\bfrom\s+sympy\b/.test(code) ? 'sympy' : null,
+			/\bimport\s+tiktoken\b|\bfrom\s+tiktoken\b/.test(code) ? 'tiktoken' : null,
+			/\bimport\s+pytz\b|\bfrom\s+pytz\b/.test(code) ? 'pytz' : null
 		].filter(Boolean);
 
 		console.log(packages);
@@ -413,11 +416,11 @@
 </script>
 
 <div>
-	<div class="relative {className} flex flex-col rounded-lg" dir="ltr">
+	<div class="relative {className} flex flex-col rounded-xl pt-2" dir="ltr">
 		{#if lang === 'mermaid'}
 			{#if mermaidHtml}
 				<SvgPanZoom
-					className=" border border-gray-100 dark:border-gray-850 rounded-lg max-h-fit overflow-hidden"
+					className=" border border-gray-100 dark:border-gray-850 rounded-xl max-h-fit overflow-hidden"
 					svg={mermaidHtml}
 					content={_token.text}
 				/>
@@ -425,16 +428,16 @@
 				<pre class="mermaid">{code}</pre>
 			{/if}
 		{:else}
-			<div class="text-text-300 absolute pl-4 py-1.5 text-xs font-medium dark:text-white">
+			<div class="text-text-300 absolute pl-4 text-xs font-medium dark:text-white">
 				{lang}
 			</div>
 
 			<div
-				class="sticky {stickyButtonsClassName} mb-1 py-1 pr-2.5 flex items-center justify-end z-10 text-xs text-black dark:text-white"
+				class="sticky {stickyButtonsClassName} mb-1 pr-2.5 flex items-center justify-end z-10 text-xs text-black dark:text-white"
 			>
-				<div class="flex items-center gap-0.5 translate-y-[1px]">
+				<div class="flex items-center gap-0.5">
 					<button
-						class="flex gap-1 items-center bg-none border-none bg-gray-50 hover:bg-gray-100 dark:bg-gray-850 dark:hover:bg-gray-800 transition rounded-md px-1.5 py-0.5"
+						class="flex gap-1 items-center bg-none border-none bg-gray-50 dark:bg-black transition rounded-md px-1.5 py-0.5"
 						on:click={collapseCodeBlock}
 					>
 						<div class=" -translate-y-[0.5px]">
@@ -448,7 +451,7 @@
 
 					{#if preview && ['html', 'svg'].includes(lang)}
 						<button
-							class="flex gap-1 items-center run-code-button bg-none border-none bg-gray-50 hover:bg-gray-100 dark:bg-gray-850 dark:hover:bg-gray-800 transition rounded-md px-1.5 py-0.5"
+							class="flex gap-1 items-center run-code-button bg-none border-none bg-gray-50 dark:bg-black transition rounded-md px-1.5 py-0.5"
 							on:click={previewCode}
 						>
 							<div class=" -translate-y-[0.5px]">
@@ -468,7 +471,7 @@
 							</div>
 						{:else if run}
 							<button
-								class="flex gap-1 items-center run-code-button bg-none border-none bg-gray-50 hover:bg-gray-100 dark:bg-gray-850 dark:hover:bg-gray-800 transition rounded-md px-1.5 py-0.5"
+								class="flex gap-1 items-center run-code-button bg-none border-none bg-gray-50 dark:bg-black transition rounded-md px-1.5 py-0.5"
 								on:click={async () => {
 									code = _code;
 									await tick();
@@ -488,7 +491,7 @@
 
 					{#if save}
 						<button
-							class="save-code-button bg-none border-none bg-gray-50 hover:bg-gray-100 dark:bg-gray-850 dark:hover:bg-gray-800 transition rounded-md px-1.5 py-0.5"
+							class="save-code-button bg-none border-none bg-gray-50 dark:bg-black transition rounded-md px-1.5 py-0.5"
 							on:click={saveCode}
 						>
 							{saved ? $i18n.t('Saved') : $i18n.t('Save')}
@@ -496,36 +499,50 @@
 					{/if}
 
 					<button
-						class="copy-code-button bg-none border-none bg-gray-50 hover:bg-gray-100 dark:bg-gray-850 dark:hover:bg-gray-800 transition rounded-md px-1.5 py-0.5"
+						class="copy-code-button bg-none border-none bg-gray-50 dark:bg-black transition rounded-md px-1.5 py-0.5"
 						on:click={copyCode}>{copied ? $i18n.t('Copied') : $i18n.t('Copy')}</button
 					>
 				</div>
 			</div>
 
 			<div
-				class="language-{lang} rounded-t-lg -mt-8 {editorClassName
+				class="language-{lang} rounded-t-xl -mt-8 {editorClassName
 					? editorClassName
 					: executing || stdout || stderr || result
 						? ''
-						: 'rounded-b-lg'} overflow-hidden"
+						: 'rounded-b-xl'} overflow-hidden"
 			>
-				<div class=" pt-7 bg-gray-50 dark:bg-gray-850"></div>
+				<div class=" pt-8 bg-gray-50 dark:bg-black"></div>
 
 				{#if !collapsed}
-					<CodeEditor
-						value={code}
-						{id}
-						{lang}
-						onSave={() => {
-							saveCode();
-						}}
-						onChange={(value) => {
-							_code = value;
-						}}
-					/>
+					{#if edit}
+						<CodeEditor
+							value={code}
+							{id}
+							{lang}
+							onSave={() => {
+								saveCode();
+							}}
+							onChange={(value) => {
+								_code = value;
+							}}
+						/>
+					{:else}
+						<pre
+							class=" hljs p-4 px-5 overflow-x-auto"
+							style="border-top-left-radius: 0px; border-top-right-radius: 0px; {(executing ||
+								stdout ||
+								stderr ||
+								result) &&
+								'border-bottom-left-radius: 0px; border-bottom-right-radius: 0px;'}"><code
+								class="language-{lang} rounded-t-none whitespace-pre text-sm"
+								>{@html hljs.highlightAuto(code, hljs.getLanguage(lang)?.aliases).value ||
+									code}</code
+							></pre>
+					{/if}
 				{:else}
 					<div
-						class="bg-gray-50 dark:bg-black dark:text-white rounded-b-lg! pt-2 pb-2 px-4 flex flex-col gap-2 text-xs"
+						class="bg-gray-50 dark:bg-black dark:text-white rounded-b-xl! pt-2 pb-2 px-4 flex flex-col gap-2 text-xs"
 					>
 						<span class="text-gray-500 italic">
 							{$i18n.t('{{COUNT}} hidden lines', {
@@ -539,12 +556,12 @@
 			{#if !collapsed}
 				<div
 					id="plt-canvas-{id}"
-					class="bg-gray-50 dark:bg-[#202123] dark:text-white max-w-full overflow-x-auto scrollbar-hidden"
+					class="bg-gray-50 dark:bg-black dark:text-white max-w-full overflow-x-auto scrollbar-hidden"
 				/>
 
 				{#if executing || stdout || stderr || result || files}
 					<div
-						class="bg-gray-50 dark:bg-[#202123] dark:text-white rounded-b-lg! py-4 px-4 flex flex-col gap-2"
+						class="bg-gray-50 dark:bg-black dark:text-white rounded-b-xl! py-4 px-4 flex flex-col gap-2"
 					>
 						{#if executing}
 							<div class=" ">

@@ -86,6 +86,7 @@
 		image_generation: true,
 		code_interpreter: true,
 		citations: true,
+		status_updates: true,
 		usage: undefined
 	};
 

@@ -426,8 +426,13 @@ async def get_rag_config(request: Request, user=Depends(get_admin_user)):
         "EXTERNAL_DOCUMENT_LOADER_API_KEY": request.app.state.config.EXTERNAL_DOCUMENT_LOADER_API_KEY,
         "TIKA_SERVER_URL": request.app.state.config.TIKA_SERVER_URL,
         "DOCLING_SERVER_URL": request.app.state.config.DOCLING_SERVER_URL,
+        "DOCLING_DO_OCR": request.app.state.config.DOCLING_DO_OCR,
+        "DOCLING_FORCE_OCR": request.app.state.config.DOCLING_FORCE_OCR,
         "DOCLING_OCR_ENGINE": request.app.state.config.DOCLING_OCR_ENGINE,
         "DOCLING_OCR_LANG": request.app.state.config.DOCLING_OCR_LANG,
+        "DOCLING_PDF_BACKEND": request.app.state.config.DOCLING_PDF_BACKEND,
+        "DOCLING_TABLE_MODE": request.app.state.config.DOCLING_TABLE_MODE,
+        "DOCLING_PIPELINE": request.app.state.config.DOCLING_PIPELINE,
         "DOCLING_DO_PICTURE_DESCRIPTION": request.app.state.config.DOCLING_DO_PICTURE_DESCRIPTION,
         "DOCLING_PICTURE_DESCRIPTION_MODE": request.app.state.config.DOCLING_PICTURE_DESCRIPTION_MODE,
         "DOCLING_PICTURE_DESCRIPTION_LOCAL": request.app.state.config.DOCLING_PICTURE_DESCRIPTION_LOCAL,
@@ -596,8 +601,13 @@ class ConfigForm(BaseModel):
 
     TIKA_SERVER_URL: Optional[str] = None
     DOCLING_SERVER_URL: Optional[str] = None
+    DOCLING_DO_OCR: Optional[bool] = None
+    DOCLING_FORCE_OCR: Optional[bool] = None
     DOCLING_OCR_ENGINE: Optional[str] = None
     DOCLING_OCR_LANG: Optional[str] = None
+    DOCLING_PDF_BACKEND: Optional[str] = None
+    DOCLING_TABLE_MODE: Optional[str] = None
+    DOCLING_PIPELINE: Optional[str] = None
     DOCLING_DO_PICTURE_DESCRIPTION: Optional[bool] = None
     DOCLING_PICTURE_DESCRIPTION_MODE: Optional[str] = None
     DOCLING_PICTURE_DESCRIPTION_LOCAL: Optional[dict] = None
@@ -767,6 +777,16 @@ async def update_rag_config(
         if form_data.DOCLING_SERVER_URL is not None
         else request.app.state.config.DOCLING_SERVER_URL
     )
+    request.app.state.config.DOCLING_DO_OCR = (
+        form_data.DOCLING_DO_OCR
+        if form_data.DOCLING_DO_OCR is not None
+        else request.app.state.config.DOCLING_DO_OCR
+    )
+    request.app.state.config.DOCLING_FORCE_OCR = (
+        form_data.DOCLING_FORCE_OCR
+        if form_data.DOCLING_FORCE_OCR is not None
+        else request.app.state.config.DOCLING_FORCE_OCR
+    )
     request.app.state.config.DOCLING_OCR_ENGINE = (
         form_data.DOCLING_OCR_ENGINE
         if form_data.DOCLING_OCR_ENGINE is not None
@@ -777,7 +797,21 @@ async def update_rag_config(
         if form_data.DOCLING_OCR_LANG is not None
         else request.app.state.config.DOCLING_OCR_LANG
     )
-
+    request.app.state.config.DOCLING_PDF_BACKEND = (
+        form_data.DOCLING_PDF_BACKEND
+        if form_data.DOCLING_PDF_BACKEND is not None
+        else request.app.state.config.DOCLING_PDF_BACKEND
+    )
+    request.app.state.config.DOCLING_TABLE_MODE = (
+        form_data.DOCLING_TABLE_MODE
+        if form_data.DOCLING_TABLE_MODE is not None
+        else request.app.state.config.DOCLING_TABLE_MODE
+    )
+    request.app.state.config.DOCLING_PIPELINE = (
+        form_data.DOCLING_PIPELINE
+        if form_data.DOCLING_PIPELINE is not None
+        else request.app.state.config.DOCLING_PIPELINE
+    )
     request.app.state.config.DOCLING_DO_PICTURE_DESCRIPTION = (
         form_data.DOCLING_DO_PICTURE_DESCRIPTION
         if form_data.DOCLING_DO_PICTURE_DESCRIPTION is not None
@@ -1062,8 +1096,13 @@ async def update_rag_config(
         "EXTERNAL_DOCUMENT_LOADER_API_KEY": request.app.state.config.EXTERNAL_DOCUMENT_LOADER_API_KEY,
         "TIKA_SERVER_URL": request.app.state.config.TIKA_SERVER_URL,
         "DOCLING_SERVER_URL": request.app.state.config.DOCLING_SERVER_URL,
+        "DOCLING_DO_OCR": request.app.state.config.DOCLING_DO_OCR,
+        "DOCLING_FORCE_OCR": request.app.state.config.DOCLING_FORCE_OCR,
         "DOCLING_OCR_ENGINE": request.app.state.config.DOCLING_OCR_ENGINE,
         "DOCLING_OCR_LANG": request.app.state.config.DOCLING_OCR_LANG,
+        "DOCLING_PDF_BACKEND": request.app.state.config.DOCLING_PDF_BACKEND,
+        "DOCLING_TABLE_MODE": request.app.state.config.DOCLING_TABLE_MODE,
+        "DOCLING_PIPELINE": request.app.state.config.DOCLING_PIPELINE,
         "DOCLING_DO_PICTURE_DESCRIPTION": request.app.state.config.DOCLING_DO_PICTURE_DESCRIPTION,
         "DOCLING_PICTURE_DESCRIPTION_MODE": request.app.state.config.DOCLING_PICTURE_DESCRIPTION_MODE,
         "DOCLING_PICTURE_DESCRIPTION_LOCAL": request.app.state.config.DOCLING_PICTURE_DESCRIPTION_LOCAL,
@@ -1453,8 +1492,13 @@ def process_file(
                     TIKA_SERVER_URL=request.app.state.config.TIKA_SERVER_URL,
                     DOCLING_SERVER_URL=request.app.state.config.DOCLING_SERVER_URL,
                     DOCLING_PARAMS={
+                        "do_ocr": request.app.state.config.DOCLING_DO_OCR,
+                        "force_ocr": request.app.state.config.DOCLING_FORCE_OCR,
                         "ocr_engine": request.app.state.config.DOCLING_OCR_ENGINE,
                         "ocr_lang": request.app.state.config.DOCLING_OCR_LANG,
+                        "pdf_backend": request.app.state.config.DOCLING_PDF_BACKEND,
+                        "table_mode": request.app.state.config.DOCLING_TABLE_MODE,
+                        "pipeline": request.app.state.config.DOCLING_PIPELINE,
                         "do_picture_description": request.app.state.config.DOCLING_DO_PICTURE_DESCRIPTION,
                         "picture_description_mode": request.app.state.config.DOCLING_PICTURE_DESCRIPTION_MODE,
                         "picture_description_local": request.app.state.config.DOCLING_PICTURE_DESCRIPTION_LOCAL,
@@ -1945,6 +1989,8 @@ async def process_web_search(
 ):
 
     urls = []
+    result_items = []
+
     try:
         logging.info(
             f"trying to web search with {request.app.state.config.WEB_SEARCH_ENGINE, form_data.queries}"
@@ -1966,6 +2012,7 @@ async def process_web_search(
             if result:
                 for item in result:
                     if item and item.link:
+                        result_items.append(item)
                         urls.append(item.link)
 
         urls = list(dict.fromkeys(urls))
@@ -2010,12 +2057,16 @@ async def process_web_search(
         urls = [
             doc.metadata.get("source") for doc in docs if doc.metadata.get("source")
         ]  # only keep the urls returned by the loader
+        result_items = [
+            dict(item) for item in result_items if item.link in urls
+        ]  # only keep the search results that have been loaded
 
         if request.app.state.config.BYPASS_WEB_SEARCH_EMBEDDING_AND_RETRIEVAL:
             return {
                 "status": True,
                 "collection_name": None,
                 "filenames": urls,
+                "items": result_items,
                 "docs": [
                     {
                         "content": doc.page_content,
@@ -2048,6 +2099,7 @@ async def process_web_search(
             return {
                 "status": True,
                 "collection_names": [collection_name],
+                "items": result_items,
                 "filenames": urls,
                 "loaded_count": len(docs),
             }
@@ -2075,7 +2127,9 @@ def query_doc_handler(
     user=Depends(get_verified_user),
 ):
     try:
-        if request.app.state.config.ENABLE_RAG_HYBRID_SEARCH:
+        if request.app.state.config.ENABLE_RAG_HYBRID_SEARCH and (
+            form_data.hybrid is None or form_data.hybrid
+        ):
             collection_results = {}
             collection_results[form_data.collection_name] = VECTOR_DB_CLIENT.get(
                 collection_name=form_data.collection_name
@@ -2145,7 +2199,9 @@ def query_collection_handler(
     user=Depends(get_verified_user),
 ):
     try:
-        if request.app.state.config.ENABLE_RAG_HYBRID_SEARCH:
+        if request.app.state.config.ENABLE_RAG_HYBRID_SEARCH and (
+            form_data.hybrid is None or form_data.hybrid
+        ):
             return query_collection_with_hybrid_search(
                 collection_names=form_data.collection_names,
                 queries=[form_data.query],
