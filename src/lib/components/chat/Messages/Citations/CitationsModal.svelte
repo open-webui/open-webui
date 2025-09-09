@@ -66,11 +66,9 @@
 							selectedCitation = citation;
 						}}
 					>
-						{#if citations.every((c) => c.distances !== undefined)}
-							<div class="bg-gray-50 dark:bg-gray-800 rounded-full size-5">
-								{idx + 1}
-							</div>
-						{/if}
+						<div class="bg-gray-50 dark:bg-gray-800 rounded-full size-5">
+							{idx + 1}
+						</div>
 						<div
 							class="flex-1 truncate text-black/60 hover:text-black dark:text-white/60 dark:hover:text-white transition text-left"
 						>
