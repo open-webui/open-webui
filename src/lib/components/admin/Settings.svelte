@@ -204,7 +204,7 @@
 					/>
 				</svg>
 			</div>
-			<div class=" self-center">{$i18n.t('Tools')}</div>
+			<div class=" self-center">{$i18n.t('External Tools')}</div>
 		</button>
 
 		<button

@@ -340,7 +340,10 @@ def merge_ollama_models_lists(model_lists):
     return list(merged_models.values())
 
 
-@cached(ttl=MODELS_CACHE_TTL)
+@cached(
+    ttl=MODELS_CACHE_TTL,
+    key=lambda _, user: f"ollama_all_models_{user.id}" if user else "ollama_all_models",
+)
 async def get_all_models(request: Request, user: UserModel = None):
     log.info("get_all_models()")
     if request.app.state.config.ENABLE_OLLAMA_API:
