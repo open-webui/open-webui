@@ -86,12 +86,10 @@
 
 	let correctionHintActive = false;
 	let messageIdForCorrection = null;
-	let correctionPrependText = '';
 	let correctionHintText = '';
 
 	const submitHandler = async () => {
 		if (correctionHintActive) {
-			prompt = `${correctionPrependText}${prompt}`;
 			await tick();
 			dispatch('submit', prompt);
 
@@ -351,7 +349,7 @@
 			messageIdForCorrection = event.detail.messageId;
 		}
 		if (event.detail?.prependText) {
-			correctionPrependText = event.detail.prependText;
+			prompt = event.detail.prependText;
 		}
 		if (event.detail?.hintText) {
 			correctionHintText = event.detail.hintText;

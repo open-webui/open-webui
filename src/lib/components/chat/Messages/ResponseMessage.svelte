@@ -883,6 +883,7 @@
 						{#each $config?.features?.search_plan_agent_buttons_mapping ?? [] as button}
 							<button
 								class="px-4 py-2 bg-white dark:bg-gray-900 hover:bg-gray-100 text-gray-800 dark:text-gray-100 transition rounded-xl border border-gray-200 dark:border-gray-700"
+								style={button.BackgroundColor ? `background-color: ${button.BackgroundColor}` : ''}
 								on:click={() => {
 									if (button.OnClickSendMessageAsUserText) {
 										submitMessage(message.id, button.OnClickSendMessageAsUserText);
