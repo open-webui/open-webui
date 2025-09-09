@@ -81,16 +81,13 @@
 										{section}
 									</div>
 
-									<div class="my-2.5 px-1.5">
-										{#each Object.keys(changelog[version][section]) as item}
-											<div class="text-sm mb-2">
-												<div class="font-semibold uppercase">
-													{changelog[version][section][item].title}
-												</div>
-												<div class="mb-2 mt-1">{@html changelog[version][section][item].raw}</div>
-											</div>
-										{/each}
-									</div>
+									<ul class="my-2.5 px-1.5 space-y-2 changelog-content">
+									    {#each changelog[version][section] as entry}
+									        <!-- The 'raw' content is already an <li>, so we just render it directly.
+									             The 'text-sm' class ensures the font size is correct. -->
+									        {@html `<div class="text-sm">${entry.raw}</div>`}
+									    {/each}
+									</ul>
 								</div>
 							{/each}
 						</div>
@@ -113,3 +110,16 @@
 		</div>
 	</div>
 </Modal>
+
+<style>
+    :global(.changelog-content li) {
+        list-style-type: none;
+        padding-left: 0;
+    }
+    :global(.changelog-content p) {
+        margin: 0;
+    }
+    :global(.changelog-content a) {
+        @apply text-blue-600 dark:text-blue-400 hover:underline;
+    }
+</style>
