@@ -178,6 +178,7 @@ async def update_user_role(form_data: UserRoleUpdateForm, user=Depends(get_admin
         "cg4532@nyu.edu",
         "jy4421@nyu.edu",
         "ht2490@nyu.edu",
+        "ps5226@nyu.edu",
     ]
 
     # Prevent users from changing their own role.
