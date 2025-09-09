@@ -194,6 +194,9 @@ async def generate_chat_completion(
         raise Exception("Model not found")
 
     model = models[model_id]
+
+    log.info(f"Model vision capability: {model.get('vision', False)}")
+    log.info(f"Documents in form_data: {form_data.get('documents', [])}")
     
     if model.get("vision", False):
         documents = form_data.pop("documents", None)
@@ -206,6 +209,7 @@ async def generate_chat_completion(
                     break
 
             if last_user_message:
+                # Ensure content is in the correct OpenAI format
                 if isinstance(last_user_message.get("content"), str):
                     last_user_message["content"] = [
                         {"type": "text", "text": last_user_message["content"]}
@@ -215,11 +219,6 @@ async def generate_chat_completion(
 
                 for doc in documents:
                     doc_id = doc.get("id")
-
-                    log.info(f"File from chat message: {doc.get('file', {}).get('image_refs')}")
-                    fresh_file = Files.get_file_by_id(doc_id)
-                    log.info(f"File from database: {fresh_file.image_refs if fresh_file else 'Not found'}")
-
                     if not doc_id:
                         continue
 
@@ -227,30 +226,21 @@ async def generate_chat_completion(
                     if not file_model:
                         log.warning(f"File not found: {doc_id}")
                         continue
-                    
-                    log.info(f"Chat processing - File {doc_id}:")
-                    log.info(f"  - Filename: {file_model.filename}")
-                    log.info(f"  - Image refs: {file_model.image_refs}")
-                    log.info(f"  - Image refs count: {len(file_model.image_refs) if file_model.image_refs else 0}")
-                    log.info(f"  - Data status: {file_model.data.get('status') if file_model.data else 'No data'}")
 
-                    if file_model.data and file_model.data.get("status") == "pending":
-                        log.warning(f"File {doc_id} is still being processed, skipping image extraction")
-                        continue
+                    log.info(f"Processing document {doc_id} with {len(file_model.image_refs) if file_model.image_refs else 0} images")
 
                     if file_model.image_refs:
-                        log.info(f"Found {len(file_model.image_refs)} images in document {doc_id}")
-
-                        for image_ref in file_model.image_refs:
+                        for i, image_ref in enumerate(file_model.image_refs):
                             try:
                                 image_path = os.path.join(DATA_DIR, image_ref)
-                                log.debug(f"Loading image from: {image_path}")
+                                log.info(f"Loading image {i+1}/{len(file_model.image_refs)}: {image_ref}")
 
                                 if os.path.exists(image_path):
                                     with open(image_path, "rb") as image_file:
                                         image_data = image_file.read()
                                         encoded_string = base64.b64encode(image_data).decode("utf-8")
 
+                                        # Determine MIME type for data URL
                                         ext = os.path.splitext(image_path)[1].lower()
                                         mime_type = {
                                             '.png': 'image/png',
@@ -260,22 +250,56 @@ async def generate_chat_completion(
                                             '.webp': 'image/webp'
                                         }.get(ext, 'image/jpeg')
 
-                                        last_user_message["content"].append({
+                                        # CORRECT OpenAI Vision API format
+                                        image_content = {
                                             "type": "image_url",
                                             "image_url": {
                                                 "url": f"data:{mime_type};base64,{encoded_string}",
-                                                "mime_type": mime_type
+                                                "detail": "high"  # Options: "low", "high", "auto"
                                             }
-                                        })
-                                        log.info(f"Successfully added image to message content")
+                                        }
+                                        
+                                        last_user_message["content"].append(image_content)
+                                        log.info(f"Successfully added image {i+1} to message content: {image_ref}")
+                                        
+                                        # Debug: Log the structure being added
+                                        log.debug(f"Image content structure: {{'type': 'image_url', 'image_url': {{'url': 'data:{mime_type};base64,[{len(encoded_string)} chars]', 'detail': 'high'}}}}")
                                 else:
                                     log.error(f"Image file not found: {image_path}")
                             except Exception as e:
                                 log.error(f"Error processing image {image_ref}: {e}")
+                                import traceback
+                                log.error(f"Traceback: {traceback.format_exc()}")
                     else:
-                        log.debug(f"No images found in document {doc_id}")
-                        if file_model.data and file_model.data.get("status") == "completed":
-                            log.warning(f"File {doc_id} is marked as completed but has no image_refs - possible processing issue")
+                        log.warning(f"No images found in document {doc_id}")
+                        
+                # Log the final message content structure
+                log.info("=== FINAL MESSAGE CONTENT STRUCTURE ===")
+                log.info(f"Message role: {last_user_message.get('role')}")
+                log.info(f"Content type: {type(last_user_message.get('content'))}")
+                log.info(f"Content items: {len(last_user_message.get('content', []))}")
+                for i, item in enumerate(last_user_message.get("content", [])):
+                    if item.get("type") == "text":
+                        log.info(f"  Item {i}: TEXT - '{item.get('text', '')[:50]}...'")
+                    elif item.get("type") == "image_url":
+                        url = item.get("image_url", {}).get("url", "")
+                        detail = item.get("image_url", {}).get("detail", "not set")
+                        log.info(f"  Item {i}: IMAGE_URL - detail={detail}, url_length={len(url)}")
+                        
+                        # Check if the base64 format is correct
+                        if url.startswith("data:image/"):
+                            log.info(f"    ✓ Correct data URL format")
+                        else:
+                            log.error(f"    ✗ Incorrect data URL format: {url[:50]}...")
+                    else:
+                        log.info(f"  Item {i}: UNKNOWN TYPE - {item}")
+                log.info("=== END MESSAGE STRUCTURE ===")
+            else:
+                log.warning("No user message found to attach images to")
+        else:
+            log.info("No documents provided for vision model")
+    else:
+        log.info("Model does not support vision or no documents provided")
                         
     if getattr(request.state, "direct", False):
         return await generate_direct_chat_completion(
