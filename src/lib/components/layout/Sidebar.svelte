@@ -778,8 +778,7 @@
 		<div
 			class=" relative my-auto flex flex-col justify-between h-screen max-h-[100dvh] overflow-x-hidden scrollbar-hidden z-50 {$showSidebar
 				? ''
-				: 'invisible'}"
-			style={`width: var(--sidebar-width, ${$sidebarWidth}px);`}
+				: 'invisible'} w-[var(--sidebar-width)] max-w-[100vw] max-w-[100dvw]"
 		>
 			<div
 				class="sidebar px-1.5 pt-2 pb-1.5 flex justify-between space-x-1 text-gray-600 dark:text-gray-400 sticky top-0 z-10 bg-gray-50 dark:bg-gray-950"
