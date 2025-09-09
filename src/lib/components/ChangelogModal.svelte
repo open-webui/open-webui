@@ -65,7 +65,10 @@
 				            <!-- 1. Make the header a button to toggle the collapsed state -->
 				            <button
 				                class="w-full flex justify-between items-center text-left"
-				                on:click={() => collapsedVersions.set(version, !isCollapsed)}
+				                on:click={() => {
+								    collapsedVersions.set(version, !isCollapsed);
+								    collapsedVersions = collapsedVersions;
+								}}
 				            >
 				                <div class="font-semibold text-xl dark:text-white">
 				                    v{version} - {changelog[version].date}
