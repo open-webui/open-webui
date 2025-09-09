@@ -87,7 +87,7 @@
 												<div class="font-semibold uppercase">
 													{changelog[version][section][item].title}
 												</div>
-												<div class="mb-2 mt-1">{changelog[version][section][item].content}</div>
+												<div class="mb-2 mt-1">{@html changelog[version][section][item].raw}</div>
 											</div>
 										{/each}
 									</div>
