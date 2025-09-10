@@ -116,7 +116,7 @@
 	let imageGenerationEnabled = false;
 	let webSearchEnabled = false;
 	let wikiGroundingEnabled = false;
-	let wikiGroundingMode = 'off'; // 'off', 'auto', 'always'
+	let wikiGroundingMode = 'off'; // 'off', 'on'
 
 	let chat = null;
 	let tags = [];
@@ -151,7 +151,7 @@
 			selectedToolIds = storedInput?.selectedToolIds || [];
 			webSearchEnabled = storedInput?.webSearchEnabled || false;
 			wikiGroundingEnabled = storedInput?.wikiGroundingEnabled || false;
-			wikiGroundingMode = storedInput?.wikiGroundingMode || 'off';
+			wikiGroundingMode = storedInput?.wikiGroundingEnabled ? 'on' : 'off';
 			imageGenerationEnabled = storedInput?.imageGenerationEnabled || false;
 
 			loaded = false;

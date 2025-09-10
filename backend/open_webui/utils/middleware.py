@@ -756,19 +756,12 @@ async def chat_wiki_grounding_handler(
     form_data: dict,
     extra_params: dict,
     user,
-    wiki_grounding_mode: str = "auto",
 ):
     """
     Wikipedia Knowledge Grounding Handler
 
     Augments LLM responses with current, factual information from txtai-wikipedia.
-    Handles both English and French queries with intelligent content analysis.
-
-    Args:
-        wiki_grounding_mode: Controls grounding behavior:
-            - "off": Disabled (should not reach this handler)
-            - "auto": Use intelligent filtering to determine if grounding is needed
-            - "always": Always apply grounding regardless of query type
+    Handles both English and French queries with context-aware analysis.
 
     Note: User session state (toggle) is already checked before this handler is called.
     This handler only needs to verify admin configuration.
@@ -809,24 +802,14 @@ async def chat_wiki_grounding_handler(
         log.info("🔍 No user message found, skipping grounding")
         return form_data
 
-    log.info(
-        f"🔍 Processing user message for grounding (mode: {wiki_grounding_mode}): {user_message}"
-    )
+    log.info(f"🔍 Processing user message for grounding: {user_message}")
 
     try:
-        # Handle different grounding modes
-        if wiki_grounding_mode == "always":
-            # Always mode: force grounding without intelligent filtering
-            log.info("🔍 Always mode: forcing grounding without filtering")
-            grounding_data = await wiki_search_grounder.ground_query_always(
-                user_message, request, user
-            )
-        else:
-            # Auto mode: use intelligent filtering to determine if grounding is needed
-            log.info("🔍 Auto mode: using intelligent filtering")
-            grounding_data = await wiki_search_grounder.ground_query(
-                user_message, request, user
-            )
+        # Always use context-aware grounding (simplified from auto mode)
+        log.info("🔍 Using context-aware grounding")
+        grounding_data = await wiki_search_grounder.ground_query(
+            user_message, request, user, messages
+        )
 
         log.info(f"🔍 Grounding query result: {bool(grounding_data)}")
 
@@ -1225,10 +1208,8 @@ async def process_chat_payload(request, form_data, metadata, user, model):
             )
 
         if "wiki_grounding" in features and features["wiki_grounding"]:
-            # Pass wiki grounding mode to handler
-            wiki_grounding_mode = features.get("wiki_grounding_mode", "auto")
             form_data = await chat_wiki_grounding_handler(
-                request, form_data, extra_params, user, wiki_grounding_mode
+                request, form_data, extra_params, user
             )
 
         if "image_generation" in features and features["image_generation"]:
