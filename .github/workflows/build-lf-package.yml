@@ -118,8 +118,9 @@ jobs:
         push: true
         tags: ${{ steps.meta.outputs.tags }}
         labels: ${{ steps.meta.outputs.labels }}
+        # FIXED: Removed mode=max which was causing 400 errors
         cache-from: type=gha,scope=${{ matrix.name }}
-        cache-to: type=gha,mode=max,scope=${{ matrix.name }}
+        cache-to: type=gha,scope=${{ matrix.name }}
         platforms: linux/amd64
         build-args: |
           BUILD_HASH=${{ github.sha }}
