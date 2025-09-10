@@ -69,45 +69,17 @@ jobs:
     permissions:
       contents: read
       packages: write
-    strategy:
-      # Important: Don't fail fast - let both builds complete
-      fail-fast: false
-      matrix:
-        include:
-          - name: open-webui
-            dockerfile: Dockerfile
-            image-suffix: -lf
-            # Explicitly set context to current directory
-            context: .
-            # Use different cache scope to avoid conflicts
-            cache-scope: webui-build
-          - name: extloader
-            dockerfile: Dockerfile.extloader
-            image-suffix: -extloader
-            # Same context - both builds happen from repo root
-            context: .
-            # Different cache scope for extloader
-            cache-scope: extloader-build
     
     steps:
     - name: Checkout repository
       uses: actions/checkout@v4
     
-    # Debug: Check file structure
-    - name: Debug - List files in context
-      run: |
-        echo "Current directory: $(pwd)"
-        echo "Files in context:"
-        ls -la
-        echo "CHANGELOG.md exists: $(test -f CHANGELOG.md && echo 'YES' || echo 'NO')"
-    
     - name: Set up Docker Buildx
       uses: docker/setup-buildx-action@v3
       with:
-        # Use default driver to avoid potential issues
-         driver-opts: |
-           image=moby/buildkit:v0.12.0
-           network=host
+        driver-opts: |
+          image=moby/buildkit:v0.12.0
+          network=host
     
     - name: Log in to Container Registry
       uses: docker/login-action@v3
@@ -116,36 +88,64 @@ jobs:
         username: ${{ github.actor }}
         password: ${{ secrets.GITHUB_TOKEN }}
     
-    - name: Extract metadata
-      id: meta
+    - name: Get package version
+      id: get_version
+      run: |
+        VERSION=$(python -c "import json; print(json.load(open('package.json'))['version'])")
+        echo "version=$VERSION" >> $GITHUB_OUTPUT
+    
+    - name: Extract metadata for open-webui
+      id: meta_webui
       uses: docker/metadata-action@v5
       with:
-        images: ghcr.io/${{ github.repository }}${{ matrix.image-suffix }}
+        images: ghcr.io/${{ github.repository }}-lf
         tags: |
           type=ref,event=branch
           type=ref,event=tag,prefix=lf-
           type=semver,pattern={{version}},prefix=lf-v
           type=raw,value=lf-latest,enable={{is_default_branch}}
     
-    - name: Build and push Docker image
+    - name: Extract metadata for extloader
+      id: meta_extloader
+      uses: docker/metadata-action@v5
+      with:
+        images: ghcr.io/${{ github.repository }}-extloader
+        tags: |
+          type=ref,event=branch
+          type=ref,event=tag,prefix=lf-
+          type=semver,pattern={{version}},prefix=lf-v
+          type=raw,value=lf-latest,enable={{is_default_branch}}
+    
+    - name: Build and push open-webui Docker image
       uses: docker/build-push-action@v5
       with:
-        # Explicitly use the matrix context
-        context: ${{ matrix.context }}
-        # Use matrix dockerfile (defaults to Dockerfile for open-webui)
-        file: ${{ matrix.dockerfile }}
+        context: .
         push: true
-        tags: ${{ steps.meta.outputs.tags }}
-        labels: ${{ steps.meta.outputs.labels }}
-        # Use unique cache scopes to prevent conflicts
-        cache-from: type=gha,scope=${{ matrix.cache-scope }}
-        cache-to: type=gha,scope=${{ matrix.cache-scope }}
+        tags: ${{ steps.meta_webui.outputs.tags }}
+        labels: ${{ steps.meta_webui.outputs.labels }}
+        # FIXED: Removed mode=max which was causing 400 errors
+        cache-from: type=gha,scope=webui
+        cache-to: type=gha,scope=webui
         platforms: linux/amd64
         build-args: |
           BUILD_HASH=${{ github.sha }}
           BUILDKIT_INLINE_CACHE=1
-        # Add no-cache-filter to avoid cache conflicts on specific steps
-        no-cache-filter: ""
+    
+    - name: Build and push extloader Docker image
+      uses: docker/build-push-action@v5
+      with:
+        context: .
+        file: ./Dockerfile.extloader
+        push: true
+        tags: ${{ steps.meta_extloader.outputs.tags }}
+        labels: ${{ steps.meta_extloader.outputs.labels }}
+        # FIXED: Removed mode=max which was causing 400 errors
+        cache-from: type=gha,scope=extloader
+        cache-to: type=gha,scope=extloader
+        platforms: linux/amd64
+        build-args: |
+          BUILD_HASH=${{ github.sha }}
+          BUILDKIT_INLINE_CACHE=1
 
   create-release:
     needs: [build-wheel, build-docker]
