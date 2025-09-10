@@ -200,6 +200,7 @@
 		}
         if (
 			localRAGConfig.CONTENT_EXTRACTION_ENGINE === 'docling' &&
+            localRAGConfig.DOCLING_DO_OCR &&
 			((localRAGConfig.DOCLING_OCR_ENGINE === '' && localRAGConfig.DOCLING_OCR_LANG !== '') ||
 				(localRAGConfig.DOCLING_OCR_ENGINE !== '' && localRAGConfig.DOCLING_OCR_LANG === ''))
 		) {
@@ -344,7 +345,7 @@
                             {$i18n.t('PDF Extract Images (OCR)')}
                         </div>
                         <div class="flex items-center relative">
-                            <Switch bind:state={RAGConfig.PDF_EXTRACT_IMAGES} />
+                            <Switch bind:state={localRAGConfig.PDF_EXTRACT_IMAGES} />
                         </div>
                     </div>
                 </div>
@@ -498,19 +499,92 @@
                         bind:value={localRAGConfig.DOCLING_SERVER_URL}
                     />
                 </div>
+                
                 <div class="flex w-full mt-2">
-                    <input
-                        class="flex-1 w-full text-sm bg-transparent outline-hidden"
-                        placeholder={$i18n.t('Enter Docling OCR Engine')}
-                        bind:value={localRAGConfig.DOCLING_OCR_ENGINE}
-                    />
-                    <input
-                        class="flex-1 w-full text-sm bg-transparent outline-hidden"
-                        placeholder={$i18n.t('Enter Docling OCR Language(s)')}
-                        bind:value={localRAGConfig.DOCLING_OCR_LANG}
-                    />
+                    <div class="flex-1 flex justify-between">
+                        <div class=" self-center text-xs font-medium">
+                            {$i18n.t('Perform OCR')}
+                        </div>
+                        <div class="flex items-center relative">
+                            <Switch bind:state={localRAGConfig.DOCLING_DO_OCR} />
+                        </div>
+                    </div>
                 </div>
+                {#if localRAGConfig.DOCLING_DO_OCR}
+                    <div class="flex w-full mt-2">
+                        <input
+                            class="flex-1 w-full text-sm bg-transparent outline-hidden"
+                            placeholder={$i18n.t('Enter Docling OCR Engine')}
+                            bind:value={localRAGConfig.DOCLING_OCR_ENGINE}
+                        />
+                        <input
+                            class="flex-1 w-full text-sm bg-transparent outline-hidden"
+                            placeholder={$i18n.t('Enter Docling OCR Language(s)')}
+                            bind:value={localRAGConfig.DOCLING_OCR_LANG}
+                        />
+                    </div>
 
+                {/if} 
+                <div class="flex w-full mt-2">
+                    <div class="flex-1 flex justify-between">
+                        <div class=" self-center text-xs font-medium">
+                            {$i18n.t('Force OCR')}
+                        </div>
+                        <div class="flex items-center relative">
+                            <Switch bind:state={localRAGConfig.DOCLING_FORCE_OCR} />
+                        </div>
+                    </div>
+                </div>
+                <div class="flex justify-between w-full mt-2">
+                    <div class="self-center text-xs font-medium">
+                        <Tooltip content={''} placement="top-start">
+                            {$i18n.t('PDF Backend')}
+                        </Tooltip>
+                    </div>
+                    <div class="">
+                        <select
+                            class="dark:bg-gray-900 w-fit pr-8 rounded-sm px-2 text-xs bg-transparent outline-hidden text-right"
+                            bind:value={localRAGConfig.DOCLING_PDF_BACKEND}
+                        >
+                            <option value="pypdfium2">{$i18n.t('pypdfium2')}</option>
+                            <option value="dlparse_v1">{$i18n.t('dlparse_v1')}</option>
+                            <option value="dlparse_v2">{$i18n.t('dlparse_v2')}</option>
+                            <option value="dlparse_v4">{$i18n.t('dlparse_v4')}</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="flex justify-between w-full mt-2">
+                    <div class="self-center text-xs font-medium">
+                        <Tooltip content={''} placement="top-start">
+                            {$i18n.t('Table Mode')}
+                        </Tooltip>
+                    </div>
+                    <div class="">
+                        <select
+                            class="dark:bg-gray-900 w-fit pr-8 rounded-sm px-2 text-xs bg-transparent outline-hidden text-right"
+                            bind:value={localRAGConfig.DOCLING_TABLE_MODE}
+                        >
+                            <option value="fast">{$i18n.t('fast')}</option>
+                            <option value="accurate">{$i18n.t('accurate')}</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="flex justify-between w-full mt-2">
+                    <div class="self-center text-xs font-medium">
+                        <Tooltip content={''} placement="top-start">
+                            {$i18n.t('Pipeline')}
+                        </Tooltip>
+                    </div>
+                    <div class="">
+                        <select
+                            class="dark:bg-gray-900 w-fit pr-8 rounded-sm px-2 text-xs bg-transparent outline-hidden text-right"
+                            bind:value={localRAGConfig.DOCLING_PIPELINE}
+                        >
+                            <option value="standard">{$i18n.t('standard')}</option>
+                            <option value="vlm">{$i18n.t('vlm')}</option>
+                        </select>
+                    </div>
+                </div>
                 <div class="flex w-full mt-2">
                     <div class="flex-1 flex justify-between">
                         <div class=" self-center text-xs font-medium">
