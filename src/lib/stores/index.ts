@@ -74,6 +74,9 @@ export const showShortcuts = writable(false);
 export const showArchivedChats = writable(false);
 export const showChangelog = writable(false);
 
+// Sidebar width (desktop). Default 260px; persisted in localStorage by Sidebar.svelte
+export const sidebarWidth = writable(260);
+
 export const showControls = writable(false);
 export const showOverview = writable(false);
 export const showArtifacts = writable(false);

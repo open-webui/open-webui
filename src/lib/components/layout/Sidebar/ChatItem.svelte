@@ -429,7 +429,7 @@
 			draggable="false"
 		>
 			<div class=" flex self-center flex-1 w-full">
-				<div dir="auto" class="text-left self-center overflow-hidden w-full h-[20px]">
+				<div dir="auto" class="text-left self-center truncate w-full h-[20px]">
 					{title}
 				</div>
 			</div>
