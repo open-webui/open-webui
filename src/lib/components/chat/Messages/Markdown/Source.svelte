@@ -37,6 +37,14 @@
 		return title;
 	}
 
+	const getDisplayTitle = (title: string) => {
+		if (!title) return 'N/A';
+		if (title.length > 30) {
+			return title.slice(0, 15) + '...' + title.slice(-10);
+		}
+		return title;
+	};
+
 	$: attributes = extractAttributes(token.text);
 </script>
 
@@ -48,9 +56,11 @@
 		}}
 	>
 		<span class="line-clamp-1">
-			{decodeURIComponent(attributes.title)
-				? formattedTitle(decodeURIComponent(attributes.title))
-				: ''}
+			{getDisplayTitle(
+				decodeURIComponent(attributes.title)
+					? formattedTitle(decodeURIComponent(attributes.title))
+					: ''
+			)}
 		</span>
 	</button>
 {/if}

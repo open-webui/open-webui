@@ -21,10 +21,10 @@ jobs:
           fetch-depth: 0
       - name: Install Git
         run: sudo apt-get update && sudo apt-get install -y git
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v5
         with:
           node-version: 22
-      - uses: actions/setup-python@v5
+      - uses: actions/setup-python@v6
         with:
           python-version: 3.11
       - name: Build

@@ -608,8 +608,13 @@ async def get_rag_config(request: Request, collectionForm: CollectionForm, user=
         "EXTERNAL_DOCUMENT_LOADER_API_KEY": rag_config.get("EXTERNAL_DOCUMENT_LOADER_API_KEY", request.app.state.config.EXTERNAL_DOCUMENT_LOADER_API_KEY),
         "TIKA_SERVER_URL": rag_config.get("TIKA_SERVER_URL", request.app.state.config.TIKA_SERVER_URL),
         "DOCLING_SERVER_URL": rag_config.get("DOCLING_SERVER_URL", request.app.state.config.DOCLING_SERVER_URL),
+        "DOCLING_DO_OCR": rag_config.get("DOCLING_DO_OCR", request.app.state.config.DOCLING_DO_OCR),
+        "DOCLING_FORCE_OCR": rag_config.get("DOCLING_FORCE_OCR", request.app.state.config.DOCLING_FORCE_OCR),
         "DOCLING_OCR_ENGINE": rag_config.get("DOCLING_OCR_ENGINE", request.app.state.config.DOCLING_OCR_ENGINE),
         "DOCLING_OCR_LANG": rag_config.get("DOCLING_OCR_LANG", request.app.state.config.DOCLING_OCR_LANG),
+        "DOCLING_PDF_BACKEND": rag_config.get("DOCLING_PDF_BACKEND", request.app.state.config.DOCLING_PDF_BACKEND),
+        "DOCLING_TABLE_MODE": rag_config.get("DOCLING_TABLE_MODE", request.app.state.config.DOCLING_TABLE_MODE),
+        "DOCLING_PIPELINE": rag_config.get("DOCLING_PIPELINE", request.app.state.config.DOCLING_PIPELINE),
         "DOCLING_DO_PICTURE_DESCRIPTION": rag_config.get("DOCLING_DO_PICTURE_DESCRIPTION", request.app.state.config.DOCLING_DO_PICTURE_DESCRIPTION),
         "DOCLING_PICTURE_DESCRIPTION_MODE": rag_config.get("DOCLING_PICTURE_DESCRIPTION_MODE", request.app.state.config.DOCLING_PICTURE_DESCRIPTION_MODE),
         "DOCLING_PICTURE_DESCRIPTION_LOCAL": rag_config.get("DOCLING_PICTURE_DESCRIPTION_LOCAL", request.app.state.config.DOCLING_PICTURE_DESCRIPTION_LOCAL),
@@ -783,8 +788,13 @@ class ConfigForm(BaseModel):
 
     TIKA_SERVER_URL: Optional[str] = None
     DOCLING_SERVER_URL: Optional[str] = None
+    DOCLING_DO_OCR: Optional[bool] = None
+    DOCLING_FORCE_OCR: Optional[bool] = None
     DOCLING_OCR_ENGINE: Optional[str] = None
     DOCLING_OCR_LANG: Optional[str] = None
+    DOCLING_PDF_BACKEND: Optional[str] = None
+    DOCLING_TABLE_MODE: Optional[str] = None
+    DOCLING_PIPELINE: Optional[str] = None
     DOCLING_DO_PICTURE_DESCRIPTION: Optional[bool] = None
     DOCLING_PICTURE_DESCRIPTION_MODE: Optional[str] = None
     DOCLING_PICTURE_DESCRIPTION_LOCAL: Optional[dict] = None
@@ -1084,17 +1094,41 @@ async def update_rag_config(
             if form_data.DOCLING_SERVER_URL is not None
             else request.app.state.config.DOCLING_SERVER_URL
         )
+        request.app.state.config.DOCLING_DO_OCR = (
+        form_data.DOCLING_DO_OCR
+        if form_data.DOCLING_DO_OCR is not None
+        else request.app.state.config.DOCLING_DO_OCR
+        )
+        request.app.state.config.DOCLING_FORCE_OCR = (
+            form_data.DOCLING_FORCE_OCR
+            if form_data.DOCLING_FORCE_OCR is not None
+            else request.app.state.config.DOCLING_FORCE_OCR
+        )
         request.app.state.config.DOCLING_OCR_ENGINE = (
-            form_data.DOCLING_OCR_ENGINE
-            if form_data.DOCLING_OCR_ENGINE is not None
-            else request.app.state.config.DOCLING_OCR_ENGINE
+                form_data.DOCLING_OCR_ENGINE
+                if form_data.DOCLING_OCR_ENGINE is not None
+                else request.app.state.config.DOCLING_OCR_ENGINE
         )
         request.app.state.config.DOCLING_OCR_LANG = (
             form_data.DOCLING_OCR_LANG
             if form_data.DOCLING_OCR_LANG is not None
             else request.app.state.config.DOCLING_OCR_LANG
         )
-
+        request.app.state.config.DOCLING_PDF_BACKEND = (
+            form_data.DOCLING_PDF_BACKEND
+            if form_data.DOCLING_PDF_BACKEND is not None
+            else request.app.state.config.DOCLING_PDF_BACKEND
+        )
+        request.app.state.config.DOCLING_TABLE_MODE = (
+            form_data.DOCLING_TABLE_MODE
+            if form_data.DOCLING_TABLE_MODE is not None
+            else request.app.state.config.DOCLING_TABLE_MODE
+        )
+        request.app.state.config.DOCLING_PIPELINE = (
+            form_data.DOCLING_PIPELINE
+            if form_data.DOCLING_PIPELINE is not None
+            else request.app.state.config.DOCLING_PIPELINE
+        )
         request.app.state.config.DOCLING_DO_PICTURE_DESCRIPTION = (
             form_data.DOCLING_DO_PICTURE_DESCRIPTION
             if form_data.DOCLING_DO_PICTURE_DESCRIPTION is not None
@@ -1380,8 +1414,13 @@ async def update_rag_config(
             "EXTERNAL_DOCUMENT_LOADER_API_KEY": request.app.state.config.EXTERNAL_DOCUMENT_LOADER_API_KEY,
             "TIKA_SERVER_URL": request.app.state.config.TIKA_SERVER_URL,
             "DOCLING_SERVER_URL": request.app.state.config.DOCLING_SERVER_URL,
+            "DOCLING_DO_OCR": request.app.state.config.DOCLING_DO_OCR,
+            "DOCLING_FORCE_OCR": request.app.state.config.DOCLING_FORCE_OCR,
             "DOCLING_OCR_ENGINE": request.app.state.config.DOCLING_OCR_ENGINE,
             "DOCLING_OCR_LANG": request.app.state.config.DOCLING_OCR_LANG,
+            "DOCLING_PDF_BACKEND": request.app.state.config.DOCLING_PDF_BACKEND,
+            "DOCLING_TABLE_MODE": request.app.state.config.DOCLING_TABLE_MODE,
+            "DOCLING_PIPELINE": request.app.state.config.DOCLING_PIPELINE,
             "DOCLING_DO_PICTURE_DESCRIPTION": request.app.state.config.DOCLING_DO_PICTURE_DESCRIPTION,
             "DOCLING_PICTURE_DESCRIPTION_MODE": request.app.state.config.DOCLING_PICTURE_DESCRIPTION_MODE,
             "DOCLING_PICTURE_DESCRIPTION_LOCAL": request.app.state.config.DOCLING_PICTURE_DESCRIPTION_LOCAL,
@@ -1789,6 +1828,21 @@ def process_file(
         docling_do_picture_description=rag_config.get(
             "DOCLING_DO_PICTURE_DESCRIPTION", request.app.state.config.DOCLING_DO_PICTURE_DESCRIPTION
         )
+        docling_do_ocr = rag_config.get(
+            "DOCLING_DO_OCR", request.app.state.config.DOCLING_DO_OCR
+        )
+        docling_force_ocr = rag_config.get(
+            "DOCLING_FORCE_OCR", request.app.state.config.DOCLING_FORCE_OCR
+        )
+        docling_pdf_backend = rag_config.get(
+            "DOCLING_PDF_BACKEND", request.app.state.config.DOCLING_PDF_BACKEND
+        )
+        docling_table_mode = rag_config.get(
+            "DOCLING_TABLE_MODE", request.app.state.config.DOCLING_TABLE_MODE
+        )
+        docling_pipeline = rag_config.get(
+            "DOCLING_PIPELINE", request.app.state.config.DOCLING_PIPELINE
+        )
         picture_description_mode = rag_config.get(
             "PICTURE_DESCRIPTION_MODE", request.app.state.config.DOCLING_PICTURE_DESCRIPTION_MODE
         )
@@ -1890,8 +1944,13 @@ def process_file(
                     TIKA_SERVER_URL=tika_server_url,
                     DOCLING_SERVER_URL=docling_server_url,
                     DOCLING_PARAMS={
+                        "do_ocr": docling_do_ocr,
+                        "force_ocr": docling_force_ocr,
                         "ocr_engine": docling_ocr_engine,
                         "ocr_lang": docling_ocr_lang,
+                        "pdf_backend": docling_pdf_backend,
+                        "table_mode": docling_table_mode,
+                        "pipeline": docling_pipeline,
                         "do_picture_description": docling_do_picture_description,
                         "picture_description_mode": picture_description_mode,
                         "picture_description_local": picture_description_local,
