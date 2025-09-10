@@ -4,7 +4,6 @@ import logging
 import os
 import uuid
 from functools import lru_cache
-from pathlib import Path
 from pydub import AudioSegment
 from pydub.silence import split_on_silence
 from concurrent.futures import ThreadPoolExecutor
@@ -15,7 +14,7 @@ import aiohttp
 import aiofiles
 import requests
 import mimetypes
-from urllib.parse import quote
+from urllib.parse import urljoin, quote
 
 from fastapi import (
     Depends,
