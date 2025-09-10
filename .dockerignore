@@ -1,4 +1,13 @@
+.git
 .github
+*.md
+.gitignore
+.dockerignore
+dist
+*.log
+.pytest_cache
+.coverage
+.vscode
 .DS_Store
 docs
 kubernetes

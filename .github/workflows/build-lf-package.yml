@@ -14,6 +14,8 @@ on:
 jobs:
   build-wheel:
     runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.get_version.outputs.version }}
     
     steps:
     - name: Checkout repository
@@ -29,6 +31,8 @@ jobs:
       uses: actions/setup-python@v4
       with:
         python-version: '3.11'
+        cache: 'pip'
+        cache-dependency-path: 'requirements*.txt'
     
     - name: Install build dependencies
       run: |
@@ -37,8 +41,7 @@ jobs:
         npm ci --force
     
     - name: Build package
-      run: |
-        python -m build
+      run: python -m build
     
     - name: Get package version
       id: get_version
@@ -60,31 +63,23 @@ jobs:
         name: open-webui-lf-${{ steps.get_version.outputs.version }}-sdist
         path: dist/*.tar.gz
         retention-days: 30
-    
-    - name: Create Release (on tag)
-      if: startsWith(github.ref, 'refs/tags/lf-v')
-      uses: softprops/action-gh-release@v1
-      with:
-        files: dist/*
-        name: "Littelfuse Open WebUI ${{ steps.get_version.outputs.version }}"
-        body: |
-          Custom Littelfuse build of Open WebUI version ${{ steps.get_version.outputs.version }}
-          
-          ## Installation
-          Download the wheel file and install with:
-          ```bash
-          pip install path/to/downloaded/wheel.whl
-          ```
-        draft: false
-        prerelease: ${{ contains(steps.get_version.outputs.version, 'dev') || contains(steps.get_version.outputs.version, 'rc') }}
-      env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
   build-docker:
     runs-on: ubuntu-latest
     permissions:
       contents: read
       packages: write
+    strategy:
+      matrix:
+        include:
+          - name: open-webui
+            dockerfile: Dockerfile
+            image-suffix: -lf
+            context: .
+          - name: extloader
+            dockerfile: Dockerfile.extloader
+            image-suffix: -extloader
+            context: .
     
     steps:
     - name: Checkout repository
@@ -92,6 +87,10 @@ jobs:
     
     - name: Set up Docker Buildx
       uses: docker/setup-buildx-action@v3
+      with:
+        driver-opts: |
+          image=moby/buildkit:v0.12.0
+          network=host
     
     - name: Log in to Container Registry
       uses: docker/login-action@v3
@@ -100,17 +99,11 @@ jobs:
         username: ${{ github.actor }}
         password: ${{ secrets.GITHUB_TOKEN }}
     
-    - name: Get package version
-      id: get_version
-      run: |
-        VERSION=$(python -c "import json; print(json.load(open('package.json'))['version'])")
-        echo "version=$VERSION" >> $GITHUB_OUTPUT
-    
     - name: Extract metadata
       id: meta
       uses: docker/metadata-action@v5
       with:
-        images: ghcr.io/${{ github.repository }}-lf
+        images: ghcr.io/${{ github.repository }}${{ matrix.image-suffix }}
         tags: |
           type=ref,event=branch
           type=ref,event=tag,prefix=lf-
@@ -120,11 +113,50 @@ jobs:
     - name: Build and push Docker image
       uses: docker/build-push-action@v5
       with:
-        context: .
+        context: ${{ matrix.context }}
+        file: ${{ matrix.dockerfile }}
         push: true
         tags: ${{ steps.meta.outputs.tags }}
         labels: ${{ steps.meta.outputs.labels }}
-        cache-from: type=gha
-        cache-to: type=gha,mode=max
+        cache-from: type=gha,scope=${{ matrix.name }}
+        cache-to: type=gha,mode=max,scope=${{ matrix.name }}
+        platforms: linux/amd64
         build-args: |
           BUILD_HASH=${{ github.sha }}
+          BUILDKIT_INLINE_CACHE=1
+
+  create-release:
+    needs: [build-wheel, build-docker]
+    runs-on: ubuntu-latest
+    if: startsWith(github.ref, 'refs/tags/lf-v')
+    
+    steps:
+    - name: Download artifacts
+      uses: actions/download-artifact@v4
+      with:
+        pattern: open-webui-lf-*
+        merge-multiple: true
+    
+    - name: Create Release
+      uses: softprops/action-gh-release@v1
+      with:
+        files: |
+          *.whl
+          *.tar.gz
+        name: "Littelfuse Open WebUI ${{ needs.build-wheel.outputs.version }}"
+        body: |
+          Custom Littelfuse build of Open WebUI version ${{ needs.build-wheel.outputs.version }}
+          
+          ## Docker Images
+          - `ghcr.io/${{ github.repository }}-lf:lf-${{ needs.build-wheel.outputs.version }}`
+          - `ghcr.io/${{ github.repository }}-extloader:lf-${{ needs.build-wheel.outputs.version }}`
+          
+          ## Installation
+          Download the wheel file and install with:
+          ```bash
+          pip install open_webui_lf-${{ needs.build-wheel.outputs.version }}-py3-none-any.whl
+          ```
+        draft: false
+        prerelease: ${{ contains(needs.build-wheel.outputs.version, 'dev') || contains(needs.build-wheel.outputs.version, 'rc') }}
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

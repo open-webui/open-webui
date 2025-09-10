@@ -1,0 +1,3 @@
+fastapi==0.104.1
+uvicorn[standard]==0.24.0
+PyMuPDF==1.23.8

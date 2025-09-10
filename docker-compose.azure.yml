@@ -1,0 +1,31 @@
+version: '3.8'
+
+services:
+  open-webui:
+    image: ghcr.io/littelfuse-ssamuel/open-webui-lf:lf-latest
+    ports:
+      - "8080:8080"
+    environment:
+      - WEBUI_SECRET_KEY=${WEBUI_SECRET_KEY:-your-secret-key-here}
+      - OLLAMA_BASE_URL=${OLLAMA_BASE_URL:-http://ollama:11434}
+      - PDF_EXTRACT_IMAGES=true
+      - RAG_DOCUMENT_LOADER_ENGINE=external
+      - EXTERNAL_DOCUMENT_LOADER_URL=http://extloader:8000
+      - EXTERNAL_DOCUMENT_LOADER_API_KEY=${EXTERNAL_DOCUMENT_LOADER_API_KEY:-your-api-key-here}
+      - SSL_CERT_FILE=${SSL_CERT_FILE:-}
+      - REQUESTS_CA_BUNDLE=${REQUESTS_CA_BUNDLE:-}
+      - PORT=8080
+    restart: unless-stopped
+    depends_on:
+      - extloader
+
+  extloader:
+    image: ghcr.io/littelfuse-ssamuel/open-webui-extloader:lf-latest
+    ports:
+      - "8000:8000"
+    environment:
+      - PYTHONUNBUFFERED=1
+      - SSL_CERT_FILE=${SSL_CERT_FILE:-}
+      - REQUESTS_CA_BUNDLE=${REQUESTS_CA_BUNDLE:-}
+      - PORT=8000
+    restart: unless-stopped
