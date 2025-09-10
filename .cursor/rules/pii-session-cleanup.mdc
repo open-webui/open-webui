@@ -1,0 +1,139 @@
+---
+description: PII session manager cleanup patterns for conditional detection
+---
+
+# PII Session Manager Cleanup Patterns
+
+Proper cleanup of PII session data when detection is disabled, while preserving chat history.
+
+## Session Manager Methods ([pii.ts](mdc:src/lib/utils/pii.ts))
+
+### Cleanup Strategy
+```typescript
+// When disabling PII detection
+if (chatId && chatId.trim() !== '') {
+    // Existing conversations: clear working entities, keep persisted
+    piiSessionManager.clearConversationWorkingEntities(chatId);
+} else {
+    // New chats: clear temporary state entirely
+    if (piiSessionManager.isTemporaryStateActive()) {
+        piiSessionManager.clearTemporaryState();
+    }
+}
+```
+
+### Working vs Persisted Entities
+- **Working Entities**: Current editing session, cleared when disabling
+- **Persisted Entities**: Saved with chat history, preserved for consistency
+- **Temporary State**: New chats before first save, cleared completely
+
+## Data Preservation Rules
+
+### What to Clear (Safe)
+- `currentPiiEntities` in components
+- `maskedPrompt` in components  
+- Working entities from session manager
+- Temporary state for new chats
+- Visual highlights and decorations
+
+### What to Preserve (Required)
+- Persisted PII state in chat history
+- Previously saved entity mask states
+- Conversation-level PII configuration
+- Backend-processed file PII data (in file metadata)
+
+## Frontend Integration
+
+### Component Cleanup ([MessageInput.svelte](mdc:src/lib/components/chat/MessageInput.svelte))
+```typescript
+// Complete cleanup when disabling
+if (!piiMaskingEnabled) {
+    // Clear component state
+    currentPiiEntities = [];
+    maskedPrompt = '';
+    
+    // Clear session working data
+    try {
+        if (chatId && chatId.trim() !== '') {
+            piiSessionManager.clearConversationWorkingEntities(chatId);
+        } else {
+            if (piiSessionManager.isTemporaryStateActive()) {
+                piiSessionManager.clearTemporaryState();
+            }
+        }
+    } catch (e) {
+        console.log('Error clearing PII session data:', e);
+    }
+}
+```
+
+### File Upload Cleanup
+```typescript
+// Conditional PII data syncing
+function syncPiiDetectionsFromFileData(fileData: any) {
+    if (!enablePiiDetection) {
+        return; // Skip entirely
+    }
+    // ... sync logic only when enabled
+}
+
+// Conditional file detail fetching
+if (enablePiiDetection) {
+    // Only fetch and process PII data when detection is active
+    const json = await getFileById(localStorage.token, data.id);
+    if (json) {
+        syncPiiDetectionsFromFileData(json);
+    }
+}
+```
+
+## Session Manager API Requirements
+
+### Required Methods
+- `clearConversationWorkingEntities(conversationId: string)`
+- `clearTemporaryState()`
+- `isTemporaryStateActive(): boolean`
+- `getEntitiesForDisplay(conversationId?: string)`
+
+### Conversation State Structure
+```typescript
+interface ConversationPiiState {
+    entities: ExtendedPiiEntity[];
+    modifiers: PiiModifier[];
+    sessionId?: string;
+    lastUpdated: number;
+}
+```
+
+## Error Recovery
+
+### Graceful Degradation
+- Session manager operations must not throw on missing data
+- Component cleanup must not crash on missing methods
+- File processing must continue without PII when disabled
+
+### Logging Strategy
+```typescript
+// Clear separation of intentional vs error states
+console.log('MessageInput: Skipping PII sync - detection disabled');
+console.log('MessageInput: Error clearing PII session data:', e);
+```
+
+## State Consistency
+
+### Enable Flow
+1. Activate detection in editor extension
+2. Trigger detection on current content
+3. Restore mask states from session manager
+
+### Disable Flow  
+1. Disable detection in editor extension
+2. Clear visual highlights
+3. Clear component state
+4. Clear working session data
+5. Preserve persisted history data
+
+### Re-enable Flow
+1. Restore from persisted state if available
+2. Re-detect current content
+3. Apply previous mask preferences

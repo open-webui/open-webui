@@ -144,6 +144,7 @@
 	import { PASTED_TEXT_CHARACTER_LIMIT } from '$lib/constants';
 
 	import FormattingButtons from './RichTextInput/FormattingButtons.svelte';
+	import PiiModifierButtons from './RichTextInput/PiiModifierButtons.svelte';
 	import { duration } from 'dayjs';
 
 	// PII Detection imports
@@ -152,8 +153,10 @@
 	import {
 		PiiModifierExtension,
 		addPiiModifierStyles,
-		type PiiModifier
+		type PiiModifier,
+		type PiiHoverMenuData
 	} from './RichTextInput/PiiModifierExtension';
+	import PiiHoverMenu from './RichTextInput/PiiHoverMenu.svelte';
 	import { debounce, createPiiHighlightStyles, PiiSessionManager } from '$lib/utils/pii';
 
 	export let oncompositionstart = (e: CompositionEvent) => {};
@@ -246,12 +249,22 @@
 	export let insertPromptAsRichText = false;
 	export let floatingMenuPlacement = 'bottom-start';
 
+	// Prevent document edits while still allowing selection and extension interactions
+	export let preventDocEdits = false;
+
 	let content = null;
 	let htmlValue = '';
 	let jsonValue = '';
 	let mdValue = '';
 
 	let lastSelectionBookmark = null;
+
+	// Guard to avoid feedback loops from programmatic setContent
+	let isProgrammaticSet = false;
+
+	// Guard to avoid interfering transactions while user is selecting with the mouse
+	let isMouseSelecting = false;
+	let deferredRemapTimeout: ReturnType<typeof setTimeout> | null = null;
 
 	// Yjs setup
 	let ydoc = null;
@@ -569,7 +582,12 @@
 
 	let floatingMenuElement = null;
 	let bubbleMenuElement = null;
+
 	let element: HTMLElement;
+
+	// PII Hover Menu state
+	let showPiiHoverMenu = false;
+	let piiHoverMenuData: PiiHoverMenuData | null = null;
 
 	// PII Detection props
 	export let enablePiiDetection = false;
@@ -584,6 +602,8 @@
 	export let enablePiiModifiers = false;
 	export let onPiiModifiersChanged: (modifiers: PiiModifier[]) => void = () => {};
 	export let piiModifierLabels: string[] = [];
+	export let piiDetectionOnlyAfterUserEdit: boolean | undefined = undefined; // Allow manual control of detection timing
+	export let disableModifierTriggeredDetection = false; // Disable PII detection when modifiers change (for FileItemModal)
 
 	// PII Loading state
 	let isPiiDetectionInProgress = false;
@@ -1015,6 +1035,50 @@
 		}
 	};
 
+	// Export method to sync editor highlights with PII session manager immediately
+	export const syncWithSession = () => {
+		try {
+			if (!enablePiiDetection || !editor) return;
+
+			// Ensure modifiers are reloaded from session for current conversation
+			if (enablePiiModifiers && conversationId && editor.commands?.reloadConversationModifiers) {
+				editor.commands.reloadConversationModifiers(conversationId);
+			}
+			if (editor.commands?.syncWithSessionManager) {
+				editor.commands.syncWithSessionManager();
+			}
+			if (editor.commands?.forceEntityRemapping) {
+				editor.commands.forceEntityRemapping();
+			}
+		} catch (e) {
+			// no-op
+		}
+	};
+
+	// Export method to enable PII detection dynamically
+	export const enablePiiDetectionDynamically = () => {
+		if (!editor || !editor.commands?.enablePiiDetection) {
+			return;
+		}
+		editor.commands.enablePiiDetection();
+	};
+
+	// Export method to disable PII detection dynamically
+	export const disablePiiDetectionDynamically = () => {
+		if (!editor || !editor.commands?.disablePiiDetection) {
+			return;
+		}
+		editor.commands.disablePiiDetection();
+	};
+
+	// Export method to clear all PII highlights but keep detection enabled
+	export const clearAllPiiHighlights = () => {
+		if (!editor || !editor.commands?.clearAllPiiHighlights) {
+			return;
+		}
+		editor.commands.clearAllPiiHighlights();
+	};
+
 	const selectTemplate = () => {
 		if (value !== '') {
 			// After updating the state, try to find and select the next template
@@ -1161,7 +1225,13 @@
 								getShouldMask: () => piiMaskingEnabled,
 								onPiiDetected: onPiiDetected,
 								onPiiToggled: onPiiToggled,
-								onPiiDetectionStateChanged: handlePiiDetectionStateChanged
+								onPiiDetectionStateChanged: handlePiiDetectionStateChanged,
+								detectOnlyAfterUserEdit:
+									piiDetectionOnlyAfterUserEdit !== undefined
+										? piiDetectionOnlyAfterUserEdit
+										: messageInput
+											? false
+											: true
 							})
 						]
 					: []),
@@ -1171,7 +1241,9 @@
 								enabled: true,
 								conversationId: conversationId,
 								onModifiersChanged: handleModifiersChanged,
-								availableLabels: piiModifierLabels.length > 0 ? piiModifierLabels : undefined // Use default labels
+								availableLabels: piiModifierLabels.length > 0 ? piiModifierLabels : undefined, // Use default labels
+								showPiiHoverMenu: handleShowPiiHoverMenu,
+								hidePiiHoverMenu: handleHidePiiHoverMenu
 							})
 						]
 					: []),
@@ -1204,18 +1276,55 @@
 							})
 						]
 					: []),
-				...(showFormattingToolbar
+				// BubbleMenu: show when formatting toolbar is on OR PII modifiers are enabled
+				...(showFormattingToolbar || (enablePiiDetection && enablePiiModifiers)
 					? [
 							BubbleMenu.configure({
 								element: bubbleMenuElement,
-								tippyOptions: {
-									duration: 100,
-									arrow: false,
+								shouldShow: ({ from, to }) => {
+									const hasSelection = from !== to;
+									if (!hasSelection) return false;
+									// Keep BubbleMenu visible for formatting when enabled
+									if (showFormattingToolbar) return true;
+									// Enable PII-only BubbleMenu based on selection length
+									if (enablePiiDetection && enablePiiModifiers) {
+										const len = to - from;
+										return len >= 2 && len <= 50;
+									}
+									return false;
+								},
+								options: {
+									strategy: 'absolute',
 									placement: 'top',
-									theme: 'transparent',
-									offset: [0, 2]
+									offset: [0, 8],
+									flip: true,
+									shift: true,
+									delay: { show: 50, hide: 0 },
+									onShow: () => {
+										// Ensure high z-index when showing
+										if (bubbleMenuElement) {
+											bubbleMenuElement.style.zIndex = '9999';
+
+											// Check if position is calculated correctly and trigger fallback if needed
+											const hasPosition =
+												bubbleMenuElement.style.position &&
+												(bubbleMenuElement.style.left !== '' || bubbleMenuElement.style.top !== '');
+
+											if (!hasPosition) {
+												// Simple fallback - trigger one resize event to help positioning
+												setTimeout(() => {
+													window.dispatchEvent(new Event('resize'));
+												}, 20);
+											}
+										}
+									}
 								}
-							}),
+							})
+						]
+					: []),
+				// FloatingMenu stays tied to formatting toolbar only
+				...(showFormattingToolbar
+					? [
 							FloatingMenu.configure({
 								element: floatingMenuElement,
 								tippyOptions: {
@@ -1232,9 +1341,12 @@
 			],
 			content: collaboration ? undefined : content,
 			autofocus: messageInput ? true : false,
-			onTransaction: () => {
-				// force re-render so `editor.isActive` works as expected
-				editor = editor;
+			onUpdate: () => {
+				// Avoid feedback loops triggered by programmatic updates
+				if (isProgrammaticSet) {
+					isProgrammaticSet = false;
+					return;
+				}
 				if (!editor) return;
 
 				htmlValue = editor.getHTML();
@@ -1280,6 +1392,14 @@
 			editorProps: {
 				attributes: { id },
 				handleDOMEvents: {
+					beforeinput: (view, event) => {
+						if (preventDocEdits) {
+							// Block any content mutation
+							event.preventDefault();
+							return true;
+						}
+						return false;
+					},
 					compositionstart: (view, event) => {
 						oncompositionstart(event);
 						return false;
@@ -1298,23 +1418,67 @@
 
 						// Force entity remapping on keyup for immediate highlight updates
 						if (enablePiiDetection && editor && editor.commands.forceEntityRemapping) {
-							setTimeout(() => {
-								editor.commands.forceEntityRemapping();
-							}, 10);
+							if (!isMouseSelecting) {
+								setTimeout(() => {
+									editor.commands.forceEntityRemapping();
+								}, 10);
+							}
 						}
 
 						return false;
 					},
 					input: (view, event) => {
+						// Mark user activity for PII detection (actual content change)
+						if (enablePiiDetection && editor && editor.commands.markUserActivity) {
+							console.log('PiiDetectionExtension: Content input detected, marking user activity');
+							editor.commands.markUserActivity();
+						}
+
 						// Force entity remapping on input for immediate highlight updates
 						if (enablePiiDetection && editor && editor.commands.forceEntityRemapping) {
-							setTimeout(() => {
-								editor.commands.forceEntityRemapping();
-							}, 10);
+							if (!isMouseSelecting) {
+								setTimeout(() => {
+									editor.commands.forceEntityRemapping();
+								}, 10);
+							}
 						}
 						return false;
 					},
 					keydown: (view, event) => {
+						if (preventDocEdits) {
+							// Allow navigation and selection keys; block editing keys
+							const k = event.key.toLowerCase();
+							const isEditKey = ['enter', 'backspace', 'delete'].includes(k);
+							const isSelectionKey = [
+								'arrowleft',
+								'arrowright',
+								'arrowup',
+								'arrowdown',
+								'home',
+								'end',
+								'pageup',
+								'pagedown'
+							].includes(k);
+
+							// Allow selection-related key combinations
+							if (event.shiftKey && isSelectionKey) {
+								return false; // Allow shift+arrow for selection
+							}
+
+							// Allow Ctrl/Cmd+A for select all
+							if ((event.ctrlKey || event.metaKey) && k === 'a') {
+								return false; // Allow select all
+							}
+
+							// Block editing keys
+							if (
+								isEditKey ||
+								(!event.ctrlKey && !event.metaKey && !event.shiftKey && k.length === 1)
+							) {
+								event.preventDefault();
+								return true;
+							}
+						}
 						ensureConversationActivated(); // Ensure conversation is activated on first keystroke
 
 						// Handle CTRL+SHIFT+L to toggle PII masking (mask all <-> unmask all)
@@ -1439,6 +1603,16 @@
 						return false;
 					},
 					paste: (view, event) => {
+						// Mark user activity for PII detection (paste is user content change)
+						if (enablePiiDetection && editor && editor.commands.markUserActivity) {
+							console.log('PiiDetectionExtension: Paste detected, marking user activity');
+							editor.commands.markUserActivity();
+						}
+
+						if (preventDocEdits) {
+							event.preventDefault();
+							return true;
+						}
 						if (event.clipboardData) {
 							const plainText = event.clipboardData.getData('text/plain');
 							if (plainText) {
@@ -1510,6 +1684,33 @@
 						// For all other cases, let ProseMirror perform its default paste behavior.
 						view.dispatch(view.state.tr.scrollIntoView());
 						return false;
+					},
+					drop: (view, event) => {
+						if (preventDocEdits) {
+							event.preventDefault();
+							return true;
+						}
+						return false;
+					},
+					mousedown: (view, event) => {
+						isMouseSelecting = true;
+						// Cancel any deferred remap while selecting
+						if (deferredRemapTimeout) {
+							clearTimeout(deferredRemapTimeout);
+							deferredRemapTimeout = null;
+						}
+						return false;
+					},
+					mouseup: (view, event) => {
+						// End of selection; perform a single remap shortly after
+						isMouseSelecting = false;
+						if (enablePiiDetection && editor && editor.commands.forceEntityRemapping) {
+							deferredRemapTimeout = setTimeout(() => {
+								editor.commands.forceEntityRemapping();
+								deferredRemapTimeout = null;
+							}, 30);
+						}
+						return false;
 					}
 				}
 			},
@@ -1523,6 +1724,86 @@
 
 		if (messageInput) {
 			selectTemplate();
+		}
+
+		// Helper to snapshot and restore scroll positions of nearest scrollable ancestors
+		function snapshotScrollAncestors(node) {
+			try {
+				const list = [];
+				const addIfScrollable = (el) => {
+					const style = window.getComputedStyle(el);
+					const canScrollY =
+						(style.overflowY === 'auto' || style.overflowY === 'scroll') &&
+						el.scrollHeight > el.clientHeight;
+					const canScrollX =
+						(style.overflowX === 'auto' || style.overflowX === 'scroll') &&
+						el.scrollWidth > el.clientWidth;
+					if (canScrollY || canScrollX) {
+						list.push({ el, x: el.scrollLeft, y: el.scrollTop });
+					}
+				};
+				let current = node;
+				let guard = 0;
+				while (current && current instanceof HTMLElement && guard < 30) {
+					addIfScrollable(current);
+					current = current.parentElement;
+					guard++;
+				}
+				list.push({ el: 'window', x: window.scrollX, y: window.scrollY });
+				return list;
+			} catch {
+				return [];
+			}
+		}
+
+		function restoreScroll(list) {
+			try {
+				list.forEach((s) => {
+					if (s.el === 'window') {
+						window.scrollTo(s.x, s.y);
+					} else if (s.el) {
+						s.el.scrollLeft = s.x;
+						s.el.scrollTop = s.y;
+					}
+				});
+			} catch {}
+		}
+
+		// Force initial sync of PII entities from session for non-message editors
+		// so existing backend-detected highlights show immediately without re-scanning
+		if (enablePiiDetection && conversationId && editor && !messageInput) {
+			setTimeout(() => {
+				const snapshot = snapshotScrollAncestors(element);
+				try {
+					if (typeof editor.commands.reloadConversationState === 'function') {
+						editor.commands.reloadConversationState(conversationId);
+					}
+					if (typeof editor.commands.syncWithSessionManager === 'function') {
+						editor.commands.syncWithSessionManager();
+					}
+					if (typeof editor.commands.forceEntityRemapping === 'function') {
+						editor.commands.forceEntityRemapping();
+					}
+				} catch (e) {
+					// no-op
+				}
+				restoreScroll(snapshot);
+				requestAnimationFrame(() => restoreScroll(snapshot));
+			}, 0);
+			// Do a second pass shortly after to catch late-mount decorations
+			setTimeout(() => {
+				const snapshot = snapshotScrollAncestors(element);
+				try {
+					if (typeof editor.commands.syncWithSessionManager === 'function') {
+						editor.commands.syncWithSessionManager();
+					}
+					if (typeof editor.commands.forceEntityRemapping === 'function') {
+						editor.commands.forceEntityRemapping();
+					}
+				} catch (e) {}
+				restoreScroll(snapshot);
+				requestAnimationFrame(() => restoreScroll(snapshot));
+			}, 150);
 		}
 	});
 
@@ -1563,17 +1844,20 @@
 
 		if (json) {
 			if (JSON.stringify(value) !== JSON.stringify(jsonValue)) {
+				isProgrammaticSet = true;
 				editor.commands.setContent(value);
-				selectTemplate();
+				if (messageInput) selectTemplate();
 			}
 		} else {
 			if (raw) {
 				if (value !== htmlValue) {
+					isProgrammaticSet = true;
 					editor.commands.setContent(value);
-					selectTemplate();
+					if (messageInput) selectTemplate();
 				}
 			} else {
 				if (value !== mdValue) {
+					isProgrammaticSet = true;
 					editor.commands.setContent(
 						preserveBreaks
 							? value
@@ -1582,7 +1866,7 @@
 								})
 					);
 
-					selectTemplate();
+					if (messageInput) selectTemplate();
 				}
 			}
 		}
@@ -1646,7 +1930,13 @@
 	}
 
 	// Reactive statement to trigger PII detection when modifiers change
-	$: if (editor && editor.view && enablePiiDetection && enablePiiModifiers) {
+	$: if (
+		editor &&
+		editor.view &&
+		enablePiiDetection &&
+		enablePiiModifiers &&
+		!disableModifierTriggeredDetection
+	) {
 		const newHash = getModifiersHash(currentModifiers);
 		if (newHash !== currentModifiersHash && newHash !== '') {
 			currentModifiersHash = newHash;
@@ -1674,8 +1964,13 @@
 			// Update the tracking hash
 			currentModifiersHash = newHash;
 
-			// Trigger detection if we have an editor and text
-			if (editor && editor.view && editor.view.state.doc.textContent.trim()) {
+			// Trigger detection if we have an editor and text, and modifier-triggered detection is enabled
+			if (
+				editor &&
+				editor.view &&
+				editor.view.state.doc.textContent.trim() &&
+				!disableModifierTriggeredDetection
+			) {
 				setTimeout(() => {
 					editor.commands.triggerDetectionForModifiers();
 
@@ -1688,6 +1983,17 @@
 				}, 100);
 			}
 		}
+	};
+
+	// PII Hover Menu handlers
+	const handleShowPiiHoverMenu = (menuData: PiiHoverMenuData) => {
+		piiHoverMenuData = menuData;
+		showPiiHoverMenu = true;
+	};
+
+	const handleHidePiiHoverMenu = () => {
+		showPiiHoverMenu = false;
+		piiHoverMenuData = null;
 	};
 
 	// Periodic sync with session manager to handle external entity changes
@@ -1718,9 +2024,20 @@
 	});
 </script>
 
-{#if showFormattingToolbar}
-	<div bind:this={bubbleMenuElement} id="bubble-menu" class="p-0">
-		<FormattingButtons {editor} />
+{#if showFormattingToolbar || (enablePiiDetection && enablePiiModifiers)}
+	<div
+		bind:this={bubbleMenuElement}
+		id="bubble-menu"
+		class="p-0 flex items-center gap-1 z-[9999] relative"
+	>
+		{#if showFormattingToolbar}
+			<FormattingButtons {editor} />
+		{/if}
+		{#if enablePiiDetection && enablePiiModifiers}
+			<div class="inline-flex">
+				<PiiModifierButtons {editor} enabled={enablePiiDetection && enablePiiModifiers} />
+			</div>
+		{/if}
 	</div>
 {/if}
 
@@ -1737,3 +2054,22 @@
 		</div>
 	{/if}
 </div>
+
+<!-- PII Hover Menu -->
+{#if showPiiHoverMenu && piiHoverMenuData}
+	<PiiHoverMenu
+		wordInfo={piiHoverMenuData?.wordInfo}
+		showIgnoreButton={piiHoverMenuData?.showIgnoreButton}
+		existingModifiers={piiHoverMenuData?.existingModifiers}
+		showTextField={piiHoverMenuData?.showTextField}
+		visible={showPiiHoverMenu}
+		currentLabel={piiHoverMenuData?.currentLabel}
+		on:ignore={piiHoverMenuData?.onIgnore}
+		on:mask={(e) => piiHoverMenuData?.onMask(e.detail.label)}
+		on:removeModifier={(e) => piiHoverMenuData?.onRemoveModifier(e.detail.modifierId)}
+		on:inputFocused={(e) => piiHoverMenuData?.onInputFocused(e.detail.focused)}
+		on:close={piiHoverMenuData?.onClose}
+		on:mouseEnter={piiHoverMenuData?.onMouseEnter}
+		on:mouseLeave={piiHoverMenuData?.onMouseLeave}
+	/>
+{/if}

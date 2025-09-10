@@ -1,0 +1,87 @@
+{
+	"version": "0.2.0",
+	"compounds": [
+		{
+			"name": "Open WebUI (Fast Dev)",
+			"configurations": ["Frontend: Vite (fast)", "Backend: Uvicorn (debug)"],
+			"stopAll": true
+		},
+		{
+			"name": "Open WebUI (Fast Dev - Attach)",
+			"configurations": [
+				"Frontend: Vite (fast)",
+				"Backend: Dev Server (uv + debugpy)",
+				"Attach: debugpy (localhost:5678)"
+			],
+			"stopAll": true
+		}
+	],
+	"configurations": [
+		{
+			"name": "Frontend: Vite (fast)",
+			"type": "node-terminal",
+			"request": "launch",
+			"command": "if command -v nvm >/dev/null 2>&1; then nvm use 22 >/dev/null 2>&1; fi; npm run dev:fast",
+			"cwd": "${workspaceFolder}",
+			"env": {
+				"BROWSER": "none"
+			}
+		},
+		{
+			"name": "Backend: Dev Server (dev.sh)",
+			"type": "node-terminal",
+			"request": "launch",
+			"command": "cd backend && uv run bash dev.sh",
+			"cwd": "${workspaceFolder}"
+		},
+		{
+			"name": "Backend: Uvicorn (debug)",
+			"type": "python",
+			"request": "launch",
+			"module": "uvicorn",
+			"python": "${workspaceFolder}/.venv/bin/python",
+			"cwd": "${workspaceFolder}/backend",
+			"env": {
+				"CORS_ALLOW_ORIGIN": "http://localhost:5173",
+				"PORT": "8080",
+				"PYTHONPATH": "${workspaceFolder}/backend"
+			},
+			"args": [
+				"open_webui.main:app",
+				"--port",
+				"8080",
+				"--host",
+				"0.0.0.0",
+				"--forwarded-allow-ips",
+				"*",
+				"--reload"
+			],
+			"subProcess": true,
+			"justMyCode": true
+		},
+		{
+			"name": "Backend: Dev Server (uv + debugpy)",
+			"type": "node-terminal",
+			"request": "launch",
+			"command": "cd backend && CORS_ALLOW_ORIGIN=http://localhost:5173 uvx debugpy --listen 127.0.0.1:5678 --wait-for-client -m uvicorn open_webui.main:app --port 8080 --host 0.0.0.0 --forwarded-allow-ips '*' --reload",
+			"cwd": "${workspaceFolder}"
+		},
+		{
+			"name": "Attach: debugpy (localhost:5678)",
+			"type": "python",
+			"request": "attach",
+			"connect": {
+				"host": "127.0.0.1",
+				"port": 5678
+			},
+			"pathMappings": [
+				{
+					"localRoot": "${workspaceFolder}/backend",
+					"remoteRoot": "."
+				}
+			],
+			"subProcess": true,
+			"justMyCode": true
+		}
+	]
+}

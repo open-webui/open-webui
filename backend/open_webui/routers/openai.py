@@ -874,7 +874,7 @@ async def generate_chat_completion(
         session = aiohttp.ClientSession(
             trust_env=True, timeout=aiohttp.ClientTimeout(total=AIOHTTP_CLIENT_TIMEOUT)
         )
-
+        log.info(f"openai:payload: {payload}")
         r = await session.request(
             method="POST",
             url=request_url,

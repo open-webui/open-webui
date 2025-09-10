@@ -66,7 +66,7 @@ class TextMaskRequest:
         elif isinstance(self.known_entities, list):
             known_entities = []
             for known_entities_type_0_item_data in self.known_entities:
-                known_entities_type_0_item = known_entities_type_0_item_data.to_dict()
+                known_entities_type_0_item = known_entities_type_0_item_data
                 known_entities.append(known_entities_type_0_item)
 
         else:

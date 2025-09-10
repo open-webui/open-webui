@@ -6,6 +6,8 @@
 
 	export let selectedFileId = null;
 	export let files = [];
+	export let enablePiiDetection = false;
+	export let knowledgeBaseId: string | null = null;
 
 	export let small = false;
 </script>
@@ -20,11 +22,14 @@
 					: 'bg-transparent'} hover:bg-gray-50 dark:hover:bg-gray-850 transition"
 				{small}
 				item={file}
+				disableModal={true}
 				name={file?.name ?? file?.meta?.name}
 				type="file"
 				size={file?.size ?? file?.meta?.size ?? ''}
 				loading={file.status === 'uploading'}
 				dismissible
+				{enablePiiDetection}
+				conversationId={knowledgeBaseId && file.id ? `${knowledgeBaseId}:${file.id}` : undefined}
 				on:click={() => {
 					if (file.status === 'uploading') {
 						return;

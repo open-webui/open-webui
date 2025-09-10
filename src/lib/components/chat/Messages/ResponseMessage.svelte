@@ -810,6 +810,8 @@
 												type={file.type}
 												size={file?.size}
 												colorClassName="bg-white dark:bg-gray-850 "
+												enablePiiDetection={$config?.features?.enable_pii_detection ?? false}
+												conversationId={chatId}
 											/>
 										{/if}
 									</div>

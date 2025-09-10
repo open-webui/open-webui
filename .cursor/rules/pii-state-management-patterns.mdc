@@ -1,0 +1,171 @@
+---
+description: PII state management architecture and optimization patterns
+globs: **/pii.ts,**/PiiDetectionExtension.ts,**/PiiModifierExtension.ts,**/PiiStateManagement.ts
+---
+
+# PII State Management Patterns
+
+## Current Architecture Analysis
+
+The PII system uses a sophisticated multi-layer state management approach with identified optimization opportunities.
+
+### Layer Structure
+```
+Component Layer (Svelte reactive state)
+    ↓
+Extension Layer (ProseMirror plugin states)  
+    ↓
+Session Management Layer (PiiSessionManager singleton)
+    ↓
+Persistence Layer (localStorage + API)
+```
+
+### State Distribution
+
+#### PiiSessionManager ([pii.ts](mdc:src/lib/utils/pii.ts))
+```typescript
+class PiiSessionManager {
+  // Persistent state (saved to localStorage)
+  private conversationStates: Map<string, ConversationPiiState>
+  
+  // Temporary working state (runtime only)
+  private workingEntitiesForConversations: Map<string, ExtendedPiiEntity[]>
+  
+  // Non-conversation state (e.g., knowledge base)
+  private temporaryState: { entities, modifiers, filenameMappings, isActive }
+  
+  // Error recovery
+  private errorBackup: Map<string, ConversationPiiState>
+}
+```
+
+#### Plugin States
+```typescript
+interface PiiDetectionState {
+  entities: ExtendedPiiEntity[]     // Current entities in editor
+  positionMapping: PositionMapping  // Text ↔ ProseMirror positions
+  isDetecting: boolean             // Detection in progress
+  needsSync: boolean               // Sync flag
+  cachedDecorations?: DecorationSet // Performance optimization
+  dynamicallyEnabled?: boolean     // Runtime control
+}
+
+interface PiiModifierState {
+  modifiers: PiiModifier[]         // Current modifiers
+  currentConversationId?: string   // Context tracking
+  hoveredWordInfo: {...} | null    // UI interaction state
+}
+```
+
+## Current Challenges
+
+### Performance Issues
+- **Duplicate state storage** across session manager and plugin states
+- **Frequent position remapping** on every document change
+- **Bidirectional sync complexity** between session ↔ plugin states
+- **Memory overhead** from multiple state copies
+
+### Complexity Issues
+- **Multiple sources of truth** (plugin state vs session manager)
+- **Race conditions** during conversation switching
+- **Circular dependencies** in bidirectional sync logic
+- **State divergence** due to inconsistent timing
+
+## Optimization Strategies
+
+### Performance Optimizations
+1. **Intelligent Caching**: Cache position mappings and decorations with hash-based invalidation
+2. **Batch Operations**: Group state updates to reduce sync frequency  
+3. **Event-Driven Updates**: Replace bidirectional sync with unidirectional event flow
+4. **Single Source of Truth**: Eliminate duplicate state storage
+
+### Architectural Improvements
+1. **State Consolidation**: Single state object per conversation
+2. **Immutable Updates**: Prevent shared mutable state issues
+3. **Transaction-Based Sync**: Atomic state changes with rollback capability
+4. **Performance Metrics**: Built-in tracking for state operation costs
+
+## Proposed Event-Driven Pattern
+
+### Single State Interface
+```typescript
+interface PiiState {
+  entities: ExtendedPiiEntity[]
+  modifiers: PiiModifier[]
+  conversationId?: string
+  positionMapping?: PositionMapping
+  isDetecting: boolean
+  lastUpdated: number
+  version: number // For optimistic updates
+}
+```
+
+### Event System
+```typescript
+type PiiStateEvent = 
+  | { type: 'ENTITIES_UPDATED'; entities: ExtendedPiiEntity[] }
+  | { type: 'MODIFIERS_UPDATED'; modifiers: PiiModifier[] }
+  | { type: 'ENTITY_TOGGLED'; entityLabel: string; shouldMask: boolean }
+  | { type: 'CONVERSATION_SWITCHED'; conversationId: string }
+```
+
+### Usage Pattern
+```typescript
+const { state, updateEntities, toggleEntity } = usePiiState(conversationId)
+
+// Subscribe to changes
+const unsubscribe = stateManager.subscribe((event, newState) => {
+  switch (event.type) {
+    case 'ENTITIES_UPDATED':
+      updatePluginDecorations(newState.entities)
+      break
+    case 'CONVERSATION_SWITCHED': 
+      reloadPluginState(newState)
+      break
+  }
+})
+```
+
+## Implementation Guidelines
+
+### Current System (Maintain)
+- **Session manager APIs** remain stable for backward compatibility
+- **Plugin sync patterns** continue to work during migration
+- **Performance tracking** provides migration guidance
+
+### Migration Strategy
+1. **Phase 1**: Add performance tracking and caching to existing system
+2. **Phase 2**: Introduce event system alongside current approach
+3. **Phase 3**: Migrate extensions one at a time to event-driven pattern
+4. **Phase 4**: Consolidate state storage and remove deprecated sync
+
+### Performance Monitoring
+Use [PiiPerformanceOptimizer.ts](mdc:src/lib/components/common/RichTextInput/PiiPerformanceOptimizer.ts) to:
+- **Track state update frequency** and timing
+- **Measure sync operation costs** 
+- **Identify bottlenecks** in current architecture
+- **Validate improvements** with concrete metrics
+
+## Development Best Practices
+
+1. **Minimize State Sync**: Reduce frequency of plugin ↔ session synchronization
+2. **Cache Aggressively**: Use intelligent caching for expensive operations
+3. **Batch Updates**: Group related state changes together
+4. **Track Performance**: Monitor state operation costs continuously
+5. **Test Thoroughly**: Verify state consistency across all layers
+
+## Debugging State Issues
+
+Use debug interface commands:
+```javascript
+piiDebug.session(conversationId)  // Show session manager state
+piiDebug.sources(conversationId)  // Show data source breakdown  
+piiDebug.sync(conversationId)     // Show sync state info
+```
+
+Access session manager debug methods:
+```typescript
+sessionManager.getDebugStats()        // Internal state statistics
+sessionManager.getDebugSources(id)    // Data source distribution
+sessionManager.getDebugSyncState(id)  // Synchronization status
+```

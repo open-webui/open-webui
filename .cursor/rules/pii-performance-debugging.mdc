@@ -1,0 +1,114 @@
+---
+description: PII performance tracking and debugging infrastructure
+globs: **/PiiPerformanceOptimizer.ts,**/PiiDebugInterface.ts,**/PiiDebugTest.ts,**/PiiDetectionExtension.ts,**/PiiModifierExtension.ts
+---
+
+# PII Performance Tracking and Debugging
+
+## Performance Tracking System
+
+The PII system includes comprehensive performance tracking via [PiiPerformanceOptimizer.ts](mdc:src/lib/components/common/RichTextInput/PiiPerformanceOptimizer.ts):
+
+### PiiPerformanceTracker (Singleton)
+```typescript
+const tracker = PiiPerformanceTracker.getInstance();
+
+// Record operations
+tracker.recordStateUpdate()
+tracker.recordPositionRemap()
+tracker.recordDecorationUpdate()
+tracker.recordApiCall()
+tracker.recordSyncOperation()
+tracker.recordPersistTime(elapsed)
+
+// Timing utilities
+const endTiming = tracker.startTiming()
+const elapsed = endTiming() // Returns milliseconds
+```
+
+### Integration Points
+- **State Updates**: Plugin `apply()` functions in extensions
+- **Position Mapping**: All `buildPositionMapping()` calls with timing
+- **API Calls**: NENNA.ai requests with response time tracking
+- **Decoration Updates**: UI highlighting rebuilds
+- **Persistence**: localStorage operations and session saves
+
+### Automatic Slow Operation Detection
+The system logs operations exceeding configurable thresholds:
+- Position mapping: >10ms
+- Decoration updates: >20ms  
+- API calls: >1000ms (full) / >500ms (incremental)
+- Persistence: >100ms
+
+## Debug Interface
+
+Access via [PiiDebugInterface.ts](mdc:src/lib/components/common/RichTextInput/PiiDebugInterface.ts):
+
+### Browser Console Commands
+```javascript
+piiDebug.help()           // Show all commands
+piiDebug.metrics()        // Performance metrics table
+piiDebug.reset()          // Reset all metrics
+piiDebug.setTracking(bool) // Enable/disable tracking
+piiDebug.config()         // Show configuration
+piiDebug.session(id?)     // Session manager stats
+piiDebug.sources(id?)     // Data source breakdown
+piiDebug.sync(id?)        // Sync state info
+piiDebug.benchmark()      // Run performance test
+```
+
+### Chat Slash Commands (Admin Only)
+```
+/pii-perf metrics         # Show metrics in console
+/pii-perf reset          # Reset metrics
+/pii-perf on/off         # Enable/disable tracking
+/pii-perf debug          # Show debug help
+/pii-debug on/off        # Toggle debug overlay
+```
+
+### Session Manager Debug Methods
+Added debug methods to [pii.ts](mdc:src/lib/utils/pii.ts):
+```typescript
+sessionManager.getDebugStats()        // Internal state counts
+sessionManager.getDebugSources(id)    // Data source breakdown
+sessionManager.getDebugSyncState(id)  // Sync state info
+```
+
+## Performance Configuration
+
+Configure via [PiiExtensionConfig.ts](mdc:src/lib/components/common/RichTextInput/PiiExtensionConfig.ts):
+```typescript
+performance: {
+  enabled: boolean,           // Master performance tracking switch
+  logSlowOperations: boolean, // Console logging for slow operations
+  thresholds: {               // Customizable slow operation thresholds (ms)
+    positionMapping: 10,
+    decorationUpdate: 20,
+    apiCall: 1000,
+    persistence: 100
+  }
+}
+```
+
+## Development Workflow
+
+1. **Enable tracking**: `piiDebug.setTracking(true)` or `/pii-perf on`
+2. **Reset metrics**: `piiDebug.reset()` before testing
+3. **Perform operations**: Type, edit, or interact with PII features
+4. **Check metrics**: `piiDebug.metrics()` to see performance impact
+5. **Debug issues**: Use `piiDebug.sources()` and `piiDebug.sync()` for state inspection
+
+## Performance Optimization Guidelines
+
+- **Position mapping** is expensive - cache when possible
+- **Decoration updates** should be batched and debounced
+- **API calls** benefit from incremental detection strategies
+- **State synchronization** should be minimized and optimized
+- Use `tracker.startTiming()` for measuring custom operations
+
+## Troubleshooting
+
+1. **Missing debug interface**: Run `verifyPiiDebug()` in console
+2. **No performance data**: Check `tracker.isEnabled()`
+3. **Slow operations**: Enable `logSlowOperations` in config
+4. **State issues**: Use session debug methods to inspect data flow

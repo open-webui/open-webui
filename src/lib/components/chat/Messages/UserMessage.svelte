@@ -3,7 +3,7 @@
 	import { toast } from 'svelte-sonner';
 	import { tick, getContext, onMount } from 'svelte';
 
-	import { models, settings } from '$lib/stores';
+	import { models, settings, config } from '$lib/stores';
 	import { user as _user } from '$lib/stores';
 	import { copyToClipboard as _copyToClipboard, formatDate } from '$lib/utils';
 	import { WEBUI_BASE_URL } from '$lib/constants';
@@ -278,6 +278,8 @@
 										type={file.type}
 										size={file?.size}
 										colorClassName="bg-white dark:bg-gray-850 "
+										enablePiiDetection={$config?.features?.enable_pii_detection ?? false}
+										conversationId={chatId}
 									/>
 								{/if}
 							</div>
@@ -333,6 +335,8 @@
 											loading={file.status === 'uploading'}
 											dismissible={true}
 											edit={true}
+											enablePiiDetection={$config?.features?.enable_pii_detection ?? false}
+											conversationId={chatId}
 											on:dismiss={async () => {
 												editedFiles.splice(fileIdx, 1);
 

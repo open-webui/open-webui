@@ -74,7 +74,7 @@
 						insertTextHandler('');
 
 						onUpload({
-							type: 'file',
+							type: data.type || 'file', // Preserve the actual type (collection, file, note, etc.)
 							data: data
 						});
 					} else if (type === 'youtube') {

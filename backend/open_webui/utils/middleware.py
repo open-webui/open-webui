@@ -84,6 +84,12 @@ from open_webui.utils.filter import (
 )
 from open_webui.utils.code_interpreter import execute_code_jupyter
 from open_webui.utils.payload import apply_model_system_prompt_to_body
+from open_webui.utils.pii import (
+    text_masking,
+    consolidate_pii_data,
+    set_file_entity_ids,
+    apply_pii_masking_to_content,
+)
 
 from open_webui.tasks import create_task
 
@@ -127,7 +133,7 @@ async def chat_completion_tools_handler(
     def get_tools_function_calling_payload(messages, task_model_id, content):
         user_message = get_last_user_message(messages)
         history = "\n".join(
-            f"{message['role'].upper()}: \"\"\"{message['content']}\"\"\""
+            f'{message["role"].upper()}: """{message["content"]}"""'
             for message in messages[::-1][:4]
         )
 
@@ -640,6 +646,55 @@ async def chat_completion_files_handler(
         if len(queries) == 0:
             queries = [get_last_user_message(body["messages"])]
 
+        # Build file_entities_dict for consistent PII labeling across all files
+        known_entities = body.get("metadata", {}).get("known_entities", [])
+        file_entities_dict = {}
+
+        # Extract PII entities from files metadata to build initial dictionary
+        for file_item in files:
+            # Path 1: file.data.pii (most common for uploaded files)
+            if file_item.get("file", {}).get("data", {}).get("pii"):
+                try:
+                    pii_data = file_item["file"]["data"]["pii"]
+                    if isinstance(pii_data, str):
+                        pii_dict = json.loads(pii_data)
+                    elif isinstance(pii_data, dict):
+                        pii_dict = pii_data
+                    else:
+                        pii_dict = {}
+                    file_entities_dict.update(pii_dict)
+                except (json.JSONDecodeError, TypeError, KeyError) as e:
+                    log.warning(f"Failed to parse PII dict from file.data.pii: {e}")
+
+            # Path 2: Load from database if not in file data
+            elif file_item.get("id"):
+                try:
+                    from open_webui.models.files import Files
+
+                    file_object = Files.get_file_by_id(file_item["id"])
+                    if file_object and file_object.data.get("pii"):
+                        pii_data = file_object.data.get("pii")
+                        if isinstance(pii_data, str):
+                            pii_dict = json.loads(pii_data)
+                        elif isinstance(pii_data, dict):
+                            pii_dict = pii_data
+                        else:
+                            pii_dict = {}
+                        file_entities_dict.update(pii_dict)
+                except Exception as e:
+                    log.warning(
+                        f"Failed to load PII from database for file {file_item.get('id')}: {e}"
+                    )
+
+        # Set consistent entity IDs based on known entities
+        if file_entities_dict and known_entities:
+            file_entities_dict = set_file_entity_ids(file_entities_dict, known_entities)
+
+        # Store file_entities_dict in metadata for PII masking functions to access
+        if not body.get("metadata"):
+            body["metadata"] = {}
+        body["metadata"]["file_entities_dict"] = file_entities_dict
+
         try:
             # Offload get_sources_from_items to a separate thread
             loop = asyncio.get_running_loop()
@@ -734,6 +789,45 @@ async def process_chat_payload(request, form_data, user, metadata, model):
     # -> Chat Files
 
     form_data = apply_params_to_form_data(form_data, model)
+
+    # Log the complete payload that will be sent to the model
+    log.info("📤 MODEL REQUEST PAYLOAD SUMMARY:")
+    log.info(f"📤 Model: {form_data.get('model', 'unknown')}")
+    log.info(f"📤 Messages count: {len(form_data.get('messages', []))}")
+
+    # Check for filenames in messages content
+    for i, message in enumerate(form_data.get("messages", [])):
+        content = str(message.get("content", ""))
+        if any(
+            ext in content.lower()
+            for ext in [".pdf", ".docx", ".txt", ".md", ".doc", ".xls", ".ppt"]
+        ):
+            log.warning(
+                f"⚠️  POTENTIAL FILENAME LEAK in message {i}: Content contains file extensions"
+            )
+            # Show a snippet to help debug
+            words_with_extensions = [
+                word
+                for word in content.split()
+                if any(
+                    ext in word.lower()
+                    for ext in [".pdf", ".docx", ".txt", ".md", ".doc", ".xls", ".ppt"]
+                )
+            ]
+            if words_with_extensions:
+                log.warning(
+                    f"⚠️  Suspicious words: {words_with_extensions[:5]}"
+                )  # Show first 5
+
+    # Log file metadata being sent
+    files_in_metadata = form_data.get("metadata", {}).get("files", [])
+    if files_in_metadata:
+        log.info(f"📤 Files in metadata: {len(files_in_metadata)} files")
+        for i, file_item in enumerate(files_in_metadata):
+            log.info(
+                f"📤 File {i + 1}: name='{file_item.get('name', 'unknown')}', id='{file_item.get('id', 'unknown')}'"
+            )
+
     log.debug(f"form_data: {form_data}")
 
     event_emitter = get_event_emitter(metadata)
@@ -890,6 +984,45 @@ async def process_chat_payload(request, form_data, user, metadata, model):
     if files:
         files = list({json.dumps(f, sort_keys=True): f for f in files}.values())
 
+    # Mask filenames if PII detection is enabled
+    if files and metadata.get("known_entities") is not None:
+        log.info(
+            "🔒 PII FILENAME MASKING: Enabled - masking filenames before sending to model"
+        )
+        masked_files = []
+        for file_item in files:
+            # Create a copy of the file item
+            masked_file = file_item.copy()
+
+            # If the file has an ID and a name, replace the name with the ID
+            if file_item.get("id") and file_item.get("name"):
+                original_name = file_item["name"]
+                file_id = file_item["id"]
+
+                # Replace the display name with the file ID
+                masked_file["name"] = file_id
+
+                log.info(f"🔒 PII FILENAME MASKING: '{original_name}' -> '{file_id}'")
+
+            masked_files.append(masked_file)
+
+        files = masked_files
+
+        # Log all file names that will be sent to the model
+        file_names = [f.get("name", "unknown") for f in files]
+        log.info(
+            f"🔒 PII FILENAME MASKING: Final file names being sent to model: {file_names}"
+        )
+    else:
+        if files:
+            # Log unmasked filenames when PII detection is disabled
+            file_names = [f.get("name", "unknown") for f in files]
+            log.warning(
+                f"⚠️  PII FILENAME MASKING: DISABLED - Unmasked filenames will be sent to model: {file_names}"
+            )
+        else:
+            log.debug("No files in request")
+
     metadata = {
         **metadata,
         "tool_ids": tool_ids,
@@ -955,10 +1088,32 @@ async def process_chat_payload(request, form_data, user, metadata, model):
     except Exception as e:
         log.exception(e)
 
+    # Initialize consolidated entities list and file entities dict
+    file_entities_dict = {}
+
     # If context is not empty, insert it into the messages
     if len(sources) > 0:
         context_string = ""
         citation_idx_map = {}
+
+        # Build file_entities_dict from the sources for consistent PII masking
+        for file_source in sources:
+            if "document" in file_source and not file_source.get("tool_result", False):
+                for file_metadata in file_source["metadata"]:
+                    pii_dict = {}
+                    if "pii" in file_metadata:
+                        try:
+                            pii_dict = json.loads(file_metadata["pii"])
+                        except (json.JSONDecodeError, TypeError) as e:
+                            log.warning(f"Failed to parse PII dict: {e}")
+                    file_entities_dict.update(pii_dict)
+
+        file_entities_dict = set_file_entity_ids(
+            file_entities_dict, metadata["known_entities"]
+        )
+
+        # Log the known entities dictionary for debugging
+        log.debug(f"Known entities dictionary: {file_entities_dict}")
 
         for source in sources:
             is_tool_result = source.get("tool_result", False)
@@ -974,13 +1129,54 @@ async def process_chat_payload(request, form_data, user, metadata, model):
                         or "N/A"
                     )
 
+                    # Mask source name if PII detection is enabled and it looks like a filename
+                    if source_name and metadata.get("known_entities") is not None:
+                        # Check if source_name looks like a file ID (can be used as-is)
+                        # or if it needs to be masked. For now, if it's not a UUID-like string,
+                        # replace it with the source_id
+                        if (
+                            len(source_name) > 36
+                            or "." in source_name
+                            or " " in source_name
+                        ):
+                            log.info(
+                                f"🔒 PII SOURCE MASKING: Citation source '{source_name}' -> '{source_id}'"
+                            )
+                            source_name = source_id
+                        else:
+                            log.info(
+                                f"🔒 PII SOURCE MASKING: Source name '{source_name}' appears to be already masked (keeping as-is)"
+                            )
+                    elif source_name:
+                        log.warning(
+                            f"⚠️  PII SOURCE MASKING: DISABLED - Unmasked source name will be sent in citation: '{source_name}'"
+                        )
+
                     if source_id not in citation_idx_map:
                         citation_idx_map[source_id] = len(citation_idx_map) + 1
+
+                    # Debug logging for PII processing
+                    log.debug(
+                        f"Processing PII for document: {document_metadata.get('source', 'unknown')}"
+                    )
+
+                    # Add file_entities_dict to document metadata for PII masking
+                    document_metadata_with_entities = {
+                        **document_metadata,
+                        "file_entities_dict": file_entities_dict,
+                    }
+
+                    # Apply PII masking using the shared function
+                    masked_text = apply_pii_masking_to_content(
+                        document_text,
+                        document_metadata_with_entities,
+                        metadata.get("known_entities", []),
+                    )
 
                     context_string += (
                         f'<source id="{citation_idx_map[source_id]}"'
                         + (f' name="{source_name}"' if source_name else "")
-                        + f">{document_text}</source>\n"
+                        + f">{masked_text}</source>\n"
                     )
 
         context_string = context_string.strip()
@@ -1023,6 +1219,25 @@ async def process_chat_payload(request, form_data, user, metadata, model):
     if len(sources) > 0:
         events.append({"sources": sources})
 
+    # Add consolidated PII entities to events for frontend
+    if file_entities_dict:
+        # Convert file_entities_dict to array format expected by frontend
+        consolidated_entities = []
+        for entity_data in file_entities_dict.values():
+            consolidated_entities.append(
+                {
+                    "id": entity_data.get("id", 1),
+                    "label": entity_data.get("label", "PII_1"),
+                    "name": entity_data.get("text", ""),
+                    "type": entity_data.get("type", "PII"),
+                    "raw_text": entity_data.get("raw_text", ""),
+                }
+            )
+        events.append({"consolidated_known_entities": consolidated_entities})
+        log.info(
+            f"🔒 PII CONSOLIDATION: Returning {len(consolidated_entities)} consolidated entities to client"
+        )
+
     if model_knowledge:
         await event_emitter(
             {
@@ -1035,6 +1250,80 @@ async def process_chat_payload(request, form_data, user, metadata, model):
                 },
             }
         )
+
+    # FINAL SECURITY CHECK: Log what's actually being sent to the model
+    log.info("🔒 FINAL SECURITY AUDIT - Data being sent to model:")
+    log.info(f"🔒 Model: {form_data.get('model', 'unknown')}")
+    log.info(f"🔒 Total messages: {len(form_data.get('messages', []))}")
+
+    # Check each message for potential filename leaks
+    for i, message in enumerate(form_data.get("messages", [])):
+        content = str(message.get("content", ""))
+
+        # Check for common file extensions
+        suspicious_patterns = [
+            ".pdf",
+            ".docx",
+            ".txt",
+            ".md",
+            ".doc",
+            ".xls",
+            ".ppt",
+            ".csv",
+            ".xlsx",
+            ".pptx",
+        ]
+        found_patterns = [
+            pattern
+            for pattern in suspicious_patterns
+            if pattern.lower() in content.lower()
+        ]
+
+        if found_patterns:
+            log.error(
+                f"🚨 FILENAME LEAK DETECTED in message {i}! Found: {found_patterns}"
+            )
+            # Extract words containing these patterns
+            words = content.split()
+            suspicious_words = [
+                word
+                for word in words
+                if any(
+                    pattern.lower() in word.lower() for pattern in suspicious_patterns
+                )
+            ]
+            log.error(f"🚨 Suspicious words: {suspicious_words[:10]}")  # Show first 10
+
+        # Check message length to avoid logging huge context
+        if len(content) < 1000:
+            log.debug(f"Message {i} content: {content[:200]}...")
+        else:
+            log.debug(
+                f"Message {i}: Large content ({len(content)} chars), not logging full text"
+            )
+
+    # Final file metadata check
+    final_files = form_data.get("metadata", {}).get("files", [])
+    if final_files:
+        log.info(f"🔒 Final file list being sent to model:")
+        for i, file_item in enumerate(final_files):
+            file_name = file_item.get("name", "unknown")
+            file_id = file_item.get("id", "unknown")
+            log.info(f"🔒   File {i + 1}: '{file_name}' (id: {file_id})")
+
+            # Check if filename looks properly masked
+            if (
+                file_name != file_id
+                and len(file_name) > 20
+                and any(c in file_name for c in [".", " "])
+            ):
+                log.error(
+                    f"🚨 POTENTIAL FILENAME LEAK: File name '{file_name}' doesn't look masked!"
+                )
+    else:
+        log.info("🔒 No files in final payload")
+
+    log.info("🔒 SECURITY AUDIT COMPLETE")
 
     return form_data, metadata, events
 
@@ -1141,7 +1430,6 @@ async def process_chat_response(
                         user_message = user_message[:100] + "..."
 
                     if tasks[TASKS.TITLE_GENERATION]:
-
                         res = await generate_title(
                             request,
                             {
@@ -1255,7 +1543,6 @@ async def process_chat_response(
     if not isinstance(response, StreamingResponse):
         if event_emitter:
             if isinstance(response, dict) or isinstance(response, JSONResponse):
-
                 if isinstance(response, JSONResponse) and isinstance(
                     response.body, bytes
                 ):
@@ -1438,10 +1725,8 @@ async def process_chat_response(
                             content += "\n"
 
                         if results:
-
                             tool_calls_display_content = ""
                             for tool_call in tool_calls:
-
                                 tool_call_id = tool_call.get("id", "")
                                 tool_name = tool_call.get("function", {}).get(
                                     "name", ""
@@ -1499,14 +1784,14 @@ async def process_chat_response(
                         if reasoning_duration is not None:
                             if raw:
                                 content = (
-                                    f'{content}{start_tag}{block["content"]}{end_tag}\n'
+                                    f"{content}{start_tag}{block['content']}{end_tag}\n"
                                 )
                             else:
                                 content = f'{content}<details type="reasoning" done="true" duration="{reasoning_duration}">\n<summary>Thought for {reasoning_duration} seconds</summary>\n{reasoning_display_content}\n</details>\n'
                         else:
                             if raw:
                                 content = (
-                                    f'{content}{start_tag}{block["content"]}{end_tag}\n'
+                                    f"{content}{start_tag}{block['content']}{end_tag}\n"
                                 )
                             else:
                                 content = f'{content}<details type="reasoning" done="false">\n<summary>Thinking…</summary>\n{reasoning_display_content}\n</details>\n'
@@ -1608,7 +1893,6 @@ async def process_chat_response(
 
                 if content_blocks[-1]["type"] == "text":
                     for start_tag, end_tag in tags:
-
                         start_tag_pattern = rf"{re.escape(start_tag)}"
                         if start_tag.startswith("<") and start_tag.endswith(">"):
                             # Match start tag e.g., <tag> or <tag attr="value">
@@ -1711,7 +1995,6 @@ async def process_chat_response(
                             # Reset the content_blocks by appending a new text block
                             if content_type != "code_interpreter":
                                 if leftover_content:
-
                                     content_blocks.append(
                                         {
                                             "type": "text",
@@ -2158,7 +2441,6 @@ async def process_chat_response(
                 tool_call_retries = 0
 
                 while len(tool_calls) > 0 and tool_call_retries < MAX_TOOL_CALL_RETRIES:
-
                     tool_call_retries += 1
 
                     response_tool_calls = tool_calls.pop(0)
@@ -2338,7 +2620,6 @@ async def process_chat_response(
                         content_blocks[-1]["type"] == "code_interpreter"
                         and retries < MAX_RETRIES
                     ):
-
                         await event_emitter(
                             {
                                 "type": "chat:completion",

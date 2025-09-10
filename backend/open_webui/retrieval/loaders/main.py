@@ -147,9 +147,19 @@ class DoclingLoader:
                 )
             }
 
-            params = {"image_export_mode": "placeholder", "table_mode": "accurate"}
+            params = {
+                "image_export_mode": "placeholder",
+                "table_mode": "fast",
+                # Ask Docling to include explicit page break placeholders in markdown output
+                "md_page_break_placeholder": None,
+            }
 
             if self.params:
+                if self.params.get("md_page_break_placeholder"):
+                    params["md_page_break_placeholder"] = self.params.get(
+                        "md_page_break_placeholder"
+                    )
+
                 if self.params.get("do_picture_description"):
                     params["do_picture_description"] = self.params.get(
                         "do_picture_description"

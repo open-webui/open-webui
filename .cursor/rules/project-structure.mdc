@@ -1,0 +1,18 @@
+---
+alwaysApply: true
+---
+
+### Project Structure Guide
+
+- Entry chat UI: [Chat.svelte](mdc:src/lib/components/chat/Chat.svelte)
+- Input control: [MessageInput.svelte](mdc:src/lib/components/chat/MessageInput.svelte)
+- Messages/rendering: [Messages.svelte](mdc:src/lib/components/chat/Messages.svelte)
+- PII session/state and helpers: [pii.ts](mdc:src/lib/utils/pii.ts)
+- PII detection extension (editor): [PiiDetectionExtension.ts](mdc:src/lib/components/common/RichTextInput/PiiDetectionExtension.ts)
+- PII display/highlighting (markdown): [PiiAwareText.svelte](mdc:src/lib/components/chat/Messages/Markdown/PiiAwareText.svelte)
+- PII API client: [client.ts](mdc:src/lib/apis/pii/client.ts)
+- Chat APIs: [apis/chats](mdc:src/lib/apis/chats/index.ts)
+- Global constants: [constants.ts](mdc:src/lib/constants.ts)
+
+Key stores used throughout the app: [stores/index.ts](mdc:src/lib/stores/index.ts)
+

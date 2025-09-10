@@ -1,0 +1,290 @@
+---
+globs: *.svelte,*.ts
+description: Svelte component patterns for PII functionality integration
+---
+
+# Svelte PII Component Patterns
+
+Svelte-specific patterns for integrating PII functionality with proper component communication and error handling.
+
+## Reactive State Management
+
+### Button State Integration
+```typescript
+// Reactive PII detection state in MessageInput.svelte
+$: piiConfigEnabled = $config?.features?.enable_pii_detection ?? false;
+$: enablePiiDetection = piiConfigEnabled && piiMaskingEnabled;
+
+// Button visibility vs functionality
+{#if piiConfigEnabled}
+    <button class="{piiMaskingEnabled ? 'active' : 'inactive'}" on:click={togglePiiMasking}>
+        <!-- Show button when config allows, style based on state -->
+    </button>
+{/if}
+```
+
+### Store Synchronization
+```typescript
+// Watch for config changes that affect PII
+$: if ($config?.features?.enable_pii_detection !== undefined) {
+    // React to configuration changes
+    if (!$config.features.enable_pii_detection) {
+        piiMaskingEnabled = false; // Force disable if config disables
+    }
+}
+```
+
+## Component Communication Patterns
+
+### Parent-Child Method Calls ([MessageInput.svelte](mdc:src/lib/components/chat/MessageInput.svelte) ↔ [RichTextInput.svelte](mdc:src/lib/components/common/RichTextInput.svelte))
+```typescript
+// Parent component (MessageInput)
+let chatInputElement: any; // Svelte component reference
+
+const togglePiiMasking = () => {
+    if (piiMaskingEnabled) {
+        // Enable PII detection
+        if (chatInputElement?.enablePiiDetectionDynamically) {
+            chatInputElement.enablePiiDetectionDynamically();
+        }
+    } else {
+        // Disable and cleanup
+        if (chatInputElement?.disablePiiDetectionDynamically) {
+            chatInputElement.disablePiiDetectionDynamically();
+        }
+        if (chatInputElement?.clearAllPiiHighlights) {
+            chatInputElement.clearAllPiiHighlights();
+        }
+    }
+};
+
+// Bind component reference
+<RichTextInput bind:this={chatInputElement} {enablePiiDetection} />
+```
+
+### Child Component Exports ([RichTextInput.svelte](mdc:src/lib/components/common/RichTextInput.svelte))
+```typescript
+// Exported methods for parent communication
+export const enablePiiDetectionDynamically = () => {
+    if (!editor || !editor.commands?.enablePiiDetection) return;
+    editor.commands.enablePiiDetection();
+};
+
+export const disablePiiDetectionDynamically = () => {
+    if (!editor || !editor.commands?.disablePiiDetection) return;
+    editor.commands.disablePiiDetection();
+};
+
+export const clearAllPiiHighlights = () => {
+    if (!editor || !editor.commands?.clearAllPiiHighlights) return;
+    editor.commands.clearAllPiiHighlights();
+};
+
+// Safe method calls with existence checks
+export const syncWithSession = () => {
+    try {
+        if (!enablePiiDetection || !editor) return;
+        if (editor.commands?.syncWithSessionManager) {
+            editor.commands.syncWithSessionManager();
+        }
+    } catch (e) {
+        // Silent failure for optional operations
+    }
+};
+```
+
+## Error Handling Patterns
+
+### Graceful Component Method Calls
+```typescript
+// Always check method existence before calling
+if (chatInputElement?.methodName) {
+    chatInputElement.methodName();
+} else {
+    console.log('Method not available on component');
+}
+
+// Try-catch for optional operations
+try {
+    chatInputElement?.optionalMethod?.();
+} catch (e) {
+    console.log('Optional operation failed:', e);
+    // Continue execution - don't crash
+}
+```
+
+### Async Operation Handling
+```typescript
+// Non-blocking async operations
+(async () => {
+    try {
+        const json = await getFileById(localStorage.token, data.id);
+        if (json && enablePiiDetection) {
+            syncPiiDetectionsFromFileData(json);
+        }
+    } catch (e) {
+        // Log but don't crash the UI
+        console.log('File PII sync failed:', e);
+    }
+})();
+```
+
+## TipTap Editor Integration
+
+### Extension Command Pattern ([PiiDetectionExtension.ts](mdc:src/lib/components/common/RichTextInput/PiiDetectionExtension.ts))
+```typescript
+// TipTap extension commands
+addCommands() {
+    return {
+        enablePiiDetection: () => ({ state, dispatch }: any) => {
+            if (dispatch) {
+                const tr = state.tr.setMeta(piiDetectionPluginKey, {
+                    type: 'ENABLE_PII_DETECTION'
+                });
+                dispatch(tr);
+                return true;
+            }
+            return false;
+        },
+        
+        disablePiiDetection: () => ({ state, dispatch }: any) => {
+            if (dispatch) {
+                const tr = state.tr.setMeta(piiDetectionPluginKey, {
+                    type: 'DISABLE_PII_DETECTION'
+                });
+                dispatch(tr);
+                return true;
+            }
+            return false;
+        }
+    };
+}
+```
+
+### Plugin State Management
+```typescript
+// Plugin state with dynamic enabling
+interface PiiDetectionState {
+    entities: ExtendedPiiEntity[];
+    isDetecting: boolean;
+    dynamicallyEnabled?: boolean; // Runtime state control
+}
+
+// State transitions
+apply(tr, prevState): PiiDetectionState {
+    const meta = tr.getMeta(piiDetectionPluginKey);
+    if (meta?.type === 'ENABLE_PII_DETECTION') {
+        return { ...prevState, dynamicallyEnabled: true };
+    }
+    if (meta?.type === 'DISABLE_PII_DETECTION') {
+        return { 
+            ...prevState, 
+            dynamicallyEnabled: false,
+            entities: [] // Clear on disable
+        };
+    }
+}
+```
+
+## TypeScript Safety Patterns
+
+### Component Reference Types
+```typescript
+// Proper typing for component references
+let chatInputElement: {
+    enablePiiDetectionDynamically?: () => void;
+    disablePiiDetectionDynamically?: () => void;
+    clearAllPiiHighlights?: () => void;
+    syncWithSession?: () => void;
+} | undefined;
+
+// Optional chaining for safety
+chatInputElement?.enablePiiDetectionDynamically?.();
+```
+
+### Function Parameter Types
+```typescript
+// Clear function signatures
+const syncPiiDetectionsFromFileData = (fileData: any): void => {
+    if (!enablePiiDetection) return;
+    // Implementation
+};
+
+const togglePiiMasking = (): void => {
+    piiMaskingEnabled = !piiMaskingEnabled;
+    // Implementation
+};
+```
+
+## Conditional Rendering Patterns
+
+### Feature Availability
+```typescript
+// Show UI elements based on configuration AND state
+{#if piiConfigEnabled}
+    <div class="pii-controls">
+        <button 
+            class:active={piiMaskingEnabled}
+            on:click={togglePiiMasking}
+        >
+            Toggle PII Masking
+        </button>
+    </div>
+{/if}
+
+// Show loading states during PII operations
+{#if enablePiiDetection && isPiiDetectionInProgress}
+    <div class="pii-loading">
+        <Spinner />
+        <span>Scanning for PII...</span>
+    </div>
+{/if}
+```
+
+### Dynamic Content
+```typescript
+// Conditional content based on PII state
+{#if enablePiiDetection && currentPiiEntities.length > 0}
+    <div class="pii-summary">
+        Found {currentPiiEntities.length} PII entities
+    </div>
+{:else if !enablePiiDetection}
+    <div class="pii-disabled">
+        PII detection is disabled
+    </div>
+{/if}
+```
+
+## Debugging and Development
+
+### Console Logging Strategy
+```typescript
+// Clear state change logging
+console.log('MessageInput: PII masking toggled to:', piiMaskingEnabled);
+console.log('MessageInput: Skipping PII sync - detection disabled');
+console.log('PiiDetectionExtension: Entity update:', entities.length);
+
+// Conditional debug logging
+if (enablePiiDetection) {
+    console.log('PII detection active, processing:', data);
+} else {
+    console.log('PII detection inactive, skipping processing');
+}
+```
+
+### Component Lifecycle Hooks
+```typescript
+onMount(() => {
+    // Initialize PII state on component mount
+    if (enablePiiDetection && conversationId) {
+        // Load existing PII state
+    }
+});
+
+onDestroy(() => {
+    // Cleanup PII resources
+    if (syncInterval) {
+        clearInterval(syncInterval);
+    }
+});
+```

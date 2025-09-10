@@ -9,6 +9,7 @@ import {
 	PiiApiTimeoutError,
 	PiiApiNetworkError
 } from '$lib/apis/pii/client';
+import { PiiPerformanceTracker } from '$lib/components/common/RichTextInput/PiiPerformanceOptimizer';
 
 // Extended PII entity with masking state
 export interface ExtendedPiiEntity extends PiiEntity {
@@ -174,10 +175,18 @@ export function createPiiHighlightStyles(): string {
 // Import PiiModifier type
 import type { PiiModifier } from '$lib/components/common/RichTextInput/PiiModifierExtension';
 
+// File mapping for filename masking
+export interface FilenameMapping {
+	fileId: string;
+	originalFilename: string;
+	maskedFilename: string; // This will be the file ID for simplicity
+}
+
 // Conversation-specific PII state for storing with chat data
 export interface ConversationPiiState {
 	entities: ExtendedPiiEntity[];
 	modifiers: PiiModifier[];
+	filenameMappings: FilenameMapping[];
 	sessionId?: string;
 	apiKey?: string;
 	lastUpdated: number;
@@ -200,20 +209,32 @@ export class PiiSessionManager {
 	private temporaryState: {
 		entities: ExtendedPiiEntity[];
 		modifiers: PiiModifier[];
+		filenameMappings: FilenameMapping[];
 		isActive: boolean;
 	} = {
 		entities: [],
 		modifiers: [],
+		filenameMappings: [],
 		isActive: false
 	};
 
 	private workingEntitiesForConversations: Map<string, ExtendedPiiEntity[]> = new Map();
+
+	// Store current PII masking state
+	private currentPiiMaskingEnabled: boolean = true;
 
 	static getInstance(): PiiSessionManager {
 		if (!PiiSessionManager.instance) {
 			PiiSessionManager.instance = new PiiSessionManager();
 		}
 		return PiiSessionManager.instance;
+	}
+
+	/**
+	 * Reset the singleton instance (for testing only)
+	 */
+	static resetInstance(): void {
+		PiiSessionManager.instance = undefined as any;
 	}
 
 	setApiKey(apiKey: string) {
@@ -257,10 +278,87 @@ export class PiiSessionManager {
 		this.temporaryState.isActive = true;
 		this.temporaryState.entities = [];
 		this.temporaryState.modifiers = [];
+		this.temporaryState.filenameMappings = [];
 	}
 
 	isTemporaryStateActive(): boolean {
 		return this.temporaryState.isActive;
+	}
+
+	/**
+	 * Shared helper method to merge entities by text content with proper ID assignment
+	 * @param existingEntities - Current entities to merge with
+	 * @param incomingEntities - New entities to merge in
+	 * @returns Merged entities with proper ID assignment and occurrence merging
+	 */
+	private mergeEntitiesByText(
+		existingEntities: ExtendedPiiEntity[],
+		incomingEntities: (ExtendedPiiEntity | PiiEntity)[]
+	): ExtendedPiiEntity[] {
+		const merged: ExtendedPiiEntity[] = [...existingEntities];
+		const occurrenceKey = (o: { start_idx: number; end_idx: number }) =>
+			`${o.start_idx}-${o.end_idx}`;
+
+		// Helper function to check if ID is already used
+		const isIdUsed = (id: number): boolean => {
+			return merged.some((e) => e.id === id);
+		};
+
+		// Helper function to get next available ID for a given type
+		const getNextIdForType = (type: string): number => {
+			const existingOfType = merged.filter((e) => e.type === type);
+			if (existingOfType.length === 0) return 1;
+
+			const maxId = Math.max(...existingOfType.map((e) => e.id));
+			return maxId + 1;
+		};
+
+		// Helper function to generate label from type and id
+		const generateLabel = (type: string, id: number): string => {
+			return `${type}_${id}`;
+		};
+
+		for (const incoming of incomingEntities) {
+			// Cast to ExtendedPiiEntity for consistent access
+			const incomingEntity = incoming as ExtendedPiiEntity;
+
+			// Find existing entity by text content (not label)
+			const idx = merged.findIndex((e) => e.text === incomingEntity.text);
+
+			if (idx >= 0) {
+				// Entity with same text already exists - merge occurrences
+				const current = merged[idx];
+				const currentOccKeys = new Set((current.occurrences || []).map(occurrenceKey));
+				const newOcc = (incomingEntity.occurrences || []).filter(
+					(o) => !currentOccKeys.has(occurrenceKey(o))
+				);
+
+				merged[idx] = {
+					...current,
+					// Keep existing shouldMask and other properties, just add new occurrences
+					occurrences: [...(current.occurrences || []), ...newOcc]
+				};
+			} else {
+				// New entity - preserve original ID/label if not in use, otherwise assign new ones
+				let finalId = incomingEntity.id;
+				let finalLabel = incomingEntity.label;
+
+				if (isIdUsed(incomingEntity.id)) {
+					// ID is already used, assign next available ID and generate label
+					finalId = getNextIdForType(incomingEntity.type);
+					finalLabel = generateLabel(incomingEntity.type, finalId);
+				}
+
+				merged.push({
+					...incomingEntity,
+					id: finalId,
+					label: finalLabel,
+					shouldMask: incomingEntity.shouldMask ?? true
+				});
+			}
+		}
+
+		return merged;
 	}
 
 	setTemporaryStateEntities(entities: ExtendedPiiEntity[]) {
@@ -269,9 +367,9 @@ export class PiiSessionManager {
 			return;
 		}
 
-		// Store the extended entities directly without recalculating shouldMask states
-		// This preserves shouldMask states that were already calculated from plugin state
-		this.temporaryState.entities = entities;
+		// Merge new entities into temporary state using shared helper
+		const existing = this.temporaryState.entities || [];
+		this.temporaryState.entities = this.mergeEntitiesByText(existing, entities);
 	}
 
 	getTemporaryStateEntities(): ExtendedPiiEntity[] {
@@ -287,6 +385,7 @@ export class PiiSessionManager {
 		const conversationState: ConversationPiiState = {
 			entities: [...this.temporaryState.entities], // Use final entities only
 			modifiers: [...this.temporaryState.modifiers],
+			filenameMappings: [...this.temporaryState.filenameMappings],
 			sessionId: this.sessionId || undefined,
 			apiKey: this.apiKey || undefined,
 			lastUpdated: Date.now()
@@ -301,10 +400,20 @@ export class PiiSessionManager {
 		this.triggerChatSave(conversationId);
 	}
 
+	// Simple methods to store and retrieve PII masking state
+	setCurrentPiiMaskingEnabled(enabled: boolean) {
+		this.currentPiiMaskingEnabled = enabled;
+	}
+
+	getCurrentPiiMaskingEnabled(): boolean {
+		return this.currentPiiMaskingEnabled;
+	}
+
 	clearTemporaryState() {
 		this.temporaryState.isActive = false;
 		this.temporaryState.entities = [];
 		this.temporaryState.modifiers = [];
+		this.temporaryState.filenameMappings = [];
 	}
 
 	getEntitiesForDisplay(conversationId?: string): ExtendedPiiEntity[] {
@@ -374,6 +483,10 @@ export class PiiSessionManager {
 
 	// Load conversation state (now called from loadFromChatData)
 	loadConversationState(conversationId: string, piiState?: ConversationPiiState) {
+		// Track performance
+		const tracker = PiiPerformanceTracker.getInstance();
+		const startTime = performance.now();
+
 		// Prevent loading the same conversation multiple times simultaneously
 		if (this.loadingConversations.has(conversationId)) {
 			return;
@@ -388,9 +501,19 @@ export class PiiSessionManager {
 
 		try {
 			if (piiState) {
-				this.conversationStates.set(conversationId, piiState);
+				// Ensure backward compatibility for existing states without filenameMappings
+				const normalizedState: ConversationPiiState = {
+					...piiState,
+					filenameMappings: piiState.filenameMappings || []
+				};
+				this.conversationStates.set(conversationId, normalizedState);
 			}
 		} finally {
+			// Track loading completion
+			const elapsed = performance.now() - startTime;
+			if (elapsed > 50) {
+				console.log(`PiiSessionManager: Slow conversation load: ${elapsed.toFixed(1)}ms`);
+			}
 			this.loadingConversations.delete(conversationId);
 		}
 	}
@@ -405,12 +528,13 @@ export class PiiSessionManager {
 	// Convert conversation entities to known entities format for API
 	getKnownEntitiesForApi(
 		conversationId?: string
-	): Array<{ id: number; label: string; name: string }> {
+	): Array<{ id: number; label: string; name: string; shouldMask?: boolean }> {
 		const entities = this.getEntitiesForDisplay(conversationId);
 		return entities.map((entity) => ({
 			id: entity.id,
 			label: entity.label,
-			name: entity.raw_text
+			name: entity.text || entity.raw_text.toLowerCase(),
+			shouldMask: entity.shouldMask
 		}));
 	}
 
@@ -436,9 +560,13 @@ export class PiiSessionManager {
 	// Set conversation modifiers
 	setConversationModifiers(conversationId: string, modifiers: PiiModifier[]) {
 		const existingState = this.conversationStates.get(conversationId);
+		const existingModifiers = existingState?.modifiers || [];
+		const mergedModifiers = this.mergeModifiers(existingModifiers, modifiers);
+
 		const newState: ConversationPiiState = {
 			entities: existingState?.entities || [],
-			modifiers: modifiers,
+			modifiers: mergedModifiers,
+			filenameMappings: existingState?.filenameMappings || [],
 			sessionId: existingState?.sessionId,
 			apiKey: existingState?.apiKey || this.apiKey || undefined,
 			lastUpdated: Date.now()
@@ -453,7 +581,161 @@ export class PiiSessionManager {
 
 	// Set global modifiers (before conversation ID exists)
 	setTemporaryModifiers(modifiers: PiiModifier[]) {
-		this.temporaryState.modifiers = modifiers;
+		// Merge new modifiers with existing ones instead of overwriting
+		const existingModifiers = this.temporaryState.modifiers || [];
+		const mergedModifiers = this.mergeModifiers(existingModifiers, modifiers);
+		this.temporaryState.modifiers = mergedModifiers;
+	}
+
+	// Helper method to merge modifiers by entity text, avoiding duplicates
+	private mergeModifiers(existing: PiiModifier[], newModifiers: PiiModifier[]): PiiModifier[] {
+		const merged = [...existing];
+
+		newModifiers.forEach((newModifier) => {
+			// Check if a modifier for this entity already exists
+			const existingIndex = merged.findIndex(
+				(m) =>
+					m.entity.toLowerCase() === newModifier.entity.toLowerCase() &&
+					m.action === newModifier.action
+			);
+
+			if (existingIndex >= 0) {
+				// Update existing modifier
+				merged[existingIndex] = { ...newModifier };
+			} else {
+				// Add new modifier
+				merged.push({ ...newModifier });
+			}
+		});
+
+		return merged;
+	}
+
+	// Remove a specific modifier by ID from conversation state
+	removeConversationModifier(conversationId: string, modifierId: string) {
+		const existingState = this.conversationStates.get(conversationId);
+		if (!existingState) return;
+
+		const remainingModifiers = existingState.modifiers.filter((m) => m.id !== modifierId);
+
+		const newState: ConversationPiiState = {
+			...existingState,
+			modifiers: remainingModifiers,
+			lastUpdated: Date.now()
+		};
+
+		this.conversationStates.set(conversationId, newState);
+
+		// Create backup and trigger save
+		this.errorBackup.set(conversationId, { ...newState });
+		this.triggerChatSave(conversationId);
+	}
+
+	// Remove a specific modifier by ID from temporary state
+	removeTemporaryModifier(modifierId: string) {
+		if (!this.temporaryState.isActive) return;
+
+		this.temporaryState.modifiers = this.temporaryState.modifiers.filter(
+			(m) => m.id !== modifierId
+		);
+	}
+
+	// FILENAME MAPPING MANAGEMENT METHODS
+
+	// Add a filename mapping for PII masking
+	addFilenameMapping(conversationId: string | undefined, fileId: string, originalFilename: string) {
+		const mapping: FilenameMapping = {
+			fileId,
+			originalFilename,
+			maskedFilename: fileId // Use file ID as the masked filename
+		};
+
+		if (conversationId && this.conversationStates.has(conversationId)) {
+			// Existing conversation - add to conversation state
+			const state = this.conversationStates.get(conversationId)!;
+			const existingMappings = state.filenameMappings || [];
+
+			// Check if mapping already exists
+			if (!existingMappings.find((m) => m.fileId === fileId)) {
+				const newState: ConversationPiiState = {
+					...state,
+					filenameMappings: [...existingMappings, mapping],
+					lastUpdated: Date.now()
+				};
+				this.conversationStates.set(conversationId, newState);
+				this.triggerChatSave(conversationId);
+			}
+		} else {
+			// New chat or no conversation - add to temporary state
+			if (!this.temporaryState.isActive) {
+				this.activateTemporaryState();
+			}
+
+			// Check if mapping already exists
+			if (!this.temporaryState.filenameMappings.find((m) => m.fileId === fileId)) {
+				this.temporaryState.filenameMappings.push(mapping);
+			}
+		}
+	}
+
+	// Get filename mappings for display
+	getFilenameMappingsForDisplay(conversationId?: string): FilenameMapping[] {
+		if (
+			!conversationId ||
+			conversationId.trim() === '' ||
+			!this.conversationStates.has(conversationId)
+		) {
+			if (this.temporaryState.isActive) {
+				return this.temporaryState.filenameMappings;
+			}
+			return [];
+		}
+
+		const state = this.conversationStates.get(conversationId);
+		return state?.filenameMappings || [];
+	}
+
+	// Get temporary filename mappings (for new chats without conversation ID)
+	getTemporaryFilenameMappings(): FilenameMapping[] {
+		return this.temporaryState.filenameMappings;
+	}
+
+	// Get filename mappings for masking files before sending to model
+	maskFilenames(files: any[], conversationId?: string): any[] {
+		const mappings = this.getFilenameMappingsForDisplay(conversationId);
+		if (!mappings.length) return files;
+
+		return files.map((file) => {
+			const mapping = mappings.find((m) => m.fileId === file.id);
+			if (mapping) {
+				return {
+					...file,
+					name: mapping.maskedFilename,
+					originalName: mapping.originalFilename // Keep original for reference
+				};
+			}
+			return file;
+		});
+	}
+
+	// Remove a filename mapping
+	removeFilenameMapping(conversationId: string | undefined, fileId: string) {
+		if (conversationId && this.conversationStates.has(conversationId)) {
+			const state = this.conversationStates.get(conversationId)!;
+			const filteredMappings = (state.filenameMappings || []).filter((m) => m.fileId !== fileId);
+
+			const newState: ConversationPiiState = {
+				...state,
+				filenameMappings: filteredMappings,
+				lastUpdated: Date.now()
+			};
+			this.conversationStates.set(conversationId, newState);
+			this.triggerChatSave(conversationId);
+		} else if (this.temporaryState.isActive) {
+			this.temporaryState.filenameMappings = this.temporaryState.filenameMappings.filter(
+				(m) => m.fileId !== fileId
+			);
+		}
 	}
 
 	// Get modifiers for API (works for both global and conversation state)
@@ -475,7 +757,7 @@ export class PiiSessionManager {
 			const state = this.conversationStates.get(conversationId);
 			if (state) {
 				const entity = state.entities.find((e) => e.label === entityId);
-				if (entity && entity.occurrences[occurrenceIndex]) {
+				if (entity) {
 					entity.shouldMask = !entity.shouldMask;
 					state.lastUpdated = Date.now();
 					this.triggerChatSave(conversationId);
@@ -490,7 +772,7 @@ export class PiiSessionManager {
 			const workingEntities = this.workingEntitiesForConversations.get(conversationId);
 			if (workingEntities) {
 				const workingEntity = workingEntities.find((e) => e.label === entityId);
-				if (workingEntity && workingEntity.occurrences[occurrenceIndex]) {
+				if (workingEntity) {
 					workingEntity.shouldMask = !workingEntity.shouldMask;
 					console.log(
 						`PiiSessionManager: Toggled working entity ${entityId} shouldMask to ${workingEntity.shouldMask}`
@@ -505,7 +787,7 @@ export class PiiSessionManager {
 		} else if (this.temporaryState.isActive) {
 			// New chat: update temporary state
 			const entity = this.temporaryState.entities.find((e) => e.label === entityId);
-			if (entity && entity.occurrences[occurrenceIndex]) {
+			if (entity) {
 				entity.shouldMask = !entity.shouldMask;
 				console.log(
 					`PiiSessionManager: Toggled temporary entity ${entityId} shouldMask to ${entity.shouldMask}`
@@ -522,20 +804,13 @@ export class PiiSessionManager {
 		const existingState = this.conversationStates.get(conversationId);
 		const existingEntities = existingState?.entities || [];
 
-		// Convert new entities to extended format with default shouldMask: true
-		const newExtendedEntities = entities.map((entity) => {
-			// Preserve shouldMask state if entity already exists
-			const existingEntity = existingEntities.find((e) => e.label === entity.label);
-			return {
-				...entity,
-				shouldMask: existingEntity?.shouldMask ?? true
-			};
-		});
+		// Merge entities using shared helper
+		const merged = this.mergeEntitiesByText(existingEntities, entities);
 
-		// Update conversation state - simple replacement, no complex merging
 		const newState: ConversationPiiState = {
-			entities: newExtendedEntities,
+			entities: merged,
 			modifiers: existingState?.modifiers || [],
+			filenameMappings: existingState?.filenameMappings || [],
 			sessionId: sessionId || existingState?.sessionId,
 			apiKey: this.apiKey || existingState?.apiKey,
 			lastUpdated: Date.now()
@@ -545,8 +820,6 @@ export class PiiSessionManager {
 		this.errorBackup.set(conversationId, { ...newState });
 		this.triggerChatSave(conversationId);
 	}
-
-	// Removed getConversationEntitiesForDisplay() - functionality moved to getEntitiesForDisplay()
 
 	clearConversationWorkingEntities(conversationId: string) {
 		this.workingEntitiesForConversations.delete(conversationId);
@@ -579,14 +852,59 @@ export class PiiSessionManager {
 		conversationId: string,
 		extendedEntities: ExtendedPiiEntity[]
 	) {
-		// Working state is purely additive - only store NEW entities not already in persistent state
-		const persistentEntities = this.conversationStates.get(conversationId)?.entities || [];
-		const newEntities = extendedEntities.filter(
-			(entity) => !persistentEntities.find((persistent) => persistent.label === entity.label)
-		);
+		const existingState = this.conversationStates.get(conversationId);
+		const persistentEntities = existingState?.entities || [];
 
-		// Only store genuinely new entities in working state
-		this.workingEntitiesForConversations.set(conversationId, newEntities);
+		// Merge occurrences for labels that already exist in persistent state
+		let persistentChanged = false;
+		const mergedPersistent: ExtendedPiiEntity[] = [...persistentEntities];
+
+		const occurrenceKey = (o: { start_idx: number; end_idx: number }) =>
+			`${o.start_idx}-${o.end_idx}`;
+
+		for (const incoming of extendedEntities) {
+			const idx = mergedPersistent.findIndex((e) => e.label === incoming.label);
+			if (idx >= 0) {
+				const current = mergedPersistent[idx];
+				const currentOccKeys = new Set((current.occurrences || []).map(occurrenceKey));
+				const newOcc = (incoming.occurrences || []).filter(
+					(o) => !currentOccKeys.has(occurrenceKey(o))
+				);
+				if (
+					newOcc.length > 0 ||
+					(incoming.shouldMask !== undefined && current.shouldMask === undefined)
+				) {
+					mergedPersistent[idx] = {
+						...current,
+						// Prefer existing shouldMask; otherwise adopt incoming
+						shouldMask: current.shouldMask ?? incoming.shouldMask,
+						// Prefer non-empty raw_text/type
+						text: current.text || incoming.text,
+						raw_text: current.raw_text || incoming.raw_text,
+						type: current.type || incoming.type,
+						occurrences: [...(current.occurrences || []), ...newOcc]
+					};
+					persistentChanged = true;
+				}
+			}
+		}
+
+		if (persistentChanged && existingState) {
+			const newState: ConversationPiiState = {
+				...existingState,
+				entities: mergedPersistent,
+				lastUpdated: Date.now()
+			};
+			this.conversationStates.set(conversationId, newState);
+			this.errorBackup.set(conversationId, { ...newState });
+			this.triggerChatSave(conversationId);
+		}
+
+		// Only store genuinely new labels in working state
+		const newLabels = extendedEntities.filter(
+			(entity) => !mergedPersistent.find((persistent) => persistent.label === entity.label)
+		);
+		this.workingEntitiesForConversations.set(conversationId, newLabels);
 	}
 
 	setEntityMaskingState(conversationId: string, entityId: string, shouldMask: boolean) {
@@ -723,6 +1041,65 @@ export class PiiSessionManager {
 		if (this.apiClient) {
 			this.apiClient.updateConfig(config);
 		}
+	}
+
+	// DEBUG METHODS - For PII debug interface
+	/**
+	 * Get debug information about sync state for a conversation
+	 */
+	getDebugSyncState(conversationId?: string) {
+		const conversationState = conversationId ? this.conversationStates.get(conversationId) : null;
+
+		return {
+			lastUpdated: conversationState?.lastUpdated || null,
+			sessionId: conversationState?.sessionId || this.sessionId || null,
+			apiKey: !!(conversationState?.apiKey || this.apiKey),
+			isLoading: conversationId ? this.loadingConversations.has(conversationId) : false,
+			hasPendingSave: conversationId ? this.pendingSaves.has(conversationId) : false
+		};
+	}
+
+	/**
+	 * Get debug information about data sources
+	 */
+	getDebugSources(conversationId?: string) {
+		const conversationState = conversationId ? this.conversationStates.get(conversationId) : null;
+		const workingEntities = conversationId
+			? this.workingEntitiesForConversations.get(conversationId)
+			: null;
+
+		return {
+			temporary: {
+				entities: this.temporaryState.entities?.length || 0,
+				modifiers: this.temporaryState.modifiers?.length || 0,
+				active: this.temporaryState.isActive || false
+			},
+			conversation: {
+				entities: conversationState?.entities?.length || 0,
+				modifiers: conversationState?.modifiers?.length || 0,
+				exists: !!conversationState
+			},
+			working: {
+				entities: workingEntities?.length || 0
+			},
+			files: {
+				mappings: this.temporaryState.filenameMappings?.length || 0
+			}
+		};
+	}
+
+	/**
+	 * Get debug information about internal state
+	 */
+	getDebugStats() {
+		return {
+			totalConversations: this.conversationStates.size,
+			loadingConversations: this.loadingConversations.size,
+			pendingSaves: this.pendingSaves.size,
+			errorBackups: this.errorBackup.size,
+			hasApiClient: !!this.apiClient,
+			temporaryStateActive: this.temporaryState.isActive
+		};
 	}
 }
 
@@ -865,19 +1242,51 @@ export function adjustPiiEntityPositionsForDisplay(
 	});
 }
 
+// Function to unmask filenames in response text
+export function unmaskFilenamesInText(text: string, mappings: FilenameMapping[]): string {
+	if (!mappings.length || !text) return text;
+
+	let result = text;
+
+	// Replace file IDs with original filenames
+	mappings.forEach((mapping) => {
+		// Create a regex to match the file ID when mentioned in text
+		// Look for patterns like the file ID mentioned as a word or in quotes
+		const escapedFileId = mapping.fileId.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+		const fileIdRegex = new RegExp(`\\b${escapedFileId}\\b`, 'gi');
+
+		result = result.replace(fileIdRegex, (match) => {
+			// Replace file ID with highlighted filename
+			return `<span class="filename-highlight" title="File: ${mapping.originalFilename}" data-file-id="${mapping.fileId}">${mapping.originalFilename}</span>`;
+		});
+	});
+
+	return result;
+}
+
 // Enhanced function to unmask and highlight text with modifier awareness for display
 export function unmaskAndHighlightTextForDisplay(
 	text: string,
-	entities: ExtendedPiiEntity[]
+	entities: ExtendedPiiEntity[],
+	filenameMappings?: FilenameMapping[]
 ): string {
-	if (!entities.length || !text) return text;
+	if (!entities.length && !filenameMappings?.length) return text;
+	if (!text) return text;
 
 	// Check if text is already processed to prevent double processing
-	if (text.includes('<span class="pii-highlight')) {
+	if (
+		text.includes('<span class="pii-highlight') &&
+		text.includes('<span class="filename-highlight')
+	) {
 		return text;
 	}
 
 	let processedText = text;
+
+	// First, handle filename unmasking if mappings are provided
+	if (filenameMappings?.length) {
+		processedText = unmaskFilenamesInText(processedText, filenameMappings);
+	}
 
 	const sortedEntities = [...entities].sort((a, b) => b.raw_text.length - a.raw_text.length);
 

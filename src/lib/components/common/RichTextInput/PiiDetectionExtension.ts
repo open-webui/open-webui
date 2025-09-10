@@ -7,6 +7,20 @@ import type { PiiEntity } from '$lib/apis/pii';
 import { maskPiiText } from '$lib/apis/pii';
 import { debounce, PiiSessionManager } from '$lib/utils/pii';
 import type { PiiModifier } from './PiiModifierExtension';
+import { decodeHtmlEntities, countWords, extractWords } from './PiiTextUtils';
+import { buildPositionMapping, type PositionMapping } from './PiiPositionMapping';
+import { getPiiConfig, type PiiExtensionConfig } from './PiiExtensionConfig';
+import { PiiPerformanceTracker } from './PiiPerformanceOptimizer';
+import {
+	extractCompletedWords,
+	findNewWords,
+	extractIncrementalContent,
+	createContextSnippet,
+	mergeIncrementalEntities,
+	getSmartDebounceDelay,
+	hasSignificantContent,
+	TypingPauseDetector
+} from './PiiDetectionUtils';
 
 // Interface for PII entity occurrences
 interface PiiOccurrence {
@@ -14,10 +28,15 @@ interface PiiOccurrence {
 	end_idx: number;
 }
 
-interface PositionMapping {
-	plainTextToProseMirror: Map<number, number>;
-	proseMirrorToPlainText: Map<number, number>;
-	plainText: string;
+// PositionMapping interface moved to PiiPositionMapping.ts
+// decodeHtmlEntities function moved to PiiTextUtils.ts
+
+// Track text nodes and their content for reliable change detection
+interface TextNodeInfo {
+	nodeId: string; // Unique identifier for the node based on position and content
+	content: string;
+	startPos: number;
+	endPos: number;
 }
 
 interface PiiDetectionState {
@@ -26,6 +45,13 @@ interface PiiDetectionState {
 	isDetecting: boolean;
 	lastText: string;
 	needsSync: boolean;
+	userEdited?: boolean;
+	textNodes: TextNodeInfo[]; // Track all text nodes in the document
+	lastWordCount: number; // Track word count for more granular change detection
+	cachedDecorations?: DecorationSet; // Cache decorations to prevent rebuilding on every keystroke
+	lastDecorationHash?: string; // Hash to detect when decorations need updating
+	dynamicallyEnabled?: boolean; // Track if PII detection is dynamically enabled/disabled
+	temporarilyHiddenEntities: Set<string>; // Track entities temporarily hidden when modifiers are removed
 }
 
 export interface PiiDetectionOptions {
@@ -37,49 +63,153 @@ export interface PiiDetectionOptions {
 	onPiiToggled?: (entities: ExtendedPiiEntity[]) => void;
 	onPiiDetectionStateChanged?: (isDetecting: boolean) => void;
 	debounceMs?: number;
+	detectOnlyAfterUserEdit?: boolean; // If true, do not auto-detect on initial load; wait for user edits
 }
 
 // Removed unused interfaces - let TypeScript infer TipTap command types
 
-// Build position mapping between plain text and ProseMirror positions
-function buildPositionMapping(doc: ProseMirrorNode): PositionMapping {
-	const plainTextToProseMirror = new Map<number, number>();
-	const proseMirrorToPlainText = new Map<number, number>();
-	let plainTextOffset = 0;
-	let plainText = '';
+// Extract all text nodes from the document for change detection
+function extractTextNodes(doc: ProseMirrorNode): TextNodeInfo[] {
+	const textNodes: TextNodeInfo[] = [];
+	let nodeCounter = 0;
 
 	doc.nodesBetween(0, doc.content.size, (node, pos) => {
 		if (node.isText && node.text) {
-			// Map each character in the text node
-			for (let i = 0; i < node.text.length; i++) {
-				const proseMirrorPos = pos + i;
-				const plainTextPos = plainTextOffset + i;
-
-				plainTextToProseMirror.set(plainTextPos, proseMirrorPos);
-				proseMirrorToPlainText.set(proseMirrorPos, plainTextPos);
-			}
-
-			plainText += node.text;
-			plainTextOffset += node.text.length;
-		} else if (node.type.name === 'paragraph' && plainTextOffset > 0) {
-			// Add line breaks between paragraphs (but not at the very beginning)
-			plainText += '\n';
-			plainTextOffset += 1;
-		} else if (node.type.name === 'hard_break') {
-			// Add line breaks for hard breaks
-			plainText += '\n';
-			plainTextOffset += 1;
+			const nodeId = `${pos}-${node.text.length}-${nodeCounter++}`;
+			textNodes.push({
+				nodeId,
+				content: node.text,
+				startPos: pos,
+				endPos: pos + node.text.length
+			});
 		}
-
-		return true; // Continue traversing
+		return true;
 	});
 
-	return {
-		plainTextToProseMirror,
-		proseMirrorToPlainText,
-		plainText: plainText.trim()
-	};
+	return textNodes;
 }
+
+// countWords function moved to PiiTextUtils.ts
+
+// extractWords function moved to PiiTextUtils.ts
+
+// Note: Removed simple PII pattern pre-filtering as it was too simplistic
+// and could miss real PII cases. Let the AI-powered API handle sophisticated detection.
+
+// Check if new content has been added by comparing text nodes
+function hasNewContent(
+	previousNodes: TextNodeInfo[],
+	currentNodes: TextNodeInfo[],
+	previousWordCount: number,
+	currentWordCount: number
+): boolean {
+	// Special case: if we had no content before and now have content, it's new
+	// This handles initial content loading (e.g., in KnowledgeBase)
+	if (previousWordCount === 0 && currentWordCount > 0) {
+		console.log('PiiDetectionExtension: Initial content loaded', {
+			wordCount: currentWordCount,
+			nodeCount: currentNodes.length
+		});
+		return true;
+	}
+
+	// Quick check: if word count increased, we definitely have new content
+	if (currentWordCount > previousWordCount) {
+		console.log('PiiDetectionExtension: Word count increased', {
+			previous: previousWordCount,
+			current: currentWordCount
+		});
+		return true;
+	}
+
+	// If we have no previous nodes but have current nodes, it's new content
+	if (previousNodes.length === 0 && currentNodes.length > 0) {
+		console.log('PiiDetectionExtension: Content loaded into empty editor', {
+			nodeCount: currentNodes.length
+		});
+		return true;
+	}
+
+	// If we have fewer nodes than before, content was removed (not new)
+	if (currentNodes.length < previousNodes.length) {
+		return false;
+	}
+
+	// If we have more nodes, we likely have new content
+	if (currentNodes.length > previousNodes.length) {
+		console.log('PiiDetectionExtension: New text nodes detected', {
+			previous: previousNodes.length,
+			current: currentNodes.length
+		});
+		return true;
+	}
+
+	// Special case: if content completely changed (like when switching files in KnowledgeBase)
+	// Check if the majority of content is different
+	if (previousNodes.length > 0 && currentNodes.length > 0) {
+		let changedNodes = 0;
+		const maxNodes = Math.max(previousNodes.length, currentNodes.length);
+
+		for (let i = 0; i < maxNodes; i++) {
+			const currentNode = currentNodes[i];
+			const previousNode = previousNodes[i];
+
+			if (!currentNode || !previousNode || currentNode.content !== previousNode.content) {
+				changedNodes++;
+			}
+		}
+
+		// If more than 50% of nodes changed, consider it new content
+		const changeRatio = changedNodes / maxNodes;
+		if (changeRatio > 0.5) {
+			console.log('PiiDetectionExtension: Substantial content change detected', {
+				changedNodes,
+				totalNodes: maxNodes,
+				changeRatio: Math.round(changeRatio * 100) + '%'
+			});
+			return true;
+		}
+	}
+
+	// Same number of nodes - check if any node content has grown
+	for (let i = 0; i < currentNodes.length; i++) {
+		const currentNode = currentNodes[i];
+		const previousNode = previousNodes[i];
+
+		if (!previousNode) continue;
+
+		// If current node content is longer and contains the previous content,
+		// it's likely new content was added to this node
+		if (
+			currentNode.content.length > previousNode.content.length &&
+			currentNode.content.includes(previousNode.content)
+		) {
+			console.log('PiiDetectionExtension: Node content expanded', {
+				node: i,
+				previous: previousNode.content.length,
+				current: currentNode.content.length,
+				previousContent: previousNode.content.slice(0, 50) + '...',
+				currentContent: currentNode.content.slice(0, 50) + '...'
+			});
+			return true;
+		}
+
+		// If node content changed completely, consider it new content
+		if (currentNode.content !== previousNode.content && currentNode.content.trim() !== '') {
+			console.log('PiiDetectionExtension: Node content changed', {
+				node: i,
+				previousContent: previousNode.content.slice(0, 50) + '...',
+				currentContent: currentNode.content.slice(0, 50) + '...'
+			});
+			return true;
+		}
+	}
+
+	return false;
+}
+
+// Build position mapping between plain text and ProseMirror positions
+// buildPositionMapping function moved to PiiPositionMapping.ts
 
 // Convert PII entity positions from plain text to ProseMirror positions
 // Preserves existing shouldMask state from current entities
@@ -102,14 +232,13 @@ function mapPiiEntitiesToProseMirror(
 				const plainTextEnd = occurrence.end_idx;
 
 				const proseMirrorStart =
-					mapping.plainTextToProseMirror.get(plainTextStart) ?? plainTextStart + 1;
-				const proseMirrorEnd =
-					mapping.plainTextToProseMirror.get(plainTextEnd - 1) ?? plainTextEnd - 1 + 1;
+					mapping.plainTextToProseMirror.get(plainTextStart) ?? plainTextStart;
+				const proseMirrorEnd = mapping.plainTextToProseMirror.get(plainTextEnd - 1) ?? plainTextEnd;
 
 				return {
 					...occurrence,
 					start_idx: proseMirrorStart,
-					end_idx: proseMirrorEnd + 1
+					end_idx: proseMirrorEnd
 				};
 			})
 		};
@@ -124,8 +253,8 @@ function validateAndFilterEntities(
 ): ExtendedPiiEntity[] {
 	return entities.filter((entity) => {
 		// Check if entity still exists in the current text
-		const entityText = entity.raw_text.toLowerCase();
-		const currentText = mapping.plainText.toLowerCase();
+		const entityText = decodeHtmlEntities(entity.raw_text).toLowerCase();
+		const currentText = decodeHtmlEntities(mapping.plainText).toLowerCase();
 
 		if (!currentText.includes(entityText)) {
 			console.log(
@@ -153,6 +282,66 @@ function validateAndFilterEntities(
 	});
 }
 
+// Resolve overlapping occurrences across all entities by preferring longer spans and stronger types
+function resolveOverlaps(entities: ExtendedPiiEntity[], doc: ProseMirrorNode): ExtendedPiiEntity[] {
+	interface SpanRef {
+		entityIdx: number;
+		occIdx: number;
+		from: number;
+		to: number;
+		length: number;
+		score: number;
+	}
+	// Entity priorities for overlap resolution
+	const config = getPiiConfig();
+	const typePriority = config.entityTypePriorities;
+
+	const spans: SpanRef[] = [];
+	entities.forEach((e, ei) => {
+		(e.occurrences || []).forEach((o, oi) => {
+			const length = o.end_idx - o.start_idx;
+			const base = Math.max(length, (e.raw_text || '').length);
+			const pri = typePriority[(e.type || '').toUpperCase()] || 1;
+			// Penalty for very short/fragmentary entities
+			const shortPenalty = (e.raw_text || '').trim().length <= 3 ? -5 : 0;
+			spans.push({
+				entityIdx: ei,
+				occIdx: oi,
+				from: o.start_idx,
+				to: o.end_idx,
+				length,
+				score: base * 10 + pri + shortPenalty
+			});
+		});
+	});
+
+	spans.sort((a, b) => b.score - a.score);
+	const kept: boolean[][] = entities.map((e) =>
+		new Array((e.occurrences || []).length).fill(false)
+	);
+	const used: Array<{ from: number; to: number }> = [];
+
+	for (const s of spans) {
+		const overlaps = used.some((u) => s.from < u.to && s.to > u.from);
+		if (!overlaps) {
+			kept[s.entityIdx][s.occIdx] = true;
+			used.push({ from: s.from, to: s.to });
+		}
+	}
+
+	const result: ExtendedPiiEntity[] = [];
+	entities.forEach((e, ei) => {
+		const occ: PiiOccurrence[] = [] as any;
+		(e.occurrences || []).forEach((o, oi) => {
+			if (kept[ei][oi]) occ.push(o as any);
+		});
+		if (occ.length > 0) {
+			result.push({ ...e, occurrences: occ });
+		}
+	});
+	return result;
+}
+
 // Remap existing entities to current document positions
 function remapEntitiesForCurrentDocument(
 	entities: ExtendedPiiEntity[],
@@ -164,65 +353,58 @@ function remapEntitiesForCurrentDocument(
 	}
 
 	const remappedEntities = entities.map((entity) => {
-		const entityText = entity.raw_text;
-		const searchText = entityText.toLowerCase();
-		const plainText = mapping.plainText.toLowerCase();
+		// Decode HTML entities in raw_text so matching aligns with rendered text
+		let entityText = decodeHtmlEntities(entity.raw_text);
 
-		// Find all occurrences of this entity in the current text
-		const newOccurrences = [];
-		let searchIndex = 0;
+		// Normalize edges: strip table pipes, leading/trailing punctuation artifacts
+		// Keep internal punctuation as-is
+		entityText = entityText
+			.normalize('NFKC')
+			.replace(/^[\s\u00A0\t|:;.,\-_/\\]+/, '')
+			.replace(/[\s\u00A0\t|:;.,\-_/\\]+$/, '');
 
-		// Use word boundary matching for better accuracy
-		const entityWords = entityText.split(/\s+/);
-		const isMultiWord = entityWords.length > 1;
+		const searchSource = decodeHtmlEntities(mapping.plainText);
 
-		while (searchIndex < plainText.length) {
-			const foundIndex = plainText.indexOf(searchText, searchIndex);
-			if (foundIndex === -1) break;
+		// Build a whitespace-tolerant regex for the entity text
+		const escaped = entityText.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+		const pattern = escaped.replace(/\s+/g, '[\\s\\u00A0\\t]+');
+		const regex = new RegExp(pattern, 'gi');
 
-			// Check word boundaries for single words to avoid partial matches
-			if (!isMultiWord) {
-				const beforeChar = foundIndex > 0 ? plainText[foundIndex - 1] : ' ';
-				const afterChar =
-					foundIndex + searchText.length < plainText.length
-						? plainText[foundIndex + searchText.length]
-						: ' ';
+		const isAlnum = (ch: string) => /[A-Za-z0-9À-ÿ]/.test(ch);
+		const startsAlpha = isAlnum(entityText[0] || '');
+		const endsAlpha = isAlnum(entityText[entityText.length - 1] || '');
 
-				// Skip if not at word boundary (unless it's punctuation)
-				if (/\w/.test(beforeChar) || /\w/.test(afterChar)) {
-					searchIndex = foundIndex + 1;
-					continue;
-				}
+		const newOccurrences = [] as PiiOccurrence[];
+		let match: RegExpExecArray | null;
+		while ((match = regex.exec(searchSource)) !== null) {
+			const foundIndex = match.index;
+			const foundLength = match[0].length;
+			const plainTextStart = foundIndex;
+			const plainTextEnd = foundIndex + foundLength;
+
+			// Enforce word boundaries to avoid mid-token matches
+			const beforeChar = plainTextStart > 0 ? searchSource[plainTextStart - 1] : '';
+			const afterChar = plainTextEnd < searchSource.length ? searchSource[plainTextEnd] : '';
+			if (startsAlpha && beforeChar && isAlnum(beforeChar)) {
+				continue; // starts inside a word
+			}
+			if (endsAlpha && afterChar && isAlnum(afterChar)) {
+				continue; // ends inside a word
 			}
 
-			const plainTextStart = foundIndex;
-			const plainTextEnd = foundIndex + entityText.length;
-
-			// Convert to ProseMirror positions
 			const proseMirrorStart = mapping.plainTextToProseMirror.get(plainTextStart);
 			const proseMirrorEnd = mapping.plainTextToProseMirror.get(plainTextEnd - 1);
 
 			if (proseMirrorStart !== undefined && proseMirrorEnd !== undefined) {
 				const from = proseMirrorStart;
 				const to = proseMirrorEnd + 1;
-
-				// Validate the range
 				if (from >= 0 && to <= doc.content.size && from < to) {
-					newOccurrences.push({
-						start_idx: from,
-						end_idx: to
-					});
+					newOccurrences.push({ start_idx: from, end_idx: to });
 				}
 			}
-
-			searchIndex = foundIndex + 1;
 		}
 
-		// Return entity with new occurrences, or mark for removal if none found
-		return {
-			...entity,
-			occurrences: newOccurrences
-		};
+		return { ...entity, occurrences: newOccurrences };
 	});
 
 	return remappedEntities.filter((entity) => entity.occurrences.length > 0);
@@ -236,6 +418,8 @@ function syncWithSessionManager(
 	mapping: PositionMapping,
 	doc: ProseMirrorNode
 ): ExtendedPiiEntity[] {
+	const tracker = PiiPerformanceTracker.getInstance();
+	tracker.recordSyncOperation();
 	// Get all entities from session manager using simplified display logic
 	const sessionEntities = piiSessionManager.getEntitiesForDisplay(conversationId);
 
@@ -267,29 +451,17 @@ function syncWithSessionManager(
 		return validateAndFilterEntities(filteredEntities, doc, mapping);
 	}
 
-	// Sync shouldMask state: plugin state takes precedence over session manager
+	// Sync shouldMask state: Use session manager state as source of truth
 	const updatedEntities = currentEntities.map((currentEntity) => {
 		const sessionEntity = sessionEntities.find(
 			(e: ExtendedPiiEntity) => e.label === currentEntity.label
 		);
-		if (sessionEntity && sessionEntity.shouldMask !== currentEntity.shouldMask) {
-			console.log(
-				`PiiDetectionExtension: Syncing shouldMask state for ${currentEntity.label}: ${sessionEntity.shouldMask} → ${currentEntity.shouldMask}`
-			);
-
-			// Update session manager to match plugin state
-			if (conversationId) {
-				piiSessionManager.setEntityMaskingState(
-					conversationId,
-					currentEntity.label,
-					currentEntity.shouldMask ?? true
-				);
-			} else {
-				piiSessionManager.setTemporaryEntityMaskingState(
-					currentEntity.label,
-					currentEntity.shouldMask ?? true
-				);
-			}
+		if (sessionEntity) {
+			// Use session manager's shouldMask state
+			return {
+				...currentEntity,
+				shouldMask: sessionEntity.shouldMask ?? true
+			};
 		}
 		return currentEntity;
 	});
@@ -304,78 +476,203 @@ function createPiiDecorations(
 	doc: ProseMirrorNode
 ): Decoration[] {
 	const decorations: Decoration[] = [];
-	const modifiersByEntity = new Map<string, PiiModifier>();
 
-	modifiers.forEach((modifier) => {
-		modifiersByEntity.set(modifier.entity.toLowerCase(), modifier);
-	});
+	// Build a fresh mapping for this render pass
+	const tracker = PiiPerformanceTracker.getInstance();
+	const endTiming = tracker.startTiming();
+	const mapping = buildPositionMapping(doc);
+	const elapsed = endTiming();
+	tracker.recordPositionRemap();
+	if (elapsed > 10) {
+		console.log(
+			`PiiDetectionExtension: Slow position mapping in createPiiDecorations: ${elapsed.toFixed(1)}ms`
+		);
+	}
 
-	// Add PII entity decorations (lower priority)
+	const source = decodeHtmlEntities(mapping.plainText);
+
+	// Helper for alnum
+	const isAlnum = (ch: string) => /[A-Za-z0-9À-ÿ]/.test(ch);
+
+	// Add PII entity decorations first (lower priority)
+	type RawSpan = {
+		type: string;
+		label: string;
+		shouldMask: boolean;
+		from: number;
+		to: number;
+		entityIndex: number;
+		occurrenceIndex: number;
+	};
+	const rawSpans: RawSpan[] = [];
+
 	entities.forEach((entity, entityIndex) => {
-		entity.occurrences.forEach((occurrence: PiiOccurrence, occurrenceIndex) => {
-			const { start_idx: from, end_idx: to } = occurrence;
-
+		(entity.occurrences || []).forEach((occ, occurrenceIndex) => {
+			const from = occ.start_idx;
+			const to = occ.end_idx;
 			if (from >= 0 && to <= doc.content.size && from < to) {
-				const hasModifier = modifiersByEntity.has(entity.raw_text.toLowerCase());
-
-				if (!hasModifier) {
-					const shouldMask = entity.shouldMask ?? true;
-					const maskingClass = shouldMask ? 'pii-masked' : 'pii-unmasked';
-
-					decorations.push(
-						Decoration.inline(from, to, {
-							class: `pii-highlight ${maskingClass}`,
-							'data-pii-type': entity.type,
-							'data-pii-label': entity.label,
-							'data-pii-text': entity.raw_text,
-							'data-pii-occurrence': occurrenceIndex.toString(),
-							'data-should-mask': shouldMask.toString(),
-							'data-entity-index': entityIndex.toString()
-						})
-					);
-				}
+				rawSpans.push({
+					type: entity.type,
+					label: entity.label,
+					shouldMask: entity.shouldMask ?? true,
+					from,
+					to,
+					entityIndex,
+					occurrenceIndex
+				});
 			}
 		});
 	});
 
-	// Add modifier decorations (higher priority)
-	modifiers.forEach((modifier) => {
-		doc.nodesBetween(0, doc.content.size, (node, pos) => {
-			if (node.isText && node.text) {
-				const entityText = modifier.entity.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-				const regex = new RegExp(`\\b${entityText}\\b`, 'gi');
-				let match;
+	// Sort for stable rendering; do NOT merge spans to preserve indices for toggling
+	rawSpans.sort((a, b) => (a.from === b.from ? a.to - b.to : a.from - b.from));
+	rawSpans.forEach((span) => {
+		const maskingClass = span.shouldMask ? 'pii-masked' : 'pii-unmasked';
+		// Get the actual text content from the document for this span
+		const spanText = doc.textBetween(span.from, span.to, '\n', '\0');
+		decorations.push(
+			Decoration.inline(span.from, span.to, {
+				class: `pii-highlight ${maskingClass}`,
+				'data-pii-type': span.type,
+				'data-pii-label': span.label,
+				'data-pii-text': spanText || '',
+				'data-pii-occurrence': String(span.occurrenceIndex),
+				'data-should-mask': span.shouldMask.toString(),
+				'data-entity-index': String(span.entityIndex)
+			})
+		);
+	});
 
-				while ((match = regex.exec(node.text)) !== null) {
-					const matchStart = pos + match.index;
-					const matchEnd = matchStart + match[0].length;
+	// Add modifier decorations using entity-based matching and fallback to text matching
+	// Track applied ranges to prevent duplicates
+	const appliedRanges = new Set<string>();
 
-					if (matchStart >= 0 && matchEnd <= doc.content.size && matchStart < matchEnd) {
-						const decorationClass =
-							modifier.action === 'string-mask'
-								? 'pii-modifier-highlight pii-modifier-mask'
+	(modifiers || []).forEach((modifier, modifierIndex) => {
+		let decorationCreated = false;
+
+		// Strategy 1: Try to find matching PII entity by text content
+		// This handles cases where the modifier was created from an existing PII highlight
+		entities.forEach((entity, entityIndex) => {
+			entity.occurrences?.forEach((occurrence, occurrenceIndex) => {
+				// Create range key to prevent duplicate decorations
+				const rangeKey = `${occurrence.start_idx}-${occurrence.end_idx}-${modifier.id}`;
+				if (appliedRanges.has(rangeKey)) return;
+
+				// Get the actual text content from the document at this entity's position
+				const entityText = doc
+					.textBetween(occurrence.start_idx, occurrence.end_idx, '\n', '\0')
+					.trim();
+
+				// Check if this entity's text matches the modifier's entity text
+				if (entityText.toLowerCase() === modifier.entity.toLowerCase()) {
+					const decorationClass =
+						modifier.action === 'string-mask'
+							? 'pii-modifier-highlight pii-modifier-mask'
+							: modifier.action === 'word-mask'
+								? 'pii-modifier-highlight pii-modifier-word-mask'
 								: 'pii-modifier-highlight pii-modifier-ignore';
 
-						decorations.push(
-							Decoration.inline(matchStart, matchEnd, {
-								class: decorationClass,
-								'data-modifier-entity': modifier.entity,
-								'data-modifier-action': modifier.action,
-								'data-modifier-type': modifier.type || '',
-								'data-modifier-id': modifier.id,
-								style: 'z-index: 10; position: relative;'
-							})
-						);
-					}
+					decorations.push(
+						Decoration.inline(occurrence.start_idx, occurrence.end_idx, {
+							class: decorationClass,
+							'data-modifier-entity': modifier.entity,
+							'data-modifier-action': modifier.action,
+							'data-modifier-type': modifier.type || '',
+							'data-modifier-id': modifier.id,
+							style: 'z-index: 10; position: relative;'
+						})
+					);
+					appliedRanges.add(rangeKey);
+					decorationCreated = true;
 				}
-			}
+			});
 		});
+
+		// Strategy 2: Fallback to plain text matching if no entity match found
+		if (!decorationCreated) {
+			// Normalize modifier entity
+			let text = decodeHtmlEntities(modifier.entity || '');
+			text = text
+				.normalize('NFKC')
+				.replace(/^[\s\u00A0\t|:;.,\-_/\\]+/, '')
+				.replace(/[\s\u00A0\t|:;.,\-_/\\]+$/, '');
+			if (!text) return;
+
+			const escaped = text.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+			const pattern = escaped.replace(/\s+/g, '[\s\u00A0\t]+');
+			const regex = new RegExp(pattern, 'gi');
+
+			const startsAlpha = isAlnum(text[0] || '');
+			const endsAlpha = isAlnum(text[text.length - 1] || '');
+
+			// Helper: tolerant mapping from plain index to PM position
+			const mapStartInRange = (startIdx: number, endIdx: number): number | undefined => {
+				// Find first mappable plain index within [startIdx, endIdx)
+				for (let i = startIdx; i < endIdx; i++) {
+					const pm = mapping.plainTextToProseMirror.get(i);
+					if (pm !== undefined) return pm;
+				}
+				return undefined;
+			};
+			const mapEndInRange = (startIdx: number, endIdx: number): number | undefined => {
+				// Find last mappable plain index within [startIdx, endIdx)
+				for (let i = endIdx - 1; i >= startIdx; i--) {
+					const pm = mapping.plainTextToProseMirror.get(i);
+					if (pm !== undefined) return pm;
+				}
+				return undefined;
+			};
+
+			let match: RegExpExecArray | null;
+			while ((match = regex.exec(source)) !== null) {
+				const start = match.index;
+				const end = start + match[0].length;
+				const before = start > 0 ? source[start - 1] : '';
+				const after = end < source.length ? source[end] : '';
+				if (startsAlpha && before && isAlnum(before)) continue;
+				if (endsAlpha && after && isAlnum(after)) continue;
+
+				const pmStart = mapStartInRange(start, end);
+				const pmEnd = mapEndInRange(start, end);
+				if (pmStart === undefined || pmEnd === undefined) continue;
+				const from = pmStart;
+				const to = pmEnd + 1;
+				if (!(from >= 0 && to <= doc.content.size && from < to)) continue;
+
+				// Check for duplicate ranges in fallback strategy too
+				const rangeKey = `${from}-${to}-${modifier.id}`;
+				if (appliedRanges.has(rangeKey)) continue;
+
+				const decorationClass =
+					modifier.action === 'string-mask'
+						? 'pii-modifier-highlight pii-modifier-mask'
+						: modifier.action === 'word-mask'
+							? 'pii-modifier-highlight pii-modifier-word-mask'
+							: 'pii-modifier-highlight pii-modifier-ignore';
+
+				decorations.push(
+					Decoration.inline(from, to, {
+						class: decorationClass,
+						'data-modifier-entity': modifier.entity,
+						'data-modifier-action': modifier.action,
+						'data-modifier-type': modifier.type || '',
+						'data-modifier-id': modifier.id,
+						style: 'z-index: 10; position: relative;'
+					})
+				);
+				appliedRanges.add(rangeKey);
+				decorationCreated = true;
+			}
+		}
 	});
 
 	return decorations;
 }
 
 const piiDetectionPluginKey = new PluginKey<PiiDetectionState>('piiDetection');
+
+// Export the plugin key so other extensions can communicate with this extension
+export { piiDetectionPluginKey };
 
 export const PiiDetectionExtension = Extension.create<PiiDetectionOptions>({
 	name: 'piiDetection',
@@ -389,7 +686,8 @@ export const PiiDetectionExtension = Extension.create<PiiDetectionOptions>({
 			onPiiDetected: undefined,
 			onPiiToggled: undefined,
 			onPiiDetectionStateChanged: undefined,
-			debounceMs: 500
+			debounceMs: getPiiConfig().timing.defaultDebounceMs,
+			detectOnlyAfterUserEdit: false
 		};
 	},
 
@@ -401,17 +699,51 @@ export const PiiDetectionExtension = Extension.create<PiiDetectionOptions>({
 			return [];
 		}
 
+		console.log('PiiDetectionExtension: initialized', {
+			conversationId: options.conversationId,
+			enabled,
+			hasApiKey: !!apiKey,
+			debounceMs: debounceMs || getPiiConfig().timing.defaultDebounceMs
+		});
+
 		const piiSessionManager = PiiSessionManager.getInstance();
 		piiSessionManager.setApiKey(apiKey);
+
+		// Initialize typing pause detector for catching missed changes after typing pauses
+		const typingPauseDetector = new TypingPauseDetector(1000); // 1 second pause threshold
+
+		// Store detector reference for command access
+		if (this.editor) {
+			(this.editor as any)._typingPauseDetector = typingPauseDetector;
+		}
+
+		// Handle pause-triggered detection
+		const handlePauseTriggeredDetection = (textDiff: { previous: string; current: string }) => {
+			console.log('PiiDetectionExtension: ⏰ Pause-triggered detection activated', {
+				previousLength: textDiff.previous.length,
+				currentLength: textDiff.current.length,
+				lengthDiff: textDiff.current.length - textDiff.previous.length
+			});
+
+			// Use the full text for pause-triggered detection (more comprehensive than incremental)
+			performPiiDetection(textDiff.current);
+		};
 
 		const performPiiDetection = async (plainText: string) => {
 			if (!plainText.trim()) {
 				return;
 			}
 
+			// Prevent race conditions - check if detection is already running
+			const editorView = this.editor?.view;
+			const currentState = editorView?.state ? plugin.getState(editorView.state) : null;
+			if (currentState?.isDetecting) {
+				console.log('PiiDetectionExtension: ⚠️ Full detection skipped - already detecting');
+				return;
+			}
+
 			try {
 				// Set detecting state to true at the start
-				const editorView = this.editor?.view;
 				if (editorView) {
 					const tr = editorView.state.tr.setMeta(piiDetectionPluginKey, {
 						type: 'SET_DETECTING',
@@ -423,6 +755,12 @@ export const PiiDetectionExtension = Extension.create<PiiDetectionOptions>({
 				const knownEntities = piiSessionManager.getKnownEntitiesForApi(options.conversationId);
 
 				const modifiers = piiSessionManager.getModifiersForApi(options.conversationId);
+
+				// Track API performance
+				const tracker = PiiPerformanceTracker.getInstance();
+				const apiStartTime = performance.now();
+				tracker.recordApiCall();
+
 				const response = await maskPiiText(
 					apiKey,
 					[plainText],
@@ -431,6 +769,17 @@ export const PiiDetectionExtension = Extension.create<PiiDetectionOptions>({
 					false,
 					false
 				);
+
+				// Track this API call for pause detection
+				typingPauseDetector.onApiCallMade(plainText);
+
+				// Track API completion
+				const apiElapsed = performance.now() - apiStartTime;
+				if (apiElapsed > 1000) {
+					console.log(
+						`PiiDetectionExtension: Slow full API call: ${apiElapsed.toFixed(0)}ms, text length: ${plainText.length}`
+					);
+				}
 
 				if (response.pii && response.pii[0] && response.pii[0].length > 0) {
 					const editorView = this.editor?.view;
@@ -493,13 +842,14 @@ export const PiiDetectionExtension = Extension.create<PiiDetectionOptions>({
 
 					const tr = editorView.state.tr.setMeta(piiDetectionPluginKey, {
 						type: 'UPDATE_ENTITIES',
-						entities: mappedEntities
+						entities: response.pii[0],
+						clearTemporarilyHidden: true // Clear hidden entities when new detection results come in from user activity
 					});
 
 					editorView.dispatch(tr);
 
 					if (onPiiDetected) {
-						onPiiDetected(mappedEntities, response.text[0]);
+						onPiiDetected(response.pii[0], response.text[0]);
 					}
 				}
 			} catch (error) {
@@ -517,8 +867,201 @@ export const PiiDetectionExtension = Extension.create<PiiDetectionOptions>({
 			}
 		};
 
-		// Debounced version
-		const debouncedDetection = debounce(performPiiDetection, debounceMs || 500);
+		// Smart debouncing based on content significance
+		const getSmartDebounceDelay = (
+			newWords: string[],
+			incrementalContent: string | null
+		): number => {
+			const config = getPiiConfig();
+			const baseDelay = debounceMs || config.timing.defaultDebounceMs;
+
+			// Factors that reduce delay (make detection faster):
+			if (newWords.length > config.textProcessing.manyWordsThreshold)
+				return Math.max(
+					baseDelay * config.timing.smartDebounce.fastMultiplier,
+					config.timing.smartDebounce.minDelayMs
+				);
+			if (
+				incrementalContent &&
+				incrementalContent.length > config.textProcessing.largeContentThreshold
+			)
+				return Math.max(baseDelay * 0.9, 450); // Faster for large additions
+
+			// Factors that increase delay (make detection slower):
+			if (newWords.length <= config.textProcessing.fewWordsThreshold)
+				return baseDelay * config.timing.smartDebounce.slowMultiplier;
+			if (newWords.every((word) => word.length <= config.textProcessing.shortWordThreshold))
+				return baseDelay * config.timing.smartDebounce.shortWordMultiplier;
+
+			return baseDelay; // Default delay
+		};
+
+		// Debounced version with smart timing
+		let smartDebouncedDetection: (text: string) => void;
+		let smartDebouncedIncrementalDetection: (incrementalText: string, fullText: string) => void;
+
+		// Incremental detection for better performance with large documents
+		const performIncrementalPiiDetection = async (
+			incrementalText: string,
+			fullText: string,
+			incrementalOffset?: number
+		) => {
+			if (!incrementalText.trim()) {
+				return;
+			}
+
+			// Prevent race conditions - check if detection is already running
+			const editorView = this.editor?.view;
+			const currentState = editorView?.state ? plugin.getState(editorView.state) : null;
+			if (currentState?.isDetecting) {
+				console.log('PiiDetectionExtension: ⚠️ Incremental detection skipped - already detecting');
+				return;
+			}
+
+			try {
+				// Set detecting state to true at the start
+				if (editorView) {
+					const tr = editorView.state.tr.setMeta(piiDetectionPluginKey, {
+						type: 'SET_DETECTING',
+						isDetecting: true
+					});
+					editorView.dispatch(tr);
+				}
+
+				const knownEntities = piiSessionManager.getKnownEntitiesForApi(options.conversationId);
+				const modifiers = piiSessionManager.getModifiersForApi(options.conversationId);
+
+				// Detect PII in the incremental content only
+				console.log('PiiDetectionExtension: Analyzing context snippet for PII', {
+					contextSnippetLength: incrementalText.length,
+					fullLength: fullText.length,
+					contextOffset: incrementalOffset || 0,
+					contextPreview:
+						incrementalText.substring(0, 100) + (incrementalText.length > 100 ? '...' : '')
+				});
+
+				// Track incremental API performance
+				const tracker = PiiPerformanceTracker.getInstance();
+				const apiStartTime = performance.now();
+				tracker.recordApiCall();
+
+				const response = await maskPiiText(
+					apiKey,
+					[incrementalText],
+					knownEntities,
+					modifiers,
+					false,
+					false
+				);
+
+				// Track this API call for pause detection (use full text as baseline, not just snippet)
+				typingPauseDetector.onApiCallMade(fullText);
+
+				// Track incremental API completion
+				const apiElapsed = performance.now() - apiStartTime;
+				if (apiElapsed > 500) {
+					console.log(
+						`PiiDetectionExtension: Slow incremental API call: ${apiElapsed.toFixed(0)}ms, text length: ${incrementalText.length}`
+					);
+				}
+
+				if (response.pii && response.pii[0] && response.pii[0].length > 0) {
+					console.log(
+						'PiiDetectionExtension: ✅ Found PII in context snippet, processing with positioning adjustment',
+						{
+							piiEntitiesFound: response.pii[0].length,
+							contextSnippetLength: incrementalText.length,
+							contextOffset: incrementalOffset || 0,
+							avoidedFullDetection: true
+						}
+					);
+
+					// Calculate offset to map incremental positions to full document positions
+					// Use provided offset if available, otherwise try to find it
+					const calculatedOffset =
+						incrementalOffset !== undefined ? incrementalOffset : fullText.indexOf(incrementalText);
+
+					if (calculatedOffset >= 0) {
+						// Adjust PII entity positions to match full document
+						const adjustedEntities = response.pii[0].map((entity) => ({
+							...entity,
+							occurrences: entity.occurrences.map((occ) => ({
+								start_idx: occ.start_idx + calculatedOffset,
+								end_idx: occ.end_idx + calculatedOffset
+							}))
+						}));
+
+						// Merge incremental results with existing entities
+						const existingEntities = piiSessionManager.getEntitiesForDisplay(
+							options.conversationId
+						);
+						const mergedEntities = mergeIncrementalEntities(existingEntities, adjustedEntities);
+						piiSessionManager.setConversationWorkingEntitiesWithMaskStates(
+							options.conversationId,
+							mergedEntities
+						);
+
+						// Update plugin state with adjusted entities
+						if (editorView) {
+							const state = piiDetectionPluginKey.getState(editorView.state);
+							if (state?.positionMapping) {
+								const mappedEntities = mapPiiEntitiesToProseMirror(
+									adjustedEntities,
+									state.positionMapping
+								);
+
+								const tr = editorView.state.tr.setMeta(piiDetectionPluginKey, {
+									type: 'UPDATE_ENTITIES',
+									entities: mappedEntities,
+									clearTemporarilyHidden: true // Clear hidden entities when new detection results come in from user activity
+								});
+								editorView.dispatch(tr);
+
+								// Notify parent component
+								if (onPiiDetected) {
+									onPiiDetected(mappedEntities, fullText);
+								}
+							}
+						}
+
+						console.log(
+							'PiiDetectionExtension: 🎉 Incremental detection completed successfully - saved API bandwidth!'
+						);
+					} else {
+						console.log(
+							'PiiDetectionExtension: ⚠️ Could not find context snippet in full text, falling back to full detection'
+						);
+						await performPiiDetection(fullText);
+					}
+				} else {
+					console.log(
+						'PiiDetectionExtension: ✅ No PII found in context snippet - context-aware detection complete'
+					);
+				}
+
+				// Always update detecting state
+				if (editorView) {
+					const tr = editorView.state.tr.setMeta(piiDetectionPluginKey, {
+						type: 'SET_DETECTING',
+						isDetecting: false
+					});
+					editorView.dispatch(tr);
+				}
+			} catch (error) {
+				console.error(
+					'PiiDetectionExtension: Context snippet detection failed, falling back to full detection:',
+					error
+				);
+				// Fall back to full detection on error
+				await performPiiDetection(fullText);
+			}
+		};
+
+		// Initialize with default debounce, will be updated dynamically
+		const config = getPiiConfig();
+		const defaultDebounce = debounceMs || config.timing.defaultDebounceMs;
+		const debouncedDetection = debounce(performPiiDetection, defaultDebounce);
+		const debouncedIncrementalDetection = debounce(performIncrementalPiiDetection, defaultDebounce);
 
 		const plugin = new Plugin<PiiDetectionState>({
 			key: piiDetectionPluginKey,
@@ -530,16 +1073,75 @@ export const PiiDetectionExtension = Extension.create<PiiDetectionOptions>({
 						positionMapping: null,
 						isDetecting: false,
 						lastText: '',
-						needsSync: false
+						needsSync: false,
+						userEdited: false,
+						textNodes: [],
+						lastWordCount: 0,
+						dynamicallyEnabled: options.enabled, // Initialize with the static enabled option
+						temporarilyHiddenEntities: new Set()
 					};
 				},
 
 				apply(tr, prevState): PiiDetectionState {
+					const tracker = PiiPerformanceTracker.getInstance();
+					tracker.recordStateUpdate();
+
 					const newState = { ...prevState };
 
 					const meta = tr.getMeta(piiDetectionPluginKey);
 					if (meta) {
+						// Reduce verbose meta action logging - only log important actions
+						if (
+							meta.type === 'TRIGGER_DETECTION' ||
+							meta.type === 'FORCE_DETECTION' ||
+							meta.type === 'TEMPORARILY_HIDE_ENTITY'
+						) {
+							console.log('PiiDetectionExtension: meta action', meta.type, meta);
+						}
 						switch (meta.type) {
+							case 'SET_USER_EDITED':
+								newState.userEdited = true;
+								break;
+
+							case 'ENABLE_PII_DETECTION':
+								newState.dynamicallyEnabled = true;
+								// Trigger detection if we have content
+								if (newState.positionMapping?.plainText.trim()) {
+									debouncedDetection(newState.positionMapping.plainText);
+								}
+								break;
+
+							case 'DISABLE_PII_DETECTION':
+								newState.dynamicallyEnabled = false;
+								newState.entities = []; // Clear all entities
+								newState.isDetecting = false; // Stop any ongoing detection
+								break;
+
+							case 'CLEAR_PII_HIGHLIGHTS':
+								newState.entities = []; // Clear all entities but keep detection enabled
+								break;
+
+							case 'TEMPORARILY_HIDE_ENTITY': {
+								// Temporarily hide entity when modifier is removed
+								const entityToHide = meta.entityText;
+								if (entityToHide) {
+									newState.temporarilyHiddenEntities = new Set(newState.temporarilyHiddenEntities);
+									newState.temporarilyHiddenEntities.add(entityToHide.toLowerCase());
+									// Clear decoration cache to force recreation without hidden entity
+									newState.cachedDecorations = undefined;
+									newState.lastDecorationHash = undefined;
+									console.log('PiiDetectionExtension: Temporarily hiding entity:', entityToHide);
+									console.log(
+										'PiiDetectionExtension: Current entities:',
+										newState.entities.map((e) => e.raw_text)
+									);
+									console.log(
+										'PiiDetectionExtension: Hidden entities set:',
+										Array.from(newState.temporarilyHiddenEntities)
+									);
+								}
+								break;
+							}
 							case 'SET_DETECTING':
 								newState.isDetecting = meta.isDetecting;
 								// Call the callback to notify parent component
@@ -549,19 +1151,92 @@ export const PiiDetectionExtension = Extension.create<PiiDetectionOptions>({
 								break;
 
 							case 'UPDATE_ENTITIES':
-								newState.entities = meta.entities || [];
+								// Recompute occurrences against current document to avoid shifted offsets
+								// (e.g., when original indices were based on markdown source rather than rendered doc)
+								if (meta.entities && meta.entities.length) {
+									let mapping = newState.positionMapping;
+									if (!mapping) {
+										const endTiming = tracker.startTiming();
+										mapping = buildPositionMapping(tr.doc);
+										const elapsed = endTiming();
+										tracker.recordPositionRemap();
+										if (elapsed > 5)
+											console.log(
+												`PiiDetectionExtension: Position mapping (UPDATE_ENTITIES): ${elapsed.toFixed(1)}ms`
+											);
+									}
+									const remapped = remapEntitiesForCurrentDocument(meta.entities, mapping, tr.doc);
+									newState.entities = validateAndFilterEntities(remapped, tr.doc, mapping);
+									newState.entities = resolveOverlaps(newState.entities, tr.doc);
+								} else {
+									newState.entities = [];
+								}
+								// Only clear temporarily hidden entities if explicitly requested
+								// This allows entities to stay hidden after modifier removal until user makes another edit
+								if (meta.clearTemporarilyHidden === true) {
+									console.log(
+										'PiiDetectionExtension: Clearing temporarily hidden entities on API update'
+									);
+									newState.temporarilyHiddenEntities = new Set();
+								} else {
+									console.log(
+										'PiiDetectionExtension: Keeping temporarily hidden entities through API update'
+									);
+									// Keep the existing temporarily hidden entities
+								}
+								// Clear decoration cache when entities are updated
+								newState.cachedDecorations = undefined;
+								newState.lastDecorationHash = undefined;
 								break;
 
 							case 'SYNC_WITH_SESSION_MANAGER': {
-								// Sync plugin state with session manager
-								if (newState.positionMapping) {
+								// Always sync from session manager to get latest state
+								let currentMapping = newState.positionMapping;
+								if (!currentMapping) {
+									const endTiming = tracker.startTiming();
+									currentMapping = buildPositionMapping(tr.doc);
+									const elapsed = endTiming();
+									tracker.recordPositionRemap();
+									if (elapsed > 5)
+										console.log(
+											`PiiDetectionExtension: Position mapping (SYNC): ${elapsed.toFixed(1)}ms`
+										);
+								}
+								const sessionEntities = piiSessionManager.getEntitiesForDisplay(
+									options.conversationId
+								);
+
+								// Always use session entities as source of truth when syncing
+								if (sessionEntities.length > 0) {
+									// Remap session entities to current doc positions
+									const remapped = remapEntitiesForCurrentDocument(
+										sessionEntities,
+										currentMapping,
+										tr.doc
+									);
+									newState.entities = validateAndFilterEntities(remapped, tr.doc, currentMapping);
+									newState.entities = resolveOverlaps(newState.entities, tr.doc);
+								} else if (newState.entities.length > 0) {
+									// If session is empty but we have entities, sync them to session
 									newState.entities = syncWithSessionManager(
 										options.conversationId,
 										piiSessionManager,
 										newState.entities,
-										newState.positionMapping,
+										currentMapping,
 										tr.doc
 									);
+									// Persist current plugin entities to session for future lookups
+									if (options.conversationId) {
+										piiSessionManager.setConversationWorkingEntitiesWithMaskStates(
+											options.conversationId,
+											newState.entities
+										);
+									} else {
+										if (!piiSessionManager.isTemporaryStateActive()) {
+											piiSessionManager.activateTemporaryState();
+										}
+										piiSessionManager.setTemporaryStateEntities(newState.entities);
+									}
 								}
 								break;
 							}
@@ -576,6 +1251,24 @@ export const PiiDetectionExtension = Extension.create<PiiDetectionOptions>({
 
 									const piiSessionManager = PiiSessionManager.getInstance();
 
+									// Ensure the entity exists in session state before toggling
+									const sessionEntitiesBefore = piiSessionManager.getEntitiesForDisplay(
+										options.conversationId
+									);
+									if (!sessionEntitiesBefore.find((e: any) => e.label === entity.label)) {
+										if (options.conversationId) {
+											piiSessionManager.setConversationWorkingEntitiesWithMaskStates(
+												options.conversationId,
+												newState.entities
+											);
+										} else {
+											if (!piiSessionManager.isTemporaryStateActive()) {
+												piiSessionManager.activateTemporaryState();
+											}
+											piiSessionManager.setTemporaryStateEntities(newState.entities);
+										}
+									}
+
 									piiSessionManager.toggleEntityMasking(
 										entity.label,
 										occurrenceIndex,
@@ -585,6 +1278,10 @@ export const PiiDetectionExtension = Extension.create<PiiDetectionOptions>({
 									// CRITICAL FIX: Mark that we need to sync with session manager on next transaction
 									// This ensures that subsequent detections use the correct shouldMask state
 									newState.needsSync = true;
+
+									// Clear decoration cache when entity masking is toggled
+									newState.cachedDecorations = undefined;
+									newState.lastDecorationHash = undefined;
 
 									if (options.onPiiToggled) {
 										options.onPiiToggled(newState.entities);
@@ -596,9 +1293,15 @@ export const PiiDetectionExtension = Extension.create<PiiDetectionOptions>({
 							case 'TRIGGER_DETECTION':
 							case 'TRIGGER_DETECTION_WITH_MODIFIERS': {
 								const currentMapping = buildPositionMapping(tr.doc);
+								const currentTextNodes = extractTextNodes(tr.doc);
+								const currentWordCount = countWords(currentMapping.plainText);
+
 								newState.positionMapping = currentMapping;
+								newState.textNodes = currentTextNodes;
+								newState.lastWordCount = currentWordCount;
 
 								if (currentMapping.plainText.trim()) {
+									newState.lastText = currentMapping.plainText;
 									performPiiDetection(currentMapping.plainText);
 								}
 								break;
@@ -608,11 +1311,46 @@ export const PiiDetectionExtension = Extension.create<PiiDetectionOptions>({
 								options.conversationId = meta.conversationId;
 
 								const newMapping = buildPositionMapping(tr.doc);
-								newState.positionMapping = newMapping;
+								const currentTextNodes = extractTextNodes(tr.doc);
+								const currentWordCount = countWords(newMapping.plainText);
 
-								if (newMapping.plainText.trim()) {
-									performPiiDetection(newMapping.plainText);
+								newState.positionMapping = newMapping;
+								newState.textNodes = currentTextNodes;
+								newState.lastWordCount = currentWordCount;
+								newState.lastText = newMapping.plainText;
+
+								// Populate entities from session immediately without triggering detection
+								const sessionEntities = piiSessionManager.getEntitiesForDisplay(
+									options.conversationId
+								);
+								if (sessionEntities.length) {
+									const remapped = remapEntitiesForCurrentDocument(
+										sessionEntities,
+										newMapping,
+										tr.doc
+									);
+									newState.entities = validateAndFilterEntities(remapped, tr.doc, newMapping);
+									newState.entities = resolveOverlaps(newState.entities, tr.doc);
 								}
+								break;
+							}
+
+							case 'FORCE_DETECTION': {
+								// Update state to indicate content has changed and should be detected
+								const newMapping = buildPositionMapping(tr.doc);
+								const currentTextNodes = extractTextNodes(tr.doc);
+								const currentWordCount = countWords(newMapping.plainText);
+
+								newState.positionMapping = newMapping;
+								newState.textNodes = currentTextNodes;
+								newState.lastWordCount = currentWordCount;
+								newState.lastText = newMapping.plainText;
+								newState.userEdited = true; // Mark as user edited to bypass edit checks
+
+								console.log('PiiDetectionExtension: Force detection triggered for content:', {
+									wordCount: currentWordCount,
+									nodeCount: currentTextNodes.length
+								});
 								break;
 							}
 						}
@@ -620,14 +1358,245 @@ export const PiiDetectionExtension = Extension.create<PiiDetectionOptions>({
 
 					if (tr.docChanged) {
 						const newMapping = buildPositionMapping(tr.doc);
+						const currentTextNodes = extractTextNodes(tr.doc);
+						const currentWordCount = countWords(newMapping.plainText);
+
+						// Track this transaction for rapid change detection
+						const isRapidChange = typingPauseDetector.onTransaction();
+
+						// Reset typing pause timer on every content change
+						typingPauseDetector.onTextChange(newMapping.plainText, handlePauseTriggeredDetection);
+
+						// Detect if this is a user edit vs programmatic change
+						// Be more restrictive: only consider it a user edit if there's clear evidence of user interaction
+						const isPiiPluginTransaction = !!tr.getMeta(piiDetectionPluginKey);
+						const hasInputMeta = !!(
+							tr.getMeta('inputType') ||
+							tr.getMeta('paste') ||
+							tr.getMeta('uiEvent')
+						);
+						const hasReplaceSteps = tr.steps.some(
+							(step) => step.jsonID === 'replace' || step.jsonID === 'replaceAround'
+						);
+
+						// Calculate the size of changes to distinguish between user typing and bulk loading
+						const totalChangeSize = tr.steps.reduce((size, step) => {
+							if (step.jsonID === 'replace') {
+								// Approximate change size - this isn't perfect but gives us an indication
+								return (
+									size +
+									((step as any).to - (step as any).from) +
+									((step as any).slice?.content?.size || 0)
+								);
+							}
+							return size;
+						}, 0);
+
+						// Consider it a user edit ONLY if:
+						// 1. Not from our plugin AND
+						// 2. Has clear input metadata (paste, inputType, uiEvent)
+						//
+						// NOTE: Removed change size detection because decoration updates, entity remapping,
+						// and other internal operations can create small replace steps that aren't user edits
+						const isUserEdit = !isPiiPluginTransaction && hasInputMeta;
+
+						if (isUserEdit) {
+							console.log('PiiDetectionExtension: Detected user edit transaction', {
+								hasReplaceSteps,
+								hasInputMeta,
+								totalChangeSize,
+								isRapidChange,
+								steps: tr.steps.map((s) => s.jsonID),
+								previousWordCount: prevState.lastWordCount
+							});
+							newState.userEdited = true;
+							// Clear temporarily hidden entities on genuine user edits
+							if (newState.temporarilyHiddenEntities.size > 0) {
+								console.log(
+									'PiiDetectionExtension: Clearing temporarily hidden entities due to user edit'
+								);
+								newState.temporarilyHiddenEntities = new Set();
+								newState.cachedDecorations = undefined;
+								newState.lastDecorationHash = undefined;
+							}
+							// Mark user activity for typing pause detection
+							typingPauseDetector.onUserKeystroke();
+						} else if (tr.docChanged && !isPiiPluginTransaction) {
+							// Log programmatic changes for debugging
+							console.log(
+								'PiiDetectionExtension: Programmatic content change detected (not user edit)',
+								{
+									hasReplaceSteps,
+									hasInputMeta,
+									totalChangeSize,
+									isRapidChange,
+									steps: tr.steps.map((s) => s.jsonID),
+									previousWordCount: prevState.lastWordCount,
+									reason: hasInputMeta
+										? 'Has input meta but failed other checks'
+										: 'No input meta (decoration/internal update)'
+								}
+							);
+						}
+
+						// Update position mapping and tracking data
 						newState.positionMapping = newMapping;
 
-						// Remap existing entities to current document positions immediately
+						// Check if we have new content using node-based detection
+						const hasNewTextContent = hasNewContent(
+							prevState.textNodes,
+							currentTextNodes,
+							prevState.lastWordCount,
+							currentWordCount
+						);
+
+						// Update text node tracking
+						newState.textNodes = currentTextNodes;
+						newState.lastWordCount = currentWordCount;
+
+						// CRITICAL: Always update lastText when document changes to prevent circular word detection failure
+						newState.lastText = newMapping.plainText;
+
+						// Smart API call filtering - only call API when there's actually significant new content
+						const newWords = findNewWords(prevState.lastText, newMapping.plainText);
+						const hasSignificantNewContent = hasSignificantContent(newWords);
+
+						// Only log when filtering decisions are interesting (new words found but blocked)
+						if (hasNewTextContent && newWords.length > 0 && !hasSignificantNewContent) {
+							console.log('PiiDetectionExtension: 🔍 Filtering blocked detection', {
+								newWordsCount: newWords.length,
+								newWords: newWords.slice(0, 3),
+								reason: 'No meaningful words (3+ chars, alphabetic)'
+							});
+						}
+
+						// Determine if we should trigger detection
+						// Only call API if:
+						// 1. We have new text content
+						// 2. The new content contains new words (not just formatting changes)
+						// 3. We're not already detecting
+						// 4. User edit requirements are met
+						const shouldTriggerDetection =
+							hasNewTextContent &&
+							hasSignificantNewContent &&
+							!newState.isDetecting &&
+							(!options.detectOnlyAfterUserEdit || newState.userEdited) &&
+							newMapping.plainText.trim().length > 0;
+
+						// Debug why detection might be skipped
+						if (hasNewTextContent && hasSignificantNewContent && !shouldTriggerDetection) {
+							console.log(
+								'PiiDetectionExtension: 🔍 Detection blocked despite significant content',
+								{
+									hasNewTextContent,
+									hasSignificantNewContent,
+									isDetecting: newState.isDetecting,
+									detectOnlyAfterUserEdit: options.detectOnlyAfterUserEdit,
+									userEdited: newState.userEdited,
+									textLength: newMapping.plainText.trim().length,
+									userEditRequirement: !options.detectOnlyAfterUserEdit || newState.userEdited,
+									allConditions: {
+										hasNewTextContent,
+										hasSignificantNewContent,
+										notDetecting: !newState.isDetecting,
+										userEditOk: !options.detectOnlyAfterUserEdit || newState.userEdited,
+										hasText: newMapping.plainText.trim().length > 0
+									}
+								}
+							);
+						}
+
+						if (shouldTriggerDetection) {
+							// Try incremental detection first for better performance
+							const incrementalResult = extractIncrementalContent(
+								prevState.lastText,
+								newMapping.plainText
+							);
+							// Use more flexible criteria for larger documents
+							const documentSize = newMapping.plainText.length;
+							const maxIncrementalRatio =
+								documentSize < 1000
+									? 0.5 // 50% for small docs
+									: documentSize < 10000
+										? 0.4 // 40% for medium docs
+										: 0.3; // 30% for large docs
+							const useIncremental =
+								incrementalResult !== null &&
+								incrementalResult.content.length < documentSize * maxIncrementalRatio;
+
+							console.log('PiiDetectionExtension: 🚀 Triggering PII detection', {
+								newWordsCount: newWords.length,
+								useIncremental,
+								textLength: newMapping.plainText.trim().length
+							});
+
+							// Calculate smart debounce delay based on content significance
+							const smartDelay = getSmartDebounceDelay(
+								newWords,
+								incrementalResult?.content || null
+							);
+
+							if (useIncremental && incrementalResult) {
+								// Create context snippet around the change for more meaningful PII detection
+								const contextSnippet = createContextSnippet(
+									newMapping.plainText,
+									incrementalResult.offset,
+									incrementalResult.content.length
+								);
+
+								// Use context snippet detection for better performance with smart timing
+								console.log(
+									'PiiDetectionExtension: Using context snippet detection with smart timing',
+									{
+										originalIncrementalLength: incrementalResult.content.length,
+										contextSnippetLength: contextSnippet.content.length,
+										contextSnippetOffset: contextSnippet.offset,
+										originalOffset: incrementalResult.offset,
+										fullLength: newMapping.plainText.length,
+										savingsPercent: Math.round(
+											(1 - contextSnippet.content.length / newMapping.plainText.length) * 100
+										),
+										smartDelay,
+										defaultDelay: debounceMs || config.timing.defaultDebounceMs,
+										contextPreview:
+											contextSnippet.content.substring(0, 100) +
+											(contextSnippet.content.length > 100 ? '...' : '')
+									}
+								);
+
+								// Create a one-time debounced function with smart delay and pass the context snippet offset
+								const smartIncrementalDetection = debounce(
+									(text: string, fullText: string) =>
+										performIncrementalPiiDetection(text, fullText, contextSnippet.offset),
+									smartDelay
+								);
+								smartIncrementalDetection(contextSnippet.content, newMapping.plainText);
+							} else {
+								// Fall back to full document detection with smart timing
+								console.log('PiiDetectionExtension: Using full detection with smart timing', {
+									smartDelay,
+									defaultDelay: debounceMs || config.timing.defaultDebounceMs,
+									newWordsCount: newWords.length,
+									incrementalFailed: incrementalResult === null,
+									incrementalTooLarge:
+										incrementalResult &&
+										incrementalResult.content.length >= documentSize * maxIncrementalRatio
+								});
+
+								// Create a one-time debounced function with smart delay
+								const smartDetection = debounce(performPiiDetection, smartDelay);
+								smartDetection(newMapping.plainText);
+							}
+						} else if (hasNewTextContent && newWords.length === 0) {
+							console.log('PiiDetectionExtension: ⏭️ No new words detected, skipping API call');
+						}
+
+						// Always remap existing entities when document changes
 						if (newState.entities.length > 0) {
 							// First, try to remap entities to current positions
 							const remappedEntities = remapEntitiesForCurrentDocument(
 								newState.entities,
-								newMapping,
+								newState.positionMapping,
 								tr.doc
 							);
 
@@ -636,26 +1605,49 @@ export const PiiDetectionExtension = Extension.create<PiiDetectionOptions>({
 								options.conversationId,
 								piiSessionManager,
 								remappedEntities,
-								newMapping,
+								newState.positionMapping,
 								tr.doc
 							);
+							newState.entities = resolveOverlaps(newState.entities, tr.doc);
+						} else {
+							// If we have no entities yet, populate from session if available
+							const sessionEntities = piiSessionManager.getEntitiesForDisplay(
+								options.conversationId
+							);
+							if (sessionEntities.length) {
+								const remapped = remapEntitiesForCurrentDocument(
+									sessionEntities,
+									newState.positionMapping,
+									tr.doc
+								);
+								newState.entities = validateAndFilterEntities(
+									remapped,
+									tr.doc,
+									newState.positionMapping
+								);
+								newState.entities = resolveOverlaps(newState.entities, tr.doc);
+							}
 						}
 
-						// CRITICAL FIX: If we need to sync after toggle, do it now BEFORE detection
-						// This ensures shouldMask state is consistent before next detection
+						// Handle sync flag for consistency
 						if (newState.needsSync) {
 							newState.entities = syncWithSessionManager(
 								options.conversationId,
 								piiSessionManager,
 								newState.entities,
-								newMapping,
+								newState.positionMapping,
 								tr.doc
 							);
 							newState.needsSync = false;
 						}
 
 						// Trigger detection if text changed significantly
-						if (!newState.isDetecting && newMapping.plainText !== newState.lastText) {
+						if (
+							newState.dynamicallyEnabled &&
+							!newState.isDetecting &&
+							newMapping.plainText !== newState.lastText &&
+							(!options.detectOnlyAfterUserEdit || newState.userEdited)
+						) {
 							newState.lastText = newMapping.plainText;
 
 							if (newMapping.plainText.trim()) {
@@ -663,10 +1655,15 @@ export const PiiDetectionExtension = Extension.create<PiiDetectionOptions>({
 							} else {
 								// If text is empty, clear entities
 								newState.entities = [];
+								newState.textNodes = [];
+								newState.lastWordCount = 0;
+								newState.lastText = '';
 							}
+						} else if (!newState.dynamicallyEnabled) {
+							// If detection is disabled, clear entities
+							newState.entities = [];
 						}
 					}
-
 					return newState;
 				}
 			},
@@ -675,20 +1672,95 @@ export const PiiDetectionExtension = Extension.create<PiiDetectionOptions>({
 				decorations(state) {
 					const pluginState = piiDetectionPluginKey.getState(state);
 
+					// Only show decorations if PII detection is dynamically enabled
+					if (!pluginState?.dynamicallyEnabled) {
+						return DecorationSet.empty;
+					}
+
 					// Get modifiers from session manager (not ProseMirror extension state)
 					const piiSessionManager = PiiSessionManager.getInstance();
 					const modifiers = piiSessionManager.getModifiersForDisplay(options.conversationId);
 
-					if (!pluginState?.entities.length && !modifiers.length) {
+					// Create hash to detect if decorations need updating
+					const entitiesHash = JSON.stringify(
+						(pluginState.entities || []).map((e) => ({
+							label: e.label,
+							shouldMask: e.shouldMask,
+							occurrences: e.occurrences
+						}))
+					);
+					const modifiersHash = JSON.stringify(
+						modifiers.map((m) => ({ id: m.id, entity: m.entity, action: m.action }))
+					);
+					const currentHash = `${entitiesHash}-${modifiersHash}-${state.doc.content.size}`;
+
+					// Return cached decorations if nothing changed and we have active selection
+					// This prevents decoration rebuilding during typing which causes cursor jumping
+					if (
+						pluginState.cachedDecorations &&
+						pluginState.lastDecorationHash === currentHash &&
+						state.selection.from === state.selection.to
+					) {
+						// Only for cursor positions, not ranges
+						return pluginState.cachedDecorations;
+					}
+
+					// If no entities yet, pull from session to allow immediate rendering
+					let entities = pluginState.entities || [];
+					if (!entities.length) {
+						const sessionEntities = piiSessionManager.getEntitiesForDisplay(options.conversationId);
+						if (sessionEntities.length) {
+							const mapping = buildPositionMapping(state.doc);
+							const remapped = remapEntitiesForCurrentDocument(sessionEntities, mapping, state.doc);
+							entities = validateAndFilterEntities(remapped, state.doc, mapping);
+						}
+					}
+
+					// Filter out temporarily hidden entities
+					const temporarilyHidden = pluginState.temporarilyHiddenEntities || new Set();
+					if (temporarilyHidden.size > 0) {
+						entities = entities.filter((entity) => {
+							const entityText = (entity.raw_text || '').toLowerCase();
+							// Check for exact match first
+							if (temporarilyHidden.has(entityText)) {
+								console.log('PiiDetectionExtension: Hiding entity (exact match):', entityText);
+								return false;
+							}
+							// Check if any hidden text matches this entity
+							for (const hiddenText of temporarilyHidden) {
+								if (
+									entityText === hiddenText ||
+									entityText.includes(hiddenText) ||
+									hiddenText.includes(entityText)
+								) {
+									console.log(
+										'PiiDetectionExtension: Hiding entity (partial match):',
+										entityText,
+										'matches hidden:',
+										hiddenText
+									);
+									return false;
+								}
+							}
+							return true;
+						});
+					}
+
+					if (!entities.length && !modifiers.length) {
 						return DecorationSet.empty;
 					}
 
-					const decorations = createPiiDecorations(
-						pluginState?.entities || [],
-						modifiers,
-						state.doc
-					);
-					return DecorationSet.create(state.doc, decorations);
+					// Create new decorations
+					const decorations = createPiiDecorations(entities, modifiers, state.doc);
+					const decorationSet = DecorationSet.create(state.doc, decorations);
+
+					// Cache the decorations in plugin state for next time
+					// Note: This is a bit of a hack since we're modifying state in a read-only function
+					// but it's necessary to prevent cursor jumping
+					(pluginState as any).cachedDecorations = decorationSet;
+					(pluginState as any).lastDecorationHash = currentHash;
+
+					return decorationSet;
 				},
 
 				handleClick(view, pos, event) {
@@ -719,6 +1791,12 @@ export const PiiDetectionExtension = Extension.create<PiiDetectionOptions>({
 
 	addCommands() {
 		const options = this.options;
+
+		// Get access to the typing pause detector from the extension storage
+		const getTypingPauseDetector = () => {
+			// Access the detector from the editor instance if available
+			return (this.editor as any)?._typingPauseDetector;
+		};
 
 		// Helper function to update all entity masking states (DRY)
 		// eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -768,7 +1846,8 @@ export const PiiDetectionExtension = Extension.create<PiiDetectionOptions>({
 				if (dispatch) {
 					const tr = state.tr.setMeta(piiDetectionPluginKey, {
 						type: 'UPDATE_ENTITIES',
-						entities: updatedPluginEntities
+						entities: updatedPluginEntities,
+						clearTemporarilyHidden: false // Don't clear when just updating masking states
 					});
 					dispatch(tr);
 
@@ -782,6 +1861,24 @@ export const PiiDetectionExtension = Extension.create<PiiDetectionOptions>({
 			};
 
 		return {
+			// Mark that the user edited the document (used to gate auto-detection on load)
+			// eslint-disable-next-line @typescript-eslint/no-explicit-any
+			markUserEdited:
+				() =>
+				({ state, dispatch }: any) => {
+					if (!dispatch) return false;
+					const tr = state.tr.setMeta(piiDetectionPluginKey, { type: 'SET_USER_EDITED' });
+					dispatch(tr);
+					return true;
+				},
+
+			// Get current plugin state (useful for debugging)
+			// eslint-disable-next-line @typescript-eslint/no-explicit-any
+			getPluginState:
+				() =>
+				({ state }: any) => {
+					return piiDetectionPluginKey.getState(state);
+				},
 			// eslint-disable-next-line @typescript-eslint/no-explicit-any
 			triggerDetection:
 				() =>
@@ -848,7 +1945,8 @@ export const PiiDetectionExtension = Extension.create<PiiDetectionOptions>({
 					// Update plugin state with remapped entities
 					const tr = state.tr.setMeta(piiDetectionPluginKey, {
 						type: 'UPDATE_ENTITIES',
-						entities: remappedEntities
+						entities: remappedEntities,
+						clearTemporarilyHidden: false // Don't clear when just remapping positions
 					});
 
 					dispatch(tr);
@@ -874,7 +1972,124 @@ export const PiiDetectionExtension = Extension.create<PiiDetectionOptions>({
 			unmaskAllEntities: () => updateAllEntityMaskingStates(false),
 
 			// Mask all PII entities
-			maskAllEntities: () => updateAllEntityMaskingStates(true)
+			maskAllEntities: () => updateAllEntityMaskingStates(true),
+
+			// Force PII detection (useful for programmatically loaded content)
+			// eslint-disable-next-line @typescript-eslint/no-explicit-any
+			forceDetection:
+				() =>
+				({ state, dispatch }: any) => {
+					const mapping = buildPositionMapping(state.doc);
+
+					if (!mapping.plainText.trim()) {
+						return false; // No content to detect
+					}
+
+					// Force detection by updating the plugin state to mark content as changed
+					const tr = state.tr.setMeta(piiDetectionPluginKey, {
+						type: 'FORCE_DETECTION',
+						plainText: mapping.plainText
+					});
+
+					if (dispatch) {
+						dispatch(tr);
+
+						// Trigger detection immediately (bypass debounce for forced detection)
+						performPiiDetection(mapping.plainText);
+						return true;
+					}
+
+					return false;
+				},
+
+			// Cleanup typing pause detector (call when component unmounts)
+			cleanup: () => {
+				const detector = getTypingPauseDetector();
+				if (detector) {
+					detector.cleanup();
+					console.log('PiiDetectionExtension: Cleaned up typing pause detector');
+				}
+			},
+
+			// Debug command to get typing pause detector state
+			getTypingPauseDetectorState: () => {
+				const detector = getTypingPauseDetector();
+				if (detector) {
+					const state = detector.getState();
+					console.log('PiiDetectionExtension: Typing pause detector state:', state);
+					return state;
+				} else {
+					console.warn('PiiDetectionExtension: typingPauseDetector not available');
+					return null;
+				}
+			},
+
+			// Manually mark user activity (for explicit user interaction tracking)
+			// eslint-disable-next-line @typescript-eslint/no-explicit-any
+			markUserActivity:
+				() =>
+				({ state, dispatch }: any) => {
+					console.log('PiiDetectionExtension: User activity manually marked');
+
+					// Access the typing pause detector
+					const detector = getTypingPauseDetector();
+					if (detector) {
+						detector.onUserKeystroke();
+					} else {
+						console.warn(
+							'PiiDetectionExtension: typingPauseDetector not available in command context'
+						);
+					}
+
+					// Also mark the document as user-edited
+					if (dispatch) {
+						const tr = state.tr.setMeta(piiDetectionPluginKey, { type: 'SET_USER_EDITED' });
+						dispatch(tr);
+					}
+					return true;
+				},
+			enablePiiDetection:
+				() =>
+				({ state, dispatch }: any) => {
+					if (dispatch) {
+						const tr = state.tr.setMeta(piiDetectionPluginKey, {
+							type: 'ENABLE_PII_DETECTION'
+						});
+						dispatch(tr);
+						return true;
+					}
+					return false;
+				},
+
+			// Disable PII detection dynamically
+			// eslint-disable-next-line @typescript-eslint/no-explicit-any
+			disablePiiDetection:
+				() =>
+				({ state, dispatch }: any) => {
+					if (dispatch) {
+						const tr = state.tr.setMeta(piiDetectionPluginKey, {
+							type: 'DISABLE_PII_DETECTION'
+						});
+						dispatch(tr);
+						return true;
+					}
+					return false;
+				},
+
+			// Clear all PII highlights but keep detection enabled
+			// eslint-disable-next-line @typescript-eslint/no-explicit-any
+			clearAllPiiHighlights:
+				() =>
+				({ state, dispatch }: any) => {
+					if (dispatch) {
+						const tr = state.tr.setMeta(piiDetectionPluginKey, {
+							type: 'CLEAR_PII_HIGHLIGHTS'
+						});
+						dispatch(tr);
+						return true;
+					}
+					return false;
+				}
 		};
 	}
 });

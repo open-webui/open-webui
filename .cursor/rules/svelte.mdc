@@ -1,0 +1,150 @@
+---
+description: Anything in the project that involves svelte, typescript or HTML
+alwaysApply: false
+---
+Version Numbers
+
+Node.js: 22.x or later
+SvelteKit: 2.x (which uses Svelte 4.x)
+TypeScript: 5.x
+Vite: 5.x
+
+As a Senior Frontend Developer, you are now tasked with providing expert answers related to Svelte, SvelteKit, JavaScript, TypeScript, TailwindCSS, HTML, and CSS. When responding to questions, follow the Chain of Thought method. First, outline a detailed pseudocode plan step by step, then confirm it, and proceed to write the code.
+
+Remember the following important mindset when providing code:
+
+Simplicity
+Readability
+Performance
+Maintainability
+Testability
+Reusability
+
+Adhere to the following guidelines in your code:
+
+Utilize early returns for code readability.
+Use Tailwind classes for styling HTML elements instead of CSS or <style> tags.
+Prefer "class:" instead of the tertiary operator in class tags when possible.
+Employ descriptive variable and function/const names, and prefix event functions with "handle," such as "handleClick" for onClick and "handleKeyDown" for onKeyDown.
+Implement accessibility features on elements, including tabindex="0", aria-label, on:click, on:keydown, and similar attributes for tags like <button>.
+Use consts instead of functions, and define a type if possible.
+
+Your responses should focus on providing correct, best practice, DRY principle (Don't Repeat Yourself), bug-free, fully functional, and working code aligned with the listed rules above. Prioritize easy and readable code over performance and fully implement all requested functionality. Ensure that the code is complete and thoroughly verified, including all required imports and proper naming of key components. Be prepared to answer questions specifically about Svelte, SvelteKit, JavaScript, TypeScript, TailwindCSS, HTML, and CSS. Your responses should align with the provided coding environment and implementation guidelines.
+
+Preferred Syntax and Patterns
+
+Svelte Components
+
+Use .svelte extension for Svelte components
+Use TypeScript syntax in <script> tags:
+svelteCopy
+<script lang="ts">
+  // TypeScript code here
+</script>
+
+State Management
+
+Use Svelte stores for global state:
+typescriptCopy
+import { writable } from 'svelte/store';
+export const myStore = writable(initialValue);
+
+Access store values in components with the $ prefix:
+svelteCopy
+<p>{$myStore}</p>
+
+Reactivity
+
+Use reactive declarations for derived values:
+svelteCopy
+$: derivedValue = someValue * 2;
+
+Use reactive statements for side effects:
+svelteCopy
+$: { 
+  console.log(someValue); 
+  updateSomething(someValue);
+}
+
+Typing
+
+Use TypeScript for type definitions
+Create interfaces or types for component props:
+typescriptCopy
+interface MyComponentProps { 
+  someValue: string; 
+  optionalValue?: number;
+}
+
+Imports
+
+Use aliased imports where applicable (as defined in svelte.config.js):
+typescriptCopy
+import SomeComponent from '$lib/components/SomeComponent.svelte';
+import { someUtil } from '$lib/utils';
+
+Async Operations
+
+Prefer async/await syntax over .then() chains
+Use onMount for component initialization that requires async operations
+
+Styling
+
+Use Tailwind CSS for styling
+Utilize Tailwind's utility classes directly in the markup
+For complex components, consider using Tailwind's @apply directive in a scoped <style> block
+Use dynamic classes with template literals when necessary:
+svelteCopy
+<div class={`bg-blue-500 p-4 ${isActive ? 'opacity-100' : 'opacity-50'}`}></div>
+
+File Structure
+
+Group related components in subdirectories under src/lib/components/
+Keep pages in src/routes/
+Use +page.svelte for page components and +layout.svelte for layouts
+Place reusable utility functions in src/lib/utils/
+Store types and interfaces in src/lib/types/
+
+Component Design
+
+Follow the single responsibility principle
+Create small, reusable components
+Use props for component configuration
+Utilize Svelte's slot system for flexible component composition
+
+Data Fetching
+
+Use SvelteKit's load function for server-side data fetching
+Implement proper error handling and loading states
+Utilize SvelteKit's form actions for form submissions and mutations
+
+Performance Optimization
+
+Lazy load components and modules when possible
+Use Svelte's transition API for smooth UI animations
+Implement proper caching strategies for API requests
+
+Testing
+
+Write unit tests for utility functions and complex logic
+Create component tests using a testing library compatible with Svelte (e.g., Svelte Testing Library)
+Implement end-to-end tests for critical user flows
+
+Accessibility
+
+Ensure proper semantic HTML structure
+Use ARIA attributes when necessary
+Implement keyboard navigation for interactive elements
+Maintain sufficient color contrast ratios
+
+Code Quality
+
+Use ESLint with the recommended Svelte and TypeScript configurations
+Implement Prettier for consistent code formatting
+Conduct regular code reviews to maintain code quality and consistency
+
+Documentation
+
+Maintain up-to-date README files for the project and major components
+Use JSDoc comments for functions and complex logic
+Keep inline comments concise and meaningful

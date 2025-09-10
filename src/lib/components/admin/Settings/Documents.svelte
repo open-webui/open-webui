@@ -559,6 +559,17 @@
 								/>
 							</div>
 
+							<div class="flex w-full mt-2 items-center gap-2">
+								<div class="text-xs font-medium shrink-0">
+									{$i18n.t('Markdown Page Break Placeholder')}
+								</div>
+								<input
+									class="flex-1 w-full text-sm bg-transparent outline-hidden"
+									placeholder={$i18n.t('e.g., <!-- md-page-break -->')}
+									bind:value={RAGConfig.DOCLING_MD_PAGE_BREAK_PLACEHOLDER}
+								/>
+							</div>
+
 							<div class="flex w-full mt-2">
 								<div class="flex-1 flex justify-between">
 									<div class=" self-center text-xs font-medium">

@@ -27,6 +27,8 @@
 	import { capitalizeFirstLetter } from '$lib/utils';
 	import Tooltip from '../common/Tooltip.svelte';
 	import XMark from '../icons/XMark.svelte';
+	import Mask from '../icons/Mask.svelte';
+	import { config } from '$lib/stores';
 
 	let loaded = false;
 
@@ -38,6 +40,9 @@
 
 	let knowledgeBases = [];
 	let filteredItems = [];
+
+	// PII detection reactive variables
+	$: piiConfigEnabled = $config?.features?.enable_pii_detection ?? false;
 
 	$: if (knowledgeBases.length > 0) {
 		// Added a check for non-empty array, good practice
@@ -162,11 +167,24 @@
 			>
 				<div class=" w-full">
 					<div class="flex items-center justify-between -mt-1">
-						{#if item?.meta?.document}
-							<Badge type="muted" content={$i18n.t('Document')} />
-						{:else}
-							<Badge type="success" content={$i18n.t('Collection')} />
-						{/if}
+						<div class="flex items-center gap-2">
+							{#if item?.meta?.document}
+								<Badge type="muted" content={$i18n.t('Document')} />
+							{:else}
+								<Badge type="success" content={$i18n.t('Collection')} />
+							{/if}
+
+							{#if piiConfigEnabled && item?.enable_pii_detection}
+								<Tooltip content={$i18n.t('PII detection is enabled for this knowledge base')}>
+									<div
+										class="flex items-center gap-1 px-2 py-0.5 bg-sky-50 dark:bg-sky-900/30 text-sky-600 dark:text-sky-300 rounded-full text-xs"
+									>
+										<Mask strokeWidth="2.5" className="size-3" />
+										<span class="font-medium">{$i18n.t('PII Masking')}</span>
+									</div>
+								</Tooltip>
+							{/if}
+						</div>
 
 						<div class=" flex self-center -mr-1 translate-y-1">
 							<ItemMenu

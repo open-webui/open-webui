@@ -1,0 +1,135 @@
+---
+description: PII utility functions and refactored architecture
+globs: **/PiiTextUtils.ts,**/PiiPositionMapping.ts,**/PiiTokenization.ts,**/PiiExtensionConfig.ts,**/PiiModifierExtension.ts,**/PiiDetectionExtension.ts
+---
+
+# PII Utility Architecture
+
+## Refactored Utility Structure
+
+The PII system has been refactored into focused utility modules for better maintainability and reusability.
+
+### Text Processing Utilities
+[PiiTextUtils.ts](mdc:src/lib/components/common/RichTextInput/PiiTextUtils.ts) - Pure text functions:
+```typescript
+generateModifierId()        // Unique ID generation for modifiers
+decodeHtmlEntities(text)     // HTML entity decoding with performance optimization
+countWords(text)             // Word counting for change detection
+extractWords(text)           // Word extraction with normalization
+```
+
+### Position Mapping System
+[PiiPositionMapping.ts](mdc:src/lib/components/common/RichTextInput/PiiPositionMapping.ts) - Document position handling:
+```typescript
+interface PositionMapping {
+  plainTextToProseMirror: Map<number, number>
+  proseMirrorToPlainText: Map<number, number>
+  plainText: string
+}
+
+buildPositionMapping(doc: ProseMirrorNode): PositionMapping
+```
+
+**Critical for**: Mapping between plain text (API) and ProseMirror document positions. Handles block elements, tables, and special characters correctly.
+
+### Text Tokenization
+[PiiTokenization.ts](mdc:src/lib/components/common/RichTextInput/PiiTokenization.ts) - Word boundary detection:
+```typescript
+// International character support
+WORD_TOKENIZER_PATTERN = /[\w'-äöüÄÖÜß]+(?=\b|\.)/g
+
+findTokenizedWords(
+  doc: ProseMirrorNode,
+  selectionFrom: number, 
+  selectionTo: number
+): Array<{ word: string; from: number; to: number }>
+```
+
+**Used for**: Context-aware selection expansion and modifier application.
+
+### Centralized Configuration
+[PiiExtensionConfig.ts](mdc:src/lib/components/common/RichTextInput/PiiExtensionConfig.ts) - All constants and settings:
+
+```typescript
+interface PiiExtensionConfig {
+  performance: {
+    enabled: boolean
+    logSlowOperations: boolean
+    thresholds: { positionMapping: number, decorationUpdate: number, ... }
+  }
+  timing: {
+    defaultDebounceMs: number
+    hoverTimeoutMs: number
+    smartDebounce: { fastMultiplier: number, slowMultiplier: number }
+  }
+  textProcessing: {
+    contextExpansionChars: number
+    minTextLengthForMatching: number
+    contentChangeThreshold: number
+  }
+  entityTypePriorities: Record<string, number>
+  styling: { colors, dimensions, animations }
+  patterns: { regex patterns for various text processing }
+}
+```
+
+**Get config**: `getPiiConfig(overrides?): PiiExtensionConfig`
+
+## Architecture Benefits
+
+### Before Refactoring
+- 400+ lines of duplicate utility functions
+- Hard-coded magic numbers scattered throughout
+- Complex interdependencies between extensions
+- Difficult testing and maintenance
+
+### After Refactoring  
+- **Single source of truth** for all constants
+- **Pure, testable functions** isolated from business logic
+- **Shared utilities** reduce duplication
+- **Performance optimization** through centralized configuration
+- **Type safety** with full TypeScript interfaces
+
+## Usage Patterns
+
+### In Extensions
+```typescript
+import { generateModifierId } from './PiiTextUtils'
+import { buildPositionMapping } from './PiiPositionMapping'
+import { findTokenizedWords } from './PiiTokenization'
+import { getPiiConfig } from './PiiExtensionConfig'
+
+const config = getPiiConfig()
+const mapping = buildPositionMapping(doc)
+const words = findTokenizedWords(doc, from, to)
+```
+
+### Custom Configuration
+```typescript
+const customConfig = getPiiConfig({
+  timing: { defaultDebounceMs: 300 },
+  performance: { thresholds: { apiCall: 500 } }
+})
+```
+
+## Development Guidelines
+
+1. **Pure Functions**: Utilities should have no side effects and be easily testable
+2. **Configuration-Driven**: Use config values instead of hard-coded constants
+3. **Performance Aware**: Include timing tracking in expensive operations
+4. **Type Safety**: Full TypeScript interfaces for all utilities
+5. **Shared Patterns**: Reuse utilities across both detection and modifier extensions
+
+## Migration Notes
+
+- All position mapping now goes through `buildPositionMapping()`
+- Text processing uses shared `decodeHtmlEntities()` and normalization
+- Configuration replaces scattered magic numbers
+- Performance tracking is integrated at utility level
+
+## Testing Strategy
+
+- **Unit test** individual utility functions
+- **Integration test** utility combinations
+- **Performance test** using configuration overrides
+- **Mock** utilities for extension testing

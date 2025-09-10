@@ -1,0 +1,202 @@
+---
+description: Development guidelines and best practices for PII system maintenance and enhancement
+globs: **/Pii*.ts,**/pii.ts,**/PiiDebugOverlay.svelte
+---
+
+# PII Development Guidelines
+
+## Development Workflow
+
+Based on the refactoring and performance optimization work, follow these patterns for PII system development.
+
+### Before Making Changes
+
+1. **Enable Performance Tracking**:
+   ```javascript
+   piiDebug.setTracking(true)
+   piiDebug.reset()
+   ```
+
+2. **Check Current State**:
+   ```javascript
+   piiDebug.session()    // Session manager state
+   piiDebug.sources()    // Data source breakdown
+   piiDebug.metrics()    // Performance baseline
+   ```
+
+3. **Use Configuration**: Reference [PiiExtensionConfig.ts](mdc:src/lib/components/common/RichTextInput/PiiExtensionConfig.ts) for all constants
+
+### Code Organization Principles
+
+#### Utility Function Guidelines
+- **Pure Functions**: No side effects, easily testable
+- **Shared Libraries**: Use extracted utilities from [PiiTextUtils.ts](mdc:src/lib/components/common/RichTextInput/PiiTextUtils.ts), [PiiPositionMapping.ts](mdc:src/lib/components/common/RichTextInput/PiiPositionMapping.ts), [PiiTokenization.ts](mdc:src/lib/components/common/RichTextInput/PiiTokenization.ts)
+- **Performance Tracking**: Add timing to expensive operations
+- **Configuration-Driven**: Use config values instead of magic numbers
+
+#### Extension Development
+```typescript
+// Import shared utilities and config
+import { getPiiConfig } from './PiiExtensionConfig'
+import { buildPositionMapping } from './PiiPositionMapping'
+import { PiiPerformanceTracker } from './PiiPerformanceOptimizer'
+
+// Use consistent patterns
+const config = getPiiConfig()
+const tracker = PiiPerformanceTracker.getInstance()
+
+// Track expensive operations
+const endTiming = tracker.startTiming()
+const mapping = buildPositionMapping(doc)
+const elapsed = endTiming()
+tracker.recordPositionRemap()
+```
+
+### Performance Best Practices
+
+#### Critical Operations to Monitor
+1. **Position Mapping** (`buildPositionMapping`): Most expensive operation
+2. **Decoration Updates**: Should be cached and batched
+3. **API Calls**: Use smart debouncing and incremental detection
+4. **State Synchronization**: Minimize frequency and complexity
+
+#### Optimization Patterns
+```typescript
+// Cache expensive results
+const cacheKey = generateDocumentHash(plainText)
+if (cache.has(cacheKey)) {
+  tracker.recordCacheHit()
+  return cache.get(cacheKey)
+}
+
+// Batch operations  
+const batchManager = new PiiBatchManager()
+batchManager.scheduleUpdate(conversationId, entities, modifiers)
+
+// Smart debouncing based on content
+const smartDelay = getSmartDebounceDelay(newWords, incrementalContent)
+```
+
+### State Management Guidelines
+
+#### Current Architecture (Maintain)
+- **Session Manager**: Central source of truth via [pii.ts](mdc:src/lib/utils/pii.ts)
+- **Plugin States**: Temporary working state in extensions
+- **Synchronization**: Use `SYNC_WITH_SESSION_MANAGER` meta transactions
+
+#### Future-Proofing
+- **Event-Driven**: Prepare for migration to event-based state updates
+- **Single Source**: Avoid duplicate state storage
+- **Immutable Updates**: Use readonly state and explicit mutations
+
+### Testing and Validation
+
+#### Performance Testing
+```javascript
+// Baseline measurement
+piiDebug.reset()
+piiDebug.benchmark()  // Run standard performance test
+
+// Custom testing
+const tracker = PiiPerformanceTracker.getInstance()
+// Perform your operations...
+piiDebug.metrics()
+```
+
+#### State Consistency Testing
+```javascript
+// Check state sources
+piiDebug.sources(conversationId)
+piiDebug.sync(conversationId)
+
+// Verify session manager
+sessionManager.getDebugStats()
+sessionManager.getDebugSources(conversationId)
+```
+
+### Error Handling Patterns
+
+#### Graceful Degradation
+```typescript
+try {
+  const entities = await detectPiiEntities(text)
+  // Process entities...
+} catch (error) {
+  console.error('PII detection failed:', error)
+  // Continue without PII features
+  tracker.recordError()
+}
+```
+
+#### Performance Safeguards
+```typescript
+const endTiming = tracker.startTiming()
+const result = expensiveOperation()
+const elapsed = endTiming()
+
+if (elapsed > config.performance.thresholds.operationTimeout) {
+  console.warn(`Slow operation detected: ${elapsed.toFixed(1)}ms`)
+  // Consider optimization or caching
+}
+```
+
+### Debugging and Troubleshooting
+
+#### Performance Issues
+1. **Check slow operations**: Look for console warnings about timing
+2. **Review metrics**: `piiDebug.metrics()` for bottlenecks
+3. **Analyze cache efficiency**: Check hit rates and usage patterns
+4. **Monitor state sync**: Use `piiDebug.sync()` for timing issues
+
+#### State Synchronization Issues
+1. **Inspect data sources**: `piiDebug.sources()` for state distribution
+2. **Check session state**: `piiDebug.session()` for consistency
+3. **Monitor sync operations**: Track `recordSyncOperation()` calls
+4. **Validate persistence**: Check localStorage and error backups
+
+### Configuration Management
+
+#### Environment-Specific Settings
+```typescript
+// Development: Enable all debugging
+const devConfig = getPiiConfig({
+  performance: { enabled: true, logSlowOperations: true },
+  timing: { defaultDebounceMs: 100 } // Faster for testing
+})
+
+// Production: Optimize for performance
+const prodConfig = getPiiConfig({
+  performance: { enabled: false }, // Disable in production
+  timing: { defaultDebounceMs: 800 } // More conservative
+})
+```
+
+#### Feature Flags
+Use configuration to enable/disable features without code changes:
+```typescript
+if (config.features.enableIncrementalDetection) {
+  // Use incremental detection strategy
+} else {
+  // Fall back to full document detection
+}
+```
+
+### Code Review Checklist
+
+- [ ] Uses shared utilities instead of duplicate code
+- [ ] Includes performance tracking for expensive operations  
+- [ ] References configuration instead of magic numbers
+- [ ] Handles errors gracefully with fallbacks
+- [ ] Updates debug interfaces if adding new state
+- [ ] Includes timing thresholds for slow operation detection
+- [ ] Tests state consistency across session/plugin boundaries
+- [ ] Documents any new performance characteristics
+
+### Common Pitfalls to Avoid
+
+1. **Duplicate Utilities**: Always check if functionality exists in shared utilities
+2. **Magic Numbers**: Use configuration values for all constants
+3. **Missing Performance Tracking**: Add timing to any operation >5ms
+4. **State Inconsistency**: Always sync plugin state with session manager
+5. **Memory Leaks**: Clean up event listeners and cached data
+6. **Blocking Operations**: Use debouncing and batching for expensive work

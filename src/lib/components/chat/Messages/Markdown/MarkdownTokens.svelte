@@ -206,6 +206,7 @@
 					{done}
 					{onTaskClick}
 					{onSourceClick}
+					{conversationId}
 				/>
 			</blockquote>
 		{/if}
@@ -239,6 +240,7 @@
 							{done}
 							{onTaskClick}
 							{onSourceClick}
+							{conversationId}
 						/>
 					</li>
 				{/each}
@@ -272,6 +274,7 @@
 									{done}
 									{onTaskClick}
 									{onSourceClick}
+									{conversationId}
 								/>
 							</div>
 						{:else}
@@ -282,6 +285,7 @@
 								{done}
 								{onTaskClick}
 								{onSourceClick}
+								{conversationId}
 							/>
 						{/if}
 					</li>
@@ -304,6 +308,7 @@
 					{done}
 					{onTaskClick}
 					{onSourceClick}
+					{conversationId}
 				/>
 			</div>
 		</Collapsible>

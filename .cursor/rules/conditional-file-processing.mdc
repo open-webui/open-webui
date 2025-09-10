@@ -1,0 +1,179 @@
+---
+description: File upload and processing patterns for conditional PII detection
+---
+
+# Conditional File Processing
+
+File upload and processing must respect the PII masking button state throughout the entire pipeline.
+
+## Upload Flow Integration
+
+### Frontend Upload ([MessageInput.svelte](mdc:src/lib/components/chat/MessageInput.svelte))
+```typescript
+// Pass PII detection state to backend
+const uploadedFile = await uploadFile(localStorage.token, file, metadata, {
+    process: shouldProcessOnUpload,
+    enablePiiDetection: enablePiiDetection // Current button state
+});
+
+// Conditional retrieval processing
+if (!shouldProcessOnUpload) {
+    console.log('Triggering file processing with PII detection:', enablePiiDetection);
+    triggerProcessFile(localStorage.token, uploadedFile.id, null, enablePiiDetection);
+}
+```
+
+### API Layer ([retrieval/index.ts](mdc:src/lib/apis/retrieval/index.ts))
+```typescript
+export const processFile = async (
+    token: string,
+    file_id: string,
+    collection_name: string | null = null,
+    enable_pii_detection: boolean = true // Frontend button state
+) => {
+    const res = await fetch(`${RETRIEVAL_API_BASE_URL}/process/file`, {
+        body: JSON.stringify({
+            file_id: file_id,
+            collection_name: collection_name ? collection_name : undefined,
+            enable_pii_detection: enable_pii_detection // Pass to backend
+        })
+    });
+};
+```
+
+## Backend Processing
+
+### Upload Endpoint ([files.py](mdc:backend/open_webui/routers/files.py))
+```python
+@router.post("/", response_model=FileModelResponse)
+def upload_file(
+    file: UploadFile = File(...),
+    process: bool = Query(True),
+    enable_pii_detection: bool = Query(True), # Frontend state
+    user=Depends(get_verified_user),
+):
+    # Pass to all processing calls
+    process_file(request, ProcessFileForm(
+        file_id=id, 
+        enable_pii_detection=enable_pii_detection
+    ), user=user)
+```
+
+### Document Processing ([retrieval.py](mdc:backend/open_webui/routers/retrieval.py))
+```python
+class ProcessFileForm(BaseModel):
+    file_id: str
+    content: Optional[str] = None
+    collection_name: Optional[str] = None
+    pii: Optional[dict | list] = None
+    pii_state: Optional[dict] = None
+    enable_pii_detection: Optional[bool] = True # Frontend button state
+
+# Processing logic
+if (
+    request.app.state.config.ENABLE_PII_DETECTION
+    and request.app.state.config.PII_API_KEY
+    and form_data.enable_pii_detection # Respect frontend choice
+):
+    log.info(f"PII detection enabled for file {file.id}")
+    # Perform PII detection API calls
+else:
+    log.info(f"PII detection skipped for file {file.id}")
+    # Skip PII processing entirely
+```
+
+## Processing Pipeline
+
+### When PII Detection Enabled ✅
+1. **Upload**: File uploaded with `enable_pii_detection=true`
+2. **Content Extraction**: Standard docling/extraction processing
+3. **PII Detection**: NENNA API calls for each document page
+4. **Entity Storage**: PII entities stored in file metadata
+5. **Frontend Sync**: PII data synced to session manager
+6. **Visual Highlights**: Entity highlights applied to UI
+
+### When PII Detection Disabled ❌
+1. **Upload**: File uploaded with `enable_pii_detection=false`
+2. **Content Extraction**: Standard processing only
+3. **PII Detection**: **Skipped entirely** - no API calls
+4. **Entity Storage**: No PII metadata stored
+5. **Frontend Sync**: **Skipped** - no data to sync
+6. **Visual Highlights**: None applied
+
+## Frontend File Sync
+
+### Conditional Data Processing
+```typescript
+// File progress polling - conditional PII sync
+if (enablePiiDetection) {
+    syncPiiDetectionsFromFileData(json);
+}
+
+// Commands component file loading
+if (enablePiiDetection) {
+    const json = await getFileById(localStorage.token, data.id);
+    if (json) {
+        syncPiiDetectionsFromFileData(json);
+    }
+}
+
+// PII sync function with early return
+function syncPiiDetectionsFromFileData(fileData: any) {
+    if (!enablePiiDetection) {
+        console.log('MessageInput: Skipping PII sync - detection disabled');
+        return;
+    }
+    // ... process PII data
+}
+```
+
+## Logging and Debugging
+
+### Backend Logging
+```python
+log.info(f"PII detection enabled for file {file.id}: config={config.ENABLE_PII_DETECTION}, api_key_set={bool(config.PII_API_KEY)}, form_flag={form_data.enable_pii_detection}")
+
+log.info(f"PII detection skipped for file {file.id}: config={config.ENABLE_PII_DETECTION}, api_key_set={bool(config.PII_API_KEY)}, form_flag={form_data.enable_pii_detection}")
+```
+
+### Frontend Logging
+```typescript
+console.log('MessageInput: Triggering file processing with PII detection:', enablePiiDetection);
+console.log('MessageInput: Skipping PII sync - detection disabled');
+```
+
+## Error Handling
+
+### Backend Graceful Degradation
+- File processing continues without PII when detection disabled
+- No errors thrown when PII APIs are not called
+- Standard content extraction proceeds normally
+
+### Frontend Resilience
+- File uploads succeed regardless of PII button state
+- No crashes when PII data is missing
+- UI gracefully handles files without PII metadata
+
+## Performance Implications
+
+### Disabled State Benefits
+- **No NENNA API calls**: Saves network requests and processing time
+- **No PII entity storage**: Reduces database writes
+- **No frontend PII sync**: Eliminates unnecessary data processing
+- **Faster file processing**: Skip PII detection pipeline entirely
+
+### File Processing Time
+- **With PII**: Content extraction + PII detection + entity storage
+- **Without PII**: Content extraction only (significantly faster)
+
+## Backward Compatibility
+
+### Default Behavior
+- `enable_pii_detection` defaults to `true` for existing integrations
+- Existing file processing continues to work without changes
+- New conditional behavior is opt-in via frontend button
+
+### API Versioning
+- New parameter is optional with sensible default
+- Existing API calls continue to work unchanged
+- Frontend can gradually adopt conditional behavior

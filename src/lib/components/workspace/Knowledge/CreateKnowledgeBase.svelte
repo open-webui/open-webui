@@ -5,15 +5,21 @@
 
 	import { createNewKnowledge, getKnowledgeBases } from '$lib/apis/knowledge';
 	import { toast } from 'svelte-sonner';
-	import { knowledge, user } from '$lib/stores';
+	import { knowledge, user, config } from '$lib/stores';
 	import AccessControl from '../common/AccessControl.svelte';
 	import Spinner from '$lib/components/common/Spinner.svelte';
+	import Switch from '$lib/components/common/Switch.svelte';
+	import Mask from '$lib/components/icons/Mask.svelte';
 
 	let loading = false;
 
 	let name = '';
 	let description = '';
 	let accessControl = {};
+	let enablePiiDetection = true;
+
+	// Check if PII detection is available in config
+	$: piiConfigEnabled = $config?.features?.enable_pii_detection ?? false;
 
 	const submitHandler = async () => {
 		loading = true;
@@ -30,7 +36,8 @@
 			localStorage.token,
 			name,
 			description,
-			accessControl
+			accessControl,
+			enablePiiDetection
 		).catch((e) => {
 			toast.error(`${e}`);
 		});
@@ -120,6 +127,34 @@
 				/>
 			</div>
 		</div>
+
+		{#if piiConfigEnabled}
+			<div class="mt-2">
+				<div class="px-3 py-2 bg-gray-50 dark:bg-gray-950 rounded-lg">
+					<div class="py-0.5 flex w-full justify-between">
+						<div
+							id="pii-detection-label"
+							class="self-center text-sm font-medium text-gray-700 dark:text-gray-300 flex items-center gap-2"
+						>
+							<Mask className="size-4" />
+							{$i18n.t('PII Detection')}
+						</div>
+						<div class="flex items-center gap-2 p-1">
+							<Switch
+								ariaLabelledbyId="pii-detection-label"
+								tooltip={true}
+								bind:state={enablePiiDetection}
+							/>
+						</div>
+					</div>
+					<div class="text-xs text-gray-500 dark:text-gray-400 mt-1">
+						{$i18n.t(
+							'When enabled, files uploaded to this knowledge base will be automatically analyzed for personally identifiable information (PII) and highlighted in the editor.'
+						)}
+					</div>
+				</div>
+			</div>
+		{/if}
 
 		<div class="flex justify-end mt-2">
 			<div>

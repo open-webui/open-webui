@@ -144,7 +144,11 @@
 										...a,
 										...(item?.files ?? []).map((file) => ({
 											...file,
-											collection: { name: item.name, description: item.description } // DO NOT REMOVE, USED IN FILE DESCRIPTION/ATTACHMENT
+											collection: {
+												id: item.id,
+												name: item.name,
+												description: item.description
+											} // DO NOT REMOVE, USED IN FILE DESCRIPTION/ATTACHMENT
 										}))
 									])
 								];

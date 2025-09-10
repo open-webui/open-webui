@@ -40,7 +40,7 @@ export type { PiiEntity, Session };
 export interface KnownPiiEntity {
 	id: number;
 	label: string;
-	name: string; // maps to raw_text in PiiEntity
+	name: string; // maps to text in PiiEntity
 }
 
 // Response interfaces that match the API

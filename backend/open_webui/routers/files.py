@@ -89,6 +89,7 @@ def upload_file(
     file: UploadFile = File(...),
     metadata: Optional[dict | str] = Form(None),
     process: bool = Query(True),
+    enable_pii_detection: bool = Query(True),
     internal: bool = False,
     user=Depends(get_verified_user),
 ):
@@ -171,21 +172,36 @@ def upload_file(
                     ):
                         file_path = Storage.get_file(file_path)
                         result = transcribe(request, file_path, file_metadata)
-
                         process_file(
                             request,
-                            ProcessFileForm(file_id=id, content=result.get("text", "")),
+                            ProcessFileForm(
+                                file_id=id,
+                                content=result.get("text", ""),
+                                enable_pii_detection=enable_pii_detection,
+                            ),
                             user=user,
                         )
                     elif (not file.content_type.startswith(("image/", "video/"))) or (
                         request.app.state.config.CONTENT_EXTRACTION_ENGINE == "external"
                     ):
-                        process_file(request, ProcessFileForm(file_id=id), user=user)
+                        process_file(
+                            request,
+                            ProcessFileForm(
+                                file_id=id, enable_pii_detection=enable_pii_detection
+                            ),
+                            user=user,
+                        )
                 else:
                     log.info(
                         f"File type {file.content_type} is not provided, but trying to process anyway"
                     )
-                    process_file(request, ProcessFileForm(file_id=id), user=user)
+                    process_file(
+                        request,
+                        ProcessFileForm(
+                            file_id=id, enable_pii_detection=enable_pii_detection
+                        ),
+                        user=user,
+                    )
 
                 file_item = Files.get_file_by_id(id=id)
             except Exception as e:
@@ -323,6 +339,38 @@ async def get_file_by_id(id: str, user=Depends(get_verified_user)):
         or user.role == "admin"
         or has_access_to_file(id, "read", user)
     ):
+        # Best-effort augmentation: If page_content is missing (older files), try to reconstruct
+        try:
+            data = file.data or {}
+            if not isinstance(data, dict):
+                data = {}
+
+            if "page_content" not in data or not data.get("page_content"):
+                # Try vector DB first to avoid re-reading the file
+                try:
+                    from open_webui.retrieval.vector.factory import VECTOR_DB_CLIENT
+
+                    result = VECTOR_DB_CLIENT.query(
+                        collection_name=f"file-{file.id}",
+                        filter={"file_id": file.id},
+                    )
+                    if result is not None and len(result.documents) > 0:
+                        pages = result.documents[0]
+                        if isinstance(pages, list) and pages:
+                            Files.update_file_data_by_id(
+                                file.id,
+                                {
+                                    "content": " ".join(pages),
+                                    "page_content": pages,
+                                },
+                            )
+                            file = Files.get_file_by_id(file.id)
+                except Exception:
+                    # Ignore augmentation errors; return original file
+                    pass
+        except Exception:
+            pass
+
         return file
     else:
         raise HTTPException(
@@ -366,6 +414,10 @@ async def get_file_data_content_by_id(id: str, user=Depends(get_verified_user)):
 
 class ContentForm(BaseModel):
     content: str
+    # Optional client-provided PII detections to persist and use during re-indexing
+    pii: Optional[dict | list] = None
+    # Optional PII UI state (masking, etc.) to persist alongside chat/file data
+    pii_state: Optional[dict] = None
 
 
 @router.post("/{id}/data/content/update")
@@ -386,9 +438,33 @@ async def update_file_data_content_by_id(
         or has_access_to_file(id, "write", user)
     ):
         try:
+            # If the client provided PII UI state, persist it first
+            if form_data.pii_state is not None:
+                try:
+                    Files.update_file_data_by_id(id, {"piiState": form_data.pii_state})
+                except Exception:
+                    pass
+
+            # If the client provided PII detections, persist to file data and meta
+            # so downstream chunking can attach them without re-detection
+            if form_data.pii is not None:
+                try:
+                    Files.update_file_data_by_id(id, {"pii": form_data.pii})
+                except Exception:
+                    pass
+                try:
+                    Files.update_file_metadata_by_id(id, {"pii": form_data.pii})
+                except Exception:
+                    pass
+
             process_file(
                 request,
-                ProcessFileForm(file_id=id, content=form_data.content),
+                ProcessFileForm(
+                    file_id=id,
+                    content=form_data.content,
+                    pii=form_data.pii,
+                    pii_state=form_data.pii_state,
+                ),
                 user=user,
             )
             file = Files.get_file_by_id(id=id)
@@ -397,6 +473,51 @@ async def update_file_data_content_by_id(
             log.error(f"Error processing file: {file.id}")
 
         return {"content": file.data.get("content", "")}
+    else:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=ERROR_MESSAGES.NOT_FOUND,
+        )
+
+
+############################
+# Update File PII State By Id
+############################
+
+
+class PiiStateForm(BaseModel):
+    pii_state: dict
+
+
+@router.post("/{id}/data/pii/state/update")
+async def update_file_pii_state_by_id(
+    id: str, form_data: PiiStateForm, user=Depends(get_verified_user)
+):
+    file = Files.get_file_by_id(id)
+
+    if not file:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=ERROR_MESSAGES.NOT_FOUND,
+        )
+
+    if (
+        file.user_id == user.id
+        or user.role == "admin"
+        or has_access_to_file(id, "write", user)
+    ):
+        try:
+            # Store under camelCase key to match frontend expectations
+            updated = Files.update_file_data_by_id(
+                id, {"piiState": form_data.pii_state}
+            )
+            return updated
+        except Exception as e:
+            log.exception(e)
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=ERROR_MESSAGES.DEFAULT("Error updating file PII state"),
+            )
     else:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
@@ -605,7 +726,6 @@ async def delete_file_by_id(id: str, user=Depends(get_verified_user)):
         or user.role == "admin"
         or has_access_to_file(id, "write", user)
     ):
-
         result = Files.delete_file_by_id(id)
         if result:
             try:

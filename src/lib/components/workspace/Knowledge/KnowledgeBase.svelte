@@ -22,7 +22,8 @@
 		updateFileDataContentById,
 		uploadFile,
 		deleteFileById,
-		getFileById
+		getFileById,
+		updateFilePiiStateById
 	} from '$lib/apis/files';
 	import {
 		addFileToKnowledgeById,
@@ -50,6 +51,33 @@
 	import LockClosed from '$lib/components/icons/LockClosed.svelte';
 	import AccessControlModal from '../common/AccessControlModal.svelte';
 	import Search from '$lib/components/icons/Search.svelte';
+	import Mask from '$lib/components/icons/Mask.svelte';
+	import Tooltip from '$lib/components/common/Tooltip.svelte';
+	// PII session manager to seed backend-detected entities for highlighting
+	import { PiiSessionManager, type ExtendedPiiEntity } from '$lib/utils/pii';
+
+	// Initialize PII session manager
+	let piiSessionManager = PiiSessionManager.getInstance();
+
+	// Reference to the embedded editor to trigger sync-after-seed
+	let kbEditor = null;
+
+	// Debounced PII state saver
+	let savePiiTimeout: any = null;
+	const savePiiStateDebounced = (fileId: string) => {
+		if (savePiiTimeout) clearTimeout(savePiiTimeout);
+		savePiiTimeout = setTimeout(async () => {
+			try {
+				const convoId = `${id || 'kb'}:${fileId}`;
+				const state = PiiSessionManager.getInstance().getConversationState(convoId);
+				if (state) {
+					await updateFilePiiStateById(localStorage.token, fileId, state);
+				}
+			} catch (e) {
+				// silent
+			}
+		}, 400);
+	};
 
 	let largeScreen = true;
 
@@ -65,6 +93,8 @@
 			file_ids: string[];
 		};
 		files: any[];
+		enable_pii_detection?: boolean;
+		access_control?: any;
 	};
 
 	let id = null;
@@ -115,6 +145,13 @@
 	let mediaQuery;
 	let dragged = false;
 
+	// PII detection reactive variables
+	// Access config as any to bypass TypeScript type issues
+	$: piiConfigEnabled = ($config as any)?.features?.enable_pii_detection ?? false;
+	$: piiApiKey = ($config as any)?.pii?.api_key ?? '';
+	$: knowledgeBasePiiEnabled = knowledge?.enable_pii_detection ?? false;
+	$: enablePiiDetection = piiConfigEnabled && knowledgeBasePiiEnabled;
+
 	const createFileFromText = (name, content) => {
 		const blob = new Blob([content], { type: 'text/plain' });
 		const file = blobToFile(blob, `${name}.txt`);
@@ -135,6 +172,7 @@
 			name: file.name,
 			size: file.size,
 			status: 'uploading',
+			progress: 5,
 			error: '',
 			itemId: tempItemId
 		};
@@ -174,23 +212,190 @@
 				};
 			}
 
-			const uploadedFile = await uploadFile(localStorage.token, file, metadata).catch((e) => {
+			const uploadedFile = await uploadFile(localStorage.token, file, metadata, {
+				process: true,
+				enablePiiDetection: enablePiiDetection
+			}).catch((e) => {
 				toast.error(`${e}`);
 				return null;
 			});
 
 			if (uploadedFile) {
 				console.log(uploadedFile);
+				// Promote temp item to processing state and keep reference to server file for progress
 				knowledge.files = knowledge.files.map((item) => {
 					if (item.itemId === tempItemId) {
 						item.id = uploadedFile.id;
-					}
+						item.file = uploadedFile;
+						item.status = 'processing';
+						item.progress = 5;
 
+						// Add filename mapping if PII detection is enabled
+						if (enablePiiDetection && uploadedFile.id && item.name) {
+							const convoId = `${id || 'kb'}:${uploadedFile.id}`;
+
+							// Ensure conversation state exists before adding filename mapping
+							if (!piiSessionManager.getConversationState(convoId)) {
+								// Create empty conversation state
+								const emptyState = {
+									entities: [],
+									modifiers: [],
+									filenameMappings: [],
+									lastUpdated: Date.now()
+								};
+								piiSessionManager.loadConversationState(convoId, emptyState);
+							}
+
+							// Store the original filename in the mapping and meta
+							piiSessionManager.addFilenameMapping(convoId, uploadedFile.id, item.name);
+							// Keep original in meta for fallback
+							if (!item.meta) item.meta = {};
+							item.meta.name = item.meta.name || item.name;
+							// Replace item.name with the masked ID for display
+							item.name = uploadedFile.id;
+
+							// Save the PII state to server immediately to persist filename mappings
+							setTimeout(async () => {
+								try {
+									const state = piiSessionManager.getConversationState(convoId);
+									if (state) {
+										await updateFilePiiStateById(localStorage.token, uploadedFile.id, state);
+									}
+								} catch (e) {
+									// Silent fail
+								}
+							}, 100);
+						}
+					}
 					// Remove temporary item id
 					delete item.itemId;
 					return item;
 				});
-				await addFileHandler(uploadedFile.id);
+
+				// Start processing by adding the file to the knowledge base (async, non-blocking)
+				// eslint-disable-next-line @typescript-eslint/no-floating-promises
+				addFileHandler(uploadedFile.id);
+
+				// Poll for processing progress via /files/{id}
+				const pollIntervalMs = 800;
+				const maxPollMs = 30 * 60 * 1000; // 30 minutes safety cap
+				let elapsed = 0;
+				const poll = async () => {
+					try {
+						const json = await getFileById(localStorage.token, uploadedFile.id);
+						// Update the temp item with fresh server state
+						knowledge.files = knowledge.files.map((item) => {
+							if (item.id === uploadedFile.id) {
+								try {
+									item.file = json;
+								} catch (e) {}
+								const processing = json?.meta?.processing;
+								if (processing) {
+									item.progress =
+										typeof processing.progress === 'number'
+											? processing.progress
+											: (item.progress ?? 0);
+									if (
+										processing.status === 'done' ||
+										(typeof processing.progress === 'number' && processing.progress >= 100)
+									) {
+										// Only show messages if this is the first time we see completion
+										if (item.status !== 'uploaded') {
+											// Check for duplicate content first
+											if (json?.duplicate) {
+												toast.info(
+													$i18n.t(
+														'{{filename}} already exists in knowledge base - content is duplicate',
+														{
+															filename: item.name
+														}
+													)
+												);
+											} else {
+												// Check for extraction information and show appropriate toast messages
+												if (json?.data?.extraction) {
+													const extraction = json.data.extraction;
+													if (extraction.fallback_used) {
+														// Handle classified error structure
+														let errorMessage = 'Unknown error';
+														if (extraction.error && typeof extraction.error === 'object') {
+															const errorInfo = extraction.error;
+															switch (errorInfo.category) {
+																case 'service_unavailable':
+																	errorMessage = $i18n.t(
+																		'Docling extraction service is not available'
+																	);
+																	break;
+																case 'timeout':
+																	errorMessage = $i18n.t(
+																		'Docling extraction took too long and timed out'
+																	);
+																	break;
+																case 'unknown':
+																default:
+																	errorMessage = $i18n.t(
+																		'Docling extraction failed with an unexpected error'
+																	);
+																	break;
+															}
+														} else if (extraction.error) {
+															// Fallback for old string-based errors
+															errorMessage = extraction.error;
+														}
+
+														toast.warning(
+															$i18n.t(
+																'Docling extraction failed for {{filename}}, using standard extraction: {{error}}',
+																{
+																	filename: item.name,
+																	error: errorMessage
+																}
+															)
+														);
+													} else if (extraction.method?.toLowerCase() === 'docling') {
+														toast.success(
+															$i18n.t('{{filename}} processed successfully using Docling', {
+																filename: item.name
+															})
+														);
+													} else if (extraction.method) {
+														toast.success(
+															$i18n.t('{{filename}} processed successfully using {{method}}', {
+																filename: item.name,
+																method: extraction.method
+															})
+														);
+													}
+												}
+											}
+										}
+
+										item.status = 'uploaded';
+									}
+									if (processing.status === 'error') {
+										item.status = 'error';
+										item.error = processing.error || 'Processing failed';
+									}
+								}
+							}
+							return item;
+						});
+						// Trigger reactive update
+						knowledge = knowledge;
+					} catch (e) {
+						// ignore transient errors
+					}
+					elapsed += pollIntervalMs;
+					const current = knowledge?.files?.find((f) => f.id === uploadedFile.id);
+					if (
+						elapsed < maxPollMs &&
+						current &&
+						(current.status === 'processing' || current.status === 'uploading')
+					) {
+						setTimeout(poll, pollIntervalMs);
+					}
+				};
+				poll();
 			} else {
 				toast.error($i18n.t('Failed to upload file.'));
 			}
@@ -389,7 +594,34 @@
 		);
 
 		if (updatedKnowledge) {
-			knowledge = updatedKnowledge;
+			// Preserve filename masking after server update
+			if (enablePiiDetection) {
+				// Store current masked filenames
+				const maskedFilenames = new Map();
+				knowledge.files.forEach((file) => {
+					if (file.id && file.name && file.meta?.name && file.name !== file.meta.name) {
+						maskedFilenames.set(file.id, { maskedName: file.name, originalName: file.meta.name });
+					}
+				});
+
+				// Update with server response
+				knowledge = updatedKnowledge;
+
+				// Restore masked filenames
+				knowledge.files = knowledge.files.map((file) => {
+					const maskedInfo = maskedFilenames.get(file.id);
+					if (maskedInfo) {
+						return {
+							...file,
+							name: maskedInfo.maskedName,
+							meta: { ...file.meta, name: maskedInfo.originalName }
+						};
+					}
+					return file;
+				});
+			} else {
+				knowledge = updatedKnowledge;
+			}
 			toast.success($i18n.t('File added successfully.'));
 		} else {
 			toast.error($i18n.t('Failed to add file.'));
@@ -400,6 +632,15 @@
 	const deleteFileHandler = async (fileId) => {
 		try {
 			console.log('Starting file deletion process for:', fileId);
+
+			// Remove filename mapping if PII detection is enabled
+			if (enablePiiDetection) {
+				const convoId = `${id || 'kb'}:${fileId}`;
+				console.log('KnowledgeBase: Removing filename mapping for deleted file:', {
+					fileId: fileId
+				});
+				piiSessionManager.removeFilenameMapping(convoId, fileId);
+			}
 
 			// Remove from knowledge base only
 			const updatedKnowledge = await removeFileFromKnowledgeById(localStorage.token, id, fileId);
@@ -423,8 +664,59 @@
 		// Clear the cache for this file since we're updating it
 		fileContentCache.delete(fileId);
 
-		const res = updateFileDataContentById(localStorage.token, fileId, content).catch((e) => {
+		// Collect PII state and entities to send with content update
+		let piiState = null;
+		let piiPayload: Record<string, any> | null = null;
+		try {
+			const convoId = `${id || 'kb'}:${fileId}`;
+			const state = PiiSessionManager.getInstance().getConversationState(convoId);
+			if (state) {
+				piiState = state as any;
+				const entities = state.entities || [];
+				const map: Record<string, any> = {};
+				entities.forEach((ent) => {
+					const key = ent.raw_text || ent.label;
+					if (!key) return;
+					map[key] = {
+						id: ent.id,
+						label: ent.label,
+						type: ent.type || 'PII',
+						text: (ent.raw_text || ent.label).toLowerCase(),
+						raw_text: ent.raw_text || ent.label,
+						occurrences: (ent.occurrences || []).map((o) => ({
+							start_idx: o.start_idx,
+							end_idx: o.end_idx
+						}))
+					};
+				});
+				piiPayload = map;
+			}
+		} catch (e) {
+			// ignore PII packaging errors
+		}
+
+		// Mask filename in content if PII detection is enabled
+		let processedContent = content;
+		if (enablePiiDetection && selectedFile) {
+			// Add filename mapping for this file
+			const convoId = `${id || 'kb'}:${fileId}`;
+			piiSessionManager.addFilenameMapping(convoId, fileId, selectedFile.meta?.name || 'unknown');
+
+			// Replace any occurrences of the actual filename with the file ID
+			const filename = selectedFile.meta?.name || '';
+			if (filename) {
+				const escapedFilename = filename.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+				const filenameRegex = new RegExp(`\\b${escapedFilename}\\b`, 'gi');
+				processedContent = processedContent.replace(filenameRegex, fileId);
+			}
+		}
+
+		const res = await updateFileDataContentById(localStorage.token, fileId, processedContent, {
+			pii: piiPayload || undefined,
+			piiState: piiState || undefined
+		}).catch((e) => {
 			toast.error(`${e}`);
+			return null;
 		});
 
 		const updatedKnowledge = await updateFileFromKnowledgeById(
@@ -457,7 +749,8 @@
 				...knowledge,
 				name: knowledge.name,
 				description: knowledge.description,
-				access_control: knowledge.access_control
+				access_control: knowledge.access_control,
+				enable_pii_detection: knowledge.enable_pii_detection
 			}).catch((e) => {
 				toast.error(`${e}`);
 			});
@@ -490,6 +783,70 @@
 			const response = await getFileById(localStorage.token, file.id);
 			if (response) {
 				selectedFileContent = response.data.content;
+
+				// Add filename mapping if PII detection is enabled
+				if (enablePiiDetection && file.meta?.name) {
+					const convoId = `${id || 'kb'}:${file.id}`;
+					console.log('KnowledgeBase: Adding filename mapping for selected file:', {
+						fileId: file.id,
+						originalName: file.meta.name
+					});
+					piiSessionManager.addFilenameMapping(convoId, file.id, file.meta.name);
+				}
+
+				// Load saved PII state if present
+				try {
+					const convoId = `${id || 'kb'}:${file.id}`;
+					if (response?.data?.piiState) {
+						piiSessionManager.loadConversationState(convoId, response.data.piiState);
+					}
+				} catch (e) {}
+				// Seed PII entities from backend analysis into the session manager so RichTextInput highlights immediately
+				try {
+					const piiMap = response?.data?.pii || {};
+					const entities: ExtendedPiiEntity[] = Object.values(piiMap)
+						.filter(Boolean)
+						.map((e: any) => ({
+							id: e.id,
+							label: e.label,
+							type: e.type || e.entity_type || 'PII',
+							raw_text: e.raw_text || e.text || e.name || '',
+							text: e.text || e.raw_text || e.name || '',
+							occurrences: (e.occurrences || []).map((o: any) => ({
+								start_idx: o.start_idx,
+								end_idx: o.end_idx
+							})),
+							shouldMask: true
+						}));
+
+					const convoId = `${id || 'kb'}:${file.id}`;
+					piiSessionManager.setConversationEntitiesFromLatestDetection(convoId, entities);
+
+					// Give the editor a moment to mount with new content, then sync highlights from the session manager
+					await tick();
+					setTimeout(() => {
+						try {
+							if (kbEditor?.commands) {
+								if (typeof kbEditor.commands.reloadConversationState === 'function') {
+									kbEditor.commands.reloadConversationState(convoId);
+								}
+								if (typeof kbEditor.commands.syncWithSessionManager === 'function') {
+									kbEditor.commands.syncWithSessionManager();
+								}
+								if (typeof kbEditor.commands.forceEntityRemapping === 'function') {
+									kbEditor.commands.forceEntityRemapping();
+								}
+								// Files are already analyzed - just load existing entities and highlights
+								console.log('KnowledgeBase: Content loaded with existing PII analysis', {
+									hasExistingEntities: entities.length > 0,
+									contentLength: response.data.content?.length || 0
+								});
+							}
+						} catch (e) {}
+					}, 50);
+				} catch (e) {
+					// Ignore seeding errors; editor can still run detection if enabled
+				}
 				// Cache the content
 				fileContentCache.set(file.id, response.data.content);
 			} else {
@@ -580,6 +937,51 @@
 
 		if (res) {
 			knowledge = res;
+
+			// Check PII detection status directly (reactive var might not be updated yet)
+			// Access config as any to bypass TypeScript type issues
+			const configAny = $config as any;
+			const currentPiiConfigEnabled = configAny?.features?.enable_pii_detection ?? false;
+			const currentKnowledgeBasePiiEnabled = knowledge?.enable_pii_detection ?? false;
+			const currentEnablePiiDetection = currentPiiConfigEnabled && currentKnowledgeBasePiiEnabled;
+
+			// Restore filename masking state if PII detection is enabled
+			if (currentEnablePiiDetection && knowledge.files) {
+				// First, load filename mappings from persisted file data
+				const loadPromises = knowledge.files.map(async (file) => {
+					try {
+						const convoId = `${id || 'kb'}:${file.id}`;
+						const fileResponse = await getFileById(localStorage.token, file.id);
+
+						if (fileResponse?.data?.piiState) {
+							// Load PII state which includes filename mappings
+							piiSessionManager.loadConversationState(convoId, fileResponse.data.piiState);
+						}
+					} catch (e) {
+						// Silent fail - file might not have PII state
+					}
+				});
+
+				// Wait for all states to load, then apply filename masking
+				await Promise.all(loadPromises);
+
+				knowledge.files = knowledge.files.map((file) => {
+					const convoId = `${id || 'kb'}:${file.id}`;
+					const mappings = piiSessionManager.getFilenameMappingsForDisplay(convoId);
+					const mapping = mappings.find((m) => m.fileId === file.id);
+
+					if (mapping && mapping.originalFilename) {
+						// File has filename mapping - apply masking
+						return {
+							...file,
+							name: file.id, // Use file ID as masked name
+							meta: { ...file.meta, name: mapping.originalFilename }
+						};
+					}
+
+					return file;
+				});
+			}
 		} else {
 			goto('/workspace/knowledge');
 		}
@@ -699,7 +1101,26 @@
 							/>
 						</div>
 
-						<div class="self-center shrink-0">
+						<div class="self-center shrink-0 flex gap-2">
+							{#if piiConfigEnabled}
+								<Tooltip
+									content={enablePiiDetection
+										? $i18n.t('PII detection is enabled for this knowledge base')
+										: $i18n.t('PII detection is disabled for this knowledge base')}
+								>
+									<div
+										class="bg-gray-50 dark:bg-gray-850 transition px-2 py-1 rounded-full flex gap-1 items-center {enablePiiDetection
+											? 'text-sky-500 dark:text-sky-300'
+											: 'text-gray-500 dark:text-gray-400'}"
+									>
+										<Mask strokeWidth="2.5" className="size-3.5" />
+										<div class="text-sm font-medium shrink-0">
+											{enablePiiDetection ? $i18n.t('PII Enabled') : $i18n.t('PII Disabled')}
+										</div>
+									</div>
+								</Tooltip>
+							{/if}
+
 							<button
 								class="bg-gray-50 hover:bg-gray-100 text-black dark:bg-gray-850 dark:hover:bg-gray-800 dark:text-white transition px-2 py-1 rounded-full flex gap-1 items-center"
 								type="button"
@@ -777,10 +1198,35 @@
 							>
 								{#key selectedFile.id}
 									<RichTextInput
-										className="input-prose-sm"
+										bind:editor={kbEditor}
+										className="input-prose-sm pii-selectable"
 										bind:value={selectedFileContent}
 										placeholder={$i18n.t('Add content here')}
 										preserveBreaks={false}
+										{enablePiiDetection}
+										{piiApiKey}
+										enablePiiModifiers={enablePiiDetection}
+										piiMaskingEnabled={enablePiiDetection}
+										piiDetectionOnlyAfterUserEdit={true}
+										piiModifierLabels={[
+											'PERSON',
+											'EMAIL',
+											'PHONE_NUMBER',
+											'ADDRESS',
+											'SSN',
+											'CREDIT_CARD',
+											'DATE_TIME',
+											'IP_ADDRESS',
+											'URL',
+											'IBAN',
+											'MEDICAL_LICENSE',
+											'US_PASSPORT',
+											'US_DRIVER_LICENSE'
+										]}
+										conversationId={`${id || 'kb'}:${selectedFile?.id || ''}`}
+										onPiiToggled={() => selectedFile?.id && savePiiStateDebounced(selectedFile.id)}
+										onPiiModifiersChanged={() =>
+											selectedFile?.id && savePiiStateDebounced(selectedFile.id)}
 									/>
 								{/key}
 							</div>
@@ -835,10 +1281,35 @@
 							>
 								{#key selectedFile.id}
 									<RichTextInput
-										className="input-prose-sm"
+										bind:editor={kbEditor}
+										className="input-prose-sm pii-selectable"
 										bind:value={selectedFileContent}
 										placeholder={$i18n.t('Add content here')}
 										preserveBreaks={false}
+										{enablePiiDetection}
+										{piiApiKey}
+										enablePiiModifiers={enablePiiDetection}
+										piiMaskingEnabled={enablePiiDetection}
+										piiDetectionOnlyAfterUserEdit={true}
+										piiModifierLabels={[
+											'PERSON',
+											'EMAIL',
+											'PHONE_NUMBER',
+											'ADDRESS',
+											'SSN',
+											'CREDIT_CARD',
+											'DATE_TIME',
+											'IP_ADDRESS',
+											'URL',
+											'IBAN',
+											'MEDICAL_LICENSE',
+											'US_PASSPORT',
+											'US_DRIVER_LICENSE'
+										]}
+										conversationId={`${id || 'kb'}:${selectedFile?.id || ''}`}
+										onPiiToggled={() => selectedFile?.id && savePiiStateDebounced(selectedFile.id)}
+										onPiiModifiersChanged={() =>
+											selectedFile?.id && savePiiStateDebounced(selectedFile.id)}
 									/>
 								{/key}
 							</div>
@@ -898,6 +1369,9 @@
 									small
 									files={filteredItems}
 									{selectedFileId}
+									enablePiiDetection={piiConfigEnabled &&
+										(knowledge?.enable_pii_detection ?? false)}
+									knowledgeBaseId={id || 'kb'}
 									on:click={(e) => {
 										selectedFileId = selectedFileId === e.detail ? null : e.detail;
 									}}
@@ -924,3 +1398,23 @@
 		<Spinner className="size-5" />
 	{/if}
 </div>
+
+<style>
+	/* Ensure text selection is enabled and visible in PII editors */
+	:global(.pii-selectable .tiptap) {
+		user-select: text !important;
+		-webkit-user-select: text !important;
+		-moz-user-select: text !important;
+		-ms-user-select: text !important;
+	}
+
+	:global(.pii-selectable .tiptap::selection),
+	:global(.pii-selectable .tiptap *::selection) {
+		background-color: rgba(100, 108, 255, 0.3) !important;
+	}
+
+	:global(.pii-selectable .tiptap::-moz-selection),
+	:global(.pii-selectable .tiptap *::-moz-selection) {
+		background-color: rgba(100, 108, 255, 0.3) !important;
+	}
+</style>

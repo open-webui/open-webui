@@ -121,17 +121,6 @@ class PiiSessionManager {
 ## User Interface - Implemented Features
 
 ### Menu System Architecture
-```typescript
-// PiiModifierExtension.ts - Dual menu system
-interface MenuState {
-  showHoverMenu: boolean;
-  showSelectionMenu: boolean;
-  hoverEntity: PiiEntity | null;
-  selectedText: string;
-  selectedRange: { from: number; to: number } | null;
-  menuPosition: { x: number; y: number };
-}
-```
 
 ### Text Selection with Tokenization
 ```typescript
@@ -236,48 +225,6 @@ const buildPositionMapping = (doc: Node) => {
   });
   
   return mapping;
-};
-```
-
-## Critical Implementation Details
-
-### Modifier Hash Generation
-```typescript
-// Content-based hashing for modifier identification
-const generateModifierHash = (modifier: PiiModifier): string => {
-  return `${modifier.action}-${modifier.entity}-${modifier.type || 'no-type'}`;
-};
-```
-
-### API Format Conversion
-```typescript
-// Convert internal modifiers to API format
-const convertToShieldApiModifiers = (modifiers: PiiModifier[]): ShieldApiModifier[] => {
-  return modifiers.map(modifier => ({
-    action: modifier.action,
-    entity: modifier.entity,
-    ...(modifier.type && { type: modifier.type })
-  }));
-};
-```
-
-### Event Handling Patterns
-```typescript
-// Menu timeout management
-let menuTimeout: NodeJS.Timeout | null = null;
-
-const scheduleMenuHide = () => {
-  if (menuTimeout) clearTimeout(menuTimeout);
-  menuTimeout = setTimeout(() => {
-    hideAllMenus();
-  }, 200);
-};
-
-const cancelMenuHide = () => {
-  if (menuTimeout) {
-    clearTimeout(menuTimeout);
-    menuTimeout = null;
-  }
 };
 ```
 

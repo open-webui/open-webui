@@ -1,0 +1,23 @@
+---
+globs: src/**/*.ts
+description: prosemirror-plain-text-mapping
+---
+## ProseMirror Plain-Text Mapping & Boundaries
+
+To reliably map PII entities and modifiers between plain text (API) and the editor document, follow these constraints.
+
+- **Single mapping source of truth**: Build a full-document plain-text with a bidirectional mapping once per decoration pass.
+- **Do not trim**: Never `trim()` the synthesized plain text; offsets must remain stable.
+- **Synthetic separators** to stabilize structure:
+  - Insert a leading `\n` before block nodes (`paragraph`, `heading`, `blockquote`, `codeBlock`, `listItem`, `bulletList`, `orderedList`, `taskList`) if previous output isn’t newline-terminated.
+  - For tables: insert `\n` before each `tableRow` and `\t` between adjacent `tableCell`/`tableHeader` cells.
+  - For `hard_break`, insert `\n`.
+- **HTML entities**: Decode both entity `raw_text` and synthesized plain text before matching.
+- **Whitespace-tolerant matching**: Replace runs of whitespace in the entity text with `[\s\u00A0\t]+` when building the regex.
+- **Unicode-aware boundaries**: If the match begins/ends with an alphanumeric, ensure it does not start/end inside another alphanumeric in the document.
+- **Occurrence localization**: For match-to-ProseMirror conversion, use the first and last mappable plain indices within the match window when exact endpoints aren’t directly mappable.
+- **Overlap resolution**: Prefer longer spans and higher-priority entity types; drop fragmentary overlaps.
+- **Per-occurrence decorations**: Create distinct decorations for each occurrence; never merge adjacent occurrences.
+
+When updating mapping logic, update both entity and modifier pipelines to keep behavior consistent.
+

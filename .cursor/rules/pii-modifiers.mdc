@@ -1,0 +1,28 @@
+---
+globs: src/**/*.ts,src/**/*.svelte
+description: pii-modifiers
+---
+## PII Modifiers: Adding, Persisting, and Highlighting
+
+Modifiers are custom rules (mask/ignore) that are applied similarly to entities. Ensure consistent selection behavior and decoration across the editor.
+
+Adding modifiers (editor):
+- Use the ProseMirror selection `[from, to]` and the provided `entity` string.
+- If `entity` occurs inside the selection slice, align `from/to` to that substring.
+- Else tokenize the slice and pick the last alphabetic token (or last token) to define `finalEntity` and `from/to`.
+- If no tokens, fallback to the trimmed slice text.
+- Persist `from/to` on the modifier when possible to ease remapping across updates.
+
+Highlighting modifiers:
+- Reuse the same plain-text mapping pipeline as entities (see `prosemirror-plain-text-mapping`).
+- Decode HTML entities and use whitespace-tolerant matching plus Unicode-aware boundaries.
+- When mapping plain indices back to document, use tolerant endpoints: nearest mappable index inside the match window.
+- Create per-occurrence decorations; do not merge adjacent spans.
+
+Selection stability:
+- Do not trigger remapping during active mouse selection. Defer a single remap right after `mouseup`.
+- Avoid heavy work in selection-only transactions; prefer `onUpdate` over `onTransaction` to prevent selection collapse.
+
+Persistence:
+- Store modifiers together with conversation/document PII state if available, using the existing session manager patterns.
+

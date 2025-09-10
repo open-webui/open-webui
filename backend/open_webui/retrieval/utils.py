@@ -23,6 +23,7 @@ from open_webui.models.notes import Notes
 
 from open_webui.retrieval.vector.main import GetResult
 from open_webui.utils.access_control import has_access
+from open_webui.utils.pii import apply_pii_masking_to_content
 
 
 from open_webui.env import (
@@ -90,7 +91,7 @@ def query_doc(
         )
 
         if result:
-            log.info(f"query_doc:result {result.ids} {result.metadatas}")
+            log.debug(f"query_doc:result {result.ids} {result.metadatas}")
 
         return result
     except Exception as e:
@@ -184,7 +185,7 @@ def query_doc_with_hybrid_search(
 
         log.info(
             "query_doc_with_hybrid_search:result "
-            + f'{result["metadatas"]} {result["distances"]}'
+            + f"{result['metadatas']} {result['distances']}"
         )
         return result
     except Exception as e:
@@ -487,13 +488,20 @@ def get_sources_from_items(
 
             if item.get("file"):
                 # if item has file data, use it
+                content = item.get("file", {}).get("data", {}).get("content", "")
+                file_data = item.get("file", {}).get("data", {})
+                metadata = file_data.get("meta", {})
+
+                # Include PII data in metadata if it exists
+                if "pii" in file_data:
+                    metadata["pii"] = file_data["pii"]
+
+                # Apply PII masking if metadata contains PII data
+                # masked_content = apply_pii_masking_to_content(content, metadata)
+
                 query_result = {
-                    "documents": [
-                        [item.get("file", {}).get("data", {}).get("content")]
-                    ],
-                    "metadatas": [
-                        [item.get("file", {}).get("data", {}).get("meta", {})]
-                    ],
+                    "documents": [[content]],
+                    "metadatas": [[metadata]],
                 }
             else:
                 # Fallback to item content
@@ -527,36 +535,46 @@ def get_sources_from_items(
                 if item.get("file", {}).get("data", {}).get("content", ""):
                     # Manual Full Mode Toggle
                     # Used from chat file modal, we can assume that the file content will be available from item.get("file").get("data", {}).get("content")
+                    content = item.get("file", {}).get("data", {}).get("content", "")
+                    file_data = item.get("file", {}).get("data", {})
+                    metadata = {
+                        "file_id": item.get("id"),
+                        "name": item.get("name"),
+                        **file_data.get("metadata", {}),
+                    }
+
+                    # Include PII data in metadata if it exists
+                    if "pii" in file_data:
+                        metadata["pii"] = file_data["pii"]
+
+                    # Apply PII masking to full content
+                    # masked_content = apply_pii_masking_to_content(content, metadata)
+
                     query_result = {
-                        "documents": [
-                            [item.get("file", {}).get("data", {}).get("content", "")]
-                        ],
-                        "metadatas": [
-                            [
-                                {
-                                    "file_id": item.get("id"),
-                                    "name": item.get("name"),
-                                    **item.get("file")
-                                    .get("data", {})
-                                    .get("metadata", {}),
-                                }
-                            ]
-                        ],
+                        "documents": [[content]],
+                        "metadatas": [[metadata]],
                     }
                 elif item.get("id"):
                     file_object = Files.get_file_by_id(item.get("id"))
                     if file_object:
+                        content = file_object.data.get("content", "")
+                        metadata = {
+                            "file_id": item.get("id"),
+                            "name": file_object.filename,
+                            "source": file_object.filename,
+                            **file_object.data.get("metadata", {}),
+                        }
+
+                        # Include PII data in metadata if it exists
+                        if "pii" in file_object.data:
+                            metadata["pii"] = file_object.data["pii"]
+
+                        # Apply PII masking to full content
+                        # masked_content = apply_pii_masking_to_content(content, metadata)
+
                         query_result = {
-                            "documents": [[file_object.data.get("content", "")]],
-                            "metadatas": [
-                                [
-                                    {
-                                        "file_id": item.get("id"),
-                                        "name": file_object.filename,
-                                        "source": file_object.filename,
-                                    }
-                                ]
-                            ],
+                            "documents": [[content]],
+                            "metadatas": [[metadata]],
                         }
             else:
                 # Fallback to collection names
@@ -577,7 +595,6 @@ def get_sources_from_items(
                     user.role == "admin"
                     or has_access(user.id, "read", knowledge_base.access_control)
                 ):
-
                     file_ids = knowledge_base.data.get("file_ids", [])
 
                     documents = []
@@ -586,14 +603,25 @@ def get_sources_from_items(
                         file_object = Files.get_file_by_id(file_id)
 
                         if file_object:
-                            documents.append(file_object.data.get("content", ""))
-                            metadatas.append(
-                                {
-                                    "file_id": file_id,
-                                    "name": file_object.filename,
-                                    "source": file_object.filename,
-                                }
-                            )
+                            content = file_object.data.get("content", "")
+                            metadata = {
+                                "file_id": file_id,
+                                "name": file_object.filename,
+                                "source": file_object.filename,
+                                **file_object.data.get("metadata", {}),
+                            }
+
+                            # Include PII data in metadata if it exists
+                            if "pii" in file_object.data:
+                                metadata["pii"] = file_object.data["pii"]
+
+                            # Apply PII masking to each file's content
+                            # masked_content = apply_pii_masking_to_content(
+                            #     content, metadata
+                            # )
+
+                            documents.append(content)
+                            metadatas.append(metadata)
 
                     query_result = {
                         "documents": [documents],

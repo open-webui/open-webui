@@ -2244,6 +2244,14 @@ DOCLING_PICTURE_DESCRIPTION_API = PersistentConfig(
 )
 
 
+# Docling markdown page break placeholder (string)
+DOCLING_MD_PAGE_BREAK_PLACEHOLDER = PersistentConfig(
+    "DOCLING_MD_PAGE_BREAK_PLACEHOLDER",
+    "rag.docling_md_page_break_placeholder",
+    os.getenv("DOCLING_MD_PAGE_BREAK_PLACEHOLDER", "<!-- md-page-break -->"),
+)
+
+
 DOCUMENT_INTELLIGENCE_ENDPOINT = PersistentConfig(
     "DOCUMENT_INTELLIGENCE_ENDPOINT",
     "rag.document_intelligence_endpoint",

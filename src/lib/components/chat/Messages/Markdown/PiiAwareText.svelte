@@ -17,18 +17,22 @@
 	}
 
 	$: entities = piiSessionManager.getEntitiesForDisplay(conversationId);
+	$: filenameMappings = piiSessionManager.getFilenameMappingsForDisplay(conversationId);
 
 	$: processedText = (() => {
-		if (!entities.length) {
+		if (!entities.length && !filenameMappings.length) {
 			return text;
 		}
 
 		// Check if text has already been processed (contains PII highlight spans)
-		if (text.includes('<span class="pii-highlight')) {
+		if (
+			text.includes('<span class="pii-highlight') ||
+			text.includes('<span class="filename-highlight')
+		) {
 			return text;
 		}
 
-		const result = unmaskAndHighlightTextForDisplay(text, entities);
+		const result = unmaskAndHighlightTextForDisplay(text, entities, filenameMappings);
 		return result;
 	})();
 	$: hasHighlighting = processedText !== text;
@@ -114,5 +118,22 @@
 		color: #a16207;
 		background-color: rgba(34, 197, 94, 0.3);
 		border-bottom: 2px dashed #15803d;
+	}
+
+	/* Filename highlights - blue background, blue underline */
+	:global(.filename-highlight) {
+		background-color: rgba(59, 130, 246, 0.2);
+		border-bottom: 1px solid #2563eb;
+		border-radius: 3px;
+		padding: 1px 2px;
+		cursor: pointer;
+		transition: all 0.2s ease;
+	}
+
+	:global(.filename-highlight:hover) {
+		background-color: rgba(59, 130, 246, 0.3);
+		border-bottom: 2px solid #2563eb;
+		transform: translateY(-1px);
+		box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
 	}
 </style>

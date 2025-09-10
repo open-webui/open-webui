@@ -1,0 +1,174 @@
+---
+description: Frontend PII detection system architecture, API call optimization, and detection workflows
+---
+
+# Frontend PII Detection System
+
+## Architecture Overview
+
+The frontend PII detection system uses a multi-layered approach to efficiently detect personally identifiable information while minimizing API calls through smart filtering and incremental detection.
+
+### Core Components
+
+- **[PiiDetectionExtension.ts](mdc:src/lib/components/common/RichTextInput/PiiDetectionExtension.ts)**: Main ProseMirror extension handling real-time detection
+- **[PiiDetectionUtils.ts](mdc:src/lib/components/common/RichTextInput/PiiDetectionUtils.ts)**: Utility functions for content analysis and context extraction
+- **[pii.ts](mdc:src/lib/utils/pii.ts)**: Session management and state persistence
+
+## Detection Strategies
+
+### 1. Word-Based Detection (Primary)
+- **Trigger**: New meaningful words detected during typing
+- **Logic**: Uses `extractCompletedWords()` with dual regex approach:
+  - `/\b\w+\b/g` for words with boundaries on both sides
+  - `/\b\w+(?=\W|$)/g` for words at text end
+- **Filtering**: Requires words ≥3 chars and pure alphabetic (`/^[a-zA-Z]+$/`)
+- **Performance**: Fast, immediate feedback during typing
+
+### 2. Incremental Detection (Optimization)
+- **Purpose**: Send only changed content + context instead of full document
+- **Algorithm**: Advanced diff detection using common prefix/suffix analysis
+- **Context**: Uses `createContextSnippet()` to send full paragraphs around changes
+- **Fallback**: Falls back to full document if snippet detection fails
+
+### 3. Typing Pause Detection (Safety Net)
+- **Trigger**: 1+ second pause in typing
+- **Purpose**: Catch any changes missed by word-based detection
+- **Comparison**: Compares current text vs. last API call baseline
+- **Logic**: Uses both length differences (>5 chars) and word-based comparison
+
+## API Call Optimization
+
+### Smart Filtering
+```typescript
+// Only trigger if content has significance
+hasSignificantContent(newWords: string[]): boolean {
+  const meaningfulWords = newWords.filter(word => 
+    word.length >= 3 && /^[a-zA-Z]+$/.test(word)
+  );
+  return meaningfulWords.length >= 1 || newWords.length >= 2;
+}
+```
+
+### Context Snippet Generation
+```typescript
+// Send paragraph-aware context instead of single characters
+createContextSnippet(text: string, changeOffset: number, changeLength: number): {
+  content: string; 
+  offset: number;
+}
+```
+
+**Paragraph Detection Patterns**:
+- `\n\n` - Double newlines
+- `\n(?=\s*[A-Z])` - Newline followed by capital letter
+- `\n(?=\s*\d+\.)` - Newline followed by numbered list
+- `\n(?=\s*[-•*])` - Newline followed by bullet points
+
+### Race Condition Prevention
+- **State Tracking**: `isDetecting` flag prevents multiple parallel API calls
+- **Debouncing**: Smart delays based on content significance
+- **Timer Management**: Proper cleanup of typing pause timers
+
+## Detection Workflow
+
+### Normal Typing Flow
+1. User types → Document change detected
+2. `findNewWords()` analyzes text changes
+3. If significant words found → Trigger API call
+4. `createContextSnippet()` extracts paragraph context
+5. API call with context snippet + known entities
+6. Position adjustment for found PII entities
+7. Update baseline for pause detection
+
+### Pause-Triggered Flow
+1. User stops typing for >1 second
+2. `TypingPauseDetector` compares current vs. last API call text
+3. If differences found → Full document API call
+4. Comprehensive PII detection with complete context
+
+### Edge Case Handling
+- **Single character changes**: Skipped to avoid noise
+- **Large document edits**: Dynamic thresholds scale with document size
+- **Middle-of-document changes**: Advanced diff algorithm handles insertions anywhere
+- **Programmatic vs. user edits**: Smart detection prevents API calls on content loading
+
+## Key Utility Functions
+
+### Word Detection
+```typescript
+extractCompletedWords(text: string): Set<string>
+findNewWords(previousText: string, currentText: string): string[]
+```
+
+### Content Analysis
+```typescript
+extractIncrementalContent(previousText: string, currentText: string): {
+  content: string;
+  offset: number;
+} | null
+```
+
+### Context Extraction
+```typescript
+createContextSnippet(text: string, changeOffset: number, changeLength: number): {
+  content: string;
+  offset: number;
+}
+```
+
+### Performance Optimization
+```typescript
+getSmartDebounceDelay(newWords: string[], incrementalContent: string | null): number
+hasSignificantContent(newWords: string[]): boolean
+```
+
+## Debugging and Logging
+
+### Key Log Patterns
+- `🔍 Word detection analysis` - Word-based detection results
+- `📝 Updated API call baseline` - Tracking pause detection baseline
+- `⏱️ Typing pause detected` - Pause-triggered detection
+- `🚀 Triggering PII detection` - API call initiation
+- `⏭️ No new words detected, skipping API call` - Smart filtering
+
+### Debug State
+```typescript
+// Check typing pause detector state
+typingPauseDetector.getState(): {
+  hasTimer: boolean;
+  lastApiCallTextLength: number;
+  pauseThresholdMs: number;
+}
+```
+
+## Performance Characteristics
+
+### API Call Reduction Strategies
+1. **Word-level filtering**: Only trigger on meaningful words
+2. **Context snippets**: Send paragraphs instead of full documents
+3. **Pause detection**: Catch missed changes without constant polling
+4. **Smart debouncing**: Adjust delays based on content significance
+5. **Race prevention**: Block parallel calls
+
+### Typical Scenarios
+- **Single word typing**: Usually no API call until word completion
+- **Paste operations**: Immediate detection with context extraction
+- **Large document editing**: Incremental detection with fallback
+- **Typing pauses**: Safety net detection after 1+ seconds
+
+## Integration Points
+
+### Session Management
+- **Entity persistence**: PII state saved per conversation
+- **Cross-message consistency**: Entity labels remain consistent
+- **Mask state tracking**: Remember user masking preferences
+
+### Editor Integration
+- **ProseMirror transactions**: Native editor state management
+- **Position mapping**: Plain text ↔ document position mapping
+- **Decoration system**: Visual highlighting of PII entities
+
+### Error Handling
+- **API failures**: Graceful degradation without breaking editor
+- **Missing API key**: Silent disable with logging
+- **Position mapping errors**: Validation with fallback recovery

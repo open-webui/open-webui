@@ -1,0 +1,30 @@
+---
+globs: src/**/*.ts,src/**/*.svelte
+description: pii-highlighting
+---
+## PII Highlighting and Unmasking
+
+This project uses NENNA.ai PII detection. Rendering must follow these rules to keep masking/unmasking correct and consistent across input and markdown displays.
+
+- **Primary components**: `PiiDetectionExtension.ts`, `PiiAwareText.svelte`, `pii.ts` utilities
+- **Session manager**: Use `PiiSessionManager` conversation APIs to persist entities and masking state
+
+Implementation rules:
+- **Decode HTML entities** before any regex/search. Use the shared decoder that supports `&amp;`, `&#39;`, `&nbsp;`.
+- **Highlighting order**:
+  - Try label patterns first: `[{TYPE_ID}]`, `[TYPE_ID]`, `{TYPE_ID}`, and bare `TYPE_ID` with word boundary.
+  - If no pattern replacement occurs, fallback to raw-text highlighting against decoded text.
+- **Entity attributes**: Each highlight span must include:
+  - `data-pii-type`, `data-pii-label`, `data-pii-occurrence`, `data-should-mask`, and `data-entity-index` (for editor-side decorations)
+- **Do not merge adjacent spans** for different occurrences. Each occurrence must remain distinct to support correct toggling and overlays.
+- **Masking state**: Toggling affects the entity label’s `shouldMask` across occurrences (not a single occurrence). Persist via `PiiSessionManager`.
+- **Graceful failures**: If API or session is missing, render without crashing; skip masking rather than throwing.
+
+Output (display) rules:
+- Use `unmaskAndHighlightTextForDisplay(text, entities)` which:
+  - Parses labels correctly (`PERSON_1` → base `PERSON`, id `1`)
+  - Matches multiple masking syntaxes and performs fallback raw-text highlight
+  - Preserves entity `shouldMask` in CSS classes: `pii-masked` or `pii-unmasked`
+
+Do not change these behaviors unless updating both input and display paths consistently.
+

@@ -260,6 +260,7 @@ type Config = {
 		enable_autocomplete_generation: boolean;
 		enable_direct_connections: boolean;
 		enable_version_update_check: boolean;
+		enable_pii_detection?: boolean;
 	};
 	oauth: {
 		providers: {
@@ -269,6 +270,10 @@ type Config = {
 	ui?: {
 		pending_user_overlay_title?: string;
 		pending_user_overlay_description?: string;
+	};
+	pii?: {
+		api_key?: string;
+		api_base_url?: string;
 	};
 };
 

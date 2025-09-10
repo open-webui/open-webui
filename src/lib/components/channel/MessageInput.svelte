@@ -680,6 +680,8 @@
 											loading={file.status === 'uploading'}
 											dismissible={true}
 											edit={true}
+											enablePiiDetection={$config?.features?.enable_pii_detection ?? false}
+											conversationId={id}
 											on:dismiss={() => {
 												files.splice(fileIdx, 1);
 												files = files;

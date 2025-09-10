@@ -4,7 +4,8 @@ export const createNewKnowledge = async (
 	token: string,
 	name: string,
 	description: string,
-	accessControl: null | object
+	accessControl: null | object,
+	enablePiiDetection?: boolean
 ) => {
 	let error = null;
 
@@ -18,7 +19,8 @@ export const createNewKnowledge = async (
 		body: JSON.stringify({
 			name: name,
 			description: description,
-			access_control: accessControl
+			access_control: accessControl,
+			enable_pii_detection: enablePiiDetection
 		})
 	})
 		.then(async (res) => {
@@ -137,6 +139,7 @@ type KnowledgeUpdateForm = {
 	description?: string;
 	data?: object;
 	access_control?: null | object;
+	enable_pii_detection?: boolean;
 };
 
 export const updateKnowledgeById = async (token: string, id: string, form: KnowledgeUpdateForm) => {
@@ -153,7 +156,8 @@ export const updateKnowledgeById = async (token: string, id: string, form: Knowl
 			name: form?.name ? form.name : undefined,
 			description: form?.description ? form.description : undefined,
 			data: form?.data ? form.data : undefined,
-			access_control: form.access_control
+			access_control: form.access_control,
+			enable_pii_detection: form.enable_pii_detection
 		})
 	})
 		.then(async (res) => {

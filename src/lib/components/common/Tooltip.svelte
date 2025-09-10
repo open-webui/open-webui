@@ -42,6 +42,8 @@
 					arrow: false,
 					offset: offset,
 					...(interactive ? { interactive: true } : {}),
+					appendTo: () => document.body,
+					zIndex: 2147483647,
 					...tippyOptions
 				});
 			}

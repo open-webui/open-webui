@@ -12,7 +12,7 @@ from open_webui.models.users import Users, UserResponse
 
 
 from pydantic import BaseModel, ConfigDict
-from sqlalchemy import BigInteger, Column, String, Text, JSON
+from sqlalchemy import BigInteger, Boolean, Column, String, Text, JSON
 
 from open_webui.utils.access_control import has_access
 
@@ -53,6 +53,10 @@ class Knowledge(Base):
     #      }
     #   }
 
+    enable_pii_detection = Column(
+        Boolean, nullable=True, default=False
+    )  # Enable PII detection for files in this knowledge base
+
     created_at = Column(BigInteger)
     updated_at = Column(BigInteger)
 
@@ -70,6 +74,7 @@ class KnowledgeModel(BaseModel):
     meta: Optional[dict] = None
 
     access_control: Optional[dict] = None
+    enable_pii_detection: Optional[bool] = False
 
     created_at: int  # timestamp in epoch
     updated_at: int  # timestamp in epoch
@@ -97,6 +102,7 @@ class KnowledgeForm(BaseModel):
     description: str
     data: Optional[dict] = None
     access_control: Optional[dict] = None
+    enable_pii_detection: Optional[bool] = False
 
 
 class KnowledgeTable:

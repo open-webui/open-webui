@@ -1,8 +1,21 @@
 import { Extension } from '@tiptap/core';
 import { Plugin, PluginKey } from 'prosemirror-state';
 import type { Node as ProseMirrorNode } from 'prosemirror-model';
+import type { EditorView } from 'prosemirror-view';
+import type { EditorState, Transaction } from 'prosemirror-state';
 import { PiiSessionManager } from '$lib/utils/pii';
-import i18next from 'i18next';
+import { generateModifierId, findCompleteWordsRobust } from './PiiTextUtils';
+import { findTokenizedWords } from './PiiTokenization';
+import { getPiiConfig, type PiiExtensionConfig } from './PiiExtensionConfig';
+import { PiiPerformanceTracker } from './PiiPerformanceOptimizer';
+import { piiDetectionPluginKey } from './PiiDetectionExtension';
+
+// TypeScript interfaces for TipTap command context
+interface CommandContext {
+	state: EditorState;
+	dispatch?: (tr: Transaction) => void;
+	view?: EditorView;
+}
 
 // Types for the Shield API modifiers
 export type ModifierAction = 'ignore' | 'string-mask' | 'word-mask';
@@ -12,6 +25,8 @@ export interface PiiModifier {
 	entity: string;
 	type?: string; // PII type - required for 'string-mask' action
 	id: string; // Unique identifier for this modifier
+	from?: number; // Optional: ProseMirror start position for exact selection
+	to?: number; // Optional: ProseMirror end position for exact selection
 }
 
 // Options for the extension
@@ -20,6 +35,25 @@ export interface PiiModifierOptions {
 	conversationId?: string; // Add conversation ID for proper state management
 	onModifiersChanged?: (modifiers: PiiModifier[]) => void;
 	availableLabels?: string[]; // List of available PII labels for mask type
+	showPiiHoverMenu?: (menuData: PiiHoverMenuData) => void; // Function to show Svelte hover menu
+	hidePiiHoverMenu?: () => void; // Function to hide Svelte hover menu
+}
+
+// Interface for hover menu data passed to PiiHoverMenu.svelte component
+// This replaces the old DOM-based createHoverMenu function with a proper Svelte component
+export interface PiiHoverMenuData {
+	wordInfo: { word: string; from: number; to: number; x: number; y: number };
+	showIgnoreButton: boolean;
+	existingModifiers: PiiModifier[];
+	showTextField: boolean;
+	currentLabel?: string;
+	onIgnore: () => void;
+	onMask: (label: string) => void;
+	onRemoveModifier: (modifierId: string) => void;
+	onInputFocused: (focused: boolean) => void;
+	onClose: () => void;
+	onMouseEnter: () => void;
+	onMouseLeave: () => void;
 }
 
 // Extension state
@@ -48,90 +82,18 @@ const piiModifierExtensionKey = new PluginKey<PiiModifierState>('piiModifier');
 // Export the plugin key so other extensions can access the state
 export { piiModifierExtensionKey };
 
-// Generate unique ID for modifiers
-function generateModifierId(): string {
-	return `modifier_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
-}
+// generateModifierId function moved to PiiTextUtils.ts
 
-// Tokenizer pattern for broader context word detection
-const WORD_TOKENIZER_PATTERN = /[\w'-äöüÄÖÜß]+(?=\b|\.)/g;
+// WORD_TOKENIZER_PATTERN moved to PiiTokenization.ts
 
-// Find all tokenized words touched by a text selection with broader context
-function findTokenizedWords(
-	doc: ProseMirrorNode,
-	selectionFrom: number,
-	selectionTo: number
-): Array<{ word: string; from: number; to: number }> {
-	const words: Array<{ word: string; from: number; to: number }> = [];
-
-	// Expand context to include words that might be partially selected
-	const contextStart = Math.max(0, selectionFrom - 100); // 100 chars before
-	const contextEnd = Math.min(doc.content.size, selectionTo + 100); // 100 chars after
-
-	let contextText = '';
-
-	// Build context text with position mapping
-	const positionMap: number[] = []; // Maps context text index to document position
-
-	doc.nodesBetween(contextStart, contextEnd, (node, nodePos) => {
-		if (node.isText && node.text) {
-			const nodeStart = nodePos;
-			const nodeEnd = nodePos + node.text.length;
-			const effectiveStart = Math.max(nodeStart, contextStart);
-			const effectiveEnd = Math.min(nodeEnd, contextEnd);
-
-			if (effectiveStart < effectiveEnd) {
-				const startOffset = effectiveStart - nodeStart;
-				const endOffset = effectiveEnd - nodeStart;
-				const textSlice = node.text.substring(startOffset, endOffset);
-
-				// Map each character position
-				for (let i = 0; i < textSlice.length; i++) {
-					positionMap.push(effectiveStart + i);
-				}
-
-				contextText += textSlice;
-			}
-		}
-	});
-
-	// Find all words using tokenizer
-	let match;
-	WORD_TOKENIZER_PATTERN.lastIndex = 0; // Reset regex
-
-	while ((match = WORD_TOKENIZER_PATTERN.exec(contextText)) !== null) {
-		const wordStart = match.index;
-		const wordEnd = match.index + match[0].length;
-
-		// Map back to document positions
-		const docStart = positionMap[wordStart];
-		const docEnd = positionMap[wordEnd - 1] + 1; // +1 because we want end position
-
-		// Check if this word is "touched" by the selection (overlaps with selection range)
-		if (docEnd > selectionFrom && docStart < selectionTo) {
-			words.push({
-				word: match[0],
-				from: docStart,
-				to: docEnd
-			});
-		}
-	}
-
-	// Remove duplicates and sort by position
-	const uniqueWords = words
-		.filter(
-			(word, index, arr) => arr.findIndex((w) => w.from === word.from && w.to === word.to) === index
-		)
-		.sort((a, b) => a.from - b.from);
-
-	return uniqueWords;
-}
+// findTokenizedWords function moved to PiiTokenization.ts
 
 // Find existing PII or modifier element under mouse cursor
 function findExistingEntityAtPosition(
-	view: any,
+	view: EditorView,
 	clientX: number,
-	clientY: number
+	clientY: number,
+	config: PiiExtensionConfig
 ): { from: number; to: number; text: string; type: 'pii' | 'modifier' } | null {
 	const target = document.elementFromPoint(clientX, clientY) as HTMLElement;
 	if (!target) return null;
@@ -151,16 +113,22 @@ function findExistingEntityAtPosition(
 	if (piiElement) {
 		const piiText = piiElement.getAttribute('data-pii-text') || piiElement.textContent || '';
 		const piiLabel = piiElement.getAttribute('data-pii-label') || '';
-		if (piiText.length >= 2) {
+		if (piiText.length >= config.textProcessing.minTextLengthForMatching) {
 			try {
 				const piiDetectionPluginKey = new PluginKey('piiDetection');
-				const piiState = piiDetectionPluginKey.getState(view.state);
-				const matchingEntity = piiState?.entities?.find((entity: any) => entity.label === piiLabel);
-				if (matchingEntity?.occurrences?.length > 0) {
+				interface PiiDetectionState {
+					entities?: Array<{
+						label: string;
+						occurrences: Array<{ start_idx: number; end_idx: number }>;
+					}>;
+				}
+				const piiState = piiDetectionPluginKey.getState(view.state) as PiiDetectionState;
+				const matchingEntity = piiState?.entities?.find((entity) => entity.label === piiLabel);
+				if (matchingEntity?.occurrences?.length && matchingEntity.occurrences.length > 0) {
 					const occurrence = matchingEntity.occurrences[0];
 					return { from: occurrence.start_idx, to: occurrence.end_idx, text: piiText, type: 'pii' };
 				}
-			} catch (error) {
+			} catch {
 				// Fall through to position-based approach
 			}
 
@@ -174,7 +142,7 @@ function findExistingEntityAtPosition(
 	if (modifierElement) {
 		const modifierText =
 			modifierElement.getAttribute('data-modifier-entity') || modifierElement.textContent || '';
-		if (modifierText.length >= 2) {
+		if (modifierText.length >= config.textProcessing.minTextLengthForMatching) {
 			const position = getPositionFromCoords(modifierText);
 			if (position) return { ...position, text: modifierText, type: 'modifier' };
 		}
@@ -183,847 +151,11 @@ function findExistingEntityAtPosition(
 	return null;
 }
 
-// Predefined PII labels for autocompletion (from SPACY_LABEL_MAPPINGS values)
-const PREDEFINED_LABELS = [
-	'ADDRESS',
-	'BANK_ACCOUNT_NUMBER',
-	'ID_NUMBER',
-	'HEALTH_DATA',
-	'LOCATION',
-	'NUMBER',
-	'TAX_NUMBER',
-	'CREDIT_CARD',
-	'DATE',
-	'SIGNATURE',
-	'EMAIL',
-	'IBAN',
-	'HEALTH_ID',
-	'IPv4v6',
-	'PHONENUMBER',
-	'LICENSE_PLATE',
-	'CURRENCY',
-	'ORGANISATION',
-	'PASSPORT',
-	'PERSON',
-	'SSN'
-];
+// Label autocompletion and matching functions are now handled by PiiHoverMenu.svelte
 
-// Find best matching label for inline completion
-function findBestMatch(input: string, labels: string[]): string | null {
-	if (!input) return null;
+// Deprecated functions have been removed - now using PiiHoverMenu.svelte component
 
-	const upperInput = input.toUpperCase();
-
-	// Only find exact prefix matches - autocomplete should only suggest words that start with the input
-	const exactMatch = labels.find((label) => label.startsWith(upperInput));
-	if (exactMatch) return exactMatch;
-
-	// No partial/substring matching - let user type what they want
-	return null;
-}
-
-// Create hover menu element for PII entities
-function createHoverMenu(
-	wordInfo: { word: string; from: number; to: number; x: number; y: number },
-	onIgnore: () => void,
-	onMask: (label: string) => void,
-	showIgnoreButton: boolean = false,
-	existingModifiers: PiiModifier[] = [],
-	onRemoveModifier?: (modifierId: string) => void,
-	timeoutManager?: {
-		clearAll: () => void;
-		setFallback: (callback: () => void, delay: number) => void;
-	},
-	showTextField: boolean = true
-): HTMLElement {
-	const menu = document.createElement('div');
-	menu.className = 'pii-modifier-hover-menu';
-	menu.style.cssText = `
-		position: fixed;
-		left: ${Math.min(wordInfo.x, window.innerWidth - 250)}px;
-		top: ${wordInfo.y - 80}px;
-		background: #3f3d8a;
-		border: 1px solid #312e81;
-		border-radius: 8px;
-		box-shadow: 0 4px 20px rgba(0,0,0,0.15);
-		padding: 12px;
-		z-index: 1000;
-		font-family: system-ui, -apple-system, sans-serif;
-		font-size: 13px;
-		min-width: 220px;
-		max-width: 300px;
-	`;
-
-	// Add help icon in top right corner
-	const helpIcon = document.createElement('a');
-	helpIcon.href = 'https://help.nenna.ai/';
-	helpIcon.target = '_blank';
-	helpIcon.rel = 'noopener noreferrer';
-	helpIcon.innerHTML = '?';
-	helpIcon.title = 'Help & Documentation';
-	helpIcon.style.cssText = `
-		position: absolute;
-		top: 8px;
-		right: 8px;
-		width: 18px;
-		height: 18px;
-		background: #f8b76b;
-		color: #3f3d8a;
-		border-radius: 50%;
-		display: flex;
-		align-items: center;
-		justify-content: center;
-		font-size: 12px;
-		font-weight: bold;
-		text-decoration: none;
-		cursor: pointer;
-		transition: all 0.2s ease;
-		z-index: 10;
-	`;
-
-	// Add hover effects for help icon
-	helpIcon.addEventListener('mouseenter', () => {
-		helpIcon.style.backgroundColor = '#f59e0b';
-		helpIcon.style.transform = 'scale(1.1)';
-	});
-
-	helpIcon.addEventListener('mouseleave', () => {
-		helpIcon.style.backgroundColor = '#f8b76b';
-		helpIcon.style.transform = 'scale(1)';
-	});
-
-	// Prevent help icon click from closing menu
-	helpIcon.addEventListener('click', (e) => {
-		e.stopPropagation();
-	});
-
-	menu.appendChild(helpIcon);
-
-	// Show existing modifiers if any
-	if (existingModifiers.length > 0) {
-		const modifiersSection = document.createElement('div');
-		modifiersSection.style.cssText = `
-			margin-bottom: 12px;
-			padding: 8px;
-			background: #5d5ba6;
-			border-radius: 4px;
-			border: 1px solid #e9ecef;
-		`;
-
-		const modifiersHeader = document.createElement('div');
-		modifiersHeader.textContent = i18next.t('PII Modifier: Current Modifiers');
-		modifiersHeader.style.cssText = `
-			font-weight: 600;
-			font-size: 11px;
-			color: white;
-			margin-bottom: 6px;
-		`;
-		modifiersSection.appendChild(modifiersHeader);
-
-		existingModifiers.forEach((modifier) => {
-			const modifierItem = document.createElement('div');
-			modifierItem.style.cssText = `
-				display: flex;
-				justify-content: space-between;
-				align-items: center;
-				padding: 4px 6px;
-				margin-bottom: 4px;
-				background: white;
-				border-radius: 3px;
-				border: 1px solid #dee2e6;
-				font-size: 11px;
-			`;
-
-			const modifierInfo = document.createElement('span');
-			const typeIcon = modifier.action === 'ignore' ? '🚫' : '🏷️';
-			const typeText = modifier.action === 'ignore' ? 'Ignore' : `${modifier.type}`;
-			modifierInfo.textContent = `${typeIcon} ${typeText}`;
-			modifierInfo.style.cssText = `
-				color: #495057;
-				flex: 1;
-			`;
-
-			const removeBtn = document.createElement('button');
-			removeBtn.textContent = '✕';
-			removeBtn.title = i18next.t('PII Modifier: Remove modifier');
-			removeBtn.style.cssText = `
-				background: #dc3545;
-				color: white;
-				border: none;
-				border-radius: 2px;
-				width: 18px;
-				height: 18px;
-				cursor: pointer;
-				font-size: 10px;
-				display: flex;
-				align-items: center;
-				justify-content: center;
-				flex-shrink: 0;
-				margin-left: 6px;
-			`;
-
-			removeBtn.addEventListener('click', (e) => {
-				e.preventDefault();
-				e.stopPropagation();
-				if (onRemoveModifier) {
-					onRemoveModifier(modifier.id);
-				}
-			});
-
-			removeBtn.addEventListener('mouseenter', () => {
-				removeBtn.style.backgroundColor = '#c82333';
-			});
-
-			removeBtn.addEventListener('mouseleave', () => {
-				removeBtn.style.backgroundColor = '#dc3545';
-			});
-
-			modifierItem.appendChild(modifierInfo);
-			modifierItem.appendChild(removeBtn);
-			modifiersSection.appendChild(modifierItem);
-		});
-
-		menu.appendChild(modifiersSection);
-	}
-
-	// Ignore button (only show if word is detected as PII)
-	if (showIgnoreButton) {
-		const ignoreBtn = document.createElement('button');
-		ignoreBtn.textContent = i18next.t('PII Modifier: Ignore');
-		ignoreBtn.style.cssText = `
-			width: 100%;
-			padding: 6px 10px;
-			margin-top: 20px;
-			margin-bottom: 8px;
-			border: 1px solid #ff6b6b;
-			background: #fff5f5;
-			border-radius: 4px;
-			cursor: pointer;
-			font-size: 12px;
-			color: #c53030;
-		`;
-		ignoreBtn.addEventListener('click', (e) => {
-			e.preventDefault();
-			e.stopPropagation();
-			onIgnore();
-		});
-		menu.appendChild(ignoreBtn);
-	}
-
-	// Label input section (only show if showTextField is true)
-	if (showTextField) {
-		const labelSection = document.createElement('div');
-		labelSection.style.cssText = `
-			display: flex;
-			flex-direction: column;
-			gap: 6px;
-			position: relative;
-		`;
-
-		const labelInput = document.createElement('input');
-		labelInput.type = 'text';
-		labelInput.value = 'CUSTOM';
-		labelInput.style.cssText = `
-		width: 100%;
-		padding: 6px 8px;
-		border: 1px solid #ddd;
-		border-radius: 4px;
-		font-size: 12px;
-		box-sizing: border-box;
-		color: #333;
-		background: white;
-	`;
-
-		let isDefaultValue = true;
-		let skipAutocompletion = false;
-
-		// Handle focus/click - clear default value
-		const handleInputFocus = (e: Event) => {
-			e.stopPropagation();
-
-			if (timeoutManager) {
-				(timeoutManager as any).setInputFocused(true);
-			}
-
-			if (isDefaultValue) {
-				labelInput.value = '';
-				labelInput.style.color = '#333';
-				isDefaultValue = false;
-			}
-		};
-
-		labelInput.addEventListener('focus', handleInputFocus);
-		labelInput.addEventListener('click', handleInputFocus);
-
-		// Handle blur - restore default if empty
-		labelInput.addEventListener('blur', () => {
-			// Notify timeout manager that input is no longer focused
-			if (timeoutManager) {
-				(timeoutManager as any).setInputFocused(false);
-			}
-
-			if (labelInput.value.trim() === '') {
-				labelInput.value = 'CUSTOM';
-				labelInput.style.color = '#999';
-				isDefaultValue = true;
-			}
-		});
-
-		// Handle input for inline autocompletion
-		labelInput.addEventListener('input', (e) => {
-			e.stopPropagation();
-
-			// Skip autocompletion if we're handling a backspace
-			if (skipAutocompletion) {
-				skipAutocompletion = false;
-				return;
-			}
-
-			const inputValue = labelInput.value;
-
-			// Only autocomplete if not default value and user has typed something
-			if (!isDefaultValue && inputValue) {
-				const bestMatch = findBestMatch(inputValue, PREDEFINED_LABELS);
-
-				if (bestMatch && bestMatch !== inputValue.toUpperCase()) {
-					// Complete the text inline
-					const cursorPos = labelInput.selectionStart || 0;
-					labelInput.value = bestMatch;
-
-					// Select the completed portion
-					labelInput.setSelectionRange(cursorPos, bestMatch.length);
-				}
-			}
-		});
-
-		// Prevent ProseMirror from intercepting keyboard events when input is focused
-		labelInput.addEventListener('keydown', (e) => {
-			// Stop propagation for all keyboard events to prevent ProseMirror interference
-			e.stopPropagation();
-
-			// Handle specific keys
-			if (e.key === 'Enter') {
-				e.preventDefault();
-				const label = isDefaultValue ? 'CUSTOM' : labelInput.value.trim().toUpperCase();
-				if (label) {
-					onMask(label);
-				}
-			} else if (e.key === 'Tab') {
-				// Accept the current autocompletion on Tab
-				e.preventDefault();
-				// The text is already completed, just move cursor to end
-				labelInput.setSelectionRange(labelInput.value.length, labelInput.value.length);
-			} else if (e.key === 'Escape') {
-				// Close menu on Escape
-				e.preventDefault();
-				menu.remove();
-			} else if (e.key === 'Backspace') {
-				// Just set flag to skip autocompletion and let browser handle backspace naturally
-				skipAutocompletion = true;
-				// Don't prevent default - let browser handle backspace naturally
-			}
-			// For all other keys, let the input handle them naturally
-		});
-
-		// Also prevent keyup events from bubbling to ProseMirror
-		labelInput.addEventListener('keyup', (e) => {
-			e.stopPropagation();
-		});
-
-		const maskBtn = document.createElement('button');
-		maskBtn.innerHTML = `<img src="/static/icon-purple-32.png" style="width: 14px; height: 14px; margin-right: 6px; vertical-align: middle;">${i18next.t('PII Modifier: Change Label')}`;
-		maskBtn.style.cssText = `
-		width: 100%;
-		padding: 6px 10px;
-		border: 1px solid #f8b76b;
-		background: #f8b76b;
-		border-radius: 4px;
-		cursor: pointer;
-		font-size: 12px;
-		color: #3f3d8a;
-		font-weight: 500;
-		transition: background-color 0.2s ease;
-		display: flex;
-		align-items: center;
-		justify-content: center;
-	`;
-
-		// Add hover effects for the button
-		maskBtn.addEventListener('mouseenter', () => {
-			maskBtn.style.backgroundColor = '#f59e0b';
-		});
-
-		maskBtn.addEventListener('mouseleave', () => {
-			maskBtn.style.backgroundColor = '#f8b76b';
-		});
-
-		// Handle mask button click
-		maskBtn.addEventListener('click', (e) => {
-			e.preventDefault();
-			e.stopPropagation();
-			const piiType = isDefaultValue ? 'CUSTOM' : labelInput.value.trim().toUpperCase();
-			if (piiType) {
-				onMask(piiType);
-			} else {
-				// Highlight input if empty
-				labelInput.style.borderColor = '#ff6b6b';
-				labelInput.focus();
-				setTimeout(() => {
-					labelInput.style.borderColor = '#ddd';
-				}, 1000);
-			}
-		});
-
-		labelSection.appendChild(labelInput);
-		labelSection.appendChild(maskBtn);
-		menu.appendChild(labelSection);
-	}
-
-	// Add hover protection to keep menu open
-	menu.addEventListener('mouseenter', () => {
-		if (timeoutManager) {
-			timeoutManager.clearAll();
-		}
-	});
-
-	menu.addEventListener('mouseleave', (e) => {
-		const relatedTarget = e.relatedTarget as HTMLElement;
-		if (relatedTarget && menu.contains(relatedTarget)) {
-			return;
-		}
-
-		if (timeoutManager) {
-			timeoutManager.setFallback(() => {
-				if (menu && document.body.contains(menu)) {
-					const activeElement = document.activeElement;
-					const isInputFocused = activeElement && menu.contains(activeElement);
-
-					if (!isInputFocused) {
-						menu.remove();
-					}
-				}
-			}, 500);
-		}
-	});
-
-	return menu;
-}
-
-// Create text selection menu element
-function createSelectionMenu(
-	selectionInfo: {
-		selectedText: string;
-		tokenizedWords: Array<{ word: string; from: number; to: number }>;
-		from: number;
-		to: number;
-		x: number;
-		y: number;
-	},
-	onMaskSelection: (text: string, label: string, from: number, to: number) => void,
-	timeoutManager?: {
-		clearAll: () => void;
-		setFallback: (callback: () => void, delay: number) => void;
-	},
-	showAdvancedMenu: boolean = true
-): HTMLElement {
-	const menu = document.createElement('div');
-	menu.className = 'pii-modifier-selection-menu';
-	menu.style.cssText = `
-		position: fixed;
-		left: ${Math.min(selectionInfo.x, window.innerWidth - 300)}px;
-		top: ${selectionInfo.y - 120}px;
-		background: #3f3d8a;
-		border: 1px solid #312e81;
-		border-radius: 8px;
-		box-shadow: 0 4px 20px rgba(0,0,0,0.15);
-		padding: 30px 16px 16px 16px;
-		z-index: 1000;
-		font-family: system-ui, -apple-system, sans-serif;
-		font-size: 13px;
-		min-width: 280px;
-		max-width: 400px;
-		max-height: 300px;
-		overflow-y: auto;
-	`;
-
-	// Add help icon in top right corner
-	const helpIcon = document.createElement('a');
-	helpIcon.href = 'https://help.nenna.ai/';
-	helpIcon.target = '_blank';
-	helpIcon.rel = 'noopener noreferrer';
-	helpIcon.innerHTML = '?';
-	helpIcon.title = 'Help & Documentation';
-	helpIcon.style.cssText = `
-		position: absolute;
-		top: 8px;
-		right: 8px;
-		width: 18px;
-		height: 18px;
-		background: #f8b76b;
-		color: #3f3d8a;
-		border-radius: 50%;
-		display: flex;
-		align-items: center;
-		justify-content: center;
-		font-size: 12px;
-		font-weight: bold;
-		text-decoration: none;
-		cursor: pointer;
-		transition: all 0.2s ease;
-		z-index: 10;
-	`;
-
-	// Add hover effects for help icon
-	helpIcon.addEventListener('mouseenter', () => {
-		helpIcon.style.backgroundColor = '#f59e0b';
-		helpIcon.style.transform = 'scale(1.1)';
-	});
-
-	helpIcon.addEventListener('mouseleave', () => {
-		helpIcon.style.backgroundColor = '#f8b76b';
-		helpIcon.style.transform = 'scale(1)';
-	});
-
-	// Prevent help icon click from closing menu
-	helpIcon.addEventListener('click', (e) => {
-		e.stopPropagation();
-	});
-
-	menu.appendChild(helpIcon);
-
-	// Check if there's a meaningful difference between tokenized words and exact selection
-	const tokenizedText = selectionInfo.tokenizedWords.map((w) => w.word).join(' ');
-	const exactText = selectionInfo.selectedText;
-
-	// In normal mode (showAdvancedMenu = false), never show selection options
-	// In expert mode (showAdvancedMenu = true), show selection options if there's a difference
-	const showSelectionOptions = showAdvancedMenu && tokenizedText !== exactText;
-
-	// Selection options (only show in expert mode if there's a difference)
-	let tokenizedRadio: HTMLInputElement;
-	let exactRadio: HTMLInputElement;
-
-	if (showSelectionOptions) {
-		const optionsContainer = document.createElement('div');
-		optionsContainer.style.cssText = `margin-bottom: 12px;`;
-
-		// Tokenized words option (default)
-		const tokenizedOption = document.createElement('div');
-		tokenizedOption.style.cssText = `margin-bottom: 8px;`;
-
-		tokenizedRadio = document.createElement('input');
-		tokenizedRadio.type = 'radio';
-		tokenizedRadio.name = 'selection-type';
-		tokenizedRadio.value = 'tokenized';
-		tokenizedRadio.checked = true;
-		tokenizedRadio.id = 'tokenized-option';
-
-		const tokenizedLabel = document.createElement('label');
-		tokenizedLabel.htmlFor = 'tokenized-option';
-		tokenizedLabel.style.cssText = `
-			margin-left: 6px;
-			font-weight: 500;
-			cursor: pointer;
-			color: white;
-		`;
-		tokenizedLabel.textContent = i18next.t('PII Modifier: Words') + '\t';
-
-		const tokenizedWords = document.createElement('span');
-		tokenizedWords.style.cssText = `
-			background: #f8b76b;
-			color: #3f3d8a;
-			padding: 2px 6px;
-			border-radius: 4px;
-			font-size: 11px;
-			margin-left: 4px;
-		`;
-		tokenizedWords.textContent = `${tokenizedText}`;
-
-		tokenizedOption.appendChild(tokenizedRadio);
-		tokenizedOption.appendChild(tokenizedLabel);
-		tokenizedOption.appendChild(tokenizedWords);
-
-		// Exact selection option
-		const exactOption = document.createElement('div');
-		exactOption.style.cssText = `margin-bottom: 8px;`;
-
-		exactRadio = document.createElement('input');
-		exactRadio.type = 'radio';
-		exactRadio.name = 'selection-type';
-		exactRadio.value = 'exact';
-		exactRadio.id = 'exact-option';
-
-		const exactLabel = document.createElement('label');
-		exactLabel.htmlFor = 'exact-option';
-		exactLabel.style.cssText = `
-			margin-left: 6px;
-			font-weight: 500;
-			cursor: pointer;
-			color: white;
-		`;
-		exactLabel.textContent = i18next.t('PII Modifier: Exact') + '\t';
-
-		const exactTextSpan = document.createElement('span');
-		exactTextSpan.style.cssText = `
-			background: #f8b76b;
-			color: #3f3d8a;
-			padding: 2px 6px;
-			border-radius: 4px;
-			font-size: 11px;
-			margin-left: 4px;
-		`;
-		exactTextSpan.textContent = `${exactText}`;
-
-		exactOption.appendChild(exactRadio);
-		exactOption.appendChild(exactLabel);
-		exactOption.appendChild(exactTextSpan);
-
-		optionsContainer.appendChild(tokenizedOption);
-		optionsContainer.appendChild(exactOption);
-		menu.appendChild(optionsContainer);
-	} else if (showAdvancedMenu) {
-		// Show preview only in expert mode when no selection options are displayed
-		const previewContainer = document.createElement('div');
-		previewContainer.style.cssText = `margin-bottom: 12px;`;
-
-		const previewLabel = document.createElement('div');
-		previewLabel.style.cssText = `
-			font-weight: 500;
-			color: white;
-			margin-bottom: 6px;
-			font-size: 12px;
-		`;
-		const previewText = document.createElement('span');
-		previewText.style.cssText = `
-			background: #f8b76b;
-			color: #3f3d8a;
-			padding: 4px 8px;
-			border-radius: 4px;
-			font-size: 12px;
-			display: inline-block;
-			border: 1px solid #bfdbfe;
-		`;
-		previewText.textContent = `${tokenizedText}`;
-
-		previewContainer.appendChild(previewLabel);
-		previewContainer.appendChild(previewText);
-		menu.appendChild(previewContainer);
-	}
-
-	// Label input section (only show if advanced menu is enabled)
-	const labelSection = document.createElement('div');
-	labelSection.style.cssText = `
-		display: flex;
-		flex-direction: column;
-		gap: 8px;
-	`;
-
-	let labelInput: HTMLInputElement;
-	let isDefaultValue = true;
-	let skipAutocompletion = false;
-
-	// Only create input field if advanced menu is enabled
-	if (showAdvancedMenu) {
-		labelInput = document.createElement('input');
-		labelInput.type = 'text';
-		labelInput.value = 'CUSTOM';
-		labelInput.placeholder = i18next.t('PII Modifier: Enter PII label type');
-		labelInput.style.cssText = `
-			width: 100%;
-			padding: 8px 10px;
-			border: 1px solid #ddd;
-			border-radius: 4px;
-			font-size: 12px;
-			box-sizing: border-box;
-			color: #333;
-			background: white;
-		`;
-
-		// Handle input focus
-		const handleInputFocus = (e: Event) => {
-			e.stopPropagation();
-
-			if (timeoutManager) {
-				(timeoutManager as any).setInputFocused(true);
-			}
-
-			if (isDefaultValue) {
-				labelInput.value = '';
-				labelInput.style.color = '#333';
-				isDefaultValue = false;
-			}
-		};
-
-		labelInput.addEventListener('focus', handleInputFocus);
-		labelInput.addEventListener('click', handleInputFocus);
-
-		labelInput.addEventListener('blur', () => {
-			if (timeoutManager) {
-				(timeoutManager as any).setInputFocused(false);
-			}
-
-			if (labelInput.value.trim() === '') {
-				labelInput.value = 'CUSTOM';
-				labelInput.style.color = '#999';
-				isDefaultValue = true;
-			}
-		});
-
-		// Handle autocompletion
-		labelInput.addEventListener('input', (e) => {
-			e.stopPropagation();
-
-			if (skipAutocompletion) {
-				skipAutocompletion = false;
-				return;
-			}
-
-			const inputValue = labelInput.value;
-
-			if (!isDefaultValue && inputValue) {
-				const bestMatch = findBestMatch(inputValue, PREDEFINED_LABELS);
-
-				if (bestMatch && bestMatch !== inputValue.toUpperCase()) {
-					const cursorPos = labelInput.selectionStart || 0;
-					labelInput.value = bestMatch;
-					labelInput.setSelectionRange(cursorPos, bestMatch.length);
-				}
-			}
-		});
-
-		// Handle keyboard events
-		labelInput.addEventListener('keydown', (e) => {
-			e.stopPropagation();
-
-			if (e.key === 'Enter') {
-				e.preventDefault();
-				markSelectedText();
-			} else if (e.key === 'Tab') {
-				e.preventDefault();
-				labelInput.setSelectionRange(labelInput.value.length, labelInput.value.length);
-			} else if (e.key === 'Escape') {
-				e.preventDefault();
-				menu.remove();
-			} else if (e.key === 'Backspace') {
-				skipAutocompletion = true;
-			}
-		});
-
-		labelInput.addEventListener('keyup', (e) => {
-			e.stopPropagation();
-		});
-
-		labelSection.appendChild(labelInput);
-	}
-
-	// Mark button
-	const markBtn = document.createElement('button');
-	markBtn.innerHTML = `<img src="/static/icon-purple-32.png" style="width: 14px; height: 14px; margin-right: 6px; vertical-align: middle;">${i18next.t('PII Modifier: Mask')}`;
-	markBtn.style.cssText = `
-		width: 100%;
-		padding: 8px 12px;
-		border: 1px solid #f8b76b;
-		background: #f8b76b;
-		border-radius: 4px;
-		cursor: pointer;
-		font-size: 12px;
-		color: #3f3d8a;
-		font-weight: 500;
-		transition: background-color 0.2s ease;
-		display: flex;
-		align-items: center;
-		justify-content: center;
-	`;
-
-	markBtn.addEventListener('mouseenter', () => {
-		markBtn.style.backgroundColor = '#f59e0b';
-	});
-
-	markBtn.addEventListener('mouseleave', () => {
-		markBtn.style.backgroundColor = '#f8b76b';
-	});
-
-	const markSelectedText = () => {
-		// In advanced mode, use input value; in simple mode, use default "CUSTOM"
-		const piiType = showAdvancedMenu
-			? isDefaultValue
-				? 'CUSTOM'
-				: labelInput.value.trim().toUpperCase()
-			: 'CUSTOM';
-
-		if (showAdvancedMenu && !piiType) {
-			labelInput.style.borderColor = '#ff6b6b';
-			labelInput.focus();
-			setTimeout(() => {
-				labelInput.style.borderColor = '#ddd';
-			}, 1000);
-			return;
-		}
-
-		// In normal mode, always use exact text (trimmed)
-		// In expert mode, check selection options or default to tokenized
-		if (!showAdvancedMenu) {
-			// Normal mode: always use exact selection text (trimmed)
-			const trimmedText = selectionInfo.selectedText.trim();
-			onMaskSelection(trimmedText, piiType, selectionInfo.from, selectionInfo.to);
-		} else {
-			// Expert mode: use radio button selection or default to tokenized
-			const isTokenized = showSelectionOptions ? tokenizedRadio.checked : true;
-
-			if (isTokenized) {
-				if (selectionInfo.tokenizedWords.length > 0) {
-					const firstWord = selectionInfo.tokenizedWords[0];
-					const lastWord = selectionInfo.tokenizedWords[selectionInfo.tokenizedWords.length - 1];
-					const combinedText = selectionInfo.tokenizedWords.map((w) => w.word).join(' ');
-
-					onMaskSelection(combinedText, piiType, firstWord.from, lastWord.to);
-				}
-			} else {
-				onMaskSelection(selectionInfo.selectedText, piiType, selectionInfo.from, selectionInfo.to);
-			}
-		}
-
-		menu.remove();
-	};
-
-	markBtn.addEventListener('click', (e) => {
-		e.preventDefault();
-		e.stopPropagation();
-		markSelectedText();
-	});
-
-	labelSection.appendChild(markBtn);
-	menu.appendChild(labelSection);
-
-	// Hover protection
-	menu.addEventListener('mouseenter', () => {
-		if (timeoutManager) {
-			timeoutManager.clearAll();
-		}
-	});
-
-	menu.addEventListener('mouseleave', (e) => {
-		const relatedTarget = e.relatedTarget as HTMLElement;
-		if (relatedTarget && menu.contains(relatedTarget)) {
-			return;
-		}
-
-		if (timeoutManager) {
-			timeoutManager.setFallback(() => {
-				if (menu && document.body.contains(menu)) {
-					const activeElement = document.activeElement;
-					const isInputFocused = activeElement && menu.contains(activeElement);
-
-					if (!isInputFocused) {
-						menu.remove();
-					}
-				}
-			}, 500);
-		}
-	});
-
-	return menu;
-}
+// Selection menus are now handled by BubbleMenu + PiiModifierButtons.svelte
 
 export const PiiModifierExtension = Extension.create<PiiModifierOptions>({
 	name: 'piiModifier',
@@ -1057,143 +189,18 @@ export const PiiModifierExtension = Extension.create<PiiModifierOptions>({
 
 	addProseMirrorPlugins() {
 		const options = this.options;
-		const { enabled, conversationId, onModifiersChanged, availableLabels } = options;
+		const { enabled, conversationId, onModifiersChanged } = options;
+		const config = getPiiConfig();
 
 		if (!enabled) {
 			return [];
 		}
 
-		let hoverMenuElement: HTMLElement | null = null;
-		let selectionMenuElement: HTMLElement | null = null;
+		let isHoverMenuShowing = false;
 		let hoverTimeout: number | null = null;
-		let selectionTimeout: number | null = null;
 		let menuCloseTimeout: ReturnType<typeof setTimeout> | null = null;
-		let isMouseOverMenu = false;
 		let isInputFocused = false;
-		let globalMouseUpListener: ((event: MouseEvent) => void) | null = null;
-
-		// Shared function to handle text selection for both editor and global mouseup
-		const handleTextSelection = (event: MouseEvent, view: any) => {
-			// Clear any existing selection timeout
-			if (selectionTimeout) {
-				clearTimeout(selectionTimeout);
-				selectionTimeout = null;
-			}
-
-			// Handle text selection for selection menu
-			const selection = view.state.selection;
-
-			// Only show selection menu if there's actual text selected
-			if (selection.empty || selection.from === selection.to) {
-				// Close selection menu if no selection
-				if (selectionMenuElement) {
-					selectionMenuElement.remove();
-					selectionMenuElement = null;
-				}
-				return false;
-			}
-
-			// Get selected text
-			const selectedText = view.state.doc.textBetween(selection.from, selection.to);
-
-			// Don't show menu for very short selections or selections longer than 100 characters
-			if (selectedText.length < 2 || selectedText.length > 50) {
-				return false;
-			}
-
-			// Find tokenized words touched by the selection
-			const tokenizedWords = findTokenizedWords(view.state.doc, selection.from, selection.to);
-
-			// Don't show menu if no words found
-			if (tokenizedWords.length === 0) {
-				return false;
-			}
-
-			// Check if SHIFT key is pressed to determine menu type
-			const showAdvancedMenu = event.shiftKey;
-
-			// Close hover menu if it exists
-			if (hoverMenuElement) {
-				hoverMenuElement.remove();
-				hoverMenuElement = null;
-			}
-
-			// Close existing selection menu
-			if (selectionMenuElement) {
-				selectionMenuElement.remove();
-			}
-
-			// Add delay before showing selection menu
-			selectionTimeout = window.setTimeout(() => {
-				// Create timeout manager for selection menu
-				const timeoutManager = {
-					clearAll: () => {
-						if (hoverTimeout) {
-							clearTimeout(hoverTimeout);
-							hoverTimeout = null;
-						}
-						if (menuCloseTimeout) {
-							clearTimeout(menuCloseTimeout);
-							menuCloseTimeout = null;
-						}
-					},
-					setFallback: (callback: () => void, delay: number) => {
-						if (menuCloseTimeout) {
-							clearTimeout(menuCloseTimeout);
-						}
-						menuCloseTimeout = setTimeout(callback, delay);
-					},
-					setInputFocused: (focused: boolean) => {
-						isInputFocused = focused;
-					}
-				};
-
-				const onMaskSelection = (text: string, piiType: string, from: number, to: number) => {
-					const tr = view.state.tr.setMeta(piiModifierExtensionKey, {
-						type: 'ADD_MODIFIER',
-						modifierAction: 'string-mask' as ModifierAction,
-						entity: text,
-						piiType,
-						from,
-						to
-					});
-					view.dispatch(tr);
-
-					if (selectionMenuElement) {
-						selectionMenuElement.remove();
-						selectionMenuElement = null;
-					}
-					timeoutManager.clearAll();
-				};
-
-				// Create selection menu (advanced if SHIFT, simplified otherwise)
-				selectionMenuElement = createSelectionMenu(
-					{
-						selectedText,
-						tokenizedWords,
-						from: selection.from,
-						to: selection.to,
-						x: event.clientX,
-						y: event.clientY
-					},
-					onMaskSelection,
-					timeoutManager,
-					showAdvancedMenu
-				);
-
-				document.body.appendChild(selectionMenuElement);
-
-				// Set a fallback timeout to close menu after 15 seconds
-				timeoutManager.setFallback(() => {
-					if (selectionMenuElement) {
-						selectionMenuElement.remove();
-						selectionMenuElement = null;
-					}
-				}, 15000);
-			}, 400); // 400ms delay
-
-			return true;
-		};
+		// Selection handling is now in BubbleMenu + PiiModifierButtons.svelte
 
 		const plugin = new Plugin<PiiModifierState>({
 			key: piiModifierExtensionKey,
@@ -1217,12 +224,16 @@ export const PiiModifierExtension = Extension.create<PiiModifierOptions>({
 				},
 
 				apply(tr, prevState): PiiModifierState {
+					const tracker = PiiPerformanceTracker.getInstance();
+					tracker.recordStateUpdate();
+
 					let newState = { ...prevState };
 
 					const meta = tr.getMeta(piiModifierExtensionKey);
 					if (meta) {
 						switch (meta.type) {
-							case 'RELOAD_CONVERSATION_MODIFIERS':
+							case 'RELOAD_CONVERSATION_MODIFIERS': {
+								tracker.recordSyncOperation();
 								const piiSessionManagerReload = PiiSessionManager.getInstance();
 								const reloadConversationId = meta.conversationId;
 
@@ -1243,18 +254,56 @@ export const PiiModifierExtension = Extension.create<PiiModifierOptions>({
 									onModifiersChanged(reloadedModifiers);
 								}
 								break;
+							}
 
-							case 'ADD_MODIFIER':
+							case 'ADD_MODIFIER': {
+								// Align selection to the provided entity within the selected range (fix concatenations across nodes)
+								let selFrom = typeof meta.from === 'number' ? meta.from : 0;
+								let selTo = typeof meta.to === 'number' ? meta.to : 0;
+								if (selFrom > selTo) {
+									[selFrom, selTo] = [selTo, selFrom];
+								}
+								const doc = tr.doc as ProseMirrorNode;
+								const docSize = doc.content.size;
+								selFrom = Math.max(0, Math.min(selFrom, docSize));
+								selTo = Math.max(0, Math.min(selTo, docSize));
+
+								const rawEntity = (meta.entity || '').normalize('NFKC').trim();
+								let finalFrom = selFrom;
+								let finalTo = selTo;
+								let finalEntity = rawEntity;
+
+								// Simplified ADD_MODIFIER logic - use provided entity text directly
+								if (meta.isExistingPii && rawEntity) {
+									// Use the entity text and positions as provided - no tokenization needed
+									// This prevents "und" being selected from "wachsenden Entwickler- und Projektteams"
+									finalEntity = rawEntity;
+									finalFrom = selFrom;
+									finalTo = selTo;
+								} else {
+									// For new text selections, use provided entity text directly - no complex tokenization
+									finalEntity = rawEntity || doc.textBetween(selFrom, selTo, '\n', '\0').trim();
+									finalFrom = selFrom;
+									finalTo = selTo;
+								}
+
+								// Skip if no valid entity text
+								if (!finalEntity) {
+									break;
+								}
+
 								const newModifier: PiiModifier = {
 									id: generateModifierId(),
 									action: meta.modifierAction,
-									entity: meta.entity,
-									type: meta.piiType
+									entity: finalEntity,
+									type: meta.piiType,
+									from: finalFrom,
+									to: finalTo
 								};
 
 								// Replace any existing modifier for the same entity text (case-insensitive)
 								const filteredModifiers = newState.modifiers.filter(
-									(modifier) => modifier.entity.toLowerCase() !== meta.entity.toLowerCase()
+									(modifier) => modifier.entity.toLowerCase() !== finalEntity.toLowerCase()
 								);
 
 								const updatedModifiers = [...filteredModifiers, newModifier];
@@ -1276,8 +325,23 @@ export const PiiModifierExtension = Extension.create<PiiModifierOptions>({
 									onModifiersChanged(updatedModifiers);
 								}
 								break;
+							}
 
-							case 'REMOVE_MODIFIER':
+							case 'REMOVE_MODIFIER': {
+								const piiSessionManagerRemove = PiiSessionManager.getInstance();
+								const removeConversationId = newState.currentConversationId;
+
+								// Use dedicated removal methods instead of merging
+								if (removeConversationId) {
+									piiSessionManagerRemove.removeConversationModifier(
+										removeConversationId,
+										meta.modifierId
+									);
+								} else {
+									piiSessionManagerRemove.removeTemporaryModifier(meta.modifierId);
+								}
+
+								// Update the plugin state to reflect the removal
 								const remainingModifiers = newState.modifiers.filter(
 									(m) => m.id !== meta.modifierId
 								);
@@ -1286,23 +350,13 @@ export const PiiModifierExtension = Extension.create<PiiModifierOptions>({
 									modifiers: remainingModifiers
 								};
 
-								const piiSessionManagerRemove = PiiSessionManager.getInstance();
-								const removeConversationId = newState.currentConversationId;
-								if (removeConversationId) {
-									piiSessionManagerRemove.setConversationModifiers(
-										removeConversationId,
-										remainingModifiers
-									);
-								} else {
-									piiSessionManagerRemove.setTemporaryModifiers(remainingModifiers);
-								}
-
 								if (onModifiersChanged) {
 									onModifiersChanged(remainingModifiers);
 								}
 								break;
+							}
 
-							case 'CLEAR_MODIFIERS':
+							case 'CLEAR_MODIFIERS': {
 								newState = {
 									...newState,
 									modifiers: []
@@ -1320,6 +374,7 @@ export const PiiModifierExtension = Extension.create<PiiModifierOptions>({
 									onModifiersChanged([]);
 								}
 								break;
+							}
 						}
 					}
 
@@ -1328,11 +383,14 @@ export const PiiModifierExtension = Extension.create<PiiModifierOptions>({
 			},
 
 			props: {
-				handleClick(view, pos, event) {
-					const target = event.target as HTMLElement;
-
+				handleClick(view, _pos, event) {
 					// Check if clicking on a text element with a mask modifier
-					const existingEntity = findExistingEntityAtPosition(view, event.clientX, event.clientY);
+					const existingEntity = findExistingEntityAtPosition(
+						view,
+						event.clientX,
+						event.clientY,
+						config
+					);
 
 					if (existingEntity) {
 						// Get current conversation ID from plugin state
@@ -1349,19 +407,30 @@ export const PiiModifierExtension = Extension.create<PiiModifierOptions>({
 							piiSessionManager.getModifiersForDisplay(currentConversationId);
 						const entityText = existingEntity.text;
 
-						// Find mask modifier for this entity
+						// Find mask modifier for this entity (both string-mask and word-mask)
 						const maskModifier = sessionModifiers.find(
 							(modifier) =>
-								modifier.action === 'string-mask' &&
+								(modifier.action === 'string-mask' || modifier.action === 'word-mask') &&
 								modifier.entity.toLowerCase() === entityText.toLowerCase()
 						);
 
 						if (maskModifier) {
-							// Remove the mask modifier directly
-							const tr = view.state.tr.setMeta(piiModifierExtensionKey, {
-								type: 'REMOVE_MODIFIER',
-								modifierId: maskModifier.id
-							});
+							console.log(
+								'PiiModifierExtension: Removing mask modifier and hiding entity:',
+								entityText
+							);
+
+							// Create transaction with both meta actions
+							const tr = view.state.tr
+								.setMeta(piiModifierExtensionKey, {
+									type: 'REMOVE_MODIFIER',
+									modifierId: maskModifier.id
+								})
+								.setMeta(piiDetectionPluginKey, {
+									type: 'TEMPORARILY_HIDE_ENTITY',
+									entityText: entityText
+								});
+
 							view.dispatch(tr);
 
 							// Prevent further event handling
@@ -1371,34 +440,22 @@ export const PiiModifierExtension = Extension.create<PiiModifierOptions>({
 					}
 
 					// Close hover menu if clicking outside of it
-					if (hoverMenuElement) {
-						const isClickInsideHoverMenu = hoverMenuElement.contains(target);
-
-						if (!isClickInsideHoverMenu) {
-							hoverMenuElement.remove();
-							hoverMenuElement = null;
-						}
+					if (isHoverMenuShowing && options.hidePiiHoverMenu) {
+						// Let the Svelte component handle click-outside detection
+						// This will be handled by the parent component
 					}
 
-					// Close selection menu if clicking outside of it
-					if (selectionMenuElement) {
-						const isClickInsideSelectionMenu = selectionMenuElement.contains(target);
-
-						if (!isClickInsideSelectionMenu) {
-							selectionMenuElement.remove();
-							selectionMenuElement = null;
-						}
-					}
+					// No selection menu to close
 
 					// Reset input focus state if clicking outside menus
-					if (!hoverMenuElement && !selectionMenuElement) {
+					if (!isHoverMenuShowing) {
 						isInputFocused = false;
 					}
 
 					return false;
 				},
 
-				handleKeyDown(view, event) {
+				handleKeyDown() {
 					// If input in menu is focused, don't let ProseMirror handle keyboard events
 					if (isInputFocused) {
 						return true; // This tells ProseMirror we handled the event
@@ -1407,49 +464,22 @@ export const PiiModifierExtension = Extension.create<PiiModifierOptions>({
 				},
 
 				handleDOMEvents: {
+					mouseup: () => {
+						// Selection-based popup is now handled by BubbleMenu UI
+						return false;
+					},
 					mousemove: (view, event) => {
-						// Check if mouse is over existing menus
-						const isOverHoverMenu =
-							hoverMenuElement && hoverMenuElement.contains(event.target as Node);
-						const isOverSelectionMenu =
-							selectionMenuElement && selectionMenuElement.contains(event.target as Node);
+						// Menu hover state is now managed by the Svelte component
+						// We only need to handle editor mouseover detection here
 
-						if (isOverHoverMenu || isOverSelectionMenu) {
-							// Update mouse over menu state
-							if (!isMouseOverMenu) {
-								isMouseOverMenu = true;
-							}
+						// No selection menu state any more
 
-							// Clear any pending timeouts to keep menu stable
-							if (hoverTimeout) {
-								clearTimeout(hoverTimeout);
-								hoverTimeout = null;
+						// Only show hover menu if SHIFT key is pressed; however, do not hide if the user is interacting with the menu
+						if (!event.shiftKey && !(isHoverMenuShowing && isInputFocused)) {
+							if (isHoverMenuShowing && options.hidePiiHoverMenu) {
+								options.hidePiiHoverMenu();
+								isHoverMenuShowing = false;
 							}
-							if (menuCloseTimeout) {
-								clearTimeout(menuCloseTimeout);
-								menuCloseTimeout = null;
-							}
-							return;
-						} else {
-							// Mouse left menu area
-							if (isMouseOverMenu) {
-								isMouseOverMenu = false;
-							}
-						}
-
-						// Don't show hover menu if selection menu is active
-						if (selectionMenuElement) {
-							return;
-						}
-
-						// Only show hover menu if SHIFT key is pressed
-						if (!event.shiftKey) {
-							// If SHIFT is not pressed, hide any existing hover menu
-							if (hoverMenuElement) {
-								hoverMenuElement.remove();
-								hoverMenuElement = null;
-							}
-							// Clear any pending timeout
 							if (hoverTimeout) {
 								clearTimeout(hoverTimeout);
 								hoverTimeout = null;
@@ -1468,20 +498,21 @@ export const PiiModifierExtension = Extension.create<PiiModifierOptions>({
 							const existingEntity = findExistingEntityAtPosition(
 								view,
 								event.clientX,
-								event.clientY
+								event.clientY,
+								config
 							);
 
 							if (!existingEntity) {
 								// Hide menu if no entity found
-								if (hoverMenuElement) {
-									hoverMenuElement.remove();
-									hoverMenuElement = null;
+								if (isHoverMenuShowing && options.hidePiiHoverMenu) {
+									options.hidePiiHoverMenu();
+									isHoverMenuShowing = false;
 								}
 								return;
 							}
 
 							// We found an existing PII or modifier entity
-							let targetInfo = {
+							const targetInfo = {
 								word: existingEntity.text,
 								from: existingEntity.from,
 								to: existingEntity.to
@@ -1530,9 +561,10 @@ export const PiiModifierExtension = Extension.create<PiiModifierOptions>({
 
 							// We already found an existing entity (PII or modifier), so show the menu
 
-							// Show hover menu
-							if (hoverMenuElement) {
-								hoverMenuElement.remove();
+							// Show hover menu - first hide existing one
+							if (isHoverMenuShowing && options.hidePiiHoverMenu) {
+								options.hidePiiHoverMenu();
+								isHoverMenuShowing = false;
 							}
 
 							// Create timeout manager
@@ -1559,87 +591,153 @@ export const PiiModifierExtension = Extension.create<PiiModifierOptions>({
 							};
 
 							const onIgnore = () => {
+								// Use transaction method with special meta to indicate this is from existing PII
+								// This will be handled in the ADD_MODIFIER case to prevent tokenization
 								const tr = view.state.tr.setMeta(piiModifierExtensionKey, {
 									type: 'ADD_MODIFIER',
 									modifierAction: 'ignore' as ModifierAction,
 									entity: finalTargetText,
 									from: targetInfo.from,
-									to: targetInfo.to
+									to: targetInfo.to,
+									isExistingPii: isPiiHighlighted // Add flag to prevent tokenization
 								});
 								view.dispatch(tr);
 
-								if (hoverMenuElement) {
-									hoverMenuElement.remove();
-									hoverMenuElement = null;
+								if (isHoverMenuShowing && options.hidePiiHoverMenu) {
+									options.hidePiiHoverMenu();
+									isHoverMenuShowing = false;
 								}
 								timeoutManager.clearAll();
 							};
 
 							const onMask = (piiType: string) => {
+								// Use transaction method with special meta to indicate this is from existing PII
+								// This will be handled in the ADD_MODIFIER case to prevent tokenization
 								const tr = view.state.tr.setMeta(piiModifierExtensionKey, {
 									type: 'ADD_MODIFIER',
 									modifierAction: 'string-mask' as ModifierAction,
 									entity: finalTargetText,
 									piiType,
 									from: targetInfo.from,
-									to: targetInfo.to
+									to: targetInfo.to,
+									isExistingPii: isPiiHighlighted // Add flag to prevent tokenization
 								});
 								view.dispatch(tr);
 
-								if (hoverMenuElement) {
-									hoverMenuElement.remove();
-									hoverMenuElement = null;
+								if (isHoverMenuShowing && options.hidePiiHoverMenu) {
+									options.hidePiiHoverMenu();
+									isHoverMenuShowing = false;
 								}
 								timeoutManager.clearAll();
 							};
 
 							const onRemoveModifier = (modifierId: string) => {
-								const tr = view.state.tr.setMeta(piiModifierExtensionKey, {
+								// Find the modifier to get its entity text for hiding
+								const modifierToRemove = sessionModifiers.find((m) => m.id === modifierId);
+
+								let tr = view.state.tr.setMeta(piiModifierExtensionKey, {
 									type: 'REMOVE_MODIFIER',
 									modifierId
 								});
+
+								// If this was a mask modifier, also temporarily hide the PII entity
+								if (
+									modifierToRemove &&
+									(modifierToRemove.action === 'string-mask' ||
+										modifierToRemove.action === 'word-mask')
+								) {
+									console.log(
+										'PiiModifierExtension: Hover menu removing modifier and hiding entity:',
+										modifierToRemove.entity
+									);
+									tr = tr.setMeta(piiDetectionPluginKey, {
+										type: 'TEMPORARILY_HIDE_ENTITY',
+										entityText: modifierToRemove.entity
+									});
+								}
+
 								view.dispatch(tr);
 
-								if (hoverMenuElement) {
-									hoverMenuElement.remove();
-									hoverMenuElement = null;
+								if (isHoverMenuShowing && options.hidePiiHoverMenu) {
+									options.hidePiiHoverMenu();
+									isHoverMenuShowing = false;
 								}
 								timeoutManager.clearAll();
 							};
 
-							hoverMenuElement = createHoverMenu(
-								{
-									word: finalTargetText,
-									from: targetInfo.from,
-									to: targetInfo.to,
-									x: event.clientX,
-									y: event.clientY
-								},
-								onIgnore,
-								onMask,
-								isPiiHighlighted, // Show ignore button if detected as PII
-								existingModifiers, // Pass existing modifiers
-								onRemoveModifier, // Pass removal callback
-								timeoutManager, // Pass timeout manager
-								existingModifiers.length === 0 ||
-									existingModifiers.some((m) => m.action === 'string-mask') // Show text field if no modifiers or has mask modifiers
-							);
+							// Use Svelte component interface
+							if (options.showPiiHoverMenu) {
+								// ALWAYS use mouse coordinates for positioning - they're the most reliable
+								const menuX = event.clientX;
+								const menuY = event.clientY;
 
-							document.body.appendChild(hoverMenuElement);
+								// debug logs removed
+								const labelFromModifier =
+									existingModifiers.find((m) => m.action === 'string-mask')?.type || '';
+								const elAtPoint = document.elementFromPoint(menuX, menuY) as HTMLElement | null;
+								const labelFromDom = (elAtPoint?.getAttribute('data-pii-type') || '').toUpperCase();
+								const computedCurrentLabel = (
+									labelFromModifier ||
+									labelFromDom ||
+									'CUSTOM'
+								).toUpperCase();
+								const menuData: PiiHoverMenuData = {
+									wordInfo: {
+										word: finalTargetText,
+										from: targetInfo.from,
+										to: targetInfo.to,
+										x: menuX,
+										y: menuY
+									},
+									showIgnoreButton: isPiiHighlighted,
+									existingModifiers,
+									showTextField:
+										existingModifiers.length === 0 ||
+										existingModifiers.some((m) => m.action === 'string-mask'),
+									currentLabel: computedCurrentLabel,
+									onIgnore,
+									onMask,
+									onRemoveModifier,
+									onInputFocused: (focused: boolean) => {
+										isInputFocused = focused;
+										if (focused) {
+											timeoutManager.clearAll();
+										}
+									},
+									onClose: () => {
+										if (isHoverMenuShowing && options.hidePiiHoverMenu) {
+											options.hidePiiHoverMenu();
+											isHoverMenuShowing = false;
+										}
+									},
+									onMouseEnter: () => {
+										timeoutManager.clearAll();
+									},
+									onMouseLeave: () => {
+										timeoutManager.setFallback(() => {
+											if (isHoverMenuShowing && !isInputFocused && options.hidePiiHoverMenu) {
+												options.hidePiiHoverMenu();
+												isHoverMenuShowing = false;
+											}
+										}, config.timing.menuCloseTimeoutMs);
+									}
+								};
 
-							// Set a fallback timeout to close menu after 10 seconds of inactivity
+								options.showPiiHoverMenu(menuData);
+								isHoverMenuShowing = true;
+							}
+
+							// Set a fallback timeout to close menu after inactivity
 							timeoutManager.setFallback(() => {
-								if (hoverMenuElement) {
-									hoverMenuElement.remove();
-									hoverMenuElement = null;
+								if (isHoverMenuShowing && options.hidePiiHoverMenu) {
+									options.hidePiiHoverMenu();
+									isHoverMenuShowing = false;
 								}
-							}, 10000);
-						}, 300);
+							}, config.timing.menuFallbackTimeoutMs);
+						}, config.timing.hoverTimeoutMs);
 					},
 
-					mouseup: (view, event) => {
-						handleTextSelection(event, view);
-					},
+					// Note: selection menu creation is disabled; BubbleMenu handles selection actions now
 
 					mouseleave: () => {
 						// Clear timeout when leaving editor, but keep menus if they exist
@@ -1650,43 +748,16 @@ export const PiiModifierExtension = Extension.create<PiiModifierOptions>({
 				}
 			},
 
-			view(editorView) {
-				// Set up global mouseup listener to catch selections that end outside the editor
-				globalMouseUpListener = (event: MouseEvent) => {
-					// Only handle if the selection is in our editor
-					if (editorView.hasFocus() || document.activeElement === editorView.dom) {
-						// Small delay to ensure selection state is updated
-						setTimeout(() => {
-							handleTextSelection(event, editorView);
-						}, 10);
-					}
-				};
-
-				document.addEventListener('mouseup', globalMouseUpListener, true);
-
+			view() {
 				return {
 					destroy: () => {
-						// Clean up global listener
-						if (globalMouseUpListener) {
-							document.removeEventListener('mouseup', globalMouseUpListener, true);
-							globalMouseUpListener = null;
-						}
-
-						if (hoverMenuElement) {
-							hoverMenuElement.remove();
-							hoverMenuElement = null;
-						}
-						if (selectionMenuElement) {
-							selectionMenuElement.remove();
-							selectionMenuElement = null;
+						if (isHoverMenuShowing && options.hidePiiHoverMenu) {
+							options.hidePiiHoverMenu();
+							isHoverMenuShowing = false;
 						}
 						if (hoverTimeout) {
 							clearTimeout(hoverTimeout);
 							hoverTimeout = null;
-						}
-						if (selectionTimeout) {
-							clearTimeout(selectionTimeout);
-							selectionTimeout = null;
 						}
 						if (menuCloseTimeout) {
 							clearTimeout(menuCloseTimeout);
@@ -1705,7 +776,7 @@ export const PiiModifierExtension = Extension.create<PiiModifierOptions>({
 			// Get current modifiers
 			getModifiers:
 				() =>
-				({ state }: any) => {
+				({ state }: CommandContext) => {
 					const pluginState = piiModifierExtensionKey.getState(state);
 					return pluginState?.modifiers || [];
 				},
@@ -1713,7 +784,7 @@ export const PiiModifierExtension = Extension.create<PiiModifierOptions>({
 			// Reload modifiers for a conversation (called when conversation changes)
 			reloadConversationModifiers:
 				(conversationId: string) =>
-				({ state, dispatch }: any) => {
+				({ state, dispatch }: CommandContext) => {
 					const tr = state.tr.setMeta(piiModifierExtensionKey, {
 						type: 'RELOAD_CONVERSATION_MODIFIERS',
 						conversationId
@@ -1729,7 +800,7 @@ export const PiiModifierExtension = Extension.create<PiiModifierOptions>({
 			// Clear all modifiers
 			clearModifiers:
 				() =>
-				({ state, dispatch }: any) => {
+				({ state, dispatch }: CommandContext) => {
 					const pluginState = piiModifierExtensionKey.getState(state);
 					if (!pluginState?.modifiers.length) {
 						return false;
@@ -1737,6 +808,38 @@ export const PiiModifierExtension = Extension.create<PiiModifierOptions>({
 
 					const tr = state.tr.setMeta(piiModifierExtensionKey, {
 						type: 'CLEAR_MODIFIERS'
+					});
+
+					if (dispatch) {
+						dispatch(tr);
+					}
+
+					return true;
+				},
+
+			// NEW: Add word-mask modifier for complete words in selection
+			addWordMaskModifier:
+				() =>
+				({ state, dispatch }: CommandContext) => {
+					const { from, to } = state.selection;
+					if (from === to) return false; // No selection
+
+					// Use robust tokenization with broader context (inspired by old findTokenizedWords)
+					const completeWordsText = findCompleteWordsRobust(state.doc, from, to);
+					if (!completeWordsText.trim()) {
+						console.log('PiiModifierExtension: No complete words found in selection');
+						return false; // No complete words found
+					}
+
+					console.log('PiiModifierExtension: Found complete words:', completeWordsText);
+
+					const tr = state.tr.setMeta(piiModifierExtensionKey, {
+						type: 'ADD_MODIFIER',
+						modifierAction: 'word-mask' as ModifierAction,
+						entity: completeWordsText,
+						piiType: 'CUSTOM',
+						from,
+						to
 					});
 
 					if (dispatch) {
@@ -1754,15 +857,103 @@ export const PiiModifierExtension = Extension.create<PiiModifierOptions>({
 					type?: string;
 					from: number;
 					to: number;
+					isExistingPii?: boolean; // New flag to indicate this is from an existing PII highlight
 				}) =>
-				({ state, dispatch }: any) => {
+				({ state, dispatch }: CommandContext) => {
+					const doc = state.doc as ProseMirrorNode;
+					const selFrom = state.selection.from;
+					const selTo = state.selection.to;
+
+					// Start with provided options
+					let useFrom = typeof options.from === 'number' ? options.from : selFrom;
+					let useTo = typeof options.to === 'number' ? options.to : selTo;
+					if (useFrom > useTo) [useFrom, useTo] = [useTo, useFrom];
+
+					// Derive canonical entity from current selection if necessary
+					let entity = (options.entity || '').normalize('NFKC').trim();
+
+					// If this is from an existing PII highlight, trust the entity text and don't tokenize
+					if (options.isExistingPii && entity) {
+						// Use the entity text and positions as provided - no tokenization needed
+						// This prevents "und" being selected from "wachsenden Entwickler- und Projektteams"
+					} else {
+						// Original tokenization logic for new text selections
+						const selText = doc.textBetween(selFrom, selTo, '\n', '\0').normalize('NFKC');
+						if (!entity || (selText && selText.indexOf(entity) === -1)) {
+							// Try to pick a token from selection
+							const slice = selText || '';
+							const tokenConfig = getPiiConfig();
+							const tokens: Array<{ start: number; end: number; text: string; hasAlpha: boolean }> =
+								[];
+							const re = tokenConfig.patterns.tokenizationFallback;
+							let m: RegExpExecArray | null;
+							re.lastIndex = 0;
+							while ((m = re.exec(slice)) !== null) {
+								const t = m[0];
+								tokens.push({
+									start: m.index,
+									end: m.index + t.length,
+									text: t,
+									hasAlpha: /[A-Za-zÀ-ÿ]/.test(t)
+								});
+							}
+							if (tokens.length > 0) {
+								const alphaTokens = tokens.filter((t) => t.hasAlpha);
+								const pick =
+									alphaTokens.length > 0
+										? alphaTokens[alphaTokens.length - 1]
+										: tokens[tokens.length - 1];
+								entity = pick.text;
+								useFrom = selFrom + pick.start;
+								useTo = selFrom + pick.end;
+							} else if (slice.trim()) {
+								entity = slice.replace(/\s+/g, ' ').trim();
+								useFrom = selFrom;
+								useTo = selTo;
+							}
+						}
+					}
+
 					const tr = state.tr.setMeta(piiModifierExtensionKey, {
 						type: 'ADD_MODIFIER',
 						modifierAction: options.action,
-						entity: options.entity,
+						entity,
 						piiType: options.type,
-						from: options.from,
-						to: options.to
+						from: useFrom,
+						to: useTo
+					});
+
+					if (dispatch) {
+						dispatch(tr);
+					}
+
+					return true;
+				},
+
+			// DEPRECATED: Use addWordMaskModifier instead - this creates multiple modifiers
+			addTokenizedMask:
+				() =>
+				({ state, dispatch }: CommandContext) => {
+					const { from, to } = state.selection;
+					if (from === to) return false; // No selection
+
+					// Get all tokenized words touched by the selection
+					const tokenizedWords = findTokenizedWords(state.doc, from, to);
+
+					if (tokenizedWords.length === 0) return false;
+
+					// Create a transaction that adds modifiers for all tokenized words
+					let tr = state.tr;
+
+					tokenizedWords.forEach((word) => {
+						tr = tr.setMeta(piiModifierExtensionKey, {
+							type: 'ADD_MODIFIER',
+							modifierAction: 'string-mask',
+							entity: word.word,
+							piiType: 'CUSTOM',
+							from: word.from,
+							to: word.to
+						});
 					});
 
 					if (dispatch) {
@@ -1775,11 +966,33 @@ export const PiiModifierExtension = Extension.create<PiiModifierOptions>({
 			// Remove a modifier by ID
 			removeModifier:
 				(modifierId: string) =>
-				({ state, dispatch }: any) => {
-					const tr = state.tr.setMeta(piiModifierExtensionKey, {
+				({ state, dispatch }: CommandContext) => {
+					// Find the modifier to get its entity text for hiding
+					const pluginState = piiModifierExtensionKey.getState(state);
+					const modifierToRemove = pluginState?.modifiers.find((m) => m.id === modifierId);
+
+					console.log(
+						'PiiModifierExtension: removeModifier command called for:',
+						modifierId,
+						modifierToRemove?.entity
+					);
+
+					let tr = state.tr.setMeta(piiModifierExtensionKey, {
 						type: 'REMOVE_MODIFIER',
 						modifierId
 					});
+
+					// If this was a mask modifier, also temporarily hide the PII entity
+					if (
+						modifierToRemove &&
+						(modifierToRemove.action === 'string-mask' || modifierToRemove.action === 'word-mask')
+					) {
+						console.log('PiiModifierExtension: Also hiding PII entity:', modifierToRemove.entity);
+						tr = tr.setMeta(piiDetectionPluginKey, {
+							type: 'TEMPORARILY_HIDE_ENTITY',
+							entityText: modifierToRemove.entity
+						});
+					}
 
 					if (dispatch) {
 						dispatch(tr);
@@ -1791,7 +1004,7 @@ export const PiiModifierExtension = Extension.create<PiiModifierOptions>({
 			// Export modifiers in Shield API format
 			exportModifiersForApi:
 				() =>
-				({ state }: any) => {
+				({ state }: CommandContext) => {
 					const pluginState = piiModifierExtensionKey.getState(state);
 					if (!pluginState?.modifiers.length) {
 						return [];
@@ -1807,7 +1020,7 @@ export const PiiModifierExtension = Extension.create<PiiModifierOptions>({
 			// Get modifiers for a specific entity text
 			getModifiersForEntity:
 				(entityText: string) =>
-				({ state }: any) => {
+				({ state }: CommandContext) => {
 					const pluginState = piiModifierExtensionKey.getState(state);
 					if (!pluginState?.modifiers.length) {
 						return [];
@@ -1821,21 +1034,34 @@ export const PiiModifierExtension = Extension.create<PiiModifierOptions>({
 			// Clear only mask modifiers (keep ignore modifiers)
 			clearMaskModifiers:
 				() =>
-				({ state, dispatch }: any) => {
+				({ state, dispatch }: CommandContext) => {
 					const pluginState = piiModifierExtensionKey.getState(state);
 					const maskModifiers =
-						pluginState?.modifiers.filter((m) => m.action === 'string-mask') || [];
+						pluginState?.modifiers.filter(
+							(m) => m.action === 'string-mask' || m.action === 'word-mask'
+						) || [];
 
 					if (maskModifiers.length === 0) {
 						return false; // No mask modifiers to clear
 					}
 
-					// Remove each mask modifier individually
+					console.log(
+						'PiiModifierExtension: clearMaskModifiers clearing:',
+						maskModifiers.map((m) => m.entity)
+					);
+
+					// For clearing multiple modifiers, we need to send separate transactions
+					// because ProseMirror transactions are immutable and we can't batch multiple REMOVE_MODIFIER actions
 					maskModifiers.forEach((modifier) => {
-						const tr = state.tr.setMeta(piiModifierExtensionKey, {
-							type: 'REMOVE_MODIFIER',
-							modifierId: modifier.id
-						});
+						const tr = state.tr
+							.setMeta(piiModifierExtensionKey, {
+								type: 'REMOVE_MODIFIER',
+								modifierId: modifier.id
+							})
+							.setMeta(piiDetectionPluginKey, {
+								type: 'TEMPORARILY_HIDE_ENTITY',
+								entityText: modifier.entity
+							});
 
 						if (dispatch) {
 							dispatch(tr);
@@ -1849,8 +1075,9 @@ export const PiiModifierExtension = Extension.create<PiiModifierOptions>({
 });
 
 // Utility function to add CSS styles for modifier system
-export function addPiiModifierStyles() {
-	const styleId = 'pii-modifier-styles';
+export function addPiiModifierStyles(config?: PiiExtensionConfig) {
+	const piiConfig = config || getPiiConfig();
+	const styleId = piiConfig.styling.styleElementId;
 
 	// Check if styles already exist
 	if (document.getElementById(styleId)) {
@@ -1860,88 +1087,62 @@ export function addPiiModifierStyles() {
 	const styleElement = document.createElement('style');
 	styleElement.id = styleId;
 	styleElement.textContent = `
-		/* Menu animations and interactions */
-		.pii-modifier-hover-menu,
-		.pii-modifier-selection-menu {
-			animation: fadeIn 0.2s ease-in-out;
-			pointer-events: auto;
-		}
-
-		@keyframes fadeIn {
-			from { opacity: 0; transform: translateY(5px); }
-			to { opacity: 1; transform: translateY(0); }
-		}
-
-		.pii-modifier-hover-menu button:hover,
-		.pii-modifier-selection-menu button:hover {
-			transform: scale(1.02);
-			transition: transform 0.1s ease;
-			box-shadow: 0 2px 8px rgba(0,0,0,0.1);
-		}
-
-		.pii-modifier-hover-menu input:focus,
-		.pii-modifier-selection-menu input:focus {
-			outline: none;
-			border-color: #4ecdc4;
-			box-shadow: 0 0 0 2px rgba(78, 205, 196, 0.2);
-		}
-
 		/* Modifier highlighting - takes precedence over PII detection */
 		.pii-modifier-highlight {
 			position: relative;
-			border-radius: 3px;
-			padding: 1px 2px;
+			border-radius: ${piiConfig.styling.borderRadius};
+			padding: ${piiConfig.styling.highlightPadding};
 			cursor: pointer;
-			transition: all 0.2s ease;
-			z-index: 10; /* Higher than PII highlights */
+			transition: all ${piiConfig.styling.transitionDuration} ease;
+			z-index: ${piiConfig.styling.zIndex.modifierHighlight}; /* Higher than PII highlights */
 		}
 
 		.pii-modifier-highlight:hover {
-			box-shadow: 0 1px 3px rgba(0,0,0,0.2);
+			box-shadow: ${piiConfig.styling.boxShadow.hover};
 		}
 
 		/* Mask modifier styling - orange text with green background/border */
 		.pii-modifier-highlight.pii-modifier-mask {
-			color: #ca8a04 !important; /* Orange text - takes precedence */
-			background-color: rgba(34, 197, 94, 0.2) !important; /* Green background */
-			border-bottom: 1px dashed #15803d !important; /* Green dashed underline */
+			color: ${piiConfig.styling.modifierColors.textColor} !important;
+			background-color: ${piiConfig.styling.modifierColors.maskBackgroundColor} !important;
+			border-bottom: 1px dashed ${piiConfig.styling.modifierColors.maskBorderColor} !important;
 		}
 
 		.pii-modifier-highlight.pii-modifier-mask:hover {
-			color: #a16207 !important;
-			background-color: rgba(34, 197, 94, 0.3) !important;
-			border-bottom: 2px dashed #15803d !important;
+			color: ${piiConfig.styling.modifierColors.textHoverColor} !important;
+			background-color: ${piiConfig.styling.modifierColors.maskBackgroundHoverColor} !important;
+			border-bottom: 2px dashed ${piiConfig.styling.modifierColors.maskBorderColor} !important;
 		}
 
 		/* Ignore modifier styling - orange text, no background */
 		.pii-modifier-highlight.pii-modifier-ignore {
-			color: #ca8a04 !important; /* Orange text - takes precedence */
-			text-decoration: line-through !important; /* Strike through */
-			opacity: 0.7 !important;
+			color: ${piiConfig.styling.modifierColors.textColor} !important;
+			text-decoration: line-through !important;
+			opacity: ${piiConfig.styling.modifierColors.ignoreOpacity} !important;
 		}
 
 		.pii-modifier-highlight.pii-modifier-ignore:hover {
-			color: #a16207 !important;
-			opacity: 0.9 !important;
+			color: ${piiConfig.styling.modifierColors.textHoverColor} !important;
+			opacity: ${piiConfig.styling.modifierColors.ignoreHoverOpacity} !important;
 		}
 
 		/* Ensure modifier styles take precedence over PII styles */
 		.pii-highlight.pii-modifier-highlight {
-			color: #ca8a04 !important;
+			color: ${piiConfig.styling.modifierColors.textColor} !important;
 		}
 
 		.pii-highlight.pii-modifier-highlight.pii-modifier-mask {
-			color: #ca8a04 !important;
-			background-color: rgba(34, 197, 94, 0.2) !important;
-			border-bottom: 1px dashed #15803d !important;
+			color: ${piiConfig.styling.modifierColors.textColor} !important;
+			background-color: ${piiConfig.styling.modifierColors.maskBackgroundColor} !important;
+			border-bottom: 1px dashed ${piiConfig.styling.modifierColors.maskBorderColor} !important;
 		}
 
 		.pii-highlight.pii-modifier-highlight.pii-modifier-ignore {
-			color: #ca8a04 !important;
+			color: ${piiConfig.styling.modifierColors.textColor} !important;
 			background-color: transparent !important;
 			border-bottom: none !important;
 			text-decoration: line-through !important;
-			opacity: 0.7 !important;
+			opacity: ${piiConfig.styling.modifierColors.ignoreOpacity} !important;
 		}
 	`;
 

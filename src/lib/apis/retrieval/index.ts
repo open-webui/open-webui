@@ -298,7 +298,8 @@ export interface SearchDocument {
 export const processFile = async (
 	token: string,
 	file_id: string,
-	collection_name: string | null = null
+	collection_name: string | null = null,
+	enable_pii_detection: boolean = true
 ) => {
 	let error = null;
 
@@ -311,7 +312,8 @@ export const processFile = async (
 		},
 		body: JSON.stringify({
 			file_id: file_id,
-			collection_name: collection_name ? collection_name : undefined
+			collection_name: collection_name ? collection_name : undefined,
+			enable_pii_detection: enable_pii_detection
 		})
 	})
 		.then(async (res) => {

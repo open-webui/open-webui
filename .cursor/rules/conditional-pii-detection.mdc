@@ -1,0 +1,122 @@
+---
+description: Conditional PII detection implementation patterns and requirements
+---
+
+# Conditional PII Detection
+
+PII detection in this project must be conditional based on user toggle state. The masking button controls whether any PII processing occurs.
+
+## Core Principle
+**Zero PII overhead when disabled** - No API calls, processing, or data storage should occur when the PII masking button is off.
+
+## Frontend Implementation
+
+### Button State Management
+- Button visibility: Show when `piiConfigEnabled` (config allows PII)
+- Detection active: Only when `enablePiiDetection = piiConfigEnabled && piiMaskingEnabled`
+- State changes: Must trigger immediate enable/disable of all PII systems
+
+### Component Integration ([MessageInput.svelte](mdc:src/lib/components/chat/MessageInput.svelte))
+```typescript
+// Reactive PII detection state
+$: enablePiiDetection = piiConfigEnabled && piiMaskingEnabled;
+
+// Toggle handler must clean up completely when disabled
+const togglePiiMasking = () => {
+    if (piiMaskingEnabled) {
+        // Enable: trigger detection and sync
+        chatInputElement?.enablePiiDetectionDynamically();
+    } else {
+        // Disable: clear ALL PII data and state
+        chatInputElement?.disablePiiDetectionDynamically();
+        chatInputElement?.clearAllPiiHighlights();
+        currentPiiEntities = [];
+        maskedPrompt = '';
+        // Clear session manager data
+        piiSessionManager.clearConversationWorkingEntities(chatId);
+    }
+};
+```
+
+### Editor Integration ([PiiDetectionExtension.ts](mdc:src/lib/components/common/RichTextInput/PiiDetectionExtension.ts))
+- Plugin state must include `dynamicallyEnabled` flag
+- Detection only triggers when `dynamicallyEnabled && !isDetecting`
+- Decorations only render when `dynamicallyEnabled`
+- Commands: `enablePiiDetection()`, `disablePiiDetection()`, `clearAllPiiHighlights()`
+
+## Backend Integration
+
+### File Upload API ([files.py](mdc:backend/open_webui/routers/files.py))
+- Accept `enable_pii_detection: bool = Query(True)` parameter
+- Pass to all `ProcessFileForm()` calls
+- Default to true for backward compatibility
+
+### Document Processing ([retrieval.py](mdc:backend/open_webui/routers/retrieval.py))
+```python
+# PII detection condition
+if (
+    request.app.state.config.ENABLE_PII_DETECTION
+    and request.app.state.config.PII_API_KEY
+    and form_data.enable_pii_detection  # Frontend button state
+):
+    # Perform PII detection
+else:
+    # Skip entirely - no API calls, no processing
+```
+
+### API Layer ([retrieval/index.ts](mdc:src/lib/apis/retrieval/index.ts))
+```typescript
+export const processFile = async (
+    token: string,
+    file_id: string,
+    collection_name: string | null = null,
+    enable_pii_detection: boolean = true  // Pass frontend state
+)
+```
+
+## Data Cleanup Requirements
+
+### When PII Detection is Disabled
+1. **Visual Layer**: Remove all highlights and decorations
+2. **Component State**: Clear `currentPiiEntities`, `maskedPrompt`
+3. **Editor State**: Disable plugin, clear entity state
+4. **Session Manager**: Clear working entities (preserve persisted for history)
+5. **File Processing**: Skip PII sync functions entirely
+
+### Conditional Data Sync
+```typescript
+// Only sync PII data when detection is enabled
+function syncPiiDetectionsFromFileData(fileData: any) {
+    if (!enablePiiDetection) {
+        console.log('Skipping PII sync - detection disabled');
+        return;
+    }
+    // ... sync logic
+}
+```
+
+## Testing Scenarios
+
+### Button Active ✅
+- Text input triggers PII detection API
+- Visual highlights displayed
+- File uploads include PII processing
+- Session manager tracks entities
+
+### Button Inactive ❌
+- No PII detection API calls
+- No visual highlights
+- File uploads skip PII processing
+- Working PII data cleared
+
+## Error Handling
+- All PII operations must gracefully handle disabled state
+- No crashes when PII components are disabled
+- Preserve existing chat PII data (don't delete persisted history)
+- Log clear messages when PII processing is skipped
+
+## Performance Considerations
+- Zero computational overhead when disabled
+- No network requests to PII APIs when disabled
+- Minimal memory usage (only button state tracking)
+- Fast enable/disable transitions

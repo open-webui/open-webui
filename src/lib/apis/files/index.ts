@@ -4,7 +4,7 @@ export const uploadFile = async (
 	token: string,
 	file: File,
 	metadata?: object | null,
-	options?: { process?: boolean }
+	options?: { process?: boolean; enablePiiDetection?: boolean }
 ) => {
 	const data = new FormData();
 	data.append('file', file);
@@ -14,7 +14,16 @@ export const uploadFile = async (
 
 	let error = null;
 
-	const qs = options?.process === false ? '?process=false' : '';
+	// Build query string with process and enablePiiDetection parameters
+	const queryParams = new URLSearchParams();
+	if (options?.process === false) {
+		queryParams.set('process', 'false');
+	}
+	if (options?.enablePiiDetection !== undefined) {
+		queryParams.set('enable_pii_detection', options.enablePiiDetection.toString());
+	}
+	const qs = queryParams.toString() ? `?${queryParams.toString()}` : '';
+
 	const res = await fetch(`${WEBUI_API_BASE_URL}/files/${qs}`, {
 		method: 'POST',
 		headers: {
@@ -128,7 +137,12 @@ export const getFileById = async (token: string, id: string) => {
 	return res;
 };
 
-export const updateFileDataContentById = async (token: string, id: string, content: string) => {
+export const updateFileDataContentById = async (
+	token: string,
+	id: string,
+	content: string,
+	options?: { pii?: Record<string, any> | any[]; piiState?: Record<string, any> }
+) => {
 	let error = null;
 
 	const res = await fetch(`${WEBUI_API_BASE_URL}/files/${id}/data/content/update`, {
@@ -139,7 +153,9 @@ export const updateFileDataContentById = async (token: string, id: string, conte
 			authorization: `Bearer ${token}`
 		},
 		body: JSON.stringify({
-			content: content
+			content,
+			pii: options?.pii,
+			pii_state: options?.piiState
 		})
 	})
 		.then(async (res) => {
@@ -148,6 +164,39 @@ export const updateFileDataContentById = async (token: string, id: string, conte
 		})
 		.then((json) => {
 			return json;
+		})
+		.catch((err) => {
+			error = err.detail;
+			console.error(err);
+			return null;
+		});
+
+	if (error) {
+		throw error;
+	}
+
+	return res;
+};
+
+export const updateFilePiiStateById = async (
+	token: string,
+	id: string,
+	pii_state: Record<string, any>
+) => {
+	let error = null;
+
+	const res = await fetch(`${WEBUI_API_BASE_URL}/files/${id}/data/pii/state/update`, {
+		method: 'POST',
+		headers: {
+			Accept: 'application/json',
+			'Content-Type': 'application/json',
+			authorization: `Bearer ${token}`
+		},
+		body: JSON.stringify({ pii_state })
+	})
+		.then(async (res) => {
+			if (!res.ok) throw await res.json();
+			return res.json();
 		})
 		.catch((err) => {
 			error = err.detail;
