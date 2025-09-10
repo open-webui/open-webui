@@ -31,7 +31,8 @@ WORKDIR /app
 RUN apk add --no-cache git
 
 COPY package.json package-lock.json ./
-RUN npm ci --force
+RUN --mount=type=cache,target=/root/.npm \
+    npm ci --force
 
 COPY . .
 ENV APP_BUILD_HASH=${BUILD_HASH}
@@ -112,17 +113,19 @@ RUN echo -n 00000000-0000-0000-0000-000000000000 > $HOME/.cache/chroma/telemetry
 RUN chown -R $UID:$GID /app $HOME
 
 # Install common system dependencies
-RUN apt-get update && \
+RUN --mount=type=cache,target=/var/cache/apt \
+    --mount=type=cache,target=/var/lib/apt/lists \
+    apt-get update && \
     apt-get install -y --no-install-recommends \
     git build-essential pandoc gcc netcat-openbsd curl jq \
     python3-dev \
-    ffmpeg libsm6 libxext6 \
-    && rm -rf /var/lib/apt/lists/*
+    ffmpeg libsm6 libxext6
 
 # install python dependencies
 COPY --chown=$UID:$GID ./backend/requirements.txt ./requirements.txt
 
-RUN pip3 install --no-cache-dir uv && \
+RUN --mount=type=cache,target=/root/.cache/pip \
+    pip3 install --no-cache-dir uv && \
     if [ "$USE_SLIM" != "true" ]; then \
     if [ "$USE_CUDA" = "true" ]; then \
     # If you use CUDA the whisper and embedding model will be downloaded on first use
@@ -145,10 +148,10 @@ RUN pip3 install --no-cache-dir uv && \
 
 # Install Ollama if requested
 RUN if [ "$USE_OLLAMA" = "true" ] && [ "$USE_SLIM" != "true" ]; then \
+    --mount=type=cache,target=/tmp/ollama \
     date +%s > /tmp/ollama_build_hash && \
     echo "Cache broken at timestamp: `cat /tmp/ollama_build_hash`" && \
-    curl -fsSL https://ollama.com/install.sh | sh && \
-    rm -rf /var/lib/apt/lists/*; \
+    curl -fsSL https://ollama.com/install.sh | sh; \
     fi
 
 # copy embedding weight from build
