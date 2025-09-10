@@ -9,9 +9,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
-- 🛡️ **PII masking** for file uploads in chatss and knowledge collections
-- 🛠️ **Simpler Behaviour of masking Button** When masking is off, on PII detection is done
-- 🛡️ **Secure handling of masked RAG data** Data from RAG is masked when part of a collection with activated PII masking (new option)
+- 🛡️ **PII masking:** for file uploads in chatss and knowledge collections
+- 🛠️ **Simpler Behaviour of masking Button:** When masking is off, no PII detection is done
+- 🛡️ **Secure handling of masked RAG data:** Data from RAG is masked when part of a collection with activated PII masking (new option)
 
 ### Fixed
 
