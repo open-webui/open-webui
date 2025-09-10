@@ -1158,6 +1158,15 @@ SEARCH_PLAN_AGENT_BUTTONS_MAPPING = PersistentConfig(
     json.loads(os.getenv("SEARCH_PLAN_AGENT_BUTTONS_MAPPING", "[]")),
 )
 
+SEARCH_PLAN_AGENT_BUTTONS_TRIGGERING_SENTENCE = PersistentConfig(
+    "SEARCH_PLAN_AGENT_BUTTONS_TRIGGERING_SENTENCE",
+    "ui.search_plan_agent_buttons_triggering_sentence",
+    os.getenv(
+        "SEARCH_PLAN_AGENT_BUTTONS_TRIGGERING_SENTENCE",
+        "Is this understanding correct? Please answer with 'yes' to proceed or provide a correction.",
+    ),
+)
+
 
 ENABLE_CHANNELS = PersistentConfig(
     "ENABLE_CHANNELS",

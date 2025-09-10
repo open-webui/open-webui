@@ -878,7 +878,7 @@
 					</div>
 				</div>
 
-				{#if message.done && isLastMessage && showCorrectionButtons && message.content.includes("Is this understanding correct? Please answer with 'yes' to proceed or provide a correction.")}
+				{#if message.done && isLastMessage && showCorrectionButtons && message.content.includes($config?.features?.search_plan_agent_buttons_triggering_sentence)}
 					<div class="mt-2 mb-1 flex justify-start space-x-1.5 text-sm font-medium">
 						{#each $config?.features?.search_plan_agent_buttons_mapping ?? [] as button}
 							<button

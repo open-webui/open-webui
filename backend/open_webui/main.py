@@ -306,6 +306,7 @@ from open_webui.config import (
     ENABLE_ADMIN_CHAT_ACCESS,
     ENABLE_ADMIN_EXPORT,
     SEARCH_PLAN_AGENT_BUTTONS_MAPPING,
+    SEARCH_PLAN_AGENT_BUTTONS_TRIGGERING_SENTENCE,
     # Tasks
     TASK_MODEL,
     TASK_MODEL_EXTERNAL,
@@ -543,6 +544,9 @@ app.state.config.WEBHOOK_URL = WEBHOOK_URL
 app.state.config.BANNERS = WEBUI_BANNERS
 app.state.config.MODEL_ORDER_LIST = MODEL_ORDER_LIST
 app.state.config.SEARCH_PLAN_AGENT_BUTTONS_MAPPING = SEARCH_PLAN_AGENT_BUTTONS_MAPPING
+app.state.config.SEARCH_PLAN_AGENT_BUTTONS_TRIGGERING_SENTENCE = (
+    SEARCH_PLAN_AGENT_BUTTONS_TRIGGERING_SENTENCE
+)
 
 
 app.state.config.ENABLE_CHANNELS = ENABLE_CHANNELS
@@ -1299,6 +1303,7 @@ async def get_app_config(request: Request):
                     "enable_google_drive_integration": app.state.config.ENABLE_GOOGLE_DRIVE_INTEGRATION,
                     "enable_onedrive_integration": app.state.config.ENABLE_ONEDRIVE_INTEGRATION,
                     "search_plan_agent_buttons_mapping": app.state.config.SEARCH_PLAN_AGENT_BUTTONS_MAPPING,
+                    "search_plan_agent_buttons_triggering_sentence": app.state.config.SEARCH_PLAN_AGENT_BUTTONS_TRIGGERING_SENTENCE,
                 }
                 if user is not None
                 else {}
