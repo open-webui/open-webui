@@ -9,24 +9,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
-- 🗂️ Folder modal now automatically focuses on the title input field for better UX.
-- 🌐 Updated Portuguese (Brazil) and Simplified Chinese translations with new entries. [#17317](https://github.com/open-webui/open-webui/pull/17317), [#17320](https://github.com/open-webui/open-webui/pull/17320)
+- 🔍 The "@" command for model selection now supports real-time search and filtering, improving usability and aligning its behavior with other input commands. [#17307](https://github.com/open-webui/open-webui/issues/17307), [Commit](https://github.com/open-webui/open-webui/commit/f2a09c71499489ee71599af4a179e7518aaf658b)
+- 🛠️ External tool server data handling is now more robust, automatically attempting to parse specifications as JSON before falling back to YAML, regardless of the URL extension. [Commit](https://github.com/open-webui/open-webui/commit/774c0056bde88ed4831422efa81506488e3d6641)
+- 🎯 The "Title" field is now automatically focused when creating a new chat folder, streamlining the folder creation process. [#17315](https://github.com/open-webui/open-webui/issues/17315), [Commit](https://github.com/open-webui/open-webui/commit/c51a651a2d5e2a27546416666812e9b92205562d)
+- 🔄 Various improvements were implemented across the frontend and backend to enhance performance, stability, and security.
+- 🌐 Brazilian Portuguese and Simplified Chinese translations were expanded and refined.
 
 ### Fixed
 
-- 🔑 Fixed OpenAI connection API key not registering or updating properly.
-- 📝 Fixed prompt command with template variables to correctly show input modal.
-- 🔊 Fixed OpenAI audio Text-to-Speech URL issue.
-- ⚙️ Fixed model command filter behavior.
-
-### Changed
-
-- 📦 Updated Chroma dependency.
-- 🛠️ Various chore updates including formatting and dependency bumps.
-- build(deps): bump elasticsearch from 9.0.1 to 9.1.0 in.
-- build(deps): bump googleapis-common-protos from 1.63.2 to 1.70.0.
-- build(deps): bump pgvector from 0.4.0 to 0.4.1.
-- build(deps): bump psycopg2-binary from 2.9.9 to 2.9.10.
+- 🔊 A regression affecting Text-to-Speech for local providers using the OpenAI engine was fixed by reverting a URL joining change. [#17316](https://github.com/open-webui/open-webui/issues/17316), [Commit](https://github.com/open-webui/open-webui/commit/8339f59cdfc63f2d58c8e26933d1bf1438479d75)
+- 🪧 A regression was fixed where the input modal for prompts with placeholders would not open, causing the raw prompt text to be pasted into the chat input field instead. [#17325](https://github.com/open-webui/open-webui/issues/17325), [Commit](https://github.com/open-webui/open-webui/commit/d5cb65527eaa4831459a4c7dbf187daa9c0525ae)
+- 🔑 An issue was resolved where modified connection keys in the OpenAIConnection component did not take effect. [#17324](https://github.com/open-webui/open-webui/pull/17324)
 
 ## [0.6.27] - 2025-09-09
 
