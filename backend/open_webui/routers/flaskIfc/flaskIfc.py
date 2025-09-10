@@ -780,7 +780,7 @@ def health_check_serial_command():
 
     serial_script.pre_and_post_check(port, baudrate)
 
-    command = f"free -h; df -h; top -b -n1"
+    command = f"uptime; free -h; df -h; top -b -n1"
 
     try:
         result = serial_script.send_serial_command(port, baudrate, command)
@@ -808,7 +808,7 @@ def system_info_serial_command():
 
     serial_script.pre_and_post_check(port, baudrate)
 
-    command = f"{exe_path}../install/tsi-version;lsmod; lscpu; lsblk"
+    command = f"{exe_path}../install/tsi-version; uptime; lsmod; lscpu; lsblk"
 
     try:
         result = serial_script.send_serial_command(port, baudrate, command)
