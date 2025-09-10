@@ -155,6 +155,9 @@ class TTSConfigForm(BaseModel):
     OPENAI_API_KEY: str
     WEBUI_API_BASE_URL: str
     WEBUI_API_KEY: str
+    WEBUI_EXAGGERATION: Optional[float] = 0.5
+    WEBUI_CFG_WEIGHT: Optional[float] = 0.5
+    WEBUI_TEMPERATURE: Optional[float] = 0.8
     API_KEY: str
     ENGINE: str
     MODEL: str
@@ -193,6 +196,9 @@ async def get_audio_config(request: Request, user=Depends(get_admin_user)):
             "OPENAI_API_KEY": request.app.state.config.TTS_OPENAI_API_KEY,
             "WEBUI_API_BASE_URL": request.app.state.config.TTS_WEBUI_API_BASE_URL,
             "WEBUI_API_KEY": request.app.state.config.TTS_WEBUI_API_KEY,
+            "WEBUI_EXAGGERATION": request.app.state.config.TTS_WEBUI_EXAGGERATION,
+            "WEBUI_CFG_WEIGHT": request.app.state.config.TTS_WEBUI_CFG_WEIGHT,
+            "WEBUI_TEMPERATURE": request.app.state.config.TTS_WEBUI_TEMPERATURE,
             "API_KEY": request.app.state.config.TTS_API_KEY,
             "ENGINE": request.app.state.config.TTS_ENGINE,
             "MODEL": request.app.state.config.TTS_MODEL,
@@ -227,6 +233,9 @@ async def update_audio_config(
     request.app.state.config.TTS_OPENAI_API_KEY = form_data.tts.OPENAI_API_KEY
     request.app.state.config.TTS_WEBUI_API_BASE_URL = form_data.tts.WEBUI_API_BASE_URL
     request.app.state.config.TTS_WEBUI_API_KEY = form_data.tts.WEBUI_API_KEY
+    request.app.state.config.TTS_WEBUI_EXAGGERATION = form_data.tts.WEBUI_EXAGGERATION
+    request.app.state.config.TTS_WEBUI_CFG_WEIGHT = form_data.tts.WEBUI_CFG_WEIGHT
+    request.app.state.config.TTS_WEBUI_TEMPERATURE = form_data.tts.WEBUI_TEMPERATURE
     request.app.state.config.TTS_API_KEY = form_data.tts.API_KEY
     request.app.state.config.TTS_ENGINE = form_data.tts.ENGINE
     request.app.state.config.TTS_MODEL = form_data.tts.MODEL
@@ -271,6 +280,9 @@ async def update_audio_config(
             "OPENAI_API_KEY": request.app.state.config.TTS_OPENAI_API_KEY,
             "WEBUI_API_BASE_URL": request.app.state.config.TTS_WEBUI_API_BASE_URL,
             "WEBUI_API_KEY": request.app.state.config.TTS_WEBUI_API_KEY,
+            "WEBUI_EXAGGERATION": request.app.state.config.TTS_WEBUI_EXAGGERATION,
+            "WEBUI_CFG_WEIGHT": request.app.state.config.TTS_WEBUI_CFG_WEIGHT,
+            "WEBUI_TEMPERATURE": request.app.state.config.TTS_WEBUI_TEMPERATURE,
             "API_KEY": request.app.state.config.TTS_API_KEY,
             "ENGINE": request.app.state.config.TTS_ENGINE,
             "MODEL": request.app.state.config.TTS_MODEL,
@@ -398,6 +410,10 @@ async def speech(request: Request, user=Depends(get_verified_user)):
 
     elif request.app.state.config.TTS_ENGINE == "ttswebui":
         payload["model"] = request.app.state.config.TTS_MODEL
+        # Add TTS WebUI specific parameters
+        payload["exaggeration"] = request.app.state.config.TTS_WEBUI_EXAGGERATION
+        payload["cfg_weight"] = request.app.state.config.TTS_WEBUI_CFG_WEIGHT
+        payload["temperature"] = request.app.state.config.TTS_WEBUI_TEMPERATURE
 
         try:
             timeout = aiohttp.ClientTimeout(total=AIOHTTP_CLIENT_TIMEOUT)

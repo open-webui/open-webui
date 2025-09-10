@@ -29,6 +29,9 @@
 	let TTS_OPENAI_API_KEY = '';
 	let TTS_WEBUI_API_BASE_URL = '';
 	let TTS_WEBUI_API_KEY = '';
+	let TTS_WEBUI_EXAGGERATION = 0.5;
+	let TTS_WEBUI_CFG_WEIGHT = 0.5;
+	let TTS_WEBUI_TEMPERATURE = 0.8;
 	let TTS_API_KEY = '';
 	let TTS_ENGINE = '';
 	let TTS_MODEL = '';
@@ -106,6 +109,9 @@
 				OPENAI_API_KEY: TTS_OPENAI_API_KEY,
 				WEBUI_API_BASE_URL: TTS_WEBUI_API_BASE_URL,
 				WEBUI_API_KEY: TTS_WEBUI_API_KEY,
+				WEBUI_EXAGGERATION: TTS_WEBUI_EXAGGERATION,
+				WEBUI_CFG_WEIGHT: TTS_WEBUI_CFG_WEIGHT,
+				WEBUI_TEMPERATURE: TTS_WEBUI_TEMPERATURE,
 				API_KEY: TTS_API_KEY,
 				ENGINE: TTS_ENGINE,
 				MODEL: TTS_MODEL,
@@ -152,6 +158,9 @@
 			TTS_OPENAI_API_KEY = res.tts.OPENAI_API_KEY;
 			TTS_WEBUI_API_BASE_URL = res.tts.WEBUI_API_BASE_URL;
 			TTS_WEBUI_API_KEY = res.tts.WEBUI_API_KEY;
+			TTS_WEBUI_EXAGGERATION = res.tts.WEBUI_EXAGGERATION ?? 0.5;
+			TTS_WEBUI_CFG_WEIGHT = res.tts.WEBUI_CFG_WEIGHT ?? 0.5;
+			TTS_WEBUI_TEMPERATURE = res.tts.WEBUI_TEMPERATURE ?? 0.8;
 			TTS_API_KEY = res.tts.API_KEY;
 
 			TTS_ENGINE = res.tts.ENGINE;
@@ -479,6 +488,59 @@
 							/>
 
 							<SensitiveInput placeholder={$i18n.t('API Key')} bind:value={TTS_WEBUI_API_KEY} />
+						</div>
+
+						<hr class="border-gray-100 dark:border-gray-850 my-2" />
+
+						<div class="mb-2">
+							<div class=" mb-1.5 text-xs font-medium">{$i18n.t('Exaggeration (Neutral = 0.5, extreme values can be unstable)')}</div>
+							<div class="flex w-full">
+								<div class="flex-1">
+									<input
+										type="range"
+										class="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer dark:bg-gray-700"
+										min="0"
+										max="2"
+										step="0.1"
+										bind:value={TTS_WEBUI_EXAGGERATION}
+									/>
+									<div class="text-xs text-gray-500 mt-1">Value: {TTS_WEBUI_EXAGGERATION}</div>
+								</div>
+							</div>
+						</div>
+
+						<div class="mb-2">
+							<div class=" mb-1.5 text-xs font-medium">{$i18n.t('CFG Weight/Pace')}</div>
+							<div class="flex w-full">
+								<div class="flex-1">
+									<input
+										type="range"
+										class="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer dark:bg-gray-700"
+										min="0"
+										max="1"
+										step="0.1"
+										bind:value={TTS_WEBUI_CFG_WEIGHT}
+									/>
+									<div class="text-xs text-gray-500 mt-1">Value: {TTS_WEBUI_CFG_WEIGHT}</div>
+								</div>
+							</div>
+						</div>
+
+						<div class="mb-2">
+							<div class=" mb-1.5 text-xs font-medium">{$i18n.t('Temperature')}</div>
+							<div class="flex w-full">
+								<div class="flex-1">
+									<input
+										type="range"
+										class="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer dark:bg-gray-700"
+										min="0.05"
+										max="5"
+										step="0.05"
+										bind:value={TTS_WEBUI_TEMPERATURE}
+									/>
+									<div class="text-xs text-gray-500 mt-1">Value: {TTS_WEBUI_TEMPERATURE}</div>
+								</div>
+							</div>
 						</div>
 					</div>
 				{:else if TTS_ENGINE === 'elevenlabs'}
