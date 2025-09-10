@@ -262,7 +262,7 @@
 									{#each OPENAI_API_BASE_URLS as url, idx}
 										<OpenAIConnection
 											{url}
-											key={OPENAI_API_KEYS[idx]}
+											bind:key={OPENAI_API_KEYS[idx]}
 											bind:config={OPENAI_API_CONFIGS[idx]}
 											pipeline={pipelineUrls[url] ? true : false}
 											onSubmit={() => {
