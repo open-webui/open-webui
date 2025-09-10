@@ -741,6 +741,11 @@ async def pull_model_helper(
     )
 
 
+async def pull_model_helper_stream(user, key, model_name):
+    result_response = await pull_model_helper(user, key, model_name)
+    yield json.dumps({"result": result_response}) + "\n"
+
+
 @router.post("/api/pull")
 @router.post("/api/pull/{url_idx}")
 async def pull_model(
@@ -765,11 +770,6 @@ async def pull_model(
         user=user,
     )
 
-    async def pull_model_helper_stream(user, key, model_name):
-        yield json.dumps({"status": "IGNORE ABOVE MESSAGE"}) + "\n"
-        result_response = await pull_model_helper(user, key, model_name)
-        yield json.dumps({"result": result_response}) + "\n"
-
     GOLDEN_NAME = None
 
     async def stream():
@@ -788,11 +788,7 @@ async def pull_model(
             async for output in pull_model_helper_stream(user, key, form_data["model"]):
                 yield output  # .encode()
 
-    async def userInterface():
-        response = StreamingResponse(stream(), media_type="application/json")
-        return response
-
-    return await userInterface()
+    return StreamingResponse(stream(), media_type="application/json")
 
 
 class PushModelForm(BaseModel):
