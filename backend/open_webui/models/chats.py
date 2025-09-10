@@ -977,35 +977,96 @@ class ChatTable:
             return False
 
     def delete_chat_by_id(self, id: str) -> bool:
+        """Delete chat by ID with automatic file cleanup."""
+        from open_webui.utils.file_cleanup import file_cleanup_manager
+        
         try:
+            # First cleanup associated files
+            cleanup_results = file_cleanup_manager.cleanup_chat_files(id)
+            log.info(f"File cleanup results for chat {id}: {cleanup_results}")
+            
+            # Then delete the chat record
             with get_db() as db:
                 db.query(Chat).filter_by(id=id).delete()
                 db.commit()
-
-                return True and self.delete_shared_chat_by_chat_id(id)
-        except Exception:
+                
+                success = True and self.delete_shared_chat_by_chat_id(id)
+                
+                if success:
+                    log.info(f"Successfully deleted chat {id} with {cleanup_results['files_deleted']} files")
+                
+                return success
+                
+        except Exception as e:
+            log.error(f"Failed to delete chat {id}: {e}")
             return False
 
     def delete_chat_by_id_and_user_id(self, id: str, user_id: str) -> bool:
+        """Delete chat by ID and user ID with automatic file cleanup."""
+        from open_webui.utils.file_cleanup import file_cleanup_manager
+        
         try:
+            # Verify ownership before cleanup
+            chat = self.get_chat_by_id_and_user_id(id, user_id)
+            if not chat:
+                return False
+            
+            # Cleanup associated files
+            cleanup_results = file_cleanup_manager.cleanup_chat_files(id)
+            log.info(f"File cleanup results for chat {id}: {cleanup_results}")
+            
+            # Delete the chat record
             with get_db() as db:
                 db.query(Chat).filter_by(id=id, user_id=user_id).delete()
                 db.commit()
-
-                return True and self.delete_shared_chat_by_chat_id(id)
-        except Exception:
+                
+                success = True and self.delete_shared_chat_by_chat_id(id)
+                
+                if success:
+                    log.info(f"Successfully deleted chat {id} by user {user_id} with {cleanup_results['files_deleted']} files")
+                
+                return success
+                
+        except Exception as e:
+            log.error(f"Failed to delete chat {id} for user {user_id}: {e}")
             return False
 
     def delete_chats_by_user_id(self, user_id: str) -> bool:
+        """Delete all chats for a user with bulk file cleanup."""
+        from open_webui.utils.file_cleanup import file_cleanup_manager
+        
         try:
+            # Get all user chats for cleanup
+            user_chats = self.get_chat_list_by_user_id(user_id)
+            
+            total_cleanup_stats = {
+                'files_processed': 0,
+                'files_deleted': 0,
+                'images_cleaned': 0,
+                'errors': []
+            }
+            
+            # Cleanup files for each chat
+            for chat in user_chats:
+                cleanup_results = file_cleanup_manager.cleanup_chat_files(chat.id)
+                total_cleanup_stats['files_processed'] += cleanup_results['files_processed']
+                total_cleanup_stats['files_deleted'] += cleanup_results['files_deleted']
+                total_cleanup_stats['images_cleaned'] += cleanup_results['images_cleaned']
+                total_cleanup_stats['errors'].extend(cleanup_results['errors'])
+            
+            # Delete shared chats first
+            self.delete_shared_chats_by_user_id(user_id)
+            
+            # Delete all user chats
             with get_db() as db:
-                self.delete_shared_chats_by_user_id(user_id)
-
                 db.query(Chat).filter_by(user_id=user_id).delete()
                 db.commit()
-
-                return True
-        except Exception:
+            
+            log.info(f"Bulk delete for user {user_id}: {total_cleanup_stats}")
+            return True
+            
+        except Exception as e:
+            log.error(f"Failed to delete chats for user {user_id}: {e}")
             return False
 
     def delete_chats_by_user_id_and_folder_id(

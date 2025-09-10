@@ -3393,3 +3393,8 @@ LDAP_ATTRIBUTE_FOR_GROUPS = PersistentConfig(
     "ldap.server.attribute_for_groups",
     os.environ.get("LDAP_ATTRIBUTE_FOR_GROUPS", "memberOf"),
 )
+
+# File cleanup settings
+ENABLE_FILE_CLEANUP = os.environ.get("ENABLE_FILE_CLEANUP", "true").lower() == "true"
+FILE_CLEANUP_DELAY_MINUTES = int(os.environ.get("FILE_CLEANUP_DELAY_MINUTES", "0"))
+PRESERVE_SHARED_FILES = os.environ.get("PRESERVE_SHARED_FILES", "true").lower() == "true"
