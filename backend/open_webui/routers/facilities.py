@@ -13,7 +13,7 @@ from open_webui.utils.auth import get_verified_user
 from open_webui.retrieval.web.tavily import search_tavily
 from open_webui.retrieval.web.main import SearchResult
 
-# Standalone facilities prompt template
+# facilities prompt template
 FACILITIES_PROMPT = """You are an expert grant writer specializing in the 'Facilities, Equipment, and Other Resources' section of academic proposals for NSF and NIH grants.
 
 Your job is to expand and professionally refine the user's section draft using:
@@ -30,11 +30,11 @@ Your job is to expand and professionally refine the user's section draft using:
 
 **Example 1**  
 > *User:* "Our Robotics Lab has 10 industrial arms and a motion capture system."  
-> *Draft:* "The Robotics Lab features 10 industrial-grade robotic manipulators and an advanced OptiTrack motion capture system for multi-agent interaction studies [0]."
+> *Draft:* "The Robotics Lab features 10 industrial-grade robotic manipulators and an advanced OptiTrack motion capture system for multi-agent interaction studies [1]."
 
 **Example 2**  
 > *User:* "We use NYU's HPC system with 1000 GPUs."  
-> *Draft:* "High-performance computing is supported by NYU's HPC cluster with 1,024 NVIDIA A100 GPUs [1]."
+> *Draft:* "High-performance computing is supported by NYU's HPC cluster with 1,024 NVIDIA A100 GPUs [2]."
 
 ---
 
@@ -60,7 +60,7 @@ Your job is to expand and professionally refine the user's section draft using:
 ### INSTRUCTIONS
 - Start with the User Input, retain all core ideas.
 - Expand with factual, cited data from PDF Chunks or Web Snippets.
-- Cite all sources using: [source_id] format (e.g., [0], [1]) when source tags are provided.
+- Cite all sources using: [source_id] format (e.g., [1], [2]) when source tags are provided.
 - Never invent or assume data not present in input or sources.
 - If no relevant info is found, return only the user's input — improved stylistically.
 
@@ -71,16 +71,16 @@ router = APIRouter()
 
 class FacilitiesRequest(BaseModel):
     sponsor: str  
-    form_data: Dict[str, str]  # Section ID -> content mapping
-    model: str  # User's selected model ID
-    web_search_enabled: bool = False  # Whether web search is enabled
+    form_data: Dict[str, str]  
+    model: str  
+    web_search_enabled: bool = False  
 
 class FacilitiesResponse(BaseModel):
     success: bool
     message: str
-    content: str  # Formatted content for chat display
-    sources: List[Dict]  # Sources in chat format
-    sections: Dict[str, str]  # Keep sections for debugging
+    content: str 
+    sources: List[Dict]  
+    sections: Dict[str, str]  
     error: Optional[str] = None
 
 def get_section_labels(sponsor: str) -> List[str]:
@@ -102,15 +102,14 @@ def get_section_labels(sponsor: str) -> List[str]:
 
 def facilities_web_search(query: str, request: Request, user) -> tuple[str, List[str]]:
     """
-    Standalone web search for facilities - uses existing NAGA Tavily configuration
+     web search for facilities - uses existing NAGA Tavily configuration
     """
     try:
-        # Check if Tavily API key is configured
+    
         if not request.app.state.config.TAVILY_API_KEY:
             logging.warning("TAVILY_API_KEY not configured in NAGA")
             return "", []
         
-        # Get Tavily API key from existing NAGA config
         tavily_api_key = request.app.state.config.TAVILY_API_KEY.get(user.email)
         if not tavily_api_key:
             logging.warning(f"No Tavily API key found for user: {user.email}")
@@ -118,7 +117,6 @@ def facilities_web_search(query: str, request: Request, user) -> tuple[str, List
         
         logging.info(f"Starting facilities web search for query: {query}")
         
-        # Domain filtering
         allowed_domains = ["nyu.edu", "nsf.gov"]
         blocklist = [
             "https://med.nyu.edu/research/scientific-cores-shared-resources/high-performance-computing-core"
@@ -127,7 +125,6 @@ def facilities_web_search(query: str, request: Request, user) -> tuple[str, List
         snippets = []
         urls = []
         
-        # Use existing NAGA Tavily function with domain filtering
         for domain in allowed_domains:
             logging.info(f"Searching domain: {domain}")
             try:
@@ -165,7 +162,7 @@ def facilities_web_search(query: str, request: Request, user) -> tuple[str, List
 
 def facilities_web_search_specific_sites(query: str, allowed_sites: List[str], request: Request, user) -> tuple[str, List[str]]:
     """
-    Standalone web search within specific sites - uses existing NAGA Tavily configuration
+    web search within specific sites - uses existing NAGA Tavily configuration
     """
     try:
        
@@ -210,9 +207,8 @@ def facilities_web_search_specific_sites(query: str, allowed_sites: List[str], r
         return f"Web search failed: {e}", []
 
 def search_knowledge_base(query: str, user_id: str, request: Request, k: int = 5) -> List[tuple]:
-    """Simple knowledge base search - standalone function"""
+    """Simple knowledge base search"""
     try:
-        # Get user's knowledge bases
         knowledge_bases = Knowledges.get_knowledge_bases_by_user_id(user_id, "read")
         collection_names = [kb.id for kb in knowledge_bases]
         
@@ -220,7 +216,6 @@ def search_knowledge_base(query: str, user_id: str, request: Request, k: int = 5
             logging.warning("No knowledge bases found for user")
             return []
         
-        # Generate embeddings for the query
         try:
             embedding_function = request.app.state.EMBEDDING_FUNCTION
             query_embedding = embedding_function(query, user_id)
@@ -249,7 +244,6 @@ def search_knowledge_base(query: str, user_id: str, request: Request, k: int = 5
                             metadata = metadatas[i]
                             source = 'unknown'
                             
-                            #Debug: log the metadata structure
                             logging.info(f"Metadata for document {i}: {metadata}")
                             
                             
@@ -267,7 +261,6 @@ def search_knowledge_base(query: str, user_id: str, request: Request, k: int = 5
                 logging.warning(f"Failed to search collection {collection_name}: {e}")
                 continue
         
-        # Sort by relevance and return top k
         return results[:k]
         
     except Exception as e:
@@ -275,19 +268,16 @@ def search_knowledge_base(query: str, user_id: str, request: Request, k: int = 5
         return []
 
 async def call_llm_direct(prompt: str, model: str, user, request: Request) -> str:
-    """Direct LLM call using existing chat completion system - simplified approach"""
+    """Direct LLM call using existing chat completion system"""
     try:
-        # Use the existing chat completion system but with a simple approach
         from open_webui.utils.chat import generate_chat_completion
         
-        # Create form data for chat completion
         form_data = {
             "model": model,
             "messages": [{"role": "user", "content": prompt}],
             "stream": False
         }
         
-        # Call the existing chat completion system
         completion_response = await generate_chat_completion(
             request=request,
             form_data=form_data,
@@ -295,7 +285,7 @@ async def call_llm_direct(prompt: str, model: str, user, request: Request) -> st
             bypass_filter=True
         )
         
-        # Extract content
+
         if isinstance(completion_response, dict) and "choices" in completion_response:
             return completion_response["choices"][0]["message"]["content"].strip()
         else:
@@ -308,21 +298,17 @@ async def call_llm_direct(prompt: str, model: str, user, request: Request) -> st
 @router.post("/generate", response_model=FacilitiesResponse)
 async def generate_facilities_response(request: Request, form_data: FacilitiesRequest, user=Depends(get_verified_user)):
     """
-    Generate facilities response - completely standalone implementation
+    Generate facilities response
     Only works when facilities is enabled for the user
     """
-    # Check if facilities is enabled for this user
     if not request.app.state.config.ENABLE_FACILITIES.get(user.email):
         raise HTTPException(status_code=403, detail="Facilities feature is not enabled for this user")
     try:
-        # Validate sponsor
         if form_data.sponsor not in ["NSF", "NIH"]:
             raise HTTPException(status_code=400, detail="Invalid sponsor. Must be 'NSF' or 'NIH'")
         
-        # Get section labels
         section_labels = get_section_labels(form_data.sponsor)
         
-        # Map form data to section labels
         field_mappings = {
             "projectTitle": "1. Project Title",
             "researchSpaceFacilities": "2. Research Space and Facilities", 
@@ -334,13 +320,12 @@ async def generate_facilities_response(request: Request, form_data: FacilitiesRe
             "equipment": "7. Equipment"
         }
         
-        # Extract user inputs
+       
         user_inputs = {}
         for form_key, section_label in field_mappings.items():
             if form_key in form_data.form_data and section_label in section_labels:
                 user_inputs[section_label] = form_data.form_data[form_key].strip()
         
-        # Check if we have any input
         if not any(user_inputs.values()):
             return FacilitiesResponse(
                 success=False,
@@ -350,10 +335,10 @@ async def generate_facilities_response(request: Request, form_data: FacilitiesRe
                 error="Please fill in at least one form field"
             )
         
-        # Process each section
+        
         section_outputs = {}
         all_sources = []
-        source_index = 0 
+        source_index = 1  
         
         for section, user_text in user_inputs.items():
             if not user_text:
@@ -364,34 +349,35 @@ async def generate_facilities_response(request: Request, form_data: FacilitiesRe
             
             query = f"{section}: {user_text}"
             
-            # Search knowledge base
+            
             search_results = search_knowledge_base(query, user.id, request, k=5)
             
-            # Format retrieved chunks with NAGA-style source tags
+             
             retrieved_chunks = []
             section_sources = []
             
-            # Group chunks by source to match NAGA's structure
+            
             source_groups = {}
             for doc, source in search_results:
                 if source not in source_groups:
                     source_groups[source] = []
                 source_groups[source].append(doc)
             
-            # Create one source per unique source file with distances for match percentages
             for source, docs in source_groups.items():
+                # Use the same source_index for all documents from this source
+                current_source_index = source_index
+                logging.info(f"Processing source '{source}' with {len(docs)} documents, using citation index {current_source_index}")
                 
                 for doc in docs:
-                    retrieved_chunks.append(f"<source><source_id>{source_index}</source_id><source_context>{doc}</source_context></source>")
-                
+                    retrieved_chunks.append(f"<source><source_id>{current_source_index}</source_id><source_context>{doc}</source_context></source>")
                 
                 mock_distances = [0.15] * len(docs)  
                 
                 section_sources.append({
                     "source": {"name": source},
-                    "document": docs,  # All chunks from this source
+                    "document": docs,  
                     "metadata": [{"source": source, "name": source}] * len(docs),
-                    "distances": mock_distances  # Add distances for match percentages
+                    "distances": mock_distances 
                 })
                 source_index += 1
             
@@ -401,7 +387,7 @@ async def generate_facilities_response(request: Request, form_data: FacilitiesRe
             logging.info(f"Found {len(search_results)} chunks for {section}")
             logging.info(f"Sources found: {[source for _, source in search_results]}")
             
-            # Perform web search only if enabled - exactly like Research Facilities
+            # web search only if enabled
             web_content = ""
             web_links = []
             web_source_tags = []
@@ -409,7 +395,6 @@ async def generate_facilities_response(request: Request, form_data: FacilitiesRe
             if form_data.web_search_enabled:
                 logging.info(f"Web search enabled for section: {section}")
                 if section == "5a. Internal Facilities (NYU)":
-                    # Special handling for NYU Internal Facilities
                     allowed_sites = [
                         "https://sites.google.com/nyu.edu/nyu-hpc/",
                         "https://www.nyu.edu/life/information-technology/research-computing-services/high-performance-computing.html",
@@ -428,16 +413,18 @@ async def generate_facilities_response(request: Request, form_data: FacilitiesRe
                 
                 # Format web content with source tags and add to sources
                 if web_content and web_links:
-                    # Split web content by URLs to create separate sources for each URL (like existing NAGA system)
-                    web_content_parts = web_content.split('\n\n---\n\n')  # Split by separator
+                    
+                    web_content_parts = web_content.split('\n\n---\n\n')
                     
                     for i, (content_part, url) in enumerate(zip(web_content_parts, web_links)):
                         if content_part.strip() and url.strip():
-                            # Create source tag for this specific URL
-                            web_source_tags.append(f"<source><source_id>{source_index}</source_id><source_context>{content_part.strip()}</source_context></source>")
+                            # Use current source_index for this web source
+                            current_web_source_index = source_index
+                            logging.info(f"Processing web source '{url}' using citation index {current_web_source_index}")
+                            web_source_tags.append(f"<source><source_id>{current_web_source_index}</source_id><source_context>{content_part.strip()}</source_context></source>")
                             
-                            # Add mock distance for web sources (0.1 = 90% relevance for web content)
-                            web_distances = [0.1]  # High relevance for web search results (0.1 distance = 90% relevance)
+
+                            web_distances = [0.1] 
                             
                             # Create separate source for each URL (like existing NAGA system)
                             all_sources.append({
@@ -452,28 +439,23 @@ async def generate_facilities_response(request: Request, form_data: FacilitiesRe
             else:
                 logging.info(f"Web search disabled for {section}")
             
-            # Combine all source tags (knowledge base + web)
+            # knowledge base + web
             all_source_tags = retrieved_chunks + web_source_tags
             combined_sources = "\n\n".join(all_source_tags) if all_source_tags else "No relevant sources found."
             
-            # Create prompt with combined sources
             prompt = FACILITIES_PROMPT.format(
                 section=section,
                 user_input=user_text,
                 retrieved_chunks=combined_sources,
-                web_snippets=""  # Not used anymore since web content is in retrieved_chunks
+                web_snippets="" 
             )
             
-            # Call LLM directly
             try:
                 generated_content = await call_llm_direct(prompt, form_data.model, user, request)
                 
-                # Clean up the generated content - keep citations as they are now part of the content
                 import re
-                # Don't remove citations anymore - they should be included in the final output
                 cleaned_content = generated_content.strip()
                 
-                # Check if the content is an error message
                 if cleaned_content.startswith('Error:') or 'Connection aborted' in cleaned_content:
                     logging.warning(f"LLM returned error for {section}, using user input as fallback")
                     section_outputs[section] = user_text
@@ -484,7 +466,6 @@ async def generate_facilities_response(request: Request, form_data: FacilitiesRe
                 
             except Exception as e:
                 logging.error(f"Failed to generate content for {section}: {e}")
-                # Use user input as fallback
                 section_outputs[section] = user_text
         
         if not section_outputs:
@@ -497,24 +478,20 @@ async def generate_facilities_response(request: Request, form_data: FacilitiesRe
                 error="Failed to generate any sections"
             )
         
-        # Format content for chat display - show each section individually like Streamlit app
         content = f"# Facilities Response for {form_data.sponsor}\n\n"
         
-        # Add each section with proper formatting and clear separation
         for section_name, section_content in section_outputs.items():
             content += f"## {section_name}\n\n{section_content}\n\n"
         
-        # Sources are already in NAGA format from the processing above
         formatted_sources = all_sources
         logging.info(f"Final sources count: {len(formatted_sources)}")
         logging.info(f"Final sources: {[s.get('source', {}).get('name', 'unknown') for s in formatted_sources]}")
         
-        # Return results in chat format
         return FacilitiesResponse(
             success=True,
             message=f"Successfully generated {len(section_outputs)} sections for {form_data.sponsor}",
             content=content,
-            sections=section_outputs,  # Keep for debugging
+            sections=section_outputs, 
             sources=formatted_sources
         )
         
@@ -528,7 +505,6 @@ async def get_facilities_sections(sponsor: str, request: Request, user=Depends(g
     Get the section labels for a specific sponsor
     Only works when facilities is enabled for the user
     """
-    # Check if facilities is enabled for this user
     if not request.app.state.config.ENABLE_FACILITIES.get(user.email):
         raise HTTPException(status_code=403, detail="Facilities feature is not enabled for this user")
     try:
@@ -550,10 +526,9 @@ async def get_facilities_sections(sponsor: str, request: Request, user=Depends(g
 @router.post("/web-search")
 async def facilities_web_search_endpoint(request: Request, form_data: dict, user=Depends(get_verified_user)):
     """
-    Standalone web search endpoint specifically for facilities - uses existing NAGA Tavily configuration
+    web search endpoint specifically for facilities - uses existing NAGA Tavily configuration
     Only works when facilities is enabled for the user
     """
-    # Check if facilities is enabled for this user
     if not request.app.state.config.ENABLE_FACILITIES.get(user.email):
         raise HTTPException(status_code=403, detail="Facilities feature is not enabled for this user")
     try:
@@ -575,25 +550,25 @@ async def facilities_web_search_endpoint(request: Request, form_data: dict, user
         logging.error(f"Facilities standalone web search failed: {e}")
         raise HTTPException(status_code=500, detail=f"Web search failed: {str(e)}")
 
-@router.post("/reindex")
-async def reindex_facilities_pdfs(request: Request, user=Depends(get_verified_user)):
-    """
-    Reindex PDFs in the knowledge base for facilities
-    Only works when facilities is enabled for the user
-    """
-    # Check if facilities is enabled for this user
-    if not request.app.state.config.ENABLE_FACILITIES.get(user.email):
-        raise HTTPException(status_code=403, detail="Facilities feature is not enabled for this user")
-    try:
-        # This would trigger a reindexing of PDFs in the knowledge base
-        # For now, return a success message
-        logging.info(f"Reindexing PDFs for user {user.id}")
+# @router.post("/reindex")
+# async def reindex_facilities_pdfs(request: Request, user=Depends(get_verified_user)):
+#     """
+#     Reindex PDFs in the knowledge base for facilities
+#     Only works when facilities is enabled for the user
+#     """
+#     # Check if facilities is enabled for this user
+#     if not request.app.state.config.ENABLE_FACILITIES.get(user.email):
+#         raise HTTPException(status_code=403, detail="Facilities feature is not enabled for this user")
+#     try:
+#         # This would trigger a reindexing of PDFs in the knowledge base
+#         # For now, return a success message
+#         logging.info(f"Reindexing PDFs for user {user.id}")
         
-        return {
-            "success": True,
-            "message": "PDFs reindexed successfully"
-        }
+#         return {
+#             "success": True,
+#             "message": "PDFs reindexed successfully"
+#         }
         
-    except Exception as e:
-        logging.error(f"Error reindexing PDFs: {e}")
-        raise HTTPException(status_code=500, detail=f"Failed to reindex PDFs: {str(e)}")
+#     except Exception as e:
+#         logging.error(f"Error reindexing PDFs: {e}")
+#         raise HTTPException(status_code=500, detail=f"Failed to reindex PDFs: {str(e)}")

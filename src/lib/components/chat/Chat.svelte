@@ -35,6 +35,7 @@
 		showOverview,
 		chatTitle,
 		showArtifacts,
+		showFacilitiesOverlay,
 		tools
 	} from '$lib/stores';
 	import {
@@ -442,6 +443,7 @@
 				showCallOverlay.set(false);
 				showOverview.set(false);
 				showArtifacts.set(false);
+				showFacilitiesOverlay.set(false);
 			}
 		});
 
@@ -980,8 +982,9 @@
 				parentId: userMessageId,
 				childrenIds: [],
 				role: 'assistant',
-				content: `[RESPONSE] ${responseMessageId}`,
+				content: _raw ? userPrompt : `[RESPONSE] ${responseMessageId}`,
 				done: true,
+				sources: _raw ? sources : undefined,
 
 				model: modelId,
 				modelName: model.name ?? model.id,
@@ -1223,7 +1226,7 @@
 	// Chat functions
 	//////////////////////////
 
-	const submitPrompt = async (userPrompt, { _raw = false } = {}) => {
+	const submitPrompt = async (userPrompt, { _raw = false, sources = [] } = {}) => {
 		console.log('submitPrompt', userPrompt, $chatId);
 
 		const messages = createMessagesList(history, history.currentId);
@@ -2107,6 +2110,8 @@
 				{stopResponse}
 				{showMessage}
 				{eventTarget}
+				{addMessages}
+				bind:webSearchEnabled
 			/>
 		</PaneGroup>
 	{:else if loading}

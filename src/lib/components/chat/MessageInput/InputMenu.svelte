@@ -3,7 +3,7 @@
 	import { flyAndScale } from '$lib/utils/transitions';
 	import { getContext, onMount, tick } from 'svelte';
 
-	import { config, user, tools as _tools, mobile } from '$lib/stores';
+	import { config, user, tools as _tools, mobile, showFacilitiesOverlay, showControls } from '$lib/stores';
 	import { createPicker } from '$lib/utils/google-drive-picker';
 
 	import { getTools } from '$lib/apis/tools';
@@ -20,6 +20,7 @@
 	import CameraSolid from '$lib/components/icons/CameraSolid.svelte';
 	import PhotoSolid from '$lib/components/icons/PhotoSolid.svelte';
 	import CommandLineSolid from '$lib/components/icons/CommandLineSolid.svelte';
+	import Cog6Solid from '$lib/components/icons/Cog6Solid.svelte';
 
 	const i18n = getContext('i18n');
 
@@ -37,9 +38,15 @@
 	let tools = {};
 	let show = false;
 	let showTools = false;
+	let facilitiesEnabled = false;
 
 	$: if (show) {
 		init();
+	}
+
+	// Reset facilities toggle when overlay is closed
+	$: if (!$showFacilitiesOverlay && facilitiesEnabled) {
+		facilitiesEnabled = false;
 	}
 
 	let fileUploadEnabled = true;
@@ -196,6 +203,28 @@
 				</DropdownMenu.Item>
 			</Tooltip>
 			<!-- Upload Files -->
+
+			<!-- Facilities Toggle -->
+			{#if $config?.features?.enable_facilities}
+				<div class="flex gap-2 items-center px-3 py-2 text-sm font-medium cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 rounded-xl">
+					<Cog6Solid />
+					<div class="line-clamp-1 flex-1">{$i18n.t('Facilities')}</div>
+					<div class="shrink-0">
+						<Switch
+							state={facilitiesEnabled}
+							on:change={async (e) => {
+								facilitiesEnabled = e.detail;
+								if (facilitiesEnabled) {
+									showFacilitiesOverlay.set(true);
+									showControls.set(true); // Open the controls panel
+									show = false; // Close the dropdown menu
+								}
+							}}
+						/>
+					</div>
+				</div>
+			{/if}
+			<!-- Facilities -->
 
 			{#if $config?.features?.enable_google_drive_integration}
 				<DropdownMenu.Item
