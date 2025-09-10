@@ -25,6 +25,7 @@ else
 fi
 
 # Update backend
+echo "Updating backend"
 cd backend || exit 1
 source venv/bin/activate
 pip install -r requirements.txt >> "$LOGFILE" 2>&1
