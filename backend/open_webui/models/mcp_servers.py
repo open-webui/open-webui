@@ -417,6 +417,13 @@ class MCPServers:
             server = db.query(MCPServer).filter(MCPServer.id == id).first()
             return MCPServerModel.model_validate(server) if server else None
 
+    def get_mcp_servers_by_ids(self, ids: list[str]) -> list[MCPServerModel]:
+        with get_db() as db:
+            if not ids:
+                return []
+            servers = db.query(MCPServer).filter(MCPServer.id.in_(ids)).all()
+            return [MCPServerModel.model_validate(server) for server in servers]
+
     def get_mcp_servers_by_user_id(
         self, user_id: str, permission: str = "read"
     ) -> List[MCPServerModel]:

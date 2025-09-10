@@ -20,6 +20,7 @@ from open_webui.utils.tools import get_tool_specs
 from open_webui.utils.auth import get_admin_user, get_verified_user
 from open_webui.utils.access_control import has_access, has_permission
 from open_webui.utils.tools import get_tool_servers_data
+from open_webui.models.groups import Groups
 
 from open_webui.env import SRC_LOG_LEVELS
 from open_webui.config import CACHE_DIR, ENABLE_ADMIN_WORKSPACE_CONTENT_ACCESS
@@ -40,26 +41,59 @@ def filter_mcp_tools(tools: list, user_id: str | None = None) -> list:
     - MCP tools that are public (server.access_control is None)
     - MCP tools that belong to the requesting user (personal)
     - MCP tools where the requesting user has read access via server access_control (e.g., group-shared)
+    - Collects all referenced MCP server IDs and loads them in one query
+    - Precomputes user group IDs once for access checks
     """
+    if not tools:
+        return []
+
+    # Collect MCP server IDs referenced by tools
+    mcp_server_ids = []
+    for tool in tools:
+        meta_dict = tool.meta.model_dump() if tool.meta else {}
+        manifest = meta_dict.get("manifest", {})
+        if manifest.get("type") == "mcp" and manifest.get("mcp_server_id"):
+            mcp_server_ids.append(manifest["mcp_server_id"])
+
+    server_by_id = {}
+    if mcp_server_ids:
+        try:
+            from open_webui.models.mcp_servers import MCPServers
+
+            servers = MCPServers.get_mcp_servers_by_ids(list(set(mcp_server_ids)))
+            server_by_id = {server.id: server for server in servers}
+        except Exception:
+            server_by_id = {}
+
+    # Precompute user group IDs for permission checks
+    user_group_ids = None
+    if user_id is not None:
+        try:
+            user_group_ids = [g.id for g in Groups.get_groups_by_member_id(user_id)]
+        except Exception:
+            user_group_ids = []
+
     filtered_tools = []
     for tool in tools:
         meta_dict = tool.meta.model_dump() if tool.meta else {}
         manifest = meta_dict.get("manifest", {})
         if manifest.get("type") == "mcp":
             server_is_accessible = False
-            try:
-                if manifest.get("mcp_server_id"):
-                    from open_webui.models.mcp_servers import MCPServers
-                    server_id = manifest["mcp_server_id"]
-                    server = MCPServers.get_mcp_server_by_id(server_id)
-                    if server:
-                        # Public servers or group-shared/private where user has read access
-                        server_is_accessible = (
-                            server.access_control is None
-                            or (user_id is not None and has_access(user_id, "read", server.access_control))
+            server_id = manifest.get("mcp_server_id")
+            if server_id and server_id in server_by_id:
+                server = server_by_id[server_id]
+                server_is_accessible = (
+                    server.access_control is None
+                    or (
+                        user_id is not None
+                        and has_access(
+                            user_id,
+                            "read",
+                            server.access_control,
+                            user_group_ids=user_group_ids,
                         )
-            except Exception:
-                server_is_accessible = False
+                    )
+                )
 
             is_personal_for_user = user_id is not None and getattr(tool, "user_id", None) == user_id
 
