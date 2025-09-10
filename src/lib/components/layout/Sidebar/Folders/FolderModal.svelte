@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { getContext, createEventDispatcher, onMount } from 'svelte';
+	import { getContext, createEventDispatcher, onMount, tick } from 'svelte';
 
 	import Spinner from '$lib/components/common/Spinner.svelte';
 	import Modal from '$lib/components/common/Modal.svelte';
@@ -8,9 +8,10 @@
 	import { toast } from 'svelte-sonner';
 	import { page } from '$app/stores';
 	import { goto } from '$app/navigation';
+	import { user } from '$lib/stores';
+
 	import Textarea from '$lib/components/common/Textarea.svelte';
 	import Knowledge from '$lib/components/workspace/Models/Knowledge.svelte';
-	import { user } from '$lib/stores';
 	const i18n = getContext('i18n');
 
 	export let show = false;
@@ -52,6 +53,19 @@
 			files: []
 		};
 	};
+
+	const focusInput = async () => {
+		await tick();
+		const input = document.getElementById('folder-name') as HTMLInputElement;
+		if (input) {
+			input.focus();
+			input.select();
+		}
+	};
+
+	$: if (show) {
+		focusInput();
+	}
 
 	$: if (folder) {
 		init();
@@ -99,6 +113,7 @@
 
 						<div class="flex-1">
 							<input
+								id="folder-name"
 								class="w-full text-sm bg-transparent placeholder:text-gray-300 dark:placeholder:text-gray-700 outline-hidden"
 								type="text"
 								bind:value={name}
