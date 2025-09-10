@@ -5,6 +5,29 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.6.28] - 2025-09-10
+
+### Added
+
+- 🗂️ Folder modal now automatically focuses on the title input field for better UX.
+- 🌐 Updated Portuguese (Brazil) and Simplified Chinese translations with new entries. [#17317](https://github.com/open-webui/open-webui/pull/17317), [#17320](https://github.com/open-webui/open-webui/pull/17320)
+
+### Fixed
+
+- 🔑 Fixed OpenAI connection API key not registering or updating properly.
+- 📝 Fixed prompt command with template variables to correctly show input modal.
+- 🔊 Fixed OpenAI audio Text-to-Speech URL issue.
+- ⚙️ Fixed model command filter behavior.
+
+### Changed
+
+- 📦 Updated Chroma dependency.
+- 🛠️ Various chore updates including formatting and dependency bumps.
+- build(deps): bump elasticsearch from 9.0.1 to 9.1.0 in.
+- build(deps): bump googleapis-common-protos from 1.63.2 to 1.70.0.
+- build(deps): bump pgvector from 0.4.0 to 0.4.1.
+- build(deps): bump psycopg2-binary from 2.9.9 to 2.9.10.
+
 ## [0.6.27] - 2025-09-09
 
 ### Added
