@@ -199,6 +199,18 @@ class DoclingLoader:
                 if self.params.get("pipeline"):
                     params["pipeline"] = self.params.get("pipeline")
 
+                if self.params.get("pipeline") == "vlm":
+                    if self.params.get("vlm_pipeline_model"):
+                        params["vlm_pipeline_model"] = self.params.get("vlm_pipeline_model")
+                    elif self.params.get("vlm_pipeline_model_local", {}):
+                        params["vlm_pipeline_model_local"] = json.dumps(
+                            self.params.get("vlm_pipeline_model_local", {})
+                        )
+                    elif self.params.get("vlm_pipeline_model_api", {}):
+                        params["vlm_pipeline_model_api"] = json.dumps(
+                            self.params.get("vlm_pipeline_model_api", {})
+                        )
+
             endpoint = f"{self.url}/v1/convert/file"
             r = requests.post(endpoint, files=files, data=params)
 
