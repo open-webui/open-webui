@@ -1387,12 +1387,6 @@ def save_docs_to_vector_db(
             items=items,
         )
 
-        # Validate the number of items inserted
-        result = VECTOR_DB_CLIENT.query(
-            collection_name=collection_name,
-            filter={"metadata": metadata} if metadata else None,
-        )
-
         return True
     except Exception as e:
         log.exception(e)
