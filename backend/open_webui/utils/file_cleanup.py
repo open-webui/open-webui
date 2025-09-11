@@ -34,8 +34,8 @@ class FileCleanupManager:
                 file_ids.add(file_ref['id'])
         
         # Check message files
-        messages = chat.chat.get('messages', {})
-        for message in messages.values():
+        messages = chat.chat.get('messages', [])
+        for message in messages:
             if message.get('files'):
                 for file_ref in message['files']:
                     if isinstance(file_ref, dict) and 'id' in file_ref:
