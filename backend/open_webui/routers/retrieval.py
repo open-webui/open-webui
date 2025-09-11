@@ -1334,7 +1334,7 @@ def save_docs_to_vector_db(
                 )
                 return True
 
-        log.info(f"adding to collection {collection_name}")
+        log.info(f"generating embeddings for {collection_name}")
         embedding_function = get_embedding_function(
             request.app.state.config.RAG_EMBEDDING_ENGINE,
             request.app.state.config.RAG_EMBEDDING_MODEL,
@@ -1381,9 +1381,16 @@ def save_docs_to_vector_db(
             for idx, text in enumerate(texts)
         ]
 
+        log.info(f"adding to collection {collection_name}")
         VECTOR_DB_CLIENT.insert(
             collection_name=collection_name,
             items=items,
+        )
+
+        # Validate the number of items inserted
+        result = VECTOR_DB_CLIENT.query(
+            collection_name=collection_name,
+            filter={"metadata": metadata} if metadata else None,
         )
 
         return True
