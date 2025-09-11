@@ -83,7 +83,6 @@
 	export let imageGenerationEnabled = false;
 	export let webSearchEnabled = false;
 	export let codeInterpreterEnabled = false;
-	export let selectedKnowledgeSources: string[] = [];
 
 	let correctionHintActive = false;
 	let messageIdForCorrection = null;
