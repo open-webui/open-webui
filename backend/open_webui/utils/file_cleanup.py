@@ -16,8 +16,8 @@ class FileCleanupManager:
     """Manages file cleanup operations with reference counting."""
     
     def __init__(self):
-        self.files_model = Files()
-        self.chats_model = Chats()
+        self.files_model = Files
+        self.chats_model = Chats
     
     def get_chat_file_references(self, chat_id: str) -> Set[str]:
         """Extract all file IDs referenced in a chat."""
