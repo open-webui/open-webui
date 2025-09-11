@@ -1216,15 +1216,7 @@ source
 ? 'bg-gray-50 dark:bg-gray-400/10 border-gray-100  dark:border-gray-700 text-gray-600 dark:text-gray-400  '
 : 'bg-transparent border-transparent text-gray-600 dark:text-gray-300  hover:bg-gray-100 dark:hover:bg-gray-800 '}"
 >
-<svg
-xmlns="http://www.w3.org/2000/svg"
-viewBox="0 0 20 20"
-fill="currentColor"
-class="size-5"
-><path
-d="M3.5 2.75a.75.75 0 00-1.5 0v14.5a.75.75 0 001.5 0v-4.392l1.657-.348a6.449 6.449 0 014.271.572 7.948 7.948 0 005.965.524l.338-.054a.75.75 0 00-.533-1.423l-.338.053a6.448 6.448 0 01-4.986-.454c-1.21-.44-2.522-.44-3.732 0l-1.657.348V2.75z"
-></path></svg
->
+<div class="w-2 h-2 bg-green-500 rounded-full"></div>
 <span
 class="hidden @xl:block whitespace-nowrap overflow-hidden text-ellipsis translate-y-[0.5px]"
 >{source}</span
