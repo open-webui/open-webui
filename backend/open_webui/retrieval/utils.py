@@ -432,13 +432,14 @@ def get_embedding_function(
             if isinstance(query, list):
                 embeddings = []
                 for i in range(0, len(query), embedding_batch_size):
-                    embeddings.extend(
-                        func(
-                            query[i : i + embedding_batch_size],
-                            prefix=prefix,
-                            user=user,
-                        )
+                    batch_embeddings = func(
+                        query[i : i + embedding_batch_size],
+                        prefix=prefix,
+                        user=user,
                     )
+
+                    if isinstance(batch_embeddings, list):
+                        embeddings.extend(batch_embeddings)
                 return embeddings
             else:
                 return func(query, prefix, user)
