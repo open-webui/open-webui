@@ -11,7 +11,10 @@ import logging
 from typing import List, Dict, Optional, Tuple
 from datetime import datetime
 
+from open_webui.env import SRC_LOG_LEVELS
+
 log = logging.getLogger(__name__)
+log.setLevel(SRC_LOG_LEVELS["GROUNDING"])
 
 
 class ConversationContextAnalyzer:

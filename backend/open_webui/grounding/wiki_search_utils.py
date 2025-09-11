@@ -8,9 +8,11 @@ import re
 from typing import Dict, List, Optional
 from datetime import datetime
 
+from open_webui.env import SRC_LOG_LEVELS
 from .context_analysis import analyze_conversation_context
 
 log = logging.getLogger(__name__)
+log.setLevel(SRC_LOG_LEVELS["GROUNDING"])
 
 
 def _get_txtai_embeddings():
