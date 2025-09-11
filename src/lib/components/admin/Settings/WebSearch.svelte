@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { getRAGConfig, updateRAGConfig } from '$lib/apis/retrieval';
+	import { getTaskConfig, updateTaskConfig } from '$lib/apis';
 	import Switch from '$lib/components/common/Switch.svelte';
 
 	import { models } from '$lib/stores';
@@ -13,6 +14,9 @@
 	export let saveHandler: Function;
 
 	let webConfig = null;
+	let taskConfig = {
+		ENABLE_SEARCH_QUERY_GENERATION: true
+	};
 	let webSearchEngines = [
 		'searxng',
 		'google_pse',
@@ -47,6 +51,7 @@
 			webConfig.search.domain_filter_list = [];
 		}
 
+		// Update both web config and task config
 		const res = await updateRAGConfig(localStorage.token, {
 			web: webConfig,
 			youtube: {
@@ -56,7 +61,16 @@
 			}
 		});
 
-		webConfig.search.domain_filter_list = webConfig.search.domain_filter_list.join(', ');
+		taskConfig = await updateTaskConfig(localStorage.token, taskConfig);
+
+		// Update webConfig with the response from server
+		if (res) {
+			webConfig = res.web;
+			// Convert array back to comma-separated string for display
+			if (webConfig?.search?.domain_filter_list && Array.isArray(webConfig.search.domain_filter_list)) {
+				webConfig.search.domain_filter_list = webConfig.search.domain_filter_list.join(', ');
+			}
+		}
 	};
 
 	onMount(async () => {
@@ -65,13 +79,22 @@
 		if (res) {
 			webConfig = res.web;
 			// Convert array back to comma-separated string for display
-			if (webConfig?.search?.domain_filter_list) {
+			if (webConfig?.search?.domain_filter_list && Array.isArray(webConfig.search.domain_filter_list)) {
 				webConfig.search.domain_filter_list = webConfig.search.domain_filter_list.join(', ');
+			} else if (!webConfig?.search?.domain_filter_list) {
+				// Initialize empty string if no domain filter list exists
+				webConfig.search.domain_filter_list = '';
 			}
 
 			youtubeLanguage = res.youtube.language.join(',');
 			youtubeTranslation = res.youtube.translation;
 			youtubeProxyUrl = res.youtube.proxy_url;
+		}
+
+		// Load task config for web search query generation setting
+		const taskRes = await getTaskConfig(localStorage.token);
+		if (taskRes) {
+			taskConfig = taskRes;
 		}
 	});
 </script>
@@ -470,6 +493,21 @@
 									: 'Use no proxy to fetch page contents.'}
 							>
 								<Switch bind:state={webConfig.search.trust_env} />
+							</Tooltip>
+						</div>
+					</div>
+
+					<div class="  mb-2.5 flex w-full justify-between">
+						<div class=" self-center text-xs font-medium">
+							{$i18n.t('Web Search Query Generation')}
+						</div>
+						<div class="flex items-center relative">
+							<Tooltip
+								content={taskConfig.ENABLE_SEARCH_QUERY_GENERATION
+									? 'Automatically generate multiple search queries to improve search results'
+									: 'Use your exact search query without LLM-generated variations'}
+							>
+								<Switch bind:state={taskConfig.ENABLE_SEARCH_QUERY_GENERATION} />
 							</Tooltip>
 						</div>
 					</div>

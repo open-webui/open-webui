@@ -32,7 +32,22 @@ router = APIRouter()
 @router.get("/", response_model=list[GroupResponse])
 async def get_groups(user=Depends(get_verified_user)):
     if user.role == "admin":
-        return Groups.get_groups(user.email)
+        # Check if super admin
+        first_user = Users.get_first_user()
+        allowed_emails = [
+            "sm11538@nyu.edu",
+            "ms15138@nyu.edu", 
+            "mb484@nyu.edu",
+            "cg4532@nyu.edu",
+            "jy4421@nyu.edu",
+            "ht2490@nyu.edu",
+            "ps5226@nyu.edu"
+        ]
+        
+        if (first_user and user.id == first_user.id) or user.email in allowed_emails:
+            return Groups.get_groups()  # Super admin gets ALL groups
+        else:
+            return Groups.get_groups(user.email)  # Normal admin gets their groups
     else:
         return Groups.get_groups_by_member_id(user.id)
 

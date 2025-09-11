@@ -24,3 +24,4 @@ class SearchResult(BaseModel):
     link: str
     title: Optional[str]
     snippet: Optional[str]
+    score: Optional[float] = 0.1

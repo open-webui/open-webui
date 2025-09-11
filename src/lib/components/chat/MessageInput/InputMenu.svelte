@@ -3,7 +3,7 @@
 	import { flyAndScale } from '$lib/utils/transitions';
 	import { getContext, onMount, tick } from 'svelte';
 
-	import { config, user, tools as _tools, mobile } from '$lib/stores';
+	import { config, user, tools as _tools, mobile, showControls, showFacilitiesOverlay } from '$lib/stores';
 	import { createPicker } from '$lib/utils/google-drive-picker';
 
 	import { getTools } from '$lib/apis/tools';
@@ -38,7 +38,7 @@
 	let show = false;
 	let showTools = false;
 
-	$: if (show) {
+	$: if (show || showTools) {
 		init();
 	}
 
@@ -105,7 +105,8 @@
 			align="start"
 			transition={flyAndScale}
 		>
-			{#if Object.keys(tools).length > 0}
+		<!-- Update: Remove tools from the "+" menu -->
+			<!-- {#if Object.keys(tools).length > 0}
 				<div class="  max-h-28 overflow-y-auto scrollbar-hidden">
 					{#each Object.keys(tools) as toolId}
 						<button
@@ -147,7 +148,7 @@
 				</div>
 
 				<hr class="border-black/5 dark:border-white/5 my-1" />
-			{/if}
+			{/if} -->
 
 			<Tooltip
 				content={!fileUploadEnabled ? $i18n.t('You do not have permission to upload files') : ''}
@@ -408,7 +409,7 @@
 				<hr class="border-black/5 dark:border-white/5 my-1" />
 			{/if}
 
-			<Tooltip
+			<!-- <Tooltip
 				content={!fileUploadEnabled ? $i18n.t('You do not have permission to upload files') : ''}
 				className="w-full"
 			>
@@ -433,10 +434,10 @@
 					<ChatBubbles />
 					<div class=" line-clamp-1">{$i18n.t('Tool A(Capture)')}</div>
 				</DropdownMenu.Item>
-			</Tooltip>
+			</Tooltip> -->
 			<!-- Tool A -->
 
-			<Tooltip
+			<!-- <Tooltip
 				content={!fileUploadEnabled ? $i18n.t('You do not have permission to upload files') : ''}
 				className="w-full"
 			>
@@ -453,8 +454,22 @@
 					<Bookmark />
 					<div class="line-clamp-1">{$i18n.t('Tool B(Upload Files)')}</div>
 				</DropdownMenu.Item>
-			</Tooltip>
+			</Tooltip> -->
 			<!-- Tool B -->
+
+			<!-- Research Facilities Form -->
+			<DropdownMenu.Item
+			class="flex gap-2 items-center px-3 py-2 text-sm font-medium cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 rounded-xl"
+			on:click={() => {
+				$showFacilitiesOverlay = true;
+				$showControls = true;
+			}}
+			>
+			<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.75" stroke="currentColor" class="size-4">
+				<path stroke-linecap="round" stroke-linejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 0 0-3.375-3.375h-1.5A1.125 1.125 0 0 1 13.5 7.125v-1.5a3.375 3.375 0 0 0-3.375-3.375H8.25m2.25 0H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0-1.125.504-1.125 1.125V11.25a9 9 0 0 0-9-9Z" />
+			</svg>
+			<div class="line-clamp-1">{('Research Facilities Form')}</div>
+			</DropdownMenu.Item>
 		</DropdownMenu.Content>
 	</div>
 </Dropdown>

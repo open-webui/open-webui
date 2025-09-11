@@ -4,11 +4,12 @@
 	import { Pane, PaneResizer } from 'paneforge';
 
 	import { onDestroy, onMount, tick } from 'svelte';
-	import { mobile, showControls, showCallOverlay, showOverview, showArtifacts } from '$lib/stores';
+	import { mobile, showControls, showCallOverlay, showOverview, showArtifacts, showFacilitiesOverlay } from '$lib/stores';
 
 	import Modal from '../common/Modal.svelte';
 	import Controls from './Controls/Controls.svelte';
 	import CallOverlay from './MessageInput/CallOverlay.svelte';
+	import FacilitiesOverlay from './MessageInput/FacilitiesOverlay.svelte';
 	import Drawer from '../common/Drawer.svelte';
 	import Overview from './Overview.svelte';
 	import EllipsisVertical from '../icons/EllipsisVertical.svelte';
@@ -27,8 +28,10 @@
 	export let submitPrompt: Function;
 	export let stopResponse: Function;
 	export let showMessage: Function;
+	export let addMessages: Function;
 	export let files;
 	export let modelId;
+	export let webSearchEnabled = false;
 
 	export let pane;
 
@@ -145,7 +148,7 @@
 				}}
 			>
 				<div
-					class=" {$showCallOverlay || $showOverview || $showArtifacts
+					class=" {$showCallOverlay || $showOverview || $showArtifacts || $showFacilitiesOverlay
 						? ' h-screen  w-full'
 						: 'px-6 py-4'} h-full"
 				>
@@ -160,6 +163,21 @@
 								{modelId}
 								{chatId}
 								{eventTarget}
+								on:close={() => {
+									showControls.set(false);
+								}}
+							/>
+						</div>
+					{:else if $showFacilitiesOverlay}
+						<div
+							class=" h-full max-h-[100dvh] bg-white text-gray-700 dark:bg-black dark:text-gray-300 flex justify-center"
+						>
+							<FacilitiesOverlay
+								{submitPrompt}
+								{modelId}
+								{history}
+								{addMessages}
+								{webSearchEnabled}
 								on:close={() => {
 									showControls.set(false);
 								}}
@@ -228,7 +246,7 @@
 			{#if $showControls}
 				<div class="pr-4 pb-8 flex max-h-full min-h-full">
 					<div
-						class="w-full {($showOverview || $showArtifacts) && !$showCallOverlay
+						class="w-full {($showOverview || $showArtifacts || $showFacilitiesOverlay) && !$showCallOverlay
 							? ' '
 							: 'px-4 py-4 bg-white dark:shadow-lg dark:bg-gray-850  border border-gray-100 dark:border-gray-850'}  rounded-xl z-40 pointer-events-auto overflow-y-auto scrollbar-hidden"
 					>
@@ -241,6 +259,19 @@
 									{modelId}
 									{chatId}
 									{eventTarget}
+									on:close={() => {
+										showControls.set(false);
+									}}
+								/>
+							</div>
+						{:else if $showFacilitiesOverlay}
+							<div class="w-full h-full flex justify-center">
+								<FacilitiesOverlay
+									{submitPrompt}
+									{modelId}
+									{history}
+									{addMessages}
+									{webSearchEnabled}
 									on:close={() => {
 										showControls.set(false);
 									}}
