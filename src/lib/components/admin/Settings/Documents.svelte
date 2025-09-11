@@ -170,6 +170,38 @@
 			toast.error($i18n.t('In order to force OCR, performing OCR must be enabled.'));
 			return;
 		}
+                if (
+			RAGConfig.CONTENT_EXTRACTION_ENGINE === 'docling' &&
+			RAGConfig.DOCLING_PIPELINE === 'vlm'
+		) {
+		    if (
+			RAGConfig.DOCLING_VLM_PIPELINE_MODEL_LOCAL !== '{}' &&
+			RAGConfig.DOCLING_VLM_PIPELINE_MODEL_LOCAL !== '' &&
+			RAGConfig.DOCLING_VLM_PIPELINE_MODEL_API !== '' &&
+			RAGConfig.DOCLING_VLM_PIPELINE_MODEL_API !== '{}'
+		    ) {
+			toast.error($i18n.t('Settings for local and api model for VLM pipeline are mutually exclusive.'));
+		        return;
+		    }
+		    if (
+			RAGConfig.DOCLING_VLM_PIPELINE_MODEL_LOCAL === '{}' &&
+			RAGConfig.DOCLING_VLM_PIPELINE_MODEL_API === '{}'
+		    ) {
+			toast.error($i18n.t('One settings for local or api model is mandatory for VLM pipeline.'));
+		        return;
+		    }
+		}
+		if (
+			RAGConfig.CONTENT_EXTRACTION_ENGINE === 'docling' &&
+			RAGConfig.DOCLING_DO_OCR &&
+			((RAGConfig.DOCLING_OCR_ENGINE === '' && RAGConfig.DOCLING_OCR_LANG !== '') ||
+				(RAGConfig.DOCLING_OCR_ENGINE !== '' && RAGConfig.DOCLING_OCR_LANG === ''))
+		) {
+			toast.error(
+				$i18n.t('Both Docling OCR Engine and Language(s) must be provided or both left empty.')
+			);
+			return;
+		}
 
 		if (
 			RAGConfig.CONTENT_EXTRACTION_ENGINE === 'datalab_marker' &&
@@ -216,6 +248,12 @@
 			ALLOWED_FILE_EXTENSIONS: RAGConfig.ALLOWED_FILE_EXTENSIONS.split(',')
 				.map((ext) => ext.trim())
 				.filter((ext) => ext !== ''),
+			DOCLING_VLM_PIPELINE_MODEL_LOCAL: JSON.parse(
+				RAGConfig.DOCLING_VLM_PIPELINE_MODEL_LOCAL || '{}'
+			),
+			DOCLING_VLM_PIPELINE_MODEL_API: JSON.parse(
+				RAGConfig.DOCLING_VLM_PIPELINE_MODEL_API || '{}'
+			),
 			DOCLING_PICTURE_DESCRIPTION_LOCAL: JSON.parse(
 				RAGConfig.DOCLING_PICTURE_DESCRIPTION_LOCAL || '{}'
 			),
@@ -256,6 +294,17 @@
 		);
 		config.DOCLING_PICTURE_DESCRIPTION_API = JSON.stringify(
 			config.DOCLING_PICTURE_DESCRIPTION_API ?? {},
+			null,
+			2
+		);
+
+		config.DOCLING_VLM_PIPELINE_MODEL_LOCAL = JSON.stringify(
+			config.DOCLING_VLM_PIPELINE_MODEL_LOCAL ?? {},
+			null,
+			2
+		);
+		config.DOCLING_VLM_PIPELINE_MODEL_API = JSON.stringify(
+			config.DOCLING_VLM_PIPELINE_MODEL_API ?? {},
 			null,
 			2
 		);
@@ -639,6 +688,50 @@
 									</select>
 								</div>
 							</div>
+							{#if RAGConfig.DOCLING_PIPELINE === 'vlm'}
+								<div class="flex flex-col gap-2 mt-2">
+									<div class=" flex flex-col w-full justify-between">
+										<div class=" mb-1 text-xs font-medium">
+											{$i18n.t('VLM Pipeline model Local Config')}
+										</div>
+										<div class="flex w-full items-center relative">
+											<Tooltip
+												content={$i18n.t(
+													'Options for running a local vision-language model for the VLM pipeline. The parameters refer to a model hosted on Hugging Face. This parameter is mutually exclusive with the VLM Pipeline Model API Config.'
+												)}
+												placement="top-start"
+												className="w-full"
+											>
+												<Textarea
+													bind:value={RAGConfig.DOCLING_VLM_PIPELINE_MODEL_LOCAL}
+													placeholder={$i18n.t('Enter Config in JSON format')}
+												/>
+											</Tooltip>
+										</div>
+									</div>
+								</div>
+								<div class="flex flex-col gap-2 mt-2">
+									<div class=" flex flex-col w-full justify-between">
+										<div class=" mb-1 text-xs font-medium">
+											{$i18n.t('VLM Pipeline model Api Config')}
+										</div>
+										<div class="flex w-full items-center relative">
+											<Tooltip
+												content={$i18n.t(
+													'API details for using a vision-language model for the for the VLM pipeline. This parameter is mutually exclusive with the VLM Pipeline Model Local Config.'
+												)}
+												placement="top-start"
+												className="w-full"
+											>
+												<Textarea
+													bind:value={RAGConfig.DOCLING_VLM_PIPELINE_MODEL_API}
+													placeholder={$i18n.t('Enter Config in JSON format')}
+												/>
+											</Tooltip>
+										</div>
+									</div>
+								</div>
+                                                        {/if}
 							<div class="flex w-full mt-2">
 								<div class="flex-1 flex justify-between">
 									<div class=" self-center text-xs font-medium">
