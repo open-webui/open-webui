@@ -71,6 +71,7 @@ def search_tavily(
                 link=result["url"],
                 title=result.get("title", ""),
                 snippet=result.get("content"),
+                score=result.get("score", 0.1),  # Include real score from Tavily
             )
             for result in all_results[:count]
         ]

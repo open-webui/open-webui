@@ -30,11 +30,13 @@ Your job is to expand and professionally refine the user's section draft using:
 
 **Example 1**  
 > *User:* "Our Robotics Lab has 10 industrial arms and a motion capture system."  
-> *Draft:* "The Robotics Lab features 10 industrial-grade robotic manipulators and an advanced OptiTrack motion capture system for multi-agent interaction studies [1]."
+> *Context:* `<source><source_id>Robotics_Lab_Equipment.pdf</source_id><source_context>Lab has 10 KUKA robotic arms and OptiTrack system</source_context></source>`
+> *Draft:* "The Robotics Lab features 10 industrial-grade robotic manipulators and an advanced OptiTrack motion capture system for multi-agent interaction studies [Robotics_Lab_Equipment.pdf]."
 
 **Example 2**  
 > *User:* "We use NYU's HPC system with 1000 GPUs."  
-> *Draft:* "High-performance computing is supported by NYU's HPC cluster with 1,024 NVIDIA A100 GPUs [2]."
+> *Context:* `<source><source_id>https://www.nyu.edu/hpc</source_id><source_context>NYU HPC cluster with 1,024 NVIDIA A100 GPUs</source_context></source>`
+> *Draft:* "High-performance computing is supported by NYU's HPC cluster with 1,024 NVIDIA A100 GPUs [https://www.nyu.edu/hpc]."
 
 ---
 
@@ -60,11 +62,22 @@ Your job is to expand and professionally refine the user's section draft using:
 ### INSTRUCTIONS
 - Start with the User Input, retain all core ideas.
 - Expand with factual, cited data from PDF Chunks or Web Snippets.
-- Cite all sources using: [source_id] format (e.g., [1], [2]) when source tags are provided.
+- Use specific technical details, numbers, and concrete information from the sources.
+- Write comprehensive, detailed content that demonstrates expertise and thoroughness.
+**CRITICAL CITATION RULES - FOLLOW EXACTLY:**
+- **MANDATORY: You MUST use source names/links in square brackets like [filename.pdf] or [https://url.com].**
+- **ONLY use source names/links that appear in `<source_id>` tags in the context above.**
+- **Look at the context above and find the exact `<source_id>` values.**
+- **If you see `<source><source_id>HRamani_NSFCAREER_SUBMITTED_Proposal_20240723_NSF.pdf</source_id>`, you MUST use [HRamani_NSFCAREER_SUBMITTED_Proposal_20240723_NSF.pdf].**
+- **If you see `<source><source_id>https://www.nyu.edu/hpc</source_id>`, you MUST use [https://www.nyu.edu/hpc].**
+- **NEVER use numbered citations like [1], [2], [3] - ALWAYS use the actual source name/link.**
+- **Do NOT use source names/links that are NOT in the `<source_id>` tags.**
+- **If no `<source_id>` tags are provided, do not include any citations.**
 - Never invent or assume data not present in input or sources.
 - If no relevant info is found, return only the user's input — improved stylistically.
+- Focus on creating professional, grant-worthy content that showcases facilities and capabilities.
 
-Write a polished section suitable for direct inclusion in an NSF or NIH grant.
+Write a polished, comprehensive section suitable for direct inclusion in an NSF or NIH grant.
 """
 
 router = APIRouter()
@@ -100,7 +113,7 @@ def get_section_labels(sponsor: str) -> List[str]:
     else:
         return nsf_sections
 
-def facilities_web_search(query: str, request: Request, user) -> tuple[str, List[str]]:
+def facilities_web_search(query: str, request: Request, user) -> tuple[str, List[str], List[float]]:
     """
      web search for facilities - uses existing NAGA Tavily configuration
     """
@@ -124,6 +137,7 @@ def facilities_web_search(query: str, request: Request, user) -> tuple[str, List
         
         snippets = []
         urls = []
+        scores = []
         
         for domain in allowed_domains:
             logging.info(f"Searching domain: {domain}")
@@ -140,13 +154,15 @@ def facilities_web_search(query: str, request: Request, user) -> tuple[str, List
                     for result in results:
                         url = result.link.strip()
                         content = result.snippet.strip()
-                        logging.info(f"Found result: {url[:50]}...")
+                        score = result.score if hasattr(result, 'score') else 0.1
+                        logging.info(f"Found result: {url[:50]}... with score: {score}")
                         
                         
                         if not any(url.startswith(bad) for bad in blocklist):
-                            snippets.append(f"{content}\n(Web Source: {url})")
+                            snippets.append(content)
                             urls.append(url)
-                            logging.info(f"Added to results: {url}")
+                            scores.append(score)
+                            logging.info(f"Added to results: {url} with score: {score}")
                         else:
                             logging.info(f"Blocked by filter: {url}")
                 else:
@@ -154,13 +170,13 @@ def facilities_web_search(query: str, request: Request, user) -> tuple[str, List
             except Exception as e:
                 logging.error(f"Error searching domain {domain}: {e}")
         
-        return "\n\n".join(snippets), urls
+        return "\n\n".join(snippets), urls, scores
         
     except Exception as e:
         logging.error(f"Facilities web search failed: {e}")
-        return f"Web search failed: {e}", []
+        return f"Web search failed: {e}", [], []
 
-def facilities_web_search_specific_sites(query: str, allowed_sites: List[str], request: Request, user) -> tuple[str, List[str]]:
+def facilities_web_search_specific_sites(query: str, allowed_sites: List[str], request: Request, user) -> tuple[str, List[str], List[float]]:
     """
     web search within specific sites - uses existing NAGA Tavily configuration
     """
@@ -180,6 +196,7 @@ def facilities_web_search_specific_sites(query: str, allowed_sites: List[str], r
         
         snippets = []
         urls = []
+        scores = []
         
         
         for site in allowed_sites:
@@ -195,19 +212,21 @@ def facilities_web_search_specific_sites(query: str, allowed_sites: List[str], r
             for result in results:
                 url = result.link
                 content = result.snippet.strip()
+                score = result.score if hasattr(result, 'score') else 0.1
                 
                 if any(url.startswith(s) for s in allowed_sites):
-                    snippets.append(f"{content}\n(Web Source: {url})")
+                    snippets.append(content)
                     urls.append(url)
+                    scores.append(score)
         
-        return "\n\n".join(snippets), urls
+        return "\n\n".join(snippets), urls, scores
         
     except Exception as e:
         logging.error(f"Facilities specific site web search failed: {e}")
-        return f"Web search failed: {e}", []
+        return f"Web search failed: {e}", [], []
 
 def search_knowledge_base(query: str, user_id: str, request: Request, k: int = 5) -> List[tuple]:
-    """Simple knowledge base search"""
+    """Simple knowledge base search with real relevance scores"""
     try:
         knowledge_bases = Knowledges.get_knowledge_bases_by_user_id(user_id, "read")
         collection_names = [kb.id for kb in knowledge_bases]
@@ -237,6 +256,7 @@ def search_knowledge_base(query: str, user_id: str, request: Request, k: int = 5
                 if search_results and hasattr(search_results, 'documents') and search_results.documents:
                     documents = search_results.documents[0]
                     metadatas = search_results.metadatas[0] if search_results.metadatas else []
+                    distances = search_results.distances[0] if hasattr(search_results, 'distances') and search_results.distances else []
                     
                     for i, doc in enumerate(documents):
                         if i < len(metadatas) and metadatas[i]:
@@ -255,7 +275,10 @@ def search_knowledge_base(query: str, user_id: str, request: Request, k: int = 5
                         else:
                             source = 'unknown'
                             logging.warning(f"No metadata found for document {i}")
-                        results.append((doc, source))
+                        
+                        # Get real distance/score if available
+                        real_score = distances[i] if i < len(distances) else 0.15
+                        results.append((doc, source, real_score))
                         
             except Exception as e:
                 logging.warning(f"Failed to search collection {collection_name}: {e}")
@@ -338,7 +361,8 @@ async def generate_facilities_response(request: Request, form_data: FacilitiesRe
         
         section_outputs = {}
         all_sources = []
-        source_index = 1  
+        cited_sources = set()  # Track which sources are actually cited in the text
+        # Using source names directly - frontend will handle the mapping  
         
         for section, user_text in user_inputs.items():
             if not user_text:
@@ -358,38 +382,41 @@ async def generate_facilities_response(request: Request, form_data: FacilitiesRe
             
             
             source_groups = {}
-            for doc, source in search_results:
+            for doc, source, score in search_results:
                 if source not in source_groups:
                     source_groups[source] = []
-                source_groups[source].append(doc)
+                source_groups[source].append((doc, score))
             
-            for source, docs in source_groups.items():
-                # Use the same source_index for all documents from this source
-                current_source_index = source_index
-                logging.info(f"Processing source '{source}' with {len(docs)} documents, using citation index {current_source_index}")
+            for source, docs_with_scores in source_groups.items():
+                
+                logging.info(f"Processing source '{source}' with {len(docs_with_scores)} documents, using source name directly")
+                
+                docs = [doc for doc, score in docs_with_scores]
+                real_distances = [score for doc, score in docs_with_scores]
                 
                 for doc in docs:
-                    retrieved_chunks.append(f"<source><source_id>{current_source_index}</source_id><source_context>{doc}</source_context></source>")
-                
-                mock_distances = [0.15] * len(docs)  
+                    retrieved_chunks.append(f"<source><source_id>{source}</source_id><source_context>{doc}</source_context></source>")
                 
                 section_sources.append({
                     "source": {"name": source},
                     "document": docs,  
                     "metadata": [{"source": source, "name": source}] * len(docs),
-                    "distances": mock_distances 
+                    "distances": real_distances 
                 })
-                source_index += 1
+                # No need to increment since we're using source names directly
             
             retrieved_texts_with_sources = "\n\n".join(retrieved_chunks) if retrieved_chunks else "No relevant PDF documents found in knowledge base."
             all_sources.extend(section_sources)
             
-            logging.info(f"Found {len(search_results)} chunks for {section}")
-            logging.info(f"Sources found: {[source for _, source in search_results]}")
+            logging.info(f"Added {len(section_sources)} sources to all_sources for {section}")
+            logging.info(f"Sources added: {[s.get('source', {}).get('name', 'unknown') for s in section_sources]}")
             
-            # web search only if enabled
+            logging.info(f"Found {len(search_results)} chunks for {section}")
+            logging.info(f"Sources found: {[source for _, source, _ in search_results]}")
+            
             web_content = ""
             web_links = []
+            web_scores = []
             web_source_tags = []
             
             if form_data.web_search_enabled:
@@ -401,53 +428,52 @@ async def generate_facilities_response(request: Request, form_data: FacilitiesRe
                         "https://www.nyu.edu/life/information-technology/research-computing-services/high-performance-computing/high-performance-computing-nyu-it.html"
                     ]
                     logging.info(f"Using specific sites search for NYU Internal Facilities")
-                    web_content, web_links = facilities_web_search_specific_sites(
+                    web_content, web_links, web_scores = facilities_web_search_specific_sites(
                         query, allowed_sites, request, user
                     )
                 else:
-                    # Standard web search for other sections
+
                     logging.info(f"Using standard web search for section: {section}")
-                    web_content, web_links = facilities_web_search(query, request, user)
+                    web_content, web_links, web_scores = facilities_web_search(query, request, user)
                 
                 logging.info(f"Web search results - Content length: {len(web_content) if web_content else 0}, Links: {len(web_links) if web_links else 0}")
                 
-                # Format web content with source tags and add to sources
                 if web_content and web_links:
                     
-                    web_content_parts = web_content.split('\n\n---\n\n')
+                    web_content_parts = web_content.split('\n\n')
                     
-                    for i, (content_part, url) in enumerate(zip(web_content_parts, web_links)):
+                    for i, (content_part, url, score) in enumerate(zip(web_content_parts, web_links, web_scores)):
                         if content_part.strip() and url.strip():
                             # Use current source_index for this web source
-                            current_web_source_index = source_index
-                            logging.info(f"Processing web source '{url}' using citation index {current_web_source_index}")
-                            web_source_tags.append(f"<source><source_id>{current_web_source_index}</source_id><source_context>{content_part.strip()}</source_context></source>")
+                            logging.info(f"Processing web source '{url}' using URL directly with score: {score}")
+                            web_source_tags.append(f"<source><source_id>{url}</source_id><source_context>{content_part.strip()}</source_context></source>")
                             
 
-                            web_distances = [0.1] 
+                            web_distances = [score]  # Use real score from web search
                             
                             # Create separate source for each URL (like existing NAGA system)
                             all_sources.append({
                                 "source": {"name": url, "url": url},  # Use URL as both name and url
                                 "document": [content_part.strip()],
                                 "metadata": [{"source": url, "name": url}],
-                                "distances": web_distances  # Add distances for match percentages
+                                "distances": web_distances  # Use real distances/scores
                             })
-                            source_index += 1
+                            logging.info(f"Added web source to all_sources: {url}")
+                            # No need to increment since we're using source names directly
                 
                 logging.info(f"Found {len(web_links)} web sources for {section}")
+                logging.info(f"Web URLs found: {web_links}")
             else:
                 logging.info(f"Web search disabled for {section}")
             
-            # knowledge base + web
-            all_source_tags = retrieved_chunks + web_source_tags
-            combined_sources = "\n\n".join(all_source_tags) if all_source_tags else "No relevant sources found."
+            pdf_sources = "\n\n".join(retrieved_chunks) if retrieved_chunks else "No relevant PDF documents found in knowledge base."
+            web_sources = "\n\n".join(web_source_tags) if web_source_tags else "No relevant web sources found."
             
             prompt = FACILITIES_PROMPT.format(
                 section=section,
                 user_input=user_text,
-                retrieved_chunks=combined_sources,
-                web_snippets="" 
+                retrieved_chunks=pdf_sources,
+                web_snippets=web_sources 
             )
             
             try:
@@ -461,7 +487,28 @@ async def generate_facilities_response(request: Request, form_data: FacilitiesRe
                     section_outputs[section] = user_text
                 else:
                     section_outputs[section] = cleaned_content
+                    
+                    # Extract cited sources from the generated text
+                    import re
+                    # Find all citations in the format [source_name] or [url]
+                    citations = re.findall(r'\[([^\]]+)\]', cleaned_content)
+                    for citation in citations:
+                        # Only add if it looks like a source (contains .pdf, .doc, http, or is a filename)
+                        if ('.pdf' in citation or '.doc' in citation or 
+                            citation.startswith('http') or 
+                            len(citation) > 10):  # Likely a filename
+                            cited_sources.add(citation)
+                    
                     logging.info(f"Generated content for {section}: {len(cleaned_content)} chars")
+                    logging.info(f"All citations found in {section}: {citations}")
+                    valid_citations = [c for c in citations if '.pdf' in c or '.doc' in c or c.startswith('http') or len(c) > 10]
+                    logging.info(f"Valid source citations in {section}: {valid_citations}")
+                    
+                    # Separate PDF and web citations for better debugging
+                    pdf_citations = [c for c in valid_citations if '.pdf' in c or '.doc' in c]
+                    web_citations = [c for c in valid_citations if c.startswith('http')]
+                    logging.info(f"PDF citations in {section}: {pdf_citations}")
+                    logging.info(f"Web citations in {section}: {web_citations}")
                     logging.info(f"Content preview: {cleaned_content[:200]}...")
                 
             except Exception as e:
@@ -483,8 +530,18 @@ async def generate_facilities_response(request: Request, form_data: FacilitiesRe
         for section_name, section_content in section_outputs.items():
             content += f"## {section_name}\n\n{section_content}\n\n"
         
-        formatted_sources = all_sources
+        # Filter sources to only include those that were actually cited in the text
+        filtered_sources = []
+        for source in all_sources:
+            source_name = source.get('source', {}).get('name', '')
+            if source_name in cited_sources:
+                filtered_sources.append(source)
+        
+        formatted_sources = filtered_sources
+        logging.info(f"Total sources found: {len(all_sources)}")
+        logging.info(f"Sources actually cited: {len(cited_sources)}")
         logging.info(f"Final sources count: {len(formatted_sources)}")
+        logging.info(f"Cited sources: {list(cited_sources)}")
         logging.info(f"Final sources: {[s.get('source', {}).get('name', 'unknown') for s in formatted_sources]}")
         
         return FacilitiesResponse(
@@ -523,52 +580,3 @@ async def get_facilities_sections(sponsor: str, request: Request, user=Depends(g
         logging.error(f"Error getting sections for {sponsor}: {e}")
         raise HTTPException(status_code=500, detail=f"Failed to get sections: {str(e)}")
 
-@router.post("/web-search")
-async def facilities_web_search_endpoint(request: Request, form_data: dict, user=Depends(get_verified_user)):
-    """
-    web search endpoint specifically for facilities - uses existing NAGA Tavily configuration
-    Only works when facilities is enabled for the user
-    """
-    if not request.app.state.config.ENABLE_FACILITIES.get(user.email):
-        raise HTTPException(status_code=403, detail="Facilities feature is not enabled for this user")
-    try:
-        query = form_data.get("query", "")
-        if not query:
-            raise HTTPException(status_code=400, detail="Query is required")
-        
-        # Perform standalone web search with domain filtering
-        web_content, web_links = facilities_web_search(query, request, user)
-        
-        return {
-            "success": True,
-            "content": web_content,
-            "sources": web_links,
-            "query": query
-        }
-        
-    except Exception as e:
-        logging.error(f"Facilities standalone web search failed: {e}")
-        raise HTTPException(status_code=500, detail=f"Web search failed: {str(e)}")
-
-# @router.post("/reindex")
-# async def reindex_facilities_pdfs(request: Request, user=Depends(get_verified_user)):
-#     """
-#     Reindex PDFs in the knowledge base for facilities
-#     Only works when facilities is enabled for the user
-#     """
-#     # Check if facilities is enabled for this user
-#     if not request.app.state.config.ENABLE_FACILITIES.get(user.email):
-#         raise HTTPException(status_code=403, detail="Facilities feature is not enabled for this user")
-#     try:
-#         # This would trigger a reindexing of PDFs in the knowledge base
-#         # For now, return a success message
-#         logging.info(f"Reindexing PDFs for user {user.id}")
-        
-#         return {
-#             "success": True,
-#             "message": "PDFs reindexed successfully"
-#         }
-        
-#     except Exception as e:
-#         logging.error(f"Error reindexing PDFs: {e}")
-#         raise HTTPException(status_code=500, detail=f"Failed to reindex PDFs: {str(e)}")

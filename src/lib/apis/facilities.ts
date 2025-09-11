@@ -51,32 +51,6 @@ export const generateFacilitiesResponse = async (
 	return res;
 };
 
-export const reindexFacilitiesPDFs = async (token: string): Promise<{ success: boolean; message: string }> => {
-	let error = null;
-
-	const res = await fetch(`${WEBUI_API_BASE_URL}/facilities/reindex`, {
-		method: 'POST',
-		headers: {
-			Accept: 'application/json',
-			'Content-Type': 'application/json',
-			authorization: `Bearer ${token}`
-		}
-	})
-		.then(async (res) => {
-			if (!res.ok) throw await res.json();
-			return res.json();
-		})
-		.catch((err) => {
-			error = err.detail ?? 'Server connection failed';
-			return null;
-		});
-
-	if (error) {
-		throw error;
-	}
-
-	return res;
-};
 
 export const getFacilitiesSections = async (
 	token: string,
