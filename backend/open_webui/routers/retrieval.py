@@ -1370,6 +1370,7 @@ def save_docs_to_vector_db(
             prefix=RAG_EMBEDDING_CONTENT_PREFIX,
             user=user,
         )
+        log.info(f"embeddings generated {len(embeddings)} for {len(texts)} items")
 
         items = [
             {
@@ -1387,6 +1388,7 @@ def save_docs_to_vector_db(
             items=items,
         )
 
+        log.info(f"added {len(items)} items to collection {collection_name}")
         return True
     except Exception as e:
         log.exception(e)
@@ -1545,13 +1547,20 @@ def process_file(
         log.debug(f"text_content: {text_content}")
         Files.update_file_data_by_id(
             file.id,
-            {"status": "completed", "content": text_content},
+            {"content": text_content},
         )
-
         hash = calculate_sha256_string(text_content)
         Files.update_file_hash_by_id(file.id, hash)
 
-        if not request.app.state.config.BYPASS_EMBEDDING_AND_RETRIEVAL:
+        if request.app.state.config.BYPASS_EMBEDDING_AND_RETRIEVAL:
+            Files.update_file_data_by_id(file.id, {"status": "completed"})
+            return {
+                "status": True,
+                "collection_name": None,
+                "filename": file.filename,
+                "content": text_content,
+            }
+        else:
             try:
                 result = save_docs_to_vector_db(
                     request,
@@ -1565,6 +1574,7 @@ def process_file(
                     add=(True if form_data.collection_name else False),
                     user=user,
                 )
+                log.info(f"added {len(docs)} items to collection {collection_name}")
 
                 if result:
                     Files.update_file_metadata_by_id(
@@ -1582,13 +1592,6 @@ def process_file(
                     }
             except Exception as e:
                 raise e
-        else:
-            return {
-                "status": True,
-                "collection_name": None,
-                "filename": file.filename,
-                "content": text_content,
-            }
 
     except Exception as e:
         log.exception(e)
