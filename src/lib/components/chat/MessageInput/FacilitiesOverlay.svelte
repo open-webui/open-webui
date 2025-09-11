@@ -53,6 +53,7 @@
 		dynamicSections.map((sectionLabel, index) => {
 			// Map backend section labels to form field IDs
 			const sectionId = getSectionIdFromLabel(sectionLabel);
+			console.log(`Mapping section ${index}: "${sectionLabel}" to ID "${sectionId}"`);
 			return { id: sectionId, label: sectionLabel, required: true };
 		}) : 
 		(selectedSponsor === 'NSF' ? nsfSections : nihSections);
@@ -60,14 +61,14 @@
 	// Helper function to map backend section labels to form field IDs
 	function getSectionIdFromLabel(label: string): string {
 		const mapping: Record<string, string> = {
-			'1. Project Title': 'projectTitle',
-			'2. Research Space and Facilities': 'researchSpaceFacilities',
-			'3. Core Instrumentation': 'coreInstrumentation',
-			'4. Computing and Data Resources': 'computingDataResources',
-			'5a. Internal Facilities (NYU)': 'internalFacilitiesNYU',
-			'5b. External Facilities (Other Institutions)': 'externalFacilitiesOther',
-			'6. Special Infrastructure': 'specialInfrastructure',
-			'7. Equipment': 'equipment'
+			'Project Title': 'projectTitle',
+			'Research Space and Facilities': 'researchSpaceFacilities',
+			'Core Instrumentation': 'coreInstrumentation',
+			'Computing and Data Resources': 'computingDataResources',
+			'Internal Facilities (NYU)': 'internalFacilitiesNYU',
+			'External Facilities (Other Institutions)': 'externalFacilitiesOther',
+			'Special Infrastructure': 'specialInfrastructure',
+			'Equipment': 'equipment'
 		};
 		return mapping[label] || label.toLowerCase().replace(/[^a-zA-Z0-9]/g, '');
 	}
