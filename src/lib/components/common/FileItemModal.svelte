@@ -337,6 +337,9 @@
 	let editors: any[] = [];
 	let hasInitialSynced = false;
 
+	// PII detection loading state
+	let isPiiDetectionInProgress = false;
+
 	function syncEditorsNow() {
 		editors.forEach((ed) => {
 			try {
@@ -390,7 +393,9 @@
 </script>
 
 <Modal bind:show size="lg">
-	<div class="font-primary px-6 py-5 w-full flex flex-col justify-center dark:text-gray-400">
+	<div
+		class="font-primary px-6 py-5 w-full flex flex-col justify-center dark:text-gray-400 relative"
+	>
 		<div class=" pb-2">
 			<div class="flex items-start justify-between">
 				<div class="flex-1 min-w-0">
@@ -416,6 +421,14 @@
 										<Mask className="size-3" />
 									</div>
 								</Tooltip>
+							{/if}
+							{#if isPiiDetectionInProgress}
+								<div
+									class="flex items-center gap-1 bg-gray-50 dark:bg-gray-850 px-2 py-1 rounded-md shadow-sm border border-gray-200 dark:border-gray-700 ml-2"
+								>
+									<Spinner className="size-3" />
+									<span class="text-xs text-gray-600 dark:text-gray-400">Scanning for PII...</span>
+								</div>
 							{/if}
 						</a>
 					</div>
@@ -614,6 +627,9 @@
 														const apiKey = $config?.pii?.api_key;
 														if (!apiKey) return;
 
+														// Set loading state
+														isPiiDetectionInProgress = true;
+
 														const piiSessionManager = PiiSessionManager.getInstance();
 														const knownEntities = piiSessionManager.getKnownEntitiesForApi(conversationId);
 														const modifiers = piiSessionManager.getModifiersForApi(conversationId);
@@ -635,16 +651,12 @@
 															// Process entities from complete document
 															const allEntities = response.pii[0];
 
-															// Update session manager with all entities
-															if (conversationId && conversationId.trim() !== '') {
-																piiSessionManager.setConversationEntitiesFromLatestDetection(conversationId, allEntities);
-															}
-
 															// Create PII payload for complete document
 															const piiPayload = {};
 															allEntities.forEach((entity) => {
 																const key = entity.raw_text || entity.label;
 																if (!key) return;
+																// @ts-ignore - Dynamic object key assignment
 																piiPayload[key] = {
 																	id: entity.id,
 																	label: entity.label,
@@ -661,6 +673,14 @@
 															// Get current PII state including modifiers
 															const state = piiSessionManager.getConversationState(conversationId || '');
 															
+														// Update session manager with all entities
+														if (conversationId && conversationId.trim() !== '') {
+															piiSessionManager.setConversationEntitiesFromLatestDetection(conversationId, allEntities);
+														} else {
+															// For new chats without conversationId, update temporary state
+															piiSessionManager.setTemporaryStateEntities(allEntities);
+														}
+															
 															// Get the original unmasked text from the file
 															const originalText = item?.file?.data?.content || '';
 															
@@ -671,12 +691,14 @@
 															});
 
 															// Sync all editors to show the updated highlights
-															setTimeout(() => {
-																syncEditorsNow();
-															}, 100);
+															syncEditorsNow();
+															
 														}
 													} catch (e) {
 														console.error('FileItemModal: Failed to re-detect PII with modifiers:', e);
+													} finally {
+														// Clear loading state
+														isPiiDetectionInProgress = false;
 													}
 												}}
 												onPiiDetected={handlePiiDetected}
@@ -722,11 +744,6 @@
 </Modal>
 
 <style>
-	.break-words {
-		word-break: break-word;
-		overflow-wrap: anywhere;
-	}
-
 	/* Ensure text selection is enabled and visible in read-only PII editors */
 	:global(.pii-selectable .tiptap) {
 		user-select: text !important;
