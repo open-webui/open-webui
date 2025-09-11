@@ -2042,7 +2042,7 @@ async def process_chat_response(
                                             )
                                         usage = data.get("usage", {})
                                         usage.update(
-                                            data.get("timing", {})
+                                            data.get("timings", {})
                                         )  # llama.cpp
 
                                         if usage:
