@@ -83,13 +83,6 @@
 	export let imageGenerationEnabled = false;
 	export let webSearchEnabled = false;
 	export let codeInterpreterEnabled = false;
-	export let selectedKnowledgeSources = [];
-
-	let knowledgeSources = [];
-	$: knowledgeSources =
-		($config?.model_id_to_knowledge_source_mapping?.[
-			atSelectedModel?.id ?? selectedModels[0]
-		] as string[]) ?? [];
 
 	let correctionHintActive = false;
 	let messageIdForCorrection = null;
@@ -119,9 +112,7 @@
 		files,
 		selectedToolIds,
 		imageGenerationEnabled,
-		webSearchEnabled,
-		codeInterpreterEnabled,
-		selectedKnowledgeSources
+		webSearchEnabled
 	});
 
 	let showTools = false;
