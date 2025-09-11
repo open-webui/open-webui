@@ -175,19 +175,11 @@
 			RAGConfig.DOCLING_PIPELINE === 'vlm'
 		) {
 		    if (
-			RAGConfig.DOCLING_VLM_PIPELINE_MODEL_LOCAL !== '{}' &&
-			RAGConfig.DOCLING_VLM_PIPELINE_MODEL_LOCAL !== '' &&
-			RAGConfig.DOCLING_VLM_PIPELINE_MODEL_API !== '' &&
-			RAGConfig.DOCLING_VLM_PIPELINE_MODEL_API !== '{}'
+			(RAGConfig.DOCLING_VLM_PIPELINE_MODEL === '' ? 0 : 1) +
+			(['{}', ''].includes(RAGConfig.DOCLING_VLM_PIPELINE_MODEL_LOCAL) ? 0 : 1) +
+			(['{}', ''].includes(RAGConfig.DOCLING_VLM_PIPELINE_MODEL_API) ? 0 : 1) > 1
 		    ) {
-			toast.error($i18n.t('Settings for local and api model for VLM pipeline are mutually exclusive.'));
-		        return;
-		    }
-		    if (
-			RAGConfig.DOCLING_VLM_PIPELINE_MODEL_LOCAL === '{}' &&
-			RAGConfig.DOCLING_VLM_PIPELINE_MODEL_API === '{}'
-		    ) {
-			toast.error($i18n.t('One settings for local or api model is mandatory for VLM pipeline.'));
+			toast.error($i18n.t('All model settings for VLM pipeline are mutually exclusive.'));
 		        return;
 		    }
 		}
@@ -689,6 +681,21 @@
 								</div>
 							</div>
 							{#if RAGConfig.DOCLING_PIPELINE === 'vlm'}
+								<div class=" mb-1 text-xs font-medium">{$i18n.t('VLM Pipeline Model')}</div>
+								<div class="flex w-full">
+									<div class="flex-1 mr-2">
+										<input
+											class="flex-1 w-full text-sm bg-transparent outline-hidden"
+											bind:value={RAGConfig.DOCLING_VLM_PIPELINE_MODEL}
+											placeholder={$i18n.t('Set VLM Pipeline Model')}
+										/>
+									</div>
+								</div>
+								<div class="mt-1 mb-1 text-xs text-gray-400 dark:text-gray-500">
+									{$i18n.t(
+										'Preset of local and API models for the VLM pipeline. This parameter is mutually exclusive with all other VLM Pipeline Model configurations. Use the other options for more parameters.'
+									)}
+								</div>
 								<div class="flex flex-col gap-2 mt-2">
 									<div class=" flex flex-col w-full justify-between">
 										<div class=" mb-1 text-xs font-medium">
@@ -697,7 +704,7 @@
 										<div class="flex w-full items-center relative">
 											<Tooltip
 												content={$i18n.t(
-													'Options for running a local vision-language model for the VLM pipeline. The parameters refer to a model hosted on Hugging Face. This parameter is mutually exclusive with the VLM Pipeline Model API Config.'
+													'Options for running a local vision-language model for the VLM pipeline. The parameters refer to a model hosted on Hugging Face. This parameter is mutually exclusive with all other VLM Pipeline Model configurations.'
 												)}
 												placement="top-start"
 												className="w-full"
@@ -718,7 +725,7 @@
 										<div class="flex w-full items-center relative">
 											<Tooltip
 												content={$i18n.t(
-													'API details for using a vision-language model for the for the VLM pipeline. This parameter is mutually exclusive with the VLM Pipeline Model Local Config.'
+													'API details for using a vision-language model for the for the VLM pipeline. This parameter is mutually exclusive with all other VLM Pipeline Model configurations.'
 												)}
 												placement="top-start"
 												className="w-full"

@@ -2274,6 +2274,12 @@ DOCLING_PIPELINE = PersistentConfig(
     os.getenv("DOCLING_PIPELINE", "standard"),
 )
 
+DOCLING_VLM_PIPELINE_MODEL = PersistentConfig(
+    "DOCLING_VLM_PIPELINE_MODEL",
+    "rag.docling_vlm_pipeline_model",
+    os.getenv("DOCLING_VLM_PIPELINE_MODEL", ""),
+)
+
 docling_vlm_pipeline_model_local = os.getenv("DOCLING_VLM_PIPELINE_MODEL_LOCAL", "")
 try:
     docling_vlm_pipeline_model_local = json.loads(docling_vlm_pipeline_model_local)

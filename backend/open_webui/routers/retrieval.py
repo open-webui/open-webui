@@ -433,6 +433,7 @@ async def get_rag_config(request: Request, user=Depends(get_admin_user)):
         "DOCLING_PDF_BACKEND": request.app.state.config.DOCLING_PDF_BACKEND,
         "DOCLING_TABLE_MODE": request.app.state.config.DOCLING_TABLE_MODE,
         "DOCLING_PIPELINE": request.app.state.config.DOCLING_PIPELINE,
+        "DOCLING_VLM_PIPELINE_MODEL": request.app.state.config.DOCLING_VLM_PIPELINE_MODEL,
         "DOCLING_VLM_PIPELINE_MODEL_LOCAL": request.app.state.config.DOCLING_VLM_PIPELINE_MODEL_LOCAL,
         "DOCLING_VLM_PIPELINE_MODEL_API": request.app.state.config.DOCLING_VLM_PIPELINE_MODEL_API,
         "DOCLING_DO_PICTURE_DESCRIPTION": request.app.state.config.DOCLING_DO_PICTURE_DESCRIPTION,
@@ -610,6 +611,7 @@ class ConfigForm(BaseModel):
     DOCLING_PDF_BACKEND: Optional[str] = None
     DOCLING_TABLE_MODE: Optional[str] = None
     DOCLING_PIPELINE: Optional[str] = None
+    DOCLING_VLM_PIPELINE_MODEL: Optional[str] = None
     DOCLING_VLM_PIPELINE_MODEL_LOCAL: Optional[dict] = None
     DOCLING_VLM_PIPELINE_MODEL_API: Optional[dict] = None
     DOCLING_DO_PICTURE_DESCRIPTION: Optional[bool] = None
@@ -815,6 +817,11 @@ async def update_rag_config(
         form_data.DOCLING_PIPELINE
         if form_data.DOCLING_PIPELINE is not None
         else request.app.state.config.DOCLING_PIPELINE
+    )
+    request.app.state.config.DOCLING_VLM_PIPELINE_MODEL = (
+        form_data.DOCLING_VLM_PIPELINE_MODEL
+        if form_data.DOCLING_VLM_PIPELINE_MODEL is not None
+        else request.app.state.config.DOCLING_VLM_PIPELINE_MODEL
     )
     request.app.state.config.DOCLING_VLM_PIPELINE_MODEL_LOCAL = (
         form_data.DOCLING_VLM_PIPELINE_MODEL_LOCAL
@@ -1117,6 +1124,7 @@ async def update_rag_config(
         "DOCLING_PDF_BACKEND": request.app.state.config.DOCLING_PDF_BACKEND,
         "DOCLING_TABLE_MODE": request.app.state.config.DOCLING_TABLE_MODE,
         "DOCLING_PIPELINE": request.app.state.config.DOCLING_PIPELINE,
+        "DOCLING_VLM_PIPELINE_MODEL": request.app.state.config.DOCLING_VLM_PIPELINE_MODEL,
         "DOCLING_VLM_PIPELINE_MODEL_LOCAL": request.app.state.config.DOCLING_VLM_PIPELINE_MODEL_LOCAL,
         "DOCLING_VLM_PIPELINE_MODEL_API": request.app.state.config.DOCLING_VLM_PIPELINE_MODEL_API,
         "DOCLING_DO_PICTURE_DESCRIPTION": request.app.state.config.DOCLING_DO_PICTURE_DESCRIPTION,
@@ -1515,6 +1523,7 @@ def process_file(
                         "pdf_backend": request.app.state.config.DOCLING_PDF_BACKEND,
                         "table_mode": request.app.state.config.DOCLING_TABLE_MODE,
                         "pipeline": request.app.state.config.DOCLING_PIPELINE,
+                        "vlm_pipeline_model": request.app.state.config.DOCLING_VLM_PIPELINE_MODEL,
                         "vlm_pipeline_model_local": request.app.state.config.DOCLING_VLM_PIPELINE_MODEL_LOCAL,
                         "vlm_pipeline_model_api": request.app.state.config.DOCLING_VLM_PIPELINE_MODEL_API,
                         "do_picture_description": request.app.state.config.DOCLING_DO_PICTURE_DESCRIPTION,

@@ -200,7 +200,9 @@ class DoclingLoader:
                     params["pipeline"] = self.params.get("pipeline")
 
                 if self.params.get("pipeline") == "vlm":
-                    if self.params.get("vlm_pipeline_model_local", {}):
+                    if self.params.get("vlm_pipeline_model"):
+                        params["vlm_pipeline_model"] = self.params.get("vlm_pipeline_model")
+                    elif self.params.get("vlm_pipeline_model_local", {}):
                         params["vlm_pipeline_model_local"] = json.dumps(
                             self.params.get("vlm_pipeline_model_local", {})
                         )
