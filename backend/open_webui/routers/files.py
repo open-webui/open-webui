@@ -190,12 +190,21 @@ def upload_file_handler(
         # Remove the leading dot from the file extension
         file_extension = file_extension[1:] if file_extension else ""
 
-        if process and request.app.state.config.ALLOWED_FILE_EXTENSIONS:
-            request.app.state.config.ALLOWED_FILE_EXTENSIONS = [
-                ext for ext in request.app.state.config.ALLOWED_FILE_EXTENSIONS if ext
+        rag_config = {}
+        # Retrieve the knowledge base using the collection_name
+        if knowledge_id:
+            knowledge_base = Knowledges.get_knowledge_by_id(knowledge_id)
+            # Retrieve the RAG configuration
+            if not knowledge_base.rag_config.get("DEFAULT_RAG_SETTINGS", True):
+                rag_config = knowledge_base.rag_config
+
+        allowed_file_extensions = rag_config.get("ALLOWED_FILE_EXTENSIONS", request.app.state.config.ALLOWED_FILE_EXTENSIONS)
+        if process and allowed_file_extensions:
+            allowed_file_extensions = [
+                ext for ext in allowed_file_extensions if ext
             ]
 
-            if file_extension not in request.app.state.config.ALLOWED_FILE_EXTENSIONS:
+            if file_extension not in allowed_file_extensions:
                 raise HTTPException(
                     status_code=status.HTTP_400_BAD_REQUEST,
                     detail=ERROR_MESSAGES.DEFAULT(
