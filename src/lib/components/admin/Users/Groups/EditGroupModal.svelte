@@ -9,6 +9,8 @@
 	import Users from './Users.svelte';
 	import UserPlusSolid from '$lib/components/icons/UserPlusSolid.svelte';
 	import WrenchSolid from '$lib/components/icons/WrenchSolid.svelte';
+	import ConfirmDialog from '$lib/components/common/ConfirmDialog.svelte';
+	import GarbageBin from '$lib/components/icons/GarbageBin.svelte';
 
 	export let onSubmit: Function = () => {};
 	export let onDelete: Function = () => {};
@@ -25,6 +27,7 @@
 
 	let selectedTab = 'general';
 	let loading = false;
+	let showConfirmDelete = false;
 
 	export let name = '';
 	export let description = '';
@@ -197,6 +200,7 @@
 										<UserPlusSolid />
 									</div>
 									<div class=" self-center">{$i18n.t('Users')} ({userIds.length})</div>
+									<!-- Entry of Users tab -->
 								</button>
 							{/if}
 						</div>
@@ -210,6 +214,7 @@
 								<Permissions bind:permissions />
 							{:else if selectedTab == 'users'}
 								<Users bind:userIds {users} />
+								<!-- The content is displayed in src/lib/components/admin/Users/Groups/Users.svelte -->
 							{/if}
 						</div>
 					</div>
@@ -266,14 +271,13 @@
 					<div class="flex justify-end pt-3 text-sm font-medium gap-1.5">
 						{#if edit}
 							<button
-								class="px-3.5 py-1.5 text-sm font-medium dark:bg-black dark:hover:bg-gray-900 dark:text-white bg-white text-black hover:bg-gray-100 transition rounded-full flex flex-row space-x-1 items-center"
+								class="flex gap-2 items-center px-3 py-1.5 text-sm cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 rounded-md"
 								type="button"
 								on:click={() => {
-									onDelete();
-									show = false;
+									showConfirmDelete = true;
 								}}
 							>
-								{$i18n.t('Delete')}
+								<div class="flex items-center text-red-600">{$i18n.t('Delete')}</div>
 							</button>
 						{/if}
 
@@ -319,4 +323,16 @@
 			</div>
 		</div>
 	</div>
+
+	<ConfirmDialog
+		bind:show={showConfirmDelete}
+		title={$i18n.t('Delete Group')}
+		message={$i18n.t('Are you sure you want to delete this group? This action cannot be undone.')}
+		confirmLabel={$i18n.t('Delete')}
+		cancelLabel={$i18n.t('Cancel')}
+		onConfirm={() => {
+			onDelete();
+			show = false;
+		}}
+	/>
 </Modal>
