@@ -2134,6 +2134,12 @@ ONEDRIVE_SHAREPOINT_TENANT_ID = PersistentConfig(
     os.environ.get("ONEDRIVE_SHAREPOINT_TENANT_ID", ""),
 )
 
+ENABLE_ONEDRIVE_TYPE = PersistentConfig(
+    "ENABLE_ONEDRIVE_TYPE",
+    "onedrive.enable_type",
+    os.environ.get("ENABLE_ONEDRIVE_TYPE", ""),
+)
+
 # RAG Content Extraction
 CONTENT_EXTRACTION_ENGINE = PersistentConfig(
     "CONTENT_EXTRACTION_ENGINE",
