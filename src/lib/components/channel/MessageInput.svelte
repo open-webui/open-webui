@@ -376,11 +376,7 @@
 					];
 				};
 
-				reader.readAsDataURL(
-					file['type'] === 'image/heic'
-						? await convertHeicToJpeg(file)
-						: file
-				);
+				reader.readAsDataURL(file['type'] === 'image/heic' ? await convertHeicToJpeg(file) : file);
 			} else {
 				uploadFileHandler(file);
 			}

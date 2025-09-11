@@ -385,6 +385,9 @@
 		}
 
 		await tick();
+		text = await inputVariableHandler(text);
+		await tick();
+
 		const chatInputContainer = document.getElementById('chat-input-container');
 		if (chatInputContainer) {
 			chatInputContainer.scrollTop = chatInputContainer.scrollHeight;
