@@ -1977,7 +1977,6 @@ async def download_model(
         return None
 
 
-@router.post("/api/uploadhelper")
 async def upload_model_helper(
     user=Depends(get_admin_user), gold: str = "", human_name: str = ""
 ):
@@ -2025,7 +2024,6 @@ async def upload_model(
             out_f.write(chunk)
 
     async def file_process_stream():
-        nonlocal ollama_url
         total_size = os.path.getsize(file_path)
         log.info(f"Total Model Size: {str(total_size)}")  # DEBUG
 
@@ -2043,7 +2041,7 @@ async def upload_model(
                         "total": total_size,
                         "completed": bytes_read,
                     }
-                    yield f"data: {json.dumps(data_msg)}\n\n"
+                    yield f"data: {json.dumps(data_msg)}\n"
 
             # --- P3: Upload to ollama /api/blobs ---
             with open(file_path, "rb") as f:
@@ -2062,20 +2060,14 @@ async def upload_model(
                     result_response = await upload_model_helper(
                         user, file_path, model_name
                     )
-                    yield json.dumps({"result": result_response}) + "\n"
-                    if result_response.ok:
-                        log.info(f"API SUCCESS!")  # DEBUG
-                    else:
-                        log.inf(
-                            f"Failed to create model in target. {result_response.text}"
-                        )
+                    yield f"data: json.dumps({'result': result_response})\n"
                 except Exception as e:
                     res = {
                         "error Ollama: Could not create model in target, Please try again.": str(
                             e
                         )
                     }
-                    log.info(f"data: {json.dumps(res)}\n\n")
+                    log.info(f"data: {json.dumps(res)}\n")
 
                 create_payload = {
                     "model": model_name,
@@ -2100,19 +2092,21 @@ async def upload_model(
                         "name": filename,
                         "model_created": model_name,
                     }
-                    yield f"data: {json.dumps(done_msg)}\n\n"
+                    yield f"data: {json.dumps(done_msg)}\n"
                 else:
                     raise Exception(
                         f"Failed to create model in Ollama. {create_resp.text}"
                     )
-                # Remove local file
-                os.remove(file_path)
 
             else:
                 raise Exception("Ollama: Could not create blob, Please try again.")
 
         except Exception as e:
             res = {"error": str(e)}
-            yield f"data: {json.dumps(res)}\n\n"
+            yield f"data: {json.dumps(res)}\n"
+        finally:
+            # Remove local file
+            if os.path.exists(file_path):
+                os.remove(file_path)
 
     return StreamingResponse(file_process_stream(), media_type="text/event-stream")
