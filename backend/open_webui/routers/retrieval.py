@@ -851,7 +851,8 @@ async def update_rag_config(
 
         if not form_data.ENABLE_RAG_HYBRID_SEARCH and \
             not in_use and \
-            request.app.state.rf.get(rag_config["RAG_RERANKING_MODEL"]):
+            request.app.state.rf.get(rag_config["RAG_RERANKING_MODEL"]) and \
+            rag_config.get("RAG_RERANKING_MODEL") != form_data.RAG_RERANKING_MODEL:
             if rag_config.get("RAG_RERANKING_MODEL"):
                 del request.app.state.rf[rag_config["RAG_RERANKING_MODEL"]]
                 del request.app.state.RERANKING_FUNCTION[rag_config["RAG_RERANKING_MODEL"]]
@@ -932,7 +933,7 @@ async def update_rag_config(
         Knowledges.update_rag_config_by_id(
             id=knowledge_base.id, rag_config=rag_config
         )
-                
+
         return rag_config
     else:
         # Update the global configuration
@@ -970,7 +971,8 @@ async def update_rag_config(
 
         if not request.app.state.config.ENABLE_RAG_HYBRID_SEARCH and \
             not in_use and \
-            request.app.state.rf.get(request.app.state.config.RAG_RERANKING_MODEL):
+            request.app.state.rf.get(request.app.state.config.RAG_RERANKING_MODEL) and \
+            request.app.state.config.RAG_RERANKING_MODEL != form_data.RAG_RERANKING_MODEL:
             del request.app.state.rf[request.app.state.config.RAG_RERANKING_MODEL]
             del request.app.state.RERANKING_FUNCTION[request.app.state.config.RAG_RERANKING_MODEL]
             engine = request.app.state.config.RAG_RERANKING_ENGINE
@@ -1397,7 +1399,7 @@ async def update_rag_config(
             "TOP_K_RERANKER": request.app.state.config.TOP_K_RERANKER,
             "RELEVANCE_THRESHOLD": request.app.state.config.RELEVANCE_THRESHOLD,
             "HYBRID_BM25_WEIGHT": request.app.state.config.HYBRID_BM25_WEIGHT,
-        # Content extraction settings
+            # Content extraction settings
             "CONTENT_EXTRACTION_ENGINE": request.app.state.config.CONTENT_EXTRACTION_ENGINE,
             "PDF_EXTRACT_IMAGES": request.app.state.config.PDF_EXTRACT_IMAGES,
             "DATALAB_MARKER_API_KEY": request.app.state.config.DATALAB_MARKER_API_KEY,
