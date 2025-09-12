@@ -49,8 +49,7 @@ opensearch-py==2.7.1
 
 # txtai-wikipedia Wiki Grounding dependencies
 transformers>=4.46.0,<5.0.0
-hnswlib<0.8.0
-txtai[graph,similarity]==9.0.0
+txtai[graph]==9.0.0
 sentence-transformers>=5.0.0
 sacremoses==0.1.1
 
