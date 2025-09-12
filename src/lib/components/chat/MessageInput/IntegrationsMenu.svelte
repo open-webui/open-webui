@@ -79,12 +79,9 @@
 	<Tooltip content={$i18n.t('Integrations')} placement="top">
 		<slot />
 	</Tooltip>
-
-	<!-- class="w-full max-w-[240px] rounded-2xl px-1 py-1  border border-gray-100  dark:border-gray-850 z-50 bg-white dark:bg-gray-850 dark:text-white shadow-lg transition max-h-96 overflow-y-auto scrollbar-thin" -->
-
 	<div slot="content">
 		<DropdownMenu.Content
-			class="w-full max-w-[240px] rounded-2xl px-1 py-1  border border-gray-100  dark:border-gray-850 z-50 bg-white dark:bg-gray-850 dark:text-white shadow-lg max-h-72 overflow-y-auto scrollbar-thin"
+			class="w-full max-w-[240px] rounded-2xl px-1 py-1  border border-gray-100  dark:border-gray-800 z-50 bg-white dark:bg-gray-850 dark:text-white shadow-lg max-h-72 overflow-y-auto scrollbar-thin"
 			sideOffset={4}
 			alignOffset={-6}
 			side="bottom"
