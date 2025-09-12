@@ -13,6 +13,7 @@
 	import Textarea from '$lib/components/common/Textarea.svelte';
 	import { getTools } from '$lib/apis/tools';
 	import { getFunctions } from '$lib/apis/functions';
+	import { getGroups } from '$lib/apis/groups';
 	import { getKnowledgeBases } from '$lib/apis/knowledge';
 	import AccessControl from '../common/AccessControl.svelte';
 	import { stringify } from 'postcss';
@@ -96,6 +97,7 @@
 	let actionIds = [];
 
 	let accessControl = {};
+	let allowedPrivate = [];
 
 	const addUsage = (base_model_id) => {
 		const baseModel = $models.find((m) => m.id === base_model_id);
@@ -283,7 +285,14 @@
 			};
 
 			console.log(model);
+
 		}
+
+		let groups = await getGroups(localStorage.token);
+
+		allowedPrivate = groups
+			.filter((group) => group.permissions?.sharing?.private_models || $user?.role === 'admin')
+			.map((group) => group.id);
 
 		loaded = true;
 	});
@@ -566,6 +575,7 @@
 								bind:accessControl
 								accessRoles={['read', 'write']}
 								allowPublic={$user?.permissions?.sharing?.public_models || $user?.role === 'admin'}
+								{allowedPrivate}
 							/>
 						</div>
 					</div>

@@ -13,6 +13,8 @@
 	import AccessControlModal from '../common/AccessControlModal.svelte';
 	import { user } from '$lib/stores';
 
+	import { getGroups } from '$lib/apis/groups';
+
 	let formElement = null;
 	let loading = false;
 
@@ -31,6 +33,7 @@
 	};
 	export let content = '';
 	export let accessControl = {};
+	let allowedPrivate = [];
 
 	let _content = '';
 
@@ -57,7 +60,7 @@ class Tools:
         pass
 
     # Add your custom tools using pure Python code here, make sure to add type hints and descriptions
-	
+
     def get_user_name_and_email_and_id(self, __user__: dict = {}) -> str:
         """
         Get the user name, Email and ID from the user object.
@@ -183,6 +186,15 @@ class Tools:
 			}
 		}
 	};
+
+
+	onMount(async () => {
+		let groups = await getGroups(localStorage.token);
+
+		allowedPrivate = groups
+			.filter((group) => group.permissions?.sharing?.private_tools || $user?.role === 'admin')
+			.map((group) => group.id);
+	});
 </script>
 
 <AccessControlModal
@@ -190,6 +202,7 @@ class Tools:
 	bind:accessControl
 	accessRoles={['read', 'write']}
 	allowPublic={$user?.permissions?.sharing?.public_tools || $user?.role === 'admin'}
+	{allowedPrivate}
 />
 
 <div class=" flex flex-col justify-between w-full overflow-y-auto h-full">

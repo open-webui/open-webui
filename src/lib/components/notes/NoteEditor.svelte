@@ -14,6 +14,7 @@
 
 	import { goto } from '$app/navigation';
 
+	import { getGroups } from '$lib/apis/groups';
 	import dayjs from '$lib/dayjs';
 	import calendar from 'dayjs/plugin/calendar';
 	import duration from 'dayjs/plugin/duration';
@@ -132,6 +133,7 @@
 
 	let showDeleteConfirm = false;
 	let showAccessControlModal = false;
+	let allowedPrivate = [];
 
 	let ignoreBlur = false;
 	let titleInputFocused = false;
@@ -878,6 +880,11 @@ Provide the enhanced notes in markdown format. Use markdown syntax for headings,
 		// dropzoneElement?.addEventListener('dragover', onDragOver);
 		// dropzoneElement?.addEventListener('drop', onDrop);
 		// dropzoneElement?.addEventListener('dragleave', onDragLeave);
+
+		let groups = await getGroups(localStorage.token);
+
+		// There is no setting governing private sharing this entity, so allow all groups
+		allowedPrivate = groups.map((group) => group.id);
 	});
 
 	onDestroy(() => {
@@ -907,6 +914,7 @@ Provide the enhanced notes in markdown format. Use markdown syntax for headings,
 		bind:show={showAccessControlModal}
 		bind:accessControl={note.access_control}
 		accessRoles={['read', 'write']}
+		{allowedPrivate}
 		onChange={() => {
 			changeDebounceHandler();
 		}}

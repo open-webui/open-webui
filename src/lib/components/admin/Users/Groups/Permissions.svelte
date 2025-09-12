@@ -54,6 +54,8 @@
 	};
 
 	export let permissions = {};
+	// Group ID these permissions apply to. For user-level permissions, leave null
+	export let groupId = null;
 
 	// Reactive statement to ensure all fields are present in `permissions`
 	$: {
@@ -73,6 +75,7 @@
 
 	onMount(() => {
 		permissions = fillMissingProperties(permissions, defaultPermissions);
+		console.log(groupId);
 	});
 </script>
 
@@ -253,36 +256,37 @@
 			<Switch bind:state={permissions.sharing.public_tools} />
 		</div>
 
-		<hr class="border-gray-100 dark:border-gray-850 my-1" />
-
-		<!-- Private -->
-		<div class="mt-1 mb-1 text-[10px] uppercase tracking-wide text-gray-500 dark:text-gray-400">
-			{$i18n.t('Private')}
-		</div>
-		<div class="flex w-full justify-between my-2 pr-2">
-			<div class="self-center text-xs font-medium">
-				{$i18n.t('Models Private Sharing')}
+		{#if groupId !== null}
+			<!-- Private -->
+			<hr class="border-gray-100 dark:border-gray-850 my-1" />
+			<div class="mt-1 mb-1 text-[10px] uppercase tracking-wide text-gray-500 dark:text-gray-400">
+				{$i18n.t('Private')}
 			</div>
-			<Switch bind:state={permissions.sharing.private_models} />
-		</div>
-		<div class="flex w-full justify-between my-2 pr-2">
-			<div class="self-center text-xs font-medium">
-				{$i18n.t('Knowledge Private Sharing')}
+			<div class="flex w-full justify-between my-2 pr-2">
+				<div class="self-center text-xs font-medium">
+					{$i18n.t('Models Private Sharing')}
+				</div>
+				<Switch bind:state={permissions.sharing.private_models} />
 			</div>
-			<Switch bind:state={permissions.sharing.private_knowledge} />
-		</div>
-		<div class="flex w-full justify-between my-2 pr-2">
-			<div class="self-center text-xs font-medium">
-				{$i18n.t('Prompts Private Sharing')}
+			<div class="flex w-full justify-between my-2 pr-2">
+				<div class="self-center text-xs font-medium">
+					{$i18n.t('Knowledge Private Sharing')}
+				</div>
+				<Switch bind:state={permissions.sharing.private_knowledge} />
 			</div>
-			<Switch bind:state={permissions.sharing.private_prompts} />
-		</div>
-		<div class="flex w-full justify-between my-2 pr-2">
-			<div class="self-center text-xs font-medium">
-				{$i18n.t('Tools Private Sharing')}
+			<div class="flex w-full justify-between my-2 pr-2">
+				<div class="self-center text-xs font-medium">
+					{$i18n.t('Prompts Private Sharing')}
+				</div>
+				<Switch bind:state={permissions.sharing.private_prompts} />
 			</div>
-			<Switch bind:state={permissions.sharing.private_tools} />
-		</div>
+			<div class="flex w-full justify-between my-2 pr-2">
+				<div class="self-center text-xs font-medium">
+					{$i18n.t('Tools Private Sharing')}
+				</div>
+				<Switch bind:state={permissions.sharing.private_tools} />
+			</div>
+		{/if}
 	</div>
 
 	<hr class=" border-gray-100 dark:border-gray-850 my-2" />

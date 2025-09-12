@@ -16,6 +16,7 @@
 	export let accessControl = {};
 
 	export let allowPublic = true;
+	export let allowedPrivate = [];
 
 	let selectedGroupId = '';
 	let groups = [];
@@ -186,7 +187,8 @@
 									<option class=" text-gray-700" value="" disabled selected
 										>{$i18n.t('Select a group')}</option
 									>
-									{#each groups.filter((group) => !accessControl.read.group_ids.includes(group.id)) as group}
+									<pre>{console.log("allowedPrivate", allowedPrivate)}</pre>
+									{#each groups.filter((group) => !accessControl.read.group_ids.includes(group.id) && allowedPrivate.includes(group.id)) as group}
 										<option class=" text-gray-700" value={group.id}>{group.name}</option>
 									{/each}
 								</select>

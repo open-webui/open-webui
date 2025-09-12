@@ -24,6 +24,7 @@
 		deleteFileById,
 		getFileById
 	} from '$lib/apis/files';
+	import { getGroups } from '$lib/apis/groups';
 	import {
 		addFileToKnowledgeById,
 		getKnowledgeById,
@@ -75,6 +76,8 @@
 	let showAddTextContentModal = false;
 	let showSyncConfirmModal = false;
 	let showAccessControlModal = false;
+
+	let allowedPrivate = [];
 
 	let inputFiles = null;
 
@@ -613,6 +616,12 @@
 		dropZone?.addEventListener('dragover', onDragOver);
 		dropZone?.addEventListener('drop', onDrop);
 		dropZone?.addEventListener('dragleave', onDragLeave);
+
+		let groups = await getGroups(localStorage.token);
+
+		allowedPrivate = groups
+			.filter((group) => group.permissions?.sharing?.private_knowledge || $user?.role === 'admin')
+			.map((group) => group.id);
 	});
 
 	onDestroy(() => {
@@ -703,6 +712,7 @@
 			bind:show={showAccessControlModal}
 			bind:accessControl={knowledge.access_control}
 			allowPublic={$user?.permissions?.sharing?.public_knowledge || $user?.role === 'admin'}
+			{allowedPrivate}
 			onChange={() => {
 				changeDebounceHandler();
 			}}
