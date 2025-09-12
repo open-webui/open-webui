@@ -3,7 +3,7 @@
 	import { flyAndScale } from '$lib/utils/transitions';
 	import { getContext, onMount, tick } from 'svelte';
 
-	import { config, user, tools as _tools, mobile } from '$lib/stores';
+	import { config, user, tools as _tools, mobile, knowledge, chats } from '$lib/stores';
 	import { createPicker } from '$lib/utils/google-drive-picker';
 
 	import { getTools } from '$lib/apis/tools';
@@ -142,37 +142,6 @@
 				</DropdownMenu.Item>
 			</Tooltip>
 
-			<Tooltip
-				content={fileUploadCapableModels.length !== selectedModels.length
-					? $i18n.t('Model(s) do not support file upload')
-					: !fileUploadEnabled
-						? $i18n.t('You do not have permission to upload files.')
-						: ''}
-				className="w-full"
-			>
-				<DropdownMenu.Item
-					class="flex gap-2 items-center px-3 py-1.5 text-sm  cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800  rounded-xl {!fileUploadEnabled
-						? 'opacity-50'
-						: ''}"
-					on:click={() => {
-						if (fileUploadEnabled) {
-							if (!detectMobile()) {
-								screenCaptureHandler();
-							} else {
-								const cameraInputElement = document.getElementById('camera-input');
-
-								if (cameraInputElement) {
-									cameraInputElement.click();
-								}
-							}
-						}
-					}}
-				>
-					<ClockRotateRight />
-					<div class=" line-clamp-1">{$i18n.t('Reference Chats')}</div>
-				</DropdownMenu.Item>
-			</Tooltip>
-
 			{#if $config?.features?.enable_notes ?? false}
 				<Tooltip
 					content={fileUploadCapableModels.length !== selectedModels.length
@@ -236,6 +205,39 @@
 					<div class=" line-clamp-1">{$i18n.t('Attach Knowledge')}</div>
 				</DropdownMenu.Item>
 			</Tooltip>
+
+			{#if ($chats ?? []).length > 0}
+				<Tooltip
+					content={fileUploadCapableModels.length !== selectedModels.length
+						? $i18n.t('Model(s) do not support file upload')
+						: !fileUploadEnabled
+							? $i18n.t('You do not have permission to upload files.')
+							: ''}
+					className="w-full"
+				>
+					<DropdownMenu.Item
+						class="flex gap-2 items-center px-3 py-1.5 text-sm  cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800  rounded-xl {!fileUploadEnabled
+							? 'opacity-50'
+							: ''}"
+						on:click={() => {
+							if (fileUploadEnabled) {
+								if (!detectMobile()) {
+									screenCaptureHandler();
+								} else {
+									const cameraInputElement = document.getElementById('camera-input');
+
+									if (cameraInputElement) {
+										cameraInputElement.click();
+									}
+								}
+							}
+						}}
+					>
+						<ClockRotateRight />
+						<div class=" line-clamp-1">{$i18n.t('Reference Chats')}</div>
+					</DropdownMenu.Item>
+				</Tooltip>
+			{/if}
 
 			{#if fileUploadEnabled}
 				{#if $config?.features?.enable_google_drive_integration}
