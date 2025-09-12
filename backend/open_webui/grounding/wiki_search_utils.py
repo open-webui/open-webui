@@ -41,6 +41,19 @@ def _get_transformers_pipeline():
         )
 
 
+def _get_txtai_reranker():
+    """Lazy load txtai.pipeline.Reranker and Similarity with clear error message"""
+    try:
+        from txtai.pipeline import Reranker, Similarity
+
+        return Reranker, Similarity
+    except ImportError:
+        raise ImportError(
+            "txtai 9.0+ is required for reranking. "
+            "Install with: pip install txtai>=9.0"
+        )
+
+
 def _check_optional_dependency(module_name: str) -> bool:
     """Check if an optional dependency is available"""
     return importlib.util.find_spec(module_name) is not None
@@ -54,8 +67,10 @@ class WikiSearchGrounder:
         self.max_search_results = 5
         self.embeddings = None
         self.translator = None
+        self.reranker = None
         self.model_loaded = False
         self.translation_loaded = False
+        self.reranker_loaded = False
         self._initialized = False
 
     async def initialize(self) -> bool:
@@ -65,12 +80,16 @@ class WikiSearchGrounder:
 
         success = True
 
-        # Initialize txtai model
+        # Initialize txtai model first
         if not self._load_txtai_model():
             success = False
 
         # Initialize translation model (optional)
         self._load_translation_model()
+
+        # Initialize reranker model (optional) - must be after embeddings
+        if self.model_loaded:
+            self._load_reranker_model()
 
         self._initialized = success
         return success
@@ -107,6 +126,48 @@ class WikiSearchGrounder:
             return True
         except Exception as e:
             log.warning(f"Translation pipeline failed to load: {e}")
+            return False
+
+    def _load_reranker_model(self) -> bool:
+        """Load txtai reranker pipeline for improved result ranking"""
+        if self.reranker_loaded:
+            return True
+
+        # Check if reranker is enabled in config
+        try:
+            from open_webui.config import ENABLE_WIKIPEDIA_GROUNDING_RERANKER
+
+            if not ENABLE_WIKIPEDIA_GROUNDING_RERANKER.value:
+                log.info("Wikipedia grounding reranker disabled by configuration")
+                return False
+        except ImportError:
+            log.warning("Could not check reranker configuration, assuming enabled")
+
+        if not _check_optional_dependency("txtai"):
+            log.warning(
+                "txtai not available for reranking. Install with: pip install txtai[similarity]"
+            )
+            return False
+
+        # Ensure embeddings are loaded first
+        if not self.model_loaded or not self.embeddings:
+            log.warning("Embeddings must be loaded before reranker")
+            return False
+
+        try:
+            Reranker, Similarity = _get_txtai_reranker()
+
+            log.info("Loading txtai reranker pipeline...")
+            # Create similarity instance using ColBERT
+            similarity = Similarity(path="colbert-ir/colbertv2.0", lateencode=True)
+
+            # Create reranker using embeddings + similarity
+            self.reranker = Reranker(self.embeddings, similarity)
+            self.reranker_loaded = True
+            log.info("txtai reranker pipeline loaded successfully")
+            return True
+        except Exception as e:
+            log.warning(f"Reranker pipeline failed to load: {e}")
             return False
 
     def _detect_language(self, text: str) -> str:
@@ -238,7 +299,7 @@ class WikiSearchGrounder:
             return False
 
     async def search(self, query: str) -> List[Dict]:
-        """Pure txtai search with translation support"""
+        """Pure txtai search with translation and reranking support"""
         # Ensure models are initialized
         if not await self.ensure_initialized():
             return []
@@ -248,40 +309,120 @@ class WikiSearchGrounder:
             original_query = query
             search_query = self._translate_to_english(query)
 
-            # Use basic search with translated query
-            results = self.embeddings.search(search_query)
+            # Use basic search with translated query - get more results for reranking
+            initial_results_count = (
+                self.max_search_results * 3
+            )  # Get 3x more for reranking
+            results = self.embeddings.search(search_query, limit=initial_results_count)
 
-            # Format results and apply score threshold
+            # Format initial results
             formatted = []
-            for result in results[: self.max_search_results * 2]:  # Get more to filter
+
+            for result in results:
                 if isinstance(result, dict):
                     score = result.get("score", 0)
 
-                    # Only include high-quality results (score > 0.8)
-                    if score > 0.8:
+                    # Apply a lower threshold since we'll rerank
+                    if score > 0.75:  # Lower threshold for reranking candidates
                         title = result.get("id", "")
                         content = result.get("text", "")
 
                         if len(content) > self.max_content_length:
                             content = content[: self.max_content_length] + "..."
 
-                        formatted.append(
-                            {
-                                "title": title,
-                                "content": content,
-                                "score": score,
-                                "url": f"https://en.wikipedia.org/wiki/{title.replace(' ', '_')}",
-                                "source": "txtai-wikipedia",
-                                "original_query": original_query,
-                                "search_query": search_query,
-                            }
-                        )
+                        formatted_result = {
+                            "title": title,
+                            "content": content,
+                            "score": score,
+                            "url": f"https://en.wikipedia.org/wiki/{title.replace(' ', '_')}",
+                            "source": "txtai-wikipedia",
+                            "original_query": original_query,
+                            "search_query": search_query,
+                        }
 
-                        # Stop when we have enough high-quality results
-                        if len(formatted) >= self.max_search_results:
-                            break
+                        formatted.append(formatted_result)
 
-            return formatted
+            # Apply reranking if available and we have multiple results
+            if self.reranker_loaded and len(formatted) > 1:
+                try:
+                    log.info(
+                        f"🔍 Reranking {len(formatted)} search results using txtai reranker"
+                    )
+
+                    # Use intelligent reranking - only improve scores, don't degrade results
+                    reranked_results = self.reranker(
+                        search_query, limit=self.max_search_results * 2
+                    )
+
+                    # Create mapping of our formatted results by title
+                    title_to_formatted = {
+                        result["title"]: result for result in formatted
+                    }
+
+                    # Enhance existing results where reranking improves scores
+                    enhanced_count = 0
+                    for rerank_result in reranked_results:
+                        title = rerank_result.get("id", "")
+                        rerank_score = rerank_result.get("score", 0)
+
+                        # Find matching formatted result
+                        if title in title_to_formatted:
+                            original_result = title_to_formatted[title]
+                            original_score = original_result["score"]
+
+                            # Only improve if reranker score is better
+                            if rerank_score > original_score:
+                                # Enhance with reranker score
+                                original_result["rerank_score"] = rerank_score
+                                original_result["original_score"] = original_score
+                                original_result["enhanced_by_reranker"] = True
+                                original_result["ranking_improvement"] = (
+                                    rerank_score - original_score
+                                )
+                                original_result["improvement_percentage"] = (
+                                    (rerank_score - original_score) / original_score
+                                ) * 100
+                                original_result["score"] = (
+                                    rerank_score  # Use improved score
+                                )
+                                enhanced_count += 1
+                            else:
+                                # Keep original score - reranker didn't improve
+                                original_result["rerank_score"] = original_score
+                                original_result["original_score"] = original_score
+                                original_result["enhanced_by_reranker"] = False
+                                original_result["ranking_improvement"] = 0.0
+                                original_result["improvement_percentage"] = 0.0
+
+                    # For results not touched by reranker, add metadata
+                    for result in formatted:
+                        if "enhanced_by_reranker" not in result:
+                            result["rerank_score"] = result["score"]
+                            result["original_score"] = result["score"]
+                            result["enhanced_by_reranker"] = False
+                            result["ranking_improvement"] = 0.0
+                            result["improvement_percentage"] = 0.0
+
+                    # Re-sort by final scores (some may have been improved)
+                    formatted.sort(key=lambda x: x["score"], reverse=True)
+
+                    log.info(
+                        f"🎯 Intelligent reranking completed: {enhanced_count} results improved, top result: {formatted[0]['title']} (score: {formatted[0].get('score', 'N/A')})"
+                    )
+
+                except Exception as e:
+                    log.warning(f"🚨 Reranking failed: {e}")
+                    # Keep original results if reranking fails
+
+            # Return top results
+            final_results = formatted[: self.max_search_results]
+
+            # Apply final quality threshold
+            high_quality_results = [r for r in final_results if r["score"] > 0.8]
+
+            return (
+                high_quality_results if high_quality_results else final_results[:3]
+            )  # At least 3 results
 
         except Exception as e:
             log.error(f"Search failed: {e}")
@@ -386,16 +527,31 @@ class WikiSearchGrounder:
             )
 
         context.append(f"Source: txtai-wikipedia")
+
+        # Check if reranking was applied
+        if (
+            grounding_data["grounding_data"]
+            and grounding_data["grounding_data"][0].get("rerank_score") is not None
+        ):
+            context.append("Reranking: Results reordered by relevance")
+
         context.append("")
 
         for i, item in enumerate(grounding_data["grounding_data"], 1):
             title = item.get("title", "Unknown")
             content = item.get("content", "")
             score = item.get("score", 0)
+            rerank_score = item.get("rerank_score")
+            original_score = item.get("original_score")
 
             context.append(f"[{i}] {title}")
             if score > 0:
                 context.append(f"Score: {score:.3f}")
+                # Show reranking details if available
+                if rerank_score is not None and original_score is not None:
+                    context.append(
+                        f"  (Original: {original_score:.3f}, Rerank: {rerank_score:.3f})"
+                    )
             context.append(f"Content: {content}")
             context.append("")
 

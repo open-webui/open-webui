@@ -434,6 +434,9 @@ class ConversationContextAnalyzer:
         # Extract key entities from context
         context_entities = self.extract_key_entities_from_context(conversation_context)
 
+        # Debug: Log what entities were extracted
+        log.info(f"🔍 Extracted context entities: {context_entities}")
+
         if not context_entities:
             return current_query
 
@@ -486,6 +489,30 @@ class ConversationContextAnalyzer:
             main_entity = context_entities[0] if context_entities else ""
             if main_entity and main_entity.lower() not in enhanced_query.lower():
                 enhanced_query = f"{main_entity} {enhanced_query}"
+
+        # For ambiguous names, add any additional context entities found in conversation
+        if context_entities and len(context_entities) >= 2:
+            main_entity = context_entities[0]
+
+            # Simply use additional context entities that were extracted from conversation
+            # without any hardcoded filtering - let the entity extraction determine what's relevant
+            additional_context = context_entities[
+                1:3
+            ]  # Take up to 2 additional context entities
+
+            if additional_context and main_entity and len(main_entity.split()) >= 2:
+                # Only add context that's not already in the query
+                new_context = []
+                for ctx in additional_context:
+                    if ctx.lower() not in enhanced_query.lower():
+                        new_context.append(ctx)
+
+                if new_context:
+                    context_str = " ".join(new_context)
+                    enhanced_query = f"{context_str} {enhanced_query}"
+                    log.info(
+                        f"🔍 Added conversation context for disambiguation: '{context_str}'"
+                    )
 
         # Clean up the query - remove any duplicate spaces and trailing issues
         enhanced_query = " ".join(enhanced_query.split())
