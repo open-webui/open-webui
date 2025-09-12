@@ -1,4 +1,5 @@
 import dayjs from 'dayjs';
+import i18n from '$lib/i18n';
 
 // Import all locales
 import 'dayjs/locale/af';
@@ -101,5 +102,43 @@ import 'dayjs/locale/yo';
 import 'dayjs/locale/zh';
 import 'dayjs/locale/zh-tw';
 import 'dayjs/locale/et';
+
+// Add plugins that components need
+import relativeTime from 'dayjs/plugin/relativeTime';
+import isToday from 'dayjs/plugin/isToday';
+import isYesterday from 'dayjs/plugin/isYesterday';
+import localizedFormat from 'dayjs/plugin/localizedFormat';
+import duration from 'dayjs/plugin/duration';
+import calendar from 'dayjs/plugin/calendar';
+
+dayjs.extend(relativeTime);
+dayjs.extend(isToday);
+dayjs.extend(isYesterday);
+dayjs.extend(localizedFormat);
+dayjs.extend(duration);
+dayjs.extend(calendar);
+
+// Global locale loader
+function loadDayjsLocale(locales) {
+    if (!locales || !Array.isArray(locales)) {
+        return;
+    }
+
+    for (const locale of locales) {
+        try {
+            dayjs.locale(locale);
+            break;
+        } catch (error) {
+            console.error(`Could not load dayjs locale '${locale}':`, error);
+        }
+    }
+}
+
+// Subscribe to i18n language changes
+i18n.subscribe(($i18n) => {
+    if ($i18n?.languages) {
+        loadDayjsLocale($i18n.languages);
+    }
+});
 
 export default dayjs;

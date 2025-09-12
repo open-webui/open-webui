@@ -360,6 +360,7 @@
 	"DD/MM/YYYY": "",
 	"December": "dekabr",
 	"Deepgram": "",
+	"DD/MM/YYYY [at] h:mm A": "",
 	"Default": "Standart",
 	"Default (Open AI)": "Standart (Ochiq AI)",
 	"Default (SentenceTransformers)": "Birlamchi (SentenceTransformers)",

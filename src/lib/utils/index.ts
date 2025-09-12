@@ -2,16 +2,11 @@ import { v4 as uuidv4 } from 'uuid';
 import sha256 from 'js-sha256';
 import { WEBUI_BASE_URL } from '$lib/constants';
 
-import dayjs from 'dayjs';
+import dayjs from '$lib/dayjs';
 import relativeTime from 'dayjs/plugin/relativeTime';
 import isToday from 'dayjs/plugin/isToday';
 import isYesterday from 'dayjs/plugin/isYesterday';
 import localizedFormat from 'dayjs/plugin/localizedFormat';
-
-dayjs.extend(relativeTime);
-dayjs.extend(isToday);
-dayjs.extend(isYesterday);
-dayjs.extend(localizedFormat);
 
 import { TTS_RESPONSE_SPLIT } from '$lib/types';
 
@@ -376,17 +371,18 @@ export const generateInitialsImage = (name) => {
 	return canvas.toDataURL();
 };
 
-export const formatDate = (inputDate) => {
-	const date = dayjs(inputDate);
-	const now = dayjs();
-
-	if (date.isToday()) {
-		return `Today at ${date.format('LT')}`;
-	} else if (date.isYesterday()) {
-		return `Yesterday at ${date.format('LT')}`;
-	} else {
-		return `${date.format('L')} at ${date.format('LT')}`;
-	}
+export const formatDate = (inputDate, i18n) => {  
+    const date = dayjs(inputDate);  
+      
+    if (date.isToday()) {  
+        return date.format(i18n.t('[Today at] h:mm A'));  
+    } else if (date.isYesterday()) {  
+        return date.format(i18n.t('[Yesterday at] h:mm A'));  
+    } else if (date.isSame(dayjs().subtract(1, 'week'), 'week')) {  
+        return date.format(i18n.t('[Last] dddd [at] h:mm A'));  
+    } else {  
+        return date.format(i18n.t('DD/MM/YYYY [at] h:mm A'));  
+    }  
 };
 
 export const copyToClipboard = async (text, html = null, formatted = false) => {

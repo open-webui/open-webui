@@ -634,7 +634,7 @@
 							: 'invisible group-hover:visible transition text-gray-400'}"
 					>
 						<Tooltip content={dayjs(message.timestamp * 1000).format('LLLL')}>
-							<span class="line-clamp-1">{formatDate(message.timestamp * 1000)}</span>
+							<span class="line-clamp-1">{formatDate(message.timestamp * 1000, $i18n)}</span>
 						</Tooltip>
 					</div>
 				{/if}
