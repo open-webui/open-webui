@@ -88,7 +88,7 @@
 			transition={flyAndScale}
 		>
 			{#if toggleFilters && toggleFilters.length > 0}
-				{#each toggleFilters as filter, filterIdx (filter.id)}
+				{#each toggleFilters.sort( (a, b) => a.name.localeCompare( b.name, undefined, { sensitivity: 'base' } ) ) as filter, filterIdx (filter.id)}
 					<Tooltip content={filter?.description} placement="top">
 						<button
 							class="flex w-full justify-between gap-2 items-center px-3 py-2 text-sm font-medium cursor-pointer rounded-xl hover:bg-gray-50 dark:hover:bg-gray-800"
