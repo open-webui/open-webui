@@ -65,7 +65,8 @@
 					type: entity.type || 'PII',
 					text: (entity.text || entity.label).toLowerCase(),
 					raw_text: entity.raw_text || entity.label,
-					occurrences: (entity.occurrences || []).map((o) => ({
+					// CRITICAL: Use originalOccurrences (plain text positions) for storage, fallback to regular occurrences
+					occurrences: ((entity.originalOccurrences || entity.occurrences) || []).map((o) => ({
 						start_idx: o.start_idx,
 						end_idx: o.end_idx
 					}))
@@ -257,18 +258,24 @@
 		// detections is a dict keyed by raw text; values carry id,label,type,occurrences
 		const values = Object.values(detections) as any[];
 		const entities: ExtendedPiiEntity[] = values
-			.map((e) => ({
-				id: e.id,
-				label: e.label,
-				type: e.type || e.entity_type || 'PII',
-				text: e.text || e.raw_text || e.name || '', // Add required 'text' field
-				raw_text: e.raw_text || e.text || e.name || '',
-				occurrences: (e.occurrences || []).map((o: any) => ({
+			.map((e) => {
+				const mappedOccurrences = (e.occurrences || []).map((o: any) => ({
 					start_idx: o.start_idx,
 					end_idx: o.end_idx
-				})),
-				shouldMask: true
-			}))
+				}));
+				
+				return {
+					id: e.id,
+					label: e.label,
+					type: e.type || e.entity_type || 'PII',
+					text: e.text || e.raw_text || e.name || '', // Add required 'text' field
+					raw_text: e.raw_text || e.text || e.name || '',
+					occurrences: mappedOccurrences,
+					// CRITICAL: Backend positions ARE the original plain text positions
+					originalOccurrences: mappedOccurrences,
+					shouldMask: true
+				};
+			})
 			.filter((e) => e.raw_text && e.raw_text.trim() !== '');
 		return entities;
 	})();
@@ -294,7 +301,7 @@
 			if (Array.isArray(extendedEntities) && extendedEntities.length > 0) {
 				if (conversationId && conversationId.trim() !== '') {
 					// Persist entities for this conversation as known entities
-					manager.setConversationEntitiesFromLatestDetection(conversationId, extendedEntities);
+					manager.setConversationWorkingEntitiesWithMaskStates(conversationId, extendedEntities);
 				} else {
 					// New chat without conversationId: seed temporary state so extensions can render
 					if (!manager.isTemporaryStateActive()) {
@@ -609,6 +616,7 @@
 												piiMaskingEnabled={true}
 												enablePiiModifiers={true}
 												disableModifierTriggeredDetection={true}
+												usePiiMarkdownMode={true}
 												onPiiToggled={(entities) => {
 													// When PII is toggled on one page, sync all other pages
 													editors.forEach((ed, edIdx) => {
@@ -630,23 +638,14 @@
 														// Set loading state
 														isPiiDetectionInProgress = true;
 
-														const piiSessionManager = PiiSessionManager.getInstance();
-														const knownEntities = piiSessionManager.getKnownEntitiesForApi(conversationId);
-														const modifiers = piiSessionManager.getModifiersForApi(conversationId);
+													const piiSessionManager = PiiSessionManager.getInstance();
+													const modifiers = piiSessionManager.getModifiersForApi(conversationId);
+													// CRITICAL: Use new method that returns entities with original plain text positions
+													const piiEntities = piiSessionManager.getEntitiesForApiWithOriginalPositions(conversationId);
 
-													// Send complete document text as one string to PII API
-													const { updatePiiMasking } = await import('$lib/apis/pii');
-													const completeText = pageContents.join('\n'); // Join all pages with double newlines
-													
-													// Convert known entities to PiiEntity format for the update API
-													const piiEntities = knownEntities.map(entity => ({
-														id: entity.id,
-														type: entity.type,
-														label: entity.label,
-														text: entity.name,
-														raw_text: entity.name,
-														occurrences: [] // Will be populated by the API
-													}));
+												// Send complete document text as one string to PII API
+												const { updatePiiMasking } = await import('$lib/apis/pii');
+												const completeText = pageContents.join('\n'); // Join all pages with double newlines
 													
 													const response = await updatePiiMasking(
 														apiKey,
@@ -657,8 +656,19 @@
 													);
 
 													if (response.pii && response.pii.length > 0) {
-														// Process entities from complete document
-														const allEntities = response.pii;
+														// Process entities from complete document and convert to ExtendedPiiEntity
+														const allEntities = [];
+														for (const entity of response.pii) {
+															allEntities.push({
+																...entity,
+																shouldMask: true,
+																// CRITICAL: API response positions ARE the original plain text positions
+																originalOccurrences: entity.occurrences.map(o => ({
+																	start_idx: o.start_idx,
+																	end_idx: o.end_idx
+																}))
+															});
+														}
 
 															// Create PII payload for complete document
 															const piiPayload = {};
@@ -672,7 +682,8 @@
 																	type: entity.type || 'PII',
 																	text: (entity.text || entity.label).toLowerCase(),
 																	raw_text: entity.raw_text || entity.label,
-																	occurrences: (entity.occurrences || []).map((o) => ({
+																	// CRITICAL: Use originalOccurrences (plain text positions) for backend storage
+																	occurrences: ((entity.originalOccurrences || entity.occurrences) || []).map((o) => ({
 																		start_idx: o.start_idx,
 																		end_idx: o.end_idx
 																	}))
@@ -684,7 +695,7 @@
 															
 														// Update session manager with all entities
 														if (conversationId && conversationId.trim() !== '') {
-															piiSessionManager.setConversationEntitiesFromLatestDetection(conversationId, allEntities);
+															piiSessionManager.setConversationWorkingEntitiesWithMaskStates(conversationId, allEntities);
 														} else {
 															// For new chats without conversationId, update temporary state
 															piiSessionManager.setTemporaryStateEntities(allEntities);

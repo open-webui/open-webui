@@ -604,6 +604,7 @@
 	export let piiModifierLabels: string[] = [];
 	export let piiDetectionOnlyAfterUserEdit: boolean | undefined = undefined; // Allow manual control of detection timing
 	export let disableModifierTriggeredDetection = false; // Disable PII detection when modifiers change (for FileItemModal)
+	export let usePiiMarkdownMode = false; // Send original markdown to PII API instead of processed text
 
 	// PII Loading state
 	let isPiiDetectionInProgress = false;
@@ -1231,7 +1232,9 @@
 										? piiDetectionOnlyAfterUserEdit
 										: messageInput
 											? false
-											: true
+											: true,
+								useMarkdownForApi: usePiiMarkdownMode,
+								getMarkdownText: usePiiMarkdownMode ? () => mdValue || value || '' : undefined
 							})
 						]
 					: []),

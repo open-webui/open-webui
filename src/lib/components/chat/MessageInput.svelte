@@ -1812,6 +1812,7 @@
 													{enablePiiDetection}
 													{piiApiKey}
 													{piiMaskingEnabled}
+													usePiiMarkdownMode={true}
 													conversationId={chatId || undefined}
 													onPiiDetected={handlePiiDetected}
 													onPiiToggled={handlePiiToggled}

@@ -14,6 +14,9 @@ import { PiiPerformanceTracker } from '$lib/components/common/RichTextInput/PiiP
 // Extended PII entity with masking state
 export interface ExtendedPiiEntity extends PiiEntity {
 	shouldMask?: boolean;
+	// Store original plain text positions for API calls
+	// While 'occurrences' contains mapped ProseMirror positions for editor interactions
+	originalOccurrences?: Array<{ start_idx: number; end_idx: number }>;
 }
 
 // Debounce function for PII detection
@@ -333,10 +336,17 @@ export class PiiSessionManager {
 					(o) => !currentOccKeys.has(occurrenceKey(o))
 				);
 
+				// Also merge originalOccurrences if they exist
+				const currentOriginalOccKeys = new Set((current.originalOccurrences || []).map(occurrenceKey));
+				const newOriginalOcc = (incomingEntity.originalOccurrences || []).filter(
+					(o) => !currentOriginalOccKeys.has(occurrenceKey(o))
+				);
+
 				merged[idx] = {
 					...current,
 					// Keep existing shouldMask and other properties, just add new occurrences
-					occurrences: [...(current.occurrences || []), ...newOcc]
+					occurrences: [...(current.occurrences || []), ...newOcc],
+					originalOccurrences: [...(current.originalOccurrences || []), ...newOriginalOcc]
 				};
 			} else {
 				// New entity - preserve original ID/label if not in use, otherwise assign new ones
@@ -535,6 +545,20 @@ export class PiiSessionManager {
 			label: entity.label,
 			name: entity.text || entity.raw_text.toLowerCase(),
 			shouldMask: entity.shouldMask
+		}));
+	}
+
+	// Get full entities with original positions for updatePiiMasking API calls
+	getEntitiesForApiWithOriginalPositions(conversationId?: string): PiiEntity[] {
+		const entities = this.getEntitiesForDisplay(conversationId);
+		return entities.map((entity) => ({
+			id: entity.id,
+			type: entity.type,
+			label: entity.label,
+			text: entity.text,
+			raw_text: entity.raw_text,
+			// CRITICAL: Use originalOccurrences (plain text positions) for API, fallback to regular occurrences
+			occurrences: entity.originalOccurrences || entity.occurrences
 		}));
 	}
 
@@ -870,8 +894,16 @@ export class PiiSessionManager {
 				const newOcc = (incoming.occurrences || []).filter(
 					(o) => !currentOccKeys.has(occurrenceKey(o))
 				);
+
+				// Also handle originalOccurrences
+				const currentOriginalOccKeys = new Set((current.originalOccurrences || []).map(occurrenceKey));
+				const newOriginalOcc = (incoming.originalOccurrences || []).filter(
+					(o) => !currentOriginalOccKeys.has(occurrenceKey(o))
+				);
+
 				if (
 					newOcc.length > 0 ||
+					newOriginalOcc.length > 0 ||
 					(incoming.shouldMask !== undefined && current.shouldMask === undefined)
 				) {
 					mergedPersistent[idx] = {
@@ -882,7 +914,8 @@ export class PiiSessionManager {
 						text: current.text || incoming.text,
 						raw_text: current.raw_text || incoming.raw_text,
 						type: current.type || incoming.type,
-						occurrences: [...(current.occurrences || []), ...newOcc]
+						occurrences: [...(current.occurrences || []), ...newOcc],
+						originalOccurrences: [...(current.originalOccurrences || []), ...newOriginalOcc]
 					};
 					persistentChanged = true;
 				}

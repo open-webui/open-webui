@@ -65,6 +65,8 @@ export interface PiiDetectionOptions {
 	onPiiDetectionStateChanged?: (isDetecting: boolean) => void;
 	debounceMs?: number;
 	detectOnlyAfterUserEdit?: boolean; // If true, do not auto-detect on initial load; wait for user edits
+	getMarkdownText?: () => string; // Function to get original markdown text instead of processed text
+	useMarkdownForApi?: boolean; // If true, use markdown text for API calls instead of ProseMirror plain text
 }
 
 // Removed unused interfaces - let TypeScript infer TipTap command types
@@ -214,6 +216,7 @@ function hasNewContent(
 
 // Convert PII entity positions from plain text to ProseMirror positions
 // Preserves existing shouldMask state from current entities
+// CRITICAL: Stores original plain text positions in originalOccurrences for API calls
 function mapPiiEntitiesToProseMirror(
 	entities: PiiEntity[],
 	mapping: PositionMapping,
@@ -225,9 +228,16 @@ function mapPiiEntitiesToProseMirror(
 		const existingEntity = existingEntities.find((existing) => existing.label === entity.label);
 		const shouldMask = existingEntity?.shouldMask ?? defaultShouldMask; // Use defaultShouldMask if not found
 
+		// Preserve original plain text positions for API calls
+		const originalOccurrences = entity.occurrences.map((occurrence) => ({
+			start_idx: occurrence.start_idx,
+			end_idx: occurrence.end_idx
+		}));
+
 		return {
 			...entity,
 			shouldMask,
+			originalOccurrences, // Store original plain text positions
 			occurrences: entity.occurrences.map((occurrence: PiiOccurrence) => {
 				const plainTextStart = occurrence.start_idx;
 				const plainTextEnd = occurrence.end_idx;
@@ -376,6 +386,7 @@ function remapEntitiesForCurrentDocument(
 		const endsAlpha = isAlnum(entityText[entityText.length - 1] || '');
 
 		const newOccurrences = [] as PiiOccurrence[];
+		const newOriginalOccurrences = [] as { start_idx: number; end_idx: number }[];
 		let match: RegExpExecArray | null;
 		while ((match = regex.exec(searchSource)) !== null) {
 			const foundIndex = match.index;
@@ -400,12 +411,19 @@ function remapEntitiesForCurrentDocument(
 				const from = proseMirrorStart;
 				const to = proseMirrorEnd + 1;
 				if (from >= 0 && to <= doc.content.size && from < to) {
+					// Store ProseMirror positions for editor use
 					newOccurrences.push({ start_idx: from, end_idx: to });
+					// Store original plain text positions for API calls
+					newOriginalOccurrences.push({ start_idx: plainTextStart, end_idx: plainTextEnd });
 				}
 			}
 		}
 
-		return { ...entity, occurrences: newOccurrences };
+		return { 
+			...entity, 
+			occurrences: newOccurrences,
+			originalOccurrences: newOriginalOccurrences
+		};
 	});
 
 	return remappedEntities.filter((entity) => entity.occurrences.length > 0);
@@ -684,7 +702,9 @@ export const PiiDetectionExtension = Extension.create<PiiDetectionOptions>({
 			onPiiToggled: undefined,
 			onPiiDetectionStateChanged: undefined,
 			debounceMs: getPiiConfig().timing.defaultDebounceMs,
-			detectOnlyAfterUserEdit: false
+			detectOnlyAfterUserEdit: false,
+			getMarkdownText: undefined,
+			useMarkdownForApi: false
 		};
 	},
 
@@ -753,6 +773,23 @@ export const PiiDetectionExtension = Extension.create<PiiDetectionOptions>({
 
 				const modifiers = piiSessionManager.getModifiersForApi(options.conversationId);
 
+				// Determine text to send to API
+				let textForApi = plainText;
+				let isUsingMarkdown = false;
+				
+				if (options.useMarkdownForApi && options.getMarkdownText) {
+					const markdownText = options.getMarkdownText();
+					if (markdownText && markdownText.trim()) {
+						textForApi = markdownText;
+						isUsingMarkdown = true;
+						console.log('PiiDetectionExtension: Using markdown text for API', {
+							markdownLength: markdownText.length,
+							proseMirrorLength: plainText.length,
+							difference: markdownText.length - plainText.length
+						});
+					}
+				}
+
 				// Track API performance
 				const tracker = PiiPerformanceTracker.getInstance();
 				const apiStartTime = performance.now();
@@ -760,7 +797,7 @@ export const PiiDetectionExtension = Extension.create<PiiDetectionOptions>({
 
 				const response = await maskPiiText(
 					apiKey,
-					[plainText],
+					[textForApi],
 					knownEntities,
 					modifiers,
 					false,
@@ -811,30 +848,52 @@ export const PiiDetectionExtension = Extension.create<PiiDetectionOptions>({
 						pluginEntities: pluginEntities.length,
 						conversationEntities: conversationEntities.length,
 						totalForMapping: existingEntitiesForMapping.length,
-						labels: existingEntitiesForMapping.map((e) => `${e.label}:${e.shouldMask}`)
+						labels: existingEntitiesForMapping.map((e) => `${e.label}:${e.shouldMask}`),
+						usingMarkdown: isUsingMarkdown
 					});
 
-					// Pass merged entities to preserve shouldMask state across messages
-					const mappedEntities = mapPiiEntitiesToProseMirror(
-						response.pii[0],
-						state.positionMapping,
-						existingEntitiesForMapping,
-						options.getShouldMask ? options.getShouldMask() : true
-					);
+					let mappedEntities: ExtendedPiiEntity[];
+
+					if (isUsingMarkdown) {
+						// When using markdown, we need to remap entities from markdown positions to ProseMirror positions
+						// This is more complex but provides better accuracy
+						console.warn('PiiDetectionExtension: Markdown mode - positions may need remapping');
+						
+						// For now, use the remap function which will try to find the entities in the current document
+						const remappedEntities = remapEntitiesForCurrentDocument(
+							response.pii[0],
+							state.positionMapping,
+							editorView.state.doc
+						);
+						
+						mappedEntities = remappedEntities.map(entity => ({
+							...entity,
+							shouldMask: existingEntitiesForMapping.find(e => e.label === entity.label)?.shouldMask ?? 
+										(options.getShouldMask ? options.getShouldMask() : true)
+						}));
+					} else {
+						// Standard position mapping from ProseMirror plain text
+						mappedEntities = mapPiiEntitiesToProseMirror(
+							response.pii[0],
+							state.positionMapping,
+							existingEntitiesForMapping,
+							options.getShouldMask ? options.getShouldMask() : true
+						);
+					}
 
 					// CRITICAL FIX: Sync the mapped entities back to session manager
 					// This ensures session manager has the correct shouldMask states from plugin
 					if (options.conversationId) {
 						piiSessionManager.setConversationWorkingEntitiesWithMaskStates(
 							options.conversationId,
-							mappedEntities
+							response.pii[0]
 						);
 					} else {
 						// For new chats, use temporary state
 						if (!piiSessionManager.isTemporaryStateActive()) {
 							piiSessionManager.activateTemporaryState();
 						}
-						piiSessionManager.setTemporaryStateEntities(mappedEntities);
+						piiSessionManager.setTemporaryStateEntities(response.pii[0]);
 					}
 
 					const tr = editorView.state.tr.setMeta(piiDetectionPluginKey, {
@@ -893,14 +952,31 @@ export const PiiDetectionExtension = Extension.create<PiiDetectionOptions>({
 
 				const modifiers = piiSessionManager.getModifiersForApi(options.conversationId);
 
+				// Determine text to send to API
+				let textForApi = plainText;
+				let isUsingMarkdown = false;
+				
+				if (options.useMarkdownForApi && options.getMarkdownText) {
+					const markdownText = options.getMarkdownText();
+					if (markdownText && markdownText.trim()) {
+						textForApi = markdownText;
+						isUsingMarkdown = true;
+						console.log('PiiDetectionExtension: Using markdown text for fast mask update', {
+							markdownLength: markdownText.length,
+							proseMirrorLength: plainText.length
+						});
+					}
+				}
+
 				// Convert ExtendedPiiEntity[] to PiiEntity[] for API call
+				// CRITICAL: Use originalOccurrences (plain text positions) for API, not ProseMirror positions
 				const piiEntities: PiiEntity[] = currentEntities.map((entity) => ({
 					id: entity.id,
 					type: entity.type,
 					label: entity.label,
 					text: entity.text,
 					raw_text: entity.raw_text,
-					occurrences: entity.occurrences
+					occurrences: entity.originalOccurrences || entity.occurrences // Fallback to regular occurrences if original not available
 				}));
 
 				// Track API performance
@@ -909,12 +985,13 @@ export const PiiDetectionExtension = Extension.create<PiiDetectionOptions>({
 				tracker.recordApiCall();
 
 				console.log('PiiDetectionExtension: 🚀 Using fast mask-update API', {
-					textLength: plainText.length,
+					textLength: textForApi.length,
 					entitiesCount: piiEntities.length,
-					modifiersCount: modifiers.length
+					modifiersCount: modifiers.length,
+					usingMarkdown: isUsingMarkdown
 				});
 
-				const response = await updatePiiMasking(apiKey, plainText, piiEntities, modifiers, false);
+				const response = await updatePiiMasking(apiKey, textForApi, piiEntities, modifiers, false);
 
 				// Track API completion
 				const apiElapsed = performance.now() - apiStartTime;
@@ -1090,13 +1167,29 @@ export const PiiDetectionExtension = Extension.create<PiiDetectionOptions>({
 				const knownEntities = piiSessionManager.getKnownEntitiesForApi(options.conversationId);
 				const modifiers = piiSessionManager.getModifiersForApi(options.conversationId);
 
+				// Determine text to send to API for incremental detection
+				let textForApi = incrementalText;
+				let isUsingMarkdown = false;
+				
+				// Note: For incremental detection, we typically still use the incremental snippet
+				// even in markdown mode, as the context snippet is already extracted from markdown
+				if (options.useMarkdownForApi && options.getMarkdownText && incrementalText === fullText) {
+					// Only use full markdown if we're analyzing the full text
+					const markdownText = options.getMarkdownText();
+					if (markdownText && markdownText.trim()) {
+						textForApi = markdownText;
+						isUsingMarkdown = true;
+					}
+				}
+
 				// Detect PII in the incremental content only
 				console.log('PiiDetectionExtension: Analyzing context snippet for PII', {
 					contextSnippetLength: incrementalText.length,
 					fullLength: fullText.length,
 					contextOffset: incrementalOffset || 0,
 					contextPreview:
-						incrementalText.substring(0, 100) + (incrementalText.length > 100 ? '...' : '')
+						incrementalText.substring(0, 100) + (incrementalText.length > 100 ? '...' : ''),
+					usingMarkdown: isUsingMarkdown
 				});
 
 				// Track incremental API performance
@@ -1106,7 +1199,7 @@ export const PiiDetectionExtension = Extension.create<PiiDetectionOptions>({
 
 				const response = await maskPiiText(
 					apiKey,
-					[incrementalText],
+					[textForApi],
 					knownEntities,
 					modifiers,
 					false,
