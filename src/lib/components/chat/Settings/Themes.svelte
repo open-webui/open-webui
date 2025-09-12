@@ -17,6 +17,7 @@
   import Clipboard from '$lib/components/icons/Clipboard.svelte';
   import Pencil from '$lib/components/icons/Pencil.svelte';
   import ThemeEditorModal from '$lib/components/common/ThemeEditorModal.svelte';
+  import ThemeImportWarningModal from '$lib/components/common/ThemImportWarningModal.svelte';
   import ConfirmDialog from '$lib/components/common/ConfirmDialog.svelte';
   import ChevronRight from '$lib/components/icons/ChevronRight.svelte';
   import ChevronDown from '$lib/components/icons/ChevronDown.svelte';
@@ -39,6 +40,8 @@
   let showConfirmDialog = false;
   let themeToDeleteId = '';
   let searchQuery = '';
+  let showThemeImportWarning = false;
+  let themeToImport: Theme | null = null;
   let sortOrder = 'default';
   let previousThemeId = '';
 
@@ -170,34 +173,20 @@
     }
 
     // Version compatibility check
-    if (theme.targetWebUIVersion && isNewerVersion(theme.targetWebUIVersion, WEBUI_VERSION)) {
-      toast.warning(
-        $i18n.t('Theme Incompatibility Warning'),
-        {
-          description: $i18n.t(
-            'This theme targets an older version of Open WebUI ({{themeVersion}}) and may not be fully compatible with your current version ({{appVersion}}).',
-            { themeVersion: theme.targetWebUIVersion, appVersion: WEBUI_VERSION }
-          )
-        }
-      );
-    } else if (theme.targetWebUIVersion && isNewerVersion(WEBUI_VERSION, theme.targetWebUIVersion)) {
-      toast.warning(
-        $i18n.t('Theme Incompatibility Warning'),
-        {
-          description: $i18n.t(
-            'This theme targets a newer version of Open WebUI ({{themeVersion}}) and may not be compatible with your current version ({{appVersion}}).',
-            { themeVersion: theme.targetWebUIVersion, appVersion: WEBUI_VERSION }
-          )
-        }
-      );
-    }
+    const versionMismatch =
+      theme.targetWebUIVersion && theme.targetWebUIVersion !== WEBUI_VERSION;
 
-    if (source) {
-      theme.sourceUrl = source;
+    if (versionMismatch) {
+      themeToImport = theme;
+      showThemeImportWarning = true;
+    } else {
+      if (source) {
+        theme.sourceUrl = source;
+      }
+      addCommunityTheme(theme);
+      toast.success($i18n.t('Theme "{{name}}" added successfully!', { name: theme.name }));
+      themeUrl = ''; // Clear input on success
     }
-    addCommunityTheme(theme);
-    toast.success($i18n.t('Theme "{{name}}" added successfully!', { name: theme.name }));
-    themeUrl = ''; // Clear input on success
   };
 
   const addThemeHandler = async () => {
@@ -573,6 +562,26 @@
     </div>
   {/if}
 </div>
+
+<ThemeImportWarningModal
+  bind:show={showThemeImportWarning}
+  themeName={themeToImport?.name ?? ''}
+  themeVersion={themeToImport?.targetWebUIVersion ?? ''}
+  webuiVersion={WEBUI_VERSION}
+  on:confirm={() => {
+    if (themeToImport) {
+      addCommunityTheme(themeToImport);
+      toast.success($i18n.t('Theme "{{name}}" added successfully!', { name: themeToImport.name }));
+      themeUrl = ''; // Clear input on success
+    }
+    showThemeImportWarning = false;
+    themeToImport = null;
+  }}
+  on:cancel={() => {
+    showThemeImportWarning = false;
+    themeToImport = null;
+  }}
+/>
 
 <ConfirmDialog
   bind:show={showConfirmDialog}
