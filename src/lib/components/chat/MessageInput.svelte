@@ -1152,7 +1152,9 @@
 									<div
 										class="scrollbar-hidden rtl:text-right ltr:text-left bg-transparent dark:text-gray-100 outline-hidden w-full pb-1 px-1 resize-none h-fit max-h-80 overflow-auto {files.length ===
 										0
-											? 'pt-2.5'
+											? atSelectedModel !== undefined
+												? 'pt-1.5'
+												: 'pt-2.5'
 											: ''}"
 										id="chat-input-container"
 									>
