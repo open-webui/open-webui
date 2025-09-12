@@ -340,6 +340,36 @@
         URL.revokeObjectURL(imageUrl);
       });
   };
+
+  const generateRandomColors = () => {
+    const getRandomHexColor = () => {
+      const letters = '0123456789ABCDEF';
+      let color = '#';
+      for (let i = 0; i < 6; i++) {
+        color += letters[Math.floor(Math.random() * 16)];
+      }
+      return color;
+    };
+
+    const newVariables = {
+      ...cssToObject(variablesText),
+      '--color-gray-950': getRandomHexColor(),
+      '--color-gray-900': getRandomHexColor(),
+      '--color-gray-850': getRandomHexColor(),
+      '--color-gray-800': getRandomHexColor(),
+      '--color-gray-100': getRandomHexColor(),
+      '--color-gray-50': getRandomHexColor(),
+      '--color-blue-600': getRandomHexColor()
+    };
+
+    variablesText = objectToCss(newVariables);
+    themeCopy.variables = newVariables;
+
+    const updatedTheme = { ...themeCopy };
+    dispatch('update', updatedTheme);
+
+    toast.success(`Theme variables updated with random colors.`);
+  };
 </script>
 
 <Modal bind:show {cancel} width="w-full max-w-3xl">
@@ -534,7 +564,13 @@
               <div class="mt-1 h-48">
                 <CodeEditor id="theme-variables-editor" bind:value={variablesText} lang={'css'} on:input={handleVariablesInput} />
               </div>
-              <div class="flex justify-end mt-2">
+              <div class="flex justify-end mt-2 space-x-2">
+                <button
+                  class="px-3.5 py-1.5 text-sm font-medium bg-gray-100 hover:bg-gray-200 text-black dark:bg-gray-800 dark:text-white dark:hover:bg-gray-700 transition rounded-full disabled:opacity-50 whitespace-nowrap"
+                  on:click={generateRandomColors}
+                >
+                  {$i18n.t('Random')}
+                </button>
                 <input
                   id="image-import-input-modal"
                   type="file"
