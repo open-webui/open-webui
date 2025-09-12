@@ -24,6 +24,12 @@
 		emoji: '🎨',
 		metaThemeColor: '#000000',
 		variables: variables.reduce((acc, v) => ({ ...acc, [v.name]: v.defaultValue }), {}),
+		gradient: {
+			enabled: true,
+			direction: 45,
+			intensity: 100,
+			colors: ['#ff0000', '#0000ff']
+		},
 		particleConfig: {},
 		tsparticlesConfig: {},
 		animationScript: '',
