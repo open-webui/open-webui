@@ -2274,6 +2274,38 @@ DOCLING_PIPELINE = PersistentConfig(
     os.getenv("DOCLING_PIPELINE", "standard"),
 )
 
+DOCLING_VLM_PIPELINE_MODEL = PersistentConfig(
+    "DOCLING_VLM_PIPELINE_MODEL",
+    "rag.docling_vlm_pipeline_model",
+    os.getenv("DOCLING_VLM_PIPELINE_MODEL", ""),
+)
+
+docling_vlm_pipeline_model_local = os.getenv("DOCLING_VLM_PIPELINE_MODEL_LOCAL", "")
+try:
+    docling_vlm_pipeline_model_local = json.loads(docling_vlm_pipeline_model_local)
+except json.JSONDecodeError:
+    docling_vlm_pipeline_model_local = {}
+
+
+DOCLING_VLM_PIPELINE_MODEL_LOCAL = PersistentConfig(
+    "DOCLING_VLM_PIPELINE_MODEL_LOCAL",
+    "rag.docling_vlm_pipeline_model_local",
+    docling_vlm_pipeline_model_local,
+)
+
+docling_vlm_pipeline_model_api = os.getenv("DOCLING_VLM_PIPELINE_MODEL_API", "")
+try:
+    docling_vlm_pipeline_model_api = json.loads(docling_vlm_pipeline_model_api)
+except json.JSONDecodeError:
+    docling_vlm_pipeline_model_api = {}
+
+
+DOCLING_VLM_PIPELINE_MODEL_API = PersistentConfig(
+    "DOCLING_VLM_PIPELINE_MODEL_API",
+    "rag.docling_vlm_pipeline_model_api",
+    docling_vlm_pipeline_model_api,
+)
+
 DOCLING_DO_PICTURE_DESCRIPTION = PersistentConfig(
     "DOCLING_DO_PICTURE_DESCRIPTION",
     "rag.docling_do_picture_description",
