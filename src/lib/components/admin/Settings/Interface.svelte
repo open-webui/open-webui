@@ -22,6 +22,8 @@
 	import Spinner from '$lib/components/common/Spinner.svelte';
 	import Banners from './Interface/Banners.svelte';
 
+	import LangPicker from './LangPicker.svelte';
+
 	const dispatch = createEventDispatcher();
 
 	const i18n = getContext('i18n');
@@ -41,7 +43,8 @@
 		ENABLE_SEARCH_QUERY_GENERATION: true,
 		ENABLE_RETRIEVAL_QUERY_GENERATION: true,
 		QUERY_GENERATION_PROMPT_TEMPLATE: '',
-		TOOLS_FUNCTION_CALLING_PROMPT_TEMPLATE: ''
+		TOOLS_FUNCTION_CALLING_PROMPT_TEMPLATE: '',
+		TRANSLATION_LANGUAGES: []
 	};
 
 	let promptSuggestions = [];
@@ -405,7 +408,7 @@
 											id: uuidv4(),
 											type: '',
 											title: '',
-											content: '',
+											content: JSON.stringify({ de: '', en: '', fr: '', it: '' }),
 											dismissible: true,
 											timestamp: Math.floor(Date.now() / 1000)
 										}
@@ -430,6 +433,12 @@
 				</div>
 
 				{#if $user?.role === 'admin'}
+					<div class="flex w-full justify-between">
+						<div class=" self-center text-xs">
+							{$i18n.t('Select languages for translations')}
+						</div>
+							<LangPicker bind:selected={taskConfig.TRANSLATION_LANGUAGES} />
+					</div>
 					<div class=" space-y-3">
 						<div class="flex w-full justify-between mb-2">
 							<div class=" self-center text-xs">
