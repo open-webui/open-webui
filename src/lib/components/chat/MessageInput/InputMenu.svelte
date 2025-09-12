@@ -17,6 +17,7 @@
 	import ChatBubbleOval from '$lib/components/icons/ChatBubbleOval.svelte';
 	import Refresh from '$lib/components/icons/Refresh.svelte';
 	import Agile from '$lib/components/icons/Agile.svelte';
+	import ClockRotateRight from '$lib/components/icons/ClockRotateRight.svelte';
 
 	const i18n = getContext('i18n');
 
@@ -167,7 +168,7 @@
 						}
 					}}
 				>
-					<Agile />
+					<ClockRotateRight />
 					<div class=" line-clamp-1">{$i18n.t('Reference Chats')}</div>
 				</DropdownMenu.Item>
 			</Tooltip>
