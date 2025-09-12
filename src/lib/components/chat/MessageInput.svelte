@@ -70,6 +70,7 @@
 	import InputVariablesModal from './MessageInput/InputVariablesModal.svelte';
 	import Voice from '../icons/Voice.svelte';
 	import { getSessionUser } from '$lib/apis/auths';
+	import Terminal from '../icons/Terminal.svelte';
 	const i18n = getContext('i18n');
 
 	export let onChange: Function = () => {};
@@ -1848,7 +1849,7 @@
 																? 'm-1'
 																: 'focus:outline-hidden rounded-full'}"
 														>
-															<CommandLine className="size-4" strokeWidth="1.75" />
+															<Terminal className="size-3.5" strokeWidth="2" />
 															<span
 																class="hidden @xl:block whitespace-nowrap text-ellipsis leading-none normal-case pr-0.5"
 																>{$i18n.t('Code Interpreter')}</span
