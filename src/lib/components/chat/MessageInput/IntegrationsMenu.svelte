@@ -92,36 +92,38 @@
 			transition={flyAndScale}
 		>
 			{#if tools}
-				<button
-					class="flex w-full justify-between gap-2 items-center px-3 py-1.5 text-sm cursor-pointer rounded-xl hover:bg-gray-50 dark:hover:bg-gray-800"
-					on:click={() => {
-						showAllTools = !showAllTools;
-					}}
-				>
-					{#if !showAllTools}
-						<Wrench />
+				{#if Object.keys(tools).length > 0}
+					<button
+						class="flex w-full justify-between gap-2 items-center px-3 py-1.5 text-sm cursor-pointer rounded-xl hover:bg-gray-50 dark:hover:bg-gray-800"
+						on:click={() => {
+							showAllTools = !showAllTools;
+						}}
+					>
+						{#if !showAllTools}
+							<Wrench />
 
-						<div class="flex items-center w-full justify-between">
-							<div>
-								{$i18n.t('Tools')}
-								<span class="ml-0.5 text-gray-500">{Object.keys(tools).length}</span>
-							</div>
+							<div class="flex items-center w-full justify-between">
+								<div>
+									{$i18n.t('Tools')}
+									<span class="ml-0.5 text-gray-500">{Object.keys(tools).length}</span>
+								</div>
 
-							<div class="text-gray-500">
-								<ChevronRight />
+								<div class="text-gray-500">
+									<ChevronRight />
+								</div>
 							</div>
-						</div>
-					{:else}
-						<ChevronLeft />
+						{:else}
+							<ChevronLeft />
 
-						<div class="flex items-center w-full justify-between">
-							<div>
-								{$i18n.t('Tools')}
-								<span class="ml-0.5 text-gray-500">{Object.keys(tools).length}</span>
+							<div class="flex items-center w-full justify-between">
+								<div>
+									{$i18n.t('Tools')}
+									<span class="ml-0.5 text-gray-500">{Object.keys(tools).length}</span>
+								</div>
 							</div>
-						</div>
-					{/if}
-				</button>
+						{/if}
+					</button>
+				{/if}
 			{:else}
 				<div class="py-4">
 					<Spinner />
