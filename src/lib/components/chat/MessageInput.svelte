@@ -1475,10 +1475,10 @@
 																);
 															}}
 															type="button"
-															class="group px-2 py-2 flex gap-1.5 items-center text-sm rounded-full transition-colors duration-300 focus:outline-hidden max-w-full overflow-hidden hover:bg-gray-50 dark:hover:bg-gray-800 {selectedFilterIds.includes(
+															class="group p-[7px] flex gap-1.5 items-center text-sm rounded-full transition-colors duration-300 focus:outline-hidden max-w-full overflow-hidden hover:bg-gray-50 dark:hover:bg-gray-800 {selectedFilterIds.includes(
 																filterId
 															)
-																? 'text-sky-500 dark:text-sky-300 bg-sky-50 dark:bg-sky-200/5'
+																? 'text-sky-500 dark:text-sky-300 bg-sky-50 dark:bg-sky-400/10 border border-sky-200/40 dark:border-sky-500/20'
 																: 'bg-transparent text-gray-600 dark:text-gray-300  '} capitalize"
 														>
 															{#if filter?.icon}
@@ -1508,9 +1508,9 @@
 													<button
 														on:click|preventDefault={() => (webSearchEnabled = !webSearchEnabled)}
 														type="button"
-														class="group px-2 py-2 flex gap-1.5 items-center text-sm rounded-full transition-colors duration-300 focus:outline-hidden max-w-full overflow-hidden hover:bg-gray-50 dark:hover:bg-gray-800 {webSearchEnabled ||
+														class="group p-[7px] flex gap-1.5 items-center text-sm rounded-full transition-colors duration-300 focus:outline-hidden max-w-full overflow-hidden hover:bg-gray-50 dark:hover:bg-gray-800 {webSearchEnabled ||
 														($settings?.webSearch ?? false) === 'always'
-															? ' text-sky-500 dark:text-sky-300 bg-sky-50 dark:bg-sky-200/5'
+															? ' text-sky-500 dark:text-sky-300 bg-sky-50 dark:bg-sky-400/10 border border-sky-200/40 dark:border-sky-500/20'
 															: 'bg-transparent text-gray-600 dark:text-gray-300 '}"
 													>
 														<GlobeAlt className="size-4" strokeWidth="1.75" />
@@ -1527,8 +1527,8 @@
 														on:click|preventDefault={() =>
 															(imageGenerationEnabled = !imageGenerationEnabled)}
 														type="button"
-														class="group px-2 py-2 flex gap-1.5 items-center text-sm rounded-full transition-colors duration-300 focus:outline-hidden max-w-full overflow-hidden hover:bg-gray-50 dark:hover:bg-gray-800 {imageGenerationEnabled
-															? ' text-sky-500 dark:text-sky-300 bg-sky-50 dark:bg-sky-200/5'
+														class="group p-[7px] flex gap-1.5 items-center text-sm rounded-full transition-colors duration-300 focus:outline-hidden max-w-full overflow-hidden hover:bg-gray-50 dark:hover:bg-gray-800 {imageGenerationEnabled
+															? ' text-sky-500 dark:text-sky-300 bg-sky-50 dark:bg-sky-400/10 border border-sky-200/40 dark:border-sky-500/20'
 															: 'bg-transparent text-gray-600 dark:text-gray-300 '}"
 													>
 														<Photo className="size-4" strokeWidth="1.75" />
@@ -1549,8 +1549,8 @@
 														on:click|preventDefault={() =>
 															(codeInterpreterEnabled = !codeInterpreterEnabled)}
 														type="button"
-														class=" group px-2 py-2 flex gap-1.5 items-center text-sm transition-colors duration-300 max-w-full overflow-hidden hover:bg-gray-50 dark:hover:bg-gray-800 {codeInterpreterEnabled
-															? ' text-sky-500 dark:text-sky-300 bg-sky-50 dark:bg-sky-200/5'
+														class=" group p-[7px] flex gap-1.5 items-center text-sm transition-colors duration-300 max-w-full overflow-hidden hover:bg-gray-50 dark:hover:bg-gray-800 {codeInterpreterEnabled
+															? ' text-sky-500 dark:text-sky-300 bg-sky-50 dark:bg-sky-400/10 border border-sky-200/40 dark:border-sky-500/20'
 															: 'bg-transparent text-gray-600 dark:text-gray-300 '} {($settings?.highContrastMode ??
 														false)
 															? 'm-1'
