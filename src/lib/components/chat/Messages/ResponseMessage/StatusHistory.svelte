@@ -32,16 +32,16 @@
 			{#if showHistory}
 				<div class="flex flex-row">
 					{#if history.length > 1}
-						<div class="w-1 border-r border-gray-50 dark:border-gray-800 mt-3 -mb-2.5" />
+						<div class="w-1 border-r border-gray-100 dark:border-gray-800 mt-3 -mb-2.5" />
 
 						<div class="w-full -translate-x-[7.5px]">
 							{#each history as status, idx}
 								{#if idx !== history.length - 1}
 									<div class="flex items-start gap-2 mb-1">
 										<div class="pt-3 px-1">
-											<span class="relative flex size-2">
+											<span class="relative flex size-1.5 rounded-full justify-center items-center">
 												<span
-													class="relative inline-flex size-1.5 rounded-full bg-gray-200 dark:bg-gray-700"
+													class="relative inline-flex size-1.5 rounded-full bg-gray-300 dark:bg-gray-600"
 												></span>
 											</span>
 										</div>
@@ -62,13 +62,13 @@
 			>
 				<div class="flex items-start gap-2">
 					<div class="pt-3 px-1">
-						<span class="relative flex size-2">
+						<span class="relative flex size-1.5 rounded-full justify-center items-center">
 							{#if status?.done === false}
 								<span
-									class="absolute inline-flex h-full w-full animate-ping rounded-full bg-gray-400 dark:bg-gray-700 opacity-75"
+									class="absolute inline-flex h-full w-full animate-ping rounded-full bg-gray-300 dark:bg-gray-600 opacity-75"
 								></span>
 							{/if}
-							<span class="relative inline-flex size-1.5 rounded-full bg-gray-200 dark:bg-gray-700"
+							<span class="relative inline-flex size-1.5 rounded-full bg-gray-300 dark:bg-gray-600"
 							></span>
 						</span>
 					</div>

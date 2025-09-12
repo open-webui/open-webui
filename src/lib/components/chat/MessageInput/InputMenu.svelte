@@ -18,6 +18,7 @@
 	import Refresh from '$lib/components/icons/Refresh.svelte';
 	import Agile from '$lib/components/icons/Agile.svelte';
 	import ClockRotateRight from '$lib/components/icons/ClockRotateRight.svelte';
+	import Database from '$lib/components/icons/Database.svelte';
 
 	const i18n = getContext('i18n');
 
@@ -201,7 +202,7 @@
 						}
 					}}
 				>
-					<DocumentArrowUp />
+					<Database />
 					<div class=" line-clamp-1">{$i18n.t('Attach Knowledge')}</div>
 				</DropdownMenu.Item>
 			</Tooltip>
