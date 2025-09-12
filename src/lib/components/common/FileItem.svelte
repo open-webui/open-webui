@@ -145,7 +145,7 @@
 							<Spinner className="size-4" />
 						</div>
 					{/if}
-					<div class="font-medium line-clamp-1 flex-1">{decodeString(name)}</div>
+					<div class="font-medium line-clamp-1 flex-1 pr-1">{decodeString(name)}</div>
 					{#if size}
 						<div class="text-gray-500 text-xs capitalize shrink-0">{formatFileSize(size)}</div>
 					{:else}

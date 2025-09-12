@@ -159,6 +159,20 @@
 
 		await tick();
 	});
+
+	const onKeyDown = (e) => {
+		if (e.key === 'Enter') {
+			e.preventDefault();
+			select();
+		}
+	};
+	onMount(() => {
+		window.addEventListener('keydown', onKeyDown);
+	});
+
+	onDestroy(() => {
+		window.removeEventListener('keydown', onKeyDown);
+	});
 </script>
 
 <div class="px-2 text-xs text-gray-500 py-1">
