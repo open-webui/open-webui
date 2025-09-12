@@ -1059,7 +1059,7 @@
 								{/if}
 
 								{#if files.length > 0}
-									<div class="mx-2 mt-2.5 -mb-1 flex items-center flex-wrap gap-2">
+									<div class="mx-2 mt-2.5 pb-1.5 flex items-center flex-wrap gap-2">
 										{#each files as file, fileIdx}
 											{#if file.type === 'image'}
 												<div class=" relative group">
@@ -1150,7 +1150,10 @@
 
 								<div class="px-2.5">
 									<div
-										class="scrollbar-hidden rtl:text-right ltr:text-left bg-transparent dark:text-gray-100 outline-hidden w-full pt-2.5 pb-[5px] px-1 resize-none h-fit max-h-80 overflow-auto"
+										class="scrollbar-hidden rtl:text-right ltr:text-left bg-transparent dark:text-gray-100 outline-hidden w-full pb-1 px-1 resize-none h-fit max-h-80 overflow-auto {files.length ===
+										0
+											? 'pt-2.5'
+											: ''}"
 										id="chat-input-container"
 									>
 										{#if suggestions}
