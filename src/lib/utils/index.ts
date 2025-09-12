@@ -378,14 +378,13 @@ export const generateInitialsImage = (name) => {
 
 export const formatDate = (inputDate) => {
 	const date = dayjs(inputDate);
-	const now = dayjs();
 
 	if (date.isToday()) {
-		return `Today at ${date.format('LT')}`;
+		return `Today at {{LOCALIZED_TIME}}`;
 	} else if (date.isYesterday()) {
-		return `Yesterday at ${date.format('LT')}`;
+		return `Yesterday at {{LOCALIZED_TIME}}`;
 	} else {
-		return `${date.format('L')} at ${date.format('LT')}`;
+		return `{{LOCALIZED_DATE}} at {{LOCALIZED_TIME}}`;
 	}
 };
 
