@@ -1,11 +1,6 @@
 <script lang="ts">
-	import * as pdfjs from 'pdfjs-dist';
-	import * as pdfWorker from 'pdfjs-dist/build/pdf.worker.mjs';
-	pdfjs.GlobalWorkerOptions.workerSrc = import.meta.url + 'pdfjs-dist/build/pdf.worker.mjs';
-
 	import DOMPurify from 'dompurify';
 	import { marked } from 'marked';
-	import heic2any from 'heic2any';
 
 	import { toast } from 'svelte-sonner';
 
@@ -32,7 +27,7 @@
 	} from '$lib/stores';
 
 	import {
-		blobToFile,
+		convertHeicToJpeg,
 		compressImage,
 		createMessagesList,
 		extractContentFromFile,
@@ -106,6 +101,7 @@
 	export let codeInterpreterEnabled = false;
 
 	let showInputVariablesModal = false;
+	let inputVariablesModalCallback = (variableValues) => {};
 	let inputVariables = {};
 	let inputVariableValues = {};
 
@@ -127,11 +123,24 @@
 		codeInterpreterEnabled
 	});
 
-	const inputVariableHandler = async (text: string) => {
+	const inputVariableHandler = async (text: string): Promise<string> => {
 		inputVariables = extractInputVariables(text);
-		if (Object.keys(inputVariables).length > 0) {
-			showInputVariablesModal = true;
+
+		// No variables? return the original text immediately.
+		if (Object.keys(inputVariables).length === 0) {
+			return text;
 		}
+
+		// Show modal and wait for the user's input.
+		showInputVariablesModal = true;
+		return await new Promise<string>((resolve) => {
+			inputVariablesModalCallback = (variableValues) => {
+				inputVariableValues = { ...inputVariableValues, ...variableValues };
+				replaceVariables(inputVariableValues);
+				showInputVariablesModal = false;
+				resolve(text);
+			};
+		});
 	};
 
 	const textVariableHandler = async (text: string) => {
@@ -249,7 +258,6 @@
 			text = text.replaceAll('{{CURRENT_WEEKDAY}}', weekday);
 		}
 
-		inputVariableHandler(text);
 		return text;
 	};
 
@@ -285,7 +293,7 @@
 		}
 	};
 
-	export const setText = async (text?: string) => {
+	export const setText = async (text?: string, cb?: (text: string) => void) => {
 		const chatInput = document.getElementById('chat-input');
 
 		if (chatInput) {
@@ -301,6 +309,10 @@
 				chatInput.focus();
 				chatInput.dispatchEvent(new Event('input'));
 			}
+
+			text = await inputVariableHandler(text);
+			await tick();
+			if (cb) await cb(text);
 		}
 	};
 
@@ -373,6 +385,9 @@
 		}
 
 		await tick();
+		text = await inputVariableHandler(text);
+		await tick();
+
 		const chatInputContainer = document.getElementById('chat-input-container');
 		if (chatInputContainer) {
 			chatInputContainer.scrollTop = chatInputContainer.scrollHeight;
@@ -417,6 +432,30 @@
 	let recording = false;
 
 	let isComposing = false;
+	// Safari has a bug where compositionend is not triggered correctly #16615
+	// when using the virtual keyboard on iOS.
+	let compositionEndedAt = -2e8;
+	const isSafari = /^((?!chrome|android).)*safari/i.test(navigator.userAgent);
+	function inOrNearComposition(event: Event) {
+		if (isComposing) {
+			return true;
+		}
+		// See https://www.stum.de/2016/06/24/handling-ime-events-in-javascript/.
+		// On Japanese input method editors (IMEs), the Enter key is used to confirm character
+		// selection. On Safari, when Enter is pressed, compositionend and keydown events are
+		// emitted. The keydown event triggers newline insertion, which we don't want.
+		// This method returns true if the keydown event should be ignored.
+		// We only ignore it once, as pressing Enter a second time *should* insert a newline.
+		// Furthermore, the keydown event timestamp must be close to the compositionEndedAt timestamp.
+		// This guards against the case where compositionend is triggered without the keyboard
+		// (e.g. character confirmation may be done with the mouse), and keydown is triggered
+		// afterwards- we wouldn't want to ignore the keydown event in this case.
+		if (isSafari && Math.abs(event.timeStamp - compositionEndedAt) < 500) {
+			compositionEndedAt = -2e8;
+			return true;
+		}
+		return false;
+	}
 
 	let chatInputContainerElement;
 	let chatInputElement;
@@ -616,7 +655,7 @@
 		} else {
 			// If temporary chat is enabled, we just add the file to the list without uploading it.
 
-			const content = await extractContentFromFile(file, pdfjsLib).catch((error) => {
+			const content = await extractContentFromFile(file).catch((error) => {
 				toast.error(
 					$i18n.t('Failed to extract content from the file: {{error}}', { error: error })
 				);
@@ -739,11 +778,7 @@
 						}
 					];
 				};
-				reader.readAsDataURL(
-					file['type'] === 'image/heic'
-						? await heic2any({ blob: file, toType: 'image/jpeg' })
-						: file
-				);
+				reader.readAsDataURL(file['type'] === 'image/heic' ? await convertHeicToJpeg(file) : file);
 			} else {
 				uploadFileHandler(file);
 			}
@@ -849,10 +884,7 @@
 <InputVariablesModal
 	bind:show={showInputVariablesModal}
 	variables={inputVariables}
-	onSave={(variableValues) => {
-		inputVariableValues = { ...inputVariableValues, ...variableValues };
-		replaceVariables(inputVariableValues);
-	}}
+	onSave={inputVariablesModalCallback}
 />
 
 {#if loaded}
@@ -1169,19 +1201,9 @@
 														return res;
 													}}
 													oncompositionstart={() => (isComposing = true)}
-													oncompositionend={() => {
-														const isSafari = /^((?!chrome|android).)*safari/i.test(
-															navigator.userAgent
-														);
-
-														if (isSafari) {
-															// Safari has a bug where compositionend is not triggered correctly #16615
-															// when using the virtual keyboard on iOS.
-															// We use a timeout to ensure that the composition is ended after a short delay.
-															setTimeout(() => (isComposing = false));
-														} else {
-															isComposing = false;
-														}
+													oncompositionend={(e) => {
+														compositionEndedAt = e.timeStamp;
+														isComposing = false;
 													}}
 													on:keydown={async (e) => {
 														e = e.detail.event;
@@ -1290,7 +1312,7 @@
 																	navigator.msMaxTouchPoints > 0
 																)
 															) {
-																if (isComposing) {
+																if (inOrNearComposition(e)) {
 																	return;
 																}
 
@@ -1393,17 +1415,9 @@
 												command = getCommand();
 											}}
 											on:compositionstart={() => (isComposing = true)}
-											on:compositionend={() => {
-												const isSafari = /^((?!chrome|android).)*safari/i.test(navigator.userAgent);
-
-												if (isSafari) {
-													// Safari has a bug where compositionend is not triggered correctly #16615
-													// when using the virtual keyboard on iOS.
-													// We use a timeout to ensure that the composition is ended after a short delay.
-													setTimeout(() => (isComposing = false));
-												} else {
-													isComposing = false;
-												}
+											on:compositionend={(e) => {
+												compositionEndedAt = e.timeStamp;
+												isComposing = false;
 											}}
 											on:keydown={async (e) => {
 												const isCtrlPressed = e.ctrlKey || e.metaKey; // metaKey is for Cmd key on Mac
@@ -1523,7 +1537,7 @@
 															navigator.msMaxTouchPoints > 0
 														)
 													) {
-														if (isComposing) {
+														if (inOrNearComposition(e)) {
 															return;
 														}
 
@@ -1772,7 +1786,7 @@
 																<Sparkles className="size-4" strokeWidth="1.75" />
 															{/if}
 															<span
-																class="hidden @xl:block whitespace-nowrap overflow-hidden text-ellipsis leading-none pr-0.5"
+																class="hidden @xl:block whitespace-nowrap text-ellipsis leading-none normal-case pr-0.5"
 																>{filter?.name}</span
 															>
 														</button>
@@ -1791,7 +1805,7 @@
 														>
 															<GlobeAlt className="size-4" strokeWidth="1.75" />
 															<span
-																class="hidden @xl:block whitespace-nowrap overflow-hidden text-ellipsis leading-none pr-0.5"
+																class="hidden @xl:block whitespace-nowrap text-ellipsis leading-none normal-case pr-0.5"
 																>{$i18n.t('Web Search')}</span
 															>
 														</button>
@@ -1810,7 +1824,7 @@
 														>
 															<Photo className="size-4" strokeWidth="1.75" />
 															<span
-																class="hidden @xl:block whitespace-nowrap overflow-hidden text-ellipsis leading-none pr-0.5"
+																class="hidden @xl:block whitespace-nowrap text-ellipsis leading-none normal-case pr-0.5"
 																>{$i18n.t('Image')}</span
 															>
 														</button>
@@ -1836,7 +1850,7 @@
 														>
 															<CommandLine className="size-4" strokeWidth="1.75" />
 															<span
-																class="hidden @xl:block whitespace-nowrap overflow-hidden text-ellipsis leading-none pr-0.5"
+																class="hidden @xl:block whitespace-nowrap text-ellipsis leading-none normal-case pr-0.5"
 																>{$i18n.t('Code Interpreter')}</span
 															>
 														</button>

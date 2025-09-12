@@ -329,17 +329,21 @@ def merge_ollama_models_lists(model_lists):
     for idx, model_list in enumerate(model_lists):
         if model_list is not None:
             for model in model_list:
-                id = model["model"]
-                if id not in merged_models:
-                    model["urls"] = [idx]
-                    merged_models[id] = model
-                else:
-                    merged_models[id]["urls"].append(idx)
+                id = model.get("model")
+                if id is not None:
+                    if id not in merged_models:
+                        model["urls"] = [idx]
+                        merged_models[id] = model
+                    else:
+                        merged_models[id]["urls"].append(idx)
 
     return list(merged_models.values())
 
 
-@cached(ttl=MODELS_CACHE_TTL)
+@cached(
+    ttl=MODELS_CACHE_TTL,
+    key=lambda _, user: f"ollama_all_models_{user.id}" if user else "ollama_all_models",
+)
 async def get_all_models(request: Request, user: UserModel = None):
     log.info("get_all_models()")
     if request.app.state.config.ENABLE_OLLAMA_API:

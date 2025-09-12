@@ -470,6 +470,10 @@ async def generate_queries(
                 detail=f"Query generation is disabled",
             )
 
+    if getattr(request.state, "cached_queries", None):
+        log.info(f"Reusing cached queries: {request.state.cached_queries}")
+        return request.state.cached_queries
+
     if getattr(request.state, "direct", False) and hasattr(request.state, "model"):
         models = {
             request.state.model["id"]: request.state.model,

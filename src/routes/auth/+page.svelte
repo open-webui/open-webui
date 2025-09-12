@@ -1,4 +1,4 @@
-<script>
+<script lang="ts">
 	import DOMPurify from 'dompurify';
 	import { marked } from 'marked';
 
@@ -14,17 +14,20 @@
 	import { WEBUI_API_BASE_URL, WEBUI_BASE_URL } from '$lib/constants';
 	import { WEBUI_NAME, config, user, socket } from '$lib/stores';
 
-	import { generateInitialsImage, canvasPixelTest, querystringValue } from '$lib/utils';
+	import { generateInitialsImage, canvasPixelTest } from '$lib/utils';
 
 	import Spinner from '$lib/components/common/Spinner.svelte';
 	import OnBoarding from '$lib/components/OnBoarding.svelte';
 	import SensitiveInput from '$lib/components/common/SensitiveInput.svelte';
+	import { redirect } from '@sveltejs/kit';
 
 	const i18n = getContext('i18n');
 
 	let loaded = false;
 
 	let mode = $config?.features.enable_ldap ? 'ldap' : 'signin';
+
+	let form = null;
 
 	let name = '';
 	let email = '';
@@ -33,7 +36,7 @@
 
 	let ldapUsername = '';
 
-	const setSessionUser = async (sessionUser) => {
+	const setSessionUser = async (sessionUser, redirectPath: string | null = null) => {
 		if (sessionUser) {
 			console.log(sessionUser);
 			toast.success($i18n.t(`You're now logged in.`));
@@ -44,8 +47,12 @@
 			await user.set(sessionUser);
 			await config.set(await getBackendConfig());
 
-			const redirectPath = querystringValue('redirect') || '/';
+			if (!redirectPath) {
+				redirectPath = $page.url.searchParams.get('redirectPath') || '/';
+			}
+
 			goto(redirectPath);
+			localStorage.removeItem('redirectPath');
 		}
 	};
 
@@ -94,7 +101,7 @@
 		}
 	};
 
-	const checkOauthCallback = async () => {
+	const oauthCallbackHandler = async () => {
 		// Get the value of the 'token' cookie
 		function getCookie(name) {
 			const match = document.cookie.match(
@@ -112,12 +119,13 @@
 			toast.error(`${error}`);
 			return null;
 		});
+
 		if (!sessionUser) {
 			return;
 		}
 
 		localStorage.token = token;
-		await setSessionUser(sessionUser);
+		await setSessionUser(sessionUser, localStorage.getItem('redirectPath') || null);
 	};
 
 	let onboarding = false;
@@ -146,11 +154,22 @@
 	}
 
 	onMount(async () => {
+		const redirectPath = $page.url.searchParams.get('redirect');
 		if ($user !== undefined) {
-			const redirectPath = querystringValue('redirect') || '/';
-			goto(redirectPath);
+			goto(redirectPath || '/');
+		} else {
+			if (redirectPath) {
+				localStorage.setItem('redirectPath', redirectPath);
+			}
 		}
-		await checkOauthCallback();
+
+		const error = $page.url.searchParams.get('error');
+		if (error) {
+			toast.error(error);
+		}
+
+		await oauthCallbackHandler();
+		form = $page.url.searchParams.get('form');
 
 		loaded = true;
 		setLogoImage();
@@ -246,7 +265,7 @@
 									{/if}
 								</div>
 
-								{#if $config?.features.enable_login_form || $config?.features.enable_ldap}
+								{#if $config?.features.enable_login_form || $config?.features.enable_ldap || form}
 									<div class="flex flex-col mt-4">
 										{#if mode === 'signup'}
 											<div class="mb-2">
@@ -337,7 +356,7 @@
 									</div>
 								{/if}
 								<div class="mt-5">
-									{#if $config?.features.enable_login_form || $config?.features.enable_ldap}
+									{#if $config?.features.enable_login_form || $config?.features.enable_ldap || form}
 										{#if mode === 'ldap'}
 											<button
 												class="bg-gray-700/5 hover:bg-gray-700/10 dark:bg-gray-100/5 dark:hover:bg-gray-100/10 dark:text-gray-300 dark:hover:text-white transition w-full rounded-full font-medium text-sm py-2.5"
@@ -386,7 +405,7 @@
 							{#if Object.keys($config?.oauth?.providers ?? {}).length > 0}
 								<div class="inline-flex items-center justify-center w-full">
 									<hr class="w-32 h-px my-4 border-0 dark:bg-gray-100/10 bg-gray-700/10" />
-									{#if $config?.features.enable_login_form || $config?.features.enable_ldap}
+									{#if $config?.features.enable_login_form || $config?.features.enable_ldap || form}
 										<span
 											class="px-3 text-sm font-medium text-gray-900 dark:text-white bg-transparent"
 											>{$i18n.t('or')}</span

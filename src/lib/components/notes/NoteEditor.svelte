@@ -1,7 +1,6 @@
 <script lang="ts">
 	import { getContext, onDestroy, onMount, tick } from 'svelte';
 	import { v4 as uuidv4 } from 'uuid';
-	import heic2any from 'heic2any';
 	import fileSaver from 'file-saver';
 	const { saveAs } = fileSaver;
 
@@ -26,7 +25,7 @@
 
 	import { PaneGroup, Pane, PaneResizer } from 'paneforge';
 
-	import { compressImage, copyToClipboard, splitStream } from '$lib/utils';
+	import { compressImage, copyToClipboard, splitStream, convertHeicToJpeg } from '$lib/utils';
 	import { WEBUI_API_BASE_URL, WEBUI_BASE_URL } from '$lib/constants';
 	import { uploadFile } from '$lib/apis/files';
 	import { chatCompletion, generateOpenAIChatCompletion } from '$lib/apis/openai';
@@ -545,11 +544,7 @@ ${content}
 					}
 				};
 
-				reader.readAsDataURL(
-					file['type'] === 'image/heic'
-						? await heic2any({ blob: file, toType: 'image/jpeg' })
-						: file
-				);
+				reader.readAsDataURL(file['type'] === 'image/heic' ? await convertHeicToJpeg(file) : file);
 			});
 
 			return await uploadImagePromise;
@@ -610,7 +605,7 @@ ${content}
 				document.body.removeChild(node);
 			}
 
-			const imgData = canvas.toDataURL('image/png');
+			const imgData = canvas.toDataURL('image/jpeg', 0.7);
 
 			// A4 page settings
 			const pdf = new jsPDF('p', 'mm', 'a4');
@@ -622,7 +617,7 @@ ${content}
 			let heightLeft = imgHeight;
 			let position = 0;
 
-			pdf.addImage(imgData, 'PNG', 0, position, imgWidth, imgHeight);
+			pdf.addImage(imgData, 'JPEG', 0, position, imgWidth, imgHeight);
 			heightLeft -= pageHeight;
 
 			// Handle additional pages
@@ -630,7 +625,7 @@ ${content}
 				position -= pageHeight;
 				pdf.addPage();
 
-				pdf.addImage(imgData, 'PNG', 0, position, imgWidth, imgHeight);
+				pdf.addImage(imgData, 'JPEG', 0, position, imgWidth, imgHeight);
 				heightLeft -= pageHeight;
 			}
 
@@ -978,7 +973,6 @@ Provide the enhanced notes in markdown format. Use markdown syntax for headings,
 								disabled={(note?.user_id !== $user?.id && $user?.role !== 'admin') ||
 									titleGenerating}
 								required
-								on:input={changeDebounceHandler}
 								on:focus={() => {
 									titleInputFocused = true;
 								}}

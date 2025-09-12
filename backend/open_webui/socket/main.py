@@ -115,7 +115,7 @@ if WEBSOCKET_MANAGER == "redis":
 
     clean_up_lock = RedisLock(
         redis_url=WEBSOCKET_REDIS_URL,
-        lock_name="usage_cleanup_lock",
+        lock_name=f"{REDIS_KEY_PREFIX}:usage_cleanup_lock",
         timeout_secs=WEBSOCKET_REDIS_LOCK_TIMEOUT,
         redis_sentinels=redis_sentinels,
         redis_cluster=WEBSOCKET_REDIS_CLUSTER,
@@ -704,6 +704,42 @@ def get_event_emitter(request_info, update_db=True):
                         "content": content,
                     },
                 )
+
+            if "type" in event_data and event_data["type"] == "files":
+                message = Chats.get_message_by_id_and_message_id(
+                    request_info["chat_id"],
+                    request_info["message_id"],
+                )
+
+                files = event_data.get("data", {}).get("files", [])
+                files.extend(message.get("files", []))
+
+                Chats.upsert_message_to_chat_by_id_and_message_id(
+                    request_info["chat_id"],
+                    request_info["message_id"],
+                    {
+                        "files": files,
+                    },
+                )
+
+            if event_data.get("type") in ["source", "citation"]:
+                data = event_data.get("data", {})
+                if data.get("type") == None:
+                    message = Chats.get_message_by_id_and_message_id(
+                        request_info["chat_id"],
+                        request_info["message_id"],
+                    )
+
+                    sources = message.get("sources", [])
+                    sources.append(data)
+
+                    Chats.upsert_message_to_chat_by_id_and_message_id(
+                        request_info["chat_id"],
+                        request_info["message_id"],
+                        {
+                            "sources": sources,
+                        },
+                    )
 
     return __event_emitter__
 

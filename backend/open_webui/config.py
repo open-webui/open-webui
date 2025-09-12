@@ -313,7 +313,7 @@ JWT_EXPIRES_IN = PersistentConfig(
 ####################################
 
 ENABLE_OAUTH_PERSISTENT_CONFIG = (
-    os.environ.get("ENABLE_OAUTH_PERSISTENT_CONFIG", "True").lower() == "true"
+    os.environ.get("ENABLE_OAUTH_PERSISTENT_CONFIG", "False").lower() == "true"
 )
 
 ENABLE_OAUTH_SIGNUP = PersistentConfig(
@@ -660,7 +660,7 @@ def load_oauth_providers():
 
     if (
         OAUTH_CLIENT_ID.value
-        and OAUTH_CLIENT_SECRET.value
+        and (OAUTH_CLIENT_SECRET.value or OAUTH_CODE_CHALLENGE_METHOD.value)
         and OPENID_PROVIDER_URL.value
     ):
 
@@ -1208,6 +1208,23 @@ USER_PERMISSIONS_CHAT_DELETE = (
     os.environ.get("USER_PERMISSIONS_CHAT_DELETE", "True").lower() == "true"
 )
 
+USER_PERMISSIONS_CHAT_DELETE_MESSAGE = (
+    os.environ.get("USER_PERMISSIONS_CHAT_DELETE_MESSAGE", "True").lower() == "true"
+)
+
+USER_PERMISSIONS_CHAT_CONTINUE_RESPONSE = (
+    os.environ.get("USER_PERMISSIONS_CHAT_CONTINUE_RESPONSE", "True").lower() == "true"
+)
+
+USER_PERMISSIONS_CHAT_REGENERATE_RESPONSE = (
+    os.environ.get("USER_PERMISSIONS_CHAT_REGENERATE_RESPONSE", "True").lower()
+    == "true"
+)
+
+USER_PERMISSIONS_CHAT_RATE_RESPONSE = (
+    os.environ.get("USER_PERMISSIONS_CHAT_RATE_RESPONSE", "True").lower() == "true"
+)
+
 USER_PERMISSIONS_CHAT_EDIT = (
     os.environ.get("USER_PERMISSIONS_CHAT_EDIT", "True").lower() == "true"
 )
@@ -1290,6 +1307,10 @@ DEFAULT_USER_PERMISSIONS = {
         "params": USER_PERMISSIONS_CHAT_PARAMS,
         "file_upload": USER_PERMISSIONS_CHAT_FILE_UPLOAD,
         "delete": USER_PERMISSIONS_CHAT_DELETE,
+        "delete_message": USER_PERMISSIONS_CHAT_DELETE_MESSAGE,
+        "continue_response": USER_PERMISSIONS_CHAT_CONTINUE_RESPONSE,
+        "regenerate_response": USER_PERMISSIONS_CHAT_REGENERATE_RESPONSE,
+        "rate_response": USER_PERMISSIONS_CHAT_RATE_RESPONSE,
         "edit": USER_PERMISSIONS_CHAT_EDIT,
         "share": USER_PERMISSIONS_CHAT_SHARE,
         "export": USER_PERMISSIONS_CHAT_EXPORT,
@@ -1576,7 +1597,7 @@ FOLLOW_UP_GENERATION_PROMPT_TEMPLATE = PersistentConfig(
 )
 
 DEFAULT_FOLLOW_UP_GENERATION_PROMPT_TEMPLATE = """### Task:
-Suggest 3-5 relevant follow-up questions or prompts in the chat's primary language that the user might naturally ask next in this conversation as a **user**, based on the chat history, to help continue or deepen the discussion.
+Suggest 3-5 relevant follow-up questions or prompts that the user might naturally ask next in this conversation as a **user**, based on the chat history, to help continue or deepen the discussion.
 ### Guidelines:
 - Write all follow-up questions from the user’s point of view, directed to the assistant.
 - Make questions concise, clear, and directly related to the discussed topic(s).
@@ -1977,6 +1998,9 @@ PGVECTOR_INITIALIZE_MAX_VECTOR_LENGTH = int(
     os.environ.get("PGVECTOR_INITIALIZE_MAX_VECTOR_LENGTH", "1536")
 )
 
+PGVECTOR_CREATE_EXTENSION = (
+    os.getenv("PGVECTOR_CREATE_EXTENSION", "true").lower() == "true"
+)
 PGVECTOR_PGCRYPTO = os.getenv("PGVECTOR_PGCRYPTO", "false").lower() == "true"
 PGVECTOR_PGCRYPTO_KEY = os.getenv("PGVECTOR_PGCRYPTO_KEY", None)
 if PGVECTOR_PGCRYPTO and not PGVECTOR_PGCRYPTO_KEY:
@@ -2208,6 +2232,18 @@ DOCLING_SERVER_URL = PersistentConfig(
     os.getenv("DOCLING_SERVER_URL", "http://docling:5001"),
 )
 
+DOCLING_DO_OCR = PersistentConfig(
+    "DOCLING_DO_OCR",
+    "rag.docling_do_ocr",
+    os.getenv("DOCLING_DO_OCR", "True").lower() == "true",
+)
+
+DOCLING_FORCE_OCR = PersistentConfig(
+    "DOCLING_FORCE_OCR",
+    "rag.docling_force_ocr",
+    os.getenv("DOCLING_FORCE_OCR", "False").lower() == "true",
+)
+
 DOCLING_OCR_ENGINE = PersistentConfig(
     "DOCLING_OCR_ENGINE",
     "rag.docling_ocr_engine",
@@ -2218,6 +2254,24 @@ DOCLING_OCR_LANG = PersistentConfig(
     "DOCLING_OCR_LANG",
     "rag.docling_ocr_lang",
     os.getenv("DOCLING_OCR_LANG", "eng,fra,deu,spa"),
+)
+
+DOCLING_PDF_BACKEND = PersistentConfig(
+    "DOCLING_PDF_BACKEND",
+    "rag.docling_pdf_backend",
+    os.getenv("DOCLING_PDF_BACKEND", "dlparse_v4"),
+)
+
+DOCLING_TABLE_MODE = PersistentConfig(
+    "DOCLING_TABLE_MODE",
+    "rag.docling_table_mode",
+    os.getenv("DOCLING_TABLE_MODE", "accurate"),
+)
+
+DOCLING_PIPELINE = PersistentConfig(
+    "DOCLING_PIPELINE",
+    "rag.docling_pipeline",
+    os.getenv("DOCLING_PIPELINE", "standard"),
 )
 
 DOCLING_DO_PICTURE_DESCRIPTION = PersistentConfig(
@@ -3076,6 +3130,12 @@ IMAGES_OPENAI_API_BASE_URL = PersistentConfig(
     "image_generation.openai.api_base_url",
     os.getenv("IMAGES_OPENAI_API_BASE_URL", OPENAI_API_BASE_URL),
 )
+IMAGES_OPENAI_API_VERSION = PersistentConfig(
+    "IMAGES_OPENAI_API_VERSION",
+    "image_generation.openai.api_version",
+    os.getenv("IMAGES_OPENAI_API_VERSION", ""),
+)
+
 IMAGES_OPENAI_API_KEY = PersistentConfig(
     "IMAGES_OPENAI_API_KEY",
     "image_generation.openai.api_key",
