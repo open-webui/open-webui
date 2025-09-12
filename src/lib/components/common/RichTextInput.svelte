@@ -216,8 +216,6 @@
 	export let fileHandler = false;
 	export let suggestions = null;
 
-	export let suggestions = null;
-
 	export let onFileDrop = (currentEditor, files, pos) => {
 		files.forEach((file) => {
 			const fileReader = new FileReader();
@@ -1015,6 +1013,9 @@
 				SelectionDecoration,
 
 <<<<<<< HEAD
+<<<<<<< HEAD
+=======
+>>>>>>> 153afd832 (refac: deprecate textarea input)
 				...(richText
 					? [
 							CodeBlockLowlight.configure({
@@ -1032,6 +1033,7 @@
 							})
 						]
 					: []),
+<<<<<<< HEAD
 =======
 				CodeBlockLowlight.configure({
 					lowlight
@@ -1039,6 +1041,8 @@
 				Highlight,
 				Typography,
 >>>>>>> 6b69c4da0 (refac/enh: commands ui)
+=======
+>>>>>>> 153afd832 (refac: deprecate textarea input)
 				...(suggestions
 					? [
 							Mention.configure({
@@ -1048,6 +1052,7 @@
 						]
 					: []),
 
+<<<<<<< HEAD
 <<<<<<< HEAD
 =======
 				TableKit.configure({
@@ -1059,6 +1064,8 @@
 					}
 				}),
 >>>>>>> 6b69c4da0 (refac/enh: commands ui)
+=======
+>>>>>>> 153afd832 (refac: deprecate textarea input)
 				CharacterCount.configure({}),
 				...(image ? [Image] : []),
 				...(fileHandler
