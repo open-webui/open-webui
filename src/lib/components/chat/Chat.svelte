@@ -269,10 +269,11 @@
 				];
 			}
 
-			// Set Default Filters
+			// Set Default Filters (Toggleable only)
 			if (model?.info?.meta?.defaultFilterIds) {
-				console.log(model);
-				selectedFilterIds = model.info.meta.defaultFilterIds;
+				selectedFilterIds = model.info.meta.defaultFilterIds.filter((id) =>
+					model?.filters?.find((f) => f.id === id)
+				);
 			}
 
 			// Set Default Features
