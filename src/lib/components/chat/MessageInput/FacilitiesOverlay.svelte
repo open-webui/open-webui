@@ -18,7 +18,6 @@
 	$: currentWebSearchEnabled = webSearchEnabled;
 
 	let selectedSponsor = '';
-	// Web search is now controlled by the existing web search button, not this form
 	let formData: Record<string, string> = {
 		projectTitle: '',
 		researchSpaceFacilities: '',
@@ -61,23 +60,18 @@
 	// Helper function to map backend section labels to form field IDs
 	function getSectionIdFromLabel(label: string): string {
 		const mapping: Record<string, string> = {
-			'Project Title': 'projectTitle',
-			'Research Space and Facilities': 'researchSpaceFacilities',
-			'Core Instrumentation': 'coreInstrumentation',
-			'Computing and Data Resources': 'computingDataResources',
-			'Internal Facilities (NYU)': 'internalFacilitiesNYU',
-			'External Facilities (Other Institutions)': 'externalFacilitiesOther',
-			'Special Infrastructure': 'specialInfrastructure',
-			'Equipment': 'equipment'
+			'1. Project Title': 'projectTitle',
+			'2. Research Space and Facilities': 'researchSpaceFacilities',
+			'3. Core Instrumentation': 'coreInstrumentation',
+			'4. Computing and Data Resources': 'computingDataResources',
+			'5a. Internal Facilities (NYU)': 'internalFacilitiesNYU',
+			'5b. External Facilities (Other Institutions)': 'externalFacilitiesOther',
+			'6. Special Infrastructure': 'specialInfrastructure',
+			'7. Equipment': 'equipment'
 		};
 		return mapping[label] || label.toLowerCase().replace(/[^a-zA-Z0-9]/g, '');
 	}
 	
-	// Helper function to remove numbers from section labels for placeholders
-	function getCleanLabel(label: string): string {
-		// Remove patterns like "1. ", "2. ", "5a. ", "5b. ", "6. ", "7. " from the beginning
-		return label.replace(/^\d+[a-z]?\.\s*/, '');
-	}
 
 	// DIRECT CHAT HISTORY MANIPULATION - BYPASS submitPrompt entirely
 	async function addFacilitiesResponseToChat(content: string, sources: any[]) {
@@ -277,8 +271,8 @@
 			const response = await generateFacilitiesResponse(token, {
 				sponsor: selectedSponsor,
 				form_data: formData,
-				model: modelId,  // Pass the user's selected model
-				web_search_enabled: webSearchEnabled  // Pass web search status
+				model: modelId,  
+				web_search_enabled: webSearchEnabled  
 			});
 
 			console.log('Facilities API response:', response);
@@ -296,11 +290,9 @@
 					contentPreview: responseMessage.substring(0, 100) + '...'
 				});
 
-				// DIRECTLY ADD TO CHAT HISTORY - BYPASS submitPrompt entirely
 				await addFacilitiesResponseToChat(responseMessage, sources);
 
-				// Keep the overlay open - user must manually toggle off
-				// closeOverlay(); // Removed automatic closing
+
 				
 				toast.success(`Generated ${Object.keys(response.sections).length} sections for ${selectedSponsor}. Form remains open for additional generations.`);
 			} else {
