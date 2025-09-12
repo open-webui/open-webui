@@ -374,7 +374,7 @@
 						>
 							{#each notes[timeRange] as note, idx (note.id)}
 								<div
-									class=" flex space-x-4 cursor-pointer w-full px-4.5 py-4 bg-gray-50 dark:bg-gray-850 dark:hover:bg-white/5 hover:bg-black/5 rounded-xl transition"
+									class=" flex space-x-4 cursor-pointer w-full px-4.5 py-4 border border-gray-50 dark:border-gray-850 bg-transparent dark:hover:bg-gray-850 hover:bg-white rounded-2xl transition"
 								>
 									<div class=" flex flex-1 space-x-4 cursor-pointer w-full">
 										<a
