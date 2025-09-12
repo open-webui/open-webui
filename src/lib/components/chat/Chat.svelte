@@ -2259,7 +2259,6 @@
 						bind:selectedModels
 						shareEnabled={!!history.currentId}
 						{initNewChat}
-						showBanners={!showCommands}
 						archiveChatHandler={() => {}}
 						{moveChatHandler}
 						onSaveTempChat={async () => {
