@@ -176,7 +176,12 @@
 								class=" self-center text-xs invisible group-hover:visible text-gray-400 font-medium first-letter:capitalize ml-0.5 translate-y-[1px]"
 							>
 								<Tooltip content={dayjs(message.created_at / 1000000).format('LLLL')}>
-									<span class="line-clamp-1">{formatDate(message.created_at / 1000000)}</span>
+									<span class="line-clamp-1">
+										{$i18n.t(formatDate(message.created_at / 1000000), {
+											LOCALIZED_TIME: dayjs(message.created_at / 1000000).format('LT'),
+											LOCALIZED_DATE: dayjs(message.created_at / 1000000).format('L')
+										})}
+									</span>
 								</Tooltip>
 							</div>
 						{/if}
