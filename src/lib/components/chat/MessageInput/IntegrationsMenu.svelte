@@ -139,17 +139,16 @@
 						}}
 					>
 						<div class="flex-1 truncate">
-							<Tooltip
-								content={tools[toolId]?.description ?? ''}
-								placement="top-start"
-								className="flex flex-1 gap-2 items-center"
-							>
-								<div class="shrink-0">
-									<Wrench />
-								</div>
-
-								<div class=" truncate">{tools[toolId].name}</div>
-							</Tooltip>
+							<div class="flex flex-1 gap-2 items-center">
+								<Tooltip content={tools[toolId]?.name ?? ''} placement="top">
+									<div class="shrink-0">
+										<Wrench />
+									</div>
+								</Tooltip>
+								<Tooltip content={tools[toolId]?.description ?? ''} placement="top-start">
+									<div class=" truncate">{tools[toolId].name}</div>
+								</Tooltip>
+							</div>
 						</div>
 
 						<div class=" shrink-0">
