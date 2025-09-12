@@ -26,6 +26,7 @@ export interface Theme {
   metaThemeColor?: string;
   variables?: { [key: string]: string };
   gradient?: {
+    enabled: boolean;
     colors: string[];
     direction: number;
     intensity: number;

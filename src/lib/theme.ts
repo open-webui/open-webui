@@ -118,6 +118,7 @@ const cleanupTheme = () => {
     const mainContainer = document.getElementById('main-container');
     if (mainContainer) {
       mainContainer.classList.remove(`${currentTheme.id}-bg`);
+      mainContainer.style.backgroundImage = 'none';
     }
 
     // Cleanup base class and CSS variables
@@ -255,7 +256,7 @@ export const checkForThemeUpdates = async () => {
 const _applyThemeStyles = (theme: Theme) => {
   const mainContainer = document.getElementById('main-container');
 
-  if (mainContainer && theme.gradient && theme.gradient.colors.length > 0) {
+  if (mainContainer && theme.gradient && theme.gradient.enabled && theme.gradient.colors.length > 0) {
     const { colors, direction, intensity } = theme.gradient;
     const alpha = (intensity ?? 100) / 100;
     const rgbaColors = colors.map((hex) => {

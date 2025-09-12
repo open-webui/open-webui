@@ -78,10 +78,13 @@
       
       if (!themeCopy.gradient) {
         themeCopy.gradient = {
+          enabled: false,
           colors: ['#0d0d0d', '#333333'],
           direction: 45,
           intensity: 100
         };
+      } else if (typeof themeCopy.gradient.enabled === 'undefined') {
+        themeCopy.gradient.enabled = false;
       }
 
       originalCodeMirrorTheme = themeCopy.codeMirrorTheme ?? $codeMirrorTheme;
@@ -656,18 +659,21 @@
           </div>
           <div class="col-span-2">
             <div class="flex items-center gap-2">
+              <Switch bind:state={themeCopy.gradient.enabled} />
               <label for="theme-gradient" class="block text-sm font-medium text-gray-700 dark:text-gray-300">{$i18n.t('Gradient Background')}</label>
             </div>
-            <div class="mt-1">
+            {#if themeCopy.gradient.enabled}
+            <div class="mt-1 max-w-md">
               <GradientPicker
                 gradient={themeCopy.gradient}
                 on:update={(e) => {
-                  themeCopy.gradient = e.detail;
+                  themeCopy.gradient = { ...themeCopy.gradient, ...e.detail };
                   const updatedTheme = { ...themeCopy };
                   dispatch('update', updatedTheme);
                 }}
               />
             </div>
+            {/if}
           </div>
         </div>
       {:else}
