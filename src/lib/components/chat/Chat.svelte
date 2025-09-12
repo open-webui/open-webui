@@ -1464,18 +1464,8 @@
 		prompt = '';
 
 		const messages = createMessagesList(history, history.currentId);
-
-		// Reset chat input textarea
-		if (!($settings?.richTextInput ?? true)) {
-			const chatInputElement = document.getElementById('chat-input');
-
-			if (chatInputElement) {
-				await tick();
-				chatInputElement.style.height = '';
-			}
-		}
-
 		const _files = JSON.parse(JSON.stringify(files));
+
 		chatFiles.push(..._files.filter((item) => ['doc', 'file', 'collection'].includes(item.type)));
 		chatFiles = chatFiles.filter(
 			// Remove duplicates
@@ -2378,11 +2368,7 @@
 										if (e.detail || files.length > 0) {
 											await tick();
 
-											submitPrompt(
-												($settings?.richTextInput ?? true)
-													? e.detail.replaceAll('\n\n', '\n')
-													: e.detail
-											);
+											submitPrompt(e.detail.replaceAll('\n\n', '\n'));
 										}
 									}}
 								/>
@@ -2431,11 +2417,7 @@
 										clearDraft();
 										if (e.detail || files.length > 0) {
 											await tick();
-											submitPrompt(
-												($settings?.richTextInput ?? true)
-													? e.detail.replaceAll('\n\n', '\n')
-													: e.detail
-											);
+											submitPrompt(e.detail.replaceAll('\n\n', '\n'));
 										}
 									}}
 								/>
