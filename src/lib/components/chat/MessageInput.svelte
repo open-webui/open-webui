@@ -71,6 +71,9 @@
 	import Voice from '../icons/Voice.svelte';
 	import { getSessionUser } from '$lib/apis/auths';
 	import Terminal from '../icons/Terminal.svelte';
+	import OptionsMenu from './MessageInput/OptionsMenu.svelte';
+	import Component from '../icons/Component.svelte';
+	import PlusAlt from '../icons/PlusAlt.svelte';
 	const i18n = getContext('i18n');
 
 	export let onChange: Function = () => {};
@@ -1657,7 +1660,6 @@
 								<div class=" flex justify-between mt-0.5 mb-2.5 mx-0.5 max-w-full" dir="ltr">
 									<div class="ml-1 self-end flex items-center flex-1 max-w-[80%]">
 										<InputMenu
-											bind:selectedToolIds
 											selectedModels={atSelectedModel ? [atSelectedModel.id] : selectedModels}
 											{fileUploadCapableModels}
 											{screenCaptureHandler}
@@ -1708,66 +1710,76 @@
 											}}
 										>
 											<div
-												class="bg-transparent hover:bg-gray-100 text-gray-800 dark:text-white dark:hover:bg-gray-800 rounded-full p-1.5 outline-hidden focus:outline-hidden"
+												class="bg-transparent hover:bg-gray-100 text-gray-700 dark:text-white dark:hover:bg-gray-800 rounded-full size-8 flex justify-center items-center outline-hidden focus:outline-hidden"
 											>
-												<svg
-													xmlns="http://www.w3.org/2000/svg"
-													viewBox="0 0 20 20"
-													aria-hidden="true"
-													fill="currentColor"
-													class="size-5"
-												>
-													<path
-														d="M10.75 4.75a.75.75 0 0 0-1.5 0v4.5h-4.5a.75.75 0 0 0 0 1.5h4.5v4.5a.75.75 0 0 0 1.5 0v-4.5h4.5a.75.75 0 0 0 0-1.5h-4.5v-4.5Z"
-													/>
-												</svg>
+												<PlusAlt className="size-5.5" />
 											</div>
 										</InputMenu>
 
-										{#if $_user && (showToolsButton || (toggleFilters && toggleFilters.length > 0) || showWebSearchButton || showImageGenerationButton || showCodeInterpreterButton)}
+										<div class="flex self-center w-[1px] h-4 mx-1 bg-gray-50 dark:bg-gray-800" />
+
+										<OptionsMenu
+											selectedModels={atSelectedModel ? [atSelectedModel.id] : selectedModels}
+											{toggleFilters}
+											{showWebSearchButton}
+											{showImageGenerationButton}
+											{showCodeInterpreterButton}
+											bind:selectedToolIds
+											bind:selectedFilterIds
+											bind:webSearchEnabled
+											bind:imageGenerationEnabled
+											bind:codeInterpreterEnabled
+											onClose={async () => {
+												await tick();
+
+												const chatInput = document.getElementById('chat-input');
+												chatInput?.focus();
+											}}
+										>
 											<div
-												class="flex self-center w-[1px] h-4 mx-1.5 bg-gray-50 dark:bg-gray-800"
-											/>
+												class="bg-transparent hover:bg-gray-100 text-gray-700 dark:text-white dark:hover:bg-gray-800 rounded-full size-8 flex justify-center items-center outline-hidden focus:outline-hidden"
+											>
+												<Component className="size-4.5" strokeWidth="1.75" />
+											</div>
+										</OptionsMenu>
 
-											<div class="flex gap-1 items-center overflow-x-auto scrollbar-none flex-1">
-												{#if showToolsButton}
-													<Tooltip
-														content={$i18n.t('{{COUNT}} Available Tools', {
-															COUNT: toolServers.length + selectedToolIds.length
-														})}
+										<div class="ml-1 flex gap-1.5">
+											{#if showToolsButton}
+												<Tooltip
+													content={$i18n.t('{{COUNT}} Available Tools', {
+														COUNT: toolServers.length + selectedToolIds.length
+													})}
+												>
+													<button
+														class="translate-y-[0.5px] flex gap-1 items-center text-gray-600 dark:text-gray-300 hover:text-gray-700 dark:hover:text-gray-200 rounded-lg p-1 self-center transition"
+														aria-label="Available Tools"
+														type="button"
+														on:click={() => {
+															showTools = !showTools;
+														}}
 													>
-														<button
-															class="translate-y-[0.5px] flex gap-1 items-center text-gray-600 dark:text-gray-300 hover:text-gray-700 dark:hover:text-gray-200 rounded-lg p-1 self-center transition"
-															aria-label="Available Tools"
-															type="button"
-															on:click={() => {
-																showTools = !showTools;
-															}}
-														>
-															<Wrench className="size-4" strokeWidth="1.75" />
+														<Wrench className="size-4" strokeWidth="1.75" />
 
-															<span class="text-sm font-medium text-gray-600 dark:text-gray-300">
-																{toolServers.length + selectedToolIds.length}
-															</span>
-														</button>
-													</Tooltip>
-												{/if}
+														<span class="text-sm font-medium text-gray-600 dark:text-gray-300">
+															{toolServers.length + selectedToolIds.length}
+														</span>
+													</button>
+												</Tooltip>
+											{/if}
 
-												{#each toggleFilters as filter, filterIdx (filter.id)}
+											{#each selectedFilterIds as filterId}
+												{@const filter = toggleFilters.find((f) => f.id === filterId)}
+												{#if filter}
 													<Tooltip content={filter?.description} placement="top">
 														<button
 															on:click|preventDefault={() => {
-																if (selectedFilterIds.includes(filter.id)) {
-																	selectedFilterIds = selectedFilterIds.filter(
-																		(id) => id !== filter.id
-																	);
-																} else {
-																	selectedFilterIds = [...selectedFilterIds, filter.id];
-																}
+																selectedFilterIds = selectedFilterIds.filter(
+																	(id) => id !== filterId
+																);
 															}}
 															type="button"
-															class="px-2 @xl:px-2.5 py-2 flex gap-1.5 items-center text-sm rounded-full transition-colors duration-300 focus:outline-hidden max-w-full overflow-hidden hover:bg-gray-50 dark:hover:bg-gray-800 {selectedFilterIds.includes(
-																filter.id
+															class="group px-2 @xl:px-2.5 py-2 flex gap-1.5 items-center text-sm rounded-full transition-colors duration-300 focus:outline-hidden max-w-full overflow-hidden hover:bg-gray-50 dark:hover:bg-gray-800 {selectedFilterIds.includes(
+																filterId
 															)
 																? 'text-sky-500 dark:text-sky-300 bg-sky-50 dark:bg-sky-200/5'
 																: 'bg-transparent text-gray-600 dark:text-gray-300  '} capitalize"
@@ -1790,75 +1802,92 @@
 																class="hidden @xl:block whitespace-nowrap text-ellipsis leading-none normal-case pr-0.5"
 																>{filter?.name}</span
 															>
-														</button>
-													</Tooltip>
-												{/each}
 
-												{#if showWebSearchButton}
-													<Tooltip content={$i18n.t('Search the internet')} placement="top">
-														<button
-															on:click|preventDefault={() => (webSearchEnabled = !webSearchEnabled)}
-															type="button"
-															class="px-2 @xl:px-2.5 py-2 flex gap-1.5 items-center text-sm rounded-full transition-colors duration-300 focus:outline-hidden max-w-full overflow-hidden hover:bg-gray-50 dark:hover:bg-gray-800 {webSearchEnabled ||
-															($settings?.webSearch ?? false) === 'always'
-																? ' text-sky-500 dark:text-sky-300 bg-sky-50 dark:bg-sky-200/5'
-																: 'bg-transparent text-gray-600 dark:text-gray-300 '}"
-														>
-															<GlobeAlt className="size-4" strokeWidth="1.75" />
-															<span
-																class="hidden @xl:block whitespace-nowrap text-ellipsis leading-none normal-case pr-0.5"
-																>{$i18n.t('Web Search')}</span
-															>
+															<div class="hidden group-hover:block">
+																<XMark className="size-4" strokeWidth="1.75" />
+															</div>
 														</button>
 													</Tooltip>
 												{/if}
+											{/each}
 
-												{#if showImageGenerationButton}
-													<Tooltip content={$i18n.t('Generate an image')} placement="top">
-														<button
-															on:click|preventDefault={() =>
-																(imageGenerationEnabled = !imageGenerationEnabled)}
-															type="button"
-															class="px-2 @xl:px-2.5 py-2 flex gap-1.5 items-center text-sm rounded-full transition-colors duration-300 focus:outline-hidden max-w-full overflow-hidden hover:bg-gray-50 dark:hover:bg-gray-800 {imageGenerationEnabled
-																? ' text-sky-500 dark:text-sky-300 bg-sky-50 dark:bg-sky-200/5'
-																: 'bg-transparent text-gray-600 dark:text-gray-300 '}"
+											{#if webSearchEnabled}
+												<Tooltip content={$i18n.t('Search the internet')} placement="top">
+													<button
+														on:click|preventDefault={() => (webSearchEnabled = !webSearchEnabled)}
+														type="button"
+														class="group px-2 @xl:px-2.5 py-2 flex gap-1.5 items-center text-sm rounded-full transition-colors duration-300 focus:outline-hidden max-w-full overflow-hidden hover:bg-gray-50 dark:hover:bg-gray-800 {webSearchEnabled ||
+														($settings?.webSearch ?? false) === 'always'
+															? ' text-sky-500 dark:text-sky-300 bg-sky-50 dark:bg-sky-200/5'
+															: 'bg-transparent text-gray-600 dark:text-gray-300 '}"
+													>
+														<GlobeAlt className="size-4" strokeWidth="1.75" />
+														<span
+															class="hidden @xl:block whitespace-nowrap text-ellipsis leading-none normal-case pr-0.5"
+															>{$i18n.t('Web Search')}</span
 														>
-															<Photo className="size-4" strokeWidth="1.75" />
-															<span
-																class="hidden @xl:block whitespace-nowrap text-ellipsis leading-none normal-case pr-0.5"
-																>{$i18n.t('Image')}</span
-															>
-														</button>
-													</Tooltip>
-												{/if}
 
-												{#if showCodeInterpreterButton}
-													<Tooltip content={$i18n.t('Execute code for analysis')} placement="top">
-														<button
-															aria-label={codeInterpreterEnabled
-																? $i18n.t('Disable Code Interpreter')
-																: $i18n.t('Enable Code Interpreter')}
-															aria-pressed={codeInterpreterEnabled}
-															on:click|preventDefault={() =>
-																(codeInterpreterEnabled = !codeInterpreterEnabled)}
-															type="button"
-															class="px-2 @xl:px-2.5 py-2 flex gap-1.5 items-center text-sm transition-colors duration-300 max-w-full overflow-hidden hover:bg-gray-50 dark:hover:bg-gray-800 {codeInterpreterEnabled
-																? ' text-sky-500 dark:text-sky-300 bg-sky-50 dark:bg-sky-200/5'
-																: 'bg-transparent text-gray-600 dark:text-gray-300 '} {($settings?.highContrastMode ??
-															false)
-																? 'm-1'
-																: 'focus:outline-hidden rounded-full'}"
+														<div class="hidden group-hover:block">
+															<XMark className="size-4" strokeWidth="1.75" />
+														</div>
+													</button>
+												</Tooltip>
+											{/if}
+
+											{#if imageGenerationEnabled}
+												<Tooltip content={$i18n.t('Generate an image')} placement="top">
+													<button
+														on:click|preventDefault={() =>
+															(imageGenerationEnabled = !imageGenerationEnabled)}
+														type="button"
+														class="group px-2 @xl:px-2.5 py-2 flex gap-1.5 items-center text-sm rounded-full transition-colors duration-300 focus:outline-hidden max-w-full overflow-hidden hover:bg-gray-50 dark:hover:bg-gray-800 {imageGenerationEnabled
+															? ' text-sky-500 dark:text-sky-300 bg-sky-50 dark:bg-sky-200/5'
+															: 'bg-transparent text-gray-600 dark:text-gray-300 '}"
+													>
+														<Photo className="size-4" strokeWidth="1.75" />
+
+														<span
+															class="hidden @xl:block whitespace-nowrap text-ellipsis leading-none normal-case pr-0.5"
+															>{$i18n.t('Image')}</span
 														>
-															<Terminal className="size-3.5" strokeWidth="2" />
-															<span
-																class="hidden @xl:block whitespace-nowrap text-ellipsis leading-none normal-case pr-0.5"
-																>{$i18n.t('Code Interpreter')}</span
-															>
-														</button>
-													</Tooltip>
-												{/if}
-											</div>
-										{/if}
+
+														<div class="hidden group-hover:block">
+															<XMark className="size-4" strokeWidth="1.75" />
+														</div>
+													</button>
+												</Tooltip>
+											{/if}
+
+											{#if codeInterpreterEnabled}
+												<Tooltip content={$i18n.t('Execute code for analysis')} placement="top">
+													<button
+														aria-label={codeInterpreterEnabled
+															? $i18n.t('Disable Code Interpreter')
+															: $i18n.t('Enable Code Interpreter')}
+														aria-pressed={codeInterpreterEnabled}
+														on:click|preventDefault={() =>
+															(codeInterpreterEnabled = !codeInterpreterEnabled)}
+														type="button"
+														class=" group px-2 @xl:px-2.5 py-2 flex gap-1.5 items-center text-sm transition-colors duration-300 max-w-full overflow-hidden hover:bg-gray-50 dark:hover:bg-gray-800 {codeInterpreterEnabled
+															? ' text-sky-500 dark:text-sky-300 bg-sky-50 dark:bg-sky-200/5'
+															: 'bg-transparent text-gray-600 dark:text-gray-300 '} {($settings?.highContrastMode ??
+														false)
+															? 'm-1'
+															: 'focus:outline-hidden rounded-full'}"
+													>
+														<Terminal className="size-3.5" strokeWidth="2" />
+														<span
+															class="hidden @xl:block whitespace-nowrap text-ellipsis leading-none normal-case pr-0.5"
+															>{$i18n.t('Code Interpreter')}</span
+														>
+
+														<div class="hidden group-hover:block">
+															<XMark className="size-4" strokeWidth="1.75" />
+														</div>
+													</button>
+												</Tooltip>
+											{/if}
+										</div>
 									</div>
 
 									<div class="self-end flex space-x-1 mr-1 shrink-0">
