@@ -13,6 +13,7 @@
   import Info from '$lib/components/icons/Info.svelte';
   import { themes, communityThemes } from '$lib/theme';
   import { Vibrant } from 'node-vibrant/browser';
+  import GradientPicker from '$lib/components/common/GradientPicker.svelte';
 
   export let theme: Theme;
   export let show: boolean;
@@ -74,6 +75,15 @@
   onMount(() => {
     if (theme) {
       themeCopy = JSON.parse(JSON.stringify(theme));
+      
+      if (!themeCopy.gradient) {
+        themeCopy.gradient = {
+          colors: ['#0d0d0d', '#333333'],
+          direction: 45,
+          intensity: 100
+        };
+      }
+
       originalCodeMirrorTheme = themeCopy.codeMirrorTheme ?? $codeMirrorTheme;
 
       if (!isEditing) {
@@ -643,6 +653,21 @@
                 <CodeEditor id="theme-tsparticle-config-editor" bind:value={tsParticleConfigText} lang={'json'} on:input={handleTsParticleConfigInput} />
               </div>
             {/if}
+          </div>
+          <div class="col-span-2">
+            <div class="flex items-center gap-2">
+              <label for="theme-gradient" class="block text-sm font-medium text-gray-700 dark:text-gray-300">{$i18n.t('Gradient Background')}</label>
+            </div>
+            <div class="mt-1">
+              <GradientPicker
+                gradient={themeCopy.gradient}
+                on:update={(e) => {
+                  themeCopy.gradient = e.detail;
+                  const updatedTheme = { ...themeCopy };
+                  dispatch('update', updatedTheme);
+                }}
+              />
+            </div>
           </div>
         </div>
       {:else}

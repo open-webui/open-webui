@@ -25,6 +25,11 @@ export interface Theme {
   emoji?: string;
   metaThemeColor?: string;
   variables?: { [key: string]: string };
+  gradient?: {
+    colors: string[];
+    direction: number;
+    intensity: number;
+  };
   particleConfig?: any;
   tsparticlesConfig?: any;
   animationScript?: string;

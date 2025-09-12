@@ -255,6 +255,29 @@ export const checkForThemeUpdates = async () => {
 const _applyThemeStyles = (theme: Theme) => {
   const mainContainer = document.getElementById('main-container');
 
+  if (mainContainer && theme.gradient && theme.gradient.colors.length > 0) {
+    const { colors, direction, intensity } = theme.gradient;
+    const alpha = (intensity ?? 100) / 100;
+    const rgbaColors = colors.map((hex) => {
+      if (/^#([A-Fa-f0-9]{3}){1,2}$/.test(hex)) {
+        let c = hex.substring(1).split('');
+        if (c.length === 3) {
+          c = [c[0], c[0], c[1], c[1], c[2], c[2]];
+        }
+        c = '0x' + c.join('');
+        const r = (c >> 16) & 255;
+        const g = (c >> 8) & 255;
+        const b = c & 255;
+        return `rgba(${r}, ${g}, ${b}, ${alpha})`;
+      }
+      return `rgba(0, 0, 0, ${alpha})`;
+    });
+    const gradientCss = `linear-gradient(${direction}deg, ${rgbaColors.join(', ')})`;
+    mainContainer.style.backgroundImage = gradientCss;
+  } else if (mainContainer) {
+    mainContainer.style.backgroundImage = 'none';
+  }
+
   if (theme.css) {
     currentStylesheet = document.createElement('style');
     currentStylesheet.id = `${theme.id}-stylesheet`;
