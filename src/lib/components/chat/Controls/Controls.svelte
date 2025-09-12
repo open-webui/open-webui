@@ -24,16 +24,13 @@
 			.catch((err) => {
 				console.error(err);
 				error = err.detail;
-				alert('Something went wrong while downloading OPU Open-WebUi log');
 				return null;
 			});
 
 		if (error) {
 			console.error('Error Download OPU Open-WebUi log failed:', error);
-			alert('Something went wrong while downloading OPU Open-WebUi log');
 			throw error;
 		}
-		alert('OPU Open-WebUi log downloaded successfully');
 	}
 
 	export async function downloadFlaskLog() {
@@ -61,16 +58,13 @@
 			.catch((err) => {
 				console.error(err);
 				error = err.detail;
-				alert('Something went wrong while downloading OPU flask log');
 				return null;
 			});
 
 		if (error) {
 			console.error('Error Download OPU flask log failed:', error);
-			alert('Something went wrong while downloading OPU flask log');
 			throw error;
 		}
-		alert('OPU flask log downloaded successfully');
 	}
 
 	export async function restartOpu() {
@@ -84,10 +78,10 @@
 				body: JSON.stringify({ target: 'opu' })
 			});
 			if (!response.ok) throw new Error('Restart failed');
-			alert('OPU restarted successfully!');
+			return response;
 		} catch (error) {
 			console.error('Error restarting OPU:', error);
-			alert('Something went wrong while restarting OPU.');
+			return null;
 		} finally {
 			isRestarting.set(false);
 		}
@@ -106,7 +100,6 @@
 			return data; // 🔁 Return the parsed object!
 		} catch (error) {
 			console.error('Error Health Check of OPU:', error);
-			alert('Something went wrong while health checking of OPU.');
 			return null;
 		}
 	}
@@ -124,7 +117,6 @@
 			return data; // 🔁 Return the parsed object!
 		} catch (error) {
 			console.error('Error System Info of OPU:', error);
-			alert('Something went wrong while getting system info of OPU.');
 			return null;
 		}
 	}
@@ -140,11 +132,9 @@
 			});
 			if (!response.ok) throw new Error('System info failed');
 			const data = await response.json(); // ✅ Parse JSON
-			alert('Task aborted on OPU.');
 			return data; // 🔁 Return the parsed object!
 		} catch (error) {
 			console.error('Error System Info of OPU:', error);
-			alert('Something went wrong while aborting task on OPU.');
 			return null;
 		} finally {
 			isAborting.set(false);
@@ -153,6 +143,7 @@
 </script>
 
 <script lang="ts">
+	import { toast } from 'svelte-sonner';
 	import { createEventDispatcher, getContext, onMount } from 'svelte';
 	const dispatch = createEventDispatcher();
 	const i18n = getContext('i18n');
@@ -182,7 +173,9 @@
 	title={$i18n.t('Abort Job Message')}
 	message={$i18n.t('Are you sure you want to abort this job?')}
 	onConfirm={async () => {
-		await abortTaskOpu();
+		const res = await abortTaskOpu();
+		if (res) toast.success($i18n.t(`Task aborted on OPU.`));
+		else toast.error($i18n.t(`Something went wrong while aborting task on OPU.`));
 	}}
 />
 
@@ -260,15 +253,15 @@
 					<div class="flex justify-between items-center text-sm">
 						<div class="  font-medium">{$i18n.t('Abort Job')}</div>
 						<button
-							disabled={$isRestarting}
+							disabled={$isAborting}
 							class={'w-auto text-sm px-2 py-1 rounded-md transition-colors duration-200' +
 								($settings.highContrastMode
 									? ' border-2 border-gray-300 dark : border-gray-700 bg-gray-50 dark:bg-gray-850 text-gray-900 dark:text-gray-100 ' +
-										($isRestarting
+										($isAborting
 											? 'opacity-50 cursor-not-allowed'
 											: 'hover:bg-blue-100 dark:hover:bg-blue-900')
 									: ' bg-blue-600 text-white ' +
-										($isRestarting
+										($isAborting
 											? 'opacity-50 cursor-not-allowed'
 											: 'hover:bg-blue-700 dark:bg-blue-600'))}
 							on:click={() => {

@@ -209,7 +209,9 @@
 	title={$i18n.t('Restart OPU Message')}
 	message={$i18n.t('Are you sure you want to restart the OPU?')}
 	onConfirm={async () => {
-		await restartOpu();
+		const res = await restartOpu();
+		if (res) toast.success($i18n.t(`OPU restarted successfully!`));
+		else toast.error($i18n.t(`Something went wrong while restarting OPU.`));
 	}}
 />
 <div class="flex flex-col h-full justify-between text-sm" id="tab-general">
@@ -352,6 +354,8 @@
 								: ' bg-blue-600 text-white hover:bg-blue-700 dark:bg-blue-600')}
 						on:click={async () => {
 							systemInfoOutput = await systemInfoOpu(); // SystemInfo logic
+							if (!systemInfoOutput)
+								toast.error($i18n.t(`Something went wrong while getting system info of OPU.`));
 							showSystemInfoModal = true;
 							showSystemInfo = !showSystemInfo;
 						}}
@@ -377,6 +381,8 @@
 								: ' bg-blue-600 text-white hover:bg-blue-700 dark:bg-blue-600')}
 						on:click={async () => {
 							healthOutput = await healthCheckOpu();
+							if (!healthOutput)
+								toast.error($i18n.t(`Something went wrong while health checking of OPU.`));
 							showHealthModal = true;
 							showHealthCheck = !showHealthCheck;
 						}}

@@ -187,7 +187,10 @@
 						class=" flex rounded-md py-2 px-3 w-full hover:bg-gray-200 dark:hover:bg-gray-800 transition"
 						type="button"
 						on:click={() => {
-							downloadOpenWebUiLog(); // Download OpenWebUI log
+							const res = downloadOpenWebUiLog(); // Download OpenWebUI log
+							if (res) toast.success($i18n.t(`OPU Open-WebUi log downloaded successfully`));
+							else
+								toast.error($i18n.t(`Something went wrong while downloading OPU Open-WebUi log`));
 						}}
 					>
 						<div class=" self-center mr-3">
@@ -216,7 +219,9 @@
 						class=" flex rounded-md py-2 px-3 w-full hover:bg-gray-200 dark:hover:bg-gray-800 transition"
 						type="button"
 						on:click={() => {
-							downloadFlaskLog(); // Download OpenWebUI log
+							const res = downloadFlaskLog(); // Download OpenWebUI log
+							if (res) toast.success($i18n.t(`OPU flask log downloaded successfully`));
+							else toast.error($i18n.t(`Something went wrong while downloading OPU flask log`));
 						}}
 					>
 						<div class=" self-center mr-3">

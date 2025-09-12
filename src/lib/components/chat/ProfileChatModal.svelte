@@ -69,7 +69,7 @@
 			usages = extractUsages(parsed);
 			console.log(usages);
 		} catch (error) {
-			alert('Invalid JSON input');
+			console.log('Invalid JSON input');
 			usages = [];
 		}
 		const seen = new Set();
