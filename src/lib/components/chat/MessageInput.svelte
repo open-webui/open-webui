@@ -51,7 +51,6 @@
 	import InputMenu from './MessageInput/InputMenu.svelte';
 	import VoiceRecording from './MessageInput/VoiceRecording.svelte';
 	import FilesOverlay from './MessageInput/FilesOverlay.svelte';
-	import Commands from './MessageInput/Commands.svelte';
 	import ToolServersModal from './ToolServersModal.svelte';
 
 	import RichTextInput from '../common/RichTextInput.svelte';
@@ -77,7 +76,6 @@
 	import { KokoroWorker } from '$lib/workers/KokoroWorker';
 
 	import { getSuggestionRenderer } from '../common/RichTextInput/suggestions';
-	import MentionList from '../common/RichTextInput/MentionList.svelte';
 	import CommandSuggestionList from './MessageInput/CommandSuggestionList.svelte';
 
 	const i18n = getContext('i18n');
@@ -298,16 +296,6 @@
 	};
 
 	const getCommand = () => {
-		const getWordAtCursor = (text, cursor) => {
-			if (typeof text !== 'string' || cursor == null) return '';
-			const left = text.slice(0, cursor);
-			const right = text.slice(cursor);
-			const leftWord = left.match(/(?:^|\s)([^\s]*)$/)?.[1] || '';
-
-			const rightWord = right.match(/^([^\s]*)/)?.[1] || '';
-			return leftWord + rightWord;
-		};
-
 		const chatInput = document.getElementById('chat-input');
 		let word = '';
 
@@ -319,14 +307,6 @@
 	};
 
 	const replaceCommandWithText = (text) => {
-		const getWordBoundsAtCursor = (text, cursor) => {
-			let start = cursor,
-				end = cursor;
-			while (start > 0 && !/\s/.test(text[start - 1])) --start;
-			while (end < text.length && !/\s/.test(text[end])) ++end;
-			return { start, end };
-		};
-
 		const chatInput = document.getElementById('chat-input');
 		if (!chatInput) return;
 

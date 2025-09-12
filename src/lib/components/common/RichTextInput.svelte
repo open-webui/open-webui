@@ -142,7 +142,7 @@
 	import { PASTED_TEXT_CHARACTER_LIMIT } from '$lib/constants';
 	import { all, createLowlight } from 'lowlight';
 
-	import MentionList from './RichTextInput/MentionList.svelte';
+	import MentionList from '../channel/MessageInput/MentionList.svelte';
 	import { getSuggestionRenderer } from './RichTextInput/suggestions.js';
 
 	export let oncompositionstart = (e) => {};
@@ -1369,7 +1369,7 @@
 	};
 </script>
 
-{#if showFormattingToolbar}
+{#if richText && showFormattingToolbar}
 	<div bind:this={bubbleMenuElement} id="bubble-menu" class="p-0">
 		<FormattingButtons {editor} />
 	</div>
