@@ -75,9 +75,7 @@ export type FileMaskRequest = {
 	 * Known Entities
 	 * Optional list of known entities, used to correctly set ids of PII entities for unmasking.
 	 */
-	known_entities?: Array<{
-		[key: string]: unknown;
-	}> | null;
+	known_entities?: Array<KnownEntity> | null;
 	/**
 	 * Modifiers
 	 * Optional list of modifiers to use for masking.
@@ -145,6 +143,72 @@ export type HttpValidationError = {
 	 * Detail
 	 */
 	detail?: Array<ValidationError>;
+};
+
+/**
+ * KnownEntity
+ * Information about a known entity.
+ */
+export type KnownEntity = {
+	/**
+	 * Id
+	 * Unique identifier for the known entity
+	 */
+	id: number;
+	/**
+	 * Label
+	 * Label of the known entity
+	 */
+	label: string;
+	/**
+	 * Name
+	 * Name of the known entity
+	 */
+	name: string;
+};
+
+/**
+ * MaskUpdateRequest
+ * Request for updating masking on previously masked text using new modifiers.
+ *
+ * This endpoint takes the output from mask_text (PIIs) and applies new modifiers
+ * to update the masking and the PIIs.
+ */
+export type MaskUpdateRequest = {
+	/**
+	 * Text
+	 * Original text string that was previously uesd for PII detection
+	 */
+	text: string;
+	/**
+	 * Pii
+	 * List of PII entities from previous mask_text operation.
+	 */
+	pii: Array<PiiEntity> | null;
+	/**
+	 * Modifiers
+	 * List of new modifiers to apply for updating the masking. Only modifiers with "string-mask" or "word-mask" action and "entity" field are used.
+	 */
+	modifiers: Array<TextProcessModifier>;
+};
+
+/**
+ * MaskUpdateResponse
+ * Response from a find occurrences operation.
+ *
+ * Contains the masked text strings and information about the found occurrences.
+ */
+export type MaskUpdateResponse = {
+	/**
+	 * Text
+	 * Masked text string with found occurrences replaced by labels
+	 */
+	text: string;
+	/**
+	 * Pii
+	 * List of detected PII entities with their positions and types. Omitted if quiet=true was specified in the request.
+	 */
+	pii?: Array<PiiEntity> | null;
 };
 
 /**
@@ -290,9 +354,7 @@ export type TextMaskRequest = {
 	 * Known Entities
 	 * Optional list of known entities, used to correctly set ids of PII entities for unmasking.
 	 */
-	known_entities?: Array<{
-		[key: string]: unknown;
-	}> | null;
+	known_entities?: Array<KnownEntity> | null;
 	/**
 	 * Modifiers
 	 * Optional list of modifiers to use for masking.
@@ -623,6 +685,39 @@ export type UnmaskTextTextUnmaskPostResponses = {
 
 export type UnmaskTextTextUnmaskPostResponse =
 	UnmaskTextTextUnmaskPostResponses[keyof UnmaskTextTextUnmaskPostResponses];
+
+export type MaskUpdateTextMaskUpdatePostData = {
+	body: MaskUpdateRequest;
+	path?: never;
+	query?: {
+		/**
+		 * Quiet
+		 * If true, omits PII details from response for reduced verbosity
+		 */
+		quiet?: boolean;
+	};
+	url: '/text/mask-update';
+};
+
+export type MaskUpdateTextMaskUpdatePostErrors = {
+	/**
+	 * Validation Error
+	 */
+	422: HttpValidationError;
+};
+
+export type MaskUpdateTextMaskUpdatePostError =
+	MaskUpdateTextMaskUpdatePostErrors[keyof MaskUpdateTextMaskUpdatePostErrors];
+
+export type MaskUpdateTextMaskUpdatePostResponses = {
+	/**
+	 * Successful Response
+	 */
+	200: MaskUpdateResponse;
+};
+
+export type MaskUpdateTextMaskUpdatePostResponse =
+	MaskUpdateTextMaskUpdatePostResponses[keyof MaskUpdateTextMaskUpdatePostResponses];
 
 export type MaskFileFileMaskPostData = {
 	body: FileMaskRequest;

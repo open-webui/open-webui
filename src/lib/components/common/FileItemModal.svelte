@@ -634,22 +634,31 @@
 														const knownEntities = piiSessionManager.getKnownEntitiesForApi(conversationId);
 														const modifiers = piiSessionManager.getModifiersForApi(conversationId);
 
-														// Send complete document text as one string to PII API
-														const { maskPiiText } = await import('$lib/apis/pii');
-														const completeText = pageContents.join('\n'); // Join all pages with double newlines
-														
-														const response = await maskPiiText(
-															apiKey,
-															[completeText],
-															knownEntities,
-															modifiers,
-															false,
-															false
-														);
+													// Send complete document text as one string to PII API
+													const { updatePiiMasking } = await import('$lib/apis/pii');
+													const completeText = pageContents.join('\n'); // Join all pages with double newlines
+													
+													// Convert known entities to PiiEntity format for the update API
+													const piiEntities = knownEntities.map(entity => ({
+														id: entity.id,
+														type: entity.type,
+														label: entity.label,
+														text: entity.name,
+														raw_text: entity.name,
+														occurrences: [] // Will be populated by the API
+													}));
+													
+													const response = await updatePiiMasking(
+														apiKey,
+														completeText,
+														piiEntities,
+														modifiers,
+														false
+													);
 
-														if (response.pii && response.pii[0] && response.pii[0].length > 0) {
-															// Process entities from complete document
-															const allEntities = response.pii[0];
+													if (response.pii && response.pii.length > 0) {
+														// Process entities from complete document
+														const allEntities = response.pii;
 
 															// Create PII payload for complete document
 															const piiPayload = {};

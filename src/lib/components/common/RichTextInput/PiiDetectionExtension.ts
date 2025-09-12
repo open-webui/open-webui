@@ -4,7 +4,7 @@ import { Decoration, DecorationSet } from 'prosemirror-view';
 import type { Node as ProseMirrorNode } from 'prosemirror-model';
 import type { ExtendedPiiEntity } from '$lib/utils/pii';
 import type { PiiEntity } from '$lib/apis/pii';
-import { maskPiiText } from '$lib/apis/pii';
+import { maskPiiText, updatePiiMasking } from '$lib/apis/pii';
 import { debounce, PiiSessionManager } from '$lib/utils/pii';
 import type { PiiModifier } from './PiiModifierExtension';
 import { decodeHtmlEntities, countWords, extractWords } from './PiiTextUtils';
@@ -52,6 +52,7 @@ interface PiiDetectionState {
 	lastDecorationHash?: string; // Hash to detect when decorations need updating
 	dynamicallyEnabled?: boolean; // Track if PII detection is dynamically enabled/disabled
 	temporarilyHiddenEntities: Set<string>; // Track entities temporarily hidden when modifiers are removed
+	isFastMaskUpdate: boolean; // Track when we're performing a fast mask update to prevent regular detection
 }
 
 export interface PiiDetectionOptions {
@@ -568,9 +569,7 @@ function createPiiDecorations(
 					const decorationClass =
 						modifier.action === 'string-mask'
 							? 'pii-modifier-highlight pii-modifier-mask'
-							: modifier.action === 'word-mask'
-								? 'pii-modifier-highlight pii-modifier-word-mask'
-								: 'pii-modifier-highlight pii-modifier-ignore';
+							: 'pii-modifier-highlight pii-modifier-ignore';
 
 					decorations.push(
 						Decoration.inline(occurrence.start_idx, occurrence.end_idx, {
@@ -646,9 +645,7 @@ function createPiiDecorations(
 				const decorationClass =
 					modifier.action === 'string-mask'
 						? 'pii-modifier-highlight pii-modifier-mask'
-						: modifier.action === 'word-mask'
-							? 'pii-modifier-highlight pii-modifier-word-mask'
-							: 'pii-modifier-highlight pii-modifier-ignore';
+						: 'pii-modifier-highlight pii-modifier-ignore';
 
 				decorations.push(
 					Decoration.inline(from, to, {
@@ -867,6 +864,168 @@ export const PiiDetectionExtension = Extension.create<PiiDetectionOptions>({
 			}
 		};
 
+		const performFastMaskUpdate = async (
+			plainText: string,
+			currentEntities: ExtendedPiiEntity[]
+		) => {
+			if (!plainText.trim() || !currentEntities.length) {
+				console.log('PiiDetectionExtension: Fast mask update skipped - no text or entities');
+				return;
+			}
+
+			// Prevent race conditions - check if detection is already running
+			const editorView = this.editor?.view;
+			const currentState = editorView?.state ? plugin.getState(editorView.state) : null;
+			if (currentState?.isDetecting) {
+				console.log('PiiDetectionExtension: ⚠️ Fast mask update skipped - already detecting');
+				return;
+			}
+
+			try {
+				// Set detecting state to true at the start
+				if (editorView) {
+					const tr = editorView.state.tr.setMeta(piiDetectionPluginKey, {
+						type: 'SET_DETECTING',
+						isDetecting: true
+					});
+					editorView.dispatch(tr);
+				}
+
+				const modifiers = piiSessionManager.getModifiersForApi(options.conversationId);
+
+				// Convert ExtendedPiiEntity[] to PiiEntity[] for API call
+				const piiEntities: PiiEntity[] = currentEntities.map((entity) => ({
+					id: entity.id,
+					type: entity.type,
+					label: entity.label,
+					text: entity.text,
+					raw_text: entity.raw_text,
+					occurrences: entity.occurrences
+				}));
+
+				// Track API performance
+				const tracker = PiiPerformanceTracker.getInstance();
+				const apiStartTime = performance.now();
+				tracker.recordApiCall();
+
+				console.log('PiiDetectionExtension: 🚀 Using fast mask-update API', {
+					textLength: plainText.length,
+					entitiesCount: piiEntities.length,
+					modifiersCount: modifiers.length
+				});
+
+				const response = await updatePiiMasking(apiKey, plainText, piiEntities, modifiers, false);
+
+				// Track API completion
+				const apiElapsed = performance.now() - apiStartTime;
+				console.log(
+					`PiiDetectionExtension: Fast mask-update API call: ${apiElapsed.toFixed(0)}ms, text length: ${plainText.length}`
+				);
+
+				if (response.pii && response.pii.length > 0) {
+					const editorView = this.editor?.view;
+					const state = piiDetectionPluginKey.getState(editorView?.state);
+
+					if (!editorView || !state?.positionMapping) {
+						console.warn('PiiDetectionExtension: No editor view or position mapping available');
+						return;
+					}
+
+					// Load conversation entities for cross-message shouldMask persistence
+					const conversationEntities = piiSessionManager.getEntitiesForDisplay(
+						options.conversationId
+					);
+
+					// Merge plugin state + conversation state for complete context
+					const pluginEntities = state.entities || [];
+					const existingEntitiesForMapping = [...pluginEntities];
+
+					// Add conversation entities that aren't already in plugin state
+					conversationEntities.forEach((convEntity) => {
+						if (!pluginEntities.find((pluginEntity) => pluginEntity.label === convEntity.label)) {
+							existingEntitiesForMapping.push(convEntity);
+						}
+					});
+
+					// Pass merged entities to preserve shouldMask state across messages
+					const mappedEntities = mapPiiEntitiesToProseMirror(
+						response.pii,
+						state.positionMapping,
+						existingEntitiesForMapping,
+						options.getShouldMask ? options.getShouldMask() : true
+					);
+
+					// CRITICAL FIX: Sync the mapped entities back to session manager with shouldMask states preserved
+					// This ensures session manager has the correct shouldMask states from plugin
+					if (options.conversationId) {
+						piiSessionManager.setConversationWorkingEntitiesWithMaskStates(
+							options.conversationId,
+							mappedEntities
+						);
+					} else {
+						// For new chats, use temporary state
+						if (!piiSessionManager.isTemporaryStateActive()) {
+							piiSessionManager.activateTemporaryState();
+						}
+						piiSessionManager.setTemporaryStateEntities(mappedEntities);
+					}
+
+					// Update plugin state via transaction
+					const tr = editorView.state.tr.setMeta(piiDetectionPluginKey, {
+						type: 'UPDATE_ENTITIES',
+						entities: response.pii,
+						clearTemporarilyHidden: true // Clear hidden entities when new detection results come in from user activity
+					});
+					editorView.dispatch(tr);
+
+					// Notify parent component
+					if (onPiiDetected) {
+						onPiiDetected(response.pii, response.text);
+					}
+
+					// Clear the fast mask update flag after successful completion
+					// Use requestAnimationFrame to ensure all DOM updates and reflows are complete
+					requestAnimationFrame(() => {
+						requestAnimationFrame(() => {
+							if (editorView) {
+								const clearFlagTr = editorView.state.tr.setMeta(piiDetectionPluginKey, {
+									type: 'CLEAR_FAST_MASK_UPDATE_FLAG'
+								});
+								editorView.dispatch(clearFlagTr);
+							}
+						});
+					});
+				}
+			} catch (error) {
+				console.error('PII fast mask update failed:', error);
+				// Fallback to regular detection if fast update fails
+				console.log('PiiDetectionExtension: Falling back to regular detection');
+				performPiiDetection(plainText);
+
+				// Clear the fast mask update flag after fallback
+				if (editorView) {
+					const clearFlagTr = editorView.state.tr.setMeta(piiDetectionPluginKey, {
+						type: 'CLEAR_FAST_MASK_UPDATE_FLAG'
+					});
+					editorView.dispatch(clearFlagTr);
+				}
+			} finally {
+				// Always clear detecting state
+				if (editorView) {
+					const tr = editorView.state.tr.setMeta(piiDetectionPluginKey, {
+						type: 'SET_DETECTING',
+						isDetecting: false
+					});
+					editorView.dispatch(tr);
+				}
+
+				// Notify parent component of state change
+				if (options.onPiiDetectionStateChanged) {
+					options.onPiiDetectionStateChanged(false);
+				}
+			}
+		};
+
 		// Smart debouncing based on content significance
 		const getSmartDebounceDelay = (
 			newWords: string[],
@@ -1078,7 +1237,8 @@ export const PiiDetectionExtension = Extension.create<PiiDetectionOptions>({
 						textNodes: [],
 						lastWordCount: 0,
 						dynamicallyEnabled: options.enabled, // Initialize with the static enabled option
-						temporarilyHiddenEntities: new Set()
+						temporarilyHiddenEntities: new Set(),
+						isFastMaskUpdate: false
 					};
 				},
 
@@ -1148,6 +1308,13 @@ export const PiiDetectionExtension = Extension.create<PiiDetectionOptions>({
 								if (options.onPiiDetectionStateChanged) {
 									options.onPiiDetectionStateChanged(meta.isDetecting);
 								}
+								break;
+
+							case 'CLEAR_FAST_MASK_UPDATE_FLAG':
+								newState.isFastMaskUpdate = false;
+								console.log(
+									'PiiDetectionExtension: ✅ Fast mask update completed, regular detection re-enabled'
+								);
 								break;
 
 							case 'UPDATE_ENTITIES':
@@ -1302,7 +1469,36 @@ export const PiiDetectionExtension = Extension.create<PiiDetectionOptions>({
 
 								if (currentMapping.plainText.trim()) {
 									newState.lastText = currentMapping.plainText;
-									performPiiDetection(currentMapping.plainText);
+
+									// Check if a fast mask update is in progress
+									if (newState.isFastMaskUpdate) {
+										console.log(
+											'PiiDetectionExtension: Skipping regular detection - fast mask update in progress'
+										);
+									} else {
+										performPiiDetection(currentMapping.plainText);
+									}
+								}
+								break;
+							}
+
+							case 'TRIGGER_FAST_MASK_UPDATE': {
+								// Use the fast mask-update API when modifiers are added/removed
+								const currentMapping = buildPositionMapping(tr.doc);
+								const currentTextNodes = extractTextNodes(tr.doc);
+								const currentWordCount = countWords(currentMapping.plainText);
+
+								newState.positionMapping = currentMapping;
+								newState.textNodes = currentTextNodes;
+								newState.lastWordCount = currentWordCount;
+								newState.isFastMaskUpdate = true; // Set flag to prevent regular detection
+								console.log(
+									'PiiDetectionExtension: 🚀 Starting fast mask update, blocking regular detection'
+								);
+
+								if (currentMapping.plainText.trim()) {
+									newState.lastText = currentMapping.plainText;
+									performFastMaskUpdate(currentMapping.plainText, newState.entities);
 								}
 								break;
 							}
@@ -1475,11 +1671,13 @@ export const PiiDetectionExtension = Extension.create<PiiDetectionOptions>({
 						// 1. We have new text content
 						// 2. The new content contains new words (not just formatting changes)
 						// 3. We're not already detecting
-						// 4. User edit requirements are met
+						// 4. We're not in the middle of a fast mask update
+						// 5. User edit requirements are met
 						const shouldTriggerDetection =
 							hasNewTextContent &&
 							hasSignificantNewContent &&
 							!newState.isDetecting &&
+							!newState.isFastMaskUpdate &&
 							(!options.detectOnlyAfterUserEdit || newState.userEdited) &&
 							newMapping.plainText.trim().length > 0;
 
@@ -1491,6 +1689,7 @@ export const PiiDetectionExtension = Extension.create<PiiDetectionOptions>({
 									hasNewTextContent,
 									hasSignificantNewContent,
 									isDetecting: newState.isDetecting,
+									isFastMaskUpdate: newState.isFastMaskUpdate,
 									detectOnlyAfterUserEdit: options.detectOnlyAfterUserEdit,
 									userEdited: newState.userEdited,
 									textLength: newMapping.plainText.trim().length,
@@ -1499,6 +1698,7 @@ export const PiiDetectionExtension = Extension.create<PiiDetectionOptions>({
 										hasNewTextContent,
 										hasSignificantNewContent,
 										notDetecting: !newState.isDetecting,
+										notFastMaskUpdate: !newState.isFastMaskUpdate,
 										userEditOk: !options.detectOnlyAfterUserEdit || newState.userEdited,
 										hasText: newMapping.plainText.trim().length > 0
 									}
