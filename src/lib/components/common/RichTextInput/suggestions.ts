@@ -76,6 +76,9 @@ export function getSuggestionRenderer(Component: any, ComponentProps = {}) {
 
 				if (container?.parentNode) container.parentNode.removeChild(container);
 				container = null;
+
+				if (refEl?.parentNode) refEl.parentNode.removeChild(refEl);
+				refEl = null;
 			}
 		};
 	};
