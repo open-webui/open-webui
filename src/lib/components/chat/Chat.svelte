@@ -260,39 +260,34 @@
 
 		const model = atSelectedModel ?? $models.find((m) => m.id === selectedModels[0]);
 		if (model) {
+			// Set Default Tools
 			if (model?.info?.meta?.toolIds) {
 				selectedToolIds = [
 					...new Set(
 						[...(model?.info?.meta?.toolIds ?? [])].filter((id) => $tools.find((t) => t.id === id))
 					)
 				];
-			} else {
-				selectedToolIds = [];
 			}
 
+			// Set Default Filters
 			if (model?.info?.meta?.defaultFilterIds) {
-				console.log('model.info.meta.defaultFilterIds', model.info.meta.defaultFilterIds);
+				console.log(model);
 				selectedFilterIds = model.info.meta.defaultFilterIds;
-				console.log('selectedFilterIds', selectedFilterIds);
-			} else {
-				selectedFilterIds = [];
 			}
 
+			// Set Default Features
 			if (model?.info?.meta?.defaultFeatureIds) {
-				console.log('model.info.meta.defaultFeatureIds', model.info.meta.defaultFeatureIds);
-				imageGenerationEnabled = model.info.meta.defaultFeatureIds.includes('image_generation');
-				webSearchEnabled = model.info.meta.defaultFeatureIds.includes('web_search');
-				codeInterpreterEnabled = model.info.meta.defaultFeatureIds.includes('code_interpreter');
+				if (model.info?.meta?.capabilities?.['image_generation']) {
+					imageGenerationEnabled = model.info.meta.defaultFeatureIds.includes('image_generation');
+				}
 
-				console.log({
-					imageGenerationEnabled,
-					webSearchEnabled,
-					codeInterpreterEnabled
-				});
-			} else {
-				imageGenerationEnabled = false;
-				webSearchEnabled = false;
-				codeInterpreterEnabled = false;
+				if (model.info?.meta?.capabilities?.['web_search']) {
+					webSearchEnabled = model.info.meta.defaultFeatureIds.includes('web_search');
+				}
+
+				if (model.info?.meta?.capabilities?.['code_interpreter']) {
+					codeInterpreterEnabled = model.info.meta.defaultFeatureIds.includes('code_interpreter');
+				}
 			}
 		}
 	};
