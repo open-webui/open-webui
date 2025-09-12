@@ -13,7 +13,8 @@
 	const dispatch = createEventDispatcher();
 
 	export let className = 'w-60';
-	export let colorClassName = 'bg-white dark:bg-gray-850 border border-gray-50 dark:border-white/5';
+	export let colorClassName =
+		'bg-white dark:bg-gray-850 border border-gray-50 dark:border-gray-800';
 	export let url: string | null = null;
 
 	export let dismissible = false;
@@ -28,8 +29,8 @@
 	export let type: string;
 	export let size: number;
 
-	import { deleteFileById } from '$lib/apis/files';
-
+	import DocumentPage from '../icons/DocumentPage.svelte';
+	import Database from '../icons/Database.svelte';
 	let showModal = false;
 
 	const decodeString = (str: string) => {
@@ -47,7 +48,7 @@
 
 <button
 	class="relative group p-1.5 {className} flex items-center gap-1 {colorClassName} {small
-		? 'rounded-xl'
+		? 'rounded-xl p-2'
 		: 'rounded-2xl'} text-left"
 	type="button"
 	on:click={async () => {
@@ -91,6 +92,23 @@
 				<Spinner />
 			{/if}
 		</div>
+	{:else}
+		<div class="pl-1">
+			{#if !loading}
+				<Tooltip
+					content={type === 'collection' ? $i18n.t('Collection') : $i18n.t('Document')}
+					placement="top"
+				>
+					{#if type === 'collection'}
+						<Database />
+					{:else}
+						<DocumentPage />
+					{/if}
+				</Tooltip>
+			{:else}
+				<Spinner />
+			{/if}
+		</div>
 	{/if}
 
 	{#if !small}
@@ -120,7 +138,7 @@
 		</div>
 	{:else}
 		<Tooltip content={decodeString(name)} className="flex flex-col w-full" placement="top-start">
-			<div class="flex flex-col justify-center -space-y-0.5 px-2.5 w-full">
+			<div class="flex flex-col justify-center -space-y-0.5 px-1 w-full">
 				<div class=" dark:text-gray-100 text-sm flex justify-between items-center">
 					{#if loading}
 						<div class=" shrink-0 mr-2">
@@ -128,7 +146,11 @@
 						</div>
 					{/if}
 					<div class="font-medium line-clamp-1 flex-1">{decodeString(name)}</div>
-					<div class="text-gray-500 text-xs capitalize shrink-0">{formatFileSize(size)}</div>
+					{#if size}
+						<div class="text-gray-500 text-xs capitalize shrink-0">{formatFileSize(size)}</div>
+					{:else}
+						<div class="text-gray-500 text-xs capitalize shrink-0">{type}</div>
+					{/if}
 				</div>
 			</div>
 		</Tooltip>

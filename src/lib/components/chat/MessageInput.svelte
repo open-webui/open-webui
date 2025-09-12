@@ -76,6 +76,10 @@
 
 	import { KokoroWorker } from '$lib/workers/KokoroWorker';
 
+	import { getSuggestionRenderer } from '../common/RichTextInput/suggestions';
+	import MentionList from '../common/RichTextInput/MentionList.svelte';
+	import CommandSuggestionList from './MessageInput/CommandSuggestionList.svelte';
+
 	const i18n = getContext('i18n');
 
 	export let onChange: Function = () => {};
@@ -428,9 +432,9 @@
 	};
 
 	let command = '';
-
 	export let showCommands = false;
 	$: showCommands = ['/', '#', '@'].includes(command?.charAt(0)) || '\\#' === command?.slice(0, 2);
+	let suggestions = null;
 
 	let showTools = false;
 
@@ -845,6 +849,115 @@
 	};
 
 	onMount(async () => {
+		suggestions = [
+			{
+				char: '@',
+				render: getSuggestionRenderer(CommandSuggestionList, {
+					i18n,
+					onSelect: (e) => {
+						const { type, data } = e;
+
+						if (type === 'model') {
+							atSelectedModel = data;
+						}
+
+						document.getElementById('chat-input')?.focus();
+					},
+
+					insertTextHandler: insertTextAtCursor,
+					onUpload: (e) => {
+						const { type, data } = e;
+
+						if (type === 'file') {
+							if (files.find((f) => f.id === data.id)) {
+								return;
+							}
+							files = [
+								...files,
+								{
+									...data,
+									status: 'processed'
+								}
+							];
+						} else {
+							dispatch('upload', e);
+						}
+					}
+				})
+			},
+			{
+				char: '/',
+				render: getSuggestionRenderer(CommandSuggestionList, {
+					i18n,
+					onSelect: (e) => {
+						const { type, data } = e;
+
+						if (type === 'model') {
+							atSelectedModel = data;
+						}
+
+						document.getElementById('chat-input')?.focus();
+					},
+
+					insertTextHandler: insertTextAtCursor,
+					onUpload: (e) => {
+						const { type, data } = e;
+
+						if (type === 'file') {
+							if (files.find((f) => f.id === data.id)) {
+								return;
+							}
+							files = [
+								...files,
+								{
+									...data,
+									status: 'processed'
+								}
+							];
+						} else {
+							dispatch('upload', e);
+						}
+					}
+				})
+			},
+			{
+				char: '#',
+				render: getSuggestionRenderer(CommandSuggestionList, {
+					i18n,
+					onSelect: (e) => {
+						const { type, data } = e;
+
+						if (type === 'model') {
+							atSelectedModel = data;
+						}
+
+						document.getElementById('chat-input')?.focus();
+					},
+
+					insertTextHandler: insertTextAtCursor,
+					onUpload: (e) => {
+						const { type, data } = e;
+
+						if (type === 'file') {
+							if (files.find((f) => f.id === data.id)) {
+								return;
+							}
+							files = [
+								...files,
+								{
+									...data,
+									status: 'processed'
+								}
+							];
+						} else {
+							dispatch('upload', e);
+						}
+					}
+				})
+			}
+		];
+
+		console.log(suggestions);
 		loaded = true;
 
 		window.setTimeout(() => {
@@ -929,78 +1042,6 @@
 						</div>
 					{/if}
 				</div>
-
-				<div class="w-full relative">
-					{#if atSelectedModel !== undefined}
-						<div
-							class="px-3 pb-0.5 pt-1.5 text-left w-full flex flex-col absolute bottom-0 left-0 right-0 bg-linear-to-t from-white dark:from-gray-900 z-10"
-						>
-							<div class="flex items-center justify-between w-full">
-								<div class="pl-[1px] flex items-center gap-2 text-sm dark:text-gray-500">
-									<img
-										crossorigin="anonymous"
-										alt="model profile"
-										class="size-3.5 max-w-[28px] object-cover rounded-full"
-										src={$models.find((model) => model.id === atSelectedModel.id)?.info?.meta
-											?.profile_image_url ??
-											($i18n.language === 'dg-DG'
-												? `${WEBUI_BASE_URL}/doge.png`
-												: `${WEBUI_BASE_URL}/static/favicon.png`)}
-									/>
-									<div class="translate-y-[0.5px]">
-										{$i18n.t('Talk to model')}:
-										<span class=" font-medium">{atSelectedModel.name}</span>
-									</div>
-								</div>
-								<div>
-									<button
-										class="flex items-center dark:text-gray-500"
-										on:click={() => {
-											atSelectedModel = undefined;
-										}}
-									>
-										<XMark />
-									</button>
-								</div>
-							</div>
-						</div>
-					{/if}
-
-					<Commands
-						bind:this={commandsElement}
-						bind:files
-						show={showCommands}
-						{command}
-						insertTextHandler={insertTextAtCursor}
-						onUpload={(e) => {
-							const { type, data } = e;
-
-							if (type === 'file') {
-								if (files.find((f) => f.id === data.id)) {
-									return;
-								}
-								files = [
-									...files,
-									{
-										...data,
-										status: 'processed'
-									}
-								];
-							} else {
-								dispatch('upload', e);
-							}
-						}}
-						onSelect={(e) => {
-							const { type, data } = e;
-
-							if (type === 'model') {
-								atSelectedModel = data;
-							}
-
-							document.getElementById('chat-input')?.focus();
-						}}
-					/>
-				</div>
 			</div>
 		</div>
 
@@ -1066,6 +1107,38 @@
 								class="flex-1 flex flex-col relative w-full shadow-lg rounded-3xl border border-gray-50 dark:border-gray-850 hover:border-gray-100 focus-within:border-gray-100 hover:dark:border-gray-800 focus-within:dark:border-gray-800 transition px-1 bg-white/90 dark:bg-gray-400/5 dark:text-gray-100"
 								dir={$settings?.chatDirection ?? 'auto'}
 							>
+								{#if atSelectedModel !== undefined}
+									<div class="px-3 pt-3 text-left w-full flex flex-col z-10">
+										<div class="flex items-center justify-between w-full">
+											<div class="pl-[1px] flex items-center gap-2 text-sm dark:text-gray-500">
+												<img
+													crossorigin="anonymous"
+													alt="model profile"
+													class="size-3.5 max-w-[28px] object-cover rounded-full"
+													src={$models.find((model) => model.id === atSelectedModel.id)?.info?.meta
+														?.profile_image_url ??
+														($i18n.language === 'dg-DG'
+															? `${WEBUI_BASE_URL}/doge.png`
+															: `${WEBUI_BASE_URL}/static/favicon.png`)}
+												/>
+												<div class="translate-y-[0.5px]">
+													<span class="">{atSelectedModel.name}</span>
+												</div>
+											</div>
+											<div>
+												<button
+													class="flex items-center dark:text-gray-500"
+													on:click={() => {
+														atSelectedModel = undefined;
+													}}
+												>
+													<XMark />
+												</button>
+											</div>
+										</div>
+									</div>
+								{/if}
+
 								{#if files.length > 0}
 									<div class="mx-2 mt-2.5 -mb-1 flex items-center flex-wrap gap-2">
 										{#each files as file, fileIdx}
@@ -1075,7 +1148,7 @@
 														<Image
 															src={file.url}
 															alt=""
-															imageClassName=" size-14 rounded-xl object-cover"
+															imageClassName=" size-10 rounded-xl object-cover"
 														/>
 														{#if atSelectedModel ? visionCapableModels.length === 0 : selectedModels.length !== visionCapableModels.length}
 															<Tooltip
@@ -1140,6 +1213,7 @@
 													loading={file.status === 'uploading'}
 													dismissible={true}
 													edit={true}
+													small={true}
 													modal={['file', 'collection'].includes(file?.type)}
 													on:dismiss={async () => {
 														// Remove from UI state
@@ -1161,250 +1235,201 @@
 											class="scrollbar-hidden rtl:text-right ltr:text-left bg-transparent dark:text-gray-100 outline-hidden w-full pt-2.5 pb-[5px] px-1 resize-none h-fit max-h-80 overflow-auto"
 											id="chat-input-container"
 										>
-											{#key $settings?.showFormattingToolbar ?? false}
-												<RichTextInput
-													bind:this={chatInputElement}
-													id="chat-input"
-													onChange={(e) => {
-														prompt = e.md;
-														command = getCommand();
-													}}
-													json={true}
-													messageInput={true}
-													showFormattingToolbar={$settings?.showFormattingToolbar ?? false}
-													floatingMenuPlacement={'top-start'}
-													insertPromptAsRichText={$settings?.insertPromptAsRichText ?? false}
-													shiftEnter={!($settings?.ctrlEnterToSend ?? false) &&
-														(!$mobile ||
-															!(
-																'ontouchstart' in window ||
-																navigator.maxTouchPoints > 0 ||
-																navigator.msMaxTouchPoints > 0
-															))}
-													placeholder={placeholder ? placeholder : $i18n.t('Send a Message')}
-													largeTextAsFile={($settings?.largeTextAsFile ?? false) && !shiftKey}
-													autocomplete={$config?.features?.enable_autocomplete_generation &&
-														($settings?.promptAutocomplete ?? false)}
-													generateAutoCompletion={async (text) => {
-														if (selectedModelIds.length === 0 || !selectedModelIds.at(0)) {
-															toast.error($i18n.t('Please select a model first.'));
-														}
-
-														const res = await generateAutoCompletion(
-															localStorage.token,
-															selectedModelIds.at(0),
-															text,
-															history?.currentId
-																? createMessagesList(history, history.currentId)
-																: null
-														).catch((error) => {
-															console.log(error);
-
-															return null;
-														});
-
-														console.log(res);
-														return res;
-													}}
-													oncompositionstart={() => (isComposing = true)}
-													oncompositionend={(e) => {
-														compositionEndedAt = e.timeStamp;
-														isComposing = false;
-													}}
-													on:keydown={async (e) => {
-														e = e.detail.event;
-
-														const isCtrlPressed = e.ctrlKey || e.metaKey; // metaKey is for Cmd key on Mac
-														const commandsContainerElement =
-															document.getElementById('commands-container');
-
-														if (e.key === 'Escape') {
-															stopResponse();
-														}
-
-														// Command/Ctrl + Shift + Enter to submit a message pair
-														if (isCtrlPressed && e.key === 'Enter' && e.shiftKey) {
-															e.preventDefault();
-															createMessagePair(prompt);
-														}
-
-														// Check if Ctrl + R is pressed
-														if (prompt === '' && isCtrlPressed && e.key.toLowerCase() === 'r') {
-															e.preventDefault();
-															console.log('regenerate');
-
-															const regenerateButton = [
-																...document.getElementsByClassName('regenerate-response-button')
-															]?.at(-1);
-
-															regenerateButton?.click();
-														}
-
-														if (prompt === '' && e.key == 'ArrowUp') {
-															e.preventDefault();
-
-															const userMessageElement = [
-																...document.getElementsByClassName('user-message')
-															]?.at(-1);
-
-															if (userMessageElement) {
-																userMessageElement.scrollIntoView({ block: 'center' });
-																const editButton = [
-																	...document.getElementsByClassName('edit-user-message-button')
-																]?.at(-1);
-
-																editButton?.click();
-															}
-														}
-
-														if (commandsContainerElement) {
-															if (commandsContainerElement && e.key === 'ArrowUp') {
-																e.preventDefault();
-																commandsElement.selectUp();
-
-																const commandOptionButton = [
-																	...document.getElementsByClassName(
-																		'selected-command-option-button'
-																	)
-																]?.at(-1);
-																commandOptionButton.scrollIntoView({ block: 'center' });
-															}
-
-															if (commandsContainerElement && e.key === 'ArrowDown') {
-																e.preventDefault();
-																commandsElement.selectDown();
-
-																const commandOptionButton = [
-																	...document.getElementsByClassName(
-																		'selected-command-option-button'
-																	)
-																]?.at(-1);
-																commandOptionButton.scrollIntoView({ block: 'center' });
-															}
-
-															if (commandsContainerElement && e.key === 'Tab') {
-																e.preventDefault();
-
-																const commandOptionButton = [
-																	...document.getElementsByClassName(
-																		'selected-command-option-button'
-																	)
-																]?.at(-1);
-
-																commandOptionButton?.click();
-															}
-
-															if (commandsContainerElement && e.key === 'Enter') {
-																e.preventDefault();
-
-																const commandOptionButton = [
-																	...document.getElementsByClassName(
-																		'selected-command-option-button'
-																	)
-																]?.at(-1);
-
-																if (commandOptionButton) {
-																	commandOptionButton?.click();
-																} else {
-																	document.getElementById('send-message-button')?.click();
-																}
-															}
-														} else {
-															if (
-																!$mobile ||
+											{#if suggestions}
+												{#key $settings?.showFormattingToolbar ?? false}
+													<RichTextInput
+														bind:this={chatInputElement}
+														id="chat-input"
+														onChange={(e) => {
+															prompt = e.md;
+															command = getCommand();
+														}}
+														json={true}
+														messageInput={true}
+														showFormattingToolbar={$settings?.showFormattingToolbar ?? false}
+														floatingMenuPlacement={'top-start'}
+														insertPromptAsRichText={$settings?.insertPromptAsRichText ?? false}
+														shiftEnter={!($settings?.ctrlEnterToSend ?? false) &&
+															(!$mobile ||
 																!(
 																	'ontouchstart' in window ||
 																	navigator.maxTouchPoints > 0 ||
 																	navigator.msMaxTouchPoints > 0
-																)
-															) {
-																if (inOrNearComposition(e)) {
-																	return;
-																}
+																))}
+														placeholder={placeholder ? placeholder : $i18n.t('Send a Message')}
+														largeTextAsFile={($settings?.largeTextAsFile ?? false) && !shiftKey}
+														autocomplete={$config?.features?.enable_autocomplete_generation &&
+															($settings?.promptAutocomplete ?? false)}
+														generateAutoCompletion={async (text) => {
+															if (selectedModelIds.length === 0 || !selectedModelIds.at(0)) {
+																toast.error($i18n.t('Please select a model first.'));
+															}
 
-																// Uses keyCode '13' for Enter key for chinese/japanese keyboards.
-																//
-																// Depending on the user's settings, it will send the message
-																// either when Enter is pressed or when Ctrl+Enter is pressed.
-																const enterPressed =
-																	($settings?.ctrlEnterToSend ?? false)
-																		? (e.key === 'Enter' || e.keyCode === 13) && isCtrlPressed
-																		: (e.key === 'Enter' || e.keyCode === 13) && !e.shiftKey;
+															const res = await generateAutoCompletion(
+																localStorage.token,
+																selectedModelIds.at(0),
+																text,
+																history?.currentId
+																	? createMessagesList(history, history.currentId)
+																	: null
+															).catch((error) => {
+																console.log(error);
 
-																if (enterPressed) {
-																	e.preventDefault();
-																	if (prompt !== '' || files.length > 0) {
-																		dispatch('submit', prompt);
-																	}
+																return null;
+															});
+
+															console.log(res);
+															return res;
+														}}
+														{suggestions}
+														oncompositionstart={() => (isComposing = true)}
+														oncompositionend={(e) => {
+															compositionEndedAt = e.timeStamp;
+															isComposing = false;
+														}}
+														on:keydown={async (e) => {
+															e = e.detail.event;
+
+															const isCtrlPressed = e.ctrlKey || e.metaKey; // metaKey is for Cmd key on Mac
+															const suggestionsContainerElement =
+																document.getElementById('suggestions-container');
+
+															if (e.key === 'Escape') {
+																stopResponse();
+															}
+
+															// Command/Ctrl + Shift + Enter to submit a message pair
+															if (isCtrlPressed && e.key === 'Enter' && e.shiftKey) {
+																e.preventDefault();
+																createMessagePair(prompt);
+															}
+
+															// Check if Ctrl + R is pressed
+															if (prompt === '' && isCtrlPressed && e.key.toLowerCase() === 'r') {
+																e.preventDefault();
+																console.log('regenerate');
+
+																const regenerateButton = [
+																	...document.getElementsByClassName('regenerate-response-button')
+																]?.at(-1);
+
+																regenerateButton?.click();
+															}
+
+															if (prompt === '' && e.key == 'ArrowUp') {
+																e.preventDefault();
+
+																const userMessageElement = [
+																	...document.getElementsByClassName('user-message')
+																]?.at(-1);
+
+																if (userMessageElement) {
+																	userMessageElement.scrollIntoView({ block: 'center' });
+																	const editButton = [
+																		...document.getElementsByClassName('edit-user-message-button')
+																	]?.at(-1);
+
+																	editButton?.click();
 																}
 															}
-														}
 
-														if (e.key === 'Escape') {
-															console.log('Escape');
-															atSelectedModel = undefined;
-															selectedToolIds = [];
-															selectedFilterIds = [];
-
-															webSearchEnabled = false;
-															imageGenerationEnabled = false;
-															codeInterpreterEnabled = false;
-														}
-													}}
-													on:paste={async (e) => {
-														e = e.detail.event;
-														console.log(e);
-
-														const clipboardData = e.clipboardData || window.clipboardData;
-
-														if (clipboardData && clipboardData.items) {
-															for (const item of clipboardData.items) {
-																if (item.type.indexOf('image') !== -1) {
-																	const blob = item.getAsFile();
-																	const reader = new FileReader();
-
-																	reader.onload = function (e) {
-																		files = [
-																			...files,
-																			{
-																				type: 'image',
-																				url: `${e.target.result}`
-																			}
-																		];
-																	};
-
-																	reader.readAsDataURL(blob);
-																} else if (item?.kind === 'file') {
-																	const file = item.getAsFile();
-																	if (file) {
-																		const _files = [file];
-																		await inputFilesHandler(_files);
-																		e.preventDefault();
+															if (!suggestionsContainerElement) {
+																if (
+																	!$mobile ||
+																	!(
+																		'ontouchstart' in window ||
+																		navigator.maxTouchPoints > 0 ||
+																		navigator.msMaxTouchPoints > 0
+																	)
+																) {
+																	if (inOrNearComposition(e)) {
+																		return;
 																	}
-																} else if (item.type === 'text/plain') {
-																	if (($settings?.largeTextAsFile ?? false) && !shiftKey) {
-																		const text = clipboardData.getData('text/plain');
 
-																		if (text.length > PASTED_TEXT_CHARACTER_LIMIT) {
-																			e.preventDefault();
-																			const blob = new Blob([text], { type: 'text/plain' });
-																			const file = new File(
-																				[blob],
-																				`Pasted_Text_${Date.now()}.txt`,
-																				{
-																					type: 'text/plain'
-																				}
-																			);
+																	// Uses keyCode '13' for Enter key for chinese/japanese keyboards.
+																	//
+																	// Depending on the user's settings, it will send the message
+																	// either when Enter is pressed or when Ctrl+Enter is pressed.
+																	const enterPressed =
+																		($settings?.ctrlEnterToSend ?? false)
+																			? (e.key === 'Enter' || e.keyCode === 13) && isCtrlPressed
+																			: (e.key === 'Enter' || e.keyCode === 13) && !e.shiftKey;
 
-																			await uploadFileHandler(file, true);
+																	if (enterPressed) {
+																		e.preventDefault();
+																		if (prompt !== '' || files.length > 0) {
+																			dispatch('submit', prompt);
 																		}
 																	}
 																}
 															}
-														}
-													}}
-												/>
-											{/key}
+
+															if (e.key === 'Escape') {
+																console.log('Escape');
+																atSelectedModel = undefined;
+																selectedToolIds = [];
+																selectedFilterIds = [];
+
+																webSearchEnabled = false;
+																imageGenerationEnabled = false;
+																codeInterpreterEnabled = false;
+															}
+														}}
+														on:paste={async (e) => {
+															e = e.detail.event;
+															console.log(e);
+
+															const clipboardData = e.clipboardData || window.clipboardData;
+
+															if (clipboardData && clipboardData.items) {
+																for (const item of clipboardData.items) {
+																	if (item.type.indexOf('image') !== -1) {
+																		const blob = item.getAsFile();
+																		const reader = new FileReader();
+
+																		reader.onload = function (e) {
+																			files = [
+																				...files,
+																				{
+																					type: 'image',
+																					url: `${e.target.result}`
+																				}
+																			];
+																		};
+
+																		reader.readAsDataURL(blob);
+																	} else if (item?.kind === 'file') {
+																		const file = item.getAsFile();
+																		if (file) {
+																			const _files = [file];
+																			await inputFilesHandler(_files);
+																			e.preventDefault();
+																		}
+																	} else if (item.type === 'text/plain') {
+																		if (($settings?.largeTextAsFile ?? false) && !shiftKey) {
+																			const text = clipboardData.getData('text/plain');
+
+																			if (text.length > PASTED_TEXT_CHARACTER_LIMIT) {
+																				e.preventDefault();
+																				const blob = new Blob([text], { type: 'text/plain' });
+																				const file = new File(
+																					[blob],
+																					`Pasted_Text_${Date.now()}.txt`,
+																					{
+																						type: 'text/plain'
+																					}
+																				);
+
+																				await uploadFileHandler(file, true);
+																			}
+																		}
+																	}
+																}
+															}
+														}}
+													/>
+												{/key}
+											{/if}
 										</div>
 									{:else}
 										<textarea
@@ -1428,8 +1453,8 @@
 											on:keydown={async (e) => {
 												const isCtrlPressed = e.ctrlKey || e.metaKey; // metaKey is for Cmd key on Mac
 
-												const commandsContainerElement =
-													document.getElementById('commands-container');
+												const suggestionsContainerElement =
+													document.getElementById('suggestions-container');
 
 												if (e.key === 'Escape') {
 													stopResponse();
@@ -1470,71 +1495,7 @@
 													editButton?.click();
 												}
 
-												if (commandsContainerElement) {
-													if (commandsContainerElement && e.key === 'ArrowUp') {
-														e.preventDefault();
-														commandsElement.selectUp();
-
-														const container = document.getElementById('command-options-container');
-														const commandOptionButton = [
-															...document.getElementsByClassName('selected-command-option-button')
-														]?.at(-1);
-
-														if (commandOptionButton && container) {
-															const elTop = commandOptionButton.offsetTop;
-															const elHeight = commandOptionButton.offsetHeight;
-															const containerHeight = container.clientHeight;
-
-															// Center the selected button in the container
-															container.scrollTop = elTop - containerHeight / 2 + elHeight / 2;
-														}
-													}
-
-													if (commandsContainerElement && e.key === 'ArrowDown') {
-														e.preventDefault();
-														commandsElement.selectDown();
-
-														const container = document.getElementById('command-options-container');
-														const commandOptionButton = [
-															...document.getElementsByClassName('selected-command-option-button')
-														]?.at(-1);
-
-														if (commandOptionButton && container) {
-															const elTop = commandOptionButton.offsetTop;
-															const elHeight = commandOptionButton.offsetHeight;
-															const containerHeight = container.clientHeight;
-
-															// Center the selected button in the container
-															container.scrollTop = elTop - containerHeight / 2 + elHeight / 2;
-														}
-													}
-
-													if (commandsContainerElement && e.key === 'Enter') {
-														e.preventDefault();
-
-														const commandOptionButton = [
-															...document.getElementsByClassName('selected-command-option-button')
-														]?.at(-1);
-
-														if (e.shiftKey) {
-															prompt = `${prompt}\n`;
-														} else if (commandOptionButton) {
-															commandOptionButton?.click();
-														} else {
-															document.getElementById('send-message-button')?.click();
-														}
-													}
-
-													if (commandsContainerElement && e.key === 'Tab') {
-														e.preventDefault();
-
-														const commandOptionButton = [
-															...document.getElementsByClassName('selected-command-option-button')
-														]?.at(-1);
-
-														commandOptionButton?.click();
-													}
-												} else {
+												if (!suggestionsContainerElement) {
 													if (
 														!$mobile ||
 														!(

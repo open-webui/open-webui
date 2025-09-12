@@ -753,53 +753,10 @@
 										e = e.detail.event;
 										const isCtrlPressed = e.ctrlKey || e.metaKey; // metaKey is for Cmd key on Mac
 
-										const commandsContainerElement = document.getElementById('commands-container');
+										const suggestionsContainerElement =
+											document.getElementById('suggestions-container');
 
-										if (commandsContainerElement) {
-											if (commandsContainerElement && e.key === 'ArrowUp') {
-												e.preventDefault();
-												commandsElement.selectUp();
-
-												const commandOptionButton = [
-													...document.getElementsByClassName('selected-command-option-button')
-												]?.at(-1);
-												commandOptionButton.scrollIntoView({ block: 'center' });
-											}
-
-											if (commandsContainerElement && e.key === 'ArrowDown') {
-												e.preventDefault();
-												commandsElement.selectDown();
-
-												const commandOptionButton = [
-													...document.getElementsByClassName('selected-command-option-button')
-												]?.at(-1);
-												commandOptionButton.scrollIntoView({ block: 'center' });
-											}
-
-											if (commandsContainerElement && e.key === 'Tab') {
-												e.preventDefault();
-
-												const commandOptionButton = [
-													...document.getElementsByClassName('selected-command-option-button')
-												]?.at(-1);
-
-												commandOptionButton?.click();
-											}
-
-											if (commandsContainerElement && e.key === 'Enter') {
-												e.preventDefault();
-
-												const commandOptionButton = [
-													...document.getElementsByClassName('selected-command-option-button')
-												]?.at(-1);
-
-												if (commandOptionButton) {
-													commandOptionButton?.click();
-												} else {
-													document.getElementById('send-message-button')?.click();
-												}
-											}
-										} else {
+										if (!suggestionsContainerElement) {
 											if (
 												!$mobile ||
 												!(

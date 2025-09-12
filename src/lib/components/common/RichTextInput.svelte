@@ -137,13 +137,13 @@
 	import CodeBlockLowlight from '@tiptap/extension-code-block-lowlight';
 
 	import Mention from '@tiptap/extension-mention';
-
-	import { all, createLowlight } from 'lowlight';
+	import FormattingButtons from './RichTextInput/FormattingButtons.svelte';
 
 	import { PASTED_TEXT_CHARACTER_LIMIT } from '$lib/constants';
+	import { all, createLowlight } from 'lowlight';
 
-	import FormattingButtons from './RichTextInput/FormattingButtons.svelte';
-	import { duration } from 'dayjs';
+	import MentionList from './RichTextInput/MentionList.svelte';
+	import { getSuggestionRenderer } from './RichTextInput/suggestions.js';
 
 	export let oncompositionstart = (e) => {};
 	export let oncompositionend = (e) => {};
@@ -165,6 +165,8 @@
 	export let link = false;
 	export let image = false;
 	export let fileHandler = false;
+
+	export let suggestions = null;
 
 	export let onFileDrop = (currentEditor, files, pos) => {
 		files.forEach((file) => {
@@ -951,6 +953,7 @@
 		}
 
 		console.log(bubbleMenuElement, floatingMenuElement);
+		console.log(suggestions);
 
 		editor = new Editor({
 			element: element,
@@ -966,12 +969,14 @@
 				}),
 				Highlight,
 				Typography,
-
-				Mention.configure({
-					HTMLAttributes: {
-						class: 'mention'
-					}
-				}),
+				...(suggestions
+					? [
+							Mention.configure({
+								HTMLAttributes: { class: 'mention' },
+								suggestions: suggestions
+							})
+						]
+					: []),
 
 				TableKit.configure({
 					table: { resizable: true }
@@ -1143,12 +1148,13 @@
 
 							if (event.key === 'Enter') {
 								const isCtrlPressed = event.ctrlKey || event.metaKey; // metaKey is for Cmd key on Mac
+
+								const { state } = view;
+								const { $from } = state.selection;
+								const lineStart = $from.before($from.depth);
+								const lineEnd = $from.after($from.depth);
+								const lineText = state.doc.textBetween(lineStart, lineEnd, '\n', '\0').trim();
 								if (event.shiftKey && !isCtrlPressed) {
-									const { state } = view;
-									const { $from } = state.selection;
-									const lineStart = $from.before($from.depth);
-									const lineEnd = $from.after($from.depth);
-									const lineText = state.doc.textBetween(lineStart, lineEnd, '\n', '\0').trim();
 									if (lineText.startsWith('```')) {
 										// Fix GitHub issue #16337: prevent backtick removal for lines starting with ```
 										return false; // Let ProseMirror handle the Enter key normally
@@ -1163,9 +1169,17 @@
 									const isInList = isInside(['listItem', 'bulletList', 'orderedList', 'taskList']);
 									const isInHeading = isInside(['heading']);
 
+									console.log({ isInCodeBlock, isInList, isInHeading });
+
 									if (isInCodeBlock || isInList || isInHeading) {
 										// Let ProseMirror handle the normal Enter behavior
 										return false;
+									}
+
+									const suggestionsElement = document.getElementById('suggestions-container');
+									if (lineText.startsWith('#') && suggestionsElement) {
+										console.log('Letting heading suggestion handle Enter key');
+										return true;
 									}
 								}
 							}
