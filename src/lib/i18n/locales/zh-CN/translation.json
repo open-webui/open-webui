@@ -360,7 +360,7 @@
 	"Datalab Marker API": "Datalab Marker API",
 	"Datalab Marker API Key required.": "需要 Datalab Marker API 密钥",
 	"DD/MM/YYYY": "DD/MM/YYYY",
-	"DD/MM/YYYY [at] h:mm A": "YYYY年MM月DD日[下午]h:mm A",
+	"DD/MM/YYYY [at] h:mm A": "YYYY年MM月DD日[下午]A h:mm",
 	"December": "十二月",
 	"Deepgram": "Deepgram",
 	"Default": "默认",
