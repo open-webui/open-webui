@@ -3,7 +3,7 @@
 	import { onMount, getContext } from 'svelte';
 
 	import { user, config, settings } from '$lib/stores';
-	import { updateUserProfile, createAPIKey, getAPIKey, getSessionUser } from '$lib/apis/auths';
+	import { updateUserProfile, createAPIKey, getAPIKey, getSessionUser, userSignOut } from '$lib/apis/auths';
 	import { WEBUI_BASE_URL } from '$lib/constants';
 
 	import UpdatePassword from './Account/UpdatePassword.svelte';
@@ -14,7 +14,8 @@
 	import Tooltip from '$lib/components/common/Tooltip.svelte';
 	import SensitiveInput from '$lib/components/common/SensitiveInput.svelte';
 	import Textarea from '$lib/components/common/Textarea.svelte';
-	import { getUserById } from '$lib/apis/users';
+	import ConfirmDialog from '$lib/components/common/ConfirmDialog.svelte';
+	import { getUserById, deleteOwnAccount } from '$lib/apis/users';
 
 	const i18n = getContext('i18n');
 
@@ -39,6 +40,8 @@
 	let APIKey = '';
 	let APIKeyCopied = false;
 	let profileImageInputElement: HTMLInputElement;
+
+	let showDeleteConfirmDialog = false;
 
 	const submitHandler = async () => {
 		if (name !== $user?.name) {
@@ -88,6 +91,21 @@
 		}
 	};
 
+	const deleteAccountHandler = async () => {
+		try {
+			const result = await deleteOwnAccount(localStorage.token);
+			if (result) {
+				toast.success($i18n.t('Account deleted successfully'));
+				// Sign out the user
+				await userSignOut();
+				// Redirect to home or login page
+				window.location.href = '/';
+			}
+		} catch (error) {
+			toast.error(`${error}`);
+		}
+	};
+
 	onMount(async () => {
 		const user = await getSessionUser(localStorage.token).catch((error) => {
 			toast.error(`${error}`);
@@ -115,6 +133,15 @@
 		loaded = true;
 	});
 </script>
+
+<ConfirmDialog
+	bind:show={showDeleteConfirmDialog}
+	title={$i18n.t('Delete Account')}
+	message={$i18n.t('Are you sure you want to delete your account? This action cannot be undone and will permanently remove all your data, including chats, models, and settings.')}
+	confirmLabel={$i18n.t('Delete Account')}
+	cancelLabel={$i18n.t('Cancel')}
+	onConfirm={deleteAccountHandler}
+/>
 
 <div id="tab-account" class="flex flex-col h-full justify-between text-sm">
 	<div class=" overflow-y-scroll max-h-[28rem] lg:max-h-full">
@@ -533,6 +560,25 @@
 				</div>
 			{/if}
 		{/if}
+
+		<hr class="border-gray-50 dark:border-gray-850 my-4" />
+
+		<div class="mt-2">
+			<div class="text-base font-medium text-red-600 dark:text-red-400 mb-2">
+				{$i18n.t('Danger Zone')}
+			</div>
+			<div class="text-xs text-gray-500 mb-4">
+				{$i18n.t('Permanently delete your account and all associated data.')}
+			</div>
+			<button
+				class="px-3.5 py-1.5 text-sm font-medium bg-red-600 hover:bg-red-700 text-white transition rounded-lg"
+				on:click={() => {
+					showDeleteConfirmDialog = true;
+				}}
+			>
+				{$i18n.t('Delete Account')}
+			</button>
+		</div>
 	</div>
 
 	<div class="flex justify-end pt-3 text-sm font-medium">
