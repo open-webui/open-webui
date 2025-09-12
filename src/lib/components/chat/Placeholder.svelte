@@ -43,7 +43,7 @@
 	export let imageGenerationEnabled = false;
 	export let webSearchEnabled = false;
 	export let wikiGroundingEnabled = false;
-	export let wikiGroundingMode = 'off'; // 'off', 'auto', 'always'
+	export let wikiGroundingMode = 'off'; // 'off', 'on'
 
 	let models = [];
 	let modelDescription = '';

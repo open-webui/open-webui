@@ -756,19 +756,12 @@ async def chat_wiki_grounding_handler(
     form_data: dict,
     extra_params: dict,
     user,
-    wiki_grounding_mode: str = "auto",
 ):
     """
     Wikipedia Knowledge Grounding Handler
 
     Augments LLM responses with current, factual information from txtai-wikipedia.
-    Handles both English and French queries with intelligent content analysis.
-
-    Args:
-        wiki_grounding_mode: Controls grounding behavior:
-            - "off": Disabled (should not reach this handler)
-            - "auto": Use intelligent filtering to determine if grounding is needed
-            - "always": Always apply grounding regardless of query type
+    Handles both English and French queries with context-aware analysis.
 
     Note: User session state (toggle) is already checked before this handler is called.
     This handler only needs to verify admin configuration.
@@ -809,24 +802,23 @@ async def chat_wiki_grounding_handler(
         log.info("🔍 No user message found, skipping grounding")
         return form_data
 
-    log.info(
-        f"🔍 Processing user message for grounding (mode: {wiki_grounding_mode}): {user_message}"
-    )
+    log.info(f"🔍 Processing user message for grounding: {user_message}")
 
     try:
-        # Handle different grounding modes
-        if wiki_grounding_mode == "always":
-            # Always mode: force grounding without intelligent filtering
-            log.info("🔍 Always mode: forcing grounding without filtering")
-            grounding_data = await wiki_search_grounder.ground_query_always(
-                user_message, request, user
-            )
-        else:
-            # Auto mode: use intelligent filtering to determine if grounding is needed
-            log.info("🔍 Auto mode: using intelligent filtering")
-            grounding_data = await wiki_search_grounder.ground_query(
-                user_message, request, user
-            )
+        # Get temporal context to prioritize current information
+        temporal_context = extra_params.get("temporal_context", {})
+        current_year = temporal_context.get("current_year")
+        current_date = temporal_context.get("current_date", "")
+
+        # Pass temporal context to grounding system for dynamic enhancement
+        # The grounding system will intelligently determine when to apply temporal context
+        # based on query analysis and conversation context, not static keywords
+
+        # Always use context-aware grounding (simplified from auto mode)
+        log.info("🔍 Using context-aware grounding")
+        grounding_data = await wiki_search_grounder.ground_query(
+            user_message, request, user, messages
+        )
 
         log.info(f"🔍 Grounding query result: {bool(grounding_data)}")
 
@@ -924,13 +916,49 @@ async def chat_wiki_grounding_handler(
                     final_language = source_language
                     fallback_reason = None
 
+                # Use reranked score as primary score if available, otherwise original score
+                primary_score = (
+                    source.get("rerank_score")
+                    if source.get("rerank_score") is not None
+                    else source.get("score", 0)
+                )
+
                 source_data = {
                     "title": title,
                     "content": content,
                     "url": final_url,
-                    "score": source.get("score", 0),
+                    "score": primary_score,  # This is what frontend displays as relevance
                     "language": final_language,
                 }
+
+                # Add reranking information if available
+                if source.get("rerank_score") is not None:
+                    source_data["rerank_score"] = source.get("rerank_score")
+                    source_data["original_score"] = source.get("original_score")
+                    source_data["rerank_position"] = source.get("rerank_position", 0)
+                    source_data["enhanced_by_reranker"] = True
+
+                    # Calculate improvement for user transparency
+                    original_score = source.get("original_score", 0)
+                    rerank_score = source.get("rerank_score", 0)
+                    improvement = rerank_score - original_score
+                    source_data["ranking_improvement"] = improvement
+                    source_data["improvement_percentage"] = (
+                        (improvement / max(original_score, 0.001)) * 100
+                        if original_score > 0
+                        else 0
+                    )
+                else:
+                    source_data["enhanced_by_reranker"] = False
+
+                # Add context enhancement information if available
+                if grounding_data.get("context_metadata", {}).get("is_context_aware"):
+                    source_data["context_enhanced"] = True
+                    source_data["context_entities"] = grounding_data.get(
+                        "context_metadata", {}
+                    ).get("context_entities", [])
+                else:
+                    source_data["context_enhanced"] = False
 
                 # Add fallback reason if applicable
                 if fallback_reason:
@@ -938,14 +966,66 @@ async def chat_wiki_grounding_handler(
 
                 sources_summary.append(source_data)
 
+            # Generate enhanced description showing improvements
+            description_parts = ["Enhanced with current information"]
+
+            # Check if reranking was applied
+            has_reranking = any(
+                source.get("rerank_score") is not None
+                for source in grounding_data["grounding_data"]
+            )
+            if has_reranking:
+                # Calculate average improvement
+                improvements = []
+                for source in grounding_data["grounding_data"]:
+                    if (
+                        source.get("rerank_score") is not None
+                        and source.get("original_score") is not None
+                    ):
+                        improvement = source.get("rerank_score") - source.get(
+                            "original_score"
+                        )
+                        improvements.append(improvement)
+
+                if improvements:
+                    avg_improvement = sum(improvements) / len(improvements)
+                    if avg_improvement > 0.05:  # Significant improvement
+                        description_parts.append(
+                            f"Results optimized by semantic ranking (+{avg_improvement:.2f} avg relevance)"
+                        )
+                    else:
+                        description_parts.append(
+                            "Results optimized by semantic ranking"
+                        )
+
+            # Check if context enhancement was applied
+            is_context_aware = grounding_data.get("context_metadata", {}).get(
+                "is_context_aware", False
+            )
+            if is_context_aware:
+                enhanced_entities = grounding_data.get("context_metadata", {}).get(
+                    "context_entities", []
+                )
+                entity_count = len(enhanced_entities)
+                if entity_count > 0:
+                    description_parts.append(
+                        f"Query enhanced with {entity_count} context entities"
+                    )
+                else:
+                    description_parts.append("Query enhanced with conversation context")
+
+            enhanced_description = " • ".join(description_parts)
+
             await __event_emitter__(
                 {
                     "type": "status",
                     "data": {
                         "action": "wiki_grounding",
-                        "description": "Enhanced with current information",
+                        "description": enhanced_description,
                         "count": len(grounding_data["grounding_data"]),
                         "sources": sources_summary,
+                        "has_reranking": has_reranking,
+                        "is_context_aware": is_context_aware,
                         "done": True,
                     },
                 }
@@ -1155,6 +1235,58 @@ async def process_chat_payload(request, form_data, metadata, user, model):
     event_emitter = get_event_emitter(metadata)
     event_call = get_event_call(metadata)
 
+    # Create temporal context early for use in grounding features
+    user_timezone = "America/Toronto"  # Default fallback for Canadian users
+
+    if user and hasattr(user, "settings") and user.settings:
+        # UserSettings is a Pydantic model with extra="allow"
+        # We can access timezone as an attribute or via model_dump()
+        user_timezone = getattr(user.settings, "timezone", "America/Toronto")
+
+    try:
+        timezone = ZoneInfo(user_timezone)
+    except Exception:
+        # If user's timezone is invalid, fallback to Eastern Time (Toronto)
+        timezone = ZoneInfo("America/Toronto")
+        user_timezone = "America/Toronto"
+
+    now = datetime.now(timezone)
+    current_datetime = now.strftime("%A, %B %d, %Y at %I:%M %p %Z")
+    current_weekday = now.strftime("%A")
+    current_date = now.strftime("%B %d, %Y")
+    current_year = now.strftime("%Y")
+
+    # Create temporal context for grounding - this helps prioritize current information
+    temporal_context = {
+        "current_date": current_date,
+        "current_year": int(current_year),
+        "current_datetime": current_datetime,
+        "current_weekday": current_weekday,
+        "user_timezone": user_timezone,
+        "iso_date": now.isoformat(),
+        "timestamp": now.timestamp(),
+    }
+
+    time_context = (
+        f"IMPORTANT: The current date is {current_date} ({current_year}). "
+        f"Today is {current_weekday}, {current_date}. "
+        f"The current time is {now.strftime('%I:%M %p %Z')}. "
+        f"User timezone: {user_timezone}. "
+        f"When asked about the current date, time, or day, always use this information: "
+        f"Date: {current_date}, Day: {current_weekday}, Time: {now.strftime('%I:%M %p %Z')}."
+    )
+
+    # Add time information to system message
+    messages = form_data.get("messages", [])
+    if messages and messages[0].get("role") == "system":
+        # Update existing system message
+        messages[0]["content"] = f"{time_context}\n\n{messages[0]['content']}"
+    else:
+        # Insert new system message at beginning
+        messages.insert(0, {"role": "system", "content": time_context})
+
+    form_data["messages"] = messages
+
     extra_params = {
         "__event_emitter__": event_emitter,
         "__event_call__": event_call,
@@ -1225,10 +1357,10 @@ async def process_chat_payload(request, form_data, metadata, user, model):
             )
 
         if "wiki_grounding" in features and features["wiki_grounding"]:
-            # Pass wiki grounding mode to handler
-            wiki_grounding_mode = features.get("wiki_grounding_mode", "auto")
+            # Pass temporal context to wiki grounding for current information prioritization
+            extra_params["temporal_context"] = temporal_context
             form_data = await chat_wiki_grounding_handler(
-                request, form_data, extra_params, user, wiki_grounding_mode
+                request, form_data, extra_params, user
             )
 
         if "image_generation" in features and features["image_generation"]:
@@ -1360,48 +1492,6 @@ async def process_chat_payload(request, form_data, metadata, user, model):
                 },
             }
         )
-
-    # Add current time information to all chat requests using user's timezone preference
-    # Get user's timezone preference from settings, fallback to Eastern Time (Toronto)
-    user_timezone = "America/Toronto"  # Default fallback for Canadian users
-
-    if user and hasattr(user, "settings") and user.settings:
-        # UserSettings is a Pydantic model with extra="allow"
-        # We can access timezone as an attribute or via model_dump()
-        user_timezone = getattr(user.settings, "timezone", "America/Toronto")
-
-    try:
-        timezone = ZoneInfo(user_timezone)
-    except Exception:
-        # If user's timezone is invalid, fallback to Eastern Time (Toronto)
-        timezone = ZoneInfo("America/Toronto")
-        user_timezone = "America/Toronto"
-
-    now = datetime.now(timezone)
-    current_datetime = now.strftime("%A, %B %d, %Y at %I:%M %p %Z")
-    current_weekday = now.strftime("%A")
-    current_date = now.strftime("%B %d, %Y")
-    current_year = now.strftime("%Y")
-
-    time_context = (
-        f"IMPORTANT: The current date is {current_date} ({current_year}). "
-        f"Today is {current_weekday}, {current_date}. "
-        f"The current time is {now.strftime('%I:%M %p %Z')}. "
-        f"User timezone: {user_timezone}. "
-        f"When asked about the current date, time, or day, always use this information: "
-        f"Date: {current_date}, Day: {current_weekday}, Time: {now.strftime('%I:%M %p %Z')}."
-    )
-
-    # Add time information to system message
-    messages = form_data.get("messages", [])
-    if messages and messages[0].get("role") == "system":
-        # Update existing system message
-        messages[0]["content"] = f"{time_context}\n\n{messages[0]['content']}"
-    else:
-        # Insert new system message at beginning
-        messages.insert(0, {"role": "system", "content": time_context})
-
-    form_data["messages"] = messages
 
     return form_data, events
 

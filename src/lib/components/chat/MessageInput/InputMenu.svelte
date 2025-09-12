@@ -41,20 +41,15 @@
 
 	export let webSearchEnabled: boolean;
 	export let wikiGroundingEnabled: boolean;
-	export let wikiGroundingMode: string = 'off'; // 'off', 'auto', 'always'
+	export let wikiGroundingMode: string = 'off'; // 'off', 'on'
 	export let imageGenerationEnabled: boolean;
 
 	export let onClose: Function;
 
 	// Reactive statement for tooltip content
-	$: tooltipContent =
-		wikiGroundingMode === 'off'
-			? $i18n.t('Off Mode: No wiki information added to responses')
-			: wikiGroundingMode === 'auto'
-				? $i18n.t('Auto Mode: Smart enhancement for English/French queries')
-				: wikiGroundingMode === 'always'
-					? $i18n.t('Always Mode: Enhance every response with wiki information')
-					: '';
+	$: tooltipContent = wikiGroundingEnabled
+		? $i18n.t('Wikipedia Grounding: Context-aware information enhancement enabled')
+		: $i18n.t('Wikipedia Grounding: Click to enable context-aware information enhancement');
 
 	let tools = {};
 	let wikiGroundingTooltip;
@@ -291,16 +286,13 @@
 						bind:this={wikiGroundingButton}
 						class="flex w-full justify-between gap-2 items-center px-3 py-2 text-sm font-medium cursor-pointer rounded-xl"
 						on:click={() => {
-							// Cycle through: off -> auto -> always -> off
-							if (wikiGroundingMode === 'off') {
-								wikiGroundingMode = 'auto';
-								wikiGroundingEnabled = true;
-							} else if (wikiGroundingMode === 'auto') {
-								wikiGroundingMode = 'always';
-								wikiGroundingEnabled = true;
-							} else {
+							// Simple toggle: off -> on -> off
+							if (wikiGroundingEnabled) {
 								wikiGroundingMode = 'off';
 								wikiGroundingEnabled = false;
+							} else {
+								wikiGroundingMode = 'on';
+								wikiGroundingEnabled = true;
 							}
 						}}
 					>
@@ -308,40 +300,11 @@
 							<BookOpen />
 							<div class="line-clamp-1">
 								{$i18n.t('Wiki Grounding')}
-								{#if wikiGroundingMode !== 'off'}
-									<span class="opacity-60">
-										{#if wikiGroundingMode === 'auto'}
-											({$i18n.t('Auto')})
-										{:else if wikiGroundingMode === 'always'}
-											({$i18n.t('Always')})
-										{/if}
-									</span>
-								{/if}
 							</div>
 						</div>
 
 						<div class="flex items-center">
-							{#key wikiGroundingMode}
-								{#if wikiGroundingMode === 'off'}
-									<div
-										class="w-4 h-4 rounded-full bg-gray-400 dark:bg-gray-500 border-2 border-gray-300 dark:border-gray-600"
-									></div>
-								{:else if wikiGroundingMode === 'auto'}
-									<div
-										class="w-4 h-4 rounded-full bg-blue-500 border-2 border-blue-300 shadow-sm"
-									></div>
-								{:else if wikiGroundingMode === 'always'}
-									<div
-										class="w-4 h-4 rounded-full bg-green-500 border-2 border-green-300 shadow-sm"
-									></div>
-								{:else}
-									<!-- Fallback for any unexpected states -->
-									<div
-										class="w-4 h-4 rounded-full bg-red-500 border-2 border-red-300 shadow-sm"
-										title="Debug: {wikiGroundingMode}"
-									></div>
-								{/if}
-							{/key}
+							<Switch state={wikiGroundingEnabled} />
 						</div>
 					</button>
 				</Tooltip>
