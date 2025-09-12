@@ -373,12 +373,12 @@ async def lifespan(app: FastAPI):
     async def initialize_wiki_grounding():
         """Initialize Wikipedia grounding models in background to avoid first-user delay"""
         try:
-            from open_webui.grounding.wiki_search_utils import wiki_search_grounder
+            from open_webui.grounding.wiki_search_utils import get_wiki_search_grounder
 
             log.info(
                 "Starting background initialization of Wikipedia grounding models..."
             )
-            success = await wiki_search_grounder.initialize()
+            success = await get_wiki_search_grounder().initialize()
             if success:
                 log.info(
                     "Wikipedia grounding models initialized successfully in background"

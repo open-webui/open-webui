@@ -2,9 +2,11 @@
 Pure txtai-wikipedia semantic search - absolutely generic
 """
 
+import asyncio
 import importlib.util
 import logging
 import re
+from concurrent.futures import ThreadPoolExecutor
 from typing import Dict, List, Optional
 from datetime import datetime
 
@@ -349,10 +351,18 @@ class WikiSearchGrounder:
                         f"🔍 Reranking {len(formatted)} search results using txtai reranker"
                     )
 
-                    # Use intelligent reranking - only improve scores, don't degrade results
-                    reranked_results = self.reranker(
-                        search_query, limit=self.max_search_results * 2
-                    )
+                    # Run reranking on thread pool to prevent blocking event loop
+                    def run_reranking():
+                        return self.reranker(
+                            search_query, limit=self.max_search_results * 2
+                        )
+
+                    # Use thread pool executor to prevent blocking K8s health checks
+                    with ThreadPoolExecutor(max_workers=1) as executor:
+                        loop = asyncio.get_event_loop()
+                        reranked_results = await loop.run_in_executor(
+                            executor, run_reranking
+                        )
 
                     # Create mapping of our formatted results by title
                     title_to_formatted = {
@@ -570,5 +580,13 @@ class WikiSearchGrounder:
         return "\n".join(context)
 
 
-# Global instance
-wiki_search_grounder = WikiSearchGrounder()
+# Global instance - lazy initialization to prevent K8s health check issues
+_wiki_search_grounder = None
+
+
+def get_wiki_search_grounder() -> WikiSearchGrounder:
+    """Get the global WikiSearchGrounder instance with lazy initialization"""
+    global _wiki_search_grounder
+    if _wiki_search_grounder is None:
+        _wiki_search_grounder = WikiSearchGrounder()
+    return _wiki_search_grounder

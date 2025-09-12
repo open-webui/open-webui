@@ -52,7 +52,7 @@ from open_webui.utils.task import (
     tools_function_calling_generation_template,
 )
 
-from open_webui.grounding.wiki_search_utils import wiki_search_grounder
+from open_webui.grounding.wiki_search_utils import get_wiki_search_grounder
 from open_webui.utils.misc import (
     get_message_list,
     add_or_update_system_message,
@@ -132,7 +132,7 @@ def detect_query_language(query: str) -> str:
 
     # Use the existing wiki search grounder's language detection
     try:
-        return wiki_search_grounder._detect_language(query)
+        return get_wiki_search_grounder()._detect_language(query)
     except Exception as e:
         log.warning(f"Language detection failed, defaulting to English: {e}")
         return "en"
@@ -816,7 +816,7 @@ async def chat_wiki_grounding_handler(
 
         # Always use context-aware grounding (simplified from auto mode)
         log.info("🔍 Using context-aware grounding")
-        grounding_data = await wiki_search_grounder.ground_query(
+        grounding_data = await get_wiki_search_grounder().ground_query(
             user_message, request, user, messages
         )
 
@@ -835,7 +835,7 @@ async def chat_wiki_grounding_handler(
             )
 
             # Format the grounding context
-            grounding_context = wiki_search_grounder.format_grounding_context(
+            grounding_context = get_wiki_search_grounder().format_grounding_context(
                 grounding_data
             )
             log.debug(
