@@ -120,7 +120,7 @@ dayjs.extend(calendar);
 
 // Global locale loader
 function loadDayjsLocale(locales) {
-    if (!locales || !Array.isArray(locales)) {
+	if (!locales || !Array.isArray(locales)) {
         return;
     }
 
