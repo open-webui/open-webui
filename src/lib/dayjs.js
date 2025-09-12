@@ -102,4 +102,17 @@ import 'dayjs/locale/zh';
 import 'dayjs/locale/zh-tw';
 import 'dayjs/locale/et';
 
+// Default to browser locale
+import { browser } from '$app/environment';
+
+// Initialize with browser locale if available
+if (browser) {
+    const browserLocale = navigator.language.split('-')[0];
+    try {
+        dayjs.locale(browserLocale);
+    } catch (error) {
+        dayjs.locale('en'); // fallback
+    }
+}
+
 export default dayjs;
