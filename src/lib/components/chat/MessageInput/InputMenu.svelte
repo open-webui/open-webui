@@ -14,6 +14,9 @@
 	import Camera from '$lib/components/icons/Camera.svelte';
 	import Note from '$lib/components/icons/Note.svelte';
 	import Clip from '$lib/components/icons/Clip.svelte';
+	import ChatBubbleOval from '$lib/components/icons/ChatBubbleOval.svelte';
+	import Refresh from '$lib/components/icons/Refresh.svelte';
+	import Agile from '$lib/components/icons/Agile.svelte';
 
 	const i18n = getContext('i18n');
 
@@ -164,10 +167,43 @@
 						}
 					}}
 				>
-					<Note />
-					<div class=" line-clamp-1">{$i18n.t('Attach Notes')}</div>
+					<Agile />
+					<div class=" line-clamp-1">{$i18n.t('Reference Chats')}</div>
 				</DropdownMenu.Item>
 			</Tooltip>
+
+			{#if $config?.features?.enable_notes ?? false}
+				<Tooltip
+					content={fileUploadCapableModels.length !== selectedModels.length
+						? $i18n.t('Model(s) do not support file upload')
+						: !fileUploadEnabled
+							? $i18n.t('You do not have permission to upload files.')
+							: ''}
+					className="w-full"
+				>
+					<DropdownMenu.Item
+						class="flex gap-2 items-center px-3 py-1.5 text-sm  cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800  rounded-xl {!fileUploadEnabled
+							? 'opacity-50'
+							: ''}"
+						on:click={() => {
+							if (fileUploadEnabled) {
+								if (!detectMobile()) {
+									screenCaptureHandler();
+								} else {
+									const cameraInputElement = document.getElementById('camera-input');
+
+									if (cameraInputElement) {
+										cameraInputElement.click();
+									}
+								}
+							}
+						}}
+					>
+						<Note />
+						<div class=" line-clamp-1">{$i18n.t('Attach Notes')}</div>
+					</DropdownMenu.Item>
+				</Tooltip>
+			{/if}
 
 			<Tooltip
 				content={fileUploadCapableModels.length !== selectedModels.length
