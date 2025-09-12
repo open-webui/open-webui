@@ -18,7 +18,6 @@
 	$: currentWebSearchEnabled = webSearchEnabled;
 
 	let selectedSponsor = '';
-	// Web search is now controlled by the existing web search button, not this form
 	let formData: Record<string, string> = {
 		projectTitle: '',
 		researchSpaceFacilities: '',
@@ -53,6 +52,7 @@
 		dynamicSections.map((sectionLabel, index) => {
 			// Map backend section labels to form field IDs
 			const sectionId = getSectionIdFromLabel(sectionLabel);
+			console.log(`Mapping section ${index}: "${sectionLabel}" to ID "${sectionId}"`);
 			return { id: sectionId, label: sectionLabel, required: true };
 		}) : 
 		(selectedSponsor === 'NSF' ? nsfSections : nihSections);
@@ -72,11 +72,6 @@
 		return mapping[label] || label.toLowerCase().replace(/[^a-zA-Z0-9]/g, '');
 	}
 	
-	// Helper function to remove numbers from section labels for placeholders
-	function getCleanLabel(label: string): string {
-		// Remove patterns like "1. ", "2. ", "5a. ", "5b. ", "6. ", "7. " from the beginning
-		return label.replace(/^\d+[a-z]?\.\s*/, '');
-	}
 
 	// DIRECT CHAT HISTORY MANIPULATION - BYPASS submitPrompt entirely
 	async function addFacilitiesResponseToChat(content: string, sources: any[]) {
@@ -276,8 +271,8 @@
 			const response = await generateFacilitiesResponse(token, {
 				sponsor: selectedSponsor,
 				form_data: formData,
-				model: modelId,  // Pass the user's selected model
-				web_search_enabled: webSearchEnabled  // Pass web search status
+				model: modelId,  
+				web_search_enabled: webSearchEnabled  
 			});
 
 			console.log('Facilities API response:', response);
@@ -295,11 +290,9 @@
 					contentPreview: responseMessage.substring(0, 100) + '...'
 				});
 
-				// DIRECTLY ADD TO CHAT HISTORY - BYPASS submitPrompt entirely
 				await addFacilitiesResponseToChat(responseMessage, sources);
 
-				// Keep the overlay open - user must manually toggle off
-				// closeOverlay(); // Removed automatic closing
+
 				
 				toast.success(`Generated ${Object.keys(response.sections).length} sections for ${selectedSponsor}. Form remains open for additional generations.`);
 			} else {
