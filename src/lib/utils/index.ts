@@ -371,18 +371,18 @@ export const generateInitialsImage = (name) => {
 	return canvas.toDataURL();
 };
 
-export const formatDate = (inputDate, i18n) => {  
-    const date = dayjs(inputDate);  
-      
-    if (date.isToday()) {  
-        return date.format(i18n.t('[Today at] h:mm A'));  
-    } else if (date.isYesterday()) {  
-        return date.format(i18n.t('[Yesterday at] h:mm A'));  
-    } else if (date.isSame(dayjs().subtract(1, 'week'), 'week')) {  
-        return date.format(i18n.t('[Last] dddd [at] h:mm A'));  
-    } else {  
-        return date.format(i18n.t('DD/MM/YYYY [at] h:mm A'));  
-    }  
+export const formatDate = (inputDate, i18n) => {
+	const date = dayjs(inputDate);
+
+	if (date.isToday()) {
+		return date.format(i18n.t('[Today at] h:mm A'));
+	} else if (date.isYesterday()) {
+		return date.format(i18n.t('[Yesterday at] h:mm A'));
+	} else if (date.isSame(dayjs().subtract(1, 'week'), 'week')) {
+		return date.format(i18n.t('[Last] dddd [at] h:mm A'));
+	} else {
+		return date.format(i18n.t('DD/MM/YYYY [at] h:mm A'));
+	}
 };
 
 export const copyToClipboard = async (text, html = null, formatted = false) => {
