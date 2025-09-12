@@ -60,7 +60,7 @@
 
 <Modal size="lg" bind:show>
 	<div>
-		<div class=" flex justify-between dark:text-gray-300 px-5 pt-4 pb-2">
+		<div class=" flex justify-between dark:text-gray-300 px-4.5 pt-3 pb-2">
 			<div class=" text-lg font-medium self-center">
 				{#if citation?.source?.name}
 					{@const document = mergedDocuments?.[0]}
