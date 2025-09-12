@@ -574,7 +574,7 @@
               </Tooltip>
             </div>
             {#if showVariables}
-              <div class="mt-1 h-48">
+              <div class="mt-1 h-48 rounded-lg overflow-hidden">
                 <CodeEditor id="theme-variables-editor" bind:value={variablesText} lang={'css'} on:input={handleVariablesInput} />
               </div>
               <div class="flex justify-end mt-2 space-x-2">
@@ -613,7 +613,7 @@
               </Tooltip>
             </div>
             {#if showCss}
-              <div class="mt-1 h-48">
+              <div class="mt-1 h-48 rounded-lg overflow-hidden">
                 <CodeEditor id="theme-css-editor" bind:value={cssText} lang={'css'} on:input={handleCssInput} />
               </div>
             {/if}
@@ -626,7 +626,7 @@
               </Tooltip>
             </div>
             {#if showAnimationScript}
-              <div class="mt-1 h-48">
+              <div class="mt-1 h-48 rounded-lg overflow-hidden">
                 <CodeEditor id="theme-animation-script-editor" bind:value={animationScriptText} lang={'javascript'} on:input={handleAnimationScriptInput} />
               </div>
             {/if}
@@ -639,7 +639,7 @@
               </Tooltip>
             </div>
             {#if showParticleConfig}
-              <div class="mt-1 h-48">
+              <div class="mt-1 h-48 rounded-lg overflow-hidden">
                 <CodeEditor id="theme-particle-config-editor" bind:value={particleConfigText} lang={'json'} on:input={handleParticleConfigInput} />
               </div>
             {/if}
@@ -652,7 +652,7 @@
               </Tooltip>
             </div>
             {#if showTsParticleConfig}
-              <div class="mt-1 h-48">
+              <div class="mt-1 h-48 rounded-lg overflow-hidden">
                 <CodeEditor id="theme-tsparticle-config-editor" bind:value={tsParticleConfigText} lang={'json'} on:input={handleTsParticleConfigInput} />
               </div>
             {/if}
@@ -679,7 +679,7 @@
           </div>
         </div>
       {:else}
-        <div class="mt-4">
+        <div class="mt-4 rounded-lg overflow-hidden">
           <CodeEditor
             id="theme-json-editor"
             bind:value={themeJsonText}
