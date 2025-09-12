@@ -22,14 +22,13 @@
 	});
 </script>
 
-{#if filters.length > 0}
-	<div>
-		<div class="flex w-full justify-between mb-1">
-			<div class=" self-center text-sm font-semibold">{$i18n.t('Filters')}</div>
-		</div>
+<div>
+	<div class="flex w-full justify-between mb-1">
+		<div class=" self-center text-sm font-semibold">{$i18n.t('Default Filters')}</div>
+	</div>
 
-		<!-- TODO: Filer order matters -->
-		<div class="flex flex-col">
+	<div class="flex flex-col">
+		{#if filters.length > 0}
 			<div class=" flex items-center flex-wrap">
 				{#each Object.keys(_filters) as filter, filterIdx}
 					<div class=" flex items-center gap-2 mr-3">
@@ -58,6 +57,6 @@
 					</div>
 				{/each}
 			</div>
-		</div>
+		{/if}
 	</div>
-{/if}
+</div>

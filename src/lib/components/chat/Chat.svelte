@@ -37,6 +37,7 @@
 		showArtifacts,
 		tools,
 		toolServers,
+		functions,
 		selectedFolder,
 		pinnedChats
 	} from '$lib/stores';
@@ -88,6 +89,7 @@
 	import Spinner from '../common/Spinner.svelte';
 	import Tooltip from '../common/Tooltip.svelte';
 	import Sidebar from '../icons/Sidebar.svelte';
+	import { getFunctions } from '$lib/apis/functions';
 
 	export let chatIdProp = '';
 
@@ -236,33 +238,62 @@
 	};
 
 	const resetInput = () => {
-		console.debug('resetInput');
-		setToolIds();
-
+		selectedToolIds = [];
 		selectedFilterIds = [];
 		webSearchEnabled = false;
 		imageGenerationEnabled = false;
 		codeInterpreterEnabled = false;
+
+		setDefaults();
 	};
 
-	const setToolIds = async () => {
+	const setDefaults = async () => {
 		if (!$tools) {
 			tools.set(await getTools(localStorage.token));
 		}
-
+		if (!$functions) {
+			functions.set(await getFunctions(localStorage.token));
+		}
 		if (selectedModels.length !== 1 && !atSelectedModel) {
 			return;
 		}
 
 		const model = atSelectedModel ?? $models.find((m) => m.id === selectedModels[0]);
-		if (model && model?.info?.meta?.toolIds) {
-			selectedToolIds = [
-				...new Set(
-					[...(model?.info?.meta?.toolIds ?? [])].filter((id) => $tools.find((t) => t.id === id))
-				)
-			];
-		} else {
-			selectedToolIds = [];
+		if (model) {
+			if (model?.info?.meta?.toolIds) {
+				selectedToolIds = [
+					...new Set(
+						[...(model?.info?.meta?.toolIds ?? [])].filter((id) => $tools.find((t) => t.id === id))
+					)
+				];
+			} else {
+				selectedToolIds = [];
+			}
+
+			if (model?.info?.meta?.defaultFilterIds) {
+				console.log('model.info.meta.defaultFilterIds', model.info.meta.defaultFilterIds);
+				selectedFilterIds = model.info.meta.defaultFilterIds;
+				console.log('selectedFilterIds', selectedFilterIds);
+			} else {
+				selectedFilterIds = [];
+			}
+
+			if (model?.info?.meta?.defaultFeatureIds) {
+				console.log('model.info.meta.defaultFeatureIds', model.info.meta.defaultFeatureIds);
+				imageGenerationEnabled = model.info.meta.defaultFeatureIds.includes('image_generation');
+				webSearchEnabled = model.info.meta.defaultFeatureIds.includes('web_search');
+				codeInterpreterEnabled = model.info.meta.defaultFeatureIds.includes('code_interpreter');
+
+				console.log({
+					imageGenerationEnabled,
+					webSearchEnabled,
+					codeInterpreterEnabled
+				});
+			} else {
+				imageGenerationEnabled = false;
+				webSearchEnabled = false;
+				codeInterpreterEnabled = false;
+			}
 		}
 	};
 
