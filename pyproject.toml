@@ -68,6 +68,7 @@ dependencies = [
     "einops==0.8.0",
 
     # txtai-wikipedia Wiki Grounding dependencies
+    "hnswlib==0.7.0",
     "txtai[graph,similarity]==9.0.0",
     "sacremoses==0.1.1",
 
