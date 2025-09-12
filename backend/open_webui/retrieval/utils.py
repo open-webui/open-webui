@@ -491,25 +491,37 @@ def get_sources_from_items(
             # Raw Text
             # Used during temporary chat file uploads or web page & youtube attachements
 
-            if item.get("collection_name"):
-                # If item has a collection name, use it
-                collection_names.append(item.get("collection_name"))
-            elif item.get("file"):
-                # if item has file data, use it
-                query_result = {
-                    "documents": [
-                        [item.get("file", {}).get("data", {}).get("content")]
-                    ],
-                    "metadatas": [[item.get("file", {}).get("meta", {})]],
-                }
-            else:
-                # Fallback to item content
-                query_result = {
-                    "documents": [[item.get("content")]],
-                    "metadatas": [
-                        [{"file_id": item.get("id"), "name": item.get("name")}]
-                    ],
-                }
+            if item.get("context") == "full":
+                if item.get("file"):
+                    # if item has file data, use it
+                    query_result = {
+                        "documents": [
+                            [item.get("file", {}).get("data", {}).get("content")]
+                        ],
+                        "metadatas": [[item.get("file", {}).get("meta", {})]],
+                    }
+
+            if query_result is None:
+                # Fallback
+                if item.get("collection_name"):
+                    # If item has a collection name, use it
+                    collection_names.append(item.get("collection_name"))
+                elif item.get("file"):
+                    # If item has file data, use it
+                    query_result = {
+                        "documents": [
+                            [item.get("file", {}).get("data", {}).get("content")]
+                        ],
+                        "metadatas": [[item.get("file", {}).get("meta", {})]],
+                    }
+                else:
+                    # Fallback to item content
+                    query_result = {
+                        "documents": [[item.get("content")]],
+                        "metadatas": [
+                            [{"file_id": item.get("id"), "name": item.get("name")}]
+                        ],
+                    }
 
         elif item.get("type") == "note":
             # Note Attached
