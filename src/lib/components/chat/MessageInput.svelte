@@ -44,6 +44,7 @@
 	import { uploadFile } from '$lib/apis/files';
 	import { generateAutoCompletion } from '$lib/apis';
 	import { deleteFileById } from '$lib/apis/files';
+	import { getSessionUser } from '$lib/apis/auths';
 
 	import { WEBUI_BASE_URL, WEBUI_API_BASE_URL, PASTED_TEXT_CHARACTER_LIMIT } from '$lib/constants';
 
@@ -66,14 +67,15 @@
 	import CommandLine from '../icons/CommandLine.svelte';
 	import Sparkles from '../icons/Sparkles.svelte';
 
-	import { KokoroWorker } from '$lib/workers/KokoroWorker';
 	import InputVariablesModal from './MessageInput/InputVariablesModal.svelte';
 	import Voice from '../icons/Voice.svelte';
-	import { getSessionUser } from '$lib/apis/auths';
 	import Terminal from '../icons/Terminal.svelte';
-	import OptionsMenu from './MessageInput/OptionsMenu.svelte';
+	import IntegrationsMenu from './MessageInput/IntegrationsMenu.svelte';
 	import Component from '../icons/Component.svelte';
 	import PlusAlt from '../icons/PlusAlt.svelte';
+
+	import { KokoroWorker } from '$lib/workers/KokoroWorker';
+
 	const i18n = getContext('i18n');
 
 	export let onChange: Function = () => {};
@@ -1718,7 +1720,7 @@
 
 										<div class="flex self-center w-[1px] h-4 mx-1 bg-gray-50 dark:bg-gray-800" />
 
-										<OptionsMenu
+										<IntegrationsMenu
 											selectedModels={atSelectedModel ? [atSelectedModel.id] : selectedModels}
 											{toggleFilters}
 											{showWebSearchButton}
@@ -1741,7 +1743,7 @@
 											>
 												<Component className="size-4.5" strokeWidth="1.5" />
 											</div>
-										</OptionsMenu>
+										</IntegrationsMenu>
 
 										<div class="ml-0.5 flex gap-1.5">
 											{#if showToolsButton}
