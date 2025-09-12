@@ -4,7 +4,9 @@ export function getSuggestionRenderer(Component: any, ComponentProps = {}) {
 	return function suggestionRenderer() {
 		let component = null;
 		let container: HTMLDivElement | null = null;
+
 		let popup: TippyInstance | null = null;
+		let refEl: HTMLDivElement | null = null; // dummy reference
 
 		return {
 			onStart: (props: any) => {
@@ -25,10 +27,21 @@ export function getSuggestionRenderer(Component: any, ComponentProps = {}) {
 					context: new Map<string, any>([['i18n', ComponentProps?.i18n]])
 				});
 
-				popup = tippy(document.body, {
+				// Create a tiny reference element so outside taps are truly "outside"
+				refEl = document.createElement('div');
+				Object.assign(refEl.style, {
+					position: 'fixed',
+					left: '0px',
+					top: '0px',
+					width: '0px',
+					height: '0px'
+				});
+				document.body.appendChild(refEl);
+
+				popup = tippy(refEl, {
 					getReferenceClientRect: props.clientRect as any,
 					appendTo: () => document.body,
-					content: container, // ✅ real element, not Svelte internals
+					content: container,
 					interactive: true,
 					trigger: 'manual',
 					theme: 'transparent',
