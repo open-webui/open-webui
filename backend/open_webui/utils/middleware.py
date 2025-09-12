@@ -810,31 +810,14 @@ async def chat_wiki_grounding_handler(
         current_year = temporal_context.get("current_year")
         current_date = temporal_context.get("current_date", "")
 
-        # Enhance user message with temporal context for better relevance
-        enhanced_user_message = user_message
-        if any(
-            word in user_message.lower()
-            for word in [
-                "current",
-                "now",
-                "today",
-                "recent",
-                "latest",
-                "pm",
-                "prime minister",
-                "president",
-                "leader",
-            ]
-        ):
-            enhanced_user_message = f"{user_message} {current_year} {current_date}"
-            log.info(
-                f"🕒 Enhanced query with temporal context: {enhanced_user_message}"
-            )
+        # Pass temporal context to grounding system for dynamic enhancement
+        # The grounding system will intelligently determine when to apply temporal context
+        # based on query analysis and conversation context, not static keywords
 
         # Always use context-aware grounding (simplified from auto mode)
         log.info("🔍 Using context-aware grounding")
         grounding_data = await wiki_search_grounder.ground_query(
-            enhanced_user_message, request, user, messages
+            user_message, request, user, messages
         )
 
         log.info(f"🔍 Grounding query result: {bool(grounding_data)}")
