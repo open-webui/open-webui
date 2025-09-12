@@ -310,3 +310,14 @@ dist
 cypress/videos
 cypress/screenshots
 .vscode/settings.json
+
+# claude
+.claude/
+CLAUDE.md
+
+NOTEPLUS_README.md
+NOTEPLUS_CATEGORY_STRUCTURE.md
+*.bak
+frontend.bat
+backend/condarun.bat
+start_dev.bat

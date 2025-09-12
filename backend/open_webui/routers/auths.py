@@ -835,6 +835,7 @@ async def get_admin_config(request: Request, user=Depends(get_admin_user)):
         "ENABLE_MESSAGE_RATING": request.app.state.config.ENABLE_MESSAGE_RATING,
         "ENABLE_CHANNELS": request.app.state.config.ENABLE_CHANNELS,
         "ENABLE_NOTES": request.app.state.config.ENABLE_NOTES,
+        "ENABLE_NOTEPLUS": request.app.state.config.ENABLE_NOTEPLUS,
         "ENABLE_USER_WEBHOOKS": request.app.state.config.ENABLE_USER_WEBHOOKS,
         "PENDING_USER_OVERLAY_TITLE": request.app.state.config.PENDING_USER_OVERLAY_TITLE,
         "PENDING_USER_OVERLAY_CONTENT": request.app.state.config.PENDING_USER_OVERLAY_CONTENT,
@@ -855,6 +856,7 @@ class AdminConfig(BaseModel):
     ENABLE_MESSAGE_RATING: bool
     ENABLE_CHANNELS: bool
     ENABLE_NOTES: bool
+    ENABLE_NOTEPLUS: bool
     ENABLE_USER_WEBHOOKS: bool
     PENDING_USER_OVERLAY_TITLE: Optional[str] = None
     PENDING_USER_OVERLAY_CONTENT: Optional[str] = None
@@ -879,6 +881,7 @@ async def update_admin_config(
 
     request.app.state.config.ENABLE_CHANNELS = form_data.ENABLE_CHANNELS
     request.app.state.config.ENABLE_NOTES = form_data.ENABLE_NOTES
+    request.app.state.config.ENABLE_NOTEPLUS = form_data.ENABLE_NOTEPLUS
 
     if form_data.DEFAULT_USER_ROLE in ["pending", "user", "admin"]:
         request.app.state.config.DEFAULT_USER_ROLE = form_data.DEFAULT_USER_ROLE
@@ -918,6 +921,7 @@ async def update_admin_config(
         "ENABLE_MESSAGE_RATING": request.app.state.config.ENABLE_MESSAGE_RATING,
         "ENABLE_CHANNELS": request.app.state.config.ENABLE_CHANNELS,
         "ENABLE_NOTES": request.app.state.config.ENABLE_NOTES,
+        "ENABLE_NOTEPLUS": request.app.state.config.ENABLE_NOTEPLUS,
         "ENABLE_USER_WEBHOOKS": request.app.state.config.ENABLE_USER_WEBHOOKS,
         "PENDING_USER_OVERLAY_TITLE": request.app.state.config.PENDING_USER_OVERLAY_TITLE,
         "PENDING_USER_OVERLAY_CONTENT": request.app.state.config.PENDING_USER_OVERLAY_CONTENT,
