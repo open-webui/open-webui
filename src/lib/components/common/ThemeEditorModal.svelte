@@ -660,7 +660,9 @@
           <div class="col-span-2">
             <div class="flex items-center gap-2">
               <Switch bind:state={themeCopy.gradient.enabled} />
-              <label for="theme-gradient" class="block text-sm font-medium text-gray-700 dark:text-gray-300">{$i18n.t('Gradient Background')}</label>
+              <Tooltip content="Adds a gradient to the background of the chat.">
+                <label for="theme-gradient" class="block text-sm font-medium text-gray-700 dark:text-gray-300">{$i18n.t('Gradient Background')}</label>
+              </Tooltip>
             </div>
             {#if themeCopy.gradient.enabled}
             <div class="mt-1 max-w-md">
