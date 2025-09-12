@@ -1739,11 +1739,11 @@
 											<div
 												class="bg-transparent hover:bg-gray-100 text-gray-700 dark:text-white dark:hover:bg-gray-800 rounded-full size-8 flex justify-center items-center outline-hidden focus:outline-hidden"
 											>
-												<Component className="size-4.5" strokeWidth="1.75" />
+												<Component className="size-4.5" strokeWidth="1.5" />
 											</div>
 										</OptionsMenu>
 
-										<div class="ml-1 flex gap-1.5">
+										<div class="ml-0.5 flex gap-1.5">
 											{#if showToolsButton}
 												<Tooltip
 													content={$i18n.t('{{COUNT}} Available Tools', {
@@ -1751,7 +1751,7 @@
 													})}
 												>
 													<button
-														class="translate-y-[0.5px] flex gap-1 items-center text-gray-600 dark:text-gray-300 hover:text-gray-700 dark:hover:text-gray-200 rounded-lg p-1 self-center transition"
+														class="translate-y-[0.5px] px-1 flex gap-1 items-center text-gray-600 dark:text-gray-300 hover:text-gray-700 dark:hover:text-gray-200 rounded-lg self-center transition"
 														aria-label="Available Tools"
 														type="button"
 														on:click={() => {
@@ -1760,7 +1760,7 @@
 													>
 														<Wrench className="size-4" strokeWidth="1.75" />
 
-														<span class="text-sm font-medium text-gray-600 dark:text-gray-300">
+														<span class="text-sm">
 															{toolServers.length + selectedToolIds.length}
 														</span>
 													</button>
@@ -1770,7 +1770,7 @@
 											{#each selectedFilterIds as filterId}
 												{@const filter = toggleFilters.find((f) => f.id === filterId)}
 												{#if filter}
-													<Tooltip content={filter?.description} placement="top">
+													<Tooltip content={filter?.name} placement="top">
 														<button
 															on:click|preventDefault={() => {
 																selectedFilterIds = selectedFilterIds.filter(
@@ -1778,7 +1778,7 @@
 																);
 															}}
 															type="button"
-															class="group px-2 @xl:px-2.5 py-2 flex gap-1.5 items-center text-sm rounded-full transition-colors duration-300 focus:outline-hidden max-w-full overflow-hidden hover:bg-gray-50 dark:hover:bg-gray-800 {selectedFilterIds.includes(
+															class="group px-2 py-2 flex gap-1.5 items-center text-sm rounded-full transition-colors duration-300 focus:outline-hidden max-w-full overflow-hidden hover:bg-gray-50 dark:hover:bg-gray-800 {selectedFilterIds.includes(
 																filterId
 															)
 																? 'text-sky-500 dark:text-sky-300 bg-sky-50 dark:bg-sky-200/5'
@@ -1798,11 +1798,6 @@
 															{:else}
 																<Sparkles className="size-4" strokeWidth="1.75" />
 															{/if}
-															<span
-																class="hidden @xl:block whitespace-nowrap text-ellipsis leading-none normal-case pr-0.5"
-																>{filter?.name}</span
-															>
-
 															<div class="hidden group-hover:block">
 																<XMark className="size-4" strokeWidth="1.75" />
 															</div>
@@ -1812,21 +1807,16 @@
 											{/each}
 
 											{#if webSearchEnabled}
-												<Tooltip content={$i18n.t('Search the internet')} placement="top">
+												<Tooltip content={$i18n.t('Web Search')} placement="top">
 													<button
 														on:click|preventDefault={() => (webSearchEnabled = !webSearchEnabled)}
 														type="button"
-														class="group px-2 @xl:px-2.5 py-2 flex gap-1.5 items-center text-sm rounded-full transition-colors duration-300 focus:outline-hidden max-w-full overflow-hidden hover:bg-gray-50 dark:hover:bg-gray-800 {webSearchEnabled ||
+														class="group px-2 py-2 flex gap-1.5 items-center text-sm rounded-full transition-colors duration-300 focus:outline-hidden max-w-full overflow-hidden hover:bg-gray-50 dark:hover:bg-gray-800 {webSearchEnabled ||
 														($settings?.webSearch ?? false) === 'always'
 															? ' text-sky-500 dark:text-sky-300 bg-sky-50 dark:bg-sky-200/5'
 															: 'bg-transparent text-gray-600 dark:text-gray-300 '}"
 													>
 														<GlobeAlt className="size-4" strokeWidth="1.75" />
-														<span
-															class="hidden @xl:block whitespace-nowrap text-ellipsis leading-none normal-case pr-0.5"
-															>{$i18n.t('Web Search')}</span
-														>
-
 														<div class="hidden group-hover:block">
 															<XMark className="size-4" strokeWidth="1.75" />
 														</div>
@@ -1835,22 +1825,16 @@
 											{/if}
 
 											{#if imageGenerationEnabled}
-												<Tooltip content={$i18n.t('Generate an image')} placement="top">
+												<Tooltip content={$i18n.t('Image')} placement="top">
 													<button
 														on:click|preventDefault={() =>
 															(imageGenerationEnabled = !imageGenerationEnabled)}
 														type="button"
-														class="group px-2 @xl:px-2.5 py-2 flex gap-1.5 items-center text-sm rounded-full transition-colors duration-300 focus:outline-hidden max-w-full overflow-hidden hover:bg-gray-50 dark:hover:bg-gray-800 {imageGenerationEnabled
+														class="group px-2 py-2 flex gap-1.5 items-center text-sm rounded-full transition-colors duration-300 focus:outline-hidden max-w-full overflow-hidden hover:bg-gray-50 dark:hover:bg-gray-800 {imageGenerationEnabled
 															? ' text-sky-500 dark:text-sky-300 bg-sky-50 dark:bg-sky-200/5'
 															: 'bg-transparent text-gray-600 dark:text-gray-300 '}"
 													>
 														<Photo className="size-4" strokeWidth="1.75" />
-
-														<span
-															class="hidden @xl:block whitespace-nowrap text-ellipsis leading-none normal-case pr-0.5"
-															>{$i18n.t('Image')}</span
-														>
-
 														<div class="hidden group-hover:block">
 															<XMark className="size-4" strokeWidth="1.75" />
 														</div>
@@ -1859,7 +1843,7 @@
 											{/if}
 
 											{#if codeInterpreterEnabled}
-												<Tooltip content={$i18n.t('Execute code for analysis')} placement="top">
+												<Tooltip content={$i18n.t('Code Interpreter')} placement="top">
 													<button
 														aria-label={codeInterpreterEnabled
 															? $i18n.t('Disable Code Interpreter')
@@ -1868,7 +1852,7 @@
 														on:click|preventDefault={() =>
 															(codeInterpreterEnabled = !codeInterpreterEnabled)}
 														type="button"
-														class=" group px-2 @xl:px-2.5 py-2 flex gap-1.5 items-center text-sm transition-colors duration-300 max-w-full overflow-hidden hover:bg-gray-50 dark:hover:bg-gray-800 {codeInterpreterEnabled
+														class=" group px-2 py-2 flex gap-1.5 items-center text-sm transition-colors duration-300 max-w-full overflow-hidden hover:bg-gray-50 dark:hover:bg-gray-800 {codeInterpreterEnabled
 															? ' text-sky-500 dark:text-sky-300 bg-sky-50 dark:bg-sky-200/5'
 															: 'bg-transparent text-gray-600 dark:text-gray-300 '} {($settings?.highContrastMode ??
 														false)
@@ -1876,10 +1860,6 @@
 															: 'focus:outline-hidden rounded-full'}"
 													>
 														<Terminal className="size-3.5" strokeWidth="2" />
-														<span
-															class="hidden @xl:block whitespace-nowrap text-ellipsis leading-none normal-case pr-0.5"
-															>{$i18n.t('Code Interpreter')}</span
-														>
 
 														<div class="hidden group-hover:block">
 															<XMark className="size-4" strokeWidth="1.75" />
