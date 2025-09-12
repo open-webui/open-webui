@@ -160,9 +160,6 @@
 	import css from 'highlight.js/lib/languages/css';
 	import elixir from 'highlight.js/lib/languages/elixir';
 
-	import MentionList from '../channel/MessageInput/MentionList.svelte';
-	import { getSuggestionRenderer } from './RichTextInput/suggestions.js';
-
 	export let oncompositionstart = (e) => {};
 	export let oncompositionend = (e) => {};
 	export let onChange = (e) => {};
@@ -177,17 +174,17 @@
 	lowlight.register('elixir', elixir);
 
 	const loadLanguageForLowlight = async (lang) => {
-	  if (lowlight.registered(lang)) {
-    	return true;
+	if (lowlight.registered(lang)) {
+	return true;
 	  }
 
 	  try {
-    	const languageModule = await import(`highlight.js/lib/languages/${lang}`);
-    	lowlight.register(lang, languageModule.default);
-    	return true;
+	const languageModule = await import(`highlight.js/lib/languages/${lang}`);
+	lowlight.register(lang, languageModule.default);
+	return true;
 	  } catch (error) {
-    	console.warn(`Failed to load language for lowlight: ${lang}`, error);
-    	return false;
+	console.warn(`Failed to load language for lowlight: ${lang}`, error);
+	return false;
 	  }
 	};
 	export let editor = null;
@@ -217,6 +214,8 @@
 	export let link = false;
 	export let image = false;
 	export let fileHandler = false;
+	export let suggestions = null;
+
 	export let suggestions = null;
 
 	export let onFileDrop = (currentEditor, files, pos) => {
@@ -1015,6 +1014,7 @@
 				Placeholder.configure({ placeholder: () => _placeholder }),
 				SelectionDecoration,
 
+<<<<<<< HEAD
 				...(richText
 					? [
 							CodeBlockLowlight.configure({
@@ -1032,6 +1032,13 @@
 							})
 						]
 					: []),
+=======
+				CodeBlockLowlight.configure({
+					lowlight
+				}),
+				Highlight,
+				Typography,
+>>>>>>> 6b69c4da0 (refac/enh: commands ui)
 				...(suggestions
 					? [
 							Mention.configure({
@@ -1041,6 +1048,17 @@
 						]
 					: []),
 
+<<<<<<< HEAD
+=======
+				TableKit.configure({
+					table: { resizable: true }
+				}),
+				ListKit.configure({
+					taskItem: {
+						nested: true
+					}
+				}),
+>>>>>>> 6b69c4da0 (refac/enh: commands ui)
 				CharacterCount.configure({}),
 				...(image ? [Image] : []),
 				...(fileHandler
