@@ -3,6 +3,7 @@
 	const i18n = getContext('i18n');
 	const dispatch = createEventDispatcher();
 
+	import { getGroups } from '$lib/apis/groups';
 	import Spinner from '$lib/components/common/Spinner.svelte';
 	import Modal from '$lib/components/common/Modal.svelte';
 	import { models } from '$lib/stores';
@@ -45,6 +46,7 @@
 	let filterMode = 'include';
 
 	let accessControl = {};
+	let allowedPrivate = [];
 
 	let imageInputElement;
 	let loading = false;
@@ -115,8 +117,13 @@
 		initModel();
 	}
 
-	onMount(() => {
+	onMount(async () => {
 		initModel();
+
+		let groups = await getGroups(localStorage.token);
+
+		// There is no setting governing private sharing this entity, so allow all groups
+		allowedPrivate = groups.map((group) => group.id);
 	});
 </script>
 
@@ -294,7 +301,7 @@
 
 						<div class="my-2 -mx-2">
 							<div class="px-3 py-2 bg-gray-50 dark:bg-gray-950 rounded-lg">
-								<AccessControl bind:accessControl />
+								<AccessControl bind:accessControl {allowedPrivate}/>
 							</div>
 						</div>
 

@@ -230,7 +230,7 @@
 							{#if selectedTab == 'general'}
 								<Display bind:name bind:description />
 							{:else if selectedTab == 'permissions'}
-								<Permissions bind:permissions />
+								<Permissions bind:permissions groupId={group?.id}/>
 							{:else if selectedTab == 'users'}
 								<Users bind:userIds {users} />
 							{/if}

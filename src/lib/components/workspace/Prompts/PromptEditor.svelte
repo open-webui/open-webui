@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { onMount, tick, getContext } from 'svelte';
+	import { getGroups } from '$lib/apis/groups';
 
 	import Textarea from '$lib/components/common/Textarea.svelte';
 	import { toast } from 'svelte-sonner';
@@ -25,6 +26,7 @@
 	let content = '';
 
 	let accessControl = {};
+	let allowedPrivate = [];
 
 	let showAccessControlModal = false;
 
@@ -76,6 +78,12 @@
 
 			accessControl = prompt?.access_control === undefined ? {} : prompt?.access_control;
 		}
+
+		let groups = await getGroups(localStorage.token);
+
+		allowedPrivate = groups
+			.filter((group) => group.permissions?.sharing?.private_prompts || $user?.role === 'admin')
+			.map((group) => group.id);
 	});
 </script>
 
@@ -84,6 +92,7 @@
 	bind:accessControl
 	accessRoles={['read', 'write']}
 	allowPublic={$user?.permissions?.sharing?.public_prompts || $user?.role === 'admin'}
+	{allowedPrivate}
 />
 
 <div class="w-full max-h-full flex justify-center">

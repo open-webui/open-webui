@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { getContext, createEventDispatcher, onMount } from 'svelte';
 	import { createNewChannel, deleteChannelById } from '$lib/apis/channels';
+	import { getGroups } from '$lib/apis/groups';
 
 	import Spinner from '$lib/components/common/Spinner.svelte';
 	import Modal from '$lib/components/common/Modal.svelte';
@@ -22,6 +23,7 @@
 
 	let name = '';
 	let accessControl = {};
+	let allowedPrivate = [];
 
 	let loading = false;
 
@@ -68,6 +70,13 @@
 
 		show = false;
 	};
+
+	onMount(async () => {
+		let groups = await getGroups(localStorage.token);
+
+		// There is no setting governing private sharing this entity, so allow all groups
+		allowedPrivate = groups.map((group) => group.id);
+	});
 </script>
 
 <Modal size="sm" bind:show>
@@ -116,7 +125,7 @@
 
 					<div class="my-2 -mx-2">
 						<div class="px-3 py-2 bg-gray-50 dark:bg-gray-950 rounded-lg">
-							<AccessControl bind:accessControl />
+							<AccessControl bind:accessControl {allowedPrivate}/>
 						</div>
 					</div>
 

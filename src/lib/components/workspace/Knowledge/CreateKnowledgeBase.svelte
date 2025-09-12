@@ -1,11 +1,12 @@
 <script>
 	import { goto } from '$app/navigation';
-	import { getContext } from 'svelte';
+	import { getContext, onMount } from 'svelte';
 	const i18n = getContext('i18n');
 
 	import { createNewKnowledge, getKnowledgeBases } from '$lib/apis/knowledge';
 	import { toast } from 'svelte-sonner';
 	import { knowledge, user } from '$lib/stores';
+	import { getGroups } from '$lib/apis/groups';
 	import AccessControl from '../common/AccessControl.svelte';
 	import Spinner from '$lib/components/common/Spinner.svelte';
 
@@ -14,6 +15,7 @@
 	let name = '';
 	let description = '';
 	let accessControl = {};
+	let allowedPrivate = [];
 
 	const submitHandler = async () => {
 		loading = true;
@@ -43,6 +45,14 @@
 
 		loading = false;
 	};
+
+	onMount(async () => {
+		let groups = await getGroups(localStorage.token);
+
+		allowedPrivate = groups
+			.filter((group) => group.permissions?.sharing?.private_knowledge || $user?.role === 'admin')
+			.map((group) => group.id);
+	});
 </script>
 
 <div class="w-full max-h-full">
@@ -117,6 +127,7 @@
 					bind:accessControl
 					accessRoles={['read', 'write']}
 					allowPublic={$user?.permissions?.sharing?.public_knowledge || $user?.role === 'admin'}
+					{allowedPrivate}
 				/>
 			</div>
 		</div>
