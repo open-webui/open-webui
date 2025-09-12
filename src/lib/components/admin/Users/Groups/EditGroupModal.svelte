@@ -11,6 +11,7 @@
 	import WrenchSolid from '$lib/components/icons/WrenchSolid.svelte';
 	import ConfirmDialog from '$lib/components/common/ConfirmDialog.svelte';
 	import GarbageBin from '$lib/components/icons/GarbageBin.svelte';
+	import { WEBUI_BASE_URL } from '$lib/constants';
 
 	export let onSubmit: Function = () => {};
 	export let onDelete: Function = () => {};
@@ -22,6 +23,9 @@
 	export let group = null;
 
 	export let custom = true;
+
+	let showImportModal = false;
+	let inputFiles;
 
 	export let tabs = ['general', 'permissions', 'users'];
 
@@ -69,6 +73,42 @@
 		loading = false;
 		show = false;
 	};
+
+	function handleImportCSV_temp(event) {
+		const file = event.target.files[0];
+		if (!file) return;
+
+		if (file.size > 10 * 1024 * 1024) {
+			console.error('File is too large (max 10MB)');
+			return;
+		}
+
+		const reader = new FileReader();
+		reader.onload = (e) => {
+			const text = e.target.result;
+			const lines = text.split(/\r?\n/).slice(0, 3);
+			console.log('First 3 lines of CSV:', lines);
+		};
+		reader.readAsText(file);
+	}
+
+	function handleImportCSV(event) {
+		const file = event.target.files[0];
+		if (!file) return;
+
+		if (file.size > 10 * 1024 * 1024) {
+			console.error('File is too large (max 10MB)');
+			return;
+		}
+
+		const reader = new FileReader();
+		reader.onload = (e) => {
+			const text = e.target.result;
+			const lines = text.split(/\r?\n/).slice(0, 3);
+			console.log('First 3 lines of CSV:', lines);
+		};
+		reader.readAsText(file);
+	}
 
 	const init = () => {
 		if (group) {
@@ -214,7 +254,6 @@
 								<Permissions bind:permissions />
 							{:else if selectedTab == 'users'}
 								<Users bind:userIds {users} />
-								<!-- The content is displayed in src/lib/components/admin/Users/Groups/Users.svelte -->
 							{/if}
 						</div>
 					</div>
@@ -269,6 +308,18 @@
 					</div> -->
 
 					<div class="flex justify-end pt-3 text-sm font-medium gap-1.5">
+						<button
+							class="flex gap-2 items-center px-3 py-1.5 text-sm cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 rounded-md"
+							type="button"
+							on:click={() => {
+								showImportModal = true;
+							}}
+						>
+							<div class="flex items-center text-gray-900 dark: text-gray-400">
+								{$i18n.t('Import')}
+							</div>
+						</button>
+
 						{#if edit}
 							<button
 								class="flex gap-2 items-center px-3 py-1.5 text-sm cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 rounded-md"
@@ -282,7 +333,7 @@
 						{/if}
 
 						<button
-							class="px-3.5 py-1.5 text-sm font-medium bg-black hover:bg-gray-900 text-white dark:bg-white dark:text-black dark:hover:bg-gray-100 transition rounded-full flex flex-row space-x-1 items-center {loading
+							class="px-4.5 py-1.5 text-sm font-medium bg-black hover:bg-gray-900 text-white dark:bg-white dark:text-black dark:hover:bg-gray-100 transition rounded-full flex flex-row space-x-1 items-center {loading
 								? ' cursor-not-allowed'
 								: ''}"
 							type="submit"
@@ -335,4 +386,68 @@
 			show = false;
 		}}
 	/>
+</Modal>
+
+<!-- Import Modal -->
+<Modal size="sm" bind:show={showImportModal}>
+	<div>
+		<div class="flex justify-between dark:text-gray-300 px-5 pt-4 pb-2">
+			<div class="text-lg font-medium self-center">{$i18n.t('Import Users from CSV')}</div>
+			<button
+				class="self-center"
+				on:click={() => {
+					showImportModal = false;
+				}}
+			>
+				<svg
+					xmlns="http://www.w3.org/2000/svg"
+					viewBox="0 0 20 20"
+					fill="currentColor"
+					class="w-5 h-5"
+				>
+					<path
+						d="M6.28 5.22a.75.75 0 00-1.06 1.06L8.94 10l-3.72 3.72a.75.75 0 101.06 1.06L10 11.06l3.72 3.72a.75.75 0 101.06-1.06L11.06 10l3.72-3.72a.75.75 0 00-1.06-1.06L10 8.94 6.28 5.22z"
+					/>
+				</svg>
+			</button>
+		</div>
+		<div class="px-5 pb-4">
+			<div class="mb-3 w-full">
+				<input
+					id="upload-user-csv-input"
+					hidden
+					bind:files={inputFiles}
+					type="file"
+					accept=".csv"
+					on:change={handleImportCSV}
+				/>
+				<button
+					class="w-full text-sm font-medium py-3 bg-transparent hover:bg-gray-100 border border-dashed dark:border-gray-850 dark:hover:bg-gray-850 text-center rounded-xl"
+					type="button"
+					on:click={() => {
+						document.getElementById('upload-user-csv-input')?.click();
+					}}
+				>
+					{#if inputFiles}
+						{inputFiles.length > 0 ? `${inputFiles.length}` : ''} document(s) selected.
+					{:else}
+						{$i18n.t('Click here to select a csv file.')}
+					{/if}
+				</button>
+			</div>
+			<div class="text-xs text-gray-600 dark:text-gray-500">
+				ⓘ {$i18n.t(
+					'Ensure your CSV file includes 4 columns in this order: Name, Email, Password, Role.'
+				)}
+				<a
+					class="underline dark:text-gray-200"
+					href="{WEBUI_BASE_URL}/static/user-import.csv"
+					target="_blank"
+					rel="noopener"
+				>
+					{$i18n.t('Click here to download user import template file.')}
+				</a>
+			</div>
+		</div>
+	</div>
 </Modal>

@@ -87,14 +87,14 @@
 				placeholder={$i18n.t('Search')}
 			/>
 			<!-- Import from CSV -->
-			<div class="ml-3">
+			<!-- <div class="ml-3">
 				<label
 					class="cursor-pointer inline-flex justify-end hover:bg-gray-50 text-xs font-medium text-gray-700 w-32"
 				>
 					Import from CSV
 					<input type="file" accept=".csv" style="display: none" on:change={handleImportCSV_temp} />
 				</label>
-			</div>
+			</div> -->
 		</div>
 	</div>
 
