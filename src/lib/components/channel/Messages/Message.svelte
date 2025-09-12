@@ -138,9 +138,7 @@
 			id="message-{message.id}"
 			dir={$settings.chatDirection}
 		>
-			<div
-				class={`shrink-0 ${($settings?.chatDirection ?? 'LTR') === 'LTR' ? 'mr-3' : 'ml-3'} w-9`}
-			>
+			<div class={`shrink-0 mr-3 w-9`}>
 				{#if showUserProfile}
 					<ProfilePreview user={message.user}>
 						<ProfileImage
@@ -198,7 +196,7 @@
 										name={file.name}
 										type={file.type}
 										size={file?.size}
-										colorClassName="bg-white dark:bg-gray-850 "
+										small={true}
 									/>
 								{/if}
 							</div>
