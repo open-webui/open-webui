@@ -14,7 +14,7 @@
 
 	import { goto } from '$app/navigation';
 
-	import dayjs from '$lib/dayjs';
+	import dayjs from '$lib/stores/dayjs';
 	import calendar from 'dayjs/plugin/calendar';
 	import duration from 'dayjs/plugin/duration';
 	import relativeTime from 'dayjs/plugin/relativeTime';
@@ -47,20 +47,6 @@
 	import Chat from './NoteEditor/Chat.svelte';
 
 	import AccessControlModal from '$lib/components/workspace/common/AccessControlModal.svelte';
-
-	async function loadLocale(locales) {
-		for (const locale of locales) {
-			try {
-				dayjs.locale(locale);
-				break; // Stop after successfully loading the first available locale
-			} catch (error) {
-				console.error(`Could not load locale '${locale}':`, error);
-			}
-		}
-	}
-
-	// Assuming $i18n.languages is an array of language codes
-	$: loadLocale($i18n.languages);
 
 	import { deleteNoteById, getNoteById, updateNoteById } from '$lib/apis/notes';
 
