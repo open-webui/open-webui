@@ -277,29 +277,8 @@
 		const chatInput = document.getElementById('chat-input');
 
 		if (chatInput) {
-			if ($settings?.richTextInput ?? true) {
-				chatInputElement.replaceVariables(variables);
-				chatInputElement.focus();
-			} else {
-				// Get current value from the input element
-				let currentValue = chatInput.value || '';
-
-				// Replace template variables using regex
-				const updatedValue = currentValue.replace(
-					/{{\s*([^|}]+)(?:\|[^}]*)?\s*}}/g,
-					(match, varName) => {
-						const trimmedVarName = varName.trim();
-						return variables.hasOwnProperty(trimmedVarName)
-							? String(variables[trimmedVarName])
-							: match;
-					}
-				);
-
-				// Update the input value
-				chatInput.value = updatedValue;
-				chatInput.focus();
-				chatInput.dispatchEvent(new Event('input', { bubbles: true }));
-			}
+			chatInputElement.replaceVariables(variables);
+			chatInputElement.focus();
 		}
 	};
 
@@ -309,16 +288,8 @@
 		if (chatInput) {
 			text = await textVariableHandler(text || '');
 
-			if ($settings?.richTextInput ?? true) {
-				chatInputElement?.setText(text);
-				chatInputElement?.focus();
-			} else {
-				chatInput.value = text;
-				prompt = text;
-
-				chatInput.focus();
-				chatInput.dispatchEvent(new Event('input'));
-			}
+			chatInputElement?.setText(text);
+			chatInputElement?.focus();
 
 			text = await inputVariableHandler(text);
 			await tick();
@@ -341,12 +312,7 @@
 		let word = '';
 
 		if (chatInput) {
-			if ($settings?.richTextInput ?? true) {
-				word = chatInputElement?.getWordAtDocPos();
-			} else {
-				const cursor = chatInput ? chatInput.selectionStart : prompt.length;
-				word = getWordAtCursor(prompt, cursor);
-			}
+			word = chatInputElement?.getWordAtDocPos();
 		}
 
 		return word;
@@ -364,15 +330,7 @@
 		const chatInput = document.getElementById('chat-input');
 		if (!chatInput) return;
 
-		if ($settings?.richTextInput ?? true) {
-			chatInputElement?.replaceCommandWithText(text);
-		} else {
-			const cursor = chatInput.selectionStart;
-			const { start, end } = getWordBoundsAtCursor(prompt, cursor);
-			prompt = prompt.slice(0, start) + text + prompt.slice(end);
-			chatInput.focus();
-			chatInput.setSelectionRange(start + text.length, start + text.length);
-		}
+		chatInputElement?.replaceCommandWithText(text);
 	};
 
 	const insertTextAtCursor = async (text: string) => {
@@ -384,14 +342,7 @@
 		if (command) {
 			replaceCommandWithText(text);
 		} else {
-			if ($settings?.richTextInput ?? true) {
-				chatInputElement?.insertContent(text);
-			} else {
-				const cursor = chatInput.selectionStart;
-				prompt = prompt.slice(0, cursor) + text + prompt.slice(cursor);
-				chatInput.focus();
-				chatInput.setSelectionRange(cursor + text.length, cursor + text.length);
-			}
+			chatInputElement?.insertContent(text);
 		}
 
 		await tick();
@@ -413,18 +364,6 @@
 			if (words.length > 0) {
 				const word = words.at(0);
 				await tick();
-
-				if (!($settings?.richTextInput ?? true)) {
-					// Move scroll to the first word
-					chatInput.setSelectionRange(word.startIndex, word.endIndex + 1);
-					chatInput.focus();
-
-					const selectionRow =
-						(word?.startIndex - (word?.startIndex % chatInput.cols)) / chatInput.cols;
-					const lineHeight = chatInput.clientHeight / chatInput.rows;
-
-					chatInput.scrollTop = lineHeight * selectionRow;
-				}
 			} else {
 				chatInput.scrollTop = chatInput.scrollHeight;
 			}
@@ -1230,12 +1169,12 @@
 								{/if}
 
 								<div class="px-2.5">
-									{#if $settings?.richTextInput ?? true}
-										<div
-											class="scrollbar-hidden rtl:text-right ltr:text-left bg-transparent dark:text-gray-100 outline-hidden w-full pt-2.5 pb-[5px] px-1 resize-none h-fit max-h-80 overflow-auto"
-											id="chat-input-container"
-										>
-											{#if suggestions}
+									<div
+										class="scrollbar-hidden rtl:text-right ltr:text-left bg-transparent dark:text-gray-100 outline-hidden w-full pt-2.5 pb-[5px] px-1 resize-none h-fit max-h-80 overflow-auto"
+										id="chat-input-container"
+									>
+										{#if suggestions}
+											{#key $settings?.richTextInput ?? true}
 												{#key $settings?.showFormattingToolbar ?? false}
 													<RichTextInput
 														bind:this={chatInputElement}
@@ -1245,6 +1184,7 @@
 															command = getCommand();
 														}}
 														json={true}
+														richText={$settings?.richTextInput ?? true}
 														messageInput={true}
 														showFormattingToolbar={$settings?.showFormattingToolbar ?? false}
 														floatingMenuPlacement={'top-start'}
@@ -1429,195 +1369,9 @@
 														}}
 													/>
 												{/key}
-											{/if}
-										</div>
-									{:else}
-										<textarea
-											id="chat-input"
-											dir={$settings?.chatDirection ?? 'auto'}
-											bind:this={chatInputElement}
-											class="scrollbar-hidden bg-transparent dark:text-gray-200 outline-hidden w-full pt-4 pb-1 px-1 resize-none"
-											placeholder={placeholder ? placeholder : $i18n.t('Send a Message')}
-											bind:value={prompt}
-											on:input={() => {
-												command = getCommand();
-											}}
-											on:click={() => {
-												command = getCommand();
-											}}
-											on:compositionstart={() => (isComposing = true)}
-											on:compositionend={(e) => {
-												compositionEndedAt = e.timeStamp;
-												isComposing = false;
-											}}
-											on:keydown={async (e) => {
-												const isCtrlPressed = e.ctrlKey || e.metaKey; // metaKey is for Cmd key on Mac
-
-												const suggestionsContainerElement =
-													document.getElementById('suggestions-container');
-
-												if (e.key === 'Escape') {
-													stopResponse();
-												}
-
-												// Command/Ctrl + Shift + Enter to submit a message pair
-												if (isCtrlPressed && e.key === 'Enter' && e.shiftKey) {
-													e.preventDefault();
-													createMessagePair(prompt);
-												}
-
-												// Check if Ctrl + R is pressed
-												if (prompt === '' && isCtrlPressed && e.key.toLowerCase() === 'r') {
-													e.preventDefault();
-													console.log('regenerate');
-
-													const regenerateButton = [
-														...document.getElementsByClassName('regenerate-response-button')
-													]?.at(-1);
-
-													regenerateButton?.click();
-												}
-
-												if (prompt === '' && e.key == 'ArrowUp') {
-													e.preventDefault();
-
-													const userMessageElement = [
-														...document.getElementsByClassName('user-message')
-													]?.at(-1);
-
-													const editButton = [
-														...document.getElementsByClassName('edit-user-message-button')
-													]?.at(-1);
-
-													console.log(userMessageElement);
-
-													userMessageElement?.scrollIntoView({ block: 'center' });
-													editButton?.click();
-												}
-
-												if (!suggestionsContainerElement) {
-													if (
-														!$mobile ||
-														!(
-															'ontouchstart' in window ||
-															navigator.maxTouchPoints > 0 ||
-															navigator.msMaxTouchPoints > 0
-														)
-													) {
-														if (inOrNearComposition(e)) {
-															return;
-														}
-
-														// Prevent Enter key from creating a new line
-														const isCtrlPressed = e.ctrlKey || e.metaKey;
-														const enterPressed =
-															($settings?.ctrlEnterToSend ?? false)
-																? (e.key === 'Enter' || e.keyCode === 13) && isCtrlPressed
-																: (e.key === 'Enter' || e.keyCode === 13) && !e.shiftKey;
-
-														if (enterPressed) {
-															e.preventDefault();
-														}
-
-														// Submit the prompt when Enter key is pressed
-														if ((prompt !== '' || files.length > 0) && enterPressed) {
-															dispatch('submit', prompt);
-														}
-													}
-												}
-
-												if (e.key === 'Tab') {
-													const words = extractCurlyBraceWords(prompt);
-
-													if (words.length > 0) {
-														const word = words.at(0);
-
-														if (word && e.target instanceof HTMLTextAreaElement) {
-															// Prevent default tab behavior
-															e.preventDefault();
-															e.target.setSelectionRange(word?.startIndex, word.endIndex + 1);
-															e.target.focus();
-
-															const selectionRow =
-																(word?.startIndex - (word?.startIndex % e.target.cols)) /
-																e.target.cols;
-															const lineHeight = e.target.clientHeight / e.target.rows;
-
-															e.target.scrollTop = lineHeight * selectionRow;
-														}
-													}
-
-													e.target.style.height = '';
-													e.target.style.height = Math.min(e.target.scrollHeight, 320) + 'px';
-												}
-
-												if (e.key === 'Escape') {
-													console.log('Escape');
-													atSelectedModel = undefined;
-													selectedToolIds = [];
-													selectedFilterIds = [];
-													webSearchEnabled = false;
-													imageGenerationEnabled = false;
-													codeInterpreterEnabled = false;
-												}
-											}}
-											rows="1"
-											on:input={async (e) => {
-												e.target.style.height = '';
-												e.target.style.height = Math.min(e.target.scrollHeight, 320) + 'px';
-											}}
-											on:focus={async (e) => {
-												e.target.style.height = '';
-												e.target.style.height = Math.min(e.target.scrollHeight, 320) + 'px';
-											}}
-											on:paste={async (e) => {
-												const clipboardData = e.clipboardData || window.clipboardData;
-
-												if (clipboardData && clipboardData.items) {
-													for (const item of clipboardData.items) {
-														console.log(item);
-														if (item.type.indexOf('image') !== -1) {
-															const blob = item.getAsFile();
-															const reader = new FileReader();
-
-															reader.onload = function (e) {
-																files = [
-																	...files,
-																	{
-																		type: 'image',
-																		url: `${e.target.result}`
-																	}
-																];
-															};
-
-															reader.readAsDataURL(blob);
-														} else if (item?.kind === 'file') {
-															const file = item.getAsFile();
-															if (file) {
-																const _files = [file];
-																await inputFilesHandler(_files);
-																e.preventDefault();
-															}
-														} else if (item.type === 'text/plain') {
-															if (($settings?.largeTextAsFile ?? false) && !shiftKey) {
-																const text = clipboardData.getData('text/plain');
-
-																if (text.length > PASTED_TEXT_CHARACTER_LIMIT) {
-																	e.preventDefault();
-																	const blob = new Blob([text], { type: 'text/plain' });
-																	const file = new File([blob], `Pasted_Text_${Date.now()}.txt`, {
-																		type: 'text/plain'
-																	});
-
-																	await uploadFileHandler(file, true);
-																}
-															}
-														}
-													}
-												}
-											}}
-										/>
-									{/if}
+											{/key}
+										{/if}
+									</div>
 								</div>
 
 								<div class=" flex justify-between mt-0.5 mb-2.5 mx-0.5 max-w-full" dir="ltr">

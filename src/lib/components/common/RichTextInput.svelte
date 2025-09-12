@@ -162,10 +162,11 @@
 
 	export let className = 'input-prose';
 	export let placeholder = 'Type here...';
+
+	export let richText = true;
 	export let link = false;
 	export let image = false;
 	export let fileHandler = false;
-
 	export let suggestions = null;
 
 	export let onFileDrop = (currentEditor, files, pos) => {
@@ -964,11 +965,23 @@
 				Placeholder.configure({ placeholder }),
 				SelectionDecoration,
 
-				CodeBlockLowlight.configure({
-					lowlight
-				}),
-				Highlight,
-				Typography,
+				...(richText
+					? [
+							CodeBlockLowlight.configure({
+								lowlight
+							}),
+							Highlight,
+							Typography,
+							TableKit.configure({
+								table: { resizable: true }
+							}),
+							ListKit.configure({
+								taskItem: {
+									nested: true
+								}
+							})
+						]
+					: []),
 				...(suggestions
 					? [
 							Mention.configure({
@@ -978,14 +991,6 @@
 						]
 					: []),
 
-				TableKit.configure({
-					table: { resizable: true }
-				}),
-				ListKit.configure({
-					taskItem: {
-						nested: true
-					}
-				}),
 				CharacterCount.configure({}),
 				...(image ? [Image] : []),
 				...(fileHandler
@@ -996,8 +1001,7 @@
 							})
 						]
 					: []),
-
-				...(autocomplete
+				...(richText && autocomplete
 					? [
 							AIAutocompletion.configure({
 								generateCompletion: async (text) => {
@@ -1015,8 +1019,7 @@
 							})
 						]
 					: []),
-
-				...(showFormattingToolbar
+				...(richText && showFormattingToolbar
 					? [
 							BubbleMenu.configure({
 								element: bubbleMenuElement,
@@ -1091,6 +1094,22 @@
 			},
 			editorProps: {
 				attributes: { id },
+				handlePaste: (view, event) => {
+					// Force plain-text pasting when richText === false
+					if (!richText) {
+						const text = (event.clipboardData?.getData('text/plain') ?? '').replace(/\r\n/g, '\n');
+						// swallow HTML completely
+						event.preventDefault();
+
+						// Insert as pure text (no HTML parsing)
+						const { state, dispatch } = view;
+						const { from, to } = state.selection;
+						dispatch(state.tr.insertText(text, from, to).scrollIntoView());
+						return true; // handled
+					}
+
+					return false;
+				},
 				handleDOMEvents: {
 					compositionstart: (view, event) => {
 						oncompositionstart(event);
@@ -1277,7 +1296,9 @@
 					editor.storage.files = files;
 				}
 			},
-			onSelectionUpdate: onSelectionUpdate
+			onSelectionUpdate: onSelectionUpdate,
+			enableInputRules: richText,
+			enablePasteRules: richText
 		});
 
 		if (messageInput) {
