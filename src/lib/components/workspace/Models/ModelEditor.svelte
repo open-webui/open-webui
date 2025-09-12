@@ -753,7 +753,10 @@
 
 					{#if filterIds.length > 0}
 						{@const toggleableFilters = $functions.filter(
-							(func) => func.type === 'filter' && filterIds.includes(func.id) && func?.meta?.toggle
+							(func) =>
+								func.type === 'filter' &&
+								(filterIds.includes(func.id) || func?.is_global) &&
+								func?.meta?.toggle
 						)}
 
 						{#if toggleableFilters.length > 0}
