@@ -1440,7 +1440,7 @@
 											</div>
 										</IntegrationsMenu>
 
-										<div class="ml-0.5 flex gap-1.5">
+										<div class="ml-1 flex gap-1.5">
 											{#if showToolsButton}
 												<Tooltip
 													content={$i18n.t('{{COUNT}} Available Tools', {
