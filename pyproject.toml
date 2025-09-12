@@ -18,7 +18,7 @@ dependencies = [
     "bcrypt==4.3.0",
     "argon2-cffi==23.1.0",
     "PyJWT[crypto]==2.10.1",
-    "authlib==1.6.1",
+    "authlib==1.6.3",
 
     "requests==2.32.4",
     "aiohttp==3.12.15",
@@ -52,15 +52,15 @@ dependencies = [
     "google-generativeai==0.8.5",
 
     "langchain==0.3.26",
-    "langchain-community==0.3.26",
+    "langchain-community==0.3.27",
 
     "fake-useragent==2.2.0",
-    "chromadb==0.6.3",
+    "chromadb==1.0.20",
     "pymilvus==2.5.0",
     "qdrant-client==1.14.3",
     "opensearch-py==2.8.0",
     "playwright==1.49.1",
-    "elasticsearch==9.0.1",
+    "elasticsearch==9.1.0",
     "pinecone==6.0.2",
     "oracledb==3.2.0",
 
@@ -72,7 +72,7 @@ dependencies = [
     "einops==0.8.1",
 
     "ftfy==6.2.3",
-    "pypdf==4.3.1",
+    "pypdf==6.0.0",
     "fpdf2==2.8.2",
     "pymdown-extensions==10.14.2",
     "docx2txt==0.8",
@@ -112,7 +112,7 @@ dependencies = [
 
     
 
-    "googleapis-common-protos==1.63.2",
+    "googleapis-common-protos==1.70.0",
     "google-cloud-storage==2.19.0",
 
     "azure-identity==1.20.0",
@@ -124,7 +124,6 @@ dependencies = [
     "tencentcloud-sdk-python==3.0.1336",
     
     "oracledb>=3.2.0",
-    "posthog==5.4.0",
 
 ]
 readme = "README.md"
@@ -142,8 +141,8 @@ classifiers = [
 
 [project.optional-dependencies]
 postgres = [
-    "psycopg2-binary==2.9.9",
-    "pgvector==0.4.0",
+    "psycopg2-binary==2.9.10",
+    "pgvector==0.4.1",
 ]
 
 all = [

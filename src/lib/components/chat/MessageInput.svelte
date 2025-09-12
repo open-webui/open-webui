@@ -1,11 +1,6 @@
 <script lang="ts">
-	import * as pdfjs from 'pdfjs-dist';
-	import * as pdfWorker from 'pdfjs-dist/build/pdf.worker.mjs';
-	pdfjs.GlobalWorkerOptions.workerSrc = import.meta.url + 'pdfjs-dist/build/pdf.worker.mjs';
-
 	import DOMPurify from 'dompurify';
 	import { marked } from 'marked';
-	import heic2any from 'heic2any';
 
 	import { toast } from 'svelte-sonner';
 
@@ -32,7 +27,7 @@
 	} from '$lib/stores';
 
 	import {
-		blobToFile,
+		convertHeicToJpeg,
 		compressImage,
 		createMessagesList,
 		extractContentFromFile,
@@ -75,6 +70,7 @@
 	import InputVariablesModal from './MessageInput/InputVariablesModal.svelte';
 	import Voice from '../icons/Voice.svelte';
 	import { getSessionUser } from '$lib/apis/auths';
+	import Terminal from '../icons/Terminal.svelte';
 	const i18n = getContext('i18n');
 
 	export let onChange: Function = () => {};
@@ -106,6 +102,7 @@
 	export let codeInterpreterEnabled = false;
 
 	let showInputVariablesModal = false;
+	let inputVariablesModalCallback = (variableValues) => {};
 	let inputVariables = {};
 	let inputVariableValues = {};
 
@@ -127,11 +124,24 @@
 		codeInterpreterEnabled
 	});
 
-	const inputVariableHandler = async (text: string) => {
+	const inputVariableHandler = async (text: string): Promise<string> => {
 		inputVariables = extractInputVariables(text);
-		if (Object.keys(inputVariables).length > 0) {
-			showInputVariablesModal = true;
+
+		// No variables? return the original text immediately.
+		if (Object.keys(inputVariables).length === 0) {
+			return text;
 		}
+
+		// Show modal and wait for the user's input.
+		showInputVariablesModal = true;
+		return await new Promise<string>((resolve) => {
+			inputVariablesModalCallback = (variableValues) => {
+				inputVariableValues = { ...inputVariableValues, ...variableValues };
+				replaceVariables(inputVariableValues);
+				showInputVariablesModal = false;
+				resolve(text);
+			};
+		});
 	};
 
 	const textVariableHandler = async (text: string) => {
@@ -249,7 +259,6 @@
 			text = text.replaceAll('{{CURRENT_WEEKDAY}}', weekday);
 		}
 
-		inputVariableHandler(text);
 		return text;
 	};
 
@@ -285,7 +294,7 @@
 		}
 	};
 
-	export const setText = async (text?: string) => {
+	export const setText = async (text?: string, cb?: (text: string) => void) => {
 		const chatInput = document.getElementById('chat-input');
 
 		if (chatInput) {
@@ -301,6 +310,10 @@
 				chatInput.focus();
 				chatInput.dispatchEvent(new Event('input'));
 			}
+
+			text = await inputVariableHandler(text);
+			await tick();
+			if (cb) await cb(text);
 		}
 	};
 
@@ -373,6 +386,9 @@
 		}
 
 		await tick();
+		text = await inputVariableHandler(text);
+		await tick();
+
 		const chatInputContainer = document.getElementById('chat-input-container');
 		if (chatInputContainer) {
 			chatInputContainer.scrollTop = chatInputContainer.scrollHeight;
@@ -640,7 +656,7 @@
 		} else {
 			// If temporary chat is enabled, we just add the file to the list without uploading it.
 
-			const content = await extractContentFromFile(file, pdfjsLib).catch((error) => {
+			const content = await extractContentFromFile(file).catch((error) => {
 				toast.error(
 					$i18n.t('Failed to extract content from the file: {{error}}', { error: error })
 				);
@@ -763,11 +779,7 @@
 						}
 					];
 				};
-				reader.readAsDataURL(
-					file['type'] === 'image/heic'
-						? await heic2any({ blob: file, toType: 'image/jpeg' })
-						: file
-				);
+				reader.readAsDataURL(file['type'] === 'image/heic' ? await convertHeicToJpeg(file) : file);
 			} else {
 				uploadFileHandler(file);
 			}
@@ -873,10 +885,7 @@
 <InputVariablesModal
 	bind:show={showInputVariablesModal}
 	variables={inputVariables}
-	onSave={(variableValues) => {
-		inputVariableValues = { ...inputVariableValues, ...variableValues };
-		replaceVariables(inputVariableValues);
-	}}
+	onSave={inputVariablesModalCallback}
 />
 
 {#if loaded}
@@ -1408,7 +1417,7 @@
 												command = getCommand();
 											}}
 											on:compositionstart={() => (isComposing = true)}
-											oncompositionend={(e) => {
+											on:compositionend={(e) => {
 												compositionEndedAt = e.timeStamp;
 												isComposing = false;
 											}}
@@ -1779,7 +1788,7 @@
 																<Sparkles className="size-4" strokeWidth="1.75" />
 															{/if}
 															<span
-																class="hidden @xl:block whitespace-nowrap overflow-hidden text-ellipsis leading-none pr-0.5"
+																class="hidden @xl:block whitespace-nowrap text-ellipsis leading-none normal-case pr-0.5"
 																>{filter?.name}</span
 															>
 														</button>
@@ -1798,7 +1807,7 @@
 														>
 															<GlobeAlt className="size-4" strokeWidth="1.75" />
 															<span
-																class="hidden @xl:block whitespace-nowrap overflow-hidden text-ellipsis leading-none pr-0.5"
+																class="hidden @xl:block whitespace-nowrap text-ellipsis leading-none normal-case pr-0.5"
 																>{$i18n.t('Web Search')}</span
 															>
 														</button>
@@ -1817,7 +1826,7 @@
 														>
 															<Photo className="size-4" strokeWidth="1.75" />
 															<span
-																class="hidden @xl:block whitespace-nowrap overflow-hidden text-ellipsis leading-none pr-0.5"
+																class="hidden @xl:block whitespace-nowrap text-ellipsis leading-none normal-case pr-0.5"
 																>{$i18n.t('Image')}</span
 															>
 														</button>
@@ -1841,9 +1850,9 @@
 																? 'm-1'
 																: 'focus:outline-hidden rounded-full'}"
 														>
-															<CommandLine className="size-4" strokeWidth="1.75" />
+															<Terminal className="size-3.5" strokeWidth="2" />
 															<span
-																class="hidden @xl:block whitespace-nowrap overflow-hidden text-ellipsis leading-none pr-0.5"
+																class="hidden @xl:block whitespace-nowrap text-ellipsis leading-none normal-case pr-0.5"
 																>{$i18n.t('Code Interpreter')}</span
 															>
 														</button>

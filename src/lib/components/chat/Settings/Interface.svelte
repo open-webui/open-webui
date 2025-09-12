@@ -49,6 +49,7 @@
 
 	let largeTextAsFile = false;
 
+	let insertSuggestionPrompt = false;
 	let keepFollowUpPrompts = false;
 	let insertFollowUpPrompt = false;
 
@@ -200,6 +201,7 @@
 		insertPromptAsRichText = $settings?.insertPromptAsRichText ?? false;
 		promptAutocomplete = $settings?.promptAutocomplete ?? false;
 
+		insertSuggestionPrompt = $settings?.insertSuggestionPrompt ?? false;
 		keepFollowUpPrompts = $settings?.keepFollowUpPrompts ?? false;
 		insertFollowUpPrompt = $settings?.insertFollowUpPrompt ?? false;
 
@@ -691,6 +693,25 @@
 							bind:state={responseAutoCopy}
 							on:change={() => {
 								toggleResponseAutoCopy();
+							}}
+						/>
+					</div>
+				</div>
+			</div>
+
+			<div>
+				<div class=" py-0.5 flex w-full justify-between">
+					<div id="insert-suggestion-prompt-label" class=" self-center text-xs">
+						{$i18n.t('Insert Suggestion Prompt to Input')}
+					</div>
+
+					<div class="flex items-center gap-2 p-1">
+						<Switch
+							ariaLabelledbyId="insert-suggestion-prompt-label"
+							tooltip={true}
+							bind:state={insertSuggestionPrompt}
+							on:change={() => {
+								saveSettings({ insertSuggestionPrompt });
 							}}
 						/>
 					</div>
