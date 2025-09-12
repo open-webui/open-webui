@@ -6,6 +6,7 @@
 
 	import { models } from '$lib/stores';
 	import { WEBUI_BASE_URL } from '$lib/constants';
+	import Tooltip from '$lib/components/common/Tooltip.svelte';
 
 	const i18n = getContext('i18n');
 
@@ -65,30 +66,32 @@
 
 {#if filteredItems.length > 0}
 	{#each filteredItems as model, modelIdx}
-		<button
-			class="px-2.5 py-1.5 rounded-xl w-full text-left {modelIdx === selectedIdx
-				? 'bg-gray-50 dark:bg-gray-800 selected-command-option-button'
-				: ''}"
-			type="button"
-			on:click={() => {
-				onSelect({ type: 'model', data: model });
-			}}
-			on:mousemove={() => {
-				selectedIdx = modelIdx;
-			}}
-			on:focus={() => {}}
-			data-selected={modelIdx === selectedIdx}
-		>
-			<div class="flex text-black dark:text-gray-100 line-clamp-1">
-				<img
-					src={model?.info?.meta?.profile_image_url ?? `${WEBUI_BASE_URL}/static/favicon.png`}
-					alt={model?.name ?? model.id}
-					class="rounded-full size-5 items-center mr-2"
-				/>
-				<div class="truncate">
-					{model.name}
+		<Tooltip content={model.id} placement="top-start">
+			<button
+				class="px-2.5 py-1.5 rounded-xl w-full text-left {modelIdx === selectedIdx
+					? 'bg-gray-50 dark:bg-gray-800 selected-command-option-button'
+					: ''}"
+				type="button"
+				on:click={() => {
+					onSelect({ type: 'model', data: model });
+				}}
+				on:mousemove={() => {
+					selectedIdx = modelIdx;
+				}}
+				on:focus={() => {}}
+				data-selected={modelIdx === selectedIdx}
+			>
+				<div class="flex text-black dark:text-gray-100 line-clamp-1">
+					<img
+						src={model?.info?.meta?.profile_image_url ?? `${WEBUI_BASE_URL}/static/favicon.png`}
+						alt={model?.name ?? model.id}
+						class="rounded-full size-5 items-center mr-2"
+					/>
+					<div class="truncate">
+						{model.name}
+					</div>
 				</div>
-			</div>
-		</button>
+			</button>
+		</Tooltip>
 	{/each}
 {/if}
