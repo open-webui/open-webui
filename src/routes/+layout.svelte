@@ -119,18 +119,19 @@
 
 		let executing = true;
 		let packages = [
-			code.includes('requests') ? 'requests' : null,
-			code.includes('bs4') ? 'beautifulsoup4' : null,
-			code.includes('numpy') ? 'numpy' : null,
-			code.includes('pandas') ? 'pandas' : null,
-			code.includes('matplotlib') ? 'matplotlib' : null,
-			code.includes('sklearn') ? 'scikit-learn' : null,
-			code.includes('scipy') ? 'scipy' : null,
-			code.includes('re') ? 'regex' : null,
-			code.includes('seaborn') ? 'seaborn' : null,
-			code.includes('sympy') ? 'sympy' : null,
-			code.includes('tiktoken') ? 'tiktoken' : null,
-			code.includes('pytz') ? 'pytz' : null
+			/\bimport\s+requests\b|\bfrom\s+requests\b/.test(code) ? 'requests' : null,
+			/\bimport\s+bs4\b|\bfrom\s+bs4\b/.test(code) ? 'beautifulsoup4' : null,
+			/\bimport\s+numpy\b|\bfrom\s+numpy\b/.test(code) ? 'numpy' : null,
+			/\bimport\s+pandas\b|\bfrom\s+pandas\b/.test(code) ? 'pandas' : null,
+			/\bimport\s+matplotlib\b|\bfrom\s+matplotlib\b/.test(code) ? 'matplotlib' : null,
+			/\bimport\s+seaborn\b|\bfrom\s+seaborn\b/.test(code) ? 'seaborn' : null,
+			/\bimport\s+sklearn\b|\bfrom\s+sklearn\b/.test(code) ? 'scikit-learn' : null,
+			/\bimport\s+scipy\b|\bfrom\s+scipy\b/.test(code) ? 'scipy' : null,
+			/\bimport\s+re\b|\bfrom\s+re\b/.test(code) ? 'regex' : null,
+			/\bimport\s+seaborn\b|\bfrom\s+seaborn\b/.test(code) ? 'seaborn' : null,
+			/\bimport\s+sympy\b|\bfrom\s+sympy\b/.test(code) ? 'sympy' : null,
+			/\bimport\s+tiktoken\b|\bfrom\s+tiktoken\b/.test(code) ? 'tiktoken' : null,
+			/\bimport\s+pytz\b|\bfrom\s+pytz\b/.test(code) ? 'pytz' : null
 		].filter(Boolean);
 
 		const pyodideWorker = new PyodideWorker();
@@ -221,8 +222,19 @@
 
 		if (toolServer) {
 			console.log(toolServer);
+
+			let toolServerToken = null;
+			const auth_type = toolServer?.auth_type ?? 'bearer';
+			if (auth_type === 'bearer') {
+				toolServerToken = toolServer?.key;
+			} else if (auth_type === 'none') {
+				// No authentication
+			} else if (auth_type === 'session') {
+				toolServerToken = localStorage.token;
+			}
+
 			const res = await executeToolServer(
-				(toolServer?.auth_type ?? 'bearer') === 'bearer' ? toolServer?.key : localStorage.token,
+				toolServerToken,
 				toolServer.url,
 				data?.name,
 				data?.params,

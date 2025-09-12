@@ -52,6 +52,7 @@
 	import { fade } from 'svelte/transition';
 	import { flyAndScale } from '$lib/utils/transitions';
 	import RegenerateMenu from './ResponseMessage/RegenerateMenu.svelte';
+	import StatusHistory from './ResponseMessage/StatusHistory.svelte';
 
 	interface MessageType {
 		id: string;
@@ -642,76 +643,11 @@
 			<div>
 				<div class="chat-{message.role} w-full min-w-full markdown-prose">
 					<div>
-						{#if (message?.statusHistory ?? [...(message?.status ? [message?.status] : [])]).length > 0}
-							{@const status = (
-								message?.statusHistory ?? [...(message?.status ? [message?.status] : [])]
-							).at(-1)}
-							{#if !status?.hidden}
-								<div class="status-description flex items-center gap-2 py-0.5">
-									{#if status?.action === 'web_search' && status?.urls}
-										<WebSearchResults {status}>
-											<div class="flex flex-col justify-center -space-y-0.5">
-												<div
-													class="{status?.done === false
-														? 'shimmer'
-														: ''} text-base line-clamp-1 text-wrap"
-												>
-													<!-- $i18n.t("Generating search query") -->
-													<!-- $i18n.t("No search query generated") -->
-
-													<!-- $i18n.t('Searched {{count}} sites') -->
-													{#if status?.description.includes('{{count}}')}
-														{$i18n.t(status?.description, {
-															count: status?.urls.length
-														})}
-													{:else if status?.description === 'No search query generated'}
-														{$i18n.t('No search query generated')}
-													{:else if status?.description === 'Generating search query'}
-														{$i18n.t('Generating search query')}
-													{:else}
-														{status?.description}
-													{/if}
-												</div>
-											</div>
-										</WebSearchResults>
-									{:else if status?.action === 'knowledge_search'}
-										<div class="flex flex-col justify-center -space-y-0.5">
-											<div
-												class="{status?.done === false
-													? 'shimmer'
-													: ''} text-gray-500 dark:text-gray-500 text-base line-clamp-1 text-wrap"
-											>
-												{$i18n.t(`Searching Knowledge for "{{searchQuery}}"`, {
-													searchQuery: status.query
-												})}
-											</div>
-										</div>
-									{:else}
-										<div class="flex flex-col justify-center -space-y-0.5">
-											<div
-												class="{status?.done === false
-													? 'shimmer'
-													: ''} text-gray-500 dark:text-gray-500 text-base line-clamp-1 text-wrap"
-											>
-												<!-- $i18n.t(`Searching "{{searchQuery}}"`) -->
-												{#if status?.description.includes('{{searchQuery}}')}
-													{$i18n.t(status?.description, {
-														searchQuery: status?.query
-													})}
-												{:else if status?.description === 'No search query generated'}
-													{$i18n.t('No search query generated')}
-												{:else if status?.description === 'Generating search query'}
-													{$i18n.t('Generating search query')}
-												{:else if status?.description === 'Searching the web'}
-													{$i18n.t('Searching the web...')}
-												{:else}
-													{status?.description}
-												{/if}
-											</div>
-										</div>
-									{/if}
-								</div>
-							{/if}
+						{#if model?.info?.meta?.capabilities?.status_updates ?? true}
+							<StatusHistory
+								statusHistory={message?.statusHistory}
+								expand={message?.content === ''}
+							/>
 						{/if}
 
 						{#if message?.files && message.files?.filter((f) => f.type === 'image').length > 0}
@@ -798,7 +734,7 @@
 							</div>
 						{:else}
 							<div class="w-full flex flex-col relative" id="response-content-container">
-								{#if message.content === '' && !message.error && (message?.statusHistory ?? [...(message?.status ? [message?.status] : [])]).length === 0}
+								{#if message.content === '' && !message.error && ((model?.info?.meta?.capabilities?.status_updates ?? true) ? (message?.statusHistory ?? [...(message?.status ? [message?.status] : [])]).length === 0 || (message?.statusHistory?.at(-1)?.hidden ?? false) : true)}
 									<Skeleton />
 								{:else if message.content && message.error !== true}
 									<!-- always show message contents even if there's an error -->
@@ -1339,7 +1275,7 @@
 										</Tooltip>
 									{/if}
 
-									{#if $user?.role === 'admin' || ($user?.permissions?.chat?.regenerate_response ?? false)}
+									{#if $user?.role === 'admin' || ($user?.permissions?.chat?.regenerate_response ?? true)}
 										{#if $settings?.regenerateMenu ?? true}
 											<button
 												type="button"
@@ -1450,7 +1386,7 @@
 										{/if}
 									{/if}
 
-									{#if $user?.role === 'admin' || ($user?.permissions?.chat?.delete_message ?? false)}
+									{#if $user?.role === 'admin' || ($user?.permissions?.chat?.delete_message ?? true)}
 										{#if siblings.length > 1}
 											<Tooltip content={$i18n.t('Delete')} placement="bottom">
 												<button

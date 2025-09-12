@@ -20,8 +20,8 @@ sqlalchemy==2.0.38
 alembic==1.14.0
 peewee==3.18.1
 peewee-migrate==1.12.2
-psycopg2-binary==2.9.9
-pgvector==0.4.0
+psycopg2-binary==2.9.10
+pgvector==0.4.1
 PyMySQL==1.1.1
 bcrypt==4.3.0
 
@@ -29,7 +29,7 @@ pymongo
 redis
 boto3==1.40.5
 
-argon2-cffi==23.1.0
+argon2-cffi==25.1.0
 APScheduler==3.10.4
 
 pycrdt==0.12.25
@@ -47,16 +47,15 @@ google-generativeai==0.8.5
 tiktoken
 
 langchain==0.3.26
-langchain-community==0.3.26
+langchain-community==0.3.27
 
 fake-useragent==2.2.0
-chromadb==0.6.3
-posthog==5.4.0
+chromadb==1.0.20
 pymilvus==2.5.0
 qdrant-client==1.14.3
 opensearch-py==2.8.0
 playwright==1.49.1 # Caution: version must match docker-compose.playwright.yaml
-elasticsearch==9.0.1
+elasticsearch==9.1.0
 pinecone==6.0.2
 oracledb==3.2.0
 
@@ -65,12 +64,12 @@ transformers
 sentence-transformers==4.1.0
 accelerate
 colbert-ai==0.2.21
-pyarrow==20.0.0
-einops==0.8.1
+pyarrow==20.0.0 # fix: pin pyarrow version to 20 for rpi compatibility #15897
+einops==0.8.1 
 
 
 ftfy==6.2.3
-pypdf==4.3.1
+pypdf==6.0.0
 fpdf2==2.8.2
 pymdown-extensions==10.14.2
 docx2txt==0.8
@@ -99,10 +98,10 @@ onnxruntime==1.20.1
 faster-whisper==1.1.1
 
 PyJWT[crypto]==2.10.1
-authlib==1.6.1
+authlib==1.6.3
 
 black==25.1.0
-youtube-transcript-api==1.1.0
+youtube-transcript-api==1.2.2
 pytube==15.0.0
 
 pydub
@@ -115,10 +114,10 @@ google-auth-oauthlib
 
 ## Tests
 docker~=7.1.0
-pytest~=8.3.5
+pytest~=8.4.1
 pytest-docker~=3.1.1
 
-googleapis-common-protos==1.63.2
+googleapis-common-protos==1.70.0
 google-cloud-storage==2.19.0
 
 azure-identity==1.23.0

@@ -153,12 +153,21 @@
 		}
 		if (
 			RAGConfig.CONTENT_EXTRACTION_ENGINE === 'docling' &&
+			RAGConfig.DOCLING_DO_OCR &&
 			((RAGConfig.DOCLING_OCR_ENGINE === '' && RAGConfig.DOCLING_OCR_LANG !== '') ||
 				(RAGConfig.DOCLING_OCR_ENGINE !== '' && RAGConfig.DOCLING_OCR_LANG === ''))
 		) {
 			toast.error(
 				$i18n.t('Both Docling OCR Engine and Language(s) must be provided or both left empty.')
 			);
+			return;
+		}
+		if (
+			RAGConfig.CONTENT_EXTRACTION_ENGINE === 'docling' &&
+			RAGConfig.DOCLING_DO_OCR === false &&
+			RAGConfig.DOCLING_FORCE_OCR === true
+		) {
+			toast.error($i18n.t('In order to force OCR, performing OCR must be enabled.'));
 			return;
 		}
 
@@ -545,19 +554,91 @@
 									bind:value={RAGConfig.DOCLING_SERVER_URL}
 								/>
 							</div>
-							<div class="flex w-full mt-2">
-								<input
-									class="flex-1 w-full text-sm bg-transparent outline-hidden"
-									placeholder={$i18n.t('Enter Docling OCR Engine')}
-									bind:value={RAGConfig.DOCLING_OCR_ENGINE}
-								/>
-								<input
-									class="flex-1 w-full text-sm bg-transparent outline-hidden"
-									placeholder={$i18n.t('Enter Docling OCR Language(s)')}
-									bind:value={RAGConfig.DOCLING_OCR_LANG}
-								/>
-							</div>
 
+							<div class="flex w-full mt-2">
+								<div class="flex-1 flex justify-between">
+									<div class=" self-center text-xs font-medium">
+										{$i18n.t('Perform OCR')}
+									</div>
+									<div class="flex items-center relative">
+										<Switch bind:state={RAGConfig.DOCLING_DO_OCR} />
+									</div>
+								</div>
+							</div>
+							{#if RAGConfig.DOCLING_DO_OCR}
+								<div class="flex w-full mt-2">
+									<input
+										class="flex-1 w-full text-sm bg-transparent outline-hidden"
+										placeholder={$i18n.t('Enter Docling OCR Engine')}
+										bind:value={RAGConfig.DOCLING_OCR_ENGINE}
+									/>
+									<input
+										class="flex-1 w-full text-sm bg-transparent outline-hidden"
+										placeholder={$i18n.t('Enter Docling OCR Language(s)')}
+										bind:value={RAGConfig.DOCLING_OCR_LANG}
+									/>
+								</div>
+							{/if}
+							<div class="flex w-full mt-2">
+								<div class="flex-1 flex justify-between">
+									<div class=" self-center text-xs font-medium">
+										{$i18n.t('Force OCR')}
+									</div>
+									<div class="flex items-center relative">
+										<Switch bind:state={RAGConfig.DOCLING_FORCE_OCR} />
+									</div>
+								</div>
+							</div>
+							<div class="flex justify-between w-full mt-2">
+								<div class="self-center text-xs font-medium">
+									<Tooltip content={''} placement="top-start">
+										{$i18n.t('PDF Backend')}
+									</Tooltip>
+								</div>
+								<div class="">
+									<select
+										class="dark:bg-gray-900 w-fit pr-8 rounded-sm px-2 text-xs bg-transparent outline-hidden text-right"
+										bind:value={RAGConfig.DOCLING_PDF_BACKEND}
+									>
+										<option value="pypdfium2">{$i18n.t('pypdfium2')}</option>
+										<option value="dlparse_v1">{$i18n.t('dlparse_v1')}</option>
+										<option value="dlparse_v2">{$i18n.t('dlparse_v2')}</option>
+										<option value="dlparse_v4">{$i18n.t('dlparse_v4')}</option>
+									</select>
+								</div>
+							</div>
+							<div class="flex justify-between w-full mt-2">
+								<div class="self-center text-xs font-medium">
+									<Tooltip content={''} placement="top-start">
+										{$i18n.t('Table Mode')}
+									</Tooltip>
+								</div>
+								<div class="">
+									<select
+										class="dark:bg-gray-900 w-fit pr-8 rounded-sm px-2 text-xs bg-transparent outline-hidden text-right"
+										bind:value={RAGConfig.DOCLING_TABLE_MODE}
+									>
+										<option value="fast">{$i18n.t('fast')}</option>
+										<option value="accurate">{$i18n.t('accurate')}</option>
+									</select>
+								</div>
+							</div>
+							<div class="flex justify-between w-full mt-2">
+								<div class="self-center text-xs font-medium">
+									<Tooltip content={''} placement="top-start">
+										{$i18n.t('Pipeline')}
+									</Tooltip>
+								</div>
+								<div class="">
+									<select
+										class="dark:bg-gray-900 w-fit pr-8 rounded-sm px-2 text-xs bg-transparent outline-hidden text-right"
+										bind:value={RAGConfig.DOCLING_PIPELINE}
+									>
+										<option value="standard">{$i18n.t('standard')}</option>
+										<option value="vlm">{$i18n.t('vlm')}</option>
+									</select>
+								</div>
+							</div>
 							<div class="flex w-full mt-2">
 								<div class="flex-1 flex justify-between">
 									<div class=" self-center text-xs font-medium">
@@ -1104,10 +1185,10 @@
 												<div class="py-0.5">
 													<div class="flex w-full justify-between">
 														<div class=" text-left text-xs font-small">
-															{$i18n.t('lexical')}
+															{$i18n.t('semantic')}
 														</div>
 														<div class=" text-right text-xs font-small">
-															{$i18n.t('semantic')}
+															{$i18n.t('lexical')}
 														</div>
 													</div>
 												</div>
