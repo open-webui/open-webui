@@ -68,8 +68,7 @@ dependencies = [
     "einops==0.8.0",
 
     # txtai-wikipedia Wiki Grounding dependencies
-    "torch>=2.5.0",
-    "txtai[graph,similarity]==9.0.0",
+    "txtai[graph]==9.0.0",
     "sacremoses==0.1.1",
 
     "ftfy==6.2.3",
