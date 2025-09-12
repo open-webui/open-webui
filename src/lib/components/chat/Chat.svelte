@@ -118,10 +118,11 @@
 	let selectedModelIds = [];
 	$: selectedModelIds = atSelectedModel !== undefined ? [atSelectedModel.id] : selectedModels;
 
-	let selectedToolIds = [];
-	let imageGenerationEnabled = false;
-	let webSearchEnabled = false;
-	let codeInterpreterEnabled = false;
+let selectedToolIds = [];
+let imageGenerationEnabled = false;
+let webSearchEnabled = false;
+let codeInterpreterEnabled = false;
+let selectedKnowledgeSources = [];
 
 	let chat = null;
 	let tags = [];
@@ -150,21 +151,23 @@
 			webSearchEnabled = false;
 			imageGenerationEnabled = false;
 
-			if (chatIdProp && (await loadChat())) {
-				await tick();
-				loading = false;
+if (chatIdProp && (await loadChat())) {
+await tick();
+loading = false;
 
-				if (localStorage.getItem(`chat-input-${chatIdProp}`)) {
-					try {
-						const input = JSON.parse(localStorage.getItem(`chat-input-${chatIdProp}`));
+if (localStorage.getItem(`chat-input-${chatIdProp}`)) {
+try {
+const input = JSON.parse(localStorage.getItem(`chat-input-${chatIdProp}`));
 
-						prompt = input.prompt;
-						files = input.files;
-						selectedToolIds = input.selectedToolIds;
-						webSearchEnabled = input.webSearchEnabled;
-						imageGenerationEnabled = input.imageGenerationEnabled;
-					} catch (e) {}
-				}
+prompt = input.prompt;
+files = input.files;
+selectedToolIds = input.selectedToolIds;
+webSearchEnabled = input.webSearchEnabled;
+imageGenerationEnabled = input.imageGenerationEnabled;
+codeInterpreterEnabled = input.codeInterpreterEnabled;
+selectedKnowledgeSources = input.selectedKnowledgeSources;
+} catch (e) {}
+}
 
 				window.setTimeout(() => scrollToBottom(), 0);
 				const chatInput = document.getElementById('chat-input');
@@ -415,20 +418,24 @@
 		}
 
 		if (localStorage.getItem(`chat-input-${chatIdProp}`)) {
-			try {
-				const input = JSON.parse(localStorage.getItem(`chat-input-${chatIdProp}`));
-				prompt = input.prompt;
-				files = input.files;
-				selectedToolIds = input.selectedToolIds;
-				webSearchEnabled = input.webSearchEnabled;
-				imageGenerationEnabled = input.imageGenerationEnabled;
-			} catch (e) {
-				prompt = '';
-				files = [];
-				selectedToolIds = [];
-				webSearchEnabled = false;
-				imageGenerationEnabled = false;
-			}
+try {
+const input = JSON.parse(localStorage.getItem(`chat-input-${chatIdProp}`));
+prompt = input.prompt;
+files = input.files;
+selectedToolIds = input.selectedToolIds;
+webSearchEnabled = input.webSearchEnabled;
+imageGenerationEnabled = input.imageGenerationEnabled;
+codeInterpreterEnabled = input.codeInterpreterEnabled;
+selectedKnowledgeSources = input.selectedKnowledgeSources;
+} catch (e) {
+prompt = '';
+files = [];
+selectedToolIds = [];
+webSearchEnabled = false;
+imageGenerationEnabled = false;
+codeInterpreterEnabled = false;
+selectedKnowledgeSources = [];
+}
 		}
 
 		showControls.subscribe(async (value) => {
@@ -1244,13 +1251,23 @@
 	// Chat functions
 	//////////////////////////
 
-	const submitPrompt = async (userPrompt, { _raw = false } = {}) => {
-		console.log('submitPrompt', userPrompt, $chatId);
+const submitPrompt = async (userPrompt, { _raw = false } = {}) => {
+console.log('submitPrompt', userPrompt, $chatId);
 
-		const messages = createMessagesList(history, history.currentId);
-		const _selectedModels = selectedModels.map((modelId) =>
-			$models.map((m) => m.id).includes(modelId) ? modelId : ''
-		);
+const messages = createMessagesList(history, history.currentId);
+
+if (
+(messages.length === 0 || history.currentId === null) &&
+selectedKnowledgeSources.length > 0
+) {
+userPrompt = `${userPrompt}\n\nI have selected these knowledge source(s): [${selectedKnowledgeSources.join(
+', '
+)}], please find information relevant to my query in these sources.`;
+}
+
+const _selectedModels = selectedModels.map((modelId) =>
+$models.map((m) => m.id).includes(modelId) ? modelId : ''
+);
 		if (JSON.stringify(selectedModels) !== JSON.stringify(_selectedModels)) {
 			selectedModels = _selectedModels;
 		}
@@ -2029,10 +2046,11 @@
 								bind:prompt
 								bind:autoScroll
 								bind:selectedToolIds
-								bind:imageGenerationEnabled
-								bind:codeInterpreterEnabled
-								bind:webSearchEnabled
-								bind:atSelectedModel
+bind:imageGenerationEnabled
+bind:codeInterpreterEnabled
+bind:webSearchEnabled
+bind:selectedKnowledgeSources
+bind:atSelectedModel
 								toolServers={$toolServers}
 								transparentBackground={$settings?.backgroundImageUrl ?? false}
 								{stopResponse}
@@ -2082,10 +2100,11 @@
 								bind:prompt
 								bind:autoScroll
 								bind:selectedToolIds
-								bind:imageGenerationEnabled
-								bind:codeInterpreterEnabled
-								bind:webSearchEnabled
-								bind:atSelectedModel
+bind:imageGenerationEnabled
+bind:codeInterpreterEnabled
+bind:webSearchEnabled
+bind:selectedKnowledgeSources
+bind:atSelectedModel
 								transparentBackground={$settings?.backgroundImageUrl ?? false}
 								toolServers={$toolServers}
 								{stopResponse}

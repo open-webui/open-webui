@@ -243,7 +243,7 @@ AMD Employees please use Microsoft Login
 							<div class="mt-4 flex flex-col space-y-2">
 								{#if $config?.oauth?.providers?.google}
 									<button
-										class="flex w-full items-center justify-center rounded-full bg-gray-700/5 py-2.5 text-sm font-medium text-gray-300 transition hover:bg-gray-700/10 hover:text-white dark:bg-gray-100/5 dark:hover:bg-gray-100/10"
+										class="flex w-full items-center justify-center rounded-full bg-gray-100 py-2.5 text-sm font-medium text-gray-800 transition hover:bg-gray-200 dark:bg-gray-800 dark:text-gray-100 dark:hover:bg-gray-700"
 										on:click={() => {
 											window.location.href = `${WEBUI_BASE_URL}/oauth/google/login`;
 										}}
@@ -268,7 +268,7 @@ AMD Employees please use Microsoft Login
 								{/if}
 								{#if $config?.oauth?.providers?.microsoft}
 									<button
-										class="flex w-full items-center justify-center rounded-full bg-gray-700/5 py-2.5 text-sm font-medium text-gray-300 transition hover:bg-gray-700/10 hover:text-white dark:bg-gray-100/5 dark:hover:bg-gray-100/10"
+										class="flex w-full items-center justify-center rounded-full bg-gray-100 py-2.5 text-sm font-medium text-gray-800 transition hover:bg-gray-200 dark:bg-gray-800 dark:text-gray-100 dark:hover:bg-gray-700"
 										on:click={() => {
 											window.location.href = `${WEBUI_BASE_URL}/oauth/microsoft/login`;
 										}}
@@ -293,7 +293,7 @@ AMD Employees please use Microsoft Login
 								{/if}
 								{#if $config?.oauth?.providers?.github}
 									<button
-										class="flex w-full items-center justify-center rounded-full bg-gray-700/5 py-2.5 text-sm font-medium text-gray-300 transition hover:bg-gray-700/10 hover:text-white dark:bg-gray-100/5 dark:hover:bg-gray-100/10"
+										class="flex w-full items-center justify-center rounded-full bg-gray-100 py-2.5 text-sm font-medium text-gray-800 transition hover:bg-gray-200 dark:bg-gray-800 dark:text-gray-100 dark:hover:bg-gray-700"
 										on:click={() => {
 											window.location.href = `${WEBUI_BASE_URL}/oauth/github/login`;
 										}}
@@ -309,7 +309,7 @@ AMD Employees please use Microsoft Login
 								{/if}
 								{#if $config?.oauth?.providers?.oidc}
 									<button
-										class="flex w-full items-center justify-center rounded-full bg-gray-700/5 py-2.5 text-sm font-medium text-gray-300 transition hover:bg-gray-700/10 hover:text-white dark:bg-gray-100/5 dark:hover:bg-gray-100/10"
+										class="flex w-full items-center justify-center rounded-full bg-gray-100 py-2.5 text-sm font-medium text-gray-800 transition hover:bg-gray-200 dark:bg-gray-800 dark:text-gray-100 dark:hover:bg-gray-700"
 										on:click={() => {
 											window.location.href = `${WEBUI_BASE_URL}/oauth/oidc/login`;
 										}}

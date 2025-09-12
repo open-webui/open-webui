@@ -33,10 +33,11 @@
 	export let prompt = '';
 	export let files = [];
 
-	export let selectedToolIds = [];
-	export let imageGenerationEnabled = false;
-	export let codeInterpreterEnabled = false;
-	export let webSearchEnabled = false;
+export let selectedToolIds = [];
+export let imageGenerationEnabled = false;
+export let codeInterpreterEnabled = false;
+export let webSearchEnabled = false;
+export let selectedKnowledgeSources = [];
 
 	export let toolServers = [];
 
@@ -192,10 +193,11 @@
 					bind:prompt
 					bind:autoScroll
 					bind:selectedToolIds
-					bind:imageGenerationEnabled
-					bind:codeInterpreterEnabled
-					bind:webSearchEnabled
-					bind:atSelectedModel
+bind:imageGenerationEnabled
+bind:codeInterpreterEnabled
+bind:webSearchEnabled
+bind:selectedKnowledgeSources
+bind:atSelectedModel
 					{toolServers}
 					{transparentBackground}
 					{stopResponse}

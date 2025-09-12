@@ -82,6 +82,7 @@
 
 	export let imageGenerationEnabled = false;
 	export let webSearchEnabled = false;
+
 	export let codeInterpreterEnabled = false;
 	export let selectedKnowledgeSources = [];
 
@@ -123,6 +124,7 @@
 		codeInterpreterEnabled,
 		selectedKnowledgeSources
 	});
+
 
 	let showTools = false;
 
@@ -823,13 +825,15 @@
 														}
 													}
 
-													if (e.key === 'Escape') {
-														console.log('Escape');
-														atSelectedModel = undefined;
-														selectedToolIds = [];
-														webSearchEnabled = false;
-														imageGenerationEnabled = false;
-													}
+if (e.key === 'Escape') {
+console.log('Escape');
+atSelectedModel = undefined;
+selectedToolIds = [];
+webSearchEnabled = false;
+imageGenerationEnabled = false;
+codeInterpreterEnabled = false;
+selectedKnowledgeSources = [];
+}
 												}}
 												on:paste={async (e) => {
 													e = e.detail.event;
@@ -1231,16 +1235,46 @@
 																? 'bg-gray-50 dark:bg-gray-400/10 border-gray-100  dark:border-gray-700 text-gray-600 dark:text-gray-400  '
 																: 'bg-transparent border-transparent text-gray-600 dark:text-gray-300  hover:bg-gray-100 dark:hover:bg-gray-800 '}"
 														>
-															<CommandLine className="size-5" strokeWidth="1.75" />
-															<span
-																class="hidden @xl:block whitespace-nowrap overflow-hidden text-ellipsis translate-y-[0.5px]"
-																>{$i18n.t('Code Interpreter')}</span
-															>
-														</button>
-													</Tooltip>
-												{/if}
-											{/if}
-										</div>
+<CommandLine className="size-5" strokeWidth="1.75" />
+<span
+class="hidden @xl:block whitespace-nowrap overflow-hidden text-ellipsis translate-y-[0.5px]"
+>{$i18n.t('Code Interpreter')}</span
+>
+</button>
+</Tooltip>
+{/if}
+
+{#if knowledgeSources.length > 0}
+{#each knowledgeSources as source}
+<Tooltip content={source} placement="top">
+<button
+on:click|preventDefault={() => {
+if (selectedKnowledgeSources.includes(source)) {
+selectedKnowledgeSources = selectedKnowledgeSources.filter(
+(s) => s !== source
+);
+} else {
+selectedKnowledgeSources = [...selectedKnowledgeSources, source];
+}
+}}
+type="button"
+class="px-1.5 @xl:px-2.5 py-1.5 flex gap-1.5 items-center text-sm rounded-full font-medium transition-colors duration-300 focus:outline-hidden max-w-full overflow-hidden border {selectedKnowledgeSources.includes(
+source
+)
+? 'bg-gray-50 dark:bg-gray-400/10 border-gray-100  dark:border-gray-700 text-gray-600 dark:text-gray-400  '
+: 'bg-transparent border-transparent text-gray-600 dark:text-gray-300  hover:bg-gray-100 dark:hover:bg-gray-800 '}"
+>
+<div class="w-2 h-2 bg-green-500 rounded-full"></div>
+<span
+class="hidden @xl:block whitespace-nowrap overflow-hidden text-ellipsis translate-y-[0.5px]"
+>{source}</span
+>
+</button>
+</Tooltip>
+{/each}
+{/if}
+{/if}
+</div>
 									</div>
 
 									<div class="self-end flex space-x-1 mr-1 shrink-0">

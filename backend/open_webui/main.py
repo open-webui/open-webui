@@ -269,6 +269,7 @@ from open_webui.config import (
     DEFAULT_PROMPT_SUGGESTIONS,
     DEFAULT_MODELS,
     DEFAULT_ARENA_MODEL,
+    MODEL_ID_TO_KNOWLEDGE_SOURCE_MAPPING,
     MODEL_ORDER_LIST,
     EVALUATION_ARENA_MODELS,
     # WebUI (OAuth)
@@ -536,6 +537,9 @@ app.state.config.ADMIN_EMAIL = ADMIN_EMAIL
 
 
 app.state.config.DEFAULT_MODELS = DEFAULT_MODELS
+app.state.config.MODEL_ID_TO_KNOWLEDGE_SOURCE_MAPPING = (
+    MODEL_ID_TO_KNOWLEDGE_SOURCE_MAPPING
+)
 app.state.config.DEFAULT_PROMPT_SUGGESTIONS = DEFAULT_PROMPT_SUGGESTIONS
 app.state.config.DEFAULT_USER_ROLE = DEFAULT_USER_ROLE
 
@@ -1313,6 +1317,9 @@ async def get_app_config(request: Request):
             {
                 "default_models": app.state.config.DEFAULT_MODELS,
                 "default_prompt_suggestions": app.state.config.DEFAULT_PROMPT_SUGGESTIONS,
+                "model_id_to_knowledge_source_mapping": json.loads(
+                    app.state.config.MODEL_ID_TO_KNOWLEDGE_SOURCE_MAPPING
+                ),
                 "user_count": user_count,
                 "code": {
                     "engine": app.state.config.CODE_EXECUTION_ENGINE,
