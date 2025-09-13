@@ -82,24 +82,49 @@
 
 	export let imageGenerationEnabled = false;
 	export let webSearchEnabled = false;
-export let codeInterpreterEnabled = false;
-export let selectedKnowledgeSources = [];
 
-let knowledgeSources = [];
-$: knowledgeSources =
-  ($config?.model_id_to_knowledge_source_mapping?.[
-    atSelectedModel?.id ?? selectedModels[0]
-  ] as string[]) ?? [];
+	export let codeInterpreterEnabled = false;
+	export let selectedKnowledgeSources = [];
 
-$: onChange({
-prompt,
-files,
-selectedToolIds,
-imageGenerationEnabled,
-webSearchEnabled,
-codeInterpreterEnabled,
-selectedKnowledgeSources
-});
+	let knowledgeSources = [];
+	$: knowledgeSources =
+		($config?.model_id_to_knowledge_source_mapping?.[
+			atSelectedModel?.id ?? selectedModels[0]
+		] as string[]) ?? [];
+
+	let correctionHintActive = false;
+	let messageIdForCorrection = null;
+	let correctionHintText = '';
+
+	const submitHandler = async () => {
+		if (correctionHintActive) {
+			await tick();
+			dispatch('submit', prompt);
+
+			if (messageIdForCorrection) {
+				window.dispatchEvent(
+					new CustomEvent('correctionSubmitted', {
+						detail: { messageId: messageIdForCorrection }
+					})
+				);
+				messageIdForCorrection = null;
+			}
+			correctionHintActive = false;
+		} else {
+			dispatch('submit', prompt);
+		}
+	};
+
+	$: onChange({
+		prompt,
+		files,
+		selectedToolIds,
+		imageGenerationEnabled,
+		webSearchEnabled,
+		codeInterpreterEnabled,
+		selectedKnowledgeSources
+	});
+
 
 	let showTools = false;
 
@@ -329,6 +354,23 @@ selectedKnowledgeSources
 		dragged = false;
 	};
 
+	const handleProvideCorrection = (event) => {
+		correctionHintActive = true;
+		if (event.detail?.messageId) {
+			messageIdForCorrection = event.detail.messageId;
+		}
+		if (event.detail?.prependText) {
+			prompt = event.detail.prependText;
+		}
+		if (event.detail?.hintText) {
+			correctionHintText = event.detail.hintText;
+		} else {
+			correctionHintText = 'Please provide a direction on how you want to the current search plan to be updated.';
+		}
+		const chatInput = document.getElementById('chat-input');
+		chatInput?.focus();
+	};
+
 	onMount(async () => {
 		loaded = true;
 
@@ -338,6 +380,7 @@ selectedKnowledgeSources
 		}, 0);
 
 		window.addEventListener('keydown', handleKeyDown);
+		window.addEventListener('provideCorrection', handleProvideCorrection);
 
 		await tick();
 
@@ -351,6 +394,7 @@ selectedKnowledgeSources
 	onDestroy(() => {
 		console.log('destroy');
 		window.removeEventListener('keydown', handleKeyDown);
+		window.removeEventListener('provideCorrection', handleProvideCorrection);
 
 		const dropzoneElement = document.getElementById('chat-container');
 
@@ -368,6 +412,13 @@ selectedKnowledgeSources
 
 {#if loaded}
 	<div class="w-full font-primary">
+				{#if correctionHintActive}
+			<div
+				class="max-w-6xl mx-auto px-4 py-2 text-lg text-center rounded-lg bg-yellow-200 dark:bg-yellow-800 text-yellow-900 dark:text-yellow-100 mb-2"
+			>
+				{correctionHintText}
+			</div>
+		{/if}
 		<div class=" mx-auto inset-x-0 bg-transparent flex justify-center">
 			<div
 				class="flex flex-col px-3 {($settings?.widescreenMode ?? null)
@@ -513,10 +564,7 @@ selectedKnowledgeSources
 					{:else}
 						<form
 							class="w-full flex gap-1.5"
-							on:submit|preventDefault={() => {
-								// check if selectedModels support image input
-								dispatch('submit', prompt);
-							}}
+							on:submit|preventDefault={submitHandler}
 						>
 							<div
 								class="flex-1 flex flex-col relative w-full shadow-lg rounded-3xl border border-gray-50 dark:border-gray-850 hover:border-gray-100 focus-within:border-gray-100 hover:dark:border-gray-800 focus-within:dark:border-gray-800 transition px-1 bg-white/90 dark:bg-gray-400/5 dark:text-gray-100"
@@ -771,7 +819,7 @@ selectedKnowledgeSources
 															if (enterPressed) {
 																e.preventDefault();
 																if (prompt !== '' || files.length > 0) {
-																	dispatch('submit', prompt);
+																	submitHandler();
 																}
 															}
 														}
@@ -959,7 +1007,7 @@ selectedKnowledgeSources = [];
 
 														// Submit the prompt when Enter key is pressed
 														if ((prompt !== '' || files.length > 0) && enterPressed) {
-															dispatch('submit', prompt);
+															submitHandler();
 														}
 													}
 												}

@@ -136,6 +136,8 @@
 	let buttonsContainerElement: HTMLDivElement;
 	let showDeleteConfirm = false;
 
+	let showCorrectionButtons = true;
+
 	let model = null;
 	$: model = $models.find((m) => m.id === message.model);
 
@@ -557,6 +559,14 @@
 	onMount(async () => {
 		// console.log('ResponseMessage mounted');
 
+		const handleCorrectionSubmitted = (event) => {
+			if (event.detail.messageId === message.id) {
+				showCorrectionButtons = false;
+			}
+		};
+
+		window.addEventListener('correctionSubmitted', handleCorrectionSubmitted);
+
 		await tick();
 		if (buttonsContainerElement) {
 			console.log(buttonsContainerElement);
@@ -570,6 +580,10 @@
 				}
 			});
 		}
+
+		return () => {
+			window.removeEventListener('correctionSubmitted', handleCorrectionSubmitted);
+		};
 	});
 </script>
 
@@ -863,6 +877,35 @@
 						{/if}
 					</div>
 				</div>
+
+				{#if message.done && isLastMessage && showCorrectionButtons && message.content.includes($config?.features?.search_plan_agent_buttons_triggering_sentence)}
+					<div class="mt-2 mb-1 flex justify-start space-x-1.5 text-sm font-medium">
+						{#each $config?.features?.search_plan_agent_buttons_mapping ?? [] as button}
+							<button
+								class="px-4 py-2 bg-white dark:bg-gray-900 hover:bg-gray-100 text-gray-800 dark:text-gray-100 transition rounded-xl border border-gray-200 dark:border-gray-700"
+								style={button.BackgroundColor ? `background-color: ${button.BackgroundColor}` : ''}
+								on:click={() => {
+									if (button.OnClickSendMessageAsUserText) {
+										submitMessage(message.id, button.OnClickSendMessageAsUserText);
+									} else if (button.OnClickPrependMessageInputText) {
+										window.dispatchEvent(
+											new CustomEvent('provideCorrection', {
+												detail: {
+													messageId: message.id,
+													prependText: button.OnClickPrependMessageInputText,
+													hintText: button.OnClickDisplayHint
+												}
+											})
+										);
+									}
+									showCorrectionButtons = false;
+								}}
+							>
+								{$i18n.t(button.Name)}
+							</button>
+						{/each}
+					</div>
+				{/if}
 
 				{#if !edit}
 					<div
