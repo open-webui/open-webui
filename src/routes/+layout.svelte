@@ -49,7 +49,7 @@
 	import AppSidebar from '$lib/components/app/AppSidebar.svelte';
 	import { chatCompletion } from '$lib/apis/openai';
 
-	import { beforeNavigate } from '$app/navigation';
+	import { beforeNavigate, afterNavigate } from '$app/navigation';
 	import { updated } from '$app/state';
 	import Spinner from '$lib/components/common/Spinner.svelte';
 
@@ -58,6 +58,10 @@
 		if (updated.current && !willUnload && to?.url) {
 			location.href = to.url.href;
 		}
+	});
+
+	afterNavigate(() => {
+		theme.set(localStorage.getItem('theme') ?? 'system');
 	});
 
 	setContext('i18n', i18n);
@@ -564,12 +568,9 @@
 		const unsubscribeTheme = theme.subscribe(async (value) => {
 			if (value) {
 				await tick();
-				setTimeout(async () => {
-					await applyTheme(value);
-				}, 100);
+				await applyTheme(value);
 			}
 		});
-		theme.set(localStorage.theme ?? 'system');
 
 		// Check for community theme updates
 		checkForThemeUpdates();

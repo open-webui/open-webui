@@ -43,6 +43,20 @@ const cleanupTheme = () => {
   }
 };
 
+const onElementReady = (selector: string, callback: () => void) => {
+  const interval = setInterval(() => {
+    const element = document.querySelector(selector);
+    if (element) {
+      clearInterval(interval);
+      callback();
+    }
+  }, 50);
+
+  setTimeout(() => {
+    clearInterval(interval);
+  }, 5000);
+};
+
 
 export const themes = writable<Map<string, Theme>>(
   new Map([
@@ -168,116 +182,118 @@ export const checkForThemeUpdates = async () => {
 };
 
 const _applyThemeStyles = (theme: Theme) => {
-  const mainContainer = document.getElementById('main-container');
+  onElementReady('#main-container', () => {
+    const mainContainer = document.getElementById('main-container');
 
-  if (mainContainer && theme.gradient && theme.gradient.enabled && theme.gradient.colors.length > 0) {
-    const { colors, direction, intensity } = theme.gradient;
-    const alpha = (intensity ?? 100) / 100;
-    const rgbaColors = colors.map((hex) => {
-      if (/^#([A-Fa-f0-9]{3}){1,2}$/.test(hex)) {
-        let c = hex.substring(1).split('');
-        if (c.length === 3) {
-          c = [c[0], c[0], c[1], c[1], c[2], c[2]];
+    if (mainContainer && theme.gradient && theme.gradient.enabled && theme.gradient.colors.length > 0) {
+      const { colors, direction, intensity } = theme.gradient;
+      const alpha = (intensity ?? 100) / 100;
+      const rgbaColors = colors.map((hex) => {
+        if (/^#([A-Fa-f0-9]{3}){1,2}$/.test(hex)) {
+          let c = hex.substring(1).split('');
+          if (c.length === 3) {
+            c = [c[0], c[0], c[1], c[1], c[2], c[2]];
+          }
+          c = '0x' + c.join('');
+          const r = (c >> 16) & 255;
+          const g = (c >> 8) & 255;
+          const b = c & 255;
+          return `rgba(${r}, ${g}, ${b}, ${alpha})`;
         }
-        c = '0x' + c.join('');
-        const r = (c >> 16) & 255;
-        const g = (c >> 8) & 255;
-        const b = c & 255;
-        return `rgba(${r}, ${g}, ${b}, ${alpha})`;
+        return `rgba(0, 0, 0, ${alpha})`;
+      });
+      const gradientCss = `linear-gradient(${direction}deg, ${rgbaColors.join(', ')})`;
+      mainContainer.style.backgroundImage = gradientCss;
+    } else if (mainContainer) {
+      mainContainer.style.backgroundImage = 'none';
+    }
+
+    if (mainContainer) {
+      mainContainer.classList.add(`${theme.id}-bg`);
+      if (theme.animationScript) {
+        const canvas = document.createElement('canvas');
+        canvas.id = `${theme.id}-canvas`;
+        canvas.style.position = 'absolute';
+        canvas.style.top = '0';
+        canvas.style.left = '0';
+        canvas.style.width = '100%';
+        canvas.style.height = '100%';
+        canvas.style.zIndex = '0';
+        canvas.style.pointerEvents = 'none';
+        canvas.style.opacity = '0';
+        canvas.style.transition = 'opacity 0.5s ease-in-out';
+        mainContainer.prepend(canvas);
+
+        try {
+          const blob = new Blob([theme.animationScript], { type: 'application/javascript' });
+          const workerUrl = URL.createObjectURL(blob);
+          const worker = new Worker(workerUrl);
+
+          const offscreen = canvas.transferControlToOffscreen();
+
+          const rect = mainContainer.getBoundingClientRect();
+          worker.postMessage(
+            { type: 'init', canvas: offscreen, width: rect.width, height: rect.height },
+            [offscreen]
+          );
+
+          currentResizeObserver = new ResizeObserver((entries) => {
+            if (entries.length > 0) {
+              const entry = entries[0];
+              worker.postMessage({
+                type: 'resize',
+                width: entry.contentRect.width,
+                height: entry.contentRect.height
+              });
+            }
+          });
+          currentResizeObserver.observe(mainContainer);
+
+          theme.animation = {
+            start: () => {},
+            stop: () => {
+              worker.terminate();
+              URL.revokeObjectURL(workerUrl);
+              if (currentResizeObserver) {
+                currentResizeObserver.disconnect();
+              }
+            }
+          };
+        } catch (e) {
+          console.error('Failed to start animation worker:', e);
+        }
+
+        setTimeout(() => {
+          window.dispatchEvent(new Event('resize'));
+          canvas.style.opacity = '1';
+        }, 100);
+      } else if (theme.animation) {
+        const canvas = document.createElement('canvas');
+        canvas.id = `${theme.id}-canvas`;
+        canvas.style.position = 'absolute';
+        canvas.style.top = '0';
+        canvas.style.left = '0';
+        canvas.style.width = '100%';
+        canvas.style.height = '100%';
+        canvas.style.zIndex = '0';
+        canvas.style.pointerEvents = 'none';
+        canvas.style.opacity = '0';
+        canvas.style.transition = 'opacity 0.5s ease-in-out';
+        mainContainer.prepend(canvas);
+        theme.animation.start(canvas);
+        setTimeout(() => {
+          window.dispatchEvent(new Event('resize'));
+          canvas.style.opacity = '1';
+        }, 100);
       }
-      return `rgba(0, 0, 0, ${alpha})`;
-    });
-    const gradientCss = `linear-gradient(${direction}deg, ${rgbaColors.join(', ')})`;
-    mainContainer.style.backgroundImage = gradientCss;
-  } else if (mainContainer) {
-    mainContainer.style.backgroundImage = 'none';
-  }
+    }
+  });
 
   if (theme.css) {
     currentStylesheet = document.createElement('style');
     currentStylesheet.id = `${theme.id}-stylesheet`;
     currentStylesheet.innerHTML = theme.css;
     document.head.appendChild(currentStylesheet);
-  }
-
-  if (mainContainer) {
-    mainContainer.classList.add(`${theme.id}-bg`);
-    if (theme.animationScript) {
-      const canvas = document.createElement('canvas');
-      canvas.id = `${theme.id}-canvas`;
-      canvas.style.position = 'absolute';
-      canvas.style.top = '0';
-      canvas.style.left = '0';
-      canvas.style.width = '100%';
-      canvas.style.height = '100%';
-      canvas.style.zIndex = '0';
-      canvas.style.pointerEvents = 'none';
-      canvas.style.opacity = '0';
-      canvas.style.transition = 'opacity 0.5s ease-in-out';
-      mainContainer.prepend(canvas);
-
-      try {
-        const blob = new Blob([theme.animationScript], { type: 'application/javascript' });
-        const workerUrl = URL.createObjectURL(blob);
-        const worker = new Worker(workerUrl);
-
-        const offscreen = canvas.transferControlToOffscreen();
-
-        const rect = mainContainer.getBoundingClientRect();
-        worker.postMessage(
-          { type: 'init', canvas: offscreen, width: rect.width, height: rect.height },
-          [offscreen]
-        );
-
-        currentResizeObserver = new ResizeObserver((entries) => {
-          if (entries.length > 0) {
-            const entry = entries[0];
-            worker.postMessage({
-              type: 'resize',
-              width: entry.contentRect.width,
-              height: entry.contentRect.height
-            });
-          }
-        });
-        currentResizeObserver.observe(mainContainer);
-
-        theme.animation = {
-          start: () => {},
-          stop: () => {
-            worker.terminate();
-            URL.revokeObjectURL(workerUrl);
-            if (currentResizeObserver) {
-              currentResizeObserver.disconnect();
-            }
-          }
-        };
-      } catch (e) {
-        console.error('Failed to start animation worker:', e);
-      }
-
-      setTimeout(() => {
-        window.dispatchEvent(new Event('resize'));
-        canvas.style.opacity = '1';
-      }, 100);
-    } else if (theme.animation) {
-      const canvas = document.createElement('canvas');
-      canvas.id = `${theme.id}-canvas`;
-      canvas.style.position = 'absolute';
-      canvas.style.top = '0';
-      canvas.style.left = '0';
-      canvas.style.width = '100%';
-      canvas.style.height = '100%';
-      canvas.style.zIndex = '0';
-      canvas.style.pointerEvents = 'none';
-      canvas.style.opacity = '0';
-      canvas.style.transition = 'opacity 0.5s ease-in-out';
-      mainContainer.prepend(canvas);
-      theme.animation.start(canvas);
-      setTimeout(() => {
-        window.dispatchEvent(new Event('resize'));
-        canvas.style.opacity = '1';
-      }, 100);
-    }
   }
 
   let resolvedBase = theme.base;
