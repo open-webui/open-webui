@@ -371,6 +371,7 @@ async def ldap_auth(request: Request, response: Response, form_data: LdapForm):
                         email=email,
                         password=str(uuid.uuid4()),
                         name=cn,
+                        username=email.split('@')[0],  # Use email prefix as username
                         role=role,
                     )
 
@@ -477,7 +478,7 @@ async def signin(request: Request, response: Response, form_data: SigninForm):
             await signup(
                 request,
                 response,
-                SignupForm(email=email, password=str(uuid.uuid4()), name=name),
+                SignupForm(email=email, username=email.split('@')[0], password=str(uuid.uuid4()), name=name),
             )
 
         user = Auths.authenticate_user_by_email(email)
@@ -503,12 +504,12 @@ async def signin(request: Request, response: Response, form_data: SigninForm):
             await signup(
                 request,
                 response,
-                SignupForm(email=admin_email, password=admin_password, name="User"),
+                SignupForm(email=admin_email, username="admin", password=admin_password, name="User"),
             )
 
             user = Auths.authenticate_user(admin_email.lower(), admin_password)
     else:
-        user = Auths.authenticate_user(form_data.email.lower(), form_data.password)
+        user = Auths.authenticate_user_by_username(form_data.username.lower(), form_data.password)
 
     if user:
 
@@ -588,6 +589,9 @@ async def signup(request: Request, response: Response, form_data: SignupForm):
 
     if Users.get_user_by_email(form_data.email.lower()):
         raise HTTPException(400, detail=ERROR_MESSAGES.EMAIL_TAKEN)
+    
+    if Users.get_user_by_username(form_data.username.lower()):
+        raise HTTPException(400, detail="Username is already taken")
 
     try:
         role = "admin" if not has_users else request.app.state.config.DEFAULT_USER_ROLE
@@ -604,6 +608,7 @@ async def signup(request: Request, response: Response, form_data: SignupForm):
             form_data.email.lower(),
             hashed,
             form_data.name,
+            form_data.username.lower(),
             form_data.profile_image_url,
             role,
         )
@@ -753,6 +758,9 @@ async def add_user(form_data: AddUserForm, user=Depends(get_admin_user)):
 
     if Users.get_user_by_email(form_data.email.lower()):
         raise HTTPException(400, detail=ERROR_MESSAGES.EMAIL_TAKEN)
+    
+    if Users.get_user_by_username(form_data.username.lower()):
+        raise HTTPException(400, detail="Username is already taken")
 
     try:
         hashed = get_password_hash(form_data.password)
@@ -760,6 +768,7 @@ async def add_user(form_data: AddUserForm, user=Depends(get_admin_user)):
             form_data.email.lower(),
             hashed,
             form_data.name,
+            form_data.username.lower(),
             form_data.profile_image_url,
             form_data.role,
         )

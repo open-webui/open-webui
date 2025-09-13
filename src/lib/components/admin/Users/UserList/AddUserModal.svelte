@@ -23,6 +23,7 @@
 
 	let _user = {
 		name: '',
+		username: '',
 		email: '',
 		password: '',
 		role: 'user'
@@ -31,6 +32,7 @@
 	$: if (show) {
 		_user = {
 			name: '',
+			username: '',
 			email: '',
 			password: '',
 			role: 'user'
@@ -49,6 +51,7 @@
 			const res = await addUser(
 				localStorage.token,
 				_user.name,
+				_user.username,
 				_user.email,
 				_user.password,
 				_user.role,
@@ -201,6 +204,21 @@
 										type="text"
 										bind:value={_user.name}
 										placeholder={$i18n.t('Enter Your Full Name')}
+										autocomplete="off"
+										required
+									/>
+								</div>
+							</div>
+
+							<div class="flex flex-col w-full mt-1">
+								<div class=" mb-1 text-xs text-gray-500">{$i18n.t('Username')}</div>
+
+								<div class="flex-1">
+									<input
+										class="w-full text-sm bg-transparent disabled:text-gray-500 dark:disabled:text-gray-500 outline-hidden"
+										type="text"
+										bind:value={_user.username}
+										placeholder={$i18n.t('Enter Your Username')}
 										autocomplete="off"
 										required
 									/>
