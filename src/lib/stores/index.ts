@@ -253,6 +253,9 @@ type Config = {
 		enable_web_search?: boolean;
 		enable_google_drive_integration: boolean;
 		enable_onedrive_integration: boolean;
+		enable_onedrive_type?: {
+			type?: 'personal' | 'work-school' | '';
+		};
 		enable_image_generation: boolean;
 		enable_admin_export: boolean;
 		enable_admin_chat_access: boolean;

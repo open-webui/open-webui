@@ -376,6 +376,7 @@
 							sideOffset={$mobile ? 5 : 0}
 							alignOffset={$mobile ? 0 : -8}
 						>
+						{#if $config?.features?.enable_onedrive_type === '' || $config?.features?.enable_onedrive_type === 'personal'}
 							<DropdownMenu.Item
 								class="flex gap-2 items-center px-3 py-1.5 text-sm cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 rounded-xl"
 								on:click={() => {
@@ -384,6 +385,9 @@
 							>
 								<div class="line-clamp-1">{$i18n.t('Microsoft OneDrive (personal)')}</div>
 							</DropdownMenu.Item>
+						{/if}
+						
+						{#if $config?.features?.enable_onedrive_type === '' || $config?.features?.enable_onedrive_type === 'work-school'}
 							<DropdownMenu.Item
 								class="flex gap-2 items-center px-3 py-1.5 text-sm cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 rounded-xl"
 								on:click={() => {
@@ -395,6 +399,7 @@
 									<div class="text-xs text-gray-500">{$i18n.t('Includes SharePoint')}</div>
 								</div>
 							</DropdownMenu.Item>
+						{/if}
 						</DropdownMenu.SubContent>
 					</DropdownMenu.Sub>
 				{/if}
