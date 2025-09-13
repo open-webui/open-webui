@@ -154,55 +154,42 @@
   const handleVariablesInput = (event) => {
     variablesText = event.detail;
     showVariables = !!variablesText;
-    const updatedTheme = { ...themeCopy, variables: cssToObject(variablesText) };
-    dispatch('update', updatedTheme);
+    themeCopy.variables = cssToObject(variablesText);
+    dispatch('update', { ...themeCopy });
   };
 
   const handleCssInput = (event) => {
     cssText = event.detail;
     showCss = !!cssText;
-    const updatedTheme = { ...themeCopy, css: cssText };
-    dispatch('update', updatedTheme);
+    themeCopy.css = cssText;
+    dispatch('update', { ...themeCopy });
   };
 
   const handleAnimationScriptInput = (event) => {
     animationScriptText = event.detail;
     showAnimationScript = !!animationScriptText;
-    const updatedTheme = { ...themeCopy, animationScript: animationScriptText };
-    dispatch('update', updatedTheme);
+    themeCopy.animationScript = animationScriptText;
+    dispatch('update', { ...themeCopy });
   };
 
   const handleManualJsonInput = (event) => {
     themeJsonText = event.detail;
     try {
-      const updatedTheme = JSON.parse(themeJsonText);
-      dispatch('update', updatedTheme);
+      themeCopy = JSON.parse(themeJsonText);
+      dispatch('update', themeCopy);
     } catch (e) {
       // Do not dispatch update if JSON is invalid
     }
   };
 
   const handleBaseThemeChange = () => {
-    let currentVariables;
-    if (manualEditMode) {
-      try {
-        currentVariables = JSON.parse(themeJsonText).variables;
-      } catch (e) {
-        // If JSON is invalid, use the last known good variables from themeCopy
-        currentVariables = themeCopy.variables;
-      }
-    } else {
-      currentVariables = cssToObject(variablesText);
-    }
-
-    const updatedTheme = { ...themeCopy, variables: currentVariables };
-    dispatch('update', updatedTheme);
+    // themeCopy.base is updated by bind:value
+    dispatch('update', { ...themeCopy });
   };
 
   const handleCodeMirrorThemeChange = () => {
-    const updatedTheme = { ...themeCopy };
-    dispatch('update', updatedTheme);
-    codeMirrorTheme.set(updatedTheme.codeMirrorTheme);
+    // themeCopy.codeMirrorTheme is updated by bind:value
+    dispatch('update', { ...themeCopy });
   };
 
   const handleTsParticleConfigInput = (event) => {
@@ -212,12 +199,12 @@
       tsParticleConfigText.trim() !== '{}' &&
       tsParticleConfigText.trim() !== 'null';
     try {
-      const updatedTheme = { ...themeCopy, tsparticlesConfig: JSON.parse(tsParticleConfigText) };
-      dispatch('update', updatedTheme);
+      themeCopy.tsparticlesConfig = JSON.parse(tsParticleConfigText);
+      dispatch('update', { ...themeCopy });
     } catch (e) {
       if (tsParticleConfigText.trim() === '') {
-        const updatedTheme = { ...themeCopy, tsparticlesConfig: undefined };
-        dispatch('update', updatedTheme);
+        themeCopy.tsparticlesConfig = undefined;
+        dispatch('update', { ...themeCopy });
       }
     }
   };
