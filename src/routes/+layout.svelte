@@ -561,14 +561,6 @@
 		// Call visibility change handler initially to set state on load
 		handleVisibilityChange();
 
-		const unsubscribeTheme = theme.subscribe(async (value) => {
-			if (value) {
-				await tick();
-				setTimeout(async () => {
-					await applyTheme(value);
-				}, 100);
-			}
-		});
 		theme.set(localStorage.theme ?? 'system');
 
 		// Check for community theme updates
