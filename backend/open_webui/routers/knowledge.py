@@ -1,26 +1,33 @@
 from typing import List, Optional
 from pydantic import BaseModel
 from fastapi import APIRouter, Depends, HTTPException, status, Request, Query
+from fastapi.concurrency import run_in_threadpool
+from langchain_core.documents import Document
 import logging
+from asyncio import sleep
 
 from open_webui.models.knowledge import (
     Knowledges,
+    KnowledgeCountResponse,
     KnowledgeForm,
     KnowledgeResponse,
     KnowledgeUserResponse,
 )
 from open_webui.models.files import Files, FileModel, FileMetadataResponse
+from open_webui.models.utils import ReindexForm
 from open_webui.retrieval.vector.factory import VECTOR_DB_CLIENT
 from open_webui.routers.retrieval import (
     process_file,
     ProcessFileForm,
     process_files_batch,
     BatchProcessFilesForm,
+    save_docs_to_vector_db
 )
+from open_webui.socket.main import REINDEX_STATE
 from open_webui.storage.provider import Storage
 
 from open_webui.constants import ERROR_MESSAGES
-from open_webui.utils.auth import get_verified_user
+from open_webui.utils.auth import get_admin_user, get_verified_user
 from open_webui.utils.access_control import has_access, has_permission
 
 
@@ -135,6 +142,21 @@ async def get_knowledge_list(user=Depends(get_verified_user)):
 
 
 ############################
+# countKnowledgeBases
+############################
+
+
+@router.get("/count", response_model=Optional[KnowledgeCountResponse])
+async def count_knowledges(user=Depends(get_admin_user)):
+    count = 0
+    try:
+        count = Knowledges.get_knowledge_bases_count()
+    except Exception as e:
+        log.error(f"Failed to get knowledge bases count.")
+    return count
+
+
+############################
 # CreateNewKnowledge
 ############################
 
@@ -180,75 +202,128 @@ async def create_new_knowledge(
 
 
 @router.post("/reindex", response_model=bool)
-async def reindex_knowledge_files(request: Request, user=Depends(get_verified_user)):
-    if user.role != "admin":
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail=ERROR_MESSAGES.UNAUTHORIZED,
-        )
+async def reindex_knowledge_files(
+    request: Request,
+    form_data: ReindexForm,
+    user=Depends(get_admin_user)):
+    # if reindexing is already running, don't start again
+    if REINDEX_STATE.get("knowledge", {}).get("status", "idle") != "idle":
+        return False
 
-    knowledge_bases = Knowledges.get_knowledge_bases()
+    if REINDEX_STATE.get("manual_stop", False) == True:
+        REINDEX_STATE["knowledge"]["status"] = "stopped"
+        return False
 
-    log.info(f"Starting reindexing for {len(knowledge_bases)} knowledge bases")
+    REINDEX_STATE["knowledge"]["status"] = (
+        "running"  # marking as started, before the first knowledge is done
+    )
+
+    batch_size = form_data.batch_size
+    knowledge_bases_count = Knowledges.get_knowledge_bases_count().count
+
+    log.info(f"Starting reindexing for {knowledge_bases_count} knowledge bases.")
 
     deleted_knowledge_bases = []
+    for offset in range(0, knowledge_bases_count, batch_size):
+        knowledge_bases_batch = Knowledges.get_knowledge_bases_paginated(
+            limit=batch_size, offset=offset
+        )
+        if len(knowledge_bases_batch) == 0:
+            break
 
-    for knowledge_base in knowledge_bases:
-        # -- Robust error handling for missing or invalid data
-        if not knowledge_base.data or not isinstance(knowledge_base.data, dict):
-            log.warning(
-                f"Knowledge base {knowledge_base.id} has no data or invalid data ({knowledge_base.data!r}). Deleting."
-            )
+        for i, knowledge_base in enumerate(knowledge_bases_batch, start=1):
+            # stop reindexing if user manually halted it
+            if REINDEX_STATE.get("manual_stop", False) == True:
+                REINDEX_STATE["knowledge"]["status"] = "stopped"
+                return False
             try:
-                Knowledges.delete_knowledge_by_id(id=knowledge_base.id)
-                deleted_knowledge_bases.append(knowledge_base.id)
-            except Exception as e:
-                log.error(
-                    f"Failed to delete invalid knowledge base {knowledge_base.id}: {e}"
-                )
-            continue
-
-        try:
-            file_ids = knowledge_base.data.get("file_ids", [])
-            files = Files.get_files_by_ids(file_ids)
-            try:
-                if VECTOR_DB_CLIENT.has_collection(collection_name=knowledge_base.id):
-                    VECTOR_DB_CLIENT.delete_collection(
-                        collection_name=knowledge_base.id
-                    )
-            except Exception as e:
-                log.error(f"Error deleting collection {knowledge_base.id}: {str(e)}")
-                continue  # Skip, don't raise
-
-            failed_files = []
-            for file in files:
                 try:
-                    process_file(
-                        request,
-                        ProcessFileForm(
-                            file_id=file.id, collection_name=knowledge_base.id
-                        ),
-                        user=user,
-                    )
+                    if VECTOR_DB_CLIENT.has_collection(
+                        collection_name=knowledge_base.id
+                    ):
+                        VECTOR_DB_CLIENT.delete_collection(
+                            collection_name=knowledge_base.id
+                        )
                 except Exception as e:
                     log.error(
-                        f"Error processing file {file.filename} (ID: {file.id}): {str(e)}"
+                        f"Error deleting collection {knowledge_base.id}: {str(e)}"
                     )
-                    failed_files.append({"file_id": file.id, "error": str(e)})
-                    continue
 
-        except Exception as e:
-            log.error(f"Error processing knowledge base {knowledge_base.id}: {str(e)}")
-            # Don't raise, just continue
-            continue
+                failed_files = []
+                file_ids = (getattr(knowledge_base, "data", None) or {}).get("file_ids", [])
+                # iterate over a batch of files for each knowledge to
+                # not load all files at once for very large knowledges
+                for j in range(0, len(file_ids), batch_size):
+                    file_ids_batch = file_ids[j:j + batch_size]
+                    files = Files.get_files_by_ids(file_ids_batch)
+                    
 
-        if failed_files:
-            log.warning(
-                f"Failed to process {len(failed_files)} files in knowledge base {knowledge_base.id}"
-            )
-            for failed in failed_files:
-                log.warning(f"File ID: {failed['file_id']}, Error: {failed['error']}")
+                    for file in files:
+                        if form_data.process_from_disk:
+                            try:
+                                await run_in_threadpool(
+                                    process_file,
+                                    request,
+                                    ProcessFileForm(
+                                        file_id=file.id, collection_name=knowledge_base.id
+                                    ),
+                                    user=user,
+                                )
+                            except Exception as e:
+                                log.error(
+                                    f"Error processing file {file.filename} (ID: {file.id}): {str(e)}"
+                                )
+                                failed_files.append({"file_id": file.id, "error": str(e)})
+                                continue
+                        else:
+                            text_content = file.data.get("content", "")
 
+                            docs: List[Document] = [
+                                Document(
+                                    page_content=text_content.replace("<br/>", "\n"),
+                                    metadata={
+                                        **file.meta,
+                                        "name": file.filename,
+                                        "created_by": file.user_id,
+                                        "file_id": file.id,
+                                        "source": file.filename,
+                                    },
+                                )
+                            ]
+                            await run_in_threadpool(
+                                save_docs_to_vector_db,
+                                request,
+                                docs=docs,
+                                collection_name=knowledge_base.id,
+                                metadata={
+                                    "file_id": file.id,
+                                    "name": file.filename,
+                                    "hash": file.hash,
+                                },
+                                add=True,
+                                user=user,
+                            )
+
+            except Exception as e:
+                log.error(
+                    f"Error processing knowledge base {knowledge_base.id}: {str(e)}"
+                )
+                # Don't raise, just continue
+                continue
+
+            REINDEX_STATE["knowledge"]["progress"] = int((i + offset) / knowledge_bases_count * 100)
+            await sleep(0.1)  # this line un-blocks the API for the GET progress bar call
+            if failed_files:
+                log.warning(
+                    f"Failed to process {len(failed_files)} files in knowledge base {knowledge_base.id}"
+                )
+                for failed in failed_files:
+                    log.warning(
+                        f"File ID: {failed['file_id']}, Error: {failed['error']}"
+                    )
+
+    REINDEX_STATE["knowledge"]["progress"] = 100
+    REINDEX_STATE["knowledge"]["status"] = "done"
     log.info(
         f"Reindexing completed. Deleted {len(deleted_knowledge_bases)} invalid knowledge bases: {deleted_knowledge_bases}"
     )
