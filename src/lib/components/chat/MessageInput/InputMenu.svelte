@@ -3,21 +3,22 @@
 	import { flyAndScale } from '$lib/utils/transitions';
 	import { getContext, onMount, tick } from 'svelte';
 
-	import { config, user, tools as _tools, mobile } from '$lib/stores';
+	import { config, user, tools as _tools, mobile, knowledge, chats } from '$lib/stores';
 	import { createPicker } from '$lib/utils/google-drive-picker';
 
 	import { getTools } from '$lib/apis/tools';
 
 	import Dropdown from '$lib/components/common/Dropdown.svelte';
 	import Tooltip from '$lib/components/common/Tooltip.svelte';
-	import DocumentArrowUpSolid from '$lib/components/icons/DocumentArrowUpSolid.svelte';
-	import Switch from '$lib/components/common/Switch.svelte';
-	import GlobeAltSolid from '$lib/components/icons/GlobeAltSolid.svelte';
-	import WrenchSolid from '$lib/components/icons/WrenchSolid.svelte';
-	import CameraSolid from '$lib/components/icons/CameraSolid.svelte';
-	import PhotoSolid from '$lib/components/icons/PhotoSolid.svelte';
-	import CommandLineSolid from '$lib/components/icons/CommandLineSolid.svelte';
-	import Spinner from '$lib/components/common/Spinner.svelte';
+	import DocumentArrowUp from '$lib/components/icons/DocumentArrowUp.svelte';
+	import Camera from '$lib/components/icons/Camera.svelte';
+	import Note from '$lib/components/icons/Note.svelte';
+	import Clip from '$lib/components/icons/Clip.svelte';
+	import ChatBubbleOval from '$lib/components/icons/ChatBubbleOval.svelte';
+	import Refresh from '$lib/components/icons/Refresh.svelte';
+	import Agile from '$lib/components/icons/Agile.svelte';
+	import ClockRotateRight from '$lib/components/icons/ClockRotateRight.svelte';
+	import Database from '$lib/components/icons/Database.svelte';
 
 	const i18n = getContext('i18n');
 
@@ -35,33 +36,12 @@
 
 	export let onClose: Function;
 
-	let tools = null;
 	let show = false;
-	let showAllTools = false;
-
-	$: if (show) {
-		init();
-	}
 
 	let fileUploadEnabled = true;
 	$: fileUploadEnabled =
 		fileUploadCapableModels.length === selectedModels.length &&
 		($user?.role === 'admin' || $user?.permissions?.chat?.file_upload);
-
-	const init = async () => {
-		await _tools.set(await getTools(localStorage.token));
-		if ($_tools) {
-			tools = $_tools.reduce((a, tool, i, arr) => {
-				a[tool.id] = {
-					name: tool.name,
-					description: tool.meta.description,
-					enabled: selectedToolIds.includes(tool.id)
-				};
-				return a;
-			}, {});
-			selectedToolIds = selectedToolIds.filter((id) => $_tools?.some((tool) => tool.id === id));
-		}
-	};
 
 	const detectMobile = () => {
 		const userAgent = navigator.userAgent || navigator.vendor || window.opera;
@@ -101,86 +81,36 @@
 
 	<div slot="content">
 		<DropdownMenu.Content
-			class="w-full max-w-[240px] rounded-xl px-1 py-1 border border-gray-300/30 dark:border-gray-700/50 z-50 bg-white dark:bg-gray-850 dark:text-white shadow-sm"
-			sideOffset={10}
-			alignOffset={-8}
-			side="top"
+			class="w-full max-w-[200px] rounded-2xl px-1 py-1  border border-gray-100  dark:border-gray-800 z-50 bg-white dark:bg-gray-850 dark:text-white shadow-lg transition"
+			sideOffset={4}
+			alignOffset={-6}
+			side="bottom"
 			align="start"
 			transition={flyAndScale}
 		>
-			{#if tools}
-				{#if Object.keys(tools).length > 0}
-					<div class="{showAllTools ? ' max-h-96' : 'max-h-28'} overflow-y-auto scrollbar-thin">
-						{#each Object.keys(tools) as toolId}
-							<button
-								class="flex w-full justify-between gap-2 items-center px-3 py-2 text-sm font-medium cursor-pointer rounded-xl"
-								on:click={() => {
-									tools[toolId].enabled = !tools[toolId].enabled;
-								}}
-							>
-								<div class="flex-1 truncate">
-									<Tooltip
-										content={tools[toolId]?.description ?? ''}
-										placement="top-start"
-										className="flex flex-1 gap-2 items-center"
-									>
-										<div class="shrink-0">
-											<WrenchSolid />
-										</div>
+			<Tooltip
+				content={fileUploadCapableModels.length !== selectedModels.length
+					? $i18n.t('Model(s) do not support file upload')
+					: !fileUploadEnabled
+						? $i18n.t('You do not have permission to upload files.')
+						: ''}
+				className="w-full"
+			>
+				<DropdownMenu.Item
+					class="flex gap-2 items-center px-3 py-1.5 text-sm cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 rounded-xl {!fileUploadEnabled
+						? 'opacity-50'
+						: ''}"
+					on:click={() => {
+						if (fileUploadEnabled) {
+							uploadFilesHandler();
+						}
+					}}
+				>
+					<Clip />
 
-										<div class=" truncate">{tools[toolId].name}</div>
-									</Tooltip>
-								</div>
-
-								<div class=" shrink-0">
-									<Switch
-										state={tools[toolId].enabled}
-										on:change={async (e) => {
-											const state = e.detail;
-											await tick();
-											if (state) {
-												selectedToolIds = [...selectedToolIds, toolId];
-											} else {
-												selectedToolIds = selectedToolIds.filter((id) => id !== toolId);
-											}
-										}}
-									/>
-								</div>
-							</button>
-						{/each}
-					</div>
-					{#if Object.keys(tools).length > 3}
-						<button
-							class="flex w-full justify-center items-center text-sm font-medium cursor-pointer rounded-lg hover:bg-gray-50 dark:hover:bg-gray-800"
-							on:click={() => {
-								showAllTools = !showAllTools;
-							}}
-							title={showAllTools ? $i18n.t('Show Less') : $i18n.t('Show All')}
-						>
-							<svg
-								xmlns="http://www.w3.org/2000/svg"
-								fill="none"
-								viewBox="0 0 24 24"
-								stroke-width="2.5"
-								stroke="currentColor"
-								class="size-3 transition-transform duration-200 {showAllTools
-									? 'rotate-180'
-									: ''} text-gray-300 dark:text-gray-600"
-							>
-								<path stroke-linecap="round" stroke-linejoin="round" d="m19.5 8.25-7.5 7.5-7.5-7.5"
-								></path>
-							</svg>
-						</button>
-					{/if}
-					<hr class="border-black/5 dark:border-white/5 my-1" />
-				{/if}
-			{:else}
-				<div class="py-4">
-					<Spinner />
-				</div>
-
-				<hr class="border-black/5 dark:border-white/5 my-1" />
-			{/if}
+					<div class="line-clamp-1">{$i18n.t('Upload Files')}</div>
+				</DropdownMenu.Item>
+			</Tooltip>
 
 			<Tooltip
 				content={fileUploadCapableModels.length !== selectedModels.length
@@ -191,7 +121,7 @@
 				className="w-full"
 			>
 				<DropdownMenu.Item
-					class="flex gap-2 items-center px-3 py-2 text-sm  font-medium cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800  rounded-xl {!fileUploadEnabled
+					class="flex gap-2 items-center px-3 py-1.5 text-sm  cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800  rounded-xl {!fileUploadEnabled
 						? 'opacity-50'
 						: ''}"
 					on:click={() => {
@@ -208,10 +138,43 @@
 						}
 					}}
 				>
-					<CameraSolid />
+					<Camera />
 					<div class=" line-clamp-1">{$i18n.t('Capture')}</div>
 				</DropdownMenu.Item>
 			</Tooltip>
+
+			{#if $config?.features?.enable_notes ?? false}
+				<Tooltip
+					content={fileUploadCapableModels.length !== selectedModels.length
+						? $i18n.t('Model(s) do not support file upload')
+						: !fileUploadEnabled
+							? $i18n.t('You do not have permission to upload files.')
+							: ''}
+					className="w-full"
+				>
+					<DropdownMenu.Item
+						class="flex gap-2 items-center px-3 py-1.5 text-sm  cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800  rounded-xl {!fileUploadEnabled
+							? 'opacity-50'
+							: ''}"
+						on:click={() => {
+							if (fileUploadEnabled) {
+								if (!detectMobile()) {
+									screenCaptureHandler();
+								} else {
+									const cameraInputElement = document.getElementById('camera-input');
+
+									if (cameraInputElement) {
+										cameraInputElement.click();
+									}
+								}
+							}
+						}}
+					>
+						<Note />
+						<div class=" line-clamp-1">{$i18n.t('Attach Notes')}</div>
+					</DropdownMenu.Item>
+				</Tooltip>
+			{/if}
 
 			<Tooltip
 				content={fileUploadCapableModels.length !== selectedModels.length
@@ -222,24 +185,65 @@
 				className="w-full"
 			>
 				<DropdownMenu.Item
-					class="flex gap-2 items-center px-3 py-2 text-sm font-medium cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 rounded-xl {!fileUploadEnabled
+					class="flex gap-2 items-center px-3 py-1.5 text-sm  cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800  rounded-xl {!fileUploadEnabled
 						? 'opacity-50'
 						: ''}"
 					on:click={() => {
 						if (fileUploadEnabled) {
-							uploadFilesHandler();
+							if (!detectMobile()) {
+								screenCaptureHandler();
+							} else {
+								const cameraInputElement = document.getElementById('camera-input');
+
+								if (cameraInputElement) {
+									cameraInputElement.click();
+								}
+							}
 						}
 					}}
 				>
-					<DocumentArrowUpSolid />
-					<div class="line-clamp-1">{$i18n.t('Upload Files')}</div>
+					<Database />
+					<div class=" line-clamp-1">{$i18n.t('Attach Knowledge')}</div>
 				</DropdownMenu.Item>
 			</Tooltip>
+
+			{#if ($chats ?? []).length > 0}
+				<Tooltip
+					content={fileUploadCapableModels.length !== selectedModels.length
+						? $i18n.t('Model(s) do not support file upload')
+						: !fileUploadEnabled
+							? $i18n.t('You do not have permission to upload files.')
+							: ''}
+					className="w-full"
+				>
+					<DropdownMenu.Item
+						class="flex gap-2 items-center px-3 py-1.5 text-sm  cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800  rounded-xl {!fileUploadEnabled
+							? 'opacity-50'
+							: ''}"
+						on:click={() => {
+							if (fileUploadEnabled) {
+								if (!detectMobile()) {
+									screenCaptureHandler();
+								} else {
+									const cameraInputElement = document.getElementById('camera-input');
+
+									if (cameraInputElement) {
+										cameraInputElement.click();
+									}
+								}
+							}
+						}}
+					>
+						<ClockRotateRight />
+						<div class=" line-clamp-1">{$i18n.t('Reference Chats')}</div>
+					</DropdownMenu.Item>
+				</Tooltip>
+			{/if}
 
 			{#if fileUploadEnabled}
 				{#if $config?.features?.enable_google_drive_integration}
 					<DropdownMenu.Item
-						class="flex gap-2 items-center px-3 py-2 text-sm font-medium cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 rounded-xl"
+						class="flex gap-2 items-center px-3 py-1.5 text-sm cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 rounded-xl"
 						on:click={() => {
 							uploadGoogleDriveHandler();
 						}}
@@ -277,7 +281,7 @@
 				{#if $config?.features?.enable_onedrive_integration}
 					<DropdownMenu.Sub>
 						<DropdownMenu.SubTrigger
-							class="flex gap-2 items-center px-3 py-2 text-sm font-medium cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 rounded-xl w-full"
+							class="flex gap-2 items-center px-3 py-1.5 text-sm cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 rounded-xl w-full"
 						>
 							<svg
 								xmlns="http://www.w3.org/2000/svg"
@@ -367,13 +371,13 @@
 							<div class="line-clamp-1">{$i18n.t('Microsoft OneDrive')}</div>
 						</DropdownMenu.SubTrigger>
 						<DropdownMenu.SubContent
-							class="w-[calc(100vw-2rem)] max-w-[280px] rounded-xl px-1 py-1 border border-gray-300/30 dark:border-gray-700/50 z-50 bg-white dark:bg-gray-850 dark:text-white shadow-sm"
+							class="w-[calc(100vw-2rem)] max-w-[280px] rounded-xl px-1 py-1 border border-gray-100  dark:border-gray-800 z-50 bg-white dark:bg-gray-850 dark:text-white shadow-sm"
 							side={$mobile ? 'bottom' : 'right'}
 							sideOffset={$mobile ? 5 : 0}
 							alignOffset={$mobile ? 0 : -8}
 						>
 							<DropdownMenu.Item
-								class="flex gap-2 items-center px-3 py-2 text-sm font-medium cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 rounded-xl"
+								class="flex gap-2 items-center px-3 py-1.5 text-sm cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 rounded-xl"
 								on:click={() => {
 									uploadOneDriveHandler('personal');
 								}}
@@ -381,7 +385,7 @@
 								<div class="line-clamp-1">{$i18n.t('Microsoft OneDrive (personal)')}</div>
 							</DropdownMenu.Item>
 							<DropdownMenu.Item
-								class="flex gap-2 items-center px-3 py-2 text-sm font-medium cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 rounded-xl"
+								class="flex gap-2 items-center px-3 py-1.5 text-sm cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 rounded-xl"
 								on:click={() => {
 									uploadOneDriveHandler('organizations');
 								}}

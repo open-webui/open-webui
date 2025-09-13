@@ -37,6 +37,7 @@ class Function(Base):
 class FunctionMeta(BaseModel):
     description: Optional[str] = None
     manifest: Optional[dict] = {}
+    model_config = ConfigDict(extra="allow")
 
 
 class FunctionModel(BaseModel):
@@ -258,6 +259,29 @@ class FunctionsTable:
                 db.refresh(function)
                 return self.get_function_by_id(id)
             except Exception:
+                return None
+
+    def update_function_metadata_by_id(
+        self, id: str, metadata: dict
+    ) -> Optional[FunctionModel]:
+        with get_db() as db:
+            try:
+                function = db.get(Function, id)
+
+                if function:
+                    if function.meta:
+                        function.meta = {**function.meta, **metadata}
+                    else:
+                        function.meta = metadata
+
+                    function.updated_at = int(time.time())
+                    db.commit()
+                    db.refresh(function)
+                    return self.get_function_by_id(id)
+                else:
+                    return None
+            except Exception as e:
+                log.exception(f"Error updating function metadata by id {id}: {e}")
                 return None
 
     def get_user_valves_by_id_and_user_id(

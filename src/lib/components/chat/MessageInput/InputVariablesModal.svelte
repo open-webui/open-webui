@@ -85,7 +85,7 @@
 												{variable}
 
 												{#if variables[variable]?.required ?? true}
-													<span class=" text-gray-500">*required</span>
+													<span class=" text-gray-500">*{$i18n.t('required')}</span>
 												{/if}
 											</div>
 										</div>

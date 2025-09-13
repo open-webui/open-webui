@@ -56,18 +56,11 @@ dependencies = [
 
     "fake-useragent==2.2.0",
     "chromadb==1.0.20",
-    "pymilvus==2.5.0",
-    "qdrant-client==1.14.3",
     "opensearch-py==2.8.0",
-    "playwright==1.49.1",
-    "elasticsearch==9.1.0",
-    "pinecone==6.0.2",
-    "oracledb==3.2.0",
-
+    
     "transformers",
     "sentence-transformers==4.1.0",
     "accelerate",
-    "colbert-ai==0.2.21",
     "pyarrow==20.0.0",
     "einops==0.8.1",
 
@@ -154,6 +147,15 @@ all = [
     "docker~=7.1.0",
     "pytest~=8.3.2",
     "pytest-docker~=3.1.1",
+    "playwright==1.49.1",
+    "elasticsearch==9.1.0",
+
+    "qdrant-client==1.14.3",
+    "pymilvus==2.5.0",
+    "pinecone==6.0.2",
+    "oracledb==3.2.0",
+
+    "colbert-ai==0.2.21",
 ]
 
 [project.scripts]

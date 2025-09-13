@@ -634,7 +634,12 @@
 							: 'invisible group-hover:visible transition text-gray-400'}"
 					>
 						<Tooltip content={dayjs(message.timestamp * 1000).format('LLLL')}>
-							<span class="line-clamp-1">{formatDate(message.timestamp * 1000)}</span>
+							<span class="line-clamp-1"
+								>{$i18n.t(formatDate(message.timestamp * 1000), {
+									LOCALIZED_TIME: dayjs(message.timestamp * 1000).format('LT'),
+									LOCALIZED_DATE: dayjs(message.timestamp * 1000).format('L')
+								})}</span
+							>
 						</Tooltip>
 					</div>
 				{/if}

@@ -47,7 +47,6 @@
 	export let history;
 	export let selectedModels;
 	export let showModelSelector = true;
-	export let showBanners = true;
 
 	export let onSaveTempChat: () => {};
 	export let archiveChatHandler: (id: string) => void;
@@ -282,30 +281,28 @@
 						/>
 					{/if}
 
-					{#if showBanners}
-						{#each $banners.filter((b) => ![...JSON.parse(localStorage.getItem('dismissedBannerIds') ?? '[]'), ...closedBannerIds].includes(b.id)) as banner (banner.id)}
-							<Banner
-								{banner}
-								on:dismiss={(e) => {
-									const bannerId = e.detail;
+					{#each $banners.filter((b) => ![...JSON.parse(localStorage.getItem('dismissedBannerIds') ?? '[]'), ...closedBannerIds].includes(b.id)) as banner (banner.id)}
+						<Banner
+							{banner}
+							on:dismiss={(e) => {
+								const bannerId = e.detail;
 
-									if (banner.dismissible) {
-										localStorage.setItem(
-											'dismissedBannerIds',
-											JSON.stringify(
-												[
-													bannerId,
-													...JSON.parse(localStorage.getItem('dismissedBannerIds') ?? '[]')
-												].filter((id) => $banners.find((b) => b.id === id))
-											)
-										);
-									} else {
-										closedBannerIds = [...closedBannerIds, bannerId];
-									}
-								}}
-							/>
-						{/each}
-					{/if}
+								if (banner.dismissible) {
+									localStorage.setItem(
+										'dismissedBannerIds',
+										JSON.stringify(
+											[
+												bannerId,
+												...JSON.parse(localStorage.getItem('dismissedBannerIds') ?? '[]')
+											].filter((id) => $banners.find((b) => b.id === id))
+										)
+									);
+								} else {
+									closedBannerIds = [...closedBannerIds, bannerId];
+								}
+							}}
+						/>
+					{/each}
 				</div>
 			</div>
 		{/if}
