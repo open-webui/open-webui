@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { toast } from 'svelte-sonner';
-	import { onMount, tick, getContext, onDestroy } from 'svelte';
+	import { onMount, tick, getContext } from 'svelte';
 	import { openDB, deleteDB } from 'idb';
 	import fileSaver from 'file-saver';
 	const { saveAs } = fileSaver;
@@ -49,8 +49,7 @@
 	import UpdateInfoToast from '$lib/components/layout/UpdateInfoToast.svelte';
 	import Spinner from '$lib/components/common/Spinner.svelte';
 	import Particles from '$lib/components/common/Particles.svelte';
-	import { liveThemeStore, applyTheme } from '$lib/theme';
-	import { theme } from '$lib/stores';
+	import { liveThemeStore } from '$lib/theme';
 
 	const i18n = getContext('i18n');
 
@@ -262,15 +261,6 @@
 		}
 
 		loaded = true;
-
-		const unsubscribeTheme = theme.subscribe(async (value) => {
-			if (value) {
-				await tick();
-				await applyTheme(value);
-			}
-		});
-
-		onDestroy(unsubscribeTheme);
 	});
 
 	const checkForVersionUpdates = async () => {
