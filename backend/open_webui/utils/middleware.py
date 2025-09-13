@@ -2042,21 +2042,21 @@ async def process_chat_response(
                                                     },
                                                 }
                                             )
-                                        usage = data.get("usage", {})
+                                            continue
+                                    usage = data.get("usage", {})
+                                    if usage:
                                         usage.update(
                                             data.get("timings", {})
                                         )  # llama.cpp
 
-                                        if usage:
-                                            await event_emitter(
-                                                {
-                                                    "type": "chat:completion",
-                                                    "data": {
-                                                        "usage": usage,
-                                                    },
-                                                }
-                                            )
-                                        continue
+                                        await event_emitter(
+                                            {
+                                                "type": "chat:completion",
+                                                "data": {
+                                                    "usage": usage,
+                                                },
+                                            }
+                                        )
 
                                     delta = choices[0].get("delta", {})
                                     delta_tool_calls = delta.get("tool_calls", None)
