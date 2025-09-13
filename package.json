@@ -1,6 +1,6 @@
 {
 	"name": "open-webui",
-	"version": "0.6.26",
+	"version": "0.6.29",
 	"private": true,
 	"scripts": {
 		"dev": "npm run pyodide:fetch && vite dev --host",
@@ -85,6 +85,7 @@
 		"@tiptap/starter-kit": "^3.0.7",
 		"@tsparticles/svelte": "^3.1.1",
 		"@uiw/codemirror-themes-all": "^4.25.1",
+		"@tiptap/suggestion": "^3.4.2",
 		"@xyflow/svelte": "^0.1.19",
 		"async": "^3.2.5",
 		"bits-ui": "^0.21.15",

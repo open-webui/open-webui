@@ -151,6 +151,18 @@ async def create_new_knowledge(
             detail=ERROR_MESSAGES.UNAUTHORIZED,
         )
 
+    # Check if user can share publicly
+    if (
+        user.role != "admin"
+        and form_data.access_control == None
+        and not has_permission(
+            user.id,
+            "sharing.public_knowledge",
+            request.app.state.config.USER_PERMISSIONS,
+        )
+    ):
+        form_data.access_control = {}
+
     knowledge = Knowledges.insert_new_knowledge(user.id, form_data)
 
     if knowledge:
@@ -285,6 +297,7 @@ async def get_knowledge_by_id(id: str, user=Depends(get_verified_user)):
 
 @router.post("/{id}/update", response_model=Optional[KnowledgeFilesResponse])
 async def update_knowledge_by_id(
+    request: Request,
     id: str,
     form_data: KnowledgeForm,
     user=Depends(get_verified_user),
@@ -306,10 +319,22 @@ async def update_knowledge_by_id(
             detail=ERROR_MESSAGES.ACCESS_PROHIBITED,
         )
 
+    # Check if user can share publicly
+    if (
+        user.role != "admin"
+        and form_data.access_control == None
+        and not has_permission(
+            user.id,
+            "sharing.public_knowledge",
+            request.app.state.config.USER_PERMISSIONS,
+        )
+    ):
+        form_data.access_control = {}
+
     knowledge = Knowledges.update_knowledge_by_id(id=id, form_data=form_data)
     if knowledge:
         file_ids = knowledge.data.get("file_ids", []) if knowledge.data else []
-        files = Files.get_files_by_ids(file_ids)
+        files = Files.get_file_metadatas_by_ids(file_ids)
 
         return KnowledgeFilesResponse(
             **knowledge.model_dump(),
