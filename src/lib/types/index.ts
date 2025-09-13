@@ -31,7 +31,6 @@ export interface Theme {
     direction: number;
     intensity: number;
   };
-  particleConfig?: any;
   tsparticlesConfig?: any;
   animationScript?: string;
   animation?: {

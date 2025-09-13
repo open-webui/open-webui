@@ -9,89 +9,6 @@ export const currentThemeStore = writable<Theme | undefined>(undefined);
 export const liveThemeStore = writable<Theme | undefined>(undefined);
 export const communityThemes = writable<Map<string, Theme>>(new Map());
 
-declare global {
-  interface Window {
-    particlesJS: any;
-    pJSDom: any[];
-  }
-}
-
-const initParticlesJS = (config: any) => {
-  let retries = 0;
-  const maxRetries = 10;
-  const interval = 200; // ms
-
-  const tryInit = () => {
-    if (typeof window.particlesJS !== 'undefined') {
-      window.particlesJS('particles-js', config);
-    } else if (retries < maxRetries) {
-      retries++;
-      setTimeout(tryInit, interval);
-    } else {
-      console.error('particles.js failed to load after multiple retries.');
-    }
-  };
-
-  tryInit();
-};
-
-const startParticlesJS = (mainContainer: HTMLElement, theme: any) => {
-  const particlesDiv = document.createElement('div');
-  particlesDiv.id = 'particles-js';
-  particlesDiv.style.position = 'absolute';
-  particlesDiv.style.top = '0';
-  particlesDiv.style.left = '0';
-  particlesDiv.style.width = '100%';
-  particlesDiv.style.height = '100%';
-  particlesDiv.style.zIndex = '0';
-  particlesDiv.style.pointerEvents = 'none';
-  particlesDiv.style.opacity = '0';
-  particlesDiv.style.transition = 'opacity 0.5s ease-in-out';
-  mainContainer.prepend(particlesDiv);
-
-  // Deep copy the theme object to avoid modifying the original
-  const themeCopy = JSON.parse(JSON.stringify(theme));
-
-  // Handle 8-digit hex colors with alpha channel
-  if (
-    themeCopy.particles?.color?.value &&
-    typeof themeCopy.particles.color.value === 'string' &&
-    themeCopy.particles.color.value.length === 9 &&
-    themeCopy.particles.color.value.startsWith('#')
-  ) {
-    const hexColor = themeCopy.particles.color.value;
-    const alpha = parseInt(hexColor.slice(7, 9), 16) / 255;
-    themeCopy.particles.color.value = hexColor.slice(0, 7);
-    if (themeCopy.particles.opacity) {
-      themeCopy.particles.opacity.value = alpha;
-    } else {
-      themeCopy.particles.opacity = { value: alpha };
-    }
-  }
-
-  themeCopy.interactivity = {
-    ...themeCopy.interactivity,
-    events: {
-      ...themeCopy.interactivity?.events,
-      onclick: {
-        ...themeCopy.interactivity?.events?.onclick,
-        enable: false
-      }
-    }
-  };
-
-  initParticlesJS(themeCopy);
-};
-
-const stopParticlesJS = () => {
-  if (window.pJSDom && window.pJSDom.length > 0) {
-    window.pJSDom[0].pJS.fn.vendors.destroypJS();
-    window.pJSDom = [];
-  }
-  const particlesDiv = document.getElementById('particles-js');
-  if (particlesDiv) particlesDiv.remove();
-};
-
 let currentTheme: Theme | undefined;
 let currentStylesheet: HTMLStyleElement | undefined;
 let currentResizeObserver: ResizeObserver | undefined;
@@ -107,9 +24,6 @@ const cleanupTheme = () => {
       currentTheme.animation.stop();
       const canvas = document.getElementById(`${currentTheme.id}-canvas`);
       if (canvas) canvas.remove();
-    }
-    if (currentTheme.particleConfig) {
-      stopParticlesJS();
     }
     if (currentStylesheet) {
       currentStylesheet.remove();
@@ -288,14 +202,7 @@ const _applyThemeStyles = (theme: Theme) => {
 
   if (mainContainer) {
     mainContainer.classList.add(`${theme.id}-bg`);
-    if (theme.particleConfig && Object.keys(theme.particleConfig).length > 0) {
-      startParticlesJS(mainContainer, theme.particleConfig);
-      setTimeout(() => {
-        window.dispatchEvent(new Event('resize'));
-        const particlesDiv = document.getElementById('particles-js');
-        if (particlesDiv) particlesDiv.style.opacity = '1';
-      }, 100);
-    } else if (theme.animationScript) {
+    if (theme.animationScript) {
       const canvas = document.createElement('canvas');
       canvas.id = `${theme.id}-canvas`;
       canvas.style.position = 'absolute';
@@ -425,6 +332,9 @@ const _applyThemeStyles = (theme: Theme) => {
 
 export const applyTheme = async (themeInput: string | Theme, isLiveUpdate = false) => {
   cleanupTheme();
+
+  // Reset codemirror theme to default
+  codeMirrorTheme.set('one-dark');
 
   let theme: Theme | undefined;
   if (typeof themeInput === 'string') {

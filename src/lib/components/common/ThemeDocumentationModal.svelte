@@ -30,7 +30,6 @@
 			intensity: 100,
 			colors: ['#ff0000', '#0000ff']
 		},
-		particleConfig: {},
 		tsparticlesConfig: {},
 		animationScript: '',
 		css: '/* Custom CSS rules go here */',
@@ -87,17 +86,9 @@
 							<strong>animationScript:</strong> Custom Javascript for canvas-based animations.
 						</li>
 						<li>
-							<strong>particleConfig:</strong> Configuration for legacy
-							<a
-								href="https://github.com/VincentGarreau/particles.js/"
-								target="_blank"
-								class="text-blue-500 hover:underline">Particles.js</a
-							> animations.
-						</li>
-						<li>
 							<strong>tsparticlesConfig:</strong> Configuration for modern
 							<a
-								href="https://particles.js.org"
+								href="https://tsparticles.dev"
 								target="_blank"
 								class="text-blue-500 hover:underline">tsParticles</a
 							> animations.
@@ -116,16 +107,9 @@
 					<ul class="mt-2 list-disc list-inside">
 						<li>
 							<a
-								href="https://particles.js.org/samples/index.html"
+								href="https://tsparticles.dev/samples"
 								target="_blank"
 								class="text-blue-500 hover:underline">tsParticles Official Editor & Samples</a
-							>
-						</li>
-						<li>
-							<a
-								href="https://vincentgarreau.com/particles.js/"
-								target="_blank"
-								class="text-blue-500 hover:underline">Legacy particles.js Demos & Configs</a
 							>
 						</li>
 					</ul>

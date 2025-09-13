@@ -77,32 +77,6 @@
   });
 
   const processAndAddTheme = (theme: any, source:string = '') => {
-    // Handle particles.js themes
-    if (theme.particles && !theme.id) {
-      // First, check for duplicates among existing particle themes
-      for (const existingTheme of $communityThemes.values()) {
-        if (existingTheme.tsparticlesConfig) {
-          // Compare the raw particle config
-          if (JSON.stringify(existingTheme.tsparticlesConfig) === JSON.stringify(theme)) {
-            toast.error($i18n.t('This exact theme is already installed.'));
-            return;
-          }
-        }
-      }
-
-      // If not a duplicate, create the new theme object
-      const tsparticlesConfig = { ...theme };
-      theme = {
-        id: crypto.randomUUID(),
-        name: `tsParticles Theme ${$communityThemes.size + 1}`,
-        author: 'Community',
-        version: '1.0.0',
-        base: 'dark',
-        tsparticlesConfig: tsparticlesConfig,
-        emoji: '✨'
-      };
-    }
-
     // Check for duplicates
     for (const existingTheme of $communityThemes.values()) {
       if (

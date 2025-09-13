@@ -26,7 +26,6 @@
   let variablesText: string;
   let cssText: string;
   let animationScriptText: string;
-  let particleConfigText: string;
   let tsParticleConfigText: string;
   let manualEditMode = false;
   let themeJsonText = '';
@@ -34,7 +33,6 @@
   let showVariables = false;
   let showCss = false;
   let showAnimationScript = false;
-  let showParticleConfig = false;
   let showTsParticleConfig = false;
   let showDocumentation = false;
 
@@ -89,16 +87,9 @@
 
       originalCodeMirrorTheme = themeCopy.codeMirrorTheme ?? $codeMirrorTheme;
 
-      if (!isEditing) {
-        themeCopy.particleConfig = undefined;
-      }
-
       variablesText = objectToCss(themeCopy.variables);
       cssText = themeCopy.css ?? '';
       animationScriptText = themeCopy.animationScript ?? '';
-      particleConfigText = themeCopy.particleConfig
-        ? JSON.stringify(themeCopy.particleConfig, null, 2)
-        : '';
       tsParticleConfigText = themeCopy.tsparticlesConfig
         ? JSON.stringify(themeCopy.tsparticlesConfig, null, 2)
         : '';
@@ -107,8 +98,6 @@
       showVariables = !!variablesText;
       showCss = !!cssText;
       showAnimationScript = !!animationScriptText;
-      showParticleConfig =
-        !!themeCopy.particleConfig && Object.keys(themeCopy.particleConfig).length > 0;
       showTsParticleConfig =
         !!themeCopy.tsparticlesConfig && Object.keys(themeCopy.tsparticlesConfig).length > 0;
     }
@@ -118,14 +107,6 @@
     if (manualEditMode) {
       try {
         const newTheme = JSON.parse(themeJsonText);
-        const hasParticleConfig = newTheme.particleConfig && Object.keys(newTheme.particleConfig).length > 0;
-        const hasTsParticleConfig =
-          newTheme.tsparticlesConfig && Object.keys(newTheme.tsparticlesConfig).length > 0;
-
-        if (hasParticleConfig && hasTsParticleConfig) {
-          toast.error('A theme cannot have both a particles.js and a tsParticles configuration.');
-          return;
-        }
         themeCopy = newTheme;
       } catch (e) {
         toast.error('Invalid JSON format. Please fix it before saving.');
@@ -150,27 +131,10 @@
         return;
       }
 
-      const hasParticleConfig =
-        particleConfigText &&
-        particleConfigText.trim() !== '' &&
-        particleConfigText.trim() !== '{}' &&
-        particleConfigText.trim() !== 'null';
-      const hasTsParticleConfig =
-        tsParticleConfigText &&
-        tsParticleConfigText.trim() !== '' &&
-        tsParticleConfigText.trim() !== '{}' &&
-        tsParticleConfigText.trim() !== 'null';
-
-      if (hasParticleConfig && hasTsParticleConfig) {
-        toast.error('A theme cannot have both a particles.js and a tsParticles configuration.');
-        return;
-      }
-
       themeCopy.variables = cssToObject(variablesText);
       themeCopy.css = cssText;
       themeCopy.animationScript = animationScriptText;
       try {
-        themeCopy.particleConfig = particleConfigText ? JSON.parse(particleConfigText) : undefined;
         themeCopy.tsparticlesConfig = tsParticleConfigText
           ? JSON.parse(tsParticleConfigText)
           : undefined;
@@ -206,21 +170,6 @@
     showAnimationScript = !!animationScriptText;
     const updatedTheme = { ...themeCopy, animationScript: animationScriptText };
     dispatch('update', updatedTheme);
-  };
-
-  const handleParticleConfigInput = (event) => {
-    particleConfigText = event.detail;
-    showParticleConfig =
-      !!particleConfigText && particleConfigText.trim() !== '{}' && particleConfigText.trim() !== 'null';
-    try {
-      const updatedTheme = { ...themeCopy, particleConfig: JSON.parse(particleConfigText) };
-      dispatch('update', updatedTheme);
-    } catch (e) {
-      if (particleConfigText.trim() === '') {
-        const updatedTheme = { ...themeCopy, particleConfig: undefined };
-        dispatch('update', updatedTheme);
-      }
-    }
   };
 
   const handleManualJsonInput = (event) => {
@@ -282,9 +231,6 @@
         variablesText = objectToCss(themeCopy.variables);
         cssText = themeCopy.css ?? '';
         animationScriptText = themeCopy.animationScript ?? '';
-        particleConfigText = themeCopy.particleConfig
-          ? JSON.stringify(themeCopy.particleConfig, null, 2)
-          : '';
         tsParticleConfigText = themeCopy.tsparticlesConfig
           ? JSON.stringify(themeCopy.tsparticlesConfig, null, 2)
           : '';
@@ -298,7 +244,6 @@
       themeCopy.css = cssText;
       themeCopy.animationScript = animationScriptText;
       try {
-        themeCopy.particleConfig = particleConfigText ? JSON.parse(particleConfigText) : undefined;
         themeCopy.tsparticlesConfig = tsParticleConfigText
           ? JSON.parse(tsParticleConfigText)
           : undefined;
@@ -628,19 +573,6 @@
             {#if showAnimationScript}
               <div class="mt-1 h-48 rounded-lg overflow-hidden">
                 <CodeEditor id="theme-animation-script-editor" bind:value={animationScriptText} lang={'javascript'} on:input={handleAnimationScriptInput} />
-              </div>
-            {/if}
-          </div>
-          <div class="col-span-2">
-            <div class="flex items-center gap-2">
-              <Switch bind:state={showParticleConfig} />
-              <Tooltip content="Configuration object for particle.js animations.">
-                <label for="theme-particle-config" class="block text-sm font-medium text-gray-700 dark:text-gray-300">{$i18n.t('Particle.js Config')}</label>
-              </Tooltip>
-            </div>
-            {#if showParticleConfig}
-              <div class="mt-1 h-48 rounded-lg overflow-hidden">
-                <CodeEditor id="theme-particle-config-editor" bind:value={particleConfigText} lang={'json'} on:input={handleParticleConfigInput} />
               </div>
             {/if}
           </div>
