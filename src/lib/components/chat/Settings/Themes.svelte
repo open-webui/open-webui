@@ -228,7 +228,7 @@
     selectedTheme = {
       id: `theme-${crypto.randomUUID()}`,
       name: 'My Custom Theme',
-      author: 'Me',
+      author: $user?.name ?? 'Me',
       version: '1.0.0',
       targetWebUIVersion: WEBUI_VERSION,
       base: 'dark',
