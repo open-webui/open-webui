@@ -403,6 +403,9 @@ from open_webui.config import (
     QUERY_GENERATION_PROMPT_TEMPLATE,
     AUTOCOMPLETE_GENERATION_PROMPT_TEMPLATE,
     AUTOCOMPLETE_GENERATION_INPUT_MAX_LENGTH,
+    # Study Mode
+    ENABLE_STUDY_MODE,
+    STUDY_MODE_PROMPT,
     AppConfig,
     reset_config,
 )
@@ -1094,6 +1097,13 @@ app.state.faster_whisper_model = None
 app.state.speech_synthesiser = None
 app.state.speech_speaker_embeddings_dataset = None
 
+########################################
+#
+# STUDY MODE
+#
+########################################
+app.state.config.ENABLE_STUDY_MODE = ENABLE_STUDY_MODE
+app.state.config.STUDY_MODE_PROMPT = STUDY_MODE_PROMPT
 
 ########################################
 #
@@ -1730,6 +1740,7 @@ async def get_app_config(request: Request):
                     "enable_code_execution": app.state.config.ENABLE_CODE_EXECUTION,
                     "enable_code_interpreter": app.state.config.ENABLE_CODE_INTERPRETER,
                     "enable_image_generation": app.state.config.ENABLE_IMAGE_GENERATION,
+                    "enable_study_mode": app.state.config.ENABLE_STUDY_MODE,
                     "enable_autocomplete_generation": app.state.config.ENABLE_AUTOCOMPLETE_GENERATION,
                     "enable_community_sharing": app.state.config.ENABLE_COMMUNITY_SHARING,
                     "enable_message_rating": app.state.config.ENABLE_MESSAGE_RATING,
