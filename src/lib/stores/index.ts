@@ -260,6 +260,7 @@ type Config = {
 		enable_autocomplete_generation: boolean;
 		enable_direct_connections: boolean;
 		enable_version_update_check: boolean;
+		enable_study_mode: boolean;
 	};
 	oauth: {
 		providers: {

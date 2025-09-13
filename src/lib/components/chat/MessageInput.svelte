@@ -70,6 +70,7 @@
 	import InputVariablesModal from './MessageInput/InputVariablesModal.svelte';
 	import Voice from '../icons/Voice.svelte';
 	import { getSessionUser } from '$lib/apis/auths';
+	import GraduationCap from '../icons/GraduationCap.svelte';
 	const i18n = getContext('i18n');
 
 	export let onChange: Function = () => {};
@@ -99,6 +100,7 @@
 	export let imageGenerationEnabled = false;
 	export let webSearchEnabled = false;
 	export let codeInterpreterEnabled = false;
+	export let studyModeEnabled = false;
 
 	let showInputVariablesModal = false;
 	let inputVariablesModalCallback = (variableValues) => {};
@@ -530,6 +532,11 @@
 			codeInterpreterCapableModels.length &&
 		$config?.features?.enable_code_interpreter &&
 		($_user.role === 'admin' || $_user?.permissions?.features?.code_interpreter);
+
+	let showStudyModeButton = false;
+	$: showStudyModeButton = $config?.features?.enable_study_mode;
+
+	console.log($config);
 
 	const scrollToBottom = () => {
 		const element = document.getElementById('messages-container');
@@ -1852,6 +1859,31 @@
 															<span
 																class="hidden @xl:block whitespace-nowrap text-ellipsis leading-none normal-case pr-0.5"
 																>{$i18n.t('Code Interpreter')}</span
+															>
+														</button>
+													</Tooltip>
+												{/if}
+												{#if showStudyModeButton}
+													<Tooltip content={$i18n.t('Get educational step-by-step guidance')} placement="top">
+														<button
+															aria-label={studyModeEnabled
+																? $i18n.t('Disable Study Mode')
+																: $i18n.t('Enable Study Mode')}
+															aria-pressed={studyModeEnabled}
+															on:click|preventDefault={() =>
+																(studyModeEnabled = !studyModeEnabled)}
+															type="button"
+															class="px-2 @xl:px-2.5 py-2 flex gap-1.5 items-center text-sm transition-colors duration-300 max-w-full overflow-hidden hover:bg-gray-50 dark:hover:bg-gray-800 {studyModeEnabled
+																? ' text-sky-500 dark:text-sky-300 bg-sky-50 dark:bg-sky-200/5'
+																: 'bg-transparent text-gray-600 dark:text-gray-300 '} {($settings?.highContrastMode ??
+															false)
+																? 'm-1'
+																: 'focus:outline-hidden rounded-full'}"
+														>
+															<GraduationCap className="size-4" strokeWidth="1.75" />
+															<span
+																class="hidden @xl:block whitespace-nowrap text-ellipsis leading-none normal-case pr-0.5"
+																>{$i18n.t('Study Mode')}</span
 															>
 														</button>
 													</Tooltip>
