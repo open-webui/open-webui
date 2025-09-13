@@ -12,34 +12,46 @@ export const communityThemes = writable<Map<string, Theme>>(new Map());
 let currentTheme: Theme | undefined;
 let currentStylesheet: HTMLStyleElement | undefined;
 let currentResizeObserver: ResizeObserver | undefined;
+let currentAnimation: Theme['animation'] | undefined;
 
 const cleanupTheme = () => {
+  // Always try to stop any running animation
+  if (currentAnimation && typeof currentAnimation.stop === 'function') {
+    currentAnimation.stop();
+  }
+  currentAnimation = undefined;
+
+  // Always try to find and remove a theme canvas
+  const canvas = document.querySelector(`[id$='-canvas']`);
+  if (canvas) {
+    canvas.remove();
+  }
+
+  // Always try to disconnect an observer
+  if (currentResizeObserver) {
+    currentResizeObserver.disconnect();
+    currentResizeObserver = undefined;
+  }
+
+  // Remove old stylesheet
+  if (currentStylesheet) {
+    currentStylesheet.remove();
+    currentStylesheet = undefined;
+  }
+
+  // Cleanup main container styles
   if (currentTheme) {
-    // Cleanup animations and particles
-    if (currentResizeObserver) {
-      currentResizeObserver.disconnect();
-      currentResizeObserver = undefined;
-    }
-    if (currentTheme.animation && typeof currentTheme.animation.stop === 'function') {
-      currentTheme.animation.stop();
-      const canvas = document.getElementById(`${currentTheme.id}-canvas`);
-      if (canvas) canvas.remove();
-    }
-    if (currentStylesheet) {
-      currentStylesheet.remove();
-      currentStylesheet = undefined;
-    }
     const mainContainer = document.getElementById('main-container');
     if (mainContainer) {
       mainContainer.classList.remove(`${currentTheme.id}-bg`);
       mainContainer.style.backgroundImage = 'none';
     }
+  }
 
-    // Cleanup base class and CSS variables
-    document.documentElement.classList.remove('light', 'dark', 'oled-dark', 'her');
-    for (const variable of variables) {
-      document.documentElement.style.removeProperty(variable.name);
-    }
+  // Cleanup base class and CSS variables
+  document.documentElement.classList.remove('light', 'dark', 'oled-dark', 'her');
+  for (const variable of variables) {
+    document.documentElement.style.removeProperty(variable.name);
   }
 };
 
@@ -182,6 +194,13 @@ export const checkForThemeUpdates = async () => {
 };
 
 const _applyThemeStyles = (theme: Theme) => {
+  if (theme.css) {
+    currentStylesheet = document.createElement('style');
+    currentStylesheet.id = `${theme.id}-stylesheet`;
+    currentStylesheet.innerHTML = theme.css;
+    document.head.appendChild(currentStylesheet);
+  }
+
   onElementReady('#main-container', () => {
     const mainContainer = document.getElementById('main-container');
 
@@ -249,7 +268,7 @@ const _applyThemeStyles = (theme: Theme) => {
           });
           currentResizeObserver.observe(mainContainer);
 
-          theme.animation = {
+          currentAnimation = {
             start: () => {},
             stop: () => {
               worker.terminate();
@@ -280,7 +299,10 @@ const _applyThemeStyles = (theme: Theme) => {
         canvas.style.opacity = '0';
         canvas.style.transition = 'opacity 0.5s ease-in-out';
         mainContainer.prepend(canvas);
-        theme.animation.start(canvas);
+
+        currentAnimation = theme.animation;
+        currentAnimation.start(canvas);
+
         setTimeout(() => {
           window.dispatchEvent(new Event('resize'));
           canvas.style.opacity = '1';
@@ -288,13 +310,6 @@ const _applyThemeStyles = (theme: Theme) => {
       }
     }
   });
-
-  if (theme.css) {
-    currentStylesheet = document.createElement('style');
-    currentStylesheet.id = `${theme.id}-stylesheet`;
-    currentStylesheet.innerHTML = theme.css;
-    document.head.appendChild(currentStylesheet);
-  }
 
   let resolvedBase = theme.base;
   if (theme.id === 'system' || theme.base === 'system') {
