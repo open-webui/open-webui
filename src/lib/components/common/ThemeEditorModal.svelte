@@ -30,10 +30,6 @@
   let manualEditMode = false;
   let themeJsonText = '';
 
-  let showVariables = false;
-  let showCss = false;
-  let showAnimationScript = false;
-  let showTsParticleConfig = false;
   let showDocumentation = false;
 
   import variables from '$lib/themes/variables.json';
@@ -73,7 +69,7 @@
   onMount(() => {
     if (theme) {
       themeCopy = JSON.parse(JSON.stringify(theme));
-      
+
       if (!themeCopy.gradient) {
         themeCopy.gradient = {
           enabled: false,
@@ -95,11 +91,19 @@
         : '';
       themeJsonText = JSON.stringify(themeCopy, null, 2);
 
-      showVariables = !!variablesText;
-      showCss = !!cssText;
-      showAnimationScript = !!animationScriptText;
-      showTsParticleConfig =
-        !!themeCopy.tsparticlesConfig && Object.keys(themeCopy.tsparticlesConfig).length > 0;
+      if (!themeCopy.toggles) {
+        themeCopy.toggles = {
+          cssVariables: isEditing ? !!variablesText : true,
+          customCss: isEditing ? !!cssText : false,
+          animationScript: isEditing ? !!animationScriptText : false,
+          tsParticles: isEditing
+            ? !!tsParticleConfigText &&
+              tsParticleConfigText.trim() !== '{}' &&
+              tsParticleConfigText.trim() !== 'null'
+            : false,
+          gradient: isEditing ? themeCopy.gradient?.enabled ?? false : false
+        };
+      }
     }
   });
 
@@ -150,24 +154,21 @@
 
     dispatch('save', themeCopy);
   };
-  
+
   const handleVariablesInput = (event) => {
     variablesText = event.detail;
-    showVariables = !!variablesText;
     themeCopy.variables = cssToObject(variablesText);
     dispatch('update', { ...themeCopy });
   };
 
   const handleCssInput = (event) => {
     cssText = event.detail;
-    showCss = !!cssText;
     themeCopy.css = cssText;
     dispatch('update', { ...themeCopy });
   };
 
   const handleAnimationScriptInput = (event) => {
     animationScriptText = event.detail;
-    showAnimationScript = !!animationScriptText;
     themeCopy.animationScript = animationScriptText;
     dispatch('update', { ...themeCopy });
   };
@@ -194,10 +195,6 @@
 
   const handleTsParticleConfigInput = (event) => {
     tsParticleConfigText = event.detail;
-    showTsParticleConfig =
-      !!tsParticleConfigText &&
-      tsParticleConfigText.trim() !== '{}' &&
-      tsParticleConfigText.trim() !== 'null';
     try {
       themeCopy.tsparticlesConfig = JSON.parse(tsParticleConfigText);
       dispatch('update', { ...themeCopy });
@@ -234,11 +231,15 @@
           ? JSON.stringify(themeCopy.tsparticlesConfig, null, 2)
           : '';
 
-        showVariables = !!variablesText;
-        showCss = !!cssText;
-        showAnimationScript = !!animationScriptText;
-        showTsParticleConfig =
-          !!themeCopy.tsparticlesConfig && Object.keys(themeCopy.tsparticlesConfig).length > 0;
+        // Re-evaluate toggles based on content when switching from manual to form
+        themeCopy.toggles = {
+          cssVariables: !!variablesText,
+          customCss: !!cssText,
+          animationScript: !!animationScriptText,
+          tsParticles:
+            !!themeCopy.tsparticlesConfig && Object.keys(themeCopy.tsparticlesConfig).length > 0,
+          gradient: themeCopy.gradient?.enabled ?? false
+        };
       } catch (e) {
         toast.error('Invalid JSON format.');
         return; // Don't switch view if JSON is invalid
@@ -260,6 +261,10 @@
     }
     manualEditMode = !manualEditMode;
   };
+
+  $: if (themeCopy && themeCopy.toggles) {
+    themeCopy.gradient.enabled = themeCopy.toggles.gradient;
+  }
 
   const cancel = () => {
     codeMirrorTheme.set(originalCodeMirrorTheme);
@@ -518,12 +523,12 @@
           </div>
           <div class="col-span-2">
             <div class="flex items-center gap-2">
-              <Switch bind:state={showVariables} />
+              <Switch bind:state={themeCopy.toggles.cssVariables} on:change={() => dispatch('update', { ...themeCopy })} />
               <Tooltip content="Define custom CSS variables to be used in your theme. These are the core of the theming system.">
                 <label for="theme-variables" class="block text-sm font-medium text-gray-700 dark:text-gray-300">{$i18n.t('CSS Variables')}</label>
               </Tooltip>
             </div>
-            {#if showVariables}
+            {#if themeCopy.toggles.cssVariables}
               <div class="mt-1 h-48 rounded-lg overflow-hidden">
                 <CodeEditor id="theme-variables-editor" bind:value={variablesText} lang={'css'} on:input={handleVariablesInput} />
               </div>
@@ -557,12 +562,12 @@
           </div>
           <div class="col-span-2">
             <div class="flex items-center gap-2">
-              <Switch bind:state={showCss} />
+              <Switch bind:state={themeCopy.toggles.customCss} on:change={() => dispatch('update', { ...themeCopy })} />
               <Tooltip content="Add custom CSS rules to style the UI. This is for more advanced styling that can't be achieved with variables alone.">
                 <label for="theme-css" class="block text-sm font-medium text-gray-700 dark:text-gray-300">{$i18n.t('CSS')}</label>
               </Tooltip>
             </div>
-            {#if showCss}
+            {#if themeCopy.toggles.customCss}
               <div class="mt-1 h-48 rounded-lg overflow-hidden">
                 <CodeEditor id="theme-css-editor" bind:value={cssText} lang={'css'} on:input={handleCssInput} />
               </div>
@@ -570,12 +575,12 @@
           </div>
           <div class="col-span-2">
             <div class="flex items-center gap-2">
-              <Switch bind:state={showAnimationScript} />
+              <Switch bind:state={themeCopy.toggles.animationScript} on:change={() => dispatch('update', { ...themeCopy })} />
               <Tooltip content="Add custom Javascript to create animations. This is for advanced themes that use canvas or other dynamic elements.">
                 <label for="theme-animation-script" class="block text-sm font-medium text-gray-700 dark:text-gray-300">{$i18n.t('Animation Script')}</label>
               </Tooltip>
             </div>
-            {#if showAnimationScript}
+            {#if themeCopy.toggles.animationScript}
               <div class="mt-1 h-48 rounded-lg overflow-hidden">
                 <CodeEditor id="theme-animation-script-editor" bind:value={animationScriptText} lang={'javascript'} on:input={handleAnimationScriptInput} />
               </div>
@@ -583,12 +588,12 @@
           </div>
           <div class="col-span-2">
             <div class="flex items-center gap-2">
-              <Switch bind:state={showTsParticleConfig} />
+              <Switch bind:state={themeCopy.toggles.tsParticles} on:change={() => dispatch('update', { ...themeCopy })} />
               <Tooltip content="Configuration object for tsParticles animations.">
                 <label for="theme-tsparticle-config" class="block text-sm font-medium text-gray-700 dark:text-gray-300">{$i18n.t('tsParticles Config')}</label>
               </Tooltip>
             </div>
-            {#if showTsParticleConfig}
+            {#if themeCopy.toggles.tsParticles}
               <div class="mt-1 h-48 rounded-lg overflow-hidden">
                 <CodeEditor id="theme-tsparticle-config-editor" bind:value={tsParticleConfigText} lang={'json'} on:input={handleTsParticleConfigInput} />
               </div>
@@ -596,12 +601,12 @@
           </div>
           <div class="col-span-2">
             <div class="flex items-center gap-2">
-              <Switch bind:state={themeCopy.gradient.enabled} />
+              <Switch bind:state={themeCopy.toggles.gradient} on:change={() => dispatch('update', { ...themeCopy })} />
               <Tooltip content="Adds a gradient to the background of the chat.">
                 <label for="theme-gradient" class="block text-sm font-medium text-gray-700 dark:text-gray-300">{$i18n.t('Gradient Background')}</label>
               </Tooltip>
             </div>
-            {#if themeCopy.gradient.enabled}
+            {#if themeCopy.toggles.gradient}
             <div class="mt-1 max-w-md">
               <GradientPicker
                 gradient={themeCopy.gradient}

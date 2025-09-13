@@ -271,7 +271,14 @@
         acc[curr.name] = curr.defaultValue;
         return acc;
       }, {}),
-      css: ``
+      css: ``,
+      toggles: {
+        cssVariables: true,
+        customCss: false,
+        animationScript: false,
+        tsParticles: false,
+        gradient: false
+      }
     };
     showThemeEditor = true;
     applyTheme(selectedTheme, true);

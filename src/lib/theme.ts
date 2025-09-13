@@ -55,17 +55,28 @@ const cleanupTheme = () => {
   }
 };
 
+let onElementReadyInterval: NodeJS.Timeout | undefined = undefined;
+
 const onElementReady = (selector: string, callback: () => void) => {
+  if (onElementReadyInterval) {
+    clearInterval(onElementReadyInterval);
+  }
+
   const interval = setInterval(() => {
     const element = document.querySelector(selector);
     if (element) {
       clearInterval(interval);
+      onElementReadyInterval = undefined;
       callback();
     }
   }, 50);
+  onElementReadyInterval = interval;
 
   setTimeout(() => {
-    clearInterval(interval);
+    if (onElementReadyInterval === interval) {
+      clearInterval(interval);
+      onElementReadyInterval = undefined;
+    }
   }, 5000);
 };
 
@@ -194,7 +205,7 @@ export const checkForThemeUpdates = async () => {
 };
 
 const _applyThemeStyles = (theme: Theme) => {
-  if (theme.css) {
+  if (theme.css && (!theme.toggles || theme.toggles.customCss)) {
     currentStylesheet = document.createElement('style');
     currentStylesheet.id = `${theme.id}-stylesheet`;
     currentStylesheet.innerHTML = theme.css;
@@ -204,7 +215,13 @@ const _applyThemeStyles = (theme: Theme) => {
   onElementReady('#main-container', () => {
     const mainContainer = document.getElementById('main-container');
 
-    if (mainContainer && theme.gradient && theme.gradient.enabled && theme.gradient.colors.length > 0) {
+    if (
+      mainContainer &&
+      theme.gradient &&
+      (!theme.toggles || theme.toggles.gradient) &&
+      theme.gradient.enabled &&
+      theme.gradient.colors.length > 0
+    ) {
       const { colors, direction, intensity } = theme.gradient;
       const alpha = (intensity ?? 100) / 100;
       const rgbaColors = colors.map((hex) => {
@@ -229,7 +246,7 @@ const _applyThemeStyles = (theme: Theme) => {
 
     if (mainContainer) {
       mainContainer.classList.add(`${theme.id}-bg`);
-      if (theme.animationScript) {
+      if (theme.animationScript && (!theme.toggles || theme.toggles.animationScript)) {
         const canvas = document.createElement('canvas');
         canvas.id = `${theme.id}-canvas`;
         canvas.style.position = 'absolute';
@@ -286,7 +303,7 @@ const _applyThemeStyles = (theme: Theme) => {
           window.dispatchEvent(new Event('resize'));
           canvas.style.opacity = '1';
         }, 100);
-      } else if (theme.animation) {
+      } else if (theme.animation && typeof theme.animation.start === 'function') {
         const canvas = document.createElement('canvas');
         canvas.id = `${theme.id}-canvas`;
         canvas.style.position = 'absolute';
@@ -326,7 +343,7 @@ const _applyThemeStyles = (theme: Theme) => {
   }
 
   // Apply variables from current theme (override base)
-  if (theme.variables) {
+  if (theme.variables && (!theme.toggles || theme.toggles.cssVariables)) {
     for (const [key, value] of Object.entries(theme.variables)) {
       document.documentElement.style.setProperty(key, value);
     }
@@ -378,31 +395,35 @@ export const applyTheme = async (themeInput: string | Theme, isLiveUpdate = fals
     return;
   }
 
-  if (theme.tsparticlesConfig) {
-    theme.tsparticlesConfig.interactivity = {
-      ...theme.tsparticlesConfig.interactivity,
+  const themeToApply = { ...theme };
+
+  if (themeToApply.toggles && !themeToApply.toggles.tsParticles) {
+    themeToApply.tsparticlesConfig = undefined;
+  } else if (themeToApply.tsparticlesConfig) {
+    themeToApply.tsparticlesConfig.interactivity = {
+      ...themeToApply.tsparticlesConfig.interactivity,
       events: {
-        ...theme.tsparticlesConfig.interactivity?.events,
+        ...themeToApply.tsparticlesConfig.interactivity?.events,
         onClick: {
-          ...theme.tsparticlesConfig.interactivity?.events?.onClick,
-          enable: false,
-        },
-      },
+          ...themeToApply.tsparticlesConfig.interactivity?.events?.onClick,
+          enable: false
+        }
+      }
     };
   }
 
   // Update currentTheme for cleanup purposes, even on live updates
-  currentTheme = theme;
+  currentTheme = themeToApply;
   liveThemeStore.set(currentTheme);
 
   if (!isLiveUpdate) {
     currentThemeStore.set(currentTheme);
   }
 
-  _applyThemeStyles(theme);
+  _applyThemeStyles(themeToApply);
 
-  if (theme.codeMirrorTheme) {
-    codeMirrorTheme.set(theme.codeMirrorTheme);
+  if (themeToApply.codeMirrorTheme) {
+    codeMirrorTheme.set(themeToApply.codeMirrorTheme);
   }
 
   if (typeof window !== 'undefined' && window.applyTheme) {

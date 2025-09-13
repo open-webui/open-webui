@@ -40,4 +40,11 @@ export interface Theme {
   css?: string;
   sourceUrl?: string;
   codeMirrorTheme?: string;
+  toggles?: {
+    cssVariables?: boolean;
+    customCss?: boolean;
+    animationScript?: boolean;
+    tsParticles?: boolean;
+    gradient?: boolean;
+  };
 }
