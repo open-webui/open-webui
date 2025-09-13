@@ -131,6 +131,13 @@ export const AIAutocompletion = Extension.create({
 		return [
 			new Plugin({
 				key: new PluginKey('aiAutocompletion'),
+				view() {
+					return {
+						destroy() {
+							clearTimeout(debounceTimer);
+						}
+					};
+				},
 				props: {
 					handleKeyDown: (view, event) => {
 						const { state, dispatch } = view;

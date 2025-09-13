@@ -30,6 +30,11 @@
 
   const i18n = getContext('i18n');
 
+  const defaultVariables = variables.reduce((acc, curr) => {
+    acc[curr.name] = curr.defaultValue;
+    return acc;
+  }, {});
+
   let selectedThemeId = 'system';
   let themeUrl = '';
   let isLoading = false;
@@ -44,6 +49,41 @@
   let themeToImport: Theme | null = null;
   let sortOrder = 'default';
   let previousThemeId = '';
+
+  const getThemeToggles = (theme: Theme) => {
+    const toggles = [];
+
+    if (theme.toggles?.cssVariables && theme.variables && Object.keys(theme.variables).length > 0) {
+      const hasCustomVariables = Object.keys(theme.variables).some((key) => {
+        return defaultVariables[key] !== theme.variables[key];
+      });
+      if (hasCustomVariables) {
+        toggles.push('CSS Variables');
+      }
+    }
+    if (theme.toggles?.customCss && theme.css) {
+      toggles.push('Custom CSS');
+    }
+    if (theme.toggles?.animationScript && theme.animationScript) {
+      toggles.push('Animation Script');
+    }
+    if (theme.toggles?.tsParticles && theme.tsparticlesConfig && Object.keys(theme.tsparticlesConfig).length > 0) {
+      toggles.push('tsParticles');
+    }
+    if (theme.toggles?.gradient) {
+      toggles.push('Gradient Background');
+    }
+    if (theme.toggles?.systemBackgroundImage && theme.systemBackgroundImageUrl) {
+      toggles.push('System Background Image');
+    }
+    if (theme.toggles?.chatBackgroundImage && theme.chatBackgroundImageUrl) {
+      toggles.push('Chat Background Image');
+    }
+    if (toggles.length > 0) {
+      return `Active Toggles: ${toggles.join(', ')}`;
+    }
+    return '';
+  };
 
   $: allThemes = new Map([...$themes, ...$communityThemes]);
   $: sortedThemes = (() => {
@@ -237,7 +277,20 @@
         acc[curr.name] = curr.defaultValue;
         return acc;
       }, {}),
-      css: ``
+      css: ``,
+      systemBackgroundImageUrl: '',
+      systemBackgroundImageDarken: 75,
+      chatBackgroundImageUrl: '',
+      chatBackgroundImageDarken: 75,
+      toggles: {
+        cssVariables: true,
+        customCss: false,
+        animationScript: false,
+        tsParticles: false,
+        gradient: false,
+        systemBackgroundImage: false,
+        chatBackgroundImage: false
+      }
     };
     showThemeEditor = true;
     applyTheme(selectedTheme, true);
@@ -284,6 +337,10 @@
     if (isEditingTheme) {
       updateCommunityTheme(updatedTheme);
       toast.success($i18n.t('Theme "{{name}}" updated successfully!', { name: updatedTheme.name }));
+
+      if (updatedTheme.id === selectedThemeId) {
+        applyTheme(updatedTheme);
+      }
     } else {
       processAndAddTheme(updatedTheme);
       applyTheme(previousThemeId);
@@ -377,80 +434,88 @@
       <div class="grid grid-cols-2 gap-2 overflow-y-auto max-h-[17rem] min-h-[14.5rem] content-start">
         {#if filteredThemes.length}
           {#each filteredThemes as theme (theme.id)}
-            <button
-              class="flex items-center p-2 rounded-lg transition group"
-              class:bg-gray-100={selectedThemeId === theme.id}
-              class:dark:bg-gray-800={selectedThemeId === theme.id}
-              class:hover:bg-gray-100={selectedThemeId !== theme.id}
-              class:dark:hover:bg-gray-800={selectedThemeId !== theme.id}
-              on:click={() => themeChangeHandler(theme.id)}
+            {@const tooltipContent = $themes.has(theme.id) ? '' : getThemeToggles(theme)}
+            <Tooltip
+              content={tooltipContent}
+              placement="top"
+              disabled={!tooltipContent}
+              className={`w-full rounded-lg transition group ${
+                selectedThemeId === theme.id
+                  ? 'bg-gray-100 dark:bg-gray-800'
+                  : 'hover:bg-gray-100 dark:hover:bg-gray-800'
+              }`}
             >
-              <span class="text-xl mr-2">{theme.emoji}</span>
-              <div class="text-left overflow-hidden">
-                <p class="font-medium leading-tight truncate" title={theme.name}>{theme.name}</p>
-                {#if !$themes.has(theme.id)}
-                  <p class="text-xs text-gray-500 leading-tight truncate">
-                    {#if theme.version}v{theme.version}{/if}
-                    {$i18n.t('by {{author}}', { author: theme.author ?? 'Unknown' })}
-                  </p>
-                {/if}
-              </div>
-
-              {#if !$themes.has(theme.id)}
-                <div class="ml-auto items-center hidden group-hover:flex">
-                  <Tooltip content="Copy Theme" placement="top">
-                    <button
-                      class="p-1.5 text-gray-500 hover:text-gray-900 dark:hover:text-white transition rounded-full"
-                      on:click|stopPropagation={() => copyTheme(theme)}
-                      aria-label={$i18n.t('Copy theme')}
-                    >
-                      <Clipboard className="w-4 h-4" />
-                    </button>
-                  </Tooltip>
-                  <Tooltip content="Export Theme" placement="top">
-                    <button
-                      class="p-1.5 text-gray-500 hover:text-gray-900 dark:hover:text-white transition rounded-full"
-                      on:click|stopPropagation={() => exportTheme(theme)}
-                      aria-label={$i18n.t('Export theme')}
-                    >
-                      <ArrowUpTray className="w-4 h-4" />
-                    </button>
-                  </Tooltip>
-                  <Tooltip content="Edit Theme" placement="top">
-                    <button
-                      class="p-1.5 text-gray-500 hover:text-yellow-500 dark:hover:text-yellow-400 transition rounded-full"
-                      on:click|stopPropagation={() => openThemeEditor(theme)}
-                      aria-label={$i18n.t('Edit theme')}
-                    >
-                      <Pencil className="w-4 h-4" />
-                    </button>
-                  </Tooltip>
-                  <Tooltip content="Remove Theme" placement="top">
-                    <button
-                      class="p-1.5 text-gray-500 hover:text-red-500 dark:hover:text-red-400 transition rounded-full"
-                      on:click|stopPropagation={() => {
-                        themeToDeleteId = theme.id;
-                        showConfirmDialog = true;
-                      }}
-                      aria-label={$i18n.t('Remove theme')}
-                    >
-                      <svg
-                        xmlns="http://www.w3.org/2000/svg"
-                        viewBox="0 0 20 20"
-                        fill="currentColor"
-                        class="w-4 h-4"
-                      >
-                        <path
-                          fill-rule="evenodd"
-                          d="M8.75 1A2.75 2.75 0 006 3.75v.443c-.795.077-1.58.22-2.365.468a.75.75 0 10.23 1.482l.149-.022.841 10.518A2.75 2.75 0 007.596 19h4.807a2.75 2.75 0 002.742-2.53l.841-10.52.149.023a.75.75 0 00.23-1.482A41.03 41.03 0 0014 4.193v-.443A2.75 2.75 0 0011.25 1h-2.5zM10 4c.84 0 1.673.025 2.5.075V3.75c0-.69-.56-1.25-1.25-1.25h-2.5c-.69 0-1.25.56-1.25 1.25v.325C8.327 4.025 9.16 4 10 4zM8.58 7.72a.75.75 0 00-1.5.06l.3 7.5a.75.75 0 101.5-.06l-.3-7.5zm4.34.06a.75.75 0 10-1.5-.06l-.3 7.5a.75.75 0 101.5.06l.3-7.5z"
-                          clip-rule="evenodd"
-                        />
-                      </svg>
-                    </button>
-                  </Tooltip>
+              <button
+                class="flex items-center p-2 w-full text-left"
+                on:click={() => themeChangeHandler(theme.id)}
+              >
+                <span class="text-xl mr-2">{theme.emoji}</span>
+                <div class="text-left overflow-hidden">
+                  <p class="font-medium leading-tight truncate" title={theme.name}>{theme.name}</p>
+                  {#if !$themes.has(theme.id)}
+                    <p class="text-xs text-gray-500 leading-tight truncate">
+                      {#if theme.version}v{theme.version}{/if}
+                      {$i18n.t('by {{author}}', { author: theme.author ?? 'Unknown' })}
+                    </p>
+                  {/if}
                 </div>
-              {/if}
-            </button>
+
+                {#if !$themes.has(theme.id)}
+                  <div class="ml-auto items-center hidden group-hover:flex">
+                    <Tooltip content="Copy Theme" placement="top">
+                      <button
+                        class="p-1.5 text-gray-500 hover:text-gray-900 dark:hover:text-white transition rounded-full"
+                        on:click|stopPropagation={() => copyTheme(theme)}
+                        aria-label={$i18n.t('Copy theme')}
+                      >
+                        <Clipboard className="w-4 h-4" />
+                      </button>
+                    </Tooltip>
+                    <Tooltip content="Export Theme" placement="top">
+                      <button
+                        class="p-1.5 text-gray-500 hover:text-gray-900 dark:hover:text-white transition rounded-full"
+                        on:click|stopPropagation={() => exportTheme(theme)}
+                        aria-label={$i18n.t('Export theme')}
+                      >
+                        <ArrowUpTray className="w-4 h-4" />
+                      </button>
+                    </Tooltip>
+                    <Tooltip content="Edit Theme" placement="top">
+                      <button
+                        class="p-1.5 text-gray-500 hover:text-yellow-500 dark:hover:text-yellow-400 transition rounded-full"
+                        on:click|stopPropagation={() => openThemeEditor(theme)}
+                        aria-label={$i18n.t('Edit theme')}
+                      >
+                        <Pencil className="w-4 h-4" />
+                      </button>
+                    </Tooltip>
+                    <Tooltip content="Remove Theme" placement="top">
+                      <button
+                        class="p-1.5 text-gray-500 hover:text-red-500 dark:hover:text-red-400 transition rounded-full"
+                        on:click|stopPropagation={() => {
+                          themeToDeleteId = theme.id;
+                          showConfirmDialog = true;
+                        }}
+                        aria-label={$i18n.t('Remove theme')}
+                      >
+                        <svg
+                          xmlns="http://www.w3.org/2000/svg"
+                          viewBox="0 0 20 20"
+                          fill="currentColor"
+                          class="w-4 h-4"
+                        >
+                          <path
+                            fill-rule="evenodd"
+                            d="M8.75 1A2.75 2.75 0 006 3.75v.443c-.795.077-1.58.22-2.365.468a.75.75 0 10.23 1.482l.149-.022.841 10.518A2.75 2.75 0 007.596 19h4.807a2.75 2.75 0 002.742-2.53l.841-10.52.149.023a.75.75 0 00.23-1.482A41.03 41.03 0 0014 4.193v-.443A2.75 2.75 0 0011.25 1h-2.5zM10 4c.84 0 1.673.025 2.5.075V3.75c0-.69-.56-1.25-1.25-1.25h-2.5c-.69 0-1.25.56-1.25 1.25v.325C8.327 4.025 9.16 4 10 4zM8.58 7.72a.75.75 0 00-1.5.06l.3 7.5a.75.75 0 101.5-.06l-.3-7.5zm4.34.06a.75.75 0 10-1.5-.06l-.3 7.5a.75.75 0 101.5.06l.3-7.5z"
+                            clip-rule="evenodd"
+                          />
+                        </svg>
+                      </button>
+                    </Tooltip>
+                  </div>
+                {/if}
+              </button>
+            </Tooltip>
           {/each}
         {:else}
           <div class="col-span-2 text-center text-gray-500 mt-4">

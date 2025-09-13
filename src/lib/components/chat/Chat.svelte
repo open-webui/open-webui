@@ -39,7 +39,8 @@
 		toolServers,
 		functions,
 		selectedFolder,
-		pinnedChats
+		pinnedChats,
+		isChatPage
 	} from '$lib/stores';
 	import { currentThemeStore } from '$lib/theme';
 	import {
@@ -499,6 +500,7 @@
 
 	let pageSubscribe = null;
 	onMount(async () => {
+		isChatPage.set(true);
 		loading = true;
 		console.log('mounted');
 		window.addEventListener('message', onMessageHandler);
@@ -573,6 +575,7 @@
 	});
 
 	onDestroy(() => {
+		isChatPage.set(false);
 		pageSubscribe();
 		chatIdUnsubscriber?.();
 		window.removeEventListener('message', onMessageHandler);

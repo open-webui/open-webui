@@ -1,6 +1,7 @@
 import type { Theme } from '$lib/types';
 import { writable } from 'svelte/store';
 import { get } from 'svelte/store';
+import { page } from '$app/stores';
 import { theme as themeStore, codeMirrorTheme } from '$lib/stores';
 import variables from '$lib/themes/variables.json';
 import { WEBUI_VERSION } from '$lib/constants';
@@ -12,35 +13,77 @@ export const communityThemes = writable<Map<string, Theme>>(new Map());
 let currentTheme: Theme | undefined;
 let currentStylesheet: HTMLStyleElement | undefined;
 let currentResizeObserver: ResizeObserver | undefined;
+let currentAnimation: Theme['animation'] | undefined;
 
 const cleanupTheme = () => {
+  // Always try to stop any running animation
+  if (currentAnimation && typeof currentAnimation.stop === 'function') {
+    currentAnimation.stop();
+  }
+  currentAnimation = undefined;
+
+  // Always try to find and remove a theme canvas
+  const canvas = document.querySelector(`[id$='-canvas']`);
+  if (canvas) {
+    canvas.remove();
+  }
+
+  // Always try to disconnect an observer
+  if (currentResizeObserver) {
+    currentResizeObserver.disconnect();
+    currentResizeObserver = undefined;
+  }
+
+  // Remove old stylesheet
+  if (currentStylesheet) {
+    currentStylesheet.remove();
+    currentStylesheet = undefined;
+  }
+
+  // Cleanup main container styles
   if (currentTheme) {
-    // Cleanup animations and particles
-    if (currentResizeObserver) {
-      currentResizeObserver.disconnect();
-      currentResizeObserver = undefined;
-    }
-    if (currentTheme.animation && typeof currentTheme.animation.stop === 'function') {
-      currentTheme.animation.stop();
-      const canvas = document.getElementById(`${currentTheme.id}-canvas`);
-      if (canvas) canvas.remove();
-    }
-    if (currentStylesheet) {
-      currentStylesheet.remove();
-      currentStylesheet = undefined;
-    }
     const mainContainer = document.getElementById('main-container');
     if (mainContainer) {
       mainContainer.classList.remove(`${currentTheme.id}-bg`);
       mainContainer.style.backgroundImage = 'none';
-    }
 
-    // Cleanup base class and CSS variables
-    document.documentElement.classList.remove('light', 'dark', 'oled-dark', 'her');
-    for (const variable of variables) {
-      document.documentElement.style.removeProperty(variable.name);
+      const gradientLayer = document.getElementById('theme-gradient-layer');
+      if (gradientLayer) {
+        gradientLayer.remove();
+      }
     }
   }
+
+  // Cleanup base class and CSS variables
+  document.documentElement.classList.remove('light', 'dark', 'oled-dark', 'her');
+  for (const variable of variables) {
+    document.documentElement.style.removeProperty(variable.name);
+  }
+};
+
+let onElementReadyInterval: NodeJS.Timeout | undefined = undefined;
+
+const onElementReady = (selector: string, callback: () => void) => {
+  if (onElementReadyInterval) {
+    clearInterval(onElementReadyInterval);
+  }
+
+  const interval = setInterval(() => {
+    const element = document.querySelector(selector);
+    if (element) {
+      clearInterval(interval);
+      onElementReadyInterval = undefined;
+      callback();
+    }
+  }, 50);
+  onElementReadyInterval = interval;
+
+  setTimeout(() => {
+    if (onElementReadyInterval === interval) {
+      clearInterval(interval);
+      onElementReadyInterval = undefined;
+    }
+  }, 5000);
 };
 
 
@@ -168,117 +211,140 @@ export const checkForThemeUpdates = async () => {
 };
 
 const _applyThemeStyles = (theme: Theme) => {
-  const mainContainer = document.getElementById('main-container');
-
-  if (mainContainer && theme.gradient && theme.gradient.enabled && theme.gradient.colors.length > 0) {
-    const { colors, direction, intensity } = theme.gradient;
-    const alpha = (intensity ?? 100) / 100;
-    const rgbaColors = colors.map((hex) => {
-      if (/^#([A-Fa-f0-9]{3}){1,2}$/.test(hex)) {
-        let c = hex.substring(1).split('');
-        if (c.length === 3) {
-          c = [c[0], c[0], c[1], c[1], c[2], c[2]];
-        }
-        c = '0x' + c.join('');
-        const r = (c >> 16) & 255;
-        const g = (c >> 8) & 255;
-        const b = c & 255;
-        return `rgba(${r}, ${g}, ${b}, ${alpha})`;
-      }
-      return `rgba(0, 0, 0, ${alpha})`;
-    });
-    const gradientCss = `linear-gradient(${direction}deg, ${rgbaColors.join(', ')})`;
-    mainContainer.style.backgroundImage = gradientCss;
-  } else if (mainContainer) {
-    mainContainer.style.backgroundImage = 'none';
-  }
-
-  if (theme.css) {
+  console.log('Applying theme:', theme);
+  if (theme.css && (!theme.toggles || theme.toggles.customCss)) {
     currentStylesheet = document.createElement('style');
     currentStylesheet.id = `${theme.id}-stylesheet`;
     currentStylesheet.innerHTML = theme.css;
     document.head.appendChild(currentStylesheet);
   }
 
-  if (mainContainer) {
-    mainContainer.classList.add(`${theme.id}-bg`);
-    if (theme.animationScript) {
-      const canvas = document.createElement('canvas');
-      canvas.id = `${theme.id}-canvas`;
-      canvas.style.position = 'absolute';
-      canvas.style.top = '0';
-      canvas.style.left = '0';
-      canvas.style.width = '100%';
-      canvas.style.height = '100%';
-      canvas.style.zIndex = '0';
-      canvas.style.pointerEvents = 'none';
-      canvas.style.opacity = '0';
-      canvas.style.transition = 'opacity 0.5s ease-in-out';
-      mainContainer.prepend(canvas);
+  onElementReady('#main-container', () => {
+    const mainContainer = document.getElementById('main-container');
 
-      try {
-        const blob = new Blob([theme.animationScript], { type: 'application/javascript' });
-        const workerUrl = URL.createObjectURL(blob);
-        const worker = new Worker(workerUrl);
+    if (mainContainer) {
 
-        const offscreen = canvas.transferControlToOffscreen();
-
-        const rect = mainContainer.getBoundingClientRect();
-        worker.postMessage(
-          { type: 'init', canvas: offscreen, width: rect.width, height: rect.height },
-          [offscreen]
-        );
-
-        currentResizeObserver = new ResizeObserver((entries) => {
-          if (entries.length > 0) {
-            const entry = entries[0];
-            worker.postMessage({
-              type: 'resize',
-              width: entry.contentRect.width,
-              height: entry.contentRect.height
-            });
-          }
-        });
-        currentResizeObserver.observe(mainContainer);
-
-        theme.animation = {
-          start: () => {},
-          stop: () => {
-            worker.terminate();
-            URL.revokeObjectURL(workerUrl);
-            if (currentResizeObserver) {
-              currentResizeObserver.disconnect();
+      // Handle Gradient
+      if (
+        theme.gradient &&
+        (!theme.toggles || typeof theme.toggles.gradient === 'undefined' || theme.toggles.gradient) &&
+        theme.gradient.enabled &&
+        theme.gradient.colors.length > 0
+      ) {
+        const { colors, direction, intensity } = theme.gradient;
+        const alpha = (intensity ?? 100) / 100;
+        const rgbaColors = colors.map((hex) => {
+          if (/^#([A-Fa-f0-9]{3}){1,2}$/.test(hex)) {
+            let c = hex.substring(1).split('');
+            if (c.length === 3) {
+              c = [c[0], c[0], c[1], c[1], c[2], c[2]];
             }
+            c = '0x' + c.join('');
+            const r = (c >> 16) & 255;
+            const g = (c >> 8) & 255;
+            const b = c & 255;
+            return `rgba(${r}, ${g}, ${b}, ${alpha})`;
           }
-        };
-      } catch (e) {
-        console.error('Failed to start animation worker:', e);
+          return `rgba(0, 0, 0, ${alpha})`;
+        });
+        const gradientCss = `linear-gradient(${direction}deg, ${rgbaColors.join(', ')})`;
+
+        const gradientLayer = document.createElement('div');
+        gradientLayer.id = 'theme-gradient-layer';
+        gradientLayer.style.position = 'absolute';
+        gradientLayer.style.top = '0';
+        gradientLayer.style.left = '0';
+        gradientLayer.style.width = '100%';
+        gradientLayer.style.height = '100%';
+        gradientLayer.style.zIndex = '3';
+        gradientLayer.style.backgroundImage = gradientCss;
+        mainContainer.prepend(gradientLayer);
+      } else {
+        mainContainer.style.backgroundImage = 'none';
       }
 
-      setTimeout(() => {
-        window.dispatchEvent(new Event('resize'));
-        canvas.style.opacity = '1';
-      }, 100);
-    } else if (theme.animation) {
-      const canvas = document.createElement('canvas');
-      canvas.id = `${theme.id}-canvas`;
-      canvas.style.position = 'absolute';
-      canvas.style.top = '0';
-      canvas.style.left = '0';
-      canvas.style.width = '100%';
-      canvas.style.height = '100%';
-      canvas.style.zIndex = '0';
-      canvas.style.pointerEvents = 'none';
-      canvas.style.opacity = '0';
-      canvas.style.transition = 'opacity 0.5s ease-in-out';
-      mainContainer.prepend(canvas);
-      theme.animation.start(canvas);
-      setTimeout(() => {
-        window.dispatchEvent(new Event('resize'));
-        canvas.style.opacity = '1';
-      }, 100);
+      mainContainer.classList.add(`${theme.id}-bg`);
+      if (theme.animationScript && (!theme.toggles || theme.toggles.animationScript)) {
+        const canvas = document.createElement('canvas');
+        canvas.id = `${theme.id}-canvas`;
+        canvas.style.position = 'absolute';
+        canvas.style.top = '0';
+        canvas.style.left = '0';
+        canvas.style.width = '100%';
+        canvas.style.height = '100%';
+        canvas.style.zIndex = '0';
+        canvas.style.pointerEvents = 'none';
+        canvas.style.opacity = '0';
+        canvas.style.transition = 'opacity 0.5s ease-in-out';
+        mainContainer.prepend(canvas);
+
+        try {
+          const blob = new Blob([theme.animationScript], { type: 'application/javascript' });
+          const workerUrl = URL.createObjectURL(blob);
+          const worker = new Worker(workerUrl);
+
+          const offscreen = canvas.transferControlToOffscreen();
+
+          const rect = mainContainer.getBoundingClientRect();
+          worker.postMessage(
+            { type: 'init', canvas: offscreen, width: rect.width, height: rect.height },
+            [offscreen]
+          );
+
+          currentResizeObserver = new ResizeObserver((entries) => {
+            if (entries.length > 0) {
+              const entry = entries[0];
+              worker.postMessage({
+                type: 'resize',
+                width: entry.contentRect.width,
+                height: entry.contentRect.height
+              });
+            }
+          });
+          currentResizeObserver.observe(mainContainer);
+
+          currentAnimation = {
+            start: () => {},
+            stop: () => {
+              worker.terminate();
+              URL.revokeObjectURL(workerUrl);
+              if (currentResizeObserver) {
+                currentResizeObserver.disconnect();
+              }
+            }
+          };
+        } catch (e) {
+          console.error('Failed to start animation worker:', e);
+        }
+
+        setTimeout(() => {
+          window.dispatchEvent(new Event('resize'));
+          canvas.style.opacity = '1';
+        }, 100);
+      } else if (theme.animation && typeof theme.animation.start === 'function') {
+        const canvas = document.createElement('canvas');
+        canvas.id = `${theme.id}-canvas`;
+        canvas.style.position = 'absolute';
+        canvas.style.top = '0';
+        canvas.style.left = '0';
+        canvas.style.width = '100%';
+        canvas.style.height = '100%';
+        canvas.style.zIndex = '0';
+        canvas.style.pointerEvents = 'none';
+        canvas.style.opacity = '0';
+        canvas.style.transition = 'opacity 0.5s ease-in-out';
+        mainContainer.prepend(canvas);
+
+        currentAnimation = theme.animation;
+        currentAnimation.start(canvas);
+
+        setTimeout(() => {
+          window.dispatchEvent(new Event('resize'));
+          canvas.style.opacity = '1';
+        }, 100);
+      }
     }
-  }
+  });
 
   let resolvedBase = theme.base;
   if (theme.id === 'system' || theme.base === 'system') {
@@ -295,7 +361,7 @@ const _applyThemeStyles = (theme: Theme) => {
   }
 
   // Apply variables from current theme (override base)
-  if (theme.variables) {
+  if (theme.variables && (!theme.toggles || theme.toggles.cssVariables)) {
     for (const [key, value] of Object.entries(theme.variables)) {
       document.documentElement.style.setProperty(key, value);
     }
@@ -347,31 +413,35 @@ export const applyTheme = async (themeInput: string | Theme, isLiveUpdate = fals
     return;
   }
 
-  if (theme.tsparticlesConfig) {
-    theme.tsparticlesConfig.interactivity = {
-      ...theme.tsparticlesConfig.interactivity,
+  const themeToApply = { ...theme };
+
+  if (themeToApply.toggles && !themeToApply.toggles.tsParticles) {
+    themeToApply.tsparticlesConfig = undefined;
+  } else if (themeToApply.tsparticlesConfig) {
+    themeToApply.tsparticlesConfig.interactivity = {
+      ...themeToApply.tsparticlesConfig.interactivity,
       events: {
-        ...theme.tsparticlesConfig.interactivity?.events,
+        ...themeToApply.tsparticlesConfig.interactivity?.events,
         onClick: {
-          ...theme.tsparticlesConfig.interactivity?.events?.onClick,
-          enable: false,
-        },
-      },
+          ...themeToApply.tsparticlesConfig.interactivity?.events?.onClick,
+          enable: false
+        }
+      }
     };
   }
 
   // Update currentTheme for cleanup purposes, even on live updates
-  currentTheme = theme;
+  currentTheme = themeToApply;
   liveThemeStore.set(currentTheme);
 
   if (!isLiveUpdate) {
     currentThemeStore.set(currentTheme);
   }
 
-  _applyThemeStyles(theme);
+  _applyThemeStyles(themeToApply);
 
-  if (theme.codeMirrorTheme) {
-    codeMirrorTheme.set(theme.codeMirrorTheme);
+  if (themeToApply.codeMirrorTheme) {
+    codeMirrorTheme.set(themeToApply.codeMirrorTheme);
   }
 
   if (typeof window !== 'undefined' && window.applyTheme) {

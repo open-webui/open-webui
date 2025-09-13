@@ -646,6 +646,10 @@ body {
 	color: #eee;
 }
 
+.dark.oled-dark body {
+	background: #000;
+}
+
 .cm-color-swatch {
 	display: inline-block;
 	width: 1em;

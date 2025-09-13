@@ -79,10 +79,10 @@
 
 </script>
 
-<div class="space-y-4 p-4 bg-gray-100 dark:bg-gray-850 text-gray-900 dark:text-white rounded-lg">
+<div class="space-y-4">
   <div>
     <h3 class="text-lg font-medium mb-2">Colors</h3>
-    <div class="flex items-center space-x-2 p-2 bg-gray-200 dark:bg-gray-900 rounded-lg">
+    <div class="flex items-center justify-center space-x-2">
       {#each colors as color, i}
         <div
           class="relative group border-2 rounded-md p-1 cursor-pointer"
@@ -102,25 +102,25 @@
         </button>
       {/if}
     </div>
-    <div class="mt-4 p-2 bg-gray-200 dark:bg-gray-900 rounded-lg color-picker-wrapper">
+    <div class="mt-4 color-picker-wrapper flex justify-center">
       <ColorPicker bind:hex={colors[selectedColorIndex]} isDialog={false} />
     </div>
   </div>
 
   <div>
     <h3 class="text-lg font-medium mb-2">Controls</h3>
-    <div class="space-y-4 p-4 bg-gray-200 dark:bg-gray-900 rounded-lg">
+    <div class="space-y-4">
       <div class="flex items-center justify-between">
         <label for="direction" class="font-medium">Gradient Direction</label>
         <span class="text-gray-500 dark:text-gray-400">{direction}°</span>
       </div>
-      <input type="range" id="direction" min="0" max="360" bind:value={direction} class="w-full h-2 bg-gray-300 dark:bg-gray-700 rounded-lg appearance-none cursor-pointer" />
+      <input type="range" id="direction" min="0" max="360" bind:value={direction} class="w-full" />
 
       <div class="flex items-center justify-between">
         <label for="intensity" class="font-medium">Color Intensity</label>
         <span class="text-gray-500 dark:text-gray-400">{intensity}%</span>
       </div>
-      <input type="range" id="intensity" min="0" max="100" bind:value={intensity} class="w-full h-2 bg-gray-300 dark:bg-gray-700 rounded-lg appearance-none cursor-pointer" />
+      <input type="range" id="intensity" min="0" max="100" bind:value={intensity} class="w-full" />
     
       <div class="flex justify-end mt-2 space-x-2">
         <button
@@ -149,14 +149,14 @@
 
 <style>
 	:global(.dark .color-picker-wrapper) {
-		--cp-bg-color: #1f2937; /* bg-gray-800 */
+		--cp-bg-color: transparent;
 		--cp-border-color: #374151; /* bg-gray-700 */
 		--cp-text-color: #f9fafb; /* text-gray-50 */
 		--cp-input-color: #374151; /* bg-gray-700 */
 		--cp-button-hover-color: #4b5563; /* bg-gray-600 */
 	}
     :global(.color-picker-wrapper) {
-		--cp-bg-color: #f3f4f6; /* bg-gray-100 */
+		--cp-bg-color: transparent;
 		--cp-border-color: #d1d5db; /* bg-gray-300 */
 		--cp-text-color: #111827; /* text-gray-900 */
 		--cp-input-color: #e5e7eb; /* bg-gray-200 */

@@ -24,6 +24,10 @@ export interface Theme {
   base: 'light' | 'dark' | 'oled-dark' | 'her';
   emoji?: string;
   metaThemeColor?: string;
+  systemBackgroundImageUrl?: string;
+  systemBackgroundImageDarken?: number;
+  chatBackgroundImageUrl?: string;
+  chatBackgroundImageDarken?: number;
   variables?: { [key: string]: string };
   gradient?: {
     enabled: boolean;
@@ -40,4 +44,13 @@ export interface Theme {
   css?: string;
   sourceUrl?: string;
   codeMirrorTheme?: string;
+  toggles?: {
+    cssVariables?: boolean;
+    customCss?: boolean;
+    animationScript?: boolean;
+    tsParticles?: boolean;
+    gradient?: boolean;
+    systemBackgroundImage?: boolean;
+    chatBackgroundImage?: boolean;
+  };
 }

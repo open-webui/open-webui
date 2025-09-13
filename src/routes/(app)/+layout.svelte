@@ -49,6 +49,7 @@
 	import UpdateInfoToast from '$lib/components/layout/UpdateInfoToast.svelte';
 	import Spinner from '$lib/components/common/Spinner.svelte';
 	import Particles from '$lib/components/common/Particles.svelte';
+	import BackgroundImage from '$lib/components/layout/BackgroundImage.svelte';
 	import { liveThemeStore } from '$lib/theme';
 
 	const i18n = getContext('i18n');
@@ -292,8 +293,9 @@
 	<div class="app relative">
 		<div
 			id="main-container"
-			class="relative text-gray-700 dark:text-gray-100 bg-white dark:bg-gray-900 h-screen max-h-[100dvh] overflow-auto flex flex-row justify-end"
+			class="relative text-gray-700 dark:text-gray-100 h-screen max-h-[100dvh] overflow-auto flex flex-row justify-end"
 		>
+			<BackgroundImage />
 			{#if $liveThemeStore?.tsparticlesConfig && Object.keys($liveThemeStore.tsparticlesConfig).length > 0}
 				<Particles options={$liveThemeStore.tsparticlesConfig} />
 			{/if}
@@ -301,7 +303,8 @@
 			{#if !['user', 'admin'].includes($user?.role)}
 				<AccountPending />
 			{:else}
-				{#if localDBChats.length > 0}
+				<div class="relative z-10 bg-transparent w-full h-full flex flex-row justify-end">
+					{#if localDBChats.length > 0}
 					<div class="fixed w-full h-full flex z-50">
 						<div
 							class="absolute w-full h-full backdrop-blur-md bg-white/20 dark:bg-gray-900/50 flex justify-center"
@@ -369,6 +372,7 @@
 						<Spinner className="size-5" />
 					</div>
 				{/if}
+				</div>
 			{/if}
 		</div>
 	</div>
@@ -417,3 +421,4 @@
 		background-color: #bcbabb;
 	}
 </style>
+

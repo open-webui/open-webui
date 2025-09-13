@@ -872,6 +872,10 @@
 		if (value !== '') {
 			// After updating the state, try to find and select the next template
 			setTimeout(() => {
+				if (!editor || editor.isDestroyed) {
+					return;
+				}
+
 				const templateFound = selectNextTemplate(editor.view.state, editor.view.dispatch);
 				if (!templateFound) {
 					editor.commands.focus('end');

@@ -30,7 +30,7 @@
     this={ParticlesComponent}
     id="tsparticles"
     class="pointer-events-none absolute top-0 left-0 w-full h-full"
-    style="z-index: 0;"
+    style="z-index: 4;"
     {options}
     {url}
     on:particlesLoaded={onParticlesLoaded}

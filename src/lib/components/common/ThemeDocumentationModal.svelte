@@ -23,6 +23,10 @@
 		base: 'dark',
 		emoji: '🎨',
 		metaThemeColor: '#000000',
+		systemBackgroundImageUrl: '',
+		systemBackgroundImageDarken: 0,
+		chatBackgroundImageUrl: '',
+		chatBackgroundImageDarken: 30,
 		variables: variables.reduce((acc, v) => ({ ...acc, [v.name]: v.defaultValue }), {}),
 		gradient: {
 			enabled: true,
@@ -59,7 +63,7 @@
 					</div>
 				</div>
 			</Collapsible>
-			<Collapsible title="Key Theme Properties" open={true}>
+			<Collapsible title="Key Theme Properties" open={false}>
 				<div slot="content" class="pt-2">
 					<p>
 						Here are the main properties you can use to define your theme. For a complete guide,
@@ -93,11 +97,23 @@
 								class="text-blue-500 hover:underline">tsParticles</a
 							> animations.
 						</li>
+						<li>
+							<strong>systemBackgroundImageUrl:</strong> URL for the system-wide background image.
+						</li>
+						<li>
+							<strong>systemBackgroundImageDarken:</strong> How much to darken the system background image (0-100).
+						</li>
+						<li>
+							<strong>chatBackgroundImageUrl:</strong> URL for the chat-specific background image.
+						</li>
+						<li>
+							<strong>chatBackgroundImageDarken:</strong> How much to darken the chat background image (0-100).
+						</li>
 					</ul>
 				</div>
 			</Collapsible>
 
-			<Collapsible title="Animation Resources" open={true}>
+			<Collapsible title="Animation Resources" open={false}>
 				<div slot="content" class="pt-2">
 					<p>
 						You can create complex particle animations using one of the supported libraries. Use
