@@ -41,6 +41,7 @@
 		selectedFolder,
 		pinnedChats
 	} from '$lib/stores';
+	import { currentThemeStore } from '$lib/theme';
 	import {
 		convertMessagesToHistory,
 		copyToClipboard,
@@ -2244,7 +2245,7 @@
 >
 	{#if !loading}
 		<div in:fade={{ duration: 50 }} class="w-full h-full flex flex-col">
-			{#if $settings?.backgroundImageUrl ?? $config?.license_metadata?.background_image_url ?? null}
+			{#if ($settings?.backgroundImageUrl ?? $config?.license_metadata?.background_image_url ?? null) && !($currentThemeStore?.particleConfig || $currentThemeStore?.animation || $currentThemeStore?.tsparticlesConfig)}
 				<div
 					class="absolute {$showSidebar
 						? 'md:max-w-[calc(100%-260px)] md:translate-x-[260px]'

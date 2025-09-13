@@ -48,6 +48,8 @@
 	import AccountPending from '$lib/components/layout/Overlay/AccountPending.svelte';
 	import UpdateInfoToast from '$lib/components/layout/UpdateInfoToast.svelte';
 	import Spinner from '$lib/components/common/Spinner.svelte';
+	import Particles from '$lib/components/common/Particles.svelte';
+	import { liveThemeStore } from '$lib/theme';
 
 	const i18n = getContext('i18n');
 
@@ -289,8 +291,13 @@
 {#if $user}
 	<div class="app relative">
 		<div
-			class=" text-gray-700 dark:text-gray-100 bg-white dark:bg-gray-900 h-screen max-h-[100dvh] overflow-auto flex flex-row justify-end"
+			id="main-container"
+			class="relative text-gray-700 dark:text-gray-100 bg-white dark:bg-gray-900 h-screen max-h-[100dvh] overflow-auto flex flex-row justify-end"
 		>
+			{#if $liveThemeStore?.tsparticlesConfig && Object.keys($liveThemeStore.tsparticlesConfig).length > 0}
+				<Particles options={$liveThemeStore.tsparticlesConfig} />
+			{/if}
+
 			{#if !['user', 'admin'].includes($user?.role)}
 				<AccountPending />
 			{:else}

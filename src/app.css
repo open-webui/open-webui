@@ -645,3 +645,13 @@ body {
 	background: #171717;
 	color: #eee;
 }
+
+.cm-color-swatch {
+	display: inline-block;
+	width: 1em;
+	height: 1em;
+	border: 1px solid #ccc;
+	border-radius: 3px;
+	margin-right: 0.5em;
+	vertical-align: middle;
+}

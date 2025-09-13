@@ -19,6 +19,8 @@
 	import XMark from '../icons/XMark.svelte';
 	import Connections from './Settings/Connections.svelte';
 	import Tools from './Settings/Tools.svelte';
+	import Themes from './Settings/Themes.svelte';
+	import Photo from '../icons/Photo.svelte';
 
 	const i18n = getContext('i18n');
 
@@ -196,6 +198,11 @@
 				'websearchinchat',
 				'web search in chat'
 			]
+		},
+		{
+			id: 'themes',
+			title: 'Themes',
+			keywords: ['themes', 'appearance', 'dark mode', 'light mode', 'community themes', 'custom themes']
 		},
 		{
 			id: 'connections',
@@ -672,6 +679,30 @@
 								</div>
 								<div class=" self-center">{$i18n.t('Interface')}</div>
 							</button>
+						{:else if tabId === 'themes'}
+							<button
+								role="tab"
+								aria-controls="tab-themes"
+								aria-selected={selectedTab === 'themes'}
+								class={`px-0.5 py-1 min-w-fit rounded-lg flex-1 md:flex-none flex text-left transition
+								${
+									selectedTab === 'themes'
+										? ($settings?.highContrastMode ?? false)
+											? 'dark:bg-gray-800 bg-gray-200'
+											: ''
+										: ($settings?.highContrastMode ?? false)
+											? 'hover:bg-gray-200 dark:hover:bg-gray-800'
+											: 'text-gray-300 dark:text-gray-600 hover:text-gray-700 dark:hover:text-white'
+								}`}
+								on:click={() => {
+									selectedTab = 'themes';
+								}}
+							>
+								<div class=" self-center mr-2">
+									<Photo className="w-4 h-4" />
+								</div>
+								<div class=" self-center">{$i18n.t('Themes')}</div>
+							</button>
 						{:else if tabId === 'connections'}
 							{#if $user?.role === 'admin' || ($user?.role === 'user' && $config?.features?.enable_direct_connections)}
 								<button
@@ -969,6 +1000,8 @@
 							toast.success($i18n.t('Settings saved successfully!'));
 						}}
 					/>
+				{:else if selectedTab === 'themes'}
+					<Themes />
 				{:else if selectedTab === 'connections'}
 					<Connections
 						saveSettings={async (updated) => {
