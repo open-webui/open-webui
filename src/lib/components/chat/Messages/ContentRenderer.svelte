@@ -142,40 +142,41 @@
 		{done}
 		{editCodeBlock}
 		{topPadding}
-		sourceIds={(sources ?? []).reduce((acc, source) => {
-			let ids = [];
-			source.document.forEach((document, index) => {
-				if (model?.info?.meta?.capabilities?.citations == false) {
-					ids.push('N/A');
-					return ids;
-				}
+                sourceIds={(sources ?? []).reduce((acc, source) => {
+                        source.document.forEach((document, index) => {
+                                if (model?.info?.meta?.capabilities?.citations == false) {
+                                        acc.push({ title: 'N/A', snippet: '' });
+                                        return;
+                                }
 
-				const metadata = source.metadata?.[index];
-				const id = metadata?.source ?? 'N/A';
+                                const metadata = source.metadata?.[index];
+                                const id = metadata?.source ?? 'N/A';
 
-				if (metadata?.name) {
-					ids.push(metadata.name);
-					return ids;
-				}
+                                let title;
+                                if (metadata?.name) {
+                                        title = metadata.name;
+                                } else if (id.startsWith('http://') || id.startsWith('https://')) {
+                                        title = id;
+                                } else {
+                                        title = source?.source?.name ?? id;
+                                }
 
-				if (id.startsWith('http://') || id.startsWith('https://')) {
-					ids.push(id);
-				} else {
-					ids.push(source?.source?.name ?? id);
-				}
+                                const snippet =
+                                        typeof document === 'string'
+                                                ? document
+                                                : document?.page_content ?? '';
 
-				return ids;
-			});
+                                if (!acc.some((item) => item.title === title)) {
+                                        acc.push({ title, snippet });
+                                }
+                        });
 
-			acc = [...acc, ...ids];
-
-			// remove duplicates
-			return acc.filter((item, index) => acc.indexOf(item) === index);
-		}, [])}
-		{onSourceClick}
-		{onTaskClick}
-		{onSave}
-		onUpdate={(token) => {
+                        return acc;
+                }, [])}
+                {onSourceClick}
+                {onTaskClick}
+                {onSave}
+                onUpdate={(token) => {
 			const { lang, text: code } = token;
 
 			if (
