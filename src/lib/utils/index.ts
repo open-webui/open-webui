@@ -67,15 +67,25 @@ export const replaceTokens = (content, sourceIds, char, user) => {
 			}
 		});
 
-		if (Array.isArray(sourceIds)) {
-			sourceIds.forEach((sourceId, idx) => {
-				const regex = new RegExp(`\\[${idx + 1}\\]`, 'g');
-				segment = segment.replace(
-					regex,
-					`<source_id data="${idx + 1}" title="${encodeURIComponent(sourceId)}" />`
-				);
-			});
-		}
+                if (Array.isArray(sourceIds)) {
+                        sourceIds.forEach((source, idx) => {
+                                const regex = new RegExp(`\\[${idx + 1}\\]`, 'g');
+                                if (typeof source === 'string') {
+                                        segment = segment.replace(
+                                                regex,
+                                                `<source_id data="${idx + 1}" title="${encodeURIComponent(source)}" />`
+                                        );
+                                } else {
+                                        const { title, snippet } = source ?? {};
+                                        segment = segment.replace(
+                                                regex,
+                                                `<source_id data="${idx + 1}" title="${encodeURIComponent(
+                                                        title ?? ''
+                                                )}" snippet="${encodeURIComponent(snippet ?? '')}" />`
+                                        );
+                                }
+                        });
+                }
 
 		return segment;
 	});

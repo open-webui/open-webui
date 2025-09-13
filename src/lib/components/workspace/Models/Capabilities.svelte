@@ -33,10 +33,10 @@
 				'Sends `stream_options: { include_usage: true }` in the request.\nSupported providers will return token usage information in the response when set.'
 			)
 		},
-		citations: {
-			label: $i18n.t('Citations'),
-			description: $i18n.t('Displays citations in the response')
-		},
+                citations: {
+                        label: $i18n.t('Citations'),
+                        description: $i18n.t('Displays citations with snippets in the response')
+                },
 		status_updates: {
 			label: $i18n.t('Status Updates'),
 			description: $i18n.t('Displays status updates (e.g., web search progress) in the response')
