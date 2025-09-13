@@ -215,12 +215,30 @@
       try {
         const newTheme = JSON.parse(themeJsonText);
         themeCopy = newTheme;
+
+        if (!themeCopy.gradient) {
+          themeCopy.gradient = {
+            enabled: false,
+            colors: ['#0d0d0d', '#333333'],
+            direction: 45,
+            intensity: 100
+          };
+        } else if (typeof themeCopy.gradient.enabled === 'undefined') {
+          themeCopy.gradient.enabled = false;
+        }
+
         variablesText = objectToCss(themeCopy.variables);
         cssText = themeCopy.css ?? '';
         animationScriptText = themeCopy.animationScript ?? '';
         tsParticleConfigText = themeCopy.tsparticlesConfig
           ? JSON.stringify(themeCopy.tsparticlesConfig, null, 2)
           : '';
+
+        showVariables = !!variablesText;
+        showCss = !!cssText;
+        showAnimationScript = !!animationScriptText;
+        showTsParticleConfig =
+          !!themeCopy.tsparticlesConfig && Object.keys(themeCopy.tsparticlesConfig).length > 0;
       } catch (e) {
         toast.error('Invalid JSON format.');
         return; // Don't switch view if JSON is invalid
