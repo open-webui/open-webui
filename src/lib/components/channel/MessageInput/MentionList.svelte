@@ -3,6 +3,7 @@
 	const i18n = getContext('i18n');
 
 	import { models } from '$lib/stores';
+	import Tooltip from '$lib/components/common/Tooltip.svelte';
 	export let query = '';
 
 	export let command: (payload: { id: string; label: string }) => void;
@@ -60,21 +61,23 @@
 				{$i18n.t('Models')}
 			</div>
 			{#each filteredItems as item, i}
-				<button
-					type="button"
-					on:click={() => select(i)}
-					on:mousemove={() => {
-						selectedIndex = i;
-					}}
-					class="px-2.5 py-1.5 rounded-xl w-full text-left {i === selectedIndex
-						? 'bg-gray-50 dark:bg-gray-800 selected-command-option-button'
-						: ''}"
-					data-selected={i === selectedIndex}
-				>
-					<div class="truncate">
-						@{item.name}
-					</div>
-				</button>
+				<Tooltip content={item?.id} placement="top-start">
+					<button
+						type="button"
+						on:click={() => select(i)}
+						on:mousemove={() => {
+							selectedIndex = i;
+						}}
+						class="px-2.5 py-1.5 rounded-xl w-full text-left {i === selectedIndex
+							? 'bg-gray-50 dark:bg-gray-800 selected-command-option-button'
+							: ''}"
+						data-selected={i === selectedIndex}
+					>
+						<div class="truncate">
+							@{item.name}
+						</div>
+					</button>
+				</Tooltip>
 			{/each}
 		</div>
 	</div>
