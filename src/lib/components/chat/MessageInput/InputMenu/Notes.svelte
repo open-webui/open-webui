@@ -122,7 +122,7 @@
 		</div>
 	{/if}
 {:else}
-	<div class="py-5">
+	<div class="py-4.5">
 		<Spinner />
 	</div>
 {/if}
