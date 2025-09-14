@@ -163,19 +163,6 @@ AZURE_STORAGE_CONTAINER_NAME = os.environ.get("AZURE_STORAGE_CONTAINER_NAME", No
 AZURE_STORAGE_KEY = os.environ.get("AZURE_STORAGE_KEY", None)
 
 ####################################
-# File Upload DIR
-####################################
-
-UPLOAD_DIR = DATA_DIR / "uploads"
-UPLOAD_DIR.mkdir(parents=True, exist_ok=True)
-
-
-####################################
-# Cache DIR
-####################################
-
-
-####################################
 # DIRECT CONNECTIONS
 ####################################
 
