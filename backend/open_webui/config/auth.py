@@ -63,6 +63,10 @@ OAUTH_MERGE_ACCOUNTS_BY_EMAIL = PersistentConfig(
 
 OAUTH_PROVIDERS = {}
 
+####################################
+# Google OAuth config
+####################################
+
 GOOGLE_CLIENT_ID = PersistentConfig(
     "GOOGLE_CLIENT_ID",
     "oauth.google.client_id",
@@ -86,6 +90,10 @@ GOOGLE_REDIRECT_URI = PersistentConfig(
     "oauth.google.redirect_uri",
     os.environ.get("GOOGLE_REDIRECT_URI", ""),
 )
+
+####################################
+# Microsoft OAuth config
+####################################
 
 MICROSOFT_CLIENT_ID = PersistentConfig(
     "MICROSOFT_CLIENT_ID",
@@ -134,6 +142,10 @@ MICROSOFT_REDIRECT_URI = PersistentConfig(
     os.environ.get("MICROSOFT_REDIRECT_URI", ""),
 )
 
+####################################
+# GitHub OAuth config
+####################################
+
 GITHUB_CLIENT_ID = PersistentConfig(
     "GITHUB_CLIENT_ID",
     "oauth.github.client_id",
@@ -157,6 +169,38 @@ GITHUB_CLIENT_REDIRECT_URI = PersistentConfig(
     "oauth.github.redirect_uri",
     os.environ.get("GITHUB_CLIENT_REDIRECT_URI", ""),
 )
+
+####################################
+# Feishu OAuth config
+####################################
+
+FEISHU_CLIENT_ID = PersistentConfig(
+    "FEISHU_CLIENT_ID",
+    "oauth.feishu.client_id",
+    os.environ.get("FEISHU_CLIENT_ID", ""),
+)
+
+FEISHU_CLIENT_SECRET = PersistentConfig(
+    "FEISHU_CLIENT_SECRET",
+    "oauth.feishu.client_secret",
+    os.environ.get("FEISHU_CLIENT_SECRET", ""),
+)
+
+FEISHU_OAUTH_SCOPE = PersistentConfig(
+    "FEISHU_OAUTH_SCOPE",
+    "oauth.feishu.scope",
+    os.environ.get("FEISHU_OAUTH_SCOPE", "contact:user.base:readonly"),
+)
+
+FEISHU_REDIRECT_URI = PersistentConfig(
+    "FEISHU_REDIRECT_URI",
+    "oauth.feishu.redirect_uri",
+    os.environ.get("FEISHU_REDIRECT_URI", ""),
+)
+
+####################################
+# Generic OpenID Connect config
+####################################
 
 OAUTH_CLIENT_ID = PersistentConfig(
     "OAUTH_CLIENT_ID",
@@ -242,29 +286,9 @@ OAUTH_GROUPS_CLAIM = PersistentConfig(
     os.environ.get("OAUTH_GROUPS_CLAIM", os.environ.get("OAUTH_GROUP_CLAIM", "groups")),
 )
 
-FEISHU_CLIENT_ID = PersistentConfig(
-    "FEISHU_CLIENT_ID",
-    "oauth.feishu.client_id",
-    os.environ.get("FEISHU_CLIENT_ID", ""),
-)
-
-FEISHU_CLIENT_SECRET = PersistentConfig(
-    "FEISHU_CLIENT_SECRET",
-    "oauth.feishu.client_secret",
-    os.environ.get("FEISHU_CLIENT_SECRET", ""),
-)
-
-FEISHU_OAUTH_SCOPE = PersistentConfig(
-    "FEISHU_OAUTH_SCOPE",
-    "oauth.feishu.scope",
-    os.environ.get("FEISHU_OAUTH_SCOPE", "contact:user.base:readonly"),
-)
-
-FEISHU_REDIRECT_URI = PersistentConfig(
-    "FEISHU_REDIRECT_URI",
-    "oauth.feishu.redirect_uri",
-    os.environ.get("FEISHU_REDIRECT_URI", ""),
-)
+####################################
+# OAuth role and group management
+####################################
 
 ENABLE_OAUTH_ROLE_MANAGEMENT = PersistentConfig(
     "ENABLE_OAUTH_ROLE_MANAGEMENT",
