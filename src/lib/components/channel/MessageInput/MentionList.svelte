@@ -15,7 +15,7 @@
 
 	const select = (index: number) => {
 		const item = filteredItems[index];
-		// Add the "A:" prefix to the id to indicate it's an assistant model
+		// Add the "A:" prefix to the id to indicate it's an agent/assistant/ai model
 		if (item) command({ id: `A:${item.id}|${item.name}`, label: item.name });
 	};
 
