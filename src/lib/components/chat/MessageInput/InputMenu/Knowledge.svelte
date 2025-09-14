@@ -9,11 +9,13 @@
 	import Tooltip from '$lib/components/common/Tooltip.svelte';
 	import Database from '$lib/components/icons/Database.svelte';
 	import DocumentPage from '$lib/components/icons/DocumentPage.svelte';
+	import Spinner from '$lib/components/common/Spinner.svelte';
 
 	const i18n = getContext('i18n');
 
 	export let onSelect = (e) => {};
 
+	let loaded = false;
 	let items = [];
 	let selectedIdx = 0;
 
@@ -99,55 +101,63 @@
 		);
 
 		await tick();
+
+		loaded = true;
 	});
 </script>
 
-<div class="flex flex-col gap-0.5">
-	{#each items as item, idx}
-		<button
-			class=" px-2.5 py-1 rounded-xl w-full text-left flex justify-between items-center text-sm {idx ===
-			selectedIdx
-				? ' bg-gray-50 dark:bg-gray-800 dark:text-gray-100 selected-command-option-button'
-				: ''}"
-			type="button"
-			on:click={() => {
-				console.log(item);
-				onSelect(item);
-			}}
-			on:mousemove={() => {
-				selectedIdx = idx;
-			}}
-			on:mouseleave={() => {
-				if (idx === 0) {
-					selectedIdx = -1;
-				}
-			}}
-			data-selected={idx === selectedIdx}
-		>
-			<div class="  text-black dark:text-gray-100 flex items-center gap-1">
-				<Tooltip
-					content={item?.legacy
-						? $i18n.t('Legacy')
-						: item?.type === 'file'
-							? $i18n.t('File')
-							: item?.type === 'collection'
-								? $i18n.t('Collection')
-								: ''}
-					placement="top"
-				>
-					{#if item?.type === 'collection'}
-						<Database className="size-4" />
-					{:else}
-						<DocumentPage className="size-4" />
-					{/if}
-				</Tooltip>
+{#if loaded}
+	<div class="flex flex-col gap-0.5">
+		{#each items as item, idx}
+			<button
+				class=" px-2.5 py-1 rounded-xl w-full text-left flex justify-between items-center text-sm {idx ===
+				selectedIdx
+					? ' bg-gray-50 dark:bg-gray-800 dark:text-gray-100 selected-command-option-button'
+					: ''}"
+				type="button"
+				on:click={() => {
+					console.log(item);
+					onSelect(item);
+				}}
+				on:mousemove={() => {
+					selectedIdx = idx;
+				}}
+				on:mouseleave={() => {
+					if (idx === 0) {
+						selectedIdx = -1;
+					}
+				}}
+				data-selected={idx === selectedIdx}
+			>
+				<div class="  text-black dark:text-gray-100 flex items-center gap-1">
+					<Tooltip
+						content={item?.legacy
+							? $i18n.t('Legacy')
+							: item?.type === 'file'
+								? $i18n.t('File')
+								: item?.type === 'collection'
+									? $i18n.t('Collection')
+									: ''}
+						placement="top"
+					>
+						{#if item?.type === 'collection'}
+							<Database className="size-4" />
+						{:else}
+							<DocumentPage className="size-4" />
+						{/if}
+					</Tooltip>
 
-				<Tooltip content={item.description || decodeString(item?.name)} placement="top-start">
-					<div class="line-clamp-1 flex-1">
-						{decodeString(item?.name)}
-					</div>
-				</Tooltip>
-			</div>
-		</button>
-	{/each}
-</div>
+					<Tooltip content={item.description || decodeString(item?.name)} placement="top-start">
+						<div class="line-clamp-1 flex-1">
+							{decodeString(item?.name)}
+						</div>
+					</Tooltip>
+				</div>
+			</button>
+		{/each}
+	</div>
+{:else}
+	<div class="py-4.5">
+		<Spinner />
+	</div>
+{/if}
