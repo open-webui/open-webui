@@ -118,7 +118,7 @@ class ConfigStateBootstrap:
                 # set the config using the appropriate attribute name
                 setattr(self.app.state.config, state_attr_name, config_item)
                 assigned_count += 1
-                log.info(
+                log.debug(
                     f"Set app.state.config.{state_attr_name} from {config_item.env_name}"
                 )
 
