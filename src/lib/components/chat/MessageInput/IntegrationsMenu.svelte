@@ -1,7 +1,8 @@
 <script lang="ts">
 	import { DropdownMenu } from 'bits-ui';
-	import { flyAndScale } from '$lib/utils/transitions';
 	import { getContext, onMount, tick } from 'svelte';
+	import { fly } from 'svelte/transition';
+	import { flyAndScale } from '$lib/utils/transitions';
 
 	import { config, user, tools as _tools, mobile, settings } from '$lib/stores';
 
@@ -18,7 +19,6 @@
 	import Terminal from '$lib/components/icons/Terminal.svelte';
 	import ChevronRight from '$lib/components/icons/ChevronRight.svelte';
 	import ChevronLeft from '$lib/components/icons/ChevronLeft.svelte';
-	import { crossfade, fade, fly, slide } from 'svelte/transition';
 
 	const i18n = getContext('i18n');
 
@@ -103,7 +103,7 @@
 								<Wrench />
 
 								<div class="flex items-center w-full justify-between">
-									<div>
+									<div class=" line-clamp-1">
 										{$i18n.t('Tools')}
 										<span class="ml-0.5 text-gray-500">{Object.keys(tools).length}</span>
 									</div>
