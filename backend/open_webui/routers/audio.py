@@ -36,7 +36,6 @@ from open_webui.utils.auth import get_admin_user, get_verified_user
 from open_webui.config import (
     WHISPER_MODEL_AUTO_UPDATE,
     WHISPER_MODEL_DIR,
-    CACHE_DIR,
     WHISPER_LANGUAGE,
 )
 
@@ -44,6 +43,7 @@ from open_webui.constants import ERROR_MESSAGES
 from open_webui.env import (
     AIOHTTP_CLIENT_SESSION_SSL,
     AIOHTTP_CLIENT_TIMEOUT,
+    CACHE_DIR,
     ENV,
     SRC_LOG_LEVELS,
     DEVICE_TYPE,

@@ -374,7 +374,6 @@ from open_webui.config import (
     LDAP_ATTRIBUTE_FOR_GROUPS,
     # Misc
     ENV,
-    CACHE_DIR,
     STATIC_DIR,
     FRONTEND_BUILD_DIR,
     CORS_ALLOW_ORIGIN,
@@ -410,6 +409,7 @@ from open_webui.env import (
     LICENSE_KEY,
     AUDIT_EXCLUDED_PATHS,
     AUDIT_LOG_LEVEL,
+    CACHE_DIR,
     CHANGELOG,
     REDIS_URL,
     REDIS_CLUSTER,

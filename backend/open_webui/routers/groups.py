@@ -12,7 +12,7 @@ from open_webui.models.groups import (
     UserIdsForm,
 )
 
-from open_webui.config import CACHE_DIR
+from open_webui.env import CACHE_DIR
 from open_webui.constants import ERROR_MESSAGES
 from fastapi import APIRouter, Depends, HTTPException, Request, status
 

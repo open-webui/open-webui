@@ -2,6 +2,7 @@ import json
 import logging
 import os
 import shutil
+from open_webui.config.base import PersistentConfig
 from open_webui.config.llm import (
     GEMINI_API_BASE_URL,
     GEMINI_API_KEY,
@@ -9,10 +10,7 @@ from open_webui.config.llm import (
     OPENAI_API_BASE_URL,
     OPENAI_API_KEY,
 )
-from open_webui.config.auth import *
-from open_webui.config.base import PersistentConfig
 
-import os
 import logging
 import shutil
 from pathlib import Path
@@ -23,6 +21,7 @@ import requests
 from pydantic import BaseModel
 
 from open_webui.env import (
+    CACHE_DIR,
     DATA_DIR,
     DATABASE_URL,
     ENV,
@@ -174,9 +173,6 @@ UPLOAD_DIR.mkdir(parents=True, exist_ok=True)
 ####################################
 # Cache DIR
 ####################################
-
-CACHE_DIR = DATA_DIR / "cache"
-CACHE_DIR.mkdir(parents=True, exist_ok=True)
 
 
 ####################################
