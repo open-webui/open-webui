@@ -3,11 +3,12 @@ import json
 import logging
 import os
 
-from open_webui.env import DATA_DIR, OPEN_WEBUI_DIR
+from open_webui.env import DATA_DIR, OPEN_WEBUI_DIR, SRC_LOG_LEVELS
 from sqlalchemy import JSON, Column, DateTime, Integer, func
 from open_webui.internal.db import Base, get_db
 
 log = logging.getLogger(__name__)
+log.setLevel(SRC_LOG_LEVELS["CONFIG"])
 
 DEFAULT_CONFIG = {
     "version": 0,
