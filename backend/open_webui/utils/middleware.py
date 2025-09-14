@@ -1131,11 +1131,11 @@ async def process_chat_response(
     request, response, form_data, user, metadata, model, events, tasks
 ):
     async def background_tasks_handler():
-        message_map = Chats.get_messages_by_chat_id(metadata["chat_id"])
-        message = message_map.get(metadata["message_id"]) if message_map else None
+        messages_map = Chats.get_messages_map_by_chat_id(metadata["chat_id"])
+        message = messages_map.get(metadata["message_id"]) if messages_map else None
 
         if message:
-            message_list = get_message_list(message_map, metadata["message_id"])
+            message_list = get_message_list(messages_map, metadata["message_id"])
 
             # Remove details tags and files from the messages.
             # as get_message_list creates a new list, it does not affect

@@ -27,7 +27,7 @@
 
 	const i18n = getContext('i18n');
 
-	export let selectedToolIds: string[] = [];
+	export let files = [];
 
 	export let selectedModels: string[] = [];
 	export let fileUploadCapableModels: string[] = [];
@@ -54,13 +54,28 @@
 		return /android|iphone|ipad|ipod|windows phone/i.test(userAgent);
 	};
 
-	function handleFileChange(event) {
+	const handleFileChange = (event) => {
 		const inputFiles = Array.from(event.target?.files);
 		if (inputFiles && inputFiles.length > 0) {
 			console.log(inputFiles);
 			inputFilesHandler(inputFiles);
 		}
-	}
+	};
+
+	const onSelect = (item) => {
+		if (files.find((f) => f.id === item.id)) {
+			return;
+		}
+		files = [
+			...files,
+			{
+				...item,
+				status: 'processed'
+			}
+		];
+
+		show = false;
+	};
 </script>
 
 <!-- Hidden file input used to open the camera on mobile -->
@@ -87,7 +102,7 @@
 
 	<div slot="content">
 		<DropdownMenu.Content
-			class="w-full max-w-[240px] rounded-2xl px-1 py-1  border border-gray-100  dark:border-gray-800 z-50 bg-white dark:bg-gray-850 dark:text-white shadow-lg max-h-72 overflow-y-auto overflow-x-hidden scrollbar-thin transition"
+			class="w-full max-w-70 rounded-2xl px-1 py-1  border border-gray-100  dark:border-gray-800 z-50 bg-white dark:bg-gray-850 dark:text-white shadow-lg max-h-72 overflow-y-auto overflow-x-hidden scrollbar-thin transition"
 			sideOffset={4}
 			alignOffset={-6}
 			side="bottom"
@@ -422,7 +437,7 @@
 						</div>
 					</button>
 
-					<Knowledge />
+					<Knowledge {onSelect} />
 				</div>
 			{:else if tab === 'notes'}
 				<div in:fly={{ x: 20, duration: 150 }}>
@@ -441,7 +456,7 @@
 						</div>
 					</button>
 
-					<Notes />
+					<Notes {onSelect} />
 				</div>
 			{:else if tab === 'chats'}
 				<div in:fly={{ x: 20, duration: 150 }}>
@@ -460,7 +475,7 @@
 						</div>
 					</button>
 
-					<Chats />
+					<Chats {onSelect} />
 				</div>
 			{/if}
 		</DropdownMenu.Content>
