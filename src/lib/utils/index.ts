@@ -1546,3 +1546,11 @@ export const convertHeicToJpeg = async (file: File) => {
 		throw err;
 	}
 };
+
+export const decodeString = (str: string) => {
+	try {
+		return decodeURIComponent(str);
+	} catch (e) {
+		return str;
+	}
+};
