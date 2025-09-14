@@ -8,6 +8,7 @@ from .media import *
 from .retrieval import *
 from .vector import *
 from .legacy import *
+from .code_interpreter import *
 
 setup_logging()
 
