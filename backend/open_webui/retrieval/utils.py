@@ -544,13 +544,10 @@ def get_sources_from_items(
         elif item.get("type") == "chat":
             # Chat Attached
             chat = Chats.get_chat_by_id(item.get("id"))
-            print("chat", chat)
 
             if chat and (user.role == "admin" or chat.user_id == user.id):
                 messages_map = chat.chat.get("history", {}).get("messages", {})
                 message_id = chat.chat.get("history", {}).get("currentId")
-
-                print(messages_map, message_id)
 
                 if messages_map and message_id:
                     # Reconstruct the message list in order
