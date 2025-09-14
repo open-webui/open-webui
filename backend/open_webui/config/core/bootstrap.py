@@ -5,6 +5,7 @@ import logging
 log = logging.getLogger(__name__)
 log.setLevel(SRC_LOG_LEVELS["CONFIG"])
 
+
 class ConfigStateBootstrap:
     """
     Bootstrap app.state.config using PersistentConfig registry during application startup.
@@ -77,9 +78,13 @@ class ConfigStateBootstrap:
                 log.debug(f"Set app.state.config.{config_item.env_name}")
 
             except Exception as e:
-                log.warning(f"Failed to set app.state.config.{config_item.env_name}: {e}")
+                log.warning(
+                    f"Failed to set app.state.config.{config_item.env_name}: {e}"
+                )
 
-        log.info(f"ConfigStateBootstrap: Set {assigned_count} configs, skipped {skipped_count} existing configs")
+        log.info(
+            f"ConfigStateBootstrap: Set {assigned_count} configs, skipped {skipped_count} existing configs"
+        )
 
     def get_registry_config_names(self):
         """
