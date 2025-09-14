@@ -7,9 +7,9 @@ class EndpointFilter(logging.Filter):
 
 
 def setup_logging():
-  """
-  Setup logging configuration.
+    """
+    Setup logging configuration.
 
-  Filter out /health endpoint logs.
-  """
-  logging.getLogger("uvicorn.access").addFilter(EndpointFilter())
+    Filter out /health endpoint logs.
+    """
+    logging.getLogger("uvicorn.access").addFilter(EndpointFilter())

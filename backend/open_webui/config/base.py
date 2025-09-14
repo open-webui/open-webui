@@ -2,10 +2,7 @@ import json
 import logging
 import os
 from typing import Generic, Optional, TypeVar, Union
-from open_webui.config.database import (
-    get_config,
-    save_to_db
-)
+from open_webui.config.database import get_config, save_to_db
 from open_webui.utils.redis import get_redis_connection
 import redis
 
@@ -27,6 +24,7 @@ def get_config_value(config_path: str):
             return None
     return cur_config
 
+
 def save_config(config):
     global CONFIG_DATA
     global PERSISTENT_CONFIG_REGISTRY
@@ -43,8 +41,6 @@ def save_config(config):
     return True
 
 
-
-
 T = TypeVar("T")
 
 ENABLE_PERSISTENT_CONFIG = (
@@ -54,6 +50,7 @@ ENABLE_PERSISTENT_CONFIG = (
 ENABLE_OAUTH_PERSISTENT_CONFIG = (
     os.environ.get("ENABLE_OAUTH_PERSISTENT_CONFIG", "False").lower() == "true"
 )
+
 
 class PersistentConfig(Generic[T]):
     def __init__(self, env_name: str, config_path: str, env_value: T):

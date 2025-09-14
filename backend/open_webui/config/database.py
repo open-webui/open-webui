@@ -3,17 +3,8 @@ import json
 import logging
 import os
 
-from open_webui.env import (
-    DATA_DIR,
-    OPEN_WEBUI_DIR
-)
-from sqlalchemy import (
-    JSON,
-    Column,
-    DateTime,
-    Integer,
-    func
-)
+from open_webui.env import DATA_DIR, OPEN_WEBUI_DIR
+from sqlalchemy import JSON, Column, DateTime, Integer, func
 from open_webui.internal.db import Base, get_db
 
 log = logging.getLogger(__name__)
@@ -22,6 +13,7 @@ DEFAULT_CONFIG = {
     "version": 0,
     "ui": {},
 }
+
 
 def run_migrations():
     log.info("Running migrations")
@@ -49,6 +41,7 @@ class Config(Base):
     created_at = Column(DateTime, nullable=False, server_default=func.now())
     updated_at = Column(DateTime, nullable=True, onupdate=func.now())
 
+
 def load_json_config():
     with open(f"{DATA_DIR}/config.json", "r") as file:
         return json.load(file)
@@ -66,6 +59,7 @@ def save_to_db(data):
             db.add(existing_config)
         db.commit()
 
+
 def reset_config():
     with get_db() as db:
         db.query(Config).delete()
@@ -73,10 +67,10 @@ def reset_config():
 
 
 def migrate_legacy_config():
-  if os.path.exists(f"{DATA_DIR}/config.json"):
-      data = load_json_config()
-      save_to_db(data)
-      os.rename(f"{DATA_DIR}/config.json", f"{DATA_DIR}/old_config.json")
+    if os.path.exists(f"{DATA_DIR}/config.json"):
+        data = load_json_config()
+        save_to_db(data)
+        os.rename(f"{DATA_DIR}/config.json", f"{DATA_DIR}/old_config.json")
 
 
 def get_config():
