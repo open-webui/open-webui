@@ -1,6 +1,6 @@
 import os
 from authlib.integrations.starlette_client import OAuth
-from open_webui.config.core.base import PersistentConfig
+from .base import PersistentConfig
 from open_webui.env import log
 
 ####################################

@@ -401,6 +401,7 @@ from open_webui.config import (
     AUTOCOMPLETE_GENERATION_PROMPT_TEMPLATE,
     AUTOCOMPLETE_GENERATION_INPUT_MAX_LENGTH,
     AppConfig,
+    ConfigStateBootstrap,
     reset_config,
 )
 from open_webui.env import (
@@ -606,6 +607,9 @@ app.state.config = AppConfig(
     redis_key_prefix=REDIS_KEY_PREFIX,
 )
 app.state.redis = None
+
+config_bootstrap = ConfigStateBootstrap(app)
+config_bootstrap.bootstrap_config_state()
 
 app.state.WEBUI_NAME = WEBUI_NAME
 app.state.LICENSE_METADATA = None

@@ -2,12 +2,13 @@ import json
 import logging
 import os
 from typing import Generic, Optional, TypeVar, Union
-from open_webui.config.core.database import get_config, save_to_db
+from open_webui.env import SRC_LOG_LEVELS
+from .database import get_config, save_to_db
 from open_webui.utils.redis import get_redis_connection
 import redis
 
 log = logging.getLogger(__name__)
-
+log.setLevel(SRC_LOG_LEVELS["CONFIG"])
 
 PERSISTENT_CONFIG_REGISTRY = []
 
