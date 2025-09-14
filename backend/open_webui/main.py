@@ -7,19 +7,17 @@ import sys
 import time
 from uuid import uuid4
 
-
 from contextlib import asynccontextmanager
 from urllib.parse import urlencode, parse_qs, urlparse
 from pydantic import BaseModel
 from sqlalchemy import text
-
 from typing import Optional
+
 from aiocache import cached
 import aiohttp
 import anyio.to_thread
 import requests
 from redis import Redis
-
 
 from fastapi import (
     Depends,
@@ -30,19 +28,16 @@ from fastapi import (
     applications,
 )
 from fastapi.openapi.docs import get_swagger_ui_html
-
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse, JSONResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
 
 from starlette_compress import CompressMiddleware
-
 from starlette.exceptions import HTTPException as StarletteHTTPException
 from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.middleware.sessions import SessionMiddleware
 from starlette.responses import Response
 from starlette.datastructures import Headers
-
 
 from open_webui.utils import logger
 from open_webui.utils.audit import AuditLevel, AuditLoggingMiddleware
@@ -200,13 +195,10 @@ from open_webui.tasks import (
     create_task,
     stop_task,
     list_tasks,
-)  # Import from tasks.py
+)
 
 from open_webui.utils.redis import get_sentinels_from_env
-
-
 from open_webui.constants import ERROR_MESSAGES
-
 
 if SAFE_MODE:
     print("SAFE MODE ENABLED")
@@ -240,7 +232,6 @@ print(
 ██║   ██║██╔═══╝ ██╔══╝  ██║╚██╗██║    ██║███╗██║██╔══╝  ██╔══██╗██║   ██║██║
 ╚██████╔╝██║     ███████╗██║ ╚████║    ╚███╔███╔╝███████╗██████╔╝╚██████╔╝██║
  ╚═════╝ ╚═╝     ╚══════╝╚═╝  ╚═══╝     ╚══╝╚══╝ ╚══════╝╚═════╝  ╚═════╝ ╚═╝
-
 
 v{VERSION} - building the best AI user interface.
 {f"Commit: {WEBUI_BUILD_HASH}" if WEBUI_BUILD_HASH != "dev-build" else ""}
@@ -320,9 +311,17 @@ app = FastAPI(
     lifespan=lifespan,
 )
 
+# Initialize OAuth manager
 oauth_manager = OAuthManager(app)
-app.state.oauth_manager = oauth_manager
 
+########################################
+#
+# APP STATE INITIALIZATION
+#
+########################################
+
+# Core application state
+app.state.oauth_manager = oauth_manager
 app.state.instance_id = None
 app.state.config = AppConfig(
     redis_url=REDIS_URL,
@@ -332,12 +331,47 @@ app.state.config = AppConfig(
 )
 app.state.redis = None
 
+# Bootstrap configuration state
 config_bootstrap = ConfigStateBootstrap(app)
 config_bootstrap.bootstrap_config_state()
 
+# WebUI configuration
 app.state.WEBUI_NAME = WEBUI_NAME
 app.state.LICENSE_METADATA = None
+app.state.AUTH_TRUSTED_EMAIL_HEADER = WEBUI_AUTH_TRUSTED_EMAIL_HEADER
+app.state.AUTH_TRUSTED_NAME_HEADER = WEBUI_AUTH_TRUSTED_NAME_HEADER
+app.state.WEBUI_AUTH_SIGNOUT_REDIRECT_URL = WEBUI_AUTH_SIGNOUT_REDIRECT_URL
+app.state.EXTERNAL_PWA_MANIFEST_URL = EXTERNAL_PWA_MANIFEST_URL
+app.state.USER_COUNT = None
 
+# Model state
+app.state.OLLAMA_MODELS = {}
+app.state.OPENAI_MODELS = {}
+app.state.BASE_MODELS = []
+app.state.MODELS = {}
+
+# Tool and function state
+app.state.TOOL_SERVERS = []
+app.state.TOOLS = {}
+app.state.TOOL_CONTENTS = {}
+app.state.FUNCTIONS = {}
+app.state.FUNCTION_CONTENTS = {}
+
+# SCIM configuration
+app.state.SCIM_ENABLED = SCIM_ENABLED
+app.state.SCIM_TOKEN = SCIM_TOKEN
+
+# Retrieval and embedding state
+app.state.EMBEDDING_FUNCTION = None
+app.state.RERANKING_FUNCTION = None
+app.state.ef = None
+app.state.rf = None
+app.state.YOUTUBE_LOADER_TRANSLATION = None
+
+# Audio processing state
+app.state.faster_whisper_model = None
+app.state.speech_synthesiser = None
+app.state.speech_speaker_embeddings_dataset = None
 
 ########################################
 #
@@ -351,74 +385,13 @@ if ENABLE_OTEL:
     setup_opentelemetry(app=app, db_engine=engine)
 
 
-app.state.OLLAMA_MODELS = {}
-app.state.OPENAI_MODELS = {}
-
 ########################################
 #
-# TOOL SERVERS
+# RETRIEVAL SETUP
 #
 ########################################
 
-app.state.TOOL_SERVERS = []
-
-########################################
-#
-# DIRECT CONNECTIONS
-#
-########################################
-
-
-########################################
-#
-# SCIM
-#
-########################################
-
-app.state.SCIM_ENABLED = SCIM_ENABLED
-app.state.SCIM_TOKEN = SCIM_TOKEN
-
-########################################
-#
-# MODELS
-#
-########################################
-
-app.state.BASE_MODELS = []
-
-########################################
-#
-# WEBUI
-#
-########################################
-
-app.state.AUTH_TRUSTED_EMAIL_HEADER = WEBUI_AUTH_TRUSTED_EMAIL_HEADER
-app.state.AUTH_TRUSTED_NAME_HEADER = WEBUI_AUTH_TRUSTED_NAME_HEADER
-app.state.WEBUI_AUTH_SIGNOUT_REDIRECT_URL = WEBUI_AUTH_SIGNOUT_REDIRECT_URL
-app.state.EXTERNAL_PWA_MANIFEST_URL = EXTERNAL_PWA_MANIFEST_URL
-
-app.state.USER_COUNT = None
-
-app.state.TOOLS = {}
-app.state.TOOL_CONTENTS = {}
-
-app.state.FUNCTIONS = {}
-app.state.FUNCTION_CONTENTS = {}
-
-########################################
-#
-# RETRIEVAL
-#
-########################################
-
-app.state.EMBEDDING_FUNCTION = None
-app.state.RERANKING_FUNCTION = None
-app.state.ef = None
-app.state.rf = None
-
-app.state.YOUTUBE_LOADER_TRANSLATION = None
-
-
+# Initialize embedding and reranking functions
 try:
     app.state.ef = get_ef(
         app.state.config.RAG_EMBEDDING_ENGINE,
@@ -442,7 +415,7 @@ except Exception as e:
     log.error(f"Error updating models: {e}")
     pass
 
-
+# Setup embedding function
 app.state.EMBEDDING_FUNCTION = get_embedding_function(
     app.state.config.RAG_EMBEDDING_ENGINE,
     app.state.config.RAG_EMBEDDING_MODEL,
@@ -473,30 +446,19 @@ app.state.EMBEDDING_FUNCTION = get_embedding_function(
     ),
 )
 
+# Setup reranking function
 app.state.RERANKING_FUNCTION = get_reranking_function(
     app.state.config.RAG_RERANKING_ENGINE,
     app.state.config.RAG_RERANKING_MODEL,
     reranking_function=app.state.rf,
 )
 
-########################################
-#
-# AUDIO
-#
-########################################
-
-app.state.faster_whisper_model = None
-app.state.speech_synthesiser = None
-app.state.speech_speaker_embeddings_dataset = None
-
 
 ########################################
 #
-# WEBUI
+# MIDDLEWARE SETUP
 #
 ########################################
-
-app.state.MODELS = {}
 
 
 class RedirectMiddleware(BaseHTTPMiddleware):
@@ -519,7 +481,7 @@ class RedirectMiddleware(BaseHTTPMiddleware):
         return response
 
 
-# Add the middleware to the app
+# Register middleware
 if ENABLE_COMPRESSION_MIDDLEWARE:
     app.add_middleware(CompressMiddleware)
 
@@ -575,51 +537,62 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+########################################
+#
+# ROUTER MOUNTING
+#
+########################################
 
+# WebSocket and legacy routes
 app.mount("/ws", socket_app)
 
-
+# External API compatibility routes
 app.include_router(ollama.router, prefix="/ollama", tags=["ollama"])
 app.include_router(openai.router, prefix="/openai", tags=["openai"])
 
-
-app.include_router(pipelines.router, prefix="/api/v1/pipelines", tags=["pipelines"])
-app.include_router(tasks.router, prefix="/api/v1/tasks", tags=["tasks"])
-app.include_router(images.router, prefix="/api/v1/images", tags=["images"])
-
-app.include_router(audio.router, prefix="/api/v1/audio", tags=["audio"])
-app.include_router(retrieval.router, prefix="/api/v1/retrieval", tags=["retrieval"])
-
+# Core API routes
 app.include_router(configs.router, prefix="/api/v1/configs", tags=["configs"])
-
 app.include_router(auths.router, prefix="/api/v1/auths", tags=["auths"])
 app.include_router(users.router, prefix="/api/v1/users", tags=["users"])
 
+# Pipeline and processing routes
+app.include_router(pipelines.router, prefix="/api/v1/pipelines", tags=["pipelines"])
+app.include_router(tasks.router, prefix="/api/v1/tasks", tags=["tasks"])
+app.include_router(audio.router, prefix="/api/v1/audio", tags=["audio"])
+app.include_router(images.router, prefix="/api/v1/images", tags=["images"])
+app.include_router(retrieval.router, prefix="/api/v1/retrieval", tags=["retrieval"])
 
+# Content and data routes
 app.include_router(channels.router, prefix="/api/v1/channels", tags=["channels"])
 app.include_router(chats.router, prefix="/api/v1/chats", tags=["chats"])
 app.include_router(notes.router, prefix="/api/v1/notes", tags=["notes"])
+app.include_router(files.router, prefix="/api/v1/files", tags=["files"])
+app.include_router(folders.router, prefix="/api/v1/folders", tags=["folders"])
+app.include_router(memories.router, prefix="/api/v1/memories", tags=["memories"])
 
-
+# Model and AI routes
 app.include_router(models.router, prefix="/api/v1/models", tags=["models"])
 app.include_router(knowledge.router, prefix="/api/v1/knowledge", tags=["knowledge"])
 app.include_router(prompts.router, prefix="/api/v1/prompts", tags=["prompts"])
 app.include_router(tools.router, prefix="/api/v1/tools", tags=["tools"])
-
-app.include_router(memories.router, prefix="/api/v1/memories", tags=["memories"])
-app.include_router(folders.router, prefix="/api/v1/folders", tags=["folders"])
-app.include_router(groups.router, prefix="/api/v1/groups", tags=["groups"])
-app.include_router(files.router, prefix="/api/v1/files", tags=["files"])
 app.include_router(functions.router, prefix="/api/v1/functions", tags=["functions"])
 app.include_router(
     evaluations.router, prefix="/api/v1/evaluations", tags=["evaluations"]
 )
+
+# Management and utility routes
+app.include_router(groups.router, prefix="/api/v1/groups", tags=["groups"])
 app.include_router(utils.router, prefix="/api/v1/utils", tags=["utils"])
 
-# SCIM 2.0 API for identity management
+# Conditional routes
 if SCIM_ENABLED:
     app.include_router(scim.router, prefix="/api/v1/scim/v2", tags=["scim"])
 
+########################################
+#
+# AUDIT MIDDLEWARE SETUP
+#
+########################################
 
 try:
     audit_level = AuditLevel(AUDIT_LOG_LEVEL)
@@ -1239,7 +1212,9 @@ async def get_current_usage(user=Depends(get_verified_user)):
 
 
 ############################
-# OAuth Login & Callback
+#
+# OAUTH LOGIN & CALLBACK
+#
 ############################
 
 # SessionMiddleware is used by authlib for oauth
