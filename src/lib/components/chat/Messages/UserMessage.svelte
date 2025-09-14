@@ -203,7 +203,7 @@
 										name={file.name}
 										type={file.type}
 										size={file?.size}
-										colorClassName="bg-white dark:bg-gray-850 "
+										small={true}
 									/>
 								{/if}
 							</div>
