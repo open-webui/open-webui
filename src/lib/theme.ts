@@ -303,6 +303,15 @@ const _applyThemeStyles = (theme: Theme) => {
           });
           currentResizeObserver.observe(mainContainer);
 
+          mainContainer.addEventListener('mousemove', (e) => {
+            const rect = mainContainer.getBoundingClientRect();
+            worker.postMessage({
+              type: 'mousemove',
+              x: e.clientX - rect.left,
+              y: e.clientY - rect.top
+            });
+          });
+
           currentAnimation = {
             start: () => {},
             stop: () => {
@@ -418,6 +427,9 @@ export const applyTheme = async (themeInput: string | Theme, isLiveUpdate = fals
   if (themeToApply.toggles && !themeToApply.toggles.tsParticles) {
     themeToApply.tsparticlesConfig = undefined;
   } else if (themeToApply.tsparticlesConfig) {
+    themeToApply.tsparticlesConfig.fpsLimit = 120;
+    themeToApply.tsparticlesConfig.pauseOnBlur = true;
+    themeToApply.tsparticlesConfig.pauseOnOutsideViewport = true;
     themeToApply.tsparticlesConfig.interactivity = {
       ...themeToApply.tsparticlesConfig.interactivity,
       events: {

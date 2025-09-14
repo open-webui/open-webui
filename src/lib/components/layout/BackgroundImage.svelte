@@ -40,11 +40,7 @@
   <div
     class="absolute top-0 left-0 w-full h-full bg-cover bg-center bg-no-repeat"
     style:background-image="url('{backgroundImageUrl}')"
-    style:z-index="1"
-  ></div>
-  <div
-    class="absolute top-0 left-0 w-full h-full"
-    style:background-color="rgba(0, 0, 0, {backgroundImageDarken / 100})"
-    style:z-index="2"
+    style:filter="brightness({1 - backgroundImageDarken / 100})"
+    style:z-index="0"
   ></div>
 {/if}

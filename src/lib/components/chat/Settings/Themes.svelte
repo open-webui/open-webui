@@ -16,6 +16,7 @@
   import ArrowUpTray from '$lib/components/icons/ArrowUpTray.svelte';
   import Clipboard from '$lib/components/icons/Clipboard.svelte';
   import Pencil from '$lib/components/icons/Pencil.svelte';
+  import Share from '$lib/components/icons/Share.svelte';
   import ThemeEditorModal from '$lib/components/common/ThemeEditorModal.svelte';
   import ThemeImportWarningModal from '$lib/components/common/ThemImportWarningModal.svelte';
   import ConfirmDialog from '$lib/components/common/ConfirmDialog.svelte';
@@ -71,7 +72,7 @@
       toggles.push('tsParticles');
     }
     if (theme.toggles?.gradient) {
-      toggles.push('Gradient Background');
+      toggles.push('System Gradient Background');
     }
     if (theme.toggles?.systemBackgroundImage && theme.systemBackgroundImageUrl) {
       toggles.push('System Background Image');
@@ -105,11 +106,10 @@
       (theme.author && theme.author.toLowerCase().includes(searchQuery.toLowerCase()))
   );
 
-  const themeChangeHandler = async (_theme: string) => {
+  const themeChangeHandler = (_theme: string) => {
     selectedThemeId = _theme;
     themeStore.set(_theme);
     localStorage.setItem('theme', _theme);
-    await applyTheme(_theme);
   };
 
   onMount(() => {
@@ -471,15 +471,6 @@
                         <Clipboard className="w-4 h-4" />
                       </button>
                     </Tooltip>
-                    <Tooltip content="Export Theme" placement="top">
-                      <button
-                        class="p-1.5 text-gray-500 hover:text-gray-900 dark:hover:text-white transition rounded-full"
-                        on:click|stopPropagation={() => exportTheme(theme)}
-                        aria-label={$i18n.t('Export theme')}
-                      >
-                        <ArrowUpTray className="w-4 h-4" />
-                      </button>
-                    </Tooltip>
                     <Tooltip content="Edit Theme" placement="top">
                       <button
                         class="p-1.5 text-gray-500 hover:text-yellow-500 dark:hover:text-yellow-400 transition rounded-full"
@@ -487,6 +478,25 @@
                         aria-label={$i18n.t('Edit theme')}
                       >
                         <Pencil className="w-4 h-4" />
+                      </button>
+                    </Tooltip>
+                    <Tooltip content="Share Theme" placement="top">
+                      <a
+                        href="https://openwebui.com/"
+                        target="_blank"
+                        class="p-1.5 text-gray-500 hover:text-gray-900 dark:hover:text-white transition rounded-full"
+                        aria-label={$i18n.t('Share theme')}
+                      >
+                        <Share class="w-4 h-4" />
+                      </a>
+                    </Tooltip>
+                    <Tooltip content="Export Theme" placement="top">
+                      <button
+                        class="p-1.5 text-gray-500 hover:text-gray-900 dark:hover:text-white transition rounded-full"
+                        on:click|stopPropagation={() => exportTheme(theme)}
+                        aria-label={$i18n.t('Export theme')}
+                      >
+                        <ArrowUpTray className="w-4 h-4" />
                       </button>
                     </Tooltip>
                     <Tooltip content="Remove Theme" placement="top">
@@ -575,7 +585,7 @@
   </div>
 
   {#if $config?.features.enable_community_sharing && ($user.role === 'admin' || $user.permissions.public_sharing)}
-    <div class=" my-1.5">
+    <div class=" mb-1.5">
       <div class=" text-sm font-medium mb-1 line-clamp-1">
         {$i18n.t('Made by Open WebUI Community')}
       </div>

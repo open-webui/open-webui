@@ -60,9 +60,6 @@
 		}
 	});
 
-	afterNavigate(() => {
-		theme.set(localStorage.getItem('theme') ?? 'system');
-	});
 
 	setContext('i18n', i18n);
 

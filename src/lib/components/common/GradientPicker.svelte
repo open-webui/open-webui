@@ -41,9 +41,11 @@
     const numColors = Math.floor(Math.random() * 5) + 2; // 2 to 6 colors
     const newColors = [];
     for (let i = 0; i < numColors; i++) {
-      newColors.push('#' + Math.floor(Math.random()*16777215).toString(16));
+      newColors.push('#' + Math.floor(Math.random() * 16777215).toString(16));
     }
     colors = newColors;
+    direction = Math.floor(Math.random() * 361);
+    intensity = Math.floor(Math.random() * 101);
     toast.success(`Generated a random ${numColors}-color gradient.`);
   };
 

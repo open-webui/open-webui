@@ -1,7 +1,7 @@
 <script lang="ts">
   import { onMount } from 'svelte';
   import type { Container } from '@tsparticles/engine';
-  import { loadFull } from 'tsparticles';
+  import { loadAll } from '@tsparticles/all';
 
   export let options: any;
   export let url: string | undefined = undefined;
@@ -14,7 +14,7 @@
     const { particlesInit } = await import('@tsparticles/svelte');
 
     await particlesInit(async (engine) => {
-      await loadFull(engine);
+      await loadAll(engine);
     });
 
     ParticlesComponent = Particles;
