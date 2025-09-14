@@ -1100,10 +1100,3 @@ DEFAULT_CODE_INTERPRETER_PROMPT = """
    - All responses should be communicated in the chat's primary language, ensuring seamless understanding. If the chat is multilingual, default to English for clarity.
 
 Ensure that the tools are effectively utilized to achieve the highest-quality analysis for the user."""
-
-
-
-
-
-
-
