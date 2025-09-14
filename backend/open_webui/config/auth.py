@@ -4,7 +4,7 @@ from open_webui.config.base import PersistentConfig
 from open_webui.env import log
 
 ####################################
-# WEBUI_AUTH (Required for security)
+# WebUI Auth
 ####################################
 
 ENABLE_API_KEY = PersistentConfig(
@@ -534,3 +534,105 @@ def load_oauth_providers():
 
 
 load_oauth_providers()
+
+
+####################################
+# LDAP
+####################################
+
+ENABLE_LDAP = PersistentConfig(
+    "ENABLE_LDAP",
+    "ldap.enable",
+    os.environ.get("ENABLE_LDAP", "false").lower() == "true",
+)
+
+LDAP_SERVER_LABEL = PersistentConfig(
+    "LDAP_SERVER_LABEL",
+    "ldap.server.label",
+    os.environ.get("LDAP_SERVER_LABEL", "LDAP Server"),
+)
+
+LDAP_SERVER_HOST = PersistentConfig(
+    "LDAP_SERVER_HOST",
+    "ldap.server.host",
+    os.environ.get("LDAP_SERVER_HOST", "localhost"),
+)
+
+LDAP_SERVER_PORT = PersistentConfig(
+    "LDAP_SERVER_PORT",
+    "ldap.server.port",
+    int(os.environ.get("LDAP_SERVER_PORT", "389")),
+)
+
+LDAP_ATTRIBUTE_FOR_MAIL = PersistentConfig(
+    "LDAP_ATTRIBUTE_FOR_MAIL",
+    "ldap.server.attribute_for_mail",
+    os.environ.get("LDAP_ATTRIBUTE_FOR_MAIL", "mail"),
+)
+
+LDAP_ATTRIBUTE_FOR_USERNAME = PersistentConfig(
+    "LDAP_ATTRIBUTE_FOR_USERNAME",
+    "ldap.server.attribute_for_username",
+    os.environ.get("LDAP_ATTRIBUTE_FOR_USERNAME", "uid"),
+)
+
+LDAP_APP_DN = PersistentConfig(
+    "LDAP_APP_DN", "ldap.server.app_dn", os.environ.get("LDAP_APP_DN", "")
+)
+
+LDAP_APP_PASSWORD = PersistentConfig(
+    "LDAP_APP_PASSWORD",
+    "ldap.server.app_password",
+    os.environ.get("LDAP_APP_PASSWORD", ""),
+)
+
+LDAP_SEARCH_BASE = PersistentConfig(
+    "LDAP_SEARCH_BASE", "ldap.server.users_dn", os.environ.get("LDAP_SEARCH_BASE", "")
+)
+
+LDAP_SEARCH_FILTERS = PersistentConfig(
+    "LDAP_SEARCH_FILTER",
+    "ldap.server.search_filter",
+    os.environ.get("LDAP_SEARCH_FILTER", os.environ.get("LDAP_SEARCH_FILTERS", "")),
+)
+
+LDAP_USE_TLS = PersistentConfig(
+    "LDAP_USE_TLS",
+    "ldap.server.use_tls",
+    os.environ.get("LDAP_USE_TLS", "True").lower() == "true",
+)
+
+LDAP_CA_CERT_FILE = PersistentConfig(
+    "LDAP_CA_CERT_FILE",
+    "ldap.server.ca_cert_file",
+    os.environ.get("LDAP_CA_CERT_FILE", ""),
+)
+
+LDAP_VALIDATE_CERT = PersistentConfig(
+    "LDAP_VALIDATE_CERT",
+    "ldap.server.validate_cert",
+    os.environ.get("LDAP_VALIDATE_CERT", "True").lower() == "true",
+)
+
+LDAP_CIPHERS = PersistentConfig(
+    "LDAP_CIPHERS", "ldap.server.ciphers", os.environ.get("LDAP_CIPHERS", "ALL")
+)
+
+# For LDAP Group Management
+ENABLE_LDAP_GROUP_MANAGEMENT = PersistentConfig(
+    "ENABLE_LDAP_GROUP_MANAGEMENT",
+    "ldap.group.enable_management",
+    os.environ.get("ENABLE_LDAP_GROUP_MANAGEMENT", "False").lower() == "true",
+)
+
+ENABLE_LDAP_GROUP_CREATION = PersistentConfig(
+    "ENABLE_LDAP_GROUP_CREATION",
+    "ldap.group.enable_creation",
+    os.environ.get("ENABLE_LDAP_GROUP_CREATION", "False").lower() == "true",
+)
+
+LDAP_ATTRIBUTE_FOR_GROUPS = PersistentConfig(
+    "LDAP_ATTRIBUTE_FOR_GROUPS",
+    "ldap.server.attribute_for_groups",
+    os.environ.get("LDAP_ATTRIBUTE_FOR_GROUPS", "memberOf"),
+)

@@ -4,6 +4,7 @@ from .database import *
 
 from .llm import *
 from .auth import *
+from .media import *
 from .legacy import *
 
 setup_logging()
