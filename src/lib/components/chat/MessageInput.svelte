@@ -919,6 +919,7 @@
 
 <FilesOverlay show={dragged} />
 <ToolServersModal bind:show={showTools} {selectedToolIds} />
+
 <InputVariablesModal
 	bind:show={showInputVariablesModal}
 	variables={inputVariables}
