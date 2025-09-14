@@ -20,6 +20,7 @@ class ConfigStateBootstrap:
 
     Attributes:
         app: The FastAPI application instance with state to be configured
+        state_name_mappings: Dict mapping env_name to desired state attribute name
 
     Example:
         >>> bootstrap = ConfigStateBootstrap(app)
@@ -27,15 +28,49 @@ class ConfigStateBootstrap:
         >>> missing_configs = bootstrap.validate_config_completeness()
     """
 
-    def __init__(self, app):
+    def __init__(self, app, state_name_mappings=None):
         """
         Initialize the bootstrap with a FastAPI application instance.
 
         Args:
             app: The FastAPI application instance that contains the state.config
                  object to be populated with configuration values.
+            state_name_mappings: Optional dict mapping env_name to desired state
+                                attribute name for cases where they differ.
         """
         self.app = app
+        self.state_name_mappings = state_name_mappings or {
+            # Misc
+            "WEBUI_BANNERS": "BANNERS",
+            # RAG
+            "RAG_TOP_K": "TOP_K",
+            "RAG_TOP_K_RERANKER": "TOP_K_RERANKERS",
+            "RAG_RELEVANCE_THRESHOLD": "RELEVANCE_THRESHOLD",
+            "RAG_HYBRID_BM25_WEIGHT": "HYBRID_BM25_WEIGHT",
+            "RAG_ALLOWED_FILE_EXTENSIONS": "ALLOWED_FILE_EXTENSIONS",
+            "RAG_FILE_MAX_SIZE": "FILE_MAX_SIZE",
+            "RAG_FILE_MAX_COUNT": "FILE_MAX_COUNT",
+            "RAG_TEXT_SPLITTER": "TEXT_SPLITTER",
+            # STT
+            "AUDIO_STT_ENGINE": "STT_ENGINE",
+            "AUDIO_STT_MODEL": "STT_MODEL",
+            "AUDIO_STT_SUPPORTED_CONTENT_TYPES": "STT_SUPPORTED_CONTENT_TYPES",
+            "AUDIO_STT_OPENAI_API_BASE_URL": "STT_OPENAI_API_BASE_URL",
+            "AUDIO_STT_OPENAI_API_KEY": "STT_OPENAI_API_KEY",
+            # TTS
+            "AUDIO_TTS_OPENAI_API_BASE_URL": "TTS_OPENAI_API_BASE_URL",
+            "AUDIO_TTS_OPENAI_API_KEY": "TTS_OPENAI_API_KEY",
+            "AUDIO_TTS_ENGINE": "TTS_ENGINE",
+            "AUDIO_TTS_MODEL": "TTS_MODEL",
+            "AUDIO_TTS_VOICE": "TTS_VOICE",
+            "AUDIO_TTS_API_KEY": "TTS_API_KEY",
+            "AUDIO_TTS_SPLIT_ON": "TTS_SPLIT_ON",
+            "AUDIO_TTS_AZURE_SPEECH_REGION": "TTS_AZURE_SPEECH_REGION",
+            "AUDIO_TTS_AZURE_SPEECH_BASE_URL": "TTS_AZURE_SPEECH_BASE_URL",
+            "AUDIO_TTS_AZURE_SPEECH_OUTPUT_FORMAT": "TTS_AZURE_SPEECH_OUTPUT_FORMAT",
+            # Variable name is different from env_name
+            "LDAP_SEARCH_FILTER": "LDAP_SEARCH_FILTERS",
+        }
 
     def bootstrap_config_state(self):
         """
@@ -45,6 +80,9 @@ class ConfigStateBootstrap:
         and sets them as attributes on app.state.config if they are not already
         present. This allows for non-destructive initialization that works
         alongside existing manual configuration assignments.
+
+        For items with mappings in state_name_mappings, the mapped attribute name
+        will be used instead of the env_name.
 
         The method logs detailed information about the bootstrap process:
         - Number of configs successfully set
@@ -66,16 +104,23 @@ class ConfigStateBootstrap:
 
         for config_item in PERSISTENT_CONFIG_REGISTRY:
             try:
-                # Check if this config is already set to avoid overriding
-                if hasattr(self.app.state.config, config_item.env_name):
+                # determine the attribute name to use on app.state.config
+                state_attr_name = self.state_name_mappings.get(
+                    config_item.env_name, config_item.env_name
+                )
+
+                # check if this config is already set to avoid overriding
+                if hasattr(self.app.state.config, state_attr_name):
                     skipped_count += 1
-                    log.debug(f"Skipping {config_item.env_name} - already set")
+                    log.debug(f"Skipping {state_attr_name} - already set")
                     continue
 
-                # Use the env_name as the attribute name (e.g., "ENABLE_OLLAMA_API")
-                setattr(self.app.state.config, config_item.env_name, config_item)
+                # set the config using the appropriate attribute name
+                setattr(self.app.state.config, state_attr_name, config_item)
                 assigned_count += 1
-                log.debug(f"Set app.state.config.{config_item.env_name}")
+                log.info(
+                    f"Set app.state.config.{state_attr_name} from {config_item.env_name}"
+                )
 
             except Exception as e:
                 log.warning(
@@ -104,3 +149,19 @@ class ConfigStateBootstrap:
             >>> print(f"First few: {config_names[:5]}")
         """
         return [config.env_name for config in PERSISTENT_CONFIG_REGISTRY]
+
+    def get_state_attribute_mapping(self):
+        """
+        Get mapping of env_name to actual state attribute name.
+
+        Returns:
+            dict: Mapping showing what attribute name will be used on app.state.config
+                 for each environment variable name.
+        """
+        mapping = {}
+        for config in PERSISTENT_CONFIG_REGISTRY:
+            state_attr_name = self.state_name_mappings.get(
+                config.env_name, config.env_name
+            )
+            mapping[config.env_name] = state_attr_name
+        return mapping

@@ -29,18 +29,6 @@ JWT_EXPIRES_IN = PersistentConfig(
     "JWT_EXPIRES_IN", "auth.jwt_expiry", os.environ.get("JWT_EXPIRES_IN", "-1")
 )
 
-SHOW_ADMIN_DETAILS = PersistentConfig(
-    "SHOW_ADMIN_DETAILS",
-    "auth.admin.show",
-    os.environ.get("SHOW_ADMIN_DETAILS", "true").lower() == "true",
-)
-
-ADMIN_EMAIL = PersistentConfig(
-    "ADMIN_EMAIL",
-    "auth.admin.email",
-    os.environ.get("ADMIN_EMAIL", None),
-)
-
 ####################################
 # OAuth config
 ####################################
