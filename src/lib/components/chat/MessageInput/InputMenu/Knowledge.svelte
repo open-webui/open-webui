@@ -2,6 +2,9 @@
 	import { onMount, tick, getContext } from 'svelte';
 
 	import { decodeString } from '$lib/utils';
+	import { knowledge } from '$lib/stores';
+
+	import { getKnowledgeBases } from '$lib/apis/knowledge';
 
 	import Tooltip from '$lib/components/common/Tooltip.svelte';
 	import Database from '$lib/components/icons/Database.svelte';
@@ -9,14 +12,17 @@
 
 	const i18n = getContext('i18n');
 
-	export let knowledge = [];
 	export let onSelect = (e) => {};
 
 	let items = [];
 	let selectedIdx = 0;
 
 	onMount(async () => {
-		let legacy_documents = knowledge
+		if ($knowledge === null) {
+			await knowledge.set(await getKnowledgeBases(localStorage.token));
+		}
+
+		let legacy_documents = $knowledge
 			.filter((item) => item?.meta?.document)
 			.map((item) => ({
 				...item,
@@ -51,16 +57,17 @@
 					]
 				: [];
 
-		let collections = knowledge
+		let collections = $knowledge
 			.filter((item) => !item?.meta?.document)
 			.map((item) => ({
 				...item,
 				type: 'collection'
 			}));
+		``;
 		let collection_files =
-			knowledge.length > 0
+			$knowledge.length > 0
 				? [
-						...knowledge
+						...$knowledge
 							.reduce((a, item) => {
 								return [
 									...new Set([
