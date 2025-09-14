@@ -1,6 +1,6 @@
 import os
 from open_webui.env import ENV
-from open_webui.config.base import PersistentConfig
+from open_webui.config.core.base import PersistentConfig
 
 ####################################
 # OLLAMA API

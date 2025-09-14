@@ -2,7 +2,7 @@ import json
 import logging
 import os
 from typing import Generic, Optional, TypeVar, Union
-from open_webui.config.database import get_config, save_to_db
+from open_webui.config.core.database import get_config, save_to_db
 from open_webui.utils.redis import get_redis_connection
 import redis
 

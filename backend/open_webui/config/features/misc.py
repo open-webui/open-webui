@@ -5,7 +5,7 @@ from urllib.parse import urlparse
 
 from pydantic import BaseModel
 
-from open_webui.config.base import PersistentConfig
+from open_webui.config.core.base import PersistentConfig
 from open_webui.env import log
 
 ####################################

@@ -1,6 +1,6 @@
 import json
 import os
-from open_webui.config.base import PersistentConfig
+from open_webui.config.core.base import PersistentConfig
 from open_webui.env import log
 
 ####################################

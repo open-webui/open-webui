@@ -1,8 +1,8 @@
 import os
 import json
 
-from open_webui.config.base import PersistentConfig
-from open_webui.config.llm import (
+from open_webui.config.core.base import PersistentConfig
+from open_webui.config.integrations.llm import (
     OPENAI_API_BASE_URL,
     OPENAI_API_KEY,
     OLLAMA_BASE_URL,

@@ -1,7 +1,7 @@
 import os
-from open_webui.config.base import PersistentConfig
+from open_webui.config.core.base import PersistentConfig
 from open_webui.env import CACHE_DIR, OFFLINE_MODE, log
-from open_webui.config.llm import (
+from open_webui.config.integrations.llm import (
     OPENAI_API_BASE_URL,
     OPENAI_API_KEY,
     GEMINI_API_BASE_URL,
