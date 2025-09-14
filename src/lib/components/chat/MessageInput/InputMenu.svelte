@@ -87,7 +87,7 @@
 
 	<div slot="content">
 		<DropdownMenu.Content
-			class="w-full max-w-[240px] rounded-2xl px-1 py-1  border border-gray-100  dark:border-gray-800 z-50 bg-white dark:bg-gray-850 dark:text-white shadow-lg max-h-72 overflow-y-auto overflow-x-hidden scrollbar-thin transition"
+			class="w-full max-w-[260px] rounded-2xl px-1 py-1  border border-gray-100  dark:border-gray-800 z-50 bg-white dark:bg-gray-850 dark:text-white shadow-lg max-h-72 overflow-y-auto overflow-x-hidden scrollbar-thin transition"
 			sideOffset={4}
 			alignOffset={-6}
 			side="bottom"
@@ -422,7 +422,7 @@
 						</div>
 					</button>
 
-					<Knowledge />
+					<Knowledge knowledge={$knowledge ?? []} />
 				</div>
 			{:else if tab === 'notes'}
 				<div in:fly={{ x: 20, duration: 150 }}>
