@@ -9,6 +9,7 @@ from .retrieval import *
 from .vector import *
 from .legacy import *
 from .code_interpreter import *
+from .storage import *
 
 setup_logging()
 
