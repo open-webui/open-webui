@@ -15,7 +15,7 @@
 
 	const select = (index: number) => {
 		const item = filteredItems[index];
-		if (item) command(item);
+		if (item) command({ id: item.id, label: item.name });
 	};
 
 	const onKeyDown = (event: KeyboardEvent) => {

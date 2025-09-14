@@ -19,6 +19,7 @@ export function getSuggestionRenderer(Component: any, ComponentProps = {}) {
 					target: container,
 					props: {
 						char: props?.text,
+						query: props?.query,
 						command: (item) => {
 							props.command({ id: item.id, label: item.label });
 						},
@@ -54,7 +55,14 @@ export function getSuggestionRenderer(Component: any, ComponentProps = {}) {
 
 			onUpdate: (props: any) => {
 				if (!component) return;
-				component.$set({ query: props.query });
+
+				component.$set({
+					query: props.query,
+					command: (item) => {
+						props.command({ id: item.id, label: item.label });
+					}
+				});
+
 				if (props.clientRect && popup) {
 					popup.setProps({ getReferenceClientRect: props.clientRect as any });
 				}

@@ -91,6 +91,18 @@
 		}
 	});
 
+	// Convert TipTap mention spans -> <@id>
+	turndownService.addRule('mentions', {
+		filter: (node) => node.nodeName === 'SPAN' && node.getAttribute('data-type') === 'mention',
+		replacement: (_content, node: HTMLElement) => {
+			const id = node.getAttribute('data-id') || '';
+			// TipTap stores the trigger char in data-mention-suggestion-char (usually "@")
+			const ch = node.getAttribute('data-mention-suggestion-char') || '@';
+			// Emit <@id> style, e.g. <@llama3.2:latest>
+			return `<${ch}${id}>`;
+		}
+	});
+
 	import { onMount, onDestroy, tick, getContext } from 'svelte';
 	import { createEventDispatcher } from 'svelte';
 
@@ -100,7 +112,7 @@
 	import { Fragment, DOMParser } from 'prosemirror-model';
 	import { EditorState, Plugin, PluginKey, TextSelection, Selection } from 'prosemirror-state';
 	import { Decoration, DecorationSet } from 'prosemirror-view';
-	import { Editor, Extension } from '@tiptap/core';
+	import { Editor, Extension, mergeAttributes } from '@tiptap/core';
 
 	// Yjs imports
 	import * as Y from 'yjs';
@@ -141,9 +153,6 @@
 
 	import { PASTED_TEXT_CHARACTER_LIMIT } from '$lib/constants';
 	import { all, createLowlight } from 'lowlight';
-
-	import MentionList from '../channel/MessageInput/MentionList.svelte';
-	import { getSuggestionRenderer } from './RichTextInput/suggestions.js';
 
 	export let oncompositionstart = (e) => {};
 	export let oncompositionend = (e) => {};
@@ -1054,7 +1063,6 @@
 
 				htmlValue = editor.getHTML();
 				jsonValue = editor.getJSON();
-
 				mdValue = turndownService
 					.turndown(
 						htmlValue
