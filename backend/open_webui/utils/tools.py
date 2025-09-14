@@ -538,12 +538,23 @@ async def get_tool_server_data(token: str, url: str) -> Dict[str, Any]:
                     error_body = await response.json()
                     raise Exception(error_body)
 
+                text_content = None
+
                 # Check if URL ends with .yaml or .yml to determine format
                 if url.lower().endswith((".yaml", ".yml")):
                     text_content = await response.text()
                     res = yaml.safe_load(text_content)
                 else:
-                    res = await response.json()
+                    text_content = await response.text()
+
+                try:
+                    res = json.loads(text_content)
+                except json.JSONDecodeError:
+                    try:
+                        res = yaml.safe_load(text_content)
+                    except Exception as e:
+                        raise e
+
     except Exception as err:
         log.exception(f"Could not fetch tool server spec from {url}")
         if isinstance(err, dict) and "detail" in err:

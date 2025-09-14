@@ -55,12 +55,12 @@ dependencies = [
     "langchain-community==0.3.27",
 
     "fake-useragent==2.2.0",
-    "chromadb==0.6.3",
+    "chromadb==1.0.20",
     "pymilvus==2.5.0",
     "qdrant-client==1.14.3",
     "opensearch-py==2.8.0",
     "playwright==1.49.1",
-    "elasticsearch==9.0.1",
+    "elasticsearch==9.1.0",
     "pinecone==6.0.2",
     "oracledb==3.2.0",
 
@@ -112,7 +112,7 @@ dependencies = [
 
     
 
-    "googleapis-common-protos==1.63.2",
+    "googleapis-common-protos==1.70.0",
     "google-cloud-storage==2.19.0",
 
     "azure-identity==1.20.0",
@@ -124,7 +124,6 @@ dependencies = [
     "tencentcloud-sdk-python==3.0.1336",
     
     "oracledb>=3.2.0",
-    "posthog==5.4.0",
 
 ]
 readme = "README.md"
@@ -142,8 +141,8 @@ classifiers = [
 
 [project.optional-dependencies]
 postgres = [
-    "psycopg2-binary==2.9.9",
-    "pgvector==0.4.0",
+    "psycopg2-binary==2.9.10",
+    "pgvector==0.4.1",
 ]
 
 all = [
