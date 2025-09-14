@@ -437,7 +437,7 @@
 						</div>
 					</button>
 
-					<Knowledge knowledge={$knowledge ?? []} {onSelect} />
+					<Knowledge {onSelect} />
 				</div>
 			{:else if tab === 'notes'}
 				<div in:fly={{ x: 20, duration: 150 }}>
