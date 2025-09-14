@@ -730,6 +730,7 @@ def load_oauth_providers():
         }
 
     if FEISHU_CLIENT_ID.value and FEISHU_CLIENT_SECRET.value:
+
         def feishu_oauth_register(client: OAuth):
             client.register(
                 name="feishu",
