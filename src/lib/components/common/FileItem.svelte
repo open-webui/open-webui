@@ -95,7 +95,7 @@
 			{/if}
 		</div>
 	{:else}
-		<div class="pl-1">
+		<div class="pl-1.5">
 			{#if !loading}
 				<Tooltip
 					content={type === 'collection'
