@@ -8,6 +8,7 @@
 	import Tooltip from '$lib/components/common/Tooltip.svelte';
 	import Spinner from '$lib/components/common/Spinner.svelte';
 	import Loader from '$lib/components/common/Loader.svelte';
+	import { chatId } from '$lib/stores';
 
 	const i18n = getContext('i18n');
 
@@ -70,33 +71,35 @@
 	{:else}
 		<div class="flex flex-col gap-0.5">
 			{#each items as item, idx}
-				<button
-					class=" px-2.5 py-1 rounded-xl w-full text-left flex justify-between items-center text-sm {idx ===
-					selectedIdx
-						? ' bg-gray-50 dark:bg-gray-800 dark:text-gray-100 selected-command-option-button'
-						: ''}"
-					type="button"
-					on:click={() => {
-						onSelect(item);
-					}}
-					on:mousemove={() => {
-						selectedIdx = idx;
-					}}
-					on:mouseleave={() => {
-						if (idx === 0) {
-							selectedIdx = -1;
-						}
-					}}
-					data-selected={idx === selectedIdx}
-				>
-					<div class="text-black dark:text-gray-100 flex items-center gap-1.5">
-						<Tooltip content={item.description || decodeString(item?.name)} placement="top-start">
-							<div class="line-clamp-1 flex-1">
-								{decodeString(item?.name)}
-							</div>
-						</Tooltip>
-					</div>
-				</button>
+				{#if item?.id !== $chatId}
+					<button
+						class=" px-2.5 py-1 rounded-xl w-full text-left flex justify-between items-center text-sm {idx ===
+						selectedIdx
+							? ' bg-gray-50 dark:bg-gray-800 dark:text-gray-100 selected-command-option-button'
+							: ''}"
+						type="button"
+						on:click={() => {
+							onSelect(item);
+						}}
+						on:mousemove={() => {
+							selectedIdx = idx;
+						}}
+						on:mouseleave={() => {
+							if (idx === 0) {
+								selectedIdx = -1;
+							}
+						}}
+						data-selected={idx === selectedIdx}
+					>
+						<div class="text-black dark:text-gray-100 flex items-center gap-1.5">
+							<Tooltip content={item.description || decodeString(item?.name)} placement="top-start">
+								<div class="line-clamp-1 flex-1">
+									{decodeString(item?.name)}
+								</div>
+							</Tooltip>
+						</div>
+					</button>
+				{/if}
 			{/each}
 
 			{#if !allItemsLoaded}
