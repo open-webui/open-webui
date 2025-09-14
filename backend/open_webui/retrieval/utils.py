@@ -554,7 +554,7 @@ def get_sources_from_items(
                     message_list = get_message_list(messages_map, message_id)
                     message_history = "\n".join(
                         [
-                            f"{m.get('role', 'user').capitalize()}: {m.get('content')}"
+                            f"#### {m.get('role', 'user').capitalize()}\n{m.get('content')}\n\n"
                             for m in message_list
                         ]
                     )
