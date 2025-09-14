@@ -7,10 +7,12 @@
 
 	export let elementId = '';
 
+	export let as = 'div';
+	export let className = 'flex';
+
 	export let placement = 'top';
 	export let content = `I'm a tooltip!`;
 	export let touch = true;
-	export let className = 'flex';
 	export let theme = '';
 	export let offset = [0, 4];
 	export let allowHTML = true;
@@ -59,8 +61,8 @@
 	});
 </script>
 
-<div bind:this={tooltipElement} class={className}>
+<svelte:element this={as} bind:this={tooltipElement} class={className}>
 	<slot />
-</div>
+</svelte:element>
 
 <slot name="tooltip"></slot>
