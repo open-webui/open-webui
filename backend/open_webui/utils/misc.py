@@ -26,7 +26,7 @@ def deep_update(d, u):
     return d
 
 
-def get_message_list(messages, message_id):
+def get_message_list(messages_map, message_id):
     """
     Reconstructs a list of messages in order up to the specified message_id.
 
@@ -36,11 +36,11 @@ def get_message_list(messages, message_id):
     """
 
     # Handle case where messages is None
-    if not messages:
+    if not messages_map:
         return []  # Return empty list instead of None to prevent iteration errors
 
     # Find the message by its id
-    current_message = messages.get(message_id)
+    current_message = messages_map.get(message_id)
 
     if not current_message:
         return []  # Return empty list instead of None to prevent iteration errors
@@ -53,7 +53,7 @@ def get_message_list(messages, message_id):
             0, current_message
         )  # Insert the message at the beginning of the list
         parent_id = current_message.get("parentId")  # Use .get() for safety
-        current_message = messages.get(parent_id) if parent_id else None
+        current_message = messages_map.get(parent_id) if parent_id else None
 
     return message_list
 

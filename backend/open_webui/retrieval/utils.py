@@ -19,10 +19,13 @@ from open_webui.retrieval.vector.factory import VECTOR_DB_CLIENT
 from open_webui.models.users import UserModel
 from open_webui.models.files import Files
 from open_webui.models.knowledge import Knowledges
+
+from open_webui.models.chats import Chats
 from open_webui.models.notes import Notes
 
 from open_webui.retrieval.vector.main import GetResult
 from open_webui.utils.access_control import has_access
+from open_webui.utils.misc import get_message_list
 
 
 from open_webui.env import (
@@ -537,6 +540,33 @@ def get_sources_from_items(
                     "documents": [[note.data.get("content", {}).get("md", "")]],
                     "metadatas": [[{"file_id": note.id, "name": note.title}]],
                 }
+
+        elif item.get("type") == "chat":
+            # Chat Attached
+            chat = Chats.get_chat_by_id(item.get("id"))
+            print("chat", chat)
+
+            if chat and (user.role == "admin" or chat.user_id == user.id):
+                messages_map = chat.chat.get("history", {}).get("messages", {})
+                message_id = chat.chat.get("history", {}).get("currentId")
+
+                print(messages_map, message_id)
+
+                if messages_map and message_id:
+                    # Reconstruct the message list in order
+                    message_list = get_message_list(messages_map, message_id)
+                    message_history = "\n".join(
+                        [
+                            f"{m.get('role', 'user').capitalize()}: {m.get('content')}"
+                            for m in message_list
+                        ]
+                    )
+
+                    # User has access to the chat
+                    query_result = {
+                        "documents": [[message_history]],
+                        "metadatas": [[{"file_id": chat.id, "name": chat.title}]],
+                    }
 
         elif item.get("type") == "file":
             if (
