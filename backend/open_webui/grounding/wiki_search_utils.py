@@ -400,9 +400,6 @@ class WikiSearchGrounder:
         if not await self.ensure_initialized():
             return []
 
-        # Acquire semaphore lock to control concurrency
-        semaphore, start_time = await self._acquire_lock("search")
-
         try:
             # Translate query to English for better search results
             original_query = query
@@ -444,6 +441,9 @@ class WikiSearchGrounder:
 
             # Apply reranking if available and we have multiple results
             if self.reranker_loaded and len(formatted) > 1:
+                # Acquire semaphore lock to control concurrency during reranking
+                semaphore, start_time = await self._acquire_lock("reranking")
+
                 try:
                     log.info(
                         f"🔍 Reranking {len(formatted)} search results using txtai reranker"
@@ -521,6 +521,9 @@ class WikiSearchGrounder:
                 except Exception as e:
                     log.warning(f"🚨 Reranking failed: {e}")
                     # Keep original results if reranking fails
+                finally:
+                    # Always release the semaphore lock after reranking
+                    self._release_lock(semaphore, "reranking", start_time)
 
             # Return top results
             final_results = formatted[: self.max_search_results]
@@ -535,9 +538,6 @@ class WikiSearchGrounder:
         except Exception as e:
             log.error(f"Search failed: {e}")
             return []
-        finally:
-            # Always release the semaphore lock
-            self._release_lock(semaphore, "search", start_time)
 
     async def ground_query(
         self, query: str, request=None, user=None, messages: List[Dict] = None
