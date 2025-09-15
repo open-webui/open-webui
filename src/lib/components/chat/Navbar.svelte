@@ -36,11 +36,11 @@
 
 	import EllipsisHorizontal from '../icons/EllipsisHorizontal.svelte';
 	import ChatPlus from '../icons/ChatPlus.svelte';
+	import ChatCheck from '../icons/ChatCheck.svelte';
 
 	const i18n = getContext('i18n');
 
 	export let initNewChat: Function;
-	export let title: string = $WEBUI_NAME;
 	export let shareEnabled: boolean = false;
 
 	export let chat;
@@ -152,11 +152,29 @@
 									}}
 								>
 									<div class=" m-auto self-center">
-										<ChatPlus className=" size-4.5" strokeWidth="1.5" />
+										<ChatCheck className=" size-4.5" strokeWidth="1.5" />
 									</div>
 								</button>
 							</Tooltip>
 						{/if}
+					{/if}
+
+					{#if $mobile && !$temporaryChatEnabled && chat && chat.id}
+						<Tooltip content={$i18n.t('New Chat')}>
+							<button
+								class=" flex {$showSidebar
+									? 'md:hidden'
+									: ''} cursor-pointer px-2 py-2 rounded-xl text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-850 transition"
+								on:click={() => {
+									initNewChat();
+								}}
+								aria-label="New Chat"
+							>
+								<div class=" m-auto self-center">
+									<ChatPlus className=" size-4.5" strokeWidth="1.5" />
+								</div>
+							</button>
+						</Tooltip>
 					{/if}
 
 					{#if shareEnabled && chat && (chat.id || $temporaryChatEnabled)}
@@ -193,24 +211,6 @@
 							>
 								<div class=" m-auto self-center">
 									<AdjustmentsHorizontal className=" size-5" strokeWidth="1" />
-								</div>
-							</button>
-						</Tooltip>
-					{/if}
-
-					{#if $mobile}
-						<Tooltip content={$i18n.t('New Chat')}>
-							<button
-								class=" flex {$showSidebar
-									? 'md:hidden'
-									: ''} cursor-pointer px-2 py-2 rounded-xl text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-850 transition"
-								on:click={() => {
-									initNewChat();
-								}}
-								aria-label="New Chat"
-							>
-								<div class=" m-auto self-center">
-									<PencilSquare className=" size-5" strokeWidth="2" />
 								</div>
 							</button>
 						</Tooltip>
