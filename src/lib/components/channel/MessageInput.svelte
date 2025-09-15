@@ -36,6 +36,7 @@
 	import { getSuggestionRenderer } from '../common/RichTextInput/suggestions';
 	import CommandSuggestionList from '../chat/MessageInput/CommandSuggestionList.svelte';
 	import MentionList from './MessageInput/MentionList.svelte';
+	import Skeleton from '../chat/Messages/Skeleton.svelte';
 
 	export let placeholder = $i18n.t('Send a Message');
 
@@ -690,18 +691,22 @@
 						{/if}
 					</div>
 
-					<div class="relative">
-						<div class=" -mt-5">
-							{#if typingUsers.length > 0}
-								<div class=" text-xs px-4 mb-1">
+					{#if typingUsers.length > 0}
+						<div
+							class=" absolute -top-6 pb-2.5 w-full bg-gradient-to-t to-transparent from-white dark:from-gray-900 pointer-events-none select-none"
+						>
+							<div class=" text-xs px-2 mt-1 flex items-center gap-1.5">
+								<Skeleton size="xs" />
+
+								<div>
 									<span class=" font-normal text-black dark:text-white">
 										{typingUsers.map((user) => user.name).join(', ')}
 									</span>
 									{$i18n.t('is typing...')}
 								</div>
-							{/if}
+							</div>
 						</div>
-					</div>
+					{/if}
 				</div>
 			</div>
 
@@ -811,7 +816,7 @@
 											json={true}
 											messageInput={true}
 											richText={$settings?.richTextInput ?? true}
-											{showFormattingToolbar}
+											showFormattingToolbar={$settings?.showFormattingToolbar ?? false}
 											shiftEnter={!($settings?.ctrlEnterToSend ?? false) &&
 												(!$mobile ||
 													!(
