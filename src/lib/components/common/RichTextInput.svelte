@@ -1105,14 +1105,30 @@
 				handlePaste: (view, event) => {
 					// Force plain-text pasting when richText === false
 					if (!richText) {
-						const text = (event.clipboardData?.getData('text/plain') ?? '').replace(/\r\n/g, '\n');
 						// swallow HTML completely
 						event.preventDefault();
-
-						// Insert as pure text (no HTML parsing)
 						const { state, dispatch } = view;
-						const { from, to } = state.selection;
-						dispatch(state.tr.insertText(text, from, to).scrollIntoView());
+
+						const plainText = (event.clipboardData?.getData('text/plain') ?? '').replace(
+							/\r\n/g,
+							'\n'
+						);
+
+						const lines = plainText.split('\n');
+						const nodes = [];
+
+						lines.forEach((line, index) => {
+							if (index > 0) {
+								nodes.push(state.schema.nodes.hardBreak.create());
+							}
+							if (line.length > 0) {
+								nodes.push(state.schema.text(line));
+							}
+						});
+
+						const fragment = Fragment.fromArray(nodes);
+						dispatch(state.tr.replaceSelectionWith(fragment, false).scrollIntoView());
+
 						return true; // handled
 					}
 
