@@ -79,7 +79,6 @@ from open_webui.config import (
     RAG_RERANKING_MODEL_TRUST_REMOTE_CODE,
     UPLOAD_DIR,
     DEFAULT_LOCALE,
-    WIKIPEDIA_GROUNDING_MAX_CONCURRENT,
     ENABLE_WIKIPEDIA_GROUNDING_RERANKER,
 )
 from open_webui.env import (
@@ -367,7 +366,6 @@ async def get_rag_config(request: Request, user=Depends(get_admin_user)):
         "RAG_FULL_CONTEXT": request.app.state.config.RAG_FULL_CONTEXT,
         "enable_google_drive_integration": request.app.state.config.ENABLE_GOOGLE_DRIVE_INTEGRATION,
         "enable_wikipedia_grounding": request.app.state.config.ENABLE_WIKIPEDIA_GROUNDING,
-        "wikipedia_grounding_max_concurrent": request.app.state.config.WIKIPEDIA_GROUNDING_MAX_CONCURRENT,
         "content_extraction": {
             "engine": request.app.state.config.CONTENT_EXTRACTION_ENGINE,
             "tika_server_url": request.app.state.config.TIKA_SERVER_URL,
@@ -415,7 +413,6 @@ async def get_rag_config(request: Request, user=Depends(get_admin_user)):
             "wikipedia_grounding": {
                 "enabled": request.app.state.config.ENABLE_WIKIPEDIA_GROUNDING,
                 "reranker_enabled": request.app.state.config.ENABLE_WIKIPEDIA_GROUNDING_RERANKER,
-                "max_concurrent": request.app.state.config.WIKIPEDIA_GROUNDING_MAX_CONCURRENT,
             },
         },
     }
@@ -467,14 +464,8 @@ class WebSearchConfig(BaseModel):
     concurrent_requests: Optional[int] = None
 
 
-class WikipediaGroundingConfig(BaseModel):
-    enabled: bool
-    max_concurrent: Optional[int] = 1
-
-
 class WebConfig(BaseModel):
     search: Optional[WebSearchConfig] = None
-    wikipedia_grounding: Optional[WikipediaGroundingConfig] = None
     web_loader_ssl_verification: Optional[bool] = None
 
 
@@ -483,7 +474,6 @@ class ConfigUpdateForm(BaseModel):
     pdf_extract_images: Optional[bool] = None
     enable_google_drive_integration: Optional[bool] = None
     enable_wikipedia_grounding: Optional[bool] = None
-    wikipedia_grounding_max_concurrent: Optional[int] = None
     file: Optional[FileConfig] = None
     content_extraction: Optional[ContentExtractionConfig] = None
     chunk: Optional[ChunkParamUpdateForm] = None
@@ -600,21 +590,11 @@ async def update_rag_config(
             f"Wikipedia grounding updated to: {form_data.enable_wikipedia_grounding}"
         )
 
-    # Wikipedia grounding max concurrent configuration
-    if form_data.wikipedia_grounding_max_concurrent is not None:
-        request.app.state.config.WIKIPEDIA_GROUNDING_MAX_CONCURRENT = (
-            form_data.wikipedia_grounding_max_concurrent
-        )
-        log.info(
-            f"Wikipedia grounding max concurrent updated to: {form_data.wikipedia_grounding_max_concurrent}"
-        )
-
     return {
         "status": True,
         "pdf_extract_images": request.app.state.config.PDF_EXTRACT_IMAGES,
         "RAG_FULL_CONTEXT": request.app.state.config.RAG_FULL_CONTEXT,
         "enable_wikipedia_grounding": request.app.state.config.ENABLE_WIKIPEDIA_GROUNDING,
-        "wikipedia_grounding_max_concurrent": request.app.state.config.WIKIPEDIA_GROUNDING_MAX_CONCURRENT,
         "file": {
             "max_size": request.app.state.config.FILE_MAX_SIZE,
             "max_count": request.app.state.config.FILE_MAX_COUNT,

@@ -5,7 +5,7 @@
 
 	const i18n = getContext('i18n');
 
-	export let config = { enabled: false, maxConcurrent: 1 };
+	export let config = { enabled: false };
 
 	let loading = false;
 
@@ -14,7 +14,6 @@
 		const res = await getRAGConfig(localStorage.token);
 		if (res) {
 			config.enabled = res?.enable_wikipedia_grounding ?? true;
-			config.maxConcurrent = res?.wikipedia_grounding_max_concurrent ?? 1;
 		}
 		loading = false;
 	});
@@ -38,34 +37,6 @@
 		<!-- Description when enabled -->
 		{#if config.enabled}
 			<div class="space-y-4">
-				<!-- Max Concurrent Setting -->
-				<div>
-					<label
-						for="wikipedia-max-concurrent"
-						class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2"
-					>
-						{$i18n.t('Maximum Concurrent Operations')}
-					</label>
-					<div class="flex items-center space-x-3">
-						<input
-							id="wikipedia-max-concurrent"
-							type="number"
-							min="1"
-							max="10"
-							bind:value={config.maxConcurrent}
-							class="w-20 px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white"
-						/>
-						<span class="text-sm text-gray-600 dark:text-gray-400">
-							{$i18n.t('Controls memory usage and prevents system overload under high load')}
-						</span>
-					</div>
-					<p class="text-xs text-gray-500 dark:text-gray-400 mt-1">
-						{$i18n.t(
-							'Recommended: 2-4 for typical deployments. Higher values may cause memory issues.'
-						)}
-					</p>
-				</div>
-
 				<!-- Description -->
 				<div
 					class="text-xs text-gray-600 dark:text-gray-400 bg-gray-50 dark:bg-gray-800 rounded-md p-3"

@@ -66,8 +66,10 @@ class WikiSearchGrounder:
     """Pure txtai-wikipedia implementation with lazy loading and concurrency control"""
 
     # Class-level semaphore for controlling concurrent operations
+    # Use limit of 1 to prevent memory exhaustion ("Brian Smash" technique)
     _semaphore = None
     _semaphore_lock = asyncio.Lock()
+    MAX_CONCURRENT_OPERATIONS = 1
 
     def __init__(self):
         self.max_content_length = 4000
@@ -83,30 +85,14 @@ class WikiSearchGrounder:
     @classmethod
     async def _get_semaphore(cls):
         """Get or create the class-level semaphore for concurrency control"""
-        try:
-            from open_webui.config import WIKIPEDIA_GROUNDING_MAX_CONCURRENT
-
-            max_concurrent = WIKIPEDIA_GROUNDING_MAX_CONCURRENT.value
-        except ImportError:
-            # Fallback to default if config not available
-            max_concurrent = 1
-
-        # Check if semaphore needs to be created or recreated due to config change
-        if cls._semaphore is None or cls._semaphore._value != max_concurrent:
+        if cls._semaphore is None:
             async with cls._semaphore_lock:
-                # Double-check pattern with config value comparison
-                if cls._semaphore is None or cls._semaphore._value != max_concurrent:
-                    old_value = cls._semaphore._value if cls._semaphore else None
-                    cls._semaphore = asyncio.Semaphore(max_concurrent)
-
-                    if old_value is None:
-                        log.info(
-                            f"🔒 Wiki grounding semaphore initialized with {max_concurrent} concurrent operations allowed"
-                        )
-                    else:
-                        log.info(
-                            f"� Wiki grounding semaphore updated from {old_value} to {max_concurrent} concurrent operations"
-                        )
+                # Double-check pattern
+                if cls._semaphore is None:
+                    cls._semaphore = asyncio.Semaphore(cls.MAX_CONCURRENT_OPERATIONS)
+                    log.info(
+                        f"🔒 Wiki grounding semaphore initialized with {cls.MAX_CONCURRENT_OPERATIONS} concurrent operations allowed"
+                    )
         return cls._semaphore
 
     async def _acquire_lock(
@@ -119,7 +105,7 @@ class WikiSearchGrounder:
         available_permits = (
             semaphore._value if hasattr(semaphore, "_value") else "unknown"
         )
-        log.info(
+        log.debug(
             f"🚦 [{operation_name}] Requesting semaphore (available: {available_permits})"
         )
 
@@ -128,11 +114,11 @@ class WikiSearchGrounder:
 
         wait_time = time.time() - start_time
         if wait_time > 0.1:  # Log if we waited more than 100ms
-            log.info(
+            log.debug(
                 f"🔓 [{operation_name}] Acquired semaphore after {wait_time:.2f}s wait"
             )
         else:
-            log.info(f"🔓 [{operation_name}] Acquired semaphore immediately")
+            log.debug(f"🔓 [{operation_name}] Acquired semaphore immediately")
 
         return semaphore, start_time
 
@@ -145,7 +131,7 @@ class WikiSearchGrounder:
         available_permits = (
             semaphore._value if hasattr(semaphore, "_value") else "unknown"
         )
-        log.info(
+        log.debug(
             f"🔓 [{operation_name}] Released semaphore after {total_time:.2f}s (available: {available_permits})"
         )
 

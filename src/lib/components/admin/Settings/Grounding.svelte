@@ -8,7 +8,7 @@
 
 	export let saveHandler: Function;
 
-	let wikipediaConfig = { enabled: false, maxConcurrent: 1 };
+	let wikipediaConfig = { enabled: false };
 	let loading = false;
 
 	const handleSubmit = async () => {
@@ -16,8 +16,7 @@
 
 		try {
 			const res = await updateRAGConfig(localStorage.token, {
-				enable_wikipedia_grounding: wikipediaConfig.enabled,
-				wikipedia_grounding_max_concurrent: wikipediaConfig.maxConcurrent
+				enable_wikipedia_grounding: wikipediaConfig.enabled
 			});
 
 			if (res) {
