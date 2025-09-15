@@ -36,24 +36,29 @@
 
 		<!-- Description when enabled -->
 		{#if config.enabled}
-			<div
-				class="text-xs text-gray-600 dark:text-gray-400 bg-gray-50 dark:bg-gray-800 rounded-md p-3"
-			>
-				<div class="font-medium text-gray-800 dark:text-gray-200 mb-2">
-					{$i18n.t('How Wikipedia Grounding works:')}
+			<div class="space-y-4">
+				<!-- Description -->
+				<div
+					class="text-xs text-gray-600 dark:text-gray-400 bg-gray-50 dark:bg-gray-800 rounded-md p-3"
+				>
+					<div class="font-medium text-gray-800 dark:text-gray-200 mb-2">
+						{$i18n.t('How Wikipedia Grounding works:')}
+					</div>
+					<ul class="list-disc list-inside space-y-1">
+						<li>{$i18n.t('Uses semantic search over Wikipedia content for factual questions')}</li>
+						<li>
+							{$i18n.t('For French queries: translates to English → searches → provides results')}
+						</li>
+						<li>
+							{$i18n.t('Provides current, accurate information without disrupting web search')}
+						</li>
+						<li>
+							{$i18n.t(
+								'Covers global knowledge including people, places, government, and general topics'
+							)}
+						</li>
+					</ul>
 				</div>
-				<ul class="list-disc list-inside space-y-1">
-					<li>{$i18n.t('Uses semantic search over Wikipedia content for factual questions')}</li>
-					<li>
-						{$i18n.t('For French queries: translates to English → searches → provides results')}
-					</li>
-					<li>{$i18n.t('Provides current, accurate information without disrupting web search')}</li>
-					<li>
-						{$i18n.t(
-							'Covers global knowledge including people, places, government, and general topics'
-						)}
-					</li>
-				</ul>
 			</div>
 		{/if}
 	</div>

@@ -6,6 +6,7 @@ import asyncio
 import importlib.util
 import logging
 import re
+import time
 from concurrent.futures import ThreadPoolExecutor
 from typing import Dict, List, Optional
 from datetime import datetime
@@ -62,7 +63,13 @@ def _check_optional_dependency(module_name: str) -> bool:
 
 
 class WikiSearchGrounder:
-    """Pure txtai-wikipedia implementation with lazy loading"""
+    """Pure txtai-wikipedia implementation with lazy loading and concurrency control"""
+
+    # Class-level semaphore for controlling concurrent operations
+    # Use limit of 1 to prevent memory exhaustion ("Brian Smash" technique)
+    _semaphore = None
+    _semaphore_lock = asyncio.Lock()
+    MAX_CONCURRENT_OPERATIONS = 1
 
     def __init__(self):
         self.max_content_length = 4000
@@ -74,6 +81,93 @@ class WikiSearchGrounder:
         self.translation_loaded = False
         self.reranker_loaded = False
         self._initialized = False
+
+    @classmethod
+    async def _get_semaphore(cls):
+        """Get or create the class-level semaphore for concurrency control"""
+        if cls._semaphore is None:
+            async with cls._semaphore_lock:
+                # Double-check pattern
+                if cls._semaphore is None:
+                    cls._semaphore = asyncio.Semaphore(cls.MAX_CONCURRENT_OPERATIONS)
+                    log.info(
+                        f"🔒 Wiki grounding semaphore initialized with {cls.MAX_CONCURRENT_OPERATIONS} concurrent operations allowed"
+                    )
+        return cls._semaphore
+
+    async def _acquire_lock(
+        self, operation_name: str
+    ) -> tuple[asyncio.Semaphore, float]:
+        """Acquire semaphore lock and return semaphore and start time for monitoring"""
+        semaphore = await self._get_semaphore()
+
+        # Log queue status before acquiring
+        available_permits = (
+            semaphore._value if hasattr(semaphore, "_value") else "unknown"
+        )
+        log.debug(
+            f"🚦 [{operation_name}] Requesting semaphore (available: {available_permits})"
+        )
+
+        start_time = time.time()
+        await semaphore.acquire()
+
+        wait_time = time.time() - start_time
+        if wait_time > 0.1:  # Log if we waited more than 100ms
+            log.debug(
+                f"🔓 [{operation_name}] Acquired semaphore after {wait_time:.2f}s wait"
+            )
+        else:
+            log.debug(f"🔓 [{operation_name}] Acquired semaphore immediately")
+
+        return semaphore, start_time
+
+    def _release_lock(
+        self, semaphore: asyncio.Semaphore, operation_name: str, start_time: float
+    ):
+        """Release semaphore lock and log timing information"""
+        total_time = time.time() - start_time
+        semaphore.release()
+        available_permits = (
+            semaphore._value if hasattr(semaphore, "_value") else "unknown"
+        )
+        log.debug(
+            f"🔓 [{operation_name}] Released semaphore after {total_time:.2f}s (available: {available_permits})"
+        )
+
+    @classmethod
+    async def get_queue_status(cls) -> dict:
+        """Get current queue status for monitoring"""
+        if cls._semaphore is None:
+            return {
+                "semaphore_initialized": False,
+                "available_permits": "N/A",
+                "max_concurrent": "N/A",
+                "waiting_operations": "N/A",
+            }
+
+        try:
+            from open_webui.config import WIKIPEDIA_GROUNDING_MAX_CONCURRENT
+
+            max_concurrent = WIKIPEDIA_GROUNDING_MAX_CONCURRENT.value
+        except ImportError:
+            max_concurrent = 1  # Default fallback
+
+        available = (
+            cls._semaphore._value if hasattr(cls._semaphore, "_value") else "unknown"
+        )
+        waiters = getattr(cls._semaphore, "_waiters", None)
+        waiting = len(waiters) if waiters is not None else "unknown"
+
+        return {
+            "semaphore_initialized": True,
+            "available_permits": available,
+            "max_concurrent": max_concurrent,
+            "waiting_operations": waiting,
+            "active_operations": (
+                max_concurrent - available if isinstance(available, int) else "unknown"
+            ),
+        }
 
     async def initialize(self) -> bool:
         """Initialize models (call once before using search methods)"""
@@ -315,6 +409,7 @@ class WikiSearchGrounder:
             initial_results_count = (
                 self.max_search_results * 3
             )  # Get 3x more for reranking
+
             results = self.embeddings.search(search_query, limit=initial_results_count)
 
             # Format initial results
@@ -346,6 +441,9 @@ class WikiSearchGrounder:
 
             # Apply reranking if available and we have multiple results
             if self.reranker_loaded and len(formatted) > 1:
+                # Acquire semaphore lock to control concurrency during reranking
+                semaphore, start_time = await self._acquire_lock("reranking")
+
                 try:
                     log.info(
                         f"🔍 Reranking {len(formatted)} search results using txtai reranker"
@@ -423,6 +521,9 @@ class WikiSearchGrounder:
                 except Exception as e:
                     log.warning(f"🚨 Reranking failed: {e}")
                     # Keep original results if reranking fails
+                finally:
+                    # Always release the semaphore lock after reranking
+                    self._release_lock(semaphore, "reranking", start_time)
 
             # Return top results
             final_results = formatted[: self.max_search_results]
@@ -471,6 +572,7 @@ class WikiSearchGrounder:
                 query = enhanced_query
 
         log.info("🔍 Wiki grounding enabled, proceeding with search")
+        log.info(f"🔍 Ground query starting for: '{query[:50]}...'")
         results = await self.search(query)
 
         if not results:
