@@ -226,12 +226,17 @@
 		const chatInput = document.getElementById('chat-input');
 
 		if (chatInput) {
-			text = await textVariableHandler(text || '');
+			if (text !== '') {
+				text = await textVariableHandler(text || '');
+			}
 
 			chatInputElement?.setText(text);
 			chatInputElement?.focus();
 
-			text = await inputVariableHandler(text);
+			if (text !== '') {
+				text = await inputVariableHandler(text);
+			}
+
 			await tick();
 			if (cb) await cb(text);
 		}
