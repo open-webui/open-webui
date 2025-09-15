@@ -730,6 +730,7 @@ def load_oauth_providers():
         }
 
     if FEISHU_CLIENT_ID.value and FEISHU_CLIENT_SECRET.value:
+
         def feishu_oauth_register(client: OAuth):
             client.register(
                 name="feishu",
@@ -2705,6 +2706,29 @@ WEB_SEARCH_RESULT_COUNT = PersistentConfig(
     "WEB_SEARCH_RESULT_COUNT",
     "rag.web.search.result_count",
     int(os.getenv("WEB_SEARCH_RESULT_COUNT", "3")),
+)
+
+
+# Web Search Rate Limiting Config
+
+WEB_SEARCH_RATE_LIMIT_ENABLED = PersistentConfig(
+    "WEB_SEARCH_RATE_LIMIT_ENABLED",
+    "rag.web.search.rate_limit.enabled",
+    os.getenv("WEB_SEARCH_RATE_LIMIT_ENABLED", "False").lower(),
+)
+
+# The maximum number of requests that can be made to the web search engine per N seconds, where N=WEB_SEARCH_RATE_LIMIT_MIN_SECONDS
+WEB_SEARCH_RATE_LIMIT_MAX_REQUESTS = PersistentConfig(
+    "WEB_SEARCH_RATE_LIMIT_MAX_REQUESTS",
+    "rag.web.search.rate_limit.max_requests",
+    int(os.getenv("WEB_SEARCH_RATE_LIMIT_MAX_REQUESTS", "1")),
+)
+
+#
+WEB_SEARCH_RATE_LIMIT_MIN_SECONDS = PersistentConfig(
+    "WEB_SEARCH_RATE_LIMIT_MIN_SECONDS",
+    "rag.web.search.rate_limit.min_seconds",
+    int(os.getenv("WEB_SEARCH_RATE_MIN_SECONDS", "1")),
 )
 
 

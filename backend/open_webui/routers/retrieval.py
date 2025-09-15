@@ -4,9 +4,11 @@ import mimetypes
 import os
 import shutil
 import asyncio
+import time
 
 import uuid
-from datetime import datetime
+from datetime import datetime, timedelta
+from multiprocessing import Value
 from pathlib import Path
 from typing import Iterator, List, Optional, Sequence, Union
 
@@ -23,6 +25,9 @@ from fastapi import (
 )
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.concurrency import run_in_threadpool
+
+from functools import wraps
+from collections import deque
 from pydantic import BaseModel
 import tiktoken
 
@@ -1738,7 +1743,63 @@ def process_web(
         )
 
 
-def search_web(request: Request, engine: str, query: str) -> list[SearchResult]:
+from open_webui.config import (
+    WEB_SEARCH_RATE_LIMIT_MAX_REQUESTS,
+    WEB_SEARCH_RATE_LIMIT_MIN_SECONDS,
+    WEB_SEARCH_RATE_LIMIT_ENABLED,
+)
+
+# Rate Limit (Specifically for search: This references environment variables named for search)
+
+
+web_search_lock = asyncio.Lock()
+# Track timestamps of previous calls
+web_search_timestamps = deque()
+
+
+def search_rate_limit(max_calls: int, period: float):
+    """
+    Async-friendly decorator for limiting function calls to `max_calls` per `period` seconds.
+    Works in FastAPI async endpoints without blocking the event loop.
+    """
+
+    def decorator(func):
+        @wraps(func)
+        async def wrapper(*args, **kwargs):
+            async with web_search_lock:
+                now = asyncio.get_event_loop().time()
+
+                # Remove timestamps older than the period
+                while web_search_timestamps and now - web_search_timestamps[0] > period:
+                    web_search_timestamps.popleft()
+
+                if len(web_search_timestamps) >= max_calls:
+                    # Need to wait until oldest call is outside the period
+                    wait_time = period - (now - web_search_timestamps[0])
+                    await asyncio.sleep(wait_time)
+                    now = asyncio.get_event_loop().time()
+                    while (
+                        web_search_timestamps
+                        and now - web_search_timestamps[0] > period
+                    ):
+                        web_search_timestamps.popleft()
+
+                # Record this call
+                web_search_timestamps.append(now)
+
+            # Call the actual function
+            return await func(*args, **kwargs)
+
+        return wrapper
+
+    return decorator
+
+
+@search_rate_limit(
+    int(WEB_SEARCH_RATE_LIMIT_MAX_REQUESTS.value),
+    int(WEB_SEARCH_RATE_LIMIT_MIN_SECONDS.value),
+)
+async def search_web(request: Request, engine: str, query: str) -> list[SearchResult]:
     """Search the web using a search engine and return the results as a list of SearchResult objects.
     Will look for a search engine API key in environment variables in the following order:
     - SEARXNG_QUERY_URL
@@ -1760,6 +1821,8 @@ def search_web(request: Request, engine: str, query: str) -> list[SearchResult]:
     Args:
         query (str): The query to search for
     """
+
+    logging.info(f"search_web: {engine} query: {query}")
 
     # TODO: add playwright to search the web
     if engine == "searxng":
@@ -2001,11 +2064,13 @@ async def process_web_search(
         )
 
         search_tasks = [
-            run_in_threadpool(
-                search_web,
-                request,
-                request.app.state.config.WEB_SEARCH_ENGINE,
-                query,
+            asyncio.ensure_future(
+                run_in_threadpool(
+                    search_web,
+                    request,
+                    request.app.state.config.WEB_SEARCH_ENGINE,
+                    query,
+                )
             )
             for query in form_data.queries
         ]
@@ -2014,6 +2079,7 @@ async def process_web_search(
 
         for result in search_results:
             if result:
+                result = await result
                 for item in result:
                     if item and item.link:
                         result_items.append(item)
