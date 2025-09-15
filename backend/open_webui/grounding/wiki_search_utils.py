@@ -83,22 +83,29 @@ class WikiSearchGrounder:
     @classmethod
     async def _get_semaphore(cls):
         """Get or create the class-level semaphore for concurrency control"""
-        if cls._semaphore is None:
-            async with cls._semaphore_lock:
-                if cls._semaphore is None:  # Double-check pattern
-                    try:
-                        from open_webui.config import WIKIPEDIA_GROUNDING_MAX_CONCURRENT
+        try:
+            from open_webui.config import WIKIPEDIA_GROUNDING_MAX_CONCURRENT
 
-                        max_concurrent = WIKIPEDIA_GROUNDING_MAX_CONCURRENT.value
-                        cls._semaphore = asyncio.Semaphore(max_concurrent)
+            max_concurrent = WIKIPEDIA_GROUNDING_MAX_CONCURRENT.value
+        except ImportError:
+            # Fallback to default if config not available
+            max_concurrent = 2
+
+        # Check if semaphore needs to be created or recreated due to config change
+        if cls._semaphore is None or cls._semaphore._value != max_concurrent:
+            async with cls._semaphore_lock:
+                # Double-check pattern with config value comparison
+                if cls._semaphore is None or cls._semaphore._value != max_concurrent:
+                    old_value = cls._semaphore._value if cls._semaphore else None
+                    cls._semaphore = asyncio.Semaphore(max_concurrent)
+
+                    if old_value is None:
                         log.info(
                             f"🔒 Wiki grounding semaphore initialized with {max_concurrent} concurrent operations allowed"
                         )
-                    except ImportError:
-                        # Fallback to default value if config not available
-                        cls._semaphore = asyncio.Semaphore(2)
-                        log.warning(
-                            "🔒 Wiki grounding semaphore initialized with default value (2 concurrent operations)"
+                    else:
+                        log.info(
+                            f"� Wiki grounding semaphore updated from {old_value} to {max_concurrent} concurrent operations"
                         )
         return cls._semaphore
 
