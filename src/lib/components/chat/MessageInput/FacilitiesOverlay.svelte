@@ -34,18 +34,18 @@
 	let dynamicSections: string[] = [];
 
 	const nsfSections = [
-		{ id: 'projectTitle', label: 'Project Title', required: true },
-		{ id: 'researchSpaceFacilities', label: 'Research Space and Facilities', required: true },
-		{ id: 'coreInstrumentation', label: 'Core Instrumentation', required: true },
-		{ id: 'computingDataResources', label: 'Computing and Data Resources', required: true },
-		{ id: 'internalFacilitiesNYU', label: 'Internal Facilities (NYU)', required: true },
-		{ id: 'externalFacilitiesOther', label: 'External Facilities (Other Institutions)', required: true },
-		{ id: 'specialInfrastructure', label: 'Special Infrastructure', required: true }
+		{ id: 'projectTitle', label: '1. Project Title', required: true },
+		{ id: 'researchSpaceFacilities', label: '2. Research Space and Facilities', required: true },
+		{ id: 'coreInstrumentation', label: '3. Core Instrumentation', required: true },
+		{ id: 'computingDataResources', label: '4. Computing and Data Resources', required: true },
+		{ id: 'internalFacilitiesNYU', label: '5a. Internal Facilities (NYU)', required: true },
+		{ id: 'externalFacilitiesOther', label: '5b. External Facilities (Other Institutions)', required: true },
+		{ id: 'specialInfrastructure', label: '6. Special Infrastructure', required: true }
 	];
 
 	const nihSections = [
 		...nsfSections,
-		{ id: 'equipment', label: 'Equipment', required: true }
+		{ id: 'equipment', label: '7. Equipment', required: true }
 	];
 
 	// Create dynamic sections based on backend response
