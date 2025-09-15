@@ -56,7 +56,7 @@
 					<div class="flex items-center">{$i18n.t('Download')}</div>
 				</DropdownMenu.SubTrigger>
 				<DropdownMenu.SubContent
-					class="w-full rounded-xl px-1 py-1.5 z-50 bg-white dark:bg-gray-850 dark:text-white shadow-lg"
+					class="w-full rounded-xl p-1 z-50 bg-white dark:bg-gray-850 dark:text-white shadow-lg"
 					transition={flyAndScale}
 					sideOffset={8}
 					align="end"
@@ -100,7 +100,7 @@
 						<div class="flex items-center">{$i18n.t('Share')}</div>
 					</DropdownMenu.SubTrigger>
 					<DropdownMenu.SubContent
-						class="w-full rounded-xl px-1 py-1.5 z-50 bg-white dark:bg-gray-850 dark:text-white shadow-lg"
+						class="w-full rounded-xl p-1 z-50 bg-white dark:bg-gray-850 dark:text-white shadow-lg"
 						transition={flyAndScale}
 						sideOffset={8}
 						align="end"
