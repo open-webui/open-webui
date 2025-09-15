@@ -464,7 +464,7 @@
 				}}
 			>
 				<button
-					class="text-gray-500 dark:text-gray-500 transition-all p-[3px] hover:bg-gray-200 dark:hover:bg-gray-850 rounded-lg"
+					class="text-gray-500 dark:text-gray-500 transition-all p-1 hover:bg-gray-200 dark:hover:bg-gray-850 rounded-lg"
 					on:click={(e) => {
 						e.stopPropagation();
 						open = !open;
@@ -472,22 +472,22 @@
 				>
 					{#if folders[folderId]?.meta?.icon}
 						<div class="flex group-hover:hidden transition-all">
-							<Emoji className="size-4" shortCode={folders[folderId].meta.icon} />
+							<Emoji className="size-3.5" shortCode={folders[folderId].meta.icon} />
 						</div>
 
 						<div class="hidden group-hover:flex transition-all p-[1px]">
 							{#if open}
-								<ChevronDown className=" size-3.5" strokeWidth="2.5" />
+								<ChevronDown className=" size-3" strokeWidth="2.5" />
 							{:else}
-								<ChevronRight className=" size-3.5" strokeWidth="2.5" />
+								<ChevronRight className=" size-3" strokeWidth="2.5" />
 							{/if}
 						</div>
 					{:else}
 						<div class="p-[1px]">
 							{#if open}
-								<ChevronDown className=" size-3.5" strokeWidth="2.5" />
+								<ChevronDown className=" size-3" strokeWidth="2.5" />
 							{:else}
-								<ChevronRight className=" size-3.5" strokeWidth="2.5" />
+								<ChevronRight className=" size-3" strokeWidth="2.5" />
 							{/if}
 						</div>
 					{/if}

@@ -109,7 +109,7 @@
 				{save}
 				{preview}
 				edit={editCodeBlock}
-				stickyButtonsClassName={topPadding ? 'top-6' : 'top-0'}
+				stickyButtonsClassName={topPadding ? 'top-7' : 'top-0'}
 				onSave={(value) => {
 					onSave({
 						raw: token.raw,
