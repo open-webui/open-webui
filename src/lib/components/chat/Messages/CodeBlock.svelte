@@ -40,7 +40,7 @@
 	export let code = '';
 	export let attributes = {};
 
-	export let className = 'my-2';
+	export let className = 'mb-2';
 	export let editorClassName = '';
 	export let stickyButtonsClassName = 'top-0';
 
@@ -416,11 +416,14 @@
 </script>
 
 <div>
-	<div class="relative {className} flex flex-col rounded-xl pt-2" dir="ltr">
+	<div
+		class="relative {className} flex flex-col rounded-3xl border border-gray-100 dark:border-gray-850 my-0.5"
+		dir="ltr"
+	>
 		{#if lang === 'mermaid'}
 			{#if mermaidHtml}
 				<SvgPanZoom
-					className=" border border-gray-100 dark:border-gray-850 rounded-xl max-h-fit overflow-hidden"
+					className=" rounded-3xl max-h-fit overflow-hidden"
 					svg={mermaidHtml}
 					content={_token.text}
 				/>
@@ -428,16 +431,16 @@
 				<pre class="mermaid">{code}</pre>
 			{/if}
 		{:else}
-			<div class="text-text-300 absolute pl-4 text-xs font-medium dark:text-white">
-				{lang}
-			</div>
-
 			<div
-				class="sticky {stickyButtonsClassName} mb-1 pr-2.5 flex items-center justify-end z-10 text-xs text-black dark:text-white"
+				class="sticky {stickyButtonsClassName} left-0 right-0 py-2 pr-3 flex items-center justify-between w-full z-10 text-xs text-black dark:text-white"
 			>
+				<div class="text-text-300 pl-4.5 text-xs font-medium dark:text-white">
+					{lang}
+				</div>
+
 				<div class="flex items-center gap-0.5">
 					<button
-						class="flex gap-1 items-center bg-none border-none bg-gray-50 dark:bg-black transition rounded-md px-1.5 py-0.5"
+						class="flex gap-1 items-center bg-none border-none transition rounded-md px-1.5 py-0.5"
 						on:click={collapseCodeBlock}
 					>
 						<div class=" -translate-y-[0.5px]">
@@ -449,21 +452,6 @@
 						</div>
 					</button>
 
-					{#if preview && ['html', 'svg'].includes(lang)}
-						<button
-							class="flex gap-1 items-center run-code-button bg-none border-none bg-gray-50 dark:bg-black transition rounded-md px-1.5 py-0.5"
-							on:click={previewCode}
-						>
-							<div class=" -translate-y-[0.5px]">
-								<Cube className="size-3" />
-							</div>
-
-							<div>
-								{$i18n.t('Preview')}
-							</div>
-						</button>
-					{/if}
-
 					{#if ($config?.features?.enable_code_execution ?? true) && (lang.toLowerCase() === 'python' || lang.toLowerCase() === 'py' || (lang === '' && checkPythonCode(code)))}
 						{#if executing}
 							<div class="run-code-button bg-none border-none p-1 cursor-not-allowed">
@@ -471,7 +459,7 @@
 							</div>
 						{:else if run}
 							<button
-								class="flex gap-1 items-center run-code-button bg-none border-none bg-gray-50 dark:bg-black transition rounded-md px-1.5 py-0.5"
+								class="flex gap-1 items-center run-code-button bg-none border-none transition rounded-md px-1.5 py-0.5"
 								on:click={async () => {
 									code = _code;
 									await tick();
@@ -491,7 +479,7 @@
 
 					{#if save}
 						<button
-							class="save-code-button bg-none border-none bg-gray-50 dark:bg-black transition rounded-md px-1.5 py-0.5"
+							class="save-code-button bg-none border-none transition rounded-md px-1.5 py-0.5"
 							on:click={saveCode}
 						>
 							{saved ? $i18n.t('Saved') : $i18n.t('Save')}
@@ -499,20 +487,31 @@
 					{/if}
 
 					<button
-						class="copy-code-button bg-none border-none bg-gray-50 dark:bg-black transition rounded-md px-1.5 py-0.5"
+						class="copy-code-button bg-none border-none transition rounded-md px-1.5 py-0.5"
 						on:click={copyCode}>{copied ? $i18n.t('Copied') : $i18n.t('Copy')}</button
 					>
+
+					{#if preview && ['html', 'svg'].includes(lang)}
+						<button
+							class="flex gap-1 items-center run-code-button bg-none border-none transition rounded-md px-1.5 py-0.5"
+							on:click={previewCode}
+						>
+							<div>
+								{$i18n.t('Preview')}
+							</div>
+						</button>
+					{/if}
 				</div>
 			</div>
 
 			<div
-				class="language-{lang} rounded-t-xl -mt-8 {editorClassName
+				class="language-{lang} rounded-t-3xl -mt-9 {editorClassName
 					? editorClassName
 					: executing || stdout || stderr || result
 						? ''
-						: 'rounded-b-xl'} overflow-hidden"
+						: 'rounded-b-3xl'} overflow-hidden"
 			>
-				<div class=" pt-8 bg-gray-50 dark:bg-black"></div>
+				<div class=" pt-8 bg-white dark:bg-black"></div>
 
 				{#if !collapsed}
 					{#if edit}
@@ -542,7 +541,7 @@
 					{/if}
 				{:else}
 					<div
-						class="bg-gray-50 dark:bg-black dark:text-white rounded-b-xl! pt-2 pb-2 px-4 flex flex-col gap-2 text-xs"
+						class="bg-gray-50 dark:bg-black dark:text-white rounded-b-3xl! pb-3 px-4 flex flex-col gap-2 text-xs"
 					>
 						<span class="text-gray-500 italic">
 							{$i18n.t('{{COUNT}} hidden lines', {
@@ -561,7 +560,7 @@
 
 				{#if executing || stdout || stderr || result || files}
 					<div
-						class="bg-gray-50 dark:bg-black dark:text-white rounded-b-xl! py-4 px-4 flex flex-col gap-2"
+						class="bg-gray-50 dark:bg-black dark:text-white rounded-b-3xl! py-4 px-4 flex flex-col gap-2"
 					>
 						{#if executing}
 							<div class=" ">
