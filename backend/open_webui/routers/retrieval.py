@@ -469,7 +469,7 @@ class WebSearchConfig(BaseModel):
 
 class WikipediaGroundingConfig(BaseModel):
     enabled: bool
-    max_concurrent: Optional[int] = 2
+    max_concurrent: Optional[int] = 1
 
 
 class WebConfig(BaseModel):
@@ -614,6 +614,7 @@ async def update_rag_config(
         "pdf_extract_images": request.app.state.config.PDF_EXTRACT_IMAGES,
         "RAG_FULL_CONTEXT": request.app.state.config.RAG_FULL_CONTEXT,
         "enable_wikipedia_grounding": request.app.state.config.ENABLE_WIKIPEDIA_GROUNDING,
+        "wikipedia_grounding_max_concurrent": request.app.state.config.WIKIPEDIA_GROUNDING_MAX_CONCURRENT,
         "file": {
             "max_size": request.app.state.config.FILE_MAX_SIZE,
             "max_count": request.app.state.config.FILE_MAX_COUNT,

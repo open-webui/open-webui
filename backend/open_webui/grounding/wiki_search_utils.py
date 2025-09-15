@@ -426,6 +426,7 @@ class WikiSearchGrounder:
             initial_results_count = (
                 self.max_search_results * 3
             )  # Get 3x more for reranking
+
             results = self.embeddings.search(search_query, limit=initial_results_count)
 
             # Format initial results

@@ -1866,7 +1866,7 @@ ENABLE_WIKIPEDIA_GROUNDING_RERANKER = PersistentConfig(
 WIKIPEDIA_GROUNDING_MAX_CONCURRENT = PersistentConfig(
     "WIKIPEDIA_GROUNDING_MAX_CONCURRENT",
     "rag.wikipedia.grounding.max_concurrent",
-    int(os.getenv("WIKIPEDIA_GROUNDING_MAX_CONCURRENT", "2")),
+    int(os.getenv("WIKIPEDIA_GROUNDING_MAX_CONCURRENT", "1")),
 )
 
 # You can provide a list of your own websites to filter after performing a web search.
