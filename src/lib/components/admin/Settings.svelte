@@ -22,6 +22,7 @@
 	import DocumentChartBar from '../icons/DocumentChartBar.svelte';
 	import Evaluations from './Settings/Evaluations.svelte';
 	import CodeExecution from './Settings/CodeExecution.svelte';
+	import StudyMode from './Settings/StudyMode.svelte';
 	import Tools from './Settings/Tools.svelte';
 
 	const i18n = getContext('i18n');
@@ -41,6 +42,7 @@
 			'documents',
 			'web',
 			'code-execution',
+			'study-mode',
 			'interface',
 			'audio',
 			'images',
@@ -291,6 +293,35 @@
 		</button>
 
 		<button
+			id="study-mode"
+			class="px-0.5 py-1 min-w-fit rounded-lg flex-1 md:flex-none flex text-left transition {selectedTab ===
+			'study-mode'
+				? ''
+				: ' text-gray-300 dark:text-gray-600 hover:text-gray-700 dark:hover:text-white'}"
+			on:click={() => {
+				goto('/admin/settings/study-mode');
+			}}
+		>
+			<div class=" self-center mr-2">
+				<svg
+					xmlns="http://www.w3.org/2000/svg"
+					width="16"
+					height="16"
+					viewBox="0 0 24 24"
+					fill="currentColor"
+					stroke="currentColor"
+					stroke-width="2"
+					stroke-linecap="round"
+					stroke-linejoin="round"
+					><path
+						d="M21.42 10.922a1 1 0 0 0-.019-1.838L12.83 5.18a2 2 0 0 0-1.66 0L2.6 9.08a1 1 0 0 0 0 1.832l8.57 3.908a2 2 0 0 0 1.66 0z"
+					/><path d="M22 10v6" /><path d="M6 12.5V16a6 3 0 0 0 12 0v-3.5" /></svg
+				>
+			</div>
+			<div class=" self-center">{$i18n.t('Study Mode')}</div>
+		</button>
+
+		<button
 			id="interface"
 			class="px-0.5 py-1 min-w-fit rounded-lg flex-1 md:flex-none flex text-left transition {selectedTab ===
 			'interface'
@@ -480,6 +511,12 @@
 
 					await tick();
 					await config.set(await getBackendConfig());
+				}}
+			/>
+		{:else if selectedTab === 'study-mode'}
+			<StudyMode
+				on:save={() => {
+					toast.success($i18n.t('Settings saved successfully!'));
 				}}
 			/>
 		{:else if selectedTab === 'interface'}

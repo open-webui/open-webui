@@ -539,7 +539,7 @@ export const getStudyModeConfig = async (token: string = '') => {
 export const updateStudyModeConfig = async (token: string, config: object) => {
 	let error = null;
 
-	const res = await fetch(`${WEBUI_BASE_URL}/api/v1/tasks/config/update`, {
+	const res = await fetch(`${WEBUI_BASE_URL}/api/v1/study-mode/config/update`, {
 		method: 'POST',
 		headers: {
 			Accept: 'application/json',
