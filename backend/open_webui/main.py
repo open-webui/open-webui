@@ -407,6 +407,7 @@ from open_webui.config import (
     # Study Mode
     ENABLE_STUDY_MODE,
     STUDY_MODE_PROMPT,
+    DEFAULT_STUDY_MODE_PROMPT,
     AppConfig,
     reset_config,
 )
@@ -1105,6 +1106,7 @@ app.state.speech_speaker_embeddings_dataset = None
 ########################################
 app.state.config.ENABLE_STUDY_MODE = ENABLE_STUDY_MODE
 app.state.config.STUDY_MODE_PROMPT = STUDY_MODE_PROMPT
+app.state.config.DEFAULT_STUDY_MODE_PROMPT = DEFAULT_STUDY_MODE_PROMPT
 
 ########################################
 #

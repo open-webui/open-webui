@@ -140,8 +140,8 @@
 		console.log('Enable study mode');
 		let studyModeConfig = await getStudyModeConfig(localStorage.token);
 
-		studyModeSystemPrompt = studyModeConfig.PROMPT;
-		params.system = studyModeConfig.PROMPT;
+		studyModeSystemPrompt = studyModeConfig.PROMPT || studyModeConfig.DEFAULT_PROMPT;
+		params.system = studyModeSystemPrompt;
 	};
 
 	const disableStudyModeSystemPrompt = async () => {
@@ -904,7 +904,7 @@
 		if ($page.url.searchParams.get('study-mode') === 'true') {
 			studyModeEnabled = true;
 			const studyModeConfig = await getStudyModeConfig();
-			studyModeSystemPrompt = studyModeConfig.PROMPT;
+			studyModeSystemPrompt = studyModeConfig.PROMPT || studyModeConfig.DEFAULT_PROMPT;
 		}
 
 		if ($page.url.searchParams.get('tools')) {
