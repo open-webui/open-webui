@@ -32,7 +32,7 @@
 </script>
 
 <button
-	class="flex gap-2.5 text-left min-w-[var(--width)] w-full dark:bg-gray-850 dark:text-white bg-white text-black border border-gray-100 dark:border-gray-850 rounded-xl px-3.5 py-3.5"
+	class="flex gap-2.5 text-left min-w-[var(--width)] w-full dark:bg-gray-850 dark:text-white bg-white text-black border border-gray-100 dark:border-gray-850 rounded-3xl px-3.5 py-3"
 	on:click={() => {
 		onClick();
 		dispatch('closeToast');
@@ -44,7 +44,7 @@
 
 	<div>
 		{#if title}
-			<div class=" text-[13px] font-medium mb-0.5 line-clamp-1 capitalize">{title}</div>
+			<div class=" text-[13px] font-medium mb-0.5 line-clamp-1">{title}</div>
 		{/if}
 
 		<div class=" line-clamp-2 text-xs self-center dark:text-gray-300 font-normal">

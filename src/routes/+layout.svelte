@@ -454,7 +454,7 @@
 							goto(`/channels/${event.channel_id}`);
 						},
 						content: data?.content,
-						title: event?.channel?.name
+						title: `#${event?.channel?.name}`
 					},
 					duration: 15000,
 					unstyled: true
