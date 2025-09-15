@@ -205,7 +205,7 @@
 
 		{#if $showControls}
 			<PaneResizer
-				class="relative flex w-2 items-center justify-center bg-background group"
+				class="relative flex w-2 items-center justify-center bg-white dark:bg-gray-850 border-l border-gray-100 dark:border-gray-850  group"
 				id="controls-resizer"
 			>
 				<div class="z-10 flex h-7 w-5 items-center justify-center rounded-xs">
@@ -236,14 +236,14 @@
 				showControls.set(false);
 			}}
 			collapsible={true}
-			class=" z-10 "
+			class=" z-10 bg-white dark:bg-gray-850"
 		>
 			{#if $showControls}
 				<div class="flex max-h-full min-h-full">
 					<div
 						class="w-full {($showOverview || $showArtifacts) && !$showCallOverlay
 							? ' '
-							: 'px-4 py-4 bg-white dark:shadow-lg dark:bg-gray-850  border border-gray-100 dark:border-gray-850'} z-40 pointer-events-auto overflow-y-auto scrollbar-hidden"
+							: 'pl-3 pr-4 py-4 bg-white dark:shadow-lg dark:bg-gray-850 '} z-40 pointer-events-auto overflow-y-auto scrollbar-hidden"
 						id="controls-container"
 					>
 						{#if $showCallOverlay}
