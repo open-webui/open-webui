@@ -17,7 +17,7 @@
 	import AlertRenderer, { alertComponent } from './AlertRenderer.svelte';
 	import Collapsible from '$lib/components/common/Collapsible.svelte';
 	import Tooltip from '$lib/components/common/Tooltip.svelte';
-	import ArrowDownTray from '$lib/components/icons/ArrowDownTray.svelte';
+	import Download from '$lib/components/icons/Download.svelte';
 
 	import Source from './Source.svelte';
 	import { settings } from '$lib/stores';
@@ -186,7 +186,7 @@
 							exportTableToCSVHandler(token, tokenIdx);
 						}}
 					>
-						<ArrowDownTray className=" size-3.5" strokeWidth="1.5" />
+						<Download className=" size-3.5" strokeWidth="1.5" />
 					</button>
 				</Tooltip>
 			</div>

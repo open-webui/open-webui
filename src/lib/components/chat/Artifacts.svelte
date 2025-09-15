@@ -12,7 +12,7 @@
 	import Tooltip from '../common/Tooltip.svelte';
 	import SvgPanZoom from '../common/SVGPanZoom.svelte';
 	import ArrowLeft from '../icons/ArrowLeft.svelte';
-	import ArrowDownTray from '../icons/ArrowDownTray.svelte';
+	import Download from '../icons/Download.svelte';
 
 	export let overlay = false;
 	export let history;
@@ -285,7 +285,7 @@
 								class=" bg-none border-none text-xs bg-gray-50 hover:bg-gray-100 dark:bg-gray-850 dark:hover:bg-gray-800 transition rounded-md p-0.5"
 								on:click={downloadArtifact}
 							>
-								<ArrowDownTray className="size-3.5" />
+								<Download className="size-3.5" />
 							</button>
 						</Tooltip>
 

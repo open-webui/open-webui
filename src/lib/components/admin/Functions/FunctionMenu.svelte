@@ -8,7 +8,7 @@
 	import Tooltip from '$lib/components/common/Tooltip.svelte';
 	import Share from '$lib/components/icons/Share.svelte';
 	import DocumentDuplicate from '$lib/components/icons/DocumentDuplicate.svelte';
-	import ArrowDownTray from '$lib/components/icons/ArrowDownTray.svelte';
+	import Download from '$lib/components/icons/Download.svelte';
 	import Switch from '$lib/components/common/Switch.svelte';
 	import GlobeAlt from '$lib/components/icons/GlobeAlt.svelte';
 
@@ -63,7 +63,7 @@
 					</div>
 				</div>
 
-				<hr class="border-gray-100 dark:border-gray-850 my-1" />
+				<hr class="border-gray-50 dark:border-gray-850 my-1" />
 			{/if}
 
 			<DropdownMenu.Item
@@ -117,12 +117,12 @@
 					exportHandler();
 				}}
 			>
-				<ArrowDownTray />
+				<Download />
 
 				<div class="flex items-center">{$i18n.t('Export')}</div>
 			</DropdownMenu.Item>
 
-			<hr class="border-gray-100 dark:border-gray-850 my-1" />
+			<hr class="border-gray-50 dark:border-gray-850 my-1" />
 
 			<DropdownMenu.Item
 				class="flex  gap-2  items-center px-3 py-1.5 text-sm  font-medium cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 rounded-md"

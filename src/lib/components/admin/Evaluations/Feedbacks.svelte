@@ -13,7 +13,7 @@
 	import { deleteFeedbackById, exportAllFeedbacks, getAllFeedbacks } from '$lib/apis/evaluations';
 
 	import Tooltip from '$lib/components/common/Tooltip.svelte';
-	import ArrowDownTray from '$lib/components/icons/ArrowDownTray.svelte';
+	import Download from '$lib/components/icons/Download.svelte';
 	import Badge from '$lib/components/common/Badge.svelte';
 	import CloudArrowUp from '$lib/components/icons/CloudArrowUp.svelte';
 	import Pagination from '$lib/components/common/Pagination.svelte';
@@ -187,7 +187,7 @@
 						exportHandler();
 					}}
 				>
-					<ArrowDownTray className="size-3" />
+					<Download className="size-3" />
 				</button>
 			</Tooltip>
 		</div>
