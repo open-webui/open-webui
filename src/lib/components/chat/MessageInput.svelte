@@ -122,7 +122,8 @@
 		selectedFilterIds,
 		imageGenerationEnabled,
 		webSearchEnabled,
-		codeInterpreterEnabled
+		codeInterpreterEnabled,
+		studyModeEnabled,
 	});
 
 	const inputVariableHandler = async (text: string): Promise<string> => {
@@ -535,8 +536,6 @@
 
 	let showStudyModeButton = false;
 	$: showStudyModeButton = $config?.features?.enable_study_mode;
-
-	console.log($config);
 
 	const scrollToBottom = () => {
 		const element = document.getElementById('messages-container');
@@ -1350,6 +1349,7 @@
 															webSearchEnabled = false;
 															imageGenerationEnabled = false;
 															codeInterpreterEnabled = false;
+															studyModeEnabled = false;
 														}
 													}}
 													on:paste={async (e) => {
@@ -1599,6 +1599,7 @@
 													webSearchEnabled = false;
 													imageGenerationEnabled = false;
 													codeInterpreterEnabled = false;
+													studyModeEnabled = false;
 												}
 											}}
 											rows="1"
@@ -1864,7 +1865,10 @@
 													</Tooltip>
 												{/if}
 												{#if showStudyModeButton}
-													<Tooltip content={$i18n.t('Get educational step-by-step guidance')} placement="top">
+													<Tooltip
+														content={$i18n.t('Get educational step-by-step guidance')}
+														placement="top"
+													>
 														<button
 															aria-label={studyModeEnabled
 																? $i18n.t('Disable Study Mode')

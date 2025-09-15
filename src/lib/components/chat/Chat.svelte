@@ -69,7 +69,8 @@
 		chatAction,
 		generateMoACompletion,
 		stopTask,
-		getTaskIdsByChatId
+		getTaskIdsByChatId,
+		getStudyModeConfig
 	} from '$lib/apis';
 	import { getTools } from '$lib/apis/tools';
 	import { uploadFile } from '$lib/apis/files';
@@ -125,6 +126,39 @@
 	let imageGenerationEnabled = false;
 	let webSearchEnabled = false;
 	let codeInterpreterEnabled = false;
+
+	let studyModeEnabled = false;
+	let studyModeSystemPrompt = '';
+
+	$: if (studyModeEnabled && studyModeSystemPrompt && params.system !== studyModeSystemPrompt) {
+		console.log('Study mode disabled due to external system prompt change');
+		studyModeEnabled = false;
+		studyModeSystemPrompt = '';
+	}
+
+	const enableStudyModeSystemPrompt = async () => {
+		console.log('Enable study mode');
+		let studyModeConfig = await getStudyModeConfig(localStorage.token);
+
+		studyModeSystemPrompt = studyModeConfig.PROMPT;
+		params.system = studyModeConfig.PROMPT;
+	};
+
+	const disableStudyModeSystemPrompt = async () => {
+		console.log('Disable study mode');
+		studyModeSystemPrompt = '';
+		params.system = undefined;
+	};
+
+	const handleStudyMode = async (studyModeEnabled) => {
+		if (studyModeEnabled) {
+			enableStudyModeSystemPrompt();
+		} else {
+			disableStudyModeSystemPrompt();
+		}
+	};
+
+	$: handleStudyMode(studyModeEnabled);
 
 	let showCommands = false;
 
@@ -186,6 +220,7 @@
 						webSearchEnabled = input.webSearchEnabled;
 						imageGenerationEnabled = input.imageGenerationEnabled;
 						codeInterpreterEnabled = input.codeInterpreterEnabled;
+						studyModeEnabled = input.studyModeEnabled;
 					}
 				} catch (e) {}
 			}
@@ -864,6 +899,12 @@
 
 		if ($page.url.searchParams.get('code-interpreter') === 'true') {
 			codeInterpreterEnabled = true;
+		}
+
+		if ($page.url.searchParams.get('study-mode') === 'true') {
+			studyModeEnabled = true;
+			const studyModeConfig = await getStudyModeConfig();
+			studyModeSystemPrompt = studyModeConfig.PROMPT;
 		}
 
 		if ($page.url.searchParams.get('tools')) {
@@ -1658,6 +1699,11 @@
 					$config?.features?.enable_web_search &&
 					($user?.role === 'admin' || $user?.permissions?.features?.web_search)
 						? webSearchEnabled
+						: false,
+				study_mode:
+					$config?.features?.enable_study_mode &&
+					($user?.role === 'admin' || $user?.permissions?.features?.study_mode)
+						? studyModeEnabled
 						: false
 			};
 
@@ -2354,6 +2400,7 @@
 									bind:webSearchEnabled
 									bind:atSelectedModel
 									bind:showCommands
+									bind:studyModeEnabled
 									toolServers={$toolServers}
 									{generating}
 									{stopResponse}
@@ -2408,6 +2455,7 @@
 									bind:imageGenerationEnabled
 									bind:codeInterpreterEnabled
 									bind:webSearchEnabled
+									bind:studyModeEnabled
 									bind:atSelectedModel
 									bind:showCommands
 									toolServers={$toolServers}

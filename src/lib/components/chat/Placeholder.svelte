@@ -51,6 +51,7 @@
 	export let imageGenerationEnabled = false;
 	export let codeInterpreterEnabled = false;
 	export let webSearchEnabled = false;
+	export let studyModeEnabled = false;
 
 	export let onSelect = (e) => {};
 	export let onChange = (e) => {};
@@ -216,6 +217,7 @@
 					bind:imageGenerationEnabled
 					bind:codeInterpreterEnabled
 					bind:webSearchEnabled
+					bind:studyModeEnabled
 					bind:atSelectedModel
 					bind:showCommands
 					{toolServers}
