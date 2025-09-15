@@ -1,25 +1,18 @@
 <script>
     import Modal from '$lib/components/common/Modal.svelte';
-    import { goto } from '$app/navigation';
-	import { onMount, getContext, createEventDispatcher } from 'svelte';
+	import { getContext, createEventDispatcher } from 'svelte';
     import { toast } from 'svelte-sonner';
     import SensitiveInput from '$lib/components/common/SensitiveInput.svelte';
     import Switch from '$lib/components/common/Switch.svelte';
     import Tooltip from '$lib/components/common/Tooltip.svelte';
 	import Textarea from '$lib/components/common/Textarea.svelte';
 
-    import { createNewKnowledge, getKnowledgeBases, reindexSpecificKnowledgeFiles} from '$lib/apis/knowledge';
-    import { knowledge, user } from '$lib/stores';
+    import { reindexSpecificKnowledgeFiles} from '$lib/apis/knowledge';
+    import { user } from '$lib/stores';
 
 	import {
-		getQuerySettings,
-		updateQuerySettings,
-		resetVectorDB,
 		getEmbeddingConfig,
 		updateEmbeddingConfig,
-		getRerankingConfig,
-		updateRerankingConfig,
-		getRAGConfig,
 		updateRAGConfig
 	} from '$lib/apis/retrieval';
 
@@ -28,15 +21,10 @@
     export let RAGConfig = null;
     export let knowledgeId = null;
 
-    let localRAGConfig = {};
-
     let loading = false;
-    let name = '';
-    let description = '';
-    let accessControl = {};
 
+    let backupRAGConfig = JSON.parse(JSON.stringify(RAGConfig));
     let updateEmbeddingModelLoading = false;
-    let updateRerankingModelLoading = false;
 
     let embeddingEngine = RAGConfig.embedding_engine || "";
     let embeddingModel = RAGConfig.embedding_model || "";
@@ -57,7 +45,6 @@
     function resetLocalState() {
     if (!RAGConfig) return;
 
-    localRAGConfig = structuredClone(RAGConfig); // or deep clone method
     embeddingEngine = RAGConfig.embedding_engine || "";
     embeddingModel = RAGConfig.embedding_model || "";
     embeddingBatchSize = RAGConfig.embedding_batch_size || "";
@@ -72,12 +59,13 @@
     OllamaUrl = RAGConfig.ollama_config?.url || "";
     OllamaKey = RAGConfig.ollama_config?.key || "";
     needsReindex = false;
+    RAGConfig = JSON.parse(JSON.stringify(backupRAGConfig));
 }
 
     // Automatically reset on modal open
-    $: if (show) {
-        resetLocalState();
-    }
+    // $: if (show) {
+    //     resetLocalState();
+    // }
 
     const dispatch = createEventDispatcher();
 
@@ -184,25 +172,25 @@
         loading = true;
 
 		if (
-			localRAGConfig.CONTENT_EXTRACTION_ENGINE === 'external' &&
-			localRAGConfig.EXTERNAL_DOCUMENT_LOADER_URL === ''
+			RAGConfig.CONTENT_EXTRACTION_ENGINE === 'external' &&
+			RAGConfig.EXTERNAL_DOCUMENT_LOADER_URL === ''
 		) {
 			toast.error($i18n.t('External Document Loader URL required.'));
 			return;
 		}
-        if (localRAGConfig.CONTENT_EXTRACTION_ENGINE === 'tika' && localRAGConfig.TIKA_SERVER_URL === '') {
+        if (RAGConfig.CONTENT_EXTRACTION_ENGINE === 'tika' && RAGConfig.TIKA_SERVER_URL === '') {
             toast.error($i18n.t('Tika Server URL required.'));
             return;
         }
-        if (localRAGConfig.CONTENT_EXTRACTION_ENGINE === 'docling' && localRAGConfig.DOCLING_SERVER_URL === '') {
+        if (RAGConfig.CONTENT_EXTRACTION_ENGINE === 'docling' && RAGConfig.DOCLING_SERVER_URL === '') {
 			toast.error($i18n.t('Docling Server URL required.'));
 			return;
 		}
         if (
-			localRAGConfig.CONTENT_EXTRACTION_ENGINE === 'docling' &&
-            localRAGConfig.DOCLING_DO_OCR &&
-			((localRAGConfig.DOCLING_OCR_ENGINE === '' && localRAGConfig.DOCLING_OCR_LANG !== '') ||
-				(localRAGConfig.DOCLING_OCR_ENGINE !== '' && localRAGConfig.DOCLING_OCR_LANG === ''))
+			RAGConfig.CONTENT_EXTRACTION_ENGINE === 'docling' &&
+            RAGConfig.DOCLING_DO_OCR &&
+			((RAGConfig.DOCLING_OCR_ENGINE === '' && RAGConfig.DOCLING_OCR_LANG !== '') ||
+				(RAGConfig.DOCLING_OCR_ENGINE !== '' && RAGConfig.DOCLING_OCR_LANG === ''))
 		) {
 			toast.error(
 				$i18n.t('Both Docling OCR Engine and Language(s) must be provided or both left empty.')
@@ -210,30 +198,30 @@
 			return;
 		}
 		if (
-			localRAGConfig.CONTENT_EXTRACTION_ENGINE === 'datalab_marker' &&
-			!localRAGConfig.DATALAB_MARKER_API_KEY
+			RAGConfig.CONTENT_EXTRACTION_ENGINE === 'datalab_marker' &&
+			!RAGConfig.DATALAB_MARKER_API_KEY
 		) {
 			toast.error($i18n.t('Datalab Marker API Key required.'));
 			return;
 		}
 
         if (
-            localRAGConfig.CONTENT_EXTRACTION_ENGINE === 'document_intelligence' &&
-            (localRAGConfig.DOCUMENT_INTELLIGENCE_ENDPOINT === '' ||
-                localRAGConfig.DOCUMENT_INTELLIGENCE_KEY === '')
+            RAGConfig.CONTENT_EXTRACTION_ENGINE === 'document_intelligence' &&
+            (RAGConfig.DOCUMENT_INTELLIGENCE_ENDPOINT === '' ||
+                RAGConfig.DOCUMENT_INTELLIGENCE_KEY === '')
         ) {
             toast.error($i18n.t('Document Intelligence endpoint and key required.'));
             return;
         }
         if (
-            localRAGConfig.CONTENT_EXTRACTION_ENGINE === 'mistral_ocr' &&
-            localRAGConfig.MISTRAL_OCR_API_KEY === ''
+            RAGConfig.CONTENT_EXTRACTION_ENGINE === 'mistral_ocr' &&
+            RAGConfig.MISTRAL_OCR_API_KEY === ''
         ) {
             toast.error($i18n.t('Mistral OCR API Key required.'));
             return;
         }
 
-        // Create a filtered version of localRAGConfig without embedding, OpenAI, Ollama, and reranking model properties
+        // Create a filtered version of RAGConfig without embedding, OpenAI, Ollama, and reranking model properties
         const { 
             embedding_engine, 
             embedding_model, 
@@ -246,7 +234,7 @@
             LOADED_RERANKING_MODELS,
             DOWNLOADED_RERANKING_MODELS, 
             ...filteredRAGConfig 
-        } = localRAGConfig;
+        } = RAGConfig;
 
         // Create the filtered RAGConfig for backend updates
         const backendRAGConfig = { ...filteredRAGConfig, knowledge_id: knowledgeId };
@@ -261,18 +249,10 @@
             DOCLING_PICTURE_DESCRIPTION_API: JSON.parse(backendRAGConfig.DOCLING_PICTURE_DESCRIPTION_API || '{}')
         });
 
-        if (!localRAGConfig.BYPASS_EMBEDDING_AND_RETRIEVAL) {
+        if (!RAGConfig.BYPASS_EMBEDDING_AND_RETRIEVAL) {
             await embeddingModelUpdateHandler();
         }
 
-        // Update embedding and reranking to show updates in UI
-        localRAGConfig.embedding_engine = embeddingEngine
-        localRAGConfig.embedding_model = embeddingModel
-        localRAGConfig.embedding_batch_size = embeddingBatchSize
-        localRAGConfig.openai_config = {"key": OpenAIKey, "url": OpenAIUrl}          
-        localRAGConfig.ollama_config = {"key": OllamaKey, "url": OllamaUrl}
-        localRAGConfig.azure_openai_config = {"key": AzureOpenAIKey, "url": AzureOpenAIUrl, "version": AzureOpenAIVersion}
-        
         if (needsReindex) {
             // Reindex knowledge files if reranking model changed
             const reindexResponse = await reindexSpecificKnowledgeFiles(localStorage.token, knowledgeId,
@@ -283,13 +263,18 @@
             }
         }
 
-        dispatch('update', localRAGConfig)
+        dispatch('update', RAGConfig)
         loading = false;
     };
 
+    function handleClose() {
+        resetLocalState();
+        show = false;
+        dispatch('close');
+    }
 </script>
 
-<Modal size="sm" bind:show>
+<Modal size="sm" bind:show on:close={handleClose}>
     <div class="w-full px-5 pb-4 dark:text-white">
     <div>
         <!-- Modal Header -->
@@ -301,7 +286,7 @@
                 class="self-center"
                 on:click={() => {
                     show = false;
-                    resetLocalState();
+                    handleClose();
                 }}
             >
                 <svg
@@ -325,7 +310,7 @@
             <div class="">
                 <select
                     class="dark:bg-gray-900 w-fit pr-8 rounded-sm px-2 text-xs bg-transparent outline-hidden text-right"
-                    bind:value={localRAGConfig.CONTENT_EXTRACTION_ENGINE}
+                    bind:value={RAGConfig.CONTENT_EXTRACTION_ENGINE}
                 >
                     <option value="">{$i18n.t('Default')}</option>
                     <option value="external">{$i18n.t('External')}</option>
@@ -338,23 +323,23 @@
             </div>
         </div>
         <div class="space-y-4 mt-4">
-            {#if localRAGConfig.CONTENT_EXTRACTION_ENGINE === ''}
+            {#if RAGConfig.CONTENT_EXTRACTION_ENGINE === ''}
                 <div class="flex w-full mt-1">
                     <div class="flex-1 flex justify-between">
                         <div class=" self-center text-xs font-medium">
                             {$i18n.t('PDF Extract Images (OCR)')}
                         </div>
                         <div class="flex items-center relative">
-                            <Switch bind:state={localRAGConfig.PDF_EXTRACT_IMAGES} />
+                            <Switch bind:state={RAGConfig.PDF_EXTRACT_IMAGES} />
                         </div>
                     </div>
                 </div>
-            {:else if localRAGConfig.CONTENT_EXTRACTION_ENGINE === 'datalab_marker'}
+            {:else if RAGConfig.CONTENT_EXTRACTION_ENGINE === 'datalab_marker'}
                 <div class="my-0.5 flex gap-2 pr-2">
                     <SensitiveInput
                         placeholder={$i18n.t('Enter Datalab Marker API Key')}
                         required={false}
-                        bind:value={localRAGConfig.DATALAB_MARKER_API_KEY}
+                        bind:value={RAGConfig.DATALAB_MARKER_API_KEY}
                     />
                 </div>
 
@@ -370,7 +355,7 @@
                         </Tooltip>
                     </div>
                     <div class="flex items-center">
-                        <Switch bind:state={localRAGConfig.DATALAB_MARKER_USE_LLM} />
+                        <Switch bind:state={RAGConfig.DATALAB_MARKER_USE_LLM} />
                     </div>
                 </div>
                 <div class="flex justify-between w-full mt-2">
@@ -383,7 +368,7 @@
                         </Tooltip>
                     </div>
                     <div class="flex items-center">
-                        <Switch bind:state={localRAGConfig.DATALAB_MARKER_SKIP_CACHE} />
+                        <Switch bind:state={RAGConfig.DATALAB_MARKER_SKIP_CACHE} />
                     </div>
                 </div>
                 <div class="flex justify-between w-full mt-2">
@@ -398,7 +383,7 @@
                         </Tooltip>
                     </div>
                     <div class="flex items-center">
-                        <Switch bind:state={localRAGConfig.DATALAB_MARKER_FORCE_OCR} />
+                        <Switch bind:state={RAGConfig.DATALAB_MARKER_FORCE_OCR} />
                     </div>
                 </div>
                 <div class="flex justify-between w-full mt-2">
@@ -413,7 +398,7 @@
                         </Tooltip>
                     </div>
                     <div class="flex items-center">
-                        <Switch bind:state={localRAGConfig.DATALAB_MARKER_PAGINATE} />
+                        <Switch bind:state={RAGConfig.DATALAB_MARKER_PAGINATE} />
                     </div>
                 </div>
                 <div class="flex justify-between w-full mt-2">
@@ -428,7 +413,7 @@
                         </Tooltip>
                     </div>
                     <div class="flex items-center">
-                        <Switch bind:state={localRAGConfig.DATALAB_MARKER_STRIP_EXISTING_OCR} />
+                        <Switch bind:state={RAGConfig.DATALAB_MARKER_STRIP_EXISTING_OCR} />
                     </div>
                 </div>
                 <div class="flex justify-between w-full mt-2">
@@ -443,7 +428,7 @@
                         </Tooltip>
                     </div>
                     <div class="flex items-center">
-                        <Switch bind:state={localRAGConfig.DATALAB_MARKER_DISABLE_IMAGE_EXTRACTION} />
+                        <Switch bind:state={RAGConfig.DATALAB_MARKER_DISABLE_IMAGE_EXTRACTION} />
                     </div>
                 </div>
                 <div class="flex justify-between w-full mt-2">
@@ -460,7 +445,7 @@
                     <div class="">
                         <select
                             class="dark:bg-gray-900 w-fit pr-8 rounded-sm px-2 text-xs bg-transparent outline-hidden text-right"
-                            bind:value={localRAGConfig.DATALAB_MARKER_OUTPUT_FORMAT}
+                            bind:value={RAGConfig.DATALAB_MARKER_OUTPUT_FORMAT}
                         >
                             <option value="markdown">{$i18n.t('Markdown')}</option>
                             <option value="json">{$i18n.t('JSON')}</option>
@@ -468,35 +453,35 @@
                         </select>
                     </div>
                 </div>
-            {:else if localRAGConfig.CONTENT_EXTRACTION_ENGINE === 'external'}
+            {:else if RAGConfig.CONTENT_EXTRACTION_ENGINE === 'external'}
                 <div class="my-0.5 flex gap-2 pr-2">
                     <input
                         class="flex-1 w-full text-sm bg-transparent outline-hidden"
                         placeholder={$i18n.t('Enter External Document Loader URL')}
-                        bind:value={localRAGConfig.EXTERNAL_DOCUMENT_LOADER_URL}
+                        bind:value={RAGConfig.EXTERNAL_DOCUMENT_LOADER_URL}
                     />
                     <SensitiveInput
                         placeholder={$i18n.t('Enter External Document Loader API Key')}
                         required={false}
-                        bind:value={localRAGConfig.EXTERNAL_DOCUMENT_LOADER_API_KEY}
+                        bind:value={RAGConfig.EXTERNAL_DOCUMENT_LOADER_API_KEY}
                     />
                 </div>
-            {:else if localRAGConfig.CONTENT_EXTRACTION_ENGINE === 'tika'}
+            {:else if RAGConfig.CONTENT_EXTRACTION_ENGINE === 'tika'}
                 <div class="flex w-full mt-1">
                     <div class="flex-1 mr-2">
                         <input
                             class="flex-1 w-full rounded-lg text-sm bg-transparent outline-hidden"
                             placeholder={$i18n.t('Enter Tika Server URL')}
-                            bind:value={localRAGConfig.TIKA_SERVER_URL}
+                            bind:value={RAGConfig.TIKA_SERVER_URL}
                         />
                     </div>
                 </div>
-            {:else if localRAGConfig.CONTENT_EXTRACTION_ENGINE === 'docling'}
+            {:else if RAGConfig.CONTENT_EXTRACTION_ENGINE === 'docling'}
                 <div class="flex w-full mt-1">
                     <input
                         class="flex-1 w-full text-sm bg-transparent outline-hidden"
                         placeholder={$i18n.t('Enter Docling Server URL')}
-                        bind:value={localRAGConfig.DOCLING_SERVER_URL}
+                        bind:value={RAGConfig.DOCLING_SERVER_URL}
                     />
                 </div>
                 
@@ -506,21 +491,21 @@
                             {$i18n.t('Perform OCR')}
                         </div>
                         <div class="flex items-center relative">
-                            <Switch bind:state={localRAGConfig.DOCLING_DO_OCR} />
+                            <Switch bind:state={RAGConfig.DOCLING_DO_OCR} />
                         </div>
                     </div>
                 </div>
-                {#if localRAGConfig.DOCLING_DO_OCR}
+                {#if RAGConfig.DOCLING_DO_OCR}
                     <div class="flex w-full mt-2">
                         <input
                             class="flex-1 w-full text-sm bg-transparent outline-hidden"
                             placeholder={$i18n.t('Enter Docling OCR Engine')}
-                            bind:value={localRAGConfig.DOCLING_OCR_ENGINE}
+                            bind:value={RAGConfig.DOCLING_OCR_ENGINE}
                         />
                         <input
                             class="flex-1 w-full text-sm bg-transparent outline-hidden"
                             placeholder={$i18n.t('Enter Docling OCR Language(s)')}
-                            bind:value={localRAGConfig.DOCLING_OCR_LANG}
+                            bind:value={RAGConfig.DOCLING_OCR_LANG}
                         />
                     </div>
 
@@ -531,7 +516,7 @@
                             {$i18n.t('Force OCR')}
                         </div>
                         <div class="flex items-center relative">
-                            <Switch bind:state={localRAGConfig.DOCLING_FORCE_OCR} />
+                            <Switch bind:state={RAGConfig.DOCLING_FORCE_OCR} />
                         </div>
                     </div>
                 </div>
@@ -544,7 +529,7 @@
                     <div class="">
                         <select
                             class="dark:bg-gray-900 w-fit pr-8 rounded-sm px-2 text-xs bg-transparent outline-hidden text-right"
-                            bind:value={localRAGConfig.DOCLING_PDF_BACKEND}
+                            bind:value={RAGConfig.DOCLING_PDF_BACKEND}
                         >
                             <option value="pypdfium2">{$i18n.t('pypdfium2')}</option>
                             <option value="dlparse_v1">{$i18n.t('dlparse_v1')}</option>
@@ -562,7 +547,7 @@
                     <div class="">
                         <select
                             class="dark:bg-gray-900 w-fit pr-8 rounded-sm px-2 text-xs bg-transparent outline-hidden text-right"
-                            bind:value={localRAGConfig.DOCLING_TABLE_MODE}
+                            bind:value={RAGConfig.DOCLING_TABLE_MODE}
                         >
                             <option value="fast">{$i18n.t('fast')}</option>
                             <option value="accurate">{$i18n.t('accurate')}</option>
@@ -578,7 +563,7 @@
                     <div class="">
                         <select
                             class="dark:bg-gray-900 w-fit pr-8 rounded-sm px-2 text-xs bg-transparent outline-hidden text-right"
-                            bind:value={localRAGConfig.DOCLING_PIPELINE}
+                            bind:value={RAGConfig.DOCLING_PIPELINE}
                         >
                             <option value="standard">{$i18n.t('standard')}</option>
                             <option value="vlm">{$i18n.t('vlm')}</option>
@@ -591,11 +576,11 @@
                             {$i18n.t('Describe Pictures in Documents')}
                         </div>
                         <div class="flex items-center relative">
-                            <Switch bind:state={localRAGConfig.DOCLING_DO_PICTURE_DESCRIPTION} />
+                            <Switch bind:state={RAGConfig.DOCLING_DO_PICTURE_DESCRIPTION} />
                         </div>
                     </div>
                 </div>
-                {#if localRAGConfig.DOCLING_DO_PICTURE_DESCRIPTION}
+                {#if RAGConfig.DOCLING_DO_PICTURE_DESCRIPTION}
                     <div class="flex justify-between w-full mt-2">
                         <div class="self-center text-xs font-medium">
                             <Tooltip content={''} placement="top-start">
@@ -605,7 +590,7 @@
                         <div class="">
                             <select
                                 class="dark:bg-gray-900 w-fit pr-8 rounded-sm px-2 text-xs bg-transparent outline-hidden text-right"
-                                bind:value={localRAGConfig.DOCLING_PICTURE_DESCRIPTION_MODE}
+                                bind:value={RAGConfig.DOCLING_PICTURE_DESCRIPTION_MODE}
                             >
                                 <option value="">{$i18n.t('Default')}</option>
                                 <option value="local">{$i18n.t('Local')}</option>
@@ -614,7 +599,7 @@
                         </div>
                     </div>
 
-                    {#if localRAGConfig.DOCLING_PICTURE_DESCRIPTION_MODE === 'local'}
+                    {#if RAGConfig.DOCLING_PICTURE_DESCRIPTION_MODE === 'local'}
                         <div class="flex flex-col gap-2 mt-2">
                             <div class=" flex flex-col w-full justify-between">
                                 <div class=" mb-1 text-xs font-medium">
@@ -629,14 +614,14 @@
                                         className="w-full"
                                     >
                                         <Textarea
-                                            bind:value={localRAGConfig.DOCLING_PICTURE_DESCRIPTION_LOCAL}
+                                            bind:value={RAGConfig.DOCLING_PICTURE_DESCRIPTION_LOCAL}
                                             placeholder={$i18n.t('Enter Config in JSON format')}
                                         />
                                     </Tooltip>
                                 </div>
                             </div>
                         </div>
-                    {:else if localRAGConfig.DOCLING_PICTURE_DESCRIPTION_MODE === 'api'}
+                    {:else if RAGConfig.DOCLING_PICTURE_DESCRIPTION_MODE === 'api'}
                         <div class="flex flex-col gap-2 mt-2">
                             <div class=" flex flex-col w-full justify-between">
                                 <div class=" mb-1 text-xs font-medium">
@@ -651,7 +636,7 @@
                                         className="w-full"
                                     >
                                         <Textarea
-                                            bind:value={localRAGConfig.DOCLING_PICTURE_DESCRIPTION_API}
+                                            bind:value={RAGConfig.DOCLING_PICTURE_DESCRIPTION_API}
                                             placeholder={$i18n.t('Enter Config in JSON format')}
                                         />
                                     </Tooltip>
@@ -660,23 +645,23 @@
                         </div>
                     {/if}
                 {/if}
-            {:else if localRAGConfig.CONTENT_EXTRACTION_ENGINE === 'document_intelligence'}
+            {:else if RAGConfig.CONTENT_EXTRACTION_ENGINE === 'document_intelligence'}
                 <div class="my-0.5 flex gap-2 pr-2">
                     <input
                         class="flex-1 w-full rounded-lg text-sm bg-transparent outline-hidden"
                         placeholder={$i18n.t('Enter Document Intelligence Endpoint')}
-                        bind:value={localRAGConfig.DOCUMENT_INTELLIGENCE_ENDPOINT}
+                        bind:value={RAGConfig.DOCUMENT_INTELLIGENCE_ENDPOINT}
                     />
                     <SensitiveInput
                         placeholder={$i18n.t('Enter Document Intelligence Key')}
-                        bind:value={localRAGConfig.DOCUMENT_INTELLIGENCE_KEY}
+                        bind:value={RAGConfig.DOCUMENT_INTELLIGENCE_KEY}
                     />
                 </div>
-            {:else if localRAGConfig.CONTENT_EXTRACTION_ENGINE === 'mistral_ocr'}
+            {:else if RAGConfig.CONTENT_EXTRACTION_ENGINE === 'mistral_ocr'}
                 <div class="my-0.5 flex gap-2 pr-2">
                     <SensitiveInput
                         placeholder={$i18n.t('Enter Mistral API Key')}
-                        bind:value={localRAGConfig.MISTRAL_OCR_API_KEY}
+                        bind:value={RAGConfig.MISTRAL_OCR_API_KEY}
                     />
                 </div>
             {/if}
@@ -690,7 +675,7 @@
             </div>
             <div class="flex items-center relative">
                 <Tooltip
-                    content={localRAGConfig.BYPASS_EMBEDDING_AND_RETRIEVAL
+                    content={RAGConfig.BYPASS_EMBEDDING_AND_RETRIEVAL
                         ? $i18n.t(
                                 'Inject the entire content as context for comprehensive processing, this is recommended for complex queries.'
                             )
@@ -698,18 +683,18 @@
                                 'Default to segmented retrieval for focused and relevant content extraction, this is recommended for most cases.'
                             )}
                 >
-                    <Switch bind:state={localRAGConfig.BYPASS_EMBEDDING_AND_RETRIEVAL} />
+                    <Switch bind:state={RAGConfig.BYPASS_EMBEDDING_AND_RETRIEVAL} />
                 </Tooltip>
             </div>
         </div>
     
-        {#if !localRAGConfig.BYPASS_EMBEDDING_AND_RETRIEVAL}
+        {#if !RAGConfig.BYPASS_EMBEDDING_AND_RETRIEVAL}
             <div class="  mb-2.5 flex w-full justify-between">
                 <div class=" self-center text-xs font-medium">{$i18n.t('Text Splitter')}</div>
                 <div class="flex items-center relative">
                     <select
                         class="dark:bg-gray-900 w-fit pr-8 rounded-sm px-2 text-xs bg-transparent outline-hidden text-right"
-                        bind:value={localRAGConfig.TEXT_SPLITTER}
+                        bind:value={RAGConfig.TEXT_SPLITTER}
                     >
                         <option value="">{$i18n.t('Default')} ({$i18n.t('Character')})</option>
                         <option value="token">{$i18n.t('Token')} ({$i18n.t('Tiktoken')})</option>
@@ -728,7 +713,7 @@
                                 class=" w-full rounded-lg py-1.5 px-4 text-sm bg-gray-50 dark:text-gray-300 dark:bg-gray-850 outline-hidden"
                                 type="number"
                                 placeholder={$i18n.t('Enter Chunk Size')}
-                                bind:value={localRAGConfig.CHUNK_SIZE}
+                                bind:value={RAGConfig.CHUNK_SIZE}
                                 autocomplete="off"
                                 min="0"
                             />
@@ -745,7 +730,7 @@
                                 class="w-full rounded-lg py-1.5 px-4 text-sm bg-gray-50 dark:text-gray-300 dark:bg-gray-850 outline-hidden"
                                 type="number"
                                 placeholder={$i18n.t('Enter Chunk Overlap')}
-                                bind:value={localRAGConfig.CHUNK_OVERLAP}
+                                bind:value={RAGConfig.CHUNK_OVERLAP}
                                 autocomplete="off"
                                 min="0"
                             />
@@ -755,7 +740,7 @@
             </div>
         {/if}
 
-    {#if !localRAGConfig.BYPASS_EMBEDDING_AND_RETRIEVAL}
+    {#if !RAGConfig.BYPASS_EMBEDDING_AND_RETRIEVAL}
         <div class="mb-3">
             <div class=" mb-2.5 text-base font-medium">{$i18n.t('Embedding')}</div>
 
@@ -857,7 +842,7 @@
                                             on:change={() => {
                                                 if (
                                                     embeddingModel !== "" &&
-                                                    embeddingModel !== localRAGConfig.RAG_EMBEDDING_MODEL
+                                                    embeddingModel !== RAGConfig.RAG_EMBEDDING_MODEL
                                                 ) {
                                                     needsReindex = true;
                                                 }
@@ -948,7 +933,7 @@
                                     on:change={() => {
                                         if (
                                             embeddingModel !== "" &&
-                                            embeddingModel !== localRAGConfig.RAG_EMBEDDING_MODEL
+                                            embeddingModel !== RAGConfig.RAG_EMBEDDING_MODEL
                                         ) {
                                             needsReindex = true;
                                             console.log('needsReindex set to', needsReindex);
@@ -961,16 +946,16 @@
                                         <option value={embeddingModel} class="py-1 font-semibold">
                                             {embeddingModel} 
                                             {#if embeddingEngine !== undefined && 
-                                                localRAGConfig.DOWNLOADED_EMBEDDING_MODELS[embeddingEngine] && 
-                                                !localRAGConfig.DOWNLOADED_EMBEDDING_MODELS[embeddingEngine]?.includes(embeddingModel)}
+                                                RAGConfig.DOWNLOADED_EMBEDDING_MODELS[embeddingEngine] && 
+                                                !RAGConfig.DOWNLOADED_EMBEDDING_MODELS[embeddingEngine]?.includes(embeddingModel)}
                                                 (custom)
                                             {/if}
                                         </option>
                                     {/if}
                                     
                                     <!-- Then show all downloaded models from the selected engine -->
-                                    {#if embeddingEngine !== undefined && localRAGConfig.DOWNLOADED_EMBEDDING_MODELS[embeddingEngine]}
-                                        {#each localRAGConfig.DOWNLOADED_EMBEDDING_MODELS[embeddingEngine] as model}
+                                    {#if embeddingEngine !== undefined && RAGConfig.DOWNLOADED_EMBEDDING_MODELS[embeddingEngine]}
+                                        {#each RAGConfig.DOWNLOADED_EMBEDDING_MODELS[embeddingEngine] as model}
                                             {#if model !== embeddingModel} <!-- Skip the current model as it's already shown -->
                                                 <option value={model} class="py-1">{model}</option>
                                             {/if}
@@ -1017,7 +1002,7 @@
                 <div class=" self-center text-xs font-medium">{$i18n.t('Full Context Mode')}</div>
                 <div class="flex items-center relative">
                     <Tooltip
-                        content={localRAGConfig.RAG_FULL_CONTEXT
+                        content={RAGConfig.RAG_FULL_CONTEXT
                             ? $i18n.t(
                                     'Inject the entire content as context for comprehensive processing, this is recommended for complex queries.'
                                 )
@@ -1025,22 +1010,22 @@
                                     'Default to segmented retrieval for focused and relevant content extraction, this is recommended for most cases.'
                                 )}
                     >
-                        <Switch bind:state={localRAGConfig.RAG_FULL_CONTEXT} />
+                        <Switch bind:state={RAGConfig.RAG_FULL_CONTEXT} />
                     </Tooltip>
                 </div>
             </div>
 
-            {#if !localRAGConfig.RAG_FULL_CONTEXT}
+            {#if !RAGConfig.RAG_FULL_CONTEXT}
                 <div class="  mb-2.5 flex w-full justify-between">
                     <div class=" self-center text-xs font-medium">{$i18n.t('Hybrid Search')}</div>
                     <div class="flex items-center relative">
                         <Switch
-                            bind:state={localRAGConfig.ENABLE_RAG_HYBRID_SEARCH}
+                            bind:state={RAGConfig.ENABLE_RAG_HYBRID_SEARCH}
                         />
                     </div>
                 </div>
                 
-                {#if localRAGConfig.ENABLE_RAG_HYBRID_SEARCH === true}
+                {#if RAGConfig.ENABLE_RAG_HYBRID_SEARCH === true}
                 <div class="  mb-2.5 flex flex-col w-full justify-between">
                     <div class="flex w-full justify-between">
                         <div class=" self-center text-xs font-medium">
@@ -1049,13 +1034,13 @@
                         <div class="flex items-center relative">
                             <select
                                 class="dark:bg-gray-900 w-fit pr-8 rounded-sm px-2 p-1 text-xs bg-transparent outline-hidden text-right"
-                                bind:value={localRAGConfig.RAG_RERANKING_ENGINE}
+                                bind:value={RAGConfig.RAG_RERANKING_ENGINE}
                                 placeholder="Select a reranking model engine"
                                 on:change={(e) => {
                                     if (e.target.value === 'external') {
-                                        localRAGConfig.RAG_RERANKING_MODEL = '';
+                                        RAGConfig.RAG_RERANKING_MODEL = '';
                                     } else if (e.target.value === '') {
-                                        localRAGConfig.RAG_RERANKING_MODEL = 'BAAI/bge-reranker-v2-m3';
+                                        RAGConfig.RAG_RERANKING_MODEL = 'BAAI/bge-reranker-v2-m3';
                                     }
                                 }}
                             >
@@ -1065,25 +1050,25 @@
                         </div>
                     </div>
 
-                    {#if localRAGConfig.RAG_RERANKING_ENGINE === 'external'}
+                    {#if RAGConfig.RAG_RERANKING_ENGINE === 'external'}
                         <div class="my-0.5 flex gap-2 pr-2">
                             <input
                                 class="flex-1 w-full text-sm bg-transparent outline-hidden"
                                 placeholder={$i18n.t('API Base URL')}
-                                bind:value={localRAGConfig.RAG_EXTERNAL_RERANKER_URL}
+                                bind:value={RAGConfig.RAG_EXTERNAL_RERANKER_URL}
                                 required
                             />
 
                             <SensitiveInput
                                 placeholder={$i18n.t('API Key')}
-                                bind:value={localRAGConfig.RAG_EXTERNAL_RERANKER_API_KEY}
+                                bind:value={RAGConfig.RAG_EXTERNAL_RERANKER_API_KEY}
                                 required={false}
                             />
                         </div>
                     {/if}
                 </div>
 
-                {#if localRAGConfig.ENABLE_RAG_HYBRID_SEARCH === true}
+                {#if RAGConfig.ENABLE_RAG_HYBRID_SEARCH === true}
                     <div class="  mb-2.5 flex flex-col w-full">
                         <div class=" mb-1 text-xs font-medium">{$i18n.t('Reranking Model')}</div>
                         {#if $user?.role === 'admin'}
@@ -1095,7 +1080,7 @@
                                             placeholder={$i18n.t('Set reranking model (e.g. {{model}})', {
                                                 model: 'BAAI/bge-reranker-v2-m3'
                                             })}
-                                            bind:value={localRAGConfig.RAG_RERANKING_MODEL}
+                                            bind:value={RAGConfig.RAG_RERANKING_MODEL}
                                             on:input={() => {
                                             }}
                                         />
@@ -1107,26 +1092,26 @@
                             <div class="flex-1 mr-2">
                                 <select
                                     class="flex-1 w-full rounded-lg text-sm bg-transparent outline-hidden p-2 border border-gray-300"
-                                    bind:value={localRAGConfig.RAG_RERANKING_MODEL}
+                                    bind:value={RAGConfig.RAG_RERANKING_MODEL}
                                     required
                                 >
                                     <option value="" disabled selected>{$i18n.t('Select reranking model')}</option>
                                     <!-- Always show the current value first if it's not empty -->
-                                    {#if localRAGConfig.RAG_RERANKING_MODEL && localRAGConfig.RAG_RERANKING_MODEL.trim() !== ''}
-                                        <option value={localRAGConfig.RAG_RERANKING_MODEL} class="py-1 font-semibold">
-                                            {localRAGConfig.RAG_RERANKING_MODEL} 
-                                            {#if localRAGConfig.RAG_RERANKING_ENGINE !== undefined &&
-                                                localRAGConfig.DOWNLOADED_RERANKING_MODELS[localRAGConfig.RAG_RERANKING_ENGINE] &&
-                                                !localRAGConfig.DOWNLOADED_RERANKING_MODELS[localRAGConfig.RAG_RERANKING_ENGINE]?.some(model => model.RAG_RERANKING_MODEL === localRAGConfig.RAG_RERANKING_MODEL)}
+                                    {#if RAGConfig.RAG_RERANKING_MODEL && RAGConfig.RAG_RERANKING_MODEL.trim() !== ''}
+                                        <option value={RAGConfig.RAG_RERANKING_MODEL} class="py-1 font-semibold">
+                                            {RAGConfig.RAG_RERANKING_MODEL} 
+                                            {#if RAGConfig.RAG_RERANKING_ENGINE !== undefined &&
+                                                RAGConfig.DOWNLOADED_RERANKING_MODELS[RAGConfig.RAG_RERANKING_ENGINE] &&
+                                                !RAGConfig.DOWNLOADED_RERANKING_MODELS[RAGConfig.RAG_RERANKING_ENGINE]?.some(model => model.RAG_RERANKING_MODEL === RAGConfig.RAG_RERANKING_MODEL)}
                                                 (custom)
                                             {/if}
                                         </option>
                                     {/if}
                                     
                                     <!-- Then show all downloaded models from the selected engine -->
-                                    {#if localRAGConfig.RAG_RERANKING_ENGINE !== undefined && localRAGConfig.DOWNLOADED_RERANKING_MODELS[localRAGConfig.RAG_RERANKING_ENGINE]}
-                                        {#each localRAGConfig.DOWNLOADED_RERANKING_MODELS[localRAGConfig.RAG_RERANKING_ENGINE] as model}
-                                            {#if model !== localRAGConfig.RAG_RERANKING_MODEL} <!-- Skip the current model as it's already shown -->
+                                    {#if RAGConfig.RAG_RERANKING_ENGINE !== undefined && RAGConfig.DOWNLOADED_RERANKING_MODELS[RAGConfig.RAG_RERANKING_ENGINE]}
+                                        {#each RAGConfig.DOWNLOADED_RERANKING_MODELS[RAGConfig.RAG_RERANKING_ENGINE] as model}
+                                            {#if model !== RAGConfig.RAG_RERANKING_MODEL} <!-- Skip the current model as it's already shown -->
                                                 <option value={model} class="py-1">{model}</option>
                                             {/if}
                                         {/each}
@@ -1144,7 +1129,7 @@
                             class="flex-1 w-full rounded-lg text-sm bg-transparent outline-hidden"
                             type="number"
                             placeholder={$i18n.t('Enter Top K')}
-                            bind:value={localRAGConfig.TOP_K}
+                            bind:value={RAGConfig.TOP_K}
                             autocomplete="off"
                             min="0"
                         />
@@ -1158,7 +1143,7 @@
                                 class="flex-1 w-full rounded-lg text-sm bg-transparent outline-hidden"
                                 type="number"
                                 placeholder={$i18n.t('Enter Top K Reranker')}
-                                bind:value={localRAGConfig.TOP_K_RERANKER}
+                                bind:value={RAGConfig.TOP_K_RERANKER}
                                 autocomplete="off"
                                 min="0"
                             />
@@ -1166,7 +1151,7 @@
                     </div>
                 {/if}
 
-                {#if localRAGConfig.ENABLE_RAG_HYBRID_SEARCH === true}
+                {#if RAGConfig.ENABLE_RAG_HYBRID_SEARCH === true}
                     <div class="  mb-2.5 flex flex-col w-full justify-between">
                         <div class=" flex w-full justify-between">
                             <div class=" self-center text-xs font-medium">
@@ -1178,7 +1163,7 @@
                                     type="number"
                                     step="0.01"
                                     placeholder={$i18n.t('Enter Score')}
-                                    bind:value={localRAGConfig.RELEVANCE_THRESHOLD}
+                                    bind:value={RAGConfig.RELEVANCE_THRESHOLD}
                                     autocomplete="off"
                                     min="0.0"
                                     title={$i18n.t(
@@ -1194,7 +1179,7 @@
                         </div>
                     </div>
                 {/if}
-                {#if localRAGConfig.ENABLE_RAG_HYBRID_SEARCH === true}
+                {#if RAGConfig.ENABLE_RAG_HYBRID_SEARCH === true}
                     <div class=" mb-2.5 py-0.5 w-full justify-between">
                         <Tooltip
                             content={$i18n.t(
@@ -1211,11 +1196,11 @@
                                     class="p-1 px-3 text-xs flex rounded-sm transition shrink-0 outline-hidden"
                                     type="button"
                                     on:click={() => {
-                                        localRAGConfig.HYBRID_BM25_WEIGHT =
-                                            (localRAGConfig.HYBRID_BM25_WEIGHT ?? null) === null ? 0.5 : null;
+                                        RAGConfig.HYBRID_BM25_WEIGHT =
+                                            (RAGConfig.HYBRID_BM25_WEIGHT ?? null) === null ? 0.5 : null;
                                     }}
                                 >
-                                    {#if (localRAGConfig.HYBRID_BM25_WEIGHT ?? null) === null}
+                                    {#if (RAGConfig.HYBRID_BM25_WEIGHT ?? null) === null}
                                         <span class="ml-2 self-center"> {$i18n.t('Default')} </span>
                                     {:else}
                                         <span class="ml-2 self-center"> {$i18n.t('Custom')} </span>
@@ -1224,7 +1209,7 @@
                             </div>
                         </Tooltip>
 
-                        {#if (localRAGConfig.HYBRID_BM25_WEIGHT ?? null) !== null}
+                        {#if (RAGConfig.HYBRID_BM25_WEIGHT ?? null) !== null}
                             <div class="flex mt-0.5 space-x-2">
                                 <div class=" flex-1">
                                     <input
@@ -1233,7 +1218,7 @@
                                         min="0"
                                         max="1"
                                         step="0.05"
-                                        bind:value={localRAGConfig.HYBRID_BM25_WEIGHT}
+                                        bind:value={RAGConfig.HYBRID_BM25_WEIGHT}
                                         class="w-full h-2 rounded-lg appearance-none cursor-pointer dark:bg-gray-700"
                                     />
 
@@ -1250,7 +1235,7 @@
                                 </div>
                                 <div>
                                     <input
-                                        bind:value={localRAGConfig.HYBRID_BM25_WEIGHT}
+                                        bind:value={RAGConfig.HYBRID_BM25_WEIGHT}
                                         type="number"
                                         class=" bg-transparent text-center w-14"
                                         min="0"
@@ -1275,7 +1260,7 @@
                         className="w-full"
                     >
                         <Textarea
-                            bind:value={localRAGConfig.RAG_TEMPLATE}
+                            bind:value={RAGConfig.RAG_TEMPLATE}
                             placeholder={$i18n.t(
                                 'Leave empty to use the default prompt, or enter a custom prompt'
                             )}
@@ -1302,7 +1287,7 @@
                             class="flex-1 w-full text-sm bg-transparent outline-hidden"
                             type="text"
                             placeholder={$i18n.t('e.g. pdf, docx, txt')}
-                            bind:value={localRAGConfig.ALLOWED_FILE_EXTENSIONS}
+                            bind:value={RAGConfig.ALLOWED_FILE_EXTENSIONS}
                             autocomplete="off"
                         />
                     </Tooltip>
@@ -1322,7 +1307,7 @@
                             class="flex-1 w-full text-sm bg-transparent outline-hidden"
                             type="number"
                             placeholder={$i18n.t('Leave empty for unlimited')}
-                            bind:value={localRAGConfig.FILE_MAX_SIZE}
+                            bind:value={RAGConfig.FILE_MAX_SIZE}
                             autocomplete="off"
                             min="0"
                         />
@@ -1343,7 +1328,7 @@
                             class="flex-1 w-full text-sm bg-transparent outline-hidden"
                             type="number"
                             placeholder={$i18n.t('Leave empty for unlimited')}
-                            bind:value={localRAGConfig.FILE_MAX_COUNT}
+                            bind:value={RAGConfig.FILE_MAX_COUNT}
                             autocomplete="off"
                             min="0"
                         />
@@ -1364,7 +1349,7 @@
                             class="flex-1 w-full text-sm bg-transparent outline-hidden"
                             type="number"
                             placeholder={$i18n.t('Leave empty for no compression')}
-                            bind:value={localRAGConfig.FILE_IMAGE_COMPRESSION_WIDTH}
+                            bind:value={RAGConfig.FILE_IMAGE_COMPRESSION_WIDTH}
                             autocomplete="off"
                             min="0"
                         />
@@ -1387,7 +1372,7 @@
                             class="flex-1 w-full text-sm bg-transparent outline-hidden"
                             type="number"
                             placeholder={$i18n.t('Leave empty for no compression')}
-                            bind:value={localRAGConfig.FILE_IMAGE_COMPRESSION_HEIGHT}
+                            bind:value={RAGConfig.FILE_IMAGE_COMPRESSION_HEIGHT}
                             autocomplete="off"
                             min="0"
                         />
@@ -1402,7 +1387,7 @@
                     class="px-2 py-1 bg-gray-300 rounded-md dark:bg-gray-700"
                     on:click={() => {
                         show = false;
-                        onCancel();
+                        handleClose();
                     }}
                 >
                     {$i18n.t('Cancel')}
