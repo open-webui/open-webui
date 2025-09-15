@@ -64,7 +64,7 @@
 				{#each item.model?.tags.sort((a, b) => a.name.localeCompare(b.name)) as tag}
 					<Tooltip content={tag.name} className="flex-shrink-0">
 						<div
-							class=" text-xs font-bold px-1 rounded-sm uppercase bg-gray-500/20 text-gray-700 dark:text-gray-200"
+							class=" text-xs font-semibold px-1 rounded-sm uppercase bg-gray-500/20 text-gray-700 dark:text-gray-200"
 						>
 							{tag.name}
 						</div>

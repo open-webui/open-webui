@@ -330,14 +330,14 @@
 					<div class=" flex-1 self-center pl-1">
 						<div class=" font-semibold flex items-center gap-1.5">
 							<div
-								class=" text-xs font-bold px-1 rounded-sm uppercase line-clamp-1 bg-gray-500/20 text-gray-700 dark:text-gray-200"
+								class=" text-xs font-semibold px-1 rounded-sm uppercase line-clamp-1 bg-gray-500/20 text-gray-700 dark:text-gray-200"
 							>
 								{func.type}
 							</div>
 
 							{#if func?.meta?.manifest?.version}
 								<div
-									class="text-xs font-bold px-1 rounded-sm line-clamp-1 bg-gray-500/20 text-gray-700 dark:text-gray-200"
+									class="text-xs font-semibold px-1 rounded-sm line-clamp-1 bg-gray-500/20 text-gray-700 dark:text-gray-200"
 								>
 									v{func?.meta?.manifest?.version ?? ''}
 								</div>
