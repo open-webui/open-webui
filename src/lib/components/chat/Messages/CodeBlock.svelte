@@ -167,9 +167,9 @@
 								];
 							}
 
-							if (stdout.startsWith(`${line}\n`)) {
+							if (stdout.includes(`${line}\n`)) {
 								stdout = stdout.replace(`${line}\n`, ``);
-							} else if (stdout.startsWith(`${line}`)) {
+							} else if (stdout.includes(`${line}`)) {
 								stdout = stdout.replace(`${line}`, ``);
 							}
 						}
@@ -196,9 +196,9 @@
 								];
 							}
 
-							if (result.startsWith(`${line}\n`)) {
+							if (result.includes(`${line}\n`)) {
 								result = result.replace(`${line}\n`, ``);
-							} else if (result.startsWith(`${line}`)) {
+							} else if (result.includes(`${line}`)) {
 								result = result.replace(`${line}`, ``);
 							}
 						}
@@ -275,9 +275,9 @@
 							];
 						}
 
-						if (stdout.startsWith(`${line}\n`)) {
+						if (stdout.includes(`${line}\n`)) {
 							stdout = stdout.replace(`${line}\n`, ``);
-						} else if (stdout.startsWith(`${line}`)) {
+						} else if (stdout.includes(`${line}`)) {
 							stdout = stdout.replace(`${line}`, ``);
 						}
 					}
@@ -454,7 +454,7 @@
 
 					{#if ($config?.features?.enable_code_execution ?? true) && (lang.toLowerCase() === 'python' || lang.toLowerCase() === 'py' || (lang === '' && checkPythonCode(code)))}
 						{#if executing}
-							<div class="run-code-button bg-none border-none p-1 cursor-not-allowed">
+							<div class="run-code-button bg-none border-none p-0.5 cursor-not-allowed">
 								{$i18n.t('Running')}
 							</div>
 						{:else if run}
@@ -466,10 +466,6 @@
 									executePython(code);
 								}}
 							>
-								<div class=" -translate-y-[0.5px]">
-									<CommandLine className="size-3" />
-								</div>
-
 								<div>
 									{$i18n.t('Run')}
 								</div>
@@ -541,7 +537,7 @@
 					{/if}
 				{:else}
 					<div
-						class="bg-gray-50 dark:bg-black dark:text-white rounded-b-3xl! pb-3 px-4 flex flex-col gap-2 text-xs"
+						class="bg-white dark:bg-black dark:text-white rounded-b-3xl! pb-3 px-4 flex flex-col gap-2 text-xs"
 					>
 						<span class="text-gray-500 italic">
 							{$i18n.t('{{COUNT}} hidden lines', {
