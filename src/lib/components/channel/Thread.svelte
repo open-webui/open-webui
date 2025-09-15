@@ -198,8 +198,14 @@
 				}}
 			/>
 
-			<div class=" pb-[1rem] px-2.5">
-				<MessageInput id={threadId} {typingUsers} {onChange} onSubmit={submitHandler} />
+			<div class=" pb-[1rem] px-2.5 w-full">
+				<MessageInput
+					id={threadId}
+					typingUsersClassName="from-gray-50 dark:from-gray-850"
+					{typingUsers}
+					{onChange}
+					onSubmit={submitHandler}
+				/>
 			</div>
 		</div>
 	</div>
