@@ -16,7 +16,7 @@
 	import Tooltip from './Tooltip.svelte';
 	import Clipboard from '../icons/Clipboard.svelte';
 	import Reset from '../icons/Reset.svelte';
-	import ArrowDownTray from '../icons/ArrowDownTray.svelte';
+	import Download from '../icons/Download.svelte';
 
 	export let className = '';
 	export let svg = '';
@@ -62,7 +62,7 @@
 							downloadAsSVG();
 						}}
 					>
-						<ArrowDownTray className=" size-4" />
+						<Download className=" size-4" />
 					</button>
 				</Tooltip>
 

@@ -29,7 +29,7 @@
 	import { chats, folders, settings, theme, user } from '$lib/stores';
 	import { createMessagesList } from '$lib/utils';
 	import { downloadChatAsPDF } from '$lib/apis/utils';
-	import Download from '$lib/components/icons/ArrowDownTray.svelte';
+	import Download from '$lib/components/icons/Download.svelte';
 	import Folder from '$lib/components/icons/Folder.svelte';
 
 	const i18n = getContext('i18n');
@@ -191,6 +191,16 @@
 				{/if}
 			</DropdownMenu.Item>
 
+			<DropdownMenu.Item
+				class="flex gap-2 items-center px-3 py-1.5 text-sm  cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 rounded-xl"
+				on:click={() => {
+					cloneChatHandler();
+				}}
+			>
+				<DocumentDuplicate strokeWidth="1.5" />
+				<div class="flex items-center">{$i18n.t('Clone')}</div>
+			</DropdownMenu.Item>
+
 			{#if chatId}
 				<DropdownMenu.Sub>
 					<DropdownMenu.SubTrigger
@@ -220,16 +230,6 @@
 					</DropdownMenu.SubContent>
 				</DropdownMenu.Sub>
 			{/if}
-
-			<DropdownMenu.Item
-				class="flex gap-2 items-center px-3 py-1.5 text-sm  cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 rounded-xl"
-				on:click={() => {
-					cloneChatHandler();
-				}}
-			>
-				<DocumentDuplicate strokeWidth="1.5" />
-				<div class="flex items-center">{$i18n.t('Clone')}</div>
-			</DropdownMenu.Item>
 
 			<DropdownMenu.Item
 				class="flex gap-2 items-center px-3 py-1.5 text-sm  cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 rounded-xl"
