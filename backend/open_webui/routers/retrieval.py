@@ -55,6 +55,9 @@ from open_webui.retrieval.web.serpstack import search_serpstack
 from open_webui.retrieval.web.tavily import search_tavily
 from open_webui.retrieval.web.bing import search_bing
 
+# Wikipedia grounding
+from open_webui.grounding.wiki_search_utils import WikiSearchGrounder
+
 
 from open_webui.retrieval.utils import (
     get_embedding_function,
@@ -76,6 +79,8 @@ from open_webui.config import (
     RAG_RERANKING_MODEL_TRUST_REMOTE_CODE,
     UPLOAD_DIR,
     DEFAULT_LOCALE,
+    WIKIPEDIA_GROUNDING_MAX_CONCURRENT,
+    ENABLE_WIKIPEDIA_GROUNDING_RERANKER,
 )
 from open_webui.env import (
     SRC_LOG_LEVELS,
@@ -362,6 +367,7 @@ async def get_rag_config(request: Request, user=Depends(get_admin_user)):
         "RAG_FULL_CONTEXT": request.app.state.config.RAG_FULL_CONTEXT,
         "enable_google_drive_integration": request.app.state.config.ENABLE_GOOGLE_DRIVE_INTEGRATION,
         "enable_wikipedia_grounding": request.app.state.config.ENABLE_WIKIPEDIA_GROUNDING,
+        "wikipedia_grounding_max_concurrent": request.app.state.config.WIKIPEDIA_GROUNDING_MAX_CONCURRENT,
         "content_extraction": {
             "engine": request.app.state.config.CONTENT_EXTRACTION_ENGINE,
             "tika_server_url": request.app.state.config.TIKA_SERVER_URL,
@@ -408,6 +414,8 @@ async def get_rag_config(request: Request, user=Depends(get_admin_user)):
             },
             "wikipedia_grounding": {
                 "enabled": request.app.state.config.ENABLE_WIKIPEDIA_GROUNDING,
+                "reranker_enabled": request.app.state.config.ENABLE_WIKIPEDIA_GROUNDING_RERANKER,
+                "max_concurrent": request.app.state.config.WIKIPEDIA_GROUNDING_MAX_CONCURRENT,
             },
         },
     }
@@ -461,6 +469,7 @@ class WebSearchConfig(BaseModel):
 
 class WikipediaGroundingConfig(BaseModel):
     enabled: bool
+    max_concurrent: Optional[int] = 2
 
 
 class WebConfig(BaseModel):
@@ -474,6 +483,7 @@ class ConfigUpdateForm(BaseModel):
     pdf_extract_images: Optional[bool] = None
     enable_google_drive_integration: Optional[bool] = None
     enable_wikipedia_grounding: Optional[bool] = None
+    wikipedia_grounding_max_concurrent: Optional[int] = None
     file: Optional[FileConfig] = None
     content_extraction: Optional[ContentExtractionConfig] = None
     chunk: Optional[ChunkParamUpdateForm] = None
@@ -590,6 +600,15 @@ async def update_rag_config(
             f"Wikipedia grounding updated to: {form_data.enable_wikipedia_grounding}"
         )
 
+    # Wikipedia grounding max concurrent configuration
+    if form_data.wikipedia_grounding_max_concurrent is not None:
+        request.app.state.config.WIKIPEDIA_GROUNDING_MAX_CONCURRENT = (
+            form_data.wikipedia_grounding_max_concurrent
+        )
+        log.info(
+            f"Wikipedia grounding max concurrent updated to: {form_data.wikipedia_grounding_max_concurrent}"
+        )
+
     return {
         "status": True,
         "pdf_extract_images": request.app.state.config.PDF_EXTRACT_IMAGES,
@@ -640,6 +659,8 @@ async def update_rag_config(
             },
             "wikipedia_grounding": {
                 "enabled": request.app.state.config.ENABLE_WIKIPEDIA_GROUNDING,
+                "reranker_enabled": request.app.state.config.ENABLE_WIKIPEDIA_GROUNDING_RERANKER,
+                "max_concurrent": request.app.state.config.WIKIPEDIA_GROUNDING_MAX_CONCURRENT,
             },
         },
     }
@@ -2994,6 +3015,35 @@ def api_cleanup_orphaned_chat_files(user=Depends(get_admin_user)):
         }
     except Exception as e:
         log.error(f"Orphaned chat files cleanup API failed: {str(e)}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail={
+                "status": "error",
+                "timestamp": datetime.now().isoformat(),
+                "error": str(e),
+            },
+        )
+
+
+@router.get("/monitoring/wikipedia-grounding/queue-status")
+async def get_wikipedia_grounding_queue_status(user=Depends(get_admin_user)):
+    """
+    API endpoint to monitor Wikipedia grounding queue status.
+    Returns current concurrency control information including:
+    - Available permits
+    - Active operations
+    - Waiting operations
+    - Configuration settings
+    """
+    try:
+        status = await WikiSearchGrounder.get_queue_status()
+        return {
+            "status": "success",
+            "timestamp": datetime.now().isoformat(),
+            "queue_status": status,
+        }
+    except Exception as e:
+        log.error(f"Wikipedia grounding queue status check failed: {str(e)}")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail={

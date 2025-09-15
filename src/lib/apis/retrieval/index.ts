@@ -47,6 +47,7 @@ type RAGConfigForm = {
 	pdf_extract_images?: boolean;
 	enable_google_drive_integration?: boolean;
 	enable_wikipedia_grounding?: boolean;
+	wikipedia_grounding_max_concurrent?: number;
 	chunk?: ChunkConfigForm;
 	content_extraction?: ContentExtractConfigForm;
 	web_loader_ssl_verification?: boolean;
