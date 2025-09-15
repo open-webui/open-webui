@@ -5,14 +5,11 @@ from html import escape
 import re
 import tempfile
 import os
-import uuid
 
 from markdown import markdown
 import matplotlib
 matplotlib.use('Agg')  # Use non-interactive backend
 import matplotlib.pyplot as plt
-from matplotlib import mathtext
-from PIL import Image
 
 import site
 from fpdf import FPDF
