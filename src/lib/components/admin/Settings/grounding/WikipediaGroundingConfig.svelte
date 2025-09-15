@@ -5,7 +5,7 @@
 
 	const i18n = getContext('i18n');
 
-	export let config = { enabled: false, maxConcurrent: 2 };
+	export let config = { enabled: false, maxConcurrent: 1 };
 
 	let loading = false;
 
@@ -14,7 +14,7 @@
 		const res = await getRAGConfig(localStorage.token);
 		if (res) {
 			config.enabled = res?.enable_wikipedia_grounding ?? true;
-			config.maxConcurrent = res?.wikipedia_grounding_max_concurrent ?? 2;
+			config.maxConcurrent = res?.wikipedia_grounding_max_concurrent ?? 1;
 		}
 		loading = false;
 	});

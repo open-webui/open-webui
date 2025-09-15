@@ -89,7 +89,7 @@ class WikiSearchGrounder:
             max_concurrent = WIKIPEDIA_GROUNDING_MAX_CONCURRENT.value
         except ImportError:
             # Fallback to default if config not available
-            max_concurrent = 2
+            max_concurrent = 1
 
         # Check if semaphore needs to be created or recreated due to config change
         if cls._semaphore is None or cls._semaphore._value != max_concurrent:
@@ -165,7 +165,7 @@ class WikiSearchGrounder:
 
             max_concurrent = WIKIPEDIA_GROUNDING_MAX_CONCURRENT.value
         except ImportError:
-            max_concurrent = 2  # Default fallback
+            max_concurrent = 1  # Default fallback
 
         available = (
             cls._semaphore._value if hasattr(cls._semaphore, "_value") else "unknown"

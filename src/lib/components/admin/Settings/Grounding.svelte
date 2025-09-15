@@ -8,7 +8,7 @@
 
 	export let saveHandler: Function;
 
-	let wikipediaConfig = { enabled: false, maxConcurrent: 2 };
+	let wikipediaConfig = { enabled: false, maxConcurrent: 1 };
 	let loading = false;
 
 	const handleSubmit = async () => {
