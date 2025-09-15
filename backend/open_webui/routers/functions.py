@@ -192,6 +192,9 @@ async def create_new_function(
             function_cache_dir = CACHE_DIR / "functions" / form_data.id
             function_cache_dir.mkdir(parents=True, exist_ok=True)
 
+            if function_type == "filter" and getattr(function_module, "toggle", None):
+                Functions.update_function_metadata_by_id(id, {"toggle": True})
+
             if function:
                 return function
             else:
@@ -307,6 +310,9 @@ async def update_function_by_id(
         log.debug(updated)
 
         function = Functions.update_function_by_id(id, updated)
+
+        if function_type == "filter" and getattr(function_module, "toggle", None):
+            Functions.update_function_metadata_by_id(id, {"toggle": True})
 
         if function:
             return function

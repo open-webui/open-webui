@@ -91,6 +91,18 @@
 		}
 	});
 
+	// Convert TipTap mention spans -> <@id>
+	turndownService.addRule('mentions', {
+		filter: (node) => node.nodeName === 'SPAN' && node.getAttribute('data-type') === 'mention',
+		replacement: (_content, node: HTMLElement) => {
+			const id = node.getAttribute('data-id') || '';
+			// TipTap stores the trigger char in data-mention-suggestion-char (usually "@")
+			const ch = node.getAttribute('data-mention-suggestion-char') || '@';
+			// Emit <@id> style, e.g. <@llama3.2:latest>
+			return `<${ch}${id}>`;
+		}
+	});
+
 	import { onMount, onDestroy, tick, getContext } from 'svelte';
 	import { createEventDispatcher } from 'svelte';
 
@@ -100,7 +112,7 @@
 	import { Fragment, DOMParser } from 'prosemirror-model';
 	import { EditorState, Plugin, PluginKey, TextSelection, Selection } from 'prosemirror-state';
 	import { Decoration, DecorationSet } from 'prosemirror-view';
-	import { Editor, Extension } from '@tiptap/core';
+	import { Editor, Extension, mergeAttributes } from '@tiptap/core';
 
 	// Yjs imports
 	import * as Y from 'yjs';
@@ -137,13 +149,10 @@
 	import CodeBlockLowlight from '@tiptap/extension-code-block-lowlight';
 
 	import Mention from '@tiptap/extension-mention';
-
-	import { all, createLowlight } from 'lowlight';
+	import FormattingButtons from './RichTextInput/FormattingButtons.svelte';
 
 	import { PASTED_TEXT_CHARACTER_LIMIT } from '$lib/constants';
-
-	import FormattingButtons from './RichTextInput/FormattingButtons.svelte';
-	import { duration } from 'dayjs';
+	import { all, createLowlight } from 'lowlight';
 
 	export let oncompositionstart = (e) => {};
 	export let oncompositionend = (e) => {};
@@ -162,9 +171,12 @@
 
 	export let className = 'input-prose';
 	export let placeholder = 'Type here...';
+
+	export let richText = true;
 	export let link = false;
 	export let image = false;
 	export let fileHandler = false;
+	export let suggestions = null;
 
 	export let onFileDrop = (currentEditor, files, pos) => {
 		files.forEach((file) => {
@@ -951,6 +963,7 @@
 		}
 
 		console.log(bubbleMenuElement, floatingMenuElement);
+		console.log(suggestions);
 
 		editor = new Editor({
 			element: element,
@@ -961,26 +974,32 @@
 				Placeholder.configure({ placeholder }),
 				SelectionDecoration,
 
-				CodeBlockLowlight.configure({
-					lowlight
-				}),
-				Highlight,
-				Typography,
+				...(richText
+					? [
+							CodeBlockLowlight.configure({
+								lowlight
+							}),
+							Highlight,
+							Typography,
+							TableKit.configure({
+								table: { resizable: true }
+							}),
+							ListKit.configure({
+								taskItem: {
+									nested: true
+								}
+							})
+						]
+					: []),
+				...(suggestions
+					? [
+							Mention.configure({
+								HTMLAttributes: { class: 'mention' },
+								suggestions: suggestions
+							})
+						]
+					: []),
 
-				Mention.configure({
-					HTMLAttributes: {
-						class: 'mention'
-					}
-				}),
-
-				TableKit.configure({
-					table: { resizable: true }
-				}),
-				ListKit.configure({
-					taskItem: {
-						nested: true
-					}
-				}),
 				CharacterCount.configure({}),
 				...(image ? [Image] : []),
 				...(fileHandler
@@ -991,8 +1010,7 @@
 							})
 						]
 					: []),
-
-				...(autocomplete
+				...(richText && autocomplete
 					? [
 							AIAutocompletion.configure({
 								generateCompletion: async (text) => {
@@ -1010,8 +1028,7 @@
 							})
 						]
 					: []),
-
-				...(showFormattingToolbar
+				...(richText && showFormattingToolbar
 					? [
 							BubbleMenu.configure({
 								element: bubbleMenuElement,
@@ -1046,7 +1063,6 @@
 
 				htmlValue = editor.getHTML();
 				jsonValue = editor.getJSON();
-
 				mdValue = turndownService
 					.turndown(
 						htmlValue
@@ -1086,6 +1102,22 @@
 			},
 			editorProps: {
 				attributes: { id },
+				handlePaste: (view, event) => {
+					// Force plain-text pasting when richText === false
+					if (!richText) {
+						const text = (event.clipboardData?.getData('text/plain') ?? '').replace(/\r\n/g, '\n');
+						// swallow HTML completely
+						event.preventDefault();
+
+						// Insert as pure text (no HTML parsing)
+						const { state, dispatch } = view;
+						const { from, to } = state.selection;
+						dispatch(state.tr.insertText(text, from, to).scrollIntoView());
+						return true; // handled
+					}
+
+					return false;
+				},
 				handleDOMEvents: {
 					compositionstart: (view, event) => {
 						oncompositionstart(event);
@@ -1143,12 +1175,13 @@
 
 							if (event.key === 'Enter') {
 								const isCtrlPressed = event.ctrlKey || event.metaKey; // metaKey is for Cmd key on Mac
+
+								const { state } = view;
+								const { $from } = state.selection;
+								const lineStart = $from.before($from.depth);
+								const lineEnd = $from.after($from.depth);
+								const lineText = state.doc.textBetween(lineStart, lineEnd, '\n', '\0').trim();
 								if (event.shiftKey && !isCtrlPressed) {
-									const { state } = view;
-									const { $from } = state.selection;
-									const lineStart = $from.before($from.depth);
-									const lineEnd = $from.after($from.depth);
-									const lineText = state.doc.textBetween(lineStart, lineEnd, '\n', '\0').trim();
 									if (lineText.startsWith('```')) {
 										// Fix GitHub issue #16337: prevent backtick removal for lines starting with ```
 										return false; // Let ProseMirror handle the Enter key normally
@@ -1163,9 +1196,17 @@
 									const isInList = isInside(['listItem', 'bulletList', 'orderedList', 'taskList']);
 									const isInHeading = isInside(['heading']);
 
+									console.log({ isInCodeBlock, isInList, isInHeading });
+
 									if (isInCodeBlock || isInList || isInHeading) {
 										// Let ProseMirror handle the normal Enter behavior
 										return false;
+									}
+
+									const suggestionsElement = document.getElementById('suggestions-container');
+									if (lineText.startsWith('#') && suggestionsElement) {
+										console.log('Letting heading suggestion handle Enter key');
+										return true;
 									}
 								}
 							}
@@ -1263,7 +1304,9 @@
 					editor.storage.files = files;
 				}
 			},
-			onSelectionUpdate: onSelectionUpdate
+			onSelectionUpdate: onSelectionUpdate,
+			enableInputRules: richText,
+			enablePasteRules: richText
 		});
 
 		if (messageInput) {
@@ -1334,7 +1377,7 @@
 	};
 </script>
 
-{#if showFormattingToolbar}
+{#if richText && showFormattingToolbar}
 	<div bind:this={bubbleMenuElement} id="bubble-menu" class="p-0">
 		<FormattingButtons {editor} />
 	</div>

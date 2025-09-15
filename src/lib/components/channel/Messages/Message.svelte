@@ -138,9 +138,7 @@
 			id="message-{message.id}"
 			dir={$settings.chatDirection}
 		>
-			<div
-				class={`shrink-0 ${($settings?.chatDirection ?? 'LTR') === 'LTR' ? 'mr-3' : 'ml-3'} w-9`}
-			>
+			<div class={`shrink-0 mr-3 w-9`}>
 				{#if showUserProfile}
 					<ProfilePreview user={message.user}>
 						<ProfileImage
@@ -178,7 +176,12 @@
 								class=" self-center text-xs invisible group-hover:visible text-gray-400 font-medium first-letter:capitalize ml-0.5 translate-y-[1px]"
 							>
 								<Tooltip content={dayjs(message.created_at / 1000000).format('LLLL')}>
-									<span class="line-clamp-1">{formatDate(message.created_at / 1000000)}</span>
+									<span class="line-clamp-1">
+										{$i18n.t(formatDate(message.created_at / 1000000), {
+											LOCALIZED_TIME: dayjs(message.created_at / 1000000).format('LT'),
+											LOCALIZED_DATE: dayjs(message.created_at / 1000000).format('L')
+										})}
+									</span>
 								</Tooltip>
 							</div>
 						{/if}
@@ -198,7 +201,7 @@
 										name={file.name}
 										type={file.type}
 										size={file?.size}
-										colorClassName="bg-white dark:bg-gray-850 "
+										small={true}
 									/>
 								{/if}
 							</div>
@@ -228,7 +231,7 @@
 							<div class="flex space-x-1.5">
 								<button
 									id="close-edit-message-button"
-									class="px-4 py-2 bg-white dark:bg-gray-900 hover:bg-gray-100 text-gray-800 dark:text-gray-100 transition rounded-3xl"
+									class="px-3.5 py-1.5 bg-white dark:bg-gray-900 hover:bg-gray-100 text-gray-800 dark:text-gray-100 transition rounded-3xl"
 									on:click={() => {
 										edit = false;
 										editedContent = null;
@@ -239,7 +242,7 @@
 
 								<button
 									id="confirm-edit-message-button"
-									class=" px-4 py-2 bg-gray-900 dark:bg-white hover:bg-gray-850 text-gray-100 dark:text-gray-800 transition rounded-3xl"
+									class="px-3.5 py-1.5 bg-gray-900 dark:bg-white hover:bg-gray-850 text-gray-100 dark:text-gray-800 transition rounded-3xl"
 									on:click={async () => {
 										onEdit(editedContent);
 										edit = false;

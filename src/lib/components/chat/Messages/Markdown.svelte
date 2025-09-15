@@ -5,6 +5,7 @@
 
 	import markedExtension from '$lib/utils/marked/extension';
 	import markedKatexExtension from '$lib/utils/marked/katex-extension';
+	import { mentionExtension } from '$lib/utils/marked/mention-extension';
 
 	import MarkdownTokens from './Markdown/MarkdownTokens.svelte';
 
@@ -37,6 +38,7 @@
 
 	marked.use(markedKatexExtension(options));
 	marked.use(markedExtension(options));
+	marked.use({ extensions: [mentionExtension({ triggerChar: '@' })] });
 
 	$: (async () => {
 		if (content) {

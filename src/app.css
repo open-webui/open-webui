@@ -409,15 +409,31 @@ input[type='number'] {
 	}
 }
 
-.tiptap .mention {
+.mention {
 	border-radius: 0.4rem;
 	box-decoration-break: clone;
 	padding: 0.1rem 0.3rem;
 	@apply text-blue-900 dark:text-blue-100 bg-blue-300/20 dark:bg-blue-500/20;
 }
 
-.tiptap .mention::after {
+.mention::after {
 	content: '\200B';
+}
+
+.tiptap .suggestion {
+	border-radius: 0.4rem;
+	box-decoration-break: clone;
+	padding: 0.1rem 0.3rem;
+	@apply bg-purple-100/20 text-purple-900 dark:bg-purple-500/20 dark:text-purple-100;
+}
+
+.tiptap .suggestion::after {
+	content: '\200B';
+}
+
+.tiptap .suggestion.is-empty::after {
+	content: '\00A0';
+	border-bottom: 1px dotted rgba(31, 41, 55, 0.12);
 }
 
 .input-prose .tiptap ul[data-type='taskList'] {
