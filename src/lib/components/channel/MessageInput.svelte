@@ -56,6 +56,8 @@
 	export let acceptFiles = true;
 	export let showFormattingToolbar = true;
 
+	export let typingUsersClassName = 'from-white dark:from-gray-900';
+
 	let loaded = false;
 	let draggedOver = false;
 
@@ -693,9 +695,9 @@
 
 					{#if typingUsers.length > 0}
 						<div
-							class=" absolute -top-6 pb-2.5 w-full bg-gradient-to-t to-transparent from-white dark:from-gray-900 pointer-events-none select-none"
+							class=" -mt-7 pb-2.5 bg-gradient-to-t to-transparent {typingUsersClassName} pointer-events-none select-none"
 						>
-							<div class=" text-xs px-2 mt-1 flex items-center gap-1.5">
+							<div class=" text-xs px-1 mt-1.5 flex items-center gap-1.5">
 								<Skeleton size="xs" />
 
 								<div>
