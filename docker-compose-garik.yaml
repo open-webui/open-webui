@@ -24,7 +24,7 @@ services:
   openwebui:
     build:
       context: .
-      dockerfile: Dockerfile
+      dockerfile: Dockerfile.dev
       args:
         - USE_CUDA=true
         - USE_CUDA_VER=cu128

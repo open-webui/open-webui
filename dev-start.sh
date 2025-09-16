@@ -10,7 +10,7 @@ echo "⏹️  Останавливаем существующие контейн
 docker-compose -f docker-compose-garik.yaml down
 
 # Пересобираем образ с последними изменениями
-echo "🔨 Пересобираем образ OpenWebUI..."
+echo "🔨 Пересобираем образ OpenWebUI с Dockerfile.dev..."
 docker-compose -f docker-compose-garik.yaml build --no-cache openwebui
 
 # Запускаем сервисы
