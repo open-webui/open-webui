@@ -155,7 +155,7 @@ class WikiSearchGrounder:
         return {
             "semaphore_initialized": True,
             "available_permits": available,
-            "max_concurrent": max_concurrent,
+            "max_concurrent": cls.MAX_CONCURRENT_OPERATIONS,
             "waiting_operations": waiting,
             "active_operations": (
                 cls.MAX_CONCURRENT_OPERATIONS - available
@@ -509,6 +509,34 @@ class WikiSearchGrounder:
                     # Re-sort by final scores (some may have been improved)
                     formatted.sort(key=lambda x: x["score"], reverse=True)
 
+                    # Apply temporal relevance boost if search query contains current year
+                    current_year = str(datetime.now().year)
+                    if current_year in search_query:
+                        log.info(
+                            f"🕒 Applying temporal relevance boost for {current_year}"
+                        )
+                        for result in formatted:
+                            title = result.get("title", "")
+                            if current_year in title:
+                                original_score = result["score"]
+                                # Apply a significant boost to current year results
+                                result["score"] = min(
+                                    1.0, original_score * 1.3
+                                )  # 30% boost, capped at 1.0
+                                result["temporal_boost_applied"] = True
+                                result["temporal_boost_amount"] = (
+                                    result["score"] - original_score
+                                )
+                                log.info(
+                                    f"🕒 Boosted '{title}' from {original_score:.3f} to {result['score']:.3f}"
+                                )
+                            else:
+                                result["temporal_boost_applied"] = False
+                                result["temporal_boost_amount"] = 0.0
+
+                        # Re-sort after temporal boosting
+                        formatted.sort(key=lambda x: x["score"], reverse=True)
+
                     log.info(
                         f"🎯 Intelligent reranking completed: {enhanced_count} results improved, top result: {formatted[0]['title']} (score: {formatted[0].get('score', 'N/A')})"
                     )
@@ -519,6 +547,34 @@ class WikiSearchGrounder:
                 finally:
                     # Always release the semaphore lock after reranking
                     self._release_lock(semaphore, "reranking", start_time)
+            else:
+                # No reranking available, but still apply temporal relevance boost
+                current_year = str(datetime.now().year)
+                if current_year in search_query:
+                    log.info(
+                        f"🕒 Applying temporal relevance boost for {current_year} (no reranking)"
+                    )
+                    for result in formatted:
+                        title = result.get("title", "")
+                        if current_year in title:
+                            original_score = result["score"]
+                            # Apply a significant boost to current year results
+                            result["score"] = min(
+                                1.0, original_score * 1.3
+                            )  # 30% boost, capped at 1.0
+                            result["temporal_boost_applied"] = True
+                            result["temporal_boost_amount"] = (
+                                result["score"] - original_score
+                            )
+                            log.info(
+                                f"🕒 Boosted '{title}' from {original_score:.3f} to {result['score']:.3f}"
+                            )
+                        else:
+                            result["temporal_boost_applied"] = False
+                            result["temporal_boost_amount"] = 0.0
+
+                    # Re-sort after temporal boosting
+                    formatted.sort(key=lambda x: x["score"], reverse=True)
 
             # Return top results
             final_results = formatted[: self.max_search_results]
@@ -557,14 +613,43 @@ class WikiSearchGrounder:
         context_metadata = {}
 
         if messages and len(messages) > 1:
-            is_context_aware, enhanced_query, context_metadata = (
+            is_enhanced, enhanced_query, context_metadata = (
                 analyze_conversation_context(query, messages)
             )
-            if is_context_aware:
+            if is_enhanced:
+                enhancement_type = []
+                if context_metadata.get("temporal_enhanced"):
+                    enhancement_type.append("temporal")
+                if context_metadata.get("context_aware"):
+                    enhancement_type.append("context")
+
+                enhancement_desc = (
+                    " + ".join(enhancement_type) if enhancement_type else "unknown"
+                )
                 log.info(
-                    f"🔍 Using context-aware query: '{query}' -> '{enhanced_query}'"
+                    f"🔍 Using enhanced query ({enhancement_desc}): '{query}' -> '{enhanced_query}'"
                 )
                 query = enhanced_query
+        else:
+            # Even for single messages, apply temporal enhancement
+            from .context_analysis import ConversationContextAnalyzer
+
+            temp_analyzer = ConversationContextAnalyzer()
+            temporal_enhanced = temp_analyzer._enhance_query_with_temporal_context(
+                query
+            )
+            if temporal_enhanced != query:
+                log.info(
+                    f"🕒 Using temporal enhancement: '{query}' -> '{temporal_enhanced}'"
+                )
+                query = temporal_enhanced
+                context_metadata = {
+                    "original_query": original_query,
+                    "enhanced_query": query,
+                    "temporal_enhanced": True,
+                    "context_aware": False,
+                    "current_year": temp_analyzer.current_year,
+                }
 
         log.info("🔍 Wiki grounding enabled, proceeding with search")
         log.info(f"🔍 Ground query starting for: '{query[:50]}...'")
@@ -576,7 +661,7 @@ class WikiSearchGrounder:
 
         return {
             "original_query": original_query,
-            "search_query": query,  # May be different from original if context-enhanced
+            "search_query": query,  # May be different from original if enhanced
             "grounding_data": results,
             "source": "txtai-wikipedia",
             "timestamp": datetime.now().isoformat(),
@@ -623,14 +708,26 @@ class WikiSearchGrounder:
                     )
 
         # Show if translation was used
+        # Add query enhancement information
         first_result = (
             grounding_data["grounding_data"][0]
             if grounding_data["grounding_data"]
             else {}
         )
-        if first_result.get("search_query") != first_result.get("original_query"):
+        context_metadata = grounding_data.get("context_metadata", {})
+
+        if grounding_data.get("search_query") != grounding_data.get("original_query"):
+            enhancements = []
+            if context_metadata.get("temporal_enhanced"):
+                enhancements.append("temporal enhancement")
+            if context_metadata.get("context_aware"):
+                enhancements.append("context awareness")
+
+            enhancement_text = (
+                " + ".join(enhancements) if enhancements else "translation"
+            )
             context.append(
-                f"Search Query (translated): {first_result.get('search_query', '')}"
+                f"Search Query ({enhancement_text}): {grounding_data.get('search_query', '')}"
             )
 
         context.append(f"Source: txtai-wikipedia")

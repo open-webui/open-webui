@@ -26,6 +26,7 @@ class ConversationContextAnalyzer:
     def __init__(self):
         self.max_context_messages = 10  # How many previous messages to consider
         self.max_context_length = 2000  # Max characters for context
+        self.current_year = datetime.now().year
 
     def extract_conversation_context(self, messages: List[Dict]) -> str:
         """
@@ -197,6 +198,32 @@ class ConversationContextAnalyzer:
         ]
 
         return any(re.search(pattern, query_lower) for pattern in question_patterns)
+
+    def _enhance_query_with_temporal_context(self, query: str) -> str:
+        """
+        Enhance ALL queries with temporal context to get more recent information.
+
+        This applies temporal enhancement to EVERY query without exception.
+        The approach adds the current year naturally to help search algorithms
+        prioritize recent information and understand temporal context.
+
+        Args:
+            query: Original query
+
+        Returns:
+            Enhanced query with temporal context
+        """
+        enhanced_query = query
+
+        # Universal Strategy: Always add current year if no year is mentioned
+        # This helps all search algorithms understand temporal context for ANY query
+        if not re.search(r"\b(19|20)\d{2}\b", query):
+            enhanced_query = f"{enhanced_query} {self.current_year}"
+
+        log.info(
+            f"🕒 Enhanced query with temporal context: '{query}' -> '{enhanced_query}'"
+        )
+        return enhanced_query
 
         return "\n".join(context_parts[-5:])  # Last 5 context entries
 
@@ -525,29 +552,44 @@ class ConversationContextAnalyzer:
     ) -> Tuple[bool, str]:
         """
         Determine if context-aware search should be used and return the enhanced query.
+        This now includes both conversation context awareness AND universal temporal enhancement.
 
         Args:
             current_query: The current user query
             messages: Full conversation message history
 
         Returns:
-            Tuple of (should_use_context_aware, enhanced_query)
+            Tuple of (should_use_enhancement, enhanced_query)
         """
-        if len(messages) < 2:
-            return False, current_query
+        enhanced_query = current_query
+        is_enhanced = False
 
-        conversation_context = self.extract_conversation_context(messages)
+        # Step 1: Apply temporal enhancement (this is now applied to ALL queries)
+        temporal_enhanced_query = self._enhance_query_with_temporal_context(
+            current_query
+        )
+        if temporal_enhanced_query != current_query:
+            enhanced_query = temporal_enhanced_query
+            is_enhanced = True
+            log.info(f"🕒 Applied universal temporal enhancement to query")
 
-        if not conversation_context:
-            return False, current_query
+        # Step 2: Apply conversation context enhancement if needed
+        if len(messages) >= 2:
+            conversation_context = self.extract_conversation_context(messages)
 
-        if self.is_follow_up_question(current_query, conversation_context):
-            enhanced_query = self.generate_context_aware_query(
+            if conversation_context and self.is_follow_up_question(
                 current_query, conversation_context
-            )
-            return True, enhanced_query
+            ):
+                # Apply context-aware enhancement to the temporally enhanced query
+                context_enhanced_query = self.generate_context_aware_query(
+                    enhanced_query, conversation_context
+                )
+                if context_enhanced_query != enhanced_query:
+                    enhanced_query = context_enhanced_query
+                    is_enhanced = True
+                    log.info(f"🔍 Applied conversation context enhancement to query")
 
-        return False, current_query
+        return is_enhanced, enhanced_query
 
 
 # Global instance
@@ -559,27 +601,41 @@ def analyze_conversation_context(
 ) -> Tuple[bool, str, Dict]:
     """
     Analyze conversation context and return enhanced query if needed.
+    Now includes temporal enhancement for queries that need current information.
 
     Args:
         current_query: The current user query
         messages: List of conversation messages
 
     Returns:
-        Tuple of (is_context_aware, enhanced_query, analysis_metadata)
+        Tuple of (is_enhanced, enhanced_query, analysis_metadata)
     """
-    is_context_aware, enhanced_query = context_analyzer.should_use_context_aware_search(
+    is_enhanced, enhanced_query = context_analyzer.should_use_context_aware_search(
         current_query, messages
     )
+
+    # Determine what type of enhancement was applied
+    temporal_enhanced = True  # Always true since we always apply temporal enhancement
+    context_aware = False
+
+    if len(messages) >= 2:
+        conversation_context = context_analyzer.extract_conversation_context(messages)
+        context_aware = context_analyzer.is_follow_up_question(
+            current_query, conversation_context
+        )
 
     metadata = {
         "original_query": current_query,
         "enhanced_query": enhanced_query,
-        "is_context_aware": is_context_aware,
+        "is_enhanced": is_enhanced,
+        "temporal_enhanced": temporal_enhanced,
+        "context_aware": context_aware,
         "context_messages_count": len(messages) - 1,  # Exclude current message
         "timestamp": datetime.now().isoformat(),
+        "current_year": context_analyzer.current_year,
     }
 
-    if is_context_aware:
+    if context_aware and len(messages) >= 2:
         conversation_context = context_analyzer.extract_conversation_context(messages)
         context_entities = context_analyzer.extract_key_entities_from_context(
             conversation_context
@@ -595,4 +651,4 @@ def analyze_conversation_context(
             }
         )
 
-    return is_context_aware, enhanced_query, metadata
+    return is_enhanced, enhanced_query, metadata
