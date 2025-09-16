@@ -186,9 +186,9 @@
 								type="button"
 							>
 								<span class="ml-2 self-center" id="background-image-url-state"
-									>{meta?.background_image_url !== null
-										? $i18n.t('Reset')
-										: $i18n.t('Upload')}</span
+									>{(meta?.background_image_url ?? null) === null
+										? $i18n.t('Upload')
+										: $i18n.t('Reset')}</span
 								>
 							</button>
 						</div>
