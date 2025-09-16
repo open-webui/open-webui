@@ -1,0 +1,13 @@
+# Минимальный тестовый Dockerfile для отладки npm
+FROM node:22-alpine3.20
+
+WORKDIR /app
+
+# Копируем только package.json
+COPY package.json ./
+
+# Проверяем npm конфигурацию
+RUN npm config list
+
+# Пробуем простую установку
+RUN npm install --verbose

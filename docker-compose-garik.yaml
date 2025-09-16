@@ -22,14 +22,7 @@ services:
       - ollama-net
 
   openwebui:
-    build:
-      context: .
-      dockerfile: Dockerfile.dev
-      args:
-        - USE_CUDA=true
-        - USE_CUDA_VER=cu128
-        - USE_EMBEDDING_MODEL=sentence-transformers/all-MiniLM-L6-v2
-        - BUILD_HASH=dev-build
+    image: ghcr.io/open-webui/open-webui:cuda
     container_name: openwebui
     depends_on:
       - ollama

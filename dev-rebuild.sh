@@ -9,9 +9,8 @@ echo "🔄 Перезапуск OpenWebUI с последними изменен
 echo "⏹️  Останавливаем OpenWebUI..."
 docker-compose -f docker-compose-garik.yaml stop openwebui
 
-# Пересобираем только openwebui
-echo "🔨 Пересобираем OpenWebUI с Dockerfile.dev..."
-docker-compose -f docker-compose-garik.yaml build openwebui
+# Перезапускаем openwebui с новым кодом
+echo "🔄 Перезапускаем OpenWebUI с обновленным кодом..."
 
 # Запускаем openwebui
 echo "▶️  Запускаем OpenWebUI..."
