@@ -64,9 +64,7 @@
 	<div
 		class="flex flex-col justify-between px-5 {showUserProfile
 			? 'pt-1.5 pb-0.5'
-			: ''} w-full {($settings?.widescreenMode ?? null)
-			? 'max-w-full'
-			: 'max-w-5xl'} mx-auto group hover:bg-gray-300/5 dark:hover:bg-gray-700/5 transition relative"
+			: ''} w-full max-w-full mx-auto group hover:bg-gray-300/5 dark:hover:bg-gray-700/5 transition relative"
 	>
 		{#if !edit}
 			<div
