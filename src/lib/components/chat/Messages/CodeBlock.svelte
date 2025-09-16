@@ -163,11 +163,8 @@
 								];
 							}
 
-							if (stdout.includes(`${line}\n`)) {
-								stdout = stdout.replace(`${line}\n`, ``);
-							} else if (stdout.includes(`${line}`)) {
-								stdout = stdout.replace(`${line}`, ``);
-							}
+							stdout = stdout.replace(`${line}\n`, ``);
+							stdout = stdout.replace(line, ``);
 						}
 					}
 				}
@@ -271,11 +268,8 @@
 							];
 						}
 
-						if (stdout.includes(`${line}\n`)) {
-							stdout = stdout.replace(`${line}\n`, ``);
-						} else if (stdout.includes(`${line}`)) {
-							stdout = stdout.replace(`${line}`, ``);
-						}
+						stdout = stdout.replace(`${line}\n`, ``);
+						stdout = stdout.replace(line, ``);
 					}
 				}
 			}
