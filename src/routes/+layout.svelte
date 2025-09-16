@@ -70,6 +70,12 @@
 
 	let showRefresh = false;
 
+	let themeUpdateCheckDone = false;
+	$: if ($user && !themeUpdateCheckDone) {
+		checkForThemeUpdates();
+		themeUpdateCheckDone = true;
+	}
+
 	const BREAKPOINT = 768;
 
 	const setupSocket = async (enableWebsocket) => {
@@ -570,7 +576,6 @@
 		});
 
 		// Check for community theme updates
-		checkForThemeUpdates();
 
 		mobile.set(window.innerWidth < BREAKPOINT);
 

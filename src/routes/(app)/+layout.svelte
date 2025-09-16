@@ -51,12 +51,14 @@
 	import Particles from '$lib/components/common/Particles.svelte';
 	import BackgroundImage from '$lib/components/layout/BackgroundImage.svelte';
 	import { liveThemeStore } from '$lib/theme';
+	import ThemeManager from '$lib/components/common/ThemeManager.svelte';
 
 	const i18n = getContext('i18n');
 
 	let loaded = false;
 	let DB = null;
 	let localDBChats = [];
+	let mainContainer: HTMLElement;
 
 	let version;
 
@@ -294,7 +296,11 @@
 		<div
 			id="main-container"
 			class="relative text-gray-700 dark:text-gray-100 h-screen max-h-[100dvh] overflow-auto flex flex-row justify-end"
+			bind:this={mainContainer}
 		>
+			{#if mainContainer}
+				<ThemeManager container={mainContainer} />
+			{/if}
 			<BackgroundImage />
 			{#if $liveThemeStore?.tsparticlesConfig && Object.keys($liveThemeStore.tsparticlesConfig).length > 0}
 				<Particles options={$liveThemeStore.tsparticlesConfig} />

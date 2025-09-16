@@ -5,6 +5,7 @@
 	import { flyAndScale } from '$lib/utils/transitions';
 	import * as FocusTrap from 'focus-trap';
 	export let show = true;
+	export let cancel = () => {};
 	export let size = 'md';
 	export let containerClassName = 'p-3';
 	export let className = 'bg-white dark:bg-gray-900 rounded-2xl';
@@ -43,6 +44,7 @@
 		if (event.key === 'Escape' && isTopModal()) {
 			console.log('Escape');
 			show = false;
+			cancel();
 		}
 	};
 
@@ -91,6 +93,7 @@
 		in:fade={{ duration: 10 }}
 		on:mousedown={() => {
 			show = false;
+			cancel();
 		}}
 	>
 		<div

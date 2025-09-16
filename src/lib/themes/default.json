@@ -1,0 +1,31 @@
+{
+  "system": { "id": "system", "name": "System", "base": "light", "emoji": "⚙️", "metaThemeColor": "#ffffff" },
+  "dark": {
+    "id": "dark",
+    "name": "Dark",
+    "base": "dark",
+    "emoji": "🌑",
+    "metaThemeColor": "#171717",
+    "variables": {
+      "--color-gray-800": "#333",
+      "--color-gray-850": "#262626",
+      "--color-gray-900": "#171717",
+      "--color-gray-950": "#0d0d0d"
+    }
+  },
+  "light": { "id": "light", "name": "Light", "base": "light", "emoji": "☀️", "metaThemeColor": "#ffffff" },
+  "oled-dark": {
+    "id": "oled-dark",
+    "name": "OLED Dark",
+    "base": "oled-dark",
+    "emoji": "🌃",
+    "metaThemeColor": "#000000",
+    "variables": {
+      "--color-gray-800": "#000",
+      "--color-gray-850": "#000",
+      "--color-gray-900": "#000",
+      "--color-gray-950": "#000"
+    }
+  },
+  "her": { "id": "her", "name": "Her", "base": "her", "emoji": "🌷", "metaThemeColor": "#983724" }
+}

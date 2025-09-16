@@ -9,10 +9,17 @@
     updateCommunityTheme,
     removeCommunityTheme,
     applyTheme,
-    isNewerVersion
+    isNewerVersion,
+    themeUpdates,
+    themeUpdateErrors,
+    updateCommunityThemeFromUrl,
+    retryThemeUpdateCheck,
+    checkForThemeUpdates
   } from '$lib/theme';
   import { settings, theme as themeStore } from '$lib/stores';
   import type { Theme } from '$lib/types';
+  import XMark from '$lib/components/icons/XMark.svelte';
+  import ArrowDownTray from '$lib/components/icons/ArrowDownTray.svelte';
   import ArrowUpTray from '$lib/components/icons/ArrowUpTray.svelte';
   import Clipboard from '$lib/components/icons/Clipboard.svelte';
   import Pencil from '$lib/components/icons/Pencil.svelte';
@@ -24,10 +31,12 @@
   import ChevronDown from '$lib/components/icons/ChevronDown.svelte';
   import ChevronUp from '$lib/components/icons/ChevronUp.svelte';
   import ChevronUpDown from '$lib/components/icons/ChevronUpDown.svelte';
+  import ArrowPath from '$lib/components/icons/ArrowPath.svelte';
   import Tooltip from '$lib/components/common/Tooltip.svelte';
   import emojiGroups from '$lib/emoji-groups.json';
   import { config, user } from '$lib/stores';
   import variables from '$lib/themes/variables.json';
+  import { validateTheme, isDuplicateTheme } from '$lib/utils/theme';
 
   const i18n = getContext('i18n');
 
@@ -50,6 +59,16 @@
   let themeToImport: Theme | null = null;
   let sortOrder = 'default';
   let previousThemeId = '';
+  let isCheckingForUpdates = false;
+
+  let showAnimationScriptWarning = false;
+  let themeWithScriptToImport: { theme: Theme; source: string } | null = null;
+
+  const handleCheckForUpdates = async () => {
+    isCheckingForUpdates = true;
+    await checkForThemeUpdates(true); // Pass true for manual check
+    isCheckingForUpdates = false;
+  };
 
   const getThemeToggles = (theme: Theme) => {
     const toggles = [];
@@ -68,7 +87,11 @@
     if (theme.toggles?.animationScript && theme.animationScript) {
       toggles.push('Animation Script');
     }
-    if (theme.toggles?.tsParticles && theme.tsparticlesConfig && Object.keys(theme.tsparticlesConfig).length > 0) {
+    if (
+      theme.toggles?.tsParticles &&
+      theme.tsparticlesConfig &&
+      Object.keys(theme.tsparticlesConfig).length > 0
+    ) {
       toggles.push('tsParticles');
     }
     if (theme.toggles?.gradient) {
@@ -116,82 +139,13 @@
     selectedThemeId = localStorage.theme ?? 'system';
   });
 
-  const processAndAddTheme = (theme: any, source:string = '') => {
-    // Check for duplicates
-    for (const existingTheme of $communityThemes.values()) {
-      if (
-        theme.imageFingerprint &&
-        existingTheme.imageFingerprint &&
-        JSON.stringify(existingTheme.imageFingerprint) === JSON.stringify(theme.imageFingerprint)
-      ) {
-        toast.error($i18n.t('A theme based on this image already exists.'));
-        return;
-      }
-
-      const newThemeCopy = { ...theme };
-      delete newThemeCopy.id;
-      delete newThemeCopy.sourceUrl;
-      delete newThemeCopy.emoji;
-      delete newThemeCopy.imageFingerprint;
-
-      const existingThemeCopy = { ...existingTheme };
-      delete existingThemeCopy.id;
-      delete existingThemeCopy.sourceUrl;
-      delete existingThemeCopy.emoji;
-      delete existingThemeCopy.imageFingerprint;
-
-      if (JSON.stringify(existingThemeCopy) === JSON.stringify(newThemeCopy)) {
-        toast.error($i18n.t('This exact theme is already installed.'));
-        return;
-      }
-    }
-
-    // Enhanced validation
-    if (typeof theme.id !== 'string' || !theme.id) {
-      toast.error('Invalid theme: "id" must be a non-empty string.');
-      return;
-    }
-    if (typeof theme.name !== 'string' || !theme.name) {
-      toast.error('Invalid theme: "name" must be a non-empty string.');
-      return;
-    }
-    const allowedBases = ['system', 'light', 'dark', 'oled-dark', 'her'];
-    if (typeof theme.base !== 'string' || !allowedBases.includes(theme.base)) {
-      toast.error(`Invalid theme: "base" must be one of ${allowedBases.join(', ')}.`);
-      return;
-    }
-    if (theme.author && typeof theme.author !== 'string') {
-      toast.error('Invalid theme: "author" must be a string.');
-      return;
-    }
-    if (theme.version && typeof theme.version !== 'string') {
-      toast.error('Invalid theme: "version" must be a string.');
-      return;
-    }
-    if (
-      theme.variables &&
-      (typeof theme.variables !== 'object' ||
-        Array.isArray(theme.variables) ||
-        theme.variables === null)
-    ) {
-      toast.error('Invalid theme: "variables" must be an object.');
-      return;
-    }
-    if (theme.css && typeof theme.css !== 'string') {
-      toast.error('Invalid theme: "css" must be a string.');
-      return;
-    }
-    if (theme.animationScript && typeof theme.animationScript !== 'string') {
-      toast.error('Invalid theme: "animationScript" must be a string.');
-      return;
-    }
-
+  const _finalizeAddTheme = (theme: Theme, source: string = '') => {
     // Version compatibility check
     const versionMismatch =
-      theme.targetWebUIVersion && theme.targetWebUIVersion !== WEBUI_VERSION;
+      theme.targetWebUIVersion && isNewerVersion(WEBUI_VERSION, theme.targetWebUIVersion);
 
     if (versionMismatch) {
-      themeToImport = theme;
+      themeToImport = { ...theme, sourceUrl: source };
       showThemeImportWarning = true;
     } else {
       if (source) {
@@ -200,6 +154,27 @@
       addCommunityTheme(theme);
       toast.success($i18n.t('Theme "{{name}}" added successfully!', { name: theme.name }));
       themeUrl = ''; // Clear input on success
+    }
+  };
+
+  const processAndAddTheme = (theme: any, source: string = '') => {
+    const validation = validateTheme(theme);
+    if (!validation.valid) {
+      toast.error($i18n.t(validation.error ?? ''));
+      return;
+    }
+
+    if (isDuplicateTheme(theme, Array.from($communityThemes.values()), false)) {
+      toast.error($i18n.t('This exact theme is already installed.'));
+      return;
+    }
+
+    // Security check for animation script
+    if (theme.animationScript) {
+      themeWithScriptToImport = { theme, source };
+      showAnimationScriptWarning = true;
+    } else {
+      _finalizeAddTheme(theme, source);
     }
   };
 
@@ -219,7 +194,9 @@
       processAndAddTheme(theme, themeUrl);
     } catch (error) {
       console.error(`Failed to load theme from ${themeUrl}:`, error);
-      toast.error($i18n.t('Failed to load theme. Check the URL and browser console for more details.'));
+      toast.error(
+        $i18n.t('Failed to load theme. Check the URL and browser console for more details.')
+      );
     } finally {
       isLoading = false;
     }
@@ -257,9 +234,7 @@
     const groups = Object.values(emojiGroups);
     const randomGroup = groups[Math.floor(Math.random() * groups.length)];
     const randomEmojiCode = randomGroup[Math.floor(Math.random() * randomGroup.length)];
-    return String.fromCodePoint(
-      ...randomEmojiCode.split('-').map((code) => parseInt(code, 16))
-    );
+    return String.fromCodePoint(...randomEmojiCode.split('-').map((code) => parseInt(code, 16)));
   };
 
   const createNewTheme = () => {
@@ -268,6 +243,7 @@
     selectedTheme = {
       id: `theme-${crypto.randomUUID()}`,
       name: 'My Custom Theme',
+      description: 'A custom theme created by me.',
       author: $user?.name ?? 'Me',
       version: '1.0.0',
       targetWebUIVersion: WEBUI_VERSION,
@@ -299,39 +275,22 @@
   const saveTheme = (e) => {
     const updatedTheme = e.detail;
 
-    // Check for duplicates
-    for (const existingTheme of $communityThemes.values()) {
-      // Skip self-comparison when editing
-      if (isEditingTheme && existingTheme.id === updatedTheme.id) {
-        continue;
-      }
+    const validation = validateTheme(updatedTheme);
+    if (!validation.valid) {
+      toast.error($i18n.t(validation.error ?? ''));
+      return;
+    }
 
-      if (
-        updatedTheme.imageFingerprint &&
-        existingTheme.imageFingerprint &&
-        JSON.stringify(existingTheme.imageFingerprint) ===
-          JSON.stringify(updatedTheme.imageFingerprint)
-      ) {
-        toast.error($i18n.t('A theme based on this image already exists.'));
-        return;
-      }
-
-      const newThemeCopy = { ...updatedTheme };
-      delete newThemeCopy.id;
-      delete newThemeCopy.sourceUrl;
-      delete newThemeCopy.emoji;
-      delete newThemeCopy.imageFingerprint;
-
-      const existingThemeCopy = { ...existingTheme };
-      delete existingThemeCopy.id;
-      delete existingThemeCopy.sourceUrl;
-      delete existingThemeCopy.emoji;
-      delete existingThemeCopy.imageFingerprint;
-
-      if (JSON.stringify(existingThemeCopy) === JSON.stringify(newThemeCopy)) {
-        toast.error($i18n.t('This exact theme is already installed.'));
-        return;
-      }
+    if (
+      isDuplicateTheme(
+        updatedTheme,
+        Array.from($communityThemes.values()),
+        isEditingTheme,
+        updatedTheme.id
+      )
+    ) {
+      toast.error($i18n.t('A theme with the same content already exists.'));
+      return;
     }
 
     if (isEditingTheme) {
@@ -400,6 +359,15 @@
               </svg>
             </div>
           </div>
+          <Tooltip content="Check for Updates" placement="top">
+            <button
+              class="p-1.5 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800"
+              on:click={handleCheckForUpdates}
+              disabled={isCheckingForUpdates}
+            >
+              <ArrowPath class={`w-4 h-4 ${isCheckingForUpdates ? 'animate-spin' : ''}`} />
+            </button>
+          </Tooltip>
           <Tooltip
             content={sortOrder === 'default'
               ? 'Sort Ascending'
@@ -451,27 +419,73 @@
               >
                 <span class="text-xl mr-2">{theme.emoji}</span>
                 <div class="text-left overflow-hidden">
-                  <p class="font-medium leading-tight truncate" title={theme.name}>{theme.name}</p>
-                  {#if !$themes.has(theme.id)}
-                    <p class="text-xs text-gray-500 leading-tight truncate">
-                      {#if theme.version}v{theme.version}{/if}
-                      {$i18n.t('by {{author}}', { author: theme.author ?? 'Unknown' })}
+                  <div class="flex items-center gap-1.5">
+                    <p
+                      class="font-medium leading-tight truncate"
+                      class:text-red-500={$themeUpdateErrors.has(theme.id)}
+                      title={theme.name}
+                    >
+                      {theme.name}
                     </p>
+                  </div>
+                  {#if !$themes.has(theme.id)}
+                    <div class="text-xs text-gray-500 leading-tight truncate">
+                      <span>
+                        {#if theme.version}v{theme.version}{/if}
+                        {$i18n.t('by {{author}}', { author: theme.author ?? 'Unknown' })}
+                      </span>
+                      {#if $themeUpdates.has(theme.id)}
+                        <span class="text-green-500 font-medium">
+                          (v{$themeUpdates.get(theme.id).version} available)
+                        </span>
+                      {:else if $themeUpdateErrors.has(theme.id)}
+                        <span class="text-red-500 font-medium"> (Update Failed) </span>
+                      {/if}
+                    </div>
+                  {#if theme.description}
+                    <div class="text-xs text-gray-500 leading-tight truncate">
+                      {theme.description}
+                    </div>
+                  {/if}
                   {/if}
                 </div>
 
                 {#if !$themes.has(theme.id)}
-                  <div class="ml-auto items-center hidden group-hover:flex">
-                    <Tooltip content="Copy Theme" placement="top">
-                      <button
-                        class="p-1.5 text-gray-500 hover:text-gray-900 dark:hover:text-white transition rounded-full"
-                        on:click|stopPropagation={() => copyTheme(theme)}
-                        aria-label={$i18n.t('Copy theme')}
-                      >
-                        <Clipboard className="w-4 h-4" />
-                      </button>
-                    </Tooltip>
-                    <Tooltip content="Edit Theme" placement="top">
+                  <div class="ml-auto items-center flex">
+                    {#if $themeUpdateErrors.has(theme.id)}
+                      <Tooltip content="Retry Update Check" placement="top">
+                        <button
+                          class="p-1.5 text-gray-500 hover:text-blue-500 dark:hover:text-blue-400 transition rounded-full"
+                          on:click|stopPropagation={() => retryThemeUpdateCheck(theme)}
+                          aria-label={$i18n.t('Retry update check')}
+                        >
+                          <ArrowPath class="w-4 h-4" />
+                        </button>
+                      </Tooltip>
+                    {/if}
+                    {#if $themeUpdates.has(theme.id)}
+                      <Tooltip content="Update Theme" placement="top">
+                        <button
+                          class="p-1.5 text-gray-500 hover:text-green-500 dark:hover:text-green-400 transition rounded-full"
+                          on:click|stopPropagation={() => updateCommunityThemeFromUrl(theme)}
+                          aria-label={$i18n.t('Update theme')}
+                        >
+                          <ArrowDownTray class="w-4 h-4" />
+                        </button>
+                      </Tooltip>
+                    {/if}
+
+                    <div class="items-center hidden group-hover:flex">
+                      <Tooltip content="Copy Theme" placement="top">
+                        <button
+                          class="p-1.5 text-gray-500 hover:text-gray-900 dark:hover:text-white transition rounded-full"
+                          on:click|stopPropagation={() => copyTheme(theme)}
+                          aria-label={$i18n.t('Copy theme')}
+                        >
+                          <Clipboard className="w-4 h-4" />
+                        </button>
+                      </Tooltip>
+                      <Tooltip content="Edit Theme" placement="top">
                       <button
                         class="p-1.5 text-gray-500 hover:text-yellow-500 dark:hover:text-yellow-400 transition rounded-full"
                         on:click|stopPropagation={() => openThemeEditor(theme)}
@@ -481,14 +495,13 @@
                       </button>
                     </Tooltip>
                     <Tooltip content="Share Theme" placement="top">
-                      <a
-                        href="https://openwebui.com/"
-                        target="_blank"
+                      <button
+                        on:click={() => window.open('https://openwebui.com/', '_blank')}
                         class="p-1.5 text-gray-500 hover:text-gray-900 dark:hover:text-white transition rounded-full"
                         aria-label={$i18n.t('Share theme')}
                       >
                         <Share class="w-4 h-4" />
-                      </a>
+                      </button>
                     </Tooltip>
                     <Tooltip content="Export Theme" placement="top">
                       <button
@@ -496,32 +509,33 @@
                         on:click|stopPropagation={() => exportTheme(theme)}
                         aria-label={$i18n.t('Export theme')}
                       >
-                        <ArrowUpTray className="w-4 h-4" />
+                        <ArrowUpTray class="w-4 h-4" />
                       </button>
-                    </Tooltip>
-                    <Tooltip content="Remove Theme" placement="top">
-                      <button
-                        class="p-1.5 text-gray-500 hover:text-red-500 dark:hover:text-red-400 transition rounded-full"
-                        on:click|stopPropagation={() => {
-                          themeToDeleteId = theme.id;
-                          showConfirmDialog = true;
-                        }}
-                        aria-label={$i18n.t('Remove theme')}
-                      >
-                        <svg
-                          xmlns="http://www.w3.org/2000/svg"
-                          viewBox="0 0 20 20"
-                          fill="currentColor"
-                          class="w-4 h-4"
+                      </Tooltip>
+                      <Tooltip content="Remove Theme" placement="top">
+                        <button
+                          class="p-1.5 text-gray-500 hover:text-red-500 dark:hover:text-red-400 transition rounded-full"
+                          on:click|stopPropagation={() => {
+                            themeToDeleteId = theme.id;
+                            showConfirmDialog = true;
+                          }}
+                          aria-label={$i18n.t('Remove theme')}
                         >
-                          <path
-                            fill-rule="evenodd"
-                            d="M8.75 1A2.75 2.75 0 006 3.75v.443c-.795.077-1.58.22-2.365.468a.75.75 0 10.23 1.482l.149-.022.841 10.518A2.75 2.75 0 007.596 19h4.807a2.75 2.75 0 002.742-2.53l.841-10.52.149.023a.75.75 0 00.23-1.482A41.03 41.03 0 0014 4.193v-.443A2.75 2.75 0 0011.25 1h-2.5zM10 4c.84 0 1.673.025 2.5.075V3.75c0-.69-.56-1.25-1.25-1.25h-2.5c-.69 0-1.25.56-1.25 1.25v.325C8.327 4.025 9.16 4 10 4zM8.58 7.72a.75.75 0 00-1.5.06l.3 7.5a.75.75 0 101.5-.06l-.3-7.5zm4.34.06a.75.75 0 10-1.5-.06l-.3 7.5a.75.75 0 101.5.06l.3-7.5z"
-                            clip-rule="evenodd"
-                          />
-                        </svg>
-                      </button>
-                    </Tooltip>
+                          <svg
+                            xmlns="http://www.w3.org/2000/svg"
+                            viewBox="0 0 20 20"
+                            fill="currentColor"
+                            class="w-4 h-4"
+                          >
+                            <path
+                              fill-rule="evenodd"
+                              d="M8.75 1A2.75 2.75 0 006 3.75v.443c-.795.077-1.58.22-2.365.468a.75.75 0 10.23 1.482l.149-.022.841 10.518A2.75 2.75 0 007.596 19h4.807a2.75 2.75 0 002.742-2.53l.841-10.52.149.023a.75.75 0 00.23-1.482A41.03 41.03 0 0014 4.193v-.443A2.75 2.75 0 0011.25 1h-2.5zM10 4c.84 0 1.673.025 2.5.075V3.75c0-.69-.56-1.25-1.25-1.25h-2.5c-.69 0-1.25.56-1.25 1.25v.325C8.327 4.025 9.16 4 10 4zM8.58 7.72a.75.75 0 00-1.5.06l.3 7.5a.75.75 0 101.5-.06l-.3-7.5zm4.34.06a.75.75 0 10-1.5-.06l-.3 7.5a.75.75 0 101.5.06l.3-7.5z"
+                              clip-rule="evenodd"
+                            />
+                          </svg>
+                        </button>
+                      </Tooltip>
+                    </div>
                   </div>
                 {/if}
               </button>
@@ -639,6 +653,23 @@
   on:confirm={() => {
     removeCommunityTheme(themeToDeleteId);
     showConfirmDialog = false;
+  }}
+/>
+
+<ConfirmDialog
+  bind:show={showAnimationScriptWarning}
+  title="Security Warning"
+  message="This theme contains an animation script. Scripts from untrusted sources can be malicious and harm your computer. Are you sure you want to add this theme?"
+  on:confirm={() => {
+    if (themeWithScriptToImport) {
+      _finalizeAddTheme(themeWithScriptToImport.theme, themeWithScriptToImport.source);
+    }
+    showAnimationScriptWarning = false;
+    themeWithScriptToImport = null;
+  }}
+  on:cancel={() => {
+    showAnimationScriptWarning = false;
+    themeWithScriptToImport = null;
   }}
 />
 

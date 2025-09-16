@@ -24,6 +24,7 @@ export const getAdminDetails = async (token: string) => {
 		throw error;
 	}
 
+	sessionStorage.clear();
 	return res;
 };
 
