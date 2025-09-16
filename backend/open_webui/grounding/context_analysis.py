@@ -565,27 +565,19 @@ class ConversationContextAnalyzer:
         enhanced_query = current_query
         is_enhanced = False
 
-        # Step 1: Apply temporal enhancement (this is now applied to ALL queries)
-        temporal_enhanced_query = self._enhance_query_with_temporal_context(
-            current_query
-        )
-        if temporal_enhanced_query != current_query:
-            enhanced_query = temporal_enhanced_query
-            is_enhanced = True
-            log.info(f"🕒 Applied universal temporal enhancement to query")
-
-        # Step 2: Apply conversation context enhancement if needed
+        # Apply conversation context enhancement if needed
+        # Note: Temporal enhancement is now handled after translation in wiki_search_utils.py
         if len(messages) >= 2:
             conversation_context = self.extract_conversation_context(messages)
 
             if conversation_context and self.is_follow_up_question(
                 current_query, conversation_context
             ):
-                # Apply context-aware enhancement to the temporally enhanced query
+                # Apply context-aware enhancement
                 context_enhanced_query = self.generate_context_aware_query(
-                    enhanced_query, conversation_context
+                    current_query, conversation_context
                 )
-                if context_enhanced_query != enhanced_query:
+                if context_enhanced_query != current_query:
                     enhanced_query = context_enhanced_query
                     is_enhanced = True
                     log.info(f"🔍 Applied conversation context enhancement to query")
@@ -616,7 +608,7 @@ def analyze_conversation_context(
     )
 
     # Determine what type of enhancement was applied
-    temporal_enhanced = True  # Always true since we always apply temporal enhancement
+    temporal_enhanced = False  # Will be applied later after translation
     context_aware = False
 
     if len(messages) >= 2:

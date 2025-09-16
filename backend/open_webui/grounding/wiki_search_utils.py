@@ -400,6 +400,21 @@ class WikiSearchGrounder:
             original_query = query
             search_query = self._translate_to_english(query)
 
+            # Apply temporal enhancement AFTER translation to English
+            # This ensures decade detection works properly for all languages
+            from .context_analysis import ConversationContextAnalyzer
+
+            temp_analyzer = ConversationContextAnalyzer()
+            temporal_enhanced_query = (
+                temp_analyzer._enhance_query_with_temporal_context(search_query)
+            )
+
+            if temporal_enhanced_query != search_query:
+                log.info(
+                    f"🕒 Applied temporal enhancement after translation: '{search_query}' -> '{temporal_enhanced_query}'"
+                )
+                search_query = temporal_enhanced_query
+
             # Use basic search with translated query - get more results for reranking
             initial_results_count = (
                 self.max_search_results * 3
@@ -630,26 +645,7 @@ class WikiSearchGrounder:
                     f"🔍 Using enhanced query ({enhancement_desc}): '{query}' -> '{enhanced_query}'"
                 )
                 query = enhanced_query
-        else:
-            # Even for single messages, apply temporal enhancement
-            from .context_analysis import ConversationContextAnalyzer
-
-            temp_analyzer = ConversationContextAnalyzer()
-            temporal_enhanced = temp_analyzer._enhance_query_with_temporal_context(
-                query
-            )
-            if temporal_enhanced != query:
-                log.info(
-                    f"🕒 Using temporal enhancement: '{query}' -> '{temporal_enhanced}'"
-                )
-                query = temporal_enhanced
-                context_metadata = {
-                    "original_query": original_query,
-                    "enhanced_query": query,
-                    "temporal_enhanced": True,
-                    "context_aware": False,
-                    "current_year": temp_analyzer.current_year,
-                }
+        # Note: Temporal enhancement is now applied after translation in the search() method
 
         log.info("🔍 Wiki grounding enabled, proceeding with search")
         log.info(f"🔍 Ground query starting for: '{query[:50]}...'")
