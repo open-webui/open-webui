@@ -540,9 +540,9 @@
 							exportHandler();
 						}}
 					>
-						<button class="p-1 dark:hover:bg-gray-850 rounded-lg touch-auto" on:click={(e) => {}}>
+						<div class="p-1 dark:hover:bg-gray-850 rounded-lg touch-auto">
 							<EllipsisHorizontal className="size-4" strokeWidth="2.5" />
-						</button>
+						</div>
 					</FolderMenu>
 				</button>
 			</button>
