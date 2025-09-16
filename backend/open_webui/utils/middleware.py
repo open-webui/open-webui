@@ -2031,6 +2031,20 @@ async def process_chat_response(
                                     )
                                 else:
                                     choices = data.get("choices", [])
+
+                                    # 17421
+                                    usage = data.get("usage", {})
+                                    usage.update(data.get("timings", {}))  # llama.cpp
+                                    if usage:
+                                        await event_emitter(
+                                            {
+                                                "type": "chat:completion",
+                                                "data": {
+                                                    "usage": usage,
+                                                },
+                                            }
+                                        )
+
                                     if not choices:
                                         error = data.get("error", {})
                                         if error:
@@ -2039,20 +2053,6 @@ async def process_chat_response(
                                                     "type": "chat:completion",
                                                     "data": {
                                                         "error": error,
-                                                    },
-                                                }
-                                            )
-                                        usage = data.get("usage", {})
-                                        usage.update(
-                                            data.get("timings", {})
-                                        )  # llama.cpp
-
-                                        if usage:
-                                            await event_emitter(
-                                                {
-                                                    "type": "chat:completion",
-                                                    "data": {
-                                                        "usage": usage,
                                                     },
                                                 }
                                             )
