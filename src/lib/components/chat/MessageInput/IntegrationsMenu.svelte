@@ -4,7 +4,7 @@
 	import { fly } from 'svelte/transition';
 	import { flyAndScale } from '$lib/utils/transitions';
 
-	import { config, user, tools as _tools, mobile, settings } from '$lib/stores';
+	import { config, user, tools as _tools, mobile, settings, toolServers } from '$lib/stores';
 
 	import { getTools } from '$lib/apis/tools';
 
@@ -55,7 +55,10 @@
 		($user?.role === 'admin' || $user?.permissions?.chat?.file_upload);
 
 	const init = async () => {
-		await _tools.set(await getTools(localStorage.token));
+		if ($_tools === null) {
+			await _tools.set(await getTools(localStorage.token));
+		}
+
 		if ($_tools) {
 			tools = $_tools.reduce((a, tool, i, arr) => {
 				a[tool.id] = {
@@ -65,8 +68,22 @@
 				};
 				return a;
 			}, {});
-			selectedToolIds = selectedToolIds.filter((id) => $_tools?.some((tool) => tool.id === id));
 		}
+
+		if ($toolServers) {
+			for (const serverIdx in $toolServers) {
+				const server = $toolServers[serverIdx];
+				if (server.info) {
+					tools[`direct_server:${serverIdx}`] = {
+						name: server?.info?.title ?? server.url,
+						description: server.info.description ?? '',
+						enabled: selectedToolIds.includes(`direct_server:${serverIdx}`)
+					};
+				}
+			}
+		}
+
+		selectedToolIds = selectedToolIds.filter((id) => Object.keys(tools).includes(id));
 	};
 </script>
 

@@ -15,11 +15,11 @@
 		type Model,
 		mobile,
 		settings,
-		showSidebar,
 		models,
 		config,
 		showCallOverlay,
 		tools,
+		toolServers,
 		user as _user,
 		showControls,
 		TTSWorker,
@@ -45,6 +45,7 @@
 	import { generateAutoCompletion } from '$lib/apis';
 	import { deleteFileById } from '$lib/apis/files';
 	import { getSessionUser } from '$lib/apis/auths';
+	import { getTools } from '$lib/apis/tools';
 
 	import { WEBUI_BASE_URL, WEBUI_API_BASE_URL, PASTED_TEXT_CHARACTER_LIMIT } from '$lib/constants';
 
@@ -98,8 +99,6 @@
 
 	export let prompt = '';
 	export let files = [];
-
-	export let toolServers = [];
 
 	export let selectedToolIds = [];
 	export let selectedFilterIds = [];
@@ -442,7 +441,7 @@
 		.reduce((acc, filters) => acc.filter((f1) => filters.some((f2) => f2.id === f1.id)));
 
 	let showToolsButton = false;
-	$: showToolsButton = toolServers.length + selectedToolIds.length > 0;
+	$: showToolsButton = ($tools ?? []).length > 0 || ($toolServers ?? []).length > 0;
 
 	let showWebSearchButton = false;
 	$: showWebSearchButton =
@@ -902,6 +901,8 @@
 		dropzoneElement?.addEventListener('dragover', onDragOver);
 		dropzoneElement?.addEventListener('drop', onDrop);
 		dropzoneElement?.addEventListener('dragleave', onDragLeave);
+
+		await tools.set(await getTools(localStorage.token));
 	});
 
 	onDestroy(() => {
@@ -1457,10 +1458,10 @@
 										{/if}
 
 										<div class="ml-1 flex gap-1.5">
-											{#if showToolsButton}
+											{#if (selectedToolIds ?? []).length > 0}
 												<Tooltip
 													content={$i18n.t('{{COUNT}} Available Tools', {
-														COUNT: toolServers.length + selectedToolIds.length
+														COUNT: selectedToolIds.length
 													})}
 												>
 													<button
@@ -1474,7 +1475,7 @@
 														<Wrench className="size-4" strokeWidth="1.75" />
 
 														<span class="text-sm">
-															{toolServers.length + selectedToolIds.length}
+															{selectedToolIds.length}
 														</span>
 													</button>
 												</Tooltip>
