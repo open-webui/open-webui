@@ -1,12 +1,8 @@
 <script lang="ts">
 	import hljs from 'highlight.js';
 
-	import mermaid from 'mermaid';
-
-	import { v4 as uuidv4 } from 'uuid';
-
 	import { getContext, onMount, tick, onDestroy } from 'svelte';
-	import { copyToClipboard } from '$lib/utils';
+	import { copyToClipboard, renderMermaidDiagram } from '$lib/utils';
 
 	import 'highlight.js/styles/github-dark.min.css';
 
@@ -325,27 +321,11 @@
 		};
 	};
 
-	let debounceTimeout;
-
-	const drawMermaidDiagram = async () => {
-		try {
-			if (await mermaid.parse(code)) {
-				const { svg } = await mermaid.render(`mermaid-${uuidv4()}`, code);
-				mermaidHtml = svg;
-			}
-		} catch (error) {
-			console.log('Error:', error);
-		}
-	};
-
 	const render = async () => {
-		if (lang === 'mermaid' && (token?.raw ?? '').slice(-4).includes('```')) {
-			(async () => {
-				await drawMermaidDiagram();
-			})();
-		}
-
 		onUpdate(token);
+		if (lang === 'mermaid' && (token?.raw ?? '').slice(-4).includes('```')) {
+			mermaidHtml = await renderMermaidDiagram(code);
+		}
 	};
 
 	$: if (token) {
@@ -391,20 +371,6 @@
 	onMount(async () => {
 		if (token) {
 			onUpdate(token);
-		}
-
-		if (document.documentElement.classList.contains('dark')) {
-			mermaid.initialize({
-				startOnLoad: true,
-				theme: 'dark',
-				securityLevel: 'loose'
-			});
-		} else {
-			mermaid.initialize({
-				startOnLoad: true,
-				theme: 'default',
-				securityLevel: 'loose'
-			});
 		}
 	});
 
