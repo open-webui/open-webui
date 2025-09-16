@@ -561,7 +561,7 @@
 						class="flex w-full justify-between font-medium select-none rounded-button py-2 pl-3 pr-1.5 text-sm text-gray-700 dark:text-gray-100 outline-hidden transition-all duration-75 rounded-xl cursor-pointer data-highlighted:bg-muted"
 					>
 						<div class="flex">
-							<div class="-ml-2 mr-2.5 translate-y-0.5">
+							<div class="mr-2.5 translate-y-0.5">
 								<Spinner />
 							</div>
 
