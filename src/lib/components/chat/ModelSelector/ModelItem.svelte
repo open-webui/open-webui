@@ -144,7 +144,7 @@
 							<div slot="tooltip" id="tags-{item.model.id}">
 								{#each item.model?.tags.sort((a, b) => a.name.localeCompare(b.name)) as tag}
 									<Tooltip content={tag.name} className="flex-shrink-0">
-										<div class=" text-xs font-semibold rounded-sm uppercase text-white">
+										<div class=" text-xs font-medium rounded-sm uppercase text-white">
 											{tag.name}
 										</div>
 									</Tooltip>
