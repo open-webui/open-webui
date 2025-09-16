@@ -171,6 +171,18 @@
 
 	export let className = 'input-prose';
 	export let placeholder = 'Type here...';
+	let _placeholder = placeholder;
+
+	$: if (placeholder !== _placeholder) {
+		setPlaceholder();
+	}
+
+	const setPlaceholder = () => {
+		_placeholder = placeholder;
+		if (editor) {
+			editor?.view.dispatch(editor.state.tr);
+		}
+	};
 
 	export let richText = true;
 	export let link = false;
@@ -971,7 +983,7 @@
 				StarterKit.configure({
 					link: link
 				}),
-				Placeholder.configure({ placeholder }),
+				Placeholder.configure({ placeholder: () => _placeholder }),
 				SelectionDecoration,
 
 				...(richText
