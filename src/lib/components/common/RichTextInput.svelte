@@ -152,15 +152,44 @@
 	import FormattingButtons from './RichTextInput/FormattingButtons.svelte';
 
 	import { PASTED_TEXT_CHARACTER_LIMIT } from '$lib/constants';
-	import { all, createLowlight } from 'lowlight';
+	import { createLowlight } from 'lowlight';
+	import javascript from 'highlight.js/lib/languages/javascript';
+	import typescript from 'highlight.js/lib/languages/typescript';
+	import python from 'highlight.js/lib/languages/python';
+	import xml from 'highlight.js/lib/languages/xml';
+	import css from 'highlight.js/lib/languages/css';
+	import elixir from 'highlight.js/lib/languages/elixir';
+
+	import MentionList from '../channel/MessageInput/MentionList.svelte';
+	import { getSuggestionRenderer } from './RichTextInput/suggestions.js';
 
 	export let oncompositionstart = (e) => {};
 	export let oncompositionend = (e) => {};
 	export let onChange = (e) => {};
 
-	// create a lowlight instance with all languages loaded
-	const lowlight = createLowlight(all);
+	// create a lowlight instance with specific languages
+	const lowlight = createLowlight();
+	lowlight.register('javascript', javascript);
+	lowlight.register('typescript', typescript);
+	lowlight.register('python', python);
+	lowlight.register('html', xml);
+	lowlight.register('css', css);
+	lowlight.register('elixir', elixir);
 
+	const loadLanguageForLowlight = async (lang) => {
+	  if (lowlight.registered(lang)) {
+    	return true;
+	  }
+
+	  try {
+    	const languageModule = await import(`highlight.js/lib/languages/${lang}`);
+    	lowlight.register(lang, languageModule.default);
+    	return true;
+	  } catch (error) {
+    	console.warn(`Failed to load language for lowlight: ${lang}`, error);
+    	return false;
+	  }
+	};
 	export let editor = null;
 
 	export let socket = null;
