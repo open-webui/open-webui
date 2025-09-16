@@ -222,7 +222,7 @@
 	}}
 />
 
-<div class="flex flex-col mt-1.5 mb-0.5">
+<div class="flex flex-col mt-1.5 mb-0.5 px-[16px]">
 	<div class="flex justify-between items-center mb-1">
 		<div class="flex md:self-center text-xl items-center font-medium px-0.5">
 			{$i18n.t('Functions')}
@@ -317,7 +317,7 @@
 	</div>
 </div>
 
-<div class="mb-5">
+<div class="mb-5 px-[16px]">
 	{#each filteredItems as func (func.id)}
 		<div
 			class=" flex space-x-4 cursor-pointer w-full px-2 py-2 dark:hover:bg-white/5 hover:bg-black/5 rounded-xl"
