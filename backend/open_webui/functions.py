@@ -72,6 +72,8 @@ def get_function_module_by_id(request: Request, pipe_id: str):
             except Exception as e:
                 log.exception(f"Error loading valves for function {pipe_id}: {e}")
                 raise e
+        else:
+            function_module.valves = Valves()
 
     return function_module
 
