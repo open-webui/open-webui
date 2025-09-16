@@ -1569,3 +1569,21 @@ export const decodeString = (str: string) => {
 		return str;
 	}
 };
+
+export const renderMermaidDiagram = async (code: string) => {
+	try {
+		const { default: mermaid } = await import('mermaid');
+		mermaid.initialize({
+			startOnLoad: true,
+			theme: document.documentElement.classList.contains('dark') ? 'dark' : 'default',
+			securityLevel: 'loose'
+		});
+		if (await mermaid.parse(code)) {
+			const { svg } = await mermaid.render(`mermaid-${uuidv4()}`, code);
+			return svg;
+		}
+	} catch (error) {
+		console.log('Failed to render mermaid diagram:', error);
+		return '';
+	}
+};
