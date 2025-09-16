@@ -6,8 +6,10 @@
 	import { acceptCompletion } from '@codemirror/autocomplete';
 	import { indentWithTab } from '@codemirror/commands';
 
-	import { highlightJSExtension } from './CodeEditor/HighlightJSExtension.js';
-    import { indentUnit } from '@codemirror/language';
+	import { indentUnit } from '@codemirror/language';
+	
+	import { highlightJSExtension } from './HighlightJSExtension.js';
+	import { languages } from '@codemirror/language-data';
 
 	import { oneDark } from '@codemirror/theme-one-dark';
 
@@ -84,6 +86,7 @@
 	let isDarkMode = false;
 	let editorTheme = new Compartment();
 	let editorLanguage = new Compartment();
+	let highlightCompartment = new Compartment();
 
 	let pyodideWorkerInstance = null;
 
@@ -209,9 +212,14 @@ print("${endTag}")
 			}
 		}),
 		editorTheme.of([]),
-		highlightJSExtension(lang)
+		highlightCompartment.of(lang ? highlightJSExtension(lang) : [])
 	];
 
+	$: if (codeEditor && lang) {  
+		codeEditor.dispatch({
+			effects: highlightCompartment.reconfigure(highlightJSExtension(lang))
+		});
+	}
 	onMount(() => {
 		console.log(value);
 		if (value === '') {
