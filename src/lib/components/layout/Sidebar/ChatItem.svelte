@@ -263,7 +263,10 @@
 
 		setTimeout(() => {
 			const input = document.getElementById(`chat-title-input-${id}`);
-			if (input) input.focus();
+			if (input) {
+				input.focus();
+				input.select();
+			}
 		}, 0);
 	};
 
