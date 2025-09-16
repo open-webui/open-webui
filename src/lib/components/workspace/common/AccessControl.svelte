@@ -75,7 +75,7 @@
 
 	const onSelectGroup = () => {
 		if (selectedGroupId !== '') {
-			accessControl.read.group_ids = [...accessControl.read.group_ids, selectedGroupId];
+			accessControl.read.group_ids = [...(accessControl?.read?.group_ids ?? []), selectedGroupId];
 
 			selectedGroupId = '';
 		}
@@ -163,7 +163,7 @@
 	</div>
 	{#if accessControl !== null}
 		{@const accessGroups = groups.filter((group) =>
-			accessControl.read.group_ids.includes(group.id)
+			(accessControl?.read?.group_ids ?? []).includes(group.id)
 		)}
 		<div>
 			<div class="">
@@ -186,7 +186,7 @@
 									<option class=" text-gray-700" value="" disabled selected
 										>{$i18n.t('Select a group')}</option
 									>
-									{#each groups.filter((group) => !accessControl.read.group_ids.includes(group.id)) as group}
+									{#each groups.filter((group) => !(accessControl?.read?.group_ids ?? []).includes(group.id)) as group}
 										<option class=" text-gray-700" value={group.id}>{group.name}</option>
 									{/each}
 								</select>
@@ -228,20 +228,20 @@
 										type="button"
 										on:click={() => {
 											if (accessRoles.includes('write')) {
-												if (accessControl.write.group_ids.includes(group.id)) {
-													accessControl.write.group_ids = accessControl.write.group_ids.filter(
-														(group_id) => group_id !== group.id
-													);
+												if ((accessControl?.write?.group_ids ?? []).includes(group.id)) {
+													accessControl.write.group_ids = (
+														accessControl?.write?.group_ids ?? []
+													).filter((group_id) => group_id !== group.id);
 												} else {
 													accessControl.write.group_ids = [
-														...accessControl.write.group_ids,
+														...(accessControl?.write?.group_ids ?? []),
 														group.id
 													];
 												}
 											}
 										}}
 									>
-										{#if accessControl.write.group_ids.includes(group.id)}
+										{#if (accessControl?.write?.group_ids ?? []).includes(group.id)}
 											<Badge type={'success'} content={$i18n.t('Write')} />
 										{:else}
 											<Badge type={'info'} content={$i18n.t('Read')} />
@@ -252,7 +252,7 @@
 										class=" rounded-full p-1 hover:bg-gray-100 dark:hover:bg-gray-850 transition"
 										type="button"
 										on:click={() => {
-											accessControl.read.group_ids = accessControl.read.group_ids.filter(
+											accessControl.read.group_ids = (accessControl?.read?.group_ids ?? []).filter(
 												(id) => id !== group.id
 											);
 										}}
