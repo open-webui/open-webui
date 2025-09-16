@@ -24,11 +24,12 @@ WORKDIR /app
 # Install git for build process
 RUN apk add --no-cache git
 
-# Copy package files
-COPY package.json package-lock.json ./
+# Copy package files and npm config
+COPY package.json package-lock.json .npmrc ./
 
-# Use npm install instead of npm ci for development flexibility
-RUN npm install
+# Clear npm cache and install with legacy peer deps to handle version conflicts
+RUN npm cache clean --force && \
+    npm install
 
 # Copy source code
 COPY . .
