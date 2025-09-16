@@ -876,11 +876,30 @@
 						className="px-2 mt-0.5"
 						name={$i18n.t('Folders')}
 						chevron={false}
-						dragAndDrop={false}
 						onAdd={() => {
 							showCreateFolderModal = true;
 						}}
 						onAddLabel={$i18n.t('New Folder')}
+						on:drop={async (e) => {
+							const { type, id, item } = e.detail;
+
+							if (type === 'folder') {
+								if (folders[id].parent_id === null) {
+									return;
+								}
+
+								const res = await updateFolderParentIdById(localStorage.token, id, null).catch(
+									(error) => {
+										toast.error(`${error}`);
+										return null;
+									}
+								);
+
+								if (res) {
+									await initFolders();
+								}
+							}
+						}}
 					>
 						<Folders
 							{folders}
