@@ -217,7 +217,8 @@ class ConversationContextAnalyzer:
 
         # Universal Strategy: Always add current year if no year is mentioned
         # This helps all search algorithms understand temporal context for ANY query
-        if not re.search(r"\b(19|20)\d{2}\b", query):
+        # Check for explicit years (1990, 2024) and decade references (1990s, 90s, 20s)
+        if not re.search(r"\b(19|20)\d{2}s?\b|\b\d{2}s\b", query):
             enhanced_query = f"{enhanced_query} {self.current_year}"
 
         log.info(
