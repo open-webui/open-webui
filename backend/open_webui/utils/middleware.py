@@ -2031,6 +2031,22 @@ async def process_chat_response(
                                     )
                                 else:
                                     choices = data.get("choices", [])
+
+                                    usage = data.get("usage", {})
+                                    if usage:
+                                        usage.update(
+                                            data.get("timing", {})
+                                        )  # llama.cpp
+
+                                        await event_emitter(
+                                            {
+                                                "type": "chat:completion",
+                                                "data": {
+                                                    "usage": usage,
+                                                },
+                                            }
+                                        )
+
                                     if not choices:
                                         error = data.get("error", {})
                                         if error:
@@ -2042,21 +2058,7 @@ async def process_chat_response(
                                                     },
                                                 }
                                             )
-                                            continue
-                                    usage = data.get("usage", {})
-                                    if usage:
-                                        usage.update(
-                                            data.get("timings", {})
-                                        )  # llama.cpp
-
-                                        await event_emitter(
-                                            {
-                                                "type": "chat:completion",
-                                                "data": {
-                                                    "usage": usage,
-                                                },
-                                            }
-                                        )
+                                        continue
 
                                     delta = choices[0].get("delta", {})
                                     delta_tool_calls = delta.get("tool_calls", None)
