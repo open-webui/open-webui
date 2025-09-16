@@ -146,13 +146,6 @@ class WikiSearchGrounder:
                 "waiting_operations": "N/A",
             }
 
-        try:
-            from open_webui.config import WIKIPEDIA_GROUNDING_MAX_CONCURRENT
-
-            max_concurrent = WIKIPEDIA_GROUNDING_MAX_CONCURRENT.value
-        except ImportError:
-            max_concurrent = 1  # Default fallback
-
         available = (
             cls._semaphore._value if hasattr(cls._semaphore, "_value") else "unknown"
         )
@@ -165,7 +158,9 @@ class WikiSearchGrounder:
             "max_concurrent": max_concurrent,
             "waiting_operations": waiting,
             "active_operations": (
-                max_concurrent - available if isinstance(available, int) else "unknown"
+                cls.MAX_CONCURRENT_OPERATIONS - available
+                if isinstance(available, int)
+                else "unknown"
             ),
         }
 
