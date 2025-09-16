@@ -322,9 +322,9 @@ def pre_and_post_check(port, baudrate):
     flag = ["ok"]
     ser = serial.Serial(port, baudrate)
 
-    ser.write(("trash" + "\n").encode())
+    ser.write(("\n").encode())
     time.sleep(0.1)
-    ser.write(("trash" + "\n").encode())
+    ser.write(("\n").encode())
     while True:
         line = b""
         while True:
@@ -344,23 +344,28 @@ def pre_and_post_check(port, baudrate):
                 ser.close()
                 return "Program interrupted by user"
 
-        if "ogin incorrec" in line.decode("utf-8", errors="replace"):
+        decoded_line = line.decode("utf-8", errors="replace")
+        if "agilex7_dk_si_agf014ea login:" in decoded_line:
             time.sleep(0.1)
             flag[0] = "root issue"
+            print("root issue")
             break
-        elif "nknown command 'trash'" in line.decode("utf-8", errors="replace"):
+        elif "SOCFPGA_AGILEX7" in decoded_line:
             time.sleep(0.1)
             flag[0] = "boot issue"
+            print("boot issue")
             break
-        elif "trash: command" in line.decode("utf-8", errors="replace"):
+        elif "@agilex7_dk_si_agf014ea:" in decoded_line:
             time.sleep(0.1)
             break
+
     ser.close()
     if flag[0] == "root issue":
         ser = serial.Serial(port, baudrate)
         time.sleep(0.1)
         ser.write(("root" + "\n").encode())
         time.sleep(0.1)
+        check_for_prompt(ser, 3)
         ser.close()
     elif flag[0] == "boot issue":
         explicit_boot_command(port, baudrate)
