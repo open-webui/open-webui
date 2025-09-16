@@ -298,7 +298,7 @@
 							</DropdownMenu.Item>
 						{/if}
 
-						{#if $config?.features?.enable_onedrive_integration}
+						{#if $config?.features?.enable_onedrive_integration && ($config?.features?.enable_onedrive_personal || $config?.features?.enable_onedrive_business)}
 							<DropdownMenu.Sub>
 								<DropdownMenu.SubTrigger
 									class="flex gap-2 items-center px-3 py-1.5 text-sm cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 rounded-xl w-full"
@@ -396,25 +396,37 @@
 									sideOffset={$mobile ? 5 : 0}
 									alignOffset={$mobile ? 0 : -8}
 								>
-									<DropdownMenu.Item
-										class="flex gap-2 items-center px-3 py-1.5 text-sm cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 rounded-xl"
-										on:click={() => {
-											uploadOneDriveHandler('personal');
-										}}
-									>
-										<div class="line-clamp-1">{$i18n.t('Microsoft OneDrive (personal)')}</div>
-									</DropdownMenu.Item>
-									<DropdownMenu.Item
-										class="flex gap-2 items-center px-3 py-1.5 text-sm cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 rounded-xl"
-										on:click={() => {
-											uploadOneDriveHandler('organizations');
-										}}
-									>
-										<div class="flex flex-col">
-											<div class="line-clamp-1">{$i18n.t('Microsoft OneDrive (work/school)')}</div>
-											<div class="text-xs text-gray-500">{$i18n.t('Includes SharePoint')}</div>
-										</div>
-									</DropdownMenu.Item>
+									{#if $config?.features?.enable_onedrive_personal}
+										<DropdownMenu.Item
+											class="flex gap-2 items-center px-3 py-1.5 text-sm cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 rounded-xl"
+											on:click={() => {
+												uploadOneDriveHandler('personal');
+											}}
+										>
+											<div class="flex flex-col">
+												<div class="line-clamp-1">{$i18n.t('Microsoft OneDrive (personal)')}</div>
+												<div class="text-xs text-gray-500">
+													{$i18n.t('Includes OneDrive Consumer')}
+												</div>
+											</div>
+										</DropdownMenu.Item>
+									{/if}
+
+									{#if $config?.features?.enable_onedrive_business}
+										<DropdownMenu.Item
+											class="flex gap-2 items-center px-3 py-1.5 text-sm cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 rounded-xl"
+											on:click={() => {
+												uploadOneDriveHandler('organizations');
+											}}
+										>
+											<div class="flex flex-col">
+												<div class="line-clamp-1">
+													{$i18n.t('Microsoft OneDrive (work/school)')}
+												</div>
+												<div class="text-xs text-gray-500">{$i18n.t('Includes SharePoint')}</div>
+											</div>
+										</DropdownMenu.Item>
+									{/if}
 								</DropdownMenu.SubContent>
 							</DropdownMenu.Sub>
 						{/if}
