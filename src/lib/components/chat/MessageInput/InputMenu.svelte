@@ -405,9 +405,6 @@
 										>
 											<div class="flex flex-col">
 												<div class="line-clamp-1">{$i18n.t('Microsoft OneDrive (personal)')}</div>
-												<div class="text-xs text-gray-500">
-													{$i18n.t('Includes OneDrive Consumer')}
-												</div>
 											</div>
 										</DropdownMenu.Item>
 									{/if}
