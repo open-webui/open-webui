@@ -152,7 +152,7 @@
 						</div>
 					{/if}
 
-					<div class="translate-y-[0.5px] {chevron ? '' : 'pl-1'}">
+					<div class="translate-y-[0.5px] {chevron ? '' : 'pl-0.5'}">
 						{name}
 					</div>
 				</button>
