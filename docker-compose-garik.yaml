@@ -22,7 +22,14 @@ services:
       - ollama-net
 
   openwebui:
-    image: ghcr.io/open-webui/open-webui:cuda
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        - USE_CUDA=true
+        - USE_CUDA_VER=cu128
+        - USE_EMBEDDING_MODEL=sentence-transformers/all-MiniLM-L6-v2
+        - BUILD_HASH=dev-build
     container_name: openwebui
     depends_on:
       - ollama
@@ -31,6 +38,16 @@ services:
     volumes:
       - openwebui_data:/app/backend/data
       - ./ai-assistant/knowledge-base:/app/knowledge-base
+      # Монтируем исходный код для разработки
+      - ./backend:/app/backend
+      - ./src:/app/src
+      - ./static:/app/static
+      - ./package.json:/app/package.json
+      - ./package-lock.json:/app/package-lock.json
+      - ./svelte.config.js:/app/svelte.config.js
+      - ./vite.config.ts:/app/vite.config.ts
+      - ./tailwind.config.js:/app/tailwind.config.js
+      - ./tsconfig.json:/app/tsconfig.json
     deploy:
       resources:
         reservations:
@@ -42,6 +59,8 @@ services:
       - NVIDIA_VISIBLE_DEVICES=all
       - OLLAMA_API_BASE_URL=http://host.docker.internal:11434/api
       - WEBUI_SECRET_KEY=your-secret-key-here # Замените на случайный ключ
+      - ENV=dev
+      - DOCKER=false
     restart: always
     extra_hosts:
       - "host.docker.internal:host-gateway"
