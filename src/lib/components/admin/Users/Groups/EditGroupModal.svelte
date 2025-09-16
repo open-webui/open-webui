@@ -97,15 +97,72 @@
 		if (!file) return;
 
 		if (file.size > 10 * 1024 * 1024) {
-			console.error('File is too large (max 10MB)');
+			toast.error('File is too large (max 10MB)');
 			return;
 		}
 
 		const reader = new FileReader();
 		reader.onload = (e) => {
-			const text = e.target.result;
-			const lines = text.split(/\r?\n/).slice(0, 3);
-			console.log('First 3 lines of CSV:', lines);
+			try {
+				const text = e.target.result;
+				const lines = text.split(/\r?\n/).filter(line => line.trim());
+				
+				// Extract emails (skip header if first line contains "Email")
+				const startIndex = lines[0]?.toLowerCase().includes('email') ? 1 : 0;
+				const csvEmails = lines.slice(startIndex).map(line => {
+					return line.trim().toLowerCase();
+				}).filter(email => email && email.includes('@'));
+
+				// Match emails to existing users and track which ones were found
+				const matchedEmails = [];
+				const newUserIds = users
+					.filter(user => {
+						const isMatch = csvEmails.includes(user.email.toLowerCase());
+						if (isMatch) {
+							matchedEmails.push(user.email.toLowerCase());
+						}
+						return isMatch;
+					})
+					.map(user => user.id)
+					.filter(id => !userIds.includes(id)); // Avoid duplicates
+
+				// Find emails that couldn't be matched to existing users
+				const unmatchedEmails = csvEmails.filter(email => !matchedEmails.includes(email));
+
+				if (newUserIds.length === 0) {
+					if (unmatchedEmails.length > 0) {
+						toast.error(`No matching users found in CSV. Unmatched emails: ${unmatchedEmails.join(', ')}`);
+					} else {
+						toast.error('No new users to add (all users already in group)');
+					}
+					return;
+				}
+
+				// Add new user IDs to existing array
+				userIds = [...userIds, ...newUserIds];
+				
+				// Show success message with details about partial failures
+				const totalEmails = csvEmails.length;
+				const successCount = newUserIds.length;
+				
+				if (unmatchedEmails.length > 0) {
+					// Show individual error messages for unmatched emails
+					unmatchedEmails.forEach(email => {
+						toast.error(`Email not found: ${email}`);
+					});
+					// Show success message with context
+					toast.success(`Added ${successCount} of ${totalEmails} users to group`);
+				} else {
+					// All emails matched successfully
+					toast.success(`Added ${successCount} users to group`);
+				}
+				
+				showImportModal = false;
+				
+			} catch (error) {
+				console.error('CSV parsing error:', error);
+				toast.error('Error parsing CSV file');
+			}
 		};
 		reader.readAsText(file);
 	}
@@ -437,7 +494,7 @@
 			</div>
 			<div class="text-xs text-gray-600 dark:text-gray-500">
 				ⓘ {$i18n.t(
-					'Ensure your CSV file includes 4 columns in this order: Name, Email, Password, Role.'
+					'Upload a CSV file with one column named email. Each line should contain the email address of a user you want to add to this group.'
 				)}
 				<a
 					class="underline dark:text-gray-200"
@@ -445,7 +502,6 @@
 					target="_blank"
 					rel="noopener"
 				>
-					{$i18n.t('Click here to download user import template file.')}
 				</a>
 			</div>
 		</div>
