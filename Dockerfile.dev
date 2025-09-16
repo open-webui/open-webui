@@ -21,24 +21,22 @@ ENV NODE_OPTIONS="--max-old-space-size=4096"
 
 WORKDIR /app
 
-# Install git and yarn for build process
+# Install git for build process
 RUN apk add --no-cache git
-
-# Install yarn globally
-RUN npm install -g yarn
 
 # Copy package files
 COPY package.json ./
 
-# Install dependencies with yarn (better dependency resolution)
-RUN yarn install --network-timeout 100000
+# Install dependencies with npm (simplified approach)
+RUN npm config set registry https://registry.npmjs.org/ && \
+    npm install --legacy-peer-deps --no-audit --no-fund --no-package-lock
 
 # Copy source code
 COPY . .
 ENV APP_BUILD_HASH=${BUILD_HASH}
 
 # Build the frontend
-RUN yarn build
+RUN npm run build
 
 ######## WebUI backend ########
 FROM python:3.11-slim-bookworm AS base
