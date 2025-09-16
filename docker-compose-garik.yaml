@@ -1,0 +1,57 @@
+version: '3.8'
+
+services:
+  ollama:
+    image: ollama/ollama
+    container_name: ollama
+    ports:
+      - "11434:11434"
+    volumes:
+      - ollama_data:/root/.ollama
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [gpu]
+    environment:
+      - NVIDIA_VISIBLE_DEVICES=all
+    restart: unless-stopped
+    networks:
+      - ollama-net
+
+  openwebui:
+    image: ghcr.io/open-webui/open-webui:cuda
+    container_name: openwebui
+    depends_on:
+      - ollama
+    ports:
+      - "3000:8080"
+    volumes:
+      - openwebui_data:/app/backend/data
+      - ./ai-assistant/knowledge-base:/app/knowledge-base
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [gpu]
+    environment:
+      - NVIDIA_VISIBLE_DEVICES=all
+      - OLLAMA_API_BASE_URL=http://host.docker.internal:11434/api
+      - WEBUI_SECRET_KEY=your-secret-key-here # Замените на случайный ключ
+    restart: always
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    networks:
+      - ollama-net
+
+volumes:
+  ollama_data:
+  openwebui_data:
+
+networks:
+  ollama-net:
+    driver: bridge
