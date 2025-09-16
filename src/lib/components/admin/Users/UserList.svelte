@@ -154,7 +154,7 @@
 	</div>
 {:else}
 	<div
-		class="pt-0.5 pb-2 gap-1 flex flex-col md:flex-row justify-between sticky top-0 z-10 bg-white dark:bg-gray-900"
+		class="pt-0.5 pb-1 gap-1 flex flex-col md:flex-row justify-between sticky top-0 z-10 bg-white dark:bg-gray-900"
 	>
 		<div class="flex md:self-center text-lg font-medium px-0.5">
 			<div class="flex-shrink-0">
@@ -219,19 +219,15 @@
 		</div>
 	</div>
 
-	<div
-		class="scrollbar-hidden relative whitespace-nowrap overflow-x-auto max-w-full rounded-sm pt-0.5"
-	>
+	<div class="scrollbar-hidden relative whitespace-nowrap overflow-x-auto max-w-full">
 		<table
 			class="w-full text-sm text-left text-gray-500 dark:text-gray-400 table-auto max-w-full rounded-sm"
 		>
-			<thead
-				class="text-xs text-gray-700 uppercase bg-gray-50 dark:bg-gray-850 dark:text-gray-400 -translate-y-0.5"
-			>
-				<tr class="">
+			<thead class="text-xs text-gray-800 uppercase bg-transparent dark:text-gray-200">
+				<tr class=" border-b-2 border-gray-100 dark:border-gray-800">
 					<th
 						scope="col"
-						class="px-3 py-1.5 cursor-pointer select-none"
+						class="px-2.5 py-2 cursor-pointer select-none"
 						on:click={() => setSortKey('role')}
 					>
 						<div class="flex gap-1.5 items-center">
@@ -254,7 +250,7 @@
 					</th>
 					<th
 						scope="col"
-						class="px-3 py-1.5 cursor-pointer select-none"
+						class="px-2.5 py-2 cursor-pointer select-none"
 						on:click={() => setSortKey('name')}
 					>
 						<div class="flex gap-1.5 items-center">
@@ -277,7 +273,7 @@
 					</th>
 					<th
 						scope="col"
-						class="px-3 py-1.5 cursor-pointer select-none"
+						class="px-2.5 py-2 cursor-pointer select-none"
 						on:click={() => setSortKey('email')}
 					>
 						<div class="flex gap-1.5 items-center">
@@ -301,7 +297,7 @@
 
 					<th
 						scope="col"
-						class="px-3 py-1.5 cursor-pointer select-none"
+						class="px-2.5 py-2 cursor-pointer select-none"
 						on:click={() => setSortKey('last_active_at')}
 					>
 						<div class="flex gap-1.5 items-center">
@@ -324,7 +320,7 @@
 					</th>
 					<th
 						scope="col"
-						class="px-3 py-1.5 cursor-pointer select-none"
+						class="px-2.5 py-2 cursor-pointer select-none"
 						on:click={() => setSortKey('created_at')}
 					>
 						<div class="flex gap-1.5 items-center">
@@ -347,7 +343,7 @@
 
 					<th
 						scope="col"
-						class="px-3 py-1.5 cursor-pointer select-none"
+						class="px-2.5 py-2 cursor-pointer select-none"
 						on:click={() => setSortKey('oauth_sub')}
 					>
 						<div class="flex gap-1.5 items-center">
@@ -369,7 +365,7 @@
 						</div>
 					</th>
 
-					<th scope="col" class="px-3 py-2 text-right" />
+					<th scope="col" class="px-2.5 py-2 text-right" />
 				</tr>
 			</thead>
 			<tbody class="">
