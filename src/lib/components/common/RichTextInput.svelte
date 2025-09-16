@@ -259,6 +259,9 @@
 	let yXmlFragment = null;
 	let awareness = null;
 
+	const triggerInputUpdate = () => editor?.view.dispatch(editor.state.tr);
+	$: placeholder && triggerInputUpdate();
+
 	const getEditorInstance = async () => {
 		return new Promise((resolve) => {
 			setTimeout(() => {
@@ -971,7 +974,7 @@
 				StarterKit.configure({
 					link: link
 				}),
-				Placeholder.configure({ placeholder }),
+				Placeholder.configure({ placeholder: () => placeholder }),
 				SelectionDecoration,
 
 				...(richText
