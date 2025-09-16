@@ -67,7 +67,7 @@ def get_function_module_by_id(request: Request, pipe_id: str):
         if valves:
             try:
                 function_module.valves = Valves(
-                    **{k: v for k, v in valves if v is not None}
+                    **{k: v for k, v in valves.items() if v is not None}
                 )
             except Exception as e:
                 log.exception(f"Error loading valves for function {pipe_id}: {e}")
