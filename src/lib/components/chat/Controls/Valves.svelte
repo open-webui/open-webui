@@ -172,7 +172,7 @@
 									>{$i18n.t('Select a tool')}</option
 								>
 
-								{#each $tools as tool, toolIdx}
+								{#each $tools.filter((tool) => !tool?.id?.startsWith('server:')) as tool, toolIdx}
 									<option value={tool.id} class="bg-gray-100 dark:bg-gray-800">{tool.name}</option>
 								{/each}
 							{:else if tab === 'functions'}
