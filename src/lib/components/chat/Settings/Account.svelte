@@ -3,7 +3,13 @@
 	import { onMount, getContext } from 'svelte';
 
 	import { user, config, settings } from '$lib/stores';
-	import { updateUserProfile, createAPIKey, getAPIKey, getSessionUser, userSignOut } from '$lib/apis/auths';
+	import {
+		updateUserProfile,
+		createAPIKey,
+		getAPIKey,
+		getSessionUser,
+		userSignOut
+	} from '$lib/apis/auths';
 	import { WEBUI_BASE_URL } from '$lib/constants';
 
 	import UpdatePassword from './Account/UpdatePassword.svelte';
@@ -137,7 +143,9 @@
 <ConfirmDialog
 	bind:show={showDeleteConfirmDialog}
 	title={$i18n.t('Delete Account')}
-	message={$i18n.t('Are you sure you want to delete your account? This action cannot be undone and will permanently remove all your data, including chats, models, and settings.')}
+	message={$i18n.t(
+		'Are you sure you want to delete your account? This action cannot be undone and will permanently remove all your data, including chats, models, and settings.'
+	)}
 	confirmLabel={$i18n.t('Delete Account')}
 	cancelLabel={$i18n.t('Cancel')}
 	onConfirm={deleteAccountHandler}
