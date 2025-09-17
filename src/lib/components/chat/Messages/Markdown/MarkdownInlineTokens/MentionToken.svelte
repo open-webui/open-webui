@@ -68,11 +68,12 @@
 </script>
 
 <LinkPreview.Root openDelay={0} closeDelay={0}>
-	<LinkPreview.Trigger class="mention cursor-pointer no-underline! font-normal! ">
+	<LinkPreview.Trigger class=" cursor-pointer no-underline! font-normal! ">
 		<!-- svelte-ignore a11y-click-events-have-key-events -->
 		<!-- svelte-ignore a11y-no-static-element-interactions -->
 
 		<span
+			class="mention"
 			on:click={async () => {
 				if (triggerChar === '@') {
 					if (idType === 'U') {

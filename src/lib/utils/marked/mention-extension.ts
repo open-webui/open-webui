@@ -20,9 +20,9 @@ function mentionStart(src: string) {
 
 function mentionTokenizer(this: any, src: string, options: MentionOptions = {}) {
 	const trigger = options.triggerChar ?? '@';
-
 	// Build dynamic regex for `<@id>`, `<@id|label>`, `<@id|>`
-	const re = new RegExp(`^<\\${trigger}([\\w.\\-:]+)(?:\\|([^>]*))?>`);
+	// Added forward slash (/) to the character class for IDs
+	const re = new RegExp(`^<\\${trigger}([\\w.\\-:/]+)(?:\\|([^>]*))?>`);
 	const m = re.exec(src);
 	if (!m) return;
 
@@ -71,14 +71,3 @@ export function mentionExtension(opts: MentionOptions = {}) {
 // Usage:
 // import { marked } from 'marked';
 // marked.use({ extensions: [mentionExtension({ triggerChar: '@' })] });
-//
-// "<@llama3.2:latest>" →
-// <span class="mention" data-type="mention" data-id="llama3.2:latest" data-mention-suggestion-char="@">@llama3.2:latest</span>
-//
-// "<@llama3.2:latest|friendly>" →
-// <span class="mention" ...>@friendly</span>
-//
-// "<@llama3.2:latest|>" →
-// <span class="mention" ...>@llama3.2:latest</span>
-//
-// If triggerChar = "#"
