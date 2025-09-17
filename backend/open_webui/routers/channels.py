@@ -200,14 +200,11 @@ async def send_notification(name, webui_url, channel, message, active_user_ids):
     users = get_users_with_access("read", channel.access_control)
 
     for user in users:
-        if user.id in active_user_ids:
-            continue
-        else:
+        if user.id not in active_user_ids:
             if user.settings:
                 webhook_url = user.settings.ui.get("notifications", {}).get(
                     "webhook_url", None
                 )
-
                 if webhook_url:
                     await post_webhook(
                         name,
@@ -220,6 +217,8 @@ async def send_notification(name, webui_url, channel, message, active_user_ids):
                             "url": f"{webui_url}/channels/{channel.id}",
                         },
                     )
+
+    return True
 
 
 @router.post("/{id}/messages/post", response_model=Optional[MessageModel])
@@ -305,14 +304,16 @@ async def post_new_message(
 
             active_user_ids = get_user_ids_from_room(f"channel:{channel.id}")
 
-            background_tasks.add_task(
-                send_notification,
-                request.app.state.WEBUI_NAME,
-                request.app.state.config.WEBUI_URL,
-                channel,
-                message,
-                active_user_ids,
-            )
+            async def background_handler():
+                await send_notification(
+                    request.app.state.WEBUI_NAME,
+                    request.app.state.config.WEBUI_URL,
+                    channel,
+                    message,
+                    active_user_ids,
+                )
+
+            background_tasks.add_task(background_handler)
 
         return MessageModel(**message.model_dump())
     except Exception as e:

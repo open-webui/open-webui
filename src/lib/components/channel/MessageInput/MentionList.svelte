@@ -52,12 +52,12 @@
 		const item = filteredItems[index];
 		if (!item) return;
 
-		// Add the "U:", "A:" or "C:" prefix to the id
+		// Add the "U:", "M:" or "C:" prefix to the id
 		// and also append the label after a pipe |
 		// so that the mention renderer can show the label
 		if (item)
 			command({
-				id: `${item.type === 'user' ? 'U' : item.type === 'model' ? 'A' : 'C'}:${item.id}|${item.label}`,
+				id: `${item.type === 'user' ? 'U' : item.type === 'model' ? 'M' : 'C'}:${item.id}|${item.label}`,
 				label: item.label
 			});
 	};
