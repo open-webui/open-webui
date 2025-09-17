@@ -4,6 +4,7 @@ import json
 import logging
 from typing import Optional
 
+from azure.identity import DefaultAzureCredential, get_bearer_token_provider
 import aiohttp
 from aiocache import cached
 import requests
@@ -119,6 +120,23 @@ def openai_reasoning_model_handler(payload):
     return payload
 
 
+def get_azure_entraid_token():
+    """
+    Get Azure access token using DefaultAzureCredential for Azure OpenAI.
+    Returns the token string or None if authentication fails.
+    """
+    try:
+        token_provider = get_bearer_token_provider(
+            DefaultAzureCredential(),
+            "https://cognitiveservices.azure.com/.default"
+        )
+        token = token_provider()
+        return token
+    except Exception as e:
+        log.error(f"Error getting Azure Entra ID token: {e}")
+        return None
+
+
 def get_headers_and_cookies(
     request: Request,
     url,
@@ -180,6 +198,11 @@ def get_headers_and_cookies(
 
         if oauth_token:
             token = f"{oauth_token.get('access_token', '')}"
+    elif auth_type == "azure_entraid":
+        # Use DefaultAzureCredential for Azure Entra ID authentication
+        token = get_azure_entraid_token()
+        if not token:
+            log.error("Failed to obtain Azure Entra ID token")
 
     if token:
         headers["Authorization"] = f"Bearer {token}"
@@ -640,7 +663,10 @@ async def verify_connection(
             )
 
             if api_config.get("azure", False):
-                headers["api-key"] = key
+                # Only set api-key header if not using Azure Entra ID authentication
+                auth_type = api_config.get("auth_type", "bearer")
+                if auth_type != "azure_entraid":
+                    headers["api-key"] = key
                 api_version = api_config.get("api_version", "") or "2023-03-15-preview"
 
                 async with session.get(
@@ -884,7 +910,10 @@ async def generate_chat_completion(
     if api_config.get("azure", False):
         api_version = api_config.get("api_version", "2023-03-15-preview")
         request_url, payload = convert_to_azure_payload(url, payload, api_version)
-        headers["api-key"] = key
+        # Only set api-key header if not using Azure Entra ID authentication
+        auth_type = api_config.get("auth_type", "bearer")
+        if auth_type != "azure_entraid":
+            headers["api-key"] = key
         headers["api-version"] = api_version
         request_url = f"{request_url}/chat/completions?api-version={api_version}"
     else:
@@ -1057,7 +1086,10 @@ async def proxy(path: str, request: Request, user=Depends(get_verified_user)):
 
         if api_config.get("azure", False):
             api_version = api_config.get("api_version", "2023-03-15-preview")
-            headers["api-key"] = key
+            # Only set api-key header if not using Azure Entra ID authentication
+            auth_type = api_config.get("auth_type", "bearer")
+            if auth_type != "azure_entraid":
+                headers["api-key"] = key
             headers["api-version"] = api_version
 
             payload = json.loads(body)

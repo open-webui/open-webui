@@ -122,7 +122,8 @@
 				return;
 			}
 
-			if (!key) {
+			// API key is not required when using Azure Entra ID authentication
+			if (!key && auth_type !== 'azure_entraid') {
 				loading = false;
 
 				toast.error($i18n.t('Key is required'));
@@ -332,6 +333,9 @@
 												{#if !direct}
 													<option value="system_oauth">{$i18n.t('OAuth')}</option>
 												{/if}
+												{#if azure}
+													<option value="azure_entraid">{$i18n.t('Azure Entra ID')}</option>
+												{/if}
 											{/if}
 										</select>
 									</div>
@@ -360,6 +364,12 @@
 												class={`text-xs self-center translate-y-[1px] ${($settings?.highContrastMode ?? false) ? 'text-gray-800 dark:text-gray-100' : 'text-gray-500'}`}
 											>
 												{$i18n.t('Forwards system user OAuth access token to authenticate')}
+											</div>
+										{:else if auth_type === 'azure_entraid'}
+											<div
+												class={`text-xs self-center translate-y-[1px] ${($settings?.highContrastMode ?? false) ? 'text-gray-800 dark:text-gray-100' : 'text-gray-500'}`}
+											>
+												{$i18n.t('Uses DefaultAzureCredential for automatic Azure authentication')}
 											</div>
 										{/if}
 									</div>
