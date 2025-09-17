@@ -122,7 +122,7 @@
 				return;
 			}
 
-			if (!key && !['azure_ad', 'azure_entra_id'].includes(auth_type)) {
+			if (!key && !['azure_ad', 'microsoft_entra_id'].includes(auth_type)) {
 				loading = false;
 
 				toast.error($i18n.t('Key is required'));
@@ -332,7 +332,7 @@
 												{#if !direct}
 													<option value="system_oauth">{$i18n.t('OAuth')}</option>
 													{#if azure}
-														<option value="azure_entra_id">{$i18n.t('Azure Entra ID')}</option>
+														<option value="microsoft_entra_id">{$i18n.t('Entra ID')}</option>
 													{/if}
 												{/if}
 											{/if}
@@ -364,7 +364,7 @@
 											>
 												{$i18n.t('Forwards system user OAuth access token to authenticate')}
 											</div>
-										{:else if ['azure_ad', 'azure_entra_id'].includes(auth_type)}
+										{:else if ['azure_ad', 'microsoft_entra_id'].includes(auth_type)}
 											<div
 												class={`text-xs self-center translate-y-[1px] ${($settings?.highContrastMode ?? false) ? 'text-gray-800 dark:text-gray-100' : 'text-gray-500'}`}
 											>

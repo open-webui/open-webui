@@ -11,7 +11,7 @@
 		const [katex] = await Promise.all([
 			import('katex'),
 			import('katex/contrib/mhchem'),
-			import('katex/dist/katex.min.css'),
+			import('katex/dist/katex.min.css')
 		]);
 		renderToString = katex.renderToString;
 	});

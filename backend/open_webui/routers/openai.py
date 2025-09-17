@@ -184,8 +184,8 @@ def get_headers_and_cookies(
         if oauth_token:
             token = f"{oauth_token.get('access_token', '')}"
 
-    elif auth_type in ("azure_ad", "azure_entra_id"):
-        token = get_azure_entra_id_access_token()
+    elif auth_type in ("azure_ad", "microsoft_entra_id"):
+        token = get_microsoft_entra_id_access_token()
 
     if token:
         headers["Authorization"] = f"Bearer {token}"
@@ -193,9 +193,9 @@ def get_headers_and_cookies(
     return headers, cookies
 
 
-def get_azure_entra_id_access_token():
+def get_microsoft_entra_id_access_token():
     """
-    Get Azure access token using DefaultAzureCredential for Azure OpenAI.
+    Get Microsoft Entra ID access token using DefaultAzureCredential for Azure OpenAI.
     Returns the token string or None if authentication fails.
     """
     try:
@@ -204,7 +204,7 @@ def get_azure_entra_id_access_token():
         )
         return token_provider()
     except Exception as e:
-        log.error(f"Error getting Azure access token: {e}")
+        log.error(f"Error getting Microsoft Entra ID access token: {e}")
         return None
 
 
@@ -663,7 +663,7 @@ async def verify_connection(
             if api_config.get("azure", False):
                 # Only set api-key header if not using Azure Entra ID authentication
                 auth_type = api_config.get("auth_type", "bearer")
-                if auth_type not in ("azure_ad", "azure_entra_id"):
+                if auth_type not in ("azure_ad", "microsoft_entra_id"):
                     headers["api-key"] = key
 
                 api_version = api_config.get("api_version", "") or "2023-03-15-preview"
@@ -911,7 +911,7 @@ async def generate_chat_completion(
 
         # Only set api-key header if not using Azure Entra ID authentication
         auth_type = api_config.get("auth_type", "bearer")
-        if auth_type not in ("azure_ad", "azure_entra_id"):
+        if auth_type not in ("azure_ad", "microsoft_entra_id"):
             headers["api-key"] = key
 
         headers["api-version"] = api_version
@@ -1089,7 +1089,7 @@ async def proxy(path: str, request: Request, user=Depends(get_verified_user)):
 
             # Only set api-key header if not using Azure Entra ID authentication
             auth_type = api_config.get("auth_type", "bearer")
-            if auth_type not in ("azure_ad", "azure_entra_id"):
+            if auth_type not in ("azure_ad", "microsoft_entra_id"):
                 headers["api-key"] = key
 
             headers["api-version"] = api_version
