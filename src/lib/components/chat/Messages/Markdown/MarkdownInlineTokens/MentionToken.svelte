@@ -53,8 +53,8 @@
 		} else if (triggerChar === '@') {
 			if (idType === 'U') {
 				// User
-			} else if (idType === 'A') {
-				// Agent/assistant/ai model
+			} else if (idType === 'M') {
+				// Model
 				const model = $models.find((m) => m.id === id);
 				if (model) {
 					label = model.name;
@@ -77,9 +77,8 @@
 					if (idType === 'U') {
 						// Open user profile
 						console.log('Clicked user mention', id);
-					} else if (idType === 'A') {
-						// Open agent/assistant/ai model profile
-						console.log('Clicked agent mention', id);
+					} else if (idType === 'M') {
+						console.log('Clicked model mention', id);
 						await goto(`/?model=${id}`);
 					}
 				} else if (triggerChar === '#') {
@@ -101,15 +100,15 @@
 		</span>
 	</LinkPreview.Trigger>
 
-	<LinkPreview.Content
-		class="w-full max-w-[260px] rounded-2xl border border-gray-100  dark:border-gray-800 z-50 bg-white dark:bg-gray-850 dark:text-white shadow-lg transition"
-		side="top"
-		align="start"
-		sideOffset={6}
-	>
-		{#if triggerChar === '@' && idType === 'U'}
+	{#if triggerChar === '@' && idType === 'U'}
+		<LinkPreview.Content
+			class="w-full max-w-[260px] rounded-2xl border border-gray-100  dark:border-gray-800 z-50 bg-white dark:bg-gray-850 dark:text-white shadow-lg transition"
+			side="top"
+			align="start"
+			sideOffset={6}
+		>
 			<UserStatus {id} />
-		{/if}
-		<!-- <div class="flex space-x-4">HI</div> -->
-	</LinkPreview.Content>
+			<!-- <div class="flex space-x-4">HI</div> -->
+		</LinkPreview.Content>
+	{/if}
 </LinkPreview.Root>
