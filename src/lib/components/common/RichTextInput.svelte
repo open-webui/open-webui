@@ -1006,7 +1006,7 @@
 				StarterKit.configure({
 					link: link
 				}),
-				Placeholder.configure({ placeholder }),
+				Placeholder.configure({ placeholder: () => _placeholder }),
 				SelectionDecoration,
 
 <<<<<<< HEAD
