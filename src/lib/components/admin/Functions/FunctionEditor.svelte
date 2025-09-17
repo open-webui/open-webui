@@ -4,7 +4,6 @@
 
 	const i18n = getContext('i18n');
 
-	import CodeEditor from '$lib/components/common/CodeEditor.svelte';
 	import ConfirmDialog from '$lib/components/common/ConfirmDialog.svelte';
 	import Badge from '$lib/components/common/Badge.svelte';
 	import Tooltip from '$lib/components/common/Tooltip.svelte';
@@ -367,20 +366,22 @@ class Pipe:
 				</div>
 
 				<div class="mb-2 flex-1 overflow-auto h-0 rounded-lg">
-					<CodeEditor
-						bind:this={codeEditor}
-						value={content}
-						lang="python"
-						{boilerplate}
-						onChange={(e) => {
-							_content = e;
-						}}
-						onSave={async () => {
-							if (formElement) {
-								formElement.requestSubmit();
-							}
-						}}
-					/>
+					{#await import('$lib/components/common/CodeEditor.svelte') then { default: CodeEditor }}
+						<CodeEditor
+							bind:this={codeEditor}
+							value={content}
+							lang="python"
+							{boilerplate}
+							onChange={(e) => {
+								_content = e;
+							}}
+							onSave={async () => {
+								if (formElement) {
+									formElement.requestSubmit();
+								}
+							}}
+						/>
+					{/await}
 				</div>
 
 				<div class="pb-3 flex justify-between">

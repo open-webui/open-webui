@@ -18,7 +18,7 @@
 		toggleGlobalById
 	} from '$lib/apis/functions';
 
-	import ArrowDownTray from '../icons/ArrowDownTray.svelte';
+	import Download from '../icons/Download.svelte';
 	import Tooltip from '../common/Tooltip.svelte';
 	import ConfirmDialog from '../common/ConfirmDialog.svelte';
 	import { getModels } from '$lib/apis';
@@ -222,7 +222,7 @@
 	}}
 />
 
-<div class="flex flex-col mt-1.5 mb-0.5">
+<div class="flex flex-col mt-1.5 mb-0.5 px-[16px]">
 	<div class="flex justify-between items-center mb-1">
 		<div class="flex md:self-center text-xl items-center font-medium px-0.5">
 			{$i18n.t('Functions')}
@@ -317,7 +317,7 @@
 	</div>
 </div>
 
-<div class="mb-5">
+<div class="mb-5 px-[16px]">
 	{#each filteredItems as func (func.id)}
 		<div
 			class=" flex space-x-4 cursor-pointer w-full px-2 py-2 dark:hover:bg-white/5 hover:bg-black/5 rounded-xl"
@@ -330,14 +330,14 @@
 					<div class=" flex-1 self-center pl-1">
 						<div class=" font-semibold flex items-center gap-1.5">
 							<div
-								class=" text-xs font-bold px-1 rounded-sm uppercase line-clamp-1 bg-gray-500/20 text-gray-700 dark:text-gray-200"
+								class=" text-xs font-semibold px-1 rounded-sm uppercase line-clamp-1 bg-gray-500/20 text-gray-700 dark:text-gray-200"
 							>
 								{func.type}
 							</div>
 
 							{#if func?.meta?.manifest?.version}
 								<div
-									class="text-xs font-bold px-1 rounded-sm line-clamp-1 bg-gray-500/20 text-gray-700 dark:text-gray-200"
+									class="text-xs font-semibold px-1 rounded-sm line-clamp-1 bg-gray-500/20 text-gray-700 dark:text-gray-200"
 								>
 									v{func?.meta?.manifest?.version ?? ''}
 								</div>
