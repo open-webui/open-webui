@@ -3,19 +3,8 @@
 
 	const i18n = getContext('i18n');
 	import { WEBUI_BASE_URL } from '$lib/constants';
-	import { getUserActiveStatusById, getUserById } from '$lib/apis/users';
 
-	export let id = null;
-	let user = null;
-
-	onMount(async () => {
-		if (id) {
-			user = await getUserById(localStorage.token, id).catch((error) => {
-				console.error('Error fetching user by ID:', error);
-				return null;
-			});
-		}
-	});
+	export let user = null;
 </script>
 
 {#if user}

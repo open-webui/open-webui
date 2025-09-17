@@ -4,6 +4,7 @@
 
 	const i18n = getContext('i18n');
 	import UserStatus from './UserStatus.svelte';
+	import UserStatusLinkPreview from './UserStatusLinkPreview.svelte';
 
 	export let user = null;
 </script>
@@ -13,12 +14,5 @@
 		<slot />
 	</LinkPreview.Trigger>
 
-	<LinkPreview.Content
-		class="w-full max-w-[260px] rounded-2xl border border-gray-100  dark:border-gray-800 z-50 bg-white dark:bg-gray-850 dark:text-white shadow-lg transition"
-		side="right"
-		align="center"
-		sideOffset={8}
-	>
-		<UserStatus id={user.id} />
-	</LinkPreview.Content>
+	<UserStatusLinkPreview id={user?.id} side="right" align="center" sideOffset={8} />
 </LinkPreview.Root>
