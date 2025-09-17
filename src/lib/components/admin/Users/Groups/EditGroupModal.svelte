@@ -131,7 +131,7 @@
 
 				if (newUserIds.length === 0) {
 					if (unmatchedEmails.length > 0) {
-						toast.error(`No matching users found in CSV. Unmatched emails: ${unmatchedEmails.join(', ')}`);
+						toast.error(`These ${unmatchedEmails.length} users: ${unmatchedEmails.join(', ')} could not be added to the group. The users are not onboarded to NYU Pilot GenAI yet.`);
 					} else {
 						toast.error('No new users to add (all users already in group)');
 					}
@@ -147,9 +147,10 @@
 				
 				if (unmatchedEmails.length > 0) {
 					// Show individual error messages for unmatched emails
-					unmatchedEmails.forEach(email => {
-						toast.error(`Email not found: ${email}`);
-					});
+					// unmatchedEmails.forEach(email => {
+					// 	toast.error(`Email not found: ${email}`);
+					// });
+					toast.error(`These ${unmatchedEmails.length} users: ${unmatchedEmails.join(', ')} could not be added to the group. The users are not onboarded to NYU Pilot GenAI yet.`);
 					// Show success message with context
 					toast.success(`Added ${successCount} of ${totalEmails} users to group`);
 				} else {
@@ -365,6 +366,7 @@
 					</div> -->
 
 					<div class="flex justify-end pt-3 text-sm font-medium gap-1.5">
+						{#if selectedTab ==='users'}
 						<button
 							class="flex gap-2 items-center px-3 py-1.5 text-sm cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 rounded-md"
 							type="button"
@@ -373,9 +375,10 @@
 							}}
 						>
 							<div class="flex items-center text-gray-900 dark: text-gray-400">
-								{$i18n.t('Import')}
+								{$i18n.t('Import User List from CSV')}
 							</div>
 						</button>
+						{/if}
 
 						{#if edit}
 							<button
@@ -493,15 +496,16 @@
 				</button>
 			</div>
 			<div class="text-xs text-gray-600 dark:text-gray-500">
-				ⓘ {$i18n.t(
-					'Upload a CSV file with one column named email. Each line should contain the email address of a user you want to add to this group.'
+				ⓘ {@html $i18n.t(
+					'Upload a CSV file with one column named email. Each line should contain the NetID email address of a user you want to add to this group. Users must be <strong>already onboarded to NYU Pilot GenAI</strong> for them to be added to the group'
 				)}
-				<a
+ 				<a
 					class="underline dark:text-gray-200"
-					href="{WEBUI_BASE_URL}/static/user-import.csv"
+					href="{WEBUI_BASE_URL}/static/sample.csv"
 					target="_blank"
 					rel="noopener"
 				>
+				<br/> Here's a sample.csv file
 				</a>
 			</div>
 		</div>
