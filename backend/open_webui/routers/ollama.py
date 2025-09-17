@@ -265,13 +265,26 @@ async def verify_connection(
             ) as r:
                 if r.status != 200:
                     detail = f"HTTP Error: {r.status}"
-                    res = await r.json()
-
-                    if "error" in res:
-                        detail = f"External Error: {res['error']}"
+                    try:
+                        res = await r.json()
+                        if isinstance(res, dict) and "error" in res:
+                            detail = f"External Error: {res['error']}"
+                    except Exception:
+                        pass
                     raise Exception(detail)
 
-                data = await r.json()
+                try:
+                    data = await r.json()
+                except Exception:
+                    raise HTTPException(status_code=400, detail="Invalid response: not JSON")
+
+                if not isinstance(data, dict) or not isinstance(data.get("version"), str):
+                    raise HTTPException(status_code=400, detail="Invalid response: missing Ollama 'version' string")
+
+                # Accept a valid version resembling existing Ollama version, such as  v0.1, v0.1.30, v0.1.30-rc1, etc
+                if not re.match(r'^v\d+(?:\.\d+){1,2}(?:[-+][0-9A-Za-z\.-]+)?$', data["version"]):
+                    raise HTTPException(status_code=400, detail="Invalid Ollama version format. Is this the correct Ollama endpoint?")
+
                 return data
         except aiohttp.ClientError as e:
             log.exception(f"Client error: {str(e)}")

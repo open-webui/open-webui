@@ -5,6 +5,20 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Changed
+- Ollama verify endpoint now validates 200 responses to ensure they are JSON objects containing a properly formatted version string (leading 'v' required), while preserving original error behavior for non-200 responses.
+
+### Fixed
+- Corrected misuse of `await` on the response status (`r.status`).
+
+### Added
+- Unit tests for the Ollama verify endpoint covering valid version responses, missing version field, and non-200 responses.
+
+### Security
+- Incremental hardening of Ollama connection verification. Note: this is not a full SSRF mitigation; additional allowlisting and IP/redirect checks are recommended.
+
 ## [0.6.28] - 2025-09-10
 
 ### Added
