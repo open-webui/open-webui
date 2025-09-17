@@ -3190,7 +3190,7 @@ WHISPER_VAD_FILTER = PersistentConfig(
     os.getenv("WHISPER_VAD_FILTER", "False").lower() == "true",
 )
 
-WHISPER_LANGUAGE = os.getenv("WHISPER_LANGUAGE", "").lower() or None
+WHISPER_LANGUAGE = os.getenv("WHISPER_LANGUAGE", "").lower()
 
 # Add Deepgram configuration
 DEEPGRAM_API_KEY = PersistentConfig(
