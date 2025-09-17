@@ -482,7 +482,7 @@
 	)}
 </div> -->
 
-<div class=" flex justify-end w-full mb-2">
+<div class=" flex justify-end w-full mb-2 px-[16px]">
 	<div class="flex space-x-2">
 		<input
 			id="documents-import-input"
@@ -562,7 +562,7 @@
 </div>
 
 {#if $config?.features.enable_community_sharing}
-	<div class=" my-16">
+	<div class=" my-16 px-[16px]">
 		<div class=" text-xl font-medium mb-1 line-clamp-1">
 			{$i18n.t('Made by Open WebUI Community')}
 		</div>
