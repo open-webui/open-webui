@@ -2168,10 +2168,16 @@ ENABLE_ONEDRIVE_INTEGRATION = PersistentConfig(
     "onedrive.enable",
     os.getenv("ENABLE_ONEDRIVE_INTEGRATION", "False").lower() == "true",
 )
-ENABLE_ONEDRIVE_PERSONAL = (
+
+ENABLE_ONEDRIVE_PERSONAL = PersistentConfig(
+    "ENABLE_ONEDRIVE_PERSONAL",
+    "onedrive.enable_personal", 
     os.environ.get("ENABLE_ONEDRIVE_PERSONAL", "True").lower() == "true"
 )
-ENABLE_ONEDRIVE_BUSINESS = (
+
+ENABLE_ONEDRIVE_BUSINESS = PersistentConfig(
+    "ENABLE_ONEDRIVE_BUSINESS",
+    "onedrive.enable_business",
     os.environ.get("ENABLE_ONEDRIVE_BUSINESS", "True").lower() == "true"
 )
 
