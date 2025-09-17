@@ -5,9 +5,6 @@
 
 	const { saveAs } = fileSaver;
 
-	import jsPDF from 'jspdf';
-	import html2canvas from 'html2canvas-pro';
-
 	import dayjs from '$lib/dayjs';
 	import duration from 'dayjs/plugin/duration';
 	import relativeTime from 'dayjs/plugin/relativeTime';
@@ -137,6 +134,11 @@
 
 	const downloadPdf = async (note) => {
 		try {
+			const [{ default: jsPDF }, { default: html2canvas }] = await Promise.all([
+				import('jspdf'),
+				import('html2canvas-pro')
+			]);
+
 			// Define a fixed virtual screen size
 			const virtualWidth = 1024; // Fixed width (adjust as needed)
 			const virtualHeight = 1400; // Fixed height (adjust as needed)

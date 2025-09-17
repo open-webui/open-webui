@@ -6,9 +6,6 @@
 	import fileSaver from 'file-saver';
 	const { saveAs } = fileSaver;
 
-	import jsPDF from 'jspdf';
-	import html2canvas from 'html2canvas-pro';
-
 	const dispatch = createEventDispatcher();
 
 	import Dropdown from '$lib/components/common/Dropdown.svelte';
@@ -90,6 +87,11 @@
 		if (!chat) {
 			return;
 		}
+
+		const [{ default: jsPDF }, { default: html2canvas }] = await Promise.all([
+			import('jspdf'),
+			import('html2canvas-pro')
+		]);
 
 		if ($settings?.stylizedPdfExport ?? true) {
 			showFullMessages = true;
