@@ -44,7 +44,7 @@
 		}
 	};
 
-	$: if (query && userSuggestions) {
+	$: if (query !== null && userSuggestions) {
 		getUserList();
 	}
 
