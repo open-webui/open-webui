@@ -127,8 +127,7 @@ def get_azure_entraid_token():
     """
     try:
         token_provider = get_bearer_token_provider(
-            DefaultAzureCredential(),
-            "https://cognitiveservices.azure.com/.default"
+            DefaultAzureCredential(), "https://cognitiveservices.azure.com/.default"
         )
         token = token_provider()
         return token
