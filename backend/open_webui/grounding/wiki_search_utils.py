@@ -3,10 +3,12 @@ Pure txtai-wikipedia semantic search - absolutely generic
 """
 
 import asyncio
+import hashlib
 import importlib.util
 import logging
 import re
 import time
+import weakref
 from concurrent.futures import ThreadPoolExecutor
 from typing import Dict, List, Optional
 from datetime import datetime
@@ -71,6 +73,11 @@ class WikiSearchGrounder:
     _semaphore_lock = asyncio.Lock()
     MAX_CONCURRENT_OPERATIONS = 1
 
+    # Query-specific locks to prevent concurrent processing of identical queries
+    # Using WeakValueDictionary to automatically clean up completed queries
+    _query_locks = weakref.WeakValueDictionary()
+    _query_locks_lock = asyncio.Lock()
+
     def __init__(self):
         self.max_content_length = 4000
         self.max_search_results = 5
@@ -133,6 +140,70 @@ class WikiSearchGrounder:
         )
         log.debug(
             f"🔓 [{operation_name}] Released semaphore after {total_time:.2f}s (available: {available_permits})"
+        )
+
+    @classmethod
+    async def _get_query_lock(cls, query: str) -> asyncio.Lock:
+        """Get or create a query-specific lock to prevent concurrent processing of identical queries"""
+        # Create a hash of the query to use as a key
+        query_hash = hashlib.md5(query.encode("utf-8")).hexdigest()
+
+        async with cls._query_locks_lock:
+            if query_hash not in cls._query_locks:
+                # Create a new lock for this query
+                query_lock = asyncio.Lock()
+                cls._query_locks[query_hash] = query_lock
+                log.debug(
+                    f"🔐 Created new query lock for: '{query[:50]}...' (hash: {query_hash[:8]})"
+                )
+            else:
+                query_lock = cls._query_locks[query_hash]
+                log.debug(
+                    f"🔐 Reusing existing query lock for: '{query[:50]}...' (hash: {query_hash[:8]})"
+                )
+
+            return query_lock
+
+    async def _acquire_query_lock(
+        self, query: str, operation_name: str
+    ) -> tuple[asyncio.Lock, str, float]:
+        """Acquire query-specific lock and return lock, query hash, and start time"""
+        query_lock = await self._get_query_lock(query)
+        query_hash = hashlib.md5(query.encode("utf-8")).hexdigest()
+
+        # Log attempt to acquire query lock
+        log.debug(
+            f"🚦 [{operation_name}] Requesting query lock for: '{query[:50]}...' (hash: {query_hash[:8]})"
+        )
+
+        start_time = time.time()
+        await query_lock.acquire()
+
+        wait_time = time.time() - start_time
+        if wait_time > 0.1:  # Log if we waited more than 100ms
+            log.info(
+                f"🔐 [{operation_name}] Acquired query lock after {wait_time:.2f}s wait for: '{query[:50]}...'"
+            )
+        else:
+            log.debug(
+                f"🔐 [{operation_name}] Acquired query lock immediately for: '{query[:50]}...'"
+            )
+
+        return query_lock, query_hash, start_time
+
+    def _release_query_lock(
+        self,
+        query_lock: asyncio.Lock,
+        query_hash: str,
+        operation_name: str,
+        start_time: float,
+        query: str,
+    ):
+        """Release query-specific lock and log timing information"""
+        total_time = time.time() - start_time
+        query_lock.release()
+        log.debug(
+            f"🔐 [{operation_name}] Released query lock after {total_time:.2f}s for: '{query[:50]}...' (hash: {query_hash[:8]})"
         )
 
     @classmethod
@@ -649,7 +720,20 @@ class WikiSearchGrounder:
 
         log.info("🔍 Wiki grounding enabled, proceeding with search")
         log.info(f"🔍 Ground query starting for: '{query[:50]}...'")
-        results = await self.search(query)
+
+        # Acquire query-specific lock to prevent concurrent processing of identical queries
+        query_lock, query_hash, query_start_time = await self._acquire_query_lock(
+            query, "ground_query"
+        )
+
+        try:
+            # Perform the actual search
+            results = await self.search(query)
+        finally:
+            # Always release the query lock
+            self._release_query_lock(
+                query_lock, query_hash, "ground_query", query_start_time, query
+            )
 
         if not results:
             log.info("🔍 No search results found")
