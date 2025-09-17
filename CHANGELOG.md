@@ -5,6 +5,16 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.6.30] - 2025-09-17
+
+### Added
+
+- 🔑 Microsoft Entra ID authentication type support was added for Azure OpenAI connections, enabling enhanced security and streamlined authentication workflows.
+
+### Fixed
+
+- ☁️ OneDrive integration was fixed after recent breakage, restoring reliable account connectivity and file access.
+
 ## [0.6.29] - 2025-09-17
 
 ### Added
