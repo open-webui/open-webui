@@ -14,8 +14,8 @@
 	</LinkPreview.Trigger>
 
 	<LinkPreview.Content
-		class="max-w-full w-[260px] rounded-2xl z-9999 bg-white dark:bg-black dark:text-white shadow-lg"
-		side="left"
+		class="w-full max-w-[260px] rounded-2xl border border-gray-100  dark:border-gray-800 z-50 bg-white dark:bg-gray-850 dark:text-white shadow-lg transition"
+		side="right"
 		align="center"
 		sideOffset={8}
 	>
