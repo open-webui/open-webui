@@ -2033,7 +2033,7 @@ async def process_chat_response(
                                     choices = data.get("choices", [])
 
                                     # 17421
-                                    usage = data.get("usage", {})
+                                    usage = data.get("usage", {}) or {}
                                     usage.update(data.get("timings", {}))  # llama.cpp
                                     if usage:
                                         await event_emitter(
