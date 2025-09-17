@@ -15,7 +15,7 @@
 
 	import { settings, user, shortCodesToEmojis } from '$lib/stores';
 
-	import { WEBUI_BASE_URL } from '$lib/constants';
+	import { WEBUI_API_BASE_URL, WEBUI_BASE_URL } from '$lib/constants';
 
 	import Markdown from '$lib/components/chat/Messages/Markdown.svelte';
 	import ProfileImage from '$lib/components/chat/Messages/ProfileImage.svelte';
@@ -34,6 +34,8 @@
 	import ChevronRight from '$lib/components/icons/ChevronRight.svelte';
 	import { formatDate } from '$lib/utils';
 	import Emoji from '$lib/components/common/Emoji.svelte';
+	import { t } from 'i18next';
+	import Skeleton from '$lib/components/chat/Messages/Skeleton.svelte';
 
 	export let message;
 	export let showUserProfile = true;
@@ -138,12 +140,20 @@
 		>
 			<div class={`shrink-0 mr-3 w-9`}>
 				{#if showUserProfile}
-					<ProfilePreview user={message.user}>
-						<ProfileImage
-							src={message.user?.profile_image_url ?? `${WEBUI_BASE_URL}/static/favicon.png`}
-							className={'size-8 translate-y-1 ml-0.5'}
+					{#if message?.meta?.model_id}
+						<img
+							src={`${WEBUI_API_BASE_URL}/models/model/profile/image?id=${message.meta.model_id}`}
+							alt={message.meta.model_name ?? message.meta.model_id}
+							class="size-8 translate-y-1 ml-0.5 object-cover rounded-full"
 						/>
-					</ProfilePreview>
+					{:else}
+						<ProfilePreview user={message.user}>
+							<ProfileImage
+								src={message.user?.profile_image_url ?? `${WEBUI_BASE_URL}/static/favicon.png`}
+								className={'size-8 translate-y-1 ml-0.5'}
+							/>
+						</ProfilePreview>
+					{/if}
 				{:else}
 					<!-- <div class="w-7 h-7 rounded-full bg-transparent" /> -->
 
@@ -163,7 +173,11 @@
 				{#if showUserProfile}
 					<Name>
 						<div class=" self-end text-base shrink-0 font-medium truncate">
-							{message?.user?.name}
+							{#if message?.meta?.model_id}
+								{message?.meta?.model_name ?? message?.meta?.model_id}
+							{:else}
+								{message?.user?.name}
+							{/if}
 						</div>
 
 						{#if message.created_at}
@@ -251,12 +265,16 @@
 					</div>
 				{:else}
 					<div class=" min-w-full markdown-prose">
-						<Markdown
-							id={message.id}
-							content={message.content}
-						/>{#if message.created_at !== message.updated_at}<span class="text-gray-500 text-[10px]"
-								>(edited)</span
-							>{/if}
+						{#if (message?.content ?? '').trim() === '' && message?.meta?.model_id}
+							<Skeleton />
+						{:else}
+							<Markdown
+								id={message.id}
+								content={message.content}
+							/>{#if message.created_at !== message.updated_at && (message?.meta?.model_id ?? null) === null}<span
+									class="text-gray-500 text-[10px]">({$i18n.t('edited')})</span
+								>{/if}
+						{/if}
 					</div>
 
 					{#if (message?.reactions ?? []).length > 0}
