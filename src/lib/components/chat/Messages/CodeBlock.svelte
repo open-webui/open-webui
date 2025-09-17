@@ -7,7 +7,6 @@
 	import 'highlight.js/styles/github-dark.min.css';
 
 	import PyodideWorker from '$lib/workers/pyodide.worker?worker';
-	import CodeEditor from '$lib/components/common/CodeEditor.svelte';
 	import SvgPanZoom from '$lib/components/common/SVGPanZoom.svelte';
 	import { config } from '$lib/stores';
 	import { executeCode } from '$lib/apis/utils';
@@ -481,17 +480,19 @@
 
 				{#if !collapsed}
 					{#if edit}
-						<CodeEditor
-							value={code}
-							{id}
-							{lang}
-							onSave={() => {
-								saveCode();
-							}}
-							onChange={(value) => {
-								_code = value;
-							}}
-						/>
+						{#await import('$lib/components/common/CodeEditor.svelte') then { default: CodeEditor }}
+							<CodeEditor
+								value={code}
+								{id}
+								{lang}
+								onSave={() => {
+									saveCode();
+								}}
+								onChange={(value) => {
+									_code = value;
+								}}
+							/>
+						{/await}
 					{:else}
 						<pre
 							class=" hljs p-4 px-5 overflow-x-auto"
