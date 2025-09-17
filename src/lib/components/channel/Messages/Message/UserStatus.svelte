@@ -30,8 +30,8 @@
 		</div>
 
 		<div class=" flex flex-col w-full flex-1">
-			<div class="mb-0.5">
-				<span class="font-medium line-clamp-1"> {user.name} </span>
+			<div class="mb-0.5 font-medium line-clamp-1 pr-2">
+				{user.name}
 			</div>
 
 			<div class=" flex items-center gap-2">
