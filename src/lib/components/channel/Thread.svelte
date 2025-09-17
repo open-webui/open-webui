@@ -203,6 +203,8 @@
 					id={threadId}
 					typingUsersClassName="from-gray-50 dark:from-gray-850"
 					{typingUsers}
+					userSuggestions={true}
+					channelSuggestions={true}
 					{onChange}
 					onSubmit={submitHandler}
 				/>
