@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { DropdownMenu } from 'bits-ui';
-	import { getContext, onMount, tick } from 'svelte';
+	import { getContext, onMount, tick, createEventDispatcher } from 'svelte';
 	import { fly } from 'svelte/transition';
 	import { flyAndScale } from '$lib/utils/transitions';
 
@@ -13,6 +13,7 @@
 	import Camera from '$lib/components/icons/Camera.svelte';
 	import Note from '$lib/components/icons/Note.svelte';
 	import Clip from '$lib/components/icons/Clip.svelte';
+	import Link from '$lib/components/icons/Link.svelte';
 	import ChatBubbleOval from '$lib/components/icons/ChatBubbleOval.svelte';
 	import Refresh from '$lib/components/icons/Refresh.svelte';
 	import Agile from '$lib/components/icons/Agile.svelte';
@@ -26,6 +27,7 @@
 	import Knowledge from './InputMenu/Knowledge.svelte';
 
 	const i18n = getContext('i18n');
+	const dispatch = createEventDispatcher();
 
 	export let files = [];
 
@@ -134,6 +136,16 @@
 							<div class="line-clamp-1">{$i18n.t('Upload Files')}</div>
 						</DropdownMenu.Item>
 					</Tooltip>
+
+					<DropdownMenu.Item
+						class="flex gap-2 items-center px-3 py-1.5 text-sm cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 rounded-xl"
+						on:click={() => {
+							dispatch('openAttachWebsiteModal');
+						}}
+					>
+						<Link />
+						<div class="line-clamp-1">{$i18n.t('Attach Website')}</div>
+					</DropdownMenu.Item>
 
 					<Tooltip
 						content={fileUploadCapableModels.length !== selectedModels.length
