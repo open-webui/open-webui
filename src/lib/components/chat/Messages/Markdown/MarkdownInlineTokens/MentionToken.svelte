@@ -1,9 +1,14 @@
 <script lang="ts">
 	import type { Token } from 'marked';
-	import Tooltip from '$lib/components/common/Tooltip.svelte';
+	import { LinkPreview } from 'bits-ui';
+
+	import { getContext } from 'svelte';
+
 	import { goto } from '$app/navigation';
 	import { channels, models } from '$lib/stores';
-	import i18n from '$lib/i18n';
+	import UserStatus from '$lib/components/channel/Messages/Message/UserStatus.svelte';
+
+	const i18n = getContext('i18n');
 
 	export let token: Token;
 
@@ -61,35 +66,50 @@
 	};
 </script>
 
-<Tooltip
-	as="span"
-	className="mention cursor-pointer"
-	onClick={async () => {
-		if (triggerChar === '@') {
-			if (idType === 'U') {
-				// Open user profile
-				console.log('Clicked user mention', id);
-			} else if (idType === 'A') {
-				// Open agent/assistant/ai model profile
-				console.log('Clicked agent mention', id);
-				await goto(`/?model=${id}`);
-			}
-		} else if (triggerChar === '#') {
-			if (idType === 'C') {
-				// Open channel
-				if ($channels.find((c) => c.id === id)) {
-					await goto(`/channels/${id}`);
+<LinkPreview.Root openDelay={0} closeDelay={0}>
+	<LinkPreview.Trigger class="mention cursor-pointer no-underline! font-normal! ">
+		<!-- svelte-ignore a11y-click-events-have-key-events -->
+		<!-- svelte-ignore a11y-no-static-element-interactions -->
+
+		<span
+			on:click={async () => {
+				if (triggerChar === '@') {
+					if (idType === 'U') {
+						// Open user profile
+						console.log('Clicked user mention', id);
+					} else if (idType === 'A') {
+						// Open agent/assistant/ai model profile
+						console.log('Clicked agent mention', id);
+						await goto(`/?model=${id}`);
+					}
+				} else if (triggerChar === '#') {
+					if (idType === 'C') {
+						// Open channel
+						if ($channels.find((c) => c.id === id)) {
+							await goto(`/channels/${id}`);
+						}
+					} else if (idType === 'T') {
+						// Open thread
+					}
+				} else {
+					// Unknown trigger char, just log
+					console.log('Clicked mention', id);
 				}
-			} else if (idType === 'T') {
-				// Open thread
-			}
-		} else {
-			// Unknown trigger char, just log
-			console.log('Clicked mention', id);
-		}
-	}}
-	content={id}
-	placement="top"
->
-	{triggerChar}{label}
-</Tooltip>
+			}}
+		>
+			{triggerChar}{label}
+		</span>
+	</LinkPreview.Trigger>
+
+	<LinkPreview.Content
+		class="max-w-full w-[240px] rounded-2xl z-9999 bg-white dark:bg-black dark:text-white shadow-lg"
+		side="top"
+		align="start"
+		sideOffset={6}
+	>
+		{#if triggerChar === '@' && idType === 'U'}
+			<UserStatus {id} />
+		{/if}
+		<!-- <div class="flex space-x-4">HI</div> -->
+	</LinkPreview.Content>
+</LinkPreview.Root>
