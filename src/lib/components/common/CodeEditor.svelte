@@ -9,7 +9,6 @@
 	import { indentUnit } from '@codemirror/language';
 	
 	import { highlightJSExtension } from './HighlightJSExtension.js';
-	import { languages } from '@codemirror/language-data';
 
 	import { oneDark } from '@codemirror/theme-one-dark';
 
