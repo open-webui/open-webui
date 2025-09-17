@@ -6,9 +6,6 @@
 	import fileSaver from 'file-saver';
 	const { saveAs } = fileSaver;
 
-	import jsPDF from 'jspdf';
-	import html2canvas from 'html2canvas-pro';
-
 	import { downloadChatAsPDF } from '$lib/apis/utils';
 	import { copyToClipboard, createMessagesList } from '$lib/utils';
 
@@ -75,6 +72,11 @@
 	};
 
 	const downloadPdf = async () => {
+		const [{ default: jsPDF }, { default: html2canvas }] = await Promise.all([
+			import('jspdf'),
+			import('html2canvas-pro')
+		]);
+
 		if ($settings?.stylizedPdfExport ?? true) {
 			showFullMessages = true;
 			await tick();
