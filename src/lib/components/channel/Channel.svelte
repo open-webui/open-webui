@@ -250,6 +250,8 @@
 				<MessageInput
 					id="root"
 					{typingUsers}
+					userSuggestions={true}
+					channelSuggestions={true}
 					{onChange}
 					onSubmit={submitHandler}
 					{scrollToBottom}

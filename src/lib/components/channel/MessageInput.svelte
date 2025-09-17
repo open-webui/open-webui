@@ -56,6 +56,9 @@
 	export let acceptFiles = true;
 	export let showFormattingToolbar = true;
 
+	export let userSuggestions = false;
+	export let channelSuggestions = false;
+
 	export let typingUsersClassName = 'from-white dark:from-gray-900';
 
 	let loaded = false;
@@ -563,9 +566,24 @@
 			{
 				char: '@',
 				render: getSuggestionRenderer(MentionList, {
-					i18n
+					i18n,
+					triggerChar: '@',
+					modelSuggestions: true,
+					userSuggestions
 				})
 			},
+			...(channelSuggestions
+				? [
+						{
+							char: '#',
+							render: getSuggestionRenderer(MentionList, {
+								i18n,
+								triggerChar: '#',
+								channelSuggestions
+							})
+						}
+					]
+				: []),
 			{
 				char: '/',
 				render: getSuggestionRenderer(CommandSuggestionList, {

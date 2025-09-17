@@ -107,8 +107,18 @@ class UserInfoResponse(BaseModel):
     role: str
 
 
+class UserIdNameResponse(BaseModel):
+    id: str
+    name: str
+
+
 class UserInfoListResponse(BaseModel):
     users: list[UserInfoResponse]
+    total: int
+
+
+class UserIdNameListResponse(BaseModel):
+    users: list[UserIdNameResponse]
     total: int
 
 
