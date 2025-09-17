@@ -110,9 +110,6 @@ from open_webui.config import (
     OLLAMA_API_CONFIGS,
     # OpenAI
     ENABLE_OPENAI_API,
-    ONEDRIVE_CLIENT_ID,
-    ONEDRIVE_SHAREPOINT_URL,
-    ONEDRIVE_SHAREPOINT_TENANT_ID,
     OPENAI_API_BASE_URLS,
     OPENAI_API_KEYS,
     OPENAI_API_CONFIGS,
@@ -303,14 +300,16 @@ from open_webui.config import (
     GOOGLE_PSE_ENGINE_ID,
     GOOGLE_DRIVE_CLIENT_ID,
     GOOGLE_DRIVE_API_KEY,
+    ENABLE_ONEDRIVE_INTEGRATION,
     ONEDRIVE_CLIENT_ID,
     ONEDRIVE_SHAREPOINT_URL,
     ONEDRIVE_SHAREPOINT_TENANT_ID,
+    ENABLE_ONEDRIVE_PERSONAL,
+    ENABLE_ONEDRIVE_BUSINESS,
     ENABLE_RAG_HYBRID_SEARCH,
     ENABLE_RAG_LOCAL_WEB_FETCH,
     ENABLE_WEB_LOADER_SSL_VERIFICATION,
     ENABLE_GOOGLE_DRIVE_INTEGRATION,
-    ENABLE_ONEDRIVE_INTEGRATION,
     UPLOAD_DIR,
     EXTERNAL_WEB_SEARCH_URL,
     EXTERNAL_WEB_SEARCH_API_KEY,
@@ -1701,8 +1700,8 @@ async def get_app_config(request: Request):
                     "enable_onedrive_integration": app.state.config.ENABLE_ONEDRIVE_INTEGRATION,
                     **(
                         {
-                            "enable_onedrive_personal": app.state.config.ENABLE_ONEDRIVE_PERSONAL,
-                            "enable_onedrive_business": app.state.config.ENABLE_ONEDRIVE_BUSINESS,
+                            "enable_onedrive_personal": ENABLE_ONEDRIVE_PERSONAL,
+                            "enable_onedrive_business": ENABLE_ONEDRIVE_BUSINESS,
                         }
                         if app.state.config.ENABLE_ONEDRIVE_INTEGRATION
                         else {}
