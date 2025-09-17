@@ -159,7 +159,7 @@
 
 {#if channel}
 	<div class="flex flex-col w-full h-full bg-gray-50 dark:bg-gray-850">
-		<div class="flex items-center justify-between px-3.5 pt-3">
+		<div class="sticky top-0 flex items-center justify-between px-3.5 py-3">
 			<div class=" font-medium text-lg">{$i18n.t('Thread')}</div>
 
 			<div>
@@ -174,7 +174,7 @@
 			</div>
 		</div>
 
-		<div class=" max-h-full w-full overflow-y-auto pt-3" bind:this={messagesContainerElement}>
+		<div class=" max-h-full w-full overflow-y-auto" bind:this={messagesContainerElement}>
 			<Messages
 				id={threadId}
 				{channel}
