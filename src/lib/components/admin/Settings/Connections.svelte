@@ -261,7 +261,7 @@
 								<div class="flex flex-col gap-1.5 mt-1.5">
 									{#each OPENAI_API_BASE_URLS as url, idx}
 										<OpenAIConnection
-											{url}
+											bind:url={OPENAI_API_BASE_URLS[idx]}
 											bind:key={OPENAI_API_KEYS[idx]}
 											bind:config={OPENAI_API_CONFIGS[idx]}
 											pipeline={pipelineUrls[url] ? true : false}
@@ -326,7 +326,7 @@
 								<div class="flex-1 flex flex-col gap-1.5 mt-1.5">
 									{#each OLLAMA_BASE_URLS as url, idx}
 										<OllamaConnection
-											{url}
+											bind:url={OLLAMA_BASE_URLS[idx]}
 											bind:config={OLLAMA_API_CONFIGS[idx]}
 											{idx}
 											onSubmit={() => {

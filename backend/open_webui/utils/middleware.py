@@ -817,10 +817,11 @@ async def process_chat_payload(request, form_data, user, metadata, model):
 
     oauth_token = None
     try:
-        oauth_token = request.app.state.oauth_manager.get_oauth_token(
-            user.id,
-            request.cookies.get("oauth_session_id", None),
-        )
+        if request.cookies.get("oauth_session_id", None):
+            oauth_token = request.app.state.oauth_manager.get_oauth_token(
+                user.id,
+                request.cookies.get("oauth_session_id", None),
+            )
     except Exception as e:
         log.error(f"Error getting OAuth token: {e}")
 
@@ -1130,11 +1131,11 @@ async def process_chat_response(
     request, response, form_data, user, metadata, model, events, tasks
 ):
     async def background_tasks_handler():
-        message_map = Chats.get_messages_by_chat_id(metadata["chat_id"])
-        message = message_map.get(metadata["message_id"]) if message_map else None
+        messages_map = Chats.get_messages_map_by_chat_id(metadata["chat_id"])
+        message = messages_map.get(metadata["message_id"]) if messages_map else None
 
         if message:
-            message_list = get_message_list(message_map, metadata["message_id"])
+            message_list = get_message_list(messages_map, metadata["message_id"])
 
             # Remove details tags and files from the messages.
             # as get_message_list creates a new list, it does not affect
@@ -1496,10 +1497,11 @@ async def process_chat_response(
 
     oauth_token = None
     try:
-        oauth_token = request.app.state.oauth_manager.get_oauth_token(
-            user.id,
-            request.cookies.get("oauth_session_id", None),
-        )
+        if request.cookies.get("oauth_session_id", None):
+            oauth_token = request.app.state.oauth_manager.get_oauth_token(
+                user.id,
+                request.cookies.get("oauth_session_id", None),
+            )
     except Exception as e:
         log.error(f"Error getting OAuth token: {e}")
 
@@ -2029,6 +2031,20 @@ async def process_chat_response(
                                     )
                                 else:
                                     choices = data.get("choices", [])
+
+                                    # 17421
+                                    usage = data.get("usage", {}) or {}
+                                    usage.update(data.get("timings", {}))  # llama.cpp
+                                    if usage:
+                                        await event_emitter(
+                                            {
+                                                "type": "chat:completion",
+                                                "data": {
+                                                    "usage": usage,
+                                                },
+                                            }
+                                        )
+
                                     if not choices:
                                         error = data.get("error", {})
                                         if error:
@@ -2037,20 +2053,6 @@ async def process_chat_response(
                                                     "type": "chat:completion",
                                                     "data": {
                                                         "error": error,
-                                                    },
-                                                }
-                                            )
-                                        usage = data.get("usage", {})
-                                        usage.update(
-                                            data.get("timing", {})
-                                        )  # llama.cpp
-
-                                        if usage:
-                                            await event_emitter(
-                                                {
-                                                    "type": "chat:completion",
-                                                    "data": {
-                                                        "usage": usage,
                                                     },
                                                 }
                                             )

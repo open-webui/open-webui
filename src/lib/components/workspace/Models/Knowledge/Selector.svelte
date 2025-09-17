@@ -143,7 +143,7 @@
 
 	<div slot="content">
 		<DropdownMenu.Content
-			class="w-full max-w-96 rounded-xl px-1 py-1.5 border border-gray-300/30 dark:border-gray-700/50 z-[99999999] bg-white dark:bg-gray-850 dark:text-white shadow-lg"
+			class="w-full max-w-96 rounded-xl p-1 border border-gray-100  dark:border-gray-800 z-[99999999] bg-white dark:bg-gray-850 dark:text-white shadow-lg"
 			sideOffset={8}
 			side="bottom"
 			align="start"
@@ -179,31 +179,31 @@
 								<div class=" font-medium text-black dark:text-gray-100 flex items-center gap-1">
 									{#if item.legacy}
 										<div
-											class="bg-gray-500/20 text-gray-700 dark:text-gray-200 rounded-sm uppercase text-xs font-bold px-1 shrink-0"
+											class="bg-gray-500/20 text-gray-700 dark:text-gray-200 rounded-sm uppercase text-xs font-semibold px-1 shrink-0"
 										>
 											Legacy
 										</div>
 									{:else if item?.meta?.document}
 										<div
-											class="bg-gray-500/20 text-gray-700 dark:text-gray-200 rounded-sm uppercase text-xs font-bold px-1 shrink-0"
+											class="bg-gray-500/20 text-gray-700 dark:text-gray-200 rounded-sm uppercase text-xs font-semibold px-1 shrink-0"
 										>
 											Document
 										</div>
 									{:else if item?.type === 'file'}
 										<div
-											class="bg-gray-500/20 text-gray-700 dark:text-gray-200 rounded-sm uppercase text-xs font-bold px-1 shrink-0"
+											class="bg-gray-500/20 text-gray-700 dark:text-gray-200 rounded-sm uppercase text-xs font-semibold px-1 shrink-0"
 										>
 											File
 										</div>
 									{:else if item?.type === 'note'}
 										<div
-											class="bg-blue-500/20 text-blue-700 dark:text-blue-200 rounded-sm uppercase text-xs font-bold px-1 shrink-0"
+											class="bg-blue-500/20 text-blue-700 dark:text-blue-200 rounded-sm uppercase text-xs font-semibold px-1 shrink-0"
 										>
 											Note
 										</div>
 									{:else}
 										<div
-											class="bg-green-500/20 text-green-700 dark:text-green-200 rounded-sm uppercase text-xs font-bold px-1 shrink-0"
+											class="bg-green-500/20 text-green-700 dark:text-green-200 rounded-sm uppercase text-xs font-semibold px-1 shrink-0"
 										>
 											Collection
 										</div>
