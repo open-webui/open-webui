@@ -2110,6 +2110,7 @@
 				{stopResponse}
 				{showMessage}
 				{eventTarget}
+				{initChatHandler}
 				{addMessages}
 				bind:webSearchEnabled
 			/>

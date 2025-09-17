@@ -32,6 +32,7 @@
 	export let files;
 	export let modelId;
 	export let webSearchEnabled = false;
+	export let initChatHandler: Function;
 
 	export let pane;
 
@@ -271,6 +272,7 @@
 									{modelId}
 									{history}
 									{addMessages}
+									{initChatHandler}
 									{webSearchEnabled}
 									on:close={() => {
 										showControls.set(false);
