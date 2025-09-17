@@ -91,18 +91,6 @@
 		}
 	});
 
-	// Convert TipTap mention spans -> <@id>
-	turndownService.addRule('mentions', {
-		filter: (node) => node.nodeName === 'SPAN' && node.getAttribute('data-type') === 'mention',
-		replacement: (_content, node: HTMLElement) => {
-			const id = node.getAttribute('data-id') || '';
-			// TipTap stores the trigger char in data-mention-suggestion-char (usually "@")
-			const ch = node.getAttribute('data-mention-suggestion-char') || '@';
-			// Emit <@id> style, e.g. <@llama3.2:latest>
-			return `<${ch}${id}>`;
-		}
-	});
-
 	import { onMount, onDestroy, tick, getContext } from 'svelte';
 	import { createEventDispatcher } from 'svelte';
 
@@ -112,7 +100,7 @@
 	import { Fragment, DOMParser } from 'prosemirror-model';
 	import { EditorState, Plugin, PluginKey, TextSelection, Selection } from 'prosemirror-state';
 	import { Decoration, DecorationSet } from 'prosemirror-view';
-	import { Editor, Extension, mergeAttributes } from '@tiptap/core';
+	import { Editor, Extension } from '@tiptap/core';
 
 	// Yjs imports
 	import * as Y from 'yjs';
@@ -153,6 +141,7 @@
 
 	import { PASTED_TEXT_CHARACTER_LIMIT } from '$lib/constants';
 	import { createLowlight } from 'lowlight';
+	import { initializeHighlightJS } from '$lib/utils/highlightLanguageLoader.js';
 	import javascript from 'highlight.js/lib/languages/javascript';
 	import typescript from 'highlight.js/lib/languages/typescript';
 	import python from 'highlight.js/lib/languages/python';
@@ -173,6 +162,7 @@
 	lowlight.register('css', css);
 	lowlight.register('elixir', elixir);
 
+<<<<<<< HEAD
 	const loadLanguageForLowlight = async (lang) => {
 	if (lowlight.registered(lang)) {
 	return true;
@@ -187,6 +177,25 @@
 	return false;
 	  }
 	};
+
+	// Register custom HCL
+	const hclLanguage = () => ({
+		keywords: {
+			keyword: 'resource data variable locals output module provider terraform required_providers',
+			built_in: 'true false null',
+			type: 'string number bool list map set object tuple'
+		},
+		contains: [
+			{ className: 'string', begin: '"', end: '"', contains: [{ className: 'subst', begin: '\\$\\{', end: '\\}' }] },
+			{ className: 'comment', begin: '#', end: '$' },
+			{ className: 'comment', begin: '/\\*', end: '\\*/' },
+			{ className: 'number', begin: '\\b\\d+(\\.\\d+)?' }
+		]
+	});
+
+	lowlight.register('hcl', hclLanguage);
+	lowlight.register('terraform', hclLanguage);
+
 	export let editor = null;
 
 	export let socket = null;
@@ -197,18 +206,6 @@
 
 	export let className = 'input-prose';
 	export let placeholder = 'Type here...';
-	let _placeholder = placeholder;
-
-	$: if (placeholder !== _placeholder) {
-		setPlaceholder();
-	}
-
-	const setPlaceholder = () => {
-		_placeholder = placeholder;
-		if (editor) {
-			editor?.view.dispatch(editor.state.tr);
-		}
-	};
 
 	export let richText = true;
 	export let link = false;
@@ -1009,7 +1006,7 @@
 				StarterKit.configure({
 					link: link
 				}),
-				Placeholder.configure({ placeholder: () => _placeholder }),
+				Placeholder.configure({ placeholder }),
 				SelectionDecoration,
 
 <<<<<<< HEAD
@@ -1129,6 +1126,7 @@
 
 				htmlValue = editor.getHTML();
 				jsonValue = editor.getJSON();
+
 				mdValue = turndownService
 					.turndown(
 						htmlValue
@@ -1171,30 +1169,14 @@
 				handlePaste: (view, event) => {
 					// Force plain-text pasting when richText === false
 					if (!richText) {
+						const text = (event.clipboardData?.getData('text/plain') ?? '').replace(/\r\n/g, '\n');
 						// swallow HTML completely
 						event.preventDefault();
+
+						// Insert as pure text (no HTML parsing)
 						const { state, dispatch } = view;
-
-						const plainText = (event.clipboardData?.getData('text/plain') ?? '').replace(
-							/\r\n/g,
-							'\n'
-						);
-
-						const lines = plainText.split('\n');
-						const nodes = [];
-
-						lines.forEach((line, index) => {
-							if (index > 0) {
-								nodes.push(state.schema.nodes.hardBreak.create());
-							}
-							if (line.length > 0) {
-								nodes.push(state.schema.text(line));
-							}
-						});
-
-						const fragment = Fragment.fromArray(nodes);
-						dispatch(state.tr.replaceSelectionWith(fragment, false).scrollIntoView());
-
+						const { from, to } = state.selection;
+						dispatch(state.tr.insertText(text, from, to).scrollIntoView());
 						return true; // handled
 					}
 
