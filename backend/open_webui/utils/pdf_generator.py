@@ -404,15 +404,15 @@ class PDFGenerator:
 
         # Add message header
         pdf.set_font("NotoSans", "b", 14)
-        pdf.cell(0, 10, f"{role.title()}", ln=True)
+        pdf.multi_cell(0, 10, f"{role.title()}", ln=True)
         
         if model:
             pdf.set_font("NotoSans", "", 10)
-            pdf.cell(0, 5, f"Model: {model}", ln=True)
+            pdf.multi_cell(0, 5, f"Model: {model}", ln=True)
         
         if timestamp:
             date_str = self.format_timestamp(timestamp)
-            pdf.cell(0, 5, f"Time: {date_str}", ln=True)
+            pdf.multi_cell(0, 5, f"Time: {date_str}", ln=True)
         
         pdf.ln(5)
         
@@ -562,7 +562,7 @@ class PDFGenerator:
 
             # Add title
             pdf.set_font("NotoSans", "b", 16)
-            pdf.cell(0, 10, self.form_data.title, ln=True)
+            pdf.multi_cell(0, 10, self.form_data.title, ln=True)
             pdf.ln(10)
 
             # Process each message
