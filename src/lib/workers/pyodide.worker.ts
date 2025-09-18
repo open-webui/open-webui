@@ -78,7 +78,7 @@ self.onmessage = async (event) => {
 
 	// Get list of existing files before execution
 	const { getAllFiles, scanForNewFiles } = await import('../pyodide/fs-utils');
-	const fs: any = (self.pyodide.FS as any);
+	const fs: any = self.pyodide.FS as any;
 	const existingFiles = getAllFiles(fs, { getCwd: () => fs.cwd() });
 
 	try {

@@ -39,9 +39,8 @@ const executeCode = async (id: string, code: string) => {
 
 	// Get list of existing files before execution
 	const { getAllFiles, scanForNewFiles } = await import('./fs-utils');
-	const fs: any = (self.pyodide.FS as any);
+	const fs: any = self.pyodide.FS as any;
 	const existingFiles = getAllFiles(fs, { getCwd: () => fs.cwd() });
-
 
 	// Update the cell state to "running"
 	self.cells[id] = {
