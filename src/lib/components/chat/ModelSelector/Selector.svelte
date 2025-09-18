@@ -71,7 +71,7 @@
 	let selectedTag = '';
 	let selectedConnectionType = '';
 
-	let ollamaVersion = null;
+	let ollamaVersion: boolean | null = null;
 	let selectedModelIdx = 0;
 
 	const fuse = new Fuse(
@@ -287,8 +287,6 @@
 	};
 
 	onMount(async () => {
-		ollamaVersion = await getOllamaVersion(localStorage.token).catch((error) => false);
-
 		if (items) {
 			tags = items
 				.filter((item) => !(item.model?.info?.meta?.hidden ?? false))
@@ -338,6 +336,14 @@
 	onOpenChange={async () => {
 		searchValue = '';
 		window.setTimeout(() => document.getElementById('model-search-input')?.focus(), 0);
+
+		if (show && ollamaVersion === null) {
+			getOllamaVersion(localStorage.token)
+				.then((version) => {
+					ollamaVersion = version;
+				})
+				.catch(console.error);
+		}
 
 		resetView();
 	}}
