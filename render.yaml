@@ -1,0 +1,87 @@
+services:
+  - type: web
+    name: openwebui
+    runtime: docker
+    dockerfilePath: ./Dockerfile
+    dockerContext: .
+    plan: starter
+    healthCheckPath: /health
+    autoDeploy: false
+    envVars:
+      # Database Configuration
+      - key: DATABASE_URL
+        fromDatabase:
+          name: openwebui-postgres
+          property: connectionString
+      
+      # Authentication & Security
+      - key: WEBUI_AUTH
+        value: "True"
+      - key: ENABLE_SIGNUP
+        value: "False"
+      - key: ENABLE_INITIAL_ADMIN_SIGNUP
+        value: "True"
+      - key: DEFAULT_USER_ROLE
+        value: "pending"
+      - key: WEBUI_SECRET_KEY
+        generateValue: true
+        
+      # Cookie Security for HTTPS
+      - key: WEBUI_SESSION_COOKIE_SECURE
+        value: "true"
+      - key: WEBUI_AUTH_COOKIE_SECURE
+        value: "true"
+      - key: WEBUI_SESSION_COOKIE_SAME_SITE
+        value: "strict"
+        
+      # Web Search Configuration
+      - key: ENABLE_WEB_SEARCH
+        value: "True"
+      - key: WEB_SEARCH_ENGINE
+        value: "duckduckgo"
+      - key: WEB_SEARCH_RESULT_COUNT
+        value: "5"
+      
+      # Performance & Database
+      - key: ENABLE_COMPRESSION_MIDDLEWARE
+        value: "True"
+      - key: DATABASE_POOL_SIZE
+        value: "5"
+      - key: DATABASE_POOL_MAX_OVERFLOW
+        value: "10"
+      - key: DATABASE_POOL_TIMEOUT
+        value: "30"
+      - key: DATABASE_POOL_RECYCLE
+        value: "3600"
+        
+      # Disable unused services for starter setup
+      - key: ENABLE_OLLAMA_API
+        value: "False"
+      - key: ENABLE_IMAGE_GENERATION
+        value: "False"
+      - key: ENABLE_CODE_EXECUTION
+        value: "False"
+      - key: ENABLE_OAUTH_SIGNUP
+        value: "False"
+        
+      # Application Settings
+      - key: WEBUI_NAME
+        value: "Open WebUI"
+      - key: ENV
+        value: "prod"
+      - key: PORT
+        value: "8080"
+      
+      # Security Headers
+      - key: CORS_ALLOW_ORIGIN
+        value: "https://openwebui.onrender.com"
+      
+      # Logging
+      - key: GLOBAL_LOG_LEVEL
+        value: "INFO"
+
+databases:
+  - name: openwebui-postgres
+    databaseName: openwebui
+    user: openwebui
+    plan: starter
