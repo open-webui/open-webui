@@ -332,14 +332,14 @@
 
 	let isExpandedUpdateTimeout;
 
-	const isExpandedUpdateDebounceHandler = (open) => {
+	const isExpandedUpdateDebounceHandler = () => {
 		clearTimeout(isExpandedUpdateTimeout);
 		isExpandedUpdateTimeout = setTimeout(() => {
 			isExpandedUpdateHandler();
 		}, 500);
 	};
 
-	$: isExpandedUpdateDebounceHandler(open);
+	$: open && isExpandedUpdateDebounceHandler();
 
 	const renameHandler = async () => {
 		console.log('Edit');
