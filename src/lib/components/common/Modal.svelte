@@ -8,7 +8,7 @@
 	export let cancel = () => {};
 	export let size = 'md';
 	export let containerClassName = 'p-3';
-	export let className = 'bg-white dark:bg-gray-900 rounded-2xl';
+	export let className = 'bg-white dark:bg-gray-900 rounded-3xl';
 
 	let modalElement = null;
 	let mounted = false;

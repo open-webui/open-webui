@@ -151,12 +151,8 @@
 				/>
 			{/if}
 		{:else}
-			<div class="flex w-full rounded-xl border border-gray-100 dark:border-gray-850">
-				<div
-					class="max-h-60 flex flex-col w-full rounded-xl bg-white dark:bg-gray-900 dark:text-gray-100"
-				>
-					<Spinner />
-				</div>
+			<div class="py-4 flex flex-col w-full rounded-xl text-gray-700 dark:text-gray-300">
+				<Spinner />
 			</div>
 		{/if}
 	</div>

@@ -19,6 +19,7 @@ export function getSuggestionRenderer(Component: any, ComponentProps = {}) {
 					target: container,
 					props: {
 						char: props?.text,
+						query: props?.query,
 						command: (item) => {
 							props.command({ id: item.id, label: item.label });
 						},
@@ -47,14 +48,46 @@ export function getSuggestionRenderer(Component: any, ComponentProps = {}) {
 					theme: 'transparent',
 					placement: 'top-start',
 					offset: [-10, -2],
-					arrow: false
+					arrow: false,
+					popperOptions: {
+						strategy: 'fixed',
+						modifiers: [
+							{
+								name: 'preventOverflow',
+								options: {
+									boundary: 'viewport', // keep within the viewport
+									altAxis: true, // also prevent overflow on the cross axis (X)
+									tether: true,
+									padding: 8
+								}
+							},
+							{
+								name: 'flip',
+								options: {
+									boundary: 'viewport',
+									fallbackPlacements: ['top-end', 'bottom-start', 'bottom-end']
+								}
+							},
+							// Ensure transforms don’t cause layout widening in some browsers
+							{ name: 'computeStyles', options: { adaptive: true } }
+						]
+					},
+					// Helps avoid accidental focus/hover “linking” from far away elements
+					interactiveBorder: 8
 				});
 				popup?.show();
 			},
 
 			onUpdate: (props: any) => {
 				if (!component) return;
-				component.$set({ query: props.query });
+
+				component.$set({
+					query: props.query,
+					command: (item) => {
+						props.command({ id: item.id, label: item.label });
+					}
+				});
+
 				if (props.clientRect && popup) {
 					popup.setProps({ getReferenceClientRect: props.clientRect as any });
 				}

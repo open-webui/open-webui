@@ -1584,12 +1584,19 @@ def process_file(
                         },
                     )
 
+                    Files.update_file_data_by_id(
+                        file.id,
+                        {"status": "completed"},
+                    )
+
                     return {
                         "status": True,
                         "collection_name": collection_name,
                         "filename": file.filename,
                         "content": text_content,
                     }
+                else:
+                    raise Exception("Error saving document to vector database")
             except Exception as e:
                 raise e
 

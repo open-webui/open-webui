@@ -15,11 +15,11 @@
 		type Model,
 		mobile,
 		settings,
-		showSidebar,
 		models,
 		config,
 		showCallOverlay,
 		tools,
+		toolServers,
 		user as _user,
 		showControls,
 		TTSWorker,
@@ -45,6 +45,7 @@
 	import { generateAutoCompletion } from '$lib/apis';
 	import { deleteFileById } from '$lib/apis/files';
 	import { getSessionUser } from '$lib/apis/auths';
+	import { getTools } from '$lib/apis/tools';
 
 	import { WEBUI_BASE_URL, WEBUI_API_BASE_URL, PASTED_TEXT_CHARACTER_LIMIT } from '$lib/constants';
 
@@ -98,8 +99,6 @@
 
 	export let prompt = '';
 	export let files = [];
-
-	export let toolServers = [];
 
 	export let selectedToolIds = [];
 	export let selectedFilterIds = [];
@@ -284,12 +283,17 @@
 		const chatInput = document.getElementById('chat-input');
 
 		if (chatInput) {
-			text = await textVariableHandler(text || '');
+			if (text !== '') {
+				text = await textVariableHandler(text || '');
+			}
 
 			chatInputElement?.setText(text);
 			chatInputElement?.focus();
 
-			text = await inputVariableHandler(text);
+			if (text !== '') {
+				text = await inputVariableHandler(text);
+			}
+
 			await tick();
 			if (cb) await cb(text);
 		}
@@ -437,7 +441,7 @@
 		.reduce((acc, filters) => acc.filter((f1) => filters.some((f2) => f2.id === f1.id)));
 
 	let showToolsButton = false;
-	$: showToolsButton = toolServers.length + selectedToolIds.length > 0;
+	$: showToolsButton = ($tools ?? []).length > 0 || ($toolServers ?? []).length > 0;
 
 	let showWebSearchButton = false;
 	$: showWebSearchButton =
@@ -897,6 +901,8 @@
 		dropzoneElement?.addEventListener('dragover', onDragOver);
 		dropzoneElement?.addEventListener('drop', onDrop);
 		dropzoneElement?.addEventListener('dragleave', onDragLeave);
+
+		await tools.set(await getTools(localStorage.token));
 	});
 
 	onDestroy(() => {
@@ -919,6 +925,7 @@
 
 <FilesOverlay show={dragged} />
 <ToolServersModal bind:show={showTools} {selectedToolIds} />
+
 <InputVariablesModal
 	bind:show={showInputVariablesModal}
 	variables={inputVariables}
@@ -1023,7 +1030,9 @@
 							}}
 						>
 							<div
-								class="flex-1 flex flex-col relative w-full shadow-lg rounded-3xl border border-gray-50 dark:border-gray-850 hover:border-gray-100 focus-within:border-gray-100 hover:dark:border-gray-800 focus-within:dark:border-gray-800 transition px-1 bg-white/90 dark:bg-gray-400/5 dark:text-gray-100"
+								class="flex-1 flex flex-col relative w-full shadow-lg rounded-3xl border {$temporaryChatEnabled
+									? 'border-dashed border-gray-100 dark:border-gray-800 hover:border-gray-200 focus-within:border-gray-200 hover:dark:border-gray-700 focus-within:dark:border-gray-700'
+									: ' border-gray-50 dark:border-gray-850 hover:border-gray-100 focus-within:border-gray-100 hover:dark:border-gray-800 focus-within:dark:border-gray-800'}  transition px-1 bg-white/90 dark:bg-gray-400/5 dark:text-gray-100"
 								dir={$settings?.chatDirection ?? 'auto'}
 							>
 								{#if atSelectedModel !== undefined}
@@ -1150,7 +1159,7 @@
 
 								<div class="px-2.5">
 									<div
-										class="scrollbar-hidden rtl:text-right ltr:text-left bg-transparent dark:text-gray-100 outline-hidden w-full pb-1 px-1 resize-none h-fit max-h-80 overflow-auto {files.length ===
+										class="scrollbar-hidden rtl:text-right ltr:text-left bg-transparent dark:text-gray-100 outline-hidden w-full pb-1 px-1 resize-none h-fit max-h-96 overflow-auto {files.length ===
 										0
 											? atSelectedModel !== undefined
 												? 'pt-1.5'
@@ -1362,6 +1371,7 @@
 								<div class=" flex justify-between mt-0.5 mb-2.5 mx-0.5 max-w-full" dir="ltr">
 									<div class="ml-1 self-end flex items-center flex-1 max-w-[80%]">
 										<InputMenu
+											bind:files
 											selectedModels={atSelectedModel ? [atSelectedModel.id] : selectedModels}
 											{fileUploadCapableModels}
 											{screenCaptureHandler}
@@ -1420,36 +1430,38 @@
 
 										<div class="flex self-center w-[1px] h-4 mx-1 bg-gray-50 dark:bg-gray-800" />
 
-										<IntegrationsMenu
-											selectedModels={atSelectedModel ? [atSelectedModel.id] : selectedModels}
-											{toggleFilters}
-											{showWebSearchButton}
-											{showImageGenerationButton}
-											{showCodeInterpreterButton}
-											bind:selectedToolIds
-											bind:selectedFilterIds
-											bind:webSearchEnabled
-											bind:imageGenerationEnabled
-											bind:codeInterpreterEnabled
-											onClose={async () => {
-												await tick();
+										{#if showWebSearchButton || showImageGenerationButton || showCodeInterpreterButton || showToolsButton || (toggleFilters && toggleFilters.length > 0)}
+											<IntegrationsMenu
+												selectedModels={atSelectedModel ? [atSelectedModel.id] : selectedModels}
+												{toggleFilters}
+												{showWebSearchButton}
+												{showImageGenerationButton}
+												{showCodeInterpreterButton}
+												bind:selectedToolIds
+												bind:selectedFilterIds
+												bind:webSearchEnabled
+												bind:imageGenerationEnabled
+												bind:codeInterpreterEnabled
+												onClose={async () => {
+													await tick();
 
-												const chatInput = document.getElementById('chat-input');
-												chatInput?.focus();
-											}}
-										>
-											<div
-												class="bg-transparent hover:bg-gray-100 text-gray-700 dark:text-white dark:hover:bg-gray-800 rounded-full size-8 flex justify-center items-center outline-hidden focus:outline-hidden"
+													const chatInput = document.getElementById('chat-input');
+													chatInput?.focus();
+												}}
 											>
-												<Component className="size-4.5" strokeWidth="1.5" />
-											</div>
-										</IntegrationsMenu>
+												<div
+													class="bg-transparent hover:bg-gray-100 text-gray-700 dark:text-white dark:hover:bg-gray-800 rounded-full size-8 flex justify-center items-center outline-hidden focus:outline-hidden"
+												>
+													<Component className="size-4.5" strokeWidth="1.5" />
+												</div>
+											</IntegrationsMenu>
+										{/if}
 
 										<div class="ml-1 flex gap-1.5">
-											{#if showToolsButton}
+											{#if (selectedToolIds ?? []).length > 0}
 												<Tooltip
 													content={$i18n.t('{{COUNT}} Available Tools', {
-														COUNT: toolServers.length + selectedToolIds.length
+														COUNT: selectedToolIds.length
 													})}
 												>
 													<button
@@ -1463,7 +1475,7 @@
 														<Wrench className="size-4" strokeWidth="1.75" />
 
 														<span class="text-sm">
-															{toolServers.length + selectedToolIds.length}
+															{selectedToolIds.length}
 														</span>
 													</button>
 												</Tooltip>

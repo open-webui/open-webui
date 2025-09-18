@@ -152,7 +152,7 @@
 			{#each citations as citation, idx}
 				<button
 					id={`source-${id}-${idx + 1}`}
-					class="no-toggle outline-hidden flex dark:text-gray-300 bg-white dark:bg-gray-900 text-gray-600 rounded-xl gap-1.5 items-center"
+					class="no-toggle outline-hidden flex dark:text-gray-300 bg-transparent text-gray-600 rounded-xl gap-1.5 items-center"
 					on:click={() => {
 						showCitationModal = true;
 						selectedCitation = citation;

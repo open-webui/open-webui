@@ -52,7 +52,7 @@
 			<div class=" flex flex-col md:flex-row md:items-center flex-1 text-sm w-fit gap-1.5">
 				<div class="flex justify-between self-start">
 					<div
-						class=" text-xs font-bold {classNames[banner.type] ??
+						class=" text-xs font-semibold {classNames[banner.type] ??
 							classNames['info']}  w-fit px-2 rounded-sm uppercase line-clamp-1 mr-0.5"
 					>
 						{#if banner.type.toLowerCase() === 'info'}

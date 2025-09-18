@@ -91,6 +91,18 @@
 		}
 	});
 
+	// Convert TipTap mention spans -> <@id>
+	turndownService.addRule('mentions', {
+		filter: (node) => node.nodeName === 'SPAN' && node.getAttribute('data-type') === 'mention',
+		replacement: (_content, node: HTMLElement) => {
+			const id = node.getAttribute('data-id') || '';
+			// TipTap stores the trigger char in data-mention-suggestion-char (usually "@")
+			const ch = node.getAttribute('data-mention-suggestion-char') || '@';
+			// Emit <@id> style, e.g. <@llama3.2:latest>
+			return `<${ch}${id}>`;
+		}
+	});
+
 	import { onMount, onDestroy, tick, getContext } from 'svelte';
 	import { createEventDispatcher } from 'svelte';
 
@@ -100,7 +112,7 @@
 	import { Fragment, DOMParser } from 'prosemirror-model';
 	import { EditorState, Plugin, PluginKey, TextSelection, Selection } from 'prosemirror-state';
 	import { Decoration, DecorationSet } from 'prosemirror-view';
-	import { Editor, Extension } from '@tiptap/core';
+	import { Editor, Extension, mergeAttributes } from '@tiptap/core';
 
 	// Yjs imports
 	import * as Y from 'yjs';
@@ -142,9 +154,6 @@
 	import { PASTED_TEXT_CHARACTER_LIMIT } from '$lib/constants';
 	import { all, createLowlight } from 'lowlight';
 
-	import MentionList from '../channel/MessageInput/MentionList.svelte';
-	import { getSuggestionRenderer } from './RichTextInput/suggestions.js';
-
 	export let oncompositionstart = (e) => {};
 	export let oncompositionend = (e) => {};
 	export let onChange = (e) => {};
@@ -162,6 +171,18 @@
 
 	export let className = 'input-prose';
 	export let placeholder = 'Type here...';
+	let _placeholder = placeholder;
+
+	$: if (placeholder !== _placeholder) {
+		setPlaceholder();
+	}
+
+	const setPlaceholder = () => {
+		_placeholder = placeholder;
+		if (editor) {
+			editor?.view.dispatch(editor.state.tr);
+		}
+	};
 
 	export let richText = true;
 	export let link = false;
@@ -966,7 +987,7 @@
 				StarterKit.configure({
 					link: link
 				}),
-				Placeholder.configure({ placeholder }),
+				Placeholder.configure({ placeholder: () => _placeholder }),
 				SelectionDecoration,
 
 				...(richText
@@ -1058,7 +1079,6 @@
 
 				htmlValue = editor.getHTML();
 				jsonValue = editor.getJSON();
-
 				mdValue = turndownService
 					.turndown(
 						htmlValue
@@ -1101,14 +1121,30 @@
 				handlePaste: (view, event) => {
 					// Force plain-text pasting when richText === false
 					if (!richText) {
-						const text = (event.clipboardData?.getData('text/plain') ?? '').replace(/\r\n/g, '\n');
 						// swallow HTML completely
 						event.preventDefault();
-
-						// Insert as pure text (no HTML parsing)
 						const { state, dispatch } = view;
-						const { from, to } = state.selection;
-						dispatch(state.tr.insertText(text, from, to).scrollIntoView());
+
+						const plainText = (event.clipboardData?.getData('text/plain') ?? '').replace(
+							/\r\n/g,
+							'\n'
+						);
+
+						const lines = plainText.split('\n');
+						const nodes = [];
+
+						lines.forEach((line, index) => {
+							if (index > 0) {
+								nodes.push(state.schema.nodes.hardBreak.create());
+							}
+							if (line.length > 0) {
+								nodes.push(state.schema.text(line));
+							}
+						});
+
+						const fragment = Fragment.fromArray(nodes);
+						dispatch(state.tr.replaceSelectionWith(fragment, false).scrollIntoView());
+
 						return true; // handled
 					}
 
