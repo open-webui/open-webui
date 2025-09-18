@@ -93,7 +93,7 @@ After deployment, you can add API keys for better search engines through the adm
 
 ### 1. Access Your Instance
 
-Your instance will be available at: `https://openwebui.onrender.com`
+Your instance will be available at: `https://[your-service-name].onrender.com` (Render will provide the exact URL after deployment)
 
 ### 2. Set Admin Email (Important!)
 

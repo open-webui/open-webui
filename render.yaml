@@ -72,10 +72,6 @@ services:
       - key: PORT
         value: "8080"
       
-      # Security Headers
-      - key: CORS_ALLOW_ORIGIN
-        value: "https://openwebui.onrender.com"
-      
       # Logging
       - key: GLOBAL_LOG_LEVEL
         value: "INFO"
