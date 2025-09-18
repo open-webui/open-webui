@@ -44,8 +44,12 @@
 		accessControl = channel.access_control;
 	};
 
-	$: if (channel) {
-		init();
+	$: if (show) {
+		if (channel) {
+			init();
+		}
+	} else {
+		resetHandler();
 	}
 
 	let showDeleteConfirmDialog = false;
@@ -67,6 +71,12 @@
 		}
 
 		show = false;
+	};
+
+	const resetHandler = () => {
+		name = '';
+		accessControl = {};
+		loading = false;
 	};
 </script>
 
