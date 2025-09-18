@@ -314,6 +314,12 @@
 			if (processAndAddTheme(updatedTheme)) {
 				showThemeEditor = false;
 				applyTheme(previousThemeId);
+			} else {
+				// Revert to the previous theme if adding the new theme fails
+				// This can happen if the security warning is shown
+				if (!showAnimationScriptWarning) {
+					applyTheme(previousThemeId);
+				}
 			}
 		}
 	};
@@ -680,7 +686,16 @@
 	title="Security Warning"
 	on:confirm={() => {
 		if (themeWithScriptToImport) {
-			_finalizeAddTheme(themeWithScriptToImport.theme, themeWithScriptToImport.source);
+			const success = _finalizeAddTheme(
+				themeWithScriptToImport.theme,
+				themeWithScriptToImport.source
+			);
+			if (showThemeEditor) {
+				if (success) {
+					showThemeEditor = false;
+				}
+				applyTheme(previousThemeId);
+			}
 		}
 		showAnimationScriptWarning = false;
 		themeWithScriptToImport = null;
