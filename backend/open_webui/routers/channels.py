@@ -362,7 +362,7 @@ async def new_message_handler(
         )
 
     if user.role != "admin" and not has_access(
-        user.id, type="read", access_control=channel.access_control
+        user.id, type="write", access_control=channel.access_control
     ):
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN, detail=ERROR_MESSAGES.DEFAULT()
@@ -597,7 +597,7 @@ async def update_message_by_id(
     if (
         user.role != "admin"
         and message.user_id != user.id
-        and not has_access(user.id, type="read", access_control=channel.access_control)
+        and not has_access(user.id, type="write", access_control=channel.access_control)
     ):
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN, detail=ERROR_MESSAGES.DEFAULT()
@@ -791,6 +791,13 @@ async def delete_message_by_id(
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND, detail=ERROR_MESSAGES.NOT_FOUND
         )
+    
+    if user.role != "admin" and not has_access(
+        user.id, type="write", access_control=channel.access_control
+    ):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN, detail=ERROR_MESSAGES.DEFAULT()
+        )
 
     message = Messages.get_message_by_id(message_id)
     if not message:
@@ -806,7 +813,7 @@ async def delete_message_by_id(
     if (
         user.role != "admin"
         and message.user_id != user.id
-        and not has_access(user.id, type="read", access_control=channel.access_control)
+        and not has_access(user.id, type="write", access_control=channel.access_control)
     ):
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN, detail=ERROR_MESSAGES.DEFAULT()
