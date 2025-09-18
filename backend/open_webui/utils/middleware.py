@@ -1170,10 +1170,15 @@ async def process_chat_payload(request, form_data, user, metadata, model):
         if prompt is None:
             raise Exception("No user message found")
 
+        model_rag_template = (
+            model.get("info", {}).get("params", {}).get("rag_template", "")
+            or request.app.state.config.RAG_TEMPLATE
+        )
+
         if context_string != "":
             form_data["messages"] = add_or_update_user_message(
                 rag_template(
-                    request.app.state.config.RAG_TEMPLATE,
+                    model_rag_template,
                     context_string,
                     prompt,
                 ),
