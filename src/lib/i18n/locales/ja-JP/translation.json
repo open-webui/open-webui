@@ -772,6 +772,7 @@
 	"Generate an image": "画像を生成",
 	"Generate Image": "画像生成",
 	"Generate prompt pair": "プロンプトペアを生成",
+	"GENERATED FILES": "",
 	"Generating search query": "検索クエリの生成",
 	"Generating...": "生成中...",
 	"Get information on {{name}} in the UI": "UIで{{name}}の情報を得る",
