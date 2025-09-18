@@ -53,9 +53,6 @@
 	"type": "module",
 	"dependencies": {
 		"@azure/msal-browser": "^4.5.0",
-		"@codemirror/lang-javascript": "^6.2.2",
-		"@codemirror/lang-python": "^6.1.6",
-		"@codemirror/language-data": "^6.5.1",
 		"@codemirror/theme-one-dark": "^6.1.2",
 		"@floating-ui/dom": "^1.7.2",
 		"@huggingface/transformers": "^3.0.0",
@@ -87,8 +84,6 @@
 		"bits-ui": "^0.21.15",
 		"chart.js": "^4.5.0",
 		"codemirror": "^6.0.1",
-		"codemirror-lang-elixir": "^4.0.0",
-		"codemirror-lang-hcl": "^0.1.0",
 		"crc-32": "^1.2.2",
 		"dayjs": "^1.11.10",
 		"dompurify": "^3.2.6",
