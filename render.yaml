@@ -6,7 +6,7 @@ services:
     dockerContext: .
     plan: starter
     healthCheckPath: /health
-    autoDeploy: false
+    autoDeployTrigger: off
     envVars:
       # Database Configuration
       - key: DATABASE_URL
@@ -80,4 +80,4 @@ databases:
   - name: openwebui-postgres
     databaseName: openwebui
     user: openwebui
-    plan: starter
+    plan: basic-256mb
