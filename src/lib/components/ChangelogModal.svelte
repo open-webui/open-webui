@@ -23,7 +23,9 @@
 		changelog = await getChangelog();
 	};
 
-	$: show && init();
+	$: if (show) {
+		init();
+	}
 </script>
 
 <Modal bind:show size="xl">
