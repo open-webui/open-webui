@@ -25,6 +25,7 @@
 	export let messages = [];
 	export let top = false;
 	export let thread = false;
+	export let hasWriteAccess = true;
 
 	export let onLoad: Function = () => {};
 	export let onThread: Function = () => {};
@@ -94,6 +95,7 @@
 			<Message
 				{message}
 				{thread}
+				{hasWriteAccess}
 				showUserProfile={messageIdx === 0 ||
 					messageList.at(messageIdx - 1)?.user_id !== message.user_id ||
 					messageList.at(messageIdx - 1)?.meta?.model_id !== message?.meta?.model_id}

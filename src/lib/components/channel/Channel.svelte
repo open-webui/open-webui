@@ -7,6 +7,8 @@
 
 	import { chatId, showSidebar, socket, user } from '$lib/stores';
 	import { getChannelById, getChannelMessages, sendMessage } from '$lib/apis/channels';
+	import { getUserGroups } from '$lib/apis/users';
+	import { checkAccess } from '$lib/utils';
 
 	import Messages from './Messages.svelte';
 	import MessageInput from './MessageInput.svelte';
@@ -30,6 +32,10 @@
 	let typingUsers = [];
 	let typingUsersTimeout = {};
 
+	let userGroups = [];
+	let hasWriteAccess = true; // Default to true to prevent blocking if access control fails to load
+	let accessControl = {};
+
 	$: if (id) {
 		initHandler();
 	}
@@ -45,6 +51,7 @@
 		messages = null;
 		channel = null;
 		threadId = null;
+		accessControl = {};
 
 		typingUsers = [];
 		typingUsersTimeout = {};
@@ -52,6 +59,23 @@
 		channel = await getChannelById(localStorage.token, id).catch((error) => {
 			return null;
 		});
+
+		if (channel) {
+			try {
+				userGroups = await getUserGroups(localStorage.token);
+			} catch (error) {
+				console.error('Failed to load user groups:', error);
+				userGroups = [];
+			}
+
+			hasWriteAccess = checkAccess(
+				$user?.id,
+				userGroups,
+				channel.access_control,
+				'write',
+				$user?.role
+			);
+		}
 
 		if (channel) {
 			messages = await getChannelMessages(localStorage.token, id, 0);
@@ -223,6 +247,7 @@
 								{channel}
 								{messages}
 								{top}
+								{hasWriteAccess}
 								onThread={(id) => {
 									threadId = id;
 								}}
@@ -252,6 +277,8 @@
 					{typingUsers}
 					userSuggestions={true}
 					channelSuggestions={true}
+					disabled={!hasWriteAccess}
+					disabledMessage="You don't have permissions to send messages in this channel"
 					{onChange}
 					onSubmit={submitHandler}
 					{scrollToBottom}
@@ -272,6 +299,7 @@
 						<Thread
 							{threadId}
 							{channel}
+							disableSendMessage={!hasWriteAccess}
 							onClose={() => {
 								threadId = null;
 							}}
@@ -294,6 +322,7 @@
 					<Thread
 						{threadId}
 						{channel}
+						disableSendMessage={!hasWriteAccess}
 						onClose={() => {
 							threadId = null;
 						}}
