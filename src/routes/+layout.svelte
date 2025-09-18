@@ -178,7 +178,8 @@
 							{
 								stdout: stdout,
 								stderr: stderr,
-								result: result
+								result: result,
+								files: data['files'] || []
 							},
 							(_key, value) => (typeof value === 'bigint' ? value.toString() : value)
 						)
@@ -199,7 +200,8 @@
 							{
 								stdout: stdout,
 								stderr: stderr,
-								result: result
+								result: result,
+								files: []
 							},
 							(_key, value) => (typeof value === 'bigint' ? value.toString() : value)
 						)

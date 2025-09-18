@@ -76,6 +76,11 @@ self.onmessage = async (event) => {
 	// make sure loading is done
 	await loadPyodideAndPackages(self.packages);
 
+	// Get list of existing files before execution
+	const { getAllFiles, scanForNewFiles } = await import('../pyodide/fs-utils');
+	const fs: any = (self.pyodide.FS as any);
+	const existingFiles = getAllFiles(fs, { getCwd: () => fs.cwd() });
+
 	try {
 		// check if matplotlib is imported in the code
 		if (code.includes('matplotlib')) {
@@ -129,7 +134,17 @@ matplotlib.pyplot.show = show`);
 		self.stderr = error.toString();
 	}
 
-	self.postMessage({ id, result: self.result, stdout: self.stdout, stderr: self.stderr });
+	// Scan for generated files in the filesystem
+	const generatedFiles = scanForNewFiles(fs, existingFiles);
+	console.log('Pyodide worker: New files found:', generatedFiles);
+
+	self.postMessage({
+		id,
+		result: self.result,
+		stdout: self.stdout,
+		stderr: self.stderr,
+		files: generatedFiles
+	});
 };
 
 function processResult(result: any): any {
