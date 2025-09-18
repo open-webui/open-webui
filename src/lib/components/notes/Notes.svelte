@@ -5,9 +5,6 @@
 
 	const { saveAs } = fileSaver;
 
-	import jsPDF from 'jspdf';
-	import html2canvas from 'html2canvas-pro';
-
 	import dayjs from '$lib/dayjs';
 	import duration from 'dayjs/plugin/duration';
 	import relativeTime from 'dayjs/plugin/relativeTime';
@@ -137,6 +134,11 @@
 
 	const downloadPdf = async (note) => {
 		try {
+			const [{ default: jsPDF }, { default: html2canvas }] = await Promise.all([
+				import('jspdf'),
+				import('html2canvas-pro')
+			]);
+
 			// Define a fixed virtual screen size
 			const virtualWidth = 1024; // Fixed width (adjust as needed)
 			const virtualHeight = 1400; // Fixed height (adjust as needed)
@@ -167,7 +169,7 @@
 				document.body.removeChild(node);
 			}
 
-			const imgData = canvas.toDataURL('image/png');
+			const imgData = canvas.toDataURL('image/jpeg', 0.7);
 
 			// A4 page settings
 			const pdf = new jsPDF('p', 'mm', 'a4');
@@ -179,7 +181,7 @@
 			let heightLeft = imgHeight;
 			let position = 0;
 
-			pdf.addImage(imgData, 'PNG', 0, position, imgWidth, imgHeight);
+			pdf.addImage(imgData, 'JPEG', 0, position, imgWidth, imgHeight);
 			heightLeft -= pageHeight;
 
 			// Handle additional pages
@@ -187,7 +189,7 @@
 				position -= pageHeight;
 				pdf.addPage();
 
-				pdf.addImage(imgData, 'PNG', 0, position, imgWidth, imgHeight);
+				pdf.addImage(imgData, 'JPEG', 0, position, imgWidth, imgHeight);
 				heightLeft -= pageHeight;
 			}
 
@@ -374,7 +376,7 @@
 						>
 							{#each notes[timeRange] as note, idx (note.id)}
 								<div
-									class=" flex space-x-4 cursor-pointer w-full px-4.5 py-4 bg-gray-50 dark:bg-gray-850 dark:hover:bg-white/5 hover:bg-black/5 rounded-xl transition"
+									class=" flex space-x-4 cursor-pointer w-full px-4.5 py-4 border border-gray-50 dark:border-gray-850 bg-transparent dark:hover:bg-gray-850 hover:bg-white rounded-2xl transition"
 								>
 									<div class=" flex flex-1 space-x-4 cursor-pointer w-full">
 										<a

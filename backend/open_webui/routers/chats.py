@@ -166,7 +166,7 @@ async def import_chat(form_data: ChatImportForm, user=Depends(get_verified_user)
 
 
 @router.get("/search", response_model=list[ChatTitleIdResponse])
-async def search_user_chats(
+def search_user_chats(
     text: str, page: Optional[int] = None, user=Depends(get_verified_user)
 ):
     if page is None:

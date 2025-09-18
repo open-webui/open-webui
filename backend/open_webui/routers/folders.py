@@ -10,10 +10,14 @@ import mimetypes
 
 from open_webui.models.folders import (
     FolderForm,
+    FolderUpdateForm,
     FolderModel,
     Folders,
 )
 from open_webui.models.chats import Chats
+from open_webui.models.files import Files
+from open_webui.models.knowledge import Knowledges
+
 
 from open_webui.config import UPLOAD_DIR
 from open_webui.env import SRC_LOG_LEVELS
@@ -43,6 +47,31 @@ router = APIRouter()
 @router.get("/", response_model=list[FolderModel])
 async def get_folders(user=Depends(get_verified_user)):
     folders = Folders.get_folders_by_user_id(user.id)
+
+    # Verify folder data integrity
+    for folder in folders:
+        if folder.data:
+            if "files" in folder.data:
+                valid_files = []
+                for file in folder.data["files"]:
+
+                    if file.get("type") == "file":
+                        if Files.check_access_by_user_id(
+                            file.get("id"), user.id, "read"
+                        ):
+                            valid_files.append(file)
+                    elif file.get("type") == "collection":
+                        if Knowledges.check_access_by_user_id(
+                            file.get("id"), user.id, "read"
+                        ):
+                            valid_files.append(file)
+                    else:
+                        valid_files.append(file)
+
+                folder.data["files"] = valid_files
+                Folders.update_folder_by_id_and_user_id(
+                    folder.id, user.id, FolderUpdateForm(data=folder.data)
+                )
 
     return [
         {
@@ -113,22 +142,24 @@ async def get_folder_by_id(id: str, user=Depends(get_verified_user)):
 
 @router.post("/{id}/update")
 async def update_folder_name_by_id(
-    id: str, form_data: FolderForm, user=Depends(get_verified_user)
+    id: str, form_data: FolderUpdateForm, user=Depends(get_verified_user)
 ):
     folder = Folders.get_folder_by_id_and_user_id(id, user.id)
     if folder:
-        existing_folder = Folders.get_folder_by_parent_id_and_user_id_and_name(
-            folder.parent_id, user.id, form_data.name
-        )
-        if existing_folder and existing_folder.id != id:
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail=ERROR_MESSAGES.DEFAULT("Folder already exists"),
+
+        if form_data.name is not None:
+            # Check if folder with same name exists
+            existing_folder = Folders.get_folder_by_parent_id_and_user_id_and_name(
+                folder.parent_id, user.id, form_data.name
             )
+            if existing_folder and existing_folder.id != id:
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail=ERROR_MESSAGES.DEFAULT("Folder already exists"),
+                )
 
         try:
             folder = Folders.update_folder_by_id_and_user_id(id, user.id, form_data)
-
             return folder
         except Exception as e:
             log.exception(e)

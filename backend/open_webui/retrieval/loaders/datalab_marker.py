@@ -64,7 +64,7 @@ class DatalabMarkerLoader:
         return mime_map.get(ext, "application/octet-stream")
 
     def check_marker_request_status(self, request_id: str) -> dict:
-        url = f"{self.api_base_url}/marker/{request_id}"
+        url = f"{self.api_base_url}/{request_id}"
         headers = {"X-Api-Key": self.api_key}
         try:
             response = requests.get(url, headers=headers)
@@ -111,7 +111,7 @@ class DatalabMarkerLoader:
             with open(self.file_path, "rb") as f:
                 files = {"file": (filename, f, mime_type)}
                 response = requests.post(
-                    f"{self.api_base_url}/marker",
+                    f"{self.api_base_url}",
                     data=form_data,
                     files=files,
                     headers=headers,

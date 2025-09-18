@@ -261,55 +261,67 @@ def get_current_user(
         return user
 
     # auth by jwt token
-    try:
-        data = decode_token(token)
-    except Exception as e:
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Invalid token",
-        )
 
-    if data is not None and "id" in data:
-        user = Users.get_user_by_id(data["id"])
-        if user is None:
+    try:
+        try:
+            data = decode_token(token)
+        except Exception as e:
             raise HTTPException(
                 status_code=status.HTTP_401_UNAUTHORIZED,
-                detail=ERROR_MESSAGES.INVALID_TOKEN,
+                detail="Invalid token",
             )
-        else:
-            if WEBUI_AUTH_TRUSTED_EMAIL_HEADER:
-                trusted_email = request.headers.get(
-                    WEBUI_AUTH_TRUSTED_EMAIL_HEADER, ""
-                ).lower()
-                if trusted_email and user.email != trusted_email:
-                    # Delete the token cookie
-                    response.delete_cookie("token")
-                    # Delete OAuth token if present
-                    if request.cookies.get("oauth_id_token"):
-                        response.delete_cookie("oauth_id_token")
-                    raise HTTPException(
-                        status_code=status.HTTP_401_UNAUTHORIZED,
-                        detail="User mismatch. Please sign in again.",
+
+        if data is not None and "id" in data:
+            user = Users.get_user_by_id(data["id"])
+            if user is None:
+                raise HTTPException(
+                    status_code=status.HTTP_401_UNAUTHORIZED,
+                    detail=ERROR_MESSAGES.INVALID_TOKEN,
+                )
+            else:
+                if WEBUI_AUTH_TRUSTED_EMAIL_HEADER:
+                    trusted_email = request.headers.get(
+                        WEBUI_AUTH_TRUSTED_EMAIL_HEADER, ""
+                    ).lower()
+                    if trusted_email and user.email != trusted_email:
+                        raise HTTPException(
+                            status_code=status.HTTP_401_UNAUTHORIZED,
+                            detail="User mismatch. Please sign in again.",
+                        )
+
+                # Add user info to current span
+                current_span = trace.get_current_span()
+                if current_span:
+                    current_span.set_attribute("client.user.id", user.id)
+                    current_span.set_attribute("client.user.email", user.email)
+                    current_span.set_attribute("client.user.role", user.role)
+                    current_span.set_attribute("client.auth.type", "jwt")
+
+                # Refresh the user's last active timestamp asynchronously
+                # to prevent blocking the request
+                if background_tasks:
+                    background_tasks.add_task(
+                        Users.update_user_last_active_by_id, user.id
                     )
+            return user
+        else:
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail=ERROR_MESSAGES.UNAUTHORIZED,
+            )
+    except Exception as e:
+        # Delete the token cookie
+        if request.cookies.get("token"):
+            response.delete_cookie("token")
 
-            # Add user info to current span
-            current_span = trace.get_current_span()
-            if current_span:
-                current_span.set_attribute("client.user.id", user.id)
-                current_span.set_attribute("client.user.email", user.email)
-                current_span.set_attribute("client.user.role", user.role)
-                current_span.set_attribute("client.auth.type", "jwt")
+        if request.cookies.get("oauth_id_token"):
+            response.delete_cookie("oauth_id_token")
 
-            # Refresh the user's last active timestamp asynchronously
-            # to prevent blocking the request
-            if background_tasks:
-                background_tasks.add_task(Users.update_user_last_active_by_id, user.id)
-        return user
-    else:
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail=ERROR_MESSAGES.UNAUTHORIZED,
-        )
+        # Delete OAuth session if present
+        if request.cookies.get("oauth_session_id"):
+            response.delete_cookie("oauth_session_id")
+
+        raise e
 
 
 def get_current_user_by_api_key(api_key: str):

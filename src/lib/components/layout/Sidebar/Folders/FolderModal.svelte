@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { getContext, createEventDispatcher, onMount } from 'svelte';
+	import { getContext, createEventDispatcher, onMount, tick } from 'svelte';
 
 	import Spinner from '$lib/components/common/Spinner.svelte';
 	import Modal from '$lib/components/common/Modal.svelte';
@@ -8,9 +8,10 @@
 	import { toast } from 'svelte-sonner';
 	import { page } from '$app/stores';
 	import { goto } from '$app/navigation';
+	import { user } from '$lib/stores';
+
 	import Textarea from '$lib/components/common/Textarea.svelte';
 	import Knowledge from '$lib/components/workspace/Models/Knowledge.svelte';
-	import { user } from '$lib/stores';
 	const i18n = getContext('i18n');
 
 	export let show = false;
@@ -21,6 +22,9 @@
 	export let folder = null;
 
 	let name = '';
+	let meta = {
+		background_image_url: null
+	};
 	let data = {
 		system_prompt: '',
 		files: []
@@ -39,6 +43,7 @@
 
 		await onSubmit({
 			name,
+			meta,
 			data
 		});
 		show = false;
@@ -47,11 +52,29 @@
 
 	const init = () => {
 		name = folder.name;
+		meta = folder.meta || {
+			background_image_url: null
+		};
 		data = folder.data || {
 			system_prompt: '',
 			files: []
 		};
+
+		console.log(folder);
 	};
+
+	const focusInput = async () => {
+		await tick();
+		const input = document.getElementById('folder-name') as HTMLInputElement;
+		if (input) {
+			input.focus();
+			input.select();
+		}
+	};
+
+	$: if (show) {
+		focusInput();
+	}
 
 	$: if (folder) {
 		init();
@@ -59,6 +82,9 @@
 
 	$: if (!show && !edit) {
 		name = '';
+		meta = {
+			background_image_url: null
+		};
 		data = {
 			system_prompt: '',
 			files: []
@@ -99,12 +125,72 @@
 
 						<div class="flex-1">
 							<input
+								id="folder-name"
 								class="w-full text-sm bg-transparent placeholder:text-gray-300 dark:placeholder:text-gray-700 outline-hidden"
 								type="text"
 								bind:value={name}
 								placeholder={$i18n.t('Enter folder name')}
 								autocomplete="off"
 							/>
+						</div>
+					</div>
+
+					<input
+						id="folder-background-image-input"
+						type="file"
+						hidden
+						accept="image/*"
+						on:change={(e) => {
+							const inputFiles = e.target.files;
+
+							let reader = new FileReader();
+							reader.onload = (event) => {
+								let originalImageUrl = `${event.target.result}`;
+								meta.background_image_url = originalImageUrl;
+							};
+
+							if (
+								inputFiles &&
+								inputFiles.length > 0 &&
+								['image/gif', 'image/webp', 'image/jpeg', 'image/png'].includes(
+									inputFiles[0]['type']
+								)
+							) {
+								reader.readAsDataURL(inputFiles[0]);
+							} else {
+								console.log(`Unsupported File Type '${inputFiles[0]['type']}'.`);
+
+								// clear the input
+								e.target.value = '';
+							}
+						}}
+					/>
+
+					<div class="flex justify-between w-full mt-1 items-center">
+						<div class="text-xs text-gray-500">{$i18n.t('Folder Background Image')}</div>
+
+						<div class="">
+							<button
+								aria-labelledby="chat-background-label background-image-url-state"
+								class="p-1 px-3 text-xs flex rounded-sm transition"
+								on:click={() => {
+									if (meta?.background_image_url !== null) {
+										meta.background_image_url = null;
+									} else {
+										const input = document.getElementById('folder-background-image-input');
+										if (input) {
+											input.click();
+										}
+									}
+								}}
+								type="button"
+							>
+								<span class="ml-2 self-center" id="background-image-url-state"
+									>{(meta?.background_image_url ?? null) === null
+										? $i18n.t('Upload')
+										: $i18n.t('Reset')}</span
+								>
+							</button>
 						</div>
 					</div>
 

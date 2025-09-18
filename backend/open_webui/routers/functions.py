@@ -10,6 +10,7 @@ from open_webui.models.functions import (
     FunctionForm,
     FunctionModel,
     FunctionResponse,
+    FunctionWithValvesModel,
     Functions,
 )
 from open_webui.utils.plugin import (
@@ -46,9 +47,9 @@ async def get_functions(user=Depends(get_verified_user)):
 ############################
 
 
-@router.get("/export", response_model=list[FunctionModel])
-async def get_functions(user=Depends(get_admin_user)):
-    return Functions.get_functions()
+@router.get("/export", response_model=list[FunctionModel | FunctionWithValvesModel])
+async def get_functions(include_valves: bool = False, user=Depends(get_admin_user)):
+    return Functions.get_functions(include_valves=include_valves)
 
 
 ############################
@@ -132,10 +133,10 @@ async def load_function_from_url(
 
 
 class SyncFunctionsForm(BaseModel):
-    functions: list[FunctionModel] = []
+    functions: list[FunctionWithValvesModel] = []
 
 
-@router.post("/sync", response_model=list[FunctionModel])
+@router.post("/sync", response_model=list[FunctionWithValvesModel])
 async def sync_functions(
     request: Request, form_data: SyncFunctionsForm, user=Depends(get_admin_user)
 ):
@@ -146,6 +147,18 @@ async def sync_functions(
                 function.id,
                 content=function.content,
             )
+
+            if hasattr(function_module, "Valves") and function.valves:
+                Valves = function_module.Valves
+                try:
+                    Valves(
+                        **{k: v for k, v in function.valves.items() if v is not None}
+                    )
+                except Exception as e:
+                    log.exception(
+                        f"Error validating valves for function {function.id}: {e}"
+                    )
+                    raise e
 
         return Functions.sync_functions(user.id, form_data.functions)
     except Exception as e:
@@ -190,6 +203,9 @@ async def create_new_function(
 
             function_cache_dir = CACHE_DIR / "functions" / form_data.id
             function_cache_dir.mkdir(parents=True, exist_ok=True)
+
+            if function_type == "filter" and getattr(function_module, "toggle", None):
+                Functions.update_function_metadata_by_id(id, {"toggle": True})
 
             if function:
                 return function
@@ -306,6 +322,9 @@ async def update_function_by_id(
         log.debug(updated)
 
         function = Functions.update_function_by_id(id, updated)
+
+        if function_type == "filter" and getattr(function_module, "toggle", None):
+            Functions.update_function_metadata_by_id(id, {"toggle": True})
 
         if function:
             return function

@@ -30,6 +30,8 @@
 	export let save = false;
 	export let preview = false;
 	export let floatingButtons = true;
+
+	export let editCodeBlock = true;
 	export let topPadding = false;
 
 	export let onSave = (e) => {};
@@ -138,6 +140,7 @@
 		{save}
 		{preview}
 		{done}
+		{editCodeBlock}
 		{topPadding}
 		sourceIds={(sources ?? []).reduce((acc, source) => {
 			let ids = [];

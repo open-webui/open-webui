@@ -74,14 +74,14 @@
 				className="w-full flex justify-start mb-0.5"
 				placement="top"
 			>
-				<div class="flex items-center gap-2 text-gray-500 font-medium text-lg mt-2 w-fit">
+				<div class="flex items-center gap-2 text-gray-500 text-lg mt-2 w-fit">
 					<EyeSlash strokeWidth="2.5" className="size-5" />{$i18n.t('Temporary Chat')}
 				</div>
 			</Tooltip>
 		{/if}
 
 		<div
-			class=" mt-2 mb-4 text-3xl text-gray-800 dark:text-gray-100 font-medium text-left flex items-center gap-4 font-primary"
+			class=" mt-2 mb-4 text-3xl text-gray-800 dark:text-gray-100 text-left flex items-center gap-4 font-primary"
 		>
 			<div>
 				<div class=" capitalize line-clamp-1" in:fade={{ duration: 200 }}>
@@ -120,7 +120,7 @@
 							</div>
 						{/if}
 					{:else}
-						<div class=" font-medium text-gray-400 dark:text-gray-500 line-clamp-1 font-p">
+						<div class=" text-gray-400 dark:text-gray-500 line-clamp-1 font-p">
 							{$i18n.t('How can I help you today?')}
 						</div>
 					{/if}

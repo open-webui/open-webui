@@ -4,6 +4,7 @@ from typing import Optional
 import time
 import re
 import aiohttp
+from open_webui.models.groups import Groups
 from pydantic import BaseModel, HttpUrl
 from fastapi import APIRouter, Depends, HTTPException, Request, status
 
@@ -71,11 +72,12 @@ async def get_tools(request: Request, user=Depends(get_verified_user)):
         # Admin can see all tools
         return tools
     else:
+        user_group_ids = {group.id for group in Groups.get_groups_by_member_id(user.id)}
         tools = [
             tool
             for tool in tools
             if tool.user_id == user.id
-            or has_access(user.id, "read", tool.access_control)
+            or has_access(user.id, "read", tool.access_control, user_group_ids)
         ]
         return tools
 

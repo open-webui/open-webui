@@ -251,7 +251,7 @@
 			/>
 		</div>
 
-		<!-- <hr class="border-gray-100 dark:border-gray-850 my-1" /> -->
+		<!-- <hr class="border-gray-50 dark:border-gray-850 my-1" /> -->
 
 		<div class="flex px-3 pb-1">
 			<div

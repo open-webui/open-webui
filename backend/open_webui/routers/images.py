@@ -48,6 +48,7 @@ async def get_config(request: Request, user=Depends(get_admin_user)):
         "prompt_generation": request.app.state.config.ENABLE_IMAGE_PROMPT_GENERATION,
         "openai": {
             "OPENAI_API_BASE_URL": request.app.state.config.IMAGES_OPENAI_API_BASE_URL,
+            "OPENAI_API_VERSION": request.app.state.config.IMAGES_OPENAI_API_VERSION,
             "OPENAI_API_KEY": request.app.state.config.IMAGES_OPENAI_API_KEY,
         },
         "automatic1111": {
@@ -72,6 +73,7 @@ async def get_config(request: Request, user=Depends(get_admin_user)):
 
 class OpenAIConfigForm(BaseModel):
     OPENAI_API_BASE_URL: str
+    OPENAI_API_VERSION: str
     OPENAI_API_KEY: str
 
 
@@ -119,6 +121,9 @@ async def update_config(
     request.app.state.config.IMAGES_OPENAI_API_BASE_URL = (
         form_data.openai.OPENAI_API_BASE_URL
     )
+    request.app.state.config.IMAGES_OPENAI_API_VERSION = (
+        form_data.openai.OPENAI_API_VERSION
+    )
     request.app.state.config.IMAGES_OPENAI_API_KEY = form_data.openai.OPENAI_API_KEY
 
     request.app.state.config.IMAGES_GEMINI_API_BASE_URL = (
@@ -165,6 +170,7 @@ async def update_config(
         "prompt_generation": request.app.state.config.ENABLE_IMAGE_PROMPT_GENERATION,
         "openai": {
             "OPENAI_API_BASE_URL": request.app.state.config.IMAGES_OPENAI_API_BASE_URL,
+            "OPENAI_API_VERSION": request.app.state.config.IMAGES_OPENAI_API_VERSION,
             "OPENAI_API_KEY": request.app.state.config.IMAGES_OPENAI_API_KEY,
         },
         "automatic1111": {
@@ -544,10 +550,16 @@ async def image_generations(
                 ),
             }
 
+            api_version_query_param = ""
+            if request.app.state.config.IMAGES_OPENAI_API_VERSION:
+                api_version_query_param = (
+                    f"?api-version={request.app.state.config.IMAGES_OPENAI_API_VERSION}"
+                )
+
             # Use asyncio.to_thread for the requests.post call
             r = await asyncio.to_thread(
                 requests.post,
-                url=f"{request.app.state.config.IMAGES_OPENAI_API_BASE_URL}/images/generations",
+                url=f"{request.app.state.config.IMAGES_OPENAI_API_BASE_URL}/images/generations{api_version_query_param}",
                 json=data,
                 headers=headers,
             )

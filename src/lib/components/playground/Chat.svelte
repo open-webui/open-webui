@@ -12,7 +12,7 @@
 	} from '$lib/constants';
 	import { WEBUI_NAME, config, user, models, settings } from '$lib/stores';
 
-	import { chatCompletion, generateOpenAIChatCompletion } from '$lib/apis/openai';
+	import { chatCompletion } from '$lib/apis/openai';
 
 	import { splitStream } from '$lib/utils';
 	import Collapsible from '../common/Collapsible.svelte';

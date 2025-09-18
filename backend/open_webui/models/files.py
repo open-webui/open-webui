@@ -147,6 +147,15 @@ class FilesTable:
         with get_db() as db:
             return [FileModel.model_validate(file) for file in db.query(File).all()]
 
+    def check_access_by_user_id(self, id, user_id, permission="write") -> bool:
+        file = self.get_file_by_id(id)
+        if not file:
+            return False
+        if file.user_id == user_id:
+            return True
+        # Implement additional access control logic here as needed
+        return False
+
     def get_files_by_ids(self, ids: list[str]) -> list[FileModel]:
         with get_db() as db:
             return [

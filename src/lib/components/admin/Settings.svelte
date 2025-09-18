@@ -83,7 +83,7 @@
 <div class="flex flex-col lg:flex-row w-full h-full pb-2 lg:space-x-4">
 	<div
 		id="admin-settings-tabs-container"
-		class="tabs flex flex-row overflow-x-auto gap-2.5 max-w-full lg:gap-1 lg:flex-col lg:flex-none lg:w-40 dark:text-gray-200 text-sm font-medium text-left scrollbar-none"
+		class="tabs mx-[16px] lg:mx-0 lg:px-[16px] flex flex-row overflow-x-auto gap-2.5 max-w-full lg:gap-1 lg:flex-col lg:flex-none lg:w-50 dark:text-gray-200 text-sm font-medium text-left scrollbar-none"
 	>
 		<button
 			id="general"
@@ -204,7 +204,7 @@
 					/>
 				</svg>
 			</div>
-			<div class=" self-center">{$i18n.t('Tools')}</div>
+			<div class=" self-center">{$i18n.t('External Tools')}</div>
 		</button>
 
 		<button
@@ -433,7 +433,9 @@
 		</button>
 	</div>
 
-	<div class="flex-1 mt-3 lg:mt-0 overflow-y-scroll pr-1 scrollbar-hidden">
+	<div
+		class="flex-1 mt-3 lg:mt-0 px-[16px] lg:pr-[16px] lg:pl-0 overflow-y-scroll scrollbar-hidden"
+	>
 		{#if selectedTab === 'general'}
 			<General
 				saveHandler={async () => {

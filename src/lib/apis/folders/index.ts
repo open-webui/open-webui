@@ -1,8 +1,9 @@
 import { WEBUI_API_BASE_URL } from '$lib/constants';
 
 type FolderForm = {
-	name: string;
+	name?: string;
 	data?: Record<string, any>;
+	meta?: Record<string, any>;
 };
 
 export const createNewFolder = async (token: string, folderForm: FolderForm) => {

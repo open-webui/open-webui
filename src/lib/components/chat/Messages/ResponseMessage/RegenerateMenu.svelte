@@ -29,7 +29,7 @@
 
 	<div slot="content">
 		<DropdownMenu.Content
-			class="w-full max-w-[190px] rounded-xl px-1 py-1 z-50 bg-white dark:bg-gray-850 dark:text-white shadow-lg"
+			class="w-full max-w-[200px] rounded-2xl px-1 py-1  border border-gray-100  dark:border-gray-850 z-50 bg-white dark:bg-gray-850 dark:text-white shadow-lg transition"
 			sideOffset={-2}
 			side="bottom"
 			align="start"
@@ -78,7 +78,7 @@
 			</div>
 			<hr class="border-gray-50 dark:border-gray-800 my-1 mx-2" />
 			<DropdownMenu.Item
-				class="flex  gap-2  items-center px-3 py-1.5 text-sm  font-medium cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 rounded-lg"
+				class="flex  gap-2  items-center px-3 py-1.5 text-sm  cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 rounded-xl"
 				on:click={() => {
 					onRegenerate();
 					show = false;
@@ -103,7 +103,7 @@
 			</DropdownMenu.Item>
 
 			<DropdownMenu.Item
-				class="flex  gap-2  items-center px-3 py-1.5 text-sm  font-medium cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 rounded-lg"
+				class="flex  gap-2  items-center px-3 py-1.5 text-sm  cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 rounded-xl"
 				on:click={() => {
 					onRegenerate($i18n.t('Add Details'));
 				}}
@@ -113,7 +113,7 @@
 			</DropdownMenu.Item>
 
 			<DropdownMenu.Item
-				class="flex  gap-2  items-center px-3 py-1.5 text-sm  font-medium cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 rounded-lg"
+				class="flex  gap-2  items-center px-3 py-1.5 text-sm  cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 rounded-xl"
 				on:click={() => {
 					onRegenerate($i18n.t('More Concise'));
 				}}

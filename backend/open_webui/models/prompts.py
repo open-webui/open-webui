@@ -2,6 +2,7 @@ import time
 from typing import Optional
 
 from open_webui.internal.db import Base, get_db
+from open_webui.models.groups import Groups
 from open_webui.models.users import Users, UserResponse
 
 from pydantic import BaseModel, ConfigDict
@@ -103,10 +104,16 @@ class PromptsTable:
 
     def get_prompts(self) -> list[PromptUserResponse]:
         with get_db() as db:
-            prompts = []
+            all_prompts = db.query(Prompt).order_by(Prompt.timestamp.desc()).all()
 
-            for prompt in db.query(Prompt).order_by(Prompt.timestamp.desc()).all():
-                user = Users.get_user_by_id(prompt.user_id)
+            user_ids = list(set(prompt.user_id for prompt in all_prompts))
+
+            users = Users.get_users_by_user_ids(user_ids) if user_ids else []
+            users_dict = {user.id: user for user in users}
+
+            prompts = []
+            for prompt in all_prompts:
+                user = users_dict.get(prompt.user_id)
                 prompts.append(
                     PromptUserResponse.model_validate(
                         {
@@ -122,12 +129,13 @@ class PromptsTable:
         self, user_id: str, permission: str = "write"
     ) -> list[PromptUserResponse]:
         prompts = self.get_prompts()
+        user_group_ids = {group.id for group in Groups.get_groups_by_member_id(user_id)}
 
         return [
             prompt
             for prompt in prompts
             if prompt.user_id == user_id
-            or has_access(user_id, permission, prompt.access_control)
+            or has_access(user_id, permission, prompt.access_control, user_group_ids)
         ]
 
     def update_prompt_by_command(

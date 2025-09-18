@@ -347,25 +347,31 @@ export const getToolServerData = async (token: string, url: string) => {
 	return data;
 };
 
-export const getToolServersData = async (i18n, servers: object[]) => {
+export const getToolServersData = async (servers: object[]) => {
 	return (
 		await Promise.all(
 			servers
 				.filter((server) => server?.config?.enable)
 				.map(async (server) => {
+					let error = null;
+
+					let toolServerToken = null;
+					const auth_type = server?.auth_type ?? 'bearer';
+					if (auth_type === 'bearer') {
+						toolServerToken = server?.key;
+					} else if (auth_type === 'none') {
+						// No authentication
+					} else if (auth_type === 'session') {
+						toolServerToken = localStorage.token;
+					}
+
 					const data = await getToolServerData(
-						(server?.auth_type ?? 'bearer') === 'bearer' ? server?.key : localStorage.token,
+						toolServerToken,
 						(server?.path ?? '').includes('://')
 							? server?.path
 							: `${server?.url}${(server?.path ?? '').startsWith('/') ? '' : '/'}${server?.path}`
 					).catch((err) => {
-						toast.error(
-							$i18n.t(`Failed to connect to {{URL}} OpenAPI tool server`, {
-								URL: (server?.path ?? '').includes('://')
-									? server?.path
-									: `${server?.url}${(server?.path ?? '').startsWith('/') ? '' : '/'}${server?.path}`
-							})
-						);
+						error = err;
 						return null;
 					});
 
@@ -377,6 +383,13 @@ export const getToolServersData = async (i18n, servers: object[]) => {
 							info: info,
 							specs: specs
 						};
+					} else if (error) {
+						return {
+							error,
+							url: server?.url
+						};
+					} else {
+						return null;
 					}
 				})
 		)

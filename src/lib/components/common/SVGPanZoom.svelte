@@ -16,7 +16,7 @@
 	import Tooltip from './Tooltip.svelte';
 	import Clipboard from '../icons/Clipboard.svelte';
 	import Reset from '../icons/Reset.svelte';
-	import ArrowDownTray from '../icons/ArrowDownTray.svelte';
+	import Download from '../icons/Download.svelte';
 
 	export let className = '';
 	export let svg = '';
@@ -53,7 +53,7 @@
 	</div>
 
 	{#if content}
-		<div class=" absolute top-1 right-1">
+		<div class=" absolute top-2.5 right-2.5">
 			<div class="flex gap-1">
 				<Tooltip content={$i18n.t('Download as SVG')}>
 					<button
@@ -62,7 +62,7 @@
 							downloadAsSVG();
 						}}
 					>
-						<ArrowDownTray className=" size-4" />
+						<Download className=" size-4" />
 					</button>
 				</Tooltip>
 

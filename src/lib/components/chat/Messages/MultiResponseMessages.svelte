@@ -29,6 +29,7 @@
 
 	export let isLastMessage;
 	export let readOnly = false;
+	export let editCodeBlock = true;
 
 	export let setInputText: Function = () => {};
 	export let updateChat: Function;
@@ -379,6 +380,7 @@
 										}}
 										{addMessages}
 										{readOnly}
+										{editCodeBlock}
 										{topPadding}
 									/>
 								{/if}

@@ -12,7 +12,7 @@
 </script>
 
 <div
-	class=" text-xs font-bold {classNames[type] ??
+	class=" text-xs font-semibold {classNames[type] ??
 		classNames['info']}  w-fit px-2 rounded-sm uppercase line-clamp-1 mr-0.5"
 >
 	{content}

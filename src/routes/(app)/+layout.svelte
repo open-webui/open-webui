@@ -4,7 +4,6 @@
 	import { openDB, deleteDB } from 'idb';
 	import fileSaver from 'file-saver';
 	const { saveAs } = fileSaver;
-	import mermaid from 'mermaid';
 
 	import { goto } from '$app/navigation';
 	import { page } from '$app/stores';
@@ -114,7 +113,20 @@
 
 			banners.set(await getBanners(localStorage.token));
 			tools.set(await getTools(localStorage.token));
-			toolServers.set(await getToolServersData($i18n, $settings?.toolServers ?? []));
+
+			let toolServersData = await getToolServersData($settings?.toolServers ?? []);
+			toolServersData = toolServersData.filter((data) => {
+				if (data.error) {
+					toast.error(
+						$i18n.t(`Failed to connect to {{URL}} OpenAPI tool server`, {
+							URL: data?.url
+						})
+					);
+					return false;
+				}
+				return true;
+			});
+			toolServers.set(toolServersData);
 
 			document.addEventListener('keydown', async function (event) {
 				const isCtrlPressed = event.ctrlKey || event.metaKey; // metaKey is for Cmd key on Mac

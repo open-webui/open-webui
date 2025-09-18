@@ -46,7 +46,7 @@
 <button
 	aria-roledescription="model-item"
 	aria-label={item.label}
-	class="flex group/item w-full text-left font-medium line-clamp-1 select-none items-center rounded-button py-2 pl-3 pr-1.5 text-sm text-gray-700 dark:text-gray-100 outline-hidden transition-all duration-75 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg cursor-pointer data-highlighted:bg-muted {index ===
+	class="flex group/item w-full text-left font-medium line-clamp-1 select-none items-center rounded-button py-2 pl-3 pr-1.5 text-sm text-gray-700 dark:text-gray-100 outline-hidden transition-all duration-75 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-xl cursor-pointer data-highlighted:bg-muted {index ===
 	selectedModelIdx
 		? 'bg-gray-100 dark:bg-gray-800 group-hover:bg-transparent'
 		: ''}"
@@ -64,7 +64,7 @@
 				{#each item.model?.tags.sort((a, b) => a.name.localeCompare(b.name)) as tag}
 					<Tooltip content={tag.name} className="flex-shrink-0">
 						<div
-							class=" text-xs font-bold px-1 rounded-sm uppercase bg-gray-500/20 text-gray-700 dark:text-gray-200"
+							class=" text-xs font-semibold px-1 rounded-sm uppercase bg-gray-500/20 text-gray-700 dark:text-gray-200"
 						>
 							{tag.name}
 						</div>
@@ -144,7 +144,7 @@
 							<div slot="tooltip" id="tags-{item.model.id}">
 								{#each item.model?.tags.sort((a, b) => a.name.localeCompare(b.name)) as tag}
 									<Tooltip content={tag.name} className="flex-shrink-0">
-										<div class=" text-xs font-semibold rounded-sm uppercase text-white">
+										<div class=" text-xs font-medium rounded-sm uppercase text-white">
 											{tag.name}
 										</div>
 									</Tooltip>

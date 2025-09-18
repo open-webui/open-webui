@@ -43,7 +43,7 @@ jobs:
           echo "PLATFORM_PAIR=${platform//\//-}" >> $GITHUB_ENV
 
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
 
       - name: Set up QEMU
         uses: docker/setup-qemu-action@v3
@@ -142,7 +142,7 @@ jobs:
           echo "PLATFORM_PAIR=${platform//\//-}" >> $GITHUB_ENV
 
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
 
       - name: Set up QEMU
         uses: docker/setup-qemu-action@v3
@@ -244,7 +244,7 @@ jobs:
           echo "PLATFORM_PAIR=${platform//\//-}" >> $GITHUB_ENV
 
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
 
       - name: Set up QEMU
         uses: docker/setup-qemu-action@v3
@@ -347,7 +347,7 @@ jobs:
           echo "PLATFORM_PAIR=${platform//\//-}" >> $GITHUB_ENV
 
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
 
       - name: Set up QEMU
         uses: docker/setup-qemu-action@v3
@@ -419,6 +419,108 @@ jobs:
           if-no-files-found: error
           retention-days: 1
 
+  build-slim-image:
+    runs-on: ${{ matrix.runner }}
+    permissions:
+      contents: read
+      packages: write
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - platform: linux/amd64
+            runner: ubuntu-latest
+          - platform: linux/arm64
+            runner: ubuntu-24.04-arm
+
+    steps:
+      # GitHub Packages requires the entire repository name to be in lowercase
+      # although the repository owner has a lowercase username, this prevents some people from running actions after forking
+      - name: Set repository and image name to lowercase
+        run: |
+          echo "IMAGE_NAME=${IMAGE_NAME,,}" >>${GITHUB_ENV}
+          echo "FULL_IMAGE_NAME=ghcr.io/${IMAGE_NAME,,}" >>${GITHUB_ENV}
+        env:
+          IMAGE_NAME: '${{ github.repository }}'
+
+      - name: Prepare
+        run: |
+          platform=${{ matrix.platform }}
+          echo "PLATFORM_PAIR=${platform//\//-}" >> $GITHUB_ENV
+
+      - name: Checkout repository
+        uses: actions/checkout@v5
+
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v3
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to the Container registry
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Extract metadata for Docker images (slim tag)
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ env.FULL_IMAGE_NAME }}
+          tags: |
+            type=ref,event=branch
+            type=ref,event=tag
+            type=sha,prefix=git-
+            type=semver,pattern={{version}}
+            type=semver,pattern={{major}}.{{minor}}
+            type=raw,enable=${{ github.ref == 'refs/heads/main' }},prefix=,suffix=,value=slim
+          flavor: |
+            latest=${{ github.ref == 'refs/heads/main' }}
+            suffix=-slim,onlatest=true
+
+      - name: Extract metadata for Docker cache
+        id: cache-meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ env.FULL_IMAGE_NAME }}
+          tags: |
+            type=ref,event=branch
+            ${{ github.ref_type == 'tag' && 'type=raw,value=main' || '' }}
+          flavor: |
+            prefix=cache-slim-${{ matrix.platform }}-
+            latest=false
+
+      - name: Build Docker image (slim)
+        uses: docker/build-push-action@v5
+        id: build
+        with:
+          context: .
+          push: true
+          platforms: ${{ matrix.platform }}
+          labels: ${{ steps.meta.outputs.labels }}
+          outputs: type=image,name=${{ env.FULL_IMAGE_NAME }},push-by-digest=true,name-canonical=true,push=true
+          cache-from: type=registry,ref=${{ steps.cache-meta.outputs.tags }}
+          cache-to: type=registry,ref=${{ steps.cache-meta.outputs.tags }},mode=max
+          build-args: |
+            BUILD_HASH=${{ github.sha }}
+            USE_SLIM=true
+
+      - name: Export digest
+        run: |
+          mkdir -p /tmp/digests
+          digest="${{ steps.build.outputs.digest }}"
+          touch "/tmp/digests/${digest#sha256:}"
+
+      - name: Upload digest
+        uses: actions/upload-artifact@v4
+        with:
+          name: digests-slim-${{ env.PLATFORM_PAIR }}
+          path: /tmp/digests/*
+          if-no-files-found: error
+          retention-days: 1
+
   merge-main-images:
     runs-on: ubuntu-latest
     needs: [build-main-image]
@@ -433,7 +535,7 @@ jobs:
           IMAGE_NAME: '${{ github.repository }}'
 
       - name: Download digests
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v5
         with:
           pattern: digests-main-*
           path: /tmp/digests
@@ -487,7 +589,7 @@ jobs:
           IMAGE_NAME: '${{ github.repository }}'
 
       - name: Download digests
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v5
         with:
           pattern: digests-cuda-*
           path: /tmp/digests
@@ -543,7 +645,7 @@ jobs:
           IMAGE_NAME: '${{ github.repository }}'
 
       - name: Download digests
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v5
         with:
           pattern: digests-cuda126-*
           path: /tmp/digests
@@ -599,7 +701,7 @@ jobs:
           IMAGE_NAME: '${{ github.repository }}'
 
       - name: Download digests
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v5
         with:
           pattern: digests-ollama-*
           path: /tmp/digests
@@ -630,6 +732,62 @@ jobs:
           flavor: |
             latest=${{ github.ref == 'refs/heads/main' }}
             suffix=-ollama,onlatest=true
+
+      - name: Create manifest list and push
+        working-directory: /tmp/digests
+        run: |
+          docker buildx imagetools create $(jq -cr '.tags | map("-t " + .) | join(" ")' <<< "$DOCKER_METADATA_OUTPUT_JSON") \
+            $(printf '${{ env.FULL_IMAGE_NAME }}@sha256:%s ' *)
+
+      - name: Inspect image
+        run: |
+          docker buildx imagetools inspect ${{ env.FULL_IMAGE_NAME }}:${{ steps.meta.outputs.version }}
+
+  merge-slim-images:
+    runs-on: ubuntu-latest
+    needs: [build-slim-image]
+    steps:
+      # GitHub Packages requires the entire repository name to be in lowercase
+      # although the repository owner has a lowercase username, this prevents some people from running actions after forking
+      - name: Set repository and image name to lowercase
+        run: |
+          echo "IMAGE_NAME=${IMAGE_NAME,,}" >>${GITHUB_ENV}
+          echo "FULL_IMAGE_NAME=ghcr.io/${IMAGE_NAME,,}" >>${GITHUB_ENV}
+        env:
+          IMAGE_NAME: '${{ github.repository }}'
+
+      - name: Download digests
+        uses: actions/download-artifact@v5
+        with:
+          pattern: digests-slim-*
+          path: /tmp/digests
+          merge-multiple: true
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to the Container registry
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Extract metadata for Docker images (default slim tag)
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ env.FULL_IMAGE_NAME }}
+          tags: |
+            type=ref,event=branch
+            type=ref,event=tag
+            type=sha,prefix=git-
+            type=semver,pattern={{version}}
+            type=semver,pattern={{major}}.{{minor}}
+            type=raw,enable=${{ github.ref == 'refs/heads/main' }},prefix=,suffix=,value=slim
+          flavor: |
+            latest=${{ github.ref == 'refs/heads/main' }}
+            suffix=-slim,onlatest=true
 
       - name: Create manifest list and push
         working-directory: /tmp/digests

@@ -9,7 +9,7 @@
 	export let tags = [];
 </script>
 
-<ul class="flex flex-row flex-wrap gap-1 line-clamp-1">
+<ul class="flex flex-row flex-wrap gap-[0.3rem] line-clamp-1">
 	<TagList
 		{tags}
 		on:delete={(e) => {

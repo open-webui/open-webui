@@ -30,16 +30,18 @@
 	$: {
 		if (search) {
 			emojis = Object.keys(emojiShortCodes).reduce((acc, key) => {
-				if (key.includes(search)) {
+				if (key.includes(search.toLowerCase())) {
 					acc[key] = emojiShortCodes[key];
 				} else {
 					if (Array.isArray(emojiShortCodes[key])) {
-						const filtered = emojiShortCodes[key].filter((emoji) => emoji.includes(search));
+						const filtered = emojiShortCodes[key].filter((emoji) =>
+							emoji.includes(search.toLowerCase())
+						);
 						if (filtered.length) {
 							acc[key] = filtered;
 						}
 					} else {
-						if (emojiShortCodes[key].includes(search)) {
+						if (emojiShortCodes[key].includes(search.toLowerCase())) {
 							acc[key] = emojiShortCodes[key];
 						}
 					}

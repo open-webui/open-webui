@@ -12,7 +12,7 @@
 	import Tooltip from '../common/Tooltip.svelte';
 	import SvgPanZoom from '../common/SVGPanZoom.svelte';
 	import ArrowLeft from '../icons/ArrowLeft.svelte';
-	import ArrowDownTray from '../icons/ArrowDownTray.svelte';
+	import Download from '../icons/Download.svelte';
 
 	export let overlay = false;
 	export let history;
@@ -205,7 +205,7 @@
 </script>
 
 <div
-	class=" w-full h-full relative flex flex-col bg-gray-50 dark:bg-gray-850"
+	class=" w-full h-full relative flex flex-col bg-white dark:bg-gray-850"
 	id="artifacts-container"
 >
 	<div class="w-full h-full flex flex-col flex-1 relative">
@@ -213,15 +213,6 @@
 			<div
 				class="pointer-events-auto z-20 flex justify-between items-center p-2.5 font-primar text-gray-900 dark:text-white"
 			>
-				<button
-					class="self-center pointer-events-auto p-1 rounded-full bg-white dark:bg-gray-850"
-					on:click={() => {
-						showArtifacts.set(false);
-					}}
-				>
-					<ArrowLeft className="size-3.5  text-gray-900 dark:text-white" />
-				</button>
-
 				<div class="flex-1 flex items-center justify-between pr-1">
 					<div class="flex items-center space-x-2">
 						<div class="flex items-center gap-0.5 self-center min-w-fit" dir="ltr">
@@ -294,7 +285,7 @@
 								class=" bg-none border-none text-xs bg-gray-50 hover:bg-gray-100 dark:bg-gray-850 dark:hover:bg-gray-800 transition rounded-md p-0.5"
 								on:click={downloadArtifact}
 							>
-								<ArrowDownTray className="size-3.5" />
+								<Download className="size-3.5" />
 							</button>
 						</Tooltip>
 

@@ -1,6 +1,7 @@
 import requests
 import logging, os
 from typing import Iterator, List, Union
+from urllib.parse import quote
 
 from langchain_core.document_loaders import BaseLoader
 from langchain_core.documents import Document
@@ -37,7 +38,7 @@ class ExternalDocumentLoader(BaseLoader):
             headers["Authorization"] = f"Bearer {self.api_key}"
 
         try:
-            headers["X-Filename"] = os.path.basename(self.file_path)
+            headers["X-Filename"] = quote(os.path.basename(self.file_path))
         except:
             pass
 

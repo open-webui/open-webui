@@ -599,20 +599,42 @@
 					{/if}
 				{:else if config?.engine === 'openai'}
 					<div>
-						<div class=" mb-1.5 text-sm font-medium">{$i18n.t('OpenAI API Config')}</div>
+						<div class=" mb-2 text-sm font-medium">{$i18n.t('OpenAI API Config')}</div>
+						<div class="flex w-full">
+							<div class="flex-1 mr-2">
+								<input
+									class="w-full rounded-lg py-2 px-4 text-sm bg-gray-50 dark:text-gray-300 dark:bg-gray-850 outline-hidden"
+									placeholder={$i18n.t('API Base URL')}
+									bind:value={config.openai.OPENAI_API_BASE_URL}
+									required
+								/>
+							</div>
+						</div>
+					</div>
 
-						<div class="flex gap-2 mb-1">
-							<input
-								class="flex-1 w-full text-sm bg-transparent outline-hidden"
-								placeholder={$i18n.t('API Base URL')}
-								bind:value={config.openai.OPENAI_API_BASE_URL}
-								required
-							/>
+					<div>
+						<div class=" mb-2 text-sm font-medium">{$i18n.t('API Key')}</div>
+						<div class="flex w-full">
+							<div class="flex-1 mr-2">
+								<SensitiveInput
+									placeholder={$i18n.t('API Key')}
+									bind:value={config.openai.OPENAI_API_KEY}
+									required
+								/>
+							</div>
+						</div>
+					</div>
 
-							<SensitiveInput
-								placeholder={$i18n.t('API Key')}
-								bind:value={config.openai.OPENAI_API_KEY}
-							/>
+					<div>
+						<div class=" mb-2 text-sm font-medium">{$i18n.t('API Version')}</div>
+						<div class="flex w-full">
+							<div class="flex-1 mr-2">
+								<input
+									class="w-full rounded-lg py-2 px-4 text-sm bg-gray-50 dark:text-gray-300 dark:bg-gray-850 outline-hidden"
+									placeholder={$i18n.t('API Version')}
+									bind:value={config.openai.OPENAI_API_VERSION}
+								/>
+							</div>
 						</div>
 					</div>
 				{:else if config?.engine === 'gemini'}
@@ -682,21 +704,23 @@
 					</div>
 				</div>
 
-				<div>
-					<div class=" mb-2.5 text-sm font-medium">{$i18n.t('Set Steps')}</div>
-					<div class="flex w-full">
-						<div class="flex-1 mr-2">
-							<Tooltip content={$i18n.t('Enter Number of Steps (e.g. 50)')} placement="top-start">
-								<input
-									class="w-full rounded-lg py-2 px-4 text-sm bg-gray-50 dark:text-gray-300 dark:bg-gray-850 outline-hidden"
-									placeholder={$i18n.t('Enter Number of Steps (e.g. 50)')}
-									bind:value={imageGenerationConfig.IMAGE_STEPS}
-									required
-								/>
-							</Tooltip>
+				{#if ['comfyui', 'automatic1111', ''].includes(config?.engine)}
+					<div>
+						<div class=" mb-2.5 text-sm font-medium">{$i18n.t('Set Steps')}</div>
+						<div class="flex w-full">
+							<div class="flex-1 mr-2">
+								<Tooltip content={$i18n.t('Enter Number of Steps (e.g. 50)')} placement="top-start">
+									<input
+										class="w-full rounded-lg py-2 px-4 text-sm bg-gray-50 dark:text-gray-300 dark:bg-gray-850 outline-hidden"
+										placeholder={$i18n.t('Enter Number of Steps (e.g. 50)')}
+										bind:value={imageGenerationConfig.IMAGE_STEPS}
+										required
+									/>
+								</Tooltip>
+							</div>
 						</div>
 					</div>
-				</div>
+				{/if}
 			{/if}
 		{/if}
 	</div>

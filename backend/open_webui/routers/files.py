@@ -120,11 +120,6 @@ def process_uploaded_file(request, file, file_path, file_item, file_metadata, us
                 f"File type {file.content_type} is not provided, but trying to process anyway"
             )
             process_file(request, ProcessFileForm(file_id=file_item.id), user=user)
-
-        Files.update_file_data_by_id(
-            file_item.id,
-            {"status": "completed"},
-        )
     except Exception as e:
         log.error(f"Error processing file: {file_item.id}")
         Files.update_file_data_by_id(
@@ -143,9 +138,18 @@ def upload_file(
     file: UploadFile = File(...),
     metadata: Optional[dict | str] = Form(None),
     process: bool = Query(True),
+    process_in_background: bool = Query(True),
     user=Depends(get_verified_user),
 ):
-    return upload_file_handler(request, file, metadata, process, user, background_tasks)
+    return upload_file_handler(
+        request,
+        file=file,
+        metadata=metadata,
+        process=process,
+        process_in_background=process_in_background,
+        user=user,
+        background_tasks=background_tasks,
+    )
 
 
 def upload_file_handler(
@@ -153,6 +157,7 @@ def upload_file_handler(
     file: UploadFile = File(...),
     metadata: Optional[dict | str] = Form(None),
     process: bool = Query(True),
+    process_in_background: bool = Query(True),
     user=Depends(get_verified_user),
     background_tasks: Optional[BackgroundTasks] = None,
 ):
@@ -225,7 +230,7 @@ def upload_file_handler(
         )
 
         if process:
-            if background_tasks:
+            if background_tasks and process_in_background:
                 background_tasks.add_task(
                     process_uploaded_file,
                     request,
@@ -401,25 +406,28 @@ async def get_file_process_status(
             MAX_FILE_PROCESSING_DURATION = 3600 * 2
 
             async def event_stream(file_item):
-                for _ in range(MAX_FILE_PROCESSING_DURATION):
-                    file_item = Files.get_file_by_id(file_item.id)
-                    if file_item:
-                        data = file_item.model_dump().get("data", {})
-                        status = data.get("status")
+                if file_item:
+                    for _ in range(MAX_FILE_PROCESSING_DURATION):
+                        file_item = Files.get_file_by_id(file_item.id)
+                        if file_item:
+                            data = file_item.model_dump().get("data", {})
+                            status = data.get("status")
 
-                        if status:
-                            event = {"status": status}
-                            if status == "failed":
-                                event["error"] = data.get("error")
+                            if status:
+                                event = {"status": status}
+                                if status == "failed":
+                                    event["error"] = data.get("error")
 
-                            yield f"data: {json.dumps(event)}\n\n"
-                            if status in ("completed", "failed"):
+                                yield f"data: {json.dumps(event)}\n\n"
+                                if status in ("completed", "failed"):
+                                    break
+                            else:
+                                # Legacy
                                 break
-                        else:
-                            # Legacy
-                            break
 
-                    await asyncio.sleep(0.5)
+                        await asyncio.sleep(0.5)
+                else:
+                    yield f"data: {json.dumps({'status': 'not_found'})}\n\n"
 
             return StreamingResponse(
                 event_stream(file),

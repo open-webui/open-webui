@@ -51,6 +51,7 @@
 	import AccessControlModal from '../common/AccessControlModal.svelte';
 	import Search from '$lib/components/icons/Search.svelte';
 	import Textarea from '$lib/components/common/Textarea.svelte';
+	import FilesOverlay from '$lib/components/chat/MessageInput/FilesOverlay.svelte';
 
 	let largeScreen = true;
 
@@ -115,6 +116,7 @@
 	let debounceTimeout = null;
 	let mediaQuery;
 	let dragged = false;
+	let isSaving = false;
 
 	const createFileFromText = (name, content) => {
 		const blob = new Blob([content], { type: 'text/plain' });
@@ -434,27 +436,34 @@
 	};
 
 	const updateFileContentHandler = async () => {
-		const fileId = selectedFile.id;
-		const content = selectedFileContent;
-
-		// Clear the cache for this file since we're updating it
-		fileContentCache.delete(fileId);
-
-		const res = updateFileDataContentById(localStorage.token, fileId, content).catch((e) => {
-			toast.error(`${e}`);
-		});
-
-		const updatedKnowledge = await updateFileFromKnowledgeById(
-			localStorage.token,
-			id,
-			fileId
-		).catch((e) => {
-			toast.error(`${e}`);
-		});
-
-		if (res && updatedKnowledge) {
-			knowledge = updatedKnowledge;
-			toast.success($i18n.t('File content updated successfully.'));
+		if (isSaving) {
+			console.log('Save operation already in progress, skipping...');
+			return;
+		}
+		isSaving = true;
+		try {
+			const fileId = selectedFile.id;
+			const content = selectedFileContent;
+			// Clear the cache for this file since we're updating it
+			fileContentCache.delete(fileId);
+			const res = await updateFileDataContentById(localStorage.token, fileId, content).catch(
+				(e) => {
+					toast.error(`${e}`);
+				}
+			);
+			const updatedKnowledge = await updateFileFromKnowledgeById(
+				localStorage.token,
+				id,
+				fileId
+			).catch((e) => {
+				toast.error(`${e}`);
+			});
+			if (res && updatedKnowledge) {
+				knowledge = updatedKnowledge;
+				toast.success($i18n.t('File content updated successfully.'));
+			}
+		} finally {
+			isSaving = false;
 		}
 	};
 
@@ -624,29 +633,7 @@
 	};
 </script>
 
-{#if dragged}
-	<div
-		class="fixed {$showSidebar
-			? 'left-0 md:left-[260px] md:w-[calc(100%-260px)]'
-			: 'left-0'}  w-full h-full flex z-50 touch-none pointer-events-none"
-		id="dropzone"
-		role="region"
-		aria-label="Drag and Drop Container"
-	>
-		<div class="absolute w-full h-full backdrop-blur-sm bg-gray-800/40 flex justify-center">
-			<div class="m-auto pt-64 flex flex-col justify-center">
-				<div class="max-w-md">
-					<AddFilesPlaceholder>
-						<div class=" mt-2 text-center text-sm dark:text-gray-200 w-full">
-							Drop any files here to add to my documents
-						</div>
-					</AddFilesPlaceholder>
-				</div>
-			</div>
-		</div>
-	</div>
-{/if}
-
+<FilesOverlay show={dragged} />
 <SyncConfirmDialog
 	bind:show={showSyncConfirmModal}
 	message={$i18n.t(
@@ -752,7 +739,7 @@
 			{#if largeScreen}
 				<div class="flex-1 flex justify-start w-full h-full max-h-full">
 					{#if selectedFile}
-						<div class=" flex flex-col w-full h-full max-h-full">
+						<div class=" flex flex-col w-full">
 							<div class="shrink-0 mb-2 flex items-center">
 								{#if !showSidepanel}
 									<div class="-translate-x-2">
@@ -779,12 +766,18 @@
 
 								<div>
 									<button
-										class="self-center w-fit text-sm py-1 px-2.5 dark:text-gray-300 dark:hover:text-white hover:bg-black/5 dark:hover:bg-white/5 rounded-lg"
+										class="self-center w-fit text-sm py-1 px-2.5 dark:text-gray-300 dark:hover:text-white hover:bg-black/5 dark:hover:bg-white/5 rounded-lg disabled:opacity-50 disabled:cursor-not-allowed"
+										disabled={isSaving}
 										on:click={() => {
 											updateFileContentHandler();
 										}}
 									>
 										{$i18n.t('Save')}
+										{#if isSaving}
+											<div class="ml-2 self-center">
+												<Spinner />
+											</div>
+										{/if}
 									</button>
 								</div>
 							</div>
@@ -836,12 +829,18 @@
 
 								<div>
 									<button
-										class="self-center w-fit text-sm py-1 px-2.5 dark:text-gray-300 dark:hover:text-white hover:bg-black/5 dark:hover:bg-white/5 rounded-lg"
+										class="self-center w-fit text-sm py-1 px-2.5 dark:text-gray-300 dark:hover:text-white hover:bg-black/5 dark:hover:bg-white/5 rounded-lg disabled:opacity-50 disabled:cursor-not-allowed"
+										disabled={isSaving}
 										on:click={() => {
 											updateFileContentHandler();
 										}}
 									>
 										{$i18n.t('Save')}
+										{#if isSaving}
+											<div class="ml-2 self-center">
+												<Spinner />
+											</div>
+										{/if}
 									</button>
 								</div>
 							</div>
@@ -882,7 +881,7 @@
 								<input
 									class=" w-full text-sm pr-4 py-1 rounded-r-xl outline-hidden bg-transparent"
 									bind:value={query}
-									placeholder={$i18n.t('Search Collection')}
+									placeholder={`${$i18n.t('Search Collection')}${(knowledge?.files ?? []).length ? ` (${(knowledge?.files ?? []).length})` : ''}`}
 									on:focus={() => {
 										selectedFileId = null;
 									}}
