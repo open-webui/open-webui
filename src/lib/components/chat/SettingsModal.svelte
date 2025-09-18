@@ -211,7 +211,14 @@
 		{
 			id: 'themes',
 			title: 'Themes',
-			keywords: ['themes', 'appearance', 'dark mode', 'light mode', 'community themes', 'custom themes']
+			keywords: [
+				'themes',
+				'appearance',
+				'dark mode',
+				'light mode',
+				'community themes',
+				'custom themes'
+			]
 		},
 		{
 			id: 'connections',

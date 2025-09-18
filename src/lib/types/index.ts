@@ -43,43 +43,43 @@ export type ThemeVariable =
 	| '--color-blue-950';
 
 export interface Theme {
-  id: string;
-  name: string;
-  description?: string;
-  version?: string;
-  author?: string;
-  repository?: string;
-  targetWebUIVersion?: string;
-  base: 'light' | 'dark' | 'oled-dark' | 'her';
-  emoji?: string;
-  metaThemeColor?: string;
-  systemBackgroundImageUrl?: string;
-  systemBackgroundImageDarken?: number;
-  chatBackgroundImageUrl?: string;
-  chatBackgroundImageDarken?: number;
-  variables?: Partial<Record<ThemeVariable, string>>;
-  gradient?: {
-    enabled: boolean;
-    colors: string[];
-    direction: number;
-    intensity: number;
-  };
-  tsparticlesConfig?: IOptions;
-  animationScript?: string;
-  animation?: {
-    start: (canvas: HTMLCanvasElement) => void;
-    stop: () => void;
-  };
-  css?: string;
-  sourceUrl?: string;
-  codeMirrorTheme?: string;
-  toggles?: {
-    cssVariables?: boolean;
-    customCss?: boolean;
-    animationScript?: boolean;
-    tsParticles?: boolean;
-    gradient?: boolean;
-    systemBackgroundImage?: boolean;
-    chatBackgroundImage?: boolean;
-  };
+	id: string;
+	name: string;
+	description?: string;
+	version?: string;
+	author?: string;
+	repository?: string;
+	targetWebUIVersion?: string;
+	base: 'light' | 'dark' | 'oled-dark' | 'her';
+	emoji?: string;
+	metaThemeColor?: string;
+	systemBackgroundImageUrl?: string;
+	systemBackgroundImageDarken?: number;
+	chatBackgroundImageUrl?: string;
+	chatBackgroundImageDarken?: number;
+	variables?: Partial<Record<ThemeVariable, string>>;
+	gradient?: {
+		enabled: boolean;
+		colors: string[];
+		direction: number;
+		intensity: number;
+	};
+	tsparticlesConfig?: IOptions;
+	animationScript?: string;
+	animation?: {
+		start: (canvas: HTMLCanvasElement) => void;
+		stop: () => void;
+	};
+	css?: string;
+	sourceUrl?: string;
+	codeMirrorTheme?: string;
+	toggles?: {
+		cssVariables?: boolean;
+		customCss?: boolean;
+		animationScript?: boolean;
+		tsParticles?: boolean;
+		gradient?: boolean;
+		systemBackgroundImage?: boolean;
+		chatBackgroundImage?: boolean;
+	};
 }

@@ -114,7 +114,6 @@
 		params = { ...params, ...$settings.params };
 		params.stop = $settings?.params?.stop ? ($settings?.params?.stop ?? []).join(',') : null;
 	});
-
 </script>
 
 <div class="flex flex-col h-full justify-between text-sm" id="tab-general">

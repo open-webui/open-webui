@@ -129,7 +129,11 @@
 									}
 
 									view.dispatch({
-										changes: { from: activeColorRange.from, to: activeColorRange.to, insert: newColorStr }
+										changes: {
+											from: activeColorRange.from,
+											to: activeColorRange.to,
+											insert: newColorStr
+										}
 									});
 									activeColorRange.to = activeColorRange.from + newColorStr.length;
 								}
@@ -404,7 +408,7 @@ print("${endTag}")
 	};
 
 	const setTheme = (themeName) => {
-		const theme = themeName === 'one-dark' ? oneDark : themes[themeName] ?? oneDark;
+		const theme = themeName === 'one-dark' ? oneDark : (themes[themeName] ?? oneDark);
 		if (codeEditor) {
 			codeEditor.dispatch({
 				effects: editorTheme.reconfigure(theme)
@@ -482,10 +486,7 @@ print("${endTag}")
 
 {#if showPicker}
 	<div class="color-picker-wrapper" style={pickerStyle}>
-		<ColorPicker
-			bind:hex={pickerColor}
-			isDialog={false}
-		/>
+		<ColorPicker bind:hex={pickerColor} isDialog={false} />
 	</div>
 {/if}
 

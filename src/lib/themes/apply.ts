@@ -9,12 +9,7 @@ import { get } from 'svelte/store';
 import { theme as themeStore, codeMirrorTheme } from '$lib/stores';
 import variables from '$lib/themes/variables.json';
 
-import {
-	currentThemeStore,
-	liveThemeStore,
-	communityThemes,
-	themes
-} from '$lib/stores/theme';
+import { currentThemeStore, liveThemeStore, communityThemes, themes } from '$lib/stores/theme';
 
 let currentStylesheet: HTMLStyleElement | undefined;
 
@@ -100,55 +95,55 @@ const _applyGlobalThemeStyles = (theme: Theme) => {
  * @param isLiveUpdate If true, only the live theme store is updated, for real-time previews.
  */
 export const applyTheme = async (themeInput: string | Theme, isLiveUpdate = false) => {
-  cleanupTheme();
+	cleanupTheme();
 
-  // Reset codemirror theme to default
-  codeMirrorTheme.set('one-dark');
+	// Reset codemirror theme to default
+	codeMirrorTheme.set('one-dark');
 
-  let theme: Theme | undefined;
-  if (typeof themeInput === 'string') {
-    theme = get(themes).get(themeInput) ?? get(communityThemes).get(themeInput);
-  } else {
-    theme = themeInput;
-  }
+	let theme: Theme | undefined;
+	if (typeof themeInput === 'string') {
+		theme = get(themes).get(themeInput) ?? get(communityThemes).get(themeInput);
+	} else {
+		theme = themeInput;
+	}
 
-  if (!theme) {
-    return;
-  }
+	if (!theme) {
+		return;
+	}
 
-  const themeToApply = { ...theme };
+	const themeToApply = { ...theme };
 
-  if (themeToApply.toggles && !themeToApply.toggles.tsParticles) {
-    themeToApply.tsparticlesConfig = undefined;
-  } else if (themeToApply.tsparticlesConfig) {
-    themeToApply.tsparticlesConfig.fpsLimit = 120;
-    themeToApply.tsparticlesConfig.pauseOnBlur = true;
-    themeToApply.tsparticlesConfig.pauseOnOutsideViewport = true;
-    themeToApply.tsparticlesConfig.interactivity = {
-      ...themeToApply.tsparticlesConfig.interactivity,
-      events: {
-        ...themeToApply.tsparticlesConfig.interactivity?.events,
-        onClick: {
-          ...themeToApply.tsparticlesConfig.interactivity?.events?.onClick,
-          enable: false
-        }
-      }
-    };
-  }
+	if (themeToApply.toggles && !themeToApply.toggles.tsParticles) {
+		themeToApply.tsparticlesConfig = undefined;
+	} else if (themeToApply.tsparticlesConfig) {
+		themeToApply.tsparticlesConfig.fpsLimit = 120;
+		themeToApply.tsparticlesConfig.pauseOnBlur = true;
+		themeToApply.tsparticlesConfig.pauseOnOutsideViewport = true;
+		themeToApply.tsparticlesConfig.interactivity = {
+			...themeToApply.tsparticlesConfig.interactivity,
+			events: {
+				...themeToApply.tsparticlesConfig.interactivity?.events,
+				onClick: {
+					...themeToApply.tsparticlesConfig.interactivity?.events?.onClick,
+					enable: false
+				}
+			}
+		};
+	}
 
-  liveThemeStore.set(themeToApply);
+	liveThemeStore.set(themeToApply);
 
-  if (!isLiveUpdate) {
-    currentThemeStore.set(themeToApply);
-  }
+	if (!isLiveUpdate) {
+		currentThemeStore.set(themeToApply);
+	}
 
-  _applyGlobalThemeStyles(themeToApply);
+	_applyGlobalThemeStyles(themeToApply);
 
-  if (themeToApply.codeMirrorTheme) {
-    codeMirrorTheme.set(themeToApply.codeMirrorTheme);
-  }
+	if (themeToApply.codeMirrorTheme) {
+		codeMirrorTheme.set(themeToApply.codeMirrorTheme);
+	}
 
-  if (typeof window !== 'undefined' && window.applyTheme) {
-    window.applyTheme();
-  }
+	if (typeof window !== 'undefined' && window.applyTheme) {
+		window.applyTheme();
+	}
 };

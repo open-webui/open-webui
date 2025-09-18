@@ -55,12 +55,15 @@
 
 <div class=" flex flex-col gap-3 {banners?.length > 0 ? 'mt-2' : ''}" bind:this={bannerListElement}>
 	{#each banners as banner, bannerIdx (banner.id)}
-		<div class=" flex justify-between items-start -ml-1" id="banner-item-{banner.id}">
+		<div
+			class=" flex justify-between items-start -ml-1 border rounded-xl border-gray-50 dark:border-none dark:bg-gray-850 p-2"
+			id="banner-item-{banner.id}"
+		>
 			<EllipsisVertical className="size-4 cursor-move item-handle" />
 
 			<div class="flex flex-row flex-1 gap-2 items-start">
 				<select
-					class="w-fit capitalize rounded-xl text-xs bg-transparent outline-hidden pl-1 pr-5"
+					class="w-fit capitalize rounded-xl text-xs outline-hidden pl-1 pr-5"
 					bind:value={banner.type}
 					required
 				>
@@ -74,7 +77,7 @@
 				</select>
 
 				<Textarea
-					className="mr-2 text-xs w-full bg-transparent outline-hidden resize-none"
+					className="mr-2 text-xs w-full outline-hidden resize-none"
 					placeholder={$i18n.t('Content')}
 					bind:value={banner.content}
 					maxSize={100}

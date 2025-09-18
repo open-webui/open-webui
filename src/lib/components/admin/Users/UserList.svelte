@@ -154,7 +154,7 @@
 	</div>
 {:else}
 	<div
-		class="pt-0.5 pb-1 gap-1 flex flex-col md:flex-row justify-between sticky top-0 z-10 bg-white dark:bg-gray-900"
+		class="pt-0.5 pb-1 gap-1 flex flex-col md:flex-row justify-between sticky top-0 z-10 bg-transparent"
 	>
 		<div class="flex md:self-center text-lg font-medium px-0.5">
 			<div class="flex-shrink-0">
@@ -206,7 +206,7 @@
 				<div>
 					<Tooltip content={$i18n.t('Add User')}>
 						<button
-							class=" p-2 rounded-xl hover:bg-gray-100 dark:bg-gray-900 dark:hover:bg-gray-850 transition font-medium text-sm flex items-center space-x-1"
+							class=" p-2 rounded-xl hover:bg-gray-100 bg-transparent dark:hover:bg-gray-850 transition font-medium text-sm flex items-center space-x-1"
 							on:click={() => {
 								showAddUserModal = !showAddUserModal;
 							}}
@@ -368,7 +368,7 @@
 			</thead>
 			<tbody class="">
 				{#each users as user, userIdx}
-					<tr class="bg-white dark:bg-gray-900 dark:border-gray-850 text-xs">
+					<tr class="bg-transparent dark:border-gray-850 text-xs">
 						<td class="px-3 py-1 min-w-[7rem] w-28">
 							<button
 								class=" translate-y-0.5"

@@ -178,7 +178,7 @@
 				<div>
 					<Tooltip content={$i18n.t('Create Group')}>
 						<button
-							class=" p-2 rounded-xl hover:bg-gray-100 dark:bg-gray-900 dark:hover:bg-gray-850 transition font-medium text-sm flex items-center space-x-1"
+							class=" p-2 rounded-xl hover:bg-gray-100 bg-transparent dark:hover:bg-gray-850 transition font-medium text-sm flex items-center space-x-1"
 							on:click={() => {
 								showCreateGroupModal = !showCreateGroupModal;
 							}}

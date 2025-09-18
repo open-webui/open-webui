@@ -15,7 +15,6 @@ export const communityThemes = writable<Map<string, Theme>>(new Map());
 export const currentThemeStore = writable<Theme | undefined>(undefined);
 export const liveThemeStore = writable<Theme | undefined>(undefined);
 
-
 // Theme update stores
 export const themeUpdates = writable<Map<string, Theme>>(new Map());
 export const themeUpdateErrors = writable<Map<string, string>>(new Map());

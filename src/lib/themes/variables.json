@@ -1,122 +1,122 @@
 [
-  {
-    "name": "--color-black",
-    "defaultValue": "#000000",
-    "description": "Absolute black color."
-  },
-  {
-    "name": "--color-white",
-    "defaultValue": "#ffffff",
-    "description": "Absolute white color."
-  },
-  {
-    "name": "--color-gray-50",
-    "defaultValue": "#f9f9f9",
-    "description": "Very light gray, almost white. Used for backgrounds."
-  },
-  {
-    "name": "--color-gray-100",
-    "defaultValue": "#ececec",
-    "description": "Light gray. Used for subtle backgrounds and borders."
-  },
-  {
-    "name": "--color-gray-200",
-    "defaultValue": "#e3e3e3",
-    "description": "Light gray. Used for UI elements like disabled buttons."
-  },
-  {
-    "name": "--color-gray-300",
-    "defaultValue": "#cdcdcd",
-    "description": "Gray. Used for borders and dividers."
-  },
-  {
-    "name": "--color-gray-400",
-    "defaultValue": "#b4b4b4",
-    "description": "Medium gray. Used for placeholder text and secondary icons."
-  },
-  {
-    "name": "--color-gray-500",
-    "defaultValue": "#9b9b9b",
-    "description": "Medium-dark gray. Used for secondary text."
-  },
-  {
-    "name": "--color-gray-600",
-    "defaultValue": "#676767",
-    "description": "Dark gray. Used for primary text in light themes."
-  },
-  {
-    "name": "--color-gray-700",
-    "defaultValue": "#4e4e4e",
-    "description": "Very dark gray. Used for headings and important text."
-  },
-  {
-    "name": "--color-gray-800",
-    "defaultValue": "#333333",
-    "description": "Almost black. Used for backgrounds in dark themes."
-  },
-  {
-    "name": "--color-gray-850",
-    "defaultValue": "#262626",
-    "description": "Slightly lighter than --color-gray-900. Used for secondary backgrounds in dark themes."
-  },
-  {
-    "name": "--color-gray-900",
-    "defaultValue": "#171717",
-    "description": "Very dark gray, near black. Used for main backgrounds in dark themes."
-  },
-  {
-    "name": "--color-gray-950",
-    "defaultValue": "#0d0d0d",
-    "description": "The darkest gray. Used for the outermost background in dark themes."
-  },
-  {
-    "name": "--color-blue-100",
-    "defaultValue": "#dbeafe",
-    "description": "Very light blue. Used for highlights and subtle backgrounds."
-  },
-  {
-    "name": "--color-blue-200",
-    "defaultValue": "#bfdbfe",
-    "description": "Light blue. Used for hover states and highlights."
-  },
-  {
-    "name": "--color-blue-300",
-    "defaultValue": "#93c5fd",
-    "description": "Blue. Used for secondary actions and links."
-  },
-  {
-    "name": "--color-blue-400",
-    "defaultValue": "#60a5fa",
-    "description": "Bright blue. Used for primary actions and highlights."
-  },
-  {
-    "name": "--color-blue-500",
-    "defaultValue": "#3b82f6",
-    "description": "Strong blue. Used for primary buttons and links."
-  },
-  {
-    "name": "--color-blue-600",
-    "defaultValue": "#2563eb",
-    "description": "The primary brand color. Used for major UI elements."
-  },
-  {
-    "name": "--color-blue-700",
-    "defaultValue": "#1d4ed8",
-    "description": "Dark blue. Used for hover states on primary elements."
-  },
-  {
-    "name": "--color-blue-800",
-    "defaultValue": "#1e40af",
-    "description": "Very dark blue. Used for visited links or pressed states."
-  },
-  {
-    "name": "--color-blue-900",
-    "defaultValue": "#1e3a8a",
-    "description": "Almost navy blue. Used for text on light blue backgrounds."
-  },
-  {
-    "name": "--color-blue-950",
-    "defaultValue": "#172554",
-    "description": "The darkest blue. Used for deep backgrounds or text."
-  }
+	{
+		"name": "--color-black",
+		"defaultValue": "#000000",
+		"description": "Absolute black color."
+	},
+	{
+		"name": "--color-white",
+		"defaultValue": "#ffffff",
+		"description": "Absolute white color."
+	},
+	{
+		"name": "--color-gray-50",
+		"defaultValue": "#f9f9f9",
+		"description": "Very light gray, almost white. Used for backgrounds."
+	},
+	{
+		"name": "--color-gray-100",
+		"defaultValue": "#ececec",
+		"description": "Light gray. Used for subtle backgrounds and borders."
+	},
+	{
+		"name": "--color-gray-200",
+		"defaultValue": "#e3e3e3",
+		"description": "Light gray. Used for UI elements like disabled buttons."
+	},
+	{
+		"name": "--color-gray-300",
+		"defaultValue": "#cdcdcd",
+		"description": "Gray. Used for borders and dividers."
+	},
+	{
+		"name": "--color-gray-400",
+		"defaultValue": "#b4b4b4",
+		"description": "Medium gray. Used for placeholder text and secondary icons."
+	},
+	{
+		"name": "--color-gray-500",
+		"defaultValue": "#9b9b9b",
+		"description": "Medium-dark gray. Used for secondary text."
+	},
+	{
+		"name": "--color-gray-600",
+		"defaultValue": "#676767",
+		"description": "Dark gray. Used for primary text in light themes."
+	},
+	{
+		"name": "--color-gray-700",
+		"defaultValue": "#4e4e4e",
+		"description": "Very dark gray. Used for headings and important text."
+	},
+	{
+		"name": "--color-gray-800",
+		"defaultValue": "#333333",
+		"description": "Almost black. Used for backgrounds in dark themes."
+	},
+	{
+		"name": "--color-gray-850",
+		"defaultValue": "#262626",
+		"description": "Slightly lighter than --color-gray-900. Used for secondary backgrounds in dark themes."
+	},
+	{
+		"name": "--color-gray-900",
+		"defaultValue": "#171717",
+		"description": "Very dark gray, near black. Used for main backgrounds in dark themes."
+	},
+	{
+		"name": "--color-gray-950",
+		"defaultValue": "#0d0d0d",
+		"description": "The darkest gray. Used for the outermost background in dark themes."
+	},
+	{
+		"name": "--color-blue-100",
+		"defaultValue": "#dbeafe",
+		"description": "Very light blue. Used for highlights and subtle backgrounds."
+	},
+	{
+		"name": "--color-blue-200",
+		"defaultValue": "#bfdbfe",
+		"description": "Light blue. Used for hover states and highlights."
+	},
+	{
+		"name": "--color-blue-300",
+		"defaultValue": "#93c5fd",
+		"description": "Blue. Used for secondary actions and links."
+	},
+	{
+		"name": "--color-blue-400",
+		"defaultValue": "#60a5fa",
+		"description": "Bright blue. Used for primary actions and highlights."
+	},
+	{
+		"name": "--color-blue-500",
+		"defaultValue": "#3b82f6",
+		"description": "Strong blue. Used for primary buttons and links."
+	},
+	{
+		"name": "--color-blue-600",
+		"defaultValue": "#2563eb",
+		"description": "The primary brand color. Used for major UI elements."
+	},
+	{
+		"name": "--color-blue-700",
+		"defaultValue": "#1d4ed8",
+		"description": "Dark blue. Used for hover states on primary elements."
+	},
+	{
+		"name": "--color-blue-800",
+		"defaultValue": "#1e40af",
+		"description": "Very dark blue. Used for visited links or pressed states."
+	},
+	{
+		"name": "--color-blue-900",
+		"defaultValue": "#1e3a8a",
+		"description": "Almost navy blue. Used for text on light blue backgrounds."
+	},
+	{
+		"name": "--color-blue-950",
+		"defaultValue": "#172554",
+		"description": "The darkest blue. Used for deep backgrounds or text."
+	}
 ]

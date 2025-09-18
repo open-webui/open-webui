@@ -9,63 +9,83 @@ import { get } from 'svelte/store';
 import { toast } from 'svelte-sonner';
 import { WEBUI_VERSION } from '$lib/constants';
 
-import {
-	communityThemes,
-	themeUpdates,
-	themeUpdateErrors,
-	themes
-} from '$lib/stores/theme';
+import { communityThemes, themeUpdates, themeUpdateErrors, themes } from '$lib/stores/theme';
 import { theme as themeStore } from '$lib/stores';
 import { applyTheme } from '$lib/themes/apply';
 
 export const loadCommunityThemes = () => {
-  const themes = localStorage.getItem('communityThemes');
-  if (themes) {
-    communityThemes.set(new Map(Object.entries(JSON.parse(themes))));
-  }
+	const themes = localStorage.getItem('communityThemes');
+	if (themes) {
+		communityThemes.set(new Map(Object.entries(JSON.parse(themes))));
+	}
 };
 
 loadCommunityThemes();
 
-const saveCommunityThemes = (themes: Map<string, Theme>) => {
-  localStorage.setItem('communityThemes', JSON.stringify(Object.fromEntries(themes)));
+const saveCommunityThemes = (themes: Map<string, Theme>): boolean => {
+	try {
+		localStorage.setItem('communityThemes', JSON.stringify(Object.fromEntries(themes)));
+		return true;
+	} catch (e) {
+		if (e instanceof DOMException && e.name === 'QuotaExceededError') {
+			toast.error('Storage quota exceeded. Please remove some themes to free up space.');
+		} else {
+			toast.error('An unknown error occurred while saving themes.');
+		}
+		return false;
+	}
 };
 
-export const addCommunityTheme = (theme: Theme) => {
-  if (!theme.targetWebUIVersion) {
-    theme.targetWebUIVersion = WEBUI_VERSION;
-  }
-  const newThemes = new Map(get(communityThemes));
-  newThemes.set(theme.id, theme);
-  communityThemes.set(newThemes);
-  saveCommunityThemes(newThemes);
+export const addCommunityTheme = (theme: Theme): boolean => {
+	if (!theme.targetWebUIVersion) {
+		theme.targetWebUIVersion = WEBUI_VERSION;
+	}
+	const originalThemes = get(communityThemes);
+	const newThemes = new Map(originalThemes);
+	newThemes.set(theme.id, theme);
+	communityThemes.set(newThemes);
+
+	const success = saveCommunityThemes(newThemes);
+
+	if (!success) {
+		communityThemes.set(originalThemes);
+	}
+	return success;
 };
 
-export const updateCommunityTheme = (theme: Theme) => {
-  const newThemes = new Map(get(communityThemes));
-  if (newThemes.has(theme.id)) {
-    newThemes.set(theme.id, theme);
-    communityThemes.set(newThemes);
-    saveCommunityThemes(newThemes);
-  }
+export const updateCommunityTheme = (theme: Theme): boolean => {
+	const originalThemes = get(communityThemes);
+	if (originalThemes.has(theme.id)) {
+		const newThemes = new Map(originalThemes);
+		newThemes.set(theme.id, theme);
+		communityThemes.set(newThemes);
+
+		const success = saveCommunityThemes(newThemes);
+
+		if (!success) {
+			communityThemes.set(originalThemes);
+		}
+		return success;
+	}
+	return false;
 };
 
 export const removeCommunityTheme = (themeId: string) => {
-  const currentThemeId = localStorage.getItem('theme');
-  if (currentThemeId === themeId) {
-    const themeToDelete = get(communityThemes).get(themeId);
-    if (themeToDelete) {
-      const baseTheme = themeToDelete.base ?? 'system';
-      themeStore.set(baseTheme);
-      localStorage.setItem('theme', baseTheme);
-      applyTheme(baseTheme);
-    }
-  }
+	const currentThemeId = localStorage.getItem('theme');
+	if (currentThemeId === themeId) {
+		const themeToDelete = get(communityThemes).get(themeId);
+		if (themeToDelete) {
+			const baseTheme = themeToDelete.base ?? 'system';
+			themeStore.set(baseTheme);
+			localStorage.setItem('theme', baseTheme);
+			applyTheme(baseTheme);
+		}
+	}
 
-  const newThemes = new Map(get(communityThemes));
-  newThemes.delete(themeId);
-  communityThemes.set(newThemes);
-  saveCommunityThemes(newThemes);
+	const newThemes = new Map(get(communityThemes));
+	newThemes.delete(themeId);
+	communityThemes.set(newThemes);
+	saveCommunityThemes(newThemes);
 };
 
 const _fetchTheme = async (url: string): Promise<[Theme | null, string | null]> => {

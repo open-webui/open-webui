@@ -738,80 +738,78 @@
 								</div>
 							</div>
 						{:else}
-						<div
-							class="w-full flex {($settings?.llmChatBubble) ? 'justify-start pb-1' : 'w-full'}"
-						>
-							<div
-								class="rounded-3xl {($settings?.llmChatBubble)
-									? `max-w-[90%] px-4 py-1.5 bg-gray-100 dark:bg-gray-850 ${
-											message.files ? 'rounded-tl-lg' : ''
-										}`
-									: 'w-full'}"
-							>
-								<div class="w-full flex flex-col relative" id="response-content-container">
-									{#if message.content === '' && !message.error && ((model?.info?.meta?.capabilities?.status_updates ?? true) ? (message?.statusHistory ?? [...(message?.status ? [message?.status] : [])]).length === 0 || (message?.statusHistory?.at(-1)?.hidden ?? false) : true)}
-										<Skeleton />
-									{:else if message.content && message.error !== true}
-										<!-- always show message contents even if there's an error -->
-										<!-- unless message.error === true which is legacy error handling, where the error message is stored in message.content -->
-										<ContentRenderer
-											id={`${chatId}-${message.id}`}
-											messageId={message.id}
-											{history}
-											{selectedModels}
-											content={message.content}
-											sources={message.sources}
-											floatingButtons={message?.done &&
-												!readOnly &&
-												($settings?.showFloatingActionButtons ?? true)}
-											save={!readOnly}
-											preview={!readOnly}
-											{editCodeBlock}
-											{topPadding}
-											done={($settings?.chatFadeStreamingText ?? true)
-												? (message?.done ?? false)
-												: true}
-											{model}
-											onTaskClick={async (e) => {
-												console.log(e);
-											}}
-											onSourceClick={async (id, idx) => {
-												console.log(id, idx);
+							<div class="w-full flex {$settings?.llmChatBubble ? 'justify-start pb-1' : 'w-full'}">
+								<div
+									class="rounded-3xl {$settings?.llmChatBubble
+										? `max-w-[90%] px-4 py-1.5 bg-gray-100 dark:bg-gray-850 ${
+												message.files ? 'rounded-tl-lg' : ''
+											}`
+										: 'w-full'}"
+								>
+									<div class="w-full flex flex-col relative" id="response-content-container">
+										{#if message.content === '' && !message.error && ((model?.info?.meta?.capabilities?.status_updates ?? true) ? (message?.statusHistory ?? [...(message?.status ? [message?.status] : [])]).length === 0 || (message?.statusHistory?.at(-1)?.hidden ?? false) : true)}
+											<Skeleton />
+										{:else if message.content && message.error !== true}
+											<!-- always show message contents even if there's an error -->
+											<!-- unless message.error === true which is legacy error handling, where the error message is stored in message.content -->
+											<ContentRenderer
+												id={`${chatId}-${message.id}`}
+												messageId={message.id}
+												{history}
+												{selectedModels}
+												content={message.content}
+												sources={message.sources}
+												floatingButtons={message?.done &&
+													!readOnly &&
+													($settings?.showFloatingActionButtons ?? true)}
+												save={!readOnly}
+												preview={!readOnly}
+												{editCodeBlock}
+												{topPadding}
+												done={($settings?.chatFadeStreamingText ?? true)
+													? (message?.done ?? false)
+													: true}
+												{model}
+												onTaskClick={async (e) => {
+													console.log(e);
+												}}
+												onSourceClick={async (id, idx) => {
+													console.log(id, idx);
 
-												if (citationsElement) {
-													citationsElement?.showSourceModal(idx - 1);
-												}
-											}}
-											onAddMessages={({ modelId, parentId, messages }) => {
-												addMessages({ modelId, parentId, messages });
-											}}
-											onSave={({ raw, oldContent, newContent }) => {
-												history.messages[message.id].content = history.messages[
-													message.id
-												].content.replace(raw, raw.replace(oldContent, newContent));
+													if (citationsElement) {
+														citationsElement?.showSourceModal(idx - 1);
+													}
+												}}
+												onAddMessages={({ modelId, parentId, messages }) => {
+													addMessages({ modelId, parentId, messages });
+												}}
+												onSave={({ raw, oldContent, newContent }) => {
+													history.messages[message.id].content = history.messages[
+														message.id
+													].content.replace(raw, raw.replace(oldContent, newContent));
 
-												updateChat();
-											}}
-										/>
-									{/if}
+													updateChat();
+												}}
+											/>
+										{/if}
 
-									{#if message?.error}
-										<Error content={message?.error?.content ?? message.content} />
-									{/if}
+										{#if message?.error}
+											<Error content={message?.error?.content ?? message.content} />
+										{/if}
 
-									{#if (message?.sources || message?.citations) && (model?.info?.meta?.capabilities?.citations ?? true)}
-										<Citations
-											bind:this={citationsElement}
-											id={message?.id}
-											sources={message?.sources ?? message?.citations}
-										/>
-									{/if}
+										{#if (message?.sources || message?.citations) && (model?.info?.meta?.capabilities?.citations ?? true)}
+											<Citations
+												bind:this={citationsElement}
+												id={message?.id}
+												sources={message?.sources ?? message?.citations}
+											/>
+										{/if}
 
-									{#if message.code_executions}
-										<CodeExecutions codeExecutions={message.code_executions} />
-									{/if}
+										{#if message.code_executions}
+											<CodeExecutions codeExecutions={message.code_executions} />
+										{/if}
+									</div>
 								</div>
-							</div>
 							</div>
 						{/if}
 					</div>

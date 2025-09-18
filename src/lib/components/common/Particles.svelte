@@ -1,38 +1,38 @@
 <script lang="ts">
-  import { onMount } from 'svelte';
-  import type { Container } from '@tsparticles/engine';
-  import { loadAll } from '@tsparticles/all';
+	import { onMount } from 'svelte';
+	import type { Container } from '@tsparticles/engine';
+	import { loadAll } from '@tsparticles/all';
 
-  export let options: any;
-  export let url: string | undefined = undefined;
+	export let options: any;
+	export let url: string | undefined = undefined;
 
-  let particlesContainer: Container | undefined;
-  let ParticlesComponent;
+	let particlesContainer: Container | undefined;
+	let ParticlesComponent;
 
-  onMount(async () => {
-    const { default: Particles } = await import('@tsparticles/svelte');
-    const { particlesInit } = await import('@tsparticles/svelte');
+	onMount(async () => {
+		const { default: Particles } = await import('@tsparticles/svelte');
+		const { particlesInit } = await import('@tsparticles/svelte');
 
-    await particlesInit(async (engine) => {
-      await loadAll(engine);
-    });
+		await particlesInit(async (engine) => {
+			await loadAll(engine);
+		});
 
-    ParticlesComponent = Particles;
-  });
+		ParticlesComponent = Particles;
+	});
 
-  const onParticlesLoaded = (event) => {
-    particlesContainer = event.detail.particles;
-  };
+	const onParticlesLoaded = (event) => {
+		particlesContainer = event.detail.particles;
+	};
 </script>
 
 {#if ParticlesComponent}
-  <svelte:component
-    this={ParticlesComponent}
-    id="tsparticles"
-    class="pointer-events-none absolute top-0 left-0 w-full h-full"
-    style="z-index: 4;"
-    {options}
-    {url}
-    on:particlesLoaded={onParticlesLoaded}
-  />
+	<svelte:component
+		this={ParticlesComponent}
+		id="tsparticles"
+		class="pointer-events-none absolute top-0 left-0 w-full h-full"
+		style="z-index: 4;"
+		{options}
+		{url}
+		on:particlesLoaded={onParticlesLoaded}
+	/>
 {/if}
