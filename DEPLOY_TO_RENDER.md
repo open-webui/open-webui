@@ -48,6 +48,7 @@ If you prefer manual configuration:
 The following are automatically configured in `render.yaml`:
 
 **Database & Security:**
+
 ```bash
 DATABASE_URL=<automatically set from managed Postgres>
 WEBUI_SECRET_KEY=<automatically generated>
@@ -57,6 +58,7 @@ ENABLE_INITIAL_ADMIN_SIGNUP=True
 ```
 
 **Authentication (Private Instance):**
+
 ```bash
 DEFAULT_USER_ROLE=pending
 WEBUI_SESSION_COOKIE_SECURE=true
@@ -64,6 +66,7 @@ WEBUI_AUTH_COOKIE_SECURE=true
 ```
 
 **Web Search:**
+
 ```bash
 ENABLE_WEB_SEARCH=True
 WEB_SEARCH_ENGINE=duckduckgo
@@ -75,11 +78,13 @@ WEB_SEARCH_RESULT_COUNT=5
 After deployment, you can add API keys for better search engines through the admin interface:
 
 **Brave Search (Recommended):**
+
 - Get API key from [brave.com/search/api](https://brave.com/search/api)
 - Add `BRAVE_SEARCH_API_KEY` environment variable
 - Change `WEB_SEARCH_ENGINE` to `brave`
 
 **Serper (Google-powered):**
+
 - Get API key from [serper.dev](https://serper.dev)
 - Add `SERPER_API_KEY` environment variable
 - Change `WEB_SEARCH_ENGINE` to `serper`
@@ -93,6 +98,7 @@ Your instance will be available at: `https://openwebui.onrender.com`
 ### 2. Set Admin Email (Important!)
 
 Before creating your admin account, you need to set your admin email:
+
 1. Go to Render Dashboard → Your Service → Environment
 2. Click "Add Environment Variable"
 3. Add: `ADMIN_EMAIL` = `your-email@example.com`
@@ -109,6 +115,7 @@ Before creating your admin account, you need to set your admin email:
 ### 3. Disable Initial Signup (Security)
 
 After creating your admin account:
+
 1. Go to Admin Panel → Settings → Authentication
 2. Ensure "Enable Signup" is disabled
 3. This prevents others from creating accounts
@@ -128,6 +135,7 @@ Since this is a private instance:
 3. **Access Control**: You control who can access your instance
 
 To add a new user:
+
 1. Admin Panel → Users → Add User
 2. Set their role (user/admin)
 3. They can then log in with their credentials
@@ -141,18 +149,21 @@ Render automatically monitors your service health at `/health` endpoint.
 ### Logs
 
 View application logs:
+
 - Render Dashboard → Your Service → Logs
 - Real-time log streaming available
 
 ### Database Backups
 
 Render automatically backs up your PostgreSQL database:
+
 - Daily backups for Starter plan
 - Access via Render Dashboard → Database → Backups
 
 ### Updates
 
 To update Open WebUI:
+
 1. Pull latest changes to your repository
 2. Push to GitHub
 3. Render will automatically redeploy (if auto-deploy is enabled)
@@ -160,6 +171,7 @@ To update Open WebUI:
 ## Cost Breakdown
 
 **Monthly Costs (Render Starter Plan):**
+
 - Web Service: $7/month
 - PostgreSQL Database: $7/month
 - **Total: $14/month**
@@ -205,6 +217,7 @@ To update Open WebUI:
 ## Features Enabled
 
 ✅ **Included in this deployment:**
+
 - Email/password authentication
 - Private instance (no public signup)
 - Web search integration
@@ -214,6 +227,7 @@ To update Open WebUI:
 - Compression middleware
 
 ❌ **Disabled for starter setup:**
+
 - Ollama integration (can be enabled later)
 - Image generation (can be enabled later)
 - Code execution (can be enabled later)
