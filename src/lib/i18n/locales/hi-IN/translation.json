@@ -1311,7 +1311,7 @@
 	"Searxng Query URL": "Searxng क्वेरी URL",
 	"See readme.md for instructions": "निर्देशों के लिए readme.md देखें",
 	"See what's new": "देखें, क्या नया है",
-	"Seed": "सीड्‌",
+	"Seed": "सीड्\u200c",
 	"Select": "",
 	"Select a base model": "एक आधार मॉडल का चयन करें",
 	"Select a base model (e.g. llama3, gpt-4o)": "",
