@@ -97,15 +97,26 @@ class NoteTable:
             db.commit()
             return note
 
-    def get_notes(self) -> list[NoteModel]:
+    def get_notes(
+        self, skip: Optional[int] = None, limit: Optional[int] = None
+    ) -> list[NoteModel]:
         with get_db() as db:
-            notes = db.query(Note).order_by(Note.updated_at.desc()).all()
+            query = db.query(Note).order_by(Note.updated_at.desc())
+            if skip is not None:
+                query = query.offset(skip)
+            if limit is not None:
+                query = query.limit(limit)
+            notes = query.all()
             return [NoteModel.model_validate(note) for note in notes]
 
     def get_notes_by_user_id(
-        self, user_id: str, permission: str = "write"
+        self,
+        user_id: str,
+        permission: str = "write",
+        skip: Optional[int] = None,
+        limit: Optional[int] = None,
     ) -> list[NoteModel]:
-        notes = self.get_notes()
+        notes = self.get_notes(skip=skip, limit=limit)
         user_group_ids = {group.id for group in Groups.get_groups_by_member_id(user_id)}
         return [
             note
