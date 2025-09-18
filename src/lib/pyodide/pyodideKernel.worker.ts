@@ -92,7 +92,6 @@ const executeCode = async (id: string, code: string) => {
 		self.postMessage({
 			type: 'result',
 			id,
-			state: self.cells[id]
 			state: self.cells[id],
 			files: generatedFiles
 		});

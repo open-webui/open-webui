@@ -403,6 +403,7 @@
 			console.log('Error:', error);
 		}
 	};
+
 	const render = async () => {
 		onUpdate(token);
 		if (lang === 'mermaid' && (token?.raw ?? '').slice(-4).includes('```')) {
