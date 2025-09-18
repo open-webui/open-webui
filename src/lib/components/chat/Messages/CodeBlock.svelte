@@ -3,6 +3,8 @@
 
 	import { getContext, onMount, tick, onDestroy } from 'svelte';
 	import { copyToClipboard, renderMermaidDiagram } from '$lib/utils';
+	import mermaid from 'mermaid';
+	import { v4 as uuidv4 } from 'uuid';
 
 	import 'highlight.js/styles/github-dark.min.css';
 
@@ -132,6 +134,7 @@
 		result = null;
 		stdout = null;
 		stderr = null;
+		files = null;
 
 		executing = true;
 
@@ -311,6 +314,18 @@
 			data['stderr'] && (stderr = data['stderr']);
 			data['result'] && (result = data['result']);
 
+			// Handle generated files from Pyodide worker
+			if (data['files'] && Array.isArray(data['files'])) {
+				console.log('CodeBlock: Received files from worker:', data['files']);
+				files = data['files'].map((generatedFile: any) => ({
+					type: generatedFile.type === 'text' ? 'text/plain' : 'application/octet-stream',
+					name: generatedFile.name,
+					content: generatedFile.content,
+					data: generatedFile.content,
+					downloadable: true
+				}));
+			}
+
 			executing = false;
 		};
 
@@ -320,6 +335,74 @@
 		};
 	};
 
+	let debounceTimeout;
+
+	const downloadFile = (file) => {
+		try {
+			// Check file size before processing
+			const estimatedSize = file.content.length;
+			const sizeMB = estimatedSize / (1024 * 1024);
+			if (sizeMB > 100) {
+				toast.error(
+					`File ${file.name} is too large to download (${sizeMB.toFixed(1)}MB). Maximum: 100MB`
+				);
+				return;
+			}
+			if (sizeMB > 10) {
+				if (!confirm(`File ${file.name} is large (${sizeMB.toFixed(1)}MB). Continue download?`)) {
+					return;
+				}
+			}
+			let blob: Blob;
+			if (file.type === 'text' || file.type === 'text/plain') {
+				// Text file - create blob directly
+				blob = new Blob([file.content], { type: 'text/plain' });
+			} else {
+				// Binary file - more efficient base64 to blob conversion
+				try {
+					const binaryString = atob(file.content);
+					const bytes = new Uint8Array(binaryString.length);
+					// More efficient byte conversion
+					for (let i = 0; i < binaryString.length; i++) {
+						bytes[i] = binaryString.charCodeAt(i);
+					}
+					blob = new Blob([bytes], { type: 'application/octet-stream' });
+				} catch (error) {
+					toast.error(`Failed to decode file ${file.name}: Invalid base64 data`);
+					return;
+				}
+			}
+			// Create download link
+			const url = URL.createObjectURL(blob);
+			const a = document.createElement('a');
+			a.href = url;
+			a.download = file.name;
+			// Use hidden link approach to avoid DOM manipulation
+			a.style.display = 'none';
+			document.body.appendChild(a);
+			a.click();
+			// Cleanup immediately
+			document.body.removeChild(a);
+			URL.revokeObjectURL(url);
+			const sizeText =
+				sizeMB > 1 ? `${sizeMB.toFixed(1)}MB` : `${(estimatedSize / 1024).toFixed(1)}KB`;
+			toast.success(`Downloaded ${file.name} (${sizeText})`);
+		} catch (error) {
+			console.error('Download failed:', error);
+			toast.error(`Failed to download ${file.name}: ${error.message || 'Unknown error'}`);
+		}
+	};
+
+	const drawMermaidDiagram = async () => {
+		try {
+			if (await mermaid.parse(code)) {
+				const { svg } = await mermaid.render(`mermaid-${uuidv4()}`, code);
+				mermaidHtml = svg;
+			}
+		} catch (error) {
+			console.log('Error:', error);
+		}
+	};
 	const render = async () => {
 		onUpdate(token);
 		if (lang === 'mermaid' && (token?.raw ?? '').slice(-4).includes('```')) {
@@ -361,6 +444,21 @@
 				stdout = output.stdout;
 				stderr = output.stderr;
 				result = output.result;
+
+				// Reset files array for this execution
+				files = null;
+
+				// Handle files from AI-generated code execution
+				if (output.files && Array.isArray(output.files)) {
+					console.log('CodeBlock: Received files from AI execution:', output.files);
+					files = output.files.map((generatedFile: any) => ({
+						type: generatedFile.type === 'text' ? 'text/plain' : 'application/octet-stream',
+						name: generatedFile.name,
+						content: generatedFile.content,
+						data: generatedFile.content,
+						downloadable: true
+					}));
+				}
 			} catch (error) {
 				console.error('Error:', error);
 			}
@@ -571,3 +669,94 @@
 		{/if}
 	</div>
 </div>
+
+<!-- Download buttons - always rendered outside main component when files exist -->
+{#if files && files.some((file) => file.downloadable)}
+	<div
+		class="bg-gray-50 dark:bg-gray-800 border-t border-gray-200 dark:border-gray-700 rounded-b-xl py-3 px-4 mt-2"
+	>
+		<div class="text-gray-500 text-xs mb-2">{$i18n.t('GENERATED FILES')}</div>
+
+		<!-- Show warning for large files -->
+		{#if files.some((file) => file.downloadable && file.content && file.content.length > 10 * 1024 * 1024)}
+			<div
+				class="bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-lg p-2 mb-3"
+			>
+				<div class="flex items-center gap-2">
+					<svg
+						class="w-4 h-4 text-yellow-600 dark:text-yellow-400"
+						fill="none"
+						stroke="currentColor"
+						viewBox="0 0 24 24"
+					>
+						<path
+							stroke-linecap="round"
+							stroke-linejoin="round"
+							stroke-width="2"
+							d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.732-.833-2.464 0L4.35 15.5c-.77.833.192 2.5 1.732 2.5z"
+						></path>
+					</svg>
+					<span class="text-xs text-yellow-700 dark:text-yellow-300"
+						>Large files detected. Downloads may be slow.</span
+					>
+				</div>
+			</div>
+		{/if}
+
+		<div class="flex flex-col gap-2">
+			{#each files as file}
+				{#if file.downloadable}
+					{@const fileSize = file.content ? file.content.length : 0}
+					{@const sizeMB = fileSize / (1024 * 1024)}
+					{@const sizeText =
+						sizeMB > 1 ? `${sizeMB.toFixed(1)}MB` : `${(fileSize / 1024).toFixed(1)}KB`}
+
+					<div
+						class="bg-white dark:bg-gray-900 p-3 rounded-lg border border-gray-200 dark:border-gray-600"
+					>
+						<div class="flex items-center justify-between">
+							<div class="flex items-center gap-2">
+								<svg
+									class="w-4 h-4 text-gray-500"
+									fill="none"
+									stroke="currentColor"
+									viewBox="0 0 24 24"
+								>
+									<path
+										stroke-linecap="round"
+										stroke-linejoin="round"
+										stroke-width="2"
+										d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
+									></path>
+								</svg>
+								<div class="flex flex-col">
+									<span class="text-sm font-medium text-gray-700 dark:text-gray-300"
+										>{file.name}</span
+									>
+									<span
+										class="text-xs text-gray-500"
+										class:text-yellow-600={sizeMB > 10}
+										class:dark:text-yellow-400={sizeMB > 10}
+									>
+										{sizeText} • {file.type}
+									</span>
+								</div>
+							</div>
+							<button
+								class="px-3 py-1 bg-blue-500 hover:bg-blue-600 text-white text-xs rounded-md transition-colors"
+								class:bg-yellow-500={sizeMB > 10}
+								class:hover:bg-yellow-600={sizeMB > 10}
+								on:click={() => downloadFile(file)}
+								title={sizeMB > 10
+									? `Large file (${sizeText}) - download may be slow`
+									: `Download ${file.name}`}
+							>
+								{sizeMB > 10 ? '⚠️ Download' : 'Download'}
+							</button>
+						</div>
+					</div>
+				{/if}
+			{/each}
+		</div>
+	</div>
+{/if}
