@@ -818,7 +818,7 @@ async def process_chat_payload(request, form_data, user, metadata, model):
     oauth_token = None
     try:
         if request.cookies.get("oauth_session_id", None):
-            oauth_token = request.app.state.oauth_manager.get_oauth_token(
+            oauth_token = await request.app.state.oauth_manager.get_oauth_token(
                 user.id,
                 request.cookies.get("oauth_session_id", None),
             )
@@ -1498,7 +1498,7 @@ async def process_chat_response(
     oauth_token = None
     try:
         if request.cookies.get("oauth_session_id", None):
-            oauth_token = request.app.state.oauth_manager.get_oauth_token(
+            oauth_token = await request.app.state.oauth_manager.get_oauth_token(
                 user.id,
                 request.cookies.get("oauth_session_id", None),
             )
