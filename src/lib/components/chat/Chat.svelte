@@ -122,6 +122,7 @@
 	let imageGenerationEnabled = false;
 	let webSearchEnabled = false;
 	let codeInterpreterEnabled = false;
+	let selectedWorkflowId = null;
 
 	let chat = null;
 	let tags = [];
@@ -2032,6 +2033,7 @@
 								bind:imageGenerationEnabled
 								bind:codeInterpreterEnabled
 								bind:webSearchEnabled
+								bind:selectedWorkflowId
 								bind:atSelectedModel
 								toolServers={$toolServers}
 								transparentBackground={$settings?.backgroundImageUrl ?? false}

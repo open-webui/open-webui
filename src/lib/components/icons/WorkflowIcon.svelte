@@ -1,0 +1,19 @@
+<script lang="ts">
+	export let className = 'size-5';
+	export let strokeWidth: number | string = 1.8;
+</script>
+
+<svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg" class={className} stroke="currentColor" stroke-width={strokeWidth}>
+	<g clip-path="url(#clip0_25_954)">
+		<path d="M17.0794 3.34448H5.07608C3.93972 3.34448 1.66699 3.97953 1.66699 6.65314C1.66699 9.32677 3.93972 10.0001 5.07608 10.0001H14.9978C16.1341 10.0001 18.3337 10.6534 18.3337 13.3271C18.3337 16.0006 16.1341 16.668 14.9978 16.668H2.5274" stroke-linecap="round" stroke-linejoin="round"/>
+		<path d="M3.35196 14.9971L1.69434 16.6914L3.35196 18.3335" stroke-linecap="round" stroke-linejoin="round"/>
+		<path d="M15.8516 1.64746L17.5092 3.34184L15.8516 4.98385" stroke-linecap="round" stroke-linejoin="round"/>
+	</g>
+	<defs>
+		<clipPath id="clip0_25_954">
+			<rect width="20" height="20" fill="white"/>
+		</clipPath>
+	</defs>
+</svg>
+
+

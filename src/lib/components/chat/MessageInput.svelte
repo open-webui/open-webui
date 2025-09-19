@@ -38,6 +38,7 @@
 	import VoiceRecording from './MessageInput/VoiceRecording.svelte';
 	import FilesOverlay from './MessageInput/FilesOverlay.svelte';
 	import Commands from './MessageInput/Commands.svelte';
+	import WorkflowMenu from './MessageInput/WorkflowMenu.svelte';
 
 	import RichTextInput from '../common/RichTextInput.svelte';
 	import Tooltip from '../common/Tooltip.svelte';
@@ -50,6 +51,7 @@
 	import PhotoSolid from '../icons/PhotoSolid.svelte';
 	import Photo from '../icons/Photo.svelte';
 	import CommandLine from '../icons/CommandLine.svelte';
+	import WorkflowIcon from '../icons/WorkflowIcon.svelte';
 	import { KokoroWorker } from '$lib/workers/KokoroWorker';
 	import ToolServersModal from './ToolServersModal.svelte';
 	import Wrench from '../icons/Wrench.svelte';
@@ -79,6 +81,7 @@
 	export let toolServers = [];
 
 	export let selectedToolIds = [];
+	export let selectedWorkflowIds = [];
 
 	export let imageGenerationEnabled = false;
 	export let webSearchEnabled = false;
@@ -88,11 +91,13 @@
 		prompt,
 		files,
 		selectedToolIds,
+		selectedWorkflowIds,
 		imageGenerationEnabled,
-		webSearchEnabled
+		webSearchEnabled,
 	});
 
 	let showTools = false;
+	let showWorkflows = false;
 
 	let loaded = false;
 	let recording = false;
@@ -1154,7 +1159,7 @@
 																(imageGenerationEnabled = !imageGenerationEnabled)}
 															type="button"
 															class="px-1.5 @xl:px-2.5 py-1.5 flex gap-1.5 items-center text-sm rounded-full font-medium transition-colors duration-300 focus:outline-hidden max-w-full overflow-hidden border {imageGenerationEnabled
-																? 'bg-gray-50 dark:bg-gray-400/10 border-gray-100 dark:border-gray-700 text-gray-600 dark:text-gray-400'
+																? 'bg-green-100 dark:bg-green-500/20 border-green-400/20 text-green-600 dark:text-green-400'
 																: 'bg-transparent border-transparent text-gray-600 dark:text-gray-300  hover:bg-gray-100 dark:hover:bg-gray-800 '}"
 														>
 															<Photo className="size-5" strokeWidth="1.75" />
@@ -1173,7 +1178,7 @@
 																(codeInterpreterEnabled = !codeInterpreterEnabled)}
 															type="button"
 															class="px-1.5 @xl:px-2.5 py-1.5 flex gap-1.5 items-center text-sm rounded-full font-medium transition-colors duration-300 focus:outline-hidden max-w-full overflow-hidden border {codeInterpreterEnabled
-																? 'bg-gray-50 dark:bg-gray-400/10 border-gray-100  dark:border-gray-700 text-gray-600 dark:text-gray-400  '
+																? 'bg-orange-100 dark:bg-orange-500/20 border-orange-400/20 text-orange-600 dark:text-orange-400'
 																: 'bg-transparent border-transparent text-gray-600 dark:text-gray-300  hover:bg-gray-100 dark:hover:bg-gray-800 '}"
 														>
 															<CommandLine className="size-5" strokeWidth="1.75" />
@@ -1184,6 +1189,31 @@
 														</button>
 													</Tooltip>
 												{/if}
+
+												<!-- Workflow Button -->
+												{#if $_user.role === 'admin'}
+													<WorkflowMenu
+														bind:selectedWorkflowIds
+														onClose={() => {
+															showWorkflows = false;
+														}}
+													>
+														<button
+															on:click|preventDefault={() => (showWorkflows = !showWorkflows)}
+															type="button"
+															class="px-1.5 @xl:px-2.5 py-1.5 flex gap-1.5 items-center text-sm rounded-full font-medium transition-colors duration-300 focus:outline-hidden max-w-full overflow-hidden border {selectedWorkflowIds.length > 0
+																? 'bg-purple-100 dark:bg-purple-500/20 border-purple-400/20 text-purple-500 dark:text-purple-400'
+																: 'bg-transparent border-transparent text-gray-600 dark:text-gray-300 border-gray-200 hover:bg-gray-100 dark:hover:bg-gray-800'}"
+														>
+															<WorkflowIcon className="size-5" strokeWidth="1.75" />
+															<span
+																class="hidden @xl:block whitespace-nowrap overflow-hidden text-ellipsis translate-y-[0.5px]"
+																>{$i18n.t('Workflow')}</span
+															>
+														</button>
+													</WorkflowMenu>
+												{/if}
+
 											{/if}
 										</div>
 									</div>

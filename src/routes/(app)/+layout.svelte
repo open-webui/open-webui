@@ -56,6 +56,42 @@
 	let version;
 
 	onMount(async () => {
+
+
+		
+		// STYLE-ONLY DEVELOPMENT SHORT-CIRCUIT (match root +layout)
+		// Skip auth redirect and heavy init when ?styleonly=1 or localStorage.styleOnly==='1'
+		try {
+			const isBrowser = typeof window !== 'undefined';
+			if (isBrowser) {
+				const url = new URL(window.location.href);
+				const styleOnly = url.searchParams.get('styleonly') === '1' || localStorage.styleOnly === '1';
+				if (styleOnly) {
+					// Provide a minimal mock user so Sidebar and pages can render
+					await user.set({
+						id: 'styleonly',
+						name: 'Style Only',
+						role: 'admin',
+						token: 'styleonly'
+					} as any);
+					loaded = true;
+					return; // stop here — do not redirect to /auth
+				}
+			}
+		} catch (e) {
+			console.warn('styleonly guard (app layout) failed, continuing normally', e);
+		}
+		
+		
+		
+		
+		
+		
+		
+		
+		
+		
+		// 用户登录与权限控制
 		if ($user === undefined || $user === null) {
 			await goto('/auth');
 		} else if (['user', 'admin'].includes($user?.role)) {
@@ -76,7 +112,7 @@
 			} catch (error) {
 				// IndexedDB Not Found
 			}
-
+			// 调用后端入口：统一在这里拉配置、模型、工具、横幅、版本等数据，真正的在lib/apis
 			const userSettings = await getUserSettings(localStorage.token).catch((error) => {
 				console.error(error);
 				return null;
@@ -227,6 +263,7 @@
 	});
 
 	const checkForVersionUpdates = async () => {
+		// 版本检查与更新提示
 		version = await getVersionUpdates(localStorage.token).catch((error) => {
 			return {
 				current: WEBUI_VERSION,
@@ -236,9 +273,12 @@
 	};
 </script>
 
+<!-- 全局设置弹窗 -->
 <SettingsModal bind:show={$showSettings} />
+<!-- 更新日志弹窗 管理员可见 -->
 <ChangelogModal bind:show={$showChangelog} />
 
+<!-- 更新提示弹窗 每天最多提示一次-->
 {#if version && compareVersion(version.latest, version.current) && ($settings?.showUpdateToast ?? true)}
 	<div class=" absolute bottom-8 right-8 z-50" in:fade={{ duration: 100 }}>
 		<UpdateInfoToast
@@ -255,6 +295,7 @@
 	<div
 		class=" text-gray-700 dark:text-gray-100 bg-white dark:bg-gray-900 h-screen max-h-[100dvh] overflow-auto flex flex-row justify-end"
 	>
+		<!-- 用户未登录或权限不足 -->
 		{#if !['user', 'admin'].includes($user?.role)}
 			<AccountPending />
 		{:else if localDBChats.length > 0}

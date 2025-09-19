@@ -433,6 +433,42 @@
 	};
 
 	onMount(async () => {
+		// STYLE-ONLY DEVELOPMENT SHORT-CIRCUIT
+		// If the URL contains ?styleonly=1 (or localStorage.styleOnly === '1'),
+		// we skip ALL backend/socket initialization and only render the UI.
+		// This makes style iteration extremely fast and avoids any API calls.
+		// To restore normal behavior, remove the query param and clear
+		// localStorage.styleOnly, or comment/remove this block.
+		try {
+			const isBrowser = typeof window !== 'undefined';
+			if (isBrowser) {
+				const url = new URL(window.location.href);
+				const styleOnly = url.searchParams.get('styleonly') === '1' || localStorage.styleOnly === '1';
+				if (styleOnly) {
+					// Minimal UI setup: theme + mobile flag + i18n language
+					theme.set(localStorage.theme);
+					mobile.set(window.innerWidth < BREAKPOINT);
+					initI18n('en-US');
+					changeLanguage('en-US');
+
+					// remove splash immediately in style-only mode
+					document.getElementById('splash-screen')?.remove();
+					
+					loaded = true;
+					return; // stop here — no backend, no sockets
+				}
+			}
+		} catch (e) {
+			console.warn('styleonly guard failed, continuing normally', e);
+		}
+
+
+
+
+
+
+
+		
 		if (typeof window !== 'undefined' && window.applyTheme) {
 			window.applyTheme();
 		}

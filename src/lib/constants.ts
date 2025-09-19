@@ -1,10 +1,27 @@
 import { browser, dev } from '$app/environment';
 // import { version } from '../../package.json';
 
-export const APP_NAME = 'Open WebUI';
+/**
+ * 应用名称常量
+ * - 这是应用在全局使用的显示名称（默认值："Open WebUI"）。
+ * - WEBUI_NAME Store 的初始值会引用这里，页面标题、导航栏、品牌展示等都会用到。
+ *
+ * 【修改方法】
+ * - 如果你要改成自定义名字（例如 "CerebraUI"），直接修改此处的字符串即可：
+ *   export const APP_NAME = 'CerebraUI';
+ *
+ * 【注意事项】
+ * - 这是构建期常量，修改后需要重新构建/启动项目才能生效。
+ * - 如果只想在运行时临时修改，可通过 WEBUI_NAME Store 调用 set() 来覆盖。
+ */
+export const APP_NAME = 'CerebraUI';
 
-export const WEBUI_HOSTNAME = browser ? (dev ? `${location.hostname}:8080` : ``) : '';
-export const WEBUI_BASE_URL = browser ? (dev ? `http://${WEBUI_HOSTNAME}` : ``) : ``;
+// ❌ 原来：const WEBUI_HOSTNAME = browser ? (dev ? `${location.hostname}:8080` : ``) : '';
+// ❌ 原来：const WEBUI_BASE_URL = browser ? (dev ? `http://${WEBUI_HOSTNAME}` : ``) : '';
+// ✅ 改成“相对路径”（让 5050 代理到 8080）
+export const WEBUI_HOSTNAME = browser ? (dev ? location.host : '') : '';
+export const WEBUI_BASE_URL = ''; // dev/prod 都用相对路径
+
 export const WEBUI_API_BASE_URL = `${WEBUI_BASE_URL}/api/v1`;
 
 export const OLLAMA_API_BASE_URL = `${WEBUI_BASE_URL}/ollama`;
