@@ -6,6 +6,8 @@
 	export let title = 'Embedded Content';
 	export let initialHeight: number | null = null; // initial height in px, null = auto
 
+	export let args = null;
+
 	export let allowScripts = true;
 	export let allowForms = false;
 
@@ -62,6 +64,11 @@
 	// When the iframe loads, try same-origin resize (cross-origin will noop)
 	const onLoad = async () => {
 		requestAnimationFrame(resizeSameOrigin);
+
+		// if arguments are provided, inject them into the iframe window
+		if (args && iframe?.contentWindow) {
+			(iframe.contentWindow as any).args = args;
+		}
 
 		// If we're injecting Alpine into srcdoc iframe and sameOrigin allowed
 		if (iframeDoc && allowSameOrigin && iframe?.contentWindow) {

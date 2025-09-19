@@ -20,6 +20,7 @@ from concurrent.futures import ThreadPoolExecutor
 
 
 from fastapi import Request, HTTPException
+from fastapi.responses import HTMLResponse
 from starlette.responses import Response, StreamingResponse, JSONResponse
 
 
@@ -2404,10 +2405,45 @@ async def process_chat_response(
                                 tool_result = str(e)
 
                         tool_result_embeds = []
-                        if tool.get("type") == "external" and isinstance(
+
+                        if isinstance(tool_result, HTMLResponse):
+                            content_disposition = tool_result.headers.get(
+                                "Content-Disposition", ""
+                            )
+                            if "inline" in content_disposition:
+                                content = tool_result.body.decode("utf-8")
+                                tool_result_embeds.append(content)
+
+                                if 200 <= tool_result.status_code < 300:
+                                    tool_result = {
+                                        "status": "success",
+                                        "code": "ui_component",
+                                        "message": "Embedded UI result is active and visible to the user.",
+                                    }
+                                elif 400 <= tool_result.status_code < 500:
+                                    tool_result = {
+                                        "status": "error",
+                                        "code": "ui_component",
+                                        "message": f"Client error {tool_result.status_code} from embedded UI result.",
+                                    }
+                                elif 500 <= tool_result.status_code < 600:
+                                    tool_result = {
+                                        "status": "error",
+                                        "code": "ui_component",
+                                        "message": f"Server error {tool_result.status_code} from embedded UI result.",
+                                    }
+                                else:
+                                    tool_result = {
+                                        "status": "error",
+                                        "code": "ui_component",
+                                        "message": f"Unexpected status code {tool_result.status_code} from embedded UI result.",
+                                    }
+                            else:
+                                tool_result = tool_result.body.decode("utf-8")
+
+                        elif tool.get("type") == "external" and isinstance(
                             tool_result, tuple
                         ):
-
                             tool_result, tool_response_headers = tool_result
 
                             if tool_response_headers:

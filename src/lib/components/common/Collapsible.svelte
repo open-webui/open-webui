@@ -107,6 +107,7 @@
 					<div class="my-2" id={`${collapsibleId}-tool-calls-${attributes?.id}-embed-${idx}`}>
 						<FullHeightIframe
 							src={embed}
+							{args}
 							allowScripts={true}
 							allowForms={true}
 							allowSameOrigin={true}
