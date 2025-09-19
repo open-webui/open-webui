@@ -10,7 +10,7 @@
 	import Cog6 from '$lib/components/icons/Cog6.svelte';
 	import Wrench from '$lib/components/icons/Wrench.svelte';
 	import ManageOllamaModal from './ManageOllamaModal.svelte';
-	import ArrowDownTray from '$lib/components/icons/ArrowDownTray.svelte';
+	import Download from '$lib/components/icons/Download.svelte';
 
 	export let onDelete = () => {};
 	export let onSubmit = () => {};
@@ -84,7 +84,7 @@
 				}}
 				type="button"
 			>
-				<ArrowDownTray />
+				<Download />
 			</button>
 		</Tooltip>
 

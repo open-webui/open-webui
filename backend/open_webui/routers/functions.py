@@ -148,6 +148,18 @@ async def sync_functions(
                 content=function.content,
             )
 
+            if hasattr(function_module, "Valves") and function.valves:
+                Valves = function_module.Valves
+                try:
+                    Valves(
+                        **{k: v for k, v in function.valves.items() if v is not None}
+                    )
+                except Exception as e:
+                    log.exception(
+                        f"Error validating valves for function {function.id}: {e}"
+                    )
+                    raise e
+
         return Functions.sync_functions(user.id, form_data.functions)
     except Exception as e:
         log.exception(f"Failed to load a function: {e}")
@@ -191,6 +203,9 @@ async def create_new_function(
 
             function_cache_dir = CACHE_DIR / "functions" / form_data.id
             function_cache_dir.mkdir(parents=True, exist_ok=True)
+
+            if function_type == "filter" and getattr(function_module, "toggle", None):
+                Functions.update_function_metadata_by_id(id, {"toggle": True})
 
             if function:
                 return function
@@ -307,6 +322,9 @@ async def update_function_by_id(
         log.debug(updated)
 
         function = Functions.update_function_by_id(id, updated)
+
+        if function_type == "filter" and getattr(function_module, "toggle", None):
+            Functions.update_function_metadata_by_id(id, {"toggle": True})
 
         if function:
             return function

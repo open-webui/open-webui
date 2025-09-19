@@ -1,5 +1,4 @@
-import { PublicClientApplication } from '@azure/msal-browser';
-import type { PopupRequest } from '@azure/msal-browser';
+import type { PopupRequest, PublicClientApplication } from '@azure/msal-browser';
 import { v4 as uuidv4 } from 'uuid';
 
 class OneDriveConfig {
@@ -77,6 +76,7 @@ class OneDriveConfig {
 				}
 			};
 
+			const { PublicClientApplication } = await import('@azure/msal-browser');
 			this.msalInstance = new PublicClientApplication(msalParams);
 			if (this.msalInstance.initialize) {
 				await this.msalInstance.initialize();
@@ -136,7 +136,7 @@ async function getToken(
 		const msalInstance = await config.getMsalInstance(authorityType);
 		const resp = await msalInstance.acquireTokenSilent(authParams);
 		accessToken = resp.accessToken;
-	} catch (err) {
+	} catch {
 		const msalInstance = await config.getMsalInstance(authorityType);
 		try {
 			const resp = await msalInstance.loginPopup(authParams);
@@ -179,6 +179,7 @@ interface PickerParams {
 interface PickerResult {
 	command?: string;
 	items?: OneDriveFileInfo[];
+	// eslint-disable-next-line @typescript-eslint/no-explicit-any
 	[key: string]: any;
 }
 
@@ -221,6 +222,7 @@ interface OneDriveFileInfo {
 		driveId: string;
 	};
 	'@sharePoint.endpoint': string;
+	// eslint-disable-next-line @typescript-eslint/no-explicit-any
 	[key: string]: any;
 }
 
@@ -319,7 +321,7 @@ export async function openOneDrivePicker(
 								} else {
 									throw new Error('Could not retrieve auth token');
 								}
-							} catch (err) {
+							} catch {
 								channelPort?.postMessage({
 									type: 'result',
 									id: portData.id,

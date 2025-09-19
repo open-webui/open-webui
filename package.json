@@ -1,6 +1,6 @@
 {
 	"name": "open-webui",
-	"version": "0.6.28",
+	"version": "0.6.30",
 	"private": true,
 	"scripts": {
 		"dev": "npm run pyodide:fetch && vite dev --host",
@@ -81,6 +81,7 @@
 		"@tiptap/extensions": "^3.0.7",
 		"@tiptap/pm": "^3.0.7",
 		"@tiptap/starter-kit": "^3.0.7",
+		"@tiptap/suggestion": "^3.4.2",
 		"@xyflow/svelte": "^0.1.19",
 		"async": "^3.2.5",
 		"bits-ui": "^0.21.15",
@@ -130,7 +131,6 @@
 		"socket.io-client": "^4.2.0",
 		"sortablejs": "^1.15.6",
 		"svelte-sonner": "^0.3.19",
-		"svelte-tiptap": "^3.0.0",
 		"tippy.js": "^6.3.7",
 		"turndown": "^7.2.0",
 		"turndown-plugin-gfm": "^1.0.2",

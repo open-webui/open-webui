@@ -513,7 +513,7 @@
 
 {#if !$mobile && !$showSidebar}
 	<div
-		class=" py-2 px-1.5 flex flex-col justify-between text-black dark:text-white hover:bg-gray-50 dark:hover:bg-gray-950 h-full border-e border-gray-50 dark:border-gray-850 z-10 transition-all"
+		class=" py-2 px-1.5 flex flex-col justify-between text-black dark:text-white hover:bg-gray-50/50 dark:hover:bg-gray-950/50 h-full border-e border-gray-50 dark:border-gray-850 z-10 transition-all"
 		id="sidebar"
 	>
 		<button
@@ -871,14 +871,61 @@
 					</Folder>
 				{/if}
 
+				{#if folders}
+					<Folder
+						className="px-2 mt-0.5"
+						name={$i18n.t('Folders')}
+						chevron={false}
+						onAdd={() => {
+							showCreateFolderModal = true;
+						}}
+						onAddLabel={$i18n.t('New Folder')}
+						on:drop={async (e) => {
+							const { type, id, item } = e.detail;
+
+							if (type === 'folder') {
+								if (folders[id].parent_id === null) {
+									return;
+								}
+
+								const res = await updateFolderParentIdById(localStorage.token, id, null).catch(
+									(error) => {
+										toast.error(`${error}`);
+										return null;
+									}
+								);
+
+								if (res) {
+									await initFolders();
+								}
+							}
+						}}
+					>
+						<Folders
+							{folders}
+							{shiftKey}
+							onDelete={(folderId) => {
+								selectedFolder.set(null);
+								initChatList();
+							}}
+							on:update={() => {
+								initChatList();
+							}}
+							on:import={(e) => {
+								const { folderId, items } = e.detail;
+								importChatHandler(items, false, folderId);
+							}}
+							on:change={async () => {
+								initChatList();
+							}}
+						/>
+					</Folder>
+				{/if}
+
 				<Folder
 					className="px-2 mt-0.5"
 					name={$i18n.t('Chats')}
 					chevron={false}
-					onAdd={() => {
-						showCreateFolderModal = true;
-					}}
-					onAddLabel={$i18n.t('New Folder')}
 					on:change={async (e) => {
 						selectedFolder.set(null);
 						await goto('/');
@@ -941,109 +988,88 @@
 					}}
 				>
 					{#if $pinnedChats.length > 0}
-						<div class="flex flex-col space-y-1 rounded-xl">
-							<Folder
-								className=""
-								bind:open={showPinnedChat}
-								on:change={(e) => {
-									localStorage.setItem('showPinnedChat', e.detail);
-									console.log(e.detail);
-								}}
-								on:import={(e) => {
-									importChatHandler(e.detail, true);
-								}}
-								on:drop={async (e) => {
-									const { type, id, item } = e.detail;
-
-									if (type === 'chat') {
-										let chat = await getChatById(localStorage.token, id).catch((error) => {
-											return null;
-										});
-										if (!chat && item) {
-											chat = await importChat(
-												localStorage.token,
-												item.chat,
-												item?.meta ?? {},
-												false,
-												null,
-												item?.created_at ?? null,
-												item?.updated_at ?? null
-											);
-										}
-
-										if (chat) {
-											console.log(chat);
-											if (chat.folder_id) {
-												const res = await updateChatFolderIdById(
-													localStorage.token,
-													chat.id,
-													null
-												).catch((error) => {
-													toast.error(`${error}`);
-													return null;
-												});
-											}
-
-											if (!chat.pinned) {
-												const res = await toggleChatPinnedStatusById(localStorage.token, chat.id);
-											}
-
-											initChatList();
-										}
-									}
-								}}
-								name={$i18n.t('Pinned')}
-							>
-								<div
-									class="ml-3 pl-1 mt-[1px] flex flex-col overflow-y-auto scrollbar-hidden border-s border-gray-100 dark:border-gray-900"
-								>
-									{#each $pinnedChats as chat, idx (`pinned-chat-${chat?.id ?? idx}`)}
-										<ChatItem
-											className=""
-											id={chat.id}
-											title={chat.title}
-											{shiftKey}
-											selected={selectedChatId === chat.id}
-											on:select={() => {
-												selectedChatId = chat.id;
-											}}
-											on:unselect={() => {
-												selectedChatId = null;
-											}}
-											on:change={async () => {
-												initChatList();
-											}}
-											on:tag={(e) => {
-												const { type, name } = e.detail;
-												tagEventHandler(type, name, chat.id);
-											}}
-										/>
-									{/each}
-								</div>
-							</Folder>
-						</div>
-					{/if}
-
-					{#if folders}
 						<div class="mb-1">
-							<Folders
-								{folders}
-								{shiftKey}
-								onDelete={(folderId) => {
-									selectedFolder.set(null);
-									initChatList();
-								}}
-								on:update={() => {
-									initChatList();
-								}}
-								on:import={(e) => {
-									const { folderId, items } = e.detail;
-									importChatHandler(items, false, folderId);
-								}}
-								on:change={async () => {
-									initChatList();
-								}}
-							/>
+							<div class="flex flex-col space-y-1 rounded-xl">
+								<Folder
+									buttonClassName=" text-gray-500"
+									bind:open={showPinnedChat}
+									on:change={(e) => {
+										localStorage.setItem('showPinnedChat', e.detail);
+										console.log(e.detail);
+									}}
+									on:import={(e) => {
+										importChatHandler(e.detail, true);
+									}}
+									on:drop={async (e) => {
+										const { type, id, item } = e.detail;
+
+										if (type === 'chat') {
+											let chat = await getChatById(localStorage.token, id).catch((error) => {
+												return null;
+											});
+											if (!chat && item) {
+												chat = await importChat(
+													localStorage.token,
+													item.chat,
+													item?.meta ?? {},
+													false,
+													null,
+													item?.created_at ?? null,
+													item?.updated_at ?? null
+												);
+											}
+
+											if (chat) {
+												console.log(chat);
+												if (chat.folder_id) {
+													const res = await updateChatFolderIdById(
+														localStorage.token,
+														chat.id,
+														null
+													).catch((error) => {
+														toast.error(`${error}`);
+														return null;
+													});
+												}
+
+												if (!chat.pinned) {
+													const res = await toggleChatPinnedStatusById(localStorage.token, chat.id);
+												}
+
+												initChatList();
+											}
+										}
+									}}
+									name={$i18n.t('Pinned')}
+								>
+									<div
+										class="ml-3 pl-1 mt-[1px] flex flex-col overflow-y-auto scrollbar-hidden border-s border-gray-100 dark:border-gray-900 text-gray-900 dark:text-gray-200"
+									>
+										{#each $pinnedChats as chat, idx (`pinned-chat-${chat?.id ?? idx}`)}
+											<ChatItem
+												className=""
+												id={chat.id}
+												title={chat.title}
+												{shiftKey}
+												selected={selectedChatId === chat.id}
+												on:select={() => {
+													selectedChatId = chat.id;
+												}}
+												on:unselect={() => {
+													selectedChatId = null;
+												}}
+												on:change={async () => {
+													initChatList();
+												}}
+												on:tag={(e) => {
+													const { type, name } = e.detail;
+													tagEventHandler(type, name, chat.id);
+												}}
+											/>
+										{/each}
+									</div>
+								</Folder>
+							</div>
 						</div>
 					{/if}
 
