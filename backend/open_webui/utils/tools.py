@@ -171,6 +171,8 @@ async def get_tools(
                         "tool_id": tool_id,
                         "callable": callable,
                         "spec": spec,
+                        # Misc info
+                        "type": "external",
                     }
 
                     # Handle function name collisions
@@ -646,7 +648,7 @@ async def execute_tool_server(
     name: str,
     params: Dict[str, Any],
     server_data: Dict[str, Any],
-) -> Any:
+) -> Tuple[Dict[str, Any], Optional[Dict[str, Any]]]:
     error = None
     try:
         openapi = server_data.get("openapi", {})
@@ -718,6 +720,7 @@ async def execute_tool_server(
                     headers=headers,
                     cookies=cookies,
                     ssl=AIOHTTP_CLIENT_SESSION_TOOL_SERVER_SSL,
+                    allow_redirects=False,
                 ) as response:
                     if response.status >= 400:
                         text = await response.text()
@@ -728,13 +731,15 @@ async def execute_tool_server(
                     except Exception:
                         response_data = await response.text()
 
-                    return response_data
+                    response_headers = response.headers
+                    return (response_data, response_headers)
             else:
                 async with request_method(
                     final_url,
                     headers=headers,
                     cookies=cookies,
                     ssl=AIOHTTP_CLIENT_SESSION_TOOL_SERVER_SSL,
+                    allow_redirects=False,
                 ) as response:
                     if response.status >= 400:
                         text = await response.text()
@@ -745,12 +750,13 @@ async def execute_tool_server(
                     except Exception:
                         response_data = await response.text()
 
-                    return response_data
+                    response_headers = response.headers
+                    return (response_data, response_headers)
 
     except Exception as err:
         error = str(err)
         log.exception(f"API Request Error: {error}")
-        return {"error": error}
+        return ({"error": error}, None)
 
 
 def get_tool_server_url(url: Optional[str], path: str) -> str:

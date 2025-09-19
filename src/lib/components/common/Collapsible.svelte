@@ -38,6 +38,8 @@
 	import CodeBlock from '../chat/Messages/CodeBlock.svelte';
 	import Markdown from '../chat/Messages/Markdown.svelte';
 	import Image from './Image.svelte';
+	import FullHeightIframe from './FullHeightIframe.svelte';
+	import { settings } from '$lib/stores';
 
 	export let open = false;
 
@@ -213,6 +215,21 @@
 		{@const args = decode(attributes?.arguments)}
 		{@const result = decode(attributes?.result ?? '')}
 		{@const files = parseJSONString(decode(attributes?.files ?? ''))}
+		{@const embeds = parseJSONString(decode(attributes?.embeds ?? ''))}
+
+		{#if embeds && Array.isArray(embeds) && embeds.length > 0}
+			{#each embeds as embed, idx}
+				<div class="my-2" id={`${collapsibleId}-tool-calls-${attributes?.id}-embed-${idx}`}>
+					<FullHeightIframe
+						src={embed}
+						allowScripts={true}
+						allowForms={$settings?.iframeSandboxAllowForms ?? false}
+						allowSameOrigin={$settings?.iframeSandboxAllowSameOrigin ?? false}
+						allowPopups={$settings?.iframeSandboxAllowPopups ?? false}
+					/>
+				</div>
+			{/each}
+		{/if}
 
 		{#if !grow}
 			{#if open && !hide}

@@ -1581,7 +1581,8 @@ async def process_chat_response(
                                         break
 
                                 if tool_result is not None:
-                                    tool_calls_display_content = f'{tool_calls_display_content}<details type="tool_calls" done="true" id="{tool_call_id}" name="{tool_name}" arguments="{html.escape(json.dumps(tool_arguments))}" result="{html.escape(json.dumps(tool_result, ensure_ascii=False))}" files="{html.escape(json.dumps(tool_result_files)) if tool_result_files else ""}">\n<summary>Tool Executed</summary>\n</details>\n'
+                                    tool_result_embeds = result.get("embeds", "")
+                                    tool_calls_display_content = f'{tool_calls_display_content}<details type="tool_calls" done="true" id="{tool_call_id}" name="{tool_name}" arguments="{html.escape(json.dumps(tool_arguments))}" result="{html.escape(json.dumps(tool_result, ensure_ascii=False))}" files="{html.escape(json.dumps(tool_result_files)) if tool_result_files else ""}" embeds="{html.escape(json.dumps(tool_result_embeds))}">\n<summary>Tool Executed</summary>\n</details>\n'
                                 else:
                                     tool_calls_display_content = f'{tool_calls_display_content}<details type="tool_calls" done="false" id="{tool_call_id}" name="{tool_name}" arguments="{html.escape(json.dumps(tool_arguments))}">\n<summary>Executing...</summary>\n</details>\n'
 
@@ -2402,6 +2403,38 @@ async def process_chat_response(
                             except Exception as e:
                                 tool_result = str(e)
 
+                        tool_result_embeds = []
+                        if tool.get("type") == "external" and isinstance(
+                            tool_result, tuple
+                        ):
+
+                            tool_result, tool_response_headers = tool_result
+
+                            if tool_response_headers:
+                                content_disposition = tool_response_headers.get(
+                                    "Content-Disposition", ""
+                                )
+
+                                if "inline" in content_disposition:
+                                    content_type = tool_response_headers.get(
+                                        "Content-Type", ""
+                                    )
+                                    location = tool_response_headers.get("Location", "")
+
+                                    if "text/html" in content_type:
+                                        # Display as iframe embed
+                                        tool_result_embeds.append(tool_result)
+                                        tool_result = {
+                                            "status": "success",
+                                            "message": "Displayed as embed",
+                                        }
+                                    elif location:
+                                        tool_result_embeds.append(location)
+                                        tool_result = {
+                                            "status": "success",
+                                            "message": "Displayed as embed",
+                                        }
+
                         tool_result_files = []
                         if isinstance(tool_result, list):
                             for item in tool_result:
@@ -2424,6 +2457,11 @@ async def process_chat_response(
                                 **(
                                     {"files": tool_result_files}
                                     if tool_result_files
+                                    else {}
+                                ),
+                                **(
+                                    {"embeds": tool_result_embeds}
+                                    if tool_result_embeds
                                     else {}
                                 ),
                             }
