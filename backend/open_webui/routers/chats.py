@@ -5,7 +5,6 @@ import zipfile
 from datetime import datetime
 from io import BytesIO, StringIO
 from typing import Optional
-from datetime import datetime
 import pytz
 
 from open_webui.models.chats import (
@@ -1105,7 +1104,14 @@ async def export_chats_as_csv(
             for message_id, message in messages.items():
                 if message.get('role') == 'user':
                     timestamp = message.get('timestamp', 0)
-                    human_timestamp = datetime.fromtimestamp(timestamp).strftime('%Y-%m-%d %H:%M:%S') if timestamp else 'Unknown'
+                    if timestamp:
+                        # Convert to EST timezone
+                        est_tz = pytz.timezone('US/Eastern')
+                        utc_dt = datetime.fromtimestamp(timestamp, tz=pytz.UTC)
+                        est_dt = utc_dt.astimezone(est_tz)
+                        human_timestamp = est_dt.strftime('%Y-%m-%d %I:%M:%S %p EST')
+                    else:
+                        human_timestamp = 'Unknown'
                     
                     csv_rows.append({
                         'member': member_name,
