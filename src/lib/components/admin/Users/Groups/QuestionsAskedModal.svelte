@@ -89,12 +89,12 @@
 					{#if isGrouped}
 						<span class="text-gray-400">•</span>
 						<span class="font-medium">
-							{member.questionsAsked} total questions
+							{member.questions.length} total questions
 						</span>
 					{:else}
 						<span class="text-gray-400">•</span>
 						<span class="font-medium">
-							{member.questionsAsked} questions
+							{member.questions.length} questions
 						</span>
 					{/if}
 				</div>
