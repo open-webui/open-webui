@@ -3336,6 +3336,35 @@ AUDIO_TTS_OPENAI_API_KEY = PersistentConfig(
     os.getenv("AUDIO_TTS_OPENAI_API_KEY", OPENAI_API_KEY),
 )
 
+AUDIO_TTS_WEBUI_API_BASE_URL = PersistentConfig(
+    "AUDIO_TTS_WEBUI_API_BASE_URL",
+    "audio.tts.webui.api_base_url",
+    os.getenv("AUDIO_TTS_WEBUI_API_BASE_URL", ""),
+)
+AUDIO_TTS_WEBUI_API_KEY = PersistentConfig(
+    "AUDIO_TTS_WEBUI_API_KEY",
+    "audio.tts.webui.api_key",
+    os.getenv("AUDIO_TTS_WEBUI_API_KEY", ""),
+)
+
+AUDIO_TTS_WEBUI_EXAGGERATION = PersistentConfig(
+    "AUDIO_TTS_WEBUI_EXAGGERATION",
+    "audio.tts.webui.exaggeration",
+    float(os.getenv("AUDIO_TTS_WEBUI_EXAGGERATION", "0.5")),
+)
+
+AUDIO_TTS_WEBUI_CFG_WEIGHT = PersistentConfig(
+    "AUDIO_TTS_WEBUI_CFG_WEIGHT",
+    "audio.tts.webui.cfg_weight",
+    float(os.getenv("AUDIO_TTS_WEBUI_CFG_WEIGHT", "0.5")),
+)
+
+AUDIO_TTS_WEBUI_TEMPERATURE = PersistentConfig(
+    "AUDIO_TTS_WEBUI_TEMPERATURE",
+    "audio.tts.webui.temperature",
+    float(os.getenv("AUDIO_TTS_WEBUI_TEMPERATURE", "0.8")),
+)
+
 AUDIO_TTS_API_KEY = PersistentConfig(
     "AUDIO_TTS_API_KEY",
     "audio.tts.api_key",

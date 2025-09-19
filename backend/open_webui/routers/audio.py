@@ -153,6 +153,11 @@ def set_faster_whisper_model(model: str, auto_update: bool = False):
 class TTSConfigForm(BaseModel):
     OPENAI_API_BASE_URL: str
     OPENAI_API_KEY: str
+    WEBUI_API_BASE_URL: str
+    WEBUI_API_KEY: str
+    WEBUI_EXAGGERATION: Optional[float] = 0.5
+    WEBUI_CFG_WEIGHT: Optional[float] = 0.5
+    WEBUI_TEMPERATURE: Optional[float] = 0.8
     API_KEY: str
     ENGINE: str
     MODEL: str
@@ -189,6 +194,11 @@ async def get_audio_config(request: Request, user=Depends(get_admin_user)):
         "tts": {
             "OPENAI_API_BASE_URL": request.app.state.config.TTS_OPENAI_API_BASE_URL,
             "OPENAI_API_KEY": request.app.state.config.TTS_OPENAI_API_KEY,
+            "WEBUI_API_BASE_URL": request.app.state.config.TTS_WEBUI_API_BASE_URL,
+            "WEBUI_API_KEY": request.app.state.config.TTS_WEBUI_API_KEY,
+            "WEBUI_EXAGGERATION": request.app.state.config.TTS_WEBUI_EXAGGERATION,
+            "WEBUI_CFG_WEIGHT": request.app.state.config.TTS_WEBUI_CFG_WEIGHT,
+            "WEBUI_TEMPERATURE": request.app.state.config.TTS_WEBUI_TEMPERATURE,
             "API_KEY": request.app.state.config.TTS_API_KEY,
             "ENGINE": request.app.state.config.TTS_ENGINE,
             "MODEL": request.app.state.config.TTS_MODEL,
@@ -221,6 +231,11 @@ async def update_audio_config(
 ):
     request.app.state.config.TTS_OPENAI_API_BASE_URL = form_data.tts.OPENAI_API_BASE_URL
     request.app.state.config.TTS_OPENAI_API_KEY = form_data.tts.OPENAI_API_KEY
+    request.app.state.config.TTS_WEBUI_API_BASE_URL = form_data.tts.WEBUI_API_BASE_URL
+    request.app.state.config.TTS_WEBUI_API_KEY = form_data.tts.WEBUI_API_KEY
+    request.app.state.config.TTS_WEBUI_EXAGGERATION = form_data.tts.WEBUI_EXAGGERATION
+    request.app.state.config.TTS_WEBUI_CFG_WEIGHT = form_data.tts.WEBUI_CFG_WEIGHT
+    request.app.state.config.TTS_WEBUI_TEMPERATURE = form_data.tts.WEBUI_TEMPERATURE
     request.app.state.config.TTS_API_KEY = form_data.tts.API_KEY
     request.app.state.config.TTS_ENGINE = form_data.tts.ENGINE
     request.app.state.config.TTS_MODEL = form_data.tts.MODEL
@@ -263,6 +278,11 @@ async def update_audio_config(
         "tts": {
             "OPENAI_API_BASE_URL": request.app.state.config.TTS_OPENAI_API_BASE_URL,
             "OPENAI_API_KEY": request.app.state.config.TTS_OPENAI_API_KEY,
+            "WEBUI_API_BASE_URL": request.app.state.config.TTS_WEBUI_API_BASE_URL,
+            "WEBUI_API_KEY": request.app.state.config.TTS_WEBUI_API_KEY,
+            "WEBUI_EXAGGERATION": request.app.state.config.TTS_WEBUI_EXAGGERATION,
+            "WEBUI_CFG_WEIGHT": request.app.state.config.TTS_WEBUI_CFG_WEIGHT,
+            "WEBUI_TEMPERATURE": request.app.state.config.TTS_WEBUI_TEMPERATURE,
             "API_KEY": request.app.state.config.TTS_API_KEY,
             "ENGINE": request.app.state.config.TTS_ENGINE,
             "MODEL": request.app.state.config.TTS_MODEL,
@@ -342,6 +362,70 @@ async def speech(request: Request, user=Depends(get_verified_user)):
                     headers={
                         "Content-Type": "application/json",
                         "Authorization": f"Bearer {request.app.state.config.TTS_OPENAI_API_KEY}",
+                        **(
+                            {
+                                "X-OpenWebUI-User-Name": quote(user.name, safe=" "),
+                                "X-OpenWebUI-User-Id": user.id,
+                                "X-OpenWebUI-User-Email": user.email,
+                                "X-OpenWebUI-User-Role": user.role,
+                            }
+                            if ENABLE_FORWARD_USER_INFO_HEADERS
+                            else {}
+                        ),
+                    },
+                    ssl=AIOHTTP_CLIENT_SESSION_SSL,
+                )
+
+                r.raise_for_status()
+
+                async with aiofiles.open(file_path, "wb") as f:
+                    await f.write(await r.read())
+
+                async with aiofiles.open(file_body_path, "w") as f:
+                    await f.write(json.dumps(payload))
+
+            return FileResponse(file_path)
+
+        except Exception as e:
+            log.exception(e)
+            detail = None
+
+            status_code = 500
+            detail = f"Open WebUI: Server Connection Error"
+
+            if r is not None:
+                status_code = r.status
+
+                try:
+                    res = await r.json()
+                    if "error" in res:
+                        detail = f"External: {res['error']}"
+                except Exception:
+                    detail = f"External: {e}"
+
+            raise HTTPException(
+                status_code=status_code,
+                detail=detail,
+            )
+
+    elif request.app.state.config.TTS_ENGINE == "ttswebui":
+        payload["model"] = request.app.state.config.TTS_MODEL
+        # Add TTS WebUI specific parameters
+        payload["exaggeration"] = request.app.state.config.TTS_WEBUI_EXAGGERATION
+        payload["cfg_weight"] = request.app.state.config.TTS_WEBUI_CFG_WEIGHT
+        payload["temperature"] = request.app.state.config.TTS_WEBUI_TEMPERATURE
+
+        try:
+            timeout = aiohttp.ClientTimeout(total=AIOHTTP_CLIENT_TIMEOUT)
+            async with aiohttp.ClientSession(
+                timeout=timeout, trust_env=True
+            ) as session:
+                r = await session.post(
+                    url=f"{request.app.state.config.TTS_WEBUI_API_BASE_URL}/audio/speech",
+                    json=payload,
+                    headers={
+                        "Content-Type": "application/json",
+                        "Authorization": f"Bearer {request.app.state.config.TTS_WEBUI_API_KEY}",
                         **(
                             {
                                 "X-OpenWebUI-User-Name": quote(user.name, safe=" "),
@@ -1024,6 +1108,17 @@ def get_available_models(request: Request) -> list[dict]:
                 available_models = [{"id": "tts-1"}, {"id": "tts-1-hd"}]
         else:
             available_models = [{"id": "tts-1"}, {"id": "tts-1-hd"}]
+    elif request.app.state.config.TTS_ENGINE == "ttswebui":
+        try:
+            response = requests.get(
+                f"{request.app.state.config.TTS_WEBUI_API_BASE_URL}/audio/models"
+            )
+            response.raise_for_status()
+            data = response.json()
+            available_models = data.get("models", [])
+        except Exception as e:
+            log.error(f"Error fetching models from TTS WebUI endpoint: {str(e)}")
+            available_models = [{"id": "tts-1"}, {"id": "tts-1-hd"}]
     elif request.app.state.config.TTS_ENGINE == "elevenlabs":
         try:
             response = requests.get(
@@ -1077,6 +1172,25 @@ def get_available_voices(request) -> dict:
                     "shimmer": "shimmer",
                 }
         else:
+            available_voices = {
+                "alloy": "alloy",
+                "echo": "echo",
+                "fable": "fable",
+                "onyx": "onyx",
+                "nova": "nova",
+                "shimmer": "shimmer",
+            }
+    elif request.app.state.config.TTS_ENGINE == "ttswebui":
+        try:
+            response = requests.get(
+                f"{request.app.state.config.TTS_WEBUI_API_BASE_URL}/audio/voices"
+            )
+            response.raise_for_status()
+            data = response.json()
+            voices_list = data.get("voices", [])
+            available_voices = {voice["id"]: voice["name"] for voice in voices_list}
+        except Exception as e:
+            log.error(f"Error fetching voices from TTS WebUI endpoint: {str(e)}")
             available_voices = {
                 "alloy": "alloy",
                 "echo": "echo",

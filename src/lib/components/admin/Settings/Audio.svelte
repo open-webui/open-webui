@@ -27,6 +27,11 @@
 	// Audio
 	let TTS_OPENAI_API_BASE_URL = '';
 	let TTS_OPENAI_API_KEY = '';
+	let TTS_WEBUI_API_BASE_URL = '';
+	let TTS_WEBUI_API_KEY = '';
+	let TTS_WEBUI_EXAGGERATION = 0.5;
+	let TTS_WEBUI_CFG_WEIGHT = 0.5;
+	let TTS_WEBUI_TEMPERATURE = 0.8;
 	let TTS_API_KEY = '';
 	let TTS_ENGINE = '';
 	let TTS_MODEL = '';
@@ -102,6 +107,11 @@
 			tts: {
 				OPENAI_API_BASE_URL: TTS_OPENAI_API_BASE_URL,
 				OPENAI_API_KEY: TTS_OPENAI_API_KEY,
+				WEBUI_API_BASE_URL: TTS_WEBUI_API_BASE_URL,
+				WEBUI_API_KEY: TTS_WEBUI_API_KEY,
+				WEBUI_EXAGGERATION: TTS_WEBUI_EXAGGERATION,
+				WEBUI_CFG_WEIGHT: TTS_WEBUI_CFG_WEIGHT,
+				WEBUI_TEMPERATURE: TTS_WEBUI_TEMPERATURE,
 				API_KEY: TTS_API_KEY,
 				ENGINE: TTS_ENGINE,
 				MODEL: TTS_MODEL,
@@ -146,6 +156,11 @@
 			console.log(res);
 			TTS_OPENAI_API_BASE_URL = res.tts.OPENAI_API_BASE_URL;
 			TTS_OPENAI_API_KEY = res.tts.OPENAI_API_KEY;
+			TTS_WEBUI_API_BASE_URL = res.tts.WEBUI_API_BASE_URL;
+			TTS_WEBUI_API_KEY = res.tts.WEBUI_API_KEY;
+			TTS_WEBUI_EXAGGERATION = res.tts.WEBUI_EXAGGERATION ?? 0.5;
+			TTS_WEBUI_CFG_WEIGHT = res.tts.WEBUI_CFG_WEIGHT ?? 0.5;
+			TTS_WEBUI_TEMPERATURE = res.tts.WEBUI_TEMPERATURE ?? 0.8;
 			TTS_API_KEY = res.tts.API_KEY;
 
 			TTS_ENGINE = res.tts.ENGINE;
@@ -430,7 +445,7 @@
 								await getVoices();
 								await getModels();
 
-								if (e.target?.value === 'openai') {
+								if (e.target?.value === 'openai' || e.target?.value === 'ttswebui') {
 									TTS_VOICE = 'alloy';
 									TTS_MODEL = 'tts-1';
 								} else {
@@ -442,6 +457,7 @@
 							<option value="">{$i18n.t('Web API')}</option>
 							<option value="transformers">{$i18n.t('Transformers')} ({$i18n.t('Local')})</option>
 							<option value="openai">{$i18n.t('OpenAI')}</option>
+							<option value="ttswebui">{$i18n.t('TTS WebUI')}</option>
 							<option value="elevenlabs">{$i18n.t('ElevenLabs')}</option>
 							<option value="azure">{$i18n.t('Azure AI Speech')}</option>
 						</select>
@@ -459,6 +475,72 @@
 							/>
 
 							<SensitiveInput placeholder={$i18n.t('API Key')} bind:value={TTS_OPENAI_API_KEY} />
+						</div>
+					</div>
+				{:else if TTS_ENGINE === 'ttswebui'}
+					<div>
+						<div class="mt-1 flex gap-2 mb-1">
+							<input
+								class="flex-1 w-full bg-transparent outline-hidden"
+								placeholder={$i18n.t('API Base URL')}
+								bind:value={TTS_WEBUI_API_BASE_URL}
+								required
+							/>
+
+							<SensitiveInput placeholder={$i18n.t('API Key')} bind:value={TTS_WEBUI_API_KEY} />
+						</div>
+
+						<hr class="border-gray-100 dark:border-gray-850 my-2" />
+
+						<div class="mb-2">
+							<div class=" mb-1.5 text-xs font-medium">{$i18n.t('Exaggeration (Neutral = 0.5, extreme values can be unstable)')}</div>
+							<div class="flex w-full">
+								<div class="flex-1">
+									<input
+										type="range"
+										class="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer dark:bg-gray-700"
+										min="0"
+										max="2"
+										step="0.1"
+										bind:value={TTS_WEBUI_EXAGGERATION}
+									/>
+									<div class="text-xs text-gray-500 mt-1">Value: {TTS_WEBUI_EXAGGERATION}</div>
+								</div>
+							</div>
+						</div>
+
+						<div class="mb-2">
+							<div class=" mb-1.5 text-xs font-medium">{$i18n.t('CFG Weight/Pace')}</div>
+							<div class="flex w-full">
+								<div class="flex-1">
+									<input
+										type="range"
+										class="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer dark:bg-gray-700"
+										min="0"
+										max="1"
+										step="0.1"
+										bind:value={TTS_WEBUI_CFG_WEIGHT}
+									/>
+									<div class="text-xs text-gray-500 mt-1">Value: {TTS_WEBUI_CFG_WEIGHT}</div>
+								</div>
+							</div>
+						</div>
+
+						<div class="mb-2">
+							<div class=" mb-1.5 text-xs font-medium">{$i18n.t('Temperature')}</div>
+							<div class="flex w-full">
+								<div class="flex-1">
+									<input
+										type="range"
+										class="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer dark:bg-gray-700"
+										min="0.05"
+										max="5"
+										step="0.05"
+										bind:value={TTS_WEBUI_TEMPERATURE}
+									/>
+									<div class="text-xs text-gray-500 mt-1">Value: {TTS_WEBUI_TEMPERATURE}</div>
+								</div>
+							</div>
 						</div>
 					</div>
 				{:else if TTS_ENGINE === 'elevenlabs'}
@@ -572,6 +654,47 @@
 							</div>
 						</div>
 					{:else if TTS_ENGINE === 'openai'}
+						<div class=" flex gap-2">
+							<div class="w-full">
+								<div class=" mb-1.5 text-xs font-medium">{$i18n.t('TTS Voice')}</div>
+								<div class="flex w-full">
+									<div class="flex-1">
+										<input
+											list="voice-list"
+											class="w-full rounded-lg py-2 px-4 text-sm bg-gray-50 dark:text-gray-300 dark:bg-gray-850 outline-hidden"
+											bind:value={TTS_VOICE}
+											placeholder={$i18n.t('Select a voice')}
+										/>
+
+										<datalist id="voice-list">
+											{#each voices as voice}
+												<option value={voice.id}>{voice.name}</option>
+											{/each}
+										</datalist>
+									</div>
+								</div>
+							</div>
+							<div class="w-full">
+								<div class=" mb-1.5 text-xs font-medium">{$i18n.t('TTS Model')}</div>
+								<div class="flex w-full">
+									<div class="flex-1">
+										<input
+											list="tts-model-list"
+											class="w-full rounded-lg py-2 px-4 text-sm bg-gray-50 dark:text-gray-300 dark:bg-gray-850 outline-hidden"
+											bind:value={TTS_MODEL}
+											placeholder={$i18n.t('Select a model')}
+										/>
+
+										<datalist id="tts-model-list">
+											{#each models as model}
+												<option value={model.id} class="bg-gray-50 dark:bg-gray-700" />
+											{/each}
+										</datalist>
+									</div>
+								</div>
+							</div>
+						</div>
+					{:else if TTS_ENGINE === 'ttswebui'}
 						<div class=" flex gap-2">
 							<div class="w-full">
 								<div class=" mb-1.5 text-xs font-medium">{$i18n.t('TTS Voice')}</div>
