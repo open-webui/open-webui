@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { getContext, createEventDispatcher } from 'svelte';
-	import { showFacilitiesOverlay, showControls, models } from '$lib/stores';
+	import { showFacilitiesOverlay, showControls, models, chatId } from '$lib/stores';
 	import { slide } from 'svelte/transition';
 	import { generateFacilitiesResponse, getFacilitiesSections } from '$lib/apis/facilities';
 	import { toast } from 'svelte-sonner';
@@ -12,6 +12,7 @@
 	export let modelId: string = '';
 	export let history: any = null;
 	export let addMessages: Function | null = null;
+	export let initChatHandler: Function | null = null; 
 	export let webSearchEnabled: boolean = false;
 	
 	// Get the current web search state from the chat interface
@@ -33,18 +34,18 @@
 	let dynamicSections: string[] = [];
 
 	const nsfSections = [
-		{ id: 'projectTitle', label: 'Project Title', required: true },
-		{ id: 'researchSpaceFacilities', label: 'Research Space and Facilities', required: true },
-		{ id: 'coreInstrumentation', label: 'Core Instrumentation', required: true },
-		{ id: 'computingDataResources', label: 'Computing and Data Resources', required: true },
-		{ id: 'internalFacilitiesNYU', label: 'Internal Facilities (NYU)', required: true },
-		{ id: 'externalFacilitiesOther', label: 'External Facilities (Other Institutions)', required: true },
-		{ id: 'specialInfrastructure', label: 'Special Infrastructure', required: true }
+		{ id: 'projectTitle', label: '1. Project Title', required: true },
+		{ id: 'researchSpaceFacilities', label: '2. Research Space and Facilities', required: true },
+		{ id: 'coreInstrumentation', label: '3. Core Instrumentation', required: true },
+		{ id: 'computingDataResources', label: '4. Computing and Data Resources', required: true },
+		{ id: 'internalFacilitiesNYU', label: '5a. Internal Facilities (NYU)', required: true },
+		{ id: 'externalFacilitiesOther', label: '5b. External Facilities (Other Institutions)', required: true },
+		{ id: 'specialInfrastructure', label: '6. Special Infrastructure', required: true }
 	];
 
 	const nihSections = [
 		...nsfSections,
-		{ id: 'equipment', label: 'Equipment', required: true }
+		{ id: 'equipment', label: '7. Equipment', required: true }
 	];
 
 	// Create dynamic sections based on backend response
@@ -83,10 +84,11 @@
 			historyCurrentId: history?.currentId
 		});
 
-		if (!history || !addMessages) {
+		if (!history || !addMessages || !initChatHandler) {
 			console.error('History or addMessages not available:', {
 				history: !!history,
-				addMessages: !!addMessages
+				addMessages: !!addMessages,
+				initChatHandler: !!initChatHandler
 			});
 			return;
 		}
@@ -134,6 +136,23 @@
 
 		// Use the addMessages function properly with error handling
 		try {
+			// Check if we need to create a new chat first
+			let parentId = history.currentId;
+
+			console.log('Chat state check:', {
+				chatId: $chatId,
+				historyMessagesCount: Object.keys(history.messages).length,
+				historyCurrentId: history.currentId
+			});
+
+			if (!$chatId || Object.keys(history.messages).length === 0) {
+				console.log('No chat exists, creating new chat first');
+				const newChatId = await initChatHandler(history);
+				console.log('Created new chat with ID:', newChatId);
+				parentId = null;
+			}
+
+			console.log('Calling addMessages with parentId:', parentId);
 			await addMessages({
 				modelId: modelId,
 				parentId: userMessage.parentId,
