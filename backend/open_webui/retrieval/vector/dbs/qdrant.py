@@ -1,4 +1,4 @@
-from qdrant_client import QdrantClient as Client, models
+from qdrant_client import AsyncQdrantClient, models
 from qdrant_client.http.models import (
     Distance,
     PointStruct,
@@ -30,7 +30,7 @@ from open_webui.config import (
 
 class QdrantClient:
     def __init__(self):
-        self.client = Client(
+        self.client = AsyncQdrantClient(
             url=QDRANT_URL,
             api_key=QDRANT_API_KEY,
             timeout=int(QDRANT_TIMEOUT_SECONDS),
@@ -79,19 +79,21 @@ class QdrantClient:
             }
         )
 
-    def has_collection(self, collection_name: str) -> bool:
+    async def has_collection(self, collection_name: str) -> bool:
         # Check if the collection exists based on the collection name.
-        return self.client.collection_exists(collection_name=collection_name)
+        return await self.client.collection_exists(collection_name=collection_name)
 
-    def list_collections(self) -> list[str]:
+    async def list_collections(self) -> list[str]:
         # List all collection names.
-        collections_response = self.client.get_collections()
+        collections_response = await self.client.get_collections()
         return [collection.name for collection in collections_response.collections]
 
-    def get_collection_sample_metadata(self, collection_name: str) -> Optional[dict]:
+    async def get_collection_sample_metadata(
+        self, collection_name: str
+    ) -> Optional[dict]:
         """Get metadata from a sample point in the collection to check properties like age."""
         try:
-            points, _ = self.client.scroll(
+            points, _ = await self.client.scroll(
                 collection_name=collection_name, limit=1, with_payload=True
             )
             if points and len(points) > 0:
@@ -102,9 +104,9 @@ class QdrantClient:
         except Exception:
             return None
 
-    def delete_collection(self, collection_name: str):
+    async def delete_collection(self, collection_name: str):
         # Delete the collection based on the collection name.
-        return self.client.delete_collection(collection_name=collection_name)
+        return await self.client.delete_collection(collection_name=collection_name)
 
     def search(
         self, collection_name: str, vectors: list[list[float | int]], limit: int
@@ -119,11 +121,11 @@ class QdrantClient:
 
         return self._result_to_search_result(result)
 
-    def query(
+    async def query(
         self, collection_name: str, filter: dict, limit: Optional[int] = None
     ) -> Optional[GetResult]:
         try:
-            if not self.client.collection_exists(collection_name=collection_name):
+            if not await self.client.collection_exists(collection_name=collection_name):
                 return None
 
             # Build the conditions if a filter is provided.
@@ -135,7 +137,7 @@ class QdrantClient:
                 ]
                 qdrant_filter = Filter(must=conditions)
 
-            points, _ = self.client.scroll(
+            points, _ = await self.client.scroll(
                 collection_name=collection_name,
                 scroll_filter=qdrant_filter,
                 limit=limit or 1,
@@ -207,7 +209,7 @@ class QdrantClient:
             points=points,
         )
 
-    def delete(
+    async def delete(
         self,
         collection_name: str,
         ids: Optional[list[str]] = None,
@@ -223,15 +225,15 @@ class QdrantClient:
             ]
             selector = Filter(must=conditions)
 
-        return self.client.delete(
+        return await self.client.delete(
             collection_name=collection_name,
             points_selector=selector,
         )
 
-    def reset(self):
+    async def reset(self):
         # Resets the database. This will delete all collections and item entries.
 
-        collection_response = self.client.get_collections()
+        collection_response = await self.client.get_collections()
 
         for collection in collection_response.collections:
-            self.client.delete_collection(collection_name=collection.name)
+            await self.client.delete_collection(collection_name=collection.name)

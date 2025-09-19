@@ -499,14 +499,20 @@ async def delete_knowledge_by_id(id: str, user=Depends(get_verified_user)):
             log.info(f"Cleaning up file {file_id} from knowledge base {id}")
 
             # Clean up vectors from the knowledge base collection
-            VECTOR_DB_CLIENT.delete(collection_name=id, filter={"file_id": file_id})
+            await VECTOR_DB_CLIENT.delete(
+                collection_name=id, filter={"file_id": file_id}
+            )
 
             # Get file info to clean up individual file collection if it exists
             file = Files.get_file_by_id(file_id)
             if file:
                 file_collection = f"file-{file_id}"
-                if VECTOR_DB_CLIENT.has_collection(collection_name=file_collection):
-                    VECTOR_DB_CLIENT.delete_collection(collection_name=file_collection)
+                if await VECTOR_DB_CLIENT.has_collection(
+                    collection_name=file_collection
+                ):
+                    await VECTOR_DB_CLIENT.delete_collection(
+                        collection_name=file_collection
+                    )
                     log.info(f"Deleted individual file collection: {file_collection}")
 
                 # Delete physical file
@@ -557,7 +563,7 @@ async def delete_knowledge_by_id(id: str, user=Depends(get_verified_user)):
 
     # Clean up the knowledge base vector collection itself
     try:
-        VECTOR_DB_CLIENT.delete_collection(collection_name=id)
+        await VECTOR_DB_CLIENT.delete_collection(collection_name=id)
         log.info(f"Deleted knowledge base collection: {id}")
     except Exception as e:
         log.debug(f"Error deleting knowledge base collection {id}: {e}")
@@ -590,7 +596,7 @@ async def reset_knowledge_by_id(id: str, user=Depends(get_verified_user)):
         )
 
     try:
-        VECTOR_DB_CLIENT.delete_collection(collection_name=id)
+        await VECTOR_DB_CLIENT.delete_collection(collection_name=id)
     except Exception as e:
         log.debug(e)
         pass

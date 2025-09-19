@@ -72,7 +72,7 @@ from open_webui.routers.retrieval import (
     get_rf,
 )
 
-from open_webui.internal.db import Session
+from open_webui.internal.db import Session, get_db
 
 from open_webui.models.functions import Functions
 from open_webui.models.models import Models
@@ -1376,7 +1376,9 @@ async def healthcheck():
 @app.get("/health/db")
 async def healthcheck_with_db():
     try:
-        Session.execute(text("SELECT 1;")).all()
+        # Use a dedicated session for health checks to avoid conflicts with long-running operations
+        with get_db() as db:
+            db.execute(text("SELECT 1;")).all()
         return {"status": True}
     except Exception as e:
         log.error(f"Database health check failed: {e}")
