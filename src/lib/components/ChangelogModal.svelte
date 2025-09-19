@@ -19,10 +19,13 @@
 
 	let changelog = null;
 
-	onMount(async () => {
-		const res = await getChangelog();
-		changelog = res;
-	});
+	const init = async () => {
+		changelog = await getChangelog();
+	};
+
+	$: if (show) {
+		init();
+	}
 </script>
 
 <Modal bind:show size="xl">

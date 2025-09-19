@@ -20,6 +20,7 @@ from concurrent.futures import ThreadPoolExecutor
 
 
 from fastapi import Request, HTTPException
+from fastapi.responses import HTMLResponse
 from starlette.responses import Response, StreamingResponse, JSONResponse
 
 
@@ -818,7 +819,7 @@ async def process_chat_payload(request, form_data, user, metadata, model):
     oauth_token = None
     try:
         if request.cookies.get("oauth_session_id", None):
-            oauth_token = request.app.state.oauth_manager.get_oauth_token(
+            oauth_token = await request.app.state.oauth_manager.get_oauth_token(
                 user.id,
                 request.cookies.get("oauth_session_id", None),
             )
@@ -1498,7 +1499,7 @@ async def process_chat_response(
     oauth_token = None
     try:
         if request.cookies.get("oauth_session_id", None):
-            oauth_token = request.app.state.oauth_manager.get_oauth_token(
+            oauth_token = await request.app.state.oauth_manager.get_oauth_token(
                 user.id,
                 request.cookies.get("oauth_session_id", None),
             )
@@ -1581,7 +1582,8 @@ async def process_chat_response(
                                         break
 
                                 if tool_result is not None:
-                                    tool_calls_display_content = f'{tool_calls_display_content}<details type="tool_calls" done="true" id="{tool_call_id}" name="{tool_name}" arguments="{html.escape(json.dumps(tool_arguments))}" result="{html.escape(json.dumps(tool_result, ensure_ascii=False))}" files="{html.escape(json.dumps(tool_result_files)) if tool_result_files else ""}">\n<summary>Tool Executed</summary>\n</details>\n'
+                                    tool_result_embeds = result.get("embeds", "")
+                                    tool_calls_display_content = f'{tool_calls_display_content}<details type="tool_calls" done="true" id="{tool_call_id}" name="{tool_name}" arguments="{html.escape(json.dumps(tool_arguments))}" result="{html.escape(json.dumps(tool_result, ensure_ascii=False))}" files="{html.escape(json.dumps(tool_result_files)) if tool_result_files else ""}" embeds="{html.escape(json.dumps(tool_result_embeds))}">\n<summary>Tool Executed</summary>\n</details>\n'
                                 else:
                                     tool_calls_display_content = f'{tool_calls_display_content}<details type="tool_calls" done="false" id="{tool_call_id}" name="{tool_name}" arguments="{html.escape(json.dumps(tool_arguments))}">\n<summary>Executing...</summary>\n</details>\n'
 
@@ -2402,6 +2404,75 @@ async def process_chat_response(
                             except Exception as e:
                                 tool_result = str(e)
 
+                        tool_result_embeds = []
+
+                        if isinstance(tool_result, HTMLResponse):
+                            content_disposition = tool_result.headers.get(
+                                "Content-Disposition", ""
+                            )
+                            if "inline" in content_disposition:
+                                content = tool_result.body.decode("utf-8")
+                                tool_result_embeds.append(content)
+
+                                if 200 <= tool_result.status_code < 300:
+                                    tool_result = {
+                                        "status": "success",
+                                        "code": "ui_component",
+                                        "message": "Embedded UI result is active and visible to the user.",
+                                    }
+                                elif 400 <= tool_result.status_code < 500:
+                                    tool_result = {
+                                        "status": "error",
+                                        "code": "ui_component",
+                                        "message": f"Client error {tool_result.status_code} from embedded UI result.",
+                                    }
+                                elif 500 <= tool_result.status_code < 600:
+                                    tool_result = {
+                                        "status": "error",
+                                        "code": "ui_component",
+                                        "message": f"Server error {tool_result.status_code} from embedded UI result.",
+                                    }
+                                else:
+                                    tool_result = {
+                                        "status": "error",
+                                        "code": "ui_component",
+                                        "message": f"Unexpected status code {tool_result.status_code} from embedded UI result.",
+                                    }
+                            else:
+                                tool_result = tool_result.body.decode("utf-8")
+
+                        elif tool.get("type") == "external" and isinstance(
+                            tool_result, tuple
+                        ):
+                            tool_result, tool_response_headers = tool_result
+
+                            if tool_response_headers:
+                                content_disposition = tool_response_headers.get(
+                                    "Content-Disposition", ""
+                                )
+
+                                if "inline" in content_disposition:
+                                    content_type = tool_response_headers.get(
+                                        "Content-Type", ""
+                                    )
+                                    location = tool_response_headers.get("Location", "")
+
+                                    if "text/html" in content_type:
+                                        # Display as iframe embed
+                                        tool_result_embeds.append(tool_result)
+                                        tool_result = {
+                                            "status": "success",
+                                            "code": "ui_component",
+                                            "message": "Embedded UI result is active and visible to the user.",
+                                        }
+                                    elif location:
+                                        tool_result_embeds.append(location)
+                                        tool_result = {
+                                            "status": "success",
+                                            "code": "ui_component",
+                                            "message": "Embedded UI result is active and visible to the user.",
+                                        }
+
                         tool_result_files = []
                         if isinstance(tool_result, list):
                             for item in tool_result:
@@ -2424,6 +2495,11 @@ async def process_chat_response(
                                 **(
                                     {"files": tool_result_files}
                                     if tool_result_files
+                                    else {}
+                                ),
+                                **(
+                                    {"embeds": tool_result_embeds}
+                                    if tool_result_embeds
                                     else {}
                                 ),
                             }

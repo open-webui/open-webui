@@ -1143,7 +1143,7 @@
 								<div class=" mb-2.5 py-0.5 w-full justify-between">
 									<Tooltip
 										content={$i18n.t(
-											'The Weight of BM25 Hybrid Search. 0 more lexical, 1 more semantic. Default 0.5'
+											'The Weight of BM25 Hybrid Search. 0 more semantic, 1 more lexical. Default 0.5'
 										)}
 										placement="top-start"
 										className="inline-tooltip"
