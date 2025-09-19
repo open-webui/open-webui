@@ -72,15 +72,18 @@
 	};
 </script>
 
-{#if enabled && editor && showPii}
+{#if editor && showPii}
 	<div
 		class="flex gap-0.5 p-0.5 rounded-lg shadow-lg bg-white text-gray-800 dark:text-white dark:bg-gray-800 min-w-fit"
 	>
 		<button
 			type="button"
 			class="hover:bg-gray-50 dark:hover:bg-gray-700 rounded-lg p-1.5 transition-all text-xs font-medium flex items-center gap-1"
-			on:click={addWordMask}
-			title="PII Modifier: Mask complete words in selection"
+			style={!enabled ? 'opacity: 0.5; cursor: not-allowed;' : ''}
+			on:click={enabled ? addWordMask : () => {}}
+			title={enabled
+				? 'PII Modifier: Mask complete words in selection'
+				: 'PII modifiers disabled during file processing'}
 		>
 			🛡️ Mask Words
 		</button>

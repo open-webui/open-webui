@@ -21,6 +21,9 @@ import type {
 	UnmaskTextTextUnmaskPostData,
 	UnmaskTextTextUnmaskPostResponses,
 	UnmaskTextTextUnmaskPostErrors,
+	MaskUpdateTextMaskUpdatePostData,
+	MaskUpdateTextMaskUpdatePostResponses,
+	MaskUpdateTextMaskUpdatePostErrors,
 	MaskFileFileMaskPostData,
 	MaskFileFileMaskPostResponses,
 	MaskFileFileMaskPostErrors,
@@ -305,6 +308,96 @@ export const unmaskTextTextUnmaskPost = <ThrowOnError extends boolean = false>(
 			}
 		],
 		url: '/text/unmask',
+		...options,
+		headers: {
+			'Content-Type': 'application/json',
+			...options.headers
+		}
+	});
+};
+
+/**
+ * Mask Update
+ * Update masking on previously masked text using new modifiers.
+ *
+ * This endpoint takes the output from mask_text (PIIs) and the original text that was used for PII detection and applies new modifiers
+ * to update the masking behavior. It's ideal for refining masking after an initial
+ * mask_text operation.
+ *
+ * - **text**: Original text string that was previously used for PII detection
+ * - **pii**: PII entities from previous mask_text operation
+ * - **modifiers**: New modifiers to apply for updating the masking
+ * - **quiet**: Set to true to receive only masked text without detailed PII information
+ *
+ * **Example request**:
+ * ```json
+ * {
+ * "text": "John Doe's phone number is +49 718 222 222",
+ * "pii": [
+ * {
+ * "id": 1,
+ * "type": "PERSON",
+ * "label": "PERSON_1",
+ * "text": "John Doe",
+ * "raw_text": "John Doe",
+ * "occurrences": [{"start_idx": 0, "end_idx": 8}]
+ * }
+ * ],
+ * "modifiers": [
+ * {"action": "string-mask", "entity": "phone", "type": "CUSTOM"},
+ * {"action": "word-mask", "entity": "+49 718 222 222", "type": "PHONENUMBER"}
+ * ]
+ * }
+ * ```
+ *
+ * **Example response format**:
+ * ```json
+ * {
+ * "text": "[{PERSON_1}]'s [{CUSTOM_2}] number is [{PHONENUMBER_3}]",
+ * "pii": [
+ * {
+ * "id": 1,
+ * "type": "PERSON",
+ * "label": "PERSON_1",
+ * "text": "John Doe",
+ * "raw_text": "John Doe",
+ * "occurrences": [{"start_idx": 0, "end_idx": 8}]
+ * },
+ * {
+ * "id": 2,
+ * "type": "CUSTOM",
+ * "label": "CUSTOM_2",
+ * "text": "phone",
+ * "raw_text": "phone",
+ * "occurrences": [{"start_idx": 10, "end_idx": 16}]
+ * },
+ * {
+ * "id": 3,
+ * "type": "PHONENUMBER",
+ * "label": "PHONENUMBER_3",
+ * "text": "+49 718 222 222",
+ * "raw_text": "+49 718 222 222",
+ * "occurrences": [{"start_idx": 27, "end_idx": 42}]
+ * }
+ * ]
+ * }
+ * ```
+ */
+export const maskUpdateTextMaskUpdatePost = <ThrowOnError extends boolean = false>(
+	options: Options<MaskUpdateTextMaskUpdatePostData, ThrowOnError>
+) => {
+	return (options.client ?? _heyApiClient).post<
+		MaskUpdateTextMaskUpdatePostResponses,
+		MaskUpdateTextMaskUpdatePostErrors,
+		ThrowOnError
+	>({
+		security: [
+			{
+				name: 'X-API-Key',
+				type: 'apiKey'
+			}
+		],
+		url: '/text/mask-update',
 		...options,
 		headers: {
 			'Content-Type': 'application/json',

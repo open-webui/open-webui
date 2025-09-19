@@ -54,7 +54,8 @@
 				"0.0.0.0",
 				"--forwarded-allow-ips",
 				"*",
-				"--reload"
+				"--reload",
+				"--log-level=debug"
 			],
 			"subProcess": true,
 			"justMyCode": true

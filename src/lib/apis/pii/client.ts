@@ -8,6 +8,7 @@ import type {
 	PiiSession,
 	ShieldApiModifier
 } from './index';
+import type { MaskUpdateResponse } from './generated';
 
 // Configuration interface for the PII API client
 export interface PiiApiClientConfig {
@@ -369,6 +370,41 @@ export class PiiApiClient {
 					text,
 					entities
 				})
+			},
+			options
+		);
+	}
+
+	/**
+	 * Update masking on previously analyzed text using new modifiers (FAST endpoint)
+	 */
+	async updateMasking(
+		text: string,
+		pii: PiiEntity[],
+		modifiers: ShieldApiModifier[],
+		options: ApiRequestOptions = {}
+	): Promise<MaskUpdateResponse> {
+		const url = new URL(`${this.getBaseUrl()}/text/mask-update`);
+
+		if (options.quiet ?? this.config.quiet) {
+			url.searchParams.set('quiet', 'true');
+		}
+
+		const requestBody: {
+			text: string;
+			pii: PiiEntity[];
+			modifiers: ShieldApiModifier[];
+		} = {
+			text,
+			pii,
+			modifiers
+		};
+
+		return this.makeRequest<MaskUpdateResponse>(
+			url.toString(),
+			{
+				method: 'POST',
+				body: JSON.stringify(requestBody)
 			},
 			options
 		);

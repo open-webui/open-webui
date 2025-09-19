@@ -14,6 +14,9 @@ import { PiiPerformanceTracker } from '$lib/components/common/RichTextInput/PiiP
 // Extended PII entity with masking state
 export interface ExtendedPiiEntity extends PiiEntity {
 	shouldMask?: boolean;
+	// Store original plain text positions for API calls
+	// While 'occurrences' contains mapped ProseMirror positions for editor interactions
+	originalOccurrences?: Array<{ start_idx: number; end_idx: number }>;
 }
 
 // Debounce function for PII detection
@@ -211,11 +214,13 @@ export class PiiSessionManager {
 		modifiers: PiiModifier[];
 		filenameMappings: FilenameMapping[];
 		isActive: boolean;
+		lastUpdated: number;
 	} = {
 		entities: [],
 		modifiers: [],
 		filenameMappings: [],
-		isActive: false
+		isActive: false,
+		lastUpdated: 0
 	};
 
 	private workingEntitiesForConversations: Map<string, ExtendedPiiEntity[]> = new Map();
@@ -333,10 +338,19 @@ export class PiiSessionManager {
 					(o) => !currentOccKeys.has(occurrenceKey(o))
 				);
 
+				// Also merge originalOccurrences if they exist
+				const currentOriginalOccKeys = new Set(
+					(current.originalOccurrences || []).map(occurrenceKey)
+				);
+				const newOriginalOcc = (incomingEntity.originalOccurrences || []).filter(
+					(o) => !currentOriginalOccKeys.has(occurrenceKey(o))
+				);
+
 				merged[idx] = {
 					...current,
 					// Keep existing shouldMask and other properties, just add new occurrences
-					occurrences: [...(current.occurrences || []), ...newOcc]
+					occurrences: [...(current.occurrences || []), ...newOcc],
+					originalOccurrences: [...(current.originalOccurrences || []), ...newOriginalOcc]
 				};
 			} else {
 				// New entity - preserve original ID/label if not in use, otherwise assign new ones
@@ -525,6 +539,10 @@ export class PiiSessionManager {
 		return this.conversationStates.get(conversationId) || null;
 	}
 
+	getTemporaryState(): ConversationPiiState | null {
+		return this.temporaryState;
+	}
+
 	// Convert conversation entities to known entities format for API
 	getKnownEntitiesForApi(
 		conversationId?: string
@@ -535,6 +553,20 @@ export class PiiSessionManager {
 			label: entity.label,
 			name: entity.text || entity.raw_text.toLowerCase(),
 			shouldMask: entity.shouldMask
+		}));
+	}
+
+	// Get full entities with original positions for updatePiiMasking API calls
+	getEntitiesForApiWithOriginalPositions(conversationId?: string): PiiEntity[] {
+		const entities = this.getEntitiesForDisplay(conversationId);
+		return entities.map((entity) => ({
+			id: entity.id,
+			type: entity.type,
+			label: entity.label,
+			text: entity.text,
+			raw_text: entity.raw_text,
+			// CRITICAL: Use originalOccurrences (plain text positions) for API
+			occurrences: entity.originalOccurrences
 		}));
 	}
 
@@ -870,8 +902,18 @@ export class PiiSessionManager {
 				const newOcc = (incoming.occurrences || []).filter(
 					(o) => !currentOccKeys.has(occurrenceKey(o))
 				);
+
+				// Also handle originalOccurrences
+				const currentOriginalOccKeys = new Set(
+					(current.originalOccurrences || []).map(occurrenceKey)
+				);
+				const newOriginalOcc = (incoming.originalOccurrences || []).filter(
+					(o) => !currentOriginalOccKeys.has(occurrenceKey(o))
+				);
+
 				if (
 					newOcc.length > 0 ||
+					newOriginalOcc.length > 0 ||
 					(incoming.shouldMask !== undefined && current.shouldMask === undefined)
 				) {
 					mergedPersistent[idx] = {
@@ -882,7 +924,8 @@ export class PiiSessionManager {
 						text: current.text || incoming.text,
 						raw_text: current.raw_text || incoming.raw_text,
 						type: current.type || incoming.type,
-						occurrences: [...(current.occurrences || []), ...newOcc]
+						occurrences: [...(current.occurrences || []), ...newOcc],
+						originalOccurrences: [...(current.originalOccurrences || []), ...newOriginalOcc]
 					};
 					persistentChanged = true;
 				}
@@ -1035,6 +1078,22 @@ export class PiiSessionManager {
 	}
 
 	/**
+	 * Create a PII payload for API calls from current conversation entities
+	 * This transforms entities into a map format where the entity text is the key
+	 * and the value contains all entity details needed for API processing
+	 *
+	 * @param conversationId - The conversation ID to get entities for (optional)
+	 * @returns Record<string, any> | null - PII payload map or null if no entities
+	 */
+	createPiiPayloadForApi(conversationId?: string): Record<string, any> | null {
+		// Get current working entities (includes user modifications and persistent state)
+		const currentEntities = this.getEntitiesForApiWithOriginalPositions(conversationId);
+
+		// Use the static utility function to create payload
+		return createPiiPayloadFromEntities(currentEntities);
+	}
+
+	/**
 	 * Update API client configuration
 	 */
 	updateApiConfig(config: Partial<PiiApiClientConfig>) {
@@ -1101,6 +1160,56 @@ export class PiiSessionManager {
 			temporaryStateActive: this.temporaryState.isActive
 		};
 	}
+}
+
+/**
+ * Create a PII payload for API calls from a provided array of entities
+ * This is a static utility function that can be used when you have entities directly
+ * rather than needing to fetch them from the session manager
+ *
+ * @param entities - Array of PII entities to transform into payload format
+ * @returns Record<string, any> | null - PII payload map or null if no entities
+ */
+export function createPiiPayloadFromEntities(
+	entities: (PiiEntity | ExtendedPiiEntity)[]
+): Record<string, any> | null {
+	// Return null if no entities to process
+	if (!entities || entities.length === 0) {
+		return null;
+	}
+
+	// Create a map where entity text is the key for efficient API processing
+	// TypeScript note: Record<string, any> means an object with string keys and any value type
+	const map: Record<string, any> = {};
+
+	entities.forEach((entity) => {
+		// Use entity text as primary key, fallback to label for compatibility
+		const key = entity.text || entity.label;
+		if (!key) return; // Skip entities without text or label
+
+		// Handle originalOccurrences vs regular occurrences
+		// ExtendedPiiEntity may have originalOccurrences (plain text positions)
+		const extendedEntity = entity as ExtendedPiiEntity;
+		const occurrences =
+			extendedEntity.originalOccurrences && extendedEntity.originalOccurrences.length > 0
+				? extendedEntity.originalOccurrences
+				: (entity.occurrences || []).map((o) => ({
+						start_idx: o.start_idx,
+						end_idx: o.end_idx
+					}));
+
+		// Create structured object with all entity details
+		map[key] = {
+			id: entity.id,
+			label: entity.label,
+			type: entity.type || 'PII',
+			text: (entity.text || entity.label).toLowerCase(), // Lowercase for consistent matching
+			raw_text: entity.raw_text || entity.label,
+			occurrences
+		};
+	});
+
+	return map;
 }
 
 // Get label variations to handle different spellings

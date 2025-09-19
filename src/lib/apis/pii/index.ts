@@ -7,13 +7,16 @@ import {
 	getSessionSessionsSessionIdGet,
 	maskTextTextMaskPost,
 	unmaskTextTextUnmaskPost,
+	maskUpdateTextMaskUpdatePost,
 	maskTextWithSessionSessionsSessionIdTextMaskPost,
 	unmaskTextWithSessionSessionsSessionIdTextUnmaskPost,
 	type PiiEntity,
 	type Session,
 	type SessionCreate,
 	type TextMaskResponse,
-	type TextUnmaskResponse
+	type TextUnmaskResponse,
+	type MaskUpdateRequest,
+	type MaskUpdateResponse
 } from './generated';
 import { client } from './generated/client.gen';
 
@@ -158,6 +161,36 @@ export const unmaskPiiText = async (
 	}
 
 	return response.json();
+};
+
+// Update masking on previously analyzed text using new modifiers (FAST endpoint)
+export const updatePiiMasking = async (
+	apiKey: string,
+	text: string,
+	pii: PiiEntity[],
+	modifiers: ShieldApiModifier[],
+	quiet: boolean = false
+): Promise<MaskUpdateResponse> => {
+	configureClient(apiKey);
+
+	const requestBody: MaskUpdateRequest = {
+		text,
+		pii,
+		modifiers
+	};
+
+	const response = await maskUpdateTextMaskUpdatePost({
+		body: requestBody,
+		query: {
+			quiet: quiet
+		}
+	});
+
+	if (response.error) {
+		throw new Error(`Failed to update PII masking: ${response.error}`);
+	}
+
+	return response.data;
 };
 
 // Mask PII using session

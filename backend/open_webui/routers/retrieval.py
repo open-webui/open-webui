@@ -10,7 +10,7 @@ import time
 import uuid
 from datetime import datetime
 from pathlib import Path
-from typing import Iterator, List, Optional, Sequence, Union
+from typing import Iterator, List, Optional, Sequence, Union, Dict, Any
 
 from fastapi import (
     Depends,
@@ -1372,6 +1372,8 @@ def save_docs_to_vector_db(
                 except Exception:
                     # If parsing fails, drop PII to avoid breaking ingestion
                     doc.metadata["pii"] = {}
+            elif isinstance(pii_meta, dict):
+                doc.metadata["pii"] = pii_meta
             elif isinstance(pii_meta, list):
                 # Convert list of entities to dict keyed by label/text
                 converted = {}
@@ -1522,13 +1524,38 @@ def save_docs_to_vector_db(
         raise e
 
 
+# Import PII types from files module - define them here to avoid circular imports
+class ProcessFilePiiEntity(BaseModel):
+    id: int
+    label: str
+    type: str
+    raw_text: str
+    text: Optional[str] = None
+    occurrences: List[Dict[str, int]] = []
+    shouldMask: Optional[bool] = True
+
+
+class ProcessFilePiiState(BaseModel):
+    entities: List[ProcessFilePiiEntity] = []
+    sessionId: Optional[str] = None
+    apiKey: Optional[str] = None
+    lastUpdated: Optional[int] = None
+    modifiers: List[Dict] = []
+
+
+# Support both dict format (legacy) and list format (new)
+ProcessFilePiiData = Union[
+    Dict[str, Any], List[ProcessFilePiiEntity], Dict[str, ProcessFilePiiEntity]
+]
+
+
 class ProcessFileForm(BaseModel):
     file_id: str
     content: Optional[str] = None
     collection_name: Optional[str] = None
     # Optional PII and UI state provided by client to avoid re-detection
-    pii: Optional[dict | list] = None
-    pii_state: Optional[dict] = None
+    pii: Optional[ProcessFilePiiData] = None
+    pii_state: Optional[Union[ProcessFilePiiState, Dict[str, Any]]] = None
     enable_pii_detection: Optional[bool] = True
 
 
@@ -1610,25 +1637,43 @@ def process_file(
             except Exception:
                 pass
 
-            # If client provided PII, attach it to doc metadata and persist to file data
+            # CRITICAL: Handle PII data preservation during content updates
+            # This ensures that existing PII data structure is maintained for collections
             try:
                 if form_data.pii is not None:
                     try:
                         if docs and len(docs) > 0:
                             # Attach as-is; downstream normalization handles chunk-local mapping
                             docs[0].metadata["pii"] = form_data.pii
+                        # Only update if PII data is provided - preserve existing data structure
                         Files.update_file_data_by_id(file.id, {"pii": form_data.pii})
-                    except Exception:
-                        pass
+                        log.debug(f"process_file: Updated PII data for file {file.id}")
+                    except Exception as e:
+                        log.warning(f"process_file: Failed to update PII data: {e}")
+                else:
+                    # Preserve existing PII data structure by not overwriting with None
+                    log.debug(
+                        f"process_file: Preserving existing PII data for file {file.id}"
+                    )
+
                 if form_data.pii_state is not None:
                     try:
-                        Files.update_file_data_by_id(
-                            file.id, {"piiState": form_data.pii_state}
+                        state_dict = (
+                            form_data.pii_state.model_dump()
+                            if isinstance(form_data.pii_state, ProcessFilePiiState)
+                            else form_data.pii_state
                         )
-                    except Exception:
-                        pass
+                        Files.update_file_data_by_id(file.id, {"piiState": state_dict})
+                        log.debug(f"process_file: Updated PII state for file {file.id}")
+                    except Exception as e:
+                        log.warning(f"process_file: Failed to update PII state: {e}")
+                else:
+                    # Preserve existing PII state by not overwriting with None
+                    log.debug(
+                        f"process_file: Preserving existing PII state for file {file.id}"
+                    )
             except Exception as e:
-                log.debug(f"process_file: skipping client-provided PII attach: {e}")
+                log.debug(f"process_file: Error handling PII data preservation: {e}")
         elif form_data.collection_name:
             # Check if the file has already been processed and save the content
             # Usage: /knowledge/{id}/file/add, /knowledge/{id}/file/update
@@ -1841,7 +1886,7 @@ def process_file(
                 Files.update_file_data_by_id(
                     file.id,
                     {
-                        "content": " ".join(text_content),
+                        "content": "".join(text_content),
                         "page_content": text_content,
                     },
                 )
