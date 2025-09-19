@@ -1,34 +1,45 @@
 services:
   ollama:
-    volumes:
-      - ollama:/root/.ollama
+    image: ollama/ollama:${OLLAMA_DOCKER_TAG-latest}
     container_name: ollama
     pull_policy: always
     tty: true
     restart: unless-stopped
-    image: ollama/ollama:${OLLAMA_DOCKER_TAG-latest}
+    volumes:
+      - ollama:/root/.ollama
 
   open-webui:
-    build:
-      context: .
-      args:
-        OLLAMA_BASE_URL: '/ollama'
-      dockerfile: Dockerfile
-    image: ghcr.io/open-webui/open-webui:${WEBUI_DOCKER_TAG-main}
+    image: ghcr.io/open-webui/open-webui:v0.6.5
     container_name: open-webui
-    volumes:
-      - open-webui:/app/backend/data
     depends_on:
       - ollama
+      - redis
     ports:
       - ${OPEN_WEBUI_PORT-3000}:8080
     environment:
-      - 'OLLAMA_BASE_URL=http://ollama:11434'
-      - 'WEBUI_SECRET_KEY='
+      - OLLAMA_BASE_URL=http://ollama:11434
+      - WEBUI_SECRET_KEY=dev-secret
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+      - REDIS_URL=redis://redis:6379/0
+      - WEBSOCKET_MANAGER=redis
+      - WEBSOCKET_REDIS_URL=redis://redis:6379/0
+    volumes:
+      - open-webui:/app/backend/data
     extra_hosts:
       - host.docker.internal:host-gateway
+    restart: unless-stopped
+
+  redis:
+    image: redis:7
+    container_name: redis
+    ports:
+      - "6380:6379"   # use 6380 on host to avoid conflict
+    volumes:
+      - redis_data:/data
     restart: unless-stopped
 
 volumes:
   ollama: {}
   open-webui: {}
+  redis_data: {}

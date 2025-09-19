@@ -331,6 +331,19 @@ JWT_EXPIRES_IN = PersistentConfig(
     "JWT_EXPIRES_IN", "auth.jwt_expiry", os.environ.get("JWT_EXPIRES_IN", "-1")
 )
 
+# Redis session feature flags
+ENABLE_REDIS_SESSIONS = PersistentConfig(
+    "ENABLE_REDIS_SESSIONS",
+    "auth.sessions.enable",
+    os.environ.get("ENABLE_REDIS_SESSIONS", "False").lower() == "true",
+)
+
+SESSION_SLIDING_TTL = PersistentConfig(
+    "SESSION_SLIDING_TTL",
+    "auth.sessions.sliding_ttl",
+    os.environ.get("SESSION_SLIDING_TTL", "True").lower() == "true",
+)
+
 ####################################
 # OAuth config
 ####################################
