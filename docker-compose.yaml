@@ -7,6 +7,12 @@ services:
     tty: true
     restart: unless-stopped
     image: ollama/ollama:${OLLAMA_DOCKER_TAG-latest}
+    deploy:
+      resources:
+        limits:
+          memory: 4G
+        reservations:
+          memory: 2G
 
   open-webui:
     build:
@@ -28,6 +34,12 @@ services:
     extra_hosts:
       - host.docker.internal:host-gateway
     restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          memory: 8G
+        reservations:
+          memory: 4G
 
 volumes:
   ollama: {}
