@@ -58,7 +58,6 @@ export const loadLanguage = async (lang) => {
 		languageCache.set(lang, false);
 		return false;
 	}
-  }
 };
 
 // Initialize on import
