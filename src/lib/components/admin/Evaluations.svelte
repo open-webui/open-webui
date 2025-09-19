@@ -3,10 +3,8 @@
 	import { goto } from '$app/navigation';
 	import { page } from '$app/stores';
 
-	import Leaderboard from './Evaluations/Leaderboard.svelte';
-	import Feedbacks from './Evaluations/Feedbacks.svelte';
-
 	import { getAllFeedbacks } from '$lib/apis/evaluations';
+	import Spinner from '$lib/components/common/Spinner.svelte';
 
 	const i18n = getContext('i18n');
 
@@ -115,9 +113,21 @@
 
 		<div class="flex-1 mt-1 lg:mt-0 px-[16px] lg:pr-[16px] lg:pl-0 overflow-y-scroll">
 			{#if selectedTab === 'leaderboard'}
-				<Leaderboard {feedbacks} />
+				{#await import('./Evaluations/Leaderboard.svelte')}
+					<div class="flex justify-center items-center h-full">
+						<Spinner />
+					</div>
+				{:then { default: Leaderboard }}
+					<Leaderboard {feedbacks} />
+				{/await}
 			{:else if selectedTab === 'feedbacks'}
-				<Feedbacks {feedbacks} />
+				{#await import('./Evaluations/Feedbacks.svelte')}
+					<div class="flex justify-center items-center h-full">
+						<Spinner />
+					</div>
+				{:then { default: Feedbacks }}
+					<Feedbacks {feedbacks} />
+				{/await}
 			{/if}
 		</div>
 	</div>
