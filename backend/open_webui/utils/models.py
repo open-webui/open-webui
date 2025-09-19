@@ -12,7 +12,7 @@ from open_webui.functions import get_function_models
 
 from open_webui.models.functions import Functions
 from open_webui.models.models import Models
-
+from open_webui.socket.utils import RedisDict
 
 from open_webui.utils.plugin import (
     load_function_module_by_id,
@@ -308,7 +308,12 @@ async def get_all_models(request, refresh: bool = False, user: UserModel = None)
 
     log.debug(f"get_all_models() returned {len(models)} models")
 
-    request.app.state.MODELS = {model["id"]: model for model in models}
+    new_models = {model["id"]: model for model in models}
+    if isinstance(request.app.state.MODELS, RedisDict):
+        request.app.state.MODELS.replace_all(new_models)
+    else:
+        request.app.state.MODELS = new_models
+
     return models
 
 
