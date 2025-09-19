@@ -47,7 +47,7 @@
 			iframeSrc = src as string;
 			iframeDoc = null;
 		} else {
-			iframeDoc = await processHtmlForAlpine(src as string);
+			iframeDoc = await processHtmlForDeps(src as string);
 			iframeSrc = null;
 		}
 	};
@@ -74,32 +74,56 @@
 		'x-id'
 	];
 
-	async function processHtmlForAlpine(html: string): Promise<string> {
+	async function processHtmlForDeps(html: string): Promise<string> {
 		if (!allowSameOrigin) return html;
 
+		const scriptTags: string[] = [];
+
+		// --- Alpine.js detection & injection ---
 		const hasAlpineDirectives = alpineDirectives.some((dir) => html.includes(dir));
-		if (!hasAlpineDirectives) return html;
-
-		try {
-			// Import Alpine and get its source code
-			// import alpineCode from './alpine.min.js?raw';
-			const { default: alpineCode } = await import('alpinejs/dist/cdn.min.js?raw');
-			const alpineBlob = new Blob([alpineCode], { type: 'text/javascript' });
-			const alpineUrl = URL.createObjectURL(alpineBlob);
-
-			// Create Alpine initialization script
-			const alpineTag = `<script src="${alpineUrl}" defer><\/script>`;
-
-			// Inject Alpine script at the beginning of head or body
-			html = html.includes('</body>')
-				? html.replace('</body>', alpineTag + '\n</body>')
-				: `<!DOCTYPE html><html><head><meta charset="utf-8"></head><body>${html}\n${alpineTag}</body></html>`;
-
-			return html;
-		} catch (error) {
-			console.error('Error processing Alpine for iframe:', error);
-			return html;
+		if (hasAlpineDirectives) {
+			try {
+				const { default: alpineCode } = await import('alpinejs/dist/cdn.min.js?raw');
+				const alpineBlob = new Blob([alpineCode], { type: 'text/javascript' });
+				const alpineUrl = URL.createObjectURL(alpineBlob);
+				const alpineTag = `<script src="${alpineUrl}" defer><\/script>`;
+				scriptTags.push(alpineTag);
+			} catch (error) {
+				console.error('Error processing Alpine for iframe:', error);
+			}
 		}
+
+		// --- Chart.js detection & injection ---
+		const chartJsDirectives = ['new Chart(', 'Chart.'];
+		const hasChartJsDirectives = chartJsDirectives.some((dir) => html.includes(dir));
+		if (hasChartJsDirectives) {
+			try {
+				// import chartUrl from 'chart.js/auto?url';
+				const { default: Chart } = await import('chart.js/auto');
+				(window as any).Chart = Chart;
+
+				const chartTag = `<script>
+window.Chart = parent.Chart; // Chart previously assigned on parent
+<\/script>`;
+				scriptTags.push(chartTag);
+			} catch (error) {
+				console.error('Error processing Chart.js for iframe:', error);
+			}
+		}
+
+		// If nothing to inject, return original HTML
+		if (scriptTags.length === 0) return html;
+
+		const tags = scriptTags.join('\n');
+
+		// Prefer injecting into <head>, then before </body>, otherwise prepend
+		if (html.includes('</head>')) {
+			return html.replace('</head>', `${tags}\n</head>`);
+		}
+		if (html.includes('</body>')) {
+			return html.replace('</body>', `${tags}\n</body>`);
+		}
+		return `${tags}\n${html}`;
 	}
 
 	// Try to measure same-origin content safely
