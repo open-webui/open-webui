@@ -6,7 +6,8 @@ from typing import Callable
 
 # inplace function: form_data is modified
 def apply_model_system_prompt_to_body(params: dict, form_data: dict, user) -> dict:
-    system = params.get("system", None)
+    system = params.get("system", "")
+
     if not system:
         return form_data
 
@@ -18,9 +19,11 @@ def apply_model_system_prompt_to_body(params: dict, form_data: dict, user) -> di
     else:
         template_params = {}
     system = prompt_template(system, **template_params)
+
     form_data["messages"] = add_or_update_system_message(
         system, form_data.get("messages", [])
     )
+
     return form_data
 
 

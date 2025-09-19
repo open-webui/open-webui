@@ -2,13 +2,22 @@
 Pure txtai-wikipedia semantic search - absolutely generic
 """
 
+import asyncio
+import hashlib
 import importlib.util
 import logging
 import re
+import time
+import weakref
+from concurrent.futures import ThreadPoolExecutor
 from typing import Dict, List, Optional
 from datetime import datetime
 
+from open_webui.env import SRC_LOG_LEVELS
+from .context_analysis import analyze_conversation_context
+
 log = logging.getLogger(__name__)
+log.setLevel(SRC_LOG_LEVELS["GROUNDING"])
 
 
 def _get_txtai_embeddings():
@@ -37,22 +46,194 @@ def _get_transformers_pipeline():
         )
 
 
+def _get_txtai_reranker():
+    """Lazy load txtai.pipeline.Reranker and Similarity with clear error message"""
+    try:
+        from txtai.pipeline import Reranker, Similarity
+
+        return Reranker, Similarity
+    except ImportError:
+        raise ImportError(
+            "txtai 9.0+ is required for reranking. "
+            "Install with: pip install txtai>=9.0"
+        )
+
+
 def _check_optional_dependency(module_name: str) -> bool:
     """Check if an optional dependency is available"""
     return importlib.util.find_spec(module_name) is not None
 
 
 class WikiSearchGrounder:
-    """Pure txtai-wikipedia implementation with lazy loading"""
+    """Pure txtai-wikipedia implementation with lazy loading and concurrency control"""
+
+    # Class-level semaphore for controlling concurrent operations
+    # Use limit of 1 to prevent memory exhaustion ("Brian Smash" technique)
+    _semaphore = None
+    _semaphore_lock = asyncio.Lock()
+    MAX_CONCURRENT_OPERATIONS = 1
+
+    # Query-specific locks to prevent concurrent processing of identical queries
+    # Using WeakValueDictionary to automatically clean up completed queries
+    _query_locks = weakref.WeakValueDictionary()
+    _query_locks_lock = asyncio.Lock()
 
     def __init__(self):
         self.max_content_length = 4000
         self.max_search_results = 5
         self.embeddings = None
         self.translator = None
+        self.reranker = None
         self.model_loaded = False
         self.translation_loaded = False
+        self.reranker_loaded = False
         self._initialized = False
+
+    @classmethod
+    async def _get_semaphore(cls):
+        """Get or create the class-level semaphore for concurrency control"""
+        if cls._semaphore is None:
+            async with cls._semaphore_lock:
+                # Double-check pattern
+                if cls._semaphore is None:
+                    cls._semaphore = asyncio.Semaphore(cls.MAX_CONCURRENT_OPERATIONS)
+                    log.info(
+                        f"🔒 Wiki grounding semaphore initialized with {cls.MAX_CONCURRENT_OPERATIONS} concurrent operations allowed"
+                    )
+        return cls._semaphore
+
+    async def _acquire_lock(
+        self, operation_name: str
+    ) -> tuple[asyncio.Semaphore, float]:
+        """Acquire semaphore lock and return semaphore and start time for monitoring"""
+        semaphore = await self._get_semaphore()
+
+        # Log queue status before acquiring
+        available_permits = (
+            semaphore._value if hasattr(semaphore, "_value") else "unknown"
+        )
+        log.debug(
+            f"🚦 [{operation_name}] Requesting semaphore (available: {available_permits})"
+        )
+
+        start_time = time.time()
+        await semaphore.acquire()
+
+        wait_time = time.time() - start_time
+        if wait_time > 0.1:  # Log if we waited more than 100ms
+            log.debug(
+                f"🔓 [{operation_name}] Acquired semaphore after {wait_time:.2f}s wait"
+            )
+        else:
+            log.debug(f"🔓 [{operation_name}] Acquired semaphore immediately")
+
+        return semaphore, start_time
+
+    def _release_lock(
+        self, semaphore: asyncio.Semaphore, operation_name: str, start_time: float
+    ):
+        """Release semaphore lock and log timing information"""
+        total_time = time.time() - start_time
+        semaphore.release()
+        available_permits = (
+            semaphore._value if hasattr(semaphore, "_value") else "unknown"
+        )
+        log.debug(
+            f"🔓 [{operation_name}] Released semaphore after {total_time:.2f}s (available: {available_permits})"
+        )
+
+    @classmethod
+    async def _get_query_lock(cls, query: str) -> asyncio.Lock:
+        """Get or create a query-specific lock to prevent concurrent processing of identical queries"""
+        # Create a hash of the query to use as a key
+        query_hash = hashlib.md5(query.encode("utf-8")).hexdigest()
+
+        async with cls._query_locks_lock:
+            if query_hash not in cls._query_locks:
+                # Create a new lock for this query
+                query_lock = asyncio.Lock()
+                cls._query_locks[query_hash] = query_lock
+                log.debug(
+                    f"🔐 Created new query lock for: '{query[:50]}...' (hash: {query_hash[:8]})"
+                )
+            else:
+                query_lock = cls._query_locks[query_hash]
+                log.debug(
+                    f"🔐 Reusing existing query lock for: '{query[:50]}...' (hash: {query_hash[:8]})"
+                )
+
+            return query_lock
+
+    async def _acquire_query_lock(
+        self, query: str, operation_name: str
+    ) -> tuple[asyncio.Lock, str, float]:
+        """Acquire query-specific lock and return lock, query hash, and start time"""
+        query_lock = await self._get_query_lock(query)
+        query_hash = hashlib.md5(query.encode("utf-8")).hexdigest()
+
+        # Log attempt to acquire query lock
+        log.debug(
+            f"🚦 [{operation_name}] Requesting query lock for: '{query[:50]}...' (hash: {query_hash[:8]})"
+        )
+
+        start_time = time.time()
+        await query_lock.acquire()
+
+        wait_time = time.time() - start_time
+        if wait_time > 0.1:  # Log if we waited more than 100ms
+            log.info(
+                f"🔐 [{operation_name}] Acquired query lock after {wait_time:.2f}s wait for: '{query[:50]}...'"
+            )
+        else:
+            log.debug(
+                f"🔐 [{operation_name}] Acquired query lock immediately for: '{query[:50]}...'"
+            )
+
+        return query_lock, query_hash, start_time
+
+    def _release_query_lock(
+        self,
+        query_lock: asyncio.Lock,
+        query_hash: str,
+        operation_name: str,
+        start_time: float,
+        query: str,
+    ):
+        """Release query-specific lock and log timing information"""
+        total_time = time.time() - start_time
+        query_lock.release()
+        log.debug(
+            f"🔐 [{operation_name}] Released query lock after {total_time:.2f}s for: '{query[:50]}...' (hash: {query_hash[:8]})"
+        )
+
+    @classmethod
+    async def get_queue_status(cls) -> dict:
+        """Get current queue status for monitoring"""
+        if cls._semaphore is None:
+            return {
+                "semaphore_initialized": False,
+                "available_permits": "N/A",
+                "max_concurrent": "N/A",
+                "waiting_operations": "N/A",
+            }
+
+        available = (
+            cls._semaphore._value if hasattr(cls._semaphore, "_value") else "unknown"
+        )
+        waiters = getattr(cls._semaphore, "_waiters", None)
+        waiting = len(waiters) if waiters is not None else "unknown"
+
+        return {
+            "semaphore_initialized": True,
+            "available_permits": available,
+            "max_concurrent": cls.MAX_CONCURRENT_OPERATIONS,
+            "waiting_operations": waiting,
+            "active_operations": (
+                cls.MAX_CONCURRENT_OPERATIONS - available
+                if isinstance(available, int)
+                else "unknown"
+            ),
+        }
 
     async def initialize(self) -> bool:
         """Initialize models (call once before using search methods)"""
@@ -61,12 +242,16 @@ class WikiSearchGrounder:
 
         success = True
 
-        # Initialize txtai model
+        # Initialize txtai model first
         if not self._load_txtai_model():
             success = False
 
         # Initialize translation model (optional)
         self._load_translation_model()
+
+        # Initialize reranker model (optional) - must be after embeddings
+        if self.model_loaded:
+            self._load_reranker_model()
 
         self._initialized = success
         return success
@@ -76,170 +261,6 @@ class WikiSearchGrounder:
         if not self._initialized:
             return await self.initialize()
         return True
-
-    def _should_ground_query(self, query: str) -> bool:
-        """
-        Intelligent determination of whether a query needs factual/recent information.
-        Supports both English and French queries.
-
-        Returns True for queries that likely need factual information,
-        False for creative/personal tasks that don't benefit from grounding.
-        """
-        query_lower = query.lower().strip()
-
-        # Skip very short queries
-        if len(query_lower) < 10:
-            return False
-
-        # English patterns that DON'T need grounding (creative/personal tasks)
-        creative_patterns_en = [
-            # Greeting/message creation
-            r"\b(write|create|make|generate|compose|draft)\s+(a\s+)?(greeting|message|email|letter|note|memo|invitation)",
-            r"\b(help\s+me\s+)?(write|create|make|compose)\s+(something|anything)",
-            r"\bgreet(ing)?\s+(message|email|text)",
-            # Creative content
-            r"\b(tell\s+me\s+a\s+)?(joke|story|riddle|poem)",
-            r"\b(write|create|make|generate)\s+(a\s+)?(story|poem|song|lyrics|script|dialogue)",
-            r"\bcreative\s+(writing|content|ideas)",
-            r"\bbrainstorm(ing)?",
-            # Personal/opinion requests
-            r"\bgive\s+me\s+(your\s+)?(opinion|thoughts|advice|suggestions)",
-            r"\bwhat\s+(do\s+you\s+)?(think|feel|believe|recommend)",
-            r"\byour\s+(opinion|thoughts|recommendation|suggestion)",
-            # Task/instructional requests
-            r"\b(help\s+me\s+)?(do|complete|finish|solve)",
-            r"\bhow\s+(do\s+i\s+|can\s+i\s+|to\s+)?(make|create|build|fix|repair)",
-            r"\bstep\s+by\s+step",
-            r"\btutorial",
-            r"\bguide\s+me",
-            # Code/technical creation
-            r"\b(write|create|generate|build)\s+(code|program|script|function|class)",
-            r"\bhelp\s+(me\s+)?(code|program|debug)",
-            # Explanations of concepts (without "latest" or "current")
-            r"\bexplain\s+(?!.*\b(latest|current|recent|today|now|202[4-9])\b)",
-            r"\btell\s+me\s+about\s+(?!.*\b(latest|current|recent|today|now|202[4-9])\b)",
-            # Role playing
-            r"\bact\s+(like|as)\s+",
-            r"\bpretend\s+(you\s+are|to\s+be)",
-            r"\brole\s*play",
-            # Format/style requests
-            r"\bformat\s+(this|it|that)",
-            r"\brewrite\s+(this|it|that)",
-            r"\bsummariz(e|ing)\s+(this|it|that)",
-            r"\btranslate\s+(this|it|that)",
-        ]
-
-        # French patterns that DON'T need grounding
-        creative_patterns_fr = [
-            # Greeting/message creation
-            r"\b(écri(s|vez)|créer?|fair(e|es?)|générer?|composer|rédiger)\s+(un\s+)?(message|email|lettre|note|mémo|invitation)",
-            r"\b(aide?z?(-moi)?\s+)?(écri(s|vez)|créer?|composer)\s+(quelque\s+chose|quelque\s+chose)",
-            r"\bmessage\s+(de\s+)?(salutation|accueil)",
-            # Creative content
-            r"\b(racont(e|ez)(-moi)?\s+)?(une\s+)?(blague|histoire|devinette|poème)",
-            r"\b(écri(s|vez)|créer?|fair(e|es?)|générer?)\s+(un(e)?\s+)?(histoire|poème|chanson|paroles|script|dialogue)",
-            r"\bcréati(f|ve|on)\s+(littéraire|contenu|idées)",
-            r"\bremue(-|\s+)méninges",
-            # Personal/opinion requests
-            r"\bdonne(z)?(-moi)?\s+(votre\s+|ton\s+)?(avis|opinion|conseil|suggestion)",
-            r"\bque\s+(pense(z|s)(-vous|-tu)|ressent(ez|s)(-vous|-tu)|croi(ez|s)(-vous|-tu)|recommande(z|s)(-vous|-tu))",
-            r"\b(votre|ton)\s+(avis|opinion|recommandation|suggestion)",
-            # Task/instructional requests
-            r"\b(aide(z)?(-moi)?\s+)?(fair(e|es?)|terminer|finir|résoudre)",
-            r"\bcomment\s+(puis(-je)|faire|créer|construire|réparer)",
-            r"\bétape\s+par\s+étape",
-            r"\btutoriel",
-            r"\bguide(z)?(-moi)",
-            # Code/technical creation
-            r"\b(écri(s|vez)|créer?|générer?|construire)\s+(code|programme|script|fonction|classe)",
-            r"\baide(z)?(-moi)?\s+(coder|programmer|déboguer)",
-            # Explanations of concepts (without "dernier/actuel/récent")
-            r"\bexpliqu(e|ez)(-moi)?\s+(?!.*(dernier|actuel|récent|aujourd\'hui|maintenant|2024|2025))",
-            r"\bparle(z)?(-moi)?\s+de\s+(?!.*(dernier|actuel|récent|aujourd\'hui|maintenant|2024|2025))",
-            # Role playing
-            r"\b(agis|agisse(z)?|comporte(-toi|-vous))\s+(comme|en\s+tant\s+que)",
-            r"\bfais\s+(semblant|comme\s+si)",
-            r"\bjeu\s+de\s+rôle",
-            # Format/style requests
-            r"\bformat(e|ez)\s+(ceci|cela|ça)",
-            r"\brééc(ris|rive(z)?)\s+(ceci|cela|ça)",
-            r"\brésume(z)?\s+(ceci|cela|ça)",
-            r"\btradui(s|se(z)?)\s+(ceci|cela|ça)",
-        ]
-
-        # Check creative patterns first (these should NOT be grounded)
-        for pattern in creative_patterns_en + creative_patterns_fr:
-            if re.search(pattern, query_lower):
-                log.info(
-                    f"🔍 Query matches creative pattern, skipping grounding: {pattern}"
-                )
-                return False
-
-        # English patterns that SHOULD be grounded (factual/recent information needs)
-        factual_patterns_en = [
-            # Current events / news
-            r"\b(latest|current|recent|new|today|this\s+(week|month|year)|2024|2025)",
-            r"\b(what\'s\s+happening|news|events|updates)",
-            r"\bhappening\s+(now|today|recently)",
-            # Factual queries
-            r"\b(when\s+(did|was|were)|what\s+(happened|is\s+the|was\s+the)|where\s+(is|was|are|were)|who\s+(is|was|are|were))",
-            r"\b(how\s+many|how\s+much|statistics|data|facts|information\s+about)",
-            r"\b(population|temperature|weather|price|cost|rate)",
-            # Research/lookup queries
-            r"\b(find\s+(information|data)|research|look\s+up|search\s+for)",
-            r"\b(definition\s+of|meaning\s+of|what\s+(does|is)|explain\s+what)",
-            # Specific entities (likely need current info)
-            r"\b(company|organization|government|politics|economy|market)",
-            r"\b(celebrity|politician|scientist|author|artist)",
-            # Location/geography
-            r"\b(country|city|state|province|region|capital|location)",
-            # Technology/science (likely evolving)
-            r"\b(technology|software|AI|artificial\s+intelligence|machine\s+learning|research)",
-            # Comparative queries
-            r"\b(better|worse|best|worst|compare|comparison|versus|vs\.?)",
-            r"\b(difference\s+between|similarities\s+between)",
-        ]
-
-        # French patterns that SHOULD be grounded
-        factual_patterns_fr = [
-            # Current events / news
-            r"\b(dernier|dernière|actuel|récent|récente|nouveau|nouvelle|aujourd\'hui|cette\s+(semaine|mois|année)|2024|2025)",
-            r"\b(qu\'est(-ce\s+qui|ce\s+que)\s+se\s+passe|nouvelles|événements|actualités|mises\s+à\s+jour)",
-            r"\bse\s+passe\s+(maintenant|aujourd\'hui|récemment)",
-            # Factual queries
-            r"\b(quand\s+(a|est|était|sont|étaient)|qu\'est(-ce\s+qui|ce\s+que)\s+(s\'est\s+passé|est|était)|où\s+(est|était|sont|étaient)|qui\s+(est|était|sont|étaient))",
-            r"\bquand\s+.*?\s+(a|ont)\s+(commencé|débuté)",
-            r"\bquand\s+.*commencé",
-            r"\b(combien\s+(de|d\')|statistiques|données|faits|informations\s+sur)",
-            r"\b(population|température|météo|prix|coût|taux)",
-            # Research/lookup queries
-            r"\b(trouvez?\s+(informations?|données)|recherch(e|er|ez)|cherch(e|er|ez))",
-            r"\b(définition\s+(de|d\')|signification\s+(de|d\')|qu\'est(-ce\s+que|ce\s+qui)|expliqu(e|ez)\s+ce\s+que)",
-            # Specific entities
-            r"\b(entreprise|organisation|gouvernement|politique|économie|marché)",
-            r"\b(célébrité|politicien|scientifique|auteur|artiste)",
-            # Location/geography
-            r"\b(pays|ville|état|province|région|capitale|lieu|endroit)",
-            # Technology/science
-            r"\b(technologie|logiciel|IA|intelligence\s+artificielle|apprentissage\s+(automatique|machine)|recherche)",
-            # Comparative queries
-            r"\b(meilleur|pire|mieux|comparer|comparaison|contre|vs\.?|comparez)",
-            r"\b(différence\s+entre|similitudes\s+entre)",
-            # Additional formal conjugations (vous forms)
-            r"\b(pouvez-vous\s+(me\s+)?(dire|expliquer|donner)|savez-vous)",
-            r"\b(connaissez-vous|avez-vous\s+(des\s+)?informations)",
-        ]
-
-        # Check factual patterns
-        for pattern in factual_patterns_en + factual_patterns_fr:
-            if re.search(pattern, query_lower):
-                log.info(f"🔍 Query matches factual pattern, should ground: {pattern}")
-                return True
-
-        # Default: if no clear pattern matches, lean towards NOT grounding
-        # This prevents over-grounding and respects user intent for creative tasks
-        log.info("🔍 Query doesn't match clear factual patterns, skipping grounding")
-        return False
 
     def _load_translation_model(self) -> bool:
         """Load HuggingFace translation pipeline"""
@@ -267,6 +288,48 @@ class WikiSearchGrounder:
             return True
         except Exception as e:
             log.warning(f"Translation pipeline failed to load: {e}")
+            return False
+
+    def _load_reranker_model(self) -> bool:
+        """Load txtai reranker pipeline for improved result ranking"""
+        if self.reranker_loaded:
+            return True
+
+        # Check if reranker is enabled in config
+        try:
+            from open_webui.config import ENABLE_WIKIPEDIA_GROUNDING_RERANKER
+
+            if not ENABLE_WIKIPEDIA_GROUNDING_RERANKER.value:
+                log.info("Wikipedia grounding reranker disabled by configuration")
+                return False
+        except ImportError:
+            log.warning("Could not check reranker configuration, assuming enabled")
+
+        if not _check_optional_dependency("txtai"):
+            log.warning(
+                "txtai not available for reranking. Install with: pip install txtai[similarity]"
+            )
+            return False
+
+        # Ensure embeddings are loaded first
+        if not self.model_loaded or not self.embeddings:
+            log.warning("Embeddings must be loaded before reranker")
+            return False
+
+        try:
+            Reranker, Similarity = _get_txtai_reranker()
+
+            log.info("Loading txtai reranker pipeline...")
+            # Create similarity instance using ColBERT
+            similarity = Similarity(path="colbert-ir/colbertv2.0", lateencode=True)
+
+            # Create reranker using embeddings + similarity
+            self.reranker = Reranker(self.embeddings, similarity)
+            self.reranker_loaded = True
+            log.info("txtai reranker pipeline loaded successfully")
+            return True
+        except Exception as e:
+            log.warning(f"Reranker pipeline failed to load: {e}")
             return False
 
     def _detect_language(self, text: str) -> str:
@@ -398,7 +461,7 @@ class WikiSearchGrounder:
             return False
 
     async def search(self, query: str) -> List[Dict]:
-        """Pure txtai search with translation support"""
+        """Pure txtai search with translation and reranking support"""
         # Ensure models are initialized
         if not await self.ensure_initialized():
             return []
@@ -408,137 +471,396 @@ class WikiSearchGrounder:
             original_query = query
             search_query = self._translate_to_english(query)
 
-            # Use basic search with translated query
-            results = self.embeddings.search(search_query)
+            # Apply temporal enhancement AFTER translation to English
+            # This ensures decade detection works properly for all languages
+            from .context_analysis import ConversationContextAnalyzer
 
-            # Format results and apply score threshold
+            temp_analyzer = ConversationContextAnalyzer()
+            temporal_enhanced_query = (
+                temp_analyzer._enhance_query_with_temporal_context(search_query)
+            )
+
+            if temporal_enhanced_query != search_query:
+                log.info(
+                    f"🕒 Applied temporal enhancement after translation: '{search_query}' -> '{temporal_enhanced_query}'"
+                )
+                search_query = temporal_enhanced_query
+
+            # Use basic search with translated query - get more results for reranking
+            initial_results_count = (
+                self.max_search_results * 3
+            )  # Get 3x more for reranking
+
+            results = self.embeddings.search(search_query, limit=initial_results_count)
+
+            # Format initial results
             formatted = []
-            for result in results[: self.max_search_results * 2]:  # Get more to filter
+
+            for result in results:
                 if isinstance(result, dict):
                     score = result.get("score", 0)
 
-                    # Only include high-quality results (score > 0.8)
-                    if score > 0.8:
+                    # Apply a lower threshold since we'll rerank
+                    if score > 0.75:  # Lower threshold for reranking candidates
                         title = result.get("id", "")
                         content = result.get("text", "")
 
                         if len(content) > self.max_content_length:
                             content = content[: self.max_content_length] + "..."
 
-                        formatted.append(
-                            {
-                                "title": title,
-                                "content": content,
-                                "score": score,
-                                "url": f"https://en.wikipedia.org/wiki/{title.replace(' ', '_')}",
-                                "source": "txtai-wikipedia",
-                                "original_query": original_query,
-                                "search_query": search_query,
-                            }
+                        formatted_result = {
+                            "title": title,
+                            "content": content,
+                            "score": score,
+                            "url": f"https://en.wikipedia.org/wiki/{title.replace(' ', '_')}",
+                            "source": "txtai-wikipedia",
+                            "original_query": original_query,
+                            "search_query": search_query,
+                        }
+
+                        formatted.append(formatted_result)
+
+            # Apply reranking if available and we have multiple results
+            if self.reranker_loaded and len(formatted) > 1:
+                # Acquire semaphore lock to control concurrency during reranking
+                semaphore, start_time = await self._acquire_lock("reranking")
+
+                try:
+                    log.info(
+                        f"🔍 Reranking {len(formatted)} search results using txtai reranker"
+                    )
+
+                    # Run reranking on thread pool to prevent blocking event loop
+                    def run_reranking():
+                        return self.reranker(
+                            search_query, limit=self.max_search_results * 2
                         )
 
-                        # Stop when we have enough high-quality results
-                        if len(formatted) >= self.max_search_results:
-                            break
+                    # Use thread pool executor to prevent blocking K8s health checks
+                    with ThreadPoolExecutor(max_workers=1) as executor:
+                        loop = asyncio.get_event_loop()
+                        reranked_results = await loop.run_in_executor(
+                            executor, run_reranking
+                        )
 
-            return formatted
+                    # Create mapping of our formatted results by title
+                    title_to_formatted = {
+                        result["title"]: result for result in formatted
+                    }
+
+                    # Enhance existing results where reranking improves scores
+                    enhanced_count = 0
+                    for rerank_result in reranked_results:
+                        title = rerank_result.get("id", "")
+                        rerank_score = rerank_result.get("score", 0)
+
+                        # Find matching formatted result
+                        if title in title_to_formatted:
+                            original_result = title_to_formatted[title]
+                            original_score = original_result["score"]
+
+                            # Only improve if reranker score is better
+                            if rerank_score > original_score:
+                                # Enhance with reranker score
+                                original_result["rerank_score"] = rerank_score
+                                original_result["original_score"] = original_score
+                                original_result["enhanced_by_reranker"] = True
+                                original_result["ranking_improvement"] = (
+                                    rerank_score - original_score
+                                )
+                                original_result["improvement_percentage"] = (
+                                    (rerank_score - original_score) / original_score
+                                ) * 100
+                                original_result["score"] = (
+                                    rerank_score  # Use improved score
+                                )
+                                enhanced_count += 1
+                            else:
+                                # Keep original score - reranker didn't improve
+                                original_result["rerank_score"] = original_score
+                                original_result["original_score"] = original_score
+                                original_result["enhanced_by_reranker"] = False
+                                original_result["ranking_improvement"] = 0.0
+                                original_result["improvement_percentage"] = 0.0
+
+                    # For results not touched by reranker, add metadata
+                    for result in formatted:
+                        if "enhanced_by_reranker" not in result:
+                            result["rerank_score"] = result["score"]
+                            result["original_score"] = result["score"]
+                            result["enhanced_by_reranker"] = False
+                            result["ranking_improvement"] = 0.0
+                            result["improvement_percentage"] = 0.0
+
+                    # Re-sort by final scores (some may have been improved)
+                    formatted.sort(key=lambda x: x["score"], reverse=True)
+
+                    # Apply temporal relevance boost if search query contains current year
+                    current_year = str(datetime.now().year)
+                    if current_year in search_query:
+                        log.info(
+                            f"🕒 Applying temporal relevance boost for {current_year}"
+                        )
+                        for result in formatted:
+                            title = result.get("title", "")
+                            if current_year in title:
+                                original_score = result["score"]
+                                # Apply a significant boost to current year results
+                                result["score"] = min(
+                                    1.0, original_score * 1.3
+                                )  # 30% boost, capped at 1.0
+                                result["temporal_boost_applied"] = True
+                                result["temporal_boost_amount"] = (
+                                    result["score"] - original_score
+                                )
+                                log.info(
+                                    f"🕒 Boosted '{title}' from {original_score:.3f} to {result['score']:.3f}"
+                                )
+                            else:
+                                result["temporal_boost_applied"] = False
+                                result["temporal_boost_amount"] = 0.0
+
+                        # Re-sort after temporal boosting
+                        formatted.sort(key=lambda x: x["score"], reverse=True)
+
+                    log.info(
+                        f"🎯 Intelligent reranking completed: {enhanced_count} results improved, top result: {formatted[0]['title']} (score: {formatted[0].get('score', 'N/A')})"
+                    )
+
+                except Exception as e:
+                    log.warning(f"🚨 Reranking failed: {e}")
+                    # Keep original results if reranking fails
+                finally:
+                    # Always release the semaphore lock after reranking
+                    self._release_lock(semaphore, "reranking", start_time)
+            else:
+                # No reranking available, but still apply temporal relevance boost
+                current_year = str(datetime.now().year)
+                if current_year in search_query:
+                    log.info(
+                        f"🕒 Applying temporal relevance boost for {current_year} (no reranking)"
+                    )
+                    for result in formatted:
+                        title = result.get("title", "")
+                        if current_year in title:
+                            original_score = result["score"]
+                            # Apply a significant boost to current year results
+                            result["score"] = min(
+                                1.0, original_score * 1.3
+                            )  # 30% boost, capped at 1.0
+                            result["temporal_boost_applied"] = True
+                            result["temporal_boost_amount"] = (
+                                result["score"] - original_score
+                            )
+                            log.info(
+                                f"🕒 Boosted '{title}' from {original_score:.3f} to {result['score']:.3f}"
+                            )
+                        else:
+                            result["temporal_boost_applied"] = False
+                            result["temporal_boost_amount"] = 0.0
+
+                    # Re-sort after temporal boosting
+                    formatted.sort(key=lambda x: x["score"], reverse=True)
+
+            # Return top results
+            final_results = formatted[: self.max_search_results]
+
+            # Apply final quality threshold
+            high_quality_results = [r for r in final_results if r["score"] > 0.8]
+
+            return (
+                high_quality_results if high_quality_results else final_results[:3]
+            )  # At least 3 results
 
         except Exception as e:
             log.error(f"Search failed: {e}")
             return []
 
-    async def ground_query(self, query: str, request=None, user=None) -> Optional[Dict]:
-        """Main grounding method with intelligent query filtering"""
+    async def ground_query(
+        self, query: str, request=None, user=None, messages: List[Dict] = None
+    ) -> Optional[Dict]:
+        """
+        Main grounding method with context awareness.
 
+        When wiki grounding is enabled, this method will:
+        1. Analyze conversation context for follow-up questions
+        2. Enhance queries with pronoun replacement and entity context
+        3. Search Wikipedia for relevant information
+
+        No intelligent filtering - if grounding is enabled, we always attempt to ground.
+        """
         # Basic length check
         if len(query.strip()) < 3:
             log.info("🔍 Query too short, skipping grounding")
             return None
 
-        # Intelligent filtering: check if this query actually needs factual information
-        if not self._should_ground_query(query):
-            log.info(
-                "🔍 Query doesn't need factual grounding based on content analysis"
+        # Analyze conversation context if messages provided
+        original_query = query
+        context_metadata = {}
+
+        if messages and len(messages) > 1:
+            is_enhanced, enhanced_query, context_metadata = (
+                analyze_conversation_context(query, messages)
             )
-            return None
+            if is_enhanced:
+                enhancement_type = []
+                if context_metadata.get("temporal_enhanced"):
+                    enhancement_type.append("temporal")
+                if context_metadata.get("context_aware"):
+                    enhancement_type.append("context")
 
-        log.info(
-            "🔍 Query determined to need factual grounding, proceeding with search"
+                enhancement_desc = (
+                    " + ".join(enhancement_type) if enhancement_type else "unknown"
+                )
+                log.info(
+                    f"🔍 Using enhanced query ({enhancement_desc}): '{query}' -> '{enhanced_query}'"
+                )
+                query = enhanced_query
+        # Note: Temporal enhancement is now applied after translation in the search() method
+
+        log.info("🔍 Wiki grounding enabled, proceeding with search")
+        log.info(f"🔍 Ground query starting for: '{query[:50]}...'")
+
+        # Acquire query-specific lock to prevent concurrent processing of identical queries
+        query_lock, query_hash, query_start_time = await self._acquire_query_lock(
+            query, "ground_query"
         )
-        results = await self.search(query)
+
+        try:
+            # Perform the actual search
+            results = await self.search(query)
+        finally:
+            # Always release the query lock
+            self._release_query_lock(
+                query_lock, query_hash, "ground_query", query_start_time, query
+            )
 
         if not results:
             log.info("🔍 No search results found")
             return None
 
         return {
-            "original_query": query,
+            "original_query": original_query,
+            "search_query": query,  # May be different from original if enhanced
             "grounding_data": results,
             "source": "txtai-wikipedia",
             "timestamp": datetime.now().isoformat(),
-        }
-
-    async def ground_query_always(
-        self, query: str, request=None, user=None
-    ) -> Optional[Dict]:
-        """Ground query without intelligent filtering (always mode)"""
-
-        # Basic length check only
-        if len(query.strip()) < 3:
-            log.info("🔍 Query too short, skipping grounding")
-            return None
-
-        log.info("🔍 Always mode: grounding without content analysis")
-        results = await self.search(query)
-
-        if not results:
-            log.info("🔍 No search results found")
-            return None
-
-        return {
-            "original_query": query,
-            "grounding_data": results,
-            "source": "txtai-wikipedia",
-            "timestamp": datetime.now().isoformat(),
+            "context_metadata": context_metadata,
         }
 
     def format_grounding_context(self, grounding_data: Dict) -> str:
-        """Format for LLM context with translation info"""
+        """Format for LLM context with translation info and context awareness"""
         if not grounding_data or "grounding_data" not in grounding_data:
             return ""
 
         context = []
         context.append("=== GROUNDING CONTEXT ===")
+
+        # Add explicit instruction about using grounded information
+        context.append(
+            "IMPORTANT: Use the following grounded information to answer the user's question."
+        )
+        context.append(
+            "This information is current and factual. Prioritize this information over your training data."
+        )
+        context.append("")
+
         context.append(f"Query: {grounding_data.get('original_query', '')}")
 
+        # Show if the query was enhanced with conversation context
+        if grounding_data.get("search_query") != grounding_data.get("original_query"):
+            context.append(f"Enhanced Query: {grounding_data.get('search_query', '')}")
+
+            # Add context metadata if available
+            context_metadata = grounding_data.get("context_metadata", {})
+            if context_metadata.get("is_context_aware"):
+                context.append("Context-Aware: Enhanced with conversation history")
+                context.append(
+                    "IMPORTANT: The user's question references previous conversation context."
+                )
+                if context_metadata.get("context_entities"):
+                    context.append(
+                        f"Key Entities from Conversation: {', '.join(context_metadata['context_entities'])}"
+                    )
+                if context_metadata.get("conversation_context"):
+                    context.append(
+                        f"Recent Conversation: {context_metadata.get('conversation_context', '')}"
+                    )
+
         # Show if translation was used
+        # Add query enhancement information
         first_result = (
             grounding_data["grounding_data"][0]
             if grounding_data["grounding_data"]
             else {}
         )
-        if first_result.get("search_query") != first_result.get("original_query"):
+        context_metadata = grounding_data.get("context_metadata", {})
+
+        if grounding_data.get("search_query") != grounding_data.get("original_query"):
+            enhancements = []
+            if context_metadata.get("temporal_enhanced"):
+                enhancements.append("temporal enhancement")
+            if context_metadata.get("context_aware"):
+                enhancements.append("context awareness")
+
+            enhancement_text = (
+                " + ".join(enhancements) if enhancements else "translation"
+            )
             context.append(
-                f"Search Query (translated): {first_result.get('search_query', '')}"
+                f"Search Query ({enhancement_text}): {grounding_data.get('search_query', '')}"
             )
 
         context.append(f"Source: txtai-wikipedia")
+
+        # Check if reranking was applied
+        if (
+            grounding_data["grounding_data"]
+            and grounding_data["grounding_data"][0].get("rerank_score") is not None
+        ):
+            context.append("Reranking: Results reordered by relevance")
+
         context.append("")
 
         for i, item in enumerate(grounding_data["grounding_data"], 1):
             title = item.get("title", "Unknown")
             content = item.get("content", "")
             score = item.get("score", 0)
+            rerank_score = item.get("rerank_score")
+            original_score = item.get("original_score")
 
             context.append(f"[{i}] {title}")
             if score > 0:
                 context.append(f"Score: {score:.3f}")
+                # Show reranking details if available
+                if rerank_score is not None and original_score is not None:
+                    context.append(
+                        f"  (Original: {original_score:.3f}, Rerank: {rerank_score:.3f})"
+                    )
             context.append(f"Content: {content}")
             context.append("")
 
         context.append("=== END GROUNDING ===")
+        context.append("")
+        context.append(
+            "INSTRUCTION: Answer the user's question using the grounded information above."
+        )
+        context.append(
+            "If the question contains pronouns or references to previous conversation,"
+        )
+        context.append(
+            "use the conversation context and key entities to understand what they refer to."
+        )
+
         return "\n".join(context)
 
 
-# Global instance
-wiki_search_grounder = WikiSearchGrounder()
+# Global instance - lazy initialization to prevent K8s health check issues
+_wiki_search_grounder = None
+
+
+def get_wiki_search_grounder() -> WikiSearchGrounder:
+    """Get the global WikiSearchGrounder instance with lazy initialization"""
+    global _wiki_search_grounder
+    if _wiki_search_grounder is None:
+        _wiki_search_grounder = WikiSearchGrounder()
+    return _wiki_search_grounder

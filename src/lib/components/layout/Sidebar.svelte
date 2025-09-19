@@ -834,7 +834,6 @@
 									}}
 									on:change={async (e) => {
 										const { buttonID } = e.detail;
-										initChatList();
 										await initChatList();
 										await tick();
 										changeFocus(buttonID);

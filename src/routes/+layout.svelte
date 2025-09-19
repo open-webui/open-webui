@@ -309,6 +309,12 @@
 
 						await user.set(sessionUser);
 						await config.set(await getBackendConfig());
+
+						// Initialize user timezone detection
+						const { timezoneService } = await import('$lib/services/timezone');
+						await timezoneService.initializeUserTimezone(sessionUser.token).catch((error) => {
+							console.warn('Failed to initialize timezone:', error);
+						});
 					} else {
 						// Redirect Invalid Session User to /auth Page
 						localStorage.removeItem('token');

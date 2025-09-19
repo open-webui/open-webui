@@ -1855,6 +1855,13 @@ ENABLE_WIKIPEDIA_GROUNDING = PersistentConfig(
     os.getenv("ENABLE_WIKIPEDIA_GROUNDING", "True").lower() == "true",
 )
 
+# Wikipedia Grounding Reranker Configuration
+ENABLE_WIKIPEDIA_GROUNDING_RERANKER = PersistentConfig(
+    "ENABLE_WIKIPEDIA_GROUNDING_RERANKER",
+    "rag.wikipedia.grounding.reranker.enable",
+    os.getenv("ENABLE_WIKIPEDIA_GROUNDING_RERANKER", "True").lower() == "true",
+)
+
 # You can provide a list of your own websites to filter after performing a web search.
 # This ensures the highest level of safety and reliability of the information sources.
 RAG_WEB_SEARCH_DOMAIN_FILTER_LIST = PersistentConfig(

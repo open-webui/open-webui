@@ -77,7 +77,7 @@
 	export let imageGenerationEnabled = false;
 	export let webSearchEnabled = false;
 	export let wikiGroundingEnabled = false;
-	export let wikiGroundingMode = 'off'; // 'off', 'auto', 'always'
+	export let wikiGroundingMode = 'off'; // 'off', 'on'
 
 	$: onChange({
 		prompt,
@@ -456,28 +456,14 @@
 									<div class="flex items-center gap-2.5 text-sm dark:text-gray-500">
 										<div class="pl-1">
 											<span class="relative flex size-2">
-												{#if wikiGroundingMode === 'auto'}
-													<span
-														class="animate-ping absolute inline-flex h-full w-full rounded-full bg-blue-400 opacity-75"
-													/>
-													<span class="relative inline-flex rounded-full size-2 bg-blue-500" />
-												{:else if wikiGroundingMode === 'always'}
-													<span
-														class="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"
-													/>
-													<span class="relative inline-flex rounded-full size-2 bg-green-500" />
-												{:else}
-													<span
-														class="animate-ping absolute inline-flex h-full w-full rounded-full bg-gray-400 opacity-75"
-													/>
-													<span class="relative inline-flex rounded-full size-2 bg-gray-500" />
-												{/if}
+												<span
+													class="animate-ping absolute inline-flex h-full w-full rounded-full bg-blue-400 opacity-75"
+												/>
+												<span class="relative inline-flex rounded-full size-2 bg-blue-500" />
 											</span>
 										</div>
 										<Tooltip
-											content={wikiGroundingMode === 'auto'
-												? $i18n.t('Smart Wikipedia context when relevant')
-												: $i18n.t('Wikipedia context on every query')}
+											content={$i18n.t('Wikipedia context-aware enhancement enabled')}
 											placement="right"
 											tippyOptions={{
 												placement: 'right',
@@ -502,15 +488,6 @@
 										>
 											<div class=" ">
 												{$i18n.t('Wiki Grounding')}
-												{#if wikiGroundingMode !== 'off'}
-													<span class="opacity-60">
-														{#if wikiGroundingMode === 'auto'}
-															({$i18n.t('Auto')})
-														{:else if wikiGroundingMode === 'always'}
-															({$i18n.t('Always')})
-														{/if}
-													</span>
-												{/if}
 											</div>
 										</Tooltip>
 									</div>
@@ -780,7 +757,6 @@
 												id="chat-input"
 												aria-label={$i18n.t('Type your message here')}
 												title={$i18n.t('Type your message here')}
-												role="textbox"
 												messageInput={true}
 												shiftEnter={!$mobile ||
 													!(
@@ -975,7 +951,6 @@
 											placeholder={placeholderText}
 											aria-label={$i18n.t('Type your message here')}
 											title={$i18n.t('Type your message here')}
-											role="textbox"
 											bind:value={prompt}
 											on:keypress={(e) => {
 												if (
