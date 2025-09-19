@@ -4,7 +4,8 @@
 	// Props
 	export let src: string | null = null; // URL or raw HTML (auto-detected)
 	export let title = 'Embedded Content';
-	export let initialHeight = 400; // fallback height if we can't measure
+	export let initialHeight: number | null = null; // initial height in px, null = auto
+
 	export let allowScripts = true;
 	export let allowForms = false;
 
@@ -33,13 +34,14 @@
 	// Detect URL vs raw HTML and prep src/srcdoc
 	$: isUrl = typeof src === 'string' && /^(https?:)?\/\//i.test(src);
 	$: iframeSrc = isUrl ? (src as string) : null;
-	$: iframeDoc = !isUrl && src ? ensureAutosizer(src) : null;
+	$: iframeDoc = !isUrl ? src : null;
 
 	// Try to measure same-origin content safely
 	function resizeSameOrigin() {
 		if (!iframe) return;
 		try {
 			const doc = iframe.contentDocument || iframe.contentWindow?.document;
+			console.log('iframe doc:', doc);
 			if (!doc) return;
 			const h = Math.max(doc.documentElement?.scrollHeight ?? 0, doc.body?.scrollHeight ?? 0);
 			if (h > 0) iframe.style.height = h + 20 + 'px';
@@ -57,6 +59,11 @@
 		}
 	}
 
+	// When the iframe loads, try same-origin resize (cross-origin will noop)
+	function onLoad() {
+		requestAnimationFrame(resizeSameOrigin);
+	}
+
 	// Ensure event listener bound only while component lives
 	onMount(() => {
 		window.addEventListener('message', onMessage);
@@ -65,52 +72,6 @@
 	onDestroy(() => {
 		window.removeEventListener('message', onMessage);
 	});
-
-	// When the iframe loads, try same-origin resize (cross-origin will noop)
-	function onLoad() {
-		// schedule after layout
-		requestAnimationFrame(resizeSameOrigin);
-	}
-
-	/**
-	 * If user passes raw HTML, we inject a tiny autosizer that posts height.
-	 * This helps both same-origin and "about:srcdoc" cases.
-	 * (No effect if the caller already includes their own autosizer.)
-	 */
-	function ensureAutosizer(html: string): string {
-		const hasOurHook = /iframe:height/.test(html) || /postMessage\(.+height/i.test(html);
-		if (hasOurHook) return html;
-
-		// This script uses ResizeObserver to post the document height
-		const autosizer = `
-<script>
-(function () {
-  function send() {
-    try {
-      var h = Math.max(
-        document.documentElement.scrollHeight || 0,
-        document.body ? document.body.scrollHeight : 0
-      );
-      parent.postMessage({ type: 'iframe:height', height: h + 20 }, '*');
-    } catch (e) {}
-  }
-  var ro = new ResizeObserver(function(){ send(); });
-  ro.observe(document.documentElement);
-  window.addEventListener('load', send);
-  // Also observe body if present
-  if (document.body) ro.observe(document.body);
-  // Periodic guard in case of late content
-  setTimeout(send, 0);
-  setTimeout(send, 250);
-  setTimeout(send, 1000);
-})();
-<\/script>`;
-		// inject before </body> if present, else append
-		return (
-			html.replace(/<\/body\s*>/i, autosizer + '</body>') +
-			(/<\/body\s*>/i.test(html) ? '' : autosizer)
-		);
-	}
 </script>
 
 {#if iframeDoc}
@@ -118,12 +79,11 @@
 		bind:this={iframe}
 		srcdoc={iframeDoc}
 		{title}
-		class="w-full rounded-xl"
-		style={`height:${initialHeight}px;`}
+		class="w-full rounded-2xl"
+		style={`${initialHeight ? `height:${initialHeight}px;` : ''}`}
 		width="100%"
 		frameborder="0"
 		{sandbox}
-		referrerpolicy={referrerPolicy}
 		{allowFullscreen}
 		on:load={onLoad}
 	/>
@@ -132,8 +92,8 @@
 		bind:this={iframe}
 		src={iframeSrc}
 		{title}
-		class="w-full rounded-xl"
-		style={`height:${initialHeight}px;`}
+		class="w-full rounded-2xl"
+		style={`${initialHeight ? `height:${initialHeight}px;` : ''}`}
 		width="100%"
 		frameborder="0"
 		{sandbox}
