@@ -60,9 +60,50 @@
 	}
 
 	// When the iframe loads, try same-origin resize (cross-origin will noop)
-	function onLoad() {
+	const onLoad = async () => {
 		requestAnimationFrame(resizeSameOrigin);
-	}
+
+		// If we're injecting Alpine into srcdoc iframe and sameOrigin allowed
+		if (iframeDoc && allowSameOrigin && iframe?.contentWindow) {
+			const alpineDirectives = [
+				'x-data',
+				'x-init',
+				'x-show',
+				'x-bind',
+				'x-on',
+				'x-text',
+				'x-html',
+				'x-model',
+				'x-modelable',
+				'x-ref',
+				'x-for',
+				'x-if',
+				'x-effect',
+				'x-transition',
+				'x-cloak',
+				'x-ignore',
+				'x-teleport',
+				'x-id'
+			];
+
+			const isAlpine = alpineDirectives.some((dir) => iframeDoc?.includes(dir));
+
+			if (isAlpine) {
+				const { default: Alpine } = await import('alpinejs');
+				const win = iframe.contentWindow as Window & { Alpine?: typeof Alpine };
+
+				// Assign Alpine
+				win.Alpine = Alpine;
+
+				// Initialize inside iframe DOM
+				try {
+					Alpine.start();
+				} catch (e) {
+					console.error('Error starting Alpine inside iframe:', e);
+				}
+			}
+		}
+	};
 
 	// Ensure event listener bound only while component lives
 	onMount(() => {

@@ -83,6 +83,7 @@
 		"@tiptap/starter-kit": "^3.0.7",
 		"@tiptap/suggestion": "^3.4.2",
 		"@xyflow/svelte": "^0.1.19",
+		"alpinejs": "^3.15.0",
 		"async": "^3.2.5",
 		"bits-ui": "^0.21.15",
 		"chart.js": "^4.5.0",
