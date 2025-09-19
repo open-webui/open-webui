@@ -27,7 +27,7 @@ FROM --platform=$BUILDPLATFORM node:22-alpine3.20 AS build
 ARG BUILD_HASH
 
 # Set Node.js options (heap limit Allocation failed - JavaScript heap out of memory)
-# ENV NODE_OPTIONS="--max-old-space-size=4096"
+ENV NODE_OPTIONS="--max-old-space-size=8192"
 
 WORKDIR /app
 
@@ -116,13 +116,23 @@ RUN echo -n 00000000-0000-0000-0000-000000000000 > $HOME/.cache/chroma/telemetry
 # Make sure the user has access to the app and root directory
 RUN chown -R $UID:$GID /app $HOME
 
-# Install common system dependencies
-RUN apt-get update && \
-    apt-get install -y --no-install-recommends \
-    git build-essential pandoc gcc netcat-openbsd curl jq \
-    python3-dev \
-    ffmpeg libsm6 libxext6 \
-    && rm -rf /var/lib/apt/lists/*
+# Install common system dependencies - ИСПРАВЛЕННАЯ ЧАСТЬ
+RUN apt-get update --allow-releaseinfo-change 2>&1 | grep -v "Post-Invoke" || true
+RUN apt-get install -y --no-install-recommends ca-certificates
+RUN apt-get install -y --no-install-recommends git
+RUN apt-get install -y --no-install-recommends build-essential
+RUN apt-get install -y --no-install-recommends pandoc
+RUN apt-get install -y --no-install-recommends gcc
+RUN apt-get install -y --no-install-recommends netcat-openbsd
+RUN apt-get install -y --no-install-recommends curl
+RUN apt-get install -y --no-install-recommends jq
+RUN apt-get install -y --no-install-recommends python3-dev
+RUN apt-get install -y --no-install-recommends ffmpeg
+RUN apt-get install -y --no-install-recommends libsm6
+RUN apt-get install -y --no-install-recommends libxext6
+RUN rm -rf /var/lib/apt/lists/* /var/cache/apt/archives/*
+
+
 
 # install python dependencies
 COPY --chown=$UID:$GID ./backend/requirements.txt ./requirements.txt
