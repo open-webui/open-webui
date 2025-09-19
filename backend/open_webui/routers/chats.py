@@ -5,6 +5,8 @@ import zipfile
 from datetime import datetime
 from io import BytesIO, StringIO
 from typing import Optional
+from datetime import datetime
+import pytz
 
 from open_webui.models.chats import (
     ChatForm,
@@ -418,9 +420,21 @@ async def update_chat_by_id(
         questions_asked = []
         for m in messages:
             if m["role"] == "user":
-                questions_asked.append(m["content"])
+                # Get timestamp and convert to EST
+                timestamp = m.get("timestamp", 0)
+                if timestamp:
+                    # Convert timestamp to datetime and then to EST
+                    dt = datetime.fromtimestamp(timestamp)
+                    est_tz = pytz.timezone('US/Eastern')
+                    dt_est = dt.astimezone(est_tz)
+                    # Convert to string format for database storage
+                    dt_est_str = dt_est.strftime('%Y-%m-%d %H:%M:%S %Z')
+                    questions_asked.append([m["content"], dt_est_str])
+                else:
+                    # If no timestamp, append with None
+                    questions_asked.append([m["content"], None])
 
-        
+
         model_name = None
         base_model_name = None
         if chat.chat.get("models") and len(chat.chat["models"]) > 0:
