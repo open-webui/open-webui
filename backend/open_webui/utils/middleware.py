@@ -2426,13 +2426,15 @@ async def process_chat_response(
                                         tool_result_embeds.append(tool_result)
                                         tool_result = {
                                             "status": "success",
-                                            "message": "Displayed as embed",
+                                            "code": "ui_component",
+                                            "message": "Embedded UI result is active and visible to the user.",
                                         }
                                     elif location:
                                         tool_result_embeds.append(location)
                                         tool_result = {
                                             "status": "success",
-                                            "message": "Displayed as embed",
+                                            "code": "ui_component",
+                                            "message": "Embedded UI result is active and visible to the user.",
                                         }
 
                         tool_result_files = []
