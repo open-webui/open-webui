@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { onDestroy, onMount } from 'svelte';
+	import { onDestroy, onMount, tick } from 'svelte';
 
 	// Props
 	export let src: string | null = null; // URL or raw HTML (auto-detected)
@@ -20,6 +20,8 @@
 	export let allowFullscreen = true;
 
 	let iframe: HTMLIFrameElement | null = null;
+	let iframeSrc: string | null = null;
+	let iframeDoc: string | null = null;
 
 	// Derived: build sandbox attribute from flags
 	$: sandbox =
@@ -35,8 +37,70 @@
 
 	// Detect URL vs raw HTML and prep src/srcdoc
 	$: isUrl = typeof src === 'string' && /^(https?:)?\/\//i.test(src);
-	$: iframeSrc = isUrl ? (src as string) : null;
-	$: iframeDoc = !isUrl ? src : null;
+	$: if (src) {
+		setIframeSrc();
+	}
+
+	const setIframeSrc = async () => {
+		await tick();
+		if (isUrl) {
+			iframeSrc = src as string;
+			iframeDoc = null;
+		} else {
+			iframeDoc = await processHtmlForAlpine(src as string);
+			iframeSrc = null;
+		}
+	};
+
+	// Alpine directives detection
+	const alpineDirectives = [
+		'x-data',
+		'x-init',
+		'x-show',
+		'x-bind',
+		'x-on',
+		'x-text',
+		'x-html',
+		'x-model',
+		'x-modelable',
+		'x-ref',
+		'x-for',
+		'x-if',
+		'x-effect',
+		'x-transition',
+		'x-cloak',
+		'x-ignore',
+		'x-teleport',
+		'x-id'
+	];
+
+	async function processHtmlForAlpine(html: string): Promise<string> {
+		if (!allowSameOrigin) return html;
+
+		const hasAlpineDirectives = alpineDirectives.some((dir) => html.includes(dir));
+		if (!hasAlpineDirectives) return html;
+
+		try {
+			// Import Alpine and get its source code
+			// import alpineCode from './alpine.min.js?raw';
+			const { default: alpineCode } = await import('alpinejs/dist/cdn.min.js?raw');
+			const alpineBlob = new Blob([alpineCode], { type: 'text/javascript' });
+			const alpineUrl = URL.createObjectURL(alpineBlob);
+
+			// Create Alpine initialization script
+			const alpineTag = `<script src="${alpineUrl}" defer><\/script>`;
+
+			// Inject Alpine script at the beginning of head or body
+			html = html.includes('</body>')
+				? html.replace('</body>', alpineTag + '\n</body>')
+				: `<!DOCTYPE html><html><head><meta charset="utf-8"></head><body>${html}\n${alpineTag}</body></html>`;
+
+			return html;
+		} catch (error) {
+			console.error('Error processing Alpine for iframe:', error);
+			return html;
+		}
+	}
 
 	// Try to measure same-origin content safely
 	function resizeSameOrigin() {
@@ -68,47 +132,6 @@
 		// if arguments are provided, inject them into the iframe window
 		if (args && iframe?.contentWindow) {
 			(iframe.contentWindow as any).args = args;
-		}
-
-		// If we're injecting Alpine into srcdoc iframe and sameOrigin allowed
-		if (iframeDoc && allowSameOrigin && iframe?.contentWindow) {
-			const alpineDirectives = [
-				'x-data',
-				'x-init',
-				'x-show',
-				'x-bind',
-				'x-on',
-				'x-text',
-				'x-html',
-				'x-model',
-				'x-modelable',
-				'x-ref',
-				'x-for',
-				'x-if',
-				'x-effect',
-				'x-transition',
-				'x-cloak',
-				'x-ignore',
-				'x-teleport',
-				'x-id'
-			];
-
-			const isAlpine = alpineDirectives.some((dir) => iframeDoc?.includes(dir));
-
-			if (isAlpine) {
-				const { default: Alpine } = await import('alpinejs');
-				const win = iframe.contentWindow as Window & { Alpine?: typeof Alpine };
-
-				// Assign Alpine
-				win.Alpine = Alpine;
-
-				// Initialize inside iframe DOM
-				try {
-					Alpine.start();
-				} catch (e) {
-					console.error('Error starting Alpine inside iframe:', e);
-				}
-			}
 		}
 	};
 
