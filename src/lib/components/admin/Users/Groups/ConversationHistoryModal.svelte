@@ -1,5 +1,11 @@
 <!-- NAME:
- 1. Currently name might be missing? Using netID instead
+ 1. /api/v1/chats/filter/meta => rawChatData
+ 2. transformChatData(rawChatData) => memberStats
+ 3. filteredMemberStats (apply search/model filter) => filteredGroupedChats
+ 4. paginatedChats (apply pagination) => displayedChats (the final item)
+ 5. group = paginatedChats[selectedIndex]
+ 6. selectedMemberForQuestions = showQuestions(group)
+ 7. QuestionsAskedModal member is selectedMemberForQuestions
   -->
 
 <script lang="ts">
@@ -25,8 +31,6 @@
 	// Simplified API function for debugging
 	const fetchGroupChatData = async (groupId) => {
 		try {
-			console.log('Group ID:', groupId);
-
 			// Minimal filter to test what data exists
 			const filterData = {
 				group_id: groupId,
@@ -35,7 +39,7 @@
 				// Remove all other filters temporarily
 			};
 
-			console.log('📤 Minimal filter request:', filterData);
+			// console.log('📤 Minimal filter request:', filterData);
 
 			const response = await fetch('/api/v1/chats/filter/meta', {
 				method: 'POST',
@@ -50,10 +54,11 @@
 				throw new Error(`HTTP error! status: ${response.status}`);
 			}
 
-			const chatData = await response.json();
-			console.log('✅ Received chat data:', chatData);
+			const rawChatData = await response.json();
+			console.log('✅ Received META data:', rawChatData);
+			// console.log(rawChatData[0].meta);
 
-			return chatData;
+			return rawChatData;
 		} catch (error) {
 			console.error('💥 Error:', error);
 			throw error;
@@ -71,7 +76,7 @@
 					email: chat.email,
 					ids: [],
 					messageCount: 0,
-					questionsAsked: 0,
+					questionsCount: 0,
 					lastUpdated: chat.lastUpdated,
 					chats: []
 				});
@@ -80,12 +85,12 @@
 			group.ids.push(chat.id);
 			group.messageCount += Number(chat.messageCount) || 0;
 
-			const qCount = Array.isArray(chat.questionsAsked)
-				? chat.questionsAsked.length
-				: typeof chat.questionsAsked === 'number'
-					? chat.questionsAsked
+			const qCount = Array.isArray(chat.questionsCount)
+				? chat.questionsCount.length
+				: typeof chat.questionsCount === 'number'
+					? chat.questionsCount
 					: 0;
-			group.questionsAsked += qCount;
+			group.questionsCount += qCount;
 
 			if (new Date(chat.lastUpdated) > new Date(group.lastUpdated)) {
 				group.lastUpdated = chat.lastUpdated;
@@ -109,7 +114,7 @@
 			// Extract questions properly from meta
 			const questionsArray = chat.meta?.questions_asked || [];
 			const questionsCount = Array.isArray(questionsArray) ? questionsArray.length : 0;
-			console.log('Extracted questions:', questionsArray);
+			// console.log('Extracted questions:', questionsArray);
 			return {
 				id: chat.id,
 				user_id: chat.user_id, // ← ADDED THIS LINE
@@ -118,8 +123,9 @@
 				email: user.email || `user${chat.user_id}@example.com`,
 				model: chat.meta?.model_name || chat.meta?.base_model_name || 'Unknown',
 				messageCount: chat.meta?.num_of_messages || 0,
-				questionsAsked: questionsCount, // This should be a number (count)
-				questions: questionsArray, // This should be the array of question texts
+				questionsCount: questionsCount, // This should be a number (count)
+				questions: questionsArray, // This should be the array of question texts + timestamps
+				createdAt: new Date(chat.created_at * 1000).toLocaleDateString(),
 				lastUpdated: new Date(chat.updated_at * 1000).toLocaleDateString(),
 				timeTaken: formatTimeTaken(chat.meta?.total_time_taken)
 			};
@@ -216,31 +222,6 @@
 		}
 	};
 
-	// Generate placeholder data when no real data is available
-	const generatePlaceholderData = () => {
-		const placeholderCount = 15;
-		const memberAmount = 7;
-		return Array.from({ length: placeholderCount }, (_, index) => ({
-			id: `placeholder-${index}`,
-			chatName: `Chat ${index + 1}`,
-			name: `Member ${Math.floor(Math.random() * memberAmount)}`,
-			email: `membername${index + 1}@example.com`,
-			model: ['Math Ally - HW01', 'Math Ally - HW02', 'Math Ally - HW03', 'Math Ally - HW04'][
-				index % 4
-			],
-			messageCount: Math.floor(Math.random() * 30) + 50,
-			questionsAsked: Math.floor(Math.random() * 20) + 10,
-			questions: Array.from(
-				{ length: Math.floor(Math.random() * 5) + 3 },
-				() => sampleQuestions[Math.floor(Math.random() * sampleQuestions.length)]
-			),
-			lastUpdated: new Date(
-				Date.now() - Math.random() * 30 * 24 * 60 * 60 * 1000
-			).toLocaleDateString(),
-			timeTaken: `${Math.floor(Math.random() * 120) + 15}min`
-		}));
-	};
-
 	// Update fetchConversationData to pass user IDs
 	const fetchConversationData = async () => {
 		if (!group) {
@@ -249,15 +230,15 @@
 		}
 
 		console.log('🚀 Group object:', group);
-		console.log('🚀 Group ID:', group.id);
+		// console.log('🚀 Group ID:', group.id);
 
 		loading = true;
 		try {
 			// Test 1: Try your current approach
-			console.log('Testing current filter approach...');
-			let chatData = await fetchGroupChatData(group.id);
+			// console.log('Testing current filter approach...');
+			let rawChatData = await fetchGroupChatData(group.id);
 
-			if (chatData.length === 0) {
+			if (rawChatData.length === 0) {
 				console.log('❌ No data with group filter, testing without group filter...');
 
 				// Test 2: Try without group filter to see if ANY chats exist
@@ -281,18 +262,17 @@
 				}
 			}
 
-			memberStats = transformChatData(chatData);
+			memberStats = transformChatData(rawChatData);
+			console.log('Transformed member stats:', memberStats);
 
 			if (memberStats.length === 0) {
 				toast.warning('No conversation data found.');
-				// memberStats = generatePlaceholderData();
 			} else {
 				toast.success(`Successfully loaded ${memberStats.length} conversations`);
 			}
 		} catch (error) {
 			console.error('Failed to fetch chat data:', error);
 			toast.error('Failed to fetch conversation data.');
-			// memberStats = generatePlaceholderData();
 		} finally {
 			loading = false;
 		}
@@ -320,7 +300,7 @@
 					email: chat.email,
 					ids: [],
 					messageCount: 0,
-					questionsAsked: 0, // This will be the total count
+					questionsCount: 0, // This will be the total count
 					questions: [], // This will be all questions combined
 					lastUpdated: chat.lastUpdated,
 					chats: []
@@ -334,18 +314,21 @@
 			// Add message count
 			group.messageCount += Number(chat.messageCount) || 0;
 
-			// Add questions count (questionsAsked should be a number)
+			// Add questions count (questionsCount should be a number)
 			const chatQuestionsCount =
-				typeof chat.questionsAsked === 'number'
-					? chat.questionsAsked
-					: Array.isArray(chat.questionsAsked)
-						? chat.questionsAsked.length
+				typeof chat.questionsCount === 'number'
+					? chat.questionsCount
+					: Array.isArray(chat.questionsCount)
+						? chat.questionsCount.length
 						: 0;
-			group.questionsAsked += chatQuestionsCount;
+			group.questionsCount += chatQuestionsCount;
 
-			// Combine all questions from all chats (questions should be arrays)
+			// Combine all questions from all chats (convert to [text, timestamp])
 			if (Array.isArray(chat.questions)) {
-				group.questions.push(...chat.questions);
+				const ts = chat.createdAt && typeof chat.createdAt === 'string' ? chat.createdAt : '';
+				//To correct the timestamp, now we use chat.createdAt which is in readable format
+				//We will change it into the timestamp from /api/v1/chats/filter/meta later
+				group.questions.push(...chat.questions.map((q) => [q, ts]));
 			}
 
 			// Update last updated time
@@ -559,6 +542,7 @@
 
 			// Get the CSV content and filename
 			const csvContent = await response.text();
+			console.log('✅ Received CSV data:', csvContent);
 			const contentDisposition = response.headers.get('Content-Disposition');
 			const filename = contentDisposition
 				? contentDisposition.split('filename=')[1]?.replace(/"/g, '')
@@ -596,7 +580,7 @@
 		// TODO: Implement actions
 	};
 
-	// Get unique models from memberStats
+	// Get unique models from member stats
 	const updateAvailableModels = () => {
 		availableModels = [...new Set(memberStats.map((chat) => chat.model))];
 	};
@@ -615,7 +599,7 @@
 		toast.success('Showing all models');
 	};
 
-	// Update available models when memberStats changes
+	// Update available models when member stats changes
 	$: if (memberStats.length > 0) {
 		updateAvailableModels();
 	}
@@ -674,7 +658,7 @@
 			name: group.name,
 			model: group.model,
 			email: group.email,
-			questionsAsked: group.questionsAsked, // This is now the correct total count
+			questionsCount: group.questionsCount, // This is now the correct total count
 			questions: group.chats.flatMap((chat) => chat.questions), // This is now the combined array of all questions
 			chatCount: group.chats.length,
 			chatNames: group.chats.map((chat) => chat.chatName || 'Unnamed Chat'),
@@ -699,7 +683,7 @@
 		email: 200,
 		model: 240,
 		messages: 140,
-		questions: 120,
+		questions_width: 120,
 		updated: 120
 	};
 
@@ -1047,7 +1031,7 @@
 												</span>
 											{/if}
 										</div>
-										<!-- ✅ Enhanced model dropdown container -->
+										<!-- Enhanced model dropdown container -->
 										<div
 											class="relative flex-shrink-0 model-dropdown"
 											bind:this={modelDropdownRef}
@@ -1150,7 +1134,7 @@
 							<th
 								scope="col"
 								class="px-4 py-3 text-left text-xs font-medium text-gray-650 dark:text-gray-400 uppercase tracking-wider relative"
-								style="width: {columnWidths.questions}px; min-width: {columnWidths.questions}px; max-width: {columnWidths.questions}px;"
+								style="width: {columnWidths.questions_width}px; min-width: {columnWidths.questions_width}px; max-width: {columnWidths.questions_width}px;"
 							>
 								<span class="truncate block">Questions</span>
 								<!-- Column resizer -->
@@ -1235,7 +1219,7 @@
 								<!-- Questions -->
 								<td
 									class="px-4 py-4 whitespace-nowrap text-sm text-gray-650 dark:text-gray-400"
-									style="width: {columnWidths.questions}px; min-width: {columnWidths.questions}px; max-width: {columnWidths.questions}px;"
+									style="width: {columnWidths.questions_width}px; min-width: {columnWidths.questions_width}px; max-width: {columnWidths.questions_width}px;"
 								>
 									<div class="flex items-start px-0">
 										<button
@@ -1243,7 +1227,7 @@
 											on:click|stopPropagation={() => showQuestions(group)}
 											aria-label="View questions asked by {group.name}"
 										>
-											<span class="min-w-[20px] text-center">{group.questionsAsked}</span>
+											<span class="min-w-[20px] text-center">{group.questionsCount}</span>
 											<div
 												class="rounded p-1 hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors"
 											>
@@ -1348,8 +1332,8 @@
 		position: absolute;
 		top: 25%;
 		bottom: 25%;
-		right: -1px; /* ✅ Changed from -2px to -1px */
-		width: 3px; /* ✅ Reduced from 4px to 3px */
+		right: -1px; /*  Changed from -2px to -1px */
+		width: 3px; /*  Reduced from 4px to 3px */
 		height: 50%;
 		cursor: col-resize;
 		background: transparent;
@@ -1378,7 +1362,7 @@
 
 	.table-container {
 		overflow-x: auto;
-		overflow-y: visible; /* ✅ Allow vertical overflow for dropdowns */
+		overflow-y: visible; /*  Allow vertical overflow for dropdowns */
 	}
 
 	.resizable-table {
@@ -1386,13 +1370,13 @@
 		min-width: 100%;
 	}
 
-	/* ✅ Ensure dropdown escapes table constraints */
+	/*  Ensure dropdown escapes table constraints */
 	.model-dropdown {
 		position: relative;
 		z-index: 20;
 	}
 
-	/* ✅ Make sure dropdown container doesn't clip */
+	/*  Make sure dropdown container doesn't clip */
 	.table-container,
 	.h-full {
 		overflow-y: visible !important;
