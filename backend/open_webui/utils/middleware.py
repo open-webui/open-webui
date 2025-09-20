@@ -626,7 +626,7 @@ async def chat_image_generation_handler(
 
 
 async def chat_completion_files_handler(
-    request: Request, body: dict, extra_params: dict, user: UserModel
+    request: Request, body: dict, extra_params: dict, user: UserModel, model_knowledge
 ) -> tuple[dict, dict[str, list]]:
     __event_emitter__ = extra_params["__event_emitter__"]
     sources = []
@@ -663,7 +663,7 @@ async def chat_completion_files_handler(
 
         if len(queries) == 0:
             queries = [get_last_user_message(body["messages"])]
-
+            
         await __event_emitter__(
             {
                 "type": "status",
@@ -676,6 +676,20 @@ async def chat_completion_files_handler(
         )
 
         try:
+            # check if individual rag config is used
+            rag_config = {}
+            if model_knowledge and not model_knowledge[0].get("rag_config").get("DEFAULT_RAG_SETTINGS", True):
+                rag_config = model_knowledge[0].get("rag_config")
+
+            k=rag_config.get("TOP_K", request.app.state.config.TOP_K)
+            reranking_model = rag_config.get("RAG_RERANKING_MODEL", request.app.state.config.RAG_RERANKING_MODEL)
+            k_reranker=rag_config.get("TOP_K_RERANKER", request.app.state.config.TOP_K_RERANKER)
+            r=rag_config.get("RELEVANCE_THRESHOLD", request.app.state.config.RELEVANCE_THRESHOLD)
+            hybrid_bm25_weight=rag_config.get("HYBRID_BM25_WEIGHT", request.app.state.config.HYBRID_BM25_WEIGHT)
+            hybrid_search=rag_config.get("ENABLE_RAG_HYBRID_SEARCH", request.app.state.config.ENABLE_RAG_HYBRID_SEARCH)
+            full_context=rag_config.get("RAG_FULL_CONTEXT", request.app.state.config.RAG_FULL_CONTEXT)
+            embedding_model = rag_config.get("RAG_EMBEDDING_MODEL", request.app.state.config.RAG_EMBEDDING_MODEL)
+
             # Offload get_sources_from_items to a separate thread
             loop = asyncio.get_running_loop()
             with ThreadPoolExecutor() as executor:
@@ -685,25 +699,17 @@ async def chat_completion_files_handler(
                         request=request,
                         items=files,
                         queries=queries,
-                        embedding_function=lambda query, prefix: request.app.state.EMBEDDING_FUNCTION(
-                            query, prefix=prefix, user=user
-                        ),
-                        k=request.app.state.config.TOP_K,
-                        reranking_function=(
-                            (
-                                lambda sentences: request.app.state.RERANKING_FUNCTION(
-                                    sentences, user=user
-                                )
-                            )
-                            if request.app.state.RERANKING_FUNCTION
-                            else None
-                        ),
-                        k_reranker=request.app.state.config.TOP_K_RERANKER,
-                        r=request.app.state.config.RELEVANCE_THRESHOLD,
-                        hybrid_bm25_weight=request.app.state.config.HYBRID_BM25_WEIGHT,
-                        hybrid_search=request.app.state.config.ENABLE_RAG_HYBRID_SEARCH,
-                        full_context=request.app.state.config.RAG_FULL_CONTEXT,
+                        embedding_function=request.app.state.EMBEDDING_FUNCTION,
+                        k=k,
+                        reranking_function=request.app.state.RERANKING_FUNCTION,
+                        k_reranker=k_reranker,
+                        r=r,
+                        hybrid_bm25_weight=hybrid_bm25_weight,
+                        hybrid_search=hybrid_search,
+                        full_context=full_context,
                         user=user,
+                        embedding_model=embedding_model,
+                        reranking_model=reranking_model
                     ),
                 )
         except Exception as e:
@@ -1040,7 +1046,7 @@ async def process_chat_payload(request, form_data, user, metadata, model):
     try:
         form_data, flags = await chat_completion_files_handler(
             request, form_data, extra_params, user
-        )
+        , model_knowledge)
         sources.extend(flags.get("sources", []))
     except Exception as e:
         log.exception(e)
@@ -1078,28 +1084,37 @@ async def process_chat_payload(request, form_data, user, metadata, model):
         prompt = get_last_user_message(form_data["messages"])
         if prompt is None:
             raise Exception("No user message found")
-
         if context_string != "":
-            # Workaround for Ollama 2.0+ system prompt issue
-            # TODO: replace with add_or_update_system_message
-            if model.get("owned_by") == "ollama":
-                form_data["messages"] = prepend_to_first_user_message_content(
-                    rag_template(
-                        request.app.state.config.RAG_TEMPLATE,
-                        context_string,
-                        prompt,
-                    ),
-                    form_data["messages"],
-                )
-            else:
-                form_data["messages"] = add_or_update_system_message(
-                    rag_template(
-                        request.app.state.config.RAG_TEMPLATE,
-                        context_string,
-                        prompt,
-                    ),
-                    form_data["messages"],
-                )
+            log.debug(
+                f"With a 0 relevancy threshold for RAG, the context cannot be empty"
+            )
+
+        # Adjusted RAG template step to use knowledge-base-specific configuration
+        rag_template_config = request.app.state.config.RAG_TEMPLATE
+
+        if model_knowledge and not model_knowledge[0].get("rag_config").get("DEFAULT_RAG_SETTINGS", True):
+            rag_template_config = model_knowledge[0].get("rag_config").get(
+                "RAG_TEMPLATE", request.app.state.config.RAG_TEMPLATE
+            )
+
+        # Workaround for Ollama 2.0+ system prompt issue
+        # TODO: replace with add_or_update_system_message
+        if model.get("owned_by") == "ollama":
+            form_data["messages"] = prepend_to_first_user_message_content(
+                rag_template(rag_template_config, 
+                    context_string, 
+                    prompt
+                ),
+                form_data["messages"],
+            )
+        else:
+            form_data["messages"] = add_or_update_system_message(
+                rag_template(rag_template_config, 
+                    context_string, 
+                    prompt
+                ),
+                form_data["messages"],
+            )
 
     # If there are citations, add them to the data_items
     sources = [
