@@ -1,10 +1,8 @@
 <script lang="ts">
-	import hljs from 'highlight.js';
+	import hljs, { loadLanguage, isLanguageLoadedBefore } from '$lib/utils/hljs';
 
 	import { getContext, onMount, tick, onDestroy } from 'svelte';
 	import { copyToClipboard, renderMermaidDiagram } from '$lib/utils';
-
-	import 'highlight.js/styles/github-dark.min.css';
 
 	import PyodideWorker from '$lib/workers/pyodide.worker?worker';
 	import SvgPanZoom from '$lib/components/common/SVGPanZoom.svelte';
@@ -40,6 +38,21 @@
 	export let stickyButtonsClassName = 'top-0';
 
 	let pyodideWorker = null;
+
+	let isLanguageLoading = false;
+	const tryLoadLanguage = async (lang: string) => {
+		if (!hljs.getLanguage(lang) && !isLanguageLoadedBefore(lang)) {
+			isLanguageLoading = true;
+			loadLanguage(lang).then(() => {
+				isLanguageLoading = false;
+			});
+		} else {
+			isLanguageLoading = false;
+		}
+	};
+	$: if (lang) {
+		tryLoadLanguage(lang);
+	}
 
 	let _code = '';
 	$: if (code) {
@@ -500,11 +513,13 @@
 								stdout ||
 								stderr ||
 								result) &&
-								'border-bottom-left-radius: 0px; border-bottom-right-radius: 0px;'}"><code
-								class="language-{lang} rounded-t-none whitespace-pre text-sm"
-								>{@html hljs.highlightAuto(code, hljs.getLanguage(lang)?.aliases).value ||
-									code}</code
-							></pre>
+								'border-bottom-left-radius: 0px; border-bottom-right-radius: 0px;'}">
+							{#key isLanguageLoading}
+								<code class="language-{lang} rounded-t-none whitespace-pre text-sm">
+									{@html hljs.highlightAuto(code, hljs.getLanguage(lang)?.aliases).value || code}
+								</code>
+							{/key}
+						</pre>
 					{/if}
 				{:else}
 					<div

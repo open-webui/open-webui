@@ -133,13 +133,12 @@
 	import FileHandler from '@tiptap/extension-file-handler';
 	import Typography from '@tiptap/extension-typography';
 	import Highlight from '@tiptap/extension-highlight';
-	import CodeBlockLowlight from '@tiptap/extension-code-block-lowlight';
+	import { CodeBlockLowlight } from '$lib/utils/hljs/LowlightEditorExtension';
 
 	import Mention from '@tiptap/extension-mention';
 	import FormattingButtons from './RichTextInput/FormattingButtons.svelte';
 
 	import { PASTED_TEXT_CHARACTER_LIMIT } from '$lib/constants';
-	import { all, createLowlight } from 'lowlight';
 	import type { SocketIOCollaborationProvider } from './RichTextInput/Collaboration';
 
 	export let oncompositionstart = (e) => {};
@@ -147,7 +146,6 @@
 	export let onChange = (e) => {};
 
 	// create a lowlight instance with all languages loaded
-	const lowlight = createLowlight(all);
 
 	export let editor: Editor | null = null;
 
@@ -663,9 +661,7 @@
 
 				...(richText
 					? [
-							CodeBlockLowlight.configure({
-								lowlight
-							}),
+							CodeBlockLowlight,
 							Highlight,
 							Typography,
 							TableKit.configure({
