@@ -772,6 +772,7 @@
 	"Generate an image": "生成图像",
 	"Generate Image": "生成图像",
 	"Generate prompt pair": "生成提示对",
+	"GENERATED FILES": "",
 	"Generating search query": "生成搜索查询",
 	"Generating...": "生成中...",
 	"Get information on {{name}} in the UI": "在界面中获取 {{name}} 的信息",

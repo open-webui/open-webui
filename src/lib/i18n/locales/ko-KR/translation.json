@@ -772,6 +772,7 @@
 	"Generate an image": "이미지 생성",
 	"Generate Image": "이미지 생성",
 	"Generate prompt pair": "프롬프트 쌍 생성",
+	"GENERATED FILES": "",
 	"Generating search query": "검색 쿼리 생성",
 	"Generating...": "생성 중...",
 	"Get information on {{name}} in the UI": "UI에서 {{name}} 정보 확인",

@@ -772,6 +772,7 @@
 	"Generate an image": "Génère une image",
 	"Generate Image": "Générer une image",
 	"Generate prompt pair": "Générer une paire de prompt",
+	"GENERATED FILES": "",
 	"Generating search query": "Génération d'une requête de recherche",
 	"Generating...": "Génération en cours...",
 	"Get information on {{name}} in the UI": "Obtenir des informations sur {{name}} dans l'interface utilisateur",
