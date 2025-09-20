@@ -127,11 +127,19 @@ def query_doc_with_hybrid_search(
     hybrid_bm25_weight: float,
 ) -> dict:
     try:
+        log.debug(f"query_doc_with_hybrid_search:doc {collection_name}")
+        # Add type checking before accessing documents
+        if isinstance(collection_result, list):
+            log.warning(f"Collection result is a list instead of GetResult object for {collection_name}")
+            return {"documents": [], "metadatas": [], "distances": []}
         if not collection_result.documents[0]:
             log.warning(f"query_doc_with_hybrid_search:no_docs {collection_name}")
             return {"documents": [], "metadatas": [], "distances": []}
-
-        log.debug(f"query_doc_with_hybrid_search:doc {collection_name}")
+        # Ensure query is a string before BM25Retriever
+        if isinstance(query, list):
+            query = ' '.join(query) if query else ""
+        elif not isinstance(query, str):
+            query = str(query)
 
         bm25_retriever = BM25Retriever.from_texts(
             texts=collection_result.documents[0],
