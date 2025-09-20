@@ -1,3 +1,4 @@
+import { browser } from '$app/environment';
 import { APP_NAME } from '$lib/constants';
 import { type Writable, writable } from 'svelte/store';
 import type { ModelConfig } from '$lib/apis';
@@ -25,7 +26,15 @@ export const socket: Writable<null | Socket> = writable(null);
 export const activeUserIds: Writable<null | string[]> = writable(null);
 export const USAGE_POOL: Writable<null | string[]> = writable(null);
 
-export const theme = writable('system');
+const getInitialTheme = () => {
+	if (browser) {
+		return localStorage.getItem('theme') ?? 'system';
+	}
+	return 'system';
+};
+
+export const theme = writable(getInitialTheme());
+export const codeMirrorTheme = writable('one-dark');
 
 export const shortCodesToEmojis = writable(
 	Object.entries(emojiShortCodes).reduce((acc, [key, value]) => {
@@ -45,6 +54,7 @@ export const TTSWorker = writable(null);
 
 export const chatId = writable('');
 export const chatTitle = writable('');
+export const isChatPage = writable(false);
 
 export const channels = writable([]);
 export const chats = writable(null);

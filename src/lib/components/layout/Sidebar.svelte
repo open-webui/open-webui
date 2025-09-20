@@ -354,6 +354,9 @@
 		showSidebar.subscribe(async (value) => {
 			localStorage.sidebar = value;
 
+			// Dispatch a resize event
+			window.dispatchEvent(new Event('resize'));
+
 			// nav element is not available on the first render
 			const navElement = document.getElementsByTagName('nav')[0];
 

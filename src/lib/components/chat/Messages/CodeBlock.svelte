@@ -1,7 +1,12 @@
 <script lang="ts">
 	import hljs from 'highlight.js';
 
-	import { getContext, onMount, tick, onDestroy } from 'svelte';
+	import mermaid from 'mermaid';
+
+	import { v4 as uuidv4 } from 'uuid';
+
+	import { getContext, onMount, tick, onDestroy, createEventDispatcher } from 'svelte';
+
 	import { copyToClipboard, renderMermaidDiagram } from '$lib/utils';
 
 	import 'highlight.js/styles/github-dark.min.css';
@@ -17,6 +22,7 @@
 	import Cube from '$lib/components/icons/Cube.svelte';
 
 	const i18n = getContext('i18n');
+	const dispatch = createEventDispatcher();
 
 	export let id = '';
 	export let edit = true;
@@ -490,6 +496,7 @@
 								}}
 								onChange={(value) => {
 									_code = value;
+									dispatch('change', _code);
 								}}
 							/>
 						{/await}

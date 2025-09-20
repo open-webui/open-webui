@@ -16,10 +16,6 @@
 
 	export let saveSettings: Function;
 
-	let backgroundImageUrl = null;
-	let inputFiles = null;
-	let filesInputElement;
-
 	// Addons
 	let titleAutoGenerate = true;
 	let autoFollowUps = true;
@@ -58,6 +54,7 @@
 
 	let landingPageMode = '';
 	let chatBubble = true;
+	let llmChatBubble = true;
 	let chatDirection: 'LTR' | 'RTL' | 'auto' = 'auto';
 	let ctrlEnterToSend = false;
 	let copyFormatted = false;
@@ -217,6 +214,7 @@
 
 		landingPageMode = $settings?.landingPageMode ?? '';
 		chatBubble = $settings?.chatBubble ?? true;
+		llmChatBubble = $settings?.llmChatBubble ?? true;
 		widescreenMode = $settings?.widescreenMode ?? false;
 		splitLargeChunks = $settings?.splitLargeChunks ?? false;
 		scrollOnBranchChange = $settings?.scrollOnBranchChange ?? true;
@@ -248,7 +246,6 @@
 			defaultModelId = $config.default_models.split(',')[0];
 		}
 
-		backgroundImageUrl = $settings?.backgroundImageUrl ?? null;
 		webSearch = $settings?.webSearch ?? null;
 	});
 </script>
@@ -278,34 +275,6 @@
 		dispatch('save');
 	}}
 >
-	<input
-		bind:this={filesInputElement}
-		bind:files={inputFiles}
-		type="file"
-		hidden
-		accept="image/*"
-		on:change={() => {
-			let reader = new FileReader();
-			reader.onload = (event) => {
-				let originalImageUrl = `${event.target.result}`;
-
-				backgroundImageUrl = originalImageUrl;
-				saveSettings({ backgroundImageUrl });
-			};
-
-			if (
-				inputFiles &&
-				inputFiles.length > 0 &&
-				['image/gif', 'image/webp', 'image/jpeg', 'image/png'].includes(inputFiles[0]['type'])
-			) {
-				reader.readAsDataURL(inputFiles[0]);
-			} else {
-				console.log(`Unsupported File Type '${inputFiles[0]['type']}'.`);
-				inputFiles = null;
-			}
-		}}
-	/>
-
 	<div class=" space-y-3 overflow-y-scroll max-h-[28rem] lg:max-h-full">
 		<div>
 			<h1 class=" mb-2 text-sm font-medium">{$i18n.t('UI')}</h1>
@@ -512,34 +481,8 @@
 
 			<div>
 				<div class=" py-0.5 flex w-full justify-between">
-					<div id="chat-background-label" class=" self-center text-xs">
-						{$i18n.t('Chat Background Image')}
-					</div>
-
-					<button
-						aria-labelledby="chat-background-label background-image-url-state"
-						class="p-1 px-3 text-xs flex rounded-sm transition"
-						on:click={() => {
-							if (backgroundImageUrl !== null) {
-								backgroundImageUrl = null;
-								saveSettings({ backgroundImageUrl });
-							} else {
-								filesInputElement.click();
-							}
-						}}
-						type="button"
-					>
-						<span class="ml-2 self-center" id="background-image-url-state"
-							>{backgroundImageUrl !== null ? $i18n.t('Reset') : $i18n.t('Upload')}</span
-						>
-					</button>
-				</div>
-			</div>
-
-			<div>
-				<div class=" py-0.5 flex w-full justify-between">
 					<div id="chat-bubble-ui-label" class=" self-center text-xs">
-						{$i18n.t('Chat Bubble UI')}
+						{$i18n.t('User Message Bubbles')}
 					</div>
 
 					<div class="flex items-center gap-2 p-1">
@@ -549,6 +492,25 @@
 							bind:state={chatBubble}
 							on:change={() => {
 								saveSettings({ chatBubble });
+							}}
+						/>
+					</div>
+				</div>
+			</div>
+
+			<div>
+				<div class=" py-0.5 flex w-full justify-between">
+					<div id="llm-chat-bubble-ui-label" class=" self-center text-xs">
+						{$i18n.t('Assistant Message Bubbles')}
+					</div>
+
+					<div class="flex items-center gap-2 p-1">
+						<Switch
+							tooltip={true}
+							ariaLabelledbyId="llm-chat-bubble-ui-label"
+							bind:state={llmChatBubble}
+							on:change={() => {
+								saveSettings({ llmChatBubble });
 							}}
 						/>
 					</div>
@@ -929,6 +891,27 @@
 						<span class="ml-2 self-center" id="web-search-state"
 							>{webSearch === 'always' ? $i18n.t('Always') : $i18n.t('Default')}</span
 						>
+					</button>
+				</div>
+			</div>
+
+			<div class=" my-2 text-sm font-medium">{$i18n.t('Appearance')}</div>
+
+			<div>
+				<div class=" py-0.5 flex w-full justify-between">
+					<div class=" self-center text-xs">
+						{$i18n.t('Legacy Chat Background Image')}
+					</div>
+
+					<button
+						class="p-1 px-3 text-xs flex rounded-sm transition"
+						on:click={() => {
+							saveSettings({ backgroundImageUrl: '' });
+							toast.success($i18n.t('Legacy background image reset successfully!'));
+						}}
+						type="button"
+					>
+						{$i18n.t('Reset')}
 					</button>
 				</div>
 			</div>

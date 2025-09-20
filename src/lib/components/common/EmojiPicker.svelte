@@ -96,8 +96,8 @@
 	const ROW_HEIGHT = 48; // Approximate height for a row with multiple emojis
 	// Handle emoji selection
 	function selectEmoji(emoji) {
-		const selectedCode = emoji.shortCodes[0];
-		onSubmit(selectedCode);
+		const character = String.fromCodePoint(parseInt(emoji.name, 16));
+		onSubmit(character);
 		show = false;
 	}
 </script>
