@@ -14,7 +14,7 @@
 	"{{COUNT}} extracted lines": "",
 	"{{COUNT}} hidden lines": "숨겨진 줄 {{COUNT}}개",
 	"{{COUNT}} Replies": "답글 {{COUNT}}개",
-	"{{COUNT}} Sources": "{{COUNT}} 소스",
+	"{{COUNT}} Sources": "{{COUNT}}개의 소스",
 	"{{COUNT}} words": "{{COUNT}} 단어",
 	"{{LOCALIZED_DATE}} at {{LOCALIZED_TIME}}": "",
 	"{{model}} download has been canceled": "{{model}} 다운로드가 취소되었습니다.",
