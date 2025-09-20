@@ -4,6 +4,7 @@
 
 	import { WEBUI_NAME, showSidebar, user } from '$lib/stores';
 	import MenuLines from '$lib/components/icons/MenuLines.svelte';
+	import CerebraLogo from '$lib/components/icons/CerebraLogo.svelte';
 	import { page } from '$app/stores';
 
 	const i18n = getContext('i18n');
@@ -26,24 +27,24 @@
 
 {#if loaded}
 	<div
-		class=" flex flex-col w-full h-screen max-h-[100dvh] transition-width duration-200 ease-in-out {$showSidebar
+		class=" relative flex flex-col w-full h-screen max-h-[100dvh] transition-width duration-200 ease-in-out {$showSidebar
 			? 'md:max-w-[calc(100%-260px)]'
 			: ''} max-w-full"
 	>
-		<nav class="   px-2.5 pt-1 backdrop-blur-xl drag-region">
-			<div class=" flex items-center gap-1">
-				<div class="{$showSidebar ? 'md:hidden' : ''} flex flex-none items-center self-end">
+		<nav class="px-2.5 pt-1 backdrop-blur-xl drag-region">
+			<div class="flex items-center gap-1">
+				<div class="{$showSidebar ? 'md:hidden' : ''} self-center flex flex-none items-center">
 					<button
 						id="sidebar-toggle-button"
-						class="cursor-pointer p-1.5 flex rounded-xl hover:bg-gray-100 dark:hover:bg-gray-850 transition"
+						class="flex items-center rounded-xl px-2 py-1 hover:bg-gray-100 dark:hover:bg-gray-900 transition"
 						on:click={() => {
 							showSidebar.set(!$showSidebar);
 						}}
 						aria-label="Toggle Sidebar"
 					>
-						<div class=" m-auto self-center">
-							<MenuLines />
-						</div>
+						<!-- Cerebra Logo (PNG with theme switching) -->
+						<CerebraLogo className="size-10 mr-2" />
+						<span class="font-semibold text-xl">CerebraUI</span>
 					</button>
 				</div>
 

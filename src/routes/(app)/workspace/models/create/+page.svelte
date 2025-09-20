@@ -87,5 +87,5 @@
 </script>
 
 {#key model}
-	<ModelEditor {model} {onSubmit} />
+	<ModelEditor {model} {onSubmit} onBack={() => goto('/workspace/models')} />
 {/key}

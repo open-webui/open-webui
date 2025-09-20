@@ -23,6 +23,7 @@
 	import Menu from '$lib/components/layout/Navbar/Menu.svelte';
 	import MenuLines from '../icons/MenuLines.svelte';
 	import AdjustmentsHorizontal from '../icons/AdjustmentsHorizontal.svelte';
+	import CerebraLogo from '../icons/CerebraLogo.svelte';
 
 	import PencilSquare from '../icons/PencilSquare.svelte';
 	import Banner from '../common/Banner.svelte';
@@ -59,21 +60,37 @@
 				>
 					<button
 						id="sidebar-toggle-button"
-						class="cursor-pointer px-2 py-2 flex rounded-xl hover:bg-gray-50 dark:hover:bg-gray-850 transition"
+						class="flex items-center rounded-xl px-2 py-1 hover:bg-gray-100 dark:hover:bg-gray-900 transition"
 						on:click={() => {
 							showSidebar.set(!$showSidebar);
 						}}
 						aria-label="Toggle Sidebar"
 					>
-						<div class=" m-auto self-center">
-							<MenuLines />
-						</div>
+						<!-- Cerebra Logo (PNG with theme switching) -->
+						<CerebraLogo className="size-10 mr-2" />
+						<span class="font-semibold text-xl">CerebraUI</span>
 					</button>
+
+					<!-- New Chat 按钮 - 移到 logo 右边 -->
+					<Tooltip content={$i18n.t('New Chat')}>
+						<button
+							id="new-chat-button"
+							class="ml-3 flex cursor-pointer px-2 py-2 rounded-xl text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-850 transition"
+							on:click={() => {
+								initNewChat();
+							}}
+							aria-label="New Chat"
+						>
+							<div class=" m-auto self-center">
+								<PencilSquare className=" size-5 text-gray-900 dark:text-white" strokeWidth="2" />
+							</div>
+						</button>
+					</Tooltip>
 				</div>
 
 				<div
 					class="flex-1 overflow-hidden max-w-full py-0.5
-			{$showSidebar ? 'ml-1' : ''}
+			{$showSidebar ? 'ml-1' : 'ml-6'}
 			"
 				>
 					{#if showModelSelector}
@@ -132,22 +149,6 @@
 						</button>
 					</Tooltip>
 
-					<Tooltip content={$i18n.t('New Chat')}>
-						<button
-							id="new-chat-button"
-							class=" flex {$showSidebar
-								? 'md:hidden'
-								: ''} cursor-pointer px-2 py-2 rounded-xl text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-850 transition"
-							on:click={() => {
-								initNewChat();
-							}}
-							aria-label="New Chat"
-						>
-							<div class=" m-auto self-center">
-								<PencilSquare className=" size-5" strokeWidth="2" />
-							</div>
-						</button>
-					</Tooltip>
 
 				</div>
 			</div>

@@ -47,5 +47,5 @@
 </script>
 
 {#if model}
-	<ModelEditor edit={true} {model} {onSubmit} />
+	<ModelEditor edit={true} {model} {onSubmit} onBack={() => goto('/workspace/models')} />
 {/if}

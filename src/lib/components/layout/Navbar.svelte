@@ -24,6 +24,7 @@
 	import { stringify } from 'postcss';
 	import PencilSquare from '../icons/PencilSquare.svelte';
 	import Plus from '../icons/Plus.svelte';
+	import CerebraLogo from '../icons/CerebraLogo.svelte';
 
 	const i18n = getContext('i18n');
 
@@ -55,15 +56,15 @@
 			>
 				<button
 					id="sidebar-toggle-button"
-					class="cursor-pointer px-2 py-2 flex rounded-xl hover:bg-gray-50 dark:hover:bg-gray-850 transition"
+					class="flex items-center rounded-xl px-2 py-1 hover:bg-gray-100 dark:hover:bg-gray-900 transition"
 					on:click={() => {
 						showSidebar.set(!$showSidebar);
 					}}
 					aria-label="Toggle Sidebar"
 				>
-					<div class=" m-auto self-center">
-						<MenuLines />
-					</div>
+					<!-- Cerebra Logo (PNG with theme switching) -->
+					<CerebraLogo className="size-8 mr-2" />
+					<span class="font-semibold text-lg">CerebraUI</span>
 				</button>
 			</div>
 

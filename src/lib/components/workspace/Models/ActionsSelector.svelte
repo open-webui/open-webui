@@ -24,10 +24,10 @@
 
 <div>
 	<div class="flex w-full justify-between mb-1">
-		<div class=" self-center text-sm font-semibold">{$i18n.t('Actions')}</div>
+		<div class=" self-center text-base font-semibold">{$i18n.t('Actions')}</div>
 	</div>
 
-	<div class=" text-xs dark:text-gray-500">
+	<div class=" text-sm dark:text-gray-500">
 		{$i18n.t('To select actions here, add them to the "Functions" workspace first.')}
 	</div>
 

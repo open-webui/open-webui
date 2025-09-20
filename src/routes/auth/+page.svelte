@@ -153,6 +153,11 @@
 		} else {
 			onboarding = $config?.onboarding ?? false;
 		}
+		
+		// 如果不是onboarding状态，重定向到新的登录页面
+		if (!onboarding) {
+			goto('/auth/login');
+		}
 	});
 </script>
 
@@ -176,20 +181,6 @@
 	<div class="w-full absolute top-0 left-0 right-0 h-8 drag-region" />
 
 	{#if loaded}
-		<div class="fixed m-10 z-50">
-			<div class="flex space-x-2">
-				<div class=" self-center">
-					<img
-						id="logo"
-						crossorigin="anonymous"
-						src="{WEBUI_BASE_URL}/static/splash.png"
-						class=" w-6 rounded-full"
-						alt="logo"
-					/>
-				</div>
-			</div>
-		</div>
-
 		<div
 			class="fixed bg-transparent min-h-screen w-full flex justify-center font-primary z-50 text-black dark:text-white"
 		>
@@ -218,6 +209,17 @@
 							}}
 						>
 							<div class="mb-1">
+								<!-- Logo moved to center above title -->
+								<div class="flex justify-center mb-6">
+									<img
+										id="logo"
+										crossorigin="anonymous"
+										src="{WEBUI_BASE_URL}/static/splash.png"
+										class="w-16 h-16 rounded-full"
+										alt="logo"
+									/>
+								</div>
+								
 								<div class=" text-2xl font-medium">
 									{#if $config?.onboarding ?? false}
 										{$i18n.t(`Get started with {{WEBUI_NAME}}`, { WEBUI_NAME: $WEBUI_NAME })}

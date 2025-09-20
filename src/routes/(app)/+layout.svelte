@@ -228,9 +228,10 @@
 				}
 			});
 
-			if ($user?.role === 'admin' && ($settings?.showChangelog ?? true)) {
-				showChangelog.set($settings?.version !== $config.version);
-			}
+			// 注释掉What's New弹窗，不再自动弹出
+			// if ($user?.role === 'admin' && ($settings?.showChangelog ?? true)) {
+			// 	showChangelog.set($settings?.version !== $config.version);
+			// }
 
 			if ($user?.permissions?.chat?.temporary ?? true) {
 				if ($page.url.searchParams.get('temporary-chat') === 'true') {
@@ -279,7 +280,7 @@
 <ChangelogModal bind:show={$showChangelog} />
 
 <!-- 更新提示弹窗 每天最多提示一次-->
-{#if version && compareVersion(version.latest, version.current) && ($settings?.showUpdateToast ?? true)}
+<!-- {#if version && compareVersion(version.latest, version.current) && ($settings?.showUpdateToast ?? true)}
 	<div class=" absolute bottom-8 right-8 z-50" in:fade={{ duration: 100 }}>
 		<UpdateInfoToast
 			{version}
@@ -289,7 +290,7 @@
 			}}
 		/>
 	</div>
-{/if}
+{/if} -->
 
 <div class="app relative">
 	<div

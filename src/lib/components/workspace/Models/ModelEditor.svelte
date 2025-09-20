@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { onMount, getContext, tick } from 'svelte';
-	import { models, tools, functions, knowledge as knowledgeCollections, user } from '$lib/stores';
+	import { models, tools, functions, knowledge as knowledgeCollections, user, showSidebar } from '$lib/stores';
 
 	import AdvancedParams from '$lib/components/chat/Settings/Advanced/AdvancedParams.svelte';
 	import Tags from '$lib/components/common/Tags.svelte';
@@ -263,28 +263,19 @@
 
 {#if loaded}
 	{#if onBack}
-		<button
-			class="flex space-x-1"
-			on:click={() => {
-				onBack();
-			}}
-		>
-			<div class=" self-center">
-				<svg
-					xmlns="http://www.w3.org/2000/svg"
-					viewBox="0 0 20 20"
-					fill="currentColor"
-					class="h-4 w-4"
-				>
-					<path
-						fill-rule="evenodd"
-						d="M17 10a.75.75 0 01-.75.75H5.612l4.158 3.96a.75.75 0 11-1.04 1.08l-5.5-5.25a.75.75 0 010-1.08l5.5-5.25a.75.75 0 111.04 1.08L5.612 9.25H16.25A.75.75 0 0117 10z"
-						clip-rule="evenodd"
-					/>
+		<div class="absolute z-10 {$showSidebar ? 'top-6 left-6' : 'top-20 left-6'}">
+			<button
+				class="flex items-center text-sm px-2 py-1.5 rounded-lg bg-gray-50 hover:bg-gray-100 dark:bg-gray-800 dark:hover:bg-gray-700 dark:text-gray-200 transition"
+				on:click={() => {
+					onBack();
+				}}
+			>
+				<svg class="w-5 h-5 mr-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+					<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
 				</svg>
-			</div>
-			<div class=" self-center text-sm font-medium">{'Back'}</div>
-		</button>
+				Back
+			</button>
+		</div>
 	{/if}
 
 	<div class="w-full max-h-full flex justify-center">
@@ -363,7 +354,7 @@
 					submitHandler();
 				}}
 			>
-				<div class="self-center md:self-start flex justify-center my-2 shrink-0">
+				<div class="self-center md:self-start flex justify-center my-2 shrink-0 mt-15">
 					<div class="self-center">
 						<button
 							class="rounded-xl flex shrink-0 items-center {info.meta.profile_image_url !==
@@ -445,7 +436,7 @@
 						<div class="flex-1">
 							<div>
 								<input
-									class="text-xs w-full bg-transparent text-gray-500 outline-hidden"
+									class="text-sm w-full bg-transparent text-gray-500 outline-hidden"
 									placeholder={$i18n.t('Model ID')}
 									bind:value={id}
 									disabled={edit}
@@ -456,12 +447,12 @@
 					</div>
 
 					{#if preset}
-						<div class="my-1">
-							<div class=" text-sm font-semibold mb-1">{$i18n.t('Base Model (From)')}</div>
+						<div class="my-2">
+							<div class=" text-base font-semibold mb-2">{$i18n.t('Base Model (From)')}</div>
 
 							<div>
 								<select
-									class="text-sm w-full bg-transparent outline-hidden"
+									class="text-base w-full bg-transparent outline-hidden"
 									placeholder="Select a base model (e.g. llama3, gpt-4o)"
 									bind:value={info.base_model_id}
 									on:change={(e) => {
@@ -480,28 +471,28 @@
 						</div>
 					{/if}
 
-					<div class="my-1">
-						<div class="mb-1 flex w-full justify-between items-center">
-							<div class=" self-center text-sm font-semibold">{$i18n.t('Description')}</div>
+						<div class="my-2">
+							<div class="mb-2 flex w-full justify-between items-center">
+								<div class=" self-center text-base font-semibold">{$i18n.t('Description')}</div>
 
 							<button
-								class="p-1 text-xs flex rounded-sm transition"
+								class="p-1 text-sm flex rounded-sm transition"
 								type="button"
 								on:click={() => {
 									enableDescription = !enableDescription;
 								}}
 							>
 								{#if !enableDescription}
-									<span class="ml-2 self-center">{$i18n.t('Default')}</span>
+									<span class="ml-2 self-center text-sm">{$i18n.t('Default')}</span>
 								{:else}
-									<span class="ml-2 self-center">{$i18n.t('Custom')}</span>
+									<span class="ml-2 self-center text-sm">{$i18n.t('Custom')}</span>
 								{/if}
 							</button>
 						</div>
 
 						{#if enableDescription}
 							<Textarea
-								className=" text-sm w-full bg-transparent outline-hidden resize-none overflow-y-hidden "
+								className=" text-base w-full bg-transparent outline-hidden resize-none overflow-y-hidden "
 								placeholder={$i18n.t('Add a short description about what this model does')}
 								bind:value={info.meta.description}
 							/>
@@ -538,19 +529,19 @@
 						</div>
 					</div>
 
-					<hr class=" border-gray-100 dark:border-gray-850 my-1.5" />
+					<hr class=" border-gray-100 dark:border-gray-850 my-3" />
 
-					<div class="my-2">
+					<div class="my-3">
 						<div class="flex w-full justify-between">
-							<div class=" self-center text-sm font-semibold">{$i18n.t('Model Params')}</div>
+							<div class=" self-center text-lg font-semibold">{$i18n.t('Model Params')}</div>
 						</div>
 
 						<div class="mt-2">
-							<div class="my-1">
-								<div class=" text-xs font-semibold mb-2">{$i18n.t('System Prompt')}</div>
+							<div class="my-2">
+								<div class=" text-sm font-semibold mb-3">{$i18n.t('System Prompt')}</div>
 								<div>
 									<Textarea
-										className=" text-sm w-full bg-transparent outline-hidden resize-none overflow-y-hidden "
+										className=" text-base w-full bg-transparent outline-hidden resize-none overflow-y-hidden "
 										placeholder={`Write your model system prompt content here\ne.g.) You are Mario from Super Mario Bros, acting as an assistant.`}
 										rows={4}
 										bind:value={info.params.system}
@@ -559,21 +550,21 @@
 							</div>
 
 							<div class="flex w-full justify-between">
-								<div class=" self-center text-xs font-semibold">
+								<div class=" self-center text-sm font-semibold">
 									{$i18n.t('Advanced Params')}
 								</div>
 
 								<button
-									class="p-1 px-3 text-xs flex rounded-sm transition"
+									class="p-1 px-3 text-sm flex rounded-sm transition"
 									type="button"
 									on:click={() => {
 										showAdvanced = !showAdvanced;
 									}}
 								>
 									{#if showAdvanced}
-										<span class="ml-2 self-center">{$i18n.t('Hide')}</span>
+										<span class="ml-2 self-center text-sm">{$i18n.t('Hide')}</span>
 									{:else}
-										<span class="ml-2 self-center">{$i18n.t('Show')}</span>
+										<span class="ml-2 self-center text-sm">{$i18n.t('Show')}</span>
 									{/if}
 								</button>
 							</div>
@@ -597,7 +588,7 @@
 					<div class="my-2">
 						<div class="flex w-full justify-between items-center">
 							<div class="flex w-full justify-between items-center">
-								<div class=" self-center text-sm font-semibold">
+								<div class=" self-center text-base font-semibold">
 									{$i18n.t('Prompt suggestions')}
 								</div>
 
@@ -613,9 +604,9 @@
 									}}
 								>
 									{#if (info?.meta?.suggestion_prompts ?? null) === null}
-										<span class="ml-2 self-center">{$i18n.t('Default')}</span>
+										<span class="ml-2 self-center text-sm">{$i18n.t('Default')}</span>
 									{:else}
-										<span class="ml-2 self-center">{$i18n.t('Custom')}</span>
+										<span class="ml-2 self-center text-sm">{$i18n.t('Custom')}</span>
 									{/if}
 								</button>
 							</div>
@@ -689,7 +680,7 @@
 						{/if}
 					</div>
 
-					<hr class=" border-gray-100 dark:border-gray-850 my-1.5" />
+					<hr class=" border-gray-100 dark:border-gray-850 my-3" />
 
 					<div class="my-2">
 						<Knowledge bind:selectedKnowledge={knowledge} collections={$knowledgeCollections} />
@@ -719,7 +710,7 @@
 
 					<div class="my-2 text-gray-300 dark:text-gray-700">
 						<div class="flex w-full justify-between mb-2">
-							<div class=" self-center text-sm font-semibold">{$i18n.t('JSON Preview')}</div>
+							<div class=" self-center text-base font-semibold">{$i18n.t('JSON Preview')}</div>
 
 							<button
 								class="p-1 px-3 text-xs flex rounded-sm transition"
@@ -749,21 +740,17 @@
 						{/if}
 					</div>
 
-					<div class="my-2 flex justify-end pb-20">
+					<div class="my-2 flex justify-center pb-20">
 						<button
-							class=" text-sm px-3 py-2 transition rounded-lg {loading
-								? ' cursor-not-allowed bg-black hover:bg-gray-900 text-white dark:bg-white dark:hover:bg-gray-100 dark:text-black'
-								: 'bg-black hover:bg-gray-900 text-white dark:bg-white dark:hover:bg-gray-100 dark:text-black'} flex w-full justify-center"
+							class="w-full bg-gray-800 dark:bg-gray-700 text-white py-3 px-4 rounded-lg font-medium hover:bg-gray-900 dark:hover:bg-gray-600 transition-colors {loading ? 'cursor-not-allowed' : ''}"
 							type="submit"
 							disabled={loading}
 						>
-							<div class=" self-center font-medium">
-								{#if edit}
-									{$i18n.t('Save & Update')}
-								{:else}
-									{$i18n.t('Save & Create')}
-								{/if}
-							</div>
+							{#if edit}
+								{$i18n.t('Save & Update')}
+							{:else}
+								{$i18n.t('Save')}
+							{/if}
 
 							{#if loading}
 								<div class="ml-1.5 self-center">

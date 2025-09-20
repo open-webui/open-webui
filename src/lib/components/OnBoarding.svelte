@@ -10,6 +10,8 @@
 
 	export let show = true;
 	export let getStartedHandler = () => {};
+	
+	import { goto } from '$app/navigation';
 
 	function setLogoImage() {
 		const logo = document.getElementById('logo');
@@ -90,6 +92,7 @@
 							class="relative z-20 flex p-1 rounded-full bg-white/5 hover:bg-white/10 transition font-medium text-sm"
 							on:click={() => {
 								getStartedHandler();
+								goto('/auth/login');
 							}}
 						>
 							<ArrowRightCircle className="size-6" />

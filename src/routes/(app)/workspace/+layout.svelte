@@ -15,6 +15,7 @@
 	import { goto } from '$app/navigation';
 
 	import MenuLines from '$lib/components/icons/MenuLines.svelte';
+	import CerebraLogo from '$lib/components/icons/CerebraLogo.svelte';
 
 	const i18n = getContext('i18n');
 
@@ -60,18 +61,20 @@
 				<div class="{$showSidebar ? 'md:hidden' : ''} self-center flex flex-none items-center">
 					<button
 						id="sidebar-toggle-button"
-						class="cursor-pointer p-1.5 flex rounded-xl hover:bg-gray-100 dark:hover:bg-gray-850 transition"
+						class="flex items-center rounded-xl px-2 py-1 hover:bg-gray-100 dark:hover:bg-gray-900 transition"
 						on:click={() => {
 							showSidebar.set(!$showSidebar);
 						}}
 						aria-label="Toggle Sidebar"
 					>
-						<div class=" m-auto self-center">
-							<MenuLines />
-						</div>
+						<!-- Cerebra Logo (PNG with theme switching) -->
+						<CerebraLogo className="size-10 mr-2" />
+						<span class="font-semibold text-xl">CerebraUI</span>
 					</button>
 				</div>
 
+				<!-- 注释掉导航栏：Models, Prompts, Knowledge, Tools -->
+				<!--
 				<div class="">
 					<div
 						class="flex gap-1 scrollbar-none overflow-x-auto w-fit text-center text-sm font-medium rounded-full bg-transparent py-1 touch-auto pointer-events-auto"
@@ -123,12 +126,13 @@
 						{/if}
 					</div>
 				</div>
+				-->
 
 				<!-- <div class="flex items-center text-xl font-semibold">{$i18n.t('Workspace')}</div> -->
 			</div>
 		</nav>
 
-		<div class="  pb-1 px-[18px] flex-1 max-h-full overflow-y-auto" id="workspace-container">
+		<div class="pt-6 pb-1 px-[18px] flex-1 max-h-full overflow-y-auto" id="workspace-container">
 			<slot />
 		</div>
 	</div>

@@ -23,7 +23,7 @@
 
 <div>
 	<div class="flex w-full justify-between mb-1">
-		<div class=" self-center text-sm font-semibold">{$i18n.t('Capabilities')}</div>
+		<div class=" self-center text-base font-semibold">{$i18n.t('Capabilities')}</div>
 	</div>
 	<div class="flex">
 		{#each Object.keys(capabilities) as capability}

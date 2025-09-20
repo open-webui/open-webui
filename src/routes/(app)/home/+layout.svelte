@@ -47,9 +47,7 @@
   - {$showSidebar ? 'md:max-w-[calc(100%-260px)]' : ''}：在桌面端（md 断点）为侧边栏预留 260px
 -->
 <div
-	class=" flex flex-col w-full h-screen max-h-[100dvh] transition-width duration-200 ease-in-out {$showSidebar
-		? 'md:max-w-[calc(100%-260px)]'
-		: ''} max-w-full"
+	class=" flex flex-col w-full h-screen max-h-[100dvh] transition-width duration-200 ease-in-out max-w-[calc(100%-260px)]"
 >
 	<!--
     顶部导航栏：
@@ -57,32 +55,9 @@
     - drag-region：在 Electron 外壳中允许该区域拖拽窗口（Web 环境不影响）
     - 内含：左侧侧边栏开关按钮 + 右侧两个 Tab（Notes / Calendar）
   -->
-	<nav class="   px-2.5 pt-1 backdrop-blur-xl w-full drag-region">
-		<div class=" flex items-center">
-			<!--
-    左侧：侧边栏开关按钮容器
-    - 当 $showSidebar 为 true 时，在 md 及以上断点隐藏按钮（md:hidden），避免重复入口
-  -->
-			<div class="{$showSidebar ? 'md:hidden' : ''} flex flex-none items-center self-end">
-				<!--
-    侧边栏开关按钮：
-    - 点击行为：showSidebar.set(!$showSidebar) —— 切换全局侧边栏显隐
-    - hover:bg-gray-100 / dark:hover:bg-gray-850：浅/深色模式下的悬停反馈
-    - aria-label：无障碍说明
-  -->
-				<button
-					id="sidebar-toggle-button"
-					class="cursor-pointer p-1.5 flex rounded-xl hover:bg-gray-100 dark:hover:bg-gray-850 transition"
-					on:click={() => {
-						showSidebar.set(!$showSidebar);
-					}}
-					aria-label="Toggle Sidebar"
-				>
-					<div class=" m-auto self-center">
-						<MenuLines />
-					</div>
-				</button>
-			</div>
+	<nav class="px-2.5 pt-1 backdrop-blur-xl w-full drag-region">
+		<div class="flex items-center">
+			<!-- 移除侧边栏切换按钮，因为logo+New Chat按钮已经固定 -->
 
 			<div class=" flex w-full">
 				<!--

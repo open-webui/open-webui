@@ -76,108 +76,105 @@
 	allowPublic={$user?.permissions?.sharing?.public_prompts || $user?.role === 'admin'}
 />
 
-<div class="w-full max-h-full flex justify-center">
+<div class="w-full max-h-full">
+	<button
+		class="flex items-center text-sm text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200"
+		on:click={() => {
+			window.history.back();
+		}}
+	>
+		<svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+			<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
+		</svg>
+		Back
+	</button>
+
 	<form
-		class="flex flex-col w-full mb-10"
+		class="flex flex-col max-w-4xl mx-auto mt-10 mb-10"
 		on:submit|preventDefault={() => {
 			submitHandler();
 		}}
 	>
-		<div class="my-2">
-			<Tooltip
-				content={`${$i18n.t('Only alphanumeric characters and hyphens are allowed')} - ${$i18n.t(
-					'Activate this command by typing "/{{COMMAND}}" to chat input.',
-					{
-						COMMAND: command
-					}
-				)}`}
-				placement="bottom-start"
-			>
-				<div class="flex flex-col w-full">
-					<div class="flex items-center">
+		<div class=" w-full flex flex-col justify-center">
+
+			<div class="w-full flex flex-col gap-2.5">
+				<div class="w-full">
+					<div class=" text-sm mb-2">{$i18n.t('Title')}</div>
+					<div class="w-full mt-1">
 						<input
-							class="text-2xl font-semibold w-full bg-transparent outline-hidden"
-							placeholder={$i18n.t('Title')}
+							class="w-full rounded-lg py-2 px-4 text-sm bg-gray-50 dark:text-gray-300 dark:bg-gray-850 outline-hidden"
+							type="text"
 							bind:value={title}
+							placeholder={$i18n.t('Title')}
 							required
 						/>
-
-						<div class="self-center shrink-0">
-							<button
-								class="bg-gray-50 hover:bg-gray-100 text-black dark:bg-gray-850 dark:hover:bg-gray-800 dark:text-white transition px-2 py-1 rounded-full flex gap-1 items-center"
-								type="button"
-								on:click={() => {
-									showAccessControlModal = true;
-								}}
-							>
-								<LockClosed strokeWidth="2.5" className="size-3.5" />
-
-								<div class="text-sm font-medium shrink-0">
-									{$i18n.t('Access')}
-								</div>
-							</button>
-						</div>
 					</div>
+				</div>
 
-					<div class="flex gap-0.5 items-center text-xs text-gray-500">
-						<div class="">/</div>
+				<div class="w-full">
+					<div class=" text-sm mb-2">{$i18n.t('Command')}</div>
+					<div class="w-full mt-1">
 						<input
-							class=" w-full bg-transparent outline-hidden"
-							placeholder={$i18n.t('Command')}
+							class="w-full rounded-lg py-2 px-4 text-sm bg-gray-50 dark:text-gray-300 dark:bg-gray-850 outline-hidden"
+							type="text"
 							bind:value={command}
+							placeholder={$i18n.t('Command')}
 							required
 							disabled={edit}
 						/>
 					</div>
 				</div>
-			</Tooltip>
-		</div>
-
-		<div class="my-2">
-			<div class="flex w-full justify-between">
-				<div class=" self-center text-sm font-semibold">{$i18n.t('Prompt Content')}</div>
-			</div>
-
-			<div class="mt-2">
-				<div>
-					<Textarea
-						className="text-sm w-full bg-transparent outline-hidden overflow-y-hidden resize-none"
-						placeholder={$i18n.t('Write a summary in 50 words that summarizes [topic or keyword].')}
-						bind:value={content}
-						rows={6}
-						required
-					/>
-				</div>
-
-				<div class="text-xs text-gray-400 dark:text-gray-500">
-					ⓘ {$i18n.t('Format your variables using brackets like this:')}&nbsp;<span
-						class=" text-gray-600 dark:text-gray-300 font-medium"
-						>{'{{'}{$i18n.t('variable')}{'}}'}</span
-					>.
-					{$i18n.t('Make sure to enclose them with')}
-					<span class=" text-gray-600 dark:text-gray-300 font-medium">{'{{'}</span>
-					{$i18n.t('and')}
-					<span class=" text-gray-600 dark:text-gray-300 font-medium">{'}}'}</span>.
-				</div>
-
-				<div class="text-xs text-gray-400 dark:text-gray-500">
-					{$i18n.t('Utilize')}<span class=" text-gray-600 dark:text-gray-300 font-medium">
-						{` {{CLIPBOARD}}`}</span
-					>
-					{$i18n.t('variable to have them replaced with clipboard content.')}
-				</div>
 			</div>
 		</div>
 
-		<div class="my-4 flex justify-end pb-20">
+		<div class="w-full">
+			<div class=" text-sm mb-2">{$i18n.t('Prompt Content')}</div>
+			<div class=" w-full mt-1">
+				<textarea
+					class="w-full resize-none rounded-lg py-2 px-4 text-sm bg-gray-50 dark:text-gray-300 dark:bg-gray-850 outline-hidden"
+					rows="6"
+					bind:value={content}
+					placeholder={$i18n.t('Write a summary in 50 words that summarizes [topic or keyword].')}
+					required
+				/>
+			</div>
+			
+			<div class="text-xs text-gray-400 dark:text-gray-500 mt-2">
+				ⓘ {$i18n.t('Format your variables using brackets like this:')}&nbsp;<span
+					class=" text-gray-600 dark:text-gray-300 font-medium"
+					>{'{{'}{$i18n.t('variable')}{'}}'}</span
+				>.
+				{$i18n.t('Make sure to enclose them with')}
+				<span class=" text-gray-600 dark:text-gray-300 font-medium">{'{{'}</span>
+				{$i18n.t('and')}
+				<span class=" text-gray-600 dark:text-gray-300 font-medium">{'}}'}</span>.
+			</div>
+
+			<div class="text-xs text-gray-400 dark:text-gray-500">
+				{$i18n.t('Utilize')}<span class=" text-gray-600 dark:text-gray-300 font-medium">
+					{` {{CLIPBOARD}}`}</span
+				>
+				{$i18n.t('variable to have them replaced with clipboard content.')}
+			</div>
+		</div>
+
+		<div class="mt-2">
+			<div class="px-3 py-2 bg-gray-50 dark:bg-gray-950 rounded-lg">
+				<AccessControl
+					bind:accessControl
+					accessRoles={['read', 'write']}
+					allowPublic={$user?.permissions?.sharing?.public_prompts || $user?.role === 'admin'}
+				/>
+			</div>
+		</div>
+
+		<div class="flex justify-center mt-8 mb-12">
 			<button
-				class=" text-sm w-full lg:w-fit px-4 py-2 transition rounded-lg {loading
-					? ' cursor-not-allowed bg-black hover:bg-gray-900 text-white dark:bg-white dark:hover:bg-gray-100 dark:text-black'
-					: 'bg-black hover:bg-gray-900 text-white dark:bg-white dark:hover:bg-gray-100 dark:text-black'} flex w-full justify-center"
+				class="w-full bg-gray-800 dark:bg-gray-700 text-white py-3 px-4 rounded-lg font-medium hover:bg-gray-900 dark:hover:bg-gray-600 transition-colors {loading ? 'cursor-not-allowed' : ''}"
 				type="submit"
 				disabled={loading}
 			>
-				<div class=" self-center font-medium">{$i18n.t('Save & Create')}</div>
+				{$i18n.t('Save')}
 
 				{#if loading}
 					<div class="ml-1.5 self-center">

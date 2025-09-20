@@ -622,18 +622,31 @@
 	}}
 />
 
-<div class="flex flex-col w-full translate-y-1" id="collection-container">
-	{#if id && knowledge}
-		<AccessControlModal
-			bind:show={showAccessControlModal}
-			bind:accessControl={knowledge.access_control}
-			allowPublic={$user?.permissions?.sharing?.public_knowledge || $user?.role === 'admin'}
-			onChange={() => {
-				changeDebounceHandler();
-			}}
-			accessRoles={['read', 'write']}
-		/>
-		<div class="w-full mb-2.5">
+<div class="w-full max-h-full">
+	<button
+		class="flex items-center text-sm text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200"
+		on:click={() => {
+			goto('/workspace/knowledge');
+		}}
+	>
+		<svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+			<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
+		</svg>
+		Back
+	</button>
+
+	<div class="flex flex-col max-w-4xl mx-auto mt-10 mb-10" id="collection-container">
+		{#if id && knowledge}
+			<AccessControlModal
+				bind:show={showAccessControlModal}
+				bind:accessControl={knowledge.access_control}
+				allowPublic={$user?.permissions?.sharing?.public_knowledge || $user?.role === 'admin'}
+				onChange={() => {
+					changeDebounceHandler();
+				}}
+				accessRoles={['read', 'write']}
+			/>
+			<div class="w-full mb-2.5">
 			<div class=" flex w-full">
 				<div class="flex-1">
 					<div class="flex items-center justify-between w-full px-0.5 mb-1">
@@ -881,7 +894,8 @@
 				</div>
 			</div>
 		</div>
-	{:else}
-		<Spinner />
-	{/if}
+		{:else}
+			<Spinner />
+		{/if}
+	</div>
 </div>

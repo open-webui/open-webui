@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { onMount, getContext } from 'svelte';
 	import { WEBUI_NAME, showSidebar, functions } from '$lib/stores';
+	import CerebraLogo from '$lib/components/icons/CerebraLogo.svelte';
 	import MenuLines from '$lib/components/icons/MenuLines.svelte';
 	import { page } from '$app/stores';
 
@@ -25,15 +26,15 @@
 			<div class="{$showSidebar ? 'md:hidden' : ''} flex flex-none items-center self-end">
 				<button
 					id="sidebar-toggle-button"
-					class="cursor-pointer p-1.5 flex rounded-xl hover:bg-gray-100 dark:hover:bg-gray-850 transition"
+					class="flex items-center rounded-xl px-2 py-1 hover:bg-gray-100 dark:hover:bg-gray-900 transition"
 					on:click={() => {
 						showSidebar.set(!$showSidebar);
 					}}
 					aria-label="Toggle Sidebar"
 				>
-					<div class=" m-auto self-center">
-						<MenuLines />
-					</div>
+					<!-- Cerebra Logo (PNG with theme switching) -->
+					<CerebraLogo className="size-10 mr-2" />
+					<span class="font-semibold text-xl">CerebraUI</span>
 				</button>
 			</div>
 

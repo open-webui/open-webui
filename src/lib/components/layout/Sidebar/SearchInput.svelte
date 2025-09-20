@@ -4,7 +4,7 @@
 	import { getContext, createEventDispatcher, onMount, onDestroy, tick } from 'svelte';
 	import { fade } from 'svelte/transition';
 	import XMark from '$lib/components/icons/XMark.svelte';
-	import SearchIcon from '$lib/components/icons/SearchIcon.svelte';
+	import Search from '$lib/components/icons/Search.svelte';
 
 	const dispatch = createEventDispatcher();
 	const i18n = getContext('i18n');
@@ -91,11 +91,11 @@
 <div class="px-1 mb-1 flex justify-center space-x-2 relative z-10" id="search-container">
 	<div class="flex w-full rounded-xl" id="chat-search">
 		<div class="self-center pl-3 py-2 rounded-l-xl bg-transparent">
-			<SearchIcon className="size-5 text-gray-900 dark:text-white" strokeWidth="1.8" />
+			<Search className="size-5 text-gray-900 dark:text-white" strokeWidth="1.8" />
 		</div>
 
 		<input
-			class="w-full rounded-r-xl py-1.5 pl-2.5 text-sm bg-transparent text-gray-500 dark:text-gray-500 outline-hidden"
+			class="w-full rounded-r-xl py-1.5 pl-2 text-sm bg-transparent text-gray-500 dark:text-gray-500 outline-hidden"
 			placeholder={placeholder ? placeholder : $i18n.t('Search')}
 			bind:value
 			on:input={() => {

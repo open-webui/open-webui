@@ -11,6 +11,7 @@
 	import Tooltip from '$lib/components/common/Tooltip.svelte';
 	import LockClosed from '$lib/components/icons/LockClosed.svelte';
 	import AccessControlModal from '../common/AccessControlModal.svelte';
+	import AccessControl from '../common/AccessControl.svelte';
 	import { user } from '$lib/stores';
 
 	let formElement = null;
@@ -192,100 +193,79 @@ class Tools:
 	allowPublic={$user?.permissions?.sharing?.public_tools || $user?.role === 'admin'}
 />
 
-<div class=" flex flex-col justify-between w-full overflow-y-auto h-full">
-	<div class="mx-auto w-full md:px-0 h-full">
-		<form
-			bind:this={formElement}
-			class=" flex flex-col max-h-[100dvh] h-full"
-			on:submit|preventDefault={() => {
-				if (edit) {
-					submitHandler();
-				} else {
-					showConfirm = true;
-				}
-			}}
-		>
-			<div class="flex flex-col flex-1 overflow-auto h-0 rounded-lg">
-				<div class="w-full mb-2 flex flex-col gap-0.5">
-					<div class="flex w-full items-center">
-						<div class=" shrink-0 mr-2">
-							<Tooltip content={$i18n.t('Back')}>
-								<button
-									class="w-full text-left text-sm py-1.5 px-1 rounded-lg dark:text-gray-300 dark:hover:text-white hover:bg-black/5 dark:hover:bg-gray-850"
-									on:click={() => {
-										goto('/workspace/tools');
-									}}
-									type="button"
-								>
-									<ChevronLeft strokeWidth="2.5" />
-								</button>
-							</Tooltip>
-						</div>
+<div class="w-full max-h-full">
+	<button
+		class="flex items-center text-sm text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200"
+		on:click={() => {
+			window.history.back();
+		}}
+	>
+		<svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+			<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
+		</svg>
+		Back
+	</button>
 
-						<div class="flex-1">
-							<Tooltip content={$i18n.t('e.g. My Tools')} placement="top-start">
-								<input
-									class="w-full text-2xl font-medium bg-transparent outline-hidden font-primary"
-									type="text"
-									placeholder={$i18n.t('Tool Name')}
-									bind:value={name}
-									required
-								/>
-							</Tooltip>
-						</div>
+	<form
+		bind:this={formElement}
+		class="flex flex-col max-w-4xl mx-auto mt-10 mb-10"
+		on:submit|preventDefault={() => {
+			if (edit) {
+				submitHandler();
+			} else {
+				showConfirm = true;
+			}
+		}}
+	>
+		<div class=" w-full flex flex-col justify-center">
 
-						<div class="self-center shrink-0">
-							<button
-								class="bg-gray-50 hover:bg-gray-100 text-black dark:bg-gray-850 dark:hover:bg-gray-800 dark:text-white transition px-2 py-1 rounded-full flex gap-1 items-center"
-								type="button"
-								on:click={() => {
-									showAccessControlModal = true;
-								}}
-							>
-								<LockClosed strokeWidth="2.5" className="size-3.5" />
-
-								<div class="text-sm font-medium shrink-0">
-									{$i18n.t('Access')}
-								</div>
-							</button>
-						</div>
-					</div>
-
-					<div class=" flex gap-2 px-1 items-center">
-						{#if edit}
-							<div class="text-sm text-gray-500 shrink-0">
-								{id}
-							</div>
-						{:else}
-							<Tooltip className="w-full" content={$i18n.t('e.g. my_tools')} placement="top-start">
-								<input
-									class="w-full text-sm disabled:text-gray-500 bg-transparent outline-hidden"
-									type="text"
-									placeholder={$i18n.t('Tool ID')}
-									bind:value={id}
-									required
-									disabled={edit}
-								/>
-							</Tooltip>
-						{/if}
-
-						<Tooltip
-							className="w-full self-center items-center flex"
-							content={$i18n.t('e.g. Tools for performing various operations')}
-							placement="top-start"
-						>
-							<input
-								class="w-full text-sm bg-transparent outline-hidden"
-								type="text"
-								placeholder={$i18n.t('Tool Description')}
-								bind:value={meta.description}
-								required
-							/>
-						</Tooltip>
+			<div class="w-full grid grid-cols-1 md:grid-cols-2 gap-4">
+				<div class="w-full">
+					<div class=" text-sm mb-2">{$i18n.t('Title')}</div>
+					<div class="w-full mt-1">
+						<input
+							class="w-full rounded-lg py-2 px-4 text-sm bg-gray-50 dark:text-gray-300 dark:bg-gray-850 outline-hidden"
+							type="text"
+							bind:value={name}
+							placeholder={$i18n.t('Tool Name')}
+							required
+						/>
 					</div>
 				</div>
 
-				<div class="mb-2 flex-1 overflow-auto h-0 rounded-lg">
+				<div class="w-full">
+					<div class=" text-sm mb-2">{$i18n.t('Tool ID')}</div>
+					<div class="w-full mt-1">
+						<input
+							class="w-full rounded-lg py-2 px-4 text-sm bg-gray-50 dark:text-gray-300 dark:bg-gray-850 outline-hidden"
+							type="text"
+							bind:value={id}
+							placeholder={$i18n.t('Tool ID')}
+							required
+							disabled={edit}
+						/>
+					</div>
+				</div>
+			</div>
+
+			<div class="w-full mt-4">
+				<div class=" text-sm mb-2">{$i18n.t('Description')}</div>
+				<div class="w-full mt-1">
+					<input
+						class="w-full rounded-lg py-2 px-4 text-sm bg-gray-50 dark:text-gray-300 dark:bg-gray-850 outline-hidden"
+						type="text"
+						bind:value={meta.description}
+						placeholder={$i18n.t('Tool Description')}
+						required
+					/>
+				</div>
+			</div>
+		</div>
+
+		<div class="w-full">
+			<div class=" text-sm mb-2">{$i18n.t('Tool Content')}</div>
+			<div class=" w-full mt-1">
+				<div class="w-full rounded-lg bg-gray-50 dark:bg-gray-850 h-[400px] overflow-hidden">
 					<CodeEditor
 						bind:this={codeEditor}
 						value={content}
@@ -301,28 +281,66 @@ class Tools:
 						}}
 					/>
 				</div>
-
-				<div class="pb-3 flex justify-between">
-					<div class="flex-1 pr-3">
-						<div class="text-xs text-gray-500 line-clamp-2">
-							<span class=" font-semibold dark:text-gray-200">{$i18n.t('Warning:')}</span>
-							{$i18n.t('Tools are a function calling system with arbitrary code execution')} <br />—
-							<span class=" font-medium dark:text-gray-400"
-								>{$i18n.t(`don't install random tools from sources you don't trust.`)}</span
-							>
-						</div>
-					</div>
-
-					<button
-						class="px-3.5 py-1.5 text-sm font-medium bg-black hover:bg-gray-900 text-white dark:bg-white dark:text-black dark:hover:bg-gray-100 transition rounded-full"
-						type="submit"
-					>
-						{$i18n.t('Save')}
-					</button>
-				</div>
 			</div>
-		</form>
-	</div>
+			
+			<div class="text-xs text-gray-400 dark:text-gray-500 mt-2">
+				ⓘ {$i18n.t('Tools are a function calling system with arbitrary code execution')}.
+				{$i18n.t('Make sure to add type hints and descriptions for your functions')}.
+			</div>
+
+			<div class="text-xs text-gray-400 dark:text-gray-500">
+				{$i18n.t('Do not install tools from sources you do not fully trust')}.
+			</div>
+		</div>
+
+		<div class="mt-2">
+			<div class="px-3 py-2 bg-gray-50 dark:bg-gray-950 rounded-lg">
+				<AccessControl
+					bind:accessControl
+					accessRoles={['read', 'write']}
+					allowPublic={$user?.permissions?.sharing?.public_tools || $user?.role === 'admin'}
+				/>
+			</div>
+		</div>
+
+		<div class="flex justify-center mt-8 mb-12">
+			<button
+				class="w-full bg-gray-800 dark:bg-gray-700 text-white py-3 px-4 rounded-lg font-medium hover:bg-gray-900 dark:hover:bg-gray-600 transition-colors {loading ? 'cursor-not-allowed' : ''}"
+				type="submit"
+				disabled={loading}
+			>
+				{$i18n.t('Save')}
+
+				{#if loading}
+					<div class="ml-1.5 self-center">
+						<svg
+							class=" w-4 h-4"
+							viewBox="0 0 24 24"
+							fill="currentColor"
+							xmlns="http://www.w3.org/2000/svg"
+							><style>
+								.spinner_ajPY {
+									transform-origin: center;
+									animation: spinner_AtaB 0.75s infinite linear;
+								}
+								@keyframes spinner_AtaB {
+									100% {
+										transform: rotate(360deg);
+									}
+								}
+							</style><path
+								d="M12,1A11,11,0,1,0,23,12,11,11,0,0,0,12,1Zm0,19a8,8,0,1,1,8-8A8,8,0,0,1,12,20Z"
+								opacity=".25"
+							/><path
+								d="M10.14,1.16a11,11,0,0,0-9,8.92A1.59,1.59,0,0,0,2.46,12,1.52,1.52,0,0,0,4.11,10.7a8,8,0,0,1,6.66-6.61A1.42,1.42,0,0,0,12,2.69h0A1.57,1.57,0,0,0,10.14,1.16Z"
+								class="spinner_ajPY"
+							/></svg
+						>
+					</div>
+				{/if}
+			</button>
+		</div>
+	</form>
 </div>
 
 <ConfirmDialog
