@@ -15,7 +15,8 @@
 	} from '$lib/apis/prompts';
 
 	import PromptMenu from './Prompts/PromptMenu.svelte';
-	import PencilSquare from '../icons/PencilSquare.svelte';
+	import Pencil from '../icons/Pencil.svelte';
+	import PromptsIcon from '../icons/PromptsIcon.svelte';
 	import EllipsisHorizontal from '../icons/EllipsisHorizontal.svelte';
 	import DeleteConfirmDialog from '$lib/components/common/ConfirmDialog.svelte';
 	import Search from '../icons/Search.svelte';
@@ -203,9 +204,7 @@
 						<div class="flex flex-col w-full overflow-hidden">
 							<!-- 第一行：图标 + 名称 -->
 							<div class="flex items-center gap-2 mb-1">
-								<svg class="w-5 h-5 text-gray-900 dark:text-gray-100 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-									<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 8h10M7 12h4m1 8l-4-4H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-3l-4 4z" />
-								</svg>
+								<PromptsIcon className="w-5 h-5 text-gray-900 dark:text-gray-100 flex-shrink-0" />
 								<div class=" text-base font-medium line-clamp-1 text-gray-900 dark:text-gray-100">
 									{prompt.title}
 								</div>
@@ -241,7 +240,7 @@
 								class="self-center w-fit text-sm px-2 py-2 dark:text-gray-300 dark:hover:text-white hover:bg-black/5 dark:hover:bg-white/5 rounded-xl"
 								href={`/workspace/prompts/edit?command=${encodeURIComponent(prompt.command)}`}
 							>
-								<PencilSquare className="w-4 h-4" strokeWidth="1.5" />
+								<Pencil className="w-4 h-4" strokeWidth="1.5" />
 							</a>
 
 							<PromptMenu

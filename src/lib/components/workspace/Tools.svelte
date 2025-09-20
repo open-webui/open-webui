@@ -17,7 +17,7 @@
 		getTools
 	} from '$lib/apis/tools';
 	import ArrowDownTray from '../icons/ArrowDownTray.svelte';
-	import PencilSquare from '../icons/PencilSquare.svelte';
+	import Pencil from '../icons/Pencil.svelte';
 	import ToolsIcon from '../icons/ToolsIcon.svelte';
 	import Tooltip from '../common/Tooltip.svelte';
 	import ConfirmDialog from '../common/ConfirmDialog.svelte';
@@ -309,7 +309,7 @@
 								class="self-center w-fit text-sm px-2 py-2 dark:text-gray-300 dark:hover:text-white hover:bg-black/5 dark:hover:bg-white/5 rounded-xl"
 								href={`/workspace/tools/edit?id=${encodeURIComponent(tool.id)}`}
 							>
-								<PencilSquare className="w-4 h-4" strokeWidth="1.5" />
+								<Pencil className="w-4 h-4" strokeWidth="1.5" />
 							</a>
 
 							{#if shiftKey}

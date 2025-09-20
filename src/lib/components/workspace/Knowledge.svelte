@@ -24,7 +24,7 @@
 	import Search from '../icons/Search.svelte';
 	import Plus from '../icons/Plus.svelte';
 	import EllipsisHorizontal from '../icons/EllipsisHorizontal.svelte';
-	import PencilSquare from '../icons/PencilSquare.svelte';
+	import Pencil from '../icons/Pencil.svelte';
 	import Spinner from '../common/Spinner.svelte';
 	import { capitalizeFirstLetter } from '$lib/utils';
 	import Tooltip from '../common/Tooltip.svelte';
@@ -181,7 +181,7 @@
 									class="self-center w-fit text-sm px-2 py-2 dark:text-gray-300 dark:hover:text-white hover:bg-black/5 dark:hover:bg-white/5 rounded-xl"
 									href={`/workspace/knowledge/${item.id}`}
 								>
-									<PencilSquare className="w-4 h-4" strokeWidth="1.5" />
+									<Pencil className="w-4 h-4" strokeWidth="1.5" />
 								</a>
 							{/if}
 							<ItemMenu
