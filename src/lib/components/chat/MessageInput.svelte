@@ -39,7 +39,8 @@
 		getFormattedTime,
 		getUserPosition,
 		getUserTimezone,
-		getWeekday
+		getWeekday,
+		isValidHttpUrl
 	} from '$lib/utils';
 	import { uploadFile } from '$lib/apis/files';
 	import { generateAutoCompletion } from '$lib/apis';
@@ -73,6 +74,7 @@
 	import IntegrationsMenu from './MessageInput/IntegrationsMenu.svelte';
 	import Component from '../icons/Component.svelte';
 	import PlusAlt from '../icons/PlusAlt.svelte';
+	import AttachWebsiteModal from './MessageInput/AttachWebsiteModal.svelte';
 
 	import { KokoroWorker } from '$lib/workers/KokoroWorker';
 
@@ -111,6 +113,22 @@
 	let inputVariablesModalCallback = (variableValues) => {};
 	let inputVariables = {};
 	let inputVariableValues = {};
+
+	let showAttachWebsiteModal = false;
+
+	const addUrlHandler = (url: string) => {
+		if (isValidHttpUrl(url)) {
+			dispatch('upload', {
+				type:
+					url.startsWith('https://www.youtube.com') || url.startsWith('https://youtu.be')
+						? 'youtube'
+						: 'web',
+				data: url
+			});
+		} else {
+			toast.error($i18n.t('Oops! Looks like the URL is invalid. Please double-check and try again.'));
+		}
+	};
 
 	$: onChange({
 		prompt,
@@ -925,6 +943,7 @@
 
 <FilesOverlay show={dragged} />
 <ToolServersModal bind:show={showTools} {selectedToolIds} />
+<AttachWebsiteModal bind:show={showAttachWebsiteModal} {addUrlHandler} />
 
 <InputVariablesModal
 	bind:show={showInputVariablesModal}
@@ -1413,6 +1432,9 @@
 												} catch (error) {
 													console.error('OneDrive Error:', error);
 												}
+											}}
+											on:openAttachWebsiteModal={() => {
+												showAttachWebsiteModal = true;
 											}}
 											onClose={async () => {
 												await tick();
