@@ -53,8 +53,6 @@
 	"type": "module",
 	"dependencies": {
 		"@azure/msal-browser": "^4.5.0",
-		"@codemirror/lang-javascript": "^6.2.2",
-		"@codemirror/lang-python": "^6.1.6",
 		"@codemirror/language-data": "^6.5.1",
 		"@codemirror/theme-one-dark": "^6.1.2",
 		"@floating-ui/dom": "^1.7.2",
@@ -66,7 +64,7 @@
 		"@sveltejs/svelte-virtual-list": "^3.0.1",
 		"@tiptap/core": "^3.0.7",
 		"@tiptap/extension-bubble-menu": "^2.26.1",
-		"@tiptap/extension-code-block-lowlight": "^3.0.7",
+		"@tiptap/extension-code-block": "^3.4.4",
 		"@tiptap/extension-drag-handle": "^3.0.7",
 		"@tiptap/extension-file-handler": "^3.0.7",
 		"@tiptap/extension-floating-menu": "^2.26.1",
