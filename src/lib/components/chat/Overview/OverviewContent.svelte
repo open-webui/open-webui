@@ -12,10 +12,10 @@
 
 	import '@xyflow/svelte/dist/style.css';
 
-	import CustomNode from './Overview/Node.svelte';
-	import Flow from './Overview/Flow.svelte';
-	import XMark from '../icons/XMark.svelte';
-	import ArrowLeft from '../icons/ArrowLeft.svelte';
+	import CustomNode from './Node.svelte';
+	import Flow from './Flow.svelte';
+	import XMark from '../../icons/XMark.svelte';
+	import ArrowLeft from '../../icons/ArrowLeft.svelte';
 
 	const { width, height } = useStore();
 
