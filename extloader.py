@@ -38,7 +38,7 @@ async def process_document(request: Request):
     filename = request.headers.get("x-filename", "unknown_file")
     file_ext = os.path.splitext(filename)[1].lower()
     
-    # Fixed: Use the same header processing logic as the original
+    # Extract image flag - EXACTLY like the original working version
     extract_images_flag = request.headers.get("x-extract-images", "false").lower()
     
     # Debug logging
@@ -52,20 +52,23 @@ async def process_document(request: Request):
     full_text = ""
     page_count = 0
 
+    # PDF processing - use original working logic
     if file_ext == ".pdf":
         logger.info("Taking PDF processing path with PyMuPDF")
         try:
+            # Open the PDF from the in-memory byte stream - EXACTLY like original
             doc = fitz.open(stream=file_bytes, filetype="pdf")
             page_count = doc.page_count
             
-            # Extract text
+            # 1. Extract all text content from the document - EXACTLY like original
             for page_num in range(len(doc)):
                 page = doc.load_page(page_num)
                 full_text += page.get_text() + "\n\n"
 
-            # Extract images - using the original working logic
+            # 2. Extract images if the flag is set - EXACTLY like original
             if extract_images_flag == 'true':
-                logger.info("Starting image extraction for PDF...")
+                logger.info("Starting image extraction...")
+                # Iterate through all objects in the PDF to find images - EXACTLY like original
                 for page_num in range(len(doc)):
                     image_list = doc.get_page_images(page_num, full=True)
                     for img_index, img in enumerate(image_list):
@@ -73,15 +76,23 @@ async def process_document(request: Request):
                         base_image = doc.extract_image(xref)
                         image_bytes = base_image["image"]
                         image_ext = base_image["ext"]
+
+                        # Encode the image bytes to a Base64 string with a data URI prefix - EXACTLY like original
                         encoded_string = base64.b64encode(image_bytes).decode("utf-8")
                         data_uri = f"data:image/{image_ext};base64,{encoded_string}"
                         base64_images.append(data_uri)
-                logger.info(f"Extracted {len(base64_images)} images from PDF.")
-                
+                logger.info(f"Extracted {len(base64_images)} images.")
+
+            doc.close()  # Close the document
+
         except Exception as e:
-            logger.error(f"Error processing PDF with PyMuPDF: {e}")
-            raise HTTPException(status_code=500, detail=f"Failed to process PDF file: {e}")
+            logger.error(f"Failed to process PDF '{filename}': {e}")
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail=f"An error occurred while processing the PDF: {e}",
+            )
             
+    # Non-PDF processing - use Azure Document Intelligence
     else:
         logger.info(f"Taking Azure Document Intelligence path for file extension: {file_ext}")
         
@@ -119,14 +130,22 @@ async def process_document(request: Request):
                 full_text = "\n\n".join([doc.page_content for doc in documents])
                 # page_count can be approximated by the number of documents, though it may not be accurate
                 page_count = len(documents)
+                logger.info(f"Successfully processed document with Azure Document Intelligence. Pages: {page_count}")
+            else:
+                logger.warning("No content extracted from document with Azure Document Intelligence")
+                full_text = ""
+                page_count = 0
             
         except Exception as e:
             logger.error(f"Error processing with Azure Document Intelligence: {e}")
             raise HTTPException(status_code=500, detail=f"Failed to process document with Azure: {e}")
         finally:
-            os.remove(temp_file_path) # Clean up the temporary file
+            try:
+                os.remove(temp_file_path) # Clean up the temporary file
+            except Exception as cleanup_error:
+                logger.warning(f"Failed to clean up temporary file: {cleanup_error}")
 
-    # Prepare the final JSON response payload
+    # Prepare the final JSON response payload - EXACTLY like original
     response_payload = {
         "page_content": full_text.strip(),
         "metadata": {
@@ -136,9 +155,26 @@ async def process_document(request: Request):
         "images": base64_images,
     }
 
+    logger.info(f"Returning response with {len(full_text)} chars of text and {len(base64_images)} images")
     return JSONResponse(content=response_payload)
 
 @app.get("/")
 def read_root():
     """A simple root endpoint to confirm the server is running."""
-    return {"status": "ok", "message": "Content Processing Engine is running."}
+    azure_configured = bool(os.getenv("DOCUMENT_INTELLIGENCE_ENDPOINT"))
+    return {
+        "status": "ok", 
+        "message": "Content Processing Engine is running.",
+        "azure_configured": azure_configured,
+        "pdf_processing": "PyMuPDF",
+        "other_documents": "Azure Document Intelligence" if azure_configured else "Not configured"
+    }
+
+@app.get("/health")
+def health_check():
+    """Health check endpoint."""
+    return {
+        "status": "healthy",
+        "azure_endpoint_configured": bool(os.getenv("DOCUMENT_INTELLIGENCE_ENDPOINT")),
+        "azure_key_configured": bool(os.getenv("DOCUMENT_INTELLIGENCE_KEY"))
+    }
