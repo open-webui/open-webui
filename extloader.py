@@ -25,6 +25,7 @@ async def process_document(request: Request):
     Processes an uploaded document to extract text and, optionally, images.
     """
     logger.info("Received request to /process endpoint.")
+    logger.info("=== DOCUMENT PROCESSING REQUEST RECEIVED ===")
     logger.info(f"All headers: {dict(request.headers)}")
     
     file_bytes = await request.body()
@@ -36,25 +37,34 @@ async def process_document(request: Request):
 
     filename = request.headers.get("x-filename", "unknown_file")
     file_ext = os.path.splitext(filename)[1].lower()
-    extract_images_flag = request.headers.get("x-extract-images", "false").lower() == 'true'
-
-    logger.info(f"Processing file: {filename}")
-    logger.info(f"Image extraction enabled: {extract_images_flag}")
+    
+    # Fixed: Use the same header processing logic as the original
+    extract_images_flag = request.headers.get("x-extract-images", "false").lower()
+    
+    # Debug logging
+    logger.info(f"=== DEBUG: filename='{filename}', file_ext='{file_ext}'")
+    logger.info(f"Raw X-Extract-Images header: {request.headers.get('x-extract-images')}")
+    logger.info(f"Processed extract_images_flag: {extract_images_flag}")
+    logger.info(f"Will extract images: {extract_images_flag == 'true'}")
+    logger.info(f"Will take PDF path: {file_ext == '.pdf'}")
 
     base64_images = []
     full_text = ""
     page_count = 0
 
     if file_ext == ".pdf":
-        logger.info("Processing PDF with PyMuPDF.")
+        logger.info("Taking PDF processing path with PyMuPDF")
         try:
             doc = fitz.open(stream=file_bytes, filetype="pdf")
             page_count = doc.page_count
+            
+            # Extract text
             for page_num in range(len(doc)):
                 page = doc.load_page(page_num)
                 full_text += page.get_text() + "\n\n"
 
-            if extract_images_flag:
+            # Extract images - using the original working logic
+            if extract_images_flag == 'true':
                 logger.info("Starting image extraction for PDF...")
                 for page_num in range(len(doc)):
                     image_list = doc.get_page_images(page_num, full=True)
@@ -67,11 +77,13 @@ async def process_document(request: Request):
                         data_uri = f"data:image/{image_ext};base64,{encoded_string}"
                         base64_images.append(data_uri)
                 logger.info(f"Extracted {len(base64_images)} images from PDF.")
+                
         except Exception as e:
             logger.error(f"Error processing PDF with PyMuPDF: {e}")
             raise HTTPException(status_code=500, detail=f"Failed to process PDF file: {e}")
+            
     else:
-        logger.info(f"Processing non-PDF file ({filename}) with Azure Document Intelligence.")
+        logger.info(f"Taking Azure Document Intelligence path for file extension: {file_ext}")
         
         # Azure loader requires a file path, so we save the content to a temporary file
         with tempfile.NamedTemporaryFile(delete=False, suffix=file_ext) as temp_file:
@@ -114,6 +126,7 @@ async def process_document(request: Request):
         finally:
             os.remove(temp_file_path) # Clean up the temporary file
 
+    # Prepare the final JSON response payload
     response_payload = {
         "page_content": full_text.strip(),
         "metadata": {
@@ -124,3 +137,8 @@ async def process_document(request: Request):
     }
 
     return JSONResponse(content=response_payload)
+
+@app.get("/")
+def read_root():
+    """A simple root endpoint to confirm the server is running."""
+    return {"status": "ok", "message": "Content Processing Engine is running."}
