@@ -2181,6 +2181,12 @@ ONEDRIVE_CLIENT_ID = PersistentConfig(
     os.environ.get("ONEDRIVE_CLIENT_ID", ""),
 )
 
+ONEDRIVE_PERSONAL_CLIENT_ID = PersistentConfig(
+    "ONEDRIVE_PERSONAL_CLIENT_ID",
+    "onedrive.personal_client_id",
+    os.environ.get("ONEDRIVE_PERSONAL_CLIENT_ID", ""),
+)
+
 ONEDRIVE_SHAREPOINT_URL = PersistentConfig(
     "ONEDRIVE_SHAREPOINT_URL",
     "onedrive.sharepoint_url",
