@@ -745,7 +745,7 @@
 				</Tooltip>
 
 				<div
-					class=" bg-linear-to-b from-white dark:from-gray-950 to-transparent from-50% pointer-events-none absolute inset-0 -z-10"
+					class=" bg-linear-to-b from-gray-50 dark:from-gray-950 to-transparent from-50% pointer-events-none absolute inset-0 -z-10"
 				></div>
 			</div>
 
@@ -1163,7 +1163,7 @@
 
 			<div class="px-1.5 pt-1.5 pb-2 sticky bottom-0 z-10 -mt-12 sidebar">
 				<div
-					class=" bg-linear-to-t from-white dark:from-gray-950 to-transparent from-50% pointer-events-none absolute inset-0 -z-10"
+					class=" bg-linear-to-t from-gray-50 dark:from-gray-950 to-transparent from-50% pointer-events-none absolute inset-0 -z-10"
 				></div>
 				<div class="flex flex-col font-primary">
 					{#if $user !== undefined && $user !== null}
