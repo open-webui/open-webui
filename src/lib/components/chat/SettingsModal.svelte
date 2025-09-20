@@ -569,9 +569,9 @@
 	});
 </script>
 
-<Modal size="lg" bind:show>
+<Modal size="xl" bind:show>
 	<div class="text-gray-700 dark:text-gray-100 mx-1">
-		<div class=" flex justify-between dark:text-gray-300 px-5 pt-4 pb-1">
+		<div class=" flex justify-between dark:text-gray-300 px-5 pt-4.5 pb-1.5">
 			<div class=" text-lg font-medium self-center">{$i18n.t('Settings')}</div>
 			<button
 				aria-label={$i18n.t('Close settings modal')}
@@ -584,11 +584,11 @@
 			</button>
 		</div>
 
-		<div class="flex flex-col md:flex-row w-full px-4 pt-1 pb-4 md:space-x-4">
+		<div class="flex flex-col md:flex-row w-full px-4.5 pt-1 pb-4 md:space-x-4">
 			<div
 				role="tablist"
 				id="settings-tabs-container"
-				class="tabs flex flex-row overflow-x-auto gap-2.5 md:gap-1 md:flex-col flex-1 md:flex-none md:w-40 md:min-h-[32rem] md:max-h-[32rem] dark:text-gray-200 text-sm text-left mb-1 md:mb-0 -translate-y-1"
+				class="tabs flex flex-row overflow-x-auto gap-2.5 md:gap-1 md:flex-col flex-1 md:flex-none md:w-40 md:min-h-[36rem] md:max-h-[36rem] dark:text-gray-200 text-sm text-left mb-1 md:mb-0 -translate-y-1"
 			>
 				<div class="hidden md:flex w-full rounded-xl -mb-1 px-[0.5px] gap-2" id="settings-search">
 					<div class="self-center rounded-l-xl bg-transparent">
@@ -855,7 +855,7 @@
 					</a>
 				{/if}
 			</div>
-			<div class="flex-1 md:min-h-[32rem] max-h-[32rem]">
+			<div class="flex-1 md:min-h-[36rem] max-h-[36rem]">
 				{#if selectedTab === 'general'}
 					<General
 						{getModels}
