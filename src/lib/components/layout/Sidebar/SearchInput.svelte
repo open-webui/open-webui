@@ -266,7 +266,7 @@
 	{#if focused && (filteredOptions.length > 0 || filteredItems.length > 0)}
 		<!-- svelte-ignore a11y-no-static-element-interactions -->
 		<div
-			class="absolute top-0 mt-8 left-0 right-1 border border-gray-100 dark:border-gray-900 bg-gray-50 dark:bg-gray-950 rounded-lg z-10 shadow-lg"
+			class="absolute top-0 mt-8 left-0 right-1 border border-gray-100 dark:border-gray-900 bg-gray-50 dark:bg-gray-950 rounded-2xl z-10 shadow-lg"
 			id="search-options-container"
 			in:fade={{ duration: 50 }}
 			on:mouseenter={() => {
@@ -278,7 +278,7 @@
 				selectedIdx = 0;
 			}}
 		>
-			<div class="px-2 py-2 text-xs group">
+			<div class="px-3 py-2.5 text-xs group">
 				{#if filteredItems.length > 0}
 					<div class="px-1 font-medium dark:text-gray-300 text-gray-700 mb-1 capitalize">
 						{selectedOption}
@@ -297,7 +297,7 @@
 									const words = value.split(' ');
 
 									words.pop();
-									words.push(`${item.type}:${item.id} `);
+									words.push(`${item.type}:${item.id}`);
 
 									value = words.join(' ');
 
