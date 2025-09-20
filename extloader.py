@@ -47,6 +47,7 @@ async def process_document(request: Request):
     logger.info(f"Processed extract_images_flag: {extract_images_flag}")
     logger.info(f"Will extract images: {extract_images_flag == 'true'}")
     logger.info(f"Will take PDF path: {file_ext == '.pdf'}")
+    logger.info(f"File size: {len(file_bytes)} bytes")
 
     base64_images = []
     full_text = ""
@@ -82,6 +83,8 @@ async def process_document(request: Request):
                         data_uri = f"data:image/{image_ext};base64,{encoded_string}"
                         base64_images.append(data_uri)
                 logger.info(f"Extracted {len(base64_images)} images.")
+            else:
+                logger.info("No image extraction requested (X-Extract-Images != 'true')")
 
             doc.close()  # Close the document
 
@@ -156,6 +159,7 @@ async def process_document(request: Request):
     }
 
     logger.info(f"Returning response with {len(full_text)} chars of text and {len(base64_images)} images")
+    logger.info(f"Images array content preview: {[img[:50] + '...' for img in base64_images[:2]]}")
     return JSONResponse(content=response_payload)
 
 @app.get("/")
@@ -177,4 +181,17 @@ def health_check():
         "status": "healthy",
         "azure_endpoint_configured": bool(os.getenv("DOCUMENT_INTELLIGENCE_ENDPOINT")),
         "azure_key_configured": bool(os.getenv("DOCUMENT_INTELLIGENCE_KEY"))
+    }
+
+@app.get("/test-image-extraction")
+def test_image_extraction():
+    """Test endpoint to verify image extraction capability."""
+    return {
+        "status": "ready",
+        "message": "Send a PDF with 'X-Extract-Images: true' header to /process to test image extraction",
+        "pdf_processing": "PyMuPDF",
+        "expected_headers": {
+            "X-Filename": "your-file.pdf",
+            "X-Extract-Images": "true"
+        }
     }
