@@ -19,16 +19,6 @@ app = FastAPI(
 async def process_document(request: Request):
     """
     Processes an uploaded document to extract text and, optionally, images.
-
-    This endpoint expects the raw binary data of a file in the request body.
-    It reads custom headers to determine how to process the file.
-
-    Headers:
-        - X-Filename (str): The original name of the file.
-        - X-Extract-Images (str): Should be 'true' to enable image extraction.
-
-    Returns:
-        JSONResponse: A JSON object containing the extracted content.
     """
     logger.info("Received request to /process endpoint.")
     logger.info("=== DOCUMENT PROCESSING REQUEST RECEIVED ===")
