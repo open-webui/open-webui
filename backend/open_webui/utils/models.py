@@ -238,6 +238,12 @@ async def get_all_models(request, refresh: bool = False, user: UserModel = None)
                         or getattr(module, "icon_url", None)
                         or getattr(module, "icon", None),
                     ),
+                    "icon_dark": action.get(
+                        "icon_url_dark",
+                        function.meta.manifest.get("icon_url_dark", None)
+                        or getattr(module, "icon_url_dark", None)
+                        or action.get("icon_dark", None),
+                    ),
                 }
                 for action in actions
             ]
@@ -250,6 +256,8 @@ async def get_all_models(request, refresh: bool = False, user: UserModel = None)
                     "icon": function.meta.manifest.get("icon_url", None)
                     or getattr(module, "icon_url", None)
                     or getattr(module, "icon", None),
+                    "icon_dark": function.meta.manifest.get("icon_url_dark", None)
+                    or getattr(module, "icon_url_dark", None),
                 }
             ]
 
@@ -263,6 +271,8 @@ async def get_all_models(request, refresh: bool = False, user: UserModel = None)
                 "icon": function.meta.manifest.get("icon_url", None)
                 or getattr(module, "icon_url", None)
                 or getattr(module, "icon", None),
+                "icon_dark": function.meta.manifest.get("icon_url_dark", None)
+                or getattr(module, "icon_url_dark", None),
             }
         ]
 
