@@ -19,16 +19,21 @@ from fastapi import (
 from starlette.responses import Response, StreamingResponse
 
 
+from open_webui.constants import ERROR_MESSAGES
 from open_webui.socket.main import (
     get_event_call,
     get_event_emitter,
 )
 
 
+from open_webui.models.users import UserModel
 from open_webui.models.functions import Functions
 from open_webui.models.models import Models
 
-from open_webui.utils.plugin import load_function_module_by_id
+from open_webui.utils.plugin import (
+    load_function_module_by_id,
+    get_function_module_from_cache,
+)
 from open_webui.utils.tools import get_tools
 from open_webui.utils.access_control import has_access
 
@@ -43,7 +48,7 @@ from open_webui.utils.misc import (
 )
 from open_webui.utils.payload import (
     apply_model_params_to_body_openai,
-    apply_model_system_prompt_to_body,
+    apply_system_prompt_to_body,
 )
 
 
@@ -53,16 +58,23 @@ log.setLevel(SRC_LOG_LEVELS["MAIN"])
 
 
 def get_function_module_by_id(request: Request, pipe_id: str):
-    # Check if function is already loaded
-    if pipe_id not in request.app.state.FUNCTIONS:
-        function_module, _, _ = load_function_module_by_id(pipe_id)
-        request.app.state.FUNCTIONS[pipe_id] = function_module
-    else:
-        function_module = request.app.state.FUNCTIONS[pipe_id]
+    function_module, _, _ = get_function_module_from_cache(request, pipe_id)
 
     if hasattr(function_module, "valves") and hasattr(function_module, "Valves"):
+        Valves = function_module.Valves
         valves = Functions.get_function_valves_by_id(pipe_id)
-        function_module.valves = function_module.Valves(**(valves if valves else {}))
+
+        if valves:
+            try:
+                function_module.valves = Valves(
+                    **{k: v for k, v in valves.items() if v is not None}
+                )
+            except Exception as e:
+                log.exception(f"Error loading valves for function {pipe_id}: {e}")
+                raise e
+        else:
+            function_module.valves = Valves()
+
     return function_module
 
 
@@ -71,65 +83,69 @@ async def get_function_models(request):
     pipe_models = []
 
     for pipe in pipes:
-        function_module = get_function_module_by_id(request, pipe.id)
+        try:
+            function_module = get_function_module_by_id(request, pipe.id)
 
-        # Check if function is a manifold
-        if hasattr(function_module, "pipes"):
-            sub_pipes = []
-
-            # Handle pipes being a list, sync function, or async function
-            try:
-                if callable(function_module.pipes):
-                    if asyncio.iscoroutinefunction(function_module.pipes):
-                        sub_pipes = await function_module.pipes()
-                    else:
-                        sub_pipes = function_module.pipes()
-                else:
-                    sub_pipes = function_module.pipes
-            except Exception as e:
-                log.exception(e)
+            # Check if function is a manifold
+            if hasattr(function_module, "pipes"):
                 sub_pipes = []
 
-            log.debug(
-                f"get_function_models: function '{pipe.id}' is a manifold of {sub_pipes}"
-            )
+                # Handle pipes being a list, sync function, or async function
+                try:
+                    if callable(function_module.pipes):
+                        if asyncio.iscoroutinefunction(function_module.pipes):
+                            sub_pipes = await function_module.pipes()
+                        else:
+                            sub_pipes = function_module.pipes()
+                    else:
+                        sub_pipes = function_module.pipes
+                except Exception as e:
+                    log.exception(e)
+                    sub_pipes = []
 
-            for p in sub_pipes:
-                sub_pipe_id = f'{pipe.id}.{p["id"]}'
-                sub_pipe_name = p["name"]
+                log.debug(
+                    f"get_function_models: function '{pipe.id}' is a manifold of {sub_pipes}"
+                )
 
-                if hasattr(function_module, "name"):
-                    sub_pipe_name = f"{function_module.name}{sub_pipe_name}"
+                for p in sub_pipes:
+                    sub_pipe_id = f'{pipe.id}.{p["id"]}'
+                    sub_pipe_name = p["name"]
 
-                pipe_flag = {"type": pipe.type}
+                    if hasattr(function_module, "name"):
+                        sub_pipe_name = f"{function_module.name}{sub_pipe_name}"
+
+                    pipe_flag = {"type": pipe.type}
+
+                    pipe_models.append(
+                        {
+                            "id": sub_pipe_id,
+                            "name": sub_pipe_name,
+                            "object": "model",
+                            "created": pipe.created_at,
+                            "owned_by": "openai",
+                            "pipe": pipe_flag,
+                        }
+                    )
+            else:
+                pipe_flag = {"type": "pipe"}
+
+                log.debug(
+                    f"get_function_models: function '{pipe.id}' is a single pipe {{ 'id': {pipe.id}, 'name': {pipe.name} }}"
+                )
 
                 pipe_models.append(
                     {
-                        "id": sub_pipe_id,
-                        "name": sub_pipe_name,
+                        "id": pipe.id,
+                        "name": pipe.name,
                         "object": "model",
                         "created": pipe.created_at,
                         "owned_by": "openai",
                         "pipe": pipe_flag,
                     }
                 )
-        else:
-            pipe_flag = {"type": "pipe"}
-
-            log.debug(
-                f"get_function_models: function '{pipe.id}' is a single pipe {{ 'id': {pipe.id}, 'name': {pipe.name} }}"
-            )
-
-            pipe_models.append(
-                {
-                    "id": pipe.id,
-                    "name": pipe.name,
-                    "object": "model",
-                    "created": pipe.created_at,
-                    "owned_by": "openai",
-                    "pipe": pipe_flag,
-                }
-            )
+        except Exception as e:
+            log.exception(e)
+            continue
 
     return pipe_models
 
@@ -220,6 +236,16 @@ async def generate_function_chat_completion(
         __task__ = metadata.get("task", None)
         __task_body__ = metadata.get("task_body", None)
 
+    oauth_token = None
+    try:
+        if request.cookies.get("oauth_session_id", None):
+            oauth_token = request.app.state.oauth_manager.get_oauth_token(
+                user.id,
+                request.cookies.get("oauth_session_id", None),
+            )
+    except Exception as e:
+        log.error(f"Error getting OAuth token: {e}")
+
     extra_params = {
         "__event_emitter__": __event_emitter__,
         "__event_call__": __event_call__,
@@ -229,16 +255,12 @@ async def generate_function_chat_completion(
         "__task__": __task__,
         "__task_body__": __task_body__,
         "__files__": files,
-        "__user__": {
-            "id": user.id,
-            "email": user.email,
-            "name": user.name,
-            "role": user.role,
-        },
+        "__user__": user.model_dump() if isinstance(user, UserModel) else {},
         "__metadata__": metadata,
+        "__oauth_token__": oauth_token,
         "__request__": request,
     }
-    extra_params["__tools__"] = get_tools(
+    extra_params["__tools__"] = await get_tools(
         request,
         tool_ids,
         user,
@@ -255,8 +277,11 @@ async def generate_function_chat_completion(
             form_data["model"] = model_info.base_model_id
 
         params = model_info.params.model_dump()
-        form_data = apply_model_params_to_body_openai(params, form_data)
-        form_data = apply_model_system_prompt_to_body(params, form_data, metadata, user)
+
+        if params:
+            system = params.pop("system", None)
+            form_data = apply_model_params_to_body_openai(params, form_data)
+            form_data = apply_system_prompt_to_body(system, form_data, metadata, user)
 
     pipe_id = get_pipe_id(form_data)
     function_module = get_function_module_by_id(request, pipe_id)

@@ -1,7 +1,7 @@
 <script lang="ts">
 	import DOMPurify from 'dompurify';
 
-	import { getBackendConfig, getVersionUpdates, getWebhookUrl, updateWebhookUrl } from '$lib/apis';
+	import { getVersionUpdates, getWebhookUrl, updateWebhookUrl } from '$lib/apis';
 	import {
 		getAdminConfig,
 		getLdapConfig,
@@ -18,6 +18,7 @@
 	import { compareVersion } from '$lib/utils';
 	import { onMount, getContext } from 'svelte';
 	import { toast } from 'svelte-sonner';
+	import Textarea from '$lib/components/common/Textarea.svelte';
 
 	const i18n = getContext('i18n');
 
@@ -58,10 +59,10 @@
 			};
 		});
 
-		console.log(version);
+		console.info(version);
 
 		updateAvailable = compareVersion(version.latest, version.current);
-		console.log(updateAvailable);
+		console.info(updateAvailable);
 	};
 
 	const updateLdapServerHandler = async () => {
@@ -78,17 +79,20 @@
 	const updateHandler = async () => {
 		webhookUrl = await updateWebhookUrl(localStorage.token, webhookUrl);
 		const res = await updateAdminConfig(localStorage.token, adminConfig);
+		await updateLdapConfig(localStorage.token, ENABLE_LDAP);
 		await updateLdapServerHandler();
 
 		if (res) {
 			saveHandler();
 		} else {
-			toast.error(i18n.t('Failed to update settings'));
+			toast.error($i18n.t('Failed to update settings'));
 		}
 	};
 
 	onMount(async () => {
-		checkForVersionUpdates();
+		if ($config?.features?.enable_version_update_check) {
+			checkForVersionUpdates();
+		}
 
 		await Promise.all([
 			(async () => {
@@ -135,16 +139,18 @@
 										v{WEBUI_VERSION}
 									</Tooltip>
 
-									<a
-										href="https://github.com/open-webui/open-webui/releases/tag/v{version.latest}"
-										target="_blank"
-									>
-										{updateAvailable === null
-											? $i18n.t('Checking for updates...')
-											: updateAvailable
-												? `(v${version.latest} ${$i18n.t('available!')})`
-												: $i18n.t('(latest)')}
-									</a>
+									{#if $config?.features?.enable_version_update_check}
+										<a
+											href="https://github.com/open-webui/open-webui/releases/tag/v{version.latest}"
+											target="_blank"
+										>
+											{updateAvailable === null
+												? $i18n.t('Checking for updates...')
+												: updateAvailable
+													? `(v${version.latest} ${$i18n.t('available!')})`
+													: $i18n.t('(latest)')}
+										</a>
+									{/if}
 								</div>
 
 								<button
@@ -158,15 +164,17 @@
 								</button>
 							</div>
 
-							<button
-								class=" text-xs px-3 py-1.5 bg-gray-50 hover:bg-gray-100 dark:bg-gray-850 dark:hover:bg-gray-800 transition rounded-lg font-medium"
-								type="button"
-								on:click={() => {
-									checkForVersionUpdates();
-								}}
-							>
-								{$i18n.t('Check for updates')}
-							</button>
+							{#if $config?.features?.enable_version_update_check}
+								<button
+									class=" text-xs px-3 py-1.5 bg-gray-50 hover:bg-gray-100 dark:bg-gray-850 dark:hover:bg-gray-800 transition rounded-lg font-medium"
+									type="button"
+									on:click={() => {
+										checkForVersionUpdates();
+									}}
+								>
+									{$i18n.t('Check for updates')}
+								</button>
+							{/if}
 						</div>
 					</div>
 
@@ -282,7 +290,7 @@
 							<select
 								class="dark:bg-gray-900 w-fit pr-8 rounded-sm px-2 text-xs bg-transparent outline-hidden text-right"
 								bind:value={adminConfig.DEFAULT_USER_ROLE}
-								placeholder="Select a role"
+								placeholder={$i18n.t('Select a role')}
 							>
 								<option value="pending">{$i18n.t('pending')}</option>
 								<option value="user">{$i18n.t('user')}</option>
@@ -303,6 +311,30 @@
 						</div>
 
 						<Switch bind:state={adminConfig.SHOW_ADMIN_DETAILS} />
+					</div>
+
+					<div class="mb-2.5">
+						<div class=" self-center text-xs font-medium mb-2">
+							{$i18n.t('Pending User Overlay Title')}
+						</div>
+						<Textarea
+							placeholder={$i18n.t(
+								'Enter a title for the pending user info overlay. Leave empty for default.'
+							)}
+							bind:value={adminConfig.PENDING_USER_OVERLAY_TITLE}
+						/>
+					</div>
+
+					<div class="mb-2.5">
+						<div class=" self-center text-xs font-medium mb-2">
+							{$i18n.t('Pending User Overlay Content')}
+						</div>
+						<Textarea
+							placeholder={$i18n.t(
+								'Enter content for the pending user info overlay. Leave empty for default.'
+							)}
+							bind:value={adminConfig.PENDING_USER_OVERLAY_CONTENT}
+						/>
 					</div>
 
 					<div class="mb-2.5 flex w-full justify-between pr-2">
@@ -375,12 +407,7 @@
 								<div class="  font-medium">{$i18n.t('LDAP')}</div>
 
 								<div class="mt-1">
-									<Switch
-										bind:state={ENABLE_LDAP}
-										on:change={async () => {
-											updateLdapConfig(localStorage.token, ENABLE_LDAP);
-										}}
-									/>
+									<Switch bind:state={ENABLE_LDAP} />
 								</div>
 							</div>
 
@@ -559,6 +586,13 @@
 													/>
 												</div>
 											</div>
+											<div class="flex justify-between items-center text-xs">
+												<div class=" font-medium">{$i18n.t('Validate certificate')}</div>
+
+												<div class="mt-1">
+													<Switch bind:state={LDAP_SERVER.validate_cert} />
+												</div>
+											</div>
 											<div class="flex w-full gap-2">
 												<div class="w-full">
 													<div class=" self-center text-xs font-medium min-w-fit mb-1">
@@ -603,6 +637,14 @@
 
 					<div class="mb-2.5 flex w-full items-center justify-between pr-2">
 						<div class=" self-center text-xs font-medium">
+							{$i18n.t('Notes')} ({$i18n.t('Beta')})
+						</div>
+
+						<Switch bind:state={adminConfig.ENABLE_NOTES} />
+					</div>
+
+					<div class="mb-2.5 flex w-full items-center justify-between pr-2">
+						<div class=" self-center text-xs font-medium">
 							{$i18n.t('Channels')} ({$i18n.t('Beta')})
 						</div>
 
@@ -615,6 +657,16 @@
 						</div>
 
 						<Switch bind:state={adminConfig.ENABLE_USER_WEBHOOKS} />
+					</div>
+
+					<div class="mb-2.5">
+						<div class=" self-center text-xs font-medium mb-2">
+							{$i18n.t('Response Watermark')}
+						</div>
+						<Textarea
+							placeholder={$i18n.t('Enter a watermark for the response. Leave empty for none.')}
+							bind:value={adminConfig.RESPONSE_WATERMARK}
+						/>
 					</div>
 
 					<div class="mb-2.5 w-full justify-between">

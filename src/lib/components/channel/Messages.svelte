@@ -51,7 +51,7 @@
 		{#if !top}
 			<Loader
 				on:visible={(e) => {
-					console.log('visible');
+					console.info('visible');
 					if (!messagesLoading) {
 						loadMoreMessages();
 					}
@@ -59,15 +59,11 @@
 			>
 				<div class="w-full flex justify-center py-1 text-xs animate-pulse items-center gap-2">
 					<Spinner className=" size-4" />
-					<div class=" ">Loading...</div>
+					<div class=" ">{$i18n.t('Loading...')}</div>
 				</div>
 			</Loader>
 		{:else if !thread}
-			<div
-				class="px-5
-			
-			{($settings?.widescreenMode ?? null) ? 'max-w-full' : 'max-w-5xl'} mx-auto"
-			>
+			<div class="px-5 max-w-full mx-auto">
 				{#if channel}
 					<div class="flex flex-col gap-1.5 pb-5 pt-10">
 						<div class="text-2xl font-medium capitalize">{channel.name}</div>
@@ -84,7 +80,7 @@
 					</div>
 				{:else}
 					<div class="flex justify-center text-xs items-center gap-2 py-5">
-						<div class=" ">Start of the channel</div>
+						<div class=" ">{$i18n.t('Start of the channel')}</div>
 					</div>
 				{/if}
 
@@ -99,7 +95,8 @@
 				{message}
 				{thread}
 				showUserProfile={messageIdx === 0 ||
-					messageList.at(messageIdx - 1)?.user_id !== message.user_id}
+					messageList.at(messageIdx - 1)?.user_id !== message.user_id ||
+					messageList.at(messageIdx - 1)?.meta?.model_id !== message?.meta?.model_id}
 				onDelete={() => {
 					messages = messages.filter((m) => m.id !== message.id);
 

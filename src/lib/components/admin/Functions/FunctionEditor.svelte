@@ -4,7 +4,6 @@
 
 	const i18n = getContext('i18n');
 
-	import CodeEditor from '$lib/components/common/CodeEditor.svelte';
 	import ConfirmDialog from '$lib/components/common/ConfirmDialog.svelte';
 	import Badge from '$lib/components/common/Badge.svelte';
 	import Tooltip from '$lib/components/common/Tooltip.svelte';
@@ -277,7 +276,7 @@ class Pipe:
 			await tick();
 
 			if (res) {
-				console.log('Code formatted successfully');
+				console.info('Code formatted successfully');
 
 				saveHandler();
 			}
@@ -367,27 +366,29 @@ class Pipe:
 				</div>
 
 				<div class="mb-2 flex-1 overflow-auto h-0 rounded-lg">
-					<CodeEditor
-						bind:this={codeEditor}
-						value={content}
-						lang="python"
-						{boilerplate}
-						onChange={(e) => {
-							_content = e;
-						}}
-						onSave={async () => {
-							if (formElement) {
-								formElement.requestSubmit();
-							}
-						}}
-					/>
+					{#await import('$lib/components/common/CodeEditor.svelte') then { default: CodeEditor }}
+						<CodeEditor
+							bind:this={codeEditor}
+							value={content}
+							lang="python"
+							{boilerplate}
+							onChange={(e) => {
+								_content = e;
+							}}
+							onSave={async () => {
+								if (formElement) {
+									formElement.requestSubmit();
+								}
+							}}
+						/>
+					{/await}
 				</div>
 
 				<div class="pb-3 flex justify-between">
 					<div class="flex-1 pr-3">
 						<div class="text-xs text-gray-500 line-clamp-2">
 							<span class=" font-semibold dark:text-gray-200">{$i18n.t('Warning:')}</span>
-							{$i18n.t('Functions allow arbitrary code execution')} <br />—
+							{$i18n.t('Functions allow arbitrary code execution.')} <br />—
 							<span class=" font-medium dark:text-gray-400"
 								>{$i18n.t(`don't install random functions from sources you don't trust.`)}</span
 							>

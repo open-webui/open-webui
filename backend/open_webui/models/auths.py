@@ -73,11 +73,6 @@ class ProfileImageUrlForm(BaseModel):
     profile_image_url: str
 
 
-class UpdateProfileForm(BaseModel):
-    profile_image_url: str
-    name: str
-
-
 class UpdatePasswordForm(BaseModel):
     password: str
     new_password: str
@@ -129,12 +124,16 @@ class AuthsTable:
 
     def authenticate_user(self, email: str, password: str) -> Optional[UserModel]:
         log.info(f"authenticate_user: {email}")
+
+        user = Users.get_user_by_email(email)
+        if not user:
+            return None
+
         try:
             with get_db() as db:
-                auth = db.query(Auth).filter_by(email=email, active=True).first()
+                auth = db.query(Auth).filter_by(id=user.id, active=True).first()
                 if auth:
                     if verify_password(password, auth.password):
-                        user = Users.get_user_by_id(auth.id)
                         return user
                     else:
                         return None
@@ -155,8 +154,8 @@ class AuthsTable:
         except Exception:
             return False
 
-    def authenticate_user_by_trusted_header(self, email: str) -> Optional[UserModel]:
-        log.info(f"authenticate_user_by_trusted_header: {email}")
+    def authenticate_user_by_email(self, email: str) -> Optional[UserModel]:
+        log.info(f"authenticate_user_by_email: {email}")
         try:
             with get_db() as db:
                 auth = db.query(Auth).filter_by(email=email, active=True).first()

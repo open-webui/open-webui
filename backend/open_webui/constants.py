@@ -51,6 +51,7 @@ class ERROR_MESSAGES(str, Enum):
     USERNAME_TAKEN = (
         "Uh-oh! This username is already registered. Please choose another username."
     )
+    PASSWORD_TOO_LONG = "Uh-oh! The password you entered is too long. Please make sure your password is less than 72 bytes long."
     COMMAND_TAKEN = "Uh-oh! This command is already registered. Please choose another command string."
     FILE_EXISTS = "Uh-oh! This file is already registered. Please choose another file."
 
@@ -130,6 +131,7 @@ class TASKS(str, Enum):
 
     DEFAULT = lambda task="": f"{task if task else 'generation'}"
     TITLE_GENERATION = "title_generation"
+    FOLLOW_UP_GENERATION = "follow_up_generation"
     TAGS_GENERATION = "tags_generation"
     EMOJI_GENERATION = "emoji_generation"
     QUERY_GENERATION = "query_generation"

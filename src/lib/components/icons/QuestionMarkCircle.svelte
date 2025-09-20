@@ -1,6 +1,6 @@
 <script lang="ts">
 	export let className = 'w-4 h-4';
-	export let strokeWidth = '2';
+	export let strokeWidth = '1.5';
 </script>
 
 <svg
@@ -9,6 +9,7 @@
 	viewBox="0 0 24 24"
 	stroke-width={strokeWidth}
 	stroke="currentColor"
+	aria-hidden="true"
 	class={className}
 >
 	<path

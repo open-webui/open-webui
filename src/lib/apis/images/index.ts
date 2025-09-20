@@ -16,7 +16,7 @@ export const getConfig = async (token: string = '') => {
 			return res.json();
 		})
 		.catch((err) => {
-			console.log(err);
+			console.error(err);
 			if ('detail' in err) {
 				error = err.detail;
 			} else {
@@ -51,7 +51,7 @@ export const updateConfig = async (token: string = '', config: object) => {
 			return res.json();
 		})
 		.catch((err) => {
-			console.log(err);
+			console.error(err);
 			if ('detail' in err) {
 				error = err.detail;
 			} else {
@@ -83,7 +83,7 @@ export const verifyConfigUrl = async (token: string = '') => {
 			return res.json();
 		})
 		.catch((err) => {
-			console.log(err);
+			console.error(err);
 			if ('detail' in err) {
 				error = err.detail;
 			} else {
@@ -115,7 +115,7 @@ export const getImageGenerationConfig = async (token: string = '') => {
 			return res.json();
 		})
 		.catch((err) => {
-			console.log(err);
+			console.error(err);
 			if ('detail' in err) {
 				error = err.detail;
 			} else {
@@ -148,7 +148,7 @@ export const updateImageGenerationConfig = async (token: string = '', config: ob
 			return res.json();
 		})
 		.catch((err) => {
-			console.log(err);
+			console.error(err);
 			if ('detail' in err) {
 				error = err.detail;
 			} else {
@@ -180,7 +180,7 @@ export const getImageGenerationModels = async (token: string = '') => {
 			return res.json();
 		})
 		.catch((err) => {
-			console.log(err);
+			console.error(err);
 			if ('detail' in err) {
 				error = err.detail;
 			} else {
@@ -215,7 +215,7 @@ export const imageGenerations = async (token: string = '', prompt: string) => {
 			return res.json();
 		})
 		.catch((err) => {
-			console.log(err);
+			console.error(err);
 			if ('detail' in err) {
 				error = err.detail;
 			} else {

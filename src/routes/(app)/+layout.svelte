@@ -4,7 +4,6 @@
 	import { openDB, deleteDB } from 'idb';
 	import fileSaver from 'file-saver';
 	const { saveAs } = fileSaver;
-	import mermaid from 'mermaid';
 
 	import { goto } from '$app/navigation';
 	import { page } from '$app/stores';
@@ -34,9 +33,12 @@
 		tags,
 		banners,
 		showSettings,
+		showShortcuts,
 		showChangelog,
 		temporaryChatEnabled,
-		toolServers
+		toolServers,
+		showSearch,
+		showSidebar
 	} from '$lib/stores';
 
 	import Sidebar from '$lib/components/layout/Sidebar.svelte';
@@ -44,7 +46,7 @@
 	import ChangelogModal from '$lib/components/ChangelogModal.svelte';
 	import AccountPending from '$lib/components/layout/Overlay/AccountPending.svelte';
 	import UpdateInfoToast from '$lib/components/layout/UpdateInfoToast.svelte';
-	import { get } from 'svelte/store';
+	import Spinner from '$lib/components/common/Spinner.svelte';
 
 	const i18n = getContext('i18n');
 
@@ -76,6 +78,13 @@
 				// IndexedDB Not Found
 			}
 
+			const chatInputKeys = Object.keys(localStorage).filter((key) => key.startsWith('chat-input'));
+			if (chatInputKeys.length > 0) {
+				chatInputKeys.forEach((key) => {
+					localStorage.removeItem(key);
+				});
+			}
+
 			const userSettings = await getUserSettings(localStorage.token).catch((error) => {
 				console.error(error);
 				return null;
@@ -104,12 +113,32 @@
 
 			banners.set(await getBanners(localStorage.token));
 			tools.set(await getTools(localStorage.token));
-			toolServers.set(await getToolServersData($i18n, $settings?.toolServers ?? []));
+
+			let toolServersData = await getToolServersData($settings?.toolServers ?? []);
+			toolServersData = toolServersData.filter((data) => {
+				if (data.error) {
+					toast.error(
+						$i18n.t(`Failed to connect to {{URL}} OpenAPI tool server`, {
+							URL: data?.url
+						})
+					);
+					return false;
+				}
+				return true;
+			});
+			toolServers.set(toolServersData);
 
 			document.addEventListener('keydown', async function (event) {
 				const isCtrlPressed = event.ctrlKey || event.metaKey; // metaKey is for Cmd key on Mac
 				// Check if the Shift key is pressed
 				const isShiftPressed = event.shiftKey;
+
+				// Check if Ctrl  + K is pressed
+				if (isCtrlPressed && event.key.toLowerCase() === 'k') {
+					event.preventDefault();
+					console.log('search');
+					showSearch.set(!$showSearch);
+				}
 
 				// Check if Ctrl + Shift + O is pressed
 				if (isCtrlPressed && isShiftPressed && event.key.toLowerCase() === 'o') {
@@ -170,8 +199,8 @@
 				// Check if Ctrl + / is pressed
 				if (isCtrlPressed && event.key === '/') {
 					event.preventDefault();
-					console.log('showShortcuts');
-					document.getElementById('show-shortcuts-button')?.click();
+
+					showShortcuts.set(!$showShortcuts);
 				}
 
 				// Check if Ctrl + Shift + ' is pressed
@@ -182,7 +211,13 @@
 				) {
 					event.preventDefault();
 					console.log('temporaryChat');
-					temporaryChatEnabled.set(!$temporaryChatEnabled);
+
+					if ($user?.role !== 'admin' && $user?.permissions?.chat?.temporary_enforced) {
+						temporaryChatEnabled.set(true);
+					} else {
+						temporaryChatEnabled.set(!$temporaryChatEnabled);
+					}
+
 					await goto('/');
 					const newChatButton = document.getElementById('new-chat-button');
 					setTimeout(() => {
@@ -195,18 +230,18 @@
 				showChangelog.set($settings?.version !== $config.version);
 			}
 
-			if ($user?.permissions?.chat?.temporary ?? true) {
+			if ($user?.role === 'admin' || ($user?.permissions?.chat?.temporary ?? true)) {
 				if ($page.url.searchParams.get('temporary-chat') === 'true') {
 					temporaryChatEnabled.set(true);
 				}
 
-				if ($user?.permissions?.chat?.temporary_enforced) {
+				if ($user?.role !== 'admin' && $user?.permissions?.chat?.temporary_enforced) {
 					temporaryChatEnabled.set(true);
 				}
 			}
 
 			// Check for version updates
-			if ($user?.role === 'admin') {
+			if ($user?.role === 'admin' && $config?.features?.enable_version_update_check) {
 				// Check if the user has dismissed the update toast in the last 24 hours
 				if (localStorage.dismissedUpdateToast) {
 					const dismissedUpdateToast = new Date(Number(localStorage.dismissedUpdateToast));
@@ -250,72 +285,86 @@
 	</div>
 {/if}
 
-<div class="app relative">
-	<div
-		class=" text-gray-700 dark:text-gray-100 bg-white dark:bg-gray-900 h-screen max-h-[100dvh] overflow-auto flex flex-row justify-end"
-	>
-		{#if loaded}
+{#if $user}
+	<div class="app relative">
+		<div
+			class=" text-gray-700 dark:text-gray-100 bg-white dark:bg-gray-900 h-screen max-h-[100dvh] overflow-auto flex flex-row justify-end"
+		>
 			{#if !['user', 'admin'].includes($user?.role)}
 				<AccountPending />
-			{:else if localDBChats.length > 0}
-				<div class="fixed w-full h-full flex z-50">
-					<div
-						class="absolute w-full h-full backdrop-blur-md bg-white/20 dark:bg-gray-900/50 flex justify-center"
-					>
-						<div class="m-auto pb-44 flex flex-col justify-center">
-							<div class="max-w-md">
-								<div class="text-center dark:text-white text-2xl font-medium z-50">
-									Important Update<br /> Action Required for Chat Log Storage
-								</div>
+			{:else}
+				{#if localDBChats.length > 0}
+					<div class="fixed w-full h-full flex z-50">
+						<div
+							class="absolute w-full h-full backdrop-blur-md bg-white/20 dark:bg-gray-900/50 flex justify-center"
+						>
+							<div class="m-auto pb-44 flex flex-col justify-center">
+								<div class="max-w-md">
+									<div class="text-center dark:text-white text-2xl font-medium z-50">
+										{$i18n.t('Important Update')}<br />
+										{$i18n.t('Action Required for Chat Log Storage')}
+									</div>
 
-								<div class=" mt-4 text-center text-sm dark:text-gray-200 w-full">
-									{$i18n.t(
-										"Saving chat logs directly to your browser's storage is no longer supported. Please take a moment to download and delete your chat logs by clicking the button below. Don't worry, you can easily re-import your chat logs to the backend through"
-									)}
-									<span class="font-semibold dark:text-white"
-										>{$i18n.t('Settings')} > {$i18n.t('Chats')} > {$i18n.t('Import Chats')}</span
-									>. {$i18n.t(
-										'This ensures that your valuable conversations are securely saved to your backend database. Thank you!'
-									)}
-								</div>
+									<div class=" mt-4 text-center text-sm dark:text-gray-200 w-full">
+										{$i18n.t(
+											"Saving chat logs directly to your browser's storage is no longer supported. Please take a moment to download and delete your chat logs by clicking the button below. Don't worry, you can easily re-import your chat logs to the backend through"
+										)}
+										<span class="font-semibold dark:text-white"
+											>{$i18n.t('Settings')} > {$i18n.t('Chats')} > {$i18n.t('Import Chats')}</span
+										>. {$i18n.t(
+											'This ensures that your valuable conversations are securely saved to your backend database. Thank you!'
+										)}
+									</div>
 
-								<div class=" mt-6 mx-auto relative group w-fit">
-									<button
-										class="relative z-20 flex px-5 py-2 rounded-full bg-white border border-gray-100 dark:border-none hover:bg-gray-100 transition font-medium text-sm"
-										on:click={async () => {
-											let blob = new Blob([JSON.stringify(localDBChats)], {
-												type: 'application/json'
-											});
-											saveAs(blob, `chat-export-${Date.now()}.json`);
+									<div class=" mt-6 mx-auto relative group w-fit">
+										<button
+											class="relative z-20 flex px-5 py-2 rounded-full bg-white border border-gray-100 dark:border-none hover:bg-gray-100 transition font-medium text-sm"
+											on:click={async () => {
+												let blob = new Blob([JSON.stringify(localDBChats)], {
+													type: 'application/json'
+												});
+												saveAs(blob, `chat-export-${Date.now()}.json`);
 
-											const tx = DB.transaction('chats', 'readwrite');
-											await Promise.all([tx.store.clear(), tx.done]);
-											await deleteDB('Chats');
+												const tx = DB.transaction('chats', 'readwrite');
+												await Promise.all([tx.store.clear(), tx.done]);
+												await deleteDB('Chats');
 
-											localDBChats = [];
-										}}
-									>
-										Download & Delete
-									</button>
+												localDBChats = [];
+											}}
+										>
+											{$i18n.t('Download & Delete')}
+										</button>
 
-									<button
-										class="text-xs text-center w-full mt-2 text-gray-400 underline"
-										on:click={async () => {
-											localDBChats = [];
-										}}>{$i18n.t('Close')}</button
-									>
+										<button
+											class="text-xs text-center w-full mt-2 text-gray-400 underline"
+											on:click={async () => {
+												localDBChats = [];
+											}}>{$i18n.t('Close')}</button
+										>
+									</div>
 								</div>
 							</div>
 						</div>
 					</div>
-				</div>
-			{/if}
+				{/if}
 
-			<Sidebar />
-			<slot />
-		{/if}
+				<Sidebar />
+
+				{#if loaded}
+					<slot />
+				{:else}
+					<div
+						class="w-full flex-1 h-full flex items-center justify-center {$showSidebar
+							? '  md:max-w-[calc(100%-260px)]'
+							: ' '}"
+					>
+						<Spinner className="size-5" />
+					</div>
+				{/if}
+			{/if}
+		</div>
 	</div>
-</div>
+{/if}
 
 <style>
 	.loading {

@@ -1,6 +1,13 @@
 <script lang="ts">
+	import { toast } from 'svelte-sonner';
+
 	import { onMount, getContext, tick } from 'svelte';
 	import { models, tools, functions, knowledge as knowledgeCollections, user } from '$lib/stores';
+	import { WEBUI_BASE_URL } from '$lib/constants';
+
+	import { getTools } from '$lib/apis/tools';
+	import { getFunctions } from '$lib/apis/functions';
+	import { getKnowledgeBases } from '$lib/apis/knowledge';
 
 	import AdvancedParams from '$lib/components/chat/Settings/Advanced/AdvancedParams.svelte';
 	import Tags from '$lib/components/common/Tags.svelte';
@@ -10,12 +17,11 @@
 	import ActionsSelector from '$lib/components/workspace/Models/ActionsSelector.svelte';
 	import Capabilities from '$lib/components/workspace/Models/Capabilities.svelte';
 	import Textarea from '$lib/components/common/Textarea.svelte';
-	import { getTools } from '$lib/apis/tools';
-	import { getFunctions } from '$lib/apis/functions';
-	import { getKnowledgeBases } from '$lib/apis/knowledge';
 	import AccessControl from '../common/AccessControl.svelte';
-	import { stringify } from 'postcss';
-	import { toast } from 'svelte-sonner';
+	import Spinner from '$lib/components/common/Spinner.svelte';
+	import XMark from '$lib/components/icons/XMark.svelte';
+	import DefaultFiltersSelector from './DefaultFiltersSelector.svelte';
+	import DefaultFeatures from './DefaultFeatures.svelte';
 
 	const i18n = getContext('i18n');
 
@@ -56,12 +62,13 @@
 		}
 	}
 
+	let system = '';
 	let info = {
 		id: '',
 		base_model_id: null,
 		name: '',
 		meta: {
-			profile_image_url: '/static/favicon.png',
+			profile_image_url: `${WEBUI_BASE_URL}/static/favicon.png`,
 			description: '',
 			suggestion_prompts: null,
 			tags: []
@@ -74,17 +81,26 @@
 	let params = {
 		system: ''
 	};
-	let capabilities = {
-		vision: true,
-		usage: undefined,
-		citations: true
-	};
 
 	let knowledge = [];
 	let toolIds = [];
-	let filterIds = [];
-	let actionIds = [];
 
+	let filterIds = [];
+	let defaultFilterIds = [];
+
+	let capabilities = {
+		vision: true,
+		file_upload: true,
+		web_search: true,
+		image_generation: true,
+		code_interpreter: true,
+		citations: true,
+		status_updates: true,
+		usage: undefined
+	};
+	let defaultFeatureIds = [];
+
+	let actionIds = [];
 	let accessControl = {};
 
 	const addUsage = (base_model_id) => {
@@ -107,12 +123,27 @@
 		info.name = name;
 
 		if (id === '') {
-			toast.error('Model ID is required.');
+			toast.error($i18n.t('Model ID is required.'));
+			loading = false;
+
+			return;
 		}
 
 		if (name === '') {
-			toast.error('Model Name is required.');
+			toast.error($i18n.t('Model Name is required.'));
+			loading = false;
+
+			return;
 		}
+
+		if (knowledge.some((item) => item.status === 'uploading')) {
+			toast.error($i18n.t('Please wait until all files are uploaded.'));
+			loading = false;
+
+			return;
+		}
+
+		info.params = { ...info.params, ...params };
 
 		info.access_control = accessControl;
 		info.meta.capabilities = capabilities;
@@ -147,6 +178,14 @@
 			}
 		}
 
+		if (defaultFilterIds.length > 0) {
+			info.meta.defaultFilterIds = defaultFilterIds;
+		} else {
+			if (info.meta.defaultFilterIds) {
+				delete info.meta.defaultFilterIds;
+			}
+		}
+
 		if (actionIds.length > 0) {
 			info.meta.actionIds = actionIds;
 		} else {
@@ -155,6 +194,15 @@
 			}
 		}
 
+		if (defaultFeatureIds.length > 0) {
+			info.meta.defaultFeatureIds = defaultFeatureIds;
+		} else {
+			if (info.meta.defaultFeatureIds) {
+				delete info.meta.defaultFeatureIds;
+			}
+		}
+
+		info.params.system = system.trim() === '' ? null : system;
 		info.params.stop = params.stop ? params.stop.split(',').filter((s) => s.trim()) : null;
 		Object.keys(info.params).forEach((key) => {
 			if (info.params[key] === '' || info.params[key] === null) {
@@ -171,7 +219,7 @@
 	onMount(async () => {
 		await tools.set(await getTools(localStorage.token));
 		await functions.set(await getFunctions(localStorage.token));
-		await knowledgeCollections.set(await getKnowledgeBases(localStorage.token));
+		await knowledgeCollections.set([...(await getKnowledgeBases(localStorage.token))]);
 
 		// Scroll to top 'workspace-container' element
 		const workspaceContainer = document.getElementById('workspace-container');
@@ -201,6 +249,8 @@
 				}
 			}
 
+			system = model?.params?.system ?? '';
+
 			params = { ...params, ...model?.params };
 			params.stop = params?.stop
 				? (typeof params.stop === 'string' ? params.stop.split(',') : (params?.stop ?? [])).join(
@@ -208,11 +258,8 @@
 					)
 				: null;
 
-			toolIds = model?.meta?.toolIds ?? [];
-			filterIds = model?.meta?.filterIds ?? [];
-			actionIds = model?.meta?.actionIds ?? [];
 			knowledge = (model?.meta?.knowledge ?? []).map((item) => {
-				if (item?.collection_name) {
+				if (item?.collection_name && item?.type !== 'file') {
 					return {
 						id: item.collection_name,
 						name: item.name,
@@ -229,7 +276,14 @@
 					return item;
 				}
 			});
+
+			toolIds = model?.meta?.toolIds ?? [];
+			filterIds = model?.meta?.filterIds ?? [];
+			defaultFilterIds = model?.meta?.defaultFilterIds ?? [];
+			actionIds = model?.meta?.actionIds ?? [];
+
 			capabilities = { ...capabilities, ...(model?.meta?.capabilities ?? {}) };
+			defaultFeatureIds = model?.meta?.defaultFeatureIds ?? [];
 
 			if ('access_control' in model) {
 				accessControl = model.access_control;
@@ -283,7 +337,7 @@
 					/>
 				</svg>
 			</div>
-			<div class=" self-center text-sm font-medium">{'Back'}</div>
+			<div class=" self-center text-sm font-medium">{$i18n.t('Back')}</div>
 		</button>
 	{/if}
 
@@ -367,7 +421,7 @@
 					<div class="self-center">
 						<button
 							class="rounded-xl flex shrink-0 items-center {info.meta.profile_image_url !==
-							'/static/favicon.png'
+							`${WEBUI_BASE_URL}/static/favicon.png`
 								? 'bg-transparent'
 								: 'bg-white'} shadow-xl group relative"
 							type="button"
@@ -383,7 +437,7 @@
 								/>
 							{:else}
 								<img
-									src="/static/favicon.png"
+									src="{WEBUI_BASE_URL}/static/favicon.png"
 									alt="model profile"
 									class=" rounded-xl size-72 md:size-60 object-cover shrink-0"
 								/>
@@ -419,11 +473,11 @@
 							<button
 								class="px-2 py-1 text-gray-500 rounded-lg text-xs"
 								on:click={() => {
-									info.meta.profile_image_url = '/static/favicon.png';
+									info.meta.profile_image_url = `${WEBUI_BASE_URL}/static/favicon.png`;
 								}}
 								type="button"
 							>
-								Reset Image</button
+								{$i18n.t('Reset Image')}</button
 							>
 						</div>
 					</div>
@@ -462,7 +516,7 @@
 							<div>
 								<select
 									class="text-sm w-full bg-transparent outline-hidden"
-									placeholder="Select a base model (e.g. llama3, gpt-4o)"
+									placeholder={$i18n.t('Select a base model (e.g. llama3, gpt-4o)')}
 									bind:value={info.base_model_id}
 									on:change={(e) => {
 										addUsage(e.target.value);
@@ -487,6 +541,10 @@
 							<button
 								class="p-1 text-xs flex rounded-sm transition"
 								type="button"
+								aria-pressed={enableDescription ? 'true' : 'false'}
+								aria-label={enableDescription
+									? $i18n.t('Custom description enabled')
+									: $i18n.t('Default description enabled')}
 								on:click={() => {
 									enableDescription = !enableDescription;
 								}}
@@ -551,9 +609,11 @@
 								<div>
 									<Textarea
 										className=" text-sm w-full bg-transparent outline-hidden resize-none overflow-y-hidden "
-										placeholder={`Write your model system prompt content here\ne.g.) You are Mario from Super Mario Bros, acting as an assistant.`}
+										placeholder={$i18n.t(
+											'Write your model system prompt content here\ne.g.) You are Mario from Super Mario Bros, acting as an assistant.'
+										)}
 										rows={4}
-										bind:value={info.params.system}
+										bind:value={system}
 									/>
 								</div>
 							</div>
@@ -580,13 +640,7 @@
 
 							{#if showAdvanced}
 								<div class="my-2">
-									<AdvancedParams
-										admin={true}
-										bind:params
-										on:change={(e) => {
-											info.params = { ...info.params, ...params };
-										}}
-									/>
+									<AdvancedParams admin={true} custom={true} bind:params />
 								</div>
 							{/if}
 						</div>
@@ -669,21 +723,12 @@
 													info.meta.suggestion_prompts = info.meta.suggestion_prompts;
 												}}
 											>
-												<svg
-													xmlns="http://www.w3.org/2000/svg"
-													viewBox="0 0 20 20"
-													fill="currentColor"
-													class="w-4 h-4"
-												>
-													<path
-														d="M6.28 5.22a.75.75 0 00-1.06 1.06L8.94 10l-3.72 3.72a.75.75 0 101.06 1.06L10 11.06l3.72 3.72a.75.75 0 101.06-1.06L11.06 10l3.72-3.72a.75.75 0 00-1.06-1.06L10 8.94 6.28 5.22z"
-													/>
-												</svg>
+												<XMark className={'size-4'} />
 											</button>
 										</div>
 									{/each}
 								{:else}
-									<div class="text-xs text-center">No suggestion prompts</div>
+									<div class="text-xs text-center">{$i18n.t('No suggestion prompts')}</div>
 								{/if}
 							</div>
 						{/if}
@@ -692,7 +737,7 @@
 					<hr class=" border-gray-100 dark:border-gray-850 my-1.5" />
 
 					<div class="my-2">
-						<Knowledge bind:selectedKnowledge={knowledge} collections={$knowledgeCollections} />
+						<Knowledge bind:selectedItems={knowledge} />
 					</div>
 
 					<div class="my-2">
@@ -706,6 +751,24 @@
 						/>
 					</div>
 
+					{#if filterIds.length > 0}
+						{@const toggleableFilters = $functions.filter(
+							(func) =>
+								func.type === 'filter' &&
+								(filterIds.includes(func.id) || func?.is_global) &&
+								func?.meta?.toggle
+						)}
+
+						{#if toggleableFilters.length > 0}
+							<div class="my-2">
+								<DefaultFiltersSelector
+									bind:selectedFilterIds={defaultFilterIds}
+									filters={toggleableFilters}
+								/>
+							</div>
+						{/if}
+					{/if}
+
 					<div class="my-2">
 						<ActionsSelector
 							bind:selectedActionIds={actionIds}
@@ -716,6 +779,21 @@
 					<div class="my-2">
 						<Capabilities bind:capabilities />
 					</div>
+
+					{#if Object.keys(capabilities).filter((key) => capabilities[key]).length > 0}
+						{@const availableFeatures = Object.entries(capabilities)
+							.filter(
+								([key, value]) =>
+									value && ['web_search', 'code_interpreter', 'image_generation'].includes(key)
+							)
+							.map(([key, value]) => key)}
+
+						{#if availableFeatures.length > 0}
+							<div class="my-2">
+								<DefaultFeatures {availableFeatures} bind:featureIds={defaultFeatureIds} />
+							</div>
+						{/if}
+					{/if}
 
 					<div class="my-2 text-gray-300 dark:text-gray-700">
 						<div class="flex w-full justify-between mb-2">
@@ -767,29 +845,7 @@
 
 							{#if loading}
 								<div class="ml-1.5 self-center">
-									<svg
-										class=" w-4 h-4"
-										viewBox="0 0 24 24"
-										fill="currentColor"
-										xmlns="http://www.w3.org/2000/svg"
-										><style>
-											.spinner_ajPY {
-												transform-origin: center;
-												animation: spinner_AtaB 0.75s infinite linear;
-											}
-											@keyframes spinner_AtaB {
-												100% {
-													transform: rotate(360deg);
-												}
-											}
-										</style><path
-											d="M12,1A11,11,0,1,0,23,12,11,11,0,0,0,12,1Zm0,19a8,8,0,1,1,8-8A8,8,0,0,1,12,20Z"
-											opacity=".25"
-										/><path
-											d="M10.14,1.16a11,11,0,0,0-9,8.92A1.59,1.59,0,0,0,2.46,12,1.52,1.52,0,0,0,4.11,10.7a8,8,0,0,1,6.66-6.61A1.42,1.42,0,0,0,12,2.69h0A1.57,1.57,0,0,0,10.14,1.16Z"
-											class="spinner_ajPY"
-										/></svg
-									>
+									<Spinner />
 								</div>
 							{/if}
 						</button>

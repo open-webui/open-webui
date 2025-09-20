@@ -2,7 +2,7 @@
 	import { decode } from 'html-entities';
 	import { v4 as uuidv4 } from 'uuid';
 
-	import { getContext, createEventDispatcher } from 'svelte';
+	import { getContext } from 'svelte';
 	const i18n = getContext('i18n');
 
 	import dayjs from '$lib/dayjs';
@@ -13,6 +13,9 @@
 	dayjs.extend(relativeTime);
 
 	async function loadLocale(locales) {
+		if (!locales || !Array.isArray(locales)) {
+			return;
+		}
 		for (const locale of locales) {
 			try {
 				dayjs.locale(locale);
@@ -25,9 +28,6 @@
 
 	// Assuming $i18n.languages is an array of language codes
 	$: loadLocale($i18n.languages);
-
-	const dispatch = createEventDispatcher();
-	$: dispatch('change', open);
 
 	import { slide } from 'svelte/transition';
 	import { quintOut } from 'svelte/easing';
@@ -55,6 +55,10 @@
 	export let disabled = false;
 	export let hide = false;
 
+	export let onChange: Function = () => {};
+
+	$: onChange(open);
+
 	const collapsibleId = uuidv4();
 
 	function parseJSONString(str) {
@@ -73,7 +77,7 @@
 				return JSON.stringify(parsed, null, 2);
 			} else {
 				// It's a primitive value like a number, boolean, etc.
-				return String(parsed);
+				return `${JSON.stringify(String(parsed))}`;
 			}
 		} catch (e) {
 			// Not valid JSON, return as-is
@@ -110,7 +114,9 @@
 				<div class="">
 					{#if attributes?.type === 'reasoning'}
 						{#if attributes?.done === 'true' && attributes?.duration}
-							{#if attributes.duration < 60}
+							{#if attributes.duration < 1}
+								{$i18n.t('Thought for less than a second')}
+							{:else if attributes.duration < 60}
 								{$i18n.t('Thought for {{DURATION}} seconds', {
 									DURATION: attributes.duration
 								})}
@@ -163,7 +169,10 @@
 		<!-- svelte-ignore a11y-click-events-have-key-events -->
 		<div
 			class="{buttonClassName} cursor-pointer"
-			on:pointerup={() => {
+			on:click={(e) => {
+				e.stopPropagation();
+			}}
+			on:pointerup={(e) => {
 				if (!disabled) {
 					open = !open;
 				}

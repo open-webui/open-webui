@@ -5,6 +5,911 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.6.30] - 2025-09-17
+
+### Added
+
+- 🔑 Microsoft Entra ID authentication type support was added for Azure OpenAI connections, enabling enhanced security and streamlined authentication workflows.
+
+### Fixed
+
+- ☁️ OneDrive integration was fixed after recent breakage, restoring reliable account connectivity and file access.
+
+## [0.6.29] - 2025-09-17
+
+### Added
+
+- 🎨 The chat input menu has been completely overhauled with a revolutionary new design, consolidating attachments under a unified '+' button, organizing integrations into a streamlined options menu, and introducing powerful, interactive selectors for attaching chats, notes, and knowledge base items. [Commit](https://github.com/open-webui/open-webui/commit/a68342d5a887e36695e21f8c2aec593b159654ff), [Commit](https://github.com/open-webui/open-webui/commit/96b8aaf83ff341fef432649366bc5155bac6cf20), [Commit](https://github.com/open-webui/open-webui/commit/4977e6d50f7b931372c96dd5979ca635d58aeb78), [Commit](https://github.com/open-webui/open-webui/commit/d973db829f7ec98b8f8fe7d3b2822d588e79f94e), [Commit](https://github.com/open-webui/open-webui/commit/d4c628de09654df76653ad9bce9cb3263e2f27c8), [Commit](https://github.com/open-webui/open-webui/commit/cd740f436db4ea308dbede14ef7ff56e8126f51b), [Commit](https://github.com/open-webui/open-webui/commit/5c2db102d06b5c18beb248d795682ff422e9b6d1), [Commit](https://github.com/open-webui/open-webui/commit/031cf38655a1a2973194d2eaa0fbbd17aca8ee92), [Commit](https://github.com/open-webui/open-webui/pull/17420/commits/3ed0a6d11fea1a054e0bc8aa8dfbe417c7c53e51), [Commit](https://github.com/open-webui/open-webui/pull/17420/commits/eadec9e86e01bc8f9fb90dfe7a7ae4fc3bfa6420), [Commit](https://github.com/open-webui/open-webui/pull/17420/commits/c03ca7270e64e3a002d321237160c0ddaf2bb129), [Commit](https://github.com/open-webui/open-webui/pull/17420/commits/b53ddfbd19aa94e9cbf7210acb31c3cfafafa5fe), [Commit](https://github.com/open-webui/open-webui/pull/17420/commits/c923461882fcde30ae297a95e91176c95b9b72e1)
+- 🤖 AI models can now be mentioned in channels to automatically generate responses, enabling multi-model conversations where mentioned models participate directly in threaded discussions with full context awareness. [Commit](https://github.com/open-webui/open-webui/pull/17420/commits/4fe97d8794ee18e087790caab9e5d82886006145)
+- 💬 The Channels feature now utilizes the modern rich text editor, including support for '/', '@', and '#' command suggestions. [Commit](https://github.com/open-webui/open-webui/commit/06c1426e14ac0dfaf723485dbbc9723a4d89aba9), [Commit](https://github.com/open-webui/open-webui/commit/02f7c3258b62970ce79716f75d15467a96565054)
+- 📎 Channel message input now supports direct paste functionality for images and files from the clipboard, streamlining content sharing workflows. [Commit](https://github.com/open-webui/open-webui/pull/17420/commits/6549fc839f86c40c26c2ef4dedcaf763a9304418)
+- ⚙️ Models can now be configured with default features (Web Search, Image Generation) and filters that automatically activate when a user selects the model. [Commit](https://github.com/open-webui/open-webui/commit/9a555478273355a5177bfc7f7211c64778e4c8de), [Commit](https://github.com/open-webui/open-webui/commit/384a53b339820068e92f7eaea0d9f3e0536c19c2), [Commit](https://github.com/open-webui/open-webui/commit/d7f43bfc1a30c065def8c50d77c2579c1a3c5c67), [Commit](https://github.com/open-webui/open-webui/commit/6a67a2217cc5946ad771e479e3a37ac213210748)
+- 💬 The ability to reference other chats as context within a conversation was added via the attachment menu. [Commit](https://github.com/open-webui/open-webui/commit/e097bbdf11ae4975c622e086df00d054291cdeb3), [Commit](https://github.com/open-webui/open-webui/commit/f3cd2ffb18e7dedbe88430f9ae7caa6b3cfd79d0), [Commit](https://github.com/open-webui/open-webui/commit/74263c872c5d574a9bb0944d7984f748dc772dba), [Commit](https://github.com/open-webui/open-webui/pull/17420/commits/aa8ab349ed2fcb46d1cf994b9c0de2ec2ea35d0d), [Commit](https://github.com/open-webui/open-webui/pull/17420/commits/025eef754f0d46789981defd473d001e3b1d0ca2)
+- 🎨 The command suggestion UI for prompts ('/'), models ('@'), and knowledge ('#') was completely overhauled with a more responsive and keyboard-navigable interface. [Commit](https://github.com/open-webui/open-webui/commit/6b69c4da0fb9329ccf7024483960e070cf52ccab), [Commit](https://github.com/open-webui/open-webui/commit/06a6855f844456eceaa4d410c93379460e208202), [Commit](https://github.com/open-webui/open-webui/commit/c55f5578280b936cf581a743df3703e3db1afd54), [Commit](https://github.com/open-webui/open-webui/commit/f68d1ba394d4423d369f827894cde99d760b2402)
+- 👥 User and channel suggestions were added to the mention system, enabling '@' mentions for users and models, and '#' mentions for channels with searchable user lookup and clickable navigation. [Commit](https://github.com/open-webui/open-webui/pull/17420/commits/bbd1d2b58c89b35daea234f1fc9208f2af840899), [Commit](https://github.com/open-webui/open-webui/pull/17420/commits/aef1e06f0bb72065a25579c982dd49157e320268), [Commit](https://github.com/open-webui/open-webui/pull/17420/commits/779db74d7e9b7b00d099b7d65cfbc8a831e74690)
+- 📁 Folder functionality was enhanced with custom background image support, improved drag-and-drop capabilities for moving folders to root level, and better menu interactions. [Commit](https://github.com/open-webui/open-webui/pull/17420/commits/2a234829f5dfdfde27fdfd30591caa908340efb4), [Commit](https://github.com/open-webui/open-webui/pull/17420/commits/2b1ee8b0dc5f7c0caaafdd218f20705059fa72e2), [Commit](https://github.com/open-webui/open-webui/pull/17420/commits/b1e5bc8e490745f701909c19b6a444b67c04660e), [Commit](https://github.com/open-webui/open-webui/pull/17420/commits/3e584132686372dfeef187596a7c557aa5f48308)
+- ☁️ OneDrive integration configuration now supports selecting between personal and work/school account types via ENABLE_ONEDRIVE_PERSONAL and ENABLE_ONEDRIVE_BUSINESS environment variables. [#17354](https://github.com/open-webui/open-webui/pull/17354), [Commit](https://github.com/open-webui/open-webui/commit/e1e3009a30f9808ce06582d81a60e391f5ca09ec), [Docs:#697](https://github.com/open-webui/docs/pull/697)
+- ⚡ Mermaid.js is now dynamically loaded on demand, significantly reducing first-screen loading time and improving initial page performance. [#17476](https://github.com/open-webui/open-webui/issues/17476), [#17477](https://github.com/open-webui/open-webui/pull/17477)
+- ⚡ Azure MSAL browser library is now dynamically loaded on demand, reducing initial bundle size by 730KB and improving first-screen loading speed. [#17479](https://github.com/open-webui/open-webui/pull/17479)
+- ⚡ CodeEditor component is now dynamically loaded on demand, reducing initial bundle size by 1MB and improving first-screen loading speed. [#17498](https://github.com/open-webui/open-webui/pull/17498)
+- ⚡ Hugging Face Transformers library is now dynamically loaded on demand, reducing initial bundle size by 1.9MB and improving first-screen loading speed. [#17499](https://github.com/open-webui/open-webui/pull/17499)
+- ⚡ jsPDF and html2canvas-pro libraries are now dynamically loaded on demand, reducing initial bundle size by 980KB and improving first-screen loading speed. [#17502](https://github.com/open-webui/open-webui/pull/17502)
+- ⚡ Leaflet mapping library is now dynamically loaded on demand, reducing initial bundle size by 454KB and improving first-screen loading speed. [#17503](https://github.com/open-webui/open-webui/pull/17503)
+- 📊 OpenTelemetry metrics collection was enhanced to properly handle HTTP 500 errors and ensure metrics are recorded even during exceptions. [Commit](https://github.com/open-webui/open-webui/pull/17420/commits/b14617a653c6bdcfd3102c12f971924fd1faf572)
+- 🔒 OAuth token retrieval logic was refactored, improving the reliability and consistency of authentication handling across the backend. [Commit](https://github.com/open-webui/open-webui/commit/6c0a5fa91cdbf6ffb74667ee61ca96bebfdfbc50)
+- 💻 Code block output processing was improved to handle Python execution results more reliably, along with refined visual styling and button layouts. [Commit](https://github.com/open-webui/open-webui/pull/17420/commits/0e5320c39e308ff97f2ca9e289618af12479eb6e)
+- ⚡ Message input processing was optimized to skip unnecessary text variable handling when input is empty, improving performance. [Commit](https://github.com/open-webui/open-webui/pull/17420/commits/e1386fe80b77126a12dabc4ad058abe9b024b275)
+- 📄 Individual chat PDF export was added to the sidebar chat menu, allowing users to export single conversations as PDF documents with both stylized and plain text options. [Commit](https://github.com/open-webui/open-webui/pull/17420/commits/d041d58bb619689cd04a391b4f8191b23941ca62)
+- 🛠️ Function validation was enhanced with improved valve validation and better error handling during function loading and synchronization. [Commit](https://github.com/open-webui/open-webui/pull/17420/commits/e66e0526ed6a116323285f79f44237538b6c75e6), [Commit](https://github.com/open-webui/open-webui/pull/17420/commits/8edfd29102e0a61777b23d3575eaa30be37b59a5)
+- 🔔 Notification toast interaction was enhanced with drag detection to prevent accidental clicks and added keyboard support for accessibility. [Commit](https://github.com/open-webui/open-webui/pull/17420/commits/621e7679c427b6f0efa85f95235319238bf171ad)
+- 🗓️ Improved date and time formatting dynamically adapts to the selected language, ensuring consistent localization across the UI. [#17409](https://github.com/open-webui/open-webui/pull/17409), [Commit](https://github.com/open-webui/open-webui/commit/2227f24bd6d861b1fad8d2cabacf7d62ce137d0c)
+- 🔒 Feishu SSO integration was added, allowing users to authenticate via Feishu. [#17284](https://github.com/open-webui/open-webui/pull/17284), [Docs:#685](https://github.com/open-webui/docs/pull/685)
+- 🔠 Toggle filters in the chat input options menu are now sorted alphabetically for easier navigation. [Commit](https://github.com/open-webui/open-webui/commit/ca853ca4656180487afcd84230d214f91db52533)
+- 🎨 Long chat titles in the sidebar are now truncated to prevent text overflow and maintain a clean layout. [#17356](https://github.com/open-webui/open-webui/pull/17356)
+- 🎨 Temporary chat interface design was refined with improved layout and visual consistency. [Commit](https://github.com/open-webui/open-webui/pull/17420/commits/67549dcadd670285d491bd41daf3d081a70fd094), [Commit](https://github.com/open-webui/open-webui/pull/17420/commits/2ca34217e68f3b439899c75881dfb050f49c9eb2), [Commit](https://github.com/open-webui/open-webui/pull/17420/commits/fb02ec52a5df3f58b53db4ab3a995c15f83503cd)
+- 🎨 Download icon consistency was improved across the entire interface by standardizing the icon component used in menus, functions, tools, and export features. [Commit](https://github.com/open-webui/open-webui/pull/17420/commits/596be451ece7e11b5cd25465d49670c27a1cb33f)
+- 🎨 Settings interface was enhanced with improved iconography and reorganized the 'Chats' section into 'Data Controls' for better clarity. [Commit](https://github.com/open-webui/open-webui/pull/17420/commits/8bf0b40fdd978b5af6548a6e1fb3aabd90bcd5cd)
+- 🔄 Various improvements were implemented across the frontend and backend to enhance performance, stability, and security.
+- 🌐 Translations for Finnish, German, Kabyle, Portuguese (Brazil), Simplified Chinese, Spanish (Spain), and Traditional Chinese (Taiwan) were enhanced and expanded.
+
+### Fixed
+
+- 📚 Knowledge base permission logic was corrected to ensure private collection owners can access their own content when embedding bypass is enabled. [#17432](https://github.com/open-webui/open-webui/issues/17432), [Commit](https://github.com/open-webui/open-webui/commit/a51f0c30ec1472d71487eab3e15d0351a2716b12)
+- ⚙️ Connection URL editing in Admin Settings now properly saves changes instead of reverting to original values, fixing issues with both Ollama and OpenAI-compatible endpoints. [#17435](https://github.com/open-webui/open-webui/issues/17435), [Commit](https://github.com/open-webui/open-webui/commit/e4c864de7eb0d577843a80688677ce3659d1f81f)
+- 📊 Usage information collection from Google models was corrected to handle providers that send usage data alongside content chunks instead of separately. [#17421](https://github.com/open-webui/open-webui/pull/17421), [Commit](https://github.com/open-webui/open-webui/commit/c2f98a4cd29ed738f395fef09c42ab8e73cd46a0)
+- ⚙️ Settings modal scrolling issue was resolved by moving image compression controls to a dedicated modal, preventing the main settings from becoming scrollable out of view. [#17474](https://github.com/open-webui/open-webui/issues/17474), [Commit](https://github.com/open-webui/open-webui/commit/fed5615c19b0045a55b0be426b468a57bfda4b66)
+- 📁 Folder click behavior was improved to prevent accidental actions by implementing proper double-click detection and timing delays for folder expansion and selection. [Commit](https://github.com/open-webui/open-webui/pull/17420/commits/19e3214997170eea6ee92452e8c778e04a28e396)
+- 🔐 Access control component reliability was improved with better null checking and error handling for group permissions and private access scenarios. [Commit](https://github.com/open-webui/open-webui/pull/17420/commits/c8780a7f934c5e49a21b438f2f30232f83cf75d2), [Commit](https://github.com/open-webui/open-webui/pull/17420/commits/32015c392dbc6b7367a6a91d9e173e675ea3402c)
+- 🔗 The citation modal now correctly displays and links to external web page sources in addition to internal documents. [Commit](https://github.com/open-webui/open-webui/commit/9208a84185a7e59524f00a7576667d493c3ac7d4)
+- 🔗 Web and YouTube attachment handling was fixed, ensuring their content is now reliably processed and included in the chat context for retrieval. [Commit](https://github.com/open-webui/open-webui/commit/210197fd438b52080cda5d6ce3d47b92cdc264c8)
+- 📂 Large file upload failures are resolved by correcting the processing logic for scenarios where document embedding is bypassed. [Commit](https://github.com/open-webui/open-webui/commit/051b6daa8299fd332503bd584563556e2ae6adab)
+- 🌐 Rich text input placeholder text now correctly updates when the interface language is switched, ensuring proper localization. [#17473](https://github.com/open-webui/open-webui/pull/17473), [Commit](https://github.com/open-webui/open-webui/commit/77358031f5077e6efe5cc08d8d4e5831c7cd1cd9)
+- 📊 Llama.cpp server timing metrics are now correctly parsed and displayed by fixing a typo in the response handling. [#17350](https://github.com/open-webui/open-webui/issues/17350), [Commit](https://github.com/open-webui/open-webui/commit/cf72f5503f39834b9da44ebbb426a3674dad0caa)
+- 🛠️ Filter functions with file_handler configuration now properly handle messages without file attachments, preventing runtime errors. [#17423](https://github.com/open-webui/open-webui/pull/17423)
+- 🔔 Channel notification delivery was fixed to properly handle background task execution and user access checking. [Commit](https://github.com/open-webui/open-webui/pull/17420/commits/1077b2ac8b96e49c2ad2620e76eb65bbb2a3a1f3)
+
+### Changed
+
+- 📝 Prompt template variables are now optional by default instead of being forced as required, allowing flexible workflows with optional metadata fields. [#17447](https://github.com/open-webui/open-webui/issues/17447), [Commit](https://github.com/open-webui/open-webui/commit/d5824b1b495fcf86e57171769bcec2a0f698b070), [Docs:#696](https://github.com/open-webui/docs/pull/696)
+- 🛠️ Direct external tool servers now require explicit user selection from the input interface instead of being automatically included in conversations, providing better control over tool usage. [Commit](https://github.com/open-webui/open-webui/pull/17420/commits/0f04227c34ca32746c43a9323e2df32299fcb6af), [Commit](https://github.com/open-webui/open-webui/pull/17420/commits/99bba12de279dd55c55ded35b2e4f819af1c9ab5)
+- 📺 Widescreen mode option was removed from Channels interface, with all channel layouts now using full-width display. [Commit](https://github.com/open-webui/open-webui/pull/17420/commits/d46b7b8f1b99a8054b55031fe935c8a16d5ec956)
+- 🎛️ The plain textarea input option was deprecated, and the custom text editor is now the standard for all chat inputs. [Commit](https://github.com/open-webui/open-webui/commit/153afd832ccd12a1e5fd99b085008d080872c161)
+
+## [0.6.28] - 2025-09-10
+
+### Added
+
+- 🔍 The "@" command for model selection now supports real-time search and filtering, improving usability and aligning its behavior with other input commands. [#17307](https://github.com/open-webui/open-webui/issues/17307), [Commit](https://github.com/open-webui/open-webui/commit/f2a09c71499489ee71599af4a179e7518aaf658b)
+- 🛠️ External tool server data handling is now more robust, automatically attempting to parse specifications as JSON before falling back to YAML, regardless of the URL extension. [Commit](https://github.com/open-webui/open-webui/commit/774c0056bde88ed4831422efa81506488e3d6641)
+- 🎯 The "Title" field is now automatically focused when creating a new chat folder, streamlining the folder creation process. [#17315](https://github.com/open-webui/open-webui/issues/17315), [Commit](https://github.com/open-webui/open-webui/commit/c51a651a2d5e2a27546416666812e9b92205562d)
+- 🔄 Various improvements were implemented across the frontend and backend to enhance performance, stability, and security.
+- 🌐 Brazilian Portuguese and Simplified Chinese translations were expanded and refined.
+
+### Fixed
+
+- 🔊 A regression affecting Text-to-Speech for local providers using the OpenAI engine was fixed by reverting a URL joining change. [#17316](https://github.com/open-webui/open-webui/issues/17316), [Commit](https://github.com/open-webui/open-webui/commit/8339f59cdfc63f2d58c8e26933d1bf1438479d75)
+- 🪧 A regression was fixed where the input modal for prompts with placeholders would not open, causing the raw prompt text to be pasted into the chat input field instead. [#17325](https://github.com/open-webui/open-webui/issues/17325), [Commit](https://github.com/open-webui/open-webui/commit/d5cb65527eaa4831459a4c7dbf187daa9c0525ae)
+- 🔑 An issue was resolved where modified connection keys in the OpenAIConnection component did not take effect. [#17324](https://github.com/open-webui/open-webui/pull/17324)
+
+## [0.6.27] - 2025-09-09
+
+### Added
+
+- 📁 Emoji folder icons were added, allowing users to personalize workspace organization with visual cues, including improved chevron display. [Commit](https://github.com/open-webui/open-webui/pull/17070/commits/1588f42fe777ad5d807e3f2fc8dbbc47a8db87c0), [Commit](https://github.com/open-webui/open-webui/pull/17070/commits/b70c0f36c0f5bbfc2a767429984d6fba1a7bb26c), [Commit](https://github.com/open-webui/open-webui/pull/17070/commits/11dea8795bfce42aa5d8d58ef316ded05173bd87), [Commit](https://github.com/open-webui/open-webui/pull/17070/commits/c0a47169fa059154d5f5a9ea6b94f9a66d82f255)
+- 📁 The 'Search Collection' input field now dynamically displays the total number of files within the knowledge base. [Commit](https://github.com/open-webui/open-webui/pull/17070/commits/fbbe1117ae4c9c8fec6499d790eee275818eccc5)
+- ☁️ A provider toggle in connection settings now allows users to manually specify Azure OpenAI deployments. [Commit](https://github.com/open-webui/open-webui/pull/17070/commits/5bdd334b74fbd154085f2d590f4afdba32469c8a)
+- ⚡ Model list caching performance was optimized by fixing cache key generation to reduce redundant API calls. [#17158](https://github.com/open-webui/open-webui/pull/17158)
+- 🎨 Azure OpenAI image generation is now supported, with configurations for IMAGES_OPENAI_API_VERSION via environment variable and admin UI. [#17147](https://github.com/open-webui/open-webui/pull/17147), [#16274](https://github.com/open-webui/open-webui/discussions/16274), [Docs:#679](https://github.com/open-webui/docs/pull/679)
+- ⚡ Comprehensive N+1 query performance is optimized by reducing database queries from 1+N to 1+1 patterns across major listing endpoints. [#17165](https://github.com/open-webui/open-webui/pull/17165), [#17160](https://github.com/open-webui/open-webui/pull/17160), [#17161](https://github.com/open-webui/open-webui/pull/17161), [#17162](https://github.com/open-webui/open-webui/pull/17162), [#17159](https://github.com/open-webui/open-webui/pull/17159), [#17166](https://github.com/open-webui/open-webui/pull/17166)
+- ⚡ The PDF.js library is now dynamically loaded, significantly reducing initial page load size and improving responsiveness. [#17222](https://github.com/open-webui/open-webui/pull/17222)
+- ⚡ The heic2any library is now dynamically loaded across various message input components, including channels, for faster page loads. [#17225](https://github.com/open-webui/open-webui/pull/17225), [#17229](https://github.com/open-webui/open-webui/pull/17229)
+- 📚 The knowledge API now supports a "delete_file" query parameter, allowing configurable file deletion behavior. [Commit](https://github.com/open-webui/open-webui/pull/17070/commits/22c4ef4fb096498066b73befe993ae3a82f7a8e7)
+- 📊 Llama.cpp timing statistics are now integrated into the usage field for comprehensive model performance metrics. [Commit](https://github.com/open-webui/open-webui/pull/17070/commits/e830b4959ecd4b2795e29e53026984a58a7696a9)
+- 🗄️ The PGVECTOR_CREATE_EXTENSION environment variable now allows control over automatic pgvector extension creation. [Commit](https://github.com/open-webui/open-webui/pull/17070/commits/c2b4976c82d335ed524bd80dc914b5e2f5bfbd9e), [Commit](https://github.com/open-webui/open-webui/pull/17070/commits/b45219c8b15b48d5ee3d42983e1107bbcefbab01), [Docs:#672](https://github.com/open-webui/docs/pull/672)
+- 🔒 Comprehensive server-side OAuth token management was implemented, securely storing encrypted tokens in a new database table and introducing an automatic refresh mechanism, enabling seamless and secure forwarding of valid user-specific OAuth tokens to downstream services, including OpenAI-compatible endpoints and external tool servers via the new "system_oauth" authentication type, resolving long-standing issues such as large token size limitations, stale/expired tokens, and reliable token propagation, and enhancing overall security by minimizing client-side token exposure, configurable via "ENABLE_OAUTH_ID_TOKEN_COOKIE" and "OAUTH_SESSION_TOKEN_ENCRYPTION_KEY" environment variables. [Docs:#683](https://github.com/open-webui/docs/pull/683), [#17210](https://github.com/open-webui/open-webui/pull/17210), [#8957](https://github.com/open-webui/open-webui/discussions/8957), [#11029](https://github.com/open-webui/open-webui/discussions/11029), [#17178](https://github.com/open-webui/open-webui/issues/17178), [#17183](https://github.com/open-webui/open-webui/issues/17183), [Commit](https://github.com/open-webui/open-webui/commit/217f4daef09b36d3d4cc4681e11d3ebd9984a1a5), [Commit](https://github.com/open-webui/open-webui/commit/fc11e4384fe98fac659e10596f67c23483578867), [Commit](https://github.com/open-webui/open-webui/commit/f11bdc6ab5dd5682bb3e27166e77581f5b8af3e0), [Commit](https://github.com/open-webui/open-webui/commit/f71834720e623761d972d4d740e9bbd90a3a86c6), [Commit](https://github.com/open-webui/open-webui/commit/b5bb6ae177dcdc4e8274d7e5ffa50bc8099fd466), [Commit](https://github.com/open-webui/open-webui/commit/b786d1e3f3308ef4f0f95d7130ddbcaaca4fc927), [Commit](https://github.com/open-webui/open-webui/commit/8a9f8627017bd0a74cbd647891552b26e56aabb7), [Commit](https://github.com/open-webui/open-webui/commit/30d1dc2c60e303756120fe1c5538968c4e6139f4), [Commit](https://github.com/open-webui/open-webui/commit/2b2d123531eb3f42c0e940593832a64e2806240d), [Commit](https://github.com/open-webui/open-webui/commit/6f6412dd16c63c2bb4df79a96b814bf69cb3f880)
+- 🔒 Conditional Permission Hardening for OpenShift Deployments: Added a build argument to enable optional permission hardening for OpenShift and container environments. [Commit](https://github.com/open-webui/open-webui/pull/17070/commits/0ebe4f8f8490451ac8e85a4846f010854d9b54e5)
+- 👥 Regex pattern support is added for OAuth blocked groups, allowing more flexible group filtering rules. [Commit](https://github.com/open-webui/open-webui/pull/17070/commits/df66e21472646648d008ebb22b0e8d5424d491df)
+- 💬 Web search result display was enhanced to include titles and favicons, providing a clearer overview of search sources. [Commit](https://github.com/open-webui/open-webui/pull/17070/commits/33f04a771455e3fabf8f0e8ebb994ae7f41b8ed4), [Commit](https://github.com/open-webui/open-webui/pull/17070/commits/0a85dd4bca23022729eafdbc82c8c139fa365af2), [Commit](https://github.com/open-webui/open-webui/pull/17070/commits/16090bc2721fde492afa2c4af5927e2b668527e1), [#17197](https://github.com/open-webui/open-webui/pull/17197), [#14179](https://github.com/open-webui/open-webui/issues/14179), [Commit](https://github.com/open-webui/open-webui/pull/17070/commits/1cdb7aed1ee9bf81f2fd0404be52dcfa64f8ed4f), [Commit](https://github.com/open-webui/open-webui/pull/17070/commits/f2525ebc447c008cf7269ef20ce04fa456f302c4), [Commit](https://github.com/open-webui/open-webui/pull/17070/commits/7f523de408ede4075349d8de71ae0214b7e1a62e), [Commit](https://github.com/open-webui/open-webui/pull/17070/commits/3d37e4a42d344051ae715ab59bd7b5718e46c343), [Commit](https://github.com/open-webui/open-webui/pull/17070/commits/cd5e2be27b613314aadda6107089331783987985), [Commit](https://github.com/open-webui/open-webui/pull/17070/commits/6dc0df247347aede2762fe2065cf30275fd137ae)
+- 💬 A new setting was added to control whether clicking a suggested prompt automatically sends the message or only inserts the text. [#17192](https://github.com/open-webui/open-webui/issues/17192), [Commit](https://github.com/open-webui/open-webui/commit/e023a98f11fc52feb21e4065ec707cc98e50c7d3)
+- 🔄 Various improvements were implemented across the frontend and backend to enhance performance, stability, and security.
+- 🌐 Translations for Portuguese (Brazil), Simplified Chinese, Catalan, and Spanish were enhanced and expanded.
+
+### Fixed
+
+- 🔍 Hybrid search functionality now correctly handles lexical-semantic weight labels and avoids errors when BM25 weight is zero. [#17049](https://github.com/open-webui/open-webui/pull/17049), [#17046](https://github.com/open-webui/open-webui/issues/17046)
+- 🛑 Task stopping errors are prevented by gracefully handling multiple stop requests for the same task. [#17195](https://github.com/open-webui/open-webui/pull/17195)
+- 🐍 Code execution package detection precision is improved in Pyodide to prevent unnecessary package inclusions. [Commit](https://github.com/open-webui/open-webui/pull/17070/commits/bbe116795860a81a647d9567e0d9cb1950650095)
+- 🛠️ Tool message format API compliance is fixed by ensuring content fields in tool call responses contain valid string values instead of null. [Commit](https://github.com/open-webui/open-webui/pull/17070/commits/37bf0087e5b8a324009c9d06b304027df351ea6b)
+- 📱 Mobile app config API authentication now supports Authorization header token verification with cookie fallback for iOS and Android requests. [#17175](https://github.com/open-webui/open-webui/pull/17175)
+- 💾 Knowledge file save race conditions are prevented by serializing API calls and adding an "isSaving" guard. [#17137](https://github.com/open-webui/open-webui/pull/17137), [Commit](https://github.com/open-webui/open-webui/pull/17070/commits/4ca936f0bf9813bee11ec8aea41d7e34fb6b16a9)
+- 🔐 The SSO login button visibility is restored for OIDC PKCE authentication without a client secret. [#17012](https://github.com/open-webui/open-webui/pull/17012)
+- 🔊 Text-to-Speech (TTS) API requests now use proper URL joining methods, ensuring reliable functionality regardless of trailing slashes in the base URL. [#17061](https://github.com/open-webui/open-webui/pull/17061)
+- 🛡️ Admin account creation on Hugging Face Spaces now correctly detects the configured port, resolving issues with custom port deployments. [#17064](https://github.com/open-webui/open-webui/pull/17064)
+- 📁 Unicode filename support is improved for external document loaders by properly URL-encoding filenames in HTTP headers. [#17013](https://github.com/open-webui/open-webui/pull/17013), [#17000](https://github.com/open-webui/open-webui/issues/17000)
+- 🔗 Web page and YouTube attachments are now correctly processed by setting their type as "text" and using collection names for accurate content retrieval. [Commit](https://github.com/open-webui/open-webui/pull/17070/commits/487979859a6ffcfd60468f523822cdf838fbef5b)
+- ✍️ Message input composition event handling is fixed to properly manage text input for multilingual users using Input Method Editors (IME). [#17085](https://github.com/open-webui/open-webui/pull/17085)
+- 💬 Follow-up tooltip duplication is removed, streamlining the user interface and preventing visual clutter. [#17186](https://github.com/open-webui/open-webui/pull/17186)
+- 🎨 Chat button text display is corrected by preventing clipping of descending characters and removing unnecessary capitalization. [#17191](https://github.com/open-webui/open-webui/pull/17191)
+- 🧠 RAG Loop/Error with Gemma 3.1 2B Instruct is fixed by correctly unwrapping unexpected single-item list responses from models. [Commit](https://github.com/open-webui/open-webui/pull/17070/commits/1bc9711afd2b72cd07c4e539a83783868733767c), [#17213](https://github.com/open-webui/open-webui/issues/17213)
+- 🖼️ HEIC conversion failures are resolved, improving robustness of image handling. [#17225](https://github.com/open-webui/open-webui/pull/17225)
+- 📦 The slim Docker image size regression has been fixed by refining the build process to correctly exclude components when USE_SLIM=true. [#16997](https://github.com/open-webui/open-webui/issues/16997), [Commit](https://github.com/open-webui/open-webui/commit/be373e9fd42ac73b0302bdb487e16dbeae178b4e), [Commit](https://github.com/open-webui/open-webui/commit/0ebe4f8f8490451ac8e85a4846f010854d9b54e5)
+- 📁 Knowledge base update validation errors are resolved, ensuring seamless management via UI or API. [#17244](https://github.com/open-webui/open-webui/issues/17244), [Commit](https://github.com/open-webui/open-webui/commit/9aac1489080a5c9441e89b1a56de0d3a672bc5fb)
+- 🔐 Resolved a security issue where a global web search setting overrode model-specific restrictions, ensuring model-level settings are now correctly prioritized. [#17151](https://github.com/open-webui/open-webui/issues/17151), [Commit](https://github.com/open-webui/open-webui/commit/9368d0ac751ec3072d5a96712b80a9b20a642ce6)
+- 🔐 OAuth redirect reliability is improved by robustly preserving the intended redirect path using session storage. [#17235](https://github.com/open-webui/open-webui/issues/17235), [Commit](https://github.com/open-webui/open-webui/pull/17070/commits/4f2b821088367da18374027919594365c7a3f459), [#15575](https://github.com/open-webui/open-webui/pull/15575), [Commit](https://github.com/open-webui/open-webui/pull/17070/commits/d9f97c832c556fae4b116759da0177bf4fe619de)
+- 🔐 Fixed a security vulnerability where knowledge base access within chat folders persisted after permissions were revoked. [#17182](https://github.com/open-webui/open-webui/issues/17182), [Commit](https://github.com/open-webui/open-webui/commit/40e40d1dddf9ca937e99af41c8ca038dbc93a7e6)
+- 🔒 OIDC access denied errors are now displayed as user-friendly toast notifications instead of raw JSON. [#17208](https://github.com/open-webui/open-webui/issues/17208), [Commit](https://github.com/open-webui/open-webui/commit/3d6d050ad82d360adc42d6e9f42e8faf8d13c9f4)
+- 💬 Chat exception handling is enhanced to prevent system instability during message generation and ensure graceful error recovery. [Commit](https://github.com/open-webui/open-webui/pull/17070/commits/f56889c5c7f0cf1a501c05d35dfa614e4f8b6958)
+- 🔒 Static asset authentication is improved by adding crossorigin="use-credentials" attributes to all link elements, enabling proper cookie forwarding for proxy environments and authenticated requests to favicon, manifest, and stylesheet resources. [#17280](https://github.com/open-webui/open-webui/pull/17280), [Commit](https://github.com/open-webui/open-webui/commit/f17d8b5d19e1a05df7d63f53e939c99772a59c1e)
+
+### Changed
+
+- 🛠️ Renamed "Tools" to "External Tools" across the UI for clearer distinction between built-in and external functionalities. [Commit](https://github.com/open-webui/open-webui/pull/17070/commits/0bca4e230ef276bec468889e3be036242ad11086f)
+- 🛡️ Default permission validation for message regeneration and deletion actions is enhanced to provide more restrictive access controls, improving chat security and user data protection. [#17285](https://github.com/open-webui/open-webui/pull/17285)
+
+## [0.6.26] - 2025-08-28
+
+### Added
+
+- 🛂 **Granular Chat Interaction Permissions**: Added fine-grained permission controls for individual chat actions including "Continue Response", "Regenerate Response", "Rate Response", and "Delete Messages". Administrators can now configure these permissions per user group or set system defaults via environment variables, providing enhanced security and governance by preventing potential system prompt leakage through response continuation and enabling precise control over user interactions with AI responses.
+- 🧠 **Custom Reasoning Tags Configuration**: Added configurable reasoning tag detection for AI model responses, allowing administrators and users to customize how the system identifies and processes reasoning content. Users can now define custom reasoning tag pairs, use default tags like "think" and "reasoning", or disable reasoning detection entirely through the Advanced Parameters interface, providing enhanced control over AI thought process visibility.
+- 📱 **Pull-to-Refresh Support**: Added pull-to-refresh functionality allowing user to easily refresh the interface by pulling down on the navbar area. This resolves timeout issues that occurred when temporarily switching away from the app during long AI response generations, eliminating the need to close and relaunch the PWA.
+- 📁 **Configurable File Upload Processing Mode**: Added "process_in_background" query parameter to the file upload API endpoint, allowing clients to choose between asynchronous (default) and synchronous file processing. Setting "process_in_background=false" forces the upload request to wait until extraction and embedding complete, returning immediately usable files and simplifying integration for backend API consumers that prefer blocking calls over polling workflows.
+- 🔐 **Azure Document Intelligence DefaultAzureCredential Support**: Added support for authenticating with Azure Document Intelligence using DefaultAzureCredential in addition to API key authentication, enabling seamless integration with Azure Entra ID and managed identity authentication for enterprise Azure environments.
+- 🔐 **Authentication Bootstrapping Enhancements**: Added "ENABLE_INITIAL_ADMIN_SIGNUP" environment variable and "?form=true" URL parameter to enable initial admin user creation and forced login form display in SSO-only deployments. This resolves bootstrap issues where administrators couldn't create the first user when login forms were disabled, allowing proper initialization of SSO-configured deployments without requiring temporary configuration changes.
+- ⚡ **Query Generation Caching**: Added "ENABLE_QUERIES_CACHE" environment variable to enable request-scoped caching of generated search queries. When both web search and file retrieval are active, queries generated for web search are automatically reused for file retrieval, eliminating duplicate LLM API calls and reducing token usage and costs while maintaining search quality.
+- 🔧 **Configurable Tool Call Retry Limit**: Added "CHAT_RESPONSE_MAX_TOOL_CALL_RETRIES" environment variable to control the maximum number of sequential tool calls allowed before safety stopping a chat session. This replaces the previous hardcoded limit of 10, enabling administrators to configure higher limits for complex workflows requiring extensive tool interactions.
+- 📦 **Slim Docker Image Variant**: Added new slim Docker image option via "USE_SLIM" build argument that excludes embedded AI models and Ollama installation, reducing image size by approximately 1GB. This variant enables faster image pulls and deployments for environments where AI models are managed externally, particularly beneficial for auto-scaling clusters and distributed deployments.
+- 🗂️ **Shift-to-Delete Functionality for Workspace Prompts**: Added keyboard shortcut support for quick prompt deletion on the Workspace Prompts page. Hold Shift and hover over any prompt to reveal a trash icon for instant deletion, bringing consistent interaction patterns across all workspace sections (Models, Tools, Functions, and now Prompts) and streamlining prompt management workflows.
+- ♿ **Accessibility Enhancements**: Enhanced user interface accessibility with improved keyboard navigation, ARIA labels, and screen reader compatibility across key platform components.
+- 📄 **Optimized PDF Export for Smaller File Size**: PDF exports are now significantly optimized, producing much smaller files for faster downloads and easier sharing or archiving of your chats and documents.
+- 📦 **Slimmed Default Install with Optional Full Dependencies**: Installing Open WebUI via pip now defaults to a slimmer package; PostgreSQL support is no longer included by default—simply use 'pip install open-webui[all]' to include all optional dependencies for full feature compatibility.
+- 🔄 **General Backend Refactoring**: Implemented various backend improvements to enhance performance, stability, and security, ensuring a more resilient and reliable platform for all users.
+- 🌐 **Localization & Internationalization Improvements**: Enhanced and expanded translations for Finnish, Spanish, Japanese, Polish, Portuguese (Brazil), and Chinese, including missing translations and typo corrections, providing a more natural and professional user experience for speakers of these languages across the entire interface.
+
+### Fixed
+
+- ⚠️ **Chat Error Feedback Restored**: Fixed an issue where various backend errors (tool server failures, API connection issues, malformed responses) would cause chats to load indefinitely without providing user feedback. The system now properly displays error messages when failures occur during chat generation, allowing users to understand issues and retry as needed instead of waiting indefinitely.
+- 🖼️ **Image Generation Steps Setting Visibility Fixed**: Fixed a UI issue where the "Set Steps" configuration option was incorrectly displayed for OpenAI and Gemini image generation engines that don't support this parameter. The setting is now only visible for compatible engines like ComfyUI and Automatic1111, eliminating user confusion about non-functional configuration options.
+- 📄 **Datalab Marker API Document Loader Fixed**: Fixed broken Datalab Marker API document loader functionality by correcting URL path handling for both hosted Datalab services and self-hosted Marker servers. Removed hardcoded "/marker" paths from the loader code and restored proper default URL structure, ensuring PDF and document processing works correctly with both deployment types.
+- 📋 **Citation Error Handling Improved**: Fixed an issue where malformed citation or source objects from external tools, pipes, or filters would cause JavaScript errors and make the chat interface completely unresponsive. The system now gracefully handles missing or undefined citation properties, allowing conversations to load properly even when tools generate defective citation events.
+- 👥 **Group User Add API Endpoint Fixed**: Fixed an issue where the "/api/v1/groups/id/{group_id}/users/add" API endpoint would accept requests without errors but fail to actually add users to groups. The system now properly initializes and deduplicates user ID lists, ensuring users are correctly added to and removed from groups via API calls.
+- 🛠️ **External Tool Server Error Handling Improved**: Fixed an issue where unreachable or misconfigured external tool servers would cause JavaScript errors and prevent the interface from loading properly. The system now gracefully handles connection failures, displays appropriate error messages, and filters out inaccessible servers while maintaining full functionality for working connections.
+- 📋 **Code Block Copy Button Content Fixed**: Fixed an issue where the copy button in code blocks would copy the original AI-generated code instead of any user-edited content, ensuring the copy function always captures the currently displayed code as modified by users.
+- 📄 **PDF Export Content Mismatch Fixed**: Resolved an issue where exporting a PDF of one chat while viewing another chat would incorrectly generate the PDF using the currently viewed chat's content instead of the intended chat's content. Additionally optimized the PDF generation algorithm with improved canvas slicing, better memory management, and enhanced image quality, while removing the problematic PDF export option from individual chat menus to prevent further confusion.
+- 🖱️ **Windows Sidebar Cursor Icon Corrected**: Fixed confusing cursor icons on Windows systems where sidebar toggle buttons displayed resize cursors (ew-resize) instead of appropriate pointer cursors. The sidebar buttons now show standard pointer cursors on Windows, eliminating user confusion about whether the buttons expand/collapse the sidebar or resize it.
+- 📝 **Safari IME Composition Bug Fixed**: Resolved an issue where pressing Enter while composing Chinese text using Input Method Editors (IMEs) on Safari would prematurely send messages instead of completing text composition. The system now properly detects composition states and ignores keydown events that occur immediately after composition ends, ensuring smooth multilingual text input across all browsers.
+- 🔍 **Hybrid Search Parameter Handling Fixed**: Fixed an issue where the "hybrid" parameter in collection query requests was not being properly evaluated, causing the system to ignore user-specified hybrid search preferences and only check global configuration. Additionally resolved a division by zero error that occurred in hybrid search when BM25Retriever was called with empty document lists, ensuring robust search functionality across all collection states.
+- 💬 **RTL Text Orientation in Messages Fixed**: Fixed text alignment issues in user messages and AI responses for Right-to-Left languages, ensuring proper text direction based on user language settings. Code blocks now consistently use Left-to-Right orientation regardless of the user's language preference, maintaining code readability across all supported languages.
+- 📁 **File Content Preview in Modal Restored**: Fixed an issue where clicking on uploaded files would display an empty preview modal, even when the files were successfully processed and available for AI context. File content now displays correctly in the preview modal, ensuring users can verify and review their uploaded documents as intended.
+- 🌐 **Playwright Timeout Configuration Corrected**: Fixed an issue where Playwright timeout values were incorrectly converted from milliseconds to seconds with an additional 1000x multiplier, causing excessively long web loading timeouts. The timeout parameter now correctly uses the configured millisecond values as intended, ensuring responsive web search and document loading operations.
+
+### Changed
+
+- 🔄 **Follow-Up Question Language Constraint Removed**: Follow-up question suggestions no longer strictly adhere to the chat's primary language setting, allowing for more flexible and diverse suggestion generation that may include questions in different languages based on conversation context and relevance rather than enforced language matching.
+
+## [0.6.25] - 2025-08-22
+
+### Fixed
+
+- 🖼️ **Image Generation Reliability Restored**: Fixed a key issue causing image generation failures.
+- 🏆 **Reranking Functionality Restored**: Resolved errors with rerank feature.
+
+## [0.6.24] - 2025-08-21
+
+### Added
+
+- ♿ **High Contrast Mode in Chat Messages**: Implemented enhanced High Contrast Mode support for chat messages, making text and important details easier to read and improving accessibility for users with visual preferences or requirements.
+- 🌎 **Localization & Internationalization Improvements**: Enhanced and expanded translations for a more natural and professional user experience for speakers of these languages across the entire interface.
+
+### Fixed
+
+- 🖼️ **ComfyUI Image Generation Restored**: Fixed a critical bug where ComfyUI-based image generation was not functioning, ensuring users can once again effortlessly create and interact with AI-generated visuals in their workflows.
+- 🛠️ **Tool Server Loading and Visibility Restored**: Resolved an issue where connected tool servers were not loading or visible, restoring seamless integration and uninterrupted access to all external and custom tools directly within the platform.
+- 🛡️ **Redis User Session Reliability**: Fixed a problem affecting the saving of user sessions in Redis, ensuring reliable login sessions, stable authentication, and secure multi-user environments.
+
+## [0.6.23] - 2025-08-21
+
+### Added
+
+- ⚡ **Asynchronous Chat Payload Processing**: Refactored the chat completion pipeline to return a response immediately for streaming requests involving web search or tool calls. This enables users to stop ongoing generations promptly and preventing network timeouts during lengthy preprocessing phases, thus significantly improving user experience and responsiveness.
+- 📁 **Asynchronous File Upload with Polling**: Implemented an asynchronous file upload process with frontend polling to resolve gateway timeouts and improve reliability when uploading large files. This ensures that even lengthy file processing, such as embedding or transcription, does not block the user interface or lead to connection timeouts, providing a smoother experience for all file operations.
+- 📈 **Database Performance Indexes and Migration Script**: Introduced new database indexes on the "chat", "tag", and "function" tables to significantly enhance query performance for SQLite and PostgreSQL installations. For existing deployments, a new Alembic migration script is included to seamlessly apply these indexes, ensuring faster filtering and sorting operations across the platform.
+- ✨ **Enhanced Database Performance Options**: Introduced new configurable options to significantly improve database performance, especially for SQLite. This includes "DATABASE_ENABLE_SQLITE_WAL" to enable SQLite WAL (Write-Ahead Logging) mode for concurrent operations, and "DATABASE_DEDUPLICATE_INTERVAL" which, in conjunction with a new deduplication mechanism, reduces redundant updates to "user.last_active_at", minimizing write conflicts across all database types.
+- 💾 **Save Temporary Chats Button**: Introduced a new 'Save Chat' button for conversations initiated in temporary mode. This allows users to permanently save valuable temporary conversations to their chat history, providing greater flexibility and ensuring important discussions are not lost.
+- 📂 **Chat Movement Options in Menu**: Added the ability to move chats directly to folders from the chat menu. This enhances chat organization and allows users to manage their conversations more efficiently by relocating them between folders with ease.
+- 💬 **Language-Aware Follow-Up Suggestions**: Enhanced the AI's follow-up question generation to dynamically adapt to the primary language of the current chat. Follow-up prompts will now be suggested in the same language the user and AI are conversing in, ensuring more natural and contextually relevant interactions.
+- 👤 **Expanded User Profile Details**: Introduced new user profile fields including username, bio, gender, and date of birth, allowing for more comprehensive user customization and information management. This enhancement includes corresponding updates to the database schema, API, and user interface for seamless integration.
+- 👥 **Direct Navigation to User Groups from User Edit**: Enhanced the user edit modal to include a direct link to the associated user group. This allows administrators to quickly navigate from a user's profile to their group settings, streamlining user and group management workflows.
+- 🔧 **Enhanced External Tool Server Compatibility**: Improved handling of responses from external tool servers, allowing both the backend and frontend to process plain text content in addition to JSON, ensuring greater flexibility and integration with diverse tool outputs.
+- 🗣️ **Enhanced Audio Transcription Language Fallback and Deepgram Support**: Implemented a robust language fallback mechanism for both OpenAI and Deepgram Speech-to-Text (STT) API calls. If a specified language parameter is not supported by the model or provider, the system will now intelligently retry the transcription without the language parameter or with a default, ensuring greater reliability and preventing failed API calls. This also specifically adds and refines support for the audio language parameter in Deepgram API integrations.
+- ⚡ **Optimized Hybrid Search Performance for BM25 Weight Configuration**: Enhanced hybrid search to significantly improve performance when the BM25 weight is set to 0 or less. This optimization intelligently disables unnecessary collection retrieval and BM25 ranking calculations, leading to faster search results without impacting accuracy for configurations that do not utilize lexical search contributions.
+- 🔒 **Configurable Code Interpreter Module Blacklist**: Introduced the "CODE_INTERPRETER_BLACKLISTED_MODULES" environment variable, allowing administrators to specify Python modules that are forbidden from being imported or executed within the code interpreter. This significantly enhances the security posture by mitigating risks associated with arbitrary code execution, such as unauthorized data access, system manipulation, or outbound connections.
+- 🔐 **Enhanced OAuth Role Claim Handling**: Improved compatibility with diverse OAuth providers by allowing role claims to be supplied as single strings or integers, in addition to arrays. The system now automatically normalizes these single-value claims into arrays for consistent processing, streamlining integration with identity providers that format role data differently.
+- ⚙️ **Configurable Tool Call Timeout**: Introduced the "AIOHTTP_CLIENT_TIMEOUT" environment variable, allowing administrators to specify custom timeout durations for external tool calls, which is crucial for integrations with tools that have varying or extended response times.
+- 🛠️ **Improved Tool Callable Generation for Google genai SDK**: Enhanced the creation of tool callables to directly support native function calling within the Google 'genai' SDK. This refactoring ensures proper signature inference and removes extraneous parameters, enabling seamless integration for advanced AI workflows using Google's generative AI models.
+- ✨ **Dynamic Loading of 'kokoro-js'**: Implemented dynamic loading for the 'kokoro-js' library, preventing failures and improving compatibility on older iOS browsers that may not support direct imports or certain modern JavaScript APIs like 'DecompressionStream'.
+- 🖥️ **Improved Command List Visibility on Small Screens**: Resolved an issue where the top items in command lists (e.g., Knowledge Base, Models, Prompts) were hidden or overlapped by the header on smaller screen sizes or specific browser zoom levels. The command option lists now dynamically adjust their height, ensuring all items are fully visible and accessible with proper scrolling.
+- 📦 **Improved Docker Image Compatibility for Arbitrary UIDs**: Fixed issues preventing the Open WebUI container from running in environments with arbitrary User IDs (UIDs), such as OpenShift's restricted Security Context Constraints (SCC). The Dockerfile has been updated to correctly set file system permissions for "/app" and "/root" directories, ensuring they are writable by processes running with a supplemental GID 0, thus resolving permission errors for Python libraries and application caches.
+- ♿ **Accessibility Enhancements**: Significantly improved the semantic structure of chat messages by using "section", "h2", "ul", and "li" HTML tags, and enhanced screen reader compatibility by explicitly hiding decorative images with "aria-hidden" attributes. This refactoring provides clearer structural context and improves overall accessibility and web standards compliance for the conversation flow.
+- 🌐 **Localization & Internationalization Improvements**: Significantly expanded internationalization support throughout the user interface, translating numerous user-facing strings in toast messages, placeholders, and other UI elements. This, alongside continuous refinement and expansion of translations for languages including Brazilian Portuguese, Kabyle (Taqbaylit), Czech, Finnish, Chinese (Simplified), Chinese (Traditional), and German, and general fixes for several other translation files, further enhances linguistic coverage and user experience.
+
+### Fixed
+
+- 🛡️ **Resolved Critical OIDC SSO Login Failure**: Fixed a critical issue where OIDC Single Sign-On (SSO) logins failed due to an error in setting the authentication token as a cookie during the redirect process. This ensures reliable and seamless authentication for users utilizing OIDC providers, restoring full login functionality that was impacted by previous security hardening.
+- ⚡ **Prevented UI Blocking by Unreachable Webhooks**: Resolved a critical performance and user experience issue where synchronous webhook calls to unreachable or slow endpoints would block the entire user interface for all users. Webhook requests are now processed asynchronously using "aiohttp", ensuring that the UI remains responsive and functional even if webhook delivery encounters delays or failures.
+- 🔒 **Password Change Option Hidden for Externally Authenticated Users**: Resolved an issue where the password change dialog was visible to users authenticated via external methods (e.g., LDAP, OIDC, Trusted Header). The option to change a password in user settings is now correctly hidden for these users, as their passwords are managed externally, streamlining the user interface and preventing confusion.
+- 💬 **Resolved Temporary Chat and Permission Enforcement Issues**: Fixed a bug where temporary chats (identified by "chat_id = local") incorrectly triggered database checks, leading to 404 errors. This also resolves the issue where the 'USER_PERMISSIONS_CHAT_TEMPORARY_ENFORCED' setting was not functioning as intended, ensuring temporary chat mode now works correctly for user roles.
+- 🔐 **Admin Model Visibility for Administrators**: Private models remained visible and usable for administrators in the chat model selector, even when the intended privacy setting ("ENABLE_ADMIN_WORKSPACE_CONTENT_ACCESS" - now renamed to "BYPASS_ADMIN_ACCESS_CONTROL") was disabled. This ensures consistent enforcement of model access controls and adherence to the principle of least privilege.
+- 🔍 **Clarified Web Search Engine Label for DDGS**: Addressed user confusion and inaccurate labeling by renaming "duckduckgo" to "DDGS" (Dux Distributed Global Search) in the web search engine selector. This clarifies that the system utilizes DDGS, a metasearch library that aggregates results from various search providers, accurately reflecting its underlying functionality rather than implying exclusive use of DuckDuckGo's search engine.
+- 🛠️ **Improved Settings UI Reactivity and Visibility**: Resolved an issue where settings tabs for 'Connections' and 'Tools' did not dynamically update their visibility based on global administrative feature flags (e.g., 'enable_direct_connections'). The UI now reactively shows or hides these sections, ensuring a consistent and clear experience when administrators control feature availability.
+- 🎚️ **Restored Model and Banner Reordering Functionality**: Fixed a bug that prevented administrators from reordering models in the Admin Panel's 'Models' settings and banners in the 'Interface' settings via drag-and-drop. The sortable functionality has been restored, allowing for proper customization of display order.
+- 📝 **Restored Custom Pending User Overlay Visibility**: Fixed an issue where the custom title and description configured for pending users were not visible. The application now correctly exposes these UI configuration settings to pending users, ensuring that the custom onboarding messages are displayed as intended.
+- 📥 **Fixed Community Function Import Compatibility**: Resolved an issue that prevented the successful import of function files downloaded from openwebui.com due to schema differences. The system now correctly processes these files, allowing for seamless integration of community-contributed functions.
+- 📦 **Fixed Stale Ollama Version in Docker Images**: Resolved an issue where the Ollama installation within Docker images could become stale due to caching during the build process. The Dockerfile now includes a mechanism to invalidate the build cache for the Ollama installation step, ensuring that the latest version of Ollama is always installed.
+- 🗄️ **Improved Milvus Query Handling for Large Datasets**: Fixed a "MilvusException" that occurred when attempting to query more than 16384 entries from a Milvus collection. The query logic has been refactored to use "query_iterator()", enabling efficient fetching of larger result sets in batches and resolving the previous limitation on the number of entries that could be retrieved.
+- 🐛 **Restored Message Toolbar Icons for Empty Messages with Files**: Fixed an issue where the edit, copy, and delete icons were not displayed on user messages that contained an attached file but no text content. This ensures full interaction capabilities for all message types, allowing users to manage their messages consistently.
+- 💬 **Resolved Streaming Interruption for Kimi-Dev Models**: Fixed an issue where streaming responses from Kimi-Dev models would halt prematurely upon encountering specific 'thinking' tokens (◁think▷, ◁/think▷). The system now correctly processes these tokens, ensuring uninterrupted streaming and proper handling of hidden or collapsible thinking sections.
+- 🔍 **Enhanced Knowledge Base Search Functionality**: Improved the search capability within the 'Knowledge' section of the Workspace. Previously, searching for knowledge bases required exact term matches or starting with the first letter. Now, the search algorithm has been refined to allow broader, less exact matches, making it easier and more intuitive to find relevant knowledge bases.
+- 📝 **Resolved Chinese Input 'Enter' Key Issue (macOS & iOS Safari)**: Fixed a bug where pressing the 'Enter' key during text composition with Input Method Editors (IMEs) on macOS and iOS Safari browsers would prematurely send the message. The system now robustly handles the composition state by addressing a 'compositionend' event bug specific to Safari, ensuring a smooth and expected typing experience for users of various languages, including Chinese and Korean.
+- 🔐 **Resolved OAUTH_GROUPS_CLAIM Configuration Issue**: Fixed a bug where the "OAUTH_GROUPS_CLAIM" environment variable was not correctly parsed due to a typo in the configuration file. This ensures that OAuth group management features, including automatic group creation, now correctly utilize the specified claim from the identity provider, allowing for seamless integration with external user directories like Keycloak.
+- 🗄️ **Resolved Azure PostgreSQL pgvector Extension Permissions**: Fixed an issue preventing the creation of "pgvector" and "pgcrypto" extensions on Azure PostgreSQL Flexible Servers due to permission limitations (e.g., 'Only members of "azure_pg_admin" are allowed to use "CREATE EXTENSION"'). The extension creation process now includes a conditional check, ensuring seamless deployment and compatibility with Azure PostgreSQL environments even with restricted database user permissions.
+- 🛠️ **Improved Backend Path Resolution and Alembic Stability**: Fixed issues causing Alembic database migrations to fail due to incorrect path resolution within the application. By implementing canonical path resolution for core directories and refining Alembic configuration, the robustness and correctness of internal pathing have been significantly enhanced, ensuring reliable database operations.
+- 📊 **Resolved Arena Model Identification in Feedback History**: Fixed an issue where the model used for feedback in arena settings was incorrectly reported as 'arena-model' in the evaluation history. The system now correctly logs and displays the actual model ID that received the feedback, restoring clarity and enabling proper analysis of model performance in arena environments.
+- 🎨 **Resolved Icon Overlap in 'Her' Theme**: Fixed a visual glitch in the 'Her' theme where icons would overlap on the loading screen and certain icons appeared incongruous. The display has been corrected to ensure proper visual presentation and theme consistency.
+- 🛠️ **Resolved Model Sorting TypeError with Null Names**: Fixed a "TypeError" that occurred in the "/api/models" endpoint when sorting models with null or missing names. The model sorting logic has been improved to gracefully handle such edge cases by ensuring that model IDs and names are treated as empty strings if their values are null or undefined, preventing comparison errors and improving API stability.
+- 💬 **Resolved Silently Dropped Streaming Response Chunks**: Fixed an issue where the final partial chunks of streaming chat responses could be silently dropped, leading to incomplete message delivery. The system now reliably flush any pending delta data upon stream termination, early breaks (e.g., code interpreter tags), or connection closure, ensuring complete and accurate response delivery.
+- 📱 **Disabled Overscroll for iOS Frontend**: Fixed an issue where overscrolling was enabled on iOS devices, causing unexpected scrolling behavior over fixed or sticky elements within the PWA. Overscroll has now been disabled, providing a more native application-like experience for iOS users.
+- 📝 **Resolved Code Block Input Issue with Shift+Enter**: Fixed a bug where typing three backticks followed by a language and then pressing Shift+Enter would cause the code block prefix to disappear, preventing proper code formatting. The system now correctly preserves the code block syntax, ensuring consistent behavior for multi-line code input.
+- 🛠️ **Improved OpenAI Model List Handling for Null Names**: Fixed an edge case where some OpenAI-compatible API providers might return models with a null value for their 'name' field. This could lead to issues like broken model list sorting. The system now gracefully handles these instances by removing the null 'name' key, ensuring stable model retrieval and display.
+- 🔍 **Resolved DDGS Concurrent Request Configuration**: Fixed an issue where the configured number of concurrent requests was not being honored for the DDGS (Dux Distributed Global Search) metasearch engine. The system now correctly applies the specified concurrency setting, improving efficiency for web searches.
+- 🛠️ **Improved Tool List Synchronization in Multi-Replica Deployments**: Resolved an issue where tool updates were not consistently reflected across all instances in multi-replica environments, leading to stale tool lists for users on other replicas. The tool list in the message input menu is now automatically refreshed each time it is accessed, ensuring all users always see the most current set of available tools.
+- 🛠️ **Resolved Duplicate Tool Name Collision**: Fixed an issue where tools with identical names from different external servers were silently removed, preventing their simultaneous use. The system now correctly handles tool name collisions by internally prefixing tools with their server identifier, allowing multiple instances of similarly named tools from different servers to be active and usable by LLMs.
+- 🖼️ **Resolved Image Generation API Size Parameter Issue**: Fixed a bug where the "/api/v1/images/generations" API endpoint did not correctly apply the 'size' parameter specified in the request payload for image generation. The system now properly honors the requested image dimensions (e.g., '1980x1080'), ensuring that generated images match the user's explicit size preference rather than defaulting to settings.
+- 🗄️ **Resolved S3 Vector Upload Limitations**: Fixed an issue that prevented uploading more than 500 vectors to S3 Vector buckets due to API limitations, which resulted in a "ValidationException". S3 vector uploads are now batched in groups of 500, ensuring successful processing of larger datasets.
+- 🛠️ **Fixed Tool Installation Error During Startup**: Resolved a "NoneType" error that occurred during tool installation at startup when 'tool.user' was unexpectedly null. The system now includes a check to ensure 'tool.user' exists before attempting to access its properties, preventing crashes and ensuring robust tool initialization.
+- 🛠️ **Improved Azure OpenAI GPT-5 Parameter Handling**: Fixed an issue with Azure OpenAI SDK parameter handling to correctly support GPT-5 models. The 'max_tokens' parameter is now appropriately converted to 'max_completion_tokens' for GPT-5 models, ensuring consistent behavior and proper function execution similar to existing o-series models.
+- 🐛 **Resolved Exception with Missing Group Permissions**: Fixed an exception that occurred in the access control logic when group permission objects were missing or null. The system now correctly handles cases where groups may not have explicit permission definitions, ensuring that 'None' checks prevent errors and maintain application stability when processing user permissions.
+- 🛠️ **Improved OpenAI API Base URL Handling**: Fixed an issue where a trailing slash in the 'OPENAI_API_BASE_URL' configuration could lead to models not being detected or the endpoint failing. The system now automatically removes trailing slashes from the configured URL, ensuring robust and consistent connections to OpenAI-compatible APIs.
+- 🖼️ **Resolved S3-Compatible Storage Upload Failures**: Fixed an issue where uploads to S3-compatible storage providers would fail with an "XAmzContentSHA256Mismatch" error. The system now correctly handles checksum calculations, ensuring reliable file and image uploads to S3-compatible services.
+- 🌐 **Corrected 'Releases' Link**: Fixed an issue where the 'Releases' button in the user menu directed to an incorrect URL, now correctly linking to the Open WebUI GitHub releases page.
+- 🛠️ **Resolved Model Sorting Errors with Null or Undefined Names**: Fixed multiple "TypeError" instances that occurred when attempting to sort model lists where model names were null or undefined. The sorting logic across various UI components (including Ollama model selection, leaderboard, and admin model settings) has been made more robust by gracefully handling absent model names, preventing crashes and ensuring consistent alphabetical sorting based on available name or ID.
+- 🎨 **Resolved Banner Dismissal Issue with Iteration IDs**: Fixed a bug where dismissing banners could lead to unintended multiple banner dismissals or other incorrect behavior, especially when banners lacked unique iteration IDs. Unique IDs are now assigned during banner iteration, ensuring proper individual dismissal and consistent display behavior.
+
+### Changed
+
+- 🛂 **Environment Variable for Admin Access Control**: The environment variable "ENABLE_ADMIN_WORKSPACE_CONTENT_ACCESS" has been renamed to "BYPASS_ADMIN_ACCESS_CONTROL". This new name more accurately reflects its function as a control to allow administrators to bypass model access restrictions. Users are encouraged to update their configurations to use the new variable name; existing configurations using the old name will still be honored for backward compatibility.
+- 🗂️ **Core Directory Path Resolution Updated**: The internal mechanism for resolving core application directory paths ("OPEN_WEBUI_DIR", "BACKEND_DIR", "BASE_DIR") has been updated to use canonical resolution via "Path().resolve()". This change improves path reliability but may require adjustments for any external scripts or configurations that previously relied on specific non-canonical path interpretations.
+- 🗃️ **Database Performance Options**: New database performance options, "DATABASE_ENABLE_SQLITE_WAL" and "DATABASE_DEDUPLICATE_INTERVAL", are now available. If "DATABASE_ENABLE_SQLITE_WAL" is enabled, SQLite will operate in WAL mode, which may alter SQLite's file locking behavior. If "DATABASE_DEDUPLICATE_INTERVAL" is set to a non-zero value, the "user.last_active_at" timestamp will be updated less frequently, leading to slightly less real-time accuracy for this specific field but significantly reducing database write conflicts and improving overall performance. Both options are disabled by default.
+- 🌐 **Renamed Web Search Concurrency Setting**: The environment variable "WEB_SEARCH_CONCURRENT_REQUESTS" has been renamed to "WEB_LOADER_CONCURRENT_REQUESTS". This change clarifies its scope, explicitly applying to the concurrency of the web loader component (which fetches content from search results) rather than the initial search engine query. Users relying on the old environment variable name for configuring web search concurrency must update their configurations to use "WEB_LOADER_CONCURRENT_REQUESTS".
+
+## [0.6.22] - 2025-08-11
+
+### Added
+
+- 🔗 **OpenAI API '/v1' Endpoint Compatibility**: Enhanced API compatibility by supporting requests to paths like '/v1/models', '/v1/embeddings', and '/v1/chat/completions'. This allows Open WebUI to integrate more seamlessly with tools that expect OpenAI's '/v1' API structure.
+- 🪄 **Toggle for Guided Response Regeneration Menu**: Introduced a new setting in 'Interface' settings, providing the ability to enable or disable the expanded guided response regeneration menu. This offers users more control over their chat workflow and interface preferences.
+- ✨ **General UI/UX Enhancements**: Implemented various user interface and experience improvements, including more rounded corners for cards in the Knowledge, Prompts, and Tools sections, and minor layout adjustments within the chat Navbar for improved visual consistency.
+- 🌐 **Localization & Internationalization Improvements**: Introduced support for the Kabyle (Taqbaylit) language, refined and expanded translations for Chinese, expanding the platform's linguistic coverage.
+
+### Fixed
+
+- 🐞 **OpenAI Error Message Propagation**: Resolved an issue where specific OpenAI API errors (e.g., 'Organization Not Verified') were obscured by generic 'JSONResponse' iterable errors. The system now correctly propagates detailed and actionable error messages from OpenAI to the user.
+- 🌲 **Pinecone Insert Issue**: Fixed a bug that prevented proper insertion of items into Pinecone vector databases.
+- 📦 **S3 Vector Issue**: Resolved a bug where s3vector functionality failed due to incorrect import paths.
+- 🏠 **Landing Page Option Setting Not Working**: Fixed an issue where the landing page option in settings was not functioning as intended.
+
+## [0.6.21] - 2025-08-10
+
+### Added
+
+- 👥 **User Groups in Edit Modal**: Added display of user groups information in the user edit modal, allowing administrators to view and manage group memberships directly when editing a user.
+
+### Fixed
+
+- 🐞 **Chat Completion 'model_id' Error**: Resolved a critical issue where chat completions failed with an "undefined model_id" error after upgrading to version 0.6.20, ensuring all models now function correctly and reliably.
+- 🛠️ **Audit Log User Information Logging**: Fixed an issue where user information was not being correctly logged in the audit trail due to an unreflected function prototype change, ensuring complete logging for administrative oversight.
+- 🛠️ **OpenTelemetry Configuration Consistency**: Fixed an issue where OpenTelemetry metric and log exporters' 'insecure' settings did not correctly default to the general OpenTelemetry 'insecure' flag, ensuring consistent security configurations across all OpenTelemetry exports.
+- 📝 **Reply Input Content Display**: Fixed an issue where replying to a message incorrectly displayed '{{INPUT_CONTENT}}' instead of the actual message content, ensuring proper content display in replies.
+- 🌐 **Localization & Internationalization Improvements**: Refined and expanded translations for Catalan, Korean, Spanish and Irish, ensuring a more fluent and native experience for global users.
+
+## [0.6.20] - 2025-08-10
+
+### Fixed
+
+- 🛠️ **Quick Actions "Add" Behavior**: Fixed a bug where using the "Add" button in Quick Actions would add the resulting message as the very first message in the chat, instead of appending it to the latest message.
+
+## [0.6.19] - 2025-08-09
+
+### Added
+
+- ✨ **Modernized Sidebar and Major UI Refinements**: The main navigation sidebar has been completely redesigned with a modern, cleaner aesthetic, featuring a sticky header and footer to keep key controls accessible. Core sidebar logic, like the pinned models list, was also refactored into dedicated components for better performance and maintainability.
+- 🪄 **Guided Response Regeneration**: The "Regenerate" button has been transformed into a powerful new menu. You can now guide the AI's next attempt by suggesting changes in a text prompt, or use one-click options like "Try Again," "Add Details," or "More Concise" to instantly refine and reshape the response to better fit your needs.
+- 🛠️ **Improved Tool Call Handling for GPT-OSS Models**: Implemented robust handling for tool calls specifically for GPT-OSS models, ensuring proper function execution and integration.
+- 🛑 **Stop Button for Merge Responses**: Added a dedicated stop button to immediately halt the generation of merged AI responses, providing users with more control over ongoing outputs.
+- 🔄 **Experimental SCIM 2.0 Support**: Implemented SCIM 2.0 (System for Cross-domain Identity Management) protocol support, enabling enterprise-grade automated user and group provisioning from identity providers like Okta, Azure AD, and Google Workspace for seamless user lifecycle management. Configuration is managed securely via environment variables.
+- 🗂️ **Amazon S3 Vector Support**: You can now use Amazon S3 Vector as a high-performance vector database for your Retrieval-Augmented Generation (RAG) workflows. This provides a scalable, cloud-native storage option for users deeply integrated into the AWS ecosystem, simplifying infrastructure and enabling enterprise-scale knowledge management.
+- 🗄️ **Oracle 23ai Vector Search Support**: Added support for Oracle 23ai's new vector search capabilities as a supported vector database, providing a robust and scalable option for managing large-scale documents and integrating vector search with existing business data at the database level.
+- ⚡ **Qdrant Performance and Configuration Enhancements**: The Qdrant client has been significantly improved with faster data retrieval logic for 'get' and 'query' operations. New environment variables ('QDRANT_TIMEOUT', 'QDRANT_HNSW_M') provide administrators with finer control over query timeouts and HNSW index parameters, enabling better performance tuning for large-scale deployments.
+- 🔐 **Encrypted SQLite Database with SQLCipher**: You can now encrypt your entire SQLite database at rest using SQLCipher. By setting the 'DATABASE_TYPE' to 'sqlite+sqlcipher' and providing a 'DATABASE_PASSWORD', all data is transparently encrypted, providing an essential security layer for protecting sensitive information in self-hosted deployments. Note that this requires additional system libraries and the 'sqlcipher3-wheels' Python package.
+- 🚀 **Efficient Redis Connection Management**: Implemented a shared connection pool cache to reuse Redis connections, dramatically reducing the number of active clients. This prevents connection exhaustion errors, improves performance, and ensures greater stability in high-concurrency deployments and those using Redis Sentinel.
+- ⚡ **Batched Response Streaming for High Performance**: Dramatically improve performance and stability during high-speed response streaming by batching multiple tokens together before sending them to the client. A new 'Stream Delta Chunk Size' advanced parameter can be set per-model or in user/chat settings, significantly reducing CPU load on the server, Redis, and client, and preventing connection issues in high-concurrency environments.
+- ⚙️ **Global Batched Streaming Configuration**: Administrators can now set a system-wide default for response streaming using the new 'CHAT_RESPONSE_STREAM_DELTA_CHUNK_SIZE' environment variable. This allows for global performance tuning, while still letting per-model or per-chat settings override the default for more granular control.
+- 🔎 **Advanced Chat Search with Status Filters**: Quickly find any conversation with powerful new search filters. You can now instantly narrow down your chats using prefixes like 'pinned:true', 'shared:true', and 'archived:true' directly in the search bar. An intelligent dropdown menu assists you by suggesting available filter options as you type, streamlining your workflow and making chat management more efficient than ever.
+- 🛂 **Granular Chat Controls Permissions**: Administrators can now manage chat settings with greater detail. The main "Chat Controls" permission now acts as a master switch, while new granular toggles for "Valves", "System Prompts", and "Advanced Parameters" allow for more specific control over which sections are visible to users inside the panel.
+- ✍️ **Formatting Toolbar for Chat Input**: Introduced a dedicated formatting toolbar for the rich text chat input field, providing users with more accessible options for text styling and editing, configurable via interface settings.
+- 📑 **Tabbed View for Multi-Model Responses**: You can now enable a new tabbed interface to view responses from multiple models. Instead of side-scrolling cards, this compact view organizes each model's response into its own tab, making it easier to compare outputs and saving vertical space. This feature can be toggled on or off in Interface settings.
+- ↕️ **Reorder Pinned Models via Drag-and-Drop**: You can now organize your pinned models in the sidebar by simply dragging and dropping them into your preferred order. This custom layout is saved automatically, giving you more flexible control over your workspace.
+- 📌 **Quick Model Unpin Shortcut**: You can now quickly unpin a model by holding the Shift key and hovering over it to reveal an instant unpin button, streamlining your workspace customization.
+- ⚡ **Improved Chat Input Performance**: The chat input is now significantly more responsive, especially when pasting or typing large amounts of text. This was achieved by implementing a debounce mechanism for the auto-save feature, which prevents UI lag and ensures a smooth, uninterrupted typing experience.
+- ✍️ **Customizable Floating Quick Actions with Tool Support**: Take full control of your text interaction workflow with new customizable floating quick actions. In Settings, you can create, edit, or disable these actions and even integrate tools using the '{{TOOL:tool_id}}' syntax in your prompts, enabling powerful one-click automations on selected text. This is in addition to using placeholders like '{{CONTENT}}' and '{{INPUT_CONTENT}}' for custom text transformations.
+- 🔒 **Admin Workspace Privacy Control**: Introduced the 'ENABLE_ADMIN_WORKSPACE_CONTENT_ACCESS' environment variable (defaults to 'True') allowing administrators to control their access privileges to workspace items (Knowledge, Models, Prompts, Tools). When disabled, administrators adhere to the same access control rules as regular users, enhancing data separation for multi-tenant deployments.
+- 🗄️ **Comprehensive Model Configuration Management**: Administrators can now export the entire model configuration to a file and use a new declarative sync endpoint to manage models in bulk. This powerful feature enables seamless backups, migrations, and state replication across multiple instances.
+- 📦 **Native Redis Cluster Mode Support**: Added full support for connecting to Redis in cluster mode, allowing for scalable and highly available Redis deployments beyond Sentinel-managed setups. New environment variables 'REDIS_CLUSTER' and 'WEBSOCKET_REDIS_CLUSTER' enable the use of 'redis.cluster.RedisCluster' clients.
+- 📊 **Granular OpenTelemetry Metrics Configuration**: Introduced dedicated environment variables and enhanced configuration options for OpenTelemetry metrics, allowing for separate OTLP endpoints, basic authentication credentials, and protocol (HTTP/gRPC) specifically for metrics export, independent of trace settings. This provides greater flexibility for integrating with diverse observability stacks.
+- 🪵 **Granular OpenTelemetry Logging Configuration**: Enhanced the OpenTelemetry logging integration by introducing dedicated environment variables for logs, allowing separate OTLP endpoints, basic authentication credentials, and protocol (HTTP/gRPC) specifically for log export, independent of general OTel settings. The application's default Python logger now leverages this configuration to automatically send logs to your OTel endpoint when enabled via 'ENABLE_OTEL_LOGS'.
+- 📁 **Enhanced Folder Chat Management with Sorting and Time Blocks**: The chat list within folders now supports comprehensive sorting options by title and updated time, along with intelligent time-based grouping (e.g., "Today," "Yesterday") similar to the main chat view, making navigation and organization of project-specific conversations significantly easier.
+- ⚙️ **Configurable Datalab Marker API & Advanced Processing Options**: Enhanced Datalab Marker API integration, allowing administrators to configure custom API base URLs for self-hosting and to specify comprehensive processing options via a new 'additional_config' JSON parameter. This replaces the deprecated language selection feature and provides granular control over document extraction, with streamlined API endpoint resolution for more robust self-hosted deployments.
+- 🧑‍💼 **Export All Users to CSV**: Administrators can now export a complete list of all users to a CSV file directly from the Admin Panel's database settings. This provides a simple, one-click way to generate user data for auditing, reporting, or management purposes.
+- 🛂 **Customizable OAuth 'sub' Claim**: Administrators can now use the 'OAUTH_SUB_CLAIM_OVERRIDE' environment variable to specify which claim from the identity provider should be used as the unique user identifier ('sub'). This provides greater flexibility and control for complex enterprise authentication setups where modifying the IDP's default claims is not possible.
+- 👁️ **Password Visibility Toggle for Input Fields**: Password fields across the application (login, registration, user management, and account settings) now utilize a new 'SensitiveInput' component, providing a consistent toggle to reveal/hide passwords for improved usability and security.
+- 🛂 **Optional "Confirm Password" on Sign-Up**: To help prevent password typos during account creation, administrators can now enable a "Confirm Password" field on the sign-up page. This feature is disabled by default and can be activated via an environment variable for enhanced user experience.
+- 💬 **View Full Chat from User Feedback**: Administrators can now easily navigate to the full conversation associated with a user feedback entry directly from the feedback modal, streamlining the review and troubleshooting process.
+- 🎚️ **Intuitive Hybrid Search BM25-Weight Slider**: The numerical input for the BM25-Weight parameter in Hybrid Search has been replaced with an interactive slider, offering a more intuitive way to adjust the balance between lexical and semantic search. A "Default/Custom" toggle and clearer labels enhance usability and understanding of this key parameter.
+- ⚙️ **Enhanced Bulk Function Synchronization**: The API endpoint for synchronizing functions has been significantly improved to reliably handle bulk updates. This ensures that importing and managing large libraries of functions is more robust and error-free for administrators.
+- 🖼️ **Option to Disable Image Compression in Channels**: Introduced a new setting under Interface options to allow users to force-disable image compression specifically for images posted in channels, ensuring higher resolution for critical visual content.
+- 🔗 **Custom CORS Scheme Support**: Introduced a new environment variable 'CORS_ALLOW_CUSTOM_SCHEME' that allows administrators to define custom URL schemes (e.g., 'app://') for CORS origins, enabling greater flexibility for local development or desktop client integrations.
+- ♿ **Translatable and Accessible Banners**: Enhanced banner elements with translatable badge text and proper ARIA attributes (aria-label, aria-hidden) for SVG icons, significantly improving accessibility and screen reader compatibility.
+- ⚠️ **OAuth Configuration Warning for Missing OPENID_PROVIDER_URL**: Added a proactive startup warning that notifies administrators when OAuth providers (Google, Microsoft, or GitHub) are configured but the essential 'OPENID_PROVIDER_URL' environment variable is missing. This prevents silent OAuth logout failures and guides administrators to complete their setup correctly.
+- ♿ **Major Accessibility Enhancements**: Key parts of the interface have been made significantly more accessible. The user profile menu is now fully navigable via keyboard, essential controls in the Playground now include proper ARIA labels for screen readers, and decorative images have been hidden from assistive technologies to reduce audio clutter. Menu buttons also feature enhanced accessibility with 'aria-label', 'aria-hidden' for SVGs, and 'aria-pressed' for toggle buttons.
+- ⚙️ **General Backend Refactoring**: Implemented various backend improvements to enhance performance, stability, and security, ensuring a more resilient and reliable platform for all users, including refining logging output to be cleaner and more efficient by conditionally including 'extra_json' fields and improving consistent metadata handling in vector database operations, and laying preliminary scaffolding for future analytics features.
+- 🌐 **Localization & Internationalization Improvements**: Refined and expanded translations for Catalan, Danish, Korean, Persian, Polish, Simplified Chinese, and Spanish, ensuring a more fluent and native experience for global users across all supported languages.
+
+### Fixed
+
+- 🛡️ **Hardened Channel Message Security**: Fixed a key permission flaw that allowed users with channel access to edit or delete messages belonging to others. The system now correctly enforces that users can only modify their own messages, protecting data integrity in shared channels.
+- 🛡️ **Hardened OAuth Security by Removing JWT from URL**: Fixed a critical security vulnerability where the authentication token was exposed in the URL after a successful OAuth login. The token is now transferred via a browser cookie, preventing potential leaks through browser history or server logs and protecting user sessions.
+- 🛡️ **Hardened Chat Completion API Security**: The chat completion API endpoint now includes an explicit ownership check, ensuring non-admin users cannot access chats that do not belong to them and preventing potential unauthorized access.
+- 🛠️ **Resilient Model Loading**: Fixed an issue where a failure in loading the model list (e.g., from a misconfigured provider) would prevent the entire user interface, including the admin panel, from loading. The application now gracefully handles these errors, ensuring the UI remains accessible.
+- 🔒 **Resolved FIPS Self-Test Failure**: Fixed a critical issue that prevented Open WebUI from running on FIPS-compliant systems, specifically resolving the "FATAL FIPS SELFTEST FAILURE" error related to OpenSSL and SentenceTransformers, restoring compatibility with secure environments.
+- 📦 **Redis Cluster Connection Restored**: Fixed an issue where the backend was unable to connect to Redis in cluster mode, now ensuring seamless integration with scalable Redis cluster deployments.
+- 📦 **PGVector Connection Stability**: Fixed an issue where read-only operations could leave database transactions idle, preventing potential connection errors and improving overall database stability and resource management.
+- 🛠️ **OpenAPI Tool Integration for Array Parameters Fixed**: Resolved a critical bug where external tools using array parameters (e.g., for tags) would fail when used with OpenAI models. The system now correctly generates the required 'items' property in the function schema, restoring functionality and preventing '400 Bad Request' errors.
+- 🛠️ **Tool Creation for Users Restored**: Fixed a bug in the code editor where status messages were incorrectly prepended to tool scripts, causing a syntax error upon saving. All authorized users can now reliably create and save new tools.
+- 📁 **Folder Knowledge Processing Restored**: Fixed a bug where files uploaded to folder and model knowledge bases were not being extracted or analyzed for Retrieval-Augmented Generation (RAG) when the 'Max Upload Count' setting was empty, ensuring seamless document processing and knowledge augmentation.
+- 🧠 **Custom Model Knowledge Base Updates Recognized**: Fixed a bug where custom models linked to to knowledge bases did not automatically recognize newly added files to those knowledge bases. Models now correctly incorporate the latest information from updated knowledge collections.
+- 📦 **Comprehensive Redis Key Prefixing**: Corrected hardcoded prefixes to ensure the REDIS_KEY_PREFIX is now respected across all WebSocket and task management keys. This prevents data collisions in multi-instance deployments and improves compatibility with Redis cluster mode.
+- ✨ **More Descriptive OpenAI Router Errors**: The OpenAI-compatible API router now propagates detailed upstream error messages instead of returning a generic 'Bad Request'. This provides clear, actionable feedback for developers and API users, making it significantly easier to debug and resolve issues with model requests.
+- 🔐 **Hardened OIDC Signout Flow**: The OpenID Connect signout process now verifies that the 'OPENID_PROVIDER_URL' is configured before attempting to communicate with it, preventing potential errors and ensuring a more reliable logout experience.
+- 🍓 **Raspberry Pi Compatibility Restored**: Pinned the pyarrow library to version 20.0.0, resolving an "Illegal Instruction" crash on ARM-based devices like the Raspberry Pi and ensuring stable operation on this hardware.
+- 📁 **Folder System Prompt Variables Restored**: Fixed a bug where prompt variables (e.g., '{{CURRENT_DATETIME}}') were not being rendered in Folder-level System Prompts. This restores an important capability for creating dynamic, context-aware instructions for all chats within a project folder.
+- 📝 **Note Access in Knowledge Retrieval Fixed**: Corrected a permission oversight in knowledge retrieval, ensuring users can always use their own notes as a source for RAG without needing explicit sharing permissions.
+- 🤖 **Title Generation Compatibility for GPT-5 Models**: Added support for 'gpt-5' models in the payload handler, which correctly converts the deprecated 'max_tokens' parameter to 'max_completion_tokens'. This resolves title generation failures and ensures seamless operation with the latest generation of models.
+- ⚙️ **Correct API 'finish_reason' in Streaming Responses**: Fixed an issue where intermediate 'reasoning_content' chunks in streaming API responses incorrectly reported a 'finish_reason' of 'stop'. The 'finish_reason' is now correctly set to 'null' for these chunks, ensuring compatibility with third-party applications that rely on this field.
+- 📈 **Evaluation Pages Stability**: Resolved a crash on the Leaderboard and Feedbacks pages when processing legacy feedback entries that were missing a 'rating' field. The system now gracefully handles this older data, ensuring both pages load reliably for all users.
+- 🤝 **Reliable Collaborative Session Cleanup**: Fixed an asynchronous bug in the real-time collaboration engine that prevented document sessions from being properly cleaned up after all users had left. This ensures greater stability and resource management for features like Collaborative Notes.
+- 🧠 **Enhanced Memory Stability and Security**: Refactored memory update and delete operations to strictly enforce user ownership, preventing potential data integrity issues. Additionally, improved error handling for memory queries now provides clearer feedback when no memories exists.
+- 🧑‍⚖️ **Restored Admin Access to User Feedback**: Fixed a permission issue that blocked administrators from viewing or editing user feedback they didn't create, ensuring they can properly manage all evaluations across the platform.
+- 🔐 **PGVector Encryption Fix for Metadata**: Corrected a SQL syntax error in the experimental 'PGVECTOR_PGCRYPTO' feature that prevented encrypted metadata from being saved. Document uploads to encrypted PGVector collections now work as intended.
+- 🔍 **Serply Web Search Integration Restored**: Fixed an issue where incorrect parameters were passed to the Serply web search engine, restoring its functionality for RAG and web search workflows.
+- 🔍 **Resilient Web Search Processing**: Web search retrieval now gracefully handles search results that are missing a 'snippet', preventing crashes and ensuring that RAG workflows complete successfully even with incomplete data from search engines.
+- 🖼️ **Table Pasting in Rich Text Input Displayed Correctly**: Fixed an issue where pasting table text into the rich text input would incorrectly display it as code. Tables are now properly rendered as expected, improving content formatting and user experience.
+- ✍️ **Rich Text Input TypeError Resolution**: Addressed a potential 'TypeError: ue.getWordAtDocPos is not a function' in 'MessageInput.svelte' by refactoring how the 'getWordAtDocPos' function is accessed and referenced from 'RichTextInput.svelte', ensuring stable rich text input behavior, especially after production restarts.
+- ✏️ **Manual Code Block Creation in Chat Restored**: Fixed an issue where typing three backticks and then pressing Shift+Enter would incorrectly remove the backticks when "Enter to Send" mode was active. This ensures users can reliably create multi-line code blocks manually.
+- 🎨 **Consistent Dark Mode Background**: Fixed an issue where the application background could incorrectly flash or remain white during page loads and refreshes in dark mode, ensuring a seamless and consistent visual experience.
+- 🎨 **'Her' Theme Rendering Fixed**: Corrected a bug that caused the "Her" theme to incorrectly render as a dark theme in some situations. The theme now reliably applies its intended light appearance across all sessions.
+- 📜 **Corrected Markdown Table Line Break Rendering**: Fixed an issue where line breaks ('<br>') within Markdown tables were displayed as raw HTML instead of being rendered correctly. This ensures that tables with multi-line cell content are now displayed as intended.
+- 🚦 **Corrected App Configuration for Pending Users**: Fixed an issue where users awaiting approval could incorrectly load the full application interface, leading to a confusing or broken UI. This ensures that only fully approved users receive the standard app 'config', resulting in a smoother and more reliable onboarding experience.
+- 🔄 **Chat Cloning Now Includes Tags, Folder Status, and Pinned Status**: When cloning a chat or shared chat, its associated tags, folder organization, and pinned status are now correctly replicated, ensuring consistent chat management.
+- ⚙️ **Enhanced Backend Reliability**: Resolved a potential crash in knowledge base retrieval when referencing a deleted note. Additionally, chat processing was refactored to ensure model information is saved more reliably, enhancing overall system stability.
+- ⚙️ **Floating 'Ask/Explain' Modal Stability**: Fixed an issue that spammed the console with errors when navigating away while a model was generating a response in the floating 'Ask' or 'Explain' modals. In-flight requests are now properly cancelled, improving application stability.
+- ⚡ **Optimized User Count Checks**: Improved performance for user count and existence checks across the application by replacing resource-intensive 'COUNT' queries with more efficient 'EXISTS' queries, reducing database load.
+- 🔐 **Hardened OpenTelemetry Exporter Configuration**: The OTLP HTTP exporter no longer uses a potentially insecure explicit flag, improving security by relying on the connection URL's protocol (HTTP/HTTPS) to ensure transport safety.
+- 📱 **Mobile User Menu Closing Behavior Fixed**: Resolved an issue where the user menu would remain open on mobile devices after selecting an option, ensuring the menu correctly closes and returns focus to the main interface for a smoother mobile experience.
+- 📱 **OnBoarding Page Display Fixed on Mobile**: Resolved an issue where buttons on the OnBoarding page were not consistently visible on certain mobile browsers, ensuring a functional and complete user experience across devices.
+- ↕️ **Improved Pinned Models Drag-and-Drop Behavior**: The drag-and-drop functionality for reordering pinned models is now explicitly disabled on mobile devices, ensuring better usability and preventing potential UI conflicts or unexpected behavior.
+- 📱 **PWA Rotation Behavior Corrected**: The Progressive Web App now correctly respects the device's screen orientation lock, preventing unwanted rotation and ensuring a more native mobile experience.
+- ✏️ **Improved Chat Title Editing Behavior**: Changes to a chat title are now reliably saved when the user clicks away or presses Enter, replacing a less intuitive behavior that could accidentally discard edits. This makes renaming chats a smoother and more predictable experience.
+- ✏️ **Underscores Allowed in Prompt Commands**: Fixed the validation for prompt commands to correctly allow the use of underscores ('\_'), aligning with documentation examples and improving flexibility in naming custom prompts.
+- 💡 **Title Generation Button Behavior Fixed**: Resolved an issue where clicking the "Generate Title" button while editing a chat or note title would incorrectly save the title before generation could start. The focus is now managed correctly, ensuring a smooth and predictable user experience.
+- ✏️ **Consistent Chat Input Height**: Fixed a minor visual bug where the chat input field's height would change slightly when toggling the "Rich Text Input for Chat" setting, ensuring a more stable and consistent layout.
+- 🙈 **Admin UI Toggle Stability**: Fixed a visual glitch in the Admin settings where toggle switches could briefly display an incorrect state on page load, ensuring the UI always accurately reflects the saved settings.
+- 🙈 **Community Sharing Button Visibility**: The "Share to Community" button on the feedback page is now correctly hidden when the Enable Community Sharing feature is disabled in the admin settings, ensuring the UI respects the configured sharing policy.
+- 🙈 **"Help Us Translate" Link Visibility**: The "Help us translate" link in settings is now correctly hidden in deployments with specific license configurations, ensuring a cleaner interface for enterprise users.
+- 🔗 **Robust Tool Server URL Handling**: Fixed an issue where providing a full URL for a tool server's OpenAPI specification resulted in an invalid path. The system now correctly handles both absolute URLs and relative paths, improving configuration flexibility.
+- 🔧 **Improved Azure URL Detection**: The logic for identifying Azure OpenAI endpoints has been made more robust, ensuring all valid Azure URLs are now correctly detected for a smoother connection setup.
+- ⚙️ **Corrected Direct Connection Save Logic**: Fixed a bug in the Admin Connections settings page by removing a redundant save action for 'Direct Connections', leading to more reliable and predictable behavior when updating settings.
+- 🔗 **Corrected "Discover" Links**: The "Discover" links for models, prompts, tools, and functions now point to their specific, relevant pages on openwebui.com, improving content discovery for users.
+- ⏱️ **Refined Display of AI Thought Duration**: Adjusted the display logic for AI thought (reasoning) durations to more accurately show very short thought times as "less than a second," improving clarity in AI process feedback.
+- 📜 **Markdown Line Break Rendering Refinement**: Improved handling of line breaks within Markdown rendering for better visual consistency.
+- 🛠️ **Corrected OpenTelemetry Docker Compose Example**: The docker-compose.otel.yaml file has been fixed and enhanced by removing duplicates, adding necessary environment variables, and hardening security settings, ensuring a more reliable out-of-box observability setup.
+- 🛠️ **Development Script CORS Fix**: Corrected the CORS origin URL in the local development script (dev.sh) by removing the trailing slash, ensuring a more reliable and consistent setup for developers.
+- ⬆️ **OpenTelemetry Libraries Updated**: Upgraded all OpenTelemetry-related libraries to their latest versions, ensuring better performance, stability, and compatibility for observability.
+
+### Changed
+
+- ❗ **Docling Integration Upgraded to v1 API (Breaking Change)**: The integration with the Docling document processing engine has been updated to its new, stable '/v1' API. This is required for compatibility with Docling version 1.0.0 and newer. As a result, older versions of Docling are no longer supported. Users who rely on Docling for document ingestion **must upgrade** their docling-serve instance to ensure continued functionality.
+- 🗣️ **Admin-First Whisper Language Priority**: The global WHISPER_LANGUAGE setting now acts as a strict override for audio transcriptions. If set, it will be used for all speech-to-text tasks, ignoring any language specified by the user on a per-request basis. This gives administrators more control over transcription consistency.
+- ✂️ **Datalab Marker API Language Selection Removed**: The separate language selection option for the Datalab Marker API has been removed, as its functionality is now integrated and superseded by the more comprehensive 'additional_config' parameter. Users should transition to using 'additional_config' for relevant language and processing settings.
+- 📄 **Documentation and Releases Links Visibility**: The "Documentation" and "Releases" links in the user menu are now visible only to admin users, streamlining the user interface for non-admin roles.
+
+## [0.6.18] - 2025-07-19
+
+### Fixed
+
+- 🚑 **Users Not Loading in Groups**: Resolved an issue where user list was not displaying within user groups, restoring full visibility and management of group memberships for teams and admins.
+
+## [0.6.17] - 2025-07-19
+
+### Added
+
+- 📂 **Dedicated Folder View with Chat List**: Clicking a folder now reveals a brand-new landing page showcasing a list of all chats within that folder, making navigation simpler and giving teams immediate visibility into project-specific conversations.
+- 🆕 **Streamlined Folder Creation Modal**: Creating a new folder is now a seamless, unified experience with a dedicated modal that visually and functionally matches the edit folder flow, making workspace organization more intuitive and error-free for all users.
+- 🗃️ **Direct File Uploads to Folder Knowledge**: You can now upload files straight to a folder’s knowledge—empowering you to enrich project spaces by adding resources and documents directly, without the need to pre-create knowledge bases beforehand.
+- 🔎 **Chat Preview in Search**: When searching chats, instantly preview results in context without having to open them—making discovery, auditing, and recall dramatically quicker, especially in large, active teams.
+- 🖼️ **Image Upload and Inline Insertion in Notes**: Notes now support inserting images directly among your text, letting you create rich, visually structured documentation, brainstorms, or reports in a more natural and engaging way—no more images just as attachments.
+- 📱 **Enhanced Note Selection Editing and Q&A**: Select any portion of your notes to either edit just the highlighted part or ask focused questions about that content—streamlining workflows, boosting productivity, and making reviews or AI-powered enhancements more targeted.
+- 📝 **Copy Notes as Rich Text**: Copy entire notes—including all formatting, images, and structure—directly as rich text for seamless pasting into emails, reports, or other tools, maintaining clarity and consistency outside the WebUI.
+- ⚡ **Fade-In Streaming Text Experience**: Live-generated responses now elegantly fade in as the AI streams them, creating a more natural and visually engaging reading experience; easily toggled off in Interface settings if you prefer static displays.
+- 🔄 **Settings for Follow-Up Prompts**: Fine-tune your follow-up prompt experience—with new controls, you can choose to keep them visible or have them inserted directly into the message input instead of auto-submitting, giving you more flexibility and control over your workflow.
+- 🔗 **Prompt Variable Documentation Quick Link**: Access documentation for prompt variables in one click from the prompt editor modal—shortening the learning curve and making advanced prompt-building more accessible.
+- 📈 **Active and Total User Metrics for Telemetry**: Gain valuable insights into usage patterns and platform engagement with new metrics tracking active and total users—enhancing auditability and planning for large organizations.
+- 🏷️ **Traceability with Log Trace and Span IDs**: Each log entry now carries detailed trace and span IDs, making it much easier for admins to pinpoint and resolve issues across distributed systems or in complex troubleshooting.
+- 👥 **User Group Add/Remove Endpoints**: Effortlessly add or remove users from groups with new, improved endpoints—giving admins and team leads faster, clearer control over collaboration and permissions.
+- ⚙️ **Note Settings and Controls Streamlined**: The main “Settings” for notes are now simply called “Controls”, and note files now reside in a dedicated controls section, decluttering navigation and making it easier to find and configure note-related options.
+- 🚀 **Faster Admin User Page Loads**: The user list endpoint for admins has been optimized to exclude heavy profile images, speeding up load times for large teams and reducing waiting during administrative tasks.
+- 📡 **Chat ID Header Forwarding**: Ollama and OpenAI router requests now include the chat ID in request headers, enabling better request correlation and debugging capabilities across AI model integrations.
+- 🧠 **Enhanced Reasoning Tag Processing**: Improved and expanded reasoning tag parsing to handle various tag formats more robustly, including standard XML-style tags and custom delimiters, ensuring better AI reasoning transparency and debugging capabilities.
+- 🔐 **OAuth Token Endpoint Authentication Method**: Added configurable OAuth token endpoint authentication method support, providing enhanced flexibility and security options for enterprise OAuth integrations and identity provider compatibility.
+- 🛡️ **Redis Sentinel High Availability Support**: Comprehensive Redis Sentinel failover implementation with automatic master discovery, intelligent retry logic for connection failures, and seamless operation during master node outages—eliminating single points of failure and ensuring continuous service availability in production deployments.
+- 🌐 **Localization & Internationalization Improvements**: Refined and expanded translations for Simplified Chinese, Traditional Chinese, French, German, Korean, and Polish, ensuring a more fluent and native experience for global users across all supported languages.
+
+### Fixed
+
+- 🏷️ **Hybrid Search Functionality Restored**: Hybrid search now works seamlessly again—enabling more accurate, relevant, and comprehensive knowledge discovery across all RAG-powered workflows.
+- 🚦 **Note Chat - Edit Button Disabled During AI Generation**: The edit button when chatting with a note is now disabled while the AI is responding—preventing accidental edits and ensuring workflow clarity during chat sessions.
+- 🧹 **Cleaner Database Credentials**: Database connection no longer duplicates ‘@’ in credentials, preventing potential connection issues and ensuring smoother, more reliable integrations.
+- 🧑‍💻 **File Deletion Now Removes Related Vector Data**: When files are deleted from storage, they are now purged from the vector database as well, ensuring clean data management and preventing clutter or stale search results.
+- 📁 **Files Modal Translation Issues Fixed**: All modal dialog strings—including “Using Entire Document” and “Using Focused Retrieval”—are now fully translated for a more consistent and localized UI experience.
+- 🚫 **Drag-and-Drop File Upload Disabled for Unsupported Models**: File upload by drag-and-drop is disabled when using models that do not support attachments—removing confusion and preventing workflow interruptions.
+- 🔑 **Ollama Tool Calls Now Reliable**: Fixed issues with Ollama-based tool calls, ensuring uninterrupted AI augmentation and tool use for every chat.
+- 📄 **MIME Type Help String Correction**: Cleaned up mimetype help text by removing extraneous characters, providing clearer guidance for file upload configurations.
+- 📝 **Note Editor Permission Fix**: Removed unnecessary admin-only restriction from note chat functionality, allowing all authorized users to access note editing features as intended.
+- 📋 **Chat Sources Handling Improved**: Fixed sources handling logic to prevent duplicate source assignments in chat messages, ensuring cleaner and more accurate source attribution during conversations.
+- 😀 **Emoji Generation Error Handling**: Improved error handling in audio router and fixed metadata structure for emoji generation tasks, preventing crashes and ensuring more reliable emoji generation functionality.
+- 🔒 **Folder System Prompt Permission Enforcement**: System prompt fields in folder edit modal are now properly hidden for users without system prompt permissions, ensuring consistent security policy enforcement across all folder management interfaces.
+- 🌐 **WebSocket Redis Lock Timeout Type Conversion**: Fixed proper integer type conversion for WebSocket Redis lock timeout configuration with robust error handling, preventing potential configuration errors and ensuring stable WebSocket connections.
+- 📦 **PostHog Dependency Added**: Added PostHog 5.4.0 library to resolve ChromaDB compatibility issues, ensuring stable vector database operations and preventing library version conflicts during deployment.
+
+### Changed
+
+- 👀 **Tiptap Editor Upgraded to v3**: The underlying rich text editor has been updated for future-proofing, though some supporting libraries remain on v2 for compatibility. For now, please install dependencies using 'npm install --force' to avoid installation errors.
+- 🚫 **Removed Redundant or Unused Strings and Elements**: Miscellaneous unused, duplicate, or obsolete code and translations have been cleaned up to maintain a streamlined and high-performance experience.
+
+## [0.6.16] - 2025-07-14
+
+### Added
+
+- 🗂️ **Folders as Projects**: Organize your workflow with folder-based projects—set folder-level system prompts and associate custom knowledge, bringing seamless, context-rich management to teams and users handling multiple initiatives or clients.
+- 📁 **Instant Folder-Based Chat Creation**: Start a new chat directly from any folder; just click and your new conversation is automatically embedded in the right project context—no more manual dragging or setup, saving time and eliminating mistakes.
+- 🧩 **Prompt Variables with Automatic Input Modal**: Prompts containing variables now display a clean, auto-generated input modal that **autofocuses on the first field** for instant value entry—just select the prompt and fill in exactly what’s needed, reducing friction and guesswork.
+- 🔡 **Variable Input Typing in Prompts**: Define input types for prompt variables (e.g., text, textarea, number, select, color, date, map and more), giving everyone a clearer and more precise prompt-building experience for advanced automation or workflows.
+- 🚀 **Base Model List Caching**: Cache your base model list to speed up model selection and reduce repeated API calls; toggle this in Admin Settings > Connections for responsive model management even in large or multi-provider setups.
+- ⏱️ **Configurable Model List Cache TTL**: Take control over model list caching with the new MODEL_LIST_CACHE_TTL environment variable. Set a custom cache duration in seconds to balance performance and freshness, reducing API requests in stable environments or ensuring rapid updates when models change frequently.
+- 🔖 **Reference Notes as Knowledge or in Chats**: Use any note as knowledge for a model or folder, or reference it directly from chat—integrate living documentation into your Retrieval Augmented Generation workflows or discussions, bridging knowledge and action.
+- 📝 **Chat Directly with Notes (Experimental)**: Ask questions about any note, and directly edit or update notes from within a chat—unlock direct AI-powered brainstorming, summarization, and cleanup, like having your own collaborative AI canvas.
+- 🤝 **Collaborative Notes with Multi-User Editing**: Share notes with others and collaborate live—multiple users can edit a note in real-time, boosting cooperative knowledge building and workflow documentation.
+- 🛡️ **Collaborative Note Permissions**: Control who can view or edit each note with robust sharing permissions, ensuring privacy or collaboration per your organizational needs.
+- 🔗 **Copy Link to Notes**: Quickly copy and share direct links to notes for easier knowledge transfer within your team or external collaborators.
+- 📋 **Task List Support in Notes**: Add, organize, and manage checklists or tasks inside your notes—plan projects, track to-dos, and keep everything actionable in a single space.
+- 🧠 **AI-Generated Note Titles**: Instantly generate relevant and concise titles for your notes using AI—keep your knowledge library organized without tedious manual editing.
+- 🔄 **Full Undo/Redo Support in Notes**: Effortlessly undo or redo your latest note changes—never fear mistakes or accidental edits while collaborating or writing.
+- 📝 **Enhanced Note Word/Character Counter**: Always know the size of your notes with built-in counters, making it easier to adhere to length guidelines for shared or published content.
+- 🖊️ **Floating & Bubble Formatting Menus in Note Editor**: Access text formatting tools through both a floating menu and an intuitive bubble menu directly in the note editor—making rich text editing faster, more discoverable, and easier than ever.
+- ✍️ **Rich Text Prompt Insertion**: A new setting allows prompts to be inserted directly into the chat box as fully-formatted rich text, preserving Markdown elements like headings, lists, and bold text for a more intuitive and visually consistent editing experience.
+- 🌐 **Configurable Database URL**: WebUI now supports more flexible database configuration via new environment variables—making deployment and scaling simpler across various infrastructure setups.
+- 🎛️ **Completely Frontend-Handled File Upload in Temporary Chats**: When using temporary chats, file extraction now occurs fully in your browser with zero files sent to the backend, further strengthening privacy and giving you instant feedback.
+- 🔄 **Enhanced Banner and Chat Command Visibility**: Banner handling and command feedback in chat are now clearer and more contextually visible, making alerts, suggestions, and automation easier to spot and interact with for all users.
+- 📱 **Mobile Experience Polished**: The "new chat" button is back in mobile, plus core navigation and input controls have been smoothed out for better usability on phones and tablets.
+- 📄 **OpenDocument Text (.odt) Support**: Seamlessly upload and process .odt files from open-source office suites like LibreOffice and OpenOffice, expanding your ability to build knowledge from a wider range of document formats.
+- 📑 **Enhanced Markdown Document Splitting**: Improve knowledge retrieval from Markdown files with a new header-aware splitting strategy. This method intelligently chunks documents based on their header structure, preserving the original context and hierarchy for more accurate and relevant RAG results.
+- 📚 **Full Context Mode for Knowledge Bases**: When adding a knowledge base to a folder or custom model, you can now toggle full context mode for the entire knowledge base. This bypasses the usual chunking and retrieval process, making it perfect for leaner knowledge bases.
+- 🕰️ **Configurable OAuth Timeout**: Enhance login reliability by setting a custom timeout (OAUTH_TIMEOUT) for all OAuth providers (Google, Microsoft, GitHub, OIDC), preventing authentication failures on slow or restricted networks.
+- 🎨 **Accessibility & High-Contrast Theme Enhancements**: Major accessibility overhaul with significant updates to the high-contrast theme. Improved focus visibility, ARIA labels, and semantic HTML ensure core components like the chat interface and model selector are fully compliant and readable for visually impaired users.
+- ↕️ **Resizable System Prompt Fields**: Conveniently resize system prompt input fields to comfortably view and edit lengthy or complex instructions, improving the user experience for advanced model configuration.
+- 🔧 **Granular Update Check Control**: Gain finer control over outbound connections with the new ENABLE_VERSION_UPDATE_CHECK flag. This allows administrators to disable version update checks independently of the full OFFLINE_MODE, perfect for environments with restricted internet access that still need to download embedding models.
+- 🗃️ **Configurable Qdrant Collection Prefix**: Enhance scalability by setting a custom QDRANT_COLLECTION_PREFIX. This allows multiple Open WebUI instances to share a single Qdrant cluster safely, ensuring complete data isolation between separate deployments without conflicts.
+- ⚙️ **Improved Default Database Performance**: Enhanced out-of-the-box performance by setting smarter database connection pooling defaults, reducing API response times for users on non-SQLite databases without requiring manual configuration.
+- 🔧 **Configurable Redis Key Prefix**: Added support for the REDIS_KEY_PREFIX environment variable, allowing multiple Open WebUI instances to share a Redis cluster with isolated key namespaces for improved multi-tenancy.
+- ➡️ **Forward User Context to Reranker**: For advanced RAG integrations, user information (ID, name, email, role) can now be forwarded as HTTP headers to external reranking services, enabling personalized results or per-user access control.
+- ⚙️ **PGVector Connection Pooling**: Enhance performance and stability for PGVector-based RAG by enabling and configuring the database connection pool. New environment variables allow fine-tuning of pool size, timeout, and overflow settings to handle high-concurrency workloads efficiently.
+- ⚙️ **General Backend Refactoring**: Extensive refactoring delivers a faster, more reliable, and robust backend experience—improving chat speed, model management, and day-to-day reliability.
+- 🌍 **Expanded & Improved Translations**: Enjoy a more accessible and intuitive experience thanks to comprehensive updates and enhancements for Chinese (Simplified and Traditional), German, French, Catalan, Irish, and Spanish translations throughout the interface.
+
+### Fixed
+
+- 🛠️ **Rich Text Input Stability and Performance**: Multiple improvements ensure faster, cleaner text editing and rendering with reduced glitches—especially supporting links, color picking, checkbox controls, and code blocks in notes and chats.
+- 📷 **Seamless iPhone Image Uploads**: Effortlessly upload photos from iPhones and other devices using HEIC format—images are now correctly recognized and processed, eliminating compatibility issues.
+- 🔄 **Audio MIME Type Registration**: Issues with audio file content types have been resolved, guaranteeing smoother, error-free uploads and playback for transcription or note attachments.
+- 🖍️ **Input Commands Now Always Visible**: Input commands (like prompts or knowledge) dynamically adjust their height on small screens, ensuring nothing is cut off and every tool remains easily accessible.
+- 🛑 **Tool Result Rendering**: Fixed display problems with tool results, providing fast, clear feedback when using external or internal tools.
+- 🗂️ **Table Alignment in Markdown**: Markdown tables are now rendered and aligned as expected, keeping reports and documentation readable.
+- 🖼️ **Thread Image Handling**: Fixed an issue where messages containing only images in threads weren’t displayed correctly.
+- 🗝️ **Note Access Control Security**: Tightened access control logic for notes to guarantee that shared or collaborative notes respect all user permissions and privacy safeguards.
+- 🧾 **Ollama API Compatibility**: Fixed model parameter naming in the API to ensure uninterrupted compatibility for all Ollama endpoints.
+- 🛠️ **Detection for 'text/html' Files**: Files loaded with docling/tika are now reliably detected as the correct type, improving knowledge ingestion and document parsing.
+- 🔐 **OAuth Login Stability**: Resolved a critical OAuth bug that caused login failures on subsequent attempts after logging out. The user session is now completely cleared on logout, ensuring reliable and secure authentication across all supported providers (Google, Microsoft, GitHub, OIDC).
+- 🚪 **OAuth Logout and Redirect Reliability**: The OAuth logout process has been made more robust. Logout requests now correctly use proxy environment variables, ensuring they succeed in corporate networks. Additionally, the custom WEBUI_AUTH_SIGNOUT_REDIRECT_URL is now properly respected for all OAuth/OIDC configurations, ensuring a seamless sign-out experience.
+- 📜 **Banner Newline Rendering**: Banners now correctly render newline characters, ensuring that multi-line announcements and messages are displayed with their intended formatting.
+- ℹ️ **Consistent Model Description Rendering**: Model descriptions now render Markdown correctly in the main chat interface, matching the formatting seen in the model selection dropdown for a consistent user experience.
+- 🔄 **Offline Mode Update Check Display**: Corrected a UI bug where the "Checking for Updates..." message would display indefinitely when the application was set to offline mode.
+- 🛠️ **Tool Result Encoding**: Fixed a bug where tool calls returning non-ASCII characters would fail, ensuring robust handling of international text and special characters in tool outputs.
+
+## [0.6.15] - 2025-06-16
+
+### Added
+
+- 🖼️ **Global Image Compression Option**: Effortlessly set image compression globally so all image uploads and outputs are optimized, speeding up load times and saving bandwidth—perfect for teams dealing with large files or limited network resources.
+- 🎤 **Custom Speech-to-Text Content-Type for Transcription**: Define custom content types for audio transcription, ensuring compatibility with diverse audio sources and unlocking smoother, more accurate transcriptions in advanced setups.
+- 🗂️ **LDAP Group Synchronization (Experimental)**: Automatically sync user groups from your LDAP directory directly into Open WebUI for seamless enterprise access management—simplifies identity integration and governance across your organization.
+- 📈 **OpenTelemetry Metrics via OTLP Exporter (Experimental)**: Gain enterprise-grade analytics and monitor your AI usage in real time with experimental OpenTelemetry Metrics support—connect to any OTLP-compatible backend for instant insights into performance, load, and user interactions.
+- 🕰️ **See User Message Timestamps on Hover (Chat Bubble UI)**: Effortlessly check when any user message was sent by hovering over it in Chat Bubble mode—no more switching screens or digging through logs for context.
+- 🗂️ **Leaderboard Sorting Options**: Sort the leaderboard directly in the UI for a clearer, more actionable view of top performers, models, or tools—making analysis and recognition quick and easy for teams.
+- 🏆 **Evaluation Details Modal in Feedbacks and Leaderboard**: Dive deeper with new modals that display detailed evaluation information when reviewing feedbacks and leaderboard rankings—accelerates learning, progress tracking, and quality improvement.
+- 🔄 **Support for Multiple Pages in External Document Loaders**: Effortlessly extract and work with content spanning multiple pages in external documents, giving you complete flexibility for in-depth research and document workflows.
+- 🌐 **New Accessibility Enhancements Across the Interface**: Benefit from significant accessibility improvements—tab navigation, ARIA roles/labels, better high-contrast text/modes, accessible modals, and more—making Open WebUI more usable and equitable for everyone, including those using assistive technologies.
+- ⚡ **Performance & Stability Upgrades Across Frontend and Backend**: Enjoy a smoother, more reliable experience with numerous behind-the-scenes optimizations and refactoring on both frontend and backend—resulting in faster load times, fewer errors, and even greater stability throughout your workflows.
+- 🌏 **Updated and Expanded Localizations**: Enjoy improved, up-to-date translations for Finnish, German (now with model pinning features), Korean, Russian, Simplified Chinese, Spanish, and more—making every interaction smoother, clearer, and more intuitive for international users.
+
+### Fixed
+
+- 🦾 **Ollama Error Messages More Descriptive**: Receive clearer, more actionable error messages when something goes wrong with Ollama models—making troubleshooting and user support faster and more effective.
+- 🌐 **Bypass Webloader Now Works as Expected**: Resolved an issue where the "bypass webloader" feature failed to function correctly, ensuring web search bypasses operate smoothly and reliably for lighter, faster query results.
+- 🔍 **Prevent Redundant Documents in Citation List**: The expanded citation list no longer shows duplicate documents, offering a cleaner, easier-to-digest reference experience when reviewing sources in knowledge and research workflows.
+- 🛡️ **Trusted Header Email Matching is Now Case-Insensitive**: Fixed a critical authentication issue where email case sensitivity could cause secure headers to mismatch, ensuring robust, seamless login and session management in all environments.
+- ⚙️ **Direct Tool Server Input Accepts Empty Strings**: You can now submit direct tool server commands without unexpected errors when passing empty-string values, improving integration and automation efficiency.
+- 📄 **Citation Page Number for Page 1 is Now Displayed**: Corrected an oversight where references for page 1 documents were missing the page number; citations are now always accurate and fully visible.
+- 📒 **Notes Access Restored**: Fixed an issue where some users could not access their notes—everyone can now view and manage their notes reliably, ensuring seamless documentation and workflow continuity.
+- 🛑 **OAuth Callback Double-Slash Issue Resolved**: Fixed rare cases where an extra slash in OAuth callbacks caused failed logins or redirects, making third-party login integrations more reliable.
+
+### Changed
+
+- 🔑 **Dedicated Permission for System Prompts**: System prompt access is now controlled by its own specific permission instead of being grouped with general chat controls, empowering admins with finer-grained management over who can view or modify system prompts for enhanced security and workflow customization.
+- 🛠️ **YouTube Transcript API and python-pptx Updated**: Enjoy better performance, reliability, and broader compatibility thanks to underlying library upgrades—less friction with media-rich and presentation workflows.
+
+### Removed
+
+- 🗑️ **Console Logging Disabled in Production**: All 'console.log' and 'console.debug' statements are now disabled in production, guaranteeing improved security and cleaner browser logs for end users by removing extraneous technical output.
+
+## [0.6.14] - 2025-06-10
+
+### Added
+
+- 🤖 **Automatic "Follow Up" Suggestions**: Open WebUI now intelligently generates actionable "Follow Up" suggestions automatically with each message you send, helping you stay productive and inspired without interrupting your flow; you can always disable this in Settings if you prefer a distraction-free experience.
+- 🧩 **OpenAI-Compatible Embeddings Endpoint**: Introducing a fully OpenAI-style '/api/embeddings' endpoint—now you can plug in OpenAI-style embeddings workflows with zero hassle, making integrations with external tools and platforms seamless and familiar.
+- ↗️ **Model Pinning for Quick Access**: Pin your favorite or most-used models to the sidebar for instant selection—no more scrolling through long model lists; your go-to models are always visible and ready for fast access.
+- 📌 **Selector Model Item Menu**: Each model in the selector now features a menu where you can easily pin/unpin to the sidebar and copy a direct link—simplifying collaboration and staying organized in even the busiest environments.
+- 🛑 **Reliable Stop for Ongoing Chats in Multi-Replica Setups**: Stopping or cancelling an in-progress chat now works reliably even in clustered deployments—ensuring every user can interrupt AI output at any time, no matter your scale.
+- 🧠 **'Think' Parameter for Ollama Models**: Leverage new 'think' parameter support for Ollama—giving you advanced control over AI reasoning process and further tuning model behavior for your unique use cases.
+- 💬 **Picture Description Modes for Docling**: Customize how images are described/extracted by Docling Loader for smarter, more detailed, and workflow-tailored image understanding in your document pipelines.
+- 🛠 **Settings Modal Deep Linking**: Every tab in Settings now has its own route—making direct navigation and sharing of precise settings faster and more intuitive.
+- 🎤 **Audio HTML Component Token**: Easily embed and play audio directly in your chats, improving voice-based workflows and making audio content instantly accessible and manageable from any conversation.
+- 🔑 **Support for Secret Key File**: Now you can specify 'WEBUI_SECRET_KEY_FILE' for more secure and flexible key management—ideal for advanced deployments and tighter security standards.
+- 💡 **Clarity When Cloning Prompts**: Cloned workspace prompts are clearly labelled with "(Clone)" and IDs have "-clone", keeping your prompt library organized and preventing accidental overwrites.
+- 📝 **Dedicated User Role Edit Modal**: Updating user roles now reliably opens a dedicated edit user modal instead of cycling through roles—making it safer and more clear to manage team permissions.
+- 🏞️ **Better Handling & Storage of Interpreter-Generated Images**: Code interpreter-generated images are now centrally stored and reliably loaded from the database or cloud storage, ensuring your artifacts are always available.
+- 🚀 **Pinecone & Vector Search Optimizations**: Applied latest best practices from Pinecone for smarter timeouts, intelligent retry control, improved connection pooling, faster DNS, and concurrent batch handling—giving you more reliable, faster document search and RAG performance without manual tweaks.
+- ⚙️ **Ollama Advanced Parameters Unified**: 'keep_alive' and 'format' options are now integrated into the advanced params section—edit everything from the model editor for flexible model control.
+- 🛠️ **CUDA 12.6 Docker Image Support**: Deploy to NVIDIA GPUs with capability 7.0 and below (e.g., V100, GTX1080) via new cuda126 image—broadening your hardware options for scalable AI workloads.
+- 🔒 **Experimental Table-Level PGVector Data Encryption**: Activate pgcrypto encryption support for pgvector to secure your vector search table contents, giving organizations enhanced compliance and data protection—perfect for enterprise or regulated environments.
+- 👁 **Accessibility Upgrades Across Interface**: Chat buttons and close controls are now labelled and structured for optimal accessibility support, ensuring smoother operation with assistive technologies.
+- 🎨 **High-Contrast Mode Expansions**: High-contrast accessibility mode now also applies to menu items, tabs, and search input fields, offering a more readable experience for all users.
+- 🛠️ **Tooltip & Translation Clarity**: Improved translation and tooltip clarity, especially over radio buttons, making the UI more understandable for all users.
+- 🔠 **Global Localization & Translation Improvements**: Hefty upgrades to Traditional Chinese, Simplified Chinese, Hebrew, Russian, Irish, German, and Danish translation packs—making the platform feel native and intuitive for even more users worldwide.
+- ⚡ **General Backend Stability & Security Enhancements**: Refined numerous backend routines to minimize memory use, improve performance, and streamline integration with external APIs—making the entire platform more robust and secure for daily work.
+
+### Fixed
+
+- 🏷 **Feedback Score Display Improved**: Addressed overflow and visibility issues with feedback scores for more readable and accessible evaluations.
+- 🗂 **Admin Settings Model Edits Apply Immediately**: Changes made in the Model Editor within Admin Settings now take effect instantly, eliminating confusion during model management.
+- 🔄 **Assigned Tools Update Instantly on New Chats**: Models assigned with specific tools now consistently update and are available in every new chat—making tool workflows more predictable and robust.
+- 🛠 **Document Settings Saved Only on User Action**: Document settings now save only when you press the Save button, reducing accidental changes and ensuring greater control.
+- 🔊 **Voice Recording on Older iOS Devices Restored**: Voice input is now fully functional on older iOS devices, keeping voice workflows accessible to all users.
+- 🔒 **Trusted Email Header Session Security**: User sessions now strictly verify the trusted email header matches the logged-in user's email, ensuring secure authentication and preventing accidental session switching.
+- 🔒 **Consistent User Signout on Email Mismatch**: When the trusted email in the header changes, you will now be properly signed out and redirected, safeguarding your session's integrity.
+- 🛠 **General Error & Content Validation Improvements**: Smarter error handling means clearer messages and fewer unnecessary retries—making batch uploads, document handling, and knowledge indexing more resilient.
+- 🕵️ **Better Feedback on Chat Title Edits**: Error messages now show clearly if problems occur while editing chat titles.
+
+## [0.6.13] - 2025-05-30
+
+### Added
+
+- 🟦 **Azure OpenAI Embedding Support**: You can now select Azure OpenAI endpoints for text embeddings, unlocking seamless integration with enterprise-scale Azure AI for powerful RAG and knowledge workflows—no more workarounds, connect and scale effortlessly.
+- 🧩 **Smarter Custom Parameter Handling**: Instantly enjoy more flexible model setup—any JSON pasted into custom parameter fields is now parsed automatically, so you can define rich, nested parameters without tedious manual adjustment. This streamlines advanced configuration for all models and accelerates experimentation.
+- ⚙️ **General Backend Refactoring**: Significant backend improvements deliver a cleaner codebase for better maintainability, faster performance, and even greater platform reliability—making all your workflows run more smoothly.
+- 🌏 **Localization Upgrades**: Experience highly improved user interface translations and clarity in Simplified, Traditional Chinese, Korean, and Finnish, offering a more natural, accurate, and accessible experience for global users.
+
+### Fixed
+
+- 🛡️ **Robust Message Handling on Chat Load**: Fixed an issue where chat pages could fail to load if a referenced message was missing or undefined; now, chats always load smoothly and missing IDs no longer disrupt your workflow.
+- 📝 **Correct Prompt Access Control**: Ensured that the prompt access controls register properly, restoring reliable permissioning and safeguarding your prompt workflows.
+- 🛠 **Open WebUI-Specific Params No Longer Sent to Models**: Fixed a bug that sent internal WebUI parameters to APIs, ensuring only intended model options are transmitted—restoring predictable, error-free model operation.
+- 🧠 **Refined Memory Error Handling**: Enhanced stability during memory-related operations, so even uncommon memory errors are gracefully managed without disrupting your session—resulting in a more reliable, worry-free experience.
+
+## [0.6.12] - 2025-05-29
+
+### Added
+
+- 🧩 **Custom Advanced Model Parameters**: You can now add your own tailor-made advanced parameters to any model, empowering you to fine-tune behavior and unlock greater flexibility beyond just the built-in options—accelerate your experimentation.
+- 🪧 **Datalab Marker API Content Extraction Support**: Seamlessly extract content from files and documents using the Datalab Marker API directly in your workflows, enabling more robust structured data extraction for RAG and document processing with just a simple engine switch in the UI.
+- ⚡ **Parallelized Base Model Fetching**: Experience noticeably faster startup and model refresh times—base model data now loads in parallel, drastically shortening delays in busy or large-scale deployments.
+- 🧠 **Efficient Function Loading and Caching**: Functions are now only reloaded if their content changes, preventing unnecessary duplicate loads, saving bandwidth, and boosting performance.
+- 🌍 **Localization & Translation Enhancements**: Improved and expanded Simplified, Traditional Chinese, and Russian translations, providing smoother, more accurate, and context-aware experiences for global users.
+
+### Fixed
+
+- 💬 **Stable Message Input Box**: Fixed an issue where the message input box would shift unexpectedly (especially on mobile or with screen reader support), ensuring a smooth and reliable typing experience for every user.
+- 🔊 **Reliable Read Aloud (Text-to-Speech)**: Read aloud now works seamlessly across messages, so users depending on TTS for accessibility or multitasking will experience uninterrupted and clear voice playback.
+- 🖼 **Image Preview and Download Restored**: Fixed problems with image preview and downloads, ensuring frictionless creation, previewing, and downloading of images in your chats—no more interruptions in creative or documentation workflows.
+- 📱 **Improved Mobile Styling for Workspace Capabilities**: Capabilities management is now readable and easy-to-use even on mobile devices, empowering admins and users to manage access quickly on the go.
+- 🔁 **/api/v1/retrieval/query/collection Endpoint Reliability**: Queries to retrieval collections now return the expected results, bolstering the reliability of your knowledge workflows and citation-ready responses.
+
+### Removed
+
+- 🧹 **Duplicate CSS Elements**: Streamlined the UI by removing redundant CSS, reducing clutter and improving load times for a smoother visual experience.
+
+## [0.6.11] - 2025-05-27
+
+### Added
+
+- 🟢 **Ollama Model Status Indicator in Model Selector**: Instantly see which Ollama models are currently loaded with a clear indicator in the model selector, helping you stay organized and optimize local model usage.
+- 🗑️ **Unload Ollama Model Directly from Model Selector**: Easily release memory and resources by unloading any loaded Ollama model right in the model selector—streamline hardware management without switching pages.
+- 🗣️ **User-Configurable Speech-to-Text Language Setting**: Improve transcription accuracy by letting individual users explicitly set their preferred STT language in their settings—ideal for multilingual teams and clear audio capture.
+- ⚡ **Granular Audio Playback Speed Control**: Instead of just presets, you can now choose granular audio speed using a numeric input, giving you complete control over playback pace in transcriptions and media reviews.
+- 📦 **GZip, Brotli, ZStd Compression Middleware**: Enjoy significantly faster page loads and reduced bandwidth usage with new server-side compression—giving users a snappier, more efficient experience.
+- 🏷️ **Configurable Weight for BM25 in Hybrid Search**: Fine-tune search relevance by adjusting the weight for BM25 inside hybrid search from the UI, letting you tailor knowledge search results to your workflow.
+- 🧪 **Bypass File Creation with CTRL + SHIFT + V**: When “Paste Large Text as File” is enabled, use CTRL + SHIFT + V to skip the file creation dialog and instantly upload text as a file—perfect for rapid document prep.
+- 🌐 **Bypass Web Loader in Web Search**: Choose to bypass web content loading and use snippets directly in web search for faster, more reliable results when page loads are slow or blocked.
+- 🚀 **Environment Variable: WEBUI_AUTH_TRUSTED_GROUPS_HEADER**: Now sync and manage user groups directly via trusted HTTP header, unlocking smoother single sign-on and identity integrations for organizations.
+- 🏢 **Workspace Models Visibility Controls**: You can now hide workspace-level models from both the model selector and shared environments—keep your team focused and reduce clutter from rarely-used endpoints.
+- 🛡️ **Copy Model Link**: You can now copy a direct link to any model—including those hidden from the selector—making sharing and onboarding others more seamless.
+- 🔗 **Load Function Directly from URL**: Simplify custom function management—just paste any GitHub function URL into Open WebUI and import new functions in seconds.
+- ⚙️ **Custom Name/Description for External Tool Servers**: Personalize and clarify external tool servers by assigning custom names and descriptions, making it easier to manage integrations in large-scale workspaces.
+- 🌍 **Custom OpenAPI JSON URL Support for Tool Servers**: Supports specifying any custom OpenAPI JSON URL, unlocking more flexible integration with any backend for tool calls.
+- 📊 **Source Field Now Displays in Non-Streaming Responses with Attachments**: When files or knowledge are attached, the "source" field now appears for all responses, even in non-streaming mode—enabling improved citation workflow.
+- 🎛 **Pinned Chats**: Reduced payload size on pinned chat requests—leading to faster load times and less data usage, especially on busy warehouses.
+- 🛠 **Import/Export Default Prompt Suggestions**: Enjoy one-click import/export of prompt suggestions, making it much easier to share, reuse, and manage best practices across teams or deployments.
+- 🍰 **Banners Now Sortable from Admin Settings**: Quickly re-order or prioritize banners, letting you highlight the most critical info for your team.
+- 🛠 **Advanced Chat Parameters—Clearer Ollama Support Labels**: Parameters and advanced settings now explicitly indicate if they are Ollama-specific, reducing confusion and improving setup accuracy.
+- 🤏 **Scroll Bar Thumb Improved for Better Visibility**: Enhanced scrollbar styling makes navigation more accessible and visually intuitive.
+- 🗄️ **Modal Redesign for Archived and User Chat Listings**: Clean, modern modal interface for browsing archived and user-specific chats makes locating conversations faster and more pleasant.
+- 📝 **Add/Edit Memory Modal UX**: Memory modals are now larger and have resizable input fields, supporting easier editing of long or complex memory content.
+- 🏆 **Translation & Localization Enhancements**: Major upgrades to Chinese (Simplified & Traditional), Korean, Russian, German, Danish, Finnish—not just fixing typos, but consistency, tone, and terminology for a more natural native-language experience.
+- ⚡ **General Backend Stability & Security Enhancements**: Various backend refinements ensure a more resilient, reliable, and secure platform for smoother operation and peace of mind.
+
+### Fixed
+
+- 🖼️ **Image Generation with Allowed File Extensions Now Works Reliably**: Ensure seamless image generation even when strict file extension rules are set—no more blocked creative workflows due to technical hiccups.
+- 🗂 **Remove Leading Dot for File Extension Check**: Fixed an issue where file validation failed because of a leading dot, making file uploads and knowledge management more robust.
+- 🏷️ **Correct Local/External Model Classification**: The platform now accurately distinguishes between local and external models—preventing local models from showing up as external (and vice versa)—ensuring seamless setup, clarity, and management of your AI model endpoints.
+- 📄 **External Document Loader Now Functions as Intended**: External document loaders are reliably invoked, ensuring smoother knowledge ingestion from external sources—expanding your RAG and knowledge workflows.
+- 🎯 **Correct Handling of Toggle Filters**: Toggle filters are now robustly managed, preventing accidental auto-activation and ensuring user preferences are always respected.
+- 🗃 **S3 Tagging Character Restrictions Fixed**: Tags for files in S3 now automatically meet Amazon’s allowed character set, avoiding upload errors and ensuring cross-cloud compatibility.
+- 🛡️ **Authentication Now Uses Password Hash When Duplicate Emails Exist**: Ensures account security and prevents access issues if duplicate emails are present in your system.
+
+### Changed
+
+- 🧩 **Admin Settings: OAuth Redirects Now Use WEBUI_URL**: The OAuth redirect URL is now based on the explicitly set WEBUI_URL, ensuring single sign-on and identity provider integrations always send users to the correct frontend.
+
+### Removed
+
+- 💡 **Duplicate/Typo Component Removals**: Obsolete components have been cleaned up, reducing confusion and improving overall code quality for the team.
+- 🚫 **Streaming Upsert in Pinecone Removed**: Removed streaming upsert references for better compatibility and future-proofing with latest Pinecone SDK updates.
+
+## [0.6.10] - 2025-05-19
+
+### Added
+
+- 🧩 **Experimental Azure OpenAI Support**: Instantly connect to Azure OpenAI endpoints by simply pasting your Azure OpenAI URL into the model connections—bringing flexible, enterprise-grade AI integration directly to your workflow.
+- 💧 **Watermark AI Responses**: Easily add a visible watermark to AI-generated responses for clear content provenance and compliance with EU AI regulations—perfect for regulated environments and transparent communication.
+- 🔍 **Enhanced Search Experience with Dedicated Modal**: Enjoy a modern, powerful search UI in a dedicated modal (open with Ctrl/Cmd + K) accessible from anywhere—quickly find chats, models, or content and boost your productivity.
+- 🔲 **"Toggle" Filter Type for Chat Input**: Add interactive toggle filters (e.g. Web Search, Image, Code Interpreter) right into the chat input—giving you one-click control to activate features and simplifying the chat configuration process.
+- 🧰 **Granular Model Capabilities Editor**: Define detailed capabilities and feature access for each AI model directly from the model editor—enabling tailored behavior, modular control, and a more customized AI environment for every team or use case.
+- 🌐 **Flexible Local and External Connection Support**: Now you can designate any AI connection—whether OpenAI, Ollama, or others—as local or external, enabling seamless setup for on-premise, self-hosted, or cloud configurations and giving you maximum control and flexibility.
+- 🗂️ **Allowed File Extensions for RAG**: Gain full control over your Retrieval-Augmented Generation (RAG) workflows by specifying exactly which file extensions are permitted for upload, improving security and relevance of indexed documents.
+- 🔊 **Enhanced Audio Transcription Logic**: Experience smoother, more reliable audio transcription—very long audio files are now automatically split and processed in segments, preventing errors and ensuring even challenging files are transcribed seamlessly, all part of a broader stability upgrade for robust media workflows.
+- 🦾 **External Document Loader Support**: Enhance knowledge base building by integrating documents using external loaders from a wide range of data sources, expanding what your AI can read and process.
+- 📝 **Preview Button for Code Artifacts**: Instantly jump from an HTML code block to its associated artifacts page with the click of a new preview button—speeding up review and streamlining analysis.
+- 🦻 **Screen Reader Support for Response Messages**: All chat responses are now fully compatible with screen readers, making the platform more inclusive and accessible for everyone.
+- 🧑‍💼 **Customizable Pending User Overlay**: You can now tailor the overlay title and content shown to pending users, ensuring onboarding messaging is perfectly aligned with your organization’s tone and requirements.
+- 🔐 **Option to Disable LDAP Certificate Validation**: You can now disable LDAP certificate validation for maximum flexibility in diverse IT environments—making integrations and troubleshooting much easier.
+- 🎯 **Workspace Search by Username or Email**: Easily search across workspace pages using any username or email address, streamlining user and resource management.
+- 🎨 **High Contrast & Dark Mode Enhancements**: Further improved placeholder, input, suggestion, toast, and model selector contrasts—including a dedicated placeholder dark mode—for more comfortable viewing in all lighting conditions.
+- 🛡️ **Refined Security for Pipelines & Model Uploads**: Strengthened safeguards against path traversal vulnerabilities during uploads—ensuring your platform’s document and model management remains secure.
+- 🌏 **Major Localization Upgrades**: Comprehensive translation updates and improvements across Korean, Bulgarian, Catalan, Japanese, Italian, Traditional Chinese, and Spanish—including more accurate AI terminology for clarity; your experience is now more natural, inclusive, and professional everywhere.
+- 🦾 **General Backend Stability & Security**: Multiple backend improvements (including file upload, command navigation, and logging refactorings) deliver increased resilience, better error handling, and a more robust platform for all users.
+
+### Fixed
+
+- ✅ **Evaluation Feedback Endpoint Reliability**: Addressed issues with feedback submission endpoints to ensure seamless user feedback collection on model responses.
+- 🫰 **Model List State Fixes**: Resolved issues where model status toggles in the workspace page might inadvertently switch or confuse state, making the management of active/inactive models more dependable.
+- ✍️ **Admin Signup Logic**: Admin self-signup experience and validation flow is smoother and more robust.
+- 🔁 **Signout Redirect Flow Improved**: Logging out now redirects more reliably, reducing confusion and making session management seamless.
+
+## [0.6.9] - 2025-05-10
+
+### Added
+
+- 📝 **Edit Attached Images/Files in Messages**: You can now easily edit your sent messages by removing attached files—streamlining document management, correcting mistakes on the fly, and keeping your chats clutter-free.
+- 🚨 **Clear Alerts for Private Task Models**: When interacting with private task models, the UI now clearly alerts you—making it easier to understand resource availability and access, reducing confusion during workflow setup.
+
+### Fixed
+
+- 🛡️ **Confirm Dialog Focus Trap Reliability**: The focus now stays correctly within confirmation dialogs, ensuring keyboard navigation and accessibility is seamless and preventing accidental operations—especially helpful during critical or rapid workflows.
+- 💬 **Temporary Chat Admin Controls & Session Cleanliness**: Admins are now able to properly enable temporary chat mode without errors, and previous session prompts or tool selections no longer carry over—delivering a fresh, predictable, and consistent temporary chat experience every time.
+- 🤖 **External Reranker Integration Functionality Restored**: External reranker integrations now work correctly, allowing you to fully leverage advanced ranking services for sharper, more relevant search results in your RAG and knowledge base workflows.
+
+## [0.6.8] - 2025-05-10
+
+### Added
+
+- 🏆 **External Reranker Support for Knowledge Base Search**: Supercharge your Retrieval-Augmented Generation (RAG) workflows with the new External Reranker integration; easily plug in advanced reranking services via the UI to deliver sharper and more relevant search results, accelerating research and insight discovery.
+- 📤 **Unstylized PDF Export Option (Reduced File Size)**: When exporting chat transcripts or documents, you can now choose an unstylized PDF export for snappier downloads, minimal file size, and clean data archiving—perfect for large-scale storage or sharing.
+- 📝 **Vazirmatn Font for Persian & Arabic**: Arabic and Persian users will now see their text beautifully rendered with the specialized Vazirmatn font for an improved localized reading experience.
+- 🏷️ **SharePoint Tenant ID Support for OneDrive**: You can now specify a SharePoint tenant ID in OneDrive settings for seamless authentication and granular enterprise integration.
+- 👤 **Refresh OAuth Profile Picture**: Your OAuth profile picture now updates in real-time, ensuring your presence and avatar always match your latest identity across integrated platforms.
+- 🔧 **Milvus Configuration Improvements**: Configure index and metric types for Milvus directly within settings; take full control of your vector database for more accurate and robust AI search experiences.
+- 🛡️ **S3 Tagging Toggle for Compatibility**: Optional S3 tagging via an environment toggle grants full compatibility with all storage backends—including those that don’t support tagging like Cloudflare R2—ensuring error-free attachment and document management.
+- 👨‍🦯 **Icon Button Accessibility Improvements**: Key interactive icon-buttons now include aria-labels and ARIA descriptions, so screen readers provide precise guidance about what action each button performs for improved accessibility.
+- ♿ **Enhanced Accessibility with Modal Focus Trap**: Modal dialogs and pop-ups now feature a focus trap and improved ARIA roles, ensuring seamless navigation and screen reader support—making the interface friendlier for everyone, including keyboard and assistive tech users.
+- 🏃 **Improved Admin User List Loading Indicator**: The user list loading experience is now clearer and more responsive in the admin panel.
+- 🧑‍🤝‍🧑 **Larger Admin User List Page Size**: Admins can now manage up to 30 users per page in the admin interface, drastically reducing pagination and making large user teams easier and faster to manage.
+- 🌠 **Default Code Interpreter Prompt Clarified**: The built-in code interpreter prompt is now more explicit, preventing AI from wrapping code in Markdown blocks when not needed—ensuring properly formatted code runs as intended every time.
+- 🧾 **Improved Default Title Generation Prompt Template**: Title generation now uses a robust template for reliable JSON output, improving chat organization and searchability.
+- 🔗 **Support Jupyter Notebooks with Non-Root Base URLs**: Notebook-based code execution now supports non-root deployed Jupyter servers, granting full flexibility for hybrid or multi-user setups.
+- 📰 **UI Scrollbar Always Visible for Overflow Tools**: When available tools overflow the display, the scrollbar is now always visible and there’s a handy "show all" toggle, making navigation of large toolsets snappier and more intuitive.
+- 🛠️ **General Backend Refactoring for Stability**: Multiple under-the-hood improvements have been made across backend components, ensuring smoother performance, fewer errors, and a more reliable overall experience for all users.
+- 🚀 **Optimized Web Search for Faster Results**: Web search speed and performance have been significantly enhanced, delivering answers and sources in record time to accelerate your research-heavy workflows.
+- 💡 **More Supported Languages**: Expanded language support ensures an even wider range of users can enjoy an intuitive and natural interface in their native tongue.
+
+### Fixed
+
+- 🏃‍♂️ **Exhausting Workers in Nginx Reverse Proxy Due to Websocket Fix**: Websocket sessions are now fully compatible behind Nginx, eliminating worker exhaustion and restoring 24/7 reliability for real-time chats even in complex deployments.
+- 🎤 **Audio Transcription Issue with OpenAI Resolved**: OpenAI-based audio transcription now handles WebM and newer formats without error, ensuring seamless voice-to-text workflows every time.
+- 👉 **Message Input RTL Issue Fixed**: The chat message input now displays correctly for right-to-left languages, creating a flawless typing and reading experience for Arabic, Hebrew, and more.
+- 🀄 **Katex: Proper Rendering of Chinese Characters Next to Math**: Math formulas now render perfectly even when directly adjacent to Chinese (CJK) characters, improving visual clarity for multilingual teams and cross-language documents.
+- 🔂 **Duplicate Web Search URLs Eliminated**: Search results now reliably filter out URL duplicates, so your knowledge and search citations are always clean, trimmed, and easy to review.
+- 📄 **Markdown Rendering Fixed in Knowledge Bases**: Markdown is now displayed correctly within knowledge bases, enabling better formatting and clarity of information-rich files.
+- 🗂️ **LDAP Import/Loading Issue Resolved**: LDAP user imports process correctly, ensuring smooth onboarding and access without interruption.
+- 🌎 **Pinecone Batch Operations and Async Safety**: All Pinecone operations (batch insert, upsert, delete) now run efficiently and safely in an async environment, boosting performance and preventing slowdowns in large-scale RAG jobs.
+
+## [0.6.7] - 2025-05-07
+
+### Added
+
+- 🌐 **Custom Azure TTS API URL Support Added**: You can now define a custom Azure Text-to-Speech endpoint—enabling flexibility for enterprise deployments and regional compliance.
+- ⚙️ **TOOL_SERVER_CONNECTIONS Environment Variable Suppor**: Easily configure and deploy tool servers via environment variables, streamlining setup and enabling faster enterprise provisioning.
+- 👥 **Enhanced OAuth Group Handling as String or List**: OAuth group data can now be passed as either a list or a comma-separated string, improving compatibility with varied identity provider formats and reducing onboarding friction.
+
+### Fixed
+
+- 🧠 **Embedding with Ollama Proxy Endpoints Restored**: Fixed an issue where missing API config broke embedding for proxied Ollama models—ensuring consistent performance and compatibility.
+- 🔐 **OIDC OAuth Login Issue Resolved**: Users can once again sign in seamlessly using OpenID Connect-based OAuth, eliminating login interruptions and improving reliability.
+- 📝 **Notes Feature Access Fixed for Non-Admins**: Fixed an issue preventing non-admin users from accessing the Notes feature, restoring full cross-role collaboration capabilities.
+- 🖼️ **Tika Loader Image Extraction Problem Resolved**: Ensured TikaLoader now processes 'extract_images' parameter correctly, restoring complete file extraction functionality in document workflows.
+- 🎨 **Automatic1111 Image Model Setting Applied Properly**: Fixed an issue where switching to a specific image model via the UI wasn’t reflected in generation, re-enabling full visual creativity control.
+- 🏷️ **Multiple XML Tags in Messages Now Parsed Correctly**: Fixed parsing issues when messages included multiple XML-style tags, ensuring clean and unbroken rendering of rich content in chats.
+- 🖌️ **OpenAI Image Generation Issues Resolved**: Resolved broken image output when using OpenAI’s image generation, ensuring fully functional visual creation workflows.
+- 🔎 **Tool Server Settings UI Privacy Restored**: Prevented restricted users from accessing tool server settings via search—restoring tight permissions control and safeguarding sensitive configurations.
+- 🎧 **WebM Audio Transcription Now Supported**: Fixed an issue where WebM files failed during audio transcription—these formats are now fully supported, ensuring smoother voice note workflows and broader file compatibility.
+
+## [0.6.6] - 2025-05-05
+
+### Added
+
+- 📝 **AI-Enhanced Notes (With Audio Transcription)**: Effortlessly create notes, attach meeting or voice audio, and let the AI instantly enhance, summarize, or refine your notes using audio transcriptions—making your documentation smarter, cleaner, and more insightful with minimal effort.
+- 🔊 **Meeting Audio Recording & Import**: Seamlessly record audio from your meetings or capture screen audio and attach it to your notes—making it easier to revisit, annotate, and extract insights from important discussions.
+- 📁 **Import Markdown Notes Effortlessly**: Bring your existing knowledge library into Open WebUI by importing your Markdown notes, so you can leverage all advanced note management and AI features right away.
+- 👥 **Notes Permissions by User Group**: Fine-tune access and editing rights for notes based on user roles or groups, so you can delegate writing or restrict sensitive information as needed.
+- ☁️ **OneDrive & SharePoint Integration**: Keep your content in sync by connecting notes and files directly with OneDrive or SharePoint—unlocking fast enterprise import/export and seamless collaboration with your existing workflows.
+- 🗂️ **Paginated User List in Admin Panel**: Effortlessly manage and search through large teams via the new paginated user list—saving time and streamlining user administration in big organizations.
+- 🕹️ **Granular Chat Share & Export Permissions**: Enjoy enhanced control over who can share or export chats, enabling tighter governance and privacy in team and enterprise settings.
+- 🛑 **User Role Change Confirmation Dialog**: Reduce accidental privilege changes with a required confirmation step before updating user roles—improving security and preventing costly mistakes in team management.
+- 🚨 **Audit Log for Failed Login Attempts**: Quickly detect unauthorized access attempts or troubleshoot user login problems with detailed logs of failed authentication right in the audit trail.
+- 💡 **Dedicated 'Generate Title' Button for Chats**: Swiftly organize every conversation—tap the new button to let AI create relevant, clear titles for all your chats, saving time and reducing clutter.
+- 💬 **Notification Sound Always-On Option**: Take control of your notifications by setting sound alerts to always play—helping you stay on top of important updates in busy environments.
+- 🆔 **S3 File Tagging Support**: Uploaded files to S3 now include tags for better organization, searching, and integration with your file management policies.
+- 🛡️ **OAuth Blocked Groups Support**: Gain more control over group-based access by explicitly blocking specified OAuth groups—ideal for complex identity or security requirements.
+- 🚀 **Optimized Faster Web Search & Multi-Threaded Queries**: Enjoy dramatically faster web search and RAG (retrieval augmented generation) with revamped multi-threaded search—get richer, more accurate results in less time.
+- 🔍 **All-Knowledge Parallel Search**: Searches across your entire knowledge base now happen in parallel even in non-hybrid mode, speeding up responses and improving knowledge accuracy for every question.
+- 🌐 **New Firecrawl & Yacy Web Search Integrations**: Expand your world of information with two new advanced search engines—Firecrawl for deeper web insight and Yacy for decentralized, privacy-friendly search capabilities.
+- 🧠 **Configurable Docling OCR Engine & Language**: Use environment variables to fine-tune Docling OCR engine and supported languages for smarter, more tailored document extraction and RAG workflows.
+- 🗝️ **Enhanced Sentence Transformers Configuration**: Added new environment variables for easier set up and advanced customization of Sentence Transformers—ensuring best fit for your embedding needs.
+- 🌲 **Pinecone Vector Database Integration**: Index, search, and manage knowledge at enterprise scale with full native support for Pinecone as your vector database—effortlessly handle even the biggest document sets.
+- 🔄 **Automatic Requirements Installation for Tools & Functions**: Never worry about lost dependencies on restart—external function and tool requirements are now auto-installed at boot, ensuring tools always “just work.”
+- 🔒 **Automatic Sign-Out on Token Expiry**: Security is smarter—users are now automatically logged out if their authentication token expires, protecting sensitive content and ensuring compliance without disruption.
+- 🎬 **Automatic YouTube Embed Detection**: Paste YouTube links and see instant in-chat video embeds—no more manual embedding, making knowledge sharing and media consumption even easier for every team.
+- 🔄 **Expanded Language & Locale Support**: Translations for Danish, French, Russian, Traditional Chinese, Simplified Chinese, Thai, Catalan, German, and Korean have been upgraded, offering smoother, more natural user experiences across the platform.
+
+### Fixed
+
+- 🔒 **Tighter HTML Token Security**: HTML rendering is now restricted to admin-uploaded tokens only, reducing any risk of XSS and keeping your data safe.
+- 🔐 **Refined HTML Security and Token Handling**: Further hardened how HTML tokens and content are handled, guaranteeing even stronger resistance to security vulnerabilities and attacks.
+- 🔏 **Correct Model Usage with Ollama Proxy Prefixes**: Enhanced model reference handling so proxied models in Ollama always download and run correctly—even when using custom prefixes.
+- 📥 **Video File Upload Handling**: Prevented video files from being misclassified as text, fixing bugs with uploads and ensuring media files work as expected.
+- 🔄 **No More Dependent WebSocket Sequential Delays**: Streamlined WebSocket operation to prevent delays and maintain snappy real-time collaboration, especially in multi-user environments.
+- 🛠️ **More Robust Action Module Execution**: Multiple actions in a module now trigger as designed, increasing automation and scripting flexibility.
+- 📧 **Notification Webhooks**: Ensured that notification webhooks are always sent for user events, even when the user isn’t currently active.
+- 🗂️ **Smarter Knowledge Base Reindexing**: Knowledge reindexing continues even when corrupt or missing collections are encountered, keeping your search features running reliably.
+- 🏷️ **User Import with Profile Images**: When importing users, their profile images now come along—making onboarding and collaboration visually clearer from day one.
+- 💬 **OpenAI o-Series Universal Support**: All OpenAI o-series models are now seamlessly recognized and supported, unlocking more advanced capabilities and model choices for every workflow.
+
+### Changed
+
+- 📜 **Custom License Update & Contributor Agreement**: Open WebUI now operates under a custom license with Contributor License Agreement required by default—see https://docs.openwebui.com/license/ for details, ensuring sustainable open innovation for the community.
+- 🔨 **CUDA Docker Images Updated to 12.8**: Upgraded CUDA image support for faster, more compatible model inference and futureproof GPU performance in your AI infrastructure.
+- 🧱 **General Backend Refactoring for Reliability**: Continuous stability improvements streamline backend logic, reduce errors, and lay a stronger foundation for the next wave of feature releases—all under the hood for a more dependable WebUI.
+
+## [0.6.5] - 2025-04-14
+
+### Added
+
+- 🛂 **Granular Voice Feature Permissions Per User Group**: Admins can now separately manage access to Speech-to-Text (record voice), Text-to-Speech (read aloud), and Tool Calls for each user group—giving teams tighter control over voice features and enhanced governance across roles.
+- 🗣️ **Toggle Voice Activity Detection (VAD) for Whisper STT**: New environment variable lets you enable/disable VAD filtering with built-in Whisper speech-to-text, giving you flexibility to optimize for different audio quality and response accuracy levels.
+- 📋 **Copy Formatted Response Mode**: You can now enable “Copy Formatted” in Settings > Interface to copy AI responses exactly as styled (with rich formatting, links, and structure preserved), making it faster and cleaner to paste into documents, emails, or reports.
+- ⚙️ **Backend Stability and Performance Enhancements**: General backend refactoring improves system resilience, consistency, and overall reliability—offering smoother performance across workflows whether chatting, generating media, or using external tools.
+- 🌎 **Translation Refinements Across Multiple Languages**: Updated translations deliver smoother language localization, clearer labels, and improved international usability throughout the UI—ensuring a better experience for non-English speakers.
+
+### Fixed
+
+- 🛠️ **LDAP Login Reliability Restored**: Resolved a critical issue where some LDAP setups failed due to attribute parsing—ensuring consistent, secure, and seamless user authentication across enterprise deployments.
+- 🖼️ **Image Generation in Temporary Chats Now Works Properly**: Fixed a bug where image outputs weren’t generated during temporary chats—visual content can now be used reliably in all chat modes without interruptions.
+
+## [0.6.4] - 2025-04-12
+
+### Fixed
+
+- 🛠️ **RAG_TEMPLATE Display Issue Resolved**: Fixed a formatting problem where the custom RAG_TEMPLATE wasn't correctly rendered in the interface—ensuring that custom retrieval prompts now appear exactly as intended for more reliable prompt engineering.
+
+## [0.6.3] - 2025-04-12
+
+### Added
+
+- 🧪 **Auto-Artifact Detection Toggle**: Automatically detects artifacts in results—but now you can disable this behavior under advanced settings for full control.
+- 🖼️ **Widescreen Mode for Shared Chats**: Shared link conversations now support widescreen layouts—perfect for presentations or easier review across wider displays.
+- 🔁 **Reindex Knowledge Files on Demand**: Admins can now trigger reindexing of all knowledge files after changing embeddings—ensuring immediate alignment with new models for optimal RAG performance.
+- 📄 **OpenAPI YAML Format Support**: External tools can now use YAML-format OpenAPI specs—making integration simpler for developers familiar with YAML-based configurations.
+- 💬 **Message Content Copy Behavior**: Copy action now excludes 'details' tags—streamlining clipboard content when sharing or pasting summaries elsewhere.
+- 🧭 **Sougou Web Search Integration**: New search engine option added—enhancing global relevance and diversity of search sources for multilingual users.
+- 🧰 **Frontend Web Loader Engine Configuration**: Admins can now set preferred web loader engine for RAG workflows directly from the frontend—offering more control across setups.
+- 👥 **Multi-Model Chat Permission Control**: Admins can manage access to multi-model chats per user group—allowing tighter governance in team environments.
+- 🧱 **Persistent Configuration Can Be Disabled**: New environment variable lets advanced users and hosts turn off persistent configs—ideal for volatile or stateless deployments.
+- 🧠 **Elixir Code Highlighting Support**: Elixir syntax is now beautifully rendered in code blocks—perfect for developers using this language in AI or automation projects.
+- 🌐 **PWA External Manifest URL Support**: You can now define an external manifest.json—integrate Open WebUI seamlessly in managed or proxy-based PWA environments like Cloudflare Zero Trust.
+- 🧪 **Azure AI Speech-to-Text Provider Integration**: Easily transcribe large audio files (up to 200MB) with high accuracy using Microsoft's Azure STT—fully configurable in Audio Settings.
+- 🔏 **PKCE (Code Challenge Method) Support for OIDC**: Enhance your OIDC login security with Proof Key for Code Exchange—ideal for zero-trust and native client apps.
+- ✨ **General UI/UX Enhancements**: Numerous refinements across layout, styling, and tool interactions—reducing visual noise and improving overall usability across key workflows.
+- 🌍 **Translation Updates Across Multiple Languages**: Refined Catalan, Russian, Chinese (Simplified & Traditional), Hungarian, and Spanish translations for clearer navigation and instructions globally.
+
+### Fixed
+
+- 💥 **Chat Completion Error with Missing Models Resolved**: Fixed internal server error when referencing a model that doesn’t exist—ensuring graceful fallback and clear error guidance.
+- 🔧 **Correct Knowledge Base Citations Restored**: Citations generated by RAG workflows now show accurate references—ensuring verifiability in outputs from sourced content.
+- 🎙️ **Broken OGG/WebM Audio Upload Handling for OpenAI Fixed**: Uploading OGG or WebM files now converts properly to WAV before transcription—restoring accurate AI speech recognition workflows.
+- 🔐 **Tool Server 'Session' Authentication Restored**: Previously broken session auth on external tool servers is now fully functional—ensuring secure and seamless access to connected tools.
+- 🌐 **Folder-Based Chat Rename Now Updates Correctly**: Renaming chats in folders now reflects instantly everywhere—improving chat organization and clarity.
+- 📜 **KaTeX Overflow Displays Fixed**: Math expressions now stay neatly within message bounds—preserving layout consistency even with long formulas.
+- 🚫 **Stopping Ongoing Chat Fixed**: You can now return to an active (ongoing) chat and stop generation at any time—ensuring full control over sessions.
+- 🔧 **TOOL_SERVERS / TOOL_SERVER_CONNECTIONS Indexing Issue Fixed**: Fixed a mismatch between tool lists and their access paths—restoring full function and preventing confusion in tool management.
+- 🔐 **LDAP Login Handles Multiple Emails**: When LDAP returns multiple email attributes, the first valid one is now used—ensuring login success and account consistency.
+- 🧩 **Model Visibility Toggle Fix**: Toggling model visibility now works even for untouched models—letting admins smoothly manage user access across base models.
+- ⚙️ **Cross-Origin manifest.json Now Loads Properly**: Compatibility issues with Cloudflare Zero Trust (and others) resolved, allowing manifest.json to load behind authenticated proxies.
+
+### Changed
+
+- 🔒 **Default Access Scopes Set to Private for All Resources**: Models, tools, and knowledge are now private by default when created—ensuring better baseline security and visibility controls.
+- 🧱 **General Backend Refactoring for Stability**: Numerous invisible improvements enhance backend scalability, security, and maintainability—powering upcoming features with a stronger foundation.
+- 🧩 **Stable Dependency Upgrades**: Updated key platform libraries—Chromadb (0.6.3), pgvector (0.4.0), Azure Identity (1.21.0), and Youtube Transcript API (1.0.3)—for improved compatibility, functionality, and security.
+
 ## [0.6.2] - 2025-04-06
 
 ### Added

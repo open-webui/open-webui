@@ -1,6 +1,4 @@
 <script lang="ts">
-	import { getBackendConfig } from '$lib/apis';
-	import { setDefaultPromptSuggestions } from '$lib/apis/configs';
 	import Switch from '$lib/components/common/Switch.svelte';
 	import { config, models, settings, user } from '$lib/stores';
 	import { createEventDispatcher, onMount, getContext, tick } from 'svelte';
@@ -26,6 +24,7 @@
 <ManageModal bind:show={showManageModal} />
 
 <form
+	id="tab-personalization"
 	class="flex flex-col h-full justify-between space-y-3 text-sm"
 	on:submit|preventDefault={() => {
 		dispatch('save');
