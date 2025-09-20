@@ -50,7 +50,7 @@ from starlette.middleware.sessions import SessionMiddleware
 from starlette.responses import Response, StreamingResponse
 from starlette.datastructures import Headers
 
-
+from open_webui.socket.utils import RedisDict
 from open_webui.utils import logger
 from open_webui.utils.audit import AuditLevel, AuditLoggingMiddleware
 from open_webui.utils.logger import start_logger
@@ -1140,8 +1140,17 @@ app.state.config.AUTOCOMPLETE_GENERATION_INPUT_MAX_LENGTH = (
 # WEBUI
 #
 ########################################
-
-app.state.MODELS = {}
+if REDIS_URL:
+    app.state.MODELS = RedisDict(
+        "open-webui:models",
+        redis_url=REDIS_URL,
+        redis_sentinels=get_sentinels_from_env(
+            REDIS_SENTINEL_HOSTS, REDIS_SENTINEL_PORT
+        ),
+        redis_cluster=REDIS_CLUSTER,
+    )
+else:
+    app.state.MODELS = {}
 
 
 class RedirectMiddleware(BaseHTTPMiddleware):
