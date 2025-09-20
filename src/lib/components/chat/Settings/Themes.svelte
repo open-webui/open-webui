@@ -64,6 +64,10 @@
 	let showAnimationScriptWarning = false;
 	let themeWithScriptToImport: { theme: Theme; source: string } | null = null;
 
+	let importQueue: Theme[] = [];
+	let importSuccessCount = 0;
+	let importErrorCount = 0;
+
 	const handleCheckForUpdates = async () => {
 		isCheckingForUpdates = true;
 		await checkForThemeUpdates(true); // Pass true for manual check
@@ -168,6 +172,11 @@
 			return false;
 		}
 
+		if ($themes.has(theme.id)) {
+			toast.error($i18n.t('A theme with this ID already exists as a default theme.'));
+			return false;
+		}
+
 		if (isDuplicateTheme(theme, Array.from($communityThemes.values()), false)) {
 			toast.error($i18n.t('This exact theme is already installed.'));
 			return false;
@@ -196,7 +205,10 @@
 				throw new Error(`Failed to fetch theme: ${res.statusText}`);
 			}
 			const theme = await res.json();
-			processAndAddTheme(theme, themeUrl);
+			importQueue = [theme];
+			importSuccessCount = 0;
+			importErrorCount = 0;
+			processNextThemeInQueue();
 		} catch (error) {
 			console.error(`Failed to load theme from ${themeUrl}:`, error);
 			toast.error(
@@ -204,6 +216,36 @@
 			);
 		} finally {
 			isLoading = false;
+		}
+	};
+
+	const processNextThemeInQueue = () => {
+		if (importQueue.length === 0) {
+			if (importSuccessCount > 0) {
+				toast.success(`${importSuccessCount} theme(s) imported successfully.`);
+			}
+			if (importErrorCount > 0) {
+				toast.error(`${importErrorCount} theme(s) could not be imported.`);
+			}
+			importSuccessCount = 0;
+			importErrorCount = 0;
+			return;
+		}
+
+		const themeToProcess = importQueue.shift();
+		if (themeToProcess) {
+			const success = processAndAddTheme(themeToProcess);
+
+			if (showAnimationScriptWarning || showThemeImportWarning) {
+				return;
+			}
+
+			if (success) {
+				importSuccessCount++;
+			} else {
+				importErrorCount++;
+			}
+			processNextThemeInQueue();
 		}
 	};
 
@@ -216,8 +258,16 @@
 		const reader = new FileReader();
 		reader.onload = () => {
 			try {
-				const theme = JSON.parse(reader.result as string);
-				processAndAddTheme(theme);
+				const content = JSON.parse(reader.result as string);
+				importSuccessCount = 0;
+				importErrorCount = 0;
+
+				if (Array.isArray(content)) {
+					importQueue = [...content];
+				} else {
+					importQueue = [content];
+				}
+				processNextThemeInQueue();
 			} catch (e) {
 				toast.error($i18n.t('Invalid JSON file.'));
 				console.error(e);
@@ -340,6 +390,18 @@
 		a.click();
 		URL.revokeObjectURL(url);
 	};
+
+	const exportAllThemes = () => {
+		const allThemes = [...$themes.values(), ...$communityThemes.values()];
+		const themesJson = JSON.stringify(allThemes, null, 2);
+		const blob = new Blob([themesJson], { type: 'application/json' });
+		const url = URL.createObjectURL(blob);
+		const a = document.createElement('a');
+		a.href = url;
+		a.download = 'open-webui-themes.json';
+		a.click();
+		URL.revokeObjectURL(url);
+	};
 </script>
 
 <div class="flex flex-col h-full justify-between text-sm">
@@ -376,15 +438,6 @@
 							</svg>
 						</div>
 					</div>
-					<Tooltip content="Check for Updates" placement="top">
-						<button
-							class="p-1.5 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800"
-							on:click={handleCheckForUpdates}
-							disabled={isCheckingForUpdates}
-						>
-							<ArrowPath class={`w-4 h-4 ${isCheckingForUpdates ? 'animate-spin' : ''}`} />
-						</button>
-					</Tooltip>
 					<Tooltip
 						content={sortOrder === 'default'
 							? 'Sort Ascending'
@@ -412,6 +465,15 @@
 							{:else}
 								<ChevronDown class="w-4 h-4" />
 							{/if}
+						</button>
+					</Tooltip>
+					<Tooltip content="Check for Updates" placement="top">
+						<button
+							class="p-1.5 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800"
+							on:click={handleCheckForUpdates}
+							disabled={isCheckingForUpdates}
+						>
+							<ArrowPath class={`w-4 h-4 ${isCheckingForUpdates ? 'animate-spin' : ''}`} />
 						</button>
 					</Tooltip>
 				</div>
@@ -613,6 +675,12 @@
 					</button>
 					<button
 						class="px-3.5 py-1.5 text-sm font-medium bg-gray-100 hover:bg-gray-200 text-black dark:bg-gray-800 dark:text-white dark:hover:bg-gray-700 transition rounded-full disabled:opacity-50 whitespace-nowrap"
+						on:click={exportAllThemes}
+					>
+						{$i18n.t('Export All')}
+					</button>
+					<button
+						class="px-3.5 py-1.5 text-sm font-medium bg-gray-100 hover:bg-gray-200 text-black dark:bg-gray-800 dark:text-white dark:hover:bg-gray-700 transition rounded-full disabled:opacity-50 whitespace-nowrap"
 						on:click={createNewTheme}
 						disabled={isLoading}
 					>
@@ -658,16 +726,22 @@
 	webuiVersion={WEBUI_VERSION}
 	on:confirm={() => {
 		if (themeToImport) {
-			addCommunityTheme(themeToImport);
-			toast.success($i18n.t('Theme "{{name}}" added successfully!', { name: themeToImport.name }));
+			if (addCommunityTheme(themeToImport)) {
+				importSuccessCount++;
+			} else {
+				importErrorCount++;
+			}
 			themeUrl = ''; // Clear input on success
 		}
 		showThemeImportWarning = false;
 		themeToImport = null;
+		setTimeout(processNextThemeInQueue, 0);
 	}}
 	on:cancel={() => {
 		showThemeImportWarning = false;
 		themeToImport = null;
+		importErrorCount++;
+		setTimeout(processNextThemeInQueue, 0);
 	}}
 />
 
@@ -690,6 +764,13 @@
 				themeWithScriptToImport.theme,
 				themeWithScriptToImport.source
 			);
+
+			if (success) {
+				importSuccessCount++;
+			} else {
+				importErrorCount++;
+			}
+
 			if (showThemeEditor) {
 				if (success) {
 					showThemeEditor = false;
@@ -699,10 +780,13 @@
 		}
 		showAnimationScriptWarning = false;
 		themeWithScriptToImport = null;
+		setTimeout(processNextThemeInQueue, 0);
 	}}
 	on:cancel={() => {
 		showAnimationScriptWarning = false;
 		themeWithScriptToImport = null;
+		importErrorCount++;
+		setTimeout(processNextThemeInQueue, 0);
 	}}
 >
 	<div class="text-sm text-gray-500">

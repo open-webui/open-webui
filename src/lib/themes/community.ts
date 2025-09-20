@@ -82,10 +82,11 @@ export const removeCommunityTheme = (themeId: string) => {
 		}
 	}
 
-	const newThemes = new Map(get(communityThemes));
-	newThemes.delete(themeId);
-	communityThemes.set(newThemes);
-	saveCommunityThemes(newThemes);
+	communityThemes.update((themes) => {
+		themes.delete(themeId);
+		return themes;
+	});
+	saveCommunityThemes(get(communityThemes));
 };
 
 const _fetchTheme = async (url: string): Promise<[Theme | null, string | null]> => {
