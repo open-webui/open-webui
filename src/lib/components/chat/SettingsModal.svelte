@@ -571,7 +571,7 @@
 
 <Modal size="xl" bind:show>
 	<div class="text-gray-700 dark:text-gray-100 mx-1">
-		<div class=" flex justify-between dark:text-gray-300 px-4 md:px-5 pt-4.5 pb-0.5 md:pb-2">
+		<div class=" flex justify-between dark:text-gray-300 px-4 md:px-4.5 pt-4.5 pb-0.5 md:pb-2.5">
 			<div class=" text-lg font-medium self-center">{$i18n.t('Settings')}</div>
 			<button
 				aria-label={$i18n.t('Close settings modal')}
@@ -588,10 +588,10 @@
 			<div
 				role="tablist"
 				id="settings-tabs-container"
-				class="tabs flex flex-row overflow-x-auto gap-2.5 mx-3 md:ml-4 md:pr-4 md:gap-1 md:flex-col flex-1 md:flex-none md:w-50 md:min-h-[36rem] md:max-h-[36rem] dark:text-gray-200 text-sm text-left mb-1 md:mb-0 -translate-y-1"
+				class="tabs flex flex-row overflow-x-auto gap-2.5 mx-3 md:pr-4 md:gap-1 md:flex-col flex-1 md:flex-none md:w-50 md:min-h-[36rem] md:max-h-[36rem] dark:text-gray-200 text-sm text-left mb-1 md:mb-0 -translate-y-1"
 			>
 				<div
-					class="hidden md:flex w-full rounded-full px-2.5 gap-2 bg-gray-50 dark:bg-gray-850 my-1"
+					class="hidden md:flex w-full rounded-full px-2.5 gap-2 bg-gray-50 dark:bg-gray-850 my-1 mb-1.5"
 					id="settings-search"
 				>
 					<div class="self-center rounded-l-xl bg-transparent">
