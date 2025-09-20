@@ -36,6 +36,7 @@
 	import { getSuggestionRenderer } from '../common/RichTextInput/suggestions';
 	import CommandSuggestionList from '../chat/MessageInput/CommandSuggestionList.svelte';
 	import MentionList from './MessageInput/MentionList.svelte';
+	import Skeleton from '../chat/Messages/Skeleton.svelte';
 
 	export let placeholder = $i18n.t('Send a Message');
 
@@ -54,6 +55,11 @@
 
 	export let acceptFiles = true;
 	export let showFormattingToolbar = true;
+
+	export let userSuggestions = false;
+	export let channelSuggestions = false;
+
+	export let typingUsersClassName = 'from-white dark:from-gray-900';
 
 	let loaded = false;
 	let draggedOver = false;
@@ -223,12 +229,17 @@
 		const chatInput = document.getElementById('chat-input');
 
 		if (chatInput) {
-			text = await textVariableHandler(text || '');
+			if (text !== '') {
+				text = await textVariableHandler(text || '');
+			}
 
 			chatInputElement?.setText(text);
 			chatInputElement?.focus();
 
-			text = await inputVariableHandler(text);
+			if (text !== '') {
+				text = await inputVariableHandler(text);
+			}
+
 			await tick();
 			if (cb) await cb(text);
 		}
@@ -555,9 +566,24 @@
 			{
 				char: '@',
 				render: getSuggestionRenderer(MentionList, {
-					i18n
+					i18n,
+					triggerChar: '@',
+					modelSuggestions: true,
+					userSuggestions
 				})
 			},
+			...(channelSuggestions
+				? [
+						{
+							char: '#',
+							render: getSuggestionRenderer(MentionList, {
+								i18n,
+								triggerChar: '#',
+								channelSuggestions
+							})
+						}
+					]
+				: []),
 			{
 				char: '/',
 				render: getSuggestionRenderer(CommandSuggestionList, {
@@ -652,11 +678,7 @@
 	/>
 
 	<div class="bg-transparent">
-		<div
-			class="{($settings?.widescreenMode ?? null)
-				? 'max-w-full'
-				: 'max-w-6xl'}  mx-auto inset-x-0 relative"
-		>
+		<div class="max-w-full mx-auto inset-x-0 relative">
 			<div
 				class="absolute top-0 left-0 right-0 mx-auto inset-x-0 bg-transparent flex justify-center"
 			>
@@ -690,18 +712,22 @@
 						{/if}
 					</div>
 
-					<div class="relative">
-						<div class=" -mt-5">
-							{#if typingUsers.length > 0}
-								<div class=" text-xs px-4 mb-1">
+					{#if typingUsers.length > 0}
+						<div
+							class=" -mt-7 pb-2.5 bg-gradient-to-t to-transparent {typingUsersClassName} pointer-events-none select-none"
+						>
+							<div class=" text-xs px-1 mt-1.5 flex items-center gap-1.5">
+								<Skeleton size="xs" />
+
+								<div>
 									<span class=" font-normal text-black dark:text-white">
 										{typingUsers.map((user) => user.name).join(', ')}
 									</span>
 									{$i18n.t('is typing...')}
 								</div>
-							{/if}
+							</div>
 						</div>
-					</div>
+					{/if}
 				</div>
 			</div>
 
@@ -802,7 +828,7 @@
 
 							<div class="px-2.5">
 								<div
-									class="scrollbar-hidden rtl:text-right ltr:text-left bg-transparent dark:text-gray-100 outline-hidden w-full pt-2.5 pb-[5px] px-1 resize-none h-fit max-h-80 overflow-auto"
+									class="scrollbar-hidden rtl:text-right ltr:text-left bg-transparent dark:text-gray-100 outline-hidden w-full pt-2.5 pb-[5px] px-1 resize-none h-fit max-h-96 overflow-auto"
 								>
 									{#key $settings?.richTextInput}
 										<RichTextInput
@@ -811,7 +837,7 @@
 											json={true}
 											messageInput={true}
 											richText={$settings?.richTextInput ?? true}
-											{showFormattingToolbar}
+											showFormattingToolbar={$settings?.showFormattingToolbar ?? false}
 											shiftEnter={!($settings?.ctrlEnterToSend ?? false) &&
 												(!$mobile ||
 													!(
@@ -862,7 +888,37 @@
 											}}
 											on:paste={async (e) => {
 												e = e.detail.event;
-												console.info(e);
+												console.log(e);
+
+												const clipboardData = e.clipboardData || window.clipboardData;
+
+												if (clipboardData && clipboardData.items) {
+													for (const item of clipboardData.items) {
+														if (item.type.indexOf('image') !== -1) {
+															const blob = item.getAsFile();
+															const reader = new FileReader();
+
+															reader.onload = function (e) {
+																files = [
+																	...files,
+																	{
+																		type: 'image',
+																		url: `${e.target.result}`
+																	}
+																];
+															};
+
+															reader.readAsDataURL(blob);
+														} else if (item?.kind === 'file') {
+															const file = item.getAsFile();
+															if (file) {
+																const _files = [file];
+																await inputFilesHandler(_files);
+																e.preventDefault();
+															}
+														}
+													}
+												}
 											}}
 										/>
 									{/key}

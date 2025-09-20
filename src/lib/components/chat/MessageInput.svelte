@@ -15,11 +15,11 @@
 		type Model,
 		mobile,
 		settings,
-		showSidebar,
 		models,
 		config,
 		showCallOverlay,
 		tools,
+		toolServers,
 		user as _user,
 		showControls,
 		TTSWorker,
@@ -45,6 +45,7 @@
 	import { generateAutoCompletion } from '$lib/apis';
 	import { deleteFileById } from '$lib/apis/files';
 	import { getSessionUser } from '$lib/apis/auths';
+	import { getTools } from '$lib/apis/tools';
 
 	import { WEBUI_BASE_URL, WEBUI_API_BASE_URL, PASTED_TEXT_CHARACTER_LIMIT } from '$lib/constants';
 
@@ -98,8 +99,6 @@
 
 	export let prompt = '';
 	export let files = [];
-
-	export let toolServers = [];
 
 	export let selectedToolIds = [];
 	export let selectedFilterIds = [];
@@ -284,12 +283,17 @@
 		const chatInput = document.getElementById('chat-input');
 
 		if (chatInput) {
-			text = await textVariableHandler(text || '');
+			if (text !== '') {
+				text = await textVariableHandler(text || '');
+			}
 
 			chatInputElement?.setText(text);
 			chatInputElement?.focus();
 
-			text = await inputVariableHandler(text);
+			if (text !== '') {
+				text = await inputVariableHandler(text);
+			}
+
 			await tick();
 			if (cb) await cb(text);
 		}
@@ -437,7 +441,7 @@
 		.reduce((acc, filters) => acc.filter((f1) => filters.some((f2) => f2.id === f1.id)));
 
 	let showToolsButton = false;
-	$: showToolsButton = toolServers.length + selectedToolIds.length > 0;
+	$: showToolsButton = ($tools ?? []).length > 0 || ($toolServers ?? []).length > 0;
 
 	let showWebSearchButton = false;
 	$: showWebSearchButton =
@@ -897,6 +901,8 @@
 		dropzoneElement?.addEventListener('dragover', onDragOver);
 		dropzoneElement?.addEventListener('drop', onDrop);
 		dropzoneElement?.addEventListener('dragleave', onDragLeave);
+
+		await tools.set(await getTools(localStorage.token));
 	});
 
 	onDestroy(() => {
@@ -1024,7 +1030,9 @@
 							}}
 						>
 							<div
-								class="flex-1 flex flex-col relative w-full shadow-lg rounded-3xl border border-gray-50 dark:border-gray-850 hover:border-gray-100 focus-within:border-gray-100 hover:dark:border-gray-800 focus-within:dark:border-gray-800 transition px-1 bg-white/90 dark:bg-gray-400/5 dark:text-gray-100"
+								class="flex-1 flex flex-col relative w-full shadow-lg rounded-3xl border {$temporaryChatEnabled
+									? 'border-dashed border-gray-100 dark:border-gray-800 hover:border-gray-200 focus-within:border-gray-200 hover:dark:border-gray-700 focus-within:dark:border-gray-700'
+									: ' border-gray-50 dark:border-gray-850 hover:border-gray-100 focus-within:border-gray-100 hover:dark:border-gray-800 focus-within:dark:border-gray-800'}  transition px-1 bg-white/90 dark:bg-gray-400/5 dark:text-gray-100"
 								dir={$settings?.chatDirection ?? 'auto'}
 								id="message-input-container"
 							>
@@ -1152,7 +1160,7 @@
 
 								<div class="px-2.5">
 									<div
-										class="scrollbar-hidden rtl:text-right ltr:text-left bg-transparent dark:text-gray-100 outline-hidden w-full pb-1 px-1 resize-none h-fit max-h-80 overflow-auto {files.length ===
+										class="scrollbar-hidden rtl:text-right ltr:text-left bg-transparent dark:text-gray-100 outline-hidden w-full pb-1 px-1 resize-none h-fit max-h-96 overflow-auto {files.length ===
 										0
 											? atSelectedModel !== undefined
 												? 'pt-1.5'
@@ -1451,10 +1459,10 @@
 										{/if}
 
 										<div class="ml-1 flex gap-1.5">
-											{#if showToolsButton}
+											{#if (selectedToolIds ?? []).length > 0}
 												<Tooltip
 													content={$i18n.t('{{COUNT}} Available Tools', {
-														COUNT: toolServers.length + selectedToolIds.length
+														COUNT: selectedToolIds.length
 													})}
 												>
 													<button
@@ -1468,7 +1476,7 @@
 														<Wrench className="size-4" strokeWidth="1.75" />
 
 														<span class="text-sm">
-															{toolServers.length + selectedToolIds.length}
+															{selectedToolIds.length}
 														</span>
 													</button>
 												</Tooltip>

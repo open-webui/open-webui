@@ -730,6 +730,7 @@ def load_oauth_providers():
         }
 
     if FEISHU_CLIENT_ID.value and FEISHU_CLIENT_SECRET.value:
+
         def feishu_oauth_register(client: OAuth):
             client.register(
                 name="feishu",
@@ -2166,6 +2167,12 @@ ENABLE_ONEDRIVE_INTEGRATION = PersistentConfig(
     "ENABLE_ONEDRIVE_INTEGRATION",
     "onedrive.enable",
     os.getenv("ENABLE_ONEDRIVE_INTEGRATION", "False").lower() == "true",
+)
+ENABLE_ONEDRIVE_PERSONAL = (
+    os.environ.get("ENABLE_ONEDRIVE_PERSONAL", "True").lower() == "true"
+)
+ENABLE_ONEDRIVE_BUSINESS = (
+    os.environ.get("ENABLE_ONEDRIVE_BUSINESS", "True").lower() == "true"
 )
 
 ONEDRIVE_CLIENT_ID = PersistentConfig(

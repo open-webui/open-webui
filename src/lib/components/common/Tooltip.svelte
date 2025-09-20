@@ -19,6 +19,8 @@
 	export let tippyOptions = {};
 	export let interactive = false;
 
+	export let onClick = () => {};
+
 	let tooltipElement;
 	let tooltipInstance;
 
@@ -61,7 +63,8 @@
 	});
 </script>
 
-<svelte:element this={as} bind:this={tooltipElement} class={className}>
+<!-- svelte-ignore a11y-no-static-element-interactions -->
+<svelte:element this={as} bind:this={tooltipElement} class={className} on:click={onClick}>
 	<slot />
 </svelte:element>
 

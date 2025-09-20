@@ -621,6 +621,7 @@ def get_sources_from_items(
 
                 if knowledge_base and (
                     user.role == "admin"
+                    or knowledge_base.user_id == user.id
                     or has_access(user.id, "read", knowledge_base.access_control)
                 ):
 

@@ -148,6 +148,18 @@ async def sync_functions(
                 content=function.content,
             )
 
+            if hasattr(function_module, "Valves") and function.valves:
+                Valves = function_module.Valves
+                try:
+                    Valves(
+                        **{k: v for k, v in function.valves.items() if v is not None}
+                    )
+                except Exception as e:
+                    log.exception(
+                        f"Error validating valves for function {function.id}: {e}"
+                    )
+                    raise e
+
         return Functions.sync_functions(user.id, form_data.functions)
     except Exception as e:
         log.exception(f"Failed to load a function: {e}")

@@ -38,7 +38,9 @@
 
 	marked.use(markedKatexExtension(options));
 	marked.use(markedExtension(options));
-	marked.use({ extensions: [mentionExtension({ triggerChar: '@' })] });
+	marked.use({
+		extensions: [mentionExtension({ triggerChar: '@' }), mentionExtension({ triggerChar: '#' })]
+	});
 
 	$: (async () => {
 		if (content) {

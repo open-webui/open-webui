@@ -550,7 +550,7 @@ def transcription_handler(request, file_path, metadata):
     metadata = metadata or {}
 
     languages = [
-        metadata.get("language", None) if WHISPER_LANGUAGE == "" else WHISPER_LANGUAGE,
+        metadata.get("language", None) if not WHISPER_LANGUAGE else WHISPER_LANGUAGE,
         None,  # Always fallback to None in case transcription fails
     ]
 
