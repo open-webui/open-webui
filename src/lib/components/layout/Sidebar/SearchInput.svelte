@@ -130,7 +130,14 @@
 					name: 'false',
 					type: 'pinned'
 				}
-			];
+			].filter((item) => {
+				const pinnedValue = lastWord.slice(7);
+				if (pinnedValue) {
+					return item.id.startsWith(pinnedValue) && item.id !== pinnedValue;
+				} else {
+					return true;
+				}
+			});
 		} else if (lastWord.startsWith('shared:')) {
 			filteredItems = [
 				{
@@ -143,7 +150,14 @@
 					name: 'false',
 					type: 'shared'
 				}
-			];
+			].filter((item) => {
+				const sharedValue = lastWord.slice(7);
+				if (sharedValue) {
+					return item.id.startsWith(sharedValue) && item.id !== sharedValue;
+				} else {
+					return true;
+				}
+			});
 		} else if (lastWord.startsWith('archived:')) {
 			filteredItems = [
 				{
@@ -156,7 +170,14 @@
 					name: 'false',
 					type: 'archived'
 				}
-			];
+			].filter((item) => {
+				const archivedValue = lastWord.slice(9);
+				if (archivedValue) {
+					return item.id.startsWith(archivedValue) && item.id !== archivedValue;
+				} else {
+					return true;
+				}
+			});
 		} else {
 			filteredItems = [];
 		}
@@ -297,7 +318,7 @@
 									const words = value.split(' ');
 
 									words.pop();
-									words.push(`${item.type}:${item.id}`);
+									words.push(`${item.type}:${item.id} `);
 
 									value = words.join(' ');
 
