@@ -37,10 +37,11 @@
 	import CommandSuggestionList from '../chat/MessageInput/CommandSuggestionList.svelte';
 	import MentionList from './MessageInput/MentionList.svelte';
 	import Skeleton from '../chat/Messages/Skeleton.svelte';
+	import LockClosed from '../icons/LockClosed.svelte';
 
 	export let placeholder = $i18n.t('Send a Message');
 
-	export let id = null;
+	export let id: string | null = null;
 	export let chatInputElement;
 
 	export let typingUsers = [];
@@ -60,6 +61,8 @@
 	export let channelSuggestions = false;
 
 	export let typingUsersClassName = 'from-white dark:from-gray-900';
+	export let disabled = false;
+	export let disabledMessage = "You don't have permission to send messages in this channel";
 
 	let loaded = false;
 	let draggedOver = false;
@@ -732,7 +735,14 @@
 			</div>
 
 			<div class="">
-				{#if recording}
+				{#if disabled}
+					<div class="flex items-center justify-center p-4 bg-gray-50 dark:bg-gray-800 rounded-lg">
+						<div class="text-center text-gray-500 dark:text-gray-400">
+							<LockClosed className="w-6 h-6 mx-auto mb-2" />
+							<p class="text-sm">{disabledMessage}</p>
+						</div>
+					</div>
+				{:else if recording}
 					<VoiceRecording
 						bind:recording
 						onCancel={async () => {

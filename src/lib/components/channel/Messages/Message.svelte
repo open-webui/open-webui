@@ -40,6 +40,7 @@
 	export let message;
 	export let showUserProfile = true;
 	export let thread = false;
+	export let hasWriteAccess = true;
 
 	export let onDelete: Function = () => {};
 	export let onEdit: Function = () => {};
@@ -107,7 +108,7 @@
 						</Tooltip>
 					{/if}
 
-					{#if message.user_id === $user?.id || $user?.role === 'admin'}
+					{#if (message.user_id === $user?.id || $user?.role === 'admin') && (hasWriteAccess || $user?.role === 'admin')}
 						<Tooltip content={$i18n.t('Edit')}>
 							<button
 								class="hover:bg-gray-100 dark:hover:bg-gray-800 transition rounded-lg p-1"

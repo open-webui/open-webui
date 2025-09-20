@@ -1587,3 +1587,55 @@ export const renderMermaidDiagram = async (code: string) => {
 		return '';
 	}
 };
+
+/**
+ * Check if a user has access to a resource based on access control settings
+ * This mirrors the backend has_access function logic
+ * 
+ * @param userId - The user ID
+ * @param userGroups - Array of user's groups with id property
+ * @param accessControl - The access control object (null means public read access)
+ * @param type - The access type ('read' or 'write')
+ * @param userRole - The user's role (optional, admin users get full access)
+ * @returns boolean indicating if user has access
+ */
+export const checkAccess = (
+  userId: string | undefined,
+  userGroups: Array<{ id: string }> | undefined,
+  accessControl: any,
+  type: 'read' | 'write' = 'read',
+  userRole?: string
+): boolean => {
+  // If no user ID, deny access
+  if (!userId) {
+    return false;
+  }
+
+  // Admin users have full access to everything
+  if (userRole === 'admin') {
+    return true;
+  }
+
+  // If access control is null, grant read access (public), deny write access
+  if (accessControl === null || accessControl === undefined) {
+    return type === 'read';
+  }
+
+  // Get the permission settings for the requested type
+  const permissionAccess = accessControl[type];
+  if (!permissionAccess) {
+    return false;
+  }
+
+  const permittedUserIds = permissionAccess.user_ids || [];
+  const permittedGroupIds = permissionAccess.group_ids || [];
+
+  // Check if user is directly permitted
+  if (permittedUserIds.includes(userId)) {
+    return true;
+  }
+
+  // Check if user is in any permitted group
+  const userGroupIds = (userGroups || []).map(group => group.id);
+  return permittedGroupIds.some(groupId => userGroupIds.includes(groupId));
+};

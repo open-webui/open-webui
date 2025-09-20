@@ -15,6 +15,7 @@
 
 	export let threadId = null;
 	export let channel = null;
+	export let disableSendMessage = false;
 
 	export let onClose = () => {};
 
@@ -159,7 +160,7 @@
 
 {#if channel}
 	<div class="flex flex-col w-full h-full bg-gray-50 dark:bg-gray-850">
-		<div class="sticky top-0 flex items-center justify-between px-3.5 py-3">
+		<div class="flex items-center justify-between px-3.5 pt-3">
 			<div class=" font-medium text-lg">{$i18n.t('Thread')}</div>
 
 			<div>
@@ -174,13 +175,14 @@
 			</div>
 		</div>
 
-		<div class=" max-h-full w-full overflow-y-auto" bind:this={messagesContainerElement}>
+		<div class=" max-h-full w-full overflow-y-auto pt-3" bind:this={messagesContainerElement}>
 			<Messages
 				id={threadId}
 				{channel}
 				{messages}
 				{top}
 				thread={true}
+				hasWriteAccess={!disableSendMessage}
 				onLoad={async () => {
 					const newMessages = await getChannelThreadMessages(
 						localStorage.token,
@@ -205,6 +207,8 @@
 					{typingUsers}
 					userSuggestions={true}
 					channelSuggestions={true}
+					disabled={disableSendMessage}
+					disabledMessage="You don't have permissions to reply in this thread"
 					{onChange}
 					onSubmit={submitHandler}
 				/>
