@@ -302,6 +302,7 @@ from open_webui.config import (
     GOOGLE_DRIVE_API_KEY,
     ENABLE_ONEDRIVE_INTEGRATION,
     ONEDRIVE_CLIENT_ID,
+    ONEDRIVE_PERSONAL_CLIENT_ID,
     ONEDRIVE_SHAREPOINT_URL,
     ONEDRIVE_SHAREPOINT_TENANT_ID,
     ENABLE_ONEDRIVE_PERSONAL,
@@ -1744,6 +1745,7 @@ async def get_app_config(request: Request):
                 },
                 "onedrive": {
                     "client_id": ONEDRIVE_CLIENT_ID.value,
+                    "personal_client_id": ONEDRIVE_PERSONAL_CLIENT_ID.value,
                     "sharepoint_url": ONEDRIVE_SHAREPOINT_URL.value,
                     "sharepoint_tenant_id": ONEDRIVE_SHAREPOINT_TENANT_ID.value,
                 },

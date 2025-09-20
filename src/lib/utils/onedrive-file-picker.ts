@@ -4,6 +4,7 @@ import { v4 as uuidv4 } from 'uuid';
 class OneDriveConfig {
 	private static instance: OneDriveConfig;
 	private clientId: string = '';
+	private personalClientId: string = '';  
 	private sharepointUrl: string = '';
 	private sharepointTenantId: string = '';
 	private msalInstance: PublicClientApplication | null = null;
@@ -47,43 +48,51 @@ class OneDriveConfig {
 		const config = await response.json();
 
 		const newClientId = config.onedrive?.client_id;
+		const newPersonalClientId = config.onedrive?.personal_client_id;
 		const newSharepointUrl = config.onedrive?.sharepoint_url;
 		const newSharepointTenantId = config.onedrive?.sharepoint_tenant_id;
 
-		if (!newClientId) {
-			throw new Error('OneDrive configuration is incomplete');
-		}
-
-		this.clientId = newClientId;
+		this.clientId = newClientId ?? '';
+		this.personalClientId = newPersonalClientId ?? '';
 		this.sharepointUrl = newSharepointUrl;
 		this.sharepointTenantId = newSharepointTenantId;
 	}
 
 	public async getMsalInstance(
-		authorityType?: 'personal' | 'organizations'
+	  authorityType?: 'personal' | 'organizations'
 	): Promise<PublicClientApplication> {
-		await this.ensureInitialized(authorityType);
+	  await this.ensureInitialized(authorityType);
 
-		if (!this.msalInstance) {
-			const authorityEndpoint =
-				this.currentAuthorityType === 'organizations'
-					? this.sharepointTenantId || 'common'
-					: 'consumers';
-			const msalParams = {
-				auth: {
-					authority: `https://login.microsoftonline.com/${authorityEndpoint}`,
-					clientId: this.clientId
-				}
-			};
+	  if (!this.msalInstance) {
+	    const authorityEndpoint =
+	      this.currentAuthorityType === 'organizations'
+	        ? this.sharepointTenantId || 'common'
+	        : 'consumers';
 
-			const { PublicClientApplication } = await import('@azure/msal-browser');
-			this.msalInstance = new PublicClientApplication(msalParams);
-			if (this.msalInstance.initialize) {
-				await this.msalInstance.initialize();
-			}
-		}
+	    const selectedClientId =
+	      this.currentAuthorityType === 'personal' ? this.personalClientId : this.clientId;
 
-		return this.msalInstance;
+	    if (!selectedClientId) {
+	      throw new Error(
+	        `OneDrive Client ID for "${this.currentAuthorityType}" account type is not configured.`
+	      );
+	    }
+
+	    const msalParams = {
+	      auth: {
+	        authority: `https://login.microsoftonline.com/${authorityEndpoint}`,
+	        clientId: selectedClientId
+	      }
+	    };
+
+	    const { PublicClientApplication } = await import('@azure/msal-browser');
+	    this.msalInstance = new PublicClientApplication(msalParams);
+	    if (this.msalInstance.initialize) {
+	      await this.msalInstance.initialize();
+	    }
+	  }
+
+	  return this.msalInstance;
 	}
 
 	public getAuthorityType(): 'personal' | 'organizations' {
