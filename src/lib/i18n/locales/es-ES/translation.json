@@ -1483,7 +1483,7 @@
 	"The score should be a value between 0.0 (0%) and 1.0 (100%).": "La puntuación debe ser un valor entre 0.0 (0%) y 1.0 (100%).",
 	"The stream delta chunk size for the model. Increasing the chunk size will make the model respond with larger pieces of text at once.": "El tamaño del fragmentado incremental para el modelo. Aumentar el tamaño del fragmentado hará que el modelo responda con fragmentos de texto más grandes cada vez.",
 	"The temperature of the model. Increasing the temperature will make the model answer more creatively.": "La temperatura del modelo. Aumentar la temperatura hará que el modelo responda de forma más creativa.",
-	"The Weight of BM25 Hybrid Search. 0 more lexical, 1 more semantic. Default 0.5": "La Ponderación de BM25 en la Búsqueda Híbrida. 0 más léxica, 1 más semántica. Por defecto, 0.5",
+	"The Weight of BM25 Hybrid Search. 0 more semantic, 1 more lexical. Default 0.5": "La Ponderación de BM25 en la Búsqueda Híbrida. 0 más semántica, 1 más léxica. Por defecto, 0.5",
 	"The width in pixels to compress images to. Leave empty for no compression.": "El ancho en pixeles al comprimir imágenes. Dejar vacío para no compresión",
 	"Theme": "Tema",
 	"Thinking...": "Pensando...",
