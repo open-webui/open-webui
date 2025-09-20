@@ -248,7 +248,7 @@ Discover upcoming features on our roadmap in the [Open WebUI Documentation](http
 
 ## License 📜
 
-This project is licensed under the [Open WebUI License](LICENSE), a revised BSD-3-Clause license. You receive all the same rights as the classic BSD-3 license: you can use, modify, and distribute the software, including in proprietary and commercial products, with minimal restrictions. The only additional requirement is to preserve the "Open WebUI" branding, as detailed in the LICENSE file. For full terms, see the [LICENSE](LICENSE) document. 📄
+This project is distributed under multiple licenses, depending on the date of the contribution and release. The latest releases are licensed under the [Open WebUI License](./LICENSE). For complete details and historical licensing information, please refer to [LICENSE_HISTORY](./LICENSE_HISTORY). For the current license terms, see the [LICENSE](./LICENSE) file.
 
 ## Support 💬
 
