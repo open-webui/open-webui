@@ -1,3 +1,6 @@
 fastapi==0.104.1
 uvicorn[standard]==0.24.0
 PyMuPDF==1.23.8
+langchain-community==0.0.34
+azure-ai-documentintelligence==1.0.0b1
+azure-identity==1.15.0
