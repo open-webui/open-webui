@@ -120,67 +120,64 @@
 	});
 </script>
 
-<div class=" flex flex-col justify-between w-full overflow-y-auto h-full">
-	<div class="mx-auto w-full md:px-0 h-full">
-		<div class=" flex flex-col h-full px-4">
-			<div class="flex flex-col justify-between mb-1 gap-1">
-				<div class="flex flex-col gap-1 w-full">
-					<div class="flex w-full">
-						<div class="overflow-hidden w-full">
-							<div class="max-w-full">
-								<Selector
-									placeholder={$i18n.t('Select a model')}
-									items={$models.map((model) => ({
-										value: model.id,
-										label: model.name,
-										model: model
-									}))}
-									bind:value={selectedModelId}
-								/>
-							</div>
-						</div>
-					</div>
-				</div>
-			</div>
-
-			<div
-				class=" pt-0.5 pb-2.5 flex flex-col justify-between w-full flex-auto overflow-auto h-0"
-				id="messages-container"
-			>
-				<div class=" h-full w-full flex flex-col">
-					<div class="flex-1">
-						<textarea
-							id="text-completion-textarea"
-							bind:this={textCompletionAreaElement}
-							class="w-full h-full p-3 bg-transparent border border-gray-100 dark:border-gray-850 outline-hidden resize-none rounded-lg text-sm"
-							bind:value={text}
-							placeholder={$i18n.t("You're a helpful assistant.")}
+<div class="w-full max-h-full overflow-y-auto">
+	<div class="flex flex-col max-w-4xl mx-auto mt-6 mb-10">
+		<div class="w-full flex flex-col justify-center">
+			<div class="w-full mb-4">
+				<div class="text-sm mb-2">{$i18n.t('Model')}</div>
+				<div class="w-full mt-1">
+					<div class="w-full">
+						<Selector
+							placeholder={$i18n.t('Select a model')}
+							items={$models.map((model) => ({
+								value: model.id,
+								label: model.name,
+								model: model
+							}))}
+							bind:value={selectedModelId}
+							className="w-full"
+							triggerClassName="w-full text-sm rounded-lg py-2 px-4 bg-gray-50 dark:text-gray-300 dark:bg-gray-850 border border-gray-200 dark:border-gray-700 outline-hidden"
 						/>
 					</div>
 				</div>
 			</div>
+		</div>
 
-			<div class="pb-3 flex justify-end">
-				{#if !loading}
-					<button
-						class="px-3.5 py-1.5 text-sm font-medium bg-black hover:bg-gray-900 text-white dark:bg-white dark:text-black dark:hover:bg-gray-100 transition rounded-full"
-						on:click={() => {
-							submitHandler();
-						}}
-					>
-						{$i18n.t('Run')}
-					</button>
-				{:else}
-					<button
-						class="px-3 py-1.5 text-sm font-medium bg-gray-300 text-black transition rounded-full"
-						on:click={() => {
-							stopResponse();
-						}}
-					>
-						{$i18n.t('Cancel')}
-					</button>
-				{/if}
+		<div class="w-full">
+			<div class="text-sm mb-2">{$i18n.t('Input')}</div>
+			<div class="w-full mt-1">
+				<div class="w-full rounded-lg bg-gray-50 dark:bg-gray-850 h-[400px] overflow-hidden">
+					<textarea
+						id="text-completion-textarea"
+						bind:this={textCompletionAreaElement}
+						class="w-full h-full p-3 bg-transparent outline-hidden resize-none text-sm"
+						bind:value={text}
+						placeholder={$i18n.t("You're a helpful assistant.")}
+					/>
+				</div>
 			</div>
+		</div>
+
+		<div class="flex justify-center mt-8 mb-12">
+			{#if !loading}
+				<button
+					class="w-full bg-gray-800 dark:bg-gray-700 text-white py-3 px-4 rounded-lg font-medium hover:bg-gray-900 dark:hover:bg-gray-600 transition-colors"
+					on:click={() => {
+						submitHandler();
+					}}
+				>
+					{$i18n.t('Run')}
+				</button>
+			{:else}
+				<button
+					class="w-full bg-gray-300 text-black py-3 px-4 rounded-lg font-medium transition-colors"
+					on:click={() => {
+						stopResponse();
+					}}
+				>
+					{$i18n.t('Cancel')}
+				</button>
+			{/if}
 		</div>
 	</div>
 </div>

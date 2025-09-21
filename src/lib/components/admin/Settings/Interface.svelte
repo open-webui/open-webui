@@ -75,7 +75,7 @@
 				<hr class=" border-gray-100 dark:border-gray-850 my-2" />
 
 				<div class=" mb-1 font-medium flex items-center">
-					<div class=" text-xs mr-1">{$i18n.t('Set Task Model')}</div>
+					<div class=" text-sm mr-1">{$i18n.t('Set Task Model')}</div>
 					<Tooltip
 						content={$i18n.t(
 							'A task model is used when performing tasks such as generating titles for chats and web search queries'
@@ -100,7 +100,7 @@
 
 				<div class=" mb-2.5 flex w-full gap-2">
 					<div class="flex-1">
-						<div class=" text-xs mb-1">{$i18n.t('Local Models')}</div>
+						<div class=" text-sm mb-1">{$i18n.t('Local Models')}</div>
 						<select
 							class="w-full rounded-lg py-2 px-4 text-sm bg-gray-50 dark:text-gray-300 dark:bg-gray-850 outline-hidden"
 							bind:value={taskConfig.TASK_MODEL}
@@ -116,7 +116,7 @@
 					</div>
 
 					<div class="flex-1">
-						<div class=" text-xs mb-1">{$i18n.t('External Models')}</div>
+						<div class=" text-sm mb-1">{$i18n.t('External Models')}</div>
 						<select
 							class="w-full rounded-lg py-2 px-4 text-sm bg-gray-50 dark:text-gray-300 dark:bg-gray-850 outline-hidden"
 							bind:value={taskConfig.TASK_MODEL_EXTERNAL}
@@ -133,7 +133,7 @@
 				</div>
 
 				<div class="mb-2.5 flex w-full items-center justify-between">
-					<div class=" self-center text-xs font-medium">
+					<div class=" self-center text-base font-medium">
 						{$i18n.t('Title Generation')}
 					</div>
 
@@ -142,7 +142,7 @@
 
 				{#if taskConfig.ENABLE_TITLE_GENERATION}
 					<div class="mb-2.5">
-						<div class=" mb-1 text-xs font-medium">{$i18n.t('Title Generation Prompt')}</div>
+						<div class=" mb-1 text-base font-medium">{$i18n.t('Title Generation Prompt')}</div>
 
 						<Tooltip
 							content={$i18n.t('Leave empty to use the default prompt, or enter a custom prompt')}
@@ -159,7 +159,7 @@
 				{/if}
 
 				<div class="mb-2.5 flex w-full items-center justify-between">
-					<div class=" self-center text-xs font-medium">
+					<div class=" self-center text-base font-medium">
 						{$i18n.t('Tags Generation')}
 					</div>
 
@@ -168,7 +168,7 @@
 
 				{#if taskConfig.ENABLE_TAGS_GENERATION}
 					<div class="mb-2.5">
-						<div class=" mb-1 text-xs font-medium">{$i18n.t('Tags Generation Prompt')}</div>
+						<div class=" mb-1 text-base font-medium">{$i18n.t('Tags Generation Prompt')}</div>
 
 						<Tooltip
 							content={$i18n.t('Leave empty to use the default prompt, or enter a custom prompt')}
@@ -185,7 +185,7 @@
 				{/if}
 
 				<div class="mb-2.5 flex w-full items-center justify-between">
-					<div class=" self-center text-xs font-medium">
+					<div class=" self-center text-base font-medium">
 						{$i18n.t('Retrieval Query Generation')}
 					</div>
 
@@ -193,7 +193,7 @@
 				</div>
 
 				<div class="mb-2.5 flex w-full items-center justify-between">
-					<div class=" self-center text-xs font-medium">
+					<div class=" self-center text-base font-medium">
 						{$i18n.t('Web Search Query Generation')}
 					</div>
 
@@ -201,7 +201,7 @@
 				</div>
 
 				<div class="mb-2.5">
-					<div class=" mb-1 text-xs font-medium">{$i18n.t('Query Generation Prompt')}</div>
+					<div class=" mb-1 text-base font-medium">{$i18n.t('Query Generation Prompt')}</div>
 
 					<Tooltip
 						content={$i18n.t('Leave empty to use the default prompt, or enter a custom prompt')}
@@ -217,7 +217,7 @@
 				</div>
 
 				<div class="mb-2.5 flex w-full items-center justify-between">
-					<div class=" self-center text-xs font-medium">
+					<div class=" self-center text-base font-medium">
 						{$i18n.t('Autocomplete Generation')}
 					</div>
 
@@ -228,7 +228,7 @@
 
 				{#if taskConfig.ENABLE_AUTOCOMPLETE_GENERATION}
 					<div class="mb-2.5">
-						<div class=" mb-1 text-xs font-medium">
+						<div class=" mb-1 text-base font-medium">
 							{$i18n.t('Autocomplete Generation Input Max Length')}
 						</div>
 
@@ -246,7 +246,7 @@
 				{/if}
 
 				<div class="mb-2.5">
-					<div class=" mb-1 text-xs font-medium">{$i18n.t('Image Prompt Generation Prompt')}</div>
+					<div class=" mb-1 text-base font-medium">{$i18n.t('Image Prompt Generation Prompt')}</div>
 
 					<Tooltip
 						content={$i18n.t('Leave empty to use the default prompt, or enter a custom prompt')}
@@ -262,7 +262,7 @@
 				</div>
 
 				<div class="mb-2.5">
-					<div class=" mb-1 text-xs font-medium">{$i18n.t('Tools Function Calling Prompt')}</div>
+					<div class=" mb-1 text-base font-medium">{$i18n.t('Tools Function Calling Prompt')}</div>
 
 					<Tooltip
 						content={$i18n.t('Leave empty to use the default prompt, or enter a custom prompt')}
@@ -290,7 +290,7 @@
 						</div>
 
 						<button
-							class="p-1 px-3 text-xs flex rounded-sm transition"
+							class="p-1 px-3 text-sm flex rounded-sm transition"
 							type="button"
 							on:click={() => {
 								if (banners.length === 0 || banners.at(-1).content !== '') {
@@ -328,7 +328,7 @@
 									class="flex flex-row flex-1 border rounded-xl border-gray-100 dark:border-gray-850"
 								>
 									<select
-										class="w-fit capitalize rounded-xl py-2 px-4 text-xs bg-transparent outline-hidden"
+										class="w-fit capitalize rounded-xl py-2 px-4 text-sm bg-transparent outline-hidden"
 										bind:value={banner.type}
 										required
 									>
@@ -344,7 +344,7 @@
 									</select>
 
 									<input
-										class="pr-5 py-1.5 text-xs w-full bg-transparent outline-hidden"
+										class="pr-5 py-1.5 text-sm w-full bg-transparent outline-hidden"
 										placeholder={$i18n.t('Content')}
 										bind:value={banner.content}
 									/>
@@ -388,7 +388,7 @@
 							</div>
 
 							<button
-								class="p-1 px-3 text-xs flex rounded-sm transition"
+								class="p-1 px-3 text-sm flex rounded-sm transition"
 								type="button"
 								on:click={() => {
 									if (promptSuggestions.length === 0 || promptSuggestions.at(-1).content !== '') {
@@ -416,20 +416,20 @@
 									<div class="flex flex-col flex-1 pl-1">
 										<div class="flex border-b border-gray-100 dark:border-gray-850 w-full">
 											<input
-												class="px-3 py-1.5 text-xs w-full bg-transparent outline-hidden border-r border-gray-100 dark:border-gray-850"
+												class="px-3 py-1.5 text-sm w-full bg-transparent outline-hidden border-r border-gray-100 dark:border-gray-850"
 												placeholder={$i18n.t('Title (e.g. Tell me a fun fact)')}
 												bind:value={prompt.title[0]}
 											/>
 
 											<input
-												class="px-3 py-1.5 text-xs w-full bg-transparent outline-hidden border-r border-gray-100 dark:border-gray-850"
+												class="px-3 py-1.5 text-sm w-full bg-transparent outline-hidden border-r border-gray-100 dark:border-gray-850"
 												placeholder={$i18n.t('Subtitle (e.g. about the Roman Empire)')}
 												bind:value={prompt.title[1]}
 											/>
 										</div>
 
 										<textarea
-											class="px-3 py-1.5 text-xs w-full bg-transparent outline-hidden border-r border-gray-100 dark:border-gray-850 resize-none"
+											class="px-3 py-1.5 text-sm w-full bg-transparent outline-hidden border-r border-gray-100 dark:border-gray-850 resize-none"
 											placeholder={$i18n.t(
 												'Prompt (e.g. Tell me a fun fact about the Roman Empire)'
 											)}
@@ -462,7 +462,7 @@
 						</div>
 
 						{#if promptSuggestions.length > 0}
-							<div class="text-xs text-left w-full mt-2">
+							<div class="text-sm text-left w-full mt-2">
 								{$i18n.t('Adjusting these settings will apply changes universally to all users.')}
 							</div>
 						{/if}
@@ -471,9 +471,9 @@
 			</div>
 		</div>
 
-		<div class="flex justify-end text-sm font-medium">
+		<div class="flex justify-end text-base font-medium">
 			<button
-				class="px-3.5 py-1.5 text-sm font-medium bg-black hover:bg-gray-900 text-white dark:bg-white dark:text-black dark:hover:bg-gray-100 transition rounded-full"
+				class="px-3.5 py-1.5 text-base font-medium bg-black hover:bg-gray-900 text-white dark:bg-white dark:text-black dark:hover:bg-gray-100 transition rounded-lg"
 				type="submit"
 			>
 				{$i18n.t('Save')}

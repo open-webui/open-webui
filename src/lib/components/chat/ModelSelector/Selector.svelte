@@ -327,24 +327,24 @@
 		id="model-selector-{id}-button"
 	>
 		<div
-			class="flex w-full text-left px-0.5 outline-hidden bg-transparent truncate {triggerClassName} justify-between font-medium placeholder-gray-400 focus:outline-hidden"
+			class="{triggerClassName} flex w-full text-left px-0.5 outline-hidden truncate justify-between font-medium placeholder-gray-400 focus:outline-hidden"
 		>
 			{#if selectedModel}
 				{selectedModel.label}
 			{:else}
 				{placeholder}
 			{/if}
-			<ChevronDown className=" self-center ml-2 size-3" strokeWidth="2.5" />
+			<ChevronDown className=" self-center ml-2 size-4 text-gray-600 dark:text-gray-400" strokeWidth="2.5" />
 		</div>
 	</DropdownMenu.Trigger>
 
 	<DropdownMenu.Content
-		class=" z-40 {$mobile
-			? `w-full`
-			: `${className}`} max-w-[calc(100vw-1rem)] justify-start rounded-xl  bg-white dark:bg-gray-850 dark:text-white shadow-lg  outline-hidden"
+		class="z-50 justify-start rounded-xl bg-white dark:bg-gray-850 dark:text-white shadow-lg border border-gray-200 dark:border-gray-700 outline-hidden"
+		style="width: var(--radix-dropdown-menu-trigger-width);"
 		transition={flyAndScale}
 		side={$mobile ? 'bottom' : 'bottom-start'}
 		sideOffset={3}
+		align="start"
 	>
 		<slot>
 			{#if searchEnabled}

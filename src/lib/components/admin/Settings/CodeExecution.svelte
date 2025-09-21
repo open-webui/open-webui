@@ -47,7 +47,7 @@
 
 					<div class="mb-2.5">
 						<div class=" flex w-full justify-between">
-							<div class=" self-center text-xs font-medium">
+							<div class=" self-center text-base font-medium">
 								{$i18n.t('Enable Code Execution')}
 							</div>
 
@@ -57,10 +57,10 @@
 
 					<div class="mb-2.5">
 						<div class="flex w-full justify-between">
-							<div class=" self-center text-xs font-medium">{$i18n.t('Code Execution Engine')}</div>
+							<div class=" self-center text-base font-medium">{$i18n.t('Code Execution Engine')}</div>
 							<div class="flex items-center relative">
 								<select
-									class="dark:bg-gray-900 w-fit pr-8 rounded-sm px-2 p-1 text-xs bg-transparent outline-hidden text-right"
+									class="dark:bg-gray-900 w-fit pr-8 rounded-sm px-2 p-1 text-sm bg-transparent outline-hidden text-right"
 									bind:value={config.CODE_EXECUTION_ENGINE}
 									placeholder={$i18n.t('Select a engine')}
 									required
@@ -74,7 +74,7 @@
 						</div>
 
 						{#if config.CODE_EXECUTION_ENGINE === 'jupyter'}
-							<div class="text-gray-500 text-xs">
+							<div class="text-gray-500 text-sm">
 								{$i18n.t(
 									'Warning: Jupyter execution enables arbitrary code execution, posing severe security risks—proceed with extreme caution.'
 								)}
@@ -84,7 +84,7 @@
 
 					{#if config.CODE_EXECUTION_ENGINE === 'jupyter'}
 						<div class="mb-2.5 flex flex-col gap-1.5 w-full">
-							<div class="text-xs font-medium">
+							<div class="text-base font-medium">
 								{$i18n.t('Jupyter URL')}
 							</div>
 
@@ -103,13 +103,13 @@
 
 						<div class="mb-2.5 flex flex-col gap-1.5 w-full">
 							<div class=" flex gap-2 w-full items-center justify-between">
-								<div class="text-xs font-medium">
+								<div class="text-base font-medium">
 									{$i18n.t('Jupyter Auth')}
 								</div>
 
 								<div>
 									<select
-										class="dark:bg-gray-900 w-fit pr-8 rounded-sm px-2 p-1 text-xs bg-transparent outline-hidden text-left"
+										class="dark:bg-gray-900 w-fit pr-8 rounded-sm px-2 p-1 text-sm bg-transparent outline-hidden text-left"
 										bind:value={config.CODE_EXECUTION_JUPYTER_AUTH}
 										placeholder={$i18n.t('Select an auth method')}
 									>
@@ -144,14 +144,14 @@
 						</div>
 
 						<div class="flex gap-2 w-full items-center justify-between">
-							<div class="text-xs font-medium">
+							<div class="text-base font-medium">
 								{$i18n.t('Code Execution Timeout')}
 							</div>
 
 							<div class="">
 								<Tooltip content={$i18n.t('Enter timeout in seconds')}>
 									<input
-										class="dark:bg-gray-900 w-fit rounded-sm px-2 p-1 text-xs bg-transparent outline-hidden text-right"
+										class="dark:bg-gray-900 w-fit rounded-sm px-2 p-1 text-sm bg-transparent outline-hidden text-right"
 										type="number"
 										bind:value={config.CODE_EXECUTION_JUPYTER_TIMEOUT}
 										placeholder={$i18n.t('e.g. 60')}
@@ -170,7 +170,7 @@
 
 					<div class="mb-2.5">
 						<div class=" flex w-full justify-between">
-							<div class=" self-center text-xs font-medium">
+							<div class=" self-center text-base font-medium">
 								{$i18n.t('Enable Code Interpreter')}
 							</div>
 
@@ -181,12 +181,12 @@
 					{#if config.ENABLE_CODE_INTERPRETER}
 						<div class="mb-2.5">
 							<div class="  flex w-full justify-between">
-								<div class=" self-center text-xs font-medium">
+								<div class=" self-center text-base font-medium">
 									{$i18n.t('Code Interpreter Engine')}
 								</div>
 								<div class="flex items-center relative">
 									<select
-										class="dark:bg-gray-900 w-fit pr-8 rounded-sm px-2 p-1 text-xs bg-transparent outline-hidden text-right"
+										class="dark:bg-gray-900 w-fit pr-8 rounded-sm px-2 p-1 text-sm bg-transparent outline-hidden text-right"
 										bind:value={config.CODE_INTERPRETER_ENGINE}
 										placeholder={$i18n.t('Select a engine')}
 										required
@@ -200,7 +200,7 @@
 							</div>
 
 							{#if config.CODE_INTERPRETER_ENGINE === 'jupyter'}
-								<div class="text-gray-500 text-xs">
+								<div class="text-gray-500 text-sm">
 									{$i18n.t(
 										'Warning: Jupyter execution enables arbitrary code execution, posing severe security risks—proceed with extreme caution.'
 									)}
@@ -210,7 +210,7 @@
 
 						{#if config.CODE_INTERPRETER_ENGINE === 'jupyter'}
 							<div class="mb-2.5 flex flex-col gap-1.5 w-full">
-								<div class="text-xs font-medium">
+								<div class="text-base font-medium">
 									{$i18n.t('Jupyter URL')}
 								</div>
 
@@ -229,13 +229,13 @@
 
 							<div class="mb-2.5 flex flex-col gap-1.5 w-full">
 								<div class="flex gap-2 w-full items-center justify-between">
-									<div class="text-xs font-medium">
+									<div class="text-base font-medium">
 										{$i18n.t('Jupyter Auth')}
 									</div>
 
 									<div>
 										<select
-											class="dark:bg-gray-900 w-fit pr-8 rounded-sm px-2 p-1 text-xs bg-transparent outline-hidden text-left"
+											class="dark:bg-gray-900 w-fit pr-8 rounded-sm px-2 p-1 text-sm bg-transparent outline-hidden text-left"
 											bind:value={config.CODE_INTERPRETER_JUPYTER_AUTH}
 											placeholder={$i18n.t('Select an auth method')}
 										>
@@ -270,14 +270,14 @@
 							</div>
 
 							<div class="flex gap-2 w-full items-center justify-between">
-								<div class="text-xs font-medium">
+								<div class="text-base font-medium">
 									{$i18n.t('Code Execution Timeout')}
 								</div>
 
 								<div class="">
 									<Tooltip content={$i18n.t('Enter timeout in seconds')}>
 										<input
-											class="dark:bg-gray-900 w-fit rounded-sm px-2 p-1 text-xs bg-transparent outline-hidden text-right"
+											class="dark:bg-gray-900 w-fit rounded-sm px-2 p-1 text-sm bg-transparent outline-hidden text-right"
 											type="number"
 											bind:value={config.CODE_INTERPRETER_JUPYTER_TIMEOUT}
 											placeholder={$i18n.t('e.g. 60')}
@@ -292,7 +292,7 @@
 
 						<div>
 							<div class="py-0.5 w-full">
-								<div class=" mb-2.5 text-xs font-medium">
+								<div class=" mb-2.5 text-base font-medium">
 									{$i18n.t('Code Interpreter Prompt Template')}
 								</div>
 
@@ -316,9 +316,9 @@
 			</div>
 		{/if}
 	</div>
-	<div class="flex justify-end pt-3 text-sm font-medium">
+	<div class="flex justify-end pt-3 text-base font-medium">
 		<button
-			class="px-3.5 py-1.5 text-sm font-medium bg-black hover:bg-gray-900 text-white dark:bg-white dark:text-black dark:hover:bg-gray-100 transition rounded-full"
+			class="px-3.5 py-1.5 text-base font-medium bg-black hover:bg-gray-900 text-white dark:bg-white dark:text-black dark:hover:bg-gray-100 transition rounded-lg"
 			type="submit"
 		>
 			{$i18n.t('Save')}

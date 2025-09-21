@@ -151,7 +151,7 @@
 		/>
 
 		<div class="space-y-1">
-			<!-- <div class=" text-sm font-medium">{$i18n.t('Account')}</div> -->
+			<!-- <div class=" text-base font-medium">{$i18n.t('Account')}</div> -->
 
 			<div class="flex space-x-5">
 				<div class="flex flex-col">
@@ -190,11 +190,11 @@
 				</div>
 
 				<div class="flex-1 flex flex-col self-center gap-0.5">
-					<div class=" mb-0.5 text-sm font-medium">{$i18n.t('Profile Image')}</div>
+					<div class=" mb-0.5 text-base font-medium">{$i18n.t('Profile Image')}</div>
 
 					<div>
 						<button
-							class=" text-xs text-center text-gray-800 dark:text-gray-400 rounded-full px-4 py-0.5 bg-gray-100 dark:bg-gray-850"
+							class=" text-sm text-center text-gray-800 dark:text-gray-400 rounded-full px-4 py-0.5 bg-gray-100 dark:bg-gray-850"
 							on:click={async () => {
 								if (canvasPixelTest()) {
 									profileImageUrl = generateInitialsImage(name);
@@ -212,7 +212,7 @@
 						>
 
 						<button
-							class=" text-xs text-center text-gray-800 dark:text-gray-400 rounded-full px-4 py-0.5 bg-gray-100 dark:bg-gray-850"
+							class=" text-sm text-center text-gray-800 dark:text-gray-400 rounded-full px-4 py-0.5 bg-gray-100 dark:bg-gray-850"
 							on:click={async () => {
 								const url = await getGravatarUrl(localStorage.token, $user?.email);
 
@@ -221,7 +221,7 @@
 						>
 
 						<button
-							class=" text-xs text-center text-gray-800 dark:text-gray-400 rounded-lg px-2 py-1"
+							class=" text-sm text-center text-gray-800 dark:text-gray-400 rounded-lg px-2 py-1"
 							on:click={async () => {
 								profileImageUrl = '/user.png';
 							}}>{$i18n.t('Remove')}</button
@@ -232,7 +232,7 @@
 
 			<div class="pt-0.5">
 				<div class="flex flex-col w-full">
-					<div class=" mb-1 text-xs font-medium">{$i18n.t('Name')}</div>
+					<div class=" mb-1 text-base font-medium">{$i18n.t('Name')}</div>
 
 					<div class="flex-1">
 						<input
@@ -249,7 +249,7 @@
 			{#if $config?.features?.enable_user_webhooks}
 				<div class="pt-2">
 					<div class="flex flex-col w-full">
-						<div class=" mb-1 text-xs font-medium">{$i18n.t('Notification Webhook')}</div>
+						<div class=" mb-1 text-base font-medium">{$i18n.t('Notification Webhook')}</div>
 
 						<div class="flex-1">
 							<input
@@ -274,7 +274,7 @@
 		<div class="flex justify-between items-center text-sm">
 			<div class="  font-medium">{$i18n.t('API keys')}</div>
 			<button
-				class=" text-xs font-medium text-gray-500"
+				class=" text-base font-medium text-gray-500"
 				type="button"
 				on:click={() => {
 					showAPIKeys = !showAPIKeys;
@@ -286,7 +286,7 @@
 			<div class="flex flex-col gap-4">
 				<div class="justify-between w-full">
 					<div class="flex justify-between w-full">
-						<div class="self-center text-xs font-medium">{$i18n.t('JWT Token')}</div>
+						<div class="self-center text-base font-medium">{$i18n.t('JWT Token')}</div>
 					</div>
 
 					<div class="flex mt-2">
@@ -340,7 +340,7 @@
 				{#if $config?.features?.enable_api_key ?? true}
 					<div class="justify-between w-full">
 						<div class="flex justify-between w-full">
-							<div class="self-center text-xs font-medium">{$i18n.t('API Key')}</div>
+							<div class="self-center text-base font-medium">{$i18n.t('API Key')}</div>
 						</div>
 						<div class="flex mt-2">
 							{#if APIKey}
@@ -432,9 +432,9 @@
 		{/if}
 	</div>
 
-	<div class="flex justify-end pt-3 text-sm font-medium">
+	<div class="flex justify-end pt-3 text-base font-medium">
 		<button
-			class="px-3.5 py-1.5 text-sm font-medium bg-black hover:bg-gray-900 text-white dark:bg-white dark:text-black dark:hover:bg-gray-100 transition rounded-full"
+			class="px-3.5 py-1.5 text-base font-medium bg-black hover:bg-gray-900 text-white dark:bg-white dark:text-black dark:hover:bg-gray-100 transition rounded-lg"
 			on:click={async () => {
 				const res = await submitHandler();
 

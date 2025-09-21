@@ -42,7 +42,7 @@
 					<div class="text-sm font-medium">
 						{$i18n.t('Memory')}
 
-						<span class=" text-xs text-gray-500">({$i18n.t('Experimental')})</span>
+						<span class=" text-sm text-gray-500">({$i18n.t('Experimental')})</span>
 					</div>
 				</Tooltip>
 
@@ -57,7 +57,7 @@
 			</div>
 		</div>
 
-		<div class="text-xs text-gray-600 dark:text-gray-400">
+		<div class="text-sm text-gray-600 dark:text-gray-400">
 			<div>
 				{$i18n.t(
 					"You can personalize your interactions with LLMs by adding memories through the 'Manage' button below, making them more helpful and tailored to you."
@@ -89,7 +89,7 @@
 
 	<div class="flex justify-end text-sm font-medium">
 		<button
-			class="px-3.5 py-1.5 text-sm font-medium bg-black hover:bg-gray-900 text-white dark:bg-white dark:text-black dark:hover:bg-gray-100 transition rounded-full"
+			class="px-3.5 py-1.5 text-sm font-medium bg-black hover:bg-gray-900 text-white dark:bg-white dark:text-black dark:hover:bg-gray-100 transition rounded-lg"
 			type="submit"
 		>
 			{$i18n.t('Save')}

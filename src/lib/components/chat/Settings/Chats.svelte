@@ -138,7 +138,7 @@
 						/>
 					</svg>
 				</div>
-				<div class=" self-center text-sm font-medium">{$i18n.t('Import Chats')}</div>
+				<div class=" self-center text-base font-medium">{$i18n.t('Import Chats')}</div>
 			</button>
 			<button
 				class=" flex rounded-md py-2 px-3.5 w-full hover:bg-gray-200 dark:hover:bg-gray-800 transition"
@@ -160,7 +160,7 @@
 						/>
 					</svg>
 				</div>
-				<div class=" self-center text-sm font-medium">{$i18n.t('Export Chats')}</div>
+				<div class=" self-center text-base font-medium">{$i18n.t('Export Chats')}</div>
 			</button>
 		</div>
 
@@ -190,7 +190,7 @@
 						/>
 					</svg>
 				</div>
-				<div class=" self-center text-sm font-medium">{$i18n.t('Archived Chats')}</div>
+				<div class=" self-center text-base font-medium">{$i18n.t('Archived Chats')}</div>
 			</button>
 
 			{#if showArchiveConfirm}
@@ -276,7 +276,7 @@
 							/>
 						</svg>
 					</div>
-					<div class=" self-center text-sm font-medium">{$i18n.t('Archive All Chats')}</div>
+					<div class=" self-center text-base font-medium">{$i18n.t('Archive All Chats')}</div>
 				</button>
 			{/if}
 
@@ -360,7 +360,7 @@
 							/>
 						</svg>
 					</div>
-					<div class=" self-center text-sm font-medium">{$i18n.t('Delete All Chats')}</div>
+					<div class=" self-center text-base font-medium">{$i18n.t('Delete All Chats')}</div>
 				</button>
 			{/if}
 		</div>

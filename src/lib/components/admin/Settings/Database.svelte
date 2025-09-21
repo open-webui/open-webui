@@ -33,7 +33,7 @@
 >
 	<div class=" space-y-3 overflow-y-scroll scrollbar-hidden h-full">
 		<div>
-			<div class=" mb-2 text-sm font-medium">{$i18n.t('Database')}</div>
+			<div class=" mb-2 text-base font-medium">{$i18n.t('Database')}</div>
 
 			<input
 				id="config-json-input"
@@ -83,7 +83,7 @@
 						/>
 					</svg>
 				</div>
-				<div class=" self-center text-sm font-medium">
+				<div class=" self-center text-base font-medium">
 					{$i18n.t('Import Config from JSON File')}
 				</div>
 			</button>
@@ -114,7 +114,7 @@
 						/>
 					</svg>
 				</div>
-				<div class=" self-center text-sm font-medium">
+				<div class=" self-center text-base font-medium">
 					{$i18n.t('Export Config to JSON File')}
 				</div>
 			</button>
@@ -123,7 +123,7 @@
 
 			{#if $config?.features.enable_admin_export ?? true}
 				<div class="  flex w-full justify-between">
-					<!-- <div class=" self-center text-xs font-medium">{$i18n.t('Allow Chat Deletion')}</div> -->
+					<!-- <div class=" self-center text-base font-medium">{$i18n.t('Allow Chat Deletion')}</div> -->
 
 					<button
 						class=" flex rounded-md py-1.5 px-3 w-full hover:bg-gray-200 dark:hover:bg-gray-800 transition"
@@ -151,7 +151,7 @@
 								/>
 							</svg>
 						</div>
-						<div class=" self-center text-sm font-medium">{$i18n.t('Download Database')}</div>
+						<div class=" self-center text-base font-medium">{$i18n.t('Download Database')}</div>
 					</button>
 				</div>
 
@@ -176,7 +176,7 @@
 							/>
 						</svg>
 					</div>
-					<div class=" self-center text-sm font-medium">
+					<div class=" self-center text-base font-medium">
 						{$i18n.t('Export All Chats (All Users)')}
 					</div>
 				</button>
@@ -184,7 +184,7 @@
 		</div>
 	</div>
 
-	<!-- <div class="flex justify-end pt-3 text-sm font-medium">
+	<!-- <div class="flex justify-end pt-3 text-base font-medium">
 		<button
 			class=" px-4 py-2 bg-emerald-700 hover:bg-emerald-800 text-gray-100 transition rounded-lg"
 			type="submit"

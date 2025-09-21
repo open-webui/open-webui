@@ -89,7 +89,7 @@
 					</div>
 
 					<div class="my-1.5">
-						<div class="text-xs text-gray-500">
+						<div class="text-sm text-gray-500">
 							{$i18n.t('Connect to your own OpenAPI compatible external tool servers.')}
 							<br />
 							{$i18n.t(
@@ -98,7 +98,7 @@
 						</div>
 					</div>
 
-					<div class=" text-xs text-gray-600 dark:text-gray-300 mb-2">
+					<div class=" text-sm text-gray-600 dark:text-gray-300 mb-2">
 						<a
 							class="underline"
 							href="https://github.com/open-webui/openapi-servers"
@@ -118,7 +118,7 @@
 
 	<div class="flex justify-end pt-3 text-sm font-medium">
 		<button
-			class="px-3.5 py-1.5 text-sm font-medium bg-black hover:bg-gray-900 text-white dark:bg-white dark:text-black dark:hover:bg-gray-100 transition rounded-full"
+			class="px-3.5 py-1.5 text-sm font-medium bg-black hover:bg-gray-900 text-white dark:bg-white dark:text-black dark:hover:bg-gray-100 transition rounded-lg"
 			type="submit"
 		>
 			{$i18n.t('Save')}

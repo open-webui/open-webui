@@ -95,7 +95,7 @@
 					<hr class=" border-gray-100 dark:border-gray-850 my-2" />
 
 					<div class="  mb-2.5 flex w-full justify-between">
-						<div class=" self-center text-xs font-medium">
+						<div class=" self-center text-base font-medium">
 							{$i18n.t('Web Search')}
 						</div>
 						<div class="flex items-center relative">
@@ -104,12 +104,12 @@
 					</div>
 
 					<div class="  mb-2.5 flex w-full justify-between">
-						<div class=" self-center text-xs font-medium">
+						<div class=" self-center text-base font-medium">
 							{$i18n.t('Web Search Engine')}
 						</div>
 						<div class="flex items-center relative">
 							<select
-								class="dark:bg-gray-900 w-fit pr-8 rounded-sm px-2 p-1 text-xs bg-transparent outline-hidden text-right"
+								class="dark:bg-gray-900 w-fit pr-8 rounded-sm px-2 p-1 text-sm bg-transparent outline-hidden text-right"
 								bind:value={webConfig.WEB_SEARCH_ENGINE}
 								placeholder={$i18n.t('Select a engine')}
 								required
@@ -126,7 +126,7 @@
 						{#if webConfig.WEB_SEARCH_ENGINE === 'searxng'}
 							<div class="mb-2.5 flex w-full flex-col">
 								<div>
-									<div class=" self-center text-xs font-medium mb-1">
+									<div class=" self-center text-base font-medium mb-1">
 										{$i18n.t('Searxng Query URL')}
 									</div>
 
@@ -146,7 +146,7 @@
 						{:else if webConfig.WEB_SEARCH_ENGINE === 'google_pse'}
 							<div class="mb-2.5 flex w-full flex-col">
 								<div>
-									<div class=" self-center text-xs font-medium mb-1">
+									<div class=" self-center text-base font-medium mb-1">
 										{$i18n.t('Google PSE API Key')}
 									</div>
 
@@ -156,7 +156,7 @@
 									/>
 								</div>
 								<div class="mt-1.5">
-									<div class=" self-center text-xs font-medium mb-1">
+									<div class=" self-center text-base font-medium mb-1">
 										{$i18n.t('Google PSE Engine Id')}
 									</div>
 
@@ -176,7 +176,7 @@
 						{:else if webConfig.WEB_SEARCH_ENGINE === 'brave'}
 							<div class="mb-2.5 flex w-full flex-col">
 								<div>
-									<div class=" self-center text-xs font-medium mb-1">
+									<div class=" self-center text-base font-medium mb-1">
 										{$i18n.t('Brave Search API Key')}
 									</div>
 
@@ -189,7 +189,7 @@
 						{:else if webConfig.WEB_SEARCH_ENGINE === 'kagi'}
 							<div class="mb-2.5 flex w-full flex-col">
 								<div>
-									<div class=" self-center text-xs font-medium mb-1">
+									<div class=" self-center text-base font-medium mb-1">
 										{$i18n.t('Kagi Search API Key')}
 									</div>
 
@@ -203,7 +203,7 @@
 						{:else if webConfig.WEB_SEARCH_ENGINE === 'mojeek'}
 							<div class="mb-2.5 flex w-full flex-col">
 								<div>
-									<div class=" self-center text-xs font-medium mb-1">
+									<div class=" self-center text-base font-medium mb-1">
 										{$i18n.t('Mojeek Search API Key')}
 									</div>
 
@@ -216,7 +216,7 @@
 						{:else if webConfig.WEB_SEARCH_ENGINE === 'bocha'}
 							<div class="mb-2.5 flex w-full flex-col">
 								<div>
-									<div class=" self-center text-xs font-medium mb-1">
+									<div class=" self-center text-base font-medium mb-1">
 										{$i18n.t('Bocha Search API Key')}
 									</div>
 
@@ -229,7 +229,7 @@
 						{:else if webConfig.WEB_SEARCH_ENGINE === 'serpstack'}
 							<div class="mb-2.5 flex w-full flex-col">
 								<div>
-									<div class=" self-center text-xs font-medium mb-1">
+									<div class=" self-center text-base font-medium mb-1">
 										{$i18n.t('Serpstack API Key')}
 									</div>
 
@@ -242,7 +242,7 @@
 						{:else if webConfig.WEB_SEARCH_ENGINE === 'serper'}
 							<div class="mb-2.5 flex w-full flex-col">
 								<div>
-									<div class=" self-center text-xs font-medium mb-1">
+									<div class=" self-center text-base font-medium mb-1">
 										{$i18n.t('Serper API Key')}
 									</div>
 
@@ -255,7 +255,7 @@
 						{:else if webConfig.WEB_SEARCH_ENGINE === 'serply'}
 							<div class="mb-2.5 flex w-full flex-col">
 								<div>
-									<div class=" self-center text-xs font-medium mb-1">
+									<div class=" self-center text-base font-medium mb-1">
 										{$i18n.t('Serply API Key')}
 									</div>
 
@@ -268,7 +268,7 @@
 						{:else if webConfig.WEB_SEARCH_ENGINE === 'tavily'}
 							<div class="mb-2.5 flex w-full flex-col">
 								<div>
-									<div class=" self-center text-xs font-medium mb-1">
+									<div class=" self-center text-base font-medium mb-1">
 										{$i18n.t('Tavily API Key')}
 									</div>
 
@@ -281,7 +281,7 @@
 						{:else if webConfig.WEB_SEARCH_ENGINE === 'searchapi'}
 							<div class="mb-2.5 flex w-full flex-col">
 								<div>
-									<div class=" self-center text-xs font-medium mb-1">
+									<div class=" self-center text-base font-medium mb-1">
 										{$i18n.t('SearchApi API Key')}
 									</div>
 
@@ -291,7 +291,7 @@
 									/>
 								</div>
 								<div class="mt-1.5">
-									<div class=" self-center text-xs font-medium mb-1">
+									<div class=" self-center text-base font-medium mb-1">
 										{$i18n.t('SearchApi Engine')}
 									</div>
 
@@ -311,7 +311,7 @@
 						{:else if webConfig.WEB_SEARCH_ENGINE === 'serpapi'}
 							<div class="mb-2.5 flex w-full flex-col">
 								<div>
-									<div class=" self-center text-xs font-medium mb-1">
+									<div class=" self-center text-base font-medium mb-1">
 										{$i18n.t('SerpApi API Key')}
 									</div>
 
@@ -321,7 +321,7 @@
 									/>
 								</div>
 								<div class="mt-1.5">
-									<div class=" self-center text-xs font-medium mb-1">
+									<div class=" self-center text-base font-medium mb-1">
 										{$i18n.t('SerpApi Engine')}
 									</div>
 
@@ -341,7 +341,7 @@
 						{:else if webConfig.WEB_SEARCH_ENGINE === 'jina'}
 							<div class="mb-2.5 flex w-full flex-col">
 								<div>
-									<div class=" self-center text-xs font-medium mb-1">
+									<div class=" self-center text-base font-medium mb-1">
 										{$i18n.t('Jina API Key')}
 									</div>
 
@@ -354,7 +354,7 @@
 						{:else if webConfig.WEB_SEARCH_ENGINE === 'bing'}
 							<div class="mb-2.5 flex w-full flex-col">
 								<div>
-									<div class=" self-center text-xs font-medium mb-1">
+									<div class=" self-center text-base font-medium mb-1">
 										{$i18n.t('Bing Search V7 Endpoint')}
 									</div>
 
@@ -372,7 +372,7 @@
 								</div>
 
 								<div class="mt-2">
-									<div class=" self-center text-xs font-medium mb-1">
+									<div class=" self-center text-base font-medium mb-1">
 										{$i18n.t('Bing Search V7 Subscription Key')}
 									</div>
 
@@ -385,7 +385,7 @@
 						{:else if webConfig.WEB_SEARCH_ENGINE === 'exa'}
 							<div class="mb-2.5 flex w-full flex-col">
 								<div>
-									<div class=" self-center text-xs font-medium mb-1">
+									<div class=" self-center text-base font-medium mb-1">
 										{$i18n.t('Exa API Key')}
 									</div>
 
@@ -397,7 +397,7 @@
 							</div>
 						{:else if webConfig.WEB_SEARCH_ENGINE === 'perplexity'}
 							<div>
-								<div class=" self-center text-xs font-medium mb-1">
+								<div class=" self-center text-base font-medium mb-1">
 									{$i18n.t('Perplexity API Key')}
 								</div>
 
@@ -409,7 +409,7 @@
 						{:else if webConfig.WEB_SEARCH_ENGINE === 'sougou'}
 							<div class="mb-2.5 flex w-full flex-col">
 								<div>
-									<div class=" self-center text-xs font-medium mb-1">
+									<div class=" self-center text-base font-medium mb-1">
 										{$i18n.t('Sougou Search API sID')}
 									</div>
 
@@ -421,7 +421,7 @@
 							</div>
 							<div class="mb-2.5 flex w-full flex-col">
 								<div>
-									<div class=" self-center text-xs font-medium mb-1">
+									<div class=" self-center text-base font-medium mb-1">
 										{$i18n.t('Sougou Search API SK')}
 									</div>
 
@@ -438,7 +438,7 @@
 						<div class="mb-2.5 flex w-full flex-col">
 							<div class="flex gap-2">
 								<div class="w-full">
-									<div class=" self-center text-xs font-medium mb-1">
+									<div class=" self-center text-base font-medium mb-1">
 										{$i18n.t('Search Result Count')}
 									</div>
 
@@ -451,7 +451,7 @@
 								</div>
 
 								<div class="w-full">
-									<div class=" self-center text-xs font-medium mb-1">
+									<div class=" self-center text-base font-medium mb-1">
 										{$i18n.t('Concurrent Requests')}
 									</div>
 
@@ -466,7 +466,7 @@
 						</div>
 
 						<div class="mb-2.5 flex w-full flex-col">
-							<div class="  text-xs font-medium mb-1">
+							<div class="  text-base font-medium mb-1">
 								{$i18n.t('Domain Filter List')}
 							</div>
 
@@ -481,7 +481,7 @@
 					{/if}
 
 					<div class="  mb-2.5 flex w-full justify-between">
-						<div class=" self-center text-xs font-medium">
+						<div class=" self-center text-base font-medium">
 							<Tooltip content={$i18n.t('Full Context Mode')} placement="top-start">
 								{$i18n.t('Bypass Embedding and Retrieval')}
 							</Tooltip>
@@ -502,7 +502,7 @@
 					</div>
 
 					<div class="  mb-2.5 flex w-full justify-between">
-						<div class=" self-center text-xs font-medium">
+						<div class=" self-center text-base font-medium">
 							{$i18n.t('Trust Proxy Environment')}
 						</div>
 						<div class="flex items-center relative">
@@ -525,12 +525,12 @@
 					<hr class=" border-gray-100 dark:border-gray-850 my-2" />
 
 					<div class="  mb-2.5 flex w-full justify-between">
-						<div class=" self-center text-xs font-medium">
+						<div class=" self-center text-base font-medium">
 							{$i18n.t('Web Loader Engine')}
 						</div>
 						<div class="flex items-center relative">
 							<select
-								class="dark:bg-gray-900 w-fit pr-8 rounded-sm px-2 p-1 text-xs bg-transparent outline-hidden text-right"
+								class="dark:bg-gray-900 w-fit pr-8 rounded-sm px-2 p-1 text-sm bg-transparent outline-hidden text-right"
 								bind:value={webConfig.WEB_LOADER_ENGINE}
 								placeholder={$i18n.t('Select a engine')}
 							>
@@ -544,7 +544,7 @@
 
 					{#if webConfig.WEB_LOADER_ENGINE === '' || webConfig.WEB_LOADER_ENGINE === 'safe_web'}
 						<div class="  mb-2.5 flex w-full justify-between">
-							<div class=" self-center text-xs font-medium">
+							<div class=" self-center text-base font-medium">
 								{$i18n.t('Verify SSL Certificate')}
 							</div>
 							<div class="flex items-center relative">
@@ -554,7 +554,7 @@
 					{:else if webConfig.WEB_LOADER_ENGINE === 'playwright'}
 						<div class="mb-2.5 flex w-full flex-col">
 							<div>
-								<div class=" self-center text-xs font-medium mb-1">
+								<div class=" self-center text-base font-medium mb-1">
 									{$i18n.t('Playwright WebSocket URL')}
 								</div>
 
@@ -572,7 +572,7 @@
 							</div>
 
 							<div class="mt-2">
-								<div class=" self-center text-xs font-medium mb-1">
+								<div class=" self-center text-base font-medium mb-1">
 									{$i18n.t('Playwright Timeout (ms)')}
 								</div>
 
@@ -591,7 +591,7 @@
 					{:else if webConfig.WEB_LOADER_ENGINE === 'firecrawl'}
 						<div class="mb-2.5 flex w-full flex-col">
 							<div>
-								<div class=" self-center text-xs font-medium mb-1">
+								<div class=" self-center text-base font-medium mb-1">
 									{$i18n.t('Firecrawl API Base URL')}
 								</div>
 
@@ -609,7 +609,7 @@
 							</div>
 
 							<div class="mt-2">
-								<div class=" self-center text-xs font-medium mb-1">
+								<div class=" self-center text-base font-medium mb-1">
 									{$i18n.t('Firecrawl API Key')}
 								</div>
 
@@ -622,7 +622,7 @@
 					{:else if webConfig.WEB_LOADER_ENGINE === 'tavily'}
 						<div class="mb-2.5 flex w-full flex-col">
 							<div>
-								<div class=" self-center text-xs font-medium mb-1">
+								<div class=" self-center text-base font-medium mb-1">
 									{$i18n.t('Tavily Extract Depth')}
 								</div>
 
@@ -641,7 +641,7 @@
 
 							{#if webConfig.WEB_SEARCH_ENGINE !== 'tavily'}
 								<div class="mt-2">
-									<div class=" self-center text-xs font-medium mb-1">
+									<div class=" self-center text-base font-medium mb-1">
 										{$i18n.t('Tavily API Key')}
 									</div>
 
@@ -655,7 +655,7 @@
 					{/if}
 
 					<div class="  mb-2.5 flex w-full justify-between">
-						<div class=" self-center text-xs font-medium">
+						<div class=" self-center text-base font-medium">
 							{$i18n.t('Youtube Language')}
 						</div>
 						<div class="flex items-center relative">
@@ -670,7 +670,7 @@
 					</div>
 
 					<div class="  mb-2.5 flex flex-col w-full justify-between">
-						<div class=" mb-1 text-xs font-medium">
+						<div class=" mb-1 text-base font-medium">
 							{$i18n.t('Youtube Proxy URL')}
 						</div>
 						<div class="flex items-center relative">
@@ -687,9 +687,9 @@
 			</div>
 		{/if}
 	</div>
-	<div class="flex justify-end pt-3 text-sm font-medium">
+	<div class="flex justify-end pt-3 text-base font-medium">
 		<button
-			class="px-3.5 py-1.5 text-sm font-medium bg-black hover:bg-gray-900 text-white dark:bg-white dark:text-black dark:hover:bg-gray-100 transition rounded-full"
+			class="px-3.5 py-1.5 text-base font-medium bg-black hover:bg-gray-900 text-white dark:bg-white dark:text-black dark:hover:bg-gray-100 transition rounded-lg"
 			type="submit"
 		>
 			{$i18n.t('Save')}

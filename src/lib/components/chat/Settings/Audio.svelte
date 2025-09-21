@@ -174,14 +174,14 @@
 >
 	<div class=" space-y-3 overflow-y-scroll max-h-[28rem] lg:max-h-full">
 		<div>
-			<div class=" mb-1 text-sm font-medium">{$i18n.t('STT Settings')}</div>
+			<div class=" mb-1 text-base font-medium">{$i18n.t('STT Settings')}</div>
 
 			{#if $config.audio.stt.engine !== 'web'}
 				<div class=" py-0.5 flex w-full justify-between">
-					<div class=" self-center text-xs font-medium">{$i18n.t('Speech-to-Text Engine')}</div>
+					<div class=" self-center text-sm font-medium">{$i18n.t('Speech-to-Text Engine')}</div>
 					<div class="flex items-center relative">
 						<select
-							class="dark:bg-gray-900 w-fit pr-8 rounded-sm px-2 p-1 text-xs bg-transparent outline-hidden text-right"
+							class="dark:bg-gray-900 w-fit pr-8 rounded-sm px-2 p-1 text-sm bg-transparent outline-hidden text-right"
 							bind:value={STTEngine}
 							placeholder="Select an engine"
 						>
@@ -193,12 +193,12 @@
 			{/if}
 
 			<div class=" py-0.5 flex w-full justify-between">
-				<div class=" self-center text-xs font-medium">
+				<div class=" self-center text-sm font-medium">
 					{$i18n.t('Instant Auto-Send After Voice Transcription')}
 				</div>
 
 				<button
-					class="p-1 px-3 text-xs flex rounded-sm transition"
+					class="p-1 px-3 text-sm flex rounded-sm transition"
 					on:click={() => {
 						toggleSpeechAutoSend();
 					}}
@@ -214,13 +214,13 @@
 		</div>
 
 		<div>
-			<div class=" mb-1 text-sm font-medium">{$i18n.t('TTS Settings')}</div>
+			<div class=" mb-1 text-base font-medium">{$i18n.t('TTS Settings')}</div>
 
 			<div class=" py-0.5 flex w-full justify-between">
-				<div class=" self-center text-xs font-medium">{$i18n.t('Text-to-Speech Engine')}</div>
+				<div class=" self-center text-sm font-medium">{$i18n.t('Text-to-Speech Engine')}</div>
 				<div class="flex items-center relative">
 					<select
-						class="dark:bg-gray-900 w-fit pr-8 rounded-sm px-2 p-1 text-xs bg-transparent outline-hidden text-right"
+						class="dark:bg-gray-900 w-fit pr-8 rounded-sm px-2 p-1 text-sm bg-transparent outline-hidden text-right"
 						bind:value={TTSEngine}
 						placeholder="Select an engine"
 					>
@@ -232,10 +232,10 @@
 
 			{#if TTSEngine === 'browser-kokoro'}
 				<div class=" py-0.5 flex w-full justify-between">
-					<div class=" self-center text-xs font-medium">{$i18n.t('Kokoro.js Dtype')}</div>
+					<div class=" self-center text-sm font-medium">{$i18n.t('Kokoro.js Dtype')}</div>
 					<div class="flex items-center relative">
 						<select
-							class="dark:bg-gray-900 w-fit pr-8 rounded-sm px-2 p-1 text-xs bg-transparent outline-hidden text-right"
+							class="dark:bg-gray-900 w-fit pr-8 rounded-sm px-2 p-1 text-sm bg-transparent outline-hidden text-right"
 							bind:value={TTSEngineConfig.dtype}
 							placeholder="Select dtype"
 						>
@@ -250,10 +250,10 @@
 			{/if}
 
 			<div class=" py-0.5 flex w-full justify-between">
-				<div class=" self-center text-xs font-medium">{$i18n.t('Auto-playback response')}</div>
+				<div class=" self-center text-sm font-medium">{$i18n.t('Auto-playback response')}</div>
 
 				<button
-					class="p-1 px-3 text-xs flex rounded-sm transition"
+					class="p-1 px-3 text-sm flex rounded-sm transition"
 					on:click={() => {
 						toggleResponseAutoPlayback();
 					}}
@@ -268,11 +268,11 @@
 			</div>
 
 			<div class=" py-0.5 flex w-full justify-between">
-				<div class=" self-center text-xs font-medium">{$i18n.t('Speech Playback Speed')}</div>
+				<div class=" self-center text-sm font-medium">{$i18n.t('Speech Playback Speed')}</div>
 
 				<div class="flex items-center relative">
 					<select
-						class="dark:bg-gray-900 w-fit pr-8 rounded-sm px-2 p-1 text-xs bg-transparent outline-hidden text-right"
+						class="dark:bg-gray-900 w-fit pr-8 rounded-sm px-2 p-1 text-sm bg-transparent outline-hidden text-right"
 						bind:value={playbackRate}
 					>
 						{#each speedOptions as option}
@@ -319,7 +319,7 @@
 						</div>
 					</div>
 
-					<div class="text-xs text-gray-500">
+					<div class="text-sm text-gray-500">
 						{$i18n.t('Please do not close the settings page while loading the model.')}
 					</div>
 				</div>
@@ -345,7 +345,7 @@
 					</div>
 				</div>
 				<div class="flex items-center justify-between my-1.5">
-					<div class="text-xs">
+					<div class="text-sm">
 						{$i18n.t('Allow non-local voices')}
 					</div>
 
@@ -379,7 +379,7 @@
 
 	<div class="flex justify-end text-sm font-medium">
 		<button
-			class="px-3.5 py-1.5 text-sm font-medium bg-black hover:bg-gray-900 text-white dark:bg-white dark:text-black dark:hover:bg-gray-100 transition rounded-full"
+			class="px-3.5 py-1.5 text-sm font-medium bg-black hover:bg-gray-900 text-white dark:bg-white dark:text-black dark:hover:bg-gray-100 transition rounded-lg"
 			type="submit"
 		>
 			{$i18n.t('Save')}

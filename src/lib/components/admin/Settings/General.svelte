@@ -123,66 +123,53 @@
 					<hr class=" border-gray-100 dark:border-gray-850 my-2" />
 
 					<div class="mb-2.5">
-						<div class=" mb-1 text-xs font-medium flex space-x-2 items-center">
+						<div class=" mb-1 text-sm font-medium flex space-x-2 items-center">
 							<div>
 								{$i18n.t('Version')}
 							</div>
 						</div>
 						<div class="flex w-full justify-between items-center">
-							<div class="flex flex-col text-xs text-gray-700 dark:text-gray-200">
+							<div class="flex flex-col text-sm text-gray-700 dark:text-gray-200">
 								<div class="flex gap-1">
-									<Tooltip content={WEBUI_BUILD_HASH}>
-										v{WEBUI_VERSION}
-									</Tooltip>
-
-									<a
-										href="https://github.com/open-webui/open-webui/releases/tag/v{version.latest}"
-										target="_blank"
-									>
-										{updateAvailable === null
-											? $i18n.t('Checking for updates...')
-											: updateAvailable
-												? `(v${version.latest} ${$i18n.t('available!')})`
-												: $i18n.t('(latest)')}
-									</a>
+									<span>v.0.0.1</span>
 								</div>
 
-								<button
-									class=" underline flex items-center space-x-1 text-xs text-gray-500 dark:text-gray-500"
+								<!-- <button
+									class=" underline flex items-center space-x-1 text-sm text-gray-500 dark:text-gray-500"
 									type="button"
 									on:click={() => {
 										showChangelog.set(true);
 									}}
 								>
 									<div>{$i18n.t("See what's new")}</div>
-								</button>
+								</button> -->
 							</div>
 
-							<button
-								class=" text-xs px-3 py-1.5 bg-gray-50 hover:bg-gray-100 dark:bg-gray-850 dark:hover:bg-gray-800 transition rounded-lg font-medium"
+							<!-- <button
+								class=" text-sm px-3 py-1.5 bg-gray-50 hover:bg-gray-100 dark:bg-gray-850 dark:hover:bg-gray-800 transition rounded-lg font-medium"
 								type="button"
 								on:click={() => {
 									checkForVersionUpdates();
 								}}
 							>
 								{$i18n.t('Check for updates')}
-							</button>
+							</button> -->
 						</div>
 					</div>
 
-					<div class="mb-2.5">
+					<!-- <div class="mb-2.5">
 						<div class="flex w-full justify-between items-center">
-							<div class="text-xs pr-2">
+							<div class="text-sm pr-2">
 								<div class="">
 									{$i18n.t('Help')}
 								</div>
-								<div class=" text-xs text-gray-500">
+								<div class=" text-sm text-gray-500">
 									{$i18n.t('Discover how to use Open WebUI and seek support from the community.')}
 								</div>
 							</div>
 
 							<a
-								class="flex-shrink-0 text-xs font-medium underline"
+								class="flex-shrink-0 text-sm font-medium underline"
 								href="https://docs.openwebui.com/"
 								target="_blank"
 							>
@@ -214,11 +201,11 @@
 								</a>
 							</div>
 						</div>
-					</div>
+					</div> -->
 
-					<div class="mb-2.5">
+					<!-- <div class="mb-2.5">
 						<div class="flex w-full justify-between items-center">
-							<div class="text-xs pr-2">
+							<div class="text-sm pr-2">
 								<div class="">
 									{$i18n.t('License')}
 								</div>
@@ -249,7 +236,7 @@
 									{/if}
 								{:else}
 									<a
-										class=" text-xs hover:underline"
+										class=" text-sm hover:underline"
 										href="https://docs.openwebui.com/enterprise"
 										target="_blank"
 									>
@@ -262,13 +249,13 @@
 								{/if}
 							</div>
 
-							<!-- <button
-								class="flex-shrink-0 text-xs px-3 py-1.5 bg-gray-50 hover:bg-gray-100 dark:bg-gray-850 dark:hover:bg-gray-800 transition rounded-lg font-medium"
+							<button
+								class="flex-shrink-0 text-sm px-3 py-1.5 bg-gray-50 hover:bg-gray-100 dark:bg-gray-850 dark:hover:bg-gray-800 transition rounded-lg font-medium"
 							>
 								{$i18n.t('Activate')}
-							</button> -->
+							</button>
 						</div>
-					</div>
+					</div> -->
 				</div>
 
 				<div class="mb-3">
@@ -277,10 +264,10 @@
 					<hr class=" border-gray-100 dark:border-gray-850 my-2" />
 
 					<div class="  mb-2.5 flex w-full justify-between">
-						<div class=" self-center text-xs font-medium">{$i18n.t('Default User Role')}</div>
+						<div class=" self-center text-sm font-medium">{$i18n.t('Default User Role')}</div>
 						<div class="flex items-center relative">
 							<select
-								class="dark:bg-gray-900 w-fit pr-8 rounded-sm px-2 text-xs bg-transparent outline-hidden text-right"
+								class="dark:bg-gray-900 w-fit pr-8 rounded-sm px-2 text-sm bg-transparent outline-hidden text-right"
 								bind:value={adminConfig.DEFAULT_USER_ROLE}
 								placeholder="Select a role"
 							>
@@ -292,13 +279,13 @@
 					</div>
 
 					<div class=" mb-2.5 flex w-full justify-between pr-2">
-						<div class=" self-center text-xs font-medium">{$i18n.t('Enable New Sign Ups')}</div>
+						<div class=" self-center text-sm font-medium">{$i18n.t('Enable New Sign Ups')}</div>
 
 						<Switch bind:state={adminConfig.ENABLE_SIGNUP} />
 					</div>
 
 					<div class="mb-2.5 flex w-full items-center justify-between pr-2">
-						<div class=" self-center text-xs font-medium">
+						<div class=" self-center text-sm font-medium">
 							{$i18n.t('Show Admin Details in Account Pending Overlay')}
 						</div>
 
@@ -306,14 +293,14 @@
 					</div>
 
 					<div class="mb-2.5 flex w-full justify-between pr-2">
-						<div class=" self-center text-xs font-medium">{$i18n.t('Enable API Key')}</div>
+						<div class=" self-center text-sm font-medium">{$i18n.t('Enable API Key')}</div>
 
 						<Switch bind:state={adminConfig.ENABLE_API_KEY} />
 					</div>
 
 					{#if adminConfig?.ENABLE_API_KEY}
 						<div class="mb-2.5 flex w-full justify-between pr-2">
-							<div class=" self-center text-xs font-medium">
+							<div class=" self-center text-sm font-medium">
 								{$i18n.t('API Key Endpoint Restrictions')}
 							</div>
 
@@ -322,7 +309,7 @@
 
 						{#if adminConfig?.ENABLE_API_KEY_ENDPOINT_RESTRICTIONS}
 							<div class=" flex w-full flex-col pr-2">
-								<div class=" text-xs font-medium">
+								<div class=" text-sm font-medium">
 									{$i18n.t('Allowed Endpoints')}
 								</div>
 
@@ -333,7 +320,7 @@
 									bind:value={adminConfig.API_KEY_ALLOWED_ENDPOINTS}
 								/>
 
-								<div class="mt-2 text-xs text-gray-400 dark:text-gray-500">
+								<div class="mt-2 text-sm text-gray-400 dark:text-gray-500">
 									<!-- https://docs.openwebui.com/getting-started/advanced-topics/api-endpoints -->
 									<a
 										href="https://docs.openwebui.com/getting-started/api-endpoints"
@@ -349,7 +336,7 @@
 
 					<div class=" mb-2.5 w-full justify-between">
 						<div class="flex w-full justify-between">
-							<div class=" self-center text-xs font-medium">{$i18n.t('JWT Expiration')}</div>
+							<div class=" self-center text-sm font-medium">{$i18n.t('JWT Expiration')}</div>
 						</div>
 
 						<div class="flex mt-2 space-x-2">
@@ -361,7 +348,7 @@
 							/>
 						</div>
 
-						<div class="mt-2 text-xs text-gray-400 dark:text-gray-500">
+						<div class="mt-2 text-sm text-gray-400 dark:text-gray-500">
 							{$i18n.t('Valid time units:')}
 							<span class=" text-gray-300 font-medium"
 								>{$i18n.t("'s', 'm', 'h', 'd', 'w' or '-1' for no expiration.")}</span
@@ -388,7 +375,7 @@
 								<div class="flex flex-col gap-1">
 									<div class="flex w-full gap-2">
 										<div class="w-full">
-											<div class=" self-center text-xs font-medium min-w-fit mb-1">
+											<div class=" self-center text-sm font-medium min-w-fit mb-1">
 												{$i18n.t('Label')}
 											</div>
 											<input
@@ -402,7 +389,7 @@
 									</div>
 									<div class="flex w-full gap-2">
 										<div class="w-full">
-											<div class=" self-center text-xs font-medium min-w-fit mb-1">
+											<div class=" self-center text-sm font-medium min-w-fit mb-1">
 												{$i18n.t('Host')}
 											</div>
 											<input
@@ -413,7 +400,7 @@
 											/>
 										</div>
 										<div class="w-full">
-											<div class=" self-center text-xs font-medium min-w-fit mb-1">
+											<div class=" self-center text-sm font-medium min-w-fit mb-1">
 												{$i18n.t('Port')}
 											</div>
 											<Tooltip
@@ -432,7 +419,7 @@
 									</div>
 									<div class="flex w-full gap-2">
 										<div class="w-full">
-											<div class=" self-center text-xs font-medium min-w-fit mb-1">
+											<div class=" self-center text-sm font-medium min-w-fit mb-1">
 												{$i18n.t('Application DN')}
 											</div>
 											<Tooltip
@@ -448,7 +435,7 @@
 											</Tooltip>
 										</div>
 										<div class="w-full">
-											<div class=" self-center text-xs font-medium min-w-fit mb-1">
+											<div class=" self-center text-sm font-medium min-w-fit mb-1">
 												{$i18n.t('Application DN Password')}
 											</div>
 											<SensitiveInput
@@ -459,7 +446,7 @@
 									</div>
 									<div class="flex w-full gap-2">
 										<div class="w-full">
-											<div class=" self-center text-xs font-medium min-w-fit mb-1">
+											<div class=" self-center text-sm font-medium min-w-fit mb-1">
 												{$i18n.t('Attribute for Mail')}
 											</div>
 											<Tooltip
@@ -479,7 +466,7 @@
 									</div>
 									<div class="flex w-full gap-2">
 										<div class="w-full">
-											<div class=" self-center text-xs font-medium min-w-fit mb-1">
+											<div class=" self-center text-sm font-medium min-w-fit mb-1">
 												{$i18n.t('Attribute for Username')}
 											</div>
 											<Tooltip
@@ -501,7 +488,7 @@
 									</div>
 									<div class="flex w-full gap-2">
 										<div class="w-full">
-											<div class=" self-center text-xs font-medium min-w-fit mb-1">
+											<div class=" self-center text-sm font-medium min-w-fit mb-1">
 												{$i18n.t('Search Base')}
 											</div>
 											<Tooltip
@@ -519,7 +506,7 @@
 									</div>
 									<div class="flex w-full gap-2">
 										<div class="w-full">
-											<div class=" self-center text-xs font-medium min-w-fit mb-1">
+											<div class=" self-center text-sm font-medium min-w-fit mb-1">
 												{$i18n.t('Search Filters')}
 											</div>
 											<input
@@ -529,7 +516,7 @@
 											/>
 										</div>
 									</div>
-									<div class="text-xs text-gray-400 dark:text-gray-500">
+									<div class="text-sm text-gray-400 dark:text-gray-500">
 										<a
 											class=" text-gray-300 font-medium underline"
 											href="https://ldap.com/ldap-filters/"
@@ -549,7 +536,7 @@
 										{#if LDAP_SERVER.use_tls}
 											<div class="flex w-full gap-2">
 												<div class="w-full">
-													<div class=" self-center text-xs font-medium min-w-fit mb-1 mt-1">
+													<div class=" self-center text-sm font-medium min-w-fit mb-1 mt-1">
 														{$i18n.t('Certificate Path')}
 													</div>
 													<input
@@ -561,7 +548,7 @@
 											</div>
 											<div class="flex w-full gap-2">
 												<div class="w-full">
-													<div class=" self-center text-xs font-medium min-w-fit mb-1">
+													<div class=" self-center text-sm font-medium min-w-fit mb-1">
 														{$i18n.t('Ciphers')}
 													</div>
 													<Tooltip content={$i18n.t('Default to ALL')} placement="top-start">
@@ -588,7 +575,7 @@
 					<hr class=" border-gray-100 dark:border-gray-850 my-2" />
 
 					<div class="mb-2.5 flex w-full items-center justify-between pr-2">
-						<div class=" self-center text-xs font-medium">
+						<div class=" self-center text-sm font-medium">
 							{$i18n.t('Enable Community Sharing')}
 						</div>
 
@@ -596,13 +583,13 @@
 					</div>
 
 					<div class="mb-2.5 flex w-full items-center justify-between pr-2">
-						<div class=" self-center text-xs font-medium">{$i18n.t('Enable Message Rating')}</div>
+						<div class=" self-center text-sm font-medium">{$i18n.t('Enable Message Rating')}</div>
 
 						<Switch bind:state={adminConfig.ENABLE_MESSAGE_RATING} />
 					</div>
 
 					<div class="mb-2.5 flex w-full items-center justify-between pr-2">
-						<div class=" self-center text-xs font-medium">
+						<div class=" self-center text-sm font-medium">
 							{$i18n.t('Channels')} ({$i18n.t('Beta')})
 						</div>
 
@@ -610,7 +597,7 @@
 					</div>
 
 					<div class="mb-2.5 flex w-full items-center justify-between pr-2">
-						<div class=" self-center text-xs font-medium">
+						<div class=" self-center text-sm font-medium">
 							{$i18n.t('User Webhooks')}
 						</div>
 
@@ -619,7 +606,7 @@
 
 					<div class="mb-2.5 w-full justify-between">
 						<div class="flex w-full justify-between">
-							<div class=" self-center text-xs font-medium">{$i18n.t('WebUI URL')}</div>
+							<div class=" self-center text-sm font-medium">{$i18n.t('WebUI URL')}</div>
 						</div>
 
 						<div class="flex mt-2 space-x-2">
@@ -631,7 +618,7 @@
 							/>
 						</div>
 
-						<div class="mt-2 text-xs text-gray-400 dark:text-gray-500">
+						<div class="mt-2 text-sm text-gray-400 dark:text-gray-500">
 							{$i18n.t(
 								'Enter the public URL of your WebUI. This URL will be used to generate links in the notifications.'
 							)}
@@ -640,7 +627,7 @@
 
 					<div class=" w-full justify-between">
 						<div class="flex w-full justify-between">
-							<div class=" self-center text-xs font-medium">{$i18n.t('Webhook URL')}</div>
+							<div class=" self-center text-sm font-medium">{$i18n.t('Webhook URL')}</div>
 						</div>
 
 						<div class="flex mt-2 space-x-2">
@@ -659,7 +646,7 @@
 
 	<div class="flex justify-end pt-3 text-sm font-medium">
 		<button
-			class="px-3.5 py-1.5 text-sm font-medium bg-black hover:bg-gray-900 text-white dark:bg-white dark:text-black dark:hover:bg-gray-100 transition rounded-full"
+			class="px-3.5 py-1.5 text-sm font-medium bg-black hover:bg-gray-900 text-white dark:bg-white dark:text-black dark:hover:bg-gray-100 transition rounded-lg"
 			type="submit"
 		>
 			{$i18n.t('Save')}

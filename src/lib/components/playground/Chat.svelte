@@ -209,8 +209,9 @@
 	});
 </script>
 
-<div class=" flex flex-col justify-between w-full overflow-y-auto h-full">
-	<div class="mx-auto w-full md:px-0 h-full relative">
+<div class="w-full max-h-full overflow-y-auto">
+	<div class="flex flex-col max-w-4xl mx-auto mt-6 mb-10">
+		<!-- Settings Sidebar -->
 		<Sidebar bind:show={showSettings} className=" bg-white dark:bg-gray-900" width="300px">
 			<div class="flex flex-col px-5 py-3 text-sm">
 				<div class="flex justify-between items-center mb-2">
@@ -218,7 +219,7 @@
 
 					<div class=" translate-x-1.5">
 						<button
-							class="p-1.5 bg-transparent hover:bg-white/5 transition rounded-lg"
+							class="p-1.5 bg-transparent hover:bg-white/5 transition rounded-lg text-gray-700 dark:text-gray-300"
 							on:click={() => {
 								showSettings = !showSettings;
 							}}
@@ -247,27 +248,30 @@
 			</div>
 		</Sidebar>
 
-		<div class=" flex flex-col h-full px-3.5">
-			<div class="flex w-full items-start gap-1.5">
-				<Collapsible
-					className="w-full flex-1"
-					bind:open={showSystem}
-					buttonClassName="w-full rounded-lg text-sm border border-gray-100 dark:border-gray-850 w-full py-1 px-1.5"
-					grow={true}
-				>
+		<!-- System Instructions -->
+		<div class="w-full mb-4">
+			<div class="text-sm mb-2">{$i18n.t('System Instructions')}</div>
+			<div class="w-full mt-1">
+				<div class="flex gap-2 items-start">
+					<Collapsible
+						className="w-full flex-1"
+						bind:open={showSystem}
+						buttonClassName="w-full rounded-lg text-sm border border-gray-200 dark:border-gray-700 py-2 px-4 bg-gray-50 dark:bg-gray-850"
+						grow={true}
+					>
 					<div class="flex gap-2 justify-between items-center">
-						<div class=" shrink-0 font-medium ml-1.5">
-							{$i18n.t('System Instructions')}
-						</div>
-
-						{#if !showSystem}
-							<div class=" flex-1 text-gray-500 line-clamp-1">
-								{system}
+						{#if showSystem}
+							<div class="flex-1 text-gray-500 text-sm">
+								{$i18n.t("Enter your system instructions here...")}
+							</div>
+						{:else}
+							<div class="flex-1 text-gray-500 line-clamp-1">
+								{system || $i18n.t("Click to add system instructions")}
 							</div>
 						{/if}
 
 						<div class="shrink-0">
-							<button class="p-1.5 bg-transparent hover:bg-white/5 transition rounded-lg">
+							<button class="p-1.5 bg-transparent hover:bg-white/5 transition rounded-lg text-gray-700 dark:text-gray-300">
 								{#if showSystem}
 									<ChevronUp className="size-3.5" />
 								{:else}
@@ -277,57 +281,64 @@
 						</div>
 					</div>
 
-					<div slot="content">
-						<div class="pt-1 px-1.5">
-							<textarea
-								bind:this={systemTextareaElement}
-								class="w-full h-full bg-transparent resize-none outline-hidden text-sm"
-								bind:value={system}
-								placeholder={$i18n.t("You're a helpful assistant.")}
-								on:input={() => {
-									resizeSystemTextarea();
-								}}
-								rows="4"
-							/>
+						<div slot="content">
+							<div class="pt-1 px-1.5">
+								<textarea
+									bind:this={systemTextareaElement}
+									class="w-full h-full bg-transparent resize-none outline-hidden text-sm"
+									bind:value={system}
+									placeholder={$i18n.t("You're a helpful assistant.")}
+									on:input={() => {
+										resizeSystemTextarea();
+									}}
+									rows="4"
+								/>
+							</div>
+						</div>
+					</Collapsible>
+
+					<!-- Settings Button -->
+					<div class="translate-y-1">
+						<button
+							class="p-1.5 bg-transparent hover:bg-white/5 transition rounded-lg text-gray-700 dark:text-gray-300"
+							on:click={() => {
+								showSettings = !showSettings;
+							}}
+						>
+							<Cog6 />
+						</button>
+					</div>
+				</div>
+			</div>
+		</div>
+
+		<!-- Messages Container -->
+		<div class="w-full mb-4">
+			<div class="text-sm mb-2">{$i18n.t('Messages')}</div>
+			<div class="w-full mt-1">
+				<div
+					class="w-full rounded-lg bg-gray-50 dark:bg-gray-850 h-[400px] overflow-hidden"
+					id="messages-container"
+					bind:this={messagesContainerElement}
+				>
+					<div class="h-full w-full flex flex-col p-3">
+						<div class="flex-1 overflow-auto">
+							<Messages bind:messages />
 						</div>
 					</div>
-				</Collapsible>
-
-				<div class="translate-y-1">
-					<button
-						class="p-1.5 bg-transparent hover:bg-white/5 transition rounded-lg"
-						on:click={() => {
-							showSettings = !showSettings;
-						}}
-					>
-						<Cog6 />
-					</button>
 				</div>
 			</div>
+		</div>
 
-			<div
-				class=" pb-2.5 flex flex-col justify-between w-full flex-auto overflow-auto h-0"
-				id="messages-container"
-				bind:this={messagesContainerElement}
-			>
-				<div class=" h-full w-full flex flex-col">
-					<div class="flex-1 p-1">
-						<Messages bind:messages />
-					</div>
-				</div>
-			</div>
-
-			<div class="pb-3">
-				<div class="text-xs font-medium text-gray-500 px-2 py-1">
-					{selectedModelId}
-				</div>
-				<div class="border border-gray-100 dark:border-gray-850 w-full px-3 py-2.5 rounded-xl">
-					<div class="py-0.5">
-						<!-- $i18n.t('a user') -->
-						<!-- $i18n.t('an assistant') -->
+		<!-- Input Area -->
+		<div class="w-full mb-4">
+			<div class="text-sm mb-2">{$i18n.t('Add Message')}</div>
+			<div class="w-full mt-1">
+				<div class="w-full rounded-lg bg-gray-50 dark:bg-gray-850 p-3">
+					<div class="mb-3">
 						<textarea
 							bind:value={message}
-							class=" w-full h-full bg-transparent resize-none outline-hidden text-sm"
+							class="w-full h-full bg-transparent resize-none outline-hidden text-sm"
 							placeholder={$i18n.t(`Enter {{role}} message here`, {
 								role: role === 'user' ? $i18n.t('a user') : $i18n.t('an assistant')
 							})}
@@ -346,7 +357,7 @@
 					<div class="flex justify-between">
 						<div>
 							<button
-								class="px-3.5 py-1.5 text-sm font-medium bg-gray-50 hover:bg-gray-100 text-gray-900 dark:bg-gray-850 dark:hover:bg-gray-800 dark:text-gray-200 transition rounded-lg"
+								class="w-20 px-3.5 py-1.5 text-sm font-medium bg-gray-100 hover:bg-gray-200 text-gray-900 dark:bg-gray-700 dark:hover:bg-gray-600 dark:text-gray-200 transition rounded-lg"
 								on:click={() => {
 									role = role === 'user' ? 'assistant' : 'user';
 								}}
@@ -359,11 +370,11 @@
 							</button>
 						</div>
 
-						<div>
+						<div class="flex gap-2">
 							{#if !loading}
 								<button
 									disabled={message === ''}
-									class="px-3.5 py-1.5 text-sm font-medium disabled:bg-gray-50 dark:disabled:hover:bg-gray-850 disabled:cursor-not-allowed bg-gray-50 hover:bg-gray-100 text-gray-900 dark:bg-gray-850 dark:hover:bg-gray-800 dark:text-gray-200 transition rounded-lg"
+									class="w-20 px-3.5 py-1.5 text-sm font-medium disabled:bg-gray-100 dark:disabled:hover:bg-gray-700 disabled:cursor-not-allowed bg-gray-100 hover:bg-gray-200 text-gray-900 dark:bg-gray-700 dark:hover:bg-gray-600 dark:text-gray-200 transition rounded-lg"
 									on:click={() => {
 										addHandler();
 										role = role === 'user' ? 'assistant' : 'user';
@@ -373,7 +384,7 @@
 								</button>
 
 								<button
-									class="px-3.5 py-1.5 text-sm font-medium bg-black hover:bg-gray-900 text-white dark:bg-white dark:text-black dark:hover:bg-gray-100 transition rounded-lg"
+									class="w-20 px-3.5 py-1.5 text-sm font-medium bg-gray-800 dark:bg-gray-700 text-white rounded-lg hover:bg-gray-900 dark:hover:bg-gray-600 transition-colors"
 									on:click={() => {
 										submitHandler();
 									}}
@@ -382,7 +393,7 @@
 								</button>
 							{:else}
 								<button
-									class="px-3 py-1.5 text-sm font-medium bg-gray-300 text-black transition rounded-lg"
+									class="w-20 px-3.5 py-1.5 text-sm font-medium bg-gray-300 text-black transition rounded-lg"
 									on:click={() => {
 										stopResponse();
 									}}

@@ -224,7 +224,7 @@
 	<div class="overflow-y-scroll scrollbar-hidden h-full">
 		{#if PIPELINES_LIST !== null}
 			<div class="flex w-full justify-between mb-2">
-				<div class=" self-center text-sm font-semibold">
+				<div class=" self-center text-base font-semibold">
 					{$i18n.t('Manage Pipelines')}
 				</div>
 			</div>
@@ -257,7 +257,7 @@
 				</div>
 
 				<div class=" my-2">
-					<div class=" mb-2 text-sm font-medium">
+					<div class=" mb-2 text-base font-medium">
 						{$i18n.t('Upload Pipeline')}
 					</div>
 					<div class="flex w-full">
@@ -271,7 +271,7 @@
 							/>
 
 							<button
-								class="w-full text-sm font-medium py-2 bg-transparent hover:bg-gray-100 border border-dashed dark:border-gray-850 dark:hover:bg-gray-850 text-center rounded-xl"
+								class="w-full text-base font-medium py-2 bg-transparent hover:bg-gray-100 border border-dashed dark:border-gray-850 dark:hover:bg-gray-850 text-center rounded-xl"
 								type="button"
 								on:click={() => {
 									document.getElementById('pipelines-upload-input')?.click();
@@ -342,7 +342,7 @@
 				</div>
 
 				<div class=" my-2">
-					<div class=" mb-2 text-sm font-medium">
+					<div class=" mb-2 text-base font-medium">
 						{$i18n.t('Install from Github URL')}
 					</div>
 					<div class="flex w-full">
@@ -409,7 +409,7 @@
 						</button>
 					</div>
 
-					<div class="mt-2 text-xs text-gray-500">
+					<div class="mt-2 text-sm text-gray-500">
 						<span class=" font-semibold dark:text-gray-200">Warning:</span> Pipelines are a plugin
 						system with arbitrary code execution —
 						<span class=" font-medium dark:text-gray-400"
@@ -423,7 +423,7 @@
 				{#if pipelines !== null}
 					{#if pipelines.length > 0}
 						<div class="flex w-full justify-between mb-2">
-							<div class=" self-center text-sm font-semibold">
+							<div class=" self-center text-base font-semibold">
 								{$i18n.t('Pipelines Valves')}
 							</div>
 						</div>
@@ -477,12 +477,12 @@
 										{#each Object.keys(valves_spec.properties) as property, idx}
 											<div class=" py-0.5 w-full justify-between">
 												<div class="flex w-full justify-between">
-													<div class=" self-center text-xs font-medium">
+													<div class=" self-center text-base font-medium">
 														{valves_spec.properties[property].title}
 													</div>
 
 													<button
-														class="p-1 px-3 text-xs flex rounded-sm transition"
+														class="p-1 px-3 text-sm flex rounded-sm transition"
 														type="button"
 														on:click={() => {
 															valves[property] = (valves[property] ?? null) === null ? '' : null;
@@ -513,7 +513,7 @@
 																</select>
 															{:else if (valves_spec.properties[property]?.type ?? null) === 'boolean'}
 																<div class="flex justify-between items-center">
-																	<div class="text-xs text-gray-500">
+																	<div class="text-sm text-gray-500">
 																		{valves[property] ? 'Enabled' : 'Disabled'}
 																	</div>
 
@@ -567,11 +567,11 @@
 	</div>
 
 	{#if PIPELINES_LIST !== null && PIPELINES_LIST.length > 0}
-		<div class="flex justify-end pt-3 text-sm font-medium">
-			<button
-				class="px-3.5 py-1.5 text-sm font-medium bg-black hover:bg-gray-900 text-white dark:bg-white dark:text-black dark:hover:bg-gray-100 transition rounded-full"
-				type="submit"
-			>
+		<div class="flex justify-end pt-3 text-base font-medium">
+		<button
+			class="px-3.5 py-1.5 text-base font-medium bg-black hover:bg-gray-900 text-white dark:bg-white dark:text-black dark:hover:bg-gray-100 transition rounded-lg"
+			type="submit"
+		>
 				{$i18n.t('Save')}
 			</button>
 		</div>

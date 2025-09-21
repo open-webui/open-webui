@@ -349,14 +349,14 @@
 
 	<div class=" space-y-3 overflow-y-scroll max-h-[28rem] lg:max-h-full">
 		<div>
-			<div class=" mb-1.5 text-sm font-medium">{$i18n.t('UI')}</div>
+			<div class=" mb-1.5 text-base font-medium">{$i18n.t('UI')}</div>
 
 			<div>
 				<div class=" py-0.5 flex w-full justify-between">
-					<div class=" self-center text-xs">{$i18n.t('Landing Page Mode')}</div>
+					<div class=" self-center text-sm">{$i18n.t('Landing Page Mode')}</div>
 
 					<button
-						class="p-1 px-3 text-xs flex rounded-sm transition"
+						class="p-1 px-3 text-sm flex rounded-sm transition"
 						on:click={() => {
 							toggleLandingPageMode();
 						}}
@@ -373,10 +373,10 @@
 
 			<div>
 				<div class=" py-0.5 flex w-full justify-between">
-					<div class=" self-center text-xs">{$i18n.t('Chat Bubble UI')}</div>
+					<div class=" self-center text-sm">{$i18n.t('Chat Bubble UI')}</div>
 
 					<button
-						class="p-1 px-3 text-xs flex rounded-sm transition"
+						class="p-1 px-3 text-sm flex rounded-sm transition"
 						on:click={() => {
 							toggleChatBubble();
 						}}
@@ -394,12 +394,12 @@
 			{#if !$settings.chatBubble}
 				<div>
 					<div class=" py-0.5 flex w-full justify-between">
-						<div class=" self-center text-xs">
+						<div class=" self-center text-sm">
 							{$i18n.t('Display the username instead of You in the Chat')}
 						</div>
 
 						<button
-							class="p-1 px-3 text-xs flex rounded-sm transition"
+							class="p-1 px-3 text-sm flex rounded-sm transition"
 							on:click={() => {
 								toggleShowUsername();
 							}}
@@ -417,10 +417,10 @@
 
 			<div>
 				<div class=" py-0.5 flex w-full justify-between">
-					<div class=" self-center text-xs">{$i18n.t('Widescreen Mode')}</div>
+					<div class=" self-center text-sm">{$i18n.t('Widescreen Mode')}</div>
 
 					<button
-						class="p-1 px-3 text-xs flex rounded-sm transition"
+						class="p-1 px-3 text-sm flex rounded-sm transition"
 						on:click={() => {
 							toggleWidescreenMode();
 						}}
@@ -437,10 +437,10 @@
 
 			<div>
 				<div class=" py-0.5 flex w-full justify-between">
-					<div class=" self-center text-xs">{$i18n.t('Chat direction')}</div>
+					<div class=" self-center text-sm">{$i18n.t('Chat direction')}</div>
 
 					<button
-						class="p-1 px-3 text-xs flex rounded-sm transition"
+						class="p-1 px-3 text-sm flex rounded-sm transition"
 						on:click={toggleChangeChatDirection}
 						type="button"
 					>
@@ -457,12 +457,12 @@
 
 			<div>
 				<div class=" py-0.5 flex w-full justify-between">
-					<div class=" self-center text-xs">
+					<div class=" self-center text-sm">
 						{$i18n.t('Notification Sound')}
 					</div>
 
 					<button
-						class="p-1 px-3 text-xs flex rounded-sm transition"
+						class="p-1 px-3 text-sm flex rounded-sm transition"
 						on:click={() => {
 							toggleNotificationSound();
 						}}
@@ -480,12 +480,12 @@
 			{#if $user?.role === 'admin'}
 				<div>
 					<div class=" py-0.5 flex w-full justify-between">
-						<div class=" self-center text-xs">
+						<div class=" self-center text-sm">
 							{$i18n.t('Toast notifications for new updates')}
 						</div>
 
 						<button
-							class="p-1 px-3 text-xs flex rounded-sm transition"
+							class="p-1 px-3 text-sm flex rounded-sm transition"
 							on:click={() => {
 								toggleShowUpdateToast();
 							}}
@@ -502,12 +502,12 @@
 
 				<div>
 					<div class=" py-0.5 flex w-full justify-between">
-						<div class=" self-center text-xs">
+						<div class=" self-center text-sm">
 							{$i18n.t(`Show "What's New" modal on login`)}
 						</div>
 
 						<button
-							class="p-1 px-3 text-xs flex rounded-sm transition"
+							class="p-1 px-3 text-sm flex rounded-sm transition"
 							on:click={() => {
 								toggleShowChangelog();
 							}}
@@ -523,14 +523,14 @@
 				</div>
 			{/if}
 
-			<div class=" my-1.5 text-sm font-medium">{$i18n.t('Chat')}</div>
+			<div class=" my-1.5 text-base font-medium">{$i18n.t('Chat')}</div>
 
 			<div>
 				<div class=" py-0.5 flex w-full justify-between">
-					<div class=" self-center text-xs">{$i18n.t('Title Auto-Generation')}</div>
+					<div class=" self-center text-sm">{$i18n.t('Title Auto-Generation')}</div>
 
 					<button
-						class="p-1 px-3 text-xs flex rounded-sm transition"
+						class="p-1 px-3 text-sm flex rounded-sm transition"
 						on:click={() => {
 							toggleTitleAutoGenerate();
 						}}
@@ -547,10 +547,10 @@
 
 			<div>
 				<div class=" py-0.5 flex w-full justify-between">
-					<div class=" self-center text-xs">{$i18n.t('Chat Tags Auto-Generation')}</div>
+					<div class=" self-center text-sm">{$i18n.t('Chat Tags Auto-Generation')}</div>
 
 					<button
-						class="p-1 px-3 text-xs flex rounded-sm transition"
+						class="p-1 px-3 text-sm flex rounded-sm transition"
 						on:click={() => {
 							toggleAutoTags();
 						}}
@@ -567,12 +567,12 @@
 
 			<div>
 				<div class=" py-0.5 flex w-full justify-between">
-					<div class=" self-center text-xs">
+					<div class=" self-center text-sm">
 						{$i18n.t('Detect Artifacts Automatically')}
 					</div>
 
 					<button
-						class="p-1 px-3 text-xs flex rounded-sm transition"
+						class="p-1 px-3 text-sm flex rounded-sm transition"
 						on:click={() => {
 							toggleDetectArtifacts();
 						}}
@@ -589,12 +589,12 @@
 
 			<div>
 				<div class=" py-0.5 flex w-full justify-between">
-					<div class=" self-center text-xs">
+					<div class=" self-center text-sm">
 						{$i18n.t('Auto-Copy Response to Clipboard')}
 					</div>
 
 					<button
-						class="p-1 px-3 text-xs flex rounded-sm transition"
+						class="p-1 px-3 text-sm flex rounded-sm transition"
 						on:click={() => {
 							toggleResponseAutoCopy();
 						}}
@@ -611,12 +611,12 @@
 
 			<div>
 				<div class=" py-0.5 flex w-full justify-between">
-					<div class=" self-center text-xs">
+					<div class=" self-center text-sm">
 						{$i18n.t('Rich Text Input for Chat')}
 					</div>
 
 					<button
-						class="p-1 px-3 text-xs flex rounded-sm transition"
+						class="p-1 px-3 text-sm flex rounded-sm transition"
 						on:click={() => {
 							toggleRichTextInput();
 						}}
@@ -634,12 +634,12 @@
 			{#if $config?.features?.enable_autocomplete_generation && richTextInput}
 				<div>
 					<div class=" py-0.5 flex w-full justify-between">
-						<div class=" self-center text-xs">
+						<div class=" self-center text-sm">
 							{$i18n.t('Prompt Autocompletion')}
 						</div>
 
 						<button
-							class="p-1 px-3 text-xs flex rounded-sm transition"
+							class="p-1 px-3 text-sm flex rounded-sm transition"
 							on:click={() => {
 								togglePromptAutocomplete();
 							}}
@@ -657,12 +657,12 @@
 
 			<div>
 				<div class=" py-0.5 flex w-full justify-between">
-					<div class=" self-center text-xs">
+					<div class=" self-center text-sm">
 						{$i18n.t('Paste Large Text as File')}
 					</div>
 
 					<button
-						class="p-1 px-3 text-xs flex rounded-sm transition"
+						class="p-1 px-3 text-sm flex rounded-sm transition"
 						on:click={() => {
 							toggleLargeTextAsFile();
 						}}
@@ -679,12 +679,12 @@
 
 			<div>
 				<div class=" py-0.5 flex w-full justify-between">
-					<div class=" self-center text-xs">
+					<div class=" self-center text-sm">
 						{$i18n.t('Copy Formatted Text')}
 					</div>
 
 					<button
-						class="p-1 px-3 text-xs flex rounded-sm transition"
+						class="p-1 px-3 text-sm flex rounded-sm transition"
 						on:click={() => {
 							toggleCopyFormatted();
 						}}
@@ -701,10 +701,10 @@
 
 			<div>
 				<div class=" py-0.5 flex w-full justify-between">
-					<div class=" self-center text-xs">{$i18n.t('Always Collapse Code Blocks')}</div>
+					<div class=" self-center text-sm">{$i18n.t('Always Collapse Code Blocks')}</div>
 
 					<button
-						class="p-1 px-3 text-xs flex rounded-sm transition"
+						class="p-1 px-3 text-sm flex rounded-sm transition"
 						on:click={() => {
 							toggleCollapseCodeBlocks();
 						}}
@@ -721,10 +721,10 @@
 
 			<div>
 				<div class=" py-0.5 flex w-full justify-between">
-					<div class=" self-center text-xs">{$i18n.t('Always Expand Details')}</div>
+					<div class=" self-center text-sm">{$i18n.t('Always Expand Details')}</div>
 
 					<button
-						class="p-1 px-3 text-xs flex rounded-sm transition"
+						class="p-1 px-3 text-sm flex rounded-sm transition"
 						on:click={() => {
 							toggleExpandDetails();
 						}}
@@ -741,12 +741,12 @@
 
 			<div>
 				<div class=" py-0.5 flex w-full justify-between">
-					<div class=" self-center text-xs">
+					<div class=" self-center text-sm">
 						{$i18n.t('Chat Background Image')}
 					</div>
 
 					<button
-						class="p-1 px-3 text-xs flex rounded-sm transition"
+						class="p-1 px-3 text-sm flex rounded-sm transition"
 						on:click={() => {
 							if (backgroundImageUrl !== null) {
 								backgroundImageUrl = null;
@@ -768,10 +768,10 @@
 
 			<div>
 				<div class=" py-0.5 flex w-full justify-between">
-					<div class=" self-center text-xs">{$i18n.t('Allow User Location')}</div>
+					<div class=" self-center text-sm">{$i18n.t('Allow User Location')}</div>
 
 					<button
-						class="p-1 px-3 text-xs flex rounded-sm transition"
+						class="p-1 px-3 text-sm flex rounded-sm transition"
 						on:click={() => {
 							toggleUserLocation();
 						}}
@@ -788,12 +788,12 @@
 
 			<div>
 				<div class=" py-0.5 flex w-full justify-between">
-					<div class=" self-center text-xs">
+					<div class=" self-center text-sm">
 						{$i18n.t('Haptic Feedback')} ({$i18n.t('Android')})
 					</div>
 
 					<button
-						class="p-1 px-3 text-xs flex rounded-sm transition"
+						class="p-1 px-3 text-sm flex rounded-sm transition"
 						on:click={() => {
 							toggleHapticFeedback();
 						}}
@@ -810,12 +810,12 @@
 
 			<!-- <div>
 				<div class=" py-0.5 flex w-full justify-between">
-					<div class=" self-center text-xs">
+					<div class=" self-center text-sm">
 						{$i18n.t('Fluidly stream large external response chunks')}
 					</div>
 
 					<button
-						class="p-1 px-3 text-xs flex rounded-sm transition"
+						class="p-1 px-3 text-sm flex rounded-sm transition"
 						on:click={() => {
 							toggleSplitLargeChunks();
 						}}
@@ -832,12 +832,12 @@
 
 			<div>
 				<div class=" py-0.5 flex w-full justify-between">
-					<div class=" self-center text-xs">
+					<div class=" self-center text-sm">
 						{$i18n.t('Enter Key Behavior')}
 					</div>
 
 					<button
-						class="p-1 px-3 text-xs flex rounded transition"
+						class="p-1 px-3 text-sm flex rounded transition"
 						on:click={() => {
 							togglectrlEnterToSend();
 						}}
@@ -854,12 +854,12 @@
 
 			<div>
 				<div class=" py-0.5 flex w-full justify-between">
-					<div class=" self-center text-xs">
+					<div class=" self-center text-sm">
 						{$i18n.t('Scroll to bottom when switching between branches')}
 					</div>
 
 					<button
-						class="p-1 px-3 text-xs flex rounded-sm transition"
+						class="p-1 px-3 text-sm flex rounded-sm transition"
 						on:click={() => {
 							togglesScrollOnBranchChange();
 						}}
@@ -876,10 +876,10 @@
 
 			<div>
 				<div class=" py-0.5 flex w-full justify-between">
-					<div class=" self-center text-xs">{$i18n.t('Web Search in Chat')}</div>
+					<div class=" self-center text-sm">{$i18n.t('Web Search in Chat')}</div>
 
 					<button
-						class="p-1 px-3 text-xs flex rounded-sm transition"
+						class="p-1 px-3 text-sm flex rounded-sm transition"
 						on:click={() => {
 							toggleWebSearch();
 						}}
@@ -896,10 +896,10 @@
 
 			<div>
 				<div class=" py-0.5 flex w-full justify-between">
-					<div class=" self-center text-xs">{$i18n.t('iframe Sandbox Allow Same Origin')}</div>
+					<div class=" self-center text-sm">{$i18n.t('iframe Sandbox Allow Same Origin')}</div>
 
 					<button
-						class="p-1 px-3 text-xs flex rounded-sm transition"
+						class="p-1 px-3 text-sm flex rounded-sm transition"
 						on:click={() => {
 							toggleIframeSandboxAllowSameOrigin();
 						}}
@@ -916,10 +916,10 @@
 
 			<div>
 				<div class=" py-0.5 flex w-full justify-between">
-					<div class=" self-center text-xs">{$i18n.t('iframe Sandbox Allow Forms')}</div>
+					<div class=" self-center text-sm">{$i18n.t('iframe Sandbox Allow Forms')}</div>
 
 					<button
-						class="p-1 px-3 text-xs flex rounded-sm transition"
+						class="p-1 px-3 text-sm flex rounded-sm transition"
 						on:click={() => {
 							toggleIframeSandboxAllowForms();
 						}}
@@ -938,10 +938,10 @@
 
 			<div>
 				<div class=" py-0.5 flex w-full justify-between">
-					<div class=" self-center text-xs">{$i18n.t('Allow Voice Interruption in Call')}</div>
+					<div class=" self-center text-sm">{$i18n.t('Allow Voice Interruption in Call')}</div>
 
 					<button
-						class="p-1 px-3 text-xs flex rounded-sm transition"
+						class="p-1 px-3 text-sm flex rounded-sm transition"
 						on:click={() => {
 							toggleVoiceInterruption();
 						}}
@@ -958,10 +958,10 @@
 
 			<div>
 				<div class=" py-0.5 flex w-full justify-between">
-					<div class=" self-center text-xs">{$i18n.t('Display Emoji in Call')}</div>
+					<div class=" self-center text-sm">{$i18n.t('Display Emoji in Call')}</div>
 
 					<button
-						class="p-1 px-3 text-xs flex rounded-sm transition"
+						class="p-1 px-3 text-sm flex rounded-sm transition"
 						on:click={() => {
 							toggleEmojiInCall();
 						}}
@@ -980,10 +980,10 @@
 
 			<div>
 				<div class=" py-0.5 flex w-full justify-between">
-					<div class=" self-center text-xs">{$i18n.t('Image Compression')}</div>
+					<div class=" self-center text-sm">{$i18n.t('Image Compression')}</div>
 
 					<button
-						class="p-1 px-3 text-xs flex rounded-sm transition"
+						class="p-1 px-3 text-sm flex rounded-sm transition"
 						on:click={() => {
 							toggleImageCompression();
 						}}
@@ -1000,8 +1000,8 @@
 
 			{#if imageCompression}
 				<div>
-					<div class=" py-0.5 flex w-full justify-between text-xs">
-						<div class=" self-center text-xs">{$i18n.t('Image Max Compression Size')}</div>
+					<div class=" py-0.5 flex w-full justify-between text-sm">
+						<div class=" self-center text-sm">{$i18n.t('Image Max Compression Size')}</div>
 
 						<div>
 							<input
@@ -1027,7 +1027,7 @@
 
 	<div class="flex justify-end text-sm font-medium">
 		<button
-			class="px-3.5 py-1.5 text-sm font-medium bg-black hover:bg-gray-900 text-white dark:bg-white dark:text-black dark:hover:bg-gray-100 transition rounded-full"
+			class="px-3.5 py-1.5 text-sm font-medium bg-black hover:bg-gray-900 text-white dark:bg-white dark:text-black dark:hover:bg-gray-100 transition rounded-lg"
 			type="submit"
 		>
 			{$i18n.t('Save')}

@@ -101,7 +101,7 @@ export const USAGE_POOL: Writable<null | string[]> = writable(null);
 
 /**
  * 主题偏好
- * - 可选值：'system' | 'light' | 'dark' | 其他自定义主题键（如 'oled-dark' / 'her'）
+ * - 可选值：'system' | 'light' | 'dark'
  * - 与 app.html 中的启动脚本配合，控制 &lt;html&gt; 上的主题类名与 meta theme-color
  */
 export const theme = writable('system');

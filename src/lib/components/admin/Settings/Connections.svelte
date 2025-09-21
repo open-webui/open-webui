@@ -42,6 +42,8 @@
 	let ENABLE_OLLAMA_API: null | boolean = null;
 
 	let directConnectionsConfig = null;
+	let loading = true;
+	let error = null;
 
 	let pipelineUrls = {};
 	let showAddOpenAIConnectionModal = false;
@@ -137,58 +139,87 @@
 
 	onMount(async () => {
 		if ($user?.role === 'admin') {
-			let ollamaConfig = {};
-			let openaiConfig = {};
+			try {
+				loading = true;
+				error = null;
+				
+				let ollamaConfig = {};
+				let openaiConfig = {};
 
-			await Promise.all([
-				(async () => {
-					ollamaConfig = await getOllamaConfig(localStorage.token);
-				})(),
-				(async () => {
-					openaiConfig = await getOpenAIConfig(localStorage.token);
-				})(),
-				(async () => {
-					directConnectionsConfig = await getDirectConnectionsConfig(localStorage.token);
-				})()
-			]);
+				await Promise.all([
+					(async () => {
+						try {
+							ollamaConfig = await getOllamaConfig(localStorage.token);
+						} catch (err) {
+							console.error('Failed to load Ollama config:', err);
+							ollamaConfig = { ENABLE_OLLAMA_API: false, OLLAMA_BASE_URLS: [''], OLLAMA_API_CONFIGS: {} };
+						}
+					})(),
+					(async () => {
+						try {
+							openaiConfig = await getOpenAIConfig(localStorage.token);
+						} catch (err) {
+							console.error('Failed to load OpenAI config:', err);
+							openaiConfig = { ENABLE_OPENAI_API: false, OPENAI_API_BASE_URLS: [''], OPENAI_API_KEYS: [''], OPENAI_API_CONFIGS: {} };
+						}
+					})(),
+					(async () => {
+						try {
+							directConnectionsConfig = await getDirectConnectionsConfig(localStorage.token);
+						} catch (err) {
+							console.error('Failed to load Direct Connections config:', err);
+							directConnectionsConfig = { ENABLE_DIRECT_CONNECTIONS: false };
+						}
+					})()
+				]);
 
-			ENABLE_OPENAI_API = openaiConfig.ENABLE_OPENAI_API;
-			ENABLE_OLLAMA_API = ollamaConfig.ENABLE_OLLAMA_API;
+				ENABLE_OPENAI_API = openaiConfig.ENABLE_OPENAI_API;
+				ENABLE_OLLAMA_API = ollamaConfig.ENABLE_OLLAMA_API;
 
-			OPENAI_API_BASE_URLS = openaiConfig.OPENAI_API_BASE_URLS;
-			OPENAI_API_KEYS = openaiConfig.OPENAI_API_KEYS;
-			OPENAI_API_CONFIGS = openaiConfig.OPENAI_API_CONFIGS;
+				OPENAI_API_BASE_URLS = openaiConfig.OPENAI_API_BASE_URLS || [''];
+				OPENAI_API_KEYS = openaiConfig.OPENAI_API_KEYS || [''];
+				OPENAI_API_CONFIGS = openaiConfig.OPENAI_API_CONFIGS || {};
 
-			OLLAMA_BASE_URLS = ollamaConfig.OLLAMA_BASE_URLS;
-			OLLAMA_API_CONFIGS = ollamaConfig.OLLAMA_API_CONFIGS;
+				OLLAMA_BASE_URLS = ollamaConfig.OLLAMA_BASE_URLS || [''];
+				OLLAMA_API_CONFIGS = ollamaConfig.OLLAMA_API_CONFIGS || {};
 
-			if (ENABLE_OPENAI_API) {
-				// get url and idx
-				for (const [idx, url] of OPENAI_API_BASE_URLS.entries()) {
-					if (!OPENAI_API_CONFIGS[idx]) {
-						// Legacy support, url as key
-						OPENAI_API_CONFIGS[idx] = OPENAI_API_CONFIGS[url] || {};
+				if (ENABLE_OPENAI_API) {
+					// get url and idx
+					for (const [idx, url] of OPENAI_API_BASE_URLS.entries()) {
+						if (!OPENAI_API_CONFIGS[idx]) {
+							// Legacy support, url as key
+							OPENAI_API_CONFIGS[idx] = OPENAI_API_CONFIGS[url] || {};
+						}
 					}
+
+					OPENAI_API_BASE_URLS.forEach(async (url, idx) => {
+						OPENAI_API_CONFIGS[idx] = OPENAI_API_CONFIGS[idx] || {};
+						if (!(OPENAI_API_CONFIGS[idx]?.enable ?? true)) {
+							return;
+						}
+						try {
+							const res = await getOpenAIModels(localStorage.token, idx);
+							if (res.pipelines) {
+								pipelineUrls[url] = true;
+							}
+						} catch (err) {
+							console.error('Failed to load OpenAI models:', err);
+						}
+					});
 				}
 
-				OPENAI_API_BASE_URLS.forEach(async (url, idx) => {
-					OPENAI_API_CONFIGS[idx] = OPENAI_API_CONFIGS[idx] || {};
-					if (!(OPENAI_API_CONFIGS[idx]?.enable ?? true)) {
-						return;
-					}
-					const res = await getOpenAIModels(localStorage.token, idx);
-					if (res.pipelines) {
-						pipelineUrls[url] = true;
-					}
-				});
-			}
-
-			if (ENABLE_OLLAMA_API) {
-				for (const [idx, url] of OLLAMA_BASE_URLS.entries()) {
-					if (!OLLAMA_API_CONFIGS[idx]) {
-						OLLAMA_API_CONFIGS[idx] = OLLAMA_API_CONFIGS[url] || {};
+				if (ENABLE_OLLAMA_API) {
+					for (const [idx, url] of OLLAMA_BASE_URLS.entries()) {
+						if (!OLLAMA_API_CONFIGS[idx]) {
+							OLLAMA_API_CONFIGS[idx] = OLLAMA_API_CONFIGS[url] || {};
+						}
 					}
 				}
+			} catch (err) {
+				console.error('Failed to load connections config:', err);
+				error = 'Failed to load connections configuration';
+			} finally {
+				loading = false;
 			}
 		}
 	});
@@ -215,7 +246,30 @@
 
 <form class="flex flex-col h-full justify-between text-sm" on:submit|preventDefault={submitHandler}>
 	<div class=" overflow-y-scroll scrollbar-hidden h-full">
-		{#if ENABLE_OPENAI_API !== null && ENABLE_OLLAMA_API !== null && directConnectionsConfig !== null}
+		{#if loading}
+			<div class="flex h-full justify-center">
+				<div class="my-auto">
+					<Spinner className="size-6" />
+				</div>
+			</div>
+		{:else if error}
+			<div class="flex h-full justify-center">
+				<div class="my-auto text-center">
+					<div class="text-red-500 text-sm mb-2">{error}</div>
+					<button 
+						class="px-3 py-1 bg-gray-100 dark:bg-gray-800 rounded text-sm"
+						on:click={() => {
+							loading = true;
+							error = null;
+							// Retry loading by reloading the page
+							window.location.reload();
+						}}
+					>
+						Retry
+					</button>
+				</div>
+			</div>
+		{:else if ENABLE_OPENAI_API !== null && ENABLE_OLLAMA_API !== null && directConnectionsConfig !== null}
 			<div class="my-2">
 				<div class="mt-2 space-y-2 pr-1.5">
 					<div class="flex justify-between items-center text-sm">
@@ -344,7 +398,7 @@
 							</div>
 						</div>
 
-						<div class="mt-1 text-xs text-gray-400 dark:text-gray-500">
+						<div class="mt-1 text-sm text-gray-400 dark:text-gray-500">
 							{$i18n.t('Trouble accessing Ollama?')}
 							<a
 								class=" text-gray-300 font-medium underline"
@@ -377,25 +431,19 @@
 				</div>
 
 				<div class="mt-1.5">
-					<div class="text-xs text-gray-500">
+					<div class="text-sm text-gray-500">
 						{$i18n.t(
 							'Direct Connections allow users to connect to their own OpenAI compatible API endpoints.'
 						)}
 					</div>
 				</div>
 			</div>
-		{:else}
-			<div class="flex h-full justify-center">
-				<div class="my-auto">
-					<Spinner className="size-6" />
-				</div>
-			</div>
 		{/if}
 	</div>
 
-	<div class="flex justify-end pt-3 text-sm font-medium">
+	<div class="flex justify-end pt-3 text-base font-medium">
 		<button
-			class="px-3.5 py-1.5 text-sm font-medium bg-black hover:bg-gray-900 text-white dark:bg-white dark:text-black dark:hover:bg-gray-100 transition rounded-full"
+			class="px-3.5 py-1.5 text-base font-medium bg-black hover:bg-gray-900 text-white dark:bg-white dark:text-black dark:hover:bg-gray-100 transition rounded-lg"
 			type="submit"
 		>
 			{$i18n.t('Save')}
