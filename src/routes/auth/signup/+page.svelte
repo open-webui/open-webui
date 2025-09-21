@@ -45,7 +45,6 @@
 	};
 
 	const signUpHandler = async () => {
-		// 恢复原有的注册API调用，直接创建账户并进入主页
 		const sessionUser = await userSignUp(name, email, password, generateInitialsImage(name)).catch(
 			(error) => {
 				toast.error(`${error}`);
