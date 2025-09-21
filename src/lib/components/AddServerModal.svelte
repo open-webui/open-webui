@@ -30,6 +30,8 @@
 	let url = '';
 	let path = 'openapi.json';
 
+	let type = 'openapi'; // 'openapi', 'mcp'
+
 	let auth_type = 'bearer';
 	let key = '';
 
@@ -137,6 +139,7 @@
 			url = connection.url;
 			path = connection?.path ?? 'openapi.json';
 
+			type = connection?.type ?? 'openapi';
 			auth_type = connection?.auth_type ?? 'bearer';
 			key = connection?.key ?? '';
 
@@ -189,6 +192,30 @@
 					}}
 				>
 					<div class="px-1">
+						{#if !direct}
+							<div class="flex gap-2 mb-1.5">
+								<div class="flex w-full justify-between items-center">
+									<div class=" text-xs text-gray-500">{$i18n.t('Type')}</div>
+
+									<div class="">
+										<button
+											on:click={() => {
+												type = ['', 'openapi'].includes(type) ? 'mcp' : 'openapi';
+											}}
+											type="button"
+											class=" text-xs text-gray-700 dark:text-gray-300"
+										>
+											{#if ['', 'openapi'].includes(type)}
+												{$i18n.t('OpenAPI')}
+											{:else if type === 'mcp'}
+												{$i18n.t('MCP')}
+											{/if}
+										</button>
+									</div>
+								</div>
+							</div>
+						{/if}
+
 						<div class="flex gap-2">
 							<div class="flex flex-col w-full">
 								<div class="flex justify-between mb-0.5">
@@ -243,30 +270,36 @@
 									</Tooltip>
 								</div>
 
-								<div class="flex-1 flex items-center">
-									<label for="url-or-path" class="sr-only"
-										>{$i18n.t('openapi.json URL or Path')}</label
-									>
-									<input
-										class={`w-full text-sm bg-transparent ${($settings?.highContrastMode ?? false) ? 'placeholder:text-gray-700 dark:placeholder:text-gray-100' : 'outline-hidden placeholder:text-gray-300 dark:placeholder:text-gray-700'}`}
-										type="text"
-										id="url-or-path"
-										bind:value={path}
-										placeholder={$i18n.t('openapi.json URL or Path')}
-										autocomplete="off"
-										required
-									/>
-								</div>
+								{#if ['', 'openapi'].includes(type)}
+									<div class="flex-1 flex items-center">
+										<label for="url-or-path" class="sr-only"
+											>{$i18n.t('openapi.json URL or Path')}</label
+										>
+										<input
+											class={`w-full text-sm bg-transparent ${($settings?.highContrastMode ?? false) ? 'placeholder:text-gray-700 dark:placeholder:text-gray-100' : 'outline-hidden placeholder:text-gray-300 dark:placeholder:text-gray-700'}`}
+											type="text"
+											id="url-or-path"
+											bind:value={path}
+											placeholder={$i18n.t('openapi.json URL or Path')}
+											autocomplete="off"
+											required
+										/>
+									</div>
+								{/if}
 							</div>
 						</div>
 
-						<div
-							class={`text-xs mt-1 ${($settings?.highContrastMode ?? false) ? 'text-gray-800 dark:text-gray-100' : 'text-gray-500'}`}
-						>
-							{$i18n.t(`WebUI will make requests to "{{url}}"`, {
-								url: path.includes('://') ? path : `${url}${path.startsWith('/') ? '' : '/'}${path}`
-							})}
-						</div>
+						{#if ['', 'openapi'].includes(type)}
+							<div
+								class={`text-xs mt-1 ${($settings?.highContrastMode ?? false) ? 'text-gray-800 dark:text-gray-100' : 'text-gray-500'}`}
+							>
+								{$i18n.t(`WebUI will make requests to "{{url}}"`, {
+									url: path.includes('://')
+										? path
+										: `${url}${path.startsWith('/') ? '' : '/'}${path}`
+								})}
+							</div>
+						{/if}
 
 						<div class="flex gap-2 mt-2">
 							<div class="flex flex-col w-full">
@@ -396,7 +429,7 @@
 							<hr class=" border-gray-100 dark:border-gray-700/10 my-2.5 w-full" />
 
 							<div class="my-2 -mx-2">
-								<div class="px-3 py-2 bg-gray-50 dark:bg-gray-950 rounded-lg">
+								<div class="px-4 py-3 bg-gray-50 dark:bg-gray-950 rounded-3xl">
 									<AccessControl bind:accessControl />
 								</div>
 							</div>
