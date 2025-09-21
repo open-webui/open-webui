@@ -189,7 +189,7 @@
 								id="email"
 								bind:value={email}
 								type="email"
-								class="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-black dark:text-white placeholder-gray-500 dark:placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+								class="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-black dark:text-white placeholder-gray-500 dark:placeholder-gray-400 focus:outline-none"
 								placeholder="Enter your email"
 								required
 							/>
@@ -203,7 +203,7 @@
 							</label>
 							<button
 								type="button"
-								class="text-sm text-blue-600 hover:text-blue-500 dark:text-blue-400 dark:hover:text-blue-300"
+								class="text-sm text-[#A855F7] hover:text-[#9333EA] dark:text-[#A855F7] dark:hover:text-[#9333EA]"
 								on:click={() => goto('/auth/forgot-password')}
 							>
 								Forgot?
@@ -213,7 +213,7 @@
 							id="password"
 							bind:value={password}
 							type="password"
-							class="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-black dark:text-white placeholder-gray-500 dark:placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+							class="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-black dark:text-white placeholder-gray-500 dark:placeholder-gray-400 focus:outline-none"
 							placeholder="Enter your password"
 							required
 						/>
@@ -234,7 +234,7 @@
 					</span>
 					<button
 						type="button"
-						class="ml-1 text-sm text-blue-600 hover:text-blue-500 dark:text-blue-400 dark:hover:text-blue-300 font-medium"
+						class="ml-1 text-sm text-[#A855F7] hover:text-[#9333EA] dark:text-[#A855F7] dark:hover:text-[#9333EA] font-medium"
 						on:click={() => goto('/auth/signup')}
 					>
 						Sign Up

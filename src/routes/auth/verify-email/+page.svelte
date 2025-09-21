@@ -53,8 +53,8 @@
 			{#if loaded}
 				<!-- Email Icon -->
 				<div class="flex justify-center mb-8">
-					<div class="w-16 h-16 bg-blue-100 dark:bg-blue-900 rounded-full flex items-center justify-center">
-						<svg class="w-8 h-8 text-blue-600 dark:text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+					<div class="w-16 h-16 bg-[#A855F7]/10 dark:bg-[#A855F7]/20 rounded-full flex items-center justify-center">
+						<svg class="w-8 h-8 text-[#A855F7] dark:text-[#A855F7]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
 							<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 4.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
 						</svg>
 					</div>
@@ -83,7 +83,7 @@
 				<div class="mb-8">
 					<button
 						type="button"
-						class="text-sm text-blue-600 hover:text-blue-500 dark:text-blue-400 dark:hover:text-blue-300 font-medium"
+						class="bg-[#A855F7] hover:bg-[#9333EA] text-white font-medium px-6 py-2 rounded-lg text-sm transition-colors"
 						on:click={handleResendEmail}
 					>
 						Resend email
@@ -97,7 +97,7 @@
 					</p>
 					<button
 						type="button"
-						class="text-sm text-gray-600 hover:text-gray-800 dark:text-gray-400 dark:hover:text-gray-200"
+						class="text-sm text-[#A855F7] hover:text-[#9333EA] dark:text-[#A855F7] dark:hover:text-[#9333EA] font-medium"
 						on:click={() => goto('/auth/login')}
 					>
 						Back to Sign In

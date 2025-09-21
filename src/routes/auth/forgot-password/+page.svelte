@@ -49,19 +49,6 @@
 </svelte:head>
 
 <div class="w-full h-screen max-h-[100dvh] bg-white dark:bg-black">
-	<!-- Back Button -->
-	<div class="absolute top-6 left-6 z-10">
-		<button
-			class="flex items-center text-sm text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200"
-			on:click={() => goto('/auth/login')}
-		>
-			<svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-				<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
-			</svg>
-			Back
-		</button>
-	</div>
-
 	<div class="w-full h-full flex items-center justify-center">
 		<div class="w-full max-w-md px-8">
 			{#if loaded}
@@ -93,7 +80,7 @@
 							id="email"
 							bind:value={email}
 							type="email"
-							class="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-black dark:text-white placeholder-gray-500 dark:placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+							class="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-black dark:text-white placeholder-gray-500 dark:placeholder-gray-400 focus:outline-none"
 							placeholder="Enter your email"
 							required
 						/>
@@ -106,7 +93,7 @@
 						<input
 							id="new-password"
 							type="password"
-							class="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-black dark:text-white placeholder-gray-500 dark:placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+							class="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-black dark:text-white placeholder-gray-500 dark:placeholder-gray-400 focus:outline-none"
 							placeholder="Enter new password"
 							required
 						/>
@@ -119,6 +106,17 @@
 						Reset your password
 					</button>
 				</form>
+
+				<!-- Back to Sign In Link -->
+				<div class="text-center mt-6">
+					<button
+						type="button"
+						class="text-sm text-[#A855F7] hover:text-[#9333EA] dark:text-[#A855F7] dark:hover:text-[#9333EA] font-medium"
+						on:click={() => goto('/auth/login')}
+					>
+						Back to Sign In
+					</button>
+				</div>
 			{/if}
 		</div>
 	</div>
