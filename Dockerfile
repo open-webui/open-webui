@@ -31,6 +31,9 @@ ENV NODE_OPTIONS="--max-old-space-size=8192"
 
 WORKDIR /app
 
+# ОБНОВЛЯЕМ npm до последней версии
+RUN npm install -g npm@latest
+
 # to store git revision in build
 RUN apk add --no-cache git
 
