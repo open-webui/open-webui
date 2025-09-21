@@ -222,9 +222,10 @@ class PersistentConfig(Generic[T]):
 
 
 class AppConfig:
-    _state: dict[str, PersistentConfig]
     _redis: Union[redis.Redis, redis.cluster.RedisCluster] = None
     _redis_key_prefix: str
+
+    _state: dict[str, PersistentConfig]
 
     def __init__(
         self,
@@ -233,9 +234,8 @@ class AppConfig:
         redis_cluster: Optional[bool] = False,
         redis_key_prefix: str = "open-webui",
     ):
-        super().__setattr__("_state", {})
-        super().__setattr__("_redis_key_prefix", redis_key_prefix)
         if redis_url:
+            super().__setattr__("_redis_key_prefix", redis_key_prefix)
             super().__setattr__(
                 "_redis",
                 get_redis_connection(
@@ -245,6 +245,8 @@ class AppConfig:
                     decode_responses=True,
                 ),
             )
+
+        super().__setattr__("_state", {})
 
     def __setattr__(self, key, value):
         if isinstance(value, PersistentConfig):
