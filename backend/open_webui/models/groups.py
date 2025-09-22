@@ -2,30 +2,48 @@ import logging
 import time
 from typing import Optional
 import uuid
+from threading import Lock
 
 from open_webui.internal.db import get_db
 from open_webui.env import SRC_LOG_LEVELS
 from open_webui.models.base import Base
 
 from pydantic import BaseModel, ConfigDict, field_validator
-from sqlalchemy import BigInteger, Column, String, Text, JSON, func
+from sqlalchemy import BigInteger, Column, String, Text, JSON
 
 
 log = logging.getLogger(__name__)
 log.setLevel(SRC_LOG_LEVELS["MODELS"])
 
+# Cache for group memberships - invalidated when groups or users change
+_group_membership_cache = {}
+_cache_timestamp = 0
+_cache_lock = Lock()
+CACHE_TTL = 300  # 5 minutes
 
-def extract_domain_from_email(email: str) -> Optional[str]:
-    """Extract domain from email address. Returns None if invalid."""
-    if not email or "@" not in email:
-        return None
-    try:
-        parts = email.split("@")
-        if len(parts) != 2 or not parts[0] or not parts[1]:
-            return None
-        return parts[1].lower()
-    except (IndexError, AttributeError):
-        return None
+
+def invalidate_group_membership_cache():
+    """Public function to invalidate group membership cache - can be called from other modules."""
+    _invalidate_group_membership_cache()
+
+
+def _get_cache_key(user_id: str, user_domain: str) -> str:
+    """Generate cache key for user's group memberships."""
+    return f"groups:{user_id}:{user_domain or 'none'}"
+
+
+def _invalidate_group_membership_cache():
+    """Invalidate the entire group membership cache."""
+    global _group_membership_cache, _cache_timestamp
+    with _cache_lock:
+        _group_membership_cache.clear()
+        _cache_timestamp = time.time()
+        log.debug("Group membership cache invalidated")
+
+
+def _is_cache_valid() -> bool:
+    """Check if cache is still valid based on TTL."""
+    return time.time() - _cache_timestamp < CACHE_TTL
 
 
 ####################
@@ -138,6 +156,8 @@ class GroupTable:
                 db.commit()
                 db.refresh(result)
                 if result:
+                    # Invalidate cache when new group is created
+                    _invalidate_group_membership_cache()
                     return GroupModel.model_validate(result)
                 else:
                     return None
@@ -157,19 +177,33 @@ class GroupTable:
         Get groups where user is either:
         1. Explicitly added to user_ids list, OR
         2. User's email domain matches any allowed_domains in the group
+
+        Uses caching to improve performance for frequently called function.
         """
         from open_webui.models.users import (
             Users,
         )  # Import here to avoid circular imports
 
+        # Get user info for domain checking
+        user = Users.get_user_by_id(user_id)
+        user_domain = user.domain if user else None
+
+        # Generate cache key
+        cache_key = _get_cache_key(user_id, user_domain)
+
+        # Try to get from cache first
+        with _cache_lock:
+            if _is_cache_valid() and cache_key in _group_membership_cache:
+                log.debug(f"Cache hit for user {user_id}")
+                return _group_membership_cache[cache_key]
+
+        # Cache miss - compute groups
+        log.debug(f"Cache miss for user {user_id}, computing groups")
+
         with get_db() as db:
             # Get all groups
             all_groups = db.query(Group).all()
             matching_groups = []
-
-            # Get user info once for domain checking
-            user = Users.get_user_by_id(user_id)
-            user_domain = user.domain if user else None
 
             for group in all_groups:
                 # Check 1: Explicit membership in user_ids
@@ -186,9 +220,15 @@ class GroupTable:
                 if is_explicit_member or is_domain_member:
                     matching_groups.append(group)
 
-            # Sort by updated_at and return as models
+            # Sort by updated_at and convert to models
             matching_groups.sort(key=lambda g: g.updated_at or 0, reverse=True)
-            return [GroupModel.model_validate(group) for group in matching_groups]
+            result = [GroupModel.model_validate(group) for group in matching_groups]
+
+            # Cache the result
+            with _cache_lock:
+                _group_membership_cache[cache_key] = result
+
+            return result
 
     def get_group_by_id(self, id: str) -> Optional[GroupModel]:
         try:
@@ -219,10 +259,8 @@ class GroupTable:
         if group.allowed_domains:
             all_users = Users.get_users()
             for user in all_users:
-                if user.email:
-                    user_domain = extract_domain_from_email(user.email)
-                    if user_domain and user_domain in group.allowed_domains:
-                        user_ids.add(user.id)
+                if user.domain and user.domain in group.allowed_domains:
+                    user_ids.add(user.id)
 
         return list(user_ids)
 
@@ -246,6 +284,9 @@ class GroupTable:
                 # Get updated group
                 updated_group = self.get_group_by_id(id=id)
 
+                # Invalidate cache when group is updated (membership may have changed)
+                _invalidate_group_membership_cache()
+
                 return updated_group
         except Exception as e:
             log.exception(e)
@@ -256,6 +297,8 @@ class GroupTable:
             with get_db() as db:
                 db.query(Group).filter_by(id=id).delete()
                 db.commit()
+                # Invalidate cache when group is deleted
+                _invalidate_group_membership_cache()
                 return True
         except Exception:
             return False
@@ -265,6 +308,8 @@ class GroupTable:
             try:
                 db.query(Group).delete()
                 db.commit()
+                # Invalidate cache when all groups are deleted
+                _invalidate_group_membership_cache()
 
                 return True
             except Exception:
@@ -285,6 +330,8 @@ class GroupTable:
                     )
                     db.commit()
 
+                # Invalidate cache when user is removed from groups
+                _invalidate_group_membership_cache()
                 return True
             except Exception:
                 return False
