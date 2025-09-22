@@ -12,6 +12,33 @@ on:
         default: ''
 
 jobs:
+  detect-changes:
+    runs-on: ubuntu-latest
+    outputs:
+      extloader: ${{ steps.changes.outputs.extloader }}
+      open-webui: ${{ steps.changes.outputs.open-webui }}
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0  # Fetch full history for better change detection
+
+      - uses: dorny/paths-filter@v3
+        id: changes
+        with:
+          filters: |
+            extloader:
+              - 'extloader.py'
+              - 'Dockerfile.extloader'
+              - 'requirements-extloader.txt'
+              - 'backend/open_webui/retrieval/loaders/external_document.py'
+            open-webui:
+              - '**'
+              - '!extloader.py'
+              - '!Dockerfile.extloader'
+              - '!requirements-extloader.txt'
+              - '!backend/open_webui/retrieval/loaders/external_document.py'
+
   build-wheel:
     runs-on: ubuntu-latest
     outputs:
@@ -64,22 +91,13 @@ jobs:
         path: dist/*.tar.gz
         retention-days: 30
 
-  build-docker:
+  build-open-webui:
+    needs: [detect-changes]
+    if: needs.detect-changes.outputs.open-webui == 'true' || github.event_name == 'workflow_dispatch' || startsWith(github.ref, 'refs/tags/lf-v')
     runs-on: ubuntu-latest
     permissions:
       contents: read
       packages: write
-    strategy:
-      matrix:
-        include:
-          - name: open-webui
-            dockerfile: Dockerfile
-            image-suffix: -lf
-            context: .
-          - name: extloader
-            dockerfile: Dockerfile.extloader
-            image-suffix: -extloader
-            context: .
     
     steps:
     - name: Checkout repository
@@ -103,7 +121,7 @@ jobs:
       id: meta
       uses: docker/metadata-action@v5
       with:
-        images: ghcr.io/${{ github.repository }}${{ matrix.image-suffix }}
+        images: ghcr.io/${{ github.repository }}-lf
         tags: |
           type=ref,event=branch
           type=ref,event=tag,prefix=lf-
@@ -113,26 +131,79 @@ jobs:
     - name: Build and push Docker image
       uses: docker/build-push-action@v5
       with:
-        context: ${{ matrix.context }}
-        file: ${{ matrix.dockerfile }}
+        context: .
+        file: Dockerfile
         push: true
         tags: ${{ steps.meta.outputs.tags }}
         labels: ${{ steps.meta.outputs.labels }}
-        # Use registry caching instead of GitHub Actions cache
-        # This stores cache layers as images in your registry
         cache-from: |
-          type=registry,ref=ghcr.io/${{ github.repository }}${{ matrix.image-suffix }}:buildcache
+          type=registry,ref=ghcr.io/${{ github.repository }}-lf:buildcache
         cache-to: |
-          type=registry,ref=ghcr.io/${{ github.repository }}${{ matrix.image-suffix }}:buildcache,mode=max
+          type=registry,ref=ghcr.io/${{ github.repository }}-lf:buildcache,mode=max
+        platforms: linux/amd64
+        build-args: |
+          BUILD_HASH=${{ github.sha }}
+          BUILDKIT_INLINE_CACHE=1
+
+  build-extloader:
+    needs: [detect-changes]
+    if: needs.detect-changes.outputs.extloader == 'true' || github.event_name == 'workflow_dispatch' || startsWith(github.ref, 'refs/tags/lf-v')
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+    
+    - name: Set up Docker Buildx
+      uses: docker/setup-buildx-action@v3
+      with:
+        driver-opts: |
+          image=moby/buildkit:v0.12.0
+          network=host
+    
+    - name: Log in to Container Registry
+      uses: docker/login-action@v3
+      with:
+        registry: ghcr.io
+        username: ${{ github.actor }}
+        password: ${{ secrets.GITHUB_TOKEN }}
+    
+    - name: Extract metadata
+      id: meta
+      uses: docker/metadata-action@v5
+      with:
+        images: ghcr.io/${{ github.repository }}-extloader
+        tags: |
+          type=ref,event=branch
+          type=ref,event=tag,prefix=lf-
+          type=semver,pattern={{version}},prefix=lf-v
+          type=raw,value=lf-latest,enable={{is_default_branch}}
+    
+    - name: Build and push Docker image
+      uses: docker/build-push-action@v5
+      with:
+        context: .
+        file: Dockerfile.extloader
+        push: true
+        tags: ${{ steps.meta.outputs.tags }}
+        labels: ${{ steps.meta.outputs.labels }}
+        cache-from: |
+          type=registry,ref=ghcr.io/${{ github.repository }}-extloader:buildcache
+        cache-to: |
+          type=registry,ref=ghcr.io/${{ github.repository }}-extloader:buildcache,mode=max
         platforms: linux/amd64
         build-args: |
           BUILD_HASH=${{ github.sha }}
           BUILDKIT_INLINE_CACHE=1
 
   create-release:
-    needs: [build-wheel, build-docker]
+    needs: [build-wheel, build-open-webui, build-extloader]
+    # Only run if at least one of the build jobs ran (using always() to check even if they were skipped)
+    if: always() && (needs.build-open-webui.result == 'success' || needs.build-extloader.result == 'success' || needs.build-open-webui.result == 'skipped' || needs.build-extloader.result == 'skipped') && startsWith(github.ref, 'refs/tags/lf-v')
     runs-on: ubuntu-latest
-    if: startsWith(github.ref, 'refs/tags/lf-v')
     
     steps:
     - name: Download artifacts
