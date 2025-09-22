@@ -51,6 +51,26 @@
 			webConfig.search.domain_filter_list = [];
 		}
 
+		// Convert website blocklist string to array before sending
+		if (webConfig.search.website_blocklist) {
+			webConfig.search.website_blocklist = webConfig.search.website_blocklist
+				.split(',')
+				.map((url) => url.trim())
+				.filter((url) => url.length > 0);
+		} else {
+			webConfig.search.website_blocklist = [];
+		}
+
+		// Convert internal facilities sites string to array before sending
+		if (webConfig.search.internal_facilities_sites) {
+			webConfig.search.internal_facilities_sites = webConfig.search.internal_facilities_sites
+				.split(',')
+				.map((url) => url.trim())
+				.filter((url) => url.length > 0);
+		} else {
+			webConfig.search.internal_facilities_sites = [];
+		}
+
 		// Update both web config and task config
 		const res = await updateRAGConfig(localStorage.token, {
 			web: webConfig,
@@ -70,11 +90,17 @@
 			if (webConfig?.search?.domain_filter_list && Array.isArray(webConfig.search.domain_filter_list)) {
 				webConfig.search.domain_filter_list = webConfig.search.domain_filter_list.join(', ');
 			}
+			if (webConfig?.search?.website_blocklist && Array.isArray(webConfig.search.website_blocklist)) {
+				webConfig.search.website_blocklist = webConfig.search.website_blocklist.join(', ');
+			}
+			if (webConfig?.search?.internal_facilities_sites && Array.isArray(webConfig.search.internal_facilities_sites)) {
+				webConfig.search.internal_facilities_sites = webConfig.search.internal_facilities_sites.join(', ');
+			}
 		}
 	};
 
 	onMount(async () => {
-		const res = await getRAGConfig(localStorage.token);
+		const res = await getRAGConfig(localStorage.token, localStorage.email);
 
 		if (res) {
 			webConfig = res.web;
@@ -84,6 +110,20 @@
 			} else if (!webConfig?.search?.domain_filter_list) {
 				// Initialize empty string if no domain filter list exists
 				webConfig.search.domain_filter_list = '';
+			}
+
+			// Handle website blocklist
+			if (webConfig?.search?.website_blocklist && Array.isArray(webConfig.search.website_blocklist)) {
+				webConfig.search.website_blocklist = webConfig.search.website_blocklist.join(', ');
+			} else if (!webConfig?.search?.website_blocklist) {
+				webConfig.search.website_blocklist = '';
+			}
+
+			// Handle internal facilities sites
+			if (webConfig?.search?.internal_facilities_sites && Array.isArray(webConfig.search.internal_facilities_sites)) {
+				webConfig.search.internal_facilities_sites = webConfig.search.internal_facilities_sites.join(', ');
+			} else if (!webConfig?.search?.internal_facilities_sites) {
+				webConfig.search.internal_facilities_sites = '';
 			}
 
 			youtubeLanguage = res.youtube.language.join(',');
@@ -461,6 +501,34 @@
 									'Enter domains separated by commas (e.g., example.com,site.org)'
 								)}
 								bind:value={webConfig.search.domain_filter_list}
+							/>
+						</div>
+
+						<div class="mb-2.5 flex w-full flex-col">
+							<div class="  text-xs font-medium mb-1">
+								{$i18n.t('Website Blocklist')}
+							</div>
+
+							<input
+								class="w-full rounded-lg py-2 px-4 text-sm bg-gray-50 dark:text-gray-300 dark:bg-gray-850 outline-hidden"
+								placeholder={$i18n.t(
+									'Enter URLs to block separated by commas (e.g., https://example.com/page, https://site.org/bad)'
+								)}
+								bind:value={webConfig.search.website_blocklist}
+							/>
+						</div>
+
+						<div class="mb-2.5 flex w-full flex-col">
+							<div class="  text-xs font-medium mb-1">
+								{$i18n.t('Internal Facilities (NYU) Specific Sites')}
+							</div>
+
+							<input
+								class="w-full rounded-lg py-2 px-4 text-sm bg-gray-50 dark:text-gray-300 dark:bg-gray-850 outline-hidden"
+								placeholder={$i18n.t(
+									'Enter specific NYU HPC sites separated by commas (e.g., https://sites.google.com/nyu.edu/nyu-hpc/, https://www.nyu.edu/hpc)'
+								)}
+								bind:value={webConfig.search.internal_facilities_sites}
 							/>
 						</div>
 					{/if}

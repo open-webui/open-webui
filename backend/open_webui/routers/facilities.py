@@ -131,9 +131,7 @@ def facilities_web_search(query: str, request: Request, user) -> tuple[str, List
         logging.info(f"Starting facilities web search for query: {query}")
         
         allowed_domains = ["nyu.edu", "nsf.gov"]
-        blocklist = [
-            "https://med.nyu.edu/research/scientific-cores-shared-resources/high-performance-computing-core"
-        ]
+        blocklist = request.app.state.config.RAG_WEB_SEARCH_WEBSITE_BLOCKLIST.get(user.email) or []
         
         snippets = []
         urls = []
@@ -142,11 +140,11 @@ def facilities_web_search(query: str, request: Request, user) -> tuple[str, List
         for domain in allowed_domains:
             logging.info(f"Searching domain: {domain}")
             try:
+                site_query = f"site:{domain} {query}"
                 results = search_tavily(
                     api_key=tavily_api_key,
-                    query=query,
-                    count=3,
-                    filter_list=[domain]
+                    query=site_query,
+                    count=3
                 )
                 logging.info(f"Search results for {domain}: {len(results) if results else 0} results")
                 
@@ -157,14 +155,21 @@ def facilities_web_search(query: str, request: Request, user) -> tuple[str, List
                         score = result.score if hasattr(result, 'score') else 0.1
                         logging.info(f"Found result: {url[:50]}... with score: {score}")
                         
+                        # Parse domain and validate it's from allowed domains
+                        from urllib.parse import urlparse
+                        parsed_domain = urlparse(url).netloc
                         
-                        if not any(url.startswith(bad) for bad in blocklist):
+                        # More strict domain validation - must end with allowed domains
+                        is_allowed_domain = any(parsed_domain.endswith(allowed) for allowed in allowed_domains)
+                        is_blocked = any(url.startswith(bad) for bad in blocklist)
+                        
+                        if is_allowed_domain and not is_blocked:
                             snippets.append(content)
                             urls.append(url)
                             scores.append(score)
-                            logging.info(f"Added to results: {url} with score: {score}")
+                            logging.info(f"Added to results: {url} with score: {score} (domain: {parsed_domain})")
                         else:
-                            logging.info(f"Blocked by filter: {url}")
+                            logging.info(f"Blocked by filter: {url} (domain: {parsed_domain}, allowed: {is_allowed_domain}, blocked: {is_blocked})")
                 else:
                     logging.info(f"No results for domain: {domain}")
             except Exception as e:
@@ -201,23 +206,30 @@ def facilities_web_search_specific_sites(query: str, allowed_sites: List[str], r
         
         for site in allowed_sites:
             
-            domain = urlparse(site).netloc
+            # Use the exact URL for internal facilities
+            site_query = f"site:{site} {query}"
+            logging.info(f"Searching site: {site} with query: {site_query}")
             results = search_tavily(
                 api_key=tavily_api_key,
-                query=query,
+                query=site_query,
                 count=3,
-                filter_list=[domain]
             )
+            logging.info(f"Found {len(results) if results else 0} results for site: {site}")
             
             for result in results:
                 url = result.link
                 content = result.snippet.strip()
                 score = result.score if hasattr(result, 'score') else 0.1
                 
-                if any(url.startswith(s) for s in allowed_sites):
+                # Check if the result URL is from any of the allowed domains
+                result_domain = urlparse(url).netloc
+                allowed_domains = [urlparse(s).netloc for s in allowed_sites]
+                
+                if result_domain in allowed_domains:
                     snippets.append(content)
                     urls.append(url)
                     scores.append(score)
+                    logging.info(f"Added result from {result_domain}: {url[:100]}...")
         
         return "\n\n".join(snippets), urls, scores
         
@@ -422,15 +434,16 @@ async def generate_facilities_response(request: Request, form_data: FacilitiesRe
             if form_data.web_search_enabled:
                 logging.info(f"Web search enabled for section: {section}")
                 if section == "5a. Internal Facilities (NYU)":
-                    allowed_sites = [
-                        "https://sites.google.com/nyu.edu/nyu-hpc/",
-                        "https://www.nyu.edu/life/information-technology/research-computing-services/high-performance-computing.html",
-                        "https://www.nyu.edu/life/information-technology/research-computing-services/high-performance-computing/high-performance-computing-nyu-it.html"
-                    ]
+                    allowed_sites = request.app.state.config.RAG_WEB_SEARCH_INTERNAL_FACILITIES_SITES.get(user.email)
                     logging.info(f"Using specific sites search for NYU Internal Facilities")
-                    web_content, web_links, web_scores = facilities_web_search_specific_sites(
-                        query, allowed_sites, request, user
-                    )
+                    logging.info(f"Allowed sites: {allowed_sites}")
+                    if allowed_sites:
+                        web_content, web_links, web_scores = facilities_web_search_specific_sites(
+                            query, allowed_sites, request, user
+                        )
+                    else:
+                        logging.warning("No allowed sites configured for NYU Internal Facilities, falling back to standard search")
+                        web_content, web_links, web_scores = facilities_web_search(query, request, user)
                 else:
 
                     logging.info(f"Using standard web search for section: {section}")
@@ -543,6 +556,8 @@ async def generate_facilities_response(request: Request, form_data: FacilitiesRe
         logging.info(f"Final sources count: {len(formatted_sources)}")
         logging.info(f"Cited sources: {list(cited_sources)}")
         logging.info(f"Final sources: {[s.get('source', {}).get('name', 'unknown') for s in formatted_sources]}")
+        
+        # Facilities response is added to current chat by frontend addFacilitiesResponseToChat function
         
         return FacilitiesResponse(
             success=True,

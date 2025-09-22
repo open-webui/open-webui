@@ -2086,6 +2086,22 @@ RAG_WEB_SEARCH_DOMAIN_FILTER_LIST = UserScopedConfig(
     ],
 )
 
+# Website blocklist - URLs that should be blocked even if they're from allowed domains
+RAG_WEB_SEARCH_WEBSITE_BLOCKLIST = UserScopedConfig(
+    "rag.web.search.website.blocklist",
+    [],
+)
+
+# Internal facilities specific sites for NYU HPC searches
+RAG_WEB_SEARCH_INTERNAL_FACILITIES_SITES = UserScopedConfig(
+    "rag.web.search.internal.facilities.sites",
+    [
+        "https://sites.google.com/nyu.edu/nyu-hpc/",
+        "https://www.nyu.edu/life/information-technology/research-computing-services/high-performance-computing.html",
+        "https://www.nyu.edu/life/information-technology/research-computing-services/high-performance-computing/high-performance-computing-nyu-it.html"
+    ],
+)
+
 
 # SEARXNG_QUERY_URL = PersistentConfig(
 #     "SEARXNG_QUERY_URL",

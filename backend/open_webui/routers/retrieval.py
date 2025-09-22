@@ -423,6 +423,8 @@ async def get_rag_config(request: Request, user=Depends(get_verified_user)):
                 "trust_env": request.app.state.config.RAG_WEB_SEARCH_TRUST_ENV.get(user.email),
                 "concurrent_requests": request.app.state.config.RAG_WEB_SEARCH_CONCURRENT_REQUESTS.get(user.email),
                 "domain_filter_list": request.app.state.config.RAG_WEB_SEARCH_DOMAIN_FILTER_LIST.get(user.email),
+                "website_blocklist": request.app.state.config.RAG_WEB_SEARCH_WEBSITE_BLOCKLIST.get(user.email),
+                "internal_facilities_sites": request.app.state.config.RAG_WEB_SEARCH_INTERNAL_FACILITIES_SITES.get(user.email),
             },
         },
     }
@@ -483,6 +485,8 @@ class WebSearchConfig(BaseModel):
     concurrent_requests: Optional[int] = None
     trust_env: Optional[bool] = None
     domain_filter_list: Optional[List[str]] = []
+    website_blocklist: Optional[List[str]] = []
+    internal_facilities_sites: Optional[List[str]] = []
 
 
 class WebConfig(BaseModel):
@@ -651,6 +655,12 @@ async def update_rag_config(
         request.app.state.config.RAG_WEB_SEARCH_DOMAIN_FILTER_LIST.set(user.email,
             form_data.web.search.domain_filter_list
         )
+        request.app.state.config.RAG_WEB_SEARCH_WEBSITE_BLOCKLIST.set(user.email,
+            form_data.web.search.website_blocklist
+        )
+        request.app.state.config.RAG_WEB_SEARCH_INTERNAL_FACILITIES_SITES.set(user.email,
+            form_data.web.search.internal_facilities_sites
+        )
 
     return {
         "status": True,
@@ -696,7 +706,7 @@ async def update_rag_config(
                 "serpstack_https": request.app.state.config.SERPSTACK_HTTPS.get(user.email),
                 "serper_api_key": request.app.state.config.SERPER_API_KEY.get(user.email),
                 "serply_api_key": request.app.state.config.SERPLY_API_KEY.get(user.email),
-                "serachapi_api_key": request.app.state.config.SEARCHAPI_API_KEY.get(user.email),
+                "searchapi_api_key": request.app.state.config.SEARCHAPI_API_KEY.get(user.email),
                 "searchapi_engine": request.app.state.config.SEARCHAPI_ENGINE.get(user.email),
                 "serpapi_api_key": request.app.state.config.SERPAPI_API_KEY.get(user.email),
                 "serpapi_engine": request.app.state.config.SERPAPI_ENGINE.get(user.email),
@@ -709,6 +719,8 @@ async def update_rag_config(
                 "concurrent_requests": request.app.state.config.RAG_WEB_SEARCH_CONCURRENT_REQUESTS.get(user.email),
                 "trust_env": request.app.state.config.RAG_WEB_SEARCH_TRUST_ENV.get(user.email),
                 "domain_filter_list": request.app.state.config.RAG_WEB_SEARCH_DOMAIN_FILTER_LIST.get(user.email),
+                "website_blocklist": request.app.state.config.RAG_WEB_SEARCH_WEBSITE_BLOCKLIST.get(user.email),
+                "internal_facilities_sites": request.app.state.config.RAG_WEB_SEARCH_INTERNAL_FACILITIES_SITES.get(user.email),
             },
         },
     }
@@ -1627,6 +1639,7 @@ def search_web(request: Request, engine: str, query: str, email: str) -> list[Se
             query,
             request.app.state.config.RAG_WEB_SEARCH_RESULT_COUNT.get(email),
             request.app.state.config.RAG_WEB_SEARCH_DOMAIN_FILTER_LIST.get(email),
+            request.app.state.config.RAG_WEB_SEARCH_WEBSITE_BLOCKLIST.get(email),
         )
     elif engine == "tavily":
         if request.app.state.config.TAVILY_API_KEY:
@@ -1635,6 +1648,7 @@ def search_web(request: Request, engine: str, query: str, email: str) -> list[Se
                 query,
                 request.app.state.config.RAG_WEB_SEARCH_RESULT_COUNT.get(email),
                 request.app.state.config.RAG_WEB_SEARCH_DOMAIN_FILTER_LIST.get(email),
+                request.app.state.config.RAG_WEB_SEARCH_WEBSITE_BLOCKLIST.get(email),
             )
         else:
             raise Exception("No TAVILY_API_KEY found in environment variables")

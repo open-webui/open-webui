@@ -1,8 +1,9 @@
 <script lang="ts">
 	import { getContext, createEventDispatcher } from 'svelte';
-	import { showFacilitiesOverlay, showControls, models, chatId } from '$lib/stores';
+	import { showFacilitiesOverlay, showControls, models, chatId, chats, currentChatPage } from '$lib/stores';
 	import { slide } from 'svelte/transition';
 	import { generateFacilitiesResponse, getFacilitiesSections } from '$lib/apis/facilities';
+	import { updateChatById, getChatList } from '$lib/apis/chats';
 	import { toast } from 'svelte-sonner';
 	
 	const dispatch = createEventDispatcher();
@@ -174,6 +175,29 @@
 					}
 				]
 			});
+
+			// Generate a proper title for the facilities chat
+			try {
+				const token = localStorage.getItem('token');
+				if (token && $chatId) {
+					// Create a meaningful title based on the sponsor and project
+					const projectTitle = formData.projectTitle || 'Facilities Response';
+					const title = `Facilities Response - ${selectedSponsor} - ${projectTitle}`;
+					
+					// Update the chat title
+					await updateChatById(token, $chatId, {
+						title: title
+					});
+					
+					// Update the chat list to reflect the new title
+					currentChatPage.set(1);
+					await chats.set(await getChatList(token, $currentChatPage));
+					
+					console.log('Updated chat title to:', title);
+				}
+			} catch (error) {
+				console.error('Error updating chat title:', error);
+			}
 		} catch (error) {
 			console.error('Error in addMessages:', error);
 			// Fallback: manually add to history if addMessages fails

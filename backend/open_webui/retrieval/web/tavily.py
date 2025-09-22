@@ -2,7 +2,7 @@ import logging
 from typing import Optional
 
 import requests
-from open_webui.retrieval.web.main import SearchResult, get_filtered_results
+from open_webui.retrieval.web.main import SearchResult, get_filtered_results, apply_blocklist
 from open_webui.env import SRC_LOG_LEVELS
 
 log = logging.getLogger(__name__)
@@ -14,6 +14,7 @@ def search_tavily(
     query: str,
     count: int,
     filter_list: Optional[list[str]] = None,
+    blocklist: Optional[list[str]] = None,
     # **kwargs,
 ) -> list[SearchResult]:
     """Search using Tavily's Search API and return the results as a list of SearchResult objects.
@@ -61,6 +62,10 @@ def search_tavily(
         # Apply additional filtering as backup (in case site: syntax doesn't work)
         if filter_list:
             all_results = get_filtered_results(all_results, filter_list)
+        
+        # Apply blocklist to filter out specific URLs
+        if blocklist:
+            all_results = apply_blocklist(all_results, blocklist)
 
         # Sort by relevance 
         if all_results and "score" in all_results[0]:
