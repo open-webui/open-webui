@@ -49,20 +49,9 @@
 	let selectedModel: string | null = null; // Allow null for "no model"
 
 	// Export functionality variables
-	let showExportModal = false;
-	let exportStartDate = '';
-	let exportEndDate = '';
 	let isExporting = false;
 	let exportLogs: any[] = [];
 	let showExportLogs = false;
-
-	// Reactive date limits for export
-	$: maxExportDate = formatDate(new Date());
-	$: minExportDate = (() => {
-		const minDate = new Date();
-		minDate.setDate(minDate.getDate() - 89); // 89 days back to allow exactly 90 days inclusive
-		return formatDate(minDate);
-	})();
 
 	// Model specific metrics
 	let modelPrompts: number = 0,
@@ -591,19 +580,19 @@
 		const today = new Date();
 
 		if (range === '7days') {
-			startDate = formatDate(new Date(today.getTime() - 7 * 24 * 60 * 60 * 1000));
+			startDate = formatDate(new Date(today.getTime() - 6 * 24 * 60 * 60 * 1000));
 			endDate = formatDate(today);
 			showCustomDateRange = false;
 		} else if (range === '30days') {
-			startDate = formatDate(new Date(today.getTime() - 30 * 24 * 60 * 60 * 1000));
+			startDate = formatDate(new Date(today.getTime() - 29 * 24 * 60 * 60 * 1000));
 			endDate = formatDate(today);
 			showCustomDateRange = false;
 		} else if (range === '60days') {
-			startDate = formatDate(new Date(today.getTime() - 60 * 24 * 60 * 60 * 1000));
+			startDate = formatDate(new Date(today.getTime() - 59 * 24 * 60 * 60 * 1000));
 			endDate = formatDate(today);
 			showCustomDateRange = false;
 		} else if (range === '90days') {
-			startDate = formatDate(new Date(today.getTime() - 90 * 24 * 60 * 60 * 1000));
+			startDate = formatDate(new Date(today.getTime() - 89 * 24 * 60 * 60 * 1000));
 			endDate = formatDate(today);
 			showCustomDateRange = false;
 		} else if (range === 'custom') {
@@ -660,8 +649,8 @@
 			domains = await getDomains(localStorage.token);
 
 			// For analyst role, automatically select their domain and don't allow changing it
-			if (isAnalyst && $user?.domain) {
-				selectedDomain = $user.domain;
+			if (isAnalyst && $user?.email) {
+				selectedDomain = $user.email.split('@')[1];
 			}
 
 			// Get models based on user role
@@ -721,40 +710,18 @@
 	}
 
 	// Export functionality
-	function openExportModal() {
-		showExportModal = true;
-		// Set default dates to current date range if custom range is selected
-		if (showCustomDateRange) {
-			exportStartDate = startDate;
-			exportEndDate = endDate;
-		} else {
-			// Set to last 30 days by default
-			const end = new Date();
-			const start = new Date();
-			start.setDate(start.getDate() - 30);
-			exportStartDate = formatDate(start);
-			exportEndDate = formatDate(end);
-		}
-	}
-
-	function closeExportModal() {
-		showExportModal = false;
-		exportStartDate = '';
-		exportEndDate = '';
-		isExporting = false;
-	}
 
 	async function handleExportData() {
-		if (!exportStartDate || !exportEndDate) {
+		// Validate that we have valid dates
+		if (!startDate || !endDate) {
 			alert($i18n.t('Please select both start and end dates'));
 			return;
 		}
 
-		// Check if date range exceeds 90 days
-		const startDate = new Date(exportStartDate);
-		const endDate = new Date(exportEndDate);
-		const diffTime = Math.abs(endDate - startDate);
-		const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+		// Check if date range exceeds 90 days (using same logic as backend)
+		const start = new Date(startDate);
+		const end = new Date(endDate);
+		const diffDays = Math.floor((end.getTime() - start.getTime()) / (1000 * 60 * 60 * 24)) + 1; // +1 to include both start and end days
 
 		if (diffDays > 90) {
 			alert($i18n.t('Date range cannot exceed 90 days. Please select a shorter range.'));
@@ -764,26 +731,19 @@
 		isExporting = true;
 		try {
 			// For analysts, always use their domain regardless of selectedDomain
-			const exportDomain = $user?.role === 'analyst' ? $user?.domain : selectedDomain;
+			const exportDomain = $user?.role === 'analyst' ? $user?.email?.split('@')[1] : selectedDomain;
 
-			const blob = await exportMetricsData(
-				localStorage.token,
-				exportStartDate,
-				exportEndDate,
-				exportDomain
-			);
+			const blob = await exportMetricsData(localStorage.token, startDate, endDate, exportDomain);
 
 			// Create download link
 			const url = window.URL.createObjectURL(blob);
 			const a = document.createElement('a');
 			a.href = url;
-			a.download = `metrics_export_${exportStartDate}_to_${exportEndDate}.csv`;
+			a.download = `metrics_export_${startDate}_to_${endDate}.csv`;
 			document.body.appendChild(a);
 			a.click();
 			window.URL.revokeObjectURL(url);
 			document.body.removeChild(a);
-
-			closeExportModal();
 
 			// Refresh export logs (for admin, global_analyst, and analyst users)
 			if (
@@ -904,7 +864,7 @@
 							<div
 								class="block w-52 p-2 text-sm border border-gray-400 bg-gray-100 dark:bg-gray-700 rounded-md shadow-sm dark:text-gray-200"
 							>
-								{$user?.domain || $user?.email?.split('@')[1] || $i18n.t('Loading...')}
+								{$user?.email?.split('@')[1] || $i18n.t('Loading...')}
 							</div>
 						{:else}
 							<!-- For admins and global analysts, show the domain selector -->
@@ -955,19 +915,44 @@
 						<div class="flex flex-col">
 							<div class="flex items-center gap-2 mt-6">
 								<button
-									on:click={openExportModal}
+									on:click={handleExportData}
+									disabled={isExporting || !startDate || !endDate}
 									title="Export raw message metrics data including tokens, timestamps, and user information in CSV format"
-									class="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium rounded-md transition-colors duration-200 flex items-center gap-2"
+									class="px-4 py-2 bg-blue-600 hover:bg-blue-700 disabled:bg-gray-400 text-white text-sm font-medium rounded-md transition-colors duration-200 flex items-center gap-2"
 								>
-									<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-										<path
-											stroke-linecap="round"
-											stroke-linejoin="round"
-											stroke-width="2"
-											d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
-										/>
-									</svg>
-									{$i18n.t('Export Raw Data')}
+									{#if isExporting}
+										<svg
+											class="animate-spin -ml-1 mr-2 h-4 w-4 text-white"
+											xmlns="http://www.w3.org/2000/svg"
+											fill="none"
+											viewBox="0 0 24 24"
+										>
+											<circle
+												class="opacity-25"
+												cx="12"
+												cy="12"
+												r="10"
+												stroke="currentColor"
+												stroke-width="4"
+											></circle>
+											<path
+												class="opacity-75"
+												fill="currentColor"
+												d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+											></path>
+										</svg>
+										{$i18n.t('Exporting...')}
+									{:else}
+										<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+											<path
+												stroke-linecap="round"
+												stroke-linejoin="round"
+												stroke-width="2"
+												d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
+											/>
+										</svg>
+										{$i18n.t('Export Raw Data')}
+									{/if}
 								</button>
 								{#if $user?.role === 'admin' || $user?.role === 'global_analyst' || $user?.role === 'analyst'}
 									<button
@@ -1367,115 +1352,6 @@
 			</div>
 		</div>
 	</div>
-
-	<!-- Export Data Modal -->
-	{#if showExportModal}
-		<div class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-			<div class="bg-white dark:bg-gray-800 rounded-lg p-6 w-96 max-w-sm mx-4">
-				<h3 class="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4">
-					{$i18n.t('Export Raw Metrics Data')}
-				</h3>
-
-				<p class="text-sm text-gray-600 dark:text-gray-400 mb-4">
-					{$i18n.t(
-						'This exports individual message records with token usage, timestamps, and user information - not the aggregated data shown in the charts above.'
-					)}
-				</p>
-
-				<div class="space-y-4">
-					<div>
-						<label
-							for="export-start-date"
-							class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2"
-						>
-							{$i18n.t('Start Date')}
-						</label>
-						<input
-							id="export-start-date"
-							type="date"
-							bind:value={exportStartDate}
-							max={maxExportDate}
-							min={minExportDate}
-							class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-gray-200"
-						/>
-					</div>
-
-					<div>
-						<label
-							for="export-end-date"
-							class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2"
-						>
-							{$i18n.t('End Date')}
-						</label>
-						<input
-							id="export-end-date"
-							type="date"
-							bind:value={exportEndDate}
-							max={maxExportDate}
-							min={exportStartDate || minExportDate}
-							class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-gray-200"
-						/>
-					</div>
-
-					<div class="text-sm text-gray-600 dark:text-gray-400">
-						{#if $user?.role === 'analyst'}
-							{$i18n.t('Exporting data for your domain')}:
-							<strong>{$user?.domain || $user?.email?.split('@')[1] || 'Unknown'}</strong>
-						{:else if selectedDomain}
-							{$i18n.t('Exporting data for domain')}: <strong>{selectedDomain}</strong>
-						{:else}
-							{$i18n.t('Exporting data for all domains')}
-						{/if}
-					</div>
-
-					<div class="text-xs text-gray-500 dark:text-gray-500 mt-2">
-						{$i18n.t('Note: Maximum date range allowed is 90 days')}
-					</div>
-				</div>
-
-				<div class="flex justify-end space-x-3 mt-6">
-					<button
-						on:click={closeExportModal}
-						class="px-4 py-2 text-gray-700 dark:text-gray-300 border border-gray-300 dark:border-gray-600 rounded-md hover:bg-gray-50 dark:hover:bg-gray-700"
-						disabled={isExporting}
-					>
-						{$i18n.t('Cancel')}
-					</button>
-					<button
-						on:click={handleExportData}
-						disabled={isExporting || !exportStartDate || !exportEndDate}
-						class="px-4 py-2 bg-blue-600 hover:bg-blue-700 disabled:bg-gray-400 text-white rounded-md transition-colors duration-200 flex items-center gap-2"
-					>
-						{#if isExporting}
-							<svg
-								class="animate-spin -ml-1 mr-2 h-4 w-4 text-white"
-								xmlns="http://www.w3.org/2000/svg"
-								fill="none"
-								viewBox="0 0 24 24"
-							>
-								<circle
-									class="opacity-25"
-									cx="12"
-									cy="12"
-									r="10"
-									stroke="currentColor"
-									stroke-width="4"
-								></circle>
-								<path
-									class="opacity-75"
-									fill="currentColor"
-									d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
-								></path>
-							</svg>
-							{$i18n.t('Exporting...')}
-						{:else}
-							{$i18n.t('Export')}
-						{/if}
-					</button>
-				</div>
-			</div>
-		</div>
-	{/if}
 
 	<!-- Export Logs Modal -->
 	{#if showExportLogs}
