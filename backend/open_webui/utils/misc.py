@@ -300,6 +300,17 @@ def validate_email_format(email: str) -> bool:
     return bool(re.match(r"[^@]+@[^@]+\.[^@]+", email))
 
 
+def validate_password_format(password: str) -> bool:
+    # Password must have at least 12 characters
+    if len(password) < 12:
+        return False
+    # Password must have at least one upper case and lower case letter
+    # one number and one special character
+    return bool(
+        re.match(r"^(?=.*[a-z])(?=.*[A-Z])(?=.*[0-9])(?=.*[!@#$%^&*,\.]).*$", password)
+    )
+
+
 def sanitize_filename(file_name):
     # Convert to lowercase
     lower_case_file_name = file_name.lower()

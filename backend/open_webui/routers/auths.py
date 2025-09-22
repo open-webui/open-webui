@@ -38,7 +38,11 @@ from fastapi.responses import RedirectResponse, Response, JSONResponse
 from open_webui.config import OPENID_PROVIDER_URL, ENABLE_OAUTH_SIGNUP, ENABLE_LDAP
 from pydantic import BaseModel
 
-from open_webui.utils.misc import parse_duration, validate_email_format
+from open_webui.utils.misc import (
+    parse_duration,
+    validate_email_format,
+    validate_password_format,
+)
 from open_webui.utils.auth import (
     decode_token,
     create_api_key,
@@ -164,7 +168,9 @@ async def update_profile(
 
 @router.post("/update/password", response_model=bool)
 async def update_password(
-    form_data: UpdatePasswordForm, session_user=Depends(get_current_user)
+    form_data: UpdatePasswordForm,
+    request: Request,
+    session_user=Depends(get_current_user),
 ):
     if WEBUI_AUTH_TRUSTED_EMAIL_HEADER:
         raise HTTPException(400, detail=ERROR_MESSAGES.ACTION_PROHIBITED)
@@ -172,6 +178,13 @@ async def update_password(
         user = Auths.authenticate_user(session_user.email, form_data.password)
 
         if user:
+            if request.app.state.config.ENABLE_ENFORCE_PASSWORD_POLICY:
+                if not validate_password_format(form_data.password):
+                    raise HTTPException(
+                        status.HTTP_400_BAD_REQUEST,
+                        detail=ERROR_MESSAGES.INVALID_PASSWORD_FORMAT,
+                    )
+
             hashed = get_password_hash(form_data.new_password)
             return Auths.update_user_password_by_id(user.id, hashed)
         else:
@@ -586,6 +599,13 @@ async def signup(request: Request, response: Response, form_data: SignupForm):
             status.HTTP_400_BAD_REQUEST, detail=ERROR_MESSAGES.INVALID_EMAIL_FORMAT
         )
 
+    if request.app.state.config.ENABLE_ENFORCE_PASSWORD_POLICY:
+        if not validate_password_format(form_data.password):
+            raise HTTPException(
+                status.HTTP_400_BAD_REQUEST,
+                detail=ERROR_MESSAGES.INVALID_PASSWORD_FORMAT,
+            )
+
     if Users.get_user_by_email(form_data.email.lower()):
         raise HTTPException(400, detail=ERROR_MESSAGES.EMAIL_TAKEN)
 
@@ -745,11 +765,20 @@ async def signout(request: Request, response: Response):
 
 
 @router.post("/add", response_model=SigninResponse)
-async def add_user(form_data: AddUserForm, user=Depends(get_admin_user)):
+async def add_user(
+    request: Request, form_data: AddUserForm, user=Depends(get_admin_user)
+):
     if not validate_email_format(form_data.email.lower()):
         raise HTTPException(
             status.HTTP_400_BAD_REQUEST, detail=ERROR_MESSAGES.INVALID_EMAIL_FORMAT
         )
+
+    if request.app.state.config.ENABLE_ENFORCE_PASSWORD_POLICY:
+        if not validate_password_format(form_data.password):
+            raise HTTPException(
+                status.HTTP_400_BAD_REQUEST,
+                detail=ERROR_MESSAGES.INVALID_PASSWORD_FORMAT,
+            )
 
     if Users.get_user_by_email(form_data.email.lower()):
         raise HTTPException(400, detail=ERROR_MESSAGES.EMAIL_TAKEN)
