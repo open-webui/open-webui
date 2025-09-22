@@ -952,6 +952,7 @@
 							<div class="flex items-center gap-2 mt-6">
 								<button
 									on:click={openExportModal}
+									title="Export raw message metrics data including tokens, timestamps, and user information in CSV format"
 									class="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium rounded-md transition-colors duration-200 flex items-center gap-2"
 								>
 									<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -962,7 +963,7 @@
 											d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
 										/>
 									</svg>
-									{$i18n.t('Export Data')}
+									{$i18n.t('Export Raw Data')}
 								</button>
 								{#if $user?.role === 'admin'}
 									<button
@@ -1368,8 +1369,14 @@
 		<div class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
 			<div class="bg-white dark:bg-gray-800 rounded-lg p-6 w-96 max-w-sm mx-4">
 				<h3 class="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4">
-					{$i18n.t('Export Metrics Data')}
+					{$i18n.t('Export Raw Metrics Data')}
 				</h3>
+
+				<p class="text-sm text-gray-600 dark:text-gray-400 mb-4">
+					{$i18n.t(
+						'This exports individual message records with token usage, timestamps, and user information - not the aggregated data shown in the charts above.'
+					)}
+				</p>
 
 				<div class="space-y-4">
 					<div>
