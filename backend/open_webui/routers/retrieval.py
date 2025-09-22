@@ -701,7 +701,7 @@ async def update_query_settings(
 ####################################
 
 
-def save_docs_to_vector_db(
+async def save_docs_to_vector_db(
     request: Request,
     docs,
     collection_name,
@@ -733,7 +733,7 @@ def save_docs_to_vector_db(
 
     # Check if entries with the same hash (metadata.hash) already exist
     if metadata and "hash" in metadata:
-        result = VECTOR_DB_CLIENT.query(
+        result = await VECTOR_DB_CLIENT.query(
             collection_name=collection_name,
             filter={"hash": metadata["hash"]},
         )
@@ -810,11 +810,13 @@ def save_docs_to_vector_db(
                 metadata[key] = str(value)
 
     try:
-        if VECTOR_DB_CLIENT.has_collection(collection_name=collection_name):
+        if await VECTOR_DB_CLIENT.has_collection(collection_name=collection_name):
             log.info(f"collection {collection_name} already exists")
 
             if overwrite:
-                VECTOR_DB_CLIENT.delete_collection(collection_name=collection_name)
+                await VECTOR_DB_CLIENT.delete_collection(
+                    collection_name=collection_name
+                )
                 log.info(f"deleting existing collection {collection_name}")
             elif add is False:
                 log.info(
@@ -860,7 +862,7 @@ def save_docs_to_vector_db(
             for idx, text in enumerate(texts)
         ]
 
-        VECTOR_DB_CLIENT.insert(
+        await VECTOR_DB_CLIENT.insert(
             collection_name=collection_name,
             items=items,
         )
@@ -878,7 +880,7 @@ class ProcessFileForm(BaseModel):
 
 
 @router.post("/process/file")
-def process_file(
+async def process_file(
     request: Request,
     form_data: ProcessFileForm,
     user=Depends(get_verified_user),
@@ -895,7 +897,7 @@ def process_file(
             # Update the content in the file
             # Usage: /files/{file_id}/data/content/update
 
-            VECTOR_DB_CLIENT.delete_collection(
+            await VECTOR_DB_CLIENT.delete_collection(
                 collection_name=f"{VECTOR_COLLECTION_PREFIXES.FILE}{file.id}"
             )
 
@@ -917,7 +919,7 @@ def process_file(
             # Check if the file has already been processed and save the content
             # Usage: /knowledge/{id}/file/add, /knowledge/{id}/file/update
 
-            result = VECTOR_DB_CLIENT.query(
+            result = await VECTOR_DB_CLIENT.query(
                 collection_name=f"{VECTOR_COLLECTION_PREFIXES.FILE}{file.id}",
                 filter={"file_id": file.id},
             )
@@ -1003,7 +1005,7 @@ def process_file(
         Files.update_file_hash_by_id(file.id, hash)
 
         try:
-            result = save_docs_to_vector_db(
+            result = await save_docs_to_vector_db(
                 request,
                 docs=docs,
                 collection_name=collection_name,
@@ -1342,7 +1344,9 @@ async def process_web_search(
                 log.info(
                     f"Getting all documents from cached collection: {cached_collection}"
                 )
-                cached_result = VECTOR_DB_CLIENT.get(collection_name=cached_collection)
+                cached_result = await VECTOR_DB_CLIENT.get(
+                    collection_name=cached_collection
+                )
 
                 cached_urls = []
 
@@ -1705,13 +1709,17 @@ class DeleteForm(BaseModel):
 
 
 @router.post("/delete")
-def delete_entries_from_collection(form_data: DeleteForm, user=Depends(get_admin_user)):
+async def delete_entries_from_collection(
+    form_data: DeleteForm, user=Depends(get_admin_user)
+):
     try:
-        if VECTOR_DB_CLIENT.has_collection(collection_name=form_data.collection_name):
+        if await VECTOR_DB_CLIENT.has_collection(
+            collection_name=form_data.collection_name
+        ):
             file = Files.get_file_by_id(form_data.file_id)
             hash = file.hash
 
-            VECTOR_DB_CLIENT.delete(
+            await VECTOR_DB_CLIENT.delete(
                 collection_name=form_data.collection_name,
                 metadata={"hash": hash},
             )
@@ -1724,8 +1732,8 @@ def delete_entries_from_collection(form_data: DeleteForm, user=Depends(get_admin
 
 
 @router.post("/reset/db")
-def reset_vector_db(user=Depends(get_admin_user)):
-    VECTOR_DB_CLIENT.reset()
+async def reset_vector_db(user=Depends(get_admin_user)):
+    await VECTOR_DB_CLIENT.reset()
     Knowledges.delete_all_knowledge()
 
 

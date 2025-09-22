@@ -149,13 +149,13 @@ class QdrantClient:
             print(f"Error querying Qdrant: {e}")
             return None
 
-    def get(self, collection_name: str) -> Optional[GetResult]:
-        points = self.client.count(
+    async def get(self, collection_name: str) -> Optional[GetResult]:
+        points = await self.client.count(
             collection_name=collection_name,
         )
         if points.count:
             # Get all the items in the collection.
-            result = self.client.scroll(
+            result = await self.client.scroll(
                 collection_name=collection_name,
                 with_payload=True,
                 limit=points.count,
@@ -165,10 +165,10 @@ class QdrantClient:
 
         return None
 
-    def insert(self, collection_name: str, items: list[VectorItem]):
-        return self.upsert(collection_name=collection_name, items=items)
+    async def insert(self, collection_name: str, items: list[VectorItem]):
+        return await self.upsert(collection_name=collection_name, items=items)
 
-    def upsert(self, collection_name: str, items: list[VectorItem]):
+    async def upsert(self, collection_name: str, items: list[VectorItem]):
         # Update the items in the collection, if the items are not present, insert them. If the collection does not exist, it will be created.
 
         quantization_config = (
@@ -179,8 +179,8 @@ class QdrantClient:
             else None
         )
 
-        if not self.client.collection_exists(collection_name=collection_name):
-            self.client.create_collection(
+        if not await self.client.collection_exists(collection_name=collection_name):
+            await self.client.create_collection(
                 collection_name=collection_name,
                 on_disk_payload=QDRANT_ON_DISK_PAYLOAD,
                 hnsw_config=HnswConfigDiff(on_disk=QDRANT_ON_DISK_HNSW),
@@ -204,7 +204,7 @@ class QdrantClient:
             for item in items
         ]
 
-        return self.client.upsert(
+        return await self.client.upsert(
             collection_name=collection_name,
             points=points,
         )
