@@ -548,7 +548,7 @@ async def export_metrics_data(
             "Total Tokens",
             "Message Created At",
             "Message Timestamp",
-            "Message ID",
+            "Metrics Record ID",
         ]
         writer.writerow(headers)
 
@@ -571,7 +571,7 @@ async def export_metrics_data(
                     row["total_tokens"],
                     message_date_str,  # Message Timestamp - when the message was created
                     row["created_at"],  # Raw timestamp
-                    row["id"],  # Message ID
+                    row["id"],  # Metrics Record ID - the message_metrics table row ID
                 ]
             )
 
