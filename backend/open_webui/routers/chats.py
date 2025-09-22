@@ -5,6 +5,7 @@ import zipfile
 from datetime import datetime
 from io import BytesIO, StringIO
 from typing import Optional
+import pytz
 
 from open_webui.models.chats import (
     ChatForm,
@@ -418,9 +419,21 @@ async def update_chat_by_id(
         questions_asked = []
         for m in messages:
             if m["role"] == "user":
-                questions_asked.append(m["content"])
+                # Get timestamp and convert to EST
+                timestamp = m.get("timestamp", 0)
+                if timestamp:
+                    # Convert timestamp to datetime and then to EST
+                    dt = datetime.fromtimestamp(timestamp)
+                    est_tz = pytz.timezone('US/Eastern')
+                    dt_est = dt.astimezone(est_tz)
+                    # Convert to string format for database storage
+                    dt_est_str = dt_est.strftime('%Y-%m-%d %H:%M:%S %Z')
+                    questions_asked.append([m["content"], dt_est_str])
+                else:
+                    # If no timestamp, append with None
+                    questions_asked.append([m["content"], None])
 
-        
+
         model_name = None
         base_model_name = None
         if chat.chat.get("models") and len(chat.chat["models"]) > 0:
@@ -1091,7 +1104,14 @@ async def export_chats_as_csv(
             for message_id, message in messages.items():
                 if message.get('role') == 'user':
                     timestamp = message.get('timestamp', 0)
-                    human_timestamp = datetime.fromtimestamp(timestamp).strftime('%Y-%m-%d %H:%M:%S') if timestamp else 'Unknown'
+                    if timestamp:
+                        # Convert to EST timezone
+                        est_tz = pytz.timezone('US/Eastern')
+                        utc_dt = datetime.fromtimestamp(timestamp, tz=pytz.UTC)
+                        est_dt = utc_dt.astimezone(est_tz)
+                        human_timestamp = est_dt.strftime('%Y-%m-%d %I:%M:%S %p EST')
+                    else:
+                        human_timestamp = 'Unknown'
                     
                     csv_rows.append({
                         'member': member_name,

@@ -9,17 +9,31 @@
 	export let member = null;
 
 	// Generate structured questions from the questions array
+	// Supports both legacy ["text", ...] and new [["text", "timestamp"], ...] formats
 	const generateQuestions = (questionsArray) => {
 		if (!Array.isArray(questionsArray) || questionsArray.length === 0) {
 			return [];
 		}
 
-		return questionsArray.map((questionText, index) => ({
-			id: index + 1,
-			question: questionText || `Question ${index + 1}`,
-			timestamp: new Date(Date.now() - Math.random() * 7 * 24 * 60 * 60 * 1000).toLocaleString(),
-			timeTaken: `${Math.floor(Math.random() * 5) + 1}min`,
-		}));
+		return questionsArray.map((entry, index) => {
+			let text = '';
+			let ts = '';
+
+			if (Array.isArray(entry)) {
+				// New format: [text, timestamp]
+				[text, ts] = entry;
+			} else if (typeof entry === 'string') {
+				// Legacy format: text only
+				text = entry;
+			}
+
+			return {
+				id: index + 1,
+				question: text || `Question ${index + 1}`,
+				timestamp: ts || '',
+				timeTaken: `${Math.floor(Math.random() * 5) + 1}min`
+			};
+		});
 	};
 
 	let questions = [];
@@ -29,7 +43,8 @@
 	$: if (member && show) {
 		// Check if this is a grouped member (has multiple chats)
 		isGrouped = member.chatCount > 1;
-
+		console.log('Member Questions:', member.questions);
+		console.log('Member:', member);
 		// Use member.questions (array) instead of member.questionsAsked (count)
 		questions = generateQuestions(member.questions || []);
 
@@ -74,12 +89,12 @@
 					{#if isGrouped}
 						<span class="text-gray-400">•</span>
 						<span class="font-medium">
-							{member.questionsAsked} total questions
+							{member.questions.length} total questions
 						</span>
 					{:else}
 						<span class="text-gray-400">•</span>
 						<span class="font-medium">
-							{member.questionsAsked} questions
+							{member.questions.length} questions
 						</span>
 					{/if}
 				</div>
@@ -119,10 +134,14 @@
 									{question.question}
 								</div>
 								<div class="flex justify-between items-center text-xs text-gray-500 dark:text-gray-400">
-									<span class="font-medium">Asked on: {question.timestamp}</span>
-									<span class="bg-gray-100 dark:bg-gray-700 px-2 py-1 rounded">
+									{#if question.timestamp && question.timestamp.trim()}
+										<span class="font-medium">Asked on: {question.timestamp}</span>
+									{:else}
+										<span class="font-medium text-gray-400">Time Not Found</span>
+									{/if}
+									<!-- <span class="bg-gray-100 dark:bg-gray-700 px-2 py-1 rounded">
 										⏱️ {question.timeTaken}
-									</span>
+									</span> -->
 								</div>
 							</div>
 						</div>

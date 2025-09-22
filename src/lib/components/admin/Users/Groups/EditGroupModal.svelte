@@ -207,6 +207,7 @@
 				class="self-center"
 				on:click={() => {
 					show = false;
+					inputFiles = null;
 				}}
 			>
 				<svg
@@ -457,6 +458,7 @@
 				class="self-center"
 				on:click={() => {
 					showImportModal = false;
+					inputFiles = null;
 				}}
 			>
 				<svg

@@ -84,6 +84,7 @@ faster-whisper==1.1.1
 
 PyJWT[crypto]==2.10.1
 authlib==1.4.1
+pytz==2024.2
 
 black==24.8.0
 langfuse==2.44.0
