@@ -116,7 +116,6 @@ async def process_document(request: Request):
                     file_path=temp_file_path,
                     api_endpoint=api_endpoint,
                     api_key=api_key,
-                    mode="markdown", # Use markdown for better text representation
                 )
             else:
                  # Authenticate using DefaultAzureCredential if no key is provided
@@ -124,7 +123,6 @@ async def process_document(request: Request):
                     file_path=temp_file_path,
                     api_endpoint=api_endpoint,
                     azure_credential=DefaultAzureCredential(),
-                    mode="markdown",
                 )
             
             documents = loader.load()
