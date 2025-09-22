@@ -4,20 +4,40 @@
 
 	import { ariaMessage, user } from '$lib/stores';
 	import { updateUserProfile } from '$lib/apis/auths';
+	import { getUserTimezoneFromSettings, updateUserTimezone } from '$lib/apis/users';
 
 	import { getGravatarUrl } from '$lib/apis/utils';
-	import { generateInitialsImage, canvasPixelTest } from '$lib/utils';
+	import { generateInitialsImage, canvasPixelTest, getUserTimezone } from '$lib/utils';
 
 	const i18n = getContext('i18n');
 
 	export let saveHandler: Function;
-	export let saveSettings: Function;
 
 	let profileImageUrl = '';
 	let name = '';
+	let selectedTimezone = '';
 	let profileImageInputElement: HTMLInputElement;
 
+	// Canadian timezone options for Government of Canada users
+	const timezoneOptions = [
+		{ value: 'America/Toronto', label: 'Eastern Time - Toronto (ON)' },
+		{ value: 'America/Montreal', label: 'Eastern Time - Montreal (QC)' },
+		{ value: 'America/Halifax', label: 'Atlantic Time - Halifax (NS)' },
+		{ value: 'America/St_Johns', label: "Newfoundland Time - St. John's (NL)" },
+		{ value: 'America/Winnipeg', label: 'Central Time - Winnipeg (MB)' },
+		{ value: 'America/Regina', label: 'Central Time - Regina (SK)' },
+		{ value: 'America/Edmonton', label: 'Mountain Time - Edmonton (AB)' },
+		{ value: 'America/Calgary', label: 'Mountain Time - Calgary (AB)' },
+		{ value: 'America/Vancouver', label: 'Pacific Time - Vancouver (BC)' },
+		{ value: 'America/Whitehorse', label: 'Mountain Time - Whitehorse (YT)' },
+		{ value: 'America/Yellowknife', label: 'Mountain Time - Yellowknife (NT)' },
+		{ value: 'America/Iqaluit', label: 'Eastern Time - Iqaluit (NU)' }
+	];
+
 	const submitHandler = async () => {
+		let updateSuccess = true;
+
+		// Update profile information
 		if (name !== $user.name) {
 			if (profileImageUrl === generateInitialsImage($user.name) || profileImageUrl === '') {
 				profileImageUrl = generateInitialsImage(name);
@@ -27,10 +47,19 @@
 		const updatedUser = await updateUserProfile(localStorage.token, name, profileImageUrl).catch(
 			(error) => {
 				toast.error(`${error}`);
+				updateSuccess = false;
 			}
 		);
 
-		if (updatedUser) {
+		// Update timezone preference
+		if (selectedTimezone) {
+			await updateUserTimezone(localStorage.token, selectedTimezone).catch((error) => {
+				toast.error(`Failed to update timezone: ${error}`);
+				updateSuccess = false;
+			});
+		}
+
+		if (updatedUser && updateSuccess) {
 			await user.set(updatedUser);
 			return true;
 		}
@@ -40,6 +69,10 @@
 	onMount(async () => {
 		name = $user.name;
 		profileImageUrl = $user.profile_image_url;
+
+		// Load user's timezone preference or default to browser timezone
+		const userTimezone = await getUserTimezoneFromSettings(localStorage.token).catch(() => null);
+		selectedTimezone = userTimezone || getUserTimezone();
 	});
 </script>
 
@@ -203,6 +236,30 @@
 							bind:value={name}
 							required
 						/>
+					</div>
+				</div>
+			</div>
+
+			<div class="pt-3">
+				<div class="flex flex-col w-full">
+					<h3 class=" mb-1 text-xs font-medium">{$i18n.t('Timezone')}</h3>
+					<div class="text-xs text-gray-500 mb-2">
+						{$i18n.t('Select your timezone for accurate date and time information in chats')}
+					</div>
+
+					<div class="flex-1">
+						<select
+							class="w-full rounded-lg py-2 px-4 text-sm dark:text-gray-300 dark:bg-gray-850 outline-none border border-gray-200 dark:border-gray-700"
+							bind:value={selectedTimezone}
+						>
+							{#each timezoneOptions as option}
+								<option value={option.value}>{option.label}</option>
+							{/each}
+							<!-- Add detected timezone as option if it's not in the list -->
+							{#if selectedTimezone && !timezoneOptions.find((opt) => opt.value === selectedTimezone)}
+								<option value={selectedTimezone}>{selectedTimezone} (Detected)</option>
+							{/if}
+						</select>
 					</div>
 				</div>
 			</div>

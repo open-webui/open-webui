@@ -84,6 +84,7 @@ log_sources = [
     "COMFYUI",
     "CONFIG",
     "DB",
+    "GROUNDING",
     "IMAGES",
     "MAIN",
     "MODELS",

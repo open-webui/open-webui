@@ -183,6 +183,7 @@ from open_webui.config import (
     ENABLE_RAG_WEB_LOADER_SSL_VERIFICATION,
     ENABLE_RAG_WEB_SEARCH,
     ENABLE_WIKIPEDIA_GROUNDING,
+    ENABLE_WIKIPEDIA_GROUNDING_RERANKER,
     BYPASS_WEB_SEARCH_EMBEDDING_AND_RETRIEVAL,
     ENABLE_GOOGLE_DRIVE_INTEGRATION,
     WEBUI_AUTH,
@@ -373,12 +374,12 @@ async def lifespan(app: FastAPI):
     async def initialize_wiki_grounding():
         """Initialize Wikipedia grounding models in background to avoid first-user delay"""
         try:
-            from open_webui.grounding.wiki_search_utils import wiki_search_grounder
+            from open_webui.grounding.wiki_search_utils import get_wiki_search_grounder
 
             log.info(
                 "Starting background initialization of Wikipedia grounding models..."
             )
-            success = await wiki_search_grounder.initialize()
+            success = await get_wiki_search_grounder().initialize()
             if success:
                 log.info(
                     "Wikipedia grounding models initialized successfully in background"
@@ -616,6 +617,9 @@ app.state.config.YOUTUBE_LOADER_PROXY_URL = YOUTUBE_LOADER_PROXY_URL
 
 app.state.config.ENABLE_RAG_WEB_SEARCH = ENABLE_RAG_WEB_SEARCH
 app.state.config.ENABLE_WIKIPEDIA_GROUNDING = ENABLE_WIKIPEDIA_GROUNDING
+app.state.config.ENABLE_WIKIPEDIA_GROUNDING_RERANKER = (
+    ENABLE_WIKIPEDIA_GROUNDING_RERANKER
+)
 app.state.config.BYPASS_WEB_SEARCH_EMBEDDING_AND_RETRIEVAL = (
     BYPASS_WEB_SEARCH_EMBEDDING_AND_RETRIEVAL
 )

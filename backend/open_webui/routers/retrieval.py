@@ -55,6 +55,9 @@ from open_webui.retrieval.web.serpstack import search_serpstack
 from open_webui.retrieval.web.tavily import search_tavily
 from open_webui.retrieval.web.bing import search_bing
 
+# Wikipedia grounding
+from open_webui.grounding.wiki_search_utils import WikiSearchGrounder
+
 
 from open_webui.retrieval.utils import (
     get_embedding_function,
@@ -76,6 +79,7 @@ from open_webui.config import (
     RAG_RERANKING_MODEL_TRUST_REMOTE_CODE,
     UPLOAD_DIR,
     DEFAULT_LOCALE,
+    ENABLE_WIKIPEDIA_GROUNDING_RERANKER,
 )
 from open_webui.env import (
     SRC_LOG_LEVELS,
@@ -408,6 +412,7 @@ async def get_rag_config(request: Request, user=Depends(get_admin_user)):
             },
             "wikipedia_grounding": {
                 "enabled": request.app.state.config.ENABLE_WIKIPEDIA_GROUNDING,
+                "reranker_enabled": request.app.state.config.ENABLE_WIKIPEDIA_GROUNDING_RERANKER,
             },
         },
     }
@@ -459,13 +464,8 @@ class WebSearchConfig(BaseModel):
     concurrent_requests: Optional[int] = None
 
 
-class WikipediaGroundingConfig(BaseModel):
-    enabled: bool
-
-
 class WebConfig(BaseModel):
     search: Optional[WebSearchConfig] = None
-    wikipedia_grounding: Optional[WikipediaGroundingConfig] = None
     web_loader_ssl_verification: Optional[bool] = None
 
 
@@ -640,6 +640,8 @@ async def update_rag_config(
             },
             "wikipedia_grounding": {
                 "enabled": request.app.state.config.ENABLE_WIKIPEDIA_GROUNDING,
+                "reranker_enabled": request.app.state.config.ENABLE_WIKIPEDIA_GROUNDING_RERANKER,
+                "max_concurrent": request.app.state.config.WIKIPEDIA_GROUNDING_MAX_CONCURRENT,
             },
         },
     }
@@ -2994,6 +2996,35 @@ def api_cleanup_orphaned_chat_files(user=Depends(get_admin_user)):
         }
     except Exception as e:
         log.error(f"Orphaned chat files cleanup API failed: {str(e)}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail={
+                "status": "error",
+                "timestamp": datetime.now().isoformat(),
+                "error": str(e),
+            },
+        )
+
+
+@router.get("/monitoring/wikipedia-grounding/queue-status")
+async def get_wikipedia_grounding_queue_status(user=Depends(get_admin_user)):
+    """
+    API endpoint to monitor Wikipedia grounding queue status.
+    Returns current concurrency control information including:
+    - Available permits
+    - Active operations
+    - Waiting operations
+    - Configuration settings
+    """
+    try:
+        status = await WikiSearchGrounder.get_queue_status()
+        return {
+            "status": "success",
+            "timestamp": datetime.now().isoformat(),
+            "queue_status": status,
+        }
+    except Exception as e:
+        log.error(f"Wikipedia grounding queue status check failed: {str(e)}")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail={

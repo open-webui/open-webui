@@ -17,12 +17,6 @@ jobs:
     permissions:
       contents: read
       packages: write
-    strategy:
-      fail-fast: false
-      matrix:
-        platform:
-          - linux/amd64
-          # Add more platforms if needed, e.g., - linux/arm64
 
     steps:
       # GitHub Packages requires the entire repository name to be in lowercase
@@ -30,14 +24,9 @@ jobs:
       - name: Set repository and image name to lowercase
         run: |
           echo "IMAGE_NAME=${IMAGE_NAME,,}" >>${GITHUB_ENV}
-          echo "FULL_IMAGE_NAME=ghcr.io/${IMAGE_NAME,,}" >>${GITHUB_ENV}
+          echo "FULL_IMAGE_NAME=${{ env.REGISTRY }}/${IMAGE_NAME,,}" >>${GITHUB_ENV}
         env:
           IMAGE_NAME: '${{ github.repository }}'
-
-      - name: Prepare
-        run: |
-          platform=${{ matrix.platform }}
-          echo "PLATFORM_PAIR=${platform//\//-}" >> $GITHUB_ENV
 
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -45,18 +34,27 @@ jobs:
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
 
-      - name: Log in to the Container registry
+      - name: Log in to the GitHub Container registry
         uses: docker/login-action@v3
         with:
           registry: ${{ env.REGISTRY }}
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
+      - name: Log in to IBM Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ca.icr.io
+          username: ${{ secrets.IBM_CONTAINER_REGISTRY_USER }}
+          password: ${{ secrets.IBM_CONTAINER_REGISTRY_KEY }}
+
       - name: Extract metadata for Docker images (default latest tag)
         id: meta
         uses: docker/metadata-action@v5
         with:
-          images: ${{ env.FULL_IMAGE_NAME }}
+          images: |
+            ${{ env.FULL_IMAGE_NAME }}
+            ca.icr.io/canchat-v2/canchat-2
           tags: |
             type=ref,event=branch
             type=ref,event=tag
@@ -65,19 +63,6 @@ jobs:
             type=semver,pattern={{major}}.{{minor}}
           flavor: |
             latest=${{ github.ref == 'refs/heads/main' }}
-
-      # Cache metadata step disabled since we're using no-cache=true
-      # - name: Extract metadata for Docker cache
-      #   id: cache-meta
-      #   uses: docker/metadata-action@v5
-      #   with:
-      #     images: ${{ env.FULL_IMAGE_NAME }}
-      #     tags: |
-      #       type=ref,event=branch
-      #       ${{ github.ref_type == 'tag' && 'type=raw,value=main' || '' }}
-      #     flavor: |
-      #       prefix=cache-${{ matrix.platform }}-
-      #       latest=false
 
       - name: Build Docker image (latest)
         uses: docker/build-push-action@v5
@@ -85,80 +70,9 @@ jobs:
         with:
           context: .
           push: true
-          platforms: ${{ matrix.platform }}
           labels: ${{ steps.meta.outputs.labels }}
-          outputs: type=image,name=${{ env.FULL_IMAGE_NAME }},push-by-digest=true,name-canonical=true,push=true
+          # outputs: type=image,name=${{ env.FULL_IMAGE_NAME }},push-by-digest=true,name-canonical=true,push=true
           no-cache: true  # Disable caching due to large/unstable images causing disk space issues
-          # cache-from: type=registry,ref=${{ steps.cache-meta.outputs.tags }}  # Disabled - not effective for large images
-          # cache-to: type=local,dest=/var/lib/docker/cache  # Disabled - causing "no space left on device" errors
-          # cache-to: type=registry,ref=${{ steps.cache-meta.outputs.tags }},mode=max  # Disabled to avoid disk space issues
           build-args: |
             BUILD_HASH=${{ github.sha }}
-
-      - name: Export digest
-        run: |
-          mkdir -p /tmp/digests
-          digest="${{ steps.build.outputs.digest }}"
-          touch "/tmp/digests/${digest#sha256:}"
-
-      - name: Upload digest
-        uses: actions/upload-artifact@v4
-        with:
-          name: digests-main-${{ env.PLATFORM_PAIR }}
-          path: /tmp/digests/*
-          if-no-files-found: error
-          retention-days: 1
-
-  merge-main-images:
-    runs-on: arc-ssc-dsai
-    needs: [build-main-image]
-    steps:
-      # GitHub Packages requires the entire repository name to be in lowercase
-      # although the repository owner has a lowercase username, this prevents some people from running actions after forking
-      - name: Set repository and image name to lowercase
-        run: |
-          echo "IMAGE_NAME=${IMAGE_NAME,,}" >>${GITHUB_ENV}
-          echo "FULL_IMAGE_NAME=ghcr.io/${IMAGE_NAME,,}" >>${GITHUB_ENV}
-        env:
-          IMAGE_NAME: '${{ github.repository }}'
-
-      - name: Download digests
-        uses: actions/download-artifact@v4
-        with:
-          pattern: digests-main-*
-          path: /tmp/digests
-          merge-multiple: true
-
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
-
-      - name: Log in to the Container registry
-        uses: docker/login-action@v3
-        with:
-          registry: ${{ env.REGISTRY }}
-          username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Extract metadata for Docker images (default latest tag)
-        id: meta
-        uses: docker/metadata-action@v5
-        with:
-          images: ${{ env.FULL_IMAGE_NAME }}
-          tags: |
-            type=ref,event=branch
-            type=ref,event=tag
-            type=sha,prefix=git-
-            type=semver,pattern={{version}}
-            type=semver,pattern={{major}}.{{minor}}
-          flavor: |
-            latest=${{ github.ref == 'refs/heads/main' }}
-
-      - name: Create manifest list and push
-        working-directory: /tmp/digests
-        run: |
-          docker buildx imagetools create $(jq -cr '.tags | map("-t " + .) | join(" ")' <<< "$DOCKER_METADATA_OUTPUT_JSON") \
-            $(printf '${{ env.FULL_IMAGE_NAME }}@sha256:%s ' *)
-
-      - name: Inspect image
-        run: |
-          docker buildx imagetools inspect ${{ env.FULL_IMAGE_NAME }}:${{ steps.meta.outputs.version }}
+          tags: ${{ steps.meta.outputs.tags }}

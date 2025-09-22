@@ -21,7 +21,7 @@ alembic==1.14.0
 peewee==3.17.8
 peewee-migrate==1.12.2
 psycopg2-binary==2.9.9
-pgvector==0.3.5
+pgvector>=0.4.1
 PyMySQL==1.1.1
 bcrypt==4.2.0
 
@@ -49,9 +49,8 @@ opensearch-py==2.7.1
 
 # txtai-wikipedia Wiki Grounding dependencies
 transformers>=4.46.0,<5.0.0
-torch>=2.5.0
-txtai[graph]>=8.6.0
-sentence-transformers==3.3.1
+txtai[graph]==9.0.0
+sentence-transformers>=5.0.0
 sacremoses==0.1.1
 
 colbert-ai==0.2.21

@@ -38,6 +38,13 @@
 			$socket.emit('user-join', { auth: { token: sessionUser.token } });
 			await user.set(sessionUser);
 			await config.set(await getBackendConfig());
+
+			// Initialize user timezone detection after successful authentication
+			const { timezoneService } = await import('$lib/services/timezone');
+			await timezoneService.initializeUserTimezone(sessionUser.token).catch((error) => {
+				console.warn('Failed to initialize timezone during login:', error);
+			});
+
 			goto('/');
 		}
 	};
