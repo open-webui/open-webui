@@ -462,8 +462,9 @@ async def update_tools_valves_by_id(
     try:
         form_data = {k: v for k, v in form_data.items() if v is not None}
         valves = Valves(**form_data)
-        Tools.update_tool_valves_by_id(id, valves.model_dump())
-        return valves.model_dump()
+        minimal = valves.model_dump(exclude_unset=True)
+        Tools.update_tool_valves_by_id(id, minimal)
+        return minimal
     except Exception as e:
         log.exception(f"Failed to update tool valves by id {id}: {e}")
         raise HTTPException(
@@ -538,10 +539,9 @@ async def update_tools_user_valves_by_id(
             try:
                 form_data = {k: v for k, v in form_data.items() if v is not None}
                 user_valves = UserValves(**form_data)
-                Tools.update_user_valves_by_id_and_user_id(
-                    id, user.id, user_valves.model_dump()
-                )
-                return user_valves.model_dump()
+                minimal = user_valves.model_dump(exclude_unset=True)
+                Tools.update_user_valves_by_id_and_user_id(id, user.id, minimal)
+                return minimal
             except Exception as e:
                 log.exception(f"Failed to update user valves by id {id}: {e}")
                 raise HTTPException(
