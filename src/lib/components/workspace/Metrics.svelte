@@ -785,8 +785,12 @@
 
 			closeExportModal();
 
-			// Refresh export logs (only for admin users)
-			if ($user?.role === 'admin') {
+			// Refresh export logs (for admin, global_analyst, and analyst users)
+			if (
+				$user?.role === 'admin' ||
+				$user?.role === 'global_analyst' ||
+				$user?.role === 'analyst'
+			) {
 				await loadExportLogs();
 			}
 		} catch (error) {
@@ -965,7 +969,7 @@
 									</svg>
 									{$i18n.t('Export Raw Data')}
 								</button>
-								{#if $user?.role === 'admin'}
+								{#if $user?.role === 'admin' || $user?.role === 'global_analyst' || $user?.role === 'analyst'}
 									<button
 										on:click={openExportLogs}
 										class="px-3 py-2 bg-gray-600 hover:bg-gray-700 text-white text-sm font-medium rounded-md transition-colors duration-200 flex items-center gap-2"
