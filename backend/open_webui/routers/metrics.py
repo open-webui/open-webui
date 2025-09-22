@@ -585,7 +585,7 @@ async def export_metrics_data(
         # Log the export
         export_log_form = ExportLogForm(
             user_id=user.id,
-            email_domain=user.email.split("@")[1] if "@" in user.email else "unknown",
+            email_domain=user.domain or "unknown",
             file_size=file_size,
             row_count=row_count,
             date_range_start=start_timestamp,
