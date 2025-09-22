@@ -121,12 +121,17 @@ def facilities_web_search(query: str, request: Request, user) -> tuple[str, List
     
         if not request.app.state.config.TAVILY_API_KEY:
             logging.warning("TAVILY_API_KEY not configured in NAGA")
-            return "", []
+            return "", [], []
         
         tavily_api_key = request.app.state.config.TAVILY_API_KEY.get(user.email)
         if not tavily_api_key:
-            logging.warning(f"No Tavily API key found for user: {user.email}")
-            return "", []
+            # Fall back to admin's global Tavily API key
+            tavily_api_key = request.app.state.config.TAVILY_API_KEY.get("")
+            if not tavily_api_key:
+                logging.warning(f"No Tavily API key found for user: {user.email} and no global admin key configured")
+                return "", [], []
+            else:
+                logging.info(f"Using admin's global Tavily API key for user: {user.email}")
         
         logging.info(f"Starting facilities web search for query: {query}")
         
@@ -189,13 +194,18 @@ def facilities_web_search_specific_sites(query: str, allowed_sites: List[str], r
        
         if not request.app.state.config.TAVILY_API_KEY:
             logging.warning("TAVILY_API_KEY not configured in NAGA")
-            return "", []
+            return "", [], []
         
         
         tavily_api_key = request.app.state.config.TAVILY_API_KEY.get(user.email)
         if not tavily_api_key:
-            logging.warning(f"No Tavily API key found for user: {user.email}")
-            return "", []
+            # Fall back to admin's global Tavily API key
+            tavily_api_key = request.app.state.config.TAVILY_API_KEY.get("")
+            if not tavily_api_key:
+                logging.warning(f"No Tavily API key found for user: {user.email} and no global admin key configured")
+                return "", [], []
+            else:
+                logging.info(f"Using admin's global Tavily API key for user: {user.email}")
         
         logging.info(f"Starting specific sites web search for query: {query}, sites: {allowed_sites}")
         
