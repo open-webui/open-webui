@@ -48,15 +48,12 @@
 		})}
 		placement="top-start"
 	>
-		{#if !(connection?.config?.enable ?? true)}
-			<div
-				class="absolute top-0 bottom-0 left-0 right-0 opacity-60 bg-white dark:bg-gray-900 z-10"
-			></div>
-		{/if}
 		<div class="flex w-full">
 			<div class="flex-1 relative">
 				<input
-					class=" outline-hidden w-full bg-transparent"
+					class=" outline-hidden w-full bg-transparent {!(connection?.config?.enable ?? true)
+						? 'opacity-50'
+						: ''}"
 					placeholder={$i18n.t('API Base URL')}
 					bind:value={connection.url}
 					autocomplete="off"
