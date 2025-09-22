@@ -169,9 +169,7 @@ class GroupTable:
 
             # Get user info once for domain checking
             user = Users.get_user_by_id(user_id)
-            user_domain = (
-                extract_domain_from_email(user.email) if user and user.email else None
-            )
+            user_domain = user.domain if user else None
 
             for group in all_groups:
                 # Check 1: Explicit membership in user_ids
