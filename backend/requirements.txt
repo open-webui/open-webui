@@ -49,6 +49,8 @@ tiktoken
 langchain==0.3.26
 langchain-community==0.3.27
 
+datasets==3.6.0
+
 fake-useragent==2.2.0
 chromadb==1.0.20
 pymilvus==2.5.0
