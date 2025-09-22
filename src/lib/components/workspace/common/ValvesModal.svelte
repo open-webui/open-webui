@@ -37,7 +37,15 @@
 			// Convert string to array
 			for (const property in valvesSpec.properties) {
 				if (valvesSpec.properties[property]?.type === 'array') {
-					valves[property] = (valves[property] ?? '').split(',').map((v) => v.trim());
+					if (typeof valves[property] === 'string') {
+						valves[property] = (valves[property] as string)
+							.split(',')
+							.map((v) => v.trim())
+							.filter((v) => v.length > 0);
+					} else if (valves[property] == null) {
+						// Keep null/undefined to indicate using default
+						valves[property] = null;
+					}
 				}
 			}
 
@@ -83,7 +91,13 @@
 			// Convert array to string
 			for (const property in valvesSpec.properties) {
 				if (valvesSpec.properties[property]?.type === 'array') {
-					valves[property] = (valves[property] ?? []).join(',');
+					if (valves[property] != null) {
+						const arr = Array.isArray(valves[property]) ? valves[property] : [];
+						valves[property] = (arr as string[]).join(', ');
+					} else {
+						// Leave as null to indicate default (even if default is an empty array)
+						valves[property] = null;
+					}
 				}
 			}
 		}
