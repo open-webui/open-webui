@@ -553,14 +553,15 @@ async def export_metrics_data(
         writer.writerow(headers)
 
         # Write data rows
+        export_timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
         for row in metrics_data:
             # Convert timestamp to readable date
-            date_str = datetime.fromtimestamp(row["created_at"]).strftime(
+            message_date_str = datetime.fromtimestamp(row["created_at"]).strftime(
                 "%Y-%m-%d %H:%M:%S"
             )
             writer.writerow(
                 [
-                    date_str,
+                    export_timestamp,  # Export Date - when this export was performed
                     row["user_domain"],
                     row["model"],
                     row["user_id"],
@@ -568,7 +569,7 @@ async def export_metrics_data(
                     row["prompt_tokens"],
                     row["completion_tokens"],
                     row["total_tokens"],
-                    date_str,  # Same as Export Date but could be different format if needed
+                    message_date_str,  # Message Timestamp - when the message was created
                     row["created_at"],  # Raw timestamp
                     row["id"],  # Message ID
                 ]
