@@ -2064,13 +2064,11 @@ async def process_web_search(
         )
 
         search_tasks = [
-            asyncio.ensure_future(
-                run_in_threadpool(
-                    search_web,
-                    request,
-                    request.app.state.config.WEB_SEARCH_ENGINE,
-                    query,
-                )
+            run_in_threadpool(
+                search_web,
+                request,
+                request.app.state.config.WEB_SEARCH_ENGINE,
+                query,
             )
             for query in form_data.queries
         ]
