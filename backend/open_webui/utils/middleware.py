@@ -146,7 +146,7 @@ async def chat_completion_tools_handler(
         user_message = get_last_user_message(messages)
         history = "\n".join(
             f"{message['role'].upper()}: \"\"\"{message['content']}\"\"\""
-            for message in messages[::-1][:4]
+            for message in messages[-4:]
         )
 
         prompt = f"History:\n{history}\nQuery: {user_message}"
