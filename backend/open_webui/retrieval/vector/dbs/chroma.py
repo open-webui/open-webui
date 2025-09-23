@@ -1,13 +1,9 @@
-import os
 import chromadb
 import logging
 from chromadb import Settings
 from chromadb.utils.batch_utils import create_batches
 
 from typing import Optional
-
-# Disable ChromaDB telemetry completely
-os.environ["CHROMA_TELEMETRY"] = "false"
 
 from open_webui.retrieval.vector.main import VectorItem, SearchResult, GetResult
 from open_webui.config import (
@@ -32,8 +28,6 @@ class ChromaClient:
         settings_dict = {
             "allow_reset": True,
             "anonymized_telemetry": False,
-            "telemetry_host": None,
-            "telemetry_port": None,
         }
         if CHROMA_CLIENT_AUTH_PROVIDER is not None:
             settings_dict["chroma_client_auth_provider"] = CHROMA_CLIENT_AUTH_PROVIDER

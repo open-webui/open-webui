@@ -1702,9 +1702,6 @@ CHROMA_DATA_PATH = f"{DATA_DIR}/vector_db"
 if VECTOR_DB == "chroma":
     import chromadb
     
-    # Disable ChromaDB telemetry to prevent errors
-    os.environ["CHROMA_TELEMETRY"] = "false"
-
     CHROMA_TENANT = os.environ.get("CHROMA_TENANT", chromadb.DEFAULT_TENANT)
     CHROMA_DATABASE = os.environ.get("CHROMA_DATABASE", chromadb.DEFAULT_DATABASE)
     CHROMA_HTTP_HOST = os.environ.get("CHROMA_HTTP_HOST", "")
