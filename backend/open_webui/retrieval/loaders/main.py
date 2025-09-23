@@ -148,7 +148,7 @@ class DoclingLoader:
                 )
             }
 
-            params = {"image_export_mode": "placeholder", "table_mode": "accurate"}
+            params = {"image_export_mode": "placeholder"}
 
             if self.params:
                 if self.params.get("do_picture_description"):
@@ -174,13 +174,30 @@ class DoclingLoader:
                             self.params.get("picture_description_api", {})
                         )
 
-                if self.params.get("ocr_engine") and self.params.get("ocr_lang"):
+                params["do_ocr"] = self.params.get("do_ocr")
+
+                params["force_ocr"] = self.params.get("force_ocr")
+
+                if (
+                    self.params.get("do_ocr")
+                    and self.params.get("ocr_engine")
+                    and self.params.get("ocr_lang")
+                ):
                     params["ocr_engine"] = self.params.get("ocr_engine")
                     params["ocr_lang"] = [
                         lang.strip()
                         for lang in self.params.get("ocr_lang").split(",")
                         if lang.strip()
                     ]
+
+                if self.params.get("pdf_backend"):
+                    params["pdf_backend"] = self.params.get("pdf_backend")
+
+                if self.params.get("table_mode"):
+                    params["table_mode"] = self.params.get("table_mode")
+
+                if self.params.get("pipeline"):
+                    params["pipeline"] = self.params.get("pipeline")
 
             endpoint = f"{self.url}/v1/convert/file"
             r = requests.post(endpoint, files=files, data=params)

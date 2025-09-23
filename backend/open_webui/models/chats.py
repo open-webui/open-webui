@@ -236,7 +236,7 @@ class ChatTable:
 
         return chat.chat.get("title", "New Chat")
 
-    def get_messages_by_chat_id(self, id: str) -> Optional[dict]:
+    def get_messages_map_by_chat_id(self, id: str) -> Optional[dict]:
         chat = self.get_chat_by_id(id)
         if chat is None:
             return None

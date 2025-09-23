@@ -201,8 +201,14 @@ class MessageTable:
         with get_db() as db:
             message = db.get(Message, id)
             message.content = form_data.content
-            message.data = form_data.data
-            message.meta = form_data.meta
+            message.data = {
+                **(message.data if message.data else {}),
+                **(form_data.data if form_data.data else {}),
+            }
+            message.meta = {
+                **(message.meta if message.meta else {}),
+                **(form_data.meta if form_data.meta else {}),
+            }
             message.updated_at = int(time.time_ns())
             db.commit()
             db.refresh(message)

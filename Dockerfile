@@ -4,6 +4,7 @@
 ARG USE_CUDA=false
 ARG USE_OLLAMA=false
 ARG USE_SLIM=false
+ARG USE_PERMISSION_HARDENING=false
 # Tested with cu117 for CUDA 11 and cu121 for CUDA 12 (default)
 ARG USE_CUDA_VER=cu128
 # any sentence transformer model; models to use can be found at https://huggingface.co/models?library=sentence-transformers
@@ -24,6 +25,9 @@ ARG GID=0
 ######## WebUI frontend ########
 FROM --platform=$BUILDPLATFORM node:22-alpine3.20 AS build
 ARG BUILD_HASH
+
+# Set Node.js options (heap limit Allocation failed - JavaScript heap out of memory)
+# ENV NODE_OPTIONS="--max-old-space-size=4096"
 
 WORKDIR /app
 
@@ -46,6 +50,7 @@ ARG USE_CUDA
 ARG USE_OLLAMA
 ARG USE_CUDA_VER
 ARG USE_SLIM
+ARG USE_PERMISSION_HARDENING
 ARG USE_EMBEDDING_MODEL
 ARG USE_RERANKING_MODEL
 ARG UID
@@ -137,14 +142,14 @@ RUN --mount=type=cache,target=/root/.cache/pip \
     else \
     pip3 install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cpu --no-cache-dir && \
     uv pip install --system -r requirements.txt --no-cache-dir && \
+    if [ "$USE_SLIM" != "true" ]; then \
     python -c "import os; from sentence_transformers import SentenceTransformer; SentenceTransformer(os.environ['RAG_EMBEDDING_MODEL'], device='cpu')" && \
     python -c "import os; from faster_whisper import WhisperModel; WhisperModel(os.environ['WHISPER_MODEL'], device='cpu', compute_type='int8', download_root=os.environ['WHISPER_MODEL_DIR'])"; \
     python -c "import os; import tiktoken; tiktoken.get_encoding(os.environ['TIKTOKEN_ENCODING_NAME'])"; \
     fi; \
-    else \
-    uv pip install --system -r requirements.txt --no-cache-dir; \
     fi; \
-    mkdir -p /app/backend/data && chown -R $UID:$GID /app/backend/data/
+    mkdir -p /app/backend/data && chown -R $UID:$GID /app/backend/data/ && \
+    rm -rf /var/lib/apt/lists/*;
 
 # Install Ollama if requested
 RUN if [ "$USE_OLLAMA" = "true" ] && [ "$USE_SLIM" != "true" ]; then \
@@ -173,11 +178,13 @@ HEALTHCHECK CMD curl --silent --fail http://localhost:${PORT:-8080}/health | jq 
 # Minimal, atomic permission hardening for OpenShift (arbitrary UID):
 # - Group 0 owns /app and /root
 # - Directories are group-writable and have SGID so new files inherit GID 0
-RUN set -eux; \
+RUN if [ "$USE_PERMISSION_HARDENING" = "true" ]; then \
+    set -eux; \
     chgrp -R 0 /app /root || true; \
     chmod -R g+rwX /app /root || true; \
     find /app -type d -exec chmod g+s {} + || true; \
-    find /root -type d -exec chmod g+s {} + || true
+    find /root -type d -exec chmod g+s {} + || true; \
+    fi
 
 USER $UID:$GID
 
