@@ -316,3 +316,4 @@ backend/set_env.ps1
 /backend/DB-Migration-ACP-3780/context-files
 backend/set_env.sh
 backend/DB-Migration-ACP-3780/dev-openwebui-data.json
+/.cline_storage
