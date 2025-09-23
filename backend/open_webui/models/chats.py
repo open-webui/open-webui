@@ -832,6 +832,13 @@ class ChatTable:
             all_chats = query.all()
             return [ChatModel.model_validate(chat) for chat in all_chats]
 
+    def count_chats_by_folder_id_and_user_id(
+        self, folder_id: str, user_id: str
+    ) -> list[ChatModel]:
+        with get_db() as db:
+            query = db.query(Chat).filter_by(folder_id=folder_id, user_id=user_id)
+            return query.count()
+
     def update_chat_folder_id_by_id_and_user_id(
         self, id: str, user_id: str, folder_id: str
     ) -> Optional[ChatModel]:
