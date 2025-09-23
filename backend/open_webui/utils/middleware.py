@@ -151,12 +151,14 @@ async def chat_completion_tools_handler(
 
     def get_tools_function_calling_payload(messages, task_model_id, content):
         user_message = get_last_user_message(messages)
-        history = "\n".join(
+
+        recent_messages = messages[-4:] if len(messages) > 4 else messages
+        chat_history = "\n".join(
             f"{message['role'].upper()}: \"\"\"{message['content']}\"\"\""
-            for message in messages[::-1][:4]
+            for message in recent_messages
         )
 
-        prompt = f"History:\n{history}\nQuery: {user_message}"
+        prompt = f"History:\n{chat_history}\nQuery: {user_message}"
 
         return {
             "model": task_model_id,
