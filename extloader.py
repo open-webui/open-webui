@@ -57,8 +57,108 @@ app = FastAPI(
     version="1.0.0"
 )
 
+def extract_docx_structure(doc, filename: str) -> str:
+    """Extract structured content from DOCX and format as JSON markdown."""
+    structure = {
+        "document_title": filename,
+        "content": [],
+        "metadata": {
+            "paragraphs": 0,
+            "tables": 0,
+            "headings": 0
+        }
+    }
+    
+    # Process paragraphs and headings
+    for paragraph in doc.paragraphs:
+        if paragraph.text.strip():
+            # Check if it's a heading based on style
+            style_name = paragraph.style.name if paragraph.style else ""
+            if "Heading" in style_name:
+                level = 1
+                if "Heading 2" in style_name:
+                    level = 2
+                elif "Heading 3" in style_name:
+                    level = 3
+                elif "Heading 4" in style_name:
+                    level = 4
+                elif "Heading 5" in style_name:
+                    level = 5
+                elif "Heading 6" in style_name:
+                    level = 6
+                
+                structure["content"].append({
+                    "type": "heading",
+                    "level": level,
+                    "text": paragraph.text.strip(),
+                    "markdown": "#" * level + " " + paragraph.text.strip()
+                })
+                structure["metadata"]["headings"] += 1
+            else:
+                structure["content"].append({
+                    "type": "paragraph",
+                    "text": paragraph.text.strip(),
+                    "markdown": paragraph.text.strip() + "\n"
+                })
+                structure["metadata"]["paragraphs"] += 1
+    
+    # Process tables
+    for table_idx, table in enumerate(doc.tables):
+        table_data = []
+        headers = []
+        
+        for row_idx, row in enumerate(table.rows):
+            row_data = []
+            for cell in row.cells:
+                cell_text = cell.text.strip()
+                row_data.append(cell_text)
+            
+            if row_idx == 0:
+                headers = row_data
+            table_data.append(row_data)
+        
+        # Create markdown table
+        if table_data:
+            markdown_table = ""
+            if headers:
+                markdown_table += "| " + " | ".join(headers) + " |\n"
+                markdown_table += "|" + "---|" * len(headers) + "\n"
+                
+                for row in table_data[1:]:
+                    markdown_table += "| " + " | ".join(row) + " |\n"
+            else:
+                for row in table_data:
+                    markdown_table += "| " + " | ".join(row) + " |\n"
+            
+            structure["content"].append({
+                "type": "table",
+                "index": table_idx,
+                "headers": headers,
+                "data": table_data,
+                "markdown": markdown_table
+            })
+            structure["metadata"]["tables"] += 1
+    
+    # Create final markdown content
+    markdown_content = f"# {filename}\n\n"
+    for item in structure["content"]:
+        if item["type"] == "heading":
+            markdown_content += item["markdown"] + "\n\n"
+        elif item["type"] == "paragraph":
+            markdown_content += item["markdown"] + "\n"
+        elif item["type"] == "table":
+            markdown_content += "\n" + item["markdown"] + "\n"
+    
+    # Return as JSON string
+    result = {
+        "structured_markdown": markdown_content.strip(),
+        "document_structure": structure
+    }
+    
+    return json.dumps(result, indent=2)
+
 def process_docx(file_bytes: bytes, filename: str) -> tuple[str, int]:
-    """Process DOCX files using python-docx."""
+    """Process DOCX files using python-docx and return structured JSON markdown."""
     if not DOCX_AVAILABLE:
         raise HTTPException(status_code=500, detail="python-docx not available")
     
@@ -68,24 +168,16 @@ def process_docx(file_bytes: bytes, filename: str) -> tuple[str, int]:
             temp_file_path = temp_file.name
         
         doc = DocxDocument(temp_file_path)
-        full_text = ""
         
-        for paragraph in doc.paragraphs:
-            full_text += paragraph.text + "\n"
-        
-        # Extract text from tables
-        for table in doc.tables:
-            for row in table.rows:
-                for cell in row.cells:
-                    full_text += cell.text + " "
-                full_text += "\n"
+        # Extract structured content as JSON markdown
+        structured_content = extract_docx_structure(doc, filename)
         
         os.unlink(temp_file_path)
         
         # Estimate page count (rough approximation)
-        page_count = max(1, len(full_text) // 3000)  # ~3000 chars per page estimate
+        page_count = max(1, len(structured_content) // 3000)  # ~3000 chars per page estimate
         
-        return full_text.strip(), page_count
+        return structured_content, page_count
         
     except Exception as e:
         if 'temp_file_path' in locals():
