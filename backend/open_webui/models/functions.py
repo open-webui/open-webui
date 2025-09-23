@@ -37,6 +37,7 @@ class Function(Base):
 class FunctionMeta(BaseModel):
     description: Optional[str] = None
     manifest: Optional[dict] = {}
+    model_config = ConfigDict(extra="allow")
 
 
 class FunctionModel(BaseModel):
@@ -46,6 +47,22 @@ class FunctionModel(BaseModel):
     type: str
     content: str
     meta: FunctionMeta
+    is_active: bool = False
+    is_global: bool = False
+    updated_at: int  # timestamp in epoch
+    created_at: int  # timestamp in epoch
+
+    model_config = ConfigDict(from_attributes=True)
+
+
+class FunctionWithValvesModel(BaseModel):
+    id: str
+    user_id: str
+    name: str
+    type: str
+    content: str
+    meta: FunctionMeta
+    valves: Optional[dict] = None
     is_active: bool = False
     is_global: bool = False
     updated_at: int  # timestamp in epoch
@@ -111,8 +128,8 @@ class FunctionsTable:
             return None
 
     def sync_functions(
-        self, user_id: str, functions: list[FunctionModel]
-    ) -> list[FunctionModel]:
+        self, user_id: str, functions: list[FunctionWithValvesModel]
+    ) -> list[FunctionWithValvesModel]:
         # Synchronize functions for a user by updating existing ones, inserting new ones, and removing those that are no longer present.
         try:
             with get_db() as db:
@@ -166,17 +183,24 @@ class FunctionsTable:
         except Exception:
             return None
 
-    def get_functions(self, active_only=False) -> list[FunctionModel]:
+    def get_functions(
+        self, active_only=False, include_valves=False
+    ) -> list[FunctionModel | FunctionWithValvesModel]:
         with get_db() as db:
             if active_only:
+                functions = db.query(Function).filter_by(is_active=True).all()
+
+            else:
+                functions = db.query(Function).all()
+
+            if include_valves:
                 return [
-                    FunctionModel.model_validate(function)
-                    for function in db.query(Function).filter_by(is_active=True).all()
+                    FunctionWithValvesModel.model_validate(function)
+                    for function in functions
                 ]
             else:
                 return [
-                    FunctionModel.model_validate(function)
-                    for function in db.query(Function).all()
+                    FunctionModel.model_validate(function) for function in functions
                 ]
 
     def get_functions_by_type(
@@ -235,6 +259,29 @@ class FunctionsTable:
                 db.refresh(function)
                 return self.get_function_by_id(id)
             except Exception:
+                return None
+
+    def update_function_metadata_by_id(
+        self, id: str, metadata: dict
+    ) -> Optional[FunctionModel]:
+        with get_db() as db:
+            try:
+                function = db.get(Function, id)
+
+                if function:
+                    if function.meta:
+                        function.meta = {**function.meta, **metadata}
+                    else:
+                        function.meta = metadata
+
+                    function.updated_at = int(time.time())
+                    db.commit()
+                    db.refresh(function)
+                    return self.get_function_by_id(id)
+                else:
+                    return None
+            except Exception as e:
+                log.exception(f"Error updating function metadata by id {id}: {e}")
                 return None
 
     def get_user_valves_by_id_and_user_id(

@@ -1,6 +1,7 @@
 <script>
 	import { toast } from 'svelte-sonner';
 	import { onMount, getContext } from 'svelte';
+	import { page } from '$app/stores';
 
 	const i18n = getContext('i18n');
 
@@ -10,7 +11,6 @@
 	import User from '$lib/components/icons/User.svelte';
 	import UserCircleSolid from '$lib/components/icons/UserCircleSolid.svelte';
 	import GroupModal from './EditGroupModal.svelte';
-	import { querystringValue } from '$lib/utils';
 
 	export let users = [];
 	export let group = {
@@ -47,7 +47,7 @@
 	};
 
 	onMount(() => {
-		const groupId = querystringValue('id');
+		const groupId = $page.url.searchParams.get('id');
 		if (groupId && groupId === group.id) {
 			showEdit = true;
 		}

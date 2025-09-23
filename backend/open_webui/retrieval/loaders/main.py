@@ -4,6 +4,7 @@ import ftfy
 import sys
 import json
 
+from azure.identity import DefaultAzureCredential
 from langchain_community.document_loaders import (
     AzureAIDocumentIntelligenceLoader,
     BSHTMLLoader,
@@ -147,7 +148,7 @@ class DoclingLoader:
                 )
             }
 
-            params = {"image_export_mode": "placeholder", "table_mode": "accurate"}
+            params = {"image_export_mode": "placeholder"}
 
             if self.params:
                 if self.params.get("do_picture_description"):
@@ -173,13 +174,30 @@ class DoclingLoader:
                             self.params.get("picture_description_api", {})
                         )
 
-                if self.params.get("ocr_engine") and self.params.get("ocr_lang"):
+                params["do_ocr"] = self.params.get("do_ocr")
+
+                params["force_ocr"] = self.params.get("force_ocr")
+
+                if (
+                    self.params.get("do_ocr")
+                    and self.params.get("ocr_engine")
+                    and self.params.get("ocr_lang")
+                ):
                     params["ocr_engine"] = self.params.get("ocr_engine")
                     params["ocr_lang"] = [
                         lang.strip()
                         for lang in self.params.get("ocr_lang").split(",")
                         if lang.strip()
                     ]
+
+                if self.params.get("pdf_backend"):
+                    params["pdf_backend"] = self.params.get("pdf_backend")
+
+                if self.params.get("table_mode"):
+                    params["table_mode"] = self.params.get("table_mode")
+
+                if self.params.get("pipeline"):
+                    params["pipeline"] = self.params.get("pipeline")
 
             endpoint = f"{self.url}/v1/convert/file"
             r = requests.post(endpoint, files=files, data=params)
@@ -283,7 +301,7 @@ class Loader:
         ):
             api_base_url = self.kwargs.get("DATALAB_MARKER_API_BASE_URL", "")
             if not api_base_url or api_base_url.strip() == "":
-                api_base_url = "https://www.datalab.to/api/v1"
+                api_base_url = "https://www.datalab.to/api/v1/marker"  # https://github.com/open-webui/open-webui/pull/16867#issuecomment-3218424349
 
             loader = DatalabMarkerLoader(
                 file_path=file_path,
@@ -327,7 +345,6 @@ class Loader:
         elif (
             self.engine == "document_intelligence"
             and self.kwargs.get("DOCUMENT_INTELLIGENCE_ENDPOINT") != ""
-            and self.kwargs.get("DOCUMENT_INTELLIGENCE_KEY") != ""
             and (
                 file_ext in ["pdf", "xls", "xlsx", "docx", "ppt", "pptx"]
                 or file_content_type
@@ -340,11 +357,18 @@ class Loader:
                 ]
             )
         ):
-            loader = AzureAIDocumentIntelligenceLoader(
-                file_path=file_path,
-                api_endpoint=self.kwargs.get("DOCUMENT_INTELLIGENCE_ENDPOINT"),
-                api_key=self.kwargs.get("DOCUMENT_INTELLIGENCE_KEY"),
-            )
+            if self.kwargs.get("DOCUMENT_INTELLIGENCE_KEY") != "":
+                loader = AzureAIDocumentIntelligenceLoader(
+                    file_path=file_path,
+                    api_endpoint=self.kwargs.get("DOCUMENT_INTELLIGENCE_ENDPOINT"),
+                    api_key=self.kwargs.get("DOCUMENT_INTELLIGENCE_KEY"),
+                )
+            else:
+                loader = AzureAIDocumentIntelligenceLoader(
+                    file_path=file_path,
+                    api_endpoint=self.kwargs.get("DOCUMENT_INTELLIGENCE_ENDPOINT"),
+                    azure_credential=DefaultAzureCredential(),
+                )
         elif (
             self.engine == "mistral_ocr"
             and self.kwargs.get("MISTRAL_OCR_API_KEY") != ""

@@ -17,7 +17,7 @@
 	import AlertRenderer, { alertComponent } from './AlertRenderer.svelte';
 	import Collapsible from '$lib/components/common/Collapsible.svelte';
 	import Tooltip from '$lib/components/common/Tooltip.svelte';
-	import ArrowDownTray from '$lib/components/icons/ArrowDownTray.svelte';
+	import Download from '$lib/components/icons/Download.svelte';
 
 	import Source from './Source.svelte';
 	import { settings } from '$lib/stores';
@@ -32,6 +32,8 @@
 
 	export let save = false;
 	export let preview = false;
+
+	export let editCodeBlock = true;
 	export let topPadding = false;
 
 	export let onSave: Function = () => {};
@@ -106,7 +108,8 @@
 				{attributes}
 				{save}
 				{preview}
-				stickyButtonsClassName={topPadding ? 'top-8' : 'top-0'}
+				edit={editCodeBlock}
+				stickyButtonsClassName={topPadding ? 'top-7' : 'top-0'}
 				onSave={(value) => {
 					onSave({
 						raw: token.raw,
@@ -121,19 +124,19 @@
 			{token.text}
 		{/if}
 	{:else if token.type === 'table'}
-		<div class="relative w-full group">
-			<div class="scrollbar-hidden relative overflow-x-auto max-w-full rounded-lg">
+		<div class="relative w-full group mb-2">
+			<div class="scrollbar-hidden relative overflow-x-auto max-w-full">
 				<table
 					class=" w-full text-sm text-left text-gray-500 dark:text-gray-400 max-w-full rounded-xl"
 				>
 					<thead
-						class="text-xs text-gray-700 uppercase bg-gray-50 dark:bg-gray-850 dark:text-gray-400 border-none"
+						class="text-xs text-gray-700 uppercase bg-white dark:bg-gray-900 dark:text-gray-400 border-none"
 					>
 						<tr class="">
 							{#each token.header as header, headerIdx}
 								<th
 									scope="col"
-									class="px-3! py-1.5! cursor-pointer border border-gray-100 dark:border-gray-850"
+									class="px-2.5! py-2! cursor-pointer border-b border-gray-100! dark:border-gray-800!"
 									style={token.align[headerIdx] ? '' : `text-align: ${token.align[headerIdx]}`}
 								>
 									<div class="gap-1.5 text-left">
@@ -152,10 +155,14 @@
 					</thead>
 					<tbody>
 						{#each token.rows as row, rowIdx}
-							<tr class="bg-white dark:bg-gray-900 dark:border-gray-850 text-xs">
+							<tr class="bg-white dark:bg-gray-900 text-xs">
 								{#each row ?? [] as cell, cellIdx}
 									<td
-										class="px-3! py-1.5! text-gray-900 dark:text-white w-max border border-gray-100 dark:border-gray-850"
+										class="px-3! py-2! text-gray-900 dark:text-white w-max {token.rows.length -
+											1 ===
+										rowIdx
+											? ''
+											: 'border-b border-gray-50! dark:border-gray-850!'}"
 										style={token.align[cellIdx] ? `text-align: ${token.align[cellIdx]}` : ''}
 									>
 										<div class="break-normal">
@@ -183,7 +190,7 @@
 							exportTableToCSVHandler(token, tokenIdx);
 						}}
 					>
-						<ArrowDownTray className=" size-3.5" strokeWidth="1.5" />
+						<Download className=" size-3.5" strokeWidth="1.5" />
 					</button>
 				</Tooltip>
 			</div>
@@ -198,6 +205,7 @@
 					id={`${id}-${tokenIdx}`}
 					tokens={token.tokens}
 					{done}
+					{editCodeBlock}
 					{onTaskClick}
 					{onSourceClick}
 				/>
@@ -231,6 +239,7 @@
 							tokens={item.tokens}
 							top={token.loose}
 							{done}
+							{editCodeBlock}
 							{onTaskClick}
 							{onSourceClick}
 						/>
@@ -264,6 +273,7 @@
 									tokens={item.tokens}
 									top={token.loose}
 									{done}
+									{editCodeBlock}
 									{onTaskClick}
 									{onSourceClick}
 								/>
@@ -274,6 +284,7 @@
 								tokens={item.tokens}
 								top={token.loose}
 								{done}
+								{editCodeBlock}
 								{onTaskClick}
 								{onSourceClick}
 							/>
@@ -296,6 +307,7 @@
 					tokens={marked.lexer(token.text)}
 					attributes={token?.attributes}
 					{done}
+					{editCodeBlock}
 					{onTaskClick}
 					{onSourceClick}
 				/>

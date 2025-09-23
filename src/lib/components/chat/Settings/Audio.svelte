@@ -6,7 +6,6 @@
 	import { getVoices as _getVoices } from '$lib/apis/audio';
 
 	import Switch from '$lib/components/common/Switch.svelte';
-	import { round } from '@huggingface/transformers';
 	import Spinner from '$lib/components/common/Spinner.svelte';
 	import Tooltip from '$lib/components/common/Tooltip.svelte';
 	const dispatch = createEventDispatcher();
