@@ -2,6 +2,8 @@
 	import { getAdminDetails } from '$lib/apis/auths';
 	import { onMount, tick, getContext } from 'svelte';
 	import { config } from '$lib/stores';
+	import DOMPurify from 'dompurify';
+	import { marked } from 'marked';
 
 	const i18n = getContext('i18n');
 
@@ -38,7 +40,7 @@
 					style="white-space: pre-wrap;"
 				>
 					{#if ($config?.ui?.pending_user_overlay_content ?? '').trim() !== ''}
-						{$config.ui.pending_user_overlay_content}
+						{@html marked.parse(DOMPurify.sanitize(($config.ui.pending_user_overlay_content).replace(/\n/g, '<br>')))}
 					{:else}
 						{$i18n.t('Your account status is currently pending activation.')}{'\n'}{$i18n.t(
 							'To access the WebUI, please reach out to the administrator. Admins can manage user statuses from the Admin Panel.'
