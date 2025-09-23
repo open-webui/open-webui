@@ -118,7 +118,11 @@ def facilities_web_search(query: str, request: Request, user) -> tuple[str, List
      web search for facilities - uses existing NAGA Tavily configuration
     """
     try:
-    
+        # Check if web search is enabled for this user
+        if not request.app.state.config.ENABLE_RAG_WEB_SEARCH.get(user.email):
+            logging.info(f"Web search is disabled for user: {user.email}")
+            return "", [], []
+        
         if not request.app.state.config.TAVILY_API_KEY:
             logging.warning("TAVILY_API_KEY not configured in NAGA")
             return "", [], []
@@ -137,18 +141,59 @@ def facilities_web_search(query: str, request: Request, user) -> tuple[str, List
         urls = []
         scores = []
         
-        for domain in allowed_domains:
-            logging.info(f"Searching domain: {domain}")
+        if allowed_domains:
+            # Search specific domains
+            for domain in allowed_domains:
+                logging.info(f"Searching domain: {domain}")
+                try:
+                    site_query = f"site:{domain} {query}"
+                    results = search_tavily(
+                        api_key=tavily_api_key,
+                        query=site_query,
+                        count=3,
+                        filter_list=None,
+                        blocklist=blocklist
+                    )
+                    logging.info(f"Search results for {domain}: {len(results) if results else 0} results")
+                    
+                    if results:
+                        for result in results:
+                            url = result.link.strip()
+                            content = result.snippet.strip()
+                            score = result.score if hasattr(result, 'score') else 0.1
+                            logging.info(f"Found result: {url[:50]}... with score: {score}")
+                            
+                            # Parse domain and validate it's from allowed domains
+                            from urllib.parse import urlparse
+                            parsed_domain = urlparse(url).netloc
+                            
+                            # More strict domain validation - must end with allowed domains
+                            is_allowed_domain = any(parsed_domain.endswith(allowed) for allowed in allowed_domains)
+                            is_blocked = any(url.startswith(bad) for bad in blocklist)
+                            
+                            if is_allowed_domain and not is_blocked:
+                                snippets.append(content)
+                                urls.append(url)
+                                scores.append(score)
+                                logging.info(f"Added to results: {url} with score: {score} (domain: {parsed_domain})")
+                            else:
+                                logging.info(f"Blocked by filter: {url} (domain: {parsed_domain}, allowed: {is_allowed_domain}, blocked: {is_blocked})")
+                    else:
+                        logging.info(f"No results for domain: {domain}")
+                except Exception as e:
+                    logging.error(f"Error searching domain {domain}: {e}")
+        else:
+            # No domain filter - search the entire web (like regular chat)
+            logging.info(f"No domain filter configured, searching entire web for query: {query}")
             try:
-                site_query = f"site:{domain} {query}"
                 results = search_tavily(
                     api_key=tavily_api_key,
-                    query=site_query,
+                    query=query,
                     count=3,
                     filter_list=None,
                     blocklist=blocklist
                 )
-                logging.info(f"Search results for {domain}: {len(results) if results else 0} results")
+                logging.info(f"Web search results: {len(results) if results else 0} results")
                 
                 if results:
                     for result in results:
@@ -157,25 +202,22 @@ def facilities_web_search(query: str, request: Request, user) -> tuple[str, List
                         score = result.score if hasattr(result, 'score') else 0.1
                         logging.info(f"Found result: {url[:50]}... with score: {score}")
                         
-                        # Parse domain and validate it's from allowed domains
+                        # Parse domain and validate it's not blocked
                         from urllib.parse import urlparse
                         parsed_domain = urlparse(url).netloc
-                        
-                        # More strict domain validation - must end with allowed domains
-                        is_allowed_domain = any(parsed_domain.endswith(allowed) for allowed in allowed_domains)
                         is_blocked = any(url.startswith(bad) for bad in blocklist)
                         
-                        if is_allowed_domain and not is_blocked:
+                        if not is_blocked:
                             snippets.append(content)
                             urls.append(url)
                             scores.append(score)
-                            logging.info(f"Added to results: {url} with score: {score} (domain: {parsed_domain})")
+                            logging.info(f"Added to results: {url} with score: {score}")
                         else:
-                            logging.info(f"Blocked by filter: {url} (domain: {parsed_domain}, allowed: {is_allowed_domain}, blocked: {is_blocked})")
+                            logging.info(f"Blocked by blocklist: {url}")
                 else:
-                    logging.info(f"No results for domain: {domain}")
+                    logging.info(f"No web search results found")
             except Exception as e:
-                logging.error(f"Error searching domain {domain}: {e}")
+                logging.error(f"Error in web search: {e}")
         
         return "\n\n".join(snippets), urls, scores
         
@@ -416,7 +458,7 @@ async def generate_facilities_response(request: Request, form_data: FacilitiesRe
                     retrieved_chunks.append(f"<source><source_id>{source}</source_id><source_context>{doc}</source_context></source>")
                 
                 section_sources.append({
-                    "source": {"name": source},
+                    "source": {"id": source, "name": source},
                     "document": docs,  
                     "metadata": [{"source": source, "name": source}] * len(docs),
                     "distances": real_distances 
@@ -472,7 +514,7 @@ async def generate_facilities_response(request: Request, form_data: FacilitiesRe
                             
                             # Create separate source for each URL (like existing NAGA system)
                             all_sources.append({
-                                "source": {"name": url, "url": url},  # Use URL as both name and url
+                                "source": {"id": url, "name": url, "url": url},  # Use URL as both name and url
                                 "document": [content_part.strip()],
                                 "metadata": [{"source": url, "name": url}],
                                 "distances": web_distances  # Use real distances/scores

@@ -2079,21 +2079,13 @@ BYPASS_WEB_SEARCH_EMBEDDING_AND_RETRIEVAL = UserScopedConfig(
 # Each user has their own private domain filter list.
 RAG_WEB_SEARCH_DOMAIN_FILTER_LIST = UserScopedConfig(
     "rag.web.search.domain.filter_list",
-    [
-        "nyu.edu",
-        "nsf.gov",
-        # "wikipedia.com",
-        # "wikimedia.org",
-        # "wikidata.org",
-    ],
+    [],
 )
 
 # Website blocklist - URLs that should be blocked even if they're from allowed domains
 RAG_WEB_SEARCH_WEBSITE_BLOCKLIST = UserScopedConfig(
     "rag.web.search.website.blocklist",
-    [
-        "https://med.nyu.edu/research/scientific-cores-shared-resources/high-performance-computing-core",
-    ],
+    [],
 )
 
 # Internal facilities specific sites for NYU HPC searches

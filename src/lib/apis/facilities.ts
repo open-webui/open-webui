@@ -13,9 +13,10 @@ export interface FacilitiesResponse {
 	content: string;  // Formatted content for chat display
 	sections: Record<string, string>;  // Keep sections for debugging
 	sources: Array<{
-		source: { id: string; name: string; url?: string };
+		source: { id: string; name: string; url?: string };  // Match regular chat format
 		document: string[];
 		metadata: Array<{ source: string; name: string }>;
+		distances?: number[];  // Relevance scores like regular chat
 	}>;  // Sources in chat format
 	error?: string;
 }
@@ -36,11 +37,16 @@ export const generateFacilitiesResponse = async (
 		body: JSON.stringify(request)
 	})
 		.then(async (res) => {
-			if (!res.ok) throw await res.json();
+			if (!res.ok) {
+				const errorData = await res.json();
+				console.error('Facilities API error response:', errorData);
+				throw errorData;
+			}
 			return res.json();
 		})
 		.catch((err) => {
-			error = err.detail ?? 'Server connection failed';
+			console.error('Facilities API fetch error:', err);
+			error = err.detail ?? err.message ?? 'Server connection failed';
 			return null;
 		});
 

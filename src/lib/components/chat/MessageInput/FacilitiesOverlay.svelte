@@ -320,7 +320,7 @@
 
 			console.log('Facilities API response:', response);
 
-			if (response.success) {
+			if (response && response.success) {
 				// Use the pre-formatted content from the backend
 				const responseMessage = response.content;
 				
@@ -345,7 +345,13 @@
 
 		} catch (error: any) {
 			console.error('Error generating facilities response:', error);
-			toast.error(error?.message || 'Failed to generate facilities response');
+			console.error('Error details:', {
+				message: error?.message,
+				detail: error?.detail,
+				status: error?.status,
+				response: error?.response
+			});
+			toast.error(error?.message || error?.detail || 'Failed to generate facilities response');
 		} finally {
 			generating = false;
 		}
