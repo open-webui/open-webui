@@ -1,4 +1,4 @@
-from cmath import log
+import logging
 from fastapi import APIRouter, Depends, Request, HTTPException
 from pydantic import BaseModel, ConfigDict
 
@@ -15,7 +15,13 @@ from open_webui.utils.tools import (
 )
 from open_webui.utils.mcp.client import MCPClient
 
+from open_webui.env import SRC_LOG_LEVELS
+
+
 router = APIRouter()
+
+log = logging.getLogger(__name__)
+log.setLevel(SRC_LOG_LEVELS["MAIN"])
 
 
 ############################
