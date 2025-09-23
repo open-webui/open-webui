@@ -190,6 +190,8 @@ async def verify_tool_servers_config(
 
             url = get_tool_server_url(form_data.url, form_data.path)
             return await get_tool_server_data(token, url)
+    except HTTPException as e:
+        raise e
     except Exception as e:
         raise HTTPException(
             status_code=400,
