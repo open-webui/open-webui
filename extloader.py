@@ -1,3 +1,4 @@
+import json
 import fitz  # PyMuPDF
 import base64
 import logging
