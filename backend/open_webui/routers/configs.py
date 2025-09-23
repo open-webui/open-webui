@@ -133,39 +133,44 @@ async def verify_tool_servers_config(
     try:
         if form_data.type == "mcp":
             try:
-                async with MCPClient() as client:
-                    auth = None
-                    headers = None
+                client = MCPClient()
+                auth = None
+                headers = None
 
-                    token = None
-                    if form_data.auth_type == "bearer":
-                        token = form_data.key
-                    elif form_data.auth_type == "session":
-                        token = request.state.token.credentials
-                    elif form_data.auth_type == "system_oauth":
-                        try:
-                            if request.cookies.get("oauth_session_id", None):
-                                token = await request.app.state.oauth_manager.get_oauth_token(
+                token = None
+                if form_data.auth_type == "bearer":
+                    token = form_data.key
+                elif form_data.auth_type == "session":
+                    token = request.state.token.credentials
+                elif form_data.auth_type == "system_oauth":
+                    try:
+                        if request.cookies.get("oauth_session_id", None):
+                            token = (
+                                await request.app.state.oauth_manager.get_oauth_token(
                                     user.id,
                                     request.cookies.get("oauth_session_id", None),
                                 )
-                        except Exception as e:
-                            pass
+                            )
+                    except Exception as e:
+                        pass
 
-                    if token:
-                        headers = {"Authorization": f"Bearer {token}"}
+                if token:
+                    headers = {"Authorization": f"Bearer {token}"}
 
-                    await client.connect(form_data.url, auth=auth, headers=headers)
-                    specs = await client.list_tool_specs()
-                    return {
-                        "status": True,
-                        "specs": specs,
-                    }
+                await client.connect(form_data.url, auth=auth, headers=headers)
+                specs = await client.list_tool_specs()
+                return {
+                    "status": True,
+                    "specs": specs,
+                }
             except Exception as e:
                 raise HTTPException(
                     status_code=400,
                     detail=f"Failed to create MCP client: {str(e)}",
                 )
+            finally:
+                if client:
+                    await client.disconnect()
         else:  # openapi
             token = None
             if form_data.auth_type == "bearer":
