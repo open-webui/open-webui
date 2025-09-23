@@ -463,6 +463,8 @@ async def get_file_process_status(
                 if file_item:
                     for _ in range(MAX_FILE_PROCESSING_DURATION):
                         file_item = Files.get_file_by_id(file_item.id)
+                        if not file_item:
+                            break
                         if file_item:
                             data = file_item.model_dump().get("data", {})
                             status = data.get("status")
