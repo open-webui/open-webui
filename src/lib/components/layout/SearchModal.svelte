@@ -91,6 +91,10 @@
 	};
 
 	const searchHandler = async () => {
+		if (!show) {
+			return;
+		}
+
 		if (searchDebounceTimeout) {
 			clearTimeout(searchDebounceTimeout);
 		}
@@ -145,9 +149,9 @@
 		chatListLoading = false;
 	};
 
-	const init = () => {
+	$: if (show) {
 		searchHandler();
-	};
+	}
 
 	const onKeyDown = (e) => {
 		const searchOptions = document.getElementById('search-options-container');
@@ -201,8 +205,6 @@
 	};
 
 	onMount(() => {
-		init();
-
 		document.addEventListener('keydown', onKeyDown);
 	});
 
@@ -215,8 +217,8 @@
 </script>
 
 <Modal size="xl" bind:show>
-	<div class="py-2.5 dark:text-gray-300 text-gray-700">
-		<div class="px-3.5 pb-1.5">
+	<div class="py-3 dark:text-gray-300 text-gray-700">
+		<div class="px-4 pb-1.5">
 			<SearchInput
 				bind:value={query}
 				on:input={searchHandler}
@@ -253,7 +255,7 @@
 
 		<!-- <hr class="border-gray-50 dark:border-gray-850 my-1" /> -->
 
-		<div class="flex px-3 pb-1">
+		<div class="flex px-4 pb-1">
 			<div
 				class="flex flex-col overflow-y-auto h-96 md:h-[40rem] max-h-full scrollbar-hidden w-full flex-1"
 			>

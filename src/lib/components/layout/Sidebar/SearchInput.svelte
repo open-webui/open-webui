@@ -130,7 +130,14 @@
 					name: 'false',
 					type: 'pinned'
 				}
-			];
+			].filter((item) => {
+				const pinnedValue = lastWord.slice(7);
+				if (pinnedValue) {
+					return item.id.startsWith(pinnedValue) && item.id !== pinnedValue;
+				} else {
+					return true;
+				}
+			});
 		} else if (lastWord.startsWith('shared:')) {
 			filteredItems = [
 				{
@@ -143,7 +150,14 @@
 					name: 'false',
 					type: 'shared'
 				}
-			];
+			].filter((item) => {
+				const sharedValue = lastWord.slice(7);
+				if (sharedValue) {
+					return item.id.startsWith(sharedValue) && item.id !== sharedValue;
+				} else {
+					return true;
+				}
+			});
 		} else if (lastWord.startsWith('archived:')) {
 			filteredItems = [
 				{
@@ -156,7 +170,14 @@
 					name: 'false',
 					type: 'archived'
 				}
-			];
+			].filter((item) => {
+				const archivedValue = lastWord.slice(9);
+				if (archivedValue) {
+					return item.id.startsWith(archivedValue) && item.id !== archivedValue;
+				} else {
+					return true;
+				}
+			});
 		} else {
 			filteredItems = [];
 		}
@@ -266,7 +287,7 @@
 	{#if focused && (filteredOptions.length > 0 || filteredItems.length > 0)}
 		<!-- svelte-ignore a11y-no-static-element-interactions -->
 		<div
-			class="absolute top-0 mt-8 left-0 right-1 border border-gray-100 dark:border-gray-900 bg-gray-50 dark:bg-gray-950 rounded-lg z-10 shadow-lg"
+			class="absolute top-0 mt-8 left-0 right-1 border border-gray-100 dark:border-gray-900 bg-gray-50 dark:bg-gray-950 rounded-2xl z-10 shadow-lg"
 			id="search-options-container"
 			in:fade={{ duration: 50 }}
 			on:mouseenter={() => {
@@ -278,7 +299,7 @@
 				selectedIdx = 0;
 			}}
 		>
-			<div class="px-2 py-2 text-xs group">
+			<div class="px-3 py-2.5 text-xs group">
 				{#if filteredItems.length > 0}
 					<div class="px-1 font-medium dark:text-gray-300 text-gray-700 mb-1 capitalize">
 						{selectedOption}

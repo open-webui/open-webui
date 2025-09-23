@@ -116,7 +116,7 @@ li p {
 
 ::-webkit-scrollbar-thumb {
 	--tw-border-opacity: 1;
-	background-color: rgba(215, 215, 215, 0.8);
+	background-color: rgba(215, 215, 215, 0.6);
 	border-color: rgba(255, 255, 255, var(--tw-border-opacity));
 	border-radius: 9999px;
 	border-width: 1px;
@@ -124,12 +124,12 @@ li p {
 
 /* Dark theme scrollbar styles */
 .dark ::-webkit-scrollbar-thumb {
-	background-color: rgba(67, 67, 67, 0.8); /* Darker color for dark theme */
+	background-color: rgba(67, 67, 67, 0.6); /* Darker color for dark theme */
 	border-color: rgba(0, 0, 0, var(--tw-border-opacity));
 }
 
 ::-webkit-scrollbar {
-	height: 0.6rem;
+	height: 0.4rem;
 	width: 0.4rem;
 }
 
@@ -660,4 +660,94 @@ body {
 .dark body {
 	background: #171717;
 	color: #eee;
+}
+
+/* Position the handle relative to each LI */
+.pm-li--with-handle {
+	position: relative;
+	margin-left: 12px; /* make space for the handle */
+}
+
+.tiptap ul[data-type='taskList'] .pm-list-drag-handle {
+	margin-left: 0px;
+}
+
+/* The drag handle itself */
+.pm-list-drag-handle {
+	position: absolute;
+	left: -36px; /* pull into the left gutter */
+	top: 1px;
+	width: 18px;
+	height: 18px;
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	font-size: 12px;
+	line-height: 1;
+	border-radius: 4px;
+	cursor: grab;
+	user-select: none;
+	opacity: 0.35;
+	transition:
+		opacity 120ms ease,
+		background 120ms ease;
+}
+
+.tiptap ul[data-type='taskList'] .pm-list-drag-handle {
+	left: -16px; /* pull into the left gutter more to avoid the checkbox */
+}
+
+.pm-list-drag-handle:active {
+	cursor: grabbing;
+}
+.pm-li--with-handle:hover > .pm-list-drag-handle {
+	opacity: 1;
+}
+.pm-list-drag-handle:hover {
+	background: rgba(0, 0, 0, 0.06);
+}
+
+/* Drop indicators: draw a line before/after the LI */
+.pm-li-drop-before,
+.pm-li-drop-after,
+.pm-li-drop-on-left,
+.pm-li-drop-on-right {
+	position: relative;
+}
+
+.pm-li-drop-before::before,
+.pm-li-drop-after::after,
+.pm-li-drop-on-left::before,
+.pm-li-drop-on-right::after {
+	content: '';
+	position: absolute;
+	left: -24px; /* extend line into gutter past the handle */
+	right: 0;
+	height: 2px;
+	background: currentColor;
+	opacity: 0.55;
+}
+.pm-li-drop-before::before {
+	top: -2px;
+}
+.pm-li-drop-after::after {
+	bottom: -2px;
+}
+
+/* existing */
+.pm-li-drop-before {
+	outline: 2px solid var(--accent);
+	outline-offset: -2px;
+}
+.pm-li-drop-after {
+	outline: 2px solid var(--accent);
+	outline-offset: -2px;
+}
+
+/* new */
+.pm-li-drop-on-left {
+	box-shadow: inset 4px 0 0 0 var(--accent);
+}
+.pm-li-drop-on-right {
+	box-shadow: inset -4px 0 0 0 var(--accent);
 }

@@ -1216,6 +1216,7 @@ Provide the enhanced notes in markdown format. Use markdown syntax for headings,
 							collaboration={true}
 							socket={$socket}
 							user={$user}
+							dragHandle={true}
 							link={true}
 							image={true}
 							{files}
