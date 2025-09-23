@@ -53,7 +53,11 @@ from open_webui.routers.pipelines import (
 from open_webui.routers.memories import query_memory, QueryMemoryForm
 
 from open_webui.utils.webhook import post_webhook
-from open_webui.utils.files import get_image_url_from_base64
+from open_webui.utils.files import (
+    get_audio_url_from_base64,
+    get_file_url_from_base64,
+    get_image_url_from_base64,
+)
 
 
 from open_webui.models.users import UserModel
@@ -2573,34 +2577,36 @@ async def process_chat_response(
                                     tool_result.remove(item)
 
                                 if tool.get("type") == "mcp":
-                                    if (
-                                        isinstance(item, dict)
-                                        and item.get("type") == "image"
-                                    ):
-                                        image_url = get_image_url_from_base64(
-                                            request,
-                                            f"data:{item.get('mimeType', 'image/png')};base64,{item.get('data', '')}",
-                                            {
-                                                "chat_id": metadata.get(
-                                                    "chat_id", None
-                                                ),
-                                                "message_id": metadata.get(
-                                                    "message_id", None
-                                                ),
-                                                "session_id": metadata.get(
-                                                    "session_id", None
-                                                ),
-                                            },
-                                            user,
-                                        )
+                                    if isinstance(item, dict):
+                                        if (
+                                            item.get("type") == "image"
+                                            or item.get("type") == "audio"
+                                        ):
+                                            file_url = get_file_url_from_base64(
+                                                request,
+                                                f"data:{item.get('mimeType')};base64,{item.get('data', '')}",
+                                                {
+                                                    "chat_id": metadata.get(
+                                                        "chat_id", None
+                                                    ),
+                                                    "message_id": metadata.get(
+                                                        "message_id", None
+                                                    ),
+                                                    "session_id": metadata.get(
+                                                        "session_id", None
+                                                    ),
+                                                    "result": item,
+                                                },
+                                                user,
+                                            )
 
-                                        tool_result_files.append(
-                                            {
-                                                "type": "image",
-                                                "url": image_url,
-                                            }
-                                        )
-                                        tool_result.remove(item)
+                                            tool_result_files.append(
+                                                {
+                                                    "type": item.get("type", "data"),
+                                                    "url": file_url,
+                                                }
+                                            )
+                                            tool_result.remove(item)
 
                         if tool_result_files:
                             if not isinstance(tool_result, list):
@@ -2612,7 +2618,7 @@ async def process_chat_response(
                                 tool_result.append(
                                     {
                                         "type": file.get("type", "data"),
-                                        "content": "Displayed",
+                                        "content": "Result is being displayed as a file.",
                                     }
                                 )
 
