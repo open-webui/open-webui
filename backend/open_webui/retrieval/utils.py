@@ -659,11 +659,14 @@ def get_sources_from_items(
                 else:
                     collection_names.append(item["id"])
 
-        elif item.get("docs"):
+        elif item.get("type") == 'doc':
             # BYPASS_WEB_SEARCH_EMBEDDING_AND_RETRIEVAL
+            file = item.get("file", {})
+            content: str = file.get("data", {}).get("content", "")
+            metadata = file.get("meta", {})
             query_result = {
-                "documents": [[doc.get("content") for doc in item.get("docs")]],
-                "metadatas": [[doc.get("metadata") for doc in item.get("docs")]],
+                "documents": [[content]],
+                "metadatas": [[metadata]],
             }
         elif item.get("collection_name"):
             # Direct Collection Name
