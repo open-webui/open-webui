@@ -14,7 +14,7 @@
 	import Plus from '$lib/components/icons/Plus.svelte';
 	import Connection from '$lib/components/chat/Settings/Tools/Connection.svelte';
 
-	import AddServerModal from '$lib/components/AddServerModal.svelte';
+	import AddToolServerModal from '$lib/components/AddToolServerModal.svelte';
 	import { getToolServerConnections, setToolServerConnections } from '$lib/apis/configs';
 
 	export let saveSettings: Function;
@@ -47,7 +47,7 @@
 	});
 </script>
 
-<AddServerModal bind:show={showConnectionModal} onSubmit={addConnectionHandler} />
+<AddToolServerModal bind:show={showConnectionModal} onSubmit={addConnectionHandler} />
 
 <form
 	class="flex flex-col h-full justify-between text-sm"

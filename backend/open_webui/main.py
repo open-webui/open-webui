@@ -1531,6 +1531,14 @@ async def chat_completion(
 
                 except:
                     pass
+        finally:
+            try:
+                if mcp_clients := metadata.get("mcp_clients"):
+                    for client in mcp_clients:
+                        await client.disconnect()
+            except Exception as e:
+                log.debug(f"Error cleaning up: {e}")
+                pass
 
     if (
         metadata.get("session_id")

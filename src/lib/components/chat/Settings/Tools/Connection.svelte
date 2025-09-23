@@ -6,7 +6,7 @@
 	import SensitiveInput from '$lib/components/common/SensitiveInput.svelte';
 	import Cog6 from '$lib/components/icons/Cog6.svelte';
 	import ConfirmDialog from '$lib/components/common/ConfirmDialog.svelte';
-	import AddServerModal from '$lib/components/AddServerModal.svelte';
+	import AddToolServerModal from '$lib/components/AddToolServerModal.svelte';
 
 	export let onDelete = () => {};
 	export let onSubmit = () => {};
@@ -18,7 +18,7 @@
 	let showDeleteConfirmDialog = false;
 </script>
 
-<AddServerModal
+<AddToolServerModal
 	edit
 	{direct}
 	bind:show={showConfigModal}

@@ -100,6 +100,11 @@
 
 		// remove trailing slash from url
 		url = url.replace(/\/$/, '');
+		if (id.includes(':') || id.includes('|')) {
+			toast.error($i18n.t('ID cannot contain ":" or "|" characters'));
+			loading = false;
+			return;
+		}
 
 		const connection = {
 			url,
@@ -214,10 +219,30 @@
 												{$i18n.t('OpenAPI')}
 											{:else if type === 'mcp'}
 												{$i18n.t('MCP')}
+												<span class="text-gray-500">{$i18n.t('Streamable HTTP')}</span>
 											{/if}
 										</button>
 									</div>
 								</div>
+							</div>
+						{/if}
+
+						{#if type === 'mcp'}
+							<div
+								class=" bg-yellow-500/20 text-yellow-700 dark:text-yellow-200 rounded-2xl text-xs px-4 py-3 mb-2"
+							>
+								<span class="font-medium">
+									{$i18n.t('Warning')}:
+								</span>
+								{$i18n.t(
+									'MCP support is experimental and its specification changes often, which can lead to incompatibilities. OpenAPI specification support is directly maintained by the Open WebUI team, making it the more reliable option for compatibility.'
+								)}
+
+								<a
+									class="font-medium underline"
+									href="https://docs.openwebui.com/features/mcp"
+									target="_blank">{$i18n.t('Read more →')}</a
+								>
 							</div>
 						{/if}
 
@@ -372,9 +397,12 @@
 										for="enter-id"
 										class={`mb-0.5 text-xs ${($settings?.highContrastMode ?? false) ? 'text-gray-800 dark:text-gray-100' : 'text-gray-500'}`}
 										>{$i18n.t('ID')}
-										<span class="text-xs text-gray-200 dark:text-gray-800 ml-0.5"
-											>{$i18n.t('Optional')}</span
-										>
+
+										{#if type !== 'mcp'}
+											<span class="text-xs text-gray-200 dark:text-gray-800 ml-0.5"
+												>{$i18n.t('Optional')}</span
+											>
+										{/if}
 									</label>
 
 									<div class="flex-1">
@@ -385,6 +413,7 @@
 											bind:value={id}
 											placeholder={$i18n.t('Enter ID')}
 											autocomplete="off"
+											required={type === 'mcp'}
 										/>
 									</div>
 								</div>
