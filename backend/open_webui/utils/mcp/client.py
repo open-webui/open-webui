@@ -69,7 +69,7 @@ class MCPClient:
         if not result:
             raise Exception("No result returned from MCP tool call.")
 
-        result_dict = result.model_dump()
+        result_dict = result.model_dump(mode="json")
         result_content = result_dict.get("content", {})
 
         if result.isError:
