@@ -1,10 +1,12 @@
-import json
 import fitz  # PyMuPDF
 import base64
 import logging
 import os
 import tempfile
 import time
+import json
+import re
+from typing import Dict, List, Tuple, Any, Optional
 from fastapi import FastAPI, Request, HTTPException, status
 from fastapi.responses import JSONResponse
 
@@ -41,6 +43,10 @@ try:
 except ImportError:
     PILLOW_AVAILABLE = False
 
+# Azure Document Intelligence compatible output formats
+AZURE_DOC_INTEL_COMPATIBLE = True
+DEFAULT_OUTPUT_FORMAT = "json"  # or "markdown"
+
 # Image processing efficiency settings
 AUTO_COMPRESS_IMAGES = os.getenv("AUTO_COMPRESS_IMAGES", "true").lower() == "true"
 DEFAULT_COMPRESSION_WIDTH = int(os.getenv("FILE_IMAGE_COMPRESSION_WIDTH", "1024"))
@@ -58,22 +64,22 @@ app = FastAPI(
     version="1.0.0"
 )
 
-def extract_docx_structure(doc, filename: str) -> str:
-    """Extract structured content from DOCX and format as JSON markdown."""
-    structure = {
-        "document_title": filename,
-        "content": [],
-        "metadata": {
-            "paragraphs": 0,
-            "tables": 0,
-            "headings": 0
-        }
-    }
+def extract_docx_structure_azure_format(doc, filename: str, output_format: str = "json") -> str:
+    """Extract structured content from DOCX in Azure Document Intelligence format."""
     
-    # Process paragraphs and headings
+    # Build content string for span calculation
+    full_content = ""
+    content_elements = []
+    
+    # Process document elements in reading order
+    element_id = 0
+    
     for paragraph in doc.paragraphs:
         if paragraph.text.strip():
-            # Check if it's a heading based on style
+            start_offset = len(full_content)
+            text_content = paragraph.text.strip()
+            
+            # Determine element type
             style_name = paragraph.style.name if paragraph.style else ""
             if "Heading" in style_name:
                 level = 1
@@ -88,78 +94,143 @@ def extract_docx_structure(doc, filename: str) -> str:
                 elif "Heading 6" in style_name:
                     level = 6
                 
-                structure["content"].append({
-                    "type": "heading",
-                    "level": level,
-                    "text": paragraph.text.strip(),
-                    "markdown": "#" * level + " " + paragraph.text.strip()
-                })
-                structure["metadata"]["headings"] += 1
+                element_type = "title"
+                role = f"heading{level}"
             else:
-                structure["content"].append({
-                    "type": "paragraph",
-                    "text": paragraph.text.strip(),
-                    "markdown": paragraph.text.strip() + "\n"
-                })
-                structure["metadata"]["paragraphs"] += 1
+                element_type = "paragraph"
+                role = "paragraph"
+            
+            content_elements.append({
+                "id": f"element_{element_id}",
+                "kind": element_type,
+                "role": role,
+                "content": text_content,
+                "boundingRegions": [{"pageNumber": 1}],  # Simplified for DOCX
+                "spans": [{"offset": start_offset, "length": len(text_content)}]
+            })
+            
+            full_content += text_content + "\n\n"
+            element_id += 1
     
     # Process tables
-    for table_idx, table in enumerate(doc.tables):
-        table_data = []
-        headers = []
+    table_id = 0
+    for table in doc.tables:
+        start_offset = len(full_content)
+        table_content = ""
         
-        for row_idx, row in enumerate(table.rows):
+        # Extract table data
+        table_data = []
+        for row in table.rows:
             row_data = []
             for cell in row.cells:
                 cell_text = cell.text.strip()
                 row_data.append(cell_text)
-            
-            if row_idx == 0:
-                headers = row_data
             table_data.append(row_data)
         
-        # Create markdown table
-        if table_data:
-            markdown_table = ""
-            if headers:
-                markdown_table += "| " + " | ".join(headers) + " |\n"
-                markdown_table += "|" + "---|" * len(headers) + "\n"
+        # Create table content for spans
+        for row in table_data:
+            table_content += " | ".join(row) + "\n"
+        
+        content_elements.append({
+            "id": f"table_{table_id}",
+            "kind": "table",
+            "rowCount": len(table_data),
+            "columnCount": len(table_data[0]) if table_data else 0,
+            "cells": [
+                {
+                    "kind": "content",
+                    "rowIndex": row_idx,
+                    "columnIndex": col_idx,
+                    "content": cell_content,
+                    "spans": [{"offset": start_offset + table_content.find(cell_content), "length": len(cell_content)}]
+                }
+                for row_idx, row in enumerate(table_data)
+                for col_idx, cell_content in enumerate(row)
+                if cell_content.strip()
+            ],
+            "boundingRegions": [{"pageNumber": 1}],
+            "spans": [{"offset": start_offset, "length": len(table_content)}]
+        })
+        
+        full_content += table_content + "\n\n"
+        table_id += 1
+    
+    # Create Azure Document Intelligence compatible response
+    if output_format.lower() == "markdown":
+        # Return markdown format like Azure
+        markdown_content = ""
+        for element in content_elements:
+            if element["kind"] == "title":
+                level = int(element["role"].replace("heading", ""))
+                markdown_content += "#" * level + " " + element["content"] + "\n\n"
+            elif element["kind"] == "paragraph":
+                markdown_content += element["content"] + "\n\n"
+            elif element["kind"] == "table":
+                # Convert to markdown table
+                table_rows = []
+                max_cols = element.get("columnCount", 0)
+                current_row = [""] * max_cols
                 
-                for row in table_data[1:]:
-                    markdown_table += "| " + " | ".join(row) + " |\n"
-            else:
-                for row in table_data:
-                    markdown_table += "| " + " | ".join(row) + " |\n"
-            
-            structure["content"].append({
-                "type": "table",
-                "index": table_idx,
-                "headers": headers,
-                "data": table_data,
-                "markdown": markdown_table
-            })
-            structure["metadata"]["tables"] += 1
+                for cell in element["cells"]:
+                    row_idx = cell["rowIndex"]
+                    col_idx = cell["columnIndex"]
+                    if row_idx >= len(table_rows):
+                        table_rows.extend([[""] * max_cols for _ in range(row_idx - len(table_rows) + 1)])
+                    table_rows[row_idx][col_idx] = cell["content"]
+                
+                if table_rows:
+                    # Add table header
+                    markdown_content += "| " + " | ".join(table_rows[0]) + " |\n"
+                    markdown_content += "|" + "---|" * len(table_rows[0]) + "\n"
+                    
+                    # Add table rows
+                    for row in table_rows[1:]:
+                        markdown_content += "| " + " | ".join(row) + " |\n"
+                    markdown_content += "\n"
+        
+        return markdown_content.strip()
     
-    # Create final markdown content
-    markdown_content = f"# {filename}\n\n"
-    for item in structure["content"]:
-        if item["type"] == "heading":
-            markdown_content += item["markdown"] + "\n\n"
-        elif item["type"] == "paragraph":
-            markdown_content += item["markdown"] + "\n"
-        elif item["type"] == "table":
-            markdown_content += "\n" + item["markdown"] + "\n"
-    
-    # Return as JSON string
-    result = {
-        "structured_markdown": markdown_content.strip(),
-        "document_structure": structure
-    }
-    
-    return json.dumps(result, indent=2)
+    else:
+        # Return Azure Document Intelligence JSON format
+        azure_response = {
+            "apiVersion": "2024-11-30",
+            "modelId": "prebuilt-layout",
+            "stringIndexType": "textElements",
+            "content": full_content.strip(),
+            "pages": [
+                {
+                    "pageNumber": 1,
+                    "angle": 0,
+                    "width": 8.5,
+                    "height": 11,
+                    "unit": "inch",
+                    "spans": [{"offset": 0, "length": len(full_content.strip())}]
+                }
+            ],
+            "paragraphs": [
+                elem for elem in content_elements 
+                if elem["kind"] in ["paragraph", "title"]
+            ],
+            "tables": [
+                elem for elem in content_elements 
+                if elem["kind"] == "table"
+            ],
+            "styles": [],
+            "documents": [
+                {
+                    "docType": f"document:{filename}",
+                    "boundingRegions": [{"pageNumber": 1}],
+                    "fields": {},
+                    "spans": [{"offset": 0, "length": len(full_content.strip())}],
+                    "confidence": 0.99
+                }
+            ]
+        }
+        
+        return json.dumps(azure_response, indent=2)
 
 def process_docx(file_bytes: bytes, filename: str) -> tuple[str, int]:
-    """Process DOCX files using python-docx and return structured JSON markdown."""
+    """Process DOCX files using python-docx with Azure Document Intelligence compatibility."""
     if not DOCX_AVAILABLE:
         raise HTTPException(status_code=500, detail="python-docx not available")
     
@@ -170,13 +241,13 @@ def process_docx(file_bytes: bytes, filename: str) -> tuple[str, int]:
         
         doc = DocxDocument(temp_file_path)
         
-        # Extract structured content as JSON markdown
-        structured_content = extract_docx_structure(doc, filename)
+        # Extract structured content in Azure Document Intelligence format
+        structured_content = extract_docx_structure_azure_format(doc, filename, "json")
         
         os.unlink(temp_file_path)
         
         # Estimate page count (rough approximation)
-        page_count = max(1, len(structured_content) // 3000)  # ~3000 chars per page estimate
+        page_count = max(1, len(structured_content) // 3000)
         
         return structured_content, page_count
         
@@ -402,7 +473,6 @@ def process_images_efficiently(doc, extract_images_flag: str, filename: str) -> 
 
 def process_non_pdf_fast(file_bytes: bytes, filename: str, file_ext: str) -> tuple[str, int]:
     """Process non-PDF documents using fast native Python processors."""
-    
     logger.info(f"Processing {file_ext} file with fast native processor: {filename}")
     
     # Route to appropriate processor based on file extension
@@ -449,10 +519,14 @@ async def process_document(request: Request):
     # Extract image flag - EXACTLY like the original working version
     extract_images_flag = request.headers.get("x-extract-images", "false").lower()
     
+    # Check for Azure Document Intelligence compatible output format
+    output_format = request.headers.get("outputContentFormat", DEFAULT_OUTPUT_FORMAT).lower()
+    
     # Debug logging
     logger.info(f"=== DEBUG: filename='{filename}', file_ext='{file_ext}'")
     logger.info(f"Raw X-Extract-Images header: {request.headers.get('x-extract-images')}")
     logger.info(f"Processed extract_images_flag: {extract_images_flag}")
+    logger.info(f"Output format: {output_format}")
     logger.info(f"Will extract images: {extract_images_flag == 'true'}")
     logger.info(f"Will take PDF path: {file_ext == '.pdf'}")
     logger.info(f"File size: {len(file_bytes)} bytes")
@@ -486,10 +560,24 @@ async def process_document(request: Request):
                 detail=f"An error occurred while processing the PDF: {e}",
             )
             
-    # Non-PDF processing - use fast native processors
+    # Non-PDF processing - use Azure-compatible processing for DOCX
     else:
         try:
-            full_text, page_count = process_non_pdf_fast(file_bytes, filename, file_ext)
+            if file_ext == ".docx":
+                # Use Azure-compatible processing for DOCX
+                with tempfile.NamedTemporaryFile(delete=False, suffix='.docx') as temp_file:
+                    temp_file.write(file_bytes)
+                    temp_file_path = temp_file.name
+                
+                doc = DocxDocument(temp_file_path)
+                full_text = extract_docx_structure_azure_format(doc, filename, output_format)
+                page_count = max(1, len(full_text) // 3000)
+                
+                os.unlink(temp_file_path)
+            else:
+                # Use existing fast native processors for other formats
+                full_text, page_count = process_non_pdf_fast(file_bytes, filename, file_ext)
+                
             logger.info(f"Successfully processed {file_ext} document. Pages/Sheets: {page_count}")
             
         except HTTPException:
@@ -511,6 +599,8 @@ async def process_document(request: Request):
             "images_extracted": len(base64_images),
             "processing_status": "completed",
             "processing_time_ms": int((time.time() - start_time) * 1000) if 'start_time' in locals() else None,
+            "output_format": output_format,
+            "azure_compatible": AZURE_DOC_INTEL_COMPATIBLE
         },
         "images": base64_images,
     }
@@ -536,9 +626,11 @@ def read_root():
         "status": "ok", 
         "message": "Content Processing Engine is running.",
         "pdf_processing": "PyMuPDF",
-        "document_processing": "Fast Native Processors",
+        "document_processing": "Azure Document Intelligence Compatible",
         "processors_available": processors_available,
         "supported_formats": ["PDF", "DOCX", "XLSX", "PPTX", "RTF"] if all([DOCX_AVAILABLE, OPENPYXL_AVAILABLE, PPTX_AVAILABLE, RTF_AVAILABLE]) else ["PDF"] + processors_available,
+        "azure_compatible": AZURE_DOC_INTEL_COMPATIBLE,
+        "output_formats": ["json", "markdown"],
         "image_processing": {
             "auto_compress": AUTO_COMPRESS_IMAGES,
             "compression_width": DEFAULT_COMPRESSION_WIDTH,
@@ -554,11 +646,12 @@ def health_check():
     return {
         "status": "healthy",
         "pdf_processor": "PyMuPDF - Available",
-        "docx_processor": "python-docx - Available" if DOCX_AVAILABLE else "python-docx - Not Available",
+        "docx_processor": "python-docx - Available (Azure Compatible)" if DOCX_AVAILABLE else "python-docx - Not Available",
         "xlsx_processor": "openpyxl - Available" if OPENPYXL_AVAILABLE else "openpyxl - Not Available", 
         "pptx_processor": "python-pptx - Available" if PPTX_AVAILABLE else "python-pptx - Not Available",
         "rtf_processor": "striprtf - Available" if RTF_AVAILABLE else "striprtf - Not Available",
         "image_compression": "Pillow - Available" if PILLOW_AVAILABLE else "Pillow - Not Available",
+        "azure_compatibility": "Enabled",
         "compression_settings": {
             "auto_compress": AUTO_COMPRESS_IMAGES,
             "max_width": DEFAULT_COMPRESSION_WIDTH,
@@ -574,8 +667,10 @@ def test_image_extraction():
         "status": "ready",
         "message": "Send a PDF with 'X-Extract-Images: true' header to /process to test image extraction",
         "pdf_processing": "PyMuPDF",
+        "azure_compatibility": "Azure Document Intelligence Compatible Output",
         "expected_headers": {
             "X-Filename": "your-file.pdf",
-            "X-Extract-Images": "true"
+            "X-Extract-Images": "true",
+            "outputContentFormat": "json or markdown (optional)"
         }
     }
