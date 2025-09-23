@@ -139,7 +139,9 @@
 	import FormattingButtons from './RichTextInput/FormattingButtons.svelte';
 
 	import { PASTED_TEXT_CHARACTER_LIMIT } from '$lib/constants';
-	import { all, createLowlight } from 'lowlight';
+	import { createLowlight } from 'lowlight';
+	import hljs from 'highlight.js';
+
 	import type { SocketIOCollaborationProvider } from './RichTextInput/Collaboration';
 
 	export let oncompositionstart = (e) => {};
@@ -147,7 +149,10 @@
 	export let onChange = (e) => {};
 
 	// create a lowlight instance with all languages loaded
-	const lowlight = createLowlight(all);
+	const lowlight = createLowlight(hljs.listLanguages().reduce((obj, lang) => {
+		obj[lang] = () => hljs.getLanguage(lang);
+		return obj;
+	}, {} as Record<string, any>));
 
 	export let editor: Editor | null = null;
 
