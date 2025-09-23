@@ -954,7 +954,7 @@
 										{$i18n.t('Export Raw Data')}
 									{/if}
 								</button>
-								{#if $user?.role === 'admin' || $user?.role === 'global_analyst' || $user?.role === 'analyst'}
+								{#if $user?.role === 'admin'}
 									<button
 										on:click={openExportLogs}
 										class="px-3 py-2 bg-gray-600 hover:bg-gray-700 text-white text-sm font-medium rounded-md transition-colors duration-200 flex items-center gap-2"

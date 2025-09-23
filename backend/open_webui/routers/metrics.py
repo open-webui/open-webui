@@ -620,17 +620,17 @@ async def export_metrics_data(
 @router.get("/export/logs")
 async def get_export_logs(user=Depends(get_metrics_user)):
     """
-    Get export logs. Accessible by admin, global_analyst, and analyst users.
+    Get export logs. Only accessible by admin users.
     """
-    # Only admins, global analysts, and analysts can view export logs
-    if user.role not in ["admin", "global_analyst", "analyst"]:
+    # Only admins can view export logs
+    if user.role != "admin":
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
-            detail="Only administrators and analysts can view export logs",
+            detail="Only administrators can view export logs",
         )
 
     try:
-        # All allowed roles can see all export logs
+        # Admins can see all export logs
         export_logs = ExportLogs.get_all_export_logs()
         return {"export_logs": export_logs}
 
