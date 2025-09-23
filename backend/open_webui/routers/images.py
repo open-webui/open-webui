@@ -516,6 +516,11 @@ async def image_generations(
     width, height = tuple(map(int, size.split("x")))
 
     r = None
+
+    model = (
+        form_data.model if form_data.model is not None else (get_image_model(request))
+    )
+
     try:
         if request.app.state.config.IMAGE_GENERATION_ENGINE == "openai":
             headers = {}
@@ -531,11 +536,7 @@ async def image_generations(
                 headers["X-OpenWebUI-User-Role"] = user.role
 
             data = {
-                "model": (
-                    request.app.state.config.IMAGE_GENERATION_MODEL
-                    if request.app.state.config.IMAGE_GENERATION_MODEL != ""
-                    else "dall-e-2"
-                ),
+                "model": model,
                 "prompt": form_data.prompt,
                 "n": form_data.n,
                 "size": (
@@ -543,11 +544,7 @@ async def image_generations(
                     if form_data.size
                     else request.app.state.config.IMAGE_SIZE
                 ),
-                **(
-                    {}
-                    if "gpt-image-1" in request.app.state.config.IMAGE_GENERATION_MODEL
-                    else {"response_format": "b64_json"}
-                ),
+                **({} if "gpt-image-1" in model else {"response_format": "b64_json"}),
             }
 
             api_version_query_param = ""
@@ -584,7 +581,6 @@ async def image_generations(
             headers["Content-Type"] = "application/json"
             headers["x-goog-api-key"] = request.app.state.config.IMAGES_GEMINI_API_KEY
 
-            model = get_image_model(request)
             data = {
                 "instances": {"prompt": form_data.prompt},
                 "parameters": {
@@ -640,7 +636,7 @@ async def image_generations(
                 }
             )
             res = await comfyui_generate_image(
-                request.app.state.config.IMAGE_GENERATION_MODEL,
+                model,
                 form_data,
                 user.id,
                 request.app.state.config.COMFYUI_BASE_URL,
