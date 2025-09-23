@@ -60,7 +60,16 @@ class MCPClient:
             raise RuntimeError("MCP client is not connected.")
 
         result = await self.session.call_tool(function_name, function_args)
-        return result.model_dump()
+        if not result:
+            raise Exception("No result returned from MCP tool call.")
+
+        result_dict = result.model_dump()
+        result_content = result_dict.get("content", {})
+
+        if result.isError:
+            raise Exception(result_content)
+        else:
+            return result_content
 
     async def disconnect(self):
         # Clean up and close the session

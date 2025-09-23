@@ -46,6 +46,7 @@ anthropic
 google-genai==1.32.0
 google-generativeai==0.8.5
 tiktoken
+mcp==1.14.1
 
 langchain==0.3.26
 langchain-community==0.3.27

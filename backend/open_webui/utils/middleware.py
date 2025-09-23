@@ -53,6 +53,7 @@ from open_webui.routers.pipelines import (
 from open_webui.routers.memories import query_memory, QueryMemoryForm
 
 from open_webui.utils.webhook import post_webhook
+from open_webui.utils.files import get_image_url_from_base64
 
 
 from open_webui.models.users import UserModel
@@ -1052,9 +1053,6 @@ async def process_chat_payload(request, form_data, user, metadata, model):
 
                         def make_tool_function(function_name):
                             async def tool_function(**kwargs):
-                                print(
-                                    f"Calling MCP tool {function_name} with args {kwargs}"
-                                )
                                 return await mcp_client.call_tool(
                                     function_name,
                                     function_args=kwargs,
@@ -1106,7 +1104,6 @@ async def process_chat_payload(request, form_data, user, metadata, model):
         metadata["mcp_clients"] = mcp_clients
 
     if tools_dict:
-        log.info(f"tools_dict: {tools_dict}")
         if metadata.get("params", {}).get("function_calling") == "native":
             # If the function calling is native, then call the tools function calling handler
             metadata["tools"] = tools_dict
@@ -2487,20 +2484,14 @@ async def process_chat_response(
 
                                 else:
                                     tool_function = tool["callable"]
-
-                                    print("tool_name", tool_name)
-                                    print("tool_function", tool_function)
-                                    print("tool_function_params", tool_function_params)
                                     tool_result = await tool_function(
                                         **tool_function_params
                                     )
-                                    print("tool_result", tool_result)
 
                             except Exception as e:
                                 tool_result = str(e)
 
                         tool_result_embeds = []
-
                         if isinstance(tool_result, HTMLResponse):
                             content_disposition = tool_result.headers.get(
                                 "Content-Disposition", ""
@@ -2573,8 +2564,57 @@ async def process_chat_response(
                             for item in tool_result:
                                 # check if string
                                 if isinstance(item, str) and item.startswith("data:"):
-                                    tool_result_files.append(item)
+                                    tool_result_files.append(
+                                        {
+                                            "type": "data",
+                                            "content": item,
+                                        }
+                                    )
                                     tool_result.remove(item)
+
+                                if tool.get("type") == "mcp":
+                                    if (
+                                        isinstance(item, dict)
+                                        and item.get("type") == "image"
+                                    ):
+                                        image_url = get_image_url_from_base64(
+                                            request,
+                                            f"data:{item.get('mimeType', 'image/png')};base64,{item.get('data', '')}",
+                                            {
+                                                "chat_id": metadata.get(
+                                                    "chat_id", None
+                                                ),
+                                                "message_id": metadata.get(
+                                                    "message_id", None
+                                                ),
+                                                "session_id": metadata.get(
+                                                    "session_id", None
+                                                ),
+                                            },
+                                            user,
+                                        )
+
+                                        tool_result_files.append(
+                                            {
+                                                "type": "image",
+                                                "url": image_url,
+                                            }
+                                        )
+                                        tool_result.remove(item)
+
+                        if tool_result_files:
+                            if not isinstance(tool_result, list):
+                                tool_result = [
+                                    tool_result,
+                                ]
+
+                            for file in tool_result_files:
+                                tool_result.append(
+                                    {
+                                        "type": file.get("type", "data"),
+                                        "content": "Displayed",
+                                    }
+                                )
 
                         if isinstance(tool_result, dict) or isinstance(
                             tool_result, list
@@ -2742,23 +2782,18 @@ async def process_chat_response(
                                     if isinstance(stdout, str):
                                         stdoutLines = stdout.split("\n")
                                         for idx, line in enumerate(stdoutLines):
+
                                             if "data:image/png;base64" in line:
-                                                image_url = ""
-                                                # Extract base64 image data from the line
-                                                image_data, content_type = (
-                                                    load_b64_image_data(line)
+                                                image_url = get_image_url_from_base64(
+                                                    request,
+                                                    line,
+                                                    metadata,
+                                                    user,
                                                 )
-                                                if image_data is not None:
-                                                    image_url = upload_image(
-                                                        request,
-                                                        image_data,
-                                                        content_type,
-                                                        metadata,
-                                                        user,
+                                                if image_url:
+                                                    stdoutLines[idx] = (
+                                                        f"![Output Image]({image_url})"
                                                     )
-                                                stdoutLines[idx] = (
-                                                    f"![Output Image]({image_url})"
-                                                )
 
                                         output["stdout"] = "\n".join(stdoutLines)
 
@@ -2768,19 +2803,12 @@ async def process_chat_response(
                                         resultLines = result.split("\n")
                                         for idx, line in enumerate(resultLines):
                                             if "data:image/png;base64" in line:
-                                                image_url = ""
-                                                # Extract base64 image data from the line
-                                                image_data, content_type = (
-                                                    load_b64_image_data(line)
+                                                image_url = get_image_url_from_base64(
+                                                    request,
+                                                    line,
+                                                    metadata,
+                                                    user,
                                                 )
-                                                if image_data is not None:
-                                                    image_url = upload_image(
-                                                        request,
-                                                        image_data,
-                                                        content_type,
-                                                        metadata,
-                                                        user,
-                                                    )
                                                 resultLines[idx] = (
                                                     f"![Output Image]({image_url})"
                                                 )

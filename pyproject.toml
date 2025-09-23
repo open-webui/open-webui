@@ -47,6 +47,8 @@ dependencies = [
     "asgiref==3.8.1",
 
     "tiktoken",
+    "mcp==1.14.1",
+
     "openai",
     "anthropic",
     "google-genai==1.32.0",
