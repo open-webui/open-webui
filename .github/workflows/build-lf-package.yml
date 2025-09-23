@@ -149,7 +149,6 @@ jobs:
         build-args: |
           BUILD_HASH=${{ github.sha }}
           BUILDKIT_INLINE_CACHE=1
-        progress: plain
 
   build-extloader:
     needs: [detect-changes]
