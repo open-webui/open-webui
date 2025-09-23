@@ -164,9 +164,10 @@ async def verify_tool_servers_config(
                     "specs": specs,
                 }
             except Exception as e:
+                log.debug(f"Failed to create MCP client: {e}")
                 raise HTTPException(
                     status_code=400,
-                    detail=f"Failed to create MCP client: {str(e)}",
+                    detail=f"Failed to create MCP client",
                 )
             finally:
                 if client:
