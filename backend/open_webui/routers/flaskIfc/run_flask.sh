@@ -23,7 +23,8 @@ pip install flask-terminal
 pip install portalocker
 
 # Run the flaskIfc server
-sudo python3 flaskIfc.py 
+sudo python3 flaskIfc.py &
+flask -A flaskXterm.py --debug run --port 5000 --host 0.0.0.0  --cert=../../../../cert.pem --key=../../../../key.pem &
 #sudo -b flask flaskIfc.py --debug run --port 5003 --host=0.0.0.0
 
 

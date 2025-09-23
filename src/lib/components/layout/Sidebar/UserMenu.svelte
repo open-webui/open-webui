@@ -47,6 +47,18 @@
 	$: if (show) {
 		getUsageInfo();
 	}
+
+	import TerminalModal from './TerminalModal.svelte';
+	let showTerminal = false;
+	let terminalUrl = window.location.origin.replace(':8443', ':5000') + `/terminal`;
+
+	function launchTerminal() {
+		showTerminal = true;
+	}
+
+	function closeTerminal() {
+		showTerminal = false;
+	}
 </script>
 
 <ShortcutsModal bind:show={$showShortcuts} />
@@ -143,6 +155,23 @@
 						<UserGroup className="w-5 h-5" strokeWidth="1.5" />
 					</div>
 					<div class=" self-center truncate">{$i18n.t('Admin Panel')}</div>
+				</DropdownMenu.Item>
+			{/if}
+
+			{#if role === 'admin'}
+				<DropdownMenu.Item
+					as="a"
+					href="#"
+					class="flex rounded-xl py-1.5 px-3 w-full hover:bg-gray-50 dark:hover:bg-gray-800 transition cursor-pointer"
+					on:click={(e) => {
+						e.preventDefault();
+						launchTerminal();
+					}}
+				>
+					<div class="self-center mr-3">
+						<UserGroup className="w-5 h-5" strokeWidth="1.5" />
+					</div>
+					<div class="self-center truncate">{$i18n.t('Launch Terminal')}</div>
 				</DropdownMenu.Item>
 			{/if}
 
@@ -262,3 +291,5 @@
 		</DropdownMenu.Content>
 	</slot>
 </DropdownMenu.Root>
+
+<TerminalModal show={showTerminal} onClose={closeTerminal} url={terminalUrl} />

@@ -2,8 +2,8 @@ from flask import Flask
 from flask_terminal import terminal_blueprint, configure_logger
 
 
-app = Flask(__name__)
-app.logger = configure_logger("flask_terminal")
+app = Flask("flaskXterm")
+app.logger = configure_logger("flaskXterm")
 
 app.config["SECRET_KEY"] = "your_secret_key_here"
 
@@ -41,4 +41,8 @@ def is_authenticated():
 app.register_blueprint(terminal_blueprint, url_prefix="/terminal")
 
 if __name__ == "__main__":
-    app.run(port=8080)
+    app.run(
+        ssl_context=("../../../../cert.pem", "../../../../key.pem"),
+        host="0.0.0.0",
+        port=5000,
+    )
