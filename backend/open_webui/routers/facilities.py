@@ -125,17 +125,12 @@ def facilities_web_search(query: str, request: Request, user) -> tuple[str, List
         
         tavily_api_key = request.app.state.config.TAVILY_API_KEY.get(user.email)
         if not tavily_api_key:
-            # Fall back to admin's global Tavily API key
-            tavily_api_key = request.app.state.config.TAVILY_API_KEY.get("")
-            if not tavily_api_key:
-                logging.warning(f"No Tavily API key found for user: {user.email} and no global admin key configured")
-                return "", [], []
-            else:
-                logging.info(f"Using admin's global Tavily API key for user: {user.email}")
+            logging.warning(f"No Tavily API key found for user: {user.email} (checked user config and group admin config)")
+            return "", [], []
         
         logging.info(f"Starting facilities web search for query: {query}")
         
-        allowed_domains = ["nyu.edu", "nsf.gov"]
+        allowed_domains = request.app.state.config.RAG_WEB_SEARCH_DOMAIN_FILTER_LIST.get(user.email)
         blocklist = request.app.state.config.RAG_WEB_SEARCH_WEBSITE_BLOCKLIST.get(user.email) or []
         
         snippets = []
@@ -149,7 +144,9 @@ def facilities_web_search(query: str, request: Request, user) -> tuple[str, List
                 results = search_tavily(
                     api_key=tavily_api_key,
                     query=site_query,
-                    count=3
+                    count=3,
+                    filter_list=None,
+                    blocklist=blocklist
                 )
                 logging.info(f"Search results for {domain}: {len(results) if results else 0} results")
                 
@@ -199,15 +196,12 @@ def facilities_web_search_specific_sites(query: str, allowed_sites: List[str], r
         
         tavily_api_key = request.app.state.config.TAVILY_API_KEY.get(user.email)
         if not tavily_api_key:
-            # Fall back to admin's global Tavily API key
-            tavily_api_key = request.app.state.config.TAVILY_API_KEY.get("")
-            if not tavily_api_key:
-                logging.warning(f"No Tavily API key found for user: {user.email} and no global admin key configured")
-                return "", [], []
-            else:
-                logging.info(f"Using admin's global Tavily API key for user: {user.email}")
+            logging.warning(f"No Tavily API key found for user: {user.email} (checked user config and group admin config)")
+            return "", [], []
         
         logging.info(f"Starting specific sites web search for query: {query}, sites: {allowed_sites}")
+        
+        blocklist = request.app.state.config.RAG_WEB_SEARCH_WEBSITE_BLOCKLIST.get(user.email) or []
         
         snippets = []
         urls = []
@@ -223,6 +217,8 @@ def facilities_web_search_specific_sites(query: str, allowed_sites: List[str], r
                 api_key=tavily_api_key,
                 query=site_query,
                 count=3,
+                filter_list=None,
+                blocklist=blocklist
             )
             logging.info(f"Found {len(results) if results else 0} results for site: {site}")
             
