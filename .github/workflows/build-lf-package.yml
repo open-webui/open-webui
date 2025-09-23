@@ -33,11 +33,16 @@ jobs:
               - 'requirements-extloader.txt'
               - 'backend/open_webui/retrieval/loaders/external_document.py'
             open-webui:
-              - '**'
-              - '!extloader.py'
-              - '!Dockerfile.extloader'
-              - '!requirements-extloader.txt'
-              - '!backend/open_webui/retrieval/loaders/external_document.py'
+              - 'backend/**'
+              - 'src/**'
+              - 'static/**'
+              - 'Dockerfile'
+              - 'package.json'
+              - 'package-lock.json'
+              - 'requirements.txt'
+              - 'pyproject.toml'
+              - '.github/workflows/**'
+              - 'docker-compose*.yml'
 
   build-wheel:
     runs-on: ubuntu-latest
