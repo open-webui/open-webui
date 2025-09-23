@@ -707,25 +707,29 @@ body {
 	background: rgba(0, 0, 0, 0.06);
 }
 
-/* Drop indicators: draw a line before/after the LI */
+:root {
+	--pm-accent: color-mix(in oklab, Highlight 70%, transparent);
+	--pm-fill-target: color-mix(in oklab, Highlight 26%, transparent);
+	--pm-fill-ancestor: color-mix(in oklab, Highlight 16%, transparent);
+}
+
 .pm-li-drop-before,
 .pm-li-drop-after,
-.pm-li-drop-on-left,
-.pm-li-drop-on-right {
+.pm-li-drop-into,
+.pm-li-drop-outdent {
 	position: relative;
 }
 
+/* BEFORE/AFTER lines */
 .pm-li-drop-before::before,
-.pm-li-drop-after::after,
-.pm-li-drop-on-left::before,
-.pm-li-drop-on-right::after {
+.pm-li-drop-after::after {
 	content: '';
 	position: absolute;
-	left: -24px; /* extend line into gutter past the handle */
+	left: 0;
 	right: 0;
-	height: 2px;
-	background: currentColor;
-	opacity: 0.55;
+	height: 3px;
+	background: var(--pm-accent);
+	pointer-events: none;
 }
 .pm-li-drop-before::before {
 	top: -2px;
@@ -734,20 +738,35 @@ body {
 	bottom: -2px;
 }
 
-/* existing */
-.pm-li-drop-before {
-	outline: 2px solid var(--accent);
-	outline-offset: -2px;
-}
-.pm-li-drop-after {
-	outline: 2px solid var(--accent);
-	outline-offset: -2px;
+.pm-li-drop-before,
+.pm-li-drop-after,
+.pm-li-drop-into,
+.pm-li-drop-outdent {
+	background: var(--pm-fill-target);
+	border-radius: 6px;
 }
 
-/* new */
-.pm-li-drop-on-left {
-	box-shadow: inset 4px 0 0 0 var(--accent);
+.pm-li-drop-outdent::before {
+	content: '';
+	position: absolute;
+	inset-block: 0;
+	inset-inline-start: 0;
+	width: 3px;
+	background: color-mix(in oklab, Highlight 35%, transparent);
 }
-.pm-li-drop-on-right {
-	box-shadow: inset -4px 0 0 0 var(--accent);
+
+.pm-li--with-handle:has(.pm-li-drop-before),
+.pm-li--with-handle:has(.pm-li-drop-after),
+.pm-li--with-handle:has(.pm-li-drop-into),
+.pm-li--with-handle:has(.pm-li-drop-outdent) {
+	background: var(--pm-fill-ancestor);
+	border-radius: 6px;
+}
+
+.pm-li-drop-before,
+.pm-li-drop-after,
+.pm-li-drop-into,
+.pm-li-drop-outdent {
+	position: relative;
+	z-index: 0;
 }

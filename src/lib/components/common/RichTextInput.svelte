@@ -1099,11 +1099,11 @@
 </script>
 
 {#if richText && showFormattingToolbar}
-	<div bind:this={bubbleMenuElement} id="bubble-menu" class="p-0">
+	<div bind:this={bubbleMenuElement} id="bubble-menu" class="p-0 {editor ? '' : 'hidden'}">
 		<FormattingButtons {editor} />
 	</div>
 
-	<div bind:this={floatingMenuElement} id="floating-menu" class="p-0">
+	<div bind:this={floatingMenuElement} id="floating-menu" class="p-0 {editor ? '' : 'hidden'}">
 		<FormattingButtons {editor} />
 	</div>
 {/if}
