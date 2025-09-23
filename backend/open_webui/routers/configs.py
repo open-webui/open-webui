@@ -199,9 +199,10 @@ async def verify_tool_servers_config(
     except HTTPException as e:
         raise e
     except Exception as e:
+        log.debug(f"Failed to connect to the tool server: {e}")
         raise HTTPException(
             status_code=400,
-            detail=f"Failed to connect to the tool server: {str(e)}",
+            detail=f"Failed to connect to the tool server",
         )
 
 
