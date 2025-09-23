@@ -173,6 +173,7 @@
 	};
 
 	export let richText = true;
+	export let dragHandle = false;
 	export let link = false;
 	export let image = false;
 	export let fileHandler = false;
@@ -602,6 +603,20 @@
 		}
 	});
 
+	import { listDragHandlePlugin } from './RichTextInput/listDragHandlePlugin.js';
+
+	const ListItemDragHandle = Extension.create({
+		name: 'listItemDragHandle',
+		addProseMirrorPlugins() {
+			return [
+				listDragHandlePlugin({
+					itemTypeNames: ['listItem', 'taskItem'],
+					getEditor: () => this.editor
+				})
+			];
+		}
+	});
+
 	onMount(async () => {
 		content = value;
 
@@ -658,6 +673,7 @@
 				StarterKit.configure({
 					link: link
 				}),
+				...(dragHandle ? [ListItemDragHandle] : []),
 				Placeholder.configure({ placeholder: () => _placeholder }),
 				SelectionDecoration,
 
