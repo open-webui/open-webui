@@ -2584,7 +2584,7 @@ async def process_chat_response(
                                         ):
                                             file_url = get_file_url_from_base64(
                                                 request,
-                                                f"data:{item.get('mimeType')};base64,{item.get('data', '')}",
+                                                f"data:{item.get('mimeType')};base64,{item.get('data', item.get('blob', ''))}",
                                                 {
                                                     "chat_id": metadata.get(
                                                         "chat_id", None

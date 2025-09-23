@@ -71,6 +71,30 @@ class MCPClient:
         else:
             return result_content
 
+    async def list_resources(self, cursor: Optional[str] = None) -> Optional[dict]:
+        if not self.session:
+            raise RuntimeError("MCP client is not connected.")
+
+        result = await self.session.list_resources(cursor=cursor)
+        if not result:
+            raise Exception("No result returned from MCP list_resources call.")
+
+        result_dict = result.model_dump()
+        resources = result_dict.get("resources", [])
+
+        return resources
+
+    async def read_resource(self, uri: str) -> Optional[dict]:
+        if not self.session:
+            raise RuntimeError("MCP client is not connected.")
+
+        result = await self.session.read_resource(uri)
+        if not result:
+            raise Exception("No result returned from MCP read_resource call.")
+        result_dict = result.model_dump()
+
+        return result_dict
+
     async def disconnect(self):
         # Clean up and close the session
         if self.session:
