@@ -157,7 +157,7 @@ class OAuthManager:
             )
         return None
 
-    def get_oauth_token(
+    async def get_oauth_token(
         self, user_id: str, session_id: str, force_refresh: bool = False
     ):
         """
@@ -186,7 +186,7 @@ class OAuthManager:
                 log.debug(
                     f"Token refresh needed for user {user_id}, provider {session.provider}"
                 )
-                refreshed_token = self._refresh_token(session)
+                refreshed_token = await self._refresh_token(session)
                 if refreshed_token:
                     return refreshed_token
                 else:

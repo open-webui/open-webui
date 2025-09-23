@@ -1420,7 +1420,7 @@ async def chat_completion(
 
     oauth_token = None
     try:
-        oauth_token = request.app.state.oauth_manager.get_oauth_token(
+        oauth_token = await request.app.state.oauth_manager.get_oauth_token(
             user.id, request.cookies.get("oauth_session_id", None)
         )
     except Exception as e:
