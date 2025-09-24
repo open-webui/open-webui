@@ -170,18 +170,16 @@
 			toast.error($i18n.t('In order to force OCR, performing OCR must be enabled.'));
 			return;
 		}
-                if (
-			RAGConfig.CONTENT_EXTRACTION_ENGINE === 'docling' &&
-			RAGConfig.DOCLING_PIPELINE === 'vlm'
-		) {
-		    if (
-			(RAGConfig.DOCLING_VLM_PIPELINE_MODEL === '' ? 0 : 1) +
-			(['{}', ''].includes(RAGConfig.DOCLING_VLM_PIPELINE_MODEL_LOCAL) ? 0 : 1) +
-			(['{}', ''].includes(RAGConfig.DOCLING_VLM_PIPELINE_MODEL_API) ? 0 : 1) > 1
-		    ) {
-			toast.error($i18n.t('All model settings for VLM pipeline are mutually exclusive.'));
-		        return;
-		    }
+		if (RAGConfig.CONTENT_EXTRACTION_ENGINE === 'docling' && RAGConfig.DOCLING_PIPELINE === 'vlm') {
+			if (
+				(RAGConfig.DOCLING_VLM_PIPELINE_MODEL === '' ? 0 : 1) +
+					(['{}', ''].includes(RAGConfig.DOCLING_VLM_PIPELINE_MODEL_LOCAL) ? 0 : 1) +
+					(['{}', ''].includes(RAGConfig.DOCLING_VLM_PIPELINE_MODEL_API) ? 0 : 1) >
+				1
+			) {
+				toast.error($i18n.t('All model settings for VLM pipeline are mutually exclusive.'));
+				return;
+			}
 		}
 
 		if (
@@ -232,9 +230,7 @@
 			DOCLING_VLM_PIPELINE_MODEL_LOCAL: JSON.parse(
 				RAGConfig.DOCLING_VLM_PIPELINE_MODEL_LOCAL || '{}'
 			),
-			DOCLING_VLM_PIPELINE_MODEL_API: JSON.parse(
-				RAGConfig.DOCLING_VLM_PIPELINE_MODEL_API || '{}'
-			),
+			DOCLING_VLM_PIPELINE_MODEL_API: JSON.parse(RAGConfig.DOCLING_VLM_PIPELINE_MODEL_API || '{}'),
 			DOCLING_PICTURE_DESCRIPTION_LOCAL: JSON.parse(
 				RAGConfig.DOCLING_PICTURE_DESCRIPTION_LOCAL || '{}'
 			),
@@ -727,7 +723,7 @@
 										</div>
 									</div>
 								</div>
-                                                        {/if}
+							{/if}
 							<div class="flex w-full mt-2">
 								<div class="flex-1 flex justify-between">
 									<div class=" self-center text-xs font-medium">
