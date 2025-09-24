@@ -252,9 +252,10 @@ class OAuthManager:
                 log.error(f"No OAuth client found for provider {provider}")
                 return None
 
+            server_metadata_url = self.get_server_metadata_url(provider)
             token_endpoint = None
             async with aiohttp.ClientSession(trust_env=True) as session_http:
-                async with session_http.get(client.gserver_metadata_url) as r:
+                async with session_http.get(server_metadata_url) as r:
                     if r.status == 200:
                         openid_data = await r.json()
                         token_endpoint = openid_data.get("token_endpoint")
