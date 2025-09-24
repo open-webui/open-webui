@@ -18,7 +18,7 @@
 		if (isValidHttpUrl(url)) {
 			onSubmit({
 				type:
-					url.startsWith('https://www.youtube.com') || url.startsWith('https://youtu.be')
+					url.startsWith('https://www.youtube.com') || url.startsWith('https://youtu.be') || url.startsWith('https://youtube.com') || url.startsWith('https://m.youtube.com')
 						? 'youtube'
 						: 'web',
 				data: url
