@@ -29,7 +29,6 @@ dependencies = [
     "peewee==3.17.8",
     "peewee-migrate==1.12.2",
     "psycopg2-binary==2.9.9",
-    "pgvector>=0.4.1",
     "PyMySQL==1.1.1",
     "bcrypt==4.2.0",
 
@@ -57,10 +56,7 @@ dependencies = [
     "azure-storage-blob==12.25.1",
 
     "fake-useragent==1.5.1",
-    "chromadb==0.5.23",
-    "pymilvus==2.5.0",
     "qdrant-client~=1.12.0",
-    "opensearch-py==2.7.1",
 
     "transformers>=4.46.0,<5.0.0",
     "sentence-transformers>=5.0.0",
