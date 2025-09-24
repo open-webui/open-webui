@@ -45,7 +45,7 @@ from open_webui.retrieval.loaders.youtube import YoutubeLoader
 # Web search engines
 from open_webui.retrieval.web.main import SearchResult
 from open_webui.retrieval.web.utils import get_web_loader
-from open_webui.retrieval.web.ollama import search_ollama
+from open_webui.retrieval.web.ollama import search_ollama_cloud
 from open_webui.retrieval.web.brave import search_brave
 from open_webui.retrieval.web.kagi import search_kagi
 from open_webui.retrieval.web.mojeek import search_mojeek
@@ -1794,7 +1794,7 @@ def search_web(request: Request, engine: str, query: str) -> list[SearchResult]:
 
     # TODO: add playwright to search the web
     if engine == "ollama_cloud":
-        return search_ollama(
+        return search_ollama_cloud(
             "https://ollama.com",
             request.app.state.config.OLLAMA_CLOUD_WEB_SEARCH_API_KEY,
             query,
