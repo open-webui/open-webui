@@ -48,6 +48,7 @@
 
 	export let readOnly = false;
 
+	export let showSearchPlanButtons = false;
 	export let bottomPadding = false;
 	export let autoScroll;
 
@@ -452,6 +453,7 @@
 							{addMessages}
 							{triggerScroll}
 							{readOnly}
+							{showSearchPlanButtons}
 						/>
 					{/each}
 				</div>

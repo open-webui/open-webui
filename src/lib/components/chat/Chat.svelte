@@ -124,6 +124,8 @@ let webSearchEnabled = false;
 let codeInterpreterEnabled = false;
 let selectedKnowledgeSources = [];
 
+	let showSearchPlanButtons = false;
+
 	let chat = null;
 	let tags = [];
 
@@ -403,6 +405,7 @@ selectedKnowledgeSources = input.selectedKnowledgeSources;
 		console.log('mounted');
 		window.addEventListener('message', onMessageHandler);
 		$socket?.on('chat-events', chatEventHandler);
+		window.addEventListener('searchPlanButtonClicked', searchPlanButtonClickHandler);
 
 		if (!$chatId) {
 			chatIdUnsubscriber = chatId.subscribe(async (value) => {
@@ -468,7 +471,28 @@ selectedKnowledgeSources = [];
 		chatIdUnsubscriber?.();
 		window.removeEventListener('message', onMessageHandler);
 		$socket?.off('chat-events', chatEventHandler);
+		window.removeEventListener('searchPlanButtonClicked', searchPlanButtonClickHandler);
 	});
+
+	const searchPlanButtonClickHandler = () => {
+		showSearchPlanButtons = false;
+	};
+
+	const checkShowSearchPlanButtons = () => {
+		if (
+			history.currentId &&
+			history.messages[history.currentId] &&
+			history.messages[history.currentId].role === 'assistant' &&
+			history.messages[history.currentId].done &&
+			history.messages[history.currentId].content.includes(
+				$config?.features?.search_plan_agent_buttons_triggering_sentence
+			)
+		) {
+			showSearchPlanButtons = true;
+		} else {
+			showSearchPlanButtons = false;
+		}
+	};
 
 	// File upload functions
 
@@ -844,6 +868,7 @@ selectedKnowledgeSources = [];
 				}
 
 				await tick();
+				checkShowSearchPlanButtons();
 
 				return true;
 			} else {
@@ -915,6 +940,7 @@ selectedKnowledgeSources = [];
 		}
 
 		taskIds = null;
+		checkShowSearchPlanButtons();
 	};
 
 	const chatActionHandler = async (chatId, actionId, modelId, responseMessageId, event = null) => {
@@ -2024,6 +2050,7 @@ $models.map((m) => m.id).includes(modelId) ? modelId : ''
 									bind:prompt
 									{selectedModels}
 									{atSelectedModel}
+									{showSearchPlanButtons}
 									{sendPrompt}
 									{showMessage}
 									{submitMessage}
