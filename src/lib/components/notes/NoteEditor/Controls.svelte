@@ -17,8 +17,8 @@
 	};
 </script>
 
-<div class="flex items-center mb-1.5 pt-1.5">
-	<div class=" -translate-x-1.5 flex items-center">
+<div class="flex items-center mb-1.5 pt-1.5 px-2.5">
+	<div class=" mr-1 flex items-center">
 		<button
 			class="p-0.5 bg-transparent transition rounded-lg"
 			on:click={() => {
@@ -36,7 +36,7 @@
 	</div>
 </div>
 
-<div class="mt-1">
+<div class="mt-1 px-2.5">
 	<div class="pb-10">
 		{#if files.length > 0}
 			<div class=" text-xs font-medium pb-1">{$i18n.t('Files')}</div>

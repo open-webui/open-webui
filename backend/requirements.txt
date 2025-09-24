@@ -2,6 +2,7 @@ fastapi==0.115.7
 uvicorn[standard]==0.35.0
 pydantic==2.11.7
 python-multipart==0.0.20
+itsdangerous==2.2.0
 
 python-socketio==5.13.0
 python-jose==3.4.0
@@ -45,6 +46,7 @@ anthropic
 google-genai==1.32.0
 google-generativeai==0.8.5
 tiktoken
+mcp==1.14.1
 
 langchain==0.3.26
 langchain-community==0.3.27
@@ -120,7 +122,7 @@ pytest-docker~=3.1.1
 googleapis-common-protos==1.70.0
 google-cloud-storage==2.19.0
 
-azure-identity==1.23.0
+azure-identity==1.25.0
 azure-storage-blob==12.24.1
 
 

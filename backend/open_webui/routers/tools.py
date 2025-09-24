@@ -43,6 +43,7 @@ router = APIRouter()
 async def get_tools(request: Request, user=Depends(get_verified_user)):
     tools = Tools.get_tools()
 
+    # OpenAPI Tool Servers
     for server in await get_tool_servers(request):
         tools.append(
             ToolUserResponse(
@@ -67,6 +68,29 @@ async def get_tools(request: Request, user=Depends(get_verified_user)):
                 }
             )
         )
+
+    # MCP Tool Servers
+    for server in request.app.state.config.TOOL_SERVER_CONNECTIONS:
+        if server.get("type", "openapi") == "mcp":
+            tools.append(
+                ToolUserResponse(
+                    **{
+                        "id": f"server:mcp:{server.get('info', {}).get('id')}",
+                        "user_id": f"server:mcp:{server.get('info', {}).get('id')}",
+                        "name": server.get("info", {}).get("name", "MCP Tool Server"),
+                        "meta": {
+                            "description": server.get("info", {}).get(
+                                "description", ""
+                            ),
+                        },
+                        "access_control": server.get("config", {}).get(
+                            "access_control", None
+                        ),
+                        "updated_at": int(time.time()),
+                        "created_at": int(time.time()),
+                    }
+                )
+            )
 
     if user.role == "admin" and BYPASS_ADMIN_ACCESS_CONTROL:
         # Admin can see all tools

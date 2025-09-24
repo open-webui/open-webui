@@ -602,6 +602,12 @@ class OAuthManager:
                 or (auth_manager_config.OAUTH_USERNAME_CLAIM not in user_data)
             ):
                 user_data: UserInfo = await client.userinfo(token=token)
+            if (
+                provider == "feishu"
+                and isinstance(user_data, dict)
+                and "data" in user_data
+            ):
+                user_data = user_data["data"]
             if not user_data:
                 log.warning(f"OAuth callback failed, user data is missing: {token}")
                 raise HTTPException(400, detail=ERROR_MESSAGES.INVALID_CRED)
