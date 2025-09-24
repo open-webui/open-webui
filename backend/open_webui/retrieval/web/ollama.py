@@ -26,11 +26,9 @@ def search_ollama_cloud(
         filter_list (Optional[list[str]]): List of domains to filter results by
     """
     log.info(f"Searching with Ollama for query: {query}")
-    headers = {"Authorization": f"Bearer {api_key}", "Content-Type": "application/json"}
 
-    payload = {
-        "query": query,
-    }
+    headers = {"Authorization": f"Bearer {api_key}", "Content-Type": "application/json"}
+    payload = {"query": query, "max_results": count}
 
     try:
         response = requests.post(f"{url}/api/web_search", headers=headers, json=payload)
