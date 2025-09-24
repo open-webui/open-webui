@@ -24,8 +24,8 @@
 	import Chats from './InputMenu/Chats.svelte';
 	import Notes from './InputMenu/Notes.svelte';
 	import Knowledge from './InputMenu/Knowledge.svelte';
-	import Link from '$lib/components/icons/Link.svelte';
 	import AttachWebpageModal from './AttachWebpageModal.svelte';
+	import GlobeAlt from '$lib/components/icons/GlobeAlt.svelte';
 
 	const i18n = getContext('i18n');
 
@@ -184,7 +184,7 @@
 							showAttachWebpageModal = true;
 						}}
 					>
-						<Link />
+						<GlobeAlt />
 						<div class="line-clamp-1">{$i18n.t('Attach Webpage')}</div>
 					</DropdownMenu.Item>
 
