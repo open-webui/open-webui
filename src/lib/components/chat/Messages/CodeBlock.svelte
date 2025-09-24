@@ -15,6 +15,7 @@
 	import ChevronUpDown from '$lib/components/icons/ChevronUpDown.svelte';
 	import CommandLine from '$lib/components/icons/CommandLine.svelte';
 	import Cube from '$lib/components/icons/Cube.svelte';
+	import CodeEditor from '$lib/components/common/CodeEditor.svelte';
 
 	const i18n = getContext('i18n');
 
@@ -480,19 +481,17 @@
 
 				{#if !collapsed}
 					{#if edit}
-						{#await import('$lib/components/common/CodeEditor.svelte') then { default: CodeEditor }}
-							<CodeEditor
-								value={code}
-								{id}
-								{lang}
-								onSave={() => {
-									saveCode();
-								}}
-								onChange={(value) => {
-									_code = value;
-								}}
-							/>
-						{/await}
+						<CodeEditor
+							value={code}
+							{id}
+							{lang}
+							onSave={() => {
+								saveCode();
+							}}
+							onChange={(value) => {
+								_code = value;
+							}}
+						/>
 					{:else}
 						<pre
 							class=" hljs p-4 px-5 overflow-x-auto"

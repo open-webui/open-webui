@@ -8,6 +8,7 @@
 	import Badge from '$lib/components/common/Badge.svelte';
 	import Tooltip from '$lib/components/common/Tooltip.svelte';
 	import ChevronLeft from '$lib/components/icons/ChevronLeft.svelte';
+	import CodeEditor from '$lib/components/common/CodeEditor.svelte';
 
 	let formElement = null;
 	let loading = false;
@@ -366,22 +367,20 @@ class Pipe:
 				</div>
 
 				<div class="mb-2 flex-1 overflow-auto h-0 rounded-lg">
-					{#await import('$lib/components/common/CodeEditor.svelte') then { default: CodeEditor }}
-						<CodeEditor
-							bind:this={codeEditor}
-							value={content}
-							lang="python"
-							{boilerplate}
-							onChange={(e) => {
-								_content = e;
-							}}
-							onSave={async () => {
-								if (formElement) {
-									formElement.requestSubmit();
-								}
-							}}
-						/>
-					{/await}
+					<CodeEditor
+						bind:this={codeEditor}
+						value={content}
+						lang="python"
+						{boilerplate}
+						onChange={(e) => {
+							_content = e;
+						}}
+						onSave={async () => {
+							if (formElement) {
+								formElement.requestSubmit();
+							}
+						}}
+					/>
 				</div>
 
 				<div class="pb-3 flex justify-between">
