@@ -16,7 +16,6 @@
 	import ChevronUpDown from '$lib/components/icons/ChevronUpDown.svelte';
 	import CommandLine from '$lib/components/icons/CommandLine.svelte';
 	import Cube from '$lib/components/icons/Cube.svelte';
-	import CodeEditor from '$lib/components/common/CodeEditor.svelte';
 
 	const i18n = getContext('i18n');
 
