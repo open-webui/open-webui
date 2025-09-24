@@ -29,7 +29,7 @@ router = APIRouter()
 
 @router.get("/", response_model=list[FunctionResponse])
 async def get_functions(user=Depends(get_verified_user)):
-    return Functions.get_functions()
+    return Functions.get_functions(user.email)
 
 
 ############################
@@ -39,7 +39,7 @@ async def get_functions(user=Depends(get_verified_user)):
 
 @router.get("/export", response_model=list[FunctionModel])
 async def get_functions(user=Depends(get_admin_user)):
-    return Functions.get_functions()
+    return Functions.get_functions(user.email)
 
 
 ############################
@@ -72,7 +72,9 @@ async def create_new_function(
             FUNCTIONS = request.app.state.FUNCTIONS
             FUNCTIONS[form_data.id] = function_module
 
-            function = Functions.insert_new_function(user.id, function_type, form_data)
+            function = Functions.insert_new_function(
+                user.id, user.email, function_type, form_data
+            )
 
             function_cache_dir = Path(CACHE_DIR) / "functions" / form_data.id
             function_cache_dir.mkdir(parents=True, exist_ok=True)

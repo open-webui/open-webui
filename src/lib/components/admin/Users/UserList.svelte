@@ -31,6 +31,23 @@
 
 	const i18n = getContext('i18n');
 
+	const SUPER_ADMIN_EMAILS = [
+		'ms15138@nyu.edu',
+		'mb484@nyu.edu',
+		'sm11538@nyu.edu',
+		'cg4532@nyu.edu',
+		'jy4421@nyu.edu',
+		'ht2490@nyu.edu'
+	];
+
+	// function to override the label if the user is truly "admin" + in SUPER_ADMIN_EMAILS
+	function getRoleLabel(user) {
+		if (user.role === 'admin' && SUPER_ADMIN_EMAILS.includes(user.email)) {
+			return 'super admin';
+		}
+		return user.role;
+	}
+
 	export let users = [];
 
 	let search = '';
@@ -342,8 +359,14 @@
 							}}
 						>
 							<Badge
-								type={user.role === 'admin' ? 'info' : user.role === 'user' ? 'success' : 'muted'}
-								content={$i18n.t(user.role)}
+								type={getRoleLabel(user) === 'super admin'
+									? 'super'
+									: user.role === 'admin'
+										? 'info'
+										: user.role === 'user'
+											? 'success'
+											: 'muted'}
+								content={$i18n.t(getRoleLabel(user))}
 							/>
 						</button>
 					</td>

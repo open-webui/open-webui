@@ -156,11 +156,11 @@
 	};
 
 	function isDarkMode() {
-        if (typeof window !== 'undefined') {
-            return document.documentElement.classList.contains('dark');
-        }
-        return false;
-    }
+		if (typeof window !== 'undefined') {
+			return document.documentElement.classList.contains('dark');
+		}
+		return false;
+	}
 
 	const playAudio = (idx: number) => {
 		return new Promise<void>((res) => {

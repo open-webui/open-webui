@@ -11,6 +11,7 @@
 	import Tooltip from '$lib/components/common/Tooltip.svelte';
 	import LockClosed from '$lib/components/icons/LockClosed.svelte';
 	import AccessControlModal from '../common/AccessControlModal.svelte';
+	import { user } from '$lib/stores';
 
 	let formElement = null;
 	let loading = false;
@@ -29,12 +30,21 @@
 		description: ''
 	};
 	export let content = '';
-	export let accessControl = null;
+	export let accessControl;
+
 
 	let _content = '';
 
 	$: if (content) {
 		updateContent();
+	}
+
+	$: if (!edit && !clone && accessControl === undefined) {
+	// New tool: default to private access
+		accessControl = {
+			read: { group_ids: [], user_ids: [] },
+			write: { group_ids: [], user_ids: [] }
+		};
 	}
 
 	const updateContent = () => {
@@ -150,9 +160,11 @@ class Tools:
 
 	const saveHandler = async () => {
 		loading = true;
+		let emailPrefix = $user?.email?.split('@')[0]
+		const finalName = (!edit && !clone && !name.endsWith(`_${emailPrefix}`))? `${name}_${emailPrefix}`: name;
 		onSave({
-			id,
-			name,
+			id: finalName,
+			name: finalName,
 			meta,
 			content,
 			access_control: accessControl

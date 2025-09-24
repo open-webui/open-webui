@@ -19,23 +19,22 @@
 	let groups = [];
 
 	onMount(async () => {
-		groups = await getGroups(localStorage.token);
+  groups = await getGroups(localStorage.token);
 
-		if (accessControl === null) {
-			accessControl = null;
-		} else {
-			accessControl = {
-				read: {
-					group_ids: accessControl?.read?.group_ids ?? [],
-					user_ids: accessControl?.read?.user_ids ?? []
-				},
-				write: {
-					group_ids: accessControl?.write?.group_ids ?? [],
-					user_ids: accessControl?.write?.user_ids ?? []
-				}
-			};
-		}
-	});
+  if (accessControl !== null) {
+    accessControl = {
+      read: {
+        group_ids: accessControl?.read?.group_ids ?? [],
+        user_ids: accessControl?.read?.user_ids ?? []
+      },
+      write: {
+        group_ids: accessControl?.write?.group_ids ?? [],
+        user_ids: accessControl?.write?.user_ids ?? []
+      }
+    };
+  }
+});
+
 
 	$: onChange(accessControl);
 
@@ -113,8 +112,8 @@
 						}
 					}}
 				>
-					<option class=" text-gray-700" value="private" selected>Private</option>
-					<option class=" text-gray-700" value="public" selected>Public</option>
+					<option class=" text-gray-700" value="private" selected={accessControl !== null}>Private</option>
+					<option class=" text-gray-700" value="public" selected={accessControl === null}>Public</option>
 				</select>
 
 				<div class=" text-xs text-gray-400 font-medium">

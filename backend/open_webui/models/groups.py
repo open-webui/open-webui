@@ -27,6 +27,7 @@ class Group(Base):
 
     id = Column(Text, unique=True, primary_key=True)
     user_id = Column(Text)
+    created_by = Column(Text, nullable=True)
 
     name = Column(Text)
     description = Column(Text)
@@ -45,6 +46,7 @@ class GroupModel(BaseModel):
     model_config = ConfigDict(from_attributes=True)
     id: str
     user_id: str
+    created_by: Optional[str] = None
 
     name: str
     description: str
@@ -67,6 +69,7 @@ class GroupModel(BaseModel):
 class GroupResponse(BaseModel):
     id: str
     user_id: str
+    created_by: Optional[str] = None
     name: str
     description: str
     permissions: Optional[dict] = None
@@ -89,7 +92,7 @@ class GroupUpdateForm(GroupForm):
 
 class GroupTable:
     def insert_new_group(
-        self, user_id: str, form_data: GroupForm
+        self, user_id: str, user_email: str, form_data: GroupForm
     ) -> Optional[GroupModel]:
         with get_db() as db:
             group = GroupModel(
@@ -97,6 +100,7 @@ class GroupTable:
                     **form_data.model_dump(exclude_none=True),
                     "id": str(uuid.uuid4()),
                     "user_id": user_id,
+                    "created_by": user_email,
                     "created_at": int(time.time()),
                     "updated_at": int(time.time()),
                 }
@@ -115,12 +119,25 @@ class GroupTable:
             except Exception:
                 return None
 
-    def get_groups(self) -> list[GroupModel]:
+    def get_groups(self, user_email: str = None) -> list[GroupModel]:
         with get_db() as db:
-            return [
-                GroupModel.model_validate(group)
-                for group in db.query(Group).order_by(Group.updated_at.desc()).all()
-            ]
+            if user_email is None:
+                # Return ALL groups (for super admin)
+                return [
+                    GroupModel.model_validate(group)
+                    for group in db.query(Group)
+                    .order_by(Group.updated_at.desc())
+                    .all()
+                ]
+            else:
+                # Return only groups created by this email (existing logic)
+                return [
+                    GroupModel.model_validate(group)
+                    for group in db.query(Group)
+                    .filter(Group.created_by == user_email)
+                    .order_by(Group.updated_at.desc())
+                    .all()
+                ]
 
     def get_groups_by_member_id(self, user_id: str) -> list[GroupModel]:
         with get_db() as db:

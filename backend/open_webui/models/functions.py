@@ -21,6 +21,7 @@ class Function(Base):
 
     id = Column(String, primary_key=True)
     user_id = Column(String)
+    created_by = Column(Text, nullable=True)
     name = Column(Text)
     type = Column(Text)
     content = Column(Text)
@@ -40,6 +41,7 @@ class FunctionMeta(BaseModel):
 class FunctionModel(BaseModel):
     id: str
     user_id: str
+    created_by: Optional[str] = None
     name: str
     type: str
     content: str
@@ -60,6 +62,7 @@ class FunctionModel(BaseModel):
 class FunctionResponse(BaseModel):
     id: str
     user_id: str
+    created_by: Optional[str] = None
     type: str
     name: str
     meta: FunctionMeta
@@ -82,12 +85,13 @@ class FunctionValves(BaseModel):
 
 class FunctionsTable:
     def insert_new_function(
-        self, user_id: str, type: str, form_data: FunctionForm
+        self, user_id: str, user_email: str, type: str, form_data: FunctionForm
     ) -> Optional[FunctionModel]:
         function = FunctionModel(
             **{
                 **form_data.model_dump(),
                 "user_id": user_id,
+                "created_by": user_email,
                 "type": type,
                 "updated_at": int(time.time()),
                 "created_at": int(time.time()),
@@ -116,17 +120,35 @@ class FunctionsTable:
         except Exception:
             return None
 
-    def get_functions(self, active_only=False) -> list[FunctionModel]:
+    # def get_functions(self, active_only=False) -> list[FunctionModel]:
+    #     with get_db() as db:
+    #         if active_only:
+    #             return [
+    #                 FunctionModel.model_validate(function)
+    #                 for function in db.query(Function).filter_by(is_active=True).all()
+    #             ]
+    #         else:
+    #             return [
+    #                 FunctionModel.model_validate(function)
+    #                 for function in db.query(Function).all()
+    #             ]
+
+    def get_functions(self, user_email, active_only=False) -> list[FunctionModel]:
         with get_db() as db:
             if active_only:
                 return [
                     FunctionModel.model_validate(function)
-                    for function in db.query(Function).filter_by(is_active=True).all()
+                    for function in db.query(Function)
+                    .filter(Function.created_by == user_email)
+                    .filter_by(is_active=True)
+                    .all()
                 ]
             else:
                 return [
                     FunctionModel.model_validate(function)
-                    for function in db.query(Function).all()
+                    for function in db.query(Function)
+                    .filter(Function.created_by == user_email)
+                    .all()
                 ]
 
     def get_functions_by_type(

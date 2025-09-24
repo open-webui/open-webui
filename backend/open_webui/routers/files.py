@@ -4,7 +4,7 @@ import uuid
 from pathlib import Path
 from typing import Optional
 from urllib.parse import quote
-
+import time 
 from fastapi import APIRouter, Depends, File, HTTPException, Request, UploadFile, status
 from fastapi.responses import FileResponse, StreamingResponse
 from open_webui.constants import ERROR_MESSAGES
@@ -74,6 +74,7 @@ def upload_file(
                 "audio/ogg",
                 "audio/x-m4a",
             ]:
+                
                 file_path = Storage.get_file(file_path)
                 result = transcribe(request, file_path)
                 process_file(
@@ -83,6 +84,13 @@ def upload_file(
                 )
             else:
                 process_file(request, ProcessFileForm(file_id=id), user=user)
+            
+            ## Store EXPIRY timing which will be used for download link expiry to (30 minutes) /start
+            #expiry=time.time() + 1800
+            #Files.update_file_metadata_by_id(id, {"download_expiry": expiry})
+            #log.info(f"[UPLOAD] File ID {id} - download expiry set to {expiry} (in 30 min) for download link.")
+
+            ##  Store EXPIRY timing which will  be used for download link expiry(30 minutes) /end
 
             file_item = Files.get_file_by_id(id=id)
         except Exception as e:
@@ -109,6 +117,81 @@ def upload_file(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=ERROR_MESSAGES.DEFAULT(e),
         )
+
+
+
+
+## download file with temporary link /start
+
+@router.get("/download/{id}")
+async def download_by_id(id: str, user=Depends(get_verified_user)):
+
+    file = Files.get_file_by_id(id)
+    # if not file:
+    #     raise HTTPException(
+    #         status_code=status.HTTP_404_NOT_FOUND,
+    #         detail=ERROR_MESSAGES.NOT_FOUND,
+    #     )
+
+    # expiry = file.meta.get("download_expiry") if file.meta else None
+    # if not expiry or time.time() > expiry:
+    #     raise HTTPException(
+    #         status_code=status.HTTP_410_GONE,
+    #         detail=ERROR_MESSAGES.DEFAULT("Download link has expired. Download links are valid for 30 minutes."),
+    #     )
+        
+    
+    
+    if file and (file.user_id == user.id or user.role == "admin"):
+        try:
+            file_path = Storage.get_file(file.path)
+            file_path = Path(file_path)
+
+            # Check if the file already exists in the cache
+            if file_path.is_file():
+                # Handle Unicode filenames
+                filename = file.meta.get("name", file.filename)
+                encoded_filename = quote(filename)  # RFC5987 encoding
+
+                content_type = file.meta.get("content_type")
+                filename = file.meta.get("name", file.filename)
+                encoded_filename = quote(filename)
+                headers = {}
+
+                if content_type == "application/pdf" or filename.lower().endswith(
+                    ".pdf"
+                ):
+                    headers["Content-Disposition"] = (
+                        f"inline; filename*=UTF-8''{encoded_filename}"
+                    )
+                    content_type = "application/pdf"
+                elif content_type != "text/plain":
+                    headers["Content-Disposition"] = (
+                        f"attachment; filename*=UTF-8''{encoded_filename}"
+                    )
+
+                return FileResponse(file_path, headers=headers, media_type=content_type)
+
+            else:
+                raise HTTPException(
+                    status_code=status.HTTP_404_NOT_FOUND,
+                    detail=ERROR_MESSAGES.NOT_FOUND,
+                )
+        except Exception as e:
+            log.exception(e)
+            log.error("Error downloading file content")
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=ERROR_MESSAGES.DEFAULT("Error downloading file content"),
+            )
+    else:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=ERROR_MESSAGES.NOT_FOUND,
+        )
+## download file with temporary link /end
+
+
 
 
 ############################

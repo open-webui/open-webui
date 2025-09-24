@@ -25,10 +25,10 @@ router = APIRouter()
 
 @router.get("/", response_model=list[ModelUserResponse])
 async def get_models(id: Optional[str] = None, user=Depends(get_verified_user)):
-    if user.role == "admin":
-        return Models.get_models()
-    else:
-        return Models.get_models_by_user_id(user.id)
+    # if user.role == "admin":
+    #     return Models.get_models()
+    # else:
+    return Models.get_models_by_user_id(user.id)
 
 
 ###########################
@@ -37,7 +37,7 @@ async def get_models(id: Optional[str] = None, user=Depends(get_verified_user)):
 
 
 @router.get("/base", response_model=list[ModelResponse])
-async def get_base_models(user=Depends(get_admin_user)):
+async def get_base_models(user=Depends(get_verified_user)):
     return Models.get_base_models()
 
 
@@ -68,7 +68,7 @@ async def create_new_model(
         )
 
     else:
-        model = Models.insert_new_model(form_data, user.id)
+        model = Models.insert_new_model(form_data, user.id, user.email)
         if model:
             return model
         else:
@@ -84,21 +84,37 @@ async def create_new_model(
 
 
 # Note: We're not using the typical url path param here, but instead using a query parameter to allow '/' in the id
+# @router.get("/model", response_model=Optional[ModelResponse])
+# async def get_model_by_id(id: str, user=Depends(get_verified_user)):
+#     model = Models.get_model_by_id(id)
+#     if model:
+#         if (
+#             user.role == "admin"
+#             or model.user_id == user.id
+#             or has_access(user.id, "read", model.access_control)
+#         ):
+#             return model
+#     else:
+#         raise HTTPException(
+#             status_code=status.HTTP_401_UNAUTHORIZED,
+#             detail=ERROR_MESSAGES.NOT_FOUND,
+#         )
+
+
 @router.get("/model", response_model=Optional[ModelResponse])
 async def get_model_by_id(id: str, user=Depends(get_verified_user)):
     model = Models.get_model_by_id(id)
-    if model:
-        if (
-            user.role == "admin"
-            or model.user_id == user.id
-            or has_access(user.id, "read", model.access_control)
-        ):
-            return model
-    else:
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail=ERROR_MESSAGES.NOT_FOUND,
-        )
+
+    if not model:
+        raise HTTPException(status_code=404, detail="Model not found")
+
+    if model.user_id == user.id or has_access(user.id, "read", model.access_control):
+        return model
+
+    raise HTTPException(
+        status_code=status.HTTP_401_UNAUTHORIZED,
+        detail=ERROR_MESSAGES.NOT_FOUND,
+    )
 
 
 ############################

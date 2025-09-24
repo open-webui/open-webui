@@ -9,11 +9,22 @@
 	import AccessControl from '../common/AccessControl.svelte';
 
 	let loading = false;
+	export let edit = false;
+	export let clone = false;
 
 	let name = '';
 	let description = '';
-	let accessControl = null;
+	export let accessControl;
 
+	$: if (!edit && !clone && accessControl === undefined) {
+	// New tool: default to private access
+	accessControl = {
+		read: { group_ids: [], user_ids: [] },
+		write: { group_ids: [], user_ids: [] }
+	   };
+	} 
+
+		
 	const submitHandler = async () => {
 		loading = true;
 

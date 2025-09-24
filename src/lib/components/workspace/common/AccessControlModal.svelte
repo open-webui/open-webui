@@ -7,6 +7,7 @@
 
 	export let show = false;
 	export let accessControl = null;
+
 	export let accessRoles = ['read'];
 
 	export let onChange = () => {};

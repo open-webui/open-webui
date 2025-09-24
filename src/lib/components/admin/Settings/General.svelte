@@ -251,7 +251,7 @@
 							<select
 								class="dark:bg-gray-900 w-fit pr-8 rounded-sm px-2 text-xs bg-transparent outline-hidden text-right"
 								bind:value={adminConfig.DEFAULT_USER_ROLE}
-								aria-label = "Select a role"
+								aria-label="Select a role"
 								placeholder="Select a role"
 							>
 								<option value="pending">{$i18n.t('pending')}</option>

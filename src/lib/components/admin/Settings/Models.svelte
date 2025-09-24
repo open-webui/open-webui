@@ -169,7 +169,7 @@
 				<div class="flex items-center gap-1.5">
 					<Tooltip content={$i18n.t('Manage Models')}>
 						<button
-							aria-label = "Manage Models"
+							aria-label="Manage Models"
 							class=" p-1 rounded-full flex gap-1 items-center"
 							type="button"
 							on:click={() => {

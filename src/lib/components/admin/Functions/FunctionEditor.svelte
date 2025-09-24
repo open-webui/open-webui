@@ -9,6 +9,7 @@
 	import Badge from '$lib/components/common/Badge.svelte';
 	import Tooltip from '$lib/components/common/Tooltip.svelte';
 	import ChevronLeft from '$lib/components/icons/ChevronLeft.svelte';
+	import { user } from '$lib/stores';
 
 	let formElement = null;
 	let loading = false;
@@ -257,9 +258,12 @@ class Pipe:
 
 	const saveHandler = async () => {
 		loading = true;
+		let emailPrefix = $user?.email?.split('@')[0]
+		// let finalName = (edit || name.endsWith(`_${emailPrefix}`)) ? name : `${name}_${emailPrefix}`;
+		const finalName = (!edit && !clone && !name.endsWith(`_${emailPrefix}`))? `${name}_${emailPrefix}`: name;
 		onSave({
-			id,
-			name,
+			id: finalName,
+			name: finalName,
 			meta,
 			content
 		});

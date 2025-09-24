@@ -247,7 +247,9 @@
 			<hr class="border-gray-100 dark:border-gray-850 my-3" />
 
 			<div>
-				<div aria-label="System Prompt" class=" my-2.5 text-sm font-medium">{$i18n.t('System Prompt')}</div>
+				<div aria-label="System Prompt" class=" my-2.5 text-sm font-medium">
+					{$i18n.t('System Prompt')}
+				</div>
 				<textarea
 					aria-label="System Prompt"
 					id="systemPrompt"

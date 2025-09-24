@@ -1,9 +1,9 @@
 import { RETRIEVAL_API_BASE_URL } from '$lib/constants';
 
-export const getRAGConfig = async (token: string) => {
+export const getRAGConfig = async (token: string,email: string) => {
 	let error = null;
 
-	const res = await fetch(`${RETRIEVAL_API_BASE_URL}/config`, {
+	const res = await fetch(`${RETRIEVAL_API_BASE_URL}/config?email=${email}`, {
 		method: 'GET',
 		headers: {
 			'Content-Type': 'application/json',
@@ -50,6 +50,7 @@ type YoutubeConfigForm = {
 };
 
 type RAGConfigForm = {
+	email: string;
 	pdf_extract_images?: boolean;
 	enable_google_drive_integration?: boolean;
 	enable_onedrive_integration?: boolean;
@@ -89,10 +90,10 @@ export const updateRAGConfig = async (token: string, payload: RAGConfigForm) => 
 	return res;
 };
 
-export const getRAGTemplate = async (token: string) => {
+export const getRAGTemplate = async (token: string, email: string) => {
 	let error = null;
 
-	const res = await fetch(`${RETRIEVAL_API_BASE_URL}/template`, {
+	const res = await fetch(`${RETRIEVAL_API_BASE_URL}/template?email=${email}`, {
 		method: 'GET',
 		headers: {
 			'Content-Type': 'application/json',
@@ -116,10 +117,10 @@ export const getRAGTemplate = async (token: string) => {
 	return res?.template ?? '';
 };
 
-export const getQuerySettings = async (token: string) => {
+export const getQuerySettings = async (token: string, email: string) => {
 	let error = null;
 
-	const res = await fetch(`${RETRIEVAL_API_BASE_URL}/query/settings`, {
+	const res = await fetch(`${RETRIEVAL_API_BASE_URL}/query/settings?email=${email}`, {
 		method: 'GET',
 		headers: {
 			'Content-Type': 'application/json',
@@ -144,6 +145,7 @@ export const getQuerySettings = async (token: string) => {
 };
 
 type QuerySettings = {
+	email: string;
 	k: number | null;
 	r: number | null;
 	template: string | null;
@@ -179,10 +181,10 @@ export const updateQuerySettings = async (token: string, settings: QuerySettings
 	return res;
 };
 
-export const getEmbeddingConfig = async (token: string) => {
+export const getEmbeddingConfig = async (token: string, email: string) => {
 	let error = null;
 
-	const res = await fetch(`${RETRIEVAL_API_BASE_URL}/embedding`, {
+	const res = await fetch(`${RETRIEVAL_API_BASE_URL}/embedding?email=${email}`, {
 		method: 'GET',
 		headers: {
 			'Content-Type': 'application/json',
@@ -212,6 +214,7 @@ type OpenAIConfigForm = {
 };
 
 type EmbeddingModelUpdateForm = {
+	email: string;
 	openai_config?: OpenAIConfigForm;
 	embedding_engine: string;
 	embedding_model: string;
@@ -248,10 +251,10 @@ export const updateEmbeddingConfig = async (token: string, payload: EmbeddingMod
 	return res;
 };
 
-export const getRerankingConfig = async (token: string) => {
+export const getRerankingConfig = async (token: string, email: string) => {
 	let error = null;
 
-	const res = await fetch(`${RETRIEVAL_API_BASE_URL}/reranking`, {
+	const res = await fetch(`${RETRIEVAL_API_BASE_URL}/reranking?email=${email}`, {
 		method: 'GET',
 		headers: {
 			'Content-Type': 'application/json',
@@ -276,6 +279,7 @@ export const getRerankingConfig = async (token: string) => {
 };
 
 type RerankingModelUpdateForm = {
+	email: string;
 	reranking_model: string;
 };
 

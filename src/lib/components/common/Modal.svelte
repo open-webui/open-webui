@@ -13,18 +13,43 @@
 	let mounted = false;
 
 	const sizeToWidth = (size) => {
-		if (size === 'full') {
-			return 'w-full';
-		}
-		if (size === 'xs') {
-			return 'w-[16rem]';
-		} else if (size === 'sm') {
-			return 'w-[30rem]';
-		} else if (size === 'md') {
-			return 'w-[42rem]';
-		} else {
-			return 'w-[56rem]';
-		}
+        if (size === 'full') {
+            return 'w-full';
+        } else if (size === 'xs') {
+            return 'w-[16rem]';
+        } else if (size === 'sm') {
+            return 'w-[30rem]';
+        } else if (size === 'md') {
+            return 'w-[42rem]';
+        } else if (size === 'lg') {
+            return 'w-[56rem]';
+        } else if (size === 'xl') {
+            return 'w-[64rem]';
+        } else if (size === '2xl') {
+            return 'w-[72rem]';
+        } else if (size === '3xl') {
+            return 'w-[80rem]';
+        } else if (size === '4xl') {
+            return 'w-[84rem]';
+        } else if (size === '5xl') {
+            return 'w-[88rem]';
+        } else if (size === '6xl') {
+            return 'w-[92rem]';
+        } else if (size === '7xl') {
+            return 'w-[96rem]';
+        } else if (size === '8xl') {
+            return 'w-[100rem]';
+        } else if (size === '9xl') {
+            return 'w-[90vw]';  // 90% of viewport width
+        } else if (size === '10xl') {
+            return 'w-[95vw]';  // 95% of viewport width
+        } else if (size === '11xl') {
+            return 'w-[98vw]';  // 98% of viewport width
+        } else if (size === '12xl') {
+            return 'w-[99vw]';  // 99% of viewport width
+        } else {
+            return 'w-[56rem]';  // Default fallback
+        }
 	};
 
 	const handleKeyDown = (event: KeyboardEvent) => {

@@ -53,7 +53,7 @@ async def get_all_base_models(request: Request, user: UserModel = None):
             for model in ollama_models["models"]
         ]
 
-    function_models = await get_function_models(request)
+    function_models = await get_function_models(request, user=user)
     models = function_models + openai_models + ollama_models
 
     return models
@@ -109,7 +109,7 @@ async def get_all_models(request, user: UserModel = None):
         for function in Functions.get_functions_by_type("action", active_only=True)
     ]
 
-    custom_models = Models.get_all_models()
+    custom_models = Models.get_all_models(user.id, user.email)
     for custom_model in custom_models:
         if custom_model.base_model_id is None:
             for model in models:
@@ -200,6 +200,8 @@ async def get_all_models(request, user: UserModel = None):
             function_module, _, _ = load_function_module_by_id(function_id)
             request.app.state.FUNCTIONS[function_id] = function_module
 
+    current_user_email = user.email if user else None
+
     for model in models:
         action_ids = [
             action_id
@@ -212,6 +214,9 @@ async def get_all_models(request, user: UserModel = None):
             action_function = Functions.get_function_by_id(action_id)
             if action_function is None:
                 raise Exception(f"Action not found: {action_id}")
+
+            if current_user_email and action_function.created_by != current_user_email:
+                continue
 
             function_module = get_function_module_by_id(action_id)
             model["actions"].extend(

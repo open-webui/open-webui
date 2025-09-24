@@ -177,30 +177,27 @@ export const updateKnowledgeById = async (token: string, id: string, form: Knowl
 	return res;
 };
 
-export const addFileToKnowledgeById = async (token: string, id: string, fileId: string) => {
+// Update frontend API call to match new backend function signature
+export const addFileToKnowledgeById = async (token: string, knowledgeId: string, file: File) => {
+	const data = new FormData();
+	data.append('file', file);
+
 	let error = null;
 
-	const res = await fetch(`${WEBUI_API_BASE_URL}/knowledge/${id}/file/add`, {
+	const res = await fetch(`${WEBUI_API_BASE_URL}/knowledge/${knowledgeId}/file/add`, {
 		method: 'POST',
 		headers: {
 			Accept: 'application/json',
-			'Content-Type': 'application/json',
 			authorization: `Bearer ${token}`
 		},
-		body: JSON.stringify({
-			file_id: fileId
-		})
+		body: data
 	})
 		.then(async (res) => {
 			if (!res.ok) throw await res.json();
 			return res.json();
 		})
-		.then((json) => {
-			return json;
-		})
 		.catch((err) => {
 			error = err.detail;
-
 			console.log(err);
 			return null;
 		});

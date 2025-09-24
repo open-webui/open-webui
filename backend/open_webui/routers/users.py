@@ -116,15 +116,118 @@ async def update_user_permissions(
 ############################
 
 
+# @router.post("/update/role", response_model=Optional[UserModel])
+# async def update_user_role(form_data: UserRoleUpdateForm, user=Depends(get_admin_user)):
+#     if user.id != form_data.id and form_data.id != Users.get_first_user().id:
+#         return Users.update_user_role_by_id(form_data.id, form_data.role)
+
+#     raise HTTPException(
+#         status_code=status.HTTP_403_FORBIDDEN,
+#         detail=ERROR_MESSAGES.ACTION_PROHIBITED,
+#     )
+
+
+# @router.post("/update/role", response_model=Optional[UserModel])
+# async def update_user_role(form_data: UserRoleUpdateForm, user=Depends(get_admin_user)):
+#     target_user = Users.get_user_by_id(form_data.id)
+
+#     if not target_user:
+#         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found")
+
+#     # Define a list of allowed emails that can bypass the admin-to-admin restriction.
+#     allowed_emails = ["cg4532@nyu.edu"]
+
+#     # Allow the first registered user (super-admin) or allowed emails to change admin roles.
+#     if target_user.role == "admin" and not (user.id == Users.get_first_user().id or user.email in allowed_emails):
+#         raise HTTPException(
+#             status_code=status.HTTP_403_FORBIDDEN,
+#             detail="Admins cannot change another admin's role",
+#         )
+
+#     # Prevent users from changing their own role
+#     if user.id == form_data.id:
+#         raise HTTPException(
+#             status_code=status.HTTP_403_FORBIDDEN,
+#             detail="Users cannot change their own role",
+#         )
+
+#     # Prevent modifying the role of the first registered user (super-admin)
+#     if form_data.id == Users.get_first_user().id:
+#         raise HTTPException(
+#             status_code=status.HTTP_403_FORBIDDEN,
+#             detail="Cannot change the role of the first registered user",
+#         )
+
+#     return Users.update_user_role_by_id(form_data.id, form_data.role)
+
+
 @router.post("/update/role", response_model=Optional[UserModel])
 async def update_user_role(form_data: UserRoleUpdateForm, user=Depends(get_admin_user)):
-    if user.id != form_data.id and form_data.id != Users.get_first_user().id:
-        return Users.update_user_role_by_id(form_data.id, form_data.role)
+    target_user = Users.get_user_by_id(form_data.id)
 
-    raise HTTPException(
-        status_code=status.HTTP_403_FORBIDDEN,
-        detail=ERROR_MESSAGES.ACTION_PROHIBITED,
+    if not target_user:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="User not found"
+        )
+
+    # Emails that get super-admin-like privileges for admin-to-admin changes.
+    allowed_emails = [
+        "sm11538@nyu.edu",
+        "ms15138@nyu.edu",
+        "mb484@nyu.edu",
+        "cg4532@nyu.edu",
+        "jy4421@nyu.edu",
+        "ht2490@nyu.edu",
+        "ps5226@nyu.edu",
+    ]
+
+    # Prevent users from changing their own role.
+    if user.id == form_data.id:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Users cannot change their own role",
+        )
+
+    # If the target user is currently an admin,
+    # only the super-admin or an allowed email can change that role.
+    if target_user.role == "admin" and not (
+        user.id == Users.get_first_user().id or user.email in allowed_emails
+    ):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Cannot change another admin's or super-admin's role",
+        )
+
+    # Prevent modifying the role of the first registered user.
+    if form_data.id == Users.get_first_user().id:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Cannot change the role of the first registered user",
+        )
+
+    # Now, check if the current user is just a normal admin (not super admin(first user) or not in allowed_emails).
+    is_normal_admin = (
+        user.role == "admin"
+        and user.id != Users.get_first_user().id
+        and user.email not in allowed_emails
     )
+
+    # If the user is a normal admin, limit role changes to only "pending" -> "user".
+    if is_normal_admin:
+        # If requested role is "admin", forbid it.
+        if form_data.role == "admin":
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Admin cannot promote a user to admin.",
+            )
+        # # If requested role is anything other than "user" or "pending", also forbid it.
+        # if form_data.role not in ("pending", "user"):
+        #     raise HTTPException(
+        #         status_code=status.HTTP_403_FORBIDDEN,
+        #         detail="Admins can only change role to 'pending' or 'user'.",
+        #     )
+
+    return Users.update_user_role_by_id(form_data.id, form_data.role)
 
 
 ############################

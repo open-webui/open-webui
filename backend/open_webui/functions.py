@@ -17,7 +17,8 @@ from fastapi import (
     status,
 )
 from starlette.responses import Response, StreamingResponse
-
+from open_webui.utils.auth import get_admin_user, get_verified_user
+from open_webui.models.users import UserModel
 
 from open_webui.socket.main import (
     get_event_call,
@@ -66,70 +67,71 @@ def get_function_module_by_id(request: Request, pipe_id: str):
     return function_module
 
 
-async def get_function_models(request):
+async def get_function_models(request, user: UserModel = None):
     pipes = Functions.get_functions_by_type("pipe", active_only=True)
     pipe_models = []
 
     for pipe in pipes:
-        function_module = get_function_module_by_id(request, pipe.id)
+        if (user.role == "admin" and pipe.created_by == user.email) or (user.role == "user"):
+            function_module = get_function_module_by_id(request, pipe.id)
 
-        # Check if function is a manifold
-        if hasattr(function_module, "pipes"):
-            sub_pipes = []
-
-            # Handle pipes being a list, sync function, or async function
-            try:
-                if callable(function_module.pipes):
-                    if asyncio.iscoroutinefunction(function_module.pipes):
-                        sub_pipes = await function_module.pipes()
-                    else:
-                        sub_pipes = function_module.pipes()
-                else:
-                    sub_pipes = function_module.pipes
-            except Exception as e:
-                log.exception(e)
+            # Check if function is a manifold
+            if hasattr(function_module, "pipes"):
                 sub_pipes = []
 
-            log.debug(
-                f"get_function_models: function '{pipe.id}' is a manifold of {sub_pipes}"
-            )
+                # Handle pipes being a list, sync function, or async function
+                try:
+                    if callable(function_module.pipes):
+                        if asyncio.iscoroutinefunction(function_module.pipes):
+                            sub_pipes = await function_module.pipes()
+                        else:
+                            sub_pipes = function_module.pipes()
+                    else:
+                        sub_pipes = function_module.pipes
+                except Exception as e:
+                    log.exception(e)
+                    sub_pipes = []
 
-            for p in sub_pipes:
-                sub_pipe_id = f'{pipe.id}.{p["id"]}'
-                sub_pipe_name = p["name"]
+                log.debug(
+                    f"get_function_models: function '{pipe.id}' is a manifold of {sub_pipes}"
+                )
 
-                if hasattr(function_module, "name"):
-                    sub_pipe_name = f"{function_module.name}{sub_pipe_name}"
+                for p in sub_pipes:
+                    sub_pipe_id = f'{pipe.id}.{p["id"]}'
+                    sub_pipe_name = p["name"]
 
-                pipe_flag = {"type": pipe.type}
+                    if hasattr(function_module, "name"):
+                        sub_pipe_name = f"{function_module.name}{sub_pipe_name}"
+
+                    pipe_flag = {"type": pipe.type}
+
+                    pipe_models.append(
+                        {
+                            "id": sub_pipe_id,
+                            "name": sub_pipe_name,
+                            "object": "model",
+                            "created": pipe.created_at,
+                            "owned_by": "openai",
+                            "pipe": pipe_flag,
+                        }
+                    )
+            else:
+                pipe_flag = {"type": "pipe"}
+
+                log.debug(
+                    f"get_function_models: function '{pipe.id}' is a single pipe {{ 'id': {pipe.id}, 'name': {pipe.name} }}"
+                )
 
                 pipe_models.append(
                     {
-                        "id": sub_pipe_id,
-                        "name": sub_pipe_name,
+                        "id": pipe.id,
+                        "name": pipe.name,
                         "object": "model",
                         "created": pipe.created_at,
                         "owned_by": "openai",
                         "pipe": pipe_flag,
                     }
                 )
-        else:
-            pipe_flag = {"type": "pipe"}
-
-            log.debug(
-                f"get_function_models: function '{pipe.id}' is a single pipe {{ 'id': {pipe.id}, 'name': {pipe.name} }}"
-            )
-
-            pipe_models.append(
-                {
-                    "id": pipe.id,
-                    "name": pipe.name,
-                    "object": "model",
-                    "created": pipe.created_at,
-                    "owned_by": "openai",
-                    "pipe": pipe_flag,
-                }
-            )
 
     return pipe_models
 

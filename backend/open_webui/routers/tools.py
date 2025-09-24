@@ -31,10 +31,10 @@ router = APIRouter()
 
 @router.get("/", response_model=list[ToolUserResponse])
 async def get_tools(user=Depends(get_verified_user)):
-    if user.role == "admin":
-        tools = Tools.get_tools()
-    else:
-        tools = Tools.get_tools_by_user_id(user.id, "read")
+    # if user.role == "admin":
+    #     tools = Tools.get_tools()
+    # else:
+    tools = Tools.get_tools_by_user_id(user.id, "read")
     return tools
 
 
@@ -45,10 +45,10 @@ async def get_tools(user=Depends(get_verified_user)):
 
 @router.get("/list", response_model=list[ToolUserResponse])
 async def get_tool_list(user=Depends(get_verified_user)):
-    if user.role == "admin":
-        tools = Tools.get_tools()
-    else:
-        tools = Tools.get_tools_by_user_id(user.id, "write")
+    # if user.role == "admin":
+    #     tools = Tools.get_tools()
+    # else:
+    tools = Tools.get_tools_by_user_id(user.id, "write")
     return tools
 
 
@@ -59,8 +59,9 @@ async def get_tool_list(user=Depends(get_verified_user)):
 
 @router.get("/export", response_model=list[ToolModel])
 async def export_tools(user=Depends(get_admin_user)):
-    tools = Tools.get_tools()
-    return tools
+    # tools = Tools.get_tools()
+    # return tools
+    return Tools.get_tools_by_user_id(user.id, "read")
 
 
 ############################
@@ -103,7 +104,7 @@ async def create_new_tools(
             TOOLS[form_data.id] = tools_module
 
             specs = get_tools_specs(TOOLS[form_data.id])
-            tools = Tools.insert_new_tool(user.id, form_data, specs)
+            tools = Tools.insert_new_tool(user.id, user.email, form_data, specs)
 
             tool_cache_dir = Path(CACHE_DIR) / "tools" / form_data.id
             tool_cache_dir.mkdir(parents=True, exist_ok=True)
@@ -133,22 +134,35 @@ async def create_new_tools(
 ############################
 
 
+# @router.get("/id/{id}", response_model=Optional[ToolModel])
+# async def get_tools_by_id(id: str, user=Depends(get_verified_user)):
+#     tools = Tools.get_tool_by_id(id)
+
+#     if tools:
+#         if (
+#             user.role == "admin"
+#             or tools.user_id == user.id
+#             or has_access(user.id, "read", tools.access_control)
+#         ):
+#             return tools
+#     else:
+#         raise HTTPException(
+#             status_code=status.HTTP_401_UNAUTHORIZED,
+#             detail=ERROR_MESSAGES.NOT_FOUND,
+#         )
+
+
 @router.get("/id/{id}", response_model=Optional[ToolModel])
 async def get_tools_by_id(id: str, user=Depends(get_verified_user)):
-    tools = Tools.get_tool_by_id(id)
+    tool = Tools.get_tool_by_id(id)
+    if not tool:
+        raise HTTPException(status_code=404, detail="Tool not found")
 
-    if tools:
-        if (
-            user.role == "admin"
-            or tools.user_id == user.id
-            or has_access(user.id, "read", tools.access_control)
-        ):
-            return tools
-    else:
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail=ERROR_MESSAGES.NOT_FOUND,
-        )
+    # Now everyone must pass either "I'm the owner" or group-based "read" check
+    if tool.user_id == user.id or has_access(user.id, "read", tool.access_control):
+        return tool
+
+    raise HTTPException(status_code=401, detail="Not allowed to view this tool")
 
 
 ############################

@@ -76,6 +76,7 @@ from open_webui.routers import (
     tools,
     users,
     utils,
+    facilities,
 )
 
 from open_webui.routers.retrieval import (
@@ -200,6 +201,8 @@ from open_webui.config import (
     RAG_WEB_SEARCH_CONCURRENT_REQUESTS,
     RAG_WEB_SEARCH_TRUST_ENV,
     RAG_WEB_SEARCH_DOMAIN_FILTER_LIST,
+    RAG_WEB_SEARCH_WEBSITE_BLOCKLIST,
+    RAG_WEB_SEARCH_INTERNAL_FACILITIES_SITES,
     JINA_API_KEY,
     SEARCHAPI_API_KEY,
     SEARCHAPI_ENGINE,
@@ -227,6 +230,7 @@ from open_webui.config import (
     ENABLE_RAG_LOCAL_WEB_FETCH,
     ENABLE_RAG_WEB_LOADER_SSL_VERIFICATION,
     ENABLE_RAG_WEB_SEARCH,
+    ENABLE_FACILITIES,
     ENABLE_GOOGLE_DRIVE_INTEGRATION,
     ENABLE_ONEDRIVE_INTEGRATION,
     UPLOAD_DIR,
@@ -392,6 +396,91 @@ v{VERSION} - building the best open-source AI user interface.
 https://github.com/open-webui/open-webui
 """
 )
+from sqlalchemy import create_engine, inspect
+def ensure_group_created_by_column():
+    from open_webui.config import DATABASE_URL
+
+    engine = create_engine(DATABASE_URL)
+    with engine.connect() as conn:
+        inspector = inspect(conn)
+        columns = [col["name"] for col in inspector.get_columns("group")]
+
+        if "created_by" not in columns:
+            print("Adding missing column: group.created_by")
+            conn.execute(text('ALTER TABLE "group" ADD COLUMN created_by TEXT;'))
+            print("Column 'created_by' added successfully")
+        else:
+            print("Column 'created_by' already exists")
+
+def ensure_function_created_by_column():
+    from open_webui.config import DATABASE_URL
+
+    engine = create_engine(DATABASE_URL)
+    with engine.connect() as conn:
+        inspector = inspect(conn)
+        columns = [col["name"] for col in inspector.get_columns("function")]
+
+        if "created_by" not in columns:
+            print("Adding missing column: function.created_by")
+            conn.execute(text('ALTER TABLE "function" ADD COLUMN created_by TEXT;'))
+            print("Column 'created_by' added successfully")
+        else:
+            print("Column 'created_by' already exists")
+
+def ensure_tool_created_by_column():
+    from open_webui.config import DATABASE_URL
+
+    engine = create_engine(DATABASE_URL)
+    with engine.begin() as conn: 
+        # conn.execute(text('DELETE FROM "tool";'))
+        # conn.execute(text('DELETE FROM "prompt";'))
+        # conn.execute(text('DELETE FROM "function";'))
+        # conn.execute(text('DELETE FROM "group";'))
+        # conn.execute(text('DELETE FROM "model";'))
+        # conn.execute(text('DELETE FROM "file";'))
+        # conn.execute(text('DELETE FROM "config";'))
+        # conn.execute(text('DELETE FROM "knowledge";'))
+    # with engine.connect() as conn:
+        inspector = inspect(conn)
+        columns = [col["name"] for col in inspector.get_columns("tool")]
+
+        if "created_by" not in columns:
+            print("Adding missing column: tool.created_by")
+            conn.execute(text('ALTER TABLE "tool" ADD COLUMN created_by TEXT;'))
+            print("Column 'created_by' added successfully")
+        else:
+            print("Column 'created_by' already exists")
+
+def ensure_model_created_by_column():
+    from open_webui.config import DATABASE_URL
+
+    engine = create_engine(DATABASE_URL)
+    with engine.connect() as conn:
+        inspector = inspect(conn)
+        columns = [col["name"] for col in inspector.get_columns("model")]
+
+        if "created_by" not in columns:
+            print("Adding missing column: model.created_by")
+            conn.execute(text('ALTER TABLE "model" ADD COLUMN created_by TEXT;'))
+            print("Column 'created_by' added successfully")
+        else:
+            print(" Column 'created_by' already exists")
+
+
+def ensure_chat_group_id_column():
+    from open_webui.config import DATABASE_URL
+
+    engine = create_engine(DATABASE_URL)
+    with engine.connect() as conn:
+        inspector = inspect(conn)
+        columns = [col["name"] for col in inspector.get_columns("chat")]
+
+        if "group_id" not in columns:
+            print("Adding missing column: chat.group_id")
+            conn.execute(text('ALTER TABLE "chat" ADD COLUMN group_id TEXT;'))
+            print("Column 'group_id' added successfully")
+        else:
+            print("Column 'group_id' already exists")
 
 
 @asynccontextmanager
@@ -404,6 +493,11 @@ async def lifespan(app: FastAPI):
         get_license_data(app, app.state.config.LICENSE_KEY)
 
     asyncio.create_task(periodic_usage_pool_cleanup())
+    ensure_group_created_by_column()
+    ensure_model_created_by_column()
+    ensure_tool_created_by_column()
+    ensure_function_created_by_column()
+    ensure_chat_group_id_column()
     yield
 
 
@@ -575,11 +669,14 @@ app.state.config.YOUTUBE_LOADER_PROXY_URL = YOUTUBE_LOADER_PROXY_URL
 
 
 app.state.config.ENABLE_RAG_WEB_SEARCH = ENABLE_RAG_WEB_SEARCH
+app.state.config.ENABLE_FACILITIES = ENABLE_FACILITIES
 app.state.config.RAG_WEB_SEARCH_ENGINE = RAG_WEB_SEARCH_ENGINE
 app.state.config.BYPASS_WEB_SEARCH_EMBEDDING_AND_RETRIEVAL = (
     BYPASS_WEB_SEARCH_EMBEDDING_AND_RETRIEVAL
 )
 app.state.config.RAG_WEB_SEARCH_DOMAIN_FILTER_LIST = RAG_WEB_SEARCH_DOMAIN_FILTER_LIST
+app.state.config.RAG_WEB_SEARCH_WEBSITE_BLOCKLIST = RAG_WEB_SEARCH_WEBSITE_BLOCKLIST
+app.state.config.RAG_WEB_SEARCH_INTERNAL_FACILITIES_SITES = RAG_WEB_SEARCH_INTERNAL_FACILITIES_SITES
 
 app.state.config.ENABLE_GOOGLE_DRIVE_INTEGRATION = ENABLE_GOOGLE_DRIVE_INTEGRATION
 app.state.config.ENABLE_ONEDRIVE_INTEGRATION = ENABLE_ONEDRIVE_INTEGRATION
@@ -642,11 +739,13 @@ app.state.EMBEDDING_FUNCTION = get_embedding_function(
     (
         app.state.config.RAG_OPENAI_API_BASE_URL
         if app.state.config.RAG_EMBEDDING_ENGINE == "openai"
+        or app.state.config.RAG_EMBEDDING_ENGINE == "portkey"
         else app.state.config.RAG_OLLAMA_BASE_URL
     ),
     (
         app.state.config.RAG_OPENAI_API_KEY
         if app.state.config.RAG_EMBEDDING_ENGINE == "openai"
+        or app.state.config.RAG_EMBEDDING_ENGINE == "portkey"
         else app.state.config.RAG_OLLAMA_API_KEY
     ),
     app.state.config.RAG_EMBEDDING_BATCH_SIZE,
@@ -896,6 +995,7 @@ app.include_router(
     evaluations.router, prefix="/api/v1/evaluations", tags=["evaluations"]
 )
 app.include_router(utils.router, prefix="/api/v1/utils", tags=["utils"])
+app.include_router(facilities.router, prefix="/api/v1/facilities", tags=["facilities"])
 
 
 try:
@@ -1169,7 +1269,8 @@ async def get_app_config(request: Request):
                 {
                     "enable_direct_connections": app.state.config.ENABLE_DIRECT_CONNECTIONS,
                     "enable_channels": app.state.config.ENABLE_CHANNELS,
-                    "enable_web_search": app.state.config.ENABLE_RAG_WEB_SEARCH,
+                    "enable_web_search": app.state.config.ENABLE_RAG_WEB_SEARCH.get(user.email),
+                    "enable_facilities": app.state.config.ENABLE_FACILITIES.get(user.email),
                     "enable_code_interpreter": app.state.config.ENABLE_CODE_INTERPRETER,
                     "enable_image_generation": app.state.config.ENABLE_IMAGE_GENERATION,
                     "enable_autocomplete_generation": app.state.config.ENABLE_AUTOCOMPLETE_GENERATION,

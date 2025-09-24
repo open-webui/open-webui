@@ -5,10 +5,13 @@ on:
     branches:
       - main
       - dev
+      - GenAi-Dev
   pull_request:
     branches:
       - main
       - dev
+      - half-baked
+  workflow_dispatch:
 
 jobs:
   build:
@@ -33,7 +36,9 @@ jobs:
         run: npm run i18n:parse
 
       - name: Check for Changes After Format
-        run: git diff --exit-code
+        run: |
+          git diff
+          git diff --exit-code
 
       - name: Build Frontend
         run: npm run build

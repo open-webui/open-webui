@@ -43,8 +43,8 @@
 				{$i18n.t('Manage Models')}
 			</div>
 			<button
-			aria-label = "Manage Models"	
-			class="self-center"
+				aria-label="Manage Models"
+				class="self-center"
 				on:click={() => {
 					show = false;
 				}}

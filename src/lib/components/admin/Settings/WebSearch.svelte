@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { getRAGConfig, updateRAGConfig } from '$lib/apis/retrieval';
+	import { getTaskConfig, updateTaskConfig } from '$lib/apis';
 	import Switch from '$lib/components/common/Switch.svelte';
 
 	import { models } from '$lib/stores';
@@ -13,6 +14,9 @@
 	export let saveHandler: Function;
 
 	let webConfig = null;
+	let taskConfig = {
+		ENABLE_SEARCH_QUERY_GENERATION: true
+	};
 	let webSearchEngines = [
 		'searxng',
 		'google_pse',
@@ -47,6 +51,27 @@
 			webConfig.search.domain_filter_list = [];
 		}
 
+		// Convert website blocklist string to array before sending
+		if (webConfig.search.website_blocklist) {
+			webConfig.search.website_blocklist = webConfig.search.website_blocklist
+				.split(',')
+				.map((url) => url.trim())
+				.filter((url) => url.length > 0);
+		} else {
+			webConfig.search.website_blocklist = [];
+		}
+
+		// Convert internal facilities sites string to array before sending
+		if (webConfig.search.internal_facilities_sites) {
+			webConfig.search.internal_facilities_sites = webConfig.search.internal_facilities_sites
+				.split(',')
+				.map((url) => url.trim())
+				.filter((url) => url.length > 0);
+		} else {
+			webConfig.search.internal_facilities_sites = [];
+		}
+
+		// Update both web config and task config
 		const res = await updateRAGConfig(localStorage.token, {
 			web: webConfig,
 			youtube: {
@@ -56,22 +81,60 @@
 			}
 		});
 
-		webConfig.search.domain_filter_list = webConfig.search.domain_filter_list.join(', ');
+		taskConfig = await updateTaskConfig(localStorage.token, taskConfig);
+
+		// Update webConfig with the response from server
+		if (res) {
+			webConfig = res.web;
+			// Convert array back to comma-separated string for display
+			if (webConfig?.search?.domain_filter_list && Array.isArray(webConfig.search.domain_filter_list)) {
+				webConfig.search.domain_filter_list = webConfig.search.domain_filter_list.join(', ');
+			}
+			if (webConfig?.search?.website_blocklist && Array.isArray(webConfig.search.website_blocklist)) {
+				webConfig.search.website_blocklist = webConfig.search.website_blocklist.join(', ');
+			}
+			if (webConfig?.search?.internal_facilities_sites && Array.isArray(webConfig.search.internal_facilities_sites)) {
+				webConfig.search.internal_facilities_sites = webConfig.search.internal_facilities_sites.join(', ');
+			}
+		}
 	};
 
 	onMount(async () => {
-		const res = await getRAGConfig(localStorage.token);
+		const res = await getRAGConfig(localStorage.token, localStorage.email);
 
 		if (res) {
 			webConfig = res.web;
 			// Convert array back to comma-separated string for display
-			if (webConfig?.search?.domain_filter_list) {
+			if (webConfig?.search?.domain_filter_list && Array.isArray(webConfig.search.domain_filter_list)) {
 				webConfig.search.domain_filter_list = webConfig.search.domain_filter_list.join(', ');
+			} else if (!webConfig?.search?.domain_filter_list) {
+				// Initialize empty string if no domain filter list exists
+				webConfig.search.domain_filter_list = '';
+			}
+
+			// Handle website blocklist
+			if (webConfig?.search?.website_blocklist && Array.isArray(webConfig.search.website_blocklist)) {
+				webConfig.search.website_blocklist = webConfig.search.website_blocklist.join(', ');
+			} else if (!webConfig?.search?.website_blocklist) {
+				webConfig.search.website_blocklist = '';
+			}
+
+			// Handle internal facilities sites
+			if (webConfig?.search?.internal_facilities_sites && Array.isArray(webConfig.search.internal_facilities_sites)) {
+				webConfig.search.internal_facilities_sites = webConfig.search.internal_facilities_sites.join(', ');
+			} else if (!webConfig?.search?.internal_facilities_sites) {
+				webConfig.search.internal_facilities_sites = '';
 			}
 
 			youtubeLanguage = res.youtube.language.join(',');
 			youtubeTranslation = res.youtube.translation;
 			youtubeProxyUrl = res.youtube.proxy_url;
+		}
+
+		// Load task config for web search query generation setting
+		const taskRes = await getTaskConfig(localStorage.token);
+		if (taskRes) {
+			taskConfig = taskRes;
 		}
 	});
 </script>
@@ -108,7 +171,7 @@
 							<select
 								class="dark:bg-gray-900 w-fit pr-8 rounded-sm px-2 p-1 text-xs bg-transparent outline-hidden text-right"
 								bind:value={webConfig.search.engine}
-								aria-label = "Select a engine"
+								aria-label="Select a engine"
 								placeholder={$i18n.t('Select a engine')}
 								required
 							>
@@ -440,6 +503,34 @@
 								bind:value={webConfig.search.domain_filter_list}
 							/>
 						</div>
+
+						<div class="mb-2.5 flex w-full flex-col">
+							<div class="  text-xs font-medium mb-1">
+								{$i18n.t('Website Blocklist')}
+							</div>
+
+							<input
+								class="w-full rounded-lg py-2 px-4 text-sm bg-gray-50 dark:text-gray-300 dark:bg-gray-850 outline-hidden"
+								placeholder={$i18n.t(
+									'Enter URLs to block separated by commas (e.g., https://example.com/page, https://site.org/bad)'
+								)}
+								bind:value={webConfig.search.website_blocklist}
+							/>
+						</div>
+
+						<div class="mb-2.5 flex w-full flex-col">
+							<div class="  text-xs font-medium mb-1">
+								{$i18n.t('Internal Facilities (NYU) Specific Sites')}
+							</div>
+
+							<input
+								class="w-full rounded-lg py-2 px-4 text-sm bg-gray-50 dark:text-gray-300 dark:bg-gray-850 outline-hidden"
+								placeholder={$i18n.t(
+									'Enter specific NYU HPC sites separated by commas (e.g., https://sites.google.com/nyu.edu/nyu-hpc/, https://www.nyu.edu/hpc)'
+								)}
+								bind:value={webConfig.search.internal_facilities_sites}
+							/>
+						</div>
 					{/if}
 
 					<div class="  mb-2.5 flex w-full justify-between">
@@ -470,6 +561,21 @@
 									: 'Use no proxy to fetch page contents.'}
 							>
 								<Switch bind:state={webConfig.search.trust_env} />
+							</Tooltip>
+						</div>
+					</div>
+
+					<div class="  mb-2.5 flex w-full justify-between">
+						<div class=" self-center text-xs font-medium">
+							{$i18n.t('Web Search Query Generation')}
+						</div>
+						<div class="flex items-center relative">
+							<Tooltip
+								content={taskConfig.ENABLE_SEARCH_QUERY_GENERATION
+									? 'Automatically generate multiple search queries to improve search results'
+									: 'Use your exact search query without LLM-generated variations'}
+							>
+								<Switch bind:state={taskConfig.ENABLE_SEARCH_QUERY_GENERATION} />
 							</Tooltip>
 						</div>
 					</div>

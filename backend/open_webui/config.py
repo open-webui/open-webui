@@ -11,7 +11,12 @@ from urllib.parse import urlparse
 
 import requests
 from pydantic import BaseModel
-from sqlalchemy import JSON, Column, DateTime, Integer, func
+from sqlalchemy import JSON, Column, DateTime, Integer, func, Any, String
+from sqlalchemy.orm.attributes import flag_modified
+from open_webui.models.groups import (
+    Groups)
+from open_webui.models.users import (
+    Users)
 
 from open_webui.env import (
     DATA_DIR,
@@ -26,7 +31,6 @@ from open_webui.env import (
     log,
 )
 from open_webui.internal.db import Base, get_db
-
 
 class EndpointFilter(logging.Filter):
     def filter(self, record: logging.LogRecord) -> bool:
@@ -66,6 +70,7 @@ class Config(Base):
     __tablename__ = "config"
 
     id = Column(Integer, primary_key=True)
+    email = Column(String, nullable=False, index=True, default="system@default")
     data = Column(JSON, nullable=False)
     version = Column(Integer, nullable=False, default=0)
     created_at = Column(DateTime, nullable=False, server_default=func.now())
@@ -160,6 +165,21 @@ def get_config():
         config_entry = db.query(Config).order_by(Config.id.desc()).first()
         return config_entry.data if config_entry else DEFAULT_CONFIG
 
+from sqlalchemy import create_engine, inspect, text
+
+def ensure_config_email_column():
+    engine = create_engine(DATABASE_URL)
+    with engine.connect() as conn:
+        inspector = inspect(conn)
+        columns = [col["name"] for col in inspector.get_columns("config")]
+        if "email" not in columns:
+            print("🔧 Adding missing column: config.email")
+            conn.execute(text('ALTER TABLE "config" ADD COLUMN email TEXT DEFAULT \'system@default\';'))
+            print(" Column 'email' added successfully")
+        else:
+            print("Column 'email' already exists")
+
+ensure_config_email_column()
 
 CONFIG_DATA = get_config()
 
@@ -245,22 +265,159 @@ class PersistentConfig(Generic[T]):
         save_to_db(CONFIG_DATA)
         self.config_value = self.value
 
+class UserScopedConfig:
+    def __init__(self, config_path: str, default: Any):
+        self.config_path = config_path
+        self.default = default
+
+    # def get(self, email: str) -> Any:
+    #     with get_db() as db:
+    #         entry = db.query(Config).filter_by(email=email).first()
+    #         if entry and isinstance(entry.data, dict):
+    #             data = entry.data
+    #             for part in self.config_path.split("."):
+    #                 if isinstance(data, dict) and part in data:
+    #                     data = data[part]
+    #                 else:
+    #                     return self.default
+    #             return data
+        
+    # # Step 2: If not found, try group creator lookup
+    #         user_id = Users.get_user_by_email(email)
+    #         user_groups = []
+    #         user_groups = Groups.get_groups_by_member_id(user_id)
+    #         for group in user_groups:
+    #             group_creator_email = group.created_by  
+    #             if group_creator_email:
+    #                 creator_entry = db.query(Config).filter_by(email=group_creator_email).first()
+    #                 if creator_entry and isinstance(creator_entry.data, dict):
+    #                     data = creator_entry.data
+    #                     for part in self.config_path.split("."):
+    #                         if isinstance(data, dict) and part in data:
+    #                             data = data[part]
+    #                         else:
+    #                             return self.default
+    #                     return data
+
+    #         # Step 3: If still nothing, return default
+    #     return self.default
+        
+    def get(self, email: str) -> Any:
+        with get_db() as db:
+            # Step 1: Check user-specific config
+            entry = db.query(Config).filter_by(email=email).first()
+            if entry and isinstance(entry.data, dict):
+                data = entry.data
+                final_value = self.default
+                for part in self.config_path.split("."):
+                    if isinstance(data, dict) and part in data:
+                        data = data[part]
+                        final_value = data
+                    else:
+                        final_value = self.default
+                        break
+                if final_value != self.default:
+                    print(f"User {email} has personal config for {self.config_path}: {final_value}")
+                return final_value
+
+            # Step 2: Check group creator's config
+            user = Users.get_user_by_email(email)
+            print(f"User {email} maps to user_id={user.id}")
+            user_groups = Groups.get_groups_by_member_id(user.id)
+            print(f"User {email} is part of groups: {user_groups}")
+            
+            for group in user_groups:
+                group_creator_email = group.created_by
+                print(f"Group created by {group_creator_email}")
+                if group_creator_email:
+                    creator_entry = db.query(Config).filter_by(email=group_creator_email).first()
+                    if creator_entry and isinstance(creator_entry.data, dict):
+                        data = creator_entry.data
+                        final_value = self.default
+                        for part in self.config_path.split("."):
+                            if isinstance(data, dict) and part in data:
+                                data = data[part]
+                                final_value = data
+                            else:
+                                final_value = self.default
+                                break
+                        if final_value != self.default:
+                            print(f"Group admin {group_creator_email} has config for {self.config_path}: {final_value}")
+                        return final_value
+
+            # Step 3: Fallback
+            print(f"Using default for {email} for {self.config_path}")
+            return self.default
+
+    def set(self, email: str, value: Any):
+        with get_db() as db:
+            entry = db.query(Config).filter_by(email=email).first()
+            if not entry:
+                entry = Config(email=email, data={})
+                db.add(entry)
+
+            data = entry.data or {}
+            current = data
+            parts = self.config_path.split(".")
+            for part in parts[:-1]:
+                if part not in current or not isinstance(current[part], dict):
+                    current[part] = {}
+                current = current[part]
+            current[parts[-1]] = value
+
+            entry.data = data
+            entry.updated_at = datetime.now()
+            flag_modified(entry, "data")  
+            db.commit()
+
+
 
 class AppConfig:
-    _state: dict[str, PersistentConfig]
+    _state: dict[str, PersistentConfig | UserScopedConfig ]
 
     def __init__(self):
         super().__setattr__("_state", {})
 
     def __setattr__(self, key, value):
-        if isinstance(value, PersistentConfig):
+        # Support PersistentConfig and UserScopedConfig both
+        if isinstance(value, (PersistentConfig, UserScopedConfig)):
             self._state[key] = value
         else:
-            self._state[key].value = value
-            self._state[key].save()
-
+            # Update the config's internal value and persist it
+            if isinstance(self._state[key], PersistentConfig):
+                self._state[key].value = value
+                self._state[key].save()
+            elif isinstance(self._state[key], UserScopedConfig):
+                raise TypeError("Use .set(email, value) to update UserScopedConfig.")
+            
     def __getattr__(self, key):
-        return self._state[key].value
+        config_obj = self._state[key]
+        if isinstance(config_obj, PersistentConfig):
+            return config_obj.value
+        return config_obj
+
+    # def __getattr__(self, key):
+    #     return self._state[key]  # return the whole config object (not just .value)
+
+
+
+
+
+# class AppConfig:
+#     _state: dict[str, PersistentConfig]
+
+#     def __init__(self):
+#         super().__setattr__("_state", {})
+
+#     def __setattr__(self, key, value):
+#         if isinstance(value, PersistentConfig):
+#             self._state[key] = value
+#         else:
+#             self._state[key].value = value
+#             self._state[key].save()
+
+#     def __getattr__(self, key):
+#         return self._state[key]
 
 
 ####################################
@@ -650,7 +807,6 @@ if frontend_flower_white.exists():
         shutil.copyfile(frontend_flower_white, STATIC_DIR / "flower-white.png")
     except Exception as e:
         logging.error(f"An error occurred: {e}")
-
 
 
 ####################################
@@ -1113,7 +1269,7 @@ def validate_cors_origin(origin):
 # For production, you should only need one host as
 # fastapi serves the svelte-kit built frontend and backend from the same host and port.
 # To test CORS_ALLOW_ORIGIN locally, you can set something like
-CORS_ALLOW_ORIGIN="http://localhost:5173;http://localhost:8080"
+CORS_ALLOW_ORIGIN = "http://localhost:5173;http://localhost:8080"
 # in your .env file depending on your frontend port, 5173 in this case.
 CORS_ALLOW_ORIGIN = os.environ.get("CORS_ALLOW_ORIGIN", "*").split(";")
 
@@ -1545,7 +1701,7 @@ CHROMA_DATA_PATH = f"{DATA_DIR}/vector_db"
 
 if VECTOR_DB == "chroma":
     import chromadb
-
+    
     CHROMA_TENANT = os.environ.get("CHROMA_TENANT", chromadb.DEFAULT_TENANT)
     CHROMA_DATABASE = os.environ.get("CHROMA_DATABASE", chromadb.DEFAULT_DATABASE)
     CHROMA_HTTP_HOST = os.environ.get("CHROMA_HTTP_HOST", "")
@@ -1659,28 +1815,32 @@ BYPASS_EMBEDDING_AND_RETRIEVAL = PersistentConfig(
     "rag.bypass_embedding_and_retrieval",
     os.environ.get("BYPASS_EMBEDDING_AND_RETRIEVAL", "False").lower() == "true",
 )
+RAG_TOP_K = UserScopedConfig( "rag.top_k", int(os.environ.get("RAG_TOP_K", "4")))
 
-
-RAG_TOP_K = PersistentConfig(
-    "RAG_TOP_K", "rag.top_k", int(os.environ.get("RAG_TOP_K", "3"))
-)
+# RAG_TOP_K = PersistentConfig(
+#     "RAG_TOP_K", "rag.top_k", int(os.environ.get("RAG_TOP_K", "3"))
+#)
 RAG_RELEVANCE_THRESHOLD = PersistentConfig(
     "RAG_RELEVANCE_THRESHOLD",
     "rag.relevance_threshold",
-    float(os.environ.get("RAG_RELEVANCE_THRESHOLD", "0.0")),
+    float(os.environ.get("RAG_RELEVANCE_THRESHOLD", "1")),
 )
 
-ENABLE_RAG_HYBRID_SEARCH = PersistentConfig(
-    "ENABLE_RAG_HYBRID_SEARCH",
-    "rag.enable_hybrid_search",
-    os.environ.get("ENABLE_RAG_HYBRID_SEARCH", "").lower() == "true",
-)
+ENABLE_RAG_HYBRID_SEARCH = UserScopedConfig("rag.enable_hybrid_search",os.environ.get("ENABLE_RAG_HYBRID_SEARCH", "").lower() == "true" )
+#     "ENABLE_RAG_HYBRID_SEARCH",
+#     "rag.enable_hybrid_search",
+#     os.environ.get("ENABLE_RAG_HYBRID_SEARCH", "").lower() == "true",
+# )
 
-RAG_FULL_CONTEXT = PersistentConfig(
-    "RAG_FULL_CONTEXT",
+# RAG_FULL_CONTEXT = PersistentConfig(
+#     "RAG_FULL_CONTEXT",
+#     "rag.full_context",
+#     os.getenv("RAG_FULL_CONTEXT", "False").lower() == "true",
+# )
+
+RAG_FULL_CONTEXT = UserScopedConfig(
     "rag.full_context",
-    os.getenv("RAG_FULL_CONTEXT", "False").lower() == "true",
-)
+    os.getenv("RAG_FULL_CONTEXT", "False").lower() == "true")
 
 RAG_FILE_MAX_COUNT = PersistentConfig(
     "RAG_FILE_MAX_COUNT",
@@ -1711,7 +1871,7 @@ ENABLE_RAG_WEB_LOADER_SSL_VERIFICATION = PersistentConfig(
 RAG_EMBEDDING_ENGINE = PersistentConfig(
     "RAG_EMBEDDING_ENGINE",
     "rag.embedding_engine",
-    os.environ.get("RAG_EMBEDDING_ENGINE", ""),
+    os.environ.get("RAG_EMBEDDING_ENGINE", "portkey"),
 )
 
 PDF_EXTRACT_IMAGES = PersistentConfig(
@@ -1723,7 +1883,7 @@ PDF_EXTRACT_IMAGES = PersistentConfig(
 RAG_EMBEDDING_MODEL = PersistentConfig(
     "RAG_EMBEDDING_MODEL",
     "rag.embedding_model",
-    os.environ.get("RAG_EMBEDDING_MODEL", "sentence-transformers/all-MiniLM-L6-v2"),
+    os.environ.get("RAG_EMBEDDING_MODEL", "text-embedding-d47871"),
 )
 log.info(f"Embedding model set: {RAG_EMBEDDING_MODEL.value}")
 
@@ -1750,6 +1910,7 @@ RAG_RERANKING_MODEL = PersistentConfig(
     "rag.reranking_model",
     os.environ.get("RAG_RERANKING_MODEL", ""),
 )
+
 if RAG_RERANKING_MODEL.value != "":
     log.info(f"Reranking model set: {RAG_RERANKING_MODEL.value}")
 
@@ -1777,15 +1938,22 @@ TIKTOKEN_ENCODING_NAME = PersistentConfig(
     os.environ.get("TIKTOKEN_ENCODING_NAME", "cl100k_base"),
 )
 
+CHUNK_SIZE = UserScopedConfig("rag.chunk_size", int(os.environ.get("CHUNK_SIZE", "1000")))
+# CHUNK_SIZE = PersistentConfig(
+#     "CHUNK_SIZE", "rag.chunk_size", int(os.environ.get("CHUNK_SIZE", "1000"))
+# )
 
-CHUNK_SIZE = PersistentConfig(
-    "CHUNK_SIZE", "rag.chunk_size", int(os.environ.get("CHUNK_SIZE", "1000"))
-)
-CHUNK_OVERLAP = PersistentConfig(
-    "CHUNK_OVERLAP",
+CHUNK_OVERLAP = UserScopedConfig(
     "rag.chunk_overlap",
     int(os.environ.get("CHUNK_OVERLAP", "100")),
 )
+
+# CHUNK_OVERLAP = PersistentConfig(
+#     "CHUNK_OVERLAP",
+#     "rag.chunk_overlap",
+#     int(os.environ.get("CHUNK_OVERLAP", "100")),
+# )
+
 
 DEFAULT_RAG_TEMPLATE = """### Task:
 Respond to the user query using the provided context, incorporating inline citations in the format [source_id] **only when the <source_id> tag is explicitly provided** in the context.
@@ -1818,21 +1986,23 @@ Provide a clear and direct response to the user's query, including inline citati
 </user_query>
 """
 
-RAG_TEMPLATE = PersistentConfig(
-    "RAG_TEMPLATE",
-    "rag.template",
-    os.environ.get("RAG_TEMPLATE", DEFAULT_RAG_TEMPLATE),
-)
+# RAG_TEMPLATE = PersistentConfig(
+#     "RAG_TEMPLATE",
+#     "rag.template",
+#     os.environ.get("RAG_TEMPLATE", DEFAULT_RAG_TEMPLATE),
+# )
+
+RAG_TEMPLATE = UserScopedConfig("rag.template", DEFAULT_RAG_TEMPLATE)
 
 RAG_OPENAI_API_BASE_URL = PersistentConfig(
     "RAG_OPENAI_API_BASE_URL",
     "rag.openai_api_base_url",
-    os.getenv("RAG_OPENAI_API_BASE_URL", OPENAI_API_BASE_URL),
+    os.getenv("RAG_OPENAI_API_BASE_URL", "https://ai-gateway.apps.cloud.rt.nyu.edu/v1"),
 )
 RAG_OPENAI_API_KEY = PersistentConfig(
     "RAG_OPENAI_API_KEY",
     "rag.openai_api_key",
-    os.getenv("RAG_OPENAI_API_KEY", OPENAI_API_KEY),
+    os.getenv("RAG_OPENAI_API_KEY", "dogDlg+W3/1qn7LsU3oTuJHDEopS"),
 )
 
 RAG_OLLAMA_BASE_URL = PersistentConfig(
@@ -1865,167 +2035,313 @@ YOUTUBE_LOADER_PROXY_URL = PersistentConfig(
 )
 
 
-ENABLE_RAG_WEB_SEARCH = PersistentConfig(
-    "ENABLE_RAG_WEB_SEARCH",
+# ENABLE_RAG_WEB_SEARCH = PersistentConfig(
+#     "ENABLE_RAG_WEB_SEARCH",
+#     "rag.web.search.enable",
+#     os.getenv("ENABLE_RAG_WEB_SEARCH", "False").lower() == "true",
+# )
+
+ENABLE_RAG_WEB_SEARCH = UserScopedConfig(
     "rag.web.search.enable",
     os.getenv("ENABLE_RAG_WEB_SEARCH", "False").lower() == "true",
 )
 
-RAG_WEB_SEARCH_ENGINE = PersistentConfig(
-    "RAG_WEB_SEARCH_ENGINE",
+# RAG_WEB_SEARCH_ENGINE = PersistentConfig(
+#     "RAG_WEB_SEARCH_ENGINE",
+#     "rag.web.search.engine",
+#     os.getenv("RAG_WEB_SEARCH_ENGINE", ""),
+# )
+
+RAG_WEB_SEARCH_ENGINE = UserScopedConfig(
     "rag.web.search.engine",
     os.getenv("RAG_WEB_SEARCH_ENGINE", ""),
 )
 
-BYPASS_WEB_SEARCH_EMBEDDING_AND_RETRIEVAL = PersistentConfig(
-    "BYPASS_WEB_SEARCH_EMBEDDING_AND_RETRIEVAL",
+# Facilities feature flag
+ENABLE_FACILITIES = UserScopedConfig(
+    "facilities.enable",
+    os.getenv("ENABLE_FACILITIES", "True").lower() == "true",
+)
+
+# BYPASS_WEB_SEARCH_EMBEDDING_AND_RETRIEVAL = PersistentConfig(
+#     "BYPASS_WEB_SEARCH_EMBEDDING_AND_RETRIEVAL",
+#     "rag.web.search.bypass_embedding_and_retrieval",
+#     os.getenv("BYPASS_WEB_SEARCH_EMBEDDING_AND_RETRIEVAL", "False").lower() == "true",
+# )
+
+BYPASS_WEB_SEARCH_EMBEDDING_AND_RETRIEVAL = UserScopedConfig(
     "rag.web.search.bypass_embedding_and_retrieval",
     os.getenv("BYPASS_WEB_SEARCH_EMBEDDING_AND_RETRIEVAL", "False").lower() == "true",
 )
 
 # You can provide a list of your own websites to filter after performing a web search.
 # This ensures the highest level of safety and reliability of the information sources.
-RAG_WEB_SEARCH_DOMAIN_FILTER_LIST = PersistentConfig(
-    "RAG_WEB_SEARCH_DOMAIN_FILTER_LIST",
+# Each user has their own private domain filter list.
+RAG_WEB_SEARCH_DOMAIN_FILTER_LIST = UserScopedConfig(
     "rag.web.search.domain.filter_list",
+    [],
+)
+
+# Website blocklist - URLs that should be blocked even if they're from allowed domains
+RAG_WEB_SEARCH_WEBSITE_BLOCKLIST = UserScopedConfig(
+    "rag.web.search.website.blocklist",
+    [],
+)
+
+# Internal facilities specific sites for NYU HPC searches
+RAG_WEB_SEARCH_INTERNAL_FACILITIES_SITES = UserScopedConfig(
+    "rag.web.search.internal.facilities.sites",
     [
-        # "wikipedia.com",
-        # "wikimedia.org",
-        # "wikidata.org",
+        "https://sites.google.com/nyu.edu/nyu-hpc/",
+        "https://www.nyu.edu/life/information-technology/research-computing-services/high-performance-computing.html",
+        "https://www.nyu.edu/life/information-technology/research-computing-services/high-performance-computing/high-performance-computing-nyu-it.html"
     ],
 )
 
 
-SEARXNG_QUERY_URL = PersistentConfig(
-    "SEARXNG_QUERY_URL",
+# SEARXNG_QUERY_URL = PersistentConfig(
+#     "SEARXNG_QUERY_URL",
+#     "rag.web.search.searxng_query_url",
+#     os.getenv("SEARXNG_QUERY_URL", ""),
+# )
+
+SEARXNG_QUERY_URL = UserScopedConfig(
     "rag.web.search.searxng_query_url",
     os.getenv("SEARXNG_QUERY_URL", ""),
 )
 
-GOOGLE_PSE_API_KEY = PersistentConfig(
-    "GOOGLE_PSE_API_KEY",
+# GOOGLE_PSE_API_KEY = PersistentConfig(
+#     "GOOGLE_PSE_API_KEY",
+#     "rag.web.search.google_pse_api_key",
+#     os.getenv("GOOGLE_PSE_API_KEY", ""),
+# )
+
+GOOGLE_PSE_API_KEY = UserScopedConfig(
     "rag.web.search.google_pse_api_key",
     os.getenv("GOOGLE_PSE_API_KEY", ""),
 )
 
-GOOGLE_PSE_ENGINE_ID = PersistentConfig(
-    "GOOGLE_PSE_ENGINE_ID",
+# GOOGLE_PSE_ENGINE_ID = PersistentConfig(
+#     "GOOGLE_PSE_ENGINE_ID",
+#     "rag.web.search.google_pse_engine_id",
+#     os.getenv("GOOGLE_PSE_ENGINE_ID", ""),
+# )
+
+GOOGLE_PSE_ENGINE_ID = UserScopedConfig(
     "rag.web.search.google_pse_engine_id",
     os.getenv("GOOGLE_PSE_ENGINE_ID", ""),
 )
 
-BRAVE_SEARCH_API_KEY = PersistentConfig(
-    "BRAVE_SEARCH_API_KEY",
+# BRAVE_SEARCH_API_KEY = PersistentConfig(
+#     "BRAVE_SEARCH_API_KEY",
+#     "rag.web.search.brave_search_api_key",
+#     os.getenv("BRAVE_SEARCH_API_KEY", ""),
+# )
+
+BRAVE_SEARCH_API_KEY = UserScopedConfig(
     "rag.web.search.brave_search_api_key",
     os.getenv("BRAVE_SEARCH_API_KEY", ""),
 )
 
-KAGI_SEARCH_API_KEY = PersistentConfig(
-    "KAGI_SEARCH_API_KEY",
+# KAGI_SEARCH_API_KEY = PersistentConfig(
+#     "KAGI_SEARCH_API_KEY",
+#     "rag.web.search.kagi_search_api_key",
+#     os.getenv("KAGI_SEARCH_API_KEY", ""),
+# )
+
+KAGI_SEARCH_API_KEY = UserScopedConfig(
     "rag.web.search.kagi_search_api_key",
     os.getenv("KAGI_SEARCH_API_KEY", ""),
 )
 
-MOJEEK_SEARCH_API_KEY = PersistentConfig(
-    "MOJEEK_SEARCH_API_KEY",
+# MOJEEK_SEARCH_API_KEY = PersistentConfig(
+#     "MOJEEK_SEARCH_API_KEY",
+#     "rag.web.search.mojeek_search_api_key",
+#     os.getenv("MOJEEK_SEARCH_API_KEY", ""),
+# )
+
+MOJEEK_SEARCH_API_KEY = UserScopedConfig(
     "rag.web.search.mojeek_search_api_key",
     os.getenv("MOJEEK_SEARCH_API_KEY", ""),
 )
 
-BOCHA_SEARCH_API_KEY = PersistentConfig(
-    "BOCHA_SEARCH_API_KEY",
+# BOCHA_SEARCH_API_KEY = PersistentConfig(
+#     "BOCHA_SEARCH_API_KEY",
+#     "rag.web.search.bocha_search_api_key",
+#     os.getenv("BOCHA_SEARCH_API_KEY", ""),
+# )
+
+BOCHA_SEARCH_API_KEY = UserScopedConfig(
     "rag.web.search.bocha_search_api_key",
     os.getenv("BOCHA_SEARCH_API_KEY", ""),
 )
 
-SERPSTACK_API_KEY = PersistentConfig(
-    "SERPSTACK_API_KEY",
+# SERPSTACK_API_KEY = PersistentConfig(
+#     "SERPSTACK_API_KEY",
+#     "rag.web.search.serpstack_api_key",
+#     os.getenv("SERPSTACK_API_KEY", ""),
+# )
+
+SERPSTACK_API_KEY = UserScopedConfig(
     "rag.web.search.serpstack_api_key",
     os.getenv("SERPSTACK_API_KEY", ""),
 )
 
-SERPSTACK_HTTPS = PersistentConfig(
-    "SERPSTACK_HTTPS",
+
+# SERPSTACK_HTTPS = PersistentConfig(
+#     "SERPSTACK_HTTPS",
+#     "rag.web.search.serpstack_https",
+#     os.getenv("SERPSTACK_HTTPS", "True").lower() == "true",
+# )
+
+SERPSTACK_HTTPS = UserScopedConfig(
     "rag.web.search.serpstack_https",
     os.getenv("SERPSTACK_HTTPS", "True").lower() == "true",
 )
 
-SERPER_API_KEY = PersistentConfig(
-    "SERPER_API_KEY",
+# SERPER_API_KEY = PersistentConfig(
+#     "SERPER_API_KEY",
+#     "rag.web.search.serper_api_key",
+#     os.getenv("SERPER_API_KEY", ""),
+# )
+
+SERPER_API_KEY = UserScopedConfig(
     "rag.web.search.serper_api_key",
     os.getenv("SERPER_API_KEY", ""),
 )
 
-SERPLY_API_KEY = PersistentConfig(
-    "SERPLY_API_KEY",
+# SERPLY_API_KEY = PersistentConfig(
+#     "SERPLY_API_KEY",
+#     "rag.web.search.serply_api_key",
+#     os.getenv("SERPLY_API_KEY", ""),
+# )
+
+SERPLY_API_KEY = UserScopedConfig(
     "rag.web.search.serply_api_key",
     os.getenv("SERPLY_API_KEY", ""),
 )
 
-TAVILY_API_KEY = PersistentConfig(
-    "TAVILY_API_KEY",
+# TAVILY_API_KEY = PersistentConfig(
+#     "TAVILY_API_KEY",
+#     "rag.web.search.tavily_api_key",
+#     os.getenv("TAVILY_API_KEY", ""),
+# )
+
+TAVILY_API_KEY = UserScopedConfig(
     "rag.web.search.tavily_api_key",
     os.getenv("TAVILY_API_KEY", ""),
 )
 
-JINA_API_KEY = PersistentConfig(
-    "JINA_API_KEY",
+# JINA_API_KEY = PersistentConfig(
+#     "JINA_API_KEY",
+#     "rag.web.search.jina_api_key",
+#     os.getenv("JINA_API_KEY", ""),
+# )
+
+JINA_API_KEY = UserScopedConfig(
     "rag.web.search.jina_api_key",
     os.getenv("JINA_API_KEY", ""),
 )
 
-SEARCHAPI_API_KEY = PersistentConfig(
-    "SEARCHAPI_API_KEY",
+# SEARCHAPI_API_KEY = PersistentConfig(
+#     "SEARCHAPI_API_KEY",
+#     "rag.web.search.searchapi_api_key",
+#     os.getenv("SEARCHAPI_API_KEY", ""),
+# )
+
+SEARCHAPI_API_KEY = UserScopedConfig(
     "rag.web.search.searchapi_api_key",
     os.getenv("SEARCHAPI_API_KEY", ""),
 )
 
-SEARCHAPI_ENGINE = PersistentConfig(
-    "SEARCHAPI_ENGINE",
+# SEARCHAPI_ENGINE = PersistentConfig(
+#     "SEARCHAPI_ENGINE",
+#     "rag.web.search.searchapi_engine",
+#     os.getenv("SEARCHAPI_ENGINE", ""),
+# )
+
+SEARCHAPI_ENGINE = UserScopedConfig(
     "rag.web.search.searchapi_engine",
     os.getenv("SEARCHAPI_ENGINE", ""),
 )
 
-SERPAPI_API_KEY = PersistentConfig(
-    "SERPAPI_API_KEY",
+# SERPAPI_API_KEY = PersistentConfig(
+#     "SERPAPI_API_KEY",
+#     "rag.web.search.serpapi_api_key",
+#     os.getenv("SERPAPI_API_KEY", ""),
+# )
+
+SERPAPI_API_KEY = UserScopedConfig(
     "rag.web.search.serpapi_api_key",
     os.getenv("SERPAPI_API_KEY", ""),
 )
 
-SERPAPI_ENGINE = PersistentConfig(
-    "SERPAPI_ENGINE",
+# SERPAPI_ENGINE = PersistentConfig(
+#     "SERPAPI_ENGINE",
+#     "rag.web.search.serpapi_engine",
+#     os.getenv("SERPAPI_ENGINE", ""),
+# )
+
+SERPAPI_ENGINE = UserScopedConfig(
     "rag.web.search.serpapi_engine",
     os.getenv("SERPAPI_ENGINE", ""),
 )
 
-BING_SEARCH_V7_ENDPOINT = PersistentConfig(
-    "BING_SEARCH_V7_ENDPOINT",
+# BING_SEARCH_V7_ENDPOINT = PersistentConfig(
+#     "BING_SEARCH_V7_ENDPOINT",
+#     "rag.web.search.bing_search_v7_endpoint",
+#     os.environ.get(
+#         "BING_SEARCH_V7_ENDPOINT", "https://api.bing.microsoft.com/v7.0/search"
+#     ),
+# )
+
+BING_SEARCH_V7_ENDPOINT = UserScopedConfig(
     "rag.web.search.bing_search_v7_endpoint",
     os.environ.get(
         "BING_SEARCH_V7_ENDPOINT", "https://api.bing.microsoft.com/v7.0/search"
     ),
 )
 
-BING_SEARCH_V7_SUBSCRIPTION_KEY = PersistentConfig(
-    "BING_SEARCH_V7_SUBSCRIPTION_KEY",
+# BING_SEARCH_V7_SUBSCRIPTION_KEY = PersistentConfig(
+#     "BING_SEARCH_V7_SUBSCRIPTION_KEY",
+#     "rag.web.search.bing_search_v7_subscription_key",
+#     os.environ.get("BING_SEARCH_V7_SUBSCRIPTION_KEY", ""),
+# )
+
+BING_SEARCH_V7_SUBSCRIPTION_KEY = UserScopedConfig(
     "rag.web.search.bing_search_v7_subscription_key",
     os.environ.get("BING_SEARCH_V7_SUBSCRIPTION_KEY", ""),
 )
 
-EXA_API_KEY = PersistentConfig(
-    "EXA_API_KEY",
+# EXA_API_KEY = PersistentConfig(
+#     "EXA_API_KEY",
+#     "rag.web.search.exa_api_key",
+#     os.getenv("EXA_API_KEY", ""),
+# )
+
+EXA_API_KEY = UserScopedConfig(
     "rag.web.search.exa_api_key",
     os.getenv("EXA_API_KEY", ""),
 )
 
-RAG_WEB_SEARCH_RESULT_COUNT = PersistentConfig(
-    "RAG_WEB_SEARCH_RESULT_COUNT",
+# RAG_WEB_SEARCH_RESULT_COUNT = PersistentConfig(
+#     "RAG_WEB_SEARCH_RESULT_COUNT",
+#     "rag.web.search.result_count",
+#     int(os.getenv("RAG_WEB_SEARCH_RESULT_COUNT", "3")),
+# )
+
+RAG_WEB_SEARCH_RESULT_COUNT = UserScopedConfig(
     "rag.web.search.result_count",
     int(os.getenv("RAG_WEB_SEARCH_RESULT_COUNT", "3")),
 )
 
-RAG_WEB_SEARCH_CONCURRENT_REQUESTS = PersistentConfig(
-    "RAG_WEB_SEARCH_CONCURRENT_REQUESTS",
+# RAG_WEB_SEARCH_CONCURRENT_REQUESTS = PersistentConfig(
+#     "RAG_WEB_SEARCH_CONCURRENT_REQUESTS",
+#     "rag.web.search.concurrent_requests",
+#     int(os.getenv("RAG_WEB_SEARCH_CONCURRENT_REQUESTS", "10")),
+# )
+
+RAG_WEB_SEARCH_CONCURRENT_REQUESTS = UserScopedConfig(
     "rag.web.search.concurrent_requests",
     int(os.getenv("RAG_WEB_SEARCH_CONCURRENT_REQUESTS", "10")),
 )
@@ -2036,8 +2352,14 @@ RAG_WEB_LOADER_ENGINE = PersistentConfig(
     os.environ.get("RAG_WEB_LOADER_ENGINE", "safe_web"),
 )
 
-RAG_WEB_SEARCH_TRUST_ENV = PersistentConfig(
-    "RAG_WEB_SEARCH_TRUST_ENV",
+
+# RAG_WEB_SEARCH_TRUST_ENV = PersistentConfig(
+#     "RAG_WEB_SEARCH_TRUST_ENV",
+#     "rag.web.search.trust_env",
+#     os.getenv("RAG_WEB_SEARCH_TRUST_ENV", "False").lower() == "true",
+# )
+
+RAG_WEB_SEARCH_TRUST_ENV = UserScopedConfig(
     "rag.web.search.trust_env",
     os.getenv("RAG_WEB_SEARCH_TRUST_ENV", "False").lower() == "true",
 )

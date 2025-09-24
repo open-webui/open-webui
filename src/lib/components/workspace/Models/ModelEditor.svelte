@@ -24,6 +24,7 @@
 
 	export let model = null;
 	export let edit = false;
+	export let clone = false;
 
 	export let preset = true;
 
@@ -85,7 +86,16 @@
 	let filterIds = [];
 	let actionIds = [];
 
-	let accessControl = {};
+	export let accessControl;
+
+	$: if (!edit && !clone && accessControl === undefined) {
+	// New tool: default to private access
+		accessControl = {
+			read: { group_ids: [], user_ids: [] },
+			write: { group_ids: [], user_ids: [] }
+		};
+	}
+
 
 	const addUsage = (base_model_id) => {
 		const baseModel = $models.find((m) => m.id === base_model_id);
@@ -234,7 +244,10 @@
 			if ('access_control' in model) {
 				accessControl = model.access_control;
 			} else {
-				accessControl = {};
+				accessControl = {
+					read: { group_ids: [], user_ids: [] },
+					write: { group_ids: [], user_ids: [] }
+				};
 			}
 
 			console.log(model?.access_control);

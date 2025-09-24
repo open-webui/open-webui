@@ -10,6 +10,7 @@ from typing import Sequence, Union
 
 import sqlalchemy as sa
 from alembic import op
+from open_webui.migrations.util import get_existing_tables
 
 # revision identifiers, used by Alembic.
 revision: str = "ca81bd47c050"
@@ -21,7 +22,8 @@ depends_on: Union[str, Sequence[str], None] = None
 def upgrade():
     op.create_table(
         "config",
-        sa.Column("id", sa.Integer, primary_key=True),
+        sa.Column("id", sa.Integer, primary_key=True, autoincrement=True),
+        sa.Column("email", sa.String,  nullable=False, server_default='system@default'),
         sa.Column("data", sa.JSON(), nullable=False),
         sa.Column("version", sa.Integer, nullable=False),
         sa.Column(
@@ -34,6 +36,7 @@ def upgrade():
             server_default=sa.func.now(),
             onupdate=sa.func.now(),
         ),
+        sa.UniqueConstraint('email', 'version', name='_email_version_uc')
     )
 
 

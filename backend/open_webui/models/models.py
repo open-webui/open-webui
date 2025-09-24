@@ -57,6 +57,7 @@ class Model(Base):
         The model's id as used in the API. If set to an existing model, it will override the model.
     """
     user_id = Column(Text)
+    created_by = Column(Text, nullable=True)
 
     base_model_id = Column(Text, nullable=True)
     """
@@ -104,6 +105,7 @@ class Model(Base):
 class ModelModel(BaseModel):
     id: str
     user_id: str
+    created_by: Optional[str] = None
     base_model_id: Optional[str] = None
 
     name: str
@@ -144,12 +146,13 @@ class ModelForm(BaseModel):
 
 class ModelsTable:
     def insert_new_model(
-        self, form_data: ModelForm, user_id: str
+        self, form_data: ModelForm, user_id: str, user_email: str
     ) -> Optional[ModelModel]:
         model = ModelModel(
             **{
                 **form_data.model_dump(),
                 "user_id": user_id,
+                "created_by": user_email,
                 "created_at": int(time.time()),
                 "updated_at": int(time.time()),
             }
@@ -169,9 +172,24 @@ class ModelsTable:
             log.exception(f"Failed to insert a new model: {e}")
             return None
 
-    def get_all_models(self) -> list[ModelModel]:
+    # def get_all_models(self) -> list[ModelModel]:
+    #     with get_db() as db:
+    #         return [ModelModel.model_validate(model) for model in db.query(Model).all()]
+
+    def get_all_models(
+        self, user_id, user_email: str = None, permission: str = "read"
+    ) -> list[ModelModel]:
         with get_db() as db:
-            return [ModelModel.model_validate(model) for model in db.query(Model).all()]
+            raw_models = db.query(Model).all()
+
+        filtered = []
+        for model in raw_models:
+            if model.created_by == user_email or has_access(
+                user_id, permission, model.access_control
+            ):
+                filtered.append(model)
+
+        return [ModelModel.model_validate(m) for m in filtered]
 
     def get_models(self) -> list[ModelUserResponse]:
         with get_db() as db:
@@ -195,16 +213,53 @@ class ModelsTable:
                 for model in db.query(Model).filter(Model.base_model_id == None).all()
             ]
 
+    # def get_base_models(self, user_email: str) -> list[ModelModel]:
+    #     with get_db() as db:
+    #         return [
+    #             ModelModel.model_validate(model)
+    #             for model in db.query(Model)
+    #                 .filter(
+    #                     Model.base_model_id == None,
+    #                     or_(
+    #                         Model.created_by == user_email,
+    #                         Model.created_by == "cg4532@nyu.edu"
+    #                     )
+    #                 )
+    #                 .all()
+    #         ]
+
+    # def get_models_by_user_id(
+    #     self, user_id: str, permission: str = "write"
+    # ) -> list[ModelUserResponse]:
+    #     models = self.get_models()
+    #     return [
+    #         model
+    #         for model in models
+    #         if model.user_id == user_id
+    #         or has_access(user_id, permission, model.access_control)
+    #     ]
+
     def get_models_by_user_id(
         self, user_id: str, permission: str = "write"
     ) -> list[ModelUserResponse]:
-        models = self.get_models()
-        return [
-            model
-            for model in models
-            if model.user_id == user_id
-            or has_access(user_id, permission, model.access_control)
-        ]
+        with get_db() as db:
+            all_models = db.query(Model).filter(Model.base_model_id != None).all()
+
+            models_for_user = []
+            for model in all_models:
+                if model.user_id == user_id or has_access(
+                    user_id, permission, model.access_control
+                ):
+                    user = Users.get_user_by_id(model.user_id)
+                    models_for_user.append(
+                        ModelUserResponse.model_validate(
+                            {
+                                **ModelModel.model_validate(model).model_dump(),
+                                "user": user.model_dump() if user else None,
+                            }
+                        )
+                    )
+            return models_for_user
 
     def get_model_by_id(self, id: str) -> Optional[ModelModel]:
         try:
@@ -213,6 +268,20 @@ class ModelsTable:
                 return ModelModel.model_validate(model)
         except Exception:
             return None
+
+    # def get_model_by_id(self, id: str, user_email: str) -> Optional[ModelModel]:
+    #     try:
+    #         with get_db() as db:
+    #             model = db.get(Model, id)
+    #             if model is None:
+    #                 return None
+    #             # Only return the model if it was created by the current user
+    #             # or by the specific shared email.
+    #             if model.created_by != user_email and model.created_by != "cg4532@nyu.edu":
+    #                 return None
+    #             return ModelModel.model_validate(model)
+    #     except Exception:
+    #         return None
 
     def toggle_model_by_id(self, id: str) -> Optional[ModelModel]:
         with get_db() as db:

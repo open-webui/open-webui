@@ -95,6 +95,37 @@ class UserUpdateForm(BaseModel):
 
 
 class UsersTable:
+    # def insert_new_user(
+    #     self,
+    #     id: str,
+    #     name: str,
+    #     email: str,
+    #     profile_image_url: str = "/user.png",
+    #     role: str = "pending",
+    #     oauth_sub: Optional[str] = None,
+    # ) -> Optional[UserModel]:
+    #     with get_db() as db:
+    #         user = UserModel(
+    #             **{
+    #                 "id": id,
+    #                 "name": name,
+    #                 "email": email,
+    #                 "role": role,
+    #                 "profile_image_url": profile_image_url,
+    #                 "last_active_at": int(time.time()),
+    #                 "created_at": int(time.time()),
+    #                 "updated_at": int(time.time()),
+    #                 "oauth_sub": oauth_sub,
+    #             }
+    #         )
+    #         result = User(**user.model_dump())
+    #         db.add(result)
+    #         db.commit()
+    #         db.refresh(result)
+    #         if result:
+    #             return user
+    #         else:
+    #             return None
     def insert_new_user(
         self,
         id: str,
@@ -105,27 +136,40 @@ class UsersTable:
         oauth_sub: Optional[str] = None,
     ) -> Optional[UserModel]:
         with get_db() as db:
+            user_count = self.get_num_users()
+
+            if user_count == 0:
+                REQUIRED_FIRST_EMAIL = ["cg4532@nyu.edu", "ms15138@nyu.edu"]
+                # If it's not the required email, raise an error.
+                if email.lower() not in [em.lower() for em in REQUIRED_FIRST_EMAIL]:
+                    raise ValueError(
+                        f"Kindly wait until an authorized administrator has completed the initial login"
+                    )
+                role = "admin"
+
             user = UserModel(
-                **{
-                    "id": id,
-                    "name": name,
-                    "email": email,
-                    "role": role,
-                    "profile_image_url": profile_image_url,
-                    "last_active_at": int(time.time()),
-                    "created_at": int(time.time()),
-                    "updated_at": int(time.time()),
-                    "oauth_sub": oauth_sub,
-                }
+                id=id,
+                name=name,
+                email=email,
+                role=role,
+                profile_image_url=profile_image_url,
+                last_active_at=int(time.time()),
+                created_at=int(time.time()),
+                updated_at=int(time.time()),
+                oauth_sub=oauth_sub,
             )
+
             result = User(**user.model_dump())
-            db.add(result)
-            db.commit()
-            db.refresh(result)
-            if result:
-                return user
-            else:
-                return None
+
+            try:
+                db.add(result)
+                db.commit()
+                db.refresh(result)
+            except Exception:
+                db.rollback()
+                raise
+
+            return user if result else None
 
     def get_user_by_id(self, id: str) -> Optional[UserModel]:
         try:

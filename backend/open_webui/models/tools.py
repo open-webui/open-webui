@@ -24,6 +24,7 @@ class Tool(Base):
 
     id = Column(String, primary_key=True)
     user_id = Column(String)
+    created_by = Column(Text, nullable=True)
     name = Column(Text)
     content = Column(Text)
     specs = Column(JSONField)
@@ -59,11 +60,13 @@ class ToolMeta(BaseModel):
 class ToolModel(BaseModel):
     id: str
     user_id: str
+    created_by: Optional[str] = None
     name: str
     content: str
     specs: list[dict]
     meta: ToolMeta
-    access_control: Optional[dict] = None
+    # access_control: Optional[dict] = None
+    access_control: Optional[dict] = {}
 
     updated_at: int  # timestamp in epoch
     created_at: int  # timestamp in epoch
@@ -83,9 +86,11 @@ class ToolUserModel(ToolModel):
 class ToolResponse(BaseModel):
     id: str
     user_id: str
+    created_by: Optional[str] = None
     name: str
     meta: ToolMeta
-    access_control: Optional[dict] = None
+    # access_control: Optional[dict] = None
+    access_control: Optional[dict] = {}
     updated_at: int  # timestamp in epoch
     created_at: int  # timestamp in epoch
 
@@ -99,7 +104,8 @@ class ToolForm(BaseModel):
     name: str
     content: str
     meta: ToolMeta
-    access_control: Optional[dict] = None
+    # access_control: Optional[dict] = None
+    access_control: Optional[dict] = {}
 
 
 class ToolValves(BaseModel):
@@ -108,7 +114,7 @@ class ToolValves(BaseModel):
 
 class ToolsTable:
     def insert_new_tool(
-        self, user_id: str, form_data: ToolForm, specs: list[dict]
+        self, user_id: str, user_email: str, form_data: ToolForm, specs: list[dict]
     ) -> Optional[ToolModel]:
         with get_db() as db:
             tool = ToolModel(
@@ -116,6 +122,7 @@ class ToolsTable:
                     **form_data.model_dump(),
                     "specs": specs,
                     "user_id": user_id,
+                    "created_by": user_email,
                     "updated_at": int(time.time()),
                     "created_at": int(time.time()),
                 }
@@ -157,17 +164,44 @@ class ToolsTable:
                 )
             return tools
 
+    # def get_tools_by_user_id(
+    #     self, user_id: str, permission: str = "write"
+    # ) -> list[ToolUserModel]:
+    #     tools = self.get_tools()
+
+    #     return [
+    #         tool
+    #         for tool in tools
+    #         if tool.user_id == user_id
+    #         or has_access(user_id, permission, tool.access_control)
+    #     ]
+
     def get_tools_by_user_id(
         self, user_id: str, permission: str = "write"
     ) -> list[ToolUserModel]:
-        tools = self.get_tools()
+        """
+        Return only the tools that this user either created
+        or has group-based permission to (via has_access).
+        """
+        with get_db() as db:
+            all_tools = db.query(Tool).order_by(Tool.updated_at.desc()).all()
 
-        return [
-            tool
-            for tool in tools
-            if tool.user_id == user_id
-            or has_access(user_id, permission, tool.access_control)
-        ]
+            tools_for_user = []
+            for tool in all_tools:
+                # Must be the creator OR pass group-based check
+                if tool.user_id == user_id or has_access(
+                    user_id, permission, tool.access_control
+                ):
+                    user = Users.get_user_by_id(tool.user_id)
+                    tools_for_user.append(
+                        ToolUserModel.model_validate(
+                            {
+                                **ToolModel.model_validate(tool).model_dump(),
+                                "user": user.model_dump() if user else None,
+                            }
+                        )
+                    )
+            return tools_for_user
 
     def get_tool_valves_by_id(self, id: str) -> Optional[dict]:
         try:

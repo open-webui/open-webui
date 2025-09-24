@@ -1,6 +1,6 @@
 from typing import List, Optional
 from pydantic import BaseModel
-from fastapi import APIRouter, Depends, HTTPException, status, Request
+from fastapi import APIRouter, Depends, HTTPException, status, Request, UploadFile, File
 import logging
 
 from open_webui.models.knowledge import (
@@ -9,7 +9,7 @@ from open_webui.models.knowledge import (
     KnowledgeResponse,
     KnowledgeUserResponse,
 )
-from open_webui.models.files import Files, FileModel
+from open_webui.models.files import Files, FileModel, FileModelResponse
 from open_webui.retrieval.vector.connector import VECTOR_DB_CLIENT
 from open_webui.routers.retrieval import (
     process_file,
@@ -42,10 +42,10 @@ router = APIRouter()
 async def get_knowledge(user=Depends(get_verified_user)):
     knowledge_bases = []
 
-    if user.role == "admin":
-        knowledge_bases = Knowledges.get_knowledge_bases()
-    else:
-        knowledge_bases = Knowledges.get_knowledge_bases_by_user_id(user.id, "read")
+    # if user.role == "admin":
+    #     knowledge_bases = Knowledges.get_knowledge_bases()
+    # else:
+    knowledge_bases = Knowledges.get_knowledge_bases_by_user_id(user.id, "read")
 
     # Get files for each knowledge base
     knowledge_with_files = []
@@ -90,10 +90,10 @@ async def get_knowledge(user=Depends(get_verified_user)):
 async def get_knowledge_list(user=Depends(get_verified_user)):
     knowledge_bases = []
 
-    if user.role == "admin":
-        knowledge_bases = Knowledges.get_knowledge_bases()
-    else:
-        knowledge_bases = Knowledges.get_knowledge_bases_by_user_id(user.id, "write")
+    # if user.role == "admin":
+    #     knowledge_bases = Knowledges.get_knowledge_bases()
+    # else:
+    knowledge_bases = Knowledges.get_knowledge_bases_by_user_id(user.id, "write")
 
     # Get files for each knowledge base
     knowledge_with_files = []
@@ -170,27 +170,52 @@ class KnowledgeFilesResponse(KnowledgeResponse):
     files: list[FileModel]
 
 
+# @router.get("/{id}", response_model=Optional[KnowledgeFilesResponse])
+# async def get_knowledge_by_id(id: str, user=Depends(get_verified_user)):
+#     knowledge = Knowledges.get_knowledge_by_id(id=id)
+
+#     if knowledge:
+
+#         if (
+#             user.role == "admin"
+#             or knowledge.user_id == user.id
+#             or has_access(user.id, "read", knowledge.access_control)
+#         ):
+
+#             file_ids = knowledge.data.get("file_ids", []) if knowledge.data else []
+#             files = Files.get_files_by_ids(file_ids)
+
+#             return KnowledgeFilesResponse(
+#                 **knowledge.model_dump(),
+#                 files=files,
+#             )
+#     else:
+#         raise HTTPException(
+#             status_code=status.HTTP_401_UNAUTHORIZED,
+#             detail=ERROR_MESSAGES.NOT_FOUND,
+#         )
+
+
 @router.get("/{id}", response_model=Optional[KnowledgeFilesResponse])
 async def get_knowledge_by_id(id: str, user=Depends(get_verified_user)):
     knowledge = Knowledges.get_knowledge_by_id(id=id)
 
-    if knowledge:
+    if not knowledge:
+        raise HTTPException(status_code=404, detail="Knowledge not found")
 
-        if (
-            user.role == "admin"
-            or knowledge.user_id == user.id
-            or has_access(user.id, "read", knowledge.access_control)
-        ):
+    if (
+        knowledge.user_id == user.id
+        or has_access(user.id, "read", knowledge.access_control)
+    ):
 
-            file_ids = knowledge.data.get("file_ids", []) if knowledge.data else []
-            files = Files.get_files_by_ids(file_ids)
+        file_ids = knowledge.data.get("file_ids", []) if knowledge.data else []
+        files = Files.get_files_by_ids(file_ids)
 
-            return KnowledgeFilesResponse(
-                **knowledge.model_dump(),
-                files=files,
-            )
-    else:
-        raise HTTPException(
+        return KnowledgeFilesResponse(
+            **knowledge.model_dump(),
+            files=files,
+        )
+    raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail=ERROR_MESSAGES.NOT_FOUND,
         )
@@ -253,9 +278,14 @@ class KnowledgeFileIdForm(BaseModel):
 def add_file_to_knowledge_by_id(
     request: Request,
     id: str,
-    form_data: KnowledgeFileIdForm,
+    file: UploadFile = File(...),
     user=Depends(get_verified_user),
+    file_metadata: dict = {},
 ):
+    import os
+    import uuid
+    from open_webui.models.files import FileForm
+
     knowledge = Knowledges.get_knowledge_by_id(id=id)
 
     if not knowledge:
@@ -274,38 +304,76 @@ def add_file_to_knowledge_by_id(
             detail=ERROR_MESSAGES.ACCESS_PROHIBITED,
         )
 
-    file = Files.get_file_by_id(form_data.file_id)
-    if not file:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail=ERROR_MESSAGES.NOT_FOUND,
-        )
-    if not file.data:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail=ERROR_MESSAGES.FILE_NOT_PROCESSED,
-        )
-
-    # Add content to the vector database
+    log.info(f"file.content_type: {file.content_type}")
     try:
-        process_file(
-            request,
-            ProcessFileForm(file_id=form_data.file_id, collection_name=id),
-            user=user,
-        )
-    except Exception as e:
-        log.debug(e)
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail=str(e),
+
+        unsanitized_filename = file.filename
+        filename = os.path.basename(unsanitized_filename)
+
+        # replace filename with uuid
+        file_id = str(uuid.uuid4())
+        name = filename
+        filename = f"{file_id}_{filename}"
+        contents, file_path = Storage.upload_file(file.file, filename)
+
+        file_item = Files.insert_new_file(
+            user.id,
+            FileForm(
+                **{
+                    "id": file_id,
+                    "filename": name,
+                    "path": file_path,
+                    "meta": {
+                        "name": name,
+                        "content_type": file.content_type,
+                        "size": len(contents),
+                        "data": file_metadata,
+                    },
+                }
+            ),
         )
 
-    if knowledge:
-        data = knowledge.data or {}
-        file_ids = data.get("file_ids", [])
+        try:
+            if file.content_type in [
+                "audio/mpeg",
+                "audio/wav",
+                "audio/ogg",
+                "audio/x-m4a",
+            ]:
+                file_path = Storage.get_file(file_path)
+                result = transcribe(request, file_path)
+                process_file(
+                    request,
+                    ProcessFileForm(file_id=file_id, content=result.get("text", "")),
+                    user=user,
+                    knowledge_id=id,  # Pass knowledge_id for single embedding
+                )
+            else:
+                # Process the file for both file and knowledge collections
+                process_file(
+                    request,
+                    ProcessFileForm(file_id=file_id),
+                    user=user,
+                    knowledge_id=id,  # Pass knowledge_id for single embedding
+                )
 
-        if form_data.file_id not in file_ids:
-            file_ids.append(form_data.file_id)
+            file_item = Files.get_file_by_id(id=file_id)
+        except Exception as e:
+            log.exception(e)
+            log.error(f"Error processing file: {file_item.id}")
+            file_item = FileModelResponse(
+                **{
+                    **file_item.model_dump(),
+                    "error": str(e.detail) if hasattr(e, "detail") else str(e),
+                }
+            )
+
+        # Update knowledge base metadata
+        if file_item:
+            data = knowledge.data or {}
+            file_ids = data.get("file_ids", [])
+
+            file_ids.append(file_id)
             data["file_ids"] = file_ids
 
             knowledge = Knowledges.update_knowledge_data_by_id(id=id, data=data)
@@ -325,12 +393,14 @@ def add_file_to_knowledge_by_id(
         else:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
-                detail=ERROR_MESSAGES.DEFAULT("file_id"),
+                detail=ERROR_MESSAGES.DEFAULT("Error uploading file"),
             )
-    else:
+
+    except Exception as e:
+        log.exception(e)
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail=ERROR_MESSAGES.NOT_FOUND,
+            detail=ERROR_MESSAGES.DEFAULT(e),
         )
 
 
@@ -510,7 +580,7 @@ async def delete_knowledge_by_id(id: str, user=Depends(get_verified_user)):
     log.info(f"Deleting knowledge base: {id} (name: {knowledge.name})")
 
     # Get all models
-    models = Models.get_all_models()
+    models = Models.get_all_models(user.id,user.email)
     log.info(f"Found {len(models)} models to check for knowledge base {id}")
 
     # Update models that reference this knowledge base

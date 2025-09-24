@@ -55,9 +55,21 @@ export const replaceTokens = (content, sourceIds, char, user) => {
 
 	// Remove sourceIds from the content and replace them with <source_id>...</source_id>
 	if (Array.isArray(sourceIds)) {
+		// First, handle numbered citations [0], [1], [2], etc.
 		sourceIds.forEach((sourceId, idx) => {
 			// Create a token based on the exact `[sourceId]` string
 			const sourceToken = `\\[${idx}\\]`; // Escape special characters for RegExp
+			const sourceRegex = new RegExp(sourceToken, 'g'); // Match all occurrences of [sourceId]
+
+			content = content.replace(sourceRegex, `<source_id data="${idx}" title="${sourceId}" />`);
+		});
+
+		// Then, handle direct source name citations [filename.pdf], [https://url.com], etc.
+		sourceIds.forEach((sourceId, idx) => {
+			// Escape special regex characters in the sourceId
+			const escapedSourceId = sourceId.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+			// Create a token based on the exact source name/URL
+			const sourceToken = `\\[${escapedSourceId}\\]`; // Escape special characters for RegExp
 			const sourceRegex = new RegExp(sourceToken, 'g'); // Match all occurrences of [sourceId]
 
 			content = content.replace(sourceRegex, `<source_id data="${idx}" title="${sourceId}" />`);

@@ -44,6 +44,24 @@
 		});
 
 	let query = '';
+
+	function handleImportCSV_temp(event) {
+		const file = event.target.files[0];
+		if (!file) return;
+
+		if (file.size > 10 * 1024 * 1024) {
+			console.error('File is too large (max 10MB)');
+			return;
+		}
+
+		const reader = new FileReader();
+		reader.onload = (e) => {
+			const text = e.target.result;
+			const lines = text.split(/\r?\n/).slice(0, 3);
+			console.log('First 3 lines of CSV:', lines);
+		};
+		reader.readAsText(file);
+	}
 </script>
 
 <div>
@@ -68,6 +86,15 @@
 				bind:value={query}
 				placeholder={$i18n.t('Search')}
 			/>
+			<!-- Import from CSV -->
+			<!-- <div class="ml-3">
+				<label
+					class="cursor-pointer inline-flex justify-end hover:bg-gray-50 text-xs font-medium text-gray-700 w-32"
+				>
+					Import from CSV
+					<input type="file" accept=".csv" style="display: none" on:change={handleImportCSV_temp} />
+				</label>
+			</div> -->
 		</div>
 	</div>
 

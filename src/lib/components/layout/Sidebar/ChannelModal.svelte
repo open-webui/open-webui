@@ -19,7 +19,11 @@
 	export let edit = false;
 
 	let name = '';
-	let accessControl = null;
+	let accessControl = {
+		read: { group_ids: [], user_ids: [] },
+		write: { group_ids: [], user_ids: [] }
+	};
+
 
 	let loading = false;
 

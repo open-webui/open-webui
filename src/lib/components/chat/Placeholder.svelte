@@ -87,13 +87,13 @@
 
 	onMount(() => {});
 
-    // Add this function to detect dark mode
-    function isDarkMode() {
-        if (typeof window !== 'undefined') {
-            return document.documentElement.classList.contains('dark');
-        }
-        return false;
-    }
+	// Add this function to detect dark mode
+	function isDarkMode() {
+		if (typeof window !== 'undefined') {
+			return document.documentElement.classList.contains('dark');
+		}
+		return false;
+	}
 </script>
 
 <div class="m-auto w-full max-w-6xl px-2 @2xl:px-20 translate-y-6 py-24 text-center">

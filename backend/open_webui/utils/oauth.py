@@ -149,7 +149,7 @@ class OAuthManager:
             user_oauth_groups = claim_data if isinstance(claim_data, list) else []
 
         user_current_groups: list[GroupModel] = Groups.get_groups_by_member_id(user.id)
-        all_available_groups: list[GroupModel] = Groups.get_groups()
+        all_available_groups: list[GroupModel] = Groups.get_groups(user.email)
 
         log.debug(f"Oauth Groups claim: {oauth_claim}")
         log.debug(f"User oauth groups: {user_oauth_groups}")
