@@ -302,7 +302,7 @@ class OAuthManager:
                             "expires_in" in new_token_data
                             and "expires_at" not in new_token_data
                         ):
-                            new_token_data["expires_at"] = (
+                            new_token_data["expires_at"] = int(
                                 datetime.now().timestamp()
                                 + new_token_data["expires_in"]
                             )
