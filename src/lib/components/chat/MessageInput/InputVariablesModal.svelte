@@ -131,7 +131,7 @@
 														<input
 															type="text"
 															class="flex-1 py-1 text-sm dark:text-gray-300 bg-transparent outline-hidden"
-															placeholder="Enter value (true/false)"
+															placeholder={$i18n.t('Enter value (true/false)')}
 															bind:value={variableValues[variable]}
 															autocomplete="off"
 															required
@@ -156,7 +156,7 @@
 														<input
 															type="text"
 															class="flex-1 py-2 text-sm dark:text-gray-300 bg-transparent outline-hidden"
-															placeholder="Enter hex color (e.g. #FF0000)"
+															placeholder={$i18n.t('Enter hex color (e.g. #FF0000)')}
 															bind:value={variableValues[variable]}
 															autocomplete="off"
 															required
@@ -232,7 +232,7 @@
 														<input
 															type="text"
 															class=" py-1 text-sm dark:text-gray-300 bg-transparent outline-hidden text-right"
-															placeholder="Enter value"
+															placeholder={$i18n.t('Enter value')}
 															bind:value={variableValues[variable]}
 															autocomplete="off"
 															required
@@ -308,7 +308,7 @@
 														<input
 															type="text"
 															class=" w-full py-1 text-left text-sm dark:text-gray-300 bg-transparent outline-hidden"
-															placeholder="Enter coordinates (e.g. 51.505, -0.09)"
+															placeholder={$i18n.t('Enter coordinates (e.g. 51.505, -0.09)')}
 															bind:value={variableValues[variable]}
 															autocomplete="off"
 															required

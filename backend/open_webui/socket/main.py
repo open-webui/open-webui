@@ -115,7 +115,7 @@ if WEBSOCKET_MANAGER == "redis":
 
     clean_up_lock = RedisLock(
         redis_url=WEBSOCKET_REDIS_URL,
-        lock_name="usage_cleanup_lock",
+        lock_name=f"{REDIS_KEY_PREFIX}:usage_cleanup_lock",
         timeout_secs=WEBSOCKET_REDIS_LOCK_TIMEOUT,
         redis_sentinels=redis_sentinels,
         redis_cluster=WEBSOCKET_REDIS_CLUSTER,
@@ -266,7 +266,9 @@ async def connect(sid, environ, auth):
             user = Users.get_user_by_id(data["id"])
 
         if user:
-            SESSION_POOL[sid] = user.model_dump()
+            SESSION_POOL[sid] = user.model_dump(
+                exclude=["date_of_birth", "bio", "gender"]
+            )
             if user.id in USER_POOL:
                 USER_POOL[user.id] = USER_POOL[user.id] + [sid]
             else:
@@ -288,7 +290,7 @@ async def user_join(sid, data):
     if not user:
         return
 
-    SESSION_POOL[sid] = user.model_dump()
+    SESSION_POOL[sid] = user.model_dump(exclude=["date_of_birth", "bio", "gender"])
     if user.id in USER_POOL:
         USER_POOL[user.id] = USER_POOL[user.id] + [sid]
     else:
@@ -702,6 +704,42 @@ def get_event_emitter(request_info, update_db=True):
                         "content": content,
                     },
                 )
+
+            if "type" in event_data and event_data["type"] == "files":
+                message = Chats.get_message_by_id_and_message_id(
+                    request_info["chat_id"],
+                    request_info["message_id"],
+                )
+
+                files = event_data.get("data", {}).get("files", [])
+                files.extend(message.get("files", []))
+
+                Chats.upsert_message_to_chat_by_id_and_message_id(
+                    request_info["chat_id"],
+                    request_info["message_id"],
+                    {
+                        "files": files,
+                    },
+                )
+
+            if event_data.get("type") in ["source", "citation"]:
+                data = event_data.get("data", {})
+                if data.get("type") == None:
+                    message = Chats.get_message_by_id_and_message_id(
+                        request_info["chat_id"],
+                        request_info["message_id"],
+                    )
+
+                    sources = message.get("sources", [])
+                    sources.append(data)
+
+                    Chats.upsert_message_to_chat_by_id_and_message_id(
+                        request_info["chat_id"],
+                        request_info["message_id"],
+                        {
+                            "sources": sources,
+                        },
+                    )
 
     return __event_emitter__
 

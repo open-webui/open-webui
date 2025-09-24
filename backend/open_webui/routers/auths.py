@@ -15,11 +15,11 @@ from open_webui.models.auths import (
     SigninResponse,
     SignupForm,
     UpdatePasswordForm,
-    UpdateProfileForm,
     UserResponse,
 )
-from open_webui.models.users import Users
+from open_webui.models.users import Users, UpdateProfileForm
 from open_webui.models.groups import Groups
+from open_webui.models.oauth_sessions import OAuthSessions
 
 from open_webui.constants import ERROR_MESSAGES, WEBHOOK_MESSAGES
 from open_webui.env import (
@@ -30,6 +30,7 @@ from open_webui.env import (
     WEBUI_AUTH_COOKIE_SAME_SITE,
     WEBUI_AUTH_COOKIE_SECURE,
     WEBUI_AUTH_SIGNOUT_REDIRECT_URL,
+    ENABLE_INITIAL_ADMIN_SIGNUP,
     SRC_LOG_LEVELS,
 )
 from fastapi import APIRouter, Depends, HTTPException, Request, status
@@ -73,7 +74,13 @@ class SessionUserResponse(Token, UserResponse):
     permissions: Optional[dict] = None
 
 
-@router.get("/", response_model=SessionUserResponse)
+class SessionUserInfoResponse(SessionUserResponse):
+    bio: Optional[str] = None
+    gender: Optional[str] = None
+    date_of_birth: Optional[datetime.date] = None
+
+
+@router.get("/", response_model=SessionUserInfoResponse)
 async def get_session_user(
     request: Request, response: Response, user=Depends(get_current_user)
 ):
@@ -120,6 +127,9 @@ async def get_session_user(
         "name": user.name,
         "role": user.role,
         "profile_image_url": user.profile_image_url,
+        "bio": user.bio,
+        "gender": user.gender,
+        "date_of_birth": user.date_of_birth,
         "permissions": user_permissions,
     }
 
@@ -136,7 +146,7 @@ async def update_profile(
     if session_user:
         user = Users.update_user_by_id(
             session_user.id,
-            {"profile_image_url": form_data.profile_image_url, "name": form_data.name},
+            form_data.model_dump(),
         )
         if user:
             return user
@@ -559,9 +569,10 @@ async def signup(request: Request, response: Response, form_data: SignupForm):
             not request.app.state.config.ENABLE_SIGNUP
             or not request.app.state.config.ENABLE_LOGIN_FORM
         ):
-            raise HTTPException(
-                status.HTTP_403_FORBIDDEN, detail=ERROR_MESSAGES.ACCESS_PROHIBITED
-            )
+            if has_users or not ENABLE_INITIAL_ADMIN_SIGNUP:
+                raise HTTPException(
+                    status.HTTP_403_FORBIDDEN, detail=ERROR_MESSAGES.ACCESS_PROHIBITED
+                )
     else:
         if has_users:
             raise HTTPException(
@@ -623,7 +634,7 @@ async def signup(request: Request, response: Response, form_data: SignupForm):
             )
 
             if request.app.state.config.WEBHOOK_URL:
-                post_webhook(
+                await post_webhook(
                     request.app.state.WEBUI_NAME,
                     request.app.state.config.WEBHOOK_URL,
                     WEBHOOK_MESSAGES.USER_SIGNUP(user.name),
@@ -664,19 +675,29 @@ async def signup(request: Request, response: Response, form_data: SignupForm):
 async def signout(request: Request, response: Response):
     response.delete_cookie("token")
     response.delete_cookie("oui-session")
+    response.delete_cookie("oauth_id_token")
 
-    if ENABLE_OAUTH_SIGNUP.value:
-        oauth_id_token = request.cookies.get("oauth_id_token")
-        if oauth_id_token and OPENID_PROVIDER_URL.value:
+    oauth_session_id = request.cookies.get("oauth_session_id")
+    if oauth_session_id:
+        response.delete_cookie("oauth_session_id")
+
+        session = OAuthSessions.get_session_by_id(oauth_session_id)
+        oauth_server_metadata_url = (
+            request.app.state.oauth_manager.get_server_metadata_url(session.provider)
+            if session
+            else None
+        ) or OPENID_PROVIDER_URL.value
+
+        if session and oauth_server_metadata_url:
+            oauth_id_token = session.token.get("id_token")
             try:
                 async with ClientSession(trust_env=True) as session:
-                    async with session.get(OPENID_PROVIDER_URL.value) as resp:
-                        if resp.status == 200:
-                            openid_data = await resp.json()
+                    async with session.get(oauth_server_metadata_url) as r:
+                        if r.status == 200:
+                            openid_data = await r.json()
                             logout_url = openid_data.get("end_session_endpoint")
-                            if logout_url:
-                                response.delete_cookie("oauth_id_token")
 
+                            if logout_url:
                                 return JSONResponse(
                                     status_code=200,
                                     content={
@@ -691,15 +712,14 @@ async def signout(request: Request, response: Response):
                                     headers=response.headers,
                                 )
                         else:
-                            raise HTTPException(
-                                status_code=resp.status,
-                                detail="Failed to fetch OpenID configuration",
-                            )
+                            raise Exception("Failed to fetch OpenID configuration")
+
             except Exception as e:
                 log.error(f"OpenID signout error: {str(e)}")
                 raise HTTPException(
                     status_code=500,
                     detail="Failed to sign out from the OpenID provider.",
+                    headers=response.headers,
                 )
 
     if WEBUI_AUTH_SIGNOUT_REDIRECT_URL:

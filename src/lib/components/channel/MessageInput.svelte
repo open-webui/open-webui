@@ -1,7 +1,6 @@
 <script lang="ts">
 	import { toast } from 'svelte-sonner';
 	import { v4 as uuidv4 } from 'uuid';
-	import heic2any from 'heic2any';
 
 	import { tick, getContext, onMount, onDestroy } from 'svelte';
 
@@ -9,9 +8,10 @@
 
 	import { config, mobile, settings, socket, user } from '$lib/stores';
 	import {
-		blobToFile,
+		convertHeicToJpeg,
 		compressImage,
 		extractInputVariables,
+		getAge,
 		getCurrentDateTime,
 		getFormattedDate,
 		getFormattedTime,
@@ -31,6 +31,7 @@
 	import FilesOverlay from '../chat/MessageInput/FilesOverlay.svelte';
 	import Commands from '../chat/MessageInput/Commands.svelte';
 	import InputVariablesModal from '../chat/MessageInput/InputVariablesModal.svelte';
+	import { getSessionUser } from '$lib/apis/auths';
 
 	export let placeholder = $i18n.t('Send a Message');
 
@@ -116,9 +117,45 @@
 			text = text.replaceAll('{{USER_LOCATION}}', String(location));
 		}
 
+		const sessionUser = await getSessionUser(localStorage.token);
+
 		if (text.includes('{{USER_NAME}}')) {
-			const name = $user?.name || 'User';
+			const name = sessionUser?.name || 'User';
 			text = text.replaceAll('{{USER_NAME}}', name);
+		}
+
+		if (text.includes('{{USER_BIO}}')) {
+			const bio = sessionUser?.bio || '';
+
+			if (bio) {
+				text = text.replaceAll('{{USER_BIO}}', bio);
+			}
+		}
+
+		if (text.includes('{{USER_GENDER}}')) {
+			const gender = sessionUser?.gender || '';
+
+			if (gender) {
+				text = text.replaceAll('{{USER_GENDER}}', gender);
+			}
+		}
+
+		if (text.includes('{{USER_BIRTH_DATE}}')) {
+			const birthDate = sessionUser?.date_of_birth || '';
+
+			if (birthDate) {
+				text = text.replaceAll('{{USER_BIRTH_DATE}}', birthDate);
+			}
+		}
+
+		if (text.includes('{{USER_AGE}}')) {
+			const birthDate = sessionUser?.date_of_birth || '';
+
+			if (birthDate) {
+				// calculate age using date
+				const age = getAge(birthDate);
+				text = text.replaceAll('{{USER_AGE}}', age);
+			}
 		}
 
 		if (text.includes('{{USER_LANGUAGE}}')) {
@@ -339,11 +376,7 @@
 					];
 				};
 
-				reader.readAsDataURL(
-					file['type'] === 'image/heic'
-						? await heic2any({ blob: file, toType: 'image/jpeg' })
-						: file
-				);
+				reader.readAsDataURL(file['type'] === 'image/heic' ? await convertHeicToJpeg(file) : file);
 			} else {
 				uploadFileHandler(file);
 			}

@@ -265,6 +265,49 @@ class AuditLoggingMiddleware:
                     request_body,
                 )
 
+            # Redact other sensitive fields that might contain user input
+            sensitive_fields = [
+                "text",
+                "content",
+                "message",
+                "prompt",
+                "input",
+                "query",
+                "transcript",
+            ]
+            for field in sensitive_fields:
+                if f'"{field}":' in request_body:
+                    # Redact string values
+                    request_body = re.sub(
+                        rf'"{field}":\s*"[^"]*"',
+                        rf'"{field}": "[REDACTED]"',
+                        request_body,
+                    )
+                    # Redact array values
+                    request_body = re.sub(
+                        rf'"{field}":\s*\[[^\]]*\]',
+                        rf'"{field}": "[REDACTED:array]"',
+                        request_body,
+                    )
+
+            # Redact response bodies that might contain generated content
+            if response_body and any(
+                field in response_body
+                for field in ["text", "content", "message", "choices"]
+            ):
+                # For responses, just indicate that content was present
+                response_body = re.sub(
+                    r'"(text|content|message)":\s*"[^"]*"',
+                    r'"\1": "[REDACTED:response]"',
+                    response_body,
+                )
+                # Handle OpenAI-style responses with choices arrays
+                response_body = re.sub(
+                    r'"choices":\s*\[[^\]]*\]',
+                    '"choices": "[REDACTED:choices_array]"',
+                    response_body,
+                )
+
             entry = AuditLogEntry(
                 id=str(uuid.uuid4()),
                 user=user,

@@ -20,7 +20,7 @@ def queue_prompt(prompt, client_id, base_url, api_key):
     log.info("queue_prompt")
     p = {"prompt": prompt, "client_id": client_id}
     data = json.dumps(p).encode("utf-8")
-    log.debug(f"queue_prompt data: {data}")
+    log.debug(f"queue_prompt data length: {len(data)}")
     try:
         req = urllib.request.Request(
             f"{base_url}/prompt",

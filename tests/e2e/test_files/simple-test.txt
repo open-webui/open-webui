@@ -1,0 +1,18 @@
+This is a simple test file for upload testing.
+
+It contains multiple lines of text without any personally identifiable information.
+
+Contents:
+- Basic text content
+- Multiple paragraphs
+- No PII entities
+- Suitable for upload progress testing
+
+This file can be used to test:
+1. File upload mechanics
+2. Progress bar functionality  
+3. File processing without PII detection
+4. Basic file handling workflows
+
+The file is intentionally small to ensure fast upload times during testing.
+

@@ -280,7 +280,7 @@ export class PiiBatchManager {
 
 		// Process all accumulated updates
 		updates.forEach(([conversationId, update]) => {
-			console.log(`PiiBatchManager: Executing batched update for ${conversationId}`, {
+			console.log('PiiBatchManager: Executing batched update', {
 				hasEntities: !!update.entities,
 				hasModifiers: !!update.modifiers,
 				age: Date.now() - update.timestamp

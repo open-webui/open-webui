@@ -114,7 +114,6 @@
 		yDocToProsemirrorJSON
 	} from 'y-prosemirror';
 	import { keymap } from 'prosemirror-keymap';
-	import Spinner from '$lib/components/common/Spinner.svelte';
 
 	import { AIAutocompletion } from './RichTextInput/AutoCompletion.js';
 
@@ -1572,7 +1571,7 @@
 									const lineStart = $from.before($from.depth);
 									const lineEnd = $from.after($from.depth);
 									const lineText = state.doc.textBetween(lineStart, lineEnd, '\n', '\0').trim();
-									if (lineText === '```') {
+									if (lineText.startsWith('```')) {
 										// Fix GitHub issue #16337: prevent backtick removal for lines starting with ```
 										return false; // Let ProseMirror handle the Enter key normally
 									}
@@ -1887,7 +1886,7 @@
 		if (!previousConversationId && conversationId) {
 			// Transition from no ID (new chat) to having ID (after first message sent)
 			// The Chat.svelte component handles the temporary state transfer
-			console.log('RichTextInput: Transition from new chat to existing chat:', conversationId);
+			console.log('RichTextInput: Transition from new chat to existing chat');
 		} else if (
 			previousConversationId &&
 			conversationId &&
@@ -2047,16 +2046,6 @@
 
 <div class="relative w-full min-w-full h-full min-h-fit {className}">
 	<div bind:this={element} class="w-full h-full min-h-fit" />
-
-	<!-- PII Detection Loading Indicator -->
-	{#if enablePiiDetection && isPiiDetectionInProgress}
-		<div
-			class="absolute top-2 right-2 flex items-center gap-1 bg-gray-50 dark:bg-gray-850 px-2 py-1 rounded-md shadow-sm border border-gray-200 dark:border-gray-700"
-		>
-			<Spinner className="size-3" />
-			<span class="text-xs text-gray-600 dark:text-gray-400">Scanning for PII...</span>
-		</div>
-	{/if}
 </div>
 
 <!-- PII Hover Menu -->

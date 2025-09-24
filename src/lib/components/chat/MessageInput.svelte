@@ -1,11 +1,6 @@
 <script lang="ts">
-	import * as pdfjs from 'pdfjs-dist';
-	import * as pdfWorker from 'pdfjs-dist/build/pdf.worker.mjs';
-	pdfjs.GlobalWorkerOptions.workerSrc = import.meta.url + 'pdfjs-dist/build/pdf.worker.mjs';
-
 	import DOMPurify from 'dompurify';
 	import { marked } from 'marked';
-	import heic2any from 'heic2any';
 
 	import { toast } from 'svelte-sonner';
 
@@ -32,12 +27,13 @@
 	} from '$lib/stores';
 
 	import {
-		blobToFile,
+		convertHeicToJpeg,
 		compressImage,
 		createMessagesList,
 		extractContentFromFile,
 		extractCurlyBraceWords,
 		extractInputVariables,
+		getAge,
 		getCurrentDateTime,
 		getFormattedDate,
 		getFormattedTime,
@@ -72,6 +68,7 @@
 	import CommandLine from '../icons/CommandLine.svelte';
 	import Sparkles from '../icons/Sparkles.svelte';
 	import Mask from '../icons/Mask.svelte';
+	import Spinner from '../common/Spinner.svelte';
 
 	import { KokoroWorker } from '$lib/workers/KokoroWorker';
 
@@ -80,6 +77,7 @@
 	import { PiiSessionManager, type ExtendedPiiEntity } from '$lib/utils/pii';
 	import InputVariablesModal from './MessageInput/InputVariablesModal.svelte';
 	import Voice from '../icons/Voice.svelte';
+	import { getSessionUser } from '$lib/apis/auths';
 	const i18n = getContext('i18n');
 
 	export let onChange: Function = () => {};
@@ -112,6 +110,7 @@
 	export let codeInterpreterEnabled = false;
 
 	let showInputVariablesModal = false;
+	let inputVariablesModalCallback = (variableValues) => {};
 	let inputVariables = {};
 	let inputVariableValues = {};
 
@@ -142,11 +141,24 @@
 		codeInterpreterEnabled
 	});
 
-	const inputVariableHandler = async (text: string) => {
+	const inputVariableHandler = async (text: string): Promise<string> => {
 		inputVariables = extractInputVariables(text);
-		if (Object.keys(inputVariables).length > 0) {
-			showInputVariablesModal = true;
+
+		// No variables? return the original text immediately.
+		if (Object.keys(inputVariables).length === 0) {
+			return text;
 		}
+
+		// Show modal and wait for the user's input.
+		showInputVariablesModal = true;
+		return await new Promise<string>((resolve) => {
+			inputVariablesModalCallback = (variableValues) => {
+				inputVariableValues = { ...inputVariableValues, ...variableValues };
+				replaceVariables(inputVariableValues);
+				showInputVariablesModal = false;
+				resolve(text);
+			};
+		});
 	};
 
 	const textVariableHandler = async (text: string) => {
@@ -193,9 +205,45 @@
 			text = text.replaceAll('{{USER_LOCATION}}', String(location));
 		}
 
+		const sessionUser = await getSessionUser(localStorage.token);
+
 		if (text.includes('{{USER_NAME}}')) {
-			const name = $_user?.name || 'User';
+			const name = sessionUser?.name || 'User';
 			text = text.replaceAll('{{USER_NAME}}', name);
+		}
+
+		if (text.includes('{{USER_BIO}}')) {
+			const bio = sessionUser?.bio || '';
+
+			if (bio) {
+				text = text.replaceAll('{{USER_BIO}}', bio);
+			}
+		}
+
+		if (text.includes('{{USER_GENDER}}')) {
+			const gender = sessionUser?.gender || '';
+
+			if (gender) {
+				text = text.replaceAll('{{USER_GENDER}}', gender);
+			}
+		}
+
+		if (text.includes('{{USER_BIRTH_DATE}}')) {
+			const birthDate = sessionUser?.date_of_birth || '';
+
+			if (birthDate) {
+				text = text.replaceAll('{{USER_BIRTH_DATE}}', birthDate);
+			}
+		}
+
+		if (text.includes('{{USER_AGE}}')) {
+			const birthDate = sessionUser?.date_of_birth || '';
+
+			if (birthDate) {
+				// calculate age using date
+				const age = getAge(birthDate);
+				text = text.replaceAll('{{USER_AGE}}', age);
+			}
 		}
 
 		if (text.includes('{{USER_LANGUAGE}}')) {
@@ -228,7 +276,6 @@
 			text = text.replaceAll('{{CURRENT_WEEKDAY}}', weekday);
 		}
 
-		inputVariableHandler(text);
 		return text;
 	};
 
@@ -264,7 +311,7 @@
 		}
 	};
 
-	export const setText = async (text?: string) => {
+	export const setText = async (text?: string, cb?: (text: string) => void) => {
 		const chatInput = document.getElementById('chat-input');
 
 		if (chatInput) {
@@ -280,6 +327,10 @@
 				chatInput.focus();
 				chatInput.dispatchEvent(new Event('input'));
 			}
+
+			text = await inputVariableHandler(text);
+			await tick();
+			if (cb) await cb(text);
 		}
 	};
 
@@ -352,6 +403,9 @@
 		}
 
 		await tick();
+		text = await inputVariableHandler(text);
+		await tick();
+
 		const chatInputContainer = document.getElementById('chat-input-container');
 		if (chatInputContainer) {
 			chatInputContainer.scrollTop = chatInputContainer.scrollHeight;
@@ -396,6 +450,30 @@
 	let recording = false;
 
 	let isComposing = false;
+	// Safari has a bug where compositionend is not triggered correctly #16615
+	// when using the virtual keyboard on iOS.
+	let compositionEndedAt = -2e8;
+	const isSafari = /^((?!chrome|android).)*safari/i.test(navigator.userAgent);
+	function inOrNearComposition(event: Event) {
+		if (isComposing) {
+			return true;
+		}
+		// See https://www.stum.de/2016/06/24/handling-ime-events-in-javascript/.
+		// On Japanese input method editors (IMEs), the Enter key is used to confirm character
+		// selection. On Safari, when Enter is pressed, compositionend and keydown events are
+		// emitted. The keydown event triggers newline insertion, which we don't want.
+		// This method returns true if the keydown event should be ignored.
+		// We only ignore it once, as pressing Enter a second time *should* insert a newline.
+		// Furthermore, the keydown event timestamp must be close to the compositionEndedAt timestamp.
+		// This guards against the case where compositionend is triggered without the keyboard
+		// (e.g. character confirmation may be done with the mouse), and keydown is triggered
+		// afterwards- we wouldn't want to ignore the keydown event in this case.
+		if (isSafari && Math.abs(event.timeStamp - compositionEndedAt) < 500) {
+			compositionEndedAt = -2e8;
+			return true;
+		}
+		return false;
+	}
 
 	let chatInputContainerElement;
 	let chatInputElement;
@@ -416,6 +494,7 @@
 	let maskedPrompt = '';
 	let piiMaskingEnabled = true; // Toggle state for PII masking
 	let loadedFileIds = new Set<string>(); // Track which files have had their PII entities loaded
+	let isPiiDetectionInProgress = false; // Track scanning state
 
 	// Transfer PII state from Knowledge Base context to chat context
 	function syncPiiFromKnowledgeBaseFile(fileData: any, knowledgeBaseId: string | null) {
@@ -781,6 +860,17 @@
 	const handlePiiToggled = (entities: ExtendedPiiEntity[]) => {
 		currentPiiEntities = entities;
 		console.log('MessageInput: PII entities toggled, updated currentPiiEntities:', entities.length);
+
+		// Trigger sync to update visual highlights immediately
+		if (chatInputElement?.syncWithSession) {
+			chatInputElement.syncWithSession();
+		}
+	};
+
+	// PII Detection state handler - track when scanning starts/stops
+	const handlePiiDetectionStateChanged = (isDetecting: boolean) => {
+		isPiiDetectionInProgress = isDetecting;
+		console.log('MessageInput: PII detection state changed:', isDetecting);
 	};
 
 	// Function to toggle PII masking (deterministic based on button state)
@@ -848,10 +938,10 @@
 
 		// Create a masked version based on user's masking preferences
 		let maskedText = prompt;
-		const entitiesToMask = currentPiiEntities.filter((entity) => entity.shouldMask);
+		const entitiesToMask = currentPiiEntities.filter((entity) => entity.shouldMask !== false);
 
 		console.log('MessageInput: Creating masked prompt, entities to mask:', entitiesToMask.length);
-		console.log('MessageInput: Original prompt:', prompt.substring(0, 200));
+		console.log('MessageInput: Original prompt length:', prompt.length);
 
 		// Use a more robust approach: sort entities by raw text length (longest first)
 		// to avoid partial replacements, then replace by raw text instead of positions
@@ -859,7 +949,7 @@
 
 		sortedEntities.forEach((entity) => {
 			if (!entity.raw_text || entity.raw_text.trim() === '') {
-				console.log('MessageInput: Skipping entity with empty raw text:', entity.label);
+				console.log('MessageInput: Skipping entity with empty raw text');
 				return;
 			}
 
@@ -885,13 +975,13 @@
 			maskedText = maskedText.replace(regex, replacementPattern);
 
 			if (maskedText !== beforeReplace) {
-				console.log('MessageInput: Successfully masked entity', entity.label);
+				console.log('MessageInput: Successfully masked entity');
 			} else {
-				console.log('MessageInput: No replacements made for entity', entity.label);
+				console.log('MessageInput: No replacements made for entity');
 			}
 		});
 
-		console.log('MessageInput: Final masked prompt:', maskedText.substring(0, 200));
+		console.log('MessageInput: Final masked prompt length:', maskedText.length);
 		return maskedText;
 	};
 
@@ -1183,7 +1273,7 @@
 		} else {
 			// If temporary chat is enabled, we just add the file to the list without uploading it.
 
-			const content = await extractContentFromFile(file, pdfjsLib).catch((error) => {
+			const content = await extractContentFromFile(file).catch((error) => {
 				toast.error(
 					$i18n.t('Failed to extract content from the file: {{error}}', { error: error })
 				);
@@ -1306,11 +1396,7 @@
 						}
 					];
 				};
-				reader.readAsDataURL(
-					file['type'] === 'image/heic'
-						? await heic2any({ blob: file, toType: 'image/jpeg' })
-						: file
-				);
+				reader.readAsDataURL(file['type'] === 'image/heic' ? await convertHeicToJpeg(file) : file);
 			} else {
 				uploadFileHandler(file);
 			}
@@ -1416,10 +1502,7 @@
 <InputVariablesModal
 	bind:show={showInputVariablesModal}
 	variables={inputVariables}
-	onSave={(variableValues) => {
-		inputVariableValues = { ...inputVariableValues, ...variableValues };
-		replaceVariables(inputVariableValues);
-	}}
+	onSave={inputVariablesModalCallback}
 />
 
 {#if loaded}
@@ -1477,7 +1560,8 @@
 												: `${WEBUI_BASE_URL}/static/favicon.png`)}
 									/>
 									<div class="translate-y-[0.5px]">
-										Talking to <span class=" font-medium">{atSelectedModel.name}</span>
+										{$i18n.t('Talk to model')}:
+										<span class=" font-medium">{atSelectedModel.name}</span>
 									</div>
 								</div>
 								<div>
@@ -1503,19 +1587,20 @@
 						onUpload={(e) => {
 							const { type, data } = e;
 
-							if (type === 'file' || type === 'collection') {
+							if (type === 'file' || type === 'collection' || type === 'note') {
 								if (files.find((f) => f.id === data.id)) {
 									return;
 								}
 
-								// Check if this is a Knowledge Base file or collection
+								// Check if this is a Knowledge Base file, collection, or note
 								const isKnowledgeBaseFile = data.knowledge === true;
 								const isCollection = type === 'collection';
+								const isNote = type === 'note';
 								const knowledgeBaseId = data.collection?.id || data.id; // For collections, use their own ID
 
-								// For Knowledge Base files, apply filename masking (but not for collections)
+								// For Knowledge Base files, apply filename masking (but not for collections or notes)
 								let fileToAdd = { ...data, status: 'processed' };
-								if (isKnowledgeBaseFile && enablePiiDetection && !isCollection) {
+								if (isKnowledgeBaseFile && enablePiiDetection && !isCollection && !isNote) {
 									console.log('MessageInput: Processing Knowledge Base file with PII masking:', {
 										fileId: data.id,
 										originalName: data.name,
@@ -1531,8 +1616,8 @@
 
 									// Add filename mapping for this file
 									piiSessionManager.addFilenameMapping(chatId || undefined, data.id, data.name);
-								} else if (enablePiiDetection && data.id && data.name && !isCollection) {
-									// Regular file - add filename mapping if PII detection is enabled (skip collections)
+								} else if (enablePiiDetection && data.id && data.name && !isCollection && !isNote) {
+									// Regular file - add filename mapping if PII detection is enabled (skip collections and notes)
 									console.log('MessageInput: Adding filename mapping for command-selected file:', {
 										fileId: data.id,
 										originalName: data.name
@@ -1544,13 +1629,18 @@
 										collectionName: data.name,
 										hasPiiEnabled: data.enable_pii_detection
 									});
+								} else if (isNote) {
+									console.log('MessageInput: Adding note (no special processing):', {
+										noteId: data.id,
+										noteName: data.name || data.title
+									});
 								}
 
 								files = [...files, fileToAdd];
 
 								// Fetch full file details to seed PII entities into the current conversation
-								// Only do this if PII detection is enabled and it's not a collection
-								if (enablePiiDetection && data.type !== 'collection') {
+								// Only do this if PII detection is enabled and it's not a collection or note
+								if (enablePiiDetection && data.type !== 'collection' && data.type !== 'note') {
 									(async () => {
 										try {
 											const json = await getFileById(localStorage.token, data.id);
@@ -1763,7 +1853,19 @@
 									</div>
 								{/if}
 
-								<div class="px-2.5">
+								<div class="px-2.5 relative">
+									<!-- PII Detection Scanning Indicator -->
+									{#if enablePiiDetection && isPiiDetectionInProgress}
+										<div
+											class="absolute top-3 right-3 z-10 flex items-center gap-1 bg-gray-50 dark:bg-gray-850 px-2 py-1 rounded-md shadow-sm border border-gray-200 dark:border-gray-700"
+										>
+											<Spinner className="size-3" />
+											<span class="text-xs text-gray-600 dark:text-gray-400"
+												>Scanning for PII...</span
+											>
+										</div>
+									{/if}
+
 									{#if $settings?.richTextInput ?? true}
 										<div
 											class="scrollbar-hidden rtl:text-right ltr:text-left bg-transparent dark:text-gray-100 outline-hidden w-full pt-2.5 pb-[5px] px-1 resize-none h-fit max-h-80 overflow-auto"
@@ -1816,6 +1918,7 @@
 													conversationId={chatId || undefined}
 													onPiiDetected={handlePiiDetected}
 													onPiiToggled={handlePiiToggled}
+													onPiiDetectionStateChanged={handlePiiDetectionStateChanged}
 													generateAutoCompletion={async (text) => {
 														if (selectedModelIds.length === 0 || !selectedModelIds.at(0)) {
 															toast.error($i18n.t('Please select a model first.'));
@@ -1838,7 +1941,10 @@
 														return res;
 													}}
 													oncompositionstart={() => (isComposing = true)}
-													oncompositionend={() => (isComposing = false)}
+													oncompositionend={(e) => {
+														compositionEndedAt = e.timeStamp;
+														isComposing = false;
+													}}
 													on:keydown={async (e) => {
 														e = e.detail.event;
 
@@ -1946,7 +2052,7 @@
 																	navigator.msMaxTouchPoints > 0
 																)
 															) {
-																if (isComposing) {
+																if (inOrNearComposition(e)) {
 																	return;
 																}
 
@@ -2049,7 +2155,10 @@
 												command = getCommand();
 											}}
 											on:compositionstart={() => (isComposing = true)}
-											on:compositionend={() => (isComposing = false)}
+											on:compositionend={(e) => {
+												compositionEndedAt = e.timeStamp;
+												isComposing = false;
+											}}
 											on:keydown={async (e) => {
 												const isCtrlPressed = e.ctrlKey || e.metaKey; // metaKey is for Cmd key on Mac
 
@@ -2168,7 +2277,7 @@
 															navigator.msMaxTouchPoints > 0
 														)
 													) {
-														if (isComposing) {
+														if (inOrNearComposition(e)) {
 															return;
 														}
 
@@ -2436,7 +2545,7 @@
 																<Sparkles className="size-4" strokeWidth="1.75" />
 															{/if}
 															<span
-																class="hidden @xl:block whitespace-nowrap overflow-hidden text-ellipsis leading-none pr-0.5"
+																class="hidden @xl:block whitespace-nowrap text-ellipsis leading-none normal-case pr-0.5"
 																>{filter?.name}</span
 															>
 														</button>
@@ -2455,7 +2564,7 @@
 														>
 															<GlobeAlt className="size-4" strokeWidth="1.75" />
 															<span
-																class="hidden @xl:block whitespace-nowrap overflow-hidden text-ellipsis leading-none pr-0.5"
+																class="hidden @xl:block whitespace-nowrap text-ellipsis leading-none normal-case pr-0.5"
 																>{$i18n.t('Web Search')}</span
 															>
 														</button>
@@ -2474,7 +2583,7 @@
 														>
 															<Photo className="size-4" strokeWidth="1.75" />
 															<span
-																class="hidden @xl:block whitespace-nowrap overflow-hidden text-ellipsis leading-none pr-0.5"
+																class="hidden @xl:block whitespace-nowrap text-ellipsis leading-none normal-case pr-0.5"
 																>{$i18n.t('Image')}</span
 															>
 														</button>
@@ -2500,7 +2609,7 @@
 														>
 															<CommandLine className="size-4" strokeWidth="1.75" />
 															<span
-																class="hidden @xl:block whitespace-nowrap overflow-hidden text-ellipsis leading-none pr-0.5"
+																class="hidden @xl:block whitespace-nowrap text-ellipsis leading-none normal-case pr-0.5"
 																>{$i18n.t('Code Interpreter')}</span
 															>
 														</button>

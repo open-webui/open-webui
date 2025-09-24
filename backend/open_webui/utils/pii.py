@@ -202,7 +202,11 @@ def text_masking(
 
     # Apply all replacements
     for replacement in resolved_replacements:
-        log.debug("Replacing: %s, in text: %s", replacement, text)
+        log.debug(
+            "Replacing PII entity, start_idx: %d, end_idx: %d",
+            replacement["start_idx"],
+            replacement["end_idx"],
+        )
 
         start_idx = replacement["start_idx"]
         end_idx = replacement["end_idx"]
@@ -272,11 +276,9 @@ def apply_pii_masking_to_content(
                     entity_text, True
                 ):  # Default to True if not found
                     filtered_pii_data.append(pii)
-                    log.debug(f"Including entity for masking: {entity_text}")
+                    log.debug("Including entity for masking")
                 else:
-                    log.debug(
-                        f"Skipping masking for entity: {entity_text} (shouldMask=False)"
-                    )
+                    log.debug("Skipping masking for entity (shouldMask=False)")
 
             consolidated_pii = filtered_pii_data
 

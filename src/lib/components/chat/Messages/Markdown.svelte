@@ -14,6 +14,8 @@
 	export let model = null;
 	export let save = false;
 	export let preview = false;
+
+	export let editCodeBlock = true;
 	export let topPadding = false;
 	export let conversationId = '';
 
@@ -53,6 +55,7 @@
 		{done}
 		{save}
 		{preview}
+		{editCodeBlock}
 		{topPadding}
 		{onTaskClick}
 		{onSourceClick}

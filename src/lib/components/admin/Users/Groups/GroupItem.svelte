@@ -1,6 +1,7 @@
 <script>
 	import { toast } from 'svelte-sonner';
-	import { getContext } from 'svelte';
+	import { onMount, getContext } from 'svelte';
+	import { page } from '$app/stores';
 
 	const i18n = getContext('i18n');
 
@@ -44,6 +45,13 @@
 			setGroups();
 		}
 	};
+
+	onMount(() => {
+		const groupId = $page.url.searchParams.get('id');
+		if (groupId && groupId === group.id) {
+			showEdit = true;
+		}
+	});
 </script>
 
 <GroupModal

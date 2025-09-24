@@ -1,0 +1,180 @@
+---
+description: Methodology for exploring applications using Playwright browser tool to discover selectors and functionality
+---
+
+# Playwright Browser Tool Exploration Methodology
+
+## Investigation Approach
+
+### Step 1: Initial Navigation and Setup
+```typescript
+// Navigate and wait for app to load
+await page.goto('http://localhost:5173');
+await page.waitForLoadState('networkidle');
+await page.waitForTimeout(3000); // Allow dynamic content to load
+```
+
+### Step 2: DOM Structure Discovery
+```typescript
+// Discover available input elements
+await page.evaluate(() => {
+  const candidates = [
+    ...document.querySelectorAll('input'),
+    ...document.querySelectorAll('textarea'), 
+    ...document.querySelectorAll('[contenteditable="true"]'),
+    ...document.querySelectorAll('.ProseMirror'),
+    ...document.querySelectorAll('[role="textbox"]')
+  ];
+  
+  return candidates.map((el, index) => ({
+    index,
+    tagName: el.tagName,
+    id: el.id,
+    className: el.className,
+    contentEditable: el.contentEditable,
+    placeholder: el.getAttribute('placeholder'),
+    isVisible: el.offsetParent !== null
+  }));
+});
+```
+
+### Step 3: Button and Interactive Element Discovery
+```typescript
+// Find buttons with specific functionality
+await page.evaluate(() => {
+  return Array.from(document.querySelectorAll('button')).map((btn, i) => ({
+    index: i,
+    text: btn.textContent?.trim(),
+    className: btn.className,
+    hasIcon: btn.querySelector('img') || btn.querySelector('svg'),
+    isVisible: btn.offsetParent !== null
+  }));
+});
+```
+
+### Step 4: Functional Testing
+```typescript
+// Test interactions step by step
+await page.evaluate((text) => {
+  const element = document.getElementById('target-id');
+  if (element) {
+    element.focus();
+    element.textContent = text;
+    element.dispatchEvent(new Event('input', { bubbles: true }));
+  }
+}, 'test text');
+```
+
+## Systematic Exploration Process
+
+### 1. Load and Inspect
+- Navigate to application
+- Take screenshots for visual reference
+- Capture page snapshot for element structure
+- Wait for dynamic content to fully load
+
+### 2. Identify Key Interfaces
+- **Input fields**: Text areas, contenteditable divs, form inputs
+- **Action buttons**: Submit, toggle, navigation buttons
+- **Display areas**: Chat messages, response containers
+- **Status indicators**: Loading spinners, confirmation messages
+
+### 3. Test Element Interactions
+- Try different selector strategies
+- Test JavaScript-based interactions for complex editors
+- Verify events trigger expected responses
+- Monitor console for application feedback
+
+### 4. Document Findings
+```typescript
+// Record working selectors and patterns
+const WORKING_SELECTORS = {
+  messageInput: '#chat-input', // TipTap/ProseMirror editor
+  sendButton: 'button[type="submit"]',
+  maskingButton: 'button:has-text("Maskieren")', // Flexible text search
+  scanningIndicator: 'text=Scanning for PII'
+};
+```
+
+## Common Investigation Patterns
+
+### For Chat Applications
+1. **Message Input Discovery**:
+   - Look for `textarea`, `[contenteditable]`, `.ProseMirror` 
+   - Test with `getElementById` if ID is found
+   - Verify input events trigger expected behavior
+
+2. **Button Identification**:
+   - Search by text content for mixed icon+text buttons
+   - Use flexible selectors that handle whitespace
+   - Test click interactions to verify functionality
+
+3. **Dynamic Content Detection**:
+   - Monitor for loading indicators
+   - Wait for API responses to complete
+   - Check for state changes after interactions
+
+### For Complex UI Components
+```typescript
+// Discover component structure
+await page.evaluate(() => {
+  // Find parent containers
+  const containers = document.querySelectorAll('[class*="chat"], [class*="message"], [id*="chat"]');
+  
+  return Array.from(containers).map(container => ({
+    tagName: container.tagName,
+    classes: container.className,
+    children: container.children.length,
+    textContent: container.textContent?.slice(0, 100)
+  }));
+});
+```
+
+## Debugging Strategies
+
+### When Elements Aren't Found
+1. **Timing Issues**: Add longer waits, check for dynamic loading
+2. **Selector Specificity**: Try broader selectors, check for nested elements  
+3. **Framework Rendering**: Elements may be in Shadow DOM or use virtual DOM
+4. **State Dependencies**: Element may only appear after specific actions
+
+### Element Interaction Failures
+1. **Framework Events**: Use JavaScript evaluation for complex editors
+2. **Visibility**: Ensure element is actually visible and interactable
+3. **Timing**: Some interactions may be debounced or async
+
+### Verification Methods
+```typescript
+// Comprehensive element verification
+await page.evaluate((selector) => {
+  const element = document.querySelector(selector);
+  return {
+    found: !!element,
+    visible: element?.offsetParent !== null,
+    enabled: !element?.disabled,
+    textContent: element?.textContent,
+    attributes: element ? Object.fromEntries(
+      Array.from(element.attributes).map(attr => [attr.name, attr.value])
+    ) : null
+  };
+}, '#target-selector');
+```
+
+## Browser Tool Best Practices
+
+### Investigation Workflow
+1. **Start Broad**: Capture overall page state with `browser_snapshot`
+2. **Focus Narrow**: Use `browser_evaluate` to examine specific elements
+3. **Test Interactions**: Use `browser_type`, `browser_click` to verify functionality
+4. **Document Patterns**: Record successful selectors and interaction methods
+
+### Error Handling During Exploration
+- Always wrap evaluation calls in try-catch
+- Use multiple selector strategies as fallbacks
+- Test on different browser engines when needed
+- Verify interactions work consistently across page states
+
+### Performance Considerations
+- Use `browser_wait_for` strategically to avoid race conditions
+- Close browser sessions when investigation is complete
+- Cache successful patterns for reuse in test implementations

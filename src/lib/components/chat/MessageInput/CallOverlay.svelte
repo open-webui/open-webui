@@ -163,11 +163,11 @@
 		});
 
 		if (res) {
-			console.log(res.text);
+			console.log('Call overlay: Transcribed text length:', res.text?.length || 0);
 
 			if (res.text !== '') {
 				const _responses = await submitPrompt(res.text, { _raw: true });
-				console.log(_responses);
+				console.log('Call overlay: Got responses, count:', _responses?.length || 0);
 			}
 		}
 	};
@@ -536,7 +536,7 @@
 
 							const audio = audioCache.get(content);
 							await playAudio(audio); // Here ensure that playAudio is indeed correct method to execute
-							console.log(`Played audio for content: ${content}`);
+							console.log('Played audio for content');
 							await new Promise((resolve) => setTimeout(resolve, 200)); // Wait before retrying to reduce tight loop
 						} catch (error) {
 							console.error('Error playing audio:', error);
@@ -547,7 +547,7 @@
 				} else {
 					// If not available in the cache, push it back to the queue and delay
 					messages[id].unshift(content); // Re-queue the content at the start
-					console.log(`Audio for "${content}" not yet available in the cache, re-queued...`);
+					console.log('Audio not yet available in the cache, re-queued...');
 					await new Promise((resolve) => setTimeout(resolve, 200)); // Wait before retrying to reduce tight loop
 				}
 			} else if (finishedMessages[id] && messages[id] && messages[id].length === 0) {
@@ -590,7 +590,7 @@
 		// there will be many sentences for the same "id"
 
 		if (currentMessageId === id) {
-			console.log(`Received chat event for message ID ${id}: ${content}`);
+			console.log(`Received chat event for message ID ${id}`);
 
 			try {
 				if (messages[id] === undefined) {

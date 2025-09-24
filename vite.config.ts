@@ -62,6 +62,24 @@ export default defineConfig({
 	},
 	// Enable esbuild for faster builds in development
 	esbuild: {
-		pure: process.env.ENV === 'dev' ? [] : ['console.log', 'console.debug']
+		pure: process.env.ENV === 'dev' ? [] : ['console.log', 'console.debug', 'console.error']
+	},
+
+	// Vitest configuration
+	test: {
+		// Include only unit/integration tests, exclude e2e
+		include: ['src/**/*.{test,spec}.{js,ts}', 'src/**/*.test.{js,ts}'],
+		// Explicitly exclude e2e tests (handled by Playwright)
+		exclude: [
+			'**/node_modules/**',
+			'**/dist/**',
+			'**/.{idea,git,cache,output,temp}/**',
+			'**/e2e/**',
+			'tests/e2e/**'
+		],
+		// Test environment for Svelte components
+		environment: 'jsdom',
+		// Enable globals like describe, it, expect
+		globals: true
 	}
 });

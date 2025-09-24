@@ -125,7 +125,12 @@ def query_doc_with_hybrid_search(
     hybrid_bm25_weight: float,
 ) -> dict:
     try:
+        if not collection_result.documents[0]:
+            log.warning(f"query_doc_with_hybrid_search:no_docs {collection_name}")
+            return {"documents": [], "metadatas": [], "distances": []}
+
         log.debug(f"query_doc_with_hybrid_search:doc {collection_name}")
+
         bm25_retriever = BM25Retriever.from_texts(
             texts=collection_result.documents[0],
             metadatas=collection_result.metadatas[0],
@@ -484,9 +489,12 @@ def get_sources_from_items(
 
         if item.get("type") == "text":
             # Raw Text
-            # Used during temporary chat file uploads
+            # Used during temporary chat file uploads or web page & youtube attachements
 
-            if item.get("file"):
+            if item.get("collection_name"):
+                # If item has a collection name, use it
+                collection_names.append(item.get("collection_name"))
+            elif item.get("file"):
                 # if item has file data, use it
                 content = item.get("file", {}).get("data", {}).get("content", "")
                 file_data = item.get("file", {}).get("data", {})
@@ -500,8 +508,10 @@ def get_sources_from_items(
                 # masked_content = apply_pii_masking_to_content(content, metadata)
 
                 query_result = {
-                    "documents": [[content]],
-                    "metadatas": [[metadata]],
+                    "documents": [
+                        [item.get("file", {}).get("data", {}).get("content")]
+                    ],
+                    "metadatas": [[item.get("file", {}).get("meta", {})]],
                 }
             else:
                 # Fallback to item content
@@ -974,6 +984,7 @@ class RerankCompressor(BaseDocumentCompressor):
     ) -> Sequence[Document]:
         reranking = self.reranking_function is not None
 
+        scores = None
         if reranking:
             scores = self.reranking_function(
                 [(query, doc.page_content) for doc in documents]
@@ -987,22 +998,31 @@ class RerankCompressor(BaseDocumentCompressor):
             )
             scores = util.cos_sim(query_embedding, document_embedding)[0]
 
-        docs_with_scores = list(
-            zip(documents, scores.tolist() if not isinstance(scores, list) else scores)
-        )
-        if self.r_score:
-            docs_with_scores = [
-                (d, s) for d, s in docs_with_scores if s >= self.r_score
-            ]
-
-        result = sorted(docs_with_scores, key=operator.itemgetter(1), reverse=True)
-        final_results = []
-        for doc, doc_score in result[: self.top_n]:
-            metadata = doc.metadata
-            metadata["score"] = doc_score
-            doc = Document(
-                page_content=doc.page_content,
-                metadata=metadata,
+        if scores is not None:
+            docs_with_scores = list(
+                zip(
+                    documents,
+                    scores.tolist() if not isinstance(scores, list) else scores,
+                )
             )
-            final_results.append(doc)
-        return final_results
+            if self.r_score:
+                docs_with_scores = [
+                    (d, s) for d, s in docs_with_scores if s >= self.r_score
+                ]
+
+            result = sorted(docs_with_scores, key=operator.itemgetter(1), reverse=True)
+            final_results = []
+            for doc, doc_score in result[: self.top_n]:
+                metadata = doc.metadata
+                metadata["score"] = doc_score
+                doc = Document(
+                    page_content=doc.page_content,
+                    metadata=metadata,
+                )
+                final_results.append(doc)
+            return final_results
+        else:
+            log.warning(
+                "No valid scores found, check your reranking function. Returning original documents."
+            )
+            return documents

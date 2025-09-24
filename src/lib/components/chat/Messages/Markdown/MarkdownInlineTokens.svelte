@@ -100,7 +100,7 @@
 		></iframe>
 	{:else if token.type === 'text'}
 		<PiiAwareInlineText
-			text={unescapeHtml(token.raw ?? '')}
+			text={token.text ?? token.raw ?? ''}
 			id={`${id}-text-${token.type}`}
 			{conversationId}
 			{done}

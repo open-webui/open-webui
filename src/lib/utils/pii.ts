@@ -793,9 +793,7 @@ export class PiiSessionManager {
 					entity.shouldMask = !entity.shouldMask;
 					state.lastUpdated = Date.now();
 					this.triggerChatSave(conversationId);
-					console.log(
-						`PiiSessionManager: Toggled persistent entity ${entityId} shouldMask to ${entity.shouldMask}`
-					);
+					console.log('PiiSessionManager: Toggled persistent entity shouldMask state');
 					return; // Successfully updated persistent state
 				}
 			}
@@ -806,24 +804,18 @@ export class PiiSessionManager {
 				const workingEntity = workingEntities.find((e) => e.label === entityId);
 				if (workingEntity) {
 					workingEntity.shouldMask = !workingEntity.shouldMask;
-					console.log(
-						`PiiSessionManager: Toggled working entity ${entityId} shouldMask to ${workingEntity.shouldMask}`
-					);
+					console.log('PiiSessionManager: Toggled working entity shouldMask state');
 					return; // Successfully updated working state
 				}
 			}
 
-			console.warn(
-				`PiiSessionManager: Entity ${entityId} not found in persistent or working state for conversation ${conversationId}`
-			);
+			console.warn('PiiSessionManager: Entity not found in persistent or working state');
 		} else if (this.temporaryState.isActive) {
 			// New chat: update temporary state
 			const entity = this.temporaryState.entities.find((e) => e.label === entityId);
 			if (entity) {
 				entity.shouldMask = !entity.shouldMask;
-				console.log(
-					`PiiSessionManager: Toggled temporary entity ${entityId} shouldMask to ${entity.shouldMask}`
-				);
+				console.log('PiiSessionManager: Toggled temporary entity shouldMask state');
 			}
 		}
 	}

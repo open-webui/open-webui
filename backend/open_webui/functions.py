@@ -47,7 +47,7 @@ from open_webui.utils.misc import (
 )
 from open_webui.utils.payload import (
     apply_model_params_to_body_openai,
-    apply_model_system_prompt_to_body,
+    apply_system_prompt_to_body,
 )
 
 
@@ -219,6 +219,15 @@ async def generate_function_chat_completion(
         __task__ = metadata.get("task", None)
         __task_body__ = metadata.get("task_body", None)
 
+    oauth_token = None
+    try:
+        oauth_token = request.app.state.oauth_manager.get_oauth_token(
+            user.id,
+            request.cookies.get("oauth_session_id", None),
+        )
+    except Exception as e:
+        log.error(f"Error getting OAuth token: {e}")
+
     extra_params = {
         "__event_emitter__": __event_emitter__,
         "__event_call__": __event_call__,
@@ -230,9 +239,10 @@ async def generate_function_chat_completion(
         "__files__": files,
         "__user__": user.model_dump() if isinstance(user, UserModel) else {},
         "__metadata__": metadata,
+        "__oauth_token__": oauth_token,
         "__request__": request,
     }
-    extra_params["__tools__"] = get_tools(
+    extra_params["__tools__"] = await get_tools(
         request,
         tool_ids,
         user,
@@ -253,9 +263,7 @@ async def generate_function_chat_completion(
         if params:
             system = params.pop("system", None)
             form_data = apply_model_params_to_body_openai(params, form_data)
-            form_data = apply_model_system_prompt_to_body(
-                system, form_data, metadata, user
-            )
+            form_data = apply_system_prompt_to_body(system, form_data, metadata, user)
 
     pipe_id = get_pipe_id(form_data)
     function_module = get_function_module_by_id(request, pipe_id)

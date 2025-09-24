@@ -29,12 +29,12 @@
 			}),
 		{
 			keys: ['value', 'tags', 'modelName'],
-			threshold: 0.3
+			threshold: 0.5
 		}
 	);
 
 	$: filteredItems = command.slice(1)
-		? fuse.search(command).map((e) => {
+		? fuse.search(command.slice(1)).map((e) => {
 				return e.item;
 			})
 		: $models.filter((model) => !model?.info?.meta?.hidden);
@@ -76,13 +76,14 @@
 
 	onMount(async () => {
 		window.addEventListener('resize', adjustHeight);
-		adjustHeight();
 
 		await tick();
 		const chatInputElement = document.getElementById('chat-input');
 		await tick();
 		chatInputElement?.focus();
 		await tick();
+
+		adjustHeight();
 	});
 
 	onDestroy(() => {

@@ -15,7 +15,7 @@ from fastapi import APIRouter, Depends, HTTPException, Request, status
 
 from open_webui.utils.auth import get_admin_user, get_verified_user
 from open_webui.utils.access_control import has_access, has_permission
-from open_webui.config import ENABLE_ADMIN_WORKSPACE_CONTENT_ACCESS
+from open_webui.config import BYPASS_ADMIN_ACCESS_CONTROL
 
 router = APIRouter()
 
@@ -27,7 +27,7 @@ router = APIRouter()
 
 @router.get("/", response_model=list[ModelUserResponse])
 async def get_models(id: Optional[str] = None, user=Depends(get_verified_user)):
-    if user.role == "admin" and ENABLE_ADMIN_WORKSPACE_CONTENT_ACCESS:
+    if user.role == "admin" and BYPASS_ADMIN_ACCESS_CONTROL:
         return Models.get_models()
     else:
         return Models.get_models_by_user_id(user.id)
@@ -117,7 +117,7 @@ async def get_model_by_id(id: str, user=Depends(get_verified_user)):
     model = Models.get_model_by_id(id)
     if model:
         if (
-            user.role == "admin"
+            (user.role == "admin" and BYPASS_ADMIN_ACCESS_CONTROL)
             or model.user_id == user.id
             or has_access(user.id, "read", model.access_control)
         ):

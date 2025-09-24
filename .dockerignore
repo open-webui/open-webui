@@ -18,3 +18,5 @@ uploads
 **/*.db
 _test
 backend/data/*
+/tests
+/test-results

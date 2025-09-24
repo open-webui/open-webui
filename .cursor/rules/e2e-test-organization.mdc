@@ -1,0 +1,273 @@
+---
+description: Guidelines for organizing e2e tests into topic-based files and maintaining clean test architecture
+---
+
+# E2E Test Organization Guidelines
+
+## File Structure Pattern
+
+### Topic-Based Organization
+```
+tests/e2e/
+├── {feature}.spec.ts          # Main test files
+├── utils/
+│   ├── {feature}-helpers.ts   # Feature-specific helpers
+│   └── common-helpers.ts      # Shared utilities
+├── fixtures/
+│   └── test-data.ts          # Test data and constants
+└── README.md                 # Setup and usage guide
+```
+
+### Naming Conventions
+- **Test files**: `{feature}.spec.ts` (e.g., `pii.spec.ts`, `chat.spec.ts`, `authentication.spec.ts`)
+- **Helper files**: `{feature}-helpers.ts` (e.g., `pii-helpers.ts`, `chat-helpers.ts`)
+- **Test descriptions**: Use clear, behavior-focused naming
+
+## Feature-Based Test Files
+
+### Example: PII Functionality (`pii.spec.ts`)
+```typescript
+import { test, expect } from '@playwright/test';
+import { PiiTestHelpers } from './utils/pii-helpers';
+
+test.describe('PII Functionality', () => {
+  test.beforeEach(async ({ page }) => {
+    // Common setup for this feature
+  });
+
+  test('should detect PII in user input', async ({ page }) => {
+    // Core functionality test
+  });
+
+  test('should toggle PII masking', async ({ page }) => {
+    // UI interaction test
+  });
+
+  test('should handle edge cases gracefully', async ({ page }) => {
+    // Error handling test
+  });
+});
+```
+
+### Example: Chat Functionality (`chat.spec.ts`)
+```typescript
+test.describe('Chat Functionality', () => {
+  test('should send and receive messages', async ({ page }) => {
+    // Basic chat flow
+  });
+
+  test('should maintain conversation history', async ({ page }) => {
+    // State persistence
+  });
+
+  test('should handle different message types', async ({ page }) => {
+    // Content variety
+  });
+});
+```
+
+## Test Categorization Strategy
+
+### Core Feature Areas
+1. **Authentication** (`auth.spec.ts`): Login, logout, session management
+2. **Chat Interface** (`chat.spec.ts`): Message sending, receiving, history
+3. **PII Detection** (`pii.spec.ts`): Privacy features, masking, detection
+4. **File Handling** (`files.spec.ts`): Upload, download, processing
+5. **Settings/Configuration** (`settings.spec.ts`): User preferences, system config
+6. **Navigation** (`navigation.spec.ts`): Routing, sidebar, menu interactions
+
+### Test Types Within Features
+```typescript
+test.describe('Feature Name', () => {
+  test.describe('Core Functionality', () => {
+    // Happy path tests
+  });
+
+  test.describe('UI Interactions', () => {
+    // Button clicks, form submissions, etc.
+  });
+
+  test.describe('Edge Cases', () => {
+    // Error conditions, boundary cases
+  });
+
+  test.describe('Integration', () => {
+    // Cross-feature interactions
+  });
+});
+```
+
+## Helper Organization Pattern
+
+### Feature-Specific Helpers
+```typescript
+// utils/pii-helpers.ts
+export class PiiTestHelpers {
+  constructor(private page: Page) {}
+
+  async enterMessage(text: string): Promise<void> {
+    // Feature-specific message entry
+  }
+
+  async toggleMasking(): Promise<void> {
+    // PII-specific button interaction
+  }
+
+  async verifyPiiDetection(): Promise<boolean> {
+    // PII-specific verification
+  }
+}
+```
+
+### Common Helpers
+```typescript
+// utils/common-helpers.ts
+export class CommonTestHelpers {
+  constructor(private page: Page) {}
+
+  async login(email: string, password: string): Promise<void> {
+    // Shared login logic
+  }
+
+  async navigateToFeature(feature: string): Promise<void> {
+    // Common navigation
+  }
+
+  async waitForAppReady(): Promise<void> {
+    // App initialization wait
+  }
+}
+```
+
+## Test Data Management
+
+### Centralized Test Data
+```typescript
+// fixtures/test-data.ts
+export const TEST_DATA = {
+  PII_EXAMPLES: {
+    GERMAN_PERSON_LOCATION: 'Max F aus Berlin.',
+    FULL_NAME_CITY: 'Mein Name ist Sarah Schmidt.',
+    PROFESSIONAL: 'Dr. Maria Rodriguez aus Barcelona.'
+  },
+  
+  CHAT_MESSAGES: {
+    SIMPLE: 'Hello, how can you help?',
+    COMPLEX: 'I need help with multiple things: A, B, and C.',
+    SPECIAL_CHARS: 'Test with émojis 🎉 and spéciál chars!'
+  },
+
+  USER_CREDENTIALS: {
+    VALID_USER: { email: 'test@example.com', password: 'password123' },
+    ADMIN_USER: { email: 'admin@example.com', password: 'admin123' }
+  }
+};
+```
+
+### Environment-Specific Data
+```typescript
+// fixtures/environments.ts
+export const ENVIRONMENTS = {
+  LOCAL: {
+    baseURL: 'http://localhost:5173',
+    apiTimeout: 10000
+  },
+  STAGING: {
+    baseURL: 'https://staging.example.com',
+    apiTimeout: 15000
+  }
+};
+```
+
+## Package.json Script Organization
+
+### Feature-Specific Scripts
+```json
+{
+  "scripts": {
+    "test:e2e": "playwright test",
+    "test:e2e:headed": "playwright test --headed",
+    "test:e2e:debug": "playwright test --debug",
+    
+    "test:e2e:pii": "playwright test tests/e2e/pii.spec.ts",
+    "test:e2e:chat": "playwright test tests/e2e/chat.spec.ts", 
+    "test:e2e:auth": "playwright test tests/e2e/auth.spec.ts",
+    
+    "test:e2e:core": "playwright test tests/e2e/pii.spec.ts tests/e2e/chat.spec.ts",
+    "test:e2e:ui": "playwright test --grep 'UI Interactions'",
+    
+    "test:e2e:report": "playwright show-report"
+  }
+}
+```
+
+## Documentation Standards
+
+### Feature Test Documentation
+```typescript
+/**
+ * PII (Personally Identifiable Information) End-to-End Tests
+ * 
+ * Tests the PII detection, masking, and unmasking functionality
+ * in the Open WebUI chat interface.
+ * 
+ * Prerequisites:
+ * - PII API service must be running and accessible
+ * - Valid API key configured in environment
+ * 
+ * Test Coverage:
+ * - PII detection in user input
+ * - Masking toggle functionality  
+ * - Text processing workflows
+ * - Error handling and edge cases
+ */
+```
+
+### README Documentation
+```markdown
+# E2E Test Suite
+
+## Running Tests
+
+### All Tests
+`npm run test:e2e`
+
+### Specific Features  
+- PII: `npm run test:e2e:pii`
+- Chat: `npm run test:e2e:chat`
+- Auth: `npm run test:e2e:auth`
+
+## Test Organization
+
+Each feature has its own test file and helper utilities:
+- **pii.spec.ts**: PII detection and privacy features
+- **chat.spec.ts**: Core messaging functionality
+- **auth.spec.ts**: Authentication and authorization
+
+## Prerequisites
+
+1. Development server running on localhost:5173
+2. PII API service accessible
+3. Test user accounts configured
+```
+
+## Maintenance Guidelines
+
+### Adding New Feature Tests
+1. Create `{feature}.spec.ts` in tests/e2e/
+2. Create `{feature}-helpers.ts` in tests/e2e/utils/
+3. Add test data to fixtures/test-data.ts
+4. Add npm script for the feature
+5. Update README with feature description
+
+### Test Refactoring Patterns
+- Extract common patterns to helper classes
+- Move repeated selectors to constants
+- Create reusable test data objects
+- Maintain consistent error handling approaches
+
+### Cross-Feature Dependencies
+- Use integration tests for features that interact
+- Maintain clear boundaries between feature test files
+- Share common setup through beforeEach hooks
+- Document dependencies in test descriptions

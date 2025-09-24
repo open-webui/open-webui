@@ -421,10 +421,7 @@ export const PiiModifierExtension = Extension.create<PiiModifierOptions>({
 						);
 
 						if (maskModifier) {
-							console.log(
-								'PiiModifierExtension: Removing mask modifier and hiding entity:',
-								entityText
-							);
+							console.log('PiiModifierExtension: Removing mask modifier and hiding entity');
 
 							// Create transaction with both meta actions
 							const tr = view.state.tr
@@ -649,8 +646,7 @@ export const PiiModifierExtension = Extension.create<PiiModifierOptions>({
 								// If this was a mask modifier, also temporarily hide the PII entity
 								if (modifierToRemove && modifierToRemove.action === 'string-mask') {
 									console.log(
-										'PiiModifierExtension: Hover menu removing modifier and hiding entity:',
-										modifierToRemove.entity
+										'PiiModifierExtension: Hover menu removing modifier and hiding entity'
 									);
 									tr = tr.setMeta(piiDetectionPluginKey, {
 										type: 'TEMPORARILY_HIDE_ENTITY',
@@ -839,7 +835,10 @@ export const PiiModifierExtension = Extension.create<PiiModifierOptions>({
 						return false; // No complete words found
 					}
 
-					console.log('PiiModifierExtension: Found complete words:', completeWordsText);
+					console.log(
+						'PiiModifierExtension: Found complete words, length:',
+						completeWordsText.length
+					);
 
 					const tr = state.tr.setMeta(piiModifierExtensionKey, {
 						type: 'ADD_MODIFIER',
@@ -991,11 +990,7 @@ export const PiiModifierExtension = Extension.create<PiiModifierOptions>({
 					const pluginState = piiModifierExtensionKey.getState(state);
 					const modifierToRemove = pluginState?.modifiers.find((m) => m.id === modifierId);
 
-					console.log(
-						'PiiModifierExtension: removeModifier command called for:',
-						modifierId,
-						modifierToRemove?.entity
-					);
+					console.log('PiiModifierExtension: removeModifier command called');
 
 					let tr = state.tr.setMeta(piiModifierExtensionKey, {
 						type: 'REMOVE_MODIFIER',
@@ -1004,7 +999,7 @@ export const PiiModifierExtension = Extension.create<PiiModifierOptions>({
 
 					// If this was a mask modifier, also temporarily hide the PII entity
 					if (modifierToRemove && modifierToRemove.action === 'string-mask') {
-						console.log('PiiModifierExtension: Also hiding PII entity:', modifierToRemove.entity);
+						console.log('PiiModifierExtension: Also hiding PII entity');
 						tr = tr.setMeta(piiDetectionPluginKey, {
 							type: 'TEMPORARILY_HIDE_ENTITY',
 							entityText: modifierToRemove.entity
@@ -1067,8 +1062,9 @@ export const PiiModifierExtension = Extension.create<PiiModifierOptions>({
 					}
 
 					console.log(
-						'PiiModifierExtension: clearMaskModifiers clearing:',
-						maskModifiers.map((m) => m.entity)
+						'PiiModifierExtension: clearMaskModifiers clearing',
+						maskModifiers.length,
+						'modifiers'
 					);
 
 					// For clearing multiple modifiers, we need to send separate transactions

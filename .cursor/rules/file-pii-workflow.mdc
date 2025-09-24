@@ -1,0 +1,307 @@
+---
+alwaysApply: true
+---
+
+# File Upload Systems and PII Modifiers - Cursor Rules
+
+## Overview
+This guide covers the file upload systems in Open WebUI and how PII (Personally Identifiable Information) detection and modifiers work with files. The system handles file uploads in both chat and knowledge base contexts with integrated PII processing.
+
+## File Components
+
+### @FileItem.svelte
+- **Purpose**: Compact file card/entry point
+- **Features**:
+  - Icon and metadata display only
+  - Progress indicator for uploads
+  - File selection/listing functionality
+  - All file types supported
+
+### @FileItemModal.svelte
+- **Purpose**: Detailed file view and processing
+- **Features**:
+  - Full content display (PDF, DOCX, audio)
+  - Complete processing workflow
+  - File viewing/editing capabilities
+  - PII detection and modifier management
+
+## File Upload Data Structure
+
+### Standard File Upload Response
+When a file is uploaded through `/api/v1/files/`, the response includes:
+
+```json
+{
+  "id": "7c3d065e-2614-47ca-b684-eff0abf9147d",
+  "user_id": "5641204b-09de-482e-867c-d340f46d4201",
+  "hash": "5e87176c1ac31d622b0cbb1840d67d479d8574a2ae0ea4669cc30d467b16480c",
+  "filename": "Kampagnen-Briefing.Digitalprodukt.3.pdf",
+  "data": {
+    "extraction": {
+      "method": "direct_content",
+      "fallback_used": false,
+      "error": null
+    },
+    "content": "Kunde: ...",
+    "page_content": ["Kunde: ..."],
+    "pii": {
+      "fasanenstraße 12, 10115 berlin": {
+        "id": 2,
+        "label": "ADDRESS_2",
+        "type": "ADDRESS",
+        "text": "fasanenstraße 12, 10115 berlin",
+        "raw_text": "Fasanenstraße 12, 10115 Berlin",
+        "occurrences": [{"start_idx": 217, "end_idx": 247}]
+      }
+    }
+  },
+  "meta": {
+    "name": "Kampagnen-Briefing.Digitalprodukt.3.pdf",
+    "content_type": "application/pdf",
+    "size": 39003,
+    "processing": {
+      "status": "done",
+      "stage": "done",
+      "progress": 100,
+      "updated_at": 1758031721421
+    },
+    "collection_name": "file-7c3d065e-2614-47ca-b684-eff0abf9147d",
+    "pii": {
+      "fasanenstraße 12, 10115 berlin": {
+        "id": 2,
+        "label": "ADDRESS_2",
+        "type": "ADDRESS",
+        "text": "fasanenstraße 12, 10115 berlin",
+        "raw_text": "Fasanenstraße 12, 10115 Berlin",
+        "occurrences": [{"start_idx": 217, "end_idx": 247}]
+      }
+    }
+  },
+  "created_at": 1758031671,
+  "updated_at": 1758031671
+}
+```
+
+### Key Data Fields
+- **`data.pii`**: PII entities detected in file content with positions
+- **`meta.pii`**: Duplicate PII data in metadata for quick access
+- **`data.page_content`**: Array of page content (becomes single entry after modifiers)
+- **`data.content`**: Full extracted text content
+- **`meta.processing`**: Upload and processing status
+
+## File Upload Workflows
+
+### Chat File Upload Flow
+
+#### 1. Frontend Upload Handler
+**Location**: `@MessageInput.svelte - uploadFileHandler`
+- Generates a `FileItem` and appends to `files` array
+- **If NOT temporaryChat**: Calls `uploadFile()` in `@index.ts` (apis/files)
+  - Saves file and chunks in vectorDB
+- **If temporaryChat**: Calls `extractContentFromFile()` in `@index.ts` (src/lib/utils)
+  - Doesn't save file, only creates FileItem with content
+
+#### 2. API Layer
+**Location**: `@index.ts (apis/files) - uploadFile()`
+- Makes API call to backend `@files.py` (router)
+
+#### 3. Backend Processing
+**Location**: `@files.py (router) - upload_file`
+- Stores file via `upload_file` in `@provider.py` (4 storage providers: S3, local, GCS, Azure)
+- Creates DB record via `insert_new_file` in `@files.py` (models) (3 DBs: SQLite, PSQL, MySQL)
+- Calls `process_file` in `@retrieval.py`
+
+#### 4. Content Processing
+**Location**: `@retrieval.py - process_file`
+- Calls Content Extraction (file type dependent)
+- Stores in vector DB (Chroma, pgvector)
+- Performs PII detection and stores results
+
+### Knowledge Base File Upload Flow
+- Files initially processed through standard upload workflow
+- Knowledge base association via `file_ids` list
+- Files inherit knowledge base's PII detection settings (`enable_pii_detection` flag)
+- Collection-level PII state maintained separately from individual file PII states
+- Files can be shared across multiple knowledge bases
+- Additional PII processing when added to PII-enabled knowledge base
+- Filename masking applied at collection level
+- PII-aware search capabilities
+
+## PII Modifiers System
+
+### How Modifiers Work
+- **API Endpoint**: Uses `mask_update` endpoint from PII API
+- **Content Transformation**: `page_content` changes from array of pages to single complete text corpus
+- **State Addition**: `piiState` added to file containing:
+  - `entities`: PII entities with masking states
+  - `sessionId`: PII API session identifier
+  - `apiKey`: API key for PII processing
+  - `lastUpdated`: Timestamp of last modification
+  - `modifiers`: Applied PII modifiers
+
+### Modifier Operations
+- **Adding Modifiers**: Uses `mask_update` endpoint from PII API
+- **Removing Modifiers**: Can be removed by users
+- **Entity Unmasking**: PII entities can only be unmasked by users (not automatically)
+
+### Modifier Types
+- **String Mask**: Masks specific text patterns
+- **Ignore**: Ignores certain PII types
+- **Word Mask**: Masks individual words
+
+## File Processing States
+
+### Upload States
+1. **Uploading**: File being uploaded to storage
+2. **Processing**: Content extraction and PII detection
+3. **Done**: Processing complete, ready for use
+
+### PII States
+1. **No PII**: File has no detected PII entities
+2. **PII Detected**: Entities found but not yet processed with modifiers
+3. **Modifiers Applied**: PII processing complete with user-defined modifiers
+4. **Masked/Unmasked**: Individual entities can be toggled
+
+## Integration Points
+
+### Chat Integration
+- Files attached to chat messages follow standard storage pattern
+- Conversation context maintained through PII session management
+- Filename masking applied based on PII detection settings
+- File content processed for retrieval and context injection
+- PII entities tracked per conversation for consistent masking/unmasking
+
+### Knowledge Base Integration
+- Files inherit knowledge base PII settings
+- Collection-level PII policies applied
+- Individual file PII states maintained
+- Cross-knowledge base sharing with individual PII contexts
+
+## Development Guidelines
+
+### When Working with File Uploads
+1. **Always check processing status** before accessing file content
+2. **Handle both temporary and persistent** file states
+3. **Include PII detection** in file processing workflows
+4. **Maintain conversation context** for PII consistency
+5. **Implement proper error handling** for upload failures
+
+### When Working with PII Modifiers
+1. **Use `mask_update` endpoint** for modifier changes
+2. **Update `piiState`** when modifiers are applied
+3. **Preserve user unmasking** decisions
+4. **Handle content transformation** (page_content array to single text)
+5. **Maintain session consistency** across file operations
+
+### When Working with File Content
+1. **Check for PII entities** before displaying content
+2. **Apply appropriate masking** based on user preferences
+3. **Handle filename masking** for privacy
+4. **Maintain position accuracy** for PII entities
+5. **Support both masked and unmasked** content views
+
+## Common Patterns
+
+### File Upload with PII
+```typescript
+// Upload file with PII detection
+const uploadFile = async (file: File, conversationId?: string) => {
+  const formData = new FormData();
+  formData.append('file', file);
+  
+  if (conversationId) {
+    formData.append('conversation_id', conversationId);
+  }
+  
+  const response = await fetch('/api/v1/files/', {
+    method: 'POST',
+    body: formData
+  });
+  
+  return response.json();
+};
+```
+
+### Apply PII Modifiers
+```typescript
+// Apply modifiers to file
+const applyModifiers = async (fileId: string, modifiers: PiiModifier[]) => {
+  const response = await updatePiiMasking(
+    apiKey,
+    fileContent,
+    piiEntities,
+    modifiers,
+    false
+  );
+  
+  // Update file with new PII state
+  await updateFilePiiState(fileId, response.pii, modifiers);
+};
+```
+
+### Handle File PII State
+```typescript
+// Get file PII entities
+const getFilePiiEntities = (file: FileData): PiiEntity[] => {
+  return file.data.pii ? Object.values(file.data.pii) : [];
+};
+
+// Check if file has PII
+const hasPii = (file: FileData): boolean => {
+  return file.data.pii && Object.keys(file.data.pii).length > 0;
+};
+```
+
+## Error Handling
+
+### Upload Failures
+- Network errors during file upload
+- Storage provider failures
+- File size or type restrictions
+- Processing errors during content extraction
+
+### PII Processing Errors
+- API failures during PII detection
+- Position mapping errors
+- Modifier application failures
+- State synchronization issues
+
+### Recovery Strategies
+- Retry failed uploads
+- Fallback to basic content extraction
+- Graceful degradation when PII API unavailable
+- Maintain file state consistency
+
+## Performance Considerations
+
+### Large Files
+- Chunked upload for large files
+- Streaming content extraction
+- Incremental PII processing
+- Memory-efficient content handling
+
+### PII Processing
+- Batch PII detection for multiple files
+- Cache PII results to avoid re-processing
+- Optimize position mapping for large documents
+- Use incremental updates for modifiers
+
+## Testing
+
+### File Upload Tests
+- Upload various file types
+- Test with and without PII detection
+- Verify processing status updates
+- Test error handling scenarios
+
+### PII Modifier Tests
+- Apply different modifier types
+- Test modifier removal
+- Verify content transformation
+- Test state persistence
+
+### Integration Tests
+- End-to-end file upload with PII
+- Cross-conversation PII consistency
+- Knowledge base file processing
+- Error recovery scenarios
