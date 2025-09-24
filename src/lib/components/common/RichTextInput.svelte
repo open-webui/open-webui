@@ -139,7 +139,9 @@
 	import FormattingButtons from './RichTextInput/FormattingButtons.svelte';
 
 	import { PASTED_TEXT_CHARACTER_LIMIT } from '$lib/constants';
-	import { all, createLowlight } from 'lowlight';
+	import { createLowlight } from 'lowlight';
+	import hljs from 'highlight.js';
+
 	import type { SocketIOCollaborationProvider } from './RichTextInput/Collaboration';
 
 	export let oncompositionstart = (e) => {};
@@ -147,7 +149,10 @@
 	export let onChange = (e) => {};
 
 	// create a lowlight instance with all languages loaded
-	const lowlight = createLowlight(all);
+	const lowlight = createLowlight(hljs.listLanguages().reduce((obj, lang) => {
+		obj[lang] = () => hljs.getLanguage(lang);
+		return obj;
+	}, {} as Record<string, any>));
 
 	export let editor: Editor | null = null;
 
@@ -173,6 +178,7 @@
 	};
 
 	export let richText = true;
+	export let dragHandle = false;
 	export let link = false;
 	export let image = false;
 	export let fileHandler = false;
@@ -602,6 +608,20 @@
 		}
 	});
 
+	import { listDragHandlePlugin } from './RichTextInput/listDragHandlePlugin.js';
+
+	const ListItemDragHandle = Extension.create({
+		name: 'listItemDragHandle',
+		addProseMirrorPlugins() {
+			return [
+				listDragHandlePlugin({
+					itemTypeNames: ['listItem', 'taskItem'],
+					getEditor: () => this.editor
+				})
+			];
+		}
+	});
+
 	onMount(async () => {
 		content = value;
 
@@ -658,6 +678,7 @@
 				StarterKit.configure({
 					link: link
 				}),
+				...(dragHandle ? [ListItemDragHandle] : []),
 				Placeholder.configure({ placeholder: () => _placeholder }),
 				SelectionDecoration,
 
@@ -1083,11 +1104,11 @@
 </script>
 
 {#if richText && showFormattingToolbar}
-	<div bind:this={bubbleMenuElement} id="bubble-menu" class="p-0">
+	<div bind:this={bubbleMenuElement} id="bubble-menu" class="p-0 {editor ? '' : 'hidden'}">
 		<FormattingButtons {editor} />
 	</div>
 
-	<div bind:this={floatingMenuElement} id="floating-menu" class="p-0">
+	<div bind:this={floatingMenuElement} id="floating-menu" class="p-0 {editor ? '' : 'hidden'}">
 		<FormattingButtons {editor} />
 	</div>
 {/if}

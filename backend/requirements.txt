@@ -46,6 +46,7 @@ anthropic
 google-genai==1.32.0
 google-generativeai==0.8.5
 tiktoken
+mcp==1.14.1
 
 langchain==0.3.26
 langchain-community==0.3.27
@@ -121,7 +122,7 @@ pytest-docker~=3.1.1
 googleapis-common-protos==1.70.0
 google-cloud-storage==2.19.0
 
-azure-identity==1.23.0
+azure-identity==1.25.0
 azure-storage-blob==12.24.1
 
 

@@ -191,20 +191,30 @@
 						{/if}
 					</div>
 				{/if}
+			{/if}
+		{/if}
 
-				{#if attributes?.done === 'true'}
-					{#if typeof files === 'object'}
-						{#each files ?? [] as file, idx}
-							{#if file.startsWith('data:image/')}
-								<Image
-									id={`${collapsibleId}-tool-calls-${attributes?.id}-result-${idx}`}
-									src={file}
-									alt="Image"
-								/>
-							{/if}
-						{/each}
+		{#if attributes?.done === 'true'}
+			{#if typeof files === 'object'}
+				{#each files ?? [] as file, idx}
+					{#if typeof file === 'string'}
+						{#if file.startsWith('data:image/')}
+							<Image
+								id={`${collapsibleId}-tool-calls-${attributes?.id}-result-${idx}`}
+								src={file}
+								alt="Image"
+							/>
+						{/if}
+					{:else if typeof file === 'object'}
+						{#if file.type === 'image' && file.url}
+							<Image
+								id={`${collapsibleId}-tool-calls-${attributes?.id}-result-${idx}`}
+								src={file.url}
+								alt="Image"
+							/>
+						{/if}
 					{/if}
-				{/if}
+				{/each}
 			{/if}
 		{/if}
 	{:else}

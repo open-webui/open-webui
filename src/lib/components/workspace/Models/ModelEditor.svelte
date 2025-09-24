@@ -587,7 +587,7 @@
 					</div>
 
 					<div class="my-2">
-						<div class="px-3 py-2 bg-gray-50 dark:bg-gray-950 rounded-lg">
+						<div class="px-4 py-3 bg-gray-50 dark:bg-gray-950 rounded-3xl">
 							<AccessControl
 								bind:accessControl
 								accessRoles={['read', 'write']}

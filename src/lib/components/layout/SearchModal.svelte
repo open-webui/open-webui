@@ -149,9 +149,9 @@
 		chatListLoading = false;
 	};
 
-	const init = () => {
+	$: if (show) {
 		searchHandler();
-	};
+	}
 
 	const onKeyDown = (e) => {
 		const searchOptions = document.getElementById('search-options-container');
@@ -205,8 +205,6 @@
 	};
 
 	onMount(() => {
-		init();
-
 		document.addEventListener('keydown', onKeyDown);
 	});
 

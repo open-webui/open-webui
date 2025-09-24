@@ -1,3 +1,4 @@
+import logging
 from fastapi import APIRouter, Depends, Request, HTTPException
 from pydantic import BaseModel, ConfigDict
 
@@ -12,9 +13,15 @@ from open_webui.utils.tools import (
     get_tool_server_url,
     set_tool_servers,
 )
+from open_webui.utils.mcp.client import MCPClient
+
+from open_webui.env import SRC_LOG_LEVELS
 
 
 router = APIRouter()
+
+log = logging.getLogger(__name__)
+log.setLevel(SRC_LOG_LEVELS["MAIN"])
 
 
 ############################
@@ -87,6 +94,7 @@ async def set_connections_config(
 class ToolServerConnection(BaseModel):
     url: str
     path: str
+    type: Optional[str] = "openapi"  # openapi, mcp
     auth_type: Optional[str]
     key: Optional[str]
     config: Optional[dict]
@@ -129,19 +137,72 @@ async def verify_tool_servers_config(
     Verify the connection to the tool server.
     """
     try:
+        if form_data.type == "mcp":
+            try:
+                client = MCPClient()
+                auth = None
+                headers = None
 
-        token = None
-        if form_data.auth_type == "bearer":
-            token = form_data.key
-        elif form_data.auth_type == "session":
-            token = request.state.token.credentials
+                token = None
+                if form_data.auth_type == "bearer":
+                    token = form_data.key
+                elif form_data.auth_type == "session":
+                    token = request.state.token.credentials
+                elif form_data.auth_type == "system_oauth":
+                    try:
+                        if request.cookies.get("oauth_session_id", None):
+                            token = (
+                                await request.app.state.oauth_manager.get_oauth_token(
+                                    user.id,
+                                    request.cookies.get("oauth_session_id", None),
+                                )
+                            )
+                    except Exception as e:
+                        pass
 
-        url = get_tool_server_url(form_data.url, form_data.path)
-        return await get_tool_server_data(token, url)
+                if token:
+                    headers = {"Authorization": f"Bearer {token}"}
+
+                await client.connect(form_data.url, auth=auth, headers=headers)
+                specs = await client.list_tool_specs()
+                return {
+                    "status": True,
+                    "specs": specs,
+                }
+            except Exception as e:
+                log.debug(f"Failed to create MCP client: {e}")
+                raise HTTPException(
+                    status_code=400,
+                    detail=f"Failed to create MCP client",
+                )
+            finally:
+                if client:
+                    await client.disconnect()
+        else:  # openapi
+            token = None
+            if form_data.auth_type == "bearer":
+                token = form_data.key
+            elif form_data.auth_type == "session":
+                token = request.state.token.credentials
+            elif form_data.auth_type == "system_oauth":
+                try:
+                    if request.cookies.get("oauth_session_id", None):
+                        token = await request.app.state.oauth_manager.get_oauth_token(
+                            user.id,
+                            request.cookies.get("oauth_session_id", None),
+                        )
+                except Exception as e:
+                    pass
+
+            url = get_tool_server_url(form_data.url, form_data.path)
+            return await get_tool_server_data(token, url)
+    except HTTPException as e:
+        raise e
     except Exception as e:
+        log.debug(f"Failed to connect to the tool server: {e}")
         raise HTTPException(
             status_code=400,
-            detail=f"Failed to connect to the tool server: {str(e)}",
+            detail=f"Failed to connect to the tool server",
         )
 
 

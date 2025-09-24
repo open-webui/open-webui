@@ -301,7 +301,8 @@ from open_webui.config import (
     GOOGLE_DRIVE_CLIENT_ID,
     GOOGLE_DRIVE_API_KEY,
     ENABLE_ONEDRIVE_INTEGRATION,
-    ONEDRIVE_CLIENT_ID,
+    ONEDRIVE_CLIENT_ID_PERSONAL,
+    ONEDRIVE_CLIENT_ID_BUSINESS,
     ONEDRIVE_SHAREPOINT_URL,
     ONEDRIVE_SHAREPOINT_TENANT_ID,
     ENABLE_ONEDRIVE_PERSONAL,
@@ -1530,6 +1531,14 @@ async def chat_completion(
 
                 except:
                     pass
+        finally:
+            try:
+                if mcp_clients := metadata.get("mcp_clients"):
+                    for client in mcp_clients:
+                        await client.disconnect()
+            except Exception as e:
+                log.debug(f"Error cleaning up: {e}")
+                pass
 
     if (
         metadata.get("session_id")
@@ -1743,7 +1752,8 @@ async def get_app_config(request: Request):
                     "api_key": GOOGLE_DRIVE_API_KEY.value,
                 },
                 "onedrive": {
-                    "client_id": ONEDRIVE_CLIENT_ID.value,
+                    "client_id_personal": ONEDRIVE_CLIENT_ID_PERSONAL,
+                    "client_id_business": ONEDRIVE_CLIENT_ID_BUSINESS,
                     "sharepoint_url": ONEDRIVE_SHAREPOINT_URL.value,
                     "sharepoint_tenant_id": ONEDRIVE_SHAREPOINT_TENANT_ID.value,
                 },

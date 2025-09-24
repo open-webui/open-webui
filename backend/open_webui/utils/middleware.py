@@ -53,6 +53,11 @@ from open_webui.routers.pipelines import (
 from open_webui.routers.memories import query_memory, QueryMemoryForm
 
 from open_webui.utils.webhook import post_webhook
+from open_webui.utils.files import (
+    get_audio_url_from_base64,
+    get_file_url_from_base64,
+    get_image_url_from_base64,
+)
 
 
 from open_webui.models.users import UserModel
@@ -87,6 +92,7 @@ from open_webui.utils.filter import (
 )
 from open_webui.utils.code_interpreter import execute_code_jupyter
 from open_webui.utils.payload import apply_system_prompt_to_body
+from open_webui.utils.mcp.client import MCPClient
 
 
 from open_webui.config import (
@@ -145,12 +151,14 @@ async def chat_completion_tools_handler(
 
     def get_tools_function_calling_payload(messages, task_model_id, content):
         user_message = get_last_user_message(messages)
-        history = "\n".join(
+
+        recent_messages = messages[-4:] if len(messages) > 4 else messages
+        chat_history = "\n".join(
             f"{message['role'].upper()}: \"\"\"{message['content']}\"\"\""
-            for message in messages[::-1][:4]
+            for message in recent_messages
         )
 
-        prompt = f"History:\n{history}\nQuery: {user_message}"
+        prompt = f"History:\n{chat_history}\nQuery: {user_message}"
 
         return {
             "model": task_model_id,
@@ -988,14 +996,91 @@ async def process_chat_payload(request, form_data, user, metadata, model):
     # Server side tools
     tool_ids = metadata.get("tool_ids", None)
     # Client side tools
-    tool_servers = metadata.get("tool_servers", None)
+    direct_tool_servers = metadata.get("tool_servers", None)
 
     log.debug(f"{tool_ids=}")
-    log.debug(f"{tool_servers=}")
+    log.debug(f"{direct_tool_servers=}")
 
     tools_dict = {}
 
+    mcp_clients = []
+    mcp_tools_dict = {}
+
     if tool_ids:
+        for tool_id in tool_ids:
+            if tool_id.startswith("server:mcp:"):
+                try:
+                    server_id = tool_id[len("server:mcp:") :]
+
+                    mcp_server_connection = None
+                    for (
+                        server_connection
+                    ) in request.app.state.config.TOOL_SERVER_CONNECTIONS:
+                        if (
+                            server_connection.get("type", "") == "mcp"
+                            and server_connection.get("info", {}).get("id") == server_id
+                        ):
+                            mcp_server_connection = server_connection
+                            break
+
+                    if not mcp_server_connection:
+                        log.error(f"MCP server with id {server_id} not found")
+                        continue
+
+                    auth_type = mcp_server_connection.get("auth_type", "")
+
+                    headers = {}
+                    if auth_type == "bearer":
+                        headers["Authorization"] = (
+                            f"Bearer {mcp_server_connection.get('key', '')}"
+                        )
+                    elif auth_type == "none":
+                        # No authentication
+                        pass
+                    elif auth_type == "session":
+                        headers["Authorization"] = (
+                            f"Bearer {request.state.token.credentials}"
+                        )
+                    elif auth_type == "system_oauth":
+                        oauth_token = extra_params.get("__oauth_token__", None)
+                        if oauth_token:
+                            headers["Authorization"] = (
+                                f"Bearer {oauth_token.get('access_token', '')}"
+                            )
+
+                    mcp_client = MCPClient()
+                    await mcp_client.connect(
+                        url=mcp_server_connection.get("url", ""),
+                        headers=headers if headers else None,
+                    )
+
+                    tool_specs = await mcp_client.list_tool_specs()
+                    for tool_spec in tool_specs:
+
+                        def make_tool_function(function_name):
+                            async def tool_function(**kwargs):
+                                return await mcp_client.call_tool(
+                                    function_name,
+                                    function_args=kwargs,
+                                )
+
+                            return tool_function
+
+                        tool_function = make_tool_function(tool_spec["name"])
+
+                        mcp_tools_dict[tool_spec["name"]] = {
+                            "spec": tool_spec,
+                            "callable": tool_function,
+                            "type": "mcp",
+                            "client": mcp_client,
+                            "direct": False,
+                        }
+
+                    mcp_clients.append(mcp_client)
+                except Exception as e:
+                    log.debug(e)
+                    continue
+
         tools_dict = await get_tools(
             request,
             tool_ids,
@@ -1007,9 +1092,11 @@ async def process_chat_payload(request, form_data, user, metadata, model):
                 "__files__": metadata.get("files", []),
             },
         )
+        if mcp_tools_dict:
+            tools_dict = {**tools_dict, **mcp_tools_dict}
 
-    if tool_servers:
-        for tool_server in tool_servers:
+    if direct_tool_servers:
+        for tool_server in direct_tool_servers:
             tool_specs = tool_server.pop("specs", [])
 
             for tool in tool_specs:
@@ -1019,6 +1106,9 @@ async def process_chat_payload(request, form_data, user, metadata, model):
                     "server": tool_server,
                 }
 
+    if mcp_clients:
+        metadata["mcp_clients"] = mcp_clients
+
     if tools_dict:
         if metadata.get("params", {}).get("function_calling") == "native":
             # If the function calling is native, then call the tools function calling handler
@@ -1027,6 +1117,7 @@ async def process_chat_payload(request, form_data, user, metadata, model):
                 {"type": "function", "function": tool.get("spec", {})}
                 for tool in tools_dict.values()
             ]
+
         else:
             # If the function calling is not native, then call the tools function calling handler
             try:
@@ -2330,6 +2421,8 @@ async def process_chat_response(
                     results = []
 
                     for tool_call in response_tool_calls:
+
+                        print("tool_call", tool_call)
                         tool_call_id = tool_call.get("id", "")
                         tool_name = tool_call.get("function", {}).get("name", "")
                         tool_args = tool_call.get("function", {}).get("arguments", "{}")
@@ -2405,7 +2498,6 @@ async def process_chat_response(
                                 tool_result = str(e)
 
                         tool_result_embeds = []
-
                         if isinstance(tool_result, HTMLResponse):
                             content_disposition = tool_result.headers.get(
                                 "Content-Disposition", ""
@@ -2478,8 +2570,59 @@ async def process_chat_response(
                             for item in tool_result:
                                 # check if string
                                 if isinstance(item, str) and item.startswith("data:"):
-                                    tool_result_files.append(item)
+                                    tool_result_files.append(
+                                        {
+                                            "type": "data",
+                                            "content": item,
+                                        }
+                                    )
                                     tool_result.remove(item)
+
+                                if tool.get("type") == "mcp":
+                                    if isinstance(item, dict):
+                                        if (
+                                            item.get("type") == "image"
+                                            or item.get("type") == "audio"
+                                        ):
+                                            file_url = get_file_url_from_base64(
+                                                request,
+                                                f"data:{item.get('mimeType')};base64,{item.get('data', item.get('blob', ''))}",
+                                                {
+                                                    "chat_id": metadata.get(
+                                                        "chat_id", None
+                                                    ),
+                                                    "message_id": metadata.get(
+                                                        "message_id", None
+                                                    ),
+                                                    "session_id": metadata.get(
+                                                        "session_id", None
+                                                    ),
+                                                    "result": item,
+                                                },
+                                                user,
+                                            )
+
+                                            tool_result_files.append(
+                                                {
+                                                    "type": item.get("type", "data"),
+                                                    "url": file_url,
+                                                }
+                                            )
+                                            tool_result.remove(item)
+
+                        if tool_result_files:
+                            if not isinstance(tool_result, list):
+                                tool_result = [
+                                    tool_result,
+                                ]
+
+                            for file in tool_result_files:
+                                tool_result.append(
+                                    {
+                                        "type": file.get("type", "data"),
+                                        "content": "Result is being displayed as a file.",
+                                    }
+                                )
 
                         if isinstance(tool_result, dict) or isinstance(
                             tool_result, list
@@ -2647,23 +2790,18 @@ async def process_chat_response(
                                     if isinstance(stdout, str):
                                         stdoutLines = stdout.split("\n")
                                         for idx, line in enumerate(stdoutLines):
+
                                             if "data:image/png;base64" in line:
-                                                image_url = ""
-                                                # Extract base64 image data from the line
-                                                image_data, content_type = (
-                                                    load_b64_image_data(line)
+                                                image_url = get_image_url_from_base64(
+                                                    request,
+                                                    line,
+                                                    metadata,
+                                                    user,
                                                 )
-                                                if image_data is not None:
-                                                    image_url = upload_image(
-                                                        request,
-                                                        image_data,
-                                                        content_type,
-                                                        metadata,
-                                                        user,
+                                                if image_url:
+                                                    stdoutLines[idx] = (
+                                                        f"![Output Image]({image_url})"
                                                     )
-                                                stdoutLines[idx] = (
-                                                    f"![Output Image]({image_url})"
-                                                )
 
                                         output["stdout"] = "\n".join(stdoutLines)
 
@@ -2673,19 +2811,12 @@ async def process_chat_response(
                                         resultLines = result.split("\n")
                                         for idx, line in enumerate(resultLines):
                                             if "data:image/png;base64" in line:
-                                                image_url = ""
-                                                # Extract base64 image data from the line
-                                                image_data, content_type = (
-                                                    load_b64_image_data(line)
+                                                image_url = get_image_url_from_base64(
+                                                    request,
+                                                    line,
+                                                    metadata,
+                                                    user,
                                                 )
-                                                if image_data is not None:
-                                                    image_url = upload_image(
-                                                        request,
-                                                        image_data,
-                                                        content_type,
-                                                        metadata,
-                                                        user,
-                                                    )
                                                 resultLines[idx] = (
                                                     f"![Output Image]({image_url})"
                                                 )
