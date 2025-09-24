@@ -24,6 +24,8 @@
 	import Chats from './InputMenu/Chats.svelte';
 	import Notes from './InputMenu/Notes.svelte';
 	import Knowledge from './InputMenu/Knowledge.svelte';
+	import Link from '$lib/components/icons/Link.svelte';
+	import AttachWebpageModal from './AttachWebpageModal.svelte';
 
 	const i18n = getContext('i18n');
 
@@ -39,10 +41,13 @@
 	export let uploadGoogleDriveHandler: Function;
 	export let uploadOneDriveHandler: Function;
 
+	export let onUpload: Function;
 	export let onClose: Function;
 
 	let show = false;
 	let tab = '';
+
+	let showAttachWebpageModal = false;
 
 	let fileUploadEnabled = true;
 	$: fileUploadEnabled =
@@ -77,6 +82,13 @@
 		show = false;
 	};
 </script>
+
+<AttachWebpageModal
+	bind:show={showAttachWebpageModal}
+	onSubmit={(e) => {
+		onUpload(e);
+	}}
+/>
 
 <!-- Hidden file input used to open the camera on mobile -->
 <input
@@ -165,6 +177,16 @@
 							<div class=" line-clamp-1">{$i18n.t('Capture')}</div>
 						</DropdownMenu.Item>
 					</Tooltip>
+
+					<DropdownMenu.Item
+						class="flex gap-2 items-center px-3 py-1.5 text-sm cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 rounded-xl"
+						on:click={() => {
+							showAttachWebpageModal = true;
+						}}
+					>
+						<Link />
+						<div class="line-clamp-1">{$i18n.t('Attach Webpage')}</div>
+					</DropdownMenu.Item>
 
 					{#if $config?.features?.enable_notes ?? false}
 						<Tooltip
