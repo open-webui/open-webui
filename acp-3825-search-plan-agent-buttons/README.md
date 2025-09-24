@@ -54,3 +54,10 @@ SEARCH_PLAN_AGENT_BUTTONS_MAPPING='[
 - Notes:
     - Matching is using a containment check against the model response (the configured string is searched for in the response). Adjust the exact trigger string to match the phrasing the model is expected to produce.
     - Use this variable together with SEARCH_PLAN_AGENT_BUTTONS_MAPPING to control when and which buttons appear.
+
+Files changed:
+@src\lib\components\chat\Messages\ResponseMessage.svelte
+@src\lib\components\chat\Chat.svelte
+@src\lib\components\chat\MessageInput.svelte
+@src\lib\components\chat\Messages.svelte
+@src\lib\components\chat\Messages\Message.svelte
