@@ -254,7 +254,7 @@ class OAuthManager:
 
             token_endpoint = None
             async with aiohttp.ClientSession(trust_env=True) as session_http:
-                async with session_http.get(client.gserver_metadata_url) as r:
+                async with session_http.get(client._server_metadata_url) as r:
                     if r.status == 200:
                         openid_data = await r.json()
                         token_endpoint = openid_data.get("token_endpoint")
@@ -301,7 +301,7 @@ class OAuthManager:
                             "expires_in" in new_token_data
                             and "expires_at" not in new_token_data
                         ):
-                            new_token_data["expires_at"] = (
+                            new_token_data["expires_at"] = int(
                                 datetime.now().timestamp()
                                 + new_token_data["expires_in"]
                             )
