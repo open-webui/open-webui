@@ -12,7 +12,7 @@
 	import calendar from 'dayjs/plugin/calendar';
 	import Loader from '../common/Loader.svelte';
 	import { createMessagesList } from '$lib/utils';
-	import { user } from '$lib/stores';
+	import { config, user } from '$lib/stores';
 	import Messages from '../chat/Messages.svelte';
 	import { goto } from '$app/navigation';
 	import PencilSquare from '../icons/PencilSquare.svelte';
@@ -31,15 +31,6 @@
 				onClose();
 			},
 			icon: PencilSquare
-		},
-		{
-			label: 'Create a new note',
-			onClick: async () => {
-				await goto('/notes');
-				show = false;
-				onClose();
-			},
-			icon: Note
 		}
 	];
 
@@ -234,6 +225,24 @@
 	};
 
 	onMount(() => {
+		actions = [
+			...actions,
+			...(($config?.features?.enable_notes ?? false) &&
+			($user?.role === 'admin' || ($user?.permissions?.features?.notes ?? true))
+				? [
+						{
+							label: 'Create a new note',
+							onClick: async () => {
+								await goto('/notes');
+								show = false;
+								onClose();
+							},
+							icon: Note
+						}
+					]
+				: [])
+		];
+
 		document.addEventListener('keydown', onKeyDown);
 	});
 
