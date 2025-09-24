@@ -162,7 +162,7 @@ type Settings = {
 	richTextInput?: boolean;
 	params?: any;
 	userLocation?: any;
-	webSearch?: boolean;
+	webSearch?: any;
 	memory?: boolean;
 	autoTags?: boolean;
 	autoFollowUps?: boolean;
@@ -277,7 +277,7 @@ type PromptSuggestion = {
 	title: [string, string];
 };
 
-type SessionUser = {
+export type SessionUser = {
 	permissions: any;
 	id: string;
 	email: string;

@@ -44,8 +44,12 @@
 		accessControl = channel.access_control;
 	};
 
-	$: if (channel) {
-		init();
+	$: if (show) {
+		if (channel) {
+			init();
+		}
+	} else {
+		resetHandler();
 	}
 
 	let showDeleteConfirmDialog = false;
@@ -67,6 +71,12 @@
 		}
 
 		show = false;
+	};
+
+	const resetHandler = () => {
+		name = '';
+		accessControl = {};
+		loading = false;
 	};
 </script>
 
@@ -115,7 +125,7 @@
 					<hr class=" border-gray-100 dark:border-gray-700/10 my-2.5 w-full" />
 
 					<div class="my-2 -mx-2">
-						<div class="px-3 py-2 bg-gray-50 dark:bg-gray-950 rounded-lg">
+						<div class="px-4 py-3 bg-gray-50 dark:bg-gray-950 rounded-3xl">
 							<AccessControl bind:accessControl />
 						</div>
 					</div>

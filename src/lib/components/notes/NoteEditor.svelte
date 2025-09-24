@@ -4,9 +4,6 @@
 	import fileSaver from 'file-saver';
 	const { saveAs } = fileSaver;
 
-	import jsPDF from 'jspdf';
-	import html2canvas from 'html2canvas-pro';
-
 	const i18n = getContext('i18n');
 
 	import { marked } from 'marked';
@@ -544,11 +541,7 @@ ${content}
 					}
 				};
 
-				reader.readAsDataURL(
-					file['type'] === 'image/heic'
-						? await convertHeicToJpeg(file)
-						: file
-				);
+				reader.readAsDataURL(file['type'] === 'image/heic' ? await convertHeicToJpeg(file) : file);
 			});
 
 			return await uploadImagePromise;
@@ -579,6 +572,11 @@ ${content}
 
 	const downloadPdf = async (note) => {
 		try {
+			const [{ default: jsPDF }, { default: html2canvas }] = await Promise.all([
+				import('jspdf'),
+				import('html2canvas-pro')
+			]);
+
 			// Define a fixed virtual screen size
 			const virtualWidth = 1024; // Fixed width (adjust as needed)
 			const virtualHeight = 1400; // Fixed height (adjust as needed)
@@ -1218,6 +1216,7 @@ Provide the enhanced notes in markdown format. Use markdown syntax for headings,
 							collaboration={true}
 							socket={$socket}
 							user={$user}
+							dragHandle={true}
 							link={true}
 							image={true}
 							{files}

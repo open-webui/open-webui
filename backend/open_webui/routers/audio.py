@@ -337,7 +337,7 @@ async def speech(request: Request, user=Depends(get_verified_user)):
                 timeout=timeout, trust_env=True
             ) as session:
                 r = await session.post(
-                    url=urljoin(request.app.state.config.TTS_OPENAI_API_BASE_URL, "/audio/speech"),
+                    url=f"{request.app.state.config.TTS_OPENAI_API_BASE_URL}/audio/speech",
                     json=payload,
                     headers={
                         "Content-Type": "application/json",
@@ -465,7 +465,8 @@ async def speech(request: Request, user=Depends(get_verified_user)):
                 timeout=timeout, trust_env=True
             ) as session:
                 async with session.post(
-                    urljoin(base_url or f"https://{region}.tts.speech.microsoft.com", "/cognitiveservices/v1"),
+                    (base_url or f"https://{region}.tts.speech.microsoft.com")
+                    + "/cognitiveservices/v1",
                     headers={
                         "Ocp-Apim-Subscription-Key": request.app.state.config.TTS_API_KEY,
                         "Content-Type": "application/ssml+xml",
@@ -549,7 +550,7 @@ def transcription_handler(request, file_path, metadata):
     metadata = metadata or {}
 
     languages = [
-        metadata.get("language", None) if WHISPER_LANGUAGE == "" else WHISPER_LANGUAGE,
+        metadata.get("language", None) if not WHISPER_LANGUAGE else WHISPER_LANGUAGE,
         None,  # Always fallback to None in case transcription fails
     ]
 

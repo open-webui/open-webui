@@ -15,6 +15,9 @@ from open_webui.models.folders import (
     Folders,
 )
 from open_webui.models.chats import Chats
+from open_webui.models.files import Files
+from open_webui.models.knowledge import Knowledges
+
 
 from open_webui.config import UPLOAD_DIR
 from open_webui.env import SRC_LOG_LEVELS
@@ -44,6 +47,31 @@ router = APIRouter()
 @router.get("/", response_model=list[FolderModel])
 async def get_folders(user=Depends(get_verified_user)):
     folders = Folders.get_folders_by_user_id(user.id)
+
+    # Verify folder data integrity
+    for folder in folders:
+        if folder.data:
+            if "files" in folder.data:
+                valid_files = []
+                for file in folder.data["files"]:
+
+                    if file.get("type") == "file":
+                        if Files.check_access_by_user_id(
+                            file.get("id"), user.id, "read"
+                        ):
+                            valid_files.append(file)
+                    elif file.get("type") == "collection":
+                        if Knowledges.check_access_by_user_id(
+                            file.get("id"), user.id, "read"
+                        ):
+                            valid_files.append(file)
+                    else:
+                        valid_files.append(file)
+
+                folder.data["files"] = valid_files
+                Folders.update_folder_by_id_and_user_id(
+                    folder.id, user.id, FolderUpdateForm(data=folder.data)
+                )
 
     return [
         {

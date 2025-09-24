@@ -82,7 +82,7 @@
 </script>
 
 <Modal bind:show size="lg">
-	<div class="font-primary px-6 py-5 w-full flex flex-col justify-center dark:text-gray-400">
+	<div class="font-primary px-4.5 py-3.5 w-full flex flex-col justify-center dark:text-gray-400">
 		<div class=" pb-2">
 			<div class="flex items-start justify-between">
 				<div>
@@ -236,7 +236,7 @@
 						/>
 					{:else}
 						<div class="max-h-96 overflow-scroll scrollbar-hidden text-xs whitespace-pre-wrap">
-							{item?.file?.data?.content ?? 'No content'}
+							{(item?.file?.data?.content ?? '').trim() || 'No content'}
 						</div>
 					{/if}
 				{:else}
@@ -251,7 +251,7 @@
 
 					{#if item?.file?.data}
 						<div class="max-h-96 overflow-scroll scrollbar-hidden text-xs whitespace-pre-wrap">
-							{item?.file?.data?.content ?? 'No content'}
+							{(item?.file?.data?.content ?? '').trim() || 'No content'}
 						</div>
 					{/if}
 				{/if}

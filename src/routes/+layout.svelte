@@ -222,8 +222,19 @@
 
 		if (toolServer) {
 			console.log(toolServer);
+
+			let toolServerToken = null;
+			const auth_type = toolServer?.auth_type ?? 'bearer';
+			if (auth_type === 'bearer') {
+				toolServerToken = toolServer?.key;
+			} else if (auth_type === 'none') {
+				// No authentication
+			} else if (auth_type === 'session') {
+				toolServerToken = localStorage.token;
+			}
+
 			const res = await executeToolServer(
-				(toolServer?.auth_type ?? 'bearer') === 'bearer' ? toolServer?.key : localStorage.token,
+				toolServerToken,
 				toolServer.url,
 				data?.name,
 				data?.params,
@@ -443,7 +454,7 @@
 							goto(`/channels/${event.channel_id}`);
 						},
 						content: data?.content,
-						title: event?.channel?.name
+						title: `#${event?.channel?.name}`
 					},
 					duration: 15000,
 					unstyled: true
@@ -683,6 +694,16 @@
 <svelte:head>
 	<title>{$WEBUI_NAME}</title>
 	<link crossorigin="anonymous" rel="icon" href="{WEBUI_BASE_URL}/static/favicon.png" />
+
+	<meta name="apple-mobile-web-app-title" content={$WEBUI_NAME} />
+	<meta name="description" content={$WEBUI_NAME} />
+	<link
+		rel="search"
+		type="application/opensearchdescription+xml"
+		title={$WEBUI_NAME}
+		href="/opensearch.xml"
+		crossorigin="use-credentials"
+	/>
 </svelte:head>
 
 {#if showRefresh}
