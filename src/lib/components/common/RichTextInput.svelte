@@ -149,10 +149,15 @@
 	export let onChange = (e) => {};
 
 	// create a lowlight instance with all languages loaded
-	const lowlight = createLowlight(hljs.listLanguages().reduce((obj, lang) => {
-		obj[lang] = () => hljs.getLanguage(lang);
-		return obj;
-	}, {} as Record<string, any>));
+	const lowlight = createLowlight(
+		hljs.listLanguages().reduce(
+			(obj, lang) => {
+				obj[lang] = () => hljs.getLanguage(lang);
+				return obj;
+			},
+			{} as Record<string, any>
+		)
+	);
 
 	export let editor: Editor | null = null;
 
@@ -501,9 +506,14 @@
 
 	export const focus = () => {
 		if (editor) {
-			editor.view.focus();
-			// Scroll to the current selection
-			editor.view.dispatch(editor.view.state.tr.scrollIntoView());
+			try {
+				editor.view?.focus();
+				// Scroll to the current selection
+				editor.view?.dispatch(editor.view.state.tr.scrollIntoView());
+			} catch (e) {
+				// sometimes focusing throws an error, ignore
+				console.warn('Error focusing editor', e);
+			}
 		}
 	};
 
