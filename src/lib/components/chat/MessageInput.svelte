@@ -98,21 +98,9 @@
 
 	const submitHandler = async () => {
 		if (correctionHintActive) {
-			await tick();
-			dispatch('submit', prompt);
-
-			if (messageIdForCorrection) {
-				window.dispatchEvent(
-					new CustomEvent('correctionSubmitted', {
-						detail: { messageId: messageIdForCorrection }
-					})
-				);
-				messageIdForCorrection = null;
-			}
 			correctionHintActive = false;
-		} else {
-			dispatch('submit', prompt);
 		}
+		dispatch('submit', prompt);
 	};
 
 	$: onChange({

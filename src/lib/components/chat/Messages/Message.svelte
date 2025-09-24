@@ -39,6 +39,7 @@
 	export let addMessages;
 	export let triggerScroll;
 	export let readOnly = false;
+	export let showSearchPlanButtons = false;
 </script>
 
 <div
@@ -86,6 +87,7 @@
 				{regenerateResponse}
 				{addMessages}
 				{readOnly}
+				{showSearchPlanButtons}
 			/>
 		{:else}
 			<MultiResponseMessages

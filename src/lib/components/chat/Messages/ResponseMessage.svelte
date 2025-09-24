@@ -132,11 +132,10 @@
 
 	export let isLastMessage = true;
 	export let readOnly = false;
+	export let showSearchPlanButtons = false;
 
 	let buttonsContainerElement: HTMLDivElement;
 	let showDeleteConfirm = false;
-
-	let showCorrectionButtons = true;
 
 	let model = null;
 	$: model = $models.find((m) => m.id === message.model);
@@ -559,14 +558,6 @@
 	onMount(async () => {
 		// console.log('ResponseMessage mounted');
 
-		const handleCorrectionSubmitted = (event) => {
-			if (event.detail.messageId === message.id) {
-				showCorrectionButtons = false;
-			}
-		};
-
-		window.addEventListener('correctionSubmitted', handleCorrectionSubmitted);
-
 		await tick();
 		if (buttonsContainerElement) {
 			console.log(buttonsContainerElement);
@@ -580,10 +571,6 @@
 				}
 			});
 		}
-
-		return () => {
-			window.removeEventListener('correctionSubmitted', handleCorrectionSubmitted);
-		};
 	});
 </script>
 
@@ -878,7 +865,7 @@
 					</div>
 				</div>
 
-				{#if message.done && isLastMessage && showCorrectionButtons && message.content.includes($config?.features?.search_plan_agent_buttons_triggering_sentence)}
+				{#if showSearchPlanButtons && isLastMessage}
 					<div class="mt-2 mb-1 flex justify-start space-x-1.5 text-sm font-medium">
 						{#each $config?.features?.search_plan_agent_buttons_mapping ?? [] as button}
 							<button
@@ -898,7 +885,7 @@
 											})
 										);
 									}
-									showCorrectionButtons = false;
+									window.dispatchEvent(new CustomEvent('searchPlanButtonClicked'));
 								}}
 							>
 								{$i18n.t(button.Name)}
