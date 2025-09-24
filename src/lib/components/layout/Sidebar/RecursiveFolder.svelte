@@ -339,10 +339,6 @@
 		}, 500);
 	};
 
-	$: if (open !== null) {
-		isExpandedUpdateDebounceHandler();
-	}
-
 	const renameHandler = async () => {
 		console.log('Edit');
 		await tick();
@@ -427,6 +423,7 @@
 			(folders[folderId].items?.chats ?? []).length === 0}
 		onChange={(state) => {
 			dispatch('open', state);
+			isExpandedUpdateDebounceHandler();
 		}}
 	>
 		<!-- svelte-ignore a11y-no-static-element-interactions -->
