@@ -233,7 +233,7 @@
 						{
 							label: 'Create a new note',
 							onClick: async () => {
-								await goto('/notes');
+								await goto(`/notes${query ? `?content=${query}` : ''}`);
 								show = false;
 								onClose();
 							},
