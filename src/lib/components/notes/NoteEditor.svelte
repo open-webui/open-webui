@@ -872,7 +872,8 @@ Provide the enhanced notes in markdown format. Use markdown syntax for headings,
 		}
 
 		if (!selectedModelId) {
-			selectedModelId = $models.at(0)?.id || '';
+			selectedModelId =
+				$models.filter((model) => !(model?.info?.meta?.hidden ?? false)).at(0)?.id || '';
 		}
 
 		const dropzoneElement = document.getElementById('note-editor');
