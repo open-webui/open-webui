@@ -38,7 +38,7 @@
 	import MentionList from './MessageInput/MentionList.svelte';
 	import Skeleton from '../chat/Messages/Skeleton.svelte';
 
-	export let placeholder = $i18n.t('Send a Message');
+	export let placeholder = $i18n.t('Type here...');
 
 	export let id = null;
 	export let chatInputElement;
@@ -53,6 +53,7 @@
 	export let scrollEnd = true;
 	export let scrollToBottom: Function = () => {};
 
+	export let disabled = false;
 	export let acceptFiles = true;
 	export let showFormattingToolbar = true;
 
@@ -731,7 +732,9 @@
 				</div>
 			</div>
 
-			<div class="">
+			<div
+				class="{disabled ? 'opacity-50 pointer-events-none cursor-not-allowed' : ''} relative z-20"
+			>
 				{#if recording}
 					<VoiceRecording
 						bind:recording
@@ -836,6 +839,8 @@
 											bind:this={chatInputElement}
 											json={true}
 											messageInput={true}
+											editable={!disabled}
+											{placeholder}
 											richText={$settings?.richTextInput ?? true}
 											showFormattingToolbar={$settings?.showFormattingToolbar ?? false}
 											shiftEnter={!($settings?.ctrlEnterToSend ?? false) &&

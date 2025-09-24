@@ -201,6 +201,10 @@
 			<div class=" pb-[1rem] px-2.5 w-full">
 				<MessageInput
 					id={threadId}
+					disabled={!channel?.write_access}
+					placeholder={!channel?.write_access
+						? $i18n.t('You do not have permission to send messages in this thread.')
+						: $i18n.t('Reply to thread...')}
 					typingUsersClassName="from-gray-50 dark:from-gray-850"
 					{typingUsers}
 					userSuggestions={true}

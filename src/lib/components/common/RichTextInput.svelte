@@ -168,7 +168,7 @@
 	export let documentId = '';
 
 	export let className = 'input-prose';
-	export let placeholder = 'Type here...';
+	export let placeholder = $i18n.t('Type here...');
 	let _placeholder = placeholder;
 
 	$: if (placeholder !== _placeholder) {
@@ -689,7 +689,7 @@
 					link: link
 				}),
 				...(dragHandle ? [ListItemDragHandle] : []),
-				Placeholder.configure({ placeholder: () => _placeholder }),
+				Placeholder.configure({ placeholder: () => _placeholder, showOnlyWhenEditable: false }),
 				SelectionDecoration,
 
 				...(richText
@@ -1123,4 +1123,9 @@
 	</div>
 {/if}
 
-<div bind:this={element} class="relative w-full min-w-full h-full min-h-fit {className}" />
+<div
+	bind:this={element}
+	class="relative w-full min-w-full h-full min-h-fit {className} {!editable
+		? 'cursor-not-allowed'
+		: ''}"
+/>

@@ -10,7 +10,13 @@ from pydantic import BaseModel
 from open_webui.socket.main import sio, get_user_ids_from_room
 from open_webui.models.users import Users, UserNameResponse
 
-from open_webui.models.channels import Channels, ChannelModel, ChannelForm
+from open_webui.models.groups import Groups
+from open_webui.models.channels import (
+    Channels,
+    ChannelModel,
+    ChannelForm,
+    ChannelResponse,
+)
 from open_webui.models.messages import (
     Messages,
     MessageModel,
@@ -80,7 +86,7 @@ async def create_new_channel(form_data: ChannelForm, user=Depends(get_admin_user
 ############################
 
 
-@router.get("/{id}", response_model=Optional[ChannelModel])
+@router.get("/{id}", response_model=Optional[ChannelResponse])
 async def get_channel_by_id(id: str, user=Depends(get_verified_user)):
     channel = Channels.get_channel_by_id(id)
     if not channel:
@@ -95,7 +101,16 @@ async def get_channel_by_id(id: str, user=Depends(get_verified_user)):
             status_code=status.HTTP_403_FORBIDDEN, detail=ERROR_MESSAGES.DEFAULT()
         )
 
-    return ChannelModel(**channel.model_dump())
+    write_access = has_access(
+        user.id, type="write", access_control=channel.access_control, strict=False
+    )
+
+    return ChannelResponse(
+        **{
+            **channel.model_dump(),
+            "write_access": write_access or user.role == "admin",
+        }
+    )
 
 
 ############################
@@ -362,7 +377,7 @@ async def new_message_handler(
         )
 
     if user.role != "admin" and not has_access(
-        user.id, type="read", access_control=channel.access_control
+        user.id, type="write", access_control=channel.access_control, strict=False
     ):
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN, detail=ERROR_MESSAGES.DEFAULT()
@@ -658,7 +673,7 @@ async def add_reaction_to_message(
         )
 
     if user.role != "admin" and not has_access(
-        user.id, type="read", access_control=channel.access_control
+        user.id, type="write", access_control=channel.access_control, strict=False
     ):
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN, detail=ERROR_MESSAGES.DEFAULT()
@@ -724,7 +739,7 @@ async def remove_reaction_by_id_and_user_id_and_name(
         )
 
     if user.role != "admin" and not has_access(
-        user.id, type="read", access_control=channel.access_control
+        user.id, type="write", access_control=channel.access_control, strict=False
     ):
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN, detail=ERROR_MESSAGES.DEFAULT()
@@ -806,7 +821,9 @@ async def delete_message_by_id(
     if (
         user.role != "admin"
         and message.user_id != user.id
-        and not has_access(user.id, type="read", access_control=channel.access_control)
+        and not has_access(
+            user.id, type="write", access_control=channel.access_control, strict=False
+        )
     ):
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN, detail=ERROR_MESSAGES.DEFAULT()
