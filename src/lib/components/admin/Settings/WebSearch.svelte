@@ -13,6 +13,7 @@
 	export let saveHandler: Function;
 
 	let webSearchEngines = [
+		'ollama_cloud',
 		'searxng',
 		'yacy',
 		'google_pse',
