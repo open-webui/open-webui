@@ -1,17 +1,18 @@
 <script lang="ts">
 	import hljs from 'highlight.js';
-
+	import { toast } from 'svelte-sonner';
 	import { getContext, onMount, tick, onDestroy } from 'svelte';
+	import { config } from '$lib/stores';
+
+	import PyodideWorker from '$lib/workers/pyodide.worker?worker';
+	import { executeCode } from '$lib/apis/utils';
 	import { copyToClipboard, renderMermaidDiagram } from '$lib/utils';
 
 	import 'highlight.js/styles/github-dark.min.css';
 
-	import PyodideWorker from '$lib/workers/pyodide.worker?worker';
 	import CodeEditor from '$lib/components/common/CodeEditor.svelte';
 	import SvgPanZoom from '$lib/components/common/SVGPanZoom.svelte';
-	import { config } from '$lib/stores';
-	import { executeCode } from '$lib/apis/utils';
-	import { toast } from 'svelte-sonner';
+
 	import ChevronUp from '$lib/components/icons/ChevronUp.svelte';
 	import ChevronUpDown from '$lib/components/icons/ChevronUpDown.svelte';
 	import CommandLine from '$lib/components/icons/CommandLine.svelte';

@@ -9,7 +9,6 @@
 	import Badge from '$lib/components/common/Badge.svelte';
 	import Tooltip from '$lib/components/common/Tooltip.svelte';
 	import ChevronLeft from '$lib/components/icons/ChevronLeft.svelte';
-	import CodeEditor from '$lib/components/common/CodeEditor.svelte';
 
 	let formElement = null;
 	let loading = false;
