@@ -1171,26 +1171,15 @@ async def process_chat_payload(request, form_data, user, metadata, model):
             raise Exception("No user message found")
 
         if context_string != "":
-            # Workaround for Ollama 2.0+ system prompt issue
-            # TODO: replace with add_or_update_system_message
-            if model.get("owned_by") == "ollama":
-                form_data["messages"] = prepend_to_first_user_message_content(
-                    rag_template(
-                        request.app.state.config.RAG_TEMPLATE,
-                        context_string,
-                        prompt,
-                    ),
-                    form_data["messages"],
-                )
-            else:
-                form_data["messages"] = add_or_update_system_message(
-                    rag_template(
-                        request.app.state.config.RAG_TEMPLATE,
-                        context_string,
-                        prompt,
-                    ),
-                    form_data["messages"],
-                )
+            form_data["messages"] = add_or_update_user_message(
+                rag_template(
+                    request.app.state.config.RAG_TEMPLATE,
+                    context_string,
+                    prompt,
+                ),
+                form_data["messages"],
+                append=False,
+            )
 
     # If there are citations, add them to the data_items
     sources = [
