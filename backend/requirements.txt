@@ -48,8 +48,8 @@ google-generativeai==0.8.5
 tiktoken
 mcp==1.14.1
 
-langchain==0.3.26
-langchain-community==0.3.27
+langchain==0.3.27
+langchain-community==0.3.29
 
 fake-useragent==2.2.0
 chromadb==1.0.20
