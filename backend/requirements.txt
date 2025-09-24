@@ -9,7 +9,7 @@ python-jose==3.4.0
 passlib[bcrypt]==1.7.4
 cryptography
 
-requests==2.32.4
+requests==2.32.5
 aiohttp==3.12.15
 async-timeout
 aiocache
@@ -43,7 +43,7 @@ asgiref==3.8.1
 # AI libraries
 openai
 anthropic
-google-genai==1.32.0
+google-genai==1.38.0
 google-generativeai==0.8.5
 tiktoken
 mcp==1.14.1
