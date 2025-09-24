@@ -492,11 +492,16 @@ class ChatTable:
         self,
         user_id: str,
         include_archived: bool = False,
+        include_folders: bool = False,
         skip: Optional[int] = None,
         limit: Optional[int] = None,
     ) -> list[ChatTitleIdResponse]:
         with get_db() as db:
-            query = db.query(Chat).filter_by(user_id=user_id).filter_by(folder_id=None)
+            query = db.query(Chat).filter_by(user_id=user_id)
+
+            if not include_folders:
+                query = query.filter_by(folder_id=None)
+
             query = query.filter(or_(Chat.pinned == False, Chat.pinned == None))
 
             if not include_archived:
