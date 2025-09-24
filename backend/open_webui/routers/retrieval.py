@@ -78,6 +78,7 @@ from open_webui.retrieval.utils import (
 )
 from open_webui.utils.misc import (
     calculate_sha256_string,
+    sanitize_json_content,
 )
 from open_webui.utils.auth import get_admin_user, get_verified_user
 
@@ -1439,7 +1440,7 @@ def process_file(
                 )
             ]
 
-            text_content = form_data.content
+            text_content = sanitize_json_content(form_data.content)
         elif form_data.collection_name:
             # Check if the file has already been processed and save the content
             # Usage: /knowledge/{id}/file/add, /knowledge/{id}/file/update
@@ -1544,6 +1545,7 @@ def process_file(
                 ]
             text_content = " ".join([doc.page_content for doc in docs])
 
+        text_content = sanitize_json_content(text_content)
         log.debug(f"text_content: {text_content}")
         Files.update_file_data_by_id(
             file.id,
@@ -1636,7 +1638,7 @@ def process_text(
             metadata={"name": form_data.name, "created_by": user.id},
         )
     ]
-    text_content = form_data.content
+    text_content = sanitize_json_content(form_data.content)
     log.debug(f"text_content: {text_content}")
 
     result = save_docs_to_vector_db(request, docs, collection_name, user=user)

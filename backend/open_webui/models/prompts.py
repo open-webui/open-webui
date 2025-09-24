@@ -9,6 +9,7 @@ from pydantic import BaseModel, ConfigDict
 from sqlalchemy import BigInteger, Column, String, Text, JSON
 
 from open_webui.utils.access_control import has_access
+from open_webui.utils.misc import sanitize_json_content
 
 ####################
 # Prompts DB Schema
@@ -73,10 +74,11 @@ class PromptsTable:
     def insert_new_prompt(
         self, user_id: str, form_data: PromptForm
     ) -> Optional[PromptModel]:
+        sanitized_form_data = sanitize_json_content(form_data.model_dump())
         prompt = PromptModel(
             **{
                 "user_id": user_id,
-                **form_data.model_dump(),
+                **sanitized_form_data,
                 "timestamp": int(time.time()),
             }
         )
@@ -144,9 +146,9 @@ class PromptsTable:
         try:
             with get_db() as db:
                 prompt = db.query(Prompt).filter_by(command=command).first()
-                prompt.title = form_data.title
-                prompt.content = form_data.content
-                prompt.access_control = form_data.access_control
+                prompt.title = sanitize_json_content(form_data.title)
+                prompt.content = sanitize_json_content(form_data.content)
+                prompt.access_control = sanitize_json_content(form_data.access_control)
                 prompt.timestamp = int(time.time())
                 db.commit()
                 return PromptModel.model_validate(prompt)

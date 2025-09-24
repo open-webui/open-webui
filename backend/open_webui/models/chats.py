@@ -7,6 +7,7 @@ from typing import Optional
 from open_webui.internal.db import Base, get_db
 from open_webui.models.tags import TagModel, Tag, Tags
 from open_webui.models.folders import Folders
+from open_webui.utils.misc import sanitize_json_content
 from open_webui.env import SRC_LOG_LEVELS
 
 from pydantic import BaseModel, ConfigDict
@@ -126,16 +127,17 @@ class ChatTable:
     def insert_new_chat(self, user_id: str, form_data: ChatForm) -> Optional[ChatModel]:
         with get_db() as db:
             id = str(uuid.uuid4())
+            sanitized_chat = sanitize_json_content(form_data.chat)
             chat = ChatModel(
                 **{
                     "id": id,
                     "user_id": user_id,
                     "title": (
-                        form_data.chat["title"]
-                        if "title" in form_data.chat
+                        sanitized_chat["title"]
+                        if "title" in sanitized_chat
                         else "New Chat"
                     ),
-                    "chat": form_data.chat,
+                    "chat": sanitized_chat,
                     "folder_id": form_data.folder_id,
                     "created_at": int(time.time()),
                     "updated_at": int(time.time()),
@@ -153,16 +155,17 @@ class ChatTable:
     ) -> Optional[ChatModel]:
         with get_db() as db:
             id = str(uuid.uuid4())
+            sanitized_chat = sanitize_json_content(form_data.chat)
             chat = ChatModel(
                 **{
                     "id": id,
                     "user_id": user_id,
                     "title": (
-                        form_data.chat["title"]
-                        if "title" in form_data.chat
+                        sanitized_chat["title"]
+                        if "title" in sanitized_chat
                         else "New Chat"
                     ),
-                    "chat": form_data.chat,
+                    "chat": sanitized_chat,
                     "meta": form_data.meta,
                     "pinned": form_data.pinned,
                     "folder_id": form_data.folder_id,
@@ -188,6 +191,7 @@ class ChatTable:
     def update_chat_by_id(self, id: str, chat: dict) -> Optional[ChatModel]:
         try:
             with get_db() as db:
+                chat = sanitize_json_content(chat)
                 chat_item = db.get(Chat, id)
                 chat_item.chat = chat
                 chat_item.title = chat["title"] if "title" in chat else "New Chat"
@@ -259,20 +263,17 @@ class ChatTable:
         if chat is None:
             return None
 
-        # Sanitize message content for null characters before upserting
-        if isinstance(message.get("content"), str):
-            message["content"] = message["content"].replace("\x00", "")
-
+        sanitized_message = sanitize_json_content(message)
         chat = chat.chat
         history = chat.get("history", {})
 
         if message_id in history.get("messages", {}):
             history["messages"][message_id] = {
                 **history["messages"][message_id],
-                **message,
+                **sanitized_message,
             }
         else:
-            history["messages"][message_id] = message
+            history["messages"][message_id] = sanitized_message
 
         history["currentId"] = message_id
 
@@ -616,7 +617,7 @@ class ChatTable:
         """
         Filters chats based on a search query using Python, allowing pagination using skip and limit.
         """
-        search_text = search_text.replace("\u0000", "").lower().strip()
+        search_text = sanitize_json_content(search_text).lower().strip()
 
         if not search_text:
             return self.get_chat_list_by_user_id(
@@ -887,19 +888,22 @@ class ChatTable:
     def add_chat_tag_by_id_and_user_id_and_tag_name(
         self, id: str, user_id: str, tag_name: str
     ) -> Optional[ChatModel]:
-        tag = Tags.get_tag_by_name_and_user_id(tag_name, user_id)
+        sanitized_tag_name = sanitize_json_content(tag_name)
+        tag = Tags.get_tag_by_name_and_user_id(sanitized_tag_name, user_id)
         if tag is None:
-            tag = Tags.insert_new_tag(tag_name, user_id)
+            tag = Tags.insert_new_tag(sanitized_tag_name, user_id)
         try:
             with get_db() as db:
                 chat = db.get(Chat, id)
 
                 tag_id = tag.id
                 if tag_id not in chat.meta.get("tags", []):
-                    chat.meta = {
-                        **chat.meta,
-                        "tags": list(set(chat.meta.get("tags", []) + [tag_id])),
-                    }
+                    chat.meta = sanitize_json_content(
+                        {
+                            **chat.meta,
+                            "tags": list(set(chat.meta.get("tags", []) + [tag_id])),
+                        }
+                    )
 
                 db.commit()
                 db.refresh(chat)
@@ -953,10 +957,12 @@ class ChatTable:
                 tag_id = tag_name.replace(" ", "_").lower()
 
                 tags = [tag for tag in tags if tag != tag_id]
-                chat.meta = {
-                    **chat.meta,
-                    "tags": list(set(tags)),
-                }
+                chat.meta = sanitize_json_content(
+                    {
+                        **chat.meta,
+                        "tags": list(set(tags)),
+                    }
+                )
                 db.commit()
                 return True
         except Exception:
@@ -966,10 +972,12 @@ class ChatTable:
         try:
             with get_db() as db:
                 chat = db.get(Chat, id)
-                chat.meta = {
-                    **chat.meta,
-                    "tags": [],
-                }
+                chat.meta = sanitize_json_content(
+                    {
+                        **chat.meta,
+                        "tags": [],
+                    }
+                )
                 db.commit()
 
                 return True

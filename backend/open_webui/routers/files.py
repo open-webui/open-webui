@@ -40,6 +40,7 @@ from open_webui.routers.retrieval import ProcessFileForm, process_file
 from open_webui.routers.audio import transcribe
 from open_webui.storage.provider import Storage
 from open_webui.utils.auth import get_admin_user, get_verified_user
+from open_webui.utils.misc import sanitize_json_content
 from pydantic import BaseModel
 
 log = logging.getLogger(__name__)
@@ -171,7 +172,7 @@ def upload_file_handler(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail=ERROR_MESSAGES.DEFAULT("Invalid metadata format"),
             )
-    file_metadata = metadata if metadata else {}
+    file_metadata = sanitize_json_content(metadata) if metadata else {}
 
     try:
         unsanitized_filename = file.filename

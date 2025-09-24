@@ -1,5 +1,6 @@
 import hashlib
 import re
+import re
 import threading
 import time
 import uuid
@@ -522,3 +523,20 @@ def throttle(interval: float = 10.0):
         return wrapper
 
     return decorator
+
+
+def sanitize_json_content(data):
+    """
+    Recursively sanitize JSON data by removing null bytes and other
+    problematic control characters while preserving valid content.
+    """
+    if isinstance(data, dict):
+        return {k: sanitize_json_content(v) for k, v in data.items()}
+    elif isinstance(data, list):
+        return [sanitize_json_content(item) for item in data]
+    elif isinstance(data, str):
+        # Remove null bytes and other C0 control characters except common ones
+        # Keep: \n (10), \r (13), \t (9)
+        return re.sub(r'[\x00-\x08\x0b\x0c\x0e-\x1f\x7f]', '', data)
+    else:
+        return data
