@@ -290,6 +290,7 @@ async def model_response_handler(request, channel, message, user):
                 )
 
                 thread_history = []
+                images = []
                 message_users = {}
 
                 for thread_message in thread_messages:
@@ -318,6 +319,11 @@ async def model_response_handler(request, channel, message, user):
                         f"{username}: {replace_mentions(thread_message.content)}"
                     )
 
+                    thread_message_files = thread_message.data.get("files", [])
+                    for file in thread_message_files:
+                        if file.get("type", "") == "image":
+                            images.append(file.get("url", ""))
+
                 system_message = {
                     "role": "system",
                     "content": f"You are {model.get('name', model_id)}, an AI assistant participating in a threaded conversation. Be helpful, concise, and conversational."
@@ -328,14 +334,29 @@ async def model_response_handler(request, channel, message, user):
                     ),
                 }
 
+                content = f"{user.name if user else 'User'}: {message_content}"
+                if images:
+                    content = [
+                        {
+                            "type": "text",
+                            "text": content,
+                        },
+                        *[
+                            {
+                                "type": "image_url",
+                                "image_url": {
+                                    "url": image,
+                                },
+                            }
+                            for image in images
+                        ],
+                    ]
+
                 form_data = {
                     "model": model_id,
                     "messages": [
                         system_message,
-                        {
-                            "role": "user",
-                            "content": f"{user.name if user else 'User'}: {message_content}",
-                        },
+                        {"role": "user", "content": content},
                     ],
                     "stream": False,
                 }
