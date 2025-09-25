@@ -1884,7 +1884,6 @@ async def get_current_usage(user=Depends(get_verified_user)):
 # SessionMiddleware is used by authlib for oauth
 if len(OAUTH_PROVIDERS) > 0:
     try:
-        # Try to create Redis store for sessions
         if REDIS_URL:
             redis_session_store = RedisStore(
                 url=REDIS_URL,
@@ -1893,9 +1892,7 @@ if len(OAUTH_PROVIDERS) > 0:
                 ),
             )
 
-            # Add SessionAutoloadMiddleware first to handle session loading
             app.add_middleware(SessionAutoloadMiddleware)
-
             app.add_middleware(
                 StarSessionsMiddleware,
                 store=redis_session_store,
@@ -1903,15 +1900,10 @@ if len(OAUTH_PROVIDERS) > 0:
                 cookie_same_site=WEBUI_SESSION_COOKIE_SAME_SITE,
                 cookie_https_only=WEBUI_SESSION_COOKIE_SECURE,
             )
-            log.info("Using StarSessions with Redis for session management")
+            log.info("Using Redis for session")
         else:
-            raise ValueError("Redis URL not configured")
-
+            raise ValueError("No Redis URL provided")
     except Exception as e:
-        log.warning(
-            f"Failed to initialize Redis sessions, falling back to cookie based sessions: {e}"
-        )
-        # Fallback to existing SessionMiddleware
         app.add_middleware(
             SessionMiddleware,
             secret_key=WEBUI_SECRET_KEY,
