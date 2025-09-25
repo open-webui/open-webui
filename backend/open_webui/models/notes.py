@@ -128,7 +128,7 @@ class NoteTable:
             notes = query.all()
             return [NoteModel.model_validate(note) for note in notes]
 
-    def get_notes_by_access(
+    def get_notes_by_permission(
         self,
         user_id: str,
         permission: str = "write",
@@ -137,40 +137,44 @@ class NoteTable:
     ) -> list[NoteModel]:
         with get_db() as db:
             user_groups = Groups.get_groups_by_member_id(user_id)
-            user_group_ids = {group_id for group_id in user_groups}
+            user_group_ids = {group.id for group in user_groups}
 
-            query = db.query(Note)
+            # Order newest-first. We stream to keep memory usage low.
+            query = (
+                db.query(Note)
+                .order_by(Note.updated_at.desc())
+                .execution_options(stream_results=True)
+                .yield_per(256)
+            )
 
-            access_conditions = [Note.user_id == user_id]
+            results: list[NoteModel] = []
+            n_skipped = 0
 
-            if user_group_ids:
-                access_conditions.append(
-                    and_(
-                        Note.access_control.isnot(None),
-                        Note.access_control != '{}',
-                        Note.access_control != 'null'
+            for note in query:
+                # Fast-pass #1: owner
+                if note.user_id == user_id:
+                    permitted = True
+                # Fast-pass #2: public/open
+                elif note.access_control is None:
+                    permitted = True
+                else:
+                    permitted = has_access(
+                        user_id, permission, note.access_control, user_group_ids
                     )
-                )
 
-            query = query.filter(or_(*access_conditions))
+                if not permitted:
+                    continue
 
-            query = query.order_by(Note.updated_at.desc())
+                # Apply skip AFTER permission filtering so it counts only accessible notes
+                if skip and n_skipped < skip:
+                    n_skipped += 1
+                    continue
 
-            if skip is not None:
-                query = query.offset(skip)
-            if limit is not None:
-                query = query.limit(limit)
+                results.append(NoteModel.model_validate(note))
+                if limit is not None and len(results) >= limit:
+                    break
 
-            notes = query.all()
-            note_models = [NoteModel.model_validate(note) for note in notes]
-
-            filtered_notes = []
-            for note in note_models:
-                if (note.user_id == user_id or
-                    has_access(user_id, permission, note.access_control, user_group_ids)):
-                    filtered_notes.append(note)
-
-            return filtered_notes
+            return results
 
     def get_note_by_id(self, id: str) -> Optional[NoteModel]:
         with get_db() as db:
