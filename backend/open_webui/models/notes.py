@@ -156,7 +156,9 @@ class NoteTable:
                     permitted = True
                 # Fast-pass #2: public/open
                 elif note.access_control is None:
-                    permitted = True
+                    # Technically this should mean public access for both read and write, but we'll only do read for now
+                    # We might want to change this behavior later
+                    permitted = permission == "read"
                 else:
                     permitted = has_access(
                         user_id, permission, note.access_control, user_group_ids
