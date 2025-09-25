@@ -103,7 +103,7 @@
 							const mimeType = blob.type || 'image/png';
 							// create file name based on the MIME type, alt should be a valid file name with extension
 							const fileName = `${$i18n
-								.t('AI Generated Image')
+								.t('Generated Image')
 								.toLowerCase()
 								.replace(/ /g, '_')}.${mimeType.split('/')[1]}`;
 
@@ -123,7 +123,7 @@
 
 									// create file name based on the MIME type, alt should be a valid file name with extension
 									const fileName = `${$i18n
-										.t('AI Generated Image')
+										.t('Generated Image')
 										.toLowerCase()
 										.replace(/ /g, '_')}.${mimeType.split('/')[1]}`;
 
@@ -151,7 +151,7 @@
 
 									// create file name based on the MIME type, alt should be a valid file name with extension
 									const fileName = `${$i18n
-										.t('AI Generated Image')
+										.t('Generated Image')
 										.toLowerCase()
 										.replace(/ /g, '_')}.${mimeType.split('/')[1]}`;
 
