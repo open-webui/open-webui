@@ -36,6 +36,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- 🛡️ SVG content security was enhanced by implementing DOMPurify sanitization to prevent XSS attacks through malicious SVG elements, ensuring safe rendering of user-generated SVG content. [Commit](https://github.com/open-webui/open-webui/pull/17747/commits/750a659a9fee7687e667d9d755e17b8a0c77d557)
+- ☁️ OneDrive attachment menu rendering issues were resolved by restructuring the submenu interface from dropdown to tabbed navigation, preventing menu items from being hidden or clipped due to overflow constraints. [#17554](https://github.com/open-webui/open-webui/issues/17554), [Commit](https://github.com/open-webui/open-webui/pull/17747/commits/90e4b49b881b644465831cc3028bb44f0f7a2196)
 - 💬 Attached conversation references now persist throughout the entire chat session, ensuring models can continue querying referenced conversations after multiple conversation turns. [#17750](https://github.com/open-webui/open-webui/issues/17750)
 - 🔍 Search modal text box focus issues after pinning or unpinning chats were resolved, allowing users to properly exit the search interface by clicking outside the text box. [#17743](https://github.com/open-webui/open-webui/issues/17743)
 - 🔍 Search function chat list is now properly updated in real-time when chats are created or deleted, eliminating stale search results and preview loading failures. [#17741](https://github.com/open-webui/open-webui/issues/17741)
