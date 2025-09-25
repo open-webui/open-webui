@@ -16,7 +16,7 @@
 	import Messages from '../chat/Messages.svelte';
 	import { goto } from '$app/navigation';
 	import PencilSquare from '../icons/PencilSquare.svelte';
-	import Note from '../icons/Note.svelte';
+	import PageEdit from '../icons/PageEdit.svelte';
 	dayjs.extend(calendar);
 
 	export let show = false;
@@ -237,7 +237,7 @@
 								show = false;
 								onClose();
 							},
-							icon: Note
+							icon: PageEdit
 						}
 					]
 				: [])
