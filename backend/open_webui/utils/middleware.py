@@ -2545,21 +2545,33 @@ async def process_chat_response(
                             else:
                                 tool_result = tool_result.body.decode("utf-8")
 
-                        elif tool.get("type") == "external" and isinstance(
-                            tool_result, tuple
+                        elif (
+                            tool.get("type") == "external"
+                            and isinstance(tool_result, tuple)
+                        ) or (
+                            tool.get("direct", True)
+                            and isinstance(tool_result, list)
+                            and len(tool_result) == 2
                         ):
                             tool_result, tool_response_headers = tool_result
 
                             if tool_response_headers:
                                 content_disposition = tool_response_headers.get(
-                                    "Content-Disposition", ""
+                                    "Content-Disposition",
+                                    tool_response_headers.get(
+                                        "content-disposition", ""
+                                    ),
                                 )
 
                                 if "inline" in content_disposition:
                                     content_type = tool_response_headers.get(
-                                        "Content-Type", ""
+                                        "Content-Type",
+                                        tool_response_headers.get("content-type", ""),
                                     )
-                                    location = tool_response_headers.get("Location", "")
+                                    location = tool_response_headers.get(
+                                        "Location",
+                                        tool_response_headers.get("location", ""),
+                                    )
 
                                     if "text/html" in content_type:
                                         # Display as iframe embed
