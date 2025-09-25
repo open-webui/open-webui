@@ -1,6 +1,7 @@
 import logging
 from fastapi import APIRouter, Depends, Request, HTTPException
 from pydantic import BaseModel, ConfigDict
+import aiohttp
 
 from typing import Optional
 
@@ -17,6 +18,12 @@ from open_webui.utils.mcp.client import MCPClient
 
 from open_webui.env import SRC_LOG_LEVELS
 
+from open_webui.utils.oauth import (
+    get_discovery_urls,
+    get_oauth_client_info_with_dynamic_client_registration,
+    encrypt_token,
+)
+from mcp.shared.auth import OAuthMetadata
 
 router = APIRouter()
 
@@ -86,6 +93,38 @@ async def set_connections_config(
     }
 
 
+class OAuthClientRegistrationForm(BaseModel):
+    url: str
+    client_id: str
+    client_name: Optional[str] = None
+
+
+@router.post("/oauth/clients/register")
+async def register_oauth_client(
+    request: Request,
+    form_data: OAuthClientRegistrationForm,
+    user=Depends(get_admin_user),
+):
+    try:
+        oauth_client_info = (
+            await get_oauth_client_info_with_dynamic_client_registration(
+                request, form_data.url
+            )
+        )
+        return {
+            "status": True,
+            "oauth_client_info": encrypt_token(
+                oauth_client_info.model_dump(mode="json")
+            ),
+        }
+    except Exception as e:
+        log.debug(f"Failed to register OAuth client: {e}")
+        raise HTTPException(
+            status_code=400,
+            detail=f"Failed to register OAuth client",
+        )
+
+
 ############################
 # ToolServers Config
 ############################
@@ -138,46 +177,79 @@ async def verify_tool_servers_config(
     """
     try:
         if form_data.type == "mcp":
-            try:
-                client = MCPClient()
-                auth = None
-                headers = None
+            if form_data.auth_type == "oauth_2.1":
+                discovery_urls = get_discovery_urls(form_data.url)
+                async with aiohttp.ClientSession() as session:
+                    async with session.get(
+                        discovery_urls[0]
+                    ) as oauth_server_metadata_response:
+                        if oauth_server_metadata_response.status != 200:
+                            raise HTTPException(
+                                status_code=400,
+                                detail=f"Failed to fetch OAuth 2.1 discovery document from {discovery_urls[0]}",
+                            )
 
-                token = None
-                if form_data.auth_type == "bearer":
-                    token = form_data.key
-                elif form_data.auth_type == "session":
-                    token = request.state.token.credentials
-                elif form_data.auth_type == "system_oauth":
-                    try:
-                        if request.cookies.get("oauth_session_id", None):
-                            token = (
-                                await request.app.state.oauth_manager.get_oauth_token(
+                        try:
+                            oauth_server_metadata = OAuthMetadata.model_validate(
+                                await oauth_server_metadata_response.json()
+                            )
+                            return {
+                                "status": True,
+                                "oauth_server_metadata": oauth_server_metadata.model_dump(
+                                    mode="json"
+                                ),
+                            }
+                        except Exception as e:
+                            log.info(
+                                f"Failed to parse OAuth 2.1 discovery document: {e}"
+                            )
+                            raise HTTPException(
+                                status_code=400,
+                                detail=f"Failed to parse OAuth 2.1 discovery document from {discovery_urls[0]}",
+                            )
+
+                raise HTTPException(
+                    status_code=400,
+                    detail=f"Failed to fetch OAuth 2.1 discovery document from {discovery_urls[0]}",
+                )
+            else:
+                try:
+                    client = MCPClient()
+                    headers = None
+
+                    token = None
+                    if form_data.auth_type == "bearer":
+                        token = form_data.key
+                    elif form_data.auth_type == "session":
+                        token = request.state.token.credentials
+                    elif form_data.auth_type == "system_oauth":
+                        try:
+                            if request.cookies.get("oauth_session_id", None):
+                                token = await request.app.state.oauth_manager.get_oauth_token(
                                     user.id,
                                     request.cookies.get("oauth_session_id", None),
                                 )
-                            )
-                    except Exception as e:
-                        pass
+                        except Exception as e:
+                            pass
 
-                if token:
-                    headers = {"Authorization": f"Bearer {token}"}
+                    if token:
+                        headers = {"Authorization": f"Bearer {token}"}
 
-                await client.connect(form_data.url, auth=auth, headers=headers)
-                specs = await client.list_tool_specs()
-                return {
-                    "status": True,
-                    "specs": specs,
-                }
-            except Exception as e:
-                log.debug(f"Failed to create MCP client: {e}")
-                raise HTTPException(
-                    status_code=400,
-                    detail=f"Failed to create MCP client",
-                )
-            finally:
-                if client:
-                    await client.disconnect()
+                    await client.connect(form_data.url, headers=headers)
+                    specs = await client.list_tool_specs()
+                    return {
+                        "status": True,
+                        "specs": specs,
+                    }
+                except Exception as e:
+                    log.debug(f"Failed to create MCP client: {e}")
+                    raise HTTPException(
+                        status_code=400,
+                        detail=f"Failed to create MCP client",
+                    )
+                finally:
+                    if client:
+                        await client.disconnect()
         else:  # openapi
             token = None
             if form_data.auth_type == "bearer":
