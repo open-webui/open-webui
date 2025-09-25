@@ -107,6 +107,16 @@ class RedisDict:
             self[key] = default
         return self[key]
 
+    def get_pipeline(self):
+        return self.redis.pipeline()
+
+    def replace_all(self, mapping: dict):
+        pipe = self.redis.pipeline()
+        pipe.delete(self.name)
+        if mapping:
+            pipe.hset(self.name, mapping={k: json.dumps(v) for k, v in mapping.items()})
+        pipe.execute()
+
 
 class YdocManager:
     def __init__(
