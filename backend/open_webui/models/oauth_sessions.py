@@ -176,6 +176,26 @@ class OAuthSessionTable:
             log.error(f"Error getting OAuth session by ID: {e}")
             return None
 
+    def get_session_by_provider_and_user_id(
+        self, provider: str, user_id: str
+    ) -> Optional[OAuthSessionModel]:
+        """Get OAuth session by provider and user ID"""
+        try:
+            with get_db() as db:
+                session = (
+                    db.query(OAuthSession)
+                    .filter_by(provider=provider, user_id=user_id)
+                    .first()
+                )
+                if session:
+                    session.token = self._decrypt_token(session.token)
+                    return OAuthSessionModel.model_validate(session)
+
+                return None
+        except Exception as e:
+            log.error(f"Error getting OAuth session by provider and user ID: {e}")
+            return None
+
     def get_sessions_by_user_id(self, user_id: str) -> List[OAuthSessionModel]:
         """Get all OAuth sessions for a user"""
         try:

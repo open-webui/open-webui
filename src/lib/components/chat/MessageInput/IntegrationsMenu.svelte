@@ -20,6 +20,8 @@
 	import ChevronRight from '$lib/components/icons/ChevronRight.svelte';
 	import ChevronLeft from '$lib/components/icons/ChevronLeft.svelte';
 	import ValvesModal from '$lib/components/workspace/common/ValvesModal.svelte';
+	import { getOAuthClientAuthorizationUrl } from '$lib/apis/configs';
+	import { partition } from 'd3-hierarchy';
 
 	const i18n = getContext('i18n');
 
@@ -321,11 +323,25 @@
 
 					{#each Object.keys(tools) as toolId}
 						<button
-							class="flex w-full justify-between gap-2 items-center px-3 py-1.5 text-sm cursor-pointer rounded-xl hover:bg-gray-50 dark:hover:bg-gray-800/50"
-							on:click={() => {
-								tools[toolId].enabled = !tools[toolId].enabled;
+							class="relative flex w-full justify-between gap-2 items-center px-3 py-1.5 text-sm cursor-pointer rounded-xl hover:bg-gray-50 dark:hover:bg-gray-800/50"
+							on:click={(e) => {
+								if (!(tools[toolId]?.authenticated ?? true)) {
+									e.preventDefault();
+
+									let parts = toolId.split(':');
+									let serverId = parts?.at(-1) ?? toolId;
+
+									const authUrl = getOAuthClientAuthorizationUrl(serverId, 'mcp');
+									window.open(authUrl, '_blank', 'noopener');
+								} else {
+									tools[toolId].enabled = !tools[toolId].enabled;
+								}
 							}}
 						>
+							{#if !(tools[toolId]?.authenticated ?? true)}
+								<!-- make it slighly darker and not clickable -->
+								<div class="absolute inset-0 opacity-50 rounded-xl cursor-not-allowed z-10" />
+							{/if}
 							<div class="flex-1 truncate">
 								<div class="flex flex-1 gap-2 items-center">
 									<Tooltip content={tools[toolId]?.name ?? ''} placement="top">

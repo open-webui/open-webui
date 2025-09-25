@@ -21,7 +21,9 @@ from open_webui.env import SRC_LOG_LEVELS
 from open_webui.utils.oauth import (
     get_discovery_urls,
     get_oauth_client_info_with_dynamic_client_registration,
-    encrypt_token,
+    encrypt_data,
+    decrypt_data,
+    OAuthClientInformationFull,
 )
 from mcp.shared.auth import OAuthMetadata
 
@@ -103,17 +105,22 @@ class OAuthClientRegistrationForm(BaseModel):
 async def register_oauth_client(
     request: Request,
     form_data: OAuthClientRegistrationForm,
+    type: Optional[str] = None,
     user=Depends(get_admin_user),
 ):
     try:
+        oauth_client_id = form_data.client_id
+        if type:
+            oauth_client_id = f"{type}:{form_data.client_id}"
+
         oauth_client_info = (
             await get_oauth_client_info_with_dynamic_client_registration(
-                request, form_data.url
+                request, oauth_client_id, form_data.url
             )
         )
         return {
             "status": True,
-            "oauth_client_info": encrypt_token(
+            "oauth_client_info": encrypt_data(
                 oauth_client_info.model_dump(mode="json")
             ),
         }
@@ -161,7 +168,24 @@ async def set_tool_servers_config(
     request.app.state.config.TOOL_SERVER_CONNECTIONS = [
         connection.model_dump() for connection in form_data.TOOL_SERVER_CONNECTIONS
     ]
+
     await set_tool_servers(request)
+
+    for connection in request.app.state.config.TOOL_SERVER_CONNECTIONS:
+        server_type = connection.get("type", "openapi")
+        if server_type == "mcp":
+            server_id = connection.get("info", {}).get("id")
+            auth_type = connection.get("auth_type", "none")
+            if auth_type == "oauth_2.1" and server_id:
+                try:
+                    oauth_client_info = decrypt_data(oauth_client_info)
+                    await request.app.state.oauth_client_manager.add_client(
+                        f"{server_type}:{server_id}",
+                        OAuthClientInformationFull(**oauth_client_info),
+                    )
+                except Exception as e:
+                    log.debug(f"Failed to add OAuth client for MCP tool server: {e}")
+                    continue
 
     return {
         "TOOL_SERVER_CONNECTIONS": request.app.state.config.TOOL_SERVER_CONNECTIONS,

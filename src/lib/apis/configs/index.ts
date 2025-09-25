@@ -1,4 +1,4 @@
-import { WEBUI_API_BASE_URL } from '$lib/constants';
+import { WEBUI_API_BASE_URL, WEBUI_BASE_URL } from '$lib/constants';
 import type { Banner } from '$lib/types';
 
 export const importConfig = async (token: string, config) => {
@@ -208,10 +208,15 @@ type RegisterOAuthClientForm = {
 	client_name?: string;
 };
 
-export const registerOAuthClient = async (token: string, formData: RegisterOAuthClientForm) => {
+export const registerOAuthClient = async (
+	token: string,
+	formData: RegisterOAuthClientForm,
+	type: null | string = null
+) => {
 	let error = null;
 
-	const res = await fetch(`${WEBUI_API_BASE_URL}/configs/oauth/clients/register`, {
+	const searchParams = type ? `?type=${type}` : '';
+	const res = await fetch(`${WEBUI_API_BASE_URL}/configs/oauth/clients/register${searchParams}`, {
 		method: 'POST',
 		headers: {
 			'Content-Type': 'application/json',
@@ -236,6 +241,11 @@ export const registerOAuthClient = async (token: string, formData: RegisterOAuth
 	}
 
 	return res;
+};
+
+export const getOAuthClientAuthorizationUrl = (clientId: string, type: null | string = null) => {
+	const oauthClientId = type ? `${type}:${clientId}` : clientId;
+	return `${WEBUI_BASE_URL}/oauth/clients/${oauthClientId}/authorize`;
 };
 
 export const getCodeExecutionConfig = async (token: string) => {

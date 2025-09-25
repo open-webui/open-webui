@@ -9,6 +9,7 @@ from pydantic import BaseModel, HttpUrl
 from fastapi import APIRouter, Depends, HTTPException, Request, status
 
 
+from open_webui.models.oauth_sessions import OAuthSessions
 from open_webui.models.tools import (
     ToolForm,
     ToolModel,
@@ -80,6 +81,24 @@ async def get_tools(request: Request, user=Depends(get_verified_user)):
     # MCP Tool Servers
     for server in request.app.state.config.TOOL_SERVER_CONNECTIONS:
         if server.get("type", "openapi") == "mcp":
+            server_id = server.get("info", {}).get("id")
+            auth_type = server.get("auth_type", "none")
+
+            session_token = None
+            if auth_type == "oauth_2.1":
+                splits = server_id.split(":")
+                server_id = splits[-1] if len(splits) > 1 else server_id
+
+                session_token = (
+                    await request.app.state.oauth_client_manager.get_oauth_token(
+                        user.id, f"mcp:{server_id}"
+                    )
+                )
+
+                print("User ID:", user.id)
+                print("Server ID:", server_id)
+                print("MCP Session Token:", session_token)
+
             tools.append(
                 ToolUserResponse(
                     **{
@@ -96,6 +115,13 @@ async def get_tools(request: Request, user=Depends(get_verified_user)):
                         ),
                         "updated_at": int(time.time()),
                         "created_at": int(time.time()),
+                        **(
+                            {
+                                "authenticated": session_token is not None,
+                            }
+                            if auth_type == "oauth_2.1"
+                            else {}
+                        ),
                     }
                 )
             )

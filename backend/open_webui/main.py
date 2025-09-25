@@ -473,7 +473,12 @@ from open_webui.utils.auth import (
     get_verified_user,
 )
 from open_webui.utils.plugin import install_tool_and_function_dependencies
-from open_webui.utils.oauth import OAuthManager
+from open_webui.utils.oauth import (
+    OAuthManager,
+    OAuthClientManager,
+    decrypt_data,
+    OAuthClientInformationFull,
+)
 from open_webui.utils.security_headers import SecurityHeadersMiddleware
 from open_webui.utils.redis import get_redis_connection
 
@@ -603,8 +608,13 @@ app = FastAPI(
     lifespan=lifespan,
 )
 
+# For Open WebUI OIDC/OAuth2
 oauth_manager = OAuthManager(app)
 app.state.oauth_manager = oauth_manager
+
+# For Integrations
+oauth_client_manager = OAuthClientManager(app)
+app.state.oauth_client_manager = oauth_client_manager
 
 app.state.instance_id = None
 app.state.config = AppConfig(
@@ -1881,6 +1891,24 @@ async def get_current_usage(user=Depends(get_verified_user)):
 # OAuth Login & Callback
 ############################
 
+
+# Initialize OAuth client manager with any MCP tool servers using OAuth 2.1
+if len(app.state.config.TOOL_SERVER_CONNECTIONS) > 0:
+    for tool_server_connection in app.state.config.TOOL_SERVER_CONNECTIONS:
+        if tool_server_connection.get("type", "openapi") == "mcp":
+            server_id = tool_server_connection.get("info", {}).get("id")
+            auth_type = tool_server_connection.get("auth_type", "none")
+            if server_id and auth_type == "oauth_2.1":
+                oauth_client_info = tool_server_connection.get("info", {}).get(
+                    "oauth_client_info"
+                )
+
+                oauth_client_info = decrypt_data(oauth_client_info)
+                app.state.oauth_client_manager.add_client(
+                    f"mcp:{server_id}", OAuthClientInformationFull(**oauth_client_info)
+                )
+
+
 # SessionMiddleware is used by authlib for oauth
 if len(OAUTH_PROVIDERS) > 0:
     try:
@@ -1913,6 +1941,31 @@ if len(OAUTH_PROVIDERS) > 0:
         )
 
 
+@app.get("/oauth/clients/{client_id}/authorize")
+async def oauth_client_authorize(
+    client_id: str,
+    request: Request,
+    response: Response,
+    user=Depends(get_verified_user),
+):
+    return await oauth_client_manager.handle_authorize(request, client_id=client_id)
+
+
+@app.get("/oauth/clients/{client_id}/callback")
+async def oauth_client_callback(
+    client_id: str,
+    request: Request,
+    response: Response,
+    user=Depends(get_verified_user),
+):
+    return await oauth_client_manager.handle_callback(
+        request,
+        client_id=client_id,
+        user_id=user.id if user else None,
+        response=response,
+    )
+
+
 @app.get("/oauth/{provider}/login")
 async def oauth_login(provider: str, request: Request):
     return await oauth_manager.handle_login(request, provider)
@@ -1924,8 +1977,9 @@ async def oauth_login(provider: str, request: Request):
 #    - This is considered insecure in general, as OAuth providers do not always verify email addresses
 # 3. If there is no user, and ENABLE_OAUTH_SIGNUP is true, create a user
 #    - Email addresses are considered unique, so we fail registration if the email address is already taken
-@app.get("/oauth/{provider}/callback")
-async def oauth_callback(provider: str, request: Request, response: Response):
+@app.get("/oauth/{provider}/callback")  # Legacy endpoint
+@app.get("/oauth/{provider}/login/callback")
+async def oauth_login_callback(provider: str, request: Request, response: Response):
     return await oauth_manager.handle_callback(request, provider, response)
 
 
