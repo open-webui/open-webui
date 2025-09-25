@@ -529,7 +529,7 @@
 
 					{#if $config?.features?.enable_onedrive_personal}
 						<DropdownMenu.Item
-							class="flex gap-2 items-center px-3 py-1.5 text-sm cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800/50 rounded-xl"
+							class="flex gap-2 items-center px-3 py-1.5 text-sm cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800/50 rounded-xl text-left"
 							on:click={() => {
 								uploadOneDriveHandler('personal');
 							}}
@@ -542,7 +542,7 @@
 
 					{#if $config?.features?.enable_onedrive_business}
 						<DropdownMenu.Item
-							class="flex gap-2 items-center px-3 py-1.5 text-sm cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800/50 rounded-xl"
+							class="flex gap-2 items-center px-3 py-1.5 text-sm cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800/50 rounded-xl text-left"
 							on:click={() => {
 								uploadOneDriveHandler('organizations');
 							}}
