@@ -213,11 +213,14 @@
 			on:input={() => {
 				dispatch('input');
 			}}
-			on:focus={() => {
-				onFocus();
-				hovering = false;
-				focused = true;
-				initTags();
+			on:click={() => {
+				if (!focused) {
+					onFocus();
+					hovering = false;
+
+					focused = true;
+					initTags();
+				}
 			}}
 			on:blur={() => {
 				if (!hovering) {
@@ -260,6 +263,14 @@
 					}
 				} else {
 					// if the user types something, reset to the top selection.
+					if (!focused) {
+						onFocus();
+						hovering = false;
+
+						focused = true;
+						initTags();
+					}
+
 					selectedIdx = 0;
 				}
 
