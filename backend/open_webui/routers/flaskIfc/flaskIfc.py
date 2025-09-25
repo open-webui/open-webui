@@ -744,7 +744,8 @@ def internal_restart_txe():
                 phrase in line
                 for phrase in [
                     "Global Reset exercised",
-                    "release chip from reset called",
+                    "release chip from reset called",  # For Pre Rel 37 where Make Juart Complete
+                    "Use the IDE stop button or Ctrl-C to terminate",  # For Rel37 as Make Juart does not Complete
                 ]
             ):
                 time.sleep(2)
