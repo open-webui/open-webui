@@ -1041,7 +1041,7 @@ class OAuthManager:
             raise HTTPException(404)
         # If the provider has a custom redirect URL, use that, otherwise automatically generate one
         redirect_uri = OAUTH_PROVIDERS[provider].get("redirect_uri") or request.url_for(
-            "oauth_callback", provider=provider
+            "oauth_login_callback", provider=provider
         )
         client = self.get_client(provider)
         if client is None:
