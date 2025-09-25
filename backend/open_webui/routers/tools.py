@@ -41,7 +41,15 @@ router = APIRouter()
 
 @router.get("/", response_model=list[ToolUserResponse])
 async def get_tools(request: Request, user=Depends(get_verified_user)):
-    tools = Tools.get_tools()
+    tools = [
+        ToolUserResponse(
+            **{
+                **tool.model_dump(),
+                "has_user_valves": "class UserValves(BaseModel):" in tool.content,
+            }
+        )
+        for tool in Tools.get_tools()
+    ]
 
     # OpenAPI Tool Servers
     for server in await get_tool_servers(request):
