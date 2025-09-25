@@ -369,7 +369,7 @@ class OAuthClientManager:
 
         Args:
             user_id: The user ID
-            session_id: The OAuth session ID
+            client_id: The OAuth client ID (provider)
             force_refresh: Force token refresh even if current token appears valid
 
         Returns:
