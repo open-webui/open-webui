@@ -9,6 +9,7 @@
 
 	let dbDomains = [];
 	let loading = true;
+	let searchQuery = '';
 
 	// Load available domains on component mount
 	onMount(async () => {
@@ -38,6 +39,16 @@
 			allowedDomains = allowedDomains.filter((d) => d !== domain);
 		}
 	};
+
+	// Filter domains based on search query
+	$: filteredDomains = dbDomains.filter((domainObj) => {
+		if (!searchQuery.trim()) return true;
+		const query = searchQuery.toLowerCase();
+		return (
+			domainObj.domain.toLowerCase().includes(query) ||
+			(domainObj.description && domainObj.description.toLowerCase().includes(query))
+		);
+	});
 </script>
 
 <div class="flex flex-col space-y-3">
@@ -103,6 +114,31 @@
 				)}
 			</div>
 		</div>
+	{:else}
+		<!-- Search input for filtering domains -->
+		<div class="space-y-2">
+			<div class="text-sm font-medium text-gray-700 dark:text-gray-300">
+				{$i18n.t('Available Domains')} ({dbDomains.length})
+			</div>
+			<div class="relative">
+				<div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+					<svg class="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+						<path
+							stroke-linecap="round"
+							stroke-linejoin="round"
+							stroke-width="2"
+							d="m21 21-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
+						></path>
+					</svg>
+				</div>
+				<input
+					type="text"
+					class="w-full pl-10 pr-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 placeholder-gray-500 dark:placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+					placeholder={$i18n.t('Search domains...')}
+					bind:value={searchQuery}
+				/>
+			</div>
+		</div>
 	{/if}
 
 	<!-- Available domains list for selection -->
@@ -117,8 +153,14 @@
 					{$i18n.t('No domains configured. Please configure domains in Admin Settings first.')}
 				</div>
 			</div>
+		{:else if filteredDomains.length === 0}
+			<div class="text-center py-4">
+				<div class="text-sm text-gray-500 dark:text-gray-400">
+					{$i18n.t('No domains match your search.')}
+				</div>
+			</div>
 		{:else}
-			{#each dbDomains as domainObj (domainObj.id)}
+			{#each filteredDomains as domainObj (domainObj.id)}
 				{@const isSelected = allowedDomains.includes(domainObj.domain)}
 				<label
 					class="flex items-center space-x-3 p-2 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-800 cursor-pointer"
