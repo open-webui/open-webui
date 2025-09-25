@@ -457,7 +457,7 @@
 											<div
 												class={`flex items-center text-xs self-center translate-y-[1px] ${($settings?.highContrastMode ?? false) ? 'text-gray-800 dark:text-gray-100' : 'text-gray-500'}`}
 											>
-												{$i18n.t('Uses ​OAuth 2.1 Dynamic Client Registration to authenticate')}
+												{$i18n.t('Uses ​OAuth 2.1 Dynamic Client Registration')}
 											</div>
 										{/if}
 									</div>
