@@ -30,7 +30,7 @@
 		dispatch('save');
 	}}
 >
-	<div class="py-1 overflow-y-scroll max-h-[28rem] lg:max-h-full">
+	<div class="py-1 overflow-y-scroll max-h-[28rem] md:max-h-full">
 		<div>
 			<div class="flex items-center justify-between mb-1">
 				<Tooltip

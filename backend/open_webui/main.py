@@ -50,6 +50,11 @@ from starlette.middleware.sessions import SessionMiddleware
 from starlette.responses import Response, StreamingResponse
 from starlette.datastructures import Headers
 
+from starsessions import (
+    SessionMiddleware as StarSessionsMiddleware,
+    SessionAutoloadMiddleware,
+)
+from starsessions.stores.redis import RedisStore
 
 from open_webui.utils import logger
 from open_webui.utils.audit import AuditLevel, AuditLoggingMiddleware
@@ -269,6 +274,7 @@ from open_webui.config import (
     WEB_SEARCH_CONCURRENT_REQUESTS,
     WEB_SEARCH_TRUST_ENV,
     WEB_SEARCH_DOMAIN_FILTER_LIST,
+    OLLAMA_CLOUD_WEB_SEARCH_API_KEY,
     JINA_API_KEY,
     SEARCHAPI_API_KEY,
     SEARCHAPI_ENGINE,
@@ -301,7 +307,8 @@ from open_webui.config import (
     GOOGLE_DRIVE_CLIENT_ID,
     GOOGLE_DRIVE_API_KEY,
     ENABLE_ONEDRIVE_INTEGRATION,
-    ONEDRIVE_CLIENT_ID,
+    ONEDRIVE_CLIENT_ID_PERSONAL,
+    ONEDRIVE_CLIENT_ID_BUSINESS,
     ONEDRIVE_SHAREPOINT_URL,
     ONEDRIVE_SHAREPOINT_TENANT_ID,
     ENABLE_ONEDRIVE_PERSONAL,
@@ -466,7 +473,12 @@ from open_webui.utils.auth import (
     get_verified_user,
 )
 from open_webui.utils.plugin import install_tool_and_function_dependencies
-from open_webui.utils.oauth import OAuthManager
+from open_webui.utils.oauth import (
+    OAuthManager,
+    OAuthClientManager,
+    decrypt_data,
+    OAuthClientInformationFull,
+)
 from open_webui.utils.security_headers import SecurityHeadersMiddleware
 from open_webui.utils.redis import get_redis_connection
 
@@ -596,8 +608,13 @@ app = FastAPI(
     lifespan=lifespan,
 )
 
+# For Open WebUI OIDC/OAuth2
 oauth_manager = OAuthManager(app)
 app.state.oauth_manager = oauth_manager
+
+# For Integrations
+oauth_client_manager = OAuthClientManager(app)
+app.state.oauth_client_manager = oauth_client_manager
 
 app.state.instance_id = None
 app.state.config = AppConfig(
@@ -882,6 +899,8 @@ app.state.config.BYPASS_WEB_SEARCH_WEB_LOADER = BYPASS_WEB_SEARCH_WEB_LOADER
 
 app.state.config.ENABLE_GOOGLE_DRIVE_INTEGRATION = ENABLE_GOOGLE_DRIVE_INTEGRATION
 app.state.config.ENABLE_ONEDRIVE_INTEGRATION = ENABLE_ONEDRIVE_INTEGRATION
+
+app.state.config.OLLAMA_CLOUD_WEB_SEARCH_API_KEY = OLLAMA_CLOUD_WEB_SEARCH_API_KEY
 app.state.config.SEARXNG_QUERY_URL = SEARXNG_QUERY_URL
 app.state.config.YACY_QUERY_URL = YACY_QUERY_URL
 app.state.config.YACY_USERNAME = YACY_USERNAME
@@ -1530,6 +1549,14 @@ async def chat_completion(
 
                 except:
                     pass
+        finally:
+            try:
+                if mcp_clients := metadata.get("mcp_clients"):
+                    for client in mcp_clients:
+                        await client.disconnect()
+            except Exception as e:
+                log.debug(f"Error cleaning up: {e}")
+                pass
 
     if (
         metadata.get("session_id")
@@ -1743,7 +1770,8 @@ async def get_app_config(request: Request):
                     "api_key": GOOGLE_DRIVE_API_KEY.value,
                 },
                 "onedrive": {
-                    "client_id": ONEDRIVE_CLIENT_ID.value,
+                    "client_id_personal": ONEDRIVE_CLIENT_ID_PERSONAL,
+                    "client_id_business": ONEDRIVE_CLIENT_ID_BUSINESS,
                     "sharepoint_url": ONEDRIVE_SHAREPOINT_URL.value,
                     "sharepoint_tenant_id": ONEDRIVE_SHAREPOINT_TENANT_ID.value,
                 },
@@ -1863,14 +1891,78 @@ async def get_current_usage(user=Depends(get_verified_user)):
 # OAuth Login & Callback
 ############################
 
+
+# Initialize OAuth client manager with any MCP tool servers using OAuth 2.1
+if len(app.state.config.TOOL_SERVER_CONNECTIONS) > 0:
+    for tool_server_connection in app.state.config.TOOL_SERVER_CONNECTIONS:
+        if tool_server_connection.get("type", "openapi") == "mcp":
+            server_id = tool_server_connection.get("info", {}).get("id")
+            auth_type = tool_server_connection.get("auth_type", "none")
+            if server_id and auth_type == "oauth_2.1":
+                oauth_client_info = tool_server_connection.get("info", {}).get(
+                    "oauth_client_info", ""
+                )
+
+                oauth_client_info = decrypt_data(oauth_client_info)
+                app.state.oauth_client_manager.add_client(
+                    f"mcp:{server_id}", OAuthClientInformationFull(**oauth_client_info)
+                )
+
+
 # SessionMiddleware is used by authlib for oauth
 if len(OAUTH_PROVIDERS) > 0:
-    app.add_middleware(
-        SessionMiddleware,
-        secret_key=WEBUI_SECRET_KEY,
-        session_cookie="oui-session",
-        same_site=WEBUI_SESSION_COOKIE_SAME_SITE,
-        https_only=WEBUI_SESSION_COOKIE_SECURE,
+    try:
+        if REDIS_URL:
+            redis_session_store = RedisStore(
+                url=REDIS_URL,
+                prefix=(
+                    f"{REDIS_KEY_PREFIX}:session:" if REDIS_KEY_PREFIX else "session:"
+                ),
+            )
+
+            app.add_middleware(SessionAutoloadMiddleware)
+            app.add_middleware(
+                StarSessionsMiddleware,
+                store=redis_session_store,
+                cookie_name="oui-session",
+                cookie_same_site=WEBUI_SESSION_COOKIE_SAME_SITE,
+                cookie_https_only=WEBUI_SESSION_COOKIE_SECURE,
+            )
+            log.info("Using Redis for session")
+        else:
+            raise ValueError("No Redis URL provided")
+    except Exception as e:
+        app.add_middleware(
+            SessionMiddleware,
+            secret_key=WEBUI_SECRET_KEY,
+            session_cookie="oui-session",
+            same_site=WEBUI_SESSION_COOKIE_SAME_SITE,
+            https_only=WEBUI_SESSION_COOKIE_SECURE,
+        )
+
+
+@app.get("/oauth/clients/{client_id}/authorize")
+async def oauth_client_authorize(
+    client_id: str,
+    request: Request,
+    response: Response,
+    user=Depends(get_verified_user),
+):
+    return await oauth_client_manager.handle_authorize(request, client_id=client_id)
+
+
+@app.get("/oauth/clients/{client_id}/callback")
+async def oauth_client_callback(
+    client_id: str,
+    request: Request,
+    response: Response,
+    user=Depends(get_verified_user),
+):
+    return await oauth_client_manager.handle_callback(
+        request,
+        client_id=client_id,
+        user_id=user.id if user else None,
+        response=response,
     )
 
 
@@ -1885,8 +1977,9 @@ async def oauth_login(provider: str, request: Request):
 #    - This is considered insecure in general, as OAuth providers do not always verify email addresses
 # 3. If there is no user, and ENABLE_OAUTH_SIGNUP is true, create a user
 #    - Email addresses are considered unique, so we fail registration if the email address is already taken
-@app.get("/oauth/{provider}/callback")
-async def oauth_callback(provider: str, request: Request, response: Response):
+@app.get("/oauth/{provider}/login/callback")
+@app.get("/oauth/{provider}/callback")  # Legacy endpoint
+async def oauth_login_callback(provider: str, request: Request, response: Response):
     return await oauth_manager.handle_callback(request, provider, response)
 
 

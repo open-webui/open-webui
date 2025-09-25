@@ -286,9 +286,11 @@
 		}
 	};
 
-	onMount(async () => {
+	const setOllamaVersion = async () => {
 		ollamaVersion = await getOllamaVersion(localStorage.token).catch((error) => false);
+	};
 
+	onMount(async () => {
 		if (items) {
 			tags = items
 				.filter((item) => !(item.model?.info?.meta?.hidden ?? false))
@@ -299,6 +301,10 @@
 			tags = Array.from(new Set(tags)).sort((a, b) => a.localeCompare(b));
 		}
 	});
+
+	$: if (show) {
+		setOllamaVersion();
+	}
 
 	const cancelModelPullHandler = async (model: string) => {
 		const { reader, abortController } = $MODEL_DOWNLOAD_POOL[model];

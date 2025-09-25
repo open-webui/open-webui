@@ -492,11 +492,16 @@ class ChatTable:
         self,
         user_id: str,
         include_archived: bool = False,
+        include_folders: bool = False,
         skip: Optional[int] = None,
         limit: Optional[int] = None,
     ) -> list[ChatTitleIdResponse]:
         with get_db() as db:
-            query = db.query(Chat).filter_by(user_id=user_id).filter_by(folder_id=None)
+            query = db.query(Chat).filter_by(user_id=user_id)
+
+            if not include_folders:
+                query = query.filter_by(folder_id=None)
+
             query = query.filter(or_(Chat.pinned == False, Chat.pinned == None))
 
             if not include_archived:
@@ -941,6 +946,16 @@ class ChatTable:
             # Debugging output for inspection
             log.info(f"Count of chats for tag '{tag_name}': {count}")
 
+            return count
+
+    def count_chats_by_folder_id_and_user_id(self, folder_id: str, user_id: str) -> int:
+        with get_db() as db:
+            query = db.query(Chat).filter_by(user_id=user_id)
+
+            query = query.filter_by(folder_id=folder_id)
+            count = query.count()
+
+            log.info(f"Count of chats for folder '{folder_id}': {count}")
             return count
 
     def delete_tag_by_id_and_user_id_and_tag_name(

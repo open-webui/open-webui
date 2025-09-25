@@ -48,7 +48,7 @@ async def get_notes(request: Request, user=Depends(get_verified_user)):
                 "user": UserResponse(**Users.get_user_by_id(note.user_id).model_dump()),
             }
         )
-        for note in Notes.get_notes_by_user_id(user.id, "write")
+        for note in Notes.get_notes_by_permission(user.id, "write")
     ]
 
     return notes
@@ -81,7 +81,9 @@ async def get_note_list(
 
     notes = [
         NoteTitleIdResponse(**note.model_dump())
-        for note in Notes.get_notes_by_user_id(user.id, "write", skip=skip, limit=limit)
+        for note in Notes.get_notes_by_permission(
+            user.id, "write", skip=skip, limit=limit
+        )
     ]
 
     return notes
