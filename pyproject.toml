@@ -17,7 +17,7 @@ dependencies = [
     "passlib[bcrypt]==1.7.4",
     "cryptography",
     "bcrypt==4.3.0",
-    "argon2-cffi==23.1.0",
+    "argon2-cffi==25.1.0",
     "PyJWT[crypto]==2.10.1",
     "authlib==1.6.3",
 
@@ -28,6 +28,7 @@ dependencies = [
     "aiofiles",
     "starlette-compress==1.6.0",
     "httpx[socks,http2,zstd,cli,brotli]==0.28.1",
+    "starsessions[redis]==2.2.1",
 
     "sqlalchemy==2.0.38",
     "alembic==1.14.0",
