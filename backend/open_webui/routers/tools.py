@@ -95,10 +95,6 @@ async def get_tools(request: Request, user=Depends(get_verified_user)):
                     )
                 )
 
-                print("User ID:", user.id)
-                print("Server ID:", server_id)
-                print("MCP Session Token:", session_token)
-
             tools.append(
                 ToolUserResponse(
                     **{
