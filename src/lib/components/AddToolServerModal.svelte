@@ -372,19 +372,6 @@
 
 									{#if auth_type === 'oauth_2.1'}
 										<div class="flex items-center gap-2">
-											{#if !oauthClientInfo}
-												<div
-													class="text-xs font-medium px-1 rounded-md bg-yellow-500/20 text-yellow-700 dark:text-yellow-200"
-												>
-													{$i18n.t('Not Registered')}
-												</div>
-											{:else}
-												<div
-													class="text-xs font-medium px-1 rounded-md bg-green-500/20 text-green-700 dark:text-green-200"
-												>
-													{$i18n.t('Registered')}
-												</div>
-											{/if}
 											<div class="flex flex-col justify-end items-center shrink-0">
 												<Tooltip
 													content={oauthClientInfo
@@ -402,6 +389,20 @@
 													</button>
 												</Tooltip>
 											</div>
+
+											{#if !oauthClientInfo}
+												<div
+													class="text-xs font-medium px-1.5 rounded-md bg-yellow-500/20 text-yellow-700 dark:text-yellow-200"
+												>
+													{$i18n.t('Not Registered')}
+												</div>
+											{:else}
+												<div
+													class="text-xs font-medium px-1.5 rounded-md bg-green-500/20 text-green-700 dark:text-green-200"
+												>
+													{$i18n.t('Registered')}
+												</div>
+											{/if}
 										</div>
 									{/if}
 								</div>
