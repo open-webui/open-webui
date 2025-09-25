@@ -149,10 +149,15 @@
 	export let onChange = (e) => {};
 
 	// create a lowlight instance with all languages loaded
-	const lowlight = createLowlight(hljs.listLanguages().reduce((obj, lang) => {
-		obj[lang] = () => hljs.getLanguage(lang);
-		return obj;
-	}, {} as Record<string, any>));
+	const lowlight = createLowlight(
+		hljs.listLanguages().reduce(
+			(obj, lang) => {
+				obj[lang] = () => hljs.getLanguage(lang);
+				return obj;
+			},
+			{} as Record<string, any>
+		)
+	);
 
 	export let editor: Editor | null = null;
 
@@ -163,7 +168,7 @@
 	export let documentId = '';
 
 	export let className = 'input-prose';
-	export let placeholder = 'Type here...';
+	export let placeholder = $i18n.t('Type here...');
 	let _placeholder = placeholder;
 
 	$: if (placeholder !== _placeholder) {
@@ -501,9 +506,14 @@
 
 	export const focus = () => {
 		if (editor) {
-			editor.view.focus();
-			// Scroll to the current selection
-			editor.view.dispatch(editor.view.state.tr.scrollIntoView());
+			try {
+				editor.view?.focus();
+				// Scroll to the current selection
+				editor.view?.dispatch(editor.view.state.tr.scrollIntoView());
+			} catch (e) {
+				// sometimes focusing throws an error, ignore
+				console.warn('Error focusing editor', e);
+			}
 		}
 	};
 
@@ -679,7 +689,7 @@
 					link: link
 				}),
 				...(dragHandle ? [ListItemDragHandle] : []),
-				Placeholder.configure({ placeholder: () => _placeholder }),
+				Placeholder.configure({ placeholder: () => _placeholder, showOnlyWhenEditable: false }),
 				SelectionDecoration,
 
 				...(richText
@@ -1113,4 +1123,9 @@
 	</div>
 {/if}
 
-<div bind:this={element} class="relative w-full min-w-full h-full min-h-fit {className}" />
+<div
+	bind:this={element}
+	class="relative w-full min-w-full h-full min-h-fit {className} {!editable
+		? 'cursor-not-allowed'
+		: ''}"
+/>

@@ -339,10 +339,6 @@
 		}, 500);
 	};
 
-	$: if (open) {
-		isExpandedUpdateDebounceHandler();
-	}
-
 	const renameHandler = async () => {
 		console.log('Edit');
 		await tick();
@@ -471,6 +467,7 @@
 					on:click={(e) => {
 						e.stopPropagation();
 						open = !open;
+						isExpandedUpdateDebounceHandler();
 					}}
 				>
 					{#if folders[folderId]?.meta?.icon}

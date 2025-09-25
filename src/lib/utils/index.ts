@@ -799,6 +799,15 @@ export const isValidHttpUrl = (string: string) => {
 	return url.protocol === 'http:' || url.protocol === 'https:';
 };
 
+export const isYoutubeUrl = (url: string) => {
+	return (
+		url.startsWith('https://www.youtube.com') ||
+		url.startsWith('https://youtu.be') ||
+		url.startsWith('https://youtube.com') ||
+		url.startsWith('https://m.youtube.com')
+	);
+};
+
 export const removeEmojis = (str: string) => {
 	// Regular expression to match emojis
 	const emojiRegex = /[\uD800-\uDBFF][\uDC00-\uDFFF]|\uD83C[\uDC00-\uDFFF]|\uD83D[\uDC00-\uDE4F]/g;

@@ -21,7 +21,7 @@ dependencies = [
     "PyJWT[crypto]==2.10.1",
     "authlib==1.6.3",
 
-    "requests==2.32.4",
+    "requests==2.32.5",
     "aiohttp==3.12.15",
     "async-timeout",
     "aiocache",
@@ -51,11 +51,11 @@ dependencies = [
 
     "openai",
     "anthropic",
-    "google-genai==1.32.0",
+    "google-genai==1.38.0",
     "google-generativeai==0.8.5",
 
-    "langchain==0.3.26",
-    "langchain-community==0.3.27",
+    "langchain==0.3.27",
+    "langchain-community==0.3.29",
 
     "fake-useragent==2.2.0",
     "chromadb==1.0.20",

@@ -1415,6 +1415,9 @@
 													console.error('OneDrive Error:', error);
 												}
 											}}
+											onUpload={async (e) => {
+												dispatch('upload', e);
+											}}
 											onClose={async () => {
 												await tick();
 

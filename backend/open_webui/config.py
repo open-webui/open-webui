@@ -2767,6 +2767,12 @@ WEB_SEARCH_TRUST_ENV = PersistentConfig(
 )
 
 
+OLLAMA_CLOUD_WEB_SEARCH_API_KEY = PersistentConfig(
+    "OLLAMA_CLOUD_WEB_SEARCH_API_KEY",
+    "rag.web.search.ollama_cloud_api_key",
+    os.getenv("OLLAMA_CLOUD_API_KEY", ""),
+)
+
 SEARXNG_QUERY_URL = PersistentConfig(
     "SEARXNG_QUERY_URL",
     "rag.web.search.searxng_query_url",

@@ -9,13 +9,14 @@ python-jose==3.4.0
 passlib[bcrypt]==1.7.4
 cryptography
 
-requests==2.32.4
+requests==2.32.5
 aiohttp==3.12.15
 async-timeout
 aiocache
 aiofiles
 starlette-compress==1.6.0
 httpx[socks,http2,zstd,cli,brotli]==0.28.1
+starsessions[redis]==2.2.1
 
 sqlalchemy==2.0.38
 alembic==1.14.0
@@ -43,13 +44,13 @@ asgiref==3.8.1
 # AI libraries
 openai
 anthropic
-google-genai==1.32.0
+google-genai==1.38.0
 google-generativeai==0.8.5
 tiktoken
 mcp==1.14.1
 
-langchain==0.3.26
-langchain-community==0.3.27
+langchain==0.3.27
+langchain-community==0.3.29
 
 fake-useragent==2.2.0
 chromadb==1.0.20
