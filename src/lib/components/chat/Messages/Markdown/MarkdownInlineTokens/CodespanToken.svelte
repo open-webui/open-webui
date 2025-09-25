@@ -20,17 +20,19 @@
 	<code
 		class="codespan cursor-pointer"
 		on:click={() => {
-			copyToClipboard(unescapeHtml(token.text));
+			copyToClipboard(token.text);
 			toast.success($i18n.t('Copied to clipboard'));
-		}}><PiiAwareText text={unescapeHtml(token.text)} {id} {conversationId} {done} /></code
+		}}
+	>
+		<PiiAwareText {token} {id} {conversationId} {done} /></code
 	>
 {:else}
 	<code
 		transition:fade={{ duration: 100 }}
 		class="codespan cursor-pointer"
 		on:click={() => {
-			copyToClipboard(unescapeHtml(token.text));
+			copyToClipboard(token.text);
 			toast.success($i18n.t('Copied to clipboard'));
-		}}><PiiAwareText text={unescapeHtml(token.text)} {id} {conversationId} {done} /></code
+		}}><PiiAwareText {token} {id} {conversationId} {done} /></code
 	>
 {/if}

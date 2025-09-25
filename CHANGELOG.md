@@ -5,6 +5,13 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.6.28n1] - 2025-09-25
+
+### Fixed
+
+- 🔧 Missing HTML normalization of responses.
+- 🔒 Unreliable PII masking of docx files now works much better.
+
 ## [0.6.28n1] - 2025-09-24
 
 ### Fixed
@@ -13,7 +20,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - 📝 An issue where notes could not be included in the chat
 - 🔤 An issue spaces were missing from model responses after **bold** text
 - 📍 Positioning of the scanning indicator
-- 🔍 Vanishing of PII highlights during re-scanning in Chat input window 
+- 🔍 Vanishing of PII highlights during re-scanning in Chat input window
 
 ## [0.6.28] - 2025-09-10
 

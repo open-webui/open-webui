@@ -39,7 +39,7 @@
 				allowfullscreen
 			></video>
 		{:else}
-			<PiiAwareText text={token.text} id={`${id}-text-html`} {conversationId} {done} />
+			<PiiAwareText {token} id={`${id}-text-html`} {conversationId} {done} />
 		{/if}
 	{:else if html && html.includes('<audio')}
 		{@const audio = html.match(/<audio[^>]*>([\s\S]*?)<\/audio>/)}
@@ -53,7 +53,7 @@
 				controls
 			></audio>
 		{:else}
-			<PiiAwareText text={token.text} id={`${id}-text-html`} {conversationId} {done} />
+			<PiiAwareText {token} id={`${id}-text-html`} {conversationId} {done} />
 		{/if}
 	{:else if token.text && token.text.match(/<iframe\s+[^>]*src="https:\/\/www\.youtube\.com\/embed\/([a-zA-Z0-9_-]{11})(?:\?[^"]*)?"[^>]*><\/iframe>/)}
 		{@const match = token.text.match(
@@ -85,7 +85,7 @@
 				onload="this.style.height=(this.contentWindow.document.body.scrollHeight+20)+'px';"
 			></iframe>
 		{:else}
-			<PiiAwareText text={token.text} id={`${id}-text-html`} {conversationId} {done} />
+			<PiiAwareText {token} id={`${id}-text-html`} {conversationId} {done} />
 		{/if}
 	{:else if token.text && token.text.includes('<status')}
 		{@const match = token.text.match(/<status title="([^"]+)" done="(true|false)" ?\/?>/)}
@@ -102,7 +102,7 @@
 				</div>
 			</div>
 		{:else}
-			<PiiAwareText text={token.text} id={`${id}-text-html`} {conversationId} {done} />
+			<PiiAwareText {token} id={`${id}-text-html`} {conversationId} {done} />
 		{/if}
 	{:else if token.text.includes(`<file type="html"`)}
 		{@const match = token.text.match(/<file type="html" id="([^"]+)"/)}
@@ -129,7 +129,7 @@
 		{#if br}
 			<br />
 		{:else}
-			<PiiAwareText text={token.text} id={`${id}-text-html`} {conversationId} {done} />
+			<PiiAwareText {token} id={`${id}-text-html`} {conversationId} {done} />
 		{/if}
 	{/if}
 {/if}

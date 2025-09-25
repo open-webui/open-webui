@@ -1909,6 +1909,49 @@ def process_file(
                 except Exception:
                     pass
 
+                # Constants for document chunking
+                CHUNK_SIZE = 5000
+
+                # If there's only one document, chunk it into smaller pieces
+                if len(docs) == 1 and len(docs[0].page_content) > CHUNK_SIZE:
+                    content = docs[0].page_content
+                    base_metadata = docs[0].metadata
+                    chunk_size = CHUNK_SIZE
+                    chunks = []
+
+                    # Split into sentences first
+                    import re
+
+                    sentences = re.split(r"(?<=[.!?])\s+", content)
+
+                    current_chunk = ""
+                    for sentence in sentences:
+                        # If adding this sentence would exceed chunk size
+                        if (
+                            len(current_chunk) + len(sentence) > chunk_size
+                            and current_chunk
+                        ):
+                            chunks.append(
+                                Document(
+                                    page_content=current_chunk,
+                                    metadata=base_metadata.copy(),
+                                )
+                            )
+                            current_chunk = sentence
+                        else:
+                            current_chunk += sentence
+
+                    # Add the last chunk if it has content
+                    if current_chunk.strip():
+                        chunks.append(
+                            Document(
+                                page_content=current_chunk,
+                                metadata=base_metadata.copy(),
+                            )
+                        )
+
+                    docs = chunks
+
                 docs = [
                     Document(
                         page_content=doc.page_content,

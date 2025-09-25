@@ -943,7 +943,10 @@ export class PiiSessionManager {
 	}
 
 	setEntityMaskingState(conversationId: string, entityId: string, shouldMask: boolean) {
-		// Only update the primary state for this conversation
+		// Update both persistent and working entities for this conversation
+		let updated = false;
+
+		// First, try to update persistent state
 		const state = this.conversationStates.get(conversationId);
 		if (state) {
 			const entity = state.entities.find((e) => e.label === entityId);
@@ -951,7 +954,28 @@ export class PiiSessionManager {
 				entity.shouldMask = shouldMask;
 				state.lastUpdated = Date.now();
 				this.triggerChatSave(conversationId);
+				updated = true;
+				console.log(
+					'PiiSessionManager: Updated persistent entity mask state:',
+					entityId,
+					shouldMask
+				);
 			}
+		}
+
+		// Also check and update working entities (for recently detected entities)
+		const workingEntities = this.workingEntitiesForConversations.get(conversationId);
+		if (workingEntities) {
+			const workingEntity = workingEntities.find((e) => e.label === entityId);
+			if (workingEntity) {
+				workingEntity.shouldMask = shouldMask;
+				updated = true;
+				console.log('PiiSessionManager: Updated working entity mask state:', entityId, shouldMask);
+			}
+		}
+
+		if (!updated) {
+			console.warn('PiiSessionManager: Entity not found in persistent or working state:', entityId);
 		}
 	}
 
@@ -959,6 +983,9 @@ export class PiiSessionManager {
 		const entity = this.temporaryState.entities.find((e) => e.label === entityId);
 		if (entity) {
 			entity.shouldMask = shouldMask;
+			console.log('PiiSessionManager: Updated temporary entity mask state:', entityId, shouldMask);
+		} else {
+			console.warn('PiiSessionManager: Entity not found in temporary state:', entityId);
 		}
 	}
 
@@ -1399,43 +1426,40 @@ export function unmaskAndHighlightTextForDisplay(
 			return;
 		}
 
-		if (entity.shouldMask) {
-			// Extract the base type and ID from the label
-			const labelMatch = label.match(/^(.+)_(\d+)$/);
-			if (!labelMatch) {
-				return;
-			}
+		// Extract the base type and ID from the label
+		const labelMatch = label.match(/^(.+)_(\d+)$/);
+		if (!labelMatch) {
+			return;
+		}
 
-			const [, baseType, labelId] = labelMatch;
-			const labelVariations = getLabelVariations(baseType);
+		const [, baseType, labelId] = labelMatch;
+		const labelVariations = getLabelVariations(baseType);
 
-			// Create comprehensive patterns for masked text
-			const patterns = [
-				`\\[\\{${labelVariations}_${labelId}\\}\\]`, // [{TYPE_ID}]
-				`\\[${labelVariations}_${labelId}\\]`, // [TYPE_ID]
-				`\\{${labelVariations}_${labelId}\\}`, // {TYPE_ID}
-				`${labelVariations}_${labelId}(?=\\s|$|[^\\w])` // TYPE_ID as word boundary
-			];
+		// Create comprehensive patterns for masked text - check these FIRST for all entities
+		const patterns = [
+			`\\[\\{${labelVariations}_${labelId}\\}\\]`, // [{TYPE_ID}]
+			`\\[${labelVariations}_${labelId}\\]`, // [TYPE_ID]
+			`\\{${labelVariations}_${labelId}\\}`, // {TYPE_ID}
+			`${labelVariations}_${labelId}(?=\\s|$|[^\\w])` // TYPE_ID as word boundary
+		];
 
-			// Use case-insensitive matching and global flag
-			const labelRegex = new RegExp(patterns.join('|'), 'gi');
+		// Use case-insensitive matching and global flag
+		const labelRegex = new RegExp(patterns.join('|'), 'gi');
 
-			// Replace masked patterns with highlighted spans containing the original text
-			const beforeReplace = processedText;
-			processedText = processedText.replace(labelRegex, () => {
-				const shouldMask = entity.shouldMask ?? true;
-				const maskingClass = shouldMask ? 'pii-masked' : 'pii-unmasked';
-				const statusText = shouldMask
-					? i18next.t('PII Modifier: Was masked in input')
-					: i18next.t('PII Modifier: Was NOT masked in input');
+		// Replace masked patterns with highlighted spans containing the original text
+		let beforeReplace = processedText;
+		processedText = processedText.replace(labelRegex, () => {
+			const shouldMask = entity.shouldMask ?? true;
+			const maskingClass = shouldMask ? 'pii-masked' : 'pii-unmasked';
+			const statusText = shouldMask
+				? i18next.t('PII Modifier: Was masked in input')
+				: i18next.t('PII Modifier: Was NOT masked in input');
 
-				return `<span class="pii-highlight ${maskingClass}" title="${entity.label} - ${statusText}" data-pii-type="${entity.type}" data-pii-label="${entity.label}">${rawText}</span>`;
-			});
+			return `<span class="pii-highlight ${maskingClass}" title="${entity.label} - ${statusText}" data-pii-type="${entity.type}" data-pii-label="${entity.label}">${rawText}</span>`;
+		});
 
-			if (beforeReplace !== processedText) {
-				//replacementsMade++;
-			}
-		} else {
+		// If no pattern matches were found, also try to match raw text for unmasked entities
+		if (beforeReplace === processedText && !entity.shouldMask) {
 			// Skip entities with empty or invalid raw_text
 			if (!entity.raw_text?.trim()) {
 				return;
@@ -1450,7 +1474,6 @@ export function unmaskAndHighlightTextForDisplay(
 				? new RegExp(escapedText, 'gi')
 				: new RegExp(`\\b${escapedText}\\b`, 'gi');
 
-			const beforeReplace = processedText;
 			processedText = processedText.replace(regex, (match) => {
 				const shouldMask = entity.shouldMask ?? true;
 				const maskingClass = shouldMask ? 'pii-masked' : 'pii-unmasked';
@@ -1460,11 +1483,15 @@ export function unmaskAndHighlightTextForDisplay(
 
 				return `<span class="pii-highlight ${maskingClass}" title="${entity.label} - ${statusText}" data-pii-type="${entity.type}" data-pii-label="${entity.label}">${match}</span>`;
 			});
-
-			if (beforeReplace !== processedText) {
-				//replacementsMade++;
-			}
 		}
+	});
+
+	// Step 2: Fallback - catch any remaining PII patterns that don't have matching entities
+	// This handles cases where patterns exist but entities are missing from the array
+	const orphanedPatternRegex = /\[\{([A-Z_]+_\d+)\}\]/g;
+	processedText = processedText.replace(orphanedPatternRegex, (match, label) => {
+		console.warn(`Found orphaned PII pattern: ${match} (no matching entity found)`);
+		return `<span class="pii-highlight pii-masked" title="${label} - Unknown PII entity" data-pii-type="UNKNOWN" data-pii-label="${label}">[Unknown PII: ${label}]</span>`;
 	});
 
 	return processedText;

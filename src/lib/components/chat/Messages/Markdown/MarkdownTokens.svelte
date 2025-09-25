@@ -352,12 +352,7 @@
 						{conversationId}
 					/>
 				{:else}
-					<PiiAwareText
-						text={unescapeHtml(token.text)}
-						id={`${id}-${tokenIdx}-text`}
-						{conversationId}
-						{done}
-					/>
+					<PiiAwareText {token} id={`${id}-${tokenIdx}-text`} {conversationId} {done} />
 				{/if}
 			</p>
 		{:else if token.tokens}
@@ -369,12 +364,7 @@
 				{conversationId}
 			/>
 		{:else}
-			<PiiAwareText
-				text={unescapeHtml(token.text)}
-				id={`${id}-${tokenIdx}-text-inline`}
-				{conversationId}
-				{done}
-			/>
+			<PiiAwareText {token} id={`${id}-${tokenIdx}-text-inline`} {conversationId} {done} />
 		{/if}
 	{:else if token.type === 'inlineKatex'}
 		{#if token.text}

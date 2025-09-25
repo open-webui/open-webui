@@ -3,7 +3,7 @@
 	import { PiiSessionManager, unmaskAndHighlightTextForDisplay } from '$lib/utils/pii';
 	import { fade } from 'svelte/transition';
 
-	export let text: string;
+	export let token: Token;
 	export let id: string = '';
 	export let conversationId: string = '';
 	export let done: boolean = false;
@@ -21,21 +21,21 @@
 
 	$: processedText = (() => {
 		if (!entities.length && !filenameMappings.length) {
-			return text;
+			return token.raw;
 		}
 
 		// Check if text has already been processed (contains PII highlight spans)
 		if (
-			text.includes('<span class="pii-highlight') ||
-			text.includes('<span class="filename-highlight')
+			token.raw.includes('<span class="pii-highlight') ||
+			token.raw.includes('<span class="filename-highlight')
 		) {
-			return text;
+			return token.raw;
 		}
 
-		const result = unmaskAndHighlightTextForDisplay(text, entities, filenameMappings);
+		const result = unmaskAndHighlightTextForDisplay(token.raw, entities, filenameMappings);
 		return result;
 	})();
-	$: hasHighlighting = processedText !== text;
+	$: hasHighlighting = processedText !== token.raw;
 </script>
 
 {#if done}
@@ -43,7 +43,7 @@
 		{#if hasHighlighting}
 			{@html DOMPurify.sanitize(processedText)}
 		{:else}
-			{text}
+			{token?.raw}
 		{/if}
 	</span>
 {:else}
@@ -51,7 +51,7 @@
 		{#if hasHighlighting}
 			{@html DOMPurify.sanitize(processedText)}
 		{:else}
-			{text}
+			{token.raw}
 		{/if}
 	</span>
 {/if}
