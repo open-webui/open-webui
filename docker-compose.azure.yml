@@ -4,7 +4,7 @@ services:
     container_name: postgres
     environment:
       - POSTGRES_USER=webui_lf
-      - POSTGRES_PASSWORD=Lfrag!25Secured
+      - POSTGRES_PASSWORD=Lfrag25Secured
       - POSTGRES_DB=openwebui
       - PGDATA=/var/lib/postgresql/data/pgdata
     volumes:
@@ -23,7 +23,7 @@ services:
     ports:
       - "8080:8080"
     environment:
-      - DATABASE_URL=postgresql://webui_lf:Lfrag!25Secured@postgres:5432/openwebui
+      - DATABASE_URL=postgresql://webui_lf:Lfrag25Secured@postgres:5432/openwebui
       - WEBUI_SECRET_KEY=${WEBUI_SECRET_KEY:-your-secret-key-here}
       - OLLAMA_BASE_URL=${OLLAMA_BASE_URL:-http://ollama:11434}
 
