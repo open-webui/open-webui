@@ -1,0 +1,9 @@
+fastapi==0.104.1
+uvicorn==0.24.0
+python-multipart==0.0.6
+pillow==10.0.1
+requests==2.31.0
+fal-client==0.4.0
+pydantic==2.5.0
+python-jose==3.3.0
+aiofiles==23.2.1
