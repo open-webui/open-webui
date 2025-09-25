@@ -205,7 +205,6 @@ async def get_tools(
                         tools_dict[function_name] = tool_dict
 
                 else:
-                    log.warning(f"Unsupported tool server type: {type}")
                     continue
 
             else:
