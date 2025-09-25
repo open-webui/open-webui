@@ -62,7 +62,7 @@ dependencies = [
     "opensearch-py==2.8.0",
     
     "transformers",
-    "sentence-transformers==4.1.0",
+    "sentence-transformers==5.1.1",
     "accelerate",
     "pyarrow==20.0.0",
     "einops==0.8.1",
