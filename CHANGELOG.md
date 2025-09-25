@@ -35,6 +35,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- 📊 Notes database operations were further optimized with streaming results and improved memory management, using per-batch processing and fast-pass permission checks to reduce memory usage for large note collections. [#17747](https://github.com/open-webui/open-webui/pull/17747)
 - 💬 Attached conversation references now persist throughout the entire chat session, ensuring models can continue querying referenced conversations after multiple conversation turns. [#17750](https://github.com/open-webui/open-webui/issues/17750)
 - 🔍 Search modal text box focus issues after pinning or unpinning chats were resolved, allowing users to properly exit the search interface by clicking outside the text box. [#17743](https://github.com/open-webui/open-webui/issues/17743)
 - 🔍 Search function chat list is now properly updated in real-time when chats are created or deleted, eliminating stale search results and preview loading failures. [#17741](https://github.com/open-webui/open-webui/issues/17741)
@@ -54,7 +55,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
-- 📊 Notes API behavior was modified where "get_notes_by_user_id()" now only returns owned notes instead of both owned and shared notes, with shared notes now accessible through the new "get_notes_by_access()" method.
+- 📊 Notes API behavior was modified where "get_notes_by_user_id()" now only returns owned notes instead of both owned and shared notes, with shared notes now accessible through the new "get_notes_by_permission()" method (renamed from "get_notes_by_access()").
 - 👥 Channel permissions now require write access for message posting, editing, and deletion, with existing user groups defaulting to read-only access requiring manual admin migration to write permissions for full participation.
 - ☁️ OneDrive environment variable configuration was updated to use separate ONEDRIVE_CLIENT_ID_PERSONAL and ONEDRIVE_CLIENT_ID_BUSINESS variables for better client ID separation, while maintaining backward compatibility with the legacy ONEDRIVE_CLIENT_ID variable. [Docs](https://docs.openwebui.com/tutorials/integrations/onedrive-sharepoint), [Docs](https://docs.openwebui.com/getting-started/env-configuration/#onedrive)
 
