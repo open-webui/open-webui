@@ -1900,7 +1900,7 @@ if len(app.state.config.TOOL_SERVER_CONNECTIONS) > 0:
             auth_type = tool_server_connection.get("auth_type", "none")
             if server_id and auth_type == "oauth_2.1":
                 oauth_client_info = tool_server_connection.get("info", {}).get(
-                    "oauth_client_info"
+                    "oauth_client_info", ""
                 )
 
                 oauth_client_info = decrypt_data(oauth_client_info)
