@@ -4,7 +4,7 @@ Added support for configurable interactive buttons for SearchPlanAgent responses
 
 The buttons for search plan agent should only appear, when the following conditions are met: 
 1. The last message on a chat is a model response, not a user message. 
-2. The model's response contain the text matching environment variable SEARCH_PLAN_AGENT_BUTTONS_TRIGGERING_SENTENCE 
+2. The model's response contain the text matching environment variable SEARCH_PLAN_AGENT_BUTTONS_TRIGGERING_SENTENCE. Only the response, thinking process isn't considered. 
 3. Buttons haven't been clicked before (only in current frontend session, storing button clicking state outside of frontend is never considered, and will never be), as clicking on those buttons will make them disappear, to prevent buttons from being able to be clicked more than once. 
 
 ## Environment variables
@@ -54,3 +54,10 @@ SEARCH_PLAN_AGENT_BUTTONS_MAPPING='[
 - Notes:
     - Matching is using a containment check against the model response (the configured string is searched for in the response). Adjust the exact trigger string to match the phrasing the model is expected to produce.
     - Use this variable together with SEARCH_PLAN_AGENT_BUTTONS_MAPPING to control when and which buttons appear.
+
+Files changed:
+@src\lib\components\chat\Messages\ResponseMessage.svelte
+@src\lib\components\chat\Chat.svelte
+@src\lib\components\chat\MessageInput.svelte
+@src\lib\components\chat\Messages.svelte
+@src\lib\components\chat\Messages\Message.svelte

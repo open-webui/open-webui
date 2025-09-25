@@ -48,6 +48,7 @@
 		splitStream,
 		sleep,
 		removeDetails,
+		removeAllDetails,
 		getPromptVariables,
 		processDetails
 	} from '$lib/utils';
@@ -484,7 +485,7 @@ selectedKnowledgeSources = [];
 			history.messages[history.currentId] &&
 			history.messages[history.currentId].role === 'assistant' &&
 			history.messages[history.currentId].done &&
-			history.messages[history.currentId].content.includes(
+			removeAllDetails(history.messages[history.currentId].content).includes(
 				$config?.features?.search_plan_agent_buttons_triggering_sentence
 			)
 		) {
