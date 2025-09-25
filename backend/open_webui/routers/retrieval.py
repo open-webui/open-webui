@@ -46,6 +46,7 @@ from open_webui.retrieval.loaders.youtube import YoutubeLoader
 from open_webui.retrieval.web.main import SearchResult
 from open_webui.retrieval.web.utils import get_web_loader
 from open_webui.retrieval.web.ollama import search_ollama_cloud
+from open_webui.retrieval.web.perplexity_search import search_perplexity_search
 from open_webui.retrieval.web.brave import search_brave
 from open_webui.retrieval.web.kagi import search_kagi
 from open_webui.retrieval.web.mojeek import search_mojeek
@@ -1801,6 +1802,16 @@ def search_web(request: Request, engine: str, query: str) -> list[SearchResult]:
             request.app.state.config.WEB_SEARCH_RESULT_COUNT,
             request.app.state.config.WEB_SEARCH_DOMAIN_FILTER_LIST,
         )
+    elif engine == "perplexity_search":
+        if request.app.state.config.PERPLEXITY_API_KEY:
+            return search_perplexity_search(
+                request.app.state.config.PERPLEXITY_API_KEY,
+                query,
+                request.app.state.config.WEB_SEARCH_RESULT_COUNT,
+                request.app.state.config.WEB_SEARCH_DOMAIN_FILTER_LIST,
+            )
+        else:
+            raise Exception("No PERPLEXITY_API_KEY found in environment variables")
     elif engine == "searxng":
         if request.app.state.config.SEARXNG_QUERY_URL:
             return search_searxng(
