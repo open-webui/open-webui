@@ -51,7 +51,7 @@
 		if (target?.value === 'portkey') {
 			STT_PORTKEY_API_BASE_URL = 'https://ai-gateway.apps.cloud.rt.nyu.edu/v1';
 			if (!STT_MODEL) {
-				STT_MODEL = 'openai-4o-mini-audio/gpt-4o-mini-audio-preview';
+				STT_MODEL = '@openai-4o-mini-audio/gpt-4o-mini-audio-preview';
 			}
 		}
 	};
