@@ -13,7 +13,7 @@ from langchain.retrievers import ContextualCompressionRetriever, EnsembleRetriev
 from langchain_community.retrievers import BM25Retriever
 from langchain_core.documents import Document
 
-from open_webui.config import VECTOR_DB
+from open_webui.config import VECTOR_DB, MILVUS_MODE
 from open_webui.retrieval.vector.factory import VECTOR_DB_CLIENT
 
 from open_webui.models.users import UserModel
@@ -53,6 +53,7 @@ class VectorSearchRetriever(BaseRetriever):
     collection_name: Any
     embedding_function: Any
     top_k: int
+    partition_names: Optional[list[str]] = None
 
     def _get_relevant_documents(
         self,
@@ -64,6 +65,7 @@ class VectorSearchRetriever(BaseRetriever):
             collection_name=self.collection_name,
             vectors=[self.embedding_function(query, RAG_EMBEDDING_QUERY_PREFIX)],
             limit=self.top_k,
+            partition_names=self.partition_names,
         )
 
         ids = result.ids[0]
@@ -82,7 +84,11 @@ class VectorSearchRetriever(BaseRetriever):
 
 
 def query_doc(
-    collection_name: str, query_embedding: list[float], k: int, user: UserModel = None
+    collection_name: str,
+    query_embedding: list[float],
+    k: int,
+    user: UserModel = None,
+    partition_names: Optional[list[str]] = None,
 ):
     try:
         log.debug(f"query_doc:doc {collection_name}")
@@ -90,6 +96,7 @@ def query_doc(
             collection_name=collection_name,
             vectors=[query_embedding],
             limit=k,
+            partition_names=partition_names,
         )
 
         if result:
@@ -101,10 +108,16 @@ def query_doc(
         raise e
 
 
-def get_doc(collection_name: str, user: UserModel = None):
+def get_doc(
+    collection_name: str,
+    user: UserModel = None,
+    partition_names: Optional[list[str]] = None,
+):
     try:
         log.debug(f"get_doc:doc {collection_name}")
-        result = VECTOR_DB_CLIENT.get(collection_name=collection_name)
+        result = VECTOR_DB_CLIENT.get(
+            collection_name=collection_name, partition_names=partition_names
+        )
 
         if result:
             log.info(f"query_doc:result {result.ids} {result.metadatas}")
@@ -125,6 +138,7 @@ def query_doc_with_hybrid_search(
     k_reranker: int,
     r: float,
     hybrid_bm25_weight: float,
+    partition_names: Optional[list[str]] = None,
 ) -> dict:
     try:
         if not collection_result.documents[0]:
@@ -143,6 +157,7 @@ def query_doc_with_hybrid_search(
             collection_name=collection_name,
             embedding_function=embedding_function,
             top_k=k,
+            partition_names=partition_names,
         )
 
         if hybrid_bm25_weight <= 0:
@@ -261,13 +276,17 @@ def merge_and_sort_query_results(query_results: list[dict], k: int) -> dict:
     }
 
 
-def get_all_items_from_collections(collection_names: list[str]) -> dict:
+def get_all_items_from_collections(
+    collection_names: list[str], partition_names: Optional[list[str]] = None
+) -> dict:
     results = []
 
     for collection_name in collection_names:
         if collection_name:
             try:
-                result = get_doc(collection_name=collection_name)
+                result = get_doc(
+                    collection_name=collection_name, partition_names=partition_names
+                )
                 if result is not None:
                     results.append(result.model_dump())
             except Exception as e:
@@ -283,6 +302,7 @@ def query_collection(
     queries: list[str],
     embedding_function,
     k: int,
+    partition_names: Optional[list[str]] = None,
 ) -> dict:
     results = []
     error = False
@@ -294,6 +314,7 @@ def query_collection(
                     collection_name=collection_name,
                     k=k,
                     query_embedding=query_embedding,
+                    partition_names=partition_names,
                 )
                 if result is not None:
                     return result.model_dump(), None
@@ -339,6 +360,7 @@ def query_collection_with_hybrid_search(
     k_reranker: int,
     r: float,
     hybrid_bm25_weight: float,
+    partition_names: Optional[list[str]] = None,
 ) -> dict:
     results = []
     error = False
@@ -351,7 +373,7 @@ def query_collection_with_hybrid_search(
                 f"query_collection_with_hybrid_search:VECTOR_DB_CLIENT.get:collection {collection_name}"
             )
             collection_results[collection_name] = VECTOR_DB_CLIENT.get(
-                collection_name=collection_name
+                collection_name=collection_name, partition_names=partition_names
             )
         except Exception as e:
             log.exception(f"Failed to fetch collection {collection_name}: {e}")
@@ -373,6 +395,7 @@ def query_collection_with_hybrid_search(
                 k_reranker=k_reranker,
                 r=r,
                 hybrid_bm25_weight=hybrid_bm25_weight,
+                partition_names=partition_names,
             )
             return result, None
         except Exception as e:
@@ -489,6 +512,7 @@ def get_sources_from_items(
     for item in items:
         query_result = None
         collection_names = []
+        partition_names = None
 
         if item.get("type") == "text":
             # Raw Text
@@ -508,7 +532,17 @@ def get_sources_from_items(
                 # Fallback
                 if item.get("collection_name"):
                     # If item has a collection name, use it
-                    collection_names.append(item.get("collection_name"))
+                    if MILVUS_MODE == "multitenancy":
+                        partition_names = [item.get("collection_name")]
+                        if "file" in item.get("collection_name"):
+                            collection_names.append("files")
+                        elif "web-search" in item.get("collection_name"):
+                            collection_names.append("web-search")
+                        else:
+                            collection_names.append("knowledge")
+                    else:
+                        collection_names.append(item.get("collection_name"))
+
                 elif item.get("file"):
                     # If item has file data, use it
                     query_result = {
@@ -609,7 +643,11 @@ def get_sources_from_items(
                 if item.get("legacy"):
                     collection_names.append(f"{item['id']}")
                 else:
-                    collection_names.append(f"file-{item['id']}")
+                    if MILVUS_MODE == "multitenancy":
+                        collection_names.append("files")
+                        partition_names = [f"file-{item['id']}"]
+                    else:
+                        collection_names.append(f"file-{item['id']}")
 
         elif item.get("type") == "collection":
             if (
@@ -651,7 +689,11 @@ def get_sources_from_items(
                 if item.get("legacy"):
                     collection_names = item.get("collection_names", [])
                 else:
-                    collection_names.append(item["id"])
+                    if MILVUS_MODE == "multitenancy":
+                        collection_names.append("knowledge")
+                        partition_names = [item["id"]]
+                    else:
+                        collection_names.append(item["id"])
 
         elif item.get("docs"):
             # BYPASS_WEB_SEARCH_EMBEDDING_AND_RETRIEVAL
@@ -661,10 +703,30 @@ def get_sources_from_items(
             }
         elif item.get("collection_name"):
             # Direct Collection Name
-            collection_names.append(item["collection_name"])
+            if MILVUS_MODE == "multitenancy":
+                partition_names = [item.get("collection_name")]
+                if "file" in item.get("collection_name"):
+                    collection_names.append("files")
+                elif "web-search" in item.get("collection_name"):
+                    collection_names.append("web-search")
+                else:
+                    collection_names.append("knowledge")
+            else:
+                collection_names.append(item["collection_name"])
         elif item.get("collection_names"):
             # Collection Names List
-            collection_names.extend(item["collection_names"])
+            if MILVUS_MODE == "multitenancy":
+                partition_names = item["collection_names"]
+                # This assumes all collections in the list belong to the same shared collection type
+                # A more robust implementation might group them by type
+                if partition_names and "file" in partition_names[0]:
+                    collection_names.append("files")
+                elif partition_names and "web-search" in partition_names[0]:
+                    collection_names.append("web-search")
+                else:
+                    collection_names.append("knowledge")
+            else:
+                collection_names.extend(item["collection_names"])
 
         # If query_result is None
         # Fallback to collection names and vector search the collections
@@ -676,7 +738,9 @@ def get_sources_from_items(
 
             try:
                 if full_context:
-                    query_result = get_all_items_from_collections(collection_names)
+                    query_result = get_all_items_from_collections(
+                        collection_names, partition_names=partition_names
+                    )
                 else:
                     query_result = None  # Initialize to None
                     if hybrid_search:
@@ -690,6 +754,7 @@ def get_sources_from_items(
                                 k_reranker=k_reranker,
                                 r=r,
                                 hybrid_bm25_weight=hybrid_bm25_weight,
+                                partition_names=partition_names,
                             )
                         except Exception as e:
                             log.debug(
@@ -703,6 +768,7 @@ def get_sources_from_items(
                             queries=queries,
                             embedding_function=embedding_function,
                             k=k,
+                            partition_names=partition_names,
                         )
             except Exception as e:
                 log.exception(e)

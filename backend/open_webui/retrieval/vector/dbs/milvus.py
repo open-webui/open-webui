@@ -17,6 +17,8 @@ from open_webui.config import (
     MILVUS_URI,
     MILVUS_DB,
     MILVUS_TOKEN,
+    MILVUS_MODE,
+    MILVUS_EMBEDDING_DIMENSION,
     MILVUS_INDEX_TYPE,
     MILVUS_METRIC_TYPE,
     MILVUS_HNSW_M,
@@ -36,6 +38,22 @@ class MilvusClient(VectorDBBase):
             self.client = Client(uri=MILVUS_URI, db_name=MILVUS_DB)
         else:
             self.client = Client(uri=MILVUS_URI, db_name=MILVUS_DB, token=MILVUS_TOKEN)
+
+        if MILVUS_MODE == "multitenancy":
+            if not MILVUS_EMBEDDING_DIMENSION:
+                raise ValueError(
+                    "MILVUS_EMBEDDING_DIMENSION must be set when using multi-tenancy mode."
+                )
+
+            self.shared_collections = ["knowledge", "files", "web-search"]
+            for collection_name in self.shared_collections:
+                if not self.has_collection(collection_name):
+                    log.info(
+                        f"Creating shared collection '{collection_name}' in multitenancy mode."
+                    )
+                    self._create_collection(
+                        collection_name, int(MILVUS_EMBEDDING_DIMENSION)
+                    )
 
     def _result_to_get_result(self, result) -> GetResult:
         ids = []
@@ -113,6 +131,14 @@ class MilvusClient(VectorDBBase):
             field_name="metadata", datatype=DataType.JSON, description="metadata"
         )
 
+        if MILVUS_MODE == "multitenancy":
+            schema.add_field(
+                field_name="resource_id",
+                datatype=DataType.VARCHAR,
+                max_length=65535,
+                is_partition_key=True,
+            )
+
         index_params = self.client.prepare_index_params()
 
         # Use configurations from config.py
@@ -153,6 +179,7 @@ class MilvusClient(VectorDBBase):
             collection_name=f"{self.collection_prefix}_{collection_name}",
             schema=schema,
             index_params=index_params,
+            num_partitions=64 if MILVUS_MODE == "multitenancy" else 1,
         )
         log.info(
             f"Successfully created collection '{self.collection_prefix}_{collection_name}' with index type '{index_type}' and metric '{metric_type}'."
@@ -168,12 +195,28 @@ class MilvusClient(VectorDBBase):
     def delete_collection(self, collection_name: str):
         # Delete the collection based on the collection name.
         collection_name = collection_name.replace("-", "_")
+
+        if (
+            MILVUS_MODE == "multitenancy"
+            and collection_name in self.shared_collections
+        ):
+            log.warning(
+                f"Attempted to delete a shared collection '{collection_name}' in multitenancy mode. Operation skipped."
+            )
+            # In multitenancy mode, we don't delete the shared collections.
+            # Deletion of data should happen at the partition or entity level.
+            return
+
         return self.client.drop_collection(
             collection_name=f"{self.collection_prefix}_{collection_name}"
         )
 
     def search(
-        self, collection_name: str, vectors: list[list[float | int]], limit: int
+        self,
+        collection_name: str,
+        vectors: list[list[float | int]],
+        limit: int,
+        partition_names: Optional[list[str]] = None,
     ) -> Optional[SearchResult]:
         # Search for the nearest neighbor items based on the vectors and return 'limit' number of results.
         collection_name = collection_name.replace("-", "_")
@@ -185,11 +228,18 @@ class MilvusClient(VectorDBBase):
             data=vectors,
             limit=limit,
             output_fields=["data", "metadata"],
+            partition_names=partition_names,
             # search_params=search_params # Potentially add later if needed
         )
         return self._result_to_search_result(result)
 
-    def query(self, collection_name: str, filter: dict, limit: Optional[int] = None):
+    def query(
+        self,
+        collection_name: str,
+        filter: dict,
+        limit: Optional[int] = None,
+        partition_names: Optional[list[str]] = None,
+    ):
         connections.connect(uri=MILVUS_URI, token=MILVUS_TOKEN, db_name=MILVUS_DB)
 
         # Construct the filter string for querying
@@ -207,12 +257,12 @@ class MilvusClient(VectorDBBase):
         )
 
         collection = Collection(f"{self.collection_prefix}_{collection_name}")
-        collection.load()
+        collection.load(partition_names=partition_names)
         all_results = []
 
         try:
             log.info(
-                f"Querying collection {self.collection_prefix}_{collection_name} with filter: '{filter_string}', limit: {limit}"
+                f"Querying collection {self.collection_prefix}_{collection_name} with filter: '{filter_string}', limit: {limit}, partitions: {partition_names}"
             )
 
             iterator = collection.query_iterator(
@@ -223,6 +273,7 @@ class MilvusClient(VectorDBBase):
                     "metadata",
                 ],
                 limit=limit,  # Pass the limit directly; None means no limit.
+                partition_names=partition_names,
             )
 
             while True:
@@ -241,7 +292,11 @@ class MilvusClient(VectorDBBase):
             )
             return None
 
-    def get(self, collection_name: str) -> Optional[GetResult]:
+    def get(
+        self,
+        collection_name: str,
+        partition_names: Optional[list[str]] = None,
+    ) -> Optional[GetResult]:
         # Get all the items in the collection. This can be very resource-intensive for large collections.
         collection_name = collection_name.replace("-", "_")
         log.warning(
@@ -249,7 +304,12 @@ class MilvusClient(VectorDBBase):
         )
         # Using query with a trivial filter to get all items.
         # This will use the paginated query logic.
-        return self.query(collection_name=collection_name, filter={}, limit=None)
+        return self.query(
+            collection_name=collection_name,
+            filter={},
+            limit=None,
+            partition_names=partition_names,
+        )
 
     def insert(self, collection_name: str, items: list[VectorItem]):
         # Insert the items into the collection, if the collection does not exist, it will be created.
@@ -271,20 +331,43 @@ class MilvusClient(VectorDBBase):
                 collection_name=collection_name, dimension=len(items[0]["vector"])
             )
 
+        partition_name = None
+        if MILVUS_MODE == "multitenancy":
+            if items:
+                # In multitenancy mode, all items in a batch should belong to the same resource
+                resource_id = items[0].get("metadata", {}).get("resource_id")
+                if resource_id:
+                    partition_name = resource_id
+                    # Ensure partition exists
+                    collection = Collection(
+                        f"{self.collection_prefix}_{collection_name}"
+                    )
+                    if not collection.has_partition(partition_name):
+                        collection.create_partition(partition_name)
+                else:
+                    log.warning(
+                        "Multitenancy mode is enabled, but no 'resource_id' found in item metadata."
+                    )
+
         log.info(
             f"Inserting {len(items)} items into collection {self.collection_prefix}_{collection_name}."
         )
+        data = []
+        for item in items:
+            item_data = {
+                "id": item["id"],
+                "vector": item["vector"],
+                "data": {"text": item["text"]},
+                "metadata": stringify_metadata(item["metadata"]),
+            }
+            if MILVUS_MODE == "multitenancy" and partition_name:
+                item_data["resource_id"] = partition_name
+            data.append(item_data)
+
         return self.client.insert(
             collection_name=f"{self.collection_prefix}_{collection_name}",
-            data=[
-                {
-                    "id": item["id"],
-                    "vector": item["vector"],
-                    "data": {"text": item["text"]},
-                    "metadata": stringify_metadata(item["metadata"]),
-                }
-                for item in items
-            ],
+            data=data,
+            partition_name=partition_name,
         )
 
     def upsert(self, collection_name: str, items: list[VectorItem]):
@@ -307,20 +390,42 @@ class MilvusClient(VectorDBBase):
                 collection_name=collection_name, dimension=len(items[0]["vector"])
             )
 
+        partition_name = None
+        if MILVUS_MODE == "multitenancy":
+            if items:
+                resource_id = items[0].get("metadata", {}).get("resource_id")
+                if resource_id:
+                    partition_name = resource_id
+                    collection = Collection(
+                        f"{self.collection_prefix}_{collection_name}"
+                    )
+                    if not collection.has_partition(partition_name):
+                        collection.create_partition(partition_name)
+                else:
+                    log.warning(
+                        "Multitenancy mode is enabled, but no 'resource_id' found in item metadata for upsert."
+                    )
+
         log.info(
             f"Upserting {len(items)} items into collection {self.collection_prefix}_{collection_name}."
         )
+
+        data = []
+        for item in items:
+            item_data = {
+                "id": item["id"],
+                "vector": item["vector"],
+                "data": {"text": item["text"]},
+                "metadata": stringify_metadata(item["metadata"]),
+            }
+            if MILVUS_MODE == "multitenancy" and partition_name:
+                item_data["resource_id"] = partition_name
+            data.append(item_data)
+
         return self.client.upsert(
             collection_name=f"{self.collection_prefix}_{collection_name}",
-            data=[
-                {
-                    "id": item["id"],
-                    "vector": item["vector"],
-                    "data": {"text": item["text"]},
-                    "metadata": stringify_metadata(item["metadata"]),
-                }
-                for item in items
-            ],
+            data=data,
+            partition_name=partition_name,
         )
 
     def delete(
@@ -328,6 +433,7 @@ class MilvusClient(VectorDBBase):
         collection_name: str,
         ids: Optional[list[str]] = None,
         filter: Optional[dict] = None,
+        partition_name: Optional[str] = None,
     ):
         # Delete the items from the collection based on the ids or filter.
         collection_name = collection_name.replace("-", "_")
@@ -337,6 +443,19 @@ class MilvusClient(VectorDBBase):
             )
             return None
 
+        if MILVUS_MODE == "multitenancy" and partition_name and not (ids or filter):
+            # If a partition_name is provided in multitenancy mode and no other filters, delete all entities within that partition
+            log.info(
+                f"Deleting all entities from partition '{partition_name}' in collection '{self.collection_prefix}_{collection_name}'."
+            )
+            # Using a match-all filter. This is safer than dropping the partition, especially for re-indexing.
+            filter_string = "id != ''"
+            return self.client.delete(
+                collection_name=f"{self.collection_prefix}_{collection_name}",
+                filter=filter_string,
+                partition_name=partition_name,
+            )
+
         if ids:
             log.info(
                 f"Deleting items by IDs from {self.collection_prefix}_{collection_name}. IDs: {ids}"
@@ -344,6 +463,7 @@ class MilvusClient(VectorDBBase):
             return self.client.delete(
                 collection_name=f"{self.collection_prefix}_{collection_name}",
                 ids=ids,
+                partition_name=partition_name,
             )
         elif filter:
             filter_string = " && ".join(
@@ -358,12 +478,36 @@ class MilvusClient(VectorDBBase):
             return self.client.delete(
                 collection_name=f"{self.collection_prefix}_{collection_name}",
                 filter=filter_string,
+                partition_name=partition_name,
             )
         else:
             log.warning(
                 f"Delete operation on {self.collection_prefix}_{collection_name} called without IDs or filter. No action taken."
             )
             return None
+
+    def delete_partition(self, collection_name: str, partition_name: str):
+        # Deletes a partition from a collection.
+        collection_name = collection_name.replace("-", "_")
+        if not self.has_collection(collection_name):
+            log.warning(
+                f"Delete partition attempted on non-existent collection: {self.collection_prefix}_{collection_name}"
+            )
+            return
+
+        log.info(
+            f"Deleting partition '{partition_name}' from collection '{self.collection_prefix}_{collection_name}'."
+        )
+        collection = Collection(f"{self.collection_prefix}_{collection_name}")
+        if collection.has_partition(partition_name):
+            collection.drop_partition(partition_name)
+            log.info(
+                f"Successfully dropped partition '{partition_name}' from collection '{self.collection_prefix}_{collection_name}'."
+            )
+        else:
+            log.warning(
+                f"Partition '{partition_name}' not found in collection '{self.collection_prefix}_{collection_name}'."
+            )
 
     def reset(self):
         # Resets the database. This will delete all collections and item entries that match the prefix.

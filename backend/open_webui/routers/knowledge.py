@@ -25,7 +25,7 @@ from open_webui.utils.access_control import has_access, has_permission
 
 
 from open_webui.env import SRC_LOG_LEVELS
-from open_webui.config import BYPASS_ADMIN_ACCESS_CONTROL
+from open_webui.config import BYPASS_ADMIN_ACCESS_CONTROL, MILVUS_MODE
 from open_webui.models.models import Models, ModelForm
 
 
@@ -212,9 +212,15 @@ async def reindex_knowledge_files(request: Request, user=Depends(get_verified_us
             file_ids = knowledge_base.data.get("file_ids", [])
             files = Files.get_files_by_ids(file_ids)
             try:
-                if VECTOR_DB_CLIENT.has_collection(collection_name=knowledge_base.id):
-                    VECTOR_DB_CLIENT.delete_collection(
-                        collection_name=knowledge_base.id
+                collection_name = (
+                    "knowledge"
+                    if MILVUS_MODE == "multitenancy"
+                    else knowledge_base.id
+                )
+                if VECTOR_DB_CLIENT.has_collection(collection_name=collection_name):
+                    VECTOR_DB_CLIENT.delete(
+                        collection_name=collection_name,
+                        partition_name=knowledge_base.id,
                     )
             except Exception as e:
                 log.error(f"Error deleting collection {knowledge_base.id}: {str(e)}")
@@ -474,8 +480,11 @@ def update_file_from_knowledge_by_id(
         )
 
     # Remove content from the vector database
+    collection_name = "knowledge" if MILVUS_MODE == "multitenancy" else knowledge.id
     VECTOR_DB_CLIENT.delete(
-        collection_name=knowledge.id, filter={"file_id": form_data.file_id}
+        collection_name=collection_name,
+        filter={"file_id": form_data.file_id},
+        partition_name=knowledge.id if MILVUS_MODE == "multitenancy" else None,
     )
 
     # Add content to the vector database
@@ -546,8 +555,11 @@ def remove_file_from_knowledge_by_id(
 
     # Remove content from the vector database
     try:
+        collection_name = "knowledge" if MILVUS_MODE == "multitenancy" else id
         VECTOR_DB_CLIENT.delete(
-            collection_name=knowledge.id, filter={"file_id": form_data.file_id}
+            collection_name=collection_name,
+            filter={"file_id": form_data.file_id},
+            partition_name=id if MILVUS_MODE == "multitenancy" else None,
         )
     except Exception as e:
         log.debug("This was most likely caused by bypassing embedding processing")
@@ -556,10 +568,19 @@ def remove_file_from_knowledge_by_id(
 
     if delete_file:
         try:
-            # Remove the file's collection from vector database
-            file_collection = f"file-{form_data.file_id}"
-            if VECTOR_DB_CLIENT.has_collection(collection_name=file_collection):
-                VECTOR_DB_CLIENT.delete_collection(collection_name=file_collection)
+            if MILVUS_MODE == "multitenancy":
+                VECTOR_DB_CLIENT.delete_partition(
+                    collection_name="files",
+                    partition_name=f"file-{form_data.file_id}",
+                )
+            else:
+                file_collection_name = f"file-{form_data.file_id}"
+                if VECTOR_DB_CLIENT.has_collection(
+                    collection_name=file_collection_name
+                ):
+                    VECTOR_DB_CLIENT.delete_collection(
+                        collection_name=file_collection_name
+                    )
         except Exception as e:
             log.debug("This was most likely caused by bypassing embedding processing")
             log.debug(e)
@@ -657,7 +678,10 @@ async def delete_knowledge_by_id(id: str, user=Depends(get_verified_user)):
 
     # Clean up vector DB
     try:
-        VECTOR_DB_CLIENT.delete_collection(collection_name=id)
+        if MILVUS_MODE == "multitenancy":
+            VECTOR_DB_CLIENT.delete_partition(collection_name="knowledge", partition_name=id)
+        else:
+            VECTOR_DB_CLIENT.delete_collection(collection_name=id)
     except Exception as e:
         log.debug(e)
         pass
@@ -690,7 +714,11 @@ async def reset_knowledge_by_id(id: str, user=Depends(get_verified_user)):
         )
 
     try:
-        VECTOR_DB_CLIENT.delete_collection(collection_name=id)
+        collection_name = "knowledge" if MILVUS_MODE == "multitenancy" else id
+        VECTOR_DB_CLIENT.delete(
+            collection_name=collection_name,
+            partition_name=id if MILVUS_MODE == "multitenancy" else None,
+        )
     except Exception as e:
         log.debug(e)
         pass

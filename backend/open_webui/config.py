@@ -2001,6 +2001,8 @@ if VECTOR_DB == "chroma":
 MILVUS_URI = os.environ.get("MILVUS_URI", f"{DATA_DIR}/vector_db/milvus.db")
 MILVUS_DB = os.environ.get("MILVUS_DB", "default")
 MILVUS_TOKEN = os.environ.get("MILVUS_TOKEN", None)
+MILVUS_MODE = os.environ.get("MILVUS_MODE", "")
+MILVUS_EMBEDDING_DIMENSION = os.environ.get("MILVUS_EMBEDDING_DIMENSION", None)
 
 MILVUS_INDEX_TYPE = os.environ.get("MILVUS_INDEX_TYPE", "HNSW")
 MILVUS_METRIC_TYPE = os.environ.get("MILVUS_METRIC_TYPE", "COSINE")

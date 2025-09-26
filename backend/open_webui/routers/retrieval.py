@@ -83,6 +83,7 @@ from open_webui.utils.auth import get_admin_user, get_verified_user
 
 from open_webui.config import (
     ENV,
+    MILVUS_MODE,
     RAG_EMBEDDING_MODEL_AUTO_UPDATE,
     RAG_EMBEDDING_MODEL_TRUST_REMOTE_CODE,
     RAG_RERANKING_MODEL_AUTO_UPDATE,
@@ -1222,11 +1223,25 @@ def save_docs_to_vector_db(
         f"save_docs_to_vector_db: document {_get_docs_info(docs)} {collection_name}"
     )
 
+    if MILVUS_MODE == "multitenancy":
+        if "file" in collection_name:
+            metadata["resource_id"] = collection_name
+            collection_name = "files"
+        elif "web-search" in collection_name:
+            metadata["resource_id"] = collection_name
+            collection_name = "web-search"
+        else:
+            metadata["resource_id"] = collection_name
+            collection_name = "knowledge"
+
     # Check if entries with the same hash (metadata.hash) already exist
     if metadata and "hash" in metadata:
         result = VECTOR_DB_CLIENT.query(
             collection_name=collection_name,
             filter={"hash": metadata["hash"]},
+            partition_names=[metadata["resource_id"]]
+            if MILVUS_MODE == "multitenancy"
+            else None,
         )
 
         if result is not None:
@@ -1326,8 +1341,13 @@ def save_docs_to_vector_db(
             log.info(f"collection {collection_name} already exists")
 
             if overwrite:
-                VECTOR_DB_CLIENT.delete_collection(collection_name=collection_name)
-                log.info(f"deleting existing collection {collection_name}")
+                VECTOR_DB_CLIENT.delete(
+                    collection_name=collection_name,
+                    partition_name=metadata.get("resource_id")
+                    if MILVUS_MODE == "multitenancy"
+                    else None,
+                )
+                log.info(f"deleting existing data from partition/collection {collection_name}")
             elif add is False:
                 log.info(
                     f"collection {collection_name} already exists, overwrite is False and add is False"
@@ -1444,8 +1464,19 @@ def process_file(
             # Check if the file has already been processed and save the content
             # Usage: /knowledge/{id}/file/add, /knowledge/{id}/file/update
 
+            query_collection_name = (
+                "files"
+                if MILVUS_MODE == "multitenancy"
+                else f"file-{file.id}"
+            )
+            partition_names = (
+                [f"file-{file.id}"] if MILVUS_MODE == "multitenancy" else None
+            )
+
             result = VECTOR_DB_CLIENT.query(
-                collection_name=f"file-{file.id}", filter={"file_id": file.id}
+                collection_name=query_collection_name,
+                filter={"file_id": file.id},
+                partition_names=partition_names,
             )
 
             if result is not None and len(result.ids[0]) > 0:
