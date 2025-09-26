@@ -47,9 +47,15 @@
 	export let onClose: Function;
 
 	// Reactive statement for tooltip content
-	$: tooltipContent = wikiGroundingEnabled
-		? $i18n.t('Wikipedia Grounding: Context-aware information enhancement enabled')
-		: $i18n.t('Wikipedia Grounding: Click to enable context-aware information enhancement');
+	$: tooltipContent = (() => {
+		if (webSearchEnabled) {
+			return $i18n.t('Wiki Grounding disabled - Web Search is active');
+		} else if (wikiGroundingEnabled) {
+			return $i18n.t('Wikipedia Grounding: Context-aware information enhancement enabled');
+		} else {
+			return $i18n.t('Wikipedia Grounding: Click to enable context-aware information enhancement');
+		}
+	})();
 
 	let tools = {};
 	let wikiGroundingTooltip;
@@ -237,19 +243,35 @@
 			{/if}
 
 			{#if showWebSearch}
-				<button
-					class="flex w-full justify-between gap-2 items-center px-3 py-2 text-sm font-medium cursor-pointer rounded-xl"
-					on:click={() => {
-						webSearchEnabled = !webSearchEnabled;
-					}}
+				<Tooltip
+					content={wikiGroundingEnabled
+						? $i18n.t('Web Search disabled - Wiki Grounding is active')
+						: $i18n.t('Web Search')}
+					placement="right"
 				>
-					<div class="flex-1 flex items-center gap-2">
-						<GlobeAltSolid />
-						<div class=" line-clamp-1">{$i18n.t('Web Search')}</div>
-					</div>
+					<button
+						class="flex w-full justify-between gap-2 items-center px-3 py-2 text-sm font-medium cursor-pointer rounded-xl {wikiGroundingEnabled
+							? 'opacity-50 cursor-not-allowed'
+							: ''}"
+						disabled={wikiGroundingEnabled}
+						on:click={() => {
+							if (!wikiGroundingEnabled) {
+								webSearchEnabled = !webSearchEnabled;
+								if (webSearchEnabled) {
+									wikiGroundingEnabled = false;
+									wikiGroundingMode = 'off';
+								}
+							}
+						}}
+					>
+						<div class="flex-1 flex items-center gap-2">
+							<GlobeAltSolid />
+							<div class=" line-clamp-1">{$i18n.t('Web Search')}</div>
+						</div>
 
-					<Switch state={webSearchEnabled} />
-				</button>
+						<Switch state={webSearchEnabled} disabled={wikiGroundingEnabled} />
+					</button>
+				</Tooltip>
 			{/if}
 
 			{#if showWikiGrounding}
@@ -284,15 +306,21 @@
 				>
 					<button
 						bind:this={wikiGroundingButton}
-						class="flex w-full justify-between gap-2 items-center px-3 py-2 text-sm font-medium cursor-pointer rounded-xl"
+						class="flex w-full justify-between gap-2 items-center px-3 py-2 text-sm font-medium cursor-pointer rounded-xl {webSearchEnabled
+							? 'opacity-50 cursor-not-allowed'
+							: ''}"
+						disabled={webSearchEnabled}
 						on:click={() => {
-							// Simple toggle: off -> on -> off
-							if (wikiGroundingEnabled) {
-								wikiGroundingMode = 'off';
-								wikiGroundingEnabled = false;
-							} else {
-								wikiGroundingMode = 'on';
-								wikiGroundingEnabled = true;
+							if (!webSearchEnabled) {
+								// Simple toggle: off -> on -> off
+								if (wikiGroundingEnabled) {
+									wikiGroundingMode = 'off';
+									wikiGroundingEnabled = false;
+								} else {
+									wikiGroundingMode = 'on';
+									wikiGroundingEnabled = true;
+									webSearchEnabled = false;
+								}
 							}
 						}}
 					>
@@ -304,7 +332,7 @@
 						</div>
 
 						<div class="flex items-center">
-							<Switch state={wikiGroundingEnabled} />
+							<Switch state={wikiGroundingEnabled} disabled={webSearchEnabled} />
 						</div>
 					</button>
 				</Tooltip>

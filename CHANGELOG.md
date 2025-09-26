@@ -5,6 +5,18 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.5.7-ccv2-1.7.1] - 2025-09-22
+
+### Enhanced
+
+- **🗑️ Chat Deletion Reactivity**: When a Chat is deleted, it is immediately removed from the UI.
+- **🕰️ Current Time in Context**: The context will always contain the current time.
+- **🌐 Wiki-Grounding: Better Temporal Understanding**:
+
+### Fixed
+
+- **🌐 Wiki-Grounding: Query Locking**: Prevent some errors by seperating resource access by query.
+
 ## [0.5.7-ccv2-1.7.0] - 2025-09-05
 
 ### Added
