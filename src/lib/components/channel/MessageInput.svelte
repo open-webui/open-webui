@@ -38,7 +38,7 @@
 	import MentionList from './MessageInput/MentionList.svelte';
 	import Skeleton from '../chat/Messages/Skeleton.svelte';
 
-	export let placeholder = $i18n.t('Send a Message');
+	export let placeholder = $i18n.t('Type here...');
 
 	export let id = null;
 	export let chatInputElement;
@@ -53,6 +53,7 @@
 	export let scrollEnd = true;
 	export let scrollToBottom: Function = () => {};
 
+	export let disabled = false;
 	export let acceptFiles = true;
 	export let showFormattingToolbar = true;
 
@@ -731,7 +732,9 @@
 				</div>
 			</div>
 
-			<div class="">
+			<div
+				class="{disabled ? 'opacity-50 pointer-events-none cursor-not-allowed' : ''} relative z-20"
+			>
 				{#if recording}
 					<VoiceRecording
 						bind:recording
@@ -766,6 +769,7 @@
 						}}
 					>
 						<div
+							id="message-input-container"
 							class="flex-1 flex flex-col relative w-full shadow-lg rounded-3xl border border-gray-50 dark:border-gray-850 hover:border-gray-100 focus-within:border-gray-100 hover:dark:border-gray-800 focus-within:dark:border-gray-800 transition px-1 bg-white/90 dark:bg-gray-400/5 dark:text-gray-100"
 							dir={$settings?.chatDirection ?? 'auto'}
 						>
@@ -836,6 +840,8 @@
 											bind:this={chatInputElement}
 											json={true}
 											messageInput={true}
+											editable={!disabled}
+											{placeholder}
 											richText={$settings?.richTextInput ?? true}
 											showFormattingToolbar={$settings?.showFormattingToolbar ?? false}
 											shiftEnter={!($settings?.ctrlEnterToSend ?? false) &&
@@ -936,6 +942,7 @@
 												}}
 											>
 												<button
+													id="input-menu-button"
 													class="bg-transparent hover:bg-white/80 text-gray-800 dark:text-white dark:hover:bg-gray-800 transition rounded-full p-1.5 outline-hidden focus:outline-hidden"
 													type="button"
 													aria-label="More"

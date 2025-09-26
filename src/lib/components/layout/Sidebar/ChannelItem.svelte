@@ -44,10 +44,11 @@
 />
 
 <div
+	id="sidebar-channel-item"
 	bind:this={itemElement}
-	class=" w-full {className} rounded-lg flex relative group hover:bg-gray-100 dark:hover:bg-gray-900 {$page
+	class=" w-full {className} rounded-xl flex relative group hover:bg-gray-100 dark:hover:bg-gray-900 {$page
 		.url.pathname === `/channels/${channel.id}`
-		? 'bg-gray-100 dark:bg-gray-900'
+		? 'bg-gray-100 dark:bg-gray-900 selected'
 		: ''} px-2.5 py-1"
 >
 	<a
