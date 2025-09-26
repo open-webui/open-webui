@@ -192,6 +192,7 @@ async def get_tools(
                             "spec": spec,
                             # Misc info
                             "type": "external",
+                            "status_messages": tool_server_connection.get("info", {}).get("status_messages", {}),
                         }
 
                         # Handle function name collisions

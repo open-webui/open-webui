@@ -172,6 +172,9 @@ async def chat_completion_tools_handler(
         }
 
     event_caller = extra_params["__event_call__"]
+    event_emitter = extra_params.get("__event_emitter__")
+    if not event_emitter or not callable(event_emitter):
+        event_emitter = lambda x: None
     metadata = extra_params["__metadata__"]
 
     task_model_id = get_task_model_id(
@@ -254,7 +257,40 @@ async def chat_completion_tools_handler(
                         )
                     else:
                         tool_function = tool["callable"]
+                        status_messages = tool.get("status_messages", {})
+                        if status_messages.get("executing"):
+                            await event_emitter({
+                                "type": "status",
+                                "data": {
+                                    "action": "tool_execution",
+                                    "description": status_messages["executing"],
+                                    "tool_name": tool_function_name,
+                                    "done": False,
+                                },
+                            })
                         tool_result = await tool_function(**tool_function_params)
+
+                        if status_messages.get("completed"):
+                            await event_emitter({
+                                "type": "status",
+                                "data": {
+                                    "action": "tool_execution",
+                                    "description": status_messages["completed"],
+                                    "tool_name": tool_function_name,
+                                    "done": True,
+                                },
+                            })
+                        else:
+                            # If the completed status message is not set, hide the status message upon completion
+                            await event_emitter({
+                                "type": "status",
+                                "data": {
+                                    "action": "tool_execution",
+                                    "tool_name": tool_function_name,
+                                    "done": True,
+                                    "hidden": True,
+                                },
+                            })
 
                 except Exception as e:
                     tool_result = str(e)

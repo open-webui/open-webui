@@ -17,6 +17,7 @@
 	import AccessControl from './workspace/common/AccessControl.svelte';
 	import Spinner from '$lib/components/common/Spinner.svelte';
 	import XMark from '$lib/components/icons/XMark.svelte';
+	import StatusMessagesConfig from '$lib/components/common/StatusMessagesConfig.svelte';
 
 	export let onSubmit: Function = () => {};
 	export let onDelete: Function = () => {};
@@ -40,6 +41,8 @@
 	let id = '';
 	let name = '';
 	let description = '';
+	let statusMessages: Record<string, string | null> = {};
+	let statusMessagesExpanded = false;
 
 	let oauthClientInfo = null;
 
@@ -119,7 +122,8 @@
 				info: {
 					id,
 					name,
-					description
+					description,
+					statusMessages
 				}
 			}).catch((err) => {
 				toast.error($i18n.t('Connection failed'));
@@ -163,6 +167,7 @@
 				id: id,
 				name: name,
 				description: description,
+				status_messages: statusMessages,
 				...(oauthClientInfo ? { oauth_client_info: oauthClientInfo } : {})
 			}
 		};
@@ -183,6 +188,8 @@
 		id = '';
 		name = '';
 		description = '';
+		statusMessages = {};
+		statusMessagesExpanded = false;
 		oauthClientInfo = null;
 
 		enable = true;
@@ -201,6 +208,8 @@
 			id = connection.info?.id ?? '';
 			name = connection.info?.name ?? '';
 			description = connection.info?.description ?? '';
+			statusMessages = connection.info?.status_messages ?? {};
+			statusMessagesExpanded = !!(statusMessages["executing"] || statusMessages["completed"])
 			oauthClientInfo = connection.info?.oauth_client_info ?? null;
 
 			enable = connection.config?.enable ?? true;
@@ -536,6 +545,11 @@
 									/>
 								</div>
 							</div>
+
+							<StatusMessagesConfig 
+								bind:statusMessages 
+								bind:expanded={statusMessagesExpanded}
+							/>
 
 							<hr class=" border-gray-100 dark:border-gray-700/10 my-2.5 w-full" />
 
