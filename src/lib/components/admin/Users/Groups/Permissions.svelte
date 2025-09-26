@@ -17,7 +17,8 @@
 			public_models: false,
 			public_knowledge: false,
 			public_prompts: false,
-			public_tools: false
+			public_tools: false,
+			public_notes: false
 		},
 		chat: {
 			controls: true,
@@ -246,6 +247,13 @@
 				{$i18n.t('Tools Public Sharing')}
 			</div>
 			<Switch bind:state={permissions.sharing.public_tools} />
+		</div>
+
+		<div class="  flex w-full justify-between my-2 pr-2">
+			<div class=" self-center text-xs font-medium">
+				{$i18n.t('Notes Public Sharing')}
+			</div>
+			<Switch bind:state={permissions.sharing.public_notes} />
 		</div>
 	</div>
 
