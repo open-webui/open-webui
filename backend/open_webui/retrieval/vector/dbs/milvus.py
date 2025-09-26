@@ -189,7 +189,7 @@ class MilvusClient(VectorDBBase):
         )
         return self._result_to_search_result(result)
 
-    def query(self, collection_name: str, filter: dict, limit: Optional[int] = None):
+    def query(self, collection_name: str, filter: dict, limit: int = -1):
         connections.connect(uri=MILVUS_URI, token=MILVUS_TOKEN, db_name=MILVUS_DB)
 
         # Construct the filter string for querying
@@ -222,7 +222,7 @@ class MilvusClient(VectorDBBase):
                     "data",
                     "metadata",
                 ],
-                limit=limit,  # Pass the limit directly; None means no limit.
+                limit=limit,  # Pass the limit directly; -1 means no limit.
             )
 
             while True:
@@ -249,7 +249,7 @@ class MilvusClient(VectorDBBase):
         )
         # Using query with a trivial filter to get all items.
         # This will use the paginated query logic.
-        return self.query(collection_name=collection_name, filter={}, limit=None)
+        return self.query(collection_name=collection_name, filter={}, limit=-1)
 
     def insert(self, collection_name: str, items: list[VectorItem]):
         # Insert the items into the collection, if the collection does not exist, it will be created.
