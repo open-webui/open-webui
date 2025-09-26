@@ -654,5 +654,52 @@ class MessageMetricsTable:
 
         return {"bins": bin_labels, "counts": counts, "total_latencies": len(latencies)}
 
+    def get_export_data(
+        self,
+        start_timestamp: int,
+        end_timestamp: int,
+        domain: Optional[str] = None,
+    ) -> list[dict]:
+        """
+        Get raw metrics data for export in a specific date range.
+        Returns all message metrics within the specified timeframe.
+        """
+        try:
+            with get_db() as db:
+                query = db.query(MessageMetric).filter(
+                    MessageMetric.created_at >= start_timestamp,
+                    MessageMetric.created_at < end_timestamp,
+                )
+
+                if domain:
+                    query = query.filter(MessageMetric.user_domain == domain)
+
+                # Order by created_at for chronological export
+                query = query.order_by(MessageMetric.created_at)
+
+                results = query.all()
+
+                # Convert to list of dictionaries for CSV export
+                export_data = []
+                for result in results:
+                    export_data.append(
+                        {
+                            "id": result.id,
+                            "user_id": result.user_id,
+                            "user_domain": result.user_domain,
+                            "model": result.model,
+                            "completion_tokens": result.completion_tokens,
+                            "prompt_tokens": result.prompt_tokens,
+                            "total_tokens": result.total_tokens,
+                            "chat_id": result.chat_id,
+                            "created_at": result.created_at,
+                        }
+                    )
+
+                return export_data
+        except Exception as e:
+            logger.error(f"Failed to get export data: {e}")
+            return []
+
 
 MessageMetrics = MessageMetricsTable()
