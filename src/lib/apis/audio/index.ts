@@ -27,41 +27,58 @@ export const getAudioConfig = async (token: string) => {
 	return res;
 };
 
-type OpenAIConfigForm = {
-	url: string;
-	key: string;
-	model: string;
-	speaker: string;
+type AudioConfigPayload = {
+    tts: {
+        OPENAI_API_BASE_URL: string;
+        OPENAI_API_KEY: string;
+        API_KEY: string;
+        ENGINE: string;
+        MODEL: string;
+        VOICE: string;
+        SPLIT_ON: string;
+        AZURE_SPEECH_REGION: string;
+        AZURE_SPEECH_OUTPUT_FORMAT: string;
+    };
+    stt: {
+        OPENAI_API_BASE_URL: string;
+        OPENAI_API_KEY: string;
+        PORTKEY_API_BASE_URL?: string;
+        PORTKEY_API_KEY?: string;
+        ENGINE: string;
+        MODEL: string;
+        WHISPER_MODEL: string;
+        DEEPGRAM_API_KEY: string;
+    };
 };
 
-export const updateAudioConfig = async (token: string, payload: OpenAIConfigForm) => {
-	let error = null;
+export const updateAudioConfig = async (token: string, payload: AudioConfigPayload) => {
+    let error = null;
 
-	const res = await fetch(`${AUDIO_API_BASE_URL}/config/update`, {
-		method: 'POST',
-		headers: {
-			'Content-Type': 'application/json',
-			Authorization: `Bearer ${token}`
-		},
-		body: JSON.stringify({
-			...payload
-		})
-	})
-		.then(async (res) => {
-			if (!res.ok) throw await res.json();
-			return res.json();
-		})
-		.catch((err) => {
-			console.log(err);
-			error = err.detail;
-			return null;
-		});
+    const res = await fetch(`${AUDIO_API_BASE_URL}/config/update`, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${token}`
+        },
+        body: JSON.stringify({
+            ...payload
+        })
+    })
+        .then(async (res) => {
+            if (!res.ok) throw await res.json();
+            return res.json();
+        })
+        .catch((err) => {
+            console.log(err);
+            error = err.detail;
+            return null;
+        });
 
-	if (error) {
-		throw error;
-	}
+    if (error) {
+        throw error;
+    }
 
-	return res;
+    return res;
 };
 
 export const transcribeAudio = async (token: string, file: File) => {

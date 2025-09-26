@@ -341,7 +341,7 @@ def add_file_to_knowledge_by_id(
                 "audio/x-m4a",
             ]:
                 file_path = Storage.get_file(file_path)
-                result = transcribe(request, file_path)
+                result = transcribe(request, file_path, user)
                 process_file(
                     request,
                     ProcessFileForm(file_id=file_id, content=result.get("text", "")),
