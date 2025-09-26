@@ -22,6 +22,8 @@ from open_webui.config import (
     MILVUS_HNSW_M,
     MILVUS_HNSW_EFCONSTRUCTION,
     MILVUS_IVF_FLAT_NLIST,
+    MILVUS_DISKANN_MAX_DEGREE,
+    MILVUS_DISKANN_SEARCH_LIST_SIZE,
 )
 from open_webui.env import SRC_LOG_LEVELS
 
@@ -131,12 +133,18 @@ class MilvusClient(VectorDBBase):
         elif index_type == "IVF_FLAT":
             index_creation_params = {"nlist": MILVUS_IVF_FLAT_NLIST}
             log.info(f"IVF_FLAT params: {index_creation_params}")
+        elif index_type == "DISKANN":
+            index_creation_params = {
+                "max_degree": MILVUS_DISKANN_MAX_DEGREE,
+                "search_list_size": MILVUS_DISKANN_SEARCH_LIST_SIZE,
+            }
+            log.info(f"DISKANN params: {index_creation_params}")
         elif index_type in ["FLAT", "AUTOINDEX"]:
             log.info(f"Using {index_type} index with no specific build-time params.")
         else:
             log.warning(
                 f"Unsupported MILVUS_INDEX_TYPE: '{index_type}'. "
-                f"Supported types: HNSW, IVF_FLAT, FLAT, AUTOINDEX. "
+                f"Supported types: HNSW, IVF_FLAT, DISKANN, FLAT, AUTOINDEX. "
                 f"Milvus will use its default for the collection if this type is not directly supported for index creation."
             )
             # For unsupported types, pass the type directly to Milvus; it might handle it or use a default.
