@@ -262,7 +262,6 @@
 		</button>
 	{/if}
 	
-	{#if canViewRestrictedTabs()}
 		<button
 			class="px-0.5 py-1 min-w-fit rounded-lg flex-1 md:flex-none flex text-right transition {selectedTab ===
 			'audio'
@@ -289,7 +288,7 @@
 			</div>
 			<div class=" self-center">{$i18n.t('Audio')}</div>
 		</button>
-	{/if}
+
 
 	{#if canViewRestrictedTabs()}	
 		<button

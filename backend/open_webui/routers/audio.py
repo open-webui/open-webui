@@ -1,4 +1,7 @@
 import hashlib
+import base64
+import shutil
+import subprocess
 import json
 import logging
 import os
@@ -137,6 +140,8 @@ class TTSConfigForm(BaseModel):
 class STTConfigForm(BaseModel):
     OPENAI_API_BASE_URL: str
     OPENAI_API_KEY: str
+    PORTKEY_API_BASE_URL: str
+    PORTKEY_API_KEY: str
     ENGINE: str
     MODEL: str
     WHISPER_MODEL: str
@@ -152,22 +157,24 @@ class AudioConfigUpdateForm(BaseModel):
 async def get_audio_config(request: Request, user=Depends(get_admin_user)):
     return {
         "tts": {
-            "OPENAI_API_BASE_URL": request.app.state.config.TTS_OPENAI_API_BASE_URL,
-            "OPENAI_API_KEY": request.app.state.config.TTS_OPENAI_API_KEY,
-            "API_KEY": request.app.state.config.TTS_API_KEY,
-            "ENGINE": request.app.state.config.TTS_ENGINE,
-            "MODEL": request.app.state.config.TTS_MODEL,
-            "VOICE": request.app.state.config.TTS_VOICE,
-            "SPLIT_ON": request.app.state.config.TTS_SPLIT_ON,
-            "AZURE_SPEECH_REGION": request.app.state.config.TTS_AZURE_SPEECH_REGION,
-            "AZURE_SPEECH_OUTPUT_FORMAT": request.app.state.config.TTS_AZURE_SPEECH_OUTPUT_FORMAT,
+            "OPENAI_API_BASE_URL": request.app.state.config.TTS_OPENAI_API_BASE_URL.get(user.email),
+            "OPENAI_API_KEY": request.app.state.config.TTS_OPENAI_API_KEY.get(user.email),
+            "API_KEY": request.app.state.config.TTS_API_KEY.get(user.email),
+            "ENGINE": request.app.state.config.TTS_ENGINE.get(user.email),
+            "MODEL": request.app.state.config.TTS_MODEL.get(user.email),
+            "VOICE": request.app.state.config.TTS_VOICE.get(user.email),
+            "SPLIT_ON": request.app.state.config.TTS_SPLIT_ON.get(user.email),
+            "AZURE_SPEECH_REGION": request.app.state.config.TTS_AZURE_SPEECH_REGION.get(user.email),
+            "AZURE_SPEECH_OUTPUT_FORMAT": request.app.state.config.TTS_AZURE_SPEECH_OUTPUT_FORMAT.get(user.email),
         },
         "stt": {
-            "OPENAI_API_BASE_URL": request.app.state.config.STT_OPENAI_API_BASE_URL,
-            "OPENAI_API_KEY": request.app.state.config.STT_OPENAI_API_KEY,
-            "ENGINE": request.app.state.config.STT_ENGINE,
-            "MODEL": request.app.state.config.STT_MODEL,
-            "WHISPER_MODEL": request.app.state.config.WHISPER_MODEL,
+            "OPENAI_API_BASE_URL": request.app.state.config.STT_OPENAI_API_BASE_URL.get(user.email),
+            "OPENAI_API_KEY": request.app.state.config.STT_OPENAI_API_KEY.get(user.email),
+            "PORTKEY_API_BASE_URL": request.app.state.config.STT_PORTKEY_API_BASE_URL.get(user.email),
+            "PORTKEY_API_KEY": request.app.state.config.STT_PORTKEY_API_KEY.get(user.email),
+            "ENGINE": request.app.state.config.STT_ENGINE.get(user.email),
+            "MODEL": request.app.state.config.STT_MODEL.get(user.email),
+            "WHISPER_MODEL": request.app.state.config.WHISPER_MODEL.get(user.email),
             "DEEPGRAM_API_KEY": request.app.state.config.DEEPGRAM_API_KEY,
         },
     }
@@ -177,48 +184,59 @@ async def get_audio_config(request: Request, user=Depends(get_admin_user)):
 async def update_audio_config(
     request: Request, form_data: AudioConfigUpdateForm, user=Depends(get_admin_user)
 ):
-    request.app.state.config.TTS_OPENAI_API_BASE_URL = form_data.tts.OPENAI_API_BASE_URL
-    request.app.state.config.TTS_OPENAI_API_KEY = form_data.tts.OPENAI_API_KEY
-    request.app.state.config.TTS_API_KEY = form_data.tts.API_KEY
-    request.app.state.config.TTS_ENGINE = form_data.tts.ENGINE
-    request.app.state.config.TTS_MODEL = form_data.tts.MODEL
-    request.app.state.config.TTS_VOICE = form_data.tts.VOICE
-    request.app.state.config.TTS_SPLIT_ON = form_data.tts.SPLIT_ON
-    request.app.state.config.TTS_AZURE_SPEECH_REGION = form_data.tts.AZURE_SPEECH_REGION
-    request.app.state.config.TTS_AZURE_SPEECH_OUTPUT_FORMAT = (
-        form_data.tts.AZURE_SPEECH_OUTPUT_FORMAT
-    )
+    request.app.state.config.TTS_OPENAI_API_BASE_URL.set(user.email, form_data.tts.OPENAI_API_BASE_URL)
+    request.app.state.config.TTS_OPENAI_API_KEY.set(user.email, form_data.tts.OPENAI_API_KEY)
+    request.app.state.config.TTS_API_KEY.set(user.email, form_data.tts.API_KEY)
+    request.app.state.config.TTS_ENGINE.set(user.email, form_data.tts.ENGINE)
+    request.app.state.config.TTS_MODEL.set(user.email, form_data.tts.MODEL)
+    request.app.state.config.TTS_VOICE.set(user.email, form_data.tts.VOICE)
+    request.app.state.config.TTS_SPLIT_ON.set(user.email, form_data.tts.SPLIT_ON)
+    request.app.state.config.TTS_AZURE_SPEECH_REGION.set(user.email, form_data.tts.AZURE_SPEECH_REGION)
+    request.app.state.config.TTS_AZURE_SPEECH_OUTPUT_FORMAT.set(user.email, form_data.tts.AZURE_SPEECH_OUTPUT_FORMAT)
 
-    request.app.state.config.STT_OPENAI_API_BASE_URL = form_data.stt.OPENAI_API_BASE_URL
-    request.app.state.config.STT_OPENAI_API_KEY = form_data.stt.OPENAI_API_KEY
-    request.app.state.config.STT_ENGINE = form_data.stt.ENGINE
-    request.app.state.config.STT_MODEL = form_data.stt.MODEL
-    request.app.state.config.WHISPER_MODEL = form_data.stt.WHISPER_MODEL
+    request.app.state.config.STT_OPENAI_API_BASE_URL.set(user.email, form_data.stt.OPENAI_API_BASE_URL)
+    request.app.state.config.STT_OPENAI_API_KEY.set(user.email, form_data.stt.OPENAI_API_KEY)
+    request.app.state.config.STT_PORTKEY_API_BASE_URL.set(user.email, form_data.stt.PORTKEY_API_BASE_URL)
+    request.app.state.config.STT_PORTKEY_API_KEY.set(user.email, form_data.stt.PORTKEY_API_KEY)
+    request.app.state.config.STT_ENGINE.set(user.email, form_data.stt.ENGINE)
+    request.app.state.config.STT_MODEL.set(user.email, form_data.stt.MODEL)
+    request.app.state.config.WHISPER_MODEL.set(user.email, form_data.stt.WHISPER_MODEL)
     request.app.state.config.DEEPGRAM_API_KEY = form_data.stt.DEEPGRAM_API_KEY
 
-    if request.app.state.config.STT_ENGINE == "":
-        request.app.state.faster_whisper_model = set_faster_whisper_model(
-            form_data.stt.WHISPER_MODEL, WHISPER_MODEL_AUTO_UPDATE
+    if request.app.state.config.STT_ENGINE.get(user.email) == "":
+        # Update user-specific whisper model
+        whisper_model_name = form_data.stt.WHISPER_MODEL
+        request.app.state.config.WHISPER_MODEL.set(user.email, whisper_model_name)
+        
+        # Initialize user-specific whisper model cache if needed
+        if not hasattr(request.app.state, 'user_whisper_models'):
+            request.app.state.user_whisper_models = {}
+        
+        user_model_key = f"{user.email}:{whisper_model_name}"
+        request.app.state.user_whisper_models[user_model_key] = set_faster_whisper_model(
+            whisper_model_name, WHISPER_MODEL_AUTO_UPDATE
         )
 
     return {
         "tts": {
-            "OPENAI_API_BASE_URL": request.app.state.config.TTS_OPENAI_API_BASE_URL,
-            "OPENAI_API_KEY": request.app.state.config.TTS_OPENAI_API_KEY,
-            "API_KEY": request.app.state.config.TTS_API_KEY,
-            "ENGINE": request.app.state.config.TTS_ENGINE,
-            "MODEL": request.app.state.config.TTS_MODEL,
-            "VOICE": request.app.state.config.TTS_VOICE,
-            "SPLIT_ON": request.app.state.config.TTS_SPLIT_ON,
-            "AZURE_SPEECH_REGION": request.app.state.config.TTS_AZURE_SPEECH_REGION,
-            "AZURE_SPEECH_OUTPUT_FORMAT": request.app.state.config.TTS_AZURE_SPEECH_OUTPUT_FORMAT,
+            "OPENAI_API_BASE_URL": request.app.state.config.TTS_OPENAI_API_BASE_URL.get(user.email),
+            "OPENAI_API_KEY": request.app.state.config.TTS_OPENAI_API_KEY.get(user.email),
+            "API_KEY": request.app.state.config.TTS_API_KEY.get(user.email),
+            "ENGINE": request.app.state.config.TTS_ENGINE.get(user.email),
+            "MODEL": request.app.state.config.TTS_MODEL.get(user.email),
+            "VOICE": request.app.state.config.TTS_VOICE.get(user.email),
+            "SPLIT_ON": request.app.state.config.TTS_SPLIT_ON.get(user.email),
+            "AZURE_SPEECH_REGION": request.app.state.config.TTS_AZURE_SPEECH_REGION.get(user.email),
+            "AZURE_SPEECH_OUTPUT_FORMAT": request.app.state.config.TTS_AZURE_SPEECH_OUTPUT_FORMAT.get(user.email),
         },
         "stt": {
-            "OPENAI_API_BASE_URL": request.app.state.config.STT_OPENAI_API_BASE_URL,
-            "OPENAI_API_KEY": request.app.state.config.STT_OPENAI_API_KEY,
-            "ENGINE": request.app.state.config.STT_ENGINE,
-            "MODEL": request.app.state.config.STT_MODEL,
-            "WHISPER_MODEL": request.app.state.config.WHISPER_MODEL,
+            "OPENAI_API_BASE_URL": request.app.state.config.STT_OPENAI_API_BASE_URL.get(user.email),
+            "OPENAI_API_KEY": request.app.state.config.STT_OPENAI_API_KEY.get(user.email),
+            "PORTKEY_API_BASE_URL": request.app.state.config.STT_PORTKEY_API_BASE_URL.get(user.email),
+            "PORTKEY_API_KEY": request.app.state.config.STT_PORTKEY_API_KEY.get(user.email),
+            "ENGINE": request.app.state.config.STT_ENGINE.get(user.email),
+            "MODEL": request.app.state.config.STT_MODEL.get(user.email),
+            "WHISPER_MODEL": request.app.state.config.WHISPER_MODEL.get(user.email),
             "DEEPGRAM_API_KEY": request.app.state.config.DEEPGRAM_API_KEY,
         },
     }
@@ -262,8 +280,9 @@ async def speech(request: Request, user=Depends(get_verified_user)):
         log.exception(e)
         raise HTTPException(status_code=400, detail="Invalid JSON payload")
 
-    if request.app.state.config.TTS_ENGINE == "openai":
-        payload["model"] = request.app.state.config.TTS_MODEL
+    tts_engine = request.app.state.config.TTS_ENGINE.get(user.email)
+    if tts_engine == "openai":
+        payload["model"] = request.app.state.config.TTS_MODEL.get(user.email)
 
         try:
             timeout = aiohttp.ClientTimeout(total=AIOHTTP_CLIENT_TIMEOUT)
@@ -271,11 +290,11 @@ async def speech(request: Request, user=Depends(get_verified_user)):
                 timeout=timeout, trust_env=True
             ) as session:
                 async with session.post(
-                    url=f"{request.app.state.config.TTS_OPENAI_API_BASE_URL}/audio/speech",
+                    url=f"{request.app.state.config.TTS_OPENAI_API_BASE_URL.get(user.email)}/audio/speech",
                     json=payload,
                     headers={
                         "Content-Type": "application/json",
-                        "Authorization": f"Bearer {request.app.state.config.TTS_OPENAI_API_KEY}",
+                        "Authorization": f"Bearer {request.app.state.config.TTS_OPENAI_API_KEY.get(user.email)}",
                         **(
                             {
                                 "X-OpenWebUI-User-Name": user.name,
@@ -316,10 +335,10 @@ async def speech(request: Request, user=Depends(get_verified_user)):
                 detail=detail if detail else "Open WebUI: Server Connection Error",
             )
 
-    elif request.app.state.config.TTS_ENGINE == "elevenlabs":
+    elif tts_engine == "elevenlabs":
         voice_id = payload.get("voice", "")
 
-        if voice_id not in get_available_voices(request):
+        if voice_id not in get_available_voices(request, user):
             raise HTTPException(
                 status_code=400,
                 detail="Invalid voice id",
@@ -334,13 +353,13 @@ async def speech(request: Request, user=Depends(get_verified_user)):
                     f"https://api.elevenlabs.io/v1/text-to-speech/{voice_id}",
                     json={
                         "text": payload["input"],
-                        "model_id": request.app.state.config.TTS_MODEL,
+                        "model_id": request.app.state.config.TTS_MODEL.get(user.email),
                         "voice_settings": {"stability": 0.5, "similarity_boost": 0.5},
                     },
                     headers={
                         "Accept": "audio/mpeg",
                         "Content-Type": "application/json",
-                        "xi-api-key": request.app.state.config.TTS_API_KEY,
+                        "xi-api-key": request.app.state.config.TTS_API_KEY.get(user.email),
                     },
                 ) as r:
                     r.raise_for_status()
@@ -370,17 +389,17 @@ async def speech(request: Request, user=Depends(get_verified_user)):
                 detail=detail if detail else "Open WebUI: Server Connection Error",
             )
 
-    elif request.app.state.config.TTS_ENGINE == "azure":
+    elif tts_engine == "azure":
         try:
             payload = json.loads(body.decode("utf-8"))
         except Exception as e:
             log.exception(e)
             raise HTTPException(status_code=400, detail="Invalid JSON payload")
 
-        region = request.app.state.config.TTS_AZURE_SPEECH_REGION
-        language = request.app.state.config.TTS_VOICE
-        locale = "-".join(request.app.state.config.TTS_VOICE.split("-")[:1])
-        output_format = request.app.state.config.TTS_AZURE_SPEECH_OUTPUT_FORMAT
+        region = request.app.state.config.TTS_AZURE_SPEECH_REGION.get(user.email)
+        language = request.app.state.config.TTS_VOICE.get(user.email)
+        locale = "-".join(request.app.state.config.TTS_VOICE.get(user.email).split("-")[:1])
+        output_format = request.app.state.config.TTS_AZURE_SPEECH_OUTPUT_FORMAT.get(user.email)
 
         try:
             data = f"""<speak version="1.0" xmlns="http://www.w3.org/2001/10/synthesis" xml:lang="{locale}">
@@ -393,7 +412,7 @@ async def speech(request: Request, user=Depends(get_verified_user)):
                 async with session.post(
                     f"https://{region}.tts.speech.microsoft.com/cognitiveservices/v1",
                     headers={
-                        "Ocp-Apim-Subscription-Key": request.app.state.config.TTS_API_KEY,
+                        "Ocp-Apim-Subscription-Key": request.app.state.config.TTS_API_KEY.get(user.email),
                         "Content-Type": "application/ssml+xml",
                         "X-Microsoft-OutputFormat": output_format,
                     },
@@ -426,7 +445,7 @@ async def speech(request: Request, user=Depends(get_verified_user)):
                 detail=detail if detail else "Open WebUI: Server Connection Error",
             )
 
-    elif request.app.state.config.TTS_ENGINE == "transformers":
+    elif tts_engine == "transformers":
         payload = None
         try:
             payload = json.loads(body.decode("utf-8"))
@@ -444,7 +463,7 @@ async def speech(request: Request, user=Depends(get_verified_user)):
         speaker_index = 6799
         try:
             speaker_index = embeddings_dataset["filename"].index(
-                request.app.state.config.TTS_MODEL
+                request.app.state.config.TTS_MODEL.get(user.email)
             )
         except Exception:
             pass
@@ -466,19 +485,28 @@ async def speech(request: Request, user=Depends(get_verified_user)):
         return FileResponse(file_path)
 
 
-def transcribe(request: Request, file_path):
+def transcribe(request: Request, file_path, user):
     log.info(f"transcribe: {file_path}")
     filename = os.path.basename(file_path)
     file_dir = os.path.dirname(file_path)
     id = filename.split(".")[0]
 
-    if request.app.state.config.STT_ENGINE == "":
-        if request.app.state.faster_whisper_model is None:
-            request.app.state.faster_whisper_model = set_faster_whisper_model(
-                request.app.state.config.WHISPER_MODEL
+    stt_engine = request.app.state.config.STT_ENGINE.get(user.email)
+    if stt_engine == "":
+        # Get user-specific whisper model
+        whisper_model_name = request.app.state.config.WHISPER_MODEL.get(user.email)
+        
+        # Initialize whisper model if needed (user-specific)
+        if not hasattr(request.app.state, 'user_whisper_models'):
+            request.app.state.user_whisper_models = {}
+        
+        user_model_key = f"{user.email}:{whisper_model_name}"
+        if user_model_key not in request.app.state.user_whisper_models:
+            request.app.state.user_whisper_models[user_model_key] = set_faster_whisper_model(
+                whisper_model_name, WHISPER_MODEL_AUTO_UPDATE
             )
 
-        model = request.app.state.faster_whisper_model
+        model = request.app.state.user_whisper_models[user_model_key]
         segments, info = model.transcribe(file_path, beam_size=5)
         log.info(
             "Detected language '%s' with probability %f"
@@ -495,7 +523,7 @@ def transcribe(request: Request, file_path):
 
         log.debug(data)
         return data
-    elif request.app.state.config.STT_ENGINE == "openai":
+    elif stt_engine == "openai":
         if is_mp4_audio(file_path):
             os.rename(file_path, file_path.replace(".wav", ".mp4"))
             # Convert MP4 audio file to WAV format
@@ -504,12 +532,12 @@ def transcribe(request: Request, file_path):
         r = None
         try:
             r = requests.post(
-                url=f"{request.app.state.config.STT_OPENAI_API_BASE_URL}/audio/transcriptions",
+                url=f"{request.app.state.config.STT_OPENAI_API_BASE_URL.get(user.email)}/audio/transcriptions",
                 headers={
-                    "Authorization": f"Bearer {request.app.state.config.STT_OPENAI_API_KEY}"
+                    "Authorization": f"Bearer {request.app.state.config.STT_OPENAI_API_KEY.get(user.email)}"
                 },
                 files={"file": (filename, open(file_path, "rb"))},
-                data={"model": request.app.state.config.STT_MODEL},
+                data={"model": request.app.state.config.STT_MODEL.get(user.email)},
             )
 
             r.raise_for_status()
@@ -535,7 +563,129 @@ def transcribe(request: Request, file_path):
 
             raise Exception(detail if detail else "Open WebUI: Server Connection Error")
 
-    elif request.app.state.config.STT_ENGINE == "deepgram":
+    elif stt_engine == "portkey":
+        try:
+            # Ensure true WAV for Portkey (browser may upload WebM mislabeled as WAV)
+            def _is_wav(path: str) -> bool:
+                try:
+                    with open(path, "rb") as _f:
+                        header = _f.read(12)
+                        return len(header) >= 12 and header[0:4] == b"RIFF" and header[8:12] == b"WAVE"
+                except Exception:
+                    return False
+
+            if not _is_wav(file_path):
+                ffmpeg_bin = shutil.which("ffmpeg")
+                if not ffmpeg_bin:
+                    raise Exception(
+                        "FFmpeg not found. Install ffmpeg to convert WebM/Opus to 16kHz mono WAV for Portkey STT."
+                    )
+
+                file_dir = os.path.dirname(file_path)
+                src_basename = os.path.basename(file_path).split(".")[0]
+                # Write to a different output path to avoid in-place overwrite
+                wav_out = os.path.join(file_dir, f"{src_basename}_conv.wav")
+
+                # Convert to 16kHz mono WAV
+                cmd = [
+                    ffmpeg_bin,
+                    "-y",
+                    "-i",
+                    file_path,
+                    "-ar",
+                    "16000",
+                    "-ac",
+                    "1",
+                    "-f",
+                    "wav",
+                    wav_out,
+                ]
+                subprocess.run(cmd, check=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+                file_path = wav_out
+
+            with open(file_path, "rb") as f:
+                audio_bytes = f.read()
+            
+            # Log that the audio bytes are being sent to Portkey
+            log.info(f"Sending audio bytes to Portkey")
+
+            audio_b64 = base64.b64encode(audio_bytes).decode("utf-8")
+            fmt = "wav"
+
+            payload = {
+                "model": request.app.state.config.STT_MODEL.get(user.email),
+                "messages": [
+                    {
+                        "role": "system",
+                        "content": [
+                            {
+                                "type": "text",
+                                "text": "You are a verbatim speech transcriber. Convert the user's audio into text exactly as spoken, with zero changes.\n- Transcribe strictly in the same language(s) spoken (German or English). Do not translate.\n- Do not add, remove, or change any words, names, spellings, grammar, casing, or numbers. Say them as spoken.\n- Keep filler words, hesitations, repetitions, requests, false starts, and slang exactly as spoken.\n- Do not add timestamps, labels, brackets, tags, or any commentary (e.g., no [inaudible], no [music], no Speaker 1).\n- If any part is unclear, transcribe what you hear without guessing or adding markers.\n- Output only the transcript text and nothing else."
+                            }
+                        ]
+                    },
+                    {
+                        "role": "user",
+                        "content": [
+                            {"type": "text", "text": ""},
+                            {"type": "input_audio", "input_audio": {"data": audio_b64, "format": fmt}}
+                        ]
+                    }
+                ],
+                "temperature": 0,
+                "max_tokens": 256,
+                "top_p": 1,
+                "modalities": ["text"],
+                "stream": False
+            }
+
+            url = request.app.state.config.STT_PORTKEY_API_BASE_URL.get(user.email) + "/chat/completions"
+            headers = {
+                "Content-Type": "application/json",
+                "x-portkey-api-key": request.app.state.config.STT_PORTKEY_API_KEY.get(user.email),
+            }
+
+            r = requests.post(url, headers=headers, json=payload, timeout=60)
+            r.raise_for_status()
+            resp = r.json()
+
+            transcript_text = ""
+            try:
+                choice = resp.get("choices", [{}])[0]
+                message = choice.get("message", {})
+                content = message.get("content", "")
+                if isinstance(content, list):
+                    for item in content:
+                        if isinstance(item, dict) and "text" in item:
+                            transcript_text = item["text"]
+                            break
+                elif isinstance(content, str):
+                    transcript_text = content
+            except Exception:
+                pass
+
+            data = {"text": (transcript_text or "").strip()}
+
+            # Log successfully received transcript from Portkey
+            log.info(f"Successfully received transcript from Portkey: {data}")
+
+            transcript_file = f"{file_dir}/{id}.json"
+            with open(transcript_file, "w") as f:
+                json.dump(data, f)
+
+            return data
+        except Exception as e:
+            log.exception(e)
+            detail = None
+            try:
+                res = r.json() if r is not None else {}
+                if "error" in res:
+                    detail = f"External: {res['error'].get('message', '')}"
+            except Exception:
+                detail = f"External: {e}"
+            raise Exception(detail if detail else "Open WebUI: Server Connection Error")
+
+    elif stt_engine == "deepgram":
         try:
             # Determine the MIME type of the file
             mime, _ = mimetypes.guess_type(file_path)
@@ -554,8 +704,9 @@ def transcribe(request: Request, file_path):
 
             # Add model if specified
             params = {}
-            if request.app.state.config.STT_MODEL:
-                params["model"] = request.app.state.config.STT_MODEL
+            stt_model = request.app.state.config.STT_MODEL.get(user.email)
+            if stt_model:
+                params["model"] = stt_model
 
             # Make request to Deepgram API
             r = requests.post(
@@ -625,14 +776,15 @@ def transcription(
 ):
     log.info(f"file.content_type: {file.content_type}")
 
-    if file.content_type not in ["audio/mpeg", "audio/wav", "audio/ogg", "audio/x-m4a"]:
+    if file.content_type not in ["audio/mpeg", "audio/wav", "audio/ogg", "audio/x-m4a", "audio/webm"]:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=ERROR_MESSAGES.FILE_NOT_SUPPORTED,
         )
 
     try:
-        ext = file.filename.split(".")[-1]
+        # Preserve original extension if present; map webm to webm
+        ext = file.filename.split(".")[-1] if "." in file.filename else "webm" if file.content_type == "audio/webm" else "wav"
         id = uuid.uuid4()
 
         filename = f"{id}.{ext}"
@@ -656,7 +808,7 @@ def transcription(
                     detail=ERROR_MESSAGES.DEFAULT(e),
                 )
 
-            data = transcribe(request, file_path)
+            data = transcribe(request, file_path, user)
             file_path = file_path.split("/")[-1]
             return {**data, "filename": file_path}
         except Exception as e:
@@ -676,16 +828,18 @@ def transcription(
         )
 
 
-def get_available_models(request: Request) -> list[dict]:
+def get_available_models(request: Request, user) -> list[dict]:
     available_models = []
-    if request.app.state.config.TTS_ENGINE == "openai":
+    tts_engine = request.app.state.config.TTS_ENGINE.get(user.email)
+    if tts_engine == "openai":
         # Use custom endpoint if not using the official OpenAI API URL
-        if not request.app.state.config.TTS_OPENAI_API_BASE_URL.startswith(
+        tts_base_url = request.app.state.config.TTS_OPENAI_API_BASE_URL.get(user.email)
+        if not tts_base_url.startswith(
             "https://api.openai.com"
         ):
             try:
                 response = requests.get(
-                    f"{request.app.state.config.TTS_OPENAI_API_BASE_URL}/audio/models"
+                    f"{tts_base_url}/audio/models"
                 )
                 response.raise_for_status()
                 data = response.json()
@@ -695,12 +849,12 @@ def get_available_models(request: Request) -> list[dict]:
                 available_models = [{"id": "tts-1"}, {"id": "tts-1-hd"}]
         else:
             available_models = [{"id": "tts-1"}, {"id": "tts-1-hd"}]
-    elif request.app.state.config.TTS_ENGINE == "elevenlabs":
+    elif tts_engine == "elevenlabs":
         try:
             response = requests.get(
                 "https://api.elevenlabs.io/v1/models",
                 headers={
-                    "xi-api-key": request.app.state.config.TTS_API_KEY,
+                    "xi-api-key": request.app.state.config.TTS_API_KEY.get(user.email),
                     "Content-Type": "application/json",
                 },
                 timeout=5,
@@ -718,20 +872,22 @@ def get_available_models(request: Request) -> list[dict]:
 
 @router.get("/models")
 async def get_models(request: Request, user=Depends(get_verified_user)):
-    return {"models": get_available_models(request)}
+    return {"models": get_available_models(request, user)}
 
 
-def get_available_voices(request) -> dict:
+def get_available_voices(request, user) -> dict:
     """Returns {voice_id: voice_name} dict"""
     available_voices = {}
-    if request.app.state.config.TTS_ENGINE == "openai":
+    tts_engine = request.app.state.config.TTS_ENGINE.get(user.email)
+    if tts_engine == "openai":
         # Use custom endpoint if not using the official OpenAI API URL
-        if not request.app.state.config.TTS_OPENAI_API_BASE_URL.startswith(
+        tts_base_url = request.app.state.config.TTS_OPENAI_API_BASE_URL.get(user.email)
+        if not tts_base_url.startswith(
             "https://api.openai.com"
         ):
             try:
                 response = requests.get(
-                    f"{request.app.state.config.TTS_OPENAI_API_BASE_URL}/audio/voices"
+                    f"{tts_base_url}/audio/voices"
                 )
                 response.raise_for_status()
                 data = response.json()
@@ -756,20 +912,20 @@ def get_available_voices(request) -> dict:
                 "nova": "nova",
                 "shimmer": "shimmer",
             }
-    elif request.app.state.config.TTS_ENGINE == "elevenlabs":
+    elif tts_engine == "elevenlabs":
         try:
             available_voices = get_elevenlabs_voices(
-                api_key=request.app.state.config.TTS_API_KEY
+                api_key=request.app.state.config.TTS_API_KEY.get(user.email)
             )
         except Exception:
             # Avoided @lru_cache with exception
             pass
-    elif request.app.state.config.TTS_ENGINE == "azure":
+    elif tts_engine == "azure":
         try:
-            region = request.app.state.config.TTS_AZURE_SPEECH_REGION
+            region = request.app.state.config.TTS_AZURE_SPEECH_REGION.get(user.email)
             url = f"https://{region}.tts.speech.microsoft.com/cognitiveservices/voices/list"
             headers = {
-                "Ocp-Apim-Subscription-Key": request.app.state.config.TTS_API_KEY
+                "Ocp-Apim-Subscription-Key": request.app.state.config.TTS_API_KEY.get(user.email)
             }
 
             response = requests.get(url, headers=headers)
@@ -823,6 +979,6 @@ def get_elevenlabs_voices(api_key: str) -> dict:
 async def get_voices(request: Request, user=Depends(get_verified_user)):
     return {
         "voices": [
-            {"id": k, "name": v} for k, v in get_available_voices(request).items()
+            {"id": k, "name": v} for k, v in get_available_voices(request, user).items()
         ]
     }

@@ -36,12 +36,40 @@
 
 	let STT_OPENAI_API_BASE_URL = '';
 	let STT_OPENAI_API_KEY = '';
+	let STT_PORTKEY_API_BASE_URL = '';
+	let STT_PORTKEY_API_KEY = '';
 	let STT_ENGINE = '';
 	let STT_MODEL = '';
 	let STT_WHISPER_MODEL = '';
 	let STT_DEEPGRAM_API_KEY = '';
 
 	let STT_WHISPER_MODEL_LOADING = false;
+
+	// Handlers
+	const handleSttEngineChange = (e: Event) => {
+		const target = e.target as HTMLSelectElement;
+		if (target?.value === 'portkey') {
+			STT_PORTKEY_API_BASE_URL = 'https://ai-gateway.apps.cloud.rt.nyu.edu/v1';
+			if (!STT_MODEL) {
+				STT_MODEL = '@openai-4o-mini-audio/gpt-4o-mini-audio-preview';
+			}
+		}
+	};
+
+	const handleTtsEngineChange = async (e: Event) => {
+		const target = e.target as HTMLSelectElement;
+		await updateConfigHandler();
+		await getVoices();
+		await getModels();
+
+		if (target?.value === 'openai') {
+			TTS_VOICE = 'alloy';
+			TTS_MODEL = 'tts-1';
+		} else {
+			TTS_VOICE = '';
+			TTS_MODEL = '';
+		}
+	};
 
 	// eslint-disable-next-line no-undef
 	let voices: SpeechSynthesisVoice[] = [];
@@ -51,10 +79,7 @@
 		if (TTS_ENGINE === '') {
 			models = [];
 		} else {
-			const res = await _getModels(
-				localStorage.token,
-				$config?.features?.enable_direct_connections && ($settings?.directConnections ?? null)
-			).catch((e) => {
+			const res = await _getModels(localStorage.token).catch((e) => {
 				toast.error(`${e}`);
 			});
 
@@ -105,6 +130,8 @@
 			stt: {
 				OPENAI_API_BASE_URL: STT_OPENAI_API_BASE_URL,
 				OPENAI_API_KEY: STT_OPENAI_API_KEY,
+				PORTKEY_API_BASE_URL: STT_PORTKEY_API_BASE_URL,
+				PORTKEY_API_KEY: STT_PORTKEY_API_KEY,
 				ENGINE: STT_ENGINE,
 				MODEL: STT_MODEL,
 				WHISPER_MODEL: STT_WHISPER_MODEL,
@@ -144,6 +171,8 @@
 
 			STT_OPENAI_API_BASE_URL = res.stt.OPENAI_API_BASE_URL;
 			STT_OPENAI_API_KEY = res.stt.OPENAI_API_KEY;
+			STT_PORTKEY_API_BASE_URL = res.stt.PORTKEY_API_BASE_URL ?? 'https://ai-gateway.apps.cloud.rt.nyu.edu/v1';
+			STT_PORTKEY_API_KEY = res.stt.PORTKEY_API_KEY ?? '';
 
 			STT_ENGINE = res.stt.ENGINE;
 			STT_MODEL = res.stt.MODEL;
@@ -176,11 +205,13 @@
 							class="dark:bg-gray-900 cursor-pointer w-fit pr-8 rounded-sm px-2 p-1 text-xs bg-transparent outline-hidden text-right"
 							bind:value={STT_ENGINE}
 							placeholder="Select an engine"
+							on:change={handleSttEngineChange}
 						>
 							<option value="">{$i18n.t('Whisper (Local)')}</option>
 							<option value="openai">OpenAI</option>
 							<option value="web">{$i18n.t('Web API')}</option>
 							<option value="deepgram">Deepgram</option>
+							<option value="portkey">Portkey</option>
 						</select>
 					</div>
 				</div>
@@ -247,6 +278,37 @@
 							>
 								{$i18n.t('Click here to see available models.')}
 							</a>
+						</div>
+					</div>
+				{:else if STT_ENGINE === 'portkey'}
+					<div>
+						<div class="mt-1 flex gap-2 mb-1">
+							<input
+								class="flex-1 w-full bg-transparent outline-hidden"
+								placeholder={$i18n.t('API Base URL')}
+								bind:value={STT_PORTKEY_API_BASE_URL}
+								required
+							/>
+
+							<SensitiveInput placeholder={$i18n.t('API Key')} bind:value={STT_PORTKEY_API_KEY} />
+						</div>
+					</div>
+
+					<hr class="border-gray-100 dark:border-gray-850 my-2" />
+
+					<div>
+						<div class=" mb-1.5 text-sm font-medium">{$i18n.t('STT Model')}</div>
+						<div class="flex w-full">
+							<div class="flex-1">
+								<input
+									class="w-full rounded-lg py-2 px-4 text-sm bg-gray-50 dark:text-gray-300 dark:bg-gray-850 outline-hidden"
+									bind:value={STT_MODEL}
+									placeholder="gpt-4o-audio-preview-2025-06-03"
+								/>
+							</div>
+						</div>
+						<div class="mt-2 mb-1 text-xs text-gray-600 dark:text-gray-500">
+							<a class=" hover:underline dark:text-gray-200 text-gray-800" href="https://portkey.ai" target="_blank" rel="noreferrer">Portkey website</a>
 						</div>
 					</div>
 				{:else if STT_ENGINE === ''}
@@ -348,19 +410,7 @@
 							bind:value={TTS_ENGINE}
 							placeholder="Select a mode"
 							aria-label="Select a mode"
-							on:change={async (e) => {
-								await updateConfigHandler();
-								await getVoices();
-								await getModels();
-
-								if (e.target?.value === 'openai') {
-									TTS_VOICE = 'alloy';
-									TTS_MODEL = 'tts-1';
-								} else {
-									TTS_VOICE = '';
-									TTS_MODEL = '';
-								}
-							}}
+							on:change={handleTtsEngineChange}
 						>
 							<option value="">{$i18n.t('Web API')}</option>
 							<option value="transformers">{$i18n.t('Transformers')} ({$i18n.t('Local')})</option>
@@ -496,7 +546,7 @@
 
 									<datalist id="voice-list">
 										{#each voices as voice}
-											<option value={voice.id}>{voice.name}</option>
+											<option value={voice.voiceURI}>{voice.name}</option>
 										{/each}
 									</datalist>
 								</div>
@@ -538,7 +588,7 @@
 
 									<datalist id="voice-list">
 										{#each voices as voice}
-											<option value={voice.id}>{voice.name}</option>
+											<option value={voice.voiceURI}>{voice.name}</option>
 										{/each}
 									</datalist>
 								</div>
@@ -580,7 +630,7 @@
 
 									<datalist id="voice-list">
 										{#each voices as voice}
-											<option value={voice.id}>{voice.name}</option>
+											<option value={voice.voiceURI}>{voice.name}</option>
 										{/each}
 									</datalist>
 								</div>

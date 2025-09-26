@@ -2622,8 +2622,7 @@ IMAGE_GENERATION_MODEL = PersistentConfig(
 ####################################
 
 # Transcription
-WHISPER_MODEL = PersistentConfig(
-    "WHISPER_MODEL",
+WHISPER_MODEL = UserScopedConfig(
     "audio.stt.whisper_model",
     os.getenv("WHISPER_MODEL", "base"),
 )
@@ -2641,80 +2640,77 @@ DEEPGRAM_API_KEY = PersistentConfig(
     os.getenv("DEEPGRAM_API_KEY", ""),
 )
 
-AUDIO_STT_OPENAI_API_BASE_URL = PersistentConfig(
-    "AUDIO_STT_OPENAI_API_BASE_URL",
+AUDIO_STT_OPENAI_API_BASE_URL = UserScopedConfig(
     "audio.stt.openai.api_base_url",
     os.getenv("AUDIO_STT_OPENAI_API_BASE_URL", OPENAI_API_BASE_URL),
 )
 
-AUDIO_STT_OPENAI_API_KEY = PersistentConfig(
-    "AUDIO_STT_OPENAI_API_KEY",
+AUDIO_STT_OPENAI_API_KEY = UserScopedConfig(
     "audio.stt.openai.api_key",
     os.getenv("AUDIO_STT_OPENAI_API_KEY", OPENAI_API_KEY),
 )
 
-AUDIO_STT_ENGINE = PersistentConfig(
-    "AUDIO_STT_ENGINE",
+AUDIO_STT_PORTKEY_API_BASE_URL = UserScopedConfig(
+    "audio.stt.portkey.api_base_url",
+    os.getenv("AUDIO_STT_PORTKEY_API_BASE_URL", "https://ai-gateway.apps.cloud.rt.nyu.edu/v1"),
+)
+
+AUDIO_STT_PORTKEY_API_KEY = UserScopedConfig(
+    "audio.stt.portkey.api_key",
+    os.getenv("AUDIO_STT_PORTKEY_API_KEY", ""),
+)
+
+AUDIO_STT_ENGINE = UserScopedConfig(
     "audio.stt.engine",
     os.getenv("AUDIO_STT_ENGINE", ""),
 )
 
-AUDIO_STT_MODEL = PersistentConfig(
-    "AUDIO_STT_MODEL",
+AUDIO_STT_MODEL = UserScopedConfig(
     "audio.stt.model",
     os.getenv("AUDIO_STT_MODEL", ""),
 )
 
-AUDIO_TTS_OPENAI_API_BASE_URL = PersistentConfig(
-    "AUDIO_TTS_OPENAI_API_BASE_URL",
+AUDIO_TTS_OPENAI_API_BASE_URL = UserScopedConfig(
     "audio.tts.openai.api_base_url",
     os.getenv("AUDIO_TTS_OPENAI_API_BASE_URL", OPENAI_API_BASE_URL),
 )
-AUDIO_TTS_OPENAI_API_KEY = PersistentConfig(
-    "AUDIO_TTS_OPENAI_API_KEY",
+AUDIO_TTS_OPENAI_API_KEY = UserScopedConfig(
     "audio.tts.openai.api_key",
     os.getenv("AUDIO_TTS_OPENAI_API_KEY", OPENAI_API_KEY),
 )
 
-AUDIO_TTS_API_KEY = PersistentConfig(
-    "AUDIO_TTS_API_KEY",
+AUDIO_TTS_API_KEY = UserScopedConfig(
     "audio.tts.api_key",
     os.getenv("AUDIO_TTS_API_KEY", ""),
 )
 
-AUDIO_TTS_ENGINE = PersistentConfig(
-    "AUDIO_TTS_ENGINE",
+AUDIO_TTS_ENGINE = UserScopedConfig(
     "audio.tts.engine",
     os.getenv("AUDIO_TTS_ENGINE", ""),
 )
 
 
-AUDIO_TTS_MODEL = PersistentConfig(
-    "AUDIO_TTS_MODEL",
+AUDIO_TTS_MODEL = UserScopedConfig(
     "audio.tts.model",
     os.getenv("AUDIO_TTS_MODEL", "tts-1"),  # OpenAI default model
 )
 
-AUDIO_TTS_VOICE = PersistentConfig(
-    "AUDIO_TTS_VOICE",
+AUDIO_TTS_VOICE = UserScopedConfig(
     "audio.tts.voice",
     os.getenv("AUDIO_TTS_VOICE", "alloy"),  # OpenAI default voice
 )
 
-AUDIO_TTS_SPLIT_ON = PersistentConfig(
-    "AUDIO_TTS_SPLIT_ON",
+AUDIO_TTS_SPLIT_ON = UserScopedConfig(
     "audio.tts.split_on",
     os.getenv("AUDIO_TTS_SPLIT_ON", "punctuation"),
 )
 
-AUDIO_TTS_AZURE_SPEECH_REGION = PersistentConfig(
-    "AUDIO_TTS_AZURE_SPEECH_REGION",
+AUDIO_TTS_AZURE_SPEECH_REGION = UserScopedConfig(
     "audio.tts.azure.speech_region",
     os.getenv("AUDIO_TTS_AZURE_SPEECH_REGION", "eastus"),
 )
 
-AUDIO_TTS_AZURE_SPEECH_OUTPUT_FORMAT = PersistentConfig(
-    "AUDIO_TTS_AZURE_SPEECH_OUTPUT_FORMAT",
+AUDIO_TTS_AZURE_SPEECH_OUTPUT_FORMAT = UserScopedConfig(
     "audio.tts.azure.speech_output_format",
     os.getenv(
         "AUDIO_TTS_AZURE_SPEECH_OUTPUT_FORMAT", "audio-24khz-160kbitrate-mono-mp3"
