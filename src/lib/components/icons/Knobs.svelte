@@ -13,12 +13,12 @@
 	viewBox="0 0 24 24"
 >
 	<!-- Top horizontal knob (left biased) -->
-	<line x1="3" y1="8" x2="6" y2="8" stroke-linecap="round" />
-	<line x1="12" y1="8" x2="21" y2="8" stroke-linecap="round" />
-	<circle cx="9" cy="8" r="2.5" stroke="currentColor" fill="none" />
+	<line x1="2" y1="7.5" x2="6" y2="7.5" stroke-linecap="round" />
+	<line x1="12" y1="7.5" x2="22" y2="7.5" stroke-linecap="round" />
+	<circle cx="9" cy="7.5" r="3" stroke="currentColor" fill="none" />
 
 	<!-- Bottom horizontal knob (right biased) -->
-	<line x1="3" y1="16" x2="12" y2="16" stroke-linecap="round" />
-	<line x1="18" y1="16" x2="21" y2="16" stroke-linecap="round" />
-	<circle cx="15" cy="16" r="2.5" stroke="currentColor" fill="none" />
+	<line x1="2" y1="16.5" x2="12" y2="16.5" stroke-linecap="round" />
+	<line x1="18" y1="16.5" x2="22" y2="16.5" stroke-linecap="round" />
+	<circle cx="15" cy="16.5" r="3" stroke="currentColor" fill="none" />
 </svg>

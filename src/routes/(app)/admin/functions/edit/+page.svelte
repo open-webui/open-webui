@@ -76,7 +76,7 @@
 </script>
 
 {#if func}
-	<div class="px-[16px]">
+	<div class="px-[16px] h-full">
 		<FunctionEditor
 			edit={true}
 			id={func.id}
