@@ -2009,6 +2009,11 @@ MILVUS_METRIC_TYPE = os.environ.get("MILVUS_METRIC_TYPE", "COSINE")
 MILVUS_HNSW_M = int(os.environ.get("MILVUS_HNSW_M", "16"))
 MILVUS_HNSW_EFCONSTRUCTION = int(os.environ.get("MILVUS_HNSW_EFCONSTRUCTION", "100"))
 MILVUS_IVF_FLAT_NLIST = int(os.environ.get("MILVUS_IVF_FLAT_NLIST", "128"))
+ENABLE_MILVUS_MULTITENANCY_MODE = (
+    os.environ.get("ENABLE_MILVUS_MULTITENANCY_MODE", "true").lower() == "true"
+)
+MILVUS_COLLECTION_PREFIX = os.environ.get("MILVUS_COLLECTION_PREFIX", "open-webui")
+
 
 # Qdrant
 QDRANT_URI = os.environ.get("QDRANT_URI", None)
