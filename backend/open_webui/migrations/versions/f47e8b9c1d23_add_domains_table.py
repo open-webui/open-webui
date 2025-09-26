@@ -1,7 +1,7 @@
 """Add domains table
 
 Revision ID: f47e8b9c1d23
-Revises: ed37e461f285
+Revises: 64d8cd268d63
 Create Date: 2025-09-03 12:00:00.000000
 
 """
