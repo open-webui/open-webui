@@ -2555,7 +2555,9 @@ async def process_chat_response(
                         ):
                             tool_result, tool_response_headers = tool_result
 
-                            if tool_response_headers:
+                            if tool_response_headers and isinstance(
+                                tool_response_headers, dict
+                            ):
                                 content_disposition = tool_response_headers.get(
                                     "Content-Disposition",
                                     tool_response_headers.get(
