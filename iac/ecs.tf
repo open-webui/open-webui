@@ -207,6 +207,59 @@ resource "aws_ecs_task_definition" "webui_scaled" {
         {
           name  = "FASTEMBED_CACHE_PATH"
           value = "/app/backend/data/cache/fastembed"
+        },
+        # OpenTelemetry Configuration
+        {
+          name  = "ENABLE_OTEL"
+          value = "true"
+        },
+        {
+          name  = "ENABLE_OTEL_METRICS"
+          value = "true"
+        },
+        {
+          name  = "ENABLE_OTEL_TRACES"
+          value = "true"
+        },
+        {
+          name  = "ENABLE_OTEL_LOGS"
+          value = "true"
+        },
+        {
+          name  = "OTEL_EXPORTER_OTLP_ENDPOINT"
+          value = "http://otel-monitor.ggai:4317"
+        },
+        {
+          name  = "OTEL_EXPORTER_OTLP_INSECURE"
+          value = "true"
+        },
+        {
+          name  = "OTEL_OTLP_SPAN_EXPORTER"
+          value = "grpc"
+        },
+        {
+          name  = "OTEL_METRICS_OTLP_SPAN_EXPORTER"
+          value = "grpc"
+        },
+        {
+          name  = "OTEL_LOGS_OTLP_SPAN_EXPORTER"
+          value = "grpc"
+        },
+        {
+          name  = "OTEL_SERVICE_NAME"
+          value = "open-webui-production"
+        },
+        {
+          name  = "OTEL_RESOURCE_ATTRIBUTES"
+          value = "service.version=${var.container_image},deployment.environment=production,service.instance.id=ecs-fargate"
+        },
+        {
+          name  = "OTEL_TRACES_SAMPLER"
+          value = "traceidratio"
+        },
+        {
+          name  = "OTEL_TRACES_SAMPLER_ARG"
+          value = "0.1"
         }
       ]
 
