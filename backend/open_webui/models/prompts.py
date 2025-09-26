@@ -7,6 +7,7 @@ from open_webui.models.users import Users, UserResponse
 
 from pydantic import BaseModel, ConfigDict
 from sqlalchemy import BigInteger, Column, String, Text, JSON
+from open_webui.utils.data_sanitizer import SanitizedJSON, SanitizedText
 
 from open_webui.utils.access_control import has_access
 
@@ -18,13 +19,13 @@ from open_webui.utils.access_control import has_access
 class Prompt(Base):
     __tablename__ = "prompt"
 
-    command = Column(String, primary_key=True)
+    command = Column(SanitizedText, primary_key=True)
     user_id = Column(String)
-    title = Column(Text)
-    content = Column(Text)
+    title = Column(SanitizedText)
+    content = Column(SanitizedText)
     timestamp = Column(BigInteger)
 
-    access_control = Column(JSON, nullable=True)  # Controls data access levels.
+    access_control = Column(SanitizedJSON, nullable=True)  # Controls data access levels.
     # Defines access control rules for this entry.
     # - `None`: Public access, available to all users with the "user" role.
     # - `{}`: Private access, restricted exclusively to the owner.
