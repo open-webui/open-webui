@@ -304,6 +304,13 @@ async def chat_completion_tools_handler(
                 ):
                     tool_result, tool_response_headers = tool_result
 
+                    try:
+                        if not isinstance(tool_response_headers, dict):
+                            tool_response_headers = dict(tool_response_headers)
+                    except Exception as e:
+                        tool_response_headers = {}
+                        log.debug(e)
+
                     if tool_response_headers and isinstance(
                         tool_response_headers, dict
                     ):
@@ -2633,6 +2640,16 @@ async def process_chat_response(
                             and len(tool_result) == 2
                         ):
                             tool_result, tool_response_headers = tool_result
+
+                            try:
+                                if not isinstance(tool_response_headers, dict):
+                                    tool_response_headers = dict(tool_response_headers)
+                            except Exception as e:
+                                tool_response_headers = {}
+                                log.debug(e)
+
+                            print(tool_response_headers)
+                            print(type(tool_response_headers))
 
                             if tool_response_headers and isinstance(
                                 tool_response_headers, dict
