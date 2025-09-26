@@ -2622,8 +2622,7 @@ IMAGE_GENERATION_MODEL = PersistentConfig(
 ####################################
 
 # Transcription
-WHISPER_MODEL = PersistentConfig(
-    "WHISPER_MODEL",
+WHISPER_MODEL = UserScopedConfig(
     "audio.stt.whisper_model",
     os.getenv("WHISPER_MODEL", "base"),
 )

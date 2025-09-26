@@ -174,7 +174,7 @@ async def get_audio_config(request: Request, user=Depends(get_admin_user)):
             "PORTKEY_API_KEY": request.app.state.config.STT_PORTKEY_API_KEY.get(user.email),
             "ENGINE": request.app.state.config.STT_ENGINE.get(user.email),
             "MODEL": request.app.state.config.STT_MODEL.get(user.email),
-            "WHISPER_MODEL": request.app.state.config.WHISPER_MODEL,
+            "WHISPER_MODEL": request.app.state.config.WHISPER_MODEL.get(user.email),
             "DEEPGRAM_API_KEY": request.app.state.config.DEEPGRAM_API_KEY,
         },
     }
@@ -200,12 +200,21 @@ async def update_audio_config(
     request.app.state.config.STT_PORTKEY_API_KEY.set(user.email, form_data.stt.PORTKEY_API_KEY)
     request.app.state.config.STT_ENGINE.set(user.email, form_data.stt.ENGINE)
     request.app.state.config.STT_MODEL.set(user.email, form_data.stt.MODEL)
-    request.app.state.config.WHISPER_MODEL = form_data.stt.WHISPER_MODEL
+    request.app.state.config.WHISPER_MODEL.set(user.email, form_data.stt.WHISPER_MODEL)
     request.app.state.config.DEEPGRAM_API_KEY = form_data.stt.DEEPGRAM_API_KEY
 
     if request.app.state.config.STT_ENGINE.get(user.email) == "":
-        request.app.state.faster_whisper_model = set_faster_whisper_model(
-            form_data.stt.WHISPER_MODEL, WHISPER_MODEL_AUTO_UPDATE
+        # Update user-specific whisper model
+        whisper_model_name = form_data.stt.WHISPER_MODEL
+        request.app.state.config.WHISPER_MODEL.set(user.email, whisper_model_name)
+        
+        # Initialize user-specific whisper model cache if needed
+        if not hasattr(request.app.state, 'user_whisper_models'):
+            request.app.state.user_whisper_models = {}
+        
+        user_model_key = f"{user.email}:{whisper_model_name}"
+        request.app.state.user_whisper_models[user_model_key] = set_faster_whisper_model(
+            whisper_model_name, WHISPER_MODEL_AUTO_UPDATE
         )
 
     return {
@@ -227,7 +236,7 @@ async def update_audio_config(
             "PORTKEY_API_KEY": request.app.state.config.STT_PORTKEY_API_KEY.get(user.email),
             "ENGINE": request.app.state.config.STT_ENGINE.get(user.email),
             "MODEL": request.app.state.config.STT_MODEL.get(user.email),
-            "WHISPER_MODEL": request.app.state.config.WHISPER_MODEL,
+            "WHISPER_MODEL": request.app.state.config.WHISPER_MODEL.get(user.email),
             "DEEPGRAM_API_KEY": request.app.state.config.DEEPGRAM_API_KEY,
         },
     }
@@ -484,12 +493,20 @@ def transcribe(request: Request, file_path, user):
 
     stt_engine = request.app.state.config.STT_ENGINE.get(user.email)
     if stt_engine == "":
-        if request.app.state.faster_whisper_model is None:
-            request.app.state.faster_whisper_model = set_faster_whisper_model(
-                request.app.state.config.WHISPER_MODEL
+        # Get user-specific whisper model
+        whisper_model_name = request.app.state.config.WHISPER_MODEL.get(user.email)
+        
+        # Initialize whisper model if needed (user-specific)
+        if not hasattr(request.app.state, 'user_whisper_models'):
+            request.app.state.user_whisper_models = {}
+        
+        user_model_key = f"{user.email}:{whisper_model_name}"
+        if user_model_key not in request.app.state.user_whisper_models:
+            request.app.state.user_whisper_models[user_model_key] = set_faster_whisper_model(
+                whisper_model_name, WHISPER_MODEL_AUTO_UPDATE
             )
 
-        model = request.app.state.faster_whisper_model
+        model = request.app.state.user_whisper_models[user_model_key]
         segments, info = model.transcribe(file_path, beam_size=5)
         log.info(
             "Detected language '%s' with probability %f"
@@ -603,7 +620,7 @@ def transcribe(request: Request, file_path, user):
                         "content": [
                             {
                                 "type": "text",
-                                "text": "You are a verbatim speech transcriber. Convert the user's audio into text exactly as spoken, with zero changes.\n- Transcribe strictly in the same language(s) spoken (German or English). Do not translate.\n- Do not add, remove, or change any words, names, spellings, grammar, casing, or numbers. Say them as spoken.\n- Keep filler words, hesitations, repetitions, false starts, and slang exactly as spoken.\n- Do not add timestamps, labels, brackets, tags, or any commentary (e.g., no [inaudible], no [music], no Speaker 1).\n- If any part is unclear, transcribe what you hear without guessing or adding markers.\n- Output only the transcript text and nothing else."
+                                "text": "You are a verbatim speech transcriber. Convert the user's audio into text exactly as spoken, with zero changes.\n- Transcribe strictly in the same language(s) spoken (German or English). Do not translate.\n- Do not add, remove, or change any words, names, spellings, grammar, casing, or numbers. Say them as spoken.\n- Keep filler words, hesitations, repetitions, requests, false starts, and slang exactly as spoken.\n- Do not add timestamps, labels, brackets, tags, or any commentary (e.g., no [inaudible], no [music], no Speaker 1).\n- If any part is unclear, transcribe what you hear without guessing or adding markers.\n- Output only the transcript text and nothing else."
                             }
                         ]
                     },
