@@ -262,15 +262,15 @@ async def update_folder_is_expanded_by_id(
 async def delete_folder_by_id(
     request: Request, id: str, user=Depends(get_verified_user)
 ):
-    chat_delete_permission = has_permission(
-        user.id, "chat.delete", request.app.state.config.USER_PERMISSIONS
-    )
-
-    if user.role != "admin" and not chat_delete_permission:
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail=ERROR_MESSAGES.ACCESS_PROHIBITED,
+    if Chats.count_chats_by_folder_id_and_user_id(id, user.id):
+        chat_delete_permission = has_permission(
+            user.id, "chat.delete", request.app.state.config.USER_PERMISSIONS
         )
+        if user.role != "admin" and not chat_delete_permission:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail=ERROR_MESSAGES.ACCESS_PROHIBITED,
+            )
 
     folder = Folders.get_folder_by_id_and_user_id(id, user.id)
     if folder:

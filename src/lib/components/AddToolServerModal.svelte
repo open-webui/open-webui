@@ -13,7 +13,7 @@
 	import Switch from '$lib/components/common/Switch.svelte';
 	import Tags from './common/Tags.svelte';
 	import { getToolServerData } from '$lib/apis';
-	import { verifyToolServerConnection } from '$lib/apis/configs';
+	import { verifyToolServerConnection, registerOAuthClient } from '$lib/apis/configs';
 	import AccessControl from './workspace/common/AccessControl.svelte';
 	import Spinner from '$lib/components/common/Spinner.svelte';
 	import XMark from '$lib/components/icons/XMark.svelte';
@@ -30,6 +30,8 @@
 	let url = '';
 	let path = 'openapi.json';
 
+	let type = 'openapi'; // 'openapi', 'mcp'
+
 	let auth_type = 'bearer';
 	let key = '';
 
@@ -39,9 +41,46 @@
 	let name = '';
 	let description = '';
 
-	let enable = true;
+	let oauthClientInfo = null;
 
+	let enable = true;
 	let loading = false;
+
+	const registerOAuthClientHandler = async () => {
+		if (url === '') {
+			toast.error($i18n.t('Please enter a valid URL'));
+			return;
+		}
+
+		if (id === '') {
+			toast.error($i18n.t('Please enter a valid ID'));
+			return;
+		}
+
+		const res = await registerOAuthClient(
+			localStorage.token,
+			{
+				url: url,
+				client_id: id
+			},
+			'mcp'
+		).catch((err) => {
+			toast.error($i18n.t('Registration failed'));
+			return null;
+		});
+
+		if (res) {
+			toast.warning(
+				$i18n.t(
+					'Please save the connection to persist the OAuth client information and do not change the ID'
+				)
+			);
+			toast.success($i18n.t('Registration successful'));
+
+			console.debug('Registration successful', res);
+			oauthClientInfo = res?.oauth_client_info ?? null;
+		}
+	};
 
 	const verifyHandler = async () => {
 		if (url === '') {
@@ -70,6 +109,7 @@
 			const res = await verifyToolServerConnection(localStorage.token, {
 				url,
 				path,
+				type,
 				auth_type,
 				key,
 				config: {
@@ -97,10 +137,22 @@
 
 		// remove trailing slash from url
 		url = url.replace(/\/$/, '');
+		if (id.includes(':') || id.includes('|')) {
+			toast.error($i18n.t('ID cannot contain ":" or "|" characters'));
+			loading = false;
+			return;
+		}
+
+		if (type === 'mcp' && auth_type === 'oauth_2.1' && !oauthClientInfo) {
+			toast.error($i18n.t('Please register the OAuth client'));
+			loading = false;
+			return;
+		}
 
 		const connection = {
 			url,
 			path,
+			type,
 			auth_type,
 			key,
 			config: {
@@ -110,7 +162,8 @@
 			info: {
 				id: id,
 				name: name,
-				description: description
+				description: description,
+				...(oauthClientInfo ? { oauth_client_info: oauthClientInfo } : {})
 			}
 		};
 
@@ -119,14 +172,18 @@
 		loading = false;
 		show = false;
 
+		// reset form
 		url = '';
 		path = 'openapi.json';
+		type = 'openapi';
+
 		key = '';
 		auth_type = 'bearer';
 
 		id = '';
 		name = '';
 		description = '';
+		oauthClientInfo = null;
 
 		enable = true;
 		accessControl = null;
@@ -137,12 +194,14 @@
 			url = connection.url;
 			path = connection?.path ?? 'openapi.json';
 
+			type = connection?.type ?? 'openapi';
 			auth_type = connection?.auth_type ?? 'bearer';
 			key = connection?.key ?? '';
 
 			id = connection.info?.id ?? '';
 			name = connection.info?.name ?? '';
 			description = connection.info?.description ?? '';
+			oauthClientInfo = connection.info?.oauth_client_info ?? null;
 
 			enable = connection.config?.enable ?? true;
 			accessControl = connection.config?.access_control ?? null;
@@ -189,6 +248,31 @@
 					}}
 				>
 					<div class="px-1">
+						{#if !direct}
+							<div class="flex gap-2 mb-1.5">
+								<div class="flex w-full justify-between items-center">
+									<div class=" text-xs text-gray-500">{$i18n.t('Type')}</div>
+
+									<div class="">
+										<button
+											on:click={() => {
+												type = ['', 'openapi'].includes(type) ? 'mcp' : 'openapi';
+											}}
+											type="button"
+											class=" text-xs text-gray-700 dark:text-gray-300"
+										>
+											{#if ['', 'openapi'].includes(type)}
+												{$i18n.t('OpenAPI')}
+											{:else if type === 'mcp'}
+												{$i18n.t('MCP')}
+												<span class="text-gray-500">{$i18n.t('Streamable HTTP')}</span>
+											{/if}
+										</button>
+									</div>
+								</div>
+							</div>
+						{/if}
+
 						<div class="flex gap-2">
 							<div class="flex flex-col w-full">
 								<div class="flex justify-between mb-0.5">
@@ -243,38 +327,85 @@
 									</Tooltip>
 								</div>
 
-								<div class="flex-1 flex items-center">
-									<label for="url-or-path" class="sr-only"
-										>{$i18n.t('openapi.json URL or Path')}</label
-									>
-									<input
-										class={`w-full text-sm bg-transparent ${($settings?.highContrastMode ?? false) ? 'placeholder:text-gray-700 dark:placeholder:text-gray-100' : 'outline-hidden placeholder:text-gray-300 dark:placeholder:text-gray-700'}`}
-										type="text"
-										id="url-or-path"
-										bind:value={path}
-										placeholder={$i18n.t('openapi.json URL or Path')}
-										autocomplete="off"
-										required
-									/>
-								</div>
+								{#if ['', 'openapi'].includes(type)}
+									<div class="flex-1 flex items-center">
+										<label for="url-or-path" class="sr-only"
+											>{$i18n.t('openapi.json URL or Path')}</label
+										>
+										<input
+											class={`w-full text-sm bg-transparent ${($settings?.highContrastMode ?? false) ? 'placeholder:text-gray-700 dark:placeholder:text-gray-100' : 'outline-hidden placeholder:text-gray-300 dark:placeholder:text-gray-700'}`}
+											type="text"
+											id="url-or-path"
+											bind:value={path}
+											placeholder={$i18n.t('openapi.json URL or Path')}
+											autocomplete="off"
+											required
+										/>
+									</div>
+								{/if}
 							</div>
 						</div>
 
-						<div
-							class={`text-xs mt-1 ${($settings?.highContrastMode ?? false) ? 'text-gray-800 dark:text-gray-100' : 'text-gray-500'}`}
-						>
-							{$i18n.t(`WebUI will make requests to "{{url}}"`, {
-								url: path.includes('://') ? path : `${url}${path.startsWith('/') ? '' : '/'}${path}`
-							})}
-						</div>
+						{#if ['', 'openapi'].includes(type)}
+							<div
+								class={`text-xs mt-1 ${($settings?.highContrastMode ?? false) ? 'text-gray-800 dark:text-gray-100' : 'text-gray-500'}`}
+							>
+								{$i18n.t(`WebUI will make requests to "{{url}}"`, {
+									url: path.includes('://')
+										? path
+										: `${url}${path.startsWith('/') ? '' : '/'}${path}`
+								})}
+							</div>
+						{/if}
 
 						<div class="flex gap-2 mt-2">
 							<div class="flex flex-col w-full">
-								<label
-									for="select-bearer-or-session"
-									class={`text-xs ${($settings?.highContrastMode ?? false) ? 'text-gray-800 dark:text-gray-100' : 'text-gray-500'}`}
-									>{$i18n.t('Auth')}</label
-								>
+								<div class="flex justify-between items-center">
+									<div class="flex gap-2 items-center">
+										<div
+											for="select-bearer-or-session"
+											class={`text-xs ${($settings?.highContrastMode ?? false) ? 'text-gray-800 dark:text-gray-100' : 'text-gray-500'}`}
+										>
+											{$i18n.t('Auth')}
+										</div>
+									</div>
+
+									{#if auth_type === 'oauth_2.1'}
+										<div class="flex items-center gap-2">
+											<div class="flex flex-col justify-end items-center shrink-0">
+												<Tooltip
+													content={oauthClientInfo
+														? $i18n.t('Register Again')
+														: $i18n.t('Register Client')}
+												>
+													<button
+														class=" text-xs underline dark:text-gray-500 dark:hover:text-gray-200 text-gray-700 hover:text-gray-900 transition"
+														type="button"
+														on:click={() => {
+															registerOAuthClientHandler();
+														}}
+													>
+														{$i18n.t('Register Client')}
+													</button>
+												</Tooltip>
+											</div>
+
+											{#if !oauthClientInfo}
+												<div
+													class="text-xs font-medium px-1.5 rounded-md bg-yellow-500/20 text-yellow-700 dark:text-yellow-200"
+												>
+													{$i18n.t('Not Registered')}
+												</div>
+											{:else}
+												<div
+													class="text-xs font-medium px-1.5 rounded-md bg-green-500/20 text-green-700 dark:text-green-200"
+												>
+													{$i18n.t('Registered')}
+												</div>
+											{/if}
+										</div>
+									{/if}
+								</div>
 
 								<div class="flex gap-2">
 									<div class="flex-shrink-0 self-start">
@@ -290,6 +421,9 @@
 
 											{#if !direct}
 												<option value="system_oauth">{$i18n.t('OAuth')}</option>
+												{#if type === 'mcp'}
+													<option value="oauth_2.1">{$i18n.t('OAuth 2.1')}</option>
+												{/if}
 											{/if}
 										</select>
 									</div>
@@ -319,6 +453,12 @@
 											>
 												{$i18n.t('Forwards system user OAuth access token to authenticate')}
 											</div>
+										{:else if auth_type === 'oauth_2.1'}
+											<div
+												class={`flex items-center text-xs self-center translate-y-[1px] ${($settings?.highContrastMode ?? false) ? 'text-gray-800 dark:text-gray-100' : 'text-gray-500'}`}
+											>
+												{$i18n.t('Uses OAuth 2.1 Dynamic Client Registration')}
+											</div>
 										{/if}
 									</div>
 								</div>
@@ -334,9 +474,12 @@
 										for="enter-id"
 										class={`mb-0.5 text-xs ${($settings?.highContrastMode ?? false) ? 'text-gray-800 dark:text-gray-100' : 'text-gray-500'}`}
 										>{$i18n.t('ID')}
-										<span class="text-xs text-gray-200 dark:text-gray-800 ml-0.5"
-											>{$i18n.t('Optional')}</span
-										>
+
+										{#if type !== 'mcp'}
+											<span class="text-xs text-gray-200 dark:text-gray-800 ml-0.5"
+												>{$i18n.t('Optional')}</span
+											>
+										{/if}
 									</label>
 
 									<div class="flex-1">
@@ -347,6 +490,7 @@
 											bind:value={id}
 											placeholder={$i18n.t('Enter ID')}
 											autocomplete="off"
+											required={type === 'mcp'}
 										/>
 									</div>
 								</div>
@@ -396,12 +540,31 @@
 							<hr class=" border-gray-100 dark:border-gray-700/10 my-2.5 w-full" />
 
 							<div class="my-2 -mx-2">
-								<div class="px-3 py-2 bg-gray-50 dark:bg-gray-950 rounded-lg">
+								<div class="px-4 py-3 bg-gray-50 dark:bg-gray-950 rounded-3xl">
 									<AccessControl bind:accessControl />
 								</div>
 							</div>
 						{/if}
 					</div>
+
+					{#if type === 'mcp'}
+						<div
+							class=" bg-yellow-500/20 text-yellow-700 dark:text-yellow-200 rounded-2xl text-xs px-4 py-3 mb-2"
+						>
+							<span class="font-medium">
+								{$i18n.t('Warning')}:
+							</span>
+							{$i18n.t(
+								'MCP support is experimental and its specification changes often, which can lead to incompatibilities. OpenAPI specification support is directly maintained by the Open WebUI team, making it the more reliable option for compatibility.'
+							)}
+
+							<a
+								class="font-medium underline"
+								href="https://docs.openwebui.com/features/mcp"
+								target="_blank">{$i18n.t('Read more →')}</a
+							>
+						</div>
+					{/if}
 
 					<div class="flex justify-end pt-3 text-sm font-medium gap-1.5">
 						{#if edit}

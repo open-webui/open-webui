@@ -263,7 +263,10 @@
 
 		setTimeout(() => {
 			const input = document.getElementById(`chat-title-input-${id}`);
-			if (input) input.focus();
+			if (input) {
+				input.focus();
+				input.select();
+			}
 		}, 0);
 	};
 
@@ -333,17 +336,19 @@
 {/if}
 
 <div
+	id="sidebar-chat-group"
 	bind:this={itemElement}
 	class=" w-full {className} relative group"
 	draggable={draggable && !confirmEdit}
 >
 	{#if confirmEdit}
 		<div
-			class=" w-full flex justify-between rounded-lg px-[11px] py-[6px] {id === $chatId ||
+			id="sidebar-chat-item"
+			class=" w-full flex justify-between rounded-xl px-[11px] py-[6px] {id === $chatId ||
 			confirmEdit
-				? 'bg-gray-100 dark:bg-gray-900'
+				? 'bg-gray-100 dark:bg-gray-900 selected'
 				: selected
-					? 'bg-gray-100 dark:bg-gray-950'
+					? 'bg-gray-100 dark:bg-gray-950 selected'
 					: 'group-hover:bg-gray-100 dark:group-hover:bg-gray-950'}  whitespace-nowrap text-ellipsis relative {generating
 				? 'cursor-not-allowed'
 				: ''}"
@@ -391,21 +396,19 @@
 		</div>
 	{:else}
 		<a
-			class=" w-full flex justify-between rounded-lg px-[11px] py-[6px] {id === $chatId ||
+			id="sidebar-chat-item"
+			class=" w-full flex justify-between rounded-xl px-[11px] py-[6px] {id === $chatId ||
 			confirmEdit
-				? 'bg-gray-100 dark:bg-gray-900'
+				? 'bg-gray-100 dark:bg-gray-900 selected'
 				: selected
-					? 'bg-gray-100 dark:bg-gray-950'
+					? 'bg-gray-100 dark:bg-gray-950 selected'
 					: ' group-hover:bg-gray-100 dark:group-hover:bg-gray-950'}  whitespace-nowrap text-ellipsis"
 			href="/c/{id}"
 			on:click={() => {
 				dispatch('select');
 
-				if (
-					$selectedFolder &&
-					!($selectedFolder?.items?.chats.map((chat) => chat.id) ?? []).includes(id)
-				) {
-					selectedFolder.set(null); // Reset selected folder if the chat is not in it
+				if ($selectedFolder) {
+					selectedFolder.set(null);
 				}
 
 				if ($mobile) {
@@ -429,7 +432,7 @@
 			draggable="false"
 		>
 			<div class=" flex self-center flex-1 w-full">
-				<div dir="auto" class="text-left self-center overflow-hidden w-full h-[20px]">
+				<div dir="auto" class="text-left self-center overflow-hidden w-full h-[20px] truncate">
 					{title}
 				</div>
 			</div>
@@ -438,11 +441,12 @@
 
 	<!-- svelte-ignore a11y-no-static-element-interactions -->
 	<div
+		id="sidebar-chat-item-menu"
 		class="
         {id === $chatId || confirmEdit
-			? 'from-gray-100 dark:from-gray-900'
+			? 'from-gray-100 dark:from-gray-900 selected'
 			: selected
-				? 'from-gray-100 dark:from-gray-950'
+				? 'from-gray-100 dark:from-gray-950 selected'
 				: 'invisible group-hover:visible from-gray-100 dark:from-gray-950'}
             absolute {className === 'pr-2'
 			? 'right-[8px]'

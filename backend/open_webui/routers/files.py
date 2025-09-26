@@ -120,11 +120,6 @@ def process_uploaded_file(request, file, file_path, file_item, file_metadata, us
                 f"File type {file.content_type} is not provided, but trying to process anyway"
             )
             process_file(request, ProcessFileForm(file_id=file_item.id), user=user)
-
-        Files.update_file_data_by_id(
-            file_item.id,
-            {"status": "completed"},
-        )
     except Exception as e:
         log.error(f"Error processing file: {file_item.id}")
         Files.update_file_data_by_id(

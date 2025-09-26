@@ -1,12 +1,11 @@
 <script lang="ts">
+	import { marked } from 'marked';
+
 	import { toast } from 'svelte-sonner';
 	import fileSaver from 'file-saver';
 	import Fuse from 'fuse.js';
 
 	const { saveAs } = fileSaver;
-
-	import jsPDF from 'jspdf';
-	import html2canvas from 'html2canvas-pro';
 
 	import dayjs from '$lib/dayjs';
 	import duration from 'dayjs/plugin/duration';
@@ -29,6 +28,7 @@
 	// Assuming $i18n.languages is an array of language codes
 	$: loadLocale($i18n.languages);
 
+	import { page } from '$app/stores';
 	import { goto } from '$app/navigation';
 	import { onMount, getContext, onDestroy } from 'svelte';
 	import { WEBUI_NAME, config, prompts as _prompts, user } from '$lib/stores';
@@ -45,7 +45,6 @@
 	import Tooltip from '../common/Tooltip.svelte';
 	import NoteMenu from './Notes/NoteMenu.svelte';
 	import FilesOverlay from '../chat/MessageInput/FilesOverlay.svelte';
-	import { marked } from 'marked';
 	import XMark from '../icons/XMark.svelte';
 
 	const i18n = getContext('i18n');
@@ -100,7 +99,7 @@
 		});
 	};
 
-	const createNoteHandler = async () => {
+	const createNoteHandler = async (content?: string) => {
 		//  $i18n.t('New Note'),
 		const res = await createNewNote(localStorage.token, {
 			// YYYY-MM-DD
@@ -108,8 +107,8 @@
 			data: {
 				content: {
 					json: null,
-					html: '',
-					md: ''
+					html: content ?? '',
+					md: content ?? ''
 				}
 			},
 			meta: null,
@@ -137,6 +136,11 @@
 
 	const downloadPdf = async (note) => {
 		try {
+			const [{ default: jsPDF }, { default: html2canvas }] = await Promise.all([
+				import('jspdf'),
+				import('html2canvas-pro')
+			]);
+
 			// Define a fixed virtual screen size
 			const virtualWidth = 1024; // Fixed width (adjust as needed)
 			const virtualHeight = 1400; // Fixed height (adjust as needed)
@@ -299,6 +303,14 @@
 	});
 
 	onMount(async () => {
+		if ($page.url.searchParams.get('content')) {
+			const content = $page.url.searchParams.get('content') ?? '';
+			if (content) {
+				createNoteHandler(content);
+				return;
+			}
+		}
+
 		await init();
 		loaded = true;
 
@@ -374,7 +386,7 @@
 						>
 							{#each notes[timeRange] as note, idx (note.id)}
 								<div
-									class=" flex space-x-4 cursor-pointer w-full px-4.5 py-4 bg-gray-50 dark:bg-gray-850 dark:hover:bg-white/5 hover:bg-black/5 rounded-xl transition"
+									class=" flex space-x-4 cursor-pointer w-full px-4.5 py-4 border border-gray-50 dark:border-gray-850 bg-transparent dark:hover:bg-gray-850 hover:bg-white rounded-2xl transition"
 								>
 									<div class=" flex flex-1 space-x-4 cursor-pointer w-full">
 										<a

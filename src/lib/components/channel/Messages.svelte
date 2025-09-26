@@ -63,11 +63,7 @@
 				</div>
 			</Loader>
 		{:else if !thread}
-			<div
-				class="px-5
-			
-			{($settings?.widescreenMode ?? null) ? 'max-w-full' : 'max-w-5xl'} mx-auto"
-			>
+			<div class="px-5 max-w-full mx-auto">
 				{#if channel}
 					<div class="flex flex-col gap-1.5 pb-5 pt-10">
 						<div class="text-2xl font-medium capitalize">{channel.name}</div>
@@ -98,8 +94,10 @@
 			<Message
 				{message}
 				{thread}
+				disabled={!channel?.write_access}
 				showUserProfile={messageIdx === 0 ||
-					messageList.at(messageIdx - 1)?.user_id !== message.user_id}
+					messageList.at(messageIdx - 1)?.user_id !== message.user_id ||
+					messageList.at(messageIdx - 1)?.meta?.model_id !== message?.meta?.model_id}
 				onDelete={() => {
 					messages = messages.filter((m) => m.id !== message.id);
 

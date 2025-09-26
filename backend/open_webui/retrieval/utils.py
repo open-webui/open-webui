@@ -19,10 +19,13 @@ from open_webui.retrieval.vector.factory import VECTOR_DB_CLIENT
 from open_webui.models.users import UserModel
 from open_webui.models.files import Files
 from open_webui.models.knowledge import Knowledges
+
+from open_webui.models.chats import Chats
 from open_webui.models.notes import Notes
 
 from open_webui.retrieval.vector.main import GetResult
 from open_webui.utils.access_control import has_access
+from open_webui.utils.misc import get_message_list
 
 
 from open_webui.env import (
@@ -124,7 +127,13 @@ def query_doc_with_hybrid_search(
     hybrid_bm25_weight: float,
 ) -> dict:
     try:
-        if not collection_result.documents[0]:
+        if (
+            not collection_result
+            or not hasattr(collection_result, "documents")
+            or not collection_result.documents
+            or len(collection_result.documents) == 0
+            or not collection_result.documents[0]
+        ):
             log.warning(f"query_doc_with_hybrid_search:no_docs {collection_name}")
             return {"documents": [], "metadatas": [], "distances": []}
 
@@ -432,13 +441,14 @@ def get_embedding_function(
             if isinstance(query, list):
                 embeddings = []
                 for i in range(0, len(query), embedding_batch_size):
-                    embeddings.extend(
-                        func(
-                            query[i : i + embedding_batch_size],
-                            prefix=prefix,
-                            user=user,
-                        )
+                    batch_embeddings = func(
+                        query[i : i + embedding_batch_size],
+                        prefix=prefix,
+                        user=user,
                     )
+
+                    if isinstance(batch_embeddings, list):
+                        embeddings.extend(batch_embeddings)
                 return embeddings
             else:
                 return func(query, prefix, user)
@@ -490,25 +500,37 @@ def get_sources_from_items(
             # Raw Text
             # Used during temporary chat file uploads or web page & youtube attachements
 
-            if item.get("collection_name"):
-                # If item has a collection name, use it
-                collection_names.append(item.get("collection_name"))
-            elif item.get("file"):
-                # if item has file data, use it
-                query_result = {
-                    "documents": [
-                        [item.get("file", {}).get("data", {}).get("content")]
-                    ],
-                    "metadatas": [[item.get("file", {}).get("meta", {})]],
-                }
-            else:
-                # Fallback to item content
-                query_result = {
-                    "documents": [[item.get("content")]],
-                    "metadatas": [
-                        [{"file_id": item.get("id"), "name": item.get("name")}]
-                    ],
-                }
+            if item.get("context") == "full":
+                if item.get("file"):
+                    # if item has file data, use it
+                    query_result = {
+                        "documents": [
+                            [item.get("file", {}).get("data", {}).get("content")]
+                        ],
+                        "metadatas": [[item.get("file", {}).get("meta", {})]],
+                    }
+
+            if query_result is None:
+                # Fallback
+                if item.get("collection_name"):
+                    # If item has a collection name, use it
+                    collection_names.append(item.get("collection_name"))
+                elif item.get("file"):
+                    # If item has file data, use it
+                    query_result = {
+                        "documents": [
+                            [item.get("file", {}).get("data", {}).get("content")]
+                        ],
+                        "metadatas": [[item.get("file", {}).get("meta", {})]],
+                    }
+                else:
+                    # Fallback to item content
+                    query_result = {
+                        "documents": [[item.get("content")]],
+                        "metadatas": [
+                            [{"file_id": item.get("id"), "name": item.get("name")}]
+                        ],
+                    }
 
         elif item.get("type") == "note":
             # Note Attached
@@ -524,6 +546,30 @@ def get_sources_from_items(
                     "documents": [[note.data.get("content", {}).get("md", "")]],
                     "metadatas": [[{"file_id": note.id, "name": note.title}]],
                 }
+
+        elif item.get("type") == "chat":
+            # Chat Attached
+            chat = Chats.get_chat_by_id(item.get("id"))
+
+            if chat and (user.role == "admin" or chat.user_id == user.id):
+                messages_map = chat.chat.get("history", {}).get("messages", {})
+                message_id = chat.chat.get("history", {}).get("currentId")
+
+                if messages_map and message_id:
+                    # Reconstruct the message list in order
+                    message_list = get_message_list(messages_map, message_id)
+                    message_history = "\n".join(
+                        [
+                            f"#### {m.get('role', 'user').capitalize()}\n{m.get('content')}\n"
+                            for m in message_list
+                        ]
+                    )
+
+                    # User has access to the chat
+                    query_result = {
+                        "documents": [[message_history]],
+                        "metadatas": [[{"file_id": chat.id, "name": chat.title}]],
+                    }
 
         elif item.get("type") == "file":
             if (
@@ -581,6 +627,7 @@ def get_sources_from_items(
 
                 if knowledge_base and (
                     user.role == "admin"
+                    or knowledge_base.user_id == user.id
                     or has_access(user.id, "read", knowledge_base.access_control)
                 ):
 

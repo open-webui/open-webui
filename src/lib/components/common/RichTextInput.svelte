@@ -91,6 +91,18 @@
 		}
 	});
 
+	// Convert TipTap mention spans -> <@id>
+	turndownService.addRule('mentions', {
+		filter: (node) => node.nodeName === 'SPAN' && node.getAttribute('data-type') === 'mention',
+		replacement: (_content, node: HTMLElement) => {
+			const id = node.getAttribute('data-id') || '';
+			// TipTap stores the trigger char in data-mention-suggestion-char (usually "@")
+			const ch = node.getAttribute('data-mention-suggestion-char') || '@';
+			// Emit <@id> style, e.g. <@llama3.2:latest>
+			return `<${ch}${id}>`;
+		}
+	});
+
 	import { onMount, onDestroy, tick, getContext } from 'svelte';
 	import { createEventDispatcher } from 'svelte';
 
@@ -100,20 +112,7 @@
 	import { Fragment, DOMParser } from 'prosemirror-model';
 	import { EditorState, Plugin, PluginKey, TextSelection, Selection } from 'prosemirror-state';
 	import { Decoration, DecorationSet } from 'prosemirror-view';
-	import { Editor, Extension } from '@tiptap/core';
-
-	// Yjs imports
-	import * as Y from 'yjs';
-	import {
-		ySyncPlugin,
-		yCursorPlugin,
-		yUndoPlugin,
-		undo,
-		redo,
-		prosemirrorJSONToYDoc,
-		yDocToProsemirrorJSON
-	} from 'y-prosemirror';
-	import { keymap } from 'prosemirror-keymap';
+	import { Editor, Extension, mergeAttributes } from '@tiptap/core';
 
 	import { AIAutocompletion } from './RichTextInput/AutoCompletion.js';
 
@@ -137,22 +136,30 @@
 	import CodeBlockLowlight from '@tiptap/extension-code-block-lowlight';
 
 	import Mention from '@tiptap/extension-mention';
-
-	import { all, createLowlight } from 'lowlight';
+	import FormattingButtons from './RichTextInput/FormattingButtons.svelte';
 
 	import { PASTED_TEXT_CHARACTER_LIMIT } from '$lib/constants';
+	import { createLowlight } from 'lowlight';
+	import hljs from 'highlight.js';
 
-	import FormattingButtons from './RichTextInput/FormattingButtons.svelte';
-	import { duration } from 'dayjs';
+	import type { SocketIOCollaborationProvider } from './RichTextInput/Collaboration';
 
 	export let oncompositionstart = (e) => {};
 	export let oncompositionend = (e) => {};
 	export let onChange = (e) => {};
 
 	// create a lowlight instance with all languages loaded
-	const lowlight = createLowlight(all);
+	const lowlight = createLowlight(
+		hljs.listLanguages().reduce(
+			(obj, lang) => {
+				obj[lang] = () => hljs.getLanguage(lang);
+				return obj;
+			},
+			{} as Record<string, any>
+		)
+	);
 
-	export let editor = null;
+	export let editor: Editor | null = null;
 
 	export let socket = null;
 	export let user = null;
@@ -161,10 +168,26 @@
 	export let documentId = '';
 
 	export let className = 'input-prose';
-	export let placeholder = 'Type here...';
+	export let placeholder = $i18n.t('Type here...');
+	let _placeholder = placeholder;
+
+	$: if (placeholder !== _placeholder) {
+		setPlaceholder();
+	}
+
+	const setPlaceholder = () => {
+		_placeholder = placeholder;
+		if (editor) {
+			editor?.view.dispatch(editor.state.tr);
+		}
+	};
+
+	export let richText = true;
+	export let dragHandle = false;
 	export let link = false;
 	export let image = false;
 	export let fileHandler = false;
+	export let suggestions = null;
 
 	export let onFileDrop = (currentEditor, files, pos) => {
 		files.forEach((file) => {
@@ -240,325 +263,11 @@
 	let jsonValue = '';
 	let mdValue = '';
 
-	let lastSelectionBookmark = null;
+	let provider: SocketIOCollaborationProvider | null = null;
 
-	// Yjs setup
-	let ydoc = null;
-	let yXmlFragment = null;
-	let awareness = null;
-
-	const getEditorInstance = async () => {
-		return new Promise((resolve) => {
-			setTimeout(() => {
-				resolve(editor);
-			}, 0);
-		});
-	};
-
-	// Custom Yjs Socket.IO provider
-	class SocketIOProvider {
-		constructor(doc, documentId, socket, user) {
-			this.doc = doc;
-			this.documentId = documentId;
-			this.socket = socket;
-			this.user = user;
-			this.isConnected = false;
-			this.synced = false;
-
-			this.setupEventListeners();
-		}
-
-		generateUserColor() {
-			const colors = [
-				'#FF6B6B',
-				'#4ECDC4',
-				'#45B7D1',
-				'#96CEB4',
-				'#FFEAA7',
-				'#DDA0DD',
-				'#98D8C8',
-				'#F7DC6F',
-				'#BB8FCE',
-				'#85C1E9'
-			];
-			return colors[Math.floor(Math.random() * colors.length)];
-		}
-
-		joinDocument() {
-			const userColor = this.generateUserColor();
-			this.socket.emit('ydoc:document:join', {
-				document_id: this.documentId,
-				user_id: this.user?.id,
-				user_name: this.user?.name,
-				user_color: userColor
-			});
-
-			// Set user awareness info
-			if (awareness && this.user) {
-				awareness.setLocalStateField('user', {
-					name: `${this.user.name}`,
-					color: userColor,
-					id: this.socket.id
-				});
-			}
-		}
-
-		setupEventListeners() {
-			// Listen for document updates from server
-			this.socket.on('ydoc:document:update', (data) => {
-				if (data.document_id === this.documentId && data.socket_id !== this.socket.id) {
-					try {
-						const update = new Uint8Array(data.update);
-						Y.applyUpdate(this.doc, update);
-					} catch (error) {
-						console.error('Error applying Yjs update:', error);
-					}
-				}
-			});
-
-			// Listen for document state from server
-			this.socket.on('ydoc:document:state', async (data) => {
-				if (data.document_id === this.documentId) {
-					try {
-						if (data.state) {
-							const state = new Uint8Array(data.state);
-
-							if (state.length === 2 && state[0] === 0 && state[1] === 0) {
-								// Empty state, check if we have content to initialize
-								// check if editor empty as well
-								// const editor = await getEditorInstance();
-
-								const isEmptyEditor = !editor || editor.getText().trim() === '';
-								if (isEmptyEditor) {
-									if (content && (data?.sessions ?? ['']).length === 1) {
-										const editorYdoc = prosemirrorJSONToYDoc(editor.schema, content);
-										if (editorYdoc) {
-											Y.applyUpdate(this.doc, Y.encodeStateAsUpdate(editorYdoc));
-										}
-									}
-								} else {
-									// If the editor already has content, we don't need to send an empty state
-									if (this.doc.getXmlFragment('prosemirror').length > 0) {
-										this.socket.emit('ydoc:document:update', {
-											document_id: this.documentId,
-											user_id: this.user?.id,
-											socket_id: this.socket.id,
-											update: Y.encodeStateAsUpdate(this.doc)
-										});
-									} else {
-										console.warn('Yjs document is empty, not sending state.');
-									}
-								}
-							} else {
-								Y.applyUpdate(this.doc, state, 'server');
-							}
-						}
-						this.synced = true;
-					} catch (error) {
-						console.error('Error applying Yjs state:', error);
-
-						this.synced = false;
-						this.socket.emit('ydoc:document:state', {
-							document_id: this.documentId
-						});
-					}
-				}
-			});
-
-			// Listen for awareness updates
-			this.socket.on('ydoc:awareness:update', (data) => {
-				if (data.document_id === this.documentId && awareness) {
-					try {
-						const awarenessUpdate = new Uint8Array(data.update);
-						awareness.applyUpdate(awarenessUpdate, 'server');
-					} catch (error) {
-						console.error('Error applying awareness update:', error);
-					}
-				}
-			});
-
-			// Handle connection events
-			this.socket.on('connect', this.onConnect);
-			this.socket.on('disconnect', this.onDisconnect);
-
-			// Listen for document updates from Yjs
-			this.doc.on('update', async (update, origin) => {
-				if (origin !== 'server' && this.isConnected) {
-					await tick(); // Ensure the DOM is updated before sending
-					this.socket.emit('ydoc:document:update', {
-						document_id: this.documentId,
-						user_id: this.user?.id,
-						socket_id: this.socket.id,
-						update: Array.from(update),
-						data: {
-							content: {
-								md: mdValue,
-								html: htmlValue,
-								json: jsonValue
-							}
-						}
-					});
-				}
-			});
-
-			// Listen for awareness updates from Yjs
-			if (awareness) {
-				awareness.on('change', ({ added, updated, removed }, origin) => {
-					if (origin !== 'server' && this.isConnected) {
-						const changedClients = added.concat(updated).concat(removed);
-						const awarenessUpdate = awareness.encodeUpdate(changedClients);
-						this.socket.emit('ydoc:awareness:update', {
-							document_id: this.documentId,
-							user_id: this.socket.id,
-							update: Array.from(awarenessUpdate)
-						});
-					}
-				});
-			}
-
-			if (this.socket.connected) {
-				this.isConnected = true;
-				this.joinDocument();
-			}
-		}
-
-		onConnect = () => {
-			this.isConnected = true;
-			this.joinDocument();
-		};
-
-		onDisconnect = () => {
-			this.isConnected = false;
-			this.synced = false;
-		};
-
-		destroy() {
-			this.socket.off('ydoc:document:update');
-			this.socket.off('ydoc:document:state');
-			this.socket.off('ydoc:awareness:update');
-			this.socket.off('connect', this.onConnect);
-			this.socket.off('disconnect', this.onDisconnect);
-
-			if (this.isConnected) {
-				this.socket.emit('ydoc:document:leave', {
-					document_id: this.documentId,
-					user_id: this.user?.id
-				});
-			}
-		}
-	}
-
-	let provider = null;
-
-	// Simple awareness implementation
-	class SimpleAwareness {
-		constructor(yDoc) {
-			// Yjs awareness expects clientID (not clientId) property
-			this.clientID = yDoc ? yDoc.clientID : Math.floor(Math.random() * 0xffffffff);
-			// Map from clientID (number) to state (object)
-			this._states = new Map(); // _states, not states; will make getStates() for compat
-			this._updateHandlers = [];
-			this._localState = {};
-			// As in Yjs Awareness, add our local state to the states map from the start:
-			this._states.set(this.clientID, this._localState);
-		}
-		on(event, handler) {
-			if (event === 'change') this._updateHandlers.push(handler);
-		}
-		off(event, handler) {
-			if (event === 'change') {
-				const i = this._updateHandlers.indexOf(handler);
-				if (i !== -1) this._updateHandlers.splice(i, 1);
-			}
-		}
-		getLocalState() {
-			return this._states.get(this.clientID) || null;
-		}
-		getStates() {
-			// Yjs returns a Map (clientID->state)
-			return this._states;
-		}
-		setLocalStateField(field, value) {
-			let localState = this._states.get(this.clientID);
-			if (!localState) {
-				localState = {};
-				this._states.set(this.clientID, localState);
-			}
-			localState[field] = value;
-			// After updating, fire 'update' event to all handlers
-			for (const cb of this._updateHandlers) {
-				// Follows Yjs Awareness ({ added, updated, removed }, origin)
-				cb({ added: [], updated: [this.clientID], removed: [] }, 'local');
-			}
-		}
-		applyUpdate(update, origin) {
-			// Very simple: Accepts a serialized JSON state for now as Uint8Array
-			try {
-				const str = new TextDecoder().decode(update);
-				const obj = JSON.parse(str);
-				// Should be a plain object: { clientID: state, ... }
-				for (const [k, v] of Object.entries(obj)) {
-					this._states.set(+k, v);
-				}
-				for (const cb of this._updateHandlers) {
-					cb({ added: [], updated: Array.from(Object.keys(obj)).map(Number), removed: [] }, origin);
-				}
-			} catch (e) {
-				console.warn('SimpleAwareness: Could not decode update:', e);
-			}
-		}
-		encodeUpdate(clients) {
-			// Encodes the states for the given clientIDs as Uint8Array (JSON)
-			const obj = {};
-			for (const id of clients || Array.from(this._states.keys())) {
-				const st = this._states.get(id);
-				if (st) obj[id] = st;
-			}
-			const json = JSON.stringify(obj);
-			return new TextEncoder().encode(json);
-		}
-	}
-
-	// Yjs collaboration extension
-	const YjsCollaboration = Extension.create({
-		name: 'yjsCollaboration',
-
-		addProseMirrorPlugins() {
-			if (!collaboration || !yXmlFragment) return [];
-
-			const plugins = [
-				ySyncPlugin(yXmlFragment),
-				yUndoPlugin(),
-				keymap({
-					'Mod-z': undo,
-					'Mod-y': redo,
-					'Mod-Shift-z': redo
-				})
-			];
-
-			if (awareness) {
-				plugins.push(yCursorPlugin(awareness));
-			}
-
-			return plugins;
-		}
-	});
-
-	function initializeCollaboration() {
-		if (!collaboration) return;
-
-		// Create Yjs document
-		ydoc = new Y.Doc();
-		yXmlFragment = ydoc.getXmlFragment('prosemirror');
-		awareness = new SimpleAwareness(ydoc);
-
-		// Create custom Socket.IO provider
-		provider = new SocketIOProvider(ydoc, documentId, socket, user);
-	}
-
-	let floatingMenuElement = null;
-	let bubbleMenuElement = null;
-	let element;
+	let floatingMenuElement: Element | null = null;
+	let bubbleMenuElement: Element | null = null;
+	let element: Element | null = null;
 
 	const options = {
 		throwOnError: false
@@ -797,9 +506,14 @@
 
 	export const focus = () => {
 		if (editor) {
-			editor.view.focus();
-			// Scroll to the current selection
-			editor.view.dispatch(editor.view.state.tr.scrollIntoView());
+			try {
+				editor.view?.focus();
+				// Scroll to the current selection
+				editor.view?.dispatch(editor.view.state.tr.scrollIntoView());
+			} catch (e) {
+				// sometimes focusing throws an error, ignore
+				console.warn('Error focusing editor', e);
+			}
 		}
 	};
 
@@ -904,6 +618,20 @@
 		}
 	});
 
+	import { listDragHandlePlugin } from './RichTextInput/listDragHandlePlugin.js';
+
+	const ListItemDragHandle = Extension.create({
+		name: 'listItemDragHandle',
+		addProseMirrorPlugins() {
+			return [
+				listDragHandlePlugin({
+					itemTypeNames: ['listItem', 'taskItem'],
+					getEditor: () => this.editor
+				})
+			];
+		}
+	});
+
 	onMount(async () => {
 		content = value;
 
@@ -946,11 +674,13 @@
 
 		console.log('content', content);
 
-		if (collaboration) {
-			initializeCollaboration();
+		if (collaboration && documentId && socket && user) {
+			const { SocketIOCollaborationProvider } = await import('./RichTextInput/Collaboration');
+			provider = new SocketIOCollaborationProvider(documentId, socket, user, content);
 		}
 
 		console.log(bubbleMenuElement, floatingMenuElement);
+		console.log(suggestions);
 
 		editor = new Editor({
 			element: element,
@@ -958,29 +688,36 @@
 				StarterKit.configure({
 					link: link
 				}),
-				Placeholder.configure({ placeholder }),
+				...(dragHandle ? [ListItemDragHandle] : []),
+				Placeholder.configure({ placeholder: () => _placeholder, showOnlyWhenEditable: false }),
 				SelectionDecoration,
 
-				CodeBlockLowlight.configure({
-					lowlight
-				}),
-				Highlight,
-				Typography,
+				...(richText
+					? [
+							CodeBlockLowlight.configure({
+								lowlight
+							}),
+							Highlight,
+							Typography,
+							TableKit.configure({
+								table: { resizable: true }
+							}),
+							ListKit.configure({
+								taskItem: {
+									nested: true
+								}
+							})
+						]
+					: []),
+				...(suggestions
+					? [
+							Mention.configure({
+								HTMLAttributes: { class: 'mention' },
+								suggestions: suggestions
+							})
+						]
+					: []),
 
-				Mention.configure({
-					HTMLAttributes: {
-						class: 'mention'
-					}
-				}),
-
-				TableKit.configure({
-					table: { resizable: true }
-				}),
-				ListKit.configure({
-					taskItem: {
-						nested: true
-					}
-				}),
 				CharacterCount.configure({}),
 				...(image ? [Image] : []),
 				...(fileHandler
@@ -991,8 +728,7 @@
 							})
 						]
 					: []),
-
-				...(autocomplete
+				...(richText && autocomplete
 					? [
 							AIAutocompletion.configure({
 								generateCompletion: async (text) => {
@@ -1010,8 +746,7 @@
 							})
 						]
 					: []),
-
-				...(showFormattingToolbar
+				...(richText && showFormattingToolbar
 					? [
 							BubbleMenu.configure({
 								element: bubbleMenuElement,
@@ -1035,7 +770,7 @@
 							})
 						]
 					: []),
-				...(collaboration ? [YjsCollaboration] : [])
+				...(collaboration && provider ? [provider.getEditorExtension()] : [])
 			],
 			content: collaboration ? undefined : content,
 			autofocus: messageInput ? true : false,
@@ -1046,7 +781,6 @@
 
 				htmlValue = editor.getHTML();
 				jsonValue = editor.getJSON();
-
 				mdValue = turndownService
 					.turndown(
 						htmlValue
@@ -1086,6 +820,38 @@
 			},
 			editorProps: {
 				attributes: { id },
+				handlePaste: (view, event) => {
+					// Force plain-text pasting when richText === false
+					if (!richText) {
+						// swallow HTML completely
+						event.preventDefault();
+						const { state, dispatch } = view;
+
+						const plainText = (event.clipboardData?.getData('text/plain') ?? '').replace(
+							/\r\n/g,
+							'\n'
+						);
+
+						const lines = plainText.split('\n');
+						const nodes = [];
+
+						lines.forEach((line, index) => {
+							if (index > 0) {
+								nodes.push(state.schema.nodes.hardBreak.create());
+							}
+							if (line.length > 0) {
+								nodes.push(state.schema.text(line));
+							}
+						});
+
+						const fragment = Fragment.fromArray(nodes);
+						dispatch(state.tr.replaceSelectionWith(fragment, false).scrollIntoView());
+
+						return true; // handled
+					}
+
+					return false;
+				},
 				handleDOMEvents: {
 					compositionstart: (view, event) => {
 						oncompositionstart(event);
@@ -1143,12 +909,13 @@
 
 							if (event.key === 'Enter') {
 								const isCtrlPressed = event.ctrlKey || event.metaKey; // metaKey is for Cmd key on Mac
+
+								const { state } = view;
+								const { $from } = state.selection;
+								const lineStart = $from.before($from.depth);
+								const lineEnd = $from.after($from.depth);
+								const lineText = state.doc.textBetween(lineStart, lineEnd, '\n', '\0').trim();
 								if (event.shiftKey && !isCtrlPressed) {
-									const { state } = view;
-									const { $from } = state.selection;
-									const lineStart = $from.before($from.depth);
-									const lineEnd = $from.after($from.depth);
-									const lineText = state.doc.textBetween(lineStart, lineEnd, '\n', '\0').trim();
 									if (lineText.startsWith('```')) {
 										// Fix GitHub issue #16337: prevent backtick removal for lines starting with ```
 										return false; // Let ProseMirror handle the Enter key normally
@@ -1163,9 +930,17 @@
 									const isInList = isInside(['listItem', 'bulletList', 'orderedList', 'taskList']);
 									const isInHeading = isInside(['heading']);
 
+									console.log({ isInCodeBlock, isInList, isInHeading });
+
 									if (isInCodeBlock || isInList || isInHeading) {
 										// Let ProseMirror handle the normal Enter behavior
 										return false;
+									}
+
+									const suggestionsElement = document.getElementById('suggestions-container');
+									if (lineText.startsWith('#') && suggestionsElement) {
+										console.log('Letting heading suggestion handle Enter key');
+										return true;
 									}
 								}
 							}
@@ -1263,8 +1038,12 @@
 					editor.storage.files = files;
 				}
 			},
-			onSelectionUpdate: onSelectionUpdate
+			onSelectionUpdate: onSelectionUpdate,
+			enableInputRules: richText,
+			enablePasteRules: richText
 		});
+
+		provider?.setEditor(editor, () => ({ md: mdValue, html: htmlValue, json: jsonValue }));
 
 		if (messageInput) {
 			selectTemplate();
@@ -1334,14 +1113,19 @@
 	};
 </script>
 
-{#if showFormattingToolbar}
-	<div bind:this={bubbleMenuElement} id="bubble-menu" class="p-0">
+{#if richText && showFormattingToolbar}
+	<div bind:this={bubbleMenuElement} id="bubble-menu" class="p-0 {editor ? '' : 'hidden'}">
 		<FormattingButtons {editor} />
 	</div>
 
-	<div bind:this={floatingMenuElement} id="floating-menu" class="p-0">
+	<div bind:this={floatingMenuElement} id="floating-menu" class="p-0 {editor ? '' : 'hidden'}">
 		<FormattingButtons {editor} />
 	</div>
 {/if}
 
-<div bind:this={element} class="relative w-full min-w-full h-full min-h-fit {className}" />
+<div
+	bind:this={element}
+	class="relative w-full min-w-full h-full min-h-fit {className} {!editable
+		? 'cursor-not-allowed'
+		: ''}"
+/>

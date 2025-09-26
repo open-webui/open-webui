@@ -37,7 +37,9 @@ router = APIRouter()
 @router.get("/", response_model=list[ChatTitleIdResponse])
 @router.get("/list", response_model=list[ChatTitleIdResponse])
 def get_session_user_chat_list(
-    user=Depends(get_verified_user), page: Optional[int] = None
+    user=Depends(get_verified_user),
+    page: Optional[int] = None,
+    include_folders: Optional[bool] = False,
 ):
     try:
         if page is not None:
@@ -45,10 +47,12 @@ def get_session_user_chat_list(
             skip = (page - 1) * limit
 
             return Chats.get_chat_title_id_list_by_user_id(
-                user.id, skip=skip, limit=limit
+                user.id, include_folders=include_folders, skip=skip, limit=limit
             )
         else:
-            return Chats.get_chat_title_id_list_by_user_id(user.id)
+            return Chats.get_chat_title_id_list_by_user_id(
+                user.id, include_folders=include_folders
+            )
     except Exception as e:
         log.exception(e)
         raise HTTPException(
@@ -166,7 +170,7 @@ async def import_chat(form_data: ChatImportForm, user=Depends(get_verified_user)
 
 
 @router.get("/search", response_model=list[ChatTitleIdResponse])
-async def search_user_chats(
+def search_user_chats(
     text: str, page: Optional[int] = None, user=Depends(get_verified_user)
 ):
     if page is None:

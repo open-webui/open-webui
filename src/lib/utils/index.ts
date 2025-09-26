@@ -378,14 +378,13 @@ export const generateInitialsImage = (name) => {
 
 export const formatDate = (inputDate) => {
 	const date = dayjs(inputDate);
-	const now = dayjs();
 
 	if (date.isToday()) {
-		return `Today at ${date.format('LT')}`;
+		return `Today at {{LOCALIZED_TIME}}`;
 	} else if (date.isYesterday()) {
-		return `Yesterday at ${date.format('LT')}`;
+		return `Yesterday at {{LOCALIZED_TIME}}`;
 	} else {
-		return `${date.format('L')} at ${date.format('LT')}`;
+		return `{{LOCALIZED_DATE}} at {{LOCALIZED_TIME}}`;
 	}
 };
 
@@ -798,6 +797,15 @@ export const isValidHttpUrl = (string: string) => {
 	}
 
 	return url.protocol === 'http:' || url.protocol === 'https:';
+};
+
+export const isYoutubeUrl = (url: string) => {
+	return (
+		url.startsWith('https://www.youtube.com') ||
+		url.startsWith('https://youtu.be') ||
+		url.startsWith('https://youtube.com') ||
+		url.startsWith('https://m.youtube.com')
+	);
 };
 
 export const removeEmojis = (str: string) => {
@@ -1409,24 +1417,39 @@ export const parseVariableDefinition = (definition: string): Record<string, any>
 	// Parse type (explicit or implied)
 	const type = firstPart.startsWith('type=') ? firstPart.slice(5) : firstPart;
 
-	// Parse properties using reduce
-	const properties = propertyParts.reduce((props, part) => {
-		// Use splitProperties for the equals sign as well, in case there are nested quotes
-		const equalsParts = splitProperties(part, '=');
-		const [propertyName, ...valueParts] = equalsParts;
-		const propertyValue = valueParts.join('='); // Handle values with = signs
+	// Parse properties; support both key=value and bare flags (e.g., ":required")
+	const properties = propertyParts.reduce(
+		(props, part) => {
+			const trimmed = part.trim();
+			if (!trimmed) return props;
 
-		return propertyName && propertyValue
-			? {
-					...props,
-					[propertyName.trim()]: parseJsonValue(propertyValue.trim())
+			// Use splitProperties for the equals sign as well, in case there are nested quotes
+			const equalsParts = splitProperties(trimmed, '=');
+
+			if (equalsParts.length === 1) {
+				// It's a flag with no value, e.g. "required" -> true
+				const flagName = equalsParts[0].trim();
+				if (flagName.length > 0) {
+					return { ...props, [flagName]: true };
 				}
-			: props;
-	}, {});
+				return props;
+			}
+
+			const [propertyName, ...valueParts] = equalsParts;
+			const propertyValueRaw = valueParts.join('='); // Handle values with extra '='
+
+			if (!propertyName || propertyValueRaw == null) return props;
+
+			return {
+				...props,
+				[propertyName.trim()]: parseJsonValue(propertyValueRaw.trim())
+			};
+		},
+		{} as Record<string, any>
+	);
 
 	return { type, ...properties };
 };
-
 export const parseJsonValue = (value: string): any => {
 	// Remove surrounding quotes if present (for string values)
 	if (value.startsWith('"') && value.endsWith('"')) {
@@ -1545,5 +1568,31 @@ export const convertHeicToJpeg = async (file: File) => {
 			return file;
 		}
 		throw err;
+	}
+};
+
+export const decodeString = (str: string) => {
+	try {
+		return decodeURIComponent(str);
+	} catch (e) {
+		return str;
+	}
+};
+
+export const renderMermaidDiagram = async (code: string) => {
+	try {
+		const { default: mermaid } = await import('mermaid');
+		mermaid.initialize({
+			startOnLoad: true,
+			theme: document.documentElement.classList.contains('dark') ? 'dark' : 'default',
+			securityLevel: 'loose'
+		});
+		if (await mermaid.parse(code)) {
+			const { svg } = await mermaid.render(`mermaid-${uuidv4()}`, code);
+			return svg;
+		}
+	} catch (error) {
+		console.log('Failed to render mermaid diagram:', error);
+		return '';
 	}
 };

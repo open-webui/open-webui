@@ -286,9 +286,11 @@
 		}
 	};
 
-	onMount(async () => {
+	const setOllamaVersion = async () => {
 		ollamaVersion = await getOllamaVersion(localStorage.token).catch((error) => false);
+	};
 
+	onMount(async () => {
 		if (items) {
 			tags = items
 				.filter((item) => !(item.model?.info?.meta?.hidden ?? false))
@@ -299,6 +301,10 @@
 			tags = Array.from(new Set(tags)).sort((a, b) => a.localeCompare(b));
 		}
 	});
+
+	$: if (show) {
+		setOllamaVersion();
+	}
 
 	const cancelModelPullHandler = async (model: string) => {
 		const { reader, abortController } = $MODEL_DOWNLOAD_POOL[model];
@@ -344,7 +350,7 @@
 	closeFocus={false}
 >
 	<DropdownMenu.Trigger
-		class="relative w-full font-primary {($settings?.highContrastMode ?? false)
+		class="relative w-full {($settings?.highContrastMode ?? false)
 			? ''
 			: 'outline-hidden focus:outline-hidden'}"
 		aria-label={placeholder}
@@ -376,14 +382,15 @@
 	<DropdownMenu.Content
 		class=" z-40 {$mobile
 			? `w-full`
-			: `${className}`} max-w-[calc(100vw-1rem)] justify-start rounded-xl  bg-white dark:bg-gray-850 dark:text-white shadow-lg  outline-hidden"
+			: `${className}`} max-w-[calc(100vw-1rem)] justify-start rounded-2xl  bg-white dark:bg-gray-850 dark:text-white shadow-lg  outline-hidden"
 		transition={flyAndScale}
 		side={$mobile ? 'bottom' : 'bottom-start'}
-		sideOffset={3}
+		sideOffset={2}
+		alignOffset={-1}
 	>
 		<slot>
 			{#if searchEnabled}
-				<div class="flex items-center gap-2.5 px-5 mt-3.5 mb-1.5">
+				<div class="flex items-center gap-2.5 px-4.5 mt-3.5 mb-1.5">
 					<Search className="size-4" strokeWidth="2.5" />
 
 					<input
@@ -416,10 +423,10 @@
 				</div>
 			{/if}
 
-			<div class="px-3">
+			<div class="px-2">
 				{#if tags && items.filter((item) => !(item.model?.info?.meta?.hidden ?? false)).length > 0}
 					<div
-						class=" flex w-full bg-white dark:bg-gray-850 overflow-x-auto scrollbar-none mb-0.5"
+						class=" flex w-full bg-white dark:bg-gray-850 overflow-x-auto scrollbar-none font-[450] mb-0.5"
 						on:wheel={(e) => {
 							if (e.deltaY !== 0) {
 								e.preventDefault();
@@ -428,12 +435,12 @@
 						}}
 					>
 						<div
-							class="flex gap-1 w-fit text-center text-sm font-medium rounded-full bg-transparent px-1.5 pb-0.5"
+							class="flex gap-1 w-fit text-center text-sm rounded-full bg-transparent px-1.5"
 							bind:this={tagsContainerElement}
 						>
 							{#if items.find((item) => item.model?.connection_type === 'local') || items.find((item) => item.model?.connection_type === 'external') || items.find((item) => item.model?.direct) || tags.length > 0}
 								<button
-									class="min-w-fit outline-none px-1.5 {selectedTag === '' &&
+									class="min-w-fit outline-none px-1.5 py-0.5 {selectedTag === '' &&
 									selectedConnectionType === ''
 										? ''
 										: 'text-gray-300 dark:text-gray-600 hover:text-gray-700 dark:hover:text-white'} transition capitalize"
@@ -511,7 +518,7 @@
 				{/if}
 			</div>
 
-			<div class="px-3 max-h-64 overflow-y-auto group relative">
+			<div class="px-2.5 max-h-64 overflow-y-auto group relative">
 				{#each filteredItems as item, index}
 					<ModelItem
 						{selectedModelIdx}
@@ -543,7 +550,7 @@
 						placement="top-start"
 					>
 						<button
-							class="flex w-full font-medium line-clamp-1 select-none items-center rounded-button py-2 pl-3 pr-1.5 text-sm text-gray-700 dark:text-gray-100 outline-hidden transition-all duration-75 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg cursor-pointer data-highlighted:bg-muted"
+							class="flex w-full font-medium line-clamp-1 select-none items-center rounded-button py-2 pl-3 pr-1.5 text-sm text-gray-700 dark:text-gray-100 outline-hidden transition-all duration-75 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-xl cursor-pointer data-highlighted:bg-muted"
 							on:click={() => {
 								pullModelHandler();
 							}}
@@ -557,10 +564,10 @@
 
 				{#each Object.keys($MODEL_DOWNLOAD_POOL) as model}
 					<div
-						class="flex w-full justify-between font-medium select-none rounded-button py-2 pl-3 pr-1.5 text-sm text-gray-700 dark:text-gray-100 outline-hidden transition-all duration-75 rounded-lg cursor-pointer data-highlighted:bg-muted"
+						class="flex w-full justify-between font-medium select-none rounded-button py-2 pl-3 pr-1.5 text-sm text-gray-700 dark:text-gray-100 outline-hidden transition-all duration-75 rounded-xl cursor-pointer data-highlighted:bg-muted"
 					>
 						<div class="flex">
-							<div class="-ml-2 mr-2.5 translate-y-0.5">
+							<div class="mr-2.5 translate-y-0.5">
 								<Spinner />
 							</div>
 
@@ -617,7 +624,7 @@
 				{/each}
 			</div>
 
-			<div class="mb-3"></div>
+			<div class="mb-2.5"></div>
 
 			<div class="hidden w-[42rem]" />
 			<div class="hidden w-[32rem]" />

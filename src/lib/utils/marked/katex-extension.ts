@@ -1,5 +1,3 @@
-import katex from 'katex';
-
 const DELIMITER_LIST = [
 	{ left: '$$', right: '$$', display: true },
 	{ left: '$', right: '$', display: false },

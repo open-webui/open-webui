@@ -1,21 +1,18 @@
 <script lang="ts">
 	import hljs from 'highlight.js';
-
-	import mermaid from 'mermaid';
-
-	import { v4 as uuidv4 } from 'uuid';
-
+	import { toast } from 'svelte-sonner';
 	import { getContext, onMount, tick, onDestroy } from 'svelte';
-	import { copyToClipboard } from '$lib/utils';
+	import { config } from '$lib/stores';
+
+	import PyodideWorker from '$lib/workers/pyodide.worker?worker';
+	import { executeCode } from '$lib/apis/utils';
+	import { copyToClipboard, renderMermaidDiagram } from '$lib/utils';
 
 	import 'highlight.js/styles/github-dark.min.css';
 
-	import PyodideWorker from '$lib/workers/pyodide.worker?worker';
 	import CodeEditor from '$lib/components/common/CodeEditor.svelte';
 	import SvgPanZoom from '$lib/components/common/SVGPanZoom.svelte';
-	import { config } from '$lib/stores';
-	import { executeCode } from '$lib/apis/utils';
-	import { toast } from 'svelte-sonner';
+
 	import ChevronUp from '$lib/components/icons/ChevronUp.svelte';
 	import ChevronUpDown from '$lib/components/icons/ChevronUpDown.svelte';
 	import CommandLine from '$lib/components/icons/CommandLine.svelte';
@@ -40,7 +37,7 @@
 	export let code = '';
 	export let attributes = {};
 
-	export let className = 'my-2';
+	export let className = 'mb-2';
 	export let editorClassName = '';
 	export let stickyButtonsClassName = 'top-0';
 
@@ -167,9 +164,9 @@
 								];
 							}
 
-							if (stdout.startsWith(`${line}\n`)) {
+							if (stdout.includes(`${line}\n`)) {
 								stdout = stdout.replace(`${line}\n`, ``);
-							} else if (stdout.startsWith(`${line}`)) {
+							} else if (stdout.includes(`${line}`)) {
 								stdout = stdout.replace(`${line}`, ``);
 							}
 						}
@@ -196,9 +193,9 @@
 								];
 							}
 
-							if (result.startsWith(`${line}\n`)) {
+							if (result.includes(`${line}\n`)) {
 								result = result.replace(`${line}\n`, ``);
-							} else if (result.startsWith(`${line}`)) {
+							} else if (result.includes(`${line}`)) {
 								result = result.replace(`${line}`, ``);
 							}
 						}
@@ -275,9 +272,9 @@
 							];
 						}
 
-						if (stdout.startsWith(`${line}\n`)) {
+						if (stdout.includes(`${line}\n`)) {
 							stdout = stdout.replace(`${line}\n`, ``);
-						} else if (stdout.startsWith(`${line}`)) {
+						} else if (stdout.includes(`${line}`)) {
 							stdout = stdout.replace(`${line}`, ``);
 						}
 					}
@@ -325,27 +322,11 @@
 		};
 	};
 
-	let debounceTimeout;
-
-	const drawMermaidDiagram = async () => {
-		try {
-			if (await mermaid.parse(code)) {
-				const { svg } = await mermaid.render(`mermaid-${uuidv4()}`, code);
-				mermaidHtml = svg;
-			}
-		} catch (error) {
-			console.log('Error:', error);
-		}
-	};
-
 	const render = async () => {
-		if (lang === 'mermaid' && (token?.raw ?? '').slice(-4).includes('```')) {
-			(async () => {
-				await drawMermaidDiagram();
-			})();
-		}
-
 		onUpdate(token);
+		if (lang === 'mermaid' && (token?.raw ?? '').slice(-4).includes('```')) {
+			mermaidHtml = await renderMermaidDiagram(code);
+		}
 	};
 
 	$: if (token) {
@@ -392,20 +373,6 @@
 		if (token) {
 			onUpdate(token);
 		}
-
-		if (document.documentElement.classList.contains('dark')) {
-			mermaid.initialize({
-				startOnLoad: true,
-				theme: 'dark',
-				securityLevel: 'loose'
-			});
-		} else {
-			mermaid.initialize({
-				startOnLoad: true,
-				theme: 'default',
-				securityLevel: 'loose'
-			});
-		}
 	});
 
 	onDestroy(() => {
@@ -416,11 +383,14 @@
 </script>
 
 <div>
-	<div class="relative {className} flex flex-col rounded-xl pt-2" dir="ltr">
+	<div
+		class="relative {className} flex flex-col rounded-3xl border border-gray-100 dark:border-gray-850 my-0.5"
+		dir="ltr"
+	>
 		{#if lang === 'mermaid'}
 			{#if mermaidHtml}
 				<SvgPanZoom
-					className=" border border-gray-100 dark:border-gray-850 rounded-xl max-h-fit overflow-hidden"
+					className=" rounded-3xl max-h-fit overflow-hidden"
 					svg={mermaidHtml}
 					content={_token.text}
 				/>
@@ -428,16 +398,18 @@
 				<pre class="mermaid">{code}</pre>
 			{/if}
 		{:else}
-			<div class="text-text-300 absolute pl-4 text-xs font-medium dark:text-white">
+			<div
+				class="absolute left-0 right-0 py-2.5 pr-3 text-text-300 pl-4.5 text-xs font-medium dark:text-white"
+			>
 				{lang}
 			</div>
 
 			<div
-				class="sticky {stickyButtonsClassName} mb-1 pr-2.5 flex items-center justify-end z-10 text-xs text-black dark:text-white"
+				class="sticky {stickyButtonsClassName} left-0 right-0 py-2 pr-3 flex items-center justify-end w-full z-10 text-xs text-black dark:text-white"
 			>
 				<div class="flex items-center gap-0.5">
 					<button
-						class="flex gap-1 items-center bg-none border-none bg-gray-50 dark:bg-black transition rounded-md px-1.5 py-0.5"
+						class="flex gap-1 items-center bg-none border-none transition rounded-md px-1.5 py-0.5 bg-white dark:bg-black"
 						on:click={collapseCodeBlock}
 					>
 						<div class=" -translate-y-[0.5px]">
@@ -449,39 +421,22 @@
 						</div>
 					</button>
 
-					{#if preview && ['html', 'svg'].includes(lang)}
-						<button
-							class="flex gap-1 items-center run-code-button bg-none border-none bg-gray-50 dark:bg-black transition rounded-md px-1.5 py-0.5"
-							on:click={previewCode}
-						>
-							<div class=" -translate-y-[0.5px]">
-								<Cube className="size-3" />
-							</div>
-
-							<div>
-								{$i18n.t('Preview')}
-							</div>
-						</button>
-					{/if}
-
 					{#if ($config?.features?.enable_code_execution ?? true) && (lang.toLowerCase() === 'python' || lang.toLowerCase() === 'py' || (lang === '' && checkPythonCode(code)))}
 						{#if executing}
-							<div class="run-code-button bg-none border-none p-1 cursor-not-allowed">
+							<div
+								class="run-code-button bg-none border-none p-0.5 cursor-not-allowed bg-white dark:bg-black"
+							>
 								{$i18n.t('Running')}
 							</div>
 						{:else if run}
 							<button
-								class="flex gap-1 items-center run-code-button bg-none border-none bg-gray-50 dark:bg-black transition rounded-md px-1.5 py-0.5"
+								class="flex gap-1 items-center run-code-button bg-none border-none transition rounded-md px-1.5 py-0.5 bg-white dark:bg-black"
 								on:click={async () => {
 									code = _code;
 									await tick();
 									executePython(code);
 								}}
 							>
-								<div class=" -translate-y-[0.5px]">
-									<CommandLine className="size-3" />
-								</div>
-
 								<div>
 									{$i18n.t('Run')}
 								</div>
@@ -491,7 +446,7 @@
 
 					{#if save}
 						<button
-							class="save-code-button bg-none border-none bg-gray-50 dark:bg-black transition rounded-md px-1.5 py-0.5"
+							class="save-code-button bg-none border-none transition rounded-md px-1.5 py-0.5 bg-white dark:bg-black"
 							on:click={saveCode}
 						>
 							{saved ? $i18n.t('Saved') : $i18n.t('Save')}
@@ -499,20 +454,31 @@
 					{/if}
 
 					<button
-						class="copy-code-button bg-none border-none bg-gray-50 dark:bg-black transition rounded-md px-1.5 py-0.5"
+						class="copy-code-button bg-none border-none transition rounded-md px-1.5 py-0.5 bg-white dark:bg-black"
 						on:click={copyCode}>{copied ? $i18n.t('Copied') : $i18n.t('Copy')}</button
 					>
+
+					{#if preview && ['html', 'svg'].includes(lang)}
+						<button
+							class="flex gap-1 items-center run-code-button bg-none border-none transition rounded-md px-1.5 py-0.5 bg-white dark:bg-black"
+							on:click={previewCode}
+						>
+							<div>
+								{$i18n.t('Preview')}
+							</div>
+						</button>
+					{/if}
 				</div>
 			</div>
 
 			<div
-				class="language-{lang} rounded-t-xl -mt-8 {editorClassName
+				class="language-{lang} rounded-t-3xl -mt-9 {editorClassName
 					? editorClassName
 					: executing || stdout || stderr || result
 						? ''
-						: 'rounded-b-xl'} overflow-hidden"
+						: 'rounded-b-3xl'} overflow-hidden"
 			>
-				<div class=" pt-8 bg-gray-50 dark:bg-black"></div>
+				<div class=" pt-8 bg-white dark:bg-black"></div>
 
 				{#if !collapsed}
 					{#if edit}
@@ -542,7 +508,7 @@
 					{/if}
 				{:else}
 					<div
-						class="bg-gray-50 dark:bg-black dark:text-white rounded-b-xl! pt-2 pb-2 px-4 flex flex-col gap-2 text-xs"
+						class="bg-white dark:bg-black dark:text-white rounded-b-3xl! pt-0.5 pb-3 px-4 flex flex-col gap-2 text-xs"
 					>
 						<span class="text-gray-500 italic">
 							{$i18n.t('{{COUNT}} hidden lines', {
@@ -561,7 +527,7 @@
 
 				{#if executing || stdout || stderr || result || files}
 					<div
-						class="bg-gray-50 dark:bg-black dark:text-white rounded-b-xl! py-4 px-4 flex flex-col gap-2"
+						class="bg-gray-50 dark:bg-black dark:text-white rounded-b-3xl! py-4 px-4 flex flex-col gap-2"
 					>
 						{#if executing}
 							<div class=" ">

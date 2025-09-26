@@ -7,30 +7,49 @@
 	dayjs.extend(relativeTime);
 
 	import { tick, getContext, onMount, onDestroy } from 'svelte';
-	import { removeLastWordFromString, isValidHttpUrl } from '$lib/utils';
-	import { knowledge } from '$lib/stores';
-	import { getNoteList, getNotes } from '$lib/apis/notes';
+	import { removeLastWordFromString, isValidHttpUrl, isYoutubeUrl } from '$lib/utils';
+	import Tooltip from '$lib/components/common/Tooltip.svelte';
+	import DocumentPage from '$lib/components/icons/DocumentPage.svelte';
+	import Database from '$lib/components/icons/Database.svelte';
+	import GlobeAlt from '$lib/components/icons/GlobeAlt.svelte';
+	import Youtube from '$lib/components/icons/Youtube.svelte';
 
 	const i18n = getContext('i18n');
 
-	export let command = '';
+	export let query = '';
 	export let onSelect = (e) => {};
+
+	export let knowledge = [];
 
 	let selectedIdx = 0;
 
 	let items = [];
 	let fuse = null;
 
-	let filteredItems = [];
+	export let filteredItems = [];
 	$: if (fuse) {
-		filteredItems = command.slice(1)
-			? fuse.search(command).map((e) => {
-					return e.item;
-				})
-			: items;
+		filteredItems = [
+			...(query
+				? fuse.search(query).map((e) => {
+						return e.item;
+					})
+				: items),
+
+			...(query.startsWith('http')
+				? isYoutubeUrl(query)
+					? [{ type: 'youtube', name: query, description: query }]
+					: [
+							{
+								type: 'web',
+								name: query,
+								description: query
+							}
+						]
+				: [])
+		];
 	}
 
-	$: if (command) {
+	$: if (query) {
 		selectedIdx = 0;
 	}
 
@@ -42,32 +61,14 @@
 		selectedIdx = Math.min(selectedIdx + 1, filteredItems.length - 1);
 	};
 
-	let container;
-	let adjustHeightDebounce;
-
-	const adjustHeight = () => {
-		if (container) {
-			if (adjustHeightDebounce) {
-				clearTimeout(adjustHeightDebounce);
-			}
-
-			adjustHeightDebounce = setTimeout(() => {
-				if (!container) return;
-
-				// Ensure the container is visible before adjusting height
-				const rect = container.getBoundingClientRect();
-				container.style.maxHeight = Math.max(Math.min(240, rect.bottom - 100), 100) + 'px';
-			}, 100);
+	export const select = async () => {
+		// find item with data-selected=true
+		const item = document.querySelector(`[data-selected="true"]`);
+		if (item) {
+			// click the item
+			item.click();
 		}
 	};
-
-	const confirmSelect = async (type, data) => {
-		onSelect({
-			type: type,
-			data: data
-		});
-	};
-
 	const decodeString = (str: string) => {
 		try {
 			return decodeURIComponent(str);
@@ -77,22 +78,7 @@
 	};
 
 	onMount(async () => {
-		window.addEventListener('resize', adjustHeight);
-
-		let notes = await getNoteList(localStorage.token).catch(() => {
-			return [];
-		});
-
-		notes = notes.map((note) => {
-			return {
-				...note,
-				type: 'note',
-				name: note.title,
-				description: dayjs(note.updated_at / 1000000).fromNow()
-			};
-		});
-
-		let legacy_documents = $knowledge
+		let legacy_documents = knowledge
 			.filter((item) => item?.meta?.document)
 			.map((item) => ({
 				...item,
@@ -127,16 +113,16 @@
 					]
 				: [];
 
-		let collections = $knowledge
+		let collections = knowledge
 			.filter((item) => !item?.meta?.document)
 			.map((item) => ({
 				...item,
 				type: 'collection'
 			}));
 		let collection_files =
-			$knowledge.length > 0
+			knowledge.length > 0
 				? [
-						...$knowledge
+						...knowledge
 							.reduce((a, item) => {
 								return [
 									...new Set([
@@ -158,196 +144,145 @@
 					]
 				: [];
 
-		items = [
-			...notes,
-			...collections,
-			...collection_files,
-			...legacy_collections,
-			...legacy_documents
-		].map((item) => {
-			return {
-				...item,
-				...(item?.legacy || item?.meta?.legacy || item?.meta?.document ? { legacy: true } : {})
-			};
-		});
+		items = [...collections, ...collection_files, ...legacy_collections, ...legacy_documents].map(
+			(item) => {
+				return {
+					...item,
+					...(item?.legacy || item?.meta?.legacy || item?.meta?.document ? { legacy: true } : {})
+				};
+			}
+		);
 
 		fuse = new Fuse(items, {
 			keys: ['name', 'description']
 		});
 
 		await tick();
-		adjustHeight();
+	});
+
+	const onKeyDown = (e) => {
+		if (e.key === 'Enter') {
+			e.preventDefault();
+			select();
+		}
+	};
+	onMount(() => {
+		window.addEventListener('keydown', onKeyDown);
 	});
 
 	onDestroy(() => {
-		window.removeEventListener('resize', adjustHeight);
+		window.removeEventListener('keydown', onKeyDown);
 	});
 </script>
 
-{#if filteredItems.length > 0 || command?.substring(1).startsWith('http')}
-	<div
-		id="commands-container"
-		class="px-2 mb-2 text-left w-full absolute bottom-0 left-0 right-0 z-10"
-	>
-		<div class="flex w-full rounded-xl border border-gray-100 dark:border-gray-850">
-			<div class="flex flex-col w-full rounded-xl bg-white dark:bg-gray-900 dark:text-gray-100">
-				<div
-					class="m-1 overflow-y-auto p-1 rounded-r-xl space-y-0.5 scrollbar-hidden max-h-60"
-					id="command-options-container"
-					bind:this={container}
-				>
-					{#each filteredItems as item, idx}
-						<button
-							class=" px-3 py-1.5 rounded-xl w-full text-left flex justify-between items-center {idx ===
-							selectedIdx
-								? ' bg-gray-50 dark:bg-gray-850 dark:text-gray-100 selected-command-option-button'
-								: ''}"
-							type="button"
-							on:click={() => {
-								console.log(item);
-								confirmSelect('knowledge', item);
-							}}
-							on:mousemove={() => {
-								selectedIdx = idx;
-							}}
-						>
-							<div>
-								<div class=" font-medium text-black dark:text-gray-100 flex items-center gap-1">
-									{#if item.legacy}
-										<div
-											class="bg-gray-500/20 text-gray-700 dark:text-gray-200 rounded-sm uppercase text-xs font-bold px-1 shrink-0"
-										>
-											Legacy
-										</div>
-									{:else if item?.meta?.document}
-										<div
-											class="bg-gray-500/20 text-gray-700 dark:text-gray-200 rounded-sm uppercase text-xs font-bold px-1 shrink-0"
-										>
-											Document
-										</div>
-									{:else if item?.type === 'file'}
-										<div
-											class="bg-gray-500/20 text-gray-700 dark:text-gray-200 rounded-sm uppercase text-xs font-bold px-1 shrink-0"
-										>
-											File
-										</div>
-									{:else if item?.type === 'note'}
-										<div
-											class="bg-blue-500/20 text-blue-700 dark:text-blue-200 rounded-sm uppercase text-xs font-bold px-1 shrink-0"
-										>
-											Note
-										</div>
-									{:else}
-										<div
-											class="bg-green-500/20 text-green-700 dark:text-green-200 rounded-sm uppercase text-xs font-bold px-1 shrink-0"
-										>
-											Collection
-										</div>
-									{/if}
+<div class="px-2 text-xs text-gray-500 py-1">
+	{$i18n.t('Knowledge')}
+</div>
 
-									<div class="line-clamp-1">
-										{decodeString(item?.name)}
-									</div>
-								</div>
+{#if filteredItems.length > 0 || query.startsWith('http')}
+	{#each filteredItems as item, idx}
+		{#if !['youtube', 'web'].includes(item.type)}
+			<button
+				class=" px-2 py-1 rounded-xl w-full text-left flex justify-between items-center {idx ===
+				selectedIdx
+					? ' bg-gray-50 dark:bg-gray-800 dark:text-gray-100 selected-command-option-button'
+					: ''}"
+				type="button"
+				on:click={() => {
+					console.log(item);
+					onSelect({
+						type: 'knowledge',
+						data: item
+					});
+				}}
+				on:mousemove={() => {
+					selectedIdx = idx;
+				}}
+				data-selected={idx === selectedIdx}
+			>
+				<div class="  text-black dark:text-gray-100 flex items-center gap-1">
+					<Tooltip
+						content={item?.legacy
+							? $i18n.t('Legacy')
+							: item?.type === 'file'
+								? $i18n.t('File')
+								: item?.type === 'collection'
+									? $i18n.t('Collection')
+									: ''}
+						placement="top"
+					>
+						{#if item?.type === 'collection'}
+							<Database className="size-4" />
+						{:else}
+							<DocumentPage className="size-4" />
+						{/if}
+					</Tooltip>
 
-								<div class=" text-xs text-gray-600 dark:text-gray-100 line-clamp-1">
-									{item?.description}
-								</div>
-							</div>
-						</button>
+					<Tooltip content={item.description || decodeString(item?.name)} placement="top-start">
+						<div class="line-clamp-1 flex-1">
+							{decodeString(item?.name)}
+						</div>
+					</Tooltip>
+				</div>
+			</button>
+		{/if}
+	{/each}
 
-						<!-- <div slot="content" class=" pl-2 pt-1 flex flex-col gap-0.5">
-								{#if !item.legacy && (item?.files ?? []).length > 0}
-									{#each item?.files ?? [] as file, fileIdx}
-										<button
-											class=" px-3 py-1.5 rounded-xl w-full text-left flex justify-between items-center hover:bg-gray-50 dark:hover:bg-gray-850 dark:hover:text-gray-100 selected-command-option-button"
-											type="button"
-											on:click={() => {
-												console.log(file);
-											}}
-											on:mousemove={() => {
-												selectedIdx = idx;
-											}}
-										>
-											<div>
-												<div
-													class=" font-medium text-black dark:text-gray-100 flex items-center gap-1"
-												>
-													<div
-														class="bg-gray-500/20 text-gray-700 dark:text-gray-200 rounded-sm uppercase text-xs font-bold px-1 shrink-0"
-													>
-														File
-													</div>
+	{#if isYoutubeUrl(query)}
+		<button
+			class="px-2 py-1 rounded-xl w-full text-left bg-gray-50 dark:bg-gray-800 dark:text-gray-100 selected-command-option-button"
+			type="button"
+			data-selected={true}
+			on:click={() => {
+				if (isValidHttpUrl(query)) {
+					onSelect({
+						type: 'youtube',
+						data: query
+					});
+				} else {
+					toast.error(
+						$i18n.t('Oops! Looks like the URL is invalid. Please double-check and try again.')
+					);
+				}
+			}}
+		>
+			<div class="  text-black dark:text-gray-100 line-clamp-1 flex items-center gap-1">
+				<Tooltip content={$i18n.t('YouTube')} placement="top">
+					<Youtube className="size-4" />
+				</Tooltip>
 
-													<div class="line-clamp-1">
-														{file?.meta?.name}
-													</div>
-												</div>
-
-												<div class=" text-xs text-gray-600 dark:text-gray-100 line-clamp-1">
-													{$i18n.t('Updated')}
-													{dayjs(file.updated_at * 1000).fromNow()}
-												</div>
-											</div>
-										</button>
-									{/each}
-								{:else}
-									<div class=" text-gray-500 text-xs mt-1 mb-2">
-										{$i18n.t('File not found.')}
-									</div>
-								{/if}
-							</div> -->
-					{/each}
-
-					{#if command.substring(1).startsWith('https://www.youtube.com') || command
-							.substring(1)
-							.startsWith('https://youtu.be')}
-						<button
-							class="px-3 py-1.5 rounded-xl w-full text-left bg-gray-50 dark:bg-gray-850 dark:text-gray-100 selected-command-option-button"
-							type="button"
-							on:click={() => {
-								if (isValidHttpUrl(command.substring(1))) {
-									confirmSelect('youtube', command.substring(1));
-								} else {
-									toast.error(
-										$i18n.t(
-											'Oops! Looks like the URL is invalid. Please double-check and try again.'
-										)
-									);
-								}
-							}}
-						>
-							<div class=" font-medium text-black dark:text-gray-100 line-clamp-1">
-								{command.substring(1)}
-							</div>
-
-							<div class=" text-xs text-gray-600 line-clamp-1">{$i18n.t('Youtube')}</div>
-						</button>
-					{:else if command.substring(1).startsWith('http')}
-						<button
-							class="px-3 py-1.5 rounded-xl w-full text-left bg-gray-50 dark:bg-gray-850 dark:text-gray-100 selected-command-option-button"
-							type="button"
-							on:click={() => {
-								if (isValidHttpUrl(command.substring(1))) {
-									confirmSelect('web', command.substring(1));
-								} else {
-									toast.error(
-										$i18n.t(
-											'Oops! Looks like the URL is invalid. Please double-check and try again.'
-										)
-									);
-								}
-							}}
-						>
-							<div class=" font-medium text-black dark:text-gray-100 line-clamp-1">
-								{command}
-							</div>
-
-							<div class=" text-xs text-gray-600 line-clamp-1">{$i18n.t('Web')}</div>
-						</button>
-					{/if}
+				<div class="truncate flex-1">
+					{query}
 				</div>
 			</div>
-		</div>
-	</div>
+		</button>
+	{:else if query.startsWith('http')}
+		<button
+			class="px-2 py-1 rounded-xl w-full text-left bg-gray-50 dark:bg-gray-800 dark:text-gray-100 selected-command-option-button"
+			type="button"
+			data-selected={true}
+			on:click={() => {
+				if (isValidHttpUrl(query)) {
+					onSelect({
+						type: 'web',
+						data: query
+					});
+				} else {
+					toast.error(
+						$i18n.t('Oops! Looks like the URL is invalid. Please double-check and try again.')
+					);
+				}
+			}}
+		>
+			<div class="  text-black dark:text-gray-100 line-clamp-1 flex items-center gap-1">
+				<Tooltip content={$i18n.t('Web')} placement="top">
+					<GlobeAlt className="size-4" />
+				</Tooltip>
+
+				<div class="truncate flex-1">
+					{query}
+				</div>
+			</div>
+		</button>
+	{/if}
 {/if}

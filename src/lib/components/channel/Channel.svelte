@@ -14,6 +14,7 @@
 	import Drawer from '../common/Drawer.svelte';
 	import EllipsisVertical from '../icons/EllipsisVertical.svelte';
 	import Thread from './Thread.svelte';
+	import i18n from '$lib/i18n';
 
 	export let id = '';
 
@@ -250,6 +251,12 @@
 				<MessageInput
 					id="root"
 					{typingUsers}
+					userSuggestions={true}
+					channelSuggestions={true}
+					disabled={!channel?.write_access}
+					placeholder={!channel?.write_access
+						? $i18n.t('You do not have permission to send messages in this channel.')
+						: $i18n.t('Type here...')}
 					{onChange}
 					onSubmit={submitHandler}
 					{scrollToBottom}
@@ -279,11 +286,12 @@
 			{/if}
 		{:else if threadId !== null}
 			<PaneResizer
-				class="relative flex w-[3px] items-center justify-center bg-background group bg-gray-50 dark:bg-gray-850"
+				class="relative flex items-center justify-center group border-l border-gray-50 dark:border-gray-850 hover:border-gray-200 dark:hover:border-gray-800  transition z-20"
+				id="controls-resizer"
 			>
-				<div class="z-10 flex h-7 w-5 items-center justify-center rounded-xs">
-					<EllipsisVertical className="size-4 invisible group-hover:visible" />
-				</div>
+				<div
+					class=" absolute -left-1.5 -right-1.5 -top-0 -bottom-0 z-20 cursor-col-resize bg-transparent"
+				/>
 			</PaneResizer>
 
 			<Pane defaultSize={50} minSize={30} class="h-full w-full">

@@ -48,7 +48,7 @@ async def get_notes(request: Request, user=Depends(get_verified_user)):
                 "user": UserResponse(**Users.get_user_by_id(note.user_id).model_dump()),
             }
         )
-        for note in Notes.get_notes_by_user_id(user.id, "write")
+        for note in Notes.get_notes_by_permission(user.id, "write")
     ]
 
     return notes
@@ -62,8 +62,9 @@ class NoteTitleIdResponse(BaseModel):
 
 
 @router.get("/list", response_model=list[NoteTitleIdResponse])
-async def get_note_list(request: Request, user=Depends(get_verified_user)):
-
+async def get_note_list(
+    request: Request, page: Optional[int] = None, user=Depends(get_verified_user)
+):
     if user.role != "admin" and not has_permission(
         user.id, "features.notes", request.app.state.config.USER_PERMISSIONS
     ):
@@ -72,9 +73,17 @@ async def get_note_list(request: Request, user=Depends(get_verified_user)):
             detail=ERROR_MESSAGES.UNAUTHORIZED,
         )
 
+    limit = None
+    skip = None
+    if page is not None:
+        limit = 60
+        skip = (page - 1) * limit
+
     notes = [
         NoteTitleIdResponse(**note.model_dump())
-        for note in Notes.get_notes_by_user_id(user.id, "write")
+        for note in Notes.get_notes_by_permission(
+            user.id, "write", skip=skip, limit=limit
+        )
     ]
 
     return notes

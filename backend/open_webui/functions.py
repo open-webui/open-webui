@@ -19,6 +19,7 @@ from fastapi import (
 from starlette.responses import Response, StreamingResponse
 
 
+from open_webui.constants import ERROR_MESSAGES
 from open_webui.socket.main import (
     get_event_call,
     get_event_emitter,
@@ -60,8 +61,20 @@ def get_function_module_by_id(request: Request, pipe_id: str):
     function_module, _, _ = get_function_module_from_cache(request, pipe_id)
 
     if hasattr(function_module, "valves") and hasattr(function_module, "Valves"):
+        Valves = function_module.Valves
         valves = Functions.get_function_valves_by_id(pipe_id)
-        function_module.valves = function_module.Valves(**(valves if valves else {}))
+
+        if valves:
+            try:
+                function_module.valves = Valves(
+                    **{k: v for k, v in valves.items() if v is not None}
+                )
+            except Exception as e:
+                log.exception(f"Error loading valves for function {pipe_id}: {e}")
+                raise e
+        else:
+            function_module.valves = Valves()
+
     return function_module
 
 
@@ -70,65 +83,69 @@ async def get_function_models(request):
     pipe_models = []
 
     for pipe in pipes:
-        function_module = get_function_module_by_id(request, pipe.id)
+        try:
+            function_module = get_function_module_by_id(request, pipe.id)
 
-        # Check if function is a manifold
-        if hasattr(function_module, "pipes"):
-            sub_pipes = []
-
-            # Handle pipes being a list, sync function, or async function
-            try:
-                if callable(function_module.pipes):
-                    if asyncio.iscoroutinefunction(function_module.pipes):
-                        sub_pipes = await function_module.pipes()
-                    else:
-                        sub_pipes = function_module.pipes()
-                else:
-                    sub_pipes = function_module.pipes
-            except Exception as e:
-                log.exception(e)
+            # Check if function is a manifold
+            if hasattr(function_module, "pipes"):
                 sub_pipes = []
 
-            log.debug(
-                f"get_function_models: function '{pipe.id}' is a manifold of {sub_pipes}"
-            )
+                # Handle pipes being a list, sync function, or async function
+                try:
+                    if callable(function_module.pipes):
+                        if asyncio.iscoroutinefunction(function_module.pipes):
+                            sub_pipes = await function_module.pipes()
+                        else:
+                            sub_pipes = function_module.pipes()
+                    else:
+                        sub_pipes = function_module.pipes
+                except Exception as e:
+                    log.exception(e)
+                    sub_pipes = []
 
-            for p in sub_pipes:
-                sub_pipe_id = f'{pipe.id}.{p["id"]}'
-                sub_pipe_name = p["name"]
+                log.debug(
+                    f"get_function_models: function '{pipe.id}' is a manifold of {sub_pipes}"
+                )
 
-                if hasattr(function_module, "name"):
-                    sub_pipe_name = f"{function_module.name}{sub_pipe_name}"
+                for p in sub_pipes:
+                    sub_pipe_id = f'{pipe.id}.{p["id"]}'
+                    sub_pipe_name = p["name"]
 
-                pipe_flag = {"type": pipe.type}
+                    if hasattr(function_module, "name"):
+                        sub_pipe_name = f"{function_module.name}{sub_pipe_name}"
+
+                    pipe_flag = {"type": pipe.type}
+
+                    pipe_models.append(
+                        {
+                            "id": sub_pipe_id,
+                            "name": sub_pipe_name,
+                            "object": "model",
+                            "created": pipe.created_at,
+                            "owned_by": "openai",
+                            "pipe": pipe_flag,
+                        }
+                    )
+            else:
+                pipe_flag = {"type": "pipe"}
+
+                log.debug(
+                    f"get_function_models: function '{pipe.id}' is a single pipe {{ 'id': {pipe.id}, 'name': {pipe.name} }}"
+                )
 
                 pipe_models.append(
                     {
-                        "id": sub_pipe_id,
-                        "name": sub_pipe_name,
+                        "id": pipe.id,
+                        "name": pipe.name,
                         "object": "model",
                         "created": pipe.created_at,
                         "owned_by": "openai",
                         "pipe": pipe_flag,
                     }
                 )
-        else:
-            pipe_flag = {"type": "pipe"}
-
-            log.debug(
-                f"get_function_models: function '{pipe.id}' is a single pipe {{ 'id': {pipe.id}, 'name': {pipe.name} }}"
-            )
-
-            pipe_models.append(
-                {
-                    "id": pipe.id,
-                    "name": pipe.name,
-                    "object": "model",
-                    "created": pipe.created_at,
-                    "owned_by": "openai",
-                    "pipe": pipe_flag,
-                }
-            )
+        except Exception as e:
+            log.exception(e)
+            continue
 
     return pipe_models
 
@@ -221,10 +238,11 @@ async def generate_function_chat_completion(
 
     oauth_token = None
     try:
-        oauth_token = request.app.state.oauth_manager.get_oauth_token(
-            user.id,
-            request.cookies.get("oauth_session_id", None),
-        )
+        if request.cookies.get("oauth_session_id", None):
+            oauth_token = await request.app.state.oauth_manager.get_oauth_token(
+                user.id,
+                request.cookies.get("oauth_session_id", None),
+            )
     except Exception as e:
         log.error(f"Error getting OAuth token: {e}")
 
