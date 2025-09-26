@@ -55,7 +55,7 @@ variable "task_family_name" {
 variable "container_image" {
   description = "Container image URI"
   type        = string
-  default     = "908027381725.dkr.ecr.us-east-1.amazonaws.com/github/open-webui/open-webui:v0.6.27"
+  default     = "908027381725.dkr.ecr.us-east-1.amazonaws.com/github/open-webui/open-webui:v0.6.30-custom"
 }
 
 variable "desired_count" {
