@@ -222,9 +222,10 @@ class PersistentConfig(Generic[T]):
 
 
 class AppConfig:
-    _state: dict[str, PersistentConfig]
     _redis: Union[redis.Redis, redis.cluster.RedisCluster] = None
     _redis_key_prefix: str
+
+    _state: dict[str, PersistentConfig]
 
     def __init__(
         self,
@@ -233,9 +234,8 @@ class AppConfig:
         redis_cluster: Optional[bool] = False,
         redis_key_prefix: str = "open-webui",
     ):
-        super().__setattr__("_state", {})
-        super().__setattr__("_redis_key_prefix", redis_key_prefix)
         if redis_url:
+            super().__setattr__("_redis_key_prefix", redis_key_prefix)
             super().__setattr__(
                 "_redis",
                 get_redis_connection(
@@ -245,6 +245,8 @@ class AppConfig:
                     decode_responses=True,
                 ),
             )
+
+        super().__setattr__("_state", {})
 
     def __setattr__(self, key, value):
         if isinstance(value, PersistentConfig):
@@ -2168,6 +2170,8 @@ ENABLE_ONEDRIVE_INTEGRATION = PersistentConfig(
     "onedrive.enable",
     os.getenv("ENABLE_ONEDRIVE_INTEGRATION", "False").lower() == "true",
 )
+
+
 ENABLE_ONEDRIVE_PERSONAL = (
     os.environ.get("ENABLE_ONEDRIVE_PERSONAL", "True").lower() == "true"
 )
@@ -2175,10 +2179,12 @@ ENABLE_ONEDRIVE_BUSINESS = (
     os.environ.get("ENABLE_ONEDRIVE_BUSINESS", "True").lower() == "true"
 )
 
-ONEDRIVE_CLIENT_ID = PersistentConfig(
-    "ONEDRIVE_CLIENT_ID",
-    "onedrive.client_id",
-    os.environ.get("ONEDRIVE_CLIENT_ID", ""),
+ONEDRIVE_CLIENT_ID = os.environ.get("ONEDRIVE_CLIENT_ID", "")
+ONEDRIVE_CLIENT_ID_PERSONAL = os.environ.get(
+    "ONEDRIVE_CLIENT_ID_PERSONAL", ONEDRIVE_CLIENT_ID
+)
+ONEDRIVE_CLIENT_ID_BUSINESS = os.environ.get(
+    "ONEDRIVE_CLIENT_ID_BUSINESS", ONEDRIVE_CLIENT_ID
 )
 
 ONEDRIVE_SHAREPOINT_URL = PersistentConfig(
@@ -2760,6 +2766,12 @@ WEB_SEARCH_TRUST_ENV = PersistentConfig(
     os.getenv("WEB_SEARCH_TRUST_ENV", "False").lower() == "true",
 )
 
+
+OLLAMA_CLOUD_WEB_SEARCH_API_KEY = PersistentConfig(
+    "OLLAMA_CLOUD_WEB_SEARCH_API_KEY",
+    "rag.web.search.ollama_cloud_api_key",
+    os.getenv("OLLAMA_CLOUD_API_KEY", ""),
+)
 
 SEARXNG_QUERY_URL = PersistentConfig(
     "SEARXNG_QUERY_URL",

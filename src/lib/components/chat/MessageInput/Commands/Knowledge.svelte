@@ -7,7 +7,7 @@
 	dayjs.extend(relativeTime);
 
 	import { tick, getContext, onMount, onDestroy } from 'svelte';
-	import { removeLastWordFromString, isValidHttpUrl } from '$lib/utils';
+	import { removeLastWordFromString, isValidHttpUrl, isYoutubeUrl } from '$lib/utils';
 	import Tooltip from '$lib/components/common/Tooltip.svelte';
 	import DocumentPage from '$lib/components/icons/DocumentPage.svelte';
 	import Database from '$lib/components/icons/Database.svelte';
@@ -36,7 +36,7 @@
 				: items),
 
 			...(query.startsWith('http')
-				? query.startsWith('https://www.youtube.com') || query.startsWith('https://youtu.be')
+				? isYoutubeUrl(query)
 					? [{ type: 'youtube', name: query, description: query }]
 					: [
 							{
@@ -228,7 +228,7 @@
 		{/if}
 	{/each}
 
-	{#if query.startsWith('https://www.youtube.com') || query.startsWith('https://youtu.be')}
+	{#if isYoutubeUrl(query)}
 		<button
 			class="px-2 py-1 rounded-xl w-full text-left bg-gray-50 dark:bg-gray-800 dark:text-gray-100 selected-command-option-button"
 			type="button"

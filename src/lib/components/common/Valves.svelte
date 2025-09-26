@@ -27,10 +27,19 @@
 					class="p-1 px-3 text-xs flex rounded-sm transition"
 					type="button"
 					on:click={() => {
-						valves[property] =
-							(valves[property] ?? null) === null
-								? (valvesSpec.properties[property]?.default ?? '')
-								: null;
+						const propertySpec = valvesSpec.properties[property] ?? {};
+
+						if ((valves[property] ?? null) === null) {
+							// Initialize to custom value
+							if ((propertySpec?.type ?? null) === 'array') {
+								const defaultArray = propertySpec?.default ?? [];
+								valves[property] = Array.isArray(defaultArray) ? defaultArray.join(', ') : '';
+							} else {
+								valves[property] = propertySpec?.default ?? '';
+							}
+						} else {
+							valves[property] = null;
+						}
 
 						dispatch('change');
 					}}
