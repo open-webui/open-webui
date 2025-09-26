@@ -259,6 +259,85 @@ async def chat_completion_tools_handler(
                 except Exception as e:
                     tool_result = str(e)
 
+                tool_result_embeds = []
+                if isinstance(tool_result, HTMLResponse):
+                    content_disposition = tool_result.headers.get(
+                        "Content-Disposition", ""
+                    )
+                    if "inline" in content_disposition:
+                        content = tool_result.body.decode("utf-8")
+                        tool_result_embeds.append(content)
+
+                        if 200 <= tool_result.status_code < 300:
+                            tool_result = {
+                                "status": "success",
+                                "code": "ui_component",
+                                "message": "Embedded UI result is active and visible to the user.",
+                            }
+                        elif 400 <= tool_result.status_code < 500:
+                            tool_result = {
+                                "status": "error",
+                                "code": "ui_component",
+                                "message": f"Client error {tool_result.status_code} from embedded UI result.",
+                            }
+                        elif 500 <= tool_result.status_code < 600:
+                            tool_result = {
+                                "status": "error",
+                                "code": "ui_component",
+                                "message": f"Server error {tool_result.status_code} from embedded UI result.",
+                            }
+                        else:
+                            tool_result = {
+                                "status": "error",
+                                "code": "ui_component",
+                                "message": f"Unexpected status code {tool_result.status_code} from embedded UI result.",
+                            }
+                    else:
+                        tool_result = tool_result.body.decode("utf-8")
+
+                elif (
+                    tool.get("type") == "external" and isinstance(tool_result, tuple)
+                ) or (
+                    tool.get("direct", True)
+                    and isinstance(tool_result, list)
+                    and len(tool_result) == 2
+                ):
+                    tool_result, tool_response_headers = tool_result
+
+                    if tool_response_headers and isinstance(
+                        tool_response_headers, dict
+                    ):
+                        content_disposition = tool_response_headers.get(
+                            "Content-Disposition",
+                            tool_response_headers.get("content-disposition", ""),
+                        )
+
+                        if "inline" in content_disposition:
+                            content_type = tool_response_headers.get(
+                                "Content-Type",
+                                tool_response_headers.get("content-type", ""),
+                            )
+                            location = tool_response_headers.get(
+                                "Location",
+                                tool_response_headers.get("location", ""),
+                            )
+
+                            if "text/html" in content_type:
+                                # Display as iframe embed
+                                tool_result_embeds.append(tool_result)
+                                tool_result = {
+                                    "status": "success",
+                                    "code": "ui_component",
+                                    "message": "Embedded UI result is active and visible to the user.",
+                                }
+                            elif location:
+                                tool_result_embeds.append(location)
+                                tool_result = {
+                                    "status": "success",
+                                    "code": "ui_component",
+                                    "message": "Embedded UI result is active and visible to the user.",
+                                }
+
                 tool_result_files = []
                 if isinstance(tool_result, list):
                     for item in tool_result:
