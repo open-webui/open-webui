@@ -1,6 +1,6 @@
 {
 	"name": "open-webui",
-	"version": "0.6.30",
+	"version": "0.6.31",
 	"private": true,
 	"scripts": {
 		"dev": "npm run pyodide:fetch && vite dev --host",
@@ -67,7 +67,7 @@
 		"@tiptap/core": "^3.0.7",
 		"@tiptap/extension-bubble-menu": "^2.26.1",
 		"@tiptap/extension-code-block-lowlight": "^3.0.7",
-		"@tiptap/extension-drag-handle": "^3.0.7",
+		"@tiptap/extension-drag-handle": "^3.4.5",
 		"@tiptap/extension-file-handler": "^3.0.7",
 		"@tiptap/extension-floating-menu": "^2.26.1",
 		"@tiptap/extension-highlight": "^3.3.0",
@@ -83,6 +83,7 @@
 		"@tiptap/starter-kit": "^3.0.7",
 		"@tiptap/suggestion": "^3.4.2",
 		"@xyflow/svelte": "^0.1.19",
+		"alpinejs": "^3.15.0",
 		"async": "^3.2.5",
 		"bits-ui": "^0.21.15",
 		"chart.js": "^4.5.0",

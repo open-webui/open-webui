@@ -514,6 +514,7 @@ async def image_generations(
         size = form_data.size
 
     width, height = tuple(map(int, size.split("x")))
+    model = get_image_model(request)
 
     r = None
     try:
@@ -531,11 +532,7 @@ async def image_generations(
                 headers["X-OpenWebUI-User-Role"] = user.role
 
             data = {
-                "model": (
-                    request.app.state.config.IMAGE_GENERATION_MODEL
-                    if request.app.state.config.IMAGE_GENERATION_MODEL != ""
-                    else "dall-e-2"
-                ),
+                "model": model,
                 "prompt": form_data.prompt,
                 "n": form_data.n,
                 "size": (
@@ -584,7 +581,6 @@ async def image_generations(
             headers["Content-Type"] = "application/json"
             headers["x-goog-api-key"] = request.app.state.config.IMAGES_GEMINI_API_KEY
 
-            model = get_image_model(request)
             data = {
                 "instances": {"prompt": form_data.prompt},
                 "parameters": {
@@ -640,7 +636,7 @@ async def image_generations(
                 }
             )
             res = await comfyui_generate_image(
-                request.app.state.config.IMAGE_GENERATION_MODEL,
+                model,
                 form_data,
                 user.id,
                 request.app.state.config.COMFYUI_BASE_URL,

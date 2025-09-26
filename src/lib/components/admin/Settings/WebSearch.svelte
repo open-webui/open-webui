@@ -13,6 +13,8 @@
 	export let saveHandler: Function;
 
 	let webSearchEngines = [
+		'ollama_cloud',
+		'perplexity_search',
 		'searxng',
 		'yacy',
 		'google_pse',
@@ -130,7 +132,41 @@
 					</div>
 
 					{#if webConfig.WEB_SEARCH_ENGINE !== ''}
-						{#if webConfig.WEB_SEARCH_ENGINE === 'searxng'}
+						{#if webConfig.WEB_SEARCH_ENGINE === 'ollama_cloud'}
+							<div class="mb-2.5 flex w-full flex-col">
+								<div>
+									<div class=" self-center text-xs font-medium mb-1">
+										{$i18n.t('Ollama Cloud API Key')}
+									</div>
+
+									<div class="flex w-full">
+										<div class="flex-1">
+											<SensitiveInput
+												placeholder={$i18n.t('Enter Ollama Cloud API Key')}
+												bind:value={webConfig.OLLAMA_CLOUD_WEB_SEARCH_API_KEY}
+											/>
+										</div>
+									</div>
+								</div>
+							</div>
+						{:else if webConfig.WEB_SEARCH_ENGINE === 'perplexity_search'}
+							<div class="mb-2.5 flex w-full flex-col">
+								<div>
+									<div class=" self-center text-xs font-medium mb-1">
+										{$i18n.t('Perplexity API Key')}
+									</div>
+
+									<div class="flex w-full">
+										<div class="flex-1">
+											<SensitiveInput
+												placeholder={$i18n.t('Enter Perplexity API Key')}
+												bind:value={webConfig.PERPLEXITY_API_KEY}
+											/>
+										</div>
+									</div>
+								</div>
+							</div>
+						{:else if webConfig.WEB_SEARCH_ENGINE === 'searxng'}
 							<div class="mb-2.5 flex w-full flex-col">
 								<div>
 									<div class=" self-center text-xs font-medium mb-1">
