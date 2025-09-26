@@ -157,6 +157,7 @@ class SharingPermissions(BaseModel):
     public_knowledge: bool = True
     public_prompts: bool = True
     public_tools: bool = True
+    public_notes: bool = True
 
 
 class ChatPermissions(BaseModel):
