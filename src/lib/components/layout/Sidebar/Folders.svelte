@@ -1,8 +1,11 @@
 <script lang="ts">
 	import { createEventDispatcher } from 'svelte';
-
 	const dispatch = createEventDispatcher();
+
 	import RecursiveFolder from './RecursiveFolder.svelte';
+
+	export let folderRegistry = {};
+
 	export let folders = {};
 	export let shiftKey = false;
 
@@ -19,11 +22,7 @@
 			})
 		);
 
-	let folderRegistry = {};
-
 	const onItemMove = (e) => {
-		console.log(`onItemMove`, e, folderRegistry);
-
 		if (e.originFolderId) {
 			folderRegistry[e.originFolderId]?.setFolderItems();
 		}

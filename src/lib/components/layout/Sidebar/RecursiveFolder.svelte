@@ -17,7 +17,8 @@
 		deleteFolderById,
 		updateFolderIsExpandedById,
 		updateFolderById,
-		updateFolderParentIdById
+		updateFolderParentIdById,
+		getFolderById
 	} from '$lib/apis/folders';
 	import {
 		getChatById,
@@ -328,9 +329,15 @@
 			toast.success($i18n.t('Folder updated successfully'));
 
 			if ($selectedFolder?.id === folderId) {
-				selectedFolder.set(folders[folderId]);
-			}
+				const folder = await getFolderById(localStorage.token, folderId).catch((error) => {
+					toast.error(`${error}`);
+					return null;
+				});
 
+				if (folder) {
+					selectedFolder.set(folder);
+				}
+			}
 			dispatch('update');
 		}
 	};
@@ -361,6 +368,17 @@
 				toast.error(`${error}`);
 				return [];
 			});
+
+			if ($selectedFolder?.id === folderId) {
+				const folder = await getFolderById(localStorage.token, folderId).catch((error) => {
+					toast.error(`${error}`);
+					return null;
+				});
+
+				if (folder) {
+					selectedFolder.set(folder);
+				}
+			}
 		} else {
 			chats = null;
 		}
@@ -417,12 +435,7 @@
 	</div>
 </DeleteConfirmDialog>
 
-<FolderModal
-	bind:show={showFolderModal}
-	edit={true}
-	folder={folders[folderId]}
-	onSubmit={updateHandler}
-/>
+<FolderModal bind:show={showFolderModal} edit={true} {folderId} onSubmit={updateHandler} />
 
 {#if dragged && x && y}
 	<DragGhost {x} {y}>
@@ -477,7 +490,14 @@
 					clickTimer = setTimeout(async () => {
 						await goto('/');
 
-						selectedFolder.set(folders[folderId]);
+						const folder = await getFolderById(localStorage.token, folderId).catch((error) => {
+							toast.error(`${error}`);
+							return null;
+						});
+
+						if (folder) {
+							selectedFolder.set(folder);
+						}
 
 						if ($mobile) {
 							showSidebar.set(!$showSidebar);
