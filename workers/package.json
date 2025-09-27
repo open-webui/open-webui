@@ -1,0 +1,45 @@
+{
+  "name": "orcaai-workers",
+  "version": "1.0.0",
+  "type": "module",
+  "description": "OrcaAI Real Estate Assistant - Cloudflare Workers",
+  "main": "src/index.ts",
+  "scripts": {
+    "dev": "wrangler dev",
+    "deploy": "wrangler deploy",
+    "test": "vitest",
+    "test:watch": "vitest --watch",
+    "test:coverage": "vitest --coverage",
+    "build": "tsc --noEmit",
+    "type-check": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@cloudflare/agents-sdk": "^1.0.0",
+    "@googleapis/gmail": "^9.0.0",
+    "@googleapis/sheets": "^9.0.0",
+    "@googleapis/calendar": "^9.0.0",
+    "@googleapis/drive": "^9.0.0",
+    "google-auth-library": "^9.0.0",
+    "openai": "^4.0.0"
+  },
+  "devDependencies": {
+    "@cloudflare/workers-types": "^4.0.0",
+    "@types/googleapis": "^128.0.0",
+    "@types/node": "^20.0.0",
+    "typescript": "^5.0.0",
+    "vitest": "^1.0.0",
+    "wrangler": "^3.0.0"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  },
+  "keywords": [
+    "real-estate",
+    "ai",
+    "cloudflare-workers",
+    "google-workspace",
+    "automation"
+  ],
+  "author": "OrcaAI Team",
+  "license": "MIT"
+}

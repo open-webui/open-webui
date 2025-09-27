@@ -1,0 +1,42 @@
+{
+	"compilerOptions": {
+		"paths": {},
+		"rootDirs": [
+			"..",
+			"./types"
+		],
+		"verbatimModuleSyntax": true,
+		"isolatedModules": true,
+		"lib": [
+			"esnext",
+			"DOM",
+			"DOM.Iterable"
+		],
+		"moduleResolution": "bundler",
+		"module": "esnext",
+		"noEmit": true,
+		"target": "esnext"
+	},
+	"include": [
+		"ambient.d.ts",
+		"non-ambient.d.ts",
+		"./types/**/$types.d.ts",
+		"../vite.config.js",
+		"../vite.config.ts",
+		"../src/**/*.js",
+		"../src/**/*.ts",
+		"../src/**/*.svelte",
+		"../tests/**/*.js",
+		"../tests/**/*.ts",
+		"../tests/**/*.svelte"
+	],
+	"exclude": [
+		"../node_modules/**",
+		"../src/service-worker.js",
+		"../src/service-worker/**/*.js",
+		"../src/service-worker.ts",
+		"../src/service-worker/**/*.ts",
+		"../src/service-worker.d.ts",
+		"../src/service-worker/**/*.d.ts"
+	]
+}

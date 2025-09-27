@@ -1,0 +1,81 @@
+name = "orcaai-workers"
+main = "src/index.ts"
+compatibility_date = "2024-01-01"
+
+[env.production]
+vars = { ENVIRONMENT = "production" }
+
+[env.staging]
+vars = { ENVIRONMENT = "staging" }
+
+[env.development]
+vars = { ENVIRONMENT = "development" }
+
+# KV Namespaces for storage and caching
+[[env.production.kv_namespaces]]
+binding = "ORCA_STORAGE"
+id = "your-kv-namespace-id"
+preview_id = "your-kv-preview-id"
+
+[[env.staging.kv_namespaces]]
+binding = "ORCA_STORAGE"
+id = "your-staging-kv-namespace-id"
+preview_id = "your-staging-kv-preview-id"
+
+[[env.development.kv_namespaces]]
+binding = "ORCA_STORAGE"
+id = "your-dev-kv-namespace-id"
+preview_id = "your-dev-kv-preview-id"
+
+# Durable Objects for session management and caching
+[[env.production.durable_objects]]
+bindings = [
+  { name = "SESSION_STORE", class_name = "SessionStore" },
+  { name = "CACHE_STORE", class_name = "CacheStore" },
+  { name = "RATE_LIMITER", class_name = "RateLimiter" }
+]
+
+[[env.staging.durable_objects]]
+bindings = [
+  { name = "SESSION_STORE", class_name = "SessionStore" },
+  { name = "CACHE_STORE", class_name = "CacheStore" },
+  { name = "RATE_LIMITER", class_name = "RateLimiter" }
+]
+
+[[env.development.durable_objects]]
+bindings = [
+  { name = "SESSION_STORE", class_name = "SessionStore" },
+  { name = "CACHE_STORE", class_name = "CacheStore" },
+  { name = "RATE_LIMITER", class_name = "RateLimiter" }
+]
+
+# Environment variables
+[env.production.vars]
+GOOGLE_CLIENT_ID = "your-google-client-id"
+GOOGLE_CLIENT_SECRET = "your-google-client-secret"
+OPENROUTER_API_KEY = "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"
+WEBUI_BASE_URL = "https://your-domain.com"
+
+[env.staging.vars]
+GOOGLE_CLIENT_ID = "your-staging-google-client-id"
+GOOGLE_CLIENT_SECRET = "your-staging-google-client-secret"
+OPENROUTER_API_KEY = "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"
+WEBUI_BASE_URL = "https://staging.your-domain.com"
+
+[env.development.vars]
+GOOGLE_CLIENT_ID = "your-dev-google-client-id"
+GOOGLE_CLIENT_SECRET = "your-dev-google-client-secret"
+OPENROUTER_API_KEY = "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"
+WEBUI_BASE_URL = "http://localhost:5174"
+
+# Limits and configuration
+[limits]
+cpu_ms = 30000
+memory_mb = 128
+
+[triggers]
+crons = ["0 */6 * * *"] # Run every 6 hours for cleanup tasks
+
+# Observability
+[observability]
+enabled = true
