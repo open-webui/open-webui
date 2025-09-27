@@ -27,10 +27,13 @@
 	export let direct = false;
 	export let connection = null;
 
-	let url = '';
-	let path = 'openapi.json';
-
 	let type = 'openapi'; // 'openapi', 'mcp'
+
+	let url = '';
+
+	let spec_type = 'url'; // 'url', 'json'
+	let spec = ''; // used when spec_type is 'json'
+	let path = 'openapi.json';
 
 	let auth_type = 'bearer';
 	let key = '';
@@ -149,10 +152,26 @@
 			return;
 		}
 
+		// validate spec
+		if (spec_type === 'json') {
+			try {
+				const specJSON = JSON.parse(spec);
+				spec = JSON.stringify(specJSON, null, 2);
+			} catch (e) {
+				toast.error($i18n.t('Please enter a valid JSON spec'));
+				loading = false;
+				return;
+			}
+		}
+
 		const connection = {
-			url,
-			path,
 			type,
+			url,
+
+			spec_type,
+			spec,
+			path,
+
 			auth_type,
 			key,
 			config: {
@@ -173,9 +192,12 @@
 		show = false;
 
 		// reset form
-		url = '';
-		path = 'openapi.json';
 		type = 'openapi';
+		url = '';
+
+		spec_type = 'url';
+		spec = '';
+		path = 'openapi.json';
 
 		key = '';
 		auth_type = 'bearer';
@@ -191,10 +213,13 @@
 
 	const init = () => {
 		if (connection) {
+			type = connection?.type ?? 'openapi';
 			url = connection.url;
+
+			spec_type = connection?.spec_type ?? 'url';
+			spec = connection?.spec ?? '';
 			path = connection?.path ?? 'openapi.json';
 
-			type = connection?.type ?? 'openapi';
 			auth_type = connection?.auth_type ?? 'bearer';
 			key = connection?.key ?? '';
 
@@ -326,35 +351,81 @@
 										<Switch bind:state={enable} />
 									</Tooltip>
 								</div>
-
-								{#if ['', 'openapi'].includes(type)}
-									<div class="flex-1 flex items-center">
-										<label for="url-or-path" class="sr-only"
-											>{$i18n.t('openapi.json URL or Path')}</label
-										>
-										<input
-											class={`w-full text-sm bg-transparent ${($settings?.highContrastMode ?? false) ? 'placeholder:text-gray-700 dark:placeholder:text-gray-100' : 'outline-hidden placeholder:text-gray-300 dark:placeholder:text-gray-700'}`}
-											type="text"
-											id="url-or-path"
-											bind:value={path}
-											placeholder={$i18n.t('openapi.json URL or Path')}
-											autocomplete="off"
-											required
-										/>
-									</div>
-								{/if}
 							</div>
 						</div>
 
 						{#if ['', 'openapi'].includes(type)}
-							<div
-								class={`text-xs mt-1 ${($settings?.highContrastMode ?? false) ? 'text-gray-800 dark:text-gray-100' : 'text-gray-500'}`}
-							>
-								{$i18n.t(`WebUI will make requests to "{{url}}"`, {
-									url: path.includes('://')
-										? path
-										: `${url}${path.startsWith('/') ? '' : '/'}${path}`
-								})}
+							<div class="flex gap-2 mt-2">
+								<div class="flex flex-col w-full">
+									<div class="flex justify-between items-center mb-0.5">
+										<div class="flex gap-2 items-center">
+											<div
+												for="select-bearer-or-session"
+												class={`text-xs ${($settings?.highContrastMode ?? false) ? 'text-gray-800 dark:text-gray-100' : 'text-gray-500'}`}
+											>
+												{$i18n.t('OpenAPI Spec')}
+											</div>
+										</div>
+									</div>
+
+									<div class="flex gap-2">
+										<div class="flex-shrink-0 self-start">
+											<select
+												id="select-bearer-or-session"
+												class={`w-full text-sm bg-transparent pr-5 ${($settings?.highContrastMode ?? false) ? 'placeholder:text-gray-700 dark:placeholder:text-gray-100' : 'outline-hidden placeholder:text-gray-300 dark:placeholder:text-gray-700'}`}
+												bind:value={spec_type}
+											>
+												<option value="url">{$i18n.t('URL')}</option>
+												<option value="json">{$i18n.t('JSON')}</option>
+											</select>
+										</div>
+
+										<div class="flex flex-1 items-center">
+											{#if spec_type === 'url'}
+												<div class="flex-1 flex items-center">
+													<label for="url-or-path" class="sr-only"
+														>{$i18n.t('openapi.json URL or Path')}</label
+													>
+													<input
+														class={`w-full text-sm bg-transparent ${($settings?.highContrastMode ?? false) ? 'placeholder:text-gray-700 dark:placeholder:text-gray-100' : 'outline-hidden placeholder:text-gray-300 dark:placeholder:text-gray-700'}`}
+														type="text"
+														id="url-or-path"
+														bind:value={path}
+														placeholder={$i18n.t('openapi.json URL or Path')}
+														autocomplete="off"
+														required
+													/>
+												</div>
+											{:else if spec_type === 'json'}
+												<div
+													class={`text-xs w-full self-center translate-y-[1px] ${($settings?.highContrastMode ?? false) ? 'text-gray-800 dark:text-gray-100' : 'text-gray-500'}`}
+												>
+													<label for="url-or-path" class="sr-only">{$i18n.t('JSON Spec')}</label>
+													<textarea
+														class={`w-full text-sm bg-transparent ${($settings?.highContrastMode ?? false) ? 'placeholder:text-gray-700 dark:placeholder:text-gray-100' : 'outline-hidden placeholder:text-gray-300 dark:placeholder:text-gray-700 text-black dark:text-white'}`}
+														bind:value={spec}
+														placeholder={$i18n.t('JSON Spec')}
+														autocomplete="off"
+														required
+														rows="5"
+													/>
+												</div>
+											{/if}
+										</div>
+									</div>
+
+									{#if ['', 'url'].includes(spec_type)}
+										<div
+											class={`text-xs mt-1 ${($settings?.highContrastMode ?? false) ? 'text-gray-800 dark:text-gray-100' : 'text-gray-500'}`}
+										>
+											{$i18n.t(`WebUI will make requests to "{{url}}"`, {
+												url: path.includes('://')
+													? path
+													: `${url}${path.startsWith('/') ? '' : '/'}${path}`
+											})}
+										</div>
+									{/if}
+								</div>
 							</div>
 						{/if}
 
