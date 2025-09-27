@@ -174,19 +174,27 @@ class MessageTable:
                 .order_by(Message.created_at.desc())
                 .all()
             )
-            return [
-                MessageReplyToResponse.model_validate(
-                    {
-                        **MessageModel.model_validate(message).model_dump(),
-                        "reply_to_message": (
-                            self.get_message_by_id(message.reply_to_id).model_dump()
-                            if message.reply_to_id
-                            else None
-                        ),
-                    }
+
+            messages = []
+            for message in all_messages:
+                reply_to_message = (
+                    self.get_message_by_id(message.reply_to_id)
+                    if message.reply_to_id
+                    else None
                 )
-                for message in all_messages
-            ]
+                messages.append(
+                    MessageReplyToResponse.model_validate(
+                        {
+                            **MessageModel.model_validate(message).model_dump(),
+                            "reply_to_message": (
+                                reply_to_message.model_dump()
+                                if reply_to_message
+                                else None
+                            ),
+                        }
+                    )
+                )
+            return messages
 
     def get_reply_user_ids_by_message_id(self, id: str) -> list[str]:
         with get_db() as db:
@@ -208,19 +216,26 @@ class MessageTable:
                 .all()
             )
 
-            return [
-                MessageReplyToResponse.model_validate(
-                    {
-                        **MessageModel.model_validate(message).model_dump(),
-                        "reply_to_message": (
-                            self.get_message_by_id(message.reply_to_id).model_dump()
-                            if message.reply_to_id
-                            else None
-                        ),
-                    }
+            messages = []
+            for message in all_messages:
+                reply_to_message = (
+                    self.get_message_by_id(message.reply_to_id)
+                    if message.reply_to_id
+                    else None
                 )
-                for message in all_messages
-            ]
+                messages.append(
+                    MessageReplyToResponse.model_validate(
+                        {
+                            **MessageModel.model_validate(message).model_dump(),
+                            "reply_to_message": (
+                                reply_to_message.model_dump()
+                                if reply_to_message
+                                else None
+                            ),
+                        }
+                    )
+                )
+            return messages
 
     def get_messages_by_parent_id(
         self, channel_id: str, parent_id: str, skip: int = 0, limit: int = 50
@@ -244,19 +259,26 @@ class MessageTable:
             if len(all_messages) < limit:
                 all_messages.append(message)
 
-            return [
-                MessageReplyToResponse.model_validate(
-                    {
-                        **MessageModel.model_validate(message).model_dump(),
-                        "reply_to_message": (
-                            self.get_message_by_id(message.reply_to_id).model_dump()
-                            if message.reply_to_id
-                            else None
-                        ),
-                    }
+            messages = []
+            for message in all_messages:
+                reply_to_message = (
+                    self.get_message_by_id(message.reply_to_id)
+                    if message.reply_to_id
+                    else None
                 )
-                for message in all_messages
-            ]
+                messages.append(
+                    MessageReplyToResponse.model_validate(
+                        {
+                            **MessageModel.model_validate(message).model_dump(),
+                            "reply_to_message": (
+                                reply_to_message.model_dump()
+                                if reply_to_message
+                                else None
+                            ),
+                        }
+                    )
+                )
+            return messages
 
     def update_message_by_id(
         self, id: str, form_data: MessageForm
