@@ -222,7 +222,7 @@ class MessageTable:
 
     def get_messages_by_parent_id(
         self, channel_id: str, parent_id: str, skip: int = 0, limit: int = 50
-    ) -> list[MessageModel]:
+    ) -> list[MessageReplyToResponse]:
         with get_db() as db:
             message = db.get(Message, parent_id)
 
@@ -242,7 +242,19 @@ class MessageTable:
             if len(all_messages) < limit:
                 all_messages.append(message)
 
-            return [MessageModel.model_validate(message) for message in all_messages]
+            return [
+                MessageReplyToResponse.model_validate(
+                    {
+                        **MessageModel.model_validate(message).model_dump(),
+                        "reply_to_message": (
+                            self.get_message_by_id(message.reply_to_id).model_dump()
+                            if message.reply_to_id
+                            else None
+                        ),
+                    }
+                )
+                for message in all_messages
+            ]
 
     def update_message_by_id(
         self, id: str, form_data: MessageForm
