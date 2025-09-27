@@ -10,13 +10,7 @@ from pydantic import BaseModel
 from open_webui.socket.main import sio, get_user_ids_from_room
 from open_webui.models.users import Users, UserNameResponse
 
-from open_webui.models.groups import Groups
-from open_webui.models.channels import (
-    Channels,
-    ChannelModel,
-    ChannelForm,
-    ChannelResponse,
-)
+from open_webui.models.channels import Channels, ChannelModel, ChannelForm
 from open_webui.models.messages import (
     Messages,
     MessageModel,
@@ -86,7 +80,7 @@ async def create_new_channel(form_data: ChannelForm, user=Depends(get_admin_user
 ############################
 
 
-@router.get("/{id}", response_model=Optional[ChannelResponse])
+@router.get("/{id}", response_model=Optional[ChannelModel])
 async def get_channel_by_id(id: str, user=Depends(get_verified_user)):
     channel = Channels.get_channel_by_id(id)
     if not channel:
@@ -101,16 +95,7 @@ async def get_channel_by_id(id: str, user=Depends(get_verified_user)):
             status_code=status.HTTP_403_FORBIDDEN, detail=ERROR_MESSAGES.DEFAULT()
         )
 
-    write_access = has_access(
-        user.id, type="write", access_control=channel.access_control, strict=False
-    )
-
-    return ChannelResponse(
-        **{
-            **channel.model_dump(),
-            "write_access": write_access or user.role == "admin",
-        }
-    )
+    return ChannelModel(**channel.model_dump())
 
 
 ############################
@@ -290,7 +275,6 @@ async def model_response_handler(request, channel, message, user):
                 )
 
                 thread_history = []
-                images = []
                 message_users = {}
 
                 for thread_message in thread_messages:
@@ -319,11 +303,6 @@ async def model_response_handler(request, channel, message, user):
                         f"{username}: {replace_mentions(thread_message.content)}"
                     )
 
-                    thread_message_files = thread_message.data.get("files", [])
-                    for file in thread_message_files:
-                        if file.get("type", "") == "image":
-                            images.append(file.get("url", ""))
-
                 system_message = {
                     "role": "system",
                     "content": f"You are {model.get('name', model_id)}, an AI assistant participating in a threaded conversation. Be helpful, concise, and conversational."
@@ -334,29 +313,14 @@ async def model_response_handler(request, channel, message, user):
                     ),
                 }
 
-                content = f"{user.name if user else 'User'}: {message_content}"
-                if images:
-                    content = [
-                        {
-                            "type": "text",
-                            "text": content,
-                        },
-                        *[
-                            {
-                                "type": "image_url",
-                                "image_url": {
-                                    "url": image,
-                                },
-                            }
-                            for image in images
-                        ],
-                    ]
-
                 form_data = {
                     "model": model_id,
                     "messages": [
                         system_message,
-                        {"role": "user", "content": content},
+                        {
+                            "role": "user",
+                            "content": f"{user.name if user else 'User'}: {message_content}",
+                        },
                     ],
                     "stream": False,
                 }
@@ -398,7 +362,7 @@ async def new_message_handler(
         )
 
     if user.role != "admin" and not has_access(
-        user.id, type="write", access_control=channel.access_control, strict=False
+        user.id, type="read", access_control=channel.access_control
     ):
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN, detail=ERROR_MESSAGES.DEFAULT()
@@ -694,7 +658,7 @@ async def add_reaction_to_message(
         )
 
     if user.role != "admin" and not has_access(
-        user.id, type="write", access_control=channel.access_control, strict=False
+        user.id, type="read", access_control=channel.access_control
     ):
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN, detail=ERROR_MESSAGES.DEFAULT()
@@ -760,7 +724,7 @@ async def remove_reaction_by_id_and_user_id_and_name(
         )
 
     if user.role != "admin" and not has_access(
-        user.id, type="write", access_control=channel.access_control, strict=False
+        user.id, type="read", access_control=channel.access_control
     ):
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN, detail=ERROR_MESSAGES.DEFAULT()
@@ -842,9 +806,7 @@ async def delete_message_by_id(
     if (
         user.role != "admin"
         and message.user_id != user.id
-        and not has_access(
-            user.id, type="write", access_control=channel.access_control, strict=False
-        )
+        and not has_access(user.id, type="read", access_control=channel.access_control)
     ):
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN, detail=ERROR_MESSAGES.DEFAULT()

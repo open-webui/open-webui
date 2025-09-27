@@ -1694,27 +1694,25 @@ async def download_file_stream(
                     yield f'data: {{"progress": {progress}, "completed": {current_size}, "total": {total_size}}}\n\n'
 
                 if done:
-                    file.close()
+                    file.seek(0)
+                    chunk_size = 1024 * 1024 * 2
+                    hashed = calculate_sha256(file, chunk_size)
+                    file.seek(0)
 
-                    with open(file_path, "rb") as file:
-                        chunk_size = 1024 * 1024 * 2
-                        hashed = calculate_sha256(file, chunk_size)
+                    url = f"{ollama_url}/api/blobs/sha256:{hashed}"
+                    response = requests.post(url, data=file)
 
-                        url = f"{ollama_url}/api/blobs/sha256:{hashed}"
-                        with requests.Session() as session:
-                            response = session.post(url, data=file, timeout=30)
+                    if response.ok:
+                        res = {
+                            "done": done,
+                            "blob": f"sha256:{hashed}",
+                            "name": file_name,
+                        }
+                        os.remove(file_path)
 
-                            if response.ok:
-                                res = {
-                                    "done": done,
-                                    "blob": f"sha256:{hashed}",
-                                    "name": file_name,
-                                }
-                                os.remove(file_path)
-
-                                yield f"data: {json.dumps(res)}\n\n"
-                            else:
-                                raise "Ollama: Could not create blob, Please try again."
+                        yield f"data: {json.dumps(res)}\n\n"
+                    else:
+                        raise "Ollama: Could not create blob, Please try again."
 
 
 # url = "https://huggingface.co/TheBloke/stablelm-zephyr-3b-GGUF/resolve/main/stablelm-zephyr-3b.Q2_K.gguf"

@@ -110,13 +110,9 @@ def has_access(
     type: str = "write",
     access_control: Optional[dict] = None,
     user_group_ids: Optional[Set[str]] = None,
-    strict: bool = True,
 ) -> bool:
     if access_control is None:
-        if strict:
-            return type == "read"
-        else:
-            return True
+        return type == "read"
 
     if user_group_ids is None:
         user_groups = Groups.get_groups_by_member_id(user_id)

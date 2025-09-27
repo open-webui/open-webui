@@ -120,20 +120,19 @@ def pop_system_message(messages: list[dict]) -> tuple[Optional[dict], list[dict]
     return get_system_message(messages), remove_system_message(messages)
 
 
-def update_message_content(message: dict, content: str, append: bool = True) -> dict:
-    if isinstance(message["content"], list):
-        for item in message["content"]:
-            if item["type"] == "text":
-                if append:
-                    item["text"] = f"{item['text']}\n{content}"
-                else:
-                    item["text"] = f"{content}\n{item['text']}"
-    else:
-        if append:
-            message["content"] = f"{message['content']}\n{content}"
-        else:
-            message["content"] = f"{content}\n{message['content']}"
-    return message
+def prepend_to_first_user_message_content(
+    content: str, messages: list[dict]
+) -> list[dict]:
+    for message in messages:
+        if message["role"] == "user":
+            if isinstance(message["content"], list):
+                for item in message["content"]:
+                    if item["type"] == "text":
+                        item["text"] = f"{content}\n{item['text']}"
+            else:
+                message["content"] = f"{content}\n{message['content']}"
+            break
+    return messages
 
 
 def add_or_update_system_message(
@@ -149,7 +148,10 @@ def add_or_update_system_message(
     """
 
     if messages and messages[0].get("role") == "system":
-        messages[0] = update_message_content(messages[0], content, append)
+        if append:
+            messages[0]["content"] = f"{messages[0]['content']}\n{content}"
+        else:
+            messages[0]["content"] = f"{content}\n{messages[0]['content']}"
     else:
         # Insert at the beginning
         messages.insert(0, {"role": "system", "content": content})
@@ -157,7 +159,7 @@ def add_or_update_system_message(
     return messages
 
 
-def add_or_update_user_message(content: str, messages: list[dict], append: bool = True):
+def add_or_update_user_message(content: str, messages: list[dict]):
     """
     Adds a new user message at the end of the messages list
     or updates the existing user message at the end.
@@ -168,21 +170,11 @@ def add_or_update_user_message(content: str, messages: list[dict], append: bool 
     """
 
     if messages and messages[-1].get("role") == "user":
-        messages[-1] = update_message_content(messages[-1], content, append)
+        messages[-1]["content"] = f"{messages[-1]['content']}\n{content}"
     else:
         # Insert at the end
         messages.append({"role": "user", "content": content})
 
-    return messages
-
-
-def prepend_to_first_user_message_content(
-    content: str, messages: list[dict]
-) -> list[dict]:
-    for message in messages:
-        if message["role"] == "user":
-            message = update_message_content(message, content, append=False)
-            break
     return messages
 
 

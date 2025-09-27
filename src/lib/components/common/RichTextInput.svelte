@@ -114,6 +114,19 @@
 	import { Decoration, DecorationSet } from 'prosemirror-view';
 	import { Editor, Extension, mergeAttributes } from '@tiptap/core';
 
+	// Yjs imports
+	import * as Y from 'yjs';
+	import {
+		ySyncPlugin,
+		yCursorPlugin,
+		yUndoPlugin,
+		undo,
+		redo,
+		prosemirrorJSONToYDoc,
+		yDocToProsemirrorJSON
+	} from 'y-prosemirror';
+	import { keymap } from 'prosemirror-keymap';
+
 	import { AIAutocompletion } from './RichTextInput/AutoCompletion.js';
 
 	import StarterKit from '@tiptap/starter-kit';
@@ -139,27 +152,16 @@
 	import FormattingButtons from './RichTextInput/FormattingButtons.svelte';
 
 	import { PASTED_TEXT_CHARACTER_LIMIT } from '$lib/constants';
-	import { createLowlight } from 'lowlight';
-	import hljs from 'highlight.js';
-
-	import type { SocketIOCollaborationProvider } from './RichTextInput/Collaboration';
+	import { all, createLowlight } from 'lowlight';
 
 	export let oncompositionstart = (e) => {};
 	export let oncompositionend = (e) => {};
 	export let onChange = (e) => {};
 
 	// create a lowlight instance with all languages loaded
-	const lowlight = createLowlight(
-		hljs.listLanguages().reduce(
-			(obj, lang) => {
-				obj[lang] = () => hljs.getLanguage(lang);
-				return obj;
-			},
-			{} as Record<string, any>
-		)
-	);
+	const lowlight = createLowlight(all);
 
-	export let editor: Editor | null = null;
+	export let editor = null;
 
 	export let socket = null;
 	export let user = null;
@@ -168,7 +170,7 @@
 	export let documentId = '';
 
 	export let className = 'input-prose';
-	export let placeholder = $i18n.t('Type here...');
+	export let placeholder = 'Type here...';
 	let _placeholder = placeholder;
 
 	$: if (placeholder !== _placeholder) {
@@ -183,7 +185,6 @@
 	};
 
 	export let richText = true;
-	export let dragHandle = false;
 	export let link = false;
 	export let image = false;
 	export let fileHandler = false;
@@ -263,11 +264,325 @@
 	let jsonValue = '';
 	let mdValue = '';
 
-	let provider: SocketIOCollaborationProvider | null = null;
+	let lastSelectionBookmark = null;
 
-	let floatingMenuElement: Element | null = null;
-	let bubbleMenuElement: Element | null = null;
-	let element: Element | null = null;
+	// Yjs setup
+	let ydoc = null;
+	let yXmlFragment = null;
+	let awareness = null;
+
+	const getEditorInstance = async () => {
+		return new Promise((resolve) => {
+			setTimeout(() => {
+				resolve(editor);
+			}, 0);
+		});
+	};
+
+	// Custom Yjs Socket.IO provider
+	class SocketIOProvider {
+		constructor(doc, documentId, socket, user) {
+			this.doc = doc;
+			this.documentId = documentId;
+			this.socket = socket;
+			this.user = user;
+			this.isConnected = false;
+			this.synced = false;
+
+			this.setupEventListeners();
+		}
+
+		generateUserColor() {
+			const colors = [
+				'#FF6B6B',
+				'#4ECDC4',
+				'#45B7D1',
+				'#96CEB4',
+				'#FFEAA7',
+				'#DDA0DD',
+				'#98D8C8',
+				'#F7DC6F',
+				'#BB8FCE',
+				'#85C1E9'
+			];
+			return colors[Math.floor(Math.random() * colors.length)];
+		}
+
+		joinDocument() {
+			const userColor = this.generateUserColor();
+			this.socket.emit('ydoc:document:join', {
+				document_id: this.documentId,
+				user_id: this.user?.id,
+				user_name: this.user?.name,
+				user_color: userColor
+			});
+
+			// Set user awareness info
+			if (awareness && this.user) {
+				awareness.setLocalStateField('user', {
+					name: `${this.user.name}`,
+					color: userColor,
+					id: this.socket.id
+				});
+			}
+		}
+
+		setupEventListeners() {
+			// Listen for document updates from server
+			this.socket.on('ydoc:document:update', (data) => {
+				if (data.document_id === this.documentId && data.socket_id !== this.socket.id) {
+					try {
+						const update = new Uint8Array(data.update);
+						Y.applyUpdate(this.doc, update);
+					} catch (error) {
+						console.error('Error applying Yjs update:', error);
+					}
+				}
+			});
+
+			// Listen for document state from server
+			this.socket.on('ydoc:document:state', async (data) => {
+				if (data.document_id === this.documentId) {
+					try {
+						if (data.state) {
+							const state = new Uint8Array(data.state);
+
+							if (state.length === 2 && state[0] === 0 && state[1] === 0) {
+								// Empty state, check if we have content to initialize
+								// check if editor empty as well
+								// const editor = await getEditorInstance();
+
+								const isEmptyEditor = !editor || editor.getText().trim() === '';
+								if (isEmptyEditor) {
+									if (content && (data?.sessions ?? ['']).length === 1) {
+										const editorYdoc = prosemirrorJSONToYDoc(editor.schema, content);
+										if (editorYdoc) {
+											Y.applyUpdate(this.doc, Y.encodeStateAsUpdate(editorYdoc));
+										}
+									}
+								} else {
+									// If the editor already has content, we don't need to send an empty state
+									if (this.doc.getXmlFragment('prosemirror').length > 0) {
+										this.socket.emit('ydoc:document:update', {
+											document_id: this.documentId,
+											user_id: this.user?.id,
+											socket_id: this.socket.id,
+											update: Y.encodeStateAsUpdate(this.doc)
+										});
+									} else {
+										console.warn('Yjs document is empty, not sending state.');
+									}
+								}
+							} else {
+								Y.applyUpdate(this.doc, state, 'server');
+							}
+						}
+						this.synced = true;
+					} catch (error) {
+						console.error('Error applying Yjs state:', error);
+
+						this.synced = false;
+						this.socket.emit('ydoc:document:state', {
+							document_id: this.documentId
+						});
+					}
+				}
+			});
+
+			// Listen for awareness updates
+			this.socket.on('ydoc:awareness:update', (data) => {
+				if (data.document_id === this.documentId && awareness) {
+					try {
+						const awarenessUpdate = new Uint8Array(data.update);
+						awareness.applyUpdate(awarenessUpdate, 'server');
+					} catch (error) {
+						console.error('Error applying awareness update:', error);
+					}
+				}
+			});
+
+			// Handle connection events
+			this.socket.on('connect', this.onConnect);
+			this.socket.on('disconnect', this.onDisconnect);
+
+			// Listen for document updates from Yjs
+			this.doc.on('update', async (update, origin) => {
+				if (origin !== 'server' && this.isConnected) {
+					await tick(); // Ensure the DOM is updated before sending
+					this.socket.emit('ydoc:document:update', {
+						document_id: this.documentId,
+						user_id: this.user?.id,
+						socket_id: this.socket.id,
+						update: Array.from(update),
+						data: {
+							content: {
+								md: mdValue,
+								html: htmlValue,
+								json: jsonValue
+							}
+						}
+					});
+				}
+			});
+
+			// Listen for awareness updates from Yjs
+			if (awareness) {
+				awareness.on('change', ({ added, updated, removed }, origin) => {
+					if (origin !== 'server' && this.isConnected) {
+						const changedClients = added.concat(updated).concat(removed);
+						const awarenessUpdate = awareness.encodeUpdate(changedClients);
+						this.socket.emit('ydoc:awareness:update', {
+							document_id: this.documentId,
+							user_id: this.socket.id,
+							update: Array.from(awarenessUpdate)
+						});
+					}
+				});
+			}
+
+			if (this.socket.connected) {
+				this.isConnected = true;
+				this.joinDocument();
+			}
+		}
+
+		onConnect = () => {
+			this.isConnected = true;
+			this.joinDocument();
+		};
+
+		onDisconnect = () => {
+			this.isConnected = false;
+			this.synced = false;
+		};
+
+		destroy() {
+			this.socket.off('ydoc:document:update');
+			this.socket.off('ydoc:document:state');
+			this.socket.off('ydoc:awareness:update');
+			this.socket.off('connect', this.onConnect);
+			this.socket.off('disconnect', this.onDisconnect);
+
+			if (this.isConnected) {
+				this.socket.emit('ydoc:document:leave', {
+					document_id: this.documentId,
+					user_id: this.user?.id
+				});
+			}
+		}
+	}
+
+	let provider = null;
+
+	// Simple awareness implementation
+	class SimpleAwareness {
+		constructor(yDoc) {
+			// Yjs awareness expects clientID (not clientId) property
+			this.clientID = yDoc ? yDoc.clientID : Math.floor(Math.random() * 0xffffffff);
+			// Map from clientID (number) to state (object)
+			this._states = new Map(); // _states, not states; will make getStates() for compat
+			this._updateHandlers = [];
+			this._localState = {};
+			// As in Yjs Awareness, add our local state to the states map from the start:
+			this._states.set(this.clientID, this._localState);
+		}
+		on(event, handler) {
+			if (event === 'change') this._updateHandlers.push(handler);
+		}
+		off(event, handler) {
+			if (event === 'change') {
+				const i = this._updateHandlers.indexOf(handler);
+				if (i !== -1) this._updateHandlers.splice(i, 1);
+			}
+		}
+		getLocalState() {
+			return this._states.get(this.clientID) || null;
+		}
+		getStates() {
+			// Yjs returns a Map (clientID->state)
+			return this._states;
+		}
+		setLocalStateField(field, value) {
+			let localState = this._states.get(this.clientID);
+			if (!localState) {
+				localState = {};
+				this._states.set(this.clientID, localState);
+			}
+			localState[field] = value;
+			// After updating, fire 'update' event to all handlers
+			for (const cb of this._updateHandlers) {
+				// Follows Yjs Awareness ({ added, updated, removed }, origin)
+				cb({ added: [], updated: [this.clientID], removed: [] }, 'local');
+			}
+		}
+		applyUpdate(update, origin) {
+			// Very simple: Accepts a serialized JSON state for now as Uint8Array
+			try {
+				const str = new TextDecoder().decode(update);
+				const obj = JSON.parse(str);
+				// Should be a plain object: { clientID: state, ... }
+				for (const [k, v] of Object.entries(obj)) {
+					this._states.set(+k, v);
+				}
+				for (const cb of this._updateHandlers) {
+					cb({ added: [], updated: Array.from(Object.keys(obj)).map(Number), removed: [] }, origin);
+				}
+			} catch (e) {
+				console.warn('SimpleAwareness: Could not decode update:', e);
+			}
+		}
+		encodeUpdate(clients) {
+			// Encodes the states for the given clientIDs as Uint8Array (JSON)
+			const obj = {};
+			for (const id of clients || Array.from(this._states.keys())) {
+				const st = this._states.get(id);
+				if (st) obj[id] = st;
+			}
+			const json = JSON.stringify(obj);
+			return new TextEncoder().encode(json);
+		}
+	}
+
+	// Yjs collaboration extension
+	const YjsCollaboration = Extension.create({
+		name: 'yjsCollaboration',
+
+		addProseMirrorPlugins() {
+			if (!collaboration || !yXmlFragment) return [];
+
+			const plugins = [
+				ySyncPlugin(yXmlFragment),
+				yUndoPlugin(),
+				keymap({
+					'Mod-z': undo,
+					'Mod-y': redo,
+					'Mod-Shift-z': redo
+				})
+			];
+
+			if (awareness) {
+				plugins.push(yCursorPlugin(awareness));
+			}
+
+			return plugins;
+		}
+	});
+
+	function initializeCollaboration() {
+		if (!collaboration) return;
+
+		// Create Yjs document
+		ydoc = new Y.Doc();
+		yXmlFragment = ydoc.getXmlFragment('prosemirror');
+		awareness = new SimpleAwareness(ydoc);
+
+		// Create custom Socket.IO provider
+		provider = new SocketIOProvider(ydoc, documentId, socket, user);
+	}
+
+	let floatingMenuElement = null;
+	let bubbleMenuElement = null;
+	let element;
 
 	const options = {
 		throwOnError: false
@@ -506,14 +821,9 @@
 
 	export const focus = () => {
 		if (editor) {
-			try {
-				editor.view?.focus();
-				// Scroll to the current selection
-				editor.view?.dispatch(editor.view.state.tr.scrollIntoView());
-			} catch (e) {
-				// sometimes focusing throws an error, ignore
-				console.warn('Error focusing editor', e);
-			}
+			editor.view.focus();
+			// Scroll to the current selection
+			editor.view.dispatch(editor.view.state.tr.scrollIntoView());
 		}
 	};
 
@@ -618,20 +928,6 @@
 		}
 	});
 
-	import { listDragHandlePlugin } from './RichTextInput/listDragHandlePlugin.js';
-
-	const ListItemDragHandle = Extension.create({
-		name: 'listItemDragHandle',
-		addProseMirrorPlugins() {
-			return [
-				listDragHandlePlugin({
-					itemTypeNames: ['listItem', 'taskItem'],
-					getEditor: () => this.editor
-				})
-			];
-		}
-	});
-
 	onMount(async () => {
 		content = value;
 
@@ -674,9 +970,8 @@
 
 		console.log('content', content);
 
-		if (collaboration && documentId && socket && user) {
-			const { SocketIOCollaborationProvider } = await import('./RichTextInput/Collaboration');
-			provider = new SocketIOCollaborationProvider(documentId, socket, user, content);
+		if (collaboration) {
+			initializeCollaboration();
 		}
 
 		console.log(bubbleMenuElement, floatingMenuElement);
@@ -688,8 +983,7 @@
 				StarterKit.configure({
 					link: link
 				}),
-				...(dragHandle ? [ListItemDragHandle] : []),
-				Placeholder.configure({ placeholder: () => _placeholder, showOnlyWhenEditable: false }),
+				Placeholder.configure({ placeholder: () => _placeholder }),
 				SelectionDecoration,
 
 				...(richText
@@ -770,7 +1064,7 @@
 							})
 						]
 					: []),
-				...(collaboration && provider ? [provider.getEditorExtension()] : [])
+				...(collaboration ? [YjsCollaboration] : [])
 			],
 			content: collaboration ? undefined : content,
 			autofocus: messageInput ? true : false,
@@ -1043,8 +1337,6 @@
 			enablePasteRules: richText
 		});
 
-		provider?.setEditor(editor, () => ({ md: mdValue, html: htmlValue, json: jsonValue }));
-
 		if (messageInput) {
 			selectTemplate();
 		}
@@ -1114,18 +1406,13 @@
 </script>
 
 {#if richText && showFormattingToolbar}
-	<div bind:this={bubbleMenuElement} id="bubble-menu" class="p-0 {editor ? '' : 'hidden'}">
+	<div bind:this={bubbleMenuElement} id="bubble-menu" class="p-0">
 		<FormattingButtons {editor} />
 	</div>
 
-	<div bind:this={floatingMenuElement} id="floating-menu" class="p-0 {editor ? '' : 'hidden'}">
+	<div bind:this={floatingMenuElement} id="floating-menu" class="p-0">
 		<FormattingButtons {editor} />
 	</div>
 {/if}
 
-<div
-	bind:this={element}
-	class="relative w-full min-w-full h-full min-h-fit {className} {!editable
-		? 'cursor-not-allowed'
-		: ''}"
-/>
+<div bind:this={element} class="relative w-full min-w-full h-full min-h-fit {className}" />

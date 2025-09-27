@@ -31,10 +31,12 @@ class OneDriveConfig {
 	}
 
 	private async getCredentials(): Promise<void> {
+		const headers: HeadersInit = {
+			'Content-Type': 'application/json'
+		};
+
 		const response = await fetch('/api/config', {
-			headers: {
-				'Content-Type': 'application/json'
-			},
+			headers,
 			credentials: 'include'
 		});
 
@@ -44,14 +46,17 @@ class OneDriveConfig {
 
 		const config = await response.json();
 
-		this.clientIdPersonal = config.onedrive?.client_id_personal;
-		this.clientIdBusiness = config.onedrive?.client_id_business;
-		this.sharepointUrl = config.onedrive?.sharepoint_url;
-		this.sharepointTenantId = config.onedrive?.sharepoint_tenant_id;
+		const newClientId = config.onedrive?.client_id;
+		const newSharepointUrl = config.onedrive?.sharepoint_url;
+		const newSharepointTenantId = config.onedrive?.sharepoint_tenant_id;
 
-		if (!this.newClientIdPersonal && !this.newClientIdBusiness) {
-			throw new Error('OneDrive client ID not configured');
+		if (!newClientId) {
+			throw new Error('OneDrive configuration is incomplete');
 		}
+
+		this.clientId = newClientId;
+		this.sharepointUrl = newSharepointUrl;
+		this.sharepointTenantId = newSharepointTenantId;
 	}
 
 	public async getMsalInstance(
@@ -64,20 +69,10 @@ class OneDriveConfig {
 				this.currentAuthorityType === 'organizations'
 					? this.sharepointTenantId || 'common'
 					: 'consumers';
-
-			const clientId =
-				this.currentAuthorityType === 'organizations'
-					? this.clientIdBusiness
-					: this.clientIdPersonal;
-
-			if (!clientId) {
-				throw new Error('OneDrive client ID not configured');
-			}
-
 			const msalParams = {
 				auth: {
 					authority: `https://login.microsoftonline.com/${authorityEndpoint}`,
-					clientId: clientId
+					clientId: this.clientId
 				}
 			};
 

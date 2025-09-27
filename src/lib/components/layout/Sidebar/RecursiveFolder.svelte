@@ -332,12 +332,14 @@
 
 	let isExpandedUpdateTimeout;
 
-	const isExpandedUpdateDebounceHandler = () => {
+	const isExpandedUpdateDebounceHandler = (open) => {
 		clearTimeout(isExpandedUpdateTimeout);
 		isExpandedUpdateTimeout = setTimeout(() => {
 			isExpandedUpdateHandler();
 		}, 500);
 	};
+
+	$: isExpandedUpdateDebounceHandler(open);
 
 	const renameHandler = async () => {
 		console.log('Edit');
@@ -429,9 +431,9 @@
 		<div class="w-full group">
 			<button
 				id="folder-{folderId}-button"
-				class="relative w-full py-1 px-1.5 rounded-xl flex items-center gap-1.5 hover:bg-gray-100 dark:hover:bg-gray-900 transition {$selectedFolder?.id ===
+				class="relative w-full py-1 px-1.5 rounded-lg flex items-center gap-1.5 hover:bg-gray-100 dark:hover:bg-gray-900 transition {$selectedFolder?.id ===
 				folderId
-					? 'bg-gray-100 dark:bg-gray-900 selected'
+					? 'bg-gray-100 dark:bg-gray-900'
 					: ''}"
 				on:dblclick={(e) => {
 					if (clickTimer) {
@@ -467,7 +469,6 @@
 					on:click={(e) => {
 						e.stopPropagation();
 						open = !open;
-						isExpandedUpdateDebounceHandler();
 					}}
 				>
 					{#if folders[folderId]?.meta?.icon}

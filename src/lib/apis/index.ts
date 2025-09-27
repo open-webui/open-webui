@@ -493,25 +493,18 @@ export const executeToolServer = async (
 			throw new Error(`HTTP error! Status: ${res.status}. Message: ${resText}`);
 		}
 
-		// make a clone of res and extract headers
-		const responseHeaders = {};
-		res.headers.forEach((value, key) => {
-			responseHeaders[key] = value;
-		});
-
-		const text = await res.text();
 		let responseData;
-
 		try {
-			responseData = JSON.parse(text);
-		} catch {
-			responseData = text;
+			responseData = await res.json();
+		} catch (err) {
+			responseData = await res.text();
 		}
-		return [responseData, responseHeaders];
+
+		return responseData;
 	} catch (err: any) {
 		error = err.message;
 		console.error('API Request Error:', error);
-		return [{ error }, null];
+		return { error };
 	}
 };
 

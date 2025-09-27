@@ -94,7 +94,6 @@
 			<Message
 				{message}
 				{thread}
-				disabled={!channel?.write_access}
 				showUserProfile={messageIdx === 0 ||
 					messageList.at(messageIdx - 1)?.user_id !== message.user_id ||
 					messageList.at(messageIdx - 1)?.meta?.model_id !== message?.meta?.model_id}

@@ -222,10 +222,9 @@ class PersistentConfig(Generic[T]):
 
 
 class AppConfig:
+    _state: dict[str, PersistentConfig]
     _redis: Union[redis.Redis, redis.cluster.RedisCluster] = None
     _redis_key_prefix: str
-
-    _state: dict[str, PersistentConfig]
 
     def __init__(
         self,
@@ -234,8 +233,9 @@ class AppConfig:
         redis_cluster: Optional[bool] = False,
         redis_key_prefix: str = "open-webui",
     ):
+        super().__setattr__("_state", {})
+        super().__setattr__("_redis_key_prefix", redis_key_prefix)
         if redis_url:
-            super().__setattr__("_redis_key_prefix", redis_key_prefix)
             super().__setattr__(
                 "_redis",
                 get_redis_connection(
@@ -245,8 +245,6 @@ class AppConfig:
                     decode_responses=True,
                 ),
             )
-
-        super().__setattr__("_state", {})
 
     def __setattr__(self, key, value):
         if isinstance(value, PersistentConfig):
@@ -998,6 +996,23 @@ ENABLE_OPENAI_API = PersistentConfig(
     os.environ.get("ENABLE_OPENAI_API", "True").lower() == "true",
 )
 
+
+OPENROUTER_API_KEY = os.environ.get("OPENROUTER_API_KEY", "")
+OPENROUTER_DEFAULT_MODEL = os.environ.get(
+    "OPENROUTER_DEFAULT_MODEL", "x-ai/grok-4-fast:free"
+)
+
+if OPENROUTER_API_KEY:
+    # When an OpenRouter key is supplied, default the connection and model
+    # configuration to route through OpenRouter unless the user explicitly
+    # overrides these values. This keeps OpenRouter as the sole backend
+    # without clobbering manual overrides.
+    os.environ.setdefault("ENABLE_OPENAI_API", "true")
+    os.environ.setdefault("OPENAI_API_BASE_URL", "https://openrouter.ai/api/v1")
+    os.environ.setdefault("OPENAI_API_BASE_URLS", "https://openrouter.ai/api/v1")
+    os.environ.setdefault("OPENAI_API_KEY", OPENROUTER_API_KEY)
+    os.environ.setdefault("OPENAI_API_KEYS", OPENROUTER_API_KEY)
+    os.environ.setdefault("DEFAULT_MODELS", OPENROUTER_DEFAULT_MODEL)
 
 OPENAI_API_KEY = os.environ.get("OPENAI_API_KEY", "")
 OPENAI_API_BASE_URL = os.environ.get("OPENAI_API_BASE_URL", "")
@@ -2170,8 +2185,6 @@ ENABLE_ONEDRIVE_INTEGRATION = PersistentConfig(
     "onedrive.enable",
     os.getenv("ENABLE_ONEDRIVE_INTEGRATION", "False").lower() == "true",
 )
-
-
 ENABLE_ONEDRIVE_PERSONAL = (
     os.environ.get("ENABLE_ONEDRIVE_PERSONAL", "True").lower() == "true"
 )
@@ -2179,12 +2192,10 @@ ENABLE_ONEDRIVE_BUSINESS = (
     os.environ.get("ENABLE_ONEDRIVE_BUSINESS", "True").lower() == "true"
 )
 
-ONEDRIVE_CLIENT_ID = os.environ.get("ONEDRIVE_CLIENT_ID", "")
-ONEDRIVE_CLIENT_ID_PERSONAL = os.environ.get(
-    "ONEDRIVE_CLIENT_ID_PERSONAL", ONEDRIVE_CLIENT_ID
-)
-ONEDRIVE_CLIENT_ID_BUSINESS = os.environ.get(
-    "ONEDRIVE_CLIENT_ID_BUSINESS", ONEDRIVE_CLIENT_ID
+ONEDRIVE_CLIENT_ID = PersistentConfig(
+    "ONEDRIVE_CLIENT_ID",
+    "onedrive.client_id",
+    os.environ.get("ONEDRIVE_CLIENT_ID", ""),
 )
 
 ONEDRIVE_SHAREPOINT_URL = PersistentConfig(
@@ -2766,12 +2777,6 @@ WEB_SEARCH_TRUST_ENV = PersistentConfig(
     os.getenv("WEB_SEARCH_TRUST_ENV", "False").lower() == "true",
 )
 
-
-OLLAMA_CLOUD_WEB_SEARCH_API_KEY = PersistentConfig(
-    "OLLAMA_CLOUD_WEB_SEARCH_API_KEY",
-    "rag.web.search.ollama_cloud_api_key",
-    os.getenv("OLLAMA_CLOUD_API_KEY", ""),
-)
 
 SEARXNG_QUERY_URL = PersistentConfig(
     "SEARXNG_QUERY_URL",

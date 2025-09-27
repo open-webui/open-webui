@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { onDestroy, onMount, getContext } from 'svelte';
+	import { onDestroy, onMount } from 'svelte';
 	import panzoom, { type PanZoom } from 'panzoom';
 
 	import fileSaver from 'file-saver';
@@ -10,8 +10,6 @@
 	export let show = false;
 	export let src = '';
 	export let alt = '';
-
-	const i18n = getContext('i18n');
 
 	let mounted = false;
 
@@ -102,10 +100,9 @@
 
 							const mimeType = blob.type || 'image/png';
 							// create file name based on the MIME type, alt should be a valid file name with extension
-							const fileName = `${$i18n
-								.t('Generated Image')
-								.toLowerCase()
-								.replace(/ /g, '_')}.${mimeType.split('/')[1]}`;
+							const fileName = alt
+								? `${alt.replaceAll('.', '')}.${mimeType.split('/')[1]}`
+								: 'download.png';
 
 							// Use FileSaver to save the blob
 							saveAs(blob, fileName);
@@ -122,10 +119,9 @@
 									const blobWithType = new Blob([blob], { type: mimeType });
 
 									// create file name based on the MIME type, alt should be a valid file name with extension
-									const fileName = `${$i18n
-										.t('Generated Image')
-										.toLowerCase()
-										.replace(/ /g, '_')}.${mimeType.split('/')[1]}`;
+									const fileName = alt
+										? `${alt.replaceAll('.', '')}.${mimeType.split('/')[1]}`
+										: 'download.png';
 
 									// Use FileSaver to save the blob
 									saveAs(blobWithType, fileName);
@@ -150,10 +146,9 @@
 									const blobWithType = new Blob([blob], { type: mimeType });
 
 									// create file name based on the MIME type, alt should be a valid file name with extension
-									const fileName = `${$i18n
-										.t('Generated Image')
-										.toLowerCase()
-										.replace(/ /g, '_')}.${mimeType.split('/')[1]}`;
+									const fileName = alt
+										? `${alt.replaceAll('.', '')}.${mimeType.split('/')[1]}`
+										: 'download.png';
 
 									// Use FileSaver to save the blob
 									saveAs(blobWithType, fileName);

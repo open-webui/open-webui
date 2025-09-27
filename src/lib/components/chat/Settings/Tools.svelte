@@ -14,7 +14,7 @@
 	import Plus from '$lib/components/icons/Plus.svelte';
 	import Connection from './Tools/Connection.svelte';
 
-	import AddToolServerModal from '$lib/components/AddToolServerModal.svelte';
+	import AddServerModal from '$lib/components/AddServerModal.svelte';
 
 	export let saveSettings: Function;
 
@@ -52,7 +52,7 @@
 	});
 </script>
 
-<AddToolServerModal bind:show={showConnectionModal} onSubmit={addConnectionHandler} direct />
+<AddServerModal bind:show={showConnectionModal} onSubmit={addConnectionHandler} direct />
 
 <form
 	id="tab-tools"

@@ -40,7 +40,6 @@
 	export let message;
 	export let showUserProfile = true;
 	export let thread = false;
-	export let disabled = false;
 
 	export let onDelete: Function = () => {};
 	export let onEdit: Function = () => {};
@@ -69,7 +68,7 @@
 			? 'pt-1.5 pb-0.5'
 			: ''} w-full max-w-full mx-auto group hover:bg-gray-300/5 dark:hover:bg-gray-700/5 transition relative"
 	>
-		{#if !edit && !disabled}
+		{#if !edit}
 			<div
 				class=" absolute {showButtons ? '' : 'invisible group-hover:visible'} right-1 -top-2 z-10"
 			>
