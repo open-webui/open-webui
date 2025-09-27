@@ -52,7 +52,6 @@ parameters = {
 
 def is_job_running():
     if job_status["running"] == True:
-        time.sleep(0.1)
         return True
     return False
 
@@ -251,8 +250,6 @@ def actual_transfer(file, file_size):
         thread = threading.Thread(target=scriptRecvFromHost)
         job_status = {"running": True, "result": "", "thread": thread}
 
-        time.sleep(1)
-
         try:
             script_path = os.path.join(file_transfer_path, "copy2fpga-x86.sh")
             print("file_transfer_path", script_path)
@@ -333,8 +330,6 @@ def receive_upload_model():
             500,
         )
 
-    time.sleep(1)
-
     print("PRELIMINARY TARGET CHECK-SUM: ", preliminary_target_check)
     print("PRELIMINARY HOST/SHELL CHECK-SUM: ", preliminary_host_check.stdout)
 
@@ -351,11 +346,9 @@ def receive_upload_model():
             200,
         )
 
-    time.sleep(1)
-
-    read_cmd_from_serial(port, baudrate, f"cd {destn_path}; rm {new_file_name}")
-
-    time.sleep(1)
+    serial_script.send_serial_command(
+        port, baudrate, f"cd {destn_path}; rm {new_file_name}", timeout=300
+    )
 
     try:
         file_size = os.path.getsize(data["actual_name"])
@@ -371,8 +364,6 @@ def receive_upload_model():
             500,
         )
 
-    time.sleep(1)
-
     full_path = file_obj.name
     print(full_path)
     try:
@@ -387,23 +378,20 @@ def receive_upload_model():
             ),
             500,
         )
-    time.sleep(1)
 
-    read_cmd_from_serial(
-        port, baudrate, f"cd {destn_path}; mv {file_name} {new_file_name}"
+    serial_script.send_serial_command(
+        port, baudrate, f"cd {destn_path}; mv {file_name} {new_file_name}", timeout=300
     )
 
     print("Listing out existing files")
-    read_cmd_from_serial(port, baudrate, f"cd {destn_path}; ls -lt")
-
-    time.sleep(1)
+    serial_script.send_serial_command(
+        port, baudrate, f"cd {destn_path}; ls -lt", timeout=300
+    )
 
     print("Doing checksum of the upload file")
     target_check_sum = serial_script.send_serial_command(
         port, baudrate, f"cd {destn_path}; md5sum {new_file_name}"
     )
-
-    time.sleep(1)
 
     print("TARGET CHECK-SUM: ", target_check_sum)
     print("HOST/SHELL CHECK-SUM: ", preliminary_host_check.stdout)
@@ -497,8 +485,6 @@ def receive_pull_model():
             500,
         )
 
-    time.sleep(1)
-
     print("PRELIMINARY TARGET CHECK-SUM: ", preliminary_target_check)
     print("PRELIMINARY HOST/SHELL CHECK-SUM: ", preliminary_host_check.stdout)
 
@@ -515,11 +501,9 @@ def receive_pull_model():
             200,
         )
 
-    time.sleep(1)
-
-    read_cmd_from_serial(port, baudrate, f"cd {destn_path}; rm {data['human_name']}")
-
-    time.sleep(1)
+    serial_script.send_serial_command(
+        port, baudrate, f"cd {destn_path}; rm {data['human_name']}", timeout=300
+    )
 
     try:
         file_size = os.path.getsize(path)
@@ -535,8 +519,6 @@ def receive_pull_model():
             500,
         )
 
-    time.sleep(1)
-
     full_path = file_obj.name
     print(full_path)
     try:
@@ -551,34 +533,32 @@ def receive_pull_model():
             ),
             500,
         )
-    time.sleep(1)
 
     print("Renaming file", data["human_name"])
 
     dir_path = os.path.dirname(data["human_name"])  # ✅ Python way
 
     # Create the directory structure on the target device
-    read_cmd_from_serial(port, baudrate, f"cd {destn_path}; mkdir -p {dir_path}")
+    serial_script.send_serial_command(
+        port, baudrate, f"cd {destn_path}; mkdir -p {dir_path}", timeout=300
+    )
 
-    read_cmd_from_serial(
+    serial_script.send_serial_command(
         port,
         baudrate,
         f"cd {destn_path}; mv {data['actual_name']} {data['human_name']}",
+        timeout=300,
     )
 
-    time.sleep(1)
-
     print("Listing out existing files")
-    read_cmd_from_serial(port, baudrate, f"cd {destn_path}; ls -lt")
-
-    time.sleep(1)
+    serial_script.send_serial_command(
+        port, baudrate, f"cd {destn_path}; ls -lt", timeout=300
+    )
 
     print("Doing checksum of the upload file")
     target_check_sum = serial_script.send_serial_command(
-        port, baudrate, f"cd {destn_path}; md5sum {data['human_name']}"
+        port, baudrate, f"cd {destn_path}; md5sum {data['human_name']}", timeout=300
     )
-
-    time.sleep(1)
 
     print("TARGET CHECK-SUM: ", target_check_sum)
     print("HOST/SHELL CHECK-SUM: ", preliminary_host_check.stdout)
@@ -646,10 +626,11 @@ def opu_delete_model():
 
     file_name = denormalize_model_name(data["model_name"])
 
-    read_cmd_from_serial(
+    serial_script.send_serial_command(
         port,
         baudrate,
         f'cd {destn_path}; rm -fr {file_name}* && find . -type d -empty | while read -r dir; do rmdir "$dir"; done',
+        timeout=300,
     )
 
     job_status["running"] = False
@@ -713,7 +694,9 @@ def upload_file():
             thread.join()
             stdout, stderr = process.communicate()
 
-        read_cmd_from_serial(port, baudrate, f"cd {temporary_destination_path}; ls -lt")
+        serial_script.send_serial_command(
+            port, baudrate, f"cd {temporary_destination_path}; ls -lt", timeout=300
+        )
 
         return render_template(
             "uploadtofpga.html",
@@ -748,7 +731,6 @@ def internal_restart_txe():
                     "Use the IDE stop button or Ctrl-C to terminate",  # For Rel37 as Make Juart does not Complete
                 ]
             ):
-                time.sleep(2)
                 os.killpg(os.getpgid(process.pid), signal.SIGTERM)
                 break
             current = time.time()
@@ -1188,6 +1170,7 @@ def restart_txe_ollama_serial_command():
 
     serial_script.pre_and_post_check(port, baudrate)
     internal_restart_txe()
+    job_status["running"] = False
 
     return (
         manual_response(
@@ -1262,6 +1245,8 @@ def aborttask():
 def abort_task_ollama_serial_command():
     incoming_headers = dict(request.headers)
     result, error = aborttask()
+    if is_job_running() == True:
+        job_status["running"] = False
     return (
         manual_response(
             content=result, thinking="Abort Task", incoming_headers=incoming_headers
