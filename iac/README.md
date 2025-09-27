@@ -18,6 +18,50 @@ Microsoft Entra App Proxy → Internal ALB → ECS Service (3 instances) → Aur
 - **Auto Scaling**: CPU-based scaling from 2-10 instances
 - **Monitoring**: CloudWatch dashboards and alarms
 
+## Directory Structure
+
+```
+iac/
+├── modules/                     # Reusable Terraform modules
+│   └── grafana-otel/           # Standalone Grafana OTEL monitoring module
+│       ├── main.tf
+│       ├── variables.tf
+│       ├── outputs.tf
+│       ├── versions.tf
+│       └── README.md
+├── grafana-standalone/         # Example standalone Grafana deployment
+│   ├── main.tf
+│   ├── variables.tf
+│   ├── outputs.tf
+│   ├── terraform.tfvars.example
+│   └── README.md
+├── *.tf                        # Main OpenWebUI infrastructure
+└── README.md                   # This file
+```
+
+### Grafana OTEL Monitoring Module
+
+The `modules/grafana-otel/` directory contains a standalone, reusable Terraform module for deploying Grafana OTEL LGTM (Logs, Grafana, Tempo, Mimir) monitoring stack. This module can be deployed independently of the main OpenWebUI infrastructure.
+
+**Features:**
+- Complete OTEL observability stack (Grafana + Prometheus + Tempo + Loki)
+- ECS Fargate deployment with autoscaling
+- Service discovery integration
+- Configurable security and network access
+- CloudWatch logging integration
+
+**Usage:**
+- **Standalone**: Use `grafana-standalone/` for independent deployment with S3 remote state
+- **Integrated**: Reference the module from other Terraform configurations
+
+**State Management:**
+- **Main Infrastructure**: `production/gravity-ai-chat/terraform.tfstate`  
+- **Grafana Monitoring**: `production/grafana-monitoring/terraform.tfstate`
+
+Both deployments use the same S3 bucket but separate state files for independent management.
+
+See `modules/grafana-otel/README.md` for detailed documentation.
+
 ## Prerequisites
 
 1. Terraform >= 1.0

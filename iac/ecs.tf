@@ -62,7 +62,7 @@ resource "aws_security_group" "ecs_scaled_sg" {
 
 # CloudWatch log group for the new service
 resource "aws_cloudwatch_log_group" "ecs_scaled_logs" {
-  name              = "/ecs/webUIfargate-scaled"
+  name              = "/ecs/openwebui-scaled"
   retention_in_days = 7
 
   tags = {

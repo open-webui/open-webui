@@ -11,7 +11,7 @@ existing_ecs_security_group_id = "sg-05e12bd2e202e19f6"
 # ECS Configuration
 cluster_name      = "webUIcluster2"
 service_name      = "webui3-scaled"
-task_family_name  = "webUIfargate-scaled"
+task_family_name  = "openwebui-scaled"
 container_image   = "908027381725.dkr.ecr.us-east-1.amazonaws.com/github/open-webui/open-webui:v0.6.16-custom"
 
 # Scaling Configuration

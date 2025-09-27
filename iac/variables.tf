@@ -49,7 +49,7 @@ variable "service_name" {
 variable "task_family_name" {
   description = "ECS task definition family name"
   type        = string
-  default     = "webUIfargate-scaled"
+  default     = "openwebui-scaled"
 }
 
 variable "container_image" {
