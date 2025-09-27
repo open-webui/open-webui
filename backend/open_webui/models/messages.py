@@ -135,7 +135,7 @@ class MessageTable:
             db.refresh(result)
             return MessageModel.model_validate(result) if result else None
 
-    def get_message_by_id(self, id: str) -> Optional[MessageReplyToResponse]:
+    def get_message_by_id(self, id: str) -> Optional[MessageResponse]:
         with get_db() as db:
             message = db.get(Message, id)
             if not message:
@@ -146,20 +146,22 @@ class MessageTable:
                 if message.reply_to_id
                 else None
             )
+
             reactions = self.get_reactions_by_message_id(id)
-            replies = self.get_thread_replies_by_message_id(id)
+            thread_replies = self.get_thread_replies_by_message_id(id)
 
             user = Users.get_user_by_id(message.user_id)
-
-            return MessageReplyToResponse.model_validate(
+            return MessageResponse.model_validate(
                 {
                     **MessageModel.model_validate(message).model_dump(),
                     "user": user.model_dump() if user else None,
                     "reply_to_message": (
                         reply_to_message.model_dump() if reply_to_message else None
                     ),
-                    "latest_reply_at": replies[0].created_at if replies else None,
-                    "reply_count": len(replies),
+                    "latest_reply_at": (
+                        thread_replies[0].created_at if thread_replies else None
+                    ),
+                    "reply_count": len(thread_replies),
                     "reactions": reactions,
                 }
             )
