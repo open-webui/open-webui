@@ -18,15 +18,27 @@
 				sensitivity: 'base'
 			})
 		);
+
+	let folderRegistry = {};
+
+	const onItemMove = (e) => {
+		console.log(`onItemMove`, e, folderRegistry);
+
+		if (e.originFolderId) {
+			folderRegistry[e.originFolderId]?.setFolderItems();
+		}
+	};
 </script>
 
 {#each folderList as folderId (folderId)}
 	<RecursiveFolder
 		className=""
+		bind:folderRegistry
 		{folders}
 		{folderId}
 		{shiftKey}
 		{onDelete}
+		{onItemMove}
 		on:import={(e) => {
 			dispatch('import', e.detail);
 		}}

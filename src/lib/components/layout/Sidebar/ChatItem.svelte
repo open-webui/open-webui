@@ -51,6 +51,8 @@
 	export let selected = false;
 	export let shiftKey = false;
 
+	export let onDragEnd = () => {};
+
 	let chat = null;
 
 	let mouseOver = false;
@@ -201,11 +203,13 @@
 		y = event.clientY;
 	};
 
-	const onDragEnd = (event) => {
+	const onDragEndHandler = (event) => {
 		event.stopPropagation();
 
 		itemElement.style.opacity = '1'; // Reset visual cue after drag
 		dragged = false;
+
+		onDragEnd(event);
 	};
 
 	const onClickOutside = (event) => {
@@ -225,7 +229,7 @@
 			// Event listener for when dragging occurs (optional)
 			itemElement.addEventListener('drag', onDrag);
 			// Event listener for when dragging ends
-			itemElement.addEventListener('dragend', onDragEnd);
+			itemElement.addEventListener('dragend', onDragEndHandler);
 		}
 	});
 
@@ -235,7 +239,7 @@
 
 			itemElement.removeEventListener('dragstart', onDragStart);
 			itemElement.removeEventListener('drag', onDrag);
-			itemElement.removeEventListener('dragend', onDragEnd);
+			itemElement.removeEventListener('dragend', onDragEndHandler);
 		}
 	});
 

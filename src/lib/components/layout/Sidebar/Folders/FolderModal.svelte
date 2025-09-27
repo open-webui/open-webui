@@ -59,8 +59,6 @@
 			system_prompt: '',
 			files: []
 		};
-
-		console.log(folder);
 	};
 
 	const focusInput = async () => {
