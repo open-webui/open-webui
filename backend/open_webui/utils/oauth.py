@@ -1249,7 +1249,7 @@ class OAuthManager:
                     )
 
             jwt_token = create_token(
-                data={"id": user.id},
+                data={"id": user.id, "jti": str(uuid.uuid4())},
                 expires_delta=parse_duration(auth_manager_config.JWT_EXPIRES_IN),
             )
             if (

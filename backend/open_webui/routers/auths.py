@@ -3,6 +3,7 @@ import uuid
 import time
 import datetime
 import logging
+import threading
 from aiohttp import ClientSession
 
 from open_webui.models.auths import (
@@ -51,6 +52,7 @@ from open_webui.utils.auth import (
 )
 from open_webui.utils.webhook import post_webhook
 from open_webui.utils.access_control import get_permissions
+from open_webui.utils.auth import jti_blacklist
 
 from typing import Optional, List
 
@@ -63,6 +65,7 @@ router = APIRouter()
 
 log = logging.getLogger(__name__)
 log.setLevel(SRC_LOG_LEVELS["MAIN"])
+
 
 ############################
 # GetSessionUser
@@ -95,7 +98,16 @@ async def get_session_user(
     if data:
         expires_at = data.get("exp")
 
+        log.debug(f"auths.get_session_user:denylist_size: {jti_blacklist.size()}")
+
         if (expires_at is not None) and int(time.time()) > expires_at:
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail=ERROR_MESSAGES.INVALID_TOKEN,
+            )
+        
+        jti = data.get("jti")
+        if (jti is None) or jti_blacklist.is_revoked(jti):
             raise HTTPException(
                 status_code=status.HTTP_401_UNAUTHORIZED,
                 detail=ERROR_MESSAGES.INVALID_TOKEN,
@@ -396,7 +408,7 @@ async def ldap_auth(request: Request, response: Response, form_data: LdapForm):
                     expires_at = int(time.time()) + int(expires_delta.total_seconds())
 
                 token = create_token(
-                    data={"id": user.id},
+                    data={ "id": user.id, "jti": str(uuid.uuid4()) },
                     expires_delta=expires_delta,
                 )
 
@@ -463,6 +475,9 @@ async def ldap_auth(request: Request, response: Response, form_data: LdapForm):
 
 @router.post("/signin", response_model=SessionUserResponse)
 async def signin(request: Request, response: Response, form_data: SigninForm):
+
+
+
     if WEBUI_AUTH_TRUSTED_EMAIL_HEADER:
         if WEBUI_AUTH_TRUSTED_EMAIL_HEADER not in request.headers:
             raise HTTPException(400, detail=ERROR_MESSAGES.INVALID_TRUSTED_HEADER)
@@ -518,7 +533,7 @@ async def signin(request: Request, response: Response, form_data: SigninForm):
             expires_at = int(time.time()) + int(expires_delta.total_seconds())
 
         token = create_token(
-            data={"id": user.id},
+            data={ "id": user.id, "jti": str(uuid.uuid4()) }, # add uuid as jti to identify JWTs
             expires_delta=expires_delta,
         )
 
@@ -615,7 +630,7 @@ async def signup(request: Request, response: Response, form_data: SignupForm):
                 expires_at = int(time.time()) + int(expires_delta.total_seconds())
 
             token = create_token(
-                data={"id": user.id},
+                data={"id": user.id, "jti": str(uuid.uuid4())},
                 expires_delta=expires_delta,
             )
 
@@ -675,6 +690,21 @@ async def signup(request: Request, response: Response, form_data: SignupForm):
 
 @router.get("/signout")
 async def signout(request: Request, response: Response):
+    
+    token = request.cookies.get('token')
+
+    if token:
+        data = decode_token(token)
+            
+        if data:
+            jti = data.get("jti")
+            exp_ts = data.get("exp")
+            
+            # Add token to blacklist if we have both jti and expiration
+            if jti and exp_ts:
+                jti_blacklist.revoke(jti, exp_ts)
+                log.debug(f"auths.signout: Token {jti} added to blacklist during signout")
+
     response.delete_cookie("token")
     response.delete_cookie("oui-session")
     response.delete_cookie("oauth_id_token")
@@ -765,7 +795,7 @@ async def add_user(form_data: AddUserForm, user=Depends(get_admin_user)):
         )
 
         if user:
-            token = create_token(data={"id": user.id})
+            token = create_token(data={"id": user.id, "jti": str(uuid.uuid4())})
             return {
                 "token": token,
                 "token_type": "Bearer",

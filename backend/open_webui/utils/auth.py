@@ -6,6 +6,7 @@ import hmac
 import hashlib
 import requests
 import os
+import threading, time
 
 
 from cryptography.hazmat.primitives.ciphers.aead import AESGCM
@@ -40,6 +41,96 @@ from fastapi import BackgroundTasks, Depends, HTTPException, Request, Response, 
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from passlib.context import CryptContext
 
+############################
+# Global State for jti blacklist
+############################
+
+class InMemoryJWTBlacklist:
+    """
+    Thread-safe JWT blacklist that stores revoked JTIs in memory with their expiry timestamps.
+    Automatically cleans up expired entries to prevent memory leaks.
+    Redis support will be brought to this, in the future.
+    """
+    def __init__(self):
+        self._jti_dict = {}
+        self._lock = threading.RLock()
+        self._last_cleanup = int(time.time())
+        self._cleanup_interval = 3600  # Cleanup every hour
+
+    def revoke(self, jti: str, exp_ts: int) -> None:
+        """
+        Revokes a JWT by adding its JTI to the blacklist (in-memory).
+        """
+        with self._lock:
+            self._jti_dict[jti] = exp_ts
+            self._maybe_cleanup()
+
+    def is_revoked(self, jti: str, now: int | None = None) -> bool:
+        """
+        Checks if a JWT is revoked.
+        """
+        if not jti:
+            return False
+            
+        now = now or int(time.time())
+        
+        with self._lock:
+            exp_ts = self._jti_dict.get(jti)
+            if exp_ts is None:
+                return False
+            
+            # If the token has expired, remove it from blacklist and return False
+            if exp_ts <= now:
+                self._jti_dict.pop(jti, None)
+                return False
+            
+            # Token is revoked
+            return True
+
+    def cleanup(self, now: int | None = None) -> int:
+        """
+        Remove expired entries from the blacklist.
+        """
+        now = now or int(time.time())
+        removed_count = 0
+        
+        with self._lock:
+            # Create a list of expired JTIs to avoid modifying dict during iteration
+            expired_jtis = [
+                jti for jti, exp_ts in self._jti_dict.items() 
+                if exp_ts <= now
+            ]
+            
+            for jti in expired_jtis:
+                self._jti_dict.pop(jti, None)
+                removed_count += 1
+            
+            self._last_cleanup = now
+        
+        if removed_count > 0:
+            log.info(f"JWT blacklist cleanup: removed {removed_count} expired entries")
+        
+        return removed_count
+
+    def _maybe_cleanup(self) -> None:
+        """Perform cleanup if enough time has passed since last cleanup."""
+        now = int(time.time())
+        if now - self._last_cleanup >= self._cleanup_interval:
+            self.cleanup(now)
+
+    def size(self) -> int:
+        """Return the current size of the blacklist."""
+        with self._lock:
+            return len(self._jti_dict)
+
+    def clear(self) -> None:
+        """Clear all entries from the blacklist."""
+        with self._lock:
+            self._jti_dict.clear()
+            log.info("JWT blacklist cleared")
+
+
+jti_blacklist = InMemoryJWTBlacklist()
 
 logging.getLogger("passlib").setLevel(logging.ERROR)
 
@@ -52,7 +143,6 @@ ALGORITHM = "HS256"
 ##############
 # Auth Utils
 ##############
-
 
 def verify_signature(payload: str, signature: str) -> bool:
     """
@@ -272,6 +362,14 @@ def get_current_user(
             )
 
         if data is not None and "id" in data:
+
+            jti = data.get("jti")
+            if (jti is None) or (jti_blacklist.is_revoked(jti=jti)):
+                raise HTTPException(
+                    status_code=status.HTTP_401_UNAUTHORIZED,
+                    detail=ERROR_MESSAGES.INVALID_TOKEN,
+                )
+
             user = Users.get_user_by_id(data["id"])
             if user is None:
                 raise HTTPException(
