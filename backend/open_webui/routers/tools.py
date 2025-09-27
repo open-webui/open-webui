@@ -17,7 +17,11 @@ from open_webui.models.tools import (
     ToolUserResponse,
     Tools,
 )
-from open_webui.utils.plugin import load_tool_module_by_id, replace_imports
+from open_webui.utils.plugin import (
+    load_tool_module_by_id,
+    replace_imports,
+    get_tool_module_from_cache,
+)
 from open_webui.utils.tools import get_tool_specs
 from open_webui.utils.auth import get_admin_user, get_verified_user
 from open_webui.utils.access_control import has_access, has_permission
@@ -35,6 +39,14 @@ log.setLevel(SRC_LOG_LEVELS["MAIN"])
 router = APIRouter()
 
 
+def get_tool_module(request, tool_id, load_from_db=True):
+    """
+    Get the tool module by its ID.
+    """
+    tool_module, _ = get_tool_module_from_cache(request, tool_id, load_from_db)
+    return tool_module
+
+
 ############################
 # GetTools
 ############################
@@ -42,15 +54,19 @@ router = APIRouter()
 
 @router.get("/", response_model=list[ToolUserResponse])
 async def get_tools(request: Request, user=Depends(get_verified_user)):
-    tools = [
-        ToolUserResponse(
-            **{
-                **tool.model_dump(),
-                "has_user_valves": "class UserValves(BaseModel):" in tool.content,
-            }
+    tools = []
+
+    # Local Tools
+    for tool in Tools.get_tools():
+        tool_module = get_tool_module(request, tool.id)
+        tools.append(
+            ToolUserResponse(
+                **{
+                    **tool.model_dump(),
+                    "has_user_valves": hasattr(tool_module, "UserValves"),
+                }
+            )
         )
-        for tool in Tools.get_tools()
-    ]
 
     # OpenAPI Tool Servers
     for server in await get_tool_servers(request):
