@@ -209,7 +209,7 @@
 			: (selectedModels ?? []).length > 0
 				? selectedModels.at(0)
 				: model?.id}
-		messages={createMessagesList(history, id)}
+		messages={createMessagesList(history, messageId)}
 		onAdd={({ modelId, parentId, messages }) => {
 			console.log(modelId, parentId, messages);
 			onAddMessages({ modelId, parentId, messages });
