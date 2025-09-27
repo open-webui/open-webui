@@ -15,6 +15,7 @@
 	import { chatCompletion } from '$lib/apis/openai';
 
 	import { splitStream } from '$lib/utils';
+	import Selector from '$lib/components/chat/ModelSelector/Selector.svelte';
 	import Collapsible from '../common/Collapsible.svelte';
 
 	import Messages from '$lib/components/playground/Chat/Messages.svelte';
@@ -30,7 +31,13 @@
 	let loaded = false;
 
 	let selectedModelId = '';
+	let selectedModelName = '';
 	let loading = false;
+
+	$: {
+		const model = $models.find((m) => m.id === selectedModelId);
+		selectedModelName = model ? model.name : '';
+	}
 	let stopResponseFlag = false;
 
 	let systemTextareaElement: HTMLTextAreaElement;
@@ -320,17 +327,16 @@
 						</div>
 
 						<div class="flex items-center justify-between gap-2 w-full sm:w-auto">
-							<div class="flex-1">
-								<select
-									class=" bg-transparent border border-gray-100 dark:border-gray-850 rounded-lg py-1 px-2 -mx-0.5 text-sm outline-hidden w-full"
+							<div class="{selectedModelName.length > 128 ? 'w-128' : ''}">
+								<Selector
+									placeholder={$i18n.t('Select a model')}
+									items={$models.map((model) => ({
+										value: model.id,
+										label: model.name,
+										model: model
+									}))}
 									bind:value={selectedModelId}
-								>
-									{#each $models as model}
-										<option value={model.id} class="bg-gray-50 dark:bg-gray-700"
-											>{model.name}</option
-										>
-									{/each}
-								</select>
+								/>
 							</div>
 
 							<div class="flex gap-2 shrink-0">
