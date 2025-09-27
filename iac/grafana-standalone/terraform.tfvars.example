@@ -1,0 +1,65 @@
+# AWS Configuration
+aws_region  = "us-east-1"
+aws_profile = "908027381725_AdministratorAccess"
+
+# Environment
+environment = "production"
+name_prefix = "grafana-otel"
+
+# Core Infrastructure (Required - Update these values)
+vpc_id = "vpc-01bc2784063a567d3"
+private_subnet_ids = [
+  "subnet-01296c54f7bff84bc",
+  "subnet-00da3547f2178dd85"
+]
+cluster_name = "webUIcluster2"
+
+# Network Access Configuration
+# Allow access from VPN and internal networks
+allowed_cidr_blocks = [
+  "192.168.158.0/24",  # GG VPN
+  "192.168.144.0/23",  # Internal VPC
+  "10.0.0.0/8"         # Private networks
+]
+
+# Grafana Configuration
+grafana_admin_user     = "admin"
+grafana_admin_password = "your-secure-password-here"
+
+# Service Discovery Configuration
+# Leave empty to create new namespace, or specify existing namespace ID
+service_discovery_namespace_id   = "ns-m5evzfyyw2zelrfu"
+service_discovery_namespace_name = "ggai"
+service_name                     = "grafana-monitoring"
+
+# Resource Configuration
+cpu           = 1024  # 1 vCPU
+memory        = 2048  # 2 GB
+desired_count = 1
+
+# Scaling Configuration
+enable_autoscaling = true
+max_capacity       = 2
+min_capacity       = 1
+cpu_target_value   = 80.0
+
+# Monitoring Configuration
+log_retention_days = 7
+
+# Security Configuration
+# Add security group IDs of applications that will send OTLP data
+otlp_sources_security_group_ids = [
+  # "sg-05e12bd2e202e19f6",  # Example: OpenWebUI security group
+  # "sg-87654321",  # Example: Other application security group
+]
+
+# Additional security groups to attach to Grafana tasks
+additional_security_group_ids = []
+
+# Tags
+tags = {
+  Project     = "grafana-monitoring"
+  Environment = "production"
+  Owner       = "platform-team"
+  ManagedBy   = "terraform"
+}
