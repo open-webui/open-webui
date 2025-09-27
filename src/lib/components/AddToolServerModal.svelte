@@ -152,7 +152,16 @@
 			console.log('importHandler', json);
 
 			try {
-				const data = JSON.parse(json);
+				let data = JSON.parse(json);
+				// validate data
+				if (Array.isArray(data)) {
+					if (data.length === 0) {
+						toast.error($i18n.t('Please select a valid JSON file'));
+						return;
+					}
+					data = data[0];
+				}
+
 				if (data.type) type = data.type;
 				if (data.url) url = data.url;
 
@@ -184,23 +193,25 @@
 
 	const exportHandler = async () => {
 		// export current connection as json file
-		const json = JSON.stringify({
-			type,
-			url,
+		const json = JSON.stringify([
+			{
+				type,
+				url,
 
-			spec_type,
-			spec,
-			path,
+				spec_type,
+				spec,
+				path,
 
-			auth_type,
-			key,
+				auth_type,
+				key,
 
-			info: {
-				id: id,
-				name: name,
-				description: description
+				info: {
+					id: id,
+					name: name,
+					description: description
+				}
 			}
-		});
+		]);
 
 		const blob = new Blob([json], {
 			type: 'application/json'
