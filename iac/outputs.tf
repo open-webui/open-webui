@@ -99,7 +99,7 @@ output "service_discovery_migration" {
 
 output "grafana_dashboard_url" {
   description = "Grafana dashboard URL (accessible via VPN)"
-  value       = "http://otel-monitor.ggai:3000"
+  value       = "http://grafana-monitoring.ggai:3000"
 }
 
 output "grafana_admin_credentials" {
@@ -114,8 +114,8 @@ output "grafana_admin_credentials" {
 output "otlp_endpoints" {
   description = "OpenTelemetry OTLP endpoints for telemetry data"
   value = {
-    grpc = "http://otel-monitor.ggai:4317"
-    http = "http://otel-monitor.ggai:4318"
+    grpc = "http://grafana-monitoring.ggai:4317"
+    http = "http://grafana-monitoring.ggai:4318"
   }
 }
 
@@ -125,9 +125,9 @@ output "grafana_service_discovery" {
     namespace = "ggai"
     service_name = "otel-monitor"
     endpoints = {
-      grafana_ui = "http://otel-monitor.ggai:3000"
-      otlp_grpc = "http://otel-monitor.ggai:4317"
-      otlp_http = "http://otel-monitor.ggai:4318"
+      grafana_ui = "http://grafana-monitoring.ggai:3000"
+      otlp_grpc = "http://grafana-monitoring.ggai:4317"
+      otlp_http = "http://grafana-monitoring.ggai:4318"
     }
   }
 }
@@ -139,11 +139,11 @@ output "monitoring_setup_instructions" {
     === GRAFANA OTEL MONITORING SETUP ===
 
     1. VERIFICATION COMMANDS (run from within VPC):
-       nslookup otel-monitor.ggai
-       curl http://otel-monitor.ggai:3000
+       nslookup grafana-monitoring.ggai
+       curl http://grafana-monitoring.ggai:3000
 
     2. GRAFANA ACCESS (via VPN):
-       URL: http://otel-monitor.ggai:3000
+       URL: http://grafana-monitoring.ggai:3000
        Username: admin
        Password: openwebui_monitoring_2024
 
@@ -152,7 +152,7 @@ output "monitoring_setup_instructions" {
        - Traces: Enabled with 10% sampling rate for performance
        - Metrics: HTTP requests, duration, active users, database queries
        - Logs: Integrated with existing CloudWatch logs
-       - Endpoint: http://otel-monitor.ggai:4317 (gRPC)
+       - Endpoint: http://grafana-monitoring.ggai:4317 (gRPC)
 
     4. MONITORING DATA SOURCES:
        - Prometheus: Pre-configured for metrics
@@ -165,7 +165,7 @@ output "monitoring_setup_instructions" {
        - Test OTLP connectivity from OpenWebUI tasks
 
     6. PERFORMANCE INVESTIGATION WORKFLOW:
-       a) Access Grafana via VPN: http://otel-monitor.ggai:3000
+       a) Access Grafana via VPN: http://grafana-monitoring.ggai:3000
        b) Navigate to "Explore" tab
        c) Select "Tempo" for distributed tracing
        d) Query traces with slow response times: {duration > 5s}

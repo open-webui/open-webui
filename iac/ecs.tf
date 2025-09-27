@@ -227,7 +227,7 @@ resource "aws_ecs_task_definition" "webui_scaled" {
         },
         {
           name  = "OTEL_EXPORTER_OTLP_ENDPOINT"
-          value = "http://otel-monitor.ggai:4317"
+          value = "http://grafana-monitoring.ggai:4317"
         },
         {
           name  = "OTEL_EXPORTER_OTLP_INSECURE"

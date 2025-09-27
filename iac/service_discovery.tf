@@ -97,19 +97,19 @@ locals {
     === GRAFANA OTEL MONITORING ===
 
     NEW MONITORING ENDPOINTS:
-    - Grafana Dashboard: http://otel-monitor.ggai:3000
-    - OTLP gRPC Endpoint: http://otel-monitor.ggai:4317
-    - OTLP HTTP Endpoint: http://otel-monitor.ggai:4318
+    - Grafana Dashboard: http://grafana-monitoring.ggai:3000
+    - OTLP gRPC Endpoint: http://grafana-monitoring.ggai:4317
+    - OTLP HTTP Endpoint: http://grafana-monitoring.ggai:4318
 
     TESTING COMMANDS (from within VPC):
     nslookup ai-scaled.ggai
-    nslookup otel-monitor.ggai
+    nslookup grafana-monitoring.ggai
 
     MIGRATION VERIFICATION:
     curl -H "Host: ai-glondon.msappproxy.net" http://ai-scaled.ggai:8080/health
 
     GRAFANA ACCESS (via VPN):
-    curl http://otel-monitor.ggai:3000
+    curl http://grafana-monitoring.ggai:3000
     # Default login: admin / openwebui_monitoring_2024
 
   EOT
