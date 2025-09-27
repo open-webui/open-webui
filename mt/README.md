@@ -314,7 +314,19 @@ git branch -d quantabase-update
 git push origin --delete quantabase-update
 ```
 
-#### 8. Deploy to Production
+#### 8. Wait for GitHub Actions Build
+
+After pushing to main, **GitHub Actions automatically builds your custom image**:
+
+- 🔄 **Monitor build**: https://github.com/imagicrafter/open-webui/actions
+- ⏱️ **Build time**: ~15-20 minutes
+- 📦 **Result**: `ghcr.io/imagicrafter/open-webui:main` with QuantaBase branding
+
+**⚠️ Important**: Wait for build completion before proceeding to production deployment.
+
+#### 9. Deploy to Production (Manual Process)
+
+**GitHub Actions does NOT auto-deploy to your server.** You manually control when production updates:
 
 ```bash
 # SSH to production server
@@ -323,18 +335,11 @@ ssh user@your-production-server
 # Navigate to deployment directory
 cd /path/to/open-webui
 
-# Pull from main branch
+# Pull latest code (for scripts and configurations)
 git pull origin main
-```
 
-#### 9. Build Production Image
-
-```bash
-# Build production image from updated code
-docker build -t ghcr.io/imagicrafter/open-webui:main .
-
-# Or pull from GitHub Container Registry if auto-build is set up
-# docker pull ghcr.io/imagicrafter/open-webui:main
+# Pull the new custom image that GitHub Actions just built
+docker pull ghcr.io/imagicrafter/open-webui:main
 ```
 
 #### 10. Restart Client Containers
@@ -349,6 +354,25 @@ docker ps -a --filter "name=openwebui-" --format "{{.Names}}" | xargs docker rm
 ./mt/manage-clients.sh list
 docker images ghcr.io/imagicrafter/open-webui
 ```
+
+### Deployment Flow Summary
+
+**🔄 What's Automated:**
+- ✅ **Image Building**: GitHub Actions builds custom image on push to main
+- ✅ **Image Publishing**: Pushes to `ghcr.io/imagicrafter/open-webui:main`
+- ✅ **Multi-platform**: Supports both amd64 and arm64 architectures
+
+**👤 What You Control:**
+- ✅ **When to Deploy**: You decide when to update production
+- ✅ **Which Clients**: Choose which clients to update
+- ✅ **Rollback**: Keep previous images for quick rollback if needed
+
+**🚫 What's NOT Automated:**
+- ❌ **Production Deployment**: No automatic server access (security)
+- ❌ **Client Updates**: No automatic container restarts
+- ❌ **Configuration Changes**: Manual git pull required
+
+This gives you **maximum control** over production deployments while automating the heavy lifting of image builds.
 
 #### 4. GitHub Actions (Automatic Image Build)
 

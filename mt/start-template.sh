@@ -70,7 +70,7 @@ docker run -d \
     -e USER_PERMISSIONS_CHAT_CONTROLS=false \
     -v ${VOLUME_NAME}:/app/backend/data \
     --restart unless-stopped \
-    ghcr.io/open-webui/open-webui:main
+    ghcr.io/imagicrafter/open-webui:main
 
 if [ $? -eq 0 ]; then
     echo "✅ ${CLIENT_NAME} Open WebUI started successfully!"
