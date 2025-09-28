@@ -413,9 +413,6 @@ from open_webui.config import (
     AppConfig,
     reset_config,
 )
-
-print(f"DEBUG: DEFAULT_GROUP_ID after import: {DEFAULT_GROUP_ID}")
-print(f"DEBUG: DEFAULT_GROUP_ID type: {type(DEFAULT_GROUP_ID)}")
 from open_webui.env import (
     LICENSE_KEY,
     AUDIT_EXCLUDED_PATHS,
@@ -731,9 +728,7 @@ app.state.config.ADMIN_EMAIL = ADMIN_EMAIL
 app.state.config.DEFAULT_MODELS = DEFAULT_MODELS
 app.state.config.DEFAULT_PROMPT_SUGGESTIONS = DEFAULT_PROMPT_SUGGESTIONS
 app.state.config.DEFAULT_USER_ROLE = DEFAULT_USER_ROLE
-print(f"DEBUG: About to assign DEFAULT_GROUP_ID: {DEFAULT_GROUP_ID}")
 app.state.config.DEFAULT_GROUP_ID = DEFAULT_GROUP_ID
-print(f"DEBUG: After assignment: {app.state.config.DEFAULT_GROUP_ID}")
 
 app.state.config.PENDING_USER_OVERLAY_CONTENT = PENDING_USER_OVERLAY_CONTENT
 app.state.config.PENDING_USER_OVERLAY_TITLE = PENDING_USER_OVERLAY_TITLE
