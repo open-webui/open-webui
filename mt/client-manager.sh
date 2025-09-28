@@ -178,9 +178,9 @@ create_new_deployment() {
             echo "✅ Deployment created successfully!"
             echo
             echo "Next steps:"
-            echo "1. Add nginx configuration for domain: $domain"
-            echo "2. Update Google OAuth redirect URI: https://$domain/oauth/google/callback"
-            echo "3. Configure DNS for: $domain"
+            echo "1. Add nginx configuration for domain: $resolved_domain"
+            echo "2. Update Google OAuth redirect URI: $redirect_uri"
+            echo "3. Configure DNS for: $resolved_domain"
             echo
             echo "Access at: http://localhost:$port"
         else
@@ -217,7 +217,18 @@ manage_deployment_menu() {
 
         for i in "${!clients[@]}"; do
             status=$(docker ps -a --filter "name=openwebui-${clients[$i]}" --format "{{.Status}}")
-            echo "$((i+1))) ${clients[$i]} ($status)"
+
+            # Try to get the redirect URI from container environment to extract domain
+            redirect_uri=$(docker exec "openwebui-${clients[$i]}" env 2>/dev/null | grep "GOOGLE_REDIRECT_URI=" | cut -d'=' -f2- 2>/dev/null || echo "")
+
+            if [[ -n "$redirect_uri" ]]; then
+                # Extract domain from redirect URI (remove http/https and /oauth/google/callback)
+                domain=$(echo "$redirect_uri" | sed 's|https\?://||' | sed 's|/oauth/google/callback||')
+                echo "$((i+1))) ${clients[$i]} → $domain ($status)"
+            else
+                # Fallback if we can't get the redirect URI
+                echo "$((i+1))) ${clients[$i]} ($status)"
+            fi
         done
 
         echo "$((${#clients[@]}+1))) Return to main menu"
@@ -340,7 +351,35 @@ generate_nginx_config() {
 
     for i in "${!clients[@]}"; do
         ports=$(docker ps -a --filter "name=openwebui-${clients[$i]}" --format "{{.Ports}}" | grep -o '0.0.0.0:[0-9]*' | cut -d: -f2)
-        echo "$((i+1))) ${clients[$i]} (port: $ports)"
+
+        # Try to get the redirect URI from container environment to extract domain
+        redirect_uri=$(docker exec "openwebui-${clients[$i]}" env 2>/dev/null | grep "GOOGLE_REDIRECT_URI=" | cut -d'=' -f2- 2>/dev/null || echo "")
+
+        # Check if nginx configuration exists
+        # TODO: This section currently assumes nginx is not containerized.
+        # Future enhancement needed to support dockerized nginx deployments.
+        nginx_status="❌ Not configured"
+
+        # Extract domain for config filename check
+        config_domain=""
+        if [[ -n "$redirect_uri" ]]; then
+            config_domain=$(echo "$redirect_uri" | sed 's|https\?://||' | sed 's|/oauth/google/callback||')
+        fi
+
+        if [[ -n "$config_domain" ]] && [ -f "/etc/nginx/sites-available/${config_domain}" ]; then
+            nginx_status="✅ Configured"
+        elif [[ -n "$config_domain" ]] && [ -f "${SCRIPT_DIR}/nginx/sites-available/${config_domain}" ]; then
+            nginx_status="🔧 Local config"
+        fi
+
+        if [[ -n "$redirect_uri" ]]; then
+            # Extract domain from redirect URI
+            domain=$(echo "$redirect_uri" | sed 's|https\?://||' | sed 's|/oauth/google/callback||')
+            echo "$((i+1))) ${clients[$i]} → $domain (port: $ports) [$nginx_status]"
+        else
+            # Fallback if we can't get the redirect URI
+            echo "$((i+1))) ${clients[$i]} (port: $ports) [$nginx_status]"
+        fi
     done
 
     echo "$((${#clients[@]}+1))) Return to main menu"
@@ -363,16 +402,15 @@ generate_nginx_config() {
 
         case "$config_type" in
             1)
-                echo -n "Enter production domain (e.g., ${client_name}.yourdomain.com): "
+                # Auto-detect production domain
+                default_production_domain="${client_name}.quantabase.io"
+                echo -n "Production domain (press Enter for '${default_production_domain}'): "
                 read domain
                 if [[ -z "$domain" ]]; then
-                    echo "❌ Domain cannot be empty."
-                    echo "Press Enter to continue..."
-                    read
-                    return
+                    domain="$default_production_domain"
                 fi
                 template_file="${SCRIPT_DIR}/nginx-template.conf"
-                config_file="/tmp/${client_name}-nginx.conf"
+                config_file="/tmp/${domain}-nginx.conf"
                 setup_type="production"
                 ;;
             2)
@@ -382,7 +420,7 @@ generate_nginx_config() {
                     domain="localhost"
                 fi
                 template_file="${SCRIPT_DIR}/nginx-template-local.conf"
-                config_file="${SCRIPT_DIR}/nginx/sites-available/${client_name}"
+                config_file="${SCRIPT_DIR}/nginx/sites-available/${domain}"
                 setup_type="local"
                 ;;
             *)
@@ -401,15 +439,26 @@ generate_nginx_config() {
         echo
 
         if [ "$setup_type" = "production" ]; then
+            # Auto-detect current server info
+            # TODO: This section provides both local and remote deployment options.
+            # Future enhancement: Auto-detect deployment context and show only relevant commands.
+            current_user=$(whoami)
+            current_hostname=$(hostname)
+
             echo "╔════════════════════════════════════════╗"
             echo "║         Production Setup Steps        ║"
             echo "╚════════════════════════════════════════╝"
             echo
             echo "1. Copy config to server:"
-            echo "   scp $config_file user@server:/etc/nginx/sites-available/${client_name}"
+            echo "   # For local deployment (script running on production server):"
+            echo "   sudo cp $config_file /etc/nginx/sites-available/${domain}"
+            echo
+            echo "   # For remote deployment (script running on local machine):"
+            echo "   scp -o PreferredAuthentications=password $config_file ${current_user}@${current_hostname}:/etc/nginx/sites-available/${domain}"
+            echo "   # OR with SSH keys: scp $config_file ${current_user}@${current_hostname}:/etc/nginx/sites-available/${domain}"
             echo
             echo "2. Enable the site:"
-            echo "   sudo ln -s /etc/nginx/sites-available/${client_name} /etc/nginx/sites-enabled/"
+            echo "   sudo ln -s /etc/nginx/sites-available/${domain} /etc/nginx/sites-enabled/"
             echo
             echo "3. Test nginx config:"
             echo "   sudo nginx -t"
@@ -428,7 +477,7 @@ generate_nginx_config() {
             echo "╚════════════════════════════════════════╝"
             echo
             echo "1. Enable the site:"
-            echo "   cp ${SCRIPT_DIR}/nginx/sites-available/${client_name} ${SCRIPT_DIR}/nginx/sites-enabled/"
+            echo "   cp ${SCRIPT_DIR}/nginx/sites-available/${domain} ${SCRIPT_DIR}/nginx/sites-enabled/"
             echo
             echo "2. Start nginx container:"
             echo "   docker-compose -f docker-compose.nginx.yml up -d"
@@ -468,7 +517,36 @@ generate_nginx_config() {
 list_clients() {
     echo "Open WebUI Client Containers:"
     echo "============================="
-    docker ps -a --filter "name=openwebui-" --format "table {{.Names}}\t{{.Status}}\t{{.Ports}}"
+
+    # Get all openwebui containers
+    containers=($(docker ps -a --filter "name=openwebui-" --format "{{.Names}}"))
+
+    if [ ${#containers[@]} -eq 0 ]; then
+        echo "No Open WebUI deployments found."
+        return
+    fi
+
+    # Header
+    printf "%-25s %-30s %-20s %s\n" "CLIENT" "DOMAIN" "STATUS" "PORTS"
+    printf "%-25s %-30s %-20s %s\n" "------" "------" "------" "-----"
+
+    for container in "${containers[@]}"; do
+        client_name=$(echo "$container" | sed 's/openwebui-//')
+        status=$(docker ps -a --filter "name=${container}" --format "{{.Status}}")
+        ports=$(docker ps -a --filter "name=${container}" --format "{{.Ports}}")
+
+        # Try to get the redirect URI from container environment to extract domain
+        redirect_uri=$(docker exec "$container" env 2>/dev/null | grep "GOOGLE_REDIRECT_URI=" | cut -d'=' -f2- 2>/dev/null || echo "")
+
+        if [[ -n "$redirect_uri" ]]; then
+            # Extract domain from redirect URI
+            domain=$(echo "$redirect_uri" | sed 's|https\?://||' | sed 's|/oauth/google/callback||')
+        else
+            domain="unknown"
+        fi
+
+        printf "%-25s %-30s %-20s %s\n" "$client_name" "$domain" "$status" "$ports"
+    done
 }
 
 stop_all() {
