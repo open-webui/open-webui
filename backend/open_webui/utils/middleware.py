@@ -2692,7 +2692,7 @@ async def process_chat_response(
                         tool_result_files = []
                         if isinstance(tool_result, list):
                             if tool.get("type") == "mcp":  # MCP
-                                response = []
+                                tool_response = []
                                 for item in tool_result:
                                     if isinstance(item, dict):
                                         if item.get("type") == "text":
@@ -2702,7 +2702,7 @@ async def process_chat_response(
                                                     text = json.loads(text)
                                                 except json.JSONDecodeError:
                                                     pass
-                                            response.append(text)
+                                            tool_response.append(text)
                                         elif item.get("type") in ["image", "audio"]:
                                             file_url = get_file_url_from_base64(
                                                 request,
@@ -2729,7 +2729,9 @@ async def process_chat_response(
                                                 }
                                             )
                                 tool_result = (
-                                    response[0] if len(response) == 1 else response
+                                    tool_response[0]
+                                    if len(tool_response) == 1
+                                    else tool_response
                                 )
                             else:  # OpenAPI
                                 for item in tool_result:
