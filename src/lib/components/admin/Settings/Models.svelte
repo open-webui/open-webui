@@ -16,6 +16,7 @@
 	} from '$lib/apis/models';
 	import { copyToClipboard } from '$lib/utils';
 	import { page } from '$app/stores';
+	import { goto } from '$app/navigation';
 
 	import { getModels } from '$lib/apis';
 	import Search from '$lib/components/icons/Search.svelte';
@@ -196,6 +197,16 @@
 		} else {
 			toast.error($i18n.t('Failed to copy link'));
 		}
+	};
+
+	const cloneAsWorkspaceModelHandler = async (model) => {
+		const modelData = { ...model };
+		modelData.name = `${model.name} Copy`;
+		modelData.base_model_id = model.id;
+		delete modelData.id;
+
+		const modelStr = JSON.stringify(modelData);
+		goto(`/workspace/models/create?model=${encodeURIComponent(modelStr)}`);
 	};
 
 	const exportModelHandler = async (model) => {
@@ -417,6 +428,9 @@
 									}}
 									copyLinkHandler={() => {
 										copyLinkHandler(model);
+									}}
+									cloneAsWorkspaceModelHandler={() => {
+										cloneAsWorkspaceModelHandler(model);
 									}}
 									onClose={() => {}}
 								>
