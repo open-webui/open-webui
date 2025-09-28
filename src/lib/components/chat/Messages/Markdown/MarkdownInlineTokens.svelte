@@ -63,6 +63,8 @@
 		></iframe>
 	{:else if token.type === 'mention'}
 		<MentionToken {token} />
+	{:else if token.type === 'footnoteRef'}
+		{@html token.html || ''}
 	{:else if token.type === 'text'}
 		<TextToken {token} {done} />
 	{/if}
