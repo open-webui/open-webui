@@ -4,7 +4,6 @@
 	const i18n = getContext('i18n');
 	import Spinner from '$lib/components/common/Spinner.svelte';
 	import Modal from '$lib/components/common/Modal.svelte';
-    import Checkbox from '$lib/components/common/Checkbox.svelte';
 	import XMark from '$lib/components/icons/XMark.svelte';
 	export let onSubmit: Function = () => {};
 	export let show = false;
@@ -74,20 +73,41 @@
                             <input
                                 id="group-name"
                                 type="text"
-                                class="w-full mt-1 bg-transparent dark:text-white rounded-lg"
+                                class="w-full mt-1 bg-transparent dark:text-white rounded-lg border border-gray-300 dark:border-gray-600 px-3 py-2"
                                 placeholder={i18n?.t ? i18n.t('Enter group name') : 'Enter group name'}
                                 bind:value={name}
                                 required
                             />
                         </div>
 
-                        <div class="flex flex-col space-y-2">
+                        <div class="flex flex-col space-y-3">
                             <label class="text-sm font-medium">{i18n?.t ? i18n.t('Clone Options') : 'Clone Options'}</label>
-                            <Checkbox bind:checked={clone_members} label={i18n?.t ? i18n.t('Clone group members') : 'Clone group members'} />
-                            <Checkbox bind:checked={clone_settings} label={i18n?.t ? i18n.t('Clone group settings') : 'Clone group settings'} />
+                            
+                            <div class="flex items-center space-x-3">
+                                <input
+                                    id="clone-members"
+                                    type="checkbox"
+                                    bind:checked={clone_members}
+                                    class="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500 dark:focus:ring-blue-600 dark:ring-offset-gray-800 focus:ring-2 dark:bg-gray-700 dark:border-gray-600"
+                                />
+                                <label for="clone-members" class="text-sm font-medium cursor-pointer">
+                                    {i18n?.t ? i18n.t('Clone group members') : 'Clone group members'}
+                                </label>
+                            </div>
+                            
+                            <div class="flex items-center space-x-3">
+                                <input
+                                    id="clone-settings"
+                                    type="checkbox"
+                                    bind:checked={clone_settings}
+                                    class="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500 dark:focus:ring-blue-600 dark:ring-offset-gray-800 focus:ring-2 dark:bg-gray-700 dark:border-gray-600"
+                                />
+                                <label for="clone-settings" class="text-sm font-medium cursor-pointer">
+                                    {i18n?.t ? i18n.t('Clone group settings') : 'Clone group settings'}
+                                </label>
+                            </div>
                         </div>
                     </div>
-
 
 					<div class="flex justify-end pt-3 text-sm font-medium gap-1.5">
 						<button
