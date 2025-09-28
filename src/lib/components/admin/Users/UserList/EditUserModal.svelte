@@ -150,7 +150,7 @@
 					}}
 				>
 					<div class=" flex items-center rounded-md px-5 py-2 w-full">
-						<div class="flex flex-col self-start group mr-5">
+						<div class="flex flex-col self-start group mr-8 min-w-0 flex-shrink-0 w-32">
 							<div class="self-center flex">
 								<button
 									class="relative rounded-full dark:bg-gray-700"
@@ -164,7 +164,7 @@
 											? _user.profile_image_url
 											: generateInitialsImage(_user.name)}
 										alt="profile"
-										class="rounded-full size-14 md:size-14 object-cover"
+										class="rounded-full size-16 md:size-16 object-cover"
 									/>
 
 									<div class="absolute bottom-0 right-0 opacity-0 group-hover:opacity-100 transition">
@@ -220,7 +220,7 @@
 							</div>
 						</div>
 
-						<div class="overflow-hidden w-full">
+						<div class="overflow-hidden flex-1 ml-4">
 							<div class=" self-center capitalize font-semibold truncate">{selectedUser.name}</div>
 
 							<div class="text-xs text-gray-500">
@@ -239,7 +239,7 @@
 							{/if}
 
 							{#if userGroups}
-								<div class="flex flex-wrap gap-1 my-0.5 -mx-1">
+								<div class="flex flex-wrap gap-1 my-0.5 mr-4">
 									{#each userGroups as userGroup}
 										<span
 											class="px-2 py-0.5 rounded-full bg-green-500/20 text-green-700 dark:text-green-200 text-xs"
