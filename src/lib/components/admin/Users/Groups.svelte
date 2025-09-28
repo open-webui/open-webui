@@ -24,7 +24,7 @@
 	import GroupItem from './Groups/GroupItem.svelte';
 	import AddGroupModal from './Groups/AddGroupModal.svelte';
 	import { createNewGroup, getGroups } from '$lib/apis/groups';
-	import { getAllUsers, updateUserDefaultPermissions } from '$lib/apis/users';
+	import { getUserDefaultPermissions, getAllUsers, updateUserDefaultPermissions } from '$lib/apis/users';
 
 	const i18n = getContext('i18n');
 
