@@ -272,10 +272,11 @@ manage_single_deployment() {
         echo "4) View logs"
         echo "5) Show Cloudflare DNS configuration"
         echo "6) Update OAuth allowed domains"
-        echo "7) Remove deployment (DANGER)"
-        echo "8) Return to deployment list"
+        echo "7) Change domain/client (preserve data)"
+        echo "8) Remove deployment (DANGER)"
+        echo "9) Return to deployment list"
         echo
-        echo -n "Select action (1-8): "
+        echo -n "Select action (1-9): "
         read action
 
         case "$action" in
@@ -459,6 +460,179 @@ manage_single_deployment() {
                 read
                 ;;
             7)
+                # Change domain/client while preserving data
+                echo
+                echo "╔════════════════════════════════════════╗"
+                echo "║    Change Domain/Client (Preserve Data)║"
+                echo "╚════════════════════════════════════════╝"
+                echo
+
+                # Get current configuration
+                current_redirect_uri=$(docker exec "$container_name" env 2>/dev/null | grep "GOOGLE_REDIRECT_URI=" | cut -d'=' -f2- 2>/dev/null || echo "")
+                current_webui_name=$(docker exec "$container_name" env 2>/dev/null | grep "WEBUI_NAME=" | cut -d'=' -f2- 2>/dev/null || echo "")
+                current_port=$(docker ps -a --filter "name=$container_name" --format "{{.Ports}}" | grep -o '0.0.0.0:[0-9]*' | cut -d: -f2)
+
+                if [[ -n "$current_redirect_uri" ]]; then
+                    current_domain=$(echo "$current_redirect_uri" | sed 's|https\?://||' | sed 's|/oauth/google/callback||')
+                    echo "Current domain: $current_domain"
+                else
+                    echo "Current domain: Unable to determine"
+                fi
+                echo "Current port: $current_port"
+                echo "Current WebUI name: $current_webui_name"
+                echo
+
+                # Get new client name
+                echo -n "Enter new client name (lowercase, no spaces): "
+                read new_client_name
+
+                if [[ ! "$new_client_name" =~ ^[a-z0-9-]+$ ]]; then
+                    echo "❌ Invalid client name. Use only lowercase letters, numbers, and hyphens."
+                    echo "Press Enter to continue..."
+                    read
+                    continue
+                fi
+
+                # Check if new client name conflicts with existing deployments
+                if docker ps -a --filter "name=openwebui-${new_client_name}" --format "{{.Names}}" | grep -q "openwebui-${new_client_name}"; then
+                    echo "❌ Client '${new_client_name}' already exists!"
+                    echo "Press Enter to continue..."
+                    read
+                    continue
+                fi
+
+                # Get new domain
+                default_domain="${new_client_name}.quantabase.io"
+                echo -n "Enter new domain (press Enter for '${default_domain}'): "
+                read new_domain
+
+                if [[ -z "$new_domain" ]]; then
+                    new_domain="$default_domain"
+                fi
+
+                # Set new redirect URI based on domain type
+                if [[ "$new_domain" == localhost* ]] || [[ "$new_domain" == 127.0.0.1* ]]; then
+                    new_redirect_uri="http://${new_domain}/oauth/google/callback"
+                    environment="development"
+                else
+                    new_redirect_uri="https://${new_domain}/oauth/google/callback"
+                    environment="production"
+                fi
+
+                new_webui_name="QuantaBase - ${new_client_name}"
+
+                echo
+                echo "╔════════════════════════════════════════╗"
+                echo "║            Change Summary              ║"
+                echo "╚════════════════════════════════════════╝"
+                echo "Old client: $client_name"
+                echo "New client: $new_client_name"
+                echo "Old domain: $current_domain"
+                echo "New domain: $new_domain"
+                echo "New redirect URI: $new_redirect_uri"
+                echo "New WebUI name: $new_webui_name"
+                echo "Port: $current_port (unchanged)"
+                echo
+                echo "⚠️  IMPORTANT: After this change you will need to:"
+                echo "   1. Update nginx configuration for the new domain"
+                echo "   2. Update Google OAuth redirect URI"
+                echo "   3. Configure DNS for the new domain"
+                echo
+                echo "⚠️  This will:"
+                echo "   - Rename the container to: openwebui-${new_client_name}"
+                echo "   - Rename the volume to: openwebui-${new_client_name}-data"
+                echo "   - Preserve ALL chat data and settings"
+                echo "   - Remove old nginx configs (you'll need to recreate)"
+                echo
+                echo -n "Continue with domain/client change? (y/N): "
+                read confirm
+
+                if [[ "$confirm" =~ ^[Yy]$ ]]; then
+                    echo
+                    echo "Changing domain/client..."
+
+                    # Get current allowed domains
+                    current_allowed_domains=$(docker exec "$container_name" env 2>/dev/null | grep "OAUTH_ALLOWED_DOMAINS=" | cut -d'=' -f2- 2>/dev/null || echo "martins.net")
+
+                    # Stop and remove old container
+                    echo "Stopping old container..."
+                    docker stop "$container_name" 2>/dev/null
+                    echo "Removing old container..."
+                    docker rm "$container_name" 2>/dev/null
+
+                    # Rename volume to new client name
+                    old_volume_name="openwebui-${client_name}-data"
+                    new_volume_name="openwebui-${new_client_name}-data"
+                    new_container_name="openwebui-${new_client_name}"
+
+                    echo "Renaming data volume..."
+                    # Create temporary container to rename volume
+                    docker run --rm -v "${old_volume_name}:/old_data" -v "${new_volume_name}:/new_data" alpine sh -c "cp -a /old_data/. /new_data/" 2>/dev/null
+                    if [ $? -eq 0 ]; then
+                        echo "✅ Data volume copied successfully"
+                        # Remove old volume after successful copy
+                        docker volume rm "${old_volume_name}" 2>/dev/null || echo "Note: Old volume cleanup may require manual removal"
+                    else
+                        echo "❌ Volume copy failed. Creating new container with original volume name..."
+                        new_volume_name="$old_volume_name"
+                    fi
+
+                    # Create new container with new name and domain
+                    echo "Creating new container: $new_container_name"
+                    docker run -d \
+                        --name "$new_container_name" \
+                        -p "${current_port}:8080" \
+                        -e GOOGLE_CLIENT_ID=1063776054060-2fa0vn14b7ahi1tmfk49cuio44goosc1.apps.googleusercontent.com \
+                        -e GOOGLE_CLIENT_SECRET=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 \
+                        -e GOOGLE_REDIRECT_URI="$new_redirect_uri" \
+                        -e ENABLE_OAUTH_SIGNUP=true \
+                        -e OAUTH_ALLOWED_DOMAINS="$current_allowed_domains" \
+                        -e OPENID_PROVIDER_URL=https://accounts.google.com/.well-known/openid-configuration \
+                        -e WEBUI_NAME="$new_webui_name" \
+                        -e USER_PERMISSIONS_CHAT_CONTROLS=false \
+                        -v "${new_volume_name}:/app/backend/data" \
+                        --restart unless-stopped \
+                        ghcr.io/imagicrafter/open-webui:main
+
+                    if [ $? -eq 0 ]; then
+                        echo "✅ Container recreated successfully!"
+                        echo
+                        echo "╔════════════════════════════════════════╗"
+                        echo "║             Next Steps                 ║"
+                        echo "╚════════════════════════════════════════╝"
+                        echo "1. Generate new nginx config:"
+                        echo "   Use option 4 (Generate nginx Configuration)"
+                        echo
+                        echo "2. Update Google OAuth Console:"
+                        echo "   New redirect URI: $new_redirect_uri"
+                        echo
+                        echo "3. Configure DNS:"
+                        echo "   Point $new_domain to this server"
+                        echo
+                        echo "4. Remove old nginx config if it exists:"
+                        echo "   sudo rm /etc/nginx/sites-enabled/$current_domain"
+                        echo "   sudo rm /etc/nginx/sites-available/$current_domain"
+                        echo
+                        echo "The deployment is now accessible as '$new_client_name' in the menu."
+                        echo "All your chat data and settings have been preserved!"
+
+                        # Since we changed the client name, we need to exit this menu
+                        # as the container name has changed
+                        echo
+                        echo "Press Enter to return to main menu..."
+                        read
+                        return
+                    else
+                        echo "❌ Failed to create new container. Check Docker logs."
+                    fi
+                else
+                    echo "Domain/client change cancelled."
+                fi
+
+                echo "Press Enter to continue..."
+                read
+                ;;
+            8)
                 echo "⚠️  WARNING: This will permanently remove the deployment!"
                 echo "Data volume will be preserved but container will be deleted."
                 echo -n "Type 'DELETE' to confirm: "
@@ -477,7 +651,7 @@ manage_single_deployment() {
                     read
                 fi
                 ;;
-            8)
+            9)
                 return
                 ;;
             *)
