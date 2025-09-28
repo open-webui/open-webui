@@ -21,6 +21,7 @@
 	let showEdit = false;
 	let showClone = false;
 	let showActionMenu = false;
+
 	const updateHandler = async (_group) => {
 		const res = await updateGroupById(localStorage.token, group.id, _group).catch((error) => {
 			toast.error(`${error}`);
@@ -31,6 +32,7 @@
 			setGroups();
 		}
 	};
+
 	const cloneHandler = async (clone_data) => {
 		const res = await cloneGroupById(localStorage.token, group.id, clone_data).catch((error) => {
 			toast.error(`${error}`);
@@ -41,6 +43,7 @@
 			setGroups();
 		}
 	};
+
 	const deleteHandler = async () => {
 		const res = await deleteGroupById(localStorage.token, group.id).catch((error) => {
 			toast.error(`${error}`);
@@ -52,23 +55,37 @@
 		}
 	};
 
-	// Handle dropdown menu actions
+	// Handle dropdown menu actions with forced state updates
 	const handleEditClick = (e) => {
+		e.preventDefault();
 		e.stopPropagation();
 		showEdit = true;
+		// Force close the dropdown
 		showActionMenu = false;
+		// Use setTimeout to ensure state update
+		setTimeout(() => { showActionMenu = false; }, 0);
 	};
 
 	const handleCloneClick = (e) => {
+		e.preventDefault();
 		e.stopPropagation();
 		showClone = true;
+		// Force close the dropdown
 		showActionMenu = false;
+		// Use setTimeout to ensure state update
+		setTimeout(() => { showActionMenu = false; }, 0);
 	};
 
 	const handleMenuToggle = (e) => {
+		e.preventDefault();
 		e.stopPropagation();
 		showActionMenu = !showActionMenu;
 	};
+
+	// Force close dropdown when clicking outside or when other modals open
+	$: if (showEdit || showClone) {
+		showActionMenu = false;
+	}
 
 	onMount(() => {
 		const groupId = $page.url.searchParams.get('id');
@@ -111,15 +128,16 @@
 			<User className="size-3.5" />
 		</div>
 
-		<div on:click={(e) => e.stopPropagation()}>
-			<Dropdown bind:show={showActionMenu} side="left" align="start">
+		<div>
+			<Dropdown bind:show={showActionMenu} side="left" align="start" closeOnClick={true}>
 				<button
 					class="rounded-lg p-1 hover:bg-gray-100 dark:hover:bg-gray-850 transition"
 					on:click={handleMenuToggle}
+					slot="trigger"
 				>
 					<EllipsisHorizontal className="size-3.5" />
 				</button>
-				
+
 				<div slot="content">
 					<div
 						class="w-full max-w-[130px] rounded-lg p-1 border border-gray-200 dark:border-gray-800 z-50 bg-white dark:bg-gray-900 text-black dark:text-white shadow-lg"
