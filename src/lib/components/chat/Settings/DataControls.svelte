@@ -67,7 +67,7 @@
 					chat: chat.chat,
 					meta: chat.meta ?? {},
 					pinned: false,
-					folder_id: null,
+					folder_id: chat?.folder_id ?? null,
 					created_at: chat?.created_at ?? null,
 					updated_at: chat?.updated_at ?? null
 				};
@@ -77,7 +77,7 @@
 					chat: chat,
 					meta: {},
 					pinned: false,
-					folder_id: null
+					folder_id: chat?.folder_id ?? null
 				};
 			}
 		});
