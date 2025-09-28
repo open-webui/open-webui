@@ -36,7 +36,13 @@
 	let profileImageInputElement: HTMLInputElement;
 
 	const submitHandler = async () => {
-		const res = await updateUserById(localStorage.token, selectedUser.id, _user).catch((error) => {
+		// Create a copy of _user but exclude password if it's empty
+		const updateData = { ..._user };
+		if (!_user.password || _user.password.trim() === '') {
+			delete updateData.password;
+		}
+
+		const res = await updateUserById(localStorage.token, selectedUser.id, updateData).catch((error) => {
 			toast.error(`${error}`);
 		});
 
@@ -315,6 +321,7 @@
 											type="password"
 											placeholder={$i18n.t('Enter New Password')}
 											bind:value={_user.password}
+											required={false}
 										/>
 									</div>
 								</div>
