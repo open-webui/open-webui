@@ -101,37 +101,41 @@ create_new_deployment() {
     fi
     echo "✅ Port $port is available"
 
+    # Determine what auto-detect would use (for display in prompt)
+    if [ -f "/etc/hostname" ] && grep -q "droplet\|server\|prod\|ubuntu\|digital" /etc/hostname 2>/dev/null; then
+        # Production environment
+        default_domain="${client_name}.quantabase.io"
+    # Check for other production indicators
+    elif [ -d "/etc/nginx/sites-available" ] && [ -f "/etc/nginx/sites-available/quantabase" ]; then
+        # Has nginx and quantabase config = production server
+        default_domain="${client_name}.quantabase.io"
+    # Check for cloud provider metadata
+    elif curl -s --max-time 2 http://169.254.169.254/metadata/v1/ >/dev/null 2>&1; then
+        # Digital Ocean metadata service available = cloud server
+        default_domain="${client_name}.quantabase.io"
+    else
+        # Development environment
+        default_domain="localhost:${port}"
+    fi
+
     # Get domain (optional - auto-detect if empty)
-    echo -n "Enter domain (press Enter to auto-detect): "
+    echo -n "Enter domain (press Enter for '${default_domain}'): "
     read domain
 
     # Resolve domain for display
     if [[ -z "$domain" ]]; then
-        # Auto-detect environment logic (same as start-template.sh)
-        if [ -f "/etc/hostname" ] && grep -q "droplet\|server\|prod\|ubuntu\|digital" /etc/hostname 2>/dev/null; then
-            # Production environment
-            resolved_domain="${client_name}.quantabase.io"
-            redirect_uri="https://${resolved_domain}/oauth/google/callback"
-            environment="production"
-        # Check for other production indicators
-        elif [ -d "/etc/nginx/sites-available" ] && [ -f "/etc/nginx/sites-available/quantabase" ]; then
-            # Has nginx and quantabase config = production server
-            resolved_domain="${client_name}.quantabase.io"
-            redirect_uri="https://${resolved_domain}/oauth/google/callback"
-            environment="production"
-        # Check for cloud provider metadata
-        elif curl -s --max-time 2 http://169.254.169.254/metadata/v1/ >/dev/null 2>&1; then
-            # Digital Ocean metadata service available = cloud server
-            resolved_domain="${client_name}.quantabase.io"
-            redirect_uri="https://${resolved_domain}/oauth/google/callback"
-            environment="production"
-        else
-            # Development environment
-            resolved_domain="localhost:${port}"
+        # Use the default we calculated above
+        resolved_domain="$default_domain"
+        domain="auto-detect"
+
+        # Set redirect URI and environment based on domain type
+        if [[ "$resolved_domain" == localhost* ]] || [[ "$resolved_domain" == 127.0.0.1* ]]; then
             redirect_uri="http://127.0.0.1:${port}/oauth/google/callback"
             environment="development"
+        else
+            redirect_uri="https://${resolved_domain}/oauth/google/callback"
+            environment="production"
         fi
-        domain="auto-detect"
     else
         resolved_domain="$domain"
         if [[ "$domain" == localhost* ]] || [[ "$domain" == 127.0.0.1* ]]; then
