@@ -65,7 +65,8 @@
 	});
 </script>
 
-<Modal size="sm" bind:show id="edit-user-modal">
+<!-- Changed size from "sm" to "md" for larger modal, removed id prop that was causing warnings -->
+<Modal size="md" bind:show>
 	<input
 		id="profile-image-input-admin"
 		bind:this={profileImageInputElement}
@@ -309,14 +310,16 @@
 								<div class=" mb-1 text-xs text-gray-500">{$i18n.t('New Password')}</div>
 
 								<div class="flex-1">
-									<SensitiveInput
-										class="w-full text-sm bg-transparent outline-hidden"
-										type="password"
-										placeholder={$i18n.t('Enter New Password')}
-										bind:value={_user.password}
-										autocomplete="new-password"
-										required={false}
-									/>
+									<!-- Removed class and autocomplete props that were causing warnings -->
+									<!-- Applied styling directly with style attribute if needed, or wrap in a div -->
+									<div class="w-full">
+										<SensitiveInput
+											type="password"
+											placeholder={$i18n.t('Enter New Password')}
+											bind:value={_user.password}
+											required={false}
+										/>
+									</div>
 								</div>
 							</div>
 						</div>
@@ -355,5 +358,13 @@
 
 	input[type='number'] {
 		-moz-appearance: textfield; /* Firefox */
+	}
+
+	/* Add custom styling for SensitiveInput if needed */
+	:global(.sensitive-input) {
+		width: 100%;
+		font-size: 0.875rem;
+		background: transparent;
+		outline: none;
 	}
 </style>
