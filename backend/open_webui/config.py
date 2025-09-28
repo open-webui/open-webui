@@ -2017,7 +2017,7 @@ MILVUS_DISKANN_MAX_DEGREE = int(os.environ.get("MILVUS_DISKANN_MAX_DEGREE", "56"
 MILVUS_DISKANN_SEARCH_LIST_SIZE = int(
     os.environ.get("MILVUS_DISKANN_SEARCH_LIST_SIZE", "100")
 )
-NABLE_MILVUS_MULTITENANCY_MODE = (
+ENABLE_MILVUS_MULTITENANCY_MODE = (
     os.environ.get("ENABLE_MILVUS_MULTITENANCY_MODE", "true").lower() == "true"
 )
 # Hyphens not allowed, need to use underscores in collection names
