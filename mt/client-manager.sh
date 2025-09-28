@@ -270,10 +270,11 @@ manage_single_deployment() {
         echo "2) Stop deployment"
         echo "3) Restart deployment"
         echo "4) View logs"
-        echo "5) Remove deployment (DANGER)"
-        echo "6) Return to deployment list"
+        echo "5) Show Cloudflare DNS configuration"
+        echo "6) Remove deployment (DANGER)"
+        echo "7) Return to deployment list"
         echo
-        echo -n "Select action (1-6): "
+        echo -n "Select action (1-7): "
         read action
 
         case "$action" in
@@ -302,6 +303,47 @@ manage_single_deployment() {
                 docker logs -f "$container_name"
                 ;;
             5)
+                # Show Cloudflare configuration
+                # Get domain from container environment
+                redirect_uri=$(docker exec "$container_name" env 2>/dev/null | grep "GOOGLE_REDIRECT_URI=" | cut -d'=' -f2- 2>/dev/null || echo "")
+                if [[ -n "$redirect_uri" ]]; then
+                    domain=$(echo "$redirect_uri" | sed 's|https\?://||' | sed 's|/oauth/google/callback||')
+                    subdomain=$(echo "$domain" | cut -d'.' -f1)
+                    base_domain=$(echo "$domain" | cut -d'.' -f2-)
+                    server_ip=$(curl -s ifconfig.me 2>/dev/null || echo "YOUR_SERVER_IP")
+
+                    echo
+                    echo "╔════════════════════════════════════════╗"
+                    echo "║      Cloudflare DNS Configuration     ║"
+                    echo "╚════════════════════════════════════════╝"
+                    echo
+                    echo "Domain: $domain"
+                    echo "Server IP: $server_ip"
+                    echo
+                    echo "1. Go to Cloudflare Dashboard"
+                    echo "   → Select domain: $base_domain"
+                    echo "   → Go to DNS → Records"
+                    echo
+                    echo "2. Create DNS Record:"
+                    echo "   Type: A"
+                    echo "   Name: $subdomain"
+                    echo "   IPv4 address: $server_ip"
+                    echo "   Proxy status: Proxied (orange cloud) ✓"
+                    echo
+                    echo "3. SSL/TLS Configuration:"
+                    echo "   → Go to SSL/TLS → Overview"
+                    echo "   → Set encryption mode: Full (strict)"
+                    echo
+                    echo "4. Wait for DNS propagation (1-5 minutes)"
+                    echo "   Test with: nslookup $domain"
+                    echo
+                else
+                    echo "❌ Could not determine domain for this deployment"
+                fi
+                echo "Press Enter to continue..."
+                read
+                ;;
+            6)
                 echo "⚠️  WARNING: This will permanently remove the deployment!"
                 echo "Data volume will be preserved but container will be deleted."
                 echo -n "Type 'DELETE' to confirm: "
@@ -320,7 +362,7 @@ manage_single_deployment() {
                     read
                 fi
                 ;;
-            6)
+            7)
                 return
                 ;;
             *)
@@ -460,16 +502,21 @@ generate_nginx_config() {
             echo "2. Enable the site:"
             echo "   sudo ln -s /etc/nginx/sites-available/${domain} /etc/nginx/sites-enabled/"
             echo
-            echo "3. Test nginx config:"
+            echo "3. Configure DNS (Cloudflare):"
+            echo "   - Create A record: ${domain} → $(curl -s ifconfig.me 2>/dev/null || echo 'YOUR_SERVER_IP')"
+            echo "   - Wait for DNS propagation (1-5 minutes)"
+            echo
+            echo "4. Test nginx config:"
             echo "   sudo nginx -t"
             echo
-            echo "4. Generate SSL certificate:"
+            echo "5. Generate SSL certificate:"
             echo "   sudo certbot --nginx -d ${domain}"
+            echo "   (Certbot will automatically modify nginx config for HTTPS)"
             echo
-            echo "5. Uncomment SSL lines in config file and restart:"
-            echo "   sudo systemctl restart nginx"
+            echo "6. Reload nginx configuration:"
+            echo "   sudo systemctl reload nginx"
             echo
-            echo "6. Update Google OAuth with redirect URI:"
+            echo "7. Update Google OAuth with redirect URI:"
             echo "   https://${domain}/oauth/google/callback"
         else
             echo "╔════════════════════════════════════════╗"
