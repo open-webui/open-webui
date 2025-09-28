@@ -2020,7 +2020,8 @@ MILVUS_DISKANN_SEARCH_LIST_SIZE = int(
 NABLE_MILVUS_MULTITENANCY_MODE = (
     os.environ.get("ENABLE_MILVUS_MULTITENANCY_MODE", "true").lower() == "true"
 )
-MILVUS_COLLECTION_PREFIX = os.environ.get("MILVUS_COLLECTION_PREFIX", "open-webui")
+# Hyphens not allowed, need to use underscores in collection names
+MILVUS_COLLECTION_PREFIX = os.environ.get("MILVUS_COLLECTION_PREFIX", "open_webui")
 
 # Qdrant
 QDRANT_URI = os.environ.get("QDRANT_URI", None)
