@@ -66,6 +66,7 @@
 	let chatFadeStreamingText = true;
 	let collapseCodeBlocks = false;
 	let expandDetails = false;
+	let useChatTitleAsTabTitle = true;
 
 	let showFloatingActionButtons = true;
 	let floatingActionButtons = null;
@@ -224,6 +225,7 @@
 		temporaryChatByDefault = $settings?.temporaryChatByDefault ?? false;
 		chatDirection = $settings?.chatDirection ?? 'auto';
 		userLocation = $settings?.userLocation ?? false;
+		useChatTitleAsTabTitle = $settings?.useChatTitleAsTabTitle ?? true;
 
 		notificationSound = $settings?.notificationSound ?? true;
 		notificationSoundAlways = $settings?.notificationSoundAlways ?? false;
@@ -323,6 +325,25 @@
 							bind:state={highContrastMode}
 							on:change={() => {
 								saveSettings({ highContrastMode });
+							}}
+						/>
+					</div>
+				</div>
+			</div>
+
+			<div>
+				<div class=" py-0.5 flex w-full justify-between">
+					<div id="use-chat-title-as-tab-title-label" class=" self-center text-xs">
+						{$i18n.t("Use the chat title as the browser's tab title")}
+					</div>
+
+					<div class="flex items-center gap-2 p-1">
+						<Switch
+							ariaLabelledbyId="use-chat-title-as-tab-title-label"
+							tooltip={true}
+							bind:state={useChatTitleAsTabTitle}
+							on:change={() => {
+								saveSettings({ useChatTitleAsTabTitle });
 							}}
 						/>
 					</div>

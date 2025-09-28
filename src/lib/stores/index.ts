@@ -184,6 +184,7 @@ type Settings = {
 	notificationEnabled?: boolean;
 	highContrastMode?: boolean;
 	title?: TitleSettings;
+	useChatTitleAsTabTitle?: boolean;
 	splitLargeDeltas?: boolean;
 	chatDirection?: 'LTR' | 'RTL' | 'auto';
 	ctrlEnterToSend?: boolean;
