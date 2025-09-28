@@ -383,10 +383,10 @@
 								/>
 							</button>
 						</td>
-						<td class="px-3 py-1 font-medium text-gray-900 dark:text-white w-max">
-							<div class="flex flex-row w-max">
+						<td class="px-3 py-1 font-medium text-gray-900 dark:text-white max-w-48">
+							<div class="flex items-center">
 								<img
-									class=" rounded-full w-6 h-6 object-cover mr-2.5"
+									class="rounded-full w-6 h-6 object-cover mr-2.5 flex-shrink-0"
 									src={user?.profile_image_url?.startsWith(WEBUI_BASE_URL) ||
 									user.profile_image_url.startsWith('https://www.gravatar.com/avatar/') ||
 									user.profile_image_url.startsWith('data:')
@@ -395,7 +395,7 @@
 									alt="user"
 								/>
 
-								<div class=" font-medium self-center">{user.name}</div>
+								<div class="font-medium truncate">{user.name}</div>
 							</div>
 						</td>
 						<td class=" px-3 py-1"> {user.email} </td>

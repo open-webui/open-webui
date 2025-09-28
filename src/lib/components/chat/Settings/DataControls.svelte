@@ -2,14 +2,22 @@
 	import fileSaver from 'file-saver';
 	const { saveAs } = fileSaver;
 
-	import { chats, user, settings, scrollPaginationEnabled, currentChatPage } from '$lib/stores';
+	import {
+		chats,
+		user,
+		settings,
+		scrollPaginationEnabled,
+		currentChatPage,
+		pinnedChats
+	} from '$lib/stores';
 
 	import {
 		archiveAllChats,
 		deleteAllChats,
 		getAllChats,
 		getChatList,
-		importChat
+		importChat,
+		getPinnedChatList
 	} from '$lib/apis/chats';
 	import { getImportOrigin, convertOpenAIChats } from '$lib/utils';
 	import { onMount, getContext } from 'svelte';
@@ -74,6 +82,7 @@
 
 		currentChatPage.set(1);
 		await chats.set(await getChatList(localStorage.token, $currentChatPage));
+		pinnedChats.set(await getPinnedChatList(localStorage.token));
 		scrollPaginationEnabled.set(true);
 	};
 
@@ -92,6 +101,7 @@
 
 		currentChatPage.set(1);
 		await chats.set(await getChatList(localStorage.token, $currentChatPage));
+		pinnedChats.set([]);
 		scrollPaginationEnabled.set(true);
 	};
 

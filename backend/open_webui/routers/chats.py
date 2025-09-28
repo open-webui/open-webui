@@ -218,6 +218,28 @@ async def get_chats_by_folder_id(folder_id: str, user=Depends(get_verified_user)
     ]
 
 
+@router.get("/folder/{folder_id}/list")
+async def get_chat_list_by_folder_id(
+    folder_id: str, page: Optional[int] = 1, user=Depends(get_verified_user)
+):
+    try:
+        limit = 60
+        skip = (page - 1) * limit
+
+        return [
+            {"title": chat.title, "id": chat.id, "updated_at": chat.updated_at}
+            for chat in Chats.get_chats_by_folder_id_and_user_id(
+                folder_id, user.id, skip=skip, limit=limit
+            )
+        ]
+
+    except Exception as e:
+        log.exception(e)
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST, detail=ERROR_MESSAGES.DEFAULT()
+        )
+
+
 ############################
 # GetPinnedChats
 ############################
@@ -337,6 +359,16 @@ async def get_archived_session_user_chat_list(
 @router.post("/archive/all", response_model=bool)
 async def archive_all_chats(user=Depends(get_verified_user)):
     return Chats.archive_all_chats_by_user_id(user.id)
+
+
+############################
+# UnarchiveAllChats
+############################
+
+
+@router.post("/unarchive/all", response_model=bool)
+async def unarchive_all_chats(user=Depends(get_verified_user)):
+    return Chats.unarchive_all_chats_by_user_id(user.id)
 
 
 ############################

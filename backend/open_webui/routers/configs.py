@@ -207,38 +207,39 @@ async def verify_tool_servers_config(
         if form_data.type == "mcp":
             if form_data.auth_type == "oauth_2.1":
                 discovery_urls = get_discovery_urls(form_data.url)
-                async with aiohttp.ClientSession() as session:
-                    async with session.get(
-                        discovery_urls[0]
-                    ) as oauth_server_metadata_response:
-                        if oauth_server_metadata_response.status != 200:
-                            raise HTTPException(
-                                status_code=400,
-                                detail=f"Failed to fetch OAuth 2.1 discovery document from {discovery_urls[0]}",
-                            )
-
-                        try:
-                            oauth_server_metadata = OAuthMetadata.model_validate(
-                                await oauth_server_metadata_response.json()
-                            )
-                            return {
-                                "status": True,
-                                "oauth_server_metadata": oauth_server_metadata.model_dump(
-                                    mode="json"
-                                ),
-                            }
-                        except Exception as e:
-                            log.info(
-                                f"Failed to parse OAuth 2.1 discovery document: {e}"
-                            )
-                            raise HTTPException(
-                                status_code=400,
-                                detail=f"Failed to parse OAuth 2.1 discovery document from {discovery_urls[0]}",
-                            )
+                for discovery_url in discovery_urls:
+                    log.debug(
+                        f"Trying to fetch OAuth 2.1 discovery document from {discovery_url}"
+                    )
+                    async with aiohttp.ClientSession() as session:
+                        async with session.get(
+                            discovery_urls[0]
+                        ) as oauth_server_metadata_response:
+                            if oauth_server_metadata_response.status == 200:
+                                try:
+                                    oauth_server_metadata = (
+                                        OAuthMetadata.model_validate(
+                                            await oauth_server_metadata_response.json()
+                                        )
+                                    )
+                                    return {
+                                        "status": True,
+                                        "oauth_server_metadata": oauth_server_metadata.model_dump(
+                                            mode="json"
+                                        ),
+                                    }
+                                except Exception as e:
+                                    log.info(
+                                        f"Failed to parse OAuth 2.1 discovery document: {e}"
+                                    )
+                                    raise HTTPException(
+                                        status_code=400,
+                                        detail=f"Failed to parse OAuth 2.1 discovery document from {discovery_urls[0]}",
+                                    )
 
                 raise HTTPException(
                     status_code=400,
-                    detail=f"Failed to fetch OAuth 2.1 discovery document from {discovery_urls[0]}",
+                    detail=f"Failed to fetch OAuth 2.1 discovery document from {discovery_urls}",
                 )
             else:
                 try:

@@ -80,7 +80,10 @@
 	let allChatsLoaded = false;
 
 	let showCreateFolderModal = false;
+
 	let folders = {};
+	let folderRegistry = {};
+
 	let newFolderId = null;
 
 	const initFolders = async () => {
@@ -120,6 +123,13 @@
 				folders[folder.parent_id].childrenIds.sort((a, b) => {
 					return folders[b].updated_at - folders[a].updated_at;
 				});
+			}
+		}
+
+		await tick();
+		for (const folderId in folders) {
+			if (folders[folderId] && folders[folderId].is_expanded) {
+				folderRegistry[folderId]?.setFolderItems();
 			}
 		}
 	};
@@ -922,6 +932,7 @@
 						}}
 					>
 						<Folders
+							bind:folderRegistry
 							{folders}
 							{shiftKey}
 							onDelete={(folderId) => {
@@ -981,6 +992,8 @@
 											return null;
 										}
 									);
+
+									folderRegistry[chat.folder_id]?.setFolderItems();
 								}
 
 								if (chat.pinned) {
