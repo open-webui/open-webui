@@ -6,6 +6,7 @@ import logging
 from open_webui.models.users import Users
 from open_webui.models.groups import (
     Groups,
+    GroupCloneForm,
     GroupForm,
     GroupUpdateForm,
     GroupResponse,
@@ -56,6 +57,40 @@ async def create_new_group(form_data: GroupForm, user=Depends(get_admin_user)):
             )
     except Exception as e:
         log.exception(f"Error creating a new group: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=ERROR_MESSAGES.DEFAULT(e),
+        )
+
+
+############################
+# CloneGroupById
+############################
+
+
+@router.post("/id/{id}/clone", response_model=Optional[GroupResponse])
+async def clone_group_by_id(
+    id: str, form_data: GroupCloneForm, user=Depends(get_admin_user)
+):
+    try:
+        if not form_data.clone_members and not form_data.clone_settings:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=ERROR_MESSAGES.DEFAULT(
+                    "At least one of clone_members or clone_settings must be True"
+                ),
+            )
+
+        group = Groups.clone_group(user.id, id, form_data)
+        if group:
+            return group
+        else:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=ERROR_MESSAGES.DEFAULT("Error cloning group"),
+            )
+    except Exception as e:
+        log.exception(f"Error cloning group {id}: {e}")
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=ERROR_MESSAGES.DEFAULT(e),
