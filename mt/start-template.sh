@@ -21,9 +21,22 @@ VOLUME_NAME="openwebui-${CLIENT_NAME}-data"
 # Auto-detect environment if domain not provided
 if [ -z "$DOMAIN" ]; then
     # Check if we're in a production environment
-    if [ -f "/etc/hostname" ] && grep -q "droplet\|server\|prod" /etc/hostname 2>/dev/null; then
+    # Multiple ways to detect production
+    if [ -f "/etc/hostname" ] && grep -q "droplet\|server\|prod\|ubuntu\|digital" /etc/hostname 2>/dev/null; then
         # Production environment - use production domain
-        DOMAIN="${CLIENT_NAME}.yourdomain.com"
+        DOMAIN="${CLIENT_NAME}.quantabase.io"
+        REDIRECT_URI="https://${DOMAIN}/oauth/google/callback"
+        ENVIRONMENT="production"
+    # Check for other production indicators
+    elif [ -d "/etc/nginx/sites-available" ] && [ -f "/etc/nginx/sites-available/quantabase" ]; then
+        # Has nginx and quantabase config = production server
+        DOMAIN="${CLIENT_NAME}.quantabase.io"
+        REDIRECT_URI="https://${DOMAIN}/oauth/google/callback"
+        ENVIRONMENT="production"
+    # Check for cloud provider metadata
+    elif curl -s --max-time 2 http://169.254.169.254/metadata/v1/ >/dev/null 2>&1; then
+        # Digital Ocean metadata service available = cloud server
+        DOMAIN="${CLIENT_NAME}.quantabase.io"
         REDIRECT_URI="https://${DOMAIN}/oauth/google/callback"
         ENVIRONMENT="production"
     else

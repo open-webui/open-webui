@@ -108,9 +108,21 @@ create_new_deployment() {
     # Resolve domain for display
     if [[ -z "$domain" ]]; then
         # Auto-detect environment logic (same as start-template.sh)
-        if [ -f "/etc/hostname" ] && grep -q "droplet\|server\|prod" /etc/hostname 2>/dev/null; then
+        if [ -f "/etc/hostname" ] && grep -q "droplet\|server\|prod\|ubuntu\|digital" /etc/hostname 2>/dev/null; then
             # Production environment
-            resolved_domain="${client_name}.yourdomain.com"
+            resolved_domain="${client_name}.quantabase.io"
+            redirect_uri="https://${resolved_domain}/oauth/google/callback"
+            environment="production"
+        # Check for other production indicators
+        elif [ -d "/etc/nginx/sites-available" ] && [ -f "/etc/nginx/sites-available/quantabase" ]; then
+            # Has nginx and quantabase config = production server
+            resolved_domain="${client_name}.quantabase.io"
+            redirect_uri="https://${resolved_domain}/oauth/google/callback"
+            environment="production"
+        # Check for cloud provider metadata
+        elif curl -s --max-time 2 http://169.254.169.254/metadata/v1/ >/dev/null 2>&1; then
+            # Digital Ocean metadata service available = cloud server
+            resolved_domain="${client_name}.quantabase.io"
             redirect_uri="https://${resolved_domain}/oauth/google/callback"
             environment="production"
         else
