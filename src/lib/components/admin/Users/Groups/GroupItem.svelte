@@ -9,18 +9,20 @@
 	import UserCircleSolid from '$lib/components/icons/UserCircleSolid.svelte';
 	import GroupModal from './EditGroupModal.svelte';
 	import CloneGroupModal from './CloneGroupModal.svelte';
-	import Dropdown from '$lib/components/common/Dropdown.svelte';
 	import EllipsisHorizontal from '$lib/components/icons/EllipsisHorizontal.svelte';
 	import Duplicate from '$lib/components/icons/Duplicate.svelte';
+	
 	export let users = [];
 	export let group = {
 		name: 'Admins',
 		user_ids: [1, 2, 3]
 	};
 	export let setGroups = () => {};
+	
 	let showEdit = false;
 	let showClone = false;
 	let showActionMenu = false;
+	let dropdownElement;
 
 	const updateHandler = async (_group) => {
 		const res = await updateGroupById(localStorage.token, group.id, _group).catch((error) => {
@@ -55,43 +57,40 @@
 		}
 	};
 
-	// Handle dropdown menu actions with forced state updates
 	const handleEditClick = (e) => {
-		e.preventDefault();
 		e.stopPropagation();
 		showEdit = true;
-		// Force close the dropdown
 		showActionMenu = false;
-		// Use setTimeout to ensure state update
-		setTimeout(() => { showActionMenu = false; }, 0);
 	};
 
 	const handleCloneClick = (e) => {
-		e.preventDefault();
 		e.stopPropagation();
 		showClone = true;
-		// Force close the dropdown
 		showActionMenu = false;
-		// Use setTimeout to ensure state update
-		setTimeout(() => { showActionMenu = false; }, 0);
 	};
 
 	const handleMenuToggle = (e) => {
-		e.preventDefault();
 		e.stopPropagation();
 		showActionMenu = !showActionMenu;
 	};
 
-	// Force close dropdown when clicking outside or when other modals open
-	$: if (showEdit || showClone) {
-		showActionMenu = false;
-	}
+	const handleClickOutside = (e) => {
+		if (dropdownElement && !dropdownElement.contains(e.target)) {
+			showActionMenu = false;
+		}
+	};
 
 	onMount(() => {
 		const groupId = $page.url.searchParams.get('id');
 		if (groupId && groupId === group.id) {
 			showEdit = true;
 		}
+
+		// Add click outside listener
+		document.addEventListener('click', handleClickOutside);
+		return () => {
+			document.removeEventListener('click', handleClickOutside);
+		};
 	});
 </script>
 
@@ -128,37 +127,34 @@
 			<User className="size-3.5" />
 		</div>
 
-		<div>
-			<Dropdown bind:show={showActionMenu} side="left" align="start" closeOnClick={true}>
-				<button
-					class="rounded-lg p-1 hover:bg-gray-100 dark:hover:bg-gray-850 transition"
-					on:click={handleMenuToggle}
-					slot="trigger"
-				>
-					<EllipsisHorizontal className="size-3.5" />
-				</button>
+		<div class="relative" bind:this={dropdownElement}>
+			<button
+				class="rounded-lg p-1 hover:bg-gray-100 dark:hover:bg-gray-850 transition"
+				on:click={handleMenuToggle}
+			>
+				<EllipsisHorizontal className="size-3.5" />
+			</button>
 
-				<div slot="content">
-					<div
-						class="w-full max-w-[130px] rounded-lg p-1 border border-gray-200 dark:border-gray-800 z-50 bg-white dark:bg-gray-900 text-black dark:text-white shadow-lg"
+			{#if showActionMenu}
+				<div
+					class="absolute right-0 top-full mt-1 w-32 rounded-lg p-1 border border-gray-200 dark:border-gray-800 z-50 bg-white dark:bg-gray-900 text-black dark:text-white shadow-lg"
+				>
+					<button
+						class="flex items-center w-full px-3 py-2 text-sm font-medium hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg transition-colors"
+						on:click={handleEditClick}
 					>
-						<button
-							class="flex items-center w-full px-3 py-2 text-sm font-medium hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg transition-colors"
-							on:click={handleEditClick}
-						>
-							<Pencil className="size-3.5 mr-2" />
-							{$i18n.t('Edit')}
-						</button>
-						<button
-							class="flex items-center w-full px-3 py-2 text-sm font-medium hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg transition-colors"
-							on:click={handleCloneClick}
-						>
-							<Duplicate className="size-3.5 mr-2" />
-							{$i18n.t('Clone')}
-						</button>
-					</div>
+						<Pencil className="size-3.5 mr-2" />
+						{$i18n.t('Edit')}
+					</button>
+					<button
+						class="flex items-center w-full px-3 py-2 text-sm font-medium hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg transition-colors"
+						on:click={handleCloneClick}
+					>
+						<Duplicate className="size-3.5 mr-2" />
+						{$i18n.t('Clone')}
+					</button>
 				</div>
-			</Dropdown>
+			{/if}
 		</div>
 	</div>
 </div>
