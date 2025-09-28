@@ -6,6 +6,7 @@
 	import { WEBUI_BASE_URL } from '$lib/constants';
 
 	import { onMount, tick, getContext } from 'svelte';
+	import { page } from '$app/stores';
 	import { createNewModel, getModelById } from '$lib/apis/models';
 	import { getModels } from '$lib/apis';
 
@@ -62,31 +63,43 @@
 	let model = null;
 
 	onMount(async () => {
-		window.addEventListener('message', async (event) => {
-			if (
-				!['https://openwebui.com', 'https://www.openwebui.com', 'http://localhost:5173'].includes(
-					event.origin
-				)
-			) {
-				return;
+		const urlModel = $page.url.searchParams.get('model');
+		if (urlModel) {
+			try {
+				model = JSON.parse(decodeURIComponent(urlModel));
+			} catch (e) {
+				console.error(e);
+				toast.error($i18n.t('Error parsing model data from URL'));
+			}
+		} else {
+			window.addEventListener('message', async (event) => {
+				if (
+					![
+						'https://openwebui.com',
+						'https://www.openwebui.com',
+						'http://localhost:5173'
+					].includes(event.origin)
+				) {
+					return;
+				}
+
+				let data = JSON.parse(event.data);
+
+				if (data?.info) {
+					data = data.info;
+				}
+
+				model = data;
+			});
+
+			if (window.opener ?? false) {
+				window.opener.postMessage('loaded', '*');
 			}
 
-			let data = JSON.parse(event.data);
-
-			if (data?.info) {
-				data = data.info;
+			if (sessionStorage.model) {
+				model = JSON.parse(sessionStorage.model);
+				sessionStorage.removeItem('model');
 			}
-
-			model = data;
-		});
-
-		if (window.opener ?? false) {
-			window.opener.postMessage('loaded', '*');
-		}
-
-		if (sessionStorage.model) {
-			model = JSON.parse(sessionStorage.model);
-			sessionStorage.removeItem('model');
 		}
 	});
 </script>
