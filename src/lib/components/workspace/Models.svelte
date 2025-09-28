@@ -305,18 +305,16 @@
 				</button>
 
 				{#each tags as tag}
-					<Tooltip content={tag}>
-						<button
-							class="min-w-fit outline-none p-1.5 {selectedTag === tag
-								? ''
-								: 'text-gray-300 dark:text-gray-600 hover:text-gray-700 dark:hover:text-white'} transition capitalize"
-							on:click={() => {
-								selectedTag = tag;
-							}}
-						>
-							{tag.length > 32 ? `${tag.slice(0, 32)}...` : tag}
-						</button>
-					</Tooltip>
+					<button
+						class="min-w-fit outline-none p-1.5 {selectedTag === tag
+							? ''
+							: 'text-gray-300 dark:text-gray-600 hover:text-gray-700 dark:hover:text-white'} transition capitalize"
+						on:click={() => {
+							selectedTag = tag;
+						}}
+					>
+						{tag}
+					</button>
 				{/each}
 			</div>
 		</div>

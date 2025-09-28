@@ -36,7 +36,8 @@ RESOURCE_ID_FIELD = "resource_id"
 
 class MilvusClient(VectorDBBase):
     def __init__(self):
-        self.collection_prefix = MILVUS_COLLECTION_PREFIX
+        # Milvus collection names can only contain numbers, letters, and underscores.
+        self.collection_prefix = MILVUS_COLLECTION_PREFIX.replace("-", "_")
         connections.connect(
             alias="default",
             uri=MILVUS_URI,
@@ -48,8 +49,8 @@ class MilvusClient(VectorDBBase):
         self.MEMORY_COLLECTION = f"{self.collection_prefix}_memories"
         self.KNOWLEDGE_COLLECTION = f"{self.collection_prefix}_knowledge"
         self.FILE_COLLECTION = f"{self.collection_prefix}_files"
-        self.WEB_SEARCH_COLLECTION = f"{self.collection_prefix}_web-search"
-        self.HASH_BASED_COLLECTION = f"{self.collection_prefix}_hash-based"
+        self.WEB_SEARCH_COLLECTION = f"{self.collection_prefix}_web_search"
+        self.HASH_BASED_COLLECTION = f"{self.collection_prefix}_hash_based"
         self.shared_collections = [
             self.MEMORY_COLLECTION,
             self.KNOWLEDGE_COLLECTION,

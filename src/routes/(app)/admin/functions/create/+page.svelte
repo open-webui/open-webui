@@ -91,17 +91,15 @@
 
 {#if mounted}
 	{#key func?.content}
-		<div class="px-[16px]">
-			<FunctionEditor
-				id={func?.id ?? ''}
-				name={func?.name ?? ''}
-				meta={func?.meta ?? { description: '' }}
-				content={func?.content ?? ''}
-				{clone}
-				onSave={(value) => {
-					saveHandler(value);
-				}}
-			/>
-		</div>
+		<FunctionEditor
+			id={func?.id ?? ''}
+			name={func?.name ?? ''}
+			meta={func?.meta ?? { description: '' }}
+			content={func?.content ?? ''}
+			{clone}
+			onSave={(value) => {
+				saveHandler(value);
+			}}
+		/>
 	{/key}
 {/if}
