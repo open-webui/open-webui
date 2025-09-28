@@ -1174,7 +1174,7 @@ DEFAULT_USER_ROLE = PersistentConfig(
 DEFAULT_GROUP_ID = PersistentConfig(
     "DEFAULT_GROUP_ID",
     "ui.default_group_id",
-    os.environ.get("DEFAULT_GROUP_ID", None),
+    os.environ.get("DEFAULT_GROUP_ID", ""),
 )
 
 PENDING_USER_OVERLAY_TITLE = PersistentConfig(
