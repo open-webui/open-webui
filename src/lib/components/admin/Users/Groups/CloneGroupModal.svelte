@@ -28,7 +28,7 @@
 		if (group && i18n?.t) {
 			name = `${i18n.t('Copy of')} ${group.name}`;
 		} else if (group) {
-			// Fallback if i18n is not available
+			// Fallback if i18n is not available yet
 			name = `Copy of ${group.name}`;
 		}
 	};
