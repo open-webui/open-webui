@@ -82,7 +82,11 @@
 			}
 		});
 
-		await importChatsInBulk(localStorage.token, chatsToImport);
+		const res = await importChatsInBulk(localStorage.token, chatsToImport);
+
+		if (res) {
+			toast.success(`Successfully imported ${res.length} chats.`);
+		}
 
 		currentChatPage.set(1);
 		await chats.set(await getChatList(localStorage.token, $currentChatPage));
