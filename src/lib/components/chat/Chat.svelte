@@ -2230,7 +2230,7 @@
 
 <svelte:head>
 	<title>
-		{$settings.useChatTitleAsTabTitle !== false && $chatTitle
+		{$settings.showChatTitleInTab !== false && $chatTitle
 			? `${$chatTitle.length > 30 ? `${$chatTitle.slice(0, 30)}...` : $chatTitle} • ${$WEBUI_NAME}`
 			: `${$WEBUI_NAME}`}
 	</title>
