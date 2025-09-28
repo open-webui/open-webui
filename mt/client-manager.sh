@@ -384,7 +384,7 @@ manage_single_deployment() {
                     echo
                     echo "Updating allowed domains..."
 
-                    # Get current container configuration
+                    # Get current container configuration BEFORE stopping
                     port=$(docker ps -a --filter "name=$container_name" --format "{{.Ports}}" | grep -o '0.0.0.0:[0-9]*' | cut -d: -f2)
                     redirect_uri=$(docker exec "$container_name" env 2>/dev/null | grep "GOOGLE_REDIRECT_URI=" | cut -d'=' -f2- 2>/dev/null || echo "")
                     webui_name=$(docker exec "$container_name" env 2>/dev/null | grep "WEBUI_NAME=" | cut -d'=' -f2- 2>/dev/null || echo "QuantaBase - $client_name")
@@ -396,11 +396,35 @@ manage_single_deployment() {
                         continue
                     fi
 
+                    echo "Current configuration:"
+                    echo "  Port: $port"
+                    echo "  Redirect URI: $redirect_uri"
+                    echo "  WebUI Name: $webui_name"
+                    echo
+
+                    # Verify port is available before proceeding
+                    echo "Checking port availability..."
+                    if netstat -ln 2>/dev/null | grep -q ":${port} " && ! docker ps --format "{{.Ports}}" | grep -q ":${port}->"; then
+                        echo "❌ Port $port is in use by another process. Cannot safely recreate container."
+                        echo "Please resolve port conflict manually."
+                        echo "Press Enter to continue..."
+                        read
+                        continue
+                    fi
+
                     # Stop and remove old container (preserve volume)
                     echo "Stopping container..."
                     docker stop "$container_name" 2>/dev/null
                     echo "Removing old container..."
                     docker rm "$container_name" 2>/dev/null
+
+                    # Double-check port is still available after container removal
+                    if netstat -ln 2>/dev/null | grep -q ":${port} "; then
+                        echo "❌ Port $port is still in use after container removal. Aborting recreation."
+                        echo "Press Enter to continue..."
+                        read
+                        continue
+                    fi
 
                     # Recreate container with new domains
                     echo "Creating new container with updated domains..."
