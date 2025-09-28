@@ -435,7 +435,7 @@
 						}}
 					>
 						<div
-							class="flex gap-1 w-fit text-center text-sm rounded-full bg-transparent px-1.5"
+							class="flex gap-1 w-fit text-center text-sm rounded-full bg-transparent px-1.5 whitespace-nowrap"
 							bind:this={tagsContainerElement}
 						>
 							{#if items.find((item) => item.model?.connection_type === 'local') || items.find((item) => item.model?.connection_type === 'external') || items.find((item) => item.model?.direct) || tags.length > 0}
@@ -500,18 +500,20 @@
 							{/if}
 
 							{#each tags as tag}
-								<button
-									class="min-w-fit outline-none px-1.5 py-0.5 {selectedTag === tag
-										? ''
-										: 'text-gray-300 dark:text-gray-600 hover:text-gray-700 dark:hover:text-white'} transition capitalize"
-									aria-pressed={selectedTag === tag}
-									on:click={() => {
-										selectedConnectionType = '';
-										selectedTag = tag;
-									}}
-								>
-									{tag}
-								</button>
+								<Tooltip content={tag}>
+									<button
+										class="min-w-fit outline-none px-1.5 py-0.5 {selectedTag === tag
+											? ''
+											: 'text-gray-300 dark:text-gray-600 hover:text-gray-700 dark:hover:text-white'} transition capitalize"
+										aria-pressed={selectedTag === tag}
+										on:click={() => {
+											selectedConnectionType = '';
+											selectedTag = tag;
+										}}
+									>
+										{tag.length > 16 ? `${tag.slice(0, 16)}...` : tag}
+									</button>
+								</Tooltip>
 							{/each}
 						</div>
 					</div>

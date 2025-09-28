@@ -263,6 +263,7 @@ async def get_all_models(request, refresh: bool = False, user: UserModel = None)
                 "icon": function.meta.manifest.get("icon_url", None)
                 or getattr(module, "icon_url", None)
                 or getattr(module, "icon", None),
+                "has_user_valves": hasattr(module, "UserValves"),
             }
         ]
 

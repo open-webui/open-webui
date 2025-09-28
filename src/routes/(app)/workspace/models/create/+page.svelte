@@ -16,7 +16,7 @@
 	const onSubmit = async (modelInfo) => {
 		if ($models.find((m) => m.id === modelInfo.id)) {
 			toast.error(
-				i18n.t(
+				$i18n.t(
 					"Error: A model with the ID '{{modelId}}' already exists. Please select a different ID to proceed.",
 					{ modelId: modelInfo.id }
 				)

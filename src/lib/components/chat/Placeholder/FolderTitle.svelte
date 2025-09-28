@@ -115,7 +115,12 @@
 </script>
 
 {#if folder}
-	<FolderModal bind:show={showFolderModal} edit={true} {folder} onSubmit={updateHandler} />
+	<FolderModal
+		bind:show={showFolderModal}
+		edit={true}
+		folderId={folder.id}
+		onSubmit={updateHandler}
+	/>
 
 	<DeleteConfirmDialog
 		bind:show={showDeleteConfirm}
