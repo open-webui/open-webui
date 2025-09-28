@@ -1,13 +1,13 @@
 <svg
 	xmlns="http://www.w3.org/2000/svg"
 	viewBox="0 0 24 24"
-	fill="currentColor"
-	class="size-6 {$props.class}"
+	fill="none"
+	stroke="currentColor"
+	stroke-width="2"
+	stroke-linecap="round"
+	stroke-linejoin="round"
+	class="size-6 {$$props.class}"
 >
-	<path
-		d="M15.75 2.25H8.25A2.25 2.25 0 006 4.5v12a2.25 2.25 0 002.25 2.25H15.75A2.25 2.25 0 0018 16.5V4.5a2.25 2.25 0 00-2.25-2.25z"
-	/>
-	<path
-		d="M5.25 7.5H4.5a2.25 2.25 0 00-2.25 2.25v7.5a2.25 2.25 0 002.25 2.25h7.5a2.25 2.25 0 002.25-2.25v-.75M7.5 9.75h6M7.5 12h6M7.5 14.25h4.5"
-	/>
+	<rect width="14" height="14" x="8" y="8" rx="2" ry="2"/>
+	<path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"/>
 </svg>
