@@ -12,7 +12,8 @@
 		deleteAllModels,
 		getBaseModels,
 		toggleModelById,
-		updateModelById
+	updateModelById,
+	importModels
 	} from '$lib/apis/models';
 	import { copyToClipboard } from '$lib/utils';
 	import { page } from '$app/stores';
@@ -40,6 +41,7 @@
 
 	let shiftKey = false;
 
+let modelsImportInProgress = false;
 	let importFiles;
 	let modelsImportInputElement: HTMLInputElement;
 
@@ -463,48 +465,32 @@
 						type="file"
 						accept=".json"
 						hidden
-						on:change={() => {
-							console.log(importFiles);
+						on:change={async () => {
+							if (importFiles.length > 0) {
+								modelsImportInProgress = true;
+								const res = await importModels(localStorage.token, importFiles[0]);
+								modelsImportInProgress = false;
 
-							let reader = new FileReader();
-							reader.onload = async (event) => {
-								let savedModels = JSON.parse(event.target.result);
-								console.log(savedModels);
-
-								for (const model of savedModels) {
-									if (Object.keys(model).includes('base_model_id')) {
-										if (model.base_model_id === null) {
-											upsertModelHandler(model);
-										}
-									} else {
-										if (model?.info ?? false) {
-											if (model.info.base_model_id === null) {
-												upsertModelHandler(model.info);
-											}
-										}
-									}
+								if (res) {
+									toast.success($i18n.t('Models imported successfully'));
+									await init();
+								} else {
+									toast.error($i18n.t('Failed to import models'));
 								}
-
-								await _models.set(
-									await getModels(
-										localStorage.token,
-										$config?.features?.enable_direct_connections &&
-											($settings?.directConnections ?? null)
-									)
-								);
-								init();
-							};
-
-							reader.readAsText(importFiles[0]);
+							}
 						}}
 					/>
 
 					<button
 						class="flex text-xs items-center space-x-1 px-3 py-1.5 rounded-xl bg-gray-50 hover:bg-gray-100 dark:bg-gray-800 dark:hover:bg-gray-700 dark:text-gray-200 transition"
+						disabled={modelsImportInProgress}
 						on:click={() => {
 							modelsImportInputElement.click();
 						}}
 					>
+						{#if modelsImportInProgress}
+							<Spinner className="size-3" />
+						{/if}
 						<div class=" self-center mr-2 font-medium line-clamp-1">
 							{$i18n.t('Import Presets')}
 						</div>
