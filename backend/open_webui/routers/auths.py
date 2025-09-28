@@ -35,7 +35,7 @@ from open_webui.env import (
 )
 from fastapi import APIRouter, Depends, HTTPException, Request, status
 from fastapi.responses import RedirectResponse, Response, JSONResponse
-from open_webui.config import OPENID_PROVIDER_URL, ENABLE_OAUTH_SIGNUP, ENABLE_LDAP, DEFAULT_GROUP_ID
+from open_webui.config import OPENID_PROVIDER_URL, ENABLE_OAUTH_SIGNUP, ENABLE_LDAP
 from pydantic import BaseModel
 
 from open_webui.utils.misc import parse_duration, validate_email_format
@@ -655,8 +655,9 @@ async def signup(request: Request, response: Response, form_data: SignupForm):
                 # Disable signup after the first user is created
                 request.app.state.config.ENABLE_SIGNUP = False
         
-            if DEFAULT_GROUP_ID.value:
-                Groups.add_user_to_group_by_id(user.id, DEFAULT_GROUP_ID.value)
+            default_group_id = getattr(request.app.state.config, 'DEFAULT_GROUP_ID', None)
+            if default_group_id and default_group_id.value:
+                Groups.add_user_to_group_by_id(user.id, default_group_id.value)
         
             return {
                 "token": token,
@@ -833,7 +834,7 @@ async def get_admin_config(request: Request, user=Depends(get_admin_user)):
         "ENABLE_API_KEY_ENDPOINT_RESTRICTIONS": request.app.state.config.ENABLE_API_KEY_ENDPOINT_RESTRICTIONS,
         "API_KEY_ALLOWED_ENDPOINTS": request.app.state.config.API_KEY_ALLOWED_ENDPOINTS,
         "DEFAULT_USER_ROLE": request.app.state.config.DEFAULT_USER_ROLE,
-        "DEFAULT_GROUP_ID": DEFAULT_GROUP_ID.value,
+        "DEFAULT_GROUP_ID": getattr(request.app.state.config, 'DEFAULT_GROUP_ID', None).value if getattr(request.app.state.config, 'DEFAULT_GROUP_ID', None) else None,
         "JWT_EXPIRES_IN": request.app.state.config.JWT_EXPIRES_IN,
         "ENABLE_COMMUNITY_SHARING": request.app.state.config.ENABLE_COMMUNITY_SHARING,
         "ENABLE_MESSAGE_RATING": request.app.state.config.ENABLE_MESSAGE_RATING,
@@ -888,7 +889,7 @@ async def update_admin_config(
     if form_data.DEFAULT_USER_ROLE in ["pending", "user", "admin"]:
         request.app.state.config.DEFAULT_USER_ROLE = form_data.DEFAULT_USER_ROLE
 
-    DEFAULT_GROUP_ID.value = form_data.DEFAULT_GROUP_ID
+    request.app.state.config.DEFAULT_GROUP_ID.value = form_data.DEFAULT_GROUP_ID
 
     pattern = r"^(-1|0|(-?\d+(\.\d+)?)(ms|s|m|h|d|w))$"
 
@@ -920,7 +921,7 @@ async def update_admin_config(
         "ENABLE_API_KEY_ENDPOINT_RESTRICTIONS": request.app.state.config.ENABLE_API_KEY_ENDPOINT_RESTRICTIONS,
         "API_KEY_ALLOWED_ENDPOINTS": request.app.state.config.API_KEY_ALLOWED_ENDPOINTS,
         "DEFAULT_USER_ROLE": request.app.state.config.DEFAULT_USER_ROLE,
-        "DEFAULT_GROUP_ID": DEFAULT_GROUP_ID.value,
+        "DEFAULT_GROUP_ID": request.app.state.config.DEFAULT_GROUP_ID.value,
         "JWT_EXPIRES_IN": request.app.state.config.JWT_EXPIRES_IN,
         "ENABLE_COMMUNITY_SHARING": request.app.state.config.ENABLE_COMMUNITY_SHARING,
         "ENABLE_MESSAGE_RATING": request.app.state.config.ENABLE_MESSAGE_RATING,
