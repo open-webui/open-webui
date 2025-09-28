@@ -356,6 +356,17 @@ async def chat_completion_tools_handler(
                 if isinstance(tool_result, dict) or isinstance(tool_result, list):
                     tool_result = json.dumps(tool_result, indent=2)
 
+                if tool_result_embeds:
+                    if event_caller:
+                        await event_caller(
+                            {
+                                "type": "embeds",
+                                "data": {
+                                    "embeds": tool_result_embeds,
+                                },
+                            }
+                        )
+
                 if isinstance(tool_result, str):
                     tool = tools[tool_function_name]
                     tool_id = tool.get("tool_id", "")
