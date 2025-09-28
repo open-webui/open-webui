@@ -16,7 +16,7 @@
 		deleteAllChats,
 		getAllChats,
 		getChatList,
-		importChat,
+		importChatsInBulk,
 		getPinnedChatList
 	} from '$lib/apis/chats';
 	import { getImportOrigin, convertOpenAIChats } from '$lib/utils';
@@ -61,24 +61,28 @@
 	}
 
 	const importChats = async (_chats) => {
-		for (const chat of _chats) {
-			console.log(chat);
-
+		const chatsToImport = _chats.map((chat) => {
 			if (chat.chat) {
-				await importChat(
-					localStorage.token,
-					chat.chat,
-					chat.meta ?? {},
-					false,
-					null,
-					chat?.created_at ?? null,
-					chat?.updated_at ?? null
-				);
+				return {
+					chat: chat.chat,
+					meta: chat.meta ?? {},
+					pinned: false,
+					folder_id: null,
+					created_at: chat?.created_at ?? null,
+					updated_at: chat?.updated_at ?? null
+				};
 			} else {
 				// Legacy format
-				await importChat(localStorage.token, chat, {}, false, null);
+				return {
+					chat: chat,
+					meta: {},
+					pinned: false,
+					folder_id: null
+				};
 			}
-		}
+		});
+
+		await importChatsInBulk(localStorage.token, chatsToImport);
 
 		currentChatPage.set(1);
 		await chats.set(await getChatList(localStorage.token, $currentChatPage));
