@@ -1,4 +1,4 @@
-<script>
+<script lang="ts">
 	import fileSaver from 'file-saver';
 	const { saveAs } = fileSaver;
 
@@ -8,12 +8,14 @@
 
 	import ChatsModal from './ChatsModal.svelte';
 	import UnarchiveAllConfirmDialog from '$lib/components/common/ConfirmDialog.svelte';
+	import Spinner from '../common/Spinner.svelte';
 
 	const i18n = getContext('i18n');
 
 	export let show = false;
 	export let onUpdate = () => {};
 
+	let loading = false;
 	let chatList = null;
 	let page = 1;
 
@@ -105,13 +107,18 @@
 	};
 
 	const unarchiveAllHandler = async () => {
-		const chats = await getAllArchivedChats(localStorage.token);
-		for (const chat of chats) {
-			await archiveChatById(localStorage.token, chat.id);
+		loading = true;
+		try {
+			const chats = await getAllArchivedChats(localStorage.token);
+			await Promise.all(chats.map((chat) => archiveChatById(localStorage.token, chat.id)));
+			toast.success($i18n.t('All chats have been unarchived.'));
+			onUpdate();
+			await init();
+		} catch (error) {
+			toast.error(`${error}`);
+		} finally {
+			loading = false;
 		}
-
-		onUpdate();
-		init();
 	};
 
 	const init = async () => {
@@ -152,15 +159,21 @@
 		<div class="flex flex-wrap text-sm font-medium gap-1.5 mt-2 m-1 justify-end w-full">
 			<button
 				class=" px-3.5 py-1.5 font-medium hover:bg-black/5 dark:hover:bg-white/5 outline outline-1 outline-gray-100 dark:outline-gray-800 rounded-3xl"
+				disabled={loading}
 				on:click={() => {
 					showUnarchiveAllConfirmDialog = true;
 				}}
 			>
-				{$i18n.t('Unarchive All Archived Chats')}
+				{#if loading}
+					<Spinner className="size-4" />
+				{:else}
+					{$i18n.t('Unarchive All Archived Chats')}
+				{/if}
 			</button>
 
 			<button
 				class="px-3.5 py-1.5 font-medium hover:bg-black/5 dark:hover:bg-white/5 outline outline-1 outline-gray-100 dark:outline-gray-800 rounded-3xl"
+				disabled={loading}
 				on:click={() => {
 					exportChatsHandler();
 				}}
