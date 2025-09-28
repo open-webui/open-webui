@@ -1,5 +1,7 @@
 from typing import Optional
+import logging
 from fastapi import APIRouter, Depends, HTTPException, status, Request
+from pydantic import BaseModel
 
 from open_webui.models.prompts import (
     PromptForm,
@@ -13,6 +15,7 @@ from open_webui.utils.access_control import has_access, has_permission
 from open_webui.config import BYPASS_ADMIN_ACCESS_CONTROL
 
 router = APIRouter()
+log = logging.getLogger(__name__)
 
 ############################
 # GetPrompts
@@ -37,6 +40,38 @@ async def get_prompt_list(user=Depends(get_verified_user)):
         prompts = Prompts.get_prompts_by_user_id(user.id, "write")
 
     return prompts
+
+
+############################
+# ImportPrompts
+############################
+
+
+class PromptsImportForm(BaseModel):
+    prompts: list[dict]
+
+
+@router.post("/import", response_model=bool)
+async def import_prompts(
+    user: str = Depends(get_admin_user), form_data: PromptsImportForm = ...
+):
+    try:
+        for prompt_data in form_data.prompts:
+            prompt_form = PromptForm(**prompt_data)
+            prompt = Prompts.get_prompt_by_command(prompt_form.command)
+
+            if prompt is None:
+                Prompts.insert_new_prompt(user.id, prompt_form)
+            else:
+                log.warn(
+                    f"Prompt with command '{prompt_form.command}' already exists. Skipping."
+                )
+        return True
+    except Exception as e:
+        log.exception(f"Error importing prompts: {e}")
+        raise HTTPException(
+            status_code=500, detail="An error occurred while importing prompts."
+        )
 
 
 ############################

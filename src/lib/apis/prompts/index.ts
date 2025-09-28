@@ -39,6 +39,34 @@ export const createNewPrompt = async (token: string, prompt: PromptItem) => {
 	return res;
 };
 
+export const importPrompts = async (token: string, prompts: object[]) => {
+	let error = null;
+
+	const res = await fetch(`${WEBUI_API_BASE_URL}/prompts/import`, {
+		method: 'POST',
+		headers: {
+			'Content-Type': 'application/json',
+			authorization: `Bearer ${token}`
+		},
+		body: JSON.stringify({ prompts: prompts })
+	})
+		.then(async (res) => {
+			if (!res.ok) throw await res.json();
+			return res.json();
+		})
+		.catch((err) => {
+			error = err;
+			console.error(err);
+			return null;
+		});
+
+	if (error) {
+		throw error;
+	}
+
+	return res;
+};
+
 export const getPrompts = async (token: string = '') => {
 	let error = null;
 

@@ -11,7 +11,8 @@
 		createNewPrompt,
 		deletePromptByCommand,
 		getPrompts,
-		getPromptList
+		getPromptList,
+		importPrompts
 	} from '$lib/apis/prompts';
 
 	import PromptMenu from './Prompts/PromptMenu.svelte';
@@ -31,6 +32,7 @@
 	const i18n = getContext('i18n');
 	let promptsImportInputElement: HTMLInputElement;
 	let loaded = false;
+	let promptsImportInProgress = false;
 
 	let importFiles = '';
 	let query = '';
@@ -156,7 +158,7 @@
 			deleteHandler(deletePrompt);
 		}}
 	>
-		<div class=" text-sm text-gray-500 truncate">
+		<div class=" text-sm text-gray-500">
 			{$i18n.t('This will delete')} <span class="  font-semibold">{deletePrompt.command}</span>.
 		</div>
 	</DeleteConfirmDialog>
@@ -314,42 +316,41 @@
 					accept=".json"
 					hidden
 					on:change={() => {
-						console.log(importFiles);
+						if (importFiles.length > 0) {
+							const reader = new FileReader();
+							reader.onload = async (event) => {
+								try {
+									const prompts = JSON.parse(String(event.target.result));
+									promptsImportInProgress = true;
+									const res = await importPrompts(localStorage.token, prompts);
+									promptsImportInProgress = false;
 
-						const reader = new FileReader();
-						reader.onload = async (event) => {
-							const savedPrompts = JSON.parse(event.target.result);
-							console.log(savedPrompts);
-
-							for (const prompt of savedPrompts) {
-								await createNewPrompt(localStorage.token, {
-									command:
-										prompt.command.charAt(0) === '/' ? prompt.command.slice(1) : prompt.command,
-									title: prompt.title,
-									content: prompt.content
-								}).catch((error) => {
-									toast.error(`${error}`);
-									return null;
-								});
-							}
-
-							prompts = await getPromptList(localStorage.token);
-							await _prompts.set(await getPrompts(localStorage.token));
-
-							importFiles = [];
-							promptsImportInputElement.value = '';
-						};
-
-						reader.readAsText(importFiles[0]);
+									if (res) {
+										toast.success($i18n.t('Prompts imported successfully'));
+										await init();
+									} else {
+										toast.error($i18n.t('Failed to import prompts'));
+									}
+								} catch (e) {
+									toast.error($i18n.t('Invalid JSON file'));
+									console.error(e);
+								}
+							};
+							reader.readAsText(importFiles[0]);
+						}
 					}}
 				/>
 
 				<button
 					class="flex text-xs items-center space-x-1 px-3 py-1.5 rounded-xl bg-gray-50 hover:bg-gray-100 dark:bg-gray-800 dark:hover:bg-gray-700 dark:text-gray-200 transition"
+					disabled={promptsImportInProgress}
 					on:click={() => {
 						promptsImportInputElement.click();
 					}}
 				>
+					{#if promptsImportInProgress}
+						<Spinner className="size-3" />
+					{/if}
 					<div class=" self-center mr-2 font-medium line-clamp-1">{$i18n.t('Import Prompts')}</div>
 
 					<div class=" self-center">
