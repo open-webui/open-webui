@@ -104,15 +104,17 @@
 				</div>
 			</DropdownMenu.Item>
 
-			<DropdownMenu.Item
-				class="flex gap-2 items-center px-3 py-1.5 text-sm  font-medium cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 rounded-md"
-				on:click={() => {
-					cloneAsWorkspaceModelHandler();
-				}}
-			>
-				<DocumentDuplicate class="size-4" />
-				<div class="flex items-center">{$i18n.t('Clone as Workspace Model')}</div>
-			</DropdownMenu.Item>
+			{#if !(model?.meta?.hidden ?? false)}
+				<DropdownMenu.Item
+					class="flex gap-2 items-center px-3 py-1.5 text-sm  font-medium cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 rounded-md"
+					on:click={() => {
+						cloneAsWorkspaceModelHandler();
+					}}
+				>
+					<DocumentDuplicate class="size-4" />
+					<div class="flex items-center">{$i18n.t('Clone as Workspace Model')}</div>
+				</DropdownMenu.Item>
+			{/if}
 
 			<DropdownMenu.Item
 				class="flex gap-2 items-center px-3 py-1.5 text-sm  font-medium cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 rounded-md"
