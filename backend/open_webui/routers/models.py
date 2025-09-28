@@ -22,8 +22,6 @@ from fastapi import (
     Request,
     status,
     Response,
-    UploadFile,
-    File,
 )
 from fastapi.responses import FileResponse, StreamingResponse
 
@@ -112,12 +110,16 @@ async def export_models(user=Depends(get_admin_user)):
 ############################
 
 
+class ModelsImportForm(BaseModel):
+    models: list[dict]
+
+
 @router.post("/import", response_model=bool)
 async def import_models(
-    user: str = Depends(get_admin_user), file: UploadFile = File(...)
+    user: str = Depends(get_admin_user), form_data: ModelsImportForm = (...)
 ):
     try:
-        data = json.loads(await file.read())
+        data = form_data.models
         if isinstance(data, list):
             for model_data in data:
                 # Here, you can add logic to validate model_data if needed

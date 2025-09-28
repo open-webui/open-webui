@@ -465,18 +465,28 @@ let modelsImportInProgress = false;
 						type="file"
 						accept=".json"
 						hidden
-						on:change={async () => {
+						on:change={() => {
 							if (importFiles.length > 0) {
-								modelsImportInProgress = true;
-								const res = await importModels(localStorage.token, importFiles[0]);
-								modelsImportInProgress = false;
+								const reader = new FileReader();
+								reader.onload = async (event) => {
+									try {
+										const models = JSON.parse(String(event.target.result));
+										modelsImportInProgress = true;
+										const res = await importModels(localStorage.token, models);
+										modelsImportInProgress = false;
 
-								if (res) {
-									toast.success($i18n.t('Models imported successfully'));
-									await init();
-								} else {
-									toast.error($i18n.t('Failed to import models'));
-								}
+										if (res) {
+											toast.success($i18n.t('Models imported successfully'));
+											await init();
+										} else {
+											toast.error($i18n.t('Failed to import models'));
+										}
+									} catch (e) {
+										toast.error($i18n.t('Invalid JSON file'));
+										console.error(e);
+									}
+								};
+								reader.readAsText(importFiles[0]);
 							}
 						}}
 					/>

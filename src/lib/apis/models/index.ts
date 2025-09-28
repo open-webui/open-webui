@@ -31,18 +31,16 @@ export const getModels = async (token: string = '') => {
 	return res;
 };
 
-export const importModels = async (token: string, file: File) => {
+export const importModels = async (token: string, models: object[]) => {
 	let error = null;
-
-	const formData = new FormData();
-	formData.append('file', file);
 
 	const res = await fetch(`${WEBUI_API_BASE_URL}/models/import`, {
 		method: 'POST',
 		headers: {
+			'Content-Type': 'application/json',
 			authorization: `Bearer ${token}`
 		},
-		body: formData
+		body: JSON.stringify({ models: models })
 	})
 		.then(async (res) => {
 			if (!res.ok) throw await res.json();
