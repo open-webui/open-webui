@@ -310,14 +310,11 @@
 								<div class=" mb-1 text-xs text-gray-500">{$i18n.t('New Password')}</div>
 
 								<div class="flex-1">
-									<!-- Removed class and autocomplete props that were causing warnings -->
-									<!-- Applied styling directly with style attribute if needed, or wrap in a div -->
-									<div class="w-full">
+									<div class="w-full text-sm bg-transparent outline-hidden">
 										<SensitiveInput
 											type="password"
 											placeholder={$i18n.t('Enter New Password')}
 											bind:value={_user.password}
-											required={false}
 										/>
 									</div>
 								</div>
