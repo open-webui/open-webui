@@ -23,7 +23,7 @@ export const uploadFile = async (token: string, file: File, metadata?: object | 
 			return res.json();
 		})
 		.catch((err) => {
-			error = err.detail;
+			error = err.detail || err.message;
 			console.error(err);
 			return null;
 		});

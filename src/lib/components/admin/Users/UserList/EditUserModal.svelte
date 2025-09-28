@@ -92,8 +92,8 @@
 							/>
 						</div>
 
-						<div>
-							<div class=" self-center capitalize font-semibold">{selectedUser.name}</div>
+						<div class="overflow-hidden w-full">
+							<div class=" self-center capitalize font-semibold truncate">{selectedUser.name}</div>
 
 							<div class="text-xs text-gray-500">
 								{$i18n.t('Created at')}

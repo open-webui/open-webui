@@ -19,10 +19,9 @@
 	import Search from '$lib/components/icons/Search.svelte';
 	import User from '$lib/components/icons/User.svelte';
 	import UserCircleSolid from '$lib/components/icons/UserCircleSolid.svelte';
-	import GroupModal from './Groups/EditGroupModal.svelte';
+	import EditGroupModal from './Groups/EditGroupModal.svelte';
 	import Pencil from '$lib/components/icons/Pencil.svelte';
 	import GroupItem from './Groups/GroupItem.svelte';
-	import AddGroupModal from './Groups/AddGroupModal.svelte';
 	import { createNewGroup, getGroups } from '$lib/apis/groups';
 	import {
 		getUserDefaultPermissions,
@@ -94,7 +93,7 @@
 		}
 	};
 
-	let showCreateGroupModal = false;
+	let showAddGroupModal = false;
 	let showDefaultPermissionsModal = false;
 
 	const setGroups = async () => {
@@ -153,7 +152,13 @@
 </script>
 
 {#if loaded}
-	<AddGroupModal bind:show={showCreateGroupModal} onSubmit={addGroupHandler} />
+	<EditGroupModal
+		bind:show={showAddGroupModal}
+		edit={false}
+		permissions={defaultPermissions}
+		onSubmit={addGroupHandler}
+	/>
+
 	<div class="mt-0.5 mb-2 gap-1 flex flex-col md:flex-row justify-between">
 		<div class="flex md:self-center text-lg font-medium px-0.5">
 			{$i18n.t('Groups')}
@@ -180,7 +185,7 @@
 						<button
 							class=" p-2 rounded-xl hover:bg-gray-100 dark:bg-gray-900 dark:hover:bg-gray-850 transition font-medium text-sm flex items-center space-x-1"
 							on:click={() => {
-								showCreateGroupModal = !showCreateGroupModal;
+								showAddGroupModal = !showAddGroupModal;
 							}}
 						>
 							<Plus className="size-3.5" />
@@ -207,7 +212,7 @@
 						class=" px-4 py-1.5 text-sm rounded-full bg-black hover:bg-gray-800 text-white dark:bg-white dark:text-black dark:hover:bg-gray-100 transition font-medium flex items-center space-x-1"
 						aria-label={$i18n.t('Create Group')}
 						on:click={() => {
-							showCreateGroupModal = true;
+							showAddGroupModal = true;
 						}}
 					>
 						{$i18n.t('Create Group')}
@@ -234,7 +239,7 @@
 
 		<hr class="mb-2 border-gray-100 dark:border-gray-850" />
 
-		<GroupModal
+		<EditGroupModal
 			bind:show={showDefaultPermissionsModal}
 			tabs={['permissions']}
 			bind:permissions={defaultPermissions}

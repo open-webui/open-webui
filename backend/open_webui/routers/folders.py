@@ -12,6 +12,7 @@ from open_webui.models.folders import (
     FolderForm,
     FolderUpdateForm,
     FolderModel,
+    FolderNameIdResponse,
     Folders,
 )
 from open_webui.models.chats import Chats
@@ -44,7 +45,7 @@ router = APIRouter()
 ############################
 
 
-@router.get("/", response_model=list[FolderModel])
+@router.get("/", response_model=list[FolderNameIdResponse])
 async def get_folders(user=Depends(get_verified_user)):
     folders = Folders.get_folders_by_user_id(user.id)
 
@@ -76,14 +77,6 @@ async def get_folders(user=Depends(get_verified_user)):
     return [
         {
             **folder.model_dump(),
-            "items": {
-                "chats": [
-                    {"title": chat.title, "id": chat.id, "updated_at": chat.updated_at}
-                    for chat in Chats.get_chats_by_folder_id_and_user_id(
-                        folder.id, user.id
-                    )
-                ]
-            },
         }
         for folder in folders
     ]

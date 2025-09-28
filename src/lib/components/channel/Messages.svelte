@@ -23,10 +23,12 @@
 	export let id = null;
 	export let channel = null;
 	export let messages = [];
+	export let replyToMessage = null;
 	export let top = false;
 	export let thread = false;
 
 	export let onLoad: Function = () => {};
+	export let onReply: Function = () => {};
 	export let onThread: Function = () => {};
 
 	let messagesLoading = false;
@@ -94,10 +96,12 @@
 			<Message
 				{message}
 				{thread}
+				replyToMessage={replyToMessage?.id === message.id}
 				disabled={!channel?.write_access}
 				showUserProfile={messageIdx === 0 ||
 					messageList.at(messageIdx - 1)?.user_id !== message.user_id ||
-					messageList.at(messageIdx - 1)?.meta?.model_id !== message?.meta?.model_id}
+					messageList.at(messageIdx - 1)?.meta?.model_id !== message?.meta?.model_id ||
+					message?.reply_to_message}
 				onDelete={() => {
 					messages = messages.filter((m) => m.id !== message.id);
 
@@ -122,6 +126,9 @@
 						toast.error(`${error}`);
 						return null;
 					});
+				}}
+				onReply={(message) => {
+					onReply(message);
 				}}
 				onThread={(id) => {
 					onThread(id);
