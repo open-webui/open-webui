@@ -24,11 +24,7 @@
 	import GroupItem from './Groups/GroupItem.svelte';
 	import AddGroupModal from './Groups/AddGroupModal.svelte';
 	import { createNewGroup, getGroups } from '$lib/apis/groups';
-	import {
-		getUserDefaultPermissions,
-		getAllUsers,
-		updateUserDefaultPermissions
-	} from '$lib/apis/users';
+	import { getAllUsers, updateUserDefaultPermissions } from '$lib/apis/users';
 
 	const i18n = getContext('i18n');
 
@@ -51,54 +47,20 @@
 	});
 
 	let search = '';
-	let defaultPermissions = {
-		workspace: {
-			models: false,
-			knowledge: false,
-			prompts: false,
-			tools: false
-		},
-		sharing: {
-			public_models: false,
-			public_knowledge: false,
-			public_prompts: false,
-			public_tools: false
-		},
-		chat: {
-			controls: true,
-			valves: true,
-			system_prompt: true,
-			params: true,
-			file_upload: true,
-			delete: true,
-			delete_message: true,
-			continue_response: true,
-			regenerate_response: true,
-			rate_response: true,
-			edit: true,
-			share: true,
-			export: true,
-			stt: true,
-			tts: true,
-			call: true,
-			multiple_models: true,
-			temporary: true,
-			temporary_enforced: false
-		},
-		features: {
-			direct_tool_servers: false,
-			web_search: true,
-			image_generation: true,
-			code_interpreter: true,
-			notes: true
-		}
-	};
+	let defaultPermissions = {};
 
 	let showCreateGroupModal = false;
 	let showDefaultPermissionsModal = false;
 
 	const setGroups = async () => {
-		groups = await getGroups(localStorage.token);
+		const allGroups = await getGroups(localStorage.token);
+		const userGroup = allGroups.find((g) => g.name.toLowerCase() === 'user');
+
+		if (userGroup) {
+			defaultPermissions = userGroup.permissions;
+		}
+
+		groups = allGroups.filter((g) => g.name.toLowerCase() !== 'user');
 	};
 
 	const addGroupHandler = async (group) => {
@@ -146,8 +108,6 @@
 		}
 
 		await setGroups();
-		defaultPermissions = await getUserDefaultPermissions(localStorage.token);
-
 		loaded = true;
 	});
 </script>
@@ -226,7 +186,7 @@
 
 				{#each filteredGroups as group}
 					<div class="my-2">
-						<GroupItem {group} {users} {setGroups} />
+						<GroupItem {group} {users} {setGroups} {defaultPermissions} />
 					</div>
 				{/each}
 			</div>
