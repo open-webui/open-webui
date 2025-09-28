@@ -1,0 +1,22 @@
+version: '3.8'
+
+services:
+  nginx:
+    image: nginx:alpine
+    container_name: local-nginx
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      # Mount local config directories (create these)
+      - ./nginx/sites-available:/etc/nginx/sites-available:ro
+      - ./nginx/sites-enabled:/etc/nginx/sites-enabled:ro
+      - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./nginx/ssl:/etc/nginx/ssl:ro  # For self-signed certs
+    networks:
+      - openwebui-net
+    restart: unless-stopped
+
+networks:
+  openwebui-net:
+    driver: bridge

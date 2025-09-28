@@ -31,6 +31,12 @@ if [ -z "$DOMAIN" ]; then
         DOMAIN="localhost:${PORT}"
         REDIRECT_URI="http://127.0.0.1:${PORT}/oauth/google/callback"
         ENVIRONMENT="development"
+        # Check if nginx proxy is running on port 80
+        if netstat -ln 2>/dev/null | grep -q ":80 " || lsof -i :80 >/dev/null 2>&1; then
+            echo "Detected nginx proxy on port 80 - configuring for proxy mode"
+            REDIRECT_URI="http://localhost/oauth/google/callback"
+            BASE_URL="http://localhost"
+        fi
     fi
 else
     # Domain explicitly provided
@@ -57,7 +63,7 @@ if docker ps -a --format '{{.Names}}' | grep -q "^${CONTAINER_NAME}$"; then
     exit 1
 fi
 
-docker run -d \
+docker_cmd="docker run -d \
     --name ${CONTAINER_NAME} \
     -p ${PORT}:8080 \
     -e GOOGLE_CLIENT_ID=1063776054060-2fa0vn14b7ahi1tmfk49cuio44goosc1.apps.googleusercontent.com \
@@ -66,11 +72,20 @@ docker run -d \
     -e ENABLE_OAUTH_SIGNUP=true \
     -e OAUTH_ALLOWED_DOMAINS=martins.net \
     -e OPENID_PROVIDER_URL=https://accounts.google.com/.well-known/openid-configuration \
-    -e WEBUI_NAME="QuantaBase - ${CLIENT_NAME}" \
-    -e USER_PERMISSIONS_CHAT_CONTROLS=false \
+    -e WEBUI_NAME=\"QuantaBase - ${CLIENT_NAME}\" \
+    -e USER_PERMISSIONS_CHAT_CONTROLS=false"
+
+# Add BASE_URL if set (for nginx proxy mode)
+if [[ -n "$BASE_URL" ]]; then
+    docker_cmd="$docker_cmd -e WEBUI_BASE_URL=${BASE_URL}"
+fi
+
+docker_cmd="$docker_cmd \
     -v ${VOLUME_NAME}:/app/backend/data \
     --restart unless-stopped \
-    ghcr.io/imagicrafter/open-webui:main
+    ghcr.io/imagicrafter/open-webui:main"
+
+eval $docker_cmd
 
 if [ $? -eq 0 ]; then
     echo "✅ ${CLIENT_NAME} Open WebUI started successfully!"

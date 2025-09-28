@@ -15,10 +15,10 @@ show_help() {
     echo "  ./start-template.sh NAME PORT DOMAIN - Start custom client"
     echo
     echo "Manage All Clients:"
-    echo "  ./manage-clients.sh list   - List all Open WebUI containers"
-    echo "  ./manage-clients.sh stop   - Stop all Open WebUI containers"
-    echo "  ./manage-clients.sh start  - Start all Open WebUI containers"
-    echo "  ./manage-clients.sh logs CLIENT_NAME - Show logs for specific client"
+    echo "  ./client-manager.sh list   - List all Open WebUI containers"
+    echo "  ./client-manager.sh stop   - Stop all Open WebUI containers"
+    echo "  ./client-manager.sh start  - Start all Open WebUI containers"
+    echo "  ./client-manager.sh logs CLIENT_NAME - Show logs for specific client"
     echo
     echo "Individual Client Commands:"
     echo "  docker stop openwebui-CLIENT_NAME"
@@ -36,9 +36,10 @@ show_main_menu() {
     echo "1) View Deployment Status"
     echo "2) Create New Deployment"
     echo "3) Manage Existing Deployment"
-    echo "4) Exit"
+    echo "4) Generate nginx Configuration"
+    echo "5) Exit"
     echo
-    echo -n "Please select an option (1-4): "
+    echo -n "Please select an option (1-5): "
 }
 
 get_next_available_port() {
@@ -303,6 +304,151 @@ manage_single_deployment() {
     done
 }
 
+generate_nginx_config() {
+    clear
+    echo "╔════════════════════════════════════════╗"
+    echo "║      Generate nginx Configuration     ║"
+    echo "╚════════════════════════════════════════╝"
+    echo
+
+    # List available clients
+    echo "Available deployments:"
+    clients=($(docker ps -a --filter "name=openwebui-" --format "{{.Names}}" | sed 's/openwebui-//'))
+
+    if [ ${#clients[@]} -eq 0 ]; then
+        echo "No deployments found. Create a deployment first."
+        echo "Press Enter to continue..."
+        read
+        return
+    fi
+
+    for i in "${!clients[@]}"; do
+        ports=$(docker ps -a --filter "name=openwebui-${clients[$i]}" --format "{{.Ports}}" | grep -o '0.0.0.0:[0-9]*' | cut -d: -f2)
+        echo "$((i+1))) ${clients[$i]} (port: $ports)"
+    done
+
+    echo "$((${#clients[@]}+1))) Return to main menu"
+    echo
+    echo -n "Select client for nginx config (1-$((${#clients[@]}+1))): "
+    read selection
+
+    if [[ "$selection" =~ ^[0-9]+$ ]] && [ "$selection" -gt 0 ] && [ "$selection" -le ${#clients[@]} ]; then
+        local client_name="${clients[$((selection-1))]}"
+        local port=$(docker ps -a --filter "name=openwebui-${client_name}" --format "{{.Ports}}" | grep -o '0.0.0.0:[0-9]*' | cut -d: -f2)
+
+        echo
+        echo
+        echo "Select configuration type:"
+        echo "1) Production (HTTPS with Let's Encrypt)"
+        echo "2) Local Testing (HTTP with Docker nginx)"
+        echo
+        echo -n "Choose option (1-2): "
+        read config_type
+
+        case "$config_type" in
+            1)
+                echo -n "Enter production domain (e.g., ${client_name}.yourdomain.com): "
+                read domain
+                if [[ -z "$domain" ]]; then
+                    echo "❌ Domain cannot be empty."
+                    echo "Press Enter to continue..."
+                    read
+                    return
+                fi
+                template_file="${SCRIPT_DIR}/nginx-template.conf"
+                config_file="/tmp/${client_name}-nginx.conf"
+                setup_type="production"
+                ;;
+            2)
+                echo -n "Enter local domain (press Enter for 'localhost'): "
+                read domain
+                if [[ -z "$domain" ]]; then
+                    domain="localhost"
+                fi
+                template_file="${SCRIPT_DIR}/nginx-template-local.conf"
+                config_file="${SCRIPT_DIR}/nginx/sites-available/${client_name}"
+                setup_type="local"
+                ;;
+            *)
+                echo "Invalid selection. Press Enter to continue..."
+                read
+                return
+                ;;
+        esac
+
+        # Generate nginx config
+        sed "s/{{CLIENT_NAME}}/${client_name}/g; s/{{DOMAIN}}/${domain}/g; s/{{PORT}}/${port}/g" \
+            "$template_file" > "$config_file"
+
+        echo
+        echo "✅ nginx configuration generated: $config_file"
+        echo
+
+        if [ "$setup_type" = "production" ]; then
+            echo "╔════════════════════════════════════════╗"
+            echo "║         Production Setup Steps        ║"
+            echo "╚════════════════════════════════════════╝"
+            echo
+            echo "1. Copy config to server:"
+            echo "   scp $config_file user@server:/etc/nginx/sites-available/${client_name}"
+            echo
+            echo "2. Enable the site:"
+            echo "   sudo ln -s /etc/nginx/sites-available/${client_name} /etc/nginx/sites-enabled/"
+            echo
+            echo "3. Test nginx config:"
+            echo "   sudo nginx -t"
+            echo
+            echo "4. Generate SSL certificate:"
+            echo "   sudo certbot --nginx -d ${domain}"
+            echo
+            echo "5. Uncomment SSL lines in config file and restart:"
+            echo "   sudo systemctl restart nginx"
+            echo
+            echo "6. Update Google OAuth with redirect URI:"
+            echo "   https://${domain}/oauth/google/callback"
+        else
+            echo "╔════════════════════════════════════════╗"
+            echo "║         Local Testing Steps           ║"
+            echo "╚════════════════════════════════════════╝"
+            echo
+            echo "1. Enable the site:"
+            echo "   cp ${SCRIPT_DIR}/nginx/sites-available/${client_name} ${SCRIPT_DIR}/nginx/sites-enabled/"
+            echo
+            echo "2. Start nginx container:"
+            echo "   docker-compose -f docker-compose.nginx.yml up -d"
+            echo
+            echo "3. Test configuration:"
+            echo "   docker exec local-nginx nginx -t"
+            echo
+            echo "4. Access your client:"
+            echo "   http://localhost (nginx will proxy to port ${port})"
+            echo
+            echo "5. Update Google OAuth with redirect URI:"
+            echo "   http://localhost/oauth/google/callback"
+            echo
+            echo "6. Stop nginx when done:"
+            echo "   docker-compose -f docker-compose.nginx.yml down"
+        fi
+        echo
+
+        echo "Press Enter to view the generated config..."
+        read
+        echo "Generated nginx configuration:"
+        echo "============================="
+        cat "$config_file"
+
+    elif [ "$selection" -eq $((${#clients[@]}+1)) ]; then
+        return
+    else
+        echo "Invalid selection. Press Enter to continue..."
+        read
+    fi
+
+    echo
+    echo "Press Enter to continue..."
+    read
+}
+
 list_clients() {
     echo "Open WebUI Client Containers:"
     echo "============================="
@@ -351,6 +497,9 @@ if [ $# -eq 0 ]; then
                 manage_deployment_menu
                 ;;
             4)
+                generate_nginx_config
+                ;;
+            5)
                 echo "Goodbye!"
                 exit 0
                 ;;
@@ -380,7 +529,7 @@ else
             ;;
         *)
             echo "Unknown command: $1"
-            echo "Run './manage-clients.sh help' for available commands"
+            echo "Run './client-manager.sh help' for available commands"
             exit 1
             ;;
     esac

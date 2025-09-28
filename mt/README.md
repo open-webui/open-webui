@@ -31,19 +31,19 @@ Each client gets their own:
 ### Manage All Clients
 ```bash
 # Show help and available commands
-./manage-clients.sh
+./client-manager.sh
 
 # List all client containers
-./manage-clients.sh list
+./client-manager.sh list
 
 # Stop all client containers
-./manage-clients.sh stop
+./client-manager.sh stop
 
 # Start all stopped client containers
-./manage-clients.sh start
+./client-manager.sh start
 
 # View logs for specific client
-./manage-clients.sh logs acme-corp
+./client-manager.sh logs acme-corp
 ```
 
 ## File Structure
@@ -54,7 +54,7 @@ mt/
 ├── start-template.sh         # Template for creating client instances
 ├── start-acme-corp.sh        # Pre-configured ACME Corp launcher
 ├── start-beta-client.sh      # Pre-configured Beta Client launcher
-└── manage-clients.sh         # Multi-client management tool
+└── client-manager.sh         # Multi-client management tool
 ```
 
 ## Container Naming Convention
@@ -155,11 +155,59 @@ server {
 
 ## OAuth Configuration
 
-All clients share the same Google OAuth configuration:
-- **Domain Restriction:** `martins.net`
-- **Redirect URI Pattern:** `https://CLIENT_DOMAIN/oauth/google/callback`
+### QuantaBase Google Cloud Project
 
-Update Google Cloud Console with each new client domain.
+**Google Cloud Console:** https://console.cloud.google.com/apis/credentials?hl=en&project=quantabase
+**OAuth 2.0 Client ID:** `Open WebUI`
+**Client ID:** `1063776054060-2fa0vn14b7ahi1tmfk49cuio44goosc1.apps.googleusercontent.com`
+
+### Shared OAuth Configuration
+
+All QuantaBase client instances share the same Google OAuth configuration:
+
+- **Domain Restriction:** `martins.net` (only @martins.net email addresses can sign in)
+- **Authorized JavaScript Origins:** Must include each client's domain
+- **Authorized Redirect URIs:** Must include each client's callback URL
+
+### Adding New Client Domains
+
+When creating a new client deployment, add these URLs to the OAuth configuration:
+
+**For Development (localhost):**
+```
+Authorized JavaScript Origins:
+- http://127.0.0.1:PORT
+- http://localhost:PORT
+
+Authorized Redirect URIs:
+- http://127.0.0.1:PORT/oauth/google/callback
+- http://localhost:PORT/oauth/google/callback
+```
+
+**For Production:**
+```
+Authorized JavaScript Origins:
+- https://CLIENT_NAME.yourdomain.com
+
+Authorized Redirect URIs:
+- https://CLIENT_NAME.yourdomain.com/oauth/google/callback
+```
+
+### Current Configured Clients
+
+| Client | Development | Production |
+|--------|------------|------------|
+| Main Instance | http://127.0.0.1:8080 | https://yourdomain.com |
+| imagicrafter | http://127.0.0.1:8081 | https://imagicrafter.yourdomain.com |
+
+### OAuth Configuration Steps
+
+1. **Access Google Cloud Console:** https://console.cloud.google.com/apis/credentials?hl=en&project=quantabase
+2. **Select "Open WebUI" OAuth 2.0 Client ID**
+3. **Add new Authorized JavaScript Origins** for the client domain
+4. **Add new Authorized Redirect URIs** for the OAuth callback
+5. **Save changes**
+6. **Test authentication** at the client URL
 
 ## Source Code Update Process
 
@@ -346,12 +394,12 @@ docker pull ghcr.io/imagicrafter/open-webui:main
 
 ```bash
 # Update all client deployments with new image
-./mt/manage-clients.sh stop
+./mt/client-manager.sh stop
 docker ps -a --filter "name=openwebui-" --format "{{.Names}}" | xargs docker rm
-./mt/manage-clients.sh start
+./mt/client-manager.sh start
 
 # Verify all clients are running with updated image
-./mt/manage-clients.sh list
+./mt/client-manager.sh list
 docker images ghcr.io/imagicrafter/open-webui
 ```
 
@@ -420,12 +468,12 @@ git pull origin main
 docker pull ghcr.io/imagicrafter/open-webui:main
 
 # Update all client deployments
-./mt/manage-clients.sh stop
+./mt/client-manager.sh stop
 docker ps -a --filter "name=openwebui-" --format "{{.Names}}" | xargs docker rm
-./mt/manage-clients.sh start
+./mt/client-manager.sh start
 
 # Verify all clients are running
-./mt/manage-clients.sh list
+./mt/client-manager.sh list
 ```
 
 ### Rollback Process
@@ -440,9 +488,9 @@ docker images ghcr.io/imagicrafter/open-webui
 docker tag ghcr.io/imagicrafter/open-webui:v2024.01.15 ghcr.io/imagicrafter/open-webui:main
 
 # Restart clients with previous version
-./mt/manage-clients.sh stop
+./mt/client-manager.sh stop
 docker ps -a --filter "name=openwebui-" --format "{{.Names}}" | xargs docker rm
-./mt/manage-clients.sh start
+./mt/client-manager.sh start
 ```
 
 ### Custom Branding Checklist
@@ -510,7 +558,7 @@ Update all clients to latest image:
 
 ```bash
 # Stop all clients
-./manage-clients.sh stop
+./client-manager.sh stop
 
 # Pull latest image
 docker pull ghcr.io/imagicrafter/open-webui:main
@@ -519,7 +567,7 @@ docker pull ghcr.io/imagicrafter/open-webui:main
 docker ps -a --filter "name=openwebui-" --format "{{.Names}}" | xargs docker rm
 
 # Restart all clients (they'll use the new image)
-./manage-clients.sh start
+./client-manager.sh start
 ```
 
 ### Volume Management
