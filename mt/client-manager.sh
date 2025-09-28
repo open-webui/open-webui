@@ -271,10 +271,11 @@ manage_single_deployment() {
         echo "3) Restart deployment"
         echo "4) View logs"
         echo "5) Show Cloudflare DNS configuration"
-        echo "6) Remove deployment (DANGER)"
-        echo "7) Return to deployment list"
+        echo "6) Update OAuth allowed domains"
+        echo "7) Remove deployment (DANGER)"
+        echo "8) Return to deployment list"
         echo
-        echo -n "Select action (1-7): "
+        echo -n "Select action (1-8): "
         read action
 
         case "$action" in
@@ -344,6 +345,96 @@ manage_single_deployment() {
                 read
                 ;;
             6)
+                # Update OAuth allowed domains
+                echo
+                echo "╔════════════════════════════════════════╗"
+                echo "║       Update OAuth Allowed Domains    ║"
+                echo "╚════════════════════════════════════════╝"
+                echo
+
+                # Get current domains from container
+                current_domains=$(docker exec "$container_name" env 2>/dev/null | grep "OAUTH_ALLOWED_DOMAINS=" | cut -d'=' -f2- 2>/dev/null || echo "")
+                if [[ -n "$current_domains" ]]; then
+                    echo "Current allowed domains: $current_domains"
+                else
+                    echo "Current allowed domains: Not set"
+                fi
+                echo
+
+                echo "Enter new allowed domains (comma-separated, e.g., martins.net,example.com):"
+                echo -n "New domains: "
+                read new_domains
+
+                if [[ -z "$new_domains" ]]; then
+                    echo "❌ No domains provided. Operation cancelled."
+                    echo "Press Enter to continue..."
+                    read
+                    continue
+                fi
+
+                echo
+                echo "⚠️  This will recreate the container with new domain settings."
+                echo "All data will be preserved (volumes are maintained)."
+                echo "New allowed domains: $new_domains"
+                echo
+                echo -n "Continue? (y/N): "
+                read confirm
+
+                if [[ "$confirm" =~ ^[Yy]$ ]]; then
+                    echo
+                    echo "Updating allowed domains..."
+
+                    # Get current container configuration
+                    port=$(docker ps -a --filter "name=$container_name" --format "{{.Ports}}" | grep -o '0.0.0.0:[0-9]*' | cut -d: -f2)
+                    redirect_uri=$(docker exec "$container_name" env 2>/dev/null | grep "GOOGLE_REDIRECT_URI=" | cut -d'=' -f2- 2>/dev/null || echo "")
+                    webui_name=$(docker exec "$container_name" env 2>/dev/null | grep "WEBUI_NAME=" | cut -d'=' -f2- 2>/dev/null || echo "QuantaBase - $client_name")
+
+                    if [[ -z "$port" ]] || [[ -z "$redirect_uri" ]]; then
+                        echo "❌ Could not retrieve container configuration. Please recreate manually."
+                        echo "Press Enter to continue..."
+                        read
+                        continue
+                    fi
+
+                    # Stop and remove old container (preserve volume)
+                    echo "Stopping container..."
+                    docker stop "$container_name" 2>/dev/null
+                    echo "Removing old container..."
+                    docker rm "$container_name" 2>/dev/null
+
+                    # Recreate container with new domains
+                    echo "Creating new container with updated domains..."
+                    volume_name="openwebui-${client_name}-data"
+
+                    docker run -d \
+                        --name "$container_name" \
+                        -p "${port}:8080" \
+                        -e GOOGLE_CLIENT_ID=1063776054060-2fa0vn14b7ahi1tmfk49cuio44goosc1.apps.googleusercontent.com \
+                        -e GOOGLE_CLIENT_SECRET=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 \
+                        -e GOOGLE_REDIRECT_URI="$redirect_uri" \
+                        -e ENABLE_OAUTH_SIGNUP=true \
+                        -e OAUTH_ALLOWED_DOMAINS="$new_domains" \
+                        -e OPENID_PROVIDER_URL=https://accounts.google.com/.well-known/openid-configuration \
+                        -e WEBUI_NAME="$webui_name" \
+                        -e USER_PERMISSIONS_CHAT_CONTROLS=false \
+                        -v "${volume_name}:/app/backend/data" \
+                        --restart unless-stopped \
+                        ghcr.io/imagicrafter/open-webui:main
+
+                    if [ $? -eq 0 ]; then
+                        echo "✅ Container recreated successfully with new allowed domains!"
+                        echo "New allowed domains: $new_domains"
+                    else
+                        echo "❌ Failed to recreate container. Check Docker logs."
+                    fi
+                else
+                    echo "Operation cancelled."
+                fi
+
+                echo "Press Enter to continue..."
+                read
+                ;;
+            7)
                 echo "⚠️  WARNING: This will permanently remove the deployment!"
                 echo "Data volume will be preserved but container will be deleted."
                 echo -n "Type 'DELETE' to confirm: "
@@ -362,7 +453,7 @@ manage_single_deployment() {
                     read
                 fi
                 ;;
-            7)
+            8)
                 return
                 ;;
             *)
