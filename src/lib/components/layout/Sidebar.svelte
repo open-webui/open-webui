@@ -402,8 +402,13 @@
 			);
 		};
 
+		let isDestroyed = false;
 		const loadData = () => Promise.all([initChannels(), initChatList()]).catch(console.error);
 		loadData().then(() => {
+			if (isDestroyed) {
+				return;
+			}
+
 			// Subscribe to chats and showSidebar after data is loaded
 			subscribeOnlyOnChange(chats, () => initFolders());
 			subscribeOnlyOnChange(showSidebar, (value) => !value && loadData());
@@ -424,7 +429,10 @@
 			dropZone?.addEventListener('dragleave', onDragLeave);
 		});
 
-		return () => unsubscribers.forEach((unsubscribe) => unsubscribe());
+		return () => {
+			isDestroyed = true;
+			unsubscribers.forEach((unsubscribe) => unsubscribe());
+		};
 	});
 
 	onDestroy(() => {
