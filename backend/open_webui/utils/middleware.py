@@ -279,228 +279,258 @@ def process_tool_result(
 async def chat_completion_tools_handler(
     request: Request, body: dict, extra_params: dict, user: UserModel, models, tools
 ) -> tuple[dict, dict]:
-    async def get_content_from_response(response) -> Optional[str]:
-        content = None
-        if hasattr(response, "body_iterator"):
-            async for chunk in response.body_iterator:
-                data = json.loads(chunk.decode("utf-8"))
-                content = data["choices"][0]["message"]["content"]
 
-            # Cleanup any remaining background tasks if necessary
-            if response.background is not None:
-                await response.background()
-        else:
-            content = response["choices"][0]["message"]["content"]
-        return content
+    # Initialize retry mechanism
+    tool_call_retries = 0
+    sources = []
+    skip_files = False
 
-    def get_tools_function_calling_payload(messages, task_model_id, content):
-        user_message = get_last_user_message(messages)
+    # Main iterative loop for tool chaining
+    while tool_call_retries < CHAT_RESPONSE_MAX_TOOL_CALL_RETRIES:
 
-        recent_messages = messages[-4:] if len(messages) > 4 else messages
-        chat_history = "\n".join(
-            f"{message['role'].upper()}: \"\"\"{message['content']}\"\"\""
-            for message in recent_messages
+        async def get_content_from_response(response) -> Optional[str]:
+            content = None
+            if hasattr(response, "body_iterator"):
+                async for chunk in response.body_iterator:
+                    data = json.loads(chunk.decode("utf-8"))
+                    content = data["choices"][0]["message"]["content"]
+
+                # Cleanup any remaining background tasks if necessary
+                if response.background is not None:
+                    await response.background()
+            else:
+                content = response["choices"][0]["message"]["content"]
+            return content
+
+        def get_tools_function_calling_payload(messages, task_model_id, content):
+            user_message = get_last_user_message(messages)
+
+            recent_messages = messages[-4:] if len(messages) > 4 else messages
+            chat_history = "\n".join(
+                f"{message['role'].upper()}: \"\"\"{message['content']}\"\"\""
+                for message in recent_messages
+            )
+
+            # Include iteration context for chaining
+            iteration_context = ""
+            if tool_call_retries > 0:
+                iteration_context = f"\n\nIteration {tool_call_retries + 1}: Previous tool results are available in the conversation context. Use them to make informed decisions about additional tool calls."
+
+            prompt = f"History:\n{chat_history}\nQuery: {user_message}{iteration_context}"
+
+            return {
+                "model": task_model_id,
+                "messages": [
+                    {"role": "system", "content": content},
+                    {"role": "user", "content": f"Query: {prompt}"},
+                ],
+                "stream": False,
+                "metadata": {"task": str(TASKS.FUNCTION_CALLING)},
+            }
+
+        event_caller = extra_params["__event_call__"]
+        event_emitter = extra_params["__event_emitter__"]
+        metadata = extra_params["__metadata__"]
+
+        task_model_id = get_task_model_id(
+            body["model"],
+            request.app.state.config.TASK_MODEL,
+            request.app.state.config.TASK_MODEL_EXTERNAL,
+            models,
         )
 
-        prompt = f"History:\n{chat_history}\nQuery: {user_message}"
+        specs = [tool["spec"] for tool in tools.values()]
+        tools_specs = json.dumps(specs)
 
-        return {
-            "model": task_model_id,
-            "messages": [
-                {"role": "system", "content": content},
-                {"role": "user", "content": f"Query: {prompt}"},
-            ],
-            "stream": False,
-            "metadata": {"task": str(TASKS.FUNCTION_CALLING)},
-        }
+        # Use enhanced template for iterative calling
+        if request.app.state.config.TOOLS_FUNCTION_CALLING_PROMPT_TEMPLATE != "":
+            template = request.app.state.config.TOOLS_FUNCTION_CALLING_PROMPT_TEMPLATE
+        else:
+            # Enhanced template that supports chaining
+            template = DEFAULT_TOOLS_FUNCTION_CALLING_PROMPT_TEMPLATE
 
-    event_caller = extra_params["__event_call__"]
-    event_emitter = extra_params["__event_emitter__"]
-    metadata = extra_params["__metadata__"]
+        tools_function_calling_prompt = tools_function_calling_generation_template(
+            template, tools_specs
+        )
+        payload = get_tools_function_calling_payload(
+            body["messages"], task_model_id, tools_function_calling_prompt
+        )
 
-    task_model_id = get_task_model_id(
-        body["model"],
-        request.app.state.config.TASK_MODEL,
-        request.app.state.config.TASK_MODEL_EXTERNAL,
-        models,
-    )
-
-    skip_files = False
-    sources = []
-
-    specs = [tool["spec"] for tool in tools.values()]
-    tools_specs = json.dumps(specs)
-
-    if request.app.state.config.TOOLS_FUNCTION_CALLING_PROMPT_TEMPLATE != "":
-        template = request.app.state.config.TOOLS_FUNCTION_CALLING_PROMPT_TEMPLATE
-    else:
-        template = DEFAULT_TOOLS_FUNCTION_CALLING_PROMPT_TEMPLATE
-
-    tools_function_calling_prompt = tools_function_calling_generation_template(
-        template, tools_specs
-    )
-    payload = get_tools_function_calling_payload(
-        body["messages"], task_model_id, tools_function_calling_prompt
-    )
-
-    try:
-        response = await generate_chat_completion(request, form_data=payload, user=user)
-        log.debug(f"{response=}")
-        content = await get_content_from_response(response)
-        log.debug(f"{content=}")
-
-        if not content:
-            return body, {}
+        # Track if any tools were called in this iteration
+        tools_called_this_iteration = False
 
         try:
-            content = content[content.find("{") : content.rfind("}") + 1]
+            response = await generate_chat_completion(request, form_data=payload, user=user)
+            log.debug(f"{response=}")
+            content = await get_content_from_response(response)
+            log.debug(f"{content=}")
+
             if not content:
-                raise Exception("No JSON object found in the response")
+                break
 
-            result = json.loads(content)
+            try:
+                content = content[content.find("{") : content.rfind("}") + 1]
+                if not content:
+                    raise Exception("No JSON object found in the response")
 
-            async def tool_call_handler(tool_call):
-                nonlocal skip_files
+                result = json.loads(content)
 
-                log.debug(f"{tool_call=}")
+                async def tool_call_handler(tool_call):
+                    nonlocal skip_files, tools_called_this_iteration
 
-                tool_function_name = tool_call.get("name", None)
-                if tool_function_name not in tools:
-                    return body, {}
+                    log.debug(f"{tool_call=}")
 
-                tool_function_params = tool_call.get("parameters", {})
+                    tool_function_name = tool_call.get("name", None)
+                    if tool_function_name not in tools:
+                        return
 
-                tool = None
-                tool_type = ""
-                direct_tool = False
+                    tools_called_this_iteration = True
+                    tool_function_params = tool_call.get("parameters", {})
 
-                try:
-                    tool = tools[tool_function_name]
-                    tool_type = tool.get("type", "")
-                    direct_tool = tool.get("direct", False)
+                    tool = None
+                    tool_type = ""
+                    direct_tool = False
 
-                    spec = tool.get("spec", {})
-                    allowed_params = (
-                        spec.get("parameters", {}).get("properties", {}).keys()
-                    )
-                    tool_function_params = {
-                        k: v
-                        for k, v in tool_function_params.items()
-                        if k in allowed_params
-                    }
+                    try:
+                        tool = tools[tool_function_name]
+                        tool_type = tool.get("type", "")
+                        direct_tool = tool.get("direct", False)
 
-                    if tool.get("direct", False):
-                        tool_result = await event_caller(
-                            {
-                                "type": "execute:tool",
-                                "data": {
-                                    "id": str(uuid4()),
-                                    "name": tool_function_name,
-                                    "params": tool_function_params,
-                                    "server": tool.get("server", {}),
-                                    "session_id": metadata.get("session_id", None),
-                                },
-                            }
+                        spec = tool.get("spec", {})
+                        allowed_params = (
+                            spec.get("parameters", {}).get("properties", {}).keys()
                         )
-                    else:
-                        tool_function = tool["callable"]
-                        tool_result = await tool_function(**tool_function_params)
-
-                except Exception as e:
-                    tool_result = str(e)
-
-                tool_result, tool_result_files, tool_result_embeds = (
-                    process_tool_result(
-                        request,
-                        tool_function_name,
-                        tool_result,
-                        tool_type,
-                        direct_tool,
-                        metadata,
-                        user,
-                    )
-                )
-
-                if event_emitter:
-                    if tool_result_files:
-                        await event_emitter(
-                            {
-                                "type": "files",
-                                "data": {
-                                    "files": tool_result_files,
-                                },
-                            }
-                        )
-
-                    if tool_result_embeds:
-                        await event_emitter(
-                            {
-                                "type": "embeds",
-                                "data": {
-                                    "embeds": tool_result_embeds,
-                                },
-                            }
-                        )
-
-                print(
-                    f"Tool {tool_function_name} result: {tool_result}",
-                    tool_result_files,
-                    tool_result_embeds,
-                )
-
-                if tool_result:
-                    tool = tools[tool_function_name]
-                    tool_id = tool.get("tool_id", "")
-
-                    tool_name = (
-                        f"{tool_id}/{tool_function_name}"
-                        if tool_id
-                        else f"{tool_function_name}"
-                    )
-
-                    # Citation is enabled for this tool
-                    sources.append(
-                        {
-                            "source": {
-                                "name": (f"{tool_name}"),
-                            },
-                            "document": [str(tool_result)],
-                            "metadata": [
-                                {
-                                    "source": (f"{tool_name}"),
-                                    "parameters": tool_function_params,
-                                }
-                            ],
-                            "tool_result": True,
+                        tool_function_params = {
+                            k: v
+                            for k, v in tool_function_params.items()
+                            if k in allowed_params
                         }
+
+                        if tool.get("direct", False):
+                            tool_result = await event_caller(
+                                {
+                                    "type": "execute:tool",
+                                    "data": {
+                                        "id": str(uuid4()),
+                                        "name": tool_function_name,
+                                        "params": tool_function_params,
+                                        "server": tool.get("server", {}),
+                                        "session_id": metadata.get("session_id", None),
+                                    },
+                                }
+                            )
+                        else:
+                            tool_function = tool["callable"]
+                            tool_result = await tool_function(**tool_function_params)
+
+                    except Exception as e:
+                        tool_result = str(e)
+
+                    tool_result, tool_result_files, tool_result_embeds = (
+                        process_tool_result(
+                            request,
+                            tool_function_name,
+                            tool_result,
+                            tool_type,
+                            direct_tool,
+                            metadata,
+                            user,
+                        )
                     )
 
-                    # Citation is not enabled for this tool
-                    body["messages"] = add_or_update_user_message(
-                        f"\nTool `{tool_name}` Output: {tool_result}",
-                        body["messages"],
+                    if event_emitter:
+                        if tool_result_files:
+                            await event_emitter(
+                                {
+                                    "type": "files",
+                                    "data": {
+                                        "files": tool_result_files,
+                                    },
+                                }
+                            )
+
+                        if tool_result_embeds:
+                            await event_emitter(
+                                {
+                                    "type": "embeds",
+                                    "data": {
+                                        "embeds": tool_result_embeds,
+                                    },
+                                }
+                            )
+
+                    print(
+                        f"Tool {tool_function_name} result: {tool_result}",
+                        tool_result_files,
+                        tool_result_embeds,
                     )
 
-                    if (
-                        tools[tool_function_name]
-                        .get("metadata", {})
-                        .get("file_handler", False)
-                    ):
-                        skip_files = True
+                    if tool_result:
+                        tool = tools[tool_function_name]
+                        tool_id = tool.get("tool_id", "")
 
-            # check if "tool_calls" in result
-            if result.get("tool_calls"):
-                for tool_call in result.get("tool_calls"):
-                    await tool_call_handler(tool_call)
-            else:
-                await tool_call_handler(result)
+                        tool_name = (
+                            f"{tool_id}/{tool_function_name}"
+                            if tool_id
+                            else f"{tool_function_name}"
+                        )
+
+                        # Citation is enabled for this tool
+                        sources.append(
+                            {
+                                "source": {
+                                    "name": (f"{tool_name}"),
+                                },
+                                "document": [str(tool_result)],
+                                "metadata": [
+                                    {
+                                        "source": (f"{tool_name}"),
+                                        "parameters": tool_function_params,
+                                        "iteration": tool_call_retries + 1,
+                                    }
+                                ],
+                                "tool_result": True,
+                            }
+                        )
+
+                        # Add result to message context for next iteration
+                        body["messages"] = add_or_update_user_message(
+                            f"\nTool `{tool_name}` (Iteration {tool_call_retries + 1}) Output: {tool_result}",
+                            body["messages"],
+                        )
+
+                        if (
+                            tools[tool_function_name]
+                            .get("metadata", {})
+                            .get("file_handler", False)
+                        ):
+                            skip_files = True
+
+                # check if "tool_calls" in result
+                if result.get("tool_calls"):
+                    for tool_call in result.get("tool_calls"):
+                        await tool_call_handler(tool_call)
+                else:
+                    await tool_call_handler(result)
+
+                # Check if we should continue with more iterations
+                should_continue = (
+                    result.get("continue_tool_calls", False) or 
+                    (tools_called_this_iteration and tool_call_retries == 0)
+                )
+
+                if not should_continue or not tools_called_this_iteration:
+                    break
+
+                tool_call_retries += 1
+
+            except Exception as e:
+                log.debug(f"Error: {e}")
+                break
 
         except Exception as e:
             log.debug(f"Error: {e}")
-            content = None
-    except Exception as e:
-        log.debug(f"Error: {e}")
-        content = None
+            break
 
     log.debug(f"tool_contexts: {sources}")
 
