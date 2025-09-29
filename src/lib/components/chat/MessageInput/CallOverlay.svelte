@@ -474,7 +474,7 @@
 					if (blob) {
 						audioCache.set(content, new Audio(blob));
 					}
-				} else if ($config.audio.tts.engine !== '') {
+				} else if ($config?.audio?.tts?.engine?.default && $config.audio.tts.engine.default !== '') {
 					const res = await synthesizeOpenAISpeech(
 						localStorage.token,
 						$settings?.audio?.tts?.defaultVoice === $config.audio.tts.voice
@@ -483,6 +483,7 @@
 						content
 					).catch((error) => {
 						console.error(error);
+						toast.error(`${error}`);
 						return null;
 					});
 
@@ -520,7 +521,7 @@
 						emoji = null;
 					}
 
-					if ($config.audio.tts.engine !== '') {
+					if ($config?.audio?.tts?.engine?.default && $config.audio.tts.engine.default !== '') {
 						try {
 							console.log(
 								'%c%s',
