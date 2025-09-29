@@ -342,72 +342,76 @@
 		selectedChatId = null;
 	};
 
-	onMount(async () => {
+	onMount(() => {
 		showPinnedChat = localStorage?.showPinnedChat ? localStorage.showPinnedChat === 'true' : true;
 
-		mobile.subscribe((value) => {
-			if ($showSidebar && value) {
-				showSidebar.set(false);
-			}
-
-			if ($showSidebar && !value) {
-				const navElement = document.getElementsByTagName('nav')[0];
-				if (navElement) {
-					navElement.style['-webkit-app-region'] = 'drag';
+		const unsubscribers: (() => void)[] = [];
+		unsubscribers.push(
+			mobile.subscribe((value) => {
+				if ($showSidebar && value) {
+					showSidebar.set(false);
 				}
-			}
 
-			if (!$showSidebar && !value) {
-				showSidebar.set(true);
-			}
-		});
+				if ($showSidebar && !value) {
+					const navElement = document.getElementsByTagName('nav')[0];
+					if (navElement) {
+						navElement.style['-webkit-app-region'] = 'drag';
+					}
+				}
+
+				if (!$showSidebar && !value) {
+					showSidebar.set(true);
+				}
+			})
+		);
 
 		showSidebar.set(!$mobile ? localStorage.sidebar === 'true' : false);
-		showSidebar.subscribe(async (value) => {
-			localStorage.sidebar = value;
+		unsubscribers.push(
+			showSidebar.subscribe(async (value) => {
+				localStorage.sidebar = value;
 
-			// nav element is not available on the first render
-			const navElement = document.getElementsByTagName('nav')[0];
+				// nav element is not available on the first render
+				const navElement = document.getElementsByTagName('nav')[0];
 
-			if (navElement) {
-				if ($mobile) {
-					if (!value) {
-						navElement.style['-webkit-app-region'] = 'drag';
+				if (navElement) {
+					if ($mobile) {
+						if (!value) {
+							navElement.style['-webkit-app-region'] = 'drag';
+						} else {
+							navElement.style['-webkit-app-region'] = 'no-drag';
+						}
 					} else {
-						navElement.style['-webkit-app-region'] = 'no-drag';
+						navElement.style['-webkit-app-region'] = 'drag';
 					}
-				} else {
-					navElement.style['-webkit-app-region'] = 'drag';
 				}
-			}
+			})
+		);
 
-			if (!value) {
-				await initChannels();
-				await initChatList();
-			}
+		const loadData = () => Promise.all([initChannels(), initChatList()]).catch(console.error);
+		loadData().then(() => {
+			// Subscribe to chats and showSidebar after data is loaded
+			unsubscribers.push(
+				chats.subscribe(() => initFolders()),
+				showSidebar.subscribe((value) => !value && loadData())
+			);
+
+			window.addEventListener('keydown', onKeyDown);
+			window.addEventListener('keyup', onKeyUp);
+
+			window.addEventListener('touchstart', onTouchStart);
+			window.addEventListener('touchend', onTouchEnd);
+
+			window.addEventListener('focus', onFocus);
+			window.addEventListener('blur', onBlur);
+
+			const dropZone = document.getElementById('sidebar');
+
+			dropZone?.addEventListener('dragover', onDragOver);
+			dropZone?.addEventListener('drop', onDrop);
+			dropZone?.addEventListener('dragleave', onDragLeave);
 		});
 
-		chats.subscribe((value) => {
-			initFolders();
-		});
-
-		await initChannels();
-		await initChatList();
-
-		window.addEventListener('keydown', onKeyDown);
-		window.addEventListener('keyup', onKeyUp);
-
-		window.addEventListener('touchstart', onTouchStart);
-		window.addEventListener('touchend', onTouchEnd);
-
-		window.addEventListener('focus', onFocus);
-		window.addEventListener('blur', onBlur);
-
-		const dropZone = document.getElementById('sidebar');
-
-		dropZone?.addEventListener('dragover', onDragOver);
-		dropZone?.addEventListener('drop', onDrop);
-		dropZone?.addEventListener('dragleave', onDragLeave);
+		return () => unsubscribers.forEach((unsubscribe) => unsubscribe());
 	});
 
 	onDestroy(() => {
