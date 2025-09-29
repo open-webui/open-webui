@@ -58,6 +58,11 @@ async def import_prompts(
     try:
         for prompt_data in form_data.prompts:
             prompt_form = PromptForm(**prompt_data)
+            prompt_form.command = (
+                prompt_form.command[1:]
+                if prompt_form.command.startswith("/")
+                else prompt_form.command
+            )
             prompt = Prompts.get_prompt_by_command(prompt_form.command)
 
             if prompt is None:
@@ -91,6 +96,12 @@ async def create_new_prompt(
             detail=ERROR_MESSAGES.UNAUTHORIZED,
         )
 
+    form_data.command = (
+        form_data.command[1:]
+        if form_data.command.startswith("/")
+        else form_data.command
+    )
+
     prompt = Prompts.get_prompt_by_command(form_data.command)
     if prompt is None:
         prompt = Prompts.insert_new_prompt(user.id, form_data)
@@ -114,7 +125,9 @@ async def create_new_prompt(
 
 @router.get("/command/{command}", response_model=Optional[PromptModel])
 async def get_prompt_by_command(command: str, user=Depends(get_verified_user)):
-    prompt = Prompts.get_prompt_by_command(f"/{command}")
+    prompt = Prompts.get_prompt_by_command(command)
+    if not prompt:
+        prompt = Prompts.get_prompt_by_command(f"/{command}")
 
     if prompt:
         if (
@@ -141,7 +154,15 @@ async def update_prompt_by_command(
     form_data: PromptForm,
     user=Depends(get_verified_user),
 ):
-    prompt = Prompts.get_prompt_by_command(f"/{command}")
+    form_data.command = (
+        form_data.command[1:]
+        if form_data.command.startswith("/")
+        else form_data.command
+    )
+    prompt = Prompts.get_prompt_by_command(command)
+    if not prompt:
+        prompt = Prompts.get_prompt_by_command(f"/{command}")
+
     if not prompt:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
@@ -159,7 +180,7 @@ async def update_prompt_by_command(
             detail=ERROR_MESSAGES.ACCESS_PROHIBITED,
         )
 
-    prompt = Prompts.update_prompt_by_command(f"/{command}", form_data)
+    prompt = Prompts.update_prompt_by_command(prompt.command, form_data)
     if prompt:
         return prompt
     else:
@@ -176,7 +197,10 @@ async def update_prompt_by_command(
 
 @router.delete("/command/{command}/delete", response_model=bool)
 async def delete_prompt_by_command(command: str, user=Depends(get_verified_user)):
-    prompt = Prompts.get_prompt_by_command(f"/{command}")
+    prompt = Prompts.get_prompt_by_command(command)
+    if not prompt:
+        prompt = Prompts.get_prompt_by_command(f"/{command}")
+
     if not prompt:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
@@ -193,5 +217,5 @@ async def delete_prompt_by_command(command: str, user=Depends(get_verified_user)
             detail=ERROR_MESSAGES.ACCESS_PROHIBITED,
         )
 
-    result = Prompts.delete_prompt_by_command(f"/{command}")
+    result = Prompts.delete_prompt_by_command(prompt.command)
     return result
