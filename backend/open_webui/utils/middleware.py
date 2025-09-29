@@ -147,7 +147,7 @@ def process_tool_result(
     if isinstance(tool_result, HTMLResponse):
         content_disposition = tool_result.headers.get("Content-Disposition", "")
         if "inline" in content_disposition:
-            content = tool_result.body.decode("utf-8")
+            content = tool_result.body.decode("utf-8", "replace")
             tool_result_embeds.append(content)
 
             if 200 <= tool_result.status_code < 300:
@@ -175,7 +175,7 @@ def process_tool_result(
                     "message": f"{tool_function_name}: Unexpected status code {tool_result.status_code} from embedded UI result.",
                 }
         else:
-            tool_result = tool_result.body.decode("utf-8")
+            tool_result = tool_result.body.decode("utf-8", "replace")
 
     elif (tool_type == "external" and isinstance(tool_result, tuple)) or (
         direct_tool and isinstance(tool_result, list) and len(tool_result) == 2
@@ -283,7 +283,7 @@ async def chat_completion_tools_handler(
         content = None
         if hasattr(response, "body_iterator"):
             async for chunk in response.body_iterator:
-                data = json.loads(chunk.decode("utf-8"))
+                data = json.loads(chunk.decode("utf-8", "replace"))
                 content = data["choices"][0]["message"]["content"]
 
             # Cleanup any remaining background tasks if necessary
@@ -1642,7 +1642,9 @@ async def process_chat_response(
                         response.body, bytes
                     ):
                         try:
-                            response_data = json.loads(response.body.decode("utf-8"))
+                            response_data = json.loads(
+                                response.body.decode("utf-8", "replace")
+                            )
                         except json.JSONDecodeError:
                             response_data = {
                                 "error": {"detail": "Invalid JSON response"}
@@ -2276,7 +2278,11 @@ async def process_chat_response(
                             last_delta_data = None
 
                     async for line in response.body_iterator:
-                        line = line.decode("utf-8") if isinstance(line, bytes) else line
+                        line = (
+                            line.decode("utf-8", "replace")
+                            if isinstance(line, bytes)
+                            else line
+                        )
                         data = line
 
                         # Skip empty lines
