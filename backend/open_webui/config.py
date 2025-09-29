@@ -2018,7 +2018,7 @@ MILVUS_DISKANN_SEARCH_LIST_SIZE = int(
     os.environ.get("MILVUS_DISKANN_SEARCH_LIST_SIZE", "100")
 )
 ENABLE_MILVUS_MULTITENANCY_MODE = (
-    os.environ.get("ENABLE_MILVUS_MULTITENANCY_MODE", "true").lower() == "true"
+    os.environ.get("ENABLE_MILVUS_MULTITENANCY_MODE", "false").lower() == "true"
 )
 # Hyphens not allowed, need to use underscores in collection names
 MILVUS_COLLECTION_PREFIX = os.environ.get("MILVUS_COLLECTION_PREFIX", "open_webui")
