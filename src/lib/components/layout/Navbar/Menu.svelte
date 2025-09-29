@@ -18,7 +18,8 @@
 		theme,
 		user,
 		settings,
-		folders
+		folders,
+		showEmbeds
 	} from '$lib/stores';
 	import { flyAndScale } from '$lib/utils/transitions';
 	import { getChatById } from '$lib/apis/chats';
@@ -319,6 +320,7 @@
 						await showControls.set(true);
 						await showOverview.set(false);
 						await showArtifacts.set(false);
+						await showEmbeds.set(false);
 					}}
 				>
 					<AdjustmentsHorizontal className=" size-4" strokeWidth="1.5" />
@@ -333,6 +335,7 @@
 					await showControls.set(true);
 					await showOverview.set(true);
 					await showArtifacts.set(false);
+					await showEmbeds.set(false);
 				}}
 			>
 				<Map className=" size-4" strokeWidth="1.5" />
@@ -346,6 +349,7 @@
 					await showControls.set(true);
 					await showArtifacts.set(true);
 					await showOverview.set(false);
+					await showEmbeds.set(false);
 				}}
 			>
 				<Cube className=" size-4" strokeWidth="1.5" />

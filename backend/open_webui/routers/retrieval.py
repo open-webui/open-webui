@@ -78,6 +78,7 @@ from open_webui.retrieval.utils import (
     query_doc,
     query_doc_with_hybrid_search,
 )
+from open_webui.retrieval.vector.utils import filter_metadata
 from open_webui.utils.misc import (
     calculate_sha256_string,
 )
@@ -1535,7 +1536,7 @@ def process_file(
                         Document(
                             page_content=doc.page_content,
                             metadata={
-                                **doc.metadata,
+                                **filter_metadata(doc.metadata),
                                 "name": file.filename,
                                 "created_by": file.user_id,
                                 "file_id": file.id,
