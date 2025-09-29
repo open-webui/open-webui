@@ -1803,28 +1803,27 @@ TOOLS_FUNCTION_CALLING_PROMPT_TEMPLATE = PersistentConfig(
 )
 
 
-DEFAULT_TOOLS_FUNCTION_CALLING_PROMPT_TEMPLATE = """Available Tools: {{TOOLS}}
-
-Your task is to choose and return the correct tool(s) from the list of available tools based on the query. Follow these guidelines:
-
-- Return only the JSON object, without any additional text or explanation.
-
-- If no tools match the query, return an empty array: 
-   {
-     "tool_calls": []
-   }
-
-- If one or more tools match the query, construct a JSON response containing a "tool_calls" array with objects that include:
-   - "name": The tool's name.
-   - "parameters": A dictionary of required parameters and their corresponding values.
-
-The format for the JSON response is strictly:
-{
-  "tool_calls": [
-    {"name": "toolName1", "parameters": {"key1": "value1"}},
-    {"name": "toolName2", "parameters": {"key2": "value2"}}
-  ]
-}"""
+DEFAULT_TOOLS_FUNCTION_CALLING_PROMPT_TEMPLATE = """Available Tools: {{TOOLS}}  
+  
+Your task is to choose and return the correct tool(s) from the list of available tools based on the query and any previous tool results in the conversation context.  
+  
+Guidelines:  
+- Return only the JSON object, without any additional text or explanation.  
+- You can make multiple tool calls in sequence by setting "continue_tool_calls": true  
+- Use results from previous tool calls to inform subsequent tool calls  
+- If no tools match the query, return: {"tool_calls": []}  
+- If you need to chain tools (use output from one tool as input to another), make the first tool call, then in the next iteration use its results  
+  
+The format for the JSON response is:  
+{  
+  "tool_calls": [  
+    {"name": "toolName1", "parameters": {"key1": "value1"}},  
+    {"name": "toolName2", "parameters": {"key2": "value2"}}  
+  ],  
+  "continue_tool_calls": true  
+}  
+  
+Set "continue_tool_calls" to true if you need to make additional tool calls based on the results of the current ones."""
 
 
 DEFAULT_EMOJI_GENERATION_PROMPT_TEMPLATE = """Your task is to reflect the speaker's likely facial expression through a fitting emoji. Interpret emotions from the message and reflect their facial expression using fitting, diverse emojis (e.g., 😊, 😢, 😡, 😱).
