@@ -13,8 +13,9 @@
 	import { getContext, onMount } from 'svelte';
 	const i18n = getContext<Writable<i18nType>>('i18n');
 
-	import { settings, user, shortCodesToEmojis } from '$lib/stores';
+	import { formatDate } from '$lib/utils';
 
+	import { settings, user, shortCodesToEmojis } from '$lib/stores';
 	import { WEBUI_API_BASE_URL, WEBUI_BASE_URL } from '$lib/constants';
 
 	import Markdown from '$lib/components/chat/Messages/Markdown.svelte';
@@ -32,18 +33,20 @@
 	import FaceSmile from '$lib/components/icons/FaceSmile.svelte';
 	import EmojiPicker from '$lib/components/common/EmojiPicker.svelte';
 	import ChevronRight from '$lib/components/icons/ChevronRight.svelte';
-	import { formatDate } from '$lib/utils';
 	import Emoji from '$lib/components/common/Emoji.svelte';
-	import { t } from 'i18next';
 	import Skeleton from '$lib/components/chat/Messages/Skeleton.svelte';
+	import ArrowUpLeftAlt from '$lib/components/icons/ArrowUpLeftAlt.svelte';
 
 	export let message;
 	export let showUserProfile = true;
 	export let thread = false;
+
+	export let replyToMessage = false;
 	export let disabled = false;
 
 	export let onDelete: Function = () => {};
 	export let onEdit: Function = () => {};
+	export let onReply: Function = () => {};
 	export let onThread: Function = () => {};
 	export let onReaction: Function = () => {};
 
@@ -65,9 +68,15 @@
 
 {#if message}
 	<div
+		id="message-{message.id}"
 		class="flex flex-col justify-between px-5 {showUserProfile
 			? 'pt-1.5 pb-0.5'
-			: ''} w-full max-w-full mx-auto group hover:bg-gray-300/5 dark:hover:bg-gray-700/5 transition relative"
+			: ''} w-full max-w-full mx-auto group hover:bg-gray-300/5 dark:hover:bg-gray-700/5 transition relative {replyToMessage
+			? 'border-l-4 border-blue-500 bg-blue-100/10 dark:bg-blue-100/5 pl-4'
+			: ''} {(message?.reply_to_message?.meta?.model_id ?? message?.reply_to_message?.user_id) ===
+		$user?.id
+			? 'border-l-4 border-orange-500 bg-orange-100/10 dark:bg-orange-100/5 pl-4'
+			: ''}"
 	>
 		{#if !edit && !disabled}
 			<div
@@ -94,6 +103,17 @@
 							</button>
 						</Tooltip>
 					</EmojiPicker>
+
+					<Tooltip content={$i18n.t('Reply')}>
+						<button
+							class="hover:bg-gray-100 dark:hover:bg-gray-800 transition rounded-lg p-0.5"
+							on:click={() => {
+								onReply(message);
+							}}
+						>
+							<ArrowUpLeftAlt className="size-5" />
+						</button>
+					</Tooltip>
 
 					{#if !thread}
 						<Tooltip content={$i18n.t('Reply in Thread')}>
@@ -134,6 +154,56 @@
 			</div>
 		{/if}
 
+		{#if message?.reply_to_message?.user}
+			<div class="relative text-xs mb-1">
+				<div
+					class="absolute h-3 w-7 left-[18px] top-2 rounded-tl-lg border-t-2 border-l-2 border-gray-300 dark:border-gray-500 z-0"
+				></div>
+
+				<button
+					class="ml-12 flex items-center space-x-2 relative z-0"
+					on:click={() => {
+						const messageElement = document.getElementById(
+							`message-${message.reply_to_message.id}`
+						);
+						if (messageElement) {
+							messageElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
+							messageElement.classList.add('highlight');
+							setTimeout(() => {
+								messageElement.classList.remove('highlight');
+							}, 2000);
+							return;
+						}
+					}}
+				>
+					{#if message?.reply_to_message?.meta?.model_id}
+						<img
+							src={`${WEBUI_API_BASE_URL}/models/model/profile/image?id=${message.reply_to_message.meta.model_id}`}
+							alt={message.reply_to_message.meta.model_name ??
+								message.reply_to_message.meta.model_id}
+							class="size-4 ml-0.5 rounded-full object-cover"
+						/>
+					{:else}
+						<img
+							src={message.reply_to_message.user?.profile_image_url ??
+								`${WEBUI_BASE_URL}/static/favicon.png`}
+							alt={message.reply_to_message.user?.name ?? $i18n.t('Unknown User')}
+							class="size-4 ml-0.5 rounded-full object-cover"
+						/>
+					{/if}
+
+					<div class="shrink-0">
+						{message?.reply_to_message.meta?.model_name ??
+							message?.reply_to_message.user?.name ??
+							$i18n.t('Unknown User')}
+					</div>
+
+					<div class="italic text-sm text-gray-500 dark:text-gray-400 line-clamp-1 w-full flex-1">
+						<Markdown id={`${message.id}-reply-to`} content={message?.reply_to_message?.content} />
+					</div>
+				</button>
+			</div>
+		{/if}
 		<div
 			class=" flex w-full message-{message.id}"
 			id="message-{message.id}"
@@ -151,7 +221,7 @@
 						<ProfilePreview user={message.user}>
 							<ProfileImage
 								src={message.user?.profile_image_url ?? `${WEBUI_BASE_URL}/static/favicon.png`}
-								className={'size-8 translate-y-1 ml-0.5'}
+								className={'size-8 ml-0.5'}
 							/>
 						</ProfilePreview>
 					{/if}
@@ -348,3 +418,18 @@
 		</div>
 	</div>
 {/if}
+
+<style>
+	.highlight {
+		animation: highlightAnimation 2s ease-in-out;
+	}
+
+	@keyframes highlightAnimation {
+		0% {
+			background-color: rgba(0, 60, 255, 0.1);
+		}
+		100% {
+			background-color: transparent;
+		}
+	}
+</style>
