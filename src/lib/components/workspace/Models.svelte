@@ -18,7 +18,8 @@
 		deleteModelById,
 		getModels as getWorkspaceModels,
 		toggleModelById,
-		updateModelById
+		updateModelById,
+		importModels
 	} from '$lib/apis/models';
 
 	import { getModels } from '$lib/apis';
@@ -43,6 +44,7 @@
 
 	let importFiles;
 	let modelsImportInputElement: HTMLInputElement;
+	let modelsImportInProgress = false;
 	let tagsContainerElement: HTMLDivElement;
 
 	let loaded = false;
@@ -505,55 +507,48 @@
 					accept=".json"
 					hidden
 					on:change={() => {
-						console.log(importFiles);
+						if (importFiles.length > 0) {
+							const reader = new FileReader();
+							reader.onload = async (event) => {
+								try {
+									const importedModels = JSON.parse(String(event.target.result));
+									modelsImportInProgress = true;
+									const res = await importModels(localStorage.token, importedModels);
+									modelsImportInProgress = false;
 
-						let reader = new FileReader();
-						reader.onload = async (event) => {
-							let savedModels = JSON.parse(event.target.result);
-							console.log(savedModels);
-
-							for (const model of savedModels) {
-								if (model?.info ?? false) {
-									if ($_models.find((m) => m.id === model.id)) {
-										await updateModelById(localStorage.token, model.id, model.info).catch(
-											(error) => {
-												return null;
-											}
+									if (res) {
+										toast.success($i18n.t('Models imported successfully'));
+										models = await getWorkspaceModels(localStorage.token);
+										await _models.set(
+											await getModels(
+												localStorage.token,
+												$config?.features?.enable_direct_connections &&
+													($settings?.directConnections ?? null)
+											)
 										);
 									} else {
-										await createNewModel(localStorage.token, model.info).catch((error) => {
-											return null;
-										});
+										toast.error($i18n.t('Failed to import models'));
 									}
-								} else {
-									if (model?.id && model?.name) {
-										await createNewModel(localStorage.token, model).catch((error) => {
-											return null;
-										});
-									}
+								} catch (e) {
+									toast.error($i18n.t('Invalid JSON file'));
+									console.error(e);
 								}
-							}
-
-							await _models.set(
-								await getModels(
-									localStorage.token,
-									$config?.features?.enable_direct_connections &&
-										($settings?.directConnections ?? null)
-								)
-							);
-							models = await getWorkspaceModels(localStorage.token);
-						};
-
-						reader.readAsText(importFiles[0]);
+							};
+							reader.readAsText(importFiles[0]);
+						}
 					}}
 				/>
 
 				<button
 					class="flex text-xs items-center space-x-1 px-3 py-1.5 rounded-xl bg-gray-50 hover:bg-gray-100 dark:bg-gray-800 dark:hover:bg-gray-700 dark:text-gray-200 transition"
+					disabled={modelsImportInProgress}
 					on:click={() => {
 						modelsImportInputElement.click();
 					}}
 				>
+					{#if modelsImportInProgress}
+						<Spinner className="size-3" />
+					{/if}
 					<div class=" self-center mr-2 font-medium line-clamp-1">{$i18n.t('Import Models')}</div>
 
 					<div class=" self-center">

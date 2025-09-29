@@ -1,6 +1,7 @@
 from typing import Optional
 import io
 import base64
+import logging
 
 from open_webui.models.models import (
     ModelForm,
@@ -21,6 +22,7 @@ from open_webui.utils.access_control import has_access, has_permission
 from open_webui.config import BYPASS_ADMIN_ACCESS_CONTROL, STATIC_DIR
 
 router = APIRouter()
+log = logging.getLogger(__name__)
 
 
 ###########################
@@ -91,6 +93,45 @@ async def create_new_model(
 @router.get("/export", response_model=list[ModelModel])
 async def export_models(user=Depends(get_admin_user)):
     return Models.get_models()
+
+
+############################
+# ImportModels
+############################
+
+
+class ModelsImportForm(BaseModel):
+    models: list[dict]
+
+
+@router.post("/import", response_model=bool)
+async def import_models(
+    user: str = Depends(get_admin_user), form_data: ModelsImportForm = ...
+):
+    try:
+        for model_data in form_data.models:
+            model_body = model_data.get("info", model_data)
+            model_id = model_body.get("id")
+
+            if not model_id:
+                continue
+
+            existing_model = Models.get_model_by_id(model_id)
+
+            model_body["meta"] = model_body.get("meta", {})
+            model_body["params"] = model_body.get("params", {})
+            model_form = ModelForm(**model_body)
+
+            if existing_model:
+                Models.update_model_by_id(model_id, model_form)
+            else:
+                Models.insert_new_model(user_id=user.id, form_data=model_form)
+        return True
+    except Exception as e:
+        log.exception(f"Error importing models: {e}")
+        raise HTTPException(
+            status_code=500, detail="An error occurred while importing models."
+        )
 
 
 ############################
