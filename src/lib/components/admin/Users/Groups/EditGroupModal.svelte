@@ -173,6 +173,22 @@
 		reader.readAsText(file);
 	}
 
+	function toDate(input) {
+	    // Accept number (seconds or ms) or numeric string or ISO string
+	    if (input == null) return null;
+
+	    // numeric value?
+	    const num = typeof input === 'number' ? input : Number(input);
+	    if (!Number.isNaN(num)) {
+	        // if value looks like seconds (rough heuristic: < 1e12) convert to ms
+	        const ms = num < 1e12 ? num * 1000 : num;
+	        return new Date(ms);
+	    }
+
+	    // fallback: parse as ISO/date string
+	    return new Date(input);
+	}
+
 	const init = () => {
 		console.log('EditGroupModal - Initializing with group:', group);
 		console.log('properties in the group:', group ? Object.keys(group) : 'No group');
@@ -181,10 +197,16 @@
 			description = group.description;
 			permissions = group?.permissions ?? {};
 			created_by = group?.created_by ?? 'Unknown';
-			created_at = group?.created_at ? new Date(group.created_at).toLocaleString() : 'Unknown';
-			updated_at = group?.updated_at ? new Date(group.updated_at).toLocaleString() : 'Unknown';
+
+			const cDate = toDate(group?.created_at);
+			created_at = cDate ? cDate.toLocaleString() : 'Unknown';
+
+			const uDate = toDate(group?.updated_at);
+			updated_at = uDate ? uDate.toLocaleString() : 'Unknown';
+
+			// for relative display with dayjs:
+			// dayjs(toDate(group.created_at)).fromNow()
 			userIds = group?.user_ids ?? [];
-			// also add creator name here
 		}
 	};
 
