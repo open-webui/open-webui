@@ -35,6 +35,9 @@
 
 	export let name = '';
 	export let description = '';
+	export let created_by = ''; // add creator name
+	export let created_at = ''; // add creator initialization
+	export let updated_at = ''; // add updated initialization
 
 	export let permissions = {
 		workspace: {
@@ -65,7 +68,9 @@
 			name,
 			description,
 			permissions,
-			user_ids: userIds
+			user_ids: userIds,
+
+			// Currently no need to add creator name here
 		};
 
 		await onSubmit(group);
@@ -169,12 +174,17 @@
 	}
 
 	const init = () => {
+		console.log('EditGroupModal - Initializing with group:', group);
+		console.log('properties in the group:', group ? Object.keys(group) : 'No group');
 		if (group) {
 			name = group.name;
 			description = group.description;
 			permissions = group?.permissions ?? {};
-
+			created_by = group?.created_by ?? 'Unknown';
+			created_at = group?.created_at ? new Date(group.created_at).toLocaleString() : 'Unknown';
+			updated_at = group?.updated_at ? new Date(group.updated_at).toLocaleString() : 'Unknown';
 			userIds = group?.user_ids ?? [];
+			// also add creator name here
 		}
 	};
 
@@ -308,7 +318,8 @@
 							class="flex-1 mt-1 lg:mt-1 lg:h-[22rem] lg:max-h-[22rem] overflow-y-auto scrollbar-hidden"
 						>
 							{#if selectedTab == 'general'}
-								<Display bind:name bind:description />
+								<Display bind:name bind:description bind:created_by bind:created_at bind:updated_at />
+								<!-- Finally put other stuff here -->
 							{:else if selectedTab == 'permissions'}
 								<Permissions bind:permissions />
 							{:else if selectedTab == 'users'}
