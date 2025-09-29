@@ -12,8 +12,8 @@
 		deleteAllModels,
 		getBaseModels,
 		toggleModelById,
-	updateModelById,
-	importModels
+		updateModelById,
+		importModels
 	} from '$lib/apis/models';
 	import { copyToClipboard } from '$lib/utils';
 	import { page } from '$app/stores';
@@ -41,7 +41,7 @@
 
 	let shiftKey = false;
 
-let modelsImportInProgress = false;
+	let modelsImportInProgress = false;
 	let importFiles;
 	let modelsImportInputElement: HTMLInputElement;
 
