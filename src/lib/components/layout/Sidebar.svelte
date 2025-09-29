@@ -28,6 +28,7 @@
 		WEBUI_NAME
 	} from '$lib/stores';
 	import { onMount, getContext, tick, onDestroy } from 'svelte';
+	import type { Unsubscriber, Readable } from 'svelte/store';
 
 	const i18n = getContext('i18n');
 
@@ -185,14 +186,15 @@
 
 	const initChatList = async () => {
 		// Reset pagination variables
-		tags.set(await getAllTags(localStorage.token));
-		pinnedChats.set(await getPinnedChatList(localStorage.token));
-		initFolders();
-
 		currentChatPage.set(1);
 		allChatsLoaded = false;
 
-		await chats.set(await getChatList(localStorage.token, $currentChatPage));
+		await Promise.all([
+			getAllTags(localStorage.token).then((data) => tags.set(data)),
+			getPinnedChatList(localStorage.token).then((data) => pinnedChats.set(data)),
+			getChatList(localStorage.token, $currentChatPage).then((data) => chats.set(data))
+		]);
+		initFolders();
 
 		// Enable pagination
 		scrollPaginationEnabled.set(true);
@@ -345,7 +347,7 @@
 	onMount(() => {
 		showPinnedChat = localStorage?.showPinnedChat ? localStorage.showPinnedChat === 'true' : true;
 
-		const unsubscribers: (() => void)[] = [];
+		const unsubscribers: Unsubscriber[] = [];
 		unsubscribers.push(
 			mobile.subscribe((value) => {
 				if ($showSidebar && value) {
@@ -387,13 +389,24 @@
 			})
 		);
 
+		const subscribeOnlyOnChange = <T,>(readable: Readable<T>, callback: (value: T) => void) => {
+			let called = false;
+			unsubscribers.push(
+				readable.subscribe((value) => {
+					if (called) {
+						callback(value);
+					} else {
+						called = true;
+					}
+				})
+			);
+		};
+
 		const loadData = () => Promise.all([initChannels(), initChatList()]).catch(console.error);
 		loadData().then(() => {
 			// Subscribe to chats and showSidebar after data is loaded
-			unsubscribers.push(
-				chats.subscribe(() => initFolders()),
-				showSidebar.subscribe((value) => !value && loadData())
-			);
+			subscribeOnlyOnChange(chats, () => initFolders());
+			subscribeOnlyOnChange(showSidebar, (value) => !value && loadData());
 
 			window.addEventListener('keydown', onKeyDown);
 			window.addEventListener('keyup', onKeyUp);
