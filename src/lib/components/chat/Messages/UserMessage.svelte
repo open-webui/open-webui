@@ -81,7 +81,7 @@
 	};
 
 	const editMessageConfirmHandler = async (submit = true) => {
-		if (!editedContent && editedFiles.length === 0) {
+		if (!editedContent && (editedFiles ?? []).length === 0) {
 			toast.error($i18n.t('Please enter a message or attach a file.'));
 			return;
 		}

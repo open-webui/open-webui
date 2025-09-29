@@ -362,6 +362,16 @@ async def archive_all_chats(user=Depends(get_verified_user)):
 
 
 ############################
+# UnarchiveAllChats
+############################
+
+
+@router.post("/unarchive/all", response_model=bool)
+async def unarchive_all_chats(user=Depends(get_verified_user)):
+    return Chats.unarchive_all_chats_by_user_id(user.id)
+
+
+############################
 # GetSharedChatById
 ############################
 

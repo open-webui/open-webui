@@ -17,6 +17,8 @@
 		name: 'Admins',
 		user_ids: [1, 2, 3]
 	};
+	export let defaultPermissions = {};
+
 	export let setGroups = () => {};
 	
 	let showEdit = false;
@@ -99,6 +101,7 @@
 	edit
 	{users}
 	{group}
+	{defaultPermissions}
 	onSubmit={updateHandler}
 	onDelete={deleteHandler}
 />

@@ -15,6 +15,8 @@
 	import SensitiveInput from '$lib/components/common/SensitiveInput.svelte';
 	import Textarea from '$lib/components/common/Textarea.svelte';
 	import { getUserById } from '$lib/apis/users';
+	import User from '$lib/components/icons/User.svelte';
+	import UserProfileImage from './Account/UserProfileImage.svelte';
 
 	const i18n = getContext('i18n');
 
@@ -118,68 +120,6 @@
 
 <div id="tab-account" class="flex flex-col h-full justify-between text-sm">
 	<div class=" overflow-y-scroll max-h-[28rem] md:max-h-full">
-		<input
-			id="profile-image-input"
-			bind:this={profileImageInputElement}
-			type="file"
-			hidden
-			accept="image/*"
-			on:change={(e) => {
-				const files = profileImageInputElement.files ?? [];
-				let reader = new FileReader();
-				reader.onload = (event) => {
-					let originalImageUrl = `${event.target.result}`;
-
-					const img = new Image();
-					img.src = originalImageUrl;
-
-					img.onload = function () {
-						const canvas = document.createElement('canvas');
-						const ctx = canvas.getContext('2d');
-
-						// Calculate the aspect ratio of the image
-						const aspectRatio = img.width / img.height;
-
-						// Calculate the new width and height to fit within 250x250
-						let newWidth, newHeight;
-						if (aspectRatio > 1) {
-							newWidth = 250 * aspectRatio;
-							newHeight = 250;
-						} else {
-							newWidth = 250;
-							newHeight = 250 / aspectRatio;
-						}
-
-						// Set the canvas size
-						canvas.width = 250;
-						canvas.height = 250;
-
-						// Calculate the position to center the image
-						const offsetX = (250 - newWidth) / 2;
-						const offsetY = (250 - newHeight) / 2;
-
-						// Draw the image on the canvas
-						ctx.drawImage(img, offsetX, offsetY, newWidth, newHeight);
-
-						// Get the base64 representation of the compressed image
-						const compressedSrc = canvas.toDataURL('image/jpeg');
-
-						// Display the compressed image
-						profileImageUrl = compressedSrc;
-
-						profileImageInputElement.files = null;
-					};
-				};
-
-				if (
-					files.length > 0 &&
-					['image/gif', 'image/webp', 'image/jpeg', 'image/png'].includes(files[0]['type'])
-				) {
-					reader.readAsDataURL(files[0]);
-				}
-			}}
-		/>
-
 		<div class="space-y-1">
 			<div>
 				<div class="text-base font-medium">{$i18n.t('Your Account')}</div>
@@ -192,73 +132,8 @@
 			<!-- <div class=" text-sm font-medium">{$i18n.t('Account')}</div> -->
 
 			<div class="flex space-x-5 my-4">
-				<div class="flex flex-col self-start group">
-					<div class="self-center flex">
-						<button
-							class="relative rounded-full dark:bg-gray-700"
-							type="button"
-							on:click={() => {
-								profileImageInputElement.click();
-							}}
-						>
-							<img
-								src={profileImageUrl !== '' ? profileImageUrl : generateInitialsImage(name)}
-								alt="profile"
-								class=" rounded-full size-14 md:size-18 object-cover"
-							/>
+				<UserProfileImage bind:profileImageUrl user={$user} />
 
-							<div class="absolute bottom-0 right-0 opacity-0 group-hover:opacity-100 transition">
-								<div class="p-1 rounded-full bg-white text-black border-gray-100 shadow">
-									<svg
-										xmlns="http://www.w3.org/2000/svg"
-										viewBox="0 0 20 20"
-										fill="currentColor"
-										class="size-3"
-									>
-										<path
-											d="m2.695 14.762-1.262 3.155a.5.5 0 0 0 .65.65l3.155-1.262a4 4 0 0 0 1.343-.886L17.5 5.501a2.121 2.121 0 0 0-3-3L3.58 13.419a4 4 0 0 0-.885 1.343Z"
-										/>
-									</svg>
-								</div>
-							</div>
-						</button>
-					</div>
-					<div class="flex flex-col w-full justify-center mt-2">
-						<button
-							class=" text-xs text-center text-gray-500 rounded-lg py-0.5 opacity-0 group-hover:opacity-100 transition-all"
-							on:click={async () => {
-								profileImageUrl = `${WEBUI_BASE_URL}/user.png`;
-							}}>{$i18n.t('Remove')}</button
-						>
-
-						<button
-							class=" text-xs text-center text-gray-800 dark:text-gray-400 rounded-lg py-0.5 opacity-0 group-hover:opacity-100 transition-all"
-							on:click={async () => {
-								if (canvasPixelTest()) {
-									profileImageUrl = generateInitialsImage(name);
-								} else {
-									toast.info(
-										$i18n.t(
-											'Fingerprint spoofing detected: Unable to use initials as avatar. Defaulting to default profile image.'
-										),
-										{
-											duration: 1000 * 10
-										}
-									);
-								}
-							}}>{$i18n.t('Initials')}</button
-						>
-
-						<button
-							class=" text-xs text-center text-gray-800 dark:text-gray-400 rounded-lg py-0.5 opacity-0 group-hover:opacity-100 transition-all"
-							on:click={async () => {
-								const url = await getGravatarUrl(localStorage.token, $user?.email);
-
-								profileImageUrl = url;
-							}}>{$i18n.t('Gravatar')}</button
-						>
-					</div>
-				</div>
 				<div class="flex flex-1 flex-col">
 					<div class=" flex-1">
 						<div class="flex flex-col w-full">

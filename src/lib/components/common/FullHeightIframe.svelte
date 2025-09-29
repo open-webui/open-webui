@@ -6,6 +6,8 @@
 	export let title = 'Embedded Content';
 	export let initialHeight: number | null = null; // initial height in px, null = auto
 
+	export let iframeClassName = 'w-full rounded-2xl';
+
 	export let args = null;
 
 	export let allowScripts = true;
@@ -174,7 +176,7 @@ window.Chart = parent.Chart; // Chart previously assigned on parent
 		bind:this={iframe}
 		srcdoc={iframeDoc}
 		{title}
-		class="w-full rounded-2xl"
+		class={iframeClassName}
 		style={`${initialHeight ? `height:${initialHeight}px;` : ''}`}
 		width="100%"
 		frameborder="0"
@@ -187,7 +189,7 @@ window.Chart = parent.Chart; // Chart previously assigned on parent
 		bind:this={iframe}
 		src={iframeSrc}
 		{title}
-		class="w-full rounded-2xl"
+		class={iframeClassName}
 		style={`${initialHeight ? `height:${initialHeight}px;` : ''}`}
 		width="100%"
 		frameborder="0"
