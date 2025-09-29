@@ -4,7 +4,14 @@
 	import { Pane, PaneResizer } from 'paneforge';
 
 	import { onDestroy, onMount, tick } from 'svelte';
-	import { mobile, showControls, showCallOverlay, showOverview, showArtifacts } from '$lib/stores';
+	import {
+		mobile,
+		showControls,
+		showCallOverlay,
+		showOverview,
+		showArtifacts,
+		showEmbeds
+	} from '$lib/stores';
 
 	import Modal from '../common/Modal.svelte';
 	import Controls from './Controls/Controls.svelte';
@@ -13,6 +20,7 @@
 	import Overview from './Overview.svelte';
 	import EllipsisVertical from '../icons/EllipsisVertical.svelte';
 	import Artifacts from './Artifacts.svelte';
+	import Embeds from './ChatControls/Embeds.svelte';
 
 	export let history;
 	export let models = [];
@@ -134,6 +142,7 @@
 		showControls.set(false);
 		showOverview.set(false);
 		showArtifacts.set(false);
+		showEmbeds.set(false);
 
 		if ($showCallOverlay) {
 			showCallOverlay.set(false);
@@ -155,9 +164,9 @@
 				}}
 			>
 				<div
-					class=" {$showCallOverlay || $showOverview || $showArtifacts
+					class=" {$showCallOverlay || $showOverview || $showArtifacts || $showEmbeds
 						? ' h-screen  w-full'
-						: 'px-6 py-4'} h-full"
+						: 'px-4 py-3'} h-full"
 				>
 					{#if $showCallOverlay}
 						<div
@@ -175,6 +184,8 @@
 								}}
 							/>
 						</div>
+					{:else if $showEmbeds}
+						<Embeds />
 					{:else if $showArtifacts}
 						<Artifacts {history} />
 					{:else if $showOverview}
@@ -241,9 +252,9 @@
 			{#if $showControls}
 				<div class="flex max-h-full min-h-full">
 					<div
-						class="w-full {($showOverview || $showArtifacts) && !$showCallOverlay
+						class="w-full {($showOverview || $showArtifacts || $showEmbeds) && !$showCallOverlay
 							? ' '
-							: 'px-4 py-4 bg-white dark:shadow-lg dark:bg-gray-850 '} z-40 pointer-events-auto overflow-y-auto scrollbar-hidden"
+							: 'px-4 py-3 bg-white dark:shadow-lg dark:bg-gray-850 '} z-40 pointer-events-auto overflow-y-auto scrollbar-hidden"
 						id="controls-container"
 					>
 						{#if $showCallOverlay}
@@ -260,6 +271,8 @@
 									}}
 								/>
 							</div>
+						{:else if $showEmbeds}
+							<Embeds overlay={dragged} />
 						{:else if $showArtifacts}
 							<Artifacts {history} overlay={dragged} />
 						{:else if $showOverview}

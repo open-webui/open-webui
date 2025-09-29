@@ -339,30 +339,6 @@
 						</div>
 					</th>
 
-					<th
-						scope="col"
-						class="px-2.5 py-2 cursor-pointer select-none"
-						on:click={() => setSortKey('oauth_sub')}
-					>
-						<div class="flex gap-1.5 items-center">
-							{$i18n.t('OAuth ID')}
-
-							{#if orderBy === 'oauth_sub'}
-								<span class="font-normal"
-									>{#if direction === 'asc'}
-										<ChevronUp className="size-2" />
-									{:else}
-										<ChevronDown className="size-2" />
-									{/if}
-								</span>
-							{:else}
-								<span class="invisible">
-									<ChevronUp className="size-2" />
-								</span>
-							{/if}
-						</div>
-					</th>
-
 					<th scope="col" class="px-2.5 py-2 text-right" />
 				</tr>
 			</thead>
@@ -407,8 +383,6 @@
 						<td class=" px-3 py-1">
 							{dayjs(user.created_at * 1000).format('LL')}
 						</td>
-
-						<td class=" px-3 py-1"> {user.oauth_sub ?? ''} </td>
 
 						<td class="px-3 py-1 text-right">
 							<div class="flex justify-end w-full">

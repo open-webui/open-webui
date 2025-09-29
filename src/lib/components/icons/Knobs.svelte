@@ -4,21 +4,17 @@
 </script>
 
 <svg
+	xmlns="http://www.w3.org/2000/svg"
 	class={className}
 	aria-hidden="true"
-	xmlns="http://www.w3.org/2000/svg"
 	stroke-width={strokeWidth}
 	fill="none"
 	stroke="currentColor"
 	viewBox="0 0 24 24"
 >
-	<!-- Top horizontal knob (left biased) -->
-	<line x1="2" y1="7.5" x2="6" y2="7.5" stroke-linecap="round" />
-	<line x1="12" y1="7.5" x2="22" y2="7.5" stroke-linecap="round" />
-	<circle cx="9" cy="7.5" r="3" stroke="currentColor" fill="none" />
-
-	<!-- Bottom horizontal knob (right biased) -->
-	<line x1="2" y1="16.5" x2="12" y2="16.5" stroke-linecap="round" />
-	<line x1="18" y1="16.5" x2="22" y2="16.5" stroke-linecap="round" />
-	<circle cx="15" cy="16.5" r="3" stroke="currentColor" fill="none" />
+	<path
+		stroke-linecap="round"
+		stroke-linejoin="round"
+		d="M10.5 6h9.75M10.5 6a1.5 1.5 0 1 1-3 0m3 0a1.5 1.5 0 1 0-3 0M3.75 6H7.5m3 12h9.75m-9.75 0a1.5 1.5 0 0 1-3 0m3 0a1.5 1.5 0 0 0-3 0m-3.75 0H7.5m9-6h3.75m-3.75 0a1.5 1.5 0 0 1-3 0m3 0a1.5 1.5 0 0 0-3 0m-9.75 0h9.75"
+	/>
 </svg>

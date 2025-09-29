@@ -367,6 +367,15 @@ class ChatTable:
         except Exception:
             return False
 
+    def unarchive_all_chats_by_user_id(self, user_id: str) -> bool:
+        try:
+            with get_db() as db:
+                db.query(Chat).filter_by(user_id=user_id).update({"archived": False})
+                db.commit()
+                return True
+        except Exception:
+            return False
+
     def update_chat_share_id_by_id(
         self, id: str, share_id: Optional[str]
     ) -> Optional[ChatModel]:

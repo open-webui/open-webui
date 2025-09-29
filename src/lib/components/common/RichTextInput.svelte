@@ -1030,6 +1030,19 @@
 						// For all other cases, let ProseMirror perform its default paste behavior.
 						view.dispatch(view.state.tr.scrollIntoView());
 						return false;
+					},
+					copy: (view, event: ClipboardEvent) => {
+						if (!event.clipboardData) return false;
+						if (richText) return false; // Let ProseMirror handle normal copy in rich text mode
+
+						const plain = editor.getText();
+						const html = editor.getHTML();
+
+						event.clipboardData.setData('text/plain', plain.replaceAll('\n\n', '\n'));
+						event.clipboardData.setData('text/html', html);
+
+						event.preventDefault();
+						return true;
 					}
 				}
 			},

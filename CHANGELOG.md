@@ -5,6 +5,26 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.6.32] - 2025-09-29
+
+### Added
+
+- 🗝️ Permission toggle for public sharing of notes was added, allowing note owners to quickly enable or disable public access from the note settings interface.
+- ⚠️ A warning is now displayed in the user edit modal if conflicting group permissions are detected, helping administrators resolve access control ambiguities before saving changes.
+
+### Fixed
+
+- 🧰 Fixed regression where External Tool servers (OpenAPI) were nonfunctional after the 0.6.31 update; external tools integration is now restored and reliable.
+- 🚑 Resolved a critical bug causing Streamable HTTP OAuth 2.1 (MCP server) integrations to throw a 500 error on first invocation due to missing 'SessionMiddleware'. OAuth 2.1 registration now succeeds and works on subsequent requests as expected.
+- 🐛 The "Set as default" option is now reliably clickable in model and filter selection menus, fixing cases where the interface appeared unresponsive.
+- 🛠️ Embed UI now works seamlessly with both default and native function calling flows, ensuring the tool embedding experience is consistent regardless of invocation method.
+- 🧹 Addressed various minor UI bugs and inconsistencies for a cleaner user experience.
+
+### Changed
+
+- 🧬 MCP tool result handling code was refactored for improved parsing and robustness of tool outputs.
+- 🧩 The user edit modal was overhauled for clarity and usability, improving the organization of group, permission, and public sharing controls.
+
 ## [0.6.31] - 2025-09-25
 
 ### Added
