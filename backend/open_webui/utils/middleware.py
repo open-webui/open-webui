@@ -316,7 +316,9 @@ async def chat_completion_tools_handler(
             if tool_call_retries > 0:
                 iteration_context = f"\n\nIteration {tool_call_retries + 1}: Previous tool results are available in the conversation context. Use them to make informed decisions about additional tool calls."
 
-            prompt = f"History:\n{chat_history}\nQuery: {user_message}{iteration_context}"
+            prompt = (
+                f"History:\n{chat_history}\nQuery: {user_message}{iteration_context}"
+            )
 
             return {
                 "model": task_model_id,
@@ -360,7 +362,9 @@ async def chat_completion_tools_handler(
         tools_called_this_iteration = False
 
         try:
-            response = await generate_chat_completion(request, form_data=payload, user=user)
+            response = await generate_chat_completion(
+                request, form_data=payload, user=user
+            )
             log.debug(f"{response=}")
             content = await get_content_from_response(response)
             log.debug(f"{content=}")
@@ -515,8 +519,9 @@ async def chat_completion_tools_handler(
 
                 # Check if we should continue with more iterations
                 should_continue = (
-                    result.get("continue_tool_calls", False) or 
-                    (tools_called_this_iteration and tool_call_retries == 0)
+                    result.get("continue_tool_calls", False) or (
+                        tools_called_this_iteration and tool_call_retries == 0
+                    )
                 )
 
                 if not should_continue or not tools_called_this_iteration:
