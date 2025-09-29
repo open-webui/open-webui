@@ -93,7 +93,7 @@
 						</div>
 
 						<div class="overflow-hidden w-full">
-							<div class=" self-center capitalize font-semibold truncate">{selectedUser.name}</div>
+							<div class=" self-center capitalize font-medium truncate">{selectedUser.name}</div>
 
 							<div class="text-xs text-gray-500">
 								{$i18n.t('Created at')}
@@ -146,6 +146,21 @@
 							{/if}
 
 							<div class="flex flex-col w-full">
+								<div class=" mb-1 text-xs text-gray-500">{$i18n.t('Name')}</div>
+
+								<div class="flex-1">
+									<input
+										class="w-full text-sm bg-transparent outline-hidden"
+										type="text"
+										bind:value={_user.name}
+										placeholder={$i18n.t('Enter Your Name')}
+										autocomplete="off"
+										required
+									/>
+								</div>
+							</div>
+
+							<div class="flex flex-col w-full">
 								<div class=" mb-1 text-xs text-gray-500">{$i18n.t('Email')}</div>
 
 								<div class="flex-1">
@@ -160,20 +175,15 @@
 								</div>
 							</div>
 
-							<div class="flex flex-col w-full">
-								<div class=" mb-1 text-xs text-gray-500">{$i18n.t('Name')}</div>
+							{#if _user?.oauth_sub}
+								<div class="flex flex-col w-full">
+									<div class=" mb-1 text-xs text-gray-500">{$i18n.t('OAuth ID')}</div>
 
-								<div class="flex-1">
-									<input
-										class="w-full text-sm bg-transparent outline-hidden"
-										type="text"
-										bind:value={_user.name}
-										placeholder={$i18n.t('Enter Your Name')}
-										autocomplete="off"
-										required
-									/>
+									<div class="flex-1 text-sm break-all mb-1">
+										{_user.oauth_sub ?? ''}
+									</div>
 								</div>
-							</div>
+							{/if}
 
 							<div class="flex flex-col w-full">
 								<div class=" mb-1 text-xs text-gray-500">{$i18n.t('New Password')}</div>
