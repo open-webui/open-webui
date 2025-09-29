@@ -38,7 +38,8 @@
 		toolServers,
 		functions,
 		selectedFolder,
-		pinnedChats
+		pinnedChats,
+		showEmbeds
 	} from '$lib/stores';
 	import {
 		convertMessagesToHistory,
@@ -564,6 +565,7 @@
 				showCallOverlay.set(false);
 				showOverview.set(false);
 				showArtifacts.set(false);
+				showEmbeds.set(false);
 			}
 		});
 
