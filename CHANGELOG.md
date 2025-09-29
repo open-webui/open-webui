@@ -9,21 +9,37 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
-- 🗝️ Permission toggle for public sharing of notes was added, allowing note owners to quickly enable or disable public access from the note settings interface.
-- ⚠️ A warning is now displayed in the user edit modal if conflicting group permissions are detected, helping administrators resolve access control ambiguities before saving changes.
+- ⚡ JSON model import moved to backend processing for significant performance improvements when importing large model files. [#17871](https://github.com/open-webui/open-webui/pull/17871)
+- ⚠️ Visual warnings for group permissions that display when a permission is disabled in a group but remains enabled in the default user role, clarifying inheritance behavior for administrators. [#17848](https://github.com/open-webui/open-webui/pull/17848)
+- 🗄️ Milvus multi-tenancy mode using shared collections with resource ID filtering for improved scalability, mirroring the existing Qdrant implementation and configurable via ENABLE_MILVUS_MULTITENANCY_MODE environment variable. [#17837](https://github.com/open-webui/open-webui/pull/17837)
+- 🛠️ Enhanced tool result processing with improved error handling, better MCP tool result handling, and performance improvements for embedded UI components. [Commit](https://github.com/open-webui/open-webui/commit/4f06f29348b2c9d71c87d1bbe5b748a368f5101f)
+- 👥 New user groups now automatically inherit default group permissions, streamlining the admin setup process by eliminating manual permission configuration. [#17843](https://github.com/open-webui/open-webui/pull/17843)
+- 🗂️ Bulk unarchive functionality for all chats, providing a single backend endpoint to efficiently restore all archived chats at once. [#17857](https://github.com/open-webui/open-webui/pull/17857)
+- 🏷️ Browser tab title toggle setting allows users to control whether chat titles appear in the browser tab or display only "Open WebUI". [#17851](https://github.com/open-webui/open-webui/pull/17851)
+- 💬 Reply-to-message functionality in channels, allowing users to reply directly to specific messages with visual threading and context display. [Commit](https://github.com/open-webui/open-webui/commit/1a18928c94903ad1f1f0391b8ade042c3e60205b)
+- 🔧 Tool server import and export functionality, allowing direct upload of openapi.json and openapi.yaml files as an alternative to URL-based configuration. [#14446](https://github.com/open-webui/open-webui/issues/14446)
+- 🔧 User valve configuration for Functions is now available in the integration menu, providing consistent management alongside Tools. [#17784](https://github.com/open-webui/open-webui/issues/17784)
+- 🔐 Admin permission toggle for controlling public sharing of notes, configurable via USER_PERMISSIONS_NOTES_ALLOW_PUBLIC_SHARING environment variable. [#17801](https://github.com/open-webui/open-webui/pull/17801), [Docs:#715](https://github.com/open-webui/docs/pull/715)
+- 🗄️ DISKANN index type support for Milvus vector database with configurable maximum degree and search list size parameters. [#17770](https://github.com/open-webui/open-webui/pull/17770), [Docs:Commit](https://github.com/open-webui/docs/commit/cec50ab4d4b659558ca1ccd4b5e6fc024f05fb83)
+- 🔄 Various improvements were implemented across the frontend and backend to enhance performance, stability, and security.
+- 🌐 Translations for Chinese (Simplified & Traditional) and Bosnian (Latin) were enhanced and expanded.
 
 ### Fixed
 
-- 🧰 Fixed regression where External Tool servers (OpenAPI) were nonfunctional after the 0.6.31 update; external tools integration is now restored and reliable.
-- 🚑 Resolved a critical bug causing Streamable HTTP OAuth 2.1 (MCP server) integrations to throw a 500 error on first invocation due to missing 'SessionMiddleware'. OAuth 2.1 registration now succeeds and works on subsequent requests as expected.
-- 🐛 The "Set as default" option is now reliably clickable in model and filter selection menus, fixing cases where the interface appeared unresponsive.
-- 🛠️ Embed UI now works seamlessly with both default and native function calling flows, ensuring the tool embedding experience is consistent regardless of invocation method.
-- 🧹 Addressed various minor UI bugs and inconsistencies for a cleaner user experience.
-
-### Changed
-
-- 🧬 MCP tool result handling code was refactored for improved parsing and robustness of tool outputs.
-- 🧩 The user edit modal was overhauled for clarity and usability, improving the organization of group, permission, and public sharing controls.
+- 🛠️ MCP tool calls are now correctly routed to the appropriate server when multiple streamable-http MCP servers are enabled, preventing "Tool not found" errors. [#17817](https://github.com/open-webui/open-webui/issues/17817)
+- 🛠️ External tool servers (OpenAPI/MCP) now properly process and return tool results to the model, restoring functionality that was broken in v0.6.31. [#17764](https://github.com/open-webui/open-webui/issues/17764)
+- 🔧 User valve detection now correctly identifies valves in imported tool code, ensuring gear icons appear in the integrations menu for all tools with user valves. [#17765](https://github.com/open-webui/open-webui/issues/17765)
+- 🔐 MCP OAuth discovery now correctly handles multi-tenant configurations by including subpaths in metadata URL discovery. [#17768](https://github.com/open-webui/open-webui/issues/17768)
+- 🗄️ Milvus query operations now correctly use -1 instead of None for unlimited queries, preventing TypeError exceptions. [#17769](https://github.com/open-webui/open-webui/pull/17769), [#17088](https://github.com/open-webui/open-webui/issues/17088)
+- 📁 File upload error messages are now displayed when files are modified during upload, preventing user confusion on Android and Windows devices. [#17777](https://github.com/open-webui/open-webui/pull/17777)
+- 🎨 MessageInput Integrations button hover effect now displays correctly with proper visual feedback. [#17767](https://github.com/open-webui/open-webui/pull/17767)
+- 🎯 "Set as default" label positioning is fixed to ensure it remains clickable in all scenarios, including multi-model configurations. [#17779](https://github.com/open-webui/open-webui/pull/17779)
+- 🎛️ Floating buttons now correctly retrieve message context by using the proper messageId parameter in createMessagesList calls. [#17823](https://github.com/open-webui/open-webui/pull/17823)
+- 📌 Pinned chats are now properly cleared from the sidebar after archiving all chats, ensuring UI consistency without requiring a page refresh. [#17832](https://github.com/open-webui/open-webui/pull/17832)
+- 🗑️ Delete confirmation modals now properly truncate long names for Notes, Prompts, Tools, and Functions to prevent modal overflow. [#17812](https://github.com/open-webui/open-webui/pull/17812)
+- 🌐 Internationalization function calls now use proper Svelte store subscription syntax, preventing "i18n.t is not a function" errors on the model creation page. [#17819](https://github.com/open-webui/open-webui/pull/17819)
+- 🎨 Playground chat interface button layout is corrected to prevent vertical text rendering for Assistant/User role buttons. [#17819](https://github.com/open-webui/open-webui/pull/17819)
+- 🏷️ UI text truncation is improved across multiple components including usernames in admin panels, arena model names, model tags, and filter tags to prevent layout overflow issues. [#17805](https://github.com/open-webui/open-webui/pull/17805), [#17803](https://github.com/open-webui/open-webui/pull/17803), [#17791](https://github.com/open-webui/open-webui/pull/17791), [#17796](https://github.com/open-webui/open-webui/pull/17796)
 
 ## [0.6.31] - 2025-09-25
 
