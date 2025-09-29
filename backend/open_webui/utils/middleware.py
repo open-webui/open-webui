@@ -518,10 +518,8 @@ async def chat_completion_tools_handler(
                     await tool_call_handler(result)
 
                 # Check if we should continue with more iterations
-                should_continue = (
-                    result.get("continue_tool_calls", False) or (
+                should_continue = result.get("continue_tool_calls", False) or (
                         tools_called_this_iteration and tool_call_retries == 0
-                    )
                 )
 
                 if not should_continue or not tools_called_this_iteration:
