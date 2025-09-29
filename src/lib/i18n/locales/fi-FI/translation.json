@@ -1525,6 +1525,7 @@
 	"This chat won't appear in history and your messages will not be saved.": "Tämä keskustelu ei näy historiassa, eikä viestejäsi tallenneta.",
 	"This ensures that your valuable conversations are securely saved to your backend database. Thank you!": "Tämä varmistaa, että arvokkaat keskustelusi tallennetaan turvallisesti backend-tietokantaasi. Kiitos!",
 	"This feature is experimental and may be modified or discontinued without notice.": "Tämä ominaisuus on kokeellinen ja sitä voidaan muokata tai se voidaan lopettaa ilman erillistä ilmoitusta.",
+	"This is a default user permission and will remain enabled.": "",
 	"This is an experimental feature, it may not function as expected and is subject to change at any time.": "Tämä on kokeellinen ominaisuus, se ei välttämättä toimi odotetulla tavalla ja se voi muuttua milloin tahansa.",
 	"This model is not publicly available. Please select another model.": "Tämä malli ei ole julkisesti saatavilla. Valitse toinen malli.",
 	"This option controls how long the model will stay loaded into memory following the request (default: 5m)": "Tämä asetus määrittää kuinka kauan malli pysyy ladattuna muistissa pyynnön jälkeen (oletusarvo: 5m)",

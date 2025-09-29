@@ -23,7 +23,11 @@
 	import Pencil from '$lib/components/icons/Pencil.svelte';
 	import GroupItem from './Groups/GroupItem.svelte';
 	import { createNewGroup, getGroups } from '$lib/apis/groups';
-	import { getUserDefaultPermissions, getAllUsers, updateUserDefaultPermissions } from '$lib/apis/users';
+	import {
+		getUserDefaultPermissions,
+		getAllUsers,
+		updateUserDefaultPermissions
+	} from '$lib/apis/users';
 
 	const i18n = getContext('i18n');
 

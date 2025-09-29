@@ -75,6 +75,11 @@
 </script>
 
 <div class="space-y-2">
+	<!-- {$i18n.t('Default Model')}
+	{$i18n.t('Model Filtering')}
+	{$i18n.t('Model Permissions')}
+	{$i18n.t('No model IDs')} -->
+
 	<div>
 		<div class=" mb-2 text-sm font-medium">{$i18n.t('Workspace Permissions')}</div>
 

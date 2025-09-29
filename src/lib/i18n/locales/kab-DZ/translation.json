@@ -1525,6 +1525,7 @@
 	"This chat won't appear in history and your messages will not be saved.": "Aqeṣṣer-a ur d-yettban deg umezruy yerna iznan-nnek ur ttwaselkamen.",
 	"This ensures that your valuable conversations are securely saved to your backend database. Thank you!": "D ayen ara yeǧǧen adiwenni-inek s wazal-is ad yettwasellek s tɣellist deg taffa n yisefka-inek n deffir. Tanemmirt!",
 	"This feature is experimental and may be modified or discontinued without notice.": "Tamahilt-a d tirmitant yerna tezmer ad tettwabeddel neɣ ad teḥbes war tamawt.",
+	"This is a default user permission and will remain enabled.": "",
 	"This is an experimental feature, it may not function as expected and is subject to change at any time.": "Ta d taɣawsa tirmitant, yezmer lḥal ur tleḥḥu ara akken i tebɣiḍ, dɣa d asentel n ubeddel melmi tebɣiḍ.",
 	"This model is not publicly available. Please select another model.": "Tamudemt-a ur telli d tazayezt akk i medden. Ttxil-k·m, fren tamudemt nniḍen.",
 	"This option controls how long the model will stay loaded into memory following the request (default: 5m)": "",

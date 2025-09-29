@@ -62,10 +62,10 @@ class MilvusClient(VectorDBBase):
     def _get_collection_and_resource_id(self, collection_name: str) -> Tuple[str, str]:
         """
         Maps the traditional collection name to multi-tenant collection and resource ID.
-        
-        WARNING: This mapping relies on current Open WebUI naming conventions for 
+
+        WARNING: This mapping relies on current Open WebUI naming conventions for
         collection names. If Open WebUI changes how it generates collection names
-        (e.g., "user-memory-" prefix, "file-" prefix, web search patterns, or hash 
+        (e.g., "user-memory-" prefix, "file-" prefix, web search patterns, or hash
         formats), this mapping will break and route data to incorrect collections.
         POTENTIALLY CAUSING HUGE DATA CORRUPTION, DATA CONSISTENCY ISSUES AND INCORRECT
         DATA MAPPING INSIDE THE DATABASE.
@@ -94,14 +94,10 @@ class MilvusClient(VectorDBBase):
                 auto_id=False,
                 max_length=36,
             ),
-            FieldSchema(
-                name="vector", dtype=DataType.FLOAT_VECTOR, dim=dimension
-            ),
+            FieldSchema(name="vector", dtype=DataType.FLOAT_VECTOR, dim=dimension),
             FieldSchema(name="text", dtype=DataType.VARCHAR, max_length=65535),
             FieldSchema(name="metadata", dtype=DataType.JSON),
-            FieldSchema(
-                name=RESOURCE_ID_FIELD, dtype=DataType.VARCHAR, max_length=255
-            ),
+            FieldSchema(name=RESOURCE_ID_FIELD, dtype=DataType.VARCHAR, max_length=255),
         ]
         schema = CollectionSchema(fields, "Shared collection for multi-tenancy")
         collection = Collection(mt_collection_name, schema)
@@ -137,9 +133,7 @@ class MilvusClient(VectorDBBase):
 
         collection = Collection(mt_collection)
         collection.load()
-        res = collection.query(
-            expr=f"{RESOURCE_ID_FIELD} == '{resource_id}'", limit=1
-        )
+        res = collection.query(expr=f"{RESOURCE_ID_FIELD} == '{resource_id}'", limit=1)
         return len(res) > 0
 
     def upsert(self, collection_name: str, items: List[VectorItem]):
@@ -220,18 +214,18 @@ class MilvusClient(VectorDBBase):
             return
 
         collection = Collection(mt_collection)
-        
+
         # Build expression
         expr = [f"{RESOURCE_ID_FIELD} == '{resource_id}'"]
         if ids:
             # Milvus expects a string list for 'in' operator
             id_list_str = ", ".join([f"'{id_val}'" for id_val in ids])
             expr.append(f"id in [{id_list_str}]")
-        
+
         if filter:
             for key, value in filter.items():
-                 expr.append(f"metadata['{key}'] == '{value}'")
-        
+                expr.append(f"metadata['{key}'] == '{value}'")
+
         collection.delete(" and ".join(expr))
 
     def reset(self):
@@ -245,7 +239,7 @@ class MilvusClient(VectorDBBase):
         )
         if not utility.has_collection(mt_collection):
             return
-        
+
         collection = Collection(mt_collection)
         collection.delete(f"{RESOURCE_ID_FIELD} == '{resource_id}'")
 

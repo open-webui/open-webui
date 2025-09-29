@@ -106,9 +106,9 @@ class QdrantClient(VectorDBBase):
         Returns:
             tuple: (collection_name, tenant_id)
 
-        WARNING: This mapping relies on current Open WebUI naming conventions for 
+        WARNING: This mapping relies on current Open WebUI naming conventions for
         collection names. If Open WebUI changes how it generates collection names
-        (e.g., "user-memory-" prefix, "file-" prefix, web search patterns, or hash 
+        (e.g., "user-memory-" prefix, "file-" prefix, web search patterns, or hash
         formats), this mapping will break and route data to incorrect collections.
         POTENTIALLY CAUSING HUGE DATA CORRUPTION, DATA CONSISTENCY ISSUES AND INCORRECT
         DATA MAPPING INSIDE THE DATABASE.
