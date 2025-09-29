@@ -201,9 +201,16 @@
 
 	const cloneAsWorkspaceModelHandler = async (model) => {
 		const modelData = { ...model };
+
+		let newId = `${model.id}-copy`;
+		let counter = 2;
+		while (models.find((m) => m.id === newId)) {
+			newId = `${model.id}-copy-${counter}`;
+			counter++;
+		}
+		modelData.id = newId;
 		modelData.name = `${model.name} Copy`;
 		modelData.base_model_id = model.id;
-		delete modelData.id;
 
 		const modelStr = JSON.stringify(modelData);
 		goto(`/workspace/models/create?model=${encodeURIComponent(modelStr)}`);
