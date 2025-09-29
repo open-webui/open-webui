@@ -337,14 +337,8 @@ export const getToolServerData = async (token: string, url: string) => {
 		throw error;
 	}
 
-	const data = {
-		openapi: res,
-		info: res.info,
-		specs: convertOpenApiToToolPayload(res)
-	};
-
-	console.log(data);
-	return data;
+	console.log(res);
+	return res;
 };
 
 export const getToolServersData = async (servers: object[]) => {
@@ -356,6 +350,7 @@ export const getToolServersData = async (servers: object[]) => {
 					let error = null;
 
 					let toolServerToken = null;
+
 					const auth_type = server?.auth_type ?? 'bearer';
 					if (auth_type === 'bearer') {
 						toolServerToken = server?.key;
@@ -365,18 +360,34 @@ export const getToolServersData = async (servers: object[]) => {
 						toolServerToken = localStorage.token;
 					}
 
-					const data = await getToolServerData(
-						toolServerToken,
-						(server?.path ?? '').includes('://')
-							? server?.path
-							: `${server?.url}${(server?.path ?? '').startsWith('/') ? '' : '/'}${server?.path}`
-					).catch((err) => {
-						error = err;
-						return null;
-					});
+					let res = null;
+					const specType = server?.spec_type ?? 'url';
 
-					if (data) {
-						const { openapi, info, specs } = data;
+					if (specType === 'url') {
+						res = await getToolServerData(
+							toolServerToken,
+							(server?.path ?? '').includes('://')
+								? server?.path
+								: `${server?.url}${(server?.path ?? '').startsWith('/') ? '' : '/'}${server?.path}`
+						).catch((err) => {
+							error = err;
+							return null;
+						});
+					} else if ((specType === 'json' && server?.spec) ?? null) {
+						try {
+							res = JSON.parse(server?.spec);
+						} catch (e) {
+							error = 'Failed to parse JSON spec';
+						}
+					}
+
+					if (res) {
+						const { openapi, info, specs } = {
+							openapi: res,
+							info: res.info,
+							specs: convertOpenApiToToolPayload(res)
+						};
+
 						return {
 							url: server?.url,
 							openapi: openapi,

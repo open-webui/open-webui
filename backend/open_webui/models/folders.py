@@ -50,6 +50,20 @@ class FolderModel(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
 
+class FolderMetadataResponse(BaseModel):
+    icon: Optional[str] = None
+
+
+class FolderNameIdResponse(BaseModel):
+    id: str
+    name: str
+    meta: Optional[FolderMetadataResponse] = None
+    parent_id: Optional[str] = None
+    is_expanded: bool = False
+    created_at: int
+    updated_at: int
+
+
 ####################
 # Forms
 ####################
