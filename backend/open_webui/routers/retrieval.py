@@ -2047,7 +2047,7 @@ async def process_web_search(
     result_items = []
 
     try:
-        logging.info(
+        logging.debug(
             f"trying to web search with {request.app.state.config.WEB_SEARCH_ENGINE, form_data.queries}"
         )
 
