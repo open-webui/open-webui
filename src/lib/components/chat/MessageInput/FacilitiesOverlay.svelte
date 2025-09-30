@@ -76,7 +76,7 @@
 	
 
 	// DIRECT CHAT HISTORY MANIPULATION - BYPASS submitPrompt entirely
-	async function addFacilitiesResponseToChat(content: string, sources: any[]) {
+	async function addFacilitiesResponseToChat(content: string, sources: any[], error: string | null = null) {
 		console.log('addFacilitiesResponseToChat called with:', {
 			contentLength: content.length,
 			sourcesCount: sources.length,
@@ -132,7 +132,10 @@
 			userContext: null,
 			timestamp: Math.floor(Date.now() / 1000),
 			done: true,
-			sources: sources
+			sources: sources,
+			error: error ? {
+				content: error
+			} : null
 		};
 
 		// Use the addMessages function properly with error handling
@@ -171,7 +174,10 @@
 						modelIdx: 0,
 						userContext: null,
 						done: true,
-						sources: sources
+						sources: sources,
+						error: error ? {
+							content: error
+						} : null
 					}
 				]
 			});
@@ -226,7 +232,10 @@
 				userContext: null,
 				timestamp: Math.floor(Date.now() / 1000),
 				done: true,
-				sources: sources
+				sources: sources,
+				error: error ? {
+					content: error
+				} : null
 			};
 			
 			history.currentId = responseMsgId;
@@ -333,13 +342,13 @@
 					contentPreview: responseMessage.substring(0, 100) + '...'
 				});
 
-				await addFacilitiesResponseToChat(responseMessage, sources);
+				await addFacilitiesResponseToChat(responseMessage, sources, null);
 
-
-				
 				toast.success(`Generated ${Object.keys(response.sections).length} sections for ${selectedSponsor}. Form remains open for additional generations.`);
 			} else {
 				console.error('Facilities API failed:', response.error);
+				// Add error to chat like regular chat does
+				await addFacilitiesResponseToChat('', [], response.error || 'Failed to generate facilities response');
 				toast.error(response.error || 'Failed to generate facilities response');
 			}
 
@@ -351,7 +360,11 @@
 				status: error?.status,
 				response: error?.response
 			});
-			toast.error(error?.message || error?.detail || 'Failed to generate facilities response');
+			
+			// Add error to chat like regular chat does - use the same error handling as regular chat
+			const errorMessage = `${error}`;
+			await addFacilitiesResponseToChat('', [], errorMessage);
+			toast.error(errorMessage);
 		} finally {
 			generating = false;
 		}
