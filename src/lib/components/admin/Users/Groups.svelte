@@ -56,8 +56,7 @@
 	let showDefaultPermissionsModal = false;
 
 	const setGroups = async () => {
-		const allGroups = await getGroups(localStorage.token);
-		groups = allGroups.filter((g) => g.name.toLowerCase() !== 'user');
+		groups = await getGroups(localStorage.token);
 	};
 
 	const addGroupHandler = async (group) => {
