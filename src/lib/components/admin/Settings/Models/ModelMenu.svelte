@@ -25,6 +25,7 @@
 	export let exportHandler: Function;
 	export let hideHandler: Function;
 	export let copyLinkHandler: Function;
+	export let cloneAsWorkspaceModelHandler: Function;
 
 	export let onClose: Function;
 
@@ -45,7 +46,7 @@
 
 	<div slot="content">
 		<DropdownMenu.Content
-			class="w-full max-w-[170px] rounded-xl p-1 border border-gray-100  dark:border-gray-800 z-50 bg-white dark:bg-gray-850 dark:text-white shadow-sm"
+			class="w-full max-w-[240px] rounded-xl p-1 border border-gray-100  dark:border-gray-800 z-50 bg-white dark:bg-gray-850 dark:text-white shadow-sm"
 			sideOffset={-2}
 			side="bottom"
 			align="start"
@@ -102,6 +103,18 @@
 					{/if}
 				</div>
 			</DropdownMenu.Item>
+
+			{#if !(model?.meta?.hidden ?? false)}
+				<DropdownMenu.Item
+					class="flex gap-2 items-center px-3 py-1.5 text-sm  font-medium cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 rounded-md"
+					on:click={() => {
+						cloneAsWorkspaceModelHandler();
+					}}
+				>
+					<DocumentDuplicate class="size-4" />
+					<div class="flex items-center">{$i18n.t('Clone as Workspace Model')}</div>
+				</DropdownMenu.Item>
+			{/if}
 
 			<DropdownMenu.Item
 				class="flex gap-2 items-center px-3 py-1.5 text-sm  font-medium cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 rounded-md"
