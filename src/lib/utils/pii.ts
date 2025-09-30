@@ -1491,7 +1491,7 @@ export function unmaskAndHighlightTextForDisplay(
 	const orphanedPatternRegex = /\[\{([A-Z_]+_\d+)\}\]/g;
 	processedText = processedText.replace(orphanedPatternRegex, (match, label) => {
 		console.warn(`Found orphaned PII pattern: ${match} (no matching entity found)`);
-		return `<span class="pii-highlight pii-masked" title="${label} - Unknown PII entity" data-pii-type="UNKNOWN" data-pii-label="${label}">[Unknown PII: ${label}]</span>`;
+		return `<span class="pii-highlight pii-masked" title="${label} - Unknown PII entity" data-pii-type="UNKNOWN" data-pii-label="${label}">[${label}]</span>`;
 	});
 
 	return processedText;

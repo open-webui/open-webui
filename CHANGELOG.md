@@ -5,7 +5,16 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [0.6.28n1] - 2025-09-25
+## [0.6.28n3] - 2025-09-25
+
+### Fixed
+
+- 🏃‍♂️ Jumping Text on select in file preview and prompt.
+- 🕵️‍♂️ An issue that made unmasking in single page documents impossible.
+- 🪄 An issue where masking state sometimes changed back to masked when typing a prompt.
+- ✍️ Multiple issues with modifiers around formatted text.
+
+## [0.6.28n2] - 2025-09-25
 
 ### Fixed
 

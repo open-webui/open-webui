@@ -76,14 +76,30 @@
 			return;
 		}
 
-		// Sync all other editors to show the same PII state
+		// For single-page files, ensure the current editor is also refreshed
 		// TypeScript: forEach is a method that runs a function for each item in the array
 		editors.forEach((editor, editorIndex) => {
-			// Skip the editor where the change originated
-			if (editorIndex !== currentEditorIndex && editor && editor.commands?.syncWithSessionManager) {
+			// For multiple pages, skip the editor where the change originated (it's already updated)
+			// For single-page files (editors.length === 1), we need to refresh the current editor too
+			// TypeScript: The "||" is the OR operator - if either condition is true, shouldSync is true
+			const shouldSync = editors.length === 1 || editorIndex !== currentEditorIndex;
+
+			if (shouldSync && editor && editor.commands) {
 				// setTimeout creates a small delay to ensure the state update completes first
+				// TypeScript: Arrow function "() => {}" is like Python's lambda, but can have multiple lines
 				setTimeout(() => {
-					editor.commands.syncWithSessionManager();
+					// Call all sync methods like syncAllEditors() does
+					// This ensures decorations are properly rebuilt after toggling
+					if (typeof editor.commands.reloadConversationState === 'function') {
+						editor.commands.reloadConversationState(conversationId);
+					}
+					if (typeof editor.commands.syncWithSessionManager === 'function') {
+						editor.commands.syncWithSessionManager();
+					}
+					// CRITICAL: Force entity remapping to rebuild decorations
+					if (typeof editor.commands.forceEntityRemapping === 'function') {
+						editor.commands.forceEntityRemapping();
+					}
 				}, 10);
 			}
 		});
@@ -192,10 +208,16 @@
 	 * This refreshes the PII highlights without changing the text content.
 	 */
 	function syncAllEditors() {
-		editors.forEach((editor) => {
-			try {
-				if (!editor || !editor.commands) return;
+		// Filter out undefined/null editors before processing
+		const validEditors = editors.filter((editor) => editor && editor.commands);
 
+		if (validEditors.length === 0) {
+			console.log('PiiEnabledFileEditor: syncAllEditors called but no editors ready yet');
+			return;
+		}
+
+		validEditors.forEach((editor) => {
+			try {
 				// Call various sync methods if they exist
 				// TypeScript: "typeof" checks if a property is a function before calling it
 				if (typeof editor.commands.reloadConversationState === 'function') {
@@ -209,12 +231,39 @@
 				}
 			} catch (e) {
 				// Silently handle any errors during sync
+				console.warn('PiiEnabledFileEditor: Sync error:', e);
 			}
 		});
 	}
 
 	// Export this function so parent components can trigger a sync
 	export { syncAllEditors };
+
+	// Track if we've done the initial sync to prevent multiple syncs
+	let hasPerformedInitialSync = false;
+	let lastSyncedPageCount = 0;
+
+	// Watch for editors becoming available and trigger initial sync ONCE
+	$: if (!hasPerformedInitialSync && editors.length > 0 && pageContents.length > 0) {
+		// Ensure editors are initialized before syncing
+		setTimeout(() => {
+			const ready = editors.filter((e) => e && e.commands).length;
+			if (ready > 0 && !hasPerformedInitialSync) {
+				console.log(`PiiEnabledFileEditor: ${ready} editor(s) ready, performing initial sync`);
+				hasPerformedInitialSync = true;
+				lastSyncedPageCount = pageContents.length;
+				syncAllEditors();
+			}
+		}, 50); // Small delay to ensure editors are fully initialized
+	}
+
+	// Reset sync flag if page count changes (different file loaded)
+	$: if (hasPerformedInitialSync && pageContents.length !== lastSyncedPageCount) {
+		console.log(
+			`PiiEnabledFileEditor: Page count changed (${lastSyncedPageCount} -> ${pageContents.length}), resetting sync flag`
+		);
+		hasPerformedInitialSync = false;
+	}
 </script>
 
 <!-- 

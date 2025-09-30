@@ -1308,6 +1308,9 @@
 										if (bubbleMenuElement) {
 											bubbleMenuElement.style.zIndex = '9999';
 
+											// Make element visible only after positioning is initialized
+											bubbleMenuElement.style.visibility = 'visible';
+
 											// Check if position is calculated correctly and trigger fallback if needed
 											const hasPosition =
 												bubbleMenuElement.style.position &&
@@ -1319,6 +1322,12 @@
 													window.dispatchEvent(new Event('resize'));
 												}, 20);
 											}
+										}
+									},
+									// Hide the element again when BubbleMenu decides to hide
+									onHide: () => {
+										if (bubbleMenuElement) {
+											bubbleMenuElement.style.visibility = 'hidden';
 										}
 									}
 								}
@@ -2031,7 +2040,8 @@
 	<div
 		bind:this={bubbleMenuElement}
 		id="bubble-menu"
-		class="p-0 flex items-center gap-1 z-[9999] relative"
+		class="p-0 flex items-center gap-1 z-[9999] absolute"
+		style="left: -9999px; top: -9999px; visibility: hidden;"
 	>
 		{#if showFormattingToolbar}
 			<FormattingButtons {editor} />
