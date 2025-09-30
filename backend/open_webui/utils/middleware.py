@@ -1411,10 +1411,6 @@ async def process_chat_payload(request, form_data, user, metadata, model):
             }
         )
 
-    print("Final form_data:", form_data)
-    print("Final metadata:", metadata)
-    print("Final events:", events)
-
     return form_data, metadata, events
 
 
