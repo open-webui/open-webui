@@ -1239,6 +1239,7 @@ def save_docs_to_vector_db(
             collection_name=collection_name,
             filter={"hash": metadata["hash"]},
         )
+
         if result is not None:
             existing_doc_ids = result.ids[0]
             if existing_doc_ids:
@@ -1732,7 +1733,7 @@ def process_web(
         collection_name = form_data.collection_name
         if not collection_name:
             collection_name = calculate_sha256_string(form_data.url)[:63]
-        
+
         loader = get_web_loader(
             form_data.url,
             verify_ssl=request.app.state.config.ENABLE_WEB_LOADER_SSL_VERIFICATION,
@@ -1740,6 +1741,7 @@ def process_web(
         )
         docs = loader.load()
         content = " ".join([doc.page_content for doc in docs])
+
         log.debug(f"text_content: {content}")
         
         # Create file record
@@ -1802,7 +1804,7 @@ def process_web(
             else:
                 collection_name = None
         else:
-            # This is for knowledge base - don't save to vector DB here
+            # Don't save to vector DB here
             # Let addFileHandler -> process_file handle it
             collection_name = form_data.collection_name
         
