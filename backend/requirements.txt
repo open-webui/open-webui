@@ -20,6 +20,7 @@ aiofiles
 starlette-compress==1.6.1
 httpx[socks,http2,zstd,cli,brotli]==0.28.1
 starsessions[redis]==2.2.1
+python-mimeparse==2.0.0
 
 sqlalchemy==2.0.38
 alembic==1.17.2

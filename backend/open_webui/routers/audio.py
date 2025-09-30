@@ -33,6 +33,7 @@ from fastapi.responses import FileResponse
 from pydantic import BaseModel
 
 
+from open_webui.utils.misc import strict_match_mime_type
 from open_webui.utils.auth import get_admin_user, get_verified_user
 from open_webui.utils.headers import include_user_info_headers
 from open_webui.config import (
@@ -1155,17 +1156,9 @@ def transcription(
 
     stt_supported_content_types = getattr(
         request.app.state.config, "STT_SUPPORTED_CONTENT_TYPES", []
-    )
+    ) or ["audio/*", "video/webm"]
 
-    if not any(
-        fnmatch(file.content_type, content_type)
-        for content_type in (
-            stt_supported_content_types
-            if stt_supported_content_types
-            and any(t.strip() for t in stt_supported_content_types)
-            else ["audio/*", "video/webm"]
-        )
-    ):
+    if not strict_match_mime_type(stt_supported_content_types, file.content_type):
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=ERROR_MESSAGES.FILE_NOT_SUPPORTED,
