@@ -4,6 +4,7 @@ import mimetypes
 import os
 import shutil
 import asyncio
+import time
 
 import uuid
 from datetime import datetime
@@ -1232,12 +1233,12 @@ def save_docs_to_vector_db(
     )
 
     # Check if entries with the same hash (metadata.hash) already exist
-    if metadata and "hash" in metadata:
+    # Skip this check when add=True (adding to existing knowledge base)
+    if metadata and "hash" in metadata and not add:
         result = VECTOR_DB_CLIENT.query(
             collection_name=collection_name,
             filter={"hash": metadata["hash"]},
         )
-
         if result is not None:
             existing_doc_ids = result.ids[0]
             if existing_doc_ids:
@@ -1731,7 +1732,7 @@ def process_web(
         collection_name = form_data.collection_name
         if not collection_name:
             collection_name = calculate_sha256_string(form_data.url)[:63]
-
+        
         loader = get_web_loader(
             form_data.url,
             verify_ssl=request.app.state.config.ENABLE_WEB_LOADER_SSL_VERIFICATION,
@@ -1739,21 +1740,78 @@ def process_web(
         )
         docs = loader.load()
         content = " ".join([doc.page_content for doc in docs])
-
         log.debug(f"text_content: {content}")
-
-        if not request.app.state.config.BYPASS_WEB_SEARCH_EMBEDDING_AND_RETRIEVAL:
-            save_docs_to_vector_db(
-                request, docs, collection_name, overwrite=True, user=user
-            )
+        
+        # Create file record
+        file_id = str(uuid.uuid4())
+        hash = calculate_sha256_string(content)
+        
+        file = FileModel(
+            id=file_id,
+            user_id=user.id,
+            filename=form_data.url,
+            path=None,
+            meta={
+                "name": form_data.url,
+                "source": form_data.url,
+                "content_type": "text/html",
+            },
+            data={
+                "content": content,
+            },
+            hash=hash,
+            created_at=int(time.time()),
+            updated_at=int(time.time())
+        )
+        
+        Files.insert_new_file(user.id, file)
+        
+        # Only save to vector DB if this is NOT being added to a knowledge base
+        # (i.e., when collection_name is auto-generated, not explicitly provided)
+        if not form_data.collection_name:
+            # This is for chat context - save to vector DB with auto-generated collection name
+            if not request.app.state.config.BYPASS_WEB_SEARCH_EMBEDDING_AND_RETRIEVAL:
+                docs = [
+                    Document(
+                        page_content=doc.page_content,
+                        metadata={
+                            **doc.metadata,
+                            "file_id": file_id,
+                            "name": form_data.url,
+                            "created_by": user.id,
+                            "source": form_data.url,
+                        },
+                    )
+                    for doc in docs
+                ]
+                
+                save_docs_to_vector_db(
+                    request, 
+                    docs, 
+                    collection_name, 
+                    metadata={
+                        "file_id": file_id,
+                        "name": form_data.url,
+                        "hash": hash,
+                    },
+                    overwrite=True, 
+                    user=user
+                )
+                
+                Files.update_file_metadata_by_id(file_id, {"collection_name": collection_name})
+            else:
+                collection_name = None
         else:
-            collection_name = None
-
+            # This is for knowledge base - don't save to vector DB here
+            # Let addFileHandler -> process_file handle it
+            collection_name = form_data.collection_name
+        
         return {
             "status": True,
             "collection_name": collection_name,
             "filename": form_data.url,
             "file": {
+                "id": file_id,
                 "data": {
                     "content": content,
                 },
