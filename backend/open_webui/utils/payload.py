@@ -369,7 +369,7 @@ def convert_embedding_payload_openai_to_ollama(openai_payload: dict) -> dict:
         ollama_payload["prompt"] = str(input_value)
 
     # Optionally forward other fields if present
-    for optional_key in ("options", "truncate", "keep_alive"):
+    for optional_key in ("options", "truncate", "keep_alive", "dimensions"):
         if optional_key in openai_payload:
             ollama_payload[optional_key] = openai_payload[optional_key]
 

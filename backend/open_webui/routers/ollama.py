@@ -1017,6 +1017,7 @@ class GenerateEmbedForm(BaseModel):
     model: str
     input: list[str] | str
     truncate: Optional[bool] = None
+    dimensions: Optional[int] = None
     options: Optional[dict] = None
     keep_alive: Optional[Union[int, str]] = None
 
