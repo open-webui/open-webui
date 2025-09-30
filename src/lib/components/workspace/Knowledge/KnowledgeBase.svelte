@@ -441,10 +441,14 @@
 	                ? await processYoutubeVideo(localStorage.token, url)
 	                : await processWeb(localStorage.token, id, url);
 	
+	        console.log('processWeb full response:', res);
+	
 	        if (res && res.file) {
-	            // processWeb already added the file to the knowledge base
-	            // Just refresh to get the updated file list
 	            const updatedKnowledge = await getKnowledgeById(localStorage.token, id);
+	            console.log('Updated knowledge base:', updatedKnowledge);
+	            console.log('Files in knowledge base:', updatedKnowledge?.files);
+	            console.log('Number of files:', updatedKnowledge?.files?.length);
+	            
 	            if (updatedKnowledge) {
 	                knowledge = updatedKnowledge;
 	                toast.success($i18n.t('Website processed successfully.'));
@@ -454,6 +458,7 @@
 	            toast.error($i18n.t('Failed to process website.'));
 	        }
 	    } catch (e) {
+	        console.error('Error in uploadWebHandler:', e);
 	        toast.error(`${e}`);
 	        knowledge.files = knowledge.files.filter((item) => item.itemId !== tempItemId);
 	    }
