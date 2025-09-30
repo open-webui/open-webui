@@ -441,14 +441,13 @@
 	                ? await processYoutubeVideo(localStorage.token, url)
 	                : await processWeb(localStorage.token, id, url);
 	
-	        console.log('processWeb response:', res);
-	        console.log('file object:', res?.file);
-	        console.log('file ID:', res?.file?.id);
-	
 	        if (res && res.file) {
-	            const success = await addFileHandler(res.file.id);
-	            if (!success) {
-	                knowledge.files = knowledge.files.filter((item) => item.itemId !== tempItemId);
+	            // processWeb already added the file to the knowledge base
+	            // Just refresh to get the updated file list
+	            const updatedKnowledge = await getKnowledgeById(localStorage.token, id);
+	            if (updatedKnowledge) {
+	                knowledge = updatedKnowledge;
+	                toast.success($i18n.t('Website processed successfully.'));
 	            }
 	        } else {
 	            knowledge.files = knowledge.files.filter((item) => item.itemId !== tempItemId);
