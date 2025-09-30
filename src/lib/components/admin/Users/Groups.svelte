@@ -57,12 +57,6 @@
 
 	const setGroups = async () => {
 		const allGroups = await getGroups(localStorage.token);
-		const userGroup = allGroups.find((g) => g.name.toLowerCase() === 'user');
-
-		if (userGroup) {
-			defaultPermissions = userGroup.permissions;
-		}
-
 		groups = allGroups.filter((g) => g.name.toLowerCase() !== 'user');
 	};
 
@@ -110,6 +104,7 @@
 			total = res.total;
 		}
 
+		defaultPermissions = await getUserDefaultPermissions(localStorage.token);
 		await setGroups();
 		loaded = true;
 	});
