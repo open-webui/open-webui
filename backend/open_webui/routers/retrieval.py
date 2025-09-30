@@ -1233,12 +1233,12 @@ def save_docs_to_vector_db(
     )
 
     # Check if entries with the same hash (metadata.hash) already exist
-    if metadata and "hash" in metadata:
+    # Skip this check when add=True (adding to existing knowledge base)
+    if metadata and "hash" in metadata and not add:
         result = VECTOR_DB_CLIENT.query(
             collection_name=collection_name,
             filter={"hash": metadata["hash"]},
         )
-
         if result is not None:
             existing_doc_ids = result.ids[0]
             if existing_doc_ids:
