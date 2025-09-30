@@ -418,15 +418,25 @@
 
 		try {
 			const res =
-				type === 'youtube'
-					? await processYoutubeVideo(localStorage.token, url)
-					: await processWeb(localStorage.token, id, url);
-
+			    type === 'youtube'
+			        ? await processYoutubeVideo(localStorage.token, url)
+			        : await processWeb(localStorage.token, id, url);
+			
 			if (res && res.file) {
-				const success = await addFileHandler(res.file.id);
-				if (!success) {
-					knowledge.files = knowledge.files.filter((item) => item.itemId !== tempItemId);
-				}
+			    // processWeb already added the file to the collection, just update the UI
+			    knowledge.files = knowledge.files.map((item) => {
+			        if (item.itemId === tempItemId) {
+			            return { ...res.file, itemId: tempItemId };
+			        }
+			        return item;
+			    });
+			    
+			    // Fetch fresh knowledge data to get the updated file list
+			    const updatedKnowledge = await getKnowledgeById(localStorage.token, id);
+			    if (updatedKnowledge) {
+			        knowledge = updatedKnowledge;
+			        toast.success($i18n.t('Website processed successfully.'));
+			    }
 			} else {
 				knowledge.files = knowledge.files.filter((item) => item.itemId !== tempItemId);
 				toast.error($i18n.t('Failed to process website.'));
