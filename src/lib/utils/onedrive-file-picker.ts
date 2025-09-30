@@ -176,6 +176,9 @@ interface PickerParams {
 		origin: string;
 		channelId: string;
 	};
+	search: {
+		enabled: boolean;
+	}
 	typesAndSources: {
 		mode: string;
 		pivots: Record<string, boolean>;
@@ -204,11 +207,15 @@ function getPickerParams(): PickerParams {
 			origin: window?.location?.origin || '',
 			channelId
 		},
+		search: {
+			enabled: true
+		},
 		typesAndSources: {
 			mode: 'files',
 			pivots: {
 				oneDrive: true,
-				recent: true
+				recent: true,
+				myOrganization: config.getAuthorityType() === "organizations",
 			}
 		}
 	};
