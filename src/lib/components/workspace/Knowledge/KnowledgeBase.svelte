@@ -448,9 +448,11 @@
 		if (updatedKnowledge) {
 			knowledge = updatedKnowledge;
 			toast.success($i18n.t('File added successfully.'));
+			return true;
 		} else {
 			toast.error($i18n.t('Failed to add file.'));
 			knowledge.files = knowledge.files.filter((file) => file.id !== fileId);
+			return false;
 		}
 	};
 
@@ -932,6 +934,8 @@
 												uploadDirectoryHandler();
 											} else if (e.detail.type === 'text') {
 												showAddTextContentModal = true;
+											} else if (e.detail.type === 'web' || e.detail.type === 'youtube') {
+												uploadWebHandler(e.detail.data, e.detail.type);
 											} else {
 												document.getElementById('files-input').click();
 											}
