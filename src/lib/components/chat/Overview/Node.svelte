@@ -5,9 +5,25 @@
 	import ProfileImage from '../Messages/ProfileImage.svelte';
 	import Tooltip from '$lib/components/common/Tooltip.svelte';
 	import Heart from '$lib/components/icons/Heart.svelte';
+	import Clip from '$lib/components/icons/Clip.svelte';
+	import Document from '$lib/components/icons/Document.svelte';
+	import ChatBubble from '$lib/components/icons/ChatBubble.svelte';
+	import Note from '$lib/components/icons/Note.svelte';
+	import Photo from '$lib/components/icons/Photo.svelte';
+	import GlobeAlt from '$lib/components/icons/GlobeAlt.svelte';
 
 	type $$Props = NodeProps;
 	export let data: $$Props['data'];
+
+	let uniqueFileTypes = [];
+	if (data.message.files && data.message.files.length > 0) {
+		const types = data.message.files.map((file) => {
+			if (file.type === 'doc' || file.type === 'file') return 'file';
+			if (file.type === 'text') return 'website';
+			return file.type;
+		});
+		uniqueFileTypes = [...new Set(types)];
+	}
 </script>
 
 <div
@@ -24,11 +40,31 @@
 					src={data.user?.profile_image_url ?? `${WEBUI_BASE_URL}/user.png`}
 					className={'size-5 -translate-y-[1px]'}
 				/>
-				<div class="ml-2">
-					<div class=" flex justify-between items-center">
-						<div class="text-xs text-black dark:text-white font-medium line-clamp-1">
+				<div class="ml-2 overflow-hidden">
+					<div class="flex items-center">
+						<div class="text-xs text-black dark:text-white font-medium truncate">
 							{data?.user?.name ?? 'User'}
 						</div>
+
+						{#if uniqueFileTypes.length > 0}
+							<div class="ml-1.5 shrink-0">
+								{#if uniqueFileTypes.length > 1}
+									<Clip class="size-3" />
+								{:else if uniqueFileTypes[0] === 'file'}
+									<Document class="size-3" />
+								{:else if uniqueFileTypes[0] === 'chat'}
+									<ChatBubble class="size-3" />
+								{:else if uniqueFileTypes[0] === 'note'}
+									<Note class="size-3" />
+								{:else if uniqueFileTypes[0] === 'image'}
+									<Photo class="size-3" />
+								{:else if uniqueFileTypes[0] === 'website'}
+									<GlobeAlt class="size-3" />
+								{:else}
+									<Clip class="size-3" />
+								{/if}
+							</div>
+						{/if}
 					</div>
 
 					{#if data?.message?.error}
