@@ -29,12 +29,14 @@
 	const nodes = writable([]);
 	const edges = writable([]);
 
+	let layoutDirection = 'vertical';
+
 	const nodeTypes = {
 		custom: CustomNode
 	};
 
 	$: if (history) {
-		drawFlow();
+		drawFlow(layoutDirection);
 	}
 
 	$: if (history && history.currentId) {
@@ -51,11 +53,11 @@
 		selectedMessageId = null;
 	};
 
-	const drawFlow = async () => {
+	const drawFlow = async (direction) => {
 		const nodeList = [];
 		const edgeList = [];
-		const levelOffset = 150; // Vertical spacing between layers
-		const siblingOffset = 250; // Horizontal spacing between nodes at the same layer
+		const levelOffset = direction === 'vertical' ? 150 : 300;
+		const siblingOffset = direction === 'vertical' ? 250 : 150;
 
 		// Map to keep track of node positions at each level
 		let positionMap = new Map();
@@ -84,9 +86,8 @@
 		// Adjust positions based on siblings count to centralize vertical spacing
 		Object.keys(history.messages).forEach((id) => {
 			const pos = positionMap.get(id);
-			const xOffset = pos.position * siblingOffset;
-			const y = pos.level * levelOffset;
-			const x = xOffset;
+			const x = direction === 'vertical' ? pos.position * siblingOffset : pos.level * levelOffset;
+			const y = direction === 'vertical' ? pos.level * levelOffset : pos.position * siblingOffset;
 
 			nodeList.push({
 				id: pos.id,
@@ -126,8 +127,13 @@
 		);
 	};
 
+	const setLayoutDirection = (direction) => {
+		layoutDirection = direction;
+		drawFlow(layoutDirection);
+	};
+
 	onMount(() => {
-		drawFlow();
+		drawFlow(layoutDirection);
 
 		nodesInitialized.subscribe(async (initialized) => {
 			if (initialized) {
@@ -188,6 +194,7 @@
 			{nodes}
 			{nodeTypes}
 			{edges}
+			{setLayoutDirection}
 			on:nodeclick={(e) => {
 				console.log(e.detail.node.data);
 				dispatch('nodeclick', e.detail);
