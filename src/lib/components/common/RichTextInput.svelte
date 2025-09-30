@@ -1035,10 +1035,15 @@
 						if (!event.clipboardData) return false;
 						if (richText) return false; // Let ProseMirror handle normal copy in rich text mode
 
-						const plain = editor.getText();
-						const html = editor.getHTML();
+						const { state } = view;
+						const { from, to } = state.selection;
 
-						event.clipboardData.setData('text/plain', plain.replaceAll('\n\n', '\n'));
+						// Only take the selected text & HTML, not the full doc
+						const plain = state.doc.textBetween(from, to, '\n');
+						const slice = state.doc.cut(from, to);
+						const html = editor.schema ? editor.getHTML(slice) : editor.getHTML(); // depending on your editor API
+
+						event.clipboardData.setData('text/plain', plain);
 						event.clipboardData.setData('text/html', html);
 
 						event.preventDefault();
