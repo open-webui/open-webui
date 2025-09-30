@@ -1115,6 +1115,10 @@ DEFAULT_MODELS = PersistentConfig(
     "DEFAULT_MODELS", "ui.default_models", os.environ.get("DEFAULT_MODELS", None)
 )
 
+CHILD_GPT_MODEL = PersistentConfig(
+    "CHILD_GPT_MODEL", "ui.child_gpt_model", os.environ.get("CHILD_GPT_MODEL", None)
+)
+
 try:
     default_prompt_suggestions = json.loads(
         os.environ.get("DEFAULT_PROMPT_SUGGESTIONS", "[]")

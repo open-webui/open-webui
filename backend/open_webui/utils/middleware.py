@@ -344,7 +344,7 @@ async def chat_completion_tools_handler(
     )
 
     try:
-        response = await generate_chat_completion(request, form_data=payload, user=user)
+        response = await generate_chat_completion(request, form_data=payload, user=user, models=models)
         log.debug(f"{response=}")
         content = await get_content_from_response(response)
         log.debug(f"{content=}")
@@ -990,11 +990,17 @@ def apply_params_to_form_data(form_data, model):
     return form_data
 
 
-async def process_chat_payload(request, form_data, user, metadata, model):
-    # Pipeline Inlet -> Filter Inlet -> Chat Memory -> Chat Web Search -> Chat Image Generation
-    # -> Chat Code Interpreter (Form Data Update) -> (Default) Chat Tools Function Calling
-    # -> Chat Files
-
+async def process_chat_payload(request, form_data, user, metadata, model, models=None):
+    log.info(f"DEBUG: process_chat_payload called with model_id: {form_data.get('model')}")
+    log.info(f"DEBUG: process_chat_payload models parameter type: {type(models)}")
+    if models:
+        if isinstance(models, dict):
+            log.info(f"DEBUG: process_chat_payload models parameter (dict): {list(models.keys())}")
+        else:
+            log.info(f"DEBUG: process_chat_payload models parameter (list): {[m['id'] if isinstance(m, dict) else str(m) for m in models]}")
+    else:
+        log.info(f"DEBUG: process_chat_payload models parameter: None")
+    
     form_data = apply_params_to_form_data(form_data, model)
     log.debug(f"form_data: {form_data}")
 
@@ -1032,12 +1038,22 @@ async def process_chat_payload(request, form_data, user, metadata, model):
 
     # Initialize events to store additional event to be sent to the client
     # Initialize contexts and citation
-    if getattr(request.state, "direct", False) and hasattr(request.state, "model"):
+    if getattr(request.state, "direct", False) and hasattr(request.state, "model") and models is None:
+        # Only override models if no models parameter was passed (preserve custom models)
         models = {
             request.state.model["id"]: request.state.model,
         }
-    else:
+    elif models is None:
         models = request.app.state.MODELS
+    else:
+        # Use the models parameter that was passed in (includes custom models)
+        pass
+    
+    log.info(f"DEBUG: process_chat_payload final models type: {type(models)}")
+    if isinstance(models, dict):
+        log.info(f"DEBUG: process_chat_payload final models (dict): {list(models.keys())}")
+    else:
+        log.info(f"DEBUG: process_chat_payload final models (list): {[m['id'] if isinstance(m, dict) else str(m) for m in models]}")
 
     task_model_id = get_task_model_id(
         form_data["model"],

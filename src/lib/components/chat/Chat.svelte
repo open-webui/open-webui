@@ -144,6 +144,23 @@
 
 	let taskIds = null;
 
+	// Socket readiness check
+	let socketReady = false;
+	let socketRetryCount = 0;
+	const MAX_SOCKET_RETRIES = 3;
+	
+	$: if ($socket && $socket.connected && $socket.id) {
+		socketReady = true;
+		console.log('Socket is ready:', $socket.id);
+	} else {
+		socketReady = false;
+		console.log('Socket not ready:', {
+			socket: !!$socket,
+			connected: $socket?.connected,
+			socketId: $socket?.id
+		});
+	}
+
 	// Chat Input
 	let prompt = '';
 	let chatFiles = [];
@@ -1033,6 +1050,12 @@
 		}
 	};
 	const chatCompletedHandler = async (chatId, modelId, responseMessageId, messages) => {
+		// Check if socket is ready
+		if (!socketReady) {
+			console.warn('Socket not ready for chat completion');
+			return;
+		}
+
 		const res = await chatCompleted(localStorage.token, {
 			model: modelId,
 			messages: messages.map((m) => ({
@@ -1093,6 +1116,12 @@
 	};
 
 	const chatActionHandler = async (chatId, actionId, modelId, responseMessageId, event = null) => {
+		// Check if socket is ready
+		if (!socketReady) {
+			console.warn('Socket not ready for chat action');
+			return;
+		}
+
 		const messages = createMessagesList(history, responseMessageId);
 
 		const res = await chatAction(localStorage.token, actionId, {
@@ -1664,47 +1693,54 @@
 		chats.set(await getChatList(localStorage.token, $currentChatPage));
 	};
 
-	const getFeatures = () => {
-		let features = {};
-
-		if ($config?.features)
-			features = {
-				image_generation:
-					$config?.features?.enable_image_generation &&
-					($user?.role === 'admin' || $user?.permissions?.features?.image_generation)
-						? imageGenerationEnabled
-						: false,
-				code_interpreter:
-					$config?.features?.enable_code_interpreter &&
-					($user?.role === 'admin' || $user?.permissions?.features?.code_interpreter)
-						? codeInterpreterEnabled
-						: false,
-				web_search:
-					$config?.features?.enable_web_search &&
-					($user?.role === 'admin' || $user?.permissions?.features?.web_search)
-						? webSearchEnabled
-						: false
-			};
-
-		const currentModels = atSelectedModel?.id ? [atSelectedModel.id] : selectedModels;
-		if (
-			currentModels.filter(
-				(model) => $models.find((m) => m.id === model)?.info?.meta?.capabilities?.web_search ?? true
-			).length === currentModels.length
-		) {
-			if ($config?.features?.enable_web_search && ($settings?.webSearch ?? false) === 'always') {
-				features = { ...features, web_search: true };
+	const sendPromptSocket = async (_history, model, responseMessageId, _chatId) => {
+		// Check if socket is ready with retry mechanism
+		// Check if socket is ready
+		if (!socketReady) {
+			// Simple retry with shorter delay
+			let retryCount = 0;
+			const maxRetries = 3;
+			const retryDelay = 500;
+			
+			while (!socketReady && retryCount < maxRetries) {
+				console.log(`Socket not ready, retrying... (${retryCount + 1}/${maxRetries})`);
+				await new Promise(resolve => setTimeout(resolve, retryDelay));
+				retryCount++;
+			}
+			
+			if (!socketReady) {
+				toast.error($i18n.t('Socket not ready. Please wait a moment and try again.'));
+				return;
 			}
 		}
 
-		if ($settings?.memory ?? false) {
-			features = { ...features, memory: true };
+		// Debug: Check socket connection status
+		console.log('Socket connection status:', {
+			socket: $socket,
+			socketId: $socket?.id,
+			socketConnected: $socket?.connected,
+			user: $user
+		});
+
+		// Check if socket is connected
+		if (!$socket || !$socket.connected) {
+			toast.error('Socket not connected. Please refresh the page and try again.');
+			return;
 		}
 
-		return features;
-	};
+		// Check if session ID is available
+		if (!$socket.id) {
+			toast.error('Session ID not available. Please refresh the page and try again.');
+			return;
+		}
 
-	const sendMessageSocket = async (model, _messages, _history, responseMessageId, _chatId) => {
+		// Ensure user is authenticated
+		if (!$user) {
+			toast.error('User not authenticated. Please refresh the page and try again.');
+			return;
+		}
+
+		const chatMessages = createMessagesList(history, history.currentId);
 		const responseMessage = _history.messages[responseMessageId];
 		const userMessage = _history.messages[responseMessage.parentId];
 
@@ -1988,6 +2024,12 @@ Key guidelines:
 
 			return null;
 		});
+
+		// Debug: Log the model being sent
+		console.log('Frontend sending model ID:', model.id);
+		console.log('Frontend selectedModels:', selectedModels);
+		console.log('Frontend atSelectedModel:', atSelectedModel);
+		console.log('Frontend model object:', model);
 
 		if (res) {
 			if (res.error) {

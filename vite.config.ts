@@ -16,17 +16,58 @@ export default defineConfig({
 			]
 		})
 	],
+	server: {
+		proxy: {
+			'/api': {
+				target: 'http://localhost:8080',
+				changeOrigin: true,
+				secure: false
+			},
+			'/ollama': {
+				target: 'http://localhost:8080',
+				changeOrigin: true,
+				secure: false
+			},
+			'/openai': {
+				target: 'http://localhost:8080',
+				changeOrigin: true,
+				secure: false
+			},
+			'/ws': {
+				target: 'http://localhost:8080',
+				changeOrigin: true,
+				secure: false,
+				ws: true
+			}
+		}
+	},
 	define: {
 		APP_VERSION: JSON.stringify(process.env.npm_package_version),
 		APP_BUILD_HASH: JSON.stringify(process.env.APP_BUILD_HASH || 'dev-build')
 	},
 	build: {
-		sourcemap: true
+		sourcemap: false, // Disable sourcemaps to reduce memory usage
+		rollupOptions: {
+			output: {
+				manualChunks: {
+					// Split large dependencies into separate chunks
+					vendor: ['svelte', '@sveltejs/kit'],
+					ui: ['bits-ui', 'svelte-sonner'],
+					editor: ['@tiptap/core', '@tiptap/starter-kit', 'codemirror'],
+					utils: ['dayjs', 'fuse.js', 'marked']
+				}
+			}
+		},
+		chunkSizeWarningLimit: 1000
 	},
 	worker: {
 		format: 'es'
 	},
 	esbuild: {
-		pure: process.env.ENV === 'dev' ? [] : ['console.log', 'console.debug', 'console.error']
+		pure: ['console.log', 'console.debug']
+	},
+	optimizeDeps: {
+		// Exclude large dependencies from pre-bundling
+		exclude: ['@mediapipe/tasks-vision', 'pyodide']
 	}
 });

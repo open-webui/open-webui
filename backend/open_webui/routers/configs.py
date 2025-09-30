@@ -422,6 +422,7 @@ async def set_code_execution_config(
 class ModelsConfigForm(BaseModel):
     DEFAULT_MODELS: Optional[str]
     MODEL_ORDER_LIST: Optional[list[str]]
+    CHILD_GPT_MODEL: Optional[str]
 
 
 @router.get("/models", response_model=ModelsConfigForm)
@@ -429,6 +430,7 @@ async def get_models_config(request: Request, user=Depends(get_admin_user)):
     return {
         "DEFAULT_MODELS": request.app.state.config.DEFAULT_MODELS,
         "MODEL_ORDER_LIST": request.app.state.config.MODEL_ORDER_LIST,
+        "CHILD_GPT_MODEL": getattr(request.app.state.config, 'CHILD_GPT_MODEL', None),
     }
 
 
@@ -438,9 +440,12 @@ async def set_models_config(
 ):
     request.app.state.config.DEFAULT_MODELS = form_data.DEFAULT_MODELS
     request.app.state.config.MODEL_ORDER_LIST = form_data.MODEL_ORDER_LIST
+    if hasattr(form_data, 'CHILD_GPT_MODEL'):
+        request.app.state.config.CHILD_GPT_MODEL = form_data.CHILD_GPT_MODEL
     return {
         "DEFAULT_MODELS": request.app.state.config.DEFAULT_MODELS,
         "MODEL_ORDER_LIST": request.app.state.config.MODEL_ORDER_LIST,
+        "CHILD_GPT_MODEL": getattr(request.app.state.config, 'CHILD_GPT_MODEL', None),
     }
 
 

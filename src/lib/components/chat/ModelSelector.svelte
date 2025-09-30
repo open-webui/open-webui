@@ -43,6 +43,21 @@
 			$models.map((m) => m.id).includes(model) ? model : ''
 		);
 	}
+
+	// Debug: Log available models and selected models
+	$: if ($models.length > 0) {
+		console.log('Available models:', $models.map(m => ({ id: m.id, name: m.name, preset: m.preset })));
+		console.log('Selected models:', selectedModels);
+	}
+
+	// Debug: Log when selectedModels changes
+	$: if (selectedModels.length > 0) {
+		console.log('ModelSelector - selectedModels changed:', selectedModels);
+		console.log('ModelSelector - selectedModels details:', selectedModels.map(id => {
+			const model = $models.find(m => m.id === id);
+			return { id, name: model?.name, preset: model?.preset };
+		}));
+	}
 </script>
 
 <div class="flex flex-col w-full items-start">

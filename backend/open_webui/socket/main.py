@@ -763,16 +763,47 @@ def get_event_emitter(request_info, update_db=True):
 
 def get_event_call(request_info):
     async def __event_caller__(event_data):
-        response = await sio.call(
-            "chat-events",
-            {
-                "chat_id": request_info.get("chat_id", None),
-                "message_id": request_info.get("message_id", None),
-                "data": event_data,
-            },
-            to=request_info["session_id"],
-        )
-        return response
+        session_id = request_info.get("session_id")
+        
+        # Check if session_id exists and is valid
+        if not session_id:
+            log.warning("No session_id provided for event call")
+            return {"error": "No session ID provided"}
+        
+        # Check if the session is still connected
+        if session_id not in SESSION_POOL:
+            log.warning(f"Session {session_id} not found in SESSION_POOL")
+            return {"error": "Session not found"}
+        
+        try:
+            response = await sio.call(
+                "chat-events",
+                {
+                    "chat_id": request_info.get("chat_id", None),
+                    "message_id": request_info.get("message_id", None),
+                    "data": event_data,
+                },
+                to=session_id,
+                timeout=10  # Add timeout to prevent hanging
+            )
+            return response
+        except Exception as e:
+            log.error(f"Error in sio.call for session {session_id}: {str(e)}")
+            # Fallback to emit if call fails
+            try:
+                await sio.emit(
+                    "chat-events",
+                    {
+                        "chat_id": request_info.get("chat_id", None),
+                        "message_id": request_info.get("message_id", None),
+                        "data": event_data,
+                    },
+                    to=session_id
+                )
+                return {"status": "emitted"}
+            except Exception as emit_error:
+                log.error(f"Error in fallback emit for session {session_id}: {str(emit_error)}")
+                return {"error": f"Failed to send event: {str(e)}"}
 
     return __event_caller__
 

@@ -1334,7 +1334,11 @@ async def generate_chat_completion(
             system = params.pop("system", None)
 
             payload = apply_model_params_to_body_ollama(params, payload)
-            payload = apply_system_prompt_to_body(system, payload, metadata, user)
+            
+            # Only apply model system prompt if there's no existing system message
+            # This allows playground system instructions to take precedence
+            if system and not (payload.get("messages") and payload["messages"] and payload["messages"][0].get("role") == "system"):
+                payload = apply_model_system_prompt_to_body(system, payload, metadata, user)
 
         # Check if user has access to the model
         if not bypass_filter and user.role == "user":
@@ -1523,7 +1527,16 @@ async def generate_openai_chat_completion(
             system = params.pop("system", None)
 
             payload = apply_model_params_to_body_openai(params, payload)
-            payload = apply_system_prompt_to_body(system, payload, metadata, user)
+            
+            # Only apply model system prompt if there's no existing system message
+            # This allows playground system instructions to take precedence
+            if system and not (payload.get("messages") and payload["messages"] and payload["messages"][0].get("role") == "system"):
+                log.info(f"Applying custom model system prompt: {system[:100]}...")
+                payload = apply_model_system_prompt_to_body(system, payload, metadata, user)
+            elif system:
+                log.info(f"Custom model has system prompt but not applying (existing system message): {system[:100]}...")
+            else:
+                log.info("No custom model system prompt found")
 
         # Check if user has access to the model
         if user.role == "user":
@@ -1557,6 +1570,16 @@ async def generate_openai_chat_completion(
     if prefix_id:
         payload["model"] = payload["model"].replace(f"{prefix_id}.", "")
 
+    # Log the messages to see if system prompt is included
+    if isinstance(payload, dict) and "messages" in payload:
+        messages = payload["messages"]
+        log.info(f"Messages being sent to Ollama: {len(messages)} messages")
+        for i, msg in enumerate(messages):
+            if msg.get("role") == "system":
+                log.info(f"System message {i}: {msg.get('content', '')[:100]}...")
+            else:
+                log.info(f"Message {i} ({msg.get('role', 'unknown')}): {msg.get('content', '')[:50]}...")
+    
     return await send_post_request(
         url=f"{url}/v1/chat/completions",
         payload=json.dumps(payload),

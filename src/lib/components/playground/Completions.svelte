@@ -6,14 +6,16 @@
 
 	import { WEBUI_BASE_URL } from '$lib/constants';
 	import { WEBUI_NAME, config, user, models, settings, showSidebar } from '$lib/stores';
-	import { chatCompletion } from '$lib/apis/openai';
+	import { generateOpenAIChatCompletion } from '$lib/apis/openai';
 
-	import { splitStream } from '$lib/utils';
+
 	import Selector from '$lib/components/chat/ModelSelector/Selector.svelte';
 
 	const i18n = getContext('i18n');
 
 	let loaded = false;
+
+
 	let text = '';
 
 	let selectedModelId = '';
@@ -39,57 +41,35 @@
 	const textCompletionHandler = async () => {
 		const model = $models.find((model) => model.id === selectedModelId);
 
-		const [res, controller] = await chatCompletion(
-			localStorage.token,
-			{
-				model: model.id,
-				stream: true,
-				messages: [
-					{
-						role: 'assistant',
-						content: text
-					}
-				]
-			},
-			`${WEBUI_BASE_URL}/api`
-		);
-
-		if (res && res.ok) {
-			const reader = res.body
-				.pipeThrough(new TextDecoderStream())
-				.pipeThrough(splitStream('\n'))
-				.getReader();
-
-			while (true) {
-				const { value, done } = await reader.read();
-				if (done || stopResponseFlag) {
-					if (stopResponseFlag) {
-						controller.abort('User: Stop Response');
-					}
-					break;
-				}
-
-				try {
-					let lines = value.split('\n');
-
-					for (const line of lines) {
-						if (line !== '') {
-							if (line.includes('[DONE]')) {
-								console.log('done');
-							} else {
-								let data = JSON.parse(line.replace(/^data: /, ''));
-								console.log(data);
-
-								text += data.choices[0].delta.content ?? '';
-							}
+		try {
+			const res = await generateOpenAIChatCompletion(
+				localStorage.token,
+				{
+					model: model.id,
+					stream: false, // Use non-streaming for playground to avoid socket issues
+					messages: [
+						{
+							role: 'assistant',
+							content: text
 						}
+					],
+					model_item: {
+						...model,
+						direct: model.direct || model.owned_by === 'openai' // Ensure direct flag is set for OpenAI models
 					}
-				} catch (error) {
-					console.log(error);
-				}
+				},
+				`http://localhost:8080/api`
+			);
 
+			if (res && res.choices && res.choices[0] && res.choices[0].message) {
+				const content = res.choices[0].message.content || '';
+				text += content;
+				await tick();
 				scrollToBottom();
 			}
+		} catch (error) {
+			console.error('Text completion error:', error);
+			toast.error(`Error: ${error.message || error}`);
 		}
 	};
 

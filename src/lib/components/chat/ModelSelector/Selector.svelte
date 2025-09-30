@@ -530,7 +530,10 @@
 						{pinModelHandler}
 						{unloadModelHandler}
 						onClick={() => {
+							console.log('ModelItem clicked:', item);
+							console.log('ModelItem value before:', value);
 							value = item.value;
+							console.log('ModelItem value after:', value);
 							selectedModelIdx = index;
 
 							show = false;

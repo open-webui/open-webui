@@ -12,9 +12,7 @@
 	} from '$lib/constants';
 	import { WEBUI_NAME, config, user, models, settings } from '$lib/stores';
 
-	import { chatCompletion } from '$lib/apis/openai';
-
-	import { splitStream } from '$lib/utils';
+	import { generateOpenAIChatCompletion } from '$lib/apis/openai';
 	import Collapsible from '../common/Collapsible.svelte';
 
 	import Messages from '$lib/components/playground/Chat/Messages.svelte';
@@ -28,6 +26,7 @@
 	const i18n = getContext('i18n');
 
 	let loaded = false;
+
 
 	let selectedModelId = '';
 	let loading = false;
@@ -83,88 +82,84 @@
 			return;
 		}
 
-		const [res, controller] = await chatCompletion(
-			localStorage.token,
-			{
-				model: model.id,
-				stream: true,
-				messages: [
-					system
-						? {
-								role: 'system',
-								content: system
-							}
-						: undefined,
-					...messages
-				].filter((message) => message)
-			},
-			`${WEBUI_BASE_URL}/api`
-		);
-
-		let responseMessage;
-		if (messages.at(-1)?.role === 'assistant') {
-			responseMessage = messages.at(-1);
-		} else {
-			responseMessage = {
-				role: 'assistant',
-				content: ''
-			};
-			messages.push(responseMessage);
-			messages = messages;
-		}
-
-		await tick();
-		const textareaElement = document.getElementById(`assistant-${messages.length - 1}-textarea`);
-
-		if (res && res.ok) {
-			const reader = res.body
-				.pipeThrough(new TextDecoderStream())
-				.pipeThrough(splitStream('\n'))
-				.getReader();
-
-			while (true) {
-				const { value, done } = await reader.read();
-				if (done || stopResponseFlag) {
-					if (stopResponseFlag) {
-						controller.abort('User: Stop Response');
-					}
-					break;
-				}
-
-				try {
-					let lines = value.split('\n');
-
-					for (const line of lines) {
-						if (line !== '') {
-							console.log(line);
-							if (line === 'data: [DONE]') {
-								// responseMessage.done = true;
-								messages = messages;
-							} else {
-								let data = JSON.parse(line.replace(/^data: /, ''));
-								console.log(data);
-
-								if (responseMessage.content == '' && data.choices[0].delta.content == '\n') {
-									continue;
-								} else {
-									textareaElement.style.height = textareaElement.scrollHeight + 'px';
-
-									responseMessage.content += data.choices[0].delta.content ?? '';
-									messages = messages;
-
-									textareaElement.style.height = textareaElement.scrollHeight + 'px';
-
-									await tick();
-								}
-							}
+		// Prepare the request payload - use the same approach as main chat
+		const payload = {
+			model: model.id,
+			stream: false, // Use non-streaming for playground to avoid socket issues
+			messages: [
+				system
+					? {
+							role: 'system',
+							content: system
 						}
-					}
-				} catch (error) {
-					console.log(error);
+					: undefined,
+				...messages
+			].filter((message) => message),
+			model_item: {
+				...model,
+				direct: model.direct || model.owned_by === 'openai' // Ensure direct flag is set for OpenAI models
+			}
+		};
+
+		console.log('Sending payload:', payload);
+
+		try {
+			// Use generateOpenAIChatCompletion like the main chat does
+			const res = await generateOpenAIChatCompletion(
+				localStorage.token,
+				payload,
+				`http://localhost:8080/api`
+			);
+
+			console.log('Response received:', res);
+
+			if (!res) {
+				toast.error('No response received from server');
+				return;
+			}
+
+			if (res.error) {
+				console.error('API Error:', res.error);
+				toast.error(`API Error: ${res.error}`);
+				return;
+			}
+
+			let responseMessage;
+			if (messages.at(-1)?.role === 'assistant') {
+				responseMessage = messages.at(-1);
+			} else {
+				responseMessage = {
+					role: 'assistant',
+					content: ''
+				};
+				messages.push(responseMessage);
+				messages = messages;
+			}
+
+			await tick();
+			const textareaElement = document.getElementById(`assistant-${messages.length - 1}-textarea`);
+
+			// Handle the response content
+			if (res.choices && res.choices[0] && res.choices[0].message) {
+				const content = res.choices[0].message.content || '';
+				
+				if (textareaElement) {
+					textareaElement.style.height = textareaElement.scrollHeight + 'px';
 				}
 
+				responseMessage.content = content;
+				messages = messages;
+
+				if (textareaElement) {
+					textareaElement.style.height = textareaElement.scrollHeight + 'px';
+				}
+
+				await tick();
 				scrollToBottom();
 			}
+		} catch (error) {
+			console.error('Chat completion error:', error);
+			toast.error(`Error: ${error.message || error}`);
 		}
 	};
 

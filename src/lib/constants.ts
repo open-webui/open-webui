@@ -1,10 +1,16 @@
 import { browser, dev } from '$app/environment';
 // import { version } from '../../package.json';
 
+// Global variables defined by Vite
+declare global {
+	const APP_VERSION: string;
+	const APP_BUILD_HASH: string;
+}
+
 export const APP_NAME = 'Open WebUI';
 
-export const WEBUI_HOSTNAME = browser ? (dev ? `${location.hostname}:8080` : ``) : '';
-export const WEBUI_BASE_URL = browser ? (dev ? `http://${WEBUI_HOSTNAME}` : ``) : ``;
+export const WEBUI_HOSTNAME = browser ? (dev ? `${location.hostname}:${location.port}` : ``) : '';
+export const WEBUI_BASE_URL = browser ? (dev ? `${location.protocol}//${WEBUI_HOSTNAME}` : ``) : ``;
 export const WEBUI_API_BASE_URL = `${WEBUI_BASE_URL}/api/v1`;
 
 export const OLLAMA_API_BASE_URL = `${WEBUI_BASE_URL}/ollama`;

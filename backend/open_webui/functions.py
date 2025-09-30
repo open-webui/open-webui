@@ -287,7 +287,13 @@ async def generate_function_chat_completion(
         if params:
             system = params.pop("system", None)
             form_data = apply_model_params_to_body_openai(params, form_data)
-            form_data = apply_system_prompt_to_body(system, form_data, metadata, user)
+            
+            # Only apply model system prompt if there's no existing system message
+            # This allows playground system instructions to take precedence
+            if system and not (form_data.get("messages") and form_data["messages"] and form_data["messages"][0].get("role") == "system"):
+                form_data = apply_model_system_prompt_to_body(
+                    system, form_data, metadata, user
+                )
 
     pipe_id = get_pipe_id(form_data)
     function_module = get_function_module_by_id(request, pipe_id)

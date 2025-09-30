@@ -812,9 +812,26 @@ async def generate_chat_completion(
 
     payload = {**form_data}
     metadata = payload.pop("metadata", None)
+    
+    # Remove internal Open WebUI fields that OpenAI doesn't recognize
+    payload.pop("urlIdx", None)
+    payload.pop("connection_type", None)
 
     model_id = form_data.get("model")
+    log.info(f"Looking for custom model: {model_id}")
+    log.info(f"Full form_data: {form_data}")
     model_info = Models.get_model_by_id(model_id)
+    if model_info:
+        log.info(f"Custom model found: {model_id}, base_model_id: {model_info.base_model_id if hasattr(model_info, 'base_model_id') else 'None'}")
+    else:
+        log.info(f"No custom model found for: {model_id}")
+        # Let's see what models are available
+        try:
+            all_models = Models.get_all_models()
+            custom_models = [m for m in all_models if hasattr(m, 'user_id') and m.user_id]
+            log.info(f"Available custom models: {[m.id for m in custom_models]}")
+        except Exception as e:
+            log.info(f"Could not get available models: {e}")
 
     # Check model info and override the payload
     if model_info:
@@ -828,7 +845,16 @@ async def generate_chat_completion(
             system = params.pop("system", None)
 
             payload = apply_model_params_to_body_openai(params, payload)
-            payload = apply_system_prompt_to_body(system, payload, metadata, user)
+            
+            # Only apply model system prompt if there's no existing system message
+            # This allows playground system instructions to take precedence
+            if system and not (payload.get("messages") and payload["messages"] and payload["messages"][0].get("role") == "system"):
+                log.info(f"Applying custom model system prompt: {system[:100]}...")
+                payload = apply_model_system_prompt_to_body(system, payload, metadata, user)
+            elif system:
+                log.info(f"Custom model has system prompt but not applying (existing system message): {system[:100]}...")
+            else:
+                log.info("No custom model system prompt found")
 
         # Check if user has access to the model
         if not bypass_filter and user.role == "user":
@@ -850,29 +876,35 @@ async def generate_chat_completion(
             )
 
     await get_all_models(request, user=user)
-    model = request.app.state.OPENAI_MODELS.get(model_id)
-    if model:
-        idx = model["urlIdx"]
+    # Always resolve to the base model ID if present
+    resolved_model_id = model_id
+    if model_info and hasattr(model_info, 'base_model_id') and model_info.base_model_id:
+        resolved_model_id = model_info.base_model_id
+    # Try to get urlIdx from form_data or model dict
+    urlIdx = None
+    model = None
+    if isinstance(form_data, dict) and "urlIdx" in form_data:
+        urlIdx = form_data["urlIdx"]
     else:
-        raise HTTPException(
-            status_code=404,
-            detail="Model not found",
-        )
-
-    # Get the API config for the model
-    api_config = request.app.state.config.OPENAI_API_CONFIGS.get(
-        str(idx),
-        request.app.state.config.OPENAI_API_CONFIGS.get(
-            request.app.state.config.OPENAI_API_BASE_URLS[idx], {}
-        ),  # Legacy support
-    )
-
-    prefix_id = api_config.get("prefix_id", None)
-    if prefix_id:
-        payload["model"] = payload["model"].replace(f"{prefix_id}.", "")
+        model = request.app.state.OPENAI_MODELS.get(resolved_model_id)
+        if model and "urlIdx" in model:
+            urlIdx = model["urlIdx"]
+    if urlIdx is not None:
+        idx = int(urlIdx)
+    else:
+        model = request.app.state.OPENAI_MODELS.get(resolved_model_id)
+        if model and "urlIdx" in model:
+            idx = model["urlIdx"]
+        else:
+            raise HTTPException(
+                status_code=404,
+                detail="Model not found",
+            )
+    # Always set model after idx is determined
+    model = request.app.state.OPENAI_MODELS.get(resolved_model_id)
 
     # Add user info to the payload if the model is a pipeline
-    if "pipeline" in model and model.get("pipeline"):
+    if model and "pipeline" in model and model.get("pipeline"):
         payload["user"] = {
             "name": user.name,
             "id": user.id,
@@ -880,8 +912,34 @@ async def generate_chat_completion(
             "role": user.role,
         }
 
-    url = request.app.state.config.OPENAI_API_BASE_URLS[idx]
-    key = request.app.state.config.OPENAI_API_KEYS[idx]
+    # For custom models based on direct models, ensure we use the correct API key
+    final_idx = idx
+    if model_info and model_info.base_model_id and model_info.base_model_id != model_id:
+        # Check if the base model is a direct model that requires a specific API key
+        base_model = request.app.state.OPENAI_MODELS.get(model_info.base_model_id)
+        if base_model and "urlIdx" in base_model:
+            # Use the API key from the base model's configuration
+            final_idx = base_model["urlIdx"]
+            url = request.app.state.config.OPENAI_API_BASE_URLS[final_idx]
+            key = request.app.state.config.OPENAI_API_KEYS[final_idx]
+        else:
+            url = request.app.state.config.OPENAI_API_BASE_URLS[idx]
+            key = request.app.state.config.OPENAI_API_KEYS[idx]
+    else:
+        url = request.app.state.config.OPENAI_API_BASE_URLS[idx]
+        key = request.app.state.config.OPENAI_API_KEYS[idx]
+
+    # Get the API config for the model using the final_idx
+    api_config = request.app.state.config.OPENAI_API_CONFIGS.get(
+        str(final_idx),
+        request.app.state.config.OPENAI_API_CONFIGS.get(
+            request.app.state.config.OPENAI_API_BASE_URLS[final_idx], {}
+        ),  # Legacy support
+    )
+
+    prefix_id = api_config.get("prefix_id", None)
+    if prefix_id:
+        payload["model"] = payload["model"].replace(f"{prefix_id}.", "")
 
     # Check if model is a reasoning model that needs special handling
     if is_openai_reasoning_model(payload["model"]):
@@ -919,6 +977,16 @@ async def generate_chat_completion(
     else:
         request_url = f"{url}/chat/completions"
 
+    # Log the messages to see if system prompt is included BEFORE converting to JSON
+    if isinstance(payload, dict) and "messages" in payload:
+        messages = payload["messages"]
+        log.info(f"Messages being sent to OpenAI: {len(messages)} messages")
+        for i, msg in enumerate(messages):
+            if msg.get("role") == "system":
+                log.info(f"System message {i}: {msg.get('content', '')[:100]}...")
+            else:
+                log.info(f"Message {i} ({msg.get('role', 'unknown')}): {msg.get('content', '')[:50]}...")
+    
     payload = json.dumps(payload)
 
     r = None
@@ -927,6 +995,8 @@ async def generate_chat_completion(
     response = None
 
     try:
+        log.info(f"Using OpenAI URL: {url}, API Key: {key[:5]}... for model: {payload[:100]}...")
+        log.info(f"Request payload: {payload}")
         session = aiohttp.ClientSession(
             trust_env=True, timeout=aiohttp.ClientTimeout(total=AIOHTTP_CLIENT_TIMEOUT)
         )
@@ -967,6 +1037,26 @@ async def generate_chat_completion(
             return response
     except Exception as e:
         log.exception(e)
+
+        detail = None
+        if r is not None:
+            try:
+                error_response = await r.json()
+                log.error(f"OpenAI Error Response: {error_response}")
+                if "error" in error_response:
+                    detail = f"{error_response['error']['message'] if 'message' in error_response['error'] else error_response['error']}"
+            except Exception:
+                try:
+                    error_text = await r.text()
+                    log.error(f"OpenAI Error Text: {error_text}")
+                    detail = f"External: {error_text}"
+                except Exception:
+                    detail = f"External: {e}"
+        elif isinstance(response, dict):
+            if "error" in response:
+                detail = f"{response['error']['message'] if 'message' in response['error'] else response['error']}"
+        elif isinstance(response, str):
+            detail = response
 
         raise HTTPException(
             status_code=r.status if r else 500,

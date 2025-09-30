@@ -91,7 +91,7 @@ from open_webui.routers import (
     tools,
     users,
     utils,
-    scim,
+    moderation,
 )
 
 from open_webui.routers.retrieval import (
@@ -348,6 +348,7 @@ from open_webui.config import (
     PENDING_USER_OVERLAY_TITLE,
     DEFAULT_PROMPT_SUGGESTIONS,
     DEFAULT_MODELS,
+    CHILD_GPT_MODEL,
     DEFAULT_ARENA_MODEL,
     MODEL_ORDER_LIST,
     EVALUATION_ARENA_MODELS,
@@ -726,6 +727,7 @@ app.state.config.ADMIN_EMAIL = ADMIN_EMAIL
 
 
 app.state.config.DEFAULT_MODELS = DEFAULT_MODELS
+app.state.config.CHILD_GPT_MODEL = CHILD_GPT_MODEL
 app.state.config.DEFAULT_PROMPT_SUGGESTIONS = DEFAULT_PROMPT_SUGGESTIONS
 app.state.config.DEFAULT_USER_ROLE = DEFAULT_USER_ROLE
 
@@ -1280,6 +1282,7 @@ app.include_router(
     evaluations.router, prefix="/api/v1/evaluations", tags=["evaluations"]
 )
 app.include_router(utils.router, prefix="/api/v1/utils", tags=["utils"])
+app.include_router(moderation.router, prefix="/api/v1/moderation", tags=["moderation"])
 
 # SCIM 2.0 API for identity management
 if SCIM_ENABLED:
@@ -1409,11 +1412,54 @@ async def chat_completion(
     metadata = {}
     try:
         if not model_item.get("direct", False):
-            if model_id not in request.app.state.MODELS:
-                raise Exception("Model not found")
-
-            model = request.app.state.MODELS[model_id]
+            model_id = form_data.get("model", None)
+            
+            # Debug: Log the model lookup process
+            log.info(f"DEBUG: Looking for model_id: {model_id}")
+            log.info(f"DEBUG: Available models in MODELS: {list(request.app.state.MODELS.keys())}")
+            
+            # First check if this is a custom model in the database
             model_info = Models.get_model_by_id(model_id)
+            log.info(f"DEBUG: Model info from database: {model_info}")
+            
+            if model_info:
+                # This is a custom model, check if it has a base_model_id
+                if model_info.base_model_id:
+                    # Use the base model for the actual request
+                    base_model_id = model_info.base_model_id
+                    log.info(f"DEBUG: Custom model has base_model_id: {base_model_id}")
+                    if base_model_id not in request.app.state.MODELS:
+                        raise Exception(f"Base model '{base_model_id}' not found")
+                    
+                    base_model = request.app.state.MODELS[base_model_id]
+                    # Copy all fields from base model, ensure urlIdx and connection_type are present
+                    model = dict(base_model)
+                    if "urlIdx" not in model and "urlIdx" in base_model:
+                        model["urlIdx"] = base_model["urlIdx"]
+                    if "connection_type" not in model and "connection_type" in base_model:
+                        model["connection_type"] = base_model["connection_type"]
+                    # Also set in form_data for downstream use
+                    form_data["urlIdx"] = model.get("urlIdx")
+                    form_data["connection_type"] = model.get("connection_type")
+                    # DON'T change the model ID here - let downstream functions handle custom model logic
+                    # form_data["model"] = base_model_id  # <-- REMOVED THIS LINE
+                    # If the base model is a direct/OpenAI model, set direct connection state
+                    if model.get("connection_type") == "external" or model.get("owned_by") == "openai":
+                        request.state.direct = True
+                        request.state.model = model
+                else:
+                    # Custom model without base_model_id, check if it's in MODELS
+                    log.info(f"DEBUG: Custom model without base_model_id, checking MODELS")
+                    if model_id not in request.app.state.MODELS:
+                        raise Exception("Model not found")
+                    model = request.app.state.MODELS[model_id]
+            else:
+                # Not a custom model, check if it's in MODELS
+                log.info(f"DEBUG: Not a custom model, checking MODELS")
+                if model_id not in request.app.state.MODELS:
+                    raise Exception("Model not found")
+                model = request.app.state.MODELS[model_id]
+                model_info = None
 
             # Check if user has access to the model
             if not BYPASS_MODEL_ACCESS_CONTROL and (
@@ -1486,6 +1532,16 @@ async def chat_completion(
         request.state.metadata = metadata
         form_data["metadata"] = metadata
 
+        # Create a models dictionary that includes custom models
+        models_with_custom = dict(request.app.state.MODELS)
+        if model_info:
+            # Add the custom model to the models dictionary
+            models_with_custom[model_id] = model
+
+        form_data, metadata, events = await process_chat_payload(
+            request, form_data, user, metadata, model, models_with_custom
+        )
+
     except Exception as e:
         log.debug(f"Error processing chat metadata: {e}")
         raise HTTPException(
@@ -1493,10 +1549,22 @@ async def chat_completion(
             detail=str(e),
         )
 
-    async def process_chat(request, form_data, user, metadata, model):
-        try:
-            form_data, metadata, events = await process_chat_payload(
-                request, form_data, user, metadata, model
+    try:
+        response = await chat_completion_handler(request, form_data, user, models=models_with_custom)
+
+        return await process_chat_response(
+            request, response, form_data, user, metadata, model, events, tasks
+        )
+    except Exception as e:
+        log.debug(f"Error in chat completion: {e}")
+        if metadata.get("chat_id") and metadata.get("message_id"):
+            # Update the chat message with the error
+            Chats.upsert_message_to_chat_by_id_and_message_id(
+                metadata["chat_id"],
+                metadata["message_id"],
+                {
+                    "error": {"content": str(e)},
+                },
             )
 
             response = await chat_completion_handler(request, form_data, user)
