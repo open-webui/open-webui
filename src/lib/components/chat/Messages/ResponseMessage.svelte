@@ -207,7 +207,7 @@
 
 		speaking = true;
 
-		if ($config.audio.tts.engine === '') {
+		if (!$config?.audio?.tts?.engine?.default || $config.audio.tts.engine.default === '') {
 			let voices = [];
 			const getVoicesLoop = setInterval(() => {
 				voices = speechSynthesis.getVoices();
@@ -305,7 +305,7 @@
 						lastPlayedAudioPromise = lastPlayedAudioPromise.then(() => playAudio(idx));
 					}
 				}
-			} else {
+			} else if ($config?.audio?.tts?.engine?.default && $config.audio.tts.engine.default !== '') {
 				for (const [idx, sentence] of messageContentParts.entries()) {
 					const res = await synthesizeOpenAISpeech(
 						localStorage.token,
@@ -332,6 +332,12 @@
 						lastPlayedAudioPromise = lastPlayedAudioPromise.then(() => playAudio(idx));
 					}
 				}
+			} else {
+				// TTS engine is empty, should use Web Speech API
+				// This shouldn't happen as it should be caught by the first condition
+				console.warn('TTS engine is empty but reached backend TTS branch');
+				speaking = false;
+				loadingSpeech = false;
 			}
 		}
 	};

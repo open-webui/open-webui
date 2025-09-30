@@ -483,6 +483,13 @@ async def speech(request: Request, user=Depends(get_verified_user)):
             await f.write(json.dumps(payload))
 
         return FileResponse(file_path)
+    
+    else:
+        # No TTS engine configured
+        raise HTTPException(
+            status_code=400,
+            detail="TTS engine not configured. Please configure a TTS engine in the audio settings.",
+        )
 
 
 def transcribe(request: Request, file_path, user):
