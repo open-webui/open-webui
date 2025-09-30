@@ -447,23 +447,41 @@
 		}
 	};
 
-	const addFileHandler = async (fileId) => {
-		const updatedKnowledge = await addFileToKnowledgeById(localStorage.token, id, fileId).catch(
-			(e) => {
-				toast.error(`${e}`);
-				return null;
-			}
-		);
-
-		if (updatedKnowledge) {
-			knowledge = updatedKnowledge;
-			toast.success($i18n.t('File added successfully.'));
-			return true;
-		} else {
-			toast.error($i18n.t('Failed to add file.'));
-			knowledge.files = knowledge.files.filter((file) => file.id !== fileId);
-			return false;
-		}
+	const uploadWebHandler = async (url, type) => {
+	    const tempItemId = uuidv4();
+	    const fileItem = {
+	        type: 'file',
+	        file: '',
+	        id: null,
+	        url: url,
+	        name: url,
+	        size: 0,
+	        status: 'uploading',
+	        error: '',
+	        itemId: tempItemId
+	    };
+	
+	    knowledge.files = [...(knowledge.files ?? []), fileItem];
+	
+	    try {
+	        const res =
+	            type === 'youtube'
+	                ? await processYoutubeVideo(localStorage.token, url)
+	                : await processWeb(localStorage.token, id, url);
+	
+	        if (res && res.file) {
+	            const success = await addFileHandler(res.file.id);
+	            if (!success) {
+	                knowledge.files = knowledge.files.filter((item) => item.itemId !== tempItemId);
+	            }
+	        } else {
+	            knowledge.files = knowledge.files.filter((item) => item.itemId !== tempItemId);
+	            toast.error($i18n.t('Failed to process website.'));
+	        }
+	    } catch (e) {
+	        toast.error(`${e}`);
+	        knowledge.files = knowledge.files.filter((item) => item.itemId !== tempItemId);
+	    }
 	};
 
 	const deleteFileHandler = async (fileId) => {
