@@ -443,15 +443,11 @@
 	
 	        console.log('processWeb full response:', res);
 	
-	        if (res && res.file) {
-	            const updatedKnowledge = await getKnowledgeById(localStorage.token, id);
-	            console.log('Updated knowledge base:', updatedKnowledge);
-	            console.log('Files in knowledge base:', updatedKnowledge?.files);
-	            console.log('Number of files:', updatedKnowledge?.files?.length);
-	            
-	            if (updatedKnowledge) {
-	                knowledge = updatedKnowledge;
-	                toast.success($i18n.t('Website processed successfully.'));
+	        if (res && res.file && res.file.id) {
+	            // Now we have a file ID, add it to the knowledge base
+	            const success = await addFileHandler(res.file.id);
+	            if (!success) {
+	                knowledge.files = knowledge.files.filter((item) => item.itemId !== tempItemId);
 	            }
 	        } else {
 	            knowledge.files = knowledge.files.filter((item) => item.itemId !== tempItemId);
