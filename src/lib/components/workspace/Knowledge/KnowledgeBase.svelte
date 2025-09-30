@@ -442,14 +442,11 @@ const uploadWebHandler = async (url, type) => {
                 : await processWeb(localStorage.token, id, url);
 
         if (res && res.file) {
-            // processWeb already added the file to the collection, just update the UI
-            knowledge.files = knowledge.files.map((item) => {
-                if (item.itemId === tempItemId) {
-                    return { ...res.file, itemId: tempItemId };
-                }
-                return item;
-            });
-            
+		    const success = await addFileHandler(res.file.id);
+		    if (!success) {
+		        knowledge.files = knowledge.files.filter((item) => item.itemId !== tempItemId);
+		    }
+		}
             // Fetch fresh knowledge data to get the updated file list
             const updatedKnowledge = await getKnowledgeById(localStorage.token, id);
             if (updatedKnowledge) {
