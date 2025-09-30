@@ -84,6 +84,7 @@ from open_webui.utils.misc import (
     get_system_message,
     prepend_to_first_user_message_content,
     convert_logit_bias_input_to_json,
+    get_content_from_message,
 )
 from open_webui.utils.tools import get_tools
 from open_webui.utils.plugin import load_function_module_by_id
@@ -298,7 +299,7 @@ async def chat_completion_tools_handler(
 
         recent_messages = messages[-4:] if len(messages) > 4 else messages
         chat_history = "\n".join(
-            f"{message['role'].upper()}: \"\"\"{message['content']}\"\"\""
+            f"{message['role'].upper()}: \"\"\"{get_content_from_message(message)}\"\"\""
             for message in recent_messages
         )
 
