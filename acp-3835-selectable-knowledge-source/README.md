@@ -42,7 +42,7 @@ An example value for the `MODEL_ID_TO_KNOWLEDGE_SOURCE_MAPPING` environment vari
 
 The frontend implementation is handled by three main Svelte components:
 
--   **`src/lib/components/chat/MessageInput.svelte`**: This component is responsible for rendering the knowledge source selection buttons. It contains a reactive variable `knowledgeSources` that is populated based on the `model_id_to_knowledge_source_mapping` from the config and the currently selected model. When a user clicks a button, the `selectedKnowledgeSources` array is updated.
+-   **`src/lib/components/chat/MessageInput.svelte`**: This component is responsible for rendering the knowledge source selection buttons. It contains a reactive variable `knowledgeSources` that is populated based on the `model_id_to_knowledge_source_mapping` from the config and the currently selected model. When a user clicks a button, the `selectedKnowledgeSources` array is updated. The component also ensures that the input area dynamically expands to fit all available knowledge source buttons, wrapping them into multiple rows if necessary.
 
 -   **`src/lib/components/chat/Chat.svelte`**: This component manages the chat session. In the `submitPrompt` function, it checks if the `selectedKnowledgeSources` array is populated. If it is, and the chat is new, it appends a message to the user's prompt.
 

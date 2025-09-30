@@ -1082,7 +1082,7 @@ selectedKnowledgeSources = [];
 								</div>
 
 								<div class=" flex justify-between mt-1 mb-2.5 mx-0.5 max-w-full" dir="ltr">
-									<div class="ml-1 self-end flex items-center flex-1 max-w-[80%] gap-0.5">
+									<div class="ml-1 self-end flex items-center flex-1 gap-0.5">
 										<InputMenu
 											bind:selectedToolIds
 											{screenCaptureHandler}
@@ -1150,7 +1150,7 @@ selectedKnowledgeSources = [];
 											</button>
 										</InputMenu>
 
-										<div class="flex gap-1 items-center overflow-x-auto scrollbar-none flex-1">
+										<div class="flex gap-1 items-center flex-wrap flex-1">
 											{#if toolServers.length + selectedToolIds.length > 0}
 												<Tooltip
 													content={$i18n.t('{{COUNT}} Available Tools', {
