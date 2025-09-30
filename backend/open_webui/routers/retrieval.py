@@ -1731,7 +1731,7 @@ def process_web(
         collection_name = form_data.collection_name
         if not collection_name:
             collection_name = calculate_sha256_string(form_data.url)[:63]
-
+        
         loader = get_web_loader(
             form_data.url,
             verify_ssl=request.app.state.config.ENABLE_WEB_LOADER_SSL_VERIFICATION,
@@ -1739,21 +1739,74 @@ def process_web(
         )
         docs = loader.load()
         content = " ".join([doc.page_content for doc in docs])
-
         log.debug(f"text_content: {content}")
-
-        if not request.app.state.config.BYPASS_WEB_SEARCH_EMBEDDING_AND_RETRIEVAL:
+        
+        # Always create a file record
+        file_id = str(uuid.uuid4())
+        hash = calculate_sha256_string(content)
+        
+        file = Files.insert_new_file(
+            user_id=user.id,
+            form_data={
+                "id": file_id,
+                "filename": form_data.url,
+                "path": None,
+                "meta": {
+                    "name": form_data.url,
+                    "source": form_data.url,
+                    "content_type": "text/html",
+                },
+                "data": {
+                    "content": content,
+                },
+                "hash": hash,
+            },
+        )
+        
+        # Only save to vector DB if collection_name was explicitly provided
+        # (not empty string from chat context)
+        if form_data.collection_name and not request.app.state.config.BYPASS_WEB_SEARCH_EMBEDDING_AND_RETRIEVAL:
+            docs = [
+                Document(
+                    page_content=doc.page_content,
+                    metadata={
+                        **doc.metadata,
+                        "file_id": file_id,
+                        "name": form_data.url,
+                        "created_by": user.id,
+                        "source": form_data.url,
+                    },
+                )
+                for doc in docs
+            ]
+            
             save_docs_to_vector_db(
-                request, docs, collection_name, overwrite=True, user=user
+                request, 
+                docs, 
+                collection_name, 
+                metadata={
+                    "file_id": file_id,
+                    "name": form_data.url,
+                    "hash": hash,
+                },
+                overwrite=True, 
+                user=user
             )
-        else:
+            
+            Files.update_file_metadata_by_id(file_id, {"collection_name": collection_name})
+        elif not form_data.collection_name:
+            # Chat context - no vector DB needed, set collection_name to None
             collection_name = None
-
+        else:
+            # Bypass embedding but collection_name was provided
+            collection_name = None
+        
         return {
             "status": True,
             "collection_name": collection_name,
             "filename": form_data.url,
             "file": {
+                "id": file_id,  # Now always includes ID
                 "data": {
                     "content": content,
                 },
