@@ -1,10 +1,9 @@
-import random
 import logging
 import sys
 
 from fastapi import Request
 from open_webui.models.users import UserModel
-from open_webui.models.models import Models
+from open_webui.utils.filter import get_sorted_filter_ids, process_filter_functions
 from open_webui.utils.models import check_model_access
 from open_webui.env import SRC_LOG_LEVELS, GLOBAL_LOG_LEVEL, BYPASS_MODEL_ACCESS_CONTROL
 
@@ -72,6 +71,22 @@ async def generate_embeddings(
         if not bypass_filter and user.role == "user":
             check_model_access(user, model)
 
+    # === FILTER INLET ===
+    # Get active filter ids for this model
+    filter_ids = get_sorted_filter_ids(request, model)
+    if filter_ids:
+        from open_webui.models.functions import Functions
+
+        filter_functions = [
+            Functions.get_function_by_id(fid)
+            for fid in filter_ids
+            if Functions.get_function_by_id(fid)
+        ]
+        # Apply inlet filters
+        form_data, _ = await process_filter_functions(
+            request, filter_functions, "inlet", form_data, {"__user__": user}
+        )
+
     # Ollama backend
     if model.get("owned_by") == "ollama":
         ollama_payload = convert_embedding_payload_openai_to_ollama(form_data)
@@ -80,11 +95,22 @@ async def generate_embeddings(
             form_data=GenerateEmbeddingsForm(**ollama_payload),
             user=user,
         )
+        # === FILTER OUTLET ===
+        if filter_ids:
+            response, _ = await process_filter_functions(
+                request, filter_functions, "outlet", response, {"__user__": user}
+            )
         return convert_embedding_response_ollama_to_openai(response)
 
     # Default: OpenAI or compatible backend
-    return await openai_embeddings(
+    response = await openai_embeddings(
         request=request,
         form_data=form_data,
         user=user,
     )
+    # === FILTER OUTLET ===
+    if filter_ids:
+        response, _ = await process_filter_functions(
+            request, filter_functions, "outlet", response, {"__user__": user}
+        )
+    return response
