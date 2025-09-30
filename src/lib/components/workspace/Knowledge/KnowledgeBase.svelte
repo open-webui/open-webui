@@ -441,6 +441,10 @@
 	                ? await processYoutubeVideo(localStorage.token, url)
 	                : await processWeb(localStorage.token, id, url);
 	
+	        console.log('processWeb response:', res);
+	        console.log('file object:', res?.file);
+	        console.log('file ID:', res?.file?.id);
+	
 	        if (res && res.file) {
 	            const success = await addFileHandler(res.file.id);
 	            if (!success) {
