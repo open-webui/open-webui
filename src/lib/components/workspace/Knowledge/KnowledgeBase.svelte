@@ -419,49 +419,42 @@
 		}
 	};
 
-const uploadWebHandler = async (url, type) => {
-    const tempItemId = uuidv4();
-    const fileItem = {
-        type: 'file',
-        file: '',
-        id: null,
-        url: url,
-        name: url,
-        size: 0,
-        status: 'uploading',
-        error: '',
-        itemId: tempItemId
-    };
-
-    knowledge.files = [...(knowledge.files ?? []), fileItem];
-
-    try {
-        const res =
-            type === 'youtube'
-                ? await processYoutubeVideo(localStorage.token, url)
-                : await processWeb(localStorage.token, id, url);
-
-        if (res && res.file) {
-		    const success = await addFileHandler(res.file.id);
-		    if (!success) {
-		        knowledge.files = knowledge.files.filter((item) => item.itemId !== tempItemId);
-		    }
-		}
-            // Fetch fresh knowledge data to get the updated file list
-            const updatedKnowledge = await getKnowledgeById(localStorage.token, id);
-            if (updatedKnowledge) {
-                knowledge = updatedKnowledge;
-                toast.success($i18n.t('Website processed successfully.'));
-            }
-        } else {
-            knowledge.files = knowledge.files.filter((item) => item.itemId !== tempItemId);
-            toast.error($i18n.t('Failed to process website.'));
-        }
-    } catch (e) {
-        toast.error(`${e}`);
-        knowledge.files = knowledge.files.filter((item) => item.itemId !== tempItemId);
-    }
-};
+	const uploadWebHandler = async (url, type) => {
+	    const tempItemId = uuidv4();
+	    const fileItem = {
+	        type: 'file',
+	        file: '',
+	        id: null,
+	        url: url,
+	        name: url,
+	        size: 0,
+	        status: 'uploading',
+	        error: '',
+	        itemId: tempItemId
+	    };
+	
+	    knowledge.files = [...(knowledge.files ?? []), fileItem];
+	
+	    try {
+	        const res =
+	            type === 'youtube'
+	                ? await processYoutubeVideo(localStorage.token, url)
+	                : await processWeb(localStorage.token, id, url);
+	
+	        if (res && res.file) {
+	            const success = await addFileHandler(res.file.id);
+	            if (!success) {
+	                knowledge.files = knowledge.files.filter((item) => item.itemId !== tempItemId);
+	            }
+	        } else {
+	            knowledge.files = knowledge.files.filter((item) => item.itemId !== tempItemId);
+	            toast.error($i18n.t('Failed to process website.'));
+	        }
+	    } catch (e) {
+	        toast.error(`${e}`);
+	        knowledge.files = knowledge.files.filter((item) => item.itemId !== tempItemId);
+	    }
+	};
 
 	const deleteFileHandler = async (fileId) => {
 		try {
