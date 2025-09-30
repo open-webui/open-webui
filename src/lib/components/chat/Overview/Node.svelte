@@ -11,6 +11,7 @@
 	import Note from '$lib/components/icons/Note.svelte';
 	import Photo from '$lib/components/icons/Photo.svelte';
 	import GlobeAlt from '$lib/components/icons/GlobeAlt.svelte';
+	import Database from '$lib/components/icons/Database.svelte';
 
 	type $$Props = NodeProps;
 	export let data: $$Props['data'];
@@ -20,6 +21,7 @@
 		const types = data.message.files.map((file) => {
 			if (file.type === 'doc' || file.type === 'file') return 'file';
 			if (file.type === 'text') return 'website';
+			if (file.type === 'collection') return 'collection';
 			return file.type;
 		});
 		uniqueFileTypes = [...new Set(types)];
@@ -56,6 +58,8 @@
 									<ChatBubble class="size-3" />
 								{:else if uniqueFileTypes[0] === 'note'}
 									<Note class="size-3" />
+								{:else if uniqueFileTypes[0] === 'collection'}
+									<Database class="size-3" />
 								{:else if uniqueFileTypes[0] === 'image'}
 									<Photo class="size-3" />
 								{:else if uniqueFileTypes[0] === 'website'}
