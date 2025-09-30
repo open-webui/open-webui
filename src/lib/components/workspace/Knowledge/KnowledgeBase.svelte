@@ -935,7 +935,7 @@
 											} else if (e.detail.type === 'text') {
 												showAddTextContentModal = true;
 											} else if (e.detail.type === 'web' || e.detail.type === 'youtube') {
-												uploadWebHandler(e.detail.url, e.detail.type);
+												uploadWebHandler(e.detail.data, e.detail.type);
 											} else {
 												document.getElementById('files-input').click();
 											}
