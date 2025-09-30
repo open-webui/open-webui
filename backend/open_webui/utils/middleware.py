@@ -1349,7 +1349,9 @@ async def process_chat_payload(request, form_data, user, metadata, model):
         citation_idx_map = {}
 
         for source in sources:
-            if "document" in source:
+            is_tool_result = source.get("tool_result", False)
+
+            if "document" in source and not is_tool_result:
                 for document_text, document_metadata in zip(
                     source["document"], source["metadata"]
                 ):
