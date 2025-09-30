@@ -51,7 +51,7 @@ class OneDriveConfig {
 		this.sharepointTenantId = config.onedrive?.sharepoint_tenant_id;
 
 		if (!this.clientIdPersonal && !this.clientIdBusiness) {
-		    throw new Error('OneDrive personal or business client ID not configured');
+			throw new Error('OneDrive personal or business client ID not configured');
 		}
 	}
 
@@ -178,7 +178,7 @@ interface PickerParams {
 	};
 	search: {
 		enabled: boolean;
-	}
+	};
 	typesAndSources: {
 		mode: string;
 		pivots: Record<string, boolean>;
@@ -215,7 +215,7 @@ function getPickerParams(): PickerParams {
 			pivots: {
 				oneDrive: true,
 				recent: true,
-				myOrganization: config.getAuthorityType() === "organizations",
+				myOrganization: config.getAuthorityType() === 'organizations'
 			}
 		}
 	};
