@@ -577,7 +577,6 @@ async def generate_facilities_response(request: Request, form_data: FacilitiesRe
                 
                 if cleaned_content.startswith('Error:') or 'Connection aborted' in cleaned_content:
                     logging.error(f"LLM returned error for {section}: {cleaned_content}")
-                    # ❌ DON'T use user input as fallback - fail like regular chat
                     raise Exception(f"LLM generation failed for {section}: {cleaned_content}")
                 else:
                     section_outputs[section] = cleaned_content
@@ -612,7 +611,6 @@ async def generate_facilities_response(request: Request, form_data: FacilitiesRe
                 
             except Exception as e:
                 logging.error(f"Failed to generate content for {section}: {e}")
-                # ❌ DON'T use user input as fallback - fail like regular chat
                 raise Exception(f"Failed to generate content for {section}: {str(e)}")
         
         if not section_outputs:
