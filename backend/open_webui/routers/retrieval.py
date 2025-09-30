@@ -1742,7 +1742,7 @@ def process_web(
         content = " ".join([doc.page_content for doc in docs])
         log.debug(f"text_content: {content}")
         
-        # Create file record using the File model directly
+        # Create file record
         file_id = str(uuid.uuid4())
         hash = calculate_sha256_string(content)
         
@@ -1766,40 +1766,45 @@ def process_web(
         
         Files.insert_new_file(user.id, file)
         
-        # Only save to vector DB if collection_name was explicitly provided
-        if form_data.collection_name and not request.app.state.config.BYPASS_WEB_SEARCH_EMBEDDING_AND_RETRIEVAL:
-            docs = [
-                Document(
-                    page_content=doc.page_content,
+        # Only save to vector DB if this is NOT being added to a knowledge base
+        # (i.e., when collection_name is auto-generated, not explicitly provided)
+        if not form_data.collection_name:
+            # This is for chat context - save to vector DB with auto-generated collection name
+            if not request.app.state.config.BYPASS_WEB_SEARCH_EMBEDDING_AND_RETRIEVAL:
+                docs = [
+                    Document(
+                        page_content=doc.page_content,
+                        metadata={
+                            **doc.metadata,
+                            "file_id": file_id,
+                            "name": form_data.url,
+                            "created_by": user.id,
+                            "source": form_data.url,
+                        },
+                    )
+                    for doc in docs
+                ]
+                
+                save_docs_to_vector_db(
+                    request, 
+                    docs, 
+                    collection_name, 
                     metadata={
-                        **doc.metadata,
                         "file_id": file_id,
                         "name": form_data.url,
-                        "created_by": user.id,
-                        "source": form_data.url,
+                        "hash": hash,
                     },
+                    overwrite=True, 
+                    user=user
                 )
-                for doc in docs
-            ]
-            
-            save_docs_to_vector_db(
-                request, 
-                docs, 
-                collection_name, 
-                metadata={
-                    "file_id": file_id,
-                    "name": form_data.url,
-                    "hash": hash,
-                },
-                overwrite=True, 
-                user=user
-            )
-            
-            Files.update_file_metadata_by_id(file_id, {"collection_name": collection_name})
-        elif not form_data.collection_name:
-            collection_name = None
+                
+                Files.update_file_metadata_by_id(file_id, {"collection_name": collection_name})
+            else:
+                collection_name = None
         else:
-            collection_name = None
+            # This is for knowledge base - don't save to vector DB here
+            # Let addFileHandler -> process_file handle it
+            collection_name = form_data.collection_name
         
         return {
             "status": True,
