@@ -1796,7 +1796,8 @@ def process_web(
                         "name": form_data.url,
                         "hash": hash,
                     },
-                    overwrite=True, 
+                    overwrite=True,
+                    add=True,  # Add this parameter to skip duplicate check for chat context
                     user=user
                 )
                 
