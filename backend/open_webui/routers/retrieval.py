@@ -4,6 +4,7 @@ import mimetypes
 import os
 import shutil
 import asyncio
+import time
 
 import uuid
 from datetime import datetime
@@ -1741,30 +1742,31 @@ def process_web(
         content = " ".join([doc.page_content for doc in docs])
         log.debug(f"text_content: {content}")
         
-        # Always create a file record
+        # Create file record using the File model directly
         file_id = str(uuid.uuid4())
         hash = calculate_sha256_string(content)
         
-        file = Files.insert_new_file(
+        file = FileModel(
+            id=file_id,
             user_id=user.id,
-            form_data={
-                "id": file_id,
-                "filename": form_data.url,
-                "path": None,
-                "meta": {
-                    "name": form_data.url,
-                    "source": form_data.url,
-                    "content_type": "text/html",
-                },
-                "data": {
-                    "content": content,
-                },
-                "hash": hash,
+            filename=form_data.url,
+            path=None,
+            meta={
+                "name": form_data.url,
+                "source": form_data.url,
+                "content_type": "text/html",
             },
+            data={
+                "content": content,
+            },
+            hash=hash,
+            created_at=int(time.time()),
+            updated_at=int(time.time())
         )
         
+        Files.insert_new_file(user.id, file)
+        
         # Only save to vector DB if collection_name was explicitly provided
-        # (not empty string from chat context)
         if form_data.collection_name and not request.app.state.config.BYPASS_WEB_SEARCH_EMBEDDING_AND_RETRIEVAL:
             docs = [
                 Document(
@@ -1795,10 +1797,8 @@ def process_web(
             
             Files.update_file_metadata_by_id(file_id, {"collection_name": collection_name})
         elif not form_data.collection_name:
-            # Chat context - no vector DB needed, set collection_name to None
             collection_name = None
         else:
-            # Bypass embedding but collection_name was provided
             collection_name = None
         
         return {
@@ -1806,7 +1806,7 @@ def process_web(
             "collection_name": collection_name,
             "filename": form_data.url,
             "file": {
-                "id": file_id,  # Now always includes ID
+                "id": file_id,
                 "data": {
                     "content": content,
                 },
