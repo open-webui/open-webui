@@ -23,8 +23,8 @@
 
 <AttachWebpageModal
 	bind:show={showAttachWebpageModal}
-	onSubmit={(e) => {
-		dispatch('upload', data);
+	onSubmit={(detail) => {
+		dispatch('upload', detail);
 	}}
 />
 
