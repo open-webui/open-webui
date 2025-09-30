@@ -209,7 +209,8 @@
 
 		sessionStorage.model = JSON.stringify({
 			base_model_id: model.id,
-			id: newId
+			id: newId,
+			name: `${model.name} Copy`
 		});
 		goto('/workspace/models/create');
 	};
