@@ -209,6 +209,25 @@
 		}
 	};
 
+	const addFileHandler = async (fileId) => {
+		const updatedKnowledge = await addFileToKnowledgeById(localStorage.token, id, fileId).catch(
+			(e) => {
+				toast.error(`${e}`);
+				return null;
+			}
+		);
+
+		if (updatedKnowledge) {
+			knowledge = updatedKnowledge;
+			toast.success($i18n.t('File added successfully.'));
+			return true;
+		} else {
+			toast.error($i18n.t('Failed to add file.'));
+			knowledge.files = knowledge.files.filter((file) => file.id !== fileId);
+			return false;
+		}
+	};
+
 	const uploadDirectoryHandler = async () => {
 		// Check if File System Access API is supported
 		const isFileSystemAccessSupported = 'showDirectoryPicker' in window;
