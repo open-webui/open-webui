@@ -1646,7 +1646,7 @@ async def query_collection_handler(
         missing_collections = []
         if VECTOR_DB_CLIENT:
             for collection_name in form_data.collection_names:
-                if not VECTOR_DB_CLIENT.has_collection(collection_name):
+                if not await VECTOR_DB_CLIENT.has_collection(collection_name):
                     missing_collections.append(collection_name)
 
         # Attempt to re-index missing file collections
@@ -2795,7 +2795,7 @@ async def reindex_file_on_demand(file_id: str, request: Request, user=None) -> b
 
         # Check if collection already exists
         collection_name = f"{VECTOR_COLLECTION_PREFIXES.FILE}{file_id}"
-        if VECTOR_DB_CLIENT and VECTOR_DB_CLIENT.has_collection(collection_name):
+        if VECTOR_DB_CLIENT and await VECTOR_DB_CLIENT.has_collection(collection_name):
             log.debug(
                 f"Collection {collection_name} already exists, no re-indexing needed"
             )
