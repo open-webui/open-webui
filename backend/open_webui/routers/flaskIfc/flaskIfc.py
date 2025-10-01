@@ -11,10 +11,11 @@ import signal
 import serial
 import serial_script
 import re
+import inspect
 from werkzeug.datastructures import FileStorage
 from werkzeug.utils import secure_filename
 
-job_status = {"running": False, "result": "", "thread": None}
+job_status = {"running": False, "result": "", "thread": None, "current_job": None}
 
 app = Flask(__name__)
 
@@ -109,6 +110,7 @@ def llama_cli_serial_command():
     command = f'cd {exe_path}; {script_path} "{prompt}" {tokens} {model_path} {backend} {repeat_penalty} {batch_size} {top_k} {top_p} {last_n} {context_length} {temp}'
     try:
         job_status["running"] = True
+        job_status["current_job"] = inspect.currentframe().f_code.co_name
         result = serial_script.send_serial_command(port, baudrate, command)
         job_status["running"] = False
         return result, 200
@@ -127,6 +129,7 @@ os.makedirs(
 
 def read_cmd_from_serial(port, baudrate, command):
     job_status["running"] = True
+    job_status["current_job"] = inspect.currentframe().f_code.co_name
     temp = serial_script.send_serial_command(port, baudrate, command, timeout=300)
     print(temp)
     job_status["running"] = False
@@ -286,7 +289,7 @@ def receive_upload_model():
     if is_job_running() == True:
         return (
             manual_response(
-                content="Server is busy. Please try again later.",
+                content=f"Server is busy. Current job: {job_status.get('current_job', 'Unknown')}. Please try again later.",
                 thinking=None,
                 profile_data=None,
                 incoming_headers=incoming_headers,
@@ -295,6 +298,7 @@ def receive_upload_model():
         )
 
     job_status["running"] = True
+    job_status["current_job"] = inspect.currentframe().f_code.co_name
 
     file_name = os.path.basename(data["actual_name"])
 
@@ -390,7 +394,7 @@ def receive_upload_model():
 
     print("Doing checksum of the upload file")
     target_check_sum = serial_script.send_serial_command(
-        port, baudrate, f"cd {destn_path}; md5sum {new_file_name}"
+        port, baudrate, f"cd {destn_path}; md5sum {new_file_name}", timeout=300
     )
 
     print("TARGET CHECK-SUM: ", target_check_sum)
@@ -428,7 +432,7 @@ def receive_pull_model():
     if is_job_running() == True:
         return (
             manual_response(
-                content="Server is busy. Please try again later.",
+                content=f"Server is busy. Current job: {job_status.get('current_job', 'Unknown')}. Please try again later.",
                 thinking=None,
                 profile_data=None,
                 incoming_headers=incoming_headers,
@@ -436,6 +440,7 @@ def receive_pull_model():
             200,
         )
     job_status["running"] = True
+    job_status["current_job"] = inspect.currentframe().f_code.co_name
 
     try:
         test1 = data["human_name"]
@@ -543,10 +548,12 @@ def receive_pull_model():
         port, baudrate, f"cd {destn_path}; mkdir -p {dir_path}", timeout=300
     )
 
+    new_file_name = normalize_model_name(data["human_name"])
+
     serial_script.send_serial_command(
         port,
         baudrate,
-        f"cd {destn_path}; mv {data['actual_name']} {data['human_name']}",
+        f"cd {destn_path}; mv {data['actual_name']} {new_file_name}",
         timeout=300,
     )
 
@@ -557,7 +564,7 @@ def receive_pull_model():
 
     print("Doing checksum of the upload file")
     target_check_sum = serial_script.send_serial_command(
-        port, baudrate, f"cd {destn_path}; md5sum {data['human_name']}", timeout=300
+        port, baudrate, f"cd {destn_path}; md5sum {new_file_name}", timeout=300
     )
 
     print("TARGET CHECK-SUM: ", target_check_sum)
@@ -600,7 +607,7 @@ def opu_delete_model():
     if is_job_running() == True:
         return (
             manual_response(
-                content="Server is busy. Please try again later.",
+                content=f"Server is busy. Current job: {job_status.get('current_job', 'Unknown')}. Please try again later.",
                 thinking=None,
                 profile_data=None,
                 incoming_headers=incoming_headers,
@@ -608,6 +615,7 @@ def opu_delete_model():
             200,
         )
     job_status["running"] = True
+    job_status["current_job"] = inspect.currentframe().f_code.co_name
 
     serial_script.pre_and_post_check(port, baudrate)
     try:
@@ -977,7 +985,7 @@ def chats():
     if is_job_running() == True:
         return (
             manual_response(
-                content="Server is busy. Please try again later.",
+                content=f"Server is busy. Current job: {job_status.get('current_job', 'Unknown')}. Please try again later.",
                 thinking=None,
                 profile_data=None,
                 incoming_headers=incoming_headers,
@@ -985,6 +993,7 @@ def chats():
             200,
         )
     job_status["running"] = True
+    job_status["current_job"] = inspect.currentframe().f_code.co_name
 
     serial_script.pre_and_post_check(port, baudrate)
 
@@ -1101,7 +1110,7 @@ def chat():
     if is_job_running() == True:
         return (
             manual_response(
-                content="Server is busy. Please try again later.",
+                content=f"Server is busy. Current job: {job_status.get('current_job', 'Unknown')}. Please try again later.",
                 thinking=None,
                 profile_data=None,
                 incoming_headers=incoming_headers,
@@ -1109,6 +1118,7 @@ def chat():
             200,
         )
     job_status["running"] = True
+    job_status["current_job"] = inspect.currentframe().f_code.co_name
 
     serial_script.pre_and_post_check(port, baudrate)
 
@@ -1188,7 +1198,7 @@ def system_info_ollama_serial_command():
     if is_job_running() == True:
         return (
             manual_response(
-                content="Server is busy. Please try again later.",
+                content=f"Server is busy. Current job: {job_status.get('current_job', 'Unknown')}. Please try again later.",
                 thinking=None,
                 profile_data=None,
                 incoming_headers=incoming_headers,
@@ -1197,6 +1207,7 @@ def system_info_ollama_serial_command():
         )
 
     job_status["running"] = True
+    job_status["current_job"] = inspect.currentframe().f_code.co_name
     result, error = system_info_serial_command()
     job_status["running"] = False
     return (
@@ -1213,7 +1224,7 @@ def health_check_ollama_serial_command():
     if is_job_running() == True:
         return (
             manual_response(
-                content="Server is busy. Please try again later.",
+                content=f"Server is busy. Current job: {job_status.get('current_job', 'Unknown')}. Please try again later.",
                 thinking=None,
                 profile_data=None,
                 incoming_headers=incoming_headers,
@@ -1222,6 +1233,7 @@ def health_check_ollama_serial_command():
         )
 
     job_status["running"] = True
+    job_status["current_job"] = inspect.currentframe().f_code.co_name
     result, error = health_check_serial_command()
     job_status["running"] = False
 
