@@ -73,17 +73,26 @@ class FeedbackUserResponse(FeedbackResponse):
 
 @router.get("/feedbacks/all", response_model=list[FeedbackUserResponse])
 async def get_all_feedbacks(user=Depends(get_admin_user)):
-    feedbacks = Feedbacks.get_all_feedbacks()
+    feedbacks_with_users = Feedbacks.get_all_feedbacks_with_users()
 
     feedback_list = []
-    for feedback in feedbacks:
-        user = Users.get_user_by_id(feedback.user_id)
-        feedback_list.append(
-            FeedbackUserResponse(
-                **feedback.model_dump(),
-                user=UserResponse(**user.model_dump()) if user else None,
-            )
-        )
+    for feedback_data in feedbacks_with_users:  
+        feedback_obj = feedback_data["feedback"]  
+        user_obj = feedback_data["user"]  
+         
+        # Convert SQLAlchemy objects to dictionaries with ALL required fields  
+        feedback_dict = {c.name: getattr(feedback_obj, c.name) for c in feedback_obj.__table__.columns}  
+          
+        user_dict = None  
+        if user_obj:
+            user_dict = {c.name: getattr(user_obj, c.name) for c in user_obj.__table__.columns} if user_obj else None  
+          
+        feedback_list.append(  
+            FeedbackUserResponse(  
+                **feedback_dict,  
+                user=UserResponse(**user_dict) if user_dict else None,  
+            )  
+        )  
     return feedback_list
 
 

@@ -5,6 +5,7 @@ from typing import Optional
 
 from open_webui.internal.db import Base, get_db
 from open_webui.models.chats import Chats
+from open_webui.models.users import User
 
 from open_webui.env import SRC_LOG_LEVELS
 from pydantic import BaseModel, ConfigDict
@@ -250,5 +251,29 @@ class FeedbackTable:
             db.commit()
             return True
 
+    def get_all_feedbacks_with_users(cls) -> list[dict]:
+        """
+        Get all feedbacks with their associated user data in a single query.
+        Returns a list of dictionaries with 'feedback' and 'user' keys.
+        """
+        try:
+            with get_db() as db:
+                query = (
+                    db.query(Feedback, User)
+                    .outerjoin(User, Feedback.user_id == User.id)
+                    .all()
+                )
+
+            result = []
+            for feedback, user in query:
+                result.append({
+                    "feedback": feedback,
+                    "user": user
+                })
+
+            return result
+        except Exception as e:
+            log.exception(f"Error getting all feedbacks with users: {e}")
+            return []
 
 Feedbacks = FeedbackTable()
