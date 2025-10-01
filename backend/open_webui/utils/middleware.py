@@ -91,6 +91,7 @@ from open_webui.utils.pii import (
     consolidate_pii_data,
     set_file_entity_ids,
     apply_pii_masking_to_content,
+    unmask_text_with_known_entities,
 )
 
 
@@ -630,6 +631,58 @@ async def chat_image_generation_handler(
     return form_data
 
 
+def unmask_messages_for_rag(messages: list[dict], known_entities: list[dict]) -> list[dict]:
+    """
+    Create a deep copy of messages with PII entities unmasked for RAG queries.
+    
+    This ensures RAG searches with actual entity names (e.g., "John Smith")
+    instead of masked placeholders (e.g., "[{PERSON_10}]").
+    
+    Args:
+        messages: List of message dicts with 'role' and 'content'
+        known_entities: List of entity dicts with 'label' and 'name' (raw_text)
+    
+    Returns:
+        Deep copy of messages with unmasked content
+    """
+    if not known_entities:
+        return messages
+    
+    unmasked_messages = []
+    
+    for message in messages:
+        # Create a copy of the message
+        unmasked_message = message.copy()
+        
+        # Unmask the content
+        content = message.get("content", "")
+        
+        if isinstance(content, str):
+            # Simple string content
+            unmasked_message["content"] = unmask_text_with_known_entities(
+                content, known_entities
+            )
+        elif isinstance(content, list):
+            # Content is a list (e.g., with text and images)
+            unmasked_content = []
+            for item in content:
+                if isinstance(item, dict) and item.get("type") == "text":
+                    # Unmask text items
+                    unmasked_item = item.copy()
+                    unmasked_item["text"] = unmask_text_with_known_entities(
+                        item.get("text", ""), known_entities
+                    )
+                    unmasked_content.append(unmasked_item)
+                else:
+                    # Keep other items as-is (images, etc.)
+                    unmasked_content.append(item)
+            unmasked_message["content"] = unmasked_content
+        
+        unmasked_messages.append(unmasked_message)
+    
+    return unmasked_messages
+
+
 async def chat_completion_files_handler(
     request: Request, body: dict, extra_params: dict, user: UserModel
 ) -> tuple[dict, dict[str, list]]:
@@ -638,12 +691,22 @@ async def chat_completion_files_handler(
 
     if files := body.get("metadata", {}).get("files", None):
         queries = []
+        
+        # Get known_entities for unmasking
+        known_entities = body.get("metadata", {}).get("known_entities", [])
+        
+        # Unmask messages for RAG query generation
+        # This allows the RAG to search for actual names/entities instead of masked placeholders
+        messages_for_rag = unmask_messages_for_rag(body["messages"], known_entities)
+        
+        log.debug(f"Unmasked {len(known_entities)} entities in messages for RAG query generation")
+        
         try:
             queries_response = await generate_queries(
                 request,
                 {
                     "model": body["model"],
-                    "messages": body["messages"],
+                    "messages": messages_for_rag,  # Use unmasked messages
                     "type": "retrieval",
                 },
                 user,
@@ -667,8 +730,14 @@ async def chat_completion_files_handler(
             pass
 
         if len(queries) == 0:
-            queries = [get_last_user_message(body["messages"])]
+            # Fallback: use masked last user message
+            last_message = get_last_user_message(messages_for_rag)
+            queries = [last_message] if last_message else []
 
+        log.info(f"🔍 RAG Query Generation: Generated {len(queries)} queries with unmasked entities")
+        for i, query in enumerate(queries):
+            log.debug(f"🔍 Query {i+1}: {query}")
+        
         await __event_emitter__(
             {
                 "type": "status",
