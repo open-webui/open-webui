@@ -9,7 +9,7 @@ from open_webui.env import SRC_LOG_LEVELS
 from open_webui.models.base import Base
 
 from pydantic import BaseModel, ConfigDict, field_validator
-from sqlalchemy import BigInteger, Column, String, Text, JSON
+from sqlalchemy import BigInteger, Column, String, Text, JSON, or_, func
 
 
 log = logging.getLogger(__name__)
@@ -178,7 +178,7 @@ class GroupTable:
         1. Explicitly added to user_ids list, OR
         2. User's email domain matches any allowed_domains in the group
 
-        Uses caching to improve performance for frequently called function.
+        Uses caching and SQL filtering for optimal performance.
         """
         from open_webui.models.users import (
             Users,
@@ -197,31 +197,33 @@ class GroupTable:
                 log.debug(f"Cache hit for user {user_id}")
                 return _group_membership_cache[cache_key]
 
-        # Cache miss - compute groups
+        # Cache miss - compute groups using SQL filtering
         log.debug(f"Cache miss for user {user_id}, computing groups")
 
         with get_db() as db:
-            # Get all groups
-            all_groups = db.query(Group).all()
-            matching_groups = []
+            query = db.query(Group).filter(
+                or_(
+                    func.json_array_length(Group.user_ids) > 0,
+                    func.json_array_length(Group.allowed_domains) > 0,
+                )
+            )  # Ensure arrays exist
 
-            for group in all_groups:
-                # Check 1: Explicit membership in user_ids
-                user_ids = group.user_ids or []
-                is_explicit_member = user_id in user_ids
+            # Build filter conditions
+            conditions = []
 
-                # Check 2: Domain-based membership
-                is_domain_member = False
-                if user_domain and group.allowed_domains:
-                    allowed_domains = group.allowed_domains or []
-                    is_domain_member = user_domain in allowed_domains
+            # Check for user ID in user_ids array
+            conditions.append(Group.user_ids.cast(String).like(f'%"{user_id}"%'))
 
-                # Include group if user matches either condition
-                if is_explicit_member or is_domain_member:
-                    matching_groups.append(group)
+            # Check for domain in allowed_domains array (if user has a domain)
+            if user_domain:
+                conditions.append(
+                    Group.allowed_domains.cast(String).like(f'%"{user_domain}"%')
+                )
 
-            # Sort by updated_at and convert to models
-            matching_groups.sort(key=lambda g: g.updated_at or 0, reverse=True)
+            # Apply OR conditions and get results
+            matching_groups = (
+                query.filter(or_(*conditions)).order_by(Group.updated_at.desc()).all()
+            )
             result = [GroupModel.model_validate(group) for group in matching_groups]
 
             # Cache the result
