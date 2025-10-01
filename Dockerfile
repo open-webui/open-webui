@@ -109,6 +109,7 @@ RUN chown -R $UID:$GID /app $HOME
 
 # Install curl and gnupg for subsequent steps
 RUN apt-get update && \
+    apt-get upgrade -y && \
     apt-get install -y --no-install-recommends curl gnupg && \
     rm -rf /var/lib/apt/lists/*
 
