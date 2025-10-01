@@ -1,10 +1,13 @@
 # tasks.py
 import asyncio
+import logging
 from typing import Dict
 from uuid import uuid4
 
 # A dictionary to keep track of active tasks
 tasks: Dict[str, asyncio.Task] = {}
+
+log = logging.getLogger(__name__)
 
 
 def cleanup_task(task_id: str):

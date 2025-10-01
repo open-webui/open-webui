@@ -408,3 +408,39 @@ def get_active_status_by_user_id(user_id):
     if user_id in USER_POOL:
         return True
     return False
+
+
+async def emit_group_membership_update(
+    group_id: str,
+    group_name: str,
+    user_count: int,
+    action: str,
+    users_affected: list = None,
+):
+    """
+    Emit group membership changes to all connected clients
+
+    Args:
+        group_id: The ID of the group that was updated
+        group_name: The name of the group
+        user_count: The new user count in the group
+        action: 'added' or 'removed'
+        users_affected: List of user emails or IDs that were affected (optional)
+    """
+    event_data = {
+        "group_id": group_id,
+        "group_name": group_name,
+        "user_count": user_count,
+        "action": action,
+        "timestamp": int(time.time()),
+    }
+
+    if users_affected:
+        event_data["users_affected"] = users_affected
+        event_data["users_count"] = len(users_affected)
+
+    # Emit to all connected clients
+    await sio.emit("group-membership-update", event_data)
+    log.info(
+        f"Emitted group membership update: {action} {len(users_affected) if users_affected else 0} users to/from group '{group_name}'"
+    )

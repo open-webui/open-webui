@@ -9,6 +9,8 @@
 	import Pencil from '$lib/components/icons/Pencil.svelte';
 	import User from '$lib/components/icons/User.svelte';
 	import UserCircleSolid from '$lib/components/icons/UserCircleSolid.svelte';
+	import GlobeAlt from '$lib/components/icons/GlobeAlt.svelte';
+	import Tooltip from '$lib/components/common/Tooltip.svelte';
 	import GroupModal from './EditGroupModal.svelte';
 
 	export let users = [];
@@ -76,7 +78,23 @@
 		</div>
 	</div>
 
+	<div class="flex items-center gap-1.5 w-full font-medium">
+		<Tooltip
+			content={group.allowed_domains && group.allowed_domains.length > 0
+				? group.allowed_domains.join(', ')
+				: 'No domains configured'}
+		>
+			<div class="flex items-center gap-1.5">
+				{group.allowed_domains ? group.allowed_domains.length : 0}
+				<div>
+					<GlobeAlt className="size-3.5" />
+				</div>
+			</div>
+		</Tooltip>
+	</div>
+
 	<div class="w-full flex justify-end">
+		>
 		<div class=" rounded-lg p-1 hover:bg-gray-100 dark:hover:bg-gray-850 transition">
 			<Pencil className="size-3.5" />
 		</div>

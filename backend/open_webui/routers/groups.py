@@ -1,6 +1,5 @@
 from typing import Optional
 
-
 from open_webui.models.users import Users
 from open_webui.models.groups import (
     Groups,
@@ -14,6 +13,7 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from open_webui.utils.auth import get_admin_user, get_verified_user
 
 router = APIRouter()
+
 
 ############################
 # GetFunctions
@@ -82,7 +82,12 @@ async def update_group_by_id(
         if form_data.user_ids:
             form_data.user_ids = Users.get_valid_user_ids(form_data.user_ids)
 
+        # Get the current group state before update to compare domain changes
+        current_group = Groups.get_group_by_id(id)
+
+        # Update the group
         group = Groups.update_group_by_id(id, form_data)
+
         if group:
             return group
         else:
@@ -95,6 +100,25 @@ async def update_group_by_id(
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=ERROR_MESSAGES.DEFAULT(e),
+        )
+
+
+############################
+# GetAvailableDomains
+############################
+
+
+@router.get("/domains", response_model=list[str])
+async def get_available_domains(user=Depends(get_admin_user)):
+    """Get all unique domains from existing users in the database"""
+    try:
+        domains = Users.get_user_domains()
+        return sorted(domains)  # Return sorted list of domains
+    except Exception as e:
+        print(f"Error getting domains: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=ERROR_MESSAGES.DEFAULT("Error retrieving domains"),
         )
 
 
