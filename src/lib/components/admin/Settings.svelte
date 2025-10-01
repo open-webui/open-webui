@@ -17,7 +17,6 @@
 	import Documents from './Settings/Documents.svelte';
 	import WebSearch from './Settings/WebSearch.svelte';
 	import Grounding from './Settings/Grounding.svelte';
-	import Domains from './Settings/Domains.svelte';
 	import ChartBar from '../icons/ChartBar.svelte';
 	import DocumentChartBar from '../icons/DocumentChartBar.svelte';
 	import Evaluations from './Settings/Evaluations.svelte';
@@ -163,35 +162,6 @@
 				<DocumentChartBar />
 			</div>
 			<div class=" self-center">{$i18n.t('Evaluations')}</div>
-		</button>
-
-		<button
-			class="px-0.5 py-1 min-w-fit rounded-lg flex-1 md:flex-none flex text-right transition {selectedTab ===
-			'domains'
-				? ''
-				: ' text-gray-600 dark:text-gray-600 hover:text-gray-700 dark:hover:text-white'}"
-			on:click={() => {
-				selectedTab = 'domains';
-			}}
-		>
-			<div class=" self-center mr-2">
-				<svg
-					xmlns="http://www.w3.org/2000/svg"
-					viewBox="0 0 24 24"
-					fill="currentColor"
-					class="w-4 h-4"
-				>
-					<path
-						fill-rule="evenodd"
-						d="M4.5 2.25a.75.75 0 000 1.5v16.5h-.75a.75.75 0 000 1.5h16.5a.75.75 0 000-1.5h-.75V3.75a.75.75 0 000-1.5h-15zM9 6a.75.75 0 000 1.5h6a.75.75 0 000-1.5H9zM9 9a.75.75 0 000 1.5h6a.75.75 0 000-1.5H9zm0 3a.75.75 0 000 1.5h6a.75.75 0 000-1.5H9zm0 3a.75.75 0 000 1.5h6a.75.75 0 000-1.5H9z"
-						clip-rule="evenodd"
-					/>
-					<path
-						d="M5.25 2.25a.75.75 0 01.75-.75h12a.75.75 0 01.75.75v2.25a.75.75 0 01-.75.75H6a.75.75 0 01-.75-.75V2.25z"
-					/>
-				</svg>
-			</div>
-			<div class=" self-center">{$i18n.t('Domains')}</div>
 		</button>
 
 		<button
@@ -436,8 +406,6 @@
 			<Models />
 		{:else if selectedTab === 'evaluations'}
 			<Evaluations />
-		{:else if selectedTab === 'domains'}
-			<Domains />
 		{:else if selectedTab === 'documents'}
 			<Documents
 				on:save={async () => {

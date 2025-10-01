@@ -110,7 +110,7 @@
 			<div class="text-sm text-yellow-800 dark:text-yellow-200">
 				<strong>{$i18n.t('No domains available.')}</strong>
 				{$i18n.t(
-					'Go to Admin Settings → Domains to add Government of Canada email domains that can be used for group assignment.'
+					'Go to Users & Access → Domains to add Government of Canada email domains that can be used for group assignment.'
 				)}
 			</div>
 		</div>

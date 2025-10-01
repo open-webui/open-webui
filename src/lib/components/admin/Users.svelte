@@ -9,6 +9,7 @@
 
 	import UserList from './Users/UserList.svelte';
 	import Groups from './Users/Groups.svelte';
+	import Domains from './Users/Settings/Domains.svelte';
 
 	const i18n = getContext('i18n');
 
@@ -22,7 +23,9 @@
 	}
 
 	const getUsersHandler = async () => {
-		users = await getUsers(localStorage.token);
+		if (selectedTab === 'overview' || selectedTab === 'groups') {
+			users = await getUsers(localStorage.token);
+		}
 	};
 
 	onMount(async () => {
@@ -98,6 +101,35 @@
 			</div>
 			<div class=" self-center">{$i18n.t('Groups')}</div>
 		</button>
+
+		<button
+			class="px-0.5 py-1 min-w-fit rounded-lg lg:flex-none flex text-right transition {selectedTab ===
+			'domains'
+				? ''
+				: ' text-gray-300 dark:text-gray-600 hover:text-gray-700 dark:hover:text-white'}"
+			on:click={() => {
+				selectedTab = 'domains';
+			}}
+		>
+			<div class=" self-center mr-2">
+				<svg
+					xmlns="http://www.w3.org/2000/svg"
+					viewBox="0 0 24 24"
+					fill="currentColor"
+					class="w-4 h-4"
+				>
+					<path
+						fill-rule="evenodd"
+						d="M17.834 6.166a8.25 8.25 0 1 0 0 11.668.75.75 0 0 1 1.06 1.06c-3.807 3.808-9.98 3.808-13.788 0-3.808-3.807-3.808-9.98 0-13.788 3.807-3.808 9.98-3.808 13.788 0A9.722 9.722 0 0 1 21.75 12c0 .975-.296 1.887-.809 2.571-.514.685-1.28 1.179-2.191 1.179-.904 0-1.666-.487-2.18-1.164a5.25 5.25 0 1 1-.82-6.26V8.25a.75.75 0 0 1 1.5 0V12a3.75 3.75 0 1 0-3.75-3.75.75.75 0 0 1-1.5 0 5.25 5.25 0 1 1 5.25 5.25c-.536 0-1.036-.232-1.414-.645a3.75 3.75 0 0 1-.336-.48z"
+						clip-rule="evenodd"
+					/>
+					<path
+						d="M5.25 2.25a.75.75 0 01.75-.75h12a.75.75 0 01.75.75v2.25a.75.75 0 01-.75.75H6a.75.75 0 01-.75-.75V2.25z"
+					/>
+				</svg>
+			</div>
+			<div class=" self-center">{$i18n.t('Domains')}</div>
+		</button>
 	</div>
 
 	<div class="flex-1 mt-1 lg:mt-0 overflow-y-scroll">
@@ -105,6 +137,8 @@
 			<UserList {users} />
 		{:else if selectedTab === 'groups'}
 			<Groups {users} />
+		{:else if selectedTab === 'domains'}
+			<Domains />
 		{/if}
 	</div>
 </div>
