@@ -149,4 +149,4 @@ opentelemetry-instrumentation-redis==0.57b0
 opentelemetry-instrumentation-requests==0.57b0
 opentelemetry-instrumentation-logging==0.57b0
 opentelemetry-instrumentation-httpx==0.57b0
-opentelemetry-instrumentation-aiohttp-client==0.57b0
+opentelemetry-instrumentation-aiohttp-client==0.58b0
