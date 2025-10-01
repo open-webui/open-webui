@@ -237,7 +237,7 @@
 							{:else if selectedTab == 'permissions'}
 								<Permissions bind:permissions />
 							{:else if selectedTab == 'users'}
-								<Users bind:userIds {users} disabled={allowedDomains.length > 0} />
+								<Users bind:userIds {users} />
 							{:else if selectedTab == 'domains'}
 								<Domains bind:allowedDomains />
 							{/if}
