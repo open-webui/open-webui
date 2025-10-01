@@ -140,13 +140,13 @@ tencentcloud-sdk-python==3.0.1336
 
 ## Trace
 opentelemetry-api==1.37.0
-opentelemetry-sdk==1.36.0
-opentelemetry-exporter-otlp==1.36.0
-opentelemetry-instrumentation==0.57b0
-opentelemetry-instrumentation-fastapi==0.57b0
-opentelemetry-instrumentation-sqlalchemy==0.57b0
-opentelemetry-instrumentation-redis==0.57b0
-opentelemetry-instrumentation-requests==0.57b0
-opentelemetry-instrumentation-logging==0.57b0
-opentelemetry-instrumentation-httpx==0.57b0
-opentelemetry-instrumentation-aiohttp-client==0.57b0
+opentelemetry-sdk==1.37.0
+opentelemetry-exporter-otlp==1.37.0
+opentelemetry-instrumentation==0.58b0
+opentelemetry-instrumentation-fastapi==0.58b0
+opentelemetry-instrumentation-sqlalchemy==0.58b0
+opentelemetry-instrumentation-redis==0.58b0
+opentelemetry-instrumentation-requests==0.58b0
+opentelemetry-instrumentation-logging==0.58b0
+opentelemetry-instrumentation-httpx==0.58b0
+opentelemetry-instrumentation-aiohttp-client==0.58b0
