@@ -41,20 +41,12 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Log in to IBM Container Registry
-        uses: docker/login-action@v3
-        with:
-          registry: ca.icr.io
-          username: ${{ secrets.IBM_CONTAINER_REGISTRY_USER }}
-          password: ${{ secrets.IBM_CONTAINER_REGISTRY_KEY }}
-
       - name: Extract metadata for Docker images (default latest tag)
         id: meta
         uses: docker/metadata-action@v5
         with:
           images: |
             ${{ env.FULL_IMAGE_NAME }}
-            ca.icr.io/canchat-v2/canchat-2
           tags: |
             type=ref,event=branch
             type=ref,event=tag

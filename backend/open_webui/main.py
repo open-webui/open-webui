@@ -48,6 +48,7 @@ from open_webui.routers import (
     auths,
     channels,
     chats,
+    domains,
     folders,
     configs,
     groups,
@@ -1012,6 +1013,7 @@ app.include_router(tools.router, prefix="/api/v1/tools", tags=["tools"])
 
 app.include_router(memories.router, prefix="/api/v1/memories", tags=["memories"])
 app.include_router(folders.router, prefix="/api/v1/folders", tags=["folders"])
+app.include_router(domains.router, prefix="/api/v1/domains", tags=["domains"])
 app.include_router(groups.router, prefix="/api/v1/groups", tags=["groups"])
 app.include_router(files.router, prefix="/api/v1/files", tags=["files"])
 app.include_router(functions.router, prefix="/api/v1/functions", tags=["functions"])
