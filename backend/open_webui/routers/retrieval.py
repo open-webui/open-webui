@@ -1568,8 +1568,8 @@ async def query_doc_handler(
 ):
     try:
         # Check if collection exists, if not try to re-index on-demand
-        if VECTOR_DB_CLIENT and not VECTOR_DB_CLIENT.has_collection(
-            form_data.collection_name
+        if VECTOR_DB_CLIENT and not await VECTOR_DB_CLIENT.has_collection(
+            collection_name=form_data.collection_name
         ):
             log.info(
                 f"Collection {form_data.collection_name} not found, attempting on-demand re-indexing..."
