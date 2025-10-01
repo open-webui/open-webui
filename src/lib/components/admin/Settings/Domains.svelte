@@ -43,12 +43,12 @@
 		const departmentName = newDepartmentInput.trim();
 
 		if (!domainName) {
-			toast.error(i18n.t('Please enter a domain name'));
+			toast.error($i18n.t('Please enter a domain name'));
 			return;
 		}
 
 		if (!departmentName) {
-			toast.error(i18n.t('Please enter a department name'));
+			toast.error($i18n.t('Please enter a department name'));
 			return;
 		}
 
@@ -57,7 +57,7 @@
 			/^([a-zA-Z0-9]([a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?\.gc\.ca|elections\.ca|canada\.ca|gc\.ca)$/;
 		if (!domainRegex.test(domainName)) {
 			toast.error(
-				i18n.t(
+				$i18n.t(
 					'Please enter a valid Government of Canada domain (*.gc.ca, canada.ca, elections.ca)'
 				)
 			);
@@ -80,11 +80,11 @@
 			showAddDomainForm = false;
 
 			toast.success(
-				i18n.t('Domain "{domainName}" added for {departmentName}', { domainName, departmentName })
+				$i18n.t('Domain "{domainName}" added for {departmentName}', { domainName, departmentName })
 			);
 		} catch (error) {
 			console.error('Failed to add domain:', error);
-			toast.error(error || i18n.t('Failed to add domain'));
+			toast.error(error || $i18n.t('Failed to add domain'));
 		}
 	};
 
@@ -99,10 +99,10 @@
 			// Reload domains
 			await loadDomains();
 
-			toast.success(i18n.t('Domain "{domain}" deleted successfully', { domain }));
+			toast.success($i18n.t('Domain "{domain}" deleted successfully', { domain }));
 		} catch (error) {
 			console.error('Failed to delete domain:', error);
-			toast.error(error || i18n.t('Failed to delete domain'));
+			toast.error(error || $i18n.t('Failed to delete domain'));
 		}
 		showDeleteConfirm = null;
 	};
@@ -130,12 +130,12 @@
 		const departmentName = editDepartmentInput.trim();
 
 		if (!domainName) {
-			toast.error(i18n.t('Please enter a domain name'));
+			toast.error($i18n.t('Please enter a domain name'));
 			return;
 		}
 
 		if (!departmentName) {
-			toast.error(i18n.t('Please enter a department/organization name'));
+			toast.error($i18n.t('Please enter a department/organization name'));
 			return;
 		}
 
@@ -144,7 +144,7 @@
 			/^([a-zA-Z0-9]([a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?\.gc\.ca|elections\.ca|canada\.ca|gc\.ca)$/;
 		if (!domainRegex.test(domainName)) {
 			toast.error(
-				i18n.t(
+				$i18n.t(
 					'Please enter a valid Government of Canada domain (*.gc.ca, canada.ca, elections.ca)'
 				)
 			);
@@ -167,10 +167,10 @@
 			// Close edit form
 			cancelEdit();
 
-			toast.success(i18n.t('Domain updated successfully'));
+			toast.success($i18n.t('Domain updated successfully'));
 		} catch (error) {
 			console.error('Failed to update domain:', error);
-			toast.error(error || i18n.t('Failed to update domain'));
+			toast.error(error || $i18n.t('Failed to update domain'));
 		}
 	};
 </script>
