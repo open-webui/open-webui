@@ -10,7 +10,13 @@ from pydantic import BaseModel
 from open_webui.socket.main import sio, get_user_ids_from_room
 from open_webui.models.users import Users, UserNameResponse
 
-from open_webui.models.channels import Channels, ChannelModel, ChannelForm
+from open_webui.models.groups import Groups
+from open_webui.models.channels import (
+    Channels,
+    ChannelModel,
+    ChannelForm,
+    ChannelResponse,
+)
 from open_webui.models.messages import (
     Messages,
     MessageModel,
@@ -80,7 +86,7 @@ async def create_new_channel(form_data: ChannelForm, user=Depends(get_admin_user
 ############################
 
 
-@router.get("/{id}", response_model=Optional[ChannelModel])
+@router.get("/{id}", response_model=Optional[ChannelResponse])
 async def get_channel_by_id(id: str, user=Depends(get_verified_user)):
     channel = Channels.get_channel_by_id(id)
     if not channel:
@@ -95,7 +101,16 @@ async def get_channel_by_id(id: str, user=Depends(get_verified_user)):
             status_code=status.HTTP_403_FORBIDDEN, detail=ERROR_MESSAGES.DEFAULT()
         )
 
-    return ChannelModel(**channel.model_dump())
+    write_access = has_access(
+        user.id, type="write", access_control=channel.access_control, strict=False
+    )
+
+    return ChannelResponse(
+        **{
+            **channel.model_dump(),
+            "write_access": write_access or user.role == "admin",
+        }
+    )
 
 
 ############################
@@ -152,7 +167,7 @@ async def delete_channel_by_id(id: str, user=Depends(get_admin_user)):
 
 
 class MessageUserResponse(MessageResponse):
-    user: UserNameResponse
+    pass
 
 
 @router.get("/{id}/messages", response_model=list[MessageUserResponse])
@@ -181,15 +196,17 @@ async def get_channel_messages(
             user = Users.get_user_by_id(message.user_id)
             users[message.user_id] = user
 
-        replies = Messages.get_replies_by_message_id(message.id)
-        latest_reply_at = replies[0].created_at if replies else None
+        thread_replies = Messages.get_thread_replies_by_message_id(message.id)
+        latest_thread_reply_at = (
+            thread_replies[0].created_at if thread_replies else None
+        )
 
         messages.append(
             MessageUserResponse(
                 **{
                     **message.model_dump(),
-                    "reply_count": len(replies),
-                    "latest_reply_at": latest_reply_at,
+                    "reply_count": len(thread_replies),
+                    "latest_reply_at": latest_thread_reply_at,
                     "reactions": Messages.get_reactions_by_message_id(message.id),
                     "user": UserNameResponse(**users[message.user_id].model_dump()),
                 }
@@ -238,12 +255,26 @@ async def model_response_handler(request, channel, message, user):
     mentions = extract_mentions(message.content)
     message_content = replace_mentions(message.content)
 
+    model_mentions = {}
+
+    # check if the message is a reply to a message sent by a model
+    if (
+        message.reply_to_message
+        and message.reply_to_message.meta
+        and message.reply_to_message.meta.get("model_id", None)
+    ):
+        model_id = message.reply_to_message.meta.get("model_id", None)
+        model_mentions[model_id] = {"id": model_id, "id_type": "M"}
+
     # check if any of the mentions are models
-    model_mentions = [mention for mention in mentions if mention["id_type"] == "M"]
+    for mention in mentions:
+        if mention["id_type"] == "M" and mention["id"] not in model_mentions:
+            model_mentions[mention["id"]] = mention
+
     if not model_mentions:
         return False
 
-    for mention in model_mentions:
+    for mention in model_mentions.values():
         model_id = mention["id"]
         model = MODELS.get(model_id, None)
 
@@ -275,6 +306,7 @@ async def model_response_handler(request, channel, message, user):
                 )
 
                 thread_history = []
+                images = []
                 message_users = {}
 
                 for thread_message in thread_messages:
@@ -303,24 +335,44 @@ async def model_response_handler(request, channel, message, user):
                         f"{username}: {replace_mentions(thread_message.content)}"
                     )
 
+                    thread_message_files = thread_message.data.get("files", [])
+                    for file in thread_message_files:
+                        if file.get("type", "") == "image":
+                            images.append(file.get("url", ""))
+
                 system_message = {
                     "role": "system",
-                    "content": f"You are {model.get('name', model_id)}, an AI assistant participating in a threaded conversation. Be helpful, concise, and conversational."
+                    "content": f"You are {model.get('name', model_id)}, participating in a threaded conversation. Be concise and conversational."
                     + (
-                        f"Here's the thread history:\n\n{''.join([f'{msg}' for msg in thread_history])}\n\nContinue the conversation naturally, addressing the most recent message while being aware of the full context."
+                        f"Here's the thread history:\n\n{''.join([f'{msg}' for msg in thread_history])}\n\nContinue the conversation naturally as {model.get('name', model_id)}, addressing the most recent message while being aware of the full context."
                         if thread_history
                         else ""
                     ),
                 }
 
+                content = f"{user.name if user else 'User'}: {message_content}"
+                if images:
+                    content = [
+                        {
+                            "type": "text",
+                            "text": content,
+                        },
+                        *[
+                            {
+                                "type": "image_url",
+                                "image_url": {
+                                    "url": image,
+                                },
+                            }
+                            for image in images
+                        ],
+                    ]
+
                 form_data = {
                     "model": model_id,
                     "messages": [
                         system_message,
-                        {
-                            "role": "user",
-                            "content": f"{user.name if user else 'User'}: {message_content}",
-                        },
+                        {"role": "user", "content": content},
                     ],
                     "stream": False,
                 }
@@ -362,7 +414,7 @@ async def new_message_handler(
         )
 
     if user.role != "admin" and not has_access(
-        user.id, type="read", access_control=channel.access_control
+        user.id, type="write", access_control=channel.access_control, strict=False
     ):
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN, detail=ERROR_MESSAGES.DEFAULT()
@@ -370,24 +422,14 @@ async def new_message_handler(
 
     try:
         message = Messages.insert_new_message(form_data, channel.id, user.id)
-
         if message:
+            message = Messages.get_message_by_id(message.id)
             event_data = {
                 "channel_id": channel.id,
                 "message_id": message.id,
                 "data": {
                     "type": "message",
-                    "data": MessageUserResponse(
-                        **{
-                            **message.model_dump(),
-                            "reply_count": 0,
-                            "latest_reply_at": None,
-                            "reactions": Messages.get_reactions_by_message_id(
-                                message.id
-                            ),
-                            "user": UserNameResponse(**user.model_dump()),
-                        }
-                    ).model_dump(),
+                    "data": message.model_dump(),
                 },
                 "user": UserNameResponse(**user.model_dump()).model_dump(),
                 "channel": channel.model_dump(),
@@ -411,23 +453,16 @@ async def new_message_handler(
                             "message_id": parent_message.id,
                             "data": {
                                 "type": "message:reply",
-                                "data": MessageUserResponse(
-                                    **{
-                                        **parent_message.model_dump(),
-                                        "user": UserNameResponse(
-                                            **Users.get_user_by_id(
-                                                parent_message.user_id
-                                            ).model_dump()
-                                        ),
-                                    }
-                                ).model_dump(),
+                                "data": parent_message.model_dump(),
                             },
                             "user": UserNameResponse(**user.model_dump()).model_dump(),
                             "channel": channel.model_dump(),
                         },
                         to=f"channel:{channel.id}",
                     )
-        return MessageModel(**message.model_dump()), channel
+            return message, channel
+        else:
+            raise Exception("Error creating message")
     except Exception as e:
         log.exception(e)
         raise HTTPException(
@@ -615,14 +650,7 @@ async def update_message_by_id(
                     "message_id": message.id,
                     "data": {
                         "type": "message:update",
-                        "data": MessageUserResponse(
-                            **{
-                                **message.model_dump(),
-                                "user": UserNameResponse(
-                                    **user.model_dump()
-                                ).model_dump(),
-                            }
-                        ).model_dump(),
+                        "data": message.model_dump(),
                     },
                     "user": UserNameResponse(**user.model_dump()).model_dump(),
                     "channel": channel.model_dump(),
@@ -658,7 +686,7 @@ async def add_reaction_to_message(
         )
 
     if user.role != "admin" and not has_access(
-        user.id, type="read", access_control=channel.access_control
+        user.id, type="write", access_control=channel.access_control, strict=False
     ):
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN, detail=ERROR_MESSAGES.DEFAULT()
@@ -688,9 +716,6 @@ async def add_reaction_to_message(
                     "type": "message:reaction:add",
                     "data": {
                         **message.model_dump(),
-                        "user": UserNameResponse(
-                            **Users.get_user_by_id(message.user_id).model_dump()
-                        ).model_dump(),
                         "name": form_data.name,
                     },
                 },
@@ -724,7 +749,7 @@ async def remove_reaction_by_id_and_user_id_and_name(
         )
 
     if user.role != "admin" and not has_access(
-        user.id, type="read", access_control=channel.access_control
+        user.id, type="write", access_control=channel.access_control, strict=False
     ):
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN, detail=ERROR_MESSAGES.DEFAULT()
@@ -757,9 +782,6 @@ async def remove_reaction_by_id_and_user_id_and_name(
                     "type": "message:reaction:remove",
                     "data": {
                         **message.model_dump(),
-                        "user": UserNameResponse(
-                            **Users.get_user_by_id(message.user_id).model_dump()
-                        ).model_dump(),
                         "name": form_data.name,
                     },
                 },
@@ -806,7 +828,9 @@ async def delete_message_by_id(
     if (
         user.role != "admin"
         and message.user_id != user.id
-        and not has_access(user.id, type="read", access_control=channel.access_control)
+        and not has_access(
+            user.id, type="write", access_control=channel.access_control, strict=False
+        )
     ):
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN, detail=ERROR_MESSAGES.DEFAULT()
@@ -844,16 +868,7 @@ async def delete_message_by_id(
                         "message_id": parent_message.id,
                         "data": {
                             "type": "message:reply",
-                            "data": MessageUserResponse(
-                                **{
-                                    **parent_message.model_dump(),
-                                    "user": UserNameResponse(
-                                        **Users.get_user_by_id(
-                                            parent_message.user_id
-                                        ).model_dump()
-                                    ),
-                                }
-                            ).model_dump(),
+                            "data": parent_message.model_dump(),
                         },
                         "user": UserNameResponse(**user.model_dump()).model_dump(),
                         "channel": channel.model_dump(),

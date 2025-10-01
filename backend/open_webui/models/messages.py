@@ -5,6 +5,7 @@ from typing import Optional
 
 from open_webui.internal.db import Base, get_db
 from open_webui.models.tags import TagModel, Tag, Tags
+from open_webui.models.users import Users, UserNameResponse
 
 
 from pydantic import BaseModel, ConfigDict
@@ -43,6 +44,7 @@ class Message(Base):
     user_id = Column(Text)
     channel_id = Column(Text, nullable=True)
 
+    reply_to_id = Column(Text, nullable=True)
     parent_id = Column(Text, nullable=True)
 
     content = Column(Text)
@@ -60,6 +62,7 @@ class MessageModel(BaseModel):
     user_id: str
     channel_id: Optional[str] = None
 
+    reply_to_id: Optional[str] = None
     parent_id: Optional[str] = None
 
     content: str
@@ -77,6 +80,7 @@ class MessageModel(BaseModel):
 
 class MessageForm(BaseModel):
     content: str
+    reply_to_id: Optional[str] = None
     parent_id: Optional[str] = None
     data: Optional[dict] = None
     meta: Optional[dict] = None
@@ -88,7 +92,15 @@ class Reactions(BaseModel):
     count: int
 
 
-class MessageResponse(MessageModel):
+class MessageUserResponse(MessageModel):
+    user: Optional[UserNameResponse] = None
+
+
+class MessageReplyToResponse(MessageUserResponse):
+    reply_to_message: Optional[MessageUserResponse] = None
+
+
+class MessageResponse(MessageReplyToResponse):
     latest_reply_at: Optional[int]
     reply_count: int
     reactions: list[Reactions]
@@ -107,6 +119,7 @@ class MessageTable:
                     "id": id,
                     "user_id": user_id,
                     "channel_id": channel_id,
+                    "reply_to_id": form_data.reply_to_id,
                     "parent_id": form_data.parent_id,
                     "content": form_data.content,
                     "data": form_data.data,
@@ -128,19 +141,32 @@ class MessageTable:
             if not message:
                 return None
 
-            reactions = self.get_reactions_by_message_id(id)
-            replies = self.get_replies_by_message_id(id)
+            reply_to_message = (
+                self.get_message_by_id(message.reply_to_id)
+                if message.reply_to_id
+                else None
+            )
 
-            return MessageResponse(
-                **{
+            reactions = self.get_reactions_by_message_id(id)
+            thread_replies = self.get_thread_replies_by_message_id(id)
+
+            user = Users.get_user_by_id(message.user_id)
+            return MessageResponse.model_validate(
+                {
                     **MessageModel.model_validate(message).model_dump(),
-                    "latest_reply_at": replies[0].created_at if replies else None,
-                    "reply_count": len(replies),
+                    "user": user.model_dump() if user else None,
+                    "reply_to_message": (
+                        reply_to_message.model_dump() if reply_to_message else None
+                    ),
+                    "latest_reply_at": (
+                        thread_replies[0].created_at if thread_replies else None
+                    ),
+                    "reply_count": len(thread_replies),
                     "reactions": reactions,
                 }
             )
 
-    def get_replies_by_message_id(self, id: str) -> list[MessageModel]:
+    def get_thread_replies_by_message_id(self, id: str) -> list[MessageReplyToResponse]:
         with get_db() as db:
             all_messages = (
                 db.query(Message)
@@ -148,7 +174,27 @@ class MessageTable:
                 .order_by(Message.created_at.desc())
                 .all()
             )
-            return [MessageModel.model_validate(message) for message in all_messages]
+
+            messages = []
+            for message in all_messages:
+                reply_to_message = (
+                    self.get_message_by_id(message.reply_to_id)
+                    if message.reply_to_id
+                    else None
+                )
+                messages.append(
+                    MessageReplyToResponse.model_validate(
+                        {
+                            **MessageModel.model_validate(message).model_dump(),
+                            "reply_to_message": (
+                                reply_to_message.model_dump()
+                                if reply_to_message
+                                else None
+                            ),
+                        }
+                    )
+                )
+            return messages
 
     def get_reply_user_ids_by_message_id(self, id: str) -> list[str]:
         with get_db() as db:
@@ -159,7 +205,7 @@ class MessageTable:
 
     def get_messages_by_channel_id(
         self, channel_id: str, skip: int = 0, limit: int = 50
-    ) -> list[MessageModel]:
+    ) -> list[MessageReplyToResponse]:
         with get_db() as db:
             all_messages = (
                 db.query(Message)
@@ -169,11 +215,31 @@ class MessageTable:
                 .limit(limit)
                 .all()
             )
-            return [MessageModel.model_validate(message) for message in all_messages]
+
+            messages = []
+            for message in all_messages:
+                reply_to_message = (
+                    self.get_message_by_id(message.reply_to_id)
+                    if message.reply_to_id
+                    else None
+                )
+                messages.append(
+                    MessageReplyToResponse.model_validate(
+                        {
+                            **MessageModel.model_validate(message).model_dump(),
+                            "reply_to_message": (
+                                reply_to_message.model_dump()
+                                if reply_to_message
+                                else None
+                            ),
+                        }
+                    )
+                )
+            return messages
 
     def get_messages_by_parent_id(
         self, channel_id: str, parent_id: str, skip: int = 0, limit: int = 50
-    ) -> list[MessageModel]:
+    ) -> list[MessageReplyToResponse]:
         with get_db() as db:
             message = db.get(Message, parent_id)
 
@@ -193,7 +259,26 @@ class MessageTable:
             if len(all_messages) < limit:
                 all_messages.append(message)
 
-            return [MessageModel.model_validate(message) for message in all_messages]
+            messages = []
+            for message in all_messages:
+                reply_to_message = (
+                    self.get_message_by_id(message.reply_to_id)
+                    if message.reply_to_id
+                    else None
+                )
+                messages.append(
+                    MessageReplyToResponse.model_validate(
+                        {
+                            **MessageModel.model_validate(message).model_dump(),
+                            "reply_to_message": (
+                                reply_to_message.model_dump()
+                                if reply_to_message
+                                else None
+                            ),
+                        }
+                    )
+                )
+            return messages
 
     def update_message_by_id(
         self, id: str, form_data: MessageForm

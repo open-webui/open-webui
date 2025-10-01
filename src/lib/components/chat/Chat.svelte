@@ -38,7 +38,8 @@
 		toolServers,
 		functions,
 		selectedFolder,
-		pinnedChats
+		pinnedChats,
+		showEmbeds
 	} from '$lib/stores';
 	import {
 		convertMessagesToHistory,
@@ -362,6 +363,8 @@
 					message.content = data.content;
 				} else if (type === 'chat:message:files' || type === 'files') {
 					message.files = data.files;
+				} else if (type === 'chat:message:embeds' || type === 'embeds') {
+					message.embeds = data.embeds;
 				} else if (type === 'chat:message:error') {
 					message.error = data.error;
 				} else if (type === 'chat:message:follow_ups') {
@@ -562,6 +565,7 @@
 				showCallOverlay.set(false);
 				showOverview.set(false);
 				showArtifacts.set(false);
+				showEmbeds.set(false);
 			}
 		});
 
@@ -1494,7 +1498,9 @@
 		const _files = JSON.parse(JSON.stringify(files));
 
 		chatFiles.push(
-			..._files.filter((item) => ['doc', 'text', 'file', 'collection'].includes(item.type))
+			..._files.filter((item) =>
+				['doc', 'text', 'file', 'note', 'chat', 'collection'].includes(item.type)
+			)
 		);
 		chatFiles = chatFiles.filter(
 			// Remove duplicates
@@ -2228,7 +2234,7 @@
 
 <svelte:head>
 	<title>
-		{$chatTitle
+		{$settings.showChatTitleInTab !== false && $chatTitle
 			? `${$chatTitle.length > 30 ? `${$chatTitle.slice(0, 30)}...` : $chatTitle} • ${$WEBUI_NAME}`
 			: `${$WEBUI_NAME}`}
 	</title>

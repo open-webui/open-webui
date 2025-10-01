@@ -423,7 +423,7 @@ Based on the user's instruction, update and enhance the existing notes or select
 									class=" bg-transparent rounded-lg py-1 px-2 -mx-0.5 text-sm outline-hidden w-full text-right pr-5"
 									bind:value={selectedModelId}
 								>
-									{#each $models as model}
+									{#each $models.filter((model) => !(model?.info?.meta?.hidden ?? false)) as model}
 										<option value={model.id} class="bg-gray-50 dark:bg-gray-700"
 											>{model.name}</option
 										>

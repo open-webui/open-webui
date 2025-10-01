@@ -45,6 +45,8 @@ from open_webui.retrieval.loaders.youtube import YoutubeLoader
 # Web search engines
 from open_webui.retrieval.web.main import SearchResult
 from open_webui.retrieval.web.utils import get_web_loader
+from open_webui.retrieval.web.ollama import search_ollama_cloud
+from open_webui.retrieval.web.perplexity_search import search_perplexity_search
 from open_webui.retrieval.web.brave import search_brave
 from open_webui.retrieval.web.kagi import search_kagi
 from open_webui.retrieval.web.mojeek import search_mojeek
@@ -76,6 +78,7 @@ from open_webui.retrieval.utils import (
     query_doc,
     query_doc_with_hybrid_search,
 )
+from open_webui.retrieval.vector.utils import filter_metadata
 from open_webui.utils.misc import (
     calculate_sha256_string,
 )
@@ -651,6 +654,7 @@ async def get_rag_config(request: Request, collectionForm: CollectionForm, user=
             "WEB_SEARCH_DOMAIN_FILTER_LIST": web_config.get("WEB_SEARCH_DOMAIN_FILTER_LIST", request.app.state.config.WEB_SEARCH_DOMAIN_FILTER_LIST),
             "BYPASS_WEB_SEARCH_EMBEDDING_AND_RETRIEVAL": web_config.get("BYPASS_WEB_SEARCH_EMBEDDING_AND_RETRIEVAL", request.app.state.config.BYPASS_WEB_SEARCH_EMBEDDING_AND_RETRIEVAL),
             "BYPASS_WEB_SEARCH_WEB_LOADER":  web_config.get("BYPASS_WEB_SEARCH_WEB_LOADER", request.app.state.config.BYPASS_WEB_SEARCH_WEB_LOADER),
+            "OLLAMA_CLOUD_WEB_SEARCH_API_KEY": web_config.get("OLLAMA_CLOUD_WEB_SEARCH_API_KEY", request.app.state.config.OLLAMA_CLOUD_WEB_SEARCH_API_KEY),
             "SEARXNG_QUERY_URL": web_config.get("SEARXNG_QUERY_URL", request.app.state.config.SEARXNG_QUERY_URL),
             "YACY_QUERY_URL": web_config.get("YACY_QUERY_URL", request.app.state.config.YACY_QUERY_URL),
             "YACY_USERNAME": web_config.get("YACY_QUERY_USERNAME",request.app.state.config.YACY_USERNAME),
@@ -712,6 +716,7 @@ class WebConfig(BaseModel):
     WEB_SEARCH_DOMAIN_FILTER_LIST: Optional[List[str]] = []
     BYPASS_WEB_SEARCH_EMBEDDING_AND_RETRIEVAL: Optional[bool] = None
     BYPASS_WEB_SEARCH_WEB_LOADER: Optional[bool] = None
+    OLLAMA_CLOUD_WEB_SEARCH_API_KEY: Optional[str] = None
     SEARXNG_QUERY_URL: Optional[str] = None
     YACY_QUERY_URL: Optional[str] = None
     YACY_USERNAME: Optional[str] = None
@@ -1308,6 +1313,9 @@ async def update_rag_config(
             request.app.state.config.BYPASS_WEB_SEARCH_WEB_LOADER = (
                 form_data.web.BYPASS_WEB_SEARCH_WEB_LOADER
             )
+            request.app.state.config.OLLAMA_CLOUD_WEB_SEARCH_API_KEY = (
+            form_data.web.OLLAMA_CLOUD_WEB_SEARCH_API_KEY
+            )
             request.app.state.config.SEARXNG_QUERY_URL = form_data.web.SEARXNG_QUERY_URL
             request.app.state.config.YACY_QUERY_URL = form_data.web.YACY_QUERY_URL
             request.app.state.config.YACY_USERNAME = form_data.web.YACY_USERNAME
@@ -1459,6 +1467,7 @@ async def update_rag_config(
                 "WEB_SEARCH_DOMAIN_FILTER_LIST": request.app.state.config.WEB_SEARCH_DOMAIN_FILTER_LIST,
                 "BYPASS_WEB_SEARCH_EMBEDDING_AND_RETRIEVAL": request.app.state.config.BYPASS_WEB_SEARCH_EMBEDDING_AND_RETRIEVAL,
                 "BYPASS_WEB_SEARCH_WEB_LOADER": request.app.state.config.BYPASS_WEB_SEARCH_WEB_LOADER,
+                "OLLAMA_CLOUD_WEB_SEARCH_API_KEY": request.app.state.config.OLLAMA_CLOUD_WEB_SEARCH_API_KEY,
                 "SEARXNG_QUERY_URL": request.app.state.config.SEARXNG_QUERY_URL,
                 "YACY_QUERY_URL": request.app.state.config.YACY_QUERY_URL,
                 "YACY_USERNAME": request.app.state.config.YACY_USERNAME,
@@ -1753,168 +1762,144 @@ def process_file(
     form_data: ProcessFileForm,
     user=Depends(get_verified_user),
 ):
-    try:
+    if user.role == "admin":
         file = Files.get_file_by_id(form_data.file_id)
+    else:
+        file = Files.get_file_by_id_and_user_id(form_data.file_id, user.id)
 
-        collection_name = form_data.collection_name
+    if file:
+        try:
 
-        if collection_name is None:
-            collection_name = f"file-{file.id}"
-        
-        rag_config = {}
-        # Retrieve the knowledge base using the collection id - knowledge_id == collection_name (minimal working solution without logic changes)
-        if form_data.collection_name:
-            knowledge_base = Knowledges.get_knowledge_by_id(form_data.collection_name)
+            collection_name = form_data.collection_name
+
+            if collection_name is None:
+                collection_name = f"file-{file.id}"
             
-            # Retrieve the RAG configuration
-            if not knowledge_base.rag_config.get("DEFAULT_RAG_SETTINGS", True):
-                rag_config = knowledge_base.rag_config
-                form_data.knowledge_id = collection_name # fallback for save_docs_to_vector_db
+            rag_config = {}
+            # Retrieve the knowledge base using the collection id - knowledge_id == collection_name (minimal working solution without logic changes)
+            if form_data.collection_name:
+                knowledge_base = Knowledges.get_knowledge_by_id(form_data.collection_name)
+                
+                # Retrieve the RAG configuration
+                if not knowledge_base.rag_config.get("DEFAULT_RAG_SETTINGS", True):
+                    rag_config = knowledge_base.rag_config
+                    form_data.knowledge_id = collection_name # fallback for save_docs_to_vector_db
 
-        elif form_data.knowledge_id:
-            knowledge_base = Knowledges.get_knowledge_by_id(form_data.knowledge_id)
-        
-            # Retrieve the RAG configuration
-            if not knowledge_base.rag_config.get("DEFAULT_RAG_SETTINGS", True):
-                rag_config = knowledge_base.rag_config
+            elif form_data.knowledge_id:
+                knowledge_base = Knowledges.get_knowledge_by_id(form_data.knowledge_id)
+            
+                # Retrieve the RAG configuration
+                if not knowledge_base.rag_config.get("DEFAULT_RAG_SETTINGS", True):
+                    rag_config = knowledge_base.rag_config
 
-        # Use knowledge-base-specific or default configurations
-        content_extraction_engine = rag_config.get(
-            "CONTENT_EXTRACTION_ENGINE", request.app.state.config.CONTENT_EXTRACTION_ENGINE
-        )
-        datalab_marker_api_key=rag_config.get(
-            "DATALAB_MARKER_API_KEY", request.app.state.config.DATALAB_MARKER_API_KEY
+            # Use knowledge-base-specific or default configurations
+            content_extraction_engine = rag_config.get(
+                "CONTENT_EXTRACTION_ENGINE", request.app.state.config.CONTENT_EXTRACTION_ENGINE
             )
-        datalab_marker_additional_config=rag_config.get(
-            "DATALAB_MARKER_ADDITIONAL_CONFIG", request.app.state.config.DATALAB_MARKER_ADDITIONAL_CONFIG
-            )
-        datalab_marker_skip_cache=rag_config.get(
-            "DATALAB_MARKER_SKIP_CACHE", request.app.state.config.DATALAB_MARKER_SKIP_CACHE
-            )
-        datalab_marker_force_ocr=rag_config.get(
-            "DATALAB_MARKER_FORCE_OCR", request.app.state.config.DATALAB_MARKER_FORCE_OCR
-            )
-        datalab_marker_paginate=rag_config.get(
-            "DATALAB_MARKER_PAGINATE", request.app.state.config.DATALAB_MARKER_PAGINATE
-            )
-        datalab_marker_strip_existing_ocr=rag_config.get(
-            "DATALAB_MARKER_STRIP_EXISTING_OCR", request.app.state.config.DATALAB_MARKER_STRIP_EXISTING_OCR
-            )
-        datalab_marker_disable_image_extraction=rag_config.get(
-            "DATALAB_MARKER_DISABLE_IMAGE_EXTRACTION", request.app.state.config.DATALAB_MARKER_DISABLE_IMAGE_EXTRACTION
-            )
-        datalab_marker_format_lines=rag_config.get(
-            "DATALAB_MARKER_FORMAT_LINES", request.app.state.config.DATALAB_MARKER_FORMAT_LINES
-        )
-        datalab_marker_use_llm=rag_config.get(
-            "DATALAB_MARKER_USE_LLM", request.app.state.config.DATALAB_MARKER_USE_LLM
-            )
-        datalab_marker_output_format=rag_config.get(
-            "DATALAB_MARKER_OUTPUT_FORMAT", request.app.state.config.DATALAB_MARKER_OUTPUT_FORMAT
-            )
-        external_document_loader_url = rag_config.get(
-            "EXTERNAL_DOCUMENT_LOADER_URL", request.app.state.config.EXTERNAL_DOCUMENT_LOADER_URL
-        )
-        external_document_loader_api_key =  rag_config.get(
-            "EXTERNAL_DOCUMENT_LOADER_API_KEY", request.app.state.config.EXTERNAL_DOCUMENT_LOADER_API_KEY
-        )
-        tika_server_url = rag_config.get(
-            "TIKA_SERVER_URL", request.app.state.config.TIKA_SERVER_URL
-        )
-        docling_server_url = rag_config.get(
-            "DOCLING_SERVER_URL", request.app.state.config.DOCLING_SERVER_URL
-        )
-        docling_ocr_engine=rag_config.get(
-            "DOCLING_OCR_ENGINE", request.app.state.config.DOCLING_OCR_ENGINE
-        )
-        docling_ocr_lang=rag_config.get(
-            "DOCLING_OCR_LANG", request.app.state.config.DOCLING_OCR_LANG
-        )
-        docling_do_picture_description=rag_config.get(
-            "DOCLING_DO_PICTURE_DESCRIPTION", request.app.state.config.DOCLING_DO_PICTURE_DESCRIPTION
-        )
-        docling_do_ocr = rag_config.get(
-            "DOCLING_DO_OCR", request.app.state.config.DOCLING_DO_OCR
-        )
-        docling_force_ocr = rag_config.get(
-            "DOCLING_FORCE_OCR", request.app.state.config.DOCLING_FORCE_OCR
-        )
-        docling_pdf_backend = rag_config.get(
-            "DOCLING_PDF_BACKEND", request.app.state.config.DOCLING_PDF_BACKEND
-        )
-        docling_table_mode = rag_config.get(
-            "DOCLING_TABLE_MODE", request.app.state.config.DOCLING_TABLE_MODE
-        )
-        docling_pipeline = rag_config.get(
-            "DOCLING_PIPELINE", request.app.state.config.DOCLING_PIPELINE
-        )
-        picture_description_mode = rag_config.get(
-            "PICTURE_DESCRIPTION_MODE", request.app.state.config.DOCLING_PICTURE_DESCRIPTION_MODE
-        )
-        picture_description_local = rag_config.get(
-            "PICTURE_DESCRIPTION_MODE", request.app.state.config.DOCLING_PICTURE_DESCRIPTION_LOCAL
-        )
-        picture_description_api = rag_config.get(
-            "PICTURE_DESCRIPTION_API", request.app.state.config.DOCLING_PICTURE_DESCRIPTION_API
-        )
-        pdf_extract_images = rag_config.get(
-            "PDF_EXTRACT_IMAGES", request.app.state.config.PDF_EXTRACT_IMAGES
-        )
-        document_intelligence_endpoint = rag_config.get(
-            "DOCUMENT_INTELLIGENCE_ENDPOINT", request.app.state.config.DOCUMENT_INTELLIGENCE_ENDPOINT
-        )
-        document_intelligence_key = rag_config.get(
-            "DOCUMENT_INTELLIGENCE_KEY", request.app.state.config.DOCUMENT_INTELLIGENCE_KEY
-        )
-        mistral_ocr_api_key = rag_config.get(
-            "MISTRAL_OCR_API_KEY", request.app.state.config.MISTRAL_OCR_API_KEY
-        )
-
-        if form_data.content:
-            # Update the content in the file
-            # Usage: /files/{file_id}/data/content/update, /files/ (audio file upload pipeline)
-
-            try:
-                # /files/{file_id}/data/content/update
-                VECTOR_DB_CLIENT.delete_collection(collection_name=f"file-{file.id}")
-            except:
-                # Audio file upload pipeline
-                pass
-
-            docs = [
-                Document(
-                    page_content=form_data.content.replace("<br/>", "\n"),
-                    metadata={
-                        **file.meta,
-                        "name": file.filename,
-                        "created_by": file.user_id,
-                        "file_id": file.id,
-                        "source": file.filename,
-                    },
+            datalab_marker_api_key=rag_config.get(
+                "DATALAB_MARKER_API_KEY", request.app.state.config.DATALAB_MARKER_API_KEY
                 )
-            ]
-
-            text_content = form_data.content
-        elif form_data.collection_name:
-            # Check if the file has already been processed and save the content
-            # Usage: /knowledge/{id}/file/add, /knowledge/{id}/file/update
-
-            result = VECTOR_DB_CLIENT.query(
-                collection_name=f"file-{file.id}", filter={"file_id": file.id}
+            datalab_marker_additional_config=rag_config.get(
+                "DATALAB_MARKER_ADDITIONAL_CONFIG", request.app.state.config.DATALAB_MARKER_ADDITIONAL_CONFIG
+                )
+            datalab_marker_skip_cache=rag_config.get(
+                "DATALAB_MARKER_SKIP_CACHE", request.app.state.config.DATALAB_MARKER_SKIP_CACHE
+                )
+            datalab_marker_force_ocr=rag_config.get(
+                "DATALAB_MARKER_FORCE_OCR", request.app.state.config.DATALAB_MARKER_FORCE_OCR
+                )
+            datalab_marker_paginate=rag_config.get(
+                "DATALAB_MARKER_PAGINATE", request.app.state.config.DATALAB_MARKER_PAGINATE
+                )
+            datalab_marker_strip_existing_ocr=rag_config.get(
+                "DATALAB_MARKER_STRIP_EXISTING_OCR", request.app.state.config.DATALAB_MARKER_STRIP_EXISTING_OCR
+                )
+            datalab_marker_disable_image_extraction=rag_config.get(
+                "DATALAB_MARKER_DISABLE_IMAGE_EXTRACTION", request.app.state.config.DATALAB_MARKER_DISABLE_IMAGE_EXTRACTION
+                )
+            datalab_marker_format_lines=rag_config.get(
+                "DATALAB_MARKER_FORMAT_LINES", request.app.state.config.DATALAB_MARKER_FORMAT_LINES
+            )
+            datalab_marker_use_llm=rag_config.get(
+                "DATALAB_MARKER_USE_LLM", request.app.state.config.DATALAB_MARKER_USE_LLM
+                )
+            datalab_marker_output_format=rag_config.get(
+                "DATALAB_MARKER_OUTPUT_FORMAT", request.app.state.config.DATALAB_MARKER_OUTPUT_FORMAT
+                )
+            external_document_loader_url = rag_config.get(
+                "EXTERNAL_DOCUMENT_LOADER_URL", request.app.state.config.EXTERNAL_DOCUMENT_LOADER_URL
+            )
+            external_document_loader_api_key =  rag_config.get(
+                "EXTERNAL_DOCUMENT_LOADER_API_KEY", request.app.state.config.EXTERNAL_DOCUMENT_LOADER_API_KEY
+            )
+            tika_server_url = rag_config.get(
+                "TIKA_SERVER_URL", request.app.state.config.TIKA_SERVER_URL
+            )
+            docling_server_url = rag_config.get(
+                "DOCLING_SERVER_URL", request.app.state.config.DOCLING_SERVER_URL
+            )
+            docling_ocr_engine=rag_config.get(
+                "DOCLING_OCR_ENGINE", request.app.state.config.DOCLING_OCR_ENGINE
+            )
+            docling_ocr_lang=rag_config.get(
+                "DOCLING_OCR_LANG", request.app.state.config.DOCLING_OCR_LANG
+            )
+            docling_do_picture_description=rag_config.get(
+                "DOCLING_DO_PICTURE_DESCRIPTION", request.app.state.config.DOCLING_DO_PICTURE_DESCRIPTION
+            )
+            docling_do_ocr = rag_config.get(
+                "DOCLING_DO_OCR", request.app.state.config.DOCLING_DO_OCR
+            )
+            docling_force_ocr = rag_config.get(
+                "DOCLING_FORCE_OCR", request.app.state.config.DOCLING_FORCE_OCR
+            )
+            docling_pdf_backend = rag_config.get(
+                "DOCLING_PDF_BACKEND", request.app.state.config.DOCLING_PDF_BACKEND
+            )
+            docling_table_mode = rag_config.get(
+                "DOCLING_TABLE_MODE", request.app.state.config.DOCLING_TABLE_MODE
+            )
+            docling_pipeline = rag_config.get(
+                "DOCLING_PIPELINE", request.app.state.config.DOCLING_PIPELINE
+            )
+            picture_description_mode = rag_config.get(
+                "PICTURE_DESCRIPTION_MODE", request.app.state.config.DOCLING_PICTURE_DESCRIPTION_MODE
+            )
+            picture_description_local = rag_config.get(
+                "PICTURE_DESCRIPTION_MODE", request.app.state.config.DOCLING_PICTURE_DESCRIPTION_LOCAL
+            )
+            picture_description_api = rag_config.get(
+                "PICTURE_DESCRIPTION_API", request.app.state.config.DOCLING_PICTURE_DESCRIPTION_API
+            )
+            pdf_extract_images = rag_config.get(
+                "PDF_EXTRACT_IMAGES", request.app.state.config.PDF_EXTRACT_IMAGES
+            )
+            document_intelligence_endpoint = rag_config.get(
+                "DOCUMENT_INTELLIGENCE_ENDPOINT", request.app.state.config.DOCUMENT_INTELLIGENCE_ENDPOINT
+            )
+            document_intelligence_key = rag_config.get(
+                "DOCUMENT_INTELLIGENCE_KEY", request.app.state.config.DOCUMENT_INTELLIGENCE_KEY
+            )
+            mistral_ocr_api_key = rag_config.get(
+                "MISTRAL_OCR_API_KEY", request.app.state.config.MISTRAL_OCR_API_KEY
             )
 
-            if result is not None and len(result.ids[0]) > 0:
-                docs = [
-                    Document(
-                        page_content=result.documents[0][idx],
-                        metadata=result.metadatas[0][idx],
+            if form_data.content:
+                # Update the content in the file
+                # Usage: /files/{file_id}/data/content/update, /files/ (audio file upload pipeline)
+
+                try:
+                    # /files/{file_id}/data/content/update
+                    VECTOR_DB_CLIENT.delete_collection(
+                        collection_name=f"file-{file.id}"
                     )
-                    for idx, id in enumerate(result.ids[0])
-                ]
-            else:
+                except:
+                    # Audio file upload pipeline
+                    pass
+
                 docs = [
                     Document(
-                        page_content=file.data.get("content", ""),
+                        page_content=form_data.content.replace("<br/>", "\n"),
                         metadata={
                             **file.meta,
                             "name": file.filename,
@@ -1924,149 +1909,190 @@ def process_file(
                         },
                     )
                 ]
+
+                text_content = form_data.content
+            elif form_data.collection_name:
+                # Check if the file has already been processed and save the content
+                # Usage: /knowledge/{id}/file/add, /knowledge/{id}/file/update
+
+                result = VECTOR_DB_CLIENT.query(
+                    collection_name=f"file-{file.id}", filter={"file_id": file.id}
+                )
+
+                if result is not None and len(result.ids[0]) > 0:
+                    docs = [
+                        Document(
+                            page_content=result.documents[0][idx],
+                            metadata=result.metadatas[0][idx],
+                        )
+                        for idx, id in enumerate(result.ids[0])
+                    ]
+                else:
+                    docs = [
+                        Document(
+                            page_content=file.data.get("content", ""),
+                            metadata={
+                                **file.meta,
+                                "name": file.filename,
+                                "created_by": file.user_id,
+                                "file_id": file.id,
+                                "source": file.filename,
+                            },
+                        )
+                    ]
 
             text_content = file.data.get("content", "")
-        else:
-            # Process the file and save the content
-            # Usage: /files/
-            file_path = file.path
-            if file_path:
-                file_path = Storage.get_file(file_path)
-                loader = Loader(
-                    engine=content_extraction_engine,
-                    DATALAB_MARKER_API_KEY=datalab_marker_api_key,
-                    DATALAB_MARKER_ADDITIONAL_CONFIG=datalab_marker_additional_config,
-                    DATALAB_MARKER_SKIP_CACHE=datalab_marker_skip_cache,
-                    DATALAB_MARKER_FORCE_OCR=datalab_marker_force_ocr,
-                    DATALAB_MARKER_PAGINATE=datalab_marker_paginate,
-                    DATALAB_MARKER_STRIP_EXISTING_OCR=datalab_marker_strip_existing_ocr,
-                    DATALAB_MARKER_DISABLE_IMAGE_EXTRACTION=datalab_marker_disable_image_extraction,
-                    DATALAB_MARKER_FORMAT_LINES=datalab_marker_format_lines,
-                    DATALAB_MARKER_USE_LLM=datalab_marker_use_llm,
-                    DATALAB_MARKER_OUTPUT_FORMAT=datalab_marker_output_format,
-                    EXTERNAL_DOCUMENT_LOADER_URL=external_document_loader_url,
-                    EXTERNAL_DOCUMENT_LOADER_API_KEY=external_document_loader_api_key,
-                    TIKA_SERVER_URL=tika_server_url,
-                    DOCLING_SERVER_URL=docling_server_url,
-                    DOCLING_PARAMS={
-                        "do_ocr": docling_do_ocr,
-                        "force_ocr": docling_force_ocr,
-                        "ocr_engine": docling_ocr_engine,
-                        "ocr_lang": docling_ocr_lang,
-                        "pdf_backend": docling_pdf_backend,
-                        "table_mode": docling_table_mode,
-                        "pipeline": docling_pipeline,
-                        "do_picture_description": docling_do_picture_description,
-                        "picture_description_mode": picture_description_mode,
-                        "picture_description_local": picture_description_local,
-                        "picture_description_api": picture_description_api,
-                    },
-                    PDF_EXTRACT_IMAGES=pdf_extract_images,
-                    DOCUMENT_INTELLIGENCE_ENDPOINT=document_intelligence_endpoint,
-                    DOCUMENT_INTELLIGENCE_KEY=document_intelligence_key,
-                    MISTRAL_OCR_API_KEY=mistral_ocr_api_key,
-                )
-                docs = loader.load(
-                    file.filename, file.meta.get("content_type"), file_path
-                )
-
-                docs = [
-                    Document(
-                        page_content=doc.page_content,
-                        metadata={
-                            **doc.metadata,
-                            "name": file.filename,
-                            "created_by": file.user_id,
-                            "file_id": file.id,
-                            "source": file.filename,
-                        },
-                    )
-                    for doc in docs
-                ]
             else:
-                docs = [
-                    Document(
-                        page_content=file.data.get("content", ""),
-                        metadata={
-                            **file.meta,
-                            "name": file.filename,
-                            "created_by": file.user_id,
-                            "file_id": file.id,
-                            "source": file.filename,
+                # Process the file and save the content
+                # Usage: /files/
+                file_path = file.path
+                if file_path:
+                    file_path = Storage.get_file(file_path)
+                    loader = Loader(
+                        engine=content_extraction_engine,
+                        DATALAB_MARKER_API_KEY=datalab_marker_api_key,
+                        DATALAB_MARKER_ADDITIONAL_CONFIG=datalab_marker_additional_config,
+                        DATALAB_MARKER_SKIP_CACHE=datalab_marker_skip_cache,
+                        DATALAB_MARKER_FORCE_OCR=datalab_marker_force_ocr,
+                        DATALAB_MARKER_PAGINATE=datalab_marker_paginate,
+                        DATALAB_MARKER_STRIP_EXISTING_OCR=datalab_marker_strip_existing_ocr,
+                        DATALAB_MARKER_DISABLE_IMAGE_EXTRACTION=datalab_marker_disable_image_extraction,
+                        DATALAB_MARKER_FORMAT_LINES=datalab_marker_format_lines,
+                        DATALAB_MARKER_USE_LLM=datalab_marker_use_llm,
+                        DATALAB_MARKER_OUTPUT_FORMAT=datalab_marker_output_format,
+                        EXTERNAL_DOCUMENT_LOADER_URL=external_document_loader_url,
+                        EXTERNAL_DOCUMENT_LOADER_API_KEY=external_document_loader_api_key,
+                        TIKA_SERVER_URL=tika_server_url,
+                        DOCLING_SERVER_URL=docling_server_url,
+                        DOCLING_PARAMS={
+                            "do_ocr": docling_do_ocr,
+                            "force_ocr": docling_force_ocr,
+                            "ocr_engine": docling_ocr_engine,
+                            "ocr_lang": docling_ocr_lang,
+                            "pdf_backend": docling_pdf_backend,
+                            "table_mode": docling_table_mode,
+                            "pipeline": docling_pipeline,
+                            "do_picture_description": docling_do_picture_description,
+                            "picture_description_mode": picture_description_mode,
+                            "picture_description_local": picture_description_local,
+                            "picture_description_api": picture_description_api,
                         },
+                        PDF_EXTRACT_IMAGES=pdf_extract_images,
+                        DOCUMENT_INTELLIGENCE_ENDPOINT=document_intelligence_endpoint,
+                        DOCUMENT_INTELLIGENCE_KEY=document_intelligence_key,
+                        MISTRAL_OCR_API_KEY=mistral_ocr_api_key,
                     )
-                ]
-            text_content = " ".join([doc.page_content for doc in docs])
-
-        log.debug(f"text_content: {text_content}")
-        Files.update_file_data_by_id(
-            file.id,
-            {"content": text_content},
-        )
-        hash = calculate_sha256_string(text_content)
-        Files.update_file_hash_by_id(file.id, hash)
-
-        if rag_config.get("BYPASS_EMBEDDING_AND_RETRIEVAL", request.app.state.config.BYPASS_EMBEDDING_AND_RETRIEVAL):
-            Files.update_file_data_by_id(file.id, {"status": "completed"})
-            return {
-                "status": True,
-                "collection_name": None,
-                "filename": file.filename,
-                "content": text_content,
-            }
-        else:
-            try:
-                result = save_docs_to_vector_db(
-                    request,
-                    docs=docs,
-                    collection_name=collection_name,
-                    metadata={
-                        "file_id": file.id,
-                        "name": file.filename,
-                        "hash": hash,
-                    },
-                    add=(True if form_data.collection_name else False),
-                    user=user,
-                    knowledge_id=form_data.knowledge_id
-                )
-                log.info(f"added {len(docs)} items to collection {collection_name}")
-
-                if result:
-                    Files.update_file_metadata_by_id(
-                        file.id,
-                        {
-                            "collection_name": collection_name,
-                        },
+                    docs = loader.load(
+                        file.filename, file.meta.get("content_type"), file_path
                     )
 
-                    Files.update_file_data_by_id(
-                        file.id,
-                        {"status": "completed"},
-                    )
-
-                    return {
-                        "status": True,
-                        "collection_name": collection_name,
-                        "filename": file.filename,
-                        "content": text_content,
-                    }
+                    docs = [
+                        Document(
+                            page_content=doc.page_content,
+                            metadata={
+                                **filter_metadata(doc.metadata),
+                                "name": file.filename,
+                                "created_by": file.user_id,
+                                "file_id": file.id,
+                                "source": file.filename,
+                            },
+                        )
+                        for doc in docs
+                    ]
                 else:
-                    raise Exception("Error saving document to vector database")
-            except Exception as e:
-                raise e
+                    docs = [
+                        Document(
+                            page_content=file.data.get("content", ""),
+                            metadata={
+                                **file.meta,
+                                "name": file.filename,
+                                "created_by": file.user_id,
+                                "file_id": file.id,
+                                "source": file.filename,
+                            },
+                        )
+                    ]
+                text_content = " ".join([doc.page_content for doc in docs])
 
-    except Exception as e:
-        log.exception(e)
-        if "No pandoc was found" in str(e):
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail=ERROR_MESSAGES.PANDOC_NOT_INSTALLED,
+            log.debug(f"text_content: {text_content}")
+            Files.update_file_data_by_id(
+                file.id,
+                {"content": text_content},
             )
-        else:
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail=str(e),
+            hash = calculate_sha256_string(text_content)
+            Files.update_file_hash_by_id(file.id, hash)
+
+            if rag_config.get("BYPASS_EMBEDDING_AND_RETRIEVAL", request.app.state.config.BYPASS_EMBEDDING_AND_RETRIEVAL):
+                Files.update_file_data_by_id(file.id, {"status": "completed"})
+                return {
+                    "status": True,
+                    "collection_name": None,
+                    "filename": file.filename,
+                    "content": text_content,
+                }
+            else:
+                try:
+                    result = save_docs_to_vector_db(
+                        request,
+                        docs=docs,
+                        collection_name=collection_name,
+                        metadata={
+                            "file_id": file.id,
+                            "name": file.filename,
+                            "hash": hash,
+                        },
+                        add=(True if form_data.collection_name else False),
+                        user=user,
+                        knowledge_id=form_data.knowledge_id
+                    )
+                    log.info(f"added {len(docs)} items to collection {collection_name}")
+
+                    if result:
+                        Files.update_file_metadata_by_id(
+                            file.id,
+                            {
+                                "collection_name": collection_name,
+                            },
+                        )
+
+                        Files.update_file_data_by_id(
+                            file.id,
+                            {"status": "completed"},
+                        )
+
+                        return {
+                            "status": True,
+                            "collection_name": collection_name,
+                            "filename": file.filename,
+                            "content": text_content,
+                        }
+                    else:
+                        raise Exception("Error saving document to vector database")
+                except Exception as e:
+                    raise e
+
+        except Exception as e:
+            log.exception(e)
+            Files.update_file_data_by_id(
+                file.id,
+                {"status": "failed"},
             )
+
+            if "No pandoc was found" in str(e):
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail=ERROR_MESSAGES.PANDOC_NOT_INSTALLED,
+                )
+            else:
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail=str(e),
+                )
+
+    else:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail=ERROR_MESSAGES.NOT_FOUND
+        )
 
 
 class ProcessTextForm(BaseModel):
@@ -2224,7 +2250,25 @@ def search_web(request: Request, engine: str, query: str) -> list[SearchResult]:
     """
 
     # TODO: add playwright to search the web
-    if engine == "searxng":
+    if engine == "ollama_cloud":
+        return search_ollama_cloud(
+            "https://ollama.com",
+            request.app.state.config.OLLAMA_CLOUD_WEB_SEARCH_API_KEY,
+            query,
+            request.app.state.config.WEB_SEARCH_RESULT_COUNT,
+            request.app.state.config.WEB_SEARCH_DOMAIN_FILTER_LIST,
+        )
+    elif engine == "perplexity_search":
+        if request.app.state.config.PERPLEXITY_API_KEY:
+            return search_perplexity_search(
+                request.app.state.config.PERPLEXITY_API_KEY,
+                query,
+                request.app.state.config.WEB_SEARCH_RESULT_COUNT,
+                request.app.state.config.WEB_SEARCH_DOMAIN_FILTER_LIST,
+            )
+        else:
+            raise Exception("No PERPLEXITY_API_KEY found in environment variables")
+    elif engine == "searxng":
         if request.app.state.config.SEARXNG_QUERY_URL:
             return search_searxng(
                 request.app.state.config.SEARXNG_QUERY_URL,
@@ -2458,7 +2502,7 @@ async def process_web_search(
     result_items = []
 
     try:
-        logging.info(
+        logging.debug(
             f"trying to web search with {request.app.state.config.WEB_SEARCH_ENGINE, form_data.queries}"
         )
 
