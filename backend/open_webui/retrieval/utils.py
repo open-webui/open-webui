@@ -61,13 +61,13 @@ class VectorSearchRetriever(BaseRetriever):
         return results
 
 
-def query_doc(
+async def query_doc(
     collection_name: str,
     query_embedding: list[float],
     k: int,
 ):
     try:
-        result = VECTOR_DB_CLIENT.search(
+        result = await VECTOR_DB_CLIENT.search(
             collection_name=collection_name,
             vectors=[query_embedding],
             limit=k,
@@ -226,7 +226,7 @@ def get_all_items_from_collections(collection_names: list[str]) -> dict:
     return merge_get_results(results)
 
 
-def query_collection(
+async def query_collection(
     collection_names: list[str],
     queries: list[str],
     embedding_function,
@@ -242,7 +242,7 @@ def query_collection(
                     handle_collection_query_with_reindex,
                 )
 
-                result = handle_collection_query_with_reindex(
+                result = await handle_collection_query_with_reindex(
                     collection_name=collection_name,
                     k=k,
                     query_embedding=query_embedding,
@@ -336,7 +336,7 @@ def get_embedding_function(
         raise ValueError(f"Unknown embedding engine: {embedding_engine}")
 
 
-def get_sources_from_files(
+async def get_sources_from_files(
     request,
     files,
     queries,
@@ -471,7 +471,7 @@ def get_sources_from_files(
                                 )
 
                         if (not hybrid_search) or (context is None):
-                            context = query_collection(
+                            context = await query_collection(
                                 collection_names=collection_names,
                                 queries=queries,
                                 embedding_function=embedding_function,

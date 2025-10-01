@@ -34,7 +34,7 @@ def extract_file_id_from_collection(collection_name: str) -> Optional[str]:
     return None
 
 
-def attempt_reindex_and_retry(
+async def attempt_reindex_and_retry(
     collection_name: str, k: int, query_embedding, file_id: str
 ) -> Optional[Dict[str, Any]]:
     """
@@ -68,7 +68,7 @@ def attempt_reindex_and_retry(
 
                 # Retry the query after successful re-indexing
                 try:
-                    result = query_doc(
+                    result = await query_doc(
                         collection_name=collection_name,
                         query_embedding=query_embedding,
                         k=k,
@@ -92,7 +92,7 @@ def attempt_reindex_and_retry(
         return None
 
 
-def handle_collection_query_with_reindex(
+async def handle_collection_query_with_reindex(
     collection_name: str, k: int, query_embedding
 ) -> Optional[Dict[str, Any]]:
     """
@@ -103,7 +103,7 @@ def handle_collection_query_with_reindex(
         from open_webui.retrieval.utils import query_doc
 
         # First, try the normal query
-        result = query_doc(
+        result = await query_doc(
             collection_name=collection_name,
             query_embedding=query_embedding,
             k=k,
@@ -125,7 +125,7 @@ def handle_collection_query_with_reindex(
             file_id = extract_file_id_from_collection(collection_name)
             if file_id:
                 # Attempt re-indexing and retry
-                result = attempt_reindex_and_retry(
+                result = await attempt_reindex_and_retry(
                     collection_name, k, query_embedding, file_id
                 )
                 if result:
