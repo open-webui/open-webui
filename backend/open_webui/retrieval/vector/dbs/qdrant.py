@@ -108,11 +108,11 @@ class QdrantClient:
         # Delete the collection based on the collection name.
         return await self.client.delete_collection(collection_name=collection_name)
 
-    def search(
+    async def search(
         self, collection_name: str, vectors: list[list[float | int]], limit: int
     ) -> Optional[SearchResult]:
         # Search for the nearest neighbor items based on the vectors and return 'limit' number of results.
-        result = self.client.query_points(
+        result = await self.client.query_points(
             collection_name=collection_name,
             query=vectors,
             limit=limit,
