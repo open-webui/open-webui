@@ -105,7 +105,7 @@ onnxruntime==1.20.1
 faster-whisper==1.1.1
 
 
-black==25.1.0
+black==25.9.0
 youtube-transcript-api==1.2.2
 pytube==15.0.0
 
