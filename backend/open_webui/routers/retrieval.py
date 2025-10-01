@@ -1940,8 +1940,7 @@ def process_file(
                             },
                         )
                     ]
-
-            text_content = file.data.get("content", "")
+                text_content = file.data.get("content", "")
             else:
                 # Process the file and save the content
                 # Usage: /files/
