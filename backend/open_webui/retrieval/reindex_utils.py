@@ -63,7 +63,7 @@ async def attempt_reindex_and_retry(
             mock_request = MockRequest(main_app)
 
             # Use the mock request for reindexing
-            if reindex_file_on_demand(file_id, mock_request, user):
+            if await reindex_file_on_demand(file_id, mock_request, user):
                 log.info(f"Re-indexing successful for {file_id}, retrying query...")
 
                 # Retry the query after successful re-indexing

@@ -1054,7 +1054,7 @@ class ProcessTextForm(BaseModel):
 
 
 @router.post("/process/text")
-def process_text(
+async def process_text(
     request: Request,
     form_data: ProcessTextForm,
     user=Depends(get_verified_user),
@@ -1072,7 +1072,7 @@ def process_text(
     text_content = form_data.content
     log.debug(f"text_content: {text_content}")
 
-    result = save_docs_to_vector_db(request, docs, collection_name)
+    result = await save_docs_to_vector_db(request, docs, collection_name)
     if result:
         return {
             "status": True,
@@ -1087,7 +1087,7 @@ def process_text(
 
 
 @router.post("/process/youtube")
-def process_youtube_video(
+async def process_youtube_video(
     request: Request, form_data: ProcessUrlForm, user=Depends(get_verified_user)
 ):
     try:
@@ -1129,7 +1129,7 @@ def process_youtube_video(
 
 
 @router.post("/process/web")
-def process_web(
+async def process_web(
     request: Request, form_data: ProcessUrlForm, user=Depends(get_verified_user)
 ):
     try:
@@ -1146,7 +1146,8 @@ def process_web(
         content = " ".join([doc.page_content for doc in docs])
 
         log.debug(f"text_content: {content}")
-        save_docs_to_vector_db(request, docs, collection_name, overwrite=True)
+
+        await save_docs_to_vector_db(request, docs, collection_name, overwrite=True)
 
         return {
             "status": True,
@@ -1560,7 +1561,7 @@ class QueryDocForm(BaseModel):
 
 
 @router.post("/query/doc")
-def query_doc_handler(
+async def query_doc_handler(
     request: Request,
     form_data: QueryDocForm,
     user=Depends(get_verified_user),
@@ -1582,7 +1583,7 @@ def query_doc_handler(
                 log.info(f"Attempting to re-index file {file_id}")
 
                 # Try to re-index the file
-                if reindex_file_on_demand(file_id, request, user):
+                if await reindex_file_on_demand(file_id, request, user):
                     log.info(f"Successfully re-indexed file {file_id}")
                 else:
                     log.warning(f"Failed to re-index file {file_id}")
@@ -1635,7 +1636,7 @@ class QueryCollectionsForm(BaseModel):
 
 
 @router.post("/query/collection")
-def query_collection_handler(
+async def query_collection_handler(
     request: Request,
     form_data: QueryCollectionsForm,
     user=Depends(get_verified_user),
@@ -1656,7 +1657,7 @@ def query_collection_handler(
                     f"Attempting to re-index missing file collection: {collection_name}"
                 )
 
-                if reindex_file_on_demand(file_id, request, user):
+                if await reindex_file_on_demand(file_id, request, user):
                     log.info(f"Successfully re-indexed file {file_id}")
                 else:
                     log.warning(f"Failed to re-index file {file_id}")
@@ -1784,7 +1785,7 @@ class BatchProcessFilesResponse(BaseModel):
 
 
 @router.post("/process/files/batch")
-def process_files_batch(
+async def process_files_batch(
     request: Request,
     form_data: BatchProcessFilesForm,
     user=Depends(get_verified_user),
@@ -1831,7 +1832,7 @@ def process_files_batch(
     # Save all documents in one batch
     if all_docs:
         try:
-            save_docs_to_vector_db(
+            await save_docs_to_vector_db(
                 request=request,
                 docs=all_docs,
                 collection_name=collection_name,
@@ -2770,7 +2771,7 @@ def cleanup_old_chat_collections(max_age_days: int = 1) -> dict:
         return {"error": error_msg}
 
 
-def reindex_file_on_demand(file_id: str, request: Request, user=None) -> bool:
+async def reindex_file_on_demand(file_id: str, request: Request, user=None) -> bool:
     """
     Re-index a file on-demand if its collection was deleted during cleanup.
     This enables the "re-index on the fly if needed" approach suggested in the PR.
@@ -2829,7 +2830,7 @@ def reindex_file_on_demand(file_id: str, request: Request, user=None) -> bool:
 
             # Use the existing save_docs_to_vector_db function
             collection_name = f"{VECTOR_COLLECTION_PREFIXES.FILE}{file_id}"
-            result = save_docs_to_vector_db(
+            result = await save_docs_to_vector_db(
                 request=request,
                 docs=docs,
                 collection_name=collection_name,
