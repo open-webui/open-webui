@@ -615,8 +615,16 @@ class OAuthManager:
         self.app = app
 
         self._clients = {}
+
         for _, provider_config in OAUTH_PROVIDERS.items():
-            provider_config["register"](self.oauth)
+            if "register" not in provider_config:
+                log.error(
+                    f"OAuth provider {provider_config['name']} missing register function"
+                )
+                continue
+
+            client = provider_config["register"](self.oauth)
+            self._clients[provider_config["name"]] = client
 
     def get_client(self, provider_name):
         if provider_name not in self._clients:

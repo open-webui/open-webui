@@ -605,8 +605,8 @@ def load_oauth_providers():
     OAUTH_PROVIDERS.clear()
     if GOOGLE_CLIENT_ID.value and GOOGLE_CLIENT_SECRET.value:
 
-        def google_oauth_register(client: OAuth):
-            client.register(
+        def google_oauth_register(oauth: OAuth):
+            return oauth.register(
                 name="google",
                 client_id=GOOGLE_CLIENT_ID.value,
                 client_secret=GOOGLE_CLIENT_SECRET.value,
@@ -633,8 +633,8 @@ def load_oauth_providers():
         and MICROSOFT_CLIENT_TENANT_ID.value
     ):
 
-        def microsoft_oauth_register(client: OAuth):
-            client.register(
+        def microsoft_oauth_register(oauth: OAuth):
+            return oauth.register(
                 name="microsoft",
                 client_id=MICROSOFT_CLIENT_ID.value,
                 client_secret=MICROSOFT_CLIENT_SECRET.value,
@@ -658,8 +658,8 @@ def load_oauth_providers():
 
     if GITHUB_CLIENT_ID.value and GITHUB_CLIENT_SECRET.value:
 
-        def github_oauth_register(client: OAuth):
-            client.register(
+        def github_oauth_register(oauth: OAuth):
+            return oauth.register(
                 name="github",
                 client_id=GITHUB_CLIENT_ID.value,
                 client_secret=GITHUB_CLIENT_SECRET.value,
@@ -690,7 +690,7 @@ def load_oauth_providers():
         and OPENID_PROVIDER_URL.value
     ):
 
-        def oidc_oauth_register(client: OAuth):
+        def oidc_oauth_register(oauth: OAuth):
             client_kwargs = {
                 "scope": OAUTH_SCOPES.value,
                 **(
@@ -716,7 +716,7 @@ def load_oauth_providers():
                     % ("S256", OAUTH_CODE_CHALLENGE_METHOD.value)
                 )
 
-            client.register(
+            return oauth.register(
                 name="oidc",
                 client_id=OAUTH_CLIENT_ID.value,
                 client_secret=OAUTH_CLIENT_SECRET.value,
@@ -733,8 +733,8 @@ def load_oauth_providers():
 
     if FEISHU_CLIENT_ID.value and FEISHU_CLIENT_SECRET.value:
 
-        def feishu_oauth_register(client: OAuth):
-            client.register(
+        def feishu_oauth_register(oauth: OAuth):
+            return oauth.register(
                 name="feishu",
                 client_id=FEISHU_CLIENT_ID.value,
                 client_secret=FEISHU_CLIENT_SECRET.value,
