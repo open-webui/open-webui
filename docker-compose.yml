@@ -1,0 +1,18 @@
+services:
+  open-webui:
+    image: ghcr.io/open-webui/open-webui:main
+    ports:
+      - "3000:8080"
+    volumes:
+      - open-webui:/app/backend/data
+    env_file:
+      - .env
+    environment:
+      - WEBUI_SECRET_KEY=
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    restart: unless-stopped
+    container_name: open-webui
+
+volumes:
+  open-webui:

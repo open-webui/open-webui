@@ -17,6 +17,7 @@
 		user,
 		settings
 	} from '$lib/stores';
+	import { createPicker } from '$lib/utils/google-drive-picker';
 
 	import {
 		updateFileDataContentById,
@@ -889,11 +890,43 @@
 
 								<div>
 									<AddContentMenu
-										on:upload={(e) => {
+										on:upload={async (e) => {
 											if (e.detail.type === 'directory') {
 												uploadDirectoryHandler();
 											} else if (e.detail.type === 'text') {
 												showAddTextContentModal = true;
+											} else if (e.detail.type === 'google-drive') {
+												try {
+													const fileData = await createPicker({ allowFolders: true });
+													if (fileData) {
+														// Handle single file or array of files
+														const files = Array.isArray(fileData) ? fileData : [fileData];
+
+														for (const data of files) {
+															const file = new File([data.blob], data.name, {
+																type: data.blob.type
+															});
+															await uploadFileHandler(file);
+														}
+
+														if (files.length > 1) {
+															toast.success(
+																$i18n.t('Successfully imported {{count}} files from Google Drive', {
+																	count: files.length
+																})
+															);
+														}
+													} else {
+														console.log('No file was selected from Google Drive');
+													}
+												} catch (error) {
+													console.error('Google Drive Error:', error);
+													toast.error(
+														$i18n.t('Error accessing Google Drive: {{error}}', {
+															error: error.message
+														})
+													);
+												}
 											} else {
 												document.getElementById('files-input').click();
 											}

@@ -1,0 +1,16 @@
+@echo off
+echo Starting Open WebUI Development Server...
+echo.
+echo Starting Backend (Python FastAPI)...
+start "Open WebUI Backend" cmd /k "cd backend && python -m uvicorn open_webui.main:app --reload --host 0.0.0.0 --port 8080"
+timeout /t 5 /nobreak
+echo.
+echo Starting Frontend (Svelte + Vite)...
+start "Open WebUI Frontend" cmd /k "npm run dev"
+echo.
+echo Open WebUI is starting...
+echo Backend: http://localhost:8080
+echo Frontend: http://localhost:5173
+echo.
+echo Press any key to exit...
+pause

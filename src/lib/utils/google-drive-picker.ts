@@ -104,7 +104,81 @@ const initialize = async () => {
 	}
 };
 
-export const createPicker = () => {
+// Helper function to download a file from Google Drive
+const downloadFile = async (fileId: string, fileName: string, mimeType: string, token: string) => {
+	let downloadUrl;
+	let exportFormat;
+
+	if (mimeType.includes('google-apps')) {
+		// Handle Google Workspace files
+		if (mimeType.includes('document')) {
+			exportFormat = 'text/plain';
+		} else if (mimeType.includes('spreadsheet')) {
+			exportFormat = 'text/csv';
+		} else if (mimeType.includes('presentation')) {
+			exportFormat = 'text/plain';
+		} else {
+			exportFormat = 'application/pdf';
+		}
+		downloadUrl = `https://www.googleapis.com/drive/v3/files/${fileId}/export?mimeType=${encodeURIComponent(exportFormat)}`;
+	} else {
+		// Regular files use direct download URL
+		downloadUrl = `https://www.googleapis.com/drive/v3/files/${fileId}?alt=media`;
+	}
+
+	// Create a Blob from the file download
+	const response = await fetch(downloadUrl, {
+		headers: {
+			Authorization: `Bearer ${token}`,
+			Accept: '*/*'
+		}
+	});
+
+	if (!response.ok) {
+		const errorText = await response.text();
+		console.error('Download failed:', {
+			status: response.status,
+			statusText: response.statusText,
+			error: errorText
+		});
+		throw new Error(`Failed to download file (${response.status}): ${errorText}`);
+	}
+
+	const blob = await response.blob();
+	return {
+		id: fileId,
+		name: fileName,
+		url: downloadUrl,
+		blob: blob,
+		headers: {
+			Authorization: `Bearer ${token}`,
+			Accept: '*/*'
+		}
+	};
+};
+
+// Helper function to list files in a folder
+const listFilesInFolder = async (folderId: string, token: string) => {
+	const response = await fetch(
+		`https://www.googleapis.com/drive/v3/files?q='${folderId}'+in+parents&fields=files(id,name,mimeType)`,
+		{
+			headers: {
+				Authorization: `Bearer ${token}`
+			}
+		}
+	);
+
+	if (!response.ok) {
+		throw new Error('Failed to list files in folder');
+	}
+
+	const data = await response.json();
+	return data.files || [];
+};
+
+export const createPicker = (options: { allowFolders?: boolean } = {}) => {
+	const { allowFolders = false } = options;
+
 	return new Promise(async (resolve, reject) => {
 		try {
 			console.log('Initializing Google Drive Picker...');
@@ -122,10 +196,12 @@ export const createPicker = () => {
 				.enableFeature(google.picker.Feature.MULTISELECT_ENABLED)
 				.addView(
 					new google.picker.DocsView()
-						.setIncludeFolders(false)
-						.setSelectFolderEnabled(false)
+						.setIncludeFolders(allowFolders)
+						.setSelectFolderEnabled(allowFolders)
 						.setMimeTypes(
-							'application/pdf,text/plain,application/vnd.openxmlformats-officedocument.wordprocessingml.document,application/vnd.google-apps.document,application/vnd.google-apps.spreadsheet,application/vnd.google-apps.presentation'
+							allowFolders
+								? 'application/pdf,text/plain,application/vnd.openxmlformats-officedocument.wordprocessingml.document,application/vnd.google-apps.document,application/vnd.google-apps.spreadsheet,application/vnd.google-apps.presentation,application/vnd.google-apps.folder'
+								: 'application/pdf,text/plain,application/vnd.openxmlformats-officedocument.wordprocessingml.document,application/vnd.google-apps.document,application/vnd.google-apps.spreadsheet,application/vnd.google-apps.presentation'
 						)
 				)
 				.setOAuthToken(token)
@@ -134,67 +210,40 @@ export const createPicker = () => {
 				.setCallback(async (data: any) => {
 					if (data[google.picker.Response.ACTION] === google.picker.Action.PICKED) {
 						try {
-							const doc = data[google.picker.Response.DOCUMENTS][0];
-							const fileId = doc[google.picker.Document.ID];
-							const fileName = doc[google.picker.Document.NAME];
-							const fileUrl = doc[google.picker.Document.URL];
+							const docs = data[google.picker.Response.DOCUMENTS];
+							const results = [];
 
-							if (!fileId || !fileName) {
-								throw new Error('Required file details missing');
-							}
+							for (const doc of docs) {
+								const fileId = doc[google.picker.Document.ID];
+								const fileName = doc[google.picker.Document.NAME];
+								const mimeType = doc[google.picker.Document.MIME_TYPE];
 
-							// Construct download URL based on MIME type
-							const mimeType = doc[google.picker.Document.MIME_TYPE];
+								if (!fileId || !fileName) {
+									throw new Error('Required file details missing');
+								}
 
-							let downloadUrl;
-							let exportFormat;
+								// Check if it's a folder
+								if (mimeType === 'application/vnd.google-apps.folder') {
+									// List all files in the folder
+									const filesInFolder = await listFilesInFolder(fileId, token);
 
-							if (mimeType.includes('google-apps')) {
-								// Handle Google Workspace files
-								if (mimeType.includes('document')) {
-									exportFormat = 'text/plain';
-								} else if (mimeType.includes('spreadsheet')) {
-									exportFormat = 'text/csv';
-								} else if (mimeType.includes('presentation')) {
-									exportFormat = 'text/plain';
+									// Download each file in the folder
+									for (const file of filesInFolder) {
+										// Skip folders within folders for now
+										if (file.mimeType !== 'application/vnd.google-apps.folder') {
+											const result = await downloadFile(file.id, file.name, file.mimeType, token);
+											results.push(result);
+										}
+									}
 								} else {
-									exportFormat = 'application/pdf';
+									// Regular file
+									const result = await downloadFile(fileId, fileName, mimeType, token);
+									results.push(result);
 								}
-								downloadUrl = `https://www.googleapis.com/drive/v3/files/${fileId}/export?mimeType=${encodeURIComponent(exportFormat)}`;
-							} else {
-								// Regular files use direct download URL
-								downloadUrl = `https://www.googleapis.com/drive/v3/files/${fileId}?alt=media`;
-							}
-							// Create a Blob from the file download
-							const response = await fetch(downloadUrl, {
-								headers: {
-									Authorization: `Bearer ${token}`,
-									Accept: '*/*'
-								}
-							});
-
-							if (!response.ok) {
-								const errorText = await response.text();
-								console.error('Download failed:', {
-									status: response.status,
-									statusText: response.statusText,
-									error: errorText
-								});
-								throw new Error(`Failed to download file (${response.status}): ${errorText}`);
 							}
 
-							const blob = await response.blob();
-							const result = {
-								id: fileId,
-								name: fileName,
-								url: downloadUrl,
-								blob: blob,
-								headers: {
-									Authorization: `Bearer ${token}`,
-									Accept: '*/*'
-								}
-							};
-							resolve(result);
+							// Return single file or array of files
+							resolve(results.length === 1 ? results[0] : results);
 						} catch (error) {
 							reject(error);
 						}

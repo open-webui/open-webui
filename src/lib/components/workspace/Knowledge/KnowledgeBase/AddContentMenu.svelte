@@ -10,6 +10,7 @@
 	import BarsArrowUp from '$lib/components/icons/BarsArrowUp.svelte';
 	import FolderOpen from '$lib/components/icons/FolderOpen.svelte';
 	import ArrowPath from '$lib/components/icons/ArrowPath.svelte';
+	import GoogleDrive from '$lib/components/icons/GoogleDrive.svelte';
 
 	const i18n = getContext('i18n');
 
@@ -101,6 +102,16 @@
 			>
 				<BarsArrowUp strokeWidth="2" />
 				<div class="flex items-center">{$i18n.t('Add text content')}</div>
+			</DropdownMenu.Item>
+
+			<DropdownMenu.Item
+				class="flex  gap-2  items-center px-3 py-2 text-sm  cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 rounded-md"
+				on:click={() => {
+					dispatch('upload', { type: 'google-drive' });
+				}}
+			>
+				<GoogleDrive strokeWidth="2" />
+				<div class="flex items-center">{$i18n.t('Import from Google Drive')}</div>
 			</DropdownMenu.Item>
 		</DropdownMenu.Content>
 	</div>
