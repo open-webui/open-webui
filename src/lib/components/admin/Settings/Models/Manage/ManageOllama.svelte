@@ -42,7 +42,7 @@
 
 	const MAX_PARALLEL_DOWNLOADS = 3;
 
-	let modelTransferring = false;
+	let modelLoading = false;
 	let modelTag = '';
 
 	let createModelLoading = false;
@@ -168,7 +168,7 @@
 			return;
 		}
 
-		modelTransferring = true;
+		modelLoading = true;
 		const [res, controller] = await pullModel(localStorage.token, sanitizedModelTag, urlIdx).catch(
 			(error) => {
 				if (error.name !== 'AbortError') {
@@ -283,11 +283,11 @@
 		}
 
 		modelTag = '';
-		modelTransferring = false;
+		modelLoading = false;
 	};
 
 	const uploadModelHandler = async () => {
-		modelTransferring = true;
+		modelLoading = true;
 
 		let uploaded = false;
 		let fileResponse = null;
@@ -426,7 +426,7 @@
 			modelUploadInputElement.value = '';
 		}
 		modelInputFile = null;
-		modelTransferring = false;
+		modelLoading = false;
 		uploadProgress = null;
 
 		models.set(
@@ -649,9 +649,9 @@
 								on:click={() => {
 									pullModelHandler();
 								}}
-								disabled={modelTransferring || modelTag.trim() === ''}
+								disabled={modelLoading || modelTag.trim() === ''}
 							>
-								{#if modelTransferring}
+								{#if modelLoading}
 									<div class="self-center">
 										<svg
 											class=" w-4 h-4"
@@ -875,9 +875,9 @@
 									on:click={() => {
 										createModelHandler();
 									}}
-									disabled={
-										createModelLoading || createModelName.trim() === '' || createModelObject.trim() === ''
-									}
+									disabled={createModelLoading ||
+										createModelName.trim() === '' ||
+										createModelObject.trim() === ''}
 								>
 									<svg
 										xmlns="http://www.w3.org/2000/svg"
@@ -1014,9 +1014,9 @@
 									<button
 										class="px-2.5 bg-gray-50 hover:bg-gray-200 text-gray-800 dark:bg-gray-850 dark:hover:bg-gray-800 dark:text-gray-100 rounded-lg disabled:cursor-not-allowed transition"
 										type="submit"
-										disabled={modelTransferring}
+										disabled={modelLoading}
 									>
-										{#if modelTransferring}
+										{#if modelLoading}
 											<div class="self-center">
 												<svg
 													class=" w-4 h-4"
