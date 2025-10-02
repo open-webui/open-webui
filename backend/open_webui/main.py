@@ -8,6 +8,7 @@ import shutil
 import sys
 import time
 import random
+import re
 from uuid import uuid4
 
 
@@ -1170,12 +1171,32 @@ class RedirectMiddleware(BaseHTTPMiddleware):
             path = request.url.path
             query_params = dict(parse_qs(urlparse(str(request.url)).query))
 
+            redirect_params = {}
+
             # Check for the specific watch path and the presence of 'v' parameter
             if path.endswith("/watch") and "v" in query_params:
                 # Extract the first 'v' parameter
-                video_id = query_params["v"][0]
-                encoded_video_id = urlencode({"youtube": video_id})
-                redirect_url = f"/?{encoded_video_id}"
+                youtube_video_id = query_params["v"][0]
+                redirect_params["youtube"] = youtube_video_id
+
+            if "shared" in query_params and len(query_params["shared"]) > 0:
+                # PWA share_target support
+
+                text = query_params["shared"][0]
+                if text:
+                    urls = re.match(r"https://\S+", text)
+                    if urls:
+                        from open_webui.retrieval.loaders.youtube import _parse_video_id
+
+                        if youtube_video_id := _parse_video_id(urls[0]):
+                            redirect_params["youtube"] = youtube_video_id
+                        else:
+                            redirect_params["load-url"] = urls[0]
+                    else:
+                        redirect_params["q"] = text
+
+            if redirect_params:
+                redirect_url = f"/?{urlencode(redirect_params)}"
                 return RedirectResponse(url=redirect_url)
 
         # Proceed with the normal flow of other requests
@@ -2004,6 +2025,11 @@ async def get_manifest_json():
                     "purpose": "maskable",
                 },
             ],
+            "share_target": {
+                "action": "/",
+                "method": "GET",
+                "params": {"text": "shared"},
+            },
         }
 
 
