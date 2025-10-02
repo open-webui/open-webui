@@ -3,6 +3,7 @@ import json
 import logging
 import os
 import uuid
+import html
 from functools import lru_cache
 from pydub import AudioSegment
 from pydub.silence import split_on_silence
@@ -458,7 +459,7 @@ async def speech(request: Request, user=Depends(get_verified_user)):
 
         try:
             data = f"""<speak version="1.0" xmlns="http://www.w3.org/2001/10/synthesis" xml:lang="{locale}">
-                <voice name="{language}">{payload["input"]}</voice>
+                <voice name="{language}">{html.escape(payload["input"])}</voice>
             </speak>"""
             timeout = aiohttp.ClientTimeout(total=AIOHTTP_CLIENT_TIMEOUT)
             async with aiohttp.ClientSession(
