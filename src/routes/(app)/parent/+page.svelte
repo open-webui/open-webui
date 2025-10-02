@@ -827,11 +827,6 @@
 		</div>
 		
 		<div class="flex items-center space-x-4">
-			<div class="flex items-center space-x-2 text-sm text-gray-600 dark:text-gray-400">
-				<LockClosed className="size-4" />
-				<span>Parent Mode</span>
-			</div>
-			
 			<!-- Theme Toggle Button -->
 			<button
 				on:click={handleThemeToggle}
@@ -844,6 +839,11 @@
 					<Moon className="size-5 text-gray-700 dark:text-gray-300" />
 				{/if}
 			</button>
+			
+			<div class="flex items-center space-x-2 text-sm text-gray-600 dark:text-gray-400">
+				<LockClosed className="size-4" />
+				<span>Parent Mode</span>
+			</div>
 			
 			{#if $user?.role === 'admin'}
 				<button
