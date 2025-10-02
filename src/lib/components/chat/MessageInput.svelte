@@ -78,6 +78,8 @@
 
 	import { getSuggestionRenderer } from '../common/RichTextInput/suggestions';
 	import CommandSuggestionList from './MessageInput/CommandSuggestionList.svelte';
+	import Camera from '../icons/Camera.svelte';
+	import Clip from '../icons/Clip.svelte';
 
 	const i18n = getContext('i18n');
 
@@ -130,6 +132,11 @@
 		codeInterpreterEnabled
 	});
 
+	const detectMobile = () => {
+		const userAgent = navigator.userAgent || navigator.vendor || window.opera;
+		return /android|iphone|ipad|ipod|windows phone/i.test(userAgent);
+	};
+	
 	const inputVariableHandler = async (text: string): Promise<string> => {
 		inputVariables = extractInputVariables(text);
 
@@ -1424,9 +1431,41 @@
 											<div
 												class="bg-transparent hover:bg-gray-100 text-gray-700 dark:text-white dark:hover:bg-gray-800 rounded-full size-8 flex justify-center items-center outline-hidden focus:outline-hidden"
 											>
-												<PlusAlt className="size-5.5" />
+												<Camera className="size-5.5" />
+												
+											</div>
+											<div
+												class="bg-transparent hover:bg-gray-100 text-gray-700 dark:text-white dark:hover:bg-gray-800 rounded-full size-8 flex justify-center items-center outline-hidden focus:outline-hidden"
+											>
+												<Clip className="size-5.5" />
+												
 											</div>
 										</InputMenu>
+
+										<div
+												class="bg-transparent hover:bg-gray-100 text-gray-700 dark:text-white dark:hover:bg-gray-800 rounded-full size-8 flex justify-center items-center outline-hidden focus:outline-hidden"
+											>
+											<button on:click = {() => {
+													console.log("I am clicking camera")
+													if (!detectMobile()) {
+															screenCaptureHandler();
+														} else {
+															const cameraInputElement = document.getElementById('camera-input');
+
+															if (cameraInputElement) {
+																cameraInputElement.click();
+															}
+														}
+
+												}}>
+													<Camera
+												className="size-5.5" />
+											</button>
+												
+												
+											</div>
+
+										
 
 										<div class="flex self-center w-[1px] h-4 mx-1 bg-gray-50 dark:bg-gray-800" />
 
@@ -1449,11 +1488,7 @@
 													chatInput?.focus();
 												}}
 											>
-												<div
-													class="bg-transparent hover:bg-gray-100 text-gray-700 dark:text-white dark:hover:bg-gray-800 rounded-full size-8 flex justify-center items-center outline-hidden focus:outline-hidden"
-												>
-													<Component className="size-4.5" strokeWidth="1.5" />
-												</div>
+											
 											</IntegrationsMenu>
 										{/if}
 
@@ -1588,6 +1623,7 @@
 										{#if (!history?.currentId || history.messages[history.currentId]?.done == true) && ($_user?.role === 'admin' || ($_user?.permissions?.chat?.stt ?? true))}
 											<!-- {$i18n.t('Record voice')} -->
 											<Tooltip content={$i18n.t('Dictate')}>
+												
 												<button
 													id="voice-input-button"
 													class=" text-gray-600 dark:text-gray-300 hover:text-gray-700 dark:hover:text-gray-200 transition rounded-full p-1.5 mr-0.5 self-center"

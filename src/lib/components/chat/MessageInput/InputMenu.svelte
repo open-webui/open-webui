@@ -148,6 +148,7 @@
 								? 'opacity-50'
 								: ''}"
 							on:click={() => {
+								console.log("I am clicking camera")
 								if (fileUploadEnabled) {
 									if (!detectMobile()) {
 										screenCaptureHandler();
@@ -162,7 +163,7 @@
 							}}
 						>
 							<Camera />
-							<div class=" line-clamp-1">{$i18n.t('Capture')}</div>
+							<!-- <div class=" line-clamp-1">{$i18n.t('Capture')}</div> -->
 						</DropdownMenu.Item>
 					</Tooltip>
 
@@ -175,7 +176,7 @@
 									: ''}
 							className="w-full"
 						>
-							<button
+							<!-- <button
 								class="flex gap-2 w-full items-center px-3 py-1.5 text-sm cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 rounded-xl {!fileUploadEnabled
 									? 'opacity-50'
 									: ''}"
@@ -194,7 +195,7 @@
 										<ChevronRight />
 									</div>
 								</div>
-							</button>
+							</button> -->
 						</Tooltip>
 					{/if}
 
@@ -206,7 +207,7 @@
 								: ''}
 						className="w-full"
 					>
-						<button
+						<!-- <button
 							class="flex gap-2 w-full items-center px-3 py-1.5 text-sm cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 rounded-xl {!fileUploadEnabled
 								? 'opacity-50'
 								: ''}"
@@ -225,7 +226,7 @@
 									<ChevronRight />
 								</div>
 							</div>
-						</button>
+						</button> -->
 					</Tooltip>
 
 					{#if ($chats ?? []).length > 0}
@@ -237,7 +238,7 @@
 									: ''}
 							className="w-full"
 						>
-							<button
+							<!-- <button
 								class="flex gap-2 w-full items-center px-3 py-1.5 text-sm cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 rounded-xl {!fileUploadEnabled
 									? 'opacity-50'
 									: ''}"
@@ -256,13 +257,13 @@
 										<ChevronRight />
 									</div>
 								</div>
-							</button>
+							</button> -->
 						</Tooltip>
 					{/if}
 
 					{#if fileUploadEnabled}
 						{#if $config?.features?.enable_google_drive_integration}
-							<DropdownMenu.Item
+							<!-- <DropdownMenu.Item
 								class="flex gap-2 items-center px-3 py-1.5 text-sm cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 rounded-xl"
 								on:click={() => {
 									uploadGoogleDriveHandler();
@@ -295,7 +296,7 @@
 									/>
 								</svg>
 								<div class="line-clamp-1">{$i18n.t('Google Drive')}</div>
-							</DropdownMenu.Item>
+							</DropdownMenu.Item> -->
 						{/if}
 
 						{#if $config?.features?.enable_onedrive_integration && ($config?.features?.enable_onedrive_personal || $config?.features?.enable_onedrive_business)}
@@ -397,7 +398,7 @@
 									alignOffset={$mobile ? 0 : -8}
 								>
 									{#if $config?.features?.enable_onedrive_personal}
-										<DropdownMenu.Item
+										<!-- <DropdownMenu.Item
 											class="flex gap-2 items-center px-3 py-1.5 text-sm cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 rounded-xl"
 											on:click={() => {
 												uploadOneDriveHandler('personal');
@@ -406,11 +407,11 @@
 											<div class="flex flex-col">
 												<div class="line-clamp-1">{$i18n.t('Microsoft OneDrive (personal)')}</div>
 											</div>
-										</DropdownMenu.Item>
+										</DropdownMenu.Item> -->
 									{/if}
 
 									{#if $config?.features?.enable_onedrive_business}
-										<DropdownMenu.Item
+										<!-- <DropdownMenu.Item
 											class="flex gap-2 items-center px-3 py-1.5 text-sm cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 rounded-xl"
 											on:click={() => {
 												uploadOneDriveHandler('organizations');
@@ -422,7 +423,7 @@
 												</div>
 												<div class="text-xs text-gray-500">{$i18n.t('Includes SharePoint')}</div>
 											</div>
-										</DropdownMenu.Item>
+										</DropdownMenu.Item> -->
 									{/if}
 								</DropdownMenu.SubContent>
 							</DropdownMenu.Sub>
