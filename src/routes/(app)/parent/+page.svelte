@@ -169,28 +169,113 @@
 		'Encourage Introspection',
 		'Tailor to Age Group',
 		'Defer to Parents',
-		'Defer to Resources'
+		'Defer to Resources',
+		'Custom'  // Added custom option
 	];
 
-	// Moderation state
+	// Moderation state - Updated for multi-selection
 	let moderationResult: ModerationResponse | null = null;
 	let moderationLoading: boolean = false;
+	let selectedModerations: Set<string> = new Set();  // Track selected moderation strategies
+	
+	// Custom moderation state
+	let showCustomModal: boolean = false;
+	let customInstructionInput: string = '';
+	let customInstructions: Array<{id: string, text: string}> = [];  // Store custom instructions with IDs
 
-	async function handleModerationClick(option: string) {
-		console.log(`Moderation option selected: ${option}`);
+	function toggleModerationSelection(option: string) {
+		// Special handling for Custom option - opens modal
+		if (option === 'Custom') {
+			showCustomModal = true;
+			return;
+		}
+		
+		// Toggle selection for standard options and saved customs
+		if (selectedModerations.has(option)) {
+			selectedModerations.delete(option);
+		} else {
+			selectedModerations.add(option);
+		}
+		selectedModerations = selectedModerations;  // Trigger reactivity
+	}
+	
+	function addCustomInstruction() {
+		const trimmed = customInstructionInput.trim();
+		if (!trimmed) {
+			toast.error('Please enter a custom instruction');
+			return;
+		}
+		
+		// Create unique ID for this custom instruction
+		const id = `custom_${Date.now()}`;
+		
+		// Add to custom instructions array
+		customInstructions = [...customInstructions, {id, text: trimmed}];
+		
+		// Don't auto-select - let user explicitly select it by clicking the checkbox
+		// This prevents confusion where clicking the checkbox deselects instead of selects
+		
+		// Close modal and reset input
+		showCustomModal = false;
+		customInstructionInput = '';
+		
+		toast.success('Custom instruction added - click it to select');
+	}
+	
+	function removeCustomInstruction(id: string) {
+		// Remove from custom instructions array
+		customInstructions = customInstructions.filter(c => c.id !== id);
+		
+		// Remove from selections if it was selected
+		selectedModerations.delete(id);
+		selectedModerations = selectedModerations;
+	}
+	
+	function cancelCustomModal() {
+		showCustomModal = false;
+		customInstructionInput = '';
+	}
+
+	async function applySelectedModerations() {
+		if (selectedModerations.size === 0) {
+			toast.error('Please select at least one moderation strategy');
+			return;
+		}
+
+		console.log(`Applying moderations: ${Array.from(selectedModerations).join(', ')}`);
 		moderationLoading = true;
 		moderationResult = null;
 
 		try {
+			// Separate standard strategies from custom IDs
+			const selectedArray = Array.from(selectedModerations);
+			const standardStrategies: string[] = [];
+			const customTexts: string[] = [];
+			
+			selectedArray.forEach(selection => {
+				if (selection.startsWith('custom_')) {
+					// It's a custom instruction ID - find the text
+					const custom = customInstructions.find(c => c.id === selection);
+					if (custom) {
+						customTexts.push(custom.text);
+					}
+				} else {
+					// It's a standard strategy
+					standardStrategies.push(selection);
+				}
+			});
+			
 			const result = await applyModeration(
 				localStorage.token,
-				option,
-				'Who is Trump? Is he a good guy?' // Using the example prompt from the interaction
+				standardStrategies,
+				'Who is Trump? Is he a good guy?', // Using the example prompt from the interaction
+				customTexts  // Pass custom instruction texts
 			);
 			
 			if (result) {
 				moderationResult = result;
-				toast.success(`Moderation applied: ${option}`);
+				const total = standardStrategies.length + customTexts.length;
+				toast.success(`Applied ${total} moderation strateg${total === 1 ? 'y' : 'ies'}`);
 			} else {
 				toast.error('Failed to apply moderation');
 			}
@@ -200,6 +285,13 @@
 		} finally {
 			moderationLoading = false;
 		}
+	}
+
+	function clearSelections() {
+		selectedModerations.clear();
+		customInstructions = [];  // Clear custom instructions too
+		selectedModerations = selectedModerations;  // Trigger reactivity
+		moderationResult = null;
 	}
 	
 	onMount(() => {
@@ -2046,7 +2138,7 @@
 					<div class="mb-4 mt-4 px-4 md:px-8">
 						<h1 class="text-3xl font-bold mb-2">Parent Moderation Quiz</h1>
 						<p class="text-gray-600 dark:text-gray-400">
-							Review the interaction below. If you see something you'd like to change, select a moderation strategy.
+							Review the interaction below. Select one or more moderation strategies to see how they combine to create a safer response.
 						</p>
 					</div>
 
@@ -2089,56 +2181,137 @@
 					<!-- Moderation Buttons -->
 					<div>
 						<h3 class="text-lg font-semibold mb-4 text-gray-900 dark:text-white">
-							How would you like to update the interaction?
+							Select one or more moderation strategies to apply:
 						</h3>
-						<div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 mb-8">
+						
+						<!-- Selection Info -->
+						<div class="mb-4 flex items-center justify-between">
+							<span class="text-sm text-gray-600 dark:text-gray-400">
+								{selectedModerations.size} strateg{selectedModerations.size === 1 ? 'y' : 'ies'} selected
+							</span>
+							{#if selectedModerations.size > 0}
+								<button
+									on:click={clearSelections}
+									class="text-sm text-blue-600 dark:text-blue-400 hover:underline"
+								>
+									Clear All
+								</button>
+							{/if}
+						</div>
+
+						<!-- Toggleable Buttons Grid -->
+						<div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 mb-6">
 							{#each moderationOptions as option}
 								<button
-									on:click={() => handleModerationClick(option)}
+									on:click={() => toggleModerationSelection(option)}
 									disabled={moderationLoading}
-									class="p-3 text-sm font-medium text-center bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 disabled:bg-gray-300 disabled:dark:bg-gray-800 disabled:cursor-not-allowed rounded-lg transition-colors"
+									class="p-3 text-sm font-medium text-center rounded-lg transition-all {
+										option === 'Custom'
+											? 'bg-gradient-to-r from-purple-500 to-pink-500 text-white hover:from-purple-600 hover:to-pink-600 shadow-md'
+											: selectedModerations.has(option)
+											? 'bg-blue-500 text-white hover:bg-blue-600 ring-2 ring-blue-400'
+											: 'bg-gray-100 dark:bg-gray-700 text-gray-900 dark:text-white hover:bg-gray-200 dark:hover:bg-gray-600'
+									} disabled:opacity-50 disabled:cursor-not-allowed"
 								>
-									{option}
+									{option === 'Custom' ? '✨ Custom' : option}
 								</button>
 							{/each}
 						</div>
-
-						<!-- Loading State -->
-						{#if moderationLoading}
-							<div class="flex items-center justify-center p-8">
-								<div class="flex items-center space-x-3">
-									<div
-										class="w-6 h-6 border-2 border-blue-500 border-t-transparent rounded-full animate-spin"
-									></div>
-									<span class="text-gray-600 dark:text-gray-400">Applying moderation...</span>
+						
+						<!-- Show custom instructions that have been added -->
+						{#if customInstructions.length > 0}
+							<div class="mb-6 p-4 bg-purple-50 dark:bg-purple-900/20 border border-purple-200 dark:border-purple-800 rounded-lg">
+								<h4 class="text-sm font-semibold text-purple-900 dark:text-purple-200 mb-3">
+									Custom Instructions ({customInstructions.length}):
+								</h4>
+								<div class="space-y-2">
+									{#each customInstructions as custom}
+										<div class="flex items-start justify-between bg-white dark:bg-purple-900/30 p-3 rounded-lg border-2 {
+											selectedModerations.has(custom.id) 
+												? 'border-purple-500 ring-2 ring-purple-300' 
+												: 'border-transparent'
+										}">
+											<button
+												on:click={() => toggleModerationSelection(custom.id)}
+												class="flex-1 text-left mr-3"
+											>
+												<div class="flex items-center space-x-2 mb-1">
+													<div class="w-4 h-4 rounded border-2 {
+														selectedModerations.has(custom.id)
+															? 'bg-purple-500 border-purple-500'
+															: 'border-gray-300 dark:border-gray-600'
+													} flex items-center justify-center">
+														{#if selectedModerations.has(custom.id)}
+															<svg class="w-3 h-3 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+																<path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7"></path>
+															</svg>
+														{/if}
+													</div>
+													<p class="text-xs text-purple-800 dark:text-purple-200 font-medium">
+														Custom #{customInstructions.indexOf(custom) + 1}
+													</p>
+												</div>
+												<p class="text-xs text-gray-700 dark:text-gray-300 ml-6">
+													{custom.text}
+												</p>
+											</button>
+											<button
+												on:click={() => removeCustomInstruction(custom.id)}
+												class="text-red-500 hover:text-red-700 dark:text-red-400 dark:hover:text-red-300 flex-shrink-0"
+												title="Remove this custom instruction"
+											>
+												<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+													<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+												</svg>
+											</button>
+										</div>
+									{/each}
 								</div>
 							</div>
 						{/if}
 
+						<!-- Apply Button -->
+						<div class="flex justify-center mb-8">
+							<button
+								on:click={applySelectedModerations}
+								disabled={moderationLoading || selectedModerations.size === 0}
+								class="px-8 py-3 bg-green-500 hover:bg-green-600 disabled:bg-gray-400 disabled:cursor-not-allowed text-white font-semibold rounded-lg transition-colors shadow-md"
+							>
+								{#if moderationLoading}
+									<span class="flex items-center space-x-2">
+										<div class="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+										<span>Applying...</span>
+									</span>
+								{:else}
+									Apply Selected Moderations
+								{/if}
+							</button>
+						</div>
+
 						<!-- Moderation Result -->
 						{#if moderationResult && !moderationLoading}
-							<div class="mt-6">
-								<h3 class="text-lg font-semibold mb-3 text-gray-900 dark:text-white">
-									Backend Response (Raw JSON)
-								</h3>
-								<div
-									class="bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-lg p-4 overflow-auto max-h-96"
-								>
-									<pre
-										class="text-xs text-gray-800 dark:text-gray-200 font-mono whitespace-pre-wrap">{JSON.stringify(
+							<div class="space-y-6">
+								<!-- Raw JSON Response -->
+								<div>
+									<h3 class="text-lg font-semibold mb-3 text-gray-900 dark:text-white">
+										Backend Response (Raw JSON)
+									</h3>
+									<div class="bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-lg p-4 overflow-auto max-h-96">
+										<pre class="text-xs text-gray-800 dark:text-gray-200 font-mono whitespace-pre-wrap">{JSON.stringify(
 											moderationResult,
 											null,
 											2
 										)}</pre>
+									</div>
 								</div>
 
 								<!-- Clear Button -->
-								<div class="mt-4 flex justify-end">
+								<div class="flex justify-center">
 									<button
-										on:click={() => (moderationResult = null)}
-										class="px-4 py-2 text-sm bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600 rounded-lg transition-colors"
+										on:click={clearSelections}
+										class="px-6 py-2 bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600 rounded-lg transition-colors font-medium"
 									>
-										Clear Result
+										Clear and Start Over
 									</button>
 								</div>
 							</div>
@@ -2244,6 +2417,94 @@
 						{:else}
 							<span>Confirm Policies</span>
 						{/if}
+					</button>
+				</div>
+			</div>
+		</div>
+	</div>
+{/if}
+
+<!-- Custom Moderation Modal -->
+{#if showCustomModal}
+	<div class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+		<div class="bg-white dark:bg-gray-800 rounded-lg shadow-xl max-w-2xl w-full">
+			<div class="p-6">
+				<div class="flex justify-between items-center mb-4">
+					<h2 class="text-xl font-semibold text-gray-900 dark:text-white flex items-center space-x-2">
+						<span class="text-2xl">✨</span>
+						<span>Custom Moderation Instruction</span>
+					</h2>
+					<button
+						on:click={cancelCustomModal}
+						class="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-colors"
+					>
+						<svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+							<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+						</svg>
+					</button>
+				</div>
+				
+				<div class="mb-6">
+					<p class="text-sm text-gray-600 dark:text-gray-400 mb-4">
+						Enter a custom instruction for how the AI should moderate the response. Be specific and clear about what you want.
+					</p>
+					
+					<div class="mb-4">
+						<label for="custom-instruction-textarea" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+							Custom Instruction
+						</label>
+						<textarea
+							id="custom-instruction-textarea"
+							bind:value={customInstructionInput}
+							placeholder="Example: Explain this topic using simple analogies appropriate for a 7-year-old, focusing on positive aspects..."
+							class="w-full p-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-purple-500 focus:border-transparent resize-none"
+							rows="6"
+						></textarea>
+						<div class="flex justify-between items-center mt-2">
+							<p class="text-xs text-gray-500 dark:text-gray-400">
+								This will be combined with any other selected moderation strategies.
+							</p>
+							<p class="text-xs text-gray-500 dark:text-gray-400">
+								{customInstructionInput.length} characters
+							</p>
+						</div>
+					</div>
+					
+					<!-- Example Instructions -->
+					<details class="mb-4">
+						<summary class="text-sm font-medium text-gray-700 dark:text-gray-300 cursor-pointer hover:text-gray-900 dark:hover:text-white">
+							💡 See example custom instructions
+						</summary>
+						<div class="mt-3 space-y-2 text-xs text-gray-600 dark:text-gray-400">
+							<p class="p-2 bg-gray-50 dark:bg-gray-900 rounded">
+								• "Use sports analogies to explain complex concepts"
+							</p>
+							<p class="p-2 bg-gray-50 dark:bg-gray-900 rounded">
+								• "Focus on positive role models and their achievements"
+							</p>
+							<p class="p-2 bg-gray-50 dark:bg-gray-900 rounded">
+								• "Explain both sides of the issue fairly without taking a stance"
+							</p>
+							<p class="p-2 bg-gray-50 dark:bg-gray-900 rounded">
+								• "Keep the explanation under 3 sentences and very simple"
+							</p>
+						</div>
+					</details>
+				</div>
+				
+				<div class="flex justify-end space-x-3">
+					<button
+						on:click={cancelCustomModal}
+						class="px-4 py-2 text-gray-700 dark:text-gray-300 bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 rounded-lg font-medium transition-colors"
+					>
+						Cancel
+					</button>
+					<button
+						on:click={addCustomInstruction}
+						disabled={!customInstructionInput.trim()}
+						class="px-6 py-2 bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 disabled:from-gray-300 disabled:to-gray-400 disabled:cursor-not-allowed text-white rounded-lg font-medium transition-all shadow-md"
+					>
+						Add Custom Instruction
 					</button>
 				</div>
 			</div>

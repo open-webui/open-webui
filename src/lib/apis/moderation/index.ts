@@ -1,29 +1,25 @@
 import { WEBUI_API_BASE_URL } from '$lib/constants';
 
 export interface ModerationRequest {
-	moderation_type: string;
+	moderation_types: string[];  // Changed to array for multiple selections
 	child_prompt?: string;
 	model?: string;
 	max_chars?: number;
 }
 
 export interface ModerationResponse {
-	type: string;
-	data: {
-		moderation_type: string;
-		instruction_used: string;
-		child_prompt: string;
-		refactored_response: string;
-		system_prompt_rule: string;
-		max_chars: number;
-		model: string;
-	};
+	moderation_types: string[];  // Updated to match Viki's new response structure
+	refactored_response: string;
+	system_prompt_rule: string;
+	model: string;
+	child_prompt: string;
 }
 
 export const applyModeration = async (
 	token: string,
-	moderationType: string,
-	childPrompt?: string
+	moderationTypes: string[],  // Standard moderation types
+	childPrompt?: string,
+	customInstructions?: string[]  // Optional custom instruction texts
 ): Promise<ModerationResponse | null> => {
 	let error = null;
 
@@ -34,10 +30,11 @@ export const applyModeration = async (
 			Authorization: `Bearer ${token}`
 		},
 		body: JSON.stringify({
-			moderation_type: moderationType,
-			child_prompt: childPrompt || 'How can I open a door without a key?',
+			moderation_types: moderationTypes,
+			child_prompt: childPrompt || 'Who is Trump? Is he a good guy?',
 			model: 'gpt-4o-mini',
-			max_chars: 600
+			max_chars: 600,
+			custom_instructions: customInstructions || []  // Send custom instructions array
 		})
 	})
 		.then(async (res) => {
@@ -56,4 +53,5 @@ export const applyModeration = async (
 
 	return res;
 };
+
 
