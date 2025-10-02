@@ -5,7 +5,7 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [0.6.33] - 2025-10-02
+## [0.6.33] - 2025-10-10
 
 ### Added
 
@@ -16,7 +16,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - 🔢 Ollama embedding endpoint now supports the optional dimensions parameter for controlling embedding output size, compatible with Ollama v0.11.11 and later. [#17942](https://github.com/open-webui/open-webui/pull/17942)
 - ⚡ Page initialization performance is improved by eliminating redundant API calls to the folders endpoint, reducing initial requests by approximately 30%. [#17889](https://github.com/open-webui/open-webui/pull/17889)
 - 🔄 Various improvements were implemented across the frontend and backend to enhance performance, stability, and security.
-- 🌐 Translations for German, Danish, Korean, Simplified Chinese, and Traditional Chinese were enhanced and expanded.
+- 🌐 Translations for German, Danish, Korean, Portuguese (Brazil), Simplified Chinese, and Traditional Chinese were enhanced and expanded.
 
 ### Fixed
 
@@ -29,6 +29,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - ⚡ Task model function calling performance is improved by excluding base64 image data from payloads, significantly reducing token count and memory usage when images are present in conversations. [#17897](https://github.com/open-webui/open-webui/pull/17897)
 - 💬 Follow-up query suggestions are now generated and displayed in temporary chats, matching the behavior of saved chats. [#14987](https://github.com/open-webui/open-webui/issues/14987)
 - 🔊 Azure Text-to-Speech now properly escapes special characters like ampersands in SSML, preventing HTTP 400 errors and ensuring audio generation succeeds for all text content. [#17962](https://github.com/open-webui/open-webui/issues/17962)
+- 🛠️ MCP mode tool server connections no longer incorrectly validate the OpenAPI path field, allowing seamless switching between OpenAPI and MCP connection types. [#17989](https://github.com/open-webui/open-webui/pull/17989), [#17988](https://github.com/open-webui/open-webui/issues/17988)
 - 🛠️ Third-party tool responses containing non-UTF8 or invalid byte sequences are now handled gracefully without causing request failures. [#17882](https://github.com/open-webui/open-webui/pull/17882)
 - ⌨️ Ctrl+Enter keyboard shortcut now correctly sends messages in mobile and narrow browser views on Chrome instead of inserting newlines. [#17975](https://github.com/open-webui/open-webui/issues/17975)
 - ⌨️ Tab characters are now preserved when pasting code or formatted text into the chat input box in plain text mode. [#17958](https://github.com/open-webui/open-webui/issues/17958)
