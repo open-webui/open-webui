@@ -1004,7 +1004,7 @@ async def process_chat_payload(request, form_data, user, metadata, model):
     if system_message:
         try:
             form_data = apply_system_prompt_to_body(
-                system_message.get("content"), form_data, metadata, user
+                system_message.get("content"), form_data, metadata, user, replace=True
             )
         except:
             pass
