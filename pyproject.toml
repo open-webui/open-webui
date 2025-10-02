@@ -14,9 +14,8 @@ dependencies = [
 
     "python-socketio==5.13.0",
     "python-jose==3.4.0",
-    "passlib[bcrypt]==1.7.4",
     "cryptography",
-    "bcrypt==4.3.0",
+    "bcrypt==5.0.0",
     "argon2-cffi==25.1.0",
     "PyJWT[crypto]==2.10.1",
     "authlib==1.6.3",
