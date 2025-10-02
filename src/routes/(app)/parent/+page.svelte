@@ -45,6 +45,7 @@
 	type SecondQuestionOption = 'option1' | 'option2' | 'option3';
 	type Tab =
 		| 'overview'
+		| 'child_profile'
 		| 'activity'
 		| 'conversations'
 		| 'users'
@@ -58,6 +59,17 @@
 	let activeTab: Tab = 'overview'; // Default to overview tab
 	let sexualExplicitness: number = 5; // Default value for the slider (0-10 range)
 	let sidebarCollapsed: boolean = false; // State for sidebar collapse
+	
+	// Child profile data
+	let childAge: string = '';
+	let childGender: string = '';
+	let childCharacteristics: string = '';
+	let parentGender: string = '';
+	let parentAge: string = '';
+	let parentPreference: string = '';
+	let parentingStyle: string = '';
+	let profileSubmitted: boolean = false; // Track if profile has been submitted
+	let isEditingProfile: boolean = false; // Track if in edit mode
 
 	// Graph state
 	let plotPoints: PlotPoint[] = [];
@@ -210,6 +222,9 @@
 			if (savedSidebarState !== null) {
 				sidebarCollapsed = savedSidebarState === 'true';
 			}
+			
+			// Load child profile data
+			loadChildProfile();
 		};
 		init();
 		
@@ -259,6 +274,59 @@
 		sidebarCollapsed = !sidebarCollapsed;
 		// Save sidebar state to localStorage
 		localStorage.setItem('parentDashboardSidebarCollapsed', String(sidebarCollapsed));
+	}
+	
+	// Child profile functions
+	function saveChildProfile() {
+		const childProfile = {
+			childAge,
+			childGender,
+			childCharacteristics,
+			parentGender,
+			parentAge,
+			parentPreference,
+			parentingStyle,
+			profileSubmitted: true
+		};
+		localStorage.setItem('childProfile', JSON.stringify(childProfile));
+		profileSubmitted = true;
+		isEditingProfile = false;
+		toast.success('Child profile saved successfully!');
+	}
+	
+	function loadChildProfile() {
+		const saved = localStorage.getItem('childProfile');
+		if (saved) {
+			const profile = JSON.parse(saved);
+			childAge = profile.childAge || '';
+			childGender = profile.childGender || '';
+			childCharacteristics = profile.childCharacteristics || '';
+			parentGender = profile.parentGender || '';
+			parentAge = profile.parentAge || '';
+			parentPreference = profile.parentPreference || '';
+			parentingStyle = profile.parentingStyle || '';
+			profileSubmitted = profile.profileSubmitted || false;
+		}
+	}
+	
+	function startEditingProfile() {
+		isEditingProfile = true;
+	}
+	
+	// Helper function to format display values
+	function formatDisplayValue(value: string, type: string): string {
+		if (!value) return 'Not specified';
+		
+		switch (type) {
+			case 'age':
+				return value === '60+' ? '60+' : `${value} years old`;
+			case 'gender':
+				return value.charAt(0).toUpperCase() + value.slice(1);
+			case 'ageRange':
+				return value;
+			default:
+				return value;
+		}
 	}
 	
 	function handleSliderChange(event: Event) {
@@ -705,6 +773,17 @@
 					</button>
 					
 					<button
+						on:click={() => handleTabClick('child_profile')}
+						class="w-full flex items-center {sidebarCollapsed ? 'justify-center' : 'space-x-3'} px-3 py-2 rounded-lg text-sm font-medium transition-colors {activeTab === 'child_profile' ? 'bg-blue-100 dark:bg-blue-900/20 text-blue-700 dark:text-blue-300' : 'text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800'}"
+						title="Child Profile"
+					>
+						<UserGroup className="size-4" />
+						{#if !sidebarCollapsed}
+							<span>Child Profile</span>
+						{/if}
+					</button>
+					
+					<button
 						on:click={() => handleTabClick('activity')}
 						class="w-full flex items-center {sidebarCollapsed ? 'justify-center' : 'space-x-3'} px-3 py-2 rounded-lg text-sm font-medium transition-colors {activeTab === 'activity' ? 'bg-blue-100 dark:bg-blue-900/20 text-blue-700 dark:text-blue-300' : 'text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800'}"
 						title="Activity History"
@@ -909,6 +988,258 @@
 							</div>
 						</div>
 					</div>
+				{:else if activeTab === 'child_profile'}
+					<!-- Child Profile Tab -->
+					<div class="mb-4 mt-2">
+						<h1 class="text-3xl font-bold mb-2">Child Profile</h1>
+						<p class="text-gray-600 dark:text-gray-400">
+							{#if profileSubmitted && !isEditingProfile}
+								View and manage your child's profile information.
+							{:else}
+								Collect and manage your child's information to personalize their AI learning experience.
+							{/if}
+						</p>
+					</div>
+					
+					{#if profileSubmitted && !isEditingProfile}
+						<!-- Profile Display View -->
+						<div class="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg p-6">
+							<!-- Header with Edit Button -->
+							<div class="flex justify-between items-center mb-6">
+								<h2 class="text-xl font-semibold text-gray-900 dark:text-white">Child Profile Information</h2>
+								<button
+									on:click={startEditingProfile}
+									class="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded-lg font-medium transition-colors focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
+								>
+									Change Profile
+								</button>
+							</div>
+							
+							<!-- Profile Display -->
+							<div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+								<!-- Child Information -->
+								<div class="space-y-6">
+									<h3 class="text-lg font-semibold text-gray-900 dark:text-white border-b border-gray-200 dark:border-gray-700 pb-2">
+										Child Information
+									</h3>
+									
+									<div class="space-y-4">
+										<div>
+											<span class="text-sm font-medium text-gray-600 dark:text-gray-400">Age:</span>
+											<p class="text-gray-900 dark:text-white">{formatDisplayValue(childAge, 'age')}</p>
+										</div>
+										
+										<div>
+											<span class="text-sm font-medium text-gray-600 dark:text-gray-400">Gender:</span>
+											<p class="text-gray-900 dark:text-white">{formatDisplayValue(childGender, 'gender')}</p>
+										</div>
+										
+										<div>
+											<span class="text-sm font-medium text-gray-600 dark:text-gray-400">Characteristics:</span>
+											<p class="text-gray-900 dark:text-white whitespace-pre-wrap">{childCharacteristics || 'Not specified'}</p>
+										</div>
+									</div>
+								</div>
+								
+								<!-- Parent Information -->
+								<div class="space-y-6">
+									<h3 class="text-lg font-semibold text-gray-900 dark:text-white border-b border-gray-200 dark:border-gray-700 pb-2">
+										Parent Information
+									</h3>
+									
+									<div class="space-y-4">
+										<div>
+											<span class="text-sm font-medium text-gray-600 dark:text-gray-400">Parent Gender:</span>
+											<p class="text-gray-900 dark:text-white">{formatDisplayValue(parentGender, 'gender')}</p>
+										</div>
+										
+										<div>
+											<span class="text-sm font-medium text-gray-600 dark:text-gray-400">Parent Age Range:</span>
+											<p class="text-gray-900 dark:text-white">{formatDisplayValue(parentAge, 'ageRange')}</p>
+										</div>
+										
+										<div>
+											<span class="text-sm font-medium text-gray-600 dark:text-gray-400">Parent Preferences:</span>
+											<p class="text-gray-900 dark:text-white whitespace-pre-wrap">{parentPreference || 'Not specified'}</p>
+										</div>
+									</div>
+								</div>
+							</div>
+							
+							<!-- Parenting Style -->
+							<div class="mt-8 pt-6 border-t border-gray-200 dark:border-gray-700">
+								<div>
+									<span class="text-sm font-medium text-gray-600 dark:text-gray-400">Parenting Style:</span>
+									<p class="text-gray-900 dark:text-white whitespace-pre-wrap mt-2">{parentingStyle || 'Not specified'}</p>
+								</div>
+							</div>
+						</div>
+					{:else}
+						<!-- Profile Form View -->
+						<div class="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg p-6">
+							<form on:submit|preventDefault={saveChildProfile} class="space-y-6">
+							<!-- Child Information Section -->
+							<div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+								<!-- Left Column: Child Data -->
+								<div class="space-y-4">
+									<h3 class="text-lg font-semibold text-gray-900 dark:text-white mb-4">Child Information</h3>
+									
+									<!-- Age -->
+									<div>
+										<label for="child-age" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+											A. Age
+										</label>
+										<select
+											id="child-age"
+											bind:value={childAge}
+											class="w-full p-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+										>
+											<option value="">Select age</option>
+											<option value="3">3 years old</option>
+											<option value="4">4 years old</option>
+											<option value="5">5 years old</option>
+											<option value="6">6 years old</option>
+											<option value="7">7 years old</option>
+											<option value="8">8 years old</option>
+											<option value="9">9 years old</option>
+											<option value="10">10 years old</option>
+											<option value="11">11 years old</option>
+											<option value="12">12 years old</option>
+											<option value="13">13 years old</option>
+											<option value="14">14 years old</option>
+											<option value="15">15 years old</option>
+											<option value="16">16 years old</option>
+											<option value="17">17 years old</option>
+										</select>
+									</div>
+									
+									<!-- Gender -->
+									<div>
+										<label for="child-gender" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+											B. Gender
+										</label>
+										<select
+											id="child-gender"
+											bind:value={childGender}
+											class="w-full p-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+										>
+											<option value="">Select gender</option>
+											<option value="male">Male</option>
+											<option value="female">Female</option>
+											<option value="non-binary">Non-binary</option>
+											<option value="prefer-not-to-say">Prefer not to say</option>
+										</select>
+									</div>
+									
+									<!-- Characteristics -->
+									<div>
+										<label for="child-characteristics" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+											C. Characteristics
+										</label>
+										<textarea
+											id="child-characteristics"
+											bind:value={childCharacteristics}
+											placeholder="Describe your child's personality, interests, learning style, strengths, challenges, etc."
+											rows="4"
+											class="w-full p-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none"
+										></textarea>
+									</div>
+								</div>
+								
+								<!-- Right Column: Parent Data -->
+								<div class="space-y-4">
+									<h3 class="text-lg font-semibold text-gray-900 dark:text-white mb-4">Parent Information</h3>
+									
+									<!-- Parent Gender -->
+									<div>
+										<label for="parent-gender" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+											Parent Gender
+										</label>
+										<select
+											id="parent-gender"
+											bind:value={parentGender}
+											class="w-full p-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+										>
+											<option value="">Select gender</option>
+											<option value="male">Male</option>
+											<option value="female">Female</option>
+											<option value="non-binary">Non-binary</option>
+											<option value="prefer-not-to-say">Prefer not to say</option>
+										</select>
+									</div>
+									
+									<!-- Parent Age -->
+									<div>
+										<label for="parent-age" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+											Parent Age
+										</label>
+										<select
+											id="parent-age"
+											bind:value={parentAge}
+											class="w-full p-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+										>
+											<option value="">Select age range</option>
+											<option value="20-25">20-25</option>
+											<option value="26-30">26-30</option>
+											<option value="31-35">31-35</option>
+											<option value="36-40">36-40</option>
+											<option value="41-45">41-45</option>
+											<option value="46-50">46-50</option>
+											<option value="51-55">51-55</option>
+											<option value="56-60">56-60</option>
+											<option value="60+">60+</option>
+										</select>
+									</div>
+									
+									<!-- Parent Preference -->
+									<div>
+										<label for="parent-preference" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+											Parent Preference?
+										</label>
+										<textarea
+											id="parent-preference"
+											bind:value={parentPreference}
+											placeholder="Any specific preferences for your child's AI interactions, content filtering, educational focus, etc."
+											rows="3"
+											class="w-full p-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none"
+										></textarea>
+									</div>
+								</div>
+							</div>
+							
+							<!-- Parenting Style Section -->
+							<div class="mt-6">
+								<label for="parenting-style" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+									D. Describe your parenting style
+								</label>
+								<textarea
+									id="parenting-style"
+									bind:value={parentingStyle}
+									placeholder="Describe your approach to parenting, values you want to instill, discipline style, educational philosophy, etc."
+									rows="4"
+									class="w-full p-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none"
+								></textarea>
+							</div>
+							
+							<!-- Submit Button -->
+							<div class="flex justify-end pt-6">
+								<button
+									type="submit"
+									class="bg-blue-500 hover:bg-blue-600 text-white px-6 py-3 rounded-lg font-medium transition-colors focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
+								>
+									SUBMIT
+								</button>
+							</div>
+							</form>
+						</div>
+						
+						<!-- Contextual Factors Note -->
+						<div class="mt-6 p-4 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg">
+							<p class="text-sm text-blue-800 dark:text-blue-200">
+								<strong>Note:</strong> This information will be used to collect possible contextual factors that help personalize your child's AI learning experience. The data is stored locally and can be updated at any time.
+							</p>
+						</div>
+					{/if}
 				{:else if activeTab === 'policy'}
 					<!-- Policy Making Tab -->
 					<div class="mb-4 mt-4 px-4 md:px-8">
