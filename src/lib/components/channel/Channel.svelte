@@ -160,7 +160,7 @@
 	};
 
 	const onChange = async () => {
-		$socket?.emit('channel-events', {
+		$socket?.emit('events:channel', {
 			channel_id: id,
 			message_id: null,
 			data: {
@@ -180,7 +180,7 @@
 			chatId.set('');
 		}
 
-		$socket?.on('channel-events', channelEventHandler);
+		$socket?.on('events:channel', channelEventHandler);
 
 		mediaQuery = window.matchMedia('(min-width: 1024px)');
 
@@ -197,7 +197,7 @@
 	});
 
 	onDestroy(() => {
-		$socket?.off('channel-events', channelEventHandler);
+		$socket?.off('events:channel', channelEventHandler);
 	});
 </script>
 

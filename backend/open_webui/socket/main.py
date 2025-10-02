@@ -356,7 +356,7 @@ async def join_note(sid, data):
     await sio.enter_room(sid, f"note:{note.id}")
 
 
-@sio.on("channel-events")
+@sio.on("events:channel")
 async def channel_events(sid, data):
     room = f"channel:{data['channel_id']}"
     participants = sio.manager.get_participants(
@@ -373,7 +373,7 @@ async def channel_events(sid, data):
 
     if event_type == "typing":
         await sio.emit(
-            "channel-events",
+            "events:channel",
             {
                 "channel_id": data["channel_id"],
                 "message_id": data.get("message_id", None),
@@ -658,7 +658,7 @@ def get_event_emitter(request_info, update_db=True):
 
         emit_tasks = [
             sio.emit(
-                "chat-events",
+                "events",
                 {
                     "chat_id": chat_id,
                     "message_id": message_id,
@@ -770,7 +770,7 @@ def get_event_emitter(request_info, update_db=True):
 def get_event_call(request_info):
     async def __event_caller__(event_data):
         response = await sio.call(
-            "chat-events",
+            "events",
             {
                 "chat_id": request_info.get("chat_id", None),
                 "message_id": request_info.get("message_id", None),
