@@ -506,7 +506,10 @@
 	};
 
 	const savedModelIds = async () => {
-		if ($selectedFolder && $selectedFolder?.data?.model_ids !== selectedModels) {
+		if (
+			$selectedFolder &&
+			JSON.stringify($selectedFolder?.data?.model_ids) !== JSON.stringify(selectedModels)
+		) {
 			const res = await updateFolderById(localStorage.token, $selectedFolder.id, {
 				data: {
 					model_ids: selectedModels
