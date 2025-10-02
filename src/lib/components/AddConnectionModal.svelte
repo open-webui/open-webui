@@ -43,6 +43,7 @@
 	let apiVersion = '';
 
 	let tags = [];
+	let headers = [];
 
 	let modelId = '';
 	let modelIds = [];
@@ -105,6 +106,20 @@
 		}
 	};
 
+	const addHeaderRow = () => {
+		headers = [...headers, { name: '', value: '' }];
+	};
+
+	const updateHeaderRow = (idx: number, field: 'name' | 'value', value: string) => {
+		headers = headers.map((header, headerIdx) =>
+			headerIdx === idx ? { ...header, [field]: value } : header
+		);
+	};
+
+	const removeHeaderRow = (idx: number) => {
+		headers = headers.filter((_, headerIdx) => headerIdx !== idx);
+	};
+
 	const submitHandler = async () => {
 		loading = true;
 
@@ -139,6 +154,13 @@
 		// remove trailing slash from url
 		url = url.replace(/\/$/, '');
 
+		const sanitizedHeaders = headers
+			.map((header) => ({
+				name: (header?.name ?? '').trim(),
+				value: String(header?.value ?? '')
+			}))
+			.filter((header) => header.name);
+
 		const connection = {
 			url,
 			key,
@@ -149,6 +171,7 @@
 				model_ids: modelIds,
 				connection_type: connectionType,
 				auth_type,
+				...(sanitizedHeaders.length ? { headers: sanitizedHeaders } : {}),
 				...(!ollama && azure ? { azure: true, api_version: apiVersion } : {})
 			}
 		};
@@ -164,6 +187,7 @@
 		prefixId = '';
 		tags = [];
 		modelIds = [];
+		headers = [];
 	};
 
 	const init = () => {
@@ -177,6 +201,12 @@
 			tags = connection.config?.tags ?? [];
 			prefixId = connection.config?.prefix_id ?? '';
 			modelIds = connection.config?.model_ids ?? [];
+			headers = Array.isArray(connection.config?.headers)
+				? connection.config.headers.map((header) => ({
+						name: header?.name ?? '',
+						value: String(header?.value ?? '')
+					}))
+				: [];
 
 			if (ollama) {
 				connectionType = connection.config?.connection_type ?? 'local';
@@ -535,11 +565,83 @@
 						</div>
 					</div>
 
+					<div class="flex flex-col w-full mt-2">
+						<div class="flex justify-between items-center">
+							<div
+								class={`mb-0.5 text-xs text-gray-500
+						${($settings?.highContrastMode ?? false) ? 'text-gray-800 dark:text-gray-100' : ''}`}
+							>
+								{$i18n.t('HTTP Headers')}
+							</div>
+
+							<button
+								type="button"
+								class="px-1"
+								on:click={() => {
+									addHeaderRow();
+								}}
+								aria-label={$i18n.t('Add Header')}
+							>
+								<Plus className="size-3.5" strokeWidth="2" />
+							</button>
+						</div>
+
+						{#if headers.length > 0}
+							<div class="flex flex-col gap-1.5 mt-1.5">
+								{#each headers as header, headerIdx}
+									<div class="flex gap-2 items-start">
+										<div class="flex-1 flex gap-2">
+											<input
+												class={`w-full text-sm bg-transparent ${($settings?.highContrastMode ?? false) ? 'placeholder:text-gray-700 dark:placeholder:text-gray-100' : 'outline-hidden placeholder:text-gray-300 dark:placeholder:text-gray-700'}`}
+												type="text"
+												placeholder={$i18n.t('Header Name')}
+												value={header.name}
+												on:input={(event) => {
+													const value = event.currentTarget.value;
+													updateHeaderRow(headerIdx, 'name', value);
+												}}
+											/>
+
+											<input
+												class={`w-full text-sm bg-transparent ${($settings?.highContrastMode ?? false) ? 'placeholder:text-gray-700 dark:placeholder:text-gray-100' : 'outline-hidden placeholder:text-gray-300 dark:placeholder:text-gray-700'}`}
+												type="text"
+												placeholder={$i18n.t('Header Value')}
+												value={header.value}
+												on:input={(event) => {
+													const value = event.currentTarget.value;
+													updateHeaderRow(headerIdx, 'value', value);
+												}}
+											/>
+										</div>
+
+										<button
+											type="button"
+											class="self-center"
+											on:click={() => {
+												removeHeaderRow(headerIdx);
+											}}
+											aria-label={$i18n.t('Remove header')}
+										>
+											<Minus strokeWidth="2" className="size-3.5" />
+										</button>
+									</div>
+								{/each}
+							</div>
+						{:else}
+							<div
+								class={`text-gray-500 text-xs text-center py-2 px-10
+						${($settings?.highContrastMode ?? false) ? 'text-gray-800 dark:text-gray-100' : ''}`}
+							>
+								{$i18n.t('No headers added')}
+							</div>
+						{/if}
+					</div>
+
 					<div class="flex gap-2 mt-2">
 						<div class="flex flex-col w-full">
 							<div
 								class={`mb-0.5 text-xs text-gray-500
-								${($settings?.highContrastMode ?? false) ? 'text-gray-800 dark:text-gray-100' : ''}`}
+						${($settings?.highContrastMode ?? false) ? 'text-gray-800 dark:text-gray-100' : ''}`}
 							>
 								{$i18n.t('Tags')}
 							</div>

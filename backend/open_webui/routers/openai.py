@@ -2,7 +2,7 @@ import asyncio
 import hashlib
 import json
 import logging
-from typing import Optional
+from typing import Optional, Dict
 
 import aiohttp
 from aiocache import cached
@@ -121,6 +121,34 @@ def openai_reasoning_model_handler(payload):
     return payload
 
 
+def extract_custom_headers(config: Optional[dict]) -> Dict[str, str]:
+    """Return a map of additional headers defined on the connection config."""
+
+    if not config:
+        return {}
+
+    raw_headers = config.get("headers", [])
+    if not isinstance(raw_headers, list):
+        return {}
+
+    custom_headers: Dict[str, str] = {}
+    for header in raw_headers:
+        if not isinstance(header, dict):
+            continue
+
+        name = (header.get("name") or "").strip()
+        if not name:
+            continue
+
+        value = header.get("value")
+        if value is None:
+            continue
+
+        custom_headers[name] = str(value)
+
+    return custom_headers
+
+
 async def get_headers_and_cookies(
     request: Request,
     url,
@@ -129,6 +157,7 @@ async def get_headers_and_cookies(
     metadata: Optional[dict] = None,
     user: UserModel = None,
 ):
+    config = config or {}
     cookies = {}
     headers = {
         "Content-Type": "application/json",
@@ -156,6 +185,8 @@ async def get_headers_and_cookies(
             else {}
         ),
     }
+
+    custom_headers = extract_custom_headers(config)
 
     token = None
     auth_type = config.get("auth_type")
@@ -189,6 +220,11 @@ async def get_headers_and_cookies(
 
     if token:
         headers["Authorization"] = f"Bearer {token}"
+
+    # Apply any additional headers defined on the connection last so they can
+    # override defaults when intentional.
+    if custom_headers:
+        headers.update(custom_headers)
 
     return headers, cookies
 
@@ -663,7 +699,9 @@ async def verify_connection(
             if api_config.get("azure", False):
                 # Only set api-key header if not using Azure Entra ID authentication
                 auth_type = api_config.get("auth_type", "bearer")
-                if auth_type not in ("azure_ad", "microsoft_entra_id"):
+                if auth_type not in ("azure_ad", "microsoft_entra_id") and (
+                    key and "api-key" not in headers
+                ):
                     headers["api-key"] = key
 
                 api_version = api_config.get("api_version", "") or "2023-03-15-preview"
@@ -911,7 +949,9 @@ async def generate_chat_completion(
 
         # Only set api-key header if not using Azure Entra ID authentication
         auth_type = api_config.get("auth_type", "bearer")
-        if auth_type not in ("azure_ad", "microsoft_entra_id"):
+        if auth_type not in ("azure_ad", "microsoft_entra_id") and (
+            key and "api-key" not in headers
+        ):
             headers["api-key"] = key
 
         headers["api-version"] = api_version
@@ -1091,7 +1131,9 @@ async def proxy(path: str, request: Request, user=Depends(get_verified_user)):
 
             # Only set api-key header if not using Azure Entra ID authentication
             auth_type = api_config.get("auth_type", "bearer")
-            if auth_type not in ("azure_ad", "microsoft_entra_id"):
+            if auth_type not in ("azure_ad", "microsoft_entra_id") and (
+                key and "api-key" not in headers
+            ):
                 headers["api-key"] = key
 
             headers["api-version"] = api_version

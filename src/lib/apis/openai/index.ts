@@ -279,12 +279,29 @@ export const verifyOpenAIConnection = async (
 	let res = null;
 
 	if (direct) {
+		const customHeaders = Array.isArray(config?.headers)
+			? config.headers.reduce((acc, header) => {
+				const name = (header?.name ?? '').trim();
+				if (!name) {
+					return acc;
+				}
+
+				const value = header?.value;
+				if (value === undefined || value === null) {
+					return acc;
+				}
+
+				return { ...acc, [name]: value };
+			}, {} as Record<string, string>)
+			: {};
+
 		res = await fetch(`${url}/models`, {
 			method: 'GET',
 			headers: {
 				Accept: 'application/json',
-				Authorization: `Bearer ${key}`,
-				'Content-Type': 'application/json'
+				'Content-Type': 'application/json',
+				...(key ? { Authorization: `Bearer ${key}` } : {}),
+				...customHeaders
 			}
 		})
 			.then(async (res) => {
