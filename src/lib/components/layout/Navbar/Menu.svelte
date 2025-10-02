@@ -232,7 +232,7 @@
 		if (chat.id) {
 			let chatObj = null;
 
-			if (chat.id === 'local' || $temporaryChatEnabled) {
+			if ((chat?.id ?? '').startsWith('local') || $temporaryChatEnabled) {
 				chatObj = chat;
 			} else {
 				chatObj = await getChatById(localStorage.token, chat.id);

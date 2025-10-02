@@ -2207,8 +2207,8 @@
 
 			selectedFolder.set(null);
 		} else {
-			_chatId = 'local';
-			await chatId.set('local');
+			_chatId = `local:${$socket?.id}`; // Use socket id for temporary chat
+			await chatId.set(_chatId);
 		}
 		await tick();
 
