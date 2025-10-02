@@ -45,6 +45,11 @@ const config = {
 		// 	showToggleButton: 'always', // Show toggle button ('always', 'active', 'never')
 		// 	toggleButtonPos: 'bottom-right' // Position of the toggle button
 		// }
+		inspector: {
+      	toggleKeyCombo: 'control-x',
+      	showToggleButton: 'always',
+      	toggleButtonPos: 'bottom-right'
+    	}
 	},
 	onwarn: (warning, handler) => {
 		const { code } = warning;
