@@ -4,11 +4,20 @@
 	const dispatch = createEventDispatcher();
 
 	import { theme } from '$lib/stores';
-	import { Background, Controls, SvelteFlow, BackgroundVariant } from '@xyflow/svelte';
+	import {
+		Background,
+		Controls,
+		SvelteFlow,
+		BackgroundVariant,
+		ControlButton
+	} from '@xyflow/svelte';
+	import BarsArrowUp from '$lib/components/icons/BarsArrowUp.svelte';
+	import Bars3BottomLeft from '$lib/components/icons/Bars3BottomLeft.svelte';
 
 	export let nodes;
 	export let nodeTypes;
 	export let edges;
+	export let setLayoutDirection;
 </script>
 
 <SvelteFlow
@@ -31,6 +40,13 @@
 		console.log('Flow initialized');
 	}}
 >
-	<Controls showLock={false} />
+	<Controls showLock={false}>
+		<ControlButton on:click={() => setLayoutDirection('vertical')} title="Vertical Layout">
+			<BarsArrowUp class="size-4" />
+		</ControlButton>
+		<ControlButton on:click={() => setLayoutDirection('horizontal')} title="Horizontal Layout">
+			<Bars3BottomLeft class="size-4" />
+		</ControlButton>
+	</Controls>
 	<Background variant={BackgroundVariant.Dots} />
 </SvelteFlow>
