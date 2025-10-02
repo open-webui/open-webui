@@ -89,7 +89,7 @@ async def get_all_feedbacks(user=Depends(get_admin_user)):
         user_dict = None  
         if user_obj:
             user_dict = (
-                {c.name: getattr(user_obj, c.name)for c in user_obj.__table__.columns}
+                {c.name: getattr(user_obj, c.name) for c in user_obj.__table__.columns}
                 if user_obj
                 else None
             )
