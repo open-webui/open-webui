@@ -1,6 +1,7 @@
 import logging
 import math
 import re
+from collections import defaultdict
 from datetime import datetime
 from typing import Optional, Any
 import uuid
@@ -10,10 +11,88 @@ from open_webui.utils.misc import get_last_user_message, get_messages_content
 
 from open_webui.env import SRC_LOG_LEVELS
 from open_webui.config import DEFAULT_RAG_TEMPLATE
+from sqlalchemy import create_engine, text
+from sqlalchemy.engine import Engine
+from sqlalchemy.exc import SQLAlchemyError
 
 
 log = logging.getLogger(__name__)
 log.setLevel(SRC_LOG_LEVELS["RAG"])
+
+
+MEMORIES_DATABASE_URL = "postgresql+psycopg2://postgres:zFns3MZAQNnZ2UVj3q41j1kJn0ORdfJ9qNjHU7skR7ev50Ugi9y7aGOsrFlBbQPs@5.78.120.77:5434/soren_openwebui"
+_MEMORIES_ENGINE: Engine | None = None
+
+
+def get_memories_engine() -> Engine | None:
+    global _MEMORIES_ENGINE
+    if _MEMORIES_ENGINE is None:
+        try:
+            _MEMORIES_ENGINE = create_engine(MEMORIES_DATABASE_URL, pool_pre_ping=True)
+        except Exception as exc:  # pragma: no cover - defensive guard
+            log.error("Failed to create memories engine: %s", exc)
+            _MEMORIES_ENGINE = None
+    return _MEMORIES_ENGINE
+
+
+def build_memories_variable() -> str:
+    engine = get_memories_engine()
+    if engine is None:
+        return ""
+
+    try:
+        with engine.connect() as conn:
+            table_rows = conn.execute(
+                text(
+                    "SELECT table_name FROM information_schema.tables "
+                    "WHERE table_schema = 'public' AND table_name IN ('memories', 'memory')"
+                )
+            )
+            available_tables = {row[0] for row in table_rows}
+
+            rows = []
+            if "memories" in available_tables:
+                result = conn.execute(
+                    text(
+                        "SELECT id, content, importance, category FROM memories "
+                        "ORDER BY category, id"
+                    )
+                )
+                rows = result.mappings().all()
+            elif "memory" in available_tables:
+                result = conn.execute(
+                    text(
+                        "SELECT id, content, NULL::text AS importance, NULL::text AS category "
+                        "FROM memory ORDER BY id"
+                    )
+                )
+                rows = result.mappings().all()
+            else:
+                log.warning("No memories table found in external database")
+                return ""
+    except SQLAlchemyError as exc:
+        log.error("Failed to fetch memories: %s", exc)
+        return ""
+
+    if not rows:
+        return ""
+
+    grouped_memories: dict[str, list[tuple[int, str]]] = defaultdict(list)
+    for index, row in enumerate(rows, start=1):
+        content = row.get("content")  # RowMapping supports get()
+        category = row.get("category")
+        grouped_memories[str(category or "uncategorized")].append(
+            (index, str(content or ""))
+        )
+
+    sections = []
+    for category, entries in grouped_memories.items():
+        lines = [category]
+        for index, content in entries:
+            lines.append(f"{index}. {content}".strip())
+        sections.append("\n".join(lines))
+
+    return "\n\n".join(sections)
 
 
 def get_task_model_id(
@@ -107,6 +186,9 @@ def prompt_template(template: str, user: Optional[Any] = None) -> str:
     template = template.replace(
         "{{USER_LOCATION}}", USER_VARIABLES.get("location", "Unknown")
     )
+
+    if "{{MEMORIES}}" in template:
+        template = template.replace("{{MEMORIES}}", build_memories_variable())
 
     return template
 
