@@ -266,10 +266,7 @@ class FeedbackTable:
 
             result = []
             for feedback, user in query:
-                result.append({
-                    "feedback": feedback,
-                    "user": user
-                })
+                result.append({"feedback": feedback, "user": user})
 
             return result
         except Exception as e:
