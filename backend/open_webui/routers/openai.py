@@ -22,6 +22,7 @@ from pydantic import BaseModel
 from starlette.background import BackgroundTask
 
 from open_webui.models.models import Models
+from open_webui.models.functions import Functions
 from open_webui.config import (
     CACHE_DIR,
 )
@@ -49,6 +50,7 @@ from open_webui.utils.misc import (
 
 from open_webui.utils.auth import get_admin_user, get_verified_user
 from open_webui.utils.access_control import has_access
+from open_webui.utils.filter import get_sorted_filter_ids, process_filter_functions
 
 
 log = logging.getLogger(__name__)
@@ -1005,6 +1007,40 @@ async def embeddings(request: Request, form_data: dict, user):
         str(idx),
         request.app.state.config.OPENAI_API_CONFIGS.get(url, {}),  # Legacy support
     )
+
+    # Process filter functions
+    model_info = Models.get_model_by_id(model_id)
+    metadata = {}
+
+    extra_params = {
+        "__event_emitter__": lambda e: None,
+        "__event_call__": lambda e: None,
+        "__user__": user.model_dump() if user else {},
+        "__metadata__": metadata,
+        "__request__": request,
+        "__model__": model_info.model_dump() if model_info else {},
+        "__oauth_token__": None,
+    }
+
+    filter_functions = [
+        Functions.get_function_by_id(filter_id)
+        for filter_id in get_sorted_filter_ids(
+            request,
+            model_info.model_dump() if model_info else {},
+            metadata.get("filter_ids", []),
+        )
+    ]
+
+    payload, flags = await process_filter_functions(
+        request=request,
+        filter_functions=filter_functions,
+        filter_type="inlet",
+        form_data=form_data,
+        extra_params=extra_params,
+    )
+
+    # Update body with filtered payload
+    body = json.dumps(payload)
 
     r = None
     session = None
