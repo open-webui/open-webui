@@ -98,7 +98,7 @@
 			return;
 		}
 
-		if (path === '') {
+		if (['', 'openapi'].includes(type) && path === '') {
 			toast.error($i18n.t('Please enter a valid path'));
 			return;
 		}
