@@ -246,11 +246,12 @@
 	};
 
 	onMount(async () => {
-		folderRegistry[folderId] = {
-			setFolderItems: () => setFolderItems()
-		};
-
 		open = folders[folderId].is_expanded;
+		folderRegistry[folderId] = {
+			setFolderItems: () => {
+				setFolderItems();
+			}
+		};
 		if (folderElement) {
 			folderElement.addEventListener('dragover', onDragOver);
 			folderElement.addEventListener('drop', onDrop);

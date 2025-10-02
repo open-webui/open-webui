@@ -885,8 +885,6 @@
 				})
 			}
 		];
-
-		console.log(suggestions);
 		loaded = true;
 
 		window.setTimeout(() => {

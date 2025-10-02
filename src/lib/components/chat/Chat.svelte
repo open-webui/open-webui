@@ -220,10 +220,15 @@
 	}
 
 	const saveSessionSelectedModels = () => {
-		if (selectedModels.length === 0 || (selectedModels.length === 1 && selectedModels[0] === '')) {
+		const selectedModelsString = JSON.stringify(selectedModels);
+		if (
+			selectedModels.length === 0 ||
+			(selectedModels.length === 1 && selectedModels[0] === '') ||
+			sessionStorage.selectedModels === selectedModelsString
+		) {
 			return;
 		}
-		sessionStorage.selectedModels = JSON.stringify(selectedModels);
+		sessionStorage.selectedModels = selectedModelsString;
 		console.log('saveSessionSelectedModels', selectedModels, sessionStorage.selectedModels);
 	};
 
