@@ -56,6 +56,92 @@
 
 	let version;
 
+	const clearChatInputStorage = () => {
+		const chatInputKeys = Object.keys(localStorage).filter((key) => key.startsWith('chat-input'));
+		if (chatInputKeys.length > 0) {
+			chatInputKeys.forEach((key) => {
+				localStorage.removeItem(key);
+			});
+		}
+	};
+
+	const checkLocalDBChats = async () => {
+		try {
+			// Check if IndexedDB exists
+			DB = await openDB('Chats', 1);
+
+			if (!DB) {
+				return;
+			}
+
+			const chats = await DB.getAllFromIndex('chats', 'timestamp');
+			localDBChats = chats.map((item, idx) => chats[chats.length - 1 - idx]);
+
+			if (localDBChats.length === 0) {
+				await deleteDB('Chats');
+			}
+		} catch (error) {
+			// IndexedDB Not Found
+		}
+	};
+
+	const setUserSettings = async (cb) => {
+		const userSettings = await getUserSettings(localStorage.token).catch((error) => {
+			console.error(error);
+			return null;
+		});
+
+		if (userSettings) {
+			await settings.set(userSettings.ui);
+
+			if (cb) {
+				await cb();
+			}
+		}
+
+		try {
+			return JSON.parse(localStorage.getItem('settings') ?? '{}');
+		} catch (e: unknown) {
+			console.error('Failed to parse settings from localStorage', e);
+			return {};
+		}
+	};
+
+	const setModels = async () => {
+		models.set(
+			await getModels(
+				localStorage.token,
+				$config?.features?.enable_direct_connections ? ($settings?.directConnections ?? null) : null
+			)
+		);
+	};
+
+	const setToolServers = async () => {
+		let toolServersData = await getToolServersData($settings?.toolServers ?? []);
+		toolServersData = toolServersData.filter((data) => {
+			if (!data || data.error) {
+				toast.error(
+					$i18n.t(`Failed to connect to {{URL}} OpenAPI tool server`, {
+						URL: data?.url
+					})
+				);
+				return false;
+			}
+			return true;
+		});
+		toolServers.set(toolServersData);
+	};
+
+	const setBanners = async () => {
+		const bannersData = await getBanners(localStorage.token);
+		banners.set(bannersData);
+	};
+
+	const setTools = async () => {
+		const toolsData = await getTools(localStorage.token);
+		tools.set(toolsData);
+	};
+
 	onMount(async () => {
 		if ($user === undefined || $user === null) {
 			await goto('/auth');
@@ -65,97 +151,13 @@
 			return;
 		}
 
-		const chatInputKeys = Object.keys(localStorage).filter((key) => key.startsWith('chat-input'));
-		if (chatInputKeys.length > 0) {
-			chatInputKeys.forEach((key) => {
-				localStorage.removeItem(key);
-			});
-		}
-
-		const loadChatsFromDB = async () => {
-			try {
-				// Check if IndexedDB exists
-				DB = await openDB('Chats', 1);
-
-				if (!DB) {
-					return;
-				}
-
-				const chats = await DB.getAllFromIndex('chats', 'timestamp');
-				localDBChats = chats.map((item, idx) => chats[chats.length - 1 - idx]);
-
-				if (localDBChats.length === 0) {
-					await deleteDB('Chats');
-				}
-			} catch (error) {
-				// IndexedDB Not Found
-			}
-		};
-
-		const loadUserSettings = async (): Promise<Parameters<(typeof settings)['set']>[0]> => {
-			const userSettings = await getUserSettings(localStorage.token).catch((error) => {
-				console.error(error);
-				return null;
-			});
-
-			if (userSettings) {
-				return userSettings.ui;
-			}
-
-			try {
-				return JSON.parse(localStorage.getItem('settings') ?? '{}');
-			} catch (e: unknown) {
-				console.error('Failed to parse settings from localStorage', e);
-				return {};
-			}
-		};
-
-		const loadModels = async () => {
-			models.set(
-				await getModels(
-					localStorage.token,
-					$config?.features?.enable_direct_connections
-						? ($settings?.directConnections ?? null)
-						: null
-				)
-			);
-		};
-
-		const loadToolServers = async () => {
-			let toolServersData = await getToolServersData($settings?.toolServers ?? []);
-			toolServersData = toolServersData.filter((data) => {
-				if (!data || data.error) {
-					toast.error(
-						$i18n.t(`Failed to connect to {{URL}} OpenAPI tool server`, {
-							URL: data?.url
-						})
-					);
-					return false;
-				}
-				return true;
-			});
-			toolServers.set(toolServersData);
-		};
-
-		const loadBanners = async () => {
-			const bannersData = await getBanners(localStorage.token);
-			banners.set(bannersData);
-		};
-
-		const loadTools = async () => {
-			const toolsData = await getTools(localStorage.token);
-			tools.set(toolsData);
-		};
-
-		// Parallel loading
+		clearChatInputStorage();
 		await Promise.all([
-			loadChatsFromDB(),
-			loadBanners(),
-			loadTools(),
-			loadUserSettings().then((loadedSettings) => {
-				settings.set(loadedSettings);
-				// The following functions are dependent on the settings
-				return Promise.all([loadModels(), loadToolServers()]);
+			checkLocalDBChats(),
+			setBanners(),
+			setTools(),
+			setUserSettings(async () => {
+				await Promise.all([setModels(), setToolServers()]);
 			})
 		]);
 
