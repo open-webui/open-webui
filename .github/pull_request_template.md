@@ -4,14 +4,15 @@
 
 **Before submitting, make sure you've checked the following:**
 
-- [ ] **Target branch:** Please verify that the pull request targets the `dev` branch.
+- [ ] **Target branch:** Verify that the pull request targets the `dev` branch. Not targeting the `dev` branch may lead to immediate closure of the PR.
 - [ ] **Description:** Provide a concise description of the changes made in this pull request.
 - [ ] **Changelog:** Ensure a changelog entry following the format of [Keep a Changelog](https://keepachangelog.com/) is added at the bottom of the PR description.
-- [ ] **Documentation:** Have you updated relevant documentation [Open WebUI Docs](https://github.com/open-webui/docs), or other documentation sources?
+- [ ] **Documentation:** If necessary, update relevant documentation [Open WebUI Docs](https://github.com/open-webui/docs) like environment variables, the tutorials, or other documentation sources.
 - [ ] **Dependencies:** Are there any new dependencies? Have you updated the dependency versions in the documentation?
-- [ ] **Testing:** Have you written and run sufficient tests to validate the changes?
+- [ ] **Testing:** Perform manual tests to verify the implemented fix/feature works as intended AND does not break any other functionality. Take this as an opportunity to make screenshots of the feature/fix and include it in the PR description.
+- [ ] **Agentic AI Code:**: Confirm this Pull Request is **not written by any AI Agent** or has at least gone through additional human review **and** manual testing. If any AI Agent is the co-author of this PR, it may lead to immediate closure of the PR.
 - [ ] **Code review:** Have you performed a self-review of your code, addressing any coding standard issues and ensuring adherence to the project's coding standards?
-- [ ] **Prefix:** To clearly categorize this pull request, prefix the pull request title using one of the following:
+- [ ] **Title Prefix:** To clearly categorize this pull request, prefix the pull request title using one of the following:
   - **BREAKING CHANGE**: Significant changes that may affect compatibility
   - **build**: Changes that affect the build system or external dependencies
   - **ci**: Changes to our continuous integration processes or workflows

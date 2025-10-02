@@ -672,16 +672,10 @@
 			}
 		}
 
-		console.log('content', content);
-
 		if (collaboration && documentId && socket && user) {
 			const { SocketIOCollaborationProvider } = await import('./RichTextInput/Collaboration');
 			provider = new SocketIOCollaborationProvider(documentId, socket, user, content);
 		}
-
-		console.log(bubbleMenuElement, floatingMenuElement);
-		console.log(suggestions);
-
 		editor = new Editor({
 			element: element,
 			extensions: [
@@ -789,11 +783,19 @@
 					)
 					.replace(/\u00a0/g, ' ');
 
-				onChange({
-					html: htmlValue,
-					json: jsonValue,
-					md: mdValue
-				});
+				if (richText) {
+					onChange({
+						html: htmlValue,
+						json: jsonValue,
+						md: mdValue
+					});
+				} else {
+					// Plain text path: preserve \t and \n exactly
+					const doc = editor.view.state.doc;
+					const plain = doc.textBetween(0, doc.content.size, '\n\n', '\n'); // keeps \t intact
+					value = plain;
+					onChange({ html: null, json: null, md: plain });
+				}
 
 				if (json) {
 					value = jsonValue;
