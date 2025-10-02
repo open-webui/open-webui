@@ -7,7 +7,7 @@
 	
 	const i18n = getContext<Writable<i18nType>>('i18n');
 	
-	import { user, config, models, type Model } from '$lib/stores';
+	import { user, config, models, type Model, theme } from '$lib/stores';
 	import { WEBUI_NAME } from '$lib/stores';
 	import { getModels } from '$lib/apis';
 	import { getModelsConfig, setModelsConfig } from '$lib/apis/configs';
@@ -15,6 +15,7 @@
 	import { generateOpenAIChatCompletion } from '$lib/apis/openai';
 	import { applyModeration, type ModerationResponse } from '$lib/apis/moderation';
 	import { toast } from 'svelte-sonner';
+	import { toggleTheme, getCurrentTheme } from '$lib/utils/theme';
 	
 	import ArrowLeft from '$lib/components/icons/ArrowLeft.svelte';
 	import LockClosed from '$lib/components/icons/LockClosed.svelte';
@@ -27,6 +28,8 @@
 	import ChevronLeft from '$lib/components/icons/ChevronLeft.svelte';
 	import ChevronRight from '$lib/components/icons/ChevronRight.svelte';
 	import Sparkles from '$lib/components/icons/Sparkles.svelte';
+	import Sun from '$lib/components/icons/Sun.svelte';
+	import Moon from '$lib/components/icons/Moon.svelte';
 	
 	// Type definitions
 	interface PlotPoint {
@@ -327,6 +330,19 @@
 			default:
 				return value;
 		}
+	}
+
+	// Theme functions
+	function getEffectiveTheme(): string {
+		const currentTheme = getCurrentTheme();
+		if (currentTheme === 'system') {
+			return window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+		}
+		return currentTheme;
+	}
+
+	function handleThemeToggle() {
+		toggleTheme();
 	}
 	
 	function handleSliderChange(event: Event) {
@@ -723,6 +739,19 @@
 				<LockClosed className="size-4" />
 				<span>Parent Mode</span>
 			</div>
+			
+			<!-- Theme Toggle Button -->
+			<button
+				on:click={handleThemeToggle}
+				class="flex items-center justify-center w-10 h-10 rounded-lg bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors"
+				title={getEffectiveTheme() === 'dark' ? 'Switch to Light Mode' : 'Switch to Dark Mode'}
+			>
+				{#if getEffectiveTheme() === 'dark'}
+					<Sun className="size-5 text-yellow-500" />
+				{:else}
+					<Moon className="size-5 text-gray-700 dark:text-gray-300" />
+				{/if}
+			</button>
 			
 			{#if $user?.role === 'admin'}
 				<button
