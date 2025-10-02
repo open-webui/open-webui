@@ -420,6 +420,26 @@ input[type='number'] {
 	content: '\200B';
 }
 
+/* Footnote reference styles */
+.footnote-ref {
+	color: inherit; /* Inherit text color from parent */
+	font-weight: normal; /* Use normal weight to blend with text */
+	cursor: default;
+	margin-right: 0.3em; /* Add spacing between consecutive footnotes */
+	transition: opacity 0.15s ease-in-out;
+}
+
+.footnote-ref:hover {
+	opacity: 0.7; /* Subtle hover effect with opacity change */
+}
+
+.footnote-ref-text {
+	/* CSS superscript text with better readability */
+	font-size: 0.7em; /* User adjusted size */
+	vertical-align: 0.3em; /* Lowered from super to reduce height */
+	line-height: 1;
+}
+
 .tiptap .suggestion {
 	border-radius: 0.4rem;
 	box-decoration-break: clone;
