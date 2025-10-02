@@ -91,6 +91,7 @@
 	import Sidebar from '../icons/Sidebar.svelte';
 	import { getFunctions } from '$lib/apis/functions';
 	import Image from '../common/Image.svelte';
+	import { updateFolderById } from '$lib/apis/folders';
 
 	export let chatIdProp = '';
 
@@ -499,7 +500,24 @@
 		}
 	};
 
+	const savedModelIds = async () => {
+		if ($selectedFolder && $selectedFolder?.data?.model_ids !== selectedModels) {
+			const res = await updateFolderById(localStorage.token, $selectedFolder.id, {
+				data: {
+					model_ids: selectedModels
+				}
+			});
+		}
+	};
+
+	$: if (selectedModels !== null) {
+		savedModelIds();
+	}
+
 	let pageSubscribe = null;
+	let showControlsSubscribe = null;
+	let selectedFolderSubscribe = null;
+
 	onMount(async () => {
 		loading = true;
 		console.log('mounted');
@@ -548,7 +566,7 @@
 			} catch (e) {}
 		}
 
-		showControls.subscribe(async (value) => {
+		showControlsSubscribe = showControls.subscribe(async (value) => {
 			if (controlPane && !$mobile) {
 				try {
 					if (value) {
@@ -569,17 +587,32 @@
 			}
 		});
 
+		selectedFolderSubscribe = selectedFolder.subscribe(async (folder) => {
+			if (
+				folder?.data?.model_ids &&
+				JSON.stringify(selectedModels) !== JSON.stringify(folder.data.model_ids)
+			) {
+				selectedModels = folder.data.model_ids;
+
+				console.log('Set selectedModels from folder data:', selectedModels);
+			}
+		});
+
 		const chatInput = document.getElementById('chat-input');
 		chatInput?.focus();
-
-		chats.subscribe(() => {});
 	});
 
 	onDestroy(() => {
-		pageSubscribe();
-		chatIdUnsubscriber?.();
-		window.removeEventListener('message', onMessageHandler);
-		$socket?.off('chat-events', chatEventHandler);
+		try {
+			pageSubscribe();
+			showControlsSubscribe();
+			selectedFolderSubscribe();
+			chatIdUnsubscriber?.();
+			window.removeEventListener('message', onMessageHandler);
+			$socket?.off('chat-events', chatEventHandler);
+		} catch (e) {
+			console.error(e);
+		}
 	});
 
 	// File upload functions
@@ -780,6 +813,7 @@
 	//////////////////////////
 
 	const initNewChat = async () => {
+		console.log('initNewChat');
 		if ($user?.role !== 'admin' && $user?.permissions?.chat?.temporary_enforced) {
 			await temporaryChatEnabled.set(true);
 		}
@@ -830,17 +864,22 @@
 				$models.map((m) => m.id).includes(modelId)
 			);
 		} else {
-			if (sessionStorage.selectedModels) {
-				selectedModels = JSON.parse(sessionStorage.selectedModels);
-				sessionStorage.removeItem('selectedModels');
+			if ($selectedFolder?.data?.model_ids) {
+				selectedModels = $selectedFolder?.data?.model_ids;
 			} else {
-				if ($settings?.models) {
-					selectedModels = $settings?.models;
-				} else if ($config?.default_models) {
-					console.log($config?.default_models.split(',') ?? '');
-					selectedModels = $config?.default_models.split(',');
+				if (sessionStorage.selectedModels) {
+					selectedModels = JSON.parse(sessionStorage.selectedModels);
+					sessionStorage.removeItem('selectedModels');
+				} else {
+					if ($settings?.models) {
+						selectedModels = $settings?.models;
+					} else if ($config?.default_models) {
+						console.log($config?.default_models.split(',') ?? '');
+						selectedModels = $config?.default_models.split(',');
+					}
 				}
 			}
+
 			selectedModels = selectedModels.filter((modelId) => availableModels.includes(modelId));
 		}
 

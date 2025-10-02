@@ -672,16 +672,10 @@
 			}
 		}
 
-		console.log('content', content);
-
 		if (collaboration && documentId && socket && user) {
 			const { SocketIOCollaborationProvider } = await import('./RichTextInput/Collaboration');
 			provider = new SocketIOCollaborationProvider(documentId, socket, user, content);
 		}
-
-		console.log(bubbleMenuElement, floatingMenuElement);
-		console.log(suggestions);
-
 		editor = new Editor({
 			element: element,
 			extensions: [
