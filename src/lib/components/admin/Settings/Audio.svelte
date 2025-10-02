@@ -634,7 +634,7 @@
 										<Textarea
 											className="w-full rounded-lg py-2 px-4 text-sm bg-gray-50 dark:text-gray-300 dark:bg-gray-850 outline-hidden"
 											bind:value={TTS_OPENAI_PARAMS}
-											placeholder={$i18n.t('Enter additional parameters')}
+											placeholder={$i18n.t('Enter additional parameters in JSON format')}
 											minSize={100}
 										/>
 									</div>

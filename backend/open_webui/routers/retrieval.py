@@ -429,6 +429,7 @@ async def get_rag_config(request: Request, user=Depends(get_admin_user)):
         "EXTERNAL_DOCUMENT_LOADER_API_KEY": request.app.state.config.EXTERNAL_DOCUMENT_LOADER_API_KEY,
         "TIKA_SERVER_URL": request.app.state.config.TIKA_SERVER_URL,
         "DOCLING_SERVER_URL": request.app.state.config.DOCLING_SERVER_URL,
+        "DOCLING_PARAMS": request.app.state.config.DOCLING_PARAMS,
         "DOCLING_DO_OCR": request.app.state.config.DOCLING_DO_OCR,
         "DOCLING_FORCE_OCR": request.app.state.config.DOCLING_FORCE_OCR,
         "DOCLING_OCR_ENGINE": request.app.state.config.DOCLING_OCR_ENGINE,
@@ -590,6 +591,7 @@ class ConfigForm(BaseModel):
     # Content extraction settings
     CONTENT_EXTRACTION_ENGINE: Optional[str] = None
     PDF_EXTRACT_IMAGES: Optional[bool] = None
+
     DATALAB_MARKER_API_KEY: Optional[str] = None
     DATALAB_MARKER_API_BASE_URL: Optional[str] = None
     DATALAB_MARKER_ADDITIONAL_CONFIG: Optional[str] = None
@@ -601,11 +603,13 @@ class ConfigForm(BaseModel):
     DATALAB_MARKER_FORMAT_LINES: Optional[bool] = None
     DATALAB_MARKER_USE_LLM: Optional[bool] = None
     DATALAB_MARKER_OUTPUT_FORMAT: Optional[str] = None
+
     EXTERNAL_DOCUMENT_LOADER_URL: Optional[str] = None
     EXTERNAL_DOCUMENT_LOADER_API_KEY: Optional[str] = None
 
     TIKA_SERVER_URL: Optional[str] = None
     DOCLING_SERVER_URL: Optional[str] = None
+    DOCLING_PARAMS: Optional[dict] = None
     DOCLING_DO_OCR: Optional[bool] = None
     DOCLING_FORCE_OCR: Optional[bool] = None
     DOCLING_OCR_ENGINE: Optional[str] = None
@@ -781,6 +785,11 @@ async def update_rag_config(
         form_data.DOCLING_SERVER_URL
         if form_data.DOCLING_SERVER_URL is not None
         else request.app.state.config.DOCLING_SERVER_URL
+    )
+    request.app.state.config.DOCLING_PARAMS = (
+        form_data.DOCLING_PARAMS
+        if form_data.DOCLING_PARAMS is not None
+        else request.app.state.config.DOCLING_PARAMS
     )
     request.app.state.config.DOCLING_DO_OCR = (
         form_data.DOCLING_DO_OCR
@@ -1104,6 +1113,7 @@ async def update_rag_config(
         "EXTERNAL_DOCUMENT_LOADER_API_KEY": request.app.state.config.EXTERNAL_DOCUMENT_LOADER_API_KEY,
         "TIKA_SERVER_URL": request.app.state.config.TIKA_SERVER_URL,
         "DOCLING_SERVER_URL": request.app.state.config.DOCLING_SERVER_URL,
+        "DOCLING_PARAMS": request.app.state.config.DOCLING_PARAMS,
         "DOCLING_DO_OCR": request.app.state.config.DOCLING_DO_OCR,
         "DOCLING_FORCE_OCR": request.app.state.config.DOCLING_FORCE_OCR,
         "DOCLING_OCR_ENGINE": request.app.state.config.DOCLING_OCR_ENGINE,
@@ -1522,6 +1532,7 @@ def process_file(
                             "picture_description_mode": request.app.state.config.DOCLING_PICTURE_DESCRIPTION_MODE,
                             "picture_description_local": request.app.state.config.DOCLING_PICTURE_DESCRIPTION_LOCAL,
                             "picture_description_api": request.app.state.config.DOCLING_PICTURE_DESCRIPTION_API,
+                            **request.app.state.config.DOCLING_PARAMS,
                         },
                         PDF_EXTRACT_IMAGES=request.app.state.config.PDF_EXTRACT_IMAGES,
                         DOCUMENT_INTELLIGENCE_ENDPOINT=request.app.state.config.DOCUMENT_INTELLIGENCE_ENDPOINT,

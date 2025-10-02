@@ -2310,6 +2310,18 @@ DOCLING_SERVER_URL = PersistentConfig(
     os.getenv("DOCLING_SERVER_URL", "http://docling:5001"),
 )
 
+docling_params = os.getenv("DOCLING_PARAMS", "")
+try:
+    docling_params = json.loads(docling_params)
+except json.JSONDecodeError:
+    docling_params = {}
+
+DOCLING_PARAMS = PersistentConfig(
+    "DOCLING_PARAMS",
+    "rag.docling_params",
+    docling_params,
+)
+
 DOCLING_DO_OCR = PersistentConfig(
     "DOCLING_DO_OCR",
     "rag.docling_do_ocr",
