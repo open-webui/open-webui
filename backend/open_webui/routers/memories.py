@@ -51,7 +51,7 @@ async def add_memory(
 ):
     memory = Memories.insert_new_memory(user.id, form_data.content)
 
-    VECTOR_DB_CLIENT.upsert(
+    await VECTOR_DB_CLIENT.upsert(
         collection_name=f"user-memory-{user.id}",
         items=[
             {
@@ -96,10 +96,10 @@ async def query_memory(
 async def reset_memory_from_vector_db(
     request: Request, user=Depends(get_verified_user)
 ):
-    VECTOR_DB_CLIENT.delete_collection(f"user-memory-{user.id}")
+    await VECTOR_DB_CLIENT.delete_collection(f"user-memory-{user.id}")
 
     memories = Memories.get_memories_by_user_id(user.id)
-    VECTOR_DB_CLIENT.upsert(
+    await VECTOR_DB_CLIENT.upsert(
         collection_name=f"user-memory-{user.id}",
         items=[
             {
@@ -129,7 +129,7 @@ async def delete_memory_by_user_id(user=Depends(get_verified_user)):
 
     if result:
         try:
-            VECTOR_DB_CLIENT.delete_collection(f"user-memory-{user.id}")
+            await VECTOR_DB_CLIENT.delete_collection(f"user-memory-{user.id}")
         except Exception as e:
             log.error(e)
         return True
@@ -154,7 +154,7 @@ async def update_memory_by_id(
         raise HTTPException(status_code=404, detail="Memory not found")
 
     if form_data.content is not None:
-        VECTOR_DB_CLIENT.upsert(
+        await VECTOR_DB_CLIENT.upsert(
             collection_name=f"user-memory-{user.id}",
             items=[
                 {
@@ -182,7 +182,7 @@ async def delete_memory_by_id(memory_id: str, user=Depends(get_verified_user)):
     result = Memories.delete_memory_by_id_and_user_id(memory_id, user.id)
 
     if result:
-        VECTOR_DB_CLIENT.delete(
+        await VECTOR_DB_CLIENT.delete(
             collection_name=f"user-memory-{user.id}", ids=[memory_id]
         )
         return True
