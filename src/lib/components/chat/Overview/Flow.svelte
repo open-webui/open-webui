@@ -13,6 +13,8 @@
 	} from '@xyflow/svelte';
 	import BarsArrowUp from '$lib/components/icons/BarsArrowUp.svelte';
 	import Bars3BottomLeft from '$lib/components/icons/Bars3BottomLeft.svelte';
+	import AlignVertical from '$lib/components/icons/AlignVertical.svelte';
+	import AlignHorizontal from '$lib/components/icons/AlignHorizontal.svelte';
 
 	export let nodes;
 	export let nodeTypes;
@@ -42,10 +44,10 @@
 >
 	<Controls showLock={false}>
 		<ControlButton on:click={() => setLayoutDirection('vertical')} title="Vertical Layout">
-			<BarsArrowUp class="size-4" />
+			<AlignVertical className="size-4" />
 		</ControlButton>
 		<ControlButton on:click={() => setLayoutDirection('horizontal')} title="Horizontal Layout">
-			<Bars3BottomLeft class="size-4" />
+			<AlignHorizontal className="size-4" />
 		</ControlButton>
 	</Controls>
 	<Background variant={BackgroundVariant.Dots} />
