@@ -37,6 +37,11 @@ const executeCode = async (id: string, code: string) => {
 		await initializePyodide();
 	}
 
+	// Get list of existing files before execution
+	const { getAllFiles, scanForNewFiles } = await import('./fs-utils');
+	const fs: any = self.pyodide.FS as any;
+	const existingFiles = getAllFiles(fs, { getCwd: () => fs.cwd() });
+
 	// Update the cell state to "running"
 	self.cells[id] = {
 		id,
@@ -79,11 +84,15 @@ const executeCode = async (id: string, code: string) => {
 		self.cells[id].status = 'error';
 		self.cells[id].stderr += `\n${error.toString()}`;
 	} finally {
+		// Scan for new files only
+		const generatedFiles = scanForNewFiles(fs, existingFiles);
+
 		// Notify parent thread when execution completes
 		self.postMessage({
 			type: 'result',
 			id,
-			state: self.cells[id]
+			state: self.cells[id],
+			files: generatedFiles
 		});
 	}
 };
