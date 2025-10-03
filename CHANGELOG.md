@@ -19,8 +19,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Removed
 
-- **🔧 Build Optimization**: Removed unused hatch build configurations to allow improvements with `uv`.
-- **🔗 Dependency Clean-up**: Removed the unused `torch` dependency from requirements.
+- **🔧 Build Optimization**: Removed unused hatch build configurations to allow improvements with uv.
+- **🔗 Dependency Clean-up**: Removed the unused torch dependency from requirements.
 
 ## [0.5.7-ccv2-1.7.1] - 2025-09-22
 
