@@ -1,13 +1,19 @@
 from open_webui.constants import ERROR_MESSAGES
 from open_webui.models.users import Users
 from open_webui.models.message_metrics import MessageMetrics
+from open_webui.models.export_logs import ExportLogs, ExportLogForm
 from fastapi import (
     APIRouter,
     Depends,
     HTTPException,
     status,
+    Response,
 )
+from fastapi.responses import StreamingResponse
 import logging
+import csv
+import io
+import time
 
 from open_webui.utils.auth import get_metrics_user
 from open_webui.env import SRC_LOG_LEVELS
@@ -475,3 +481,162 @@ async def get_inter_prompt_latency_histogram(
         "histogram": histogram_data,
         "description": "Time between user prompts in chat sessions (inter-prompt latency)",
     }
+
+
+############################
+# Export Data
+############################
+
+
+@router.post("/export")
+async def export_metrics_data(
+    start_date: str, end_date: str, domain: str = None, user=Depends(get_metrics_user)
+):
+    """
+    Export metrics data as CSV for a specific date range.
+    Accessible by users with admin, global_analyst, or analyst roles.
+    """
+    try:
+        # Convert dates to timestamps
+        start_timestamp = int(datetime.strptime(start_date, "%Y-%m-%d").timestamp())
+        end_timestamp = (
+            int(datetime.strptime(end_date, "%Y-%m-%d").timestamp()) + 86400
+        )  # End of day
+
+        # Validate date range (max 90 days)
+        # Calculate days based on the actual date difference, not including the end-of-day addition
+        start_date_obj = datetime.strptime(start_date, "%Y-%m-%d")
+        end_date_obj = datetime.strptime(end_date, "%Y-%m-%d")
+        date_range_days = (
+            end_date_obj - start_date_obj
+        ).days + 1  # +1 to include both start and end days
+
+        if date_range_days > 90:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Date range cannot exceed 90 days",
+            )
+
+        # For analyst role, enforce domain restriction to their own domain
+        if user.role == "analyst":
+            domain = user.domain
+
+        # Get metrics data for the date range
+        metrics_data = MessageMetrics.get_export_data(
+            start_timestamp, end_timestamp, domain
+        )
+
+        if not metrics_data:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="No data found for the specified date range",
+            )
+
+        # Create CSV content
+        output = io.StringIO()
+        writer = csv.writer(output)
+
+        # Write header - include all available fields
+        headers = [
+            "Export Date",
+            "User Domain",
+            "Model",
+            "User ID",
+            "Chat ID",
+            "Prompt Tokens",
+            "Completion Tokens",
+            "Total Tokens",
+            "Message Created At",
+            "Message Timestamp",
+            "Metrics Record ID",
+        ]
+        writer.writerow(headers)
+
+        # Write data rows
+        export_timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        for row in metrics_data:
+            # Convert timestamp to readable date
+            message_date_str = datetime.fromtimestamp(row["created_at"]).strftime(
+                "%Y-%m-%d %H:%M:%S"
+            )
+            writer.writerow(
+                [
+                    export_timestamp,  # Export Date - when this export was performed
+                    row["user_domain"],
+                    row["model"],
+                    row["user_id"],
+                    row["chat_id"] or "",
+                    row["prompt_tokens"],
+                    row["completion_tokens"],
+                    row["total_tokens"],
+                    message_date_str,  # Message Timestamp - when the message was created
+                    row["created_at"],  # Raw timestamp
+                    row["id"],  # Metrics Record ID - the message_metrics table row ID
+                ]
+            )
+
+        csv_content = output.getvalue()
+        output.close()
+
+        # Calculate file size and row count
+        file_size = len(csv_content.encode("utf-8"))
+        row_count = len(metrics_data)
+
+        # Log the export
+        export_log_form = ExportLogForm(
+            user_id=user.id,
+            email_domain=user.domain or "unknown",
+            file_size=file_size,
+            row_count=row_count,
+            date_range_start=start_timestamp,
+            date_range_end=end_timestamp,
+        )
+
+        ExportLogs.insert_new_export_log(export_log_form)
+
+        # Generate filename
+        filename = f"metrics_export_{start_date}_to_{end_date}.csv"
+
+        # Return CSV as streaming response
+        return StreamingResponse(
+            io.BytesIO(csv_content.encode("utf-8")),
+            media_type="text/csv",
+            headers={"Content-Disposition": f"attachment; filename={filename}"},
+        )
+
+    except ValueError as e:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"Invalid date format. Use YYYY-MM-DD: {str(e)}",
+        )
+    except Exception as e:
+        log.exception(f"Error exporting metrics data: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to export data: {str(e)}",
+        )
+
+
+@router.get("/export/logs")
+async def get_export_logs(user=Depends(get_metrics_user)):
+    """
+    Get export logs. Only accessible by admin users.
+    """
+    # Only admins can view export logs
+    if user.role != "admin":
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Only administrators can view export logs",
+        )
+
+    try:
+        # Admins can see all export logs
+        export_logs = ExportLogs.get_all_export_logs()
+        return {"export_logs": export_logs}
+
+    except Exception as e:
+        log.exception(f"Error getting export logs: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to get export logs: {str(e)}",
+        )

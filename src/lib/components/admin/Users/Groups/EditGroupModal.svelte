@@ -1,12 +1,13 @@
 <script lang="ts">
 	import { toast } from 'svelte-sonner';
-	import { getContext, onMount } from 'svelte';
+	import { getContext, onMount, onDestroy } from 'svelte';
 	const i18n = getContext('i18n');
 
 	import Modal from '$lib/components/common/Modal.svelte';
 	import Display from './Display.svelte';
 	import Permissions from './Permissions.svelte';
 	import Users from './Users.svelte';
+	import Domains from './Domains.svelte';
 	import UserPlusSolid from '$lib/components/icons/UserPlusSolid.svelte';
 	import WrenchSolid from '$lib/components/icons/WrenchSolid.svelte';
 
@@ -21,7 +22,7 @@
 
 	export let custom = true;
 
-	export let tabs = ['general', 'permissions', 'users'];
+	export let tabs = ['general', 'permissions', 'users', 'domains'];
 
 	let selectedTab = 'general';
 	let loading = false;
@@ -49,6 +50,7 @@
 		}
 	};
 	export let userIds = [];
+	export let allowedDomains = [];
 
 	const submitHandler = async () => {
 		loading = true;
@@ -57,7 +59,8 @@
 			name,
 			description,
 			permissions,
-			user_ids: userIds
+			user_ids: userIds,
+			allowed_domains: allowedDomains
 		};
 
 		await onSubmit(group);
@@ -71,8 +74,8 @@
 			name = group.name;
 			description = group.description;
 			permissions = group?.permissions ?? {};
-
 			userIds = group?.user_ids ?? [];
+			allowedDomains = group?.allowed_domains ?? [];
 		}
 	};
 
@@ -197,6 +200,33 @@
 									<div class=" self-center">{$i18n.t('Users')} ({userIds.length})</div>
 								</button>
 							{/if}
+
+							{#if tabs.includes('domains')}
+								<button
+									class="px-0.5 py-1 max-w-fit w-fit rounded-lg flex-1 lg:flex-none flex text-right transition {selectedTab ===
+									'domains'
+										? ''
+										: ' text-gray-300 dark:text-gray-600 hover:text-gray-700 dark:hover:text-white'}"
+									on:click={() => {
+										selectedTab = 'domains';
+									}}
+									type="button"
+								>
+									<div class=" self-center mr-2">
+										<svg
+											xmlns="http://www.w3.org/2000/svg"
+											viewBox="0 0 16 16"
+											fill="currentColor"
+											class="w-4 h-4"
+										>
+											<path
+												d="M8 1a7 7 0 1 0 0 14A7 7 0 0 0 8 1ZM4.5 7.5a.5.5 0 0 1 .5-.5h6a.5.5 0 0 1 0 1H5a.5.5 0 0 1-.5-.5ZM5 5a.5.5 0 0 0 0 1h6a.5.5 0 0 0 0-1H5Zm0 4a.5.5 0 0 0 0 1h6a.5.5 0 0 0 0-1H5Z"
+											/>
+										</svg>
+									</div>
+									<div class=" self-center">{$i18n.t('Domains')} ({allowedDomains.length})</div>
+								</button>
+							{/if}
 						</div>
 
 						<div
@@ -208,6 +238,8 @@
 								<Permissions bind:permissions />
 							{:else if selectedTab == 'users'}
 								<Users bind:userIds {users} />
+							{:else if selectedTab == 'domains'}
+								<Domains bind:allowedDomains />
 							{/if}
 						</div>
 					</div>
