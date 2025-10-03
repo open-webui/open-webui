@@ -290,7 +290,7 @@
 			}}
 		>
 			<div
-				class="flex gap-1 w-fit text-center text-sm font-medium rounded-full"
+				class="flex gap-1 w-fit text-center text-sm rounded-full bg-transparent px-1.5 whitespace-nowrap"
 				bind:this={tagsContainerElement}
 			>
 				<button
