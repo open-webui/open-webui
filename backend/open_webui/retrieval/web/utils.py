@@ -464,7 +464,9 @@ class SafePlaywrightURLLoader(PlaywrightURLLoader, RateLimitMixin, URLProcessing
         async with async_playwright() as p:
             # Use remote browser if ws_endpoint is provided, otherwise use local browser
             if self.playwright_ws_url:
-                browser = await p.chromium.connect(self.playwright_ws_url)
+                browser = await p.chromium.connect(
+                    self.playwright_ws_url, timeout=self.playwright_timeout
+                )
             else:
                 browser = await p.chromium.launch(
                     headless=self.headless, proxy=self.proxy
