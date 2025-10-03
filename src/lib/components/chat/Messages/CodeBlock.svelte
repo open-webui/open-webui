@@ -327,9 +327,12 @@
 		onUpdate(token);
 		if (lang === 'mermaid' && (token?.raw ?? '').slice(-4).includes('```')) {
 			mermaidHtml = await renderMermaidDiagram(code);
-		} else if ((lang === 'vega' || lang === 'vega-lite') && (token?.raw ?? '').slice(-4).includes('```')) {
-  			vegaHtml = await renderVegaVisualization(code);
-  		}
+		} else if (
+			(lang === 'vega' || lang === 'vega-lite') &&
+			(token?.raw ?? '').slice(-4).includes('```')
+		) {
+			vegaHtml = await renderVegaVisualization(code);
+		}
 	};
 
 	$: if (token) {
@@ -403,12 +406,12 @@
 		{:else if lang === 'vega' || lang === 'vega-lite'}
 			{#if vegaHtml}
 				<SvgPanZoom
-      				className="rounded-3xl max-h-fit overflow-hidden"
-      				svg={vegaHtml}
-      				content={_token.text}
-    			/>
+					className="rounded-3xl max-h-fit overflow-hidden"
+					svg={vegaHtml}
+					content={_token.text}
+				/>
 			{:else}
-			    <pre class="vega">{code}</pre>
+				<pre class="vega">{code}</pre>
 			{/if}
 		{:else}
 			<div

@@ -1598,14 +1598,14 @@ export const renderMermaidDiagram = async (code: string) => {
 };
 
 export const renderVegaVisualization = async (spec: string) => {
-  try {
-    const vega = await import('vega');      
-    const parsedSpec = JSON.parse(spec);
-    const view = new vega.View(vega.parse(parsedSpec), {renderer: 'none'});
-    const svg = await view.toSVG();
-    return svg;
-  } catch (error) {
-    	console.log('Failed to render Vega visualization:', error); 
-    	return '';
-  }
+	try {
+		const vega = await import('vega');
+		const parsedSpec = JSON.parse(spec);
+		const view = new vega.View(vega.parse(parsedSpec), { renderer: 'none' });
+		const svg = await view.toSVG();
+		return svg;
+	} catch (error) {
+		console.log('Failed to render Vega visualization:', error);
+		return '';
+	}
 };
