@@ -813,7 +813,7 @@
 	"High Contrast Mode": "",
 	"Home": "",
 	"Host": "",
-	"How can I help you today?": "",
+	"How can I help you today?": "Hello {{name}}, how can I help you today?",
 	"How would you rate this response?": "",
 	"HTML": "",
 	"Hybrid Search": "",

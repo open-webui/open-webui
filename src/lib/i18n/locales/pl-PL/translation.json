@@ -813,7 +813,7 @@
 	"High Contrast Mode": "",
 	"Home": "Dom",
 	"Host": "Serwer",
-	"How can I help you today?": "Jak mogę Ci dzisiaj pomóc?",
+	"How can I help you today?": "Witaj {{name}}, jak mogę Ci dzisiaj pomóc?",
 	"How would you rate this response?": "Jak oceniłbyś tę odpowiedź?",
 	"HTML": "",
 	"Hybrid Search": "Wyszukiwanie hybrydowe",
