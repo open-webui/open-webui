@@ -35,7 +35,8 @@
 		toggleChatPinnedStatusById,
 		getChatById,
 		updateChatFolderIdById,
-		importChat
+		importChat,
+		deleteMultipleChats
 	} from '$lib/apis/chats';
 	import { createNewFolder, getFolders, updateFolderParentIdById } from '$lib/apis/folders';
 	import { WEBUI_BASE_URL } from '$lib/constants';
@@ -47,6 +48,7 @@
 	import Loader from '../common/Loader.svelte';
 	import AddFilesPlaceholder from '../AddFilesPlaceholder.svelte';
 	import SearchInput from './Sidebar/SearchInput.svelte';
+	import ConfirmDialog from '../common/ConfirmDialog.svelte';
 	import Folder from '../common/Folder.svelte';
 	import Plus from '../icons/Plus.svelte';
 	import Tooltip from '../common/Tooltip.svelte';
@@ -63,9 +65,15 @@
 
 	let shiftKey = false;
 
-	let selectedChatId = null;
+	let selectedChatIds = new Set();
+
+	// Calculate total selected count including current chat if not in multi-selection
+	$: totalSelectedCount =
+		selectedChatIds.size + ($chatId && $chatId !== '' && !selectedChatIds.has($chatId) ? 1 : 0);
+	$: showSelectionControls = totalSelectedCount > 0;
 	let showDropdown = false;
 	let showPinnedChat = true;
+	let showDeleteConfirm = false;
 
 	let showCreateChannel = false;
 
@@ -270,6 +278,82 @@
 		}
 	};
 
+	const toggleChatSelection = (chatId) => {
+		if (selectedChatIds.has(chatId)) {
+			selectedChatIds.delete(chatId);
+		} else {
+			selectedChatIds.add(chatId);
+		}
+		// Force reactivity
+		selectedChatIds = new Set(selectedChatIds);
+	};
+
+	const clearSelection = () => {
+		selectedChatIds.clear();
+		selectedChatIds = new Set(selectedChatIds);
+	};
+
+	const selectAllChats = () => {
+		const allChatIds = [...($chats || []), ...($pinnedChats || [])].map((chat) => chat.id);
+		selectedChatIds = new Set(allChatIds);
+	};
+
+	const clearMultiSelection = () => {
+		if (selectedChatIds.size > 0) {
+			clearSelection();
+		}
+	};
+
+	const deleteSelectedChats = async () => {
+		if (totalSelectedCount === 0) {
+			toast.error($i18n.t('No chats selected'));
+			return;
+		}
+
+		showDeleteConfirm = true;
+	};
+	const confirmDeleteSelectedChats = async () => {
+		// Include current chat in deletion if it's visually selected but not in multi-selection
+		const chatIdsToDelete = new Set(selectedChatIds);
+		if ($chatId && !selectedChatIds.has($chatId)) {
+			chatIdsToDelete.add($chatId);
+		}
+		const chatIdsArray = Array.from(chatIdsToDelete);
+
+		try {
+			const result = await deleteMultipleChats(localStorage.token, chatIdsArray);
+
+			if (result.failed_deletions.length > 0) {
+				const message =
+					result.failed_deletions.length === 1
+						? $i18n.t('Failed to delete chat')
+						: `${$i18n.t('Failed to delete')} ${result.failed_deletions.length} ${$i18n.t('chats')}`;
+				toast.error(message);
+			}
+
+			if (result.deleted_count > 0) {
+				const message =
+					result.deleted_count === 1
+						? $i18n.t('Successfully deleted chat')
+						: `${$i18n.t('Successfully deleted')} ${result.deleted_count} ${$i18n.t('chats')}`;
+				toast.success(message);
+			}
+
+			// Clear selection and refresh chat list
+			clearSelection();
+			await initChatList();
+
+			// Check if the current chat was deleted and redirect to new chat
+			if (result.deleted_count > 0 && chatIdsArray.includes($chatId)) {
+				// Clear chatId before redirect to prevent selection count issues
+				await chatId.set('');
+				await goto('/');
+			}
+		} catch (error) {
+			toast.error($i18n.t('Error deleting chats: {{error}}', { error: error }));
+		}
+	};
+
 	let draggedOver = false;
 
 	const onDragOver = (e) => {
@@ -342,7 +426,7 @@
 
 	const onBlur = () => {
 		shiftKey = false;
-		selectedChatId = null;
+		clearSelection();
 	};
 
 	const changeFocus = async (elementId) => {
@@ -521,7 +605,7 @@
 				href="/"
 				draggable="false"
 				on:click={async () => {
-					selectedChatId = null;
+					clearSelection();
 					await goto('/');
 					const newChatButton = document.getElementById('new-chat-button');
 					setTimeout(() => {
@@ -559,7 +643,7 @@
 					class="flex-grow flex space-x-3 rounded-lg px-2 py-[7px] hover:bg-gray-100 dark:hover:bg-gray-900 transition"
 					href="/workspace"
 					on:click={() => {
-						selectedChatId = null;
+						clearSelection();
 						chatId.set('');
 
 						if ($mobile) {
@@ -601,6 +685,77 @@
 				<SearchInput bind:value={search} on:input={searchDebounceHandler} />
 			</Tooltip>
 		</div>
+
+		<!-- Bulk Selection Controls -->
+		{#if showSelectionControls}
+			<div
+				class="flex items-center justify-between px-2.5 py-2 bg-gray-50 dark:bg-gray-850 rounded-lg mx-2 mb-2"
+			>
+				<div class="text-xs text-gray-600 dark:text-gray-400">
+					{totalSelectedCount}
+					{$i18n.t('selected')}
+				</div>
+				<div class="flex space-x-1">
+					<Tooltip content={$i18n.t('Select All')}>
+						<button
+							class="p-1 rounded hover:bg-gray-200 dark:hover:bg-gray-700 transition"
+							on:click={selectAllChats}
+						>
+							<svg
+								xmlns="http://www.w3.org/2000/svg"
+								class="w-3.5 h-3.5"
+								viewBox="0 0 20 20"
+								fill="currentColor"
+							>
+								<path
+									fill-rule="evenodd"
+									d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"
+									clip-rule="evenodd"
+								/>
+							</svg>
+						</button>
+					</Tooltip>
+					<Tooltip content={$i18n.t('Clear Selection')}>
+						<button
+							class="p-1 rounded hover:bg-gray-200 dark:hover:bg-gray-700 transition"
+							on:click={clearSelection}
+						>
+							<svg
+								xmlns="http://www.w3.org/2000/svg"
+								class="w-3.5 h-3.5"
+								viewBox="0 0 20 20"
+								fill="currentColor"
+							>
+								<path
+									fill-rule="evenodd"
+									d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z"
+									clip-rule="evenodd"
+								/>
+							</svg>
+						</button>
+					</Tooltip>
+					<Tooltip content={$i18n.t('Delete Selected')}>
+						<button
+							class="p-1 rounded hover:bg-red-200 dark:hover:bg-red-700 text-red-600 dark:text-red-400 transition"
+							on:click={deleteSelectedChats}
+						>
+							<svg
+								xmlns="http://www.w3.org/2000/svg"
+								class="w-3.5 h-3.5"
+								viewBox="0 0 20 20"
+								fill="currentColor"
+							>
+								<path
+									fill-rule="evenodd"
+									d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm5-1a1 1 0 00-1 1v6a1 1 0 102 0V8a1 1 0 00-1-1z"
+									clip-rule="evenodd"
+								/>
+							</svg>
+						</button>
+					</Tooltip>
+				</div>
+			</div>
+		{/if}
 
 		<div
 			class="relative flex flex-col flex-1 overflow-y-auto overflow-x-hidden {$temporaryChatEnabled
@@ -746,13 +901,14 @@
 										className=""
 										id={chat.id}
 										title={chat.title}
-										{shiftKey}
-										selected={selectedChatId === chat.id}
+										selected={selectedChatIds.has(chat.id) || $chatId === chat.id}
 										on:select={() => {
-											selectedChatId = chat.id;
+											// This is for multi-selection (Ctrl+click)
+											toggleChatSelection(chat.id);
 										}}
 										on:unselect={() => {
-											selectedChatId = null;
+											// This is for multi-selection (Ctrl+click)
+											toggleChatSelection(chat.id);
 										}}
 										on:change={async (e) => {
 											const { buttonID } = e.detail;
@@ -824,13 +980,14 @@
 									className=""
 									id={chat.id}
 									title={chat.title}
-									{shiftKey}
-									selected={selectedChatId === chat.id}
+									selected={selectedChatIds.has(chat.id) || $chatId === chat.id}
 									on:select={() => {
-										selectedChatId = chat.id;
+										// This is for multi-selection (Ctrl+click)
+										toggleChatSelection(chat.id);
 									}}
 									on:unselect={() => {
-										selectedChatId = null;
+										// This is for multi-selection (Ctrl+click)
+										toggleChatSelection(chat.id);
 									}}
 									on:change={async (e) => {
 										const { buttonID } = e.detail;
@@ -841,6 +998,10 @@
 									on:tag={(e) => {
 										const { type, name } = e.detail;
 										tagEventHandler(type, name, chat.id);
+									}}
+									on:navigate={() => {
+										// Clear multi-selection on regular navigation
+										clearMultiSelection();
 									}}
 								/>
 							{/each}
@@ -904,6 +1065,17 @@
 		</div>
 	</div>
 </div>
+
+<ConfirmDialog
+	bind:show={showDeleteConfirm}
+	title={$i18n.t('Delete selected chats?')}
+	on:confirm={confirmDeleteSelectedChats}
+>
+	<div class="text-sm text-gray-800 dark:text-gray-200">
+		{$i18n.t('This will delete')} <span class="font-semibold">{totalSelectedCount}</span>
+		{$i18n.t('selected chat(s)')}. {$i18n.t('This action cannot be undone')}.
+	</div>
+</ConfirmDialog>
 
 <style>
 	.scrollbar-hidden:active::-webkit-scrollbar-thumb,

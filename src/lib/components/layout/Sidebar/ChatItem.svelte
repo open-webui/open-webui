@@ -45,7 +45,6 @@
 	export let title;
 
 	export let selected = false;
-	export let shiftKey = false;
 
 	let chat = null;
 
@@ -124,8 +123,9 @@
 
 			// If deleting the current chat, navigate away first
 			if ($chatId === id) {
-				await goto('/');
+				// Clear chatId first to prevent selection count issues
 				await chatId.set('');
+				await goto('/');
 				await tick();
 			}
 
@@ -247,7 +247,7 @@
 			confirmEdit
 				? 'bg-gray-200 dark:bg-gray-900'
 				: selected
-					? 'bg-gray-100 dark:bg-gray-950'
+					? 'bg-blue-100 dark:bg-blue-900 border-2 border-blue-300 dark:border-blue-700'
 					: 'group-hover:bg-gray-100 dark:group-hover:bg-gray-950'} whitespace-nowrap text-ellipsis"
 		>
 			<input
@@ -284,13 +284,24 @@
 				confirmEdit
 					? 'bg-gray-200 dark:bg-gray-900'
 					: selected
-						? 'bg-gray-100 dark:bg-gray-950'
+						? 'bg-blue-100 dark:bg-blue-900 border-2 border-blue-300 dark:border-blue-700'
 						: 'group-hover:bg-gray-100 dark:group-hover:bg-gray-950'} whitespace-nowrap text-ellipsis"
 				href="/c/{id}"
-				on:click={() => {
-					dispatch('select');
-					if ($mobile) {
-						showSidebar.set(false);
+				on:click={(e) => {
+					if (e.ctrlKey || e.metaKey) {
+						// Ctrl+click for multi-selection
+						e.preventDefault();
+						if (selected) {
+							dispatch('unselect');
+						} else {
+							dispatch('select');
+						}
+					} else {
+						// Regular click - navigate and clear multi-selection
+						dispatch('navigate');
+						if ($mobile) {
+							showSidebar.set(false);
+						}
 					}
 				}}
 				on:dblclick={() => {
@@ -307,6 +318,22 @@
 				draggable="false"
 			>
 				<div class=" flex self-center flex-1 w-full">
+					{#if selected}
+						<div class="mr-2 flex items-center">
+							<svg
+								xmlns="http://www.w3.org/2000/svg"
+								class="w-4 h-4 text-blue-600 dark:text-blue-400"
+								viewBox="0 0 20 20"
+								fill="currentColor"
+							>
+								<path
+									fill-rule="evenodd"
+									d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"
+									clip-rule="evenodd"
+								/>
+							</svg>
+						</div>
+					{/if}
 					<div class=" text-left self-center overflow-hidden w-full h-[20px]">
 						{title}
 					</div>
@@ -321,7 +348,7 @@
         {id === $chatId || confirmEdit
 			? 'from-gray-200 dark:from-gray-900'
 			: selected
-				? 'from-gray-100 dark:from-gray-950'
+				? 'from-blue-100 dark:from-blue-900'
 				: 'invisible group-hover:visible from-gray-100 dark:from-gray-950'}
             absolute {className === 'pr-2'
 			? 'right-[8px]'
@@ -366,32 +393,6 @@
 					</button>
 				</Tooltip>
 			</div>
-		{:else if shiftKey && mouseOver}
-			<div class=" flex items-center self-center space-x-1.5">
-				<Tooltip content={$i18n.t('Archive')} className="flex items-center">
-					<button
-						class=" self-center dark:hover:text-white transition"
-						on:click={() => {
-							archiveChatHandler(id);
-						}}
-						type="button"
-					>
-						<ArchiveBox className="size-3  translate-y-[0.5px]" strokeWidth="2" />
-					</button>
-				</Tooltip>
-
-				<Tooltip content={$i18n.t('Delete')}>
-					<button
-						class=" self-center dark:hover:text-white transition"
-						on:click={() => {
-							deleteChatHandler(id);
-						}}
-						type="button"
-					>
-						<GarbageBin strokeWidth="2" />
-					</button>
-				</Tooltip>
-			</div>
 		{:else}
 			<div class="flex self-center space-x-1 z-10">
 				<Tooltip content={$i18n.t('Chat Menu')}>
@@ -401,9 +402,6 @@
 						{buttonID}
 						cloneChatHandler={() => {
 							cloneChatHandler(id);
-						}}
-						shareHandler={() => {
-							showShareChatModal = true;
 						}}
 						archiveChatHandler={() => {
 							archiveChatHandler(id);
@@ -417,9 +415,6 @@
 							if (input) {
 								input.focus();
 							}
-						}}
-						deleteHandler={() => {
-							showDeleteConfirm = true;
 						}}
 						buttonClass="dark:hover:bg-gray-850 rounded-lg touch-auto"
 						onClose={() => {

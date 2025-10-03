@@ -9,7 +9,7 @@
 	const dispatch = createEventDispatcher();
 
 	import Dropdown from '$lib/components/common/Dropdown.svelte';
-	import GarbageBin from '$lib/components/icons/GarbageBin.svelte';
+
 	import Pencil from '$lib/components/icons/Pencil.svelte';
 	import Tooltip from '$lib/components/common/Tooltip.svelte';
 	import Tags from '$lib/components/chat/Tags.svelte';
@@ -33,7 +33,6 @@
 	export let cloneChatHandler: Function;
 	export let archiveChatHandler: Function;
 	export let renameHandler: Function;
-	export let deleteHandler: Function;
 	export let onClose: Function;
 	export let buttonClass = '';
 	export let ariaLabel = '';
@@ -213,15 +212,6 @@
 					</DropdownMenu.Item>
 				</DropdownMenu.SubContent>
 			</DropdownMenu.Sub>
-			<DropdownMenu.Item
-				class="flex  gap-2  items-center px-3 py-1.5 text-sm  cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 rounded-md"
-				on:click={() => {
-					deleteHandler();
-				}}
-			>
-				<GarbageBin strokeWidth="2" />
-				<div class="flex items-center">{$i18n.t('Delete')}</div>
-			</DropdownMenu.Item>
 
 			<hr class="border-gray-50 dark:border-gray-850 my-0.5" />
 
