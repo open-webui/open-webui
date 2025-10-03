@@ -15,6 +15,7 @@
 	export let addMessages: Function | null = null;
 	export let initChatHandler: Function | null = null; 
 	export let webSearchEnabled: boolean = false;
+	export let files: any[] = [];
 	
 	// Get the current web search state from the chat interface
 	$: currentWebSearchEnabled = webSearchEnabled;
@@ -240,6 +241,7 @@
 			
 			history.currentId = responseMsgId;
 		}
+		files = [];
 
 		console.log('Added facilities response to chat using addMessages:', {
 			contentLength: content.length,
@@ -315,16 +317,21 @@
 				sponsor: selectedSponsor,
 				form_data: formData,
 				model: modelId,
-				web_search_enabled: webSearchEnabled
+				web_search_enabled: webSearchEnabled,
+				files: files
 			});
 			console.log('Web search enabled value:', webSearchEnabled);
+			console.log('Attached files:', files);
+			console.log('Attached files count:', files.length);
+			console.log('Attached files details:', files.map(f => ({ name: f.name, type: f.type, id: f.id })));
 
 			// Call the facilities API
 			const response = await generateFacilitiesResponse(token, {
 				sponsor: selectedSponsor,
 				form_data: formData,
 				model: modelId,  
-				web_search_enabled: webSearchEnabled  
+				web_search_enabled: webSearchEnabled,
+				files: files
 			});
 
 			console.log('Facilities API response:', response);
@@ -462,6 +469,23 @@
 
 		<!-- Main content area - scrollable -->
 		<div class="flex-1 min-h-0 overflow-y-auto custom-scrollbar p-4 space-y-6">
+			<!-- Attached Files Indicator -->
+			{#if files && files.length > 0}
+				<div class="bg-[#8900E1]/20 border border-[#8900E1]/30 dark:border-[#8900E1]/40 rounded-lg p-3">
+					<div class="flex items-center gap-2 mb-2">
+						<svg class="w-4 h-4 text-[#8900E1] dark:text-[#8900E1]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+							<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
+						</svg>
+						<span class="text-sm font-medium text-[#57068C] dark:text-[#8900E1]">
+							{files.length} file{files.length === 1 ? '' : 's'} attached
+						</span>
+					</div>
+					<p class="text-xs text-[#57068C] dark:text-[#8900E1]">
+						These files will be used as reference material when generating your facilities response.
+					</p>
+				</div>
+			{/if}
+
 			<p class="text-sm text-gray-600 dark:text-gray-400 mt-1">
 					<b>Description</b><br>
 					This tool assists in developing the DRAFT section related to  Facilities & Equipment for grant proposals where sponsors are NSF (National Science Foundation) and NIH (National Institute of Health).<br><br>

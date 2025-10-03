@@ -179,6 +179,7 @@
 								{history}
 								{addMessages}
 								{webSearchEnabled}
+								bind:files
 								on:close={() => {
 									showControls.set(false);
 								}}
@@ -274,6 +275,7 @@
 									{addMessages}
 									{initChatHandler}
 									{webSearchEnabled}
+									bind:files
 									on:close={() => {
 										showControls.set(false);
 									}}
