@@ -12,6 +12,8 @@ TXE_PROMPT = "tsi_apc_prompt>"
 TXE_CLOSE_COMMAND = "close all"
 LINUX_LOGGED_IN_PROMPT = "@agilex7_dk_si_agf014ea"
 LINUX_LOGIN_PROMPT = "agilex7_dk_si_agf014ea"
+SYSTEMD_LOGGED_IN_PROMPT = "@agilex7dksiagf014ea"
+SYSTEMD_LOGIN_PROMPT = "agilex7dksiagf014ea"
 
 
 def is_lock_available():
@@ -47,7 +49,10 @@ def check_for_specific_prompt(ser, timeout=10, prompt=LINUX_LOGGED_IN_PROMPT):
                     read_next_line = line.decode("utf-8", errors="replace")
                 except UnicodeDecodeError as e:
                     print("Decoding error:", e, "Raw line:", line)
-                if prompt in read_next_line.strip():
+                if (
+                    prompt in read_next_line.strip()
+                    or SYSTEMD_LOGGED_IN_PROMPT in read_next_line.strip()
+                ):
                     return True
             else:
                 return False
@@ -87,6 +92,7 @@ def check_for_prompt(ser, timeout=10):
                     or ("SOCFPGA_AGILEX7 " in read_next_line.strip())
                     or ("Unknown command " in read_next_line.strip())
                     or (LINUX_LOGGED_IN_PROMPT in read_next_line.strip())
+                    or (SYSTEMD_LOGGED_IN_PROMPT in read_next_line.strip())
                     or ("imx8mpevk" in read_next_line.strip())
                 ):
                     return True
@@ -98,7 +104,10 @@ def check_for_prompt(ser, timeout=10):
 
                 if (
                     "(Yocto Project Reference Distro) 5.2." in read_next_line.strip()
-                    and LINUX_LOGIN_PROMPT in read_next_line.strip()
+                    and (
+                        LINUX_LOGIN_PROMPT in read_next_line.strip()
+                        or SYSTEMD_LOGIN_PROMPT in read_next_line.strip()
+                    )
                 ):
                     time.sleep(3)
                     ser.write(b"root\n")
@@ -210,9 +219,8 @@ def explicit_root_command(port, baudrate, path):
         print("SERIAL/TARGET:" + line)
         if line:
             # print(f"Received: {line}")
-            if (
-                "(Yocto Project Reference Distro) 5.2." in line
-                and LINUX_LOGIN_PROMPT in line
+            if "(Yocto Project Reference Distro) 5.2." in line and (
+                LINUX_LOGIN_PROMPT in line or SYSTEMD_LOGIN_PROMPT in line
             ):
                 time.sleep(3)
                 ser.write(b"root\n")
@@ -285,6 +293,7 @@ def send_serial_command(port, baudrate, command, timeout=DEFAULT_COMMAND_TIMEOUT
                         or ("SOCFPGA_AGILEX7 " in read_next_line.strip())
                         or ("Unknown command " in read_next_line.strip())
                         or (LINUX_LOGGED_IN_PROMPT in read_next_line.strip())
+                        or (SYSTEMD_LOGGED_IN_PROMPT in read_next_line.strip())
                         or ("imx8mpevk" in read_next_line.strip())
                     ):
                         break
@@ -325,6 +334,7 @@ def pre_and_post_check(port, baudrate):
     ser.write(("\n").encode())
     time.sleep(0.1)
     ser.write(("\n").encode())
+    print("pre_and_post_check")
     while True:
         line = b""
         while True:
@@ -345,7 +355,10 @@ def pre_and_post_check(port, baudrate):
                 return "Program interrupted by user"
 
         decoded_line = line.decode("utf-8", errors="replace")
-        if "agilex7_dk_si_agf014ea login:" in decoded_line:
+        if (
+            "agilex7_dk_si_agf014ea login:" in decoded_line
+            or "agilex7dksiagf014ea login:" in decoded_line
+        ):
             time.sleep(0.1)
             flag[0] = "root issue"
             print("root issue")
@@ -355,7 +368,10 @@ def pre_and_post_check(port, baudrate):
             flag[0] = "boot issue"
             print("boot issue")
             break
-        elif "@agilex7_dk_si_agf014ea:" in decoded_line:
+        elif (
+            "@agilex7_dk_si_agf014ea:" in decoded_line
+            or "agilex7dksiagf014ea:" in decoded_line
+        ):
             time.sleep(0.1)
             break
 

@@ -10,6 +10,7 @@ import mmap
 import signal
 import serial
 import serial_script
+import serial_script_for_ssh
 import re
 import inspect
 from werkzeug.datastructures import FileStorage
@@ -37,6 +38,10 @@ DEFAULT_CONTEXT_LENGTH = 2048
 DEFAULT_TEMP = 0.8
 
 DEFAULT_MODEL_COMMAND_RUN_TIMEOUT = 14400
+DEFAULT_TIMEOUT = 300
+DEFAULT_THREAD_TIMEOUT = 900
+PER_1G_TIMEOUT_SECS = 240
+GB = 1024 * 1024 * 1024
 
 parameters = {
     "target": "opu",
@@ -50,6 +55,65 @@ parameters = {
     "temperature": DEFAULT_TEMP,
 }
 
+import os
+import socket
+
+shell = None
+ssh = None
+initialization_done = False
+
+
+def initialize_shell():
+    global ssh, shell, initialization_done
+    # Step 1: Get the hostname
+    tsi_hostname = socket.gethostname()
+    os.environ["TSI_HOSTNAME"] = tsi_hostname
+
+    # Step 3: Set environment variables based on hostname
+    fpga_hosts = [
+        "fpga1.tsavoritesi.net",
+        "fpga2.tsavoritesi.net",
+        "fpga3.tsavoritesi.net",
+        "fpga4.tsavoritesi.net",
+    ]
+
+    if tsi_hostname not in fpga_hosts:
+        ssh, shell = serial_script_for_ssh.connect_to_shell()
+    initialization_done = True
+
+
+def close_shell(ssh, shell):
+    if ssh != None and shell != None:
+        serial_script_for_ssh.disconnect_shell(ssh, shell)
+
+
+def pre_and_post_check():
+    if shell is None:
+        serial_script.pre_and_post_check(port, baudrate)
+    else:
+        serial_script_for_ssh.pre_and_post_check(shell)
+
+
+def send_serial_command(command, timeout=DEFAULT_TIMEOUT):
+    if shell is None:
+        return serial_script.send_serial_command(port, baudrate, command, timeout)
+    else:
+        return serial_script_for_ssh.send_shell_command(shell, command, timeout)
+
+
+def restart_txe_serial_portion(command_path):
+    if shell is None:
+        return serial_script.restart_txe_serial_portion(port, baudrate, command_path)
+    else:
+        return serial_script_for_ssh.restart_txe_serial_portion(shell, command_path)
+
+
+def abort_serial_portion():
+    if shell is None:
+        return serial_script.abort_serial_portion(port, baudrate)
+    else:
+        return serial_script_for_ssh.abort_serial_portion(shell)
+
 
 def is_job_running():
     if job_status["running"] == True:
@@ -60,7 +124,7 @@ def is_job_running():
 @app.route("/")
 def index():
 
-    serial_script.pre_and_post_check(port, baudrate)
+    pre_and_post_check()
 
     return render_template("index.html")
 
@@ -68,7 +132,7 @@ def index():
 @app.route("/llama-cli", methods=["GET"])
 def llama_cli_serial_command():
 
-    serial_script.pre_and_post_check(port, baudrate)
+    pre_and_post_check()
 
     # ./run_llama_cli.sh "my cat's name" "10" "tinyllama-vo-5m-para.gguf" "none"
     model = request.args.get("model")
@@ -111,7 +175,7 @@ def llama_cli_serial_command():
     try:
         job_status["running"] = True
         job_status["current_job"] = inspect.currentframe().f_code.co_name
-        result = serial_script.send_serial_command(port, baudrate, command)
+        result = send_serial_command(command)
         job_status["running"] = False
         return result, 200
     except subprocess.CalledProcessError as e:
@@ -130,7 +194,7 @@ os.makedirs(
 def read_cmd_from_serial(port, baudrate, command):
     job_status["running"] = True
     job_status["current_job"] = inspect.currentframe().f_code.co_name
-    temp = serial_script.send_serial_command(port, baudrate, command, timeout=300)
+    temp = send_serial_command(command, timeout=300)
     print(temp)
     job_status["running"] = False
 
@@ -138,7 +202,7 @@ def read_cmd_from_serial(port, baudrate, command):
 @app.route("/delete-file", methods=["POST", "GET"])
 def delete_file():
 
-    serial_script.pre_and_post_check(port, baudrate)
+    pre_and_post_check()
 
     if request.method == "POST":
 
@@ -153,7 +217,7 @@ def delete_file():
 @app.route("/upload-gguf", methods=["POST", "GET"])
 def upload_serial_command():
 
-    serial_script.pre_and_post_check(port, baudrate)
+    pre_and_post_check()
 
     if request.method == "POST":
         # Check if a file was submitted
@@ -178,7 +242,7 @@ def upload_serial_command():
 
             def scriptRecvFromHost():
                 try:
-                    result = serial_script.send_serial_command(port, baudrate, command)
+                    result = send_serial_command(command)
                     job_status["result"] = result
                     print(result)
                     recv_output = result
@@ -201,11 +265,6 @@ def upload_serial_command():
             recvoutput=f"On FPGA Target, recvFromHost completed ; transfered file:{filename} received",
         )
     return render_template("upload.html")  # Display the upload form
-
-
-DEFAULT_THREAD_TIMEOUT = 900
-PER_1G_TIMEOUT_SECS = 240
-GB = 1024 * 1024 * 1024
 
 
 def actual_transfer(file, file_size):
@@ -237,9 +296,7 @@ def actual_transfer(file, file_size):
 
         def scriptRecvFromHost():
             try:
-                result = serial_script.send_serial_command(
-                    port, baudrate, command, timeout=timeout
-                )
+                result = send_serial_command(command, timeout=timeout)
                 job_status["result"] = result
                 print("Success:", job_status["result"])
                 recv_output = result
@@ -315,8 +372,8 @@ def receive_upload_model():
         new_file_name,
     )
 
-    preliminary_target_check = serial_script.send_serial_command(
-        port, baudrate, f"cd {destn_path}; md5sum {new_file_name}"
+    preliminary_target_check = send_serial_command(
+        f"cd {destn_path}; md5sum {new_file_name}"
     )
 
     try:
@@ -350,9 +407,7 @@ def receive_upload_model():
             200,
         )
 
-    serial_script.send_serial_command(
-        port, baudrate, f"cd {destn_path}; rm {new_file_name}", timeout=300
-    )
+    send_serial_command(f"cd {destn_path}; rm {new_file_name}", timeout=300)
 
     try:
         file_size = os.path.getsize(data["actual_name"])
@@ -383,18 +438,14 @@ def receive_upload_model():
             500,
         )
 
-    serial_script.send_serial_command(
-        port, baudrate, f"cd {destn_path}; mv {file_name} {new_file_name}", timeout=300
-    )
+    send_serial_command(f"cd {destn_path}; mv {file_name} {new_file_name}", timeout=300)
 
     print("Listing out existing files")
-    serial_script.send_serial_command(
-        port, baudrate, f"cd {destn_path}; ls -lt", timeout=300
-    )
+    send_serial_command(port, baudrate, f"cd {destn_path}; ls -lt", timeout=300)
 
     print("Doing checksum of the upload file")
-    target_check_sum = serial_script.send_serial_command(
-        port, baudrate, f"cd {destn_path}; md5sum {new_file_name}", timeout=300
+    target_check_sum = send_serial_command(
+        f"cd {destn_path}; md5sum {new_file_name}", timeout=300
     )
 
     print("TARGET CHECK-SUM: ", target_check_sum)
@@ -471,8 +522,8 @@ def receive_pull_model():
             500,
         )
 
-    preliminary_target_check = serial_script.send_serial_command(
-        port, baudrate, f"cd {destn_path}; md5sum {data['human_name']}"
+    preliminary_target_check = send_serial_command(
+        f"cd {destn_path}; md5sum {data['human_name']}"
     )
 
     try:
@@ -506,9 +557,7 @@ def receive_pull_model():
             200,
         )
 
-    serial_script.send_serial_command(
-        port, baudrate, f"cd {destn_path}; rm {data['human_name']}", timeout=300
-    )
+    send_serial_command(f"cd {destn_path}; rm {data['human_name']}", timeout=300)
 
     try:
         file_size = os.path.getsize(path)
@@ -544,27 +593,21 @@ def receive_pull_model():
     dir_path = os.path.dirname(data["human_name"])  # ✅ Python way
 
     # Create the directory structure on the target device
-    serial_script.send_serial_command(
-        port, baudrate, f"cd {destn_path}; mkdir -p {dir_path}", timeout=300
-    )
+    send_serial_command(f"cd {destn_path}; mkdir -p {dir_path}", timeout=300)
 
     new_file_name = normalize_model_name(data["human_name"])
 
-    serial_script.send_serial_command(
-        port,
-        baudrate,
+    send_serial_command(
         f"cd {destn_path}; mv {data['actual_name']} {new_file_name}",
         timeout=300,
     )
 
     print("Listing out existing files")
-    serial_script.send_serial_command(
-        port, baudrate, f"cd {destn_path}; ls -lt", timeout=300
-    )
+    send_serial_command(f"cd {destn_path}; ls -lt", timeout=300)
 
     print("Doing checksum of the upload file")
-    target_check_sum = serial_script.send_serial_command(
-        port, baudrate, f"cd {destn_path}; md5sum {new_file_name}", timeout=300
+    target_check_sum = send_serial_command(
+        f"cd {destn_path}; md5sum {new_file_name}", timeout=300
     )
 
     print("TARGET CHECK-SUM: ", target_check_sum)
@@ -617,7 +660,7 @@ def opu_delete_model():
     job_status["running"] = True
     job_status["current_job"] = inspect.currentframe().f_code.co_name
 
-    serial_script.pre_and_post_check(port, baudrate)
+    pre_and_post_check()
     try:
         model_name = data["model_name"]
         print("model_name: ", model_name, "destn_path", destn_path)
@@ -634,9 +677,7 @@ def opu_delete_model():
 
     file_name = denormalize_model_name(data["model_name"])
 
-    serial_script.send_serial_command(
-        port,
-        baudrate,
+    send_serial_command(
         f'cd {destn_path}; rm -fr {file_name}* && find . -type d -empty | while read -r dir; do rmdir "$dir"; done',
         timeout=300,
     )
@@ -655,7 +696,7 @@ def opu_delete_model():
 @app.route("/upload-file", methods=["GET", "POST"])
 def upload_file():
 
-    serial_script.pre_and_post_check(port, baudrate)
+    pre_and_post_check()
 
     if request.method == "POST":
         # Check if a file was submitted
@@ -685,7 +726,7 @@ def upload_file():
 
             def scriptRecvFromHost():
                 try:
-                    result = serial_script.send_serial_command(port, baudrate, command)
+                    result = send_serial_command(command)
                     job_status["result"] = result
 
                     print(result)
@@ -702,9 +743,7 @@ def upload_file():
             thread.join()
             stdout, stderr = process.communicate()
 
-        serial_script.send_serial_command(
-            port, baudrate, f"cd {temporary_destination_path}; ls -lt", timeout=300
-        )
+        send_serial_command(f"cd {temporary_destination_path}; ls -lt", timeout=300)
 
         return render_template(
             "uploadtofpga.html",
@@ -751,7 +790,7 @@ def internal_restart_txe():
 
     process.wait()
 
-    serial_script.restart_txe_serial_portion(port, baudrate, exe_path)
+    restart_txe_serial_portion(exe_path)
 
     print("Finished Everything Hooray")
 
@@ -759,7 +798,7 @@ def internal_restart_txe():
 @app.route("/restart-txe", methods=["GET"])
 def restart_txe_serial_command():
 
-    serial_script.pre_and_post_check(port, baudrate)
+    pre_and_post_check()
 
     internal_restart_txe()
 
@@ -769,12 +808,12 @@ def restart_txe_serial_command():
 @app.route("/health-check", methods=["GET"])
 def health_check_serial_command():
 
-    serial_script.pre_and_post_check(port, baudrate)
+    pre_and_post_check()
 
     command = f"uptime; free -h; df -h; top -b -n1"
 
     try:
-        result = serial_script.send_serial_command(port, baudrate, command)
+        result = send_serial_command(command)
         return result, 200
     except subprocess.CalledProcessError as e:
         return f"Error executing script: {e.stderr}", 500
@@ -783,12 +822,12 @@ def health_check_serial_command():
 @app.route("/test", methods=["GET"])
 def test_serial_command():
 
-    serial_script.pre_and_post_check(port, baudrate)
+    pre_and_post_check()
 
     command = f"test"
 
     try:
-        result = serial_script.send_serial_command(port, baudrate, command)
+        result = send_serial_command(command)
         return result, 200
     except subprocess.CalledProcessError as e:
         return f"Error executing script: {e.stderr}", 500
@@ -797,12 +836,12 @@ def test_serial_command():
 @app.route("/system-info", methods=["GET"])
 def system_info_serial_command():
 
-    serial_script.pre_and_post_check(port, baudrate)
+    pre_and_post_check()
 
     command = f"{exe_path}../install/tsi-version; uptime; lsmod; lscpu; lsblk"
 
     try:
-        result = serial_script.send_serial_command(port, baudrate, command)
+        result = send_serial_command(command)
         return result, 200
     except subprocess.CalledProcessError as e:
         return f"Error executing script: {e.stderr}", 500
@@ -995,12 +1034,12 @@ def chats():
     job_status["running"] = True
     job_status["current_job"] = inspect.currentframe().f_code.co_name
 
-    serial_script.pre_and_post_check(port, baudrate)
+    pre_and_post_check()
 
     def run_script(command):
         try:
-            result = serial_script.send_serial_command(
-                port, baudrate, command, timeout=DEFAULT_MODEL_COMMAND_RUN_TIMEOUT
+            result = send_serial_command(
+                command, timeout=DEFAULT_MODEL_COMMAND_RUN_TIMEOUT
             )
             if result:
                 response_text = result
@@ -1120,12 +1159,12 @@ def chat():
     job_status["running"] = True
     job_status["current_job"] = inspect.currentframe().f_code.co_name
 
-    serial_script.pre_and_post_check(port, baudrate)
+    pre_and_post_check()
 
     def run_script(command):
         try:
-            result = serial_script.send_serial_command(
-                port, baudrate, command, timeout=DEFAULT_MODEL_COMMAND_RUN_TIMEOUT
+            result = send_serial_command(
+                command, timeout=DEFAULT_MODEL_COMMAND_RUN_TIMEOUT
             )
             if result:
                 response_text = result
@@ -1178,7 +1217,7 @@ def restart_txe_ollama_serial_command():
     global parameters
     incoming_headers = dict(request.headers)
 
-    serial_script.pre_and_post_check(port, baudrate)
+    pre_and_post_check()
     internal_restart_txe()
     job_status["running"] = False
 
@@ -1247,7 +1286,7 @@ def health_check_ollama_serial_command():
 
 def aborttask():
     try:
-        result = serial_script.abort_serial_portion(port, baudrate)
+        result = abort_serial_portion()
         return result, 200
     except subprocess.CalledProcessError as e:
         return f"Error executing script: {e.stderr}", 500
@@ -1270,7 +1309,7 @@ def abort_task_ollama_serial_command():
 @app.route("/submit", methods=["POST"])
 def submit():
 
-    serial_script.pre_and_post_check(port, baudrate)
+    pre_and_post_check()
 
     global job_status
 
@@ -1318,7 +1357,7 @@ def submit():
 
     def run_script():
         try:
-            result = serial_script.send_serial_command(port, baudrate, command)
+            result = send_serial_command(command)
             job_status["result"] = result
         except subprocess.CalledProcessError as e:
             job_status["result"] = f"Error: {e.stderr}"
@@ -1336,7 +1375,7 @@ def submit():
 @app.route("/status")
 def status():
 
-    serial_script.pre_and_post_check(port, baudrate)
+    pre_and_post_check()
 
     if job_status["running"]:
         return "running"
@@ -1374,11 +1413,24 @@ def abort():
         # Use subprocess.Popen + pid handling instead for real process termination
         job_status["running"] = False
         job_status["result"] = "Aborted by user."
-        serial_script.abort_serial_portion(port, baudrate)
+        abort_serial_portion()
         internal_restart_txe()
         return "<h2>Job aborted.</h2><a href='/'>Home</a>"
     return "<h2>No job running.</h2><a href='/'>Home</a>"
 
 
+import atexit
+
+
+def cleanup():
+    global ssh, shell
+    close_shell(ssh, shell)
+
+
+atexit.register(cleanup)
+
 if __name__ == "__main__":
+    if initialization_done is not True:
+        initialize_shell()
+        atexit.register(cleanup)
     app.run(debug=True, port=5001)
