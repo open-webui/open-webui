@@ -12,8 +12,9 @@ from open_webui.models.feedbacks import (
 
 from open_webui.constants import ERROR_MESSAGES
 from open_webui.utils.auth import get_admin_user, get_verified_user
+from open_webui.utils.callback import CallbackRoute
 
-router = APIRouter()
+router = APIRouter(route_class=CallbackRoute)
 
 
 ############################

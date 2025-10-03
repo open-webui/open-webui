@@ -19,11 +19,12 @@ from open_webui.env import SRC_LOG_LEVELS
 
 from open_webui.utils.auth import get_admin_user, get_verified_user
 from open_webui.utils.access_control import has_access, has_permission
+from open_webui.utils.callback import CallbackRoute
 
 log = logging.getLogger(__name__)
 log.setLevel(SRC_LOG_LEVELS["MODELS"])
 
-router = APIRouter()
+router = APIRouter(route_class=CallbackRoute)
 
 ############################
 # GetNotes
