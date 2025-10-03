@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { getContext, createEventDispatcher } from 'svelte';
+	import { getContext, createEventDispatcher, onMount } from 'svelte';
 	import { showFacilitiesOverlay, showControls, models, chatId, chats, currentChatPage } from '$lib/stores';
 	import { slide } from 'svelte/transition';
 	import { generateFacilitiesResponse, getFacilitiesSections } from '$lib/apis/facilities';
@@ -15,6 +15,9 @@
 	export let addMessages: Function | null = null;
 	export let initChatHandler: Function | null = null; 
 	export let webSearchEnabled: boolean = false;
+	
+	// Local storage key - unique per chat
+	$: STORAGE_KEY = `facilities-overlay-form-${$chatId || 'new'}`;
 	
 	// Get the current web search state from the chat interface
 	$: currentWebSearchEnabled = webSearchEnabled;
@@ -52,7 +55,6 @@
 	// Create dynamic sections based on backend response
 	$: currentSections = dynamicSections.length > 0 ? 
 		dynamicSections.map((sectionLabel, index) => {
-			// Map backend section labels to form field IDs
 			const sectionId = getSectionIdFromLabel(sectionLabel);
 			console.log(`Mapping section ${index}: "${sectionLabel}" to ID "${sectionId}"`);
 			return { id: sectionId, label: sectionLabel, required: true };
@@ -74,6 +76,88 @@
 		return mapping[label] || label.toLowerCase().replace(/[^a-zA-Z0-9]/g, '');
 	}
 	
+	// Save form data to localStorage whenever it changes
+	// Only save if we have a valid chatId (not for new chats)
+	$: if ($chatId && (selectedSponsor || Object.values(formData).some(v => v.trim() !== ''))) {
+		saveToLocalStorage();
+	}
+
+	function saveToLocalStorage() {
+		// Only save if we have a valid chatId
+		if (!$chatId) {
+			console.log('Skipping save - no chatId yet (new chat)');
+			return;
+		}
+		
+		try {
+			const dataToSave = {
+				selectedSponsor,
+				formData,
+				dynamicSections,
+				chatId: $chatId,
+				timestamp: Date.now()
+			};
+			localStorage.setItem(STORAGE_KEY, JSON.stringify(dataToSave));
+			console.log(`Saved form data to localStorage for chat: ${$chatId}`);
+		} catch (error) {
+			console.error('Error saving to localStorage:', error);
+		}
+	}
+
+	function loadFromLocalStorage() {
+		// Only load if we have a valid chatId
+		if (!$chatId) {
+			console.log('Skipping load - no chatId yet (new chat)');
+			return;
+		}
+		
+		try {
+			const saved = localStorage.getItem(STORAGE_KEY);
+			if (saved) {
+				const parsed = JSON.parse(saved);
+				
+				// Only load if it matches current chat (safety check)
+				if (parsed.chatId === $chatId) {
+					selectedSponsor = parsed.selectedSponsor || '';
+					formData = parsed.formData || formData;
+					dynamicSections = parsed.dynamicSections || [];
+					
+					console.log(`Loaded form data from localStorage for chat: ${$chatId}`, {
+						sponsor: selectedSponsor,
+						hasData: Object.values(formData).some(v => v.trim() !== ''),
+						sectionsCount: dynamicSections.length,
+						savedAt: new Date(parsed.timestamp).toLocaleString()
+					});
+				}
+			}
+		} catch (error) {
+			console.error('Error loading from localStorage:', error);
+		}
+	}
+
+	function clearLocalStorage() {
+		// Only clear if we have a valid chatId
+		if (!$chatId) {
+			return;
+		}
+		
+		try {
+			localStorage.removeItem(STORAGE_KEY);
+			console.log(`Cleared form data from localStorage for chat: ${$chatId}`);
+		} catch (error) {
+			console.error('Error clearing localStorage:', error);
+		}
+	}
+
+	// Load saved data when component mounts or chat changes
+	onMount(() => {
+		loadFromLocalStorage();
+	});
+	
+	// Reload form data when chat ID changes
+	$: if ($chatId) {
+		loadFromLocalStorage();
+	}
 
 	// DIRECT CHAT HISTORY MANIPULATION - BYPASS submitPrompt entirely
 	async function addFacilitiesResponseToChat(content: string, sources: any[], error: string | null = null) {
@@ -251,17 +335,8 @@
 
 	async function handleSponsorChange(sponsor: string) {
 		selectedSponsor = sponsor;
-		// Reset form data when sponsor changes
-		formData = {
-			projectTitle: '',
-			researchSpaceFacilities: '',
-			coreInstrumentation: '',
-			computingDataResources: '',
-			internalFacilitiesNYU: '',
-			externalFacilitiesOther: '',
-			specialInfrastructure: '',
-			equipment: ''
-		};
+		// Don't reset form data - keep existing data
+		// Just update the equipment field visibility based on sponsor
 		
 		// Fetch sections from backend
 		try {
@@ -285,6 +360,11 @@
 			dynamicSections = sponsor === 'NSF' ? 
 				nsfSections.map(s => s.label) : 
 				nihSections.map(s => s.label);
+		}
+		
+		// Save after sponsor change (only if chatId exists)
+		if ($chatId) {
+			saveToLocalStorage();
 		}
 	}
 
@@ -343,8 +423,6 @@
 				});
 
 				await addFacilitiesResponseToChat(responseMessage, sources, null);
-
-				toast.success(`Generated ${Object.keys(response.sections).length} sections for ${selectedSponsor}. Form remains open for additional generations.`);
 			} else {
 				console.error('Facilities API failed:', response.error);
 				// Add error to chat like regular chat does
@@ -371,6 +449,7 @@
 	}
 
 	function closeOverlay() {
+		// Don't clear localStorage on close - keep the draft
 		showFacilitiesOverlay.set(false);
 		showControls.set(false);
 		dispatch('close');
@@ -520,7 +599,7 @@
 
 						<button
 							type="button"
-							class="w-full mt-6 px-4 py-3 bg-[#57068C] hover:bg-[#8900E1] text-white dark:bg-white dark:text-gray-900 dark:hover:bg-gray-100 dark:disabled:bg-gray-600 rounded-lg font-medium text-sm"
+							class="w-full mt-6 px-4 py-3 bg-[#57068C] hover:bg-[#8900E1] text-white dark:bg-white dark:text-gray-900 dark:hover:bg-gray-100 dark:disabled:bg-gray-600 disabled:opacity-50 disabled:cursor-not-allowed rounded-lg font-medium text-sm transition-colors"
 							on:click={generateSection}
 							disabled={generating}
 							aria-describedby="generate-help"
