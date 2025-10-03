@@ -48,7 +48,7 @@ async def get_notes(request: Request, user=Depends(get_verified_user)):
                 "user": UserResponse(**Users.get_user_by_id(note.user_id).model_dump()),
             }
         )
-        for note in Notes.get_notes_by_user_id(user.id, "write")
+        for note in Notes.get_notes_by_permission(user.id, "write")
     ]
 
     return notes
@@ -81,7 +81,9 @@ async def get_note_list(
 
     notes = [
         NoteTitleIdResponse(**note.model_dump())
-        for note in Notes.get_notes_by_user_id(user.id, "write", skip=skip, limit=limit)
+        for note in Notes.get_notes_by_permission(
+            user.id, "write", skip=skip, limit=limit
+        )
     ]
 
     return notes
@@ -177,6 +179,18 @@ async def update_note_by_id(
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN, detail=ERROR_MESSAGES.DEFAULT()
         )
+
+    # Check if user can share publicly
+    if (
+        user.role != "admin"
+        and form_data.access_control == None
+        and not has_permission(
+            user.id,
+            "sharing.public_notes",
+            request.app.state.config.USER_PERMISSIONS,
+        )
+    ):
+        form_data.access_control = {}
 
     try:
         note = Notes.update_note_by_id(id, form_data)

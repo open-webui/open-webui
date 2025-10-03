@@ -12,13 +12,27 @@
 	import calendar from 'dayjs/plugin/calendar';
 	import Loader from '../common/Loader.svelte';
 	import { createMessagesList } from '$lib/utils';
-	import { user } from '$lib/stores';
+	import { config, user } from '$lib/stores';
 	import Messages from '../chat/Messages.svelte';
 	import { goto } from '$app/navigation';
+	import PencilSquare from '../icons/PencilSquare.svelte';
+	import PageEdit from '../icons/PageEdit.svelte';
 	dayjs.extend(calendar);
 
 	export let show = false;
 	export let onClose = () => {};
+
+	let actions = [
+		{
+			label: 'Start a new conversation',
+			onClick: async () => {
+				await goto(`/${query ? `?q=${query}` : ''}`);
+				show = false;
+				onClose();
+			},
+			icon: PencilSquare
+		}
+	];
 
 	let query = '';
 	let page = 1;
@@ -55,7 +69,13 @@
 			return;
 		}
 
-		const chatId = chatList[selectedIdx].id;
+		const selectedChatIdx = selectedIdx - actions.length;
+		if (selectedChatIdx < 0) {
+			selectedChat = null;
+			return;
+		}
+
+		const chatId = chatList[selectedChatIdx].id;
 
 		const chat = await getChatById(localStorage.token, chatId).catch(async (error) => {
 			return null;
@@ -91,6 +111,10 @@
 	};
 
 	const searchHandler = async () => {
+		if (!show) {
+			return;
+		}
+
 		if (searchDebounceTimeout) {
 			clearTimeout(searchDebounceTimeout);
 		}
@@ -145,9 +169,9 @@
 		chatListLoading = false;
 	};
 
-	const init = () => {
+	$: if (show) {
 		searchHandler();
-	};
+	}
 
 	const onKeyDown = (e) => {
 		const searchOptions = document.getElementById('search-options-container');
@@ -158,13 +182,13 @@
 		if (e.code === 'Escape') {
 			show = false;
 			onClose();
-		} else if (e.code === 'Enter' && (chatList ?? []).length > 0) {
+		} else if (e.code === 'Enter') {
 			const item = document.querySelector(`[data-arrow-selected="true"]`);
 			if (item) {
 				item?.click();
+				show = false;
 			}
 
-			show = false;
 			return;
 		} else if (e.code === 'ArrowDown') {
 			const searchInput = document.getElementById('search-input');
@@ -178,7 +202,7 @@
 				}
 			}
 
-			selectedIdx = Math.min(selectedIdx + 1, (chatList ?? []).length - 1);
+			selectedIdx = Math.min(selectedIdx + 1, (chatList ?? []).length - 1 + actions.length);
 		} else if (e.code === 'ArrowUp') {
 			if (selectedIdx === 0) {
 				const searchInput = document.getElementById('search-input');
@@ -201,7 +225,23 @@
 	};
 
 	onMount(() => {
-		init();
+		actions = [
+			...actions,
+			...(($config?.features?.enable_notes ?? false) &&
+			($user?.role === 'admin' || ($user?.permissions?.features?.notes ?? true))
+				? [
+						{
+							label: 'Create a new note',
+							onClick: async () => {
+								await goto(`/notes${query ? `?content=${query}` : ''}`);
+								show = false;
+								onClose();
+							},
+							icon: PageEdit
+						}
+					]
+				: [])
+		];
 
 		document.addEventListener('keydown', onKeyDown);
 	});
@@ -215,8 +255,8 @@
 </script>
 
 <Modal size="xl" bind:show>
-	<div class="py-2.5 dark:text-gray-300 text-gray-700">
-		<div class="px-3.5 pb-1.5">
+	<div class="py-3 dark:text-gray-300 text-gray-700">
+		<div class="px-4 pb-1.5">
 			<SearchInput
 				bind:value={query}
 				on:input={searchHandler}
@@ -238,7 +278,7 @@
 						show = false;
 						return;
 					} else if (e.code === 'ArrowDown') {
-						selectedIdx = Math.min(selectedIdx + 1, (chatList ?? []).length - 1);
+						selectedIdx = Math.min(selectedIdx + 1, (chatList ?? []).length - 1 + actions.length);
 					} else if (e.code === 'ArrowUp') {
 						selectedIdx = Math.max(selectedIdx - 1, 0);
 					} else {
@@ -251,15 +291,47 @@
 			/>
 		</div>
 
-		<!-- <hr class="border-gray-100 dark:border-gray-850 my-1" /> -->
+		<!-- <hr class="border-gray-50 dark:border-gray-850 my-1" /> -->
 
-		<div class="flex px-3 pb-1">
+		<div class="flex px-4 pb-1">
 			<div
-				class="flex flex-col overflow-y-auto h-96 md:h-[40rem] max-h-full scrollbar-hidden w-full flex-1"
+				class="flex flex-col overflow-y-auto h-96 md:h-[40rem] max-h-full scrollbar-hidden w-full flex-1 pr-2"
 			>
+				<div class="w-full text-xs text-gray-500 dark:text-gray-500 font-medium pb-2 px-2">
+					{$i18n.t('Actions')}
+				</div>
+
+				{#each actions as action, idx (action.label)}
+					<button
+						class=" w-full flex items-center rounded-xl text-sm py-2 px-3 hover:bg-gray-50 dark:hover:bg-gray-850 {selectedIdx ===
+						idx
+							? 'bg-gray-50 dark:bg-gray-850'
+							: ''}"
+						data-arrow-selected={selectedIdx === idx ? 'true' : undefined}
+						dragabble="false"
+						on:mouseenter={() => {
+							selectedIdx = idx;
+						}}
+						on:click={async () => {
+							await action.onClick();
+						}}
+					>
+						<div class="pr-2">
+							<svelte:component this={action.icon} />
+						</div>
+						<div class=" flex-1 text-left">
+							<div class="text-ellipsis line-clamp-1 w-full">
+								{$i18n.t(action.label)}
+							</div>
+						</div>
+					</button>
+				{/each}
+
 				{#if chatList}
+					<hr class="border-gray-50 dark:border-gray-850 my-3" />
+
 					{#if chatList.length === 0}
-						<div class="text-xs text-gray-500 dark:text-gray-400 text-center px-5">
+						<div class="text-xs text-gray-500 dark:text-gray-400 text-center px-5 py-4">
 							{$i18n.t('No results found')}
 						</div>
 					{/if}
@@ -294,15 +366,15 @@
 						{/if}
 
 						<a
-							class=" w-full flex justify-between items-center rounded-lg text-sm py-2 px-3 hover:bg-gray-50 dark:hover:bg-gray-850 {selectedIdx ===
-							idx
+							class=" w-full flex justify-between items-center rounded-xl text-sm py-2 px-3 hover:bg-gray-50 dark:hover:bg-gray-850 {selectedIdx ===
+							idx + actions.length
 								? 'bg-gray-50 dark:bg-gray-850'
 								: ''}"
 							href="/c/{chat.id}"
 							draggable="false"
-							data-arrow-selected={selectedIdx === idx ? 'true' : undefined}
+							data-arrow-selected={selectedIdx === idx + actions.length ? 'true' : undefined}
 							on:mouseenter={() => {
-								selectedIdx = idx;
+								selectedIdx = idx + actions.length;
 							}}
 							on:click={async () => {
 								await goto(`/c/${chat.id}`);

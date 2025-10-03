@@ -8,6 +8,7 @@
 	import fileSaver from 'file-saver';
 	const { saveAs } = fileSaver;
 
+	import { goto } from '$app/navigation';
 	import { toast } from 'svelte-sonner';
 
 	import { chatId, mobile, selectedFolder, showSidebar } from '$lib/stores';
@@ -16,11 +17,13 @@
 		deleteFolderById,
 		updateFolderIsExpandedById,
 		updateFolderById,
-		updateFolderParentIdById
+		updateFolderParentIdById,
+		getFolderById
 	} from '$lib/apis/folders';
 	import {
 		getChatById,
 		getChatsByFolderId,
+		getChatListByFolderId,
 		importChat,
 		updateChatFolderIdById
 	} from '$lib/apis/chats';
@@ -37,9 +40,10 @@
 	import FolderMenu from './Folders/FolderMenu.svelte';
 	import DeleteConfirmDialog from '$lib/components/common/ConfirmDialog.svelte';
 	import FolderModal from './Folders/FolderModal.svelte';
-	import { goto } from '$app/navigation';
 	import Emoji from '$lib/components/common/Emoji.svelte';
+	import Spinner from '$lib/components/common/Spinner.svelte';
 
+	export let folderRegistry = {};
 	export let open = false;
 
 	export let folders;
@@ -51,6 +55,7 @@
 	export let parentDragged = false;
 
 	export let onDelete = (e) => {};
+	export let onItemMove = (e) => {};
 
 	let folderElement;
 
@@ -59,6 +64,8 @@
 
 	let draggedOver = false;
 	let dragged = false;
+
+	let clickTimer = null;
 
 	let name = '';
 
@@ -169,6 +176,12 @@
 									return null;
 								});
 
+								onItemMove({
+									originFolderId: chat.folder_id,
+									targetFolderId: folderId,
+									e
+								});
+
 								if (res) {
 									dispatch('update');
 								}
@@ -180,6 +193,7 @@
 				}
 			}
 
+			setFolderItems();
 			draggedOver = false;
 		}
 	};
@@ -233,6 +247,11 @@
 
 	onMount(async () => {
 		open = folders[folderId].is_expanded;
+		folderRegistry[folderId] = {
+			setFolderItems: () => {
+				setFolderItems();
+			}
+		};
 		if (folderElement) {
 			folderElement.addEventListener('dragover', onDragOver);
 			folderElement.addEventListener('drop', onDrop);
@@ -248,7 +267,6 @@
 
 		if (folders[folderId]?.new) {
 			delete folders[folderId].new;
-
 			await tick();
 			renameHandler();
 		}
@@ -280,7 +298,7 @@
 		}
 	};
 
-	const updateHandler = async ({ name, data }) => {
+	const updateHandler = async ({ name, meta, data }) => {
 		if (name === '') {
 			toast.error($i18n.t('Folder name cannot be empty.'));
 			return;
@@ -293,6 +311,7 @@
 
 		const res = await updateFolderById(localStorage.token, folderId, {
 			name,
+			...(meta ? { meta } : {}),
 			...(data ? { data } : {})
 		}).catch((error) => {
 			toast.error(`${error}`);
@@ -311,9 +330,15 @@
 			toast.success($i18n.t('Folder updated successfully'));
 
 			if ($selectedFolder?.id === folderId) {
-				selectedFolder.set(folders[folderId]);
-			}
+				const folder = await getFolderById(localStorage.token, folderId).catch((error) => {
+					toast.error(`${error}`);
+					return null;
+				});
 
+				if (folder) {
+					await selectedFolder.set(folder);
+				}
+			}
 			dispatch('update');
 		}
 	};
@@ -329,27 +354,52 @@
 
 	let isExpandedUpdateTimeout;
 
-	const isExpandedUpdateDebounceHandler = (open) => {
+	const isExpandedUpdateDebounceHandler = () => {
 		clearTimeout(isExpandedUpdateTimeout);
 		isExpandedUpdateTimeout = setTimeout(() => {
 			isExpandedUpdateHandler();
 		}, 500);
 	};
 
-	$: isExpandedUpdateDebounceHandler(open);
+	let chats = null;
+	export const setFolderItems = async () => {
+		await tick();
+		if (open) {
+			chats = await getChatListByFolderId(localStorage.token, folderId).catch((error) => {
+				toast.error(`${error}`);
+				return [];
+			});
+
+			if ($selectedFolder?.id === folderId) {
+				const folder = await getFolderById(localStorage.token, folderId).catch((error) => {
+					toast.error(`${error}`);
+					return null;
+				});
+
+				if (folder) {
+					await selectedFolder.set(folder);
+				}
+			}
+		} else {
+			chats = null;
+		}
+	};
+
+	$: setFolderItems(open);
 
 	const renameHandler = async () => {
 		console.log('Edit');
 		await tick();
 		name = folders[folderId].name;
-
 		edit = true;
+
+		await tick();
 		await tick();
 
 		const input = document.getElementById(`folder-${folderId}-input`);
-
 		if (input) {
 			input.focus();
+			input.select();
 		}
 	};
 
@@ -386,12 +436,7 @@
 	</div>
 </DeleteConfirmDialog>
 
-<FolderModal
-	bind:show={showFolderModal}
-	edit={true}
-	folder={folders[folderId]}
-	onSubmit={updateHandler}
-/>
+<FolderModal bind:show={showFolderModal} edit={true} {folderId} onSubmit={updateHandler} />
 
 {#if dragged && x && y}
 	<DragGhost {x} {y}>
@@ -417,8 +462,6 @@
 		bind:open
 		className="w-full"
 		buttonClassName="w-full"
-		hide={(folders[folderId]?.childrenIds ?? []).length === 0 &&
-			(folders[folderId].items?.chats ?? []).length === 0}
 		onChange={(state) => {
 			dispatch('open', state);
 		}}
@@ -427,47 +470,73 @@
 		<div class="w-full group">
 			<button
 				id="folder-{folderId}-button"
-				class="relative w-full py-1.5 px-2 rounded-lg flex items-center gap-1.5 text-xs text-gray-500 dark:text-gray-500 font-medium hover:bg-gray-100 dark:hover:bg-gray-900 transition {$selectedFolder?.id ===
+				class="relative w-full py-1 px-1.5 rounded-xl flex items-center gap-1.5 hover:bg-gray-100 dark:hover:bg-gray-900 transition {$selectedFolder?.id ===
 				folderId
-					? 'bg-gray-100 dark:bg-gray-900'
+					? 'bg-gray-100 dark:bg-gray-900 selected'
 					: ''}"
-				on:dblclick={() => {
+				on:dblclick={(e) => {
+					if (clickTimer) {
+						clearTimeout(clickTimer); // cancel the single-click action
+						clickTimer = null;
+					}
 					renameHandler();
 				}}
 				on:click={async (e) => {
-					await goto('/');
-
-					selectedFolder.set(folders[folderId]);
-
-					if ($mobile) {
-						showSidebar.set(!$showSidebar);
+					(e) => e.stopPropagation();
+					if (clickTimer) {
+						clearTimeout(clickTimer);
+						clickTimer = null;
 					}
+
+					clickTimer = setTimeout(async () => {
+						const folder = await getFolderById(localStorage.token, folderId).catch((error) => {
+							toast.error(`${error}`);
+							return null;
+						});
+
+						if (folder) {
+							await selectedFolder.set(folder);
+						}
+
+						await goto('/');
+
+						if ($mobile) {
+							showSidebar.set(!$showSidebar);
+						}
+						clickTimer = null;
+					}, 100); // 100ms delay (typical double-click threshold)
+				}}
+				on:pointerup={(e) => {
+					e.stopPropagation();
 				}}
 			>
 				<button
-					class="text-gray-300 dark:text-gray-600 transition-all"
+					class="text-gray-500 dark:text-gray-500 transition-all p-1 hover:bg-gray-200 dark:hover:bg-gray-850 rounded-lg"
 					on:click={(e) => {
 						e.stopPropagation();
+						e.stopImmediatePropagation();
+						open = !open;
+						isExpandedUpdateDebounceHandler();
 					}}
 				>
 					{#if folders[folderId]?.meta?.icon}
 						<div class="flex group-hover:hidden transition-all">
-							<Emoji className="size-4" shortCode={folders[folderId].meta.icon} />
+							<Emoji className="size-3.5" shortCode={folders[folderId].meta.icon} />
 						</div>
 
 						<div class="hidden group-hover:flex transition-all p-[1px]">
 							{#if open}
-								<ChevronDown className=" size-3.5" strokeWidth="2.5" />
+								<ChevronDown className=" size-3" strokeWidth="2.5" />
 							{:else}
-								<ChevronRight className=" size-3.5" strokeWidth="2.5" />
+								<ChevronRight className=" size-3" strokeWidth="2.5" />
 							{/if}
 						</div>
 					{:else}
 						<div class="p-[1px]">
 							{#if open}
-								<ChevronDown className=" size-3.5" strokeWidth="2.5" />
+								<ChevronDown className=" size-3" strokeWidth="2.5" />
 							{:else}
-								<ChevronRight className=" size-3.5" strokeWidth="2.5" />
+								<ChevronRight className=" size-3" strokeWidth="2.5" />
 							{/if}
 						</div>
 					{/if}
@@ -479,10 +548,8 @@
 							id="folder-{folderId}-input"
 							type="text"
 							bind:value={name}
-							on:focus={(e) => {
-								e.target.select();
-							}}
 							on:blur={() => {
+								console.log('Blur');
 								updateHandler({ name });
 								edit = false;
 							}}
@@ -500,7 +567,7 @@
 									edit = false;
 								}
 							}}
-							class="w-full h-full bg-transparent text-gray-500 dark:text-gray-500 outline-hidden"
+							class="w-full h-full bg-transparent outline-hidden"
 						/>
 					{:else}
 						{folders[folderId].name}
@@ -509,10 +576,6 @@
 
 				<button
 					class="absolute z-10 right-2 invisible group-hover:visible self-center flex items-center dark:text-gray-300"
-					on:pointerup={(e) => {
-						e.stopPropagation();
-					}}
-					on:click={(e) => e.stopPropagation()}
 				>
 					<FolderMenu
 						onEdit={() => {
@@ -525,16 +588,16 @@
 							exportHandler();
 						}}
 					>
-						<button class="p-0.5 dark:hover:bg-gray-850 rounded-lg touch-auto" on:click={(e) => {}}>
+						<div class="p-1 dark:hover:bg-gray-850 rounded-lg touch-auto">
 							<EllipsisHorizontal className="size-4" strokeWidth="2.5" />
-						</button>
+						</div>
 					</FolderMenu>
 				</button>
 			</button>
 		</div>
 
 		<div slot="content" class="w-full">
-			{#if (folders[folderId]?.childrenIds ?? []).length > 0 || (folders[folderId].items?.chats ?? []).length > 0}
+			{#if (folders[folderId]?.childrenIds ?? []).length > 0 || (chats ?? []).length > 0}
 				<div
 					class="ml-3 pl-1 mt-[1px] flex flex-col overflow-y-auto scrollbar-hidden border-s border-gray-100 dark:border-gray-900"
 				>
@@ -550,10 +613,12 @@
 
 						{#each children as childFolder (`${folderId}-${childFolder.id}`)}
 							<svelte:self
+								bind:folderRegistry
 								{folders}
 								folderId={childFolder.id}
 								{shiftKey}
 								parentDragged={dragged}
+								{onItemMove}
 								{onDelete}
 								on:import={(e) => {
 									dispatch('import', e.detail);
@@ -568,18 +633,22 @@
 						{/each}
 					{/if}
 
-					{#if folders[folderId].items?.chats}
-						{#each folders[folderId].items.chats as chat (chat.id)}
-							<ChatItem
-								id={chat.id}
-								title={chat.title}
-								{shiftKey}
-								on:change={(e) => {
-									dispatch('change', e.detail);
-								}}
-							/>
-						{/each}
-					{/if}
+					{#each chats ?? [] as chat (chat.id)}
+						<ChatItem
+							id={chat.id}
+							title={chat.title}
+							{shiftKey}
+							on:change={(e) => {
+								dispatch('change', e.detail);
+							}}
+						/>
+					{/each}
+				</div>
+			{/if}
+
+			{#if chats === null}
+				<div class="flex justify-center items-center p-2">
+					<Spinner className="size-4 text-gray-500" />
 				</div>
 			{/if}
 		</div>

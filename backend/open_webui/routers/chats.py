@@ -37,7 +37,9 @@ router = APIRouter()
 @router.get("/", response_model=list[ChatTitleIdResponse])
 @router.get("/list", response_model=list[ChatTitleIdResponse])
 def get_session_user_chat_list(
-    user=Depends(get_verified_user), page: Optional[int] = None
+    user=Depends(get_verified_user),
+    page: Optional[int] = None,
+    include_folders: Optional[bool] = False,
 ):
     try:
         if page is not None:
@@ -45,10 +47,12 @@ def get_session_user_chat_list(
             skip = (page - 1) * limit
 
             return Chats.get_chat_title_id_list_by_user_id(
-                user.id, skip=skip, limit=limit
+                user.id, include_folders=include_folders, skip=skip, limit=limit
             )
         else:
-            return Chats.get_chat_title_id_list_by_user_id(user.id)
+            return Chats.get_chat_title_id_list_by_user_id(
+                user.id, include_folders=include_folders
+            )
     except Exception as e:
         log.exception(e)
         raise HTTPException(
@@ -166,7 +170,7 @@ async def import_chat(form_data: ChatImportForm, user=Depends(get_verified_user)
 
 
 @router.get("/search", response_model=list[ChatTitleIdResponse])
-async def search_user_chats(
+def search_user_chats(
     text: str, page: Optional[int] = None, user=Depends(get_verified_user)
 ):
     if page is None:
@@ -212,6 +216,28 @@ async def get_chats_by_folder_id(folder_id: str, user=Depends(get_verified_user)
         ChatResponse(**chat.model_dump())
         for chat in Chats.get_chats_by_folder_ids_and_user_id(folder_ids, user.id)
     ]
+
+
+@router.get("/folder/{folder_id}/list")
+async def get_chat_list_by_folder_id(
+    folder_id: str, page: Optional[int] = 1, user=Depends(get_verified_user)
+):
+    try:
+        limit = 60
+        skip = (page - 1) * limit
+
+        return [
+            {"title": chat.title, "id": chat.id, "updated_at": chat.updated_at}
+            for chat in Chats.get_chats_by_folder_id_and_user_id(
+                folder_id, user.id, skip=skip, limit=limit
+            )
+        ]
+
+    except Exception as e:
+        log.exception(e)
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST, detail=ERROR_MESSAGES.DEFAULT()
+        )
 
 
 ############################
@@ -333,6 +359,16 @@ async def get_archived_session_user_chat_list(
 @router.post("/archive/all", response_model=bool)
 async def archive_all_chats(user=Depends(get_verified_user)):
     return Chats.archive_all_chats_by_user_id(user.id)
+
+
+############################
+# UnarchiveAllChats
+############################
+
+
+@router.post("/unarchive/all", response_model=bool)
+async def unarchive_all_chats(user=Depends(get_verified_user)):
+    return Chats.unarchive_all_chats_by_user_id(user.id)
 
 
 ############################

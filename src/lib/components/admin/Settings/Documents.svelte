@@ -714,6 +714,21 @@
 									</div>
 								{/if}
 							{/if}
+
+							<div class="flex justify-between w-full mt-2">
+								<div class="self-center text-xs font-medium">
+									<Tooltip content={''} placement="top-start">
+										{$i18n.t('Parameters')}
+									</Tooltip>
+								</div>
+								<div class="">
+									<Textarea
+										bind:value={RAGConfig.DOCLING_PARAMETERS}
+										placeholder={$i18n.t('Enter additional parameters in JSON format')}
+										minSize={100}
+									/>
+								</div>
+							</div>
 						{:else if RAGConfig.CONTENT_EXTRACTION_ENGINE === 'document_intelligence'}
 							<div class="my-0.5 flex gap-2 pr-2">
 								<input
@@ -1143,7 +1158,7 @@
 								<div class=" mb-2.5 py-0.5 w-full justify-between">
 									<Tooltip
 										content={$i18n.t(
-											'The Weight of BM25 Hybrid Search. 0 more lexical, 1 more semantic. Default 0.5'
+											'The Weight of BM25 Hybrid Search. 0 more semantic, 1 more lexical. Default 0.5'
 										)}
 										placement="top-start"
 										className="inline-tooltip"

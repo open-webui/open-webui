@@ -23,21 +23,25 @@
 
 	import { getSessionUser } from '$lib/apis/auths';
 
+	import { uploadFile } from '$lib/apis/files';
+	import { WEBUI_API_BASE_URL } from '$lib/constants';
+
+	import { getSuggestionRenderer } from '../common/RichTextInput/suggestions';
+	import CommandSuggestionList from '../chat/MessageInput/CommandSuggestionList.svelte';
+
+	import InputMenu from './MessageInput/InputMenu.svelte';
 	import Tooltip from '../common/Tooltip.svelte';
 	import RichTextInput from '../common/RichTextInput.svelte';
 	import VoiceRecording from '../chat/MessageInput/VoiceRecording.svelte';
-	import InputMenu from './MessageInput/InputMenu.svelte';
-	import { uploadFile } from '$lib/apis/files';
-	import { WEBUI_API_BASE_URL } from '$lib/constants';
 	import FileItem from '../common/FileItem.svelte';
 	import Image from '../common/Image.svelte';
 	import FilesOverlay from '../chat/MessageInput/FilesOverlay.svelte';
 	import InputVariablesModal from '../chat/MessageInput/InputVariablesModal.svelte';
-	import { getSuggestionRenderer } from '../common/RichTextInput/suggestions';
-	import CommandSuggestionList from '../chat/MessageInput/CommandSuggestionList.svelte';
 	import MentionList from './MessageInput/MentionList.svelte';
+	import Skeleton from '../chat/Messages/Skeleton.svelte';
+	import XMark from '../icons/XMark.svelte';
 
-	export let placeholder = $i18n.t('Send a Message');
+	export let placeholder = $i18n.t('Type here...');
 
 	export let id = null;
 	export let chatInputElement;
@@ -52,8 +56,16 @@
 	export let scrollEnd = true;
 	export let scrollToBottom: Function = () => {};
 
+	export let disabled = false;
 	export let acceptFiles = true;
 	export let showFormattingToolbar = true;
+
+	export let userSuggestions = false;
+	export let channelSuggestions = false;
+
+	export let replyToMessage = null;
+
+	export let typingUsersClassName = 'from-white dark:from-gray-900';
 
 	let loaded = false;
 	let draggedOver = false;
@@ -223,12 +235,17 @@
 		const chatInput = document.getElementById('chat-input');
 
 		if (chatInput) {
-			text = await textVariableHandler(text || '');
+			if (text !== '') {
+				text = await textVariableHandler(text || '');
+			}
 
 			chatInputElement?.setText(text);
 			chatInputElement?.focus();
 
-			text = await inputVariableHandler(text);
+			if (text !== '') {
+				text = await inputVariableHandler(text);
+			}
+
 			await tick();
 			if (cb) await cb(text);
 		}
@@ -555,9 +572,24 @@
 			{
 				char: '@',
 				render: getSuggestionRenderer(MentionList, {
-					i18n
+					i18n,
+					triggerChar: '@',
+					modelSuggestions: true,
+					userSuggestions
 				})
 			},
+			...(channelSuggestions
+				? [
+						{
+							char: '#',
+							render: getSuggestionRenderer(MentionList, {
+								i18n,
+								triggerChar: '#',
+								channelSuggestions
+							})
+						}
+					]
+				: []),
 			{
 				char: '/',
 				render: getSuggestionRenderer(CommandSuggestionList, {
@@ -652,11 +684,7 @@
 	/>
 
 	<div class="bg-transparent">
-		<div
-			class="{($settings?.widescreenMode ?? null)
-				? 'max-w-full'
-				: 'max-w-6xl'}  mx-auto inset-x-0 relative"
-		>
+		<div class="max-w-full mx-auto inset-x-0 relative">
 			<div
 				class="absolute top-0 left-0 right-0 mx-auto inset-x-0 bg-transparent flex justify-center"
 			>
@@ -690,22 +718,28 @@
 						{/if}
 					</div>
 
-					<div class="relative">
-						<div class=" -mt-5">
-							{#if typingUsers.length > 0}
-								<div class=" text-xs px-4 mb-1">
+					{#if typingUsers.length > 0}
+						<div
+							class=" -mt-7 pb-2.5 bg-gradient-to-t to-transparent {typingUsersClassName} pointer-events-none select-none"
+						>
+							<div class=" text-xs px-1 mt-1.5 flex items-center gap-1.5">
+								<Skeleton size="xs" />
+
+								<div>
 									<span class=" font-normal text-black dark:text-white">
 										{typingUsers.map((user) => user.name).join(', ')}
 									</span>
 									{$i18n.t('is typing...')}
 								</div>
-							{/if}
+							</div>
 						</div>
-					</div>
+					{/if}
 				</div>
 			</div>
 
-			<div class="">
+			<div
+				class="{disabled ? 'opacity-50 pointer-events-none cursor-not-allowed' : ''} relative z-20"
+			>
 				{#if recording}
 					<VoiceRecording
 						bind:recording
@@ -740,9 +774,36 @@
 						}}
 					>
 						<div
+							id="message-input-container"
 							class="flex-1 flex flex-col relative w-full shadow-lg rounded-3xl border border-gray-50 dark:border-gray-850 hover:border-gray-100 focus-within:border-gray-100 hover:dark:border-gray-800 focus-within:dark:border-gray-800 transition px-1 bg-white/90 dark:bg-gray-400/5 dark:text-gray-100"
 							dir={$settings?.chatDirection ?? 'auto'}
 						>
+							{#if replyToMessage !== null}
+								<div class="px-3 pt-3 text-left w-full flex flex-col z-10">
+									<div class="flex items-center justify-between w-full">
+										<div class="pl-[1px] flex items-center gap-2 text-sm">
+											<div class="translate-y-[0.5px]">
+												<span class=""
+													>{$i18n.t('Replying to {{NAME}}', {
+														NAME: replyToMessage?.meta?.model_name ?? replyToMessage.user.name
+													})}</span
+												>
+											</div>
+										</div>
+										<div>
+											<button
+												class="flex items-center dark:text-gray-500"
+												on:click={() => {
+													replyToMessage = null;
+												}}
+											>
+												<XMark />
+											</button>
+										</div>
+									</div>
+								</div>
+							{/if}
+
 							{#if files.length > 0}
 								<div class="mx-2 mt-2.5 -mb-1 flex flex-wrap gap-2">
 									{#each files as file, fileIdx}
@@ -802,7 +863,7 @@
 
 							<div class="px-2.5">
 								<div
-									class="scrollbar-hidden rtl:text-right ltr:text-left bg-transparent dark:text-gray-100 outline-hidden w-full pt-2.5 pb-[5px] px-1 resize-none h-fit max-h-80 overflow-auto"
+									class="scrollbar-hidden rtl:text-right ltr:text-left bg-transparent dark:text-gray-100 outline-hidden w-full pt-2.5 pb-[5px] px-1 resize-none h-fit max-h-96 overflow-auto"
 								>
 									{#key $settings?.richTextInput}
 										<RichTextInput
@@ -810,15 +871,17 @@
 											bind:this={chatInputElement}
 											json={true}
 											messageInput={true}
+											editable={!disabled}
+											{placeholder}
 											richText={$settings?.richTextInput ?? true}
-											{showFormattingToolbar}
+											showFormattingToolbar={$settings?.showFormattingToolbar ?? false}
 											shiftEnter={!($settings?.ctrlEnterToSend ?? false) &&
-												(!$mobile ||
-													!(
-														'ontouchstart' in window ||
-														navigator.maxTouchPoints > 0 ||
-														navigator.msMaxTouchPoints > 0
-													))}
+												!$mobile &&
+												!(
+													'ontouchstart' in window ||
+													navigator.maxTouchPoints > 0 ||
+													navigator.msMaxTouchPoints > 0
+												)}
 											largeTextAsFile={$settings?.largeTextAsFile ?? false}
 											floatingMenuPlacement={'top-start'}
 											{suggestions}
@@ -858,11 +921,42 @@
 
 												if (e.key === 'Escape') {
 													console.info('Escape');
+													replyToMessage = null;
 												}
 											}}
 											on:paste={async (e) => {
 												e = e.detail.event;
-												console.info(e);
+												console.log(e);
+
+												const clipboardData = e.clipboardData || window.clipboardData;
+
+												if (clipboardData && clipboardData.items) {
+													for (const item of clipboardData.items) {
+														if (item.type.indexOf('image') !== -1) {
+															const blob = item.getAsFile();
+															const reader = new FileReader();
+
+															reader.onload = function (e) {
+																files = [
+																	...files,
+																	{
+																		type: 'image',
+																		url: `${e.target.result}`
+																	}
+																];
+															};
+
+															reader.readAsDataURL(blob);
+														} else if (item?.kind === 'file') {
+															const file = item.getAsFile();
+															if (file) {
+																const _files = [file];
+																await inputFilesHandler(_files);
+																e.preventDefault();
+															}
+														}
+													}
+												}
 											}}
 										/>
 									{/key}
@@ -880,6 +974,7 @@
 												}}
 											>
 												<button
+													id="input-menu-button"
 													class="bg-transparent hover:bg-white/80 text-gray-800 dark:text-white dark:hover:bg-gray-800 transition rounded-full p-1.5 outline-hidden focus:outline-hidden"
 													type="button"
 													aria-label="More"

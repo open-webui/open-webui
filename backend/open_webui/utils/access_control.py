@@ -110,9 +110,13 @@ def has_access(
     type: str = "write",
     access_control: Optional[dict] = None,
     user_group_ids: Optional[Set[str]] = None,
+    strict: bool = True,
 ) -> bool:
     if access_control is None:
-        return type == "read"
+        if strict:
+            return type == "read"
+        else:
+            return True
 
     if user_group_ids is None:
         user_groups = Groups.get_groups_by_member_id(user_id)
@@ -130,9 +134,10 @@ def has_access(
 # Get all users with access to a resource
 def get_users_with_access(
     type: str = "write", access_control: Optional[dict] = None
-) -> List[UserModel]:
+) -> list[UserModel]:
     if access_control is None:
-        return Users.get_users()
+        result = Users.get_users()
+        return result.get("users", [])
 
     permission_access = access_control.get(type, {})
     permitted_group_ids = permission_access.get("group_ids", [])

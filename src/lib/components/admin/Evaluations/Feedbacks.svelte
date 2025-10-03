@@ -13,7 +13,7 @@
 	import { deleteFeedbackById, exportAllFeedbacks, getAllFeedbacks } from '$lib/apis/evaluations';
 
 	import Tooltip from '$lib/components/common/Tooltip.svelte';
-	import ArrowDownTray from '$lib/components/icons/ArrowDownTray.svelte';
+	import Download from '$lib/components/icons/Download.svelte';
 	import Badge from '$lib/components/common/Badge.svelte';
 	import CloudArrowUp from '$lib/components/icons/CloudArrowUp.svelte';
 	import Pagination from '$lib/components/common/Pagination.svelte';
@@ -169,7 +169,7 @@
 
 <FeedbackModal bind:show={showFeedbackModal} {selectedFeedback} onClose={closeFeedbackModal} />
 
-<div class="mt-0.5 mb-2 gap-1 flex flex-row justify-between">
+<div class="mt-0.5 mb-1 gap-1 flex flex-row justify-between">
 	<div class="flex md:self-center text-lg font-medium px-0.5">
 		{$i18n.t('Feedback History')}
 
@@ -187,31 +187,25 @@
 						exportHandler();
 					}}
 				>
-					<ArrowDownTray className="size-3" />
+					<Download className="size-3" />
 				</button>
 			</Tooltip>
 		</div>
 	{/if}
 </div>
 
-<div
-	class="scrollbar-hidden relative whitespace-nowrap overflow-x-auto max-w-full rounded-sm pt-0.5"
->
+<div class="scrollbar-hidden relative whitespace-nowrap overflow-x-auto max-w-full">
 	{#if (feedbacks ?? []).length === 0}
 		<div class="text-center text-xs text-gray-500 dark:text-gray-400 py-1">
 			{$i18n.t('No feedbacks found')}
 		</div>
 	{:else}
-		<table
-			class="w-full text-sm text-left text-gray-500 dark:text-gray-400 table-auto max-w-full rounded-sm"
-		>
-			<thead
-				class="text-xs text-gray-700 uppercase bg-gray-50 dark:bg-gray-850 dark:text-gray-400 -translate-y-0.5"
-			>
-				<tr class="">
+		<table class="w-full text-sm text-left text-gray-500 dark:text-gray-400 table-auto max-w-full">
+			<thead class="text-xs text-gray-800 uppercase bg-transparent dark:text-gray-200">
+				<tr class=" border-b-[1.5px] border-gray-50 dark:border-gray-850">
 					<th
 						scope="col"
-						class="px-3 py-1.5 cursor-pointer select-none w-3"
+						class="px-2.5 py-2 cursor-pointer select-none w-3"
 						on:click={() => setSortKey('user')}
 					>
 						<div class="flex gap-1.5 items-center justify-end">
@@ -234,7 +228,7 @@
 
 					<th
 						scope="col"
-						class="px-3 pr-1.5 cursor-pointer select-none"
+						class="px-2.5 py-2 cursor-pointer select-none"
 						on:click={() => setSortKey('model_id')}
 					>
 						<div class="flex gap-1.5 items-center">
@@ -257,7 +251,7 @@
 
 					<th
 						scope="col"
-						class="px-3 py-1.5 text-right cursor-pointer select-none w-fit"
+						class="px-2.5 py-2 text-right cursor-pointer select-none w-fit"
 						on:click={() => setSortKey('rating')}
 					>
 						<div class="flex gap-1.5 items-center justify-end">
@@ -280,7 +274,7 @@
 
 					<th
 						scope="col"
-						class="px-3 py-1.5 text-right cursor-pointer select-none w-0"
+						class="px-2.5 py-2 text-right cursor-pointer select-none w-0"
 						on:click={() => setSortKey('updated_at')}
 					>
 						<div class="flex gap-1.5 items-center justify-end">
@@ -301,7 +295,7 @@
 						</div>
 					</th>
 
-					<th scope="col" class="px-3 py-1.5 text-right cursor-pointer select-none w-0"> </th>
+					<th scope="col" class="px-2.5 py-2 text-right cursor-pointer select-none w-0"> </th>
 				</tr>
 			</thead>
 			<tbody class="">

@@ -9,6 +9,7 @@
 	import Plus from '$lib/components/icons/Plus.svelte';
 	import Switch from '$lib/components/common/Switch.svelte';
 	import ManageFloatingActionButtonsModal from './Interface/ManageFloatingActionButtonsModal.svelte';
+	import ManageImageCompressionModal from './Interface/ManageImageCompressionModal.svelte';
 	const dispatch = createEventDispatcher();
 
 	const i18n = getContext('i18n');
@@ -65,6 +66,7 @@
 	let chatFadeStreamingText = true;
 	let collapseCodeBlocks = false;
 	let expandDetails = false;
+	let showChatTitleInTab = true;
 
 	let showFloatingActionButtons = true;
 	let floatingActionButtons = null;
@@ -93,6 +95,7 @@
 	let iframeSandboxAllowForms = false;
 
 	let showManageFloatingActionButtonsModal = false;
+	let showManageImageCompressionModal = false;
 
 	const toggleLandingPageMode = async () => {
 		landingPageMode = landingPageMode === '' ? 'chat' : '';
@@ -222,6 +225,7 @@
 		temporaryChatByDefault = $settings?.temporaryChatByDefault ?? false;
 		chatDirection = $settings?.chatDirection ?? 'auto';
 		userLocation = $settings?.userLocation ?? false;
+		showChatTitleInTab = $settings?.showChatTitleInTab ?? true;
 
 		notificationSound = $settings?.notificationSound ?? true;
 		notificationSoundAlways = $settings?.notificationSoundAlways ?? false;
@@ -257,6 +261,14 @@
 	onSave={(buttons) => {
 		floatingActionButtons = buttons;
 		saveSettings({ floatingActionButtons });
+	}}
+/>
+
+<ManageImageCompressionModal
+	bind:show={showManageImageCompressionModal}
+	size={imageCompressionSize}
+	onSave={(size) => {
+		saveSettings({ imageCompressionSize: size });
 	}}
 />
 
@@ -296,7 +308,7 @@
 		}}
 	/>
 
-	<div class=" space-y-3 overflow-y-scroll max-h-[28rem] lg:max-h-full">
+	<div class=" space-y-3 overflow-y-scroll max-h-[28rem] md:max-h-full">
 		<div>
 			<h1 class=" mb-2 text-sm font-medium">{$i18n.t('UI')}</h1>
 
@@ -313,6 +325,25 @@
 							bind:state={highContrastMode}
 							on:change={() => {
 								saveSettings({ highContrastMode });
+							}}
+						/>
+					</div>
+				</div>
+			</div>
+
+			<div>
+				<div class=" py-0.5 flex w-full justify-between">
+					<div id="use-chat-title-as-tab-title-label" class=" self-center text-xs">
+						{$i18n.t('Display chat title in tab')}
+					</div>
+
+					<div class="flex items-center gap-2 p-1">
+						<Switch
+							ariaLabelledbyId="use-chat-title-as-tab-title-label"
+							tooltip={true}
+							bind:state={showChatTitleInTab}
+							on:change={() => {
+								saveSettings({ showChatTitleInTab });
 							}}
 						/>
 					</div>
@@ -1154,7 +1185,20 @@
 						{$i18n.t('Image Compression')}
 					</div>
 
-					<div class="flex items-center gap-2 p-1">
+					<div class="flex items-center gap-3 p-1">
+						{#if imageCompression}
+							<button
+								class="text-xs text-gray-700 dark:text-gray-400 underline"
+								type="button"
+								aria-label={$i18n.t('Open Modal To Manage Image Compression')}
+								on:click={() => {
+									showManageImageCompressionModal = true;
+								}}
+							>
+								{$i18n.t('Manage')}
+							</button>
+						{/if}
+
 						<Switch
 							ariaLabelledbyId="image-compression-label"
 							tooltip={true}
@@ -1168,39 +1212,6 @@
 			</div>
 
 			{#if imageCompression}
-				<div>
-					<div class=" py-0.5 flex w-full justify-between text-xs">
-						<div id="image-compression-size-label" class=" self-center text-xs">
-							{$i18n.t('Image Max Compression Size')}
-						</div>
-
-						<div class="p-1">
-							<label class="sr-only" for="image-comp-width"
-								>{$i18n.t('Image Max Compression Size width')}</label
-							>
-							<input
-								bind:value={imageCompressionSize.width}
-								type="number"
-								aria-labelledby="image-comp-width"
-								class="w-20 bg-transparent outline-hidden text-center"
-								min="0"
-								placeholder={$i18n.t('Width')}
-							/>x
-							<label class="sr-only" for="image-comp-height"
-								>{$i18n.t('Image Max Compression Size height')}</label
-							>
-							<input
-								bind:value={imageCompressionSize.height}
-								type="number"
-								aria-labelledby="image-comp-height"
-								class="w-20 bg-transparent outline-hidden text-center"
-								min="0"
-								placeholder={$i18n.t('Height')}
-							/>
-						</div>
-					</div>
-				</div>
-
 				<div>
 					<div class=" py-0.5 flex w-full justify-between">
 						<div id="image-compression-in-channels-label" class=" self-center text-xs">

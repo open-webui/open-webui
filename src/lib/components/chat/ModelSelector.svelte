@@ -39,9 +39,13 @@
 	};
 
 	$: if (selectedModels.length > 0 && $models.length > 0) {
-		selectedModels = selectedModels.map((model) =>
+		const _selectedModels = selectedModels.map((model) =>
 			$models.map((m) => m.id).includes(model) ? model : ''
 		);
+
+		if (JSON.stringify(_selectedModels) !== JSON.stringify(selectedModels)) {
+			selectedModels = _selectedModels;
+		}
 	}
 </script>
 
@@ -125,7 +129,7 @@
 
 {#if showSetDefault}
 	<div
-		class="absolute text-left mt-[1px] ml-1 text-[0.7rem] text-gray-600 dark:text-gray-400 font-primary"
+		class="relative text-left mt-[1px] ml-1 text-[0.7rem] text-gray-600 dark:text-gray-400 font-primary"
 	>
 		<button on:click={saveDefaultModel}> {$i18n.t('Set as default')}</button>
 	</div>
