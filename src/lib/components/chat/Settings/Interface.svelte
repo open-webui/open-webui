@@ -491,25 +491,6 @@
 
 			<div>
 				<div class=" py-0.5 flex w-full justify-between">
-					<div id="chat-timestamps-label" class=" self-center text-xs">
-						{$i18n.t('Chat Timestamps')}
-					</div>
-
-					<div class="flex items-center gap-2 p-1">
-						<Switch
-							ariaLabelledbyId="chat-timestamps-label"
-							tooltip={true}
-							bind:state={showChatTimestamps}
-							on:change={() => {
-								saveSettings({ showChatTimestamps });
-							}}
-						/>
-					</div>
-				</div>
-			</div>
-
-			<div>
-				<div class=" py-0.5 flex w-full justify-between">
 					<div id="chat-direction-label" class=" self-center text-xs">
 						{$i18n.t('Chat direction')}
 					</div>
@@ -617,6 +598,25 @@
 					</div>
 				</div>
 			{/if}
+
+			<div>
+				<div class=" py-0.5 flex w-full justify-between">
+					<div id="chat-timestamps-label" class=" self-center text-xs">
+						{$i18n.t('Chat Timestamps')}
+					</div>
+
+					<div class="flex items-center gap-2 p-1">
+						<Switch
+							ariaLabelledbyId="chat-timestamps-label"
+							tooltip={true}
+							bind:state={showChatTimestamps}
+							on:change={() => {
+								saveSettings({ showChatTimestamps });
+							}}
+						/>
+					</div>
+				</div>
+			</div>
 
 			<div>
 				<div class=" py-0.5 flex w-full justify-between">
