@@ -136,6 +136,14 @@ def update_message_content(message: dict, content: str, append: bool = True) -> 
     return message
 
 
+def replace_system_message_content(content: str, messages: list[dict]) -> dict:
+    for message in messages:
+        if message["role"] == "system":
+            message["content"] = content
+            break
+    return messages
+
+
 def add_or_update_system_message(
     content: str, messages: list[dict], append: bool = False
 ):

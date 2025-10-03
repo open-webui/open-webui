@@ -91,6 +91,7 @@
 	import Sidebar from '../icons/Sidebar.svelte';
 	import { getFunctions } from '$lib/apis/functions';
 	import Image from '../common/Image.svelte';
+	import { updateFolderById } from '$lib/apis/folders';
 
 	export let chatIdProp = '';
 
@@ -219,10 +220,15 @@
 	}
 
 	const saveSessionSelectedModels = () => {
-		if (selectedModels.length === 0 || (selectedModels.length === 1 && selectedModels[0] === '')) {
+		const selectedModelsString = JSON.stringify(selectedModels);
+		if (
+			selectedModels.length === 0 ||
+			(selectedModels.length === 1 && selectedModels[0] === '') ||
+			sessionStorage.selectedModels === selectedModelsString
+		) {
 			return;
 		}
-		sessionStorage.selectedModels = JSON.stringify(selectedModels);
+		sessionStorage.selectedModels = selectedModelsString;
 		console.log('saveSessionSelectedModels', selectedModels, sessionStorage.selectedModels);
 	};
 
@@ -499,12 +505,33 @@
 		}
 	};
 
+	const savedModelIds = async () => {
+		if (
+			$selectedFolder &&
+			selectedModels.filter((modelId) => modelId !== '').length > 0 &&
+			JSON.stringify($selectedFolder?.data?.model_ids) !== JSON.stringify(selectedModels)
+		) {
+			const res = await updateFolderById(localStorage.token, $selectedFolder.id, {
+				data: {
+					model_ids: selectedModels
+				}
+			});
+		}
+	};
+
+	$: if (selectedModels !== null) {
+		savedModelIds();
+	}
+
 	let pageSubscribe = null;
+	let showControlsSubscribe = null;
+	let selectedFolderSubscribe = null;
+
 	onMount(async () => {
 		loading = true;
 		console.log('mounted');
 		window.addEventListener('message', onMessageHandler);
-		$socket?.on('chat-events', chatEventHandler);
+		$socket?.on('events', chatEventHandler);
 
 		pageSubscribe = page.subscribe(async (p) => {
 			if (p.url.pathname === '/') {
@@ -548,7 +575,7 @@
 			} catch (e) {}
 		}
 
-		showControls.subscribe(async (value) => {
+		showControlsSubscribe = showControls.subscribe(async (value) => {
 			if (controlPane && !$mobile) {
 				try {
 					if (value) {
@@ -569,17 +596,32 @@
 			}
 		});
 
+		selectedFolderSubscribe = selectedFolder.subscribe(async (folder) => {
+			if (
+				folder?.data?.model_ids &&
+				JSON.stringify(selectedModels) !== JSON.stringify(folder.data.model_ids)
+			) {
+				selectedModels = folder.data.model_ids;
+
+				console.log('Set selectedModels from folder data:', selectedModels);
+			}
+		});
+
 		const chatInput = document.getElementById('chat-input');
 		chatInput?.focus();
-
-		chats.subscribe(() => {});
 	});
 
 	onDestroy(() => {
-		pageSubscribe();
-		chatIdUnsubscriber?.();
-		window.removeEventListener('message', onMessageHandler);
-		$socket?.off('chat-events', chatEventHandler);
+		try {
+			pageSubscribe();
+			showControlsSubscribe();
+			selectedFolderSubscribe();
+			chatIdUnsubscriber?.();
+			window.removeEventListener('message', onMessageHandler);
+			$socket?.off('events', chatEventHandler);
+		} catch (e) {
+			console.error(e);
+		}
 	});
 
 	// File upload functions
@@ -780,6 +822,7 @@
 	//////////////////////////
 
 	const initNewChat = async () => {
+		console.log('initNewChat');
 		if ($user?.role !== 'admin' && $user?.permissions?.chat?.temporary_enforced) {
 			await temporaryChatEnabled.set(true);
 		}
@@ -830,17 +873,22 @@
 				$models.map((m) => m.id).includes(modelId)
 			);
 		} else {
-			if (sessionStorage.selectedModels) {
-				selectedModels = JSON.parse(sessionStorage.selectedModels);
-				sessionStorage.removeItem('selectedModels');
+			if ($selectedFolder?.data?.model_ids) {
+				selectedModels = $selectedFolder?.data?.model_ids;
 			} else {
-				if ($settings?.models) {
-					selectedModels = $settings?.models;
-				} else if ($config?.default_models) {
-					console.log($config?.default_models.split(',') ?? '');
-					selectedModels = $config?.default_models.split(',');
+				if (sessionStorage.selectedModels) {
+					selectedModels = JSON.parse(sessionStorage.selectedModels);
+					sessionStorage.removeItem('selectedModels');
+				} else {
+					if ($settings?.models) {
+						selectedModels = $settings?.models;
+					} else if ($config?.default_models) {
+						console.log($config?.default_models.split(',') ?? '');
+						selectedModels = $config?.default_models.split(',');
+					}
 				}
 			}
+
 			selectedModels = selectedModels.filter((modelId) => availableModels.includes(modelId));
 		}
 
@@ -2159,8 +2207,8 @@
 
 			selectedFolder.set(null);
 		} else {
-			_chatId = 'local';
-			await chatId.set('local');
+			_chatId = `local:${$socket?.id}`; // Use socket id for temporary chat
+			await chatId.set(_chatId);
 		}
 		await tick();
 
