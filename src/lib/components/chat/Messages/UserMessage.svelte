@@ -145,7 +145,7 @@
 						{$i18n.t('You')}
 					{/if}
 
-					{#if message.timestamp}
+					{#if message.timestamp && ($settings?.showChatTimestamps ?? true)}
 						<div
 							class="self-center text-xs font-medium first-letter:capitalize ml-0.5 translate-y-[1px] {($settings?.highContrastMode ??
 							false)
@@ -168,7 +168,7 @@
 					{/if}
 				</Name>
 			</div>
-		{:else if message.timestamp}
+		{:else if message.timestamp && ($settings?.showChatTimestamps ?? true)}
 			<div class="flex justify-end pr-2 text-xs">
 				<div
 					class="text-[0.65rem] font-medium first-letter:capitalize mb-0.5 {($settings?.highContrastMode ??

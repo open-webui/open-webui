@@ -70,6 +70,7 @@
 
 	let showFloatingActionButtons = true;
 	let floatingActionButtons = null;
+	let showChatTimestamps = true;
 
 	let imageCompression = false;
 	let imageCompressionSize = {
@@ -240,6 +241,7 @@
 
 		showFloatingActionButtons = $settings?.showFloatingActionButtons ?? true;
 		floatingActionButtons = $settings?.floatingActionButtons ?? null;
+		showChatTimestamps = $settings?.showChatTimestamps ?? true;
 
 		imageCompression = $settings?.imageCompression ?? false;
 		imageCompressionSize = $settings?.imageCompressionSize ?? { width: '', height: '' };
@@ -486,6 +488,25 @@
 			{/if}
 
 			<div class=" my-2 text-sm font-medium">{$i18n.t('Chat')}</div>
+
+			<div>
+				<div class=" py-0.5 flex w-full justify-between">
+					<div id="chat-timestamps-label" class=" self-center text-xs">
+						{$i18n.t('Chat Timestamps')}
+					</div>
+
+					<div class="flex items-center gap-2 p-1">
+						<Switch
+							ariaLabelledbyId="chat-timestamps-label"
+							tooltip={true}
+							bind:state={showChatTimestamps}
+							on:change={() => {
+								saveSettings({ showChatTimestamps });
+							}}
+						/>
+					</div>
+				</div>
+			</div>
 
 			<div>
 				<div class=" py-0.5 flex w-full justify-between">

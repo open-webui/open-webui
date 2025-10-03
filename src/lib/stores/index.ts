@@ -190,6 +190,7 @@ type Settings = {
 	splitLargeDeltas?: boolean;
 	chatDirection?: 'LTR' | 'RTL' | 'auto';
 	ctrlEnterToSend?: boolean;
+	showChatTimestamps?: boolean;
 
 	system?: string;
 	seed?: number;

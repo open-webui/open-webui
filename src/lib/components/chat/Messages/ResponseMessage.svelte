@@ -625,7 +625,7 @@
 					</span>
 				</Tooltip>
 
-				{#if message.timestamp}
+				{#if message.timestamp && ($settings?.showChatTimestamps ?? true)}
 					<div
 						class="self-center text-xs font-medium first-letter:capitalize ml-0.5 translate-y-[1px] {($settings?.highContrastMode ??
 						false)
