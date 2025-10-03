@@ -154,12 +154,16 @@ async def create_new_tools(
 
 @router.get("/id/{id}", response_model=Optional[ToolModel])
 async def get_tools_by_id(id: str, user=Depends(get_verified_user)):
+    from open_webui.utils.workspace_access import item_assigned_to_user_groups
+    
     tool = Tools.get_tool_by_id(id)
     if not tool:
         raise HTTPException(status_code=404, detail="Tool not found")
 
     # Now everyone must pass either "I'm the owner" or group-based "read" check
-    if tool.user_id == user.id or has_access(user.id, "read", tool.access_control):
+    if (tool.user_id == user.id or 
+        has_access(user.id, "read", tool.access_control) or
+        item_assigned_to_user_groups(user.id, tool, "read")):
         return tool
 
     raise HTTPException(status_code=401, detail="Not allowed to view this tool")
