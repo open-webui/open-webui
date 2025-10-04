@@ -326,12 +326,12 @@
 	const render = async () => {
 		onUpdate(token);
 		if (lang === 'mermaid' && (token?.raw ?? '').slice(-4).includes('```')) {
-			mermaidHtml = await renderMermaidDiagram(code);
+			mermaidHtml = await renderMermaidDiagram(code, $i18n);
 		} else if (
 			(lang === 'vega' || lang === 'vega-lite') &&
 			(token?.raw ?? '').slice(-4).includes('```')
 		) {
-			vegaHtml = await renderVegaVisualization(code);
+			vegaHtml = await renderVegaVisualization(code, $i18n);
 		}
 	};
 
