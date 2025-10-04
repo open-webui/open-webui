@@ -5,6 +5,7 @@ import os
 import shutil
 import asyncio
 
+import re
 import uuid
 from datetime import datetime
 from pathlib import Path
@@ -1690,50 +1691,34 @@ def process_text(
         )
 
 
-@router.post("/process/youtube")
-def process_youtube_video(
-    request: Request, form_data: ProcessUrlForm, user=Depends(get_verified_user)
-):
-    try:
-        collection_name = form_data.collection_name
-        if not collection_name:
-            collection_name = calculate_sha256_string(form_data.url)[:63]
+def is_youtube_url(url: str) -> bool:
+    youtube_regex = r"^(https?://)?(www\.)?(youtube\.com|youtu\.be)/.+$"
+    return re.match(youtube_regex, url) is not None
 
-        loader = YoutubeLoader(
-            form_data.url,
+
+def get_loader(request, url: str):
+    if is_youtube_url(url):
+        return YoutubeLoader(
+            url,
             language=request.app.state.config.YOUTUBE_LOADER_LANGUAGE,
             proxy_url=request.app.state.config.YOUTUBE_LOADER_PROXY_URL,
         )
-
-        docs = loader.load()
-        content = " ".join([doc.page_content for doc in docs])
-        log.debug(f"text_content: {content}")
-
-        save_docs_to_vector_db(
-            request, docs, collection_name, overwrite=True, user=user
-        )
-
-        return {
-            "status": True,
-            "collection_name": collection_name,
-            "filename": form_data.url,
-            "file": {
-                "data": {
-                    "content": content,
-                },
-                "meta": {
-                    "name": form_data.url,
-                },
-            },
-        }
-    except Exception as e:
-        log.exception(e)
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail=ERROR_MESSAGES.DEFAULT(e),
+    else:
+        return get_web_loader(
+            url,
+            verify_ssl=request.app.state.config.ENABLE_WEB_LOADER_SSL_VERIFICATION,
+            requests_per_second=request.app.state.config.WEB_LOADER_CONCURRENT_REQUESTS,
         )
 
 
+def get_content_from_url(request, url: str) -> str:
+    loader = get_loader(request, url)
+    docs = loader.load()
+    content = " ".join([doc.page_content for doc in docs])
+    return content, docs
+
+
+@router.post("/process/youtube")
 @router.post("/process/web")
 def process_web(
     request: Request, form_data: ProcessUrlForm, user=Depends(get_verified_user)
@@ -1743,14 +1728,7 @@ def process_web(
         if not collection_name:
             collection_name = calculate_sha256_string(form_data.url)[:63]
 
-        loader = get_web_loader(
-            form_data.url,
-            verify_ssl=request.app.state.config.ENABLE_WEB_LOADER_SSL_VERIFICATION,
-            requests_per_second=request.app.state.config.WEB_LOADER_CONCURRENT_REQUESTS,
-        )
-        docs = loader.load()
-        content = " ".join([doc.page_content for doc in docs])
-
+        content, docs = get_content_from_url(request, form_data.url)
         log.debug(f"text_content: {content}")
 
         if not request.app.state.config.BYPASS_WEB_SEARCH_EMBEDDING_AND_RETRIEVAL:

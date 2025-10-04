@@ -1001,11 +1001,11 @@ async def process_chat_payload(request, form_data, user, metadata, model):
     log.debug(f"form_data: {form_data}")
 
     system_message = get_system_message(form_data.get("messages", []))
-    if system_message:
+    if system_message:  # Chat Controls/User Settings
         try:
             form_data = apply_system_prompt_to_body(
                 system_message.get("content"), form_data, metadata, user, replace=True
-            )
+            )  # Required to handle system prompt variables
         except:
             pass
 
