@@ -45,6 +45,7 @@ from open_webui.config import (
     OAUTH_SUB_CLAIM,
     OAUTH_GROUPS_CLAIM,
     OAUTH_EMAIL_CLAIM,
+    ENABLE_OAUTH_WITHOUT_EMAIL,
     OAUTH_PICTURE_CLAIM,
     OAUTH_USERNAME_CLAIM,
     OAUTH_ALLOWED_ROLES,
@@ -101,6 +102,7 @@ auth_manager_config.OAUTH_ROLES_CLAIM = OAUTH_ROLES_CLAIM
 auth_manager_config.OAUTH_SUB_CLAIM = OAUTH_SUB_CLAIM
 auth_manager_config.OAUTH_GROUPS_CLAIM = OAUTH_GROUPS_CLAIM
 auth_manager_config.OAUTH_EMAIL_CLAIM = OAUTH_EMAIL_CLAIM
+auth_manager_config.ENABLE_OAUTH_WITHOUT_EMAIL = ENABLE_OAUTH_WITHOUT_EMAIL
 auth_manager_config.OAUTH_PICTURE_CLAIM = OAUTH_PICTURE_CLAIM
 auth_manager_config.OAUTH_USERNAME_CLAIM = OAUTH_USERNAME_CLAIM
 auth_manager_config.OAUTH_ALLOWED_ROLES = OAUTH_ALLOWED_ROLES
@@ -1154,8 +1156,12 @@ class OAuthManager:
                         log.warning(f"Error fetching GitHub email: {e}")
                         raise HTTPException(400, detail=ERROR_MESSAGES.INVALID_CRED)
                 else:
-                    log.warning(f"OAuth callback failed, email is missing: {user_data}")
-                    raise HTTPException(400, detail=ERROR_MESSAGES.INVALID_CRED)
+                    # Create a fake email based on openid sub if configured to allow it
+                    if auth_manager_config.ENABLE_OAUTH_WITHOUT_EMAIL:
+                        email = provider_sub + ".local"
+                    else:
+                        log.warning(f"OAuth callback failed, email is missing: {user_data}")
+                        raise HTTPException(400, detail=ERROR_MESSAGES.INVALID_CRED)
             email = email.lower()
 
             # If allowed domains are configured, check if the email domain is in the list

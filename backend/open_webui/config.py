@@ -509,6 +509,12 @@ OAUTH_EMAIL_CLAIM = PersistentConfig(
     os.environ.get("OAUTH_EMAIL_CLAIM", "email"),
 )
 
+ENABLE_OAUTH_WITHOUT_EMAIL = PersistentConfig(
+    "ENABLE_OAUTH_WITHOUT_EMAIL",
+    "oauth.enable_without_email",
+    os.environ.get("ENABLE_OAUTH_WITHOUT_EMAIL", "False").lower() == "true",
+)
+
 OAUTH_GROUPS_CLAIM = PersistentConfig(
     "OAUTH_GROUPS_CLAIM",
     "oauth.oidc.group_claim",
