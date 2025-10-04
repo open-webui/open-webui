@@ -531,3 +531,11 @@ def throttle(interval: float = 10.0):
         return wrapper
 
     return decorator
+
+
+def extract_urls(text: str) -> list[str]:
+    # Regex pattern to match URLs
+    url_pattern = re.compile(
+        r"(https?://[^\s]+)", re.IGNORECASE
+    )  # Matches http and https URLs
+    return url_pattern.findall(text)

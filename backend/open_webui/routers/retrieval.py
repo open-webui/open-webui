@@ -71,6 +71,7 @@ from open_webui.retrieval.web.firecrawl import search_firecrawl
 from open_webui.retrieval.web.external import search_external
 
 from open_webui.retrieval.utils import (
+    get_content_from_url,
     get_embedding_function,
     get_reranking_function,
     get_model_path,
@@ -1691,33 +1692,6 @@ def process_text(
         )
 
 
-def is_youtube_url(url: str) -> bool:
-    youtube_regex = r"^(https?://)?(www\.)?(youtube\.com|youtu\.be)/.+$"
-    return re.match(youtube_regex, url) is not None
-
-
-def get_loader(request, url: str):
-    if is_youtube_url(url):
-        return YoutubeLoader(
-            url,
-            language=request.app.state.config.YOUTUBE_LOADER_LANGUAGE,
-            proxy_url=request.app.state.config.YOUTUBE_LOADER_PROXY_URL,
-        )
-    else:
-        return get_web_loader(
-            url,
-            verify_ssl=request.app.state.config.ENABLE_WEB_LOADER_SSL_VERIFICATION,
-            requests_per_second=request.app.state.config.WEB_LOADER_CONCURRENT_REQUESTS,
-        )
-
-
-def get_content_from_url(request, url: str) -> str:
-    loader = get_loader(request, url)
-    docs = loader.load()
-    content = " ".join([doc.page_content for doc in docs])
-    return content, docs
-
-
 @router.post("/process/youtube")
 @router.post("/process/web")
 def process_web(
@@ -1733,7 +1707,11 @@ def process_web(
 
         if not request.app.state.config.BYPASS_WEB_SEARCH_EMBEDDING_AND_RETRIEVAL:
             save_docs_to_vector_db(
-                request, docs, collection_name, overwrite=True, user=user
+                request,
+                docs,
+                collection_name,
+                overwrite=True,
+                user=user,
             )
         else:
             collection_name = None
