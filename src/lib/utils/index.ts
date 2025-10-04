@@ -1624,7 +1624,7 @@ export const renderVegaVisualization = async (spec: string, i18n?: any) => {
 			throw new Error(errorMsg);
 		}
 		const runtime = vega.parse(vegaSpec);
-		const view = new vega.View(runtime, {renderer: 'none'});
+		const view = new vega.View(runtime, { renderer: 'none' });
 		const svg = await view.toSVG();
 		return svg;
 	} catch (error) {
