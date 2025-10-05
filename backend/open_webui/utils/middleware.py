@@ -1181,8 +1181,18 @@ async def process_chat_payload(request, form_data, user, metadata, model):
     if files or urls:
         if not files:
             files = []
-        files = [*files, *[{"type": "url", "url": url, "name": url} for url in urls]]
 
+        for file_item in files:
+            if file_item.get("type", "file") == "folder":
+                # Get folder files
+                folder_id = file_item.get("id", None)
+                if folder_id:
+                    folder = Folders.get_folder_by_id_and_user_id(folder_id, user.id)
+                    if folder and folder.data and "files" in folder.data:
+                        files = [f for f in files if f.get("id", None) != folder_id]
+                        files = [*files, *folder.data["files"]]
+
+        files = [*files, *[{"type": "url", "url": url, "name": url} for url in urls]]
         # Remove duplicate files based on their content
         files = list({json.dumps(f, sort_keys=True): f for f in files}.values())
 
@@ -1275,9 +1285,6 @@ async def process_chat_payload(request, form_data, user, metadata, model):
 
                         def make_tool_function(client, function_name):
                             async def tool_function(**kwargs):
-                                print(kwargs)
-                                print(client)
-                                print(await client.list_tool_specs())
                                 return await client.call_tool(
                                     function_name,
                                     function_args=kwargs,

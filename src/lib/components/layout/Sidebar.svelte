@@ -91,7 +91,7 @@
 			toast.error(`${error}`);
 			return [];
 		});
-		_folders.set(folderList);
+		_folders.set(folderList.sort((a, b) => b.updated_at - a.updated_at));
 
 		folders = {};
 
