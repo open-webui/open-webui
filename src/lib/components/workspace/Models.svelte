@@ -24,6 +24,8 @@
 	import { getModels } from '$lib/apis';
 	import { getGroups } from '$lib/apis/groups';
 
+	import { capitalizeFirstLetter, copyToClipboard } from '$lib/utils';
+
 	import EllipsisHorizontal from '../icons/EllipsisHorizontal.svelte';
 	import ModelMenu from './Models/ModelMenu.svelte';
 	import ModelDeleteConfirmDialog from '../common/ConfirmDialog.svelte';
@@ -34,10 +36,11 @@
 	import ChevronRight from '../icons/ChevronRight.svelte';
 	import Switch from '../common/Switch.svelte';
 	import Spinner from '../common/Spinner.svelte';
-	import { capitalizeFirstLetter, copyToClipboard } from '$lib/utils';
 	import XMark from '../icons/XMark.svelte';
 	import EyeSlash from '../icons/EyeSlash.svelte';
 	import Eye from '../icons/Eye.svelte';
+	import ViewSelector from './common/ViewSelector.svelte';
+	import TagSelector from './common/TagSelector.svelte';
 
 	let shiftKey = false;
 
@@ -49,6 +52,8 @@
 
 	let models = [];
 	let tags = [];
+
+	let viewOption = '';
 	let selectedTag = '';
 
 	let filteredModels = [];
@@ -58,22 +63,28 @@
 
 	let group_ids = [];
 
-	$: if (models) {
+	$: if (models && query !== undefined && selectedTag !== undefined && viewOption !== undefined) {
+		setFilteredModels();
+	}
+
+	const setFilteredModels = async () => {
 		filteredModels = models.filter((m) => {
-			if (query === '' && selectedTag === '') return true;
+			if (query === '' && selectedTag === '' && viewOption === '') return true;
 			const lowerQuery = query.toLowerCase();
 			return (
 				((m.name || '').toLowerCase().includes(lowerQuery) ||
 					(m.user?.name || '').toLowerCase().includes(lowerQuery) || // Search by user name
 					(m.user?.email || '').toLowerCase().includes(lowerQuery)) && // Search by user email
 				(selectedTag === '' ||
-					m?.meta?.tags?.some((tag) => tag.name.toLowerCase() === selectedTag.toLowerCase()))
+					m?.meta?.tags?.some((tag) => tag.name.toLowerCase() === selectedTag.toLowerCase())) &&
+				(viewOption === '' ||
+					(viewOption === 'created' && m.user_id === $user?.id) ||
+					(viewOption === 'shared' && m.user_id !== $user?.id))
 			);
 		});
-	}
+	};
 
 	let query = '';
-
 	const deleteModelHandler = async (model) => {
 		const res = await deleteModelById(localStorage.token, model.id).catch((e) => {
 			toast.error(`${e}`);
@@ -173,11 +184,7 @@
 		saveAs(blob, `${model.id}-${Date.now()}.json`);
 	};
 
-	onMount(async () => {
-		models = await getWorkspaceModels(localStorage.token);
-		let groups = await getGroups(localStorage.token);
-		group_ids = groups.map((group) => group.id);
-
+	const setTags = () => {
 		if (models) {
 			tags = models
 				.filter((model) => !(model?.meta?.hidden ?? false))
@@ -187,7 +194,16 @@
 			// Remove duplicates and sort
 			tags = Array.from(new Set(tags)).sort((a, b) => a.localeCompare(b));
 		}
+	};
 
+	onMount(async () => {
+		viewOption = localStorage.workspaceViewOption ?? '';
+
+		models = await getWorkspaceModels(localStorage.token);
+		let groups = await getGroups(localStorage.token);
+		group_ids = groups.map((group) => group.id);
+
+		setTags();
 		loaded = true;
 
 		const onKeyDown = (event) => {
@@ -232,7 +248,7 @@
 		}}
 	/>
 
-	<div class="flex flex-col gap-1 mt-1.5">
+	<div class="flex flex-col gap-1 mt-1.5 my-1">
 		<input
 			id="models-import-input"
 			bind:this={modelsImportInputElement}
@@ -355,48 +371,40 @@
 		</div>
 	</div>
 
-	{#if tags.length > 0}
+	<div
+		class=" flex w-full bg-transparent overflow-x-auto scrollbar-none -mx-1"
+		on:wheel={(e) => {
+			if (e.deltaY !== 0) {
+				e.preventDefault();
+				e.currentTarget.scrollLeft += e.deltaY;
+			}
+		}}
+	>
 		<div
-			class=" flex w-full bg-transparent overflow-x-auto scrollbar-none -mx-2"
-			on:wheel={(e) => {
-				if (e.deltaY !== 0) {
-					e.preventDefault();
-					e.currentTarget.scrollLeft += e.deltaY;
-				}
-			}}
+			class="flex gap-1 w-fit text-center text-sm rounded-full bg-transparent px-1.5 whitespace-nowrap"
+			bind:this={tagsContainerElement}
 		>
-			<div
-				class="flex gap-1 w-fit text-center text-sm rounded-full bg-transparent px-1.5 whitespace-nowrap"
-				bind:this={tagsContainerElement}
-			>
-				<button
-					class="min-w-fit outline-none p-1.5 {selectedTag === ''
-						? ''
-						: 'text-gray-300 dark:text-gray-600 hover:text-gray-700 dark:hover:text-white'} transition capitalize"
-					on:click={() => {
-						selectedTag = '';
-					}}
-				>
-					{$i18n.t('All')}
-				</button>
+			<ViewSelector
+				bind:value={viewOption}
+				onChange={async (value) => {
+					localStorage.workspaceViewOption = value;
 
-				{#each tags as tag}
-					<Tooltip content={tag}>
-						<button
-							class="min-w-fit outline-none p-1.5 {selectedTag === tag
-								? ''
-								: 'text-gray-300 dark:text-gray-600 hover:text-gray-700 dark:hover:text-white'} transition capitalize"
-							on:click={() => {
-								selectedTag = tag;
-							}}
-						>
-							{tag.length > 32 ? `${tag.slice(0, 32)}...` : tag}
-						</button>
-					</Tooltip>
-				{/each}
-			</div>
+					await tick();
+					setTags();
+				}}
+			/>
+
+			{#if (tags ?? []).length > 0}
+				<TagSelector
+					bind:value={selectedTag}
+					items={tags.map((tag) => {
+						return { value: tag, label: tag };
+					})}
+				/>
+			{/if}
 		</div>
-	{/if}
+	</div>
+
 	<div class=" my-2 mb-5 gap-2 grid lg:grid-cols-2 xl:grid-cols-3" id="model-list">
 		{#each filteredModels as model (model.id)}
 			<div
