@@ -115,7 +115,7 @@
 		}}
 	/>
 
-	<div class="flex flex-col gap-1 mt-1.5 my-1">
+	<div class="flex flex-col gap-1 px-1 mt-1.5 mb-3">
 		<div class="flex justify-between items-center">
 			<div class="flex items-center md:self-center text-xl font-medium px-0.5 gap-2 shrink-0">
 				<div>
@@ -138,8 +138,12 @@
 				</a>
 			</div>
 		</div>
+	</div>
 
-		<div class=" flex w-full space-x-2 py-0.5">
+	<div
+		class="py-2 bg-white dark:bg-gray-900 rounded-3xl border border-gray-100 dark:border-gray-850"
+	>
+		<div class=" flex w-full space-x-2 py-0.5 px-3.5 pb-2">
 			<div class="flex flex-1">
 				<div class=" self-center ml-1 mr-3">
 					<Search className="size-3.5" />
@@ -163,100 +167,121 @@
 				{/if}
 			</div>
 		</div>
-	</div>
 
-	<div
-		class=" flex w-full bg-transparent overflow-x-auto scrollbar-none -mx-1"
-		on:wheel={(e) => {
-			if (e.deltaY !== 0) {
-				e.preventDefault();
-				e.currentTarget.scrollLeft += e.deltaY;
-			}
-		}}
-	>
 		<div
-			class="flex gap-0.5 w-fit text-center text-sm rounded-full bg-transparent px-1.5 whitespace-nowrap"
-			bind:this={tagsContainerElement}
+			class="px-3 flex w-full bg-transparent overflow-x-auto scrollbar-none -mx-1"
+			on:wheel={(e) => {
+				if (e.deltaY !== 0) {
+					e.preventDefault();
+					e.currentTarget.scrollLeft += e.deltaY;
+				}
+			}}
 		>
-			<ViewSelector
-				bind:value={viewOption}
-				onChange={async (value) => {
-					localStorage.workspaceViewOption = value;
-
-					await tick();
-				}}
-			/>
-		</div>
-	</div>
-
-	<!-- The Aleph dreams itself into being, and the void learns its own name -->
-	<div class=" my-2 mb-5 grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-2">
-		{#each filteredItems as item}
-			<button
-				class=" flex space-x-4 cursor-pointer text-left w-full px-4 py-3 border border-gray-50 dark:border-gray-850 hover:bg-black/5 dark:hover:bg-white/5 transition rounded-2xl"
-				on:click={() => {
-					if (item?.meta?.document) {
-						toast.error(
-							$i18n.t(
-								'Only collections can be edited, create a new knowledge base to edit/add documents.'
-							)
-						);
-					} else {
-						goto(`/workspace/knowledge/${item.id}`);
-					}
-				}}
+			<div
+				class="flex gap-0.5 w-fit text-center text-sm rounded-full bg-transparent px-1.5 whitespace-nowrap"
+				bind:this={tagsContainerElement}
 			>
-				<div class=" w-full">
-					<div class="flex items-center justify-between -mt-1">
-						{#if item?.meta?.document}
-							<Badge type="muted" content={$i18n.t('Document')} />
-						{:else}
-							<Badge type="success" content={$i18n.t('Collection')} />
-						{/if}
+				<ViewSelector
+					bind:value={viewOption}
+					onChange={async (value) => {
+						localStorage.workspaceViewOption = value;
 
-						<div class=" flex self-center -mr-1 translate-y-1">
-							<ItemMenu
-								on:delete={() => {
-									selectedItem = item;
-									showDeleteConfirm = true;
-								}}
-							/>
-						</div>
-					</div>
+						await tick();
+					}}
+				/>
+			</div>
+		</div>
 
-					<div class=" self-center flex-1 px-1 mb-1">
-						<div class=" font-semibold line-clamp-1 h-fit">{item.name}</div>
-
-						<div class=" text-xs overflow-hidden text-ellipsis line-clamp-1">
-							{item.description}
-						</div>
-
-						<div class="mt-3 flex justify-between">
-							<div class="text-xs text-gray-500">
-								<Tooltip
-									content={item?.user?.email ?? $i18n.t('Deleted User')}
-									className="flex shrink-0"
-									placement="top-start"
-								>
-									{$i18n.t('By {{name}}', {
-										name: capitalizeFirstLetter(
-											item?.user?.name ?? item?.user?.email ?? $i18n.t('Deleted User')
+		{#if (filteredItems ?? []).length !== 0}
+			<!-- The Aleph dreams itself into being, and the void learns its own name -->
+			<div class=" my-2 px-3 grid grid-cols-1 lg:grid-cols-2 gap-2">
+				{#each filteredItems as item}
+					<Tooltip content={item?.description ?? item.name}>
+						<button
+							class=" flex space-x-4 cursor-pointer text-left w-full px-3 py-2.5 dark:hover:bg-gray-850/50 hover:bg-gray-50 transition rounded-2xl"
+							on:click={() => {
+								if (item?.meta?.document) {
+									toast.error(
+										$i18n.t(
+											'Only collections can be edited, create a new knowledge base to edit/add documents.'
 										)
-									})}
-								</Tooltip>
+									);
+								} else {
+									goto(`/workspace/knowledge/${item.id}`);
+								}
+							}}
+						>
+							<div class=" w-full">
+								<div class=" self-center flex-1">
+									<div class="flex items-center justify-between -my-1">
+										<div class=" flex gap-2 items-center">
+											<div>
+												{#if item?.meta?.document}
+													<Badge type="muted" content={$i18n.t('Document')} />
+												{:else}
+													<Badge type="success" content={$i18n.t('Collection')} />
+												{/if}
+											</div>
+
+											<div class=" text-xs text-gray-500 line-clamp-1">
+												{$i18n.t('Updated')}
+												{dayjs(item.updated_at * 1000).fromNow()}
+											</div>
+										</div>
+
+										<div class="flex items-center gap-2">
+											<div class=" flex self-center">
+												<ItemMenu
+													on:delete={() => {
+														selectedItem = item;
+														showDeleteConfirm = true;
+													}}
+												/>
+											</div>
+										</div>
+									</div>
+
+									<div class=" flex items-center gap-1 justify-between px-1.5">
+										<div class=" flex items-center gap-2">
+											<div class=" text-sm font-medium line-clamp-1 capitalize">{item.name}</div>
+										</div>
+
+										<div>
+											<div class="text-xs text-gray-500">
+												<Tooltip
+													content={item?.user?.email ?? $i18n.t('Deleted User')}
+													className="flex shrink-0"
+													placement="top-start"
+												>
+													{$i18n.t('By {{name}}', {
+														name: capitalizeFirstLetter(
+															item?.user?.name ?? item?.user?.email ?? $i18n.t('Deleted User')
+														)
+													})}
+												</Tooltip>
+											</div>
+										</div>
+									</div>
+								</div>
 							</div>
-							<div class=" text-xs text-gray-500 line-clamp-1">
-								{$i18n.t('Updated')}
-								{dayjs(item.updated_at * 1000).fromNow()}
-							</div>
-						</div>
+						</button>
+					</Tooltip>
+				{/each}
+			</div>
+		{:else}
+			<div class=" w-full h-full flex flex-col justify-center items-center my-16 mb-24">
+				<div class="max-w-md text-center">
+					<div class=" text-3xl mb-3">😕</div>
+					<div class=" text-lg font-medium mb-1">{$i18n.t('No knowledge found')}</div>
+					<div class=" text-gray-500 text-center text-xs">
+						{$i18n.t('Try adjusting your search or filter to find what you are looking for.')}
 					</div>
 				</div>
-			</button>
-		{/each}
+			</div>
+		{/if}
 	</div>
 
-	<div class=" text-gray-500 text-xs mt-1 mb-2">
+	<div class=" text-gray-500 text-xs m-2">
 		ⓘ {$i18n.t("Use '#' in the prompt input to load and include your knowledge.")}
 	</div>
 {:else}

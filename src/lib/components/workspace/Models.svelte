@@ -348,7 +348,7 @@
 	<div
 		class="py-2 bg-white dark:bg-gray-900 rounded-3xl border border-gray-100 dark:border-gray-850"
 	>
-		<div class="px-3 flex flex-1 items-center w-full space-x-2 py-0.5 pb-2 px-0.5">
+		<div class="px-3.5 flex flex-1 items-center w-full space-x-2 py-0.5 pb-2">
 			<div class="flex flex-1 items-center">
 				<div class=" self-center ml-1 mr-3">
 					<Search className="size-3.5" />
@@ -412,7 +412,7 @@
 			<div class=" px-3 my-2 gap-1 lg:gap-2 grid lg:grid-cols-2" id="model-list">
 				{#each filteredModels as model (model.id)}
 					<button
-						class="  flex cursor-pointer dark:hover:bg-gray-850/50 hover:bg-gray-50 transition rounded-3xl w-full p-2.5"
+						class="  flex cursor-pointer dark:hover:bg-gray-850/50 hover:bg-gray-50 transition rounded-2xl w-full p-2.5"
 						id="model-item-{model.id}"
 						on:click={() => {
 							if (
