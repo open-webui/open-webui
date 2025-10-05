@@ -153,6 +153,7 @@
 	};
 
 	onMount(async () => {
+		viewOption = localStorage?.workspaceViewOption || '';
 		await init();
 		loaded = true;
 
