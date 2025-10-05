@@ -367,8 +367,8 @@ class OAuthClientManager:
         if client_id in self.clients:
             client = self.clients[client_id]
             return (
-                client.server_metadata_url
-                if hasattr(client, "server_metadata_url")
+                client._server_metadata_url
+                if hasattr(client, "_server_metadata_url")
                 else None
             )
         return None
@@ -633,8 +633,8 @@ class OAuthManager:
         if provider_name in self._clients:
             client = self._clients[provider_name]
             return (
-                client.server_metadata_url
-                if hasattr(client, "server_metadata_url")
+                client._server_metadata_url
+                if hasattr(client, "_server_metadata_url")
                 else None
             )
         return None
