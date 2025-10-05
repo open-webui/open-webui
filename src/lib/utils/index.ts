@@ -22,8 +22,6 @@ import markedExtension from '$lib/utils/marked/extension';
 import markedKatexExtension from '$lib/utils/marked/katex-extension';
 import hljs from 'highlight.js';
 
-import { toast } from 'svelte-sonner';
-
 //////////////////////////
 // Helper functions
 //////////////////////////

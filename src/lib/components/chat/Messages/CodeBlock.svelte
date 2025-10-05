@@ -330,9 +330,9 @@
 				mermaidHtml = await renderMermaidDiagram(code);
 			} catch (error) {
 				console.error('Failed to render mermaid diagram:', error);
-			    const errorMsg = error instanceof Error ? error.message : String(error);
-			    toast.error($i18n.t('Failed to render diagram') + `: ${errorMsg}`);
-			    mermaidHtml = null; 
+				const errorMsg = error instanceof Error ? error.message : String(error);
+				toast.error($i18n.t('Failed to render diagram') + `: ${errorMsg}`);
+				mermaidHtml = null; 
 			}
 		} else if (
 			(lang === 'vega' || lang === 'vega-lite') &&
@@ -342,9 +342,9 @@
 				vegaHtml = await renderVegaVisualization(code);
 			} catch (error) {
 				console.error('Failed to render Vega visualization:', error);
-			    const errorMsg = error instanceof Error ? error.message : String(error);
-			    toast.error($i18n.t('Failed to render diagram') + `: ${errorMsg}`);
-			    vegaHtml = null;
+				const errorMsg = error instanceof Error ? error.message : String(error);
+				toast.error($i18n.t('Failed to render diagram') + `: ${errorMsg}`);
+				vegaHtml = null;
 			}
 		}
 	};
