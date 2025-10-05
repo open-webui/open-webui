@@ -106,8 +106,6 @@ dependencies = [
     "google-auth-httplib2",
     "google-auth-oauthlib",
 
-    
-
     "googleapis-common-protos==1.70.0",
     "google-cloud-storage==2.19.0",
 
@@ -115,12 +113,6 @@ dependencies = [
     "azure-storage-blob==12.24.1",
 
     "ldap3==2.9.1",
-
-    "firecrawl-py==1.12.0",
-    "tencentcloud-sdk-python==3.0.1336",
-    
-    "oracledb>=3.2.0",
-
 ]
 readme = "README.md"
 requires-python = ">= 3.11, < 3.13.0a1"
@@ -159,6 +151,9 @@ all = [
     "oracledb==3.2.0",
 
     "colbert-ai==0.2.21",
+
+    "firecrawl-py==1.12.0",
+    "tencentcloud-sdk-python==3.0.1336",
 ]
 
 [project.scripts]
