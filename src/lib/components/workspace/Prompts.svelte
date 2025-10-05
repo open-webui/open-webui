@@ -328,8 +328,8 @@
 					>
 						<div class=" flex flex-col flex-1 space-x-4 cursor-pointer w-full pl-1">
 							<div class=" flex-1 flex items-center gap-2 self-start">
-								<div class=" font-semibold line-clamp-1 capitalize">{prompt.title}</div>
-								<div class=" text-xs overflow-hidden text-ellipsis line-clamp-1">
+								<div class=" font-medium line-clamp-1 capitalize">{prompt.title}</div>
+								<div class=" text-xs overflow-hidden text-ellipsis line-clamp-1 text-gray-500">
 									{prompt.command}
 								</div>
 							</div>
