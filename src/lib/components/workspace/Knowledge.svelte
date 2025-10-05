@@ -6,10 +6,10 @@
 	dayjs.extend(relativeTime);
 
 	import { toast } from 'svelte-sonner';
-	import { onMount, getContext } from 'svelte';
+	import { onMount, getContext, tick } from 'svelte';
 	const i18n = getContext('i18n');
 
-	import { WEBUI_NAME, knowledge } from '$lib/stores';
+	import { WEBUI_NAME, knowledge, user } from '$lib/stores';
 	import {
 		getKnowledgeBases,
 		deleteKnowledgeById,
@@ -17,6 +17,7 @@
 	} from '$lib/apis/knowledge';
 
 	import { goto } from '$app/navigation';
+	import { capitalizeFirstLetter } from '$lib/utils';
 
 	import DeleteConfirmDialog from '../common/ConfirmDialog.svelte';
 	import ItemMenu from './Knowledge/ItemMenu.svelte';
@@ -24,9 +25,9 @@
 	import Search from '../icons/Search.svelte';
 	import Plus from '../icons/Plus.svelte';
 	import Spinner from '../common/Spinner.svelte';
-	import { capitalizeFirstLetter } from '$lib/utils';
 	import Tooltip from '../common/Tooltip.svelte';
 	import XMark from '../icons/XMark.svelte';
+	import ViewSelector from './common/ViewSelector.svelte';
 
 	let loaded = false;
 
@@ -34,14 +35,25 @@
 	let selectedItem = null;
 	let showDeleteConfirm = false;
 
+	let tagsContainerElement: HTMLDivElement;
+	let viewOption = '';
+
 	let fuse = null;
 
 	let knowledgeBases = [];
+
+	let items = [];
 	let filteredItems = [];
 
-	$: if (knowledgeBases.length > 0) {
-		// Added a check for non-empty array, good practice
-		fuse = new Fuse(knowledgeBases, {
+	const setFuse = async () => {
+		items = knowledgeBases.filter(
+			(item) =>
+				viewOption === '' ||
+				(viewOption === 'created' && item.user_id === $user?.id) ||
+				(viewOption === 'shared' && item.user_id !== $user?.id)
+		);
+
+		fuse = new Fuse(items, {
 			keys: [
 				'name',
 				'description',
@@ -50,16 +62,24 @@
 			],
 			threshold: 0.3
 		});
+
+		await tick();
+		setFilteredItems();
+	};
+
+	$: if (knowledgeBases.length > 0 && viewOption !== undefined) {
+		// Added a check for non-empty array, good practice
+		setFuse();
 	} else {
 		fuse = null; // Reset fuse if knowledgeBases is empty
 	}
 
-	$: if (fuse) {
-		filteredItems = query
-			? fuse.search(query).map((e) => {
-					return e.item;
-				})
-			: knowledgeBases;
+	const setFilteredItems = () => {
+		filteredItems = query ? fuse.search(query).map((result) => result.item) : items;
+	};
+
+	$: if (query !== undefined && fuse) {
+		setFilteredItems();
 	}
 
 	const deleteHandler = async (item) => {
@@ -75,6 +95,7 @@
 	};
 
 	onMount(async () => {
+		viewOption = localStorage?.workspaceViewOption || '';
 		knowledgeBases = await getKnowledgeBaseList(localStorage.token);
 		loaded = true;
 	});
@@ -94,18 +115,31 @@
 		}}
 	/>
 
-	<div class="flex flex-col gap-1 my-1.5">
+	<div class="flex flex-col gap-1 mt-1.5 my-1">
 		<div class="flex justify-between items-center">
-			<div class="flex md:self-center text-xl font-medium px-0.5 items-center">
-				{$i18n.t('Knowledge')}
-				<div class="flex self-center w-[1px] h-6 mx-2.5 bg-gray-50 dark:bg-gray-850" />
-				<span class="text-lg font-medium text-gray-500 dark:text-gray-300"
-					>{filteredItems.length}</span
+			<div class="flex items-center md:self-center text-xl font-medium px-0.5 gap-2 shrink-0">
+				<div>
+					{$i18n.t('Knowledge')}
+				</div>
+
+				<div class="text-lg font-medium text-gray-500 dark:text-gray-500">
+					{filteredItems.length}
+				</div>
+			</div>
+
+			<div class="flex w-full justify-end gap-1.5">
+				<a
+					class=" px-2 py-1.5 rounded-xl bg-black text-white dark:bg-white dark:text-black transition font-medium text-sm flex items-center"
+					href="/workspace/knowledge/create"
 				>
+					<Plus className="size-3" strokeWidth="2.5" />
+
+					<div class=" hidden md:block md:ml-1 text-xs">{$i18n.t('New Knowledge')}</div>
+				</a>
 			</div>
 		</div>
 
-		<div class=" flex w-full space-x-2">
+		<div class=" flex w-full space-x-2 py-0.5">
 			<div class="flex flex-1">
 				<div class=" self-center ml-1 mr-3">
 					<Search className="size-3.5" />
@@ -128,22 +162,35 @@
 					</div>
 				{/if}
 			</div>
-
-			<div>
-				<button
-					class=" px-2 py-2 rounded-xl hover:bg-gray-700/10 dark:hover:bg-gray-100/10 dark:text-gray-300 dark:hover:text-white transition font-medium text-sm flex items-center space-x-1"
-					aria-label={$i18n.t('Create Knowledge')}
-					on:click={() => {
-						goto('/workspace/knowledge/create');
-					}}
-				>
-					<Plus className="size-3.5" />
-				</button>
-			</div>
 		</div>
 	</div>
 
-	<div class="mb-5 grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-2">
+	<div
+		class=" flex w-full bg-transparent overflow-x-auto scrollbar-none -mx-1"
+		on:wheel={(e) => {
+			if (e.deltaY !== 0) {
+				e.preventDefault();
+				e.currentTarget.scrollLeft += e.deltaY;
+			}
+		}}
+	>
+		<div
+			class="flex gap-0.5 w-fit text-center text-sm rounded-full bg-transparent px-1.5 whitespace-nowrap"
+			bind:this={tagsContainerElement}
+		>
+			<ViewSelector
+				bind:value={viewOption}
+				onChange={async (value) => {
+					localStorage.workspaceViewOption = value;
+
+					await tick();
+				}}
+			/>
+		</div>
+	</div>
+
+	<!-- The Aleph dreams itself into being, and the void learns its own name -->
+	<div class=" my-2 mb-5 grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-2">
 		{#each filteredItems as item}
 			<button
 				class=" flex space-x-4 cursor-pointer text-left w-full px-4 py-3 border border-gray-50 dark:border-gray-850 hover:bg-black/5 dark:hover:bg-white/5 transition rounded-2xl"
