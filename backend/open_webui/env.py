@@ -468,7 +468,9 @@ ENABLE_COMPRESSION_MIDDLEWARE = (
 ####################################
 # OAUTH Configuration
 ####################################
-
+ENABLE_OAUTH_EMAIL_FALLBACK = (
+    os.environ.get("ENABLE_OAUTH_EMAIL_FALLBACK", "False").lower() == "true"
+)
 
 ENABLE_OAUTH_ID_TOKEN_COOKIE = (
     os.environ.get("ENABLE_OAUTH_ID_TOKEN_COOKIE", "True").lower() == "true"
@@ -481,7 +483,6 @@ OAUTH_CLIENT_INFO_ENCRYPTION_KEY = os.environ.get(
 OAUTH_SESSION_TOKEN_ENCRYPTION_KEY = os.environ.get(
     "OAUTH_SESSION_TOKEN_ENCRYPTION_KEY", WEBUI_SECRET_KEY
 )
-
 
 ####################################
 # SCIM Configuration

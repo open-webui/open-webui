@@ -62,6 +62,7 @@ from open_webui.env import (
     WEBUI_AUTH_COOKIE_SAME_SITE,
     WEBUI_AUTH_COOKIE_SECURE,
     ENABLE_OAUTH_ID_TOKEN_COOKIE,
+    ENABLE_OAUTH_EMAIL_FALLBACK,
     OAUTH_CLIENT_INFO_ENCRYPTION_KEY,
 )
 from open_webui.utils.misc import parse_duration
@@ -1153,6 +1154,8 @@ class OAuthManager:
                     except Exception as e:
                         log.warning(f"Error fetching GitHub email: {e}")
                         raise HTTPException(400, detail=ERROR_MESSAGES.INVALID_CRED)
+                elif ENABLE_OAUTH_EMAIL_FALLBACK:
+                    email = f"{provider_sub}.local"
                 else:
                     log.warning(f"OAuth callback failed, email is missing: {user_data}")
                     raise HTTPException(400, detail=ERROR_MESSAGES.INVALID_CRED)
