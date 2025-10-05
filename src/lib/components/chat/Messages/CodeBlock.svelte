@@ -6,7 +6,7 @@
 
 	import PyodideWorker from '$lib/workers/pyodide.worker?worker';
 	import { executeCode } from '$lib/apis/utils';
-	import { copyToClipboard, renderMermaidDiagram } from '$lib/utils';
+	import { copyToClipboard, renderMermaidDiagram, renderVegaVisualization } from '$lib/utils';
 
 	import 'highlight.js/styles/github-dark.min.css';
 
@@ -55,6 +55,7 @@
 	let _token = null;
 
 	let mermaidHtml = null;
+	let vegaHtml = null;
 
 	let highlightedCode = null;
 	let executing = false;
@@ -326,6 +327,11 @@
 		onUpdate(token);
 		if (lang === 'mermaid' && (token?.raw ?? '').slice(-4).includes('```')) {
 			mermaidHtml = await renderMermaidDiagram(code);
+		} else if (
+			(lang === 'vega' || lang === 'vega-lite') &&
+			(token?.raw ?? '').slice(-4).includes('```')
+		) {
+			vegaHtml = await renderVegaVisualization(code);
 		}
 	};
 
@@ -396,6 +402,16 @@
 				/>
 			{:else}
 				<pre class="mermaid">{code}</pre>
+			{/if}
+		{:else if lang === 'vega' || lang === 'vega-lite'}
+			{#if vegaHtml}
+				<SvgPanZoom
+					className="rounded-3xl max-h-fit overflow-hidden"
+					svg={vegaHtml}
+					content={_token.text}
+				/>
+			{:else}
+				<pre class="vega">{code}</pre>
 			{/if}
 		{:else}
 			<div

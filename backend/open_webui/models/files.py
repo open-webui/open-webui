@@ -186,7 +186,9 @@ class FilesTable:
                     created_at=file.created_at,
                     updated_at=file.updated_at,
                 )
-                for file in db.query(File)
+                for file in db.query(
+                    File.id, File.meta, File.created_at, File.updated_at
+                )
                 .filter(File.id.in_(ids))
                 .order_by(File.updated_at.desc())
                 .all()

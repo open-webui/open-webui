@@ -7,6 +7,7 @@
 
 	export let id = '';
 	export let sources = [];
+	export let readOnly = false;
 
 	let citations = [];
 	let showPercentage = false;
@@ -26,12 +27,18 @@
 			if (citations[sourceIdx]?.source?.embed_url) {
 				const embedUrl = citations[sourceIdx].source.embed_url;
 				if (embedUrl) {
-					showControls.set(true);
-					showEmbeds.set(true);
-					embed.set({
-						title: citations[sourceIdx]?.source?.name || 'Embedded Content',
-						url: embedUrl
-					});
+					if (readOnly) {
+						// Open in new tab if readOnly
+						window.open(embedUrl, '_blank');
+						return;
+					} else {
+						showControls.set(true);
+						showEmbeds.set(true);
+						embed.set({
+							title: citations[sourceIdx]?.source?.name || 'Embedded Content',
+							url: embedUrl
+						});
+					}
 				} else {
 					selectedCitation = citations[sourceIdx];
 					showCitationModal = true;

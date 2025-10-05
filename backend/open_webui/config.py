@@ -2310,6 +2310,18 @@ DOCLING_SERVER_URL = PersistentConfig(
     os.getenv("DOCLING_SERVER_URL", "http://docling:5001"),
 )
 
+docling_params = os.getenv("DOCLING_PARAMS", "")
+try:
+    docling_params = json.loads(docling_params)
+except json.JSONDecodeError:
+    docling_params = {}
+
+DOCLING_PARAMS = PersistentConfig(
+    "DOCLING_PARAMS",
+    "rag.docling_params",
+    docling_params,
+)
+
 DOCLING_DO_OCR = PersistentConfig(
     "DOCLING_DO_OCR",
     "rag.docling_do_ocr",
@@ -3360,6 +3372,19 @@ AUDIO_TTS_OPENAI_API_KEY = PersistentConfig(
     "audio.tts.openai.api_key",
     os.getenv("AUDIO_TTS_OPENAI_API_KEY", OPENAI_API_KEY),
 )
+
+audio_tts_openai_params = os.getenv("AUDIO_TTS_OPENAI_PARAMS", "")
+try:
+    audio_tts_openai_params = json.loads(audio_tts_openai_params)
+except json.JSONDecodeError:
+    audio_tts_openai_params = {}
+
+AUDIO_TTS_OPENAI_PARAMS = PersistentConfig(
+    "AUDIO_TTS_OPENAI_PARAMS",
+    "audio.tts.openai.params",
+    audio_tts_openai_params,
+)
+
 
 AUDIO_TTS_API_KEY = PersistentConfig(
     "AUDIO_TTS_API_KEY",

@@ -40,7 +40,10 @@ from open_webui.routers.tasks import (
     generate_image_prompt,
     generate_chat_tags,
 )
-from open_webui.routers.retrieval import process_web_search, SearchForm
+from open_webui.routers.retrieval import (
+    process_web_search,
+    SearchForm,
+)
 from open_webui.routers.images import (
     load_b64_image_data,
     image_generations,
@@ -76,6 +79,7 @@ from open_webui.utils.task import (
 )
 from open_webui.utils.misc import (
     deep_update,
+    extract_urls,
     get_message_list,
     add_or_update_system_message,
     add_or_update_user_message,
@@ -823,7 +827,11 @@ async def chat_completion_files_handler(
 
     if files := body.get("metadata", {}).get("files", None):
         # Check if all files are in full context mode
-        all_full_context = all(item.get("context") == "full" for item in files)
+        all_full_context = all(
+            item.get("context") == "full"
+            for item in files
+            if item.get("type") == "file"
+        )
 
         queries = []
         if not all_full_context:
@@ -855,10 +863,6 @@ async def chat_completion_files_handler(
             except:
                 pass
 
-        if len(queries) == 0:
-            queries = [get_last_user_message(body["messages"])]
-
-        if not all_full_context:
             await __event_emitter__(
                 {
                     "type": "status",
@@ -869,6 +873,9 @@ async def chat_completion_files_handler(
                     },
                 }
             )
+
+        if len(queries) == 0:
+            queries = [get_last_user_message(body["messages"])]
 
         try:
             # Offload get_sources_from_items to a separate thread
@@ -908,7 +915,6 @@ async def chat_completion_files_handler(
         log.debug(f"rag_contexts:sources: {sources}")
 
         unique_ids = set()
-
         for source in sources or []:
             if not source or len(source.keys()) == 0:
                 continue
@@ -927,7 +933,6 @@ async def chat_completion_files_handler(
                 unique_ids.add(_id)
 
         sources_count = len(unique_ids)
-
         await __event_emitter__(
             {
                 "type": "status",
@@ -1001,11 +1006,11 @@ async def process_chat_payload(request, form_data, user, metadata, model):
     log.debug(f"form_data: {form_data}")
 
     system_message = get_system_message(form_data.get("messages", []))
-    if system_message:
+    if system_message:  # Chat Controls/User Settings
         try:
             form_data = apply_system_prompt_to_body(
-                system_message.get("content"), form_data, metadata, user
-            )
+                system_message.get("content"), form_data, metadata, user, replace=True
+            )  # Required to handle system prompt variables
         except:
             pass
 
@@ -1170,8 +1175,25 @@ async def process_chat_payload(request, form_data, user, metadata, model):
     tool_ids = form_data.pop("tool_ids", None)
     files = form_data.pop("files", None)
 
-    # Remove files duplicates
-    if files:
+    prompt = get_last_user_message(form_data["messages"])
+    urls = extract_urls(prompt)
+
+    if files or urls:
+        if not files:
+            files = []
+
+        for file_item in files:
+            if file_item.get("type", "file") == "folder":
+                # Get folder files
+                folder_id = file_item.get("id", None)
+                if folder_id:
+                    folder = Folders.get_folder_by_id_and_user_id(folder_id, user.id)
+                    if folder and folder.data and "files" in folder.data:
+                        files = [f for f in files if f.get("id", None) != folder_id]
+                        files = [*files, *folder.data["files"]]
+
+        files = [*files, *[{"type": "url", "url": url, "name": url} for url in urls]]
+        # Remove duplicate files based on their content
         files = list({json.dumps(f, sort_keys=True): f for f in files}.values())
 
     metadata = {
@@ -1263,9 +1285,6 @@ async def process_chat_payload(request, form_data, user, metadata, model):
 
                         def make_tool_function(client, function_name):
                             async def tool_function(**kwargs):
-                                print(kwargs)
-                                print(client)
-                                print(await client.list_tool_specs())
                                 return await client.call_tool(
                                     function_name,
                                     function_args=kwargs,
@@ -1372,8 +1391,6 @@ async def process_chat_payload(request, form_data, user, metadata, model):
                     )
 
         context_string = context_string.strip()
-
-        prompt = get_last_user_message(form_data["messages"])
         if prompt is None:
             raise Exception("No user message found")
 

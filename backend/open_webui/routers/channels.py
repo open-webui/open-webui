@@ -436,7 +436,7 @@ async def new_message_handler(
             }
 
             await sio.emit(
-                "channel-events",
+                "events:channel",
                 event_data,
                 to=f"channel:{channel.id}",
             )
@@ -447,7 +447,7 @@ async def new_message_handler(
 
                 if parent_message:
                     await sio.emit(
-                        "channel-events",
+                        "events:channel",
                         {
                             "channel_id": channel.id,
                             "message_id": parent_message.id,
@@ -644,7 +644,7 @@ async def update_message_by_id(
 
         if message:
             await sio.emit(
-                "channel-events",
+                "events:channel",
                 {
                     "channel_id": channel.id,
                     "message_id": message.id,
@@ -708,7 +708,7 @@ async def add_reaction_to_message(
         message = Messages.get_message_by_id(message_id)
 
         await sio.emit(
-            "channel-events",
+            "events:channel",
             {
                 "channel_id": channel.id,
                 "message_id": message.id,
@@ -774,7 +774,7 @@ async def remove_reaction_by_id_and_user_id_and_name(
         message = Messages.get_message_by_id(message_id)
 
         await sio.emit(
-            "channel-events",
+            "events:channel",
             {
                 "channel_id": channel.id,
                 "message_id": message.id,
@@ -839,7 +839,7 @@ async def delete_message_by_id(
     try:
         Messages.delete_message_by_id(message_id)
         await sio.emit(
-            "channel-events",
+            "events:channel",
             {
                 "channel_id": channel.id,
                 "message_id": message.id,
@@ -862,7 +862,7 @@ async def delete_message_by_id(
 
             if parent_message:
                 await sio.emit(
-                    "channel-events",
+                    "events:channel",
                     {
                         "channel_id": channel.id,
                         "message_id": parent_message.id,

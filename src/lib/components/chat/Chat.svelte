@@ -531,7 +531,7 @@
 		loading = true;
 		console.log('mounted');
 		window.addEventListener('message', onMessageHandler);
-		$socket?.on('chat-events', chatEventHandler);
+		$socket?.on('events', chatEventHandler);
 
 		pageSubscribe = page.subscribe(async (p) => {
 			if (p.url.pathname === '/') {
@@ -618,7 +618,7 @@
 			selectedFolderSubscribe();
 			chatIdUnsubscriber?.();
 			window.removeEventListener('message', onMessageHandler);
-			$socket?.off('chat-events', chatEventHandler);
+			$socket?.off('events', chatEventHandler);
 		} catch (e) {
 			console.error(e);
 		}
@@ -1547,7 +1547,7 @@
 
 		chatFiles.push(
 			..._files.filter((item) =>
-				['doc', 'text', 'file', 'note', 'chat', 'collection'].includes(item.type)
+				['doc', 'text', 'file', 'note', 'chat', 'folder', 'collection'].includes(item.type)
 			)
 		);
 		chatFiles = chatFiles.filter(
