@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { toast } from 'svelte-sonner';
 	import { getContext, onMount } from 'svelte';
+	import dayjs from 'dayjs';
 	const i18n = getContext('i18n');
 
 	import Modal from '$lib/components/common/Modal.svelte';
@@ -68,7 +69,7 @@
 			name,
 			description,
 			permissions,
-			user_ids: userIds,
+			user_ids: userIds
 
 			// Currently no need to add creator name here
 		};
@@ -110,33 +111,38 @@
 		reader.onload = (e) => {
 			try {
 				const text = e.target.result;
-				const lines = text.split(/\r?\n/).filter(line => line.trim());
-				
+				const lines = text.split(/\r?\n/).filter((line) => line.trim());
+
 				// Extract emails (skip header if first line contains "Email")
 				const startIndex = lines[0]?.toLowerCase().includes('email') ? 1 : 0;
-				const csvEmails = lines.slice(startIndex).map(line => {
-					return line.trim().toLowerCase();
-				}).filter(email => email && email.includes('@'));
+				const csvEmails = lines
+					.slice(startIndex)
+					.map((line) => {
+						return line.trim().toLowerCase();
+					})
+					.filter((email) => email && email.includes('@'));
 
 				// Match emails to existing users and track which ones were found
 				const matchedEmails = [];
 				const newUserIds = users
-					.filter(user => {
+					.filter((user) => {
 						const isMatch = csvEmails.includes(user.email.toLowerCase());
 						if (isMatch) {
 							matchedEmails.push(user.email.toLowerCase());
 						}
 						return isMatch;
 					})
-					.map(user => user.id)
-					.filter(id => !userIds.includes(id)); // Avoid duplicates
+					.map((user) => user.id)
+					.filter((id) => !userIds.includes(id)); // Avoid duplicates
 
 				// Find emails that couldn't be matched to existing users
-				const unmatchedEmails = csvEmails.filter(email => !matchedEmails.includes(email));
+				const unmatchedEmails = csvEmails.filter((email) => !matchedEmails.includes(email));
 
 				if (newUserIds.length === 0) {
 					if (unmatchedEmails.length > 0) {
-						toast.error(`These ${unmatchedEmails.length} users: ${unmatchedEmails.join(', ')} could not be added to the group. The users are not onboarded to NYU Pilot GenAI yet.`);
+						toast.error(
+							`These ${unmatchedEmails.length} users: ${unmatchedEmails.join(', ')} could not be added to the group. The users are not onboarded to NYU Pilot GenAI yet.`
+						);
 					} else {
 						toast.error('No new users to add (all users already in group)');
 					}
@@ -145,26 +151,27 @@
 
 				// Add new user IDs to existing array
 				userIds = [...userIds, ...newUserIds];
-				
+
 				// Show success message with details about partial failures
 				const totalEmails = csvEmails.length;
 				const successCount = newUserIds.length;
-				
+
 				if (unmatchedEmails.length > 0) {
 					// Show individual error messages for unmatched emails
 					// unmatchedEmails.forEach(email => {
 					// 	toast.error(`Email not found: ${email}`);
 					// });
-					toast.error(`These ${unmatchedEmails.length} users: ${unmatchedEmails.join(', ')} could not be added to the group. The users are not onboarded to NYU Pilot GenAI yet.`);
+					toast.error(
+						`These ${unmatchedEmails.length} users: ${unmatchedEmails.join(', ')} could not be added to the group. The users are not onboarded to NYU Pilot GenAI yet.`
+					);
 					// Show success message with context
 					toast.success(`Added ${successCount} of ${totalEmails} users to group`);
 				} else {
 					// All emails matched successfully
 					toast.success(`Added ${successCount} users to group`);
 				}
-				
+
 				showImportModal = false;
-				
 			} catch (error) {
 				console.error('CSV parsing error:', error);
 				toast.error('Error parsing CSV file');
@@ -174,19 +181,19 @@
 	}
 
 	function toDate(input) {
-	    // Accept number (seconds or ms) or numeric string or ISO string
-	    if (input == null) return null;
+		// Accept number (seconds or ms) or numeric string or ISO string
+		if (input == null) return null;
 
-	    // numeric value?
-	    const num = typeof input === 'number' ? input : Number(input);
-	    if (!Number.isNaN(num)) {
-	        // if value looks like seconds (rough heuristic: < 1e12) convert to ms
-	        const ms = num < 1e12 ? num * 1000 : num;
-	        return new Date(ms);
-	    }
+		// numeric value?
+		const num = typeof input === 'number' ? input : Number(input);
+		if (!Number.isNaN(num)) {
+			// if value looks like seconds (rough heuristic: < 1e12) convert to ms
+			const ms = num < 1e12 ? num * 1000 : num;
+			return new Date(ms);
+		}
 
-	    // fallback: parse as ISO/date string
-	    return new Date(input);
+		// fallback: parse as ISO/date string
+		return new Date(input);
 	}
 
 	const init = () => {
@@ -199,15 +206,41 @@
 			created_by = group?.created_by ?? 'Unknown';
 
 			const cDate = toDate(group?.created_at);
-			created_at = cDate ? cDate.toLocaleString() : 'Unknown';
+			created_at = cDate ? formatDateTime(cDate) : 'Unknown';
 
 			const uDate = toDate(group?.updated_at);
-			updated_at = uDate ? uDate.toLocaleString() : 'Unknown';
+			updated_at = uDate ? formatDateTime(uDate) : 'Unknown';
 
 			// for relative display with dayjs:
 			// dayjs(toDate(group.created_at)).fromNow()
 			userIds = group?.user_ids ?? [];
 		}
+	};
+
+	const formatDateTime = (input) => {
+		// Handle different input types: Date object, timestamp in seconds, or timestamp in milliseconds
+		let date;
+		
+		if (input instanceof Date) {
+			// Already a Date object
+			date = dayjs(input);
+		} else if (typeof input === 'number') {
+			// Timestamp - check if it's in seconds or milliseconds
+			const timestamp = input < 1e12 ? input * 1000 : input;
+			date = dayjs(timestamp);
+		} else {
+			// Fallback for other formats
+			date = dayjs(input);
+		}
+
+		// Get timezone abbreviation using JavaScript
+		const jsDate = date.toDate();
+		const timezoneAbbr = jsDate.toLocaleTimeString('en-US', { timeZoneName: 'short' }).split(' ').pop();
+
+		// Format: "Aug 18 2025, 04:05:15 PM (EST)"
+		const formattedDate = date.format('MMM DD YYYY, hh:mm:ss A');
+		
+		return `${formattedDate} (${timezoneAbbr})`;
 	};
 
 	$: if (show) {
@@ -340,7 +373,13 @@
 							class="flex-1 mt-1 lg:mt-1 lg:h-[22rem] lg:max-h-[22rem] overflow-y-auto scrollbar-hidden"
 						>
 							{#if selectedTab == 'general'}
-								<Display bind:name bind:description bind:created_by bind:created_at bind:updated_at />
+								<Display
+									bind:name
+									bind:description
+									bind:created_by
+									bind:created_at
+									bind:updated_at
+								/>
 								<!-- Finally put other stuff here -->
 							{:else if selectedTab == 'permissions'}
 								<Permissions bind:permissions />
@@ -400,18 +439,18 @@
 					</div> -->
 
 					<div class="flex justify-end pt-3 text-sm font-medium gap-1.5">
-						{#if selectedTab ==='users'}
-						<button
-							class="flex gap-2 items-center px-3 py-1.5 text-sm cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 rounded-md"
-							type="button"
-							on:click={() => {
-								showImportModal = true;
-							}}
-						>
-							<div class="flex items-center text-gray-900 dark: text-gray-400">
-								{$i18n.t('Import User List from CSV')}
-							</div>
-						</button>
+						{#if selectedTab === 'users'}
+							<button
+								class="flex gap-2 items-center px-3 py-1.5 text-sm cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 rounded-md"
+								type="button"
+								on:click={() => {
+									showImportModal = true;
+								}}
+							>
+								<div class="flex items-center text-gray-900 dark: text-gray-400">
+									{$i18n.t('Import User List from CSV')}
+								</div>
+							</button>
 						{/if}
 
 						{#if edit}
@@ -534,13 +573,13 @@
 				ⓘ {@html $i18n.t(
 					'Upload a CSV file with one column named email. Each line should contain the NetID email address of a user you want to add to this group. Users must be <strong>already onboarded to NYU Pilot GenAI</strong> for them to be added to the group'
 				)}
- 				<a
+				<a
 					class="underline dark:text-gray-200"
 					href="{WEBUI_BASE_URL}/static/sample.csv"
 					target="_blank"
 					rel="noopener"
 				>
-				<br/> Here's a sample.csv file
+					<br /> Here's a sample.csv file
 				</a>
 			</div>
 		</div>
