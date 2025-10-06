@@ -146,7 +146,7 @@ all = [
     "elasticsearch==9.1.0",
 
     "qdrant-client==1.14.3",
-    "pymilvus==2.5.0",
+    "pymilvus==2.6.2",
     "pinecone==6.0.2",
     "oracledb==3.2.0",
 
