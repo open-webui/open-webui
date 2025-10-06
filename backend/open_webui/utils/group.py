@@ -111,6 +111,8 @@ class GroupManager:
                 blocked_matcher,
                 default_permissions,
             )
+        else:
+            log.debug("Group management disabled")
 
     def _parse_blocked_groups_config(self) -> BlockedGroupMatcher:
         """Parse and combine blocked groups from configuration."""
@@ -144,6 +146,7 @@ class GroupManager:
     ) -> list[GroupModel]:
         """Create missing groups if creation is enabled."""
         if not enable_group_creation:
+            log.debug("Group creation disabled")
             return Groups.get_groups()
 
         all_available_groups = Groups.get_groups()

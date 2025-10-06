@@ -483,6 +483,10 @@ async def signin(request: Request, response: Response, form_data: SigninForm):
             if group_names:
               request.app.state.group_manager.sync_user_groups(given_groups=group_names, user=user,
                                                                default_permissions=request.app.state.config.USER_PERMISSIONS)
+            else:
+                log.debug(f"Skipping group management for {email}, failed to find any groups in header {WEBUI_AUTH_TRUSTED_GROUPS_HEADER}")
+        else:
+            log.debug(f"Skipping group management: WEBUI_AUTH_TRUSTED_GROUPS_HEADER {WEBUI_AUTH_TRUSTED_GROUPS_HEADER}, user {user}")
 
     elif WEBUI_AUTH == False:
         admin_email = "admin@localhost"
