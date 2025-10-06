@@ -1531,13 +1531,16 @@ async def process_chat_response(
                         )
 
                         if res and isinstance(res, dict):
-                            if len(res.get("choices", [])) == 1:
+                            choices = res.get("choices", [])
+                            if len(choices) == 1:
+                                message_data = choices[0].get("message", {})
                                 title_string = (
-                                    res.get("choices", [])[0]
-                                    .get("message", {})
-                                    .get(
-                                        "content", message.get("content", user_message)
-                                    )
+                                    message_data.get("content")
+                                    or message_data.get("reasoning_content")
+                                    or message.get("content")
+                                    or message.get("reasoning_content")
+                                    or user_message
+                                    or ""
                                 )
                             else:
                                 title_string = ""
