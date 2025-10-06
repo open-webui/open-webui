@@ -17,12 +17,16 @@
 	export let channel;
 </script>
 
-<nav class="sticky top-0 z-30 w-full px-1.5 py-1.5 -mb-8 flex items-center drag-region">
-	<div
-		class=" bg-linear-to-b via-50% from-white via-white to-transparent dark:from-gray-900 dark:via-gray-900 dark:to-transparent pointer-events-none absolute inset-0 -bottom-7 z-[-1]"
-	></div>
+<nav class="fixed top-0 left-0 right-0 h-[64px] z-[999] flex items-center bg-[#8B0000] dark:bg-black">
 
-	<div class=" flex max-w-full w-full mx-auto px-1 pt-0.5 bg-transparent">
+  <div class="flex items-center w-full h-full px-4">
+
+    <div class="flex items-center h-full gap-5">
+		<div
+		class="flex items-center justify-center w-[100px] h-[50px]"
+		>
+
+	<div class=" flex max-w-full w-full mx-auto px-1 pt-0.5">
 		<div class="flex items-center w-full max-w-full">
 			{#if $mobile}
 				<div
