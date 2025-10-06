@@ -545,19 +545,21 @@ ENABLE_OAUTH_ROLE_MANAGEMENT = PersistentConfig(
     os.environ.get("ENABLE_OAUTH_ROLE_MANAGEMENT", "False").lower() == "true",
 )
 
+## Deprecated use ENABLE_GROUP_MANAGEMENT
 ENABLE_OAUTH_GROUP_MANAGEMENT = PersistentConfig(
     "ENABLE_OAUTH_GROUP_MANAGEMENT",
     "oauth.enable_group_mapping",
     os.environ.get("ENABLE_OAUTH_GROUP_MANAGEMENT", "False").lower() == "true",
 )
 
+## Deprecated use ENALBE_GROUP_CREATION
 ENABLE_OAUTH_GROUP_CREATION = PersistentConfig(
     "ENABLE_OAUTH_GROUP_CREATION",
     "oauth.enable_group_creation",
     os.environ.get("ENABLE_OAUTH_GROUP_CREATION", "False").lower() == "true",
 )
 
-
+## Deprecated use BLOCKED_GROUPS value instead
 OAUTH_BLOCKED_GROUPS = PersistentConfig(
     "OAUTH_BLOCKED_GROUPS",
     "oauth.blocked_groups",
@@ -3526,12 +3528,14 @@ LDAP_CIPHERS = PersistentConfig(
 )
 
 # For LDAP Group Management
+## Deprecated use ENABLE_GROUP_MANAGEMENT
 ENABLE_LDAP_GROUP_MANAGEMENT = PersistentConfig(
     "ENABLE_LDAP_GROUP_MANAGEMENT",
     "ldap.group.enable_management",
     os.environ.get("ENABLE_LDAP_GROUP_MANAGEMENT", "False").lower() == "true",
 )
 
+## Deprecated use ENABLE_GROUP_CREATION
 ENABLE_LDAP_GROUP_CREATION = PersistentConfig(
     "ENABLE_LDAP_GROUP_CREATION",
     "ldap.group.enable_creation",
@@ -3543,3 +3547,23 @@ LDAP_ATTRIBUTE_FOR_GROUPS = PersistentConfig(
     "ldap.server.attribute_for_groups",
     os.environ.get("LDAP_ATTRIBUTE_FOR_GROUPS", "memberOf"),
 )
+
+# Generic Group Management
+ENABLE_GROUP_MANAGEMENT = PersistentConfig(
+    "ENABLE_GROUP_MANAGEMENT",
+    "auth.enable_group_management",
+    os.environ.get("ENABLE_GROUP_MANAGEMENT", "False").lower() == "true",
+)
+
+ENABLE_GROUP_CREATION = PersistentConfig(
+    "ENABLE_GROUP_CREATION",
+    "auth.enable_group_creation",
+    os.environ.get("ENABLE_GROUP_CREATION", "False").lower() == "true",
+)
+
+BLOCKED_GROUPS = PersistentConfig(
+    "BLOCKED_GROUPS",
+    "auth.blocked_groups",
+    os.environ.get("BLOCKED_GROUPS", "[]"),
+)
+
