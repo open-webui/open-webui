@@ -1176,6 +1176,7 @@ async def process_chat_payload(request, form_data, user, metadata, model):
     files = form_data.pop("files", None)
 
     prompt = get_last_user_message(form_data["messages"])
+    urls = []
     if prompt and len(prompt or "") < 500 and (not files or len(files) == 0):
         urls = extract_urls(prompt)
 
