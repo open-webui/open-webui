@@ -1565,16 +1565,24 @@ async def process_chat_response(
                             )
 
                             if res and isinstance(res, dict):
+                                title_string = None
                                 if len(res.get("choices", [])) == 1:
                                     title_string = (
                                         res.get("choices", [])[0]
                                         .get("message", {})
                                         .get(
-                                            "content",
-                                            message.get("content", user_message),
+                                            "content", message.get("content", user_message)
                                         )
                                     )
-                                else:
+                                    if title_string is None:
+                                        title_string = (
+                                            res.get("choices", [])[0]
+                                            .get("message", {})
+                                            .get(
+                                                "reasoning_content", message.get("reasoning_content", user_message)
+                                            )
+                                        )
+                                if title_string is None:
                                     title_string = ""
 
                                 title_string = title_string[
