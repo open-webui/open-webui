@@ -1,34 +1,24 @@
 @reference "./tailwind.css";
 
 @font-face {
-	font-family: 'Inter';
-	src: url('/assets/fonts/Inter-Variable.ttf');
+	font-family: 'Sweco Sans';
+	src: url('/assets/fonts/SwecoSans-Regular.otf') format('truetype');
 	font-display: swap;
 }
 
 @font-face {
-	font-family: 'Archivo';
-	src: url('/assets/fonts/Archivo-Variable.ttf');
+	font-family: 'Sweco Sans';
+	src: url('/assets/fonts/SwecoSans-Medium.otf') format('truetype');
 	font-display: swap;
 }
 
+
 @font-face {
-	font-family: 'Mona Sans';
-	src: url('/assets/fonts/Mona-Sans.woff2');
+	font-family: 'Sweco Sans';
+	src: url('/assets/fonts/SwecoSans-Bold.otf') format('truetype');
 	font-display: swap;
 }
 
-@font-face {
-	font-family: 'InstrumentSerif';
-	src: url('/assets/fonts/InstrumentSerif-Regular.ttf');
-	font-display: swap;
-}
-
-@font-face {
-	font-family: 'Vazirmatn';
-	src: url('/assets/fonts/Vazirmatn-Variable.ttf');
-	font-display: swap;
-}
 
 html {
 	word-break: break-word;
@@ -94,7 +84,7 @@ textarea::placeholder {
 }
 
 .font-primary {
-	font-family: 'Archivo', 'Vazirmatn', sans-serif;
+	font-family: 'Sweco Sans', sans-serif;
 }
 
 .drag-region {

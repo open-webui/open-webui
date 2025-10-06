@@ -104,8 +104,8 @@
 					}}
 				/>
 			{:else}
-				<div class="flex flex-row justify-center gap-3 @sm:gap-3.5 w-fit px-5 max-w-xl">
-					<div class="flex shrink-0 justify-center">
+				<div class="flex flex-row justify-center gap-3 @sm:gap-3.5 w-fit max-w-xl">
+					<div class=" justify-center">
 						<div class="flex -space-x-4 mb-0.5" in:fade={{ duration: 100 }}>
 							{#each models as model, modelIdx}
 								<Tooltip
@@ -114,26 +114,12 @@
 										.join(', ')}
 									placement="top"
 								>
-									<button
-										aria-hidden={models.length <= 1}
-										aria-label={$i18n.t('Get information on {{name}} in the UI', {
-											name: models[modelIdx]?.name
-										})}
-										on:click={() => {
-											selectedModelIdx = modelIdx;
-										}}
-									>
-										<img
-											crossorigin="anonymous"
-											src={model?.info?.meta?.profile_image_url ??
-												($i18n.language === 'dg-DG'
-													? `${WEBUI_BASE_URL}/doge.png`
-													: `${WEBUI_BASE_URL}/static/favicon.png`)}
-											class=" size-9 @sm:size-10 rounded-full border-[1px] border-gray-100 dark:border-none"
-											aria-hidden="true"
-											draggable="false"
-										/>
-									</button>
+								<span class="line-clamp-1">
+									<p>
+ 										 <span>{ $i18n.t("How can I help you today,") }</span>
+  											<span class="font-semibold ml-1">{ $user?.name || 'Guest' }?</span>
+									</p>
+								</span>
 								</Tooltip>
 							{/each}
 						</div>
@@ -149,9 +135,6 @@
 								placement="top"
 								className=" flex items-center "
 							>
-								<span class="line-clamp-1">
-									{models[selectedModelIdx]?.name}
-								</span>
 							</Tooltip>
 						{:else}
 							{$i18n.t('Hello, {{name}}', { name: $user?.name })}
@@ -221,7 +204,7 @@
 					{toolServers}
 					{stopResponse}
 					{createMessagePair}
-					placeholder={$i18n.t('How can I help you today?')}
+					placeholder={$i18n.t('Enter a prompt here')}
 					{onChange}
 					on:upload={(e) => {
 						dispatch('upload', e.detail);
@@ -233,26 +216,4 @@
 			</div>
 		</div>
 	</div>
-
-	{#if $selectedFolder}
-		<div
-			class="mx-auto px-4 md:max-w-3xl md:px-6 font-primary min-h-62"
-			in:fade={{ duration: 200, delay: 200 }}
-		>
-			<FolderPlaceholder folder={$selectedFolder} />
-		</div>
-	{:else}
-		<div class="mx-auto max-w-2xl font-primary mt-2" in:fade={{ duration: 200, delay: 200 }}>
-			<div class="mx-5">
-				<Suggestions
-					suggestionPrompts={atSelectedModel?.info?.meta?.suggestion_prompts ??
-						models[selectedModelIdx]?.info?.meta?.suggestion_prompts ??
-						$config?.default_prompt_suggestions ??
-						[]}
-					inputValue={prompt}
-					{onSelect}
-				/>
-			</div>
-		</div>
-	{/if}
 </div>

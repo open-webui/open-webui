@@ -78,9 +78,9 @@
 				<Tooltip content={$user?.role === 'admin' ? (item?.value ?? '') : ''} placement="top-start">
 					<img
 						src={item.model?.info?.meta?.profile_image_url ??
-							`${WEBUI_BASE_URL}/static/favicon.png`}
+							`${WEBUI_BASE_URL}/static/model.png`}
 						alt="Model"
-						class="rounded-full size-5 flex items-center"
+						class="rounded-full size-5 flex items-center dark:invert p-0.5"
 					/>
 				</Tooltip>
 			</div>

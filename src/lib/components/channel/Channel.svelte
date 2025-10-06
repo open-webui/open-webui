@@ -202,7 +202,7 @@
 </script>
 
 <svelte:head>
-	<title>#{channel?.name ?? 'Channel'} • Open WebUI</title>
+	<title>#{channel?.name ?? 'Channel'} • Sweco</title>
 </svelte:head>
 
 <div
