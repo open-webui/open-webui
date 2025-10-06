@@ -340,11 +340,12 @@ async def model_response_handler(request, channel, message, user):
                         if file.get("type", "") == "image":
                             images.append(file.get("url", ""))
 
+                thread_history_string = "\n\n".join(thread_history)
                 system_message = {
                     "role": "system",
                     "content": f"You are {model.get('name', model_id)}, participating in a threaded conversation. Be concise and conversational."
                     + (
-                        f"Here's the thread history:\n\n\n{'\n\n'.join([f'{msg}' for msg in thread_history])}\n\n\nContinue the conversation naturally as {model.get('name', model_id)}, addressing the most recent message while being aware of the full context."
+                        f"Here's the thread history:\n\n\n{thread_history_string}\n\n\nContinue the conversation naturally as {model.get('name', model_id)}, addressing the most recent message while being aware of the full context."
                         if thread_history
                         else ""
                     ),
