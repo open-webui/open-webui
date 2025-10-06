@@ -606,7 +606,25 @@ class OAuthClientManager:
             redirect_url = f"{redirect_url}/?error={error_message}"
             return RedirectResponse(url=redirect_url, headers=response.headers)
 
-        response = RedirectResponse(url=redirect_url, headers=response.headers)
+        from fastapi.responses import HTMLResponse
+        close_tab_html = f"""
+        <!DOCTYPE html>
+        <html>
+        <head>
+            <title>Authentication Complete</title>
+        </head>
+        <body>
+            <script>
+                const channel = new BroadcastChannel(`server:{client_id}:oauth`);
+                channel.postMessage('oauth_complete');
+                channel.close();
+                window.close();
+            </script>
+            <p>Authentication complete. You can close this tab.</p>
+        </body>
+        </html>
+        """
+        response = HTMLResponse(content=close_tab_html, headers=response.headers)
         return response
 
 

@@ -336,6 +336,24 @@
 
 									let parts = toolId.split(':');
 									let serverId = parts?.at(-1) ?? toolId;
+									
+									const channel = new BroadcastChannel(`${toolId}:oauth`);							
+									channel.onmessage = (event) => {
+										if (event.data === 'oauth_complete') {
+											_tools.update(currentTools => {
+												const currentTool = currentTools.find(t => t.id === toolId);
+												if (currentTool) {
+													currentTool.authenticated = true;
+												}
+												return currentTools;
+											});
+
+											tools[toolId].authenticated = true;
+											tools[toolId].enabled = true;
+											
+											channel.close();
+										}
+									};
 
 									const authUrl = getOAuthClientAuthorizationUrl(serverId, 'mcp');
 									window.open(authUrl, '_blank', 'noopener');
