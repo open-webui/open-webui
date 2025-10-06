@@ -337,6 +337,7 @@ class OAuthClientManager:
                 name=client_id,
                 client_id=oauth_client_info.client_id,
                 client_secret=oauth_client_info.client_secret,
+                code_challenge_method="S256",
                 client_kwargs=(
                     {"scope": oauth_client_info.scope}
                     if oauth_client_info.scope
@@ -561,7 +562,12 @@ class OAuthClientManager:
 
         error_message = None
         try:
-            token = await client.authorize_access_token(request)
+            client_info = self.get_client_info(client_id)
+            token_params = {}
+            if client_info and hasattr(client_info, 'client_id') and hasattr(client_info, 'client_secret'):
+                token_params['client_id'] = client_info.client_id
+                token_params['client_secret'] = client_info.client_secret
+            token = await client.authorize_access_token(request, **token_params)
             if token:
                 try:
                     # Add timestamp for tracking
