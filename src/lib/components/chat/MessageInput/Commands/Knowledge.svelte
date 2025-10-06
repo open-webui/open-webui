@@ -13,6 +13,8 @@
 	import Database from '$lib/components/icons/Database.svelte';
 	import GlobeAlt from '$lib/components/icons/GlobeAlt.svelte';
 	import Youtube from '$lib/components/icons/Youtube.svelte';
+	import { folders } from '$lib/stores';
+	import Folder from '$lib/components/icons/Folder.svelte';
 
 	const i18n = getContext('i18n');
 
@@ -144,14 +146,25 @@
 					]
 				: [];
 
-		items = [...collections, ...collection_files, ...legacy_collections, ...legacy_documents].map(
-			(item) => {
-				return {
-					...item,
-					...(item?.legacy || item?.meta?.legacy || item?.meta?.document ? { legacy: true } : {})
-				};
-			}
-		);
+		let folder_items = $folders.map((folder) => ({
+			...folder,
+			type: 'folder',
+			description: $i18n.t('Folder'),
+			title: folder.name
+		}));
+
+		items = [
+			...folder_items,
+			...collections,
+			...collection_files,
+			...legacy_collections,
+			...legacy_documents
+		].map((item) => {
+			return {
+				...item,
+				...(item?.legacy || item?.meta?.legacy || item?.meta?.document ? { legacy: true } : {})
+			};
+		});
 
 		fuse = new Fuse(items, {
 			keys: ['name', 'description']
@@ -213,6 +226,8 @@
 					>
 						{#if item?.type === 'collection'}
 							<Database className="size-4" />
+						{:else if item?.type === 'folder'}
+							<Folder className="size-4" />
 						{:else}
 							<DocumentPage className="size-4" />
 						{/if}

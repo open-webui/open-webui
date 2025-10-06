@@ -62,6 +62,7 @@ from open_webui.env import (
     WEBUI_AUTH_COOKIE_SAME_SITE,
     WEBUI_AUTH_COOKIE_SECURE,
     ENABLE_OAUTH_ID_TOKEN_COOKIE,
+    ENABLE_OAUTH_EMAIL_FALLBACK,
     OAUTH_CLIENT_INFO_ENCRYPTION_KEY,
 )
 from open_webui.utils.misc import parse_duration
@@ -367,8 +368,8 @@ class OAuthClientManager:
         if client_id in self.clients:
             client = self.clients[client_id]
             return (
-                client.server_metadata_url
-                if hasattr(client, "server_metadata_url")
+                client._server_metadata_url
+                if hasattr(client, "_server_metadata_url")
                 else None
             )
         return None
@@ -615,8 +616,14 @@ class OAuthManager:
         self.app = app
 
         self._clients = {}
-        for _, provider_config in OAUTH_PROVIDERS.items():
-            provider_config["register"](self.oauth)
+
+        for name, provider_config in OAUTH_PROVIDERS.items():
+            if "register" not in provider_config:
+                log.error(f"OAuth provider {name} missing register function")
+                continue
+
+            client = provider_config["register"](self.oauth)
+            self._clients[name] = client
 
     def get_client(self, provider_name):
         if provider_name not in self._clients:
@@ -627,8 +634,8 @@ class OAuthManager:
         if provider_name in self._clients:
             client = self._clients[provider_name]
             return (
-                client.server_metadata_url
-                if hasattr(client, "server_metadata_url")
+                client._server_metadata_url
+                if hasattr(client, "_server_metadata_url")
                 else None
             )
         return None
@@ -1147,6 +1154,8 @@ class OAuthManager:
                     except Exception as e:
                         log.warning(f"Error fetching GitHub email: {e}")
                         raise HTTPException(400, detail=ERROR_MESSAGES.INVALID_CRED)
+                elif ENABLE_OAUTH_EMAIL_FALLBACK:
+                    email = f"{provider_sub}.local"
                 else:
                     log.warning(f"OAuth callback failed, email is missing: {user_data}")
                     raise HTTPException(400, detail=ERROR_MESSAGES.INVALID_CRED)

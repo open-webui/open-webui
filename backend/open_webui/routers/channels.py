@@ -344,7 +344,7 @@ async def model_response_handler(request, channel, message, user):
                     "role": "system",
                     "content": f"You are {model.get('name', model_id)}, participating in a threaded conversation. Be concise and conversational."
                     + (
-                        f"Here's the thread history:\n\n{''.join([f'{msg}' for msg in thread_history])}\n\nContinue the conversation naturally as {model.get('name', model_id)}, addressing the most recent message while being aware of the full context."
+                        f"Here's the thread history:\n\n\n{'\n\n'.join([f'{msg}' for msg in thread_history])}\n\n\nContinue the conversation naturally as {model.get('name', model_id)}, addressing the most recent message while being aware of the full context."
                         if thread_history
                         else ""
                     ),
@@ -384,19 +384,34 @@ async def model_response_handler(request, channel, message, user):
                 )
 
                 if res:
-                    await update_message_by_id(
-                        channel.id,
-                        response_message.id,
-                        MessageForm(
-                            **{
-                                "content": res["choices"][0]["message"]["content"],
-                                "meta": {
-                                    "done": True,
-                                },
-                            }
-                        ),
-                        user,
-                    )
+                    if res.get("choices", []) and len(res["choices"]) > 0:
+                        await update_message_by_id(
+                            channel.id,
+                            response_message.id,
+                            MessageForm(
+                                **{
+                                    "content": res["choices"][0]["message"]["content"],
+                                    "meta": {
+                                        "done": True,
+                                    },
+                                }
+                            ),
+                            user,
+                        )
+                    elif res.get("error", None):
+                        await update_message_by_id(
+                            channel.id,
+                            response_message.id,
+                            MessageForm(
+                                **{
+                                    "content": f"Error: {res['error']}",
+                                    "meta": {
+                                        "done": True,
+                                    },
+                                }
+                            ),
+                            user,
+                        )
             except Exception as e:
                 log.info(e)
                 pass
@@ -436,7 +451,7 @@ async def new_message_handler(
             }
 
             await sio.emit(
-                "channel-events",
+                "events:channel",
                 event_data,
                 to=f"channel:{channel.id}",
             )
@@ -447,7 +462,7 @@ async def new_message_handler(
 
                 if parent_message:
                     await sio.emit(
-                        "channel-events",
+                        "events:channel",
                         {
                             "channel_id": channel.id,
                             "message_id": parent_message.id,
@@ -644,7 +659,7 @@ async def update_message_by_id(
 
         if message:
             await sio.emit(
-                "channel-events",
+                "events:channel",
                 {
                     "channel_id": channel.id,
                     "message_id": message.id,
@@ -708,7 +723,7 @@ async def add_reaction_to_message(
         message = Messages.get_message_by_id(message_id)
 
         await sio.emit(
-            "channel-events",
+            "events:channel",
             {
                 "channel_id": channel.id,
                 "message_id": message.id,
@@ -774,7 +789,7 @@ async def remove_reaction_by_id_and_user_id_and_name(
         message = Messages.get_message_by_id(message_id)
 
         await sio.emit(
-            "channel-events",
+            "events:channel",
             {
                 "channel_id": channel.id,
                 "message_id": message.id,
@@ -839,7 +854,7 @@ async def delete_message_by_id(
     try:
         Messages.delete_message_by_id(message_id)
         await sio.emit(
-            "channel-events",
+            "events:channel",
             {
                 "channel_id": channel.id,
                 "message_id": message.id,
@@ -862,7 +877,7 @@ async def delete_message_by_id(
 
             if parent_message:
                 await sio.emit(
-                    "channel-events",
+                    "events:channel",
                     {
                         "channel_id": channel.id,
                         "message_id": parent_message.id,
