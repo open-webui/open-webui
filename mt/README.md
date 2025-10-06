@@ -22,6 +22,15 @@ The client manager includes built-in database migration capabilities:
 
 Perfect for scaling from local development to cloud-hosted production databases.
 
+**📖 [Complete Migration Documentation →](DB_MIGRATION/README.md)**
+
+The DB_MIGRATION folder contains comprehensive documentation covering:
+- Step-by-step migration process
+- Security posture explanation (why no RLS, public schema)
+- Rollback procedures
+- Troubleshooting guide
+- Migration scripts and helper functions
+
 ## Quick Start
 
 ### Start Pre-configured Clients
@@ -85,7 +94,10 @@ mt/
 ├── start-acme-corp.sh           # Pre-configured ACME Corp launcher
 ├── start-beta-client.sh         # Pre-configured Beta Client launcher
 ├── client-manager.sh            # Multi-client management tool
-├── db-migration-helper.sh       # Database migration utilities (SQLite → PostgreSQL)
+├── DB_MIGRATION/                # Database migration system (SQLite → PostgreSQL)
+│   ├── README.md                # Complete migration documentation
+│   ├── db-migration-helper.sh   # Migration utility functions
+│   └── migrate-db.py            # Python data migration script
 ├── nginx-template.conf          # Production nginx config template
 ├── nginx-template-local.conf    # Local testing nginx config
 ├── docker-compose.nginx.yml     # Local nginx setup

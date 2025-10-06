@@ -931,11 +931,10 @@ display_postgres_config() {
     echo "╚════════════════════════════════════════╝"
     echo
     echo "Database Type:  PostgreSQL (Supabase)"
-    echo "Host:          $db_host"
-    echo "Port:          $db_port"
-    echo "Database:      $db_name"
-    echo "User:          $db_user"
-    echo "Connection:    $masked_url"
+    echo "Host:           $db_host:$db_port"
+    echo "Database:       $db_name"
+    echo "User:           $db_user"
+    echo "Connection:     $masked_url"
     echo
     echo "─────────────────────────────────────────"
     echo

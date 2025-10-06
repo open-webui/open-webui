@@ -681,7 +681,7 @@ manage_single_deployment() {
                 if [[ -n "$database_url" ]]; then
                     # PostgreSQL - Show configuration
                     clear
-                    source "${SCRIPT_DIR}/db-migration-helper.sh"
+                    source "${SCRIPT_DIR}/DB_MIGRATION/db-migration-helper.sh"
                     display_postgres_config "$container_name"
                 else
                     # SQLite - Offer migration
@@ -717,7 +717,7 @@ manage_single_deployment() {
                     fi
 
                     # Source the helper script
-                    source "${SCRIPT_DIR}/db-migration-helper.sh"
+                    source "${SCRIPT_DIR}/DB_MIGRATION/db-migration-helper.sh"
 
                     # Step 1: Get Supabase configuration
                     clear
