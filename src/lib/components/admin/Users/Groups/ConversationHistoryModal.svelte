@@ -609,7 +609,7 @@
 
 	// Click outside handler
 	const handleClickOutside = (event) => {
-		console.log('🖱️ Click outside detected:', event.target);
+		// console.log('🖱️ Click outside detected:', event.target);
 
 		// Close action dropdown if clicked outside
 		if (actionDropdownRef && !actionDropdownRef.contains(event.target)) {

@@ -156,6 +156,11 @@ class KnowledgeTable:
     #         or has_access(user_id, permission, knowledge_base.access_control)
     #     ]
 
+    def _item_assigned_to_user_groups(self, user_id: str, item, permission: str = "write") -> bool:
+        """Check if item is assigned to any group the user is member of OR owns"""
+        from open_webui.utils.workspace_access import item_assigned_to_user_groups
+        return item_assigned_to_user_groups(user_id, item, permission)
+
     def get_knowledge_bases_by_user_id(
         self, user_id: str, permission: str = "write"
     ) -> list[KnowledgeUserModel]:
@@ -166,9 +171,9 @@ class KnowledgeTable:
             knowledge_for_user = []
 
             for knowledge in all_knowledge_bases:
-                if knowledge.user_id == user_id or has_access(
-                    user_id, permission, knowledge.access_control
-                ):
+                if (knowledge.user_id == user_id or 
+                    has_access(user_id, permission, knowledge.access_control) or
+                    self._item_assigned_to_user_groups(user_id, knowledge, permission)):
                     user = Users.get_user_by_id(knowledge.user_id)
                     knowledge_for_user.append(
                         KnowledgeUserModel.model_validate(

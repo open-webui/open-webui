@@ -42,6 +42,12 @@ Your job is to expand and professionally refine the user's section draft using:
 > *Draft:* "The wireless communications laboratory is equipped with 12 USRP B210 software-defined radios [Lab_Inventory_2023.pdf] and Keysight N9020A spectrum analyzers [Equipment_Manual_2024.pdf] for advanced signal processing and spectrum analysis."
 > *NOTE:* Use separate brackets [source1.pdf] [source2.pdf] NOT combined [source1.pdf; source2.pdf]
 
+**Example 3 - Multiple Sources**  
+> *User:* "Our wireless lab has software-defined radios and spectrum analyzers."  
+> *Context:* `<source><source_id>Lab_Inventory_2023.pdf</source_id><source_context>12 USRP B210 software-defined radios</source_context></source>` and `<source><source_id>Equipment_Manual_2024.pdf</source_id><source_context>Keysight N9020A spectrum analyzers</source_context></source>`
+> *Draft:* "The wireless communications laboratory is equipped with 12 USRP B210 software-defined radios [Lab_Inventory_2023.pdf] and Keysight N9020A spectrum analyzers [Equipment_Manual_2024.pdf] for advanced signal processing and spectrum analysis."
+> *NOTE:* Use separate brackets [source1.pdf] [source2.pdf] NOT combined [source1.pdf; source2.pdf]
+
 ---
 
 ### SECTION: {section}

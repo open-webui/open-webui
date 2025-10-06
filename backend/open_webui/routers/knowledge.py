@@ -198,6 +198,8 @@ class KnowledgeFilesResponse(KnowledgeResponse):
 
 @router.get("/{id}", response_model=Optional[KnowledgeFilesResponse])
 async def get_knowledge_by_id(id: str, user=Depends(get_verified_user)):
+    from open_webui.utils.workspace_access import item_assigned_to_user_groups
+    
     knowledge = Knowledges.get_knowledge_by_id(id=id)
 
     if not knowledge:
@@ -206,6 +208,7 @@ async def get_knowledge_by_id(id: str, user=Depends(get_verified_user)):
     if (
         knowledge.user_id == user.id
         or has_access(user.id, "read", knowledge.access_control)
+        or item_assigned_to_user_groups(user.id, knowledge, "read")
     ):
 
         file_ids = knowledge.data.get("file_ids", []) if knowledge.data else []

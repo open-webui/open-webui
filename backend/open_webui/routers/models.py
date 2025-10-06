@@ -103,12 +103,16 @@ async def create_new_model(
 
 @router.get("/model", response_model=Optional[ModelResponse])
 async def get_model_by_id(id: str, user=Depends(get_verified_user)):
+    from open_webui.utils.workspace_access import item_assigned_to_user_groups
+    
     model = Models.get_model_by_id(id)
 
     if not model:
         raise HTTPException(status_code=404, detail="Model not found")
 
-    if model.user_id == user.id or has_access(user.id, "read", model.access_control):
+    if (model.user_id == user.id or 
+        has_access(user.id, "read", model.access_control) or
+        item_assigned_to_user_groups(user.id, model, "read")):
         return model
 
     raise HTTPException(

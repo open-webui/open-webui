@@ -6,7 +6,9 @@
 	const i18n = getContext('i18n');
 
 	export let name = '';
-	export let color = '';
+	export let created_by = '';
+	export let created_at = '';
+	export let updated_at = '';
 	export let description = '';
 </script>
 
@@ -58,4 +60,63 @@
 			placeholder={$i18n.t('Group Description')}
 		/>
 	</div>
+
+	<div class=" mb-1 text-xs text-gray-600 dark:text-gray-500">{$i18n.t('Created by')}</div>
+
+	<div class="flex-1">
+		<Textarea
+			className="w-full text-sm bg-transparent placeholder:text-gray-300 dark:placeholder:text-gray-700 outline-hidden resize-none"
+			rows={4}
+			bind:value={created_by}
+			placeholder={$i18n.t('Created by')}
+		/>
+	</div>
+
+		<div class=" mb-1 text-xs text-gray-600 dark:text-gray-500">{$i18n.t('Created at')}</div>
+
+	<div class="flex-1">
+		<Textarea
+			className="w-full text-sm bg-transparent placeholder:text-gray-300 dark:placeholder:text-gray-700 outline-hidden resize-none"
+			rows={4}
+			bind:value={created_at}
+			placeholder={$i18n.t('Created at')}
+		/>
+	</div>
+
+		<div class=" mb-1 text-xs text-gray-600 dark:text-gray-500">{$i18n.t('Updated at')}</div>
+
+	<div class="flex-1">
+		<Textarea
+			className="w-full text-sm bg-transparent placeholder:text-gray-300 dark:placeholder:text-gray-700 outline-hidden resize-none"
+			rows={4}
+			bind:value={updated_at}
+			placeholder={$i18n.t('Updated at')}
+		/>
+	</div>
 </div>
+
+<!-- To add new properties:
+ 1. Apply here;
+ 2. src/lib/components/admin/Users/Groups/EditGroupModal.svelte
+ 3. Find <Display bind:name bind:description />
+ 4. Bind the new property
+ 5. Find src/lib/components/admin/Users/Groups/GroupItem.svelte
+ 6. Find bind:show={showEdit}. GroupModal is EditGroupModal.svelte
+ 7. They binded users, group, onSubmit, onDelete
+ 8. group (in const init) contains the new property
+ 9. group has[
+    "id",
+    "user_id",
+    "created_by",
+    "name",
+    "description",
+    "permissions",
+    "data",
+    "meta",
+    "user_ids",
+    "created_at",
+    "updated_at"
+]
+10. in submitHandler, it is going to be handled in "updateGroupById", in src/lib/apis/groups/index.ts (currently no need to add creator name here)
+11. in 
+	 -->

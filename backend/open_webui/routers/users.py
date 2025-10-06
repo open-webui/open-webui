@@ -428,3 +428,71 @@ async def delete_user_by_id(user_id: str, user=Depends(get_admin_user)):
         status_code=status.HTTP_403_FORBIDDEN,
         detail=ERROR_MESSAGES.ACTION_PROHIBITED,
     )
+
+
+############################
+# ToggleCoAdminStatus
+############################
+
+
+@router.post("/{user_id}/co-admin/toggle", response_model=Optional[UserModel])
+async def toggle_co_admin_status(user_id: str, user=Depends(get_admin_user)):
+    # Check if current user is super admin
+    super_admin_emails = [
+        "sm11538@nyu.edu",
+        "ms15138@nyu.edu", 
+        "mb484@nyu.edu",
+        "cg4532@nyu.edu",
+        "jy4421@nyu.edu",
+        "ht2490@nyu.edu",
+        "ps5226@nyu.edu",
+    ]
+    
+    is_super_admin = (
+        user.id == Users.get_first_user().id or 
+        user.email in super_admin_emails
+    )
+    
+    if not is_super_admin:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Only super admins can manage co-admin status",
+        )
+    
+    target_user = Users.get_user_by_id(user_id)
+    if not target_user:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, 
+            detail="User not found"
+        )
+    
+    # Only admins can be co-admins
+    if target_user.role != "admin":
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Only admin users can be assigned co-admin status",
+        )
+    
+    # Prevent changing super admin co-admin status
+    if target_user.id == Users.get_first_user().id or target_user.email in super_admin_emails:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Cannot change co-admin status of super admins",
+        )
+    
+    # Toggle co-admin status
+    if target_user.info is None:
+        target_user.info = {}
+    
+    current_co_admin_status = target_user.info.get("is_co_admin", False)
+    new_info = {**target_user.info, "is_co_admin": not current_co_admin_status}
+    
+    updated_user = Users.update_user_by_id(user_id, {"info": new_info})
+    
+    if updated_user:
+        return updated_user
+    else:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=ERROR_MESSAGES.DEFAULT(),
+        )
