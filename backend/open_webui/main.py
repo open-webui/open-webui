@@ -551,8 +551,8 @@ async def lifespan(app: FastAPI):
 
     # This should be blocking (sync) so functions are not deactivated on first /get_models calls
     # when the first user lands on the / route.
-    log.info("Installing external dependencies of functions and tools...")
-    # Temporarily disabled to prevent hanging during startup
+    log.info("Skipping install of external dependencies of functions and tools (disabled)")
+    # Explicitly disabled to prevent hanging during startup
     # install_tool_and_function_dependencies()
 
     app.state.redis = get_redis_connection(

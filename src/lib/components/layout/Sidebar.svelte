@@ -57,7 +57,11 @@
 	import PencilSquare from '../icons/PencilSquare.svelte';
 	import Search from '../icons/Search.svelte';
 	import SearchModal from './SearchModal.svelte';
-	import PersonalStore from '../personas/PersonalStore.svelte';
+	import FolderModal from './Sidebar/Folders/FolderModal.svelte';
+	import Sidebar from '../icons/Sidebar.svelte';
+	import PinnedModelList from './Sidebar/PinnedModelList.svelte';
+	import Note from '../icons/Note.svelte';
+	import { slide } from 'svelte/transition';
 
 	const BREAKPOINT = 768;
 
@@ -70,8 +74,6 @@
 	let showPinnedChat = true;
 
 	let showCreateChannel = false;
-	let showPersonalStore = false;
-	let currentPersonal = null;
 
 	// Pagination variables
 	let chatListLoading = false;
@@ -83,19 +85,6 @@
 	let folderRegistry = {};
 
 	let newFolderId = null;
-
-	// 加载当前选择的personal
-	const loadCurrentPersonal = () => {
-		const selectedId = localStorage.getItem('selectedPersonalId');
-		if (selectedId) {
-			const personals = JSON.parse(localStorage.getItem('personals') || '[]');
-			currentPersonal = personals.find(p => p.id === selectedId) || null;
-		}
-	};
-
-	const handlePersonalSelected = (event) => {
-		currentPersonal = event.detail;
-	};
 
 	const initFolders = async () => {
 		const folderList = await getFolders(localStorage.token).catch((error) => {
@@ -419,8 +408,6 @@
 		dropZone?.addEventListener('dragover', onDragOver);
 		dropZone?.addEventListener('drop', onDrop);
 		dropZone?.addEventListener('dragleave', onDragLeave);
-
-		loadCurrentPersonal();
 	});
 
 	onDestroy(() => {
@@ -497,9 +484,12 @@
 	}}
 />
 
-<PersonalStore 
-	bind:open={showPersonalStore} 
-	on:personalSelected={handlePersonalSelected}
+<FolderModal
+	bind:show={showCreateFolderModal}
+	onSubmit={async (folder) => {
+		await createFolder(folder);
+		showCreateFolderModal = false;
+	}}
 />
 
 <!-- svelte-ignore a11y-no-static-element-interactions -->
@@ -1227,75 +1217,10 @@
 								</div>
 								<div class=" self-center font-medium">{$user?.name}</div>
 							</div>
-							<div class=" self-center font-medium">{$user?.name}</div>
-						</button>
-					</UserMenu>
-				{/if}
-
-				{#if currentPersonal}
-					<div class="current-personal" on:click={() => showPersonalStore = true}>
-						<span class="personal-avatar">{currentPersonal.avatar}</span>
-						<span class="personal-name">{currentPersonal.name}</span>
-						<span class="personal-prefix">"{currentPersonal.prefix}"</span>
-					</div>
-				{:else}
-					<div class="no-personal" on:click={() => showPersonalStore = true}>
-						<span class="personal-avatar">🎭</span>
-						<span class="personal-name">Choose Character</span>
-					</div>
-				{/if}
+						</UserMenu>
+					{/if}
+				</div>
 			</div>
 		</div>
 	</div>
-</div>
-
-<style>
-	.scrollbar-hidden:active::-webkit-scrollbar-thumb,
-	.scrollbar-hidden:focus::-webkit-scrollbar-thumb,
-	.scrollbar-hidden:hover::-webkit-scrollbar-thumb {
-		visibility: visible;
-	}
-	.scrollbar-hidden::-webkit-scrollbar-thumb {
-		visibility: hidden;
-	}
-
-	.current-personal,
-	.no-personal {
-		display: flex;
-		align-items: center;
-		padding: 0.75rem 1rem;
-		margin: 0.5rem 0;
-		border-radius: 8px;
-		cursor: pointer;
-		transition: all 0.2s;
-		background: rgba(102, 126, 234, 0.1);
-		border: 1px solid rgba(102, 126, 234, 0.2);
-	}
-
-	.current-personal:hover,
-	.no-personal:hover {
-		background: rgba(102, 126, 234, 0.15);
-		border-color: rgba(102, 126, 234, 0.3);
-	}
-
-	.personal-avatar {
-		font-size: 1.5rem;
-		margin-right: 0.75rem;
-	}
-
-	.personal-name {
-		font-weight: 500;
-		color: #495057;
-		margin-right: 0.5rem;
-	}
-
-	.personal-prefix {
-		font-size: 0.8rem;
-		color: #667eea;
-		font-style: italic;
-	}
-
-	.no-personal .personal-name {
-		color: #6c757d;
-	}
-</style>
+{/if}

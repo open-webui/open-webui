@@ -212,43 +212,19 @@
 				{/if}
 			{/if}
 
-			{#if message.content !== ''}
-				{#if edit === true}
-					<div class=" w-full user-bubble rounded-3xl px-5 py-3 mb-2">
-						{#if (editedFiles ?? []).length > 0}
-							<div class="flex items-center flex-wrap gap-2 -mx-2 mb-1">
-								{#each editedFiles as file, fileIdx}
-									{#if file.type === 'image'}
-										<div class=" relative group">
-											<div class="relative flex items-center">
-												<Image
-													src={file.url}
-													alt="input"
-													imageClassName=" size-14 rounded-xl object-cover"
-												/>
-											</div>
-											<div class=" absolute -top-1 -right-1">
-												<button
-													class=" bg-white text-black border border-white rounded-full group-hover:visible invisible transition"
-													type="button"
-													on:click={() => {
-														editedFiles.splice(fileIdx, 1);
-
-														editedFiles = editedFiles;
-													}}
-												>
-													<svg
-														xmlns="http://www.w3.org/2000/svg"
-														viewBox="0 0 20 20"
-														fill="currentColor"
-														class="size-4"
-													>
-														<path
-															d="M6.28 5.22a.75.75 0 00-1.06 1.06L8.94 10l-3.72 3.72a.75.75 0 101.06 1.06L10 11.06l3.72 3.72a.75.75 0 101.06-1.06L11.06 10l3.72-3.72a.75.75 0 00-1.06-1.06L10 8.94 6.28 5.22z"
-														/>
-													</svg>
-												</button>
-											</div>
+			{#if edit === true}
+				<div class=" w-full bg-gray-50 dark:bg-gray-800 rounded-3xl px-5 py-3 mb-2">
+					{#if (editedFiles ?? []).length > 0}
+						<div class="flex items-center flex-wrap gap-2 -mx-2 mb-1">
+							{#each editedFiles as file, fileIdx}
+								{#if file.type === 'image'}
+									<div class=" relative group">
+										<div class="relative flex items-center">
+											<Image
+												src={file.url}
+												alt="input"
+												imageClassName=" size-14 rounded-xl object-cover"
+											/>
 										</div>
 										<div class=" absolute -top-1 -right-1">
 											<button
@@ -260,165 +236,7 @@
 												on:click={() => {
 													editedFiles.splice(fileIdx, 1);
 
-												editedFiles = editedFiles;
-											}}
-											on:click={() => {
-												console.log(file);
-											}}
-										/>
-									{/if}
-								{/each}
-							</div>
-						{/if}
-
-						<div class="max-h-96 overflow-auto">
-							<textarea
-								id="message-edit-{message.id}"
-								bind:this={messageEditTextAreaElement}
-								class=" bg-transparent outline-hidden w-full resize-none"
-								bind:value={editedContent}
-								on:input={(e) => {
-									e.target.style.height = '';
-									e.target.style.height = `${e.target.scrollHeight}px`;
-								}}
-								on:keydown={(e) => {
-									if (e.key === 'Escape') {
-										document.getElementById('close-edit-message-button')?.click();
-									}
-
-									const isCmdOrCtrlPressed = e.metaKey || e.ctrlKey;
-									const isEnterPressed = e.key === 'Enter';
-
-									if (isCmdOrCtrlPressed && isEnterPressed) {
-										document.getElementById('confirm-edit-message-button')?.click();
-									}
-								}}
-							/>
-						</div>
-
-						<div class=" mt-2 mb-1 flex justify-between text-sm font-medium">
-							<div>
-								<button
-									id="save-edit-message-button"
-									class=" px-4 py-2 bg-gray-50 hover:bg-gray-100 dark:bg-gray-800 dark:hover:bg-gray-700 border border-gray-100 dark:border-gray-700 text-gray-700 dark:text-gray-200 transition rounded-3xl"
-									on:click={() => {
-										editMessageConfirmHandler(false);
-									}}
-								>
-									{$i18n.t('Save')}
-								</button>
-							</div>
-
-							<div class="flex space-x-1.5">
-								<button
-									id="close-edit-message-button"
-									class="px-4 py-2 bg-white dark:bg-gray-900 hover:bg-gray-100 text-gray-800 dark:text-gray-100 transition rounded-3xl"
-									on:click={() => {
-										cancelEditMessage();
-									}}
-								>
-									{$i18n.t('Cancel')}
-								</button>
-
-								<button
-									id="confirm-edit-message-button"
-									class=" px-4 py-2 bg-gray-900 dark:bg-white hover:bg-gray-850 text-gray-100 dark:text-gray-800 transition rounded-3xl"
-									on:click={() => {
-										editMessageConfirmHandler();
-									}}
-								>
-									{$i18n.t('Send')}
-								</button>
-							</div>
-						</div>
-					</div>
-				{:else}
-					<div class="w-full">
-						<div class="flex {($settings?.chatBubble ?? true) ? 'justify-end pb-1' : 'w-full'}">
-							<div
-								class="rounded-3xl {($settings?.chatBubble ?? true)
-									? `max-w-[90%] px-5 py-2 user-bubble ${
-											message.files ? 'rounded-tr-lg' : ''
-										}`
-									: ' w-full'}"
-							>
-								{#if message.content}
-									<Markdown id={message.id} content={message.content} />
-								{/if}
-							</div>
-						</div>
-
-						<div
-							class=" flex {($settings?.chatBubble ?? true)
-								? 'justify-end'
-								: ''}  text-gray-600 dark:text-gray-500"
-						>
-							{#if !($settings?.chatBubble ?? true)}
-								{#if siblings.length > 1}
-									<div class="flex self-center" dir="ltr">
-										<button
-											class="self-center p-1 hover:bg-black/5 dark:hover:bg-white/5 dark:hover:text-white hover:text-black rounded-md transition"
-											on:click={() => {
-												showPreviousMessage(message);
-											}}
-										>
-											<svg
-												xmlns="http://www.w3.org/2000/svg"
-												fill="none"
-												viewBox="0 0 24 24"
-												stroke="currentColor"
-												stroke-width="2.5"
-												class="size-3.5"
-											>
-												<path
-													stroke-linecap="round"
-													stroke-linejoin="round"
-													d="M15.75 19.5 8.25 12l7.5-7.5"
-												/>
-											</svg>
-										</button>
-
-										{#if messageIndexEdit}
-											<div
-												class="text-sm flex justify-center font-semibold self-center dark:text-gray-100 min-w-fit"
-											>
-												<input
-													id="message-index-input-{message.id}"
-													type="number"
-													value={siblings.indexOf(message.id) + 1}
-													min="1"
-													max={siblings.length}
-													on:focus={(e) => {
-														e.target.select();
-													}}
-													on:blur={(e) => {
-														gotoMessage(message, e.target.value - 1);
-														messageIndexEdit = false;
-													}}
-													on:keydown={(e) => {
-														if (e.key === 'Enter') {
-															gotoMessage(message, e.target.value - 1);
-															messageIndexEdit = false;
-														}
-													}}
-													class="bg-transparent font-semibold self-center dark:text-gray-100 min-w-fit outline-hidden"
-												/>/{siblings.length}
-											</div>
-										{:else}
-											<!-- svelte-ignore a11y-no-static-element-interactions -->
-											<div
-												class="text-sm tracking-widest font-semibold self-center dark:text-gray-100 min-w-fit"
-												on:dblclick={async () => {
-													messageIndexEdit = true;
-
-													await tick();
-													const input = document.getElementById(
-														`message-index-input-${message.id}`
-													);
-													if (input) {
-														input.focus();
-														input.select();
-													}
+													editedFiles = editedFiles;
 												}}
 											>
 												<svg
