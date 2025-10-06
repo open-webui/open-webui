@@ -993,6 +993,26 @@ export const getPromptVariables = (user_name, user_location) => {
 	};
 };
 
+// Replace known placeholders in a template with runtime values (user, time, locale)
+export const promptTemplate = (
+    template: string,
+    user_name?: string,
+    user_location?: string
+) => {
+    if (!template || typeof template !== 'string') return '';
+    const vars = getPromptVariables(user_name ?? '', user_location ?? '');
+    let out = template;
+    for (const [key, value] of Object.entries(vars)) {
+        try {
+            out = out.replaceAll(key, String(value ?? ''));
+        } catch {
+            // Fallback for older environments without replaceAll
+            out = out.split(key).join(String(value ?? ''));
+        }
+    }
+    return out;
+};
+
 /**
  * This function is used to replace placeholders in a template string with the provided prompt.
  * The placeholders can be in the following formats:
