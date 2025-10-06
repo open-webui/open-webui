@@ -1555,6 +1555,15 @@ async def chat_completion(
         return await process_chat_response(
             request, response, form_data, user, metadata, model, events, tasks
         )
+    except asyncio.CancelledError:
+        log.info("Chat processing was cancelled")
+        try:
+            event_emitter = get_event_emitter(metadata)
+            await event_emitter(
+                {"type": "chat:tasks:cancel"},
+            )
+        except Exception:
+            pass
     except Exception as e:
         log.debug(f"Error in chat completion: {e}")
         if metadata.get("chat_id") and metadata.get("message_id"):
@@ -1577,55 +1586,23 @@ async def chat_completion(
                             "model": model_id,
                         },
                     )
-                except:
+                except Exception:
                     pass
 
             return await process_chat_response(
                 request, response, form_data, user, metadata, model, events, tasks
             )
-        except asyncio.CancelledError:
-            log.info("Chat processing was cancelled")
-            try:
-                event_emitter = get_event_emitter(metadata)
-                await event_emitter(
-                    {"type": "chat:tasks:cancel"},
-                )
-            except Exception as e:
-                pass
+        else:
+            # No chat/message metadata, bubble up after cleanup
+            raise
+    finally:
+        try:
+            if mcp_clients := metadata.get("mcp_clients"):
+                for client in mcp_clients.values():
+                    await client.disconnect()
         except Exception as e:
-            log.debug(f"Error processing chat payload: {e}")
-            if metadata.get("chat_id") and metadata.get("message_id"):
-                # Update the chat message with the error
-                try:
-                    Chats.upsert_message_to_chat_by_id_and_message_id(
-                        metadata["chat_id"],
-                        metadata["message_id"],
-                        {
-                            "error": {"content": str(e)},
-                        },
-                    )
-
-                    event_emitter = get_event_emitter(metadata)
-                    await event_emitter(
-                        {
-                            "type": "chat:message:error",
-                            "data": {"error": {"content": str(e)}},
-                        }
-                    )
-                    await event_emitter(
-                        {"type": "chat:tasks:cancel"},
-                    )
-
-                except:
-                    pass
-        finally:
-            try:
-                if mcp_clients := metadata.get("mcp_clients"):
-                    for client in mcp_clients.values():
-                        await client.disconnect()
-            except Exception as e:
-                log.debug(f"Error cleaning up: {e}")
-                pass
+            log.debug(f"Error cleaning up: {e}")
+            pass
 
     if (
         metadata.get("session_id")

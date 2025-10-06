@@ -1470,8 +1470,9 @@ export const parseJsonValue = (value: string): any => {
 
 async function ensurePDFjsLoaded() {
 	if (!window.pdfjsLib) {
-		const pdfjs = await import('pdfjs-dist');
-		pdfjs.GlobalWorkerOptions.workerSrc = pdfWorkerUrl;
+        const pdfjs = await import('pdfjs-dist');
+        // Vite resolves ?url to an asset URL; use it directly
+        pdfjs.GlobalWorkerOptions.workerSrc = pdfWorkerUrl;
 		if (!window.pdfjsLib) {
 			throw new Error('pdfjsLib is required for PDF extraction');
 		}
