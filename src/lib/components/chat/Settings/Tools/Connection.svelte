@@ -49,7 +49,9 @@
 					? 'opacity-50'
 					: ''}"
 			>
-				<WrenchAlt />
+				<Tooltip content={connection?.type === 'mcp' ? $i18n.t('MCP') : $i18n.t('OpenAPI')}>
+					<WrenchAlt />
+				</Tooltip>
 				<div class=" capitalize outline-hidden w-full bg-transparent">
 					{connection?.info?.name ?? connection?.url}
 					<span class="text-gray-500">{connection?.info?.id}</span>
