@@ -119,6 +119,16 @@ RUN if [ "$USE_OLLAMA" = "true" ]; then \
     apt-get install -y --no-install-recommends gcc python3-dev && \
     # for RAG OCR
     apt-get install -y --no-install-recommends ffmpeg libsm6 libxext6 && \
+    # WeasyPrint runtime dependencies (Cairo/Pango/GDK-PixBuf/FFI/fonts)
+    apt-get install -y --no-install-recommends \
+        libcairo2 \
+        libpango-1.0-0 \
+        libpangocairo-1.0-0 \
+        libpangoft2-1.0-0 \
+        libgdk-pixbuf-2.0-0 \
+        libffi-dev \
+        fonts-dejavu-core \
+        fonts-liberation && \
     # install helper tools
     apt-get install -y --no-install-recommends curl jq && \
     # install ollama
@@ -132,6 +142,16 @@ RUN if [ "$USE_OLLAMA" = "true" ]; then \
     apt-get install -y --no-install-recommends gcc python3-dev && \
     # for RAG OCR
     apt-get install -y --no-install-recommends ffmpeg libsm6 libxext6 && \
+    # WeasyPrint runtime dependencies (Cairo/Pango/GDK-PixBuf/FFI/fonts)
+    apt-get install -y --no-install-recommends \
+        libcairo2 \
+        libpango-1.0-0 \
+        libpangocairo-1.0-0 \
+        libpangoft2-1.0-0 \
+        libgdk-pixbuf-2.0-0 \
+        libffi-dev \
+        fonts-dejavu-core \
+        fonts-liberation && \
     # cleanup
     rm -rf /var/lib/apt/lists/*; \
     fi
