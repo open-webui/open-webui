@@ -188,7 +188,10 @@ def query_doc_with_hybrid_search(
                 zip(distances, metadatas, documents), key=lambda x: x[0], reverse=True
             )
             sorted_items = sorted_items[:k]
-            distances, documents, metadatas = map(list, zip(*sorted_items))
+            if sorted_items:
+                distances, documents, metadatas = map(list, zip(*sorted_items))
+            else:
+                distances, documents, metadatas = [], [], []
 
         result = {
             "distances": [distances],
