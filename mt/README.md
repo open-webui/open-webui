@@ -10,6 +10,17 @@ Each client gets their own:
 - 🌐 **Custom domain** and port
 - 🏷️ **Branded interface** with client name
 - 🔐 **Same OAuth configuration** (martins.net domain restriction)
+- 🗄️ **Database choice** (SQLite local or PostgreSQL/Supabase cloud)
+
+### Database Migration Feature
+
+The client manager includes built-in database migration capabilities:
+- **Automatic detection** of current database type (SQLite or PostgreSQL)
+- **One-click migration** from SQLite to Supabase PostgreSQL
+- **Zero data loss** with automatic backups and rollback
+- **Configuration viewer** for PostgreSQL deployments
+
+Perfect for scaling from local development to cloud-hosted production databases.
 
 ## Quick Start
 
@@ -46,15 +57,41 @@ Each client gets their own:
 ./client-manager.sh logs acme-corp
 ```
 
+### Migrate Database to PostgreSQL
+```bash
+# Access interactive client manager
+./client-manager.sh
+
+# Select "3) Manage Existing Deployment"
+# Choose your client
+# Select "8) Migrate to Supabase/PostgreSQL"
+
+# The wizard will guide you through:
+# - Entering Supabase credentials
+# - Testing connectivity
+# - Creating backups
+# - Migrating data
+# - Switching to PostgreSQL
+
+# See "Database Migration" section below for full details
+```
+
 ## File Structure
 
 ```
 mt/
-├── README.md                 # This file
-├── start-template.sh         # Template for creating client instances
-├── start-acme-corp.sh        # Pre-configured ACME Corp launcher
-├── start-beta-client.sh      # Pre-configured Beta Client launcher
-└── client-manager.sh         # Multi-client management tool
+├── README.md                    # This file
+├── start-template.sh            # Template for creating client instances
+├── start-acme-corp.sh           # Pre-configured ACME Corp launcher
+├── start-beta-client.sh         # Pre-configured Beta Client launcher
+├── client-manager.sh            # Multi-client management tool
+├── db-migration-helper.sh       # Database migration utilities (SQLite → PostgreSQL)
+├── nginx-template.conf          # Production nginx config template
+├── nginx-template-local.conf    # Local testing nginx config
+├── docker-compose.nginx.yml     # Local nginx setup
+└── nginx/                       # Local nginx configurations
+    ├── sites-available/
+    └── sites-enabled/
 ```
 
 ## Container Naming Convention
@@ -603,6 +640,404 @@ for volume in $(docker volume ls --filter name=openwebui- --format "{{.Name}}");
   docker run --rm -v $volume:/data -v $(pwd):/backup alpine tar czf /backup/${client}-backup-$(date +%Y%m%d).tar.gz -C /data .
 done
 ```
+
+## Database Migration
+
+### Overview
+
+Open WebUI supports two database backends:
+- **SQLite** (default): Local database stored in the container volume
+- **PostgreSQL/Supabase**: Cloud-hosted PostgreSQL for scalability and multi-instance deployments
+
+The client manager includes built-in migration capabilities to seamlessly migrate from SQLite to Supabase PostgreSQL.
+
+### When to Migrate to PostgreSQL
+
+Consider migrating to PostgreSQL/Supabase when you need:
+- **Remote access** to your database for backups and analysis
+- **Scalability** beyond local storage limits
+- **Multi-instance deployments** sharing the same database
+- **Better performance** for large datasets
+- **Cloud-based backups** and disaster recovery
+
+### Prerequisites
+
+Before migrating, ensure you have:
+
+1. **Supabase Account and Project**
+   - Sign up at https://supabase.com
+   - Create a new project (note the project reference and password)
+   - Wait for project to be fully provisioned (~2 minutes)
+
+2. **Enable pgvector Extension** (recommended for RAG features)
+   ```sql
+   -- Run this in Supabase SQL Editor
+   CREATE EXTENSION IF NOT EXISTS vector;
+   ```
+
+3. **Get Connection Details**
+   - Go to Project Settings → Database → Connection String
+   - Note your:
+     - Project Reference (e.g., `abc123xyz`)
+     - Database Password
+     - Region (e.g., `aws-0-us-east-1`)
+
+4. **Stable Internet Connection**
+   - Migration can take 15-30 minutes for large databases
+   - Ensure reliable connectivity throughout the process
+
+### Migration Process
+
+#### Step 1: Access Database Migration Menu
+
+```bash
+./client-manager.sh
+# Select "3) Manage Existing Deployment"
+# Choose your client
+# Select "8) Migrate to Supabase/PostgreSQL"
+```
+
+#### Step 2: Review Migration Plan
+
+The script will display:
+- What will happen during migration
+- Estimated time
+- Requirements checklist
+
+Confirm to proceed.
+
+#### Step 3: Enter Supabase Configuration
+
+When prompted, provide:
+- **Project Reference**: Found in Supabase dashboard URL
+- **Database Password**: The password you set when creating the project
+- **Region**: Geographic region of your Supabase instance
+
+The script will:
+- Automatically use Transaction Mode (port 6543) for optimal performance
+- URL-encode special characters in passwords
+- Test the connection before proceeding
+
+#### Step 4: Automated Migration
+
+The script automatically:
+1. ✅ Tests Supabase connectivity
+2. ✅ Checks pgvector extension
+3. ✅ Creates SQLite backup (in container and on host)
+4. ✅ Initializes PostgreSQL schema
+5. ✅ Runs migration tool (interactive)
+6. ✅ Fixes null byte compatibility issues
+7. ✅ Recreates container with PostgreSQL configuration
+8. ✅ Verifies container is running
+
+#### Step 5: Verify Migration
+
+After successful migration:
+```bash
+# Check container is running
+docker ps | grep openwebui-CLIENT_NAME
+
+# Test web access
+# Visit http://localhost:PORT
+
+# Verify data
+# - Log in with your account
+# - Check chat history
+# - Verify user settings
+```
+
+### Post-Migration
+
+#### View Database Configuration
+
+After migration, option 8 changes to "View database configuration":
+
+```bash
+./client-manager.sh
+# Select "3) Manage Existing Deployment"
+# Choose your migrated client
+# Select "8) View database configuration"
+```
+
+This displays:
+- Database type (PostgreSQL)
+- Host and port
+- Database name
+- Connection status
+- Masked connection string
+
+#### Backup Location
+
+SQLite backups are saved in two locations:
+- **Container**: `/app/backend/data/webui-backup-TIMESTAMP.db`
+- **Host**: `/tmp/webui-backup-TIMESTAMP.db`
+
+**Keep backups for 2-4 weeks** before deleting.
+
+### Rollback to SQLite
+
+If you encounter issues after migration, you can rollback:
+
+#### Automatic Rollback
+
+If migration fails, the script automatically:
+- Restores SQLite backup
+- Recreates container with SQLite configuration
+- Verifies container is running
+
+#### Manual Rollback
+
+If you need to rollback after successful migration:
+
+```bash
+# 1. Stop the PostgreSQL container
+docker stop openwebui-CLIENT_NAME
+docker rm openwebui-CLIENT_NAME
+
+# 2. Restore backup (if you have it)
+BACKUP_PATH="/tmp/webui-backup-TIMESTAMP.db"
+docker run -d --name temp-restore \
+  -v openwebui-CLIENT_NAME-data:/app/backend/data \
+  ghcr.io/imagicrafter/open-webui:main sleep 3600
+
+docker cp "$BACKUP_PATH" temp-restore:/app/backend/data/webui.db
+docker stop temp-restore
+docker rm temp-restore
+
+# 3. Recreate container without DATABASE_URL
+./start-template.sh CLIENT_NAME PORT [DOMAIN]
+```
+
+### Troubleshooting Migration
+
+#### Connection Test Fails
+
+**Problem**: Cannot connect to Supabase
+
+**Solutions**:
+- Verify project is fully provisioned (check Supabase dashboard)
+- Check password is correct (no extra spaces)
+- Ensure your IP isn't blocked by Supabase firewall
+- Try resetting database password in Supabase settings
+
+#### pgvector Extension Missing
+
+**Problem**: Migration warns about missing pgvector
+
+**Solutions**:
+- Go to Supabase → Database → Extensions
+- Enable "vector" extension
+- Or run: `CREATE EXTENSION IF NOT EXISTS vector;`
+- Continue without pgvector if you don't use RAG features
+
+#### Migration Tool Fails
+
+**Problem**: Data migration fails partway through
+
+**Solutions**:
+- Check internet connection stability
+- Verify Supabase storage limits (500MB on free tier)
+- Check Supabase dashboard for database errors
+- Contact support if database is corrupted
+
+#### Container Won't Start After Migration
+
+**Problem**: Container exits immediately after migration
+
+**Solutions**:
+- Check logs: `docker logs openwebui-CLIENT_NAME`
+- Verify DATABASE_URL format is correct
+- Test connection to Supabase manually
+- Try automatic rollback to SQLite
+
+#### Special Characters in Password
+
+**Problem**: Connection fails with special characters in password
+
+**Solutions**:
+- Script automatically URL-encodes passwords
+- If still failing, try changing password to alphanumeric only
+- Avoid: `@`, `#`, `!`, `%`, `&`, `:`, `/`
+
+### Migration Best Practices
+
+#### Before Migration
+
+- [ ] Backup client data manually (see Data Backup section)
+- [ ] Test Supabase connection from your server
+- [ ] Check database size vs Supabase tier limits
+- [ ] Schedule migration during low-traffic period
+- [ ] Notify users of planned downtime
+
+#### During Migration
+
+- [ ] Don't interrupt the migration process
+- [ ] Monitor progress in terminal
+- [ ] Keep terminal session active
+- [ ] Have Supabase dashboard open for monitoring
+
+#### After Migration
+
+- [ ] Test all critical functionality
+- [ ] Monitor container logs for errors
+- [ ] Keep SQLite backup for 2-4 weeks
+- [ ] Document migration date and backup location
+- [ ] Update your infrastructure documentation
+
+### Connection String Reference
+
+#### Format
+
+```
+postgresql://postgres.[PROJECT-REF]:[PASSWORD]@[REGION].pooler.supabase.com:6543/postgres
+```
+
+#### Components
+
+- **Protocol**: `postgresql://` (required)
+- **User**: `postgres.[PROJECT-REF]` (Supabase format)
+- **Password**: URL-encoded password
+- **Host**: `[REGION].pooler.supabase.com`
+- **Port**: `6543` (Transaction Mode - recommended for web apps)
+- **Database**: `postgres` (default Supabase database)
+
+#### Example
+
+```
+postgresql://postgres.abc123xyz:myP%40ssword@aws-0-us-east-1.pooler.supabase.com:6543/postgres
+```
+
+**Note**: Password `myP@ssword` becomes `myP%40ssword` (URL-encoded)
+
+### Security Considerations
+
+#### Current Security Posture (Development/Testing)
+
+After migrating to Supabase, you may notice tables show an **"Unrestricted"** tag in the Supabase dashboard. This indicates **Row Level Security (RLS)** is not enabled.
+
+**For development and testing environments, this is acceptable** because:
+
+- **Application-level security**: Open WebUI handles all authentication and authorization at the application layer
+- **Backend-only access**: Users interact only through the web UI, not directly with the database
+- **Database-per-client isolation**: Each client uses a separate Supabase project/database (not shared tables)
+- **No public API exposure**: You're not using Supabase's auto-generated REST APIs or client libraries
+
+#### When to Enable Row Level Security (RLS)
+
+Consider enabling RLS when moving to **production** or when:
+
+- **Exposing Supabase APIs**: Using Supabase's PostgREST API or client libraries directly
+- **Multiple applications**: Different services accessing the same database with varying permissions
+- **Shared database architecture**: Multiple clients sharing the same Supabase project (not recommended)
+- **Compliance requirements**: Industry regulations requiring database-level access controls
+- **Defense-in-depth**: Adding an extra security layer beyond application logic
+
+#### How to Enable Row Level Security
+
+If you decide to enable RLS for production:
+
+1. **Enable RLS on Tables** (Supabase Dashboard → Table Editor → Settings):
+   ```sql
+   -- Enable RLS for all Open WebUI tables
+   ALTER TABLE public.user ENABLE ROW LEVEL SECURITY;
+   ALTER TABLE public.chat ENABLE ROW LEVEL SECURITY;
+   ALTER TABLE public.document ENABLE ROW LEVEL SECURITY;
+   -- Repeat for all tables
+   ```
+
+2. **Create RLS Policies** (match Open WebUI's application logic):
+   ```sql
+   -- Example: Users can only access their own chats
+   CREATE POLICY "Users can view own chats"
+     ON public.chat
+     FOR SELECT
+     USING (auth.uid() = user_id);
+
+   -- Example: Users can modify their own chats
+   CREATE POLICY "Users can update own chats"
+     ON public.chat
+     FOR UPDATE
+     USING (auth.uid() = user_id);
+   ```
+
+3. **Test Thoroughly**: Ensure RLS policies don't break existing functionality
+
+**Note**: Open WebUI connects as the `postgres` superuser, which bypasses RLS by default. You'll need to create a dedicated application user with restricted permissions for RLS to be effective.
+
+#### Production Security Best Practices
+
+When deploying to production, implement these additional security measures:
+
+**Database Security:**
+- [ ] Review and restrict Supabase API key permissions
+- [ ] Enable connection pooling with `pgBouncer` (Transaction Mode)
+- [ ] Use SSL/TLS for all database connections (enabled by default)
+- [ ] Monitor database access logs in Supabase dashboard
+- [ ] Set up database activity alerts
+- [ ] Implement IP allowlisting if your infrastructure supports it
+
+**Application Security:**
+- [ ] Use environment variables for sensitive credentials (never hardcode)
+- [ ] Rotate database passwords regularly
+- [ ] Enable audit logging for authentication events
+- [ ] Configure OAuth consent screen with privacy policy
+- [ ] Restrict OAuth to specific Google Workspace domains
+- [ ] Implement rate limiting at nginx/reverse proxy level
+
+**Infrastructure Security:**
+- [ ] Use separate Supabase projects per client for isolation
+- [ ] Enable container health checks and automatic restarts
+- [ ] Implement firewall rules to restrict database access
+- [ ] Set up monitoring and alerting for anomalies
+- [ ] Regular backup verification and disaster recovery testing
+- [ ] Keep Docker images updated for security patches
+
+**Compliance:**
+- [ ] Document data retention policies
+- [ ] Implement GDPR/privacy regulation requirements
+- [ ] Set up encrypted backups with access controls
+- [ ] Establish incident response procedures
+- [ ] Regular security audits of database permissions
+
+#### Recommended Security Architecture
+
+For production deployments:
+
+```
+┌─────────────────────────────────────────────┐
+│  Client 1 (client1.example.com)            │
+│  ┌─────────────────────────────────────┐   │
+│  │ Open WebUI Container                │   │
+│  │ - OAuth (domain-restricted)         │───┼──> Supabase Project 1
+│  │ - Application-level auth            │   │   (dedicated database)
+│  └─────────────────────────────────────┘   │
+└─────────────────────────────────────────────┘
+
+┌─────────────────────────────────────────────┐
+│  Client 2 (client2.example.com)            │
+│  ┌─────────────────────────────────────┐   │
+│  │ Open WebUI Container                │   │
+│  │ - OAuth (domain-restricted)         │───┼──> Supabase Project 2
+│  │ - Application-level auth            │   │   (dedicated database)
+│  └─────────────────────────────────────┘   │
+└─────────────────────────────────────────────┘
+```
+
+**Key Principle**: Database-per-client isolation provides strong security without requiring RLS.
+
+### Multi-Instance Deployments (Future)
+
+Once migrated to PostgreSQL, you can run multiple Open WebUI instances sharing the same database:
+
+```bash
+# Instance 1
+./start-template.sh client1 8081 client1.example.com
+
+# Instance 2 (sharing same database)
+./start-template.sh client2 8082 client2.example.com
+```
+
+**Note**: Requires setting the same `DATABASE_URL` in both containers. This feature is not yet automated in the client manager.
 
 ## Troubleshooting
 

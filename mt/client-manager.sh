@@ -30,7 +30,7 @@ show_help() {
 show_main_menu() {
     clear
     echo "╔════════════════════════════════════════╗"
-    echo "║       Open WebUI Client Manager       ║"
+    echo "║       Open WebUI Client Manager        ║"
     echo "╚════════════════════════════════════════╝"
     echo
     echo "1) View Deployment Status"
@@ -199,7 +199,7 @@ manage_deployment_menu() {
     while true; do
         clear
         echo "╔════════════════════════════════════════╗"
-        echo "║        Manage Deployment Menu         ║"
+        echo "║        Manage Deployment Menu          ║"
         echo "╚════════════════════════════════════════╝"
         echo
 
@@ -223,7 +223,7 @@ manage_deployment_menu() {
 
             if [[ -n "$redirect_uri" ]]; then
                 # Extract domain from redirect URI (remove http/https and /oauth/google/callback)
-                domain=$(echo "$redirect_uri" | sed 's|https\?://||' | sed 's|/oauth/google/callback||')
+                domain=$(echo "$redirect_uri" | sed -E 's|https?://||' | sed 's|/oauth/google/callback||')
                 echo "$((i+1))) ${clients[$i]} → $domain ($status)"
             else
                 # Fallback if we can't get the redirect URI
@@ -238,7 +238,7 @@ manage_deployment_menu() {
 
         if [[ "$selection" =~ ^[0-9]+$ ]] && [ "$selection" -gt 0 ] && [ "$selection" -le ${#clients[@]} ]; then
             manage_single_deployment "${clients[$((selection-1))]}"
-        elif [ "$selection" -eq $((${#clients[@]}+1)) ]; then
+        elif [[ "$selection" =~ ^[0-9]+$ ]] && [ "$selection" -eq $((${#clients[@]}+1)) ]; then
             return
         else
             echo "Invalid selection. Press Enter to continue..."
@@ -251,19 +251,55 @@ manage_single_deployment() {
     local client_name="$1"
     local container_name="openwebui-${client_name}"
 
+    # Color codes for output
+    local RED='\033[0;31m'
+    local GREEN='\033[0;32m'
+    local YELLOW='\033[1;33m'
+    local NC='\033[0m'
+
     while true; do
         clear
         echo "╔════════════════════════════════════════╗"
-        echo "║     Managing: $client_name"
-        printf "║%*s║\n" $((40-${#client_name}-15)) ""
+        # Calculate padding for client name to align properly
+        local title="     Managing: $client_name"
+        local padding=$((38 - ${#title}))
+        printf "║%s%*s║\n" "$title" $padding ""
         echo "╚════════════════════════════════════════╝"
         echo
 
         # Show status
         local status=$(docker ps -a --filter "name=$container_name" --format "{{.Status}}")
         local ports=$(docker ps -a --filter "name=$container_name" --format "{{.Ports}}")
+
+        # Get FQDN from redirect URI
+        local redirect_uri=$(docker exec "$container_name" env 2>/dev/null | grep "GOOGLE_REDIRECT_URI=" | cut -d'=' -f2- 2>/dev/null || echo "")
+        local fqdn=""
+        if [[ -n "$redirect_uri" ]]; then
+            fqdn=$(echo "$redirect_uri" | sed -E 's|https?://||' | sed 's|/oauth/google/callback||')
+        fi
+
         echo "Status: $status"
         echo "Ports:  $ports"
+        if [[ -n "$fqdn" ]]; then
+            echo "Domain: $fqdn"
+        fi
+
+        # Detect and display database configuration
+        local database_url=$(docker exec "$container_name" env 2>/dev/null | grep "DATABASE_URL=" | cut -d'=' -f2- 2>/dev/null || echo "")
+
+        if [[ -n "$database_url" ]]; then
+            # PostgreSQL detected
+            local db_host=$(echo "$database_url" | sed 's|postgresql://[^@]*@||' | cut -d':' -f1)
+            local db_port=$(echo "$database_url" | sed 's|.*:||' | cut -d'/' -f1)
+            local db_name=$(echo "$database_url" | sed 's|.*/||')
+            echo "Database: PostgreSQL"
+            echo "  Host: $db_host:$db_port"
+            echo "  Name: $db_name"
+        else
+            # SQLite (default)
+            echo "Database: SQLite (default)"
+        fi
+
         echo
 
         echo "1) Start deployment"
@@ -273,10 +309,18 @@ manage_single_deployment() {
         echo "5) Show Cloudflare DNS configuration"
         echo "6) Update OAuth allowed domains"
         echo "7) Change domain/client (preserve data)"
-        echo "8) Remove deployment (DANGER)"
-        echo "9) Return to deployment list"
+
+        # Show database option based on current database type
+        if [[ -n "$database_url" ]]; then
+            echo "8) View database configuration (includes rollback)"
+        else
+            echo "8) Migrate to Supabase/PostgreSQL"
+        fi
+
+        echo "9) Remove deployment (DANGER)"
+        echo "10) Return to deployment list"
         echo
-        echo -n "Select action (1-9): "
+        echo -n "Select action (1-10): "
         read action
 
         case "$action" in
@@ -309,14 +353,14 @@ manage_single_deployment() {
                 # Get domain from container environment
                 redirect_uri=$(docker exec "$container_name" env 2>/dev/null | grep "GOOGLE_REDIRECT_URI=" | cut -d'=' -f2- 2>/dev/null || echo "")
                 if [[ -n "$redirect_uri" ]]; then
-                    domain=$(echo "$redirect_uri" | sed 's|https\?://||' | sed 's|/oauth/google/callback||')
+                    domain=$(echo "$redirect_uri" | sed -E 's|https?://||' | sed 's|/oauth/google/callback||')
                     subdomain=$(echo "$domain" | cut -d'.' -f1)
                     base_domain=$(echo "$domain" | cut -d'.' -f2-)
                     server_ip=$(curl -s ifconfig.me 2>/dev/null || echo "YOUR_SERVER_IP")
 
                     echo
                     echo "╔════════════════════════════════════════╗"
-                    echo "║      Cloudflare DNS Configuration     ║"
+                    echo "║      Cloudflare DNS Configuration      ║"
                     echo "╚════════════════════════════════════════╝"
                     echo
                     echo "Domain: $domain"
@@ -349,7 +393,7 @@ manage_single_deployment() {
                 # Update OAuth allowed domains
                 echo
                 echo "╔════════════════════════════════════════╗"
-                echo "║       Update OAuth Allowed Domains    ║"
+                echo "║       Update OAuth Allowed Domains     ║"
                 echo "╚════════════════════════════════════════╝"
                 echo
 
@@ -463,7 +507,7 @@ manage_single_deployment() {
                 # Change domain/client while preserving data
                 echo
                 echo "╔════════════════════════════════════════╗"
-                echo "║    Change Domain/Client (Preserve Data)║"
+                echo "║  Change Domain/Client (Preserve Data)  ║"
                 echo "╚════════════════════════════════════════╝"
                 echo
 
@@ -473,7 +517,7 @@ manage_single_deployment() {
                 current_port=$(docker ps -a --filter "name=$container_name" --format "{{.Ports}}" | grep -o '0.0.0.0:[0-9]*' | cut -d: -f2)
 
                 if [[ -n "$current_redirect_uri" ]]; then
-                    current_domain=$(echo "$current_redirect_uri" | sed 's|https\?://||' | sed 's|/oauth/google/callback||')
+                    current_domain=$(echo "$current_redirect_uri" | sed -E 's|https?://||' | sed 's|/oauth/google/callback||')
                     echo "Current domain: $current_domain"
                 else
                     echo "Current domain: Unable to determine"
@@ -633,6 +677,174 @@ manage_single_deployment() {
                 read
                 ;;
             8)
+                # Database Migration / Configuration Viewer
+                if [[ -n "$database_url" ]]; then
+                    # PostgreSQL - Show configuration
+                    clear
+                    source "${SCRIPT_DIR}/db-migration-helper.sh"
+                    display_postgres_config "$container_name"
+                else
+                    # SQLite - Offer migration
+                    clear
+                    echo "╔════════════════════════════════════════╗"
+                    echo "║     Migrate to Supabase/PostgreSQL     ║"
+                    echo "╚════════════════════════════════════════╝"
+                    echo
+                    echo "⚠️  WARNING: Database migration is a critical operation"
+                    echo
+                    echo "What will happen:"
+                    echo "  1. Backup your current SQLite database"
+                    echo "  2. Initialize PostgreSQL schema on Supabase"
+                    echo "  3. Migrate all data to PostgreSQL"
+                    echo "  4. Recreate container with PostgreSQL configuration"
+                    echo
+                    echo "Requirements:"
+                    echo "  - Supabase account and project set up"
+                    echo "  - pgvector extension enabled (recommended)"
+                    echo "  - Stable internet connection"
+                    echo
+                    echo "Estimated time: 15-30 minutes"
+                    echo "The service will be temporarily unavailable during migration"
+                    echo
+                    echo -n "Continue with migration? (y/N): "
+                    read confirm
+
+                    if [[ ! "$confirm" =~ ^[Yy]$ ]]; then
+                        echo "Migration cancelled."
+                        echo "Press Enter to continue..."
+                        read
+                        continue
+                    fi
+
+                    # Source the helper script
+                    source "${SCRIPT_DIR}/db-migration-helper.sh"
+
+                    # Step 1: Get Supabase configuration
+                    clear
+                    if ! get_supabase_config; then
+                        echo
+                        echo "❌ Failed to configure Supabase connection"
+                        echo "Press Enter to continue..."
+                        read
+                        continue
+                    fi
+
+                    # Step 2: Test connection
+                    clear
+                    if ! test_supabase_connection "$DATABASE_URL"; then
+                        echo
+                        echo "❌ Cannot connect to Supabase. Please check your credentials."
+                        echo "Press Enter to continue..."
+                        read
+                        continue
+                    fi
+
+                    # Step 3: Check pgvector extension
+                    clear
+                    if ! check_pgvector_extension "$DATABASE_URL"; then
+                        echo "Migration cancelled."
+                        echo "Press Enter to continue..."
+                        read
+                        continue
+                    fi
+
+                    # Step 4: Backup SQLite database
+                    clear
+                    # Use FQDN for backup naming, fall back to client_name if not available
+                    local backup_identifier="${fqdn:-$client_name}"
+                    backup_path=$(backup_sqlite_database "$container_name" "$backup_identifier")
+
+                    if [[ -z "$backup_path" ]]; then
+                        echo
+                        echo "❌ Failed to create backup. Migration aborted."
+                        echo "Press Enter to continue..."
+                        read
+                        continue
+                    fi
+
+                    # Step 5: Get port for initialization
+                    current_port=$(echo "$ports" | grep -o '0.0.0.0:[0-9]*' | head -1 | cut -d: -f2)
+                    if [[ -z "$current_port" ]]; then
+                        current_port=8080
+                    fi
+
+                    # Step 6: Initialize PostgreSQL schema
+                    clear
+                    if ! initialize_postgresql_schema "$container_name" "$DATABASE_URL" "$current_port"; then
+                        echo
+                        echo "❌ Failed to initialize PostgreSQL schema. Migration aborted."
+                        echo "Press Enter to continue..."
+                        read
+                        continue
+                    fi
+
+                    # Step 7: Run migration tool
+                    clear
+                    echo "╔════════════════════════════════════════╗"
+                    echo "║        Running Migration Tool          ║"
+                    echo "╚════════════════════════════════════════╝"
+                    echo
+                    echo "The migration tool will now run interactively."
+                    echo "When prompted for the SQLite database path, enter:"
+                    echo "  $backup_path"
+                    echo
+                    echo "Press Enter to start migration..."
+                    read
+
+                    # Use FQDN for log file naming, fall back to client_name if not available
+                    local migration_identifier="${fqdn:-$client_name}"
+
+                    if ! run_migration_tool "$backup_path" "$DATABASE_URL" "$migration_identifier"; then
+                        echo
+                        echo "❌ Migration failed. Starting rollback..."
+                        rollback_to_sqlite "$client_name" "$backup_path" "$current_port"
+                        echo
+                        echo "Press Enter to continue..."
+                        read
+                        continue
+                    fi
+
+                    # Step 8: Fix null byte issue
+                    clear
+                    fix_null_bytes "$DATABASE_URL"
+
+                    # Step 9: Recreate container with PostgreSQL
+                    clear
+                    if ! recreate_container_with_postgres "$client_name" "$DATABASE_URL" "$current_port"; then
+                        echo
+                        echo "❌ Failed to recreate container. Starting rollback..."
+                        rollback_to_sqlite "$client_name" "$backup_path" "$current_port"
+                        echo
+                        echo "Press Enter to continue..."
+                        read
+                        continue
+                    fi
+
+                    # Step 10: Success message
+                    clear
+                    echo "╔════════════════════════════════════════╗"
+                    echo "║     Migration Completed Successfully!  ║"
+                    echo "╚════════════════════════════════════════╝"
+                    echo
+                    echo "✅ Your deployment is now using PostgreSQL/Supabase"
+                    echo
+                    echo "Next steps:"
+                    echo "  1. Test web access: http://localhost:$current_port"
+                    echo "  2. Verify chat history and user data"
+                    echo "  3. Monitor container logs for any errors"
+                    echo "  4. SQLite backup saved at: $backup_path"
+                    echo "  5. Keep backup for 2-4 weeks before deleting"
+                    echo
+                    echo "If you encounter any issues, you can rollback to SQLite"
+                    echo "by using option 8 again and selecting rollback."
+                fi
+
+                echo
+                echo "Press Enter to continue..."
+                read
+                ;;
+            9)
+                # Remove deployment
                 echo "⚠️  WARNING: This will permanently remove the deployment!"
                 echo "Data volume will be preserved but container will be deleted."
                 echo -n "Type 'DELETE' to confirm: "
@@ -651,7 +863,8 @@ manage_single_deployment() {
                     read
                 fi
                 ;;
-            9)
+            10)
+                # Return to deployment list
                 return
                 ;;
             *)
@@ -665,7 +878,7 @@ manage_single_deployment() {
 generate_nginx_config() {
     clear
     echo "╔════════════════════════════════════════╗"
-    echo "║      Generate nginx Configuration     ║"
+    echo "║      Generate nginx Configuration      ║"
     echo "╚════════════════════════════════════════╝"
     echo
 
@@ -694,7 +907,7 @@ generate_nginx_config() {
         # Extract domain for config filename check
         config_domain=""
         if [[ -n "$redirect_uri" ]]; then
-            config_domain=$(echo "$redirect_uri" | sed 's|https\?://||' | sed 's|/oauth/google/callback||')
+            config_domain=$(echo "$redirect_uri" | sed -E 's|https?://||' | sed 's|/oauth/google/callback||')
         fi
 
         if [[ -n "$config_domain" ]] && [ -f "/etc/nginx/sites-available/${config_domain}" ]; then
@@ -705,7 +918,7 @@ generate_nginx_config() {
 
         if [[ -n "$redirect_uri" ]]; then
             # Extract domain from redirect URI
-            domain=$(echo "$redirect_uri" | sed 's|https\?://||' | sed 's|/oauth/google/callback||')
+            domain=$(echo "$redirect_uri" | sed -E 's|https?://||' | sed 's|/oauth/google/callback||')
             echo "$((i+1))) ${clients[$i]} → $domain (port: $ports) [$nginx_status]"
         else
             # Fallback if we can't get the redirect URI
@@ -777,7 +990,7 @@ generate_nginx_config() {
             current_hostname=$(hostname)
 
             echo "╔════════════════════════════════════════╗"
-            echo "║         Production Setup Steps        ║"
+            echo "║         Production Setup Steps         ║"
             echo "╚════════════════════════════════════════╝"
             echo
             echo "1. Copy config to server:"
@@ -809,7 +1022,7 @@ generate_nginx_config() {
             echo "   https://${domain}/oauth/google/callback"
         else
             echo "╔════════════════════════════════════════╗"
-            echo "║         Local Testing Steps           ║"
+            echo "║          Local Testing Steps           ║"
             echo "╚════════════════════════════════════════╝"
             echo
             echo "1. Enable the site:"
@@ -876,7 +1089,7 @@ list_clients() {
 
         if [[ -n "$redirect_uri" ]]; then
             # Extract domain from redirect URI
-            domain=$(echo "$redirect_uri" | sed 's|https\?://||' | sed 's|/oauth/google/callback||')
+            domain=$(echo "$redirect_uri" | sed -E 's|https?://||' | sed 's|/oauth/google/callback||')
         else
             domain="unknown"
         fi
