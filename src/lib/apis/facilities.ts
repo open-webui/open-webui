@@ -1,10 +1,11 @@
 import { WEBUI_API_BASE_URL } from '$lib/constants';
 
 export interface FacilitiesRequest {
-	sponsor: string; // "NSF" or "NIH"
-	form_data: Record<string, string>; // Section ID -> content mapping
-	model: string; // User's selected model ID
-	web_search_enabled: boolean; // Whether web search is enabled
+	sponsor: string; 
+	form_data: Record<string, string>; 
+	model: string; 
+	web_search_enabled: boolean; 
+	files?: any[]; 
 }
 
 export interface FacilitiesResponse {
