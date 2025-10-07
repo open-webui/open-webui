@@ -655,6 +655,11 @@ input[type='number'] {
 	}
 }
 
+/* Selection recording highlight */
+mark.selection-highlight {
+    @apply bg-yellow-200 dark:bg-yellow-800 text-black dark:text-white rounded px-0.5;
+}
+
 .chat-side-bar {
 	@apply overflow-hidden w-64 z-10;
 

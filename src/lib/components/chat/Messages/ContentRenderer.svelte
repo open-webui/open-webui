@@ -3,16 +3,18 @@
 	const i18n = getContext('i18n');
 
 	import Markdown from './Markdown.svelte';
-	import {
-		artifactCode,
-		chatId,
-		mobile,
-		settings,
-		showArtifacts,
-		showControls,
-		showEmbeds,
-		showOverview
-	} from '$lib/stores';
+import {
+    artifactCode,
+    chatId as chatIdStore,
+    mobile,
+    settings,
+    showArtifacts,
+    showControls,
+    showEmbeds,
+    showOverview,
+    selectionModeEnabled,
+    savedSelections
+} from '$lib/stores';
 	import FloatingButtons from '../ContentRenderer/FloatingButtons.svelte';
 	import { createMessagesList } from '$lib/utils';
 
@@ -42,6 +44,9 @@
 
 	let contentContainerElement;
 	let floatingButtonsElement;
+
+// Chat identifier to record selection against
+export let chatId = '';
 
 	const updateButtonPosition = (event) => {
 		const buttonsContainerElement = document.getElementById(`floating-buttons-${id}`);
@@ -116,21 +121,72 @@
 		}
 	};
 
-	onMount(() => {
-		if (floatingButtons) {
-			contentContainerElement?.addEventListener('mouseup', updateButtonPosition);
-			document.addEventListener('mouseup', updateButtonPosition);
-			document.addEventListener('keydown', keydownHandler);
-		}
-	});
+let listenersAttached = false;
 
-	onDestroy(() => {
-		if (floatingButtons) {
-			contentContainerElement?.removeEventListener('mouseup', updateButtonPosition);
-			document.removeEventListener('mouseup', updateButtonPosition);
-			document.removeEventListener('keydown', keydownHandler);
-		}
-	});
+const attachListeners = () => {
+    if (listenersAttached) return;
+    contentContainerElement?.addEventListener('mouseup', updateButtonPosition);
+    document.addEventListener('mouseup', updateButtonPosition);
+    document.addEventListener('keydown', keydownHandler);
+    listenersAttached = true;
+};
+
+const detachListeners = () => {
+    if (!listenersAttached) return;
+    contentContainerElement?.removeEventListener('mouseup', updateButtonPosition);
+    document.removeEventListener('mouseup', updateButtonPosition);
+    document.removeEventListener('keydown', keydownHandler);
+    listenersAttached = false;
+};
+
+onMount(() => {
+    if (floatingButtons || $selectionModeEnabled) {
+        attachListeners();
+    }
+});
+
+onDestroy(() => {
+    detachListeners();
+});
+
+// React to selection mode changes to attach/detach listeners dynamically
+$: {
+    if ($selectionModeEnabled) {
+        attachListeners();
+    } else if (!floatingButtons) {
+        // Only detach when floatingButtons is also off
+        detachListeners();
+    }
+}
+
+const saveCurrentSelection = () => {
+    const selection = window.getSelection();
+    if (!selection || selection.rangeCount === 0) return;
+
+    const range = selection.getRangeAt(0);
+    if (!contentContainerElement?.contains(range.commonAncestorContainer)) return;
+
+    const text = selection.toString();
+    if (!text.trim()) return;
+
+    // Highlight selected text
+    const mark = document.createElement('mark');
+    mark.className = 'selection-highlight';
+    mark.textContent = text;
+
+    range.deleteContents();
+    range.insertNode(mark);
+
+    selection.removeAllRanges();
+
+    // Record selection
+    savedSelections.update((arr) => [
+        ...arr,
+        { chatId: chatId || $chatIdStore, messageId, role: 'assistant', text }
+    ]);
+
+    closeFloatingButtons();
+};
 </script>
 
 <div bind:this={contentContainerElement}>
@@ -180,10 +236,10 @@
 			const { lang, text: code } = token;
 
 			if (
-				($settings?.detectArtifacts ?? true) &&
+                ($settings?.detectArtifacts ?? true) &&
 				(['html', 'svg'].includes(lang) || (lang === 'xml' && code.includes('svg'))) &&
-				!$mobile &&
-				$chatId
+                !$mobile &&
+                $chatIdStore
 			) {
 				showArtifacts.set(true);
 				showControls.set(true);
@@ -200,22 +256,37 @@
 	/>
 </div>
 
-{#if floatingButtons && model}
-	<FloatingButtons
-		bind:this={floatingButtonsElement}
-		{id}
-		{messageId}
-		actions={$settings?.floatingActionButtons ?? []}
-		model={(selectedModels ?? []).includes(model?.id)
-			? model?.id
-			: (selectedModels ?? []).length > 0
-				? selectedModels.at(0)
-				: model?.id}
-		messages={createMessagesList(history, messageId)}
-		onAdd={({ modelId, parentId, messages }) => {
-			console.log(modelId, parentId, messages);
-			onAddMessages({ modelId, parentId, messages });
-			closeFloatingButtons();
-		}}
-	/>
+{#if $selectionModeEnabled}
+    <div
+        id={`floating-buttons-${id}`}
+        class="absolute rounded-lg mt-1 text-xs z-9999"
+        style="display: none"
+    >
+        <div class="flex flex-row gap-0.5 shrink-0 p-1 bg-white dark:bg-gray-850 dark:text-gray-100 text-medium rounded-lg shadow-xl">
+            <button
+                class="px-2 py-0.5 hover:bg-gray-50 dark:hover:bg-gray-800 rounded-sm min-w-fit"
+                on:click={saveCurrentSelection}
+            >
+                {$i18n.t('Save')}
+            </button>
+        </div>
+    </div>
+{:else if floatingButtons && model}
+    <FloatingButtons
+        bind:this={floatingButtonsElement}
+        {id}
+        {messageId}
+        actions={$settings?.floatingActionButtons ?? []}
+        model={(selectedModels ?? []).includes(model?.id)
+            ? model?.id
+            : (selectedModels ?? []).length > 0
+                ? selectedModels.at(0)
+                : model?.id}
+        messages={createMessagesList(history, messageId)}
+        onAdd={({ modelId, parentId, messages }) => {
+            console.log(modelId, parentId, messages);
+            onAddMessages({ modelId, parentId, messages });
+            closeFloatingButtons();
+        }}
+    />
 {/if}

@@ -15,7 +15,7 @@
 	import { getChatById } from '$lib/apis/chats';
 	import { generateTags } from '$lib/apis';
 
-	import { config, models, settings, temporaryChatEnabled, TTSWorker, user } from '$lib/stores';
+import { config, models, settings, temporaryChatEnabled, TTSWorker, user, selectionModeEnabled } from '$lib/stores';
 	import { synthesizeOpenAISpeech } from '$lib/apis/audio';
 	import { imageGenerations } from '$lib/apis/images';
 	import {
@@ -761,16 +761,16 @@
 								{:else if message.content && message.error !== true}
 									<!-- always show message contents even if there's an error -->
 									<!-- unless message.error === true which is legacy error handling, where the error message is stored in message.content -->
-									<ContentRenderer
+                                    <ContentRenderer
 										id={`${chatId}-${message.id}`}
 										messageId={message.id}
 										{history}
 										{selectedModels}
 										content={message.content}
 										sources={message.sources}
-										floatingButtons={message?.done &&
-											!readOnly &&
-											($settings?.showFloatingActionButtons ?? true)}
+                                        floatingButtons={false && !$selectionModeEnabled && message?.done &&
+                                            !readOnly &&
+                                            ($settings?.showFloatingActionButtons ?? true)}
 										save={!readOnly}
 										preview={!readOnly}
 										{editCodeBlock}
@@ -925,9 +925,9 @@
 								</div>
 							{/if}
 
-							{#if message.done}
-								{#if !readOnly}
-									{#if $user?.role === 'user' ? ($user?.permissions?.chat?.edit ?? true) : true}
+                                {#if message.done}
+                                    {#if !readOnly}
+                                        {#if ($user?.role === 'user' ? ($user?.permissions?.chat?.edit ?? true) : true) && false}
 										<Tooltip content={$i18n.t('Edit')} placement="bottom">
 											<button
 												aria-label={$i18n.t('Edit')}
@@ -1490,7 +1490,7 @@
 						/>
 					{/if}
 
-					{#if (isLastMessage || ($settings?.keepFollowUpPrompts ?? false)) && message.done && !readOnly && (message?.followUps ?? []).length > 0}
+                    {#if false && !$selectionModeEnabled && (isLastMessage || ($settings?.keepFollowUpPrompts ?? false)) && message.done && !readOnly && (message?.followUps ?? []).length > 0}
 						<div class="mt-2.5" in:fade={{ duration: 100 }}>
 							<FollowUps
 								followUps={message?.followUps}

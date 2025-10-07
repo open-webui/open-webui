@@ -3,7 +3,7 @@
 	import { toast } from 'svelte-sonner';
 	import { tick, getContext, onMount } from 'svelte';
 
-	import { models, settings } from '$lib/stores';
+import { models, settings, selectionModeEnabled, savedSelections, chatId as chatIdStore } from '$lib/stores';
 	import { user as _user } from '$lib/stores';
 	import { copyToClipboard as _copyToClipboard, formatDate } from '$lib/utils';
 	import { WEBUI_BASE_URL } from '$lib/constants';
@@ -103,9 +103,111 @@
 		deleteMessage(message.id);
 	};
 
+	let contentContainerElement: HTMLDivElement;
+	const updateButtonPosition = (event) => {
+		const buttonsContainerElement = document.getElementById(`floating-buttons-${chatId}-${message.id}`);
+		if (
+			!contentContainerElement?.contains(event.target) &&
+			!buttonsContainerElement?.contains(event.target)
+		) {
+			closeFloatingButtons();
+			return;
+		}
+
+		setTimeout(async () => {
+			await tick();
+
+			if (!contentContainerElement?.contains(event.target)) return;
+
+			let selection = window.getSelection();
+
+			if (selection.toString().trim().length > 0) {
+				const range = selection.getRangeAt(0);
+				const rect = range.getBoundingClientRect();
+
+				const parentRect = contentContainerElement.getBoundingClientRect();
+
+				const top = rect.bottom - parentRect.top;
+				const left = rect.left - parentRect.left;
+
+				if (buttonsContainerElement) {
+					buttonsContainerElement.style.display = 'block';
+
+					const spaceOnRight = parentRect.width - left;
+					let halfScreenWidth = false ? window.innerWidth / 2 : window.innerWidth / 3;
+
+					if (spaceOnRight < halfScreenWidth) {
+						const right = parentRect.right - rect.right;
+						buttonsContainerElement.style.right = `${right}px`;
+						buttonsContainerElement.style.left = 'auto';
+					} else {
+						buttonsContainerElement.style.left = `${left}px`;
+						buttonsContainerElement.style.right = 'auto';
+					}
+					buttonsContainerElement.style.top = `${top + 5}px`;
+				}
+			} else {
+				closeFloatingButtons();
+			}
+		}, 0);
+	};
+
+	const closeFloatingButtons = () => {
+		const buttonsContainerElement = document.getElementById(`floating-buttons-${chatId}-${message.id}`);
+		if (buttonsContainerElement) {
+			buttonsContainerElement.style.display = 'none';
+		}
+	};
+
+	const keydownHandler = (e) => {
+		if (e.key === 'Escape') {
+			closeFloatingButtons();
+		}
+	};
+
 	onMount(() => {
 		// console.log('UserMessage mounted');
+		if ($selectionModeEnabled) {
+			contentContainerElement?.addEventListener('mouseup', updateButtonPosition);
+			document.addEventListener('mouseup', updateButtonPosition);
+			document.addEventListener('keydown', keydownHandler);
+		}
 	});
+
+	$: if ($selectionModeEnabled && contentContainerElement) {
+		contentContainerElement.addEventListener('mouseup', updateButtonPosition);
+		document.addEventListener('mouseup', updateButtonPosition);
+		document.addEventListener('keydown', keydownHandler);
+	} else if (contentContainerElement) {
+		contentContainerElement.removeEventListener('mouseup', updateButtonPosition);
+		document.removeEventListener('mouseup', updateButtonPosition);
+		document.removeEventListener('keydown', keydownHandler);
+	}
+
+    const saveCurrentSelection = () => {
+        const container = document.getElementById(`message-${message.id}`);
+        if (!container) return;
+        const selection = window.getSelection();
+        if (!selection || selection.rangeCount === 0) return;
+        const range = selection.getRangeAt(0);
+        if (!container.contains(range.commonAncestorContainer)) return;
+
+        const text = selection.toString();
+        if (!text.trim()) return;
+
+        const mark = document.createElement('mark');
+        mark.className = 'selection-highlight';
+        mark.textContent = text;
+
+        range.deleteContents();
+        range.insertNode(mark);
+        selection.removeAllRanges();
+
+        savedSelections.update((arr) => [
+            ...arr,
+            { chatId: $chatIdStore, messageId: message.id, role: 'user', text }
+        ]);
+    };
 </script>
 
 <DeleteConfirmDialog
@@ -337,7 +439,7 @@
 					</div>
 				</div>
 			{:else if message.content !== ''}
-				<div class="w-full">
+			<div class="w-full relative">
 					<div class="flex {($settings?.chatBubble ?? true) ? 'justify-end pb-1' : 'w-full'}">
 						<div
 							class="rounded-3xl {($settings?.chatBubble ?? true)
@@ -347,15 +449,34 @@
 								: ' w-full'}"
 						>
 							{#if message.content}
-								<Markdown
+								<div bind:this={contentContainerElement}>
+									<Markdown
 									id={`${chatId}-${message.id}`}
 									content={message.content}
 									{editCodeBlock}
 									{topPadding}
 								/>
+								</div>
 							{/if}
 						</div>
 					</div>
+
+				{#if $selectionModeEnabled}
+					<div
+						id={`floating-buttons-${chatId}-${message.id}`}
+						class="absolute rounded-lg mt-1 text-xs z-9999"
+						style="display: none"
+					>
+						<div class="flex flex-row gap-0.5 shrink-0 p-1 bg-white dark:bg-gray-850 dark:text-gray-100 text-medium rounded-lg shadow-xl">
+							<button
+								class="px-2 py-0.5 hover:bg-gray-50 dark:hover:bg-gray-800 rounded-sm min-w-fit"
+								on:click={saveCurrentSelection}
+							>
+								{$i18n.t('Save')}
+							</button>
+						</div>
+					</div>
+				{/if}
 				</div>
 			{/if}
 

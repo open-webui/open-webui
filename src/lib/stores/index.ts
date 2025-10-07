@@ -90,6 +90,36 @@ export const currentChatPage = writable(1);
 export const isLastActiveTab = writable(true);
 export const playingNotificationSound = writable(false);
 
+// Selection/Recording Mode (UI-only)
+export const selectionModeEnabled = writable(false);
+export const savedSelections: Writable<
+	{ chatId: string; messageId: string; role: 'user' | 'assistant'; text: string }[]
+> = writable([]);
+export const selectionForceInput = writable(false);
+
+// Persist selections to localStorage per chat
+if (typeof window !== 'undefined') {
+  savedSelections.subscribe((items) => {
+    try {
+      const byChat = items.reduce((acc, item) => {
+        (acc[item.chatId] = acc[item.chatId] || []).push(item);
+        return acc;
+      }, {} as Record<string, { chatId: string; messageId: string; role: 'user' | 'assistant'; text: string }[]>);
+      localStorage.setItem('saved-selections', JSON.stringify(byChat));
+    } catch {}
+  });
+
+  // restore on load for current chat if possible
+  chatId.subscribe((id) => {
+    try {
+      const persisted = JSON.parse(localStorage.getItem('saved-selections') ?? '{}');
+      if (id && persisted[id]) {
+        savedSelections.set(persisted[id]);
+      }
+    } catch {}
+  });
+}
+
 export type Model = OpenAIModel | OllamaModel;
 
 type BaseModel = {

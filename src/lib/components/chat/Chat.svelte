@@ -14,7 +14,7 @@
 	import type { i18n as i18nType } from 'i18next';
 	import { WEBUI_BASE_URL } from '$lib/constants';
 
-	import {
+import {
 		chatId,
 		chats,
 		config,
@@ -35,8 +35,11 @@
 		showOverview,
 		chatTitle,
 		showArtifacts,
-		tools,
-		toolServers
+	tools,
+	toolServers,
+	selectionModeEnabled,
+	savedSelections,
+	selectionForceInput
 	} from '$lib/stores';
 	import {
 		convertMessagesToHistory,
@@ -87,6 +90,21 @@ import { getAndUpdateUserLocation, getUserSettings } from '$lib/apis/users';
 	import ChatControls from './ChatControls.svelte';
 	import EventConfirmDialog from '../common/ConfirmDialog.svelte';
 	import Placeholder from './Placeholder.svelte';
+import SelectionInput from './SelectionInput.svelte';
+let selectionSwitchAfterResponse = false;
+let lastMessageIdAtDone: string | null = null;
+$: {
+    if (
+        selectionSwitchAfterResponse &&
+        history?.currentId &&
+        history.currentId !== lastMessageIdAtDone &&
+        history.messages[history.currentId]?.done === true
+    ) {
+        selectionForceInput.set(false);
+        selectionSwitchAfterResponse = false;
+        lastMessageIdAtDone = null;
+    }
+}
 	import NotificationToast from '../NotificationToast.svelte';
 	import Spinner from '../common/Spinner.svelte';
 	import { fade } from 'svelte/transition';
@@ -924,6 +942,15 @@ const initNewChat = async () => {
 
 				autoScroll = true;
 				await tick();
+
+				// Restore saved selections for this chat
+				try {
+					const persisted = JSON.parse(localStorage.getItem('saved-selections') ?? '{}');
+					const items = persisted[$chatId] ?? [];
+					if (items.length > 0) {
+						savedSelections.set(items);
+					}
+				} catch {}
 
 				if (history.currentId) {
 					for (const message of Object.values(history.messages)) {
@@ -2265,7 +2292,9 @@ Key guidelines:
 								</div>
 							</div>
 
-							<div class=" pb-2">
+						<div class=" pb-2">
+							<!-- Start/Done buttons moved into MessageInput bar -->
+                            {#if ((!$selectionModeEnabled || $selectionForceInput) && Object.keys(history?.messages ?? {}).length === 0)}
 								<MessageInput
 									{history}
 									{taskIds}
@@ -2317,6 +2346,92 @@ Key guidelines:
 										}
 									}}
 								/>
+                            {:else if $selectionModeEnabled && !$selectionForceInput}
+                                <SelectionInput
+                                    mode="done"
+                                    instruction={$i18n.t('Selection mode active: Select problematic text in the chat. Click Save by the selection. When done, press Done to submit.')}
+                                    onPrimary={() => {
+                                        const selections = get(savedSelections);
+                                        console.log('Submitting selections', selections);
+                                        selectionModeEnabled.set(false);
+                                        selectionForceInput.set(true);
+                                        selectionSwitchAfterResponse = true;
+                                        lastMessageIdAtDone = history?.currentId ?? null;
+                                    }}
+                                    {history}
+                                    {createMessagePair}
+                                    {stopResponse}
+                                    {selectedModels}
+                                    {atSelectedModel}
+                                />
+                            {:else if !$selectionForceInput}
+                                <SelectionInput
+                                    mode="start"
+                                    instruction={$i18n.t('Select problematic text in the chat and save your selection.')}
+                                    onPrimary={() => {
+                                        selectionForceInput.set(false);
+                                        selectionModeEnabled.set(true);
+                                    }}
+                                    {history}
+                                    {createMessagePair}
+                                    {stopResponse}
+                                    {selectedModels}
+                                    {atSelectedModel}
+                                />
+                            {:else}
+                                <!-- Force re-show original input right after Done -->
+                                <MessageInput
+                                    {history}
+                                    {taskIds}
+                                    {selectedModels}
+                                    bind:files
+                                    bind:prompt
+                                    bind:autoScroll
+                                    bind:selectedToolIds
+                                    bind:selectedFilterIds
+                                    bind:imageGenerationEnabled
+                                    bind:codeInterpreterEnabled
+                                    bind:webSearchEnabled
+                                    bind:atSelectedModel
+                                    toolServers={$toolServers}
+                                    transparentBackground={$settings?.backgroundImageUrl ?? false}
+                                    {stopResponse}
+                                    {createMessagePair}
+                                    onChange={(input) => {
+                                        if (!$temporaryChatEnabled) {
+                                            if (input.prompt !== null) {
+                                                localStorage.setItem(
+                                                    `chat-input${$chatId ? `-${$chatId}` : ''}`,
+                                                    JSON.stringify(input)
+                                                );
+                                            } else {
+                                                localStorage.removeItem(`chat-input${$chatId ? `-${$chatId}` : ''}`);
+                                            }
+                                        }
+                                    }}
+                                    on:upload={async (e) => {
+                                        const { type, data } = e.detail;
+
+                                        if (type === 'web') {
+                                            await uploadWeb(data);
+                                        } else if (type === 'youtube') {
+                                            await uploadYoutubeTranscription(data);
+                                        } else if (type === 'google-drive') {
+                                            await uploadGoogleDriveFile(data);
+                                        }
+                                    }}
+                                    on:submit={async (e) => {
+                                        if (e.detail || files.length > 0) {
+                                            await tick();
+                                            submitPrompt(
+                                                ($settings?.richTextInput ?? true)
+                                                    ? e.detail.replaceAll('\n\n', '\n')
+                                                    : e.detail
+                                            );
+                                        }
+                                    }}
+                                />
+							{/if}
 
 								<div
 									class="absolute bottom-1 text-xs text-gray-500 text-center line-clamp-1 right-0 left-0"
