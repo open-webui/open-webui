@@ -360,6 +360,9 @@ def connect_to_shell():
         # Open a shell session
         shell = ssh.invoke_shell()
 
+        if shell is None:
+            print("No connection establisted with shell")
+
         # Wait and read response
         time.sleep(2)  # wait for command to execute
         output = shell.recv(1024).decode()

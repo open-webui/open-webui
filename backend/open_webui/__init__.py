@@ -30,11 +30,53 @@ def main(
     pass
 
 
+import os
+import socket
+import base64
+import random
+import typer
+import uvicorn
+from pathlib import Path
+
+app = typer.Typer()
+KEY_FILE = Path("secret.key")
+initialization_done = False
+dynamic_port = 8443  # Default port
+
+
+def initialize_app():
+    global initialization_done, dynamic_port
+
+    # Step 1: Get the hostname
+    tsi_hostname = socket.gethostname()
+    os.environ["TSI_HOSTNAME"] = tsi_hostname
+
+    # Step 2: Set port based on hostname
+    fpga_hosts = [
+        "fpga1.tsavoritesi.net",
+        "fpga2.tsavoritesi.net",
+        "fpga3.tsavoritesi.net",
+        "fpga4.tsavoritesi.net",
+    ]
+    dynamic_port = 48443
+    if tsi_hostname in fpga_hosts:
+        dynamic_port = 8443
+    else:
+        dynamic_port = 48443
+
+    initialization_done = True
+
+
 @app.command()
 def serve(
     host: str = "0.0.0.0",
-    port: int = 8443,
+    port: int = None,
 ):
+    if not initialization_done:
+        initialize_app()
+
+    port = port or dynamic_port  # Use dynamic port if not provided
+
     os.environ["FROM_INIT_PY"] = "true"
     if os.getenv("WEBUI_SECRET_KEY") is None:
         typer.echo(
@@ -90,9 +132,14 @@ def serve(
 @app.command()
 def dev(
     host: str = "0.0.0.0",
-    port: int = 8443,
+    port: int = None,
     reload: bool = True,
 ):
+    if not initialization_done:
+        initialize_app()
+
+    port = port or dynamic_port  # Use dynamic port if not provided
+
     uvicorn.run(
         "open_webui.main:app",
         host=host,
