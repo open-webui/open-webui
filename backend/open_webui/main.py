@@ -1933,10 +1933,17 @@ if len(app.state.config.TOOL_SERVER_CONNECTIONS) > 0:
                     "oauth_client_info", ""
                 )
 
-                oauth_client_info = decrypt_data(oauth_client_info)
-                app.state.oauth_client_manager.add_client(
-                    f"mcp:{server_id}", OAuthClientInformationFull(**oauth_client_info)
-                )
+                try:
+                    oauth_client_info = decrypt_data(oauth_client_info)
+                    app.state.oauth_client_manager.add_client(
+                        f"mcp:{server_id}",
+                        OAuthClientInformationFull(**oauth_client_info),
+                    )
+                except Exception as e:
+                    log.error(
+                        f"Error adding OAuth client for MCP tool server {server_id}: {e}"
+                    )
+                    pass
 
 try:
     if REDIS_URL:
