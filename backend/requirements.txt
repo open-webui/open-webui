@@ -29,14 +29,6 @@ peewee-migrate==1.12.2
 pycrdt==0.12.25
 redis
 
-pymongo
-
-psycopg2-binary==2.9.10
-pgvector==0.4.1
-
-PyMySQL==1.1.1
-boto3==1.40.5
-
 APScheduler==3.10.4
 RestrictedPython==8.0
 
@@ -59,21 +51,11 @@ fake-useragent==2.2.0
 chromadb==1.1.0
 opensearch-py==2.8.0
 
-pymilvus==2.6.2
-qdrant-client==1.14.3
-playwright==1.49.1 # Caution: version must match docker-compose.playwright.yaml
-elasticsearch==9.1.0
-pinecone==6.0.2
-oracledb==3.2.0
-
-av==14.0.1 # Caution: Set due to FATAL FIPS SELFTEST FAILURE, see discussion https://github.com/open-webui/open-webui/discussions/15720
 transformers
 sentence-transformers==5.1.1
 accelerate
 pyarrow==20.0.0 # fix: pin pyarrow version to 20 for rpi compatibility #15897
 einops==0.8.1 
-
-colbert-ai==0.2.21
 
 ftfy==6.2.3
 pypdf==6.0.0
@@ -116,17 +98,36 @@ google-api-python-client
 google-auth-httplib2
 google-auth-oauthlib
 
-## Tests
-docker~=7.1.0
-pytest~=8.4.1
-pytest-docker~=3.1.1
-
 googleapis-common-protos==1.70.0
 google-cloud-storage==2.19.0
 
 azure-identity==1.25.0
 azure-storage-blob==12.24.1
 
+
+pymongo
+psycopg2-binary==2.9.10
+pgvector==0.4.1
+
+PyMySQL==1.1.1
+boto3==1.40.5
+
+pymilvus==2.6.2
+qdrant-client==1.14.3
+playwright==1.49.1 # Caution: version must match docker-compose.playwright.yaml
+elasticsearch==9.1.0
+pinecone==6.0.2
+oracledb==3.2.0
+
+av==14.0.1 # Caution: Set due to FATAL FIPS SELFTEST FAILURE, see discussion https://github.com/open-webui/open-webui/discussions/15720
+
+colbert-ai==0.2.21
+
+
+## Tests
+docker~=7.1.0
+pytest~=8.4.1
+pytest-docker~=3.1.1
 
 ## LDAP
 ldap3==2.9.1
