@@ -115,7 +115,7 @@ async def get_all_feedbacks(
                 user=UserResponse(**user_dict) if user_dict else None,
             )
         )
-     return feedback_list
+    return feedback_list
 
 
 @router.delete("/feedbacks/all")
