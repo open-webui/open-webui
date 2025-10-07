@@ -1176,11 +1176,12 @@ async def process_chat_payload(request, form_data, user, metadata, model):
     files = form_data.pop("files", None)
 
     prompt = get_last_user_message(form_data["messages"])
-    urls = []
-    if prompt and len(prompt or "") < 500 and (not files or len(files) == 0):
-        urls = extract_urls(prompt)
+    # TODO: re-enable URL extraction from prompt
+    # urls = []
+    # if prompt and len(prompt or "") < 500 and (not files or len(files) == 0):
+    #     urls = extract_urls(prompt)
 
-    if files or urls:
+    if files:
         if not files:
             files = []
 
@@ -1194,7 +1195,7 @@ async def process_chat_payload(request, form_data, user, metadata, model):
                         files = [f for f in files if f.get("id", None) != folder_id]
                         files = [*files, *folder.data["files"]]
 
-        files = [*files, *[{"type": "url", "url": url, "name": url} for url in urls]]
+        # files = [*files, *[{"type": "url", "url": url, "name": url} for url in urls]]
         # Remove duplicate files based on their content
         files = list({json.dumps(f, sort_keys=True): f for f in files}.values())
 
