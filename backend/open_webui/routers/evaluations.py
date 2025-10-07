@@ -71,51 +71,51 @@ class FeedbackUserResponse(FeedbackResponse):
     user: Optional[UserResponse] = None
 
 
-@router.get("/feedbacks/all", response_model=list[FeedbackUserResponse] | list[str])  
-async def get_all_feedbacks(  
-    ids_only: bool = False,  
-    count: Optional[int] = None,  
-    user=Depends(get_admin_user)  
-):  
-    feedbacks_with_users = Feedbacks.get_all_feedbacks_with_users()  
-      
-    # If only IDs are requested, return them early  
-    if ids_only:  
-        feedback_ids = [feedback_data["feedback"].id for feedback_data in feedbacks_with_users]  
-        if count:  
-            return feedback_ids[:count]  
-        return feedback_ids  
-      
-    # Apply count limit if specified  
-    if count:  
-        feedbacks_with_users = feedbacks_with_users[:count]  
-  
-    feedback_list = []  
-    for feedback_data in feedbacks_with_users:    
-        feedback_obj = feedback_data["feedback"]    
-        user_obj = feedback_data["user"]    
-           
-        # Convert SQLAlchemy objects to dictionaries with ALL required fields    
-        feedback_dict = {  
-            c.name: getattr(feedback_obj, c.name)  
-            for c in feedback_obj.__table__.columns  
-        }    
-            
-        user_dict = None    
-        if user_obj:  
-            user_dict = (  
-                {c.name: getattr(user_obj, c.name) for c in user_obj.__table__.columns}  
-                if user_obj  
-                else None  
-            )  
-            
-        feedback_list.append(    
-            FeedbackUserResponse(    
-                **feedback_dict,    
-                user=UserResponse(**user_dict) if user_dict else None,    
-            )    
-        )    
-    return feedback_list
+@router.get("/feedbacks/all", response_model=list[FeedbackUserResponse] | list[str])
+async def get_all_feedbacks(
+    ids_only: bool = False, count: Optional[int] = None, user=Depends(get_admin_user)
+):
+    feedbacks_with_users = Feedbacks.get_all_feedbacks_with_users()
+
+    # If only IDs are requested, return them early
+    if ids_only:
+        feedback_ids = [
+            feedback_data["feedback"].id for feedback_data in feedbacks_with_users
+        ]
+        if count:
+            return feedback_ids[:count]
+        return feedback_ids
+
+    # Apply count limit if specified
+    if count:
+        feedbacks_with_users = feedbacks_with_users[:count]
+
+    feedback_list = []
+    for feedback_data in feedbacks_with_users:
+        feedback_obj = feedback_data["feedback"]
+        user_obj = feedback_data["user"]
+
+        # Convert SQLAlchemy objects to dictionaries with ALL required fields
+        feedback_dict = {
+            c.name: getattr(feedback_obj, c.name)
+            for c in feedback_obj.__table__.columns
+        }
+
+        user_dict = None
+        if user_obj:
+            user_dict = (
+                {c.name: getattr(user_obj, c.name) for c in user_obj.__table__.columns}
+                if user_obj
+                else None
+            )
+
+        feedback_list.append(
+            FeedbackUserResponse(
+                **feedback_dict,
+                user=UserResponse(**user_dict) if user_dict else None,
+            )
+        )
+     return feedback_list
 
 
 @router.delete("/feedbacks/all")
