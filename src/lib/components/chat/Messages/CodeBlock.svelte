@@ -332,7 +332,7 @@
 				console.error('Failed to render mermaid diagram:', error);
 				const errorMsg = error instanceof Error ? error.message : String(error);
 				toast.error($i18n.t('Failed to render diagram') + `: ${errorMsg}`);
-				mermaidHtml = null; 
+				mermaidHtml = null;
 			}
 		} else if (
 			(lang === 'vega' || lang === 'vega-lite') &&
