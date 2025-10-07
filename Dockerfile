@@ -116,9 +116,22 @@ RUN if [ "$USE_OLLAMA" = "true" ]; then \
     apt-get update && \
     # Install pandoc and netcat
     apt-get install -y --no-install-recommends git build-essential pandoc netcat-openbsd curl && \
+    # Node.js runtime for server-side KaTeX rendering
+    apt-get install -y --no-install-recommends nodejs && \
+    if [ ! -e /usr/bin/node ] && [ -e /usr/bin/nodejs ]; then ln -s /usr/bin/nodejs /usr/bin/node; fi && \
     apt-get install -y --no-install-recommends gcc python3-dev && \
     # for RAG OCR
     apt-get install -y --no-install-recommends ffmpeg libsm6 libxext6 && \
+    # WeasyPrint runtime dependencies (Cairo/Pango/GDK-PixBuf/FFI/fonts)
+    apt-get install -y --no-install-recommends \
+        libcairo2 \
+        libpango-1.0-0 \
+        libpangocairo-1.0-0 \
+        libpangoft2-1.0-0 \
+        libgdk-pixbuf-2.0-0 \
+        libffi-dev \
+        fonts-dejavu-core \
+        fonts-liberation && \
     # install helper tools
     apt-get install -y --no-install-recommends curl jq && \
     # install ollama
@@ -129,9 +142,22 @@ RUN if [ "$USE_OLLAMA" = "true" ]; then \
     apt-get update && \
     # Install pandoc, netcat and gcc
     apt-get install -y --no-install-recommends git build-essential pandoc gcc netcat-openbsd curl jq && \
+    # Node.js runtime for server-side KaTeX rendering
+    apt-get install -y --no-install-recommends nodejs && \
+    if [ ! -e /usr/bin/node ] && [ -e /usr/bin/nodejs ]; then ln -s /usr/bin/nodejs /usr/bin/node; fi && \
     apt-get install -y --no-install-recommends gcc python3-dev && \
     # for RAG OCR
     apt-get install -y --no-install-recommends ffmpeg libsm6 libxext6 && \
+    # WeasyPrint runtime dependencies (Cairo/Pango/GDK-PixBuf/FFI/fonts)
+    apt-get install -y --no-install-recommends \
+        libcairo2 \
+        libpango-1.0-0 \
+        libpangocairo-1.0-0 \
+        libpangoft2-1.0-0 \
+        libgdk-pixbuf-2.0-0 \
+        libffi-dev \
+        fonts-dejavu-core \
+        fonts-liberation && \
     # cleanup
     rm -rf /var/lib/apt/lists/*; \
     fi
@@ -168,6 +194,10 @@ RUN pip3 install uv && \
 COPY --chown=$UID:$GID --from=build /app/build /app/build
 COPY --chown=$UID:$GID --from=build /app/CHANGELOG.md /app/CHANGELOG.md
 COPY --chown=$UID:$GID --from=build /app/package.json /app/package.json
+# Copy KaTeX runtime and assets for server-side rendering and local CSS/fonts
+COPY --chown=$UID:$GID --from=build /app/node_modules/katex /app/node_modules/katex
+# Place KaTeX dist (CSS + fonts) where STATIC_DIR points: backend/open_webui/static/katex
+COPY --chown=$UID:$GID --from=build /app/node_modules/katex/dist /app/backend/open_webui/static/katex
 
 # copy backend files
 COPY --chown=$UID:$GID ./backend .
