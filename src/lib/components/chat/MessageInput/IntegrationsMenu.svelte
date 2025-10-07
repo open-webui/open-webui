@@ -338,7 +338,7 @@
 									let serverId = parts?.at(-1) ?? toolId;
 
 									const authUrl = getOAuthClientAuthorizationUrl(serverId, 'mcp');
-									window.open(authUrl, '_blank', 'noopener');
+									window.open(authUrl, '_self', 'noopener');
 								} else {
 									tools[toolId].enabled = !tools[toolId].enabled;
 
