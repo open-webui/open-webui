@@ -189,6 +189,22 @@ def get_rf(
                     log.error(f"CrossEncoder: {e}")
                     raise Exception(ERROR_MESSAGES.DEFAULT("CrossEncoder error"))
 
+                # Safely adjust pad_token_id if missing as some models do not have this in config
+                try:
+                    model_cfg = getattr(rf, "model", None)
+                    if model_cfg and hasattr(model_cfg, "config"):
+                        cfg = model_cfg.config
+                        if getattr(cfg, "pad_token_id", None) is None:
+                            # Fallback to eos_token_id when available
+                            eos = getattr(cfg, "eos_token_id", None)
+                            if eos is not None:
+                                cfg.pad_token_id = eos
+                                log.debug(f"Missing pad_token_id detected; set to eos_token_id={eos}")
+                            else:
+                                log.warning("Neither pad_token_id nor eos_token_id present in model config")
+                except Exception as e2:
+                    log.warning(f"Failed to adjust pad_token_id on CrossEncoder: {e2}")
+
     return rf
 
 
