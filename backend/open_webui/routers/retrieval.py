@@ -201,9 +201,13 @@ def get_rf(
                             eos = getattr(cfg, "eos_token_id", None)
                             if eos is not None:
                                 cfg.pad_token_id = eos
-                                log.debug(f"Missing pad_token_id detected; set to eos_token_id={eos}")
+                                log.debug(
+                                    f"Missing pad_token_id detected; set to eos_token_id={eos}"
+                                )
                             else:
-                                log.warning("Neither pad_token_id nor eos_token_id present in model config")
+                                log.warning(
+                                    "Neither pad_token_id nor eos_token_id present in model config"
+                                )
                 except Exception as e2:
                     log.warning(f"Failed to adjust pad_token_id on CrossEncoder: {e2}")
 
@@ -2062,6 +2066,12 @@ async def process_web_search(
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=ERROR_MESSAGES.WEB_SEARCH_ERROR(e),
+        )
+
+    if len(urls) == 0:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=ERROR_MESSAGES.DEFAULT("No results found from web search"),
         )
 
     try:
