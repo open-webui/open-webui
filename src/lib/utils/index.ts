@@ -68,12 +68,26 @@ export const replaceTokens = (content, sourceIds, char, user) => {
 		});
 
 		if (Array.isArray(sourceIds)) {
-			sourceIds.forEach((sourceId, idx) => {
-				const regex = new RegExp(`\\[${idx + 1}\\]`, 'g');
-				segment = segment.replace(
-					regex,
-					`<source_id data="${idx + 1}" title="${encodeURIComponent(sourceId)}" />`
-				);
+			// Match both [1], [2], and [1,2,3] forms
+			const multiRefRegex = /\[([\d,\s]+)\]/g;
+			segment = segment.replace(multiRefRegex, (match, group) => {
+				// Extract numbers like 1,2,3
+				const indices = group
+					.split(',')
+					.map((n) => parseInt(n.trim(), 10))
+					.filter((n) => !isNaN(n));
+
+				// Replace each index with a <source_id> tag
+				const sources = indices
+					.map((idx) => {
+						const sourceId = sourceIds[idx - 1];
+						return sourceId
+							? `<source_id data="${idx}" title="${encodeURIComponent(sourceId)}" />`
+							: match;
+					})
+					.join('');
+
+				return sources;
 			});
 		}
 
