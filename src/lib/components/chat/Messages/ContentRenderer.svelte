@@ -13,7 +13,8 @@ import {
     showEmbeds,
     showOverview,
     selectionModeEnabled,
-    savedSelections
+    savedSelections,
+    latestAssistantMessageId
 } from '$lib/stores';
 	import FloatingButtons from '../ContentRenderer/FloatingButtons.svelte';
 	import { createMessagesList } from '$lib/utils';
@@ -179,6 +180,12 @@ const saveCurrentSelection = () => {
 
     selection.removeAllRanges();
 
+    // Record selection only if this is the most recent assistant message
+    if ($latestAssistantMessageId && $latestAssistantMessageId !== messageId) {
+        closeFloatingButtons();
+        return;
+    }
+
     // Record selection
     savedSelections.update((arr) => [
         ...arr,
@@ -187,6 +194,56 @@ const saveCurrentSelection = () => {
 
     closeFloatingButtons();
 };
+
+// Re-apply saved selections on mount and when data changes
+function wrapFirstMatch(root, target) {
+    if (!root || !target || target.length === 0) return false;
+    const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT, null);
+    let node;
+    while ((node = walker.nextNode())) {
+        // Skip inside existing marks
+        if (node.parentElement && node.parentElement.closest('mark.selection-highlight')) continue;
+        const idx = node.data.indexOf(target);
+        if (idx !== -1) {
+            const mark = document.createElement('mark');
+            mark.className = 'selection-highlight';
+            mark.textContent = target;
+
+            const before = node.splitText(idx);
+            before.splitText(target.length);
+            before.parentNode.replaceChild(mark, before);
+            return true;
+        }
+    }
+    return false;
+}
+
+function applySavedSelections() {
+    const root = contentContainerElement;
+    if (!root) return;
+    const chat = chatId || $chatIdStore;
+    const items = ($savedSelections || []).filter(
+        (s) => s.chatId === chat && s.messageId === messageId && s.role === 'assistant'
+    );
+    // Avoid double-highlighting: only add marks for texts not yet wrapped
+    for (const sel of items) {
+        // If a mark with exact text exists, skip
+        const already = Array.from(root.querySelectorAll('mark.selection-highlight'))
+            .some((m) => m.textContent === sel.text);
+        if (!already) {
+            wrapFirstMatch(root, sel.text);
+        }
+    }
+}
+
+onMount(async () => {
+    await tick();
+    applySavedSelections();
+});
+
+$: ($savedSelections, messageId, contentContainerElement, () => {
+    applySavedSelections();
+})();
 </script>
 
 <div bind:this={contentContainerElement}>

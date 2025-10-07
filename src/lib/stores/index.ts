@@ -97,6 +97,10 @@ export const savedSelections: Writable<
 > = writable([]);
 export const selectionForceInput = writable(false);
 
+// Track latest message IDs for restricting selection to most recent prompt/response
+export const latestAssistantMessageId: Writable<string | null> = writable(null);
+export const latestUserMessageId: Writable<string | null> = writable(null);
+
 // Persist selections to localStorage per chat
 if (typeof window !== 'undefined') {
   savedSelections.subscribe((items) => {

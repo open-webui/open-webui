@@ -3,7 +3,7 @@
 	import { toast } from 'svelte-sonner';
 	import { tick, getContext, onMount } from 'svelte';
 
-import { models, settings, selectionModeEnabled, savedSelections, chatId as chatIdStore } from '$lib/stores';
+import { models, settings, selectionModeEnabled, savedSelections, chatId as chatIdStore, latestUserMessageId } from '$lib/stores';
 	import { user as _user } from '$lib/stores';
 	import { copyToClipboard as _copyToClipboard, formatDate } from '$lib/utils';
 	import { WEBUI_BASE_URL } from '$lib/constants';
@@ -203,11 +203,61 @@ import { models, settings, selectionModeEnabled, savedSelections, chatId as chat
         range.insertNode(mark);
         selection.removeAllRanges();
 
+        // Only allow selection on the latest user message
+        if ($latestUserMessageId && $latestUserMessageId !== message.id) {
+            closeFloatingButtons();
+            return;
+        }
+
         savedSelections.update((arr) => [
             ...arr,
             { chatId: $chatIdStore, messageId: message.id, role: 'user', text }
         ]);
     };
+
+    // Re-apply saved selections to user message content
+    function wrapFirstMatch(root, target) {
+        if (!root || !target || target.length === 0) return false;
+        const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT, null);
+        let node;
+        while ((node = walker.nextNode())) {
+            if (node.parentElement && node.parentElement.closest('mark.selection-highlight')) continue;
+            const idx = node.data.indexOf(target);
+            if (idx !== -1) {
+                const mark = document.createElement('mark');
+                mark.className = 'selection-highlight';
+                mark.textContent = target;
+
+                const before = node.splitText(idx);
+                before.splitText(target.length);
+                before.parentNode.replaceChild(mark, before);
+                return true;
+            }
+        }
+        return false;
+    }
+
+    function applySavedSelections() {
+        const root = contentContainerElement;
+        if (!root) return;
+        const items = ($savedSelections || []).filter(
+            (s) => s.chatId === $chatIdStore && s.messageId === message.id && s.role === 'user'
+        );
+        for (const sel of items) {
+            const already = Array.from(root.querySelectorAll('mark.selection-highlight'))
+                .some((m) => m.textContent === sel.text);
+            if (!already) wrapFirstMatch(root, sel.text);
+        }
+    }
+
+    onMount(async () => {
+        await tick();
+        applySavedSelections();
+    });
+
+    $: ($savedSelections, message?.id, contentContainerElement, () => {
+        applySavedSelections();
+    })
 </script>
 
 <DeleteConfirmDialog
@@ -450,7 +500,7 @@ import { models, settings, selectionModeEnabled, savedSelections, chatId as chat
 						>
 							{#if message.content}
 								<div bind:this={contentContainerElement}>
-									<Markdown
+								<Markdown
 									id={`${chatId}-${message.id}`}
 									content={message.content}
 									{editCodeBlock}

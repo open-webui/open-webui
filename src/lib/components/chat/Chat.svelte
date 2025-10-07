@@ -15,32 +15,34 @@
 	import { WEBUI_BASE_URL } from '$lib/constants';
 
 import {
-		chatId,
-		chats,
-		config,
-		type Model,
-		models,
-		tags as allTags,
-		settings,
-		showSidebar,
-		WEBUI_NAME,
-		banners,
-		user,
-		socket,
-		showControls,
-		showCallOverlay,
-		currentChatPage,
-		temporaryChatEnabled,
-		mobile,
-		showOverview,
-		chatTitle,
-		showArtifacts,
-	tools,
-	toolServers,
-	selectionModeEnabled,
-	savedSelections,
-	selectionForceInput
-	} from '$lib/stores';
+        chatId,
+        chats,
+        config,
+        type Model,
+        models,
+        tags as allTags,
+        settings,
+        showSidebar,
+        WEBUI_NAME,
+        banners,
+        user,
+        socket,
+        showControls,
+        showCallOverlay,
+        currentChatPage,
+        temporaryChatEnabled,
+        mobile,
+        showOverview,
+        chatTitle,
+        showArtifacts,
+    tools,
+    toolServers,
+    selectionModeEnabled,
+    savedSelections,
+    selectionForceInput,
+	latestAssistantMessageId,
+	latestUserMessageId
+    } from '$lib/stores';
 	import {
 		convertMessagesToHistory,
 		copyToClipboard,
@@ -103,6 +105,118 @@ $: {
         selectionForceInput.set(false);
         selectionSwitchAfterResponse = false;
         lastMessageIdAtDone = null;
+        // Clear persistent force flag after new assistant message completes
+        try {
+            const chat = $chatId;
+            if (chat) localStorage.removeItem(`selection-force-input-${chat}`);
+        } catch {}
+    }
+}
+
+// Single source of truth for which bottom panel to show
+type PanelState = 'message' | 'selection';
+let inputPanelState: PanelState = 'message';
+let messageInputResetKey = 0;
+
+function setInputPanelState(state: PanelState) {
+    inputPanelState = state;
+    try {
+        const chat = get(chatId);
+        if (chat) localStorage.setItem(`input-panel-state-${chat}`, state);
+    } catch {}
+}
+
+// Load persisted panel state on chat change
+$: {
+    const chat = $chatId;
+    if (chat) {
+        try {
+            const persisted = localStorage.getItem(`input-panel-state-${chat}`) as PanelState | null;
+            if (persisted === 'message' || persisted === 'selection') {
+                inputPanelState = persisted;
+            } else {
+                inputPanelState = 'message';
+            }
+        } catch {
+            inputPanelState = 'message';
+        }
+    }
+}
+
+// When a new assistant response finishes loading, switch to selection panel
+let lastAssistantPanelSwitchId: string | null = null;
+$: {
+    if (history?.currentId) {
+        const msg = history.messages[history.currentId];
+        if (
+            msg?.role === 'assistant' &&
+            msg?.done === true &&
+            history.currentId !== lastAssistantPanelSwitchId
+        ) {
+            setInputPanelState('selection');
+            lastAssistantPanelSwitchId = history.currentId;
+        }
+    }
+}
+
+// Track latest user and assistant message IDs for selection restriction
+$: {
+    if (history?.currentId) {
+        const msg = history.messages[history.currentId];
+        if (msg?.role === 'assistant') {
+            latestAssistantMessageId.set(history.currentId);
+        } else if (msg?.role === 'user') {
+            latestUserMessageId.set(history.currentId);
+        }
+    }
+}
+
+// On navigation/back or chat load: prefer MessageInput only if the latest user and assistant both have saved selections
+$: {
+    const chat = $chatId;
+    if (chat) {
+        try {
+            // Respect persisted force-input after Done until next response or restart selection
+            const persistedForce = localStorage.getItem(`selection-force-input-${chat}`) === '1';
+				if (persistedForce) {
+					selectionModeEnabled.set(false);
+					selectionForceInput.set(true);
+				} else {
+					const items = get(savedSelections);
+					const latestUserId = $latestUserMessageId;
+					const latestAssistId = $latestAssistantMessageId;
+					const hasUserSel = latestUserId
+						? items.some((s) => s.chatId === chat && s.messageId === latestUserId && s.role === 'user')
+						: false;
+					const hasAssistSel = latestAssistId
+						? items.some((s) => s.chatId === chat && s.messageId === latestAssistId && s.role === 'assistant')
+						: false;
+					if (hasUserSel && hasAssistSel) {
+						selectionModeEnabled.set(false);
+						selectionForceInput.set(true);
+					} else {
+						// Do not force input; allow SelectionInput to appear on next response
+						selectionForceInput.set(false);
+					}
+				}
+        } catch {}
+    }
+}
+
+// If both latest prompt and response have saved selections, default to MessageInput
+$: {
+    const chat = $chatId;
+    const latestUserId = $latestUserMessageId;
+    const latestAssistId = $latestAssistantMessageId;
+    if (chat && latestUserId && latestAssistId) {
+        const items = get(savedSelections);
+        const hasUserSel = items.some((s) => s.chatId === chat && s.messageId === latestUserId && s.role === 'user');
+        const hasAssistSel = items.some((s) => s.chatId === chat && s.messageId === latestAssistId && s.role === 'assistant');
+        if (hasUserSel && hasAssistSel) {
+            selectionModeEnabled.set(false);
+            selectionForceInput.set(true);
+            selectionSwitchAfterResponse = false;
+        }
     }
 }
 	import NotificationToast from '../NotificationToast.svelte';
@@ -2294,8 +2408,9 @@ Key guidelines:
 
 						<div class=" pb-2">
 							<!-- Start/Done buttons moved into MessageInput bar -->
-                            {#if ((!$selectionModeEnabled || $selectionForceInput) && Object.keys(history?.messages ?? {}).length === 0)}
-								<MessageInput
+                            {#if inputPanelState === 'message'}
+                                {#key messageInputResetKey}
+                                <MessageInput
 									{history}
 									{taskIds}
 									{selectedModels}
@@ -2335,7 +2450,7 @@ Key guidelines:
 											await uploadGoogleDriveFile(data);
 										}
 									}}
-									on:submit={async (e) => {
+                                    on:submit={async (e) => {
 										if (e.detail || files.length > 0) {
 											await tick();
 											submitPrompt(
@@ -2343,94 +2458,54 @@ Key guidelines:
 													? e.detail.replaceAll('\n\n', '\n')
 													: e.detail
 											);
+                                            // Clear input box after submit
+                                            prompt = '';
+                                            try {
+                                                const id = $chatId;
+                                                if (id) localStorage.removeItem(`chat-input-${id}`);
+                                                else localStorage.removeItem('chat-input');
+                                            } catch {}
+                                            // Force re-mount of MessageInput to clear internal editor state immediately
+                                            messageInputResetKey += 1;
 										}
 									}}
 								/>
-                            {:else if $selectionModeEnabled && !$selectionForceInput}
-                                <SelectionInput
-                                    mode="done"
-                                    instruction={$i18n.t('Selection mode active: Select problematic text in the chat. Click Save by the selection. When done, press Done to submit.')}
-                                    onPrimary={() => {
-                                        const selections = get(savedSelections);
-                                        console.log('Submitting selections', selections);
-                                        selectionModeEnabled.set(false);
-                                        selectionForceInput.set(true);
-                                        selectionSwitchAfterResponse = true;
-                                        lastMessageIdAtDone = history?.currentId ?? null;
-                                    }}
-                                    {history}
-                                    {createMessagePair}
-                                    {stopResponse}
-                                    {selectedModels}
-                                    {atSelectedModel}
-                                />
-                            {:else if !$selectionForceInput}
-                                <SelectionInput
-                                    mode="start"
-                                    instruction={$i18n.t('Select problematic text in the chat and save your selection.')}
-                                    onPrimary={() => {
-                                        selectionForceInput.set(false);
-                                        selectionModeEnabled.set(true);
-                                    }}
-                                    {history}
-                                    {createMessagePair}
-                                    {stopResponse}
-                                    {selectedModels}
-                                    {atSelectedModel}
-                                />
-                            {:else}
-                                <!-- Force re-show original input right after Done -->
-                                <MessageInput
-                                    {history}
-                                    {taskIds}
-                                    {selectedModels}
-                                    bind:files
-                                    bind:prompt
-                                    bind:autoScroll
-                                    bind:selectedToolIds
-                                    bind:selectedFilterIds
-                                    bind:imageGenerationEnabled
-                                    bind:codeInterpreterEnabled
-                                    bind:webSearchEnabled
-                                    bind:atSelectedModel
-                                    toolServers={$toolServers}
-                                    transparentBackground={$settings?.backgroundImageUrl ?? false}
-                                    {stopResponse}
-                                    {createMessagePair}
-                                    onChange={(input) => {
-                                        if (!$temporaryChatEnabled) {
-                                            if (input.prompt !== null) {
-                                                localStorage.setItem(
-                                                    `chat-input${$chatId ? `-${$chatId}` : ''}`,
-                                                    JSON.stringify(input)
-                                                );
-                                            } else {
-                                                localStorage.removeItem(`chat-input${$chatId ? `-${$chatId}` : ''}`);
-                                            }
-                                        }
-                                    }}
-                                    on:upload={async (e) => {
-                                        const { type, data } = e.detail;
-
-                                        if (type === 'web') {
-                                            await uploadWeb(data);
-                                        } else if (type === 'youtube') {
-                                            await uploadYoutubeTranscription(data);
-                                        } else if (type === 'google-drive') {
-                                            await uploadGoogleDriveFile(data);
-                                        }
-                                    }}
-                                    on:submit={async (e) => {
-                                        if (e.detail || files.length > 0) {
-                                            await tick();
-                                            submitPrompt(
-                                                ($settings?.richTextInput ?? true)
-                                                    ? e.detail.replaceAll('\n\n', '\n')
-                                                    : e.detail
-                                            );
-                                        }
-                                    }}
-                                />
+                                {/key}
+                            {:else if inputPanelState === 'selection'}
+                                {#if !$selectionModeEnabled}
+                                    <!-- Start selection prompt -->
+                                    <SelectionInput
+                                        mode="start"
+                                        instruction={$i18n.t('Select problematic text in the chat and save your selection.')}
+                                        onPrimary={() => {
+                                            selectionModeEnabled.set(true);
+                                        }}
+                                        {history}
+                                        {createMessagePair}
+                                        {stopResponse}
+                                        {selectedModels}
+                                        {atSelectedModel}
+                                    />
+                                {:else}
+                                    <!-- Selection active: show Done -->
+                                    <SelectionInput
+                                        mode="done"
+                                        instruction={$i18n.t('Selection mode active: Select problematic text in the chat. Click Save by the selection. When done, press Done to submit.')}
+                                        onPrimary={() => {
+                                            const selections = get(savedSelections);
+                                            console.log('Submitting selections', selections);
+                                            selectionModeEnabled.set(false);
+                                            setInputPanelState('message');
+                                            selectionSwitchAfterResponse = true;
+                                            lastMessageIdAtDone = history?.currentId ?? null;
+                                        }}
+                                        {history}
+                                        {createMessagePair}
+                                        {stopResponse}
+                                        {selectedModels}
+                                        {atSelectedModel}
+                                    />
+                                {/if}
 							{/if}
 
 								<div
