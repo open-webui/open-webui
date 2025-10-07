@@ -212,6 +212,11 @@ ENABLE_FORWARD_USER_INFO_HEADERS = (
     os.environ.get("ENABLE_FORWARD_USER_INFO_HEADERS", "False").lower() == "true"
 )
 
+# Experimental feature, may be removed in future
+ENABLE_STAR_SESSIONS_MIDDLEWARE = (
+    os.environ.get("ENABLE_STAR_SESSIONS_MIDDLEWARE", "False").lower() == "true"
+)
+
 ####################################
 # WEBUI_BUILD_HASH
 ####################################

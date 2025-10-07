@@ -450,6 +450,7 @@ from open_webui.env import (
     ENABLE_OTEL,
     EXTERNAL_PWA_MANIFEST_URL,
     AIOHTTP_CLIENT_SESSION_SSL,
+    ENABLE_STAR_SESSIONS_MIDDLEWARE,
 )
 
 
@@ -1946,7 +1947,7 @@ if len(app.state.config.TOOL_SERVER_CONNECTIONS) > 0:
                     pass
 
 try:
-    if REDIS_URL:
+    if ENABLE_STAR_SESSIONS_MIDDLEWARE:
         redis_session_store = RedisStore(
             url=REDIS_URL,
             prefix=(f"{REDIS_KEY_PREFIX}:session:" if REDIS_KEY_PREFIX else "session:"),
