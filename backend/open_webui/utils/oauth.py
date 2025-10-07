@@ -138,14 +138,26 @@ def encrypt_data(data) -> str:
         raise
 
 
-def decrypt_data(data: str):
-    """Decrypt data from storage"""
+def decrypt_data(data: str) -> Optional[dict]:
+    """
+    Decrypt data from storage.
+    Returns None if decryption fails instead of raising an exception.
+    """
     try:
+        if not data:
+            return None
         decrypted = FERNET.decrypt(data.encode()).decode()
         return json.loads(decrypted)
     except Exception as e:
-        log.error(f"Error decrypting data: {e}")
-        raise
+        log.error(f"Failed to decrypt data: {e}")
+        log.error(
+            "This may indicate a WEBUI_SECRET_KEY mismatch. "
+            "The data was encrypted with a different key than the one currently configured."
+        )
+        log.error(
+            "To fix: restore the original WEBUI_SECRET_KEY or reconfigure the affected OAuth connection via the UI."
+        )
+        return None
 
 
 def is_in_blocked_groups(group_name: str, groups: list) -> bool:

@@ -1933,10 +1933,24 @@ if len(app.state.config.TOOL_SERVER_CONNECTIONS) > 0:
                     "oauth_client_info", ""
                 )
 
-                oauth_client_info = decrypt_data(oauth_client_info)
-                app.state.oauth_client_manager.add_client(
-                    f"mcp:{server_id}", OAuthClientInformationFull(**oauth_client_info)
-                )
+                try:
+                    oauth_client_info = decrypt_data(oauth_client_info)
+                    if oauth_client_info is None:
+                        log.error(
+                            f"Failed to decrypt OAuth credentials for MCP tool server '{server_id}'. "
+                            f"The connection will be disabled. "
+                            f"This may be due to a changed WEBUI_SECRET_KEY."
+                        )
+                        continue
+                    app.state.oauth_client_manager.add_client(
+                        f"mcp:{server_id}", OAuthClientInformationFull(**oauth_client_info)
+                    )
+                except Exception as e:
+                    log.error(
+                        f"Failed to initialize OAuth client for MCP tool server '{server_id}': {e}. "
+                        f"The connection will be disabled."
+                    )
+                    continue
 
 try:
     if REDIS_URL:

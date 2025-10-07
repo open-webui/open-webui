@@ -183,6 +183,13 @@ async def set_tool_servers_config(
                     )
                     oauth_client_info = decrypt_data(oauth_client_info)
 
+                    if oauth_client_info is None:
+                        log.debug(
+                            f"Failed to decrypt OAuth credentials for MCP tool server '{server_id}'. "
+                            f"Skipping connection."
+                        )
+                        continue
+
                     await request.app.state.oauth_client_manager.add_client(
                         f"{server_type}:{server_id}",
                         OAuthClientInformationFull(**oauth_client_info),
