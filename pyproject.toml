@@ -6,17 +6,16 @@ authors = [
 ]
 license = { file = "LICENSE" }
 dependencies = [
-    "fastapi==0.115.7",
-    "uvicorn[standard]==0.35.0",
-    "pydantic==2.11.7",
+    "fastapi==0.118.0",
+    "uvicorn[standard]==0.37.0",
+    "pydantic==2.11.9",
     "python-multipart==0.0.20",
     "itsdangerous==2.2.0",
 
     "python-socketio==5.13.0",
     "python-jose==3.4.0",
-    "passlib[bcrypt]==1.7.4",
     "cryptography",
-    "bcrypt==4.3.0",
+    "bcrypt==5.0.0",
     "argon2-cffi==25.1.0",
     "PyJWT[crypto]==2.10.1",
     "authlib==1.6.3",
@@ -76,7 +75,7 @@ dependencies = [
     "python-pptx==1.0.2",
     "unstructured==0.16.17",
     "nltk==3.9.1",
-    "Markdown==3.8.2",
+    "Markdown==3.9",
     "pypandoc==1.15",
     "pandas==2.2.3",
     "openpyxl==3.1.5",
@@ -96,8 +95,8 @@ dependencies = [
     "onnxruntime==1.20.1",
     "faster-whisper==1.1.1",
 
-    "black==25.1.0",
-    "youtube-transcript-api==1.1.0",
+    "black==25.9.0",
+    "youtube-transcript-api==1.2.2",
     "pytube==15.0.0",
 
     "pydub",
@@ -107,8 +106,6 @@ dependencies = [
     "google-auth-httplib2",
     "google-auth-oauthlib",
 
-    
-
     "googleapis-common-protos==1.70.0",
     "google-cloud-storage==2.19.0",
 
@@ -116,12 +113,6 @@ dependencies = [
     "azure-storage-blob==12.24.1",
 
     "ldap3==2.9.1",
-
-    "firecrawl-py==1.12.0",
-    "tencentcloud-sdk-python==3.0.1336",
-    
-    "oracledb>=3.2.0",
-
 ]
 readme = "README.md"
 requires-python = ">= 3.11, < 3.13.0a1"
@@ -155,11 +146,14 @@ all = [
     "elasticsearch==9.1.0",
 
     "qdrant-client==1.14.3",
-    "pymilvus==2.5.0",
+    "pymilvus==2.6.2",
     "pinecone==6.0.2",
     "oracledb==3.2.0",
 
     "colbert-ai==0.2.21",
+
+    "firecrawl-py==1.12.0",
+    "tencentcloud-sdk-python==3.0.1336",
 ]
 
 [project.scripts]

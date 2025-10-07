@@ -143,7 +143,7 @@
 	};
 
 	const onChange = async () => {
-		$socket?.emit('channel-events', {
+		$socket?.emit('events:channel', {
 			channel_id: channel.id,
 			message_id: threadId,
 			data: {
@@ -156,11 +156,11 @@
 	};
 
 	onMount(() => {
-		$socket?.on('channel-events', channelEventHandler);
+		$socket?.on('events:channel', channelEventHandler);
 	});
 
 	onDestroy(() => {
-		$socket?.off('channel-events', channelEventHandler);
+		$socket?.off('events:channel', channelEventHandler);
 	});
 </script>
 
