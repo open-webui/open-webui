@@ -349,10 +349,17 @@ class OAuthClientManager:
 
         if (
             oauth_client_info.server_metadata
-            and "S256"
-            in oauth_client_info.server_metadata.code_challenge_methods_supported
+            and oauth_client_info.server_metadata.code_challenge_methods_supported
         ):
-            kwargs["code_challenge_method"] = "S256"
+            if (
+                isinstance(
+                    oauth_client_info.server_metadata.code_challenge_methods_supported,
+                    list,
+                )
+                and "S256"
+                in oauth_client_info.server_metadata.code_challenge_methods_supported
+            ):
+                kwargs["code_challenge_method"] = "S256"
 
         self.clients[client_id] = {
             "client": self.oauth.register(**kwargs),
