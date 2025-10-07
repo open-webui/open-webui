@@ -1490,8 +1490,6 @@ async def process_chat_response(
                     TASKS.FOLLOW_UP_GENERATION in tasks
                     and tasks[TASKS.FOLLOW_UP_GENERATION]
                 ):
-
-                    print("Generating follow ups")
                     res = await generate_follow_ups(
                         request,
                         {
@@ -1505,10 +1503,12 @@ async def process_chat_response(
 
                     if res and isinstance(res, dict):
                         if len(res.get("choices", [])) == 1:
-                            follow_ups_string = (
-                                res.get("choices", [])[0]
-                                .get("message", {})
-                                .get("content", "")
+                            response_message = res.get("choices", [])[0].get(
+                                "message", {}
+                            )
+
+                            follow_ups_string = response_message.get(
+                                "content", response_message.get("reasoning_content", "")
                             )
                         else:
                             follow_ups_string = ""
@@ -1568,13 +1568,16 @@ async def process_chat_response(
 
                             if res and isinstance(res, dict):
                                 if len(res.get("choices", [])) == 1:
-                                    title_string = (
-                                        res.get("choices", [])[0]
-                                        .get("message", {})
-                                        .get(
-                                            "content",
+                                    response_message = res.get("choices", [])[0].get(
+                                        "message", {}
+                                    )
+
+                                    title_string = response_message.get(
+                                        "content",
+                                        response_message.get(
+                                            "reasoning_content",
                                             message.get("content", user_message),
-                                        )
+                                        ),
                                     )
                                 else:
                                     title_string = ""
@@ -1628,10 +1631,13 @@ async def process_chat_response(
 
                         if res and isinstance(res, dict):
                             if len(res.get("choices", [])) == 1:
-                                tags_string = (
-                                    res.get("choices", [])[0]
-                                    .get("message", {})
-                                    .get("content", "")
+                                response_message = res.get("choices", [])[0].get(
+                                    "message", {}
+                                )
+
+                                tags_string = response_message.get(
+                                    "content",
+                                    response_message.get("reasoning_content", ""),
                                 )
                             else:
                                 tags_string = ""
