@@ -2634,6 +2634,7 @@ Respond to the user query using the provided context, incorporating inline citat
 - **Only include inline citations using [id] (e.g., [1], [2]) when the <source> tag includes an id attribute.**
 - Do not cite if the <source> tag does not contain an id attribute.
 - Do not use XML tags in your response.
+- Do NOT put multiple source ids into the same bracket (do NOT do this: [1, 2], instead use multiple brackets like so: [1][2].
 - Ensure citations are concise and directly related to the information provided.
 
 ### Example of Citation:
