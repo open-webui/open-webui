@@ -121,6 +121,7 @@
 	dir={$settings.chatDirection}
 	id="message-{message.id}"
 >
+
 	{#if !($settings?.chatBubble ?? true)}
 		<div class={`shrink-0 ltr:mr-3 rtl:ml-3 mt-1`}>
 			<ProfileImage
@@ -339,13 +340,17 @@
 			{:else if message.content !== ''}
 				<div class="w-full">
 					<div class="flex {($settings?.chatBubble ?? true) ? 'justify-end pb-1' : 'w-full'}">
+					
 						<div
-							class="rounded-3xl {($settings?.chatBubble ?? true)
+						
+							class="rounded-3xl text-[1.3em]  {($settings?.chatBubble ?? true)
 								? `max-w-[90%] px-4 py-1.5  bg-gray-50 dark:bg-gray-850 ${
 										message.files ? 'rounded-tr-lg' : ''
 									}`
 								: ' w-full'}"
 						>
+					
+						
 							{#if message.content}
 								<Markdown
 									id={`${chatId}-${message.id}`}
