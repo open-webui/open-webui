@@ -284,7 +284,7 @@
 			</div>
 		{:else}
 			<div
-				class="py-1 flex dark:text-gray-100 bg-gray-50 dark:bg-gray-800 border border-gray-100 dark:border-gray-850 w-72 rounded-full shadow-xl"
+				class="py-1 flex dark:text-gray-100 bg-white dark:bg-gray-850 border border-gray-100 dark:border-gray-800 w-72 rounded-full shadow-xl"
 			>
 				<input
 					type="text"
@@ -299,7 +299,7 @@
 					}}
 				/>
 
-				<div class="ml-1 mr-2">
+				<div class="ml-1 mr-1">
 					<button
 						class="{floatingInputValue !== ''
 							? 'bg-black text-white hover:bg-gray-900 dark:bg-white dark:text-black dark:hover:bg-gray-100 '
@@ -336,10 +336,11 @@
 				</div>
 			</div>
 
-			<div
-				class="bg-white dark:bg-gray-850 dark:text-gray-100 text-medium rounded-3xl px-3.5 py-3 w-full"
-			>
-				<div class=" max-h-80 overflow-y-auto w-full markdown-prose-xs" id="response-container">
+			<div class="bg-white dark:bg-gray-850 dark:text-gray-100 text-medium rounded-4xl w-full">
+				<div
+					class=" max-h-80 overflow-y-auto w-full markdown-prose-xs px-3.5 py-3"
+					id="response-container"
+				>
 					{#if !responseContent || responseContent?.trim() === ''}
 						<Skeleton size="sm" />
 					{:else}
