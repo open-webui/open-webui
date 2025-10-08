@@ -1284,6 +1284,10 @@ app.include_router(
 app.include_router(utils.router, prefix="/api/v1/utils", tags=["utils"])
 app.include_router(moderation.router, prefix="/api/v1/moderation", tags=["moderation"])
 
+# Import and include selections router
+from open_webui.routers import selections
+app.include_router(selections.router, prefix="/api/v1", tags=["selections"])
+
 # SCIM 2.0 API for identity management
 if SCIM_ENABLED:
     app.include_router(scim.router, prefix="/api/v1/scim/v2", tags=["scim"])

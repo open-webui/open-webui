@@ -4,6 +4,7 @@
 	import { tick, getContext, onMount } from 'svelte';
 
 import { models, settings, selectionModeEnabled, savedSelections, chatId as chatIdStore, latestUserMessageId } from '$lib/stores';
+import { selectionSyncService } from '$lib/services/selectionSync';
 	import { user as _user } from '$lib/stores';
 	import { copyToClipboard as _copyToClipboard, formatDate } from '$lib/utils';
 	import { WEBUI_BASE_URL } from '$lib/constants';
@@ -184,7 +185,7 @@ import { models, settings, selectionModeEnabled, savedSelections, chatId as chat
 		document.removeEventListener('keydown', keydownHandler);
 	}
 
-    const saveCurrentSelection = () => {
+    const saveCurrentSelection = async () => {
         console.log('UserMessage saveCurrentSelection called');
         const container = document.getElementById(`message-${message.id}`);
         if (!container) {
@@ -234,6 +235,33 @@ import { models, settings, selectionModeEnabled, savedSelections, chatId as chat
             console.log('Updated user selections array:', newArr);
             return newArr;
         });
+
+        // Also save to backend via sync service
+        const currentChatId = $chatIdStore;
+        console.log('Attempting to save user selection to backend:', { currentChatId, messageId: message.id, text: text.substring(0, 50) + '...' });
+        
+        if (!currentChatId) {
+            console.warn('No chatId available for backend sync, user selection saved to localStorage only');
+            return;
+        }
+        
+        try {
+            await selectionSyncService.saveSelection({
+                chat_id: currentChatId,
+                message_id: message.id,
+                role: 'user',
+                selected_text: text,
+                context: undefined,
+                meta: {
+                    timestamp: Date.now(),
+                    source: 'user_selection'
+                }
+            });
+            console.log('User selection saved to backend via sync service');
+        } catch (error) {
+            console.warn('Failed to save user selection to backend:', error);
+            // Selection is still saved in localStorage, so user doesn't lose data
+        }
     };
 
     // Re-apply saved selections to user message content

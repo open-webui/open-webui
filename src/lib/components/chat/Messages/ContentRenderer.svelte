@@ -3,19 +3,20 @@
 	const i18n = getContext('i18n');
 
 	import Markdown from './Markdown.svelte';
-import {
-    artifactCode,
+	import {
+		artifactCode,
     chatId as chatIdStore,
-    mobile,
-    settings,
-    showArtifacts,
-    showControls,
-    showEmbeds,
+		mobile,
+		settings,
+		showArtifacts,
+		showControls,
+		showEmbeds,
     showOverview,
     selectionModeEnabled,
     savedSelections,
     latestAssistantMessageId
-} from '$lib/stores';
+	} from '$lib/stores';
+import { selectionSyncService } from '$lib/services/selectionSync';
 	import FloatingButtons from '../ContentRenderer/FloatingButtons.svelte';
 	import { createMessagesList } from '$lib/utils';
 
@@ -126,9 +127,9 @@ let listenersAttached = false;
 
 const attachListeners = () => {
     if (listenersAttached) return;
-    contentContainerElement?.addEventListener('mouseup', updateButtonPosition);
-    document.addEventListener('mouseup', updateButtonPosition);
-    document.addEventListener('keydown', keydownHandler);
+			contentContainerElement?.addEventListener('mouseup', updateButtonPosition);
+			document.addEventListener('mouseup', updateButtonPosition);
+			document.addEventListener('keydown', keydownHandler);
     listenersAttached = true;
 };
 
@@ -143,10 +144,10 @@ const detachListeners = () => {
 onMount(() => {
     if (floatingButtons || $selectionModeEnabled) {
         attachListeners();
-    }
-});
+		}
+	});
 
-onDestroy(() => {
+	onDestroy(() => {
     detachListeners();
 });
 
@@ -160,7 +161,7 @@ $: {
     }
 }
 
-const saveCurrentSelection = () => {
+const saveCurrentSelection = async () => {
     console.log('saveCurrentSelection called');
     const selection = window.getSelection();
     if (!selection || selection.rangeCount === 0) {
@@ -209,6 +210,33 @@ const saveCurrentSelection = () => {
         console.log('Updated selections array:', newArr);
         return newArr;
     });
+
+    // Also save to backend via sync service
+    const currentChatId = chatId || $chatIdStore;
+    console.log('Attempting to save selection to backend:', { currentChatId, messageId, text: text.substring(0, 50) + '...' });
+    
+    if (!currentChatId) {
+        console.warn('No chatId available for backend sync, selection saved to localStorage only');
+        return;
+    }
+    
+    try {
+        await selectionSyncService.saveSelection({
+            chat_id: currentChatId,
+            message_id: messageId,
+            role: 'assistant',
+            selected_text: text,
+            context: undefined,
+            meta: {
+                timestamp: Date.now(),
+                source: 'user_selection'
+            }
+        });
+        console.log('Selection saved to backend via sync service');
+    } catch (error) {
+        console.warn('Failed to save selection to backend:', error);
+        // Selection is still saved in localStorage, so user doesn't lose data
+    }
 
     closeFloatingButtons();
 };
@@ -344,9 +372,9 @@ $: if ($savedSelections && messageId && contentContainerElement) {
 			const { lang, text: code } = token;
 
 			if (
-                ($settings?.detectArtifacts ?? true) &&
+				($settings?.detectArtifacts ?? true) &&
 				(['html', 'svg'].includes(lang) || (lang === 'xml' && code.includes('svg'))) &&
-                !$mobile &&
+				!$mobile &&
                 $chatIdStore
 			) {
 				showArtifacts.set(true);
@@ -380,21 +408,21 @@ $: if ($savedSelections && messageId && contentContainerElement) {
         </div>
     </div>
 {:else if floatingButtons && model}
-    <FloatingButtons
-        bind:this={floatingButtonsElement}
-        {id}
-        {messageId}
-        actions={$settings?.floatingActionButtons ?? []}
-        model={(selectedModels ?? []).includes(model?.id)
-            ? model?.id
-            : (selectedModels ?? []).length > 0
-                ? selectedModels.at(0)
-                : model?.id}
-        messages={createMessagesList(history, messageId)}
-        onAdd={({ modelId, parentId, messages }) => {
-            console.log(modelId, parentId, messages);
-            onAddMessages({ modelId, parentId, messages });
-            closeFloatingButtons();
-        }}
-    />
+	<FloatingButtons
+		bind:this={floatingButtonsElement}
+		{id}
+		{messageId}
+		actions={$settings?.floatingActionButtons ?? []}
+		model={(selectedModels ?? []).includes(model?.id)
+			? model?.id
+			: (selectedModels ?? []).length > 0
+				? selectedModels.at(0)
+				: model?.id}
+		messages={createMessagesList(history, messageId)}
+		onAdd={({ modelId, parentId, messages }) => {
+			console.log(modelId, parentId, messages);
+			onAddMessages({ modelId, parentId, messages });
+			closeFloatingButtons();
+		}}
+	/>
 {/if}

@@ -182,37 +182,55 @@ if (typeof window !== 'undefined') {
     }
   });
 
-  // Handle chatId changes - only clear if switching to a different chat
-  // This is the second attempt at restoration, after chatId becomes available
-  let previousChatId: string | null = null;
-  chatId.subscribe((id) => {
-    if (isInitializing) return; // Don't handle during initialization
-    
-    try {
-      const persisted = JSON.parse(localStorage.getItem('saved-selections') ?? '{}');
-      console.log('chatId changed from', previousChatId, 'to', id, 'persisted data:', persisted);
-      
-      if (id && persisted[id]) {
-        // Perfect case: we have a chatId and data for it - restore immediately
-        console.log('Restoring selections for chat:', id, persisted[id]);
-        savedSelections.set(persisted[id]);
-      } else if (previousChatId === null && id && Object.keys(persisted).length > 0) {
-        // First time chatId is set and we have persisted data - this is likely the initial load case
-        // This handles the race condition where chatId wasn't available during initial load
-        console.log('First chatId set with persisted data - checking for matches');
-        // Don't clear, let the data be restored if it matches
-      } else if (previousChatId !== null && id !== previousChatId && Object.keys(persisted).length > 0) {
-        // Only clear if we're actually switching chats AND there's data in localStorage
-        console.log('Switching chats - clearing selections for new chat:', id);
-        savedSelections.set([]);
-      } else if (previousChatId !== null && id !== previousChatId) {
-        console.log('Switching chats but no localStorage data - keeping current selections');
-      }
-      previousChatId = id;
-    } catch (error) {
-      console.error('Error handling chatId change:', error);
-    }
-  });
+      // Handle chatId changes - only clear if switching to a different chat
+      // This is the second attempt at restoration, after chatId becomes available
+      let previousChatId: string | null = null;
+      chatId.subscribe(async (id) => {
+        if (isInitializing) return; // Don't handle during initialization
+        
+        try {
+          const persisted = JSON.parse(localStorage.getItem('saved-selections') ?? '{}');
+          console.log('chatId changed from', previousChatId, 'to', id, 'persisted data:', persisted);
+          
+          if (id && persisted[id]) {
+            // Perfect case: we have a chatId and data for it - restore immediately
+            console.log('Restoring selections for chat:', id, persisted[id]);
+            savedSelections.set(persisted[id]);
+            
+            // Also sync these selections to backend if they haven't been synced yet
+            try {
+              const { selectionSyncService } = await import('$lib/services/selectionSync');
+              await selectionSyncService.syncToBackend();
+              console.log('Synced existing selections to backend after chatId became available');
+            } catch (error) {
+              console.warn('Failed to sync existing selections to backend:', error);
+            }
+          } else if (previousChatId === null && id && Object.keys(persisted).length > 0) {
+            // First time chatId is set and we have persisted data - this is likely the initial load case
+            // This handles the race condition where chatId wasn't available during initial load
+            console.log('First chatId set with persisted data - checking for matches');
+            // Don't clear, let the data be restored if it matches
+            
+            // Try to sync any existing selections to backend
+            try {
+              const { selectionSyncService } = await import('$lib/services/selectionSync');
+              await selectionSyncService.syncToBackend();
+              console.log('Synced existing selections to backend after initial chatId load');
+            } catch (error) {
+              console.warn('Failed to sync existing selections to backend:', error);
+            }
+          } else if (previousChatId !== null && id !== previousChatId && Object.keys(persisted).length > 0) {
+            // Only clear if we're actually switching chats AND there's data in localStorage
+            console.log('Switching chats - clearing selections for new chat:', id);
+            savedSelections.set([]);
+          } else if (previousChatId !== null && id !== previousChatId) {
+            console.log('Switching chats but no localStorage data - keeping current selections');
+          }
+          previousChatId = id;
+        } catch (error) {
+          console.error('Error handling chatId change:', error);
+        }
+      });
 }
 
 export type Model = OpenAIModel | OllamaModel;
