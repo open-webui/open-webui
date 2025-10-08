@@ -8,6 +8,7 @@
 	});
 
 	import { onMount, tick, setContext, onDestroy } from 'svelte';
+	import { initFoundryConnection } from '$lib/index';
 	import {
 		config,
 		user,
@@ -483,6 +484,7 @@
 	};
 
 	onMount(async () => {
+		initFoundryConnection();
 		let touchstartY = 0;
 
 		function isNavOrDescendant(el) {
