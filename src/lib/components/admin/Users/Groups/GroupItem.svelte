@@ -92,14 +92,14 @@
 		showEdit = true;
 	}}
 >
-	<div class="flex items-center gap-1.5 w-full font-medium">
+	<div class="flex items-center gap-1.5 w-288 font-medium text-left">
 		<div>
 			<UserCircleSolid className="size-4" />
 		</div>
 		{group.name}
 	</div>
 
-	<div class="flex items-center gap-1.5 w-full font-medium">
+	<div class="flex items-center gap-1.5 w-76 font-medium text-left">
 		{group.user_ids.length}
 
 		<div>
@@ -107,10 +107,10 @@
 		</div>
 	</div>
 
-	<div class="flex items-center gap-1.5 w-full font-medium">
+	<div class="flex items-center gap-1.5 w-144 font-medium text-left">
 		{dayjs(group.created_at * 1000).fromNow()}
 	</div>
-	<div class="flex items-center gap-1.5 w-full font-medium">
+	<div class="flex items-center gap-1.5 w-144 font-medium text-left">
 		{dayjs(group.last_active_at * 1000).fromNow()}
 	</div>
 	<!-- CREATED AT & LAST ACTIVE: src/lib/components/admin/Users/Groups.svelte -->

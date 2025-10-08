@@ -189,13 +189,13 @@
 		{:else}
 			<div>
 				<div class=" flex items-center gap-3 justify-between text-xs uppercase px-1 font-bold">
-					<div class="w-full">Group</div>
+					<div class="w-288">Group</div>
 
-					<div class="w-full">Users</div>
+					<div class="w-76">Users</div>
 
-					<div class="w-full">Last Active</div>
+					<div class="w-144">Last Active</div>
 
-					<div class="w-full">Created At</div>
+					<div class="w-144">Created At</div>
 					<div class="w-full">Actions</div>
 				</div>
 
