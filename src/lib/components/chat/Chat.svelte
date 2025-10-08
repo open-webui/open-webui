@@ -127,6 +127,7 @@ function setInputPanelState(state: PanelState) {
 }
 
 // Load persisted panel state on chat change
+let isInitialChatLoad = true;
 $: {
     const chat = $chatId;
     if (chat) {
@@ -137,16 +138,19 @@ $: {
             } else {
                 inputPanelState = 'message';
             }
+            // Mark that we've loaded the initial state for this chat
+            isInitialChatLoad = false;
         } catch {
             inputPanelState = 'message';
+            isInitialChatLoad = false;
         }
     }
 }
 
-// When a new assistant response finishes loading, switch to selection panel
+// When a new assistant response finishes loading, switch to selection panel and automatically start selection
 let lastAssistantPanelSwitchId: string | null = null;
 $: {
-    if (history?.currentId) {
+    if (history?.currentId && !isInitialChatLoad) {
         const msg = history.messages[history.currentId];
         if (
             msg?.role === 'assistant' &&
@@ -154,7 +158,14 @@ $: {
             history.currentId !== lastAssistantPanelSwitchId
         ) {
             setInputPanelState('selection');
+            // Automatically start selection mode when response finishes
+            selectionModeEnabled.set(true);
             lastAssistantPanelSwitchId = history.currentId;
+            // Clear any persisted force-input flag to allow selection mode
+            try {
+                const chat = $chatId;
+                if (chat) localStorage.removeItem(`selection-force-input-${chat}`);
+            } catch {}
         }
     }
 }
@@ -174,7 +185,7 @@ $: {
 // On navigation/back or chat load: prefer MessageInput only if the latest user and assistant both have saved selections
 $: {
     const chat = $chatId;
-    if (chat) {
+    if (chat && isInitialChatLoad) { // Only run during initial load, not on every change
         try {
             // Respect persisted force-input after Done until next response or restart selection
             const persistedForce = localStorage.getItem(`selection-force-input-${chat}`) === '1';
@@ -204,11 +215,12 @@ $: {
 }
 
 // If both latest prompt and response have saved selections, default to MessageInput
+// But only during initial load, not when new responses are being processed
 $: {
     const chat = $chatId;
     const latestUserId = $latestUserMessageId;
     const latestAssistId = $latestAssistantMessageId;
-    if (chat && latestUserId && latestAssistId) {
+    if (chat && latestUserId && latestAssistId && isInitialChatLoad) {
         const items = get(savedSelections);
         const hasUserSel = items.some((s) => s.chatId === chat && s.messageId === latestUserId && s.role === 'user');
         const hasAssistSel = items.some((s) => s.chatId === chat && s.messageId === latestAssistId && s.role === 'assistant');
@@ -2490,7 +2502,7 @@ Key guidelines:
                                     <!-- Selection active: show Done -->
                                     <SelectionInput
                                         mode="done"
-                                        instruction={$i18n.t('Selection mode active: Select problematic text in the chat. Click Save by the selection. When done, press Done to submit.')}
+                                        instruction={$i18n.t('Select problematic text in the chat and save your selection.')}
                                         onPrimary={() => {
                                             const selections = get(savedSelections);
                                             console.log('Submitting selections', selections);
