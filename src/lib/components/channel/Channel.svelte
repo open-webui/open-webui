@@ -14,20 +14,19 @@
 	import Drawer from '../common/Drawer.svelte';
 	import EllipsisVertical from '../icons/EllipsisVertical.svelte';
 	import Thread from './Thread.svelte';
-	import i18n from '$lib/i18n';
 
 	export let id = '';
 
 	let scrollEnd = true;
 	let messagesContainerElement = null;
-	let chatInputElement = null;
 
 	let top = false;
 
-	let channel = null;
-	let messages = null;
+let channel = null;
+let messages = null;
 
-	let replyToMessage = null;
+let channelDisplayName = '';
+
 	let threadId = null;
 
 	let typingUsers = [];
@@ -56,20 +55,32 @@
 			return null;
 		});
 
-		if (channel) {
-			messages = await getChannelMessages(localStorage.token, id, 0);
+	if (channel) {
+		messages = await getChannelMessages(localStorage.token, id, 0);
 
-			if (messages) {
-				scrollToBottom();
-
-				if (messages.length < 50) {
-					top = true;
-				}
-			}
+		const participants = channel?.meta?.direct?.participants ?? [];
+		if (channel?.type === 'direct') {
+			const otherParticipant = participants.find((participant) => participant.id !== $user?.id);
+			channelDisplayName = otherParticipant?.name ?? channel?.name ?? '';
 		} else {
-			goto('/');
+			channelDisplayName = channel?.name ?? '';
 		}
-	};
+
+		if (messages) {
+			scrollToBottom();
+
+			if (messages.length < 50) {
+				top = true;
+			}
+		}
+	} else {
+		goto('/');
+	}
+};
+
+$: if (!channel) {
+	channelDisplayName = '';
+}
 
 	const channelEventHandler = async (event) => {
 		if (event.channel_id === id) {
@@ -143,24 +154,20 @@
 			return;
 		}
 
-		const res = await sendMessage(localStorage.token, id, {
-			content: content,
-			data: data,
-			reply_to_id: replyToMessage?.id ?? null
-		}).catch((error) => {
-			toast.error(`${error}`);
-			return null;
-		});
+		const res = await sendMessage(localStorage.token, id, { content: content, data: data }).catch(
+			(error) => {
+				toast.error(`${error}`);
+				return null;
+			}
+		);
 
 		if (res) {
 			messagesContainerElement.scrollTop = messagesContainerElement.scrollHeight;
 		}
-
-		replyToMessage = null;
 	};
 
 	const onChange = async () => {
-		$socket?.emit('events:channel', {
+		$socket?.emit('channel-events', {
 			channel_id: id,
 			message_id: null,
 			data: {
@@ -180,7 +187,7 @@
 			chatId.set('');
 		}
 
-		$socket?.on('events:channel', channelEventHandler);
+		$socket?.on('channel-events', channelEventHandler);
 
 		mediaQuery = window.matchMedia('(min-width: 1024px)');
 
@@ -197,12 +204,12 @@
 	});
 
 	onDestroy(() => {
-		$socket?.off('events:channel', channelEventHandler);
+		$socket?.off('channel-events', channelEventHandler);
 	});
 </script>
 
 <svelte:head>
-	<title>#{channel?.name ?? 'Channel'} • Open WebUI</title>
+	<title>#{channelDisplayName || channel?.name || 'Channel'} • Open WebUI</title>
 </svelte:head>
 
 <div
@@ -228,14 +235,8 @@
 						{#key id}
 							<Messages
 								{channel}
-								{top}
 								{messages}
-								{replyToMessage}
-								onReply={async (message) => {
-									replyToMessage = message;
-									await tick();
-									chatInputElement?.focus();
-								}}
+								{top}
 								onThread={(id) => {
 									threadId = id;
 								}}
@@ -262,15 +263,9 @@
 			<div class=" pb-[1rem] px-2.5">
 				<MessageInput
 					id="root"
-					bind:chatInputElement
-					bind:replyToMessage
 					{typingUsers}
 					userSuggestions={true}
 					channelSuggestions={true}
-					disabled={!channel?.write_access}
-					placeholder={!channel?.write_access
-						? $i18n.t('You do not have permission to send messages in this channel.')
-						: $i18n.t('Type here...')}
 					{onChange}
 					onSubmit={submitHandler}
 					{scrollToBottom}

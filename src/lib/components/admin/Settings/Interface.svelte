@@ -520,7 +520,7 @@
 							</div>
 						{/if}
 
-						<div class="flex items-center justify-end space-x-2 mt-2">
+						<div class="flex items-center justify-start space-x-2 mt-2">
 							<input
 								id="prompt-suggestions-import-input"
 								type="file"
@@ -629,7 +629,7 @@
 			</div>
 		</div>
 
-		<div class="flex justify-end text-sm font-medium">
+		<div class="flex justify-start text-sm font-medium">
 			<button
 				class="px-3.5 py-1.5 text-sm font-medium bg-black hover:bg-gray-900 text-white dark:bg-white dark:text-black dark:hover:bg-gray-100 transition rounded-full"
 				type="submit"

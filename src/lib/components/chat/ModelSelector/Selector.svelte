@@ -90,26 +90,6 @@
 		}
 	);
 
-	const updateFuse = () => {
-		if (fuse) {
-			fuse.setCollection(
-				items.map((item) => {
-					const _item = {
-						...item,
-						modelName: item.model?.name,
-						tags: (item.model?.tags ?? []).map((tag) => tag.name).join(' '),
-						desc: item.model?.info?.meta?.description
-					};
-					return _item;
-				})
-			);
-		}
-	};
-
-	$: if (items) {
-		updateFuse();
-	}
-
 	$: filteredItems = (
 		searchValue
 			? fuse
@@ -306,11 +286,9 @@
 		}
 	};
 
-	const setOllamaVersion = async () => {
-		ollamaVersion = await getOllamaVersion(localStorage.token).catch((error) => false);
-	};
-
 	onMount(async () => {
+		ollamaVersion = await getOllamaVersion(localStorage.token).catch((error) => false);
+
 		if (items) {
 			tags = items
 				.filter((item) => !(item.model?.info?.meta?.hidden ?? false))
@@ -321,10 +299,6 @@
 			tags = Array.from(new Set(tags)).sort((a, b) => a.localeCompare(b));
 		}
 	});
-
-	$: if (show) {
-		setOllamaVersion();
-	}
 
 	const cancelModelPullHandler = async (model: string) => {
 		const { reader, abortController } = $MODEL_DOWNLOAD_POOL[model];
@@ -422,8 +396,10 @@
 						aria-label={$i18n.t('Search In Models')}
 						on:keydown={(e) => {
 							if (e.code === 'Enter' && filteredItems.length > 0) {
-								value = filteredItems[selectedModelIdx].value;
-								show = false;
+						const previousValue = value;
+						value = filteredItems[selectedModelIdx].value;
+						show = false;
+						dispatch('change', { value, previousValue });
 								return; // dont need to scroll on selection
 							} else if (e.code === 'ArrowDown') {
 								e.stopPropagation();
@@ -455,7 +431,7 @@
 						}}
 					>
 						<div
-							class="flex gap-1 w-fit text-center text-sm rounded-full bg-transparent px-1.5 whitespace-nowrap"
+							class="flex gap-1 w-fit text-center text-sm rounded-full bg-transparent px-1.5"
 							bind:this={tagsContainerElement}
 						>
 							{#if items.find((item) => item.model?.connection_type === 'local') || items.find((item) => item.model?.connection_type === 'external') || items.find((item) => item.model?.direct) || tags.length > 0}
@@ -520,20 +496,18 @@
 							{/if}
 
 							{#each tags as tag}
-								<Tooltip content={tag}>
-									<button
-										class="min-w-fit outline-none px-1.5 py-0.5 {selectedTag === tag
-											? ''
-											: 'text-gray-300 dark:text-gray-600 hover:text-gray-700 dark:hover:text-white'} transition capitalize"
-										aria-pressed={selectedTag === tag}
-										on:click={() => {
-											selectedConnectionType = '';
-											selectedTag = tag;
-										}}
-									>
-										{tag.length > 16 ? `${tag.slice(0, 16)}...` : tag}
-									</button>
-								</Tooltip>
+								<button
+									class="min-w-fit outline-none px-1.5 py-0.5 {selectedTag === tag
+										? ''
+										: 'text-gray-300 dark:text-gray-600 hover:text-gray-700 dark:hover:text-white'} transition capitalize"
+									aria-pressed={selectedTag === tag}
+									on:click={() => {
+										selectedConnectionType = '';
+										selectedTag = tag;
+									}}
+								>
+									{tag}
+								</button>
 							{/each}
 						</div>
 					</div>
@@ -550,10 +524,12 @@
 						{pinModelHandler}
 						{unloadModelHandler}
 						onClick={() => {
+							const previousValue = value;
 							value = item.value;
 							selectedModelIdx = index;
 
 							show = false;
+							dispatch('change', { value, previousValue });
 						}}
 					/>
 				{:else}

@@ -164,10 +164,7 @@ async def stop_task(redis, task_id: str):
         # Task successfully canceled
         return {"status": True, "message": f"Task {task_id} successfully stopped."}
 
-    if task.cancelled() or task.done():
-        return {"status": True, "message": f"Task {task_id} successfully cancelled."}
-
-    return {"status": True, "message": f"Cancellation requested for {task_id}."}
+    return {"status": False, "message": f"Failed to stop task {task_id}."}
 
 
 async def stop_item_tasks(redis: Redis, item_id: str):

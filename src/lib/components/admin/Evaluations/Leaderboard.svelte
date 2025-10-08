@@ -389,7 +389,7 @@
 				: ''}"
 		>
 			<thead class="text-xs text-gray-800 uppercase bg-transparent dark:text-gray-200">
-				<tr class=" border-b-[1.5px] border-gray-50 dark:border-gray-850">
+				<tr class=" border-b-2 border-gray-100 dark:border-gray-800">
 					<th
 						scope="col"
 						class="px-2.5 py-2 cursor-pointer select-none w-3"
@@ -439,7 +439,7 @@
 						class="px-2.5 py-2 text-right cursor-pointer select-none w-fit"
 						on:click={() => setSortKey('rating')}
 					>
-						<div class="flex gap-1.5 items-center justify-end">
+						<div class="flex gap-1.5 items-center justify-start">
 							{$i18n.t('Rating')}
 							{#if orderBy === 'rating'}
 								<span class="font-normal">
@@ -461,7 +461,7 @@
 						class="px-2.5 py-2 text-right cursor-pointer select-none w-5"
 						on:click={() => setSortKey('won')}
 					>
-						<div class="flex gap-1.5 items-center justify-end">
+						<div class="flex gap-1.5 items-center justify-start">
 							{$i18n.t('Won')}
 							{#if orderBy === 'won'}
 								<span class="font-normal">
@@ -483,7 +483,7 @@
 						class="px-2.5 py-2 text-right cursor-pointer select-none w-5"
 						on:click={() => setSortKey('lost')}
 					>
-						<div class="flex gap-1.5 items-center justify-end">
+						<div class="flex gap-1.5 items-center justify-start">
 							{$i18n.t('Lost')}
 							{#if orderBy === 'lost'}
 								<span class="font-normal">
@@ -564,7 +564,7 @@
 	{/if}
 </div>
 
-<div class=" text-gray-500 text-xs mt-1.5 w-full flex justify-end">
+<div class=" text-gray-500 text-xs mt-1.5 w-full flex justify-start">
 	<div class=" text-right">
 		<div class="line-clamp-1">
 			ⓘ {$i18n.t(

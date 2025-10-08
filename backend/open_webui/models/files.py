@@ -130,17 +130,6 @@ class FilesTable:
             except Exception:
                 return None
 
-    def get_file_by_id_and_user_id(self, id: str, user_id: str) -> Optional[FileModel]:
-        with get_db() as db:
-            try:
-                file = db.query(File).filter_by(id=id, user_id=user_id).first()
-                if file:
-                    return FileModel.model_validate(file)
-                else:
-                    return None
-            except Exception:
-                return None
-
     def get_file_metadata_by_id(self, id: str) -> Optional[FileMetadataResponse]:
         with get_db() as db:
             try:
@@ -186,9 +175,7 @@ class FilesTable:
                     created_at=file.created_at,
                     updated_at=file.updated_at,
                 )
-                for file in db.query(
-                    File.id, File.meta, File.created_at, File.updated_at
-                )
+                for file in db.query(File)
                 .filter(File.id.in_(ids))
                 .order_by(File.updated_at.desc())
                 .all()

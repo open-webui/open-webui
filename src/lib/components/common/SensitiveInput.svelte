@@ -9,17 +9,18 @@
 	export let required = true;
 	export let readOnly = false;
 	export let outerClassName = 'flex flex-1 bg-transparent';
-	export let inputClassName = 'w-full text-sm py-0.5 bg-transparent';
-	export let showButtonClassName = 'pl-1.5  transition bg-transparent';
+	export let inputClassName = 'my-0.5 py-1.5 px-3 w-full text-sm outline-hidden bg-transparent placeholder:text-[#76746B] dark:placeholder:text-[#76746B] border border-[#CCCCCC] rounded-lg';
+	export let showButtonClassName = 'transition bg-transparent text=[] absolute bottom-2 right-1 mb-1';
 
 	let show = false;
 </script>
 
 <div class={outerClassName}>
 	<label class="sr-only" for={id}>{placeholder || $i18n.t('Password')}</label>
+	<div class="relative w-full">
 	<input
 		{id}
-		class={`${inputClassName} ${show ? '' : 'password'} ${($settings?.highContrastMode ?? false) ? 'placeholder:text-gray-700 dark:placeholder:text-gray-100' : ' outline-hidden placeholder:text-gray-300 dark:placeholder:text-gray-600'}`}
+		class={`${inputClassName} ${show ? '' : 'password'} ${($settings?.highContrastMode ?? false) ? 'placeholder:text-[#76746B] dark:placeholder:text-[#76746B]' : ' outline-hidden placeholder:text-[#76746B] dark:placeholder:text-[#76746B]'}`}
 		{placeholder}
 		type={type === 'password' && !show ? 'password' : 'text'}
 		{value}
@@ -46,7 +47,7 @@
 				viewBox="0 0 16 16"
 				fill="currentColor"
 				aria-hidden="true"
-				class="size-4"
+				class="size-4 {show ? 'text-[#2C3D83]' : 'text-[#2C3D83]'}"
 			>
 				<path
 					fill-rule="evenodd"
@@ -62,7 +63,7 @@
 				xmlns="http://www.w3.org/2000/svg"
 				viewBox="0 0 16 16"
 				fill="currentColor"
-				class="size-4"
+				class="size-4 {show ? 'text-[#2C3D83]' : 'text-[#2C3D83]'}"
 				aria-hidden="true"
 			>
 				<path d="M8 9.5a1.5 1.5 0 1 0 0-3 1.5 1.5 0 0 0 0 3Z" />
@@ -74,4 +75,5 @@
 			</svg>
 		{/if}
 	</button>
+	</div>
 </div>

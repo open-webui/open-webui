@@ -112,7 +112,7 @@
 		</div>
 
 		<div class="mt-2">
-			<div class="px-4 py-3 bg-gray-50 dark:bg-gray-950 rounded-3xl">
+			<div class="px-3 py-2 bg-gray-50 dark:bg-gray-950 rounded-lg">
 				<AccessControl
 					bind:accessControl
 					accessRoles={['read', 'write']}
@@ -121,7 +121,7 @@
 			</div>
 		</div>
 
-		<div class="flex justify-end mt-2">
+		<div class="flex justify-start mt-2">
 			<div>
 				<button
 					class=" text-sm px-4 py-2 transition rounded-lg {loading

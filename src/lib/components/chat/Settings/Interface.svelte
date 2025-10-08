@@ -66,7 +66,6 @@
 	let chatFadeStreamingText = true;
 	let collapseCodeBlocks = false;
 	let expandDetails = false;
-	let showChatTitleInTab = true;
 
 	let showFloatingActionButtons = true;
 	let floatingActionButtons = null;
@@ -225,7 +224,6 @@
 		temporaryChatByDefault = $settings?.temporaryChatByDefault ?? false;
 		chatDirection = $settings?.chatDirection ?? 'auto';
 		userLocation = $settings?.userLocation ?? false;
-		showChatTitleInTab = $settings?.showChatTitleInTab ?? true;
 
 		notificationSound = $settings?.notificationSound ?? true;
 		notificationSoundAlways = $settings?.notificationSoundAlways ?? false;
@@ -308,7 +306,7 @@
 		}}
 	/>
 
-	<div class=" space-y-3 overflow-y-scroll max-h-[28rem] md:max-h-full">
+	<div class=" space-y-3 overflow-y-scroll max-h-[28rem] lg:max-h-full">
 		<div>
 			<h1 class=" mb-2 text-sm font-medium">{$i18n.t('UI')}</h1>
 
@@ -325,25 +323,6 @@
 							bind:state={highContrastMode}
 							on:change={() => {
 								saveSettings({ highContrastMode });
-							}}
-						/>
-					</div>
-				</div>
-			</div>
-
-			<div>
-				<div class=" py-0.5 flex w-full justify-between">
-					<div id="use-chat-title-as-tab-title-label" class=" self-center text-xs">
-						{$i18n.t('Display chat title in tab')}
-					</div>
-
-					<div class="flex items-center gap-2 p-1">
-						<Switch
-							ariaLabelledbyId="use-chat-title-as-tab-title-label"
-							tooltip={true}
-							bind:state={showChatTitleInTab}
-							on:change={() => {
-								saveSettings({ showChatTitleInTab });
 							}}
 						/>
 					</div>
@@ -1234,7 +1213,7 @@
 		</div>
 	</div>
 
-	<div class="flex justify-end text-sm font-medium">
+	<div class="flex justify-start text-sm font-medium">
 		<button
 			class="px-3.5 py-1.5 text-sm font-medium bg-black hover:bg-gray-900 text-white dark:bg-white dark:text-black dark:hover:bg-gray-100 transition rounded-full"
 			type="submit"

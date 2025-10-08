@@ -144,7 +144,10 @@ async def create_new_knowledge(
     request: Request, form_data: KnowledgeForm, user=Depends(get_verified_user)
 ):
     if user.role != "admin" and not has_permission(
-        user.id, "workspace.knowledge", request.app.state.config.USER_PERMISSIONS
+        user.id,
+        "workspace.knowledge",
+        request.app.state.config.USER_PERMISSIONS,
+        user_role=user.role,
     ):
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
@@ -159,6 +162,7 @@ async def create_new_knowledge(
             user.id,
             "sharing.public_knowledge",
             request.app.state.config.USER_PERMISSIONS,
+            user_role=user.role,
         )
     ):
         form_data.access_control = {}
@@ -327,6 +331,7 @@ async def update_knowledge_by_id(
             user.id,
             "sharing.public_knowledge",
             request.app.state.config.USER_PERMISSIONS,
+            user_role=user.role,
         )
     ):
         form_data.access_control = {}

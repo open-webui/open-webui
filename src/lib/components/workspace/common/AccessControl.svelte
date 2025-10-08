@@ -62,7 +62,7 @@
 
 <div class=" rounded-lg flex flex-col gap-2">
 	<div class="">
-		<div class=" text-sm font-semibold mb-1.5">{$i18n.t('Visibility')}</div>
+		<div class=" text-sm font-semibold mb-1">{$i18n.t('Visibility')}</div>
 
 		<div class="flex gap-2.5 items-center mb-1">
 			<div>
@@ -212,7 +212,7 @@
 									</div>
 								</div>
 
-								<div class="w-full flex justify-end items-center gap-0.5">
+								<div class="w-full flex justify-start items-center gap-0.5">
 									<button
 										class=""
 										type="button"

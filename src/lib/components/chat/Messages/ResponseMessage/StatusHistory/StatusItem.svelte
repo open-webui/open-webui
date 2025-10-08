@@ -100,6 +100,12 @@
 					{/each}
 				</div>
 			</div>
+		{:else if status?.action === 'sql_status'}
+			<div
+				class="{(done || status?.done) === false ? 'shimmer' : ''} text-gray-500 dark:text-gray-500 text-base line-clamp-1 text-wrap"
+			>
+				{status?.description}
+			</div>
 		{:else if status?.action === 'sources_retrieved' && status?.count !== undefined}
 			<div class="flex flex-col justify-center -space-y-0.5">
 				<div

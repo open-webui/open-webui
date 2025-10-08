@@ -37,9 +37,7 @@ router = APIRouter()
 @router.get("/", response_model=list[ChatTitleIdResponse])
 @router.get("/list", response_model=list[ChatTitleIdResponse])
 def get_session_user_chat_list(
-    user=Depends(get_verified_user),
-    page: Optional[int] = None,
-    include_folders: Optional[bool] = False,
+    user=Depends(get_verified_user), page: Optional[int] = None
 ):
     try:
         if page is not None:
@@ -47,12 +45,10 @@ def get_session_user_chat_list(
             skip = (page - 1) * limit
 
             return Chats.get_chat_title_id_list_by_user_id(
-                user.id, include_folders=include_folders, skip=skip, limit=limit
+                user.id, skip=skip, limit=limit
             )
         else:
-            return Chats.get_chat_title_id_list_by_user_id(
-                user.id, include_folders=include_folders
-            )
+            return Chats.get_chat_title_id_list_by_user_id(user.id)
     except Exception as e:
         log.exception(e)
         raise HTTPException(
@@ -68,8 +64,11 @@ def get_session_user_chat_list(
 @router.delete("/", response_model=bool)
 async def delete_all_user_chats(request: Request, user=Depends(get_verified_user)):
 
-    if user.role == "user" and not has_permission(
-        user.id, "chat.delete", request.app.state.config.USER_PERMISSIONS
+    if user.role in {"user", "knowledge"} and not has_permission(
+        user.id,
+        "chat.delete",
+        request.app.state.config.USER_PERMISSIONS,
+        user_role=user.role,
     ):
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
@@ -218,28 +217,6 @@ async def get_chats_by_folder_id(folder_id: str, user=Depends(get_verified_user)
     ]
 
 
-@router.get("/folder/{folder_id}/list")
-async def get_chat_list_by_folder_id(
-    folder_id: str, page: Optional[int] = 1, user=Depends(get_verified_user)
-):
-    try:
-        limit = 60
-        skip = (page - 1) * limit
-
-        return [
-            {"title": chat.title, "id": chat.id, "updated_at": chat.updated_at}
-            for chat in Chats.get_chats_by_folder_id_and_user_id(
-                folder_id, user.id, skip=skip, limit=limit
-            )
-        ]
-
-    except Exception as e:
-        log.exception(e)
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST, detail=ERROR_MESSAGES.DEFAULT()
-        )
-
-
 ############################
 # GetPinnedChats
 ############################
@@ -362,16 +339,6 @@ async def archive_all_chats(user=Depends(get_verified_user)):
 
 
 ############################
-# UnarchiveAllChats
-############################
-
-
-@router.post("/unarchive/all", response_model=bool)
-async def unarchive_all_chats(user=Depends(get_verified_user)):
-    return Chats.unarchive_all_chats_by_user_id(user.id)
-
-
-############################
 # GetSharedChatById
 ############################
 
@@ -383,7 +350,9 @@ async def get_shared_chat_by_id(share_id: str, user=Depends(get_verified_user)):
             status_code=status.HTTP_401_UNAUTHORIZED, detail=ERROR_MESSAGES.NOT_FOUND
         )
 
-    if user.role == "user" or (user.role == "admin" and not ENABLE_ADMIN_CHAT_ACCESS):
+    if user.role in {"user", "knowledge"} or (
+        user.role == "admin" and not ENABLE_ADMIN_CHAT_ACCESS
+    ):
         chat = Chats.get_chat_by_share_id(share_id)
     elif user.role == "admin" and ENABLE_ADMIN_CHAT_ACCESS:
         chat = Chats.get_chat_by_id(share_id)
@@ -582,7 +551,10 @@ async def delete_chat_by_id(request: Request, id: str, user=Depends(get_verified
         return result
     else:
         if not has_permission(
-            user.id, "chat.delete", request.app.state.config.USER_PERMISSIONS
+            user.id,
+            "chat.delete",
+            request.app.state.config.USER_PERMISSIONS,
+            user_role=user.role,
         ):
             raise HTTPException(
                 status_code=status.HTTP_401_UNAUTHORIZED,
@@ -751,7 +723,10 @@ async def archive_chat_by_id(id: str, user=Depends(get_verified_user)):
 async def share_chat_by_id(request: Request, id: str, user=Depends(get_verified_user)):
     if (user.role != "admin") and (
         not has_permission(
-            user.id, "chat.share", request.app.state.config.USER_PERMISSIONS
+            user.id,
+            "chat.share",
+            request.app.state.config.USER_PERMISSIONS,
+            user_role=user.role,
         )
     ):
         raise HTTPException(

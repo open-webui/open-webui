@@ -68,20 +68,17 @@
 				}}
 			>
 				<div class="flex items-start gap-2">
-					{#if history.length > 1}
-						<div class="pt-3 px-1">
-							<span class="relative flex size-1.5 rounded-full justify-center items-center">
-								{#if status?.done === false}
-									<span
-										class="absolute inline-flex h-full w-full animate-ping rounded-full bg-gray-500 dark:bg-gray-300 opacity-75"
-									></span>
-								{/if}
+					<div class="pt-3 px-1">
+						<span class="relative flex size-1.5 rounded-full justify-center items-center">
+							{#if status?.done === false}
 								<span
-									class="relative inline-flex size-1.5 rounded-full bg-gray-500 dark:bg-gray-300"
+									class="absolute inline-flex h-full w-full animate-ping rounded-full bg-gray-500 dark:bg-gray-300 opacity-75"
 								></span>
-							</span>
-						</div>
-					{/if}
+							{/if}
+							<span class="relative inline-flex size-1.5 rounded-full bg-gray-500 dark:bg-gray-300"
+							></span>
+						</span>
+					</div>
 					<StatusItem {status} />
 				</div>
 			</button>

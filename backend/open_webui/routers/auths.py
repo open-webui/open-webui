@@ -116,7 +116,7 @@ async def get_session_user(
         )
 
     user_permissions = get_permissions(
-        user.id, request.app.state.config.USER_PERMISSIONS
+        user.id, request.app.state.config.USER_PERMISSIONS, user.role
     )
 
     return {
@@ -417,7 +417,9 @@ async def ldap_auth(request: Request, response: Response, form_data: LdapForm):
                 )
 
                 user_permissions = get_permissions(
-                    user.id, request.app.state.config.USER_PERMISSIONS
+                    user.id,
+                    request.app.state.config.USER_PERMISSIONS,
+                    user.role,
                 )
 
                 if (
@@ -539,7 +541,7 @@ async def signin(request: Request, response: Response, form_data: SigninForm):
         )
 
         user_permissions = get_permissions(
-            user.id, request.app.state.config.USER_PERMISSIONS
+            user.id, request.app.state.config.USER_PERMISSIONS, user.role
         )
 
         return {
@@ -648,7 +650,9 @@ async def signup(request: Request, response: Response, form_data: SignupForm):
                 )
 
             user_permissions = get_permissions(
-                user.id, request.app.state.config.USER_PERMISSIONS
+                user.id,
+                request.app.state.config.USER_PERMISSIONS,
+                user.role,
             )
 
             if not has_users:
@@ -880,7 +884,7 @@ async def update_admin_config(
     request.app.state.config.ENABLE_CHANNELS = form_data.ENABLE_CHANNELS
     request.app.state.config.ENABLE_NOTES = form_data.ENABLE_NOTES
 
-    if form_data.DEFAULT_USER_ROLE in ["pending", "user", "admin"]:
+    if form_data.DEFAULT_USER_ROLE in ["pending", "knowledge", "user", "admin"]:
         request.app.state.config.DEFAULT_USER_ROLE = form_data.DEFAULT_USER_ROLE
 
     pattern = r"^(-1|0|(-?\d+(\.\d+)?)(ms|s|m|h|d|w))$"

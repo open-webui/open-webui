@@ -263,7 +263,6 @@ async def get_all_models(request, refresh: bool = False, user: UserModel = None)
                 "icon": function.meta.manifest.get("icon_url", None)
                 or getattr(module, "icon_url", None)
                 or getattr(module, "icon", None),
-                "has_user_valves": hasattr(module, "UserValves"),
             }
         ]
 
@@ -339,7 +338,7 @@ def check_model_access(user, model):
 def get_filtered_models(models, user):
     # Filter out models that the user does not have access to
     if (
-        user.role == "user"
+        user.role in {"user", "knowledge"}
         or (user.role == "admin" and not BYPASS_ADMIN_ACCESS_CONTROL)
     ) and not BYPASS_MODEL_ACCESS_CONTROL:
         filtered_models = []

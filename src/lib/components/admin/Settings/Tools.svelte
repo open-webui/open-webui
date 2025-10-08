@@ -14,7 +14,7 @@
 	import Plus from '$lib/components/icons/Plus.svelte';
 	import Connection from '$lib/components/chat/Settings/Tools/Connection.svelte';
 
-	import AddToolServerModal from '$lib/components/AddToolServerModal.svelte';
+	import AddServerModal from '$lib/components/AddServerModal.svelte';
 	import { getToolServerConnections, setToolServerConnections } from '$lib/apis/configs';
 
 	export let saveSettings: Function;
@@ -47,7 +47,7 @@
 	});
 </script>
 
-<AddToolServerModal bind:show={showConnectionModal} onSubmit={addConnectionHandler} />
+<AddServerModal bind:show={showConnectionModal} onSubmit={addConnectionHandler} />
 
 <form
 	class="flex flex-col h-full justify-between text-sm"
@@ -83,7 +83,7 @@
 							</Tooltip>
 						</div>
 
-						<div class="flex flex-col gap-1">
+						<div class="flex flex-col gap-1.5">
 							{#each servers as server, idx}
 								<Connection
 									bind:connection={server}
@@ -123,7 +123,7 @@
 		{/if}
 	</div>
 
-	<div class="flex justify-end pt-3 text-sm font-medium">
+	<div class="flex justify-start pt-3 text-sm font-medium">
 		<button
 			class="px-3.5 py-1.5 text-sm font-medium bg-black hover:bg-gray-900 text-white dark:bg-white dark:text-black dark:hover:bg-gray-100 transition rounded-full"
 			type="submit"

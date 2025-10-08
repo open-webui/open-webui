@@ -8,7 +8,6 @@ import shutil
 import sys
 import time
 import random
-import re
 from uuid import uuid4
 
 
@@ -51,11 +50,6 @@ from starlette.middleware.sessions import SessionMiddleware
 from starlette.responses import Response, StreamingResponse
 from starlette.datastructures import Headers
 
-from starsessions import (
-    SessionMiddleware as StarSessionsMiddleware,
-    SessionAutoloadMiddleware,
-)
-from starsessions.stores.redis import RedisStore
 
 from open_webui.utils import logger
 from open_webui.utils.audit import AuditLevel, AuditLoggingMiddleware
@@ -175,14 +169,13 @@ from open_webui.config import (
     AUDIO_STT_AZURE_LOCALES,
     AUDIO_STT_AZURE_BASE_URL,
     AUDIO_STT_AZURE_MAX_SPEAKERS,
+    AUDIO_TTS_API_KEY,
     AUDIO_TTS_ENGINE,
     AUDIO_TTS_MODEL,
-    AUDIO_TTS_VOICE,
     AUDIO_TTS_OPENAI_API_BASE_URL,
     AUDIO_TTS_OPENAI_API_KEY,
-    AUDIO_TTS_OPENAI_PARAMS,
-    AUDIO_TTS_API_KEY,
     AUDIO_TTS_SPLIT_ON,
+    AUDIO_TTS_VOICE,
     AUDIO_TTS_AZURE_SPEECH_REGION,
     AUDIO_TTS_AZURE_SPEECH_BASE_URL,
     AUDIO_TTS_AZURE_SPEECH_OUTPUT_FORMAT,
@@ -248,7 +241,6 @@ from open_webui.config import (
     EXTERNAL_DOCUMENT_LOADER_API_KEY,
     TIKA_SERVER_URL,
     DOCLING_SERVER_URL,
-    DOCLING_PARAMS,
     DOCLING_DO_OCR,
     DOCLING_FORCE_OCR,
     DOCLING_OCR_ENGINE,
@@ -277,7 +269,6 @@ from open_webui.config import (
     WEB_SEARCH_CONCURRENT_REQUESTS,
     WEB_SEARCH_TRUST_ENV,
     WEB_SEARCH_DOMAIN_FILTER_LIST,
-    OLLAMA_CLOUD_WEB_SEARCH_API_KEY,
     JINA_API_KEY,
     SEARCHAPI_API_KEY,
     SEARCHAPI_ENGINE,
@@ -310,8 +301,7 @@ from open_webui.config import (
     GOOGLE_DRIVE_CLIENT_ID,
     GOOGLE_DRIVE_API_KEY,
     ENABLE_ONEDRIVE_INTEGRATION,
-    ONEDRIVE_CLIENT_ID_PERSONAL,
-    ONEDRIVE_CLIENT_ID_BUSINESS,
+    ONEDRIVE_CLIENT_ID,
     ONEDRIVE_SHAREPOINT_URL,
     ONEDRIVE_SHAREPOINT_TENANT_ID,
     ENABLE_ONEDRIVE_PERSONAL,
@@ -450,7 +440,6 @@ from open_webui.env import (
     ENABLE_OTEL,
     EXTERNAL_PWA_MANIFEST_URL,
     AIOHTTP_CLIENT_SESSION_SSL,
-    ENABLE_STAR_SESSIONS_MIDDLEWARE,
 )
 
 
@@ -477,12 +466,7 @@ from open_webui.utils.auth import (
     get_verified_user,
 )
 from open_webui.utils.plugin import install_tool_and_function_dependencies
-from open_webui.utils.oauth import (
-    OAuthManager,
-    OAuthClientManager,
-    decrypt_data,
-    OAuthClientInformationFull,
-)
+from open_webui.utils.oauth import OAuthManager
 from open_webui.utils.security_headers import SecurityHeadersMiddleware
 from open_webui.utils.redis import get_redis_connection
 
@@ -612,13 +596,8 @@ app = FastAPI(
     lifespan=lifespan,
 )
 
-# For Open WebUI OIDC/OAuth2
 oauth_manager = OAuthManager(app)
 app.state.oauth_manager = oauth_manager
-
-# For Integrations
-oauth_client_manager = OAuthClientManager(app)
-app.state.oauth_client_manager = oauth_client_manager
 
 app.state.instance_id = None
 app.state.config = AppConfig(
@@ -838,7 +817,6 @@ app.state.config.EXTERNAL_DOCUMENT_LOADER_URL = EXTERNAL_DOCUMENT_LOADER_URL
 app.state.config.EXTERNAL_DOCUMENT_LOADER_API_KEY = EXTERNAL_DOCUMENT_LOADER_API_KEY
 app.state.config.TIKA_SERVER_URL = TIKA_SERVER_URL
 app.state.config.DOCLING_SERVER_URL = DOCLING_SERVER_URL
-app.state.config.DOCLING_PARAMS = DOCLING_PARAMS
 app.state.config.DOCLING_DO_OCR = DOCLING_DO_OCR
 app.state.config.DOCLING_FORCE_OCR = DOCLING_FORCE_OCR
 app.state.config.DOCLING_OCR_ENGINE = DOCLING_OCR_ENGINE
@@ -904,8 +882,6 @@ app.state.config.BYPASS_WEB_SEARCH_WEB_LOADER = BYPASS_WEB_SEARCH_WEB_LOADER
 
 app.state.config.ENABLE_GOOGLE_DRIVE_INTEGRATION = ENABLE_GOOGLE_DRIVE_INTEGRATION
 app.state.config.ENABLE_ONEDRIVE_INTEGRATION = ENABLE_ONEDRIVE_INTEGRATION
-
-app.state.config.OLLAMA_CLOUD_WEB_SEARCH_API_KEY = OLLAMA_CLOUD_WEB_SEARCH_API_KEY
 app.state.config.SEARXNG_QUERY_URL = SEARXNG_QUERY_URL
 app.state.config.YACY_QUERY_URL = YACY_QUERY_URL
 app.state.config.YACY_USERNAME = YACY_USERNAME
@@ -1100,15 +1076,11 @@ app.state.config.AUDIO_STT_AZURE_LOCALES = AUDIO_STT_AZURE_LOCALES
 app.state.config.AUDIO_STT_AZURE_BASE_URL = AUDIO_STT_AZURE_BASE_URL
 app.state.config.AUDIO_STT_AZURE_MAX_SPEAKERS = AUDIO_STT_AZURE_MAX_SPEAKERS
 
-app.state.config.TTS_ENGINE = AUDIO_TTS_ENGINE
-
-app.state.config.TTS_MODEL = AUDIO_TTS_MODEL
-app.state.config.TTS_VOICE = AUDIO_TTS_VOICE
-
 app.state.config.TTS_OPENAI_API_BASE_URL = AUDIO_TTS_OPENAI_API_BASE_URL
 app.state.config.TTS_OPENAI_API_KEY = AUDIO_TTS_OPENAI_API_KEY
-app.state.config.TTS_OPENAI_PARAMS = AUDIO_TTS_OPENAI_PARAMS
-
+app.state.config.TTS_ENGINE = AUDIO_TTS_ENGINE
+app.state.config.TTS_MODEL = AUDIO_TTS_MODEL
+app.state.config.TTS_VOICE = AUDIO_TTS_VOICE
 app.state.config.TTS_API_KEY = AUDIO_TTS_API_KEY
 app.state.config.TTS_SPLIT_ON = AUDIO_TTS_SPLIT_ON
 
@@ -1179,32 +1151,12 @@ class RedirectMiddleware(BaseHTTPMiddleware):
             path = request.url.path
             query_params = dict(parse_qs(urlparse(str(request.url)).query))
 
-            redirect_params = {}
-
             # Check for the specific watch path and the presence of 'v' parameter
             if path.endswith("/watch") and "v" in query_params:
                 # Extract the first 'v' parameter
-                youtube_video_id = query_params["v"][0]
-                redirect_params["youtube"] = youtube_video_id
-
-            if "shared" in query_params and len(query_params["shared"]) > 0:
-                # PWA share_target support
-
-                text = query_params["shared"][0]
-                if text:
-                    urls = re.match(r"https://\S+", text)
-                    if urls:
-                        from open_webui.retrieval.loaders.youtube import _parse_video_id
-
-                        if youtube_video_id := _parse_video_id(urls[0]):
-                            redirect_params["youtube"] = youtube_video_id
-                        else:
-                            redirect_params["load-url"] = urls[0]
-                    else:
-                        redirect_params["q"] = text
-
-            if redirect_params:
-                redirect_url = f"/?{urlencode(redirect_params)}"
+                video_id = query_params["v"][0]
+                encoded_video_id = urlencode({"youtube": video_id})
+                redirect_url = f"/?{encoded_video_id}"
                 return RedirectResponse(url=redirect_url)
 
         # Proceed with the normal flow of other requests
@@ -1503,7 +1455,7 @@ async def chat_completion(
         }
 
         if metadata.get("chat_id") and (user and user.role != "admin"):
-            if not metadata["chat_id"].startswith("local:"):
+            if metadata["chat_id"] != "local":
                 chat = Chats.get_chat_by_id_and_user_id(metadata["chat_id"], user.id)
                 if chat is None:
                     raise HTTPException(
@@ -1530,14 +1482,13 @@ async def chat_completion(
             response = await chat_completion_handler(request, form_data, user)
             if metadata.get("chat_id") and metadata.get("message_id"):
                 try:
-                    if not metadata["chat_id"].startswith("local:"):
-                        Chats.upsert_message_to_chat_by_id_and_message_id(
-                            metadata["chat_id"],
-                            metadata["message_id"],
-                            {
-                                "model": model_id,
-                            },
-                        )
+                    Chats.upsert_message_to_chat_by_id_and_message_id(
+                        metadata["chat_id"],
+                        metadata["message_id"],
+                        {
+                            "model": model_id,
+                        },
+                    )
                 except:
                     pass
 
@@ -1558,14 +1509,13 @@ async def chat_completion(
             if metadata.get("chat_id") and metadata.get("message_id"):
                 # Update the chat message with the error
                 try:
-                    if not metadata["chat_id"].startswith("local:"):
-                        Chats.upsert_message_to_chat_by_id_and_message_id(
-                            metadata["chat_id"],
-                            metadata["message_id"],
-                            {
-                                "error": {"content": str(e)},
-                            },
-                        )
+                    Chats.upsert_message_to_chat_by_id_and_message_id(
+                        metadata["chat_id"],
+                        metadata["message_id"],
+                        {
+                            "error": {"content": str(e)},
+                        },
+                    )
 
                     event_emitter = get_event_emitter(metadata)
                     await event_emitter(
@@ -1580,14 +1530,6 @@ async def chat_completion(
 
                 except:
                     pass
-        finally:
-            try:
-                if mcp_clients := metadata.get("mcp_clients"):
-                    for client in mcp_clients.values():
-                        await client.disconnect()
-            except Exception as e:
-                log.debug(f"Error cleaning up: {e}")
-                pass
 
     if (
         metadata.get("session_id")
@@ -1801,8 +1743,7 @@ async def get_app_config(request: Request):
                     "api_key": GOOGLE_DRIVE_API_KEY.value,
                 },
                 "onedrive": {
-                    "client_id_personal": ONEDRIVE_CLIENT_ID_PERSONAL,
-                    "client_id_business": ONEDRIVE_CLIENT_ID_BUSINESS,
+                    "client_id": ONEDRIVE_CLIENT_ID.value,
                     "sharepoint_url": ONEDRIVE_SHAREPOINT_URL.value,
                     "sharepoint_tenant_id": ONEDRIVE_SHAREPOINT_TENANT_ID.value,
                 },
@@ -1820,7 +1761,7 @@ async def get_app_config(request: Request):
                     else {}
                 ),
             }
-            if user is not None and (user.role in ["admin", "user"])
+            if user is not None and (user.role in ["admin", "user", "knowledge"])
             else {
                 **(
                     {
@@ -1922,80 +1863,14 @@ async def get_current_usage(user=Depends(get_verified_user)):
 # OAuth Login & Callback
 ############################
 
-
-# Initialize OAuth client manager with any MCP tool servers using OAuth 2.1
-if len(app.state.config.TOOL_SERVER_CONNECTIONS) > 0:
-    for tool_server_connection in app.state.config.TOOL_SERVER_CONNECTIONS:
-        if tool_server_connection.get("type", "openapi") == "mcp":
-            server_id = tool_server_connection.get("info", {}).get("id")
-            auth_type = tool_server_connection.get("auth_type", "none")
-            if server_id and auth_type == "oauth_2.1":
-                oauth_client_info = tool_server_connection.get("info", {}).get(
-                    "oauth_client_info", ""
-                )
-
-                try:
-                    oauth_client_info = decrypt_data(oauth_client_info)
-                    app.state.oauth_client_manager.add_client(
-                        f"mcp:{server_id}",
-                        OAuthClientInformationFull(**oauth_client_info),
-                    )
-                except Exception as e:
-                    log.error(
-                        f"Error adding OAuth client for MCP tool server {server_id}: {e}"
-                    )
-                    pass
-
-try:
-    if ENABLE_STAR_SESSIONS_MIDDLEWARE:
-        redis_session_store = RedisStore(
-            url=REDIS_URL,
-            prefix=(f"{REDIS_KEY_PREFIX}:session:" if REDIS_KEY_PREFIX else "session:"),
-        )
-
-        app.add_middleware(SessionAutoloadMiddleware)
-        app.add_middleware(
-            StarSessionsMiddleware,
-            store=redis_session_store,
-            cookie_name="owui-session",
-            cookie_same_site=WEBUI_SESSION_COOKIE_SAME_SITE,
-            cookie_https_only=WEBUI_SESSION_COOKIE_SECURE,
-        )
-        log.info("Using Redis for session")
-    else:
-        raise ValueError("No Redis URL provided")
-except Exception as e:
+# SessionMiddleware is used by authlib for oauth
+if len(OAUTH_PROVIDERS) > 0:
     app.add_middleware(
         SessionMiddleware,
         secret_key=WEBUI_SECRET_KEY,
-        session_cookie="owui-session",
+        session_cookie="oui-session",
         same_site=WEBUI_SESSION_COOKIE_SAME_SITE,
         https_only=WEBUI_SESSION_COOKIE_SECURE,
-    )
-
-
-@app.get("/oauth/clients/{client_id}/authorize")
-async def oauth_client_authorize(
-    client_id: str,
-    request: Request,
-    response: Response,
-    user=Depends(get_verified_user),
-):
-    return await oauth_client_manager.handle_authorize(request, client_id=client_id)
-
-
-@app.get("/oauth/clients/{client_id}/callback")
-async def oauth_client_callback(
-    client_id: str,
-    request: Request,
-    response: Response,
-    user=Depends(get_verified_user),
-):
-    return await oauth_client_manager.handle_callback(
-        request,
-        client_id=client_id,
-        user_id=user.id if user else None,
-        response=response,
     )
 
 
@@ -2010,9 +1885,8 @@ async def oauth_login(provider: str, request: Request):
 #    - This is considered insecure in general, as OAuth providers do not always verify email addresses
 # 3. If there is no user, and ENABLE_OAUTH_SIGNUP is true, create a user
 #    - Email addresses are considered unique, so we fail registration if the email address is already taken
-@app.get("/oauth/{provider}/login/callback")
-@app.get("/oauth/{provider}/callback")  # Legacy endpoint
-async def oauth_login_callback(provider: str, request: Request, response: Response):
+@app.get("/oauth/{provider}/callback")
+async def oauth_callback(provider: str, request: Request, response: Response):
     return await oauth_manager.handle_callback(request, provider, response)
 
 
@@ -2024,7 +1898,7 @@ async def get_manifest_json():
         return {
             "name": app.state.WEBUI_NAME,
             "short_name": app.state.WEBUI_NAME,
-            "description": f"{app.state.WEBUI_NAME} is an open, extensible, user-friendly interface for AI that adapts to your workflow.",
+            "description": f"{app.state.WEBUI_NAME} delivers an open, extensible, user-friendly interface for AI that adapts to your workflow.",
             "start_url": "/",
             "display": "standalone",
             "background_color": "#343541",
@@ -2042,11 +1916,6 @@ async def get_manifest_json():
                     "purpose": "maskable",
                 },
             ],
-            "share_target": {
-                "action": "/",
-                "method": "GET",
-                "params": {"text": "shared"},
-            },
         }
 
 

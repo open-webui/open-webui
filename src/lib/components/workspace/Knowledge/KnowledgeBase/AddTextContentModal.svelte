@@ -77,7 +77,7 @@
 			</div>
 
 			<div
-				class="flex flex-row items-center justify-end text-sm font-medium shrink-0 mt-1 p-4 gap-1.5"
+				class="flex flex-row items-center justify-start text-sm font-medium shrink-0 mt-1 p-4 gap-1.5"
 			>
 				<div class="">
 					{#if voiceInput}

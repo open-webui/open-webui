@@ -469,7 +469,7 @@
 							></div>
 						</button>
 
-						<div class="flex w-full mt-1 justify-end">
+						<div class="flex w-full mt-1 justify-start">
 							<button
 								class="px-2 py-1 text-gray-500 rounded-lg text-xs"
 								on:click={() => {
@@ -526,7 +526,7 @@
 									<option value={null} class=" text-gray-900"
 										>{$i18n.t('Select a base model')}</option
 									>
-									{#each $models.filter((m) => (model ? m.id !== model.id : true) && !m?.preset && m?.owned_by !== 'arena' && !(m?.direct ?? false)) as model}
+									{#each $models.filter((m) => (model ? m.id !== model.id : true) && !m?.preset && m?.owned_by !== 'arena') as model}
 										<option value={model.id} class=" text-gray-900">{model.name}</option>
 									{/each}
 								</select>
@@ -587,7 +587,7 @@
 					</div>
 
 					<div class="my-2">
-						<div class="px-4 py-3 bg-gray-50 dark:bg-gray-950 rounded-3xl">
+						<div class="px-3 py-2 bg-gray-50 dark:bg-gray-950 rounded-lg">
 							<AccessControl
 								bind:accessControl
 								accessRoles={['read', 'write']}
@@ -827,7 +827,7 @@
 						{/if}
 					</div>
 
-					<div class="my-2 flex justify-end pb-20">
+					<div class="my-2 flex justify-start pb-20">
 						<button
 							class=" text-sm px-3 py-2 transition rounded-lg {loading
 								? ' cursor-not-allowed bg-black hover:bg-gray-900 text-white dark:bg-white dark:hover:bg-gray-100 dark:text-black'

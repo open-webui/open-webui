@@ -7,19 +7,31 @@
 	import { mobile, showSidebar, user } from '$lib/stores';
 	import { updateChannelById } from '$lib/apis/channels';
 
-	import Cog6 from '$lib/components/icons/Cog6.svelte';
-	import ChannelModal from './ChannelModal.svelte';
-	import Lock from '$lib/components/icons/Lock.svelte';
-	import Hashtag from '$lib/components/icons/Hashtag.svelte';
+import Cog6 from '$lib/components/icons/Cog6.svelte';
+import ChannelModal from './ChannelModal.svelte';
+import Lock from '$lib/components/icons/Lock.svelte';
+import Hashtag from '$lib/components/icons/Hashtag.svelte';
+import Users from '$lib/components/icons/Users.svelte';
 
 	export let onUpdate: Function = () => {};
 
 	export let className = '';
 	export let channel;
 
-	let showEditChannelModal = false;
+let showEditChannelModal = false;
 
-	let itemElement;
+let itemElement;
+let displayName = '';
+
+$: {
+	if (channel?.type === 'direct') {
+		const participants = channel?.meta?.direct?.participants ?? [];
+		const otherParticipant = participants.find((participant) => participant.id !== $user?.id);
+		displayName = otherParticipant?.name ?? channel?.name ?? '';
+	} else {
+		displayName = channel?.name ?? '';
+	}
+}
 </script>
 
 <ChannelModal
@@ -44,11 +56,10 @@
 />
 
 <div
-	id="sidebar-channel-item"
 	bind:this={itemElement}
-	class=" w-full {className} rounded-xl flex relative group hover:bg-gray-100 dark:hover:bg-gray-900 {$page
+	class=" w-full {className} rounded-lg flex relative group hover:bg-gray-100 dark:hover:bg-gray-900 {$page
 		.url.pathname === `/channels/${channel.id}`
-		? 'bg-gray-100 dark:bg-gray-900 selected'
+		? 'bg-gray-100 dark:bg-gray-900'
 		: ''} px-2.5 py-1"
 >
 	<a
@@ -64,7 +75,9 @@
 	>
 		<div class="flex items-center gap-1 shrink-0">
 			<div class=" size-4 justify-center flex items-center">
-				{#if channel?.access_control === null}
+				{#if channel?.type === 'direct'}
+					<Users className="size-3.5" strokeWidth="2.5" />
+				{:else if channel?.access_control === null}
 					<Hashtag className="size-3" strokeWidth="2.5" />
 				{:else}
 					<Lock className="size-[15px]" strokeWidth="2" />
@@ -72,22 +85,20 @@
 			</div>
 
 			<div class=" text-left self-center overflow-hidden w-full line-clamp-1 flex-1">
-				{channel.name}
+				{displayName}
 			</div>
 		</div>
 	</a>
 
-	{#if $user?.role === 'admin'}
+	{#if $user?.role === 'admin' && channel?.type !== 'direct'}
 		<button
-			class="absolute z-10 right-2 invisible group-hover:visible self-center flex items-center dark:text-gray-300"
+			class="absolute z-10 right-2 invisible group-hover:visible self-center flex items-center dark:text-gray-300 p-0.5 dark:hover:bg-gray-850 rounded-lg"
 			on:click={(e) => {
 				e.stopPropagation();
 				showEditChannelModal = true;
 			}}
 		>
-			<button class="p-0.5 dark:hover:bg-gray-850 rounded-lg touch-auto" on:click={(e) => {}}>
-				<Cog6 className="size-3.5" />
-			</button>
+			<Cog6 className="size-3.5" />
 		</button>
 	{/if}
 </div>

@@ -86,10 +86,6 @@ async def get_function_models(request):
         try:
             function_module = get_function_module_by_id(request, pipe.id)
 
-            has_user_valves = False
-            if hasattr(function_module, "UserValves"):
-                has_user_valves = True
-
             # Check if function is a manifold
             if hasattr(function_module, "pipes"):
                 sub_pipes = []
@@ -128,7 +124,6 @@ async def get_function_models(request):
                             "created": pipe.created_at,
                             "owned_by": "openai",
                             "pipe": pipe_flag,
-                            "has_user_valves": has_user_valves,
                         }
                     )
             else:
@@ -146,7 +141,6 @@ async def get_function_models(request):
                         "created": pipe.created_at,
                         "owned_by": "openai",
                         "pipe": pipe_flag,
-                        "has_user_valves": has_user_valves,
                     }
                 )
         except Exception as e:
@@ -245,7 +239,7 @@ async def generate_function_chat_completion(
     oauth_token = None
     try:
         if request.cookies.get("oauth_session_id", None):
-            oauth_token = await request.app.state.oauth_manager.get_oauth_token(
+            oauth_token = request.app.state.oauth_manager.get_oauth_token(
                 user.id,
                 request.cookies.get("oauth_session_id", None),
             )

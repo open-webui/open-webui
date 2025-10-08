@@ -19,6 +19,7 @@ from open_webui.models.users import (
     UserListResponse,
     UserInfoListResponse,
     UserIdNameListResponse,
+    UserNameResponse,
     UserRoleUpdateForm,
     Users,
     UserSettings,
@@ -118,6 +119,26 @@ async def search_users(
     return Users.get_users(filter=filter, skip=skip, limit=limit)
 
 
+@router.get("/peers", response_model=list[UserNameResponse])
+async def get_chat_peers(
+    query: Optional[str] = None,
+    user=Depends(get_verified_user),
+):
+    filter = {}
+    if query:
+        filter["query"] = query
+
+    result = Users.get_users(filter=filter, skip=0, limit=100)
+
+    peers = []
+    for peer in result["users"]:
+        if peer.id == user.id or peer.role == "pending":
+            continue
+        peers.append(UserNameResponse(**peer.model_dump()))
+
+    return peers
+
+
 ############################
 # User Groups
 ############################
@@ -136,7 +157,7 @@ async def get_user_groups(user=Depends(get_verified_user)):
 @router.get("/permissions")
 async def get_user_permissisions(request: Request, user=Depends(get_verified_user)):
     user_permissions = get_permissions(
-        user.id, request.app.state.config.USER_PERMISSIONS
+        user.id, request.app.state.config.USER_PERMISSIONS, user.role
     )
 
     return user_permissions
@@ -157,7 +178,6 @@ class SharingPermissions(BaseModel):
     public_knowledge: bool = True
     public_prompts: bool = True
     public_tools: bool = True
-    public_notes: bool = True
 
 
 class ChatPermissions(BaseModel):
@@ -257,6 +277,7 @@ async def update_user_settings_by_session_user(
             user.id,
             "features.direct_tool_servers",
             request.app.state.config.USER_PERMISSIONS,
+            user_role=user.role,
         )
     ):
         # If the user is not an admin and does not have permission to use tool servers, remove the key

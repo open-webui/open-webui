@@ -9,7 +9,6 @@ from pydantic import BaseModel, HttpUrl
 from fastapi import APIRouter, Depends, HTTPException, Request, status
 
 
-from open_webui.models.oauth_sessions import OAuthSessions
 from open_webui.models.tools import (
     ToolForm,
     ToolModel,
@@ -17,11 +16,7 @@ from open_webui.models.tools import (
     ToolUserResponse,
     Tools,
 )
-from open_webui.utils.plugin import (
-    load_tool_module_by_id,
-    replace_imports,
-    get_tool_module_from_cache,
-)
+from open_webui.utils.plugin import load_tool_module_by_id, replace_imports
 from open_webui.utils.tools import get_tool_specs
 from open_webui.utils.auth import get_admin_user, get_verified_user
 from open_webui.utils.access_control import has_access, has_permission
@@ -39,14 +34,6 @@ log.setLevel(SRC_LOG_LEVELS["MAIN"])
 router = APIRouter()
 
 
-def get_tool_module(request, tool_id, load_from_db=True):
-    """
-    Get the tool module by its ID.
-    """
-    tool_module, _ = get_tool_module_from_cache(request, tool_id, load_from_db)
-    return tool_module
-
-
 ############################
 # GetTools
 ############################
@@ -54,21 +41,8 @@ def get_tool_module(request, tool_id, load_from_db=True):
 
 @router.get("/", response_model=list[ToolUserResponse])
 async def get_tools(request: Request, user=Depends(get_verified_user)):
-    tools = []
+    tools = Tools.get_tools()
 
-    # Local Tools
-    for tool in Tools.get_tools():
-        tool_module = get_tool_module(request, tool.id)
-        tools.append(
-            ToolUserResponse(
-                **{
-                    **tool.model_dump(),
-                    "has_user_valves": hasattr(tool_module, "UserValves"),
-                }
-            )
-        )
-
-    # OpenAPI Tool Servers
     for server in await get_tool_servers(request):
         tools.append(
             ToolUserResponse(
@@ -93,50 +67,6 @@ async def get_tools(request: Request, user=Depends(get_verified_user)):
                 }
             )
         )
-
-    # MCP Tool Servers
-    for server in request.app.state.config.TOOL_SERVER_CONNECTIONS:
-        if server.get("type", "openapi") == "mcp":
-            server_id = server.get("info", {}).get("id")
-            auth_type = server.get("auth_type", "none")
-
-            session_token = None
-            if auth_type == "oauth_2.1":
-                splits = server_id.split(":")
-                server_id = splits[-1] if len(splits) > 1 else server_id
-
-                session_token = (
-                    await request.app.state.oauth_client_manager.get_oauth_token(
-                        user.id, f"mcp:{server_id}"
-                    )
-                )
-
-            tools.append(
-                ToolUserResponse(
-                    **{
-                        "id": f"server:mcp:{server.get('info', {}).get('id')}",
-                        "user_id": f"server:mcp:{server.get('info', {}).get('id')}",
-                        "name": server.get("info", {}).get("name", "MCP Tool Server"),
-                        "meta": {
-                            "description": server.get("info", {}).get(
-                                "description", ""
-                            ),
-                        },
-                        "access_control": server.get("config", {}).get(
-                            "access_control", None
-                        ),
-                        "updated_at": int(time.time()),
-                        "created_at": int(time.time()),
-                        **(
-                            {
-                                "authenticated": session_token is not None,
-                            }
-                            if auth_type == "oauth_2.1"
-                            else {}
-                        ),
-                    }
-                )
-            )
 
     if user.role == "admin" and BYPASS_ADMIN_ACCESS_CONTROL:
         # Admin can see all tools
@@ -264,7 +194,10 @@ async def create_new_tools(
     user=Depends(get_verified_user),
 ):
     if user.role != "admin" and not has_permission(
-        user.id, "workspace.tools", request.app.state.config.USER_PERMISSIONS
+        user.id,
+        "workspace.tools",
+        request.app.state.config.USER_PERMISSIONS,
+        user_role=user.role,
     ):
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
@@ -532,9 +465,8 @@ async def update_tools_valves_by_id(
     try:
         form_data = {k: v for k, v in form_data.items() if v is not None}
         valves = Valves(**form_data)
-        valves_dict = valves.model_dump(exclude_unset=True)
-        Tools.update_tool_valves_by_id(id, valves_dict)
-        return valves_dict
+        Tools.update_tool_valves_by_id(id, valves.model_dump())
+        return valves.model_dump()
     except Exception as e:
         log.exception(f"Failed to update tool valves by id {id}: {e}")
         raise HTTPException(
@@ -609,11 +541,10 @@ async def update_tools_user_valves_by_id(
             try:
                 form_data = {k: v for k, v in form_data.items() if v is not None}
                 user_valves = UserValves(**form_data)
-                user_valves_dict = user_valves.model_dump(exclude_unset=True)
                 Tools.update_user_valves_by_id_and_user_id(
-                    id, user.id, user_valves_dict
+                    id, user.id, user_valves.model_dump()
                 )
-                return user_valves_dict
+                return user_valves.model_dump()
             except Exception as e:
                 log.exception(f"Failed to update user valves by id {id}: {e}")
                 raise HTTPException(

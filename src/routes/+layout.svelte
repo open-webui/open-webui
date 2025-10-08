@@ -9,24 +9,25 @@
 
 	import { onMount, tick, setContext, onDestroy } from 'svelte';
 	import {
-		config,
-		user,
-		settings,
-		theme,
-		WEBUI_NAME,
-		mobile,
-		socket,
-		chatId,
-		chats,
-		currentChatPage,
-		tags,
-		temporaryChatEnabled,
-		isLastActiveTab,
-		isApp,
-		appInfo,
-		toolServers,
-		playingNotificationSound
-	} from '$lib/stores';
+	config,
+	user,
+	settings,
+	theme,
+	WEBUI_NAME,
+	mobile,
+	socket,
+	chatId,
+	chats,
+	currentChatPage,
+	tags,
+	temporaryChatEnabled,
+	isLastActiveTab,
+	isApp,
+	appInfo,
+	toolServers,
+	playingNotificationSound,
+	channels
+} from '$lib/stores';
 	import { goto } from '$app/navigation';
 	import { page } from '$app/stores';
 	import { Toaster, toast } from 'svelte-sonner';
@@ -254,9 +255,9 @@
 						})
 					)
 				);
-			}
 		}
-	};
+	}
+};
 
 	const chatEventHandler = async (event, cb) => {
 		const chat = $page.url.pathname.includes(`/c/${event.chat_id}`);
@@ -274,6 +275,19 @@
 		await tick();
 		const type = event?.data?.type ?? null;
 		const data = event?.data?.data ?? null;
+
+		if (event?.channel) {
+			channels.update((current) => {
+				const list = current ?? [];
+				const index = list.findIndex((item) => item.id === event.channel.id);
+				if (index !== -1) {
+					const updated = [...list];
+					updated[index] = event.channel;
+					return updated;
+				}
+				return [...list, event.channel];
+			});
+		}
 
 		if ((event.chat_id !== $chatId && !$temporaryChatEnabled) || isFocused) {
 			if (type === 'chat:completion') {
@@ -415,53 +429,200 @@
 		}
 	};
 
-	const channelEventHandler = async (event) => {
-		if (event.data?.type === 'typing') {
-			return;
-		}
+const getWebkitNotifications = () => {
+	if (typeof window === 'undefined') {
+		return null;
+	}
+	return window.webkitNotifications ?? null;
+};
 
-		// check url path
-		const channel = $page.url.pathname.includes(`/channels/${event.channel_id}`);
+const hasBrowserNotificationPermission = () => {
+	if (typeof window === 'undefined') {
+		return false;
+	}
 
-		let isFocused = document.visibilityState !== 'visible';
-		if (window.electronAPI) {
-			const res = await window.electronAPI.send({
-				type: 'window:isFocused'
-			});
-			if (res) {
-				isFocused = res.isFocused;
+	if ('Notification' in window && Notification.permission === 'granted') {
+		return true;
+	}
+
+	const webkitNotifications = getWebkitNotifications();
+	if (
+		webkitNotifications &&
+		typeof webkitNotifications.checkPermission === 'function' &&
+		webkitNotifications.checkPermission() === 0
+	) {
+		return true;
+	}
+
+	return false;
+};
+
+const requestNotificationPermission = async () => {
+	if (typeof window === 'undefined') {
+		return;
+	}
+
+	if ('Notification' in window) {
+		const permission = Notification.permission;
+		if (permission === 'default') {
+			try {
+				const request =
+					Notification.requestPermission.length === 1
+						? new Promise((resolve) => {
+								Notification.requestPermission(resolve);
+							})
+						: Notification.requestPermission();
+				await request;
+			} catch (error) {
+				console.warn('Notification permission request failed', error);
 			}
 		}
+	}
 
-		if ((!channel || isFocused) && event?.user?.id !== $user?.id) {
-			await tick();
-			const type = event?.data?.type ?? null;
-			const data = event?.data?.data ?? null;
+	const webkitNotifications = getWebkitNotifications();
+	if (webkitNotifications && typeof webkitNotifications.requestPermission === 'function') {
+		try {
+			const permission = webkitNotifications.checkPermission?.();
+			if (permission !== 0) {
+				webkitNotifications.requestPermission();
+			}
+		} catch (error) {
+			console.warn('WebKit notification permission request failed', error);
+		}
+	}
+};
 
-			if (type === 'message') {
-				if ($isLastActiveTab) {
-					if ($settings?.notificationEnabled ?? false) {
-						new Notification(`${data?.user?.name} (#${event?.channel?.name}) • Open WebUI`, {
-							body: data?.content,
-							icon: data?.user?.profile_image_url ?? `${WEBUI_BASE_URL}/static/favicon.png`
-						});
-					}
+const showBrowserNotification = async (title, options) => {
+	if (typeof window === 'undefined') {
+		return false;
+	}
+
+	const permissionGranted =
+		typeof Notification !== 'undefined' && Notification.permission === 'granted';
+
+	if ('Notification' in window && permissionGranted) {
+		try {
+			new Notification(title, options);
+			return true;
+		} catch (error) {
+			console.warn('Browser notification API failed', error);
+		}
+	}
+
+	if ('serviceWorker' in navigator && permissionGranted) {
+		try {
+			const registration = await navigator.serviceWorker.getRegistration();
+			if (registration?.showNotification) {
+				await registration.showNotification(title, options);
+				return true;
+			}
+		} catch (error) {
+			console.warn('Service worker notification failed', error);
+		}
+	}
+
+	const webkitNotifications = getWebkitNotifications();
+	if (
+		webkitNotifications &&
+		typeof webkitNotifications.createNotification === 'function' &&
+		typeof webkitNotifications.checkPermission === 'function' &&
+		webkitNotifications.checkPermission() === 0
+	) {
+		try {
+			const webkitNotification = webkitNotifications.createNotification(
+				options.icon ?? '',
+				title,
+				options.body ?? ''
+			);
+			webkitNotification?.show?.();
+			return true;
+		} catch (error) {
+			console.warn('Legacy webkit notification failed', error);
+		}
+	}
+
+	return false;
+};
+
+const channelEventHandler = async (event) => {
+	const eventType = event?.data?.type ?? null;
+	if (eventType === 'channel:created') {
+		const channelData = event?.data?.data;
+		if (channelData) {
+			channels.update((current) => {
+				const list = current ?? [];
+				const index = list.findIndex((item) => item.id === channelData.id);
+				if (index !== -1) {
+					const updated = [...list];
+					updated[index] = channelData;
+					return updated;
 				}
 
-				toast.custom(NotificationToast, {
-					componentProps: {
-						onClick: () => {
-							goto(`/channels/${event.channel_id}`);
-						},
-						content: data?.content,
-						title: `#${event?.channel?.name}`
-					},
-					duration: 15000,
-					unstyled: true
-				});
-			}
+				return [...list, channelData];
+			});
 		}
-	};
+		return;
+	}
+
+	if (eventType === 'typing') {
+		return;
+	}
+
+	// check url path
+	const currentPath = $page.url.pathname ?? '';
+	const onChannelPage = currentPath.includes(`/channels/${event.channel_id}`);
+	const documentVisible = document.visibilityState === 'visible';
+	let windowFocused = typeof document.hasFocus === 'function' ? document.hasFocus() : documentVisible;
+
+	if (window.electronAPI) {
+		const res = await window.electronAPI.send({
+			type: 'window:isFocused'
+		});
+		if (res) {
+			windowFocused = res.isFocused;
+		}
+	}
+
+	const shouldHandleEvent = (!onChannelPage || !windowFocused || !documentVisible) && event?.user?.id !== $user?.id;
+
+	if (shouldHandleEvent) {
+		await tick();
+		const type = event?.data?.type ?? null;
+		const data = event?.data?.data ?? null;
+
+		if (type === 'message') {
+			const notificationSettingEnabled =
+				($settings?.notificationEnabled ?? true) || $settings?.notificationEnabled === undefined;
+			const hasPermission = hasBrowserNotificationPermission();
+			const shouldShowBrowserNotification =
+				hasPermission &&
+				notificationSettingEnabled &&
+				(!onChannelPage || !documentVisible || !windowFocused || !$isLastActiveTab);
+
+			if (shouldShowBrowserNotification) {
+				await showBrowserNotification(
+					`${data?.user?.name} (#${event?.channel?.name}) • Open WebUI`,
+					{
+						body: data?.content,
+						icon: data?.user?.profile_image_url ?? `${WEBUI_BASE_URL}/static/favicon.png`
+					}
+				);
+			}
+
+			toast.custom(NotificationToast, {
+				componentProps: {
+					onClick: () => {
+						goto(`/channels/${event.channel_id}`);
+					},
+					content: data?.content,
+					title: `#${event?.channel?.name}`
+				},
+				duration: 15000,
+				unstyled: true
+			});
+		}
+	}
+};
 
 	const TOKEN_EXPIRY_BUFFER = 60; // seconds
 	const checkTokenExpiry = async () => {
@@ -560,6 +721,8 @@
 		// Call visibility change handler initially to set state on load
 		handleVisibilityChange();
 
+	await requestNotificationPermission();
+
 		theme.set(localStorage.theme);
 
 		mobile.set(window.innerWidth < BREAKPOINT);
@@ -575,11 +738,11 @@
 
 		user.subscribe((value) => {
 			if (value) {
-				$socket?.off('events', chatEventHandler);
-				$socket?.off('events:channel', channelEventHandler);
+				$socket?.off('chat-events', chatEventHandler);
+				$socket?.off('channel-events', channelEventHandler);
 
-				$socket?.on('events', chatEventHandler);
-				$socket?.on('events:channel', channelEventHandler);
+				$socket?.on('chat-events', chatEventHandler);
+				$socket?.on('channel-events', channelEventHandler);
 
 				// Set up the token expiry check
 				if (tokenTimer) {
@@ -587,8 +750,8 @@
 				}
 				tokenTimer = setInterval(checkTokenExpiry, 15000);
 			} else {
-				$socket?.off('events', chatEventHandler);
-				$socket?.off('events:channel', channelEventHandler);
+				$socket?.off('chat-events', chatEventHandler);
+				$socket?.off('channel-events', channelEventHandler);
 			}
 		});
 

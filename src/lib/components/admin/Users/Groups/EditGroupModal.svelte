@@ -21,7 +21,6 @@
 
 	export let users = [];
 	export let group = null;
-	export let defaultPermissions = {};
 
 	export let custom = true;
 
@@ -231,7 +230,7 @@
 							{#if selectedTab == 'general'}
 								<Display bind:name bind:description />
 							{:else if selectedTab == 'permissions'}
-								<Permissions bind:permissions {defaultPermissions} />
+								<Permissions bind:permissions />
 							{:else if selectedTab == 'users'}
 								<Users bind:userIds {users} />
 							{/if}

@@ -41,27 +41,27 @@
 
 	<div slot="content">
 		<DropdownMenu.Content
-			class="w-full max-w-[190px] rounded-2xl px-1 py-1 border border-gray-100  dark:border-gray-800 z-50 bg-white dark:bg-gray-850 dark:text-white shadow-lg"
-			sideOffset={6}
+			class="w-full max-w-[190px] text-sm rounded-xl px-1 py-1 dark:text-white shadow-lg  border border-gray-100  dark:border-gray-800 z-50 bg-white dark:bg-gray-850"
+			sideOffset={-2}
 			side="bottom"
 			align="start"
 			transition={flyAndScale}
 		>
 			<button
-				class="flex gap-2 items-center px-3 py-1.5 text-sm cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 rounded-xl w-full"
+				class="flex rounded-md py-1.5 px-3 w-full hover:bg-gray-50 dark:hover:bg-gray-800 transition"
 				on:click={async () => {
 					createHandler();
 					show = false;
 				}}
 			>
 				<div class=" self-center mr-2">
-					<Pencil />
+					<PencilSolid />
 				</div>
 				<div class=" self-center truncate">{$i18n.t('New Tool')}</div>
 			</button>
 
 			<button
-				class="flex gap-2 items-center px-3 py-1.5 text-sm cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 rounded-xl w-full"
+				class="flex rounded-md py-1.5 px-3 w-full hover:bg-gray-50 dark:hover:bg-gray-800 transition"
 				on:click={async () => {
 					importFromLinkHandler();
 					show = false;

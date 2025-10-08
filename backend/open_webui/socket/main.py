@@ -356,7 +356,7 @@ async def join_note(sid, data):
     await sio.enter_room(sid, f"note:{note.id}")
 
 
-@sio.on("events:channel")
+@sio.on("channel-events")
 async def channel_events(sid, data):
     room = f"channel:{data['channel_id']}"
     participants = sio.manager.get_participants(
@@ -373,7 +373,7 @@ async def channel_events(sid, data):
 
     if event_type == "typing":
         await sio.emit(
-            "events:channel",
+            "channel-events",
             {
                 "channel_id": data["channel_id"],
                 "message_id": data.get("message_id", None),
@@ -653,15 +653,12 @@ def get_event_emitter(request_info, update_db=True):
             )
         )
 
-        chat_id = request_info.get("chat_id", None)
-        message_id = request_info.get("message_id", None)
-
         emit_tasks = [
             sio.emit(
-                "events",
+                "chat-events",
                 {
-                    "chat_id": chat_id,
-                    "message_id": message_id,
+                    "chat_id": request_info.get("chat_id", None),
+                    "message_id": request_info.get("message_id", None),
                     "data": event_data,
                 },
                 to=session_id,
@@ -670,11 +667,8 @@ def get_event_emitter(request_info, update_db=True):
         ]
 
         await asyncio.gather(*emit_tasks)
-        if (
-            update_db
-            and message_id
-            and not request_info.get("chat_id", "").startswith("local:")
-        ):
+
+        if update_db:
             if "type" in event_data and event_data["type"] == "status":
                 Chats.add_message_status_to_chat_by_id_and_message_id(
                     request_info["chat_id"],
@@ -708,23 +702,6 @@ def get_event_emitter(request_info, update_db=True):
                     request_info["message_id"],
                     {
                         "content": content,
-                    },
-                )
-
-            if "type" in event_data and event_data["type"] == "embeds":
-                message = Chats.get_message_by_id_and_message_id(
-                    request_info["chat_id"],
-                    request_info["message_id"],
-                )
-
-                embeds = event_data.get("data", {}).get("embeds", [])
-                embeds.extend(message.get("embeds", []))
-
-                Chats.upsert_message_to_chat_by_id_and_message_id(
-                    request_info["chat_id"],
-                    request_info["message_id"],
-                    {
-                        "embeds": embeds,
                     },
                 )
 
@@ -770,7 +747,7 @@ def get_event_emitter(request_info, update_db=True):
 def get_event_call(request_info):
     async def __event_caller__(event_data):
         response = await sio.call(
-            "events",
+            "chat-events",
             {
                 "chat_id": request_info.get("chat_id", None),
                 "message_id": request_info.get("message_id", None),

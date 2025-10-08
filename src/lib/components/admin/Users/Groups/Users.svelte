@@ -75,10 +75,10 @@
 							/>
 						</div>
 
-						<div class="flex w-full items-center justify-between overflow-hidden">
+						<div class="flex w-full items-center justify-between">
 							<Tooltip content={user.email} placement="top-start">
 								<div class="flex">
-									<div class=" font-medium self-center truncate">{user.name}</div>
+									<div class=" font-medium self-center">{user.name}</div>
 								</div>
 							</Tooltip>
 

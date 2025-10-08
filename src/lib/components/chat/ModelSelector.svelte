@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { models, showSettings, settings, user, mobile, config } from '$lib/stores';
-	import { onMount, tick, getContext } from 'svelte';
+	import { onMount, tick, getContext, createEventDispatcher } from 'svelte';
 	import { toast } from 'svelte-sonner';
 	import Selector from './ModelSelector/Selector.svelte';
 	import Tooltip from '../common/Tooltip.svelte';
@@ -12,6 +12,8 @@
 	export let disabled = false;
 
 	export let showSetDefault = true;
+
+	const dispatch = createEventDispatcher();
 
 	const saveDefaultModel = async () => {
 		const hasEmptyModel = selectedModels.filter((it) => it === '');
@@ -39,13 +41,9 @@
 	};
 
 	$: if (selectedModels.length > 0 && $models.length > 0) {
-		const _selectedModels = selectedModels.map((model) =>
+		selectedModels = selectedModels.map((model) =>
 			$models.map((m) => m.id).includes(model) ? model : ''
 		);
-
-		if (JSON.stringify(_selectedModels) !== JSON.stringify(selectedModels)) {
-			selectedModels = _selectedModels;
-		}
 	}
 </script>
 
@@ -64,6 +62,15 @@
 						}))}
 						{pinModelHandler}
 						bind:value={selectedModel}
+						on:change={(event) => {
+							if (event?.detail?.value !== undefined) {
+								dispatch('change', {
+									index: selectedModelIdx,
+									value: event.detail.value,
+									previousValue: event.detail.previousValue
+								});
+							}
+						}}
 					/>
 				</div>
 			</div>
@@ -129,7 +136,7 @@
 
 {#if showSetDefault}
 	<div
-		class="relative text-left mt-[1px] ml-1 text-[0.7rem] text-gray-600 dark:text-gray-400 font-primary"
+		class="absolute text-left mt-[1px] ml-1 text-[0.7rem] text-gray-600 dark:text-gray-400 font-primary"
 	>
 		<button on:click={saveDefaultModel}> {$i18n.t('Set as default')}</button>
 	</div>

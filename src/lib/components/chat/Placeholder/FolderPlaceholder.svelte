@@ -1,40 +1,15 @@
 <script>
-	import { getContext, onMount } from 'svelte';
+	import { getContext } from 'svelte';
 	const i18n = getContext('i18n');
 
 	import { fade } from 'svelte/transition';
 
 	import ChatList from './ChatList.svelte';
 	import FolderKnowledge from './FolderKnowledge.svelte';
-	import Spinner from '$lib/components/common/Spinner.svelte';
-	import { getChatListByFolderId } from '$lib/apis/chats';
 
 	export let folder = null;
 
 	let selectedTab = 'chats';
-
-	let chats = null;
-	let page = 1;
-
-	const setChatList = async () => {
-		chats = null;
-
-		if (folder && folder.id) {
-			const res = await getChatListByFolderId(localStorage.token, folder.id, page);
-
-			if (res) {
-				chats = res;
-			} else {
-				chats = [];
-			}
-		} else {
-			chats = [];
-		}
-	};
-
-	$: if (folder) {
-		setChatList();
-	}
 </script>
 
 <div>
@@ -70,13 +45,7 @@
 		{#if selectedTab === 'knowledge'}
 			<FolderKnowledge />
 		{:else if selectedTab === 'chats'}
-			{#if chats !== null}
-				<ChatList {chats} />
-			{:else}
-				<div class="py-10">
-					<Spinner />
-				</div>
-			{/if}
+			<ChatList chats={folder?.items?.chats ?? []} />
 		{/if}
 	</div>
 </div>

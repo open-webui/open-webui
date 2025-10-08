@@ -34,7 +34,8 @@ router = APIRouter()
 async def get_notes(request: Request, user=Depends(get_verified_user)):
 
     if user.role != "admin" and not has_permission(
-        user.id, "features.notes", request.app.state.config.USER_PERMISSIONS
+        user.id, "features.notes", request.app.state.config.USER_PERMISSIONS,
+        user_role=user.role,
     ):
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
@@ -48,7 +49,7 @@ async def get_notes(request: Request, user=Depends(get_verified_user)):
                 "user": UserResponse(**Users.get_user_by_id(note.user_id).model_dump()),
             }
         )
-        for note in Notes.get_notes_by_permission(user.id, "write")
+        for note in Notes.get_notes_by_user_id(user.id, "write")
     ]
 
     return notes
@@ -66,7 +67,8 @@ async def get_note_list(
     request: Request, page: Optional[int] = None, user=Depends(get_verified_user)
 ):
     if user.role != "admin" and not has_permission(
-        user.id, "features.notes", request.app.state.config.USER_PERMISSIONS
+        user.id, "features.notes", request.app.state.config.USER_PERMISSIONS,
+        user_role=user.role,
     ):
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
@@ -81,9 +83,7 @@ async def get_note_list(
 
     notes = [
         NoteTitleIdResponse(**note.model_dump())
-        for note in Notes.get_notes_by_permission(
-            user.id, "write", skip=skip, limit=limit
-        )
+        for note in Notes.get_notes_by_user_id(user.id, "write", skip=skip, limit=limit)
     ]
 
     return notes
@@ -100,7 +100,8 @@ async def create_new_note(
 ):
 
     if user.role != "admin" and not has_permission(
-        user.id, "features.notes", request.app.state.config.USER_PERMISSIONS
+        user.id, "features.notes", request.app.state.config.USER_PERMISSIONS,
+        user_role=user.role,
     ):
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
@@ -125,7 +126,8 @@ async def create_new_note(
 @router.get("/{id}", response_model=Optional[NoteModel])
 async def get_note_by_id(request: Request, id: str, user=Depends(get_verified_user)):
     if user.role != "admin" and not has_permission(
-        user.id, "features.notes", request.app.state.config.USER_PERMISSIONS
+        user.id, "features.notes", request.app.state.config.USER_PERMISSIONS,
+        user_role=user.role,
     ):
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
@@ -159,7 +161,8 @@ async def update_note_by_id(
     request: Request, id: str, form_data: NoteForm, user=Depends(get_verified_user)
 ):
     if user.role != "admin" and not has_permission(
-        user.id, "features.notes", request.app.state.config.USER_PERMISSIONS
+        user.id, "features.notes", request.app.state.config.USER_PERMISSIONS,
+        user_role=user.role,
     ):
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
@@ -179,18 +182,6 @@ async def update_note_by_id(
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN, detail=ERROR_MESSAGES.DEFAULT()
         )
-
-    # Check if user can share publicly
-    if (
-        user.role != "admin"
-        and form_data.access_control == None
-        and not has_permission(
-            user.id,
-            "sharing.public_notes",
-            request.app.state.config.USER_PERMISSIONS,
-        )
-    ):
-        form_data.access_control = {}
 
     try:
         note = Notes.update_note_by_id(id, form_data)
@@ -216,7 +207,8 @@ async def update_note_by_id(
 @router.delete("/{id}/delete", response_model=bool)
 async def delete_note_by_id(request: Request, id: str, user=Depends(get_verified_user)):
     if user.role != "admin" and not has_permission(
-        user.id, "features.notes", request.app.state.config.USER_PERMISSIONS
+        user.id, "features.notes", request.app.state.config.USER_PERMISSIONS,
+        user_role=user.role,
     ):
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,

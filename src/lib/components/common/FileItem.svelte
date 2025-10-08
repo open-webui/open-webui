@@ -33,7 +33,6 @@
 	import Database from '../icons/Database.svelte';
 	import PageEdit from '../icons/PageEdit.svelte';
 	import ChatBubble from '../icons/ChatBubble.svelte';
-	import Folder from '../icons/Folder.svelte';
 	let showModal = false;
 
 	const decodeString = (str: string) => {
@@ -116,8 +115,6 @@
 						<PageEdit />
 					{:else if type === 'chat'}
 						<ChatBubble />
-					{:else if type === 'folder'}
-						<Folder />
 					{:else}
 						<DocumentPage />
 					{/if}

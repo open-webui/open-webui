@@ -54,114 +54,94 @@
 	let DB = null;
 	let localDBChats = [];
 
+	const KNOWLEDGE_PATH_PREFIX = '/workspace/knowledge';
+	let isKnowledgeUser = false;
 	let version;
 
-	const clearChatInputStorage = () => {
-		const chatInputKeys = Object.keys(localStorage).filter((key) => key.startsWith('chat-input'));
-		if (chatInputKeys.length > 0) {
-			chatInputKeys.forEach((key) => {
-				localStorage.removeItem(key);
-			});
-		}
-	};
-
-	const checkLocalDBChats = async () => {
-		try {
-			// Check if IndexedDB exists
-			DB = await openDB('Chats', 1);
-
-			if (!DB) {
-				return;
-			}
-
-			const chats = await DB.getAllFromIndex('chats', 'timestamp');
-			localDBChats = chats.map((item, idx) => chats[chats.length - 1 - idx]);
-
-			if (localDBChats.length === 0) {
-				await deleteDB('Chats');
-			}
-		} catch (error) {
-			// IndexedDB Not Found
-		}
-	};
-
-	const setUserSettings = async (cb) => {
-		const userSettings = await getUserSettings(localStorage.token).catch((error) => {
-			console.error(error);
-			return null;
-		});
-
-		if (userSettings) {
-			await settings.set(userSettings.ui);
-
-			if (cb) {
-				await cb();
-			}
-		}
-
-		try {
-			return JSON.parse(localStorage.getItem('settings') ?? '{}');
-		} catch (e: unknown) {
-			console.error('Failed to parse settings from localStorage', e);
-			return {};
-		}
-	};
-
-	const setModels = async () => {
-		models.set(
-			await getModels(
-				localStorage.token,
-				$config?.features?.enable_direct_connections ? ($settings?.directConnections ?? null) : null
-			)
-		);
-	};
-
-	const setToolServers = async () => {
-		let toolServersData = await getToolServersData($settings?.toolServers ?? []);
-		toolServersData = toolServersData.filter((data) => {
-			if (!data || data.error) {
-				toast.error(
-					$i18n.t(`Failed to connect to {{URL}} OpenAPI tool server`, {
-						URL: data?.url
-					})
-				);
-				return false;
-			}
-			return true;
-		});
-		toolServers.set(toolServersData);
-	};
-
-	const setBanners = async () => {
-		const bannersData = await getBanners(localStorage.token);
-		banners.set(bannersData);
-	};
-
-	const setTools = async () => {
-		const toolsData = await getTools(localStorage.token);
-		tools.set(toolsData);
-	};
+	$: isKnowledgeUser = $user?.role === 'knowledge';
 
 	onMount(async () => {
 		if ($user === undefined || $user === null) {
 			await goto('/auth');
 			return;
 		}
-		if (!['user', 'admin'].includes($user?.role)) {
-			return;
+
+		const knowledgeRole = $user?.role === 'knowledge';
+		const currentPath = $page.url?.pathname ?? '';
+		if (knowledgeRole && !currentPath.startsWith(KNOWLEDGE_PATH_PREFIX)) {
+			await goto(KNOWLEDGE_PATH_PREFIX);
 		}
 
-		clearChatInputStorage();
-		await Promise.all([
-			checkLocalDBChats(),
-			setBanners(),
-			setTools(),
-			setUserSettings(async () => {
-				await Promise.all([setModels(), setToolServers()]);
-			})
-		]);
+		// Redirect removed - users can stay on main chat interface
+		if (['user', 'knowledge', 'admin'].includes($user?.role)) {
+			try {
+				// Check if IndexedDB exists
+				DB = await openDB('Chats', 1);
 
-		const setupKeyboardShortcuts = () => {
+				if (DB) {
+					const chats = await DB.getAllFromIndex('chats', 'timestamp');
+					localDBChats = chats.map((item, idx) => chats[chats.length - 1 - idx]);
+
+					if (localDBChats.length === 0) {
+						await deleteDB('Chats');
+					}
+				}
+
+				console.log(DB);
+			} catch (error) {
+				// IndexedDB Not Found
+			}
+
+			const chatInputKeys = Object.keys(localStorage).filter((key) => key.startsWith('chat-input'));
+			if (chatInputKeys.length > 0) {
+				chatInputKeys.forEach((key) => {
+					localStorage.removeItem(key);
+				});
+			}
+
+			const userSettings = await getUserSettings(localStorage.token).catch((error) => {
+				console.error(error);
+				return null;
+			});
+
+			if (userSettings) {
+				settings.set(userSettings.ui);
+			} else {
+				let localStorageSettings = {} as Parameters<(typeof settings)['set']>[0];
+
+				try {
+					localStorageSettings = JSON.parse(localStorage.getItem('settings') ?? '{}');
+				} catch (e: unknown) {
+					console.error('Failed to parse settings from localStorage', e);
+				}
+
+				settings.set(localStorageSettings);
+			}
+
+			models.set(
+				await getModels(
+					localStorage.token,
+					$config?.features?.enable_direct_connections && ($settings?.directConnections ?? null)
+				)
+			);
+
+			banners.set(await getBanners(localStorage.token));
+			tools.set(await getTools(localStorage.token));
+
+			let toolServersData = await getToolServersData($settings?.toolServers ?? []);
+			toolServersData = toolServersData.filter((data) => {
+				if (data.error) {
+					toast.error(
+						$i18n.t(`Failed to connect to {{URL}} OpenAPI tool server`, {
+							URL: data?.url
+						})
+					);
+					return false;
+				}
+				return true;
+			});
+			toolServers.set(toolServersData);
+
 			document.addEventListener('keydown', async function (event) {
 				const isCtrlPressed = event.ctrlKey || event.metaKey; // metaKey is for Cmd key on Mac
 				// Check if the Shift key is pressed
@@ -259,41 +239,46 @@
 					}, 0);
 				}
 			});
-		};
-		setupKeyboardShortcuts();
 
-		if ($user?.role === 'admin' && ($settings?.showChangelog ?? true)) {
-			showChangelog.set($settings?.version !== $config.version);
-		}
+			// Disable automatic "What's New" pop-up after login
+			showChangelog.set(false);
 
-		if ($user?.role === 'admin' || ($user?.permissions?.chat?.temporary ?? true)) {
-			if ($page.url.searchParams.get('temporary-chat') === 'true') {
-				temporaryChatEnabled.set(true);
+			if ($user?.role === 'admin' || ($user?.permissions?.chat?.temporary ?? true)) {
+				if ($page.url.searchParams.get('temporary-chat') === 'true') {
+					temporaryChatEnabled.set(true);
+				}
+
+				if ($user?.role !== 'admin' && $user?.permissions?.chat?.temporary_enforced) {
+					temporaryChatEnabled.set(true);
+				}
 			}
 
-			if ($user?.role !== 'admin' && $user?.permissions?.chat?.temporary_enforced) {
-				temporaryChatEnabled.set(true);
-			}
-		}
+			// Check for version updates
+			if ($user?.role === 'admin' && $config?.features?.enable_version_update_check) {
+				// Check if the user has dismissed the update toast in the last 24 hours
+				if (localStorage.dismissedUpdateToast) {
+					const dismissedUpdateToast = new Date(Number(localStorage.dismissedUpdateToast));
+					const now = new Date();
 
-		// Check for version updates
-		if ($user?.role === 'admin' && $config?.features?.enable_version_update_check) {
-			// Check if the user has dismissed the update toast in the last 24 hours
-			if (localStorage.dismissedUpdateToast) {
-				const dismissedUpdateToast = new Date(Number(localStorage.dismissedUpdateToast));
-				const now = new Date();
-
-				if (now - dismissedUpdateToast > 24 * 60 * 60 * 1000) {
+					if (now - dismissedUpdateToast > 24 * 60 * 60 * 1000) {
+						checkForVersionUpdates();
+					}
+				} else {
 					checkForVersionUpdates();
 				}
-			} else {
-				checkForVersionUpdates();
 			}
+			await tick();
 		}
-		await tick();
 
 		loaded = true;
 	});
+
+	$: if (isKnowledgeUser) {
+		const activePath = $page.url?.pathname ?? '';
+		if (!activePath.startsWith(KNOWLEDGE_PATH_PREFIX)) {
+			goto(KNOWLEDGE_PATH_PREFIX);
+		}
+	}
 
 	const checkForVersionUpdates = async () => {
 		version = await getVersionUpdates(localStorage.token).catch((error) => {
@@ -325,7 +310,7 @@
 		<div
 			class=" text-gray-700 dark:text-gray-100 bg-white dark:bg-gray-900 h-screen max-h-[100dvh] overflow-auto flex flex-row justify-end"
 		>
-			{#if !['user', 'admin'].includes($user?.role)}
+			{#if !['user', 'knowledge', 'admin'].includes($user?.role)}
 				<AccountPending />
 			{:else}
 				{#if localDBChats.length > 0}
@@ -398,6 +383,12 @@
 				{/if}
 			{/if}
 		</div>
+
+		{#if ['user', 'knowledge', 'admin'].includes($user?.role)}
+			<div class="pointer-events-none fixed right-1 bottom-1 sm:right-2 sm:bottom-2 z-40 text-[7px] sm:text-[9px] text-gray-600 dark:text-gray-300 bg-white/94 dark:bg-gray-900/84 backdrop-blur-md px-1.5 py-0.25 rounded-full shadow-sm border border-gray-200/70 dark:border-gray-700/60">
+				{$i18n.t('Powered by')} <span class="font-semibold">Open WebUI</span>
+			</div>
+		{/if}
 	</div>
 {/if}
 

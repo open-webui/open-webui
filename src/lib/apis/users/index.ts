@@ -222,6 +222,41 @@ export const searchUsers = async (token: string, query: string) => {
 	return res;
 };
 
+export const getChatPeers = async (token: string, query: string = '') => {
+	let error = null;
+	let res = null;
+
+	const params = new URLSearchParams();
+	if (query) {
+		params.set('query', query);
+	}
+
+	const url = `${WEBUI_API_BASE_URL}/users/peers${params.toString() ? `?${params.toString()}` : ''}`;
+
+	res = await fetch(url, {
+		method: 'GET',
+		headers: {
+			'Content-Type': 'application/json',
+			Authorization: `Bearer ${token}`
+		}
+	})
+		.then(async (res) => {
+			if (!res.ok) throw await res.json();
+			return res.json();
+		})
+		.catch((err) => {
+			console.error(err);
+			error = err.detail ?? err.message ?? err;
+			return null;
+		});
+
+	if (error) {
+		throw error;
+	}
+
+	return res;
+};
+
 export const getUserSettings = async (token: string) => {
 	let error = null;
 	const res = await fetch(`${WEBUI_API_BASE_URL}/users/user/settings`, {
@@ -295,6 +330,33 @@ export const getUserById = async (token: string, userId: string) => {
 		.catch((err) => {
 			console.error(err);
 			error = err.detail;
+			return null;
+		});
+
+	if (error) {
+		throw error;
+	}
+
+	return res;
+};
+
+export const getActiveUsers = async (token: string) => {
+	let error = null;
+
+	const res = await fetch(`${WEBUI_API_BASE_URL}/users/active`, {
+		method: 'GET',
+		headers: {
+			'Content-Type': 'application/json',
+			Authorization: `Bearer ${token}`
+		}
+	})
+		.then(async (res) => {
+			if (!res.ok) throw await res.json();
+			return res.json();
+		})
+		.catch((err) => {
+			console.error(err);
+			error = err.detail ?? err;
 			return null;
 		});
 

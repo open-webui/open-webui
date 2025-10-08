@@ -12,16 +12,15 @@
 
 	import Textarea from '$lib/components/common/Textarea.svelte';
 	import Knowledge from '$lib/components/workspace/Models/Knowledge.svelte';
-	import { getFolderById } from '$lib/apis/folders';
 	const i18n = getContext('i18n');
 
 	export let show = false;
 	export let onSubmit: Function = (e) => {};
 
-	export let folderId = null;
 	export let edit = false;
 
-	let folder = null;
+	export let folder = null;
+
 	let name = '';
 	let meta = {
 		background_image_url: null
@@ -51,24 +50,17 @@
 		loading = false;
 	};
 
-	const init = async () => {
-		if (folderId) {
-			folder = await getFolderById(localStorage.token, folderId).catch((error) => {
-				toast.error(`${error}`);
-				return null;
-			});
+	const init = () => {
+		name = folder.name;
+		meta = folder.meta || {
+			background_image_url: null
+		};
+		data = folder.data || {
+			system_prompt: '',
+			files: []
+		};
 
-			name = folder.name;
-			meta = folder.meta || {
-				background_image_url: null
-			};
-			data = folder.data || {
-				system_prompt: '',
-				files: []
-			};
-		}
-
-		focusInput();
+		console.log(folder);
 	};
 
 	const focusInput = async () => {
@@ -81,6 +73,10 @@
 	};
 
 	$: if (show) {
+		focusInput();
+	}
+
+	$: if (folder) {
 		init();
 	}
 
@@ -228,7 +224,7 @@
 						</Knowledge>
 					</div>
 
-					<div class="flex justify-end pt-3 text-sm font-medium gap-1.5">
+					<div class="flex justify-start pt-3 text-sm font-medium gap-1.5">
 						<button
 							class="px-3.5 py-1.5 text-sm font-medium bg-black hover:bg-gray-950 text-white dark:bg-white dark:text-black dark:hover:bg-gray-100 transition rounded-full flex flex-row space-x-1 items-center {loading
 								? ' cursor-not-allowed'

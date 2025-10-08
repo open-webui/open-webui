@@ -10,6 +10,7 @@ import random
 import re
 import time
 from datetime import datetime
+from uuid import uuid4
 
 from typing import Optional, Union
 from urllib.parse import urlparse
@@ -35,7 +36,7 @@ from fastapi import (
     APIRouter,
 )
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import StreamingResponse
+from fastapi.responses import StreamingResponse, JSONResponse
 from pydantic import BaseModel, ConfigDict, validator
 from starlette.background import BackgroundTask
 
@@ -66,6 +67,8 @@ from open_webui.env import (
     BYPASS_MODEL_ACCESS_CONTROL,
 )
 from open_webui.constants import ERROR_MESSAGES
+# SQL agent functionality removed
+from open_webui.socket.main import get_event_emitter
 
 log = logging.getLogger(__name__)
 log.setLevel(SRC_LOG_LEVELS["OLLAMA"])
@@ -506,7 +509,7 @@ async def get_ollama_tags(
                 detail=detail if detail else "Open WebUI: Server Connection Error",
             )
 
-    if user.role == "user" and not BYPASS_MODEL_ACCESS_CONTROL:
+    if user.role in {"user", "knowledge"} and not BYPASS_MODEL_ACCESS_CONTROL:
         models["models"] = await get_filtered_models(models, user)
 
     return models
@@ -1020,10 +1023,6 @@ class GenerateEmbedForm(BaseModel):
     options: Optional[dict] = None
     keep_alive: Optional[Union[int, str]] = None
 
-    model_config = ConfigDict(
-        extra="allow",
-    )
-
 
 @router.post("/api/embed")
 @router.post("/api/embed/{url_idx}")
@@ -1341,7 +1340,7 @@ async def generate_chat_completion(
             payload = apply_system_prompt_to_body(system, payload, metadata, user)
 
         # Check if user has access to the model
-        if not bypass_filter and user.role == "user":
+        if not bypass_filter and user.role in {"user", "knowledge"}:
             if not (
                 user.id == model_info.user_id
                 or has_access(
@@ -1358,6 +1357,34 @@ async def generate_chat_completion(
                 status_code=403,
                 detail="Model not found",
             )
+
+    requested_model = payload.get("model", model_id)
+    event_emitter = None
+
+    extra_fields = (
+        getattr(form_data, "__pydantic_extra__", None)
+        or getattr(form_data, "model_extra", None)
+        or {}
+    )
+
+    def _extra_attr(model, name):
+        if hasattr(model, name):
+            return getattr(model, name)
+        return extra_fields.get(name)
+
+    background_tasks = extra_fields.get("background_tasks") or getattr(form_data, "background_tasks", None)
+
+    is_follow_up_generation = bool(background_tasks and background_tasks.get("follow_up_generation"))
+
+    if user and not is_follow_up_generation:
+        chat_id = _extra_attr(form_data, "chat_id")
+        message_id = _extra_attr(form_data, "id")
+        session_id = _extra_attr(form_data, "session_id")
+        if not chat_id and metadata:
+            chat_id = metadata.get("chat_id")
+
+
+
 
     if ":" not in payload["model"]:
         payload["model"] = f"{payload['model']}:latest"
@@ -1409,7 +1436,6 @@ class OpenAICompletionForm(BaseModel):
 
     model_config = ConfigDict(extra="allow")
 
-
 @router.post("/v1/completions")
 @router.post("/v1/completions/{url_idx}")
 async def generate_openai_completion(
@@ -1447,7 +1473,7 @@ async def generate_openai_completion(
             payload = apply_model_params_to_body_openai(params, payload)
 
         # Check if user has access to the model
-        if user.role == "user":
+        if user.role in {"user", "knowledge"}:
             if not (
                 user.id == model_info.user_id
                 or has_access(
@@ -1512,9 +1538,8 @@ async def generate_openai_chat_completion(
     if "metadata" in payload:
         del payload["metadata"]
 
-    model_id = completion_form.model
-    if ":" not in model_id:
-        model_id = f"{model_id}:latest"
+    requested_model = completion_form.model
+    model_id = requested_model if ":" in requested_model else f"{requested_model}:latest"
 
     model_info = Models.get_model_by_id(model_id)
     if model_info:
@@ -1530,7 +1555,7 @@ async def generate_openai_chat_completion(
             payload = apply_system_prompt_to_body(system, payload, metadata, user)
 
         # Check if user has access to the model
-        if user.role == "user":
+        if user.role in {"user", "knowledge"}:
             if not (
                 user.id == model_info.user_id
                 or has_access(
@@ -1547,6 +1572,8 @@ async def generate_openai_chat_completion(
                 status_code=403,
                 detail="Model not found",
             )
+
+
 
     if ":" not in payload["model"]:
         payload["model"] = f"{payload['model']}:latest"
@@ -1625,7 +1652,7 @@ async def get_openai_models(
                 detail=error_detail,
             )
 
-    if user.role == "user" and not BYPASS_MODEL_ACCESS_CONTROL:
+    if user.role in {"user", "knowledge"} and not BYPASS_MODEL_ACCESS_CONTROL:
         # Filter models based on user access control
         filtered_models = []
         for model in models:
@@ -1698,27 +1725,25 @@ async def download_file_stream(
                     yield f'data: {{"progress": {progress}, "completed": {current_size}, "total": {total_size}}}\n\n'
 
                 if done:
-                    file.close()
+                    file.seek(0)
+                    chunk_size = 1024 * 1024 * 2
+                    hashed = calculate_sha256(file, chunk_size)
+                    file.seek(0)
 
-                    with open(file_path, "rb") as file:
-                        chunk_size = 1024 * 1024 * 2
-                        hashed = calculate_sha256(file, chunk_size)
+                    url = f"{ollama_url}/api/blobs/sha256:{hashed}"
+                    response = requests.post(url, data=file)
 
-                        url = f"{ollama_url}/api/blobs/sha256:{hashed}"
-                        with requests.Session() as session:
-                            response = session.post(url, data=file, timeout=30)
+                    if response.ok:
+                        res = {
+                            "done": done,
+                            "blob": f"sha256:{hashed}",
+                            "name": file_name,
+                        }
+                        os.remove(file_path)
 
-                            if response.ok:
-                                res = {
-                                    "done": done,
-                                    "blob": f"sha256:{hashed}",
-                                    "name": file_name,
-                                }
-                                os.remove(file_path)
-
-                                yield f"data: {json.dumps(res)}\n\n"
-                            else:
-                                raise "Ollama: Could not create blob, Please try again."
+                        yield f"data: {json.dumps(res)}\n\n"
+                    else:
+                        raise "Ollama: Could not create blob, Please try again."
 
 
 # url = "https://huggingface.co/TheBloke/stablelm-zephyr-3b-GGUF/resolve/main/stablelm-zephyr-3b.Q2_K.gguf"

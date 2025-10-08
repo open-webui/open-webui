@@ -37,6 +37,11 @@ fi
 
 if [[ "${USE_OLLAMA_DOCKER,,}" == "true" ]]; then
     echo "USE_OLLAMA is set to true, starting ollama serve."
+    export OLLAMA_NUM_PARALLEL=${OLLAMA_NUM_PARALLEL:-50}
+    if [ -z "${OLLAMA_MAX_QUEUE}" ]; then
+        export OLLAMA_MAX_QUEUE=128
+    fi
+    echo "Starting ollama with OLLAMA_NUM_PARALLEL=${OLLAMA_NUM_PARALLEL} OLLAMA_MAX_QUEUE=${OLLAMA_MAX_QUEUE}"
     ollama serve &
 fi
 
@@ -70,18 +75,5 @@ if [ -n "$SPACE_ID" ]; then
 fi
 
 PYTHON_CMD=$(command -v python3 || command -v python)
-UVICORN_WORKERS="${UVICORN_WORKERS:-1}"
 
-# If script is called with arguments, use them; otherwise use default workers
-if [ "$#" -gt 0 ]; then
-    ARGS=("$@")
-else
-    ARGS=(--workers "$UVICORN_WORKERS")
-fi
-
-# Run uvicorn
-WEBUI_SECRET_KEY="$WEBUI_SECRET_KEY" exec "$PYTHON_CMD" -m uvicorn open_webui.main:app \
-    --host "$HOST" \
-    --port "$PORT" \
-    --forwarded-allow-ips '*' \
-    "${ARGS[@]}"
+WEBUI_SECRET_KEY="$WEBUI_SECRET_KEY" exec "$PYTHON_CMD" -m uvicorn open_webui.main:app --host "$HOST" --port "$PORT" --forwarded-allow-ips '*' --workers "${UVICORN_WORKERS:-1}"

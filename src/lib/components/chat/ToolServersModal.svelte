@@ -46,8 +46,8 @@
 				<div class=" text-sm dark:text-gray-300 mb-1">
 					{#each selectedTools as tool}
 						<Collapsible buttonClassName="w-full mb-0.5">
-							<div class="truncate">
-								<div class="text-sm font-medium dark:text-gray-100 text-gray-800 truncate">
+							<div>
+								<div class="text-sm font-medium dark:text-gray-100 text-gray-800">
 									{tool?.name}
 								</div>
 

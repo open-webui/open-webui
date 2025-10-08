@@ -159,7 +159,7 @@
 				</div>
 			</div>
 
-			<div class="pb-3 flex justify-end">
+			<div class="pb-3 flex justify-start">
 				{#if !loading}
 					<button
 						class="px-3.5 py-1.5 text-sm font-medium bg-black hover:bg-gray-900 text-white dark:bg-white dark:text-black dark:hover:bg-gray-100 transition rounded-full"

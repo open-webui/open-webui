@@ -123,7 +123,7 @@
 					{/if}
 				</div>
 
-				<div class="flex justify-end">
+				<div class="flex justify-start">
 					<div class="flex flex-col items-end space-x-1 mt-3">
 						<div class="flex gap-1">
 							{#if $config?.features.enable_community_sharing}

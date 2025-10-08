@@ -19,7 +19,6 @@
 
 	import type { Writable } from 'svelte/store';
 	import type { i18n as i18nType } from 'i18next';
-	import Textarea from '$lib/components/common/Textarea.svelte';
 
 	const i18n = getContext<Writable<i18nType>>('i18n');
 
@@ -32,7 +31,6 @@
 	let TTS_ENGINE = '';
 	let TTS_MODEL = '';
 	let TTS_VOICE = '';
-	let TTS_OPENAI_PARAMS = '';
 	let TTS_SPLIT_ON: TTS_RESPONSE_SPLIT = TTS_RESPONSE_SPLIT.PUNCTUATION;
 	let TTS_AZURE_SPEECH_REGION = '';
 	let TTS_AZURE_SPEECH_BASE_URL = '';
@@ -100,28 +98,18 @@
 	};
 
 	const updateConfigHandler = async () => {
-		let openaiParams = {};
-		try {
-			openaiParams = TTS_OPENAI_PARAMS ? JSON.parse(TTS_OPENAI_PARAMS) : {};
-			TTS_OPENAI_PARAMS = JSON.stringify(openaiParams, null, 2);
-		} catch (e) {
-			toast.error($i18n.t('Invalid JSON format for Parameters'));
-			return;
-		}
-
 		const res = await updateAudioConfig(localStorage.token, {
 			tts: {
 				OPENAI_API_BASE_URL: TTS_OPENAI_API_BASE_URL,
 				OPENAI_API_KEY: TTS_OPENAI_API_KEY,
-				OPENAI_PARAMS: openaiParams,
 				API_KEY: TTS_API_KEY,
 				ENGINE: TTS_ENGINE,
 				MODEL: TTS_MODEL,
 				VOICE: TTS_VOICE,
+				SPLIT_ON: TTS_SPLIT_ON,
 				AZURE_SPEECH_REGION: TTS_AZURE_SPEECH_REGION,
 				AZURE_SPEECH_BASE_URL: TTS_AZURE_SPEECH_BASE_URL,
-				AZURE_SPEECH_OUTPUT_FORMAT: TTS_AZURE_SPEECH_OUTPUT_FORMAT,
-				SPLIT_ON: TTS_SPLIT_ON
+				AZURE_SPEECH_OUTPUT_FORMAT: TTS_AZURE_SPEECH_OUTPUT_FORMAT
 			},
 			stt: {
 				OPENAI_API_BASE_URL: STT_OPENAI_API_BASE_URL,
@@ -158,7 +146,6 @@
 			console.log(res);
 			TTS_OPENAI_API_BASE_URL = res.tts.OPENAI_API_BASE_URL;
 			TTS_OPENAI_API_KEY = res.tts.OPENAI_API_KEY;
-			TTS_OPENAI_PARAMS = JSON.stringify(res?.tts?.OPENAI_PARAMS ?? '', null, 2);
 			TTS_API_KEY = res.tts.API_KEY;
 
 			TTS_ENGINE = res.tts.ENGINE;
@@ -625,22 +612,6 @@
 								</div>
 							</div>
 						</div>
-
-						<div class="mt-2 mb-1 text-xs text-gray-400 dark:text-gray-500">
-							<div class="w-full">
-								<div class=" mb-1.5 text-xs font-medium">{$i18n.t('Additional Parameters')}</div>
-								<div class="flex w-full">
-									<div class="flex-1">
-										<Textarea
-											className="w-full rounded-lg py-2 px-4 text-sm bg-gray-50 dark:text-gray-300 dark:bg-gray-850 outline-hidden"
-											bind:value={TTS_OPENAI_PARAMS}
-											placeholder={$i18n.t('Enter additional parameters in JSON format')}
-											minSize={100}
-										/>
-									</div>
-								</div>
-							</div>
-						</div>
 					{:else if TTS_ENGINE === 'elevenlabs'}
 						<div class=" flex gap-2">
 							<div class="w-full">
@@ -752,7 +723,7 @@
 			</div>
 		</div>
 	</div>
-	<div class="flex justify-end text-sm font-medium">
+	<div class="flex justify-start text-sm font-medium">
 		<button
 			class="px-3.5 py-1.5 text-sm font-medium bg-black hover:bg-gray-900 text-white dark:bg-white dark:text-black dark:hover:bg-gray-100 transition rounded-full"
 			type="submit"

@@ -106,7 +106,7 @@
 												</div>
 											</td>
 											<td class="px-3 py-1">
-												<div class="flex justify-end w-full">
+												<div class="flex justify-start w-full">
 													<Tooltip content="Edit">
 														<button
 															class="self-center w-fit text-sm px-2 py-2 hover:bg-black/5 dark:hover:bg-white/5 rounded-xl"

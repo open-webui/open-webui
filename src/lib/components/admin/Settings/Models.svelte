@@ -12,8 +12,7 @@
 		deleteAllModels,
 		getBaseModels,
 		toggleModelById,
-		updateModelById,
-		importModels
+		updateModelById
 	} from '$lib/apis/models';
 	import { copyToClipboard } from '$lib/utils';
 	import { page } from '$app/stores';
@@ -41,7 +40,6 @@
 
 	let shiftKey = false;
 
-	let modelsImportInProgress = false;
 	let importFiles;
 	let modelsImportInputElement: HTMLInputElement;
 
@@ -345,7 +343,7 @@
 							<div class=" flex-1 self-center {(model?.is_active ?? true) ? '' : 'text-gray-500'}">
 								<Tooltip
 									content={marked.parse(
-										!!model?.meta?.description
+										model?.meta?.description
 											? model?.meta?.description
 											: model?.ollama?.digest
 												? `${model?.ollama?.digest} **(${model?.ollama?.modified_at})**`
@@ -358,7 +356,7 @@
 								</Tooltip>
 								<div class=" text-xs overflow-hidden text-ellipsis line-clamp-1 text-gray-500">
 									<span class=" line-clamp-1">
-										{!!model?.meta?.description
+										{model?.meta?.description
 											? model?.meta?.description
 											: model?.ollama?.digest
 												? `${model.id} (${model?.ollama?.digest})`
@@ -456,7 +454,7 @@
 		</div>
 
 		{#if $user?.role === 'admin'}
-			<div class=" flex justify-end w-full mb-3">
+			<div class=" flex justify-start w-full mb-3">
 				<div class="flex space-x-1">
 					<input
 						id="models-import-input"
@@ -466,41 +464,47 @@
 						accept=".json"
 						hidden
 						on:change={() => {
-							if (importFiles.length > 0) {
-								const reader = new FileReader();
-								reader.onload = async (event) => {
-									try {
-										const models = JSON.parse(String(event.target.result));
-										modelsImportInProgress = true;
-										const res = await importModels(localStorage.token, models);
-										modelsImportInProgress = false;
+							console.log(importFiles);
 
-										if (res) {
-											toast.success($i18n.t('Models imported successfully'));
-											await init();
-										} else {
-											toast.error($i18n.t('Failed to import models'));
+							let reader = new FileReader();
+							reader.onload = async (event) => {
+								let savedModels = JSON.parse(event.target.result);
+								console.log(savedModels);
+
+								for (const model of savedModels) {
+									if (Object.keys(model).includes('base_model_id')) {
+										if (model.base_model_id === null) {
+											upsertModelHandler(model);
 										}
-									} catch (e) {
-										toast.error($i18n.t('Invalid JSON file'));
-										console.error(e);
+									} else {
+										if (model?.info ?? false) {
+											if (model.info.base_model_id === null) {
+												upsertModelHandler(model.info);
+											}
+										}
 									}
-								};
-								reader.readAsText(importFiles[0]);
-							}
+								}
+
+								await _models.set(
+									await getModels(
+										localStorage.token,
+										$config?.features?.enable_direct_connections &&
+											($settings?.directConnections ?? null)
+									)
+								);
+								init();
+							};
+
+							reader.readAsText(importFiles[0]);
 						}}
 					/>
 
 					<button
 						class="flex text-xs items-center space-x-1 px-3 py-1.5 rounded-xl bg-gray-50 hover:bg-gray-100 dark:bg-gray-800 dark:hover:bg-gray-700 dark:text-gray-200 transition"
-						disabled={modelsImportInProgress}
 						on:click={() => {
 							modelsImportInputElement.click();
 						}}
 					>
-						{#if modelsImportInProgress}
-							<Spinner className="size-3" />
-						{/if}
 						<div class=" self-center mr-2 font-medium line-clamp-1">
 							{$i18n.t('Import Presets')}
 						</div>

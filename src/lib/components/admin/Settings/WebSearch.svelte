@@ -13,8 +13,6 @@
 	export let saveHandler: Function;
 
 	let webSearchEngines = [
-		'ollama_cloud',
-		'perplexity_search',
 		'searxng',
 		'yacy',
 		'google_pse',
@@ -51,6 +49,15 @@
 			webConfig.WEB_SEARCH_DOMAIN_FILTER_LIST = [];
 		}
 
+		// Convert domain block string to array before sending
+		if (webConfig.WEB_SEARCH_DOMAIN_BLOCK_LIST) {
+			webConfig.WEB_SEARCH_DOMAIN_BLOCK_LIST = webConfig.WEB_SEARCH_DOMAIN_BLOCK_LIST.split(',')
+				.map((domain) => domain.trim())
+				.filter((domain) => domain.length > 0);
+		} else {
+			webConfig.WEB_SEARCH_DOMAIN_BLOCK_LIST = [];
+		}
+
 		// Convert Youtube loader language string to array before sending
 		if (webConfig.YOUTUBE_LOADER_LANGUAGE) {
 			webConfig.YOUTUBE_LOADER_LANGUAGE = webConfig.YOUTUBE_LOADER_LANGUAGE.split(',')
@@ -65,6 +72,7 @@
 		});
 
 		webConfig.WEB_SEARCH_DOMAIN_FILTER_LIST = webConfig.WEB_SEARCH_DOMAIN_FILTER_LIST.join(',');
+		webConfig.WEB_SEARCH_DOMAIN_BLOCK_LIST = webConfig.WEB_SEARCH_DOMAIN_BLOCK_LIST.join(',');
 		webConfig.YOUTUBE_LOADER_LANGUAGE = webConfig.YOUTUBE_LOADER_LANGUAGE.join(',');
 	};
 
@@ -77,6 +85,10 @@
 			// Convert array back to comma-separated string for display
 			if (webConfig?.WEB_SEARCH_DOMAIN_FILTER_LIST) {
 				webConfig.WEB_SEARCH_DOMAIN_FILTER_LIST = webConfig.WEB_SEARCH_DOMAIN_FILTER_LIST.join(',');
+			}
+
+			if (webConfig?.WEB_SEARCH_DOMAIN_BLOCK_LIST) {
+				webConfig.WEB_SEARCH_DOMAIN_BLOCK_LIST = webConfig.WEB_SEARCH_DOMAIN_BLOCK_LIST.join(',');
 			}
 
 			webConfig.YOUTUBE_LOADER_LANGUAGE = webConfig.YOUTUBE_LOADER_LANGUAGE.join(',');
@@ -132,41 +144,7 @@
 					</div>
 
 					{#if webConfig.WEB_SEARCH_ENGINE !== ''}
-						{#if webConfig.WEB_SEARCH_ENGINE === 'ollama_cloud'}
-							<div class="mb-2.5 flex w-full flex-col">
-								<div>
-									<div class=" self-center text-xs font-medium mb-1">
-										{$i18n.t('Ollama Cloud API Key')}
-									</div>
-
-									<div class="flex w-full">
-										<div class="flex-1">
-											<SensitiveInput
-												placeholder={$i18n.t('Enter Ollama Cloud API Key')}
-												bind:value={webConfig.OLLAMA_CLOUD_WEB_SEARCH_API_KEY}
-											/>
-										</div>
-									</div>
-								</div>
-							</div>
-						{:else if webConfig.WEB_SEARCH_ENGINE === 'perplexity_search'}
-							<div class="mb-2.5 flex w-full flex-col">
-								<div>
-									<div class=" self-center text-xs font-medium mb-1">
-										{$i18n.t('Perplexity API Key')}
-									</div>
-
-									<div class="flex w-full">
-										<div class="flex-1">
-											<SensitiveInput
-												placeholder={$i18n.t('Enter Perplexity API Key')}
-												bind:value={webConfig.PERPLEXITY_API_KEY}
-											/>
-										</div>
-									</div>
-								</div>
-							</div>
-						{:else if webConfig.WEB_SEARCH_ENGINE === 'searxng'}
+						{#if webConfig.WEB_SEARCH_ENGINE === 'searxng'}
 							<div class="mb-2.5 flex w-full flex-col">
 								<div>
 									<div class=" self-center text-xs font-medium mb-1">
@@ -669,6 +647,20 @@
 								bind:value={webConfig.WEB_SEARCH_DOMAIN_FILTER_LIST}
 							/>
 						</div>
+
+						<div class="mb-2.5 flex w-full flex-col">
+							<div class="  text-xs font-medium mb-1">
+								{$i18n.t('Domain Block List')}
+							</div>
+
+							<input
+								class="w-full rounded-lg py-2 px-4 text-sm bg-gray-50 dark:text-gray-300 dark:bg-gray-850 outline-hidden"
+								placeholder={$i18n.t(
+									'Enter domains to block separated by commas (e.g., zhidao.baidu.com,www.zhihu.com)'
+								)}
+								bind:value={webConfig.WEB_SEARCH_DOMAIN_BLOCK_LIST}
+							/>
+						</div>
 					{/if}
 
 					<div class="  mb-2.5 flex w-full justify-between">
@@ -935,7 +927,7 @@
 			</div>
 		{/if}
 	</div>
-	<div class="flex justify-end pt-3 text-sm font-medium">
+	<div class="flex justify-start pt-3 text-sm font-medium">
 		<button
 			class="px-3.5 py-1.5 text-sm font-medium bg-black hover:bg-gray-900 text-white dark:bg-white dark:text-black dark:hover:bg-gray-100 transition rounded-full"
 			type="submit"

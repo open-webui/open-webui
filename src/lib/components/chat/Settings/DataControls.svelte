@@ -2,22 +2,14 @@
 	import fileSaver from 'file-saver';
 	const { saveAs } = fileSaver;
 
-	import {
-		chats,
-		user,
-		settings,
-		scrollPaginationEnabled,
-		currentChatPage,
-		pinnedChats
-	} from '$lib/stores';
+	import { chats, user, settings, scrollPaginationEnabled, currentChatPage } from '$lib/stores';
 
 	import {
 		archiveAllChats,
 		deleteAllChats,
 		getAllChats,
 		getChatList,
-		importChat,
-		getPinnedChatList
+		importChat
 	} from '$lib/apis/chats';
 	import { getImportOrigin, convertOpenAIChats } from '$lib/utils';
 	import { onMount, getContext } from 'svelte';
@@ -82,7 +74,6 @@
 
 		currentChatPage.set(1);
 		await chats.set(await getChatList(localStorage.token, $currentChatPage));
-		pinnedChats.set(await getPinnedChatList(localStorage.token));
 		scrollPaginationEnabled.set(true);
 	};
 
@@ -101,7 +92,6 @@
 
 		currentChatPage.set(1);
 		await chats.set(await getChatList(localStorage.token, $currentChatPage));
-		pinnedChats.set([]);
 		scrollPaginationEnabled.set(true);
 	};
 
@@ -127,7 +117,7 @@
 <ArchivedChatsModal bind:show={showArchivedChatsModal} onUpdate={handleArchivedChatsChange} />
 
 <div id="tab-chats" class="flex flex-col h-full justify-between space-y-3 text-sm">
-	<div class=" space-y-2 overflow-y-scroll max-h-[28rem] md:max-h-full">
+	<div class=" space-y-2 overflow-y-scroll max-h-[28rem] lg:max-h-full">
 		<div class="flex flex-col">
 			<input
 				id="chat-import-input"

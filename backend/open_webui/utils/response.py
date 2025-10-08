@@ -79,11 +79,40 @@ def convert_ollama_usage_to_openai(data: dict) -> dict:
     }
 
 
-def convert_response_ollama_to_openai(ollama_response: dict) -> dict:
+def _ensure_ollama_dict(response):
+    if isinstance(response, dict):
+        return response
+
+    body = None
+    if hasattr(response, "body"):
+        body = response.body
+    elif hasattr(response, "_body"):
+        body = response._body  # type: ignore[attr-defined]
+
+    if body is None:
+        return {}
+
+    if isinstance(body, bytes):
+        body = body.decode("utf-8", errors="ignore")
+
+    if not body:
+        return {}
+
+    try:
+        return json.loads(body)
+    except Exception:
+        return {}
+
+
+def convert_response_ollama_to_openai(ollama_response) -> dict:
+    ollama_response = _ensure_ollama_dict(ollama_response)
+
     model = ollama_response.get("model", "ollama")
-    message_content = ollama_response.get("message", {}).get("content", "")
-    reasoning_content = ollama_response.get("message", {}).get("thinking", None)
-    tool_calls = ollama_response.get("message", {}).get("tool_calls", None)
+    message_dict = ollama_response.get("message", {}) or {}
+    message_content = message_dict.get("content", "")
+    reasoning_content = message_dict.get("thinking", None)
+    tool_calls = message_dict.get("tool_calls", None)
+    metadata = message_dict.get("metadata")
     openai_tool_calls = None
 
     if tool_calls:
@@ -94,19 +123,28 @@ def convert_response_ollama_to_openai(ollama_response: dict) -> dict:
     usage = convert_ollama_usage_to_openai(data)
 
     response = openai_chat_completion_message_template(
-        model, message_content, reasoning_content, openai_tool_calls, usage
+        model, message_content, reasoning_content, openai_tool_calls, usage, metadata
     )
     return response
 
 
 async def convert_streaming_response_ollama_to_openai(ollama_streaming_response):
     async for data in ollama_streaming_response.body_iterator:
+        if isinstance(data, (bytes, bytearray)):
+            data = data.decode("utf-8", errors="ignore")
+
+        data = data.strip()
+        if not data:
+            continue
+
         data = json.loads(data)
 
         model = data.get("model", "ollama")
         message_content = data.get("message", {}).get("content", None)
         reasoning_content = data.get("message", {}).get("thinking", None)
-        tool_calls = data.get("message", {}).get("tool_calls", None)
+        message_block = data.get("message", {}) or {}
+        tool_calls = message_block.get("tool_calls", None)
+        metadata = message_block.get("metadata")
         openai_tool_calls = None
 
         if tool_calls:
@@ -119,7 +157,12 @@ async def convert_streaming_response_ollama_to_openai(ollama_streaming_response)
             usage = convert_ollama_usage_to_openai(data)
 
         data = openai_chat_chunk_message_template(
-            model, message_content, reasoning_content, openai_tool_calls, usage
+            model,
+            message_content,
+            reasoning_content,
+            openai_tool_calls,
+            usage,
+            metadata,
         )
 
         line = f"data: {json.dumps(data)}\n\n"

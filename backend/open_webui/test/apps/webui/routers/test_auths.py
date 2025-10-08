@@ -111,7 +111,7 @@ class TestAuths(AbstractPostgresTest):
         assert data["id"] is not None and len(data["id"]) > 0
         assert data["name"] == "John Doe"
         assert data["email"] == "john.doe@openwebui.com"
-        assert data["role"] in ["admin", "user", "pending"]
+        assert data["role"] in ["admin", "knowledge", "user", "pending"]
         assert data["profile_image_url"] == "/user.png"
         assert data["token"] is not None and len(data["token"]) > 0
         assert data["token_type"] == "Bearer"

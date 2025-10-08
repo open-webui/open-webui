@@ -37,7 +37,6 @@
 	import EllipsisHorizontal from '../icons/EllipsisHorizontal.svelte';
 	import ChatPlus from '../icons/ChatPlus.svelte';
 	import ChatCheck from '../icons/ChatCheck.svelte';
-	import Knobs from '../icons/Knobs.svelte';
 
 	const i18n = getContext('i18n');
 
@@ -48,6 +47,7 @@
 	export let history;
 	export let selectedModels;
 	export let showModelSelector = true;
+	export let onModelSelected: (modelId: string, index: number, previousModelId?: string) => void = () => {};
 
 	export let onSaveTempChat: () => {};
 	export let archiveChatHandler: (id: string) => void;
@@ -103,14 +103,24 @@
 			"
 				>
 					{#if showModelSelector}
-						<ModelSelector bind:selectedModels showSetDefault={!shareEnabled} />
+						<ModelSelector
+							bind:selectedModels
+							showSetDefault={!shareEnabled}
+							on:change={(event) => {
+								if (event?.detail?.value) {
+									onModelSelected(event.detail.value, event.detail.index ?? 0, event.detail.previousValue);
+								}
+							}}
+						/>
 					{/if}
 				</div>
 
 				<div class="self-start flex flex-none items-center text-gray-600 dark:text-gray-400">
 					<!-- <div class="md:hidden flex self-center w-[1px] h-5 mx-2 bg-gray-300 dark:bg-stone-700" /> -->
 
-					{#if $user?.role === 'user' ? ($user?.permissions?.chat?.temporary ?? true) && !($user?.permissions?.chat?.temporary_enforced ?? false) : true}
+					{#if ['user', 'knowledge'].includes($user?.role)
+						? ($user?.permissions?.chat?.temporary ?? true) && !($user?.permissions?.chat?.temporary_enforced ?? false)
+						: true}
 						{#if !chat?.id}
 							<Tooltip content={$i18n.t(`Temporary Chat`)}>
 								<button
@@ -211,7 +221,7 @@
 								aria-label="Controls"
 							>
 								<div class=" m-auto self-center">
-									<Knobs className=" size-5" strokeWidth="1" />
+									<AdjustmentsHorizontal className=" size-5" strokeWidth="1" />
 								</div>
 							</button>
 						</Tooltip>
@@ -248,7 +258,7 @@
 		</div>
 	</div>
 
-	{#if $temporaryChatEnabled && ($chatId ?? '').startsWith('local:')}
+	{#if $temporaryChatEnabled && $chatId === 'local'}
 		<div class=" w-full z-30 text-center">
 			<div class="text-xs text-gray-500">{$i18n.t('Temporary Chat')}</div>
 		</div>
@@ -256,7 +266,7 @@
 
 	<div class="absolute top-[100%] left-0 right-0 h-fit">
 		{#if !history.currentId && !$chatId && ($banners.length > 0 || ($config?.license_metadata?.type ?? null) === 'trial' || (($config?.license_metadata?.seats ?? null) !== null && $config?.user_count > $config?.license_metadata?.seats))}
-			<div class=" w-full z-30">
+			<div class=" w-full z-30 mt-4">
 				<div class=" flex flex-col gap-1 w-full">
 					{#if ($config?.license_metadata?.type ?? null) === 'trial'}
 						<Banner

@@ -75,8 +75,7 @@ def safe_validate_urls(url: Sequence[str]) -> Sequence[str]:
         try:
             if validate_url(u):
                 valid_urls.append(u)
-        except Exception as e:
-            log.debug(f"Invalid URL {u}: {str(e)}")
+        except ValueError:
             continue
     return valid_urls
 

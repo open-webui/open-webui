@@ -111,8 +111,6 @@ for source in log_sources:
 log.setLevel(SRC_LOG_LEVELS["CONFIG"])
 
 WEBUI_NAME = os.environ.get("WEBUI_NAME", "Open WebUI")
-if WEBUI_NAME != "Open WebUI":
-    WEBUI_NAME += " (Open WebUI)"
 
 WEBUI_FAVICON_URL = "https://openwebui.com/favicon.png"
 
@@ -210,11 +208,6 @@ SAFE_MODE = os.environ.get("SAFE_MODE", "false").lower() == "true"
 
 ENABLE_FORWARD_USER_INFO_HEADERS = (
     os.environ.get("ENABLE_FORWARD_USER_INFO_HEADERS", "False").lower() == "true"
-)
-
-# Experimental feature, may be removed in future
-ENABLE_STAR_SESSIONS_MIDDLEWARE = (
-    os.environ.get("ENABLE_STAR_SESSIONS_MIDDLEWARE", "False").lower() == "true"
 )
 
 ####################################
@@ -473,21 +466,16 @@ ENABLE_COMPRESSION_MIDDLEWARE = (
 ####################################
 # OAUTH Configuration
 ####################################
-ENABLE_OAUTH_EMAIL_FALLBACK = (
-    os.environ.get("ENABLE_OAUTH_EMAIL_FALLBACK", "False").lower() == "true"
-)
+
 
 ENABLE_OAUTH_ID_TOKEN_COOKIE = (
     os.environ.get("ENABLE_OAUTH_ID_TOKEN_COOKIE", "True").lower() == "true"
 )
 
-OAUTH_CLIENT_INFO_ENCRYPTION_KEY = os.environ.get(
-    "OAUTH_CLIENT_INFO_ENCRYPTION_KEY", WEBUI_SECRET_KEY
-)
-
 OAUTH_SESSION_TOKEN_ENCRYPTION_KEY = os.environ.get(
     "OAUTH_SESSION_TOKEN_ENCRYPTION_KEY", WEBUI_SECRET_KEY
 )
+
 
 ####################################
 # SCIM Configuration
@@ -557,16 +545,16 @@ else:
 
 
 CHAT_RESPONSE_MAX_TOOL_CALL_RETRIES = os.environ.get(
-    "CHAT_RESPONSE_MAX_TOOL_CALL_RETRIES", "30"
+    "CHAT_RESPONSE_MAX_TOOL_CALL_RETRIES", "10"
 )
 
 if CHAT_RESPONSE_MAX_TOOL_CALL_RETRIES == "":
-    CHAT_RESPONSE_MAX_TOOL_CALL_RETRIES = 30
+    CHAT_RESPONSE_MAX_TOOL_CALL_RETRIES = 10
 else:
     try:
         CHAT_RESPONSE_MAX_TOOL_CALL_RETRIES = int(CHAT_RESPONSE_MAX_TOOL_CALL_RETRIES)
     except Exception:
-        CHAT_RESPONSE_MAX_TOOL_CALL_RETRIES = 30
+        CHAT_RESPONSE_MAX_TOOL_CALL_RETRIES = 10
 
 
 ####################################

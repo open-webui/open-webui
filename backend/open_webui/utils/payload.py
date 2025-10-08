@@ -2,7 +2,6 @@ from open_webui.utils.task import prompt_template, prompt_variables_template
 from open_webui.utils.misc import (
     deep_update,
     add_or_update_system_message,
-    replace_system_message_content,
 )
 
 from typing import Callable, Optional
@@ -11,11 +10,7 @@ import json
 
 # inplace function: form_data is modified
 def apply_system_prompt_to_body(
-    system: Optional[str],
-    form_data: dict,
-    metadata: Optional[dict] = None,
-    user=None,
-    replace: bool = False,
+    system: Optional[str], form_data: dict, metadata: Optional[dict] = None, user=None
 ) -> dict:
     if not system:
         return form_data
@@ -29,15 +24,9 @@ def apply_system_prompt_to_body(
     # Legacy (API Usage)
     system = prompt_template(system, user)
 
-    if replace:
-        form_data["messages"] = replace_system_message_content(
-            system, form_data.get("messages", [])
-        )
-    else:
-        form_data["messages"] = add_or_update_system_message(
-            system, form_data.get("messages", [])
-        )
-
+    form_data["messages"] = add_or_update_system_message(
+        system, form_data.get("messages", [])
+    )
     return form_data
 
 
@@ -164,11 +153,17 @@ def apply_model_params_to_body_ollama(params: dict, form_data: dict) -> dict:
         "repeat_last_n": int,
         "top_k": int,
         "min_p": float,
+        "typical_p": float,
         "repeat_penalty": float,
         "presence_penalty": float,
         "frequency_penalty": float,
+        "penalize_newline": bool,
         "stop": lambda x: [bytes(s, "utf-8").decode("unicode_escape") for s in x],
+        "numa": bool,
         "num_gpu": int,
+        "main_gpu": int,
+        "low_vram": bool,
+        "vocab_only": bool,
         "use_mmap": bool,
         "use_mlock": bool,
         "num_thread": int,
@@ -342,6 +337,8 @@ def convert_payload_openai_to_ollama(openai_payload: dict) -> dict:
         ollama_options = ollama_payload.get("options", {})
         ollama_options["stop"] = openai_payload.get("stop")
         ollama_payload["options"] = ollama_options
+
+
 
     if "metadata" in openai_payload:
         ollama_payload["metadata"] = openai_payload["metadata"]

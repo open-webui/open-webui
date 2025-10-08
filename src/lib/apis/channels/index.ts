@@ -168,6 +168,38 @@ export const deleteChannelById = async (token: string = '', channel_id: string) 
 	return res;
 };
 
+export const startDirectChannel = async (token: string = '', user_id: string) => {
+	let error = null;
+
+	const res = await fetch(`${WEBUI_API_BASE_URL}/channels/direct/start`, {
+		method: 'POST',
+		headers: {
+			Accept: 'application/json',
+			'Content-Type': 'application/json',
+			authorization: `Bearer ${token}`
+		},
+		body: JSON.stringify({ user_id })
+	})
+		.then(async (res) => {
+			if (!res.ok) throw await res.json();
+			return res.json();
+		})
+		.then((json) => {
+			return json;
+		})
+		.catch((err) => {
+			error = err.detail ?? err.message ?? err;
+			console.error(err);
+			return null;
+		});
+
+	if (error) {
+		throw error;
+	}
+
+	return res;
+};
+
 export const getChannelMessages = async (
 	token: string = '',
 	channel_id: string,
@@ -248,7 +280,6 @@ export const getChannelThreadMessages = async (
 };
 
 type MessageForm = {
-	reply_to_id?: string;
 	parent_id?: string;
 	content: string;
 	data?: object;

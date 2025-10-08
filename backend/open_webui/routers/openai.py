@@ -49,6 +49,8 @@ from open_webui.utils.misc import (
 
 from open_webui.utils.auth import get_admin_user, get_verified_user
 from open_webui.utils.access_control import has_access
+# SQL agent functionality removed
+from open_webui.socket.main import get_event_emitter
 
 
 log = logging.getLogger(__name__)
@@ -121,7 +123,7 @@ def openai_reasoning_model_handler(payload):
     return payload
 
 
-async def get_headers_and_cookies(
+def get_headers_and_cookies(
     request: Request,
     url,
     key=None,
@@ -174,7 +176,7 @@ async def get_headers_and_cookies(
         oauth_token = None
         try:
             if request.cookies.get("oauth_session_id", None):
-                oauth_token = await request.app.state.oauth_manager.get_oauth_token(
+                oauth_token = request.app.state.oauth_manager.get_oauth_token(
                     user.id,
                     request.cookies.get("oauth_session_id", None),
                 )
@@ -189,9 +191,6 @@ async def get_headers_and_cookies(
 
     if token:
         headers["Authorization"] = f"Bearer {token}"
-
-    if config.get("headers") and isinstance(config.get("headers"), dict):
-        headers = {**headers, **config.get("headers")}
 
     return headers, cookies
 
@@ -308,7 +307,7 @@ async def speech(request: Request, user=Depends(get_verified_user)):
             request.app.state.config.OPENAI_API_CONFIGS.get(url, {}),  # Legacy support
         )
 
-        headers, cookies = await get_headers_and_cookies(
+        headers, cookies = get_headers_and_cookies(
             request, url, key, api_config, user=user
         )
 
@@ -573,7 +572,7 @@ async def get_models(
             timeout=aiohttp.ClientTimeout(total=AIOHTTP_CLIENT_TIMEOUT_MODEL_LIST),
         ) as session:
             try:
-                headers, cookies = await get_headers_and_cookies(
+                headers, cookies = get_headers_and_cookies(
                     request, url, key, api_config, user=user
                 )
 
@@ -630,7 +629,7 @@ async def get_models(
                 error_detail = f"Unexpected error: {str(e)}"
                 raise HTTPException(status_code=500, detail=error_detail)
 
-    if user.role == "user" and not BYPASS_MODEL_ACCESS_CONTROL:
+    if user.role in {"user", "knowledge"} and not BYPASS_MODEL_ACCESS_CONTROL:
         models["data"] = await get_filtered_models(models, user)
 
     return models
@@ -659,7 +658,7 @@ async def verify_connection(
         timeout=aiohttp.ClientTimeout(total=AIOHTTP_CLIENT_TIMEOUT_MODEL_LIST),
     ) as session:
         try:
-            headers, cookies = await get_headers_and_cookies(
+            headers, cookies = get_headers_and_cookies(
                 request, url, key, api_config, user=user
             )
 
@@ -834,7 +833,7 @@ async def generate_chat_completion(
             payload = apply_system_prompt_to_body(system, payload, metadata, user)
 
         # Check if user has access to the model
-        if not bypass_filter and user.role == "user":
+        if not bypass_filter and user.role in {"user", "knowledge"}:
             if not (
                 user.id == model_info.user_id
                 or has_access(
@@ -851,6 +850,38 @@ async def generate_chat_completion(
                 status_code=403,
                 detail="Model not found",
             )
+
+    requested_model = payload.get("model", model_id)
+
+    chat_id_meta = payload.pop("chat_id", None) or (metadata.get("chat_id") if metadata else None)
+    message_id_meta = (
+        payload.pop("id", None)
+        or payload.pop("message_id", None)
+        or (metadata.get("id") if metadata else None)
+        or (metadata.get("message_id") if metadata else None)
+    )
+    session_id_meta = payload.pop("session_id", None) or (metadata.get("session_id") if metadata else None)
+    background_tasks = payload.pop("background_tasks", None)
+
+    is_follow_up_generation = bool(background_tasks and background_tasks.get("follow_up_generation"))
+
+    event_emitter = None
+    if user and not is_follow_up_generation and chat_id_meta and message_id_meta:
+        try:
+            event_emitter = get_event_emitter(
+                {
+                    "chat_id": chat_id_meta,
+                    "message_id": message_id_meta,
+                    "session_id": session_id_meta,
+                    "user_id": user.id,
+                }
+            )
+        except Exception as emitter_error:
+            log.debug("Failed to initialize event emitter: %s", emitter_error)
+
+
+
+    # SQL agent functionality removed
 
     await get_all_models(request, user=user)
     model = request.app.state.OPENAI_MODELS.get(model_id)
@@ -904,7 +935,7 @@ async def generate_chat_completion(
             convert_logit_bias_input_to_json(payload["logit_bias"])
         )
 
-    headers, cookies = await get_headers_and_cookies(
+    headers, cookies = get_headers_and_cookies(
         request, url, key, api_config, metadata, user=user
     )
 
@@ -1013,9 +1044,7 @@ async def embeddings(request: Request, form_data: dict, user):
     session = None
     streaming = False
 
-    headers, cookies = await get_headers_and_cookies(
-        request, url, key, api_config, user=user
-    )
+    headers, cookies = get_headers_and_cookies(request, url, key, api_config, user=user)
     try:
         session = aiohttp.ClientSession(trust_env=True)
         r = await session.request(
@@ -1085,7 +1114,7 @@ async def proxy(path: str, request: Request, user=Depends(get_verified_user)):
     streaming = False
 
     try:
-        headers, cookies = await get_headers_and_cookies(
+        headers, cookies = get_headers_and_cookies(
             request, url, key, api_config, user=user
         )
 

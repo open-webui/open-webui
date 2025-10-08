@@ -23,25 +23,22 @@
 
 	import { getSessionUser } from '$lib/apis/auths';
 
-	import { uploadFile } from '$lib/apis/files';
-	import { WEBUI_API_BASE_URL } from '$lib/constants';
-
-	import { getSuggestionRenderer } from '../common/RichTextInput/suggestions';
-	import CommandSuggestionList from '../chat/MessageInput/CommandSuggestionList.svelte';
-
-	import InputMenu from './MessageInput/InputMenu.svelte';
 	import Tooltip from '../common/Tooltip.svelte';
 	import RichTextInput from '../common/RichTextInput.svelte';
 	import VoiceRecording from '../chat/MessageInput/VoiceRecording.svelte';
+	import InputMenu from './MessageInput/InputMenu.svelte';
+	import { uploadFile } from '$lib/apis/files';
+	import { WEBUI_API_BASE_URL } from '$lib/constants';
 	import FileItem from '../common/FileItem.svelte';
 	import Image from '../common/Image.svelte';
 	import FilesOverlay from '../chat/MessageInput/FilesOverlay.svelte';
 	import InputVariablesModal from '../chat/MessageInput/InputVariablesModal.svelte';
+	import { getSuggestionRenderer } from '../common/RichTextInput/suggestions';
+	import CommandSuggestionList from '../chat/MessageInput/CommandSuggestionList.svelte';
 	import MentionList from './MessageInput/MentionList.svelte';
 	import Skeleton from '../chat/Messages/Skeleton.svelte';
-	import XMark from '../icons/XMark.svelte';
 
-	export let placeholder = $i18n.t('Type here...');
+	export let placeholder = $i18n.t('Send a Message');
 
 	export let id = null;
 	export let chatInputElement;
@@ -56,14 +53,11 @@
 	export let scrollEnd = true;
 	export let scrollToBottom: Function = () => {};
 
-	export let disabled = false;
 	export let acceptFiles = true;
 	export let showFormattingToolbar = true;
 
 	export let userSuggestions = false;
 	export let channelSuggestions = false;
-
-	export let replyToMessage = null;
 
 	export let typingUsersClassName = 'from-white dark:from-gray-900';
 
@@ -737,9 +731,7 @@
 				</div>
 			</div>
 
-			<div
-				class="{disabled ? 'opacity-50 pointer-events-none cursor-not-allowed' : ''} relative z-20"
-			>
+			<div class="">
 				{#if recording}
 					<VoiceRecording
 						bind:recording
@@ -774,36 +766,9 @@
 						}}
 					>
 						<div
-							id="message-input-container"
 							class="flex-1 flex flex-col relative w-full shadow-lg rounded-3xl border border-gray-50 dark:border-gray-850 hover:border-gray-100 focus-within:border-gray-100 hover:dark:border-gray-800 focus-within:dark:border-gray-800 transition px-1 bg-white/90 dark:bg-gray-400/5 dark:text-gray-100"
 							dir={$settings?.chatDirection ?? 'auto'}
 						>
-							{#if replyToMessage !== null}
-								<div class="px-3 pt-3 text-left w-full flex flex-col z-10">
-									<div class="flex items-center justify-between w-full">
-										<div class="pl-[1px] flex items-center gap-2 text-sm">
-											<div class="translate-y-[0.5px]">
-												<span class=""
-													>{$i18n.t('Replying to {{NAME}}', {
-														NAME: replyToMessage?.meta?.model_name ?? replyToMessage.user.name
-													})}</span
-												>
-											</div>
-										</div>
-										<div>
-											<button
-												class="flex items-center dark:text-gray-500"
-												on:click={() => {
-													replyToMessage = null;
-												}}
-											>
-												<XMark />
-											</button>
-										</div>
-									</div>
-								</div>
-							{/if}
-
 							{#if files.length > 0}
 								<div class="mx-2 mt-2.5 -mb-1 flex flex-wrap gap-2">
 									{#each files as file, fileIdx}
@@ -871,17 +836,15 @@
 											bind:this={chatInputElement}
 											json={true}
 											messageInput={true}
-											editable={!disabled}
-											{placeholder}
 											richText={$settings?.richTextInput ?? true}
 											showFormattingToolbar={$settings?.showFormattingToolbar ?? false}
 											shiftEnter={!($settings?.ctrlEnterToSend ?? false) &&
-												!$mobile &&
-												!(
-													'ontouchstart' in window ||
-													navigator.maxTouchPoints > 0 ||
-													navigator.msMaxTouchPoints > 0
-												)}
+												(!$mobile ||
+													!(
+														'ontouchstart' in window ||
+														navigator.maxTouchPoints > 0 ||
+														navigator.msMaxTouchPoints > 0
+													))}
 											largeTextAsFile={$settings?.largeTextAsFile ?? false}
 											floatingMenuPlacement={'top-start'}
 											{suggestions}
@@ -921,7 +884,6 @@
 
 												if (e.key === 'Escape') {
 													console.info('Escape');
-													replyToMessage = null;
 												}
 											}}
 											on:paste={async (e) => {
@@ -974,7 +936,6 @@
 												}}
 											>
 												<button
-													id="input-menu-button"
 													class="bg-transparent hover:bg-white/80 text-gray-800 dark:text-white dark:hover:bg-gray-800 transition rounded-full p-1.5 outline-hidden focus:outline-hidden"
 													type="button"
 													aria-label="More"

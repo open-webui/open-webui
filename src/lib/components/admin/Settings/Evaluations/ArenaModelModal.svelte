@@ -293,7 +293,7 @@
 						<hr class=" border-gray-100 dark:border-gray-700/10 my-2.5 w-full" />
 
 						<div class="my-2 -mx-2">
-							<div class="px-4 py-3 bg-gray-50 dark:bg-gray-950 rounded-3xl">
+							<div class="px-3 py-2 bg-gray-50 dark:bg-gray-950 rounded-lg">
 								<AccessControl bind:accessControl />
 							</div>
 						</div>
@@ -376,7 +376,7 @@
 						</div>
 					</div>
 
-					<div class="flex justify-end pt-3 text-sm font-medium gap-1.5">
+					<div class="flex justify-start pt-3 text-sm font-medium gap-1.5">
 						{#if edit}
 							<button
 								class="px-3.5 py-1.5 text-sm font-medium dark:bg-black dark:hover:bg-gray-950 dark:text-white bg-white text-black hover:bg-gray-100 transition rounded-full flex flex-row space-x-1 items-center"

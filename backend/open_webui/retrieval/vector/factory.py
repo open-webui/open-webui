@@ -1,10 +1,6 @@
 from open_webui.retrieval.vector.main import VectorDBBase
 from open_webui.retrieval.vector.type import VectorType
-from open_webui.config import (
-    VECTOR_DB,
-    ENABLE_QDRANT_MULTITENANCY_MODE,
-    ENABLE_MILVUS_MULTITENANCY_MODE,
-)
+from open_webui.config import VECTOR_DB, ENABLE_QDRANT_MULTITENANCY_MODE
 
 
 class Vector:
@@ -16,16 +12,9 @@ class Vector:
         """
         match vector_type:
             case VectorType.MILVUS:
-                if ENABLE_MILVUS_MULTITENANCY_MODE:
-                    from open_webui.retrieval.vector.dbs.milvus_multitenancy import (
-                        MilvusClient,
-                    )
+                from open_webui.retrieval.vector.dbs.milvus import MilvusClient
 
-                    return MilvusClient()
-                else:
-                    from open_webui.retrieval.vector.dbs.milvus import MilvusClient
-
-                    return MilvusClient()
+                return MilvusClient()
             case VectorType.QDRANT:
                 if ENABLE_QDRANT_MULTITENANCY_MODE:
                     from open_webui.retrieval.vector.dbs.qdrant_multitenancy import (

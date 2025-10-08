@@ -185,9 +185,10 @@
 										placeholder={$i18n.t('Enter Your Role')}
 										required
 									>
-										<option value="pending"> {$i18n.t('pending')} </option>
-										<option value="user"> {$i18n.t('user')} </option>
-										<option value="admin"> {$i18n.t('admin')} </option>
+									<option value="pending"> {$i18n.t('pending')} </option>
+									<option value="knowledge"> {$i18n.t('Knowledge')} </option>
+									<option value="user"> {$i18n.t('user')} </option>
+									<option value="admin"> {$i18n.t('admin')} </option>
 									</select>
 								</div>
 							</div>
@@ -278,7 +279,7 @@
 						{/if}
 					</div>
 
-					<div class="flex justify-end pt-3 text-sm font-medium">
+					<div class="flex justify-start pt-3 text-sm font-medium">
 						<button
 							class="px-3.5 py-1.5 text-sm font-medium bg-black hover:bg-gray-900 text-white dark:bg-white dark:text-black dark:hover:bg-gray-100 transition rounded-full flex flex-row space-x-1 items-center {loading
 								? ' cursor-not-allowed'

@@ -57,10 +57,6 @@ class ChannelModel(BaseModel):
 ####################
 
 
-class ChannelResponse(ChannelModel):
-    write_access: bool = False
-
-
 class ChannelForm(BaseModel):
     name: str
     description: Optional[str] = None
@@ -113,6 +109,15 @@ class ChannelTable:
             channel = db.query(Channel).filter(Channel.id == id).first()
             return ChannelModel.model_validate(channel) if channel else None
 
+    def get_channel_by_name(self, name: str) -> Optional[ChannelModel]:
+        with get_db() as db:
+            channel = (
+                db.query(Channel)
+                .filter(func.lower(Channel.name) == name.lower())
+                .first()
+            )
+            return ChannelModel.model_validate(channel) if channel else None
+
     def update_channel_by_id(
         self, id: str, form_data: ChannelForm
     ) -> Optional[ChannelModel]:
@@ -128,6 +133,17 @@ class ChannelTable:
             channel.updated_at = int(time.time_ns())
 
             db.commit()
+            return ChannelModel.model_validate(channel) if channel else None
+
+    def touch_channel_by_id(self, id: str) -> Optional[ChannelModel]:
+        with get_db() as db:
+            channel = db.query(Channel).filter(Channel.id == id).first()
+            if not channel:
+                return None
+
+            channel.updated_at = int(time.time_ns())
+            db.commit()
+            db.refresh(channel)
             return ChannelModel.model_validate(channel) if channel else None
 
     def delete_channel_by_id(self, id: str):

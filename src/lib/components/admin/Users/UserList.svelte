@@ -222,7 +222,7 @@
 	<div class="scrollbar-hidden relative whitespace-nowrap overflow-x-auto max-w-full">
 		<table class="w-full text-sm text-left text-gray-500 dark:text-gray-400 table-auto max-w-full">
 			<thead class="text-xs text-gray-800 uppercase bg-transparent dark:text-gray-200">
-				<tr class=" border-b-[1.5px] border-gray-50 dark:border-gray-850">
+				<tr class=" border-b-2 border-gray-100 dark:border-gray-800">
 					<th
 						scope="col"
 						class="px-2.5 py-2 cursor-pointer select-none"
@@ -339,6 +339,30 @@
 						</div>
 					</th>
 
+					<th
+						scope="col"
+						class="px-2.5 py-2 cursor-pointer select-none"
+						on:click={() => setSortKey('oauth_sub')}
+					>
+						<div class="flex gap-1.5 items-center">
+							{$i18n.t('OAuth ID')}
+
+							{#if orderBy === 'oauth_sub'}
+								<span class="font-normal"
+									>{#if direction === 'asc'}
+										<ChevronUp className="size-2" />
+									{:else}
+										<ChevronDown className="size-2" />
+									{/if}
+								</span>
+							{:else}
+								<span class="invisible">
+									<ChevronUp className="size-2" />
+								</span>
+							{/if}
+						</div>
+					</th>
+
 					<th scope="col" class="px-2.5 py-2 text-right" />
 				</tr>
 			</thead>
@@ -354,15 +378,21 @@
 								}}
 							>
 								<Badge
-									type={user.role === 'admin' ? 'info' : user.role === 'user' ? 'success' : 'muted'}
+									type={user.role === 'admin'
+										? 'info'
+									: user.role === 'knowledge'
+										? 'warning'
+									: user.role === 'user'
+										? 'success'
+									: 'muted'}
 									content={$i18n.t(user.role)}
 								/>
 							</button>
 						</td>
-						<td class="px-3 py-1 font-medium text-gray-900 dark:text-white max-w-48">
-							<div class="flex items-center">
+						<td class="px-3 py-1 font-medium text-gray-900 dark:text-white w-max">
+							<div class="flex flex-row w-max">
 								<img
-									class="rounded-full w-6 h-6 object-cover mr-2.5 flex-shrink-0"
+									class=" rounded-full w-6 h-6 object-cover mr-2.5"
 									src={user?.profile_image_url?.startsWith(WEBUI_BASE_URL) ||
 									user.profile_image_url.startsWith('https://www.gravatar.com/avatar/') ||
 									user.profile_image_url.startsWith('data:')
@@ -371,7 +401,7 @@
 									alt="user"
 								/>
 
-								<div class="font-medium truncate">{user.name}</div>
+								<div class=" font-medium self-center">{user.name}</div>
 							</div>
 						</td>
 						<td class=" px-3 py-1"> {user.email} </td>
@@ -384,8 +414,10 @@
 							{dayjs(user.created_at * 1000).format('LL')}
 						</td>
 
+						<td class=" px-3 py-1"> {user.oauth_sub ?? ''} </td>
+
 						<td class="px-3 py-1 text-right">
-							<div class="flex justify-end w-full">
+							<div class="flex justify-start w-full">
 								{#if $config.features.enable_admin_chat_access && user.role !== 'admin'}
 									<Tooltip content={$i18n.t('Chats')}>
 										<button

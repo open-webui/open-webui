@@ -14,7 +14,19 @@
 
 	const i18n = getContext('i18n');
 
-	export let channel;
+export let channel;
+
+let displayName = '';
+
+$: {
+	if (channel?.type === 'direct') {
+		const participants = channel?.meta?.direct?.participants ?? [];
+		const otherParticipant = participants.find((participant) => participant.id !== $user?.id);
+		displayName = otherParticipant?.name ?? channel?.name ?? '';
+	} else {
+		displayName = channel?.name ?? '';
+	}
+}
 </script>
 
 <nav class="sticky top-0 z-30 w-full px-1.5 py-1.5 -mb-8 flex items-center drag-region">
@@ -56,7 +68,7 @@
 			>
 				{#if channel}
 					<div class="line-clamp-1 capitalize font-medium font-primary text-lg">
-						{channel.name}
+						{displayName}
 					</div>
 				{/if}
 			</div>

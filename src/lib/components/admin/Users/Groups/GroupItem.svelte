@@ -17,7 +17,6 @@
 		name: 'Admins',
 		user_ids: [1, 2, 3]
 	};
-	export let defaultPermissions = {};
 
 	export let setGroups = () => {};
 
@@ -60,7 +59,6 @@
 	edit
 	{users}
 	{group}
-	{defaultPermissions}
 	onSubmit={updateHandler}
 	onDelete={deleteHandler}
 />
@@ -80,7 +78,7 @@
 		</div>
 	</div>
 
-	<div class="flex items-center gap-1.5 w-fit font-medium text-right justify-end">
+	<div class="flex items-center gap-1.5 w-fit font-medium text-right justify-start">
 		{group.user_ids.length}
 
 		<div>

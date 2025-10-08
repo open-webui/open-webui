@@ -30,7 +30,7 @@
 		dispatch('save');
 	}}
 >
-	<div class="py-1 overflow-y-scroll max-h-[28rem] md:max-h-full">
+	<div class="py-1 overflow-y-scroll max-h-[28rem] lg:max-h-full">
 		<div>
 			<div class="flex items-center justify-between mb-1">
 				<Tooltip
@@ -86,7 +86,7 @@
 		</div>
 	</div>
 
-	<div class="flex justify-end text-sm font-medium">
+	<div class="flex justify-start text-sm font-medium">
 		<button
 			class="px-3.5 py-1.5 text-sm font-medium bg-black hover:bg-gray-900 text-white dark:bg-white dark:text-black dark:hover:bg-gray-100 transition rounded-full"
 			type="submit"

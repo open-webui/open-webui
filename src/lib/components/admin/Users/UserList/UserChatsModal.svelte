@@ -43,10 +43,6 @@
 	let searchDebounceTimeout;
 
 	const searchHandler = async () => {
-		if (!show) {
-			return;
-		}
-
 		if (searchDebounceTimeout) {
 			clearTimeout(searchDebounceTimeout);
 		}
@@ -107,9 +103,7 @@
 	bind:query
 	bind:orderBy
 	bind:direction
-	title={$i18n.t("{{user}}'s Chats", {
-		user: user.name.length > 32 ? `${user.name.slice(0, 32)}...` : user.name
-	})}
+	title={$i18n.t("{{user}}'s Chats", { user: user.name })}
 	emptyPlaceholder={$i18n.t('No chats found for this user.')}
 	shareUrl={true}
 	{chatList}

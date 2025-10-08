@@ -202,13 +202,13 @@
 	{:else}
 		<table class="w-full text-sm text-left text-gray-500 dark:text-gray-400 table-auto max-w-full">
 			<thead class="text-xs text-gray-800 uppercase bg-transparent dark:text-gray-200">
-				<tr class=" border-b-[1.5px] border-gray-50 dark:border-gray-850">
+				<tr class=" border-b-2 border-gray-100 dark:border-gray-800">
 					<th
 						scope="col"
 						class="px-2.5 py-2 cursor-pointer select-none w-3"
 						on:click={() => setSortKey('user')}
 					>
-						<div class="flex gap-1.5 items-center justify-end">
+						<div class="flex gap-1.5 items-center justify-start">
 							{$i18n.t('User')}
 							{#if orderBy === 'user'}
 								<span class="font-normal">
@@ -254,7 +254,7 @@
 						class="px-2.5 py-2 text-right cursor-pointer select-none w-fit"
 						on:click={() => setSortKey('rating')}
 					>
-						<div class="flex gap-1.5 items-center justify-end">
+						<div class="flex gap-1.5 items-center justify-start">
 							{$i18n.t('Result')}
 							{#if orderBy === 'rating'}
 								<span class="font-normal">
@@ -277,7 +277,7 @@
 						class="px-2.5 py-2 text-right cursor-pointer select-none w-0"
 						on:click={() => setSortKey('updated_at')}
 					>
-						<div class="flex gap-1.5 items-center justify-end">
+						<div class="flex gap-1.5 items-center justify-start">
 							{$i18n.t('Updated At')}
 							{#if orderBy === 'updated_at'}
 								<span class="font-normal">
@@ -352,7 +352,7 @@
 
 						{#if feedback?.data?.rating}
 							<td class="px-3 py-1 text-right font-medium text-gray-900 dark:text-white w-max">
-								<div class=" flex justify-end">
+								<div class=" flex justify-start">
 									{#if feedback?.data?.rating.toString() === '1'}
 										<Badge type="info" content={$i18n.t('Won')} />
 									{:else if feedback?.data?.rating.toString() === '0'}
@@ -389,7 +389,7 @@
 </div>
 
 {#if feedbacks.length > 0 && $config?.features?.enable_community_sharing}
-	<div class=" flex flex-col justify-end w-full text-right gap-1">
+	<div class=" flex flex-col justify-start w-full text-right gap-1">
 		<div class="line-clamp-1 text-gray-500 text-xs">
 			{$i18n.t('Help us create the best community leaderboard by sharing your feedback history!')}
 		</div>

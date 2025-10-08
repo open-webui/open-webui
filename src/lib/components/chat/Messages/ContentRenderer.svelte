@@ -10,7 +10,6 @@
 		settings,
 		showArtifacts,
 		showControls,
-		showEmbeds,
 		showOverview
 	} from '$lib/stores';
 	import FloatingButtons from '../ContentRenderer/FloatingButtons.svelte';
@@ -195,7 +194,6 @@
 			await showControls.set(true);
 			await showArtifacts.set(true);
 			await showOverview.set(false);
-			await showEmbeds.set(false);
 		}}
 	/>
 </div>
@@ -211,7 +209,7 @@
 			: (selectedModels ?? []).length > 0
 				? selectedModels.at(0)
 				: model?.id}
-		messages={createMessagesList(history, messageId)}
+		messages={createMessagesList(history, id)}
 		onAdd={({ modelId, parentId, messages }) => {
 			console.log(modelId, parentId, messages);
 			onAddMessages({ modelId, parentId, messages });

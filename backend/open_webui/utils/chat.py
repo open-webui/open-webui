@@ -80,7 +80,6 @@ async def generate_direct_chat_completion(
     event_caller = get_event_call(metadata)
 
     channel = f"{user_id}:{session_id}:{request_id}"
-    logging.info(f"WebSocket channel: {channel}")
 
     if form_data.get("stream"):
         q = asyncio.Queue()
@@ -122,10 +121,7 @@ async def generate_direct_chat_completion(
 
                             yield f"data: {json.dumps(data)}\n\n"
                         elif isinstance(data, str):
-                            if "data:" in data:
-                                yield f"{data}\n\n"
-                            else:
-                                yield f"data: {data}\n\n"
+                            yield data
                 except Exception as e:
                     log.debug(f"Error in event generator: {e}")
                     pass
@@ -201,7 +197,7 @@ async def generate_chat_completion(
         )
     else:
         # Check if user has access to the model
-        if not bypass_filter and user.role == "user":
+        if not bypass_filter and user.role in {"user", "knowledge"}:
             try:
                 check_model_access(user, model)
             except Exception as e:
