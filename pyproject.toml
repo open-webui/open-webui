@@ -6,9 +6,9 @@ authors = [
 ]
 license = { file = "LICENSE" }
 dependencies = [
-    "fastapi==0.115.7",
-    "uvicorn[standard]==0.35.0",
-    "pydantic==2.11.7",
+    "fastapi==0.118.0",
+    "uvicorn[standard]==0.37.0",
+    "pydantic==2.11.9",
     "python-multipart==0.0.20",
     "itsdangerous==2.2.0",
 
@@ -75,7 +75,7 @@ dependencies = [
     "python-pptx==1.0.2",
     "unstructured==0.16.17",
     "nltk==3.9.1",
-    "Markdown==3.8.2",
+    "Markdown==3.9",
     "pypandoc==1.15",
     "pandas==2.2.3",
     "openpyxl==3.1.5",
@@ -95,8 +95,8 @@ dependencies = [
     "onnxruntime==1.20.1",
     "faster-whisper==1.1.1",
 
-    "black==25.1.0",
-    "youtube-transcript-api==1.1.0",
+    "black==25.9.0",
+    "youtube-transcript-api==1.2.2",
     "pytube==15.0.0",
 
     "pydub",
@@ -146,7 +146,7 @@ all = [
     "elasticsearch==9.1.0",
 
     "qdrant-client==1.14.3",
-    "pymilvus==2.5.0",
+    "pymilvus==2.6.2",
     "pinecone==6.0.2",
     "oracledb==3.2.0",
 

@@ -300,7 +300,7 @@
 		}
 	};
 
-	const showMessage = async (message) => {
+	const showMessage = async (message, ignoreSettings = false) => {
 		await tick();
 
 		const _chatId = JSON.parse(JSON.stringify($chatId));
@@ -326,7 +326,7 @@
 		await tick();
 		await tick();
 
-		if ($settings?.scrollOnBranchChange ?? true) {
+		if (($settings?.scrollOnBranchChange ?? true) || ignoreSettings) {
 			const messageElement = document.getElementById(`message-${message.id}`);
 			if (messageElement) {
 				messageElement.scrollIntoView({ behavior: 'smooth' });

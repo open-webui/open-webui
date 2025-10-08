@@ -775,27 +775,35 @@
 
 				htmlValue = editor.getHTML();
 				jsonValue = editor.getJSON();
-				mdValue = turndownService
-					.turndown(
-						htmlValue
-							.replace(/<p><\/p>/g, '<br/>')
-							.replace(/ {2,}/g, (m) => m.replace(/ /g, '\u00a0'))
-					)
-					.replace(/\u00a0/g, ' ');
 
 				if (richText) {
-					onChange({
-						html: htmlValue,
-						json: jsonValue,
-						md: mdValue
-					});
+					mdValue = turndownService
+						.turndown(
+							htmlValue
+								.replace(/<p><\/p>/g, '<br/>')
+								.replace(/ {2,}/g, (m) => m.replace(/ /g, '\u00a0'))
+						)
+						.replace(/\u00a0/g, ' ');
 				} else {
-					// Plain text path: preserve \t and \n exactly
-					const doc = editor.view.state.doc;
-					const plain = doc.textBetween(0, doc.content.size, '\n\n', '\n'); // keeps \t intact
-					value = plain;
-					onChange({ html: null, json: null, md: plain });
+					mdValue = turndownService
+						.turndown(
+							htmlValue
+								// Replace empty paragraphs with line breaks
+								.replace(/<p><\/p>/g, '<br/>')
+								// Replace multiple spaces with non-breaking spaces
+								.replace(/ {2,}/g, (m) => m.replace(/ /g, '\u00a0'))
+								// Replace tabs with non-breaking spaces (preserve indentation)
+								.replace(/\t/g, '\u00a0\u00a0\u00a0\u00a0') // 1 tab = 4 spaces
+						)
+						// Convert non-breaking spaces back to regular spaces for markdown
+						.replace(/\u00a0/g, ' ');
 				}
+
+				onChange({
+					html: htmlValue,
+					json: jsonValue,
+					md: mdValue
+				});
 
 				if (json) {
 					value = jsonValue;
