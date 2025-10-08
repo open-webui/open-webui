@@ -89,6 +89,7 @@
 
 	export let autoScroll = false;
 	export let generating = false;
+	export let disabled = false;
 
 	export let atSelectedModel: Model | undefined = undefined;
 	export let selectedModels: [''];
@@ -1039,10 +1040,12 @@
 						/>
 					{:else}
 						<form
-							class="w-full flex flex-col gap-1.5"
+							class="w-full flex flex-col gap-1.5 {disabled ? 'opacity-50 pointer-events-none' : ''}"
 							on:submit|preventDefault={() => {
 								// check if selectedModels support image input
-								dispatch('submit', prompt);
+								if (!disabled) {
+									dispatch('submit', prompt);
+								}
 							}}
 						>
 							<div

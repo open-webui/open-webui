@@ -4,8 +4,9 @@
 	import mermaid from 'mermaid';
 	import { PaneGroup, Pane, PaneResizer } from 'paneforge';
 
-	import { getContext, onDestroy, onMount, tick } from 'svelte';
+	import { getContext, onDestroy, onMount, tick, createEventDispatcher } from 'svelte';
 	const i18n: Writable<i18nType> = getContext('i18n');
+	const dispatch = createEventDispatcher();
 
 	import { goto } from '$app/navigation';
 	import { page } from '$app/stores';
@@ -117,6 +118,8 @@ $: {
 type PanelState = 'message' | 'selection';
 let inputPanelState: PanelState = 'message';
 let messageInputResetKey = 0;
+let messageInput: any = null;
+let showCommands = false;
 
 function setInputPanelState(state: PanelState) {
     inputPanelState = state;
@@ -128,21 +131,37 @@ function setInputPanelState(state: PanelState) {
 
 // Load persisted panel state on chat change
 let isInitialChatLoad = true;
+let currentChatId = '';
+
 $: {
     const chat = $chatId;
-    if (chat) {
+    if (chat && chat !== currentChatId) {
+        currentChatId = chat;
+        isInitialChatLoad = true; // Reset for new chat
+        
         try {
             const persisted = localStorage.getItem(`input-panel-state-${chat}`) as PanelState | null;
+            console.log('Loading persisted panel state:', { chat, persisted, isInitialChatLoad });
             if (persisted === 'message' || persisted === 'selection') {
                 inputPanelState = persisted;
+                // If we're restoring selection mode, also set the selection mode enabled flag
+                if (persisted === 'selection') {
+                    selectionModeEnabled.set(true);
+                }
             } else {
                 inputPanelState = 'message';
             }
-            // Mark that we've loaded the initial state for this chat
-            isInitialChatLoad = false;
+            
+            // Mark that we've loaded the initial state for this chat after a short delay
+            setTimeout(() => {
+                isInitialChatLoad = false;
+                console.log('Initial chat load completed, isInitialChatLoad set to false');
+            }, 500);
         } catch {
             inputPanelState = 'message';
-            isInitialChatLoad = false;
+            setTimeout(() => {
+                isInitialChatLoad = false;
+            }, 500);
         }
     }
 }
@@ -150,13 +169,37 @@ $: {
 // TEXT SELECTION: Auto-start selection mode when assistant response completes
 let lastAssistantPanelSwitchId: string | null = null;
 $: {
+    console.log('Auto-selection reactive block triggered:', {
+        historyCurrentId: history?.currentId,
+        isInitialChatLoad,
+        hasHistory: !!history,
+        hasMessages: !!history?.messages
+    });
+    
     if (history?.currentId && !isInitialChatLoad) {
         const msg = history.messages[history.currentId];
+        console.log('Checking for auto-selection:', {
+            currentId: history.currentId,
+            isInitialChatLoad,
+            msgRole: msg?.role,
+            msgDone: msg?.done,
+            lastAssistantPanelSwitchId,
+            inputPanelState,
+            shouldTrigger: msg?.role === 'assistant' && msg?.done === true && history.currentId !== lastAssistantPanelSwitchId
+        });
+        
+        // Reset lastAssistantPanelSwitchId when a new assistant message starts (not done yet)
+        if (msg?.role === 'assistant' && msg?.done !== true && history.currentId !== lastAssistantPanelSwitchId) {
+            console.log('New assistant message started, resetting lastAssistantPanelSwitchId');
+            lastAssistantPanelSwitchId = null;
+        }
+        
         if (
             msg?.role === 'assistant' &&
             msg?.done === true &&
             history.currentId !== lastAssistantPanelSwitchId
         ) {
+            console.log('Auto-switching to selection mode for message:', history.currentId);
             setInputPanelState('selection');
             selectionModeEnabled.set(true); // Auto-start selection mode
             lastAssistantPanelSwitchId = history.currentId;
@@ -165,6 +208,13 @@ $: {
                 const chat = $chatId;
                 if (chat) localStorage.removeItem(`selection-force-input-${chat}`);
             } catch {}
+            
+            // Debug: Log the state after setting
+            console.log('Selection mode state after auto-switch:', {
+                inputPanelState,
+                selectionModeEnabled: $selectionModeEnabled,
+                latestAssistantMessageId: $latestAssistantMessageId
+            });
         }
     }
 }
@@ -590,6 +640,34 @@ $: if (selectedModels && chatIdProp !== '') {
 	};
 
 	let pageSubscribe = null;
+	
+	// Listen for selection done event
+	const handleSelectionDone = (event) => {
+		console.log('handleSelectionDone called with event:', event);
+		const { selections } = event.detail;
+		console.log('Selections from event:', selections);
+		console.log('Current state before reset:', { 
+			inputPanelState, 
+			selectionModeEnabled: $selectionModeEnabled,
+			lastAssistantPanelSwitchId 
+		});
+		
+		selectionModeEnabled.set(false);
+		setInputPanelState('message');
+		selectionSwitchAfterResponse = true;
+		lastMessageIdAtDone = history?.currentId ?? null;
+		// DON'T reset lastAssistantPanelSwitchId to null - keep it set to prevent immediate re-triggering
+		// It will be reset when a new assistant response comes in
+		// Force re-mount of MessageInput to clear internal editor state
+		messageInputResetKey += 1;
+		
+		console.log('State after reset:', { 
+			inputPanelState, 
+			selectionModeEnabled: $selectionModeEnabled,
+			lastAssistantPanelSwitchId 
+		});
+	};
+	
 	onMount(async () => {
 		loading = true;
 		console.log('mounted');
@@ -658,12 +736,15 @@ $: if (selectedModels && chatIdProp !== '') {
 		chatInput?.focus();
 
 		chats.subscribe(() => {});
+		
+		window.addEventListener('selection-done', handleSelectionDone);
 	});
 
 	onDestroy(() => {
 		pageSubscribe();
 		chatIdUnsubscriber?.();
 		window.removeEventListener('message', onMessageHandler);
+		window.removeEventListener('selection-done', handleSelectionDone);
 		$socket?.off('chat-events', chatEventHandler);
 	});
 
@@ -949,6 +1030,11 @@ const initNewChat = async () => {
 
 		chatFiles = [];
 		params = {};
+		
+		// Reset selection mode tracking for new chat
+		lastAssistantPanelSwitchId = null;
+		isInitialChatLoad = true;
+		currentChatId = '';
 
 		if ($page.url.searchParams.get('youtube')) {
 			uploadYoutubeTranscription(
@@ -2485,39 +2571,46 @@ Key guidelines:
 								/>
                                 {/key}
                             {:else if inputPanelState === 'selection'}
-                                {#if !$selectionModeEnabled}
-                                    <!-- Start selection prompt -->
-                                    <SelectionInput
-                                        mode="start"
-                                        instruction={$i18n.t('Select problematic text in the chat and save your selection.')}
-                                        onPrimary={() => {
-                                            selectionModeEnabled.set(true);
-                                        }}
-                                        {history}
-                                        {createMessagePair}
-                                        {stopResponse}
-                                        {selectedModels}
-                                        {atSelectedModel}
-                                    />
-                                {:else}
-                                    <!-- Selection active: show Done -->
-                                    <SelectionInput
-                                        mode="done"
-                                        instruction={$i18n.t('Select problematic text in the chat and save your selection.')}
-                                        onPrimary={() => {
-                                            const selections = get(savedSelections);
-                                            selectionModeEnabled.set(false);
-                                            setInputPanelState('message');
-                                            selectionSwitchAfterResponse = true;
-                                            lastMessageIdAtDone = history?.currentId ?? null;
-                                        }}
-                                        {history}
-                                        {createMessagePair}
-                                        {stopResponse}
-                                        {selectedModels}
-                                        {atSelectedModel}
-                                    />
-                                {/if}
+                                <!-- Always show MessageInput when in selection mode -->
+                                <MessageInput
+                                    key={messageInputResetKey}
+                                    bind:this={messageInput}
+                                    {history}
+                                    {selectedModels}
+                                    bind:files
+                                    bind:prompt
+                                    bind:autoScroll
+                                    bind:selectedToolIds
+                                    bind:selectedFilterIds
+                                    bind:imageGenerationEnabled
+                                    bind:codeInterpreterEnabled
+                                    bind:webSearchEnabled
+                                    bind:atSelectedModel
+                                    bind:showCommands
+                                    {toolServers}
+                                    {stopResponse}
+                                    {createMessagePair}
+                                    placeholder={$i18n.t('How can I help you today?')}
+                                    onChange={(input) => {
+                                        if (!$temporaryChatEnabled) {
+                                            if (input.prompt !== null) {
+                                                localStorage.setItem(
+                                                    `chat-input${$chatId ? `-${$chatId}` : ''}`,
+                                                    JSON.stringify(input)
+                                                );
+                                            } else {
+                                                localStorage.removeItem(`chat-input${$chatId ? `-${$chatId}` : ''}`);
+                                            }
+                                        }
+                                    }}
+                                    disabled={true}
+                                    on:upload={(e) => {
+                                        dispatch('upload', e.detail);
+                                    }}
+                                    on:submit={(e) => {
+                                        dispatch('submit', e.detail);
+                                    }}
+                                />
 							{/if}
 
 								<div
