@@ -674,13 +674,9 @@
 	"Export chat (.json)": "Exportar chat (.json)",
 	"Export Chats": "Exportar Chats",
 	"Export Config to JSON File": "Exportar Configuração para Arquivo JSON",
-										  
-									 
 	"Export Presets": "Exportar Presets",
 	"Export Prompt Suggestions": "Exportar Sugestões de Prompt",
-									  
 	"Export to CSV": "Exportar para CSV",
-										
 	"Export Users": "Exportar Usuários",
 	"External": "Externo",
 	"External Document Loader URL required.": "URL do carregador de documentos externo necessária.",
@@ -852,14 +848,10 @@
 	"Import Chats": "Importar Chats",
 	"Import Config from JSON File": "Importar Configurações de JSON",
 	"Import From Link": "Importar do link",
-										  
-									 
 	"Import Notes": "Importar Notas",
 	"Import Presets": "Importar Presets",
 	"Import Prompt Suggestions": "Importar Sugestões de Prompt",
-									  
 	"Import successful": "Importação bem-sucedida",
-										
 	"Important Update": "Atualização importante",
 	"In order to force OCR, performing OCR must be enabled.": "Para forçar o OCR, a execução do OCR deve estar habilitada.",
 	"Include": "Incluir",
