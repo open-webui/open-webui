@@ -21,7 +21,7 @@
 	}}
 	typeahead={false}
 >
-	<DropdownMenu.Trigger aria-label={ariaLabel}>
+	<DropdownMenu.Trigger aria-label={ariaLabel} data-dropdown-trigger="true">
 		<slot />
 	</DropdownMenu.Trigger>
 

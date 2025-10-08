@@ -2,7 +2,11 @@
 	import { toast } from 'svelte-sonner';
 	import { goto, invalidate, invalidateAll } from '$app/navigation';
 	import { onMount, getContext, createEventDispatcher, tick, onDestroy } from 'svelte';
-	const i18n = getContext('i18n');
+	import { fly } from 'svelte/transition';
+	import type { Writable } from 'svelte/store';
+	import type { i18n as i18nType } from 'i18next';
+
+	const i18n: Writable<i18nType> = getContext('i18n');
 
 	const dispatch = createEventDispatcher();
 
@@ -45,6 +49,9 @@
 	export let title;
 
 	export let selected = false;
+	export let isCurrentChat = false;
+	export let showSelectionMode = false;
+	export let isFirstInList = false;
 
 	let chat = null;
 
@@ -280,16 +287,30 @@
 			}}
 		>
 			<a
-				class=" w-full flex justify-between rounded-lg px-[11px] py-[6px] {id === $chatId ||
-				confirmEdit
+				class=" w-full flex justify-between rounded-lg px-[11px] py-[6px]
+				{isCurrentChat && !selected
 					? 'bg-gray-200 dark:bg-gray-900'
 					: selected
 						? 'bg-blue-100 dark:bg-blue-900 border-2 border-blue-300 dark:border-blue-700'
 						: 'group-hover:bg-gray-100 dark:group-hover:bg-gray-950'} whitespace-nowrap text-ellipsis"
 				href="/c/{id}"
 				on:click={(e) => {
-					if (e.ctrlKey || e.metaKey) {
-						// Ctrl+click for multi-selection
+					// Check if the click was on the checkbox area, bulk actions, or chat menu
+					const target = e.target;
+					const clickedCheckbox = target && target.closest && target.closest('.checkbox-area');
+					const clickedBulkAction = target && target.closest && target.closest('button[title]');
+					const clickedDropdown =
+						target && target.closest && target.closest('[data-dropdown-trigger]');
+
+					if (clickedDropdown) {
+						// Dropdown/menu clicked - do nothing, let it handle its own logic
+						e.preventDefault();
+						return;
+					} else if (clickedBulkAction) {
+						// Bulk action buttons handle their own clicks
+						return;
+					} else if (clickedCheckbox) {
+						// Clicked on checkbox - toggle selection
 						e.preventDefault();
 						if (selected) {
 							dispatch('unselect');
@@ -297,7 +318,7 @@
 							dispatch('select');
 						}
 					} else {
-						// Regular click - navigate and clear multi-selection
+						// Normal navigation
 						dispatch('navigate');
 						if ($mobile) {
 							showSidebar.set(false);
@@ -318,11 +339,36 @@
 				draggable="false"
 			>
 				<div class=" flex self-center flex-1 w-full">
-					{#if selected}
+					{#if showSelectionMode || mouseOver}
+						<!-- Show checkbox when in selection mode or on hover -->
+						<div
+							class="checkbox-area mr-2 flex items-center cursor-pointer p-1 -m-1 rounded hover:bg-gray-200 dark:hover:bg-gray-700"
+						>
+							{#if selected}
+								<!-- Selected checkbox -->
+								<svg
+									xmlns="http://www.w3.org/2000/svg"
+									class="w-4 h-4 text-blue-600 dark:text-blue-400"
+									viewBox="0 0 20 20"
+									fill="currentColor"
+								>
+									<path
+										fill-rule="evenodd"
+										d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"
+										clip-rule="evenodd"
+									/>
+								</svg>
+							{:else}
+								<!-- Empty checkbox -->
+								<div class="w-4 h-4 border-2 border-gray-300 dark:border-gray-600 rounded"></div>
+							{/if}
+						</div>
+					{:else if isCurrentChat}
+						<!-- Current chat indicator -->
 						<div class="mr-2 flex items-center">
 							<svg
 								xmlns="http://www.w3.org/2000/svg"
-								class="w-4 h-4 text-blue-600 dark:text-blue-400"
+								class="w-4 h-4 text-gray-600 dark:text-gray-400"
 								viewBox="0 0 20 20"
 								fill="currentColor"
 							>
@@ -335,7 +381,7 @@
 						</div>
 					{/if}
 					<div class=" text-left self-center overflow-hidden w-full h-[20px]">
-						{title}
+						<span class="truncate">{title}</span>
 					</div>
 				</div>
 			</a>
@@ -418,16 +464,13 @@
 						}}
 						buttonClass="dark:hover:bg-gray-850 rounded-lg touch-auto"
 						onClose={() => {
-							dispatch('unselect');
+							// Do nothing - menu closing should not affect selection
 						}}
 						on:change={async (e) => {
 							dispatch('change', e.detail);
 						}}
 						on:tag={(e) => {
 							dispatch('tag', e.detail);
-						}}
-						on:click={() => {
-							dispatch('select');
 						}}
 					>
 						<svg
@@ -466,4 +509,52 @@
 			</div>
 		{/if}
 	</div>
+
+	<!-- Bulk Actions removed from ChatItem - now handled in Sidebar -->
+
+	<!-- Bulk Actions (appear next to first chat when any chats selected) -->
+	{#if isFirstInList && showSelectionMode}
+		<div
+			style="position: fixed; top: 205px; left: 265px; z-index: 9999;"
+			class="flex items-center space-x-1 bg-white dark:bg-gray-800 rounded-md shadow-lg px-2 py-1 border border-gray-200 dark:border-gray-600"
+			in:fly={{ x: 100, duration: 300, delay: 100 }}
+			out:fly={{ x: 100, duration: 200 }}
+		>
+			<!-- Select All Button -->
+			<button
+				class="px-2 py-1 text-xs bg-blue-500 hover:bg-blue-600 text-white rounded transition-colors font-medium"
+				on:click|stopPropagation={(e) => {
+					e.preventDefault();
+					dispatch('selectAll');
+				}}
+				title={$i18n.t('Select All')}
+			>
+				{$i18n.t('All')}
+			</button>
+
+			<!-- Clear Selection Button -->
+			<button
+				class="px-2 py-1 text-xs bg-gray-500 hover:bg-gray-600 text-white rounded transition-colors font-medium"
+				on:click|stopPropagation={(e) => {
+					e.preventDefault();
+					dispatch('clearSelection');
+				}}
+				title={$i18n.t('Clear Selection')}
+			>
+				{$i18n.t('Clear')}
+			</button>
+
+			<!-- Delete Selected Button -->
+			<button
+				class="px-2 py-1 text-xs bg-red-500 hover:bg-red-600 text-white rounded transition-colors font-medium"
+				on:click|stopPropagation={(e) => {
+					e.preventDefault();
+					dispatch('deleteSelected');
+				}}
+				title={$i18n.t('Delete Selected')}
+			>
+				{$i18n.t('Delete')}
+			</button>
+		</div>
+	{/if}
 </div>
