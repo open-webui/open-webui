@@ -754,6 +754,13 @@
 							</div>
 						{:else}
 							<div class="w-full flex flex-col relative" id="response-content-container">
+								<style>
+									#response-content-container {
+										font-size: 1.3em;
+										line-height: 0,2em;
+
+									}
+								</style>
 								{#if message.content === '' && !message.error && ((model?.info?.meta?.capabilities?.status_updates ?? true) ? (message?.statusHistory ?? [...(message?.status ? [message?.status] : [])]).length === 0 || (message?.statusHistory?.at(-1)?.hidden ?? false) : true)}
 									<Skeleton />
 								{:else if message.content && message.error !== true}
@@ -823,7 +830,7 @@
 				{#if !edit}
 					<div
 						bind:this={buttonsContainerElement}
-						class="flex justify-start overflow-x-auto buttons text-gray-600 dark:text-gray-500 mt-0.5"
+						class="flex justify-start overflow-x-auto buttons text-gray-600 dark:text-gray-500 mt-2"
 					>
 						{#if message.done || siblings.length > 1}
 							{#if siblings.length > 1}

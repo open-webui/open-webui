@@ -760,3 +760,7 @@ body {
 	position: relative;
 	z-index: 0;
 }
+
+p {
+  font-size: 1.3em !important;
+}
