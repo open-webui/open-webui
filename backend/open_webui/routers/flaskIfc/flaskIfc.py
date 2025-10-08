@@ -267,11 +267,43 @@ def upload_serial_command():
     return render_template("upload.html")  # Display the upload form
 
 
+def ensure_remote_dir(sftp, remote_path):
+    """
+    Recursively create remote directories if they don't exist.
+    """
+    dirs = remote_path.strip("/").split("/")
+    current_dir = ""
+    for dir_part in dirs:
+        current_dir += "/" + dir_part
+        try:
+            sftp.stat(current_dir)
+        except IOError:
+            print(f"Creating remote directory: {current_dir}")
+            sftp.mkdir(current_dir)
+
+
 def actual_transfer(file, file_size):
     # Check if the file is empty
     if file.name == "":
         return "No file selected"
 
+    if ssh != None and shell != None:
+        if file:
+            filename = os.path.basename(file.name)  # secure_filename(file.filename)
+            # Create Sftp client and transfer file
+            sftp = ssh.open_sftp()
+
+            remote_dir = "/tsi/proj/model-cache/gguf/"
+            remote_path = os.path.join(remote_dir, filename)
+
+            # Ensure remote directory exists
+            ensure_remote_dir(sftp, remote_dir)
+            try:
+                sftp.put(file.name, remote_path)
+            except Exception as e:
+                return f"File-transfer failed: {e}", 500
+            sftp.close()
+            return f"File transfer succeeded", 200
     # Save the file if it exists
     if file:
         filename = os.path.basename(file.name)  # secure_filename(file.filename)
@@ -440,6 +472,17 @@ def receive_upload_model():
 
     send_serial_command(f"cd {destn_path}; mv {file_name} {new_file_name}", timeout=300)
 
+    if ssh:
+        job_status["running"] = False
+        return (
+            manual_response(
+                content="File Download Done",
+                thinking="File Download Done",
+                incoming_headers=incoming_headers,
+            ),
+            200,
+        )
+
     print("Listing out existing files")
     send_serial_command(port, baudrate, f"cd {destn_path}; ls -lt", timeout=300)
 
@@ -602,6 +645,16 @@ def receive_pull_model():
         timeout=300,
     )
 
+    if ssh:
+        job_status["running"] = False
+        return (
+            manual_response(
+                content="File Download Done",
+                thinking="File Download Done",
+                incoming_headers=incoming_headers,
+            ),
+            200,
+        )
     print("Listing out existing files")
     send_serial_command(f"cd {destn_path}; ls -lt", timeout=300)
 
@@ -719,7 +772,7 @@ def upload_file():
             script_path = "./recvFromHost "
             temporary_destination_path = request.form.get(
                 "destination_file_path"
-            )  # I've tested this on fpga4 and it correctly gets the user-inputted file path
+            )  # I've tested this on fpgax and it correctly gets the user-inputted file path
             command = (
                 f"cd {exe_path}; {script_path} {temporary_destination_path}{filename}"
             )

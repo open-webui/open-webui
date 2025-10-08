@@ -3,7 +3,10 @@ import sys
 import time
 import portalocker
 import paramiko
+import re
 
+DEFAULT_COMMAND_TIMEOUT = 7200
+SHELL_PROMPT_REGEX = re.compile(r"root@[\w\-]+:[\w\/\-]+#")
 SERIAL_LOCK_FILE = "./serial_port.lock"  # Use a lock file
 exe_path = "/usr/bin/tsi/v0.1.1*/bin/"
 
@@ -17,7 +20,7 @@ QEMU_LOGIN_PROMPT = "qemuarm64"
 QEMU_LOGGED_IN_PROMPT = "@qemuarm64"
 
 # SSH connection details
-hostname = "192.168.7.4"
+hostname = "192.168.7.2"
 username = "root"
 password = "your_password"  # or use key-based auth
 port = 22
@@ -221,9 +224,6 @@ def restart_txe_serial_portion(shell, path):
     time.sleep(3)
 
 
-DEFAULT_COMMAND_TIMEOUT = 7200
-
-
 def send_shell_command(shell, command, timeout=DEFAULT_COMMAND_TIMEOUT):
     if not is_lock_available():
         return None
@@ -256,6 +256,7 @@ def send_shell_command(shell, command, timeout=DEFAULT_COMMAND_TIMEOUT):
                         print("Decoding error:", e, "Raw line:", line)
                         continue
 
+                    # Check for known completion keywords
                     if any(
                         keyword in read_next_line
                         for keyword in [
@@ -268,11 +269,18 @@ def send_shell_command(shell, command, timeout=DEFAULT_COMMAND_TIMEOUT):
                         ]
                     ):
                         if first_time:
+                            # Check for shell prompt to exit
+                            if SHELL_PROMPT_REGEX.search(read_next_line):
+                                break
                             first_time = False
                             continue
                         else:
                             break
 
+                    # Check for shell prompt to exit
+                    if SHELL_PROMPT_REGEX.search(read_next_line):
+                        break
+                    # Filter out noisy lines
                     if not any(
                         keyword in read_next_line
                         for keyword in ["read in progress", "tSavorite"]
@@ -286,6 +294,9 @@ def send_shell_command(shell, command, timeout=DEFAULT_COMMAND_TIMEOUT):
             except KeyboardInterrupt:
                 return "Program interrupted by user"
 
+        lines = data.splitlines()
+        if lines and command.lower() in lines[0].lower():
+            data = "\n".join(lines[1:])
         return data
 
     except Exception as e:
