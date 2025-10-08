@@ -84,6 +84,7 @@ import { getAndUpdateUserLocation, getUserSettings } from '$lib/apis/users';
 		getTaskIdsByChatId
 	} from '$lib/apis';
 	import { getTools } from '$lib/apis/tools';
+	import { applyModeration, generateFollowUpPrompt, type ModerationResponse } from '$lib/apis/moderation';
 
 	import Banner from '../common/Banner.svelte';
 	import MessageInput from '$lib/components/chat/MessageInput.svelte';
@@ -239,6 +240,64 @@ $: {
 	export let chatIdProp = '';
 
 	let loading = true;
+	
+	// Parent mode toggle state
+	let parentMode = false;
+
+	// ====== PARENT MODE: MODERATION STATE ======
+	const moderationOptions = [
+		'Refuse Response and Explain',
+		'Remove Harmful Phrases',
+		'Omit Unprompted Suggestions',
+		'Do Not Suggest Workarounds',
+		'Clarify Child\'s Intent',
+		'Emphasize Emotional Support',
+		'Explain Problems in Prompt',
+		'Emphasize Risk Awareness',
+		'Redirect with Alternatives',
+		'Remind Model is Not Human',
+		'Encourage Introspection',
+		'Tailor to Age Group',
+		'Defer to Parents',
+		'Defer to Resources',
+		'Custom'
+	];
+
+	// Moderation state - Updated for multi-selection
+	let moderationResult: ModerationResponse | null = null;
+	let moderationLoading: boolean = false;
+	let selectedModerations: Set<string> = new Set();  // Track selected moderation strategies
+	
+	// Custom moderation state
+	let showCustomModal: boolean = false;
+	let customInstructionInput: string = '';
+	let customInstructions: Array<{id: string, text: string}> = [];  // Store custom instructions with IDs
+	
+	// TWO-PASS MODERATION STATE (New for iterative moderation)
+	let conversationStep: 'first' | 'second' = 'first';  // Track which pass we're on
+	
+	// First pass data
+	let childPrompt1: string = 'Who is Trump? Is he a good guy?';  // Default example
+	let originalResponse1: string = 'Hi there! Donald Trump is a well-known businessman and was the 45th President of the United States. People have different opinions about him, just like with many leaders. Some people think he did a good job, while others have different thoughts.';
+	let highlightedTexts1: string = '';  // Simple textarea for MVP
+	let moderationResult1: ModerationResponse | null = null;
+	
+	// Second pass data
+	let childPrompt2: string = '';  // Will be auto-generated
+	let originalResponse2: string = '';  // User will input this
+	let highlightedTexts2: string = '';
+	let moderationResult2: ModerationResponse | null = null;
+	
+	// Loading states
+	let generatingPrompt2: boolean = false;
+	let showSecondPass: boolean = false;
+	
+	// UI state for chat-based interface
+	let showOriginal1: boolean = false;  // Toggle between original/moderated for pass 1
+	let showOriginal2: boolean = false;  // Toggle between original/moderated for pass 2
+	let showSystemRules: boolean = false;  // Expandable system rules section
+	let generatingResponse2: boolean = false;  // Loading state for auto-generating follow-up response
+	// ====== END PARENT MODE STATE ======
 
 	const eventTarget = new EventTarget();
 	let controlPane;
@@ -2309,9 +2368,227 @@ Key guidelines:
 			}
 		}
 	};
+
+	// ====== PARENT MODE: MODERATION FUNCTIONS ======
+	function toggleModerationSelection(option: string) {
+		// Special handling for Custom option - opens modal
+		if (option === 'Custom') {
+			showCustomModal = true;
+			return;
+		}
+		
+		// Toggle selection for standard options and saved customs
+		if (selectedModerations.has(option)) {
+			selectedModerations.delete(option);
+		} else {
+			selectedModerations.add(option);
+		}
+		selectedModerations = selectedModerations;  // Trigger reactivity
+	}
+	
+	function addCustomInstruction() {
+		const trimmed = customInstructionInput.trim();
+		if (!trimmed) {
+			toast.error('Please enter a custom instruction');
+			return;
+		}
+		
+		// Create unique ID for this custom instruction
+		const id = `custom_${Date.now()}`;
+		
+		// Add to custom instructions array
+		customInstructions = [...customInstructions, {id, text: trimmed}];
+		
+		// Don't auto-select - let user explicitly select it by clicking the checkbox
+		// This prevents confusion where clicking the checkbox deselects instead of selects
+		
+		// Close modal and reset input
+		showCustomModal = false;
+		customInstructionInput = '';
+		
+		toast.success('Custom instruction added - click it to select');
+	}
+	
+	function removeCustomInstruction(id: string) {
+		// Remove from custom instructions array
+		customInstructions = customInstructions.filter(c => c.id !== id);
+		
+		// Remove from selections if it was selected
+		selectedModerations.delete(id);
+		selectedModerations = selectedModerations;
+	}
+	
+	function cancelCustomModal() {
+		showCustomModal = false;
+		customInstructionInput = '';
+	}
+
+	async function applySelectedModerations() {
+		if (selectedModerations.size === 0) {
+			toast.error('Please select at least one moderation strategy');
+			return;
+		}
+
+		console.log(`Applying moderations (Pass ${conversationStep}):`, Array.from(selectedModerations).join(', '));
+		moderationLoading = true;
+		
+		// Determine which pass we're on
+		const isFirstPass = conversationStep === 'first';
+
+		try {
+			// Separate standard strategies from custom IDs
+			const selectedArray = Array.from(selectedModerations);
+			const standardStrategies: string[] = [];
+			const customTexts: string[] = [];
+			
+			selectedArray.forEach(selection => {
+				if (selection.startsWith('custom_')) {
+					const custom = customInstructions.find(c => c.id === selection);
+					if (custom) {
+						customTexts.push(custom.text);
+					}
+				} else {
+					standardStrategies.push(selection);
+				}
+			});
+			
+			// Call moderation with appropriate parameters for current pass
+			const result = await applyModeration(
+				localStorage.token,
+				standardStrategies,
+				isFirstPass ? childPrompt1 : childPrompt2,
+				customTexts,
+				isFirstPass ? originalResponse1 : originalResponse2,  // Pass original response
+				isFirstPass ? highlightedTexts1.split('\n').filter(t => t.trim()) : highlightedTexts2.split('\n').filter(t => t.trim())  // Parse highlighted texts
+			);
+			
+			if (result) {
+				// Store result in appropriate pass
+				if (isFirstPass) {
+					moderationResult1 = result;
+				} else {
+					moderationResult2 = result;
+				}
+				
+				const total = standardStrategies.length + customTexts.length;
+				toast.success(`Applied ${total} moderation strateg${total === 1 ? 'y' : 'ies'} (Pass ${conversationStep === 'first' ? '1' : '2'})`);
+			} else {
+				toast.error('Failed to apply moderation');
+			}
+		} catch (error: any) {
+			console.error('Error applying moderation:', error);
+			toast.error(`Error: ${error.message || 'Failed to apply moderation'}`);
+		} finally {
+			moderationLoading = false;
+		}
+	}
+
+	function clearSelections() {
+		selectedModerations.clear();
+		customInstructions = [];  // Clear custom instructions too
+		selectedModerations = selectedModerations;  // Trigger reactivity
+		moderationResult = null;
+	}
+	
+	async function generateFollowUp() {
+		if (!moderationResult1) {
+			toast.error('Please complete the first moderation pass first');
+			return;
+		}
+
+		generatingPrompt2 = true;
+
+		try {
+			const followup = await generateFollowUpPrompt(
+				localStorage.token,
+				childPrompt1,
+				moderationResult1.refactored_response
+			);
+			
+			childPrompt2 = followup;
+			showSecondPass = true;
+			conversationStep = 'second';
+			
+			toast.success('Follow-up question generated!');
+			
+			// Auto-generate AI response for the follow-up
+			await generateFollowUpResponse();
+		} catch (error: any) {
+			console.error('Error generating follow-up:', error);
+			toast.error(`Error: ${error.message || 'Failed to generate follow-up'}`);
+		} finally {
+			generatingPrompt2 = false;
+		}
+	}
+
+	async function generateFollowUpResponse() {
+		if (!childPrompt2) {
+			toast.error('No follow-up prompt to respond to');
+			return;
+		}
+
+		generatingResponse2 = true;
+
+		try {
+			// Use the OpenAI API to generate a response to the follow-up prompt
+			// This simulates the child's GPT responding to the follow-up question
+			const response = await generateOpenAIChatCompletion(
+				localStorage.token,
+				{
+					model: selectedModels[0] || 'gpt-4o-mini',  // Use selected model or default
+					messages: [
+						{ role: 'user', content: childPrompt2 }
+					],
+					stream: false
+				}
+			);
+			
+			if (response && response.choices && response.choices[0]) {
+				originalResponse2 = response.choices[0].message.content || '';
+				toast.success('Follow-up response generated!');
+			} else {
+				throw new Error('No response content received');
+			}
+		} catch (error: any) {
+			console.error('Error generating follow-up response:', error);
+			toast.error(`Error: ${error.message || 'Failed to generate follow-up response'}`);
+		} finally {
+			generatingResponse2 = false;
+		}
+	}
+
+	function resetConversation() {
+		conversationStep = 'first';
+		showSecondPass = false;
+		moderationResult1 = null;
+		moderationResult2 = null;
+		childPrompt2 = '';
+		originalResponse2 = '';
+		highlightedTexts2 = '';
+		showOriginal1 = false;
+		showOriginal2 = false;
+		showSystemRules = false;
+		generatingResponse2 = false;
+		// Reset to default example
+		childPrompt1 = 'Who is Trump? Is he a good guy?';
+		originalResponse1 = 'Hi there! Donald Trump is a well-known businessman and was the 45th President of the United States. People have different opinions about him, just like with many leaders. Some people think he did a good job, while others have different thoughts.';
+		highlightedTexts1 = '';
+		selectedModerations.clear();
+		selectedModerations = selectedModerations;
+	}
+	// ====== END PARENT MODE FUNCTIONS ======
 </script>
 
 <svelte:head>
+	<style>
+		/* Rotate the arrow when details is open */
+		details[open] .details-arrow {
+			transform: rotate(180deg);
+		}
+		.details-arrow {
+			transition: transform 0.2s ease;
+		}
+	</style>
 	<title>
 		{$chatTitle
 			? `${$chatTitle.length > 30 ? `${$chatTitle.slice(0, 30)}...` : $chatTitle} • ${$WEBUI_NAME}`
@@ -2363,8 +2640,359 @@ Key guidelines:
 					class="absolute top-0 left-0 w-full h-full bg-linear-to-t from-white to-white/85 dark:from-gray-900 dark:to-gray-900/90 z-0"
 				/>
 			{/if}
+			
+			<!-- Parent Mode Toggle -->
+			<div class="absolute bottom-4 right-4 z-50">
+				<button
+					on:click={() => parentMode = !parentMode}
+					class="px-4 py-2 rounded-lg font-medium transition-all shadow-lg {parentMode 
+						? 'bg-purple-500 text-white hover:bg-purple-600' 
+						: 'bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-white hover:bg-gray-300 dark:hover:bg-gray-600'}"
+				>
+					{parentMode ? '👨‍👩‍👧 Parent Mode' : '🧒 Kid Mode'}
+				</button>
+			</div>
 
-			<PaneGroup direction="horizontal" class="w-full h-full">
+			{#if parentMode}
+				<!-- Parent Mode: Chat-Based Iterative Moderation -->
+				<div class="w-full h-full flex bg-white dark:bg-gray-900">
+					<!-- Left Sidebar: Moderation Panel -->
+					<div class="w-80 flex-shrink-0 border-r border-gray-200 dark:border-gray-800 flex flex-col bg-gray-50 dark:bg-gray-900">
+						<!-- Sidebar Header -->
+						<div class="flex-shrink-0 border-b border-gray-200 dark:border-gray-800 p-4">
+							<h2 class="text-lg font-semibold text-gray-900 dark:text-white mb-1">Moderation Strategies</h2>
+							<p class="text-xs text-gray-600 dark:text-gray-400">Select strategies to apply</p>
+						</div>
+
+						<!-- Sidebar Content (Scrollable) -->
+						<div class="flex-1 overflow-y-auto p-4 space-y-4">
+							<!-- Strategy Count -->
+							<div class="flex items-center justify-between mb-2">
+								<span class="text-xs text-gray-600 dark:text-gray-400">
+									{selectedModerations.size} selected
+								</span>
+								{#if selectedModerations.size > 0}
+									<button
+										on:click={clearSelections}
+										class="text-xs text-blue-600 dark:text-blue-400 hover:underline"
+									>
+										Clear All
+									</button>
+								{/if}
+							</div>
+
+							<!-- Strategy Grid (2 columns for sidebar) -->
+							<div class="grid grid-cols-2 gap-2">
+								{#each moderationOptions as option}
+									<button
+										on:click={() => toggleModerationSelection(option)}
+										disabled={moderationLoading}
+										class="p-2 text-xs font-medium text-center rounded-lg transition-all {
+											option === 'Custom'
+												? 'bg-gradient-to-r from-purple-500 to-pink-500 text-white hover:from-purple-600 hover:to-pink-600'
+												: selectedModerations.has(option)
+												? 'bg-blue-500 text-white hover:bg-blue-600 ring-2 ring-blue-400'
+												: 'bg-white dark:bg-gray-800 text-gray-900 dark:text-white hover:bg-gray-100 dark:hover:bg-gray-700 border border-gray-200 dark:border-gray-700'
+										} disabled:opacity-50"
+									>
+										{option === 'Custom' ? '✨ Custom' : option}
+									</button>
+								{/each}
+							</div>
+
+							<!-- Custom Instructions -->
+							{#if customInstructions.length > 0}
+								<div class="p-3 bg-purple-50 dark:bg-purple-900/20 border border-purple-200 dark:border-purple-800 rounded-lg">
+									<h4 class="text-xs font-semibold text-purple-900 dark:text-purple-200 mb-2">
+										Custom ({customInstructions.length}):
+									</h4>
+									<div class="space-y-2">
+										{#each customInstructions as custom}
+											<div class="flex items-start justify-between bg-white dark:bg-purple-900/30 p-2 rounded border-2 {
+												selectedModerations.has(custom.id) 
+													? 'border-purple-500' 
+													: 'border-transparent'
+											}">
+												<button
+													on:click={() => toggleModerationSelection(custom.id)}
+													class="flex-1 text-left mr-2"
+												>
+													<div class="flex items-center space-x-1 mb-1">
+														<div class="w-3 h-3 rounded border-2 {
+															selectedModerations.has(custom.id)
+																? 'bg-purple-500 border-purple-500'
+																: 'border-gray-300 dark:border-gray-600'
+														} flex items-center justify-center">
+															{#if selectedModerations.has(custom.id)}
+																<svg class="w-2 h-2 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+																	<path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7"></path>
+																</svg>
+															{/if}
+														</div>
+														<p class="text-xs text-purple-800 dark:text-purple-200 font-medium">
+															#{customInstructions.indexOf(custom) + 1}
+														</p>
+													</div>
+													<p class="text-xs text-gray-700 dark:text-gray-300 line-clamp-2">
+														{custom.text}
+													</p>
+												</button>
+												<button
+													on:click={() => removeCustomInstruction(custom.id)}
+													class="text-red-500 hover:text-red-700 dark:text-red-400 flex-shrink-0"
+													title="Remove"
+												>
+													<svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+														<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+													</svg>
+												</button>
+											</div>
+										{/each}
+									</div>
+								</div>
+							{/if}
+
+							<!-- Apply Button -->
+							<button
+								on:click={applySelectedModerations}
+								disabled={moderationLoading || selectedModerations.size === 0}
+								class="w-full px-4 py-2.5 bg-green-500 hover:bg-green-600 disabled:bg-gray-400 text-white text-sm font-semibold rounded-lg transition-colors flex items-center justify-center space-x-2"
+							>
+								{#if moderationLoading}
+									<div class="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+									<span>Applying...</span>
+								{:else}
+									<span>Apply Moderation</span>
+								{/if}
+							</button>
+
+							<!-- Expandable Applied Rules -->
+							{#if moderationResult1 || moderationResult2}
+								<div class="border border-gray-200 dark:border-gray-700 rounded-lg overflow-hidden">
+									<button
+										on:click={() => showSystemRules = !showSystemRules}
+										class="w-full px-3 py-2 bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-750 transition-colors flex items-center justify-between"
+									>
+										<span class="text-xs font-medium text-gray-900 dark:text-white">📋 Applied Rules</span>
+										<svg 
+											class="w-4 h-4 text-gray-500 transform transition-transform {showSystemRules ? 'rotate-180' : ''}" 
+											fill="none" 
+											stroke="currentColor" 
+											viewBox="0 0 24 24"
+										>
+											<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
+										</svg>
+									</button>
+									
+									{#if showSystemRules}
+										<div class="px-3 py-2 bg-gray-50 dark:bg-gray-900 border-t border-gray-200 dark:border-gray-700 space-y-3 max-h-48 overflow-y-auto">
+											{#if moderationResult1}
+												<div>
+													<h4 class="text-xs font-semibold text-gray-600 dark:text-gray-400 mb-1.5">Pass 1 Strategies:</h4>
+													<ul class="space-y-1">
+														{#each moderationResult1.moderation_types as strategy, idx}
+															<li class="text-xs text-gray-700 dark:text-gray-300 flex items-start">
+																<span class="text-blue-500 mr-1.5">•</span>
+																<span>{strategy}</span>
+															</li>
+														{/each}
+													</ul>
+												</div>
+											{/if}
+											{#if moderationResult2}
+												<div>
+													<h4 class="text-xs font-semibold text-gray-600 dark:text-gray-400 mb-1.5">Pass 2 Strategies:</h4>
+													<ul class="space-y-1">
+														{#each moderationResult2.moderation_types as strategy, idx}
+															<li class="text-xs text-gray-700 dark:text-gray-300 flex items-start">
+																<span class="text-green-500 mr-1.5">•</span>
+																<span>{strategy}</span>
+															</li>
+														{/each}
+													</ul>
+												</div>
+											{/if}
+										</div>
+									{/if}
+								</div>
+							{/if}
+
+							<!-- Backend Response JSON Viewer -->
+							{#if moderationResult1 || moderationResult2}
+								<details class="border border-gray-200 dark:border-gray-700 rounded-lg overflow-hidden">
+									<summary class="px-3 py-2 bg-green-50 dark:bg-green-900/20 cursor-pointer hover:bg-green-100 dark:hover:bg-green-900/30 transition-colors list-none">
+										<div class="flex items-center justify-between">
+											<span class="text-xs font-medium text-gray-900 dark:text-white">🔧 Backend Response</span>
+											<svg class="w-4 h-4 text-gray-500 details-arrow" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+												<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
+											</svg>
+										</div>
+									</summary>
+									<div class="p-2 bg-gray-900 dark:bg-black max-h-64 overflow-auto">
+										<div class="space-y-3">
+											{#if moderationResult1}
+												<div>
+													<div class="text-xs font-semibold text-green-400 mb-1">Pass 1 Response:</div>
+													<pre class="text-xs font-mono text-green-300 whitespace-pre-wrap break-words">{JSON.stringify(moderationResult1, null, 2)}</pre>
+												</div>
+											{/if}
+											{#if moderationResult2}
+												<div class="border-t border-gray-700 pt-2">
+													<div class="text-xs font-semibold text-blue-400 mb-1">Pass 2 Response:</div>
+													<pre class="text-xs font-mono text-blue-300 whitespace-pre-wrap break-words">{JSON.stringify(moderationResult2, null, 2)}</pre>
+												</div>
+											{/if}
+										</div>
+									</div>
+								</details>
+							{/if}
+
+							<!-- JSON Log (Compact) -->
+							{#if moderationResult1 && moderationResult2}
+								<details class="border border-gray-200 dark:border-gray-700 rounded-lg overflow-hidden">
+									<summary class="px-3 py-2 bg-blue-50 dark:bg-blue-900/20 cursor-pointer hover:bg-blue-100 dark:hover:bg-blue-900/30 transition-colors">
+										<span class="text-xs font-medium text-gray-900 dark:text-white">📄 Conversation Log</span>
+									</summary>
+									<div class="p-2 bg-white dark:bg-gray-800 max-h-32 overflow-y-auto">
+										<pre class="text-xs font-mono whitespace-pre-wrap text-gray-900 dark:text-white">{JSON.stringify({
+											prompt_1: childPrompt1,
+											response_1: originalResponse1,
+											refactored_1: moderationResult1.refactored_response,
+											prompt_2: childPrompt2,
+											response_2: originalResponse2,
+											refactored_2: moderationResult2.refactored_response,
+										}, null, 2)}</pre>
+									</div>
+								</details>
+							{/if}
+						</div>
+
+						<!-- Sidebar Footer: Reset Button -->
+						<div class="flex-shrink-0 border-t border-gray-200 dark:border-gray-800 p-4">
+							<button
+								on:click={resetConversation}
+								class="w-full px-4 py-2 text-sm font-medium text-blue-600 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-lg transition-colors"
+							>
+								Reset Conversation
+							</button>
+						</div>
+					</div>
+
+					<!-- Right Side: Chat Thread -->
+					<div class="flex-1 flex flex-col">
+						<!-- Chat Header -->
+						<div class="flex-shrink-0 border-b border-gray-200 dark:border-gray-800 p-4">
+							<h1 class="text-xl font-bold text-gray-900 dark:text-white">Conversation Review</h1>
+							<p class="text-sm text-gray-600 dark:text-gray-400">Review and moderate AI responses</p>
+						</div>
+
+						<!-- Chat Messages Area -->
+						<div class="flex-1 overflow-y-auto p-6 space-y-4">
+							<!-- First Pass - Child Prompt Bubble (Blue, Right-aligned) -->
+							<div class="flex justify-end">
+								<div class="max-w-[80%] bg-blue-500 text-white rounded-2xl rounded-tr-sm px-4 py-3 shadow-sm">
+									<p class="text-sm whitespace-pre-wrap">{childPrompt1}</p>
+								</div>
+							</div>
+
+							<!-- First Pass - AI Response Bubble (Gray, Left-aligned) -->
+							<div class="flex justify-start">
+								<div class="max-w-[80%] bg-gray-100 dark:bg-gray-800 rounded-2xl rounded-tl-sm px-4 py-3 shadow-sm">
+									<p class="text-sm text-gray-900 dark:text-white whitespace-pre-wrap">
+										{#if moderationResult1 && !showOriginal1}
+											{moderationResult1.refactored_response}
+										{:else}
+											{originalResponse1}
+										{/if}
+									</p>
+									
+									<!-- Toggle Button (only show if moderation has been applied) -->
+									{#if moderationResult1}
+										<button
+											on:click={() => showOriginal1 = !showOriginal1}
+											class="mt-2 text-xs text-blue-600 dark:text-blue-400 hover:underline flex items-center space-x-1"
+										>
+											<svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+												<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path>
+												<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"></path>
+											</svg>
+											<span>{showOriginal1 ? 'View Moderated' : 'View Original'}</span>
+										</button>
+									{/if}
+
+									<!-- Generate Follow-Up Button (only show after Pass 1 moderation) -->
+									{#if moderationResult1 && !showSecondPass}
+										<button
+											on:click={generateFollowUp}
+											disabled={generatingPrompt2}
+											class="mt-3 w-full px-4 py-2 bg-blue-500 hover:bg-blue-600 disabled:bg-blue-300 text-white text-sm rounded-lg font-medium transition-colors flex items-center justify-center space-x-2"
+										>
+											{#if generatingPrompt2}
+												<div class="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+												<span>Generating...</span>
+											{:else}
+												<span>➡️ Generate Follow-Up Question</span>
+											{/if}
+										</button>
+									{/if}
+								</div>
+							</div>
+
+							<!-- Second Pass - Follow-Up Child Prompt Bubble (only show if generated) -->
+							{#if showSecondPass && childPrompt2}
+								<div class="flex justify-end mt-6">
+									<div class="max-w-[80%] bg-blue-500 text-white rounded-2xl rounded-tr-sm px-4 py-3 shadow-sm">
+										<p class="text-sm whitespace-pre-wrap">{childPrompt2}</p>
+									</div>
+								</div>
+
+								<!-- Second Pass - AI Response Bubble -->
+								{#if generatingResponse2}
+									<!-- Loading state -->
+									<div class="flex justify-start">
+										<div class="max-w-[80%] bg-gray-100 dark:bg-gray-800 rounded-2xl rounded-tl-sm px-4 py-3 shadow-sm">
+											<div class="flex items-center space-x-2">
+												<div class="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style="animation-delay: 0ms;"></div>
+												<div class="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style="animation-delay: 150ms;"></div>
+												<div class="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style="animation-delay: 300ms;"></div>
+											</div>
+										</div>
+									</div>
+								{:else if originalResponse2}
+									<!-- Response generated -->
+									<div class="flex justify-start">
+										<div class="max-w-[80%] bg-gray-100 dark:bg-gray-800 rounded-2xl rounded-tl-sm px-4 py-3 shadow-sm">
+											<p class="text-sm text-gray-900 dark:text-white whitespace-pre-wrap">
+												{#if moderationResult2 && !showOriginal2}
+													{moderationResult2.refactored_response}
+												{:else}
+													{originalResponse2}
+												{/if}
+											</p>
+											
+											<!-- Toggle Button for Pass 2 -->
+											{#if moderationResult2}
+												<button
+													on:click={() => showOriginal2 = !showOriginal2}
+													class="mt-2 text-xs text-blue-600 dark:text-blue-400 hover:underline flex items-center space-x-1"
+												>
+													<svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+														<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path>
+														<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"></path>
+													</svg>
+													<span>{showOriginal2 ? 'View Moderated' : 'View Original'}</span>
+												</button>
+											{/if}
+										</div>
+									</div>
+								{/if}
+							{/if}
+						</div>
+					</div>
+				</div>
+			{:else}
+				<!-- Kids Mode View (Original Chat Interface) -->
+				<PaneGroup direction="horizontal" class="w-full h-full">
 				<Pane defaultSize={50} class="h-full flex relative max-w-full flex-col">
 					<Navbar
 						bind:this={navbarElement}
@@ -2593,6 +3221,7 @@ Key guidelines:
 					{eventTarget}
 				/>
 			</PaneGroup>
+			{/if}
 		</div>
 	{:else if loading}
 		<div class=" flex items-center justify-center h-full w-full">
@@ -2602,3 +3231,91 @@ Key guidelines:
 		</div>
 	{/if}
 </div>
+
+<!-- Custom Moderation Modal (Parent Mode) -->
+{#if showCustomModal}
+	<div class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+		<div class="bg-white dark:bg-gray-800 rounded-lg shadow-xl max-w-2xl w-full">
+			<div class="p-6">
+				<div class="flex justify-between items-center mb-4">
+					<h2 class="text-xl font-semibold text-gray-900 dark:text-white flex items-center space-x-2">
+						<span class="text-2xl">✨</span>
+						<span>Custom Moderation Instruction</span>
+					</h2>
+					<button
+						on:click={cancelCustomModal}
+						class="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-colors"
+					>
+						<svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+							<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+						</svg>
+					</button>
+				</div>
+				
+				<div class="mb-6">
+					<p class="text-sm text-gray-600 dark:text-gray-400 mb-4">
+						Enter a custom instruction for how the AI should moderate the response. Be specific and clear about what you want.
+					</p>
+					
+					<div class="mb-4">
+						<label for="custom-instruction-textarea" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+							Custom Instruction
+						</label>
+						<textarea
+							id="custom-instruction-textarea"
+							bind:value={customInstructionInput}
+							placeholder="Example: Explain this topic using simple analogies appropriate for a 7-year-old, focusing on positive aspects..."
+							class="w-full p-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-purple-500 focus:border-transparent resize-none"
+							rows="6"
+						></textarea>
+						<div class="flex justify-between items-center mt-2">
+							<p class="text-xs text-gray-500 dark:text-gray-400">
+								This will be combined with any other selected moderation strategies.
+							</p>
+							<p class="text-xs text-gray-500 dark:text-gray-400">
+								{customInstructionInput.length} characters
+							</p>
+						</div>
+					</div>
+					
+					<!-- Example Instructions -->
+					<details class="mb-4">
+						<summary class="text-sm font-medium text-gray-700 dark:text-gray-300 cursor-pointer hover:text-gray-900 dark:hover:text-white">
+							💡 See example custom instructions
+						</summary>
+						<div class="mt-3 space-y-2 text-xs text-gray-600 dark:text-gray-400">
+							<p class="p-2 bg-gray-50 dark:bg-gray-900 rounded">
+								• "Use sports analogies to explain complex concepts"
+							</p>
+							<p class="p-2 bg-gray-50 dark:bg-gray-900 rounded">
+								• "Focus on positive role models and their achievements"
+							</p>
+							<p class="p-2 bg-gray-50 dark:bg-gray-900 rounded">
+								• "Explain both sides of the issue fairly without taking a stance"
+							</p>
+							<p class="p-2 bg-gray-50 dark:bg-gray-900 rounded">
+								• "Keep the explanation under 3 sentences and very simple"
+							</p>
+						</div>
+					</details>
+				</div>
+				
+				<div class="flex justify-end space-x-3">
+					<button
+						on:click={cancelCustomModal}
+						class="px-4 py-2 text-gray-700 dark:text-gray-300 bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 rounded-lg font-medium transition-colors"
+					>
+						Cancel
+					</button>
+					<button
+						on:click={addCustomInstruction}
+						disabled={!customInstructionInput.trim()}
+						class="px-6 py-2 bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 disabled:from-gray-300 disabled:to-gray-400 disabled:cursor-not-allowed text-white rounded-lg font-medium transition-all shadow-md"
+					>
+						Add Custom Instruction
+					</button>
+				</div>
+			</div>
+		</div>
+	</div>
+{/if}
