@@ -239,6 +239,11 @@ class ModelsTable:
     #         or has_access(user_id, permission, model.access_control)
     #     ]
 
+    def _item_assigned_to_user_groups(self, user_id: str, item, permission: str = "write") -> bool:
+        """Check if item is assigned to any group the user is member of OR owns"""
+        from open_webui.utils.workspace_access import item_assigned_to_user_groups
+        return item_assigned_to_user_groups(user_id, item, permission)
+
     def get_models_by_user_id(
         self, user_id: str, permission: str = "write"
     ) -> list[ModelUserResponse]:
@@ -247,9 +252,9 @@ class ModelsTable:
 
             models_for_user = []
             for model in all_models:
-                if model.user_id == user_id or has_access(
-                    user_id, permission, model.access_control
-                ):
+                if (model.user_id == user_id or 
+                    has_access(user_id, permission, model.access_control) or
+                    self._item_assigned_to_user_groups(user_id, model, permission)):
                     user = Users.get_user_by_id(model.user_id)
                     models_for_user.append(
                         ModelUserResponse.model_validate(

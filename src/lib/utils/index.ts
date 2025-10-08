@@ -55,6 +55,14 @@ export const replaceTokens = (content, sourceIds, char, user) => {
 
 	// Remove sourceIds from the content and replace them with <source_id>...</source_id>
 	if (Array.isArray(sourceIds)) {
+		// Handle patterns like [source_id=0], [sourceid=1], [source id = 2]
+		// Normalize and map numeric index to the corresponding source title
+		content = content.replace(/\[(?:source[_\s]*id)\s*[:=]\s*(\d+)\]/gi, (match, idxStr) => {
+			const idx = Number(idxStr);
+			const title = sourceIds[idx] ?? 'N/A';
+			return `<source_id data="${idx}" title="${title}" />`;
+		});
+
 		// First, handle numbered citations [0], [1], [2], etc.
 		sourceIds.forEach((sourceId, idx) => {
 			// Create a token based on the exact `[sourceId]` string

@@ -15,7 +15,7 @@
 
 	$: filteredUsers = users
 		.filter((user) => {
-			if (user?.role === 'admin') {
+			if (user?.role === 'admin' && !user.info?.is_co_admin) {
 				return false;
 			}
 

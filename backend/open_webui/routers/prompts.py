@@ -96,12 +96,16 @@ async def create_new_prompt(
 
 @router.get("/command/{command}", response_model=Optional[PromptModel])
 async def get_prompt_by_command(command: str, user=Depends(get_verified_user)):
+    from open_webui.utils.workspace_access import item_assigned_to_user_groups
+    
     prompt = Prompts.get_prompt_by_command(f"/{command}")
 
     if not prompt:
         raise HTTPException(status_code=404, detail="Prompt not found")
 
-    if prompt.user_id == user.id or has_access(user.id, "read", prompt.access_control):
+    if (prompt.user_id == user.id or 
+        has_access(user.id, "read", prompt.access_control) or
+        item_assigned_to_user_groups(user.id, prompt, "read")):
         return prompt
 
     raise HTTPException(
