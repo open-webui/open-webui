@@ -3,13 +3,13 @@ import { user } from '$lib/stores';
 import { get } from 'svelte/store';
 
 /**
- * Service for syncing selections between localStorage and backend database
+ * TEXT SELECTION: Service for syncing selections between localStorage and backend database
  * 
- * This service handles:
- * 1. Syncing localStorage selections to backend when user is authenticated
- * 2. Restoring selections from backend when user logs in
- * 3. Keeping localStorage and backend in sync
- * 4. Providing fallback to localStorage when backend is unavailable
+ * Handles:
+ * - Syncing localStorage selections to backend when user is authenticated
+ * - Restoring selections from backend when user logs in
+ * - Keeping localStorage and backend in sync
+ * - Providing fallback to localStorage when backend is unavailable
  */
 
 class SelectionSyncService {
@@ -32,7 +32,7 @@ class SelectionSyncService {
   }
 
   /**
-   * Save a selection to both localStorage and backend
+   * TEXT SELECTION: Save a selection to both localStorage and backend
    */
   async saveSelection(selection: SelectionForm): Promise<void> {
     // Always save to localStorage first (for offline support)
@@ -42,16 +42,14 @@ class SelectionSyncService {
     if (this.isOnline && this.isUserAuthenticated()) {
       try {
         await selectionsAPI.createSelection(selection);
-        console.log('Selection saved to backend:', selection);
       } catch (error) {
-        console.warn('Failed to save selection to backend:', error);
         // Selection is still saved in localStorage, so user doesn't lose data
       }
     }
   }
 
   /**
-   * Save multiple selections (for bulk sync)
+   * TEXT SELECTION: Save multiple selections (for bulk sync)
    */
   async saveBulkSelections(selections: SelectionForm[]): Promise<void> {
     // Save to localStorage
@@ -61,15 +59,14 @@ class SelectionSyncService {
     if (this.isOnline && this.isUserAuthenticated()) {
       try {
         await selectionsAPI.createBulkSelections(selections);
-        console.log(`Synced ${selections.length} selections to backend`);
       } catch (error) {
-        console.warn('Failed to sync selections to backend:', error);
+        // Failed to sync - continue silently
       }
     }
   }
 
   /**
-   * Get selections for a specific chat
+   * TEXT SELECTION: Get selections for a specific chat (backend first, localStorage fallback)
    */
   async getChatSelections(chatId: string): Promise<SelectionForm[]> {
     // Try backend first if online and authenticated
@@ -84,7 +81,7 @@ class SelectionSyncService {
           text: selection.selected_text
         }));
       } catch (error) {
-        console.warn('Failed to get selections from backend, falling back to localStorage:', error);
+        // Failed to get from backend - fall back to localStorage
       }
     }
 
@@ -93,35 +90,24 @@ class SelectionSyncService {
   }
 
   /**
-   * Sync all localStorage selections to backend
+   * TEXT SELECTION: Sync all localStorage selections to backend (with rate limiting)
    */
   async syncToBackend(): Promise<void> {
-    if (!this.isOnline || !this.isUserAuthenticated()) {
-      return;
-    }
+    if (!this.isOnline || !this.isUserAuthenticated()) return;
 
     const currentUser = get(user);
-    if (!currentUser) {
-      return;
-    }
+    if (!currentUser) return;
 
     try {
-      // Check if we've already synced
+      // Rate limiting: only sync if it's been more than 5 minutes since last sync
       const lastSync = localStorage.getItem(this.SYNC_KEY);
       const lastSyncTime = lastSync ? parseInt(lastSync) : 0;
       const now = Date.now();
-
-      // Only sync if it's been more than 5 minutes since last sync
-      if (now - lastSyncTime < 5 * 60 * 1000) {
-        return;
-      }
+      if (now - lastSyncTime < 5 * 60 * 1000) return;
 
       // Get all selections from localStorage
       const allSelections = this.getAllFromLocalStorage();
-      
-      if (allSelections.length === 0) {
-        return;
-      }
+      if (allSelections.length === 0) return;
 
       // Convert to backend format
       const backendSelections: SelectionForm[] = allSelections.map(selection => ({
@@ -141,10 +127,9 @@ class SelectionSyncService {
       
       // Mark as synced
       localStorage.setItem(this.SYNC_KEY, now.toString());
-      console.log(`Synced ${backendSelections.length} selections to backend`);
 
     } catch (error) {
-      console.error('Failed to sync selections to backend:', error);
+      // Failed to sync - continue silently
     }
   }
 
@@ -178,10 +163,9 @@ class SelectionSyncService {
 
       // Save to localStorage
       localStorage.setItem(this.STORAGE_KEY, JSON.stringify(localSelections));
-      console.log(`Restored ${backendSelections.length} selections from backend`);
 
     } catch (error) {
-      console.error('Failed to restore selections from backend:', error);
+      // Failed to restore - continue silently
     }
   }
 
@@ -189,7 +173,6 @@ class SelectionSyncService {
    * Manually sync all localStorage selections to backend (useful for testing)
    */
   async manualSyncToBackend(): Promise<void> {
-    console.log('Manual sync to backend initiated...');
     await this.syncToBackend();
   }
 
@@ -209,9 +192,8 @@ class SelectionSyncService {
         for (const selection of selections) {
           await selectionsAPI.deleteSelection(selection.id);
         }
-        console.log('Cleared all selections from backend');
       } catch (error) {
-        console.warn('Failed to clear selections from backend:', error);
+        // Failed to clear from backend - continue silently
       }
     }
   }
@@ -242,7 +224,7 @@ class SelectionSyncService {
       existing[selection.chat_id].push(localSelection);
       localStorage.setItem(this.STORAGE_KEY, JSON.stringify(existing));
     } catch (error) {
-      console.error('Failed to save to localStorage:', error);
+      // Failed to save to localStorage - continue silently
     }
   }
 
@@ -251,7 +233,6 @@ class SelectionSyncService {
       const existing = JSON.parse(localStorage.getItem(this.STORAGE_KEY) || '{}');
       return existing[chatId] || [];
     } catch (error) {
-      console.error('Failed to get from localStorage:', error);
       return [];
     }
   }
@@ -267,7 +248,6 @@ class SelectionSyncService {
       
       return allSelections;
     } catch (error) {
-      console.error('Failed to get all from localStorage:', error);
       return [];
     }
   }

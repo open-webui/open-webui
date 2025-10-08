@@ -185,65 +185,46 @@ import { selectionSyncService } from '$lib/services/selectionSync';
 		document.removeEventListener('keydown', keydownHandler);
 	}
 
+    // TEXT SELECTION: Save selected text from user message
     const saveCurrentSelection = async () => {
-        console.log('UserMessage saveCurrentSelection called');
         const container = document.getElementById(`message-${message.id}`);
-        if (!container) {
-            console.log('No container found for message:', message.id);
-            return;
-        }
+        if (!container) return;
+        
         const selection = window.getSelection();
-        if (!selection || selection.rangeCount === 0) {
-            console.log('No selection found');
-            return;
-        }
+        if (!selection || selection.rangeCount === 0) return;
+        
         const range = selection.getRangeAt(0);
-        if (!container.contains(range.commonAncestorContainer)) {
-            console.log('Selection not in container');
-            return;
-        }
+        if (!container.contains(range.commonAncestorContainer)) return;
 
         const text = selection.toString();
-        if (!text.trim()) {
-            console.log('No text selected');
-            return;
-        }
+        if (!text.trim()) return;
 
-        console.log('Saving user selection:', { text, messageId: message.id, chatId: $chatIdStore });
-
+        // Highlight selected text with <mark> element
         const mark = document.createElement('mark');
         mark.className = 'selection-highlight';
         mark.textContent = text;
-
         range.deleteContents();
         range.insertNode(mark);
         selection.removeAllRanges();
 
         // Only allow selection on the latest user message
         if ($latestUserMessageId && $latestUserMessageId !== message.id) {
-            console.log('Not latest user message, skipping save');
             closeFloatingButtons();
             return;
         }
 
-        console.log('Adding user selection to store');
+        // Save to localStorage store
         savedSelections.update((arr) => {
             const newArr = [
                 ...arr,
                 { chatId: $chatIdStore, messageId: message.id, role: 'user', text }
             ];
-            console.log('Updated user selections array:', newArr);
             return newArr;
         });
 
-        // Also save to backend via sync service
+        // Also save to backend database via sync service
         const currentChatId = $chatIdStore;
-        console.log('Attempting to save user selection to backend:', { currentChatId, messageId: message.id, text: text.substring(0, 50) + '...' });
-        
-        if (!currentChatId) {
-            console.warn('No chatId available for backend sync, user selection saved to localStorage only');
-            return;
-        }
+        if (!currentChatId) return;
         
         try {
             await selectionSyncService.saveSelection({
@@ -257,22 +238,25 @@ import { selectionSyncService } from '$lib/services/selectionSync';
                     source: 'user_selection'
                 }
             });
-            console.log('User selection saved to backend via sync service');
         } catch (error) {
-            console.warn('Failed to save user selection to backend:', error);
             // Selection is still saved in localStorage, so user doesn't lose data
         }
     };
 
-    // Re-apply saved selections to user message content
+    // TEXT SELECTION: Re-apply saved selections by wrapping text with <mark> elements
     function wrapFirstMatch(root, target) {
         if (!root || !target || target.length === 0) return false;
+        
+        // Use TreeWalker to find text nodes containing the target text
         const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT, null);
         let node;
         while ((node = walker.nextNode())) {
+            // Skip nodes already inside selection highlights
             if (node.parentElement && node.parentElement.closest('mark.selection-highlight')) continue;
+            
             const idx = node.data.indexOf(target);
             if (idx !== -1) {
+                // Split text node and wrap target text with <mark> element
                 const mark = document.createElement('mark');
                 mark.className = 'selection-highlight';
                 mark.textContent = target;
@@ -286,18 +270,18 @@ import { selectionSyncService } from '$lib/services/selectionSync';
         return false;
     }
 
+    // TEXT SELECTION: Re-apply saved selections by highlighting text with <mark> elements
     function applySavedSelections() {
         const root = contentContainerElement;
         if (!root) return;
         const items = ($savedSelections || []).filter(
             (s) => s.chatId === $chatIdStore && s.messageId === message.id && s.role === 'user'
         );
-        console.log('UserMessage applySavedSelections:', { chatId: $chatIdStore, messageId: message.id, items, allSelections: $savedSelections });
         for (const sel of items) {
+            // Avoid double-highlighting: only add marks for texts not yet wrapped
             const already = Array.from(root.querySelectorAll('mark.selection-highlight'))
                 .some((m) => m.textContent === sel.text);
             if (!already) {
-                console.log('Wrapping user text:', sel.text);
                 wrapFirstMatch(root, sel.text);
             }
         }

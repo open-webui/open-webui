@@ -7,7 +7,10 @@ from pydantic import BaseModel, ConfigDict
 from sqlalchemy import BigInteger, Column, String, Text, JSON, Index
 
 ####################
-# Selection DB Schema
+# TEXT SELECTION: Database schema for storing user text selections
+# - Stores selected text from chat messages for analysis and moderation
+# - Links selections to users, chats, and specific messages
+# - Supports both user prompts and assistant responses
 ####################
 
 class Selection(Base):

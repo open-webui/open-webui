@@ -1,3 +1,10 @@
+"""
+TEXT SELECTION: FastAPI router for text selection analytics and management
+- Provides CRUD operations for user text selections
+- Supports bulk operations and analytics endpoints
+- Includes user authentication and authorization
+"""
+
 import logging
 from typing import List, Optional
 from fastapi import APIRouter, Depends, HTTPException, Query

@@ -161,64 +161,43 @@ $: {
     }
 }
 
+// TEXT SELECTION: Save selected text from assistant message
 const saveCurrentSelection = async () => {
-    console.log('saveCurrentSelection called');
     const selection = window.getSelection();
-    if (!selection || selection.rangeCount === 0) {
-        console.log('No selection found');
-        return;
-    }
+    if (!selection || selection.rangeCount === 0) return;
 
     const range = selection.getRangeAt(0);
-    if (!contentContainerElement?.contains(range.commonAncestorContainer)) {
-        console.log('Selection not in content container');
-        return;
-    }
+    if (!contentContainerElement?.contains(range.commonAncestorContainer)) return;
 
     const text = selection.toString();
-    if (!text.trim()) {
-        console.log('No text selected');
-        return;
-    }
+    if (!text.trim()) return;
 
-    console.log('Saving selection:', { text, messageId, chatId: chatId || $chatIdStore });
-
-    // Highlight selected text
+    // Highlight selected text with <mark> element
     const mark = document.createElement('mark');
     mark.className = 'selection-highlight';
     mark.textContent = text;
-
     range.deleteContents();
     range.insertNode(mark);
-
     selection.removeAllRanges();
 
-    // Record selection only if this is the most recent assistant message
+    // Only allow selection on the most recent assistant message
     if ($latestAssistantMessageId && $latestAssistantMessageId !== messageId) {
-        console.log('Not latest assistant message, skipping save');
         closeFloatingButtons();
         return;
     }
 
-    // Record selection
-    console.log('Adding selection to store');
+    // Save to localStorage store
     savedSelections.update((arr) => {
         const newArr = [
             ...arr,
             { chatId: chatId || $chatIdStore, messageId, role: 'assistant', text }
         ];
-        console.log('Updated selections array:', newArr);
         return newArr;
     });
 
-    // Also save to backend via sync service
+    // Also save to backend database via sync service
     const currentChatId = chatId || $chatIdStore;
-    console.log('Attempting to save selection to backend:', { currentChatId, messageId, text: text.substring(0, 50) + '...' });
-    
-    if (!currentChatId) {
-        console.warn('No chatId available for backend sync, selection saved to localStorage only');
-        return;
-    }
+    if (!currentChatId) return;
     
     try {
         await selectionSyncService.saveSelection({
@@ -232,9 +211,7 @@ const saveCurrentSelection = async () => {
                 source: 'user_selection'
             }
         });
-        console.log('Selection saved to backend via sync service');
     } catch (error) {
-        console.warn('Failed to save selection to backend:', error);
         // Selection is still saved in localStorage, so user doesn't lose data
     }
 
@@ -278,6 +255,7 @@ function wrapFirstMatch(root, target) {
     return false;
 }
 
+// TEXT SELECTION: Re-apply saved selections by highlighting text with <mark> elements
 function applySavedSelections() {
     const root = contentContainerElement;
     if (!root) return;
@@ -285,25 +263,17 @@ function applySavedSelections() {
     const items = ($savedSelections || []).filter(
         (s) => s.chatId === chat && s.messageId === messageId && s.role === 'assistant'
     );
-    console.log('ContentRenderer applySavedSelections:', { chat, messageId, items, allSelections: $savedSelections });
     // Avoid double-highlighting: only add marks for texts not yet wrapped
     for (const sel of items) {
-        // If a mark with exact text exists, skip
         const existingMarks = Array.from(root.querySelectorAll('mark.selection-highlight'));
-        console.log('Existing marks:', existingMarks.map(m => ({ text: m.textContent, classes: m.className })));
         const already = existingMarks.some((m) => m.textContent === sel.text);
         if (!already) {
-            console.log('Wrapping text:', sel.text);
-            const success = wrapFirstMatch(root, sel.text);
-            console.log('wrapFirstMatch result:', success);
+            wrapFirstMatch(root, sel.text);
         } else {
-            console.log('Text already wrapped:', sel.text);
-            // Let's check if the mark is actually visible
+            // Text already wrapped - mark exists and is visible
             const mark = existingMarks.find(m => m.textContent === sel.text);
             if (mark) {
-                console.log('Found existing mark:', mark);
-                console.log('Mark computed styles:', window.getComputedStyle(mark));
-                console.log('Mark background color:', window.getComputedStyle(mark).backgroundColor);
+                // Mark exists and is visible
             }
         }
     }

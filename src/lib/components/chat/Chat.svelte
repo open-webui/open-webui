@@ -147,7 +147,7 @@ $: {
     }
 }
 
-// When a new assistant response finishes loading, switch to selection panel and automatically start selection
+// TEXT SELECTION: Auto-start selection mode when assistant response completes
 let lastAssistantPanelSwitchId: string | null = null;
 $: {
     if (history?.currentId && !isInitialChatLoad) {
@@ -158,10 +158,9 @@ $: {
             history.currentId !== lastAssistantPanelSwitchId
         ) {
             setInputPanelState('selection');
-            // Automatically start selection mode when response finishes
-            selectionModeEnabled.set(true);
+            selectionModeEnabled.set(true); // Auto-start selection mode
             lastAssistantPanelSwitchId = history.currentId;
-            // Clear any persisted force-input flag to allow selection mode
+            // Clear force-input flag to allow selection mode
             try {
                 const chat = $chatId;
                 if (chat) localStorage.removeItem(`selection-force-input-${chat}`);
@@ -170,7 +169,7 @@ $: {
     }
 }
 
-// Track latest user and assistant message IDs for selection restriction
+// TEXT SELECTION: Track latest message IDs to restrict selection to most recent prompt/response
 $: {
     if (history?.currentId) {
         const msg = history.messages[history.currentId];
@@ -182,40 +181,41 @@ $: {
     }
 }
 
-// On navigation/back or chat load: prefer MessageInput only if the latest user and assistant both have saved selections
+// TEXT SELECTION: Restore UI state on initial load - show MessageInput if both latest messages have selections
 $: {
     const chat = $chatId;
-    if (chat && isInitialChatLoad) { // Only run during initial load, not on every change
+    if (chat && isInitialChatLoad) { // Only during initial load to avoid conflicts
         try {
-            // Respect persisted force-input after Done until next response or restart selection
             const persistedForce = localStorage.getItem(`selection-force-input-${chat}`) === '1';
-				if (persistedForce) {
+			if (persistedForce) {
+				// Respect persisted force-input state
+				selectionModeEnabled.set(false);
+				selectionForceInput.set(true);
+			} else {
+				// Check if both latest messages have selections
+				const items = get(savedSelections);
+				const latestUserId = $latestUserMessageId;
+				const latestAssistId = $latestAssistantMessageId;
+				const hasUserSel = latestUserId
+					? items.some((s) => s.chatId === chat && s.messageId === latestUserId && s.role === 'user')
+					: false;
+				const hasAssistSel = latestAssistId
+					? items.some((s) => s.chatId === chat && s.messageId === latestAssistId && s.role === 'assistant')
+					: false;
+				if (hasUserSel && hasAssistSel) {
+					// Both have selections - show MessageInput
 					selectionModeEnabled.set(false);
 					selectionForceInput.set(true);
 				} else {
-					const items = get(savedSelections);
-					const latestUserId = $latestUserMessageId;
-					const latestAssistId = $latestAssistantMessageId;
-					const hasUserSel = latestUserId
-						? items.some((s) => s.chatId === chat && s.messageId === latestUserId && s.role === 'user')
-						: false;
-					const hasAssistSel = latestAssistId
-						? items.some((s) => s.chatId === chat && s.messageId === latestAssistId && s.role === 'assistant')
-						: false;
-					if (hasUserSel && hasAssistSel) {
-						selectionModeEnabled.set(false);
-						selectionForceInput.set(true);
-					} else {
-						// Do not force input; allow SelectionInput to appear on next response
-						selectionForceInput.set(false);
-					}
+					// Allow SelectionInput to appear on next response
+					selectionForceInput.set(false);
 				}
+			}
         } catch {}
     }
 }
 
-// If both latest prompt and response have saved selections, default to MessageInput
-// But only during initial load, not when new responses are being processed
+// TEXT SELECTION: Backup check for initial load state restoration (redundant but safe)
 $: {
     const chat = $chatId;
     const latestUserId = $latestUserMessageId;
@@ -225,6 +225,7 @@ $: {
         const hasUserSel = items.some((s) => s.chatId === chat && s.messageId === latestUserId && s.role === 'user');
         const hasAssistSel = items.some((s) => s.chatId === chat && s.messageId === latestAssistId && s.role === 'assistant');
         if (hasUserSel && hasAssistSel) {
+            // Both messages have selections - ensure MessageInput is shown
             selectionModeEnabled.set(false);
             selectionForceInput.set(true);
             selectionSwitchAfterResponse = false;
@@ -2505,7 +2506,6 @@ Key guidelines:
                                         instruction={$i18n.t('Select problematic text in the chat and save your selection.')}
                                         onPrimary={() => {
                                             const selections = get(savedSelections);
-                                            console.log('Submitting selections', selections);
                                             selectionModeEnabled.set(false);
                                             setInputPanelState('message');
                                             selectionSwitchAfterResponse = true;
