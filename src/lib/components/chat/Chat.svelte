@@ -14,35 +14,30 @@
 	import type { i18n as i18nType } from 'i18next';
 	import { WEBUI_BASE_URL } from '$lib/constants';
 
-import {
-        chatId,
-        chats,
-        config,
-        type Model,
-        models,
-        tags as allTags,
-        settings,
-        showSidebar,
-        WEBUI_NAME,
-        banners,
-        user,
-        socket,
-        showControls,
-        showCallOverlay,
-        currentChatPage,
-        temporaryChatEnabled,
-        mobile,
-        showOverview,
-        chatTitle,
-        showArtifacts,
-    tools,
-    toolServers,
-    selectionModeEnabled,
-    savedSelections,
-    selectionForceInput,
-	latestAssistantMessageId,
-	latestUserMessageId
-    } from '$lib/stores';
+	import {
+		chatId,
+		chats,
+		config,
+		type Model,
+		models,
+		tags as allTags,
+		settings,
+		showSidebar,
+		WEBUI_NAME,
+		banners,
+		user,
+		socket,
+		showControls,
+		showCallOverlay,
+		currentChatPage,
+		temporaryChatEnabled,
+		mobile,
+		showOverview,
+		chatTitle,
+		showArtifacts,
+		tools,
+		toolServers
+	} from '$lib/stores';
 	import {
 		convertMessagesToHistory,
 		copyToClipboard,
@@ -74,7 +69,7 @@ import {
 	import { processWeb, processWebSearch, processYoutubeVideo } from '$lib/apis/retrieval';
 	import { createOpenAITextStream } from '$lib/apis/streaming';
 	import { queryMemory } from '$lib/apis/memories';
-import { getAndUpdateUserLocation, getUserSettings } from '$lib/apis/users';
+	import { getAndUpdateUserLocation, getUserSettings } from '$lib/apis/users';
 	import {
 		chatCompleted,
 		generateQueries,
@@ -84,7 +79,6 @@ import { getAndUpdateUserLocation, getUserSettings } from '$lib/apis/users';
 		getTaskIdsByChatId
 	} from '$lib/apis';
 	import { getTools } from '$lib/apis/tools';
-	import { applyModeration, generateFollowUpPrompt, type ModerationResponse } from '$lib/apis/moderation';
 
 	import Banner from '../common/Banner.svelte';
 	import MessageInput from '$lib/components/chat/MessageInput.svelte';
@@ -93,146 +87,6 @@ import { getAndUpdateUserLocation, getUserSettings } from '$lib/apis/users';
 	import ChatControls from './ChatControls.svelte';
 	import EventConfirmDialog from '../common/ConfirmDialog.svelte';
 	import Placeholder from './Placeholder.svelte';
-import SelectionInput from './SelectionInput.svelte';
-let selectionSwitchAfterResponse = false;
-let lastMessageIdAtDone: string | null = null;
-$: {
-    if (
-        selectionSwitchAfterResponse &&
-        history?.currentId &&
-        history.currentId !== lastMessageIdAtDone &&
-        history.messages[history.currentId]?.done === true
-    ) {
-        selectionForceInput.set(false);
-        selectionSwitchAfterResponse = false;
-        lastMessageIdAtDone = null;
-        // Clear persistent force flag after new assistant message completes
-        try {
-            const chat = $chatId;
-            if (chat) localStorage.removeItem(`selection-force-input-${chat}`);
-        } catch {}
-    }
-}
-
-// Single source of truth for which bottom panel to show
-type PanelState = 'message' | 'selection';
-let inputPanelState: PanelState = 'message';
-let messageInputResetKey = 0;
-
-function setInputPanelState(state: PanelState) {
-    inputPanelState = state;
-    try {
-        const chat = get(chatId);
-        if (chat) localStorage.setItem(`input-panel-state-${chat}`, state);
-    } catch {}
-}
-
-// Load persisted panel state on chat change
-let isInitialChatLoad = true;
-$: {
-    const chat = $chatId;
-    if (chat) {
-        try {
-            const persisted = localStorage.getItem(`input-panel-state-${chat}`) as PanelState | null;
-            if (persisted === 'message' || persisted === 'selection') {
-                inputPanelState = persisted;
-            } else {
-                inputPanelState = 'message';
-            }
-            // Mark that we've loaded the initial state for this chat
-            isInitialChatLoad = false;
-        } catch {
-            inputPanelState = 'message';
-            isInitialChatLoad = false;
-        }
-    }
-}
-
-// TEXT SELECTION: Auto-start selection mode when assistant response completes
-let lastAssistantPanelSwitchId: string | null = null;
-$: {
-    if (history?.currentId && !isInitialChatLoad) {
-        const msg = history.messages[history.currentId];
-        if (
-            msg?.role === 'assistant' &&
-            msg?.done === true &&
-            history.currentId !== lastAssistantPanelSwitchId
-        ) {
-            setInputPanelState('selection');
-            selectionModeEnabled.set(true); // Auto-start selection mode
-            lastAssistantPanelSwitchId = history.currentId;
-            // Clear force-input flag to allow selection mode
-            try {
-                const chat = $chatId;
-                if (chat) localStorage.removeItem(`selection-force-input-${chat}`);
-            } catch {}
-        }
-    }
-}
-
-// TEXT SELECTION: Track latest message IDs to restrict selection to most recent prompt/response
-$: {
-    if (history?.currentId) {
-        const msg = history.messages[history.currentId];
-        if (msg?.role === 'assistant') {
-            latestAssistantMessageId.set(history.currentId);
-        } else if (msg?.role === 'user') {
-            latestUserMessageId.set(history.currentId);
-        }
-    }
-}
-
-// TEXT SELECTION: Restore UI state on initial load - show MessageInput if both latest messages have selections
-$: {
-    const chat = $chatId;
-    if (chat && isInitialChatLoad) { // Only during initial load to avoid conflicts
-        try {
-            const persistedForce = localStorage.getItem(`selection-force-input-${chat}`) === '1';
-			if (persistedForce) {
-				// Respect persisted force-input state
-				selectionModeEnabled.set(false);
-				selectionForceInput.set(true);
-			} else {
-				// Check if both latest messages have selections
-				const items = get(savedSelections);
-				const latestUserId = $latestUserMessageId;
-				const latestAssistId = $latestAssistantMessageId;
-				const hasUserSel = latestUserId
-					? items.some((s) => s.chatId === chat && s.messageId === latestUserId && s.role === 'user')
-					: false;
-				const hasAssistSel = latestAssistId
-					? items.some((s) => s.chatId === chat && s.messageId === latestAssistId && s.role === 'assistant')
-					: false;
-				if (hasUserSel && hasAssistSel) {
-					// Both have selections - show MessageInput
-					selectionModeEnabled.set(false);
-					selectionForceInput.set(true);
-				} else {
-					// Allow SelectionInput to appear on next response
-					selectionForceInput.set(false);
-				}
-			}
-        } catch {}
-    }
-}
-
-// TEXT SELECTION: Backup check for initial load state restoration (redundant but safe)
-$: {
-    const chat = $chatId;
-    const latestUserId = $latestUserMessageId;
-    const latestAssistId = $latestAssistantMessageId;
-    if (chat && latestUserId && latestAssistId && isInitialChatLoad) {
-        const items = get(savedSelections);
-        const hasUserSel = items.some((s) => s.chatId === chat && s.messageId === latestUserId && s.role === 'user');
-        const hasAssistSel = items.some((s) => s.chatId === chat && s.messageId === latestAssistId && s.role === 'assistant');
-        if (hasUserSel && hasAssistSel) {
-            // Both messages have selections - ensure MessageInput is shown
-            selectionModeEnabled.set(false);
-            selectionForceInput.set(true);
-            selectionSwitchAfterResponse = false;
-        }
-    }
-}
 	import NotificationToast from '../NotificationToast.svelte';
 	import Spinner from '../common/Spinner.svelte';
 	import { fade } from 'svelte/transition';
@@ -240,64 +94,6 @@ $: {
 	export let chatIdProp = '';
 
 	let loading = true;
-	
-	// Parent mode toggle state
-	let parentMode = false;
-
-	// ====== PARENT MODE: MODERATION STATE ======
-	const moderationOptions = [
-		'Refuse Response and Explain',
-		'Remove Harmful Phrases',
-		'Omit Unprompted Suggestions',
-		'Do Not Suggest Workarounds',
-		'Clarify Child\'s Intent',
-		'Emphasize Emotional Support',
-		'Explain Problems in Prompt',
-		'Emphasize Risk Awareness',
-		'Redirect with Alternatives',
-		'Remind Model is Not Human',
-		'Encourage Introspection',
-		'Tailor to Age Group',
-		'Defer to Parents',
-		'Defer to Resources',
-		'Custom'
-	];
-
-	// Moderation state - Updated for multi-selection
-	let moderationResult: ModerationResponse | null = null;
-	let moderationLoading: boolean = false;
-	let selectedModerations: Set<string> = new Set();  // Track selected moderation strategies
-	
-	// Custom moderation state
-	let showCustomModal: boolean = false;
-	let customInstructionInput: string = '';
-	let customInstructions: Array<{id: string, text: string}> = [];  // Store custom instructions with IDs
-	
-	// TWO-PASS MODERATION STATE (New for iterative moderation)
-	let conversationStep: 'first' | 'second' = 'first';  // Track which pass we're on
-	
-	// First pass data
-	let childPrompt1: string = 'Who is Trump? Is he a good guy?';  // Default example
-	let originalResponse1: string = 'Hi there! Donald Trump is a well-known businessman and was the 45th President of the United States. People have different opinions about him, just like with many leaders. Some people think he did a good job, while others have different thoughts.';
-	let highlightedTexts1: string = '';  // Simple textarea for MVP
-	let moderationResult1: ModerationResponse | null = null;
-	
-	// Second pass data
-	let childPrompt2: string = '';  // Will be auto-generated
-	let originalResponse2: string = '';  // User will input this
-	let highlightedTexts2: string = '';
-	let moderationResult2: ModerationResponse | null = null;
-	
-	// Loading states
-	let generatingPrompt2: boolean = false;
-	let showSecondPass: boolean = false;
-	
-	// UI state for chat-based interface
-	let showOriginal1: boolean = false;  // Toggle between original/moderated for pass 1
-	let showOriginal2: boolean = false;  // Toggle between original/moderated for pass 2
-	let showSystemRules: boolean = false;  // Expandable system rules section
-	let generatingResponse2: boolean = false;  // Loading state for auto-generating follow-up response
-	// ====== END PARENT MODE STATE ======
 
 	const eventTarget = new EventTarget();
 	let controlPane;
@@ -339,6 +135,112 @@ $: {
 	};
 
 	let taskIds = null;
+
+	// Child profile popup
+	let showChildProfilePopup = false;
+	let childProfiles = [];
+	let selectedChildIndex = 0;
+
+	// Load child profiles from localStorage
+	function loadChildProfiles() {
+		try {
+			const selectedRole = localStorage.getItem('selectedRole');
+			console.log('Selected role:', selectedRole);
+			
+			if (selectedRole === 'kids') {
+				const savedProfiles = localStorage.getItem('childProfiles');
+				console.log('Saved profiles:', savedProfiles);
+				
+				if (savedProfiles) {
+					childProfiles = JSON.parse(savedProfiles);
+					console.log('Parsed child profiles:', childProfiles);
+				}
+				
+				// Only show popup if:
+				// 1. No profiles exist at all, OR
+				// 2. Profiles exist but no child is selected (selectedChildIndex is invalid)
+				const selectedChild = localStorage.getItem('selectedChildIndex');
+				const hasValidChildSelection = selectedChild !== null && 
+					parseInt(selectedChild) >= 0 && 
+					parseInt(selectedChild) < childProfiles.length;
+				
+				console.log('Selected child index:', selectedChild);
+				console.log('Has valid child selection:', hasValidChildSelection);
+				console.log('Child profiles length:', childProfiles.length);
+				
+				if (childProfiles.length === 0 || !hasValidChildSelection) {
+					// Always ensure selectedChildIndex has a valid value when profiles exist
+					if (childProfiles.length > 0) {
+						selectedChildIndex = 0;
+						console.log('Showing child profile popup - no valid child selected, defaulting to index 0');
+					} else {
+						console.log('Showing setup popup - no profiles exist');
+						selectedChildIndex = null; // No selection when no profiles
+					}
+					showChildProfilePopup = true;
+				} else {
+					// Valid selection exists, load it
+					selectedChildIndex = parseInt(selectedChild);
+				}
+			}
+		} catch (error) {
+			console.error('Error loading child profiles:', error);
+		}
+	}
+
+	// Check if we're in kids mode
+	$: isKidsMode = localStorage.getItem('selectedRole') === 'kids';
+
+	// Close child profile popup
+	function closeChildProfilePopup() {
+		// Save the selected child index when closing popup
+		if (childProfiles.length > 0 && selectedChildIndex >= 0) {
+			localStorage.setItem('selectedChildIndex', selectedChildIndex.toString());
+			console.log('Saved selected child index:', selectedChildIndex);
+			// Force update currentChild immediately
+			currentChild = childProfiles[selectedChildIndex] || null;
+			console.log('Updated currentChild:', currentChild);
+		}
+		showChildProfilePopup = false;
+	}
+
+	// Show child selection popup (for changing kids)
+	function showChildSelectionPopup() {
+		if (childProfiles.length > 0) {
+			// Set selectedChildIndex to current child if available
+			const savedIndex = localStorage.getItem('selectedChildIndex');
+			if (savedIndex !== null) {
+				const index = parseInt(savedIndex);
+				if (index >= 0 && index < childProfiles.length) {
+					selectedChildIndex = index;
+				} else {
+					selectedChildIndex = 0; // Default to first child
+				}
+			} else {
+				selectedChildIndex = 0; // Default to first child
+			}
+			showChildProfilePopup = true;
+		}
+	}
+
+	// Get current child info for display
+	let currentChild = null;
+	let isManualSelection = false;
+	
+	$: {
+		// Only auto-update if not manually selecting
+		if (!isManualSelection) {
+			// Load selected child index from localStorage
+			const savedIndex = localStorage.getItem('selectedChildIndex');
+			if (savedIndex !== null && childProfiles.length > 0) {
+				const index = parseInt(savedIndex);
+				if (index >= 0 && index < childProfiles.length) {
+					selectedChildIndex = index;
+				}
+			}
+			currentChild = childProfiles[selectedChildIndex] || null;
+		}
+	}
 
 	// Socket readiness check
 	let socketReady = false;
@@ -404,12 +306,17 @@ $: {
 		})();
 	}
 
-// NOTE: We intentionally do NOT persist the model selection to
-// sessionStorage or user settings. This ensures that on refresh/new chat
-// the app always resets to the desired default (see initNewChat).
-$: if (selectedModels && chatIdProp !== '') {
-    // No-op: selection is session-only and not persisted
-}
+	$: if (selectedModels && chatIdProp !== '') {
+		saveSessionSelectedModels();
+	}
+
+	const saveSessionSelectedModels = () => {
+		if (selectedModels.length === 0 || (selectedModels.length === 1 && selectedModels[0] === '')) {
+			return;
+		}
+		sessionStorage.selectedModels = JSON.stringify(selectedModels);
+		console.log('saveSessionSelectedModels', selectedModels, sessionStorage.selectedModels);
+	};
 
 	let oldSelectedModelIds = [''];
 	$: if (JSON.stringify(selectedModelIds) !== JSON.stringify(oldSelectedModelIds)) {
@@ -717,6 +624,9 @@ $: if (selectedModels && chatIdProp !== '') {
 		chatInput?.focus();
 
 		chats.subscribe(() => {});
+
+		// Load child profiles and show popup if needed
+		loadChildProfiles();
 	});
 
 	onDestroy(() => {
@@ -923,12 +833,7 @@ $: if (selectedModels && chatIdProp !== '') {
 	// Web functions
 	//////////////////////////
 
-// Initial model selection policy (highest precedence first):
-// 1) URL query "models" or "model" (validated against available models)
-// 2) Preferred model 'gpt-5-2025-08-07' if available
-// 3) Server-configured default_models (comma-separated)
-// 4) First available model
-const initNewChat = async () => {
+	const initNewChat = async () => {
 		const availableModels = $models
 			.filter((m) => !(m?.info?.meta?.hidden ?? false))
 			.map((m) => m.id);
@@ -966,14 +871,16 @@ const initNewChat = async () => {
 				$models.map((m) => m.id).includes(modelId)
 			);
 		} else {
-			// Always reset to preferred default on refresh/new chat
-			// Prefer 'gpt-5-2025-08-07' when present, otherwise use server defaults
-			const preferredModelId = 'gpt-5-2025-08-07';
-			if (availableModels.includes(preferredModelId)) {
-				selectedModels = [preferredModelId];
-			} else if ($config?.default_models) {
-				// Fallback to server-configured defaults
-				selectedModels = $config?.default_models.split(',');
+			if (sessionStorage.selectedModels) {
+				selectedModels = JSON.parse(sessionStorage.selectedModels);
+				sessionStorage.removeItem('selectedModels');
+			} else {
+				if ($settings?.models) {
+					selectedModels = $settings?.models;
+				} else if ($config?.default_models) {
+					console.log($config?.default_models.split(',') ?? '');
+					selectedModels = $config?.default_models.split(',');
+				}
 			}
 			selectedModels = selectedModels.filter((modelId) => availableModels.includes(modelId));
 		}
@@ -1128,15 +1035,6 @@ const initNewChat = async () => {
 
 				autoScroll = true;
 				await tick();
-
-				// Restore saved selections for this chat
-				try {
-					const persisted = JSON.parse(localStorage.getItem('saved-selections') ?? '{}');
-					const items = persisted[$chatId] ?? [];
-					if (items.length > 0) {
-						savedSelections.set(items);
-					}
-				} catch {}
 
 				if (history.currentId) {
 					for (const message of Object.values(history.messages)) {
@@ -1678,7 +1576,7 @@ const initNewChat = async () => {
 		const chatInput = document.getElementById('chat-input');
 		chatInput?.focus();
 
-        // selection is session-only and not persisted
+		saveSessionSelectedModels();
 
 		await sendPrompt(history, userPrompt, userMessageId, { newChat: true });
 	};
@@ -2368,227 +2266,9 @@ Key guidelines:
 			}
 		}
 	};
-
-	// ====== PARENT MODE: MODERATION FUNCTIONS ======
-	function toggleModerationSelection(option: string) {
-		// Special handling for Custom option - opens modal
-		if (option === 'Custom') {
-			showCustomModal = true;
-			return;
-		}
-		
-		// Toggle selection for standard options and saved customs
-		if (selectedModerations.has(option)) {
-			selectedModerations.delete(option);
-		} else {
-			selectedModerations.add(option);
-		}
-		selectedModerations = selectedModerations;  // Trigger reactivity
-	}
-	
-	function addCustomInstruction() {
-		const trimmed = customInstructionInput.trim();
-		if (!trimmed) {
-			toast.error('Please enter a custom instruction');
-			return;
-		}
-		
-		// Create unique ID for this custom instruction
-		const id = `custom_${Date.now()}`;
-		
-		// Add to custom instructions array
-		customInstructions = [...customInstructions, {id, text: trimmed}];
-		
-		// Don't auto-select - let user explicitly select it by clicking the checkbox
-		// This prevents confusion where clicking the checkbox deselects instead of selects
-		
-		// Close modal and reset input
-		showCustomModal = false;
-		customInstructionInput = '';
-		
-		toast.success('Custom instruction added - click it to select');
-	}
-	
-	function removeCustomInstruction(id: string) {
-		// Remove from custom instructions array
-		customInstructions = customInstructions.filter(c => c.id !== id);
-		
-		// Remove from selections if it was selected
-		selectedModerations.delete(id);
-		selectedModerations = selectedModerations;
-	}
-	
-	function cancelCustomModal() {
-		showCustomModal = false;
-		customInstructionInput = '';
-	}
-
-	async function applySelectedModerations() {
-		if (selectedModerations.size === 0) {
-			toast.error('Please select at least one moderation strategy');
-			return;
-		}
-
-		console.log(`Applying moderations (Pass ${conversationStep}):`, Array.from(selectedModerations).join(', '));
-		moderationLoading = true;
-		
-		// Determine which pass we're on
-		const isFirstPass = conversationStep === 'first';
-
-		try {
-			// Separate standard strategies from custom IDs
-			const selectedArray = Array.from(selectedModerations);
-			const standardStrategies: string[] = [];
-			const customTexts: string[] = [];
-			
-			selectedArray.forEach(selection => {
-				if (selection.startsWith('custom_')) {
-					const custom = customInstructions.find(c => c.id === selection);
-					if (custom) {
-						customTexts.push(custom.text);
-					}
-				} else {
-					standardStrategies.push(selection);
-				}
-			});
-			
-			// Call moderation with appropriate parameters for current pass
-			const result = await applyModeration(
-				localStorage.token,
-				standardStrategies,
-				isFirstPass ? childPrompt1 : childPrompt2,
-				customTexts,
-				isFirstPass ? originalResponse1 : originalResponse2,  // Pass original response
-				isFirstPass ? highlightedTexts1.split('\n').filter(t => t.trim()) : highlightedTexts2.split('\n').filter(t => t.trim())  // Parse highlighted texts
-			);
-			
-			if (result) {
-				// Store result in appropriate pass
-				if (isFirstPass) {
-					moderationResult1 = result;
-				} else {
-					moderationResult2 = result;
-				}
-				
-				const total = standardStrategies.length + customTexts.length;
-				toast.success(`Applied ${total} moderation strateg${total === 1 ? 'y' : 'ies'} (Pass ${conversationStep === 'first' ? '1' : '2'})`);
-			} else {
-				toast.error('Failed to apply moderation');
-			}
-		} catch (error: any) {
-			console.error('Error applying moderation:', error);
-			toast.error(`Error: ${error.message || 'Failed to apply moderation'}`);
-		} finally {
-			moderationLoading = false;
-		}
-	}
-
-	function clearSelections() {
-		selectedModerations.clear();
-		customInstructions = [];  // Clear custom instructions too
-		selectedModerations = selectedModerations;  // Trigger reactivity
-		moderationResult = null;
-	}
-	
-	async function generateFollowUp() {
-		if (!moderationResult1) {
-			toast.error('Please complete the first moderation pass first');
-			return;
-		}
-
-		generatingPrompt2 = true;
-
-		try {
-			const followup = await generateFollowUpPrompt(
-				localStorage.token,
-				childPrompt1,
-				moderationResult1.refactored_response
-			);
-			
-			childPrompt2 = followup;
-			showSecondPass = true;
-			conversationStep = 'second';
-			
-			toast.success('Follow-up question generated!');
-			
-			// Auto-generate AI response for the follow-up
-			await generateFollowUpResponse();
-		} catch (error: any) {
-			console.error('Error generating follow-up:', error);
-			toast.error(`Error: ${error.message || 'Failed to generate follow-up'}`);
-		} finally {
-			generatingPrompt2 = false;
-		}
-	}
-
-	async function generateFollowUpResponse() {
-		if (!childPrompt2) {
-			toast.error('No follow-up prompt to respond to');
-			return;
-		}
-
-		generatingResponse2 = true;
-
-		try {
-			// Use the OpenAI API to generate a response to the follow-up prompt
-			// This simulates the child's GPT responding to the follow-up question
-			const response = await generateOpenAIChatCompletion(
-				localStorage.token,
-				{
-					model: selectedModels[0] || 'gpt-4o-mini',  // Use selected model or default
-					messages: [
-						{ role: 'user', content: childPrompt2 }
-					],
-					stream: false
-				}
-			);
-			
-			if (response && response.choices && response.choices[0]) {
-				originalResponse2 = response.choices[0].message.content || '';
-				toast.success('Follow-up response generated!');
-			} else {
-				throw new Error('No response content received');
-			}
-		} catch (error: any) {
-			console.error('Error generating follow-up response:', error);
-			toast.error(`Error: ${error.message || 'Failed to generate follow-up response'}`);
-		} finally {
-			generatingResponse2 = false;
-		}
-	}
-
-	function resetConversation() {
-		conversationStep = 'first';
-		showSecondPass = false;
-		moderationResult1 = null;
-		moderationResult2 = null;
-		childPrompt2 = '';
-		originalResponse2 = '';
-		highlightedTexts2 = '';
-		showOriginal1 = false;
-		showOriginal2 = false;
-		showSystemRules = false;
-		generatingResponse2 = false;
-		// Reset to default example
-		childPrompt1 = 'Who is Trump? Is he a good guy?';
-		originalResponse1 = 'Hi there! Donald Trump is a well-known businessman and was the 45th President of the United States. People have different opinions about him, just like with many leaders. Some people think he did a good job, while others have different thoughts.';
-		highlightedTexts1 = '';
-		selectedModerations.clear();
-		selectedModerations = selectedModerations;
-	}
-	// ====== END PARENT MODE FUNCTIONS ======
 </script>
 
 <svelte:head>
-	<style>
-		/* Rotate the arrow when details is open */
-		details[open] .details-arrow {
-			transform: rotate(180deg);
-		}
-		.details-arrow {
-			transition: transform 0.2s ease;
-		}
-	</style>
 	<title>
 		{$chatTitle
 			? `${$chatTitle.length > 30 ? `${$chatTitle.slice(0, 30)}...` : $chatTitle} • ${$WEBUI_NAME}`
@@ -2623,6 +2303,151 @@ Key guidelines:
 		: ' '} w-full max-w-full flex flex-col kid-chat-container"
 	id="chat-container"
 >
+	<!-- Child Profile Popup -->
+	{#if showChildProfilePopup}
+		<div class="fixed inset-0 z-50 flex items-center justify-center bg-black/50" role="dialog" aria-modal="true" on:click={closeChildProfilePopup}>
+			<div class="bg-white dark:bg-gray-800 rounded-xl p-6 max-w-md w-full mx-4 shadow-2xl relative" on:click|stopPropagation on:mousedown|stopPropagation>
+				<div class="flex items-center justify-between mb-4">
+					<h3 class="text-lg font-semibold text-gray-900 dark:text-white">
+						{#if childProfiles.length > 0}
+							Your Saved Child Profile
+						{:else}
+							Set Up Your Child Profile
+						{/if}
+					</h3>
+					<button
+						type="button"
+						on:click={closeChildProfilePopup}
+						class="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 p-1 rounded hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
+						aria-label="Close dialog"
+					>
+						<svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+							<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+						</svg>
+					</button>
+				</div>
+				
+				{#if childProfiles.length > 0}
+					<!-- Show saved child profiles -->
+					<div class="space-y-4">
+						{#if childProfiles.length > 1}
+							<!-- Multiple children - show selection -->
+							<div class="space-y-2">
+								<h4 class="text-sm font-medium text-gray-700 dark:text-gray-300 mb-3">Select a child profile:</h4>
+								{#each childProfiles as child, index}
+									<button
+										type="button"
+										on:click={() => {
+											console.log(`Clicked ${child.name} (index: ${index})`);
+											console.log(`Previous selectedChildIndex: ${selectedChildIndex}`);
+											isManualSelection = true;
+											selectedChildIndex = index;
+											currentChild = childProfiles[selectedChildIndex] || null;
+											console.log(`New selectedChildIndex: ${selectedChildIndex}`);
+											console.log(`New currentChild:`, currentChild);
+										}}
+										class="w-full p-3 rounded-lg border-2 transition-all duration-200 text-left cursor-pointer select-none focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 {selectedChildIndex === index ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/20' : 'border-gray-200 dark:border-gray-600 hover:border-gray-300 dark:hover:border-gray-500'}"
+									>
+										<div class="flex items-center space-x-3">
+											<div class="w-10 h-10 bg-gradient-to-r from-blue-500 to-purple-600 rounded-full flex items-center justify-center">
+												<span class="text-white font-semibold text-sm">
+													{(child.name || 'Kid').charAt(0).toUpperCase()}
+												</span>
+											</div>
+											<div class="flex-1">
+												<h5 class="font-medium text-gray-900 dark:text-white">
+													{child.name || `Kid ${index + 1}`}
+												</h5>
+												<p class="text-sm text-gray-500 dark:text-gray-400">
+													{child.childAge || 'Age not set'} • {child.childGender || 'Gender not set'}
+												</p>
+											</div>
+											{#if selectedChildIndex === index}
+												<div class="w-5 h-5 bg-blue-500 rounded-full flex items-center justify-center">
+													<svg class="w-3 h-3 text-white" fill="currentColor" viewBox="0 0 20 20">
+														<path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"></path>
+													</svg>
+												</div>
+											{/if}
+										</div>
+										{#if child.childCharacteristics}
+											<p class="text-xs text-gray-600 dark:text-gray-400 mt-2 line-clamp-2">
+												{child.childCharacteristics}
+											</p>
+										{/if}
+									</button>
+								{/each}
+							</div>
+						{:else}
+							<!-- Single child - show profile directly -->
+							<div class="flex items-center space-x-3">
+								<div class="w-12 h-12 bg-gradient-to-r from-blue-500 to-purple-600 rounded-full flex items-center justify-center">
+									<span class="text-white font-semibold text-lg">
+										{(childProfiles[selectedChildIndex]?.name || 'Kid').charAt(0).toUpperCase()}
+									</span>
+								</div>
+								<div>
+									<h4 class="font-medium text-gray-900 dark:text-white">
+										{childProfiles[selectedChildIndex]?.name || `Kid ${selectedChildIndex + 1}`}
+									</h4>
+									<p class="text-sm text-gray-500 dark:text-gray-400">
+										{childProfiles[selectedChildIndex]?.childAge || 'Age not set'} • {childProfiles[selectedChildIndex]?.childGender || 'Gender not set'}
+									</p>
+								</div>
+							</div>
+						{/if}
+						
+						{#if childProfiles[selectedChildIndex]?.childCharacteristics}
+							<div class="bg-gray-50 dark:bg-gray-700 rounded-lg p-3">
+								<p class="text-sm text-gray-700 dark:text-gray-300">
+									<strong>Characteristics:</strong> {childProfiles[selectedChildIndex].childCharacteristics}
+								</p>
+							</div>
+						{/if}
+						
+						<p class="text-sm text-gray-600 dark:text-gray-400">
+							This information helps personalize your AI learning experience.
+						</p>
+					</div>
+				{:else}
+					<!-- First time setup message -->
+					<div class="text-center space-y-4">
+						<div class="w-16 h-16 bg-gradient-to-r from-emerald-500 to-teal-600 rounded-full flex items-center justify-center mx-auto">
+							<svg class="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+								<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path>
+							</svg>
+						</div>
+						<div>
+							<h4 class="font-medium text-gray-900 dark:text-white mb-2">Welcome to Kids Mode!</h4>
+							<p class="text-sm text-gray-600 dark:text-gray-400 mb-4">
+								To get the best personalized experience, set up your child profile first.
+							</p>
+							<button
+								type="button"
+								on:click={() => {
+									window.location.href = '/kids/profile';
+								}}
+								class="w-full bg-gradient-to-r from-emerald-500 to-teal-600 text-white px-4 py-2 rounded-lg hover:from-emerald-400 hover:to-teal-500 transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:ring-offset-2"
+							>
+								Set Up Child Profile
+							</button>
+						</div>
+					</div>
+				{/if}
+				
+				<div class="mt-6 flex justify-end">
+					<button
+						type="button"
+						on:click={closeChildProfilePopup}
+						class="px-4 py-2 rounded-lg transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-offset-2 {childProfiles.length > 0 && selectedChildIndex !== null && selectedChildIndex >= 0 ? 'bg-gradient-to-r from-green-500 to-emerald-600 text-white hover:from-green-600 hover:to-emerald-700 focus:ring-green-500' : 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600 focus:ring-gray-500'}"
+					>
+						{childProfiles.length > 0 ? 'Continue' : 'Skip for now'}
+					</button>
+				</div>
+			</div>
+		</div>
+	{/if}
+
 	{#if !loading}
 		<div in:fade={{ duration: 50 }} class="w-full h-full flex flex-col">
 			<!-- Gradient Background -->
@@ -2640,359 +2465,8 @@ Key guidelines:
 					class="absolute top-0 left-0 w-full h-full bg-linear-to-t from-white to-white/85 dark:from-gray-900 dark:to-gray-900/90 z-0"
 				/>
 			{/if}
-			
-			<!-- Parent Mode Toggle -->
-			<div class="absolute bottom-4 right-4 z-50">
-				<button
-					on:click={() => parentMode = !parentMode}
-					class="px-4 py-2 rounded-lg font-medium transition-all shadow-lg {parentMode 
-						? 'bg-purple-500 text-white hover:bg-purple-600' 
-						: 'bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-white hover:bg-gray-300 dark:hover:bg-gray-600'}"
-				>
-					{parentMode ? '👨‍👩‍👧 Parent Mode' : '🧒 Kid Mode'}
-				</button>
-			</div>
 
-			{#if parentMode}
-				<!-- Parent Mode: Chat-Based Iterative Moderation -->
-				<div class="w-full h-full flex bg-white dark:bg-gray-900">
-					<!-- Left Sidebar: Moderation Panel -->
-					<div class="w-80 flex-shrink-0 border-r border-gray-200 dark:border-gray-800 flex flex-col bg-gray-50 dark:bg-gray-900">
-						<!-- Sidebar Header -->
-						<div class="flex-shrink-0 border-b border-gray-200 dark:border-gray-800 p-4">
-							<h2 class="text-lg font-semibold text-gray-900 dark:text-white mb-1">Moderation Strategies</h2>
-							<p class="text-xs text-gray-600 dark:text-gray-400">Select strategies to apply</p>
-						</div>
-
-						<!-- Sidebar Content (Scrollable) -->
-						<div class="flex-1 overflow-y-auto p-4 space-y-4">
-							<!-- Strategy Count -->
-							<div class="flex items-center justify-between mb-2">
-								<span class="text-xs text-gray-600 dark:text-gray-400">
-									{selectedModerations.size} selected
-								</span>
-								{#if selectedModerations.size > 0}
-									<button
-										on:click={clearSelections}
-										class="text-xs text-blue-600 dark:text-blue-400 hover:underline"
-									>
-										Clear All
-									</button>
-								{/if}
-							</div>
-
-							<!-- Strategy Grid (2 columns for sidebar) -->
-							<div class="grid grid-cols-2 gap-2">
-								{#each moderationOptions as option}
-									<button
-										on:click={() => toggleModerationSelection(option)}
-										disabled={moderationLoading}
-										class="p-2 text-xs font-medium text-center rounded-lg transition-all {
-											option === 'Custom'
-												? 'bg-gradient-to-r from-purple-500 to-pink-500 text-white hover:from-purple-600 hover:to-pink-600'
-												: selectedModerations.has(option)
-												? 'bg-blue-500 text-white hover:bg-blue-600 ring-2 ring-blue-400'
-												: 'bg-white dark:bg-gray-800 text-gray-900 dark:text-white hover:bg-gray-100 dark:hover:bg-gray-700 border border-gray-200 dark:border-gray-700'
-										} disabled:opacity-50"
-									>
-										{option === 'Custom' ? '✨ Custom' : option}
-									</button>
-								{/each}
-							</div>
-
-							<!-- Custom Instructions -->
-							{#if customInstructions.length > 0}
-								<div class="p-3 bg-purple-50 dark:bg-purple-900/20 border border-purple-200 dark:border-purple-800 rounded-lg">
-									<h4 class="text-xs font-semibold text-purple-900 dark:text-purple-200 mb-2">
-										Custom ({customInstructions.length}):
-									</h4>
-									<div class="space-y-2">
-										{#each customInstructions as custom}
-											<div class="flex items-start justify-between bg-white dark:bg-purple-900/30 p-2 rounded border-2 {
-												selectedModerations.has(custom.id) 
-													? 'border-purple-500' 
-													: 'border-transparent'
-											}">
-												<button
-													on:click={() => toggleModerationSelection(custom.id)}
-													class="flex-1 text-left mr-2"
-												>
-													<div class="flex items-center space-x-1 mb-1">
-														<div class="w-3 h-3 rounded border-2 {
-															selectedModerations.has(custom.id)
-																? 'bg-purple-500 border-purple-500'
-																: 'border-gray-300 dark:border-gray-600'
-														} flex items-center justify-center">
-															{#if selectedModerations.has(custom.id)}
-																<svg class="w-2 h-2 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-																	<path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7"></path>
-																</svg>
-															{/if}
-														</div>
-														<p class="text-xs text-purple-800 dark:text-purple-200 font-medium">
-															#{customInstructions.indexOf(custom) + 1}
-														</p>
-													</div>
-													<p class="text-xs text-gray-700 dark:text-gray-300 line-clamp-2">
-														{custom.text}
-													</p>
-												</button>
-												<button
-													on:click={() => removeCustomInstruction(custom.id)}
-													class="text-red-500 hover:text-red-700 dark:text-red-400 flex-shrink-0"
-													title="Remove"
-												>
-													<svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-														<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
-													</svg>
-												</button>
-											</div>
-										{/each}
-									</div>
-								</div>
-							{/if}
-
-							<!-- Apply Button -->
-							<button
-								on:click={applySelectedModerations}
-								disabled={moderationLoading || selectedModerations.size === 0}
-								class="w-full px-4 py-2.5 bg-green-500 hover:bg-green-600 disabled:bg-gray-400 text-white text-sm font-semibold rounded-lg transition-colors flex items-center justify-center space-x-2"
-							>
-								{#if moderationLoading}
-									<div class="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
-									<span>Applying...</span>
-								{:else}
-									<span>Apply Moderation</span>
-								{/if}
-							</button>
-
-							<!-- Expandable Applied Rules -->
-							{#if moderationResult1 || moderationResult2}
-								<div class="border border-gray-200 dark:border-gray-700 rounded-lg overflow-hidden">
-									<button
-										on:click={() => showSystemRules = !showSystemRules}
-										class="w-full px-3 py-2 bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-750 transition-colors flex items-center justify-between"
-									>
-										<span class="text-xs font-medium text-gray-900 dark:text-white">📋 Applied Rules</span>
-										<svg 
-											class="w-4 h-4 text-gray-500 transform transition-transform {showSystemRules ? 'rotate-180' : ''}" 
-											fill="none" 
-											stroke="currentColor" 
-											viewBox="0 0 24 24"
-										>
-											<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
-										</svg>
-									</button>
-									
-									{#if showSystemRules}
-										<div class="px-3 py-2 bg-gray-50 dark:bg-gray-900 border-t border-gray-200 dark:border-gray-700 space-y-3 max-h-48 overflow-y-auto">
-											{#if moderationResult1}
-												<div>
-													<h4 class="text-xs font-semibold text-gray-600 dark:text-gray-400 mb-1.5">Pass 1 Strategies:</h4>
-													<ul class="space-y-1">
-														{#each moderationResult1.moderation_types as strategy, idx}
-															<li class="text-xs text-gray-700 dark:text-gray-300 flex items-start">
-																<span class="text-blue-500 mr-1.5">•</span>
-																<span>{strategy}</span>
-															</li>
-														{/each}
-													</ul>
-												</div>
-											{/if}
-											{#if moderationResult2}
-												<div>
-													<h4 class="text-xs font-semibold text-gray-600 dark:text-gray-400 mb-1.5">Pass 2 Strategies:</h4>
-													<ul class="space-y-1">
-														{#each moderationResult2.moderation_types as strategy, idx}
-															<li class="text-xs text-gray-700 dark:text-gray-300 flex items-start">
-																<span class="text-green-500 mr-1.5">•</span>
-																<span>{strategy}</span>
-															</li>
-														{/each}
-													</ul>
-												</div>
-											{/if}
-										</div>
-									{/if}
-								</div>
-							{/if}
-
-							<!-- Backend Response JSON Viewer -->
-							{#if moderationResult1 || moderationResult2}
-								<details class="border border-gray-200 dark:border-gray-700 rounded-lg overflow-hidden">
-									<summary class="px-3 py-2 bg-green-50 dark:bg-green-900/20 cursor-pointer hover:bg-green-100 dark:hover:bg-green-900/30 transition-colors list-none">
-										<div class="flex items-center justify-between">
-											<span class="text-xs font-medium text-gray-900 dark:text-white">🔧 Backend Response</span>
-											<svg class="w-4 h-4 text-gray-500 details-arrow" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-												<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
-											</svg>
-										</div>
-									</summary>
-									<div class="p-2 bg-gray-900 dark:bg-black max-h-64 overflow-auto">
-										<div class="space-y-3">
-											{#if moderationResult1}
-												<div>
-													<div class="text-xs font-semibold text-green-400 mb-1">Pass 1 Response:</div>
-													<pre class="text-xs font-mono text-green-300 whitespace-pre-wrap break-words">{JSON.stringify(moderationResult1, null, 2)}</pre>
-												</div>
-											{/if}
-											{#if moderationResult2}
-												<div class="border-t border-gray-700 pt-2">
-													<div class="text-xs font-semibold text-blue-400 mb-1">Pass 2 Response:</div>
-													<pre class="text-xs font-mono text-blue-300 whitespace-pre-wrap break-words">{JSON.stringify(moderationResult2, null, 2)}</pre>
-												</div>
-											{/if}
-										</div>
-									</div>
-								</details>
-							{/if}
-
-							<!-- JSON Log (Compact) -->
-							{#if moderationResult1 && moderationResult2}
-								<details class="border border-gray-200 dark:border-gray-700 rounded-lg overflow-hidden">
-									<summary class="px-3 py-2 bg-blue-50 dark:bg-blue-900/20 cursor-pointer hover:bg-blue-100 dark:hover:bg-blue-900/30 transition-colors">
-										<span class="text-xs font-medium text-gray-900 dark:text-white">📄 Conversation Log</span>
-									</summary>
-									<div class="p-2 bg-white dark:bg-gray-800 max-h-32 overflow-y-auto">
-										<pre class="text-xs font-mono whitespace-pre-wrap text-gray-900 dark:text-white">{JSON.stringify({
-											prompt_1: childPrompt1,
-											response_1: originalResponse1,
-											refactored_1: moderationResult1.refactored_response,
-											prompt_2: childPrompt2,
-											response_2: originalResponse2,
-											refactored_2: moderationResult2.refactored_response,
-										}, null, 2)}</pre>
-									</div>
-								</details>
-							{/if}
-						</div>
-
-						<!-- Sidebar Footer: Reset Button -->
-						<div class="flex-shrink-0 border-t border-gray-200 dark:border-gray-800 p-4">
-							<button
-								on:click={resetConversation}
-								class="w-full px-4 py-2 text-sm font-medium text-blue-600 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-lg transition-colors"
-							>
-								Reset Conversation
-							</button>
-						</div>
-					</div>
-
-					<!-- Right Side: Chat Thread -->
-					<div class="flex-1 flex flex-col">
-						<!-- Chat Header -->
-						<div class="flex-shrink-0 border-b border-gray-200 dark:border-gray-800 p-4">
-							<h1 class="text-xl font-bold text-gray-900 dark:text-white">Conversation Review</h1>
-							<p class="text-sm text-gray-600 dark:text-gray-400">Review and moderate AI responses</p>
-						</div>
-
-						<!-- Chat Messages Area -->
-						<div class="flex-1 overflow-y-auto p-6 space-y-4">
-							<!-- First Pass - Child Prompt Bubble (Blue, Right-aligned) -->
-							<div class="flex justify-end">
-								<div class="max-w-[80%] bg-blue-500 text-white rounded-2xl rounded-tr-sm px-4 py-3 shadow-sm">
-									<p class="text-sm whitespace-pre-wrap">{childPrompt1}</p>
-								</div>
-							</div>
-
-							<!-- First Pass - AI Response Bubble (Gray, Left-aligned) -->
-							<div class="flex justify-start">
-								<div class="max-w-[80%] bg-gray-100 dark:bg-gray-800 rounded-2xl rounded-tl-sm px-4 py-3 shadow-sm">
-									<p class="text-sm text-gray-900 dark:text-white whitespace-pre-wrap">
-										{#if moderationResult1 && !showOriginal1}
-											{moderationResult1.refactored_response}
-										{:else}
-											{originalResponse1}
-										{/if}
-									</p>
-									
-									<!-- Toggle Button (only show if moderation has been applied) -->
-									{#if moderationResult1}
-										<button
-											on:click={() => showOriginal1 = !showOriginal1}
-											class="mt-2 text-xs text-blue-600 dark:text-blue-400 hover:underline flex items-center space-x-1"
-										>
-											<svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-												<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path>
-												<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"></path>
-											</svg>
-											<span>{showOriginal1 ? 'View Moderated' : 'View Original'}</span>
-										</button>
-									{/if}
-
-									<!-- Generate Follow-Up Button (only show after Pass 1 moderation) -->
-									{#if moderationResult1 && !showSecondPass}
-										<button
-											on:click={generateFollowUp}
-											disabled={generatingPrompt2}
-											class="mt-3 w-full px-4 py-2 bg-blue-500 hover:bg-blue-600 disabled:bg-blue-300 text-white text-sm rounded-lg font-medium transition-colors flex items-center justify-center space-x-2"
-										>
-											{#if generatingPrompt2}
-												<div class="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
-												<span>Generating...</span>
-											{:else}
-												<span>➡️ Generate Follow-Up Question</span>
-											{/if}
-										</button>
-									{/if}
-								</div>
-							</div>
-
-							<!-- Second Pass - Follow-Up Child Prompt Bubble (only show if generated) -->
-							{#if showSecondPass && childPrompt2}
-								<div class="flex justify-end mt-6">
-									<div class="max-w-[80%] bg-blue-500 text-white rounded-2xl rounded-tr-sm px-4 py-3 shadow-sm">
-										<p class="text-sm whitespace-pre-wrap">{childPrompt2}</p>
-									</div>
-								</div>
-
-								<!-- Second Pass - AI Response Bubble -->
-								{#if generatingResponse2}
-									<!-- Loading state -->
-									<div class="flex justify-start">
-										<div class="max-w-[80%] bg-gray-100 dark:bg-gray-800 rounded-2xl rounded-tl-sm px-4 py-3 shadow-sm">
-											<div class="flex items-center space-x-2">
-												<div class="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style="animation-delay: 0ms;"></div>
-												<div class="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style="animation-delay: 150ms;"></div>
-												<div class="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style="animation-delay: 300ms;"></div>
-											</div>
-										</div>
-									</div>
-								{:else if originalResponse2}
-									<!-- Response generated -->
-									<div class="flex justify-start">
-										<div class="max-w-[80%] bg-gray-100 dark:bg-gray-800 rounded-2xl rounded-tl-sm px-4 py-3 shadow-sm">
-											<p class="text-sm text-gray-900 dark:text-white whitespace-pre-wrap">
-												{#if moderationResult2 && !showOriginal2}
-													{moderationResult2.refactored_response}
-												{:else}
-													{originalResponse2}
-												{/if}
-											</p>
-											
-											<!-- Toggle Button for Pass 2 -->
-											{#if moderationResult2}
-												<button
-													on:click={() => showOriginal2 = !showOriginal2}
-													class="mt-2 text-xs text-blue-600 dark:text-blue-400 hover:underline flex items-center space-x-1"
-												>
-													<svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-														<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path>
-														<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"></path>
-													</svg>
-													<span>{showOriginal2 ? 'View Moderated' : 'View Original'}</span>
-												</button>
-											{/if}
-										</div>
-									</div>
-								{/if}
-							{/if}
-						</div>
-					</div>
-				</div>
-			{:else}
-				<!-- Kids Mode View (Original Chat Interface) -->
-				<PaneGroup direction="horizontal" class="w-full h-full">
+			<PaneGroup direction="horizontal" class="w-full h-full">
 				<Pane defaultSize={50} class="h-full flex relative max-w-full flex-col">
 					<Navbar
 						bind:this={navbarElement}
@@ -3013,6 +2487,7 @@ Key guidelines:
 						shareEnabled={!!history.currentId}
 						{initNewChat}
 					/>
+					
 
 					<div class="flex flex-col flex-auto z-10 w-full @container">
 						{#if $settings?.landingPageMode === 'chat' || createMessagesList(history, history.currentId).length > 0}
@@ -3047,11 +2522,75 @@ Key guidelines:
 								</div>
 							</div>
 
-						<div class=" pb-2">
-							<!-- Start/Done buttons moved into MessageInput bar -->
-                            {#if inputPanelState === 'message'}
-                                {#key messageInputResetKey}
-                                <MessageInput
+							<!-- Child Profile Info Display (only in kids mode) - positioned above input -->
+							{#if isKidsMode}
+								<div class="bg-gradient-to-r from-blue-100 to-purple-100 dark:from-blue-900/30 dark:to-purple-900/30 border-l-4 border-blue-500 dark:border-blue-400 mx-4 mb-3 p-3 rounded-lg shadow-md">
+									<div class="flex items-center space-x-3">
+										<div class="w-8 h-8 bg-gradient-to-r from-blue-500 to-purple-600 rounded-full flex items-center justify-center flex-shrink-0 shadow-lg">
+											<span class="text-white font-bold text-sm">
+												{#if currentChild}
+													{(currentChild.name || 'Kid').charAt(0).toUpperCase()}
+												{:else}
+													K
+												{/if}
+											</span>
+										</div>
+										<div class="flex-1 min-w-0">
+											<div class="flex items-center space-x-2">
+												<span class="font-semibold text-gray-900 dark:text-white text-sm">
+													{#if currentChild}
+														{currentChild.name || `Kid ${selectedChildIndex + 1}`}
+													{:else}
+														Kids Mode
+													{/if}
+												</span>
+												{#if currentChild}
+													<span class="text-xs text-gray-600 dark:text-gray-300 bg-gray-200 dark:bg-gray-700 px-2 py-1 rounded-full">
+														{currentChild.childAge || 'Age not set'}
+													</span>
+													<span class="text-xs text-gray-600 dark:text-gray-300 bg-gray-200 dark:bg-gray-700 px-2 py-1 rounded-full">
+														{currentChild.childGender || 'Gender not set'}
+													</span>
+												{/if}
+											</div>
+											{#if currentChild?.childCharacteristics}
+												<p class="text-sm text-gray-700 dark:text-gray-300 mt-1 line-clamp-2">
+													{currentChild.childCharacteristics}
+												</p>
+											{:else if !currentChild}
+												<p class="text-sm text-gray-700 dark:text-gray-300 mt-1">
+													Set up your profile in Parent Dashboard for personalized AI experience
+												</p>
+											{/if}
+										</div>
+										<div class="flex space-x-2 flex-shrink-0">
+											{#if currentChild && childProfiles.length > 1}
+												<button
+													on:click={showChildSelectionPopup}
+													class="bg-gradient-to-r from-green-500 to-emerald-600 text-white text-xs font-medium px-3 py-2 rounded-lg hover:from-green-600 hover:to-emerald-700 transition-all duration-200 shadow-md hover:shadow-lg"
+												>
+													Change Kids
+												</button>
+											{/if}
+											<button
+												on:click={() => {
+													window.location.href = '/kids/profile';
+												}}
+												class="bg-gradient-to-r from-blue-500 to-purple-600 text-white text-xs font-medium px-3 py-2 rounded-lg hover:from-blue-600 hover:to-purple-700 transition-all duration-200 shadow-md hover:shadow-lg"
+											>
+												{#if currentChild}
+													Edit Profile
+												{:else}
+													Set Up Profile
+												{/if}
+											</button>
+										</div>
+									</div>
+								</div>
+							{/if}
+
+							<div class=" pb-2">
+								<MessageInput
 									{history}
 									{taskIds}
 									{selectedModels}
@@ -3091,7 +2630,7 @@ Key guidelines:
 											await uploadGoogleDriveFile(data);
 										}
 									}}
-                                    on:submit={async (e) => {
+									on:submit={async (e) => {
 										if (e.detail || files.length > 0) {
 											await tick();
 											submitPrompt(
@@ -3099,54 +2638,9 @@ Key guidelines:
 													? e.detail.replaceAll('\n\n', '\n')
 													: e.detail
 											);
-                                            // Clear input box after submit
-                                            prompt = '';
-                                            try {
-                                                const id = $chatId;
-                                                if (id) localStorage.removeItem(`chat-input-${id}`);
-                                                else localStorage.removeItem('chat-input');
-                                            } catch {}
-                                            // Force re-mount of MessageInput to clear internal editor state immediately
-                                            messageInputResetKey += 1;
 										}
 									}}
 								/>
-                                {/key}
-                            {:else if inputPanelState === 'selection'}
-                                {#if !$selectionModeEnabled}
-                                    <!-- Start selection prompt -->
-                                    <SelectionInput
-                                        mode="start"
-                                        instruction={$i18n.t('Select problematic text in the chat and save your selection.')}
-                                        onPrimary={() => {
-                                            selectionModeEnabled.set(true);
-                                        }}
-                                        {history}
-                                        {createMessagePair}
-                                        {stopResponse}
-                                        {selectedModels}
-                                        {atSelectedModel}
-                                    />
-                                {:else}
-                                    <!-- Selection active: show Done -->
-                                    <SelectionInput
-                                        mode="done"
-                                        instruction={$i18n.t('Select problematic text in the chat and save your selection.')}
-                                        onPrimary={() => {
-                                            const selections = get(savedSelections);
-                                            selectionModeEnabled.set(false);
-                                            setInputPanelState('message');
-                                            selectionSwitchAfterResponse = true;
-                                            lastMessageIdAtDone = history?.currentId ?? null;
-                                        }}
-                                        {history}
-                                        {createMessagePair}
-                                        {stopResponse}
-                                        {selectedModels}
-                                        {atSelectedModel}
-                                    />
-                                {/if}
-							{/if}
 
 								<div
 									class="absolute bottom-1 text-xs text-gray-500 text-center line-clamp-1 right-0 left-0"
@@ -3221,7 +2715,6 @@ Key guidelines:
 					{eventTarget}
 				/>
 			</PaneGroup>
-			{/if}
 		</div>
 	{:else if loading}
 		<div class=" flex items-center justify-center h-full w-full">
@@ -3231,91 +2724,3 @@ Key guidelines:
 		</div>
 	{/if}
 </div>
-
-<!-- Custom Moderation Modal (Parent Mode) -->
-{#if showCustomModal}
-	<div class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-		<div class="bg-white dark:bg-gray-800 rounded-lg shadow-xl max-w-2xl w-full">
-			<div class="p-6">
-				<div class="flex justify-between items-center mb-4">
-					<h2 class="text-xl font-semibold text-gray-900 dark:text-white flex items-center space-x-2">
-						<span class="text-2xl">✨</span>
-						<span>Custom Moderation Instruction</span>
-					</h2>
-					<button
-						on:click={cancelCustomModal}
-						class="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-colors"
-					>
-						<svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-							<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
-						</svg>
-					</button>
-				</div>
-				
-				<div class="mb-6">
-					<p class="text-sm text-gray-600 dark:text-gray-400 mb-4">
-						Enter a custom instruction for how the AI should moderate the response. Be specific and clear about what you want.
-					</p>
-					
-					<div class="mb-4">
-						<label for="custom-instruction-textarea" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-							Custom Instruction
-						</label>
-						<textarea
-							id="custom-instruction-textarea"
-							bind:value={customInstructionInput}
-							placeholder="Example: Explain this topic using simple analogies appropriate for a 7-year-old, focusing on positive aspects..."
-							class="w-full p-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-purple-500 focus:border-transparent resize-none"
-							rows="6"
-						></textarea>
-						<div class="flex justify-between items-center mt-2">
-							<p class="text-xs text-gray-500 dark:text-gray-400">
-								This will be combined with any other selected moderation strategies.
-							</p>
-							<p class="text-xs text-gray-500 dark:text-gray-400">
-								{customInstructionInput.length} characters
-							</p>
-						</div>
-					</div>
-					
-					<!-- Example Instructions -->
-					<details class="mb-4">
-						<summary class="text-sm font-medium text-gray-700 dark:text-gray-300 cursor-pointer hover:text-gray-900 dark:hover:text-white">
-							💡 See example custom instructions
-						</summary>
-						<div class="mt-3 space-y-2 text-xs text-gray-600 dark:text-gray-400">
-							<p class="p-2 bg-gray-50 dark:bg-gray-900 rounded">
-								• "Use sports analogies to explain complex concepts"
-							</p>
-							<p class="p-2 bg-gray-50 dark:bg-gray-900 rounded">
-								• "Focus on positive role models and their achievements"
-							</p>
-							<p class="p-2 bg-gray-50 dark:bg-gray-900 rounded">
-								• "Explain both sides of the issue fairly without taking a stance"
-							</p>
-							<p class="p-2 bg-gray-50 dark:bg-gray-900 rounded">
-								• "Keep the explanation under 3 sentences and very simple"
-							</p>
-						</div>
-					</details>
-				</div>
-				
-				<div class="flex justify-end space-x-3">
-					<button
-						on:click={cancelCustomModal}
-						class="px-4 py-2 text-gray-700 dark:text-gray-300 bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 rounded-lg font-medium transition-colors"
-					>
-						Cancel
-					</button>
-					<button
-						on:click={addCustomInstruction}
-						disabled={!customInstructionInput.trim()}
-						class="px-6 py-2 bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 disabled:from-gray-300 disabled:to-gray-400 disabled:cursor-not-allowed text-white rounded-lg font-medium transition-all shadow-md"
-					>
-						Add Custom Instruction
-					</button>
-				</div>
-			</div>
-		</div>
-	</div>
-{/if}

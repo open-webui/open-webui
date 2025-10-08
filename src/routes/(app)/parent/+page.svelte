@@ -13,7 +13,7 @@
 	import { getModelsConfig, setModelsConfig } from '$lib/apis/configs';
 	import { updateModelById, getModels as getWorkspaceModels } from '$lib/apis/models';
 	import { generateOpenAIChatCompletion } from '$lib/apis/openai';
-	import { applyModeration, generateFollowUpPrompt, type ModerationResponse } from '$lib/apis/moderation';
+	import { applyModeration, type ModerationResponse } from '$lib/apis/moderation';
 	import { toast } from 'svelte-sonner';
 	import { toggleTheme, getCurrentTheme } from '$lib/utils/theme';
 	
@@ -64,6 +64,7 @@
 	let sidebarCollapsed: boolean = false; // State for sidebar collapse
 	
 	// Child profile data
+	let childName: string = '';
 	let childAge: string = '';
 	let childGender: string = '';
 	let childCharacteristics: string = '';
@@ -73,6 +74,90 @@
 	let parentingStyle: string = '';
 	let profileSubmitted: boolean = false; // Track if profile has been submitted
 	let isEditingProfile: boolean = false; // Track if in edit mode
+
+	// Multi-child support
+	interface ChildProfileItem {
+		id: string;
+		name: string;
+		childAge: string;
+		childGender: string;
+		childCharacteristics: string;
+		parentingStyle: string;
+	}
+
+	let childProfiles: ChildProfileItem[] = [];
+	let selectedChildIndex: number = 0;
+let showPreview: boolean = false; // legacy preview flag (not used in new layout)
+let showProfileModal: boolean = false;
+let editInModal: boolean = false;
+
+	function getChildGridTemplate(): string {
+		const cols = Math.max(1, Math.min((childProfiles?.length || 1), 5));
+		return `repeat(${cols}, minmax(120px, 1fr))`;
+	}
+
+	function ensureAtLeastOneChild() {
+		// No-op: allow empty list of children per user request
+	}
+
+	function hydrateFormFromSelectedChild() {
+		ensureAtLeastOneChild();
+		const sel = childProfiles[selectedChildIndex];
+		childName = sel?.name || '';
+		childAge = sel?.childAge || '';
+		childGender = sel?.childGender || '';
+		childCharacteristics = sel?.childCharacteristics || '';
+		parentingStyle = sel?.parentingStyle || '';
+	}
+
+	function applyFormToSelectedChild() {
+		ensureAtLeastOneChild();
+		const sel = childProfiles[selectedChildIndex];
+		if (!sel) return;
+		sel.name = childName;
+		sel.childAge = childAge;
+		sel.childGender = childGender;
+		sel.childCharacteristics = childCharacteristics;
+		sel.parentingStyle = parentingStyle;
+	}
+
+	function deleteChild(index: number) {
+		childProfiles = childProfiles.filter((_, i) => i !== index);
+		
+		// Adjust selectedChildIndex if needed
+		if (childProfiles.length === 0) {
+			selectedChildIndex = 0;
+			childName = '';
+			childAge = '';
+			childGender = '';
+			childCharacteristics = '';
+			parentingStyle = '';
+		} else {
+			if (selectedChildIndex >= childProfiles.length) {
+				selectedChildIndex = childProfiles.length - 1;
+			}
+			hydrateFormFromSelectedChild();
+		}
+		
+		// Save updated profiles
+		localStorage.setItem('childProfiles', JSON.stringify(childProfiles));
+	}
+
+	function addNewChild() {
+		childProfiles = [
+			...childProfiles,
+			{
+				id: crypto.randomUUID(),
+				name: '',
+				childAge: '',
+				childGender: '',
+				childCharacteristics: '',
+				parentingStyle: ''
+			}
+		];
+		selectedChildIndex = childProfiles.length - 1;
+		hydrateFormFromSelectedChild();
+	}
 
 	// Graph state
 	let plotPoints: PlotPoint[] = [];
@@ -182,25 +267,6 @@
 	let showCustomModal: boolean = false;
 	let customInstructionInput: string = '';
 	let customInstructions: Array<{id: string, text: string}> = [];  // Store custom instructions with IDs
-	
-	// TWO-PASS MODERATION STATE (New for iterative moderation)
-	let conversationStep: 'first' | 'second' = 'first';  // Track which pass we're on
-	
-	// First pass data
-	let childPrompt1: string = 'Who is Trump? Is he a good guy?';  // Default example
-	let originalResponse1: string = 'Hi there! Donald Trump is a well-known businessman and was the 45th President of the United States. People have different opinions about him, just like with many leaders. Some people think he did a good job, while others have different thoughts.';
-	let highlightedTexts1: string = '';  // Simple textarea for MVP
-	let moderationResult1: ModerationResponse | null = null;
-	
-	// Second pass data
-	let childPrompt2: string = '';  // Will be auto-generated
-	let originalResponse2: string = '';  // User will input this
-	let highlightedTexts2: string = '';
-	let moderationResult2: ModerationResponse | null = null;
-	
-	// Loading states
-	let generatingPrompt2: boolean = false;
-	let showSecondPass: boolean = false;
 
 	function toggleModerationSelection(option: string) {
 		// Special handling for Custom option - opens modal
@@ -261,11 +327,9 @@
 			return;
 		}
 
-		console.log(`Applying moderations (Pass ${conversationStep}):`, Array.from(selectedModerations).join(', '));
+		console.log(`Applying moderations: ${Array.from(selectedModerations).join(', ')}`);
 		moderationLoading = true;
-		
-		// Determine which pass we're on
-		const isFirstPass = conversationStep === 'first';
+		moderationResult = null;
 
 		try {
 			// Separate standard strategies from custom IDs
@@ -275,41 +339,34 @@
 			
 			selectedArray.forEach(selection => {
 				if (selection.startsWith('custom_')) {
+					// It's a custom instruction ID - find the text
 					const custom = customInstructions.find(c => c.id === selection);
 					if (custom) {
 						customTexts.push(custom.text);
 					}
 				} else {
+					// It's a standard strategy
 					standardStrategies.push(selection);
 				}
 			});
 			
-			// Call moderation with appropriate parameters for current pass
 			const result = await applyModeration(
 				localStorage.token,
 				standardStrategies,
-				isFirstPass ? childPrompt1 : childPrompt2,
-				customTexts,
-				isFirstPass ? originalResponse1 : originalResponse2,  // Pass original response
-				isFirstPass ? highlightedTexts1.split('\n').filter(t => t.trim()) : highlightedTexts2.split('\n').filter(t => t.trim())  // Parse highlighted texts
+				'Who is Trump? Is he a good guy?', // Using the example prompt from the interaction
+				customTexts  // Pass custom instruction texts
 			);
 			
 			if (result) {
-				// Store result in appropriate pass
-				if (isFirstPass) {
-					moderationResult1 = result;
-				} else {
-					moderationResult2 = result;
-				}
-				
+				moderationResult = result;
 				const total = standardStrategies.length + customTexts.length;
-				toast.success(`Applied ${total} moderation strateg${total === 1 ? 'y' : 'ies'} (Pass ${conversationStep === 'first' ? '1' : '2'})`);
+				toast.success(`Applied ${total} moderation strateg${total === 1 ? 'y' : 'ies'}`);
 			} else {
 				toast.error('Failed to apply moderation');
 			}
 		} catch (error: any) {
 			console.error('Error applying moderation:', error);
-			toast.error(`Error: ${error.message || 'Failed to apply moderation'}`);
+			toast.error(`Error: ${error.detail || error.message || 'Failed to apply moderation'}`);
 		} finally {
 			moderationLoading = false;
 		}
@@ -320,46 +377,6 @@
 		customInstructions = [];  // Clear custom instructions too
 		selectedModerations = selectedModerations;  // Trigger reactivity
 		moderationResult = null;
-	}
-	
-	async function generateFollowUp() {
-		if (!moderationResult1) {
-			toast.error('Please complete the first moderation pass first');
-			return;
-		}
-
-		generatingPrompt2 = true;
-
-		try {
-			const followup = await generateFollowUpPrompt(
-				localStorage.token,
-				childPrompt1,
-				moderationResult1.refactored_response
-			);
-			
-			childPrompt2 = followup;
-			showSecondPass = true;
-			conversationStep = 'second';
-			
-			toast.success('Follow-up question generated!');
-		} catch (error: any) {
-			console.error('Error generating follow-up:', error);
-			toast.error(`Error: ${error.message || 'Failed to generate follow-up'}`);
-		} finally {
-			generatingPrompt2 = false;
-		}
-	}
-
-	function resetConversation() {
-		conversationStep = 'first';
-		showSecondPass = false;
-		moderationResult1 = null;
-		moderationResult2 = null;
-		childPrompt2 = '';
-		originalResponse2 = '';
-		highlightedTexts2 = '';
-		selectedModerations.clear();
-		selectedModerations = selectedModerations;
 	}
 	
 	onMount(() => {
@@ -441,35 +458,60 @@
 	
 	// Child profile functions
 	function saveChildProfile() {
-		const childProfile = {
-			childAge,
-			childGender,
-			childCharacteristics,
+		// Apply current form to selected child and persist all children + parent info
+		applyFormToSelectedChild();
+		const parentInfo = {
 			parentGender,
 			parentAge,
-			parentPreference,
-			parentingStyle,
-			profileSubmitted: true
+			parentPreference
 		};
-		localStorage.setItem('childProfile', JSON.stringify(childProfile));
+		localStorage.setItem('childProfiles', JSON.stringify(childProfiles));
+		localStorage.setItem('childParentInfo', JSON.stringify(parentInfo));
 		profileSubmitted = true;
 		isEditingProfile = false;
 		toast.success('Child profile saved successfully!');
 	}
 	
 	function loadChildProfile() {
-		const saved = localStorage.getItem('childProfile');
-		if (saved) {
-			const profile = JSON.parse(saved);
-			childAge = profile.childAge || '';
-			childGender = profile.childGender || '';
-			childCharacteristics = profile.childCharacteristics || '';
-			parentGender = profile.parentGender || '';
-			parentAge = profile.parentAge || '';
-			parentPreference = profile.parentPreference || '';
-			parentingStyle = profile.parentingStyle || '';
-			profileSubmitted = profile.profileSubmitted || false;
+		// Migration: if legacy single profile exists, convert to array once
+		const savedLegacy = localStorage.getItem('childProfile');
+		const savedArray = localStorage.getItem('childProfiles');
+		if (!savedArray && savedLegacy) {
+			try {
+				const p = JSON.parse(savedLegacy);
+				const migrated: ChildProfileItem = {
+					id: crypto.randomUUID(),
+					name: p.childName || '',
+					childAge: p.childAge || '',
+					childGender: p.childGender || '',
+					childCharacteristics: p.childCharacteristics || '',
+					parentingStyle: p.parentingStyle || ''
+				};
+				localStorage.setItem('childProfiles', JSON.stringify([migrated]));
+				const parentInfo = {
+					parentGender: p.parentGender || '',
+					parentAge: p.parentAge || '',
+					parentPreference: p.parentPreference || ''
+				};
+				localStorage.setItem('childParentInfo', JSON.stringify(parentInfo));
+				localStorage.removeItem('childProfile');
+			} catch {}
 		}
+
+		try {
+			const arr = JSON.parse(localStorage.getItem('childProfiles') || '[]');
+			if (Array.isArray(arr)) {
+				childProfiles = arr;
+			}
+			const parentInfo = JSON.parse(localStorage.getItem('childParentInfo') || '{}');
+			parentGender = parentInfo.parentGender || '';
+			parentAge = parentInfo.parentAge || '';
+			parentPreference = parentInfo.parentPreference || '';
+		} catch {}
+
+		ensureAtLeastOneChild();
+		hydrateFormFromSelectedChild();
+		profileSubmitted = (localStorage.getItem('childProfiles') ?? '').length > 0;
 	}
 	
 	function startEditingProfile() {
@@ -913,7 +955,8 @@
 				<span>Parent Mode</span>
 			</div>
 			
-			{#if $user?.role === 'admin'}
+			<!-- Admin Panel hidden per user request -->
+			<!-- {#if $user?.role === 'admin'}
 				<button
 					on:click={goToAdmin}
 					class="flex items-center space-x-2 text-sm font-medium text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white transition-colors"
@@ -921,7 +964,7 @@
 					<Settings className="size-4" />
 					<span>Admin Panel</span>
 				</button>
-			{/if}
+			{/if} -->
 		</div>
 	</div>
 	
@@ -1179,104 +1222,116 @@
 					</div>
 				{:else if activeTab === 'child_profile'}
 					<!-- Child Profile Tab -->
-					<div class="mb-4 mt-2">
-						<h1 class="text-3xl font-bold mb-2">Child Profile</h1>
-						<p class="text-gray-600 dark:text-gray-400">
-							{#if profileSubmitted && !isEditingProfile}
-								View and manage your child's profile information.
-							{:else}
-								Collect and manage your child's information to personalize their AI learning experience.
-							{/if}
-						</p>
+					<div class="mb-4 mt-2 flex justify-between items-start">
+						<div>
+							<h1 class="text-3xl font-bold mb-2">Child Profile</h1>
+							<p class="text-gray-600 dark:text-gray-400">
+								{#if profileSubmitted && !isEditingProfile}
+									View and manage your child's profile information.
+								{:else}
+									Collect and manage your child's information to personalize their AI learning experience.
+								{/if}
+							</p>
+						</div>
+						{#if childProfiles.length > 0}
+							<!-- Add Kid button outside the container -->
+							<button type="button" class="px-4 py-2 rounded-full bg-gradient-to-r from-emerald-500 to-teal-600 text-white shadow-lg ring-1 ring-emerald-400/30 hover:from-emerald-400 hover:to-teal-500 hover:ring-emerald-300/50 hover:scale-105 transition-all duration-200" on:click={addNewChild}>
+								<span class="font-medium text-sm">+ Add Kid</span>
+							</button>
+						{/if}
 					</div>
 					
-					{#if profileSubmitted && !isEditingProfile}
-						<!-- Profile Display View -->
-						<div class="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg p-6">
-							<!-- Header with Edit Button -->
-							<div class="flex justify-between items-center mb-6">
-								<h2 class="text-xl font-semibold text-gray-900 dark:text-white">Child Profile Information</h2>
-								<button
-									on:click={startEditingProfile}
-									class="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded-lg font-medium transition-colors focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
-								>
-									Change Profile
+						{#if childProfiles.length === 0}
+							<!-- Empty state -->
+							<div class="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg p-8 text-center space-y-4">
+								<h2 class="text-xl font-semibold">Set up your kids</h2>
+								<p class="text-gray-600 dark:text-gray-400 max-w-2xl mx-auto">
+									This page stores each kid's profile (name, age, gender, characteristics) so the assistant can personalize experiences. Start by adding your first kid.
+								</p>
+								<button type="button" class="px-6 py-4 rounded-full bg-gradient-to-r from-emerald-500 to-teal-600 text-white shadow-lg ring-1 ring-emerald-400/30 hover:from-emerald-400 hover:to-teal-500 hover:ring-emerald-300/50 hover:scale-105 transition-all duration-200" on:click={addNewChild}>
+									<span class="font-medium">+ Add Kid</span>
 								</button>
 							</div>
-							
-							<!-- Profile Display -->
-							<div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
-								<!-- Child Information -->
-								<div class="space-y-6">
-									<h3 class="text-lg font-semibold text-gray-900 dark:text-white border-b border-gray-200 dark:border-gray-700 pb-2">
-										Child Information
-									</h3>
-									
-									<div class="space-y-4">
-										<div>
-											<span class="text-sm font-medium text-gray-600 dark:text-gray-400">Age:</span>
-											<p class="text-gray-900 dark:text-white">{formatDisplayValue(childAge, 'age')}</p>
-										</div>
-										
-										<div>
-											<span class="text-sm font-medium text-gray-600 dark:text-gray-400">Gender:</span>
-											<p class="text-gray-900 dark:text-white">{formatDisplayValue(childGender, 'gender')}</p>
-										</div>
-										
-										<div>
-											<span class="text-sm font-medium text-gray-600 dark:text-gray-400">Characteristics:</span>
-											<p class="text-gray-900 dark:text-white whitespace-pre-wrap">{childCharacteristics || 'Not specified'}</p>
-										</div>
+						{:else}
+							<!-- Kids buttons container -->
+                        <div class="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg p-6">
+							<!-- Kids buttons grid -->
+                            <div class="grid gap-3" style={`grid-template-columns: ${getChildGridTemplate()}`} role="tablist" aria-label="Children">
+									{#each childProfiles as c, i}
+									<div class="relative group">
+										<button type="button" role="tab" aria-selected={i===selectedChildIndex}
+											class={`px-6 py-4 rounded-full transition-all duration-200 w-full ${i===selectedChildIndex ? 'bg-gradient-to-r from-blue-500 to-purple-600 text-white shadow-lg ring-2 ring-blue-400/50 transform scale-105' : 'bg-gradient-to-r from-gray-700 to-gray-600 text-white ring-1 ring-gray-500/30 hover:from-gray-600 hover:to-gray-500 hover:ring-gray-400/50 hover:scale-102'}`}
+											on:click={() => { selectedChildIndex = i; hydrateFormFromSelectedChild(); showProfileModal = true; editInModal = false; }}>
+												<span class="font-medium">{c.name || `Kid ${i + 1}`}</span>
+											</button>
+										<button type="button" 
+											class="absolute -top-2 -right-2 w-6 h-6 bg-red-500 hover:bg-red-600 text-white rounded-full text-xs opacity-0 group-hover:opacity-100 transition-opacity duration-200 flex items-center justify-center"
+											on:click|stopPropagation={() => deleteChild(i)}
+											title="Delete child">
+											×
+										</button>
 									</div>
-								</div>
-								
-								<!-- Parent Information -->
-								<div class="space-y-6">
-									<h3 class="text-lg font-semibold text-gray-900 dark:text-white border-b border-gray-200 dark:border-gray-700 pb-2">
-										Parent Information
-									</h3>
-									
-									<div class="space-y-4">
-										<div>
-											<span class="text-sm font-medium text-gray-600 dark:text-gray-400">Parent Gender:</span>
-											<p class="text-gray-900 dark:text-white">{formatDisplayValue(parentGender, 'gender')}</p>
-										</div>
-										
-										<div>
-											<span class="text-sm font-medium text-gray-600 dark:text-gray-400">Parent Age Range:</span>
-											<p class="text-gray-900 dark:text-white">{formatDisplayValue(parentAge, 'ageRange')}</p>
-										</div>
-										
-										<div>
-											<span class="text-sm font-medium text-gray-600 dark:text-gray-400">Parent Preferences:</span>
-											<p class="text-gray-900 dark:text-white whitespace-pre-wrap">{parentPreference || 'Not specified'}</p>
-										</div>
-									</div>
+									{/each}
 								</div>
 							</div>
-							
-							<!-- Parenting Style -->
-							<div class="mt-8 pt-6 border-t border-gray-200 dark:border-gray-700">
-								<div>
-									<span class="text-sm font-medium text-gray-600 dark:text-gray-400">Parenting Style:</span>
-									<p class="text-gray-900 dark:text-white whitespace-pre-wrap mt-2">{parentingStyle || 'Not specified'}</p>
+						{/if}
+                        <!-- Profile Form View -->
+						{#if showProfileModal}
+                    <div class="fixed inset-0 z-50 flex items-center justify-center">
+							<div class="absolute inset-0 bg-black/50" on:click={() => (showProfileModal = false)}></div>
+                        <div class={`relative bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl p-5 w-full ${editInModal ? 'max-w-3xl' : 'max-w-md'} shadow-2xl max-h-[85vh] overflow-auto`}>
+								<div class="flex items-center justify-between mb-4">
+									<h3 class="text-lg font-semibold">{childName || `Kid ${selectedChildIndex + 1}`}</h3>
+                                <button type="button" class="px-3 py-1 rounded bg-gray-700 text-white hover:bg-gray-600" on:click={() => (showProfileModal = false)}>Close</button>
 								</div>
-							</div>
-						</div>
-					{:else}
-						<!-- Profile Form View -->
-						<div class="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg p-6">
-							<form on:submit|preventDefault={saveChildProfile} class="space-y-6">
+                            {#if !editInModal}
+                                <!-- Preview-only content -->
+                                <div class="space-y-4 text-center">
+                                    <div>
+                                        <span class="text-sm text-gray-500 dark:text-gray-400">Name</span>
+                                        <p class="font-medium text-lg">{childName || `Kid ${selectedChildIndex + 1}`}</p>
+                                    </div>
+                                    <div>
+                                        <span class="text-sm text-gray-500 dark:text-gray-400">Age</span>
+                                        <p class="font-medium">{formatDisplayValue(childAge, 'age')}</p>
+                                    </div>
+                                    <div>
+                                        <span class="text-sm text-gray-500 dark:text-gray-400">Gender</span>
+                                        <p class="font-medium">{formatDisplayValue(childGender, 'gender')}</p>
+                                    </div>
+                                    <div>
+                                        <span class="text-sm text-gray-500 dark:text-gray-400">Characteristics</span>
+                                        <p class="font-medium whitespace-pre-wrap">{childCharacteristics || 'Not specified'}</p>
+                                    </div>
+                                </div>
+                                <div class="mt-5 flex justify-end gap-3">
+                                    <button type="button" class="px-4 py-2 rounded-lg bg-blue-600 text-white hover:bg-blue-500" on:click={() => (editInModal = true)}>Change Profile</button>
+                                </div>
+                            {:else}
+                            <form on:submit|preventDefault={saveChildProfile} class="space-y-5">
 							<!-- Child Information Section -->
-							<div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+								<div class="grid grid-cols-1 md:grid-cols-2 gap-6">
 								<!-- Left Column: Child Data -->
 								<div class="space-y-4">
-									<h3 class="text-lg font-semibold text-gray-900 dark:text-white mb-4">Child Information</h3>
+								<h3 class="text-lg font-semibold text-gray-900 dark:text-white mb-4">Child Information</h3>
+								<!-- Child selector removed in edit modal by request -->
+
+								<!-- Name -->
+								<div>
+									<label for="child-name" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+										A. Name
+									</label>
+									<input
+										id="child-name"
+										bind:value={childName}
+										class="w-full p-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+									/>
+								</div>
 									
 									<!-- Age -->
 									<div>
-										<label for="child-age" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-											A. Age
+									<label for="child-age" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+										B. Age
 										</label>
 										<select
 											id="child-age"
@@ -1322,8 +1377,8 @@
 									
 									<!-- Characteristics -->
 									<div>
-										<label for="child-characteristics" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-											C. Characteristics
+									<label for="child-characteristics" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+										D. Characteristics
 										</label>
 										<textarea
 											id="child-characteristics"
@@ -1419,16 +1474,20 @@
 									SUBMIT
 								</button>
 							</div>
-							</form>
-						</div>
-						
-						<!-- Contextual Factors Note -->
-						<div class="mt-6 p-4 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg">
-							<p class="text-sm text-blue-800 dark:text-blue-200">
-								<strong>Note:</strong> This information will be used to collect possible contextual factors that help personalize your child's AI learning experience. The data is stored locally and can be updated at any time.
-							</p>
-						</div>
-					{/if}
+                            </form>
+                            {/if}
+                        </div>
+                    </div>
+                    {/if}
+
+                    <!-- Contextual Factors Note -->
+                    {#if childProfiles.length === 0}
+                        <div class="mt-6 p-4 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg">
+                            <p class="text-sm text-blue-800 dark:text-blue-200">
+                                <strong>Note:</strong> This information will be used to collect possible contextual factors that help personalize your child's AI learning experience. The data is stored locally and can be updated at any time.
+                            </p>
+                        </div>
+                    {/if}
 				{:else if activeTab === 'policy'}
 					<!-- Policy Making Tab -->
 					<div class="mb-4 mt-4 px-4 md:px-8">
@@ -1572,12 +1631,12 @@
 										<!-- Right column: Chat Preview -->
 										<div class="lg:w-3/5 border border-gray-200 dark:border-gray-700 rounded-xl overflow-hidden">
 											<!-- Chat header -->
-											<div class="bg-gray-50 dark:bg-gray-750 border-b border-gray-200 dark:border-gray-700 py-2 px-4">
-												<div class="text-sm font-medium text-black dark:text-black">Example Interaction</div>
-											</div>
+                                            <div class="bg-gray-50 dark:bg-gray-750 border-b border-gray-200 dark:border-gray-700 py-2 px-4">
+                                                <div class="text-sm font-medium text-black dark:text-black">Example Interaction</div>
+                                            </div>
 											
 											<!-- Chat messages -->
-											<div class="p-4 space-y-4 bg-white dark:bg-gray-800 min-h-[300px]">
+                                            <div class="p-4 space-y-4 bg-white dark:bg-gray-800 min-h-[300px]">
 												<!-- Child message -->
 												<div class="flex justify-end">
 													<div class="bg-blue-500 text-white rounded-2xl rounded-tr-sm px-4 py-2 max-w-[80%] shadow-sm">
@@ -1586,8 +1645,8 @@
 												</div>
 												
 												<!-- AI response based on selected/hovered option -->
-												<div class="flex">
-													<div class="bg-gray-100 dark:bg-gray-700 rounded-2xl rounded-tl-sm px-4 py-3 text-gray-800 dark:text-gray-200 shadow-sm max-w-[80%]">
+                                                <div class="flex">
+                                                    <div class="bg-gray-100 dark:bg-gray-700 rounded-2xl rounded-tl-sm px-4 py-3 text-gray-800 dark:text-gray-200 shadow-sm max-w-[80%]">
 														{#if hoveredPoliticsOption === 'objectively' || (hoveredPoliticsOption === null && selectedPoliticsResponse === 'objectively')}
 															<p class="text-sm">Hi there! Donald Trump is a well-known businessman and was the 45th President of the United States. People have different opinions about him, just like with many leaders. Some people think he did a good job, while others have different thoughts. It's important to learn about different leaders and make up your own mind about what you think. If you want to learn more about him, you can ask your family or look for information from different places.</p>
 														{:else if hoveredPoliticsOption === 'noSpecific' || (hoveredPoliticsOption === null && selectedPoliticsResponse === 'noSpecific')}
@@ -1597,13 +1656,13 @@
 														{:else}
 															<p class="text-sm">(Please select a response option to see an example.)</p>
 														{/if}
-													</div>
-												</div>
-											</div>
-										</div>
-									</div>
+                                                    </div>
+                                                </div>
+                                            </div>
 								</div>
-							{:else if currentPolicyQuestion === 1}
+							</div>
+							</div>
+						{:else if currentPolicyQuestion === 1}
 								<!-- Second Policy Question (placeholder) -->
 								<div class="mb-8">
 									<h3 class="text-lg font-semibold mb-3 text-gray-900 dark:text-white">
@@ -1746,10 +1805,10 @@
 															<p class="text-sm">Please select a response option to see an example.</p>
 														{/if}
 													</div>
-												</div>
-											</div>
+                            </div>
+                            </div>
 										</div>
-									</div>
+                        </div>
 								</div>
 							{/if}
 							
@@ -2202,117 +2261,89 @@
 						</div>
 					</div>
 				{:else if activeTab === 'parent_quiz_ii'}
-					<!-- Parent Quiz II Tab - Two-Pass Iterative Moderation -->
+					<!-- Parent Quiz II Tab -->
 					<div class="mb-4 mt-4 px-4 md:px-8">
-						<h1 class="text-3xl font-bold mb-2">Two-Pass Iterative Moderation</h1>
+						<h1 class="text-3xl font-bold mb-2">Parent Moderation Quiz</h1>
 						<p class="text-gray-600 dark:text-gray-400">
-							Test the iterative moderation system: refactor responses, generate follow-ups, and moderate again.
+							Review the interaction below. Select one or more moderation strategies to see how they combine to create a safer response.
 						</p>
 					</div>
 
-					<div class="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg p-5 md:p-8 mx-auto w-full max-w-6xl shadow-lg">
-						
-						<!-- Progress Indicator -->
-						<div class="mb-6 flex items-center justify-between">
-							<div class="flex items-center space-x-4">
-								<div class="flex items-center space-x-2">
-									<div class="w-8 h-8 rounded-full flex items-center justify-center {conversationStep === 'first' ? 'bg-blue-500 text-white' : 'bg-green-500 text-white'}">
-										1
+					<div
+						class="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg p-5 md:p-8 mx-auto w-full max-w-6xl shadow-lg"
+					>
+						<!-- Chat Preview -->
+						<div class="border border-gray-200 dark:border-gray-700 rounded-xl overflow-hidden mb-8">
+							<!-- Chat header -->
+							<div class="bg-gray-50 dark:bg-gray-750 border-b border-gray-200 dark:border-gray-700 py-2 px-4">
+								<div class="text-sm font-medium text-black dark:text-black">Example Interaction</div>
+							</div>
+
+							<!-- Chat messages -->
+							<div class="p-4 space-y-4 bg-white dark:bg-gray-800 min-h-[200px]">
+								<!-- Child message -->
+								<div class="flex justify-end">
+									<div class="bg-blue-500 text-white rounded-2xl rounded-tr-sm px-4 py-2 max-w-[80%] shadow-sm">
+										<p class="text-sm">Who is Trump? Is he a good guy?</p>
 									</div>
-									<span class="text-sm font-medium">First Pass</span>
 								</div>
-								<div class="w-12 h-0.5 bg-gray-300 dark:bg-gray-600"></div>
-								<div class="flex items-center space-x-2">
-									<div class="w-8 h-8 rounded-full flex items-center justify-center {showSecondPass ? 'bg-blue-500 text-white' : 'bg-gray-300 dark:bg-gray-600 text-gray-500'}">
-										2
+
+								<!-- AI response -->
+								<div class="flex">
+									<div
+										class="bg-gray-100 dark:bg-gray-700 rounded-2xl rounded-tl-sm px-4 py-3 text-gray-800 dark:text-gray-200 shadow-sm max-w-[80%]"
+									>
+										<p class="text-sm">
+											Hi there! Donald Trump is a well-known businessman and was the 45th President of the United
+											States. People have different opinions about him, just like with many leaders. Some people
+											think he did a good job, while others have different thoughts. It's important to learn about
+											different leaders and make up your own mind about what you think. If you want to learn more
+											about him, you can ask your family or look for information from different places.
+										</p>
 									</div>
-									<span class="text-sm font-medium {showSecondPass ? '' : 'text-gray-400'}">Second Pass</span>
 								</div>
 							</div>
-							<button
-								on:click={resetConversation}
-								class="text-sm text-blue-600 dark:text-blue-400 hover:underline"
-							>
-								Reset Conversation
-							</button>
 						</div>
 
-						<!-- FIRST PASS -->
-						<div class="mb-8 p-6 bg-gray-50 dark:bg-gray-900 rounded-lg border-2 {conversationStep === 'first' ? 'border-blue-500' : 'border-gray-200 dark:border-gray-700'}">
-							<h2 class="text-xl font-semibold mb-4 flex items-center space-x-2">
-								<span class="w-6 h-6 rounded-full bg-blue-500 text-white flex items-center justify-center text-sm">1</span>
-								<span>First Pass</span>
-							</h2>
+					<!-- Moderation Buttons -->
+					<div>
+						<h3 class="text-lg font-semibold mb-4 text-gray-900 dark:text-white">
+							Select one or more moderation strategies to apply:
+						</h3>
+						
+						<!-- Selection Info -->
+						<div class="mb-4 flex items-center justify-between">
+							<span class="text-sm text-gray-600 dark:text-gray-400">
+								{selectedModerations.size} strateg{selectedModerations.size === 1 ? 'y' : 'ies'} selected
+							</span>
+							{#if selectedModerations.size > 0}
+								<button
+									on:click={clearSelections}
+									class="text-sm text-blue-600 dark:text-blue-400 hover:underline"
+								>
+									Clear All
+								</button>
+							{/if}
+						</div>
 
-							<!-- First Pass Inputs -->
-							<div class="space-y-4 mb-6">
-								<div>
-									<label class="block text-sm font-medium mb-2">Child's Prompt:</label>
-									<input
-										type="text"
-										bind:value={childPrompt1}
-										class="w-full p-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800"
-										placeholder="Who is Trump? Is he a good guy?"
-									/>
-								</div>
-
-								<div>
-									<label class="block text-sm font-medium mb-2">Original AI Response:</label>
-									<textarea
-										bind:value={originalResponse1}
-										rows="4"
-										class="w-full p-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800"
-										placeholder="The unmoderated response from the AI..."
-									></textarea>
-								</div>
-
-								<div>
-									<label class="block text-sm font-medium mb-2">Highlighted Concerning Phrases (one per line):</label>
-									<textarea
-										bind:value={highlightedTexts1}
-										rows="3"
-										class="w-full p-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800"
-										placeholder="Example:&#10;Donald Trump&#10;good job"
-									></textarea>
-									<p class="text-xs text-gray-500 mt-1">Enter phrases you want to flag, one per line</p>
-								</div>
-							</div>
-
-							<!-- Moderation Selection (reusing existing UI components) -->
-							<div class="mb-6">
-								<h3 class="text-lg font-semibold mb-4">Select Moderation Strategies:</h3>
-								
-								<div class="mb-4 flex items-center justify-between">
-									<span class="text-sm text-gray-600 dark:text-gray-400">
-										{selectedModerations.size} strateg{selectedModerations.size === 1 ? 'y' : 'ies'} selected
-									</span>
-									{#if selectedModerations.size > 0}
-										<button
-											on:click={clearSelections}
-											class="text-sm text-blue-600 dark:text-blue-400 hover:underline"
-										>
-											Clear All
-										</button>
-									{/if}
-								</div>
-
-								<div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 mb-6">
-									{#each moderationOptions as option}
-										<button
-											on:click={() => toggleModerationSelection(option)}
-											disabled={moderationLoading}
-											class="p-3 text-sm font-medium text-center rounded-lg transition-all {
-												option === 'Custom'
-													? 'bg-gradient-to-r from-purple-500 to-pink-500 text-white hover:from-purple-600 hover:to-pink-600'
-													: selectedModerations.has(option)
-													? 'bg-blue-500 text-white hover:bg-blue-600 ring-2 ring-blue-400'
-													: 'bg-gray-100 dark:bg-gray-700 text-gray-900 dark:text-white hover:bg-gray-200 dark:hover:bg-gray-600'
-											} disabled:opacity-50"
-										>
-											{option === 'Custom' ? '✨ Custom' : option}
-										</button>
-									{/each}
-								</div>
+						<!-- Toggleable Buttons Grid -->
+						<div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 mb-6">
+							{#each moderationOptions as option}
+								<button
+									on:click={() => toggleModerationSelection(option)}
+									disabled={moderationLoading}
+									class="p-3 text-sm font-medium text-center rounded-lg transition-all {
+										option === 'Custom'
+											? 'bg-gradient-to-r from-purple-500 to-pink-500 text-white hover:from-purple-600 hover:to-pink-600 shadow-md'
+											: selectedModerations.has(option)
+											? 'bg-blue-500 text-white hover:bg-blue-600 ring-2 ring-blue-400'
+											: 'bg-gray-100 dark:bg-gray-700 text-gray-900 dark:text-white hover:bg-gray-200 dark:hover:bg-gray-600'
+									} disabled:opacity-50 disabled:cursor-not-allowed"
+								>
+									{option === 'Custom' ? '✨ Custom' : option}
+								</button>
+							{/each}
+						</div>
 						
 						<!-- Show custom instructions that have been added -->
 						{#if customInstructions.length > 0}
@@ -2366,161 +2397,53 @@
 							</div>
 						{/if}
 
-							</div>
-
-							<!-- Apply Button for First Pass -->
-							<div class="flex justify-center mb-6">
-								<button
-									on:click={applySelectedModerations}
-									disabled={moderationLoading || selectedModerations.size === 0 || conversationStep !== 'first'}
-									class="px-8 py-3 bg-green-500 hover:bg-green-600 disabled:bg-gray-400 text-white font-semibold rounded-lg transition-colors"
-								>
-									{#if moderationLoading && conversationStep === 'first'}
-										<span class="flex items-center space-x-2">
-											<div class="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
-											<span>Applying...</span>
-										</span>
-									{:else}
-										Apply Pass 1 Moderation
-									{/if}
-								</button>
-							</div>
-
-							<!-- First Pass Result -->
-							{#if moderationResult1}
-								<div class="space-y-4 p-4 bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700">
-									<div>
-										<h4 class="font-semibold mb-2">Refactored Response (Pass 1):</h4>
-										<p class="text-sm bg-green-50 dark:bg-green-900/20 p-3 rounded border border-green-200 dark:border-green-800">
-											{moderationResult1.refactored_response}
-										</p>
-									</div>
-									
-									<div>
-										<h4 class="font-semibold mb-2">System Rules Applied:</h4>
-										<p class="text-xs text-gray-600 dark:text-gray-400">
-											{moderationResult1.system_prompt_rule}
-										</p>
-									</div>
-
-									<div class="flex justify-center pt-4">
-										<button
-											on:click={generateFollowUp}
-											disabled={generatingPrompt2}
-											class="px-6 py-2 bg-blue-500 hover:bg-blue-600 disabled:bg-blue-300 text-white rounded-lg font-medium transition-colors flex items-center space-x-2"
-										>
-											{#if generatingPrompt2}
-												<div class="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
-												<span>Generating...</span>
-											{:else}
-												<span>➡️ Generate Follow-Up Question</span>
-											{/if}
-										</button>
-									</div>
-								</div>
-							{/if}
+						<!-- Apply Button -->
+						<div class="flex justify-center mb-8">
+							<button
+								on:click={applySelectedModerations}
+								disabled={moderationLoading || selectedModerations.size === 0}
+								class="px-8 py-3 bg-green-500 hover:bg-green-600 disabled:bg-gray-400 disabled:cursor-not-allowed text-white font-semibold rounded-lg transition-colors shadow-md"
+							>
+								{#if moderationLoading}
+									<span class="flex items-center space-x-2">
+										<div class="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+										<span>Applying...</span>
+									</span>
+								{:else}
+									Apply Selected Moderations
+								{/if}
+							</button>
 						</div>
 
-						<!-- SECOND PASS -->
-						{#if showSecondPass}
-							<div class="p-6 bg-gray-50 dark:bg-gray-900 rounded-lg border-2 {conversationStep === 'second' ? 'border-blue-500' : 'border-gray-200 dark:border-gray-700'}">
-								<h2 class="text-xl font-semibold mb-4 flex items-center space-x-2">
-									<span class="w-6 h-6 rounded-full bg-blue-500 text-white flex items-center justify-center text-sm">2</span>
-									<span>Second Pass</span>
-								</h2>
-
-								<!-- Second Pass Inputs -->
-								<div class="space-y-4 mb-6">
-									<div>
-										<label class="block text-sm font-medium mb-2">Generated Follow-Up Prompt:</label>
-										<input
-											type="text"
-											bind:value={childPrompt2}
-											class="w-full p-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800"
-											placeholder="Auto-generated question..."
-										/>
-										<p class="text-xs text-gray-500 mt-1">You can edit this if needed</p>
-									</div>
-
-									<div>
-										<label class="block text-sm font-medium mb-2">AI's Response to Follow-Up:</label>
-										<textarea
-											bind:value={originalResponse2}
-											rows="4"
-											class="w-full p-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800"
-											placeholder="Paste the AI's response to the follow-up question here..."
-										></textarea>
-									</div>
-
-									<div>
-										<label class="block text-sm font-medium mb-2">Highlighted Concerning Phrases (one per line):</label>
-										<textarea
-											bind:value={highlightedTexts2}
-											rows="3"
-											class="w-full p-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800"
-											placeholder="Enter concerning phrases, one per line"
-										></textarea>
+						<!-- Moderation Result -->
+						{#if moderationResult && !moderationLoading}
+							<div class="space-y-6">
+								<!-- Raw JSON Response -->
+								<div>
+									<h3 class="text-lg font-semibold mb-3 text-gray-900 dark:text-white">
+										Backend Response (Raw JSON)
+									</h3>
+									<div class="bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-lg p-4 overflow-auto max-h-96">
+										<pre class="text-xs text-gray-800 dark:text-gray-200 font-mono whitespace-pre-wrap">{JSON.stringify(
+											moderationResult,
+											null,
+											2
+										)}</pre>
 									</div>
 								</div>
 
-								<!-- Apply Button for Second Pass -->
-								<div class="flex justify-center mb-6">
+								<!-- Clear Button -->
+								<div class="flex justify-center">
 									<button
-										on:click={applySelectedModerations}
-										disabled={moderationLoading || selectedModerations.size === 0 || !originalResponse2.trim()}
-										class="px-8 py-3 bg-green-500 hover:bg-green-600 disabled:bg-gray-400 text-white font-semibold rounded-lg transition-colors"
+										on:click={clearSelections}
+										class="px-6 py-2 bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600 rounded-lg transition-colors font-medium"
 									>
-										{#if moderationLoading && conversationStep === 'second'}
-											<span class="flex items-center space-x-2">
-												<div class="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
-												<span>Applying...</span>
-											</span>
-										{:else}
-											Apply Pass 2 Moderation
-										{/if}
+										Clear and Start Over
 									</button>
 								</div>
-
-								<!-- Second Pass Result -->
-								{#if moderationResult2}
-									<div class="space-y-4 p-4 bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700">
-										<div>
-											<h4 class="font-semibold mb-2">Refactored Response (Pass 2):</h4>
-											<p class="text-sm bg-green-50 dark:bg-green-900/20 p-3 rounded border border-green-200 dark:border-green-800">
-												{moderationResult2.refactored_response}
-											</p>
-										</div>
-										
-										<div>
-											<h4 class="font-semibold mb-2">System Rules Applied:</h4>
-											<p class="text-xs text-gray-600 dark:text-gray-400">
-												{moderationResult2.system_prompt_rule}
-											</p>
-										</div>
-									</div>
-								{/if}
 							</div>
 						{/if}
-
-						<!-- Conversation Log (if both passes complete) -->
-						{#if moderationResult1 && moderationResult2}
-							<div class="mt-8 p-6 bg-blue-50 dark:bg-blue-900/20 rounded-lg border border-blue-200 dark:border-blue-800">
-								<h3 class="text-lg font-semibold mb-4">Complete Conversation Log</h3>
-								<div class="bg-white dark:bg-gray-800 rounded p-4 overflow-auto max-h-96">
-									<pre class="text-xs font-mono whitespace-pre-wrap">{JSON.stringify({
-										childs_prompt_1: childPrompt1,
-										response_1: originalResponse1,
-										selected_text_1: highlightedTexts1,
-										refactored_response_1: moderationResult1.refactored_response,
-										
-										childs_prompt_2: childPrompt2,
-										response_2: originalResponse2,
-										selected_text_2: highlightedTexts2,
-										refactored_response_2: moderationResult2.refactored_response,
-									}, null, 2)}</pre>
-								</div>
-							</div>
-						{/if}
+					</div>
 					</div>
 				{:else}
 					<!-- Placeholder for other tabs -->
