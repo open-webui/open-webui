@@ -2,7 +2,7 @@
 	import { getContext, createEventDispatcher } from 'svelte';
 	import { showFacilitiesOverlay, showControls, models, chatId, chats, currentChatPage } from '$lib/stores';
 	import { slide } from 'svelte/transition';
-	import { generateFacilitiesResponse, getFacilitiesSections } from '$lib/apis/facilities';
+	import { generateFacilitiesResponse, getFacilitiesSections, downloadFacilitiesDocument } from '$lib/apis/facilities';
 	import { updateChatById, getChatList } from '$lib/apis/chats';
 	import { toast } from 'svelte-sonner';
 	
@@ -34,6 +34,19 @@
 
 	let generating = false;
 	let dynamicSections: string[] = [];
+	let lastGeneratedResponse: { content: string; sections: any; sources: any[] } | null = null;
+	let showDownloadOptions = false;
+	let downloadFormat: 'pdf' | 'word' | '' = '';
+	let downloadFilename = 'facilities_draft';
+	let currentChatId = $chatId;
+
+	// Reset download state when chat changes
+	$: if ($chatId !== currentChatId) {
+		currentChatId = $chatId;
+		showDownloadOptions = false;
+		downloadFormat = '';
+		lastGeneratedResponse = null;
+	}
 
 	const nsfSections = [
 		{ id: 'projectTitle', label: '1. Project Title', required: true },
@@ -351,6 +364,15 @@
 
 				await addFacilitiesResponseToChat(responseMessage, sources, null);
 
+				// Store the response for download functionality
+				lastGeneratedResponse = {
+					content: responseMessage,
+					sections: response.sections || {},
+					sources: sources
+				};
+
+				showDownloadOptions = true;
+
 				toast.success(`Generated ${Object.keys(response.sections).length} sections for ${selectedSponsor}. Form remains open for additional generations.`);
 			} else {
 				console.error('Facilities API failed:', response.error);
@@ -377,7 +399,42 @@
 		}
 	}
 
+	async function handleDownload() {
+		if (!lastGeneratedResponse || !downloadFormat) {
+			toast.error('No document to download');
+			return;
+		}
+
+		try {
+			// Get token from localStorage
+			const token = localStorage.getItem('token');
+			if (!token) {
+				toast.error('Authentication required');
+				return;
+			}
+
+			// Call backend API to download document
+			await downloadFacilitiesDocument(
+				token,
+				lastGeneratedResponse.sections,
+				downloadFormat,
+				downloadFilename
+			);
+
+			toast.success(`Downloaded ${downloadFormat === 'pdf' ? 'PDF' : 'Word document'} successfully`);
+			
+			downloadFormat = '';
+		} catch (error: any) {
+			console.error('Download error:', error);
+			toast.error(error.message || 'Failed to download document');
+		}
+	}
+
 	function closeOverlay() {
+		showDownloadOptions = false;
+		downloadFormat = '';
+		lastGeneratedResponse = null;
+		
 		showFacilitiesOverlay.set(false);
 		showControls.set(false);
 		dispatch('close');
@@ -559,6 +616,79 @@
 								{('Generate')}
 							{/if}
 						</button>
+
+						<!-- Download Options -->
+						{#if showDownloadOptions && lastGeneratedResponse}
+							<div class="mt-6 border-t border-gray-200 dark:border-gray-700 pt-6">
+								<h3 class="text-sm font-medium text-gray-900 dark:text-white mb-4">
+									Download Generated Response
+								</h3>
+								
+								<!-- Download Format Buttons -->
+								<div class="grid grid-cols-2 gap-3 mb-4">
+									<button
+										type="button"
+										class="px-4 py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-medium text-sm transition-colors"
+										on:click={() => downloadFormat = 'pdf'}
+									>
+										<svg class="inline w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+											<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z"></path>
+										</svg>
+										Download as PDF
+									</button>
+									<button
+										type="button"
+										class="px-4 py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-medium text-sm transition-colors"
+										on:click={() => downloadFormat = 'word'}
+									>
+										<svg class="inline w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+											<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
+										</svg>
+										Download as Word
+									</button>
+								</div>
+
+								<!-- Filename Input and Download Button -->
+								{#if downloadFormat}
+									<div class="space-y-3" transition:slide>
+										<div>
+											<label for="download-filename" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+												Enter filename (without extension):
+											</label>
+											<input
+												id="download-filename"
+												type="text"
+												bind:value={downloadFilename}
+												class="w-full rounded-lg py-2.5 px-3 text-sm bg-gray-50 dark:text-gray-300 dark:bg-gray-800 border border-gray-300 dark:border-gray-600 outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors"
+												placeholder="facilities_draft"
+											/>
+											<p class="mt-1 text-xs text-gray-500 dark:text-gray-400">
+												Timestamp will be automatically appended to the filename
+											</p>
+										</div>
+										
+										<button
+											type="button"
+											class="w-full px-4 py-2.5 bg-green-600 hover:bg-green-700 text-white rounded-lg font-medium text-sm transition-colors"
+											on:click={handleDownload}
+										>
+											<svg class="inline w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+												<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path>
+											</svg>
+											Download {downloadFormat === 'pdf' ? 'PDF' : 'Word Document'}
+										</button>
+										
+										<button
+											type="button"
+											class="w-full px-4 py-2 text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200 text-sm"
+											on:click={() => downloadFormat = ''}
+										>
+											Cancel
+										</button>
+									</div>
+								{/if}
+							</div>
+						{/if}
 
 					</fieldset>
 				</div>

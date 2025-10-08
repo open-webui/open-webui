@@ -1,10 +1,19 @@
 from fastapi import APIRouter, HTTPException, Depends, Request
+from fastapi.responses import Response
 from pydantic import BaseModel
 from typing import Dict, List, Optional
 import logging
 import os
 import json
 from urllib.parse import urlparse
+from io import BytesIO
+from docx import Document
+from docx.shared import Pt, RGBColor
+from docx.enum.text import WD_ALIGN_PARAGRAPH
+from datetime import datetime
+from reportlab.lib.pagesizes import letter
+from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer
+from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
 
 
 from open_webui.models.knowledge import Knowledges
@@ -726,4 +735,133 @@ async def get_facilities_sections(sponsor: str, request: Request, user=Depends(g
     except Exception as e:
         logging.error(f"Error getting sections for {sponsor}: {e}")
         raise HTTPException(status_code=500, detail=f"Failed to get sections: {str(e)}")
+
+
+class DownloadRequest(BaseModel):
+    sections: Dict[str, str]
+    format: str  # 'pdf' or 'word'
+
+
+def generate_facilities_pdf(sections: Dict[str, str]) -> bytes:
+    """Generate PDF from facilities sections """
+    buffer = BytesIO()
+    doc = SimpleDocTemplate(buffer, pagesize=letter)
+    story = []
+    
+    
+    styles = getSampleStyleSheet()
+    title_style = ParagraphStyle(
+        'CustomTitle',
+        parent=styles['Heading1'],
+        fontSize=16,
+        spaceAfter=30,
+        alignment=1  
+    )
+    heading_style = ParagraphStyle(
+        'CustomHeading',
+        parent=styles['Heading2'],
+        fontSize=14,
+        spaceAfter=12,
+        spaceBefore=20
+    )
+    normal_style = styles['Normal']
+    
+    
+    story.append(Paragraph("Facilities Template", title_style))
+    story.append(Spacer(1, 20))
+    
+    
+    for section_label, section_text in sections.items():
+        if section_text and section_text.strip():
+            
+            story.append(Paragraph(section_label, heading_style))
+            
+            
+            escaped_text = section_text.replace('&', '&amp;').replace('<', '&lt;').replace('>', '&gt;')
+            
+            formatted_text = escaped_text.replace('\n', '<br/>')
+            
+            story.append(Paragraph(formatted_text, normal_style))
+            story.append(Spacer(1, 12))
+    
+    
+    doc.build(story)
+    buffer.seek(0)
+    return buffer.getvalue()
+
+
+def generate_facilities_word(sections: Dict[str, str]) -> bytes:
+    """Generate Word document from facilities sections"""
+    doc = Document()
+    
+    
+    title_paragraph = doc.add_paragraph()
+    title_paragraph.alignment = WD_ALIGN_PARAGRAPH.CENTER
+    title_run = title_paragraph.add_run('Facilities Template')
+    title_run.bold = True
+    title_run.font.size = Pt(16)
+    
+    title_run.font.color.rgb = RGBColor(0, 0, 0)
+    title_run.font.color.theme_color = None  
+    
+    doc.add_paragraph()
+    
+
+    for section_label, section_text in sections.items():
+        if section_text and section_text.strip():
+        
+            heading_paragraph = doc.add_paragraph()
+            heading_run = heading_paragraph.add_run(section_label)
+            heading_run.bold = True
+            heading_run.font.size = Pt(14)
+
+            heading_run.font.color.rgb = RGBColor(0, 0, 0)
+            heading_run.font.color.theme_color = None
+            
+            doc.add_paragraph(section_text)
+    
+    buffer = BytesIO()
+    doc.save(buffer)
+    buffer.seek(0)
+    return buffer.getvalue()
+
+
+@router.post("/download")
+async def download_facilities_document(
+    request: Request,
+    download_data: DownloadRequest,
+    user=Depends(get_verified_user)
+):
+    """
+    Download facilities document as PDF or Word
+    """
+    if not request.app.state.config.ENABLE_FACILITIES.get(user.email):
+        raise HTTPException(status_code=403, detail="Facilities feature is not enabled for this user")
+    
+    try:
+        if download_data.format not in ["pdf", "word"]:
+            raise HTTPException(status_code=400, detail="Invalid format. Must be 'pdf' or 'word'")
+        
+        if not download_data.sections:
+            raise HTTPException(status_code=400, detail="No sections provided")
+        
+        # Generate document based on format
+        if download_data.format == "pdf":
+            content = generate_facilities_pdf(download_data.sections)
+            media_type = "application/pdf"
+            filename = "facilities_draft.pdf"
+        else:  # word
+            content = generate_facilities_word(download_data.sections)
+            media_type = "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+            filename = "facilities_draft.docx"
+        
+        return Response(
+            content=content,
+            media_type=media_type,
+            headers={"Content-Disposition": f"attachment; filename={filename}"}
+        )
+        
+    except Exception as e:
+        logging.error(f"Error generating {download_data.format} document: {e}")
+        raise HTTPException(status_code=500, detail=f"Failed to generate document: {str(e)}")
 
