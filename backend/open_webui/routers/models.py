@@ -35,6 +35,10 @@ log = logging.getLogger(__name__)
 router = APIRouter()
 
 
+def validate_model_id(model_id: str) -> bool:
+    return model_id and len(model_id) <= 256
+
+
 ###########################
 # GetModels
 ###########################
@@ -84,6 +88,12 @@ async def create_new_model(
             detail=ERROR_MESSAGES.MODEL_ID_TAKEN,
         )
 
+    if not validate_model_id(form_data.id):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=ERROR_MESSAGES.MODEL_ID_TOO_LONG,
+        )
+
     else:
         model = Models.insert_new_model(form_data, user.id)
         if model:
@@ -124,7 +134,8 @@ async def import_models(
             for model_data in data:
                 # Here, you can add logic to validate model_data if needed
                 model_id = model_data.get("id")
-                if model_id:
+
+                if model_id and validate_model_id(model_id):
                     existing_model = Models.get_model_by_id(model_id)
                     if existing_model:
                         # Update existing model
