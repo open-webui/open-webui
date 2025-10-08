@@ -72,10 +72,13 @@
 		// remove trailing slash from url
 		url = url.replace(/\/$/, '');
 
+		let _headers = null;
+
 		if (headers) {
 			try {
-				const _headers = JSON.parse(headers);
+				_headers = JSON.parse(headers);
 				if (typeof _headers !== 'object' || Array.isArray(_headers)) {
+					_headers = null;
 					throw new Error('Headers must be a valid JSON object');
 				}
 				headers = JSON.stringify(_headers, null, 2);
@@ -94,7 +97,7 @@
 					auth_type,
 					azure: azure,
 					api_version: apiVersion,
-					headers: JSON.parse(headers)
+					...(_headers ? { headers: _headers } : {})
 				}
 			},
 			direct
