@@ -2,7 +2,6 @@
 	import { toast } from 'svelte-sonner';
 	import { goto, invalidate, invalidateAll } from '$app/navigation';
 	import { onMount, getContext, createEventDispatcher, tick, onDestroy } from 'svelte';
-	import { fly } from 'svelte/transition';
 	import type { Writable } from 'svelte/store';
 	import type { i18n as i18nType } from 'i18next';
 
@@ -50,8 +49,7 @@
 
 	export let selected = false;
 	export let isCurrentChat = false;
-	export let showSelectionMode = false;
-	export let isFirstInList = false;
+	export let inSelectionMode = false;
 
 	let chat = null;
 
@@ -339,7 +337,7 @@
 				draggable="false"
 			>
 				<div class=" flex self-center flex-1 w-full">
-					{#if showSelectionMode || mouseOver}
+					{#if inSelectionMode || mouseOver}
 						<!-- Show checkbox when in selection mode or on hover -->
 						<div
 							class="checkbox-area mr-2 flex items-center cursor-pointer p-1 -m-1 rounded hover:bg-gray-200 dark:hover:bg-gray-700"
@@ -509,52 +507,4 @@
 			</div>
 		{/if}
 	</div>
-
-	<!-- Bulk Actions removed from ChatItem - now handled in Sidebar -->
-
-	<!-- Bulk Actions (appear next to first chat when any chats selected) -->
-	{#if isFirstInList && showSelectionMode}
-		<div
-			style="position: fixed; top: 205px; left: 265px; z-index: 9999;"
-			class="flex items-center space-x-1 bg-white dark:bg-gray-800 rounded-md shadow-lg px-2 py-1 border border-gray-200 dark:border-gray-600"
-			in:fly={{ x: 100, duration: 300, delay: 100 }}
-			out:fly={{ x: 100, duration: 200 }}
-		>
-			<!-- Select All Button -->
-			<button
-				class="px-2 py-1 text-xs bg-blue-500 hover:bg-blue-600 text-white rounded transition-colors font-medium"
-				on:click|stopPropagation={(e) => {
-					e.preventDefault();
-					dispatch('selectAll');
-				}}
-				title={$i18n.t('Select All')}
-			>
-				{$i18n.t('All')}
-			</button>
-
-			<!-- Clear Selection Button -->
-			<button
-				class="px-2 py-1 text-xs bg-gray-500 hover:bg-gray-600 text-white rounded transition-colors font-medium"
-				on:click|stopPropagation={(e) => {
-					e.preventDefault();
-					dispatch('clearSelection');
-				}}
-				title={$i18n.t('Clear Selection')}
-			>
-				{$i18n.t('Clear')}
-			</button>
-
-			<!-- Delete Selected Button -->
-			<button
-				class="px-2 py-1 text-xs bg-red-500 hover:bg-red-600 text-white rounded transition-colors font-medium"
-				on:click|stopPropagation={(e) => {
-					e.preventDefault();
-					dispatch('deleteSelected');
-				}}
-				title={$i18n.t('Delete Selected')}
-			>
-				{$i18n.t('Delete')}
-			</button>
-		</div>
-	{/if}
 </div>

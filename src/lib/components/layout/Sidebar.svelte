@@ -692,12 +692,44 @@
 			<!-- Selection Counter (appears when items are selected) -->
 			{#if showBulkActions}
 				<div
-					class="px-2 py-1 mt-2 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded text-center"
+					class="px-2 py-1 mt-2 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded"
 				>
-					<span class="text-xs text-blue-600 dark:text-blue-400 font-medium">
-						{selectedChatIds.length}
-						{$i18n.t('selected')}
-					</span>
+					<div class="text-center mb-2">
+						<span class="text-xs text-blue-600 dark:text-blue-400 font-medium">
+							{selectedChatIds.length}
+							{$i18n.t('selected')}
+						</span>
+					</div>
+
+					<!-- Bulk Actions -->
+					<div class="flex items-center justify-center space-x-1">
+						<!-- Select All Button -->
+						<button
+							class="px-2 py-1 text-xs bg-gray-100 hover:bg-gray-200 text-gray-800 dark:bg-gray-700 dark:hover:bg-gray-600 dark:text-gray-300 rounded transition-colors font-medium"
+							on:click={() => selectAllChats()}
+							title={$i18n.t('Select All')}
+						>
+							{$i18n.t('All')}
+						</button>
+
+						<!-- Clear Selection Button -->
+						<button
+							class="px-2 py-1 text-xs bg-gray-50 hover:bg-gray-100 text-gray-700 dark:bg-gray-800 dark:hover:bg-gray-700 dark:text-gray-200 rounded transition-colors font-medium"
+							on:click={() => clearSelection()}
+							title={$i18n.t('Clear Selection')}
+						>
+							{$i18n.t('Clear')}
+						</button>
+
+						<!-- Delete Selected Button -->
+						<button
+							class="px-2 py-1 text-xs bg-black hover:bg-gray-900 text-white dark:bg-white dark:text-black dark:hover:bg-gray-100 rounded transition-colors font-medium"
+							on:click={() => deleteSelectedChats()}
+							title={$i18n.t('Delete Selected')}
+						>
+							{$i18n.t('Delete')}
+						</button>
+					</div>
 				</div>
 			{/if}
 		</div>
@@ -848,22 +880,12 @@
 										title={chat.title}
 										selected={selectedChatIds.includes(chat.id)}
 										isCurrentChat={$chatId === chat.id}
-										showSelectionMode={showBulkActions}
-										isFirstInList={idx === 0}
+										inSelectionMode={showBulkActions}
 										on:select={() => {
 											toggleChatSelection(chat.id);
 										}}
 										on:unselect={() => {
 											toggleChatSelection(chat.id);
-										}}
-										on:selectAll={() => {
-											selectAllChats();
-										}}
-										on:clearSelection={() => {
-											clearSelection();
-										}}
-										on:deleteSelected={() => {
-											deleteSelectedChats();
 										}}
 										on:navigate={() => {
 											// Clear multi-selection on regular navigation
@@ -941,22 +963,12 @@
 									title={chat.title}
 									selected={selectedChatIds.includes(chat.id)}
 									isCurrentChat={$chatId === chat.id}
-									showSelectionMode={showBulkActions}
-									isFirstInList={idx === 0}
+									inSelectionMode={showBulkActions}
 									on:select={() => {
 										toggleChatSelection(chat.id);
 									}}
 									on:unselect={() => {
 										toggleChatSelection(chat.id);
-									}}
-									on:selectAll={() => {
-										selectAllChats();
-									}}
-									on:clearSelection={() => {
-										clearSelection();
-									}}
-									on:deleteSelected={() => {
-										deleteSelectedChats();
 									}}
 									on:change={async (e) => {
 										const { buttonID } = e.detail;
