@@ -2497,7 +2497,7 @@ async def process_files_batch(
             for file_result in file_results:
                 file_result.status = "failed"
                 file_errors.append(
-                    BatchProcessFilesResult(file_id=file_result.file_id, error=str(e))
+                    BatchProcessFilesResult(file_id=file_result.file_id, status="failed", error=str(e))
                 )
 
     return BatchProcessFilesResponse(results=file_results, errors=file_errors)
