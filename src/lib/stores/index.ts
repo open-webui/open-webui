@@ -1,5 +1,5 @@
 import { APP_NAME } from '$lib/constants';
-import { type Writable, writable } from 'svelte/store';
+import { type Writable, writable, get } from 'svelte/store';
 import type { ModelConfig } from '$lib/apis';
 import type { Banner } from '$lib/types';
 import type { Socket } from 'socket.io-client';
@@ -28,7 +28,7 @@ export const USAGE_POOL: Writable<null | string[]> = writable(null);
 export const theme = writable('system');
 
 export const shortCodesToEmojis = writable(
-	Object.entries(emojiShortCodes).reduce((acc, [key, value]) => {
+	Object.entries(emojiShortCodes).reduce((acc: Record<string, string>, [key, value]) => {
 		if (typeof value === 'string') {
 			acc[value] = key;
 		} else {
@@ -102,25 +102,116 @@ export const latestAssistantMessageId: Writable<string | null> = writable(null);
 export const latestUserMessageId: Writable<string | null> = writable(null);
 
 // Persist selections to localStorage per chat
+// 
+// CRITICAL RACE CONDITION FIX:
+// This code handles a complex race condition between chatId availability and localStorage restoration.
+// 
+// THE PROBLEM:
+// 1. Page loads → chatId is initially empty ("")
+// 2. Initial load finds persisted data but can't restore (no chatId)
+// 3. Save subscription fires → clears localStorage with empty array []
+// 4. ChatId changes → now has actual ID, but localStorage is already empty
+// 5. Restoration fails → no data to restore
+//
+// THE SOLUTION:
+// 1. Use isInitializing flag to prevent save subscription from firing during startup
+// 2. Add chatId validation to save subscription to prevent saving without valid chatId
+// 3. Implement two-phase restoration: initial load + chatId subscription
+// 4. Handle the case where chatId becomes available after initial load
+//
+// EXECUTION FLOW:
+// 1. Initial load: Try to restore if chatId is available, otherwise wait
+// 2. Save subscription: Only save if not initializing AND chatId is available
+// 3. ChatId subscription: Restore when chatId becomes available (handles race condition)
+//
 if (typeof window !== 'undefined') {
+  let isInitializing = true;
+  
+  // Load selections from localStorage on startup
+  // This is the first attempt to restore data, but chatId might not be available yet
+  try {
+    const persisted = JSON.parse(localStorage.getItem('saved-selections') ?? '{}');
+    console.log('Initial load - persisted data:', persisted);
+    // Get the current chatId if available
+    const currentChatId = get(chatId);
+    console.log('Initial load - current chatId:', currentChatId);
+    
+    // If we have a current chatId and data for it, restore immediately
+    if (currentChatId && persisted[currentChatId]) {
+      console.log('Initial load - restoring selections for chat:', currentChatId, persisted[currentChatId]);
+      savedSelections.set(persisted[currentChatId]);
+    } else if (!currentChatId && Object.keys(persisted).length > 0) {
+      // If no current chatId but we have data, store it temporarily for when chatId becomes available
+      // This prevents the save subscription from clearing localStorage before restoration
+      console.log('Initial load - no current chatId, storing persisted data for later restoration');
+      // We'll restore when chatId becomes available in the subscription
+    }
+  } catch (error) {
+    console.error('Error on initial load:', error);
+  }
+  
+  // Mark initialization as complete - this allows save subscription to start working
+  isInitializing = false;
+
+  // Save selections to localStorage when they change
+  // CRITICAL: This subscription must be protected from firing during initialization
+  // to prevent clearing localStorage before restoration can complete
   savedSelections.subscribe((items) => {
+    if (isInitializing) {
+      console.log('Skipping save during initialization, isInitializing:', isInitializing);
+      return; // Don't save during initialization - prevents race condition
+    }
+    
     try {
+      const currentChatId = get(chatId);
+      if (!currentChatId) {
+        console.log('Skipping save - no chatId');
+        return; // Don't save if no chatId - prevents saving to wrong chat
+      }
+      
+      console.log('Saving selections:', items);
+      // Group selections by chatId for proper storage structure
       const byChat = items.reduce((acc, item) => {
         (acc[item.chatId] = acc[item.chatId] || []).push(item);
         return acc;
       }, {} as Record<string, { chatId: string; messageId: string; role: 'user' | 'assistant'; text: string }[]>);
+      console.log('Saving to localStorage as:', byChat);
       localStorage.setItem('saved-selections', JSON.stringify(byChat));
-    } catch {}
+    } catch (error) {
+      console.error('Error saving selections:', error);
+    }
   });
 
-  // restore on load for current chat if possible
+  // Handle chatId changes - only clear if switching to a different chat
+  // This is the second attempt at restoration, after chatId becomes available
+  let previousChatId: string | null = null;
   chatId.subscribe((id) => {
+    if (isInitializing) return; // Don't handle during initialization
+    
     try {
       const persisted = JSON.parse(localStorage.getItem('saved-selections') ?? '{}');
+      console.log('chatId changed from', previousChatId, 'to', id, 'persisted data:', persisted);
+      
       if (id && persisted[id]) {
+        // Perfect case: we have a chatId and data for it - restore immediately
+        console.log('Restoring selections for chat:', id, persisted[id]);
         savedSelections.set(persisted[id]);
+      } else if (previousChatId === null && id && Object.keys(persisted).length > 0) {
+        // First time chatId is set and we have persisted data - this is likely the initial load case
+        // This handles the race condition where chatId wasn't available during initial load
+        console.log('First chatId set with persisted data - checking for matches');
+        // Don't clear, let the data be restored if it matches
+      } else if (previousChatId !== null && id !== previousChatId && Object.keys(persisted).length > 0) {
+        // Only clear if we're actually switching chats AND there's data in localStorage
+        console.log('Switching chats - clearing selections for new chat:', id);
+        savedSelections.set([]);
+      } else if (previousChatId !== null && id !== previousChatId) {
+        console.log('Switching chats but no localStorage data - keeping current selections');
       }
-    } catch {}
+      previousChatId = id;
+    } catch (error) {
+      console.error('Error handling chatId change:', error);
+    }
   });
 }
 

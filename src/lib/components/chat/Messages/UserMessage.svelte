@@ -185,15 +185,30 @@ import { models, settings, selectionModeEnabled, savedSelections, chatId as chat
 	}
 
     const saveCurrentSelection = () => {
+        console.log('UserMessage saveCurrentSelection called');
         const container = document.getElementById(`message-${message.id}`);
-        if (!container) return;
+        if (!container) {
+            console.log('No container found for message:', message.id);
+            return;
+        }
         const selection = window.getSelection();
-        if (!selection || selection.rangeCount === 0) return;
+        if (!selection || selection.rangeCount === 0) {
+            console.log('No selection found');
+            return;
+        }
         const range = selection.getRangeAt(0);
-        if (!container.contains(range.commonAncestorContainer)) return;
+        if (!container.contains(range.commonAncestorContainer)) {
+            console.log('Selection not in container');
+            return;
+        }
 
         const text = selection.toString();
-        if (!text.trim()) return;
+        if (!text.trim()) {
+            console.log('No text selected');
+            return;
+        }
+
+        console.log('Saving user selection:', { text, messageId: message.id, chatId: $chatIdStore });
 
         const mark = document.createElement('mark');
         mark.className = 'selection-highlight';
@@ -205,14 +220,20 @@ import { models, settings, selectionModeEnabled, savedSelections, chatId as chat
 
         // Only allow selection on the latest user message
         if ($latestUserMessageId && $latestUserMessageId !== message.id) {
+            console.log('Not latest user message, skipping save');
             closeFloatingButtons();
             return;
         }
 
-        savedSelections.update((arr) => [
-            ...arr,
-            { chatId: $chatIdStore, messageId: message.id, role: 'user', text }
-        ]);
+        console.log('Adding user selection to store');
+        savedSelections.update((arr) => {
+            const newArr = [
+                ...arr,
+                { chatId: $chatIdStore, messageId: message.id, role: 'user', text }
+            ];
+            console.log('Updated user selections array:', newArr);
+            return newArr;
+        });
     };
 
     // Re-apply saved selections to user message content
@@ -243,10 +264,14 @@ import { models, settings, selectionModeEnabled, savedSelections, chatId as chat
         const items = ($savedSelections || []).filter(
             (s) => s.chatId === $chatIdStore && s.messageId === message.id && s.role === 'user'
         );
+        console.log('UserMessage applySavedSelections:', { chatId: $chatIdStore, messageId: message.id, items, allSelections: $savedSelections });
         for (const sel of items) {
             const already = Array.from(root.querySelectorAll('mark.selection-highlight'))
                 .some((m) => m.textContent === sel.text);
-            if (!already) wrapFirstMatch(root, sel.text);
+            if (!already) {
+                console.log('Wrapping user text:', sel.text);
+                wrapFirstMatch(root, sel.text);
+            }
         }
     }
 
@@ -255,9 +280,9 @@ import { models, settings, selectionModeEnabled, savedSelections, chatId as chat
         applySavedSelections();
     });
 
-    $: ($savedSelections, message?.id, contentContainerElement, () => {
+    $: if ($savedSelections && message?.id && contentContainerElement) {
         applySavedSelections();
-    })
+    }
 </script>
 
 <DeleteConfirmDialog

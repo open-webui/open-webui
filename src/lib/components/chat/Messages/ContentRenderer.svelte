@@ -161,14 +161,26 @@ $: {
 }
 
 const saveCurrentSelection = () => {
+    console.log('saveCurrentSelection called');
     const selection = window.getSelection();
-    if (!selection || selection.rangeCount === 0) return;
+    if (!selection || selection.rangeCount === 0) {
+        console.log('No selection found');
+        return;
+    }
 
     const range = selection.getRangeAt(0);
-    if (!contentContainerElement?.contains(range.commonAncestorContainer)) return;
+    if (!contentContainerElement?.contains(range.commonAncestorContainer)) {
+        console.log('Selection not in content container');
+        return;
+    }
 
     const text = selection.toString();
-    if (!text.trim()) return;
+    if (!text.trim()) {
+        console.log('No text selected');
+        return;
+    }
+
+    console.log('Saving selection:', { text, messageId, chatId: chatId || $chatIdStore });
 
     // Highlight selected text
     const mark = document.createElement('mark');
@@ -182,29 +194,45 @@ const saveCurrentSelection = () => {
 
     // Record selection only if this is the most recent assistant message
     if ($latestAssistantMessageId && $latestAssistantMessageId !== messageId) {
+        console.log('Not latest assistant message, skipping save');
         closeFloatingButtons();
         return;
     }
 
     // Record selection
-    savedSelections.update((arr) => [
-        ...arr,
-        { chatId: chatId || $chatIdStore, messageId, role: 'assistant', text }
-    ]);
+    console.log('Adding selection to store');
+    savedSelections.update((arr) => {
+        const newArr = [
+            ...arr,
+            { chatId: chatId || $chatIdStore, messageId, role: 'assistant', text }
+        ];
+        console.log('Updated selections array:', newArr);
+        return newArr;
+    });
 
     closeFloatingButtons();
 };
 
 // Re-apply saved selections on mount and when data changes
 function wrapFirstMatch(root, target) {
-    if (!root || !target || target.length === 0) return false;
+    console.log('wrapFirstMatch called with:', { root, target });
+    if (!root || !target || target.length === 0) {
+        console.log('wrapFirstMatch: invalid parameters');
+        return false;
+    }
     const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT, null);
     let node;
+    let nodeCount = 0;
     while ((node = walker.nextNode())) {
+        nodeCount++;
         // Skip inside existing marks
-        if (node.parentElement && node.parentElement.closest('mark.selection-highlight')) continue;
+        if (node.parentElement && node.parentElement.closest('mark.selection-highlight')) {
+            console.log('Skipping node inside existing mark');
+            continue;
+        }
         const idx = node.data.indexOf(target);
         if (idx !== -1) {
+            console.log('Found target text in node:', { nodeData: node.data, idx, target });
             const mark = document.createElement('mark');
             mark.className = 'selection-highlight';
             mark.textContent = target;
@@ -212,9 +240,13 @@ function wrapFirstMatch(root, target) {
             const before = node.splitText(idx);
             before.splitText(target.length);
             before.parentNode.replaceChild(mark, before);
+            console.log('Successfully wrapped text, mark element:', mark);
+            console.log('Mark classes:', mark.className);
+            console.log('Mark computed styles:', window.getComputedStyle(mark));
             return true;
         }
     }
+    console.log('wrapFirstMatch: target not found after checking', nodeCount, 'text nodes');
     return false;
 }
 
@@ -225,25 +257,44 @@ function applySavedSelections() {
     const items = ($savedSelections || []).filter(
         (s) => s.chatId === chat && s.messageId === messageId && s.role === 'assistant'
     );
+    console.log('ContentRenderer applySavedSelections:', { chat, messageId, items, allSelections: $savedSelections });
     // Avoid double-highlighting: only add marks for texts not yet wrapped
     for (const sel of items) {
         // If a mark with exact text exists, skip
-        const already = Array.from(root.querySelectorAll('mark.selection-highlight'))
-            .some((m) => m.textContent === sel.text);
+        const existingMarks = Array.from(root.querySelectorAll('mark.selection-highlight'));
+        console.log('Existing marks:', existingMarks.map(m => ({ text: m.textContent, classes: m.className })));
+        const already = existingMarks.some((m) => m.textContent === sel.text);
         if (!already) {
-            wrapFirstMatch(root, sel.text);
+            console.log('Wrapping text:', sel.text);
+            const success = wrapFirstMatch(root, sel.text);
+            console.log('wrapFirstMatch result:', success);
+        } else {
+            console.log('Text already wrapped:', sel.text);
+            // Let's check if the mark is actually visible
+            const mark = existingMarks.find(m => m.textContent === sel.text);
+            if (mark) {
+                console.log('Found existing mark:', mark);
+                console.log('Mark computed styles:', window.getComputedStyle(mark));
+                console.log('Mark background color:', window.getComputedStyle(mark).backgroundColor);
+            }
         }
     }
 }
 
 onMount(async () => {
     await tick();
-    applySavedSelections();
+    // Add a small delay to ensure DOM is fully rendered
+    setTimeout(() => {
+        applySavedSelections();
+    }, 100);
 });
 
-$: ($savedSelections, messageId, contentContainerElement, () => {
-    applySavedSelections();
-})();
+$: if ($savedSelections && messageId && contentContainerElement) {
+    // Add a small delay to ensure DOM is fully rendered
+    setTimeout(() => {
+        applySavedSelections();
+    }, 100);
+}
 </script>
 
 <div bind:this={contentContainerElement}>
