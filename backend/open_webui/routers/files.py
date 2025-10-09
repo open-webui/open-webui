@@ -40,6 +40,13 @@ router = APIRouter()
 
 @router.post("/", response_model=FileModelResponse)
 def upload_file(
+    # NOTE: This function is intentionally synchronous (def) rather than async (async def)
+    # to prevent blocking the event loop during large file processing operations.
+    # File uploads and vector processing can be CPU-intensive and time-consuming,
+    # so FastAPI will automatically run this in a thread pool executor.
+    # The async process_file() call is handled via asyncio.run() to maintain
+    # proper async vector database operations while keeping the endpoint non-blocking.
+    # See: https://fastapi.tiangolo.com/async/#in-a-hurry
     request: Request, file: UploadFile = File(...), user=Depends(get_verified_user)
 ):
     log.info(f"file.content_type: {file.content_type}")
