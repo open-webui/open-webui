@@ -1376,7 +1376,7 @@ async def healthcheck():
 
 
 @app.get("/health/db")
-async def healthcheck_with_db():
+def healthcheck_with_db():
     try:
         # Use a dedicated session for health checks to avoid conflicts with long-running operations
         with get_db() as db:

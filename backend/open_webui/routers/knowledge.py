@@ -354,7 +354,7 @@ async def update_file_from_knowledge_by_id(
         )
 
     # Remove content from the vector database
-    VECTOR_DB_CLIENT.delete(
+    await VECTOR_DB_CLIENT.delete(
         collection_name=knowledge.id, filter={"file_id": form_data.file_id}
     )
 
