@@ -41,6 +41,7 @@ import { selectionSyncService } from '$lib/services/selectionSync';
 	export let readOnly: boolean;
 	export let editCodeBlock = true;
 	export let topPadding = false;
+	export let allowTextSelection = false;
 
 	let showDeleteConfirm = false;
 
@@ -168,14 +169,14 @@ import { selectionSyncService } from '$lib/services/selectionSync';
 
 	onMount(() => {
 		// console.log('UserMessage mounted');
-		if ($selectionModeEnabled) {
+		if ($selectionModeEnabled && allowTextSelection) {
 			contentContainerElement?.addEventListener('mouseup', updateButtonPosition);
 			document.addEventListener('mouseup', updateButtonPosition);
 			document.addEventListener('keydown', keydownHandler);
 		}
 	});
 
-	$: if ($selectionModeEnabled && contentContainerElement) {
+	$: if ($selectionModeEnabled && allowTextSelection && contentContainerElement) {
 		contentContainerElement.addEventListener('mouseup', updateButtonPosition);
 		document.addEventListener('mouseup', updateButtonPosition);
 		document.addEventListener('keydown', keydownHandler);
@@ -548,7 +549,7 @@ import { selectionSyncService } from '$lib/services/selectionSync';
 						</div>
 					</div>
 
-				{#if $selectionModeEnabled}
+				{#if $selectionModeEnabled && allowTextSelection}
 					<div
 						id={`floating-buttons-${chatId}-${message.id}`}
 						class="absolute rounded-lg mt-1 text-xs z-9999"

@@ -7,9 +7,13 @@
 		user as _user,
 		mobile,
 		currentChatPage,
-		temporaryChatEnabled
+		temporaryChatEnabled,
+		selectionModeEnabled,
+		savedSelections,
+		latestAssistantMessageId
 	} from '$lib/stores';
 	import { tick, getContext, onMount, createEventDispatcher } from 'svelte';
+	import { get } from 'svelte/store';
 	const dispatch = createEventDispatcher();
 
 	import { toast } from 'svelte-sonner';
@@ -422,37 +426,74 @@
 							</div>
 						</Loader>
 					{/if}
+					<!-- Always render all messages in the same structure -->
 					<ul role="log" aria-live="polite" aria-relevant="additions" aria-atomic="false">
 						{#each messages as message, messageIdx (message.id)}
-							<Message
-								{chatId}
-								bind:history
-								{selectedModels}
-								messageId={message.id}
-								idx={messageIdx}
-								{user}
-								{setInputText}
-								{gotoMessage}
-								{showPreviousMessage}
-								{showNextMessage}
-								{updateChat}
-								{editMessage}
-								{deleteMessage}
-								{rateMessage}
-								{actionMessage}
-								{saveMessage}
-								{submitMessage}
-								{regenerateResponse}
-								{continueResponse}
-								{mergeResponses}
-								{addMessages}
-								{triggerScroll}
-								{readOnly}
-								{editCodeBlock}
-								{topPadding}
-							/>
+							<!-- Add dashed border wrapper for last two messages when in selection mode -->
+							{#if $selectionModeEnabled && messages.length >= 2 && messageIdx >= messages.length - 2}
+								<div class="border-2 border-dashed border-blue-300 dark:border-blue-600 rounded-lg my-2 ml-2 pt-2 bg-blue-50/20 dark:bg-blue-900/5">
+									<Message
+										{chatId}
+										bind:history
+										{selectedModels}
+										messageId={message.id}
+										idx={messageIdx}
+										{user}
+										{setInputText}
+										{gotoMessage}
+										{showPreviousMessage}
+										{showNextMessage}
+										{updateChat}
+										{editMessage}
+										{deleteMessage}
+										{rateMessage}
+										{actionMessage}
+										{saveMessage}
+										{submitMessage}
+										{regenerateResponse}
+										{continueResponse}
+										{mergeResponses}
+										{addMessages}
+										{triggerScroll}
+										{readOnly}
+										{editCodeBlock}
+										{topPadding}
+										allowTextSelection={true}
+									/>
+								</div>
+							{:else}
+								<Message
+									{chatId}
+									bind:history
+									{selectedModels}
+									messageId={message.id}
+									idx={messageIdx}
+									{user}
+									{setInputText}
+									{gotoMessage}
+									{showPreviousMessage}
+									{showNextMessage}
+									{updateChat}
+									{editMessage}
+									{deleteMessage}
+									{rateMessage}
+									{actionMessage}
+									{saveMessage}
+									{submitMessage}
+									{regenerateResponse}
+									{continueResponse}
+									{mergeResponses}
+									{addMessages}
+									{triggerScroll}
+									{readOnly}
+									{editCodeBlock}
+									{topPadding}
+									allowTextSelection={false}
+								/>
+							{/if}
 						{/each}
 					</ul>
+					
 				</section>
 				<div class="pb-18" />
 				{#if bottomPadding}

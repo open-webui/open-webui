@@ -39,6 +39,7 @@ import { selectionSyncService } from '$lib/services/selectionSync';
 
 	export let editCodeBlock = true;
 	export let topPadding = false;
+	export let allowTextSelection = false;
 
 	export let onSave = (e) => {};
 	export let onSourceClick = (e) => {};
@@ -143,7 +144,7 @@ const detachListeners = () => {
 };
 
 onMount(() => {
-    if (floatingButtons || $selectionModeEnabled) {
+    if (floatingButtons || ($selectionModeEnabled && allowTextSelection)) {
         attachListeners();
 		}
 	});
@@ -154,7 +155,7 @@ onMount(() => {
 
 // React to selection mode changes to attach/detach listeners dynamically
 $: {
-    if ($selectionModeEnabled) {
+    if ($selectionModeEnabled && allowTextSelection) {
         attachListeners();
     } else if (!floatingButtons) {
         // Only detach when floatingButtons is also off
@@ -363,7 +364,7 @@ $: if ($savedSelections && messageId && contentContainerElement) {
 	/>
 </div>
 
-{#if $selectionModeEnabled}
+{#if $selectionModeEnabled && allowTextSelection}
     <div
         id={`floating-buttons-${id}`}
         class="absolute rounded-lg mt-1 text-xs z-9999"
@@ -379,42 +380,6 @@ $: if ($savedSelections && messageId && contentContainerElement) {
         </div>
     </div>
     
-    <!-- Done button below response when selection mode is active -->
-    {#if $selectionModeEnabled && done && $latestAssistantMessageId === messageId}
-        <div class="mt-4 flex justify-between items-center">
-            <div class="text-sm text-gray-600 dark:text-gray-400">
-                {$i18n.t('Select problematic text in the chat and save your selection.')}
-            </div>
-            <button
-                class="bg-white border border-gray-100 dark:border-none dark:bg-white/20 hover:bg-gray-100 text-gray-800 dark:text-white transition rounded-full p-1.5 self-center pointer-events-auto"
-                type="button"
-                on:click={() => {
-                    console.log('Done button clicked!');
-                    // Import selectionModeEnabled and other stores
-                    import('$lib/stores').then(({ selectionModeEnabled, savedSelections }) => {
-                        const selections = get(savedSelections);
-                        console.log('Current selections:', selections);
-                        selectionModeEnabled.set(false);
-                        // Switch back to message input
-                        window.dispatchEvent(new CustomEvent('selection-done', {
-                            detail: { selections }
-                        }));
-                        console.log('Selection-done event dispatched');
-                    });
-                }}
-            >
-                <span class="text-sm font-medium">{$i18n.t('Done')}</span>
-            </button>
-        </div>
-    {:else if $selectionModeEnabled && done}
-        <!-- Debug: Show why Done button is not appearing -->
-        <div class="mt-4 text-xs text-red-500">
-            Debug: Selection mode enabled but Done button not showing. 
-            Latest assistant message ID: {$latestAssistantMessageId}, 
-            Current message ID: {messageId}, 
-            Done: {done}
-        </div>
-    {/if}
 {:else if floatingButtons && model}
 	<FloatingButtons
 		bind:this={floatingButtonsElement}

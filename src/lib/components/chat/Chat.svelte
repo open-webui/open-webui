@@ -132,12 +132,18 @@ function setInputPanelState(state: PanelState) {
 // Load persisted panel state on chat change
 let isInitialChatLoad = true;
 let currentChatId = '';
+let initialLoadTimeout: ReturnType<typeof setTimeout>;
 
 $: {
     const chat = $chatId;
     if (chat && chat !== currentChatId) {
         currentChatId = chat;
         isInitialChatLoad = true; // Reset for new chat
+        
+        // Clear any existing timeout
+        if (initialLoadTimeout) {
+            clearTimeout(initialLoadTimeout);
+        }
         
         try {
             const persisted = localStorage.getItem(`input-panel-state-${chat}`) as PanelState | null;
@@ -153,18 +159,33 @@ $: {
             }
             
             // Mark that we've loaded the initial state for this chat after a short delay
-            setTimeout(() => {
+            initialLoadTimeout = setTimeout(() => {
                 isInitialChatLoad = false;
                 console.log('Initial chat load completed, isInitialChatLoad set to false');
-            }, 500);
+            }, 1000);
         } catch {
             inputPanelState = 'message';
-            setTimeout(() => {
+            initialLoadTimeout = setTimeout(() => {
                 isInitialChatLoad = false;
-            }, 500);
+                console.log('Initial chat load completed (catch), isInitialChatLoad set to false');
+            }, 1000);
         }
     }
 }
+
+// Simple fallback timeout to ensure isInitialChatLoad gets set to false
+onMount(() => {
+    const fallbackTimeout = setTimeout(() => {
+        if (isInitialChatLoad) {
+            console.log('Setting isInitialChatLoad to false after fallback timeout');
+            isInitialChatLoad = false;
+        }
+    }, 2000); // 2 second fallback delay
+    
+    return () => {
+        clearTimeout(fallbackTimeout);
+    };
+});
 
 // TEXT SELECTION: Auto-start selection mode when assistant response completes
 let lastAssistantPanelSwitchId: string | null = null;
@@ -658,8 +679,7 @@ $: if (selectedModels && chatIdProp !== '') {
 		lastMessageIdAtDone = history?.currentId ?? null;
 		// DON'T reset lastAssistantPanelSwitchId to null - keep it set to prevent immediate re-triggering
 		// It will be reset when a new assistant response comes in
-		// Force re-mount of MessageInput to clear internal editor state
-		messageInputResetKey += 1;
+		// Note: Removed messageInputResetKey increment to prevent scroll jumping
 		
 		console.log('State after reset:', { 
 			inputPanelState, 
@@ -2695,3 +2715,4 @@ Key guidelines:
 		</div>
 	{/if}
 </div>
+

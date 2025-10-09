@@ -15,7 +15,8 @@
 	import { getChatById } from '$lib/apis/chats';
 	import { generateTags } from '$lib/apis';
 
-import { config, models, settings, temporaryChatEnabled, TTSWorker, user, selectionModeEnabled } from '$lib/stores';
+import { get } from 'svelte/store';
+import { config, models, settings, temporaryChatEnabled, TTSWorker, user, selectionModeEnabled, savedSelections } from '$lib/stores';
 	import { synthesizeOpenAISpeech } from '$lib/apis/audio';
 	import { imageGenerations } from '$lib/apis/images';
 	import {
@@ -142,6 +143,7 @@ import { config, models, settings, temporaryChatEnabled, TTSWorker, user, select
 	export let readOnly = false;
 	export let editCodeBlock = true;
 	export let topPadding = false;
+	export let allowTextSelection = false;
 
 	let citationsElement: HTMLDivElement;
 	let buttonsContainerElement: HTMLDivElement;
@@ -775,6 +777,7 @@ import { config, models, settings, temporaryChatEnabled, TTSWorker, user, select
 										preview={!readOnly}
 										{editCodeBlock}
 										{topPadding}
+										{allowTextSelection}
 										done={($settings?.chatFadeStreamingText ?? true)
 											? (message?.done ?? false)
 											: true}
@@ -1477,6 +1480,36 @@ import { config, models, settings, temporaryChatEnabled, TTSWorker, user, select
 							{/if}
 						{/if}
 					</div>
+
+					<!-- Selection instructions and Done button -->
+					{#if $selectionModeEnabled && isLastMessage && message.done}
+						<div class="border-2 border-blue-300 dark:border-blue-600 rounded-lg my-2 bg-blue-50/30 dark:bg-blue-900/10">
+							<div class="p-4">
+								<div class="flex justify-between items-center">
+									<div class="text-sm text-gray-600 dark:text-gray-400">
+										{$i18n.t('Select text in the chat that you would change, if any.')}
+									</div>
+									<button
+										class="bg-white border border-gray-100 dark:border-none dark:bg-white/20 hover:bg-gray-100 text-gray-800 dark:text-white transition rounded-full p-1.5 self-center pointer-events-auto"
+										type="button"
+										on:click|preventDefault={() => {
+											console.log('Done button clicked!');
+											const selections = get(savedSelections);
+											console.log('Current selections:', selections);
+											selectionModeEnabled.set(false);
+											// Switch back to message input
+											window.dispatchEvent(new CustomEvent('selection-done', {
+												detail: { selections }
+											}));
+											console.log('Selection-done event dispatched');
+										}}
+									>
+										<span class="text-sm font-medium">{$i18n.t('Done')}</span>
+									</button>
+								</div>
+							</div>
+						</div>
+					{/if}
 
 					{#if message.done && showRateComment}
 						<RateComment

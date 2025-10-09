@@ -43,6 +43,7 @@
 	export let readOnly = false;
 	export let editCodeBlock = true;
 	export let topPadding = false;
+	export let allowTextSelection = false;
 </script>
 
 <div
@@ -71,6 +72,7 @@
 				{readOnly}
 				{editCodeBlock}
 				{topPadding}
+				{allowTextSelection}
 			/>
 		{:else if (history.messages[history.messages[messageId].parentId]?.models?.length ?? 1) === 1}
 			<ResponseMessage
@@ -97,6 +99,7 @@
 				{readOnly}
 				{editCodeBlock}
 				{topPadding}
+				{allowTextSelection}
 			/>
 		{:else}
 			<MultiResponseMessages
