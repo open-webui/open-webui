@@ -180,12 +180,10 @@ if (typeof window !== 'undefined') {
         } catch (error) {
           console.warn('Failed to sync existing selections to backend:', error);
         }
-      } else if (previousChatId !== null && id !== previousChatId && Object.keys(persisted).length > 0) {
-        // Chat switching: clear selections for new chat
-        console.log('Switching chats - clearing selections for new chat:', id);
-        savedSelections.set([]);
       } else if (previousChatId !== null && id !== previousChatId) {
-        console.log('Switching chats but no localStorage data - keeping current selections');
+        // Chat switching: let Chat.svelte handle selection restoration
+        console.log('Switching chats - Chat.svelte will handle selection restoration for:', id);
+        // Don't clear selections here - let Chat.svelte handle restoration
       }
       previousChatId = id;
     } catch (error) {

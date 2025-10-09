@@ -48,6 +48,16 @@ import { selectionSyncService } from '$lib/services/selectionSync';
 
 	let contentContainerElement;
 	let floatingButtonsElement;
+	
+	// Delete selection popup state
+	let showDeletePopup = false;
+	let deletePopupElement;
+	let selectedTextToDelete = '';
+	let selectedMarkToDelete = null;
+	
+	// Edit selections popup state
+	let showEditSelectionsPopupState = false;
+	let editSelectionsPopupElement;
 
 // Chat identifier to record selection against
 export let chatId = '';
@@ -178,6 +188,12 @@ const saveCurrentSelection = async () => {
     const mark = document.createElement('mark');
     mark.className = 'selection-highlight';
     mark.textContent = text;
+    // Add click handler for selection interaction
+    mark.addEventListener('click', (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        handleSelectionClick(mark, text);
+    });
     range.deleteContents();
     range.insertNode(mark);
     selection.removeAllRanges();
@@ -220,6 +236,144 @@ const saveCurrentSelection = async () => {
     closeFloatingButtons();
 };
 
+// Handle selection click based on current state
+const handleSelectionClick = (markElement, text) => {
+    // Check if this is the most recent assistant message
+    const isMostRecent = $latestAssistantMessageId === messageId;
+    
+    if (!isMostRecent) {
+        // Don't show any popup for selections in older messages
+        return;
+    }
+    
+    if ($selectionModeEnabled) {
+        // In selection mode, show delete popup
+        showDeleteSelectionPopup(markElement, text);
+    } else {
+        // Not in selection mode, show edit selections popup
+        showEditSelectionsPopup(markElement, text);
+    }
+};
+
+// Show delete selection popup
+const showDeleteSelectionPopup = (markElement, text) => {
+    selectedTextToDelete = text;
+    selectedMarkToDelete = markElement;
+    showDeletePopup = true;
+    
+    // Position the popup next to the selection like the Save button
+    setTimeout(() => {
+        if (deletePopupElement && markElement && contentContainerElement) {
+            const markRect = markElement.getBoundingClientRect();
+            const parentRect = contentContainerElement.getBoundingClientRect();
+            
+            // Calculate position relative to the content container
+            const top = markRect.bottom - parentRect.top;
+            const left = markRect.left - parentRect.left;
+            
+            // Calculate space available on the right
+            const spaceOnRight = parentRect.width - left;
+            let halfScreenWidth = $mobile ? window.innerWidth / 2 : window.innerWidth / 3;
+            
+            if (spaceOnRight < halfScreenWidth) {
+                const right = parentRect.right - markRect.right;
+                deletePopupElement.style.right = `${right}px`;
+                deletePopupElement.style.left = 'auto';
+            } else {
+                deletePopupElement.style.left = `${left}px`;
+                deletePopupElement.style.right = 'auto';
+            }
+            
+            deletePopupElement.style.top = `${top + 5}px`;
+            
+            // Show the popup after positioning
+            deletePopupElement.style.display = 'block';
+        }
+    }, 0);
+};
+
+// Show edit selections popup
+const showEditSelectionsPopup = (markElement, text) => {
+    selectedTextToDelete = text;
+    selectedMarkToDelete = markElement;
+    showEditSelectionsPopupState = true;
+    
+    // Position the popup next to the selection like the Save button
+    setTimeout(() => {
+        if (editSelectionsPopupElement && markElement && contentContainerElement) {
+            const markRect = markElement.getBoundingClientRect();
+            const parentRect = contentContainerElement.getBoundingClientRect();
+            
+            // Calculate position relative to the content container
+            const top = markRect.bottom - parentRect.top;
+            const left = markRect.left - parentRect.left;
+            
+            // Calculate space available on the right
+            const spaceOnRight = parentRect.width - left;
+            let halfScreenWidth = $mobile ? window.innerWidth / 2 : window.innerWidth / 3;
+            
+            if (spaceOnRight < halfScreenWidth) {
+                const right = parentRect.right - markRect.right;
+                editSelectionsPopupElement.style.right = `${right}px`;
+                editSelectionsPopupElement.style.left = 'auto';
+            } else {
+                editSelectionsPopupElement.style.left = `${left}px`;
+                editSelectionsPopupElement.style.right = 'auto';
+            }
+            
+            editSelectionsPopupElement.style.top = `${top + 5}px`;
+            
+            // Show the popup after positioning
+            editSelectionsPopupElement.style.display = 'block';
+        }
+    }, 0);
+};
+
+// Delete a selection
+const deleteSelection = async () => {
+    if (!selectedTextToDelete || !selectedMarkToDelete) return;
+    
+    // Remove from backend and localStorage using selectionSyncService
+    const currentChatId = chatId || $chatIdStore;
+    if (currentChatId) {
+        try {
+            await selectionSyncService.deleteSelection({
+                chat_id: currentChatId,
+                message_id: messageId,
+                role: 'assistant',
+                selected_text: selectedTextToDelete
+            });
+            
+            // Update the savedSelections store to reflect the change
+            savedSelections.update((arr) => {
+                return arr.filter((selection) => 
+                    !(selection.chatId === currentChatId && 
+                      selection.messageId === messageId && 
+                      selection.role === 'assistant' && 
+                      selection.text === selectedTextToDelete)
+                );
+            });
+        } catch (error) {
+            console.error('Failed to delete selection from backend:', error);
+        }
+    }
+    
+    // Remove the mark element from DOM
+    if (selectedMarkToDelete && selectedMarkToDelete.parentNode) {
+        const parent = selectedMarkToDelete.parentNode;
+        const textNode = document.createTextNode(selectedTextToDelete);
+        parent.replaceChild(textNode, selectedMarkToDelete);
+        
+        // Merge adjacent text nodes
+        parent.normalize();
+    }
+    
+    // Close popup
+    showDeletePopup = false;
+    selectedTextToDelete = '';
+    selectedMarkToDelete = null;
+};
+
 // Re-apply saved selections on mount and when data changes
 function wrapFirstMatch(root, target) {
     console.log('wrapFirstMatch called with:', { root, target });
@@ -243,6 +397,12 @@ function wrapFirstMatch(root, target) {
             const mark = document.createElement('mark');
             mark.className = 'selection-highlight';
             mark.textContent = target;
+            // Add click handler for selection interaction
+            mark.addEventListener('click', (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                handleSelectionClick(mark, target);
+            });
 
             const before = node.splitText(idx);
             before.splitText(target.length);
@@ -398,4 +558,72 @@ $: if ($savedSelections && messageId && contentContainerElement) {
 			closeFloatingButtons();
 		}}
 	/>
+{/if}
+
+<!-- Delete Selection Popup -->
+{#if showDeletePopup}
+	<div
+		bind:this={deletePopupElement}
+		class="absolute rounded-lg mt-1 text-xs z-9999 bg-white dark:bg-gray-850 dark:text-gray-100 text-medium rounded-lg shadow-xl p-1"
+		style="display: none;"
+	>
+		<div class="flex flex-row gap-0.5 shrink-0">
+			<button
+				class="px-2 py-0.5 hover:bg-gray-50 dark:hover:bg-gray-800 rounded-sm min-w-fit text-red-600 dark:text-red-400"
+				on:click={() => {
+					deleteSelection();
+				}}
+			>
+				{$i18n.t('Delete')}
+			</button>
+			<button
+				class="px-2 py-0.5 hover:bg-gray-50 dark:hover:bg-gray-800 rounded-sm min-w-fit"
+				on:click={() => {
+					showDeletePopup = false;
+					selectedTextToDelete = '';
+					selectedMarkToDelete = null;
+				}}
+			>
+				{$i18n.t('Cancel')}
+			</button>
+		</div>
+	</div>
+{/if}
+
+<!-- Edit Selections Popup -->
+{#if showEditSelectionsPopupState}
+	<div
+		bind:this={editSelectionsPopupElement}
+		class="absolute rounded-lg mt-1 text-xs z-9999 bg-white dark:bg-gray-850 dark:text-gray-100 text-medium rounded-lg shadow-xl p-1"
+		style="display: none;"
+	>
+		<div class="flex flex-row gap-0.5 shrink-0">
+			<button
+				class="px-2 py-0.5 hover:bg-gray-50 dark:hover:bg-gray-800 rounded-sm min-w-fit"
+				on:click={() => {
+					// Trigger selection mode
+					selectionModeEnabled.set(true);
+					window.dispatchEvent(new CustomEvent('set-input-panel-state', {
+						detail: { state: 'selection' }
+					}));
+					// Close the popup
+					showEditSelectionsPopupState = false;
+					selectedTextToDelete = '';
+					selectedMarkToDelete = null;
+				}}
+			>
+				{$i18n.t('Edit Selections')}
+			</button>
+			<button
+				class="px-2 py-0.5 hover:bg-gray-50 dark:hover:bg-gray-800 rounded-sm min-w-fit"
+				on:click={() => {
+					showEditSelectionsPopupState = false;
+					selectedTextToDelete = '';
+					selectedMarkToDelete = null;
+				}}
+			>
+				{$i18n.t('Cancel')}
+			</button>
+		</div>
+	</div>
 {/if}

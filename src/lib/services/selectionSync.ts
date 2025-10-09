@@ -198,6 +198,58 @@ class SelectionSyncService {
     }
   }
 
+  /**
+   * Delete a specific selection (both localStorage and backend)
+   */
+  async deleteSelection(selectionDetails: {
+    chat_id: string;
+    message_id: string;
+    role: 'user' | 'assistant';
+    selected_text: string;
+  }): Promise<void> {
+    // Remove from localStorage
+    try {
+      const existing = JSON.parse(localStorage.getItem(this.STORAGE_KEY) || '{}');
+      if (existing[selectionDetails.chat_id]) {
+        existing[selectionDetails.chat_id] = existing[selectionDetails.chat_id].filter(
+          (selection: any) => 
+            !(selection.chatId === selectionDetails.chat_id &&
+              selection.messageId === selectionDetails.message_id &&
+              selection.role === selectionDetails.role &&
+              selection.text === selectionDetails.selected_text)
+        );
+        
+        // If no selections left for this chat, remove the chat entry
+        if (existing[selectionDetails.chat_id].length === 0) {
+          delete existing[selectionDetails.chat_id];
+        }
+        
+        localStorage.setItem(this.STORAGE_KEY, JSON.stringify(existing));
+      }
+    } catch (error) {
+      // Failed to remove from localStorage - continue
+    }
+
+    // Remove from backend if online and authenticated
+    if (this.isOnline && this.isUserAuthenticated()) {
+      try {
+        const allSelections = await selectionsAPI.getUserSelections(1000);
+        const selectionToDelete = allSelections.find(selection => 
+          selection.chat_id === selectionDetails.chat_id &&
+          selection.message_id === selectionDetails.message_id &&
+          selection.role === selectionDetails.role &&
+          selection.selected_text === selectionDetails.selected_text
+        );
+        
+        if (selectionToDelete) {
+          await selectionsAPI.deleteSelection(selectionToDelete.id);
+        }
+      } catch (error) {
+        // Failed to delete from backend - continue silently
+      }
+    }
+  }
+
   // Private helper methods
 
   private isUserAuthenticated(): boolean {

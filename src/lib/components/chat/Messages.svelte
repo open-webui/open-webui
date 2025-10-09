@@ -426,73 +426,47 @@
 							</div>
 						</Loader>
 					{/if}
-					<!-- Always render all messages in the same structure -->
-					<ul role="log" aria-live="polite" aria-relevant="additions" aria-atomic="false">
-						{#each messages as message, messageIdx (message.id)}
-							<!-- Add dashed border wrapper for last two messages when in selection mode -->
-							{#if $selectionModeEnabled && messages.length >= 2 && messageIdx >= messages.length - 2}
-								<div class="border-2 border-dashed border-blue-300 dark:border-blue-600 rounded-lg my-2 ml-2 pt-2 bg-blue-50/20 dark:bg-blue-900/5">
-									<Message
-										{chatId}
-										bind:history
-										{selectedModels}
-										messageId={message.id}
-										idx={messageIdx}
-										{user}
-										{setInputText}
-										{gotoMessage}
-										{showPreviousMessage}
-										{showNextMessage}
-										{updateChat}
-										{editMessage}
-										{deleteMessage}
-										{rateMessage}
-										{actionMessage}
-										{saveMessage}
-										{submitMessage}
-										{regenerateResponse}
-										{continueResponse}
-										{mergeResponses}
-										{addMessages}
-										{triggerScroll}
-										{readOnly}
-										{editCodeBlock}
-										{topPadding}
-										allowTextSelection={true}
-									/>
-								</div>
-							{:else}
-								<Message
-									{chatId}
-									bind:history
-									{selectedModels}
-									messageId={message.id}
-									idx={messageIdx}
-									{user}
-									{setInputText}
-									{gotoMessage}
-									{showPreviousMessage}
-									{showNextMessage}
-									{updateChat}
-									{editMessage}
-									{deleteMessage}
-									{rateMessage}
-									{actionMessage}
-									{saveMessage}
-									{submitMessage}
-									{regenerateResponse}
-									{continueResponse}
-									{mergeResponses}
-									{addMessages}
-									{triggerScroll}
-									{readOnly}
-									{editCodeBlock}
-									{topPadding}
-									allowTextSelection={false}
-								/>
-							{/if}
-						{/each}
-					</ul>
+				<!-- Always render all messages in the same structure to prevent scroll jumping -->
+				<ul role="log" aria-live="polite" aria-relevant="additions" aria-atomic="false">
+					{#each messages as message, messageIdx (message.id)}
+						<!-- Determine if this message is in the selection area -->
+						{@const isInSelectionArea = $selectionModeEnabled && messages.length >= 2 && messageIdx >= messages.length - 2}
+						{@const isFirstInSelection = isInSelectionArea && messageIdx === messages.length - 2}
+						{@const isLastInSelection = isInSelectionArea && messageIdx === messages.length - 1}
+						{@const selectionBoxClass = isFirstInSelection ? 'selection-area-start' : isLastInSelection ? 'selection-area-end' : ''}
+						
+						<!-- Render Message with conditional styling classes passed as props -->
+						<Message
+							{chatId}
+							bind:history
+							{selectedModels}
+							messageId={message.id}
+							idx={messageIdx}
+							{user}
+							{setInputText}
+							{gotoMessage}
+							{showPreviousMessage}
+							{showNextMessage}
+							{updateChat}
+							{editMessage}
+							{deleteMessage}
+							{rateMessage}
+							{actionMessage}
+							{saveMessage}
+							{submitMessage}
+							{regenerateResponse}
+							{continueResponse}
+							{mergeResponses}
+							{addMessages}
+							{triggerScroll}
+							{readOnly}
+							{editCodeBlock}
+							{topPadding}
+							allowTextSelection={isInSelectionArea}
+							{selectionBoxClass}
+						/>
+					{/each}
+				</ul>
 					
 				</section>
 				<div class="pb-18" />
@@ -503,3 +477,34 @@
 		</div>
 	{/if}
 </div>
+
+<style>
+	/* Selection area styling for unified border effect */
+	:global(.selection-area-start) {
+		border: 2px dashed #3b82f6 !important; /* Blue dashed border */
+		border-bottom: none !important;
+		border-radius: 0.5rem 0.5rem 0 0 !important; /* rounded-lg top */
+		margin: 0.5rem 2rem 0 0 !important; /* Preserve original top margin */
+		padding: 1.25rem 1.25rem 0 1.25rem !important; /* px-5 pt-5 - preserve original horizontal padding */
+		background-color: rgba(59, 130, 246, 0.1) !important; /* Light blue background */
+	}
+	
+	:global(.dark .selection-area-start) {
+		border-color: #3b82f6 !important; /* Blue dashed border */
+		background-color: rgba(59, 130, 246, 0.1) !important; /* Light blue background */
+	}
+	
+	:global(.selection-area-end) {
+		border: 2px dashed #3b82f6 !important; /* Blue dashed border */
+		border-top: none !important;
+		border-radius: 0 0 0.5rem 0.5rem !important; /* rounded-lg bottom */
+		margin: 0 0 0.75rem 0 !important; /* mb-3 - preserve original bottom margin */
+		padding: 0 1.25rem 1.25rem 1.25rem !important; /* px-5 pb-5 - preserve original horizontal padding */
+		background-color: rgba(59, 130, 246, 0.1) !important; /* Light blue background */
+	}
+	
+	:global(.dark .selection-area-end) {
+		border-color: #3b82f6 !important; /* Blue dashed border */
+		background-color: rgba(59, 130, 246, 0.1) !important; /* Light blue background */
+	}
+</style>

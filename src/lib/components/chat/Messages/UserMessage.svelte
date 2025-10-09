@@ -3,7 +3,7 @@
 	import { toast } from 'svelte-sonner';
 	import { tick, getContext, onMount } from 'svelte';
 
-import { models, settings, selectionModeEnabled, savedSelections, chatId as chatIdStore, latestUserMessageId } from '$lib/stores';
+import { models, settings, selectionModeEnabled, savedSelections, chatId as chatIdStore, latestUserMessageId, mobile } from '$lib/stores';
 import { selectionSyncService } from '$lib/services/selectionSync';
 	import { user as _user } from '$lib/stores';
 	import { copyToClipboard as _copyToClipboard, formatDate } from '$lib/utils';
@@ -46,6 +46,16 @@ import { selectionSyncService } from '$lib/services/selectionSync';
 	let showDeleteConfirm = false;
 
 	let messageIndexEdit = false;
+	
+	// Delete selection popup state
+	let showDeleteSelectionPopupState = false;
+	let deleteSelectionPopupElement;
+	let selectedTextToDelete = '';
+	let selectedMarkToDelete = null;
+	
+	// Edit selections popup state
+	let showEditSelectionsPopupState = false;
+	let editSelectionsPopupElement;
 
 	let edit = false;
 	let editedContent = '';
@@ -204,6 +214,12 @@ import { selectionSyncService } from '$lib/services/selectionSync';
         const mark = document.createElement('mark');
         mark.className = 'selection-highlight';
         mark.textContent = text;
+        // Add click handler for selection interaction
+        mark.addEventListener('click', (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            handleSelectionClick(mark, text);
+        });
         range.deleteContents();
         range.insertNode(mark);
         selection.removeAllRanges();
@@ -261,6 +277,12 @@ import { selectionSyncService } from '$lib/services/selectionSync';
                 const mark = document.createElement('mark');
                 mark.className = 'selection-highlight';
                 mark.textContent = target;
+            // Add click handler for selection interaction
+            mark.addEventListener('click', (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                handleSelectionClick(mark, target);
+            });
 
                 const before = node.splitText(idx);
                 before.splitText(target.length);
@@ -296,6 +318,144 @@ import { selectionSyncService } from '$lib/services/selectionSync';
     $: if ($savedSelections && message?.id && contentContainerElement) {
         applySavedSelections();
     }
+
+// Handle selection click based on current state
+const handleSelectionClick = (markElement, text) => {
+    // Check if this is the most recent user message
+    const isMostRecent = $latestUserMessageId === message.id;
+    
+    if (!isMostRecent) {
+        // Don't show any popup for selections in older messages
+        return;
+    }
+    
+    if ($selectionModeEnabled) {
+        // In selection mode, show delete popup
+        showDeleteSelectionPopup(markElement, text);
+    } else {
+        // Not in selection mode, show edit selections popup
+        showEditSelectionsPopup(markElement, text);
+    }
+};
+
+// Show delete selection popup
+const showDeleteSelectionPopup = (markElement, text) => {
+    selectedTextToDelete = text;
+    selectedMarkToDelete = markElement;
+    showDeleteSelectionPopupState = true;
+    
+    // Position the popup next to the selection like the Save button
+    setTimeout(() => {
+        if (deleteSelectionPopupElement && markElement && contentContainerElement) {
+            const markRect = markElement.getBoundingClientRect();
+            const parentRect = contentContainerElement.getBoundingClientRect();
+            
+            // Calculate position relative to the content container
+            const top = markRect.bottom - parentRect.top;
+            const left = markRect.left - parentRect.left;
+            
+            // Calculate space available on the right
+            const spaceOnRight = parentRect.width - left;
+            let halfScreenWidth = $mobile ? window.innerWidth / 2 : window.innerWidth / 3;
+            
+            if (spaceOnRight < halfScreenWidth) {
+                const right = parentRect.right - markRect.right;
+                deleteSelectionPopupElement.style.right = `${right}px`;
+                deleteSelectionPopupElement.style.left = 'auto';
+            } else {
+                deleteSelectionPopupElement.style.left = `${left}px`;
+                deleteSelectionPopupElement.style.right = 'auto';
+            }
+            
+            deleteSelectionPopupElement.style.top = `${top + 5}px`;
+            
+            // Show the popup after positioning
+            deleteSelectionPopupElement.style.display = 'block';
+        }
+    }, 0);
+};
+
+// Show edit selections popup
+const showEditSelectionsPopup = (markElement, text) => {
+    selectedTextToDelete = text;
+    selectedMarkToDelete = markElement;
+    showEditSelectionsPopupState = true;
+    
+    // Position the popup next to the selection like the Save button
+    setTimeout(() => {
+        if (editSelectionsPopupElement && markElement && contentContainerElement) {
+            const markRect = markElement.getBoundingClientRect();
+            const parentRect = contentContainerElement.getBoundingClientRect();
+            
+            // Calculate position relative to the content container
+            const top = markRect.bottom - parentRect.top;
+            const left = markRect.left - parentRect.left;
+            
+            // Calculate space available on the right
+            const spaceOnRight = parentRect.width - left;
+            let halfScreenWidth = $mobile ? window.innerWidth / 2 : window.innerWidth / 3;
+            
+            if (spaceOnRight < halfScreenWidth) {
+                const right = parentRect.right - markRect.right;
+                editSelectionsPopupElement.style.right = `${right}px`;
+                editSelectionsPopupElement.style.left = 'auto';
+            } else {
+                editSelectionsPopupElement.style.left = `${left}px`;
+                editSelectionsPopupElement.style.right = 'auto';
+            }
+            
+            editSelectionsPopupElement.style.top = `${top + 5}px`;
+            
+            // Show the popup after positioning
+            editSelectionsPopupElement.style.display = 'block';
+        }
+    }, 0);
+};
+
+    // Delete a selection
+    const deleteSelection = async () => {
+        if (!selectedTextToDelete || !selectedMarkToDelete) return;
+        
+        // Remove from backend and localStorage using selectionSyncService
+        const currentChatId = $chatIdStore;
+        if (currentChatId) {
+            try {
+                await selectionSyncService.deleteSelection({
+                    chat_id: currentChatId,
+                    message_id: message.id,
+                    role: 'user',
+                    selected_text: selectedTextToDelete
+                });
+                
+                // Update the savedSelections store to reflect the change
+                savedSelections.update((arr) => {
+                    return arr.filter((selection) => 
+                        !(selection.chatId === currentChatId && 
+                          selection.messageId === message.id && 
+                          selection.role === 'user' && 
+                          selection.text === selectedTextToDelete)
+                    );
+                });
+            } catch (error) {
+                console.error('Failed to delete selection from backend:', error);
+            }
+        }
+        
+        // Remove the mark element from DOM
+        if (selectedMarkToDelete && selectedMarkToDelete.parentNode) {
+            const parent = selectedMarkToDelete.parentNode;
+            const textNode = document.createTextNode(selectedTextToDelete);
+            parent.replaceChild(textNode, selectedMarkToDelete);
+            
+            // Merge adjacent text nodes
+            parent.normalize();
+        }
+        
+        // Close popup
+        showDeleteSelectionPopupState = false;
+        selectedTextToDelete = '';
+        selectedMarkToDelete = null;
+    };
 </script>
 
 <DeleteConfirmDialog
@@ -562,10 +722,48 @@ import { selectionSyncService } from '$lib/services/selectionSync';
 							>
 								{$i18n.t('Save')}
 							</button>
-						</div>
-					</div>
-				{/if}
-				</div>
+		</div>
+	</div>
+{/if}
+
+<!-- Edit Selections Popup -->
+{#if showEditSelectionsPopupState}
+	<div
+		bind:this={editSelectionsPopupElement}
+		class="absolute rounded-lg mt-1 text-xs z-9999 bg-white dark:bg-gray-850 dark:text-gray-100 text-medium rounded-lg shadow-xl p-1"
+		style="display: none;"
+	>
+		<div class="flex flex-row gap-0.5 shrink-0">
+			<button
+				class="px-2 py-0.5 hover:bg-gray-50 dark:hover:bg-gray-800 rounded-sm min-w-fit"
+				on:click={() => {
+					// Trigger selection mode
+					selectionModeEnabled.set(true);
+					window.dispatchEvent(new CustomEvent('set-input-panel-state', {
+						detail: { state: 'selection' }
+					}));
+					// Close the popup
+					showEditSelectionsPopupState = false;
+					selectedTextToDelete = '';
+					selectedMarkToDelete = null;
+				}}
+			>
+				{$i18n.t('Edit Selections')}
+			</button>
+			<button
+				class="px-2 py-0.5 hover:bg-gray-50 dark:hover:bg-gray-800 rounded-sm min-w-fit"
+				on:click={() => {
+					showEditSelectionsPopupState = false;
+					selectedTextToDelete = '';
+					selectedMarkToDelete = null;
+				}}
+			>
+				{$i18n.t('Cancel')}
+			</button>
+		</div>
+	</div>
+{/if}
+</div>
 			{/if}
 
 			{#if edit !== true}
@@ -690,6 +888,41 @@ import { selectionSyncService } from '$lib/services/selectionSync';
 										stroke-linecap="round"
 										stroke-linejoin="round"
 										d="M16.862 4.487l1.687-1.688a1.875 1.875 0 112.652 2.652L6.832 19.82a4.5 4.5 0 01-1.897 1.13l-2.685.8.8-2.685a4.5 4.5 0 011.13-1.897L16.863 4.487zm0 0L19.5 7.125"
+									/>
+								</svg>
+							</button>
+						</Tooltip>
+					{/if}
+
+					<!-- Edit Selection Button -->
+					{#if !$selectionModeEnabled}
+						<Tooltip content={$i18n.t('Edit Selection')} placement="bottom">
+							<button
+								class="{($settings?.highContrastMode ?? false)
+									? ''
+									: 'invisible group-hover:visible'} p-1.5 hover:bg-black/5 dark:hover:bg-white/5 rounded-lg dark:hover:text-white hover:text-black transition"
+								on:click={() => {
+									selectionModeEnabled.set(true);
+									// Force the latest user message to be the target for selection
+									latestUserMessageId.set(message.id);
+									// Dispatch event to change input panel state
+									window.dispatchEvent(new CustomEvent('set-input-panel-state', {
+										detail: { state: 'selection' }
+									}));
+								}}
+							>
+								<svg
+									xmlns="http://www.w3.org/2000/svg"
+									fill="none"
+									viewBox="0 0 24 24"
+									stroke-width="2"
+									stroke="currentColor"
+									class="w-4 h-4"
+								>
+									<path
+										stroke-linecap="round"
+										stroke-linejoin="round"
+										d="m16.862 4.487 1.687-1.688a1.875 1.875 0 1 1 2.652 2.652L10.582 16.07a4.5 4.5 0 0 1-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 0 1 1.13-1.897l8.932-8.931Zm0 0L19.5 7.125M18 14v4.75A2.25 2.25 0 0 1 15.75 21H5.25A2.25 2.25 0 0 1 3 18.75V8.25A2.25 2.25 0 0 1 5.25 6H10"
 									/>
 								</svg>
 							</button>
@@ -853,3 +1086,33 @@ import { selectionSyncService } from '$lib/services/selectionSync';
 		</div>
 	</div>
 </div>
+
+<!-- Delete Selection Popup -->
+{#if showDeleteSelectionPopupState}
+	<div
+		bind:this={deleteSelectionPopupElement}
+		class="absolute rounded-lg mt-1 text-xs z-9999 bg-white dark:bg-gray-850 dark:text-gray-100 text-medium rounded-lg shadow-xl p-1"
+		style="display: none;"
+	>
+		<div class="flex flex-row gap-0.5 shrink-0">
+			<button
+				class="px-2 py-0.5 hover:bg-gray-50 dark:hover:bg-gray-800 rounded-sm min-w-fit text-red-600 dark:text-red-400"
+				on:click={() => {
+					deleteSelection();
+				}}
+			>
+				{$i18n.t('Delete')}
+			</button>
+			<button
+				class="px-2 py-0.5 hover:bg-gray-50 dark:hover:bg-gray-800 rounded-sm min-w-fit"
+				on:click={() => {
+					showDeleteSelectionPopupState = false;
+					selectedTextToDelete = '';
+					selectedMarkToDelete = null;
+				}}
+			>
+				{$i18n.t('Cancel')}
+			</button>
+		</div>
+	</div>
+{/if}

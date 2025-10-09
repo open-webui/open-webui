@@ -76,6 +76,7 @@ import {
 	import { createOpenAITextStream } from '$lib/apis/streaming';
 	import { queryMemory } from '$lib/apis/memories';
 import { getAndUpdateUserLocation, getUserSettings } from '$lib/apis/users';
+import { selectionSyncService } from '$lib/services/selectionSync';
 	import {
 		chatCompleted,
 		generateQueries,
@@ -129,115 +130,115 @@ function setInputPanelState(state: PanelState) {
     } catch {}
 }
 
+// Restore selections for a specific chat
+async function restoreSelectionsForChat(chatId: string) {
+    try {
+        // Get selections from localStorage/backend for this chat
+        const chatSelections = await selectionSyncService.getChatSelections(chatId);
+        
+        // Update the savedSelections store with the restored selections
+        const currentSelections = get(savedSelections);
+        const updatedSelections = { ...currentSelections, [chatId]: chatSelections };
+        savedSelections.set(updatedSelections);
+    } catch (error) {
+        console.error('Failed to restore selections for chat:', chatId, error);
+    }
+}
+
 // Load persisted panel state on chat change
 let isInitialChatLoad = true;
 let currentChatId = '';
 let initialLoadTimeout: ReturnType<typeof setTimeout>;
 
+
+
+// Track if we've already loaded this chat to avoid resetting state on navigation
+let loadedChats = new Set<string>();
+
+// Reactive block to handle chat changes
 $: {
     const chat = $chatId;
     if (chat && chat !== currentChatId) {
-        currentChatId = chat;
-        isInitialChatLoad = true; // Reset for new chat
-        
-        // Clear any existing timeout
-        if (initialLoadTimeout) {
-            clearTimeout(initialLoadTimeout);
+        handleChatChange(chat);
+    }
+}
+
+// Handle chat change logic in a separate function to avoid reactive issues
+function handleChatChange(chat: string) {
+    const isNewChat = chat !== currentChatId;
+    const isFirstTimeLoadingThisChat = !loadedChats.has(chat);
+    
+    // Update current chat ID
+    currentChatId = chat;
+    
+    // Clear any existing timeout
+    if (initialLoadTimeout) {
+        clearTimeout(initialLoadTimeout);
+    }
+    
+    try {
+        // Always restore panel state and selections on any chat load/navigation
+        const persisted = localStorage.getItem(`input-panel-state-${chat}`) as PanelState | null;
+        if (persisted === 'message' || persisted === 'selection') {
+            inputPanelState = persisted;
+            // Set the selection mode enabled flag based on restored state
+            if (persisted === 'selection') {
+                selectionModeEnabled.set(true);
+            } else {
+                selectionModeEnabled.set(false);
+            }
+        } else {
+            inputPanelState = 'message';
+            selectionModeEnabled.set(false);
         }
         
-        try {
-            const persisted = localStorage.getItem(`input-panel-state-${chat}`) as PanelState | null;
-            console.log('Loading persisted panel state:', { chat, persisted, isInitialChatLoad });
-            if (persisted === 'message' || persisted === 'selection') {
-                inputPanelState = persisted;
-                // If we're restoring selection mode, also set the selection mode enabled flag
-                if (persisted === 'selection') {
-                    selectionModeEnabled.set(true);
-                }
-            } else {
-                inputPanelState = 'message';
-            }
-            
-            // Mark that we've loaded the initial state for this chat after a short delay
+        // Load user dismissal flag for this chat
+        const dismissed = localStorage.getItem(`selection-dismissed-${chat}`);
+        userDismissedSelectionMode = dismissed === 'true';
+        
+        // Always restore selections for this chat (on both new loads and navigation)
+        restoreSelectionsForChat(chat);
+        
+        // Only reset isInitialChatLoad and set timeout for truly new chats
+        if (isNewChat && isFirstTimeLoadingThisChat) {
+            isInitialChatLoad = true;
+            loadedChats.add(chat);
             initialLoadTimeout = setTimeout(() => {
                 isInitialChatLoad = false;
-                console.log('Initial chat load completed, isInitialChatLoad set to false');
-            }, 1000);
-        } catch {
-            inputPanelState = 'message';
+            }, 500);
+        }
+    } catch {
+        inputPanelState = 'message';
+        userDismissedSelectionMode = false;
+        if (isNewChat && isFirstTimeLoadingThisChat) {
+            isInitialChatLoad = true;
+            loadedChats.add(chat);
             initialLoadTimeout = setTimeout(() => {
                 isInitialChatLoad = false;
-                console.log('Initial chat load completed (catch), isInitialChatLoad set to false');
-            }, 1000);
+            }, 500);
         }
     }
 }
 
-// Simple fallback timeout to ensure isInitialChatLoad gets set to false
-onMount(() => {
-    const fallbackTimeout = setTimeout(() => {
-        if (isInitialChatLoad) {
-            console.log('Setting isInitialChatLoad to false after fallback timeout');
-            isInitialChatLoad = false;
-        }
-    }, 2000); // 2 second fallback delay
-    
-    return () => {
-        clearTimeout(fallbackTimeout);
-    };
-});
-
 // TEXT SELECTION: Auto-start selection mode when assistant response completes
 let lastAssistantPanelSwitchId: string | null = null;
-$: {
-    console.log('Auto-selection reactive block triggered:', {
-        historyCurrentId: history?.currentId,
-        isInitialChatLoad,
-        hasHistory: !!history,
-        hasMessages: !!history?.messages
-    });
-    
-    if (history?.currentId && !isInitialChatLoad) {
-        const msg = history.messages[history.currentId];
-        console.log('Checking for auto-selection:', {
-            currentId: history.currentId,
-            isInitialChatLoad,
-            msgRole: msg?.role,
-            msgDone: msg?.done,
-            lastAssistantPanelSwitchId,
-            inputPanelState,
-            shouldTrigger: msg?.role === 'assistant' && msg?.done === true && history.currentId !== lastAssistantPanelSwitchId
-        });
-        
-        // Reset lastAssistantPanelSwitchId when a new assistant message starts (not done yet)
-        if (msg?.role === 'assistant' && msg?.done !== true && history.currentId !== lastAssistantPanelSwitchId) {
-            console.log('New assistant message started, resetting lastAssistantPanelSwitchId');
-            lastAssistantPanelSwitchId = null;
-        }
-        
-        if (
-            msg?.role === 'assistant' &&
-            msg?.done === true &&
-            history.currentId !== lastAssistantPanelSwitchId
-        ) {
-            console.log('Auto-switching to selection mode for message:', history.currentId);
-            setInputPanelState('selection');
-            selectionModeEnabled.set(true); // Auto-start selection mode
-            lastAssistantPanelSwitchId = history.currentId;
-            // Clear force-input flag to allow selection mode
-            try {
-                const chat = $chatId;
-                if (chat) localStorage.removeItem(`selection-force-input-${chat}`);
-            } catch {}
-            
-            // Debug: Log the state after setting
-            console.log('Selection mode state after auto-switch:', {
-                inputPanelState,
-                selectionModeEnabled: $selectionModeEnabled,
-                latestAssistantMessageId: $latestAssistantMessageId
-            });
-        }
-    }
+let userDismissedSelectionMode = false;
+
+// Immediate fallback to set isInitialChatLoad to false after component mount
+let immediateFallbackTimeout: ReturnType<typeof setTimeout>;
+
+// Trigger selection only when a live assistant response finishes (not on hydration)
+function maybeAutoEnterSelectionOnResponseDone(messageId: string) {
+    if (userDismissedSelectionMode) return;
+    if (inputPanelState !== 'message') return;
+    if (lastAssistantPanelSwitchId === messageId) return;
+    setInputPanelState('selection');
+    selectionModeEnabled.set(true);
+    lastAssistantPanelSwitchId = messageId;
+    try {
+        const chat = $chatId;
+        if (chat) localStorage.removeItem(`selection-force-input-${chat}`);
+    } catch {}
 }
 
 // TEXT SELECTION: Track latest message IDs to restrict selection to most recent prompt/response
@@ -664,14 +665,18 @@ $: if (selectedModels && chatIdProp !== '') {
 	
 	// Listen for selection done event
 	const handleSelectionDone = (event) => {
-		console.log('handleSelectionDone called with event:', event);
 		const { selections } = event.detail;
-		console.log('Selections from event:', selections);
-		console.log('Current state before reset:', { 
-			inputPanelState, 
-			selectionModeEnabled: $selectionModeEnabled,
-			lastAssistantPanelSwitchId 
-		});
+		
+		// Mark that user manually dismissed selection mode
+		userDismissedSelectionMode = true;
+		
+		// Persist this flag in localStorage for this chat
+		try {
+			const chat = $chatId;
+			if (chat) {
+				localStorage.setItem(`selection-dismissed-${chat}`, 'true');
+			}
+		} catch {}
 		
 		selectionModeEnabled.set(false);
 		setInputPanelState('message');
@@ -680,12 +685,24 @@ $: if (selectedModels && chatIdProp !== '') {
 		// DON'T reset lastAssistantPanelSwitchId to null - keep it set to prevent immediate re-triggering
 		// It will be reset when a new assistant response comes in
 		// Note: Removed messageInputResetKey increment to prevent scroll jumping
+	};
+	
+	// Listen for input panel state changes from Edit Selection buttons
+	const handleInputPanelStateChange = (event) => {
+		const { state } = event.detail;
+		setInputPanelState(state);
 		
-		console.log('State after reset:', { 
-			inputPanelState, 
-			selectionModeEnabled: $selectionModeEnabled,
-			lastAssistantPanelSwitchId 
-		});
+		// If user manually triggers selection mode, reset the dismissal flag
+		if (state === 'selection') {
+			userDismissedSelectionMode = false;
+			// Clear the dismissal flag from localStorage for this chat
+			try {
+				const chat = $chatId;
+				if (chat) {
+					localStorage.removeItem(`selection-dismissed-${chat}`);
+				}
+			} catch {}
+		}
 	};
 	
 	onMount(async () => {
@@ -693,6 +710,14 @@ $: if (selectedModels && chatIdProp !== '') {
 		console.log('mounted');
 		window.addEventListener('message', onMessageHandler);
 		$socket?.on('chat-events', chatEventHandler);
+
+		// Restore selections from backend to localStorage on app load
+		try {
+			await selectionSyncService.restoreFromBackend();
+			console.log('Selections restored from backend on app load');
+		} catch (error) {
+			console.error('Failed to restore selections from backend:', error);
+		}
 
 		pageSubscribe = page.subscribe(async (p) => {
 			if (p.url.pathname === '/') {
@@ -758,6 +783,14 @@ $: if (selectedModels && chatIdProp !== '') {
 		chats.subscribe(() => {});
 		
 		window.addEventListener('selection-done', handleSelectionDone);
+		window.addEventListener('set-input-panel-state', handleInputPanelStateChange);
+		
+		// Set a timeout to ensure isInitialChatLoad gets set to false after panel state restoration
+        immediateFallbackTimeout = setTimeout(() => {
+            if (isInitialChatLoad) {
+                isInitialChatLoad = false;
+            }
+        }, 1000); // 1 second timeout to allow panel state restoration to complete
 	});
 
 	onDestroy(() => {
@@ -765,7 +798,16 @@ $: if (selectedModels && chatIdProp !== '') {
 		chatIdUnsubscriber?.();
 		window.removeEventListener('message', onMessageHandler);
 		window.removeEventListener('selection-done', handleSelectionDone);
+		window.removeEventListener('set-input-panel-state', handleInputPanelStateChange);
 		$socket?.off('chat-events', chatEventHandler);
+		
+		// Clean up timeouts
+		if (immediateFallbackTimeout) {
+			clearTimeout(immediateFallbackTimeout);
+		}
+		if (initialLoadTimeout) {
+			clearTimeout(initialLoadTimeout);
+		}
 	});
 
 	// File upload functions
@@ -1053,6 +1095,7 @@ const initNewChat = async () => {
 		
 		// Reset selection mode tracking for new chat
 		lastAssistantPanelSwitchId = null;
+		userDismissedSelectionMode = false;
 		isInitialChatLoad = true;
 		currentChatId = '';
 
@@ -1185,13 +1228,8 @@ const initNewChat = async () => {
 					}
 				} catch {}
 
-				if (history.currentId) {
-					for (const message of Object.values(history.messages)) {
-						if (message.role === 'assistant') {
-							message.done = true;
-						}
-					}
-				}
+                // Do not flip messages to done on hydration; keep original flags to avoid
+                // triggering selection logic on reload
 
 				const taskRes = await getTaskIdsByChatId(localStorage.token, $chatId).catch((error) => {
 					return null;
@@ -1573,8 +1611,12 @@ const initNewChat = async () => {
 
 		history.messages[message.id] = message;
 
-		if (done) {
-			message.done = true;
+                if (done) {
+                    message.done = true;
+                    // Live completion finished: auto-enter selection
+                    if (message.role === 'assistant') {
+                        maybeAutoEnterSelectionOnResponseDone(message.id);
+                    }
 
 			if ($settings.responseAutoCopy) {
 				copyToClipboard(message.content);
@@ -2147,7 +2189,11 @@ Key guidelines:
 			responseMessage.error = {
 				content: error
 			};
-			responseMessage.done = true;
+            responseMessage.done = true;
+            // Error path still represents a finished assistant message
+            if (responseMessage.role === 'assistant') {
+                maybeAutoEnterSelectionOnResponseDone(responseMessageId);
+            }
 
 			history.messages[responseMessageId] = responseMessage;
 			history.currentId = responseMessageId;
@@ -2208,7 +2254,10 @@ Key guidelines:
 		responseMessage.error = {
 			content: $i18n.t(`Uh-oh! There was an issue with the response.`) + '\n' + errorMessage
 		};
-		responseMessage.done = true;
+        responseMessage.done = true;
+        if (responseMessage.role === 'assistant') {
+            maybeAutoEnterSelectionOnResponseDone(responseMessageId);
+        }
 
 		if (responseMessage.statusHistory) {
 			responseMessage.statusHistory = responseMessage.statusHistory.filter(
@@ -2232,9 +2281,13 @@ Key guidelines:
 
 			const responseMessage = history.messages[history.currentId];
 			// Set all response messages to done
-			for (const messageId of history.messages[responseMessage.parentId].childrenIds) {
-				history.messages[messageId].done = true;
-			}
+            for (const messageId of history.messages[responseMessage.parentId].childrenIds) {
+                history.messages[messageId].done = true;
+                const msg = history.messages[messageId];
+                if (msg?.role === 'assistant') {
+                    maybeAutoEnterSelectionOnResponseDone(messageId);
+                }
+            }
 
 			history.messages[history.currentId] = responseMessage;
 
@@ -2715,4 +2768,5 @@ Key guidelines:
 		</div>
 	{/if}
 </div>
+
 

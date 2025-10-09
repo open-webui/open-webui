@@ -16,7 +16,7 @@
 	import { generateTags } from '$lib/apis';
 
 import { get } from 'svelte/store';
-import { config, models, settings, temporaryChatEnabled, TTSWorker, user, selectionModeEnabled, savedSelections } from '$lib/stores';
+import { config, models, settings, temporaryChatEnabled, TTSWorker, user, selectionModeEnabled, savedSelections, latestAssistantMessageId } from '$lib/stores';
 	import { synthesizeOpenAISpeech } from '$lib/apis/audio';
 	import { imageGenerations } from '$lib/apis/images';
 	import {
@@ -1409,6 +1409,44 @@ import { config, models, settings, temporaryChatEnabled, TTSWorker, user, select
 												</button>
 											</Tooltip>
 										{/if}
+									{/if}
+
+									<!-- Edit Selection Button -->
+									{#if !$selectionModeEnabled && message.done}
+										<Tooltip content={$i18n.t('Edit Selection')} placement="bottom">
+											<button
+												type="button"
+												aria-label={$i18n.t('Edit Selection')}
+												class="{isLastMessage || ($settings?.highContrastMode ?? false)
+													? 'visible'
+													: 'invisible group-hover:visible'} p-1.5 hover:bg-black/5 dark:hover:bg-white/5 rounded-lg dark:hover:text-white hover:text-black transition"
+												on:click={() => {
+													selectionModeEnabled.set(true);
+													// Force the latest assistant message to be the target for selection
+													latestAssistantMessageId.set(message.id);
+													// Dispatch event to change input panel state
+													window.dispatchEvent(new CustomEvent('set-input-panel-state', {
+														detail: { state: 'selection' }
+													}));
+												}}
+											>
+												<svg
+													xmlns="http://www.w3.org/2000/svg"
+													fill="none"
+													viewBox="0 0 24 24"
+													stroke-width="2"
+													stroke="currentColor"
+													aria-hidden="true"
+													class="w-4 h-4"
+												>
+													<path
+														stroke-linecap="round"
+														stroke-linejoin="round"
+														d="m16.862 4.487 1.687-1.688a1.875 1.875 0 1 1 2.652 2.652L10.582 16.07a4.5 4.5 0 0 1-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 0 1 1.13-1.897l8.932-8.931Zm0 0L19.5 7.125M18 14v4.75A2.25 2.25 0 0 1 15.75 21H5.25A2.25 2.25 0 0 1 3 18.75V8.25A2.25 2.25 0 0 1 5.25 6H10"
+													/>
+												</svg>
+											</button>
+										</Tooltip>
 									{/if}
 
 									{#if $user?.role === 'admin' || ($user?.permissions?.chat?.delete_message ?? true)}
