@@ -582,17 +582,15 @@ async def image_generations(
             headers["x-goog-api-key"] = request.app.state.config.IMAGES_GEMINI_API_KEY
 
             data = {
-                "instances": {"prompt": form_data.prompt},
-                "parameters": {
-                    "sampleCount": form_data.n,
-                    "outputOptions": {"mimeType": "image/png"},
-                },
+                "prompt": {"text": form_data.prompt},
+                "samples": form_data.n
             }
+
 
             # Use asyncio.to_thread for the requests.post call
             r = await asyncio.to_thread(
                 requests.post,
-                url=f"{request.app.state.config.IMAGES_GEMINI_API_BASE_URL}/models/{model}:predict",
+                url=f"{request.app.state.config.IMAGES_GEMINI_API_BASE_URL}/models/{model}:generateImage?key={request.app.state.config.IMAGES_GEMINI_API_KEY}",
                 json=data,
                 headers=headers,
             )
@@ -601,9 +599,9 @@ async def image_generations(
             res = r.json()
 
             images = []
-            for image in res["predictions"]:
+            for image in res.get("images", []):
                 image_data, content_type = load_b64_image_data(
-                    image["bytesBase64Encoded"]
+                    image["imageBytes"]
                 )
                 url = upload_image(request, image_data, content_type, data, user)
                 images.append({"url": url})
