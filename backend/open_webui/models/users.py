@@ -147,8 +147,7 @@ class UserUpdateForm(BaseModel):
     name: str
     email: str
     profile_image_url: str
-    password: Optional[str] = None
-
+    password: Optional[str] = Field(None, min_length=8, max_length=255)
 
 class UsersTable:
     def insert_new_user(

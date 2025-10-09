@@ -1,34 +1,23 @@
+version: "3.9"
+
 services:
-  ollama:
-    volumes:
-      - ollama:/root/.ollama
-    container_name: ollama
-    pull_policy: always
-    tty: true
-    restart: unless-stopped
-    image: ollama/ollama:${OLLAMA_DOCKER_TAG-latest}
-
   open-webui:
-    build:
-      context: .
-      args:
-        OLLAMA_BASE_URL: '/ollama'
-      dockerfile: Dockerfile
-    image: ghcr.io/open-webui/open-webui:${WEBUI_DOCKER_TAG-main}
+    image: open-webui:latest       # replace with your actual image name if different
+    build: .
     container_name: open-webui
-    volumes:
-      - open-webui:/app/backend/data
-    depends_on:
-      - ollama
+    working_dir: /app/backend/open_webui
+    env_file:
+      - ./backend/open_webui/.env
     ports:
-      - ${OPEN_WEBUI_PORT-3000}:8080
-    environment:
-      - 'OLLAMA_BASE_URL=http://ollama:11434'
-      - 'WEBUI_SECRET_KEY='
-    extra_hosts:
-      - host.docker.internal:host-gateway
+      - "7860:7860"                # frontend port mapping (if using AUTOMATIC1111)
+      - "11434:11434"              # backend Ollama port mapping
+    volumes:
+      - ./backend:/app/backend
+    command: >
+      python -m alembic -c alembic.ini upgrade head
     restart: unless-stopped
 
-volumes:
-  ollama: {}
-  open-webui: {}
+# Optional: you can add networks if needed
+networks:
+  default:
+    driver: bridge

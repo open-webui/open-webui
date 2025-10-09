@@ -1,3 +1,4 @@
+from pydantic import BaseModel, Field
 import logging
 import uuid
 from typing import Optional
@@ -22,7 +23,7 @@ class Auth(Base):
 
     id = Column(String, primary_key=True)
     email = Column(String)
-    password = Column(Text)
+    password = Column(String(255))
     active = Column(Boolean)
 
 
@@ -74,8 +75,8 @@ class ProfileImageUrlForm(BaseModel):
 
 
 class UpdatePasswordForm(BaseModel):
-    password: str
-    new_password: str
+    password: str= Field(..., min_length=8)
+    new_password: str = Field(..., min_length=8, max_length=255) 
 
 
 class SignupForm(BaseModel):
