@@ -1,4 +1,3 @@
-import re
 import json
 from sqlalchemy import types, Text, JSON
 
