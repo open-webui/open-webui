@@ -1,0 +1,203 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Clear Selection Data</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 600px;
+            margin: 50px auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .container {
+            background: white;
+            padding: 30px;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        h1 {
+            color: #333;
+            text-align: center;
+        }
+        button {
+            background-color: #007bff;
+            color: white;
+            border: none;
+            padding: 15px 30px;
+            font-size: 16px;
+            border-radius: 5px;
+            cursor: pointer;
+            width: 100%;
+            margin-bottom: 20px;
+        }
+        button:hover {
+            background-color: #0056b3;
+        }
+        #output {
+            background-color: #f8f9fa;
+            padding: 20px;
+            border-radius: 5px;
+            border-left: 4px solid #007bff;
+            min-height: 100px;
+        }
+        .success {
+            color: #28a745;
+        }
+        .error {
+            color: #dc3545;
+        }
+        .warning {
+            color: #ffc107;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Clear Selection Data</h1>
+        <button onclick="clearSelections()">Clear All Selection Data</button>
+        <div id="output">
+            <p>Click the button above to clear all selection data from localStorage and backend.</p>
+        </div>
+    </div>
+
+    <script>
+        function clearSelections() {
+            const output = document.getElementById('output');
+            
+            try {
+                // Show initial state
+                console.log('Before clearing:');
+                console.log('saved-selections:', localStorage.getItem('saved-selections'));
+                console.log('selections-synced:', localStorage.getItem('selections-synced'));
+                
+                output.innerHTML = `
+                    <h3>Starting Clear Process...</h3>
+                    <p>📋 Initial state logged to console</p>
+                    <p><strong>Step 1: Clearing backend database first...</strong></p>
+                `;
+                
+                // Clear backend first to prevent restoration
+                clearBackendSelections();
+                
+            } catch (error) {
+                output.innerHTML = `<p class="error">Error: ${error.message}</p>`;
+            }
+        }
+        
+        function clearLocalStorage() {
+            const output = document.getElementById('output');
+            
+            try {
+                // Clear localStorage after backend is cleared
+                localStorage.removeItem('saved-selections');
+                localStorage.removeItem('selections-synced');
+                
+                console.log('After clearing localStorage:');
+                console.log('saved-selections:', localStorage.getItem('saved-selections'));
+                console.log('selections-synced:', localStorage.getItem('selections-synced'));
+                
+                output.innerHTML += `
+                    <h3 class="success">localStorage Cleared!</h3>
+                    <p>✅ Removed 'saved-selections'</p>
+                    <p>✅ Removed 'selections-synced'</p>
+                    <p><strong>All selection data has been cleared successfully!</strong></p>
+                    <p><em>Note: If you have the app open in another tab, refresh that tab to see the changes.</em></p>
+                `;
+                
+            } catch (error) {
+                output.innerHTML += `<p class="error">localStorage Error: ${error.message}</p>`;
+            }
+        }
+        
+        async function clearBackendSelections() {
+            const output = document.getElementById('output');
+            
+            try {
+                // Get current user's selections
+                const response = await fetch('/api/v1/selections/user?limit=1000', {
+                    method: 'GET',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    }
+                });
+                
+                if (response.ok) {
+                    const selections = await response.json();
+                    console.log(`Found ${selections.length} selections to delete`);
+                    
+                    if (selections.length === 0) {
+                        output.innerHTML += `
+                            <h3 class="success">Backend Already Clean!</h3>
+                            <p>✅ No selections found in backend database</p>
+                            <p><strong>Step 2: Now clearing localStorage...</strong></p>
+                        `;
+                        // Clear localStorage even if backend is already clean
+                        clearLocalStorage();
+                        return;
+                    }
+                    
+                    // Delete each selection
+                    let deletedCount = 0;
+                    let errorCount = 0;
+                    
+                    for (const selection of selections) {
+                        try {
+                            const deleteResponse = await fetch(`/api/v1/selections/${selection.id}`, {
+                                method: 'DELETE',
+                                headers: {
+                                    'Content-Type': 'application/json',
+                                }
+                            });
+                            
+                            if (deleteResponse.ok) {
+                                deletedCount++;
+                            } else {
+                                errorCount++;
+                                console.error(`Failed to delete selection ${selection.id}:`, deleteResponse.status);
+                            }
+                        } catch (error) {
+                            errorCount++;
+                            console.error(`Failed to delete selection ${selection.id}:`, error);
+                        }
+                    }
+                    
+                    if (errorCount === 0) {
+                        output.innerHTML += `
+                            <h3 class="success">Backend Cleared Successfully!</h3>
+                            <p>✅ Deleted ${deletedCount} selections from backend</p>
+                            <p>Total selections found: ${selections.length}</p>
+                            <p><strong>Step 2: Now clearing localStorage...</strong></p>
+                        `;
+                    } else {
+                        output.innerHTML += `
+                            <h3 class="warning">Backend Partially Cleared</h3>
+                            <p>✅ Deleted ${deletedCount} selections from backend</p>
+                            <p class="error">❌ Failed to delete ${errorCount} selections</p>
+                            <p>Total selections found: ${selections.length}</p>
+                            <p><strong>Step 2: Now clearing localStorage...</strong></p>
+                        `;
+                    }
+                    
+                    // Clear localStorage after backend is cleared
+                    clearLocalStorage();
+                    
+                } else {
+                    output.innerHTML += `
+                        <h3 class="warning">Backend Clear Failed</h3>
+                        <p class="error">Could not fetch selections from backend. Status: ${response.status}</p>
+                        <p>You may need to clear the database manually using SQL.</p>
+                    `;
+                }
+                
+            } catch (error) {
+                output.innerHTML += `
+                    <h3 class="error">Backend Clear Error</h3>
+                    <p class="error">Error: ${error.message}</p>
+                    <p>Make sure you're logged in and the server is running.</p>
+                `;
+            }
+        }
+    </script>
+</body>
+</html>

@@ -1,5 +1,5 @@
 import { selectionsAPI, type Selection, type SelectionForm } from '$lib/apis/selections';
-import { user } from '$lib/stores';
+import { user, savedSelections } from '$lib/stores';
 import { get } from 'svelte/store';
 
 /**
@@ -35,8 +35,16 @@ class SelectionSyncService {
    * TEXT SELECTION: Save a selection to both localStorage and backend
    */
   async saveSelection(selection: SelectionForm): Promise<void> {
-    // Always save to localStorage first (for offline support)
-    this.saveToLocalStorage(selection);
+    // Convert to local format for store
+    const localSelection = {
+      chatId: selection.chat_id,
+      messageId: selection.message_id,
+      role: selection.role,
+      text: selection.selected_text
+    };
+
+    // Update the store first (this will trigger localStorage save via subscription)
+    savedSelections.update(current => [...current, localSelection]);
 
     // Try to save to backend if online and user is authenticated
     if (this.isOnline && this.isUserAuthenticated()) {
@@ -52,8 +60,15 @@ class SelectionSyncService {
    * TEXT SELECTION: Save multiple selections (for bulk sync)
    */
   async saveBulkSelections(selections: SelectionForm[]): Promise<void> {
-    // Save to localStorage
-    selections.forEach(selection => this.saveToLocalStorage(selection));
+    // Convert to local format and update store (this will trigger localStorage save via subscription)
+    const localSelections = selections.map(selection => ({
+      chatId: selection.chat_id,
+      messageId: selection.message_id,
+      role: selection.role,
+      text: selection.selected_text
+    }));
+    
+    savedSelections.update(current => [...current, ...localSelections]);
 
     // Try to save to backend
     if (this.isOnline && this.isUserAuthenticated()) {
@@ -68,7 +83,7 @@ class SelectionSyncService {
   /**
    * TEXT SELECTION: Get selections for a specific chat (backend first, localStorage fallback)
    */
-  async getChatSelections(chatId: string): Promise<SelectionForm[]> {
+  async getChatSelections(chatId: string): Promise<{chatId: string; messageId: string; role: 'user' | 'assistant'; text: string}[]> {
     // Try backend first if online and authenticated
     if (this.isOnline && this.isUserAuthenticated()) {
       try {
@@ -230,6 +245,16 @@ class SelectionSyncService {
       // Failed to remove from localStorage - continue
     }
 
+    // Also remove from the savedSelections store to keep it in sync
+    savedSelections.update(current => {
+      return current.filter(selection => 
+        !(selection.chatId === selectionDetails.chat_id &&
+          selection.messageId === selectionDetails.message_id &&
+          selection.role === selectionDetails.role &&
+          selection.text === selectionDetails.selected_text)
+      );
+    });
+
     // Remove from backend if online and authenticated
     if (this.isOnline && this.isUserAuthenticated()) {
       try {
@@ -280,7 +305,7 @@ class SelectionSyncService {
     }
   }
 
-  private getFromLocalStorage(chatId: string): SelectionForm[] {
+  private getFromLocalStorage(chatId: string): {chatId: string; messageId: string; role: 'user' | 'assistant'; text: string}[] {
     try {
       const existing = JSON.parse(localStorage.getItem(this.STORAGE_KEY) || '{}');
       return existing[chatId] || [];

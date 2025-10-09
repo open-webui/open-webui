@@ -230,16 +230,7 @@ import { selectionSyncService } from '$lib/services/selectionSync';
             return;
         }
 
-        // Save to localStorage store
-        savedSelections.update((arr) => {
-            const newArr = [
-                ...arr,
-                { chatId: $chatIdStore, messageId: message.id, role: 'user', text }
-            ];
-            return newArr;
-        });
-
-        // Also save to backend database via sync service
+        // Save to both localStorage and backend via sync service
         const currentChatId = $chatIdStore;
         if (!currentChatId) return;
         
@@ -425,16 +416,6 @@ const showEditSelectionsPopup = (markElement, text) => {
                     message_id: message.id,
                     role: 'user',
                     selected_text: selectedTextToDelete
-                });
-                
-                // Update the savedSelections store to reflect the change
-                savedSelections.update((arr) => {
-                    return arr.filter((selection) => 
-                        !(selection.chatId === currentChatId && 
-                          selection.messageId === message.id && 
-                          selection.role === 'user' && 
-                          selection.text === selectedTextToDelete)
-                    );
                 });
             } catch (error) {
                 console.error('Failed to delete selection from backend:', error);

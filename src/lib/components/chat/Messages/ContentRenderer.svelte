@@ -204,16 +204,7 @@ const saveCurrentSelection = async () => {
         return;
     }
 
-    // Save to localStorage store
-    savedSelections.update((arr) => {
-        const newArr = [
-            ...arr,
-            { chatId: chatId || $chatIdStore, messageId, role: 'assistant', text }
-        ];
-        return newArr;
-    });
-
-    // Also save to backend database via sync service
+    // Save to both localStorage and backend via sync service
     const currentChatId = chatId || $chatIdStore;
     if (!currentChatId) return;
     
@@ -342,16 +333,6 @@ const deleteSelection = async () => {
                 message_id: messageId,
                 role: 'assistant',
                 selected_text: selectedTextToDelete
-            });
-            
-            // Update the savedSelections store to reflect the change
-            savedSelections.update((arr) => {
-                return arr.filter((selection) => 
-                    !(selection.chatId === currentChatId && 
-                      selection.messageId === messageId && 
-                      selection.role === 'assistant' && 
-                      selection.text === selectedTextToDelete)
-                );
             });
         } catch (error) {
             console.error('Failed to delete selection from backend:', error);

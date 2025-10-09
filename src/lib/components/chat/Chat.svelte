@@ -137,9 +137,11 @@ async function restoreSelectionsForChat(chatId: string) {
         const chatSelections = await selectionSyncService.getChatSelections(chatId);
         
         // Update the savedSelections store with the restored selections
-        const currentSelections = get(savedSelections);
-        const updatedSelections = { ...currentSelections, [chatId]: chatSelections };
-        savedSelections.set(updatedSelections);
+        // Filter out any existing selections for this chat and add the new ones
+        savedSelections.update(current => {
+            const filtered = current.filter(s => s.chatId !== chatId);
+            return [...filtered, ...chatSelections];
+        });
     } catch (error) {
         console.error('Failed to restore selections for chat:', chatId, error);
     }
@@ -196,8 +198,11 @@ function handleChatChange(chat: string) {
         const dismissed = localStorage.getItem(`selection-dismissed-${chat}`);
         userDismissedSelectionMode = dismissed === 'true';
         
-        // Always restore selections for this chat (on both new loads and navigation)
-        restoreSelectionsForChat(chat);
+        // Only restore selections for truly new chats, not on navigation
+        // (The store subscription in index.ts already handles restoration on chatId changes)
+        if (isFirstTimeLoadingThisChat) {
+            restoreSelectionsForChat(chat);
+        }
         
         // Only reset isInitialChatLoad and set timeout for truly new chats
         if (isNewChat && isFirstTimeLoadingThisChat) {
@@ -711,10 +716,18 @@ $: if (selectedModels && chatIdProp !== '') {
 		window.addEventListener('message', onMessageHandler);
 		$socket?.on('chat-events', chatEventHandler);
 
-		// Restore selections from backend to localStorage on app load
+		// Restore selections from backend to localStorage on app load only if needed
+		// Check if localStorage is empty or if we need to sync from backend
 		try {
-			await selectionSyncService.restoreFromBackend();
-			console.log('Selections restored from backend on app load');
+			const hasLocalSelections = localStorage.getItem('saved-selections') && 
+				Object.keys(JSON.parse(localStorage.getItem('saved-selections') || '{}')).length > 0;
+			
+			if (!hasLocalSelections) {
+				await selectionSyncService.restoreFromBackend();
+				console.log('Selections restored from backend on app load');
+			} else {
+				console.log('Using existing localStorage selections, skipping backend restore');
+			}
 		} catch (error) {
 			console.error('Failed to restore selections from backend:', error);
 		}
