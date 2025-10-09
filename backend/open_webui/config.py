@@ -28,14 +28,6 @@ from open_webui.internal.db import get_db
 from open_webui.models.base import Base
 
 
-class EndpointFilter(logging.Filter):
-    def filter(self, record: logging.LogRecord) -> bool:
-        return record.getMessage().find("/health") == -1
-
-
-# Filter out /endpoint
-logging.getLogger("uvicorn.access").addFilter(EndpointFilter())
-
 ####################################
 # Config helpers
 ####################################

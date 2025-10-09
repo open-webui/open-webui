@@ -282,6 +282,7 @@ from open_webui.env import (
     RESET_CONFIG_ON_START,
 )
 
+from open_webui.logging import LoggingMiddleware, reconfigure_access_log
 
 from open_webui.utils.models import (
     get_all_models,
@@ -313,6 +314,8 @@ if SAFE_MODE:
 logging.basicConfig(stream=sys.stdout, level=GLOBAL_LOG_LEVEL)
 log = logging.getLogger(__name__)
 log.setLevel(SRC_LOG_LEVELS["MAIN"])
+
+reconfigure_access_log()
 
 
 class SPAStaticFiles(StaticFiles):
@@ -976,6 +979,10 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+# Logging middleware is last to ensure it is first
+# on the request and last on the response.
+# https://fastapi.tiangolo.com/tutorial/middleware/#multiple-middleware-execution-order
+app.add_middleware(LoggingMiddleware)
 
 app.mount("/ws", socket_app)
 
