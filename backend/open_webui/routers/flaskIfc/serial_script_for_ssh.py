@@ -18,6 +18,13 @@ LINUX_LOGGED_IN_PROMPT = "@agilex7_dk_si_agf014ea"
 LINUX_LOGIN_PROMPT = "agilex7_dk_si_agf014ea"
 QEMU_LOGIN_PROMPT = "qemuarm64"
 QEMU_LOGGED_IN_PROMPT = "@qemuarm64"
+SYSTEMD_LOGGED_IN_PROMPT = "@agilex7dksiagf014ea"
+SYSTEMD_LOGIN_PROMPT = "agilex7dksiagf014ea"
+LINUXB_LOGGED_IN_PROMPT = "@agilex7_dk_si_agf014eb"
+LINUXB_LOGIN_PROMPT = "agilex7_dk_si_agf014eb"
+SYSTEMDB_LOGGED_IN_PROMPT = "@agilex7dksiagf014eb"
+SYSTEMDB_LOGIN_PROMPT = "agilex7dksiagf014eb"
+
 
 # SSH connection details
 hostname = "192.168.7.2"
@@ -59,6 +66,9 @@ def check_for_specific_prompt(shell, timeout=10, prompt=LINUX_LOGGED_IN_PROMPT):
                 if (
                     prompt in read_next_line.strip()
                     or QEMU_LOGGED_IN_PROMPT in read_next_line.strip()
+                    or SYSTEMD_LOGGED_IN_PROMPT in read_next_line.strip()
+                    or LINUXB_LOGGED_IN_PROMPT in read_next_line.strip()
+                    or SYSTEMDB_LOGGED_IN_PROMPT in read_next_line.strip()
                 ):
                     return True
             else:
@@ -100,6 +110,9 @@ def check_for_prompt(shell, timeout=10):
                     or "Unknown command " in read_next_line
                     or LINUX_LOGGED_IN_PROMPT in read_next_line
                     or QEMU_LOGGED_IN_PROMPT in read_next_line
+                    or SYSTEMD_LOGGED_IN_PROMPT in read_next_line
+                    or LINUXB_LOGGED_IN_PROMPT in read_next_line.strip
+                    or SYSTEMDB_LOGGED_IN_PROMPT in read_next_line.strip
                     or "imx8mpevk" in read_next_line
                 ):
                     return True
@@ -109,10 +122,13 @@ def check_for_prompt(shell, timeout=10):
                     time.sleep(3)
                     return True
 
-                if (
-                    "(Yocto Project Reference Distro) 5.2." in read_next_line
-                    and LINUX_LOGIN_PROMPT in read_next_line
-                ) or (LINUX_LOGIN_PROMPT in read_next_line):
+                if "(Yocto Project Reference Distro) 5.2." in read_next_line and (
+                    LINUX_LOGIN_PROMPT in read_next_line
+                    or QEMU_LOGGED_IN_PROMPT in read_next_line
+                    or SYSTEMD_LOGIN_PROMPT in read_next_line
+                    or LINUXB_LOGIN_PROMPT in read_next_line
+                    or SYSTEMDB_LOGIN_PROMPT in read_next_line
+                ):
                     time.sleep(3)
                     shell.send("root\n")
                     return True
@@ -264,6 +280,9 @@ def send_shell_command(shell, command, timeout=DEFAULT_COMMAND_TIMEOUT):
                             "SOCFPGA_AGILEX7 ",
                             "Unknown command ",
                             LINUX_LOGGED_IN_PROMPT,
+                            LINUXB_LOGGED_IN_PROMPT,
+                            SYSTEMD_LOGGED_IN_PROMPT,
+                            SYSTEMDB_LOGGED_IN_PROMPT,
                             QEMU_LOGGED_IN_PROMPT,
                             "imx8mpevk",
                         ]
@@ -329,8 +348,12 @@ def pre_and_post_check(shell):
                 return "Program interrupted by user"
 
         decoded_line = line.decode("utf-8", errors="replace")
-        if ("agilex7_dk_si_agf014ea login:" in decoded_line) or (
-            "qemuarm64 login:" in decoded_line
+        if (
+            "agilex7_dk_si_agf014ea login:" in decoded_line
+            or "qemuarm64 login:" in decoded_line
+            or "agilex7dksiagf014ea login:" in decoded_line
+            or "agilex7_dk_si_agf014eb login:" in decoded_line
+            or "agilex7dksiagf014eb login:" in decoded_line
         ):
             time.sleep(0.1)
             flag[0] = "root issue"
@@ -341,8 +364,12 @@ def pre_and_post_check(shell):
             flag[0] = "boot issue"
             print("boot issue")
             break
-        elif ("@agilex7_dk_si_agf014ea:" in decoded_line) or (
-            "@qemuarm64:" in decoded_line
+        elif (
+            "@agilex7_dk_si_agf014ea:" in decoded_line
+            or "qemuarm64:" in decoded_line
+            or "agilex7dksiagf014ea:" in decoded_line
+            or "agilex7_dk_si_agf014eb:" in decoded_line
+            or "agilex7dksiagf014eb:" in decoded_line
         ):
             time.sleep(0.1)
             break
