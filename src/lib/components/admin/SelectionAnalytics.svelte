@@ -9,6 +9,7 @@
   let loading = false;
   let error = '';
   let selectedRole: string = '';
+  let selectedChild: string = '';
   let dateRange = { start: '', end: '' };
 
   // Check if user is admin
@@ -38,12 +39,23 @@
       const startDate = dateRange.start ? new Date(dateRange.start).getTime() * 1000000 : undefined;
       const endDate = dateRange.end ? new Date(dateRange.end).getTime() * 1000000 : undefined;
       
-      analytics = await selectionsAPI.getAnalyticsData(
+      let allAnalytics = await selectionsAPI.getAnalyticsData(
         startDate,
         endDate,
         selectedRole || undefined,
         1000
       );
+      
+      // Apply child marker filter client-side
+      if (selectedChild) {
+        if (selectedChild === 'no-child') {
+          analytics = allAnalytics.filter(selection => !selection.child_marker);
+        } else {
+          analytics = allAnalytics.filter(selection => selection.child_marker === selectedChild);
+        }
+      } else {
+        analytics = allAnalytics;
+      }
     } catch (err) {
       error = `Failed to load analytics: ${err}`;
     } finally {
@@ -54,7 +66,7 @@
   function exportToCSV() {
     if (analytics.length === 0) return;
 
-    const headers = ['ID', 'User ID', 'Chat ID', 'Message ID', 'Role', 'Selected Text', 'Context', 'Created At'];
+    const headers = ['ID', 'User ID', 'Chat ID', 'Message ID', 'Role', 'Child Marker', 'Selected Text', 'Context', 'Created At'];
     const csvContent = [
       headers.join(','),
       ...analytics.map(selection => [
@@ -63,6 +75,7 @@
         selection.chat_id,
         selection.message_id,
         selection.role,
+        selection.child_marker || 'No Child',
         `"${selection.selected_text.replace(/"/g, '""')}"`, // Escape quotes
         `"${(selection.context || '').replace(/"/g, '""')}"`,
         new Date(selection.created_at / 1000000).toISOString()
@@ -85,6 +98,9 @@
   function truncateText(text: string, maxLength: number = 100): string {
     return text.length > maxLength ? text.substring(0, maxLength) + '...' : text;
   }
+
+  // Get unique child markers from analytics data
+  $: uniqueChildMarkers = [...new Set(analytics.map(s => s.child_marker).filter(Boolean))].sort();
 </script>
 
 {#if !isAdmin}
@@ -136,7 +152,7 @@
     <!-- Filters -->
     <div class="bg-white p-4 rounded-lg shadow">
       <h3 class="text-lg font-semibold mb-4">Filters</h3>
-      <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+      <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
         <div>
           <label for="role" class="block text-sm font-medium text-gray-700">Role</label>
           <select
@@ -148,6 +164,21 @@
             <option value="">All Roles</option>
             <option value="user">User</option>
             <option value="assistant">Assistant</option>
+          </select>
+        </div>
+        <div>
+          <label for="child" class="block text-sm font-medium text-gray-700">Child Profile</label>
+          <select
+            id="child"
+            bind:value={selectedChild}
+            on:change={loadAnalytics}
+            class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
+          >
+            <option value="">All Children</option>
+            <option value="no-child">No Child Profile</option>
+            {#each uniqueChildMarkers as childMarker}
+              <option value={childMarker}>{childMarker}</option>
+            {/each}
           </select>
         </div>
         <div>
@@ -203,6 +234,9 @@
                   Role
                 </th>
                 <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Child Profile
+                </th>
+                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                   Selected Text
                 </th>
                 <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
@@ -226,6 +260,15 @@
                     <span class="inline-flex px-2 py-1 text-xs font-semibold rounded-full {selection.role === 'user' ? 'bg-blue-100 text-blue-800' : 'bg-green-100 text-green-800'}">
                       {selection.role}
                     </span>
+                  </td>
+                  <td class="px-6 py-4 whitespace-nowrap">
+                    {#if selection.child_marker}
+                      <span class="inline-flex px-2 py-1 text-xs font-semibold rounded-full bg-purple-100 text-purple-800">
+                        {selection.child_marker}
+                      </span>
+                    {:else}
+                      <span class="text-gray-400 text-sm">No Child</span>
+                    {/if}
                   </td>
                   <td class="px-6 py-4 text-sm text-gray-900 max-w-xs">
                     <div class="truncate" title={selection.selected_text}>

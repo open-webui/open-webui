@@ -31,30 +31,40 @@ def _strip_fences(s: str) -> str:
 async def multi_moderations_openai(
     child_prompt: str,
     moderation_types: List[str],
+    original_response: str = None,
+    highlighted_texts: List[str] = None,
     api_key: str = None,
     model: str = "gpt-4o-mini",
     max_chars: int = 600,
     custom_instructions: List[str] = None,
 ) -> Dict:
     """
-    Apply multiple moderation strategies at once to a child's prompt.
-    Based on Viki's updated multi-moderation logic, extended to support custom instructions.
+    Apply moderation strategies to either:
+    1. Generate a response (original_response=None) - GENERATION MODE
+    2. Refactor an existing response (original_response provided) - REFACTORING MODE
+    
+    Based on notebook (3) iterative moderation design.
     
     Args:
         child_prompt: The child's original question/prompt
         moderation_types: List of standard moderation strategy names
+        original_response: The AI's original response to refactor (optional)
+        highlighted_texts: Phrases parent flagged as concerning (optional)
         api_key: OpenAI API key
         model: OpenAI model to use
         max_chars: Maximum combined length of response + rule
         custom_instructions: List of custom instruction texts (optional)
     
     Returns:
-        Dict with moderation_types, refactored_response, system_prompt_rule, model, child_prompt
+        Dict with moderation_types, refactored_response, system_prompt_rule, model, child_prompt,
+        original_response, highlighted_texts
     """
     
-    # Handle None case
+    # Handle None cases
     if custom_instructions is None:
         custom_instructions = []
+    if highlighted_texts is None:
+        highlighted_texts = []
     
     # Get API key from environment if not provided
     if not api_key:
@@ -92,20 +102,40 @@ async def multi_moderations_openai(
     else:
         joined = "Provide a safe, age-appropriate answer."
     
-    # Build system prompt following Viki's pattern
-    system_content = (
-        "You are a child-friendly AI assisting with parent-guided moderation.\n"
-        "Follow ALL of the following instructions together:\n"
-        f"{joined}\n\n"
-        "Output STRICTLY as JSON (no extra text):\n"
-        '{ "refactored_response": string, "system_prompt_rule": string }\n'
-        f"Constraints: warm, age-appropriate, concise; combined length ≤ {max_chars} chars."
-    )
+    # Different system prompts for different modes
+    if original_response:
+        # REFACTORING MODE (from notebook function 1)
+        system_content = (
+            "You are a child-friendly AI assisting with parent-guided moderation.\n"
+            "You will be given a child's original prompt and the assistant's original response.\n"
+            "Your job is to rewrite the response to follow ALL of the following parent-selected rules:\n"
+            f"{joined}\n\n"
+            "Output STRICTLY as JSON (no extra text):\n"
+            '{ "refactored_response": string, "system_prompt_rule": string }\n'
+            "Constraints: warm, child-friendly, concise."
+        )
+        
+        user_content = json.dumps({
+            "child_prompt": child_prompt,
+            "original_response": original_response
+        }, ensure_ascii=False)
+    else:
+        # GENERATION MODE (original behavior)
+        system_content = (
+            "You are a child-friendly AI assisting with parent-guided moderation.\n"
+            "Follow ALL of the following instructions together:\n"
+            f"{joined}\n\n"
+            "Output STRICTLY as JSON (no extra text):\n"
+            '{ "refactored_response": string, "system_prompt_rule": string }\n'
+            f"Constraints: warm, age-appropriate, concise; combined length ≤ {max_chars} chars."
+        )
+        
+        user_content = json.dumps({"child_prompt": child_prompt}, ensure_ascii=False)
     
     # Build messages for OpenAI API
     messages = [
         {"role": "system", "content": system_content},
-        {"role": "user", "content": json.dumps({"child_prompt": child_prompt}, ensure_ascii=False)},
+        {"role": "user", "content": user_content},
     ]
     
     # Call OpenAI API (following Viki's pattern)
@@ -133,10 +163,68 @@ async def multi_moderations_openai(
         all_strategy_names.append(f"Custom #{i}: {custom[:50]}..." if len(custom) > 50 else f"Custom #{i}: {custom}")
     
     return {
+        "model": model,
+        "child_prompt": child_prompt,
+        "original_response": original_response,  # Include in response
+        "highlighted_texts": highlighted_texts,  # Include in response
         "moderation_types": all_strategy_names,  # Include both standard and custom
         "refactored_response": refactored,
         "system_prompt_rule": rule,
-        "model": model,
-        "child_prompt": child_prompt,
     }
+
+
+async def generate_second_pass_prompt(
+    initial_prompt: str,
+    initial_response: str,
+    api_key: str = None,
+    model: str = "gpt-4o-mini",
+) -> str:
+    """
+    Generate a realistic follow-up question a child might ask based on
+    their initial prompt and the refactored response they received.
+    
+    Based on notebook (3) function 2.
+    
+    Args:
+        initial_prompt: The child's original question
+        initial_response: The refactored/moderated response they received
+        api_key: OpenAI API key
+        model: OpenAI model to use
+    
+    Returns:
+        A follow-up question string
+    """
+    
+    # Get API key from environment if not provided
+    if not api_key:
+        api_key = os.getenv("OPENAI_API_KEY")
+        if not api_key:
+            raise ValueError("OpenAI API key is required. Set OPENAI_API_KEY environment variable or pass api_key parameter.")
+    
+    system_content = (
+        "You are a child-friendly assistant.\n"
+        "Task: Create ONE realistic follow-up prompt a child might ask, "
+        "based on their initial prompt and your previous response.\n"
+        "Output as JSON only:\n"
+        '{"child_followup_prompt": string}'
+    )
+    
+    user_payload = {
+        "initial_child_prompt": initial_prompt,
+        "assistant_initial_response": initial_response
+    }
+    
+    client = OpenAI(api_key=api_key)
+    resp = client.responses.create(
+        model=model,
+        input=[
+            {"role": "system", "content": system_content},
+            {"role": "user", "content": json.dumps(user_payload, ensure_ascii=False)},
+        ],
+    )
+    
+    raw = getattr(resp, "output_text", "") or ""
+    data = json.loads(raw)
+    
+    return data.get("child_followup_prompt", "").strip()
 

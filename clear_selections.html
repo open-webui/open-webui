@@ -5,7 +5,7 @@
     <style>
         body {
             font-family: Arial, sans-serif;
-            max-width: 600px;
+            max-width: 800px;
             margin: 50px auto;
             padding: 20px;
             background-color: #f5f5f5;
@@ -20,19 +20,54 @@
             color: #333;
             text-align: center;
         }
-        button {
-            background-color: #007bff;
-            color: white;
-            border: none;
-            padding: 15px 30px;
-            font-size: 16px;
-            border-radius: 5px;
-            cursor: pointer;
-            width: 100%;
+        .button-group {
+            display: flex;
+            gap: 10px;
             margin-bottom: 20px;
         }
-        button:hover {
+        button {
+            color: white;
+            border: none;
+            padding: 15px 20px;
+            font-size: 14px;
+            border-radius: 5px;
+            cursor: pointer;
+            flex: 1;
+        }
+        .clear-all {
+            background-color: #dc3545;
+        }
+        .clear-all:hover {
+            background-color: #c82333;
+        }
+        .clear-current-child {
+            background-color: #fd7e14;
+        }
+        .clear-current-child:hover {
+            background-color: #e8690b;
+        }
+        .clear-local-only {
+            background-color: #6c757d;
+        }
+        .clear-local-only:hover {
+            background-color: #5a6268;
+        }
+        .clear-backend-only {
+            background-color: #007bff;
+        }
+        .clear-backend-only:hover {
             background-color: #0056b3;
+        }
+        .info-box {
+            background-color: #e7f3ff;
+            border: 1px solid #b3d9ff;
+            border-radius: 5px;
+            padding: 15px;
+            margin-bottom: 20px;
+        }
+        .info-box h3 {
+            margin-top: 0;
+            color: #0066cc;
         }
         #output {
             background-color: #f8f9fa;
@@ -50,19 +85,99 @@
         .warning {
             color: #ffc107;
         }
+        .child-info {
+            background-color: #fff3cd;
+            border: 1px solid #ffeaa7;
+            border-radius: 5px;
+            padding: 10px;
+            margin-bottom: 15px;
+        }
     </style>
 </head>
 <body>
     <div class="container">
         <h1>Clear Selection Data</h1>
-        <button onclick="clearSelections()">Clear All Selection Data</button>
+        
+        <div class="info-box">
+            <h3>ℹ️ Selection Clearing Options</h3>
+            <p><strong>Clear All:</strong> Removes all selections from backend and localStorage</p>
+            <p><strong>Clear Current Child:</strong> Removes only selections for the currently selected child profile</p>
+            <p><strong>Clear Local Only:</strong> Removes selections from localStorage only (will be restored from backend on next sync)</p>
+            <p><strong>Clear Backend Only:</strong> Removes selections from backend database only</p>
+        </div>
+
+        <div class="child-info" id="childInfo">
+            <strong>Current Child Profile:</strong> <span id="currentChild">Loading...</span>
+        </div>
+
+        <div class="button-group">
+            <button class="clear-all" onclick="clearSelections('all')">Clear All Selections</button>
+            <button class="clear-current-child" onclick="clearSelections('current-child')">Clear Current Child</button>
+        </div>
+        
+        <div class="button-group">
+            <button class="clear-local-only" onclick="clearSelections('local-only')">Clear Local Only</button>
+            <button class="clear-backend-only" onclick="clearSelections('backend-only')">Clear Backend Only</button>
+        </div>
+        
         <div id="output">
-            <p>Click the button above to clear all selection data from localStorage and backend.</p>
+            <p>Select an option above to clear selection data. The current child profile will be shown above.</p>
         </div>
     </div>
 
     <script>
-        function clearSelections() {
+        // Load current child info on page load
+        window.addEventListener('load', function() {
+            loadCurrentChildInfo();
+        });
+
+        function loadCurrentChildInfo() {
+            try {
+                const selectedIndex = localStorage.getItem('selectedChildIndex');
+                const profilesJson = localStorage.getItem('childProfiles');
+                
+                if (selectedIndex !== null && profilesJson) {
+                    const profiles = JSON.parse(profilesJson);
+                    const index = parseInt(selectedIndex);
+                    
+                    if (profiles && profiles[index]) {
+                        const currentChild = profiles[index];
+                        document.getElementById('currentChild').textContent = 
+                            currentChild.name || `Child ${index + 1}`;
+                    } else {
+                        document.getElementById('currentChild').textContent = 'No child selected';
+                    }
+                } else {
+                    document.getElementById('currentChild').textContent = 'No child profiles found';
+                }
+            } catch (error) {
+                document.getElementById('currentChild').textContent = 'Error loading child info';
+                console.error('Error loading child info:', error);
+            }
+        }
+
+        function getCurrentChildMarker() {
+            try {
+                const selectedIndex = localStorage.getItem('selectedChildIndex');
+                const profilesJson = localStorage.getItem('childProfiles');
+                
+                if (selectedIndex !== null && profilesJson) {
+                    const profiles = JSON.parse(profilesJson);
+                    const index = parseInt(selectedIndex);
+                    const currentChild = profiles[index];
+                    
+                    if (currentChild) {
+                        return currentChild.name || `child_${index}`;
+                    }
+                }
+                return null;
+            } catch (error) {
+                console.error('Error getting current child marker:', error);
+                return null;
+            }
+        }
+
+        function clearSelections(type = 'all') {
             const output = document.getElementById('output');
             
             try {
@@ -70,26 +185,41 @@
                 console.log('Before clearing:');
                 console.log('saved-selections:', localStorage.getItem('saved-selections'));
                 console.log('selections-synced:', localStorage.getItem('selections-synced'));
+                console.log('Clear type:', type);
                 
                 output.innerHTML = `
                     <h3>Starting Clear Process...</h3>
                     <p>📋 Initial state logged to console</p>
-                    <p><strong>Step 1: Clearing backend database first...</strong></p>
+                    <p><strong>Clear type:</strong> ${type}</p>
                 `;
                 
-                // Clear backend first to prevent restoration
-                clearBackendSelections();
+                switch (type) {
+                    case 'all':
+                        clearBackendSelections(type);
+                        break;
+                    case 'current-child':
+                        clearBackendSelections(type);
+                        break;
+                    case 'local-only':
+                        clearLocalStorageOnly();
+                        break;
+                    case 'backend-only':
+                        clearBackendSelections(type);
+                        break;
+                    default:
+                        output.innerHTML += `<p class="error">Invalid clear type: ${type}</p>`;
+                }
                 
             } catch (error) {
                 output.innerHTML = `<p class="error">Error: ${error.message}</p>`;
             }
         }
         
-        function clearLocalStorage() {
+        function clearLocalStorageOnly() {
             const output = document.getElementById('output');
             
             try {
-                // Clear localStorage after backend is cleared
+                // Clear localStorage only
                 localStorage.removeItem('saved-selections');
                 localStorage.removeItem('selections-synced');
                 
@@ -99,18 +229,81 @@
                 
                 output.innerHTML += `
                     <h3 class="success">localStorage Cleared!</h3>
-                    <p>✅ Removed 'saved-selections'</p>
-                    <p>✅ Removed 'selections-synced'</p>
-                    <p><strong>All selection data has been cleared successfully!</strong></p>
-                    <p><em>Note: If you have the app open in another tab, refresh that tab to see the changes.</em></p>
+                    <p>✅ Removed 'saved-selections' from localStorage</p>
+                    <p>✅ Removed 'selections-synced' from localStorage</p>
+                    <p><strong>localStorage selection data has been cleared!</strong></p>
+                    <p><em>Note: Selections will be restored from backend on next sync. If you have the app open in another tab, refresh that tab to see the changes.</em></p>
                 `;
                 
             } catch (error) {
                 output.innerHTML += `<p class="error">localStorage Error: ${error.message}</p>`;
             }
         }
+
+        function clearLocalStorage(type = 'all') {
+            const output = document.getElementById('output');
+            
+            try {
+                if (type === 'current-child') {
+                    // Clear only current child's selections from localStorage
+                    const currentChildMarker = getCurrentChildMarker();
+                    const savedSelections = localStorage.getItem('saved-selections');
+                    
+                    if (savedSelections) {
+                        const selectionsByChat = JSON.parse(savedSelections);
+                        let removedCount = 0;
+                        
+                        Object.keys(selectionsByChat).forEach(chatId => {
+                            const originalLength = selectionsByChat[chatId].length;
+                            selectionsByChat[chatId] = selectionsByChat[chatId].filter(
+                                selection => selection.childMarker !== currentChildMarker
+                            );
+                            removedCount += originalLength - selectionsByChat[chatId].length;
+                            
+                            // Remove empty chat entries
+                            if (selectionsByChat[chatId].length === 0) {
+                                delete selectionsByChat[chatId];
+                            }
+                        });
+                        
+                        localStorage.setItem('saved-selections', JSON.stringify(selectionsByChat));
+                        
+                        output.innerHTML += `
+                            <h3 class="success">localStorage Cleared!</h3>
+                            <p>✅ Removed ${removedCount} selections for current child from localStorage</p>
+                            <p><strong>Current child's selection data has been cleared!</strong></p>
+                            <p><em>Note: If you have the app open in another tab, refresh that tab to see the changes.</em></p>
+                        `;
+                    } else {
+                        output.innerHTML += `
+                            <h3 class="success">localStorage Already Clean!</h3>
+                            <p>✅ No selections found in localStorage</p>
+                        `;
+                    }
+                } else {
+                    // Clear all selections from localStorage
+                    localStorage.removeItem('saved-selections');
+                    localStorage.removeItem('selections-synced');
+                    
+                    output.innerHTML += `
+                        <h3 class="success">localStorage Cleared!</h3>
+                        <p>✅ Removed 'saved-selections'</p>
+                        <p>✅ Removed 'selections-synced'</p>
+                        <p><strong>All localStorage selection data has been cleared!</strong></p>
+                        <p><em>Note: If you have the app open in another tab, refresh that tab to see the changes.</em></p>
+                    `;
+                }
+                
+                console.log('After clearing localStorage:');
+                console.log('saved-selections:', localStorage.getItem('saved-selections'));
+                console.log('selections-synced:', localStorage.getItem('selections-synced'));
+                
+            } catch (error) {
+                output.innerHTML += `<p class="error">localStorage Error: ${error.message}</p>`;
+            }
+        }
         
-        async function clearBackendSelections() {
+        async function clearBackendSelections(type = 'all') {
             const output = document.getElementById('output');
             
             try {
@@ -124,16 +317,53 @@
                 
                 if (response.ok) {
                     const selections = await response.json();
-                    console.log(`Found ${selections.length} selections to delete`);
+                    console.log(`Found ${selections.length} selections to process`);
                     
                     if (selections.length === 0) {
                         output.innerHTML += `
                             <h3 class="success">Backend Already Clean!</h3>
                             <p>✅ No selections found in backend database</p>
-                            <p><strong>Step 2: Now clearing localStorage...</strong></p>
                         `;
-                        // Clear localStorage even if backend is already clean
-                        clearLocalStorage();
+                        
+                        if (type !== 'backend-only') {
+                            output.innerHTML += `<p><strong>Step 2: Now clearing localStorage...</strong></p>`;
+                            clearLocalStorage(type);
+                        }
+                        return;
+                    }
+                    
+                    let selectionsToDelete = selections;
+                    
+                    // Filter selections by current child if needed
+                    if (type === 'current-child') {
+                        const currentChildMarker = getCurrentChildMarker();
+                        if (currentChildMarker) {
+                            selectionsToDelete = selections.filter(
+                                selection => selection.child_marker === currentChildMarker
+                            );
+                            output.innerHTML += `
+                                <p>🔍 Filtering for current child: <strong>${currentChildMarker}</strong></p>
+                                <p>📊 Found ${selectionsToDelete.length} selections for current child out of ${selections.length} total</p>
+                            `;
+                        } else {
+                            output.innerHTML += `
+                                <h3 class="warning">No Child Selected</h3>
+                                <p>⚠️ Cannot filter by child - no child profile is currently selected</p>
+                            `;
+                            return;
+                        }
+                    }
+                    
+                    if (selectionsToDelete.length === 0) {
+                        output.innerHTML += `
+                            <h3 class="success">No Selections to Delete!</h3>
+                            <p>✅ No selections found for the specified criteria</p>
+                        `;
+                        
+                        if (type !== 'backend-only') {
+                            output.innerHTML += `<p><strong>Step 2: Now clearing localStorage...</strong></p>`;
+                            clearLocalStorage(type);
+                        }
                         return;
                     }
                     
@@ -141,7 +371,9 @@
                     let deletedCount = 0;
                     let errorCount = 0;
                     
-                    for (const selection of selections) {
+                    output.innerHTML += `<p><strong>🗑️ Deleting ${selectionsToDelete.length} selections...</strong></p>`;
+                    
+                    for (const selection of selectionsToDelete) {
                         try {
                             const deleteResponse = await fetch(`/api/v1/selections/${selection.id}`, {
                                 method: 'DELETE',
@@ -166,21 +398,27 @@
                         output.innerHTML += `
                             <h3 class="success">Backend Cleared Successfully!</h3>
                             <p>✅ Deleted ${deletedCount} selections from backend</p>
-                            <p>Total selections found: ${selections.length}</p>
-                            <p><strong>Step 2: Now clearing localStorage...</strong></p>
+                            <p>Total selections processed: ${selectionsToDelete.length}</p>
                         `;
                     } else {
                         output.innerHTML += `
                             <h3 class="warning">Backend Partially Cleared</h3>
                             <p>✅ Deleted ${deletedCount} selections from backend</p>
                             <p class="error">❌ Failed to delete ${errorCount} selections</p>
-                            <p>Total selections found: ${selections.length}</p>
-                            <p><strong>Step 2: Now clearing localStorage...</strong></p>
+                            <p>Total selections processed: ${selectionsToDelete.length}</p>
                         `;
                     }
                     
-                    // Clear localStorage after backend is cleared
-                    clearLocalStorage();
+                    // Clear localStorage after backend is cleared (if not backend-only)
+                    if (type !== 'backend-only') {
+                        output.innerHTML += `<p><strong>Step 2: Now clearing localStorage...</strong></p>`;
+                        clearLocalStorage(type);
+                    } else {
+                        output.innerHTML += `
+                            <p><strong>Backend-only clear completed!</strong></p>
+                            <p><em>localStorage was not cleared. If you have the app open in another tab, refresh that tab to see the changes.</em></p>
+                        `;
+                    }
                     
                 } else {
                     output.innerHTML += `

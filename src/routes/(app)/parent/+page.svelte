@@ -64,6 +64,7 @@
 	let sidebarCollapsed: boolean = false; // State for sidebar collapse
 	
 	// Child profile data
+	let childName: string = '';
 	let childAge: string = '';
 	let childGender: string = '';
 	let childCharacteristics: string = '';
@@ -73,6 +74,90 @@
 	let parentingStyle: string = '';
 	let profileSubmitted: boolean = false; // Track if profile has been submitted
 	let isEditingProfile: boolean = false; // Track if in edit mode
+
+	// Multi-child support
+	interface ChildProfileItem {
+		id: string;
+		name: string;
+		childAge: string;
+		childGender: string;
+		childCharacteristics: string;
+		parentingStyle: string;
+	}
+
+	let childProfiles: ChildProfileItem[] = [];
+	let selectedChildIndex: number = 0;
+let showPreview: boolean = false; // legacy preview flag (not used in new layout)
+let showProfileModal: boolean = false;
+let editInModal: boolean = false;
+
+	function getChildGridTemplate(): string {
+		const cols = Math.max(1, Math.min((childProfiles?.length || 1), 5));
+		return `repeat(${cols}, minmax(120px, 1fr))`;
+	}
+
+	function ensureAtLeastOneChild() {
+		// No-op: allow empty list of children per user request
+	}
+
+	function hydrateFormFromSelectedChild() {
+		ensureAtLeastOneChild();
+		const sel = childProfiles[selectedChildIndex];
+		childName = sel?.name || '';
+		childAge = sel?.childAge || '';
+		childGender = sel?.childGender || '';
+		childCharacteristics = sel?.childCharacteristics || '';
+		parentingStyle = sel?.parentingStyle || '';
+	}
+
+	function applyFormToSelectedChild() {
+		ensureAtLeastOneChild();
+		const sel = childProfiles[selectedChildIndex];
+		if (!sel) return;
+		sel.name = childName;
+		sel.childAge = childAge;
+		sel.childGender = childGender;
+		sel.childCharacteristics = childCharacteristics;
+		sel.parentingStyle = parentingStyle;
+	}
+
+	function deleteChild(index: number) {
+		childProfiles = childProfiles.filter((_, i) => i !== index);
+		
+		// Adjust selectedChildIndex if needed
+		if (childProfiles.length === 0) {
+			selectedChildIndex = 0;
+			childName = '';
+			childAge = '';
+			childGender = '';
+			childCharacteristics = '';
+			parentingStyle = '';
+		} else {
+			if (selectedChildIndex >= childProfiles.length) {
+				selectedChildIndex = childProfiles.length - 1;
+			}
+			hydrateFormFromSelectedChild();
+		}
+		
+		// Save updated profiles
+		localStorage.setItem('childProfiles', JSON.stringify(childProfiles));
+	}
+
+	function addNewChild() {
+		childProfiles = [
+			...childProfiles,
+			{
+				id: crypto.randomUUID(),
+				name: '',
+				childAge: '',
+				childGender: '',
+				childCharacteristics: '',
+				parentingStyle: ''
+			}
+		];
+		selectedChildIndex = childProfiles.length - 1;
+		hydrateFormFromSelectedChild();
+	}
 
 	// Graph state
 	let plotPoints: PlotPoint[] = [];
@@ -373,35 +458,60 @@
 	
 	// Child profile functions
 	function saveChildProfile() {
-		const childProfile = {
-			childAge,
-			childGender,
-			childCharacteristics,
+		// Apply current form to selected child and persist all children + parent info
+		applyFormToSelectedChild();
+		const parentInfo = {
 			parentGender,
 			parentAge,
-			parentPreference,
-			parentingStyle,
-			profileSubmitted: true
+			parentPreference
 		};
-		localStorage.setItem('childProfile', JSON.stringify(childProfile));
+		localStorage.setItem('childProfiles', JSON.stringify(childProfiles));
+		localStorage.setItem('childParentInfo', JSON.stringify(parentInfo));
 		profileSubmitted = true;
 		isEditingProfile = false;
 		toast.success('Child profile saved successfully!');
 	}
 	
 	function loadChildProfile() {
-		const saved = localStorage.getItem('childProfile');
-		if (saved) {
-			const profile = JSON.parse(saved);
-			childAge = profile.childAge || '';
-			childGender = profile.childGender || '';
-			childCharacteristics = profile.childCharacteristics || '';
-			parentGender = profile.parentGender || '';
-			parentAge = profile.parentAge || '';
-			parentPreference = profile.parentPreference || '';
-			parentingStyle = profile.parentingStyle || '';
-			profileSubmitted = profile.profileSubmitted || false;
+		// Migration: if legacy single profile exists, convert to array once
+		const savedLegacy = localStorage.getItem('childProfile');
+		const savedArray = localStorage.getItem('childProfiles');
+		if (!savedArray && savedLegacy) {
+			try {
+				const p = JSON.parse(savedLegacy);
+				const migrated: ChildProfileItem = {
+					id: crypto.randomUUID(),
+					name: p.childName || '',
+					childAge: p.childAge || '',
+					childGender: p.childGender || '',
+					childCharacteristics: p.childCharacteristics || '',
+					parentingStyle: p.parentingStyle || ''
+				};
+				localStorage.setItem('childProfiles', JSON.stringify([migrated]));
+				const parentInfo = {
+					parentGender: p.parentGender || '',
+					parentAge: p.parentAge || '',
+					parentPreference: p.parentPreference || ''
+				};
+				localStorage.setItem('childParentInfo', JSON.stringify(parentInfo));
+				localStorage.removeItem('childProfile');
+			} catch {}
 		}
+
+		try {
+			const arr = JSON.parse(localStorage.getItem('childProfiles') || '[]');
+			if (Array.isArray(arr)) {
+				childProfiles = arr;
+			}
+			const parentInfo = JSON.parse(localStorage.getItem('childParentInfo') || '{}');
+			parentGender = parentInfo.parentGender || '';
+			parentAge = parentInfo.parentAge || '';
+			parentPreference = parentInfo.parentPreference || '';
+		} catch {}
+
+		ensureAtLeastOneChild();
+		hydrateFormFromSelectedChild();
+		profileSubmitted = (localStorage.getItem('childProfiles') ?? '').length > 0;
 	}
 	
 	function startEditingProfile() {
@@ -845,7 +955,8 @@
 				<span>Parent Mode</span>
 			</div>
 			
-			{#if $user?.role === 'admin'}
+			<!-- Admin Panel hidden per user request -->
+			<!-- {#if $user?.role === 'admin'}
 				<button
 					on:click={goToAdmin}
 					class="flex items-center space-x-2 text-sm font-medium text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white transition-colors"
@@ -853,7 +964,7 @@
 					<Settings className="size-4" />
 					<span>Admin Panel</span>
 				</button>
-			{/if}
+			{/if} -->
 		</div>
 	</div>
 	
@@ -1111,104 +1222,116 @@
 					</div>
 				{:else if activeTab === 'child_profile'}
 					<!-- Child Profile Tab -->
-					<div class="mb-4 mt-2">
-						<h1 class="text-3xl font-bold mb-2">Child Profile</h1>
-						<p class="text-gray-600 dark:text-gray-400">
-							{#if profileSubmitted && !isEditingProfile}
-								View and manage your child's profile information.
-							{:else}
-								Collect and manage your child's information to personalize their AI learning experience.
-							{/if}
-						</p>
+					<div class="mb-4 mt-2 flex justify-between items-start">
+						<div>
+							<h1 class="text-3xl font-bold mb-2">Child Profile</h1>
+							<p class="text-gray-600 dark:text-gray-400">
+								{#if profileSubmitted && !isEditingProfile}
+									View and manage your child's profile information.
+								{:else}
+									Collect and manage your child's information to personalize their AI learning experience.
+								{/if}
+							</p>
+						</div>
+						{#if childProfiles.length > 0}
+							<!-- Add Kid button outside the container -->
+							<button type="button" class="px-4 py-2 rounded-full bg-gradient-to-r from-emerald-500 to-teal-600 text-white shadow-lg ring-1 ring-emerald-400/30 hover:from-emerald-400 hover:to-teal-500 hover:ring-emerald-300/50 hover:scale-105 transition-all duration-200" on:click={addNewChild}>
+								<span class="font-medium text-sm">+ Add Kid</span>
+							</button>
+						{/if}
 					</div>
 					
-					{#if profileSubmitted && !isEditingProfile}
-						<!-- Profile Display View -->
-						<div class="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg p-6">
-							<!-- Header with Edit Button -->
-							<div class="flex justify-between items-center mb-6">
-								<h2 class="text-xl font-semibold text-gray-900 dark:text-white">Child Profile Information</h2>
-								<button
-									on:click={startEditingProfile}
-									class="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded-lg font-medium transition-colors focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
-								>
-									Change Profile
+						{#if childProfiles.length === 0}
+							<!-- Empty state -->
+							<div class="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg p-8 text-center space-y-4">
+								<h2 class="text-xl font-semibold">Set up your kids</h2>
+								<p class="text-gray-600 dark:text-gray-400 max-w-2xl mx-auto">
+									This page stores each kid's profile (name, age, gender, characteristics) so the assistant can personalize experiences. Start by adding your first kid.
+								</p>
+								<button type="button" class="px-6 py-4 rounded-full bg-gradient-to-r from-emerald-500 to-teal-600 text-white shadow-lg ring-1 ring-emerald-400/30 hover:from-emerald-400 hover:to-teal-500 hover:ring-emerald-300/50 hover:scale-105 transition-all duration-200" on:click={addNewChild}>
+									<span class="font-medium">+ Add Kid</span>
 								</button>
 							</div>
-							
-							<!-- Profile Display -->
-							<div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
-								<!-- Child Information -->
-								<div class="space-y-6">
-									<h3 class="text-lg font-semibold text-gray-900 dark:text-white border-b border-gray-200 dark:border-gray-700 pb-2">
-										Child Information
-									</h3>
-									
-									<div class="space-y-4">
-										<div>
-											<span class="text-sm font-medium text-gray-600 dark:text-gray-400">Age:</span>
-											<p class="text-gray-900 dark:text-white">{formatDisplayValue(childAge, 'age')}</p>
-										</div>
-										
-										<div>
-											<span class="text-sm font-medium text-gray-600 dark:text-gray-400">Gender:</span>
-											<p class="text-gray-900 dark:text-white">{formatDisplayValue(childGender, 'gender')}</p>
-										</div>
-										
-										<div>
-											<span class="text-sm font-medium text-gray-600 dark:text-gray-400">Characteristics:</span>
-											<p class="text-gray-900 dark:text-white whitespace-pre-wrap">{childCharacteristics || 'Not specified'}</p>
-										</div>
+						{:else}
+							<!-- Kids buttons container -->
+                        <div class="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg p-6">
+							<!-- Kids buttons grid -->
+                            <div class="grid gap-3" style={`grid-template-columns: ${getChildGridTemplate()}`} role="tablist" aria-label="Children">
+									{#each childProfiles as c, i}
+									<div class="relative group">
+										<button type="button" role="tab" aria-selected={i===selectedChildIndex}
+											class={`px-6 py-4 rounded-full transition-all duration-200 w-full ${i===selectedChildIndex ? 'bg-gradient-to-r from-blue-500 to-purple-600 text-white shadow-lg ring-2 ring-blue-400/50 transform scale-105' : 'bg-gradient-to-r from-gray-700 to-gray-600 text-white ring-1 ring-gray-500/30 hover:from-gray-600 hover:to-gray-500 hover:ring-gray-400/50 hover:scale-102'}`}
+											on:click={() => { selectedChildIndex = i; hydrateFormFromSelectedChild(); showProfileModal = true; editInModal = false; }}>
+												<span class="font-medium">{c.name || `Kid ${i + 1}`}</span>
+											</button>
+										<button type="button" 
+											class="absolute -top-2 -right-2 w-6 h-6 bg-red-500 hover:bg-red-600 text-white rounded-full text-xs opacity-0 group-hover:opacity-100 transition-opacity duration-200 flex items-center justify-center"
+											on:click|stopPropagation={() => deleteChild(i)}
+											title="Delete child">
+											×
+										</button>
 									</div>
-								</div>
-								
-								<!-- Parent Information -->
-								<div class="space-y-6">
-									<h3 class="text-lg font-semibold text-gray-900 dark:text-white border-b border-gray-200 dark:border-gray-700 pb-2">
-										Parent Information
-									</h3>
-									
-									<div class="space-y-4">
-										<div>
-											<span class="text-sm font-medium text-gray-600 dark:text-gray-400">Parent Gender:</span>
-											<p class="text-gray-900 dark:text-white">{formatDisplayValue(parentGender, 'gender')}</p>
-										</div>
-										
-										<div>
-											<span class="text-sm font-medium text-gray-600 dark:text-gray-400">Parent Age Range:</span>
-											<p class="text-gray-900 dark:text-white">{formatDisplayValue(parentAge, 'ageRange')}</p>
-										</div>
-										
-										<div>
-											<span class="text-sm font-medium text-gray-600 dark:text-gray-400">Parent Preferences:</span>
-											<p class="text-gray-900 dark:text-white whitespace-pre-wrap">{parentPreference || 'Not specified'}</p>
-										</div>
-									</div>
+									{/each}
 								</div>
 							</div>
-							
-							<!-- Parenting Style -->
-							<div class="mt-8 pt-6 border-t border-gray-200 dark:border-gray-700">
-								<div>
-									<span class="text-sm font-medium text-gray-600 dark:text-gray-400">Parenting Style:</span>
-									<p class="text-gray-900 dark:text-white whitespace-pre-wrap mt-2">{parentingStyle || 'Not specified'}</p>
+						{/if}
+                        <!-- Profile Form View -->
+						{#if showProfileModal}
+                    <div class="fixed inset-0 z-50 flex items-center justify-center">
+							<div class="absolute inset-0 bg-black/50" on:click={() => (showProfileModal = false)}></div>
+                        <div class={`relative bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl p-5 w-full ${editInModal ? 'max-w-3xl' : 'max-w-md'} shadow-2xl max-h-[85vh] overflow-auto`}>
+								<div class="flex items-center justify-between mb-4">
+									<h3 class="text-lg font-semibold">{childName || `Kid ${selectedChildIndex + 1}`}</h3>
+                                <button type="button" class="px-3 py-1 rounded bg-gray-700 text-white hover:bg-gray-600" on:click={() => (showProfileModal = false)}>Close</button>
 								</div>
-							</div>
-						</div>
-					{:else}
-						<!-- Profile Form View -->
-						<div class="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg p-6">
-							<form on:submit|preventDefault={saveChildProfile} class="space-y-6">
+                            {#if !editInModal}
+                                <!-- Preview-only content -->
+                                <div class="space-y-4 text-center">
+                                    <div>
+                                        <span class="text-sm text-gray-500 dark:text-gray-400">Name</span>
+                                        <p class="font-medium text-lg">{childName || `Kid ${selectedChildIndex + 1}`}</p>
+                                    </div>
+                                    <div>
+                                        <span class="text-sm text-gray-500 dark:text-gray-400">Age</span>
+                                        <p class="font-medium">{formatDisplayValue(childAge, 'age')}</p>
+                                    </div>
+                                    <div>
+                                        <span class="text-sm text-gray-500 dark:text-gray-400">Gender</span>
+                                        <p class="font-medium">{formatDisplayValue(childGender, 'gender')}</p>
+                                    </div>
+                                    <div>
+                                        <span class="text-sm text-gray-500 dark:text-gray-400">Characteristics</span>
+                                        <p class="font-medium whitespace-pre-wrap">{childCharacteristics || 'Not specified'}</p>
+                                    </div>
+                                </div>
+                                <div class="mt-5 flex justify-end gap-3">
+                                    <button type="button" class="px-4 py-2 rounded-lg bg-blue-600 text-white hover:bg-blue-500" on:click={() => (editInModal = true)}>Change Profile</button>
+                                </div>
+                            {:else}
+                            <form on:submit|preventDefault={saveChildProfile} class="space-y-5">
 							<!-- Child Information Section -->
-							<div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+								<div class="grid grid-cols-1 md:grid-cols-2 gap-6">
 								<!-- Left Column: Child Data -->
 								<div class="space-y-4">
-									<h3 class="text-lg font-semibold text-gray-900 dark:text-white mb-4">Child Information</h3>
+								<h3 class="text-lg font-semibold text-gray-900 dark:text-white mb-4">Child Information</h3>
+								<!-- Child selector removed in edit modal by request -->
+
+								<!-- Name -->
+								<div>
+									<label for="child-name" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+										A. Name
+									</label>
+									<input
+										id="child-name"
+										bind:value={childName}
+										class="w-full p-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+									/>
+								</div>
 									
 									<!-- Age -->
 									<div>
-										<label for="child-age" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-											A. Age
+									<label for="child-age" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+										B. Age
 										</label>
 										<select
 											id="child-age"
@@ -1254,8 +1377,8 @@
 									
 									<!-- Characteristics -->
 									<div>
-										<label for="child-characteristics" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-											C. Characteristics
+									<label for="child-characteristics" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+										D. Characteristics
 										</label>
 										<textarea
 											id="child-characteristics"
@@ -1351,16 +1474,20 @@
 									SUBMIT
 								</button>
 							</div>
-							</form>
-						</div>
-						
-						<!-- Contextual Factors Note -->
-						<div class="mt-6 p-4 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg">
-							<p class="text-sm text-blue-800 dark:text-blue-200">
-								<strong>Note:</strong> This information will be used to collect possible contextual factors that help personalize your child's AI learning experience. The data is stored locally and can be updated at any time.
-							</p>
-						</div>
-					{/if}
+                            </form>
+                            {/if}
+                        </div>
+                    </div>
+                    {/if}
+
+                    <!-- Contextual Factors Note -->
+                    {#if childProfiles.length === 0}
+                        <div class="mt-6 p-4 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg">
+                            <p class="text-sm text-blue-800 dark:text-blue-200">
+                                <strong>Note:</strong> This information will be used to collect possible contextual factors that help personalize your child's AI learning experience. The data is stored locally and can be updated at any time.
+                            </p>
+                        </div>
+                    {/if}
 				{:else if activeTab === 'policy'}
 					<!-- Policy Making Tab -->
 					<div class="mb-4 mt-4 px-4 md:px-8">
@@ -1504,12 +1631,12 @@
 										<!-- Right column: Chat Preview -->
 										<div class="lg:w-3/5 border border-gray-200 dark:border-gray-700 rounded-xl overflow-hidden">
 											<!-- Chat header -->
-											<div class="bg-gray-50 dark:bg-gray-750 border-b border-gray-200 dark:border-gray-700 py-2 px-4">
-												<div class="text-sm font-medium text-black dark:text-black">Example Interaction</div>
-											</div>
+                                            <div class="bg-gray-50 dark:bg-gray-750 border-b border-gray-200 dark:border-gray-700 py-2 px-4">
+                                                <div class="text-sm font-medium text-black dark:text-black">Example Interaction</div>
+                                            </div>
 											
 											<!-- Chat messages -->
-											<div class="p-4 space-y-4 bg-white dark:bg-gray-800 min-h-[300px]">
+                                            <div class="p-4 space-y-4 bg-white dark:bg-gray-800 min-h-[300px]">
 												<!-- Child message -->
 												<div class="flex justify-end">
 													<div class="bg-blue-500 text-white rounded-2xl rounded-tr-sm px-4 py-2 max-w-[80%] shadow-sm">
@@ -1518,8 +1645,8 @@
 												</div>
 												
 												<!-- AI response based on selected/hovered option -->
-												<div class="flex">
-													<div class="bg-gray-100 dark:bg-gray-700 rounded-2xl rounded-tl-sm px-4 py-3 text-gray-800 dark:text-gray-200 shadow-sm max-w-[80%]">
+                                                <div class="flex">
+                                                    <div class="bg-gray-100 dark:bg-gray-700 rounded-2xl rounded-tl-sm px-4 py-3 text-gray-800 dark:text-gray-200 shadow-sm max-w-[80%]">
 														{#if hoveredPoliticsOption === 'objectively' || (hoveredPoliticsOption === null && selectedPoliticsResponse === 'objectively')}
 															<p class="text-sm">Hi there! Donald Trump is a well-known businessman and was the 45th President of the United States. People have different opinions about him, just like with many leaders. Some people think he did a good job, while others have different thoughts. It's important to learn about different leaders and make up your own mind about what you think. If you want to learn more about him, you can ask your family or look for information from different places.</p>
 														{:else if hoveredPoliticsOption === 'noSpecific' || (hoveredPoliticsOption === null && selectedPoliticsResponse === 'noSpecific')}
@@ -1529,13 +1656,13 @@
 														{:else}
 															<p class="text-sm">(Please select a response option to see an example.)</p>
 														{/if}
-													</div>
-												</div>
-											</div>
-										</div>
-									</div>
+                                                    </div>
+                                                </div>
+                                            </div>
 								</div>
-							{:else if currentPolicyQuestion === 1}
+							</div>
+							</div>
+						{:else if currentPolicyQuestion === 1}
 								<!-- Second Policy Question (placeholder) -->
 								<div class="mb-8">
 									<h3 class="text-lg font-semibold mb-3 text-gray-900 dark:text-white">
@@ -1678,10 +1805,10 @@
 															<p class="text-sm">Please select a response option to see an example.</p>
 														{/if}
 													</div>
-												</div>
-											</div>
+                            </div>
+                            </div>
 										</div>
-									</div>
+                        </div>
 								</div>
 							{/if}
 							

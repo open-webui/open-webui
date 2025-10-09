@@ -5,6 +5,7 @@
 
 import { models, settings, selectionModeEnabled, savedSelections, chatId as chatIdStore, latestUserMessageId, mobile } from '$lib/stores';
 import { selectionSyncService } from '$lib/services/selectionSync';
+import { getCurrentChildMarker } from '$lib/utils/childUtils';
 	import { user as _user } from '$lib/stores';
 	import { copyToClipboard as _copyToClipboard, formatDate } from '$lib/utils';
 	import { WEBUI_BASE_URL } from '$lib/constants';
@@ -240,6 +241,7 @@ import { selectionSyncService } from '$lib/services/selectionSync';
                 message_id: message.id,
                 role: 'user',
                 selected_text: text,
+                child_marker: getCurrentChildMarker() || undefined,
                 context: undefined,
                 meta: {
                     timestamp: Date.now(),
@@ -288,8 +290,10 @@ import { selectionSyncService } from '$lib/services/selectionSync';
     function applySavedSelections() {
         const root = contentContainerElement;
         if (!root) return;
+        const currentChildMarker = getCurrentChildMarker();
         const items = ($savedSelections || []).filter(
-            (s) => s.chatId === $chatIdStore && s.messageId === message.id && s.role === 'user'
+            (s) => s.chatId === $chatIdStore && s.messageId === message.id && s.role === 'user' &&
+                   (s.childMarker === currentChildMarker || (!s.childMarker && !currentChildMarker))
         );
         for (const sel of items) {
             // Avoid double-highlighting: only add marks for texts not yet wrapped
@@ -304,6 +308,32 @@ import { selectionSyncService } from '$lib/services/selectionSync';
     onMount(async () => {
         await tick();
         applySavedSelections();
+        
+        // Listen for child profile changes to refresh selections
+        const handleRefreshSelections = () => {
+            // Clear existing selections first
+            const root = contentContainerElement;
+            if (root) {
+                const existingMarks = Array.from(root.querySelectorAll('mark.selection-highlight'));
+                existingMarks.forEach(mark => {
+                    const parent = mark.parentNode;
+                    if (parent) {
+                        parent.replaceChild(document.createTextNode(mark.textContent || ''), mark);
+                        parent.normalize();
+                    }
+                });
+            }
+            // Reapply selections with new child filter
+            setTimeout(() => {
+                applySavedSelections();
+            }, 50);
+        };
+        
+        window.addEventListener('refresh-selections', handleRefreshSelections);
+        
+        return () => {
+            window.removeEventListener('refresh-selections', handleRefreshSelections);
+        };
     });
 
     $: if ($savedSelections && message?.id && contentContainerElement) {

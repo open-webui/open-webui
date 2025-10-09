@@ -40,7 +40,8 @@ class SelectionSyncService {
       chatId: selection.chat_id,
       messageId: selection.message_id,
       role: selection.role,
-      text: selection.selected_text
+      text: selection.selected_text,
+      childMarker: selection.child_marker
     };
 
     // Update the store first (this will trigger localStorage save via subscription)
@@ -65,7 +66,8 @@ class SelectionSyncService {
       chatId: selection.chat_id,
       messageId: selection.message_id,
       role: selection.role,
-      text: selection.selected_text
+      text: selection.selected_text,
+      childMarker: selection.child_marker
     }));
     
     savedSelections.update(current => [...current, ...localSelections]);
@@ -83,7 +85,7 @@ class SelectionSyncService {
   /**
    * TEXT SELECTION: Get selections for a specific chat (backend first, localStorage fallback)
    */
-  async getChatSelections(chatId: string): Promise<{chatId: string; messageId: string; role: 'user' | 'assistant'; text: string}[]> {
+  async getChatSelections(chatId: string): Promise<{chatId: string; messageId: string; role: 'user' | 'assistant'; text: string; childMarker?: string}[]> {
     // Try backend first if online and authenticated
     if (this.isOnline && this.isUserAuthenticated()) {
       try {
@@ -93,7 +95,8 @@ class SelectionSyncService {
           chatId: selection.chat_id,
           messageId: selection.message_id,
           role: selection.role,
-          text: selection.selected_text
+          text: selection.selected_text,
+          childMarker: selection.child_marker
         }));
       } catch (error) {
         // Failed to get from backend - fall back to localStorage
@@ -295,7 +298,8 @@ class SelectionSyncService {
         chatId: selection.chat_id,
         messageId: selection.message_id,
         role: selection.role,
-        text: selection.selected_text
+        text: selection.selected_text,
+        childMarker: selection.child_marker
       };
 
       existing[selection.chat_id].push(localSelection);
@@ -305,7 +309,7 @@ class SelectionSyncService {
     }
   }
 
-  private getFromLocalStorage(chatId: string): {chatId: string; messageId: string; role: 'user' | 'assistant'; text: string}[] {
+  private getFromLocalStorage(chatId: string): {chatId: string; messageId: string; role: 'user' | 'assistant'; text: string; childMarker?: string}[] {
     try {
       const existing = JSON.parse(localStorage.getItem(this.STORAGE_KEY) || '{}');
       return existing[chatId] || [];
