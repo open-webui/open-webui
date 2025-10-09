@@ -1,6 +1,7 @@
 import logging
 import os
 import uuid
+import asyncio
 from pathlib import Path
 from typing import Optional
 from pydantic import BaseModel
@@ -38,7 +39,7 @@ router = APIRouter()
 
 
 @router.post("/", response_model=FileModelResponse)
-async def upload_file(
+def upload_file(
     request: Request, file: UploadFile = File(...), user=Depends(get_verified_user)
 ):
     log.info(f"file.content_type: {file.content_type}")
@@ -69,7 +70,8 @@ async def upload_file(
         )
 
         try:
-            await process_file(request, ProcessFileForm(file_id=id))
+            # Run the async process_file in the thread pool executor
+            asyncio.run(process_file(request, ProcessFileForm(file_id=id)))
             file_item = Files.get_file_by_id(id=id)
         except Exception as e:
             log.exception(e)
