@@ -5,6 +5,23 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.5.7-ccv2-1.8.0] - 2025-10-03
+
+### Added
+
+- **💻 Metrics Export**: Added functionality for exporting metrics data and logs.
+- **🔗 Group Assignment & Management**: Implemented domain-based group assignment and management
+
+### Changed
+
+- **⚙️ Advanced Params UI Defaults**: Setted "Advanced Params" collapsible to closed by default in Controls.
+- **⚙️ Feature Toggles**: Prevented Web Search and Wiki Grounding functionalities from being enabled simultaneously.
+
+### Removed
+
+- **🔧 Build Optimization**: Removed unused hatch build configurations to allow improvements with uv.
+- **🔗 Dependency Clean-up**: Removed the unused torch dependency from requirements.
+
 ## [0.5.7-ccv2-1.7.1] - 2025-09-22
 
 ### Enhanced
