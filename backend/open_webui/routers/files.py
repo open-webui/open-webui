@@ -47,7 +47,9 @@ def upload_file(
     # The async process_file() call is handled via asyncio.run() to maintain
     # proper async vector database operations while keeping the endpoint non-blocking.
     # See: https://fastapi.tiangolo.com/async/#in-a-hurry
-    request: Request, file: UploadFile = File(...), user=Depends(get_verified_user)
+    request: Request,
+    file: UploadFile = File(...),
+    user=Depends(get_verified_user),
 ):
     log.info(f"file.content_type: {file.content_type}")
     try:
