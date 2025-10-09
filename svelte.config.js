@@ -46,9 +46,9 @@ const config = {
 		// 	toggleButtonPos: 'bottom-right' // Position of the toggle button
 		// }
 		inspector: {
-      	toggleKeyCombo: 'control-x',
-      	showToggleButton: 'always',
-      	toggleButtonPos: 'bottom-right'
+			toggleKeyCombo: 'control-x',
+			showToggleButton: 'always',
+			toggleButtonPos: 'bottom-right'
     	}
 	},
 	onwarn: (warning, handler) => {

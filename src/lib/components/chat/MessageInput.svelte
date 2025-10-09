@@ -78,7 +78,6 @@
 
 	import { getSuggestionRenderer } from '../common/RichTextInput/suggestions';
 	import CommandSuggestionList from './MessageInput/CommandSuggestionList.svelte';
-	import Camera from '../icons/Camera.svelte';
 	import Clip from '../icons/Clip.svelte';
 
 	const i18n = getContext('i18n');
@@ -131,11 +130,6 @@
 		webSearchEnabled,
 		codeInterpreterEnabled
 	});
-
-	const detectMobile = () => {
-		const userAgent = navigator.userAgent || navigator.vendor || window.opera;
-		return /android|iphone|ipad|ipod|windows phone/i.test(userAgent);
-	};
 
 	const inputVariableHandler = async (text: string): Promise<string> => {
 		inputVariables = extractInputVariables(text);
@@ -479,42 +473,6 @@
 		});
 	};
 
-	const screenCaptureHandler = async () => {
-		try {
-			// Request screen media
-			const mediaStream = await navigator.mediaDevices.getDisplayMedia({
-				video: { cursor: 'never' },
-				audio: false
-			});
-			// Once the user selects a screen, temporarily create a video element
-			const video = document.createElement('video');
-			video.srcObject = mediaStream;
-			// Ensure the video loads without affecting user experience or tab switching
-			await video.play();
-			// Set up the canvas to match the video dimensions
-			const canvas = document.createElement('canvas');
-			canvas.width = video.videoWidth;
-			canvas.height = video.videoHeight;
-			// Grab a single frame from the video stream using the canvas
-			const context = canvas.getContext('2d');
-			context.drawImage(video, 0, 0, canvas.width, canvas.height);
-			// Stop all video tracks (stop screen sharing) after capturing the image
-			mediaStream.getTracks().forEach((track) => track.stop());
-
-			// bring back focus to this current tab, so that the user can see the screen capture
-			window.focus();
-
-			// Convert the canvas to a Base64 image URL
-			const imageUrl = canvas.toDataURL('image/png');
-			// Add the captured image to the files array to render it
-			files = [...files, { type: 'image', url: imageUrl }];
-			// Clean memory: Clear video srcObject
-			video.srcObject = null;
-		} catch (error) {
-			// Handle any errors (e.g., user cancels screen sharing)
-			console.error('Error capturing screen:', error);
-		}
-	};
 
 	const uploadFileHandler = async (file, fullContext: boolean = false) => {
 		if ($_user?.role !== 'admin' && !($_user?.permissions?.chat?.file_upload ?? true)) {
@@ -989,8 +947,8 @@
 						bind:this={filesInputElement}
 						bind:files={inputFiles}
 						type="file"
+						accept="image/*"
 						hidden
-						multiple
 						on:change={async () => {
 							if (inputFiles && inputFiles.length > 0) {
 								const _inputFiles = Array.from(inputFiles);
@@ -1377,13 +1335,15 @@
 
 								<div class=" flex justify-between mt-0.5 mb-2.5 mx-0.5 max-w-full" dir="ltr">
 									<div class="ml-1 self-end flex items-center flex-1 max-w-[80%]">
-										<InputMenu
+										<!-- This is orginal InputMenu DO NOT DELETE IT!!!!! NEED FOR REFERENCE LATER -->
+										<!-- <InputMenu
 											bind:files
 											selectedModels={atSelectedModel ? [atSelectedModel.id] : selectedModels}
 											{fileUploadCapableModels}
 											{screenCaptureHandler}
 											{inputFilesHandler}
 											uploadFilesHandler={() => {
+												console.log(filesInputElement)
 												filesInputElement.click();
 											}}
 											uploadGoogleDriveHandler={async () => {
@@ -1428,37 +1388,27 @@
 												chatInput?.focus();
 											}}
 										>
-											<div
-												class="bg-transparent hover:bg-gray-100 text-gray-700 dark:text-white dark:hover:bg-gray-800 rounded-full size-8 flex justify-center items-center outline-hidden focus:outline-hidden"
-											>
-												<Camera className="size-5.5" />
-											</div>
+										
 											<div
 												class="bg-transparent hover:bg-gray-100 text-gray-700 dark:text-white dark:hover:bg-gray-800 rounded-full size-8 flex justify-center items-center outline-hidden focus:outline-hidden"
 											>
 												<Clip className="size-5.5" />
 											</div>
-										</InputMenu>
+											
+										</InputMenu> -->
 
 										<div
-											class="bg-transparent hover:bg-gray-100 text-gray-700 dark:text-white dark:hover:bg-gray-800 rounded-full size-8 flex justify-center items-center outline-hidden focus:outline-hidden"
-										>
-											<button
-												on:click={() => {
-													console.log('I am clicking camera');
-													if (!detectMobile()) {
-														screenCaptureHandler();
-													} else {
-														const cameraInputElement = document.getElementById('camera-input');
-
-														if (cameraInputElement) {
-															cameraInputElement.click();
-														}
-													}
-												}}
+												class="bg-transparent hover:bg-gray-100 text-gray-700 dark:text-white dark:hover:bg-gray-800 rounded-full size-8 flex justify-center items-center outline-hidden focus:outline-hidden"
 											>
-												<Camera className="size-5.5" />
-											</button>
+												<button on:click={
+													() => {
+													console.log(filesInputElement)
+													filesInputElement.click();
+												}
+												}>
+													<Clip className="size-5.5" />
+												</button>
+												
 										</div>
 
 										<div class="flex self-center w-[1px] h-4 mx-1 bg-gray-50 dark:bg-gray-800" />

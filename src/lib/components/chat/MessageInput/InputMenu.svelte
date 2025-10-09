@@ -96,7 +96,7 @@
 		}
 	}}
 >
-	<Tooltip content={$i18n.t('More')}>
+	<Tooltip content={$i18n.t('Image Upload')}>
 		<slot />
 	</Tooltip>
 
@@ -162,7 +162,7 @@
 								}
 							}}
 						>
-							<Camera />
+							<!-- <Camera /> -->
 							<!-- <div class=" line-clamp-1">{$i18n.t('Capture')}</div> -->
 						</DropdownMenu.Item>
 					</Tooltip>
