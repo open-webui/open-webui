@@ -232,12 +232,8 @@ def explicit_root_command(shell, path):
 
 
 def restart_txe_serial_portion(shell, path):
-    explicit_boot_command(shell)
-    explicit_root_command(shell, path)
-
-    time.sleep(3)
-    shell.send(f"cd {path}\n")
-    time.sleep(3)
+    shell.send(path + "\n")
+    time.sleep(6)
 
 
 def send_shell_command(shell, command, timeout=DEFAULT_COMMAND_TIMEOUT):

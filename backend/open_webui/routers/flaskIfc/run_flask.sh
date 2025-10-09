@@ -40,6 +40,6 @@ sudo python3 flaskIfc.py &
 else
 python3 flaskIfc.py &
 fi
-#flask -A flaskXterm.py --debug run --port 5000 --host 0.0.0.0  --cert=../../../../cert.pem --key=../../../../key.pem &
+flask -A flaskXterm.py --debug run --port 5000 --host 0.0.0.0  --cert=../../../../cert.pem --key=../../../../key.pem &
 #sudo -b flask flaskIfc.py --debug run --port 5003 --host=0.0.0.0
 

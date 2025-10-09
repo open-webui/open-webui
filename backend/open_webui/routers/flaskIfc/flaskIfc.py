@@ -1264,6 +1264,13 @@ def chat():
     )
 
 
+def qemu_restart_txe():
+    command = f"reboot -f\n"
+    restart_txe_serial_portion(command)
+    initialize_shell()
+    print("Finished Rebooting")
+
+
 @app.route("/api/restart-txe", methods=["GET", "POST"])
 def restart_txe_ollama_serial_command():
     global job_status
@@ -1271,7 +1278,10 @@ def restart_txe_ollama_serial_command():
     incoming_headers = dict(request.headers)
 
     pre_and_post_check()
-    internal_restart_txe()
+    if ssh:
+        qemu_restart_txe()
+    else:
+        internal_restart_txe()
     job_status["running"] = False
 
     return (
