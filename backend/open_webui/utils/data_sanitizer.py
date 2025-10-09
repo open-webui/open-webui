@@ -5,10 +5,11 @@ from sqlalchemy import types, Text, JSON
 def sanitize_data(data):
     """
     Recursively removes null bytes from strings, lists, and dictionaries.
+    PostgreSQL's JSON functions cannot handle \x00 (null byte) characters.
     """
     if isinstance(data, str):
-        # Remove the null byte character
-        return re.sub(r'\x00', '', data)
+        # Remove only null bytes - the actual issue causing PostgreSQL errors
+        return data.replace('\x00', '')
     elif isinstance(data, list):
         return [sanitize_data(item) for item in data]
     elif isinstance(data, dict):
