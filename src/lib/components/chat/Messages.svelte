@@ -1,464 +1,79 @@
-<script lang="ts">
-	import { v4 as uuidv4 } from 'uuid';
-	import {
-		chats,
-		config,
-		settings,
-		user as _user,
-		mobile,
-		currentChatPage,
-		temporaryChatEnabled
-	} from '$lib/stores';
-	import { tick, getContext, onMount, createEventDispatcher } from 'svelte';
-	const dispatch = createEventDispatcher();
+// In the <script> section of Message.svelte
 
-	import { toast } from 'svelte-sonner';
-	import { getChatList, updateChatById } from '$lib/apis/chats';
-	import { copyToClipboard, extractCurlyBraceWords } from '$lib/utils';
+// ... other imports
+import { activeTTSAudio } from '$lib/stores/ttsStore.js'; // ADD THIS
+import { get } from 'svelte/store';                         // ADD THIS
+import { getTTS, cancelTTS } from '$lib/apis/v1/tts';
 
-	import Message from './Messages/Message.svelte';
-	import Loader from '../common/Loader.svelte';
-	import Spinner from '../common/Spinner.svelte';
+// ... other variables
 
-	import ChatPlaceholder from './ChatPlaceholder.svelte';
+// REPLACE the existing 'speak' function and its related variables with this:
+let audioLoading = false;
 
-	const i18n = getContext('i18n');
+const speak = async () => {
+	const currentAudio = get(activeTTSAudio);
 
-	export let className = 'h-full flex pt-8';
-
-	export let chatId = '';
-	export let user = $_user;
-
-	export let prompt;
-	export let history = {};
-	export let selectedModels;
-	export let atSelectedModel;
-
-	let messages = [];
-
-	export let setInputText: Function = () => {};
-
-	export let sendMessage: Function;
-	export let continueResponse: Function;
-	export let regenerateResponse: Function;
-	export let mergeResponses: Function;
-
-	export let chatActionHandler: Function;
-	export let showMessage: Function = () => {};
-	export let submitMessage: Function = () => {};
-	export let addMessages: Function = () => {};
-
-	export let readOnly = false;
-	export let editCodeBlock = true;
-
-	export let topPadding = false;
-	export let bottomPadding = false;
-	export let autoScroll;
-
-	export let onSelect = (e) => {};
-
-	export let messagesCount: number | null = 20;
-	let messagesLoading = false;
-
-	const loadMoreMessages = async () => {
-		// scroll slightly down to disable continuous loading
-		const element = document.getElementById('messages-container');
-		element.scrollTop = element.scrollTop + 100;
-
-		messagesLoading = true;
-		messagesCount += 20;
-
-		await tick();
-
-		messagesLoading = false;
-	};
-
-	$: if (history.currentId) {
-		let _messages = [];
-
-		let message = history.messages[history.currentId];
-		while (message && (messagesCount !== null ? _messages.length <= messagesCount : true)) {
-			_messages.unshift({ ...message });
-			message = message.parentId !== null ? history.messages[message.parentId] : null;
-		}
-
-		messages = _messages;
+	// If the audio for THIS message is already playing, stop it.
+	if (currentAudio && currentAudio.id === `tts-${message.id}`) {
+		currentAudio.pause();
+		activeTTSAudio.set(null);
 	} else {
-		messages = [];
+		// If some other audio is playing, stop it first.
+		if (currentAudio) {
+			currentAudio.pause();
+		}
+
+		try {
+			audioLoading = true;
+			const [newAudio, error] = await getTTS(
+				$page.data.models.find((m) => m.id === message.model)?.name ?? message.model,
+				message.content
+			);
+
+			if (error) {
+				alert(error);
+				activeTTSAudio.set(null);
+				return;
+			}
+			
+			if (newAudio) {
+				newAudio.id = `tts-${message.id}`; // Assign a unique ID to the audio object
+				activeTTSAudio.set(newAudio); // Put the new audio object in the store
+				newAudio.play();
+
+				newAudio.addEventListener('ended', () => {
+					// Check if the current audio in the store is still this one before clearing
+					if (get(activeTTSAudio)?.id === `tts-${message.id}`) {
+						activeTTSAudio.set(null);
+					}
+				});
+				newAudio.addEventListener('pause', () => {
+				    // This handles external pauses, like from the stopActiveTTS function
+					if (get(activeTTSAudio)?.id === `tts-${message.id}`) {
+						activeTTSAudio.set(null);
+					}
+				});
+			}
+		} catch (error) {
+			console.error(error);
+			activeTTSAudio.set(null);
+		} finally {
+			audioLoading = false;
+		}
 	}
+};
 
-	$: if (autoScroll && bottomPadding) {
-		(async () => {
-			await tick();
-			scrollToBottom();
-		})();
-	}
 
-	const scrollToBottom = () => {
-		const element = document.getElementById('messages-container');
-		element.scrollTop = element.scrollHeight;
-	};
+// In the HTML part of Message.svelte, update the button logic to react to the store
 
-	const updateChat = async () => {
-		if (!$temporaryChatEnabled) {
-			history = history;
-			await tick();
-			await updateChatById(localStorage.token, chatId, {
-				history: history,
-				messages: messages
-			});
-
-			currentChatPage.set(1);
-			await chats.set(await getChatList(localStorage.token, $currentChatPage));
-		}
-	};
-
-	const gotoMessage = async (message, idx) => {
-		// Determine the correct sibling list (either parent's children or root messages)
-		let siblings;
-		if (message.parentId !== null) {
-			siblings = history.messages[message.parentId].childrenIds;
-		} else {
-			siblings = Object.values(history.messages)
-				.filter((msg) => msg.parentId === null)
-				.map((msg) => msg.id);
-		}
-
-		// Clamp index to a valid range
-		idx = Math.max(0, Math.min(idx, siblings.length - 1));
-
-		let messageId = siblings[idx];
-
-		// If we're navigating to a different message
-		if (message.id !== messageId) {
-			// Drill down to the deepest child of that branch
-			let messageChildrenIds = history.messages[messageId].childrenIds;
-			while (messageChildrenIds.length !== 0) {
-				messageId = messageChildrenIds.at(-1);
-				messageChildrenIds = history.messages[messageId].childrenIds;
-			}
-
-			history.currentId = messageId;
-		}
-
-		await tick();
-
-		// Optional auto-scroll
-		if ($settings?.scrollOnBranchChange ?? true) {
-			const element = document.getElementById('messages-container');
-			autoScroll = element.scrollHeight - element.scrollTop <= element.clientHeight + 50;
-
-			setTimeout(() => {
-				scrollToBottom();
-			}, 100);
-		}
-	};
-
-	const showPreviousMessage = async (message) => {
-		if (message.parentId !== null) {
-			let messageId =
-				history.messages[message.parentId].childrenIds[
-					Math.max(history.messages[message.parentId].childrenIds.indexOf(message.id) - 1, 0)
-				];
-
-			if (message.id !== messageId) {
-				let messageChildrenIds = history.messages[messageId].childrenIds;
-
-				while (messageChildrenIds.length !== 0) {
-					messageId = messageChildrenIds.at(-1);
-					messageChildrenIds = history.messages[messageId].childrenIds;
-				}
-
-				history.currentId = messageId;
-			}
-		} else {
-			let childrenIds = Object.values(history.messages)
-				.filter((message) => message.parentId === null)
-				.map((message) => message.id);
-			let messageId = childrenIds[Math.max(childrenIds.indexOf(message.id) - 1, 0)];
-
-			if (message.id !== messageId) {
-				let messageChildrenIds = history.messages[messageId].childrenIds;
-
-				while (messageChildrenIds.length !== 0) {
-					messageId = messageChildrenIds.at(-1);
-					messageChildrenIds = history.messages[messageId].childrenIds;
-				}
-
-				history.currentId = messageId;
-			}
-		}
-
-		await tick();
-
-		if ($settings?.scrollOnBranchChange ?? true) {
-			const element = document.getElementById('messages-container');
-			autoScroll = element.scrollHeight - element.scrollTop <= element.clientHeight + 50;
-
-			setTimeout(() => {
-				scrollToBottom();
-			}, 100);
-		}
-	};
-
-	const showNextMessage = async (message) => {
-		if (message.parentId !== null) {
-			let messageId =
-				history.messages[message.parentId].childrenIds[
-					Math.min(
-						history.messages[message.parentId].childrenIds.indexOf(message.id) + 1,
-						history.messages[message.parentId].childrenIds.length - 1
-					)
-				];
-
-			if (message.id !== messageId) {
-				let messageChildrenIds = history.messages[messageId].childrenIds;
-
-				while (messageChildrenIds.length !== 0) {
-					messageId = messageChildrenIds.at(-1);
-					messageChildrenIds = history.messages[messageId].childrenIds;
-				}
-
-				history.currentId = messageId;
-			}
-		} else {
-			let childrenIds = Object.values(history.messages)
-				.filter((message) => message.parentId === null)
-				.map((message) => message.id);
-			let messageId =
-				childrenIds[Math.min(childrenIds.indexOf(message.id) + 1, childrenIds.length - 1)];
-
-			if (message.id !== messageId) {
-				let messageChildrenIds = history.messages[messageId].childrenIds;
-
-				while (messageChildrenIds.length !== 0) {
-					messageId = messageChildrenIds.at(-1);
-					messageChildrenIds = history.messages[messageId].childrenIds;
-				}
-
-				history.currentId = messageId;
-			}
-		}
-
-		await tick();
-
-		if ($settings?.scrollOnBranchChange ?? true) {
-			const element = document.getElementById('messages-container');
-			autoScroll = element.scrollHeight - element.scrollTop <= element.clientHeight + 50;
-
-			setTimeout(() => {
-				scrollToBottom();
-			}, 100);
-		}
-	};
-
-	const rateMessage = async (messageId, rating) => {
-		history.messages[messageId].annotation = {
-			...history.messages[messageId].annotation,
-			rating: rating
-		};
-
-		await updateChat();
-	};
-
-	const editMessage = async (messageId, { content, files }, submit = true) => {
-		if ((selectedModels ?? []).filter((id) => id).length === 0) {
-			toast.error($i18n.t('Model not selected'));
-			return;
-		}
-		if (history.messages[messageId].role === 'user') {
-			if (submit) {
-				// New user message
-				let userPrompt = content;
-				let userMessageId = uuidv4();
-
-				let userMessage = {
-					id: userMessageId,
-					parentId: history.messages[messageId].parentId,
-					childrenIds: [],
-					role: 'user',
-					content: userPrompt,
-					...(files && { files: files }),
-					models: selectedModels,
-					timestamp: Math.floor(Date.now() / 1000) // Unix epoch
-				};
-
-				let messageParentId = history.messages[messageId].parentId;
-
-				if (messageParentId !== null) {
-					history.messages[messageParentId].childrenIds = [
-						...history.messages[messageParentId].childrenIds,
-						userMessageId
-					];
-				}
-
-				history.messages[userMessageId] = userMessage;
-				history.currentId = userMessageId;
-
-				await tick();
-				await sendMessage(history, userMessageId);
-			} else {
-				// Edit user message
-				history.messages[messageId].content = content;
-				history.messages[messageId].files = files;
-				await updateChat();
-			}
-		} else {
-			if (submit) {
-				// New response message
-				const responseMessageId = uuidv4();
-				const message = history.messages[messageId];
-				const parentId = message.parentId;
-
-				const responseMessage = {
-					...message,
-					id: responseMessageId,
-					parentId: parentId,
-					childrenIds: [],
-					files: undefined,
-					content: content,
-					timestamp: Math.floor(Date.now() / 1000) // Unix epoch
-				};
-
-				history.messages[responseMessageId] = responseMessage;
-				history.currentId = responseMessageId;
-
-				// Append messageId to childrenIds of parent message
-				if (parentId !== null) {
-					history.messages[parentId].childrenIds = [
-						...history.messages[parentId].childrenIds,
-						responseMessageId
-					];
-				}
-
-				await updateChat();
-			} else {
-				// Edit response message
-				history.messages[messageId].originalContent = history.messages[messageId].content;
-				history.messages[messageId].content = content;
-				await updateChat();
-			}
-		}
-	};
-
-	const actionMessage = async (actionId, message, event = null) => {
-		await chatActionHandler(chatId, actionId, message.model, message.id, event);
-	};
-
-	const saveMessage = async (messageId, message) => {
-		history.messages[messageId] = message;
-		await updateChat();
-	};
-
-	const deleteMessage = async (messageId) => {
-		const messageToDelete = history.messages[messageId];
-		const parentMessageId = messageToDelete.parentId;
-		const childMessageIds = messageToDelete.childrenIds ?? [];
-
-		// Collect all grandchildren
-		const grandchildrenIds = childMessageIds.flatMap(
-			(childId) => history.messages[childId]?.childrenIds ?? []
-		);
-
-		// Update parent's children
-		if (parentMessageId && history.messages[parentMessageId]) {
-			history.messages[parentMessageId].childrenIds = [
-				...history.messages[parentMessageId].childrenIds.filter((id) => id !== messageId),
-				...grandchildrenIds
-			];
-		}
-
-		// Update grandchildren's parent
-		grandchildrenIds.forEach((grandchildId) => {
-			if (history.messages[grandchildId]) {
-				history.messages[grandchildId].parentId = parentMessageId;
-			}
-		});
-
-		// Delete the message and its children
-		[messageId, ...childMessageIds].forEach((id) => {
-			delete history.messages[id];
-		});
-
-		await tick();
-
-		showMessage({ id: parentMessageId });
-
-		// Update the chat
-		await updateChat();
-	};
-
-	const triggerScroll = () => {
-		if (autoScroll) {
-			const element = document.getElementById('messages-container');
-			autoScroll = element.scrollHeight - element.scrollTop <= element.clientHeight + 50;
-			setTimeout(() => {
-				scrollToBottom();
-			}, 100);
-		}
-	};
-</script>
-
-<div class={className}>
-	{#if Object.keys(history?.messages ?? {}).length == 0}
-		<ChatPlaceholder modelIds={selectedModels} {atSelectedModel} {onSelect} />
-	{:else}
-		<div class="w-full pt-2">
-			{#key chatId}
-				<section class="w-full" aria-labelledby="chat-conversation">
-					<h2 class="sr-only" id="chat-conversation">{$i18n.t('Chat Conversation')}</h2>
-					{#if messages.at(0)?.parentId !== null}
-						<Loader
-							on:visible={(e) => {
-								console.log('visible');
-								if (!messagesLoading) {
-									loadMoreMessages();
-								}
-							}}
-						>
-							<div class="w-full flex justify-center py-1 text-xs animate-pulse items-center gap-2">
-								<Spinner className=" size-4" />
-								<div class=" ">{$i18n.t('Loading...')}</div>
-							</div>
-						</Loader>
-					{/if}
-					<ul role="log" aria-live="polite" aria-relevant="additions" aria-atomic="false">
-						{#each messages as message, messageIdx (message.id)}
-							<Message
-								{chatId}
-								bind:history
-								{selectedModels}
-								messageId={message.id}
-								idx={messageIdx}
-								{user}
-								{setInputText}
-								{gotoMessage}
-								{showPreviousMessage}
-								{showNextMessage}
-								{updateChat}
-								{editMessage}
-								{deleteMessage}
-								{rateMessage}
-								{actionMessage}
-								{saveMessage}
-								{submitMessage}
-								{regenerateResponse}
-								{continueResponse}
-								{mergeResponses}
-								{addMessages}
-								{triggerScroll}
-								{readOnly}
-								{editCodeBlock}
-								{topPadding}
-							/>
-						{/each}
-					</ul>
-				</section>
-				<div class="pb-18" />
-				{#if bottomPadding}
-					<div class="  pb-6" />
-				{/if}
-			{/key}
-		</div>
-	{/if}
-</div>
+// ... button element ...
+<button ... on:click={speak} ...>
+    {#if $activeTTSAudio && $activeTTSAudio.id === `tts-${message.id}`}
+        <StopCircleIcon class="w-4 h-4" />
+        <Tooltip>Stop</Tooltip>
+    {:else if audioLoading}
+        {:else}
+        <SpeakerWaveIcon class="w-4 h-4" />
+        <Tooltip>Text-to-Speech</Tooltip>
+    {/if}
+</button>

@@ -50,6 +50,7 @@
 	import { beforeNavigate } from '$app/navigation';
 	import { updated } from '$app/state';
 	import Spinner from '$lib/components/common/Spinner.svelte';
+    import FloatingPlayer from '$lib/components/FloatingPlayer.svelte'; // ADDED THIS LINE
 
 	// handle frontend updates (https://svelte.dev/docs/kit/configuration#version)
 	beforeNavigate(({ willUnload, to }) => {
@@ -725,6 +726,8 @@
 		<slot />
 	{/if}
 {/if}
+
+<FloatingPlayer />
 
 <Toaster
 	theme={$theme.includes('dark')
