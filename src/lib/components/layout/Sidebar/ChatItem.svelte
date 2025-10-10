@@ -252,7 +252,7 @@
 			confirmEdit
 				? 'bg-gray-200 dark:bg-gray-900'
 				: selected
-					? 'bg-blue-100 dark:bg-blue-900 border-2 border-blue-300 dark:border-blue-700'
+					? 'bg-gray-100 dark:bg-gray-800'
 					: 'group-hover:bg-gray-100 dark:group-hover:bg-gray-950'} whitespace-nowrap text-ellipsis"
 		>
 			<input
@@ -289,7 +289,7 @@
 				{isCurrentChat && !selected
 					? 'bg-gray-200 dark:bg-gray-900'
 					: selected
-						? 'bg-blue-100 dark:bg-blue-900 border-2 border-blue-300 dark:border-blue-700'
+						? 'bg-gray-100 dark:bg-gray-800'
 						: 'group-hover:bg-gray-100 dark:group-hover:bg-gray-950'} whitespace-nowrap text-ellipsis"
 				href="/c/{id}"
 				on:click={(e) => {
@@ -346,7 +346,7 @@
 								<!-- Selected checkbox -->
 								<svg
 									xmlns="http://www.w3.org/2000/svg"
-									class="w-4 h-4 text-blue-600 dark:text-blue-400"
+									class="w-4 h-4 text-gray-700 dark:text-gray-300"
 									viewBox="0 0 20 20"
 									fill="currentColor"
 								>
@@ -389,10 +389,10 @@
 	<!-- svelte-ignore a11y-no-static-element-interactions -->
 	<div
 		class="
-        {id === $chatId || confirmEdit
-			? 'from-gray-200 dark:from-gray-900'
-			: selected
-				? 'from-blue-100 dark:from-blue-900'
+        {selected
+			? 'from-gray-100 dark:from-gray-800'
+			: id === $chatId || confirmEdit
+				? 'from-gray-200 dark:from-gray-900'
 				: 'invisible group-hover:visible from-gray-100 dark:from-gray-950'}
             absolute {className === 'pr-2'
 			? 'right-[8px]'

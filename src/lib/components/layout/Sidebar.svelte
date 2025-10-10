@@ -692,10 +692,10 @@
 			<!-- Selection Counter (appears when items are selected) -->
 			{#if showBulkActions}
 				<div
-					class="px-2 py-1 mt-2 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded"
+					class="px-2 py-1 mt-2 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-600 rounded"
 				>
 					<div class="text-center mb-2">
-						<span class="text-xs text-blue-600 dark:text-blue-400 font-medium">
+						<span class="text-xs text-gray-700 dark:text-gray-300 font-medium">
 							{selectedChatIds.length}
 							{$i18n.t('selected')}
 						</span>
