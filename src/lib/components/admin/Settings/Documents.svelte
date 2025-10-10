@@ -124,15 +124,6 @@
 			return null;
 		});
 		updateEmbeddingModelLoading = false;
-
-		if (res) {
-			console.debug('embeddingModelUpdateHandler:', res);
-			if (res.status === true) {
-				toast.success($i18n.t('Embedding model set to "{{embedding_model}}"', res), {
-					duration: 1000 * 10
-				});
-			}
-		}
 	};
 
 	const submitHandler = async () => {
