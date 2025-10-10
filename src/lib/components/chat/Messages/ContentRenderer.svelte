@@ -185,8 +185,10 @@
 				!$mobile &&
 				$chatId
 			) {
-				showArtifacts.set(true);
-				showControls.set(true);
+				setTimeout(() => {
+					showArtifacts.set(true);
+					showControls.set(true);
+				});
 			}
 		}}
 		onPreview={async (value) => {
