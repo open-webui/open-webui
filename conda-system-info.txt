@@ -1,0 +1,32 @@
+
+     active environment : open-webui
+    active env location : /opt/anaconda3/envs/open-webui
+            shell level : 2
+       user config file : /Users/johndriscoll/.condarc
+ populated config files : /opt/anaconda3/.condarc
+                          /Users/johndriscoll/.condarc
+          conda version : 24.11.3
+    conda-build version : 24.9.0
+         python version : 3.12.7.final.0
+                 solver : libmamba (default)
+       virtual packages : __archspec=1=cannonlake
+                          __conda=24.11.3=0
+                          __osx=10.16=0
+                          __unix=0=0
+       base environment : /opt/anaconda3  (writable)
+      conda av data dir : /opt/anaconda3/etc/conda
+  conda av metadata url : None
+           channel URLs : https://repo.anaconda.com/pkgs/main/osx-64
+                          https://repo.anaconda.com/pkgs/main/noarch
+                          https://repo.anaconda.com/pkgs/r/osx-64
+                          https://repo.anaconda.com/pkgs/r/noarch
+          package cache : /opt/anaconda3/pkgs
+                          /Users/johndriscoll/.conda/pkgs
+       envs directories : /opt/anaconda3/envs
+                          /Users/johndriscoll/.conda/envs
+               platform : osx-64
+             user-agent : conda/24.11.3 requests/2.32.3 CPython/3.12.7 Darwin/24.4.0 OSX/10.16 solver/libmamba conda-libmamba-solver/24.9.0 libmambapy/1.5.8 aau/0.4.4 c/6CK535DqIbTtyjAvtR8lIQ s/UrSzuMEo1Pmu-64kZrIdMw e/aUg-KMkpk6hNRjogeNggzg
+                UID:GID : 501:20
+             netrc file : /Users/johndriscoll/.netrc
+           offline mode : False
+

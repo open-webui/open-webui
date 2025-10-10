@@ -2652,7 +2652,7 @@ Key guidelines:
 	<!-- Child Profile Popup -->
 	{#if showChildProfilePopup}
 		<div class="fixed inset-0 z-50 flex items-center justify-center bg-black/50" role="dialog" aria-modal="true" on:click={closeChildProfilePopup}>
-			<div class="bg-white dark:bg-gray-800 rounded-xl p-6 max-w-md w-full mx-4 shadow-2xl relative" on:click|stopPropagation on:mousedown|stopPropagation>
+			<div class="bg-white dark:bg-gray-800 rounded-xl p-6 {($settings?.widescreenMode ?? null) ? 'max-w-2xl' : 'max-w-md'} w-full mx-4 shadow-2xl relative" on:click|stopPropagation on:mousedown|stopPropagation>
 				<div class="flex items-center justify-between mb-4">
 					<h3 class="text-lg font-semibold text-gray-900 dark:text-white">
 						{#if childProfiles.length > 0}

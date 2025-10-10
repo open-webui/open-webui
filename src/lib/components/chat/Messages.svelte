@@ -484,7 +484,7 @@
 		border: 2px dashed #3b82f6 !important; /* Blue dashed border */
 		border-bottom: none !important;
 		border-radius: 0.5rem 0.5rem 0 0 !important; /* rounded-lg top */
-		margin: 0.5rem 2rem 0 0 !important; /* Preserve original top margin */
+		margin: 0.5rem auto 0 auto !important; /* Center horizontally */
 		padding: 1.25rem 1.25rem 0 1.25rem !important; /* px-5 pt-5 - preserve original horizontal padding */
 		background-color: rgba(59, 130, 246, 0.1) !important; /* Light blue background */
 	}
@@ -498,7 +498,7 @@
 		border: 2px dashed #3b82f6 !important; /* Blue dashed border */
 		border-top: none !important;
 		border-radius: 0 0 0.5rem 0.5rem !important; /* rounded-lg bottom */
-		margin: 0 0 0.75rem 0 !important; /* mb-3 - preserve original bottom margin */
+		margin: 0 auto 0.75rem auto !important; /* Center horizontally, preserve bottom margin */
 		padding: 0 1.25rem 1.25rem 1.25rem !important; /* px-5 pb-5 - preserve original horizontal padding */
 		background-color: rgba(59, 130, 246, 0.1) !important; /* Light blue background */
 	}
