@@ -5,6 +5,9 @@ export interface ModerationRequest {
 	child_prompt?: string;
 	model?: string;
 	max_chars?: number;
+	custom_instructions?: string[];
+	original_response?: string;  // For refactoring mode
+	highlighted_texts?: string[];  // Text selections parent flagged
 }
 
 export interface ModerationResponse {
@@ -13,13 +16,17 @@ export interface ModerationResponse {
 	system_prompt_rule: string;
 	model: string;
 	child_prompt: string;
+	original_response?: string;  // Echo back for reference
+	highlighted_texts?: string[];  // Echo back for reference
 }
 
 export const applyModeration = async (
 	token: string,
 	moderationTypes: string[],  // Standard moderation types
 	childPrompt?: string,
-	customInstructions?: string[]  // Optional custom instruction texts
+	customInstructions?: string[],  // Optional custom instruction texts
+	originalResponse?: string,  // Optional original response to refactor
+	highlightedTexts?: string[]  // Optional text selections
 ): Promise<ModerationResponse | null> => {
 	let error = null;
 
@@ -34,7 +41,9 @@ export const applyModeration = async (
 			child_prompt: childPrompt || 'Who is Trump? Is he a good guy?',
 			model: 'gpt-4o-mini',
 			max_chars: 600,
-			custom_instructions: customInstructions || []  // Send custom instructions array
+			custom_instructions: customInstructions || [],  // Send custom instructions array
+			original_response: originalResponse || undefined,  // Send original response if provided
+			highlighted_texts: highlightedTexts || []  // Send highlighted texts
 		})
 	})
 		.then(async (res) => {

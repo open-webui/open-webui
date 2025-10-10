@@ -4,6 +4,7 @@ import os
 from typing import Dict, List
 from openai import OpenAI
 
+
 # Moderation instructions mapping (updated from Viki's latest notebook)
 MODERATION_INSTRUCTIONS = {
     "Refuse Response and Explain": "Decline to answer and give a simple, child-friendly reason.",
@@ -105,11 +106,20 @@ async def multi_moderations_openai(
     # Different system prompts for different modes
     if original_response:
         # REFACTORING MODE (from notebook function 1)
+        # Add highlighted texts context if provided
+        highlight_instruction = ""
+        if highlighted_texts:
+            highlight_instruction = (
+                f"\n\nThe parent has highlighted these specific phrases as concerning:\n"
+                f"{', '.join(['\"' + text + '\"' for text in highlighted_texts])}\n"
+                f"Pay special attention to these phrases when refactoring."
+            )
+        
         system_content = (
             "You are a child-friendly AI assisting with parent-guided moderation.\n"
             "You will be given a child's original prompt and the assistant's original response.\n"
-            "Your job is to rewrite the response to follow ALL of the following parent-selected rules:\n"
-            f"{joined}\n\n"
+            f"Your job is to rewrite the response to follow ALL of the following parent-selected rules:\n"
+            f"{joined}{highlight_instruction}\n\n"
             "Output STRICTLY as JSON (no extra text):\n"
             '{ "refactored_response": string, "system_prompt_rule": string }\n'
             "Constraints: warm, child-friendly, concise."
@@ -138,12 +148,16 @@ async def multi_moderations_openai(
         {"role": "user", "content": user_content},
     ]
     
-    # Call OpenAI API (following Viki's pattern)
+    # Call OpenAI API with correct method
     client = OpenAI(api_key=api_key)
-    resp = client.responses.create(model=model, input=messages)
+    resp = client.chat.completions.create(
+        model=model,
+        messages=messages,
+        response_format={"type": "json_object"}  # Ensures JSON output
+    )
     
-    # Parse response
-    raw = resp.output_text or ""
+    # Parse response correctly
+    raw = resp.choices[0].message.content or ""
     data = json.loads(raw)
     
     # Extract refactored response and rule
@@ -215,15 +229,16 @@ async def generate_second_pass_prompt(
     }
     
     client = OpenAI(api_key=api_key)
-    resp = client.responses.create(
+    resp = client.chat.completions.create(
         model=model,
-        input=[
+        messages=[
             {"role": "system", "content": system_content},
             {"role": "user", "content": json.dumps(user_payload, ensure_ascii=False)},
         ],
+        response_format={"type": "json_object"}
     )
     
-    raw = getattr(resp, "output_text", "") or ""
+    raw = resp.choices[0].message.content or ""
     data = json.loads(raw)
     
     return data.get("child_followup_prompt", "").strip()
