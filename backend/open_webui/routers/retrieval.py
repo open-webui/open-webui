@@ -2223,8 +2223,10 @@ async def cleanup_expired_web_searches(max_age_days: int = 30) -> dict:
                 try:
                     if hasattr(VECTOR_DB_CLIENT, "get_collection_sample_metadata"):
                         # Get sample metadata to check for expiry
-                        metadata = VECTOR_DB_CLIENT.get_collection_sample_metadata(
-                            collection_name
+                        metadata = (
+                            await VECTOR_DB_CLIENT.get_collection_sample_metadata(
+                                collection_name
+                            )
                         )
 
                         if metadata:
@@ -2673,7 +2675,7 @@ async def cleanup_old_chat_collections(max_age_days: int = 1) -> dict:
         # Get all collections
         try:
             if hasattr(VECTOR_DB_CLIENT, "list_collections"):
-                collection_names = VECTOR_DB_CLIENT.list_collections()
+                collection_names = await VECTOR_DB_CLIENT.list_collections()
                 # Create collection objects with name attribute for compatibility
                 collections = [
                     type("Collection", (), {"name": name})()
@@ -2892,7 +2894,7 @@ async def cleanup_orphaned_chat_files() -> dict:
         # Get all file collections from vector DB
         collections = []
         if hasattr(VECTOR_DB_CLIENT, "list_collections"):
-            collections = VECTOR_DB_CLIENT.list_collections()
+            collections = await VECTOR_DB_CLIENT.list_collections()
         else:
             log.warning(
                 "Vector DB client does not support listing collections for chat cleanup"
