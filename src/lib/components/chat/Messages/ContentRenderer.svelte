@@ -176,7 +176,7 @@
 		{onSourceClick}
 		{onTaskClick}
 		{onSave}
-		onUpdate={(token) => {
+		onUpdate={async (token) => {
 			const { lang, text: code } = token;
 
 			if (
@@ -185,10 +185,9 @@
 				!$mobile &&
 				$chatId
 			) {
-				setTimeout(() => {
-					showArtifacts.set(true);
-					showControls.set(true);
-				});
+				await tick();
+				showArtifacts.set(true);
+				showControls.set(true);
 			}
 		}}
 		onPreview={async (value) => {
