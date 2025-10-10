@@ -286,7 +286,7 @@
 		>
 			<a
 				class=" w-full flex justify-between rounded-lg px-[11px] py-[6px]
-				{isCurrentChat && !selected
+				{isCurrentChat
 					? 'bg-gray-200 dark:bg-gray-900 border-2 border-gray-400 dark:border-gray-500'
 					: selected
 						? 'bg-gray-100 dark:bg-gray-800'
