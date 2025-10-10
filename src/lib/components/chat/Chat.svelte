@@ -1988,8 +1988,22 @@
 			errorMessage = innerError.message;
 		}
 
+		// Check if this is a regeneration error and provide better messaging
+		let isRegenerationError = false;
+		if (errorMessage && (errorMessage.toLowerCase().includes('regenerate') || errorMessage.toLowerCase().includes('provider error'))) {
+			isRegenerationError = true;
+		}
+
+		let errorContent = '';
+		if (isRegenerationError) {
+			errorContent = $i18n.t(`Failed to regenerate response. The AI provider encountered an error. You can try regenerating again or switch to a different model.`) + '\n\n' + errorMessage;
+		} else {
+			errorContent = $i18n.t(`Uh-oh! There was an issue with the response.`) + '\n' + errorMessage;
+		}
+
 		responseMessage.error = {
-			content: $i18n.t(`Uh-oh! There was an issue with the response.`) + '\n' + errorMessage
+			content: errorContent,
+			canRetry: isRegenerationError // Add flag to indicate retry is possible
 		};
 		responseMessage.done = true;
 

@@ -801,7 +801,13 @@
 								{/if}
 
 								{#if message?.error}
-									<Error content={message?.error?.content ?? message.content} />
+									<Error
+										content={message?.error?.content ?? message.content}
+										canRetry={message?.error?.canRetry ?? false}
+										on:retry={() => {
+											regenerateResponse(message);
+										}}
+									/>
 								{/if}
 
 								{#if (message?.sources || message?.citations) && (model?.info?.meta?.capabilities?.citations ?? true)}

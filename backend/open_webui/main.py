@@ -1260,12 +1260,51 @@ async def inspect_websocket(request: Request, call_next):
     return await call_next(request)
 
 
+
+from starlette.middleware.cors import CORSMiddleware
+from starlette.types import ASGIApp, Receive, Scope, Send
+from starlette.middleware.base import BaseHTTPMiddleware
+from starlette.responses import Response
+
+class DynamicCORSMiddleware(BaseHTTPMiddleware):
+    def __init__(self, app: ASGIApp, allow_origins, allow_methods, allow_headers, allow_credentials):
+        super().__init__(app)
+        self.allow_origins = allow_origins
+        self.allow_methods = allow_methods
+        self.allow_headers = allow_headers
+        self.allow_credentials = allow_credentials
+        self.cors_middleware = CORSMiddleware(
+            app,
+            allow_origins=allow_origins if allow_origins != ["*"] else [],
+            allow_methods=allow_methods,
+            allow_headers=allow_headers,
+            allow_credentials=allow_credentials if allow_origins != ["*"] else False,
+        )
+
+    async def dispatch(self, request: Request, call_next):
+        origin = request.headers.get("origin")
+        if self.allow_origins == ["*"] and origin:
+            # Use the underlying CORSMiddleware to get the response
+            response = await self.cors_middleware.dispatch(request, call_next)
+            # Override the Access-Control-Allow-Origin header to the request origin
+            response.headers["Access-Control-Allow-Origin"] = origin
+            if self.allow_credentials:
+                response.headers["Access-Control-Allow-Credentials"] = "true"
+            return response
+        else:
+            return await self.cors_middleware.dispatch(request, call_next)
+
+allow_origins = CORS_ALLOW_ORIGIN
+allow_methods = ["*"]
+allow_headers = ["*"]
+allow_credentials = True
+
 app.add_middleware(
-    CORSMiddleware,
-    allow_origins=CORS_ALLOW_ORIGIN,
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
+    DynamicCORSMiddleware,
+    allow_origins=allow_origins,
+    allow_methods=allow_methods,
+    allow_headers=allow_headers,
+    allow_credentials=allow_credentials,
 )
 
 

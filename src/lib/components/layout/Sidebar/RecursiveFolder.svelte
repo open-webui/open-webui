@@ -308,6 +308,7 @@
 
 		name = name.trim();
 		folders[folderId].name = name;
+		folders = { ...folders };
 
 		const res = await updateFolderById(localStorage.token, folderId, {
 			name,
@@ -317,14 +318,19 @@
 			toast.error(`${error}`);
 
 			folders[folderId].name = currentName;
+			folders = { ...folders };
 			return null;
 		});
 
 		if (res) {
 			folders[folderId].name = name;
+			if (meta) {
+				folders[folderId].meta = meta;
+			}
 			if (data) {
 				folders[folderId].data = data;
 			}
+			folders = { ...folders };
 
 			// toast.success($i18n.t('Folder name updated successfully'));
 			toast.success($i18n.t('Folder updated successfully'));

@@ -1,7 +1,11 @@
 <script lang="ts">
+	import { createEventDispatcher } from 'svelte';
 	import Info from '$lib/components/icons/Info.svelte';
 
+	const dispatch = createEventDispatcher();
+
 	export let content = '';
+	export let canRetry = false;
 </script>
 
 <div class="flex my-2 gap-2.5 border px-4 py-3 border-red-600/10 bg-red-600/10 rounded-lg">
@@ -9,7 +13,7 @@
 		<Info className="size-5 text-red-700 dark:text-red-400" />
 	</div>
 
-	<div class=" self-center text-sm">
+	<div class="flex-1 self-center text-sm">
 		{#if typeof content === 'string'}
 			{content}
 		{:else if typeof content === 'object' && content !== null}
@@ -26,4 +30,15 @@
 			{JSON.stringify(content)}
 		{/if}
 	</div>
+
+	{#if canRetry}
+		<div class="self-center">
+			<button
+				class="px-3 py-1.5 bg-red-600 hover:bg-red-700 text-white text-sm rounded-md transition-colors"
+				on:click={() => dispatch('retry')}
+			>
+				Retry
+			</button>
+		</div>
+	{/if}
 </div>

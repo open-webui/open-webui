@@ -9,7 +9,7 @@
 
 	import { toast } from 'svelte-sonner';
 
-	import { selectedFolder } from '$lib/stores';
+	import { selectedFolder, folders as _folders } from '$lib/stores';
 
 	import { deleteFolderById, getFolderById, updateFolderById } from '$lib/apis/folders';
 	import { getChatsByFolderId } from '$lib/apis/chats';
@@ -68,6 +68,7 @@
 			});
 
 			await selectedFolder.set(_folder);
+			_folders.update((f) => f.map((fold) => fold.id === _folder.id ? _folder : fold));
 			onUpdate(_folder);
 		}
 	};

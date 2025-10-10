@@ -350,29 +350,49 @@
 	};
 
 	let unsubscribers = [];
-	onMount(async () => {
+		onMount(async () => {
 		showPinnedChat = localStorage?.showPinnedChat ? localStorage.showPinnedChat === 'true' : true;
-		await showSidebar.set(!$mobile ? localStorage.sidebar === 'true' : false);
+
+		// Fix for Sidebar Auto-Reopens Despite User Closing it on Desktop Browsers
+		// Only set showSidebar from localStorage if the value exists, otherwise default to false on desktop, true on mobile
+		let sidebarPref;
+		try {
+			sidebarPref = localStorage.getItem('sidebar');
+		} catch (e) {
+			sidebarPref = null;
+		}
+		if (sidebarPref === null) {
+			// No preference saved, default to false on desktop, true on mobile
+			await showSidebar.set($mobile);
+		} else {
+			// Use saved preference
+			await showSidebar.set(sidebarPref === 'true');
+		}
 
 		unsubscribers = [
 			mobile.subscribe((value) => {
-				if ($showSidebar && value) {
+				// When switching to mobile, hide the sidebar if it's currently open.
+				if (value && $showSidebar) {
 					showSidebar.set(false);
 				}
 
-				if ($showSidebar && !value) {
+				// On desktop, don't force the sidebar open/closed here — respect user preference.
+				// Just ensure the nav element has the correct drag region when available.
+				if (!value) {
 					const navElement = document.getElementsByTagName('nav')[0];
 					if (navElement) {
 						navElement.style['-webkit-app-region'] = 'drag';
 					}
-				}
-
-				if (!$showSidebar && !value) {
-					showSidebar.set(true);
+					// Do not override showSidebar here to avoid auto-reopen issue
+					// showSidebar.set(localStorage.sidebar !== 'false');
 				}
 			}),
 			showSidebar.subscribe(async (value) => {
-				localStorage.sidebar = value;
+				try {
+					localStorage.sidebar = value;
+				} catch (e) {
+					// ignore
+				}
 
 				// nav element is not available on the first render
 				const navElement = document.getElementsByTagName('nav')[0];
@@ -392,6 +412,40 @@
 				if (value) {
 					await initChannels();
 					await initChatList();
+				}
+			}),
+			_folders.subscribe((folderList) => {
+				folders = {};
+
+				// First pass: Initialize all folder entries
+				for (const folder of folderList) {
+					// Ensure folder is added to folders with its data
+					folders[folder.id] = { ...(folders[folder.id] || {}), ...folder };
+
+					if (newFolderId && folder.id === newFolderId) {
+						folders[folder.id].new = true;
+						newFolderId = null;
+					}
+				}
+
+				// Second pass: Tie child folders to their parents
+				for (const folder of folderList) {
+					if (folder.parent_id) {
+						// Ensure the parent folder is initialized if it doesn't exist
+						if (!folders[folder.parent_id]) {
+							folders[folder.parent_id] = {}; // Create a placeholder if not already present
+						}
+
+						// Initialize childrenIds array if it doesn't exist and add the current folder id
+						folders[folder.parent_id].childrenIds = folders[folder.parent_id].childrenIds
+							? [...folders[folder.parent_id].childrenIds, folder.id]
+							: [folder.id];
+
+						// Sort the children by updated_at field
+						folders[folder.parent_id].childrenIds.sort((a, b) => {
+							return folders[b].updated_at - folders[a].updated_at;
+						});
+					}
 				}
 			})
 		];
