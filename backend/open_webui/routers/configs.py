@@ -43,8 +43,106 @@ class ImportConfigForm(BaseModel):
 
 
 @router.post("/import", response_model=dict)
-async def import_config(form_data: ImportConfigForm, user=Depends(get_admin_user)):
+async def import_config(request: Request, form_data: ImportConfigForm, user=Depends(get_admin_user)):
     save_config(form_data.config)
+    
+    # Check if embedding configuration was updated and re-initialize if needed
+    embedding_keys = [
+        'RAG_EMBEDDING_ENGINE', 'RAG_EMBEDDING_MODEL', 'RAG_EMBEDDING_BATCH_SIZE',
+        'RAG_OPENAI_API_BASE_URL', 'RAG_OPENAI_API_KEY',
+        'RAG_OLLAMA_BASE_URL', 'RAG_OLLAMA_API_KEY',
+        'RAG_AZURE_OPENAI_BASE_URL', 'RAG_AZURE_OPENAI_API_KEY', 'RAG_AZURE_OPENAI_API_VERSION',
+        'RAG_RERANKING_ENGINE', 'RAG_RERANKING_MODEL',
+        'RAG_EXTERNAL_RERANKER_URL', 'RAG_EXTERNAL_RERANKER_API_KEY',
+        'ENABLE_RAG_HYBRID_SEARCH', 'BYPASS_EMBEDDING_AND_RETRIEVAL'
+    ]
+    
+    if any(key in form_data.config for key in embedding_keys):
+        try:
+            from open_webui.routers.retrieval import get_ef, get_rf, get_embedding_function, get_reranking_function
+            from open_webui.config import RAG_EMBEDDING_MODEL_AUTO_UPDATE, RAG_RERANKING_MODEL_AUTO_UPDATE
+            from open_webui.env import DEVICE_TYPE
+            
+            log.info("Re-initializing embedding functions after configuration import")
+            
+            # Clear existing embedding functions if switching from internal model
+            if request.app.state.config.RAG_EMBEDDING_ENGINE == "":
+                request.app.state.ef = None
+                request.app.state.EMBEDDING_FUNCTION = None
+                import gc
+                gc.collect()
+                if DEVICE_TYPE == "cuda":
+                    import torch
+                    if torch.cuda.is_available():
+                        torch.cuda.empty_cache()
+            
+            # Re-initialize embedding function
+            request.app.state.ef = get_ef(
+                request.app.state.config.RAG_EMBEDDING_ENGINE,
+                request.app.state.config.RAG_EMBEDDING_MODEL,
+                RAG_EMBEDDING_MODEL_AUTO_UPDATE,
+            )
+            
+            # Re-initialize reranking function if hybrid search is enabled
+            if (
+                request.app.state.config.ENABLE_RAG_HYBRID_SEARCH
+                and not request.app.state.config.BYPASS_EMBEDDING_AND_RETRIEVAL
+            ):
+                request.app.state.rf = get_rf(
+                    request.app.state.config.RAG_RERANKING_ENGINE,
+                    request.app.state.config.RAG_RERANKING_MODEL,
+                    request.app.state.config.RAG_EXTERNAL_RERANKER_URL,
+                    request.app.state.config.RAG_EXTERNAL_RERANKER_API_KEY,
+                    RAG_RERANKING_MODEL_AUTO_UPDATE,
+                )
+            else:
+                request.app.state.rf = None
+            
+            # Re-initialize embedding function wrapper
+            request.app.state.EMBEDDING_FUNCTION = get_embedding_function(
+                request.app.state.config.RAG_EMBEDDING_ENGINE,
+                request.app.state.config.RAG_EMBEDDING_MODEL,
+                embedding_function=request.app.state.ef,
+                url=(
+                    request.app.state.config.RAG_OPENAI_API_BASE_URL
+                    if request.app.state.config.RAG_EMBEDDING_ENGINE == "openai"
+                    else (
+                        request.app.state.config.RAG_OLLAMA_BASE_URL
+                        if request.app.state.config.RAG_EMBEDDING_ENGINE == "ollama"
+                        else request.app.state.config.RAG_AZURE_OPENAI_BASE_URL
+                    )
+                ),
+                key=(
+                    request.app.state.config.RAG_OPENAI_API_KEY
+                    if request.app.state.config.RAG_EMBEDDING_ENGINE == "openai"
+                    else (
+                        request.app.state.config.RAG_OLLAMA_API_KEY
+                        if request.app.state.config.RAG_EMBEDDING_ENGINE == "ollama"
+                        else request.app.state.config.RAG_AZURE_OPENAI_API_KEY
+                    )
+                ),
+                embedding_batch_size=request.app.state.config.RAG_EMBEDDING_BATCH_SIZE,
+                azure_api_version=(
+                    request.app.state.config.RAG_AZURE_OPENAI_API_VERSION
+                    if request.app.state.config.RAG_EMBEDDING_ENGINE == "azure_openai"
+                    else None
+                ),
+            )
+            
+            # Re-initialize reranking function wrapper
+            request.app.state.RERANKING_FUNCTION = get_reranking_function(
+                request.app.state.config.RAG_RERANKING_ENGINE,
+                request.app.state.config.RAG_RERANKING_MODEL,
+                reranking_function=request.app.state.rf,
+            )
+            
+            log.info(f"Successfully re-initialized embedding functions with model: {request.app.state.config.RAG_EMBEDDING_MODEL}")
+            
+        except Exception as e:
+            log.error(f"Error re-initializing embedding functions after config import: {e}")
+            # Don't fail the import if embedding initialization fails
+            pass
+    
     return get_config()
 
 
