@@ -1,0 +1,41 @@
+# SQLite + Supabase Sync System - Python Dependencies
+# Phase 1: High Availability Sync Container
+
+# FastAPI and ASGI server
+fastapi==0.115.0
+uvicorn[standard]==0.32.0
+
+# Async PostgreSQL driver
+asyncpg==0.30.0
+
+# Prometheus metrics
+prometheus-client==0.21.0
+prometheus-fastapi-instrumentator==7.0.0
+
+# Data validation and settings management
+pydantic==2.9.2
+pydantic-settings==2.6.1
+
+# Environment variable management
+python-dotenv==1.0.1
+
+# JSON handling (enhanced)
+orjson==3.10.12
+
+# Logging (structured)
+python-json-logger==3.2.1
+
+# HTTP client for inter-service communication
+httpx==0.28.1
+
+# Testing (development)
+pytest==8.3.4
+pytest-asyncio==0.24.0
+pytest-cov==6.0.0
+
+# Type checking (development)
+mypy==1.14.0
+types-orjson==3.6.2
+
+# Code quality (development)
+ruff==0.8.4

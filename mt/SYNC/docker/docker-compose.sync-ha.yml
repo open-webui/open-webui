@@ -1,0 +1,136 @@
+version: '3.8'
+
+# SQLite + Supabase Sync System - High Availability Cluster
+# Phase 1: Dual sync containers with leader election
+
+services:
+  sync-primary:
+    image: ghcr.io/imagicrafter/openwebui-sync:latest
+    container_name: openwebui-sync-primary
+    restart: unless-stopped
+
+    environment:
+      # Required
+      - DATABASE_URL=${SUPABASE_URL}
+      - ROLE=primary
+      - CLUSTER_NAME=${HOST_NAME:-prod-host-1}
+
+      # Optional (with defaults)
+      - API_PORT=9443
+      - CACHE_TTL=${CACHE_TTL:-300}
+      - HEARTBEAT_INTERVAL=${HEARTBEAT_INTERVAL:-30}
+      - LEASE_DURATION=${LEASE_DURATION:-60}
+      - LOG_LEVEL=${LOG_LEVEL:-INFO}
+      - LOG_FORMAT=${LOG_FORMAT:-json}
+      - BATCH_SIZE=${BATCH_SIZE:-1000}
+      - ENABLE_METRICS=${ENABLE_METRICS:-true}
+
+    volumes:
+      # Docker socket for executing sync operations
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+
+      # Configuration (read-only)
+      - ./config:/app/config:ro
+
+      # Logs
+      - ./logs:/app/logs
+
+    ports:
+      - "9443:9443"
+
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9443/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
+
+    networks:
+      - sync-network
+
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  sync-secondary:
+    image: ghcr.io/imagicrafter/openwebui-sync:latest
+    container_name: openwebui-sync-secondary
+    restart: unless-stopped
+
+    environment:
+      # Required
+      - DATABASE_URL=${SUPABASE_URL}
+      - ROLE=secondary
+      - CLUSTER_NAME=${HOST_NAME:-prod-host-1}
+
+      # Optional (with defaults)
+      - API_PORT=9444
+      - CACHE_TTL=${CACHE_TTL:-300}
+      - HEARTBEAT_INTERVAL=${HEARTBEAT_INTERVAL:-30}
+      - LEASE_DURATION=${LEASE_DURATION:-60}
+      - LOG_LEVEL=${LOG_LEVEL:-INFO}
+      - LOG_FORMAT=${LOG_FORMAT:-json}
+      - ENABLE_METRICS=${ENABLE_METRICS:-true}
+
+    volumes:
+      # Docker socket for executing sync operations
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+
+      # Configuration (read-only)
+      - ./config:/app/config:ro
+
+      # Logs
+      - ./logs:/app/logs
+
+    ports:
+      - "9444:9444"
+
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9444/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
+
+    networks:
+      - sync-network
+
+    depends_on:
+      sync-primary:
+        condition: service_healthy
+
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+networks:
+  sync-network:
+    driver: bridge
+
+# ============================================================================
+# USAGE
+# ============================================================================
+#
+# 1. Set environment variables:
+#    export SUPABASE_URL="postgresql://sync_service:PASSWORD@region.pooler.supabase.com:5432/postgres"
+#    export HOST_NAME="prod-host-1"
+#
+# 2. Start cluster:
+#    docker-compose -f docker-compose.sync-ha.yml up -d
+#
+# 3. Check status:
+#    docker-compose -f docker-compose.sync-ha.yml ps
+#    curl http://localhost:9443/health | jq
+#    curl http://localhost:9444/health | jq
+#
+# 4. View logs:
+#    docker-compose -f docker-compose.sync-ha.yml logs -f
+#
+# 5. Stop cluster:
+#    docker-compose -f docker-compose.sync-ha.yml down
+#
+# ============================================================================

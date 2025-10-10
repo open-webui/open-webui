@@ -1,0 +1,99 @@
+{
+  "conflict_resolution": {
+    "default_strategy": "newest_wins",
+    "default_compare_field": "updated_at",
+
+    "table_strategies": {
+      "user": {
+        "strategy": "newest_wins",
+        "compare_field": "updated_at",
+        "description": "User profile changes - prefer most recent"
+      },
+
+      "auth": {
+        "strategy": "source_wins",
+        "description": "Authentication records - prefer local SQLite (active sessions)"
+      },
+
+      "oauth_session": {
+        "strategy": "source_wins",
+        "description": "OAuth sessions - prefer local SQLite (active sessions should not be overwritten)"
+      },
+
+      "chat": {
+        "strategy": "merge",
+        "merge_rules": {
+          "title": "newest_wins",
+          "messages": "append",
+          "metadata": "union",
+          "updated_at": "newest_wins"
+        },
+        "description": "Chat conversations - merge messages to avoid data loss"
+      },
+
+      "message": {
+        "strategy": "merge",
+        "merge_rules": {
+          "content": "newest_wins",
+          "annotations": "union",
+          "metadata": "union"
+        },
+        "description": "Individual messages - merge annotations and metadata"
+      },
+
+      "config": {
+        "strategy": "manual",
+        "notify": true,
+        "description": "System configuration - require manual review for safety"
+      },
+
+      "tag": {
+        "strategy": "newest_wins",
+        "compare_field": "updated_at",
+        "description": "Tags - prefer most recent"
+      },
+
+      "function": {
+        "strategy": "manual",
+        "notify": true,
+        "description": "Custom functions - require manual review for code changes"
+      }
+    },
+
+    "resolution_log": {
+      "enabled": true,
+      "retention_days": 30,
+      "include_data_snapshot": false,
+      "description": "Keep conflict logs for 30 days without storing full data snapshots"
+    },
+
+    "notification": {
+      "manual_resolution_required": {
+        "enabled": true,
+        "channels": ["log", "metrics"],
+        "description": "Notify when manual conflict resolution is needed"
+      },
+      "high_conflict_rate": {
+        "enabled": true,
+        "threshold": 10,
+        "time_window_minutes": 10,
+        "channels": ["log", "metrics"],
+        "description": "Alert if more than 10 conflicts in 10 minutes"
+      }
+    },
+
+    "advanced_options": {
+      "auto_merge_max_age_hours": 24,
+      "conflict_detection_fields": ["updated_at", "version"],
+      "checksum_validation": false,
+      "parallel_resolution": true,
+      "max_resolution_workers": 4
+    }
+  },
+
+  "_metadata": {
+    "version": "1.0",
+    "created": "2025-01-10",
+    "description": "Default conflict resolution configuration for SQLite + Supabase sync system"
+  }
+}
