@@ -41,7 +41,7 @@ class SelectionSyncService {
       messageId: selection.message_id,
       role: selection.role,
       text: selection.selected_text,
-      childMarker: selection.child_marker
+      childId: selection.child_id
     };
 
     // Update the store first (this will trigger localStorage save via subscription)
@@ -67,7 +67,7 @@ class SelectionSyncService {
       messageId: selection.message_id,
       role: selection.role,
       text: selection.selected_text,
-      childMarker: selection.child_marker
+      childId: selection.child_id
     }));
     
     savedSelections.update(current => [...current, ...localSelections]);
@@ -85,7 +85,7 @@ class SelectionSyncService {
   /**
    * TEXT SELECTION: Get selections for a specific chat (backend first, localStorage fallback)
    */
-  async getChatSelections(chatId: string): Promise<{chatId: string; messageId: string; role: 'user' | 'assistant'; text: string; childMarker?: string}[]> {
+  async getChatSelections(chatId: string): Promise<{chatId: string; messageId: string; role: 'user' | 'assistant'; text: string; childId?: string}[]> {
     // Try backend first if online and authenticated
     if (this.isOnline && this.isUserAuthenticated()) {
       try {
@@ -96,7 +96,7 @@ class SelectionSyncService {
           messageId: selection.message_id,
           role: selection.role,
           text: selection.selected_text,
-          childMarker: selection.child_marker
+          childId: selection.child_id
         }));
       } catch (error) {
         // Failed to get from backend - fall back to localStorage
@@ -299,7 +299,7 @@ class SelectionSyncService {
         messageId: selection.message_id,
         role: selection.role,
         text: selection.selected_text,
-        childMarker: selection.child_marker
+        childId: selection.child_id
       };
 
       existing[selection.chat_id].push(localSelection);
@@ -309,7 +309,7 @@ class SelectionSyncService {
     }
   }
 
-  private getFromLocalStorage(chatId: string): {chatId: string; messageId: string; role: 'user' | 'assistant'; text: string; childMarker?: string}[] {
+  private getFromLocalStorage(chatId: string): {chatId: string; messageId: string; role: 'user' | 'assistant'; text: string; childId?: string}[] {
     try {
       const existing = JSON.parse(localStorage.getItem(this.STORAGE_KEY) || '{}');
       return existing[chatId] || [];

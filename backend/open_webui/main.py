@@ -92,6 +92,7 @@ from open_webui.routers import (
     users,
     utils,
     moderation,
+    child_profiles,
 )
 
 from open_webui.routers.retrieval import (
@@ -1287,6 +1288,9 @@ app.include_router(moderation.router, prefix="/api/v1/moderation", tags=["modera
 # Import and include selections router
 from open_webui.routers import selections
 app.include_router(selections.router, prefix="/api/v1", tags=["selections"])
+
+# Include child profiles router
+app.include_router(child_profiles.router, prefix="/api/v1", tags=["child_profiles"])
 
 # SCIM 2.0 API for identity management
 if SCIM_ENABLED:

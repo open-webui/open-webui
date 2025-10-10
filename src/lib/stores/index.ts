@@ -93,7 +93,7 @@ export const playingNotificationSound = writable(false);
 // Selection/Recording Mode (UI-only)
 export const selectionModeEnabled = writable(false);
 export const savedSelections: Writable<
-	{ chatId: string; messageId: string; role: 'user' | 'assistant'; text: string; childMarker?: string }[]
+	{ chatId: string; messageId: string; role: 'user' | 'assistant'; text: string; childId?: string }[]
 > = writable([]);
 export const selectionForceInput = writable(false);
 
@@ -141,7 +141,7 @@ if (typeof window !== 'undefined') {
       const byChat = items.reduce((acc, item) => {
         (acc[item.chatId] = acc[item.chatId] || []).push(item);
         return acc;
-      }, {} as Record<string, { chatId: string; messageId: string; role: 'user' | 'assistant'; text: string; childMarker?: string }[]>);
+      }, {} as Record<string, { chatId: string; messageId: string; role: 'user' | 'assistant'; text: string; childId?: string }[]>);
       localStorage.setItem('saved-selections', JSON.stringify(byChat));
     } catch (error) {
       // Continue silently on save error

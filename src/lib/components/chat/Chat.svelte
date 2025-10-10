@@ -76,7 +76,9 @@
 	import { createOpenAITextStream } from '$lib/apis/streaming';
 	import { queryMemory } from '$lib/apis/memories';
 import { getAndUpdateUserLocation, getUserSettings } from '$lib/apis/users';
-import { selectionSyncService } from '$lib/services/selectionSync';
+	import { selectionSyncService } from '$lib/services/selectionSync';
+	import { childProfileSync } from '$lib/services/childProfileSync';
+	import type { ChildProfile } from '$lib/apis/child-profiles';
 	import {
 		chatCompleted,
 		generateQueries,
@@ -361,70 +363,80 @@ $: {
 
 	// Child profile popup
 	let showChildProfilePopup = false;
-	let childProfiles = [];
+	let childProfiles: ChildProfile[] = [];
 	let selectedChildIndex = 0;
 
 	// Load child profiles from localStorage
-	function loadChildProfiles() {
+	async function loadChildProfiles() {
 		try {
 			const selectedRole = localStorage.getItem('selectedRole');
 			console.log('Selected role:', selectedRole);
 			
 			if (selectedRole === 'kids') {
-				const savedProfiles = localStorage.getItem('childProfiles');
-				console.log('Saved profiles:', savedProfiles);
+				// Load child profiles from API
+				childProfiles = await childProfileSync.getChildProfiles();
+				console.log('Loaded child profiles:', childProfiles);
 				
-				if (savedProfiles) {
-					childProfiles = JSON.parse(savedProfiles);
-					console.log('Parsed child profiles:', childProfiles);
-				}
+				// Get currently selected child ID from user settings
+				const currentChildId = childProfileSync.getCurrentChildId();
+				console.log('Current child ID from settings:', currentChildId);
 				
-				// Only show popup if:
-				// 1. No profiles exist at all, OR
-				// 2. Profiles exist but no child is selected (selectedChildIndex is invalid)
-				const selectedChild = localStorage.getItem('selectedChildIndex');
-				const hasValidChildSelection = selectedChild !== null && 
-					parseInt(selectedChild) >= 0 && 
-					parseInt(selectedChild) < childProfiles.length;
-				
-				console.log('Selected child index:', selectedChild);
-				console.log('Has valid child selection:', hasValidChildSelection);
-				console.log('Child profiles length:', childProfiles.length);
-				
-				if (childProfiles.length === 0 || !hasValidChildSelection) {
-					// Always ensure selectedChildIndex has a valid value when profiles exist
-					if (childProfiles.length > 0) {
-						selectedChildIndex = 0;
-						console.log('Showing child profile popup - no valid child selected, defaulting to index 0');
-					} else {
-						console.log('Showing setup popup - no profiles exist');
-						selectedChildIndex = null; // No selection when no profiles
-					}
+				if (childProfiles.length === 0) {
+					// No profiles exist - show popup
+					selectedChildIndex = -1;
+					currentChild = null;
 					showChildProfilePopup = true;
+					console.log('No child profiles found, showing popup');
+				} else if (currentChildId) {
+					// Find the selected child by ID
+					const childIndex = childProfiles.findIndex(child => child.id === currentChildId);
+					if (childIndex >= 0) {
+						selectedChildIndex = childIndex;
+						currentChild = childProfiles[selectedChildIndex];
+						console.log('Found selected child:', currentChild);
+					} else {
+						// Selected child ID doesn't match any profile - default to first
+						selectedChildIndex = 0;
+						currentChild = childProfiles[0];
+						await childProfileSync.setCurrentChildId(currentChild.id);
+						console.log('Selected child not found, defaulting to first child:', currentChild);
+					}
 				} else {
-					// Valid selection exists, load it
-					selectedChildIndex = parseInt(selectedChild);
+					// No child selected - default to first and save selection
+					selectedChildIndex = 0;
+					currentChild = childProfiles[0];
+					await childProfileSync.setCurrentChildId(currentChild.id);
+					console.log('No child selected, defaulting to first child:', currentChild);
 				}
 			}
 		} catch (error) {
 			console.error('Error loading child profiles:', error);
+			showChildProfilePopup = true;
 		}
 	}
 
 	// Check if we're in kids mode
 	$: isKidsMode = localStorage.getItem('selectedRole') === 'kids';
 
+	// Reactive statement to initialize new chat when models are loaded
+	$: if ($models.length > 0 && $page.url.pathname === '/' && !currentChatId) {
+		initNewChat();
+	}
+
 	// Close child profile popup
-	function closeChildProfilePopup() {
-		// Save the selected child index when closing popup
+	async function closeChildProfilePopup() {
+		// Save the selected child ID when closing popup
 		if (childProfiles.length > 0 && selectedChildIndex >= 0) {
-			localStorage.setItem('selectedChildIndex', selectedChildIndex.toString());
-			console.log('Saved selected child index:', selectedChildIndex);
-			// Force update currentChild immediately
-			currentChild = childProfiles[selectedChildIndex] || null;
-			console.log('Updated currentChild:', currentChild);
-			// Refresh selections to show only current child's selections
-			refreshSelections();
+			const selectedChild = childProfiles[selectedChildIndex];
+			if (selectedChild) {
+				await childProfileSync.setCurrentChildId(selectedChild.id);
+				console.log('Saved selected child ID:', selectedChild.id);
+				// Force update currentChild immediately
+				currentChild = selectedChild;
+				console.log('Updated currentChild:', currentChild);
+				// Refresh selections to show only current child's selections
+				refreshSelections();
+			}
 		}
 		showChildProfilePopup = false;
 	}
@@ -855,7 +867,7 @@ $: {
 		pageSubscribe = page.subscribe(async (p) => {
 			if (p.url.pathname === '/') {
 				await tick();
-				initNewChat();
+				// initNewChat() is now called reactively when models are loaded
 			}
 		});
 
@@ -926,7 +938,7 @@ $: {
         }, 1000); // 1 second timeout to allow panel state restoration to complete
 
 		// Load child profiles and show popup if needed
-		loadChildProfiles();
+		await loadChildProfiles();
 	});
 
 	onDestroy(() => {
@@ -1144,6 +1156,7 @@ $: {
 	//////////////////////////
 
 	const initNewChat = async () => {
+
 		const availableModels = $models
 			.filter((m) => !(m?.info?.meta?.hidden ?? false))
 			.map((m) => m.id);
@@ -1181,23 +1194,21 @@ $: {
 				$models.map((m) => m.id).includes(modelId)
 			);
 		} else {
-			if (sessionStorage.selectedModels) {
-				selectedModels = JSON.parse(sessionStorage.selectedModels);
-				sessionStorage.removeItem('selectedModels');
-			} else {
-				if ($settings?.models) {
-					selectedModels = $settings?.models;
-				} else if ($config?.default_models) {
-					console.log($config?.default_models.split(',') ?? '');
-					selectedModels = $config?.default_models.split(',');
-				}
+			// Always reset to preferred default on refresh/new chat
+			// Prefer 'gpt-5-2025-08-07' when present, otherwise use server defaults
+			const preferredModelId = 'gpt-5-2025-08-07';
+			if (availableModels.includes(preferredModelId)) {
+				selectedModels = [preferredModelId];
+			} else if ($config?.default_models) {
+				// Fallback to server-configured defaults
+				selectedModels = $config?.default_models.split(',');
 			}
 			selectedModels = selectedModels.filter((modelId) => availableModels.includes(modelId));
 		}
 
 		if (selectedModels.length === 0 || (selectedModels.length === 1 && selectedModels[0] === '')) {
 			if (availableModels.length > 0) {
-				selectedModels = [availableModels?.at(0) ?? ''];
+				selectedModels = [availableModels[0]];
 			} else {
 				selectedModels = [''];
 			}
@@ -2677,11 +2688,15 @@ Key guidelines:
 											console.log(`Previous selectedChildIndex: ${selectedChildIndex}`);
 											isManualSelection = true;
 											selectedChildIndex = index;
-											currentChild = childProfiles[selectedChildIndex] || null;
-											console.log(`New selectedChildIndex: ${selectedChildIndex}`);
-											console.log(`New currentChild:`, currentChild);
-											// Refresh selections to show only current child's selections
-											refreshSelections();
+											const selectedChild = childProfiles[selectedChildIndex];
+											if (selectedChild) {
+												childProfileSync.setCurrentChildId(selectedChild.id);
+												currentChild = selectedChild;
+												console.log(`New selectedChildIndex: ${selectedChildIndex}`);
+												console.log(`New currentChild:`, currentChild);
+												// Refresh selections to show only current child's selections
+												refreshSelections();
+											}
 										}}
 										class="w-full p-3 rounded-lg border-2 transition-all duration-200 text-left cursor-pointer select-none focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 {selectedChildIndex === index ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/20' : 'border-gray-200 dark:border-gray-600 hover:border-gray-300 dark:hover:border-gray-500'}"
 									>
@@ -2696,7 +2711,7 @@ Key guidelines:
 													{child.name || `Kid ${index + 1}`}
 												</h5>
 												<p class="text-sm text-gray-500 dark:text-gray-400">
-													{child.childAge || 'Age not set'} • {child.childGender || 'Gender not set'}
+													{child.child_age || 'Age not set'} • {child.child_gender || 'Gender not set'}
 												</p>
 											</div>
 											{#if selectedChildIndex === index}
@@ -2707,9 +2722,9 @@ Key guidelines:
 												</div>
 											{/if}
 										</div>
-										{#if child.childCharacteristics}
+										{#if child.child_characteristics}
 											<p class="text-xs text-gray-600 dark:text-gray-400 mt-2 line-clamp-2">
-												{child.childCharacteristics}
+												{child.child_characteristics}
 											</p>
 										{/if}
 									</button>
@@ -2728,16 +2743,16 @@ Key guidelines:
 										{childProfiles[selectedChildIndex]?.name || `Kid ${selectedChildIndex + 1}`}
 									</h4>
 									<p class="text-sm text-gray-500 dark:text-gray-400">
-										{childProfiles[selectedChildIndex]?.childAge || 'Age not set'} • {childProfiles[selectedChildIndex]?.childGender || 'Gender not set'}
+										{childProfiles[selectedChildIndex]?.child_age || 'Age not set'} • {childProfiles[selectedChildIndex]?.child_gender || 'Gender not set'}
 									</p>
 								</div>
 							</div>
 						{/if}
 						
-						{#if childProfiles[selectedChildIndex]?.childCharacteristics}
+						{#if childProfiles[selectedChildIndex]?.child_characteristics}
 							<div class="bg-gray-50 dark:bg-gray-700 rounded-lg p-3">
 								<p class="text-sm text-gray-700 dark:text-gray-300">
-									<strong>Characteristics:</strong> {childProfiles[selectedChildIndex].childCharacteristics}
+									<strong>Characteristics:</strong> {childProfiles[selectedChildIndex].child_characteristics}
 								</p>
 							</div>
 						{/if}
@@ -2883,16 +2898,16 @@ Key guidelines:
 												</span>
 												{#if currentChild}
 													<span class="text-xs text-gray-600 dark:text-gray-300 bg-gray-200 dark:bg-gray-700 px-2 py-1 rounded-full">
-														{currentChild.childAge || 'Age not set'}
+														{currentChild.child_age || 'Age not set'}
 													</span>
 													<span class="text-xs text-gray-600 dark:text-gray-300 bg-gray-200 dark:bg-gray-700 px-2 py-1 rounded-full">
-														{currentChild.childGender || 'Gender not set'}
+														{currentChild.child_gender || 'Gender not set'}
 													</span>
 												{/if}
 											</div>
-											{#if currentChild?.childCharacteristics}
+											{#if currentChild?.child_characteristics}
 												<p class="text-sm text-gray-700 dark:text-gray-300 mt-1 line-clamp-2">
-													{currentChild.childCharacteristics}
+													{currentChild.child_characteristics}
 												</p>
 											{:else if !currentChild}
 												<p class="text-sm text-gray-700 dark:text-gray-300 mt-1">

@@ -16,6 +16,8 @@
 	import { applyModeration, type ModerationResponse } from '$lib/apis/moderation';
 	import { toast } from 'svelte-sonner';
 	import { toggleTheme, getCurrentTheme } from '$lib/utils/theme';
+	import { childProfileSync } from '$lib/services/childProfileSync';
+	import type { ChildProfile } from '$lib/apis/child-profiles';
 	
 	import ArrowLeft from '$lib/components/icons/ArrowLeft.svelte';
 	import LockClosed from '$lib/components/icons/LockClosed.svelte';
@@ -75,17 +77,8 @@
 	let profileSubmitted: boolean = false; // Track if profile has been submitted
 	let isEditingProfile: boolean = false; // Track if in edit mode
 
-	// Multi-child support
-	interface ChildProfileItem {
-		id: string;
-		name: string;
-		childAge: string;
-		childGender: string;
-		childCharacteristics: string;
-		parentingStyle: string;
-	}
-
-	let childProfiles: ChildProfileItem[] = [];
+	// Multi-child support - using backend ChildProfile type
+	let childProfiles: ChildProfile[] = [];
 	let selectedChildIndex: number = 0;
 let showPreview: boolean = false; // legacy preview flag (not used in new layout)
 let showProfileModal: boolean = false;
@@ -104,10 +97,10 @@ let editInModal: boolean = false;
 		ensureAtLeastOneChild();
 		const sel = childProfiles[selectedChildIndex];
 		childName = sel?.name || '';
-		childAge = sel?.childAge || '';
-		childGender = sel?.childGender || '';
-		childCharacteristics = sel?.childCharacteristics || '';
-		parentingStyle = sel?.parentingStyle || '';
+		childAge = sel?.child_age || '';
+		childGender = sel?.child_gender || '';
+		childCharacteristics = sel?.child_characteristics || '';
+		parentingStyle = sel?.parenting_style || '';
 	}
 
 	function applyFormToSelectedChild() {
@@ -115,48 +108,59 @@ let editInModal: boolean = false;
 		const sel = childProfiles[selectedChildIndex];
 		if (!sel) return;
 		sel.name = childName;
-		sel.childAge = childAge;
-		sel.childGender = childGender;
-		sel.childCharacteristics = childCharacteristics;
-		sel.parentingStyle = parentingStyle;
+		sel.child_age = childAge;
+		sel.child_gender = childGender;
+		sel.child_characteristics = childCharacteristics;
+		sel.parenting_style = parentingStyle;
 	}
 
-	function deleteChild(index: number) {
-		childProfiles = childProfiles.filter((_, i) => i !== index);
-		
-		// Adjust selectedChildIndex if needed
-		if (childProfiles.length === 0) {
-			selectedChildIndex = 0;
-			childName = '';
-			childAge = '';
-			childGender = '';
-			childCharacteristics = '';
-			parentingStyle = '';
-		} else {
-			if (selectedChildIndex >= childProfiles.length) {
-				selectedChildIndex = childProfiles.length - 1;
+	async function deleteChild(index: number) {
+		const childToDelete = childProfiles[index];
+		if (!childToDelete) return;
+
+		try {
+			await childProfileSync.deleteChildProfile(childToDelete.id);
+			childProfiles = childProfiles.filter((_, i) => i !== index);
+			
+			// Adjust selectedChildIndex if needed
+			if (childProfiles.length === 0) {
+				selectedChildIndex = 0;
+				childName = '';
+				childAge = '';
+				childGender = '';
+				childCharacteristics = '';
+				parentingStyle = '';
+			} else {
+				if (selectedChildIndex >= childProfiles.length) {
+					selectedChildIndex = childProfiles.length - 1;
+				}
+				hydrateFormFromSelectedChild();
 			}
-			hydrateFormFromSelectedChild();
+			
+			toast.success('Child profile deleted successfully!');
+		} catch (error) {
+			console.error('Failed to delete child profile:', error);
+			toast.error('Failed to delete child profile');
 		}
-		
-		// Save updated profiles
-		localStorage.setItem('childProfiles', JSON.stringify(childProfiles));
 	}
 
-	function addNewChild() {
-		childProfiles = [
-			...childProfiles,
-			{
-				id: crypto.randomUUID(),
+	async function addNewChild() {
+		try {
+			const newChild = 			await childProfileSync.createChildProfile({
 				name: '',
-				childAge: '',
-				childGender: '',
-				childCharacteristics: '',
-				parentingStyle: ''
-			}
-		];
-		selectedChildIndex = childProfiles.length - 1;
-		hydrateFormFromSelectedChild();
+				child_age: '',
+				child_gender: '',
+				child_characteristics: '',
+				parenting_style: ''
+			});
+			
+			childProfiles = [...childProfiles, newChild];
+			selectedChildIndex = childProfiles.length - 1;
+			hydrateFormFromSelectedChild();
+		} catch (error) {
+			console.error('Failed to create child profile:', error);
+			toast.error('Failed to create child profile');
+		}
 	}
 
 	// Graph state
@@ -404,7 +408,7 @@ let editInModal: boolean = false;
 			}
 			
 			// Load child profile data
-			loadChildProfile();
+			await loadChildProfile();
 		};
 		init();
 		
@@ -457,61 +461,63 @@ let editInModal: boolean = false;
 	}
 	
 	// Child profile functions
-	function saveChildProfile() {
-		// Apply current form to selected child and persist all children + parent info
-		applyFormToSelectedChild();
-		const parentInfo = {
-			parentGender,
-			parentAge,
-			parentPreference
-		};
-		localStorage.setItem('childProfiles', JSON.stringify(childProfiles));
-		localStorage.setItem('childParentInfo', JSON.stringify(parentInfo));
-		profileSubmitted = true;
-		isEditingProfile = false;
-		toast.success('Child profile saved successfully!');
+	async function saveChildProfile() {
+		try {
+			// Apply current form to selected child
+			applyFormToSelectedChild();
+			
+			const selectedChild = childProfiles[selectedChildIndex];
+			if (selectedChild) {
+				// Update the child profile via API
+				const updatedChild = await childProfileSync.updateChildProfile(selectedChild.id, {
+					name: childName,
+					child_age: childAge,
+					child_gender: childGender,
+					child_characteristics: childCharacteristics,
+					parenting_style: parentingStyle
+				});
+				
+				// Update local array
+				childProfiles[selectedChildIndex] = updatedChild;
+			}
+			
+			// Save parent info to localStorage (not part of child profile API)
+			const parentInfo = {
+				parentGender,
+				parentAge,
+				parentPreference
+			};
+			localStorage.setItem('childParentInfo', JSON.stringify(parentInfo));
+			
+			profileSubmitted = true;
+			isEditingProfile = false;
+			toast.success('Child profile saved successfully!');
+		} catch (error) {
+			console.error('Failed to save child profile:', error);
+			toast.error('Failed to save child profile');
+		}
 	}
 	
-	function loadChildProfile() {
-		// Migration: if legacy single profile exists, convert to array once
-		const savedLegacy = localStorage.getItem('childProfile');
-		const savedArray = localStorage.getItem('childProfiles');
-		if (!savedArray && savedLegacy) {
-			try {
-				const p = JSON.parse(savedLegacy);
-				const migrated: ChildProfileItem = {
-					id: crypto.randomUUID(),
-					name: p.childName || '',
-					childAge: p.childAge || '',
-					childGender: p.childGender || '',
-					childCharacteristics: p.childCharacteristics || '',
-					parentingStyle: p.parentingStyle || ''
-				};
-				localStorage.setItem('childProfiles', JSON.stringify([migrated]));
-				const parentInfo = {
-					parentGender: p.parentGender || '',
-					parentAge: p.parentAge || '',
-					parentPreference: p.parentPreference || ''
-				};
-				localStorage.setItem('childParentInfo', JSON.stringify(parentInfo));
-				localStorage.removeItem('childProfile');
-			} catch {}
-		}
-
+	async function loadChildProfile() {
 		try {
-			const arr = JSON.parse(localStorage.getItem('childProfiles') || '[]');
-			if (Array.isArray(arr)) {
-				childProfiles = arr;
-			}
+			// Load child profiles from API via childProfileSync
+			childProfiles = await childProfileSync.getChildProfiles();
+			
+			// Load parent info from localStorage (not part of child profile API)
 			const parentInfo = JSON.parse(localStorage.getItem('childParentInfo') || '{}');
 			parentGender = parentInfo.parentGender || '';
 			parentAge = parentInfo.parentAge || '';
 			parentPreference = parentInfo.parentPreference || '';
-		} catch {}
-
-		ensureAtLeastOneChild();
-		hydrateFormFromSelectedChild();
-		profileSubmitted = (localStorage.getItem('childProfiles') ?? '').length > 0;
+			
+			ensureAtLeastOneChild();
+			hydrateFormFromSelectedChild();
+			profileSubmitted = childProfiles.length > 0;
+		} catch (error) {
+			console.error('Failed to load child profiles:', error);
+			// Fallback to empty array
+			childProfiles = [];
+			profileSubmitted = false;
+		}
 	}
 	
 	function startEditingProfile() {

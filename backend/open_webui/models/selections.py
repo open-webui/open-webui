@@ -22,6 +22,7 @@ class Selection(Base):
     message_id = Column(String, nullable=False)  # Link to specific message
     role = Column(String, nullable=False)  # 'user' or 'assistant'
     selected_text = Column(Text, nullable=False)  # The actual selected text
+    child_id = Column(String, nullable=True)  # Link to child profile for kids mode
     context = Column(Text, nullable=True)  # Surrounding context for analysis
     meta = Column(JSON, nullable=True)  # Additional metadata (model used, timestamp, etc.)
     
@@ -45,6 +46,7 @@ class SelectionModel(BaseModel):
     message_id: str
     role: str
     selected_text: str
+    child_id: Optional[str] = None
     context: Optional[str] = None
     meta: Optional[dict] = None
     created_at: int
@@ -55,6 +57,7 @@ class SelectionForm(BaseModel):
     message_id: str
     role: str
     selected_text: str
+    child_id: Optional[str] = None
     context: Optional[str] = None
     meta: Optional[dict] = None
 
@@ -75,6 +78,7 @@ class SelectionTable:
                     "message_id": form_data.message_id,
                     "role": form_data.role,
                     "selected_text": form_data.selected_text,
+                    "child_id": form_data.child_id,
                     "context": form_data.context,
                     "meta": form_data.meta,
                     "created_at": ts,

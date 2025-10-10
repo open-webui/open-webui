@@ -7,7 +7,7 @@ export interface Selection {
   message_id: string;
   role: 'user' | 'assistant';
   selected_text: string;
-  child_marker?: string;
+  child_id?: string;
   context?: string;
   meta?: Record<string, any>;
   created_at: number;
@@ -19,7 +19,7 @@ export interface SelectionForm {
   message_id: string;
   role: 'user' | 'assistant';
   selected_text: string;
-  child_marker?: string;
+  child_id?: string;
   context?: string;
   meta?: Record<string, any>;
 }

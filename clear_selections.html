@@ -156,8 +156,18 @@
             }
         }
 
-        function getCurrentChildMarker() {
+        function getCurrentChildId() {
             try {
+                // Try to get from user settings first (new system)
+                const userData = localStorage.getItem('user');
+                if (userData) {
+                    const user = JSON.parse(userData);
+                    if (user.settings?.ui?.selectedChildId) {
+                        return user.settings.ui.selectedChildId;
+                    }
+                }
+                
+                // Fallback to old localStorage system for backward compatibility
                 const selectedIndex = localStorage.getItem('selectedChildIndex');
                 const profilesJson = localStorage.getItem('childProfiles');
                 
@@ -167,14 +177,19 @@
                     const currentChild = profiles[index];
                     
                     if (currentChild) {
-                        return currentChild.name || `child_${index}`;
+                        return currentChild.id || currentChild.name || `child_${index}`;
                     }
                 }
                 return null;
             } catch (error) {
-                console.error('Error getting current child marker:', error);
+                console.error('Error getting current child ID:', error);
                 return null;
             }
+        }
+        
+        // Keep old function for backward compatibility
+        function getCurrentChildMarker() {
+            return getCurrentChildId();
         }
 
         function clearSelections(type = 'all') {
@@ -246,7 +261,7 @@
             try {
                 if (type === 'current-child') {
                     // Clear only current child's selections from localStorage
-                    const currentChildMarker = getCurrentChildMarker();
+                    const currentChildId = getCurrentChildId();
                     const savedSelections = localStorage.getItem('saved-selections');
                     
                     if (savedSelections) {
@@ -256,7 +271,7 @@
                         Object.keys(selectionsByChat).forEach(chatId => {
                             const originalLength = selectionsByChat[chatId].length;
                             selectionsByChat[chatId] = selectionsByChat[chatId].filter(
-                                selection => selection.childMarker !== currentChildMarker
+                                selection => selection.childId !== currentChildId
                             );
                             removedCount += originalLength - selectionsByChat[chatId].length;
                             
@@ -336,13 +351,13 @@
                     
                     // Filter selections by current child if needed
                     if (type === 'current-child') {
-                        const currentChildMarker = getCurrentChildMarker();
-                        if (currentChildMarker) {
+                        const currentChildId = getCurrentChildId();
+                        if (currentChildId) {
                             selectionsToDelete = selections.filter(
-                                selection => selection.child_marker === currentChildMarker
+                                selection => selection.child_id === currentChildId
                             );
                             output.innerHTML += `
-                                <p>🔍 Filtering for current child: <strong>${currentChildMarker}</strong></p>
+                                <p>🔍 Filtering for current child: <strong>${currentChildId}</strong></p>
                                 <p>📊 Found ${selectionsToDelete.length} selections for current child out of ${selections.length} total</p>
                             `;
                         } else {

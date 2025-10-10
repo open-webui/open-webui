@@ -1673,3 +1673,6 @@ export const updateModelConfig = async (token: string, config: GlobalModelConfig
 
 	return res;
 };
+
+// Export child profile APIs
+export * from './child-profiles';

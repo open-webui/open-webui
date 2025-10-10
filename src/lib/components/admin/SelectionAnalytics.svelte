@@ -3,6 +3,8 @@
   import { selectionsAPI, type Selection, type SelectionStats } from '$lib/apis/selections';
   import { user } from '$lib/stores';
   import { get } from 'svelte/store';
+  import { childProfileSync } from '$lib/services/childProfileSync';
+  import type { ChildProfile } from '$lib/apis/child-profiles';
 
   let stats: SelectionStats | null = null;
   let analytics: Selection[] = [];
@@ -11,14 +13,16 @@
   let selectedRole: string = '';
   let selectedChild: string = '';
   let dateRange = { start: '', end: '' };
+  let childProfiles: ChildProfile[] = [];
 
   // Check if user is admin
   $: isAdmin = $user?.role === 'admin';
 
-  onMount(() => {
+  onMount(async () => {
     if (isAdmin) {
       loadStats();
       loadAnalytics();
+      await loadChildProfiles();
     }
   });
 
@@ -49,9 +53,9 @@
       // Apply child marker filter client-side
       if (selectedChild) {
         if (selectedChild === 'no-child') {
-          analytics = allAnalytics.filter(selection => !selection.child_marker);
+          analytics = allAnalytics.filter(selection => !selection.child_id);
         } else {
-          analytics = allAnalytics.filter(selection => selection.child_marker === selectedChild);
+          analytics = allAnalytics.filter(selection => selection.child_id === selectedChild);
         }
       } else {
         analytics = allAnalytics;
@@ -75,7 +79,7 @@
         selection.chat_id,
         selection.message_id,
         selection.role,
-        selection.child_marker || 'No Child',
+        selection.child_id ? getChildName(selection.child_id) : 'No Child',
         `"${selection.selected_text.replace(/"/g, '""')}"`, // Escape quotes
         `"${(selection.context || '').replace(/"/g, '""')}"`,
         new Date(selection.created_at / 1000000).toISOString()
@@ -99,8 +103,24 @@
     return text.length > maxLength ? text.substring(0, maxLength) + '...' : text;
   }
 
+  async function loadChildProfiles() {
+    try {
+      const userData = get(user);
+      if (userData && userData.id) {
+        childProfiles = await childProfileSync.getChildProfiles();
+      }
+    } catch (err) {
+      console.error('Failed to load child profiles:', err);
+    }
+  }
+
+  function getChildName(childId: string): string {
+    const child = childProfiles.find(c => c.id === childId);
+    return child ? child.name : childId;
+  }
+
   // Get unique child markers from analytics data
-  $: uniqueChildMarkers = [...new Set(analytics.map(s => s.child_marker).filter(Boolean))].sort();
+  $: uniqueChildMarkers = [...new Set(analytics.map(s => s.child_id).filter(Boolean))].sort();
 </script>
 
 {#if !isAdmin}
@@ -176,8 +196,8 @@
           >
             <option value="">All Children</option>
             <option value="no-child">No Child Profile</option>
-            {#each uniqueChildMarkers as childMarker}
-              <option value={childMarker}>{childMarker}</option>
+            {#each uniqueChildMarkers as childId}
+              <option value={childId}>{getChildName(childId || '')}</option>
             {/each}
           </select>
         </div>
@@ -262,9 +282,9 @@
                     </span>
                   </td>
                   <td class="px-6 py-4 whitespace-nowrap">
-                    {#if selection.child_marker}
+                    {#if selection.child_id}
                       <span class="inline-flex px-2 py-1 text-xs font-semibold rounded-full bg-purple-100 text-purple-800">
-                        {selection.child_marker}
+                        {getChildName(selection.child_id)}
                       </span>
                     {:else}
                       <span class="text-gray-400 text-sm">No Child</span>

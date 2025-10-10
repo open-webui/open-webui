@@ -24,6 +24,7 @@ class SelectionResponse(BaseModel):
     message_id: str
     role: str
     selected_text: str
+    child_id: Optional[str] = None
     context: Optional[str] = None
     meta: Optional[dict] = None
     created_at: int

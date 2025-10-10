@@ -5,7 +5,7 @@
 
 import { models, settings, selectionModeEnabled, savedSelections, chatId as chatIdStore, latestUserMessageId, mobile } from '$lib/stores';
 import { selectionSyncService } from '$lib/services/selectionSync';
-import { getCurrentChildMarker } from '$lib/utils/childUtils';
+import { getCurrentChildId } from '$lib/utils/childUtils';
 	import { user as _user } from '$lib/stores';
 	import { copyToClipboard as _copyToClipboard, formatDate } from '$lib/utils';
 	import { WEBUI_BASE_URL } from '$lib/constants';
@@ -241,7 +241,7 @@ import { getCurrentChildMarker } from '$lib/utils/childUtils';
                 message_id: message.id,
                 role: 'user',
                 selected_text: text,
-                child_marker: getCurrentChildMarker() || undefined,
+                child_id: getCurrentChildId() || undefined,
                 context: undefined,
                 meta: {
                     timestamp: Date.now(),
@@ -290,10 +290,10 @@ import { getCurrentChildMarker } from '$lib/utils/childUtils';
     function applySavedSelections() {
         const root = contentContainerElement;
         if (!root) return;
-        const currentChildMarker = getCurrentChildMarker();
+        const currentChildId = getCurrentChildId();
         const items = ($savedSelections || []).filter(
             (s) => s.chatId === $chatIdStore && s.messageId === message.id && s.role === 'user' &&
-                   (s.childMarker === currentChildMarker || (!s.childMarker && !currentChildMarker))
+                   (s.childId === currentChildId || (!s.childId && !currentChildId))
         );
         for (const sel of items) {
             // Avoid double-highlighting: only add marks for texts not yet wrapped

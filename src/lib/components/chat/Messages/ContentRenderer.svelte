@@ -20,7 +20,7 @@
 import { selectionSyncService } from '$lib/services/selectionSync';
 	import FloatingButtons from '../ContentRenderer/FloatingButtons.svelte';
 	import { createMessagesList } from '$lib/utils';
-	import { getCurrentChildMarker } from '$lib/utils/childUtils';
+	import { getCurrentChildId } from '$lib/utils/childUtils';
 
 	export let id;
 	export let content;
@@ -215,7 +215,7 @@ const saveCurrentSelection = async () => {
             message_id: messageId,
             role: 'assistant',
             selected_text: text,
-            child_marker: getCurrentChildMarker() || undefined,
+            child_id: getCurrentChildId() || undefined,
             context: undefined,
             meta: {
                 timestamp: Date.now(),
@@ -405,10 +405,10 @@ function applySavedSelections() {
     const root = contentContainerElement;
     if (!root) return;
     const chat = chatId || $chatIdStore;
-    const currentChildMarker = getCurrentChildMarker();
+    const currentChildId = getCurrentChildId();
     const items = ($savedSelections || []).filter(
         (s) => s.chatId === chat && s.messageId === messageId && s.role === 'assistant' && 
-               (s.childMarker === currentChildMarker || (!s.childMarker && !currentChildMarker))
+               (s.childId === currentChildId || (!s.childId && !currentChildId))
     );
     // Avoid double-highlighting: only add marks for texts not yet wrapped
     for (const sel of items) {

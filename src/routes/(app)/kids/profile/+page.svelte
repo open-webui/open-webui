@@ -4,6 +4,9 @@
 	import { showSidebar } from '$lib/stores';
 	import MenuLines from '$lib/components/icons/MenuLines.svelte';
 	import { page } from '$app/stores';
+	import { childProfileSync } from '$lib/services/childProfileSync';
+	import type { ChildProfile } from '$lib/apis/child-profiles';
+	import { toast } from 'svelte-sonner';
 
 	const i18n = getContext('i18n');
 
@@ -17,17 +20,8 @@
 	let parentPreference: string = '';
 	let parentingStyle: string = '';
 
-	// Multi-child support
-	interface ChildProfileItem {
-		id: string;
-		name: string;
-		childAge: string;
-		childGender: string;
-		childCharacteristics: string;
-		parentingStyle: string;
-	}
-
-	let childProfiles: ChildProfileItem[] = [];
+	// Multi-child support - using backend ChildProfile type
+	let childProfiles: ChildProfile[] = [];
 	let selectedChildIndex: number = 0;
 	let showProfileModal: boolean = false;
 	let editInModal: boolean = false;
@@ -45,10 +39,10 @@
 		ensureAtLeastOneChild();
 		const sel = childProfiles[selectedChildIndex];
 		childName = sel?.name || '';
-		childAge = sel?.childAge || '';
-		childGender = sel?.childGender || '';
-		childCharacteristics = sel?.childCharacteristics || '';
-		parentingStyle = sel?.parentingStyle || '';
+		childAge = sel?.child_age || '';
+		childGender = sel?.child_gender || '';
+		childCharacteristics = sel?.child_characteristics || '';
+		parentingStyle = sel?.parenting_style || '';
 	}
 
 	function applyFormToSelectedChild() {
@@ -56,113 +50,114 @@
 		const sel = childProfiles[selectedChildIndex];
 		if (!sel) return;
 		sel.name = childName;
-		sel.childAge = childAge;
-		sel.childGender = childGender;
-		sel.childCharacteristics = childCharacteristics;
-		sel.parentingStyle = parentingStyle;
+		sel.child_age = childAge;
+		sel.child_gender = childGender;
+		sel.child_characteristics = childCharacteristics;
+		sel.parenting_style = parentingStyle;
 	}
 
-	function deleteChild(index: number) {
-		childProfiles = childProfiles.filter((_, i) => i !== index);
-		
-		// Adjust selectedChildIndex if needed
-		if (childProfiles.length === 0) {
-			selectedChildIndex = 0;
-			childName = '';
-			childAge = '';
-			childGender = '';
-			childCharacteristics = '';
-			parentingStyle = '';
-		} else {
-			if (selectedChildIndex >= childProfiles.length) {
-				selectedChildIndex = childProfiles.length - 1;
-			}
-			hydrateFormFromSelectedChild();
-		}
-		
-		// Save updated profiles
-		localStorage.setItem('childProfiles', JSON.stringify(childProfiles));
-	}
+	async function deleteChild(index: number) {
+		const childToDelete = childProfiles[index];
+		if (!childToDelete) return;
 
-	function addNewChild() {
-		childProfiles = [
-			...childProfiles,
-			{
-				id: crypto.randomUUID(),
-				name: '',
-				childAge: '',
-				childGender: '',
-				childCharacteristics: '',
-				parentingStyle: ''
-			}
-		];
-		selectedChildIndex = childProfiles.length - 1;
-		hydrateFormFromSelectedChild();
-	}
-
-	function loadChildProfile() {
 		try {
-			const savedProfiles = localStorage.getItem('childProfiles');
-			if (savedProfiles) {
-				childProfiles = JSON.parse(savedProfiles);
+			await childProfileSync.deleteChildProfile(childToDelete.id);
+			childProfiles = childProfiles.filter((_, i) => i !== index);
+			
+			// Adjust selectedChildIndex if needed
+			if (childProfiles.length === 0) {
+				selectedChildIndex = 0;
+				childName = '';
+				childAge = '';
+				childGender = '';
+				childCharacteristics = '';
+				parentingStyle = '';
 			} else {
-				// Migrate old single profile if it exists
-				const oldName = localStorage.getItem('childName');
-				const oldAge = localStorage.getItem('childAge');
-				const oldGender = localStorage.getItem('childGender');
-				const oldCharacteristics = localStorage.getItem('childCharacteristics');
-				const oldParentingStyle = localStorage.getItem('parentingStyle');
-				
-				if (oldName || oldAge || oldGender || oldCharacteristics || oldParentingStyle) {
-					childProfiles = [{
-						id: crypto.randomUUID(),
-						name: oldName || '',
-						childAge: oldAge || '',
-						childGender: oldGender || '',
-						childCharacteristics: oldCharacteristics || '',
-						parentingStyle: oldParentingStyle || ''
-					}];
-					
-					// Clear old storage
-					localStorage.removeItem('childName');
-					localStorage.removeItem('childAge');
-					localStorage.removeItem('childGender');
-					localStorage.removeItem('childCharacteristics');
-					localStorage.removeItem('parentingStyle');
-					
-					// Save new format
-					localStorage.setItem('childProfiles', JSON.stringify(childProfiles));
+				if (selectedChildIndex >= childProfiles.length) {
+					selectedChildIndex = childProfiles.length - 1;
 				}
+				hydrateFormFromSelectedChild();
+			}
+			
+			toast.success('Child profile deleted successfully!');
+		} catch (error) {
+			console.error('Failed to delete child profile:', error);
+			toast.error('Failed to delete child profile');
+		}
+	}
+
+	async function addNewChild() {
+		try {
+			const newChild = await childProfileSync.createChildProfile({
+				name: '',
+				child_age: '',
+				child_gender: '',
+				child_characteristics: '',
+				parenting_style: ''
+			});
+			
+			childProfiles = [...childProfiles, newChild];
+			selectedChildIndex = childProfiles.length - 1;
+			hydrateFormFromSelectedChild();
+		} catch (error) {
+			console.error('Failed to create child profile:', error);
+			toast.error('Failed to create child profile');
+		}
+	}
+
+	async function loadChildProfile() {
+		try {
+			// Load child profiles from API via childProfileSync
+			childProfiles = await childProfileSync.getChildProfiles();
+			
+			if (childProfiles.length > 0) {
+				hydrateFormFromSelectedChild();
 			}
 		} catch (error) {
-			console.error('Error loading child profiles:', error);
-		}
-		
-		if (childProfiles.length > 0) {
-			hydrateFormFromSelectedChild();
+			console.error('Failed to load child profiles:', error);
+			// Fallback to empty array
+			childProfiles = [];
 		}
 	}
 
-	function saveChildProfile() {
-		// If no profiles exist, create a new one
-		if (childProfiles.length === 0) {
-			childProfiles = [{
-				id: crypto.randomUUID(),
-				name: childName,
-				childAge: childAge,
-				childGender: childGender,
-				childCharacteristics: childCharacteristics,
-				parentingStyle: parentingStyle
-			}];
-			selectedChildIndex = 0;
-		} else {
-			applyFormToSelectedChild();
+	async function saveChildProfile() {
+		try {
+			// If no profiles exist, create a new one
+			if (childProfiles.length === 0) {
+				const newChild = await childProfileSync.createChildProfile({
+					name: childName,
+					child_age: childAge,
+					child_gender: childGender,
+					child_characteristics: childCharacteristics,
+					parenting_style: parentingStyle
+				});
+				childProfiles = [newChild];
+				selectedChildIndex = 0;
+			} else {
+				// Apply current form to selected child
+				applyFormToSelectedChild();
+				
+				const selectedChild = childProfiles[selectedChildIndex];
+				if (selectedChild) {
+					// Update the child profile via API
+					await childProfileSync.updateChildProfile(selectedChild.id, {
+						name: childName,
+						child_age: childAge,
+						child_gender: childGender,
+						child_characteristics: childCharacteristics,
+						parenting_style: parentingStyle
+					});
+				}
+			}
+			
+			toast.success('Child profile saved successfully!');
+			
+			// Go back to main kids page
+			goto('/');
+		} catch (error) {
+			console.error('Failed to save child profile:', error);
+			toast.error('Failed to save child profile');
 		}
-		
-		localStorage.setItem('childProfiles', JSON.stringify(childProfiles));
-		
-		// Go back to main kids page
-		goto('/');
 	}
 
 	function formatDisplayValue(value: string, type: string): string {
@@ -178,8 +173,8 @@
 		}
 	}
 
-	onMount(() => {
-		loadChildProfile();
+	onMount(async () => {
+		await loadChildProfile();
 	});
 </script>
 
