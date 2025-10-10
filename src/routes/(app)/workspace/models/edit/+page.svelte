@@ -16,9 +16,10 @@
 	let model = null;
 
 	onMount(async () => {
-		const _id = $page.url.searchParams.get('id');
+		const _id = decodeURIComponent($page.url.hash.substring(1));
 		if (_id) {
 			model = await getModelById(localStorage.token, _id).catch((e) => {
+				toast.error(e?.detail ?? $i18n.t('Failed to load model'));
 				return null;
 			});
 

@@ -35,10 +35,6 @@ log = logging.getLogger(__name__)
 router = APIRouter()
 
 
-def validate_model_id(model_id: str) -> bool:
-    return model_id and len(model_id) <= 256
-
-
 ###########################
 # GetModels
 ###########################
@@ -80,18 +76,17 @@ async def create_new_model(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail=ERROR_MESSAGES.UNAUTHORIZED,
         )
+    if len(form_data.id) > 255:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="The model id is too long. Please make sure your model id is less than 256 characters long.",
+        )
 
     model = Models.get_model_by_id(form_data.id)
     if model:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail=ERROR_MESSAGES.MODEL_ID_TAKEN,
-        )
-
-    if not validate_model_id(form_data.id):
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail=ERROR_MESSAGES.MODEL_ID_TOO_LONG,
         )
 
     else:
@@ -124,6 +119,10 @@ class ModelsImportForm(BaseModel):
     models: list[dict]
 
 
+class ModelIdForm(BaseModel):
+    id: str
+
+
 @router.post("/import", response_model=bool)
 async def import_models(
     user: str = Depends(get_admin_user), form_data: ModelsImportForm = (...)
@@ -134,8 +133,13 @@ async def import_models(
             for model_data in data:
                 # Here, you can add logic to validate model_data if needed
                 model_id = model_data.get("id")
+                if model_id:
+                    if len(model_id) > 255:
+                        raise HTTPException(
+                            status_code=status.HTTP_400_BAD_REQUEST,
+                            detail="The model id is too long. Please make sure your model id is less than 256 characters long.",
+                        )
 
-                if model_id and validate_model_id(model_id):
                     existing_model = Models.get_model_by_id(model_id)
                     if existing_model:
                         # Update existing model
@@ -155,6 +159,8 @@ async def import_models(
             return True
         else:
             raise HTTPException(status_code=400, detail="Invalid JSON format")
+    except HTTPException as e:
+        raise e
     except Exception as e:
         log.exception(e)
         raise HTTPException(status_code=500, detail=str(e))
@@ -181,9 +187,9 @@ async def sync_models(
 ###########################
 
 
-# Note: We're not using the typical url path param here, but instead using a query parameter to allow '/' in the id
-@router.get("/model", response_model=Optional[ModelResponse])
-async def get_model_by_id(id: str, user=Depends(get_verified_user)):
+@router.post("/model", response_model=Optional[ModelResponse])
+async def get_model_by_id(form_data: ModelIdForm, user=Depends(get_verified_user)):
+    id = form_data.id
     model = Models.get_model_by_id(id)
     if model:
         if (
@@ -238,7 +244,8 @@ async def get_model_profile_image(id: str, user=Depends(get_verified_user)):
 
 
 @router.post("/model/toggle", response_model=Optional[ModelResponse])
-async def toggle_model_by_id(id: str, user=Depends(get_verified_user)):
+async def toggle_model_by_id(form_data: ModelIdForm, user=Depends(get_verified_user)):
+    id = form_data.id
     model = Models.get_model_by_id(id)
     if model:
         if (
@@ -274,10 +281,10 @@ async def toggle_model_by_id(id: str, user=Depends(get_verified_user)):
 
 @router.post("/model/update", response_model=Optional[ModelModel])
 async def update_model_by_id(
-    id: str,
     form_data: ModelForm,
     user=Depends(get_verified_user),
 ):
+    id = form_data.id
     model = Models.get_model_by_id(id)
 
     if not model:
@@ -305,8 +312,9 @@ async def update_model_by_id(
 ############################
 
 
-@router.delete("/model/delete", response_model=bool)
-async def delete_model_by_id(id: str, user=Depends(get_verified_user)):
+@router.post("/model/delete", response_model=bool)
+async def delete_model_by_id(form_data: ModelIdForm, user=Depends(get_verified_user)):
+    id = form_data.id
     model = Models.get_model_by_id(id)
     if not model:
         raise HTTPException(

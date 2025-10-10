@@ -261,33 +261,40 @@
 
 				let reader = new FileReader();
 				reader.onload = async (event) => {
-					let savedModels = JSON.parse(event.target.result);
-					console.log(savedModels);
+					try {
+						let savedModels = JSON.parse(event.target.result);
+						console.log(savedModels);
 
-					for (const model of savedModels) {
-						if (model?.info ?? false) {
-							if ($_models.find((m) => m.id === model.id)) {
-								await updateModelById(localStorage.token, model.id, model.info).catch((error) => {
-									return null;
-								});
-							} else {
-								await createNewModel(localStorage.token, model.info).catch((error) => {
-									return null;
-								});
-							}
-						} else {
-							if (model?.id && model?.name) {
-								await createNewModel(localStorage.token, model).catch((error) => {
-									return null;
-								});
+						for (const model of savedModels) {
+							try {
+								if (model?.info ?? false) {
+									if ($_models.find((m) => m.id === model.id)) {
+										await updateModelById(localStorage.token, model.id, model.info);
+									} else {
+										await createNewModel(localStorage.token, model.info);
+									}
+								} else {
+									if (model?.id && model?.name) {
+										await createNewModel(localStorage.token, model);
+									}
+								}
+							} catch (e) {
+								toast.error(
+									e?.detail ??
+										$i18n.t('Failed to import model {{name}}', { name: model.id ?? 'N/A' })
+								);
 							}
 						}
+					} catch (e) {
+						toast.error($i18n.t('Invalid JSON file'));
+						console.error(e);
 					}
 
 					await _models.set(
 						await getModels(
 							localStorage.token,
-							$config?.features?.enable_direct_connections && ($settings?.directConnections ?? null)
+							$config?.features?.enable_direct_connections &&
+								($settings?.directConnections ?? null)
 						)
 					);
 					models = await getWorkspaceModels(localStorage.token);
@@ -420,7 +427,7 @@
 								model.user_id === $user?.id ||
 								model.access_control.write.group_ids.some((wg) => group_ids.includes(wg))
 							) {
-								goto(`/workspace/models/edit?id=${encodeURIComponent(model.id)}`);
+								goto(`/workspace/models/edit#${encodeURIComponent(model.id)}`);
 							}
 						}}
 					>
