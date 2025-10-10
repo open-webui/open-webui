@@ -429,7 +429,7 @@ async def remove_file_from_knowledge_by_id(
 
     # Remove the file's collection from vector database
     file_collection = f"file-{form_data.file_id}"
-    if VECTOR_DB_CLIENT.has_collection(collection_name=file_collection):
+    if await VECTOR_DB_CLIENT.has_collection(collection_name=file_collection):
         await VECTOR_DB_CLIENT.delete_collection(collection_name=file_collection)
 
     # Delete physical file
