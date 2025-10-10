@@ -311,6 +311,18 @@ ENABLE_ENFORCE_PASSWORD_POLICY = PersistentConfig(
     os.environ.get("ENABLE_ENFORCE_PASSWORD_POLICY", "False").lower() == "true",
 )
 
+USER_PASSWORD_MIN_LENGTH = PersistentConfig(
+    "USER_PASSWORD_MIN_LENGTH",
+    "auth.password_policy.min_length",
+    int(os.environ.get("USER_PASSWORD_MIN_LENGTH", "12")),
+)
+
+USER_PASSWORD_POLICY_SYMBOLS = PersistentConfig(
+    "USER_PASSWORD_POLICY_SYMBOLS",
+    "auth.password_policy.symbols",
+    os.environ.get("USER_PASSWORD_POLICY_SYMBOLS", "!@#$%^&*,"),
+)
+
 JWT_EXPIRES_IN = PersistentConfig(
     "JWT_EXPIRES_IN", "auth.jwt_expiry", os.environ.get("JWT_EXPIRES_IN", "-1")
 )

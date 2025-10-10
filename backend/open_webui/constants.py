@@ -44,7 +44,9 @@ class ERROR_MESSAGES(str, Enum):
     )
     INVALID_CRED = "The email or password provided is incorrect. Please check for typos and try logging in again."
     INVALID_EMAIL_FORMAT = "The email format you entered is invalid. Please double-check and make sure you're using a valid email address (e.g., yourname@example.com)."
-    INVALID_PASSWORD_FORMAT = "The password you entered does not match the criteria. Please include at least 12 characters, including one upper case, one lower case letter, one number and one of the following symbols !@#$%^&*,. ."
+    INVALID_PASSWORD_FORMAT = (
+        lambda min_length, symbols="": f"The password you entered does not match the criteria. Please include at least {min_length} characters, including one upper case, one lower case letter, one number and one of the following symbols: {symbols}"
+    )
     INVALID_PASSWORD = (
         "The password provided is incorrect. Please check for typos and try again."
     )

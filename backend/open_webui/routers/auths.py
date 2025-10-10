@@ -35,7 +35,13 @@ from open_webui.env import (
 )
 from fastapi import APIRouter, Depends, HTTPException, Request, status
 from fastapi.responses import RedirectResponse, Response, JSONResponse
-from open_webui.config import OPENID_PROVIDER_URL, ENABLE_OAUTH_SIGNUP, ENABLE_LDAP
+from open_webui.config import (
+    OPENID_PROVIDER_URL,
+    ENABLE_OAUTH_SIGNUP,
+    ENABLE_LDAP,
+    USER_PASSWORD_MIN_LENGTH,
+    USER_PASSWORD_POLICY_SYMBOLS,
+)
 from pydantic import BaseModel
 
 from open_webui.utils.misc import (
@@ -179,10 +185,13 @@ async def update_password(
 
         if user:
             if request.app.state.config.ENABLE_ENFORCE_PASSWORD_POLICY:
-                if not validate_password_format(form_data.password):
+                if not validate_password_format(form_data.new_password):
                     raise HTTPException(
                         status.HTTP_400_BAD_REQUEST,
-                        detail=ERROR_MESSAGES.INVALID_PASSWORD_FORMAT,
+                        detail=ERROR_MESSAGES.INVALID_PASSWORD_FORMAT(
+                            USER_PASSWORD_MIN_LENGTH.env_value,
+                            USER_PASSWORD_POLICY_SYMBOLS.env_value,
+                        ),
                     )
 
             hashed = get_password_hash(form_data.new_password)
@@ -603,7 +612,10 @@ async def signup(request: Request, response: Response, form_data: SignupForm):
         if not validate_password_format(form_data.password):
             raise HTTPException(
                 status.HTTP_400_BAD_REQUEST,
-                detail=ERROR_MESSAGES.INVALID_PASSWORD_FORMAT,
+                detail=ERROR_MESSAGES.INVALID_PASSWORD_FORMAT(
+                    USER_PASSWORD_MIN_LENGTH.env_value,
+                    USER_PASSWORD_POLICY_SYMBOLS.env_value,
+                ),
             )
 
     if Users.get_user_by_email(form_data.email.lower()):
@@ -777,7 +789,10 @@ async def add_user(
         if not validate_password_format(form_data.password):
             raise HTTPException(
                 status.HTTP_400_BAD_REQUEST,
-                detail=ERROR_MESSAGES.INVALID_PASSWORD_FORMAT,
+                detail=ERROR_MESSAGES.INVALID_PASSWORD_FORMAT(
+                    USER_PASSWORD_MIN_LENGTH.env_value,
+                    USER_PASSWORD_POLICY_SYMBOLS.env_value,
+                ),
             )
 
     if Users.get_user_by_email(form_data.email.lower()):

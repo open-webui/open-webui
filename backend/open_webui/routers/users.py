@@ -9,6 +9,8 @@ from fastapi.responses import Response, StreamingResponse, FileResponse
 from pydantic import BaseModel
 
 
+from open_webui.config import USER_PASSWORD_POLICY_SYMBOLS, USER_PASSWORD_MIN_LENGTH
+
 from open_webui.models.auths import Auths
 from open_webui.models.oauth_sessions import OAuthSessions
 
@@ -476,7 +478,10 @@ async def update_user_by_id(
                 if not validate_password_format(form_data.password):
                     raise HTTPException(
                         status.HTTP_400_BAD_REQUEST,
-                        detail=ERROR_MESSAGES.INVALID_PASSWORD_FORMAT,
+                        detail=ERROR_MESSAGES.INVALID_PASSWORD_FORMAT(
+                            USER_PASSWORD_MIN_LENGTH.env_value,
+                            USER_PASSWORD_POLICY_SYMBOLS.env_value,
+                        ),
                     )
 
             hashed = get_password_hash(form_data.password)
