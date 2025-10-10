@@ -97,46 +97,47 @@ echo ""
 echo "🔑 Updating sync_service role password in Supabase..."
 echo ""
 
-# Create temporary Python script to update password
-cat > /tmp/update_sync_password.py << 'PYEOF'
-import asyncpg
-import asyncio
-import sys
+# Use psql via Docker if available, or skip password update
+if command -v docker &> /dev/null; then
+    # Use official postgres Docker image to run psql
+    if docker run --rm postgres:15-alpine psql "$ADMIN_URL" \
+        -c "ALTER ROLE sync_service WITH ENCRYPTED PASSWORD '$SYNC_PASSWORD';" 2>&1 | tee /tmp/psql_output.log; then
 
-async def update_password():
-    try:
-        admin_url = sys.argv[1]
-        new_password = sys.argv[2]
-
-        conn = await asyncpg.connect(admin_url, timeout=10)
-
-        # Update password
-        await conn.execute(
-            "ALTER ROLE sync_service WITH ENCRYPTED PASSWORD $1",
-            new_password
-        )
-
-        await conn.close()
-        print("✅ sync_service password updated successfully")
-        return True
-
-    except Exception as e:
-        print(f"❌ Error: {e}", file=sys.stderr)
-        return False
-
-sys.exit(0 if asyncio.run(update_password()) else 1)
-PYEOF
-
-# Run password update
-if python3 /tmp/update_sync_password.py "$ADMIN_URL" "$SYNC_PASSWORD"; then
-    echo ""
+        if grep -q "ERROR" /tmp/psql_output.log; then
+            echo "❌ Failed to update sync_service password"
+            echo "⚠️  You may need to manually update the password in Supabase:"
+            echo "   ALTER ROLE sync_service WITH ENCRYPTED PASSWORD 'your-password';"
+            echo ""
+            read -rp "Continue anyway? (y/N): " CONTINUE
+            if [[ ! "$CONTINUE" =~ ^[Yy]$ ]]; then
+                exit 1
+            fi
+        else
+            echo "✅ sync_service password updated successfully"
+        fi
+    else
+        echo "⚠️  Could not update password automatically"
+        echo "You can update it manually in Supabase SQL Editor:"
+        echo "   ALTER ROLE sync_service WITH ENCRYPTED PASSWORD '$SYNC_PASSWORD';"
+        echo ""
+        read -rp "Continue anyway? (y/N): " CONTINUE
+        if [[ ! "$CONTINUE" =~ ^[Yy]$ ]]; then
+            exit 1
+        fi
+    fi
+    rm -f /tmp/psql_output.log
 else
-    echo "❌ Failed to update sync_service password"
-    rm -f /tmp/update_sync_password.py
-    exit 1
+    echo "⚠️  Docker not available, skipping password update"
+    echo "Please update manually in Supabase:"
+    echo "   ALTER ROLE sync_service WITH ENCRYPTED PASSWORD '$SYNC_PASSWORD';"
+    echo ""
+    read -rp "Continue? (y/N): " CONTINUE
+    if [[ ! "$CONTINUE" =~ ^[Yy]$ ]]; then
+        exit 1
+    fi
 fi
 
-rm -f /tmp/update_sync_password.py
+echo ""
 
 # ============================================================================
 # CREATE ENVIRONMENT FILE
