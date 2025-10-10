@@ -1475,6 +1475,21 @@ async def chat_completion(
         if model_info_params.get("reasoning_tags") is not None:
             reasoning_tags = model_info_params.get("reasoning_tags")
 
+        raw_use_provider_model = model_info_params.get("use_provider_model_name")
+        if isinstance(raw_use_provider_model, str):
+            use_provider_model_name = raw_use_provider_model.lower() == "true"
+        elif raw_use_provider_model is None:
+            use_provider_model_name = False
+        elif isinstance(raw_use_provider_model, bool):
+            use_provider_model_name = raw_use_provider_model
+        else:
+            use_provider_model_name = bool(raw_use_provider_model)
+
+        if isinstance(form_data.get("params"), dict):
+            params_obj = form_data["params"]
+            if isinstance(params_obj.get("custom_params"), dict):
+                params_obj["custom_params"].pop("use_provider_model_name", None)
+
         metadata = {
             "user_id": user.id,
             "chat_id": form_data.pop("chat_id", None),
@@ -1499,6 +1514,7 @@ async def chat_completion(
                     )
                     else "default"
                 ),
+                "use_provider_model_name": use_provider_model_name,
             },
         }
 
@@ -1536,6 +1552,7 @@ async def chat_completion(
                             metadata["message_id"],
                             {
                                 "model": model_id,
+                                "useProviderModelName": use_provider_model_name,
                             },
                         )
                 except:

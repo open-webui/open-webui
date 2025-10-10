@@ -103,6 +103,8 @@
 			load_duration?: number;
 			usage?: unknown;
 		};
+		providerModel?: string | null;
+		useProviderModelName?: boolean;
 		annotation?: { type: string; rating: number };
 	}
 
@@ -149,6 +151,12 @@
 
 	let model = null;
 	$: model = $models.find((m) => m.id === message.model);
+
+	let displayModelName = '';
+	$: displayModelName =
+		message?.useProviderModelName && message?.providerModel
+			? message.providerModel
+			: (model?.name ?? message.model);
 
 	let edit = false;
 	let editedContent = '';
@@ -619,9 +627,9 @@
 
 		<div class="flex-auto w-0 pl-1 relative">
 			<Name>
-				<Tooltip content={model?.name ?? message.model} placement="top-start">
+				<Tooltip content={displayModelName} placement="top-start">
 					<span class="line-clamp-1 text-black dark:text-white">
-						{model?.name ?? message.model}
+						{displayModelName}
 					</span>
 				</Tooltip>
 

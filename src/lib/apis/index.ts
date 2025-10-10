@@ -1640,7 +1640,9 @@ export interface ModelMeta {
 	profile_image_url?: string;
 }
 
-export interface ModelParams {}
+export interface ModelParams {
+	use_provider_model_name?: boolean | null;
+}
 
 export type GlobalModelConfig = ModelConfig[];
 

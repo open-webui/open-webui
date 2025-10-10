@@ -18,6 +18,7 @@
 		stream_delta_chunk_size: null, // Set the chunk size for streaming responses
 		function_calling: null,
 		reasoning_tags: null,
+		use_provider_model_name: null,
 		seed: null,
 		stop: null,
 		temperature: null,
@@ -239,6 +240,44 @@
 				</div>
 			</div>
 		{/if}
+	</div>
+
+	<div>
+		<Tooltip
+			content={$i18n.t(
+				'When enabled, the assistant displays the model name returned by the provider in responses.'
+			)}
+			placement="top-start"
+			className="inline-tooltip"
+		>
+			<div class=" py-0.5 flex w-full justify-between">
+				<div class=" self-center text-xs font-medium">
+					{$i18n.t('Use Provider Model Name')}
+				</div>
+				<button
+					class="p-1 px-3 text-xs flex rounded-sm transition"
+					type="button"
+					on:click={() => {
+						const current = params?.use_provider_model_name ?? null;
+						if (current === null) {
+							params.use_provider_model_name = true;
+						} else if (current === true) {
+							params.use_provider_model_name = false;
+						} else {
+							params.use_provider_model_name = null;
+						}
+					}}
+				>
+					{#if params.use_provider_model_name === true}
+						<span class="ml-2 self-center">{$i18n.t('On')}</span>
+					{:else if params.use_provider_model_name === false}
+						<span class="ml-2 self-center">{$i18n.t('Off')}</span>
+					{:else}
+						<span class="ml-2 self-center">{$i18n.t('Default')}</span>
+					{/if}
+				</button>
+			</div>
+		</Tooltip>
 	</div>
 
 	<div class=" py-0.5 w-full justify-between">

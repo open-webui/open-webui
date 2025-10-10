@@ -953,6 +953,7 @@ def apply_params_to_form_data(form_data, model):
         "function_calling": str,
         "reasoning_tags": list,
         "system": str,
+        "use_provider_model_name": bool,
     }
 
     for key in list(params.keys()):
@@ -1660,6 +1661,26 @@ async def process_chat_response(
 
     event_emitter = None
     event_caller = None
+
+    raw_use_provider_model = metadata.get("params", {}).get("use_provider_model_name")
+    use_provider_model_name = True if raw_use_provider_model is True else False
+
+    def upsert_provider_model(provider_model_name):
+        if not metadata.get("chat_id") or not metadata.get("message_id"):
+            return
+
+        payload = {"useProviderModelName": use_provider_model_name}
+        if use_provider_model_name:
+            payload["providerModel"] = provider_model_name
+        else:
+            payload["providerModel"] = None
+
+        Chats.upsert_message_to_chat_by_id_and_message_id(
+            metadata["chat_id"],
+            metadata["message_id"],
+            payload,
+        )
+
     if (
         "session_id" in metadata
         and metadata["session_id"]
@@ -1725,6 +1746,13 @@ async def process_chat_response(
                                 "selectedModelId": response_data["selected_model_id"],
                             },
                         )
+
+                    provider_model_name = response_data.get("model")
+                    response_data["use_provider_model_name"] = use_provider_model_name
+                    if use_provider_model_name:
+                        upsert_provider_model(provider_model_name)
+                    else:
+                        upsert_provider_model(None)
 
                     choices = response_data.get("choices", [])
                     if choices and choices[0].get("message", {}).get("content"):
@@ -2319,6 +2347,9 @@ async def process_chat_response(
                             delta_count = 0
                             last_delta_data = None
 
+                    if not use_provider_model_name:
+                        upsert_provider_model(None)
+
                     async for line in response.body_iterator:
                         line = (
                             line.decode("utf-8", "replace")
@@ -2352,6 +2383,13 @@ async def process_chat_response(
                             if data:
                                 if "event" in data:
                                     await event_emitter(data.get("event", {}))
+
+                                provider_model_name = data.get("model")
+                                data["use_provider_model_name"] = (
+                                    use_provider_model_name
+                                )
+                                if use_provider_model_name:
+                                    upsert_provider_model(provider_model_name)
 
                                 if "selected_model_id" in data:
                                     model_id = data["selected_model_id"]

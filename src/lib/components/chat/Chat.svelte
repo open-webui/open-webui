@@ -1237,6 +1237,8 @@
 				model: modelId,
 				modelName: model.name ?? model.id,
 				modelIdx: 0,
+				providerModel: null,
+				useProviderModelName: false,
 				timestamp: Math.floor(Date.now() / 1000)
 			};
 
@@ -1327,7 +1329,18 @@
 	};
 
 	const chatCompletionEventHandler = async (data, message, chatId) => {
-		const { id, done, choices, content, sources, selected_model_id, error, usage } = data;
+		const {
+			id,
+			done,
+			choices,
+			content,
+			sources,
+			selected_model_id,
+			error,
+			usage,
+			model: provider_model,
+			use_provider_model_name
+		} = data;
 
 		if (error) {
 			await handleOpenAIError(error, message);
@@ -1414,6 +1427,17 @@
 		if (selected_model_id) {
 			message.selectedModelId = selected_model_id;
 			message.arena = true;
+		}
+
+		if (typeof use_provider_model_name === 'boolean') {
+			message.useProviderModelName = use_provider_model_name;
+			if (!use_provider_model_name) {
+				message.providerModel = null;
+			}
+		}
+
+		if (provider_model && message.useProviderModelName) {
+			message.providerModel = provider_model;
 		}
 
 		if (usage) {
@@ -1635,6 +1659,8 @@
 					model: model.id,
 					modelName: model.name ?? model.id,
 					modelIdx: modelIdx ? modelIdx : _modelIdx,
+					providerModel: null,
+					useProviderModelName: false,
 					timestamp: Math.floor(Date.now() / 1000) // Unix epoch
 				};
 

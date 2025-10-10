@@ -76,6 +76,7 @@ def remove_open_webui_params(params: dict) -> dict:
         "function_calling": str,
         "reasoning_tags": list,
         "system": str,
+        "use_provider_model_name": bool,
     }
 
     for key in list(params.keys()):
