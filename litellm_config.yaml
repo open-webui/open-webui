@@ -1,0 +1,23 @@
+model_list:
+  - model_name: gemini-pro
+    litellm_params:
+      model: gemini/gemini-2.5-pro
+      api_key: AIzaSyA-mUE4jrmFq15YZbhgZ571LP-JtRAyOE4
+  
+  - model_name: gemini-flash
+    litellm_params:
+      model: gemini/gemini-2.0-flash
+      api_key: AIzaSyA-mUE4jrmFq15YZbhgZ571LP-JtRAyOE4
+  
+  - model_name: gemini-flash-latest
+    litellm_params:
+      model: gemini/gemini-flash-latest
+      api_key: AIzaSyA-mUE4jrmFq15YZbhgZ571LP-JtRAyOE4
+
+general_settings:
+  master_key: sk-1234567890abcdef  # You can change this
+  database_url: "sqlite:///litellm.db"
+
+litellm_settings:
+  drop_params: true
+  set_verbose: false
