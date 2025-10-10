@@ -287,7 +287,7 @@
 			<a
 				class=" w-full flex justify-between rounded-lg px-[11px] py-[6px]
 				{isCurrentChat && !selected
-					? 'bg-gray-200 dark:bg-gray-900'
+					? 'bg-gray-200 dark:bg-gray-900 border-2 border-gray-400 dark:border-gray-500'
 					: selected
 						? 'bg-gray-100 dark:bg-gray-800'
 						: 'group-hover:bg-gray-100 dark:group-hover:bg-gray-950'} whitespace-nowrap text-ellipsis"
