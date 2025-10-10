@@ -138,13 +138,13 @@ async def multi_moderations_openai(
         {"role": "user", "content": user_content},
     ]
     
-    # Call OpenAI API (following Viki's pattern)
+    # Call OpenAI API
     client = OpenAI(api_key=api_key)
-    resp = client.responses.create(model=model, input=messages)
+    resp = client.chat.completions.create(model=model, messages=messages)
     
     # Parse response
-    raw = resp.output_text or ""
-    data = json.loads(raw)
+    raw = resp.choices[0].message.content or ""
+    data = json.loads(_strip_fences(raw))
     
     # Extract refactored response and rule
     refactored = (data.get("refactored_response") or "").strip()
@@ -215,16 +215,16 @@ async def generate_second_pass_prompt(
     }
     
     client = OpenAI(api_key=api_key)
-    resp = client.responses.create(
+    resp = client.chat.completions.create(
         model=model,
-        input=[
+        messages=[
             {"role": "system", "content": system_content},
             {"role": "user", "content": json.dumps(user_payload, ensure_ascii=False)},
         ],
     )
     
-    raw = getattr(resp, "output_text", "") or ""
-    data = json.loads(raw)
+    raw = resp.choices[0].message.content or ""
+    data = json.loads(_strip_fences(raw))
     
     return data.get("child_followup_prompt", "").strip()
 
