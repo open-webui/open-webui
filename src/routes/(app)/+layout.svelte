@@ -205,7 +205,7 @@
 					button?.click();
 				}
 
-				// Check if Ctrl + Shift + S is pressed
+				// Check if  is pressed
 				if (isCtrlPressed && isShiftPressed && event.key.toLowerCase() === 's') {
 					event.preventDefault();
 					console.log('toggleSidebar');
@@ -222,7 +222,21 @@
 					console.log('deleteChat');
 					document.getElementById('delete-chat-button')?.click();
 				}
-
+				// Check if Ctrl + Shift + S is pressed
+if (isCtrlPressed && isShiftPressed && event.key.toLowerCase() === 's') {
+	event.preventDefault();
+	event.stopPropagation(); // Prevent event from bubbling
+	console.log('toggleSidebar');
+	
+	const button = document.getElementById('sidebar-toggle-button');
+	if (button) {
+		button.click();
+	} else {
+		// Fallback: directly toggle the store if button doesn't exist
+		console.warn('sidebar-toggle-button not found, toggling store directly');
+		showSidebar.set(!$showSidebar);
+	}
+}
 				// Check if Ctrl + . is pressed
 				if (isCtrlPressed && event.key === '.') {
 					event.preventDefault();
@@ -381,7 +395,7 @@
 							</div>
 						</div>
 					</div>
-				{/if}
+				{/if} 	
 
 				<Sidebar />
 
