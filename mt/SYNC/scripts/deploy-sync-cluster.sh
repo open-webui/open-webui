@@ -201,13 +201,13 @@ echo ""
 cd "$DOCKER_DIR"
 
 # Stop any existing containers
-if docker-compose -f docker-compose.sync-ha.yml ps -q 2>/dev/null | grep -q .; then
+if docker compose -f docker-compose.sync-ha.yml ps -q 2>/dev/null | grep -q .; then
     echo "⚠️  Stopping existing sync cluster..."
-    docker-compose -f docker-compose.sync-ha.yml down
+    docker compose -f docker-compose.sync-ha.yml down
 fi
 
 # Start new cluster
-if docker-compose -f docker-compose.sync-ha.yml up -d; then
+if docker compose -f docker-compose.sync-ha.yml up -d; then
     echo "✅ Sync cluster started"
 else
     echo "❌ Failed to start sync cluster"
@@ -285,16 +285,16 @@ echo "📈 Monitoring:"
 echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
 echo ""
 echo "  Metrics:    http://localhost:9443/metrics"
-echo "  Logs:       docker-compose -f $DOCKER_DIR/docker-compose.sync-ha.yml logs -f"
+echo "  Logs:       docker compose -f $DOCKER_DIR/docker-compose.sync-ha.yml logs -f"
 echo ""
 
 echo "📚 Useful Commands:"
 echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
 echo ""
 echo "  View status:   curl http://localhost:9443/health | jq"
-echo "  View logs:     docker-compose -f $DOCKER_DIR/docker-compose.sync-ha.yml logs -f"
-echo "  Restart:       docker-compose -f $DOCKER_DIR/docker-compose.sync-ha.yml restart"
-echo "  Stop:          docker-compose -f $DOCKER_DIR/docker-compose.sync-ha.yml down"
+echo "  View logs:     docker compose -f $DOCKER_DIR/docker-compose.sync-ha.yml logs -f"
+echo "  Restart:       docker compose -f $DOCKER_DIR/docker-compose.sync-ha.yml restart"
+echo "  Stop:          docker compose -f $DOCKER_DIR/docker-compose.sync-ha.yml down"
 echo ""
 
 # ============================================================================
