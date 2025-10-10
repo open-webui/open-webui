@@ -91,7 +91,10 @@ from open_webui.utils.misc import (
     convert_logit_bias_input_to_json,
     get_content_from_message,
 )
-from open_webui.utils.tools import get_tools
+from open_webui.utils.tools import (
+    get_tool_function_with_updated_params,
+    get_tools,
+)
 from open_webui.utils.plugin import load_function_module_by_id
 from open_webui.utils.filter import (
     get_sorted_filter_ids,
@@ -2748,9 +2751,28 @@ async def process_chat_response(
 
                                 else:
                                     tool_function = tool["callable"]
-                                    tool_result = await tool_function(
-                                        **tool_function_params
-                                    )
+
+                                    # For native mode: update __messages__ with current form_data
+                                    if hasattr(tool_function, "__original_function__"):
+
+                                        tool_result = (
+                                            await get_tool_function_with_updated_params(
+                                                tool_function,
+                                                tool_function_params,
+                                                {
+                                                    "__messages__": form_data.get(
+                                                        "messages", []
+                                                    ),
+                                                    "__files__": metadata.get(
+                                                        "files", []
+                                                    ),
+                                                },
+                                            )
+                                        )
+                                    else:
+                                        tool_result = await tool_function(
+                                            **tool_function_params
+                                        )
 
                             except Exception as e:
                                 tool_result = str(e)
