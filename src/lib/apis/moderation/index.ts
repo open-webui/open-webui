@@ -54,4 +54,33 @@ export const applyModeration = async (
 	return res;
 };
 
+export const generateFollowUpPrompt = async (
+	token: string,
+	originalPrompt: string,
+	moderatedResponse: string
+): Promise<string> => {
+	const res = await fetch(`${WEBUI_API_BASE_URL}/moderation/generate-followup`, {
+		method: 'POST',
+		headers: {
+			'Content-Type': 'application/json',
+			Authorization: `Bearer ${token}`
+		},
+		body: JSON.stringify({
+			original_prompt: originalPrompt,
+			moderated_response: moderatedResponse
+		})
+	})
+		.then(async (res) => {
+			if (!res.ok) throw await res.json();
+			return res.json();
+		})
+		.then((data) => data.followup_prompt)
+		.catch((err) => {
+			console.error(err);
+			throw err;
+		});
+
+	return res;
+};
+
 
