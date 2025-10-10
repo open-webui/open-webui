@@ -519,13 +519,17 @@ async def get_tool_servers(request: Request):
     return tool_servers
 
 
-async def get_tool_server_data(token: str, url: str) -> Dict[str, Any]:
+async def get_tool_server_data(token: str, url: str, config: Dict[str, str]) -> Dict[str, Any]:
     headers = {
         "Accept": "application/json",
         "Content-Type": "application/json",
     }
     if token:
         headers["Authorization"] = f"Bearer {token}"
+
+    if config.additional_headers:
+        for additional_header in config.additional_headers:
+            headers[additional_header.key] = additional_header.value
 
     error = None
     try:
@@ -583,6 +587,8 @@ async def get_tool_servers_data(servers: List[Dict[str, Any]]) -> List[Dict[str,
             full_url = get_tool_server_url(server.get("url"), openapi_path)
 
             info = server.get("info", {})
+
+            config = server.get('config')
 
             auth_type = server.get("auth_type", "bearer")
             token = None

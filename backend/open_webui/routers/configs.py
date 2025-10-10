@@ -135,9 +135,11 @@ async def verify_tool_servers_config(
             token = form_data.key
         elif form_data.auth_type == "session":
             token = request.state.token.credentials
+        
+        config = form_data.config
 
         url = get_tool_server_url(form_data.url, form_data.path)
-        return await get_tool_server_data(token, url)
+        return await get_tool_server_data(token, url, config)
     except Exception as e:
         raise HTTPException(
             status_code=400,
