@@ -1,3 +1,4 @@
+import asyncio
 from typing import List, Optional
 from pydantic import BaseModel
 from fastapi import APIRouter, Depends, HTTPException, status, Request
@@ -282,8 +283,10 @@ def add_file_to_knowledge_by_id(
 
     # Add content to the vector database
     try:
-        process_file(
-            request, ProcessFileForm(file_id=form_data.file_id, collection_name=id)
+        asyncio.run(
+            process_file(
+                request, ProcessFileForm(file_id=form_data.file_id, collection_name=id)
+            )
         )
     except Exception as e:
         log.debug(e)
@@ -327,7 +330,7 @@ def add_file_to_knowledge_by_id(
 
 
 @router.post("/{id}/file/update", response_model=Optional[KnowledgeFilesResponse])
-def update_file_from_knowledge_by_id(
+async def update_file_from_knowledge_by_id(
     request: Request,
     id: str,
     form_data: KnowledgeFileIdForm,
@@ -354,14 +357,16 @@ def update_file_from_knowledge_by_id(
         )
 
     # Remove content from the vector database
-    VECTOR_DB_CLIENT.delete(
+    await VECTOR_DB_CLIENT.delete(
         collection_name=knowledge.id, filter={"file_id": form_data.file_id}
     )
 
     # Add content to the vector database
     try:
-        process_file(
-            request, ProcessFileForm(file_id=form_data.file_id, collection_name=id)
+        asyncio.run(
+            process_file(
+                request, ProcessFileForm(file_id=form_data.file_id, collection_name=id)
+            )
         )
     except Exception as e:
         raise HTTPException(
@@ -392,7 +397,7 @@ def update_file_from_knowledge_by_id(
 
 
 @router.post("/{id}/file/remove", response_model=Optional[KnowledgeFilesResponse])
-def remove_file_from_knowledge_by_id(
+async def remove_file_from_knowledge_by_id(
     id: str,
     form_data: KnowledgeFileIdForm,
     user=Depends(get_verified_user),
@@ -418,14 +423,14 @@ def remove_file_from_knowledge_by_id(
         )
 
     # Remove content from the vector database
-    VECTOR_DB_CLIENT.delete(
+    await VECTOR_DB_CLIENT.delete(
         collection_name=knowledge.id, filter={"file_id": form_data.file_id}
     )
 
     # Remove the file's collection from vector database
     file_collection = f"file-{form_data.file_id}"
-    if VECTOR_DB_CLIENT.has_collection(collection_name=file_collection):
-        VECTOR_DB_CLIENT.delete_collection(collection_name=file_collection)
+    if await VECTOR_DB_CLIENT.has_collection(collection_name=file_collection):
+        await VECTOR_DB_CLIENT.delete_collection(collection_name=file_collection)
 
     # Delete physical file
     if file.path:
@@ -499,14 +504,20 @@ async def delete_knowledge_by_id(id: str, user=Depends(get_verified_user)):
             log.info(f"Cleaning up file {file_id} from knowledge base {id}")
 
             # Clean up vectors from the knowledge base collection
-            VECTOR_DB_CLIENT.delete(collection_name=id, filter={"file_id": file_id})
+            await VECTOR_DB_CLIENT.delete(
+                collection_name=id, filter={"file_id": file_id}
+            )
 
             # Get file info to clean up individual file collection if it exists
             file = Files.get_file_by_id(file_id)
             if file:
                 file_collection = f"file-{file_id}"
-                if VECTOR_DB_CLIENT.has_collection(collection_name=file_collection):
-                    VECTOR_DB_CLIENT.delete_collection(collection_name=file_collection)
+                if await VECTOR_DB_CLIENT.has_collection(
+                    collection_name=file_collection
+                ):
+                    await VECTOR_DB_CLIENT.delete_collection(
+                        collection_name=file_collection
+                    )
                     log.info(f"Deleted individual file collection: {file_collection}")
 
                 # Delete physical file
@@ -557,7 +568,7 @@ async def delete_knowledge_by_id(id: str, user=Depends(get_verified_user)):
 
     # Clean up the knowledge base vector collection itself
     try:
-        VECTOR_DB_CLIENT.delete_collection(collection_name=id)
+        await VECTOR_DB_CLIENT.delete_collection(collection_name=id)
         log.info(f"Deleted knowledge base collection: {id}")
     except Exception as e:
         log.debug(f"Error deleting knowledge base collection {id}: {e}")
@@ -590,7 +601,7 @@ async def reset_knowledge_by_id(id: str, user=Depends(get_verified_user)):
         )
 
     try:
-        VECTOR_DB_CLIENT.delete_collection(collection_name=id)
+        await VECTOR_DB_CLIENT.delete_collection(collection_name=id)
     except Exception as e:
         log.debug(e)
         pass
@@ -642,10 +653,12 @@ def add_files_to_knowledge_batch(
 
     # Process files
     try:
-        result = process_files_batch(
-            request=request,
-            form_data=BatchProcessFilesForm(files=files, collection_name=id),
-            user=user,
+        result = asyncio.run(
+            process_files_batch(
+                request=request,
+                form_data=BatchProcessFilesForm(files=files, collection_name=id),
+                user=user,
+            )
         )
     except Exception as e:
         log.error(

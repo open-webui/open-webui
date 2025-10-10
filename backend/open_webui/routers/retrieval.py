@@ -701,7 +701,7 @@ async def update_query_settings(
 ####################################
 
 
-def save_docs_to_vector_db(
+async def save_docs_to_vector_db(
     request: Request,
     docs,
     collection_name,
@@ -733,7 +733,7 @@ def save_docs_to_vector_db(
 
     # Check if entries with the same hash (metadata.hash) already exist
     if metadata and "hash" in metadata:
-        result = VECTOR_DB_CLIENT.query(
+        result = await VECTOR_DB_CLIENT.query(
             collection_name=collection_name,
             filter={"hash": metadata["hash"]},
         )
@@ -810,11 +810,13 @@ def save_docs_to_vector_db(
                 metadata[key] = str(value)
 
     try:
-        if VECTOR_DB_CLIENT.has_collection(collection_name=collection_name):
+        if await VECTOR_DB_CLIENT.has_collection(collection_name=collection_name):
             log.info(f"collection {collection_name} already exists")
 
             if overwrite:
-                VECTOR_DB_CLIENT.delete_collection(collection_name=collection_name)
+                await VECTOR_DB_CLIENT.delete_collection(
+                    collection_name=collection_name
+                )
                 log.info(f"deleting existing collection {collection_name}")
             elif add is False:
                 log.info(
@@ -860,7 +862,7 @@ def save_docs_to_vector_db(
             for idx, text in enumerate(texts)
         ]
 
-        VECTOR_DB_CLIENT.insert(
+        await VECTOR_DB_CLIENT.insert(
             collection_name=collection_name,
             items=items,
         )
@@ -878,7 +880,7 @@ class ProcessFileForm(BaseModel):
 
 
 @router.post("/process/file")
-def process_file(
+async def process_file(
     request: Request,
     form_data: ProcessFileForm,
     user=Depends(get_verified_user),
@@ -895,7 +897,7 @@ def process_file(
             # Update the content in the file
             # Usage: /files/{file_id}/data/content/update
 
-            VECTOR_DB_CLIENT.delete_collection(
+            await VECTOR_DB_CLIENT.delete_collection(
                 collection_name=f"{VECTOR_COLLECTION_PREFIXES.FILE}{file.id}"
             )
 
@@ -917,7 +919,7 @@ def process_file(
             # Check if the file has already been processed and save the content
             # Usage: /knowledge/{id}/file/add, /knowledge/{id}/file/update
 
-            result = VECTOR_DB_CLIENT.query(
+            result = await VECTOR_DB_CLIENT.query(
                 collection_name=f"{VECTOR_COLLECTION_PREFIXES.FILE}{file.id}",
                 filter={"file_id": file.id},
             )
@@ -1003,7 +1005,7 @@ def process_file(
         Files.update_file_hash_by_id(file.id, hash)
 
         try:
-            result = save_docs_to_vector_db(
+            result = await save_docs_to_vector_db(
                 request,
                 docs=docs,
                 collection_name=collection_name,
@@ -1052,7 +1054,7 @@ class ProcessTextForm(BaseModel):
 
 
 @router.post("/process/text")
-def process_text(
+async def process_text(
     request: Request,
     form_data: ProcessTextForm,
     user=Depends(get_verified_user),
@@ -1070,7 +1072,7 @@ def process_text(
     text_content = form_data.content
     log.debug(f"text_content: {text_content}")
 
-    result = save_docs_to_vector_db(request, docs, collection_name)
+    result = await save_docs_to_vector_db(request, docs, collection_name)
     if result:
         return {
             "status": True,
@@ -1085,7 +1087,7 @@ def process_text(
 
 
 @router.post("/process/youtube")
-def process_youtube_video(
+async def process_youtube_video(
     request: Request, form_data: ProcessUrlForm, user=Depends(get_verified_user)
 ):
     try:
@@ -1127,7 +1129,7 @@ def process_youtube_video(
 
 
 @router.post("/process/web")
-def process_web(
+async def process_web(
     request: Request, form_data: ProcessUrlForm, user=Depends(get_verified_user)
 ):
     try:
@@ -1144,7 +1146,8 @@ def process_web(
         content = " ".join([doc.page_content for doc in docs])
 
         log.debug(f"text_content: {content}")
-        save_docs_to_vector_db(request, docs, collection_name, overwrite=True)
+
+        await save_docs_to_vector_db(request, docs, collection_name, overwrite=True)
 
         return {
             "status": True,
@@ -1342,7 +1345,9 @@ async def process_web_search(
                 log.info(
                     f"Getting all documents from cached collection: {cached_collection}"
                 )
-                cached_result = VECTOR_DB_CLIENT.get(collection_name=cached_collection)
+                cached_result = await VECTOR_DB_CLIENT.get(
+                    collection_name=cached_collection
+                )
 
                 cached_urls = []
 
@@ -1556,15 +1561,15 @@ class QueryDocForm(BaseModel):
 
 
 @router.post("/query/doc")
-def query_doc_handler(
+async def query_doc_handler(
     request: Request,
     form_data: QueryDocForm,
     user=Depends(get_verified_user),
 ):
     try:
         # Check if collection exists, if not try to re-index on-demand
-        if VECTOR_DB_CLIENT and not VECTOR_DB_CLIENT.has_collection(
-            form_data.collection_name
+        if VECTOR_DB_CLIENT and not await VECTOR_DB_CLIENT.has_collection(
+            collection_name=form_data.collection_name
         ):
             log.info(
                 f"Collection {form_data.collection_name} not found, attempting on-demand re-indexing..."
@@ -1578,7 +1583,7 @@ def query_doc_handler(
                 log.info(f"Attempting to re-index file {file_id}")
 
                 # Try to re-index the file
-                if reindex_file_on_demand(file_id, request, user):
+                if await reindex_file_on_demand(file_id, request, user):
                     log.info(f"Successfully re-indexed file {file_id}")
                 else:
                     log.warning(f"Failed to re-index file {file_id}")
@@ -1631,7 +1636,7 @@ class QueryCollectionsForm(BaseModel):
 
 
 @router.post("/query/collection")
-def query_collection_handler(
+async def query_collection_handler(
     request: Request,
     form_data: QueryCollectionsForm,
     user=Depends(get_verified_user),
@@ -1641,7 +1646,7 @@ def query_collection_handler(
         missing_collections = []
         if VECTOR_DB_CLIENT:
             for collection_name in form_data.collection_names:
-                if not VECTOR_DB_CLIENT.has_collection(collection_name):
+                if not await VECTOR_DB_CLIENT.has_collection(collection_name):
                     missing_collections.append(collection_name)
 
         # Attempt to re-index missing file collections
@@ -1652,7 +1657,7 @@ def query_collection_handler(
                     f"Attempting to re-index missing file collection: {collection_name}"
                 )
 
-                if reindex_file_on_demand(file_id, request, user):
+                if await reindex_file_on_demand(file_id, request, user):
                     log.info(f"Successfully re-indexed file {file_id}")
                 else:
                     log.warning(f"Failed to re-index file {file_id}")
@@ -1705,13 +1710,17 @@ class DeleteForm(BaseModel):
 
 
 @router.post("/delete")
-def delete_entries_from_collection(form_data: DeleteForm, user=Depends(get_admin_user)):
+async def delete_entries_from_collection(
+    form_data: DeleteForm, user=Depends(get_admin_user)
+):
     try:
-        if VECTOR_DB_CLIENT.has_collection(collection_name=form_data.collection_name):
+        if await VECTOR_DB_CLIENT.has_collection(
+            collection_name=form_data.collection_name
+        ):
             file = Files.get_file_by_id(form_data.file_id)
             hash = file.hash
 
-            VECTOR_DB_CLIENT.delete(
+            await VECTOR_DB_CLIENT.delete(
                 collection_name=form_data.collection_name,
                 metadata={"hash": hash},
             )
@@ -1724,8 +1733,8 @@ def delete_entries_from_collection(form_data: DeleteForm, user=Depends(get_admin
 
 
 @router.post("/reset/db")
-def reset_vector_db(user=Depends(get_admin_user)):
-    VECTOR_DB_CLIENT.reset()
+async def reset_vector_db(user=Depends(get_admin_user)):
+    await VECTOR_DB_CLIENT.reset()
     Knowledges.delete_all_knowledge()
 
 
@@ -1776,7 +1785,7 @@ class BatchProcessFilesResponse(BaseModel):
 
 
 @router.post("/process/files/batch")
-def process_files_batch(
+async def process_files_batch(
     request: Request,
     form_data: BatchProcessFilesForm,
     user=Depends(get_verified_user),
@@ -1823,7 +1832,7 @@ def process_files_batch(
     # Save all documents in one batch
     if all_docs:
         try:
-            save_docs_to_vector_db(
+            await save_docs_to_vector_db(
                 request=request,
                 docs=all_docs,
                 collection_name=collection_name,
@@ -1857,7 +1866,7 @@ def process_files_batch(
 ##########################################
 
 
-def cleanup_file_vectors(file_id: str, collection_name: str = None) -> bool:
+async def cleanup_file_vectors(file_id: str, collection_name: str = None) -> bool:
     """
     Clean up vectors associated with a specific file from the vector database.
 
@@ -1879,18 +1888,20 @@ def cleanup_file_vectors(file_id: str, collection_name: str = None) -> bool:
         )
 
         # Check if collection exists
-        if VECTOR_DB_CLIENT.has_collection(collection_name=target_collection):
+        if await VECTOR_DB_CLIENT.has_collection(collection_name=target_collection):
             # For file-specific collections (file-{file_id}), delete the entire collection
             if target_collection.startswith(
                 f"{VECTOR_COLLECTION_PREFIXES.FILE}{file_id}"
             ):
-                VECTOR_DB_CLIENT.delete_collection(collection_name=target_collection)
+                await VECTOR_DB_CLIENT.delete_collection(
+                    collection_name=target_collection
+                )
                 log.info(f"Deleted entire collection {target_collection}")
             else:
                 # For shared collections, we need to delete by filter
                 # Note: This requires the vector client to support filtering by metadata
                 try:
-                    VECTOR_DB_CLIENT.delete(
+                    await VECTOR_DB_CLIENT.delete(
                         collection_name=target_collection,
                         points_selector={
                             "filter": {
@@ -1923,7 +1934,7 @@ def cleanup_file_vectors(file_id: str, collection_name: str = None) -> bool:
         return False
 
 
-def cleanup_orphaned_vectors() -> dict:
+async def cleanup_orphaned_vectors() -> dict:
     """
     Clean up orphaned vectors that no longer have corresponding files in the database.
     This ONLY cleans up standalone file collections (file-*), preserving knowledge bases and their files.
@@ -1942,7 +1953,7 @@ def cleanup_orphaned_vectors() -> dict:
 
         # Get all collections from vector DB
         if hasattr(VECTOR_DB_CLIENT, "list_collections"):
-            collections = VECTOR_DB_CLIENT.list_collections()
+            collections = await VECTOR_DB_CLIENT.list_collections()
         else:
             # Fallback for clients that don't support listing collections
             collections = []
@@ -1985,7 +1996,7 @@ def cleanup_orphaned_vectors() -> dict:
                     file = Files.get_file_by_id(file_id)
                     if not file:
                         # File doesn't exist, delete the collection
-                        VECTOR_DB_CLIENT.delete_collection(
+                        await VECTOR_DB_CLIENT.delete_collection(
                             collection_name=collection_name
                         )
                         cleanup_summary["collections_cleaned"] += 1
@@ -1994,7 +2005,9 @@ def cleanup_orphaned_vectors() -> dict:
                         )
                 except Exception:
                     # File doesn't exist, delete the collection
-                    VECTOR_DB_CLIENT.delete_collection(collection_name=collection_name)
+                    await VECTOR_DB_CLIENT.delete_collection(
+                        collection_name=collection_name
+                    )
                     cleanup_summary["collections_cleaned"] += 1
                     log.info(
                         f"Cleaned up orphaned standalone file collection: {collection_name}"
@@ -2013,7 +2026,7 @@ def cleanup_orphaned_vectors() -> dict:
         return {"error": str(e), "collections_cleaned": 0, "vectors_cleaned": 0}
 
 
-def get_vector_db_stats(user) -> dict:
+async def get_vector_db_stats(user) -> dict:
     """
     Get comprehensive statistics about the vector database.
 
@@ -2031,7 +2044,7 @@ def get_vector_db_stats(user) -> dict:
         collections = []
         try:
             if hasattr(VECTOR_DB_CLIENT, "list_collections"):
-                collections = VECTOR_DB_CLIENT.list_collections()
+                collections = await VECTOR_DB_CLIENT.list_collections()
             else:
                 # For other vector DBs, we'll need to implement collection listing
                 log.warning(
@@ -2153,7 +2166,7 @@ def check_web_search_cache(search_hash: str) -> str:
         return None
 
 
-def cleanup_expired_web_searches(max_age_days: int = 30) -> dict:
+async def cleanup_expired_web_searches(max_age_days: int = 30) -> dict:
     """
     Clean up expired web search results from vector database.
 
@@ -2179,7 +2192,7 @@ def cleanup_expired_web_searches(max_age_days: int = 30) -> dict:
         collections = []
         try:
             if hasattr(VECTOR_DB_CLIENT, "list_collections"):
-                collections = VECTOR_DB_CLIENT.list_collections()
+                collections = await VECTOR_DB_CLIENT.list_collections()
             else:
                 log.warning(
                     "Vector DB client does not support listing collections for web search cleanup"
@@ -2210,8 +2223,10 @@ def cleanup_expired_web_searches(max_age_days: int = 30) -> dict:
                 try:
                     if hasattr(VECTOR_DB_CLIENT, "get_collection_sample_metadata"):
                         # Get sample metadata to check for expiry
-                        metadata = VECTOR_DB_CLIENT.get_collection_sample_metadata(
-                            collection_name
+                        metadata = (
+                            await VECTOR_DB_CLIENT.get_collection_sample_metadata(
+                                collection_name
+                            )
                         )
 
                         if metadata:
@@ -2251,7 +2266,7 @@ def cleanup_expired_web_searches(max_age_days: int = 30) -> dict:
                 if should_delete:
                     # Delete the entire collection for expired web searches
                     try:
-                        VECTOR_DB_CLIENT.delete_collection(collection_name)
+                        await VECTOR_DB_CLIENT.delete_collection(collection_name)
                         cleanup_summary["collections_cleaned"] += 1
                         log.info(
                             f"Deleted expired web search collection: {collection_name}"
@@ -2284,7 +2299,7 @@ def cleanup_expired_web_searches(max_age_days: int = 30) -> dict:
 
 
 @router.post("/maintenance/cleanup/orphaned")
-def api_cleanup_orphaned_vectors(user=Depends(get_admin_user)):
+async def api_cleanup_orphaned_vectors(user=Depends(get_admin_user)):
     """
     API endpoint to cleanup orphaned vectors from standalone files.
     PRESERVES knowledge bases and all files within them.
@@ -2292,7 +2307,7 @@ def api_cleanup_orphaned_vectors(user=Depends(get_admin_user)):
     Used by K8s CronJobs for scheduled maintenance.
     """
     try:
-        result = cleanup_orphaned_vectors()
+        result = await cleanup_orphaned_vectors()
         return {
             "status": "success",
             "timestamp": datetime.now().isoformat(),
@@ -2311,7 +2326,7 @@ def api_cleanup_orphaned_vectors(user=Depends(get_admin_user)):
 
 
 @router.post("/maintenance/cleanup/web-search")
-def api_cleanup_web_search_vectors(
+async def api_cleanup_web_search_vectors(
     max_age_days: int = None, user=Depends(get_admin_user)
 ):
     """
@@ -2323,7 +2338,7 @@ def api_cleanup_web_search_vectors(
         if max_age_days is None:
             max_age_days = int(os.getenv("VECTOR_DB_WEB_SEARCH_EXPIRY_DAYS", "30"))
 
-        result = cleanup_expired_web_searches(max_age_days)
+        result = await cleanup_expired_web_searches(max_age_days)
         return {
             "status": "success",
             "timestamp": datetime.now().isoformat(),
@@ -2343,7 +2358,9 @@ def api_cleanup_web_search_vectors(
 
 
 @router.post("/maintenance/cleanup/comprehensive")
-def api_comprehensive_cleanup(max_age_days: int = None, user=Depends(get_admin_user)):
+async def api_comprehensive_cleanup(
+    max_age_days: int = None, user=Depends(get_admin_user)
+):
     """
     API endpoint for comprehensive vector DB cleanup.
     Cleans up orphaned standalone files, expired web searches, and orphaned chat files.
@@ -2355,10 +2372,10 @@ def api_comprehensive_cleanup(max_age_days: int = None, user=Depends(get_admin_u
             max_age_days = int(os.getenv("VECTOR_DB_WEB_SEARCH_EXPIRY_DAYS", "30"))
 
         # Run all cleanup operations
-        orphaned_result = cleanup_orphaned_vectors()
-        web_search_result = cleanup_expired_web_searches(max_age_days)
-        chat_files_result = cleanup_orphaned_chat_files()
-        old_collections_result = cleanup_old_chat_collections(
+        orphaned_result = await cleanup_orphaned_vectors()
+        web_search_result = await cleanup_expired_web_searches(max_age_days)
+        chat_files_result = await cleanup_orphaned_chat_files()
+        old_collections_result = await cleanup_old_chat_collections(
             max_age_days=1
         )  # 1 day for collection cleanup
 
@@ -2386,7 +2403,9 @@ def api_comprehensive_cleanup(max_age_days: int = None, user=Depends(get_admin_u
 
 
 @router.post("/maintenance/cleanup/old-collections")
-def api_cleanup_old_collections(max_age_days: int = 1, user=Depends(get_admin_user)):
+async def api_cleanup_old_collections(
+    max_age_days: int = 1, user=Depends(get_admin_user)
+):
     """
     API endpoint to cleanup old chat file collections to prevent uncontrolled growth.
 
@@ -2397,7 +2416,7 @@ def api_cleanup_old_collections(max_age_days: int = 1, user=Depends(get_admin_us
     Used by K8s CronJobs for proactive collection management.
     """
     try:
-        result = cleanup_old_chat_collections(max_age_days)
+        result = await cleanup_old_chat_collections(max_age_days)
         return {
             "status": "success",
             "timestamp": datetime.now().isoformat(),
@@ -2531,7 +2550,7 @@ def get_all_file_references_from_chats():
         return set()
 
 
-def cleanup_orphaned_files_by_reference():
+async def cleanup_orphaned_files_by_reference():
     """
     Clean up files that are not referenced by any existing chats.
     This is the safe way to handle file cleanup when chats can be cloned.
@@ -2590,8 +2609,8 @@ def cleanup_orphaned_files_by_reference():
                 try:
                     # Delete vector collection
                     collection_name = f"{VECTOR_COLLECTION_PREFIXES.FILE}{file.id}"
-                    if VECTOR_DB_CLIENT.has_collection(collection_name):
-                        VECTOR_DB_CLIENT.delete_collection(collection_name)
+                    if await VECTOR_DB_CLIENT.has_collection(collection_name):
+                        await VECTOR_DB_CLIENT.delete_collection(collection_name)
                         cleanup_summary["collections_cleaned"] += 1
                         log.info(f"Deleted vector collection: {collection_name}")
 
@@ -2621,7 +2640,7 @@ def cleanup_orphaned_files_by_reference():
         return {"error": error_msg}
 
 
-def cleanup_old_chat_collections(max_age_days: int = 1) -> dict:
+async def cleanup_old_chat_collections(max_age_days: int = 1) -> dict:
     """
     Clean up old chat file collections to prevent uncontrolled growth.
     Collections older than max_age_days will be deleted, but can be recreated on-demand.
@@ -2656,7 +2675,7 @@ def cleanup_old_chat_collections(max_age_days: int = 1) -> dict:
         # Get all collections
         try:
             if hasattr(VECTOR_DB_CLIENT, "list_collections"):
-                collection_names = VECTOR_DB_CLIENT.list_collections()
+                collection_names = await VECTOR_DB_CLIENT.list_collections()
                 # Create collection objects with name attribute for compatibility
                 collections = [
                     type("Collection", (), {"name": name})()
@@ -2742,7 +2761,7 @@ def cleanup_old_chat_collections(max_age_days: int = 1) -> dict:
                     cleanup_summary["old_collections_found"] += 1
 
                     # Delete the old collection
-                    VECTOR_DB_CLIENT.delete_collection(collection_name)
+                    await VECTOR_DB_CLIENT.delete_collection(collection_name)
                     cleanup_summary["collections_deleted"] += 1
                     log.info(f"Deleted old chat collection: {collection_name}")
                 else:
@@ -2762,7 +2781,7 @@ def cleanup_old_chat_collections(max_age_days: int = 1) -> dict:
         return {"error": error_msg}
 
 
-def reindex_file_on_demand(file_id: str, request: Request, user=None) -> bool:
+async def reindex_file_on_demand(file_id: str, request: Request, user=None) -> bool:
     """
     Re-index a file on-demand if its collection was deleted during cleanup.
     This enables the "re-index on the fly if needed" approach suggested in the PR.
@@ -2786,7 +2805,7 @@ def reindex_file_on_demand(file_id: str, request: Request, user=None) -> bool:
 
         # Check if collection already exists
         collection_name = f"{VECTOR_COLLECTION_PREFIXES.FILE}{file_id}"
-        if VECTOR_DB_CLIENT and VECTOR_DB_CLIENT.has_collection(collection_name):
+        if VECTOR_DB_CLIENT and await VECTOR_DB_CLIENT.has_collection(collection_name):
             log.debug(
                 f"Collection {collection_name} already exists, no re-indexing needed"
             )
@@ -2821,7 +2840,7 @@ def reindex_file_on_demand(file_id: str, request: Request, user=None) -> bool:
 
             # Use the existing save_docs_to_vector_db function
             collection_name = f"{VECTOR_COLLECTION_PREFIXES.FILE}{file_id}"
-            result = save_docs_to_vector_db(
+            result = await save_docs_to_vector_db(
                 request=request,
                 docs=docs,
                 collection_name=collection_name,
@@ -2848,7 +2867,7 @@ def reindex_file_on_demand(file_id: str, request: Request, user=None) -> bool:
         return False
 
 
-def cleanup_orphaned_chat_files() -> dict:
+async def cleanup_orphaned_chat_files() -> dict:
     """
     Clean up ALL chat files (except Knowledge Base files).
     This aggressive cleanup deletes all files except those belonging to KBs,
@@ -2875,7 +2894,7 @@ def cleanup_orphaned_chat_files() -> dict:
         # Get all file collections from vector DB
         collections = []
         if hasattr(VECTOR_DB_CLIENT, "list_collections"):
-            collections = VECTOR_DB_CLIENT.list_collections()
+            collections = await VECTOR_DB_CLIENT.list_collections()
         else:
             log.warning(
                 "Vector DB client does not support listing collections for chat cleanup"
@@ -2941,7 +2960,9 @@ def cleanup_orphaned_chat_files() -> dict:
                 if not file:
                     # File doesn't exist in database - orphaned
                     cleanup_summary["orphaned_files_found"] += 1
-                    VECTOR_DB_CLIENT.delete_collection(collection_name=collection_name)
+                    await VECTOR_DB_CLIENT.delete_collection(
+                        collection_name=collection_name
+                    )
                     cleanup_summary["collections_cleaned"] += 1
                     log.info(f"Cleaned up orphaned file collection: {collection_name}")
                     continue
@@ -2951,7 +2972,9 @@ def cleanup_orphaned_chat_files() -> dict:
                 cleanup_summary["orphaned_files_found"] += 1
 
                 # Delete vector collection
-                VECTOR_DB_CLIENT.delete_collection(collection_name=collection_name)
+                await VECTOR_DB_CLIENT.delete_collection(
+                    collection_name=collection_name
+                )
                 cleanup_summary["collections_cleaned"] += 1
 
                 # Delete physical file
@@ -2980,7 +3003,7 @@ def cleanup_orphaned_chat_files() -> dict:
 
 
 @router.post("/maintenance/cleanup/chat-files")
-def api_cleanup_orphaned_chat_files(user=Depends(get_admin_user)):
+async def api_cleanup_orphaned_chat_files(user=Depends(get_admin_user)):
     """
     API endpoint to cleanup orphaned chat files.
     Removes files that were uploaded to chats but whose chats no longer exist.
@@ -2988,7 +3011,7 @@ def api_cleanup_orphaned_chat_files(user=Depends(get_admin_user)):
     Used by K8s CronJobs for scheduled maintenance.
     """
     try:
-        result = cleanup_orphaned_chat_files()
+        result = await cleanup_orphaned_chat_files()
         return {
             "status": "success",
             "timestamp": datetime.now().isoformat(),
