@@ -390,7 +390,7 @@
 	<div
 		class="
         {selected
-			? 'from-gray-100 dark:from-gray-800'
+			? 'from-transparent'
 			: id === $chatId || confirmEdit
 				? 'from-gray-200 dark:from-gray-900'
 				: 'invisible group-hover:visible from-gray-100 dark:from-gray-950'}
