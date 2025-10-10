@@ -615,7 +615,7 @@
 					($i18n.language === 'dg-DG'
 						? `${WEBUI_BASE_URL}/doge.png`
 						: `${WEBUI_BASE_URL}/static/model.png`)}
-				className={'size-8 assistant-message-profile-image !rounded-none'}
+				className={'size-7 mt-[10px] assistant-message-profile-image !rounded-none'}
 			/>
 		</div>
 

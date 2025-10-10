@@ -524,7 +524,12 @@
 
 {#if !$mobile && !$showSidebar}
 	<div
-		class=" py-2 px-1.5 flex flex-col justify-between bg-[#F2F2F2] text-black dark:text-white hover:bg-gray-50/50 dark:hover:bg-gray-950/50 h-full border-e border-gray-50 dark:border-gray-850 z-10 transition-all"
+		class="py-2 px-1.5 flex flex-col justify-between 
++		       bg-gray-50 dark:bg-black oled:bg-black 
++		       text-gray-900 dark:text-gray-100 oled:text-gray-100
++		       hover:bg-gray-100/50 dark:hover:bg-gray-900/50 oled:hover:bg-gray-800/50
++		       h-full border-e border-gray-100 dark:border-gray-800 oled:border-gray-900 
++		       z-10 transition-all"
 		id="sidebar"
 	>
 		<button
