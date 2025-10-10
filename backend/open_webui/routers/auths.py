@@ -50,7 +50,7 @@ from open_webui.utils.auth import (
     get_http_authorization_cred,
 )
 from open_webui.utils.webhook import post_webhook
-from open_webui.utils.access_control import get_permissions
+from open_webui.utils.access_control import get_permissions, has_permission
 
 from typing import Optional, List
 
@@ -1036,9 +1036,16 @@ async def update_ldap_config(
 # create api key
 @router.post("/api_key", response_model=ApiKey)
 async def generate_api_key(request: Request, user=Depends(get_current_user)):
-    if not request.app.state.config.ENABLE_API_KEY:
+    # Check if API keys are globally enabled OR user has permission through a group
+    global_enabled = request.app.state.config.ENABLE_API_KEY
+    user_has_permission = has_permission(
+        user.id,
+        "api_key.enable",
+    )
+
+    if not (global_enabled or user_has_permission):
         raise HTTPException(
-            status.HTTP_403_FORBIDDEN,
+            status_code=status.HTTP_403_FORBIDDEN,
             detail=ERROR_MESSAGES.API_KEY_CREATION_NOT_ALLOWED,
         )
 

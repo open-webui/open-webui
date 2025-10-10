@@ -242,7 +242,7 @@
 			</div>
 		{/if}
 
-		{#if ($config?.features?.enable_api_key ?? true) || $user?.role === 'admin'}
+		{#if ($config?.features?.enable_api_key ?? true) || $user?.role === 'admin' || String($user?.permissions?.api_key?.enable) === 'true'}
 			<div class="flex justify-between items-center text-sm mt-2">
 				<div class="  font-medium">{$i18n.t('API keys')}</div>
 				<button
@@ -312,7 +312,7 @@
 						</div>
 					{/if}
 
-					{#if $config?.features?.enable_api_key ?? true}
+					{#if ($config?.features?.enable_api_key ?? true) || $user?.role === 'admin' || String($user?.permissions?.api_key?.enable) === 'true'}
 						<div class="justify-between w-full mt-2">
 							{#if $user?.role === 'admin'}
 								<div class="flex justify-between w-full">
