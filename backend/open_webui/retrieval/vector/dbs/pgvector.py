@@ -27,7 +27,7 @@ from sqlalchemy.ext.mutable import MutableDict
 from sqlalchemy.exc import NoSuchTableError
 
 
-from open_webui.retrieval.vector.utils import process_metadata
+from open_webui.retrieval.vector.utils import process_metadata, clean_text_for_postgres
 from open_webui.retrieval.vector.main import (
     VectorDBBase,
     VectorItem,
@@ -260,11 +260,15 @@ class PgvectorClient(VectorDBBase):
                 new_items = []
                 for item in items:
                     vector = self.adjust_vector_length(item["vector"])
+                    
+                    # Clean text to remove NUL characters that cause PostgreSQL errors
+                    cleaned_text = clean_text_for_postgres(item["text"])
+                    
                     new_chunk = DocumentChunk(
                         id=item["id"],
                         vector=vector,
                         collection_name=collection_name,
-                        text=item["text"],
+                        text=cleaned_text,
                         vmetadata=process_metadata(item["metadata"]),
                     )
                     new_items.append(new_chunk)

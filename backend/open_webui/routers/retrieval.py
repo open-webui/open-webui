@@ -1406,33 +1406,60 @@ def save_docs_to_vector_db(
             ),
         )
 
-        embeddings = embedding_function(
-            list(map(lambda x: x.replace("\n", " "), texts)),
-            prefix=RAG_EMBEDDING_CONTENT_PREFIX,
-            user=user,
-        )
-        log.info(f"embeddings generated {len(embeddings)} for {len(texts)} items")
+        # Process texts in smaller batches to prevent memory issues
+        batch_size = min(100, len(texts))  # Process max 100 items at a time
+        
+        for batch_start in range(0, len(texts), batch_size):
+            batch_end = min(batch_start + batch_size, len(texts))
+            batch_texts = texts[batch_start:batch_end]
+            batch_metadatas = metadatas[batch_start:batch_end]
+            
+            # Clean texts to remove NUL characters before embedding
+            cleaned_batch_texts = []
+            for text in batch_texts:
+                if text:
+                    # Remove NUL characters and other problematic characters
+                    cleaned_text = text.replace('\x00', '')
+                    cleaned_text = ''.join(char for char in cleaned_text if ord(char) >= 32 or char in '\n\r\t')
+                    cleaned_batch_texts.append(cleaned_text.replace("\n", " "))
+                else:
+                    cleaned_batch_texts.append("")
+            
+            embeddings = embedding_function(
+                cleaned_batch_texts,
+                prefix=RAG_EMBEDDING_CONTENT_PREFIX,
+                user=user,
+            )
+            log.info(f"embeddings generated {len(embeddings)} for {len(cleaned_batch_texts)} items in batch {batch_start//batch_size + 1}")
 
-        items = [
-            {
-                "id": str(uuid.uuid4()),
-                "text": text,
-                "vector": embeddings[idx],
-                "metadata": metadatas[idx],
-            }
-            for idx, text in enumerate(texts)
-        ]
+            items = [
+                {
+                    "id": str(uuid.uuid4()),
+                    "text": cleaned_batch_texts[idx],
+                    "vector": embeddings[idx],
+                    "metadata": batch_metadatas[idx],
+                }
+                for idx in range(len(cleaned_batch_texts))
+            ]
 
-        log.info(f"adding to collection {collection_name}")
-        VECTOR_DB_CLIENT.insert(
-            collection_name=collection_name,
-            items=items,
-        )
+            log.info(f"adding batch to collection {collection_name}")
+            VECTOR_DB_CLIENT.insert(
+                collection_name=collection_name,
+                items=items,
+            )
+            
+            # Force garbage collection after each batch to prevent memory leaks
+            import gc
+            del embeddings, items, cleaned_batch_texts, batch_texts, batch_metadatas
+            gc.collect()
 
-        log.info(f"added {len(items)} items to collection {collection_name}")
+        log.info(f"added all items to collection {collection_name}")
         return True
     except Exception as e:
         log.exception(e)
+        # Force cleanup on error
+        import gc
+        gc.collect()
         raise e
 
 
