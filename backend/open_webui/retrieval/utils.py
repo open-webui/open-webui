@@ -328,13 +328,17 @@ def query_collection(
 ) -> dict:
     results = []
     error = False
+    
+    # Calculate expanded limit for initial queries to ensure proper Top-K across all collections
+    # Use k * number of collections to get enough candidates, but cap at reasonable maximum
+    expanded_k = min(k * len(collection_names), k * 10) if len(collection_names) > 1 else k
 
     def process_query_collection(collection_name, query_embedding):
         try:
             if collection_name:
                 result = query_doc(
                     collection_name=collection_name,
-                    k=k,
+                    k=expanded_k,
                     query_embedding=query_embedding,
                 )
                 if result is not None:
@@ -403,6 +407,10 @@ def query_collection_with_hybrid_search(
         f"Starting hybrid search for {len(queries)} queries in {len(collection_names)} collections..."
     )
 
+    # Calculate expanded limits for initial queries to ensure proper Top-K across all collections
+    expanded_k = min(k * len(collection_names), k * 10) if len(collection_names) > 1 else k
+    expanded_k_reranker = min(k_reranker * len(collection_names), k_reranker * 10) if len(collection_names) > 1 else k_reranker
+
     def process_query(collection_name, query):
         try:
             result = query_doc_with_hybrid_search(
@@ -410,9 +418,9 @@ def query_collection_with_hybrid_search(
                 collection_result=collection_results[collection_name],
                 query=query,
                 embedding_function=embedding_function,
-                k=k,
+                k=expanded_k,
                 reranking_function=reranking_function,
-                k_reranker=k_reranker,
+                k_reranker=expanded_k_reranker,
                 r=r,
                 hybrid_bm25_weight=hybrid_bm25_weight,
             )
