@@ -79,7 +79,7 @@ async def create_new_model(
     if len(form_data.id) > 255:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail="The model id is too long. Please make sure your model id is less than 256 characters long.",
+            detail=ERROR_MESSAGES.MODEL_ID_TOO_LONG,
         )
 
     model = Models.get_model_by_id(form_data.id)
@@ -137,7 +137,7 @@ async def import_models(
                     if len(model_id) > 255:
                         raise HTTPException(
                             status_code=status.HTTP_400_BAD_REQUEST,
-                            detail="The model id is too long. Please make sure your model id is less than 256 characters long.",
+                            detail=ERROR_MESSAGES.MODEL_ID_TOO_LONG,
                         )
 
                     existing_model = Models.get_model_by_id(model_id)
