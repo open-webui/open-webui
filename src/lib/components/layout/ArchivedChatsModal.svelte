@@ -11,7 +11,7 @@
 		unarchiveAllChats
 	} from '$lib/apis/chats';
 	import { chatListRefresh } from '$lib/stores';
-	
+
 	import ChatsModal from './ChatsModal.svelte';
 	import UnarchiveAllConfirmDialog from '$lib/components/common/ConfirmDialog.svelte';
 	import Spinner from '../common/Spinner.svelte';
@@ -108,10 +108,11 @@
 			toast.error(`${error}`);
 		});
 
-	    chatListRefresh.update(v => ({    // Trigger global refresh  
-	        timestamp: Date.now(),
-	        folderId: null  			// Refresh all since we don't have folder context here  
-	    }));
+		chatListRefresh.update((v) => ({
+			// Trigger global refresh
+			timestamp: Date.now(),
+			folderId: null // Refresh all since we don't have folder context here
+		}));
 		onUpdate();
 		init();
 	};
@@ -122,10 +123,11 @@
 			await unarchiveAllChats(localStorage.token);
 			toast.success($i18n.t('All chats have been unarchived.'));
 
-		    chatListRefresh.update(v => ({    // Trigger global refresh  
-		        timestamp: Date.now(),
-		        folderId: null  			// Refresh all since we don't have folder context here  
-		    }));			
+			chatListRefresh.update((v) => ({
+				// Trigger global refresh
+				timestamp: Date.now(),
+				folderId: null // Refresh all since we don't have folder context here
+			}));			
 			onUpdate();
 			await init();
 		} catch (error) {

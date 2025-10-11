@@ -209,7 +209,7 @@
 	};
 
 	$: if ($chatListRefresh) {
-    	initChatList();
+		initChatList();
 	}
 
 	const loadMoreChats = async () => {

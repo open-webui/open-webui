@@ -70,7 +70,7 @@
 	let name = '';
 
 	$: if ($chatListRefresh) {
-    	setFolderItems();  
+		setFolderItems();
 	}
 
 	const onDragOver = (e) => {

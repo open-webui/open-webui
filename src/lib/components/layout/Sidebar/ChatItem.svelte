@@ -71,12 +71,12 @@
 	};
 
 	const refreshChatList = () => {
-	    if (chat?.folder_id) {
-	        chatListRefresh.update(v => ({
-	            timestamp: Date.now(),
- 	           folderId: chat.folder_id
-	        }));  
- 	   }  
+		if (chat?.folder_id) {
+			chatListRefresh.update((v) => ({
+				timestamp: Date.now(),
+				folderId: chat.folder_id
+			}));
+		} 
 	};
 
 	let showShareChatModal = false;
