@@ -195,21 +195,23 @@ setup_docker_ipv6() {
 
     # Backup existing config if it exists
     if [ -f /etc/docker/daemon.json ]; then
-        sudo cp /etc/docker/daemon.json /etc/docker/daemon.json.backup.$(date +%Y%m%d-%H%M%S)
+        cp /etc/docker/daemon.json /etc/docker/daemon.json.backup.$(date +%Y%m%d-%H%M%S)
     fi
 
-    # Create new config with IPv6 using tee
-    echo '{
+    # Create new config with IPv6
+    cat > /etc/docker/daemon.json << 'DOCKER_EOF'
+{
   "ipv6": true,
   "fixed-cidr-v6": "fd00::/64"
-}' | sudo tee /etc/docker/daemon.json > /dev/null
+}
+DOCKER_EOF
 
     echo "Restarting Docker daemon..."
-    sudo systemctl restart docker
+    systemctl restart docker
     sleep 10
 
     # Verify Docker restarted
-    if sudo systemctl is-active --quiet docker; then
+    if systemctl is-active --quiet docker; then
         echo "✅ Docker IPv6 enabled and daemon restarted"
     else
         echo "❌ Docker failed to restart"
@@ -267,10 +269,9 @@ if [ "$USE_IPV6_CONNECTION" = true ]; then
     ADMIN_URL="postgresql://postgres:${ENCODED_ADMIN_PASSWORD}@db.${PROJECT_REF}.supabase.co:5432/postgres"
     SYNC_URL="postgresql://sync_service:${ENCODED_SYNC_PASSWORD}@db.${PROJECT_REF}.supabase.co:5432/postgres"
 else
-    echo "Using pooler connection (IPv4)..."
     ADMIN_URL="postgresql://postgres.${PROJECT_REF}:${ENCODED_ADMIN_PASSWORD}@${REGION}.pooler.supabase.com:5432/postgres"
-    SYNC_URL="postgresql://sync_service:${ENCODED_SYNC_PASSWORD}@${REGION}.pooler.supabase.com:5432/postgres"
-    echo "⚠️  Note: Pooler requires postgres admin credentials. sync_service role may not work."
+    SYNC_URL="postgresql://sync_service.${PROJECT_REF}:${ENCODED_SYNC_PASSWORD}@${REGION}.pooler.supabase.com:5432/postgres"
+    echo "⚠️  Note: Using pooler connection (IPv4). Format: sync_service.PROJECT_REF required."
 fi
 
 # ============================================================================

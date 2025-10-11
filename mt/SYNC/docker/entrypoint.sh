@@ -19,8 +19,8 @@ echo ""
 : "${CLUSTER_NAME:?ERROR: CLUSTER_NAME not set}"
 
 # Validate ROLE
-if [[ "$ROLE" != "primary" && "$ROLE" != "secondary" ]]; then
-    echo "❌ ERROR: ROLE must be 'primary' or 'secondary', got: $ROLE"
+if [[ "$ROLE" != "primary" && "$ROLE" != "secondary" && "$ROLE" != "node-a" && "$ROLE" != "node-b" ]]; then
+    echo "❌ ERROR: ROLE must be 'primary', 'secondary', 'node-a', or 'node-b', got: $ROLE"
     exit 1
 fi
 
