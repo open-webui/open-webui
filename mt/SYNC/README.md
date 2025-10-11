@@ -81,17 +81,19 @@ mt/SYNC/
 
 Two containers per host provide high availability:
 
-- **Primary** (`openwebui-sync-primary`):
-  - Runs leader election
+- **Node A** (`openwebui-sync-node-a`):
+  - Participates in leader election
   - Exposes REST API on port 9443
-  - Executes sync jobs when leader
+  - Executes sync jobs when elected leader
   - Manages state cache
 
-- **Secondary** (`openwebui-sync-secondary`):
+- **Node B** (`openwebui-sync-node-b`):
   - Participates in leader election
-  - Health check endpoint on port 9444
-  - Automatically takes over if primary fails
+  - Exposes REST API on port 9444
+  - Automatically takes over leadership if Node A fails
   - Maintains synchronized state cache
+
+**Important**: Container names (nodeA/nodeB) are **just identifiers** and do NOT determine leadership. Leadership is determined dynamically via PostgreSQL atomic operations. See [Understanding Leader Election](#understanding-leader-election) below.
 
 ### 2. State Management System
 
@@ -264,7 +266,7 @@ Response:
 {
   "status": "healthy",
   "is_leader": true,
-  "leader_id": "openwebui-sync-primary",
+  "leader_id": "openwebui-sync-node-a",
   "cluster_name": "prod-host-1",
   "uptime_seconds": 3600,
   "last_sync": "2025-01-08T10:30:00Z"
@@ -498,7 +500,7 @@ ping6 -c 3 db.YOUR_PROJECT_REF.supabase.co
 nc -6 -zv db.YOUR_PROJECT_REF.supabase.co 5432
 
 # 5. Check container is using IPv6 connection
-docker exec openwebui-sync-primary env | grep DATABASE_URL
+docker exec openwebui-sync-node-a env | grep DATABASE_URL
 # Should show: db.PROJECT_REF.supabase.co (not pooler.supabase.com)
 ```
 
@@ -543,6 +545,258 @@ docker exec openwebui-sync-primary env | grep DATABASE_URL
 1. **Check IPv6 availability**: Script chose pooler because IPv6 test failed
 2. **Verify connectivity manually**: Test with `nc -6 -zv db.PROJECT_REF.supabase.co 5432`
 3. **Re-run deployment**: After fixing IPv6, re-run `./scripts/deploy-sync-cluster.sh`
+
+## Understanding Leader Election
+
+### Container Names vs Leadership Roles
+
+**Critical Concept**: Container names (`openwebui-sync-node-a`, `openwebui-sync-node-b`) are **fixed identifiers** that do NOT determine leadership. Leadership is determined **dynamically** through PostgreSQL atomic operations.
+
+**What This Means**:
+- ✅ Node A can be the leader OR a follower
+- ✅ Node B can be the leader OR a follower
+- ✅ Leadership changes automatically based on health and lease expiration
+- ✅ Container names never change, but leadership roles do
+
+### How Leadership Is Determined
+
+**Source of Truth**: PostgreSQL `sync_metadata.leader_election` table
+
+Every 30 seconds (heartbeat interval), both containers execute this atomic operation:
+
+```sql
+INSERT INTO sync_metadata.leader_election
+    (cluster_name, leader_id, acquired_at, expires_at)
+VALUES
+    ('prod-host-1', 'openwebui-sync-node-a', NOW(), NOW() + INTERVAL '60 seconds')
+ON CONFLICT (cluster_name) DO UPDATE
+SET
+    leader_id = EXCLUDED.leader_id,
+    expires_at = NOW() + INTERVAL '60 seconds'
+WHERE
+    -- Only succeed if:
+    leader_election.expires_at < NOW()          -- Previous leader's lease expired
+    OR leader_election.leader_id = EXCLUDED.leader_id  -- I'm already the leader
+RETURNING
+    leader_id = 'openwebui-sync-node-a' as is_leader;
+```
+
+**PostgreSQL Guarantees**:
+- Only ONE container succeeds per heartbeat cycle
+- Split-brain scenarios are impossible (ACID guarantees)
+- Leader holds a 60-second lease
+- Lease must be renewed every 30 seconds
+
+### Leadership States and Transitions
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│                    Initial Deployment                        │
+│  Both containers start and participate in election           │
+└──────────────────────┬──────────────────────────────────────┘
+                       │
+                       v
+              ┌────────────────┐
+              │ First heartbeat│
+              │ (race condition)│
+              └────────┬────────┘
+                       │
+         ┌─────────────┴─────────────┐
+         v                           v
+    ┌─────────┐                 ┌─────────┐
+    │ Node A  │                 │ Node B  │
+    │ LEADER  │                 │ FOLLOWER│
+    └────┬────┘                 └────┬────┘
+         │                           │
+         │ Heartbeat every 30s       │ Heartbeat rejected
+         │ Lease renewed             │ (already has leader)
+         │                           │
+         v                           v
+    ┌─────────────────────────────────────┐
+    │  Normal Operation (60+ seconds)      │
+    │  Node A: leader_id in DB             │
+    │  Node B: follower, monitoring        │
+    └──────────────┬──────────────────────┘
+                   │
+        ┌──────────┴──────────┐
+        │                     │
+        v                     v
+   Node A crashes        Node A healthy
+        │                     │
+        v                     v
+   ┌─────────┐           ┌─────────┐
+   │ Lease   │           │ Node A  │
+   │ expires │           │ renews  │
+   │ (60s)   │           │ leader  │
+   └────┬────┘           └─────────┘
+        │
+        v
+   ┌─────────────────┐
+   │ Next heartbeat  │
+   │ from Node B     │
+   │ (30s interval)  │
+   └────┬────────────┘
+        │
+        v
+   ┌──────────────────────────────┐
+   │ Node B becomes LEADER        │
+   │ (lease expired, acquires)    │
+   │                              │
+   │ DB: leader_id = 'node-b'     │
+   └──────────────────────────────┘
+```
+
+### Checking Current Leader
+
+**Three methods** (in order of reliability):
+
+#### Method 1: Query Supabase (Most Reliable)
+
+```sql
+-- Direct query to leader_election table
+SELECT leader_id, expires_at,
+       CASE WHEN expires_at > NOW() THEN 'active' ELSE 'expired' END as status
+FROM sync_metadata.leader_election
+WHERE cluster_name = 'prod-host-1';
+```
+
+**Example output**:
+```
+leader_id                 | expires_at          | status
+--------------------------|---------------------|--------
+openwebui-sync-node-b     | 2025-10-10 10:32:00 | active
+```
+
+#### Method 2: Use v_cluster_health View (Recommended)
+
+```sql
+-- Comprehensive cluster status
+SELECT hostname, leader_status, leader_lease_expires,
+       seconds_since_heartbeat
+FROM sync_metadata.v_cluster_health
+WHERE cluster_name = 'prod-host-1';
+```
+
+**Example output**:
+```
+hostname                | leader_status | leader_lease_expires | seconds_since_heartbeat
+------------------------|---------------|----------------------|------------------------
+openwebui-sync-node-a   | follower      | 2025-10-10 10:32:00  | 15
+openwebui-sync-node-b   | leader        | 2025-10-10 10:32:00  | 8
+```
+
+**Notice**: Node B is the leader even though it's named "node-b" (not "node-a")!
+
+#### Method 3: Container Health API (Less Reliable)
+
+```bash
+# Check Node A
+curl http://localhost:9443/health | jq '.is_leader'
+# Returns: true or false
+
+# Check Node B
+curl http://localhost:9444/health | jq '.is_leader'
+# Returns: true or false
+```
+
+**Limitation**: Requires containers to be running and network connectivity.
+
+### Failover Scenarios
+
+#### Scenario 1: Node A Crashes
+
+```
+Time    | Event                           | Leader in DB
+--------|--------------------------------|-------------------
+10:30:00| Node A is leader, healthy      | node-a
+10:30:15| Node A crashes                 | node-a (lease still valid)
+10:31:15| Node A lease expires (60s)     | node-a (expired)
+10:31:30| Node B heartbeat (30s interval)| node-b (acquired!)
+10:31:30| Node B becomes leader          | node-b
+```
+
+**Failover time**: ~35 seconds maximum (60s lease + 30s heartbeat interval)
+
+#### Scenario 2: Node A Restarts After Crash
+
+```
+Time    | Event                           | Leader in DB
+--------|--------------------------------|-------------------
+10:31:30| Node B is leader               | node-b
+10:32:00| Node A restarts                | node-b (still valid)
+10:32:30| Node A tries to acquire        | node-b (rejected - lease valid)
+10:33:00| Node B renews lease            | node-b
+```
+
+**Result**: Node B remains leader even though Node A is "back online"!
+
+**Why?** Node B's lease hasn't expired, so Node A's heartbeat gets rejected.
+
+#### Scenario 3: Both Nodes Restart
+
+```
+Time    | Event                           | Leader in DB
+--------|--------------------------------|-------------------
+10:30:00| Both nodes restart              | (old lease expired)
+10:30:05| Node A heartbeat (wins race)   | node-a
+10:30:10| Node B heartbeat (rejected)    | node-a
+```
+
+**Result**: Whichever container sends the first heartbeat becomes leader (race condition).
+
+### Leadership Best Practices
+
+**1. Don't Rely on Container Names**
+
+❌ **Wrong assumption**: "Node A is always the leader because it's named 'node-a'"
+
+✅ **Correct approach**: "Check `v_cluster_health` to see which node is currently leader"
+
+**2. Always Check the Database**
+
+❌ **Wrong**: Assuming leadership based on container name or startup order
+
+✅ **Correct**: Query `sync_metadata.leader_election` or `v_cluster_health`
+
+**3. Expect Leadership to Change**
+
+❌ **Wrong**: Hard-coding logic that assumes Node A is always leader
+
+✅ **Correct**: Query current leader before performing leader-specific operations
+
+**4. Monitor Lease Expiration**
+
+```sql
+-- Alert if no valid leader for more than 2 minutes
+SELECT cluster_name, leader_id, expires_at
+FROM sync_metadata.leader_election
+WHERE expires_at < NOW() - INTERVAL '2 minutes';
+```
+
+**5. Check Heartbeat Lag**
+
+```sql
+-- Alert if heartbeat is stale (> 5 minutes)
+SELECT hostname, cluster_name, last_heartbeat,
+       EXTRACT(EPOCH FROM (NOW() - last_heartbeat))::INTEGER as seconds_since_heartbeat
+FROM sync_metadata.hosts
+WHERE last_heartbeat < NOW() - INTERVAL '5 minutes';
+```
+
+### Key Takeaways
+
+| Question | Answer |
+|----------|--------|
+| Do container names determine leadership? | ❌ NO |
+| Can "node-b" become the leader? | ✅ YES |
+| Can "node-a" be a follower? | ✅ YES |
+| What determines leadership? | ⚡ PostgreSQL atomic operations + lease expiration |
+| Where is the source of truth? | 📊 `sync_metadata.leader_election` table |
+| Can both nodes be leaders? | ❌ NO (PostgreSQL prevents split-brain) |
+| Can neither node be leader? | ⚠️ Only temporarily (if both down or lease expired) |
+| How long does failover take? | ⏱️ ~35 seconds maximum |
+
+---
 
 ## Cluster Lifecycle Management
 
@@ -654,7 +908,7 @@ This could be implemented as a PostgreSQL function triggered by `pg_cron` extens
 **Solution**:
 ```bash
 # Check leader_election table
-docker exec openwebui-sync-primary python3 -c "
+docker exec openwebui-sync-node-a python3 -c "
 import psycopg2
 conn = psycopg2.connect(os.environ['DATABASE_URL'])
 cur = conn.cursor()
@@ -707,11 +961,12 @@ EOF
 **Symptom**: Primary container down but secondary not taking over
 
 **Checklist**:
-- [ ] Verify secondary container is running: `docker ps | grep sync-secondary`
-- [ ] Check secondary logs: `docker logs openwebui-sync-secondary`
+- [ ] Verify both containers are running: `docker ps | grep sync-node`
+- [ ] Check container logs: `docker logs openwebui-sync-node-a` and `docker logs openwebui-sync-node-b`
 - [ ] Verify DATABASE_URL environment variable is set correctly
-- [ ] Test Supabase connectivity from secondary
+- [ ] Test Supabase connectivity from containers
 - [ ] Check for expired lease: Should expire in 60 seconds
+- [ ] Query `v_cluster_health` view to see current leader status
 
 ## Phase 2 Preview
 
@@ -745,10 +1000,11 @@ cd tests/
 ## Support
 
 For issues or questions:
-1. Check logs: `docker logs openwebui-sync-primary`
+1. Check logs: `docker logs openwebui-sync-node-a` or `docker logs openwebui-sync-node-b`
 2. Review Supabase dashboard for database errors
 3. Consult troubleshooting section above
-4. File issue on GitHub with logs and config
+4. Query `v_cluster_health` view for cluster status
+5. File issue on GitHub with logs and config
 
 ## License
 

@@ -231,7 +231,7 @@ if docker ps -q --filter "name=openwebui-sync-" | grep -q .; then
     info "Found running sync containers, stopping gracefully..."
 
     # This triggers graceful shutdown which releases leadership
-    docker stop openwebui-sync-primary openwebui-sync-secondary 2>/dev/null || true
+    docker stop openwebui-sync-node-a openwebui-sync-node-b 2>/dev/null || true
 
     success "Sync containers stopped"
 
@@ -287,7 +287,7 @@ read -p "Remove local sync containers and Docker volumes? (yes/no): " REMOVE_LOC
 if [ "$REMOVE_LOCAL" = "yes" ]; then
     info "Removing local sync containers..."
 
-    docker rm -f openwebui-sync-primary openwebui-sync-secondary 2>/dev/null || true
+    docker rm -f openwebui-sync-node-a openwebui-sync-node-b 2>/dev/null || true
 
     # Check for sync-related volumes
     if docker volume ls --filter "name=sync" | grep -q sync; then

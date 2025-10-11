@@ -1,16 +1,20 @@
 # SQLite + Supabase Sync System - High Availability Cluster
 # Phase 1: Dual sync containers with leader election
+#
+# Note: Container names (nodeA/nodeB) are just identifiers and DO NOT determine
+# leadership. Leadership is determined dynamically via PostgreSQL atomic operations
+# in the sync_metadata.leader_election table.
 
 services:
-  sync-primary:
+  sync-node-a:
     image: ghcr.io/imagicrafter/openwebui-sync:latest
-    container_name: openwebui-sync-primary
+    container_name: openwebui-sync-node-a
     restart: unless-stopped
 
     environment:
       # Required
       - DATABASE_URL=${SUPABASE_URL}
-      - ROLE=primary
+      - ROLE=node-a
       - CLUSTER_NAME=${HOST_NAME:-prod-host-1}
 
       # Optional (with defaults)
@@ -52,15 +56,15 @@ services:
         max-size: "10m"
         max-file: "3"
 
-  sync-secondary:
+  sync-node-b:
     image: ghcr.io/imagicrafter/openwebui-sync:latest
-    container_name: openwebui-sync-secondary
+    container_name: openwebui-sync-node-b
     restart: unless-stopped
 
     environment:
       # Required
       - DATABASE_URL=${SUPABASE_URL}
-      - ROLE=secondary
+      - ROLE=node-b
       - CLUSTER_NAME=${HOST_NAME:-prod-host-1}
 
       # Optional (with defaults)
@@ -96,7 +100,7 @@ services:
       - sync-network
 
     depends_on:
-      sync-primary:
+      sync-node-a:
         condition: service_healthy
 
     logging:
