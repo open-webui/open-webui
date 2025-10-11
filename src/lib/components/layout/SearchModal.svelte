@@ -17,6 +17,7 @@
 	import { goto } from '$app/navigation';
 	import PencilSquare from '../icons/PencilSquare.svelte';
 	import PageEdit from '../icons/PageEdit.svelte';
+	import { createNewNote } from '$lib/apis/notes';
 	dayjs.extend(calendar);
 
 	export let show = false;
@@ -233,9 +234,40 @@
 						{
 							label: $i18n.t('Create a new note'),
 							onClick: async () => {
-								await goto(`/notes${query ? `?content=${query}` : ''}`);
-								show = false;
-								onClose();
+								const note = await createNewNote(localStorage.token, {
+									title: dayjs().format('YYYY-MM-DD'),
+									data: {
+										content: {
+											json: {
+												type: 'doc',
+												content: [
+													{
+														type: 'paragraph',
+														content: query
+															? [
+																	{
+																		type: 'text',
+																		text: query
+																	}
+																]
+															: []
+													}
+												]
+											},
+											html: `<p>${query}</p>`,
+											md: query
+										}
+									},
+									access_control: {}
+								});
+
+								if (note) {
+									await goto(`/notes/${note.id}`);
+									show = false;
+									onClose();
+								} else {
+									toast.error($i18n.t('Failed to create note'));
+								}
 							},
 							icon: PageEdit
 						}
