@@ -7,6 +7,7 @@ from open_webui.socket.main import get_event_emitter
 from open_webui.models.chats import (
     ChatForm,
     ChatImportForm,
+    ChatsImportForm,
     ChatResponse,
     Chats,
     ChatTitleIdResponse,
@@ -163,6 +164,23 @@ async def import_chat(form_data: ChatImportForm, user=Depends(get_verified_user)
             status_code=status.HTTP_400_BAD_REQUEST, detail=ERROR_MESSAGES.DEFAULT()
         )
 
+############################
+# Bulk Import Chats
+############################
+
+
+@router.post("/import/bulk", response_model=list[ChatResponse])
+async def bulk_import_chats(
+    form_data: ChatsImportForm, user=Depends(get_verified_user)
+):
+    try:
+        chats = Chats.import_chats_in_bulk(user.id, form_data)
+        return [ChatResponse(**chat.model_dump()) for chat in chats]
+    except Exception as e:
+        log.exception(e)
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST, detail=ERROR_MESSAGES.DEFAULT()
+        )
 
 ############################
 # GetChats

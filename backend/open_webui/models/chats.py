@@ -92,6 +92,10 @@ class ChatImportForm(ChatForm):
     updated_at: Optional[int] = None
 
 
+class ChatsImportForm(BaseModel):
+    chats: list[ChatImportForm]
+
+
 class ChatTitleMessagesForm(BaseModel):
     title: str
     messages: list[dict]
@@ -184,6 +188,47 @@ class ChatTable:
             db.commit()
             db.refresh(result)
             return ChatModel.model_validate(result) if result else None
+
+    def import_chats_in_bulk(
+        self, user_id: str, form_data: "ChatsImportForm"
+    ) -> list[ChatModel]:
+        with get_db() as db:
+            chats_to_create = []
+            for chat_form in form_data.chats:
+                id = str(uuid.uuid4())
+                chat = ChatModel(
+                    **{
+                        "id": id,
+                        "user_id": user_id,
+                        "title": (
+                            chat_form.chat["title"]
+                            if "title" in chat_form.chat
+                            else "New Chat"
+                        ),
+                        "chat": chat_form.chat,
+                        "meta": chat_form.meta,
+                        "pinned": chat_form.pinned,
+                        "folder_id": chat_form.folder_id,
+                        "created_at": (
+                            chat_form.created_at
+                            if chat_form.created_at
+                            else int(time.time())
+                        ),
+                        "updated_at": (
+                            chat_form.updated_at
+                            if chat_form.updated_at
+                            else int(time.time())
+                        ),
+                    }
+                )
+                chats_to_create.append(Chat(**chat.model_dump()))
+
+            db.add_all(chats_to_create)
+            db.commit()
+
+            return [
+                ChatModel.model_validate(chat) for chat in chats_to_create
+            ]
 
     def update_chat_by_id(self, id: str, chat: dict) -> Optional[ChatModel]:
         try:
