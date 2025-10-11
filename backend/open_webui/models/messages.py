@@ -11,6 +11,7 @@ from open_webui.models.users import Users, UserNameResponse
 from pydantic import BaseModel, ConfigDict
 from sqlalchemy import BigInteger, Boolean, Column, String, Text, JSON
 from sqlalchemy import or_, func, select, and_, text
+from open_webui.utils.data_sanitizer import SanitizedJSON, SanitizedText
 from sqlalchemy.sql import exists
 
 ####################
@@ -20,10 +21,10 @@ from sqlalchemy.sql import exists
 
 class MessageReaction(Base):
     __tablename__ = "message_reaction"
-    id = Column(Text, primary_key=True)
-    user_id = Column(Text)
-    message_id = Column(Text)
-    name = Column(Text)
+    id = Column(SanitizedText, primary_key=True)
+    user_id = Column(SanitizedText)
+    message_id = Column(SanitizedText)
+    name = Column(SanitizedText)
     created_at = Column(BigInteger)
 
 
@@ -39,17 +40,17 @@ class MessageReactionModel(BaseModel):
 
 class Message(Base):
     __tablename__ = "message"
-    id = Column(Text, primary_key=True)
+    id = Column(SanitizedText, primary_key=True)
 
-    user_id = Column(Text)
-    channel_id = Column(Text, nullable=True)
+    user_id = Column(SanitizedText)
+    channel_id = Column(SanitizedText, nullable=True)
 
+    parent_id = Column(SanitizedText, nullable=True)
     reply_to_id = Column(Text, nullable=True)
-    parent_id = Column(Text, nullable=True)
 
-    content = Column(Text)
-    data = Column(JSON, nullable=True)
-    meta = Column(JSON, nullable=True)
+    content = Column(SanitizedText)
+    data = Column(SanitizedJSON, nullable=True)
+    meta = Column(SanitizedJSON, nullable=True)
 
     created_at = Column(BigInteger)  # time_ns
     updated_at = Column(BigInteger)  # time_ns

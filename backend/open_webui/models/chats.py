@@ -8,6 +8,7 @@ from open_webui.internal.db import Base, get_db
 from open_webui.models.tags import TagModel, Tag, Tags
 from open_webui.models.folders import Folders
 from open_webui.env import SRC_LOG_LEVELS
+from open_webui.utils.data_sanitizer import SanitizedJSON, SanitizedText
 
 from pydantic import BaseModel, ConfigDict
 from sqlalchemy import BigInteger, Boolean, Column, String, Text, JSON, Index
@@ -28,18 +29,18 @@ class Chat(Base):
 
     id = Column(String, primary_key=True)
     user_id = Column(String)
-    title = Column(Text)
-    chat = Column(JSON)
+    title = Column(SanitizedText)
+    chat = Column(SanitizedJSON)
 
     created_at = Column(BigInteger)
     updated_at = Column(BigInteger)
 
-    share_id = Column(Text, unique=True, nullable=True)
+    share_id = Column(SanitizedText, unique=True, nullable=True)
     archived = Column(Boolean, default=False)
     pinned = Column(Boolean, default=False, nullable=True)
 
-    meta = Column(JSON, server_default="{}")
-    folder_id = Column(Text, nullable=True)
+    meta = Column(SanitizedJSON, server_default="{}")
+    folder_id = Column(SanitizedText, nullable=True)
 
     __table_args__ = (
         # Performance indexes for common queries

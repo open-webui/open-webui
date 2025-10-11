@@ -12,6 +12,7 @@ from open_webui.utils.misc import throttle
 
 from pydantic import BaseModel, ConfigDict
 from sqlalchemy import BigInteger, Column, String, Text, Date
+from open_webui.utils.data_sanitizer import SanitizedJSON, SanitizedText
 from sqlalchemy import or_
 
 import datetime
@@ -25,23 +26,23 @@ class User(Base):
     __tablename__ = "user"
 
     id = Column(String, primary_key=True)
-    name = Column(String)
+    name = Column(SanitizedText)
 
-    email = Column(String)
-    username = Column(String(50), nullable=True)
+    email = Column(SanitizedText)
+    username = Column(SanitizedText, nullable=True)
 
     role = Column(String)
-    profile_image_url = Column(Text)
+    profile_image_url = Column(SanitizedText)
 
-    bio = Column(Text, nullable=True)
-    gender = Column(Text, nullable=True)
+    bio = Column(SanitizedText, nullable=True)
+    gender = Column(SanitizedText, nullable=True)
     date_of_birth = Column(Date, nullable=True)
 
-    info = Column(JSONField, nullable=True)
-    settings = Column(JSONField, nullable=True)
+    info = Column(SanitizedJSON, nullable=True)
+    settings = Column(SanitizedJSON, nullable=True)
 
-    api_key = Column(String, nullable=True, unique=True)
-    oauth_sub = Column(Text, unique=True)
+    api_key = Column(SanitizedText, nullable=True, unique=True)
+    oauth_sub = Column(SanitizedText, unique=True)
 
     last_active_at = Column(BigInteger)
 

@@ -6,6 +6,7 @@ from open_webui.internal.db import Base, JSONField, get_db
 from open_webui.env import SRC_LOG_LEVELS
 from pydantic import BaseModel, ConfigDict
 from sqlalchemy import BigInteger, Column, String, Text, JSON
+from open_webui.utils.data_sanitizer import SanitizedJSON, SanitizedText
 
 log = logging.getLogger(__name__)
 log.setLevel(SRC_LOG_LEVELS["MODELS"])
@@ -19,15 +20,15 @@ class File(Base):
     __tablename__ = "file"
     id = Column(String, primary_key=True)
     user_id = Column(String)
-    hash = Column(Text, nullable=True)
+    hash = Column(SanitizedText, nullable=True)
 
-    filename = Column(Text)
-    path = Column(Text, nullable=True)
+    filename = Column(SanitizedText)
+    path = Column(SanitizedText, nullable=True)
 
-    data = Column(JSON, nullable=True)
-    meta = Column(JSON, nullable=True)
+    data = Column(SanitizedJSON, nullable=True)
+    meta = Column(SanitizedJSON, nullable=True)
 
-    access_control = Column(JSON, nullable=True)
+    access_control = Column(SanitizedJSON, nullable=True)
 
     created_at = Column(BigInteger)
     updated_at = Column(BigInteger)

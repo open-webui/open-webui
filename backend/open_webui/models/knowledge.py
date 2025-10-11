@@ -14,6 +14,7 @@ from open_webui.models.users import Users, UserResponse
 
 from pydantic import BaseModel, ConfigDict
 from sqlalchemy import BigInteger, Column, String, Text, JSON
+from open_webui.utils.data_sanitizer import SanitizedJSON, SanitizedText
 
 from open_webui.utils.access_control import has_access
 
@@ -28,16 +29,16 @@ log.setLevel(SRC_LOG_LEVELS["MODELS"])
 class Knowledge(Base):
     __tablename__ = "knowledge"
 
-    id = Column(Text, unique=True, primary_key=True)
-    user_id = Column(Text)
+    id = Column(SanitizedText, unique=True, primary_key=True)
+    user_id = Column(SanitizedText)
 
-    name = Column(Text)
-    description = Column(Text)
+    name = Column(SanitizedText)
+    description = Column(SanitizedText)
 
-    data = Column(JSON, nullable=True)
-    meta = Column(JSON, nullable=True)
+    data = Column(SanitizedJSON, nullable=True)
+    meta = Column(SanitizedJSON, nullable=True)
 
-    access_control = Column(JSON, nullable=True)  # Controls data access levels.
+    access_control = Column(SanitizedJSON, nullable=True)  # Controls data access levels.
     # Defines access control rules for this entry.
     # - `None`: Public access, available to all users with the "user" role.
     # - `{}`: Private access, restricted exclusively to the owner.
