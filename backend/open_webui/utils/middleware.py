@@ -827,11 +827,7 @@ async def chat_completion_files_handler(
 
     if files := body.get("metadata", {}).get("files", None):
         # Check if all files are in full context mode
-        all_full_context = all(
-            item.get("context") == "full"
-            for item in files
-            if item.get("type") == "file"
-        )
+        all_full_context = all(item.get("context") == "full" for item in files)
 
         queries = []
         if not all_full_context:
