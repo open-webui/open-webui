@@ -504,39 +504,42 @@ async def get_all_models(request: Request, user: UserModel) -> dict[str, list]:
     def merge_models_lists(model_lists):
         log.debug(f"merge_models_lists {model_lists}")
         merged_list = []
+        seen_ids = set()
 
         for idx, models in enumerate(model_lists):
             if models is not None and "error" not in models:
-
-                merged_list.extend(
-                    [
-                        {
+                for model in models:
+                    model_id = model.get("id") or model.get("name")
+                    if not model_id:
+                        continue
+                    
+                    # Check if this model should be included
+                    should_include = (
+                        "api.openai.com"
+                        not in request.app.state.config.OPENAI_API_BASE_URLS[idx]
+                        or not any(
+                            name in model_id
+                            for name in [
+                                "babbage",
+                                "dall-e",
+                                "davinci",
+                                "embedding",
+                                "tts",
+                                "whisper",
+                            ]
+                        )
+                    )
+                    
+                    if should_include and model_id not in seen_ids:
+                        seen_ids.add(model_id)
+                        merged_list.append({
                             **model,
                             "name": model.get("name", model["id"]),
                             "owned_by": "openai",
                             "openai": model,
                             "connection_type": model.get("connection_type", "external"),
                             "urlIdx": idx,
-                        }
-                        for model in models
-                        if (model.get("id") or model.get("name"))
-                        and (
-                            "api.openai.com"
-                            not in request.app.state.config.OPENAI_API_BASE_URLS[idx]
-                            or not any(
-                                name in model["id"]
-                                for name in [
-                                    "babbage",
-                                    "dall-e",
-                                    "davinci",
-                                    "embedding",
-                                    "tts",
-                                    "whisper",
-                                ]
-                            )
-                        )
-                    ]
-                )
+                        })
 
         return merged_list
 
