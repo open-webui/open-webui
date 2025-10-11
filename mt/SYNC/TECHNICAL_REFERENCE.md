@@ -747,3 +747,109 @@ sudo systemctl restart docker
 **Resolution**: Added sudo to all system-level operations
 **Lesson**: Never assume deployment scripts run as root - always use explicit sudo
 
+---
+
+## 🔌 Supabase Connection Standards
+
+### Database Connection URLs
+
+**CRITICAL**: Supabase has TWO connection methods with DIFFERENT URL formats.
+
+#### Direct Connection (IPv6 - Recommended)
+
+```bash
+# Format for direct connection
+postgresql://[USER]:[PASSWORD]@db.[PROJECT_REF].supabase.co:5432/postgres
+
+# Examples
+ADMIN_URL="postgresql://postgres:${PASSWORD}@db.dgjvrkoxxmbndvtxvqjv.supabase.co:5432/postgres"
+SYNC_URL="postgresql://sync_service:${PASSWORD}@db.dgjvrkoxxmbndvtxvqjv.supabase.co:5432/postgres"
+```
+
+**Requirements**:
+- IPv6 connectivity required
+- All PostgreSQL features supported
+- Lower latency
+- Custom roles work without modification
+
+#### Pooler Connection (IPv4 - Fallback)
+
+```bash
+# Format for pooler connection - MUST include PROJECT_REF in username
+postgresql://[USER].[PROJECT_REF]:[PASSWORD]@[REGION].pooler.supabase.com:5432/postgres
+
+# Examples
+ADMIN_URL="postgresql://postgres.dgjvrkoxxmbndvtxvqjv:${PASSWORD}@aws-1-us-east-2.pooler.supabase.com:5432/postgres"
+SYNC_URL="postgresql://sync_service.dgjvrkoxxmbndvtxvqjv:${PASSWORD}@aws-1-us-east-2.pooler.supabase.com:5432/postgres"
+```
+
+**CRITICAL DIFFERENCE**: Username must be `[USER].[PROJECT_REF]` not just `[USER]`
+
+**Requirements**:
+- IPv4 connectivity
+- Limited PostgreSQL features (transaction pooling mode)
+- Higher latency through proxy
+- **MUST append project reference to username**
+
+### Common Mistake: "Tenant or user not found"
+
+**Symptom**: Connection fails with error:
+```
+FATAL: Tenant or user not found
+```
+
+**Cause**: Using pooler connection without project reference in username
+
+**Wrong**:
+```bash
+# ❌ This will fail with pooler
+postgresql://sync_service:password@aws-1-us-east-2.pooler.supabase.com:5432/postgres
+```
+
+**Correct**:
+```bash
+# ✅ This works with pooler
+postgresql://sync_service.dgjvrkoxxmbndvtxvqjv:password@aws-1-us-east-2.pooler.supabase.com:5432/postgres
+```
+
+### Testing Connection Format
+
+```bash
+# Test direct connection (IPv6)
+docker run --rm postgres:15-alpine psql \
+  "postgresql://sync_service:PASSWORD@db.PROJECT_REF.supabase.co:5432/postgres" \
+  -c "SELECT current_user;"
+
+# Test pooler connection (IPv4)
+docker run --rm postgres:15-alpine psql \
+  "postgresql://sync_service.PROJECT_REF:PASSWORD@REGION.pooler.supabase.com:5432/postgres" \
+  -c "SELECT current_user;"
+```
+
+### Deployment Script Standards
+
+When building connection URLs, always check IPv6 availability first:
+
+```bash
+if [ "$USE_IPV6_CONNECTION" = true ]; then
+    # Direct connection - no project ref needed in username
+    SYNC_URL="postgresql://sync_service:${PASSWORD}@db.${PROJECT_REF}.supabase.co:5432/postgres"
+else
+    # Pooler connection - MUST include project ref in username
+    SYNC_URL="postgresql://sync_service.${PROJECT_REF}:${PASSWORD}@${REGION}.pooler.supabase.com:5432/postgres"
+fi
+```
+
+**Pre-Commit Checklist Addition**:
+- [ ] Pooler URLs use `USER.PROJECT_REF` format for username
+- [ ] Direct URLs use `db.PROJECT_REF.supabase.co` hostname
+- [ ] Script warns when using pooler fallback
+- [ ] Passwords are URL-encoded before use
+
+---
+
+**Added**: 2025-10-11
+**Issue**: Pooler connection failed with "Tenant or user not found"
+**Resolution**: Added project reference to username (sync_service.PROJECT_REF)
+**Lesson**: Supabase pooler has different authentication format than direct connection
+
