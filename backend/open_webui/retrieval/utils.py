@@ -268,6 +268,13 @@ def merge_and_sort_query_results(query_results: list[dict], k: int) -> dict:
     combined = dict()  # To store documents with unique document hashes
 
     for data in query_results:
+        if (
+            len(data.get("distances", [])) == 0
+            or len(data.get("documents", [])) == 0
+            or len(data.get("metadatas", [])) == 0
+        ):
+            continue
+
         distances = data["distances"][0]
         documents = data["documents"][0]
         metadatas = data["metadatas"][0]
