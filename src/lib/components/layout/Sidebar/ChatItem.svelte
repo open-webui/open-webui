@@ -27,7 +27,8 @@
 		showSidebar,
 		currentChatPage,
 		tags,
-		selectedFolder
+		selectedFolder,
+		chatListRefresh
 	} from '$lib/stores';
 
 	import ChatMenu from './ChatMenu.svelte';
@@ -69,6 +70,15 @@
 		}
 	};
 
+	const refreshChatList = () => {
+	    if (chat?.folder_id) {
+	        chatListRefresh.update(v => ({
+	            timestamp: Date.now(),
+ 	           folderId: chat.folder_id
+	        }));  
+ 	   }  
+	};
+
 	let showShareChatModal = false;
 	let confirmEdit = false;
 
@@ -90,6 +100,7 @@
 			await chats.set(await getChatList(localStorage.token, $currentChatPage));
 			await pinnedChats.set(await getPinnedChatList(localStorage.token));
 
+			refreshChatList();
 			dispatch('change');
 		}
 	};
@@ -107,6 +118,7 @@
 		});
 
 		if (res) {
+			refreshChatList();
 			goto(`/c/${res.id}`);
 
 			currentChatPage.set(1);
@@ -122,6 +134,7 @@
 		});
 
 		if (res) {
+			refreshChatList();
 			tags.set(await getAllTags(localStorage.token));
 			if ($chatId === id) {
 				await goto('/');
@@ -136,6 +149,8 @@
 
 	const archiveChatHandler = async (id) => {
 		await archiveChatById(localStorage.token, id);
+
+		refreshChatList();
 		dispatch('change');
 	};
 
@@ -153,6 +168,7 @@
 				await chats.set(await getChatList(localStorage.token, $currentChatPage));
 				await pinnedChats.set(await getPinnedChatList(localStorage.token));
 
+				refreshChatList();
 				dispatch('change');
 
 				toast.success($i18n.t('Chat moved successfully'));

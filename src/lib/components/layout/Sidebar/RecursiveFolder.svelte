@@ -11,7 +11,7 @@
 	import { goto } from '$app/navigation';
 	import { toast } from 'svelte-sonner';
 
-	import { chatId, mobile, selectedFolder, showSidebar } from '$lib/stores';
+	import { chatId, mobile, selectedFolder, showSidebar, chatListRefresh } from '$lib/stores';
 
 	import {
 		deleteFolderById,
@@ -68,6 +68,10 @@
 	let clickTimer = null;
 
 	let name = '';
+
+	$: if ($chatListRefresh) {
+    	setFolderItems();  
+	}
 
 	const onDragOver = (e) => {
 		e.preventDefault();
