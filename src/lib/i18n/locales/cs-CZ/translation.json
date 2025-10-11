@@ -1211,7 +1211,7 @@
 	"Please wait until all files are uploaded.": "Prosím počkejte dokud nebudou všechny soubory nahrány.",
 	"Port": "Port",
 	"Positive attitude": "Pozitivní přístup",
-	"Prefer not to say": "",
+	"Prefer not to say": "Raději nevyberu",
 	"Prefix ID": "Prefix ID",
 	"Prefix ID is used to avoid conflicts with other connections by adding a prefix to the model IDs - leave empty to disable": "Prefix ID se používá k zamezení konfliktů s jinými připojeními přidáním prefixu k ID modelů - pro vypnutí ponechte prázdné",
 	"Prevent file creation": "Zabránit vytváření souborů",
