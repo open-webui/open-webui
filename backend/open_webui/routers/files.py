@@ -19,6 +19,7 @@ from fastapi import (
     UploadFile,
     status,
     Query,
+    Form
 )
 
 from fastapi.responses import FileResponse, StreamingResponse
@@ -85,7 +86,7 @@ def has_access_to_file(
 ############################
 
 
-def process_uploaded_file(request, file, file_path, file_item, file_metadata, user):
+def process_uploaded_file(request, file, file_path, file_item, file_metadata, user, knowledge_id):
     try:
         if file.content_type:
             stt_supported_content_types = getattr(
@@ -114,12 +115,12 @@ def process_uploaded_file(request, file, file_path, file_item, file_metadata, us
             elif (not file.content_type.startswith(("image/", "video/"))) or (
                 request.app.state.config.CONTENT_EXTRACTION_ENGINE == "external"
             ):
-                process_file(request, ProcessFileForm(file_id=file_item.id), user=user)
+                process_file(request, ProcessFileForm(file_id=file_item.id, knowledge_id=knowledge_id), user=user)
         else:
             log.info(
                 f"File type {file.content_type} is not provided, but trying to process anyway"
             )
-            process_file(request, ProcessFileForm(file_id=file_item.id), user=user)
+            process_file(request, ProcessFileForm(file_id=file_item.id, knowledge_id=knowledge_id), user=user)
     except Exception as e:
         log.error(f"Error processing file: {file_item.id}")
         Files.update_file_data_by_id(
@@ -140,6 +141,7 @@ def upload_file(
     process: bool = Query(True),
     process_in_background: bool = Query(True),
     user=Depends(get_verified_user),
+    knowledge_id: Optional[str] = Form(None)
 ):
     return upload_file_handler(
         request,
@@ -149,6 +151,7 @@ def upload_file(
         process_in_background=process_in_background,
         user=user,
         background_tasks=background_tasks,
+        knowledge_id=knowledge_id,
     )
 
 
@@ -160,6 +163,7 @@ def upload_file_handler(
     process_in_background: bool = Query(True),
     user=Depends(get_verified_user),
     background_tasks: Optional[BackgroundTasks] = None,
+    knowledge_id: Optional[str] = Form(None)
 ):
     log.info(f"file.content_type: {file.content_type}")
 
@@ -181,12 +185,21 @@ def upload_file_handler(
         # Remove the leading dot from the file extension
         file_extension = file_extension[1:] if file_extension else ""
 
-        if process and request.app.state.config.ALLOWED_FILE_EXTENSIONS:
-            request.app.state.config.ALLOWED_FILE_EXTENSIONS = [
-                ext for ext in request.app.state.config.ALLOWED_FILE_EXTENSIONS if ext
+        rag_config = {}
+        # Retrieve the knowledge base using the collection_name
+        if knowledge_id:
+            knowledge_base = Knowledges.get_knowledge_by_id(knowledge_id)
+            # Retrieve the RAG configuration
+            if not knowledge_base.rag_config.get("DEFAULT_RAG_SETTINGS", True):
+                rag_config = knowledge_base.rag_config
+
+        allowed_file_extensions = rag_config.get("ALLOWED_FILE_EXTENSIONS", request.app.state.config.ALLOWED_FILE_EXTENSIONS)
+        if process and allowed_file_extensions:
+            allowed_file_extensions = [
+                ext for ext in allowed_file_extensions if ext
             ]
 
-            if file_extension not in request.app.state.config.ALLOWED_FILE_EXTENSIONS:
+            if file_extension not in allowed_file_extensions:
                 raise HTTPException(
                     status_code=status.HTTP_400_BAD_REQUEST,
                     detail=ERROR_MESSAGES.DEFAULT(
@@ -239,6 +252,7 @@ def upload_file_handler(
                     file_item,
                     file_metadata,
                     user,
+                    knowledge_id
                 )
                 return {"status": True, **file_item.model_dump()}
             else:
@@ -249,6 +263,7 @@ def upload_file_handler(
                     file_item,
                     file_metadata,
                     user,
+                    knowledge_id
                 )
                 return {"status": True, **file_item.model_dump()}
         else:
