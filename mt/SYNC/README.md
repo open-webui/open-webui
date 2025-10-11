@@ -50,11 +50,29 @@ This directory contains the **Phase 1** implementation of a high-availability da
          └───────────────────────────┘
 ```
 
+## 📖 Documentation
+
+**IMPORTANT**: Before modifying ANY code in this directory, read:
+
+- **[TECHNICAL_REFERENCE.md](TECHNICAL_REFERENCE.md)** - **REQUIRED READING** for developers
+  - Single source of truth for implementation standards
+  - Mandatory naming conventions and file paths
+  - Pre-commit checklist must be followed
+  - Prevents inconsistencies in variable names, paths, container names
+
+**Other Documentation**:
+- **[README.md](README.md)** - This file (architecture overview and user guide)
+- **[IMPLEMENTATION_STATUS.md](IMPLEMENTATION_STATUS.md)** - Project progress tracking
+- **[CLUSTER_LIFECYCLE_FAQ.md](CLUSTER_LIFECYCLE_FAQ.md)** - Operational procedures and Q&A
+
 ## Directory Structure
 
 ```
 mt/SYNC/
-├── README.md                    # This file
+├── README.md                    # This file (user-facing docs)
+├── TECHNICAL_REFERENCE.md       # ⚠️ REQUIRED READING for developers
+├── IMPLEMENTATION_STATUS.md     # Project progress
+├── CLUSTER_LIFECYCLE_FAQ.md     # Operations Q&A
 ├── config/                      # Configuration files
 │   ├── conflict-resolution.json # Default conflict strategies
 │   └── sync-intervals.json      # Sync timing configuration

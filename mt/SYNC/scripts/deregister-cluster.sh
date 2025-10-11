@@ -18,7 +18,7 @@ SYNC_DIR="$(dirname "$SCRIPT_DIR")"
 # ============================================================================
 
 CLUSTER_NAME="${CLUSTER_NAME:-$(hostname)}"
-CREDENTIALS_FILE="${SYNC_DIR}/docker/.credentials"
+CREDENTIALS_FILE="${SYNC_DIR}/.credentials"
 
 # ============================================================================
 # Functions
@@ -51,9 +51,12 @@ fi
 
 source "$CREDENTIALS_FILE"
 
-if [ -z "${SUPABASE_ADMIN_URL:-}" ]; then
-    error "SUPABASE_ADMIN_URL not found in credentials file"
+# Use ADMIN_URL from credentials file
+if [ -z "${ADMIN_URL:-}" ]; then
+    error "ADMIN_URL not found in credentials file"
 fi
+
+SUPABASE_ADMIN_URL="$ADMIN_URL"
 
 # ============================================================================
 # Main Deregistration Process
