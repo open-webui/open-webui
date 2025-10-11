@@ -469,11 +469,10 @@
 							if (importFiles.length > 0) {
 								const reader = new FileReader();
 								reader.onload = async (event) => {
+									modelsImportInProgress = true;
 									try {
 										const models = JSON.parse(String(event.target.result));
-										modelsImportInProgress = true;
 										const res = await importModels(localStorage.token, models);
-										modelsImportInProgress = false;
 
 										if (res) {
 											toast.success($i18n.t('Models imported successfully'));
@@ -482,9 +481,10 @@
 											toast.error($i18n.t('Failed to import models'));
 										}
 									} catch (e) {
-										toast.error($i18n.t('Invalid JSON file'));
+										toast.error(e?.detail ?? $i18n.t('Invalid JSON file'));
 										console.error(e);
 									}
+									modelsImportInProgress = false;
 								};
 								reader.readAsText(importFiles[0]);
 							}

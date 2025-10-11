@@ -122,16 +122,14 @@ export const createNewModel = async (token: string, model: object) => {
 export const getModelById = async (token: string, id: string) => {
 	let error = null;
 
-	const searchParams = new URLSearchParams();
-	searchParams.append('id', id);
-
-	const res = await fetch(`${WEBUI_API_BASE_URL}/models/model?${searchParams.toString()}`, {
-		method: 'GET',
+	const res = await fetch(`${WEBUI_API_BASE_URL}/models/model`, {
+		method: 'POST',
 		headers: {
 			Accept: 'application/json',
 			'Content-Type': 'application/json',
 			authorization: `Bearer ${token}`
-		}
+		},
+		body: JSON.stringify({ id: id })
 	})
 		.then(async (res) => {
 			if (!res.ok) throw await res.json();
@@ -157,16 +155,14 @@ export const getModelById = async (token: string, id: string) => {
 export const toggleModelById = async (token: string, id: string) => {
 	let error = null;
 
-	const searchParams = new URLSearchParams();
-	searchParams.append('id', id);
-
-	const res = await fetch(`${WEBUI_API_BASE_URL}/models/model/toggle?${searchParams.toString()}`, {
+	const res = await fetch(`${WEBUI_API_BASE_URL}/models/model/toggle`, {
 		method: 'POST',
 		headers: {
 			Accept: 'application/json',
 			'Content-Type': 'application/json',
 			authorization: `Bearer ${token}`
-		}
+		},
+		body: JSON.stringify({ id: id })
 	})
 		.then(async (res) => {
 			if (!res.ok) throw await res.json();
@@ -192,17 +188,14 @@ export const toggleModelById = async (token: string, id: string) => {
 export const updateModelById = async (token: string, id: string, model: object) => {
 	let error = null;
 
-	const searchParams = new URLSearchParams();
-	searchParams.append('id', id);
-
-	const res = await fetch(`${WEBUI_API_BASE_URL}/models/model/update?${searchParams.toString()}`, {
+	const res = await fetch(`${WEBUI_API_BASE_URL}/models/model/update`, {
 		method: 'POST',
 		headers: {
 			Accept: 'application/json',
 			'Content-Type': 'application/json',
 			authorization: `Bearer ${token}`
 		},
-		body: JSON.stringify(model)
+		body: JSON.stringify({ ...model, id: id })
 	})
 		.then(async (res) => {
 			if (!res.ok) throw await res.json();
@@ -228,16 +221,14 @@ export const updateModelById = async (token: string, id: string, model: object) 
 export const deleteModelById = async (token: string, id: string) => {
 	let error = null;
 
-	const searchParams = new URLSearchParams();
-	searchParams.append('id', id);
-
-	const res = await fetch(`${WEBUI_API_BASE_URL}/models/model/delete?${searchParams.toString()}`, {
-		method: 'DELETE',
+	const res = await fetch(`${WEBUI_API_BASE_URL}/models/model/delete`, {
+		method: 'POST',
 		headers: {
 			Accept: 'application/json',
 			'Content-Type': 'application/json',
 			authorization: `Bearer ${token}`
-		}
+		},
+		body: JSON.stringify({ id: id })
 	})
 		.then(async (res) => {
 			if (!res.ok) throw await res.json();

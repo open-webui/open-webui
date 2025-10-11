@@ -71,16 +71,13 @@
 				return;
 			}
 
-			try {
+			if (typeof event.data === 'string' && event.data.startsWith('{')) {
 				let data = JSON.parse(event.data);
 
 				if (data?.info) {
 					data = data.info;
 				}
-
 				model = data;
-			} catch (e) {
-				console.error('Failed to parse message data:', e);
 			}
 		});
 
