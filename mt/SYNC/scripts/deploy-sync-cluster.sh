@@ -195,23 +195,21 @@ setup_docker_ipv6() {
 
     # Backup existing config if it exists
     if [ -f /etc/docker/daemon.json ]; then
-        cp /etc/docker/daemon.json /etc/docker/daemon.json.backup.$(date +%Y%m%d-%H%M%S)
+        sudo cp /etc/docker/daemon.json /etc/docker/daemon.json.backup.$(date +%Y%m%d-%H%M%S)
     fi
 
-    # Create new config with IPv6
-    cat > /etc/docker/daemon.json << 'DOCKER_EOF'
-{
+    # Create new config with IPv6 using tee
+    echo '{
   "ipv6": true,
   "fixed-cidr-v6": "fd00::/64"
-}
-DOCKER_EOF
+}' | sudo tee /etc/docker/daemon.json > /dev/null
 
     echo "Restarting Docker daemon..."
-    systemctl restart docker
+    sudo systemctl restart docker
     sleep 10
 
     # Verify Docker restarted
-    if systemctl is-active --quiet docker; then
+    if sudo systemctl is-active --quiet docker; then
         echo "✅ Docker IPv6 enabled and daemon restarted"
     else
         echo "❌ Docker failed to restart"

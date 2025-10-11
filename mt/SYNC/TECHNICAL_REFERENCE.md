@@ -704,3 +704,46 @@ docker run --rm postgres:15-alpine psql "$SUPABASE_ADMIN_URL" -c \
 - Documented all current standards and patterns
 - Added credentials file location fix (SYNC root, not docker/)
 - Added variable name mapping standards (ADMIN_URL → SUPABASE_ADMIN_URL)
+
+---
+
+## 🔧 System-Level Operations and Permissions
+
+### Deployment Scripts Require Elevated Privileges
+
+**CRITICAL REQUIREMENT**: Deployment scripts that modify system-level configuration (Docker daemon, systemd services, /etc directories) **MUST** use sudo for privileged operations.
+
+**Problem Identified (2025-10-11)**:
+- Original deploy-sync-cluster.sh attempted to write to /etc/docker/daemon.json without sudo
+- Shell redirection (cat >) and tee commands failed with "Permission denied"
+- System commands (systemctl, file operations in /etc) require root privileges
+
+**Mandatory Pattern for System Operations**:
+
+```bash
+# WRONG - Will fail with permission denied
+echo 'config' > /etc/docker/daemon.json
+systemctl restart docker
+
+# CORRECT - Use sudo for system operations  
+echo 'config' | sudo tee /etc/docker/daemon.json > /dev/null
+sudo systemctl restart docker
+```
+
+**System Commands Requiring sudo**:
+1. File operations in /etc/docker/, /etc/systemd/, or any root-owned paths
+2. systemctl commands (start, stop, restart, status, enable, disable)
+3. Docker daemon operations
+4. Network configuration (ip -6 addr add, ip -6 route add)
+
+**Pre-Commit Checklist Addition**:
+- [ ] All system-level file operations use sudo tee or run with root privileges
+- [ ] All systemctl commands prefixed with sudo
+- [ ] All operations in /etc directories use sudo
+- [ ] Script documents sudo requirement in header comments
+
+**Added**: 2025-10-11
+**Issue**: deploy-sync-cluster.sh failed with "Permission denied"
+**Resolution**: Added sudo to all system-level operations
+**Lesson**: Never assume deployment scripts run as root - always use explicit sudo
+
