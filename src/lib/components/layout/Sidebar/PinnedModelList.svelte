@@ -2,6 +2,7 @@
 	import Sortable from 'sortablejs';
 
 	import { onMount } from 'svelte';
+	import Folder from '$lib/components/common/Folder.svelte';
 
 	import { chatId, mobile, models, settings, showSidebar } from '$lib/stores';
 	import { WEBUI_BASE_URL } from '$lib/constants';
@@ -10,6 +11,8 @@
 
 	export let selectedChatId = null;
 	export let shiftKey = false;
+
+	let showPinned = true;
 
 	const initPinnedModelsSortable = () => {
 		const pinnedModelsList = document.getElementById('pinned-models-list');
@@ -38,26 +41,34 @@
 	});
 </script>
 
-<div class="mt-0.5 pb-1.5" id="pinned-models-list">
-	{#each $settings.pinnedModels as modelId (modelId)}
-		{@const model = $models.find((model) => model.id === modelId)}
-		{#if model}
-			<PinnedModelItem
-				{model}
-				{shiftKey}
-				onClick={() => {
-					selectedChatId = null;
-					chatId.set('');
-					if ($mobile) {
-						showSidebar.set(false);
-					}
-				}}
-				onUnpin={() => {
-					const pinnedModels = $settings.pinnedModels.filter((id) => id !== modelId);
-					settings.set({ ...$settings, pinnedModels });
-					updateUserSettings(localStorage.token, { ui: $settings });
-				}}
-			/>
-		{/if}
-	{/each}
-</div>
+<Folder
+	className="px-2 mt-0.5"
+	name="Pinned Models"
+	bind:open={showPinned}
+	chevron={false}
+	
+>
+	<div class="mt-0.5 pb-1.5" id="pinned-models-list">
+		{#each $settings.pinnedModels as modelId (modelId)}
+			{@const model = $models.find((model) => model.id === modelId)}
+			{#if model}
+				<PinnedModelItem
+					{model}
+					{shiftKey}
+					onClick={() => {
+						selectedChatId = null;
+						chatId.set('');
+						if ($mobile) {
+							showSidebar.set(false);
+						}
+					}}
+					onUnpin={() => {
+						const pinnedModels = $settings.pinnedModels.filter((id) => id !== modelId);
+						settings.set({ ...$settings, pinnedModels });
+						updateUserSettings(localStorage.token, { ui: $settings });
+					}}
+				/>
+			{/if}
+		{/each}
+	</div>
+</Folder>
