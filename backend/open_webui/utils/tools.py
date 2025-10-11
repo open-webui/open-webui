@@ -85,7 +85,34 @@ def get_async_tool_function_and_apply_extra_params(
     update_wrapper(new_function, function)
     new_function.__signature__ = new_sig
 
+    # Store original function and initial extra_params for potential re-application
+    new_function.__original_function__ = function
+    new_function.__initial_extra_params__ = extra_params
+
     return new_function
+
+
+async def get_tool_function_with_updated_params(
+    callable_func: Callable, tool_params: dict, updated_extra_params: dict
+):
+    # Get the original function and merge updated params
+    original_func = getattr(callable_func, "__original_function__", None)
+    initial_params = getattr(callable_func, "__initial_extra_params__", {})
+
+    if original_func:
+        sig = inspect.signature(original_func)
+        all_params = {**initial_params, **updated_extra_params}
+        filtered_params = {k: v for k, v in all_params.items() if k in sig.parameters}
+
+        if inspect.iscoroutinefunction(original_func):
+            return await original_func(**filtered_params, **tool_params)
+        else:
+            result = original_func(**filtered_params, **tool_params)
+            if inspect.isawaitable(result):
+                return await result
+            return result
+    else:
+        return await callable_func(**tool_params)
 
 
 async def get_tools(
