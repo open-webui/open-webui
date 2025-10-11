@@ -75,6 +75,162 @@ HOST_NAME="${HOST_NAME:-$(hostname)}"
 echo ""
 
 # ============================================================================
+# IPv6 DETECTION AND CONFIGURATION
+# ============================================================================
+
+echo "🌐 IPv6 Network Configuration"
+echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+echo ""
+
+# Detect cloud provider
+detect_cloud_provider() {
+    if curl -sf -m 2 http://169.254.169.254/metadata/v1/id > /dev/null 2>&1; then
+        echo "digitalocean"
+    elif curl -sf -m 2 http://169.254.169.254/latest/meta-data/instance-id > /dev/null 2>&1; then
+        echo "aws"
+    else
+        echo "unknown"
+    fi
+}
+
+CLOUD_PROVIDER=$(detect_cloud_provider)
+echo "Detected cloud provider: $CLOUD_PROVIDER"
+
+# Check and configure IPv6
+setup_ipv6() {
+    echo ""
+    echo "Checking IPv6 availability..."
+
+    # Check if IPv6 is already configured
+    if ip -6 addr show 2>/dev/null | grep -q "scope global"; then
+        IPV6_CONFIGURED=true
+        IPV6_ADDR=$(ip -6 addr show | grep "scope global" | head -1 | awk '{print $2}' | cut -d/ -f1)
+        echo "✅ IPv6 already configured: $IPV6_ADDR"
+    else
+        IPV6_CONFIGURED=false
+        echo "⚠️  IPv6 not currently configured"
+    fi
+
+    # Try to get IPv6 info from cloud metadata
+    if [ "$CLOUD_PROVIDER" = "digitalocean" ]; then
+        echo "Querying Digital Ocean metadata for IPv6..."
+        IPV6_ADDR=$(curl -sf http://169.254.169.254/metadata/v1/interfaces/public/0/ipv6/address 2>/dev/null)
+        IPV6_CIDR=$(curl -sf http://169.254.169.254/metadata/v1/interfaces/public/0/ipv6/cidr 2>/dev/null)
+        IPV6_GATEWAY=$(curl -sf http://169.254.169.254/metadata/v1/interfaces/public/0/ipv6/gateway 2>/dev/null)
+
+        if [ -n "$IPV6_ADDR" ]; then
+            echo "✅ IPv6 available in DO metadata: $IPV6_ADDR"
+
+            if [ "$IPV6_CONFIGURED" = false ]; then
+                echo "Configuring IPv6 on primary interface..."
+                PRIMARY_IFACE=$(ip route | grep default | awk '{print $5}' | head -1)
+
+                ip -6 addr add ${IPV6_ADDR}/${IPV6_CIDR##*/} dev "$PRIMARY_IFACE" 2>/dev/null || true
+                ip -6 route add default via "$IPV6_GATEWAY" dev "$PRIMARY_IFACE" 2>/dev/null || true
+
+                echo "✅ IPv6 configured on $PRIMARY_IFACE"
+                IPV6_CONFIGURED=true
+            fi
+        else
+            echo "❌ IPv6 not available in DO metadata"
+            echo ""
+            echo "To enable IPv6 on Digital Ocean:"
+            echo "  1. Go to: https://cloud.digitalocean.com/droplets"
+            echo "  2. Select this droplet"
+            echo "  3. Click 'Networking' → 'IPv6' → 'Enable'"
+            echo "  4. Wait 30 seconds for propagation"
+            echo ""
+            read -rp "Press Enter after enabling IPv6 in DO control panel, or Ctrl+C to abort..."
+
+            # Retry after user enables
+            sleep 5
+            IPV6_ADDR=$(curl -sf http://169.254.169.254/metadata/v1/interfaces/public/0/ipv6/address 2>/dev/null)
+            if [ -z "$IPV6_ADDR" ]; then
+                echo "❌ IPv6 still not available. Deployment will use pooler connection."
+                return 1
+            fi
+
+            # Configure after enabling
+            IPV6_CIDR=$(curl -sf http://169.254.169.254/metadata/v1/interfaces/public/0/ipv6/cidr)
+            IPV6_GATEWAY=$(curl -sf http://169.254.169.254/metadata/v1/interfaces/public/0/ipv6/gateway)
+            PRIMARY_IFACE=$(ip route | grep default | awk '{print $5}' | head -1)
+
+            ip -6 addr add ${IPV6_ADDR}/${IPV6_CIDR##*/} dev "$PRIMARY_IFACE"
+            ip -6 route add default via "$IPV6_GATEWAY" dev "$PRIMARY_IFACE"
+
+            echo "✅ IPv6 configured: $IPV6_ADDR"
+            IPV6_CONFIGURED=true
+        fi
+    fi
+
+    # Test IPv6 connectivity to Supabase
+    if [ "$IPV6_CONFIGURED" = true ]; then
+        echo ""
+        echo "Testing IPv6 connectivity to Supabase..."
+        if timeout 5 nc -6 -zv db.${PROJECT_REF}.supabase.co 5432 2>&1 | grep -q "succeeded\|Connected"; then
+            echo "✅ IPv6 connectivity to Supabase: SUCCESS"
+            USE_IPV6_CONNECTION=true
+        else
+            echo "⚠️  IPv6 configured but cannot reach Supabase database"
+            USE_IPV6_CONNECTION=false
+        fi
+    else
+        USE_IPV6_CONNECTION=false
+    fi
+
+    return 0
+}
+
+# Setup Docker IPv6
+setup_docker_ipv6() {
+    echo ""
+    echo "Configuring Docker for IPv6..."
+
+    if [ -f /etc/docker/daemon.json ] && grep -q '"ipv6": true' /etc/docker/daemon.json; then
+        echo "✅ Docker IPv6 already enabled"
+        return
+    fi
+
+    echo "Enabling IPv6 in Docker daemon..."
+
+    # Backup existing config if it exists
+    if [ -f /etc/docker/daemon.json ]; then
+        cp /etc/docker/daemon.json /etc/docker/daemon.json.backup.$(date +%Y%m%d-%H%M%S)
+    fi
+
+    # Create new config with IPv6
+    cat > /etc/docker/daemon.json << 'DOCKER_EOF'
+{
+  "ipv6": true,
+  "fixed-cidr-v6": "fd00::/64"
+}
+DOCKER_EOF
+
+    echo "Restarting Docker daemon..."
+    systemctl restart docker
+    sleep 10
+
+    # Verify Docker restarted
+    if systemctl is-active --quiet docker; then
+        echo "✅ Docker IPv6 enabled and daemon restarted"
+    else
+        echo "❌ Docker failed to restart"
+        exit 1
+    fi
+}
+
+# Run IPv6 setup
+setup_ipv6
+IPV6_RESULT=$?
+
+# Setup Docker IPv6 if system IPv6 is available
+if [ "$IPV6_CONFIGURED" = true ]; then
+    setup_docker_ipv6
+fi
+
+echo ""
+
+# ============================================================================
 # GENERATE CREDENTIALS
 # ============================================================================
 
@@ -85,9 +241,39 @@ echo ""
 SYNC_PASSWORD=$(openssl rand -base64 32 | tr -d '\n')
 echo "✅ Generated sync_service password"
 
-# Build database URLs
-ADMIN_URL="postgresql://postgres.${PROJECT_REF}:${ADMIN_PASSWORD}@${REGION}.pooler.supabase.com:5432/postgres"
-SYNC_URL="postgresql://sync_service:${SYNC_PASSWORD}@${REGION}.pooler.supabase.com:5432/postgres"
+# URL encode function for passwords
+urlencode() {
+    local string="${1}"
+    local strlen=${#string}
+    local encoded=""
+    local pos c o
+
+    for (( pos=0 ; pos<strlen ; pos++ )); do
+        c=${string:$pos:1}
+        case "$c" in
+            [-_.~a-zA-Z0-9] ) o="${c}" ;;
+            * ) printf -v o '%%%02x' "'$c"
+        esac
+        encoded+="${o}"
+    done
+    echo "${encoded}"
+}
+
+# URL encode passwords for database URLs
+ENCODED_ADMIN_PASSWORD=$(urlencode "$ADMIN_PASSWORD")
+ENCODED_SYNC_PASSWORD=$(urlencode "$SYNC_PASSWORD")
+
+# Build database URLs based on IPv6 availability
+if [ "$USE_IPV6_CONNECTION" = true ]; then
+    echo "Using direct IPv6 database connection..."
+    ADMIN_URL="postgresql://postgres:${ENCODED_ADMIN_PASSWORD}@db.${PROJECT_REF}.supabase.co:5432/postgres"
+    SYNC_URL="postgresql://sync_service:${ENCODED_SYNC_PASSWORD}@db.${PROJECT_REF}.supabase.co:5432/postgres"
+else
+    echo "Using pooler connection (IPv4)..."
+    ADMIN_URL="postgresql://postgres.${PROJECT_REF}:${ENCODED_ADMIN_PASSWORD}@${REGION}.pooler.supabase.com:5432/postgres"
+    SYNC_URL="postgresql://sync_service:${ENCODED_SYNC_PASSWORD}@${REGION}.pooler.supabase.com:5432/postgres"
+    echo "⚠️  Note: Pooler requires postgres admin credentials. sync_service role may not work."
+fi
 
 # ============================================================================
 # UPDATE SYNC_SERVICE PASSWORD

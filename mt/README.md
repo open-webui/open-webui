@@ -31,6 +31,44 @@ The DB_MIGRATION folder contains comprehensive documentation covering:
 - Troubleshooting guide
 - Migration scripts and helper functions
 
+### High Availability Sync System (NEW - Phase 1)
+
+**⭐ NEW**: The `SYNC/` directory contains a production-ready **SQLite + Supabase Sync System** with high availability:
+
+**Key Features**:
+- **Dual sync containers** (primary/secondary) with automatic leader election
+- **One-way sync** SQLite → Supabase (Phase 1)
+- **Automated conflict resolution** with 5 configurable strategies
+- **Supabase as authoritative state** with local caching (5-min TTL)
+- **High availability** with automatic failover (<35 seconds)
+- **Comprehensive monitoring** via Prometheus metrics
+- **IPv6 auto-configuration** for optimal Supabase connectivity
+
+**Architecture**:
+- **Leader Election**: PostgreSQL atomic operations (no external dependencies)
+- **State Management**: Cache-aside pattern with cluster synchronization
+- **Security**: Restricted database roles, Row Level Security (RLS)
+- **Deployment**: Automated with `deploy-sync-cluster.sh`
+
+**📖 [Complete Sync System Documentation →](SYNC/README.md)**
+
+The SYNC folder includes:
+- Complete architectural overview and design patterns
+- **Automatic IPv6 detection and configuration** (Digital Ocean supported)
+- FastAPI application with REST API and health checks
+- Deployment automation with pre-flight validation
+- Conflict resolution strategies and configuration
+- Monitoring and troubleshooting guides
+- Phase 2 roadmap (bidirectional sync, cross-host migration)
+
+**Quick Start**:
+```bash
+cd mt/SYNC
+./scripts/deploy-sync-cluster.sh
+```
+
+See [SYNC/README.md](SYNC/README.md) for detailed documentation including IPv6 setup requirements.
+
 ## Quick Start
 
 ### Start Pre-configured Clients
@@ -98,6 +136,12 @@ mt/
 │   ├── README.md                # Complete migration documentation
 │   ├── db-migration-helper.sh   # Migration utility functions
 │   └── migrate-db.py            # Python data migration script
+├── SYNC/                        # ⭐ NEW: SQLite + Supabase Sync System (Phase 1)
+│   ├── README.md                # Complete sync system documentation
+│   ├── python/                  # FastAPI application and sync modules
+│   ├── scripts/                 # Deployment and sync automation
+│   ├── docker/                  # Container infrastructure
+│   └── config/                  # Configuration templates
 ├── nginx-template.conf          # Production nginx config template
 ├── nginx-template-local.conf    # Local testing nginx config
 ├── docker-compose.nginx.yml     # Local nginx setup

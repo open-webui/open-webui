@@ -114,19 +114,31 @@ class LeaderElection:
                 min_size=1,
                 max_size=3,
                 max_queries=10000,
-                command_timeout=10
+                command_timeout=10,
+                # Set session context on every new connection
+                init=self._init_connection
             )
             logger.info("Leader election database pool created")
 
             # Register this host in sync_metadata.hosts
             await self._register_host()
 
-            # Set session context for RLS
-            await self._set_session_context()
-
         except Exception as e:
             logger.error(f"Failed to initialize leader election: {e}")
             raise
+
+    async def _init_connection(self, conn):
+        """
+        Initialize each new connection with session context for RLS.
+
+        This is called automatically for every connection acquired from the pool.
+        Sets session-level PostgreSQL variables for RLS policies.
+        """
+        # Set session parameters directly (persists for the life of the connection)
+        await conn.execute(f"SET app.current_host_id = '{self.host_id}'")
+        await conn.execute(f"SET app.current_hostname = '{self.node_id}'")
+        await conn.execute(f"SET app.current_cluster_name = '{self.cluster_name}'")
+        logger.debug(f"Session context set for connection: host_id={self.host_id}, cluster={self.cluster_name}")
 
     async def _register_host(self):
         """
@@ -147,18 +159,6 @@ class LeaderElection:
                 self.cluster_name
             )
             logger.info(f"Host registered: {self.node_id}")
-
-    async def _set_session_context(self):
-        """
-        Set PostgreSQL session context for RLS policies.
-        """
-        async with self.pool.acquire() as conn:
-            await conn.execute(
-                "SELECT sync_metadata.set_sync_context($1::uuid, $2, $3, NULL)",
-                self.host_id,
-                self.node_id,
-                self.cluster_name
-            )
 
     async def start(self):
         """

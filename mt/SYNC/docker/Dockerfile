@@ -14,6 +14,7 @@ RUN apt-get update && apt-get install -y \
     curl \
     jq \
     docker.io \
+    uuid-runtime \
     && rm -rf /var/lib/apt/lists/*
 
 # Create app directory

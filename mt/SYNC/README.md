@@ -210,6 +210,11 @@ CREATE POLICY sync_host_isolation ON sync_metadata.hosts
    - Docker Compose v2+
    - Access to `/var/run/docker.sock`
 
+3. **IPv6 Connectivity** (required for Supabase direct database connection):
+   - **Digital Ocean**: Enable IPv6 in Droplet settings (automatically configured by deployment script)
+   - **AWS/Other**: Manual IPv6 configuration may be required
+   - **Fallback**: Script will use IPv4 pooler connection if IPv6 unavailable (see IPv6 section below)
+
 ### Initial Deployment
 
 ```bash
@@ -221,6 +226,13 @@ cd /Users/justinmartin/github/open-webui/mt/SYNC
 
 # 3. Deploy HA sync cluster
 ./scripts/deploy-sync-cluster.sh
+
+# The script will automatically:
+# - Detect cloud provider (Digital Ocean, AWS, etc.)
+# - Configure IPv6 if available
+# - Set up Docker IPv6 networking
+# - Choose optimal database connection method
+# - Deploy primary and secondary sync containers
 
 # 4. Verify cluster health
 curl http://localhost:9443/health | jq .
@@ -353,6 +365,285 @@ scrape_configs:
 3. **sync_duration_seconds** - Alert if p95 > 60 seconds
 4. **conflicts_detected_total** - Monitor for unusual spikes
 5. **state_sync_lag_seconds** - Alert if > 600 (10 minutes)
+
+## IPv6 Network Configuration
+
+### Why IPv6 is Required
+
+Supabase's **direct database connection** (`db.PROJECT_REF.supabase.co:5432`) is **IPv6-only**. This provides:
+- **Lower latency** compared to pooler connection
+- **Full PostgreSQL feature support** (no pooler limitations)
+- **Better performance** for sync operations
+- **Direct access** to database without intermediate proxy
+
+The alternative **pooler connection** (`pooler.supabase.com:5432`) uses IPv4 but has limitations:
+- Not all PostgreSQL features supported
+- Higher latency through connection pooling proxy
+- May have transaction mode restrictions
+
+### Automatic IPv6 Configuration
+
+The deployment script (`deploy-sync-cluster.sh`) **automatically configures IPv6** on supported cloud providers:
+
+#### Digital Ocean (Automatic)
+
+1. **Enable IPv6 in Droplet Settings** (one-time manual step):
+   - Navigate to: Digital Ocean Control Panel → Droplets → Your Droplet → Networking
+   - Click "Enable IPv6"
+   - Wait ~30 seconds for provisioning
+
+2. **Deployment Script Handles Everything Else**:
+   - Detects Digital Ocean via metadata service
+   - Queries IPv6 address, CIDR, and gateway from metadata
+   - Configures network interface automatically
+   - Sets up IPv6 routing
+   - Verifies connectivity to Supabase
+   - Configures Docker daemon for IPv6
+   - Uses direct database connection
+
+#### AWS (Manual Configuration May Be Required)
+
+The script detects AWS but does not auto-configure IPv6. Manual steps:
+
+```bash
+# 1. Assign IPv6 CIDR block to VPC (AWS Console)
+# 2. Assign IPv6 address to EC2 instance
+# 3. Configure security group for IPv6
+# 4. Add IPv6 address to network interface:
+
+sudo ip -6 addr add YOUR_IPV6_ADDRESS/128 dev eth0
+sudo ip -6 route add default via YOUR_IPV6_GATEWAY dev eth0
+
+# 5. Test connectivity
+ping6 -c 3 db.YOUR_PROJECT_REF.supabase.co
+
+# 6. Run deployment script
+./scripts/deploy-sync-cluster.sh
+```
+
+#### Other Cloud Providers / Bare Metal
+
+The script will use **IPv4 pooler connection** as fallback if IPv6 is not detected.
+
+To manually enable IPv6:
+
+1. **Configure IPv6 address on server**:
+   ```bash
+   sudo ip -6 addr add YOUR_IPV6_ADDRESS/64 dev eth0
+   sudo ip -6 route add default via YOUR_GATEWAY dev eth0
+   ```
+
+2. **Test connectivity**:
+   ```bash
+   ping6 -c 3 db.YOUR_PROJECT_REF.supabase.co
+   nc -6 -zv db.YOUR_PROJECT_REF.supabase.co 5432
+   ```
+
+3. **Run deployment script** (will detect IPv6 and use direct connection)
+
+### Docker IPv6 Configuration
+
+The deployment script automatically configures Docker for IPv6:
+
+1. **Backs up existing `/etc/docker/daemon.json`**
+2. **Creates new configuration**:
+   ```json
+   {
+     "ipv6": true,
+     "fixed-cidr-v6": "fd00::/80"
+   }
+   ```
+3. **Restarts Docker daemon**
+4. **Adds IPv6 subnets to docker-compose network**:
+   ```yaml
+   networks:
+     sync-network:
+       driver: bridge
+       enable_ipv6: true
+       ipam:
+         config:
+           - subnet: 172.30.0.0/16    # IPv4
+           - subnet: fd01::/64         # IPv6
+   ```
+
+### Connection Method Selection
+
+The deployment script intelligently chooses the connection method:
+
+```bash
+# IPv6 Available → Use Direct Connection
+DATABASE_URL="postgresql://sync_service:PASSWORD@db.PROJECT_REF.supabase.co:5432/postgres"
+
+# IPv6 Not Available → Use Pooler (IPv4)
+DATABASE_URL="postgresql://sync_service:PASSWORD@REGION.pooler.supabase.com:5432/postgres"
+```
+
+**Note**: The `sync_service` role may have restricted permissions on the pooler connection. Direct connection is recommended.
+
+### Verifying IPv6 Configuration
+
+After deployment, verify IPv6 is working:
+
+```bash
+# 1. Check IPv6 address is configured
+ip -6 addr show | grep "scope global"
+
+# 2. Test IPv6 route
+ip -6 route show
+
+# 3. Test connectivity to Supabase
+ping6 -c 3 db.YOUR_PROJECT_REF.supabase.co
+
+# 4. Test database connection
+nc -6 -zv db.YOUR_PROJECT_REF.supabase.co 5432
+
+# 5. Check container is using IPv6 connection
+docker exec openwebui-sync-primary env | grep DATABASE_URL
+# Should show: db.PROJECT_REF.supabase.co (not pooler.supabase.com)
+```
+
+### Troubleshooting IPv6
+
+#### IPv6 Not Auto-Configured
+
+**Symptom**: Deployment script reports "IPv6 not currently configured"
+
+**Solutions**:
+1. **Digital Ocean**: Ensure IPv6 is enabled in Droplet settings
+2. **Check cloud provider support**: Not all providers offer IPv6
+3. **Verify metadata service**: `curl -sf http://169.254.169.254/metadata/v1/interfaces/public/0/ipv6/address`
+4. **Manual configuration**: See "Other Cloud Providers" section above
+
+#### Connection Test Fails
+
+**Symptom**: `nc -6 -zv db.PROJECT_REF.supabase.co 5432` fails
+
+**Solutions**:
+1. **Check IPv6 routing**: `ip -6 route show`
+2. **Verify default route**: Should have route via gateway
+3. **Test basic IPv6**: `ping6 google.com`
+4. **Check firewall rules**: Ensure IPv6 traffic is allowed
+5. **Restart networking**: `sudo systemctl restart networking`
+
+#### Docker Containers Can't Connect
+
+**Symptom**: Containers show "Network is unreachable" errors
+
+**Solutions**:
+1. **Verify Docker IPv6 config**: `cat /etc/docker/daemon.json`
+2. **Check Docker service**: `sudo systemctl status docker`
+3. **Inspect network**: `docker network inspect SYNC_sync-network | grep IPv6`
+4. **Recreate containers**: `docker compose down && docker compose up -d`
+
+#### Pooler Connection Instead of Direct
+
+**Symptom**: DATABASE_URL contains `pooler.supabase.com` instead of `db.PROJECT_REF.supabase.co`
+
+**Solutions**:
+1. **Check IPv6 availability**: Script chose pooler because IPv6 test failed
+2. **Verify connectivity manually**: Test with `nc -6 -zv db.PROJECT_REF.supabase.co 5432`
+3. **Re-run deployment**: After fixing IPv6, re-run `./scripts/deploy-sync-cluster.sh`
+
+## Cluster Lifecycle Management
+
+### Deregistering a Cluster Before Host Destruction
+
+**⚠️ IMPORTANT**: Before destroying a Digital Ocean droplet or decommissioning a host server, you must properly deregister the sync cluster from Supabase.
+
+**Why Deregistration is Required**:
+- Prevents orphaned metadata records in Supabase
+- Releases leadership gracefully to allow other clusters to take over
+- Cleans up client deployment records
+- Removes stale cache invalidation events
+- Avoids "ghost" hosts showing as offline in monitoring
+
+**⚠️ CRITICAL SAFETY CHECKS**:
+
+The deregistration script includes **automatic safety checks** that will:
+1. ✅ **Block deregistration** if ANY Open WebUI clients have `sync_enabled = true`
+2. ✅ **List all sync-enabled clients** with their sync status
+3. ✅ **Provide clear remediation options** before allowing deregistration
+4. ✅ **Warn about non-sync clients** that will be deleted
+
+**Protection Against Data Loss**:
+- **Cannot deregister** if active sync clients exist
+- **Must explicitly handle** each sync-enabled client before proceeding:
+  - **Option 1**: Disable sync for the client
+  - **Option 2**: Migrate client to another host/cluster
+  - **Option 3**: Decommission the client deployment
+- **Will warn** about non-sync clients that will be deleted
+
+**Deregistration Process**:
+
+```bash
+# SSH to the host that will be destroyed
+ssh user@your-host
+
+# Navigate to sync directory
+cd /path/to/mt/SYNC
+
+# Run deregistration script
+./scripts/deregister-cluster.sh
+
+# Follow prompts to:
+# 1. Review cluster metadata that will be deleted
+# 2. Confirm deletion
+# 3. Optionally remove local Docker containers/volumes
+```
+
+**What the Script Does**:
+1. ✅ Stops sync containers gracefully (releases leadership)
+2. ✅ Displays cluster metadata (hosts, leader status, deployments)
+3. ✅ Confirms deletion with user
+4. ✅ Deletes host records from Supabase
+5. ✅ CASCADE deletes related records:
+   - Leader election entries
+   - Client deployments
+   - Cache events
+   - Sync job history
+6. ✅ Verifies complete removal
+7. ✅ Optionally cleans up local Docker resources
+
+**After Deregistration**:
+- Host can be safely destroyed
+- No orphaned records remain in Supabase
+- Other clusters unaffected
+- Ready for fresh deployment on new host
+
+**Re-deploying on New Host**:
+```bash
+# After creating new droplet
+./scripts/deploy-sync-cluster.sh
+# Will create fresh cluster registration
+```
+
+### Manual Cleanup (If Host Was Destroyed Without Deregistration)
+
+If you destroyed a host **without** running the deregistration script, clean up manually:
+
+```bash
+# Connect to Supabase with admin credentials
+psql "postgresql://postgres:PASSWORD@db.PROJECT_REF.supabase.co:5432/postgres"
+
+# Check for orphaned hosts
+SELECT hostname, cluster_name, status, last_heartbeat
+FROM sync_metadata.hosts
+WHERE last_heartbeat < NOW() - INTERVAL '5 minutes';
+
+# Delete specific cluster (replace 'old-cluster-name')
+DELETE FROM sync_metadata.hosts WHERE cluster_name = 'old-cluster-name';
+
+# Verify deletion (should show 0 rows)
+SELECT COUNT(*) FROM sync_metadata.hosts WHERE cluster_name = 'old-cluster-name';
+SELECT COUNT(*) FROM sync_metadata.leader_election WHERE cluster_name = 'old-cluster-name';
+```
+
+**Automated Cleanup (Future Enhancement)**:
+Consider adding a scheduled job to automatically mark hosts as `offline` if:
+- `last_heartbeat` > 5 minutes old
+- Status still shows as `active`
+
+This could be implemented as a PostgreSQL function triggered by `pg_cron` extension.
 
 ## Troubleshooting
 
