@@ -12,6 +12,7 @@ import json
 
 import collections.abc
 from open_webui.env import SRC_LOG_LEVELS
+from open_webui.config import USER_PASSWORD_MIN_LENGTH, USER_PASSWORD_POLICY_SYMBOLS
 
 log = logging.getLogger(__name__)
 log.setLevel(SRC_LOG_LEVELS["MAIN"])
@@ -314,6 +315,23 @@ def validate_email_format(email: str) -> bool:
         return True
 
     return bool(re.match(r"[^@]+@[^@]+\.[^@]+", email))
+
+
+def validate_password_format(password: str) -> bool:
+    # Password must have at least 12 characters
+    if len(password) < USER_PASSWORD_MIN_LENGTH.env_value:
+        return False
+    # Check that password contains at least one upper case letter,
+    # one lower case letter, one digit and one of the provided symbols.
+    if (
+        any(c.isupper() for c in password)
+        and any(c.islower() for c in password)
+        and any(c.isdigit() for c in password)
+        and any(c in USER_PASSWORD_POLICY_SYMBOLS.env_value for c in password)
+    ):
+        return True
+
+    return False
 
 
 def sanitize_filename(file_name):

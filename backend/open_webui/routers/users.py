@@ -9,6 +9,8 @@ from fastapi.responses import Response, StreamingResponse, FileResponse
 from pydantic import BaseModel
 
 
+from open_webui.config import USER_PASSWORD_POLICY_SYMBOLS, USER_PASSWORD_MIN_LENGTH
+
 from open_webui.models.auths import Auths
 from open_webui.models.oauth_sessions import OAuthSessions
 
@@ -38,6 +40,7 @@ from open_webui.env import SRC_LOG_LEVELS, STATIC_DIR
 from open_webui.utils.auth import get_admin_user, get_password_hash, get_verified_user
 from open_webui.utils.access_control import get_permissions, has_permission
 
+from open_webui.utils.misc import validate_password_format
 
 log = logging.getLogger(__name__)
 log.setLevel(SRC_LOG_LEVELS["MODELS"])
@@ -429,6 +432,7 @@ async def get_user_active_status_by_id(user_id: str, user=Depends(get_verified_u
 
 @router.post("/{user_id}/update", response_model=Optional[UserModel])
 async def update_user_by_id(
+    request: Request,
     user_id: str,
     form_data: UserUpdateForm,
     session_user=Depends(get_admin_user),
@@ -471,6 +475,16 @@ async def update_user_by_id(
                 )
 
         if form_data.password:
+            if request.app.state.config.ENABLE_ENFORCE_PASSWORD_POLICY:
+                if not validate_password_format(form_data.password):
+                    raise HTTPException(
+                        status.HTTP_400_BAD_REQUEST,
+                        detail=ERROR_MESSAGES.INVALID_PASSWORD_FORMAT(
+                            USER_PASSWORD_MIN_LENGTH.env_value,
+                            USER_PASSWORD_POLICY_SYMBOLS.env_value,
+                        ),
+                    )
+
             hashed = get_password_hash(form_data.password)
             log.debug(f"hashed: {hashed}")
             Auths.update_user_password_by_id(user_id, hashed)
