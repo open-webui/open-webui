@@ -2,16 +2,16 @@
 	import { toast } from 'svelte-sonner';
 	import { onMount, getContext } from 'svelte';
 	import { page } from '$app/stores';
-
 	const i18n = getContext('i18n');
-
-	import { deleteGroupById, updateGroupById } from '$lib/apis/groups';
-
+	import { deleteGroupById, updateGroupById, cloneGroupById } from '$lib/apis/groups';
 	import Pencil from '$lib/components/icons/Pencil.svelte';
 	import User from '$lib/components/icons/User.svelte';
 	import UserCircleSolid from '$lib/components/icons/UserCircleSolid.svelte';
 	import GroupModal from './EditGroupModal.svelte';
-
+	import CloneGroupModal from './CloneGroupModal.svelte';
+	import EllipsisHorizontal from '$lib/components/icons/EllipsisHorizontal.svelte';
+	import Duplicate from '$lib/components/icons/Duplicate.svelte';
+	
 	export let users = [];
 	export let group = {
 		name: 'Admins',
@@ -20,17 +20,30 @@
 	export let defaultPermissions = {};
 
 	export let setGroups = () => {};
-
+	
 	let showEdit = false;
+	let showClone = false;
+	let showActionMenu = false;
+	let dropdownElement;
 
 	const updateHandler = async (_group) => {
 		const res = await updateGroupById(localStorage.token, group.id, _group).catch((error) => {
 			toast.error(`${error}`);
 			return null;
 		});
-
 		if (res) {
 			toast.success($i18n.t('Group updated successfully'));
+			setGroups();
+		}
+	};
+
+	const cloneHandler = async (clone_data) => {
+		const res = await cloneGroupById(localStorage.token, group.id, clone_data).catch((error) => {
+			toast.error(`${error}`);
+			return null;
+		});
+		if (res) {
+			toast.success($i18n.t('Group cloned successfully'));
 			setGroups();
 		}
 	};
@@ -40,10 +53,32 @@
 			toast.error(`${error}`);
 			return null;
 		});
-
 		if (res) {
 			toast.success($i18n.t('Group deleted successfully'));
 			setGroups();
+		}
+	};
+
+	const handleEditClick = (e) => {
+		e.stopPropagation();
+		showEdit = true;
+		showActionMenu = false;
+	};
+
+	const handleCloneClick = (e) => {
+		e.stopPropagation();
+		showClone = true;
+		showActionMenu = false;
+	};
+
+	const handleMenuToggle = (e) => {
+		e.stopPropagation();
+		showActionMenu = !showActionMenu;
+	};
+
+	const handleClickOutside = (e) => {
+		if (dropdownElement && !dropdownElement.contains(e.target)) {
+			showActionMenu = false;
 		}
 	};
 
@@ -52,6 +87,12 @@
 		if (groupId && groupId === group.id) {
 			showEdit = true;
 		}
+
+		// Add click outside listener
+		document.addEventListener('click', handleClickOutside);
+		return () => {
+			document.removeEventListener('click', handleClickOutside);
+		};
 	});
 </script>
 
@@ -65,20 +106,22 @@
 	onDelete={deleteHandler}
 />
 
-<button
-	class="flex items-center gap-3 justify-between px-1 text-xs w-full transition"
-	on:click={() => {
-		showEdit = true;
-	}}
->
-	<div class="flex items-center gap-1.5 w-full font-medium flex-1">
+<CloneGroupModal bind:show={showClone} {group} onSubmit={cloneHandler} />
+
+<div class="flex items-center gap-3 justify-between px-1 text-xs w-full transition">
+	<button
+		class="flex items-center gap-1.5 w-full font-medium flex-1"
+		on:click={() => {
+			showEdit = true;
+		}}
+	>
 		<div>
 			<UserCircleSolid className="size-4" />
 		</div>
 		<div class="line-clamp-1">
 			{group.name}
 		</div>
-	</div>
+	</button>
 
 	<div class="flex items-center gap-1.5 w-fit font-medium text-right justify-end">
 		{group.user_ids.length}
@@ -87,8 +130,34 @@
 			<User className="size-3.5" />
 		</div>
 
-		<div class=" rounded-lg p-1 hover:bg-gray-100 dark:hover:bg-gray-850 transition">
-			<Pencil className="size-3.5" />
+		<div class="relative" bind:this={dropdownElement}>
+			<button
+				class="rounded-lg p-1 hover:bg-gray-100 dark:hover:bg-gray-850 transition"
+				on:click={handleMenuToggle}
+			>
+				<EllipsisHorizontal className="size-3.5" />
+			</button>
+
+			{#if showActionMenu}
+				<div
+					class="absolute right-0 top-full mt-1 w-32 rounded-lg p-1 border border-gray-200 dark:border-gray-800 z-50 bg-white dark:bg-gray-900 text-black dark:text-white shadow-lg"
+				>
+					<button
+						class="flex items-center w-full px-3 py-2 text-sm font-medium hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg transition-colors"
+						on:click={handleEditClick}
+					>
+						<Pencil className="size-3.5 mr-2" />
+						{$i18n.t('Edit')}
+					</button>
+					<button
+						class="flex items-center w-full px-3 py-2 text-sm font-medium hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg transition-colors"
+						on:click={handleCloneClick}
+					>
+						<Duplicate className="size-3.5 mr-2" />
+						{$i18n.t('Clone')}
+					</button>
+				</div>
+			{/if}
 		</div>
 	</div>
-</button>
+</div>

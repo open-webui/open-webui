@@ -31,6 +31,37 @@ export const createNewGroup = async (token: string, group: object) => {
 	return res;
 };
 
+export const cloneGroupById = async (token: string, id: string, group: object) => {
+	let error = null;
+
+	const res = await fetch(`${WEBUI_API_BASE_URL}/groups/id/${id}/clone`, {
+		method: 'POST',
+		headers: {
+			Accept: 'application/json',
+			'Content-Type': 'application/json',
+			authorization: `Bearer ${token}`
+		},
+		body: JSON.stringify({
+			...group
+		})
+	})
+		.then(async (res) => {
+			if (!res.ok) throw await res.json();
+			return res.json();
+		})
+		.catch((err) => {
+			error = err.detail;
+			console.error(err);
+			return null;
+		});
+
+	if (error) {
+		throw error;
+	}
+
+	return res;
+};
+
 export const getGroups = async (token: string = '') => {
 	let error = null;
 

@@ -91,6 +91,12 @@ class GroupUpdateForm(GroupForm, UserIdsForm):
     pass
 
 
+class GroupCloneForm(BaseModel):
+    name: str
+    clone_members: bool
+    clone_settings: bool
+
+
 class GroupTable:
     def insert_new_group(
         self, user_id: str, form_data: GroupForm
@@ -117,6 +123,44 @@ class GroupTable:
                     return None
 
             except Exception:
+                return None
+
+    def clone_group(
+        self, user_id: str, group_id: str, form_data: GroupCloneForm
+    ) -> Optional[GroupModel]:
+        with get_db() as db:
+            original_group = self.get_group_by_id(group_id)
+            if not original_group:
+                return None
+
+            new_group_data = {
+                "id": str(uuid.uuid4()),
+                "user_id": user_id,
+                "name": form_data.name,
+                "description": original_group.description,
+                "created_at": int(time.time()),
+                "updated_at": int(time.time()),
+            }
+
+            if form_data.clone_settings:
+                new_group_data["permissions"] = original_group.permissions
+
+            if form_data.clone_members:
+                new_group_data["user_ids"] = original_group.user_ids
+
+            group = GroupModel(**new_group_data)
+
+            try:
+                result = Group(**group.model_dump())
+                db.add(result)
+                db.commit()
+                db.refresh(result)
+                if result:
+                    return GroupModel.model_validate(result)
+                else:
+                    return None
+            except Exception as e:
+                log.exception(f"Error cloning group: {e}")
                 return None
 
     def get_groups(self) -> list[GroupModel]:
