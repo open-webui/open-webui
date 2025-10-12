@@ -26,6 +26,11 @@
 	export let dragAndDrop = true;
 
 	let folderElement;
+	let initialized = false;
+
+	$: if (initialized && collapsible) {
+		localStorage.setItem(`folder-open-state-${name}`, `${open}`);
+	}
 
 	let draggedOver = false;
 
@@ -103,6 +108,15 @@
 	};
 
 	onMount(() => {
+		const storedState = localStorage.getItem(`folder-open-state-${name}`);
+		if (storedState !== null) {
+			open = storedState === 'true';
+		}
+		// Use a timeout to ensure the initial state is set before we start saving
+		setTimeout(() => {
+			initialized = true;
+		}, 0);
+
 		if (!dragAndDrop) {
 			return;
 		}

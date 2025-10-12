@@ -351,7 +351,6 @@
 
 	let unsubscribers = [];
 	onMount(async () => {
-		showPinnedChat = localStorage?.showPinnedChat ? localStorage.showPinnedChat === 'true' : true;
 		await showSidebar.set(!$mobile ? localStorage.sidebar === 'true' : false);
 
 		unsubscribers = [
@@ -1035,10 +1034,6 @@
 								<Folder
 									buttonClassName=" text-gray-500"
 									bind:open={showPinnedChat}
-									on:change={(e) => {
-										localStorage.setItem('showPinnedChat', e.detail);
-										console.log(e.detail);
-									}}
 									on:import={(e) => {
 										importChatHandler(e.detail, true);
 									}}
