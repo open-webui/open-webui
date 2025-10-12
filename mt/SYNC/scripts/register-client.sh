@@ -203,17 +203,16 @@ main() {
     echo ""
 
     # Build DATABASE_URL for the client schema
-    # Extract components from ADMIN_URL and modify schema
-    # Format: postgresql://postgres.PROJECT:PASS@REGION.pooler.supabase.com:5432/postgres?options=-c%20search_path%3Dclient_schema
+    # Format: postgresql://postgres.PROJECT:PASS@REGION.pooler.supabase.com:5432/postgres?options=--search_path%3Dclient_schema
 
-    # URL-encode the schema name with proper escaping
+    # URL-encode the schema name (hyphens are safe, no need to encode)
     ENCODED_SCHEMA=$(python3 -c "import urllib.parse; print(urllib.parse.quote('${CLIENT_NAME}', safe=''))")
 
-    # Append search_path to ADMIN_URL
+    # Append search_path to ADMIN_URL using --search_path format (note: double dash)
     if [[ "$ADMIN_URL" == *"?"* ]]; then
-        CLIENT_DATABASE_URL="${ADMIN_URL}&options=-c%20search_path%3D${ENCODED_SCHEMA}"
+        CLIENT_DATABASE_URL="${ADMIN_URL}&options=--search_path%3D${ENCODED_SCHEMA}"
     else
-        CLIENT_DATABASE_URL="${ADMIN_URL}?options=-c%20search_path%3D${ENCODED_SCHEMA}"
+        CLIENT_DATABASE_URL="${ADMIN_URL}?options=--search_path%3D${ENCODED_SCHEMA}"
     fi
 
     # Generate unique temporary port (10000 + random number to avoid conflicts)
