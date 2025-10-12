@@ -145,20 +145,30 @@ class LeaderElection:
         Register this host in sync_metadata.hosts table.
 
         This creates or updates the host record for RLS and monitoring.
+        If the host already exists (by hostname + cluster_name), retrieves
+        the existing host_id to maintain consistency across container restarts.
         """
         async with self.pool.acquire() as conn:
-            await conn.execute(
+            # Use RETURNING to get the host_id whether inserted or updated
+            result = await conn.fetchrow(
                 """INSERT INTO sync_metadata.hosts (host_id, hostname, cluster_name, status, last_heartbeat)
                    VALUES ($1::uuid, $2, $3, 'active', NOW())
                    ON CONFLICT (hostname, cluster_name) DO UPDATE
                    SET status = 'active',
-                       last_heartbeat = NOW(),
-                       host_id = EXCLUDED.host_id""",
+                       last_heartbeat = NOW()
+                   RETURNING host_id""",
                 self.host_id,
                 self.node_id,
                 self.cluster_name
             )
-            logger.info(f"Host registered: {self.node_id}")
+
+            # Update self.host_id with the stable host_id from the database
+            # This ensures consistency across container restarts
+            if result and result['host_id'] != self.host_id:
+                logger.info(f"Using existing host_id {result['host_id']} for {self.node_id} (was {self.host_id})")
+                self.host_id = str(result['host_id'])
+            else:
+                logger.info(f"Host registered: {self.node_id} with host_id {self.host_id}")
 
     async def start(self):
         """
