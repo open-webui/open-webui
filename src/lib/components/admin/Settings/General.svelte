@@ -399,6 +399,16 @@
 								>{$i18n.t("'s', 'm', 'h', 'd', 'w' or '-1' for no expiration.")}</span
 							>
 						</div>
+						{#if adminConfig.JWT_EXPIRES_IN === '-1'}
+							<div class="mt-2 px-3 py-2 bg-yellow-500/10 border border-yellow-500/20 rounded-lg">
+								<div class="flex items-start space-x-2">
+									<div class="text-yellow-500 mt-0.5">⚠️</div>
+									<div class="text-xs text-yellow-600 dark:text-yellow-500">
+										{$i18n.t('-1 means JWT will never expire. This is extremely dangerous for production! Set to a reasonable value.')}
+									</div>
+								</div>
+							</div>
+						{/if}
 					</div>
 
 					<div class=" space-y-3">
