@@ -81,9 +81,14 @@ log_warning() {
 
 # Execute SQL via Python in sync container
 execute_sql() {
-    local sql="$1"
+    local sql_query="${SQL_QUERY:-}"
 
-    docker exec -i openwebui-sync-node-a python3 << PYEOF
+    if [[ -z "$sql_query" ]]; then
+        log_error "SQL_QUERY environment variable not set"
+        return 1
+    fi
+
+    docker exec -i -e ADMIN_URL="$ADMIN_URL" -e SQL_QUERY="$sql_query" openwebui-sync-node-a python3 << 'PYEOF'
 import asyncpg
 import asyncio
 import sys
@@ -92,8 +97,18 @@ import os
 async def run_sql():
     try:
         admin_url = os.getenv('ADMIN_URL')
+        sql_query = os.getenv('SQL_QUERY')
+
+        if not admin_url:
+            print("Error: ADMIN_URL not set", file=sys.stderr)
+            return False
+
+        if not sql_query:
+            print("Error: SQL_QUERY not set", file=sys.stderr)
+            return False
+
         conn = await asyncpg.connect(admin_url)
-        result = await conn.fetch('''$sql''')
+        result = await conn.fetch(sql_query)
         await conn.close()
 
         if result:
@@ -129,20 +144,23 @@ main() {
     # Check if client exists
     log_info "Checking if client is registered..."
 
-    CLIENT_EXISTS=$(docker exec openwebui-sync-node-a python3 << PYEOF
+    CLIENT_EXISTS=$(docker exec -i -e ADMIN_URL="$ADMIN_URL" -e CLIENT_NAME="$CLIENT_NAME" openwebui-sync-node-a python3 << 'PYEOF'
 import asyncpg
 import asyncio
 import os
 
 async def check_client():
     admin_url = os.getenv('ADMIN_URL')
+    client_name = os.getenv('CLIENT_NAME')
+    if not admin_url or not client_name:
+        return
     conn = await asyncpg.connect(admin_url)
     exists = await conn.fetchval('''
         SELECT EXISTS(
             SELECT 1 FROM sync_metadata.client_deployments
-            WHERE client_name = \$1
+            WHERE client_name = $1
         )
-    ''', '${CLIENT_NAME}')
+    ''', client_name)
     await conn.close()
     print('true' if exists else 'false')
 
@@ -180,7 +198,9 @@ PYEOF
     RETURNING client_name;
     "
 
-    if execute_sql "$DEREGISTER_SQL" 2>/dev/null; then
+    SQL_QUERY="$DEREGISTER_SQL" execute_sql "" 2>/dev/null
+
+    if [ $? -eq 0 ]; then
         log_success "Client deregistered from sync system"
     else
         log_error "Failed to deregister client"
@@ -191,9 +211,11 @@ PYEOF
     if [[ "$DROP_SCHEMA" == "--drop-schema" ]]; then
         log_warning "Dropping schema: $CLIENT_NAME (this will delete all data)"
 
-        DROP_SQL="DROP SCHEMA IF EXISTS ${CLIENT_NAME} CASCADE;"
+        DROP_SQL="DROP SCHEMA IF EXISTS \"${CLIENT_NAME}\" CASCADE;"
 
-        if execute_sql "$DROP_SQL" 2>/dev/null; then
+        SQL_QUERY="$DROP_SQL" execute_sql "" 2>/dev/null
+
+        if [ $? -eq 0 ]; then
             log_success "Schema dropped: $CLIENT_NAME"
         else
             log_error "Failed to drop schema"
