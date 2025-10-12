@@ -92,8 +92,13 @@ print(asyncio.run(get_timestamp()))
 checkpoint_wal() {
     log_info "Checkpointing SQLite WAL..."
 
-    docker exec "$CONTAINER_NAME" sqlite3 "$SQLITE_PATH" \
-        "PRAGMA wal_checkpoint(TRUNCATE);" 2>/dev/null || {
+    docker exec "$CONTAINER_NAME" python3 -c "
+import sqlite3
+conn = sqlite3.connect('$SQLITE_PATH')
+conn.execute('PRAGMA wal_checkpoint(TRUNCATE)')
+conn.close()
+print('WAL checkpointed')
+" 2>/dev/null || {
         log_error "Failed to checkpoint WAL"
         return 1
     }
@@ -107,8 +112,15 @@ get_row_count() {
     local table="$1"
     local since_timestamp="$2"
 
-    docker exec "$CONTAINER_NAME" sqlite3 "$SQLITE_PATH" \
-        "SELECT COUNT(*) FROM $table WHERE updated_at > '$since_timestamp';" 2>/dev/null || echo "0"
+    docker exec "$CONTAINER_NAME" python3 -c "
+import sqlite3
+conn = sqlite3.connect('$SQLITE_PATH')
+cursor = conn.cursor()
+cursor.execute('SELECT COUNT(*) FROM \"$table\" WHERE updated_at > ?', ('$since_timestamp',))
+count = cursor.fetchone()[0]
+conn.close()
+print(count)
+" 2>/dev/null || echo "0"
 }
 
 # Sync a single table
@@ -131,13 +143,27 @@ sync_table() {
 
     log_info "Found $total_rows rows to sync in $table"
 
-    # Export changed rows as JSON
+    # Export changed rows as JSON using Python
     local temp_file
     temp_file=$(mktemp)
 
-    docker exec "$CONTAINER_NAME" sqlite3 -json "$SQLITE_PATH" \
-        "SELECT * FROM $table WHERE updated_at > '$since_timestamp' LIMIT $BATCH_SIZE;" \
-        > "$temp_file" 2>/dev/null || {
+    docker exec "$CONTAINER_NAME" python3 -c "
+import sqlite3
+import json
+import sys
+
+conn = sqlite3.connect('$SQLITE_PATH')
+conn.row_factory = sqlite3.Row
+cursor = conn.cursor()
+cursor.execute('SELECT * FROM \"$table\" WHERE updated_at > ? LIMIT $BATCH_SIZE', ('$since_timestamp',))
+
+rows = []
+for row in cursor:
+    rows.append(dict(row))
+
+conn.close()
+print(json.dumps(rows))
+" > "$temp_file" 2>/dev/null || {
         log_error "Failed to export $table"
         rm -f "$temp_file"
         return 1
@@ -182,15 +208,16 @@ async def sync_rows():
             values = [row[col] for col in columns]
 
             # Build INSERT ... ON CONFLICT DO UPDATE query
+            # Quote identifiers for schema and table names with hyphens
             placeholders = ', '.join([f'\${i+1}' for i in range(len(columns))])
-            cols_str = ', '.join(columns)
+            cols_str = ', '.join([f'"{col}"' for col in columns])
 
-            # Simple upsert (in production, would check for conflicts first)
+            # Simple upsert with properly quoted identifiers
             query = f'''
-                INSERT INTO ${CLIENT_NAME}.$table ({cols_str})
+                INSERT INTO "${CLIENT_NAME}"."{table}" ({cols_str})
                 VALUES ({placeholders})
                 ON CONFLICT (id) DO UPDATE
-                SET {', '.join([f'{col} = EXCLUDED.{col}' for col in columns if col != 'id'])}
+                SET {', '.join([f'"{col}" = EXCLUDED."{col}"' for col in columns if col != 'id'])}
             '''
 
             await conn.execute(query, *values)
@@ -231,13 +258,13 @@ async def sync_rows():
             columns = list(row.keys())
             values = [row[col] for col in columns]
             placeholders = ', '.join([f'\${i+1}' for i in range(len(columns))])
-            cols_str = ', '.join(columns)
+            cols_str = ', '.join([f'"{col}"' for col in columns])
 
             query = f'''
-                INSERT INTO ${CLIENT_NAME}.$table ({cols_str})
+                INSERT INTO "${CLIENT_NAME}"."{table}" ({cols_str})
                 VALUES ({placeholders})
                 ON CONFLICT (id) DO UPDATE
-                SET {', '.join([f'{col} = EXCLUDED.{col}' for col in columns if col != 'id'])}
+                SET {', '.join([f'"{col}" = EXCLUDED."{col}"' for col in columns if col != 'id'])}
             '''
 
             await conn.execute(query, *values)
