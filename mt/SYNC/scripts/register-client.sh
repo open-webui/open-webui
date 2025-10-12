@@ -245,7 +245,16 @@ main() {
     while [ $WAITED -lt $MAX_WAIT ]; do
         LOGS=$(docker logs "$INIT_CONTAINER" 2>&1)
 
-        # Check for successful startup indicators
+        # Check for successful migration completion (happens before app startup)
+        if echo "$LOGS" | grep -q "Running upgrade.*Add oauth_session table"; then
+            # Last migration has run - schema is initialized
+            log_info "Database migrations completed"
+            sleep 2  # Give it a moment to finish
+            INITIALIZED=true
+            break
+        fi
+
+        # Check for successful startup indicators (backup checks)
         if echo "$LOGS" | grep -q "Application startup complete"; then
             INITIALIZED=true
             break
