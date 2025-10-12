@@ -47,6 +47,7 @@
 	import AccountPending from '$lib/components/layout/Overlay/AccountPending.svelte';
 	import UpdateInfoToast from '$lib/components/layout/UpdateInfoToast.svelte';
 	import Spinner from '$lib/components/common/Spinner.svelte';
+	import { Shortcut, shortcuts } from '$lib/shortcuts';
 
 	const i18n = getContext('i18n');
 
@@ -163,105 +164,114 @@
 			})
 		]);
 
-		const setupKeyboardShortcuts = () => {
-			document.addEventListener('keydown', async function (event) {
-				const isCtrlPressed = event.ctrlKey || event.metaKey; // metaKey is for Cmd key on Mac
-				// Check if the Shift key is pressed
-				const isShiftPressed = event.shiftKey;
+// Helper function to check if the pressed keys match the shortcut definition
+	const checkShortcut = (event: KeyboardEvent, keys: string[]): boolean => {
+		const lowerCaseKeys = keys.map((key) => key.toLowerCase());
 
-				// Check if Ctrl  + K is pressed
-				if (isCtrlPressed && event.key.toLowerCase() === 'k') {
-					event.preventDefault();
-					console.log('search');
-					showSearch.set(!$showSearch);
+		const isModPressed = lowerCaseKeys.includes('mod') ? event.ctrlKey || event.metaKey : true;
+		const isShiftPressed = lowerCaseKeys.includes('shift') ? event.shiftKey : true;
+		const isAltPressed = lowerCaseKeys.includes('alt') ? event.altKey : true;
+		const isCtrlPressed = lowerCaseKeys.includes('ctrl') ? event.ctrlKey : true;
+
+		const mainKeys = lowerCaseKeys.filter((key) => !['mod', 'shift', 'alt', 'ctrl'].includes(key));
+
+		if (mainKeys.length > 0 && !mainKeys.includes(event.code.toLowerCase())) {
+			return false;
+		}
+
+		let modConflict = false;
+		if (keys.includes('mod')) {
+			if (!lowerCaseKeys.includes('shift') && event.shiftKey) modConflict = true;
+			if (!lowerCaseKeys.includes('alt') && event.altKey) modConflict = true;
+		}
+
+		return (
+			!modConflict &&
+			isModPressed &&
+			isShiftPressed &&
+			isAltPressed &&
+			isCtrlPressed &&
+			(event.ctrlKey || event.metaKey) === (lowerCaseKeys.includes('mod') || lowerCaseKeys.includes('ctrl')) &&
+			event.shiftKey === lowerCaseKeys.includes('shift') &&
+			event.altKey === lowerCaseKeys.includes('alt')
+		);
+	};
+
+const setupKeyboardShortcuts = () => {
+	document.addEventListener('keydown', async (event) => {
+		for (const shortcutName in shortcuts) {
+			const shortcut = shortcuts[shortcutName];
+			if (checkShortcut(event, shortcut.keys)) {
+				// Here you can map the shortcut name to an action
+				// This is a simple example, you might want a more robust solution
+				switch (shortcutName) {
+					case Shortcut.SEARCH:
+							event.preventDefault();
+						showSearch.set(!$showSearch);
+						break;
+					case Shortcut.NEW_CHAT:
+							event.preventDefault();
+						document.getElementById('sidebar-new-chat-button')?.click();
+						break;
+					case Shortcut.FOCUS_INPUT:
+							event.preventDefault();
+						document.getElementById('chat-input')?.focus();
+						break;
+					case Shortcut.COPY_LAST_CODE_BLOCK:
+							event.preventDefault();
+						[...document.getElementsByClassName('copy-code-button')]?.at(-1)?.click();
+						break;
+					case Shortcut.COPY_LAST_RESPONSE:
+							event.preventDefault();
+						[...document.getElementsByClassName('copy-response-button')]?.at(-1)?.click();
+						break;
+					case Shortcut.TOGGLE_SIDEBAR:
+							event.preventDefault();
+						showSidebar.set(!$showSidebar);
+						break;
+					case Shortcut.DELETE_CHAT:
+							event.preventDefault();
+						document.getElementById('delete-chat-button')?.click();
+						break;
+					case Shortcut.OPEN_SETTINGS:
+							event.preventDefault();
+						showSettings.set(!$showSettings);
+						break;
+					case Shortcut.SHOW_SHORTCUTS:
+							event.preventDefault();
+						showShortcuts.set(!$showShortcuts);
+						break;
+					case Shortcut.CLOSE_MODAL:
+						event.preventDefault();
+						showSettings.set(false);
+						showShortcuts.set(false);
+						break;
+					case Shortcut.NEW_TEMPORARY_CHAT:
+							event.preventDefault();
+						if ($user?.role !== 'admin' && $user?.permissions?.chat?.temporary_enforced) {
+							temporaryChatEnabled.set(true);
+						} else {
+							temporaryChatEnabled.set(!$temporaryChatEnabled);
+						}
+						await goto('/');
+						setTimeout(() => {
+							document.getElementById('new-chat-button')?.click();
+						}, 0);
+						break;
+					case Shortcut.GENERATE_PROMPT_PAIR:
+						// Placeholder for future implementation
+						break;
+					case Shortcut.STOP_GENERATING:
+						// Placeholder for future implementation
+						break;
+					case Shortcut.PREVENT_FILE_CREATION:
+							// This shortcut is handled by the paste event in MessageInput.svelte
+						break;
 				}
-
-				// Check if Ctrl + Shift + O is pressed
-				if (isCtrlPressed && isShiftPressed && event.key.toLowerCase() === 'o') {
-					event.preventDefault();
-					console.log('newChat');
-					document.getElementById('sidebar-new-chat-button')?.click();
-				}
-
-				// Check if Shift + Esc is pressed
-				if (isShiftPressed && event.key === 'Escape') {
-					event.preventDefault();
-					console.log('focusInput');
-					document.getElementById('chat-input')?.focus();
-				}
-
-				// Check if Ctrl + Shift + ; is pressed
-				if (isCtrlPressed && isShiftPressed && event.key === ';') {
-					event.preventDefault();
-					console.log('copyLastCodeBlock');
-					const button = [...document.getElementsByClassName('copy-code-button')]?.at(-1);
-					button?.click();
-				}
-
-				// Check if Ctrl + Shift + C is pressed
-				if (isCtrlPressed && isShiftPressed && event.key.toLowerCase() === 'c') {
-					event.preventDefault();
-					console.log('copyLastResponse');
-					const button = [...document.getElementsByClassName('copy-response-button')]?.at(-1);
-					console.log(button);
-					button?.click();
-				}
-
-				// Check if Ctrl + Shift + S is pressed
-				if (isCtrlPressed && isShiftPressed && event.key.toLowerCase() === 's') {
-					event.preventDefault();
-					console.log('toggleSidebar');
-					document.getElementById('sidebar-toggle-button')?.click();
-				}
-
-				// Check if Ctrl + Shift + Backspace is pressed
-				if (
-					isCtrlPressed &&
-					isShiftPressed &&
-					(event.key === 'Backspace' || event.key === 'Delete')
-				) {
-					event.preventDefault();
-					console.log('deleteChat');
-					document.getElementById('delete-chat-button')?.click();
-				}
-
-				// Check if Ctrl + . is pressed
-				if (isCtrlPressed && event.key === '.') {
-					event.preventDefault();
-					console.log('openSettings');
-					showSettings.set(!$showSettings);
-				}
-
-				// Check if Ctrl + / is pressed
-				if (isCtrlPressed && event.key === '/') {
-					event.preventDefault();
-
-					showShortcuts.set(!$showShortcuts);
-				}
-
-				// Check if Ctrl + Shift + ' is pressed
-				if (
-					isCtrlPressed &&
-					isShiftPressed &&
-					(event.key.toLowerCase() === `'` || event.key.toLowerCase() === `"`)
-				) {
-					event.preventDefault();
-					console.log('temporaryChat');
-
-					if ($user?.role !== 'admin' && $user?.permissions?.chat?.temporary_enforced) {
-						temporaryChatEnabled.set(true);
-					} else {
-						temporaryChatEnabled.set(!$temporaryChatEnabled);
-					}
-
-					await goto('/');
-					const newChatButton = document.getElementById('new-chat-button');
-					setTimeout(() => {
-						newChatButton?.click();
-					}, 0);
-				}
-			});
-		};
+			}
+		}
+	});
+};
 		setupKeyboardShortcuts();
 
 		if ($user?.role === 'admin' && ($settings?.showChangelog ?? true)) {
