@@ -226,11 +226,11 @@ main() {
     docker rm -f "$INIT_CONTAINER" > /dev/null 2>&1
 
     # Start temporary container with client schema
+    # Note: Don't set VECTOR_DB to avoid pgvector errors during schema init
     if ! docker run -d \
         --name "$INIT_CONTAINER" \
         -p "${TEMP_PORT}:8080" \
         -e DATABASE_URL="$CLIENT_DATABASE_URL" \
-        -e VECTOR_DB="pgvector" \
         ghcr.io/imagicrafter/open-webui:main > /dev/null 2>&1; then
         log_error "Failed to create initialization container"
         exit 1
