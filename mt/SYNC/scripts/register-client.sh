@@ -198,115 +198,94 @@ main() {
 
     # Step 3: Create Open WebUI tables in client schema
     log_info "Creating Open WebUI tables in ${CLIENT_NAME} schema..."
+    log_info "This will start Open WebUI temporarily to initialize database schema"
+    log_info "This process takes about 30-60 seconds..."
+    echo ""
 
-    # Note: These schemas mirror Open WebUI's SQLite structure
-    # Source: https://github.com/open-webui/open-webui/blob/main/backend/open_webui/models/
+    # Build DATABASE_URL for the client schema
+    # Extract components from ADMIN_URL and modify schema
+    # Format: postgresql://postgres.PROJECT:PASS@REGION.pooler.supabase.com:5432/postgres?options=-c%20search_path%3Dclient_schema
 
-    TABLES_SQL="
-    -- Users table
-    CREATE TABLE IF NOT EXISTS \"${CLIENT_NAME}\".\"user\" (
-        id TEXT PRIMARY KEY,
-        name TEXT NOT NULL,
-        email TEXT UNIQUE NOT NULL,
-        role TEXT NOT NULL DEFAULT 'user',
-        profile_image_url TEXT,
-        created_at BIGINT NOT NULL,
-        updated_at BIGINT NOT NULL,
-        last_active_at BIGINT NOT NULL,
-        api_key TEXT
-    );
+    # URL-encode the schema name with proper escaping
+    ENCODED_SCHEMA=$(python3 -c "import urllib.parse; print(urllib.parse.quote('${CLIENT_NAME}', safe=''))")
 
-    -- Auth table
-    CREATE TABLE IF NOT EXISTS "${CLIENT_NAME}".auth (
-        id TEXT PRIMARY KEY,
-        email TEXT UNIQUE NOT NULL,
-        password TEXT NOT NULL,
-        active BOOLEAN DEFAULT true,
-        created_at BIGINT NOT NULL,
-        updated_at BIGINT NOT NULL
-    );
-
-    -- Chat table
-    CREATE TABLE IF NOT EXISTS "${CLIENT_NAME}".chat (
-        id TEXT PRIMARY KEY,
-        user_id TEXT NOT NULL,
-        title TEXT NOT NULL,
-        chat JSONB NOT NULL,
-        created_at BIGINT NOT NULL,
-        updated_at BIGINT NOT NULL,
-        share_id TEXT UNIQUE,
-        archived BOOLEAN DEFAULT false
-    );
-
-    -- Tag table
-    CREATE TABLE IF NOT EXISTS "${CLIENT_NAME}".tag (
-        id TEXT PRIMARY KEY,
-        name TEXT NOT NULL,
-        user_id TEXT NOT NULL,
-        data JSONB,
-        created_at BIGINT NOT NULL,
-        updated_at BIGINT NOT NULL
-    );
-
-    -- Message table (if using message-based storage)
-    CREATE TABLE IF NOT EXISTS "${CLIENT_NAME}".message (
-        id TEXT PRIMARY KEY,
-        user_id TEXT NOT NULL,
-        chat_id TEXT,
-        content TEXT NOT NULL,
-        role TEXT NOT NULL,
-        model TEXT,
-        timestamp BIGINT NOT NULL,
-        created_at BIGINT NOT NULL,
-        updated_at BIGINT NOT NULL
-    );
-
-    -- Config table
-    CREATE TABLE IF NOT EXISTS "${CLIENT_NAME}".config (
-        id TEXT PRIMARY KEY,
-        data JSONB NOT NULL,
-        created_at BIGINT NOT NULL,
-        updated_at BIGINT NOT NULL
-    );
-
-    -- OAuth session table
-    CREATE TABLE IF NOT EXISTS "${CLIENT_NAME}".oauth_session (
-        id TEXT PRIMARY KEY,
-        provider TEXT NOT NULL,
-        user_id TEXT NOT NULL,
-        access_token TEXT,
-        refresh_token TEXT,
-        expires_at BIGINT,
-        created_at BIGINT NOT NULL,
-        updated_at BIGINT NOT NULL
-    );
-
-    -- Function table
-    CREATE TABLE IF NOT EXISTS "${CLIENT_NAME}".function (
-        id TEXT PRIMARY KEY,
-        user_id TEXT NOT NULL,
-        type TEXT NOT NULL,
-        name TEXT NOT NULL,
-        content TEXT NOT NULL,
-        meta JSONB,
-        created_at BIGINT NOT NULL,
-        updated_at BIGINT NOT NULL
-    );
-
-    -- Create indexes for performance
-    CREATE INDEX IF NOT EXISTS idx_chat_user_id ON "${CLIENT_NAME}".chat(user_id);
-    CREATE INDEX IF NOT EXISTS idx_chat_updated_at ON "${CLIENT_NAME}".chat(updated_at);
-    CREATE INDEX IF NOT EXISTS idx_message_chat_id ON "${CLIENT_NAME}".message(chat_id);
-    CREATE INDEX IF NOT EXISTS idx_message_updated_at ON "${CLIENT_NAME}".message(updated_at);
-    CREATE INDEX IF NOT EXISTS idx_tag_user_id ON "${CLIENT_NAME}".tag(user_id);
-    "
-
-    SQL_QUERY="$TABLES_SQL" execute_sql "" 2>/dev/null
-
-    if [ $? -eq 0 ]; then
-        log_success "Created 8 Open WebUI tables"
+    # Append search_path to ADMIN_URL
+    if [[ "$ADMIN_URL" == *"?"* ]]; then
+        CLIENT_DATABASE_URL="${ADMIN_URL}&options=-c%20search_path%3D${ENCODED_SCHEMA}"
     else
-        log_error "Failed to create tables"
+        CLIENT_DATABASE_URL="${ADMIN_URL}?options=-c%20search_path%3D${ENCODED_SCHEMA}"
+    fi
+
+    # Generate unique temporary port (10000 + random number to avoid conflicts)
+    TEMP_PORT=$((10000 + RANDOM % 10000))
+    INIT_CONTAINER="${CLIENT_NAME}-schema-init-$$"
+
+    log_info "Using temporary port: $TEMP_PORT"
+    log_info "Starting initialization container..."
+
+    # Remove any leftover container with this name
+    docker rm -f "$INIT_CONTAINER" > /dev/null 2>&1
+
+    # Start temporary container with client schema
+    if ! docker run -d \
+        --name "$INIT_CONTAINER" \
+        -p "${TEMP_PORT}:8080" \
+        -e DATABASE_URL="$CLIENT_DATABASE_URL" \
+        -e VECTOR_DB="pgvector" \
+        ghcr.io/imagicrafter/open-webui:main > /dev/null 2>&1; then
+        log_error "Failed to create initialization container"
+        exit 1
+    fi
+
+    # Wait for schema initialization
+    log_info "Waiting for schema initialization..."
+    MAX_WAIT=180
+    WAITED=0
+    INITIALIZED=false
+
+    while [ $WAITED -lt $MAX_WAIT ]; do
+        LOGS=$(docker logs "$INIT_CONTAINER" 2>&1)
+
+        # Check for successful startup indicators
+        if echo "$LOGS" | grep -q "Application startup complete"; then
+            INITIALIZED=true
+            break
+        fi
+
+        if echo "$LOGS" | grep -q "Uvicorn running on"; then
+            INITIALIZED=true
+            break
+        fi
+
+        if echo "$LOGS" | grep -q "Started server process"; then
+            INITIALIZED=true
+            break
+        fi
+
+        # Check for fatal errors
+        if echo "$LOGS" | grep -qi "fatal\|critical\|cannot connect"; then
+            log_error "Fatal error during initialization"
+            echo "Last logs:"
+            docker logs --tail 20 "$INIT_CONTAINER"
+            break
+        fi
+
+        echo -n "."
+        sleep 3
+        WAITED=$((WAITED + 3))
+    done
+
+    echo ""
+
+    # Cleanup initialization container
+    log_info "Cleaning up initialization container..."
+    docker stop "$INIT_CONTAINER" > /dev/null 2>&1
+    docker rm "$INIT_CONTAINER" > /dev/null 2>&1
+
+    if [ "$INITIALIZED" = true ]; then
+        log_success "Created Open WebUI tables using schema initialization"
+    else
+        log_error "Schema initialization timed out or failed"
         exit 1
     fi
 
@@ -377,7 +356,7 @@ PYEOF
     echo ""
     echo -e "${GREEN}Schema:${NC} ${CLIENT_NAME}"
     echo -e "${GREEN}Container:${NC} ${CONTAINER_NAME}"
-    echo -e "${GREEN}Tables:${NC} 8 Open WebUI tables created"
+    echo -e "${GREEN}Tables:${NC} Open WebUI schema initialized"
     echo -e "${GREEN}Sync:${NC} Enabled (300s interval)"
     echo ""
     echo -e "${BLUE}Next Steps:${NC}"
