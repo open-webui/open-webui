@@ -52,6 +52,8 @@
 	import { fade } from 'svelte/transition';
 	import { flyAndScale } from '$lib/utils/transitions';
 	import RegenerateMenu from './ResponseMessage/RegenerateMenu.svelte';
+	import StatusHistory from './ResponseMessage/StatusHistory.svelte';
+	import FullHeightIframe from '$lib/components/common/FullHeightIframe.svelte';
 
 	interface MessageType {
 		id: string;
@@ -574,8 +576,6 @@
 
 		await tick();
 		if (buttonsContainerElement) {
-			console.log(buttonsContainerElement);
-
 			buttonsContainerElement.addEventListener('wheel', function (event) {
 				if (buttonsContainerElement.scrollWidth <= buttonsContainerElement.clientWidth) {
 					// If the container is not scrollable, horizontal scroll
@@ -633,7 +633,12 @@
 							: 'invisible group-hover:visible transition text-gray-400'}"
 					>
 						<Tooltip content={dayjs(message.timestamp * 1000).format('LLLL')}>
-							<span class="line-clamp-1">{formatDate(message.timestamp * 1000)}</span>
+							<span class="line-clamp-1"
+								>{$i18n.t(formatDate(message.timestamp * 1000), {
+									LOCALIZED_TIME: dayjs(message.timestamp * 1000).format('LT'),
+									LOCALIZED_DATE: dayjs(message.timestamp * 1000).format('L')
+								})}</span
+							>
 						</Tooltip>
 					</div>
 				{/if}
@@ -642,76 +647,11 @@
 			<div>
 				<div class="chat-{message.role} w-full min-w-full markdown-prose">
 					<div>
-						{#if (message?.statusHistory ?? [...(message?.status ? [message?.status] : [])]).length > 0}
-							{@const status = (
-								message?.statusHistory ?? [...(message?.status ? [message?.status] : [])]
-							).at(-1)}
-							{#if !status?.hidden}
-								<div class="status-description flex items-center gap-2 py-0.5">
-									{#if status?.action === 'web_search' && status?.urls}
-										<WebSearchResults {status}>
-											<div class="flex flex-col justify-center -space-y-0.5">
-												<div
-													class="{status?.done === false
-														? 'shimmer'
-														: ''} text-base line-clamp-1 text-wrap"
-												>
-													<!-- $i18n.t("Generating search query") -->
-													<!-- $i18n.t("No search query generated") -->
-
-													<!-- $i18n.t('Searched {{count}} sites') -->
-													{#if status?.description.includes('{{count}}')}
-														{$i18n.t(status?.description, {
-															count: status?.urls.length
-														})}
-													{:else if status?.description === 'No search query generated'}
-														{$i18n.t('No search query generated')}
-													{:else if status?.description === 'Generating search query'}
-														{$i18n.t('Generating search query')}
-													{:else}
-														{status?.description}
-													{/if}
-												</div>
-											</div>
-										</WebSearchResults>
-									{:else if status?.action === 'knowledge_search'}
-										<div class="flex flex-col justify-center -space-y-0.5">
-											<div
-												class="{status?.done === false
-													? 'shimmer'
-													: ''} text-gray-500 dark:text-gray-500 text-base line-clamp-1 text-wrap"
-											>
-												{$i18n.t(`Searching Knowledge for "{{searchQuery}}"`, {
-													searchQuery: status.query
-												})}
-											</div>
-										</div>
-									{:else}
-										<div class="flex flex-col justify-center -space-y-0.5">
-											<div
-												class="{status?.done === false
-													? 'shimmer'
-													: ''} text-gray-500 dark:text-gray-500 text-base line-clamp-1 text-wrap"
-											>
-												<!-- $i18n.t(`Searching "{{searchQuery}}"`) -->
-												{#if status?.description.includes('{{searchQuery}}')}
-													{$i18n.t(status?.description, {
-														searchQuery: status?.query
-													})}
-												{:else if status?.description === 'No search query generated'}
-													{$i18n.t('No search query generated')}
-												{:else if status?.description === 'Generating search query'}
-													{$i18n.t('Generating search query')}
-												{:else if status?.description === 'Searching the web'}
-													{$i18n.t('Searching the web...')}
-												{:else}
-													{status?.description}
-												{/if}
-											</div>
-										</div>
-									{/if}
-								</div>
-							{/if}
+						{#if model?.info?.meta?.capabilities?.status_updates ?? true}
+							<StatusHistory
+								statusHistory={message?.statusHistory}
+								expand={message?.content === ''}
+							/>
 						{/if}
 
 						{#if message?.files && message.files?.filter((f) => f.type === 'image').length > 0}
@@ -727,9 +667,25 @@
 												name={file.name}
 												type={file.type}
 												size={file?.size}
-												colorClassName="bg-white dark:bg-gray-850 "
+												small={true}
 											/>
 										{/if}
+									</div>
+								{/each}
+							</div>
+						{/if}
+
+						{#if message?.embeds && message.embeds.length > 0}
+							<div class="my-1 w-full flex overflow-x-auto gap-2 flex-wrap">
+								{#each message.embeds as embed, idx}
+									<div class="my-2 w-full" id={`${message.id}-embeds-${idx}`}>
+										<FullHeightIframe
+											src={embed}
+											allowScripts={true}
+											allowForms={true}
+											allowSameOrigin={true}
+											allowPopups={true}
+										/>
 									</div>
 								{/each}
 							</div>
@@ -764,7 +720,7 @@
 									<div>
 										<button
 											id="save-new-message-button"
-											class=" px-4 py-2 bg-gray-50 hover:bg-gray-100 dark:bg-gray-800 dark:hover:bg-gray-700 border border-gray-100 dark:border-gray-700 text-gray-700 dark:text-gray-200 transition rounded-3xl"
+											class="px-3.5 py-1.5 bg-gray-50 hover:bg-gray-100 dark:bg-gray-800 dark:hover:bg-gray-700 border border-gray-100 dark:border-gray-700 text-gray-700 dark:text-gray-200 transition rounded-3xl"
 											on:click={() => {
 												saveAsCopyHandler();
 											}}
@@ -776,7 +732,7 @@
 									<div class="flex space-x-1.5">
 										<button
 											id="close-edit-message-button"
-											class="px-4 py-2 bg-white dark:bg-gray-900 hover:bg-gray-100 text-gray-800 dark:text-gray-100 transition rounded-3xl"
+											class="px-3.5 py-1.5 bg-white dark:bg-gray-900 hover:bg-gray-100 text-gray-800 dark:text-gray-100 transition rounded-3xl"
 											on:click={() => {
 												cancelEditMessage();
 											}}
@@ -786,7 +742,7 @@
 
 										<button
 											id="confirm-edit-message-button"
-											class=" px-4 py-2 bg-gray-900 dark:bg-white hover:bg-gray-850 text-gray-100 dark:text-gray-800 transition rounded-3xl"
+											class="px-3.5 py-1.5 bg-gray-900 dark:bg-white hover:bg-gray-850 text-gray-100 dark:text-gray-800 transition rounded-3xl"
 											on:click={() => {
 												editMessageConfirmHandler();
 											}}
@@ -798,7 +754,7 @@
 							</div>
 						{:else}
 							<div class="w-full flex flex-col relative" id="response-content-container">
-								{#if message.content === '' && !message.error && (message?.statusHistory ?? [...(message?.status ? [message?.status] : [])]).length === 0}
+								{#if message.content === '' && !message.error && ((model?.info?.meta?.capabilities?.status_updates ?? true) ? (message?.statusHistory ?? [...(message?.status ? [message?.status] : [])]).length === 0 || (message?.statusHistory?.at(-1)?.hidden ?? false) : true)}
 									<Skeleton />
 								{:else if message.content && message.error !== true}
 									<!-- always show message contents even if there's an error -->
@@ -853,6 +809,7 @@
 										bind:this={citationsElement}
 										id={message?.id}
 										sources={message?.sources ?? message?.citations}
+										{readOnly}
 									/>
 								{/if}
 
@@ -1339,7 +1296,7 @@
 										</Tooltip>
 									{/if}
 
-									{#if $user?.role === 'admin' || ($user?.permissions?.chat?.regenerate_response ?? false)}
+									{#if $user?.role === 'admin' || ($user?.permissions?.chat?.regenerate_response ?? true)}
 										{#if $settings?.regenerateMenu ?? true}
 											<button
 												type="button"
@@ -1450,7 +1407,7 @@
 										{/if}
 									{/if}
 
-									{#if $user?.role === 'admin' || ($user?.permissions?.chat?.delete_message ?? false)}
+									{#if $user?.role === 'admin' || ($user?.permissions?.chat?.delete_message ?? true)}
 										{#if siblings.length > 1}
 											<Tooltip content={$i18n.t('Delete')} placement="bottom">
 												<button

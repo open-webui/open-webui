@@ -1,0 +1,11 @@
+# Open WebUI Multi-License Notice
+
+This repository contains code governed by multiple licenses based on the date and origin of contribution:
+
+1. All code committed prior to commit a76068d69cd59568b920dfab85dc573dbbb8f131 is licensed under the MIT License (see LICENSE_HISTORY).
+
+2. All code committed from commit a76068d69cd59568b920dfab85dc573dbbb8f131 up to and including commit 60d84a3aae9802339705826e9095e272e3c83623 is licensed under the BSD 3-Clause License (see LICENSE_HISTORY).
+
+3. All code contributed or modified after commit 60d84a3aae9802339705826e9095e272e3c83623 is licensed under the Open WebUI License (see LICENSE).
+
+For details on which commits are covered by which license, refer to LICENSE_HISTORY.

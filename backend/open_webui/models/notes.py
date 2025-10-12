@@ -2,8 +2,10 @@ import json
 import time
 import uuid
 from typing import Optional
+from functools import lru_cache
 
 from open_webui.internal.db import Base, get_db
+from open_webui.models.groups import Groups
 from open_webui.utils.access_control import has_access
 from open_webui.models.users import Users, UserResponse
 
@@ -96,21 +98,85 @@ class NoteTable:
             db.commit()
             return note
 
-    def get_notes(self) -> list[NoteModel]:
+    def get_notes(
+        self, skip: Optional[int] = None, limit: Optional[int] = None
+    ) -> list[NoteModel]:
         with get_db() as db:
-            notes = db.query(Note).order_by(Note.updated_at.desc()).all()
+            query = db.query(Note).order_by(Note.updated_at.desc())
+            if skip is not None:
+                query = query.offset(skip)
+            if limit is not None:
+                query = query.limit(limit)
+            notes = query.all()
             return [NoteModel.model_validate(note) for note in notes]
 
     def get_notes_by_user_id(
-        self, user_id: str, permission: str = "write"
+        self,
+        user_id: str,
+        skip: Optional[int] = None,
+        limit: Optional[int] = None,
     ) -> list[NoteModel]:
-        notes = self.get_notes()
-        return [
-            note
-            for note in notes
-            if note.user_id == user_id
-            or has_access(user_id, permission, note.access_control)
-        ]
+        with get_db() as db:
+            query = db.query(Note).filter(Note.user_id == user_id)
+            query = query.order_by(Note.updated_at.desc())
+
+            if skip is not None:
+                query = query.offset(skip)
+            if limit is not None:
+                query = query.limit(limit)
+
+            notes = query.all()
+            return [NoteModel.model_validate(note) for note in notes]
+
+    def get_notes_by_permission(
+        self,
+        user_id: str,
+        permission: str = "write",
+        skip: Optional[int] = None,
+        limit: Optional[int] = None,
+    ) -> list[NoteModel]:
+        with get_db() as db:
+            user_groups = Groups.get_groups_by_member_id(user_id)
+            user_group_ids = {group.id for group in user_groups}
+
+            # Order newest-first. We stream to keep memory usage low.
+            query = (
+                db.query(Note)
+                .order_by(Note.updated_at.desc())
+                .execution_options(stream_results=True)
+                .yield_per(256)
+            )
+
+            results: list[NoteModel] = []
+            n_skipped = 0
+
+            for note in query:
+                # Fast-pass #1: owner
+                if note.user_id == user_id:
+                    permitted = True
+                # Fast-pass #2: public/open
+                elif note.access_control is None:
+                    # Technically this should mean public access for both read and write, but we'll only do read for now
+                    # We might want to change this behavior later
+                    permitted = permission == "read"
+                else:
+                    permitted = has_access(
+                        user_id, permission, note.access_control, user_group_ids
+                    )
+
+                if not permitted:
+                    continue
+
+                # Apply skip AFTER permission filtering so it counts only accessible notes
+                if skip and n_skipped < skip:
+                    n_skipped += 1
+                    continue
+
+                results.append(NoteModel.model_validate(note))
+                if limit is not None and len(results) >= limit:
+                    break
+
+            return results
 
     def get_note_by_id(self, id: str) -> Optional[NoteModel]:
         with get_db() as db:

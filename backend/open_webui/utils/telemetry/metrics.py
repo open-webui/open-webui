@@ -163,20 +163,27 @@ def setup_metrics(app: FastAPI, resource: Resource) -> None:
     @app.middleware("http")
     async def _metrics_middleware(request: Request, call_next):
         start_time = time.perf_counter()
-        response = await call_next(request)
-        elapsed_ms = (time.perf_counter() - start_time) * 1000.0
 
-        # Route template e.g. "/items/{item_id}" instead of real path.
-        route = request.scope.get("route")
-        route_path = getattr(route, "path", request.url.path)
+        status_code = None
+        try:
+            response = await call_next(request)
+            status_code = getattr(response, "status_code", 500)
+            return response
+        except Exception:
+            status_code = 500
+            raise
+        finally:
+            elapsed_ms = (time.perf_counter() - start_time) * 1000.0
 
-        attrs: Dict[str, str | int] = {
-            "http.method": request.method,
-            "http.route": route_path,
-            "http.status_code": response.status_code,
-        }
+            # Route template e.g. "/items/{item_id}" instead of real path.
+            route = request.scope.get("route")
+            route_path = getattr(route, "path", request.url.path)
 
-        request_counter.add(1, attrs)
-        duration_histogram.record(elapsed_ms, attrs)
+            attrs: Dict[str, str | int] = {
+                "http.method": request.method,
+                "http.route": route_path,
+                "http.status_code": status_code,
+            }
 
-        return response
+            request_counter.add(1, attrs)
+            duration_histogram.record(elapsed_ms, attrs)

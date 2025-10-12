@@ -12,7 +12,7 @@
 	} from '$lib/constants';
 	import { WEBUI_NAME, config, user, models, settings } from '$lib/stores';
 
-	import { chatCompletion, generateOpenAIChatCompletion } from '$lib/apis/openai';
+	import { chatCompletion } from '$lib/apis/openai';
 
 	import { splitStream } from '$lib/utils';
 	import Collapsible from '../common/Collapsible.svelte';
@@ -296,7 +296,7 @@
 					<div
 						class="flex justify-between flex-col sm:flex-row items-start sm:items-center gap-2 mt-2"
 					>
-						<div class="flex-1 shrink-0">
+						<div class="shrink-0">
 							<button
 								type="button"
 								class="px-3.5 py-1.5 text-sm font-medium bg-gray-50 hover:bg-gray-100 text-gray-900 dark:bg-gray-850 dark:hover:bg-gray-800 dark:text-gray-200 transition rounded-lg shrink-0 {($settings?.highContrastMode ??

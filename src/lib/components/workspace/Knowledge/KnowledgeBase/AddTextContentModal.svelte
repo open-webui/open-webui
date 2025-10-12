@@ -14,7 +14,7 @@
 	import VoiceRecording from '$lib/components/chat/MessageInput/VoiceRecording.svelte';
 	export let show = false;
 
-	let name = 'Untitled';
+	let name = $i18n.t('Untitled');
 	let content = '';
 
 	let voiceInput = false;

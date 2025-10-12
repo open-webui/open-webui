@@ -1,11 +1,23 @@
 <script lang="ts">
-	export let className = 'w-4 h-4';
+	export let className = 'size-4';
+	export let strokeWidth = '1.5';
 </script>
 
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" class={className}>
-	<path
-		fill-rule="evenodd"
-		d="M15.75 4.5a3 3 0 1 1 .825 2.066l-8.421 4.679a3.002 3.002 0 0 1 0 1.51l8.421 4.679a3 3 0 1 1-.729 1.31l-8.421-4.678a3 3 0 1 1 0-4.132l8.421-4.679a3 3 0 0 1-.096-.755Z"
-		clip-rule="evenodd"
-	/>
-</svg>
+<svg
+	xmlns="http://www.w3.org/2000/svg"
+	fill="none"
+	viewBox="0 0 24 24"
+	stroke-width={strokeWidth}
+	stroke="currentColor"
+	aria-hidden="true"
+	class={className}
+	><path
+		d="M20 13V19C20 20.1046 19.1046 21 18 21H6C4.89543 21 4 20.1046 4 19V13"
+		stroke-linecap="round"
+		stroke-linejoin="round"
+	></path><path
+		d="M12 15V3M12 3L8.5 6.5M12 3L15.5 6.5"
+		stroke-linecap="round"
+		stroke-linejoin="round"
+	></path></svg
+>

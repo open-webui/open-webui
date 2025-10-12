@@ -27,7 +27,7 @@ from sqlalchemy.ext.mutable import MutableDict
 from sqlalchemy.exc import NoSuchTableError
 
 
-from open_webui.retrieval.vector.utils import stringify_metadata
+from open_webui.retrieval.vector.utils import process_metadata
 from open_webui.retrieval.vector.main import (
     VectorDBBase,
     VectorItem,
@@ -37,6 +37,7 @@ from open_webui.retrieval.vector.main import (
 from open_webui.config import (
     PGVECTOR_DB_URL,
     PGVECTOR_INITIALIZE_MAX_VECTOR_LENGTH,
+    PGVECTOR_CREATE_EXTENSION,
     PGVECTOR_PGCRYPTO,
     PGVECTOR_PGCRYPTO_KEY,
     PGVECTOR_POOL_SIZE,
@@ -112,18 +113,19 @@ class PgvectorClient(VectorDBBase):
         try:
             # Ensure the pgvector extension is available
             # Use a conditional check to avoid permission issues on Azure PostgreSQL
-            self.session.execute(
-                text(
-                    """
-                DO $$
-                BEGIN
-                   IF NOT EXISTS (SELECT 1 FROM pg_extension WHERE extname = 'vector') THEN
-                      CREATE EXTENSION IF NOT EXISTS vector;
-                   END IF;
-                END $$;
-            """
+            if PGVECTOR_CREATE_EXTENSION:
+                self.session.execute(
+                    text(
+                        """
+                    DO $$
+                    BEGIN
+                    IF NOT EXISTS (SELECT 1 FROM pg_extension WHERE extname = 'vector') THEN
+                        CREATE EXTENSION IF NOT EXISTS vector;
+                    END IF;
+                    END $$;
+                """
+                    )
                 )
-            )
 
             if PGVECTOR_PGCRYPTO:
                 # Ensure the pgcrypto extension is available for encryption
@@ -263,7 +265,7 @@ class PgvectorClient(VectorDBBase):
                         vector=vector,
                         collection_name=collection_name,
                         text=item["text"],
-                        vmetadata=stringify_metadata(item["metadata"]),
+                        vmetadata=process_metadata(item["metadata"]),
                     )
                     new_items.append(new_chunk)
                 self.session.bulk_save_objects(new_items)
@@ -321,7 +323,7 @@ class PgvectorClient(VectorDBBase):
                     if existing:
                         existing.vector = vector
                         existing.text = item["text"]
-                        existing.vmetadata = stringify_metadata(item["metadata"])
+                        existing.vmetadata = process_metadata(item["metadata"])
                         existing.collection_name = (
                             collection_name  # Update collection_name if necessary
                         )
@@ -331,7 +333,7 @@ class PgvectorClient(VectorDBBase):
                             vector=vector,
                             collection_name=collection_name,
                             text=item["text"],
-                            vmetadata=stringify_metadata(item["metadata"]),
+                            vmetadata=process_metadata(item["metadata"]),
                         )
                         self.session.add(new_chunk)
                 self.session.commit()

@@ -12,7 +12,8 @@
 		deleteAllModels,
 		getBaseModels,
 		toggleModelById,
-		updateModelById
+		updateModelById,
+		importModels
 	} from '$lib/apis/models';
 	import { copyToClipboard } from '$lib/utils';
 	import { page } from '$app/stores';
@@ -30,7 +31,7 @@
 	import Cog6 from '$lib/components/icons/Cog6.svelte';
 	import ConfigureModelsModal from './Models/ConfigureModelsModal.svelte';
 	import Wrench from '$lib/components/icons/Wrench.svelte';
-	import ArrowDownTray from '$lib/components/icons/ArrowDownTray.svelte';
+	import Download from '$lib/components/icons/Download.svelte';
 	import ManageModelsModal from './Models/ManageModelsModal.svelte';
 	import ModelMenu from '$lib/components/admin/Settings/Models/ModelMenu.svelte';
 	import EllipsisHorizontal from '$lib/components/icons/EllipsisHorizontal.svelte';
@@ -40,6 +41,7 @@
 
 	let shiftKey = false;
 
+	let modelsImportInProgress = false;
 	let importFiles;
 	let modelsImportInputElement: HTMLInputElement;
 
@@ -265,7 +267,7 @@
 								showManageModal = true;
 							}}
 						>
-							<ArrowDownTray />
+							<Download />
 						</button>
 					</Tooltip>
 
@@ -464,47 +466,41 @@
 						accept=".json"
 						hidden
 						on:change={() => {
-							console.log(importFiles);
+							if (importFiles.length > 0) {
+								const reader = new FileReader();
+								reader.onload = async (event) => {
+									try {
+										const models = JSON.parse(String(event.target.result));
+										modelsImportInProgress = true;
+										const res = await importModels(localStorage.token, models);
+										modelsImportInProgress = false;
 
-							let reader = new FileReader();
-							reader.onload = async (event) => {
-								let savedModels = JSON.parse(event.target.result);
-								console.log(savedModels);
-
-								for (const model of savedModels) {
-									if (Object.keys(model).includes('base_model_id')) {
-										if (model.base_model_id === null) {
-											upsertModelHandler(model);
+										if (res) {
+											toast.success($i18n.t('Models imported successfully'));
+											await init();
+										} else {
+											toast.error($i18n.t('Failed to import models'));
 										}
-									} else {
-										if (model?.info ?? false) {
-											if (model.info.base_model_id === null) {
-												upsertModelHandler(model.info);
-											}
-										}
+									} catch (e) {
+										toast.error($i18n.t('Invalid JSON file'));
+										console.error(e);
 									}
-								}
-
-								await _models.set(
-									await getModels(
-										localStorage.token,
-										$config?.features?.enable_direct_connections &&
-											($settings?.directConnections ?? null)
-									)
-								);
-								init();
-							};
-
-							reader.readAsText(importFiles[0]);
+								};
+								reader.readAsText(importFiles[0]);
+							}
 						}}
 					/>
 
 					<button
 						class="flex text-xs items-center space-x-1 px-3 py-1.5 rounded-xl bg-gray-50 hover:bg-gray-100 dark:bg-gray-800 dark:hover:bg-gray-700 dark:text-gray-200 transition"
+						disabled={modelsImportInProgress}
 						on:click={() => {
 							modelsImportInputElement.click();
 						}}
 					>
+						{#if modelsImportInProgress}
+							<Spinner className="size-3" />
+						{/if}
 						<div class=" self-center mr-2 font-medium line-clamp-1">
 							{$i18n.t('Import Presets')}
 						</div>

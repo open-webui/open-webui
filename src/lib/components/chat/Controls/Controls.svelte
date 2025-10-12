@@ -45,6 +45,7 @@
 								type={file.type}
 								size={file?.size}
 								dismissible={true}
+								small={true}
 								on:dismiss={() => {
 									// Remove the file from the chatFiles array
 

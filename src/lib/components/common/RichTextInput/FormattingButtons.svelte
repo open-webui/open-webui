@@ -22,7 +22,7 @@
 </script>
 
 <div
-	class="flex gap-0.5 p-0.5 rounded-lg shadow-lg bg-white text-gray-800 dark:text-white dark:bg-gray-800 min-w-fit"
+	class="flex gap-0.5 p-0.5 rounded-xl shadow-lg bg-white text-gray-800 dark:text-white dark:bg-gray-850 min-w-fit border border-gray-100 dark:border-gray-800"
 >
 	<Tooltip placement="top" content={$i18n.t('H1')}>
 		<button

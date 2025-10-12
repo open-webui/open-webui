@@ -6,6 +6,7 @@ import requests
 import hashlib
 from concurrent.futures import ThreadPoolExecutor
 import time
+import re
 
 from urllib.parse import quote
 from huggingface_hub import snapshot_download
@@ -16,13 +17,20 @@ from langchain_core.documents import Document
 from open_webui.config import VECTOR_DB
 from open_webui.retrieval.vector.factory import VECTOR_DB_CLIENT
 
+
 from open_webui.models.users import UserModel
 from open_webui.models.files import Files
 from open_webui.models.knowledge import Knowledges
+
+from open_webui.models.chats import Chats
 from open_webui.models.notes import Notes
 
 from open_webui.retrieval.vector.main import GetResult
 from open_webui.utils.access_control import has_access
+from open_webui.utils.misc import get_message_list
+
+from open_webui.retrieval.web.utils import get_web_loader
+from open_webui.retrieval.loaders.youtube import YoutubeLoader
 
 
 from open_webui.env import (
@@ -44,6 +52,33 @@ from typing import Any
 
 from langchain_core.callbacks import CallbackManagerForRetrieverRun
 from langchain_core.retrievers import BaseRetriever
+
+
+def is_youtube_url(url: str) -> bool:
+    youtube_regex = r"^(https?://)?(www\.)?(youtube\.com|youtu\.be)/.+$"
+    return re.match(youtube_regex, url) is not None
+
+
+def get_loader(request, url: str):
+    if is_youtube_url(url):
+        return YoutubeLoader(
+            url,
+            language=request.app.state.config.YOUTUBE_LOADER_LANGUAGE,
+            proxy_url=request.app.state.config.YOUTUBE_LOADER_PROXY_URL,
+        )
+    else:
+        return get_web_loader(
+            url,
+            verify_ssl=request.app.state.config.ENABLE_WEB_LOADER_SSL_VERIFICATION,
+            requests_per_second=request.app.state.config.WEB_LOADER_CONCURRENT_REQUESTS,
+        )
+
+
+def get_content_from_url(request, url: str) -> str:
+    loader = get_loader(request, url)
+    docs = loader.load()
+    content = " ".join([doc.page_content for doc in docs])
+    return content, docs
 
 
 class VectorSearchRetriever(BaseRetriever):
@@ -124,18 +159,23 @@ def query_doc_with_hybrid_search(
     hybrid_bm25_weight: float,
 ) -> dict:
     try:
-        if not collection_result.documents[0]:
+        if (
+            not collection_result
+            or not hasattr(collection_result, "documents")
+            or not collection_result.documents
+            or len(collection_result.documents) == 0
+            or not collection_result.documents[0]
+        ):
             log.warning(f"query_doc_with_hybrid_search:no_docs {collection_name}")
             return {"documents": [], "metadatas": [], "distances": []}
 
-        # BM_25 required only if weight is greater than 0
-        if hybrid_bm25_weight > 0:
-            log.debug(f"query_doc_with_hybrid_search:doc {collection_name}")
-            bm25_retriever = BM25Retriever.from_texts(
-                texts=collection_result.documents[0],
-                metadatas=collection_result.metadatas[0],
-            )
-            bm25_retriever.k = k
+        log.debug(f"query_doc_with_hybrid_search:doc {collection_name}")
+
+        bm25_retriever = BM25Retriever.from_texts(
+            texts=collection_result.documents[0],
+            metadatas=collection_result.metadatas[0],
+        )
+        bm25_retriever.k = k
 
         vector_search_retriever = VectorSearchRetriever(
             collection_name=collection_name,
@@ -180,7 +220,11 @@ def query_doc_with_hybrid_search(
                 zip(distances, metadatas, documents), key=lambda x: x[0], reverse=True
             )
             sorted_items = sorted_items[:k]
-            distances, documents, metadatas = map(list, zip(*sorted_items))
+
+            if sorted_items:
+                distances, documents, metadatas = map(list, zip(*sorted_items))
+            else:
+                distances, documents, metadatas = [], [], []
 
         result = {
             "distances": [distances],
@@ -343,22 +387,18 @@ def query_collection_with_hybrid_search(
     # Fetch collection data once per collection sequentially
     # Avoid fetching the same data multiple times later
     collection_results = {}
-    # Only retrieve entire collection if bm_25 calculation is required
-    if hybrid_bm25_weight > 0:
-        for collection_name in collection_names:
-            try:
-                log.debug(
-                    f"query_collection_with_hybrid_search:VECTOR_DB_CLIENT.get:collection {collection_name}"
-                )
-                collection_results[collection_name] = VECTOR_DB_CLIENT.get(
-                    collection_name=collection_name
-                )
-            except Exception as e:
-                log.exception(f"Failed to fetch collection {collection_name}: {e}")
-                collection_results[collection_name] = None
-    else:
-        for collection_name in collection_names:
-            collection_results[collection_name] = []
+    for collection_name in collection_names:
+        try:
+            log.debug(
+                f"query_collection_with_hybrid_search:VECTOR_DB_CLIENT.get:collection {collection_name}"
+            )
+            collection_results[collection_name] = VECTOR_DB_CLIENT.get(
+                collection_name=collection_name
+            )
+        except Exception as e:
+            log.exception(f"Failed to fetch collection {collection_name}: {e}")
+            collection_results[collection_name] = None
+
     log.info(
         f"Starting hybrid search for {len(queries)} queries in {len(collection_names)} collections..."
     )
@@ -437,13 +477,14 @@ def get_embedding_function(
             if isinstance(query, list):
                 embeddings = []
                 for i in range(0, len(query), embedding_batch_size):
-                    embeddings.extend(
-                        func(
-                            query[i : i + embedding_batch_size],
-                            prefix=prefix,
-                            user=user,
-                        )
+                    batch_embeddings = func(
+                        query[i : i + embedding_batch_size],
+                        prefix=prefix,
+                        user=user,
                     )
+
+                    if isinstance(batch_embeddings, list):
+                        embeddings.extend(batch_embeddings)
                 return embeddings
             else:
                 return func(query, prefix, user)
@@ -493,26 +534,39 @@ def get_sources_from_items(
 
         if item.get("type") == "text":
             # Raw Text
-            # Used during temporary chat file uploads
+            # Used during temporary chat file uploads or web page & youtube attachements
 
-            if item.get("file"):
-                # if item has file data, use it
-                query_result = {
-                    "documents": [
-                        [item.get("file", {}).get("data", {}).get("content")]
-                    ],
-                    "metadatas": [
-                        [item.get("file", {}).get("data", {}).get("meta", {})]
-                    ],
-                }
-            else:
-                # Fallback to item content
-                query_result = {
-                    "documents": [[item.get("content")]],
-                    "metadatas": [
-                        [{"file_id": item.get("id"), "name": item.get("name")}]
-                    ],
-                }
+            if item.get("context") == "full":
+                if item.get("file"):
+                    # if item has file data, use it
+                    query_result = {
+                        "documents": [
+                            [item.get("file", {}).get("data", {}).get("content")]
+                        ],
+                        "metadatas": [[item.get("file", {}).get("meta", {})]],
+                    }
+
+            if query_result is None:
+                # Fallback
+                if item.get("collection_name"):
+                    # If item has a collection name, use it
+                    collection_names.append(item.get("collection_name"))
+                elif item.get("file"):
+                    # If item has file data, use it
+                    query_result = {
+                        "documents": [
+                            [item.get("file", {}).get("data", {}).get("content")]
+                        ],
+                        "metadatas": [[item.get("file", {}).get("meta", {})]],
+                    }
+                else:
+                    # Fallback to item content
+                    query_result = {
+                        "documents": [[item.get("content")]],
+                        "metadatas": [
+                            [{"file_id": item.get("id"), "name": item.get("name")}]
+                        ],
+                    }
 
         elif item.get("type") == "note":
             # Note Attached
@@ -529,6 +583,37 @@ def get_sources_from_items(
                     "metadatas": [[{"file_id": note.id, "name": note.title}]],
                 }
 
+        elif item.get("type") == "chat":
+            # Chat Attached
+            chat = Chats.get_chat_by_id(item.get("id"))
+
+            if chat and (user.role == "admin" or chat.user_id == user.id):
+                messages_map = chat.chat.get("history", {}).get("messages", {})
+                message_id = chat.chat.get("history", {}).get("currentId")
+
+                if messages_map and message_id:
+                    # Reconstruct the message list in order
+                    message_list = get_message_list(messages_map, message_id)
+                    message_history = "\n".join(
+                        [
+                            f"#### {m.get('role', 'user').capitalize()}\n{m.get('content')}\n"
+                            for m in message_list
+                        ]
+                    )
+
+                    # User has access to the chat
+                    query_result = {
+                        "documents": [[message_history]],
+                        "metadatas": [[{"file_id": chat.id, "name": chat.title}]],
+                    }
+
+        elif item.get("type") == "url":
+            content, docs = get_content_from_url(request, item.get("url"))
+            if docs:
+                query_result = {
+                    "documents": [[content]],
+                    "metadatas": [[{"url": item.get("url"), "name": item.get("url")}]],
+                }
         elif item.get("type") == "file":
             if (
                 item.get("context") == "full"
@@ -585,6 +670,7 @@ def get_sources_from_items(
 
                 if knowledge_base and (
                     user.role == "admin"
+                    or knowledge_base.user_id == user.id
                     or has_access(user.id, "read", knowledge_base.access_control)
                 ):
 
@@ -693,7 +779,6 @@ def get_sources_from_items(
                     sources.append(source)
         except Exception as e:
             log.exception(e)
-
     return sources
 
 

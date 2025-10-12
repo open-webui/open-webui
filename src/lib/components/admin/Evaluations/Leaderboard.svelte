@@ -1,9 +1,4 @@
 <script lang="ts">
-	import * as ort from 'onnxruntime-web';
-	import { env, AutoModel, AutoTokenizer } from '@huggingface/transformers';
-
-	env.backends.onnx.wasm.wasmPaths = '/wasm/';
-
 	import { onMount, getContext } from 'svelte';
 	import { models } from '$lib/stores';
 
@@ -237,6 +232,11 @@
 	//////////////////////
 
 	const loadEmbeddingModel = async () => {
+		const { env, AutoModel, AutoTokenizer } = await import('@huggingface/transformers');
+		if (env.backends.onnx.wasm) {
+			env.backends.onnx.wasm.wasmPaths = '/wasm/';
+		}
+
 		// Check if the tokenizer and model are already loaded and stored in the window object
 		if (!window.tokenizer) {
 			window.tokenizer = await AutoTokenizer.from_pretrained(EMBEDDING_MODEL);
@@ -337,7 +337,7 @@
 />
 
 <div
-	class="pt-0.5 pb-2 gap-1 flex flex-col md:flex-row justify-between sticky top-0 z-10 bg-white dark:bg-gray-900"
+	class="pt-0.5 pb-1 gap-1 flex flex-col md:flex-row justify-between sticky top-0 z-10 bg-white dark:bg-gray-900"
 >
 	<div class="flex md:self-center text-lg font-medium px-0.5 shrink-0 items-center">
 		<div class=" gap-1">
@@ -370,9 +370,7 @@
 	</div>
 </div>
 
-<div
-	class="scrollbar-hidden relative whitespace-nowrap overflow-x-auto max-w-full rounded-sm pt-0.5"
->
+<div class="scrollbar-hidden relative whitespace-nowrap overflow-x-auto max-w-full rounded-sm">
 	{#if loadingLeaderboard}
 		<div class=" absolute top-0 bottom-0 left-0 right-0 flex">
 			<div class="m-auto">
@@ -386,17 +384,15 @@
 		</div>
 	{:else}
 		<table
-			class="w-full text-sm text-left text-gray-500 dark:text-gray-400 table-auto max-w-full rounded {loadingLeaderboard
+			class="w-full text-sm text-left text-gray-500 dark:text-gray-400 table-auto max-w-full {loadingLeaderboard
 				? 'opacity-20'
 				: ''}"
 		>
-			<thead
-				class="text-xs text-gray-700 uppercase bg-gray-50 dark:bg-gray-850 dark:text-gray-400 -translate-y-0.5"
-			>
-				<tr class="">
+			<thead class="text-xs text-gray-800 uppercase bg-transparent dark:text-gray-200">
+				<tr class=" border-b-[1.5px] border-gray-50 dark:border-gray-850">
 					<th
 						scope="col"
-						class="px-3 py-1.5 cursor-pointer select-none w-3"
+						class="px-2.5 py-2 cursor-pointer select-none w-3"
 						on:click={() => setSortKey('rating')}
 					>
 						<div class="flex gap-1.5 items-center">
@@ -418,7 +414,7 @@
 					</th>
 					<th
 						scope="col"
-						class="px-3 py-1.5 cursor-pointer select-none"
+						class="px-2.5 py-2 cursor-pointer select-none"
 						on:click={() => setSortKey('name')}
 					>
 						<div class="flex gap-1.5 items-center">
@@ -440,7 +436,7 @@
 					</th>
 					<th
 						scope="col"
-						class="px-3 py-1.5 text-right cursor-pointer select-none w-fit"
+						class="px-2.5 py-2 text-right cursor-pointer select-none w-fit"
 						on:click={() => setSortKey('rating')}
 					>
 						<div class="flex gap-1.5 items-center justify-end">
@@ -462,7 +458,7 @@
 					</th>
 					<th
 						scope="col"
-						class="px-3 py-1.5 text-right cursor-pointer select-none w-5"
+						class="px-2.5 py-2 text-right cursor-pointer select-none w-5"
 						on:click={() => setSortKey('won')}
 					>
 						<div class="flex gap-1.5 items-center justify-end">
@@ -484,7 +480,7 @@
 					</th>
 					<th
 						scope="col"
-						class="px-3 py-1.5 text-right cursor-pointer select-none w-5"
+						class="px-2.5 py-2 text-right cursor-pointer select-none w-5"
 						on:click={() => setSortKey('lost')}
 					>
 						<div class="flex gap-1.5 items-center justify-end">

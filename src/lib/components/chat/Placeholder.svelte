@@ -7,6 +7,9 @@
 
 	const dispatch = createEventDispatcher();
 
+	import { getChatList } from '$lib/apis/chats';
+	import { updateFolderById } from '$lib/apis/folders';
+
 	import {
 		config,
 		user,
@@ -25,7 +28,6 @@
 	import MessageInput from './MessageInput.svelte';
 	import FolderPlaceholder from './Placeholder/FolderPlaceholder.svelte';
 	import FolderTitle from './Placeholder/FolderTitle.svelte';
-	import { getChatList } from '$lib/apis/chats';
 
 	const i18n = getContext('i18n');
 
@@ -58,7 +60,6 @@
 	export let toolServers = [];
 
 	let models = [];
-
 	let selectedModelIdx = 0;
 
 	$: if (selectedModels.length > 0) {
@@ -66,8 +67,6 @@
 	}
 
 	$: models = selectedModels.map((id) => $_models.find((m) => m.id === id));
-
-	onMount(() => {});
 </script>
 
 <div class="m-auto w-full max-w-6xl px-2 @2xl:px-20 translate-y-6 py-24 text-center">
@@ -77,7 +76,7 @@
 			className="w-full flex justify-center mb-0.5"
 			placement="top"
 		>
-			<div class="flex items-center gap-2 text-gray-500 font-medium text-base my-2 w-fit">
+			<div class="flex items-center gap-2 text-gray-500 text-base my-2 w-fit">
 				<EyeSlash strokeWidth="2.5" className="size-4" />{$i18n.t('Temporary Chat')}
 			</div>
 		</Tooltip>
@@ -91,8 +90,6 @@
 				<FolderTitle
 					folder={$selectedFolder}
 					onUpdate={async (folder) => {
-						selectedFolder.set(folder);
-
 						await chats.set(await getChatList(localStorage.token, $currentChatPage));
 						currentChatPage.set(1);
 					}}

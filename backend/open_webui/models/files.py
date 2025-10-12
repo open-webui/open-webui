@@ -130,6 +130,17 @@ class FilesTable:
             except Exception:
                 return None
 
+    def get_file_by_id_and_user_id(self, id: str, user_id: str) -> Optional[FileModel]:
+        with get_db() as db:
+            try:
+                file = db.query(File).filter_by(id=id, user_id=user_id).first()
+                if file:
+                    return FileModel.model_validate(file)
+                else:
+                    return None
+            except Exception:
+                return None
+
     def get_file_metadata_by_id(self, id: str) -> Optional[FileMetadataResponse]:
         with get_db() as db:
             try:
@@ -146,6 +157,15 @@ class FilesTable:
     def get_files(self) -> list[FileModel]:
         with get_db() as db:
             return [FileModel.model_validate(file) for file in db.query(File).all()]
+
+    def check_access_by_user_id(self, id, user_id, permission="write") -> bool:
+        file = self.get_file_by_id(id)
+        if not file:
+            return False
+        if file.user_id == user_id:
+            return True
+        # Implement additional access control logic here as needed
+        return False
 
     def get_files_by_ids(self, ids: list[str]) -> list[FileModel]:
         with get_db() as db:
@@ -166,7 +186,9 @@ class FilesTable:
                     created_at=file.created_at,
                     updated_at=file.updated_at,
                 )
-                for file in db.query(File)
+                for file in db.query(
+                    File.id, File.meta, File.created_at, File.updated_at
+                )
                 .filter(File.id.in_(ids))
                 .order_by(File.updated_at.desc())
                 .all()

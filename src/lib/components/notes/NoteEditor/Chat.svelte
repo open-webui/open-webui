@@ -43,7 +43,7 @@
 	} from '$lib/constants';
 	import { WEBUI_NAME, config, user, models, settings } from '$lib/stores';
 
-	import { chatCompletion, generateOpenAIChatCompletion } from '$lib/apis/openai';
+	import { chatCompletion } from '$lib/apis/openai';
 
 	import { splitStream } from '$lib/utils';
 
@@ -327,8 +327,8 @@ Based on the user's instruction, update and enhance the existing notes or select
 	});
 </script>
 
-<div class="flex items-center mb-1.5 pt-1.5">
-	<div class=" -translate-x-1.5 flex items-center">
+<div class="flex items-center mb-1.5 pt-1.5 px-2.5">
+	<div class="flex items-center mr-1">
 		<button
 			class="p-0.5 bg-transparent transition rounded-lg"
 			on:click={() => {
@@ -358,7 +358,7 @@ Based on the user's instruction, update and enhance the existing notes or select
 	</div>
 </div>
 
-<div class="flex flex-col items-center mb-2 flex-1 @container">
+<div class="flex flex-col items-center flex-1 @container px-2.5">
 	<div class=" flex flex-col justify-between w-full overflow-y-auto h-full">
 		<div class="mx-auto w-full md:px-0 h-full relative">
 			<div class=" flex flex-col h-full">
@@ -375,7 +375,7 @@ Based on the user's instruction, update and enhance the existing notes or select
 					</div>
 				</div>
 
-				<div class=" pb-2">
+				<div class=" pb-[1rem]">
 					{#if selectedContent}
 						<div class="text-xs rounded-xl px-3.5 py-3 w-full markdown-prose-xs">
 							<blockquote>
@@ -423,7 +423,7 @@ Based on the user's instruction, update and enhance the existing notes or select
 									class=" bg-transparent rounded-lg py-1 px-2 -mx-0.5 text-sm outline-hidden w-full text-right pr-5"
 									bind:value={selectedModelId}
 								>
-									{#each $models as model}
+									{#each $models.filter((model) => !(model?.info?.meta?.hidden ?? false)) as model}
 										<option value={model.id} class="bg-gray-50 dark:bg-gray-700"
 											>{model.name}</option
 										>

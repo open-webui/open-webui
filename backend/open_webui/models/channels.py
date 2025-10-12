@@ -57,6 +57,10 @@ class ChannelModel(BaseModel):
 ####################
 
 
+class ChannelResponse(ChannelModel):
+    write_access: bool = False
+
+
 class ChannelForm(BaseModel):
     name: str
     description: Optional[str] = None

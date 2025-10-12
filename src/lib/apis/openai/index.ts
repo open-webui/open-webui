@@ -372,6 +372,7 @@ export const generateOpenAIChatCompletion = async (
 			Authorization: `Bearer ${token}`,
 			'Content-Type': 'application/json'
 		},
+		credentials: 'include',
 		body: JSON.stringify(body)
 	})
 		.then(async (res) => {

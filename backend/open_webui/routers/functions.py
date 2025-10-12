@@ -10,6 +10,8 @@ from open_webui.models.functions import (
     FunctionForm,
     FunctionModel,
     FunctionResponse,
+    FunctionUserResponse,
+    FunctionWithValvesModel,
     Functions,
 )
 from open_webui.utils.plugin import (
@@ -41,14 +43,19 @@ async def get_functions(user=Depends(get_verified_user)):
     return Functions.get_functions()
 
 
+@router.get("/list", response_model=list[FunctionUserResponse])
+async def get_function_list(user=Depends(get_admin_user)):
+    return Functions.get_function_list()
+
+
 ############################
 # ExportFunctions
 ############################
 
 
-@router.get("/export", response_model=list[FunctionModel])
-async def get_functions(user=Depends(get_admin_user)):
-    return Functions.get_functions()
+@router.get("/export", response_model=list[FunctionModel | FunctionWithValvesModel])
+async def get_functions(include_valves: bool = False, user=Depends(get_admin_user)):
+    return Functions.get_functions(include_valves=include_valves)
 
 
 ############################
@@ -132,10 +139,10 @@ async def load_function_from_url(
 
 
 class SyncFunctionsForm(BaseModel):
-    functions: list[FunctionModel] = []
+    functions: list[FunctionWithValvesModel] = []
 
 
-@router.post("/sync", response_model=list[FunctionModel])
+@router.post("/sync", response_model=list[FunctionWithValvesModel])
 async def sync_functions(
     request: Request, form_data: SyncFunctionsForm, user=Depends(get_admin_user)
 ):
@@ -146,6 +153,18 @@ async def sync_functions(
                 function.id,
                 content=function.content,
             )
+
+            if hasattr(function_module, "Valves") and function.valves:
+                Valves = function_module.Valves
+                try:
+                    Valves(
+                        **{k: v for k, v in function.valves.items() if v is not None}
+                    )
+                except Exception as e:
+                    log.exception(
+                        f"Error validating valves for function {function.id}: {e}"
+                    )
+                    raise e
 
         return Functions.sync_functions(user.id, form_data.functions)
     except Exception as e:
@@ -190,6 +209,9 @@ async def create_new_function(
 
             function_cache_dir = CACHE_DIR / "functions" / form_data.id
             function_cache_dir.mkdir(parents=True, exist_ok=True)
+
+            if function_type == "filter" and getattr(function_module, "toggle", None):
+                Functions.update_function_metadata_by_id(id, {"toggle": True})
 
             if function:
                 return function
@@ -307,6 +329,9 @@ async def update_function_by_id(
 
         function = Functions.update_function_by_id(id, updated)
 
+        if function_type == "filter" and getattr(function_module, "toggle", None):
+            Functions.update_function_metadata_by_id(id, {"toggle": True})
+
         if function:
             return function
         else:
@@ -412,8 +437,10 @@ async def update_function_valves_by_id(
             try:
                 form_data = {k: v for k, v in form_data.items() if v is not None}
                 valves = Valves(**form_data)
-                Functions.update_function_valves_by_id(id, valves.model_dump())
-                return valves.model_dump()
+
+                valves_dict = valves.model_dump(exclude_unset=True)
+                Functions.update_function_valves_by_id(id, valves_dict)
+                return valves_dict
             except Exception as e:
                 log.exception(f"Error updating function values by id {id}: {e}")
                 raise HTTPException(
@@ -495,10 +522,11 @@ async def update_function_user_valves_by_id(
             try:
                 form_data = {k: v for k, v in form_data.items() if v is not None}
                 user_valves = UserValves(**form_data)
+                user_valves_dict = user_valves.model_dump(exclude_unset=True)
                 Functions.update_user_valves_by_id_and_user_id(
-                    id, user.id, user_valves.model_dump()
+                    id, user.id, user_valves_dict
                 )
-                return user_valves.model_dump()
+                return user_valves_dict
             except Exception as e:
                 log.exception(f"Error updating function user valves by id {id}: {e}")
                 raise HTTPException(
