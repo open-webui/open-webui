@@ -345,16 +345,21 @@ PYEOF
 
     log_info "Using host_id: $HOST_ID"
 
+    # Build config JSON with SQLite path
+    CONFIG_JSON="{\"sqlite_path\": \"${SQLITE_PATH}\"}"
+
     REGISTER_SQL="
     INSERT INTO sync_metadata.client_deployments
-    (deployment_id, client_name, host_id, sqlite_path, sync_enabled, sync_interval, last_sync_status)
+    (deployment_id, client_name, container_name, host_id, database_type, sync_enabled, sync_interval, last_sync_status, status, config)
     VALUES
-    (gen_random_uuid(), '${CLIENT_NAME}', '${HOST_ID}'::uuid, '${SQLITE_PATH}', true, 300, 'pending')
+    (gen_random_uuid(), '${CLIENT_NAME}', '${CONTAINER_NAME}', '${HOST_ID}'::uuid, 'postgresql', true, 300, 'pending', 'active', '${CONFIG_JSON}'::jsonb)
     ON CONFLICT (client_name) DO UPDATE
     SET
         host_id = EXCLUDED.host_id,
-        sqlite_path = EXCLUDED.sqlite_path,
+        container_name = EXCLUDED.container_name,
         sync_enabled = true,
+        status = 'active',
+        config = EXCLUDED.config,
         updated_at = NOW()
     RETURNING deployment_id, client_name, sync_enabled;
     "
