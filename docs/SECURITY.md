@@ -63,9 +63,9 @@ We appreciate the community's interest in identifying potential vulnerabilities.
 9. **CVSS Scoring Accuracy:** If you include a CVSS score with your report, it must accurately reflect the vulnerability according to CVSS methodology. Common errors include 1) rating PR:N (None) when authentication is required, 2) scoring hypothetical attack chains instead of the actual vulnerability, or 3) inflating severity without evidence. **We will adjust inaccurate CVSS scores.** Intentionally inflated scores may result in report rejection.
 
 > [!WARNING]
-> **Using CVE Precedents:** If you cite other CVEs to support your report, ensure they are genuinely comparable in vulnerability type, threat model, and attack vector. Citing CVEs from **different product categories**, different vulnerability classes, or different deployment models will lead us to suspect the use of AI in your report.
+> **Using CVE Precedents:** If you cite other CVEs to support your report, ensure they are **genuinely comparable** in vulnerability type, threat model, and attack vector. Citing CVEs from different product categories, different vulnerability classes or different deployment models will lead us to suspect the use of AI in your report.
 
-11. **Admin Actions Are Out of Scope:** Vulnerabilities that require an administrator to actively perform unsafe actions are **not considered valid vulnerabilities**. Admins have full system control and are expected to understand the security implications of their actions and configurations. This includes but is not limited to: adding malicious external servers (models, tools, webhooks), pasting untrusted code into Functions/Tools, or intentionally weakening security settings. **Reports requiring admin negligence or social engineering of admins will be rejected.** This is an intentional design tradeoff that enables Open WebUI's flexibility and customizability.
+11. **Admin Actions Are Out of Scope:** Vulnerabilities that require an administrator to actively perform unsafe actions are **not considered valid vulnerabilities**. Admins have full system control and are expected to understand the security implications of their actions and configurations. This includes but is not limited to: adding malicious external servers (models, tools, webhooks), pasting untrusted code into Functions/Tools, or intentionally weakening security settings. **Reports requiring admin negligence or social engineering of admins may be rejected.**
 
 12. **AI report transparency:** Due to an extreme spike in AI-aided vulnerability reports **YOU MUST DISCLOSE if AI was used in any capacity** - whether for writing the report, generating the PoC, or identifying the vulnerability. If AI helped you in any way shape or form in the creation of the report, PoC or finding the vulnerability, you MUST disclose it.
 
@@ -87,12 +87,27 @@ We appreciate the community's interest in identifying potential vulnerabilities.
 
 If you want to report a vulnerability and can meet the outlined requirements, [open a vulnerability report here](https://github.com/open-webui/open-webui/security/advisories/new).
 
-## Product Security
+## Product Security And For Non-Vulnerability Security Concerns:
+
+If your concern does not meet the vulnerability requirements outlined above, such as:
+- Suggestions for better default configuration values
+- Security hardening recommendations
+- Deployment best practices guidance
+- Unclear configuration instructions
+- Need for additional security documentation
+- Feature requests for optional security enhancements (2FA, audit logging, etc.)
+- General security questions about production deployment
+
+**then use one of the following channels instead:**
+- **Documentation issues/improvement ideas:** Open an issue on our [Documentation Repository](https://github.com/open-webui/docs)
+- **Feature requests:** Create a discussion in [GitHub Discussions - Ideas](https://github.com/open-webui/open-webui/discussions/) to discuss with the community if this feature request is wanted by multiple people
+- **Configuration help:** Ask the community for help and guidance on our [Discord Server](https://discord.gg/5rJgQTnV4s) or on [Reddit](https://www.reddit.com/r/OpenWebUI/)
+- **General issues:** Use our [Issue Tracker](https://github.com/open-webui/open-webui/issues)
 
 We regularly audit our internal processes and system architecture for vulnerabilities using a combination of automated and manual testing techniques. We are also planning to implement SAST and SCA scans in our project soon.
 
-For immediate concerns or detailed reports that meet our guidelines, please create an issue in our [issue tracker](/open-webui/open-webui/issues) or contact us on [Discord](https://discord.gg/5rJgQTnV4s).
+For any other immediate concerns, please create an issue in our [issue tracker](/open-webui/open-webui/issues) or contact our team on [Discord](https://discord.gg/5rJgQTnV4s).
 
 ---
 
-_Last updated on **2025-10-09**._
+_Last updated on **2025-10-12**._
