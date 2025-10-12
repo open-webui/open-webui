@@ -103,18 +103,34 @@ check_container() {
 
 # Execute SQL via Python in sync container
 execute_sql() {
-    local sql="$1"
-    local connection_url="${2:-$ADMIN_URL}"
+    local sql_query="${SQL_QUERY:-}"
 
-    docker exec -i openwebui-sync-node-a python3 << PYEOF
+    if [[ -z "$sql_query" ]]; then
+        log_error "SQL_QUERY environment variable not set"
+        return 1
+    fi
+
+    docker exec -i -e ADMIN_URL="$ADMIN_URL" -e SQL_QUERY="$sql_query" openwebui-sync-node-a python3 << 'PYEOF'
 import asyncpg
 import asyncio
 import sys
+import os
 
 async def run_sql():
     try:
-        conn = await asyncpg.connect('$connection_url')
-        result = await conn.fetch('''$sql''')
+        admin_url = os.getenv('ADMIN_URL')
+        sql_query = os.getenv('SQL_QUERY')
+
+        if not admin_url:
+            print("Error: ADMIN_URL not set", file=sys.stderr)
+            return False
+
+        if not sql_query:
+            print("Error: SQL_QUERY not set", file=sys.stderr)
+            return False
+
+        conn = await asyncpg.connect(admin_url)
+        result = await conn.fetch(sql_query)
         await conn.close()
 
         if result:
@@ -154,10 +170,13 @@ main() {
 
     check_container || log_warning "Container will need to be started manually"
 
-    # Step 1: Create client schema
+    # Step 1: Create client schema (with quotes for names containing hyphens)
     log_info "Creating client schema: ${CLIENT_NAME}..."
 
-    if execute_sql "CREATE SCHEMA IF NOT EXISTS ${CLIENT_NAME};" 2>/dev/null; then
+    SQL_QUERY="CREATE SCHEMA IF NOT EXISTS \"${CLIENT_NAME}\";" \
+    execute_sql "" 2>/dev/null
+
+    if [ $? -eq 0 ]; then
         log_success "Schema created: ${CLIENT_NAME}"
     else
         log_error "Failed to create schema"
@@ -167,7 +186,10 @@ main() {
     # Step 2: Grant sync_service access using helper function
     log_info "Granting sync_service access to schema..."
 
-    if execute_sql "SELECT sync_metadata.grant_client_access('${CLIENT_NAME}');" 2>/dev/null; then
+    SQL_QUERY="SELECT sync_metadata.grant_client_access('${CLIENT_NAME}');" \
+    execute_sql "" 2>/dev/null
+
+    if [ $? -eq 0 ]; then
         log_success "Access granted to sync_service"
     else
         log_error "Failed to grant access"
@@ -182,7 +204,7 @@ main() {
 
     TABLES_SQL="
     -- Users table
-    CREATE TABLE IF NOT EXISTS ${CLIENT_NAME}.\"user\" (
+    CREATE TABLE IF NOT EXISTS \"${CLIENT_NAME}\".\"user\" (
         id TEXT PRIMARY KEY,
         name TEXT NOT NULL,
         email TEXT UNIQUE NOT NULL,
@@ -195,7 +217,7 @@ main() {
     );
 
     -- Auth table
-    CREATE TABLE IF NOT EXISTS ${CLIENT_NAME}.auth (
+    CREATE TABLE IF NOT EXISTS "${CLIENT_NAME}".auth (
         id TEXT PRIMARY KEY,
         email TEXT UNIQUE NOT NULL,
         password TEXT NOT NULL,
@@ -205,7 +227,7 @@ main() {
     );
 
     -- Chat table
-    CREATE TABLE IF NOT EXISTS ${CLIENT_NAME}.chat (
+    CREATE TABLE IF NOT EXISTS "${CLIENT_NAME}".chat (
         id TEXT PRIMARY KEY,
         user_id TEXT NOT NULL,
         title TEXT NOT NULL,
@@ -217,7 +239,7 @@ main() {
     );
 
     -- Tag table
-    CREATE TABLE IF NOT EXISTS ${CLIENT_NAME}.tag (
+    CREATE TABLE IF NOT EXISTS "${CLIENT_NAME}".tag (
         id TEXT PRIMARY KEY,
         name TEXT NOT NULL,
         user_id TEXT NOT NULL,
@@ -227,7 +249,7 @@ main() {
     );
 
     -- Message table (if using message-based storage)
-    CREATE TABLE IF NOT EXISTS ${CLIENT_NAME}.message (
+    CREATE TABLE IF NOT EXISTS "${CLIENT_NAME}".message (
         id TEXT PRIMARY KEY,
         user_id TEXT NOT NULL,
         chat_id TEXT,
@@ -240,7 +262,7 @@ main() {
     );
 
     -- Config table
-    CREATE TABLE IF NOT EXISTS ${CLIENT_NAME}.config (
+    CREATE TABLE IF NOT EXISTS "${CLIENT_NAME}".config (
         id TEXT PRIMARY KEY,
         data JSONB NOT NULL,
         created_at BIGINT NOT NULL,
@@ -248,7 +270,7 @@ main() {
     );
 
     -- OAuth session table
-    CREATE TABLE IF NOT EXISTS ${CLIENT_NAME}.oauth_session (
+    CREATE TABLE IF NOT EXISTS "${CLIENT_NAME}".oauth_session (
         id TEXT PRIMARY KEY,
         provider TEXT NOT NULL,
         user_id TEXT NOT NULL,
@@ -260,7 +282,7 @@ main() {
     );
 
     -- Function table
-    CREATE TABLE IF NOT EXISTS ${CLIENT_NAME}.function (
+    CREATE TABLE IF NOT EXISTS "${CLIENT_NAME}".function (
         id TEXT PRIMARY KEY,
         user_id TEXT NOT NULL,
         type TEXT NOT NULL,
@@ -272,14 +294,16 @@ main() {
     );
 
     -- Create indexes for performance
-    CREATE INDEX IF NOT EXISTS idx_chat_user_id ON ${CLIENT_NAME}.chat(user_id);
-    CREATE INDEX IF NOT EXISTS idx_chat_updated_at ON ${CLIENT_NAME}.chat(updated_at);
-    CREATE INDEX IF NOT EXISTS idx_message_chat_id ON ${CLIENT_NAME}.message(chat_id);
-    CREATE INDEX IF NOT EXISTS idx_message_updated_at ON ${CLIENT_NAME}.message(updated_at);
-    CREATE INDEX IF NOT EXISTS idx_tag_user_id ON ${CLIENT_NAME}.tag(user_id);
+    CREATE INDEX IF NOT EXISTS idx_chat_user_id ON "${CLIENT_NAME}".chat(user_id);
+    CREATE INDEX IF NOT EXISTS idx_chat_updated_at ON "${CLIENT_NAME}".chat(updated_at);
+    CREATE INDEX IF NOT EXISTS idx_message_chat_id ON "${CLIENT_NAME}".message(chat_id);
+    CREATE INDEX IF NOT EXISTS idx_message_updated_at ON "${CLIENT_NAME}".message(updated_at);
+    CREATE INDEX IF NOT EXISTS idx_tag_user_id ON "${CLIENT_NAME}".tag(user_id);
     "
 
-    if execute_sql "$TABLES_SQL" 2>/dev/null; then
+    SQL_QUERY="$TABLES_SQL" execute_sql "" 2>/dev/null
+
+    if [ $? -eq 0 ]; then
         log_success "Created 8 Open WebUI tables"
     else
         log_error "Failed to create tables"
@@ -290,13 +314,15 @@ main() {
     log_info "Registering client in sync metadata..."
 
     # Get host_id from sync cluster (use node-a as default)
-    HOST_ID=$(docker exec openwebui-sync-node-a python3 << 'PYEOF'
+    HOST_ID=$(docker exec -i -e ADMIN_URL="$ADMIN_URL" openwebui-sync-node-a python3 << 'PYEOF'
 import asyncpg
 import asyncio
 import os
 
 async def get_host_id():
     admin_url = os.getenv('ADMIN_URL')
+    if not admin_url:
+        return
     conn = await asyncpg.connect(admin_url)
     host_id = await conn.fetchval('''
         SELECT host_id FROM sync_metadata.hosts
@@ -307,8 +333,6 @@ async def get_host_id():
     await conn.close()
     if host_id:
         print(str(host_id))
-    else:
-        print('')
 
 asyncio.run(get_host_id())
 PYEOF
@@ -336,7 +360,9 @@ PYEOF
     RETURNING deployment_id, client_name, sync_enabled;
     "
 
-    if execute_sql "$REGISTER_SQL" 2>/dev/null; then
+    SQL_QUERY="$REGISTER_SQL" execute_sql "" 2>/dev/null
+
+    if [ $? -eq 0 ]; then
         log_success "Client registered in sync system"
     else
         log_error "Failed to register client"
