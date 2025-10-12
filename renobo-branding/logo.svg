@@ -1,0 +1,31 @@
+<svg width="200" height="50" viewBox="0 0 200 50" xmlns="http://www.w3.org/2000/svg">
+  <!-- House icon with gradient -->
+  <defs>
+    <linearGradient id="houseGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#2563eb;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#10b981;stop-opacity:1" />
+    </linearGradient>
+  </defs>
+
+  <!-- House roof -->
+  <path d="M25 12 L15 20 L15 18 L25 10 L35 18 L35 20 Z" fill="url(#houseGradient)"/>
+
+  <!-- House body -->
+  <path d="M17 20 L17 35 L33 35 L33 20 Z" fill="#2563eb"/>
+
+  <!-- Door -->
+  <rect x="21" y="27" width="8" height="8" fill="#10b981"/>
+
+  <!-- Energy indicator (circle) -->
+  <circle cx="25" cy="23" r="2.5" fill="#f59e0b"/>
+
+  <!-- Text "Renobo" -->
+  <text x="45" y="28" font-family="'Inter', 'Helvetica', 'Arial', sans-serif" font-size="22" font-weight="700" fill="#2563eb">
+    Renobo
+  </text>
+
+  <!-- Text "AI" -->
+  <text x="45" y="40" font-family="'Inter', 'Helvetica', 'Arial', sans-serif" font-size="12" font-weight="500" fill="#10b981">
+    AI - Energy Retrofit Advisor
+  </text>
+</svg>
