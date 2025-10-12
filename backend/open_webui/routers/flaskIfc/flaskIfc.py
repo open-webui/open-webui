@@ -517,6 +517,14 @@ def receive_upload_model():
     )
 
 
+def remove_url_from_directory_path(url):
+    if url.startswith("https://"):
+        return url.replace("https://", "")
+    elif url.startswith("http://"):
+        return url.replace("http://", "")
+    return url
+
+
 @app.route("/api/receive", methods=["GET", "POST"])
 def receive_pull_model():
 
@@ -631,14 +639,19 @@ def receive_pull_model():
             500,
         )
 
-    print("Renaming file", data["human_name"])
-
     dir_path = os.path.dirname(data["human_name"])  # ✅ Python way
+
+    dir_path = remove_url_from_directory_path(dir_path)
 
     # Create the directory structure on the target device
     send_serial_command(f"cd {destn_path}; mkdir -p {dir_path}", timeout=300)
 
-    new_file_name = normalize_model_name(data["human_name"])
+    filename = os.path.basename(data["human_name"])
+
+    new_file_name = os.path.join(dir_path, filename)
+    new_file_name = normalize_model_name(new_file_name)
+
+    print("Renaming file:", data["human_name"], " to new_file_name:", filename)
 
     send_serial_command(
         f"cd {destn_path}; mv {data['actual_name']} {new_file_name}",
