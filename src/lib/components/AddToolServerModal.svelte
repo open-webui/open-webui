@@ -98,9 +98,16 @@
 			return;
 		}
 
-		if (path === '') {
-			toast.error($i18n.t('Please enter a valid path'));
-			return;
+		if (['openapi', ''].includes(type)) {
+			if (spec_type === 'json' && spec === '') {
+				toast.error($i18n.t('Please enter a valid JSON spec'));
+				return;
+			}
+
+			if (spec_type === 'url' && path === '') {
+				toast.error($i18n.t('Please enter a valid path'));
+				return;
+			}
 		}
 
 		if (direct) {

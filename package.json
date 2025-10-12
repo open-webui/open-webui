@@ -1,6 +1,6 @@
 {
 	"name": "open-webui",
-	"version": "0.6.31",
+	"version": "0.6.33",
 	"private": true,
 	"scripts": {
 		"dev": "npm run pyodide:fetch && vite dev --host",
@@ -137,6 +137,8 @@
 		"turndown-plugin-gfm": "^1.0.2",
 		"undici": "^7.3.0",
 		"uuid": "^9.0.1",
+		"vega": "^6.2.0",
+		"vega-lite": "^6.4.1",
 		"vite-plugin-static-copy": "^2.2.0",
 		"y-prosemirror": "^1.3.7",
 		"yaml": "^2.7.1",

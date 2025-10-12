@@ -10,6 +10,7 @@
 		settings,
 		showArtifacts,
 		showControls,
+		showEmbeds,
 		showOverview
 	} from '$lib/stores';
 	import FloatingButtons from '../ContentRenderer/FloatingButtons.svelte';
@@ -194,6 +195,7 @@
 			await showControls.set(true);
 			await showArtifacts.set(true);
 			await showOverview.set(false);
+			await showEmbeds.set(false);
 		}}
 	/>
 </div>

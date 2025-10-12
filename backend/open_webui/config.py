@@ -605,8 +605,8 @@ def load_oauth_providers():
     OAUTH_PROVIDERS.clear()
     if GOOGLE_CLIENT_ID.value and GOOGLE_CLIENT_SECRET.value:
 
-        def google_oauth_register(client: OAuth):
-            client.register(
+        def google_oauth_register(oauth: OAuth):
+            client = oauth.register(
                 name="google",
                 client_id=GOOGLE_CLIENT_ID.value,
                 client_secret=GOOGLE_CLIENT_SECRET.value,
@@ -621,6 +621,7 @@ def load_oauth_providers():
                 },
                 redirect_uri=GOOGLE_REDIRECT_URI.value,
             )
+            return client
 
         OAUTH_PROVIDERS["google"] = {
             "redirect_uri": GOOGLE_REDIRECT_URI.value,
@@ -633,8 +634,8 @@ def load_oauth_providers():
         and MICROSOFT_CLIENT_TENANT_ID.value
     ):
 
-        def microsoft_oauth_register(client: OAuth):
-            client.register(
+        def microsoft_oauth_register(oauth: OAuth):
+            client = oauth.register(
                 name="microsoft",
                 client_id=MICROSOFT_CLIENT_ID.value,
                 client_secret=MICROSOFT_CLIENT_SECRET.value,
@@ -649,6 +650,7 @@ def load_oauth_providers():
                 },
                 redirect_uri=MICROSOFT_REDIRECT_URI.value,
             )
+            return client
 
         OAUTH_PROVIDERS["microsoft"] = {
             "redirect_uri": MICROSOFT_REDIRECT_URI.value,
@@ -658,8 +660,8 @@ def load_oauth_providers():
 
     if GITHUB_CLIENT_ID.value and GITHUB_CLIENT_SECRET.value:
 
-        def github_oauth_register(client: OAuth):
-            client.register(
+        def github_oauth_register(oauth: OAuth):
+            client = oauth.register(
                 name="github",
                 client_id=GITHUB_CLIENT_ID.value,
                 client_secret=GITHUB_CLIENT_SECRET.value,
@@ -677,6 +679,7 @@ def load_oauth_providers():
                 },
                 redirect_uri=GITHUB_CLIENT_REDIRECT_URI.value,
             )
+            return client
 
         OAUTH_PROVIDERS["github"] = {
             "redirect_uri": GITHUB_CLIENT_REDIRECT_URI.value,
@@ -690,7 +693,7 @@ def load_oauth_providers():
         and OPENID_PROVIDER_URL.value
     ):
 
-        def oidc_oauth_register(client: OAuth):
+        def oidc_oauth_register(oauth: OAuth):
             client_kwargs = {
                 "scope": OAUTH_SCOPES.value,
                 **(
@@ -716,7 +719,7 @@ def load_oauth_providers():
                     % ("S256", OAUTH_CODE_CHALLENGE_METHOD.value)
                 )
 
-            client.register(
+            client = oauth.register(
                 name="oidc",
                 client_id=OAUTH_CLIENT_ID.value,
                 client_secret=OAUTH_CLIENT_SECRET.value,
@@ -724,6 +727,7 @@ def load_oauth_providers():
                 client_kwargs=client_kwargs,
                 redirect_uri=OPENID_REDIRECT_URI.value,
             )
+            return client
 
         OAUTH_PROVIDERS["oidc"] = {
             "name": OAUTH_PROVIDER_NAME.value,
@@ -733,8 +737,8 @@ def load_oauth_providers():
 
     if FEISHU_CLIENT_ID.value and FEISHU_CLIENT_SECRET.value:
 
-        def feishu_oauth_register(client: OAuth):
-            client.register(
+        def feishu_oauth_register(oauth: OAuth):
+            client = oauth.register(
                 name="feishu",
                 client_id=FEISHU_CLIENT_ID.value,
                 client_secret=FEISHU_CLIENT_SECRET.value,
@@ -752,6 +756,7 @@ def load_oauth_providers():
                 },
                 redirect_uri=FEISHU_REDIRECT_URI.value,
             )
+            return client
 
         OAUTH_PROVIDERS["feishu"] = {
             "register": feishu_oauth_register,
@@ -2005,11 +2010,9 @@ if VECTOR_DB == "chroma":
 # this uses the model defined in the Dockerfile ENV variable. If you dont use docker or docker based deployments such as k8s, the default embedding model will be used (sentence-transformers/all-MiniLM-L6-v2)
 
 # Milvus
-
 MILVUS_URI = os.environ.get("MILVUS_URI", f"{DATA_DIR}/vector_db/milvus.db")
 MILVUS_DB = os.environ.get("MILVUS_DB", "default")
 MILVUS_TOKEN = os.environ.get("MILVUS_TOKEN", None)
-
 MILVUS_INDEX_TYPE = os.environ.get("MILVUS_INDEX_TYPE", "HNSW")
 MILVUS_METRIC_TYPE = os.environ.get("MILVUS_METRIC_TYPE", "COSINE")
 MILVUS_HNSW_M = int(os.environ.get("MILVUS_HNSW_M", "16"))
@@ -2019,6 +2022,11 @@ MILVUS_DISKANN_MAX_DEGREE = int(os.environ.get("MILVUS_DISKANN_MAX_DEGREE", "56"
 MILVUS_DISKANN_SEARCH_LIST_SIZE = int(
     os.environ.get("MILVUS_DISKANN_SEARCH_LIST_SIZE", "100")
 )
+ENABLE_MILVUS_MULTITENANCY_MODE = (
+    os.environ.get("ENABLE_MILVUS_MULTITENANCY_MODE", "false").lower() == "true"
+)
+# Hyphens not allowed, need to use underscores in collection names
+MILVUS_COLLECTION_PREFIX = os.environ.get("MILVUS_COLLECTION_PREFIX", "open_webui")
 
 # Qdrant
 QDRANT_URI = os.environ.get("QDRANT_URI", None)
@@ -2305,6 +2313,18 @@ DOCLING_SERVER_URL = PersistentConfig(
     "DOCLING_SERVER_URL",
     "rag.docling_server_url",
     os.getenv("DOCLING_SERVER_URL", "http://docling:5001"),
+)
+
+docling_params = os.getenv("DOCLING_PARAMS", "")
+try:
+    docling_params = json.loads(docling_params)
+except json.JSONDecodeError:
+    docling_params = {}
+
+DOCLING_PARAMS = PersistentConfig(
+    "DOCLING_PARAMS",
+    "rag.docling_params",
+    docling_params,
 )
 
 DOCLING_DO_OCR = PersistentConfig(
@@ -3357,6 +3377,19 @@ AUDIO_TTS_OPENAI_API_KEY = PersistentConfig(
     "audio.tts.openai.api_key",
     os.getenv("AUDIO_TTS_OPENAI_API_KEY", OPENAI_API_KEY),
 )
+
+audio_tts_openai_params = os.getenv("AUDIO_TTS_OPENAI_PARAMS", "")
+try:
+    audio_tts_openai_params = json.loads(audio_tts_openai_params)
+except json.JSONDecodeError:
+    audio_tts_openai_params = {}
+
+AUDIO_TTS_OPENAI_PARAMS = PersistentConfig(
+    "AUDIO_TTS_OPENAI_PARAMS",
+    "audio.tts.openai.params",
+    audio_tts_openai_params,
+)
+
 
 AUDIO_TTS_API_KEY = PersistentConfig(
     "AUDIO_TTS_API_KEY",

@@ -672,16 +672,10 @@
 			}
 		}
 
-		console.log('content', content);
-
 		if (collaboration && documentId && socket && user) {
 			const { SocketIOCollaborationProvider } = await import('./RichTextInput/Collaboration');
 			provider = new SocketIOCollaborationProvider(documentId, socket, user, content);
 		}
-
-		console.log(bubbleMenuElement, floatingMenuElement);
-		console.log(suggestions);
-
 		editor = new Editor({
 			element: element,
 			extensions: [
@@ -781,13 +775,29 @@
 
 				htmlValue = editor.getHTML();
 				jsonValue = editor.getJSON();
-				mdValue = turndownService
-					.turndown(
-						htmlValue
-							.replace(/<p><\/p>/g, '<br/>')
-							.replace(/ {2,}/g, (m) => m.replace(/ /g, '\u00a0'))
-					)
-					.replace(/\u00a0/g, ' ');
+
+				if (richText) {
+					mdValue = turndownService
+						.turndown(
+							htmlValue
+								.replace(/<p><\/p>/g, '<br/>')
+								.replace(/ {2,}/g, (m) => m.replace(/ /g, '\u00a0'))
+						)
+						.replace(/\u00a0/g, ' ');
+				} else {
+					mdValue = turndownService
+						.turndown(
+							htmlValue
+								// Replace empty paragraphs with line breaks
+								.replace(/<p><\/p>/g, '<br/>')
+								// Replace multiple spaces with non-breaking spaces
+								.replace(/ {2,}/g, (m) => m.replace(/ /g, '\u00a0'))
+								// Replace tabs with non-breaking spaces (preserve indentation)
+								.replace(/\t/g, '\u00a0\u00a0\u00a0\u00a0') // 1 tab = 4 spaces
+						)
+						// Convert non-breaking spaces back to regular spaces for markdown
+						.replace(/\u00a0/g, ' ');
+				}
 
 				onChange({
 					html: htmlValue,
@@ -1030,6 +1040,24 @@
 						// For all other cases, let ProseMirror perform its default paste behavior.
 						view.dispatch(view.state.tr.scrollIntoView());
 						return false;
+					},
+					copy: (view, event: ClipboardEvent) => {
+						if (!event.clipboardData) return false;
+						if (richText) return false; // Let ProseMirror handle normal copy in rich text mode
+
+						const { state } = view;
+						const { from, to } = state.selection;
+
+						// Only take the selected text & HTML, not the full doc
+						const plain = state.doc.textBetween(from, to, '\n');
+						const slice = state.doc.cut(from, to);
+						const html = editor.schema ? editor.getHTML(slice) : editor.getHTML(); // depending on your editor API
+
+						event.clipboardData.setData('text/plain', plain);
+						event.clipboardData.setData('text/html', html);
+
+						event.preventDefault();
+						return true;
 					}
 				}
 			},
