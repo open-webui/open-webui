@@ -300,7 +300,8 @@ main() {
     # Step 4: Register client in sync_metadata.client_deployments
     log_info "Registering client in sync metadata..."
 
-    # Get host_id from sync cluster (use node-a as default)
+    # Get host_id from sync cluster
+    # Try to find a host matching the container name pattern, or use most recent
     HOST_ID=$(docker exec -i -e ADMIN_URL="$ADMIN_URL" openwebui-sync-node-a python3 << 'PYEOF'
 import asyncpg
 import asyncio
@@ -311,12 +312,23 @@ async def get_host_id():
     if not admin_url:
         return
     conn = await asyncpg.connect(admin_url)
+
+    # Try to find a host with "node-a" in the name
     host_id = await conn.fetchval('''
         SELECT host_id FROM sync_metadata.hosts
-        WHERE hostname = 'openwebui-sync-node-a'
+        WHERE hostname LIKE '%node-a%' OR hostname LIKE '%node_a%'
         ORDER BY last_heartbeat DESC
         LIMIT 1
     ''')
+
+    # If no match, use the most recent heartbeat from any host
+    if not host_id:
+        host_id = await conn.fetchval('''
+            SELECT host_id FROM sync_metadata.hosts
+            ORDER BY last_heartbeat DESC
+            LIMIT 1
+        ''')
+
     await conn.close()
     if host_id:
         print(str(host_id))
