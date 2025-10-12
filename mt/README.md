@@ -69,6 +69,143 @@ cd mt/SYNC
 
 See [SYNC/README.md](SYNC/README.md) for detailed documentation including IPv6 setup requirements.
 
+## Monitoring & Observability
+
+### Current State
+
+The sync containers **already expose Prometheus metrics** on their `/metrics` endpoints:
+
+- **Node A**: `http://localhost:9443/metrics`
+- **Node B**: `http://localhost:9444/metrics`
+
+**Available Metrics** (automatically instrumented):
+
+| Category | Metrics | Description |
+|----------|---------|-------------|
+| **Leader Election** | `sync_is_leader`<br>`sync_leader_election_attempts_total`<br>`sync_leader_election_successes_total`<br>`sync_leader_lease_expires_timestamp` | Leadership status, election attempts, lease expiration |
+| **Heartbeats** | `sync_heartbeat_failures_total`<br>`sync_container_uptime_seconds` | Heartbeat failures, container uptime |
+| **Sync Operations** | `sync_operations_total{status}`<br>`sync_operation_duration_seconds`<br>`sync_rows_synced_total` | Sync job metrics, duration histograms, row counts |
+| **Conflicts** | `sync_conflicts_detected_total`<br>`sync_conflicts_resolved_total{strategy}` | Conflict detection and resolution by strategy |
+| **Failover** | `sync_failover_events_total` | Leadership change events |
+
+### Centralized Monitoring Setup (Planned)
+
+**Location**: `mt/monitoring/` (not yet implemented)
+
+The centralized monitoring stack will track:
+- ✅ All sync clusters across different hosts
+- ✅ Client deployment health and status
+- ✅ Future mt/ services (client-manager metrics, etc.)
+
+**Planned Architecture**:
+```
+mt/monitoring/
+├── docker-compose.yml          # Prometheus + Grafana stack
+├── prometheus/
+│   ├── prometheus.yml          # Multi-cluster scrape config
+│   └── alerts.yml              # Alert rules for failures
+└── grafana/
+    └── dashboards/
+        ├── sync-clusters.json  # Multi-cluster overview
+        └── mt-overview.json    # Overall mt/ stack health
+```
+
+**Access** (when deployed):
+- **Grafana**: `http://localhost:3000` (dashboards)
+- **Prometheus**: `http://localhost:9090` (raw metrics)
+
+**Dashboards will include**:
+- Leadership status over time (which node is leader)
+- Heartbeat freshness graphs
+- Failover events timeline
+- Sync operation success/failure rates
+- Conflict resolution statistics
+- Per-cluster and cross-cluster views
+
+### Manual Monitoring (Current)
+
+Until centralized monitoring is deployed, monitor clusters via:
+
+**1. Health API Endpoints**:
+```bash
+# Check Node A
+curl http://localhost:9443/health | jq
+
+# Check Node B
+curl http://localhost:9444/health | jq
+```
+
+**2. Database Views**:
+```sql
+-- Cluster health overview
+SELECT * FROM sync_metadata.v_cluster_health;
+
+-- Active sync jobs
+SELECT * FROM sync_metadata.v_active_sync_jobs;
+
+-- Recent conflicts
+SELECT * FROM sync_metadata.v_recent_conflicts;
+```
+
+**3. Raw Metrics**:
+```bash
+# View all metrics from Node A
+curl http://localhost:9443/metrics
+
+# Filter specific metrics
+curl http://localhost:9443/metrics | grep sync_is_leader
+```
+
+### Setting Up Monitoring (Future)
+
+When the centralized monitoring stack is ready:
+
+```bash
+# Deploy monitoring infrastructure
+cd mt/monitoring
+docker compose up -d
+
+# Access Grafana
+open http://localhost:3000
+# Default login: admin/admin
+
+# Add new cluster to monitoring
+# Edit prometheus/prometheus.yml
+# Add scrape target for new cluster endpoints
+docker compose restart prometheus
+```
+
+### Adding Clusters to Monitoring
+
+To monitor a new sync cluster:
+
+1. **Deploy sync cluster** on new host
+2. **Get metrics endpoints** (`http://HOST:9443/metrics`, `http://HOST:9444/metrics`)
+3. **Update Prometheus config** to scrape new endpoints
+4. **Verify** in Grafana dashboards
+
+### Troubleshooting Monitoring
+
+**Metrics not appearing?**
+- Verify containers are running: `docker ps | grep sync-node`
+- Check metrics endpoint: `curl http://localhost:9443/metrics`
+- Review container logs: `docker logs openwebui-sync-node-a`
+
+**Stale heartbeat warnings?**
+- Fixed in latest version with stable `host_id` across restarts
+- View real-time status: `SELECT * FROM sync_metadata.v_cluster_health;`
+
+### Archon Tasks for Monitoring Implementation
+
+The following tasks are tracked in Archon for implementing centralized monitoring:
+
+1. **Design monitoring architecture** - Decide on federation vs single instance
+2. **Create Prometheus configuration** - Scrape configs and alert rules
+3. **Create Grafana dashboards** - Multi-cluster views and drill-downs
+4. **Create docker-compose** - Monitoring stack deployment
+
+See Archon project `038661b1-7e1c-40d0-b4f9-950db24c2a3f` for task details.
+
 ## Quick Start
 
 ### Start Pre-configured Clients
