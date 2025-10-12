@@ -41,7 +41,7 @@
 	import XMark from '$lib/components/icons/XMark.svelte';
 	import Document from '$lib/components/icons/Document.svelte';
 	import Sparkles from '$lib/components/icons/Sparkles.svelte';
-	import { generateTitle, getTaskConfig } from '$lib/apis';
+	import { generateTitle } from '$lib/apis';
 
 	export let className = '';
 
@@ -287,12 +287,11 @@
 			};
 		});
 
-		const taskConfig = await getTaskConfig(localStorage.token);
-		const taskModel = taskConfig.TASK_MODEL ?? '';
+		const model = chat.chat.models.at(0) ?? chat.models.at(0) ?? '';
 
 		chatTitle = '';
 
-		const generatedTitle = await generateTitle(localStorage.token, taskModel, messages).catch(
+		const generatedTitle = await generateTitle(localStorage.token, model, messages).catch(
 			(error) => {
 				toast.error(`${error}`);
 				return null;
