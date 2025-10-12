@@ -114,9 +114,16 @@ get_row_count() {
 
     docker exec "$CONTAINER_NAME" python3 -c "
 import sqlite3
+from datetime import datetime
+
 conn = sqlite3.connect('$SQLITE_PATH')
 cursor = conn.cursor()
-cursor.execute('SELECT COUNT(*) FROM \"$table\" WHERE updated_at > ?', ('$since_timestamp',))
+
+# Convert ISO timestamp to Unix epoch (Open WebUI uses Unix timestamps)
+since_dt = datetime.fromisoformat('$since_timestamp'.replace('Z', '+00:00'))
+since_epoch = int(since_dt.timestamp())
+
+cursor.execute('SELECT COUNT(*) FROM \"$table\" WHERE updated_at > ?', (since_epoch,))
 count = cursor.fetchone()[0]
 conn.close()
 print(count)
@@ -151,11 +158,17 @@ sync_table() {
 import sqlite3
 import json
 import sys
+from datetime import datetime
 
 conn = sqlite3.connect('$SQLITE_PATH')
 conn.row_factory = sqlite3.Row
 cursor = conn.cursor()
-cursor.execute('SELECT * FROM \"$table\" WHERE updated_at > ? LIMIT $BATCH_SIZE', ('$since_timestamp',))
+
+# Convert ISO timestamp to Unix epoch (Open WebUI uses Unix timestamps)
+since_dt = datetime.fromisoformat('$since_timestamp'.replace('Z', '+00:00'))
+since_epoch = int(since_dt.timestamp())
+
+cursor.execute('SELECT * FROM \"$table\" WHERE updated_at > ? LIMIT $BATCH_SIZE', (since_epoch,))
 
 rows = []
 for row in cursor:
