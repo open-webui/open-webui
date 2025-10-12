@@ -187,6 +187,7 @@ type Settings = {
 	highContrastMode?: boolean;
 	title?: TitleSettings;
 	showChatTitleInTab?: boolean;
+	showSidebarHotkeyHints?: boolean;
 	splitLargeDeltas?: boolean;
 	chatDirection?: 'LTR' | 'RTL' | 'auto';
 	ctrlEnterToSend?: boolean;

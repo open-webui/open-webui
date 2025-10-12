@@ -67,6 +67,7 @@
 	let collapseCodeBlocks = false;
 	let expandDetails = false;
 	let showChatTitleInTab = true;
+	let showSidebarHotkeyHints = true;
 
 	let showFloatingActionButtons = true;
 	let floatingActionButtons = null;
@@ -226,6 +227,7 @@
 		chatDirection = $settings?.chatDirection ?? 'auto';
 		userLocation = $settings?.userLocation ?? false;
 		showChatTitleInTab = $settings?.showChatTitleInTab ?? true;
+		showSidebarHotkeyHints = $settings?.showSidebarHotkeyHints ?? true;
 
 		notificationSound = $settings?.notificationSound ?? true;
 		notificationSoundAlways = $settings?.notificationSoundAlways ?? false;
@@ -344,6 +346,25 @@
 							bind:state={showChatTitleInTab}
 							on:change={() => {
 								saveSettings({ showChatTitleInTab });
+							}}
+						/>
+					</div>
+				</div>
+			</div>
+
+			<div>
+				<div class=" py-0.5 flex w-full justify-between">
+					<div id="show-sidebar-hotkey-hints-label" class=" self-center text-xs">
+						{$i18n.t('Show Sidebar Hotkey Hints')}
+					</div>
+
+					<div class="flex items-center gap-2 p-1">
+						<Switch
+							ariaLabelledbyId="show-sidebar-hotkey-hints-label"
+							tooltip={true}
+							bind:state={showSidebarHotkeyHints}
+							on:change={() => {
+								saveSettings({ showSidebarHotkeyHints });
 							}}
 						/>
 					</div>
