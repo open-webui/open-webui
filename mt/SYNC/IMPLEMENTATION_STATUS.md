@@ -457,14 +457,15 @@ Based on PRP Phase 1 success criteria:
 - **Session Context Required**: INSERT operations require proper app.current_host_id setting
 - **Schema Isolation**: Cannot access tables outside sync_metadata schema
 
-**Test Script Location**: `mt/SYNC/tests/security-validation-test.py`
+**Test Script Location**: `mt/tests/sync-security-validation.py`
 
 **Test Execution**:
 ```bash
 # Run from host with Docker container:
-source mt/SYNC/.credentials
+cd mt/tests
+source ../SYNC/.credentials
 docker exec -i -e SYNC_URL="$SYNC_URL" -e ADMIN_URL="$ADMIN_URL" \
-    openwebui-sync-node-a python3 - < tests/security-validation-test.py
+    openwebui-sync-node-a python3 - < sync-security-validation.py
 ```
 
 **Key Findings**:

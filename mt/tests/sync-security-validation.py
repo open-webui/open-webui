@@ -16,14 +16,15 @@ Test Coverage:
 
 Usage:
     # Run from host:
-    source mt/SYNC/.credentials
+    cd mt/tests
+    source ../SYNC/.credentials
     docker exec -i -e SYNC_URL="$SYNC_URL" -e ADMIN_URL="$ADMIN_URL" \\
-        openwebui-sync-node-a python3 - < tests/security-validation-test.py
+        openwebui-sync-node-a python3 - < sync-security-validation.py
 
     # Or from within container:
     export SYNC_URL="postgresql://sync_service.PROJECT_REF:PASSWORD@..."
     export ADMIN_URL="postgresql://postgres.PROJECT_REF:PASSWORD@..."
-    python3 tests/security-validation-test.py
+    python3 sync-security-validation.py
 
 Test Results (2025-10-12):
     ✅ All 13 tests passed on production deployment (157.245.220.28)

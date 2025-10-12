@@ -69,6 +69,44 @@ cd mt/SYNC
 
 See [SYNC/README.md](SYNC/README.md) for detailed documentation including IPv6 setup requirements.
 
+## Testing & Certification
+
+### Testing Suite
+
+**Location**: `mt/tests/`
+
+The testing suite validates all mt/ features before production release. Tests cover:
+- **Security validation**: Permission and access control tests
+- **HA failover testing**: High availability and leader election
+- **Integration tests**: Component interaction validation
+- **Performance tests**: Load and latency benchmarks
+
+**📖 [Complete Testing Documentation →](tests/README.md)**
+
+**Available Tests**:
+- ✅ `sync-security-validation.py` - SYNC security validation (13 tests, all passing)
+- ⏳ `sync-ha-failover.sh` - HA failover tests (manual testing complete, script pending)
+- 🔲 `sync-conflict-resolution.sh` - Conflict resolution tests (planned)
+- 🔲 `sync-state-authority.sh` - State management tests (planned)
+
+**Quick Test Execution**:
+```bash
+# Run security validation tests
+cd mt/tests
+source ../SYNC/.credentials
+docker exec -i -e SYNC_URL="$SYNC_URL" -e ADMIN_URL="$ADMIN_URL" \
+    openwebui-sync-node-a python3 - < sync-security-validation.py
+```
+
+**Future: Automated Certification**
+```bash
+# Run full certification suite (future)
+cd mt/tests
+./run-certification.sh
+```
+
+This will validate all components before production deployment and generate comprehensive test reports.
+
 ## Monitoring & Observability
 
 ### Current State
@@ -279,6 +317,10 @@ mt/
 │   ├── scripts/                 # Deployment and sync automation
 │   ├── docker/                  # Container infrastructure
 │   └── config/                  # Configuration templates
+├── tests/                       # ⭐ Testing & Certification Suite
+│   ├── README.md                # Testing methodology and documentation
+│   ├── sync-security-validation.py  # SYNC security tests (✅ all passing)
+│   └── run-certification.sh     # Batch test runner (future)
 ├── nginx-template.conf          # Production nginx config template
 ├── nginx-template-local.conf    # Local testing nginx config
 ├── docker-compose.nginx.yml     # Local nginx setup
