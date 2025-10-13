@@ -87,7 +87,7 @@
 		</div>
 		<input
 			class="w-full py-2 pl-1 text-sm bg-transparent dark:text-gray-300 outline-none"
-			placeholder={$i18n.t('Search...')}
+			placeholder={$i18n.t('Search Notes')}
 			autocomplete="off"
 			bind:value={query}
 		/>
