@@ -81,8 +81,8 @@
 	{/if}
 </div>
 
-<div class="h-40 w-full">
-	{#if filteredPrompts.length > 0}
+{#if filteredPrompts.length > 0}
+	<div class="h-40 w-full">
 		<div role="list" class="max-h-40 overflow-auto scrollbar-none items-start {className}">
 			{#each filteredPrompts as prompt, idx (prompt.id || prompt.content)}
 				<!-- svelte-ignore a11y-no-interactive-element-to-noninteractive-role -->
@@ -118,8 +118,8 @@
 				</button>
 			{/each}
 		</div>
-	{/if}
-</div>
+	</div>
+{/if}
 
 <style>
 	/* Waterfall animation for the suggestions */
