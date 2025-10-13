@@ -3543,3 +3543,36 @@ LDAP_ATTRIBUTE_FOR_GROUPS = PersistentConfig(
     "ldap.server.attribute_for_groups",
     os.environ.get("LDAP_ATTRIBUTE_FOR_GROUPS", "memberOf"),
 )
+
+
+####################################
+# JIUTIAN PLATFORM
+####################################
+
+JIUTIAN_API_KEY = PersistentConfig(
+    "JIUTIAN_API_KEY",
+    "jiutian.api_key",
+    os.environ.get("JIUTIAN_API_KEY", ""),
+)
+
+JIUTIAN_API_BASE = PersistentConfig(
+    "JIUTIAN_API_BASE",
+    "jiutian.api_base",
+    os.environ.get("JIUTIAN_API_BASE", "https://jiutian.10086.cn/largemodel/api/v1"),
+)
+
+JIUTIAN_MODEL_IDS = PersistentConfig(
+    "JIUTIAN_MODEL_IDS",
+    "jiutian.model_ids",
+    [
+        model_id.strip()
+        for model_id in os.environ.get("JIUTIAN_MODEL_IDS", "").split(",")
+        if model_id.strip()
+    ],
+)
+
+ENABLE_JIUTIAN_MULTI_CHAT = PersistentConfig(
+    "ENABLE_JIUTIAN_MULTI_CHAT",
+    "jiutian.enable_multi_chat",
+    os.environ.get("ENABLE_JIUTIAN_MULTI_CHAT", "False").lower() == "true",
+)

@@ -54,6 +54,9 @@
 	export let codeInterpreterEnabled = false;
 	export let webSearchEnabled = false;
 
+	// 九天平台多智能体模式
+	export let isMultiAgentMode = false;
+
 	export let onSelect = (e) => {};
 	export let onChange = (e) => {};
 
@@ -215,6 +218,7 @@
 					bind:webSearchEnabled
 					bind:atSelectedModel
 					bind:showCommands
+					bind:isMultiAgentMode
 					{toolServers}
 					{stopResponse}
 					{createMessagePair}

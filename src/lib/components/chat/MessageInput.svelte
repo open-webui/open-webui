@@ -73,6 +73,7 @@
 	import IntegrationsMenu from './MessageInput/IntegrationsMenu.svelte';
 	import Component from '../icons/Component.svelte';
 	import PlusAlt from '../icons/PlusAlt.svelte';
+	import JiutianMultiAgentSelector from './JiutianMultiAgentSelector.svelte';
 
 	import { KokoroWorker } from '$lib/workers/KokoroWorker';
 
@@ -95,6 +96,9 @@
 
 	let selectedModelIds = [];
 	$: selectedModelIds = atSelectedModel !== undefined ? [atSelectedModel.id] : selectedModels;
+
+	// 九天平台多智能体模式
+	export let isMultiAgentMode = false;
 
 	export let history;
 	export let taskIds = null;
@@ -1043,6 +1047,16 @@
 								dispatch('submit', prompt);
 							}}
 						>
+							<!-- 九天平台多智能体选择器 -->
+							{#if !atSelectedModel}
+								<div class="px-3 pt-3">
+									<JiutianMultiAgentSelector 
+										bind:selectedModels 
+										bind:isMultiAgentMode 
+										disabled={generating}
+									/>
+								</div>
+							{/if}
 							<div
 								id="message-input-container"
 								class="flex-1 flex flex-col relative w-full shadow-lg rounded-3xl border {$temporaryChatEnabled

@@ -93,6 +93,7 @@ from open_webui.routers import (
     users,
     utils,
     scim,
+    jiutian,
 )
 
 from open_webui.routers.retrieval import (
@@ -381,7 +382,12 @@ from open_webui.config import (
     ENABLE_LDAP_GROUP_MANAGEMENT,
     ENABLE_LDAP_GROUP_CREATION,
     LDAP_ATTRIBUTE_FOR_GROUPS,
-    # Misc
+    #
+    JIUTIAN_API_KEY,
+    JIUTIAN_API_BASE,
+    JIUTIAN_MODEL_IDS,
+    ENABLE_JIUTIAN_MULTI_CHAT,
+    #
     ENV,
     CACHE_DIR,
     STATIC_DIR,
@@ -781,6 +787,16 @@ app.state.config.ENABLE_LDAP_GROUP_MANAGEMENT = ENABLE_LDAP_GROUP_MANAGEMENT
 app.state.config.ENABLE_LDAP_GROUP_CREATION = ENABLE_LDAP_GROUP_CREATION
 app.state.config.LDAP_ATTRIBUTE_FOR_GROUPS = LDAP_ATTRIBUTE_FOR_GROUPS
 
+########################################
+#
+# JIUTIAN PLATFORM
+#
+########################################
+
+app.state.config.JIUTIAN_API_KEY = JIUTIAN_API_KEY
+app.state.config.JIUTIAN_API_BASE = JIUTIAN_API_BASE
+app.state.config.JIUTIAN_MODEL_IDS = JIUTIAN_MODEL_IDS
+app.state.config.ENABLE_JIUTIAN_MULTI_CHAT = ENABLE_JIUTIAN_MULTI_CHAT
 
 app.state.AUTH_TRUSTED_EMAIL_HEADER = WEBUI_AUTH_TRUSTED_EMAIL_HEADER
 app.state.AUTH_TRUSTED_NAME_HEADER = WEBUI_AUTH_TRUSTED_NAME_HEADER
@@ -1274,6 +1290,7 @@ app.mount("/ws", socket_app)
 
 app.include_router(ollama.router, prefix="/ollama", tags=["ollama"])
 app.include_router(openai.router, prefix="/openai", tags=["openai"])
+app.include_router(jiutian.router, prefix="/api/v1/jiutian", tags=["jiutian"])
 
 
 app.include_router(pipelines.router, prefix="/api/v1/pipelines", tags=["pipelines"])

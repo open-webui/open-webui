@@ -64,6 +64,7 @@
 	import { generateOpenAIChatCompletion } from '$lib/apis/openai';
 	import { processWeb, processWebSearch, processYoutubeVideo } from '$lib/apis/retrieval';
 	import { getAndUpdateUserLocation, getUserSettings } from '$lib/apis/users';
+	import { jiutianMultiChatCompletion } from '$lib/apis/jiutian';
 	import {
 		chatCompleted,
 		generateQueries,
@@ -123,6 +124,9 @@
 	let atSelectedModel: Model | undefined;
 	let selectedModelIds = [];
 	$: selectedModelIds = atSelectedModel !== undefined ? [atSelectedModel.id] : selectedModels;
+
+	// 九天平台多智能体模式
+	let isMultiAgentMode = false;
 
 	let selectedToolIds = [];
 	let selectedFilterIds = [];
@@ -1590,6 +1594,166 @@
 		await sendMessage(history, userMessageId, { newChat: true });
 	};
 
+	const handleJiutianMultiAgentChat = async (_history, parentId, selectedModelIds, messages) => {
+		// 创建一个统一的响应消息
+		const responseMessageId = uuidv4();
+		const responseMessage = {
+			parentId: parentId,
+			id: responseMessageId,
+			childrenIds: [],
+			role: 'assistant',
+			content: '',
+			models: selectedModelIds.map(id => $models.find(m => m.id === id)).filter(Boolean),
+			timestamp: Math.floor(Date.now() / 1000),
+			isMultiAgent: true,
+			currentAgent: null
+		};
+
+		// 添加消息到历史记录
+		_history.messages[responseMessageId] = responseMessage;
+		_history.currentId = responseMessageId;
+
+		// 将消息ID添加到父消息的子消息列表
+		if (parentId !== null && _history.messages[parentId]) {
+			_history.messages[parentId].childrenIds.push(responseMessageId);
+		}
+
+		// 更新聊天历史
+		history.set(_history);
+		await tick();
+
+		// 准备消息数据
+		const _messages = messages && messages.length > 0 
+			? messages 
+			: createMessagesList(_history, responseMessageId);
+
+		// 调用九天平台多智能体API
+		try {
+			// 显示加载状态并设置初始当前智能体
+			const models = selectedModelIds.map(id => $models.find(m => m.id === id)).filter(Boolean);
+			if (models.length > 0) {
+				_history.messages[responseMessageId].currentAgent = models[0];
+			}
+			_history.messages[responseMessageId].content = '🤖 多智能体正在协作思考中...';
+			history.set(_history);
+			await tick();
+			scrollToBottom();
+
+			const response = await jiutianMultiChatCompletion(
+				localStorage.token,
+				{
+					models: selectedModelIds,
+					messages: _messages.map(msg => ({
+						role: msg.role,
+						content: msg.content
+					})),
+					stream: true
+				}
+			);
+
+			// 清空加载状态，准备接收实际内容
+			_history.messages[responseMessageId].content = '';
+			history.set(_history);
+
+			// 处理流式响应
+			if (response.body) {
+				const reader = response.body.getReader();
+				const decoder = new TextDecoder();
+				let buffer = '';
+				let contentBuffer = '';
+
+				// 打字机效果的延迟
+				const typewriterDelay = 30; // 毫秒
+				let lastUpdateTime = 0;
+
+				while (true) {
+					const { done, value } = await reader.read();
+					if (done) break;
+
+					buffer += decoder.decode(value, { stream: true });
+					const lines = buffer.split('\n');
+					buffer = lines.pop() || '';
+
+					for (const line of lines) {
+						if (line.startsWith('data: ')) {
+							try {
+								const data = JSON.parse(line.slice(6));
+								if (data.content) {
+									contentBuffer += data.content;
+									
+									// 实现打字机效果
+									const now = Date.now();
+									if (now - lastUpdateTime >= typewriterDelay) {
+										_history.messages[responseMessageId].content = contentBuffer;
+										history.set(_history);
+										await tick();
+										scrollToBottom();
+										lastUpdateTime = now;
+									}
+								}
+								
+								// 处理智能体切换
+								if (data.agent_switch && data.agent_id) {
+									const newAgent = models.find(m => m.id === data.agent_id);
+									if (newAgent) {
+										_history.messages[responseMessageId].currentAgent = newAgent;
+										contentBuffer += `\n\n[${newAgent.name} 开始回答]\n`;
+									}
+								}
+								
+								// 处理多智能体特定的数据格式
+								if (data.agent_id && data.agent_name) {
+									// 如果有智能体信息，可以显示当前回答的智能体
+									_history.messages[responseMessageId].currentAgent = {
+										id: data.agent_id,
+										name: data.agent_name
+									};
+								}
+								
+								if (data.finished) {
+									// 确保最终内容完整显示
+									_history.messages[responseMessageId].content = contentBuffer;
+									// 清除当前智能体指示器（完成状态）
+									_history.messages[responseMessageId].currentAgent = null;
+									history.set(_history);
+									await tick();
+									scrollToBottom();
+									break;
+								}
+							} catch (e) {
+								console.error('解析流式数据错误:', e);
+							}
+						}
+					}
+				}
+
+				// 确保最后的内容被显示
+				if (contentBuffer && _history.messages[responseMessageId].content !== contentBuffer) {
+					_history.messages[responseMessageId].content = contentBuffer;
+					// 清除当前智能体指示器（完成状态）
+					_history.messages[responseMessageId].currentAgent = null;
+					history.set(_history);
+					await tick();
+					scrollToBottom();
+				}
+			}
+		} catch (error) {
+			console.error('九天平台多智能体聊天错误:', error);
+			_history.messages[responseMessageId].content = '❌ 抱歉，多智能体聊天出现错误，请稍后重试。\n\n错误信息: ' + (error.message || '未知错误');
+			// 清除当前智能体指示器（错误状态）
+			_history.messages[responseMessageId].currentAgent = null;
+			history.set(_history);
+		}
+
+		// 保存聊天记录
+		if ($settings.saveChatHistory ?? true) {
+			chat.set(await updateChatById(localStorage.token, $chatId, {
+				messages: _history.messages,
+				history: _history
+			}));
+		}
+	};
+
 	const sendMessage = async (
 		_history,
 		parentId: string,
@@ -1619,6 +1783,15 @@
 			: atSelectedModel !== undefined
 				? [atSelectedModel.id]
 				: selectedModels;
+
+		// 检查是否为九天平台多智能体模式
+		const isJiutianMultiAgent = isMultiAgentMode && selectedModelIds.length > 1;
+		
+		// 如果是九天平台多智能体模式，使用特殊的处理逻辑
+		if (isJiutianMultiAgent) {
+			await handleJiutianMultiAgentChat(_history, parentId, selectedModelIds, messages);
+			return;
+		}
 
 		// Create response messages for each selected model
 		for (const [_modelIdx, modelId] of selectedModelIds.entries()) {
@@ -2456,6 +2629,7 @@
 									bind:webSearchEnabled
 									bind:atSelectedModel
 									bind:showCommands
+									bind:isMultiAgentMode
 									toolServers={$toolServers}
 									{generating}
 									{stopResponse}
@@ -2508,6 +2682,7 @@
 									bind:webSearchEnabled
 									bind:atSelectedModel
 									bind:showCommands
+									bind:isMultiAgentMode
 									toolServers={$toolServers}
 									{stopResponse}
 									{createMessagePair}
