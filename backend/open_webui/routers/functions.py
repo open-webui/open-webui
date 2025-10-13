@@ -10,6 +10,7 @@ from open_webui.models.functions import (
     FunctionForm,
     FunctionModel,
     FunctionResponse,
+    FunctionUserResponse,
     FunctionWithValvesModel,
     Functions,
 )
@@ -40,6 +41,11 @@ router = APIRouter()
 @router.get("/", response_model=list[FunctionResponse])
 async def get_functions(user=Depends(get_verified_user)):
     return Functions.get_functions()
+
+
+@router.get("/list", response_model=list[FunctionUserResponse])
+async def get_function_list(user=Depends(get_admin_user)):
+    return Functions.get_function_list()
 
 
 ############################
@@ -431,8 +437,10 @@ async def update_function_valves_by_id(
             try:
                 form_data = {k: v for k, v in form_data.items() if v is not None}
                 valves = Valves(**form_data)
-                Functions.update_function_valves_by_id(id, valves.model_dump())
-                return valves.model_dump()
+
+                valves_dict = valves.model_dump(exclude_unset=True)
+                Functions.update_function_valves_by_id(id, valves_dict)
+                return valves_dict
             except Exception as e:
                 log.exception(f"Error updating function values by id {id}: {e}")
                 raise HTTPException(
@@ -514,10 +522,11 @@ async def update_function_user_valves_by_id(
             try:
                 form_data = {k: v for k, v in form_data.items() if v is not None}
                 user_valves = UserValves(**form_data)
+                user_valves_dict = user_valves.model_dump(exclude_unset=True)
                 Functions.update_user_valves_by_id_and_user_id(
-                    id, user.id, user_valves.model_dump()
+                    id, user.id, user_valves_dict
                 )
-                return user_valves.model_dump()
+                return user_valves_dict
             except Exception as e:
                 log.exception(f"Error updating function user valves by id {id}: {e}")
                 raise HTTPException(

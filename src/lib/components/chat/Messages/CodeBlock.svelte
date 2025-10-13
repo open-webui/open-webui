@@ -1,16 +1,18 @@
 <script lang="ts">
 	import hljs from 'highlight.js';
-
+	import { toast } from 'svelte-sonner';
 	import { getContext, onMount, tick, onDestroy } from 'svelte';
-	import { copyToClipboard, renderMermaidDiagram } from '$lib/utils';
+	import { config } from '$lib/stores';
+
+	import PyodideWorker from '$lib/workers/pyodide.worker?worker';
+	import { executeCode } from '$lib/apis/utils';
+	import { copyToClipboard, renderMermaidDiagram, renderVegaVisualization } from '$lib/utils';
 
 	import 'highlight.js/styles/github-dark.min.css';
 
-	import PyodideWorker from '$lib/workers/pyodide.worker?worker';
+	import CodeEditor from '$lib/components/common/CodeEditor.svelte';
 	import SvgPanZoom from '$lib/components/common/SVGPanZoom.svelte';
-	import { config } from '$lib/stores';
-	import { executeCode } from '$lib/apis/utils';
-	import { toast } from 'svelte-sonner';
+
 	import ChevronUp from '$lib/components/icons/ChevronUp.svelte';
 	import ChevronUpDown from '$lib/components/icons/ChevronUpDown.svelte';
 	import CommandLine from '$lib/components/icons/CommandLine.svelte';
@@ -53,6 +55,7 @@
 	let _token = null;
 
 	let mermaidHtml = null;
+	let vegaHtml = null;
 
 	let highlightedCode = null;
 	let executing = false;
@@ -323,7 +326,26 @@
 	const render = async () => {
 		onUpdate(token);
 		if (lang === 'mermaid' && (token?.raw ?? '').slice(-4).includes('```')) {
-			mermaidHtml = await renderMermaidDiagram(code);
+			try {
+				mermaidHtml = await renderMermaidDiagram(code);
+			} catch (error) {
+				console.error('Failed to render mermaid diagram:', error);
+				const errorMsg = error instanceof Error ? error.message : String(error);
+				toast.error($i18n.t('Failed to render diagram') + `: ${errorMsg}`);
+				mermaidHtml = null;
+			}
+		} else if (
+			(lang === 'vega' || lang === 'vega-lite') &&
+			(token?.raw ?? '').slice(-4).includes('```')
+		) {
+			try {
+				vegaHtml = await renderVegaVisualization(code);
+			} catch (error) {
+				console.error('Failed to render Vega visualization:', error);
+				const errorMsg = error instanceof Error ? error.message : String(error);
+				toast.error($i18n.t('Failed to render diagram') + `: ${errorMsg}`);
+				vegaHtml = null;
+			}
 		}
 	};
 
@@ -394,6 +416,16 @@
 				/>
 			{:else}
 				<pre class="mermaid">{code}</pre>
+			{/if}
+		{:else if lang === 'vega' || lang === 'vega-lite'}
+			{#if vegaHtml}
+				<SvgPanZoom
+					className="rounded-3xl max-h-fit overflow-hidden"
+					svg={vegaHtml}
+					content={_token.text}
+				/>
+			{:else}
+				<pre class="vega">{code}</pre>
 			{/if}
 		{:else}
 			<div
@@ -480,19 +512,17 @@
 
 				{#if !collapsed}
 					{#if edit}
-						{#await import('$lib/components/common/CodeEditor.svelte') then { default: CodeEditor }}
-							<CodeEditor
-								value={code}
-								{id}
-								{lang}
-								onSave={() => {
-									saveCode();
-								}}
-								onChange={(value) => {
-									_code = value;
-								}}
-							/>
-						{/await}
+						<CodeEditor
+							value={code}
+							{id}
+							{lang}
+							onSave={() => {
+								saveCode();
+							}}
+							onChange={(value) => {
+								_code = value;
+							}}
+						/>
 					{:else}
 						<pre
 							class=" hljs p-4 px-5 overflow-x-auto"

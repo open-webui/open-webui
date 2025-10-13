@@ -1,4 +1,6 @@
 <script lang="ts">
+	import { marked } from 'marked';
+
 	import { toast } from 'svelte-sonner';
 	import fileSaver from 'file-saver';
 	import Fuse from 'fuse.js';
@@ -26,6 +28,7 @@
 	// Assuming $i18n.languages is an array of language codes
 	$: loadLocale($i18n.languages);
 
+	import { page } from '$app/stores';
 	import { goto } from '$app/navigation';
 	import { onMount, getContext, onDestroy } from 'svelte';
 	import { WEBUI_NAME, config, prompts as _prompts, user } from '$lib/stores';
@@ -42,7 +45,6 @@
 	import Tooltip from '../common/Tooltip.svelte';
 	import NoteMenu from './Notes/NoteMenu.svelte';
 	import FilesOverlay from '../chat/MessageInput/FilesOverlay.svelte';
-	import { marked } from 'marked';
 	import XMark from '../icons/XMark.svelte';
 
 	const i18n = getContext('i18n');
@@ -97,7 +99,7 @@
 		});
 	};
 
-	const createNoteHandler = async () => {
+	const createNoteHandler = async (content?: string) => {
 		//  $i18n.t('New Note'),
 		const res = await createNewNote(localStorage.token, {
 			// YYYY-MM-DD
@@ -105,8 +107,8 @@
 			data: {
 				content: {
 					json: null,
-					html: '',
-					md: ''
+					html: content ?? '',
+					md: content ?? ''
 				}
 			},
 			meta: null,
@@ -301,6 +303,14 @@
 	});
 
 	onMount(async () => {
+		if ($page.url.searchParams.get('content')) {
+			const content = $page.url.searchParams.get('content') ?? '';
+			if (content) {
+				createNoteHandler(content);
+				return;
+			}
+		}
+
 		await init();
 		loaded = true;
 
@@ -330,7 +340,7 @@
 				showDeleteConfirm = false;
 			}}
 		>
-			<div class=" text-sm text-gray-500">
+			<div class=" text-sm text-gray-500 truncate">
 				{$i18n.t('This will delete')} <span class="  font-semibold">{selectedNote.title}</span>.
 			</div>
 		</DeleteConfirmDialog>
