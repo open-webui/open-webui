@@ -123,11 +123,20 @@ from datetime import datetime
 conn = sqlite3.connect('$SQLITE_PATH')
 cursor = conn.cursor()
 
-# Convert ISO timestamp to Unix epoch (Open WebUI uses Unix timestamps)
-since_dt = datetime.fromisoformat('$since_timestamp'.replace('Z', '+00:00'))
-since_epoch = int(since_dt.timestamp())
+# Check if table has updated_at column
+cursor.execute('PRAGMA table_info(\"$table\")')
+columns = [row[1] for row in cursor.fetchall()]
+has_updated_at = 'updated_at' in columns
 
-cursor.execute('SELECT COUNT(*) FROM \"$table\" WHERE updated_at > ?', (since_epoch,))
+if has_updated_at:
+    # Convert ISO timestamp to Unix epoch (Open WebUI uses Unix timestamps)
+    since_dt = datetime.fromisoformat('$since_timestamp'.replace('Z', '+00:00'))
+    since_epoch = int(since_dt.timestamp())
+    cursor.execute('SELECT COUNT(*) FROM \"$table\" WHERE updated_at > ?', (since_epoch,))
+else:
+    # No updated_at column - sync entire table
+    cursor.execute('SELECT COUNT(*) FROM \"$table\"')
+
 count = cursor.fetchone()[0]
 conn.close()
 print(count)
@@ -148,11 +157,19 @@ conn = sqlite3.connect('$SQLITE_PATH')
 conn.row_factory = sqlite3.Row
 cursor = conn.cursor()
 
-# Convert ISO timestamp to Unix epoch
-since_dt = datetime.fromisoformat('$since_timestamp'.replace('Z', '+00:00'))
-since_epoch = int(since_dt.timestamp())
+# Check if table has updated_at column
+cursor.execute('PRAGMA table_info(\"$table\")')
+columns = [row[1] for row in cursor.fetchall()]
+has_updated_at = 'updated_at' in columns
 
-cursor.execute('SELECT * FROM \"$table\" WHERE updated_at > ? LIMIT $BATCH_SIZE', (since_epoch,))
+if has_updated_at:
+    # Convert ISO timestamp to Unix epoch
+    since_dt = datetime.fromisoformat('$since_timestamp'.replace('Z', '+00:00'))
+    since_epoch = int(since_dt.timestamp())
+    cursor.execute('SELECT * FROM \"$table\" WHERE updated_at > ? LIMIT $BATCH_SIZE', (since_epoch,))
+else:
+    # No updated_at column - sync entire table (limited by BATCH_SIZE)
+    cursor.execute('SELECT * FROM \"$table\" LIMIT $BATCH_SIZE')
 
 rows = []
 for row in cursor:
