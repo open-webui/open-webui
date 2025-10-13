@@ -9,7 +9,7 @@
 
 	import { toast } from 'svelte-sonner';
 
-	import { selectedFolder } from '$lib/stores';
+	import { selectedFolder, chatListRefresh } from '$lib/stores';
 
 	import { deleteFolderById, getFolderById, updateFolderById } from '$lib/apis/folders';
 	import { getChatsByFolderId } from '$lib/apis/chats';
@@ -93,6 +93,10 @@
 			});
 
 			await selectedFolder.set(_folder);
+			chatListRefresh.update((v) => ({
+				timestamp: Date.now(),
+				folderId: folder.id
+			}));
 			onUpdate(_folder);
 		}
 	};

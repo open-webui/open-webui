@@ -127,7 +127,7 @@
 				// Trigger global refresh
 				timestamp: Date.now(),
 				folderId: null // Refresh all since we don't have folder context here
-			}));			
+			}));
 			onUpdate();
 			await init();
 		} catch (error) {

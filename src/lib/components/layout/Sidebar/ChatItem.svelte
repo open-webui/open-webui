@@ -76,7 +76,7 @@
 				timestamp: Date.now(),
 				folderId: chat.folder_id
 			}));
-		} 
+		}
 	};
 
 	let showShareChatModal = false;

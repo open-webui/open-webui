@@ -343,6 +343,11 @@
 					await selectedFolder.set(folder);
 				}
 			}
+
+			chatListRefresh.update((v) => ({
+				timestamp: Date.now(),
+				folderId: folder.id
+			}));
 			dispatch('update');
 		}
 	};
