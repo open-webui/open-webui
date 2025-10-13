@@ -89,7 +89,7 @@ async def get_timestamp():
         print('1970-01-01T00:00:00', flush=True)  # Fallback on error
 
 print(asyncio.run(get_timestamp()), flush=True)
-" 2>/dev/null || echo "1970-01-01T00:00:00"
+" || echo "1970-01-01T00:00:00"
 }
 
 # Checkpoint SQLite WAL for consistent snapshot
@@ -102,7 +102,7 @@ conn = sqlite3.connect('$SQLITE_PATH')
 conn.execute('PRAGMA wal_checkpoint(TRUNCATE)')
 conn.close()
 print('WAL checkpointed')
-" 2>/dev/null || {
+" || {
         log_error "Failed to checkpoint WAL"
         return 1
     }
@@ -140,7 +140,7 @@ else:
 count = cursor.fetchone()[0]
 conn.close()
 print(count)
-" 2>/dev/null || echo "0"
+" || echo "0"
 }
 
 # Export table data from SQLite
@@ -177,7 +177,7 @@ for row in cursor:
 
 conn.close()
 print(json.dumps(rows), flush=True)
-" 2>/dev/null
+"
 }
 
 # Sync a single table
@@ -268,7 +268,9 @@ async def sync_rows():
         except Exception as e:
             failed += 1
             # Log error but continue
-            print(f'Row error: {str(e)[:100]}', file=sys.stderr, flush=True)
+            print(f'ERROR syncing row in {table_name}: {str(e)}', file=sys.stderr, flush=True)
+            import traceback
+            traceback.print_exc(file=sys.stderr)
 
     await conn.close()
     print(f'{synced},{failed}', flush=True)
@@ -324,7 +326,7 @@ async def update_timestamp():
         return False
 
 asyncio.run(update_timestamp())
-" 2>/dev/null || log_error "Failed to update sync timestamp"
+" || log_error "Failed to update sync timestamp"
 }
 
 # ============================================================================
@@ -363,10 +365,16 @@ main() {
     local total_failed=0
 
     for table in "${TABLES[@]}"; do
+        log_info "=== Starting sync for table: $table ==="
         if sync_table "$table" "$last_sync"; then
-            ((total_synced++))
+            log_info "DEBUG: About to increment total_synced (currently: $total_synced)"
+            total_synced=$((total_synced + 1))
+            log_info "DEBUG: Incremented total_synced to: $total_synced"
+            log_success "Table $table completed successfully"
         else
-            ((total_failed++))
+            log_info "DEBUG: About to increment total_failed (currently: $total_failed)"
+            total_failed=$((total_failed + 1))
+            log_info "DEBUG: Incremented total_failed to: $total_failed"
             log_error "Failed to sync table: $table"
         fi
     done
