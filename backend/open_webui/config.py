@@ -1542,6 +1542,13 @@ ENABLE_CHANNELS = PersistentConfig(
     os.environ.get("ENABLE_CHANNELS", "False").lower() == "true",
 )
 
+ENABLE_INDIVIDUAL_KNOWLEDGE_FILE_ATTACHMENTS = PersistentConfig(
+    "ENABLE_INDIVIDUAL_KNOWLEDGE_FILE_ATTACHMENTS",
+    "knowledge.individual_file_attachments.enable",
+    os.environ.get("ENABLE_INDIVIDUAL_KNOWLEDGE_FILE_ATTACHMENTS", "True").lower()
+    == "true",
+)
+
 ENABLE_NOTES = PersistentConfig(
     "ENABLE_NOTES",
     "notes.enable",

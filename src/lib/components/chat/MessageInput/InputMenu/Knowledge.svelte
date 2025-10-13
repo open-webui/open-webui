@@ -2,7 +2,7 @@
 	import { onMount, tick, getContext } from 'svelte';
 
 	import { decodeString } from '$lib/utils';
-	import { knowledge } from '$lib/stores';
+	import { knowledge, config } from '$lib/stores';
 
 	import { getKnowledgeBases } from '$lib/apis/knowledge';
 
@@ -99,7 +99,9 @@
 				};
 			}
 		);
-
+		if (!($config?.features?.enable_individual_knowledge_file_attachments ?? true)) {
+			items = items.filter((it) => it.type !== 'file');
+		}
 		await tick();
 
 		loaded = true;
