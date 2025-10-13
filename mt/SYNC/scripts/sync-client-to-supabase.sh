@@ -201,18 +201,23 @@ sync_table() {
 
     log_info "Processing $row_count rows from $table..."
 
+    # Write JSON to temp file
+    local temp_file
+    temp_file=$(mktemp)
+    echo "$json_data" > "$temp_file"
+
     # Import to Supabase (using local Python with asyncpg)
     local result
-    result=$(python3 -c "
+    result=$(python3 <<PYEOF
 import asyncpg
 import asyncio
 import json
 import sys
 
 async def sync_rows():
-    # Read JSON data from stdin
-    json_data = '''$json_data'''
-    rows = json.loads(json_data)
+    # Read JSON data from file
+    with open('$temp_file', 'r') as f:
+        rows = json.load(f)
 
     conn = await asyncpg.connect('$DATABASE_URL')
 
@@ -226,15 +231,15 @@ async def sync_rows():
             values = [row[col] for col in columns]
 
             # Build INSERT ... ON CONFLICT DO UPDATE query
-            placeholders = ', '.join([f'\\\$\{i+1}' for i in range(len(columns))])
-            cols_str = ', '.join([f'\"{col}\"' for col in columns])
+            placeholders = ', '.join([f'\\$\{i+1}' for i in range(len(columns))])
+            cols_str = ', '.join([f'"{col}"' for col in columns])
 
             # Upsert with properly quoted identifiers
             query = f'''
-                INSERT INTO \"${CLIENT_NAME}\".\"{table}\" ({cols_str})
+                INSERT INTO "${CLIENT_NAME}"."{table}" ({cols_str})
                 VALUES ({placeholders})
                 ON CONFLICT (id) DO UPDATE
-                SET {', '.join([f'\"{col}\" = EXCLUDED.\"{col}\"' for col in columns if col != 'id'])}
+                SET {', '.join([f'"{col}" = EXCLUDED."{col}"' for col in columns if col != 'id'])}
             '''
 
             await conn.execute(query, *values)
@@ -249,7 +254,11 @@ async def sync_rows():
     print(f'{synced},{failed}', flush=True)
 
 asyncio.run(sync_rows())
-" 2>&1)
+PYEOF
+)
+
+    # Clean up temp file
+    rm -f "$temp_file"
 
     # Parse results (format: "synced,failed")
     local rows_synced
