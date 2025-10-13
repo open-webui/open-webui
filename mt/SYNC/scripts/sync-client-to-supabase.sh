@@ -230,6 +230,7 @@ import asyncpg
 import asyncio
 import json
 import sys
+from datetime import datetime
 
 async def sync_rows():
     # Read JSON data from file
@@ -244,11 +245,80 @@ async def sync_rows():
     table_name = '$table'
     client_name = '$CLIENT_NAME'
 
+    # Get PostgreSQL column types for this table
+    schema_query = '''
+        SELECT column_name, data_type, udt_name
+        FROM information_schema.columns
+        WHERE table_schema = \$1 AND table_name = \$2
+        ORDER BY ordinal_position
+    '''
+
+    schema_rows = await conn.fetch(schema_query, client_name, table_name)
+
+    # Build type mapping: column_name -> (data_type, udt_name)
+    column_types = {row['column_name']: (row['data_type'], row['udt_name']) for row in schema_rows}
+
     for row in rows:
         try:
-            # Get column names and values
+            # Get column names and convert values based on PostgreSQL types
             columns = list(row.keys())
-            values = [row[col] for col in columns]
+            values = []
+
+            for col in columns:
+                val = row[col]
+
+                # Skip conversion if column not in schema (shouldn't happen)
+                if col not in column_types:
+                    values.append(val)
+                    continue
+
+                data_type, udt_name = column_types[col]
+
+                # Type conversion logic
+                if val is None:
+                    # NULL values pass through
+                    values.append(val)
+
+                elif data_type == 'boolean' or udt_name == 'bool':
+                    # Convert SQLite INTEGER (0/1) to Python bool
+                    if isinstance(val, int):
+                        values.append(bool(val))
+                    else:
+                        values.append(val)
+
+                elif data_type in ('timestamp without time zone', 'timestamp with time zone') or udt_name in ('timestamp', 'timestamptz'):
+                    # Convert SQLite TEXT timestamp to Python datetime
+                    if isinstance(val, str):
+                        # Try parsing various timestamp formats
+                        try:
+                            # Format: "2025-09-28 03:37:37"
+                            values.append(datetime.strptime(val, '%Y-%m-%d %H:%M:%S'))
+                        except ValueError:
+                            try:
+                                # ISO format with T separator
+                                values.append(datetime.fromisoformat(val.replace('Z', '+00:00')))
+                            except ValueError:
+                                # If parsing fails, pass through and let asyncpg handle it
+                                values.append(val)
+                    elif isinstance(val, (int, float)):
+                        # Unix timestamp (epoch seconds)
+                        values.append(datetime.fromtimestamp(val))
+                    else:
+                        values.append(val)
+
+                elif data_type == 'date':
+                    # Convert SQLite TEXT date to Python date
+                    if isinstance(val, str):
+                        try:
+                            values.append(datetime.strptime(val, '%Y-%m-%d').date())
+                        except ValueError:
+                            values.append(val)
+                    else:
+                        values.append(val)
+
+                else:
+                    # All other types pass through (text, integer, uuid, json, etc.)
+                    values.append(val)
 
             # Build INSERT ... ON CONFLICT DO UPDATE query
             placeholders = ', '.join(['\$' + str(i+1) for i in range(len(columns))])
