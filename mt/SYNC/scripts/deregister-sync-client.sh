@@ -173,7 +173,7 @@ async def disable_sync():
         await conn.execute('''
             UPDATE sync_metadata.client_deployments
             SET sync_enabled = false,
-                status = 'inactive',
+                status = 'paused',
                 updated_at = NOW()
             WHERE client_name = $1
         ''', client_name)
@@ -263,7 +263,7 @@ main() {
     echo "What will happen:"
     echo "  - Sync will be disabled in sync_metadata.client_deployments"
     echo "  - The sync cluster will stop syncing this client"
-    echo "  - Client status will be set to 'inactive'"
+    echo "  - Client status will be set to 'paused'"
     echo ""
     echo "What will NOT happen:"
     echo "  - Supabase schema and data will be PRESERVED"
@@ -302,7 +302,7 @@ main() {
     echo "  - Sync cluster will no longer sync this client"
     echo ""
     echo -e "${BLUE}What was NOT deleted:${NC}"
-    echo "  - Client registration in sync_metadata.client_deployments (status: inactive)"
+    echo "  - Client registration in sync_metadata.client_deployments (status: paused)"
     echo "  - Supabase schema: $CLIENT_NAME (all data preserved)"
     echo "  - Client container (still running if it was before)"
     echo "  - SQLite database in container"
