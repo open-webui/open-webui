@@ -120,74 +120,82 @@
 
 						console.log(file);
 					} else {
-						// Handle the drag-and-drop data for folders or chats (same as before)
-						const dataTransfer = e.dataTransfer.getData('text/plain');
-
+						open = true;
 						try {
-							const data = JSON.parse(dataTransfer);
-							console.log(data);
+							const dataTransfer = e.dataTransfer.getData('text/plain');
+							if (dataTransfer) {
+								const data = JSON.parse(dataTransfer);
+								console.log(data);
+								const { type, id, item } = data;
 
-							const { type, id, item } = data;
-
-							if (type === 'folder') {
-								open = true;
-								if (id === folderId) {
-									return;
-								}
-								// Move the folder
-								const res = await updateFolderParentIdById(localStorage.token, id, folderId).catch(
-									(error) => {
-										toast.error(`${error}`);
-										return null;
+								if (type === 'folder') {
+									open = true;
+									if (id === folderId) {
+										return;
 									}
-								);
-
-								if (res) {
-									dispatch('update');
-								}
-							} else if (type === 'chat') {
-								open = true;
-
-								let chat = await getChatById(localStorage.token, id).catch((error) => {
-									return null;
-								});
-								if (!chat && item) {
-									chat = await importChat(
+									// Move the folder
+									const res = await updateFolderParentIdById(
 										localStorage.token,
-										item.chat,
-										item?.meta ?? {},
-										false,
-										null,
-										item?.created_at ?? null,
-										item?.updated_at ?? null
+										id,
+										folderId
 									).catch((error) => {
 										toast.error(`${error}`);
 										return null;
 									});
+
+									if (res) {
+										dispatch('update');
+									}
+								} else if (type === 'chat') {
+									open = true;
+
+									let chat = await getChatById(localStorage.token, id).catch((error) => {
+										return null;
+									});
+									if (!chat && item) {
+										chat = await importChat(
+											localStorage.token,
+											item.chat,
+											item?.meta ?? {},
+											false,
+											null,
+											item?.created_at ?? null,
+											item?.updated_at ?? null
+										).catch((error) => {
+											toast.error(`${error}`);
+											return null;
+										});
+									}
+
+									// Move the chat
+									const res = await updateChatFolderIdById(
+										localStorage.token,
+										chat.id,
+										folderId
+									).catch((error) => {
+										toast.error(`${error}`);
+										return null;
+									});
+
+									onItemMove({
+										originFolderId: chat.folder_id,
+										targetFolderId: folderId,
+										e
+									});
+
+									if (res) {
+										dispatch('update');
+									}
 								}
-
-								// Move the chat
-								const res = await updateChatFolderIdById(
-									localStorage.token,
-									chat.id,
-									folderId
-								).catch((error) => {
-									toast.error(`${error}`);
-									return null;
-								});
-
-								onItemMove({
-									originFolderId: chat.folder_id,
-									targetFolderId: folderId,
-									e
-								});
-
-								if (res) {
-									dispatch('update');
-								}
+							} else {
+								console.log('Dropped text data is empty or not text/plain.');
 							}
 						} catch (error) {
-							console.log('Error parsing dataTransfer:', error);
+							console.log(
+								'Dropped data is not valid JSON text or is empty. Ignoring drop event for this type of data.'
+							);
+						} finally {
+							draggedOver = false;
 						}
 					}
 				}
