@@ -356,6 +356,19 @@
 					}
 				} else if (type === 'chat:completion') {
 					chatCompletionEventHandler(data, message, event.chat_id);
+				} else if (type === 'chat:message:update') {
+					const elementId = data.id;
+					const isDone = data.done;
+
+					if (elementId) {
+						// Find the <details> element in the DOM
+						const element = document.getElementById(elementId);
+
+						if (element) {
+							// Update the 'done' attribute to close the animation
+							element.setAttribute('done', isDone.toString());
+						}
+					}
 				} else if (type === 'chat:tasks:cancel') {
 					taskIds = null;
 					const responseMessage = history.messages[history.currentId];
