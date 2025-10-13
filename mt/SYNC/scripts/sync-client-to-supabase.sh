@@ -224,6 +224,9 @@ async def sync_rows():
     synced = 0
     failed = 0
 
+    table_name = '$table'
+    client_name = '$CLIENT_NAME'
+
     for row in rows:
         try:
             # Get column names and values
@@ -236,7 +239,7 @@ async def sync_rows():
 
             # Upsert with properly quoted identifiers
             query = f'''
-                INSERT INTO "${CLIENT_NAME}"."{table}" ({cols_str})
+                INSERT INTO "{client_name}"."{table_name}" ({cols_str})
                 VALUES ({placeholders})
                 ON CONFLICT (id) DO UPDATE
                 SET {', '.join([f'"{col}" = EXCLUDED."{col}"' for col in columns if col != 'id'])}
