@@ -138,7 +138,7 @@ class LeaderElection:
         await conn.execute(f"SET app.current_host_id = '{self.host_id}'")
         await conn.execute(f"SET app.current_hostname = '{self.node_id}'")
         await conn.execute(f"SET app.current_cluster_name = '{self.cluster_name}'")
-        logger.debug(f"Session context set for connection: host_id={self.host_id}, cluster={self.cluster_name}")
+        logger.info(f"Session context set for connection: host_id={self.host_id}, cluster={self.cluster_name}")
 
     async def _register_host(self):
         """
@@ -148,8 +148,8 @@ class LeaderElection:
         If the host already exists (by hostname + cluster_name), retrieves
         the existing host_id to maintain consistency across container restarts.
         """
+        # First, query for existing host_id
         async with self.pool.acquire() as conn:
-            # Use RETURNING to get the host_id whether inserted or updated
             result = await conn.fetchrow(
                 """INSERT INTO sync_metadata.hosts (host_id, hostname, cluster_name, status, last_heartbeat)
                    VALUES ($1::uuid, $2, $3, 'active', NOW())
@@ -162,13 +162,41 @@ class LeaderElection:
                 self.cluster_name
             )
 
-            # Update self.host_id with the stable host_id from the database
-            # This ensures consistency across container restarts
-            if result and result['host_id'] != self.host_id:
-                logger.info(f"Using existing host_id {result['host_id']} for {self.node_id} (was {self.host_id})")
-                self.host_id = str(result['host_id'])
+        # Update self.host_id with the stable host_id from the database
+        # This ensures consistency across container restarts
+        if result:
+            db_host_id = str(result['host_id'])
+
+            if db_host_id != self.host_id:
+                old_host_id = self.host_id
+                self.host_id = db_host_id
+                logger.info(f"Using existing host_id {db_host_id} for {self.node_id} (was {old_host_id})")
+
+                # Update session context on all existing connections in the pool
+                # This is critical because _init_connection was called with the old host_id
+                logger.info(f"About to update pool session context...")
+                await self._update_pool_session_context()
+                logger.info(f"Pool session context update complete")
             else:
                 logger.info(f"Host registered: {self.node_id} with host_id {self.host_id}")
+
+    async def _update_pool_session_context(self):
+        """
+        Update session context on all connections in the pool.
+
+        Called after host_id is updated to the database value to ensure
+        all pooled connections use the correct host_id for RLS policies.
+
+        Since asyncpg pools don't provide direct access to modify all connections,
+        we terminate all connections and let the pool recreate them with the
+        correct host_id via the init callback.
+        """
+        logger.info(f"Updating session context to host_id={self.host_id}")
+
+        if self.pool:
+            # Close all connections in the pool (they'll be recreated on next use)
+            await self.pool.expire_connections()
+            logger.info("Pool connections expired - new connections will use updated host_id")
 
     async def start(self):
         """
@@ -213,14 +241,20 @@ class LeaderElection:
         """
         logger.info(f"Node {self.node_id} participating in leader election")
 
+        iteration = 0
         while self.running:
             try:
+                iteration += 1
+                logger.info(f"Leader election loop iteration {iteration} starting")
+
                 # Update uptime metric
                 uptime = time.time() - self.start_time
                 container_uptime_seconds.labels(node_id=self.node_id).set(uptime)
 
                 # Attempt to acquire or renew leadership
+                logger.info(f"Attempting to acquire/renew leadership...")
                 acquired = await self._try_acquire_leadership()
+                logger.info(f"Leadership acquisition result: {acquired}")
 
                 previous_state = self.is_leader
 
@@ -250,7 +284,7 @@ class LeaderElection:
 
                     else:
                         # Renewed leadership
-                        logger.debug(f"Node {self.node_id} renewed leadership")
+                        logger.info(f"Node {self.node_id} renewed leadership (iteration {iteration})")
                         record_leader_election(
                             node_id=self.node_id,
                             cluster=self.cluster_name,
@@ -259,7 +293,9 @@ class LeaderElection:
                         )
 
                     self.is_leader = True
+                    logger.info(f"Calling _perform_leader_duties...")
                     await self._perform_leader_duties()
+                    logger.info(f"_perform_leader_duties completed")
 
                 else:
                     if previous_state:
@@ -284,10 +320,14 @@ class LeaderElection:
                                 logger.error(f"Error in on_lose_leadership callback: {e}")
 
                     self.is_leader = False
+                    logger.info(f"Calling _perform_follower_duties...")
                     await self._perform_follower_duties()
+                    logger.info(f"_perform_follower_duties completed")
 
                 # Sleep half the lease duration (renew before expiry)
+                logger.info(f"Sleeping for {self.heartbeat_interval} seconds before next iteration")
                 await asyncio.sleep(self.heartbeat_interval)
+                logger.info(f"Woke up from sleep, starting iteration {iteration + 1}")
 
             except asyncio.CancelledError:
                 logger.info("Leader election task cancelled")
@@ -420,16 +460,24 @@ class LeaderElection:
         """
         # Update host heartbeat
         try:
+            logger.info(f"Updating heartbeat for host_id={self.host_id}")
             async with self.pool.acquire() as conn:
-                await conn.execute(
+                # EXPLICITLY set session context before UPDATE
+                # This ensures the correct host_id is used for RLS
+                await conn.execute(f"SET app.current_host_id = '{self.host_id}'")
+                await conn.execute(f"SET app.current_hostname = '{self.node_id}'")
+                await conn.execute(f"SET app.current_cluster_name = '{self.cluster_name}'")
+
+                result = await conn.execute(
                     """UPDATE sync_metadata.hosts
                        SET last_heartbeat = NOW(),
                            status = 'active'
                        WHERE host_id = $1::uuid""",
                     self.host_id
                 )
+                logger.info(f"Heartbeat update result: {result}")
         except Exception as e:
-            logger.error(f"Error updating host heartbeat: {e}")
+            logger.error(f"Error updating host heartbeat: {e}", exc_info=True)
 
         # Leader-specific work would go here or in callbacks
         # e.g., process sync job queue, coordinate cluster tasks, etc.
@@ -442,16 +490,24 @@ class LeaderElection:
         """
         # Update host heartbeat
         try:
+            logger.info(f"Updating heartbeat for host_id={self.host_id}")
             async with self.pool.acquire() as conn:
-                await conn.execute(
+                # EXPLICITLY set session context before UPDATE
+                # This ensures the correct host_id is used for RLS
+                await conn.execute(f"SET app.current_host_id = '{self.host_id}'")
+                await conn.execute(f"SET app.current_hostname = '{self.node_id}'")
+                await conn.execute(f"SET app.current_cluster_name = '{self.cluster_name}'")
+
+                result = await conn.execute(
                     """UPDATE sync_metadata.hosts
                        SET last_heartbeat = NOW(),
                            status = 'active'
                        WHERE host_id = $1::uuid""",
                     self.host_id
                 )
+                logger.info(f"Heartbeat update result: {result}")
         except Exception as e:
-            logger.error(f"Error updating host heartbeat: {e}")
+            logger.error(f"Error updating host heartbeat: {e}", exc_info=True)
 
         # Follower-specific work would go here or in callbacks
         # e.g., monitor leader health, update local metrics, etc.
