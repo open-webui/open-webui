@@ -21,6 +21,9 @@
 	import Terminal from '$lib/components/icons/Terminal.svelte';
 	import ChevronRight from '$lib/components/icons/ChevronRight.svelte';
 	import ChevronLeft from '$lib/components/icons/ChevronLeft.svelte';
+	import Search from '$lib/components/icons/Search.svelte';
+	import XMark from '$lib/components/icons/XMark.svelte';
+	import Fuse from 'fuse.js';
 
 	const i18n = getContext('i18n');
 
@@ -45,12 +48,24 @@
 
 	let show = false;
 	let tab = '';
+	let query = '';
 
 	let tools = null;
+	let fuse;
 
 	$: if (show) {
 		init();
 	}
+
+	$: {
+		if (tools) {
+			fuse = new Fuse(Object.values(tools), {
+				keys: ['name']
+			});
+		}
+	}
+
+	$: filteredTools = query ? fuse.search(query).map((e) => e.item) : tools ? Object.values(tools) : [];
 
 	let fileUploadEnabled = true;
 	$: fileUploadEnabled =
@@ -327,75 +342,107 @@
 						</div>
 					</button>
 
-					{#each Object.keys(tools) as toolId}
-						<button
-							class="relative flex w-full justify-between gap-2 items-center px-3 py-1.5 text-sm cursor-pointer rounded-xl hover:bg-gray-50 dark:hover:bg-gray-800/50"
-							on:click={async (e) => {
-								if (!(tools[toolId]?.authenticated ?? true)) {
-									e.preventDefault();
+					<div class="px-1 mb-1 flex justify-center space-x-2 relative z-10" id="search-container">
+						<div class="flex w-full rounded-xl items-center" id="chat-search">
+							<div class="pl-2 pr-1.5">
+								<Search />
+							</div>
+							<input
+								class="w-full py-2 pl-1 text-sm bg-transparent dark:text-gray-300 outline-none"
+								placeholder={$i18n.t('Search...')}
+								autocomplete="off"
+								bind:value={query}
+							/>
+							{#if query}
+								<div class="self-center pl-1.5 pr-1.5 rounded-l-xl bg-transparent">
+									<button
+										class="p-0.5 rounded-full hover:bg-gray-100 dark:hover:bg-gray-900 transition"
+										on:click={() => {
+											query = '';
+										}}
+									>
+										<XMark className="size-3" strokeWidth="2" />
+									</button>
+								</div>
+							{/if}
+						</div>
+					</div>
 
-									let parts = toolId.split(':');
-									let serverId = parts?.at(-1) ?? toolId;
+					{#if filteredTools.length === 0}
+						<div class="text-center text-xs text-gray-500 py-3">
+							{$i18n.t('No tools found')}
+						</div>
+					{:else}
+						{#each filteredTools as tool}
+							<button
+								class="relative flex w-full justify-between gap-2 items-center px-3 py-1.5 text-sm cursor-pointer rounded-xl hover:bg-gray-50 dark:hover:bg-gray-800/50"
+								on:click={async (e) => {
+									if (!(tool?.authenticated ?? true)) {
+										e.preventDefault();
 
-									const authUrl = getOAuthClientAuthorizationUrl(serverId, 'mcp');
-									window.open(authUrl, '_self', 'noopener');
-								} else {
-									tools[toolId].enabled = !tools[toolId].enabled;
+										let parts = tool.id.split(':');
+										let serverId = parts?.at(-1) ?? tool.id;
 
-									const state = tools[toolId].enabled;
-									await tick();
-
-									if (state) {
-										selectedToolIds = [...selectedToolIds, toolId];
+										const authUrl = getOAuthClientAuthorizationUrl(serverId, 'mcp');
+										window.open(authUrl, '_self', 'noopener');
 									} else {
-										selectedToolIds = selectedToolIds.filter((id) => id !== toolId);
+										tool.enabled = !tool.enabled;
+
+										const state = tool.enabled;
+										await tick();
+
+										if (state) {
+											selectedToolIds = [...selectedToolIds, tool.id];
+										} else {
+											selectedToolIds = selectedToolIds.filter((id) => id !== tool.id);
+										}
 									}
-								}
-							}}
-						>
-							{#if !(tools[toolId]?.authenticated ?? true)}
-								<!-- make it slighly darker and not clickable -->
-								<div class="absolute inset-0 opacity-50 rounded-xl cursor-pointer z-10" />
-							{/if}
-							<div class="flex-1 truncate">
-								<div class="flex flex-1 gap-2 items-center">
-									<Tooltip content={tools[toolId]?.name ?? ''} placement="top">
-										<div class="shrink-0">
-											<Wrench />
-										</div>
-									</Tooltip>
-									<Tooltip content={tools[toolId]?.description ?? ''} placement="top-start">
-										<div class=" truncate">{tools[toolId].name}</div>
-									</Tooltip>
+								}}
+							>
+								{#if !(tool?.authenticated ?? true)}
+									<!-- make it slighly darker and not clickable -->
+									<div class="absolute inset-0 opacity-50 rounded-xl cursor-pointer z-10" />
+								{/if}
+								<div class="flex-1 truncate">
+									<div class="flex flex-1 gap-2 items-center">
+										<Tooltip content={tool?.name ?? ''} placement="top">
+											<div class="shrink-0">
+												<Wrench />
+											</div>
+										</Tooltip>
+										<Tooltip content={tool?.description ?? ''} placement="top-start">
+											<div class=" truncate">{tool.name}</div>
+										</Tooltip>
+									</div>
 								</div>
-							</div>
 
-							{#if tools[toolId]?.has_user_valves}
+								{#if tool?.has_user_valves}
+									<div class=" shrink-0">
+										<Tooltip content={$i18n.t('Valves')}>
+											<button
+												class="self-center w-fit text-sm text-gray-600 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300 transition rounded-full"
+												type="button"
+												on:click={(e) => {
+													e.stopPropagation();
+													e.preventDefault();
+													onShowValves({
+														type: 'tool',
+														id: tool.id
+													});
+												}}
+											>
+												<Knobs />
+											</button>
+										</Tooltip>
+									</div>
+								{/if}
+
 								<div class=" shrink-0">
-									<Tooltip content={$i18n.t('Valves')}>
-										<button
-											class="self-center w-fit text-sm text-gray-600 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300 transition rounded-full"
-											type="button"
-											on:click={(e) => {
-												e.stopPropagation();
-												e.preventDefault();
-												onShowValves({
-													type: 'tool',
-													id: toolId
-												});
-											}}
-										>
-											<Knobs />
-										</button>
-									</Tooltip>
+									<Switch state={tool.enabled} />
 								</div>
-							{/if}
-
-							<div class=" shrink-0">
-								<Switch state={tools[toolId].enabled} />
-							</div>
-						</button>
-					{/each}
+							</button>
+						{/each}
+					{/if}
 				</div>
 			{/if}
 		</DropdownMenu.Content>

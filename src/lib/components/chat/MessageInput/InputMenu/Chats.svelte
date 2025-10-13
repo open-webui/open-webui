@@ -5,10 +5,13 @@
 	import { decodeString } from '$lib/utils';
 	import { getChatList } from '$lib/apis/chats';
 
+	import Fuse from 'fuse.js';
 	import Tooltip from '$lib/components/common/Tooltip.svelte';
 	import Spinner from '$lib/components/common/Spinner.svelte';
 	import Loader from '$lib/components/common/Loader.svelte';
 	import { chatId } from '$lib/stores';
+	import Search from '$lib/components/icons/Search.svelte';
+	import XMark from '$lib/components/icons/XMark.svelte';
 
 	const i18n = getContext('i18n');
 
@@ -18,6 +21,7 @@
 
 	let items = [];
 	let selectedIdx = 0;
+	let query = '';
 
 	let page = 1;
 	let itemsLoading = false;
@@ -65,14 +69,50 @@
 
 		loaded = true;
 	});
+	let fuse;
+	$: {
+		if (items) {
+			fuse = new Fuse(items, {
+				keys: ['name']
+			});
+		}
+	}
+
+	$: filteredItems = query ? fuse.search(query).map((e) => e.item) : items;
 </script>
 
+<div class="px-1 mb-1 flex justify-center space-x-2 relative z-10" id="search-container">
+	<div class="flex w-full rounded-xl items-center" id="chat-search">
+		<div class="pl-2 pr-1.5">
+			<Search />
+		</div>
+		<input
+			class="w-full py-2 pl-1 text-sm bg-transparent dark:text-gray-300 outline-none"
+			placeholder={$i18n.t('Search...')}
+			autocomplete="off"
+			bind:value={query}
+		/>
+		{#if query}
+			<div class="self-center pl-1.5 pr-1.5 rounded-l-xl bg-transparent">
+				<button
+					class="p-0.5 rounded-full hover:bg-gray-100 dark:hover:bg-gray-900 transition"
+					on:click={() => {
+						query = '';
+					}}
+				>
+					<XMark className="size-3" strokeWidth="2" />
+				</button>
+			</div>
+		{/if}
+	</div>
+</div>
+
 {#if loaded}
-	{#if items.length === 0}
+	{#if filteredItems.length === 0}
 		<div class="text-center text-xs text-gray-500 py-3">{$i18n.t('No chats found')}</div>
 	{:else}
 		<div class="flex flex-col gap-0.5">
-			{#each items as item, idx}
+			{#each filteredItems as item, idx}
 				<button
 					class=" px-2.5 py-1 rounded-xl w-full text-left flex justify-between items-center text-sm {idx ===
 					selectedIdx
