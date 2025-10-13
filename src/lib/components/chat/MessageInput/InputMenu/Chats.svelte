@@ -3,7 +3,7 @@
 	import { onMount, tick, getContext } from 'svelte';
 
 	import { decodeString } from '$lib/utils';
-	import { getChatList } from '$lib/apis/chats';
+	import { getChatList, getPinnedChatList } from '$lib/apis/chats';
 
 	import Tooltip from '$lib/components/common/Tooltip.svelte';
 	import Spinner from '$lib/components/common/Spinner.svelte';
@@ -44,7 +44,7 @@
 		items = [
 			...items,
 			...res
-				.filter((item) => item?.id !== $chatId)
+				.filter((item) => item?.id !== $chatId && !items.some((i) => i.id === item.id))
 				.map((item) => {
 					return {
 						...item,
@@ -60,6 +60,20 @@
 	};
 
 	onMount(async () => {
+		if (items.length === 0) {
+			itemsLoading = true;
+			const pinnedItems = (await getPinnedChatList(localStorage.token).catch(() => []))
+				.filter((item) => item?.id !== $chatId)
+				.map((item) => {
+					return {
+						...item,
+						type: 'chat',
+						name: item.title,
+						description: dayjs(item.updated_at * 1000).fromNow()
+					};
+				});
+			items = [...items, ...pinnedItems];
+		}
 		await getItemsPage();
 		await tick();
 
