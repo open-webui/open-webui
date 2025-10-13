@@ -234,7 +234,7 @@ async def sync_rows():
             values = [row[col] for col in columns]
 
             # Build INSERT ... ON CONFLICT DO UPDATE query
-            placeholders = ', '.join([f'\\$\{i+1}' for i in range(len(columns))])
+            placeholders = ', '.join(['\$' + str(i+1) for i in range(len(columns))])
             cols_str = ', '.join([f'"{col}"' for col in columns])
 
             # Upsert with properly quoted identifiers
