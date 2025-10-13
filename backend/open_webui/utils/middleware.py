@@ -1505,8 +1505,8 @@ async def process_chat_response(
                             )
 
                             follow_ups_string = response_message.get(
-                                "content", response_message.get("reasoning_content", "")
-                            )
+                                "content"
+                            ) or response_message.get("reasoning_content", "")
                         else:
                             follow_ups_string = ""
 
@@ -1569,12 +1569,12 @@ async def process_chat_response(
                                         "message", {}
                                     )
 
-                                    title_string = response_message.get(
-                                        "content",
-                                        response_message.get(
+                                    title_string = (
+                                        response_message.get("content")
+                                        or response_message.get(
                                             "reasoning_content",
-                                            message.get("content", user_message),
-                                        ),
+                                        )
+                                        or message.get("content", user_message)
                                     )
                                 else:
                                     title_string = ""
@@ -1633,9 +1633,8 @@ async def process_chat_response(
                                 )
 
                                 tags_string = response_message.get(
-                                    "content",
-                                    response_message.get("reasoning_content", ""),
-                                )
+                                    "content"
+                                ) or response_message.get("reasoning_content", "")
                             else:
                                 tags_string = ""
 
