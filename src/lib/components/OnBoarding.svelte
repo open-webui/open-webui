@@ -4,6 +4,9 @@
 
 	import { WEBUI_BASE_URL } from '$lib/constants';
 
+
+	import { initFoundryConnection } from '$lib/index';
+
 	import Marquee from './common/Marquee.svelte';
 	import SlideShow from './common/SlideShow.svelte';
 	import ArrowRightCircle from './icons/ArrowRightCircle.svelte';
@@ -32,6 +35,9 @@
 			}
 		}
 	}
+	onMount(() => {
+		initFoundryConnection();
+	});
 
 	$: if (show) {
 		setLogoImage();
