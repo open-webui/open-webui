@@ -263,6 +263,7 @@ type Config = {
 		enable_autocomplete_generation: boolean;
 		enable_direct_connections: boolean;
 		enable_version_update_check: boolean;
+		enable_individual_knowledge_file_attachments: boolean;
 	};
 	oauth: {
 		providers: {
