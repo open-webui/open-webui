@@ -79,6 +79,7 @@ conflict_resolver: Optional[ConflictResolver] = None
 # Background tasks
 cache_cleanup_task: Optional[asyncio.Task] = None
 cache_events_task: Optional[asyncio.Task] = None
+periodic_sync_task: Optional[asyncio.Task] = None
 
 # ============================================================================
 # PYDANTIC MODELS
@@ -169,6 +170,7 @@ async def lifespan(app: FastAPI):
         logger.info("Starting background tasks...")
         cache_cleanup_task = asyncio.create_task(periodic_cache_cleanup())
         cache_events_task = asyncio.create_task(periodic_cache_events_processing())
+        periodic_sync_task = asyncio.create_task(periodic_sync_scheduler())
         logger.info("✅ Background tasks started")
 
         logger.info("=== Application Ready ===")
@@ -197,6 +199,13 @@ async def lifespan(app: FastAPI):
         cache_events_task.cancel()
         try:
             await cache_events_task
+        except asyncio.CancelledError:
+            pass
+
+    if periodic_sync_task:
+        periodic_sync_task.cancel()
+        try:
+            await periodic_sync_task
         except asyncio.CancelledError:
             pass
 
@@ -272,6 +281,79 @@ async def periodic_cache_events_processing():
             break
         except Exception as e:
             logger.error(f"Error in cache events processing task: {e}")
+
+async def periodic_sync_scheduler():
+    """
+    Periodically check for clients needing sync and trigger sync jobs.
+
+    Only runs on the leader node. Checks every 60 seconds for clients with:
+    - sync_enabled = true
+    - status = 'active'
+    - (now - last_sync_at) >= sync_interval OR last_sync_at IS NULL
+    """
+    import asyncpg
+    from datetime import datetime, timezone
+
+    logger.info("Periodic sync scheduler started")
+
+    # Wait a bit before starting to ensure leader election stabilizes
+    await asyncio.sleep(30)
+
+    while True:
+        try:
+            await asyncio.sleep(60)  # Check every minute
+
+            # Only leader processes syncs
+            if not leader_election or not leader_election.is_leader:
+                continue
+
+            # Query clients needing sync
+            if not state_manager or not state_manager.pool:
+                continue
+
+            async with state_manager.pool.acquire() as conn:
+                rows = await conn.fetch("""
+                    SELECT
+                        client_name,
+                        sync_interval,
+                        last_sync_at,
+                        EXTRACT(EPOCH FROM (NOW() - last_sync_at))::int AS seconds_since_sync
+                    FROM sync_metadata.client_deployments
+                    WHERE sync_enabled = true
+                      AND status = 'active'
+                      AND (
+                          last_sync_at IS NULL
+                          OR EXTRACT(EPOCH FROM (NOW() - last_sync_at)) >= sync_interval
+                      )
+                    ORDER BY last_sync_at NULLS FIRST, client_name
+                """)
+
+                if rows:
+                    logger.info(f"Found {len(rows)} client(s) needing sync")
+
+                    for row in rows:
+                        client_name = row['client_name']
+                        sync_interval = row['sync_interval']
+                        last_sync = row['last_sync_at']
+                        seconds_since = row['seconds_since_sync']
+
+                        if last_sync is None:
+                            logger.info(f"Triggering initial sync for {client_name}")
+                        else:
+                            logger.info(
+                                f"Triggering sync for {client_name} "
+                                f"(interval: {sync_interval}s, last: {seconds_since}s ago)"
+                            )
+
+                        # Trigger sync as background task (incremental, not full)
+                        asyncio.create_task(execute_sync_job(client_name, full_sync=False))
+                        sync_queue_size.inc()
+
+        except asyncio.CancelledError:
+            logger.info("Periodic sync scheduler stopped")
+            break
+        except Exception as e:
+            logger.error(f"Error in periodic sync scheduler: {e}", exc_info=True)
 
 # ============================================================================
 # API ENDPOINTS
