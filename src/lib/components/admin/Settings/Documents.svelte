@@ -207,6 +207,15 @@
 			return;
 		}
 
+		if (
+			RAGConfig.CONTENT_EXTRACTION_ENGINE === 'mineru' &&
+			RAGConfig.MINERU_API_MODE === 'cloud' &&
+			RAGConfig.MINERU_API_KEY === ''
+		) {
+			toast.error($i18n.t('MinerU API Key required for Cloud API mode.'));
+			return;
+		}
+
 		if (!RAGConfig.BYPASS_EMBEDDING_AND_RETRIEVAL) {
 			await embeddingModelUpdateHandler();
 		}
@@ -337,6 +346,7 @@
 									<option value="datalab_marker">{$i18n.t('Datalab Marker API')}</option>
 									<option value="document_intelligence">{$i18n.t('Document Intelligence')}</option>
 									<option value="mistral_ocr">{$i18n.t('Mistral OCR')}</option>
+									<option value="mineru">{$i18n.t('MinerU')}</option>
 								</select>
 							</div>
 						</div>
@@ -749,6 +759,137 @@
 									bind:value={RAGConfig.MISTRAL_OCR_API_KEY}
 								/>
 							</div>
+					{:else if RAGConfig.CONTENT_EXTRACTION_ENGINE === 'mineru'}
+						<!-- API Mode Selection -->
+						<div class="flex w-full mt-2">
+							<div class="flex-1 flex justify-between">
+								<div class="self-center text-xs font-medium">
+									{$i18n.t('API Mode')}
+								</div>
+								<select
+									class="dark:bg-gray-900 w-fit pr-8 rounded-sm px-2 text-xs bg-transparent outline-hidden"
+									bind:value={RAGConfig.MINERU_API_MODE}
+									on:change={() => {
+										// Auto-update URL when switching modes if it's empty or matches the opposite mode's default
+										const cloudUrl = 'https://mineru.net/api/v4';
+										const localUrl = 'http://localhost:8000';
+										
+										if (RAGConfig.MINERU_API_MODE === 'cloud') {
+											if (!RAGConfig.MINERU_API_URL || RAGConfig.MINERU_API_URL === localUrl) {
+												RAGConfig.MINERU_API_URL = cloudUrl;
+											}
+										} else {
+											if (!RAGConfig.MINERU_API_URL || RAGConfig.MINERU_API_URL === cloudUrl) {
+												RAGConfig.MINERU_API_URL = localUrl;
+											}
+										}
+									}}
+								>
+									<option value="local">{$i18n.t('Self-Hosted')}</option>
+									<option value="cloud">{$i18n.t('minerU managed (Cloud API)')}</option>
+								</select>
+							</div>
+						</div>
+
+							<!-- API URL -->
+							<div class="flex w-full mt-2">
+								<input
+									class="flex-1 w-full text-sm bg-transparent outline-hidden"
+									placeholder={RAGConfig.MINERU_API_MODE === 'cloud' 
+										? $i18n.t('https://mineru.net/api/v4')
+										: $i18n.t('http://localhost:8000')}
+									bind:value={RAGConfig.MINERU_API_URL}
+								/>
+							</div>
+
+							<!-- API Key (Cloud only) -->
+							{#if RAGConfig.MINERU_API_MODE === 'cloud'}
+								<div class="flex w-full mt-2">
+									<SensitiveInput
+										placeholder={$i18n.t('Enter MinerU API Key')}
+										bind:value={RAGConfig.MINERU_API_KEY}
+									/>
+								</div>
+							{/if}
+
+							<!-- OCR Toggle -->
+							<div class="flex w-full mt-2">
+								<div class="flex-1 flex justify-between">
+									<div class="self-center text-xs font-medium">
+										{$i18n.t('Enable OCR (for scanned documents)')}
+									</div>
+									<div class="flex items-center relative">
+										<Switch bind:state={RAGConfig.MINERU_ENABLE_OCR} />
+									</div>
+								</div>
+							</div>
+
+							<!-- Formula Recognition -->
+							<div class="flex w-full mt-2">
+								<div class="flex-1 flex justify-between">
+									<div class="self-center text-xs font-medium">
+										{$i18n.t('Enable Formula Recognition')}
+									</div>
+									<div class="flex items-center relative">
+										<Switch bind:state={RAGConfig.MINERU_ENABLE_FORMULA} />
+									</div>
+								</div>
+							</div>
+
+							<!-- Table Recognition -->
+							<div class="flex w-full mt-2">
+								<div class="flex-1 flex justify-between">
+									<div class="self-center text-xs font-medium">
+										{$i18n.t('Enable Table Recognition')}
+									</div>
+									<div class="flex items-center relative">
+										<Switch bind:state={RAGConfig.MINERU_ENABLE_TABLE} />
+									</div>
+								</div>
+							</div>
+
+							<!-- Advanced Settings Toggle -->
+							<details class="w-full mt-2">
+								<summary class="text-xs font-medium cursor-pointer hover:text-gray-600 dark:hover:text-gray-300">
+									{$i18n.t('Advanced Settings')}
+								</summary>
+								
+								<div class="mt-2 space-y-2 pl-2 border-l-2 border-gray-200 dark:border-gray-700">
+									<!-- Model Version -->
+									<div class="flex w-full">
+										<div class="flex-1 flex justify-between">
+											<div class="self-center text-xs font-medium">
+												{$i18n.t('Model Version')}
+											</div>
+											<select
+												class="dark:bg-gray-900 w-fit pr-8 rounded-sm px-2 text-xs bg-transparent outline-hidden"
+												bind:value={RAGConfig.MINERU_MODEL_VERSION}
+											>
+												<option value="pipeline">{$i18n.t('Pipeline (Faster, CPU-friendly)')}</option>
+												<option value="vlm">{$i18n.t('VLM (More Accurate, GPU required)')}</option>
+											</select>
+										</div>
+									</div>
+
+									<!-- Language -->
+									<div class="flex w-full">
+										<input
+											class="flex-1 w-full text-xs bg-transparent outline-hidden"
+											placeholder={$i18n.t('Language: en, ch, japan, korean, etc. (default: en)')}
+											bind:value={RAGConfig.MINERU_LANGUAGE}
+										/>
+									</div>
+
+									<!-- Page Ranges (Optional) -->
+									<div class="flex w-full">
+										<input
+											class="flex-1 w-full text-xs bg-transparent outline-hidden"
+											placeholder={$i18n.t('Page ranges (optional): e.g., 1-10,15,20-25')}
+											bind:value={RAGConfig.MINERU_PAGE_RANGES}
+										/>
+									</div>
+								</div>
+							</details>
 						{/if}
 					</div>
 
