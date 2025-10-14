@@ -170,8 +170,64 @@ main() {
 
     check_container || log_warning "Container will need to be started manually"
 
-    # Step 1: Create client schema (with quotes for names containing hyphens)
-    log_info "Creating client schema: ${CLIENT_NAME}..."
+    # Step 0.5: Check if schema already exists with tables
+    log_info "Checking if schema already exists..."
+
+    SCHEMA_EXISTS=$(docker exec -i -e ADMIN_URL="$ADMIN_URL" -e CLIENT_NAME="$CLIENT_NAME" openwebui-sync-node-a python3 << 'PYEOF'
+import asyncpg
+import asyncio
+import os
+import json
+
+async def check_schema():
+    admin_url = os.getenv('ADMIN_URL')
+    client_name = os.getenv('CLIENT_NAME')
+    if not admin_url or not client_name:
+        return
+    conn = await asyncpg.connect(admin_url)
+
+    # Check if schema exists
+    schema_exists = await conn.fetchval('''
+        SELECT EXISTS(
+            SELECT 1 FROM information_schema.schemata
+            WHERE schema_name = $1
+        )
+    ''', client_name)
+
+    # If schema exists, count tables in it
+    table_count = 0
+    if schema_exists:
+        table_count = await conn.fetchval('''
+            SELECT COUNT(*)
+            FROM information_schema.tables
+            WHERE table_schema = $1
+        ''', client_name)
+
+    await conn.close()
+    print(json.dumps({'exists': schema_exists, 'table_count': table_count}))
+
+asyncio.run(check_schema())
+PYEOF
+)
+
+    if [[ -n "$SCHEMA_EXISTS" ]]; then
+        SCHEMA_HAS_TABLES=$(echo "$SCHEMA_EXISTS" | python3 -c "import sys, json; d = json.load(sys.stdin); print('true' if d['exists'] and d['table_count'] > 0 else 'false')")
+
+        if [[ "$SCHEMA_HAS_TABLES" == "true" ]]; then
+            TABLE_COUNT=$(echo "$SCHEMA_EXISTS" | python3 -c "import sys, json; print(json.load(sys.stdin)['table_count'])")
+            log_warning "Schema '${CLIENT_NAME}' already exists with ${TABLE_COUNT} tables"
+            log_warning "Skipping schema initialization to avoid overwriting existing data"
+
+            # Skip to registration step
+            SKIP_SCHEMA_INIT=true
+        fi
+    fi
+
+    if [[ "${SKIP_SCHEMA_INIT:-false}" == "true" ]]; then
+        log_info "Using existing schema: ${CLIENT_NAME}"
+    else
+        # Step 1: Create client schema (with quotes for names containing hyphens)
+        log_info "Creating client schema: ${CLIENT_NAME}..."
 
     SQL_QUERY="CREATE SCHEMA IF NOT EXISTS \"${CLIENT_NAME}\";" \
     execute_sql "" 2>/dev/null
@@ -296,6 +352,7 @@ main() {
         log_error "Schema initialization timed out or failed"
         exit 1
     fi
+    fi  # End of schema initialization check
 
     # Step 4: Register client in sync_metadata.client_deployments
     log_info "Registering client in sync metadata..."
