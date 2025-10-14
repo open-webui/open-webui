@@ -1,5 +1,6 @@
 import time
 import uuid
+import logging
 from typing import Optional
 
 from open_webui.internal.db import get_db
@@ -9,6 +10,8 @@ from open_webui.models.tags import TagModel, Tags
 from pydantic import BaseModel, ConfigDict
 from sqlalchemy import BigInteger, Boolean, Column, String, Text, JSON
 from sqlalchemy import or_, and_, text
+
+log = logging.getLogger(__name__)
 
 ####################
 # Chat DB Schema
@@ -901,6 +904,185 @@ class ChatTable:
                 return True
         except Exception:
             return False
+
+    def get_expired_chats(
+        self,
+        max_age_days: int,
+        preserve_pinned: bool = True,
+        preserve_archived: bool = False,
+    ) -> list[ChatModel]:
+        """
+        Get chats that are older than max_age_days.
+
+        Args:
+            max_age_days: Age threshold in days
+            preserve_pinned: If True, exclude pinned chats from cleanup
+            preserve_archived: If True, exclude archived chats from cleanup
+
+        Returns:
+            List of expired ChatModel objects
+        """
+        try:
+            import time
+
+            cutoff_timestamp = int(time.time()) - (max_age_days * 24 * 60 * 60)
+
+            with get_db() as db:
+                query = db.query(Chat).filter(Chat.created_at < cutoff_timestamp)
+
+                # Apply preservation filters
+                if preserve_pinned:
+                    query = query.filter(
+                        or_(Chat.pinned == False, Chat.pinned.is_(None))
+                    )
+
+                if preserve_archived:
+                    query = query.filter(Chat.archived == False)
+
+                # Exclude shared chats (user_id starting with "shared-")
+                query = query.filter(~Chat.user_id.like("shared-%"))
+
+                expired_chats = query.all()
+
+                # Convert SQLAlchemy objects to ChatModel objects
+                result_chats = []
+                for chat in expired_chats:
+                    try:
+                        chat_model = ChatModel(
+                            id=chat.id,
+                            user_id=chat.user_id,
+                            title=chat.title,
+                            chat=chat.chat or {},
+                            created_at=chat.created_at,
+                            updated_at=chat.updated_at,
+                            share_id=chat.share_id,
+                            archived=chat.archived or False,
+                            pinned=chat.pinned or False,
+                            meta=chat.meta or {},
+                            folder_id=chat.folder_id,
+                        )
+                        result_chats.append(chat_model)
+                        log.debug(
+                            f"Successfully created ChatModel for chat {chat.id}, type: {type(chat_model)}"
+                        )
+                    except Exception as e:
+                        log.error(f"Error converting chat {chat.id} to ChatModel: {e}")
+                        continue
+
+                return result_chats
+
+        except Exception as e:
+            log.error(f"Error getting expired chats: {e}")
+            return []
+
+    def get_all_chats_for_cleanup(
+        self, preserve_pinned: bool = True, preserve_archived: bool = False
+    ) -> list[ChatModel]:
+        """
+        Get all chats for cleanup (ignoring age restrictions).
+        Used when chat lifetime is disabled but cleanup is still needed.
+
+        Args:
+            preserve_pinned: If True, exclude pinned chats from cleanup
+            preserve_archived: If True, exclude archived chats from cleanup
+
+        Returns:
+            List of ChatModel objects for cleanup
+        """
+        try:
+            with get_db() as db:
+                query = db.query(Chat)
+
+                # Apply preservation filters
+                if preserve_pinned:
+                    query = query.filter(
+                        or_(Chat.pinned == False, Chat.pinned.is_(None))
+                    )
+
+                if preserve_archived:
+                    query = query.filter(Chat.archived == False)
+
+                # Exclude shared chats (user_id starting with "shared-")
+                query = query.filter(~Chat.user_id.like("shared-%"))
+
+                all_chats = query.all()
+
+                # Convert SQLAlchemy objects to ChatModel objects
+                result_chats = []
+                for chat in all_chats:
+                    try:
+                        chat_model = ChatModel(
+                            id=chat.id,
+                            user_id=chat.user_id,
+                            title=chat.title,
+                            chat=chat.chat or {},
+                            created_at=chat.created_at,
+                            updated_at=chat.updated_at,
+                            share_id=chat.share_id,
+                            archived=chat.archived or False,
+                            pinned=chat.pinned or False,
+                            meta=chat.meta or {},
+                            folder_id=chat.folder_id,
+                        )
+                        result_chats.append(chat_model)
+                        log.debug(
+                            f"Successfully created ChatModel for chat {chat.id} for cleanup"
+                        )
+                    except Exception as e:
+                        log.error(f"Error converting chat {chat.id} to ChatModel: {e}")
+                        continue
+
+                return result_chats
+
+        except Exception as e:
+            log.error(f"Error getting all chats for cleanup: {e}")
+            return []
+
+    def delete_chat_list(self, chat_ids: list[str]) -> dict:
+        """
+        Delete multiple chats by their IDs and return deletion summary.
+
+        Args:
+            chat_ids: List of chat IDs to delete
+
+        Returns:
+            Dictionary with deletion results
+        """
+        try:
+            result = {
+                "deleted_count": 0,
+                "failed_count": 0,
+                "total_requested": len(chat_ids),
+                "errors": [],
+            }
+
+            with get_db() as db:
+                for chat_id in chat_ids:
+                    try:
+                        deleted = db.query(Chat).filter_by(id=chat_id).delete()
+                        if deleted > 0:
+                            result["deleted_count"] += 1
+                        else:
+                            result["failed_count"] += 1
+                            result["errors"].append(f"Chat {chat_id} not found")
+                    except Exception as e:
+                        result["failed_count"] += 1
+                        result["errors"].append(
+                            f"Error deleting chat {chat_id}: {str(e)}"
+                        )
+
+                db.commit()
+
+            return result
+
+        except Exception as e:
+            log.error(f"Error in bulk chat deletion: {e}")
+            return {
+                "deleted_count": 0,
+                "failed_count": len(chat_ids),
+                "total_requested": len(chat_ids),
+                "errors": [f"Bulk deletion failed: {str(e)}"],
+            }
 
 
 Chats = ChatTable()

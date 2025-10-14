@@ -201,3 +201,257 @@ export const setBanners = async (token: string, banners: Banner[]) => {
 
 	return res;
 };
+
+// Chat Lifetime Configuration
+export interface ChatLifetimeConfig {
+	enabled: boolean;
+	days: number;
+	preserve_pinned: boolean;
+	preserve_archived: boolean;
+}
+
+export const getChatLifetimeConfig = async (token: string): Promise<ChatLifetimeConfig> => {
+	let error = null;
+
+	const res = await fetch(`${WEBUI_API_BASE_URL}/configs/chat-lifetime`, {
+		method: 'GET',
+		headers: {
+			'Content-Type': 'application/json',
+			Authorization: `Bearer ${token}`
+		}
+	})
+		.then(async (res) => {
+			if (!res.ok) throw await res.json();
+			return res.json();
+		})
+		.catch((err) => {
+			console.log(err);
+			error = err.detail;
+			return null;
+		});
+
+	if (error) {
+		throw error;
+	}
+
+	return res;
+};
+
+export const updateChatLifetimeConfig = async (
+	token: string,
+	config: ChatLifetimeConfig
+): Promise<ChatLifetimeConfig> => {
+	let error = null;
+
+	const res = await fetch(`${WEBUI_API_BASE_URL}/configs/chat-lifetime`, {
+		method: 'POST',
+		headers: {
+			'Content-Type': 'application/json',
+			Authorization: `Bearer ${token}`
+		},
+		body: JSON.stringify(config)
+	})
+		.then(async (res) => {
+			if (!res.ok) throw await res.json();
+			return res.json();
+		})
+		.catch((err) => {
+			console.log(err);
+			error = err.detail;
+			return null;
+		});
+
+	if (error) {
+		throw error;
+	}
+
+	return res;
+};
+
+// Cleanup Operations
+export const triggerChatCleanup = async (
+	token: string,
+	options?: {
+		max_age_days?: number;
+		preserve_pinned?: boolean;
+		preserve_archived?: boolean;
+	}
+) => {
+	let error = null;
+
+	const queryParams = new URLSearchParams();
+	if (options?.max_age_days !== undefined) {
+		queryParams.append('max_age_days', options.max_age_days.toString());
+	}
+	if (options?.preserve_pinned !== undefined) {
+		queryParams.append('preserve_pinned', options.preserve_pinned.toString());
+	}
+	if (options?.preserve_archived !== undefined) {
+		queryParams.append('preserve_archived', options.preserve_archived.toString());
+	}
+
+	const url = `${WEBUI_API_BASE_URL}/retrieval/maintenance/cleanup/expired-chats${
+		queryParams.toString() ? `?${queryParams.toString()}` : ''
+	}`;
+
+	const res = await fetch(url, {
+		method: 'POST',
+		headers: {
+			'Content-Type': 'application/json',
+			Authorization: `Bearer ${token}`
+		}
+	})
+		.then(async (res) => {
+			if (!res.ok) throw await res.json();
+			return res.json();
+		})
+		.catch((err) => {
+			console.log(err);
+			error = err.detail;
+			return null;
+		});
+
+	if (error) {
+		throw error;
+	}
+
+	return res;
+};
+
+export const triggerComprehensiveCleanup = async (
+	token: string,
+	options?: {
+		max_age_days?: number;
+		include_chat_cleanup?: boolean;
+	}
+) => {
+	let error = null;
+
+	const queryParams = new URLSearchParams();
+	if (options?.max_age_days !== undefined) {
+		queryParams.append('max_age_days', options.max_age_days.toString());
+	}
+	if (options?.include_chat_cleanup !== undefined) {
+		queryParams.append('include_chat_cleanup', options.include_chat_cleanup.toString());
+	}
+
+	const url = `${WEBUI_API_BASE_URL}/retrieval/maintenance/cleanup/comprehensive${
+		queryParams.toString() ? `?${queryParams.toString()}` : ''
+	}`;
+
+	const res = await fetch(url, {
+		method: 'POST',
+		headers: {
+			'Content-Type': 'application/json',
+			Authorization: `Bearer ${token}`
+		}
+	})
+		.then(async (res) => {
+			if (!res.ok) throw await res.json();
+			return res.json();
+		})
+		.catch((err) => {
+			console.log(err);
+			error = err.detail;
+			return null;
+		});
+
+	if (error) {
+		throw error;
+	}
+
+	return res;
+};
+
+export interface ChatLifetimeScheduleInfo {
+	enabled: boolean;
+	status: string;
+	next_run: string | null;
+	lifetime_days: number;
+	schedule?: string;
+	error?: string;
+}
+
+export const getChatLifetimeSchedule = async (token: string): Promise<ChatLifetimeScheduleInfo> => {
+	let error = null;
+
+	const res = await fetch(`${WEBUI_API_BASE_URL}/configs/chat-lifetime/schedule`, {
+		method: 'GET',
+		headers: {
+			'Content-Type': 'application/json',
+			Authorization: `Bearer ${token}`
+		}
+	})
+		.then(async (res) => {
+			if (!res.ok) throw await res.json();
+			return res.json();
+		})
+		.catch((err) => {
+			console.log(err);
+			error = err.detail;
+			return null;
+		});
+
+	if (error) {
+		throw error;
+	}
+
+	return res;
+};
+
+export const enableTestModeSchedule = async (token: string, testMinutes: number = 5) => {
+	let error = null;
+
+	const res = await fetch(
+		`${WEBUI_API_BASE_URL}/configs/chat-lifetime/test-mode?test_minutes=${testMinutes}`,
+		{
+			method: 'POST',
+			headers: {
+				'Content-Type': 'application/json',
+				Authorization: `Bearer ${token}`
+			}
+		}
+	)
+		.then(async (res) => {
+			if (!res.ok) throw await res.json();
+			return res.json();
+		})
+		.catch((err) => {
+			console.log(err);
+			error = err.detail;
+			return null;
+		});
+
+	if (error) {
+		throw error;
+	}
+
+	return res;
+};
+
+export const disableTestModeSchedule = async (token: string) => {
+	let error = null;
+
+	const res = await fetch(`${WEBUI_API_BASE_URL}/configs/chat-lifetime/disable-test-mode`, {
+		method: 'POST',
+		headers: {
+			'Content-Type': 'application/json',
+			Authorization: `Bearer ${token}`
+		}
+	})
+		.then(async (res) => {
+			if (!res.ok) throw await res.json();
+			return res.json();
+		})
+		.catch((err) => {
+			console.log(err);
+			error = err.detail;
+			return null;
+		});
+
+	if (error) {
+		throw error;
+	}
+
+	return res;
+};

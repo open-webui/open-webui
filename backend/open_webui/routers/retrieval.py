@@ -793,7 +793,12 @@ async def save_docs_to_vector_db(
                 if collection_name.startswith(VECTOR_COLLECTION_PREFIXES.FILE)
                 else (
                     "web_search"
-                    if collection_name.startswith(VECTOR_COLLECTION_PREFIXES.WEB_SEARCH)
+                    if (
+                        collection_name.startswith(
+                            VECTOR_COLLECTION_PREFIXES.WEB_SEARCH
+                        )
+                        or collection_name.startswith("web_")
+                    )  # Handle legacy web search collections
                     else "knowledge"
                 )
             ),
@@ -1977,11 +1982,31 @@ async def cleanup_orphaned_vectors() -> dict:
         for collection_name in collections:
             try:
                 # PRESERVE knowledge base collections - DO NOT CLEAN THEM
-                if collection_name in existing_kb_ids:
+                # Knowledge base collections typically start with "knowledge_" or are UUID-format but NOT web search collections
+                is_knowledge_base = (
+                    collection_name.startswith("knowledge_")
+                    or (collection_name in existing_kb_ids)
+                    or (
+                        len(collection_name) == 36
+                        and "-" in collection_name
+                        and not collection_name.startswith("web_")
+                        and not collection_name.startswith(
+                            VECTOR_COLLECTION_PREFIXES.WEB_SEARCH
+                        )
+                    )
+                )
+
+                if is_knowledge_base:
                     cleanup_summary["kb_collections_preserved"] += 1
                     log.debug(
                         f"Preserving knowledge base collection: {collection_name}"
                     )
+                    continue
+
+                # Skip web search collections - they have their own cleanup logic
+                if collection_name.startswith("web_") or collection_name.startswith(
+                    VECTOR_COLLECTION_PREFIXES.WEB_SEARCH
+                ):
                     continue
 
                 # Only process standalone file collections (file-*)
@@ -2086,14 +2111,24 @@ async def get_vector_db_stats(user) -> dict:
             ):
                 stats["file_collections"] += 1
                 category = "file"
-            elif collection_name.startswith("web_"):
+            elif collection_name.startswith("web_") or collection_name.startswith(
+                VECTOR_COLLECTION_PREFIXES.WEB_SEARCH
+            ):
                 stats["web_search_collections"] += 1
                 category = "web_search"
             elif collection_name.startswith("knowledge_"):
                 stats["knowledge_collections"] += 1
                 category = "knowledge"
-            elif len(collection_name) == 36 and collection_name.count("-") == 4:
+            elif (
+                len(collection_name) == 36
+                and collection_name.count("-") == 4
+                and not collection_name.startswith("web_")
+                and not collection_name.startswith(
+                    VECTOR_COLLECTION_PREFIXES.WEB_SEARCH
+                )
+            ):
                 # UUID format knowledge collections (e.g., 4e4c3b25-25a9-46e8-a8ae-094bfed192d4)
+                # But exclude any web search collections that might use UUID format
                 stats["knowledge_collections"] += 1
                 category = "knowledge"
             else:
@@ -2166,7 +2201,9 @@ def check_web_search_cache(search_hash: str) -> str:
         return None
 
 
-async def cleanup_expired_web_searches(max_age_days: int = 30) -> dict:
+async def cleanup_expired_web_searches(
+    max_age_days: int = 30, force_delete_all: bool = False
+) -> dict:
     """
     Clean up expired web search results from vector database.
 
@@ -2210,8 +2247,11 @@ async def cleanup_expired_web_searches(max_age_days: int = 30) -> dict:
                 collection if isinstance(collection, str) else collection.name
             )
 
-            # Only process web search collections
-            if not collection_name.startswith("web_"):
+            # Only process web search collections (both old and new prefix formats)
+            if not (
+                collection_name.startswith("web_")
+                or collection_name.startswith(VECTOR_COLLECTION_PREFIXES.WEB_SEARCH)
+            ):
                 continue
 
             try:
@@ -2220,48 +2260,69 @@ async def cleanup_expired_web_searches(max_age_days: int = 30) -> dict:
                 # Get collection info to check if it has expired metadata
                 should_delete = False
 
-                try:
-                    if hasattr(VECTOR_DB_CLIENT, "get_collection_sample_metadata"):
-                        # Get sample metadata to check for expiry
-                        metadata = (
-                            await VECTOR_DB_CLIENT.get_collection_sample_metadata(
-                                collection_name
+                if force_delete_all:
+                    # Force delete all web search collections regardless of age
+                    should_delete = True
+                else:
+                    # Normal age-based cleanup logic
+                    try:
+                        if hasattr(VECTOR_DB_CLIENT, "get_collection_sample_metadata"):
+                            # Get sample metadata to check for expiry
+                            metadata = (
+                                await VECTOR_DB_CLIENT.get_collection_sample_metadata(
+                                    collection_name
+                                )
                             )
-                        )
 
-                        if metadata:
-                            # Check if timestamp indicates expiry
-                            created_at = metadata.get("created_at")
-                            if created_at:
-                                try:
-                                    point_timestamp = datetime.fromisoformat(
-                                        created_at.replace("Z", "+00:00")
-                                    )
-                                    if point_timestamp < cutoff_timestamp:
+                            if metadata:
+                                # Check if timestamp indicates expiry
+                                created_at = metadata.get("created_at")
+                                if created_at:
+                                    try:
+                                        # Handle both string and integer timestamps
+                                        if isinstance(created_at, int):
+                                            # Integer timestamp (epoch seconds)
+                                            point_timestamp = datetime.fromtimestamp(
+                                                created_at
+                                            )
+                                        elif isinstance(created_at, str):
+                                            # String timestamp (ISO format)
+                                            point_timestamp = datetime.fromisoformat(
+                                                created_at.replace("Z", "+00:00")
+                                            )
+                                        else:
+                                            # Unknown format, consider it old
+                                            should_delete = True
+                                            continue
+
+                                        if point_timestamp < cutoff_timestamp:
+                                            should_delete = True
+                                    except (ValueError, TypeError) as e:
+                                        # If timestamp is invalid, consider it old
+                                        log.debug(
+                                            f"Invalid timestamp format for {collection_name}: {created_at}, error: {e}"
+                                        )
                                         should_delete = True
-                                except (ValueError, TypeError):
-                                    # If timestamp is invalid, consider it old
+                                else:
+                                    # No timestamp means it's from before we added timestamps
                                     should_delete = True
                             else:
-                                # No timestamp means it's from before we added timestamps
+                                # Empty collection should be cleaned up
                                 should_delete = True
                         else:
-                            # Empty collection should be cleaned up
-                            should_delete = True
-                    else:
-                        # For other vector DBs, we might not be able to check timestamps
-                        # so we'll skip the cleanup for now
-                        log.warning(
-                            f"Cannot check timestamp for collection {collection_name} on this vector DB"
+                            # For other vector DBs, we might not be able to check timestamps
+                            # so we'll skip the cleanup for now
+                            log.warning(
+                                f"Cannot check timestamp for collection {collection_name} on this vector DB"
+                            )
+                            continue
+
+                    except Exception as e:
+                        log.error(f"Error checking collection {collection_name}: {e}")
+                        cleanup_summary["errors"].append(
+                            f"Error checking collection {collection_name}: {e}"
                         )
                         continue
-
-                except Exception as e:
-                    log.error(f"Error checking collection {collection_name}: {e}")
-                    cleanup_summary["errors"].append(
-                        f"Error checking collection {collection_name}: {e}"
-                    )
-                    continue
 
                 if should_delete:
                     # Delete the entire collection for expired web searches
@@ -2359,36 +2420,82 @@ async def api_cleanup_web_search_vectors(
 
 @router.post("/maintenance/cleanup/comprehensive")
 async def api_comprehensive_cleanup(
-    max_age_days: int = None, user=Depends(get_admin_user)
+    max_age_days: int = None,
+    include_chat_cleanup: bool = None,
+    user=Depends(get_admin_user),
 ):
     """
     API endpoint for comprehensive vector DB cleanup.
-    Cleans up orphaned standalone files, expired web searches, and orphaned chat files.
+    Cleans up orphaned standalone files, expired web searches, orphaned chat files,
+    and optionally expired chats based on configuration.
     PRESERVES knowledge bases and all files within them.
     Used by K8s CronJobs for complete maintenance.
     """
     try:
+        from open_webui.config import CHAT_LIFETIME_ENABLED, CHAT_LIFETIME_DAYS
+
         if max_age_days is None:
-            max_age_days = int(os.getenv("VECTOR_DB_WEB_SEARCH_EXPIRY_DAYS", "30"))
+            # Use chat lifetime setting instead of web search expiry
+            max_age_days = CHAT_LIFETIME_DAYS.value
+
+        # Only use default if not explicitly provided
+        if include_chat_cleanup is None:
+            include_chat_cleanup = CHAT_LIFETIME_ENABLED.value
+        # If explicitly provided (True or False), use that value regardless of server config
+
+        log.info(
+            f"Comprehensive cleanup: max_age_days={max_age_days}, include_chat_cleanup={include_chat_cleanup}, CHAT_LIFETIME_ENABLED={CHAT_LIFETIME_ENABLED}"
+        )
 
         # Run all cleanup operations
         orphaned_result = await cleanup_orphaned_vectors()
-        web_search_result = await cleanup_expired_web_searches(max_age_days)
+        web_search_result = await cleanup_expired_web_searches(
+            max_age_days, force_delete_all=True
+        )
         chat_files_result = await cleanup_orphaned_chat_files()
         old_collections_result = await cleanup_old_chat_collections(
             max_age_days=1
         )  # 1 day for collection cleanup
 
+        cleanup_results = {
+            "orphaned_vectors": orphaned_result,
+            "web_search_vectors": web_search_result,
+            "chat_files": chat_files_result,
+            "old_collections": old_collections_result,
+        }
+
+        # Include expired chat cleanup if enabled
+        if include_chat_cleanup:
+            log.info(
+                f"Chat cleanup requested: CHAT_LIFETIME_ENABLED={CHAT_LIFETIME_ENABLED.value}, CHAT_LIFETIME_DAYS={CHAT_LIFETIME_DAYS.value}"
+            )
+            # Check if chat lifetime is enabled to determine cleanup behavior
+            if CHAT_LIFETIME_ENABLED.value:
+                log.info("Using age-based chat cleanup (lifetime enabled)")
+                # Use server-side chat lifetime configuration for chat cleanup
+                expired_chats_result = await cleanup_expired_chats(
+                    max_age_days=CHAT_LIFETIME_DAYS.value,
+                    preserve_pinned=True,
+                    preserve_archived=False,
+                    force_cleanup_all=False,
+                )
+            else:
+                log.info("Using force cleanup ALL chats (lifetime disabled)")
+                # Chat lifetime is disabled - clean up ALL chats immediately
+                expired_chats_result = await cleanup_expired_chats(
+                    max_age_days=0,  # Not used when force_cleanup_all=True
+                    preserve_pinned=True,
+                    preserve_archived=False,
+                    force_cleanup_all=True,
+                )
+            cleanup_results["expired_chats"] = expired_chats_result
+
         return {
             "status": "success",
             "timestamp": datetime.now().isoformat(),
             "max_age_days": max_age_days,
-            "cleanup_results": {
-                "orphaned_vectors": orphaned_result,
-                "web_search_vectors": web_search_result,
-                "chat_files": chat_files_result,
-                "old_collections": old_collections_result,
-            },
+            "chat_cleanup_included": include_chat_cleanup,
+            "cleanup_results": cleanup_results,
         }
     except Exception as e:
         log.error(f"Comprehensive vector cleanup API failed: {str(e)}")
@@ -2531,7 +2638,7 @@ def get_all_file_references_from_chats():
         all_file_ids = set()
 
         # Get all chats in the system
-        all_chats = Chats.get_chat_list(include_archived=True)
+        all_chats = Chats.get_chats()
 
         for chat in all_chats:
             try:
@@ -3019,6 +3126,285 @@ async def api_cleanup_orphaned_chat_files(user=Depends(get_admin_user)):
         }
     except Exception as e:
         log.error(f"Orphaned chat files cleanup API failed: {str(e)}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail={
+                "status": "error",
+                "timestamp": datetime.now().isoformat(),
+                "error": str(e),
+            },
+        )
+
+
+####################################
+#
+# Chat Lifetime Management
+#
+####################################
+
+
+async def cleanup_expired_chats(
+    max_age_days: int = 30,
+    preserve_pinned: bool = True,
+    preserve_archived: bool = False,
+    force_cleanup_all: bool = False,
+) -> dict:
+    """
+    Clean up chats that are older than the specified age threshold.
+    Also cleans up associated files and vector collections.
+
+    Args:
+        max_age_days: Age threshold in days (default: 30 days)
+        preserve_pinned: If True, exclude pinned chats from cleanup (default: True)
+        preserve_archived: If True, exclude archived chats from cleanup (default: False)
+        force_cleanup_all: If True, ignore age restrictions and clean up all chats (default: False)
+
+    Returns:
+        dict: Summary of cleanup operations
+    """
+    try:
+        from open_webui.models.chats import Chats
+        from open_webui.models.files import Files
+        from open_webui.storage.provider import Storage
+
+        cleanup_summary = {
+            "chats_checked": 0,
+            "expired_chats_found": 0,
+            "chats_deleted": 0,
+            "files_cleaned": 0,
+            "collections_cleaned": 0,
+            "preserved_pinned": 0,
+            "preserved_archived": 0,
+            "errors": [],
+        }
+
+        if force_cleanup_all:
+            log.info("Force cleanup all chats enabled - ignoring age restrictions")
+
+        log.info(
+            f"Starting expired chat cleanup (age > {max_age_days} days, "
+            f"preserve_pinned={preserve_pinned}, preserve_archived={preserve_archived}, "
+            f"force_cleanup_all={force_cleanup_all})"
+        )
+
+        # Get expired chats
+        if force_cleanup_all:
+            # Get all chats regardless of age
+            expired_chats = Chats.get_all_chats_for_cleanup(
+                preserve_pinned=preserve_pinned,
+                preserve_archived=preserve_archived,
+            )
+        else:
+            # Get only expired chats based on age
+            expired_chats = Chats.get_expired_chats(
+                max_age_days=max_age_days,
+                preserve_pinned=preserve_pinned,
+                preserve_archived=preserve_archived,
+            )
+
+        log.info(f"Retrieved {len(expired_chats)} expired chats")
+        for i, chat in enumerate(expired_chats[:3]):  # Log first 3 for debugging
+            log.debug(
+                f"Chat {i}: type={type(chat)}, has_id={hasattr(chat, 'id')}, is_dict={isinstance(chat, dict)}"
+            )
+            try:
+                log.debug(
+                    f"Chat {i}: attributes={dir(chat)[:10]}..."
+                )  # First 10 attributes
+                if hasattr(chat, "id"):
+                    log.debug(f"Chat {i}: id={chat.id}")
+                elif isinstance(chat, dict):
+                    log.debug(f"Chat {i}: dict_keys={list(chat.keys())}")
+            except Exception as e:
+                log.debug(f"Chat {i}: error accessing attributes: {e}")
+
+        cleanup_summary["chats_checked"] = len(expired_chats)
+        cleanup_summary["expired_chats_found"] = len(expired_chats)
+
+        if not expired_chats:
+            log.info("No expired chats found for cleanup")
+            return cleanup_summary
+
+        # Group chats for batch processing
+        chat_ids_to_delete = []
+        file_ids_to_cleanup = set()
+
+        for chat in expired_chats:
+            try:
+                log.debug(f"Processing chat: type={type(chat)}, chat={chat}")
+
+                # Defensive access to chat properties
+                if hasattr(chat, "chat") and hasattr(chat, "id"):
+                    # Extract file IDs from chat for cleanup
+                    file_ids = extract_file_ids_from_chat_data(chat)
+                    file_ids_to_cleanup.update(file_ids)
+
+                    # Add chat ID for deletion
+                    chat_ids_to_delete.append(chat.id)
+
+                    log.debug(
+                        f"Marked chat {chat.id} for deletion (created: {chat.created_at})"
+                    )
+                elif isinstance(chat, dict):
+                    # Handle dict case - create a temporary object-like structure
+                    class TempChat:
+                        def __init__(self, data):
+                            self.chat = data.get("chat", {})
+                            self.id = data.get("id")
+
+                    temp_chat = TempChat(chat)
+                    file_ids = extract_file_ids_from_chat_data(temp_chat)
+                    file_ids_to_cleanup.update(file_ids)
+
+                    chat_ids_to_delete.append(chat["id"])
+
+                    log.debug(
+                        f"Marked chat {chat['id']} for deletion (created: {chat.get('created_at')})"
+                    )
+                else:
+                    log.error(f"Unexpected chat object type: {type(chat)}, {chat}")
+
+            except Exception as e:
+                # Try to get some debugging info even if chat.id fails
+                try:
+                    if hasattr(chat, "id"):
+                        chat_info = f"id={chat.id}, type={type(chat)}"
+                    elif isinstance(chat, dict) and "id" in chat:
+                        chat_info = f"id={chat['id']}, type={type(chat)}"
+                    else:
+                        chat_info = f"type={type(chat)}, repr={repr(chat)[:100]}"
+                except:
+                    chat_info = f"type={type(chat)}, repr={repr(chat)[:100]}"
+
+                error_msg = f"Error processing chat {chat_info}: {e}"
+                log.error(error_msg)
+                cleanup_summary["errors"].append(error_msg)
+
+        # Clean up associated files and vector collections
+        log.info(f"Cleaning up {len(file_ids_to_cleanup)} associated files...")
+
+        for file_id in file_ids_to_cleanup:
+            try:
+                # Check if file is still referenced by other chats
+                all_file_refs = get_all_file_references_from_chats()
+
+                # Only delete if this file is not referenced by any remaining chats
+                if file_id not in all_file_refs:
+                    # Get file info
+                    file = Files.get_file_by_id(file_id)
+                    if file:
+                        # Clean up vector collection
+                        collection_name = f"file-{file_id}"
+                        if await VECTOR_DB_CLIENT.has_collection(collection_name):
+                            await VECTOR_DB_CLIENT.delete_collection(collection_name)
+                            cleanup_summary["collections_cleaned"] += 1
+                            log.debug(f"Deleted vector collection: {collection_name}")
+
+                        # Delete physical file
+                        if file.path:
+                            try:
+                                Storage.delete_file(file.path)
+                                log.debug(f"Deleted physical file: {file.path}")
+                            except Exception as e:
+                                log.warning(
+                                    f"Could not delete physical file {file.path}: {e}"
+                                )
+
+                        # Delete from database
+                        Files.delete_file_by_id(file_id)
+                        cleanup_summary["files_cleaned"] += 1
+                        log.debug(f"Deleted file record: {file_id}")
+                else:
+                    log.debug(
+                        f"File {file_id} still referenced by other chats, preserving"
+                    )
+
+            except Exception as e:
+                error_msg = f"Error cleaning up file {file_id}: {e}"
+                log.error(error_msg)
+                cleanup_summary["errors"].append(error_msg)
+
+        # Delete chats in batch
+        if chat_ids_to_delete:
+            log.info(f"Deleting {len(chat_ids_to_delete)} expired chats...")
+            deletion_result = Chats.delete_chat_list(chat_ids_to_delete)
+            cleanup_summary["chats_deleted"] = deletion_result["deleted_count"]
+
+            if deletion_result["errors"]:
+                cleanup_summary["errors"].extend(deletion_result["errors"])
+
+        log.info(f"Expired chat cleanup completed: {cleanup_summary}")
+        return cleanup_summary
+
+    except Exception as e:
+        log.error(f"Error during expired chat cleanup: {e}")
+        return {
+            "error": str(e),
+            "chats_checked": 0,
+            "expired_chats_found": 0,
+            "chats_deleted": 0,
+            "files_cleaned": 0,
+            "collections_cleaned": 0,
+        }
+
+
+@router.post("/maintenance/cleanup/expired-chats")
+async def api_cleanup_expired_chats(
+    max_age_days: int = None,
+    preserve_pinned: bool = None,
+    preserve_archived: bool = None,
+    user=Depends(get_admin_user),
+):
+    """
+    API endpoint to cleanup expired chats based on configured lifetime.
+    Cleans up chats older than the specified age and their associated files.
+    PRESERVES pinned and/or archived chats based on configuration.
+    Used by K8s CronJobs for scheduled chat lifecycle management.
+    """
+    try:
+        from open_webui.config import (
+            CHAT_LIFETIME_ENABLED,
+            CHAT_LIFETIME_DAYS,
+            CHAT_CLEANUP_PRESERVE_PINNED,
+            CHAT_CLEANUP_PRESERVE_ARCHIVED,
+        )
+
+        # Use config defaults if not specified
+        if max_age_days is None:
+            max_age_days = CHAT_LIFETIME_DAYS.value
+        if preserve_pinned is None:
+            preserve_pinned = CHAT_CLEANUP_PRESERVE_PINNED.value
+        if preserve_archived is None:
+            preserve_archived = CHAT_CLEANUP_PRESERVE_ARCHIVED.value
+
+        # Check if chat lifetime is enabled to determine cleanup behavior
+        if CHAT_LIFETIME_ENABLED.value:
+            # Use normal age-based cleanup
+            result = await cleanup_expired_chats(
+                max_age_days=max_age_days,
+                preserve_pinned=preserve_pinned,
+                preserve_archived=preserve_archived,
+                force_cleanup_all=False,
+            )
+        else:
+            # Chat lifetime is disabled - clean up ALL chats immediately
+            result = await cleanup_expired_chats(
+                max_age_days=0,  # Not used when force_cleanup_all=True
+                preserve_pinned=preserve_pinned,
+                preserve_archived=preserve_archived,
+                force_cleanup_all=True,
+            )
+
+        return {
+            "status": "success",
+            "timestamp": datetime.now().isoformat(),
+            "max_age_days": max_age_days,
+            "preserve_pinned": preserve_pinned,
+            "preserve_archived": preserve_archived,
+            "cleanup_result": result,
+        }
+    except Exception as e:
+        log.error(f"Expired chats cleanup API failed: {str(e)}")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail={

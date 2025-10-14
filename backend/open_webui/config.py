@@ -1273,6 +1273,35 @@ ADMIN_EMAIL = PersistentConfig(
 
 
 ####################################
+# CHAT LIFETIME AND CLEANUP
+####################################
+
+CHAT_LIFETIME_ENABLED = PersistentConfig(
+    "CHAT_LIFETIME_ENABLED",
+    "chat.lifetime.enable",
+    os.environ.get("CHAT_LIFETIME_ENABLED", "False").lower() == "true",
+)
+
+CHAT_LIFETIME_DAYS = PersistentConfig(
+    "CHAT_LIFETIME_DAYS",
+    "chat.lifetime.days",
+    int(os.environ.get("CHAT_LIFETIME_DAYS", "30")),
+)
+
+CHAT_CLEANUP_PRESERVE_PINNED = PersistentConfig(
+    "CHAT_CLEANUP_PRESERVE_PINNED",
+    "chat.cleanup.preserve_pinned",
+    os.environ.get("CHAT_CLEANUP_PRESERVE_PINNED", "True").lower() == "true",
+)
+
+CHAT_CLEANUP_PRESERVE_ARCHIVED = PersistentConfig(
+    "CHAT_CLEANUP_PRESERVE_ARCHIVED",
+    "chat.cleanup.preserve_archived",
+    os.environ.get("CHAT_CLEANUP_PRESERVE_ARCHIVED", "False").lower() == "true",
+)
+
+
+####################################
 # TASKS
 ####################################
 

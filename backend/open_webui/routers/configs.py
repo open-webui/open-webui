@@ -1,5 +1,6 @@
 from fastapi import APIRouter, Depends, Request
 from pydantic import BaseModel
+import logging
 
 from typing import Optional
 
@@ -9,6 +10,68 @@ from open_webui.config import BannerModel
 
 
 router = APIRouter()
+log = logging.getLogger(__name__)
+
+
+############################
+# Chat Lifetime Configuration
+############################
+
+
+class ChatLifetimeConfigForm(BaseModel):
+    enabled: bool
+    days: int
+    preserve_pinned: bool
+    preserve_archived: bool
+
+
+@router.get("/chat-lifetime", response_model=ChatLifetimeConfigForm)
+async def get_chat_lifetime_config(request: Request, user=Depends(get_admin_user)):
+    return {
+        "enabled": request.app.state.config.CHAT_LIFETIME_ENABLED,
+        "days": request.app.state.config.CHAT_LIFETIME_DAYS,
+        "preserve_pinned": request.app.state.config.CHAT_CLEANUP_PRESERVE_PINNED,
+        "preserve_archived": request.app.state.config.CHAT_CLEANUP_PRESERVE_ARCHIVED,
+    }
+
+
+@router.post("/chat-lifetime", response_model=ChatLifetimeConfigForm)
+async def update_chat_lifetime_config(
+    request: Request, form_data: ChatLifetimeConfigForm, user=Depends(get_admin_user)
+):
+    request.app.state.config.CHAT_LIFETIME_ENABLED = form_data.enabled
+    request.app.state.config.CHAT_LIFETIME_DAYS = form_data.days
+    request.app.state.config.CHAT_CLEANUP_PRESERVE_PINNED = form_data.preserve_pinned
+    request.app.state.config.CHAT_CLEANUP_PRESERVE_ARCHIVED = (
+        form_data.preserve_archived
+    )
+
+    # Update the scheduler to reflect the new configuration
+    try:
+        from open_webui.scheduler import update_cleanup_schedule
+
+        update_cleanup_schedule()
+    except Exception as e:
+        log.error(f"Failed to update chat cleanup schedule: {e}")
+
+    return {
+        "enabled": request.app.state.config.CHAT_LIFETIME_ENABLED,
+        "days": request.app.state.config.CHAT_LIFETIME_DAYS,
+        "preserve_pinned": request.app.state.config.CHAT_CLEANUP_PRESERVE_PINNED,
+        "preserve_archived": request.app.state.config.CHAT_CLEANUP_PRESERVE_ARCHIVED,
+    }
+
+
+@router.get("/chat-lifetime/schedule")
+async def get_chat_lifetime_schedule(request: Request, user=Depends(get_admin_user)):
+    """Get information about the current chat lifetime cleanup schedule"""
+    try:
+        from open_webui.scheduler import get_schedule_info
+
+        return get_schedule_info()
+    except Exception as e:
+        log.error(f"Failed to get schedule info: {e}")
+        return {"enabled": False, "status": "error", "next_run": None, "error": str(e)}
 
 
 ############################
