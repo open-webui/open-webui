@@ -406,9 +406,77 @@ asyncio.run(update_timestamp())
 main() {
     log_info "Starting sync for client: $CLIENT_NAME"
 
+    # Create sync job entry
+    local job_id
+    local sync_type
+    if [[ "$FULL_SYNC" == "--full" ]]; then
+        sync_type="full"
+    else
+        sync_type="incremental"
+    fi
+
+    job_id=$(python3 <<PYEOF
+import asyncpg
+import asyncio
+import uuid
+
+async def create_job():
+    conn = await asyncpg.connect('$DATABASE_URL')
+    job_id = str(uuid.uuid4())
+
+    # Set session context for RLS policy
+    await conn.execute("SET app.current_client_name = '$CLIENT_NAME'")
+
+    # Get deployment_id for this client
+    deployment_id = await conn.fetchval('''
+        SELECT deployment_id
+        FROM sync_metadata.client_deployments
+        WHERE client_name = \$1
+    ''', '$CLIENT_NAME')
+
+    # Create job entry
+    await conn.execute('''
+        INSERT INTO sync_metadata.sync_jobs
+        (job_id, deployment_id, client_name, started_at, status, sync_type, triggered_by, tables_total)
+        VALUES (\$1, \$2, \$3, NOW(), 'running', \$4, 'manual', \$5)
+    ''', job_id, deployment_id, '$CLIENT_NAME', '$sync_type', ${#TABLES[@]})
+
+    await conn.close()
+    print(job_id)
+
+asyncio.run(create_job())
+PYEOF
+)
+
+    if [[ -z "$job_id" ]]; then
+        log_error "Failed to create sync job entry"
+        exit 1
+    fi
+
+    log_info "Created sync job: $job_id"
+
     # Check container
     if ! check_container; then
         log_error "Cannot sync - container not available"
+        # Update job as failed
+        python3 <<PYEOF
+import asyncpg
+import asyncio
+
+async def fail_job():
+    conn = await asyncpg.connect('$DATABASE_URL')
+    await conn.execute("SET app.current_client_name = '$CLIENT_NAME'")
+    await conn.execute('''
+        UPDATE sync_metadata.sync_jobs
+        SET status = 'failed',
+            completed_at = NOW(),
+            error_message = 'Container not available'
+        WHERE job_id = \$1
+    ''', '$job_id')
+    await conn.close()
+
+asyncio.run(fail_job())
+PYEOF
         update_sync_timestamp "failed"
         exit 1
     fi
@@ -426,38 +494,101 @@ main() {
     # Checkpoint WAL
     if ! checkpoint_wal; then
         log_error "WAL checkpoint failed"
+        # Update job as failed
+        python3 <<PYEOF
+import asyncpg
+import asyncio
+
+async def fail_job():
+    conn = await asyncpg.connect('$DATABASE_URL')
+    await conn.execute("SET app.current_client_name = '$CLIENT_NAME'")
+    await conn.execute('''
+        UPDATE sync_metadata.sync_jobs
+        SET status = 'failed',
+            completed_at = NOW(),
+            error_message = 'WAL checkpoint failed'
+        WHERE job_id = \$1
+    ''', '$job_id')
+    await conn.close()
+
+asyncio.run(fail_job())
+PYEOF
         update_sync_timestamp "failed"
         exit 1
     fi
 
     # Sync each table
-    local total_synced=0
-    local total_failed=0
+    local total_tables_synced=0
+    local total_tables_failed=0
+    local total_rows_synced=0
+    local total_rows_failed=0
 
     for table in "${TABLES[@]}"; do
         log_info "=== Starting sync for table: $table ==="
-        if sync_table "$table" "$last_sync"; then
-            log_info "DEBUG: About to increment total_synced (currently: $total_synced)"
-            total_synced=$((total_synced + 1))
-            log_info "DEBUG: Incremented total_synced to: $total_synced"
+
+        # Capture sync_table output to get row counts
+        local sync_output
+        if sync_output=$(sync_table "$table" "$last_sync" 2>&1); then
+            total_tables_synced=$((total_tables_synced + 1))
+
+            # Extract row counts from output
+            local rows_synced
+            local rows_failed
+            rows_synced=$(echo "$sync_output" | grep -oP "Synced \K[0-9]+" | tail -1 || echo "0")
+            rows_failed=$(echo "$sync_output" | grep -oP "failed: \K[0-9]+" | tail -1 || echo "0")
+
+            total_rows_synced=$((total_rows_synced + rows_synced))
+            total_rows_failed=$((total_rows_failed + rows_failed))
+
             log_success "Table $table completed successfully"
+            echo "$sync_output"
         else
-            log_info "DEBUG: About to increment total_failed (currently: $total_failed)"
-            total_failed=$((total_failed + 1))
-            log_info "DEBUG: Incremented total_failed to: $total_failed"
+            total_tables_failed=$((total_tables_failed + 1))
             log_error "Failed to sync table: $table"
+            echo "$sync_output" >&2
         fi
     done
 
+    # Update job with completion status
+    local job_status
+    if [[ "$total_tables_failed" -eq 0 ]]; then
+        job_status="success"
+    else
+        job_status="failed"
+    fi
+
+    python3 <<PYEOF
+import asyncpg
+import asyncio
+
+async def complete_job():
+    conn = await asyncpg.connect('$DATABASE_URL')
+    await conn.execute("SET app.current_client_name = '$CLIENT_NAME'")
+    await conn.execute('''
+        UPDATE sync_metadata.sync_jobs
+        SET status = \$1,
+            completed_at = NOW(),
+            tables_synced = \$2,
+            rows_synced = \$3,
+            rows_failed = \$4,
+            duration_seconds = EXTRACT(EPOCH FROM (NOW() - started_at))
+        WHERE job_id = \$5
+    ''', '$job_status', $total_tables_synced, $total_rows_synced, $total_rows_failed, '$job_id')
+    await conn.close()
+
+asyncio.run(complete_job())
+PYEOF
+
     # Update last_sync_at timestamp
-    if [[ "$total_failed" -eq 0 ]]; then
+    if [[ "$total_tables_failed" -eq 0 ]]; then
         log_info "Updating last sync timestamp..."
         update_sync_timestamp "success"
         log_success "Sync complete for $CLIENT_NAME"
-        log_info "Tables synced: $total_synced / ${#TABLES[@]}"
+        log_info "Tables synced: $total_tables_synced / ${#TABLES[@]}"
+        log_info "Rows synced: $total_rows_synced (failed: $total_rows_failed)"
         exit 0
     else
-        log_error "Some tables failed to sync: $total_failed"
+        log_error "Some tables failed to sync: $total_tables_failed"
         update_sync_timestamp "failed"
         exit 1
     fi
