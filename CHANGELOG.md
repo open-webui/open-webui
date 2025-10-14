@@ -5,6 +5,12 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.5.7-ccv2-1.8.2] - 2025-10-14
+
+### Fixed
+
+- **📌 Pin pydantic dependency**: Pinning to 2.11.10 do to issues with 2.12.1 and 2.12.2.
+
 ## [0.5.7-ccv2-1.8.1] - 2025-10-14
 
 ### Changed
