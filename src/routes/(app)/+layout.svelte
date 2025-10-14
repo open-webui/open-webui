@@ -85,25 +85,27 @@
 		}
 	};
 
-	const setUserSettings = async (cb) => {
-		const userSettings = await getUserSettings(localStorage.token).catch((error) => {
+	const setUserSettings = async (cb: () => Promise<void>) => {
+		let userSettings = await getUserSettings(localStorage.token).catch((error) => {
 			console.error(error);
 			return null;
 		});
 
-		if (userSettings) {
-			await settings.set(userSettings.ui);
-
-			if (cb) {
-				await cb();
+		if (!userSettings) {
+			try {
+				userSettings = JSON.parse(localStorage.getItem('settings') ?? '{}');
+			} catch (e: unknown) {
+				console.error('Failed to parse settings from localStorage', e);
+				userSettings = {};
 			}
 		}
 
-		try {
-			return JSON.parse(localStorage.getItem('settings') ?? '{}');
-		} catch (e: unknown) {
-			console.error('Failed to parse settings from localStorage', e);
-			return {};
+		if (userSettings?.ui) {
+			settings.set(userSettings.ui);
+		}
+
+		if (cb) {
+			await cb();
 		}
 	};
 
