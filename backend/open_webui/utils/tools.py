@@ -754,7 +754,7 @@ async def execute_tool_server(
         ) as session:
             request_method = getattr(session, http_method.lower())
 
-            if http_method in ["post", "put", "patch"]:
+            if http_method in ["post", "put", "patch", "delete"]:
                 async with request_method(
                     final_url,
                     json=body_params,

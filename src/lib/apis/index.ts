@@ -494,7 +494,10 @@ export const executeToolServer = async (
 			headers
 		};
 
-		if (['post', 'put', 'patch'].includes(httpMethod.toLowerCase()) && operation.requestBody) {
+		if (
+			['post', 'put', 'patch', 'delete'].includes(httpMethod.toLowerCase()) &&
+			operation.requestBody
+		) {
 			requestOptions.body = JSON.stringify(bodyParams);
 		}
 
