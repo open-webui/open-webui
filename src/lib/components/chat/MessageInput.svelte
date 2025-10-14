@@ -929,7 +929,7 @@
 	});
 
 
-  //added so user can regnerate old promts and refill the chatbox. 
+  //added so user can regnerate old promts and refill the chatbox
 	onMount(() => {
 		window.addEventListener('refillPrompt', async (e: CustomEvent) => {
 			const text = e.detail;
