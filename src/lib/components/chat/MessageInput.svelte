@@ -927,16 +927,6 @@
 			dropzoneElement?.removeEventListener('dragleave', onDragLeave);
 		}
 	});
-
-
-  //added so user can regnerate old promts and refill the chatbox. 
-	onMount(() => {
-		window.addEventListener('refillPrompt', async (e: CustomEvent) => {
-			const text = e.detail;
-			await setText(text); // <-- Use the Svelte method that updates the input properly
-		});
-	});
-
 </script>
 
 <FilesOverlay show={dragged} />
