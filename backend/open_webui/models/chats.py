@@ -502,6 +502,7 @@ class ChatTable:
         user_id: str,
         include_archived: bool = False,
         include_folders: bool = False,
+        include_pinned: bool = False,
         skip: Optional[int] = None,
         limit: Optional[int] = None,
     ) -> list[ChatTitleIdResponse]:
@@ -511,7 +512,8 @@ class ChatTable:
             if not include_folders:
                 query = query.filter_by(folder_id=None)
 
-            query = query.filter(or_(Chat.pinned == False, Chat.pinned == None))
+            if not include_pinned:
+                query = query.filter(or_(Chat.pinned == False, Chat.pinned == None))
 
             if not include_archived:
                 query = query.filter_by(archived=False)
