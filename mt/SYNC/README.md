@@ -263,16 +263,103 @@ curl http://localhost:9443/health | jq '.is_leader'
 # Should return true for primary (or secondary if primary down)
 ```
 
-### Integrate with Client Manager
+### Client-Manager Integration
 
-The sync system integrates with `mt/client-manager.sh`:
+The sync system is fully integrated with `mt/client-manager.sh` as of version 2.0 (2025-10-14).
+
+#### Managing Sync Nodes
+
+Access sync node management through the deployment menu:
 
 ```bash
+cd mt
 ./client-manager.sh
-# Select "3) Manage Existing Deployment"
-# Choose your client
-# New option: "9) Configure Database Sync"
+# Select: 3) Manage Existing Deployment
+# Select: sync-node-a or sync-node-b [SYNC NODE]
+# Available options:
+#   1) View Cluster Status     - Full cluster health and leadership
+#   2) View Health Check       - Individual node health and API status
+#   3) View Container Logs     - Last 50 lines of logs
+#   4) View Live Logs          - Follow mode for real-time monitoring
+#   5) Restart Sync Node       - Graceful restart with health check
+#   6) Stop Sync Node          - Stop with leadership transfer warning
+#   7) Update Sync Node        - Instructions for updating to latest version
+#   8) Return to Deployment List
 ```
+
+**Key Features**:
+- Automatic port detection (9443 for node-a, 9444 for node-b)
+- JSON response formatting with jq (if available)
+- Leadership status displayed in health checks
+- Warnings for operations that affect cluster availability
+
+#### Managing Client Sync
+
+Configure sync for individual Open WebUI clients:
+
+```bash
+cd mt
+./client-manager.sh
+# Select: 3) Manage Existing Deployment
+# Select: your-client-name [CLIENT]
+# Select: 8) Sync Management
+# Available options:
+#   1) Register Client for Sync        - Create schema and enable syncing
+#   2) Start/Resume Sync                - Enable automatic syncing
+#   3) Pause Sync                       - Temporarily stop syncing (keeps data)
+#   4) Manual Sync (Full)               - One-time complete sync
+#   5) Manual Sync (Incremental)        - One-time recent changes sync
+#   6) View Sync Status                 - Check sync enabled, interval, last sync
+#   7) View Recent Sync Jobs            - Last 10 sync operations with details
+#   8) Deregister Client                - Remove from sync (optional: delete data)
+#   9) Help                             - View SCRIPTS_REFERENCE.md
+#   10) Return to Client Menu
+```
+
+**Sync Operations**:
+- All manual syncs use `triggered_by=manual-console` for tracking
+- Status checks query Supabase directly for real-time information
+- Recent jobs show: timestamp, status, sync type, rows synced, duration
+- Help option displays full scripts reference documentation
+
+#### Integration Benefits
+
+1. **Unified Management**: Single interface for both Open WebUI and sync operations
+2. **Container Detection**: Automatically distinguishes sync nodes from client deployments
+3. **Safety Confirmations**: All destructive operations require explicit confirmation
+4. **Error Handling**: Clear error messages with remediation steps
+5. **Consistent UX**: Familiar menu patterns matching existing client-manager interface
+
+#### Workflow Examples
+
+**New Client Setup with Sync**:
+```bash
+# 1. Create client (via client-manager)
+# 2. Select: 3) Manage Existing Deployment → your-client
+# 3. Select: 8) Sync Management → 1) Register Client for Sync
+# 4. Sync automatically enabled and scheduled
+```
+
+**Troubleshooting Sync Issues**:
+```bash
+# 1. Select: 3) Manage Existing Deployment → your-client
+# 2. Select: 8) Sync Management → 6) View Sync Status
+# 3. Check sync_enabled, status, last_sync_at
+# 4. Select: 7) View Recent Sync Jobs
+# 5. Look for failed jobs or patterns
+# 6. If needed: 3) Pause Sync → Fix issue → 2) Start/Resume Sync
+```
+
+**Checking Cluster Health**:
+```bash
+# 1. Select: 3) Manage Existing Deployment → sync-node-a
+# 2. Select: 1) View Cluster Status
+# 3. Check: leader status, node health, last heartbeat
+# 4. Select: 2) View Health Check
+# 5. Verify: is_leader, uptime, API responding
+```
+
+**Note**: Cluster deployment and deregistration still require dedicated scripts (`deploy-sync-cluster.sh` and `deregister-cluster.sh`) but all operational management is now available through client-manager.
 
 ## API Reference
 

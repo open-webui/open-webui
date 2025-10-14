@@ -8,7 +8,7 @@
 ## Question 1: Does client-manager support cluster lifecycle management?
 
 ### Short Answer
-**NO** - The client-manager (`mt/client-manager.sh`) currently does NOT support sync cluster lifecycle management.
+**YES (PARTIAL)** - The client-manager (`mt/client-manager.sh`) now supports sync node management and client sync operations as of 2025-10-14.
 
 ### Current State
 
@@ -19,71 +19,59 @@
 - Start/stop/restart client containers
 - Change client domains and OAuth settings
 - Generate nginx configurations
+- **NEW: Manage sync nodes (view status, logs, restart)**
+- **NEW: Register clients with sync system**
+- **NEW: Enable/disable sync for clients (start/pause)**
+- **NEW: Monitor sync status and view recent jobs**
+- **NEW: Perform manual syncs (full and incremental)**
+- **NEW: Deregister clients from sync system**
+- **NEW: View cluster health and leader status**
 
 **❌ What client-manager.sh CANNOT do (yet)**:
-- Deploy or manage sync clusters
-- Register clients with sync system
-- Enable/disable sync for clients
-- Monitor sync status
-- Deregister clusters before host destruction
-- Migrate clients between clusters/hosts
-- View cluster health or leader status
+- Deploy new sync clusters (use `SYNC/scripts/deploy-sync-cluster.sh`)
+- Deregister clusters before host destruction (use `SYNC/scripts/deregister-cluster.sh`)
+- Initial cluster deployment (still requires manual script execution)
 
-### Integration Gap
+### Integration Status
 
-**The sync system and client-manager are currently SEPARATE**:
-- **Sync Cluster Management**: `mt/SYNC/scripts/deploy-sync-cluster.sh`, `deregister-cluster.sh`
-- **Client Management**: `mt/client-manager.sh`
-- **NO INTEGRATION**: They don't communicate with each other
+**Phase 1.5 - Client-Manager Integration** ✅ **IMPLEMENTED** (2025-10-14):
 
-### Recommended Future Enhancement
+The sync system and client-manager are now **INTEGRATED**:
+- **Sync Node Management**: Available via client-manager menu (Option 3 → Select sync-node)
+- **Client Sync Management**: Available via client-manager menu (Option 3 → Select client → Option 8)
+- **Cluster Deployment**: Still requires `mt/SYNC/scripts/deploy-sync-cluster.sh`
+- **Cluster Deregistration**: Still requires `mt/SYNC/scripts/deregister-cluster.sh`
 
-**Phase 1.5 - Client-Manager Integration** (not yet implemented):
+### How to Access Sync Features
 
-Add sync management options to client-manager.sh:
-
-```
-Managing: acme-corp
-Status: Running
-Database: SQLite (default)
-
-1) Start deployment
-2) Stop deployment
-3) Restart deployment
-4) View logs
-5) Show Cloudflare DNS configuration
-6) Update OAuth allowed domains
-7) Change domain/client (preserve data)
-8) Migrate to Supabase/PostgreSQL
-9) **NEW: Configure Sync** ← Add this
-   9a) Enable sync for this client
-   9b) Disable sync for this client
-   9c) View sync status
-   9d) Change sync interval
-10) Remove deployment (DANGER)
-11) **NEW: Cluster Management** ← Add this
-   11a) View cluster status
-   11b) Deregister cluster (pre-flight checks)
-   11c) Migrate to new cluster
-```
-
-### Workaround for Now
-
-**To manage clusters**, use the dedicated sync scripts:
+**To manage sync nodes** (view status, logs, restart):
 ```bash
-# Deploy sync cluster
+cd mt
+./client-manager.sh
+# Select: 3) Manage Existing Deployment
+# Select: sync-node-a or sync-node-b
+# Menu shows: View Cluster Status, View Health Check, View Logs, Restart, Stop, Update
+```
+
+**To manage client sync** (enable, disable, view status):
+```bash
+cd mt
+./client-manager.sh
+# Select: 3) Manage Existing Deployment
+# Select: your-client-name
+# Select: 8) Sync Management
+# Menu shows: Register, Start/Resume, Pause, Manual Sync, View Status, View Jobs, Deregister, Help
+```
+
+**To deploy/deregister clusters**, use dedicated scripts:
+```bash
+# Deploy sync cluster (initial setup)
 cd mt/SYNC
 ./scripts/deploy-sync-cluster.sh
 
 # Deregister cluster (before destroying host)
 cd mt/SYNC
 ./scripts/deregister-cluster.sh
-```
-
-**To manage clients**, use client-manager:
-```bash
-cd mt
-./client-manager.sh
 ```
 
 ---
@@ -414,10 +402,10 @@ cd mt/SYNC
 ## Summary
 
 ### Question 1: Client-Manager Integration
-**Status**: ❌ **NOT IMPLEMENTED**
-**Current State**: Sync cluster management is separate from client-manager
-**Workaround**: Use dedicated scripts in `mt/SYNC/scripts/`
-**Future**: Phase 1.5 integration planned
+**Status**: ✅ **IMPLEMENTED** (2025-10-14)
+**Current State**: Sync node and client sync management integrated into client-manager
+**Access**: Via client-manager.sh menu (Option 3 → Select deployment → Sync options)
+**Remaining Gap**: Cluster deployment and deregistration still require dedicated scripts
 
 ### Question 2: Sync Client Safety Checks
 **Status**: ✅ **IMPLEMENTED** (as of 2025-10-10)
@@ -463,5 +451,6 @@ Since you're destroying the current droplet and creating a fresh one:
 
 ---
 
-**Last Updated**: 2025-10-10
+**Last Updated**: 2025-10-14
 **Script Version**: deregister-cluster.sh v1.1 (with safety checks)
+**Client-Manager Version**: v2.0 (with sync integration)

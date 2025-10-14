@@ -42,6 +42,18 @@ show_main_menu() {
     echo -n "Please select an option (1-5): "
 }
 
+# Detect container type (sync-node vs client)
+detect_container_type() {
+    local client_name="$1"
+
+    # Check if this is a sync node
+    if [[ "$client_name" == "sync-node-a" ]] || [[ "$client_name" == "sync-node-b" ]]; then
+        echo "sync-node"
+    else
+        echo "client"
+    fi
+}
+
 get_next_available_port() {
     local start_port=8081
     local max_port=8099
@@ -195,6 +207,564 @@ create_new_deployment() {
     read
 }
 
+# Sync-node management menu
+manage_sync_node() {
+    local client_name="$1"
+    local container_name="openwebui-${client_name}"
+
+    # Determine API port based on node (a=9443, b=9444)
+    local api_port
+    if [[ "$client_name" == "sync-node-a" ]]; then
+        api_port=9443
+    else
+        api_port=9444
+    fi
+
+    while true; do
+        clear
+        echo "╔════════════════════════════════════════╗"
+        # Calculate padding for client name to align properly
+        local title="   Managing Sync Node: $client_name"
+        local padding=$((38 - ${#title}))
+        printf "║%s%*s║\n" "$title" $padding ""
+        echo "╚════════════════════════════════════════╝"
+        echo
+
+        # Show status
+        local status=$(docker ps -a --filter "name=$container_name" --format "{{.Status}}")
+        local ports=$(docker ps -a --filter "name=$container_name" --format "{{.Ports}}")
+
+        echo "Status:   $status"
+        echo "Ports:    $ports"
+        echo "API Port: $api_port"
+        echo
+
+        echo "1) View Cluster Status"
+        echo "2) View Health Check"
+        echo "3) View Container Logs (last 50 lines)"
+        echo "4) View Live Logs (follow mode)"
+        echo "5) Restart Sync Node"
+        echo "6) Stop Sync Node"
+        echo "7) Update Sync Node (instructions)"
+        echo "8) Return to Deployment List"
+        echo
+        echo -n "Select action (1-8): "
+        read action
+
+        case "$action" in
+            1)
+                # View Cluster Status
+                clear
+                echo "╔════════════════════════════════════════╗"
+                echo "║          Cluster Status                ║"
+                echo "╚════════════════════════════════════════╝"
+                echo
+                echo "Fetching cluster status from http://localhost:${api_port}/api/v1/cluster/status..."
+                echo
+
+                if curl -s -f "http://localhost:${api_port}/api/v1/cluster/status" > /tmp/cluster_status.json 2>/dev/null; then
+                    # Pretty print the JSON
+                    if command -v jq &> /dev/null; then
+                        cat /tmp/cluster_status.json | jq '.'
+                    else
+                        cat /tmp/cluster_status.json
+                        echo
+                        echo "(Install 'jq' for formatted output)"
+                    fi
+                    rm -f /tmp/cluster_status.json
+                else
+                    echo "❌ Failed to fetch cluster status"
+                    echo "Possible reasons:"
+                    echo "  - Sync node is not running"
+                    echo "  - API port $api_port is not accessible"
+                    echo "  - Network connectivity issues"
+                fi
+                echo
+                echo "Press Enter to continue..."
+                read
+                ;;
+            2)
+                # View Health Check
+                clear
+                echo "╔════════════════════════════════════════╗"
+                echo "║           Health Check                 ║"
+                echo "╚════════════════════════════════════════╝"
+                echo
+                echo "Fetching health status from http://localhost:${api_port}/health..."
+                echo
+
+                if curl -s -f "http://localhost:${api_port}/health" > /tmp/health_check.json 2>/dev/null; then
+                    # Pretty print the JSON
+                    if command -v jq &> /dev/null; then
+                        cat /tmp/health_check.json | jq '.'
+                    else
+                        cat /tmp/health_check.json
+                        echo
+                        echo "(Install 'jq' for formatted output)"
+                    fi
+                    rm -f /tmp/health_check.json
+                else
+                    echo "❌ Failed to fetch health status"
+                    echo "Possible reasons:"
+                    echo "  - Sync node is not running"
+                    echo "  - API port $api_port is not accessible"
+                fi
+                echo
+                echo "Press Enter to continue..."
+                read
+                ;;
+            3)
+                # View Container Logs (last 50 lines)
+                clear
+                echo "╔════════════════════════════════════════╗"
+                echo "║      Container Logs (last 50 lines)    ║"
+                echo "╚════════════════════════════════════════╝"
+                echo
+                docker logs --tail 50 "$container_name"
+                echo
+                echo "Press Enter to continue..."
+                read
+                ;;
+            4)
+                # View Live Logs
+                echo
+                echo "Starting live log stream for $container_name..."
+                echo "(Press Ctrl+C to exit)"
+                echo
+                sleep 2
+                docker logs -f "$container_name"
+                ;;
+            5)
+                # Restart Sync Node
+                clear
+                echo "╔════════════════════════════════════════╗"
+                echo "║         Restart Sync Node              ║"
+                echo "╚════════════════════════════════════════╝"
+                echo
+                echo "⚠️  WARNING: Restarting sync node will temporarily affect sync operations"
+                echo
+                echo "This sync node will:"
+                echo "  - Stop processing sync jobs"
+                echo "  - Lose leader status (if it's the current leader)"
+                echo "  - Rejoin the cluster and participate in leader election after restart"
+                echo
+                echo "The other sync node will continue serving requests during the restart."
+                echo
+                echo -n "Continue with restart? (y/N): "
+                read confirm
+
+                if [[ "$confirm" =~ ^[Yy]$ ]]; then
+                    echo
+                    echo "Restarting $container_name..."
+                    docker restart "$container_name"
+                    echo "✅ Sync node restarted successfully"
+                    echo
+                    echo "Waiting 5 seconds for startup..."
+                    sleep 5
+
+                    # Check health after restart
+                    if curl -s -f "http://localhost:${api_port}/health" > /dev/null 2>&1; then
+                        echo "✅ Health check passed - sync node is responding"
+                    else
+                        echo "⚠️  Health check failed - sync node may still be starting up"
+                    fi
+                else
+                    echo "Restart cancelled."
+                fi
+                echo
+                echo "Press Enter to continue..."
+                read
+                ;;
+            6)
+                # Stop Sync Node
+                clear
+                echo "╔════════════════════════════════════════╗"
+                echo "║          Stop Sync Node                ║"
+                echo "╚════════════════════════════════════════╝"
+                echo
+                echo "⚠️  CRITICAL WARNING: Stopping this sync node will affect sync operations"
+                echo
+                echo "Impact:"
+                echo "  - This sync node will stop processing sync jobs"
+                echo "  - If this is the current leader, leadership will transfer to the other node"
+                echo "  - Only one sync node will remain active"
+                echo "  - Reduced high availability until both nodes are running"
+                echo
+                echo "Only stop this node if:"
+                echo "  - You need to perform maintenance"
+                echo "  - You are troubleshooting an issue"
+                echo "  - The other sync node is confirmed healthy and running"
+                echo
+                echo -n "Type 'STOP' to confirm: "
+                read confirm
+
+                if [[ "$confirm" == "STOP" ]]; then
+                    echo
+                    echo "Stopping $container_name..."
+                    docker stop "$container_name"
+                    echo "✅ Sync node stopped"
+                    echo
+                    echo "To restart later, use option 5 (Restart Sync Node) or:"
+                    echo "  docker start $container_name"
+                else
+                    echo "Stop cancelled."
+                fi
+                echo
+                echo "Press Enter to continue..."
+                read
+                ;;
+            7)
+                # Update Sync Node
+                clear
+                echo "╔════════════════════════════════════════╗"
+                echo "║         Update Sync Node               ║"
+                echo "╚════════════════════════════════════════╝"
+                echo
+                echo "To update the sync node to the latest version:"
+                echo
+                echo "1. Navigate to the SYNC directory:"
+                echo "   cd ${SCRIPT_DIR}/SYNC"
+                echo
+                echo "2. Run the deployment script (it will update existing nodes):"
+                echo "   ./scripts/deploy-sync-cluster.sh"
+                echo
+                echo "3. The script will:"
+                echo "   - Pull the latest Docker image"
+                echo "   - Recreate sync node containers"
+                echo "   - Preserve all configuration and data"
+                echo "   - Maintain cluster registration in Supabase"
+                echo
+                echo "⚠️  NOTE: Updates should be done during maintenance windows"
+                echo "to minimize disruption to sync operations."
+                echo
+                echo "For more details, see:"
+                echo "  ${SCRIPT_DIR}/SYNC/README.md"
+                echo "  ${SCRIPT_DIR}/SYNC/TECHNICAL_REFERENCE.md"
+                echo
+                echo "Press Enter to continue..."
+                read
+                ;;
+            8)
+                # Return to Deployment List
+                return
+                ;;
+            *)
+                echo "Invalid selection. Press Enter to continue..."
+                read
+                ;;
+        esac
+    done
+}
+
+# Sync Management submenu for client deployments
+sync_management_menu() {
+    local client_name="$1"
+    local container_name="openwebui-${client_name}"
+
+    while true; do
+        clear
+        echo "╔════════════════════════════════════════╗"
+        local title="   Sync Management: $client_name"
+        local padding=$((38 - ${#title}))
+        printf "║%s%*s║\n" "$title" $padding ""
+        echo "╚════════════════════════════════════════╝"
+        echo
+
+        echo "1) Register Client for Sync"
+        echo "2) Start/Resume Sync"
+        echo "3) Pause Sync"
+        echo "4) Manual Sync (Full)"
+        echo "5) Manual Sync (Incremental)"
+        echo "6) View Sync Status"
+        echo "7) View Recent Sync Jobs"
+        echo "8) Deregister Client"
+        echo "9) Help (View Scripts Reference)"
+        echo "10) Return to Client Menu"
+        echo
+        echo -n "Select action (1-10): "
+        read action
+
+        case "$action" in
+            1)
+                # Register Client for Sync
+                clear
+                echo "╔════════════════════════════════════════╗"
+                echo "║        Register Client for Sync        ║"
+                echo "╚════════════════════════════════════════╝"
+                echo
+                echo "This will register '$client_name' with the sync system."
+                echo
+                echo "What will happen:"
+                echo "  - Create Supabase schema for this client"
+                echo "  - Initialize Open WebUI tables in Supabase"
+                echo "  - Enable automatic syncing"
+                echo
+                echo -n "Continue? (y/N): "
+                read confirm
+
+                if [[ "$confirm" =~ ^[Yy]$ ]]; then
+                    echo
+                    "${SCRIPT_DIR}/SYNC/scripts/register-sync-client-to-supabase.sh" "$client_name" "$container_name"
+                else
+                    echo "Registration cancelled."
+                fi
+                echo
+                echo "Press Enter to continue..."
+                read
+                ;;
+            2)
+                # Start/Resume Sync
+                clear
+                echo "╔════════════════════════════════════════╗"
+                echo "║          Start/Resume Sync             ║"
+                echo "╚════════════════════════════════════════╝"
+                echo
+                echo "This will enable automatic syncing for '$client_name'."
+                echo
+                echo -n "Continue? (y/N): "
+                read confirm
+
+                if [[ "$confirm" =~ ^[Yy]$ ]]; then
+                    echo
+                    "${SCRIPT_DIR}/SYNC/scripts/start-sync.sh" "$client_name"
+                else
+                    echo "Operation cancelled."
+                fi
+                echo
+                echo "Press Enter to continue..."
+                read
+                ;;
+            3)
+                # Pause Sync
+                clear
+                echo "╔════════════════════════════════════════╗"
+                echo "║            Pause Sync                  ║"
+                echo "╚════════════════════════════════════════╝"
+                echo
+                echo "This will temporarily stop automatic syncing for '$client_name'."
+                echo "Data and registration will be preserved."
+                echo
+                echo -n "Continue? (y/N): "
+                read confirm
+
+                if [[ "$confirm" =~ ^[Yy]$ ]]; then
+                    echo
+                    "${SCRIPT_DIR}/SYNC/scripts/pause-sync.sh" "$client_name"
+                else
+                    echo "Operation cancelled."
+                fi
+                echo
+                echo "Press Enter to continue..."
+                read
+                ;;
+            4)
+                # Manual Sync (Full)
+                clear
+                echo "╔════════════════════════════════════════╗"
+                echo "║        Manual Full Sync                ║"
+                echo "╚════════════════════════════════════════╝"
+                echo
+                echo "This will perform a complete sync of all data from SQLite to Supabase."
+                echo
+                echo -n "Continue? (y/N): "
+                read confirm
+
+                if [[ "$confirm" =~ ^[Yy]$ ]]; then
+                    echo
+                    cd "${SCRIPT_DIR}/SYNC"
+                    source .credentials
+                    export DATABASE_URL="$SYNC_URL"
+                    ./scripts/sync-client-to-supabase.sh "$client_name" "manual-console" --full
+                else
+                    echo "Operation cancelled."
+                fi
+                echo
+                echo "Press Enter to continue..."
+                read
+                ;;
+            5)
+                # Manual Sync (Incremental)
+                clear
+                echo "╔════════════════════════════════════════╗"
+                echo "║      Manual Incremental Sync           ║"
+                echo "╚════════════════════════════════════════╝"
+                echo
+                echo "This will sync only recent changes from SQLite to Supabase."
+                echo
+                echo -n "Continue? (y/N): "
+                read confirm
+
+                if [[ "$confirm" =~ ^[Yy]$ ]]; then
+                    echo
+                    cd "${SCRIPT_DIR}/SYNC"
+                    source .credentials
+                    export DATABASE_URL="$SYNC_URL"
+                    ./scripts/sync-client-to-supabase.sh "$client_name" "manual-console"
+                else
+                    echo "Operation cancelled."
+                fi
+                echo
+                echo "Press Enter to continue..."
+                read
+                ;;
+            6)
+                # View Sync Status
+                clear
+                echo "╔════════════════════════════════════════╗"
+                echo "║           Sync Status                  ║"
+                echo "╚════════════════════════════════════════╝"
+                echo
+
+                docker exec -i openwebui-sync-node-a python3 << EOF
+import asyncpg, asyncio, os, sys
+
+async def check_status():
+    try:
+        conn = await asyncpg.connect(os.getenv('ADMIN_URL'))
+        row = await conn.fetchrow('''
+            SELECT sync_enabled, status, sync_interval, last_sync_at, last_sync_status
+            FROM sync_metadata.client_deployments
+            WHERE client_name = \$1
+        ''', '$client_name')
+
+        if row:
+            print(f"Client: $client_name")
+            print(f"  Sync Enabled: {row['sync_enabled']}")
+            print(f"  Status: {row['status']}")
+            print(f"  Interval: {row['sync_interval']}s")
+            print(f"  Last Sync: {row['last_sync_at']}")
+            print(f"  Last Status: {row['last_sync_status']}")
+        else:
+            print(f"❌ Client '$client_name' not found in sync system")
+            print(f"   Use option 1 to register this client for sync")
+
+        await conn.close()
+    except Exception as e:
+        print(f"Error: {e}")
+        sys.exit(1)
+
+asyncio.run(check_status())
+EOF
+                echo
+                echo "Press Enter to continue..."
+                read
+                ;;
+            7)
+                # View Recent Sync Jobs
+                clear
+                echo "╔════════════════════════════════════════╗"
+                echo "║        Recent Sync Jobs                ║"
+                echo "╚════════════════════════════════════════╝"
+                echo
+
+                docker exec -i openwebui-sync-node-a python3 << 'EOF'
+import asyncpg, asyncio, os, sys
+
+async def show_jobs():
+    try:
+        conn = await asyncpg.connect(os.getenv('ADMIN_URL'))
+        rows = await conn.fetch('''
+            SELECT job_id, started_at, status, sync_type, triggered_by,
+                   rows_synced, duration_seconds
+            FROM sync_metadata.sync_jobs
+            WHERE client_name = $1
+            ORDER BY started_at DESC
+            LIMIT 10
+        ''', '$client_name')
+
+        if rows:
+            print(f"{'Started':<20} {'Status':<10} {'Type':<6} {'By':<15} {'Rows':<8} {'Duration':<8}")
+            print("-" * 85)
+
+            for row in rows:
+                duration = f"{row['duration_seconds']:.1f}s" if row['duration_seconds'] else "-"
+                rows_synced = row['rows_synced'] or 0
+                print(f"{str(row['started_at']):<20} {row['status']:<10} {row['sync_type']:<6} "
+                      f"{row['triggered_by']:<15} {rows_synced:<8} {duration:<8}")
+        else:
+            print(f"No sync jobs found for client: $client_name")
+
+        await conn.close()
+    except Exception as e:
+        print(f"Error: {e}")
+        sys.exit(1)
+
+asyncio.run(show_jobs())
+EOF
+                echo
+                echo "Press Enter to continue..."
+                read
+                ;;
+            8)
+                # Deregister Client
+                clear
+                echo "╔════════════════════════════════════════╗"
+                echo "║         Deregister Client              ║"
+                echo "╚════════════════════════════════════════╝"
+                echo
+                echo "⚠️  WARNING: This will remove '$client_name' from the sync system"
+                echo
+                echo "Choose removal option:"
+                echo "  1) Keep Supabase data (remove from sync only)"
+                echo "  2) DELETE all Supabase data (cannot be undone)"
+                echo "  3) Cancel"
+                echo
+                echo -n "Select option (1-3): "
+                read deregister_option
+
+                case "$deregister_option" in
+                    1)
+                        echo
+                        echo "Deregistering client (keeping data)..."
+                        "${SCRIPT_DIR}/SYNC/scripts/deregister-client.sh" "$client_name"
+                        ;;
+                    2)
+                        echo
+                        echo "⚠️  CRITICAL WARNING: This will DELETE ALL DATA for '$client_name' in Supabase!"
+                        echo -n "Type 'DELETE' to confirm: "
+                        read confirm
+                        if [[ "$confirm" == "DELETE" ]]; then
+                            "${SCRIPT_DIR}/SYNC/scripts/deregister-client.sh" "$client_name" --drop-schema
+                        else
+                            echo "Deletion cancelled."
+                        fi
+                        ;;
+                    3)
+                        echo "Deregistration cancelled."
+                        ;;
+                    *)
+                        echo "Invalid selection."
+                        ;;
+                esac
+                echo
+                echo "Press Enter to continue..."
+                read
+                ;;
+            9)
+                # Help - Display SCRIPTS_REFERENCE.md
+                clear
+                if [ -f "${SCRIPT_DIR}/SYNC/SCRIPTS_REFERENCE.md" ]; then
+                    less "${SCRIPT_DIR}/SYNC/SCRIPTS_REFERENCE.md"
+                else
+                    echo "❌ Scripts reference file not found:"
+                    echo "   ${SCRIPT_DIR}/SYNC/SCRIPTS_REFERENCE.md"
+                    echo
+                    echo "Press Enter to continue..."
+                    read
+                fi
+                ;;
+            10)
+                # Return to Client Menu
+                return
+                ;;
+            *)
+                echo "Invalid selection. Press Enter to continue..."
+                read
+                ;;
+        esac
+    done
+}
+
 manage_deployment_menu() {
     while true; do
         clear
@@ -217,17 +787,21 @@ manage_deployment_menu() {
 
         for i in "${!clients[@]}"; do
             status=$(docker ps -a --filter "name=openwebui-${clients[$i]}" --format "{{.Status}}")
+            container_type=$(detect_container_type "${clients[$i]}")
 
             # Try to get the redirect URI from container environment to extract domain
             redirect_uri=$(docker exec "openwebui-${clients[$i]}" env 2>/dev/null | grep "GOOGLE_REDIRECT_URI=" | cut -d'=' -f2- 2>/dev/null || echo "")
 
-            if [[ -n "$redirect_uri" ]]; then
+            if [[ "$container_type" == "sync-node" ]]; then
+                # Sync node - show with [SYNC NODE] indicator
+                echo "$((i+1))) ${clients[$i]} [SYNC NODE] ($status)"
+            elif [[ -n "$redirect_uri" ]]; then
                 # Extract domain from redirect URI (remove http/https and /oauth/google/callback)
                 domain=$(echo "$redirect_uri" | sed -E 's|https?://||' | sed 's|/oauth/google/callback||')
-                echo "$((i+1))) ${clients[$i]} → $domain ($status)"
+                echo "$((i+1))) ${clients[$i]} [CLIENT] → $domain ($status)"
             else
                 # Fallback if we can't get the redirect URI
-                echo "$((i+1))) ${clients[$i]} ($status)"
+                echo "$((i+1))) ${clients[$i]} [CLIENT] ($status)"
             fi
         done
 
@@ -251,6 +825,16 @@ manage_single_deployment() {
     local client_name="$1"
     local container_name="openwebui-${client_name}"
 
+    # Detect container type and route to appropriate menu
+    local container_type=$(detect_container_type "$client_name")
+
+    if [[ "$container_type" == "sync-node" ]]; then
+        # Route to sync-node management menu
+        manage_sync_node "$client_name"
+        return
+    fi
+
+    # Continue with client deployment menu for non-sync-node containers
     # Color codes for output
     local RED='\033[0;31m'
     local GREEN='\033[0;32m'
@@ -309,18 +893,19 @@ manage_single_deployment() {
         echo "5) Show Cloudflare DNS configuration"
         echo "6) Update OAuth allowed domains"
         echo "7) Change domain/client (preserve data)"
+        echo "8) Sync Management"
 
         # Show database option based on current database type
         if [[ -n "$database_url" ]]; then
-            echo "8) View database configuration (includes rollback)"
+            echo "9) View database configuration (includes rollback)"
         else
-            echo "8) Migrate to Supabase/PostgreSQL"
+            echo "9) Migrate to Supabase/PostgreSQL"
         fi
 
-        echo "9) Remove deployment (DANGER)"
-        echo "10) Return to deployment list"
+        echo "10) Remove deployment (DANGER)"
+        echo "11) Return to deployment list"
         echo
-        echo -n "Select action (1-10): "
+        echo -n "Select action (1-11): "
         read action
 
         case "$action" in
@@ -677,6 +1262,10 @@ manage_single_deployment() {
                 read
                 ;;
             8)
+                # Sync Management
+                sync_management_menu "$client_name"
+                ;;
+            9)
                 # Database Migration / Configuration Viewer
                 if [[ -n "$database_url" ]]; then
                     # PostgreSQL - Show configuration
@@ -843,7 +1432,7 @@ manage_single_deployment() {
                 echo "Press Enter to continue..."
                 read
                 ;;
-            9)
+            10)
                 # Remove deployment
                 echo "⚠️  WARNING: This will permanently remove the deployment!"
                 echo "Data volume will be preserved but container will be deleted."
@@ -863,7 +1452,7 @@ manage_single_deployment() {
                     read
                 fi
                 ;;
-            10)
+            11)
                 # Return to deployment list
                 return
                 ;;
