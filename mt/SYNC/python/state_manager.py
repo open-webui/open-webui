@@ -43,17 +43,19 @@ class StateManager:
     the next read will fetch correct state from Supabase.
     """
 
-    def __init__(self, db_url: str, host_id: str, ttl: int = 300):
+    def __init__(self, db_url: str, host_id: str, cluster_name: str = None, ttl: int = 300):
         """
         Initialize StateManager.
 
         Args:
             db_url: PostgreSQL connection URL (Supabase)
             host_id: Unique identifier for this host
+            cluster_name: Cluster name for RLS policy filtering (optional)
             ttl: Cache time-to-live in seconds (default: 5 minutes)
         """
         self.db_url = db_url
         self.host_id = host_id
+        self.cluster_name = cluster_name
         self.ttl = ttl
 
         # Local cache
@@ -66,7 +68,7 @@ class StateManager:
         # Last sync timestamp
         self.last_sync_at: Optional[float] = None
 
-        logger.info(f"StateManager initialized with TTL={ttl}s, host_id={host_id}")
+        logger.info(f"StateManager initialized with TTL={ttl}s, host_id={host_id}, cluster={cluster_name}")
 
     async def initialize(self):
         """
@@ -98,14 +100,16 @@ class StateManager:
         Set PostgreSQL session context for RLS policies.
 
         This ensures that RLS policies can identify which host this connection
-        belongs to and enforce proper isolation.
+        belongs to and enforce proper isolation. Also sets cluster_name to allow
+        the scheduler to query all active clients.
         """
         async with self.pool.acquire() as conn:
-            await conn.execute(
-                "SELECT sync_metadata.set_sync_context($1::uuid, NULL, NULL, NULL)",
-                self.host_id
+            result = await conn.fetchval(
+                "SELECT sync_metadata.set_sync_context($1::uuid, NULL, $2, NULL)",
+                self.host_id,
+                self.cluster_name
             )
-            logger.debug(f"Session context set for host_id={self.host_id}")
+            logger.debug(f"Session context set: {result}")
 
     async def get_state(self, key: str) -> Optional[Dict[str, Any]]:
         """

@@ -140,7 +140,7 @@ async def lifespan(app: FastAPI):
     try:
         # Initialize state manager
         logger.info("Initializing state manager...")
-        state_manager = StateManager(DATABASE_URL, HOST_ID, ttl=CACHE_TTL)
+        state_manager = StateManager(DATABASE_URL, HOST_ID, cluster_name=CLUSTER_NAME, ttl=CACHE_TTL)
         await state_manager.initialize()
         logger.info("✅ State manager initialized")
 
