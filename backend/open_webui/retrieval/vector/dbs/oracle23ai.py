@@ -712,6 +712,7 @@ class Oracle23aiClient(VectorDBBase):
             >>> if results:
             ...     print(f"Retrieved {len(results.ids[0])} documents from collection")
         """
+        limit = 1000
         log.info(
             f"Getting items from collection '{collection_name}' with limit {limit}."
         )
