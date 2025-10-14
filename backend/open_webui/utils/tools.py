@@ -748,10 +748,6 @@ async def execute_tool_server(
         if operation.get("requestBody", {}).get("content"):
             if params:
                 body_params = params
-            else:
-                raise Exception(
-                    f"Request body expected for operation '{name}' but none found."
-                )
 
         async with aiohttp.ClientSession(
             trust_env=True, timeout=aiohttp.ClientTimeout(total=AIOHTTP_CLIENT_TIMEOUT)

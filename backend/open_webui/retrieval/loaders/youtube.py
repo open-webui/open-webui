@@ -157,3 +157,10 @@ class YoutubeLoader:
             f"No transcript found for any of the specified languages: {languages_tried}. Verify if the video has transcripts, add more languages if needed."
         )
         raise NoTranscriptFound(self.video_id, self.language, list(transcript_list))
+
+    async def aload(self) -> Generator[Document, None, None]:
+        """Asynchronously load YouTube transcripts into `Document` objects."""
+        import asyncio
+
+        loop = asyncio.get_event_loop()
+        return await loop.run_in_executor(None, self.load)

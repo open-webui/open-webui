@@ -213,7 +213,7 @@ async def verify_tool_servers_config(
                     )
                     async with aiohttp.ClientSession() as session:
                         async with session.get(
-                            discovery_urls[0]
+                            discovery_url
                         ) as oauth_server_metadata_response:
                             if oauth_server_metadata_response.status == 200:
                                 try:
@@ -234,7 +234,7 @@ async def verify_tool_servers_config(
                                     )
                                     raise HTTPException(
                                         status_code=400,
-                                        detail=f"Failed to parse OAuth 2.1 discovery document from {discovery_urls[0]}",
+                                        detail=f"Failed to parse OAuth 2.1 discovery document from {discovery_url}",
                                     )
 
                 raise HTTPException(

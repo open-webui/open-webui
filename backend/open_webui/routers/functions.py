@@ -10,6 +10,7 @@ from open_webui.models.functions import (
     FunctionForm,
     FunctionModel,
     FunctionResponse,
+    FunctionUserResponse,
     FunctionWithValvesModel,
     Functions,
 )
@@ -40,6 +41,11 @@ router = APIRouter()
 @router.get("/", response_model=list[FunctionResponse])
 async def get_functions(user=Depends(get_verified_user)):
     return Functions.get_functions()
+
+
+@router.get("/list", response_model=list[FunctionUserResponse])
+async def get_function_list(user=Depends(get_admin_user)):
+    return Functions.get_function_list()
 
 
 ############################
