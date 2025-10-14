@@ -75,7 +75,8 @@ class StateManager:
         Initialize database connection pool.
 
         Creates an asyncpg connection pool with optimal settings for
-        long-lived connections.
+        long-lived connections. Each connection is initialized with
+        session context for RLS policies.
         """
         try:
             self.pool = await asyncpg.create_pool(
@@ -84,32 +85,28 @@ class StateManager:
                 max_size=10,
                 max_queries=50000,
                 max_inactive_connection_lifetime=300,
-                command_timeout=30
+                command_timeout=30,
+                # Set session context on every new connection
+                init=self._init_connection
             )
             logger.info("Database connection pool created successfully")
-
-            # Set session context for RLS
-            await self._set_session_context()
 
         except Exception as e:
             logger.error(f"Failed to initialize database pool: {e}")
             raise
 
-    async def _set_session_context(self):
+    async def _init_connection(self, conn):
         """
-        Set PostgreSQL session context for RLS policies.
+        Initialize each new connection with session context for RLS.
 
-        This ensures that RLS policies can identify which host this connection
-        belongs to and enforce proper isolation. Also sets cluster_name to allow
-        the scheduler to query all active clients.
+        This is called automatically for every connection acquired from the pool.
         """
-        async with self.pool.acquire() as conn:
-            result = await conn.fetchval(
-                "SELECT sync_metadata.set_sync_context($1::uuid, NULL, $2, NULL)",
-                self.host_id,
-                self.cluster_name
-            )
-            logger.debug(f"Session context set: {result}")
+        result = await conn.fetchval(
+            "SELECT sync_metadata.set_sync_context($1::uuid, NULL, $2, NULL)",
+            self.host_id,
+            self.cluster_name
+        )
+        logger.debug(f"Connection initialized with session context: {result}")
 
     async def get_state(self, key: str) -> Optional[Dict[str, Any]]:
         """
