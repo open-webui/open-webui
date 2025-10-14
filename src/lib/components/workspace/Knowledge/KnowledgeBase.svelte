@@ -78,10 +78,26 @@
 	let showAccessControlModal = false;
 
 	let inputFiles = null;
+	const FILES_PER_PAGE = 100;
+	let allFiles = []; // All files loaded from API
+	let displayLimit = FILES_PER_PAGE; // How many files to display
+	let loadingMoreFiles = false;
 
 	let filteredItems = [];
+	// Update allFiles when knowledge is loaded
 	$: if (knowledge && knowledge.files) {
-		fuse = new Fuse(knowledge.files, {
+		allFiles = knowledge.files;
+	}
+
+	// Slice files based on display limit
+	$: displayedFiles = allFiles.slice(0, displayLimit);
+
+	// Check if there are more files to display
+	$: hasMoreFiles = displayLimit < allFiles.length;
+
+	let fuse = null;
+	$: if (displayedFiles) {
+		fuse = new Fuse(displayedFiles, {
 			keys: ['meta.name', 'meta.description']
 		});
 	}
@@ -91,7 +107,7 @@
 			? fuse.search(query).map((e) => {
 					return e.item;
 				})
-			: (knowledge?.files ?? []);
+			: displayedFiles;
 	}
 
 	let selectedFile = null;
@@ -112,11 +128,11 @@
 		selectedFile = null;
 	}
 
-	let fuse = null;
 	let debounceTimeout = null;
 	let mediaQuery;
 	let dragged = false;
 	let isSaving = false;
+	let filesScrollContainer: HTMLElement | null = null;
 
 	const createFileFromText = (name, content) => {
 		const blob = new Blob([content], { type: 'text/plain' });
@@ -388,6 +404,8 @@
 			});
 
 			if (res) {
+				// Update knowledge and reset display limit
+				displayLimit = FILES_PER_PAGE;
 				knowledge = res;
 				toast.success($i18n.t('Knowledge reset successfully.'));
 
@@ -397,6 +415,19 @@
 		} else {
 			uploadDirectoryHandler();
 		}
+	};
+
+	const loadMoreFiles = () => {
+		if (loadingMoreFiles || !hasMoreFiles) {
+			return;
+		}
+
+		loadingMoreFiles = true;
+
+		// Increase display limit
+		displayLimit += FILES_PER_PAGE;
+
+		loadingMoreFiles = false;
 	};
 
 	const addFileHandler = async (fileId) => {
@@ -907,11 +938,17 @@
 						</div>
 
 						{#if filteredItems.length > 0}
-							<div class=" flex overflow-y-auto h-full w-full scrollbar-hidden text-xs">
+							<div
+								class=" flex overflow-y-auto h-full w-full scrollbar-hidden text-xs"
+								bind:this={filesScrollContainer}
+							>
 								<Files
 									small
 									files={filteredItems}
 									{selectedFileId}
+									loading={loadingMoreFiles}
+									hasMore={!query && hasMoreFiles}
+									scrollContainer={filesScrollContainer}
 									on:click={(e) => {
 										selectedFileId = selectedFileId === e.detail ? null : e.detail;
 									}}
@@ -921,6 +958,7 @@
 										selectedFileId = null;
 										deleteFileHandler(e.detail);
 									}}
+									on:loadmore={loadMoreFiles}
 								/>
 							</div>
 						{:else}

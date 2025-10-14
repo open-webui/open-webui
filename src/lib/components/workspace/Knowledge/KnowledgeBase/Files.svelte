@@ -3,11 +3,16 @@
 	const dispatch = createEventDispatcher();
 
 	import FileItem from '$lib/components/common/FileItem.svelte';
+	import Loader from '$lib/components/common/Loader.svelte';
+	import Spinner from '$lib/components/common/Spinner.svelte';
 
 	export let selectedFileId = null;
 	export let files = [];
 
 	export let small = false;
+	export let loading = false;
+	export let hasMore = false;
+	export let scrollContainer: HTMLElement | null = null;
 </script>
 
 <div class=" max-h-full flex flex-col w-full">
@@ -42,4 +47,20 @@
 			/>
 		</div>
 	{/each}
+
+	{#if hasMore}
+		<Loader
+			{scrollContainer}
+			on:visible={(e) => {
+				if (!loading) {
+					dispatch('loadmore');
+				}
+			}}
+		>
+			<div class="w-full flex justify-center py-2 text-xs animate-pulse items-center gap-2">
+				<Spinner className="size-4" />
+				<div>Loading more files...</div>
+			</div>
+		</Loader>
+	{/if}
 </div>

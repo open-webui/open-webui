@@ -2,13 +2,15 @@
 	import { createEventDispatcher, onDestroy, onMount } from 'svelte';
 	const dispatch = createEventDispatcher();
 
+	export let scrollContainer: HTMLElement | null = null;
+
 	let loaderElement: HTMLElement;
 
 	let observer;
 	let intervalId;
 
-	onMount(() => {
-		observer = new IntersectionObserver(
+	function createObserver() {
+		return new IntersectionObserver(
 			(entries, observer) => {
 				entries.forEach((entry) => {
 					if (entry.isIntersecting) {
@@ -23,14 +25,24 @@
 				});
 			},
 			{
-				root: null, // viewport
+				root: scrollContainer,
 				rootMargin: '0px',
 				threshold: 0.1 // When 10% of the loader is visible
 			}
 		);
+	}
 
+	onMount(() => {
+		observer = createObserver();
 		observer.observe(loaderElement);
 	});
+
+	// Reactively recreate observer when scrollContainer changes after mount
+	$: if (observer && scrollContainer !== undefined) {
+		observer.disconnect();
+		observer = createObserver();
+		observer.observe(loaderElement);
+	}
 
 	onDestroy(() => {
 		if (observer) {
