@@ -576,8 +576,6 @@
 
 		await tick();
 		if (buttonsContainerElement) {
-			console.log(buttonsContainerElement);
-
 			buttonsContainerElement.addEventListener('wheel', function (event) {
 				if (buttonsContainerElement.scrollWidth <= buttonsContainerElement.clientWidth) {
 					// If the container is not scrollable, horizontal scroll
@@ -811,6 +809,7 @@
 										bind:this={citationsElement}
 										id={message?.id}
 										sources={message?.sources ?? message?.citations}
+										{readOnly}
 									/>
 								{/if}
 
