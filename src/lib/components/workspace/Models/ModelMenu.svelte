@@ -43,7 +43,14 @@
 	}}
 >
 	<Tooltip content={$i18n.t('More')}>
-		<slot />
+		<button
+			on:click={(e) => {
+				e.stopPropagation();
+				show = !show;
+			}}
+		>
+			<slot />
+		</button>
 	</Tooltip>
 
 	<div slot="content">

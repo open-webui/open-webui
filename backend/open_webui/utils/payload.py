@@ -2,6 +2,7 @@ from open_webui.utils.task import prompt_template, prompt_variables_template
 from open_webui.utils.misc import (
     deep_update,
     add_or_update_system_message,
+    replace_system_message_content,
 )
 
 from typing import Callable, Optional
@@ -10,7 +11,11 @@ import json
 
 # inplace function: form_data is modified
 def apply_system_prompt_to_body(
-    system: Optional[str], form_data: dict, metadata: Optional[dict] = None, user=None
+    system: Optional[str],
+    form_data: dict,
+    metadata: Optional[dict] = None,
+    user=None,
+    replace: bool = False,
 ) -> dict:
     if not system:
         return form_data
@@ -24,9 +29,15 @@ def apply_system_prompt_to_body(
     # Legacy (API Usage)
     system = prompt_template(system, user)
 
-    form_data["messages"] = add_or_update_system_message(
-        system, form_data.get("messages", [])
-    )
+    if replace:
+        form_data["messages"] = replace_system_message_content(
+            system, form_data.get("messages", [])
+        )
+    else:
+        form_data["messages"] = add_or_update_system_message(
+            system, form_data.get("messages", [])
+        )
+
     return form_data
 
 

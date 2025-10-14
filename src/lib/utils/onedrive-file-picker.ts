@@ -3,7 +3,8 @@ import { v4 as uuidv4 } from 'uuid';
 
 class OneDriveConfig {
 	private static instance: OneDriveConfig;
-	private clientId: string = '';
+	private clientIdPersonal: string = '';
+	private clientIdBusiness: string = '';
 	private sharepointUrl: string = '';
 	private sharepointTenantId: string = '';
 	private msalInstance: PublicClientApplication | null = null;
@@ -49,8 +50,8 @@ class OneDriveConfig {
 		this.sharepointUrl = config.onedrive?.sharepoint_url;
 		this.sharepointTenantId = config.onedrive?.sharepoint_tenant_id;
 
-		if (!this.newClientIdPersonal && !this.newClientIdBusiness) {
-			throw new Error('OneDrive client ID not configured');
+		if (!this.clientIdPersonal && !this.clientIdBusiness) {
+			throw new Error('OneDrive personal or business client ID not configured');
 		}
 	}
 
@@ -175,6 +176,9 @@ interface PickerParams {
 		origin: string;
 		channelId: string;
 	};
+	search: {
+		enabled: boolean;
+	};
 	typesAndSources: {
 		mode: string;
 		pivots: Record<string, boolean>;
@@ -203,11 +207,15 @@ function getPickerParams(): PickerParams {
 			origin: window?.location?.origin || '',
 			channelId
 		},
+		search: {
+			enabled: true
+		},
 		typesAndSources: {
 			mode: 'files',
 			pivots: {
 				oneDrive: true,
-				recent: true
+				recent: true,
+				myOrganization: config.getAuthorityType() === 'organizations'
 			}
 		}
 	};
