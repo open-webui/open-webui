@@ -15,9 +15,9 @@ from open_webui.constants import ERROR_MESSAGES
 from open_webui.env import ENABLE_FORWARD_USER_INFO_HEADERS, SRC_LOG_LEVELS
 from open_webui.routers.files import upload_file
 from open_webui.utils.auth import get_admin_user, get_verified_user
-from open_webui.utils.images.comfyui import (
+# 🔑 ComfyUI
+from open_webui.utils.images.comfyui import ( 
     ComfyUIGenerateImageForm,
-    ComfyUIWorkflow,
     comfyui_generate_image,
 )
 from pydantic import BaseModel
@@ -140,7 +140,7 @@ async def update_config(
         if form_data.automatic1111.AUTOMATIC1111_SCHEDULER
         else None
     )
-
+# comfyui part
     request.app.state.config.COMFYUI_BASE_URL = (
         form_data.comfyui.COMFYUI_BASE_URL.strip("/")
     )
@@ -413,6 +413,10 @@ class GenerateImageForm(BaseModel):
     size: Optional[str] = None
     n: int = 1
     negative_prompt: Optional[str] = None
+        # 🆕 新增：支持图片输入
+    input_images: Optional[list[str]] = None      # file_id 列表
+    image_strength: Optional[float] = None        # 图生图强度 (0.0-1.0)
+    style_weights: Optional[list[float]] = None   # 风格权重（未来使用）
 
 
 def load_b64_image_data(b64_str):
@@ -560,60 +564,70 @@ async def image_generations(
                 images.append({"url": url})
 
             return images
-
+        #ComfyUI
         elif request.app.state.config.IMAGE_GENERATION_ENGINE == "comfyui":
-            data = {
-                "prompt": form_data.prompt,
-                "width": width,
-                "height": height,
-                "n": form_data.n,
-            }
-
-            if request.app.state.config.IMAGE_STEPS is not None:
-                data["steps"] = request.app.state.config.IMAGE_STEPS
-
-            if form_data.negative_prompt is not None:
-                data["negative_prompt"] = form_data.negative_prompt
-
-            form_data = ComfyUIGenerateImageForm(
-                **{
-                    "workflow": ComfyUIWorkflow(
-                        **{
-                            "workflow": request.app.state.config.COMFYUI_WORKFLOW,
-                            "nodes": request.app.state.config.COMFYUI_WORKFLOW_NODES,
-                        }
-                    ),
-                    **data,
-                }
+            # queue param
+            comfyui_payload = ComfyUIGenerateImageForm(
+                prompt=form_data.prompt,
+                width=width,
+                height=height,
+                input_images=form_data.input_images,  # support img input
             )
+            
+            # adjust comfyUI generation
             res = await comfyui_generate_image(
                 request.app.state.config.IMAGE_GENERATION_MODEL,
-                form_data,
+                comfyui_payload,
                 user.id,
                 request.app.state.config.COMFYUI_BASE_URL,
                 request.app.state.config.COMFYUI_API_KEY,
             )
-            log.debug(f"res: {res}")
-
+            
+            # Checking return result
+            if not res or not res.get("data"):
+                raise HTTPException(
+                    status_code=500,
+                    detail="ComfyUI failed to generate images"
+                )
+            
+            log.debug(f"ComfyUI response: {res}")
+            
+            # download and upload to Open-WebUI
             images = []
-
             for image in res["data"]:
+                if image.get("type") != "output":
+                    log.info(f"Skipping {image.get('type')} image: {image.get('filename')}")
+                    continue
+                # access header if needed
                 headers = None
                 if request.app.state.config.COMFYUI_API_KEY:
                     headers = {
                         "Authorization": f"Bearer {request.app.state.config.COMFYUI_API_KEY}"
                     }
-
+                
+                # download from comfyUI
                 image_data, content_type = load_url_image_data(image["url"], headers)
+                
+                # upload to openui storage
                 url = upload_image(
                     request,
-                    form_data.model_dump(exclude_none=True),
+                    comfyui_payload.model_dump(exclude_none=True),
                     image_data,
                     content_type,
                     user,
                 )
-                images.append({"url": url})
+
+                image_info = {
+                    "url": url,
+                    "type": image.get("type", "output"),  
+                    "filename": image.get("filename"),     
+                    "original_url": image["url"]           
+                }
+        
+                images.append(image_info)
+            
             return images
+
         elif (
             request.app.state.config.IMAGE_GENERATION_ENGINE == "automatic1111"
             or request.app.state.config.IMAGE_GENERATION_ENGINE == ""
