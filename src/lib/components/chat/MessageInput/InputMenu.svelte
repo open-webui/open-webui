@@ -246,7 +246,7 @@
 				<Tooltip
 					content={wikiGroundingEnabled
 						? $i18n.t('Web Search disabled - Wiki Grounding is active')
-						: $i18n.t('Web Search')}
+						: $i18n.t('Web Search (Beta)')}
 					placement="right"
 				>
 					<button
@@ -266,7 +266,7 @@
 					>
 						<div class="flex-1 flex items-center gap-2">
 							<GlobeAltSolid />
-							<div class=" line-clamp-1">{$i18n.t('Web Search')}</div>
+							<div class=" line-clamp-1">{$i18n.t('Web Search (Beta)')}</div>
 						</div>
 
 						<Switch state={webSearchEnabled} disabled={wikiGroundingEnabled} />
