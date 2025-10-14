@@ -20,11 +20,43 @@ set -euo pipefail
 # ============================================================================
 
 CLIENT_NAME="${1:-}"
-FULL_SYNC="${2:-}"
+TRIGGERED_BY="${2:-manual}"
+FULL_SYNC="${3:-}"
+
+# Parse arguments (support both positional and named)
+shift
+while [[ $# -gt 0 ]]; do
+    case "$1" in
+        --full)
+            FULL_SYNC="--full"
+            shift
+            ;;
+        --triggered-by)
+            TRIGGERED_BY="$2"
+            shift 2
+            ;;
+        *)
+            # If no flag, assume it's triggered_by if not --full
+            if [[ "$1" != "--full" ]] && [[ -z "${TRIGGERED_BY_SET:-}" ]]; then
+                TRIGGERED_BY="$1"
+                TRIGGERED_BY_SET=true
+            fi
+            shift
+            ;;
+    esac
+done
 
 if [[ -z "$CLIENT_NAME" ]]; then
     echo "❌ Error: CLIENT_NAME required"
-    echo "Usage: $0 CLIENT_NAME [--full]"
+    echo "Usage: $0 CLIENT_NAME [TRIGGERED_BY|--triggered-by TRIGGERED_BY] [--full]"
+    echo ""
+    echo "TRIGGERED_BY values: scheduler (automatic), api (REST API), manual (default), or username"
+    echo ""
+    echo "Examples:"
+    echo "  $0 chat-test                                    # Manual sync (default)"
+    echo "  $0 chat-test scheduler                          # Scheduler-triggered sync"
+    echo "  $0 chat-test --triggered-by api --full          # API-triggered full sync"
+    echo "  $0 chat-test manual --full                      # Manual full sync"
     exit 1
 fi
 
@@ -438,8 +470,8 @@ async def create_job():
     await conn.execute('''
         INSERT INTO sync_metadata.sync_jobs
         (job_id, deployment_id, client_name, started_at, status, sync_type, triggered_by, tables_total)
-        VALUES (\$1, \$2, \$3, NOW(), 'running', \$4, 'manual', \$5)
-    ''', job_id, deployment_id, '$CLIENT_NAME', '$sync_type', ${#TABLES[@]})
+        VALUES (\$1, \$2, \$3, NOW(), 'running', \$4, \$5, \$6)
+    ''', job_id, deployment_id, '$CLIENT_NAME', '$sync_type', '$TRIGGERED_BY', ${#TABLES[@]})
 
     await conn.close()
     print(job_id)

@@ -346,7 +346,7 @@ async def periodic_sync_scheduler():
                             )
 
                         # Trigger sync as background task (incremental, not full)
-                        asyncio.create_task(execute_sync_job(client_name, full_sync=False))
+                        asyncio.create_task(execute_sync_job(client_name, full_sync=False, triggered_by='scheduler'))
                         sync_queue_size.inc()
 
         except asyncio.CancelledError:
@@ -460,7 +460,8 @@ async def trigger_manual_sync(
     background_tasks.add_task(
         execute_sync_job,
         sync_request.client_name,
-        sync_request.full_sync
+        sync_request.full_sync,
+        triggered_by='api'
     )
 
     # Increment queue size metric
@@ -519,16 +520,21 @@ async def get_conflicts(
 # SYNC JOB EXECUTION
 # ============================================================================
 
-async def execute_sync_job(client_name: str, full_sync: bool = False):
+async def execute_sync_job(client_name: str, full_sync: bool = False, triggered_by: str = 'manual'):
     """
     Execute sync job as background task.
 
     This calls the shell script that performs the actual sync operation.
+
+    Args:
+        client_name: Name of the client to sync
+        full_sync: Whether to perform full sync (default: False for incremental)
+        triggered_by: Source of the sync trigger ('scheduler', 'api', 'manual', or username)
     """
     import subprocess
     import time
 
-    logger.info(f"Starting sync job for client: {client_name} (full={full_sync})")
+    logger.info(f"Starting sync job for client: {client_name} (full={full_sync}, triggered_by={triggered_by})")
 
     sync_jobs_active.inc()
     start_time = time.time()
@@ -536,7 +542,7 @@ async def execute_sync_job(client_name: str, full_sync: bool = False):
     try:
         # Call sync script
         script_path = "/app/scripts/sync-client-to-supabase.sh"
-        args = [script_path, client_name]
+        args = [script_path, client_name, triggered_by]
 
         if full_sync:
             args.append("--full")

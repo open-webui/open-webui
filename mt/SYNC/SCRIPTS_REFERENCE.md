@@ -155,19 +155,27 @@ cd mt/SYNC
 source .credentials
 export DATABASE_URL="$SYNC_URL"
 
-./scripts/sync-client-to-supabase.sh CLIENT_NAME [--full]
+./scripts/sync-client-to-supabase.sh CLIENT_NAME [TRIGGERED_BY] [--full]
 
 # Examples:
-./scripts/sync-client-to-supabase.sh chat-test           # Incremental sync
-./scripts/sync-client-to-supabase.sh chat-test --full    # Full sync
+./scripts/sync-client-to-supabase.sh chat-test                    # Manual sync (default)
+./scripts/sync-client-to-supabase.sh chat-test manual --full      # Manual full sync
+./scripts/sync-client-to-supabase.sh chat-test scheduler          # Scheduler sync (for testing)
+./scripts/sync-client-to-supabase.sh chat-test --triggered-by api --full  # API full sync
 ```
+
+**TRIGGERED_BY values**:
+- `manual` (default) - Manual execution by user
+- `scheduler` - Automated sync by scheduler
+- `api` - REST API triggered sync
+- Custom username - Can specify any username for tracking
 
 **When to use**:
 - Manual sync for testing
 - Force immediate sync outside scheduler
 - Initial data migration after registration
 
-**Note**: Automatic syncing happens via the scheduler (no manual execution needed)
+**Note**: Automatic syncing happens via the scheduler (no manual execution needed). The `triggered_by` parameter is automatically set by the system based on how the sync was initiated.
 
 ---
 
