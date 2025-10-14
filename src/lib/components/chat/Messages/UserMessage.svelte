@@ -65,7 +65,6 @@
 		}
 	};
 
-
 	const editMessageHandler = async () => {
 		edit = true;
 		editedContent = message?.content ?? '';
@@ -360,9 +359,7 @@
 									{topPadding}
 								/>
 							{/if}
-							
 						</div>
-						
 					</div>
 				</div>
 			{/if}
@@ -496,9 +493,7 @@
 					{/if}
 
 					{#if message?.content}
-
-					
-						<!-- ✅ Regenerate / Copy to Chatbox -->
+							<!-- ✅ Regenerate / Copy to Chatbox -->
 						<Tooltip content={$i18n.t('Regenerate')} placement="bottom">
 							<button
 								class="{($settings?.highContrastMode ?? false)
@@ -527,8 +522,6 @@
 							</button>
 							
 						</Tooltip>
-					
-
 					{/if}
 
 					{#if $_user?.role === 'admin' || ($_user?.permissions?.chat?.delete_message ?? false)}
