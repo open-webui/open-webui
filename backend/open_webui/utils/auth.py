@@ -228,9 +228,16 @@ def get_current_user(
 
     # auth by api key
     if token.startswith("sk-"):
-        if not request.state.enable_api_key:
+        user = get_current_user_by_api_key(token)
+
+        from open_webui.utils.access_control import has_permission
+
+        if not request.state.enable_api_key and not has_permission(
+            user.id, "api_key.enable"
+        ):
             raise HTTPException(
-                status.HTTP_403_FORBIDDEN, detail=ERROR_MESSAGES.API_KEY_NOT_ALLOWED
+                status.HTTP_403_FORBIDDEN,
+                detail=ERROR_MESSAGES.API_KEY_NOT_ALLOWED,
             )
 
         if request.app.state.config.ENABLE_API_KEY_ENDPOINT_RESTRICTIONS:
@@ -250,8 +257,6 @@ def get_current_user(
                 raise HTTPException(
                     status.HTTP_403_FORBIDDEN, detail=ERROR_MESSAGES.API_KEY_NOT_ALLOWED
                 )
-
-        user = get_current_user_by_api_key(token)
 
         # Add user info to current span
         current_span = trace.get_current_span()

@@ -47,6 +47,9 @@
 			image_generation: true,
 			code_interpreter: true,
 			notes: true
+		},
+		api_key: {
+			enable: false
 		}
 	};
 
@@ -65,7 +68,8 @@
 			workspace: { ...defaults.workspace, ...obj.workspace },
 			sharing: { ...defaults.sharing, ...obj.sharing },
 			chat: { ...defaults.chat, ...obj.chat },
-			features: { ...defaults.features, ...obj.features }
+			features: { ...defaults.features, ...obj.features },
+			api_key: { ...defaults.api_key, ...obj.api_key }
 		};
 	}
 
@@ -583,6 +587,22 @@
 				<Switch bind:state={permissions.features.web_search} />
 			</div>
 			{#if defaultPermissions?.features?.web_search && !permissions.features.web_search}
+				<div>
+					<div class="text-xs text-gray-500">
+						{$i18n.t('This is a default user permission and will remain enabled.')}
+					</div>
+				</div>
+			{/if}
+		</div>
+
+		<div class="flex flex-col w-full">
+			<div class="flex w-full justify-between my-1">
+				<div class="self-center text-xs font-medium">
+					{$i18n.t('Enable API Key')}
+				</div>
+				<Switch bind:state={permissions.api_key.enable} />
+			</div>
+			{#if defaultPermissions?.api_key?.enable && !permissions.api_key.enable}
 				<div>
 					<div class="text-xs text-gray-500">
 						{$i18n.t('This is a default user permission and will remain enabled.')}
