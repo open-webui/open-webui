@@ -209,9 +209,9 @@ def main():
         # Summary
         if not args.dry_run:
             total_cleaned = sum(
-                result.get("collections_cleaned", 0) + 
-                result.get("files_deleted", 0) + 
-                result.get("chats_deleted", 0)
+                result.get("collections_cleaned", 0)
+                + result.get("files_deleted", 0)
+                + result.get("chats_deleted", 0)
                 for result in cleanup_results.values()
                 if isinstance(result, dict)
             )
