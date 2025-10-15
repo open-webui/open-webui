@@ -47,17 +47,6 @@ export default defineConfig({
 	},
 	build: {
 		sourcemap: false, // Disable sourcemaps to reduce memory usage
-		rollupOptions: {
-			output: {
-				manualChunks: {
-					// Split large dependencies into separate chunks
-					vendor: ['svelte', '@sveltejs/kit'],
-					ui: ['bits-ui', 'svelte-sonner'],
-					editor: ['@tiptap/core', '@tiptap/starter-kit', 'codemirror'],
-					utils: ['dayjs', 'fuse.js', 'marked']
-				}
-			}
-		},
 		chunkSizeWarningLimit: 1000
 	},
 	worker: {

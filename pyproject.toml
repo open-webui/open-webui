@@ -144,8 +144,8 @@ postgres = [
 
 all = [
     "pymongo",
-    "psycopg2-binary==2.9.9",
-    "pgvector==0.4.0",
+    "psycopg2-binary==2.9.10",
+    "pgvector==0.4.1",
     "moto[s3]>=5.0.26",
     "gcp-storage-emulator>=2024.8.3",
     "docker~=7.1.0",

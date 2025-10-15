@@ -1,20 +1,83 @@
-.github
-.DS_Store
-docs
-kubernetes
+# Git
+.git
+.gitignore
+
+# Node.js (exclude from build context, will be installed in container)
 node_modules
-/.svelte-kit
-/package
-.env
-.env.*
-vite.config.js.timestamp-*
-vite.config.ts.timestamp-*
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Python (exclude from build context, will be installed in container)
 __pycache__
-.idea
-venv
-_old
-uploads
-.ipynb_checkpoints
-**/*.db
-_test
-backend/data/*
+*.pyc
+*.pyo
+*.pyd
+.Python
+env
+pip-log.txt
+pip-delete-this-directory.txt
+.tox
+.coverage
+.coverage.*
+.cache
+nosetests.xml
+coverage.xml
+*.cover
+*.log
+.mypy_cache
+.pytest_cache
+.hypothesis
+
+# Build artifacts (exclude existing builds, will be created fresh in container)
+build/
+dist/
+.svelte-kit/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# Heroku (not needed in Docker)
+.heroku/
+
+# Environment files (use Heroku config vars instead)
+.env
+.env.local
+.env.*.local
+
+# Documentation (exclude most docs, but keep CHANGELOG.md)
+docs/
+cypress/
+test/
+README.md
+CONTRIBUTING.md
+LICENSE.md
+
+# Docker (exclude Docker files from build context)
+Dockerfile*
+docker-compose*.yml
+.dockerignore
+
+# Database files (use Heroku Postgres instead)
+*.sqlite3
+*.db
+vector_db/
+webui.db
+
+# Temporary and cache files
+tmp/
+temp/
+.cache/
