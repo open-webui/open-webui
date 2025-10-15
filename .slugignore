@@ -1,0 +1,20 @@
+# Exclude unnecessary files from Heroku slug
+node_modules/
+.git/
+.gitignore
+docs/
+cypress/
+test/
+# *.md (commented out to allow README.md for pyproject.toml)
+.env
+.env.local
+.env.*.local
+.DS_Store
+*.log
+coverage/
+.nyc_output/
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
