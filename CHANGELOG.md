@@ -5,20 +5,27 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [0.6.34] - 2025-10-14
+## [0.6.34] - 2025-10-15
 
 ### Added
 
+- 🔒 JWT token expiration default is now set to 4 weeks instead of never expiring, with security warnings displayed in backend logs and admin UI when set to unlimited. [#18261](https://github.com/open-webui/open-webui/pull/18261), [#18262](https://github.com/open-webui/open-webui/pull/18262)
+- 📁 File hash values are now included in the knowledge endpoint response, enabling efficient file synchronization through hash comparison. [#18284](https://github.com/open-webui/open-webui/pull/18284), [#18283](https://github.com/open-webui/open-webui/issues/18283)
 - ⚡ Page loading performance is improved by preventing unnecessary API requests when sidebar folders are not expanded. [#18179](https://github.com/open-webui/open-webui/pull/18179), [#17476](https://github.com/open-webui/open-webui/issues/17476)
 - 🔄 Various improvements were implemented across the frontend and backend to enhance performance, stability, and security.
-- 🌐 Translations for Catalan, Chinese, Czech, Finnish, German, Portuguese (Brazil), and Spanish were enhanced and expanded.
+- 🌐 Translations for Catalan, Chinese, Czech, Finnish, German, Kabyle, Korean, Portuguese (Brazil), and Spanish were enhanced and expanded.
 
 ### Fixed
 
 - 📚 Focused retrieval mode now works correctly, preventing the system from forcing full context mode and loading all documents in a knowledge base regardless of settings. [#18133](https://github.com/open-webui/open-webui/issues/18133)
+- 💬 Pinned chats now appear in the Reference Chats list and can be referenced in conversations. [#18288](https://github.com/open-webui/open-webui/issues/18288)
 - 🔧 Filter inlet functions now correctly execute on tool call continuations, ensuring parameter persistence throughout tool interactions. [#18222](https://github.com/open-webui/open-webui/issues/18222)
+- 🔧 Model auto-pull functionality now works correctly even when user settings remain unmodified. [#18324](https://github.com/open-webui/open-webui/pull/18324)
+- 🛠️ External tool servers now properly support DELETE requests with body data. [#18289](https://github.com/open-webui/open-webui/pull/18289), [#18287](https://github.com/open-webui/open-webui/issues/18287)
 - 🎨 Duplicate HTML content in artifacts is now prevented by improving code block detection logic. [#18195](https://github.com/open-webui/open-webui/pull/18195), [#6154](https://github.com/open-webui/open-webui/issues/6154)
+- 🔔 Toast notifications can now be dismissed even when a modal is open. [#18260](https://github.com/open-webui/open-webui/pull/18260)
 - 🔘 The "Chats" button in the sidebar now correctly toggles chat list visibility without navigating away from the current page. [#18232](https://github.com/open-webui/open-webui/pull/18232)
+- 🎯 The Integrations menu no longer closes prematurely when clicking outside the Valves modal. [#18310](https://github.com/open-webui/open-webui/pull/18310)
 - 🛠️ Tool ID display issues where "undefined" was incorrectly shown in the interface are now resolved. [#18178](https://github.com/open-webui/open-webui/pull/18178)
 - 🛠️ Model management issues caused by excessively long model IDs are now prevented through validation that limits model IDs to 256 characters. [#18125](https://github.com/open-webui/open-webui/issues/18125)
 
