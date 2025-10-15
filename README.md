@@ -1,23 +1,19 @@
-# CANChat 👋
+# Welcome to CANChat 👋
 
 ![GitHub stars](https://img.shields.io/github/stars/ssc-dsai/canchat-v2?style=social)
 ![GitHub forks](https://img.shields.io/github/forks/ssc-dsai/canchat-v2?style=social)
 ![GitHub watchers](https://img.shields.io/github/watchers/ssc-dsai/canchat-v2?style=social)
 ![GitHub repo size](https://img.shields.io/github/repo-size/ssc-dsai/canchat-v2)
-![GitHub language count](https://img.shields.io/github/languages/count/ssc-dsai/canchat-v2)
-![GitHub top language](https://img.shields.io/github/languages/top/ssc-dsai/canchat-v2)
 ![GitHub last commit](https://img.shields.io/github/last-commit/ssc-dsai/canchat-v2?color=red)
-![Hits](https://hits.seeyoufarm.com/api/count/incr/badge.svg?url=https%3A%2F%2Fgithub.com%2Follama-webui%2Follama-wbui&count_bg=%2379C83D&title_bg=%23555555&icon=&icon_color=%23E7E7E7&title=hits&edge_flat=false)
-[![Discord](https://img.shields.io/badge/Discord-Open_WebUI-blue?logo=discord&logoColor=white)](https://discord.gg/5rJgQTnV4s)
-[![](https://img.shields.io/static/v1?label=Sponsor&message=%E2%9D%A4&logo=GitHub&color=%23fe8e86)](https://github.com/sponsors/tjbck)
 
-**Open WebUI is an [extensible](https://docs.openwebui.com/features/plugin/), feature-rich, and user-friendly self-hosted AI platform designed to operate entirely offline.** It supports various LLM runners like **Ollama** and **OpenAI-compatible APIs**, with **built-in inference engine** for RAG, making it a **powerful AI deployment solution**.
+([Français](#bienvenue-à-canchat))
 
-For more information, be sure to check out the [Open WebUI Documentation](https://docs.openwebui.com/).
+**CANChat is an extensible, feature-rich, and user-friendly self-hosted AI platform designed to operate entirely offline.** It supports various LLM runners like **Ollama** and **OpenAI-compatible APIs**, with **built-in inference engine** for RAG, making it a **powerful AI deployment solution**.
 
-![CANChat Demo](./demo.gif)
+**For more information, be sure to check out our [Documentation](https://gcxgce.sharepoint.com/teams/1000538/SitePages/CANchat.aspx).**
 
-## Key Features of CANChat ⭐
+
+## CANChat's Key Features
 
 - 🚀 **Effortless Setup**: Install seamlessly using Docker or Kubernetes (kubectl, kustomize or helm) for a hassle-free experience with support for both `:ollama` and `:cuda` tagged images.
 
@@ -33,7 +29,7 @@ For more information, be sure to check out the [Open WebUI Documentation](https:
 
 - 🎤📹 **Hands-Free Voice/Video Call**: Experience seamless communication with integrated hands-free voice and video call features, allowing for a more dynamic and interactive chat environment.
 
-- 🛠️ **Model Builder**: Easily create Ollama models via the Web UI. Create and add custom characters/agents, customize chat elements, and import models effortlessly through [Open WebUI Community](https://openwebui.com/) integration.
+- 🛠️ **Model Builder**: Easily create Ollama models via the Web UI. Create and add custom characters/agents, customize chat elements.
 
 - 🐍 **Native Python Function Calling Tool**: Enhance your LLMs with built-in code editor support in the tools workspace. Bring Your Own Function (BYOF) by simply adding your pure Python functions, enabling seamless integration with LLMs.
 
@@ -51,173 +47,438 @@ For more information, be sure to check out the [Open WebUI Documentation](https:
 
 - 🌐🌍 **Multilingual Support**: Experience CANChat in your preferred language with our internationalization (i18n) support. Join us in expanding our supported languages! We're actively seeking contributors!
 
-- 🧩 **Pipelines, Open WebUI Plugin Support**: Seamlessly integrate custom logic and Python libraries into CANChat using [Pipelines Plugin Framework](https://github.com/open-webui/pipelines). Launch your Pipelines instance, set the OpenAI URL to the Pipelines URL, and explore endless possibilities. [Examples](https://github.com/open-webui/pipelines/tree/main/examples) include **Function Calling**, User **Rate Limiting** to control access, **Usage Monitoring** with tools like Langfuse, **Live Translation with LibreTranslate** for multilingual support, **Toxic Message Filtering** and much more.
+- 🧩 **Pipelines, Open WebUI Plugin Support**: Seamlessly integrate custom logic and Python libraries into CANChat using a pipelines plugin framework. Launch your Pipelines instance, set the OpenAI URL to the Pipelines URL, and explore endless possibilities. Examples include **Function Calling**, User **Rate Limiting** to control access, **Usage Monitoring** with tools like Langfuse, **Live Translation with LibreTranslate** for multilingual support, **Toxic Message Filtering** and much more.
 
 - 🌟 **Continuous Updates**: We are committed to improving CANChat with regular updates, fixes, and new features.
 
-Want to learn more about CANChat's features? Check out the [Open WebUI documentation](https://docs.openwebui.com/features) for a comprehensive overview!
-
-## 🔗 Also Check Out Open WebUI Community!
-
-Don't forget to explore our sibling project, [Open WebUI Community](https://openwebui.com/), where you can discover, download, and explore customized Modelfiles. Open WebUI Community offers a wide range of exciting possibilities for enhancing your chat interactions with CANChat! 🚀
-
-## How to Install 🚀
-
-### Installation via Python pip 🐍
-
-CANChat can be installed using pip, the Python package installer. Before proceeding, ensure you're using **Python 3.11** to avoid compatibility issues.
-
-1. **Install CANChat**:
-   Open your terminal and run the following command to install Open WebUI:
-
-   ```bash
-   pip install open-webui
-   ```
-
-2. **Running Open WebUI**:
-   After installation, you can start CANChat by executing:
-
-   ```bash
-   open-webui serve
-   ```
-
-This will start the CANChat server, which you can access at [http://localhost:8080](http://localhost:8080)
-
-### Quick Start with Docker 🐳
-
-> [!NOTE]  
-> Please note that for certain Docker environments, additional configurations might be needed. If you encounter any connection issues, our detailed guide on [Open WebUI Documentation](https://docs.openwebui.com/) is ready to assist you.
-
-> [!WARNING]
-> When using Docker to install CANChat, make sure to include the `-v open-webui:/app/backend/data` in your Docker command. This step is crucial as it ensures your database is properly mounted and prevents any loss of data.
-
-> [!TIP]  
-> If you wish to utilize CANChat with Ollama included or CUDA acceleration, we recommend utilizing our official images tagged with either `:cuda` or `:ollama`. To enable CUDA, you must install the [Nvidia CUDA container toolkit](https://docs.nvidia.com/dgx/nvidia-container-runtime-upgrade/) on your Linux/WSL system.
-
-### Installation with Default Configuration
-
-- **If Ollama is on your computer**, use this command:
-
-  ```bash
-  docker run -d -p 3000:8080 --add-host=host.docker.internal:host-gateway -v open-webui:/app/backend/data --name open-webui --restart always ghcr.io/open-webui/open-webui:main
-  ```
-
-- **If Ollama is on a Different Server**, use this command:
-
-  To connect to Ollama on another server, change the `OLLAMA_BASE_URL` to the server's URL:
-
-  ```bash
-  docker run -d -p 3000:8080 -e OLLAMA_BASE_URL=https://example.com -v open-webui:/app/backend/data --name open-webui --restart always ghcr.io/open-webui/open-webui:main
-  ```
-
-- **To run CANChat with Nvidia GPU support**, use this command:
-
-  ```bash
-  docker run -d -p 3000:8080 --gpus all --add-host=host.docker.internal:host-gateway -v open-webui:/app/backend/data --name open-webui --restart always ghcr.io/open-webui/open-webui:cuda
-  ```
-
-### Installation for OpenAI API Usage Only
-
-- **If you're only using OpenAI API**, use this command:
-
-  ```bash
-  docker run -d -p 3000:8080 -e OPENAI_API_KEY=your_secret_key -v open-webui:/app/backend/data --name open-webui --restart always ghcr.io/open-webui/open-webui:main
-  ```
-
-### Installing CANChat with Bundled Ollama Support
-
-This installation method uses a single container image that bundles CANChat with Ollama, allowing for a streamlined setup via a single command. Choose the appropriate command based on your hardware setup:
-
-- **With GPU Support**:
-  Utilize GPU resources by running the following command:
-
-  ```bash
-  docker run -d -p 3000:8080 --gpus=all -v ollama:/root/.ollama -v open-webui:/app/backend/data --name open-webui --restart always ghcr.io/open-webui/open-webui:ollama
-  ```
-
-- **For CPU Only**:
-  If you're not using a GPU, use this command instead:
-
-  ```bash
-  docker run -d -p 3000:8080 -v ollama:/root/.ollama -v open-webui:/app/backend/data --name open-webui --restart always ghcr.io/open-webui/open-webui:ollama
-  ```
-
-Both commands facilitate a built-in, hassle-free installation of both CANChat and Ollama, ensuring that you can get everything up and running swiftly.
-
-After installation, you can access CANChat at [http://localhost:3000](http://localhost:3000). Enjoy! 😄
-
-### Other Installation Methods
-
-We offer various installation alternatives, including non-Docker native installation methods, Docker Compose, Kustomize, and Helm. Visit our [Open WebUI Documentation](https://docs.openwebui.com/getting-started/) or join our [Discord community](https://discord.gg/5rJgQTnV4s) for comprehensive guidance.
-
-### Troubleshooting
-
-Encountering connection issues? Our [Open WebUI Documentation](https://docs.openwebui.com/troubleshooting/) has got you covered. For further assistance and to join our vibrant community, visit the [Open WebUI Discord](https://discord.gg/5rJgQTnV4s).
-
-#### CANChat: Server Connection Error
-
-If you're experiencing connection issues, it’s often due to the WebUI docker container not being able to reach the Ollama server at 127.0.0.1:11434 (host.docker.internal:11434) inside the container . Use the `--network=host` flag in your docker command to resolve this. Note that the port changes from 3000 to 8080, resulting in the link: `http://localhost:8080`.
-
-**Example Docker Command**:
-
-```bash
-docker run -d --network=host -v open-webui:/app/backend/data -e OLLAMA_BASE_URL=http://127.0.0.1:11434 --name open-webui --restart always ghcr.io/open-webui/open-webui:main
-```
-
-### Keeping Your Docker Installation Up-to-Date
-
-In case you want to update your local Docker installation to the latest version, you can do it with [Watchtower](https://containrrr.dev/watchtower/):
-
-```bash
-docker run --rm --volume /var/run/docker.sock:/var/run/docker.sock containrrr/watchtower --run-once open-webui
-```
-
-In the last part of the command, replace `open-webui` with your container name if it is different.
-
-Check our Migration Guide available in our [Open WebUI Documentation](https://docs.openwebui.com/tutorials/migration/).
-
-### Using the Dev Branch 🌙
-
-> [!WARNING]
-> The `:dev` branch contains the latest unstable features and changes. Use it at your own risk as it may have bugs or incomplete features.
-
-If you want to try out the latest bleeding-edge features and are okay with occasional instability, you can use the `:dev` tag like this:
-
-```bash
-docker run -d -p 3000:8080 -v open-webui:/app/backend/data --name open-webui --add-host=host.docker.internal:host-gateway --restart always ghcr.io/open-webui/open-webui:dev
-```
-
-### Offline Mode
-
-If you are running CANChat in an offline environment, you can set the `HF_HUB_OFFLINE` environment variable to `1` to prevent attempts to download models from the internet.
-
-```bash
-export HF_HUB_OFFLINE=1
-```
-
-## What's Next? 🌟
-
-Discover upcoming features on our roadmap in the [Open WebUI Documentation](https://docs.openwebui.com/roadmap/).
-
-## License 📜
-
-This project is licensed under the [BSD-3-Clause License](LICENSE) - see the [LICENSE](LICENSE) file for details. 📄
-
-## Support 💬
-
-If you have any questions, suggestions, or need assistance, please open an issue or join our
-[Open WebUI Discord community](https://discord.gg/5rJgQTnV4s) to connect with us! 🤝
-
-## Star History
-
-<a href="https://star-history.com/#ssc-dsai/canchat-v2&Date">
-  <picture>
-    <source media="(prefers-color-scheme: dark)" srcset="https://api.star-history.com/svg?repos=ssc-dsai/canchat-v2&type=Date&theme=dark" />
-    <source media="(prefers-color-scheme: light)" srcset="https://api.star-history.com/svg?repos=ssc-dsai/canchat-v2&type=Date" />
-    <img alt="Star History Chart" src="https://api.star-history.com/svg?repos=ssc-dsai/canchat-v2&type=Date" />
-  </picture>
-</a>
+Want to learn more about CANChat's features? Check out our [documentation](https://gcxgce.sharepoint.com/teams/1000538/SitePages/CANchat.aspx) for a comprehensive overview!
 
 ---
 
-Created by [Timothy Jaeryang Baek](https://github.com/tjbck) - Let's make CANChat even more amazing together! 💪
+## How to Install
+
+### Prerequisites
+
+Before you begin, ensure your system meets these minimum requirements:
+
+- **Operating System**: Linux (or WSL on Windows), Windows 11, or macOS. (Recommended for best compatibility)
+- **Python: Version 3.11 or higher**. (Required for backend services)
+- **Node.js: Version 22.10 or higher**. (Required for frontend development)
+- **IDE (Recommended)**: We recommend using an IDE like VS Code for code editing, debugging, and integrated terminal access. Feel free to use your favorite IDE if you have one!
+
+### Setting Up Your Local Environment
+
+We'll set up both the frontend (user interface) and backend (API and server logic).
+
+---
+
+#### 1. Clone the Repository
+
+First, use `git clone` to download the CANChat V2 repository to your local machine. This will create a local copy of the project on your computer.
+
+1. Open your terminal (or Git Bash if you're on Windows).
+2. Navigate to the directory where you want to store the project.
+3. Run the following commands:
+
+   ```bash
+   git clone https://github.com/ssc-dsai/canchat-v2.git
+   cd canchat-v2
+   ```
+
+   - The `git clone` command downloads the project files from GitHub.
+   - The `cd canchat-v2` command navigates you into the newly created project directory.
+
+---
+
+#### 2. Frontend Setup (User Interface)
+
+Let's get the user interface (what you see in your browser) up and running first:
+
+#### 2.1 Configure Environment Variables
+
+Copy the example environment file to `.env`:
+
+```bash
+cp -RPp .env.example .env
+```
+
+- This command copies the `.env.example` file to a new file named `.env`.
+- The `.env` file is where you'll configure environment variables for the frontend.
+
+**Customize `.env`:**  
+Open the `.env` file in your code editor (e.g., VS Code). For local development, the default settings in `.env.example` should suffice, but you can customize them if needed.
+
+> **Important:** If you plan to contribute to the repository, **do not commit sensitive information to your `.env` file**. Always review your environment variables before pushing changes to ensure no secrets, credentials, or private data are exposed.
+
+---
+
+#### 2.2 Install Frontend Dependencies
+
+Navigate to the frontend directory if you're not already there:
+
+```bash
+cd canchat-v2
+```
+
+Install the required JavaScript packages:
+
+```bash
+npm install
+```
+
+If you encounter compatibility warnings or errors, try:
+
+```bash
+npm install --force
+```
+
+---
+
+#### 2.3 Start the Frontend Development Server
+
+Launch the frontend development server:
+
+```bash
+npm run dev
+```
+
+- If successful, the server will indicate it's running and provide a local URL.
+- Open your browser and navigate to **[http://localhost:5173](http://localhost:5173)**.
+- You should see a message indicating that the frontend is running and is waiting for the backend to be available.
+
+Keep this terminal running; it's serving your frontend!
+
+---
+
+#### 3. Backend Setup (API and Server)
+
+Run the backend in a **separate terminal** to manage your workflows cleanly.
+
+---
+
+#### 3.1 Using VS Code Integrated Terminals (Optional)
+
+- Open a new terminal in VS Code: go to `Terminal` > `New Terminal` or use the shortcut:
+  - **Windows/Linux:** `Ctrl + Shift +`  
+  - **macOS:** `Cmd + Shift +`
+
+- Navigate to the backend directory:
+
+  ```bash
+  cd backend
+  ```
+
+Now you’ll have two terminals: one for the frontend and one for the backend.
+
+---
+
+#### 3.2 Create and Activate a Conda Environment (Recommended)
+
+To isolate project dependencies and avoid conflicts, use Conda:
+
+```bash
+conda create --name canchat-v2 python=3.11
+conda activate canchat-v2
+```
+
+- **`conda create --name canchat-v2 python=3.11`:** Creates a Conda environment with Python 3.11.
+- **`conda activate canchat-v2`:** Activates the Conda environment. The terminal prompt will change to include `(canchat-v2)`.
+
+> If you're not using Conda, ensure you have Python 3.11 or higher installed.
+
+---
+
+#### 3.3 Install Backend Dependencies
+
+Run the following command in the backend terminal:
+
+```bash
+pip install -r requirements.txt -U
+```
+
+- This installs all the Python libraries required for the backend from `requirements.txt`.
+- The `-U` flag ensures the latest compatible versions are installed.
+
+---
+
+#### 3.4 Start the Backend Development Server
+
+Run the backend development server script:
+
+```bash
+sh dev.sh
+```
+
+- This will start the backend server, and you should see output in the terminal.
+- Access the API documentation in your browser: **[http://localhost:8080/docs](http://localhost:8080/docs)**.
+
+---
+
+#### 4. Final Steps: Run Everything Together
+
+🎉 Congratulations! You now have both the frontend and backend running locally:
+
+1. Return to the frontend URL: **[http://localhost:5173](http://localhost:5173)**.
+2. Refresh the page.  
+   - You should see the full application connected to the backend!
+
+That's it—you're all set up!
+
+## How to Contribute
+
+### Code of Conduct
+
+This project and everyone participating in it is governed by our [Code of Conduct](CODE_OF_CONDUCT). By participating, you are expected to uphold this code. Please report unacceptable behavior to the [maintainers](mailto:dsaiclientengagement.sdiaclientmobilisation@ssc-spc.gc.ca).
+
+### Reporting Bugs
+
+If you find a bug, please open an issue on our [issue tracker](https://github.com/ssc-dsai/canchat-v2/issues) and provide as much detail as possible, including your operating system, browser, and steps to reproduce the bug.
+
+### Suggesting Enhancements
+
+We welcome suggestions for enhancements. Open an issue on the [issue tracker](https://github.com/ssc-dsai/canchat-v2/issues) and include a detailed description of your proposed enhancement.
+
+### Code Contribution
+
+- Ensure your code follows our style guide.
+- Test your changes thoroughly.
+- Submit a pull request to the dev branch of the upstream repository.
+
+### Security Issue
+
+Do not post any security issues on the public repository! See [SECURITY.md](SECURITY)
+
+## License
+
+This project is licensed under the [BSD-3-Clause License](LICENSE) - see the [LICENSE](LICENSE) file for details.
+
+## Support
+
+If you have any questions, suggestions, or need assistance, please see our 
+[Documentation](https://gcxgce.sharepoint.com/teams/1000538/SitePages/CANchat.aspx).
+
+---
+
+# Bienvenue à CANChat
+
+**CANChat est une plateforme d’intelligence artificielle (IA) auto-hébergée, extensible, riche en fonctionnalités et conviviale, conçue pour fonctionner entièrement hors ligne.** Elle prend en charge divers moteurs LLM comme **Ollama** et les **APIs compatibles avec OpenAI**, avec un **moteur d'inférence intégré** pour le RAG, faisant ainsi de CANChat une **puissante solution de déploiement IA**.
+
+**Pour plus d'informations, consultez notre [documentation](https://gcxgce.sharepoint.com/teams/1000538/SitePages/CANchat_FR.aspx).**
+
+## Principales fonctionnalités de CANChat
+
+- 🚀 **Configuration facilitée** : Installez facilement avec Docker ou Kubernetes (kubectl, kustomize ou helm) pour une expérience sans souci, avec prise en charge des images marquées `:ollama` et `:cuda`.
+ 
+- 🤝 **Intégration API Ollama/OpenAI** : Intégrez facilement des API compatibles avec OpenAI pour des conversations polyvalentes, en plus des modèles d’Ollama. Personnalisez l’URL API OpenAI pour vous connecter à **LMStudio, GroqCloud, Mistral, OpenRouter, et plus encore**.
+  
+- 🛡️ **Permissions granulaires et groupes d’utilisateurs** : Permettez aux administrateurs de créer des rôles et des permissions détaillés pour garantir un environnement sécurisé. Cette granularité renforce la sécurité et permet des expériences utilisateur personnalisées, favorisant un sentiment de responsabilité chez les utilisateurs.
+ 
+- 📱 **Design réactif** : Profitez d'une expérience harmonieuse sur ordinateur de bureau, ordinateur portable et appareils mobiles.
+  
+- 📱 **Application web progressive (PWA) pour mobile** : Profitez d’une expérience semblable à une application native sur votre appareil mobile grâce à notre PWA, offrant un accès hors ligne sur localhost et une interface utilisateur fluide.
+  
+- ✒️🔢 **Prise en charge complète de Markdown et LaTeX** : Élevez votre expérience LLM avec des capacités Markdown et LaTeX complètes pour des interactions enrichies.
+  
+- 🎤📹 **Appel audio/vidéo mains libres** : Expérimentez une communication fluide grâce aux fonctionnalités d’appel audio et vidéo intégrées, permettant un environnement de discussion plus dynamique et interactif.
+  
+- 🛠️ **Créateur de modèles** : Créez facilement des modèles Ollama via l’interface Web. Ajoutez des personnages/agents personnalisés et personnalisez les éléments de discussion.
+  
+- 🐍 **Outil d’appel de fonctions Python natif** : Enrichissez vos LLM grâce à un éditeur de code intégré dans l'espace de travail des outils. Ajoutez vos propres fonctions Python pour une intégration transparente avec les LLM.
+  
+- 📚 **Intégration RAG locale** : Plongez dans l’avenir des interactions de discussion avec le support révolutionnaire du **RAG (Recovery Augmented Generation)**. Cette fonctionnalité intègre des documents dans vos conversations. Chargez des documents directement dans le chat ou ajoutez des fichiers à votre bibliothèque de documents pour les accéder facilement via la commande `#` avant une requête.
+  
+- 🔍 **Recherche web pour RAG** : Effectuez des recherches web à l'aide de fournisseurs comme `SearXNG`, `Google PSE`, `Brave Search`, `serpstack`, `serper`, `Serply`, `DuckDuckGo`, `TavilySearch`, `SearchApi` et `Bing`, et injectez les résultats directement dans votre discussion.
+  
+- 🌐 **Capacité de navigation web** : Intégrez des sites web directement dans votre expérience de chat avec la commande `#` suivie d'une URL. Cette fonctionnalité enrichit vos conversations en incorporant du contenu web.
+  
+- 🎨 **Intégration de génération d'images** : Profitez des capacités de génération d’images à l’aide d’options telles que l’API AUTOMATIC1111 ou ComfyUI (local), et DALL-E d’OpenAI (externe), enrichissant votre expérience de chat avec du contenu visuel dynamique.
+  
+- ⚙️ **Conversations multi-modèles** : Interagissez facilement avec différents modèles simultanément, en exploitant leurs forces uniques pour des réponses optimales. Améliorez votre expérience en utilisant un ensemble diversifié de modèles en parallèle.
+  
+- 🔐 **Contrôle d’accès basé sur les rôles (RBAC)** : Garantissez un accès sécurisé avec des permissions restreintes : seules les personnes autorisées ont accès à Ollama, et les droits exclusifs de création/téléchargement de modèles sont réservés aux administrateurs.
+   
+- 🌐🌍 **Support multilingue** : Utilisez CANChat dans la langue de votre choix grâce à notre support d’internationalisation (i18n). Participez à l'expansion de nos langues prises en charge ! Nous recherchons activement des contributeurs !
+
+- 🧩 **Pipelines et support de plugins Open WebUI** : Intégrez facilement une logique personnalisée et des bibliothèques Python dans CANChat en utilisant un cadre de plugins pipelines. Lancez votre instance Pipelines, configurez l'URL OpenAI sur l'URL de Pipelines et explorez des possibilités infinies. Exemples : **Appels de fonctions Python**, **limitation d’usage utilisateur**, **suivi d'utilisation** avec des outils comme Langfuse, **traductions en direct avec LibreTranslate**, **filtrage de messages toxiques** et bien plus.
+ 
+- 🌟 **Mises à jour continues** : Nous nous engageons à améliorer CANChat avec des mises à jour régulières, des correctifs et de nouvelles fonctionnalités.
+Vous souhaitez en savoir plus sur les fonctionnalités de CANChat ? Consultez notre [documentation](https://gcxgce.sharepoint.com/teams/1000538/SitePages/CANchat_FR.aspx) pour un aperçu complet !
+
+---
+
+## Comment installer CANChat
+
+### Prérequis
+
+Avant de commencer, assurez-vous que votre système répond à ces exigences minimales :
+- **Système d’exploitation** : Linux (ou WSL sous Windows), Windows 11 ou macOS. (Recommandé pour une meilleure compatibilité)
+- **Python** : Version 3.11 ou supérieure. (Requis pour les services backend)
+- **Node.js** : Version 22.10 ou supérieure. (Requis pour le développement frontend)
+- **IDE (recommandé)** : Nous recommandons d’utiliser un IDE comme VS Code pour l’édition, le débogage et l’accès au terminal intégré. Si vous le souhaitez, utilisez votre IDE préféré !
+- 
+### Configurer votre environnement local
+
+Nous allons configurer l'interface utilisateur (frontend) et l'API/serveur (backend).
+
+---
+
+#### 1. Cloner le dépôt
+
+Pour commencer, utilisez `git clone` afin de télécharger le dépôt de CANChat V2 sur votre machine locale. Cela créera une copie locale sur votre ordinateur.
+1. Ouvrez votre terminal (ou Git Bash si vous êtes sous Windows).
+2. Naviguez vers le répertoire où vous voulez stocker le projet.
+3. Exécutez les commandes suivantes :
+   ```bash
+   git clone https://github.com/ssc-dsai/canchat-v2.git
+   cd canchat-v2
+   ```
+   - La commande `git clone` télécharge les fichiers du projet depuis GitHub.
+   - La commande `cd canchat-v2` vous permet d’entrer dans le répertoire nouvellement créé.
+   - 
+---
+
+#### 2. Configuration du Frontend (interface utilisateur)
+
+Commençons par mettre en place l’interface utilisateur.
+
+#### 2.1 Configurer les variables d’environnement
+
+Copiez le fichier d’environnement exemple vers `.env` :
+```bash
+cp -RPp .env.example .env
+```
+- Cette commande copie le fichier `.env.example` dans un nouveau fichier nommé `.env`.
+- Le fichier `.env` est où vous pourrez configurer les variables d’environnement pour le frontend.
+**Personnaliser `.env` :**  
+Ouvrez le fichier `.env` dans votre éditeur de code (VS Code, par exemple). Pour le développement local, les paramètres par défaut devraient suffire, mais vous pouvez les personnaliser si nécessaire.
+> **Important :** Si vous prévoyez de contribuer au dépôt, **ne commitez pas d’informations sensibles dans votre fichier `.env`**. Vérifiez toujours vos variables d’environnement avant d’effectuer un commit pour vous assurer qu’aucune information privée ou confidentielle n'est exposée.
+
+---
+
+#### 2.2 Installer les dépendances du frontend
+
+Si ce n’est pas encore fait, allez dans le répertoire du frontend :
+```bash
+cd canchat-v2
+```
+Installez les paquets JavaScript nécessaires :
+```bash
+npm install
+```
+En cas d’avertissements ou d'erreurs de compatibilité, essayez :
+```bash
+npm install --force
+```
+
+---
+
+#### 2.3 Démarrer le serveur de développement du Frontend
+
+Lancez le serveur de développement du frontend :
+```bash
+npm run dev
+```
+- Si tout se passe bien, le serveur indiquera qu'il est en fonctionnement et fournira une URL locale.
+- Ouvrez votre navigateur et allez à **[http://localhost:5173](http://localhost:5173)**.
+- Vous devriez voir un message indiquant que le frontend est opérationnel et attend la connexion avec le backend.
+Gardez ce terminal ouvert : il sert votre frontend !
+
+---
+
+#### 3. Configuration du Backend (API et serveur)
+
+Pour le backend, ouvrez **un nouveau terminal** pour mieux organiser votre workflow.
+
+---
+
+#### 3.1 Utilisation des terminaux intégrés de VS Code (optionnel)
+
+- Ouvrez un nouveau terminal dans VS Code en allant dans `Terminal` > `New Terminal`, ou utilisez les raccourcis suivants :
+  - **Windows/Linux :** `Ctrl + Shift +`  
+  - **macOS :** `Cmd + Shift +`
+- Naviguez vers le répertoire backend :
+  ```bash
+  cd backend
+  ```
+Vous disposerez maintenant de deux terminaux : un pour le frontend et un pour le backend.
+
+---
+
+#### 3.2 Créer et activer un environnement Conda (recommandé)
+
+Pour isoler les dépendances du projet et éviter les conflits, utilisez Conda :
+```bash
+conda create --name canchat-v2 python=3.11
+conda activate canchat-v2
+```
+- **`conda create --name canchat-v2 python=3.11`** : Crée un environnement Conda avec Python 3.11.
+- **`conda activate canchat-v2`** : Active l’environnement Conda. Le prompt du terminal affichera `(canchat-v2)`.
+> Si vous n’utilisez pas Conda, assurez-vous d’avoir Python 3.11 ou une version plus récente installée.
+
+---
+
+#### 3.3 Installer les dépendances du backend
+
+Exécutez la commande suivante dans le terminal backend :
+```bash
+pip install -r requirements.txt -U
+```
+- Cela installe toutes les bibliothèques nécessaires au backend en se basant sur le fichier `requirements.txt`.
+- Le flag `-U` garantit que les versions les plus récentes compatibles seront installées.
+  
+---
+
+#### 3.4 Démarrer le serveur de développement du Backend
+
+Lancez le script du serveur backend :
+```bash
+sh dev.sh
+```
+- Cela démarrera le serveur backend, et vous devriez voir sa sortie dans le terminal.
+- Accédez à la documentation de l'API dans votre navigateur : **[http://localhost:8080/docs](http://localhost:8080/docs)**.
+  
+---
+
+#### 4. Étapes finales : Tout faire fonctionner ensemble
+
+🎉 Félicitations ! Vous avez maintenant le frontend et le backend en fonctionnement local :
+1. Retournez sur l'URL du frontend : **[http://localhost:5173](http://localhost:5173)**.
+2. Actualisez la page.  
+   - Vous devriez voir l’application complète connectée au backend !
+
+C'est tout—vous êtes prêt à utiliser CANChat !
+
+---
+
+## Comment contribuer
+
+### Code de conduite
+
+Ce projet, ainsi que tous les participants, est régi par notre [Code de conduite](CODE_OF_CONDUCT). En participant, vous acceptez de respecter ce code. Veuillez signaler tout comportement inacceptable aux [mainteneurs](mailto:dsaiclientengagement.sdiaclientmobilisation@ssc-spc.gc.ca).
+
+### Signaler des bogues
+
+Si vous trouvez un bogue, ouvrez une issue sur notre [traqueur d’issues](https://github.com/ssc-dsai/canchat-v2/issues) et fournissez autant de détails que possible, notamment votre système d'exploitation, navigateur et les étapes pour reproduire le bogue.
+
+### Suggérer des améliorations
+
+Nous accueillons avec plaisir vos suggestions d'améliorations. Ouvrez une issue sur le [traqueur d’issues](https://github.com/ssc-dsai/canchat-v2/issues) et décrivez votre proposition en détail.
+
+### Contribuer au code
+
+- Assurez-vous que votre code respecte notre guide de style.
+- Testez minutieusement vos modifications.
+- Soumettez une pull request vers la branche `dev` du dépôt principal.
+  
+### Problèmes de sécurité
+
+Ne postez aucun problème de sécurité sur le dépôt public ! Consultez notre [SECURITY.md](SECURITY).
+
+## Licence
+
+Ce projet est sous licence [BSD-3-Clause License](LICENSE) - consultez le fichier [LICENSE](LICENSE) pour plus de détails.
+
+## Support
+
+Si vous avez des questions, des suggestions ou avez besoin d'assistance, veuillez consulter notre 
+[documentation](https://gcxgce.sharepoint.com/teams/1000538/SitePages/CANchat_FR.aspx).
