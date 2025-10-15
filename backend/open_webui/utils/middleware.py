@@ -827,11 +827,7 @@ async def chat_completion_files_handler(
 
     if files := body.get("metadata", {}).get("files", None):
         # Check if all files are in full context mode
-        all_full_context = all(
-            item.get("context") == "full"
-            for item in files
-            if item.get("type") == "file"
-        )
+        all_full_context = all(item.get("context") == "full" for item in files)
 
         queries = []
         if not all_full_context:
@@ -2297,6 +2293,8 @@ async def process_chat_response(
                     nonlocal content
                     nonlocal content_blocks
 
+                    seen_reasoning_content = False
+
                     response_tool_calls = []
 
                     delta_count = 0
@@ -2495,6 +2493,7 @@ async def process_chat_response(
                                                 content_blocks
                                             )
                                         }
+                                        seen_reasoning_content = True
 
                                     if value:
                                         if (
@@ -2533,7 +2532,7 @@ async def process_chat_response(
                                             content_blocks[-1]["content"] + value
                                         )
 
-                                        if DETECT_REASONING_TAGS:
+                                        if DETECT_REASONING_TAGS and not seen_reasoning_content:
                                             content, content_blocks, _ = (
                                                 tag_content_handler(
                                                     "reasoning",
