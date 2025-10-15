@@ -409,7 +409,7 @@
 										<span class=" font-medium">{$i18n.t('Warning')}:</span>
 										<span
 											><a
-												href="hhttps://docs.openwebui.com/getting-started/env-configuration#jwt_expires_in"
+												href="https://docs.openwebui.com/getting-started/env-configuration#jwt_expires_in"
 												target="_blank"
 												class=" underline"
 												>{$i18n.t('No expiration can pose security risks.')}
