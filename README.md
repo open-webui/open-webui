@@ -12,7 +12,6 @@
 
 **For more information, be sure to check out our [Documentation](https://gcxgce.sharepoint.com/teams/1000538/SitePages/CANchat.aspx).**
 
-
 ## CANChat's Key Features
 
 - 🚀 **Effortless Setup**: Install seamlessly using Docker or Kubernetes (kubectl, kustomize or helm) for a hassle-free experience with support for both `:ollama` and `:cuda` tagged images.
@@ -159,7 +158,8 @@ Run the backend in a **separate terminal** to manage your workflows cleanly.
 #### 3.1 Using VS Code Integrated Terminals (Optional)
 
 - Open a new terminal in VS Code: go to `Terminal` > `New Terminal` or use the shortcut:
-  - **Windows/Linux:** `Ctrl + Shift +`  
+
+  - **Windows/Linux:** `Ctrl + Shift +`
   - **macOS:** `Cmd + Shift +`
 
 - Navigate to the backend directory:
@@ -219,7 +219,7 @@ sh dev.sh
 🎉 Congratulations! You now have both the frontend and backend running locally:
 
 1. Return to the frontend URL: **[http://localhost:5173](http://localhost:5173)**.
-2. Refresh the page.  
+2. Refresh the page.
    - You should see the full application connected to the backend!
 
 That's it—you're all set up!
@@ -254,7 +254,7 @@ This project is licensed under the [BSD-3-Clause License](LICENSE) - see the [LI
 
 ## Support
 
-If you have any questions, suggestions, or need assistance, please see our 
+If you have any questions, suggestions, or need assistance, please see our
 [Documentation](https://gcxgce.sharepoint.com/teams/1000538/SitePages/CANchat.aspx).
 
 ---
@@ -268,41 +268,28 @@ If you have any questions, suggestions, or need assistance, please see our
 ## Principales fonctionnalités de CANChat
 
 - 🚀 **Configuration facilitée** : Installez facilement avec Docker ou Kubernetes (kubectl, kustomize ou helm) pour une expérience sans souci, avec prise en charge des images marquées `:ollama` et `:cuda`.
- 
+
 - 🤝 **Intégration API Ollama/OpenAI** : Intégrez facilement des API compatibles avec OpenAI pour des conversations polyvalentes, en plus des modèles d’Ollama. Personnalisez l’URL API OpenAI pour vous connecter à **LMStudio, GroqCloud, Mistral, OpenRouter, et plus encore**.
-  
 - 🛡️ **Permissions granulaires et groupes d’utilisateurs** : Permettez aux administrateurs de créer des rôles et des permissions détaillés pour garantir un environnement sécurisé. Cette granularité renforce la sécurité et permet des expériences utilisateur personnalisées, favorisant un sentiment de responsabilité chez les utilisateurs.
- 
+
 - 📱 **Design réactif** : Profitez d'une expérience harmonieuse sur ordinateur de bureau, ordinateur portable et appareils mobiles.
-  
 - 📱 **Application web progressive (PWA) pour mobile** : Profitez d’une expérience semblable à une application native sur votre appareil mobile grâce à notre PWA, offrant un accès hors ligne sur localhost et une interface utilisateur fluide.
-  
 - ✒️🔢 **Prise en charge complète de Markdown et LaTeX** : Élevez votre expérience LLM avec des capacités Markdown et LaTeX complètes pour des interactions enrichies.
-  
 - 🎤📹 **Appel audio/vidéo mains libres** : Expérimentez une communication fluide grâce aux fonctionnalités d’appel audio et vidéo intégrées, permettant un environnement de discussion plus dynamique et interactif.
-  
 - 🛠️ **Créateur de modèles** : Créez facilement des modèles Ollama via l’interface Web. Ajoutez des personnages/agents personnalisés et personnalisez les éléments de discussion.
-  
 - 🐍 **Outil d’appel de fonctions Python natif** : Enrichissez vos LLM grâce à un éditeur de code intégré dans l'espace de travail des outils. Ajoutez vos propres fonctions Python pour une intégration transparente avec les LLM.
-  
 - 📚 **Intégration RAG locale** : Plongez dans l’avenir des interactions de discussion avec le support révolutionnaire du **RAG (Recovery Augmented Generation)**. Cette fonctionnalité intègre des documents dans vos conversations. Chargez des documents directement dans le chat ou ajoutez des fichiers à votre bibliothèque de documents pour les accéder facilement via la commande `#` avant une requête.
-  
 - 🔍 **Recherche web pour RAG** : Effectuez des recherches web à l'aide de fournisseurs comme `SearXNG`, `Google PSE`, `Brave Search`, `serpstack`, `serper`, `Serply`, `DuckDuckGo`, `TavilySearch`, `SearchApi` et `Bing`, et injectez les résultats directement dans votre discussion.
-  
 - 🌐 **Capacité de navigation web** : Intégrez des sites web directement dans votre expérience de chat avec la commande `#` suivie d'une URL. Cette fonctionnalité enrichit vos conversations en incorporant du contenu web.
-  
 - 🎨 **Intégration de génération d'images** : Profitez des capacités de génération d’images à l’aide d’options telles que l’API AUTOMATIC1111 ou ComfyUI (local), et DALL-E d’OpenAI (externe), enrichissant votre expérience de chat avec du contenu visuel dynamique.
-  
 - ⚙️ **Conversations multi-modèles** : Interagissez facilement avec différents modèles simultanément, en exploitant leurs forces uniques pour des réponses optimales. Améliorez votre expérience en utilisant un ensemble diversifié de modèles en parallèle.
-  
 - 🔐 **Contrôle d’accès basé sur les rôles (RBAC)** : Garantissez un accès sécurisé avec des permissions restreintes : seules les personnes autorisées ont accès à Ollama, et les droits exclusifs de création/téléchargement de modèles sont réservés aux administrateurs.
-   
 - 🌐🌍 **Support multilingue** : Utilisez CANChat dans la langue de votre choix grâce à notre support d’internationalisation (i18n). Participez à l'expansion de nos langues prises en charge ! Nous recherchons activement des contributeurs !
 
 - 🧩 **Pipelines et support de plugins Open WebUI** : Intégrez facilement une logique personnalisée et des bibliothèques Python dans CANChat en utilisant un cadre de plugins pipelines. Lancez votre instance Pipelines, configurez l'URL OpenAI sur l'URL de Pipelines et explorez des possibilités infinies. Exemples : **Appels de fonctions Python**, **limitation d’usage utilisateur**, **suivi d'utilisation** avec des outils comme Langfuse, **traductions en direct avec LibreTranslate**, **filtrage de messages toxiques** et bien plus.
- 
+
 - 🌟 **Mises à jour continues** : Nous nous engageons à améliorer CANChat avec des mises à jour régulières, des correctifs et de nouvelles fonctionnalités.
-Vous souhaitez en savoir plus sur les fonctionnalités de CANChat ? Consultez notre [documentation](https://gcxgce.sharepoint.com/teams/1000538/SitePages/CANchat_FR.aspx) pour un aperçu complet !
+  Vous souhaitez en savoir plus sur les fonctionnalités de CANChat ? Consultez notre [documentation](https://gcxgce.sharepoint.com/teams/1000538/SitePages/CANchat_FR.aspx) pour un aperçu complet !
 
 ---
 
@@ -311,11 +298,13 @@ Vous souhaitez en savoir plus sur les fonctionnalités de CANChat ? Consultez no
 ### Prérequis
 
 Avant de commencer, assurez-vous que votre système répond à ces exigences minimales :
+
 - **Système d’exploitation** : Linux (ou WSL sous Windows), Windows 11 ou macOS. (Recommandé pour une meilleure compatibilité)
 - **Python** : Version 3.11 ou supérieure. (Requis pour les services backend)
 - **Node.js** : Version 22.10 ou supérieure. (Requis pour le développement frontend)
 - **IDE (recommandé)** : Nous recommandons d’utiliser un IDE comme VS Code pour l’édition, le débogage et l’accès au terminal intégré. Si vous le souhaitez, utilisez votre IDE préféré !
-- 
+-
+
 ### Configurer votre environnement local
 
 Nous allons configurer l'interface utilisateur (frontend) et l'API/serveur (backend).
@@ -325,6 +314,7 @@ Nous allons configurer l'interface utilisateur (frontend) et l'API/serveur (back
 #### 1. Cloner le dépôt
 
 Pour commencer, utilisez `git clone` afin de télécharger le dépôt de CANChat V2 sur votre machine locale. Cela créera une copie locale sur votre ordinateur.
+
 1. Ouvrez votre terminal (ou Git Bash si vous êtes sous Windows).
 2. Naviguez vers le répertoire où vous voulez stocker le projet.
 3. Exécutez les commandes suivantes :
@@ -334,7 +324,8 @@ Pour commencer, utilisez `git clone` afin de télécharger le dépôt de CANChat
    ```
    - La commande `git clone` télécharge les fichiers du projet depuis GitHub.
    - La commande `cd canchat-v2` vous permet d’entrer dans le répertoire nouvellement créé.
-   - 
+   -
+
 ---
 
 #### 2. Configuration du Frontend (interface utilisateur)
@@ -344,28 +335,35 @@ Commençons par mettre en place l’interface utilisateur.
 #### 2.1 Configurer les variables d’environnement
 
 Copiez le fichier d’environnement exemple vers `.env` :
+
 ```bash
 cp -RPp .env.example .env
 ```
+
 - Cette commande copie le fichier `.env.example` dans un nouveau fichier nommé `.env`.
 - Le fichier `.env` est où vous pourrez configurer les variables d’environnement pour le frontend.
-**Personnaliser `.env` :**  
-Ouvrez le fichier `.env` dans votre éditeur de code (VS Code, par exemple). Pour le développement local, les paramètres par défaut devraient suffire, mais vous pouvez les personnaliser si nécessaire.
-> **Important :** Si vous prévoyez de contribuer au dépôt, **ne commitez pas d’informations sensibles dans votre fichier `.env`**. Vérifiez toujours vos variables d’environnement avant d’effectuer un commit pour vous assurer qu’aucune information privée ou confidentielle n'est exposée.
+  **Personnaliser `.env` :**  
+  Ouvrez le fichier `.env` dans votre éditeur de code (VS Code, par exemple). Pour le développement local, les paramètres par défaut devraient suffire, mais vous pouvez les personnaliser si nécessaire.
+  > **Important :** Si vous prévoyez de contribuer au dépôt, **ne commitez pas d’informations sensibles dans votre fichier `.env`**. Vérifiez toujours vos variables d’environnement avant d’effectuer un commit pour vous assurer qu’aucune information privée ou confidentielle n'est exposée.
 
 ---
 
 #### 2.2 Installer les dépendances du frontend
 
 Si ce n’est pas encore fait, allez dans le répertoire du frontend :
+
 ```bash
 cd canchat-v2
 ```
+
 Installez les paquets JavaScript nécessaires :
+
 ```bash
 npm install
 ```
+
 En cas d’avertissements ou d'erreurs de compatibilité, essayez :
+
 ```bash
 npm install --force
 ```
@@ -375,13 +373,15 @@ npm install --force
 #### 2.3 Démarrer le serveur de développement du Frontend
 
 Lancez le serveur de développement du frontend :
+
 ```bash
 npm run dev
 ```
+
 - Si tout se passe bien, le serveur indiquera qu'il est en fonctionnement et fournira une URL locale.
 - Ouvrez votre navigateur et allez à **[http://localhost:5173](http://localhost:5173)**.
 - Vous devriez voir un message indiquant que le frontend est opérationnel et attend la connexion avec le backend.
-Gardez ce terminal ouvert : il sert votre frontend !
+  Gardez ce terminal ouvert : il sert votre frontend !
 
 ---
 
@@ -394,56 +394,63 @@ Pour le backend, ouvrez **un nouveau terminal** pour mieux organiser votre workf
 #### 3.1 Utilisation des terminaux intégrés de VS Code (optionnel)
 
 - Ouvrez un nouveau terminal dans VS Code en allant dans `Terminal` > `New Terminal`, ou utilisez les raccourcis suivants :
-  - **Windows/Linux :** `Ctrl + Shift +`  
+  - **Windows/Linux :** `Ctrl + Shift +`
   - **macOS :** `Cmd + Shift +`
 - Naviguez vers le répertoire backend :
   ```bash
   cd backend
   ```
-Vous disposerez maintenant de deux terminaux : un pour le frontend et un pour le backend.
+  Vous disposerez maintenant de deux terminaux : un pour le frontend et un pour le backend.
 
 ---
 
 #### 3.2 Créer et activer un environnement Conda (recommandé)
 
 Pour isoler les dépendances du projet et éviter les conflits, utilisez Conda :
+
 ```bash
 conda create --name canchat-v2 python=3.11
 conda activate canchat-v2
 ```
+
 - **`conda create --name canchat-v2 python=3.11`** : Crée un environnement Conda avec Python 3.11.
 - **`conda activate canchat-v2`** : Active l’environnement Conda. Le prompt du terminal affichera `(canchat-v2)`.
-> Si vous n’utilisez pas Conda, assurez-vous d’avoir Python 3.11 ou une version plus récente installée.
+  > Si vous n’utilisez pas Conda, assurez-vous d’avoir Python 3.11 ou une version plus récente installée.
 
 ---
 
 #### 3.3 Installer les dépendances du backend
 
 Exécutez la commande suivante dans le terminal backend :
+
 ```bash
 pip install -r requirements.txt -U
 ```
+
 - Cela installe toutes les bibliothèques nécessaires au backend en se basant sur le fichier `requirements.txt`.
 - Le flag `-U` garantit que les versions les plus récentes compatibles seront installées.
-  
+
 ---
 
 #### 3.4 Démarrer le serveur de développement du Backend
 
 Lancez le script du serveur backend :
+
 ```bash
 sh dev.sh
 ```
+
 - Cela démarrera le serveur backend, et vous devriez voir sa sortie dans le terminal.
 - Accédez à la documentation de l'API dans votre navigateur : **[http://localhost:8080/docs](http://localhost:8080/docs)**.
-  
+
 ---
 
 #### 4. Étapes finales : Tout faire fonctionner ensemble
 
 🎉 Félicitations ! Vous avez maintenant le frontend et le backend en fonctionnement local :
+
 1. Retournez sur l'URL du frontend : **[http://localhost:5173](http://localhost:5173)**.
-2. Actualisez la page.  
+2. Actualisez la page.
    - Vous devriez voir l’application complète connectée au backend !
 
 C'est tout—vous êtes prêt à utiliser CANChat !
@@ -469,7 +476,7 @@ Nous accueillons avec plaisir vos suggestions d'améliorations. Ouvrez une issue
 - Assurez-vous que votre code respecte notre guide de style.
 - Testez minutieusement vos modifications.
 - Soumettez une pull request vers la branche `dev` du dépôt principal.
-  
+
 ### Problèmes de sécurité
 
 Ne postez aucun problème de sécurité sur le dépôt public ! Consultez notre [SECURITY.md](SECURITY).
@@ -480,5 +487,5 @@ Ce projet est sous licence [BSD-3-Clause License](LICENSE) - consultez le fichie
 
 ## Support
 
-Si vous avez des questions, des suggestions ou avez besoin d'assistance, veuillez consulter notre 
+Si vous avez des questions, des suggestions ou avez besoin d'assistance, veuillez consulter notre
 [documentation](https://gcxgce.sharepoint.com/teams/1000538/SitePages/CANchat_FR.aspx).
