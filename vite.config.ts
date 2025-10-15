@@ -26,6 +26,9 @@ export default defineConfig({
 	worker: {
 		format: 'es'
 	},
+	optimizeDeps: {
+		include: ['y-protocols/awareness']
+	},
 	esbuild: {
 		pure: process.env.ENV === 'dev' ? [] : ['console.log', 'console.debug', 'console.error']
 	}

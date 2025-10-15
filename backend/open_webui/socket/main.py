@@ -638,20 +638,29 @@ async def disconnect(sid):
         # print(f"Unknown session ID {sid} disconnected")
 
 
-def get_event_emitter(request_info, update_db=True):
+def get_event_emitter(request_info, update_db=True, broadcast: bool = True):
     async def __event_emitter__(event_data):
         user_id = request_info["user_id"]
 
-        session_ids = list(
-            set(
-                USER_POOL.get(user_id, [])
-                + (
-                    [request_info.get("session_id")]
-                    if request_info.get("session_id")
-                    else []
+        if broadcast:
+            # Broadcast to all user sessions (default behavior)
+            session_ids = list(
+                set(
+                    USER_POOL.get(user_id, [])
+                    + (
+                        [request_info.get("session_id")]
+                        if request_info.get("session_id")
+                        else []
+                    )
                 )
             )
-        )
+        else:
+            # Target only the originating session (for streaming chat responses)
+            session_ids = (
+                [request_info.get("session_id")]
+                if request_info.get("session_id")
+                else []
+            )
 
         chat_id = request_info.get("chat_id", None)
         message_id = request_info.get("message_id", None)

@@ -5,6 +5,7 @@
 	const { saveAs } = fileSaver;
 
 	const i18n = getContext('i18n');
+	const socket = getContext('socket');
 
 	import { marked } from 'marked';
 	import { toast } from 'svelte-sonner';
@@ -33,7 +34,6 @@
 		models,
 		settings,
 		showSidebar,
-		socket,
 		user,
 		WEBUI_NAME
 	} from '$lib/stores';

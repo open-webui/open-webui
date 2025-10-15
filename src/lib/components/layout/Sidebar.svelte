@@ -20,7 +20,6 @@
 		currentChatPage,
 		temporaryChatEnabled,
 		channels,
-		socket,
 		config,
 		isApp,
 		models,
@@ -30,6 +29,7 @@
 	import { onMount, getContext, tick, onDestroy } from 'svelte';
 
 	const i18n = getContext('i18n');
+	const socket = getContext('socket');
 
 	import {
 		getChatList,

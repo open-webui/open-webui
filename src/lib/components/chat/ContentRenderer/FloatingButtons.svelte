@@ -6,6 +6,7 @@
 
 	import { getContext, tick, onDestroy } from 'svelte';
 	const i18n = getContext('i18n');
+	const socket = getContext('socket');
 
 	import { chatCompletion } from '$lib/apis/openai';
 
@@ -13,7 +14,7 @@
 	import LightBulb from '$lib/components/icons/LightBulb.svelte';
 	import Markdown from '../Messages/Markdown.svelte';
 	import Skeleton from '../Messages/Skeleton.svelte';
-	import { chatId, models, socket } from '$lib/stores';
+	import { chatId, models } from '$lib/stores';
 
 	export let id = '';
 	export let messageId = '';

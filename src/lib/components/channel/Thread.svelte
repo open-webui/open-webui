@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { goto } from '$app/navigation';
 
-	import { socket, user } from '$lib/stores';
+	import { user } from '$lib/stores';
 
 	import { getChannelThreadMessages, sendMessage } from '$lib/apis/channels';
 
@@ -13,6 +13,7 @@
 	import Spinner from '../common/Spinner.svelte';
 
 	const i18n = getContext('i18n');
+	const socket = getContext('socket');
 
 	export let threadId = null;
 	export let channel = null;

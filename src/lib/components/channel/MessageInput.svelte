@@ -5,8 +5,9 @@
 	import { tick, getContext, onMount, onDestroy } from 'svelte';
 
 	const i18n = getContext('i18n');
+	const socket = getContext('socket');
 
-	import { config, mobile, settings, socket, user } from '$lib/stores';
+	import { config, mobile, settings, user } from '$lib/stores';
 	import {
 		convertHeicToJpeg,
 		compressImage,

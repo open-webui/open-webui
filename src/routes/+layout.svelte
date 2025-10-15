@@ -8,6 +8,7 @@
 	});
 
 	import { onMount, tick, setContext, onDestroy } from 'svelte';
+	import { writable } from 'svelte/store';
 	import {
 		config,
 		user,
@@ -15,7 +16,6 @@
 		theme,
 		WEBUI_NAME,
 		mobile,
-		socket,
 		chatId,
 		chats,
 		currentChatPage,
@@ -60,6 +60,11 @@
 
 	setContext('i18n', i18n);
 
+	// Create tab-specific socket store using Context API
+	// Each browser tab gets its own independent socket connection
+	const socketStore = writable(null);
+	setContext('socket', socketStore);
+
 	const bc = new BroadcastChannel('active-tab-channel');
 
 	let loaded = false;
@@ -80,7 +85,8 @@
 			auth: { token: localStorage.token }
 		});
 
-		await socket.set(_socket);
+		// Update the tab-specific socket store
+		socketStore.set(_socket);
 
 		_socket.on('connect_error', (err) => {
 			console.log('connect_error', err);
@@ -110,6 +116,8 @@
 				console.log('Additional details:', details);
 			}
 		});
+
+		return _socket;
 	};
 
 	const executePythonAsWorker = async (id, code, cb) => {
@@ -317,7 +325,7 @@
 			} else if (type === 'chat:tags') {
 				tags.set(await getAllTags(localStorage.token));
 			}
-		} else if (data?.session_id === $socket.id) {
+		} else if (data?.session_id === $socketStore?.id) {
 			if (type === 'execute:python') {
 				console.log('execute:python', data);
 				executePythonAsWorker(data.id, data.code, cb);
@@ -325,7 +333,7 @@
 				console.log('execute:tool', data);
 				executeTool(data, cb);
 			} else if (type === 'request:chat:completion') {
-				console.log(data, $socket.id);
+				console.log(data, $socketStore?.id);
 				const { session_id, channel, form_data, model } = data;
 
 				try {
@@ -382,7 +390,7 @@
 
 											for (const line of lines) {
 												console.log(line);
-												$socket?.emit(channel, line);
+												$socketStore?.emit(channel, line);
 											}
 										}
 									};
@@ -405,7 +413,7 @@
 					console.error('chatCompletion', error);
 					cb(error);
 				} finally {
-					$socket.emit(channel, {
+					$socketStore?.emit(channel, {
 						done: true
 					});
 				}
@@ -574,12 +582,15 @@
 		window.addEventListener('resize', onResize);
 
 		user.subscribe((value) => {
-			if (value) {
-				$socket?.off('events', chatEventHandler);
-				$socket?.off('events:channel', channelEventHandler);
+			// Get socket from context (if available)
+			const contextSocket = $socketStore;
 
-				$socket?.on('events', chatEventHandler);
-				$socket?.on('events:channel', channelEventHandler);
+			if (value) {
+				contextSocket?.off('events', chatEventHandler);
+				contextSocket?.off('events:channel', channelEventHandler);
+
+				contextSocket?.on('events', chatEventHandler);
+				contextSocket?.on('events:channel', channelEventHandler);
 
 				// Set up the token expiry check
 				if (tokenTimer) {
@@ -587,8 +598,8 @@
 				}
 				tokenTimer = setInterval(checkTokenExpiry, 15000);
 			} else {
-				$socket?.off('events', chatEventHandler);
-				$socket?.off('events:channel', channelEventHandler);
+				contextSocket?.off('events', chatEventHandler);
+				contextSocket?.off('events:channel', channelEventHandler);
 			}
 		});
 
@@ -620,7 +631,8 @@
 			await WEBUI_NAME.set(backendConfig.name);
 
 			if ($config) {
-				await setupSocket($config.features?.enable_websocket ?? true);
+				// Setup tab-specific socket connection
+				const tabSocket = await setupSocket($config.features?.enable_websocket ?? true);
 
 				const currentUrl = `${window.location.pathname}${window.location.search}`;
 				const encodedUrl = encodeURIComponent(currentUrl);
@@ -687,6 +699,11 @@
 
 		return () => {
 			window.removeEventListener('resize', onResize);
+			// Cleanup tab-specific socket on component destroy (tab close)
+			if (tabSocket) {
+				console.log('Disconnecting tab socket on cleanup:', tabSocket.id);
+				tabSocket.disconnect();
+			}
 		};
 	});
 </script>

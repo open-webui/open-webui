@@ -5,6 +5,7 @@
 
 	import { getContext, onDestroy, onMount, tick } from 'svelte';
 	const i18n: Writable<i18nType> = getContext('i18n');
+	const socket: Writable<any> = getContext('socket');
 
 	import { goto } from '$app/navigation';
 	import { page } from '$app/stores';
@@ -25,7 +26,6 @@
 		WEBUI_NAME,
 		banners,
 		user,
-		socket,
 		showControls,
 		showCallOverlay,
 		currentChatPage,

@@ -922,6 +922,11 @@
 
 								const { state } = view;
 								const { $from } = state.selection;
+
+								// Guard against invalid positions at document start
+								if ($from.pos === 0 || state.doc.content.size === 0) {
+									return false; // Let ProseMirror handle it normally
+								}
 								const lineStart = $from.before($from.depth);
 								const lineEnd = $from.after($from.depth);
 								const lineText = state.doc.textBetween(lineStart, lineEnd, '\n', '\0').trim();

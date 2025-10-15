@@ -2,10 +2,11 @@
 	import { toast } from 'svelte-sonner';
 	import { Pane, PaneGroup, PaneResizer } from 'paneforge';
 
-	import { onDestroy, onMount, tick } from 'svelte';
+	import { onDestroy, onMount, tick, getContext } from 'svelte';
 	import { goto } from '$app/navigation';
 
-	import { chatId, showSidebar, socket, user } from '$lib/stores';
+	import { chatId, showSidebar, user } from '$lib/stores';
+	const socket = getContext('socket');
 	import { getChannelById, getChannelMessages, sendMessage } from '$lib/apis/channels';
 
 	import Messages from './Messages.svelte';
