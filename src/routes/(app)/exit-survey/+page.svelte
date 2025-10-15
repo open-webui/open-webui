@@ -30,11 +30,10 @@
 		
 		// Mark assignment as completed
 		localStorage.setItem('assignmentCompleted', 'true');
-		localStorage.setItem('assignmentStep', '3');
+		localStorage.setItem('assignmentStep', '4');
 		
-		// Show completion message and redirect
-		alert('Thank you for completing the assignment! Your responses have been recorded.');
-		goto('/');
+		// Redirect to completion page
+		goto('/completion');
 	}
 
 	function goBack() {

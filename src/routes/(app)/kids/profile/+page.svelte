@@ -27,9 +27,10 @@
 	let editInModal: boolean = false;
 	let showAddProfileModal: boolean = false;
 	let showForm: boolean = false; // Control form visibility
+	let showConfirmationModal: boolean = false; // Confirmation modal for workflow progression
 
 	function getChildGridTemplate(): string {
-		const cols = Math.max(1, Math.min((childProfiles?.length || 1), 5));
+		const cols = Math.max(1, Math.min((childProfiles?.length || 0) + 1, 5));
 		return `repeat(${cols}, minmax(120px, 1fr))`;
 	}
 
@@ -127,6 +128,9 @@
 			showForm = true;
 			showAddProfileModal = false;
 			toast.success('Child profile created successfully!');
+			
+			// Show confirmation modal after creating new profile
+			showConfirmationModal = true;
 		} catch (error) {
 			console.error('Failed to create child profile:', error);
 			toast.error('Failed to create child profile');
@@ -154,6 +158,12 @@
 			// Load child profiles from API via childProfileSync
 			childProfiles = await childProfileSync.getChildProfiles();
 			
+			// Ensure childProfiles is always an array
+			if (!childProfiles || !Array.isArray(childProfiles)) {
+				console.warn('Child profiles returned invalid value, defaulting to empty array');
+				childProfiles = [];
+			}
+			
 			// Don't automatically show form - user must click on a child
 			showForm = false;
 			selectedChildIndex = -1;
@@ -166,6 +176,20 @@
 
 	async function saveChildProfile() {
 		try {
+			// Validate required fields
+			if (!childName.trim()) {
+				toast.error('Please enter a name for the child');
+				return;
+			}
+			if (!childAge) {
+				toast.error('Please select an age');
+				return;
+			}
+			if (!childGender) {
+				toast.error('Please select a gender');
+				return;
+			}
+
 			// If no profiles exist, create a new one
 			if (childProfiles.length === 0) {
 				const newChild = await childProfileSync.createChildProfile({
@@ -196,12 +220,22 @@
 			
 			toast.success('Child profile saved successfully!');
 			
-			// Go back to main kids page
-			goto('/');
+			// Show confirmation modal for workflow progression
+			showConfirmationModal = true;
 		} catch (error) {
 			console.error('Failed to save child profile:', error);
 			toast.error('Failed to save child profile');
 		}
+	}
+
+	function proceedToNextStep() {
+		// Update assignment step to 2 (moderation scenarios)
+		localStorage.setItem('assignmentStep', '2');
+		goto('/moderation-scenario');
+	}
+
+	function continueEditing() {
+		showConfirmationModal = false;
 	}
 
 	function formatDisplayValue(value: string, type: string): string {
@@ -279,7 +313,7 @@
 		</div>
 
 		<!-- Child Selection -->
-		{#if childProfiles.length > 0}
+		{#if childProfiles && childProfiles.length > 0}
 			<div class="mb-8">
 				<div class="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg p-6">
 					<h2 class="text-lg font-semibold text-gray-900 dark:text-white mb-4">Select Your Profile</h2>
@@ -578,6 +612,42 @@
 						</button>
 					</div>
 				</form>
+			</div>
+		</div>
+		{/if}
+
+		<!-- Confirmation Modal for Workflow Progression -->
+		{#if showConfirmationModal}
+		<div class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50" on:click={() => showConfirmationModal = false}>
+			<div class="bg-white dark:bg-gray-800 rounded-xl p-8 max-w-md w-full mx-4 shadow-2xl" on:click|stopPropagation>
+				<div class="text-center mb-6">
+					<div class="w-16 h-16 bg-gradient-to-r from-green-500 to-emerald-600 rounded-full flex items-center justify-center mx-auto mb-4">
+						<svg class="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+							<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+						</svg>
+					</div>
+					<h3 class="text-2xl font-bold text-gray-900 dark:text-white mb-2">
+						Profile Saved!
+					</h3>
+					<p class="text-gray-600 dark:text-gray-400">
+						Would you like to proceed to the next step?
+					</p>
+				</div>
+
+				<div class="flex flex-col space-y-3">
+					<button
+						on:click={proceedToNextStep}
+						class="bg-gradient-to-r from-blue-500 to-purple-600 hover:from-blue-600 hover:to-purple-700 text-white px-6 py-3 rounded-lg font-medium transition-all duration-200 shadow-lg hover:shadow-xl"
+					>
+						Yes, Continue to Moderation Scenarios
+					</button>
+					<button
+						on:click={continueEditing}
+						class="px-6 py-3 text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200 border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
+					>
+						No, Continue Editing Profile
+					</button>
+				</div>
 			</div>
 		</div>
 		{/if}

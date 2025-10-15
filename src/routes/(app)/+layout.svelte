@@ -60,6 +60,9 @@
 		if ($user === undefined || $user === null) {
 			await goto('/auth');
 		} else if (['user', 'admin'].includes($user?.role)) {
+			// Workflow navigation guard
+			await enforceWorkflowNavigation();
+
 			try {
 				// Check if IndexedDB exists
 				DB = await openDB('Chats', 1);
@@ -268,6 +271,51 @@
 			};
 		});
 	};
+
+	// Workflow navigation guard
+	const enforceWorkflowNavigation = async () => {
+		const currentPath = $page.url.pathname;
+		const assignmentStep = parseInt(localStorage.getItem('assignmentStep') || '1');
+		
+		// Allow navigation to home/intro page
+		if (currentPath === '/') {
+			return;
+		}
+		
+		// Allow access to admin and workspace routes for admins
+		if ($user?.role === 'admin' && (currentPath.startsWith('/admin') || currentPath.startsWith('/workspace'))) {
+			return;
+		}
+
+		// Define step-to-route mapping
+		const stepRoutes: { [key: number]: string } = {
+			1: '/kids/profile',
+			2: '/moderation-scenario',
+			3: '/exit-survey',
+			4: '/completion'
+		};
+
+		// Allow users to access their current step or any previous steps
+		const allowedRoutes: string[] = [];
+		for (let step = 1; step <= assignmentStep; step++) {
+			if (stepRoutes[step]) {
+				allowedRoutes.push(stepRoutes[step]);
+			}
+		}
+
+		// Check if current route is allowed
+		const isAllowed = allowedRoutes.some(route => currentPath.startsWith(route));
+		
+		// If not allowed, redirect to current step
+		if (!isAllowed && stepRoutes[assignmentStep]) {
+			await goto(stepRoutes[assignmentStep]);
+		}
+	};
+
+	// Watch for route changes and enforce navigation
+	$: if ($page && $user) {
+		enforceWorkflowNavigation();
+	}
 </script>
 
 <SettingsModal bind:show={$showSettings} />

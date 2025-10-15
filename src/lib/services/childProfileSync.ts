@@ -25,6 +25,9 @@ class ChildProfileSyncService {
     private isUserAuthenticated = () => !!get(user);
 
     constructor() {
+        // Clean up any corrupted cache data on initialization
+        this.validateAndCleanCache();
+        
         // Listen for online/offline events
         window.addEventListener('online', () => {
             this.isOnline = true;
@@ -34,6 +37,26 @@ class ChildProfileSyncService {
         window.addEventListener('offline', () => {
             this.isOnline = false;
         });
+    }
+    
+    /**
+     * Validate and clean up corrupted cache data
+     */
+    private validateAndCleanCache(): void {
+        try {
+            const cached = localStorage.getItem(this.CACHE_KEY);
+            if (cached) {
+                const parsed = JSON.parse(cached);
+                // If cache is not a valid array, clear it
+                if (!Array.isArray(parsed)) {
+                    console.warn('Clearing corrupted cache data');
+                    this.clearCache();
+                }
+            }
+        } catch (error) {
+            console.warn('Error validating cache, clearing it:', error);
+            this.clearCache();
+        }
     }
 
     /**
@@ -49,9 +72,11 @@ class ChildProfileSyncService {
             if (!token) return this.getFromCache();
 
             const profiles = await getChildProfiles(token);
-            this.saveToCache(profiles);
+            // Handle null response from API
+            const safeProfiles = profiles || [];
+            this.saveToCache(safeProfiles);
             localStorage.setItem(this.SYNC_KEY, 'true');
-            return profiles;
+            return safeProfiles;
         } catch (error) {
             console.warn('Failed to sync child profiles from backend:', error);
             return this.getFromCache();
@@ -85,7 +110,11 @@ class ChildProfileSyncService {
                 if (token) {
                     const newProfile = await createChildProfile(token, formData);
                     // Update cache
-                    const profiles = this.getFromCache();
+                    let profiles = this.getFromCache();
+                    // Extra safety check
+                    if (!Array.isArray(profiles)) {
+                        profiles = [];
+                    }
                     profiles.push(newProfile);
                     this.saveToCache(profiles);
                     return newProfile;
@@ -108,7 +137,11 @@ class ChildProfileSyncService {
             updated_at: Date.now()
         };
 
-        const profiles = this.getFromCache();
+        let profiles = this.getFromCache();
+        // Extra safety check
+        if (!Array.isArray(profiles)) {
+            profiles = [];
+        }
         profiles.push(localProfile);
         this.saveToCache(profiles);
         
@@ -126,7 +159,11 @@ class ChildProfileSyncService {
                 if (token) {
                     const updatedProfile = await updateChildProfile(token, profileId, formData);
                     // Update cache
-                    const profiles = this.getFromCache();
+                    let profiles = this.getFromCache();
+                    // Extra safety check
+                    if (!Array.isArray(profiles)) {
+                        profiles = [];
+                    }
                     const index = profiles.findIndex(p => p.id === profileId);
                     if (index !== -1) {
                         profiles[index] = updatedProfile;
@@ -140,7 +177,11 @@ class ChildProfileSyncService {
         }
 
         // Fallback: update locally
-        const profiles = this.getFromCache();
+        let profiles = this.getFromCache();
+        // Extra safety check
+        if (!Array.isArray(profiles)) {
+            profiles = [];
+        }
         const index = profiles.findIndex(p => p.id === profileId);
         if (index !== -1) {
             profiles[index] = {
@@ -166,7 +207,12 @@ class ChildProfileSyncService {
                 if (token) {
                     await deleteChildProfile(token, profileId);
                     // Update cache
-                    const profiles = this.getFromCache().filter(p => p.id !== profileId);
+                    let profiles = this.getFromCache();
+                    // Extra safety check
+                    if (!Array.isArray(profiles)) {
+                        profiles = [];
+                    }
+                    profiles = profiles.filter(p => p.id !== profileId);
                     this.saveToCache(profiles);
                     return;
                 }
@@ -176,7 +222,12 @@ class ChildProfileSyncService {
         }
 
         // Fallback: delete locally
-        const profiles = this.getFromCache().filter(p => p.id !== profileId);
+        let profiles = this.getFromCache();
+        // Extra safety check
+        if (!Array.isArray(profiles)) {
+            profiles = [];
+        }
+        profiles = profiles.filter(p => p.id !== profileId);
         this.saveToCache(profiles);
     }
 
@@ -190,7 +241,11 @@ class ChildProfileSyncService {
         const selectedChildId = this.getCurrentChildId();
         if (!selectedChildId) return null;
 
-        const profiles = this.getFromCache();
+        let profiles = this.getFromCache();
+        // Extra safety check
+        if (!Array.isArray(profiles)) {
+            profiles = [];
+        }
         return profiles.find(p => p.id === selectedChildId) || null;
     }
 
@@ -242,7 +297,15 @@ class ChildProfileSyncService {
     private getFromCache(): ChildProfile[] {
         try {
             const cached = localStorage.getItem(this.CACHE_KEY);
-            return cached ? JSON.parse(cached) : [];
+            if (!cached) return [];
+            
+            const parsed = JSON.parse(cached);
+            // Ensure the parsed value is a valid array
+            if (!parsed || !Array.isArray(parsed)) {
+                console.warn('Cache contained invalid data, resetting to empty array');
+                return [];
+            }
+            return parsed;
         } catch (error) {
             console.warn('Failed to parse child profiles cache:', error);
             return [];

@@ -152,6 +152,11 @@
 		try {
 			console.log('Loading child profiles in sidebar...');
 			childProfiles = await childProfileSync.getChildProfiles();
+			// Ensure childProfiles is always an array
+			if (!childProfiles || !Array.isArray(childProfiles)) {
+				console.warn('Child profiles returned invalid value, defaulting to empty array');
+				childProfiles = [];
+			}
 			console.log('Loaded child profiles:', childProfiles);
 			const currentChildId = childProfileSync.getCurrentChildId();
 			console.log('Current child ID:', currentChildId);
@@ -236,10 +241,11 @@
 
 	function getStepRoute(step: number): string {
 		switch (step) {
-			case 1: return '/kids/profile/preview';
+			case 1: return '/kids/profile';
 			case 2: return '/moderation-scenario';
 			case 3: return '/exit-survey';
-			default: return '/kids/profile/preview';
+			case 4: return '/completion';
+			default: return '/kids/profile';
 		}
 	}
 
@@ -247,7 +253,7 @@
 		showAssignmentSetup = false;
 		localStorage.setItem('assignmentStep', '1');
 		assignmentStep = 1;
-		goto('/kids/profile/preview');
+		goto('/kids/profile');
 	}
 
 	// Function to update assignment step when user completes tasks
@@ -259,12 +265,14 @@
 	// Listen for navigation events to update assignment progress
 	$: if (typeof window !== 'undefined') {
 		const currentPath = window.location.pathname;
-		if ((currentPath === '/kids/profile' || currentPath === '/kids/profile/preview') && assignmentStep < 2) {
+		if (currentPath === '/kids/profile' && assignmentStep < 2) {
 			updateAssignmentStep(1);
 		} else if (currentPath === '/moderation-scenario' && assignmentStep < 3) {
 			updateAssignmentStep(2);
-		} else if (currentPath === '/exit-survey') {
+		} else if (currentPath === '/exit-survey' && assignmentStep < 4) {
 			updateAssignmentStep(3);
+		} else if (currentPath === '/completion') {
+			updateAssignmentStep(4);
 			assignmentCompleted = true;
 		}
 	}
@@ -781,7 +789,7 @@
 				<div class="grow flex items-center space-x-3 rounded-lg px-2 py-[7px] transition {assignmentStep >= 1 ? 'hover:bg-gray-100 dark:hover:bg-gray-900' : 'opacity-50 cursor-not-allowed'}">
 					<button
 						class="flex items-center space-x-3 flex-1"
-						on:click={() => goToStep(1)}
+						on:click={() => goto('/kids/profile')}
 						disabled={assignmentStep < 1}
 					>
 						<div class="self-center">
@@ -826,12 +834,10 @@
 				<button
 					class="grow flex items-center space-x-3 rounded-lg px-2 py-[7px] transition {assignmentStep >= 2 ? 'hover:bg-gray-100 dark:hover:bg-gray-900' : 'opacity-50 cursor-not-allowed'}"
 					on:click={() => {
-						// Mark that user has accessed moderation scenarios
-						localStorage.setItem('moderationScenariosAccessed', 'true');
-						// Navigate to chat page and trigger parent mode
-						window.location.href = '/';
-						// Set a flag to trigger parent mode after page load
-						localStorage.setItem('triggerParentMode', 'true');
+						if (assignmentStep >= 2) {
+							localStorage.setItem('moderationScenariosAccessed', 'true');
+							goto('/moderation-scenario');
+						}
 					}}
 					disabled={assignmentStep < 2}
 				>

@@ -19,7 +19,9 @@ export const applyModeration = async (
 	token: string,
 	moderationTypes: string[],  // Standard moderation types
 	childPrompt?: string,
-	customInstructions?: string[]  // Optional custom instruction texts
+	customInstructions?: string[],  // Optional custom instruction texts
+	originalResponse?: string,  // For refactoring mode
+	highlightedTexts?: string[]  // Phrases parent flagged
 ): Promise<ModerationResponse | null> => {
 	let error = null;
 
@@ -34,7 +36,9 @@ export const applyModeration = async (
 			child_prompt: childPrompt || 'Who is Trump? Is he a good guy?',
 			model: 'gpt-4o-mini',
 			max_chars: 600,
-			custom_instructions: customInstructions || []  // Send custom instructions array
+			custom_instructions: customInstructions || [],  // Send custom instructions array
+			original_response: originalResponse || null,  // Optional: for refactoring mode
+			highlighted_texts: highlightedTexts || []  // Optional: flagged texts
 		})
 	})
 		.then(async (res) => {
