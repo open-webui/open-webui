@@ -35,11 +35,12 @@ show_main_menu() {
     echo
     echo "1) View Deployment Status"
     echo "2) Create New Deployment"
-    echo "3) Manage Existing Deployment"
-    echo "4) Generate nginx Configuration"
-    echo "5) Exit"
+    echo "3) Manage Client Deployment"
+    echo "4) Manage Sync Cluster"
+    echo "5) Generate nginx Configuration"
+    echo "6) Exit"
     echo
-    echo -n "Please select an option (1-5): "
+    echo -n "Please select an option (1-6): "
 }
 
 # Detect container type (sync-node vs client)
@@ -765,6 +766,519 @@ EOF
     done
 }
 
+# Deploy sync cluster wrapper function
+deploy_sync_cluster() {
+    clear
+    echo "╔════════════════════════════════════════╗"
+    echo "║        Deploy Sync Cluster             ║"
+    echo "╚════════════════════════════════════════╝"
+    echo
+
+    # Check if cluster already exists
+    node_a_exists=$(docker ps -a --filter "name=openwebui-sync-node-a" --format "{{.Names}}" | grep -q "openwebui-sync-node-a" && echo "yes" || echo "no")
+    node_b_exists=$(docker ps -a --filter "name=openwebui-sync-node-b" --format "{{.Names}}" | grep -q "openwebui-sync-node-b" && echo "yes" || echo "no")
+
+    if [[ "$node_a_exists" == "yes" ]] || [[ "$node_b_exists" == "yes" ]]; then
+        echo "⚠️  WARNING: Sync cluster already exists"
+        echo
+        echo "Current cluster status:"
+        if [[ "$node_a_exists" == "yes" ]]; then
+            node_a_status=$(docker ps -a --filter "name=openwebui-sync-node-a" --format "{{.Status}}")
+            echo "  Node A: $node_a_status"
+        fi
+        if [[ "$node_b_exists" == "yes" ]]; then
+            node_b_status=$(docker ps -a --filter "name=openwebui-sync-node-b" --format "{{.Status}}")
+            echo "  Node B: $node_b_status"
+        fi
+        echo
+        echo "Re-running deployment will:"
+        echo "  - Recreate sync node containers"
+        echo "  - Update to latest Docker image"
+        echo "  - Preserve cluster registration in Supabase"
+        echo "  - Preserve all configuration"
+        echo
+        echo -n "Continue with deployment? (y/N): "
+        read confirm
+        if [[ ! "$confirm" =~ ^[Yy]$ ]]; then
+            echo "Deployment cancelled."
+            echo
+            echo "Press Enter to continue..."
+            read
+            return
+        fi
+    else
+        echo "This will deploy a high-availability sync cluster with 2 nodes."
+        echo
+        echo "Requirements:"
+        echo "  ✓ Docker installed and running"
+        echo "  ✓ Supabase project configured"
+        echo "  ✓ Credentials file at mt/SYNC/.credentials"
+        echo "  ✓ IPv6 enabled (recommended for HA)"
+        echo
+        echo "What will be created:"
+        echo "  - sync-node-a (primary node, port 9443)"
+        echo "  - sync-node-b (secondary node, port 9444)"
+        echo "  - Cluster registration in Supabase"
+        echo "  - Leader election system"
+        echo
+        echo -n "Continue with deployment? (y/N): "
+        read confirm
+        if [[ ! "$confirm" =~ ^[Yy]$ ]]; then
+            echo "Deployment cancelled."
+            echo
+            echo "Press Enter to continue..."
+            read
+            return
+        fi
+    fi
+
+    echo
+    echo "Starting deployment..."
+    echo
+
+    # Check if deployment script exists
+    if [ ! -f "${SCRIPT_DIR}/SYNC/scripts/deploy-sync-cluster.sh" ]; then
+        echo "❌ ERROR: Deployment script not found"
+        echo "   Expected: ${SCRIPT_DIR}/SYNC/scripts/deploy-sync-cluster.sh"
+        echo
+        echo "Press Enter to continue..."
+        read
+        return
+    fi
+
+    # Execute deployment script
+    cd "${SCRIPT_DIR}/SYNC"
+    ./scripts/deploy-sync-cluster.sh
+
+    deployment_status=$?
+
+    echo
+    if [ $deployment_status -eq 0 ]; then
+        echo "╔════════════════════════════════════════╗"
+        echo "║   Deployment Completed Successfully    ║"
+        echo "╚════════════════════════════════════════╝"
+        echo
+        echo "Next steps:"
+        echo "  1. Verify cluster health (option 2 from cluster menu)"
+        echo "  2. Register clients for sync (option 3 → Manage Client → Sync Management)"
+        echo "  3. Monitor sync operations via cluster status"
+        echo
+        echo "Cluster endpoints:"
+        echo "  - Node A: http://localhost:9443"
+        echo "  - Node B: http://localhost:9444"
+    else
+        echo "╔════════════════════════════════════════╗"
+        echo "║      Deployment Failed                 ║"
+        echo "╚════════════════════════════════════════╝"
+        echo
+        echo "Check the output above for error details."
+        echo "Common issues:"
+        echo "  - Missing credentials file"
+        echo "  - Docker not running"
+        echo "  - Port conflicts (9443, 9444)"
+        echo "  - Supabase connection issues"
+    fi
+
+    echo
+    echo "Press Enter to continue..."
+    read
+}
+
+# Deregister sync cluster wrapper function
+deregister_sync_cluster() {
+    clear
+    echo "╔════════════════════════════════════════╗"
+    echo "║      Deregister Sync Cluster           ║"
+    echo "╚════════════════════════════════════════╝"
+    echo
+
+    # Check if cluster exists
+    node_a_exists=$(docker ps -a --filter "name=openwebui-sync-node-a" --format "{{.Names}}" | grep -q "openwebui-sync-node-a" && echo "yes" || echo "no")
+    node_b_exists=$(docker ps -a --filter "name=openwebui-sync-node-b" --format "{{.Names}}" | grep -q "openwebui-sync-node-b" && echo "yes" || echo "no")
+
+    if [[ "$node_a_exists" == "no" ]] && [[ "$node_b_exists" == "no" ]]; then
+        echo "ℹ️  No sync cluster is currently deployed"
+        echo
+        echo "Note: This command deregisters cluster metadata from Supabase."
+        echo "If you have cluster metadata in Supabase but no local containers,"
+        echo "you can still run the deregistration to clean up the database."
+        echo
+        echo -n "Continue with deregistration anyway? (y/N): "
+        read confirm
+        if [[ ! "$confirm" =~ ^[Yy]$ ]]; then
+            echo "Deregistration cancelled."
+            echo
+            echo "Press Enter to continue..."
+            read
+            return
+        fi
+    fi
+
+    echo "⚠️  CRITICAL WARNING: Cluster Deregistration"
+    echo
+    echo "This will permanently remove cluster metadata from Supabase:"
+    echo "  ❌ All host records for this cluster"
+    echo "  ❌ Leader election records (CASCADE)"
+    echo "  ❌ Client deployment records (CASCADE)"
+    echo "  ❌ Cache invalidation events (CASCADE)"
+    echo "  ❌ Sync job history (CASCADE)"
+    echo
+    echo "IMPORTANT: This operation will be BLOCKED if any clients"
+    echo "have sync enabled. You must disable or migrate them first."
+    echo
+    echo "Local Docker containers (sync-node-a, sync-node-b) will NOT"
+    echo "be automatically removed. You can remove them manually if needed."
+    echo
+    echo "This is typically done BEFORE destroying a host/server."
+    echo
+
+    # Check if deregister script exists
+    if [ ! -f "${SCRIPT_DIR}/SYNC/scripts/deregister-cluster.sh" ]; then
+        echo "❌ ERROR: Deregistration script not found"
+        echo "   Expected: ${SCRIPT_DIR}/SYNC/scripts/deregister-cluster.sh"
+        echo
+        echo "Press Enter to continue..."
+        read
+        return
+    fi
+
+    echo -n "Type 'DEREGISTER' to confirm cluster deregistration: "
+    read confirmation
+
+    if [[ "$confirmation" != "DEREGISTER" ]]; then
+        echo
+        echo "Deregistration cancelled (confirmation did not match)."
+        echo
+        echo "Press Enter to continue..."
+        read
+        return
+    fi
+
+    echo
+    echo "Starting deregistration..."
+    echo
+
+    # Execute deregistration script
+    cd "${SCRIPT_DIR}/SYNC"
+    ./scripts/deregister-cluster.sh
+
+    deregister_status=$?
+
+    echo
+    if [ $deregister_status -eq 0 ]; then
+        echo "╔════════════════════════════════════════╗"
+        echo "║  Deregistration Completed Successfully ║"
+        echo "╚════════════════════════════════════════╝"
+        echo
+        echo "Cluster metadata has been removed from Supabase."
+        echo
+        echo "Next steps:"
+        echo "  1. If destroying host: Safe to proceed with host destruction"
+        echo "  2. If redeploying: Run option 1 (Deploy Sync Cluster) to create new cluster"
+        echo "  3. Local containers: Remove manually if no longer needed:"
+        echo "     docker rm -f openwebui-sync-node-a openwebui-sync-node-b"
+    else
+        echo "╔════════════════════════════════════════╗"
+        echo "║      Deregistration Failed             ║"
+        echo "╚════════════════════════════════════════╝"
+        echo
+        echo "Check the output above for details."
+        echo
+        echo "Common reasons for failure:"
+        echo "  ❌ Sync-enabled clients still registered"
+        echo "     → Use client sync management to disable sync first"
+        echo "  ❌ Missing credentials file"
+        echo "  ❌ Cannot connect to Supabase"
+        echo "  ❌ Cluster not found in database"
+    fi
+
+    echo
+    echo "Press Enter to continue..."
+    read
+}
+
+# View cluster health function
+view_cluster_health() {
+    clear
+    echo "╔════════════════════════════════════════╗"
+    echo "║         Cluster Health Check           ║"
+    echo "╚════════════════════════════════════════╝"
+    echo
+
+    # Check if nodes exist
+    node_a_exists=$(docker ps -a --filter "name=openwebui-sync-node-a" --format "{{.Names}}" | grep -q "openwebui-sync-node-a" && echo "yes" || echo "no")
+    node_b_exists=$(docker ps -a --filter "name=openwebui-sync-node-b" --format "{{.Names}}" | grep -q "openwebui-sync-node-b" && echo "yes" || echo "no")
+
+    if [[ "$node_a_exists" == "no" ]] && [[ "$node_b_exists" == "no" ]]; then
+        echo "❌ No sync cluster deployed"
+        echo
+        echo "Deploy a cluster first using option 1 (Deploy Sync Cluster)"
+        echo
+        echo "Press Enter to continue..."
+        read
+        return
+    fi
+
+    # Check Node A
+    echo "═══════════════════════════════════════════════════════════════════"
+    echo "Sync Node A Status:"
+    echo "═══════════════════════════════════════════════════════════════════"
+    echo
+
+    if [[ "$node_a_exists" == "yes" ]]; then
+        node_a_status=$(docker ps -a --filter "name=openwebui-sync-node-a" --format "{{.Status}}")
+        node_a_running=$(docker ps --filter "name=openwebui-sync-node-a" --format "{{.Names}}" | grep -q "openwebui-sync-node-a" && echo "yes" || echo "no")
+
+        echo "Container Status: $node_a_status"
+
+        if [[ "$node_a_running" == "yes" ]]; then
+            echo "Health Endpoint: http://localhost:9443/health"
+            echo
+
+            if curl -s -f "http://localhost:9443/health" > /tmp/node_a_health.json 2>/dev/null; then
+                echo "Health Check: ✅ Responding"
+                if command -v jq &> /dev/null; then
+                    cat /tmp/node_a_health.json | jq '.'
+                else
+                    cat /tmp/node_a_health.json
+                    echo
+                    echo "(Install 'jq' for formatted JSON output)"
+                fi
+                rm -f /tmp/node_a_health.json
+            else
+                echo "Health Check: ❌ Not responding"
+                echo "  Node may still be starting up or has issues"
+            fi
+        else
+            echo "Health Check: ⚠️  Container not running"
+        fi
+    else
+        echo "❌ Node A not deployed"
+    fi
+
+    echo
+    echo "═══════════════════════════════════════════════════════════════════"
+    echo "Sync Node B Status:"
+    echo "═══════════════════════════════════════════════════════════════════"
+    echo
+
+    if [[ "$node_b_exists" == "yes" ]]; then
+        node_b_status=$(docker ps -a --filter "name=openwebui-sync-node-b" --format "{{.Status}}")
+        node_b_running=$(docker ps --filter "name=openwebui-sync-node-b" --format "{{.Names}}" | grep -q "openwebui-sync-node-b" && echo "yes" || echo "no")
+
+        echo "Container Status: $node_b_status"
+
+        if [[ "$node_b_running" == "yes" ]]; then
+            echo "Health Endpoint: http://localhost:9444/health"
+            echo
+
+            if curl -s -f "http://localhost:9444/health" > /tmp/node_b_health.json 2>/dev/null; then
+                echo "Health Check: ✅ Responding"
+                if command -v jq &> /dev/null; then
+                    cat /tmp/node_b_health.json | jq '.'
+                else
+                    cat /tmp/node_b_health.json
+                    echo
+                    echo "(Install 'jq' for formatted JSON output)"
+                fi
+                rm -f /tmp/node_b_health.json
+            else
+                echo "Health Check: ❌ Not responding"
+                echo "  Node may still be starting up or has issues"
+            fi
+        else
+            echo "Health Check: ⚠️  Container not running"
+        fi
+    else
+        echo "❌ Node B not deployed"
+    fi
+
+    # Try to get cluster status from one of the running nodes
+    echo
+    echo "═══════════════════════════════════════════════════════════════════"
+    echo "Cluster Status (Leader Election):"
+    echo "═══════════════════════════════════════════════════════════════════"
+    echo
+
+    cluster_status_retrieved="no"
+
+    # Try node A first
+    if [[ "$node_a_exists" == "yes" ]] && [[ "$node_a_running" == "yes" ]]; then
+        if curl -s -f "http://localhost:9443/api/v1/cluster/status" > /tmp/cluster_status.json 2>/dev/null; then
+            cluster_status_retrieved="yes"
+            if command -v jq &> /dev/null; then
+                cat /tmp/cluster_status.json | jq '.'
+            else
+                cat /tmp/cluster_status.json
+                echo
+                echo "(Install 'jq' for formatted JSON output)"
+            fi
+            rm -f /tmp/cluster_status.json
+        fi
+    fi
+
+    # Try node B if node A didn't work
+    if [[ "$cluster_status_retrieved" == "no" ]] && [[ "$node_b_exists" == "yes" ]] && [[ "$node_b_running" == "yes" ]]; then
+        if curl -s -f "http://localhost:9444/api/v1/cluster/status" > /tmp/cluster_status.json 2>/dev/null; then
+            cluster_status_retrieved="yes"
+            if command -v jq &> /dev/null; then
+                cat /tmp/cluster_status.json | jq '.'
+            else
+                cat /tmp/cluster_status.json
+                echo
+                echo "(Install 'jq' for formatted JSON output)"
+            fi
+            rm -f /tmp/cluster_status.json
+        fi
+    fi
+
+    if [[ "$cluster_status_retrieved" == "no" ]]; then
+        echo "❌ Could not retrieve cluster status"
+        echo "  Ensure at least one node is running and responding"
+    fi
+
+    echo
+    echo "═══════════════════════════════════════════════════════════════════"
+    echo
+    echo "Press Enter to continue..."
+    read
+}
+
+# Sync Cluster management menu
+manage_sync_cluster_menu() {
+    while true; do
+        clear
+        echo "╔════════════════════════════════════════╗"
+        echo "║       Manage Sync Cluster Menu         ║"
+        echo "╚════════════════════════════════════════╝"
+        echo
+
+        # Check if sync nodes exist
+        node_a_exists=$(docker ps -a --filter "name=openwebui-sync-node-a" --format "{{.Names}}" | grep -q "openwebui-sync-node-a" && echo "yes" || echo "no")
+        node_b_exists=$(docker ps -a --filter "name=openwebui-sync-node-b" --format "{{.Names}}" | grep -q "openwebui-sync-node-b" && echo "yes" || echo "no")
+
+        if [[ "$node_a_exists" == "yes" ]] || [[ "$node_b_exists" == "yes" ]]; then
+            echo "Cluster Status:"
+            if [[ "$node_a_exists" == "yes" ]]; then
+                node_a_status=$(docker ps -a --filter "name=openwebui-sync-node-a" --format "{{.Status}}")
+                echo "  Node A: $node_a_status"
+            else
+                echo "  Node A: Not deployed"
+            fi
+            if [[ "$node_b_exists" == "yes" ]]; then
+                node_b_status=$(docker ps -a --filter "name=openwebui-sync-node-b" --format "{{.Status}}")
+                echo "  Node B: $node_b_status"
+            else
+                echo "  Node B: Not deployed"
+            fi
+        else
+            echo "⚠️  No sync cluster deployed"
+        fi
+        echo
+
+        echo "1) Deploy Sync Cluster"
+        echo "2) View Cluster Health"
+        echo "3) Manage Sync Node A"
+        echo "4) Manage Sync Node B"
+        echo "5) Deregister Cluster"
+        echo "6) Help (Documentation)"
+        echo "7) Return to Main Menu"
+        echo
+        echo -n "Select option (1-7): "
+        read choice
+
+        case "$choice" in
+            1)
+                deploy_sync_cluster
+                ;;
+            2)
+                view_cluster_health
+                ;;
+            3)
+                if [[ "$node_a_exists" == "yes" ]]; then
+                    manage_sync_node "sync-node-a"
+                else
+                    echo
+                    echo "❌ Sync Node A is not deployed"
+                    echo "   Use option 1 to deploy the sync cluster first"
+                    echo
+                    echo "Press Enter to continue..."
+                    read
+                fi
+                ;;
+            4)
+                if [[ "$node_b_exists" == "yes" ]]; then
+                    manage_sync_node "sync-node-b"
+                else
+                    echo
+                    echo "❌ Sync Node B is not deployed"
+                    echo "   Use option 1 to deploy the sync cluster first"
+                    echo
+                    echo "Press Enter to continue..."
+                    read
+                fi
+                ;;
+            5)
+                deregister_sync_cluster
+                ;;
+            6)
+                clear
+                echo "╔════════════════════════════════════════╗"
+                echo "║         Sync Cluster Help              ║"
+                echo "╚════════════════════════════════════════╝"
+                echo
+                echo "Available documentation:"
+                echo
+                if [ -f "${SCRIPT_DIR}/SYNC/README.md" ]; then
+                    echo "1) View SYNC/README.md (press 1)"
+                fi
+                if [ -f "${SCRIPT_DIR}/SYNC/TECHNICAL_REFERENCE.md" ]; then
+                    echo "2) View SYNC/TECHNICAL_REFERENCE.md (press 2)"
+                fi
+                if [ -f "${SCRIPT_DIR}/SYNC/CLUSTER_LIFECYCLE_FAQ.md" ]; then
+                    echo "3) View SYNC/CLUSTER_LIFECYCLE_FAQ.md (press 3)"
+                fi
+                echo "0) Return to cluster menu"
+                echo
+                echo -n "Select documentation (0-3): "
+                read doc_choice
+
+                case "$doc_choice" in
+                    1)
+                        if [ -f "${SCRIPT_DIR}/SYNC/README.md" ]; then
+                            less "${SCRIPT_DIR}/SYNC/README.md"
+                        fi
+                        ;;
+                    2)
+                        if [ -f "${SCRIPT_DIR}/SYNC/TECHNICAL_REFERENCE.md" ]; then
+                            less "${SCRIPT_DIR}/SYNC/TECHNICAL_REFERENCE.md"
+                        fi
+                        ;;
+                    3)
+                        if [ -f "${SCRIPT_DIR}/SYNC/CLUSTER_LIFECYCLE_FAQ.md" ]; then
+                            less "${SCRIPT_DIR}/SYNC/CLUSTER_LIFECYCLE_FAQ.md"
+                        fi
+                        ;;
+                    0)
+                        # Return to cluster menu
+                        ;;
+                    *)
+                        echo "Invalid selection"
+                        sleep 1
+                        ;;
+                esac
+                ;;
+            7)
+                return
+                ;;
+            *)
+                echo "Invalid selection. Press Enter to continue..."
+                read
+                ;;
+        esac
+    done
+}
+
 manage_deployment_menu() {
     while true; do
         clear
@@ -773,12 +1287,22 @@ manage_deployment_menu() {
         echo "╚════════════════════════════════════════╝"
         echo
 
-        # List available clients
-        echo "Available deployments:"
-        clients=($(docker ps -a --filter "name=openwebui-" --format "{{.Names}}" | sed 's/openwebui-//'))
+        # List available clients (exclude sync-nodes)
+        echo "Available client deployments:"
+        all_containers=($(docker ps -a --filter "name=openwebui-" --format "{{.Names}}" | sed 's/openwebui-//'))
+
+        # Filter out sync-nodes
+        clients=()
+        for container in "${all_containers[@]}"; do
+            if [[ "$container" != "sync-node-a" ]] && [[ "$container" != "sync-node-b" ]]; then
+                clients+=("$container")
+            fi
+        done
 
         if [ ${#clients[@]} -eq 0 ]; then
-            echo "No deployments found."
+            echo "No client deployments found."
+            echo
+            echo "ℹ️  Note: Sync nodes are managed via option 4 (Manage Sync Cluster)"
             echo
             echo "Press Enter to return to main menu..."
             read
@@ -787,21 +1311,17 @@ manage_deployment_menu() {
 
         for i in "${!clients[@]}"; do
             status=$(docker ps -a --filter "name=openwebui-${clients[$i]}" --format "{{.Status}}")
-            container_type=$(detect_container_type "${clients[$i]}")
 
             # Try to get the redirect URI from container environment to extract domain
             redirect_uri=$(docker exec "openwebui-${clients[$i]}" env 2>/dev/null | grep "GOOGLE_REDIRECT_URI=" | cut -d'=' -f2- 2>/dev/null || echo "")
 
-            if [[ "$container_type" == "sync-node" ]]; then
-                # Sync node - show with [SYNC NODE] indicator
-                echo "$((i+1))) ${clients[$i]} [SYNC NODE] ($status)"
-            elif [[ -n "$redirect_uri" ]]; then
+            if [[ -n "$redirect_uri" ]]; then
                 # Extract domain from redirect URI (remove http/https and /oauth/google/callback)
                 domain=$(echo "$redirect_uri" | sed -E 's|https?://||' | sed 's|/oauth/google/callback||')
-                echo "$((i+1))) ${clients[$i]} [CLIENT] → $domain ($status)"
+                echo "$((i+1))) ${clients[$i]} → $domain ($status)"
             else
                 # Fallback if we can't get the redirect URI
-                echo "$((i+1))) ${clients[$i]} [CLIENT] ($status)"
+                echo "$((i+1))) ${clients[$i]} ($status)"
             fi
         done
 
@@ -1729,9 +2249,12 @@ if [ $# -eq 0 ]; then
                 manage_deployment_menu
                 ;;
             4)
-                generate_nginx_config
+                manage_sync_cluster_menu
                 ;;
             5)
+                generate_nginx_config
+                ;;
+            6)
                 echo "Goodbye!"
                 exit 0
                 ;;

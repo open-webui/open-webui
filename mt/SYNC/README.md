@@ -267,6 +267,60 @@ curl http://localhost:9443/health | jq '.is_leader'
 
 The sync system is fully integrated with `mt/client-manager.sh` as of version 2.0 (2025-10-14).
 
+#### Managing Sync Cluster
+
+Access comprehensive cluster management through the main menu:
+
+```bash
+cd mt
+./client-manager.sh
+# Select: 4) Manage Sync Cluster
+# Available options:
+#   1) Deploy Sync Cluster       - Full HA deployment (2 nodes + Supabase registration)
+#   2) View Cluster Health        - Combined status of both nodes + leader info
+#   3) Manage Sync Node A         - Individual node A operations
+#   4) Manage Sync Node B         - Individual node B operations
+#   5) Deregister Cluster         - Clean removal before host destruction
+#   6) Help (Documentation)       - View README, TECHNICAL_REFERENCE, FAQ
+#   7) Return to Main Menu
+```
+
+**Cluster Operations**:
+- **Deploy**: Handles full cluster setup including IPv6, Docker config, node deployment, and Supabase registration
+- **View Health**: Queries both nodes (9443, 9444) for health status and displays current leader
+- **Individual Node Management**: Direct access to node-specific operations (logs, restart, etc.)
+- **Deregister**: Safe cluster removal with sync-enabled client checks and cascade cleanup
+- **Help**: Quick access to all documentation files via less/pager
+
+**Workflow Examples**:
+
+**Initial Cluster Deployment**:
+```bash
+# 1. Main menu → 4) Manage Sync Cluster
+# 2. Select: 1) Deploy Sync Cluster
+# 3. Review requirements and confirm
+# 4. Script handles IPv6, Docker, containers, and Supabase
+# 5. Returns to menu with deployment status
+```
+
+**Monitoring Cluster Health**:
+```bash
+# 1. Main menu → 4) Manage Sync Cluster
+# 2. Select: 2) View Cluster Health
+# 3. See: Node A status, Node B status, leader election info
+# 4. Press Enter to return
+```
+
+**Before Host Destruction**:
+```bash
+# 1. Main menu → 4) Manage Sync Cluster
+# 2. Select: 5) Deregister Cluster
+# 3. Review what will be deleted
+# 4. Type 'DEREGISTER' to confirm
+# 5. Script cleans up Supabase metadata
+# 6. Safe to destroy host/droplet
+```
+
 #### Managing Sync Nodes
 
 Access sync node management through the deployment menu:
@@ -359,7 +413,7 @@ cd mt
 # 5. Verify: is_leader, uptime, API responding
 ```
 
-**Note**: Cluster deployment and deregistration still require dedicated scripts (`deploy-sync-cluster.sh` and `deregister-cluster.sh`) but all operational management is now available through client-manager.
+**Note**: Cluster deployment and deregistration are now fully integrated into client-manager (main menu → option 4 → Manage Sync Cluster). Individual node operations, sync client registration, and all other sync functionality are also accessible through the unified menu interface.
 
 ## API Reference
 
