@@ -2291,7 +2291,6 @@ DATALAB_MARKER_OUTPUT_FORMAT = PersistentConfig(
     os.environ.get("DATALAB_MARKER_OUTPUT_FORMAT", "markdown"),
 )
 
-# MinerU Configuration
 MINERU_API_MODE = PersistentConfig(
     "MINERU_API_MODE",
     "rag.mineru_api_mode",
@@ -2310,40 +2309,16 @@ MINERU_API_KEY = PersistentConfig(
     os.environ.get("MINERU_API_KEY", ""),
 )
 
-MINERU_ENABLE_OCR = PersistentConfig(
-    "MINERU_ENABLE_OCR",
-    "rag.mineru_enable_ocr",
-    os.environ.get("MINERU_ENABLE_OCR", "false").lower() == "true",
-)
+mineru_params = os.getenv("MINERU_PARAMS", "")
+try:
+    mineru_params = json.loads(mineru_params)
+except json.JSONDecodeError:
+    mineru_params = {}
 
-MINERU_ENABLE_FORMULA = PersistentConfig(
-    "MINERU_ENABLE_FORMULA",
-    "rag.mineru_enable_formula",
-    os.environ.get("MINERU_ENABLE_FORMULA", "true").lower() == "true",
-)
-
-MINERU_ENABLE_TABLE = PersistentConfig(
-    "MINERU_ENABLE_TABLE",
-    "rag.mineru_enable_table",
-    os.environ.get("MINERU_ENABLE_TABLE", "true").lower() == "true",
-)
-
-MINERU_LANGUAGE = PersistentConfig(
-    "MINERU_LANGUAGE",
-    "rag.mineru_language",
-    os.environ.get("MINERU_LANGUAGE", "en"),
-)
-
-MINERU_MODEL_VERSION = PersistentConfig(
-    "MINERU_MODEL_VERSION",
-    "rag.mineru_model_version",
-    os.environ.get("MINERU_MODEL_VERSION", "pipeline"),  # "pipeline" or "vlm"
-)
-
-MINERU_PAGE_RANGES = PersistentConfig(
-    "MINERU_PAGE_RANGES",
-    "rag.mineru_page_ranges",
-    os.environ.get("MINERU_PAGE_RANGES", ""),
+MINERU_PARAMS = PersistentConfig(
+    "MINERU_PARAMS",
+    "rag.mineru_params",
+    mineru_params,
 )
 
 EXTERNAL_DOCUMENT_LOADER_URL = PersistentConfig(

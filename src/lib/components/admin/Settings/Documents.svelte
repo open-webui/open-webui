@@ -791,106 +791,57 @@
 							</div>
 						</div>
 
-							<!-- API URL -->
+						<!-- API URL -->
+						<div class="flex w-full mt-2">
+							<input
+								class="flex-1 w-full text-sm bg-transparent outline-hidden"
+								placeholder={RAGConfig.MINERU_API_MODE === 'cloud' 
+									? $i18n.t('https://mineru.net/api/v4')
+									: $i18n.t('http://localhost:8000')}
+								bind:value={RAGConfig.MINERU_API_URL}
+							/>
+						</div>
+
+						<!-- API Key (Cloud only) -->
+						{#if RAGConfig.MINERU_API_MODE === 'cloud'}
 							<div class="flex w-full mt-2">
-								<input
-									class="flex-1 w-full text-sm bg-transparent outline-hidden"
-									placeholder={RAGConfig.MINERU_API_MODE === 'cloud' 
-										? $i18n.t('https://mineru.net/api/v4')
-										: $i18n.t('http://localhost:8000')}
-									bind:value={RAGConfig.MINERU_API_URL}
+								<SensitiveInput
+									placeholder={$i18n.t('Enter MinerU API Key')}
+									bind:value={RAGConfig.MINERU_API_KEY}
 								/>
 							</div>
-
-							<!-- API Key (Cloud only) -->
-							{#if RAGConfig.MINERU_API_MODE === 'cloud'}
-								<div class="flex w-full mt-2">
-									<SensitiveInput
-										placeholder={$i18n.t('Enter MinerU API Key')}
-										bind:value={RAGConfig.MINERU_API_KEY}
-									/>
-								</div>
-							{/if}
-
-							<!-- OCR Toggle -->
-							<div class="flex w-full mt-2">
-								<div class="flex-1 flex justify-between">
-									<div class="self-center text-xs font-medium">
-										{$i18n.t('Enable OCR (for scanned documents)')}
-									</div>
-									<div class="flex items-center relative">
-										<Switch bind:state={RAGConfig.MINERU_ENABLE_OCR} />
-									</div>
-								</div>
-							</div>
-
-							<!-- Formula Recognition -->
-							<div class="flex w-full mt-2">
-								<div class="flex-1 flex justify-between">
-									<div class="self-center text-xs font-medium">
-										{$i18n.t('Enable Formula Recognition')}
-									</div>
-									<div class="flex items-center relative">
-										<Switch bind:state={RAGConfig.MINERU_ENABLE_FORMULA} />
-									</div>
-								</div>
-							</div>
-
-							<!-- Table Recognition -->
-							<div class="flex w-full mt-2">
-								<div class="flex-1 flex justify-between">
-									<div class="self-center text-xs font-medium">
-										{$i18n.t('Enable Table Recognition')}
-									</div>
-									<div class="flex items-center relative">
-										<Switch bind:state={RAGConfig.MINERU_ENABLE_TABLE} />
-									</div>
-								</div>
-							</div>
-
-							<!-- Advanced Settings Toggle -->
-							<details class="w-full mt-2">
-								<summary class="text-xs font-medium cursor-pointer hover:text-gray-600 dark:hover:text-gray-300">
-									{$i18n.t('Advanced Settings')}
-								</summary>
-								
-								<div class="mt-2 space-y-2 pl-2 border-l-2 border-gray-200 dark:border-gray-700">
-									<!-- Model Version -->
-									<div class="flex w-full">
-										<div class="flex-1 flex justify-between">
-											<div class="self-center text-xs font-medium">
-												{$i18n.t('Model Version')}
-											</div>
-											<select
-												class="dark:bg-gray-900 w-fit pr-8 rounded-sm px-2 text-xs bg-transparent outline-hidden"
-												bind:value={RAGConfig.MINERU_MODEL_VERSION}
-											>
-												<option value="pipeline">{$i18n.t('Pipeline (Faster, CPU-friendly)')}</option>
-												<option value="vlm">{$i18n.t('VLM (More Accurate, GPU required)')}</option>
-											</select>
-										</div>
-									</div>
-
-									<!-- Language -->
-									<div class="flex w-full">
-										<input
-											class="flex-1 w-full text-xs bg-transparent outline-hidden"
-											placeholder={$i18n.t('Language: en, ch, japan, korean, etc. (default: en)')}
-											bind:value={RAGConfig.MINERU_LANGUAGE}
-										/>
-									</div>
-
-									<!-- Page Ranges (Optional) -->
-									<div class="flex w-full">
-										<input
-											class="flex-1 w-full text-xs bg-transparent outline-hidden"
-											placeholder={$i18n.t('Page ranges (optional): e.g., 1-10,15,20-25')}
-											bind:value={RAGConfig.MINERU_PAGE_RANGES}
-										/>
-									</div>
-								</div>
-							</details>
 						{/if}
+
+						<!-- Parameters -->
+						<div class="flex justify-between w-full mt-2">
+							<div class="self-center text-xs font-medium">
+								<Tooltip 
+									content={$i18n.t('Advanced parameters for MinerU parsing (enable_ocr, enable_formula, enable_table, language, model_version, page_ranges)')} 
+									placement="top-start"
+								>
+									{$i18n.t('Parameters')}
+								</Tooltip>
+							</div>
+							<div class="">
+								<Textarea
+									value={typeof RAGConfig.MINERU_PARAMS === 'object' && RAGConfig.MINERU_PARAMS !== null && Object.keys(RAGConfig.MINERU_PARAMS).length > 0
+										? JSON.stringify(RAGConfig.MINERU_PARAMS, null, 2)
+										: ''}
+									on:input={(e) => {
+										try {
+											const value = e.target.value.trim();
+											RAGConfig.MINERU_PARAMS = value ? JSON.parse(value) : {};
+										} catch (err) {
+											// Keep the string value if JSON is invalid (user is still typing)
+											RAGConfig.MINERU_PARAMS = e.target.value;
+										}
+									}}
+									placeholder={`{\n  "enable_ocr": false,\n  "enable_formula": true,\n  "enable_table": true,\n  "language": "en",\n  "model_version": "pipeline",\n  "page_ranges": ""\n}`}
+									minSize={100}
+								/>
+							</div>
+						</div>
+					{/if}
 					</div>
 
 					<div class="  mb-2.5 flex w-full justify-between">

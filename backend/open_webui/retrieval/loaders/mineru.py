@@ -25,23 +25,21 @@ class MinerULoader:
         api_mode: str = "local",
         api_url: str = "http://localhost:8000",
         api_key: str = "",
-        enable_ocr: bool = False,
-        enable_formula: bool = True,
-        enable_table: bool = True,
-        language: str = "en",
-        model_version: str = "pipeline",
-        page_ranges: str = "",
+        params: dict = None,
     ):
         self.file_path = file_path
         self.api_mode = api_mode.lower()
         self.api_url = api_url.rstrip("/")
         self.api_key = api_key
-        self.enable_ocr = enable_ocr
-        self.enable_formula = enable_formula
-        self.enable_table = enable_table
-        self.language = language
-        self.model_version = model_version
-        self.page_ranges = page_ranges
+
+        # Parse params dict with defaults
+        params = params or {}
+        self.enable_ocr = params.get("enable_ocr", False)
+        self.enable_formula = params.get("enable_formula", True)
+        self.enable_table = params.get("enable_table", True)
+        self.language = params.get("language", "en")
+        self.model_version = params.get("model_version", "pipeline")
+        self.page_ranges = params.get("page_ranges", "")
 
         # Validate API mode
         if self.api_mode not in ["local", "cloud"]:

@@ -470,12 +470,7 @@ async def get_rag_config(request: Request, user=Depends(get_admin_user)):
         "MINERU_API_MODE": request.app.state.config.MINERU_API_MODE,
         "MINERU_API_URL": request.app.state.config.MINERU_API_URL,
         "MINERU_API_KEY": request.app.state.config.MINERU_API_KEY,
-        "MINERU_ENABLE_OCR": request.app.state.config.MINERU_ENABLE_OCR,
-        "MINERU_ENABLE_FORMULA": request.app.state.config.MINERU_ENABLE_FORMULA,
-        "MINERU_ENABLE_TABLE": request.app.state.config.MINERU_ENABLE_TABLE,
-        "MINERU_LANGUAGE": request.app.state.config.MINERU_LANGUAGE,
-        "MINERU_MODEL_VERSION": request.app.state.config.MINERU_MODEL_VERSION,
-        "MINERU_PAGE_RANGES": request.app.state.config.MINERU_PAGE_RANGES,
+        "MINERU_PARAMS": request.app.state.config.MINERU_PARAMS,
         # Reranking settings
         "RAG_RERANKING_MODEL": request.app.state.config.RAG_RERANKING_MODEL,
         "RAG_RERANKING_ENGINE": request.app.state.config.RAG_RERANKING_ENGINE,
@@ -661,12 +656,7 @@ class ConfigForm(BaseModel):
     MINERU_API_MODE: Optional[str] = None
     MINERU_API_URL: Optional[str] = None
     MINERU_API_KEY: Optional[str] = None
-    MINERU_ENABLE_OCR: Optional[bool] = None
-    MINERU_ENABLE_FORMULA: Optional[bool] = None
-    MINERU_ENABLE_TABLE: Optional[bool] = None
-    MINERU_LANGUAGE: Optional[str] = None
-    MINERU_MODEL_VERSION: Optional[str] = None
-    MINERU_PAGE_RANGES: Optional[str] = None
+    MINERU_PARAMS: Optional[dict] = None
 
     # Reranking settings
     RAG_RERANKING_MODEL: Optional[str] = None
@@ -923,35 +913,10 @@ async def update_rag_config(
         if form_data.MINERU_API_KEY is not None
         else request.app.state.config.MINERU_API_KEY
     )
-    request.app.state.config.MINERU_ENABLE_OCR = (
-        form_data.MINERU_ENABLE_OCR
-        if form_data.MINERU_ENABLE_OCR is not None
-        else request.app.state.config.MINERU_ENABLE_OCR
-    )
-    request.app.state.config.MINERU_ENABLE_FORMULA = (
-        form_data.MINERU_ENABLE_FORMULA
-        if form_data.MINERU_ENABLE_FORMULA is not None
-        else request.app.state.config.MINERU_ENABLE_FORMULA
-    )
-    request.app.state.config.MINERU_ENABLE_TABLE = (
-        form_data.MINERU_ENABLE_TABLE
-        if form_data.MINERU_ENABLE_TABLE is not None
-        else request.app.state.config.MINERU_ENABLE_TABLE
-    )
-    request.app.state.config.MINERU_LANGUAGE = (
-        form_data.MINERU_LANGUAGE
-        if form_data.MINERU_LANGUAGE is not None
-        else request.app.state.config.MINERU_LANGUAGE
-    )
-    request.app.state.config.MINERU_MODEL_VERSION = (
-        form_data.MINERU_MODEL_VERSION
-        if form_data.MINERU_MODEL_VERSION is not None
-        else request.app.state.config.MINERU_MODEL_VERSION
-    )
-    request.app.state.config.MINERU_PAGE_RANGES = (
-        form_data.MINERU_PAGE_RANGES
-        if form_data.MINERU_PAGE_RANGES is not None
-        else request.app.state.config.MINERU_PAGE_RANGES
+    request.app.state.config.MINERU_PARAMS = (
+        form_data.MINERU_PARAMS
+        if form_data.MINERU_PARAMS is not None
+        else request.app.state.config.MINERU_PARAMS
     )
 
     # Reranking settings
@@ -1222,12 +1187,7 @@ async def update_rag_config(
         "MINERU_API_MODE": request.app.state.config.MINERU_API_MODE,
         "MINERU_API_URL": request.app.state.config.MINERU_API_URL,
         "MINERU_API_KEY": request.app.state.config.MINERU_API_KEY,
-        "MINERU_ENABLE_OCR": request.app.state.config.MINERU_ENABLE_OCR,
-        "MINERU_ENABLE_FORMULA": request.app.state.config.MINERU_ENABLE_FORMULA,
-        "MINERU_ENABLE_TABLE": request.app.state.config.MINERU_ENABLE_TABLE,
-        "MINERU_LANGUAGE": request.app.state.config.MINERU_LANGUAGE,
-        "MINERU_MODEL_VERSION": request.app.state.config.MINERU_MODEL_VERSION,
-        "MINERU_PAGE_RANGES": request.app.state.config.MINERU_PAGE_RANGES,
+        "MINERU_PARAMS": request.app.state.config.MINERU_PARAMS,
         # Reranking settings
         "RAG_RERANKING_MODEL": request.app.state.config.RAG_RERANKING_MODEL,
         "RAG_RERANKING_ENGINE": request.app.state.config.RAG_RERANKING_ENGINE,
@@ -1641,12 +1601,7 @@ def process_file(
                         MINERU_API_MODE=request.app.state.config.MINERU_API_MODE,
                         MINERU_API_URL=request.app.state.config.MINERU_API_URL,
                         MINERU_API_KEY=request.app.state.config.MINERU_API_KEY,
-                        MINERU_ENABLE_OCR=request.app.state.config.MINERU_ENABLE_OCR,
-                        MINERU_ENABLE_FORMULA=request.app.state.config.MINERU_ENABLE_FORMULA,
-                        MINERU_ENABLE_TABLE=request.app.state.config.MINERU_ENABLE_TABLE,
-                        MINERU_LANGUAGE=request.app.state.config.MINERU_LANGUAGE,
-                        MINERU_MODEL_VERSION=request.app.state.config.MINERU_MODEL_VERSION,
-                        MINERU_PAGE_RANGES=request.app.state.config.MINERU_PAGE_RANGES,
+                        MINERU_PARAMS=request.app.state.config.MINERU_PARAMS,
                     )
                     docs = loader.load(
                         file.filename, file.meta.get("content_type"), file_path

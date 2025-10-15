@@ -382,12 +382,7 @@ class Loader:
                 api_mode=self.kwargs.get("MINERU_API_MODE", "local"),
                 api_url=self.kwargs.get("MINERU_API_URL", "http://localhost:8000"),
                 api_key=self.kwargs.get("MINERU_API_KEY", ""),
-                enable_ocr=self.kwargs.get("MINERU_ENABLE_OCR", False),
-                enable_formula=self.kwargs.get("MINERU_ENABLE_FORMULA", True),
-                enable_table=self.kwargs.get("MINERU_ENABLE_TABLE", True),
-                language=self.kwargs.get("MINERU_LANGUAGE", "en"),
-                model_version=self.kwargs.get("MINERU_MODEL_VERSION", "pipeline"),
-                page_ranges=self.kwargs.get("MINERU_PAGE_RANGES", ""),
+                params=self.kwargs.get("MINERU_PARAMS", {}),
             )
         elif (
             self.engine == "mistral_ocr"
