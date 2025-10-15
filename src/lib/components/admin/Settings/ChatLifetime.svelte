@@ -17,7 +17,8 @@
 		type ChatLifetimeScheduleInfo
 	} from '$lib/apis/configs';
 	import { getChatList } from '$lib/apis/chats';
-	import { chats, currentChatPage } from '$lib/stores';
+	import { getPinnedChatList } from '$lib/apis/chats';
+	import { chats, currentChatPage, pinnedChats } from '$lib/stores';
 
 	import Switch from '$lib/components/common/Switch.svelte';
 	import Tooltip from '$lib/components/common/Tooltip.svelte';
@@ -131,15 +132,15 @@
 
 				// Only refresh the chat list if chats were actually deleted
 				if (chatsDeleted > 0) {
-					console.log('Refreshing chat list after cleanup - chats deleted:', chatsDeleted);
 					const updatedChats = await getChatList(localStorage.token, $currentChatPage);
-					console.log('Retrieved updated chat list:', updatedChats);
+					const updatedPinnedChats = await getPinnedChatList(localStorage.token);
 					chats.set(updatedChats);
-					console.log('Chat list updated in store');
+					pinnedChats.set(updatedPinnedChats);
 
-					// Force a reactive update by updating the store in the next tick
+					// Force a reactive update by updating both stores in the next tick
 					setTimeout(() => {
 						chats.update((c) => [...c]);
+						pinnedChats.update((c) => [...c]);
 					}, 100);
 				}
 			} else {
@@ -159,7 +160,9 @@
 			// based on CHAT_LIFETIME_ENABLED config, so we just pass the current settings
 			const result = await triggerComprehensiveCleanup(localStorage.token, {
 				max_age_days: config.days,
-				include_chat_cleanup: true
+				include_chat_cleanup: true,
+				preserve_pinned: config.preserve_pinned,
+				preserve_archived: config.preserve_archived
 			});
 
 			if (result) {
@@ -202,18 +205,15 @@
 
 				// Only refresh the chat list if chats were actually deleted
 				if (chatsDeleted > 0) {
-					console.log(
-						'Refreshing chat list after comprehensive cleanup - chats deleted:',
-						chatsDeleted
-					);
 					const updatedChats = await getChatList(localStorage.token, $currentChatPage);
-					console.log('Retrieved updated chat list:', updatedChats);
+					const updatedPinnedChats = await getPinnedChatList(localStorage.token);
 					chats.set(updatedChats);
-					console.log('Chat list updated in store');
+					pinnedChats.set(updatedPinnedChats);
 
-					// Force a reactive update by updating the store in the next tick
+					// Force a reactive update by updating both stores in the next tick
 					setTimeout(() => {
 						chats.update((c) => [...c]);
+						pinnedChats.update((c) => [...c]);
 					}, 100);
 				}
 			}

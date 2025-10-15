@@ -2422,6 +2422,8 @@ async def api_cleanup_web_search_vectors(
 async def api_comprehensive_cleanup(
     max_age_days: int = None,
     include_chat_cleanup: bool = None,
+    preserve_pinned: bool = None,
+    preserve_archived: bool = None,
     user=Depends(get_admin_user),
 ):
     """
@@ -2432,7 +2434,12 @@ async def api_comprehensive_cleanup(
     Used by K8s CronJobs for complete maintenance.
     """
     try:
-        from open_webui.config import CHAT_LIFETIME_ENABLED, CHAT_LIFETIME_DAYS
+        from open_webui.config import (
+            CHAT_LIFETIME_ENABLED,
+            CHAT_LIFETIME_DAYS,
+            CHAT_CLEANUP_PRESERVE_PINNED,
+            CHAT_CLEANUP_PRESERVE_ARCHIVED,
+        )
 
         if max_age_days is None:
             # Use chat lifetime setting instead of web search expiry
@@ -2443,8 +2450,14 @@ async def api_comprehensive_cleanup(
             include_chat_cleanup = CHAT_LIFETIME_ENABLED.value
         # If explicitly provided (True or False), use that value regardless of server config
 
+        # Use config defaults if not specified
+        if preserve_pinned is None:
+            preserve_pinned = CHAT_CLEANUP_PRESERVE_PINNED.value
+        if preserve_archived is None:
+            preserve_archived = CHAT_CLEANUP_PRESERVE_ARCHIVED.value
+
         log.info(
-            f"Comprehensive cleanup: max_age_days={max_age_days}, include_chat_cleanup={include_chat_cleanup}, CHAT_LIFETIME_ENABLED={CHAT_LIFETIME_ENABLED}"
+            f"Comprehensive cleanup: max_age_days={max_age_days}, include_chat_cleanup={include_chat_cleanup}, preserve_pinned={preserve_pinned}, preserve_archived={preserve_archived}, CHAT_LIFETIME_ENABLED={CHAT_LIFETIME_ENABLED}"
         )
 
         # Run all cleanup operations
@@ -2475,8 +2488,8 @@ async def api_comprehensive_cleanup(
                 # Use server-side chat lifetime configuration for chat cleanup
                 expired_chats_result = await cleanup_expired_chats(
                     max_age_days=CHAT_LIFETIME_DAYS.value,
-                    preserve_pinned=True,
-                    preserve_archived=False,
+                    preserve_pinned=preserve_pinned,
+                    preserve_archived=preserve_archived,
                     force_cleanup_all=False,
                 )
             else:
@@ -2484,8 +2497,8 @@ async def api_comprehensive_cleanup(
                 # Chat lifetime is disabled - clean up ALL chats immediately
                 expired_chats_result = await cleanup_expired_chats(
                     max_age_days=0,  # Not used when force_cleanup_all=True
-                    preserve_pinned=True,
-                    preserve_archived=False,
+                    preserve_pinned=preserve_pinned,
+                    preserve_archived=preserve_archived,
                     force_cleanup_all=True,
                 )
             cleanup_results["expired_chats"] = expired_chats_result

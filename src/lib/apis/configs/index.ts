@@ -323,6 +323,8 @@ export const triggerComprehensiveCleanup = async (
 	options?: {
 		max_age_days?: number;
 		include_chat_cleanup?: boolean;
+		preserve_pinned?: boolean;
+		preserve_archived?: boolean;
 	}
 ) => {
 	let error = null;
@@ -333,6 +335,12 @@ export const triggerComprehensiveCleanup = async (
 	}
 	if (options?.include_chat_cleanup !== undefined) {
 		queryParams.append('include_chat_cleanup', options.include_chat_cleanup.toString());
+	}
+	if (options?.preserve_pinned !== undefined) {
+		queryParams.append('preserve_pinned', options.preserve_pinned.toString());
+	}
+	if (options?.preserve_archived !== undefined) {
+		queryParams.append('preserve_archived', options.preserve_archived.toString());
 	}
 
 	const url = `${WEBUI_API_BASE_URL}/retrieval/maintenance/cleanup/comprehensive${
