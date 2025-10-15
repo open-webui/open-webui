@@ -2156,7 +2156,7 @@ def check_web_search_cache(search_hash: str) -> str:
         collection_name = f"web_{search_hash}"
 
         # Check if collection exists
-        if VECTOR_DB_CLIENT.has_collection(collection_name=collection_name):
+        if await VECTOR_DB_CLIENT.has_collection(collection_name=collection_name):
             return collection_name
 
         return None
