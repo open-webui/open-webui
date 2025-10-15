@@ -50,51 +50,49 @@
 		<div class="flex w-full max-w-fit">
 			<div class="overflow-hidden w-full">
 				<div class="max-w-full {($settings?.highContrastMode ?? false) ? 'm-1' : 'mr-1'}">
-					<Selector
-						id={`${selectedModelIdx}`}
-						placeholder={$i18n.t('Select a model')}
-						items={$models.map((model) => ({
-							value: model.id,
-							label: model.name,
-							model: model
-						}))}
-						{pinModelHandler}
-						bind:value={selectedModel}
-					/>
+					{#if $models.length === 0}
+						<!-- Show Load Model button when no models exist -->
+						<button
+							class="w-full px-3 py-2 border rounded bg-gray-100 hover:bg-gray-200"
+							on:click={() => location.reload()}
+						>
+							{$i18n.t('Load model')}
+						</button>
+					{:else}
+						<Selector
+							id={`${selectedModelIdx}`}
+							placeholder={$i18n.t('Select a model')}
+							items={$models.map((model) => ({
+								value: model.id,
+								label: model.name,
+								model: model
+							}))}
+							{pinModelHandler}
+							bind:value={selectedModel}
+						/>
+					{/if}
 				</div>
 			</div>
 
 			{#if $user?.role === 'admin' || ($user?.permissions?.chat?.multiple_models ?? true)}
 				{#if selectedModelIdx === 0}
-					<div
-						class="  self-center mx-1 disabled:text-gray-600 disabled:hover:text-gray-600 -translate-y-[0.5px]"
-					>
+					<div class="self-center mx-1 disabled:text-gray-600 disabled:hover:text-gray-600 -translate-y-[0.5px]">
 						<Tooltip content={$i18n.t('Add Model')}>
 							<button
-								class=" "
 								{disabled}
 								on:click={() => {
 									selectedModels = [...selectedModels, ''];
 								}}
 								aria-label="Add Model"
 							>
-								<svg
-									xmlns="http://www.w3.org/2000/svg"
-									fill="none"
-									viewBox="0 0 24 24"
-									stroke-width="2"
-									stroke="currentColor"
-									class="size-3.5"
-								>
+								<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="size-3.5">
 									<path stroke-linecap="round" stroke-linejoin="round" d="M12 6v12m6-6H6" />
 								</svg>
 							</button>
 						</Tooltip>
 					</div>
 				{:else}
-					<div
-						class="  self-center mx-1 disabled:text-gray-600 disabled:hover:text-gray-600 -translate-y-[0.5px]"
-					>
+					<div class="self-center mx-1 disabled:text-gray-600 disabled:hover:text-gray-600 -translate-y-[0.5px]">
 						<Tooltip content={$i18n.t('Remove Model')}>
 							<button
 								{disabled}
@@ -104,14 +102,7 @@
 								}}
 								aria-label="Remove Model"
 							>
-								<svg
-									xmlns="http://www.w3.org/2000/svg"
-									fill="none"
-									viewBox="0 0 24 24"
-									stroke-width="2"
-									stroke="currentColor"
-									class="size-3"
-								>
+								<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="size-3">
 									<path stroke-linecap="round" stroke-linejoin="round" d="M19.5 12h-15" />
 								</svg>
 							</button>
