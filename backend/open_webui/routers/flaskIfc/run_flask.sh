@@ -1,5 +1,6 @@
 #!/bin/bash
 export TSI_HOSTNAME=$(hostname)
+
 if [ "${TSI_HOSTNAME}" == "fpga1.tsavoritesi.net" ] || [ "${TSI_HOSTNAME}" == "fpga2.tsavoritesi.net" ]  || [ "${TSI_HOSTNAME}" == "fpga3.tsavoritesi.net" ]  || [ "${TSI_HOSTNAME}" == "fpga4.tsavoritesi.net" ];
 then
 sudo -v
@@ -36,8 +37,10 @@ pip3 install scp
 # Run the flaskIfc server
 if [ "${TSI_HOSTNAME}" == "fpga1.tsavoritesi.net" ] || [ "${TSI_HOSTNAME}" == "fpga2.tsavoritesi.net" ]  || [ "${TSI_HOSTNAME}" == "fpga3.tsavoritesi.net" ]  || [ "${TSI_HOSTNAME}" == "fpga4.tsavoritesi.net" ];
 then
+#sudo REGION='JP' python3 flaskIfc.py &
 sudo python3 flaskIfc.py &
 else
+#REGION='JP' python3 flaskIfc.py &
 python3 flaskIfc.py &
 fi
 flask -A flaskXterm.py --debug run --port 5000 --host 0.0.0.0  --cert=../../../../cert.pem --key=../../../../key.pem &

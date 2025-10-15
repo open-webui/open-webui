@@ -261,7 +261,9 @@ def restart_txe_serial_portion(port, baudrate, path):
 DEFAULT_COMMAND_TIMEOUT = 7200
 
 
-def send_serial_command(port, baudrate, command, timeout=DEFAULT_COMMAND_TIMEOUT):
+def send_serial_command(
+    port, baudrate, command, timeout=DEFAULT_COMMAND_TIMEOUT, region="USA"
+):
     if is_lock_available() != True:
         return None
 
@@ -269,7 +271,14 @@ def send_serial_command(port, baudrate, command, timeout=DEFAULT_COMMAND_TIMEOUT
         ser = serial.Serial(port, baudrate)
         ser.reset_output_buffer()
         ser.reset_input_buffer()
-        ser.write((command + "\n").encode())  # Send command with newline '\n'
+
+        # Decide encoding based on region
+        if region == "USA":
+            ser.write((command + "\n").encode())  # Send command with newline '\n'
+        else:
+            ser.write(
+                (command + "\n").encode("utf-8")
+            )  # Send command with newline in utf-8 encoding'\n'
         ser.flush()
         # Wait to read the serial port
         data = "\0"

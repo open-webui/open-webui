@@ -94,9 +94,11 @@ def pre_and_post_check():
         serial_script_for_ssh.pre_and_post_check(shell)
 
 
-def send_serial_command(command, timeout=DEFAULT_TIMEOUT):
+def send_serial_command(command, timeout=DEFAULT_TIMEOUT, region="USA"):
     if shell is None:
-        return serial_script.send_serial_command(port, baudrate, command, timeout)
+        return serial_script.send_serial_command(
+            port, baudrate, command, timeout, region
+        )
     else:
         return serial_script_for_ssh.send_shell_command(shell, command, timeout)
 
@@ -1045,7 +1047,13 @@ def chats():
     original_prompt = data["messages"][-1]["content"]
     flattened_prompt = re.sub(r"\s+", " ", original_prompt).strip()
     tmpprompt = flattened_prompt.replace('"', '\\"').encode("utf-8")
-    prompt = tmpprompt.decode("utf-8")
+    # Read a custom environment variable, e.g., REGION
+    region = os.getenv("REGION", "USA")  # Default to 'USA' if not set
+    # Decide encoding based on region
+    if region == "USA":
+        prompt = tmpprompt.decode("utf-8")
+    else:
+        prompt = tmpprompt
 
     model = DEFAULT_MODEL
 
@@ -1102,10 +1110,10 @@ def chats():
 
     pre_and_post_check()
 
-    def run_script(command):
+    def run_script(command, region):
         try:
             result = send_serial_command(
-                command, timeout=DEFAULT_MODEL_COMMAND_RUN_TIMEOUT
+                command, DEFAULT_MODEL_COMMAND_RUN_TIMEOUT, region
             )
             if result:
                 response_text = result
@@ -1135,7 +1143,7 @@ def chats():
             job_status["running"] = False
         return filtered_text, formatted_text
 
-    filtered_text, profile_text = run_script(command)
+    filtered_text, profile_text = run_script(command, region)
     extracted_json = extract_json_output(filtered_text)
     chat_history = extract_chat_history(filtered_text)
     final_chat_output = extract_final_output_after_chat_history(chat_history)
@@ -1170,7 +1178,13 @@ def chat():
     original_prompt = data["messages"][-1]["content"]
     flattened_prompt = re.sub(r"\s+", " ", original_prompt).strip()
     tmpprompt = flattened_prompt.replace('"', '\\"').encode("utf-8")
-    prompt = tmpprompt.decode("utf-8")
+    # Read a custom environment variable, e.g., REGION
+    region = os.getenv("REGION", "USA")  # Default to 'USA' if not set
+    # Decide encoding based on region
+    if region == "USA":
+        prompt = tmpprompt.decode("utf-8")
+    else:
+        prompt = tmpprompt
 
     model = DEFAULT_MODEL
 
@@ -1227,10 +1241,10 @@ def chat():
 
     pre_and_post_check()
 
-    def run_script(command):
+    def run_script(command, region):
         try:
             result = send_serial_command(
-                command, timeout=DEFAULT_MODEL_COMMAND_RUN_TIMEOUT
+                command, DEFAULT_MODEL_COMMAND_RUN_TIMEOUT, region
             )
             if result:
                 response_text = result
@@ -1260,7 +1274,7 @@ def chat():
             job_status["running"] = False
         return filtered_text, formatted_text
 
-    filtered_text, profile_text = run_script(command)
+    filtered_text, profile_text = run_script(command, region)
     extracted_json = extract_json_output(filtered_text)
     chat_history = extract_chat_history(filtered_text)
     final_chat_output = extract_final_output_after_chat_history(chat_history)
