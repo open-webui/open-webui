@@ -1,6 +1,6 @@
 fastapi==0.111.0
 uvicorn[standard]==0.30.6
-pydantic>=2.10.6,<3.0.0
+pydantic==2.11.10
 python-multipart==0.0.18
 
 Flask==3.1.0
