@@ -246,10 +246,9 @@ manage_sync_node() {
         echo "4) View Live Logs (follow mode)"
         echo "5) Restart Sync Node"
         echo "6) Stop Sync Node"
-        echo "7) Update Sync Node (instructions)"
-        echo "8) Return to Deployment List"
+        echo "7) Return to Deployment List"
         echo
-        echo -n "Select action (1-8): "
+        echo -n "Select action (1-7): "
         read action
 
         case "$action" in
@@ -415,37 +414,6 @@ manage_sync_node() {
                 read
                 ;;
             7)
-                # Update Sync Node
-                clear
-                echo "╔════════════════════════════════════════╗"
-                echo "║         Update Sync Node               ║"
-                echo "╚════════════════════════════════════════╝"
-                echo
-                echo "To update the sync node to the latest version:"
-                echo
-                echo "1. Navigate to the SYNC directory:"
-                echo "   cd ${SCRIPT_DIR}/SYNC"
-                echo
-                echo "2. Run the deployment script (it will update existing nodes):"
-                echo "   ./scripts/deploy-sync-cluster.sh"
-                echo
-                echo "3. The script will:"
-                echo "   - Pull the latest Docker image"
-                echo "   - Recreate sync node containers"
-                echo "   - Preserve all configuration and data"
-                echo "   - Maintain cluster registration in Supabase"
-                echo
-                echo "⚠️  NOTE: Updates should be done during maintenance windows"
-                echo "to minimize disruption to sync operations."
-                echo
-                echo "For more details, see:"
-                echo "  ${SCRIPT_DIR}/SYNC/README.md"
-                echo "  ${SCRIPT_DIR}/SYNC/TECHNICAL_REFERENCE.md"
-                echo
-                echo "Press Enter to continue..."
-                read
-                ;;
-            8)
                 # Return to Deployment List
                 return
                 ;;
@@ -1144,6 +1112,243 @@ view_cluster_health() {
     read
 }
 
+# Update sync nodes function
+update_sync_nodes() {
+    clear
+    echo "╔════════════════════════════════════════╗"
+    echo "║       Update Sync Nodes (Both)         ║"
+    echo "╚════════════════════════════════════════╝"
+    echo
+
+    # Check if nodes exist
+    node_a_exists=$(docker ps -a --filter "name=openwebui-sync-node-a" --format "{{.Names}}" | grep -q "openwebui-sync-node-a" && echo "yes" || echo "no")
+    node_b_exists=$(docker ps -a --filter "name=openwebui-sync-node-b" --format "{{.Names}}" | grep -q "openwebui-sync-node-b" && echo "yes" || echo "no")
+
+    if [[ "$node_a_exists" == "no" ]] && [[ "$node_b_exists" == "no" ]]; then
+        echo "❌ No sync cluster deployed"
+        echo
+        echo "Deploy a cluster first using option 1 (Deploy Sync Cluster)"
+        echo
+        echo "Press Enter to continue..."
+        read
+        return
+    fi
+
+    echo "⚠️  CRITICAL: This will update BOTH sync nodes simultaneously"
+    echo
+    echo "What will happen:"
+    echo "  1. Both sync nodes will be stopped (2-5 minute downtime)"
+    echo "  2. Latest Docker image will be pulled"
+    echo "  3. Both nodes will be recreated with latest code"
+    echo "  4. All configuration and cluster registration preserved"
+    echo "  5. Leader election will occur after restart"
+    echo
+
+    # Check if credentials file exists
+    if [ ! -f "${SCRIPT_DIR}/SYNC/.credentials" ]; then
+        echo "❌ ERROR: Credentials file not found"
+        echo "   Expected: ${SCRIPT_DIR}/SYNC/.credentials"
+        echo "   This file is required for the update process"
+        echo
+        echo "Press Enter to continue..."
+        read
+        return
+    fi
+
+    # Check for sync-enabled clients using docker exec
+    echo "═══════════════════════════════════════════════════════════════════"
+    echo "Checking for clients with sync enabled..."
+    echo "═══════════════════════════════════════════════════════════════════"
+    echo
+
+    # Try to query Supabase for sync-enabled clients
+    if [[ "$node_a_exists" == "yes" ]] || [[ "$node_b_exists" == "yes" ]]; then
+        # Source credentials
+        cd "${SCRIPT_DIR}/SYNC"
+        source .credentials 2>/dev/null || true
+
+        # Query for sync-enabled clients
+        sync_enabled_clients=$(docker exec -i openwebui-sync-node-a python3 2>/dev/null << 'EOF'
+import asyncpg, asyncio, os, sys
+
+async def check_clients():
+    try:
+        conn = await asyncpg.connect(os.getenv('ADMIN_URL'))
+        rows = await conn.fetch('''
+            SELECT client_name, container_name, status, last_sync_at, last_sync_status
+            FROM sync_metadata.client_deployments
+            WHERE sync_enabled = true
+            ORDER BY client_name
+        ''')
+
+        if rows:
+            print("SYNC_ENABLED_FOUND")
+            for row in rows:
+                last_sync = row['last_sync_at'] if row['last_sync_at'] else "Never"
+                last_status = row['last_sync_status'] if row['last_sync_status'] else "N/A"
+                print(f"  • {row['client_name']} (container: {row['container_name']})")
+                print(f"    Status: {row['status']} | Last sync: {last_sync} | Last status: {last_status}")
+        else:
+            print("NO_SYNC_ENABLED")
+
+        await conn.close()
+    except Exception as e:
+        print(f"ERROR:{e}")
+        sys.exit(1)
+
+asyncio.run(check_clients())
+EOF
+)
+
+        check_result=$?
+
+        if [[ $check_result -ne 0 ]]; then
+            echo "⚠️  WARNING: Could not query Supabase for sync-enabled clients"
+            echo "   The update can proceed, but please manually verify no syncs are running"
+            echo
+        elif echo "$sync_enabled_clients" | grep -q "SYNC_ENABLED_FOUND"; then
+            echo "❌ CANNOT UPDATE: Clients with sync enabled detected"
+            echo
+            echo "$sync_enabled_clients" | grep -v "SYNC_ENABLED_FOUND"
+            echo
+            echo "═══════════════════════════════════════════════════════════════════"
+            echo "REQUIRED ACTIONS before updating:"
+            echo "═══════════════════════════════════════════════════════════════════"
+            echo
+            echo "You must PAUSE sync for all clients listed above:"
+            echo
+            echo "For each client:"
+            echo "  1. Return to main menu (press 8, then 7)"
+            echo "  2. Select: 3) Manage Client Deployment"
+            echo "  3. Select the client from the list"
+            echo "  4. Select: 8) Sync Management"
+            echo "  5. Select: 3) Pause Sync"
+            echo "  6. Confirm the pause"
+            echo
+            echo "After all clients are paused, return here to update the cluster."
+            echo
+            echo "Press Enter to continue..."
+            read
+            return
+        else
+            echo "✅ No clients with sync enabled found"
+            echo
+        fi
+    else
+        echo "⚠️  WARNING: Cannot check for sync-enabled clients (no nodes running)"
+        echo "   Proceeding with update assuming no active syncs"
+        echo
+    fi
+
+    echo "═══════════════════════════════════════════════════════════════════"
+    echo "Update Impact:"
+    echo "═══════════════════════════════════════════════════════════════════"
+    echo
+    echo "Expected Downtime: 2-5 minutes"
+    echo
+    echo "During update:"
+    echo "  ❌ No sync operations will occur"
+    echo "  ❌ No leader will be available"
+    echo "  ❌ Health endpoints will not respond"
+    echo
+    echo "After update:"
+    echo "  ✅ Nodes will restart automatically"
+    echo "  ✅ Leader election will occur (~30 seconds)"
+    echo "  ✅ Sync operations will resume for paused clients (if re-enabled)"
+    echo
+    echo "⚠️  IMPORTANT: This is typically done during maintenance windows"
+    echo
+    echo -n "Type 'UPDATE' to confirm cluster update: "
+    read confirmation
+
+    if [[ "$confirmation" != "UPDATE" ]]; then
+        echo
+        echo "Update cancelled (confirmation did not match)."
+        echo
+        echo "Press Enter to continue..."
+        read
+        return
+    fi
+
+    echo
+    echo "Starting cluster update..."
+    echo
+
+    # Check if deployment script exists
+    if [ ! -f "${SCRIPT_DIR}/SYNC/scripts/deploy-sync-cluster.sh" ]; then
+        echo "❌ ERROR: Deployment script not found"
+        echo "   Expected: ${SCRIPT_DIR}/SYNC/scripts/deploy-sync-cluster.sh"
+        echo
+        echo "Press Enter to continue..."
+        read
+        return
+    fi
+
+    # Execute deployment script (which handles updates)
+    cd "${SCRIPT_DIR}/SYNC"
+    ./scripts/deploy-sync-cluster.sh
+
+    update_status=$?
+
+    echo
+    if [ $update_status -eq 0 ]; then
+        echo "╔════════════════════════════════════════╗"
+        echo "║   Update Completed Successfully        ║"
+        echo "╚════════════════════════════════════════╝"
+        echo
+        echo "Verifying cluster health..."
+        sleep 5
+
+        # Check health of both nodes
+        node_a_healthy="no"
+        node_b_healthy="no"
+
+        if curl -s -f "http://localhost:9443/health" > /dev/null 2>&1; then
+            node_a_healthy="yes"
+            echo "  ✅ Node A: Healthy and responding"
+        else
+            echo "  ⚠️  Node A: Not responding (may still be starting)"
+        fi
+
+        if curl -s -f "http://localhost:9444/health" > /dev/null 2>&1; then
+            node_b_healthy="yes"
+            echo "  ✅ Node B: Healthy and responding"
+        else
+            echo "  ⚠️  Node B: Not responding (may still be starting)"
+        fi
+
+        echo
+        echo "Next steps:"
+        echo "  1. Verify cluster health (option 2 from cluster menu)"
+        echo "  2. Check leader election status"
+        if echo "$sync_enabled_clients" | grep -q "SYNC_ENABLED_FOUND"; then
+            echo "  3. Re-enable sync for clients that were paused:"
+            echo "     - Main menu → 3) Manage Client Deployment → [client] → 8) Sync Management → 2) Start/Resume Sync"
+        fi
+        echo
+    else
+        echo "╔════════════════════════════════════════╗"
+        echo "║         Update Failed                  ║"
+        echo "╚════════════════════════════════════════╝"
+        echo
+        echo "Check the output above for error details."
+        echo
+        echo "Common issues:"
+        echo "  ❌ Missing credentials file"
+        echo "  ❌ Docker not running"
+        echo "  ❌ Port conflicts (9443, 9444)"
+        echo "  ❌ Supabase connection issues"
+        echo "  ❌ Image pull failures"
+        echo
+        echo "The cluster may be in an inconsistent state."
+        echo "Check container status with: docker ps -a | grep sync-node"
+    fi
+
+    echo
+    echo "Press Enter to continue..."
+    read
+}
+
 # Sync Cluster management menu
 manage_sync_cluster_menu() {
     while true; do
@@ -1181,10 +1386,11 @@ manage_sync_cluster_menu() {
         echo "3) Manage Sync Node A"
         echo "4) Manage Sync Node B"
         echo "5) Deregister Cluster"
-        echo "6) Help (Documentation)"
-        echo "7) Return to Main Menu"
+        echo "6) Update Sync Nodes (Both)"
+        echo "7) Help (Documentation)"
+        echo "8) Return to Main Menu"
         echo
-        echo -n "Select option (1-7): "
+        echo -n "Select option (1-8): "
         read choice
 
         case "$choice" in
@@ -1222,6 +1428,9 @@ manage_sync_cluster_menu() {
                 deregister_sync_cluster
                 ;;
             6)
+                update_sync_nodes
+                ;;
+            7)
                 clear
                 echo "╔════════════════════════════════════════╗"
                 echo "║         Sync Cluster Help              ║"
@@ -1268,7 +1477,7 @@ manage_sync_cluster_menu() {
                         ;;
                 esac
                 ;;
-            7)
+            8)
                 return
                 ;;
             *)
