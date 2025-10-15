@@ -62,6 +62,8 @@
 	import MagnifyingGlass from '../icons/MagnifyingGlass.svelte';
 	import SearchModal from './SearchModal.svelte';
 	import PersonalStore from '../personas/PersonalStore.svelte';
+	import { childProfileSync } from '$lib/services/childProfileSync';
+	import type { ChildProfile } from '$lib/apis/child-profiles';
 
 	const BREAKPOINT = 768;
 
@@ -83,6 +85,55 @@
 	let folders = {};
 	let newFolderId = null;
 
+	// Child profile state
+	let childProfiles: ChildProfile[] = [];
+	let currentChild: ChildProfile | null = null;
+	let selectedChildIndex: number = 0;
+
+	// Assignment workflow state
+	let assignmentStep: number = 1; // 1: child-profile, 2: moderation-scenario, 3: exit-survey
+	let showAssignmentSetup: boolean = false;
+	let assignmentCompleted: boolean = false;
+	let moderationScenariosAccessed: boolean = false; // Track if user has accessed moderation scenarios
+
+	// Make assignmentStep reactive to localStorage changes
+	$: if (typeof window !== 'undefined') {
+		const storedStep = localStorage.getItem('assignmentStep');
+		if (storedStep) {
+			assignmentStep = parseInt(storedStep);
+		}
+		const moderationAccessed = localStorage.getItem('moderationScenariosAccessed');
+		moderationScenariosAccessed = moderationAccessed === 'true';
+	}
+
+	// Listen for localStorage changes from other tabs/windows
+	onMount(() => {
+		// Check assignment step on mount
+		const storedStep = localStorage.getItem('assignmentStep');
+		if (storedStep) {
+			assignmentStep = parseInt(storedStep);
+		}
+		
+		// Check moderation scenarios access on mount
+		const moderationAccessed = localStorage.getItem('moderationScenariosAccessed');
+		moderationScenariosAccessed = moderationAccessed === 'true';
+		
+		const handleStorageChange = (e) => {
+			if (e.key === 'assignmentStep' && e.newValue) {
+				assignmentStep = parseInt(e.newValue);
+			}
+			if (e.key === 'moderationScenariosAccessed' && e.newValue) {
+				moderationScenariosAccessed = e.newValue === 'true';
+			}
+		};
+		
+		window.addEventListener('storage', handleStorageChange);
+		
+		return () => {
+			window.removeEventListener('storage', handleStorageChange);
+		};
+	});
+
 	// 加载当前选择的personal
 	const loadCurrentPersonal = () => {
 		const selectedId = localStorage.getItem('selectedPersonalId');
@@ -95,6 +146,128 @@
 	const handlePersonalSelected = (event) => {
 		currentPersonal = event.detail;
 	};
+
+	// Child profile functions
+	const loadChildProfiles = async () => {
+		try {
+			console.log('Loading child profiles in sidebar...');
+			childProfiles = await childProfileSync.getChildProfiles();
+			console.log('Loaded child profiles:', childProfiles);
+			const currentChildId = childProfileSync.getCurrentChildId();
+			console.log('Current child ID:', currentChildId);
+				
+				if (currentChildId && childProfiles.length > 0) {
+					const index = childProfiles.findIndex(child => child.id === currentChildId);
+					if (index !== -1) {
+						selectedChildIndex = index;
+						currentChild = childProfiles[index];
+						console.log('Selected child:', currentChild);
+					} else {
+						selectedChildIndex = 0;
+						currentChild = childProfiles[0];
+						console.log('Using first child as default:', currentChild);
+					}
+				} else if (childProfiles.length > 0) {
+					// No current child selected, use the first one
+					selectedChildIndex = 0;
+					currentChild = childProfiles[0];
+					console.log('No current child, using first:', currentChild);
+				}
+		} catch (error) {
+			console.error('Failed to load child profiles:', error);
+			childProfiles = [];
+			currentChild = null;
+		}
+	};
+
+
+	// Track the current role to avoid infinite loops
+	let lastKnownRole: string | null = '';
+	
+	// Reactive statement to reload child profiles when role changes
+	$: if (typeof window !== 'undefined') {
+		const currentRole = localStorage.getItem('selectedRole');
+		if (currentRole !== lastKnownRole) {
+			lastKnownRole = currentRole;
+			if (currentRole === 'kids') {
+				loadChildProfiles();
+				// Check if we need to show assignment setup
+				checkAssignmentSetup();
+			} else {
+				childProfiles = [];
+				currentChild = null;
+				selectedChildIndex = 0;
+			}
+		}
+	}
+
+	// Assignment workflow functions
+	function checkAssignmentSetup() {
+		// Check if user has completed child profile setup
+		const hasChildProfile = localStorage.getItem('assignmentStep') !== null;
+		const currentStep = localStorage.getItem('assignmentStep');
+		
+		if (!hasChildProfile || !currentStep) {
+			showAssignmentSetup = true;
+			assignmentStep = 1;
+		} else {
+			assignmentStep = parseInt(currentStep) || 1;
+		}
+	}
+
+	function proceedToNextStep() {
+		if (assignmentStep < 3) {
+			assignmentStep++;
+			localStorage.setItem('assignmentStep', assignmentStep.toString());
+		} else {
+			assignmentCompleted = true;
+			localStorage.setItem('assignmentCompleted', 'true');
+		}
+	}
+
+	function goToStep(step: number) {
+		// Only allow going to previous steps or current step
+		const currentStep = parseInt(localStorage.getItem('assignmentStep') || '1');
+		if (step <= currentStep) {
+			assignmentStep = step;
+			goto(getStepRoute(step));
+		}
+	}
+
+	function getStepRoute(step: number): string {
+		switch (step) {
+			case 1: return '/kids/profile/preview';
+			case 2: return '/moderation-scenario';
+			case 3: return '/exit-survey';
+			default: return '/kids/profile/preview';
+		}
+	}
+
+	function startAssignment() {
+		showAssignmentSetup = false;
+		localStorage.setItem('assignmentStep', '1');
+		assignmentStep = 1;
+		goto('/kids/profile/preview');
+	}
+
+	// Function to update assignment step when user completes tasks
+	function updateAssignmentStep(step: number) {
+		localStorage.setItem('assignmentStep', step.toString());
+		assignmentStep = step;
+	}
+
+	// Listen for navigation events to update assignment progress
+	$: if (typeof window !== 'undefined') {
+		const currentPath = window.location.pathname;
+		if ((currentPath === '/kids/profile' || currentPath === '/kids/profile/preview') && assignmentStep < 2) {
+			updateAssignmentStep(1);
+		} else if (currentPath === '/moderation-scenario' && assignmentStep < 3) {
+			updateAssignmentStep(2);
+		} else if (currentPath === '/exit-survey') {
+			updateAssignmentStep(3);
+			assignmentCompleted = true;
+		}
+	}
 
 	const initFolders = async () => {
 		const folderList = await getFolders(localStorage.token).catch((error) => {
@@ -392,6 +565,7 @@
 		dropZone?.addEventListener('dragleave', onDragLeave);
 
 		loadCurrentPersonal();
+		await loadChildProfiles();
 	});
 
 	onDestroy(() => {
@@ -464,6 +638,58 @@
 		}
 	}}
 />
+
+
+<!-- Assignment Overview Popup -->
+{#if showAssignmentSetup}
+<div class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+	<div class="bg-white dark:bg-gray-800 rounded-xl p-8 max-w-2xl w-full mx-4 shadow-2xl">
+		<div class="text-center mb-6">
+			<h2 class="text-2xl font-bold text-gray-900 dark:text-white mb-4">
+				Welcome to the AI Moderation Assignment
+			</h2>
+			<p class="text-gray-600 dark:text-gray-300 mb-6">
+				You'll be completing a 3-step assignment to help us understand how AI moderation works with children's conversations.
+			</p>
+		</div>
+
+		<div class="space-y-4 mb-8">
+			<div class="flex items-center space-x-4 p-4 bg-blue-50 dark:bg-blue-900/20 rounded-lg">
+				<div class="w-8 h-8 bg-blue-500 text-white rounded-full flex items-center justify-center font-bold">1</div>
+				<div>
+					<h3 class="font-semibold text-gray-900 dark:text-white">Child Profile Setup</h3>
+					<p class="text-sm text-gray-600 dark:text-gray-300">Create and select a child profile for the assignment</p>
+				</div>
+			</div>
+			
+			<div class="flex items-center space-x-4 p-4 bg-purple-50 dark:bg-purple-900/20 rounded-lg">
+				<div class="w-8 h-8 bg-purple-500 text-white rounded-full flex items-center justify-center font-bold">2</div>
+				<div>
+					<h3 class="font-semibold text-gray-900 dark:text-white">Moderation Scenarios</h3>
+					<p class="text-sm text-gray-600 dark:text-gray-300">Review and moderate AI responses to children's questions</p>
+				</div>
+			</div>
+			
+			<div class="flex items-center space-x-4 p-4 bg-green-50 dark:bg-green-900/20 rounded-lg">
+				<div class="w-8 h-8 bg-green-500 text-white rounded-full flex items-center justify-center font-bold">3</div>
+				<div>
+					<h3 class="font-semibold text-gray-900 dark:text-white">Exit Survey</h3>
+					<p class="text-sm text-gray-600 dark:text-gray-300">Provide feedback on your moderation experience</p>
+				</div>
+			</div>
+		</div>
+
+		<div class="text-center">
+			<button
+				on:click={startAssignment}
+				class="bg-gradient-to-r from-blue-500 to-purple-600 hover:from-blue-600 hover:to-purple-700 text-white px-8 py-3 rounded-lg font-medium transition-all duration-200 shadow-lg hover:shadow-xl"
+			>
+				Start Assignment - Step 1
+			</button>
+		</div>
+	</div>
+</div>
+{/if}
 
 <div
 	bind:this={navElement}
@@ -542,168 +768,118 @@
 			</a>
 		</div>
 
-		<!-- {#if $user?.role === 'admin'}
-			<div class="px-1.5 flex justify-center text-gray-800 dark:text-gray-200">
-				<a
-					class="grow flex items-center space-x-3 rounded-lg px-2 py-[7px] hover:bg-gray-100 dark:hover:bg-gray-900 transition"
-					href="/home"
-					on:click={() => {
-						selectedChatId = null;
-						chatId.set('');
-
-						if ($mobile) {
-							showSidebar.set(false);
-						}
-					}}
-					draggable="false"
-				>
-					<div class="self-center">
-						<Home strokeWidth="2" className="size-[1.1rem]" />
-					</div>
-
-					<div class="flex self-center translate-y-[0.5px]">
-						<div class=" self-center font-medium text-sm font-primary">{$i18n.t('Home')}</div>
-					</div>
-				</a>
+		<!-- Assignment Navigation - always show -->
+		{#if true}
+			<div class="px-4 py-3 border-b border-gray-200 dark:border-gray-700">
+				<h3 class="text-sm font-semibold text-gray-700 dark:text-gray-300 uppercase tracking-wide">
+					Assignment Steps
+				</h3>
 			</div>
-		{/if} -->
 
-		<div class="px-1.5 flex justify-center text-gray-800 dark:text-gray-200">
-			<button
-				class="grow flex items-center space-x-3 rounded-lg px-2 py-[7px] hover:bg-gray-100 dark:hover:bg-gray-900 transition outline-none"
-				on:click={() => {
-					showSearch.set(true);
-				}}
-				draggable="false"
-			>
-				<div class="self-center">
-					<MagnifyingGlass strokeWidth="2" className="size-[1.1rem]" />
+			<!-- Step 1: Child Profile -->
+			<div class="px-1.5 flex justify-center text-gray-800 dark:text-gray-200">
+				<div class="grow flex items-center space-x-3 rounded-lg px-2 py-[7px] transition {assignmentStep >= 1 ? 'hover:bg-gray-100 dark:hover:bg-gray-900' : 'opacity-50 cursor-not-allowed'}">
+					<button
+						class="flex items-center space-x-3 flex-1"
+						on:click={() => goToStep(1)}
+						disabled={assignmentStep < 1}
+					>
+						<div class="self-center">
+							<div class="w-6 h-6 rounded-full flex items-center justify-center {assignmentStep >= 1 ? 'bg-blue-500 text-white' : 'bg-gray-300 dark:bg-gray-600 text-gray-500'}">
+								{#if assignmentStep > 1}
+									<svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+										<path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"></path>
+									</svg>
+								{:else}
+									<span class="text-xs font-bold">1</span>
+								{/if}
+							</div>
+						</div>
+						<div class="flex self-center translate-y-[0.5px]">
+							<div class="font-medium text-sm font-primary">Child Profile</div>
+						</div>
+					</button>
+					
+					<!-- Edit button -->
+					<div class="flex space-x-1 ml-auto">
+						<a
+							href="/kids/profile"
+							on:click={() => {
+								selectedChatId = null;
+								chatId.set('');
+
+								if ($mobile) {
+									showSidebar.set(false);
+								}
+							}}
+							class="bg-gradient-to-r from-blue-500 to-purple-600 text-white text-xs font-medium px-2 py-1 rounded hover:from-blue-600 hover:to-purple-700 transition-all duration-200"
+							title="Edit Profile"
+						>
+							Edit
+						</a>
+					</div>
 				</div>
-
-				<div class="flex self-center translate-y-[0.5px]">
-					<div class=" self-center font-medium text-sm font-primary">{$i18n.t('Search')}</div>
-				</div>
-			</button>
-		</div>
-
-		{#if ($config?.features?.enable_notes ?? false) && ($user?.role === 'admin' || ($user?.permissions?.features?.notes ?? true))}
-			<div class="px-1.5 flex justify-center text-gray-800 dark:text-gray-200">
-				<a
-					class="grow flex items-center space-x-3 rounded-lg px-2 py-[7px] hover:bg-gray-100 dark:hover:bg-gray-900 transition"
-					href="/notes"
-					on:click={() => {
-						selectedChatId = null;
-						chatId.set('');
-
-						if ($mobile) {
-							showSidebar.set(false);
-						}
-					}}
-					draggable="false"
-				>
-					<div class="self-center">
-						<svg
-							class="size-4"
-							aria-hidden="true"
-							xmlns="http://www.w3.org/2000/svg"
-							width="24"
-							height="24"
-							fill="none"
-							viewBox="0 0 24 24"
-						>
-							<path
-								stroke="currentColor"
-								stroke-linecap="round"
-								stroke-linejoin="round"
-								stroke-width="2"
-								d="M10 3v4a1 1 0 0 1-1 1H5m4 8h6m-6-4h6m4-8v16a1 1 0 0 1-1 1H6a1 1 0 0 1-1-1V7.914a1 1 0 0 1 .293-.707l3.914-3.914A1 1 0 0 1 9.914 3H18a1 1 0 0 1 1 1Z"
-							/>
-						</svg>
-					</div>
-
-					<div class="flex self-center translate-y-[0.5px]">
-						<div class=" self-center font-medium text-sm font-primary">{$i18n.t('Notes')}</div>
-					</div>
-				</a>
 			</div>
-		{/if}
 
-		<!-- Child Profile - only show in kids mode -->
-		{#if localStorage.getItem('selectedRole') === 'kids'}
+			<!-- Step 2: Moderation Scenarios -->
 			<div class="px-1.5 flex justify-center text-gray-800 dark:text-gray-200">
-				<a
-					class="grow flex items-center space-x-3 rounded-lg px-2 py-[7px] hover:bg-gray-100 dark:hover:bg-gray-900 transition"
-					href="/kids/profile"
+				<button
+					class="grow flex items-center space-x-3 rounded-lg px-2 py-[7px] transition {assignmentStep >= 2 ? 'hover:bg-gray-100 dark:hover:bg-gray-900' : 'opacity-50 cursor-not-allowed'}"
 					on:click={() => {
-						selectedChatId = null;
-						chatId.set('');
-
-						if ($mobile) {
-							showSidebar.set(false);
-						}
+						// Mark that user has accessed moderation scenarios
+						localStorage.setItem('moderationScenariosAccessed', 'true');
+						// Navigate to chat page and trigger parent mode
+						window.location.href = '/';
+						// Set a flag to trigger parent mode after page load
+						localStorage.setItem('triggerParentMode', 'true');
 					}}
-					draggable="false"
+					disabled={assignmentStep < 2}
 				>
 					<div class="self-center">
-						<svg
-							xmlns="http://www.w3.org/2000/svg"
-							fill="none"
-							viewBox="0 0 24 24"
-							stroke-width="2"
-							stroke="currentColor"
-							class="size-[1.1rem]"
-						>
-							<path
-								stroke-linecap="round"
-								stroke-linejoin="round"
-								d="M15.75 6a3.75 3.75 0 11-7.5 0 3.75 3.75 0 017.5 0zM4.501 20.118a7.5 7.5 0 0114.998 0A17.933 17.933 0 0112 21.75c-2.676 0-5.216-.584-7.499-1.632z"
-							/>
-						</svg>
+						<div class="w-6 h-6 rounded-full flex items-center justify-center {assignmentStep >= 2 ? 'bg-purple-500 text-white' : 'bg-gray-300 dark:bg-gray-600 text-gray-500'}">
+							{#if assignmentStep > 2}
+								<svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+									<path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"></path>
+								</svg>
+							{:else}
+								<span class="text-xs font-bold">2</span>
+							{/if}
+						</div>
 					</div>
-
 					<div class="flex self-center translate-y-[0.5px]">
-						<div class=" self-center font-medium text-sm font-primary">Child Profile</div>
+						<div class="font-medium text-sm font-primary">Moderation Scenarios</div>
 					</div>
-				</a>
+				</button>
 			</div>
-		{/if}
 
-		{#if $user?.role === 'admin' || $user?.permissions?.workspace?.models || $user?.permissions?.workspace?.knowledge || $user?.permissions?.workspace?.prompts || $user?.permissions?.workspace?.tools}
+			<!-- Step 3: Exit Survey -->
 			<div class="px-1.5 flex justify-center text-gray-800 dark:text-gray-200">
-				<a
-					class="grow flex items-center space-x-3 rounded-lg px-2 py-[7px] hover:bg-gray-100 dark:hover:bg-gray-900 transition"
-					href="/workspace"
-					on:click={() => {
-						selectedChatId = null;
-						chatId.set('');
-
-						if ($mobile) {
-							showSidebar.set(false);
-						}
-					}}
-					draggable="false"
+				<button
+					class="grow flex items-center space-x-3 rounded-lg px-2 py-[7px] transition {assignmentStep >= 3 && moderationScenariosAccessed ? 'hover:bg-gray-100 dark:hover:bg-gray-900' : 'opacity-50 cursor-not-allowed'}"
+					on:click={() => goToStep(3)}
+					disabled={assignmentStep < 3 || !moderationScenariosAccessed}
 				>
 					<div class="self-center">
-						<svg
-							xmlns="http://www.w3.org/2000/svg"
-							fill="none"
-							viewBox="0 0 24 24"
-							stroke-width="2"
-							stroke="currentColor"
-							class="size-[1.1rem]"
-						>
-							<path
-								stroke-linecap="round"
-								stroke-linejoin="round"
-								d="M13.5 16.875h3.375m0 0h3.375m-3.375 0V13.5m0 3.375v3.375M6 10.5h2.25a2.25 2.25 0 0 0 2.25-2.25V6a2.25 2.25 0 0 0-2.25-2.25H6A2.25 2.25 0 0 0 3.75 6v2.25A2.25 2.25 0 0 0 6 10.5Zm0 9.75h2.25A2.25 2.25 0 0 0 10.5 18v-2.25a2.25 2.25 0 0 0-2.25-2.25H6a2.25 2.25 0 0 0-2.25 2.25V18A2.25 2.25 0 0 0 6 20.25Zm9.75-9.75H18a2.25 2.25 0 0 0 2.25-2.25V6A2.25 2.25 0 0 0 18 3.75h-2.25A2.25 2.25 0 0 0 13.5 6v2.25a2.25 2.25 0 0 0 2.25 2.25Z"
-							/>
-						</svg>
+						<div class="w-6 h-6 rounded-full flex items-center justify-center {assignmentStep >= 3 && moderationScenariosAccessed ? 'bg-green-500 text-white' : 'bg-gray-300 dark:bg-gray-600 text-gray-500'}">
+							{#if assignmentCompleted}
+								<svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+									<path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"></path>
+								</svg>
+							{:else}
+								<span class="text-xs font-bold">3</span>
+							{/if}
+						</div>
 					</div>
-
 					<div class="flex self-center translate-y-[0.5px]">
-						<div class=" self-center font-medium text-sm font-primary">{$i18n.t('Workspace')}</div>
+						<div class="font-medium text-sm font-primary">Exit Survey</div>
 					</div>
-				</a>
+				</button>
+			</div>
+
+			<div class="px-4 py-3 border-b border-gray-200 dark:border-gray-700 mt-4">
+				<h3 class="text-sm font-semibold text-gray-700 dark:text-gray-300 uppercase tracking-wide">
+					Chat History
+				</h3>
 			</div>
 		{/if}
 

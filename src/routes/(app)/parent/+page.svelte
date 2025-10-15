@@ -1345,9 +1345,6 @@ let editInModal: boolean = false;
 											class="w-full p-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent"
 										>
 											<option value="">Select age</option>
-											<option value="3">3 years old</option>
-											<option value="4">4 years old</option>
-											<option value="5">5 years old</option>
 											<option value="6">6 years old</option>
 											<option value="7">7 years old</option>
 											<option value="8">8 years old</option>
