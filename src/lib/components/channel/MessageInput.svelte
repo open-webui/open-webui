@@ -876,12 +876,12 @@
 											richText={$settings?.richTextInput ?? true}
 											showFormattingToolbar={$settings?.showFormattingToolbar ?? false}
 											shiftEnter={!($settings?.ctrlEnterToSend ?? false) &&
-												(!$mobile ||
-													!(
-														'ontouchstart' in window ||
-														navigator.maxTouchPoints > 0 ||
-														navigator.msMaxTouchPoints > 0
-													))}
+												!$mobile &&
+												!(
+													'ontouchstart' in window ||
+													navigator.maxTouchPoints > 0 ||
+													navigator.msMaxTouchPoints > 0
+												)}
 											largeTextAsFile={$settings?.largeTextAsFile ?? false}
 											floatingMenuPlacement={'top-start'}
 											{suggestions}

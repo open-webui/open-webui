@@ -3,6 +3,7 @@ import json
 import logging
 import os
 import uuid
+import html
 from functools import lru_cache
 from pydub import AudioSegment
 from pydub.silence import split_on_silence
@@ -153,6 +154,7 @@ def set_faster_whisper_model(model: str, auto_update: bool = False):
 class TTSConfigForm(BaseModel):
     OPENAI_API_BASE_URL: str
     OPENAI_API_KEY: str
+    OPENAI_PARAMS: Optional[dict] = None
     API_KEY: str
     ENGINE: str
     MODEL: str
@@ -189,6 +191,7 @@ async def get_audio_config(request: Request, user=Depends(get_admin_user)):
         "tts": {
             "OPENAI_API_BASE_URL": request.app.state.config.TTS_OPENAI_API_BASE_URL,
             "OPENAI_API_KEY": request.app.state.config.TTS_OPENAI_API_KEY,
+            "OPENAI_PARAMS": request.app.state.config.TTS_OPENAI_PARAMS,
             "API_KEY": request.app.state.config.TTS_API_KEY,
             "ENGINE": request.app.state.config.TTS_ENGINE,
             "MODEL": request.app.state.config.TTS_MODEL,
@@ -221,6 +224,7 @@ async def update_audio_config(
 ):
     request.app.state.config.TTS_OPENAI_API_BASE_URL = form_data.tts.OPENAI_API_BASE_URL
     request.app.state.config.TTS_OPENAI_API_KEY = form_data.tts.OPENAI_API_KEY
+    request.app.state.config.TTS_OPENAI_PARAMS = form_data.tts.OPENAI_PARAMS
     request.app.state.config.TTS_API_KEY = form_data.tts.API_KEY
     request.app.state.config.TTS_ENGINE = form_data.tts.ENGINE
     request.app.state.config.TTS_MODEL = form_data.tts.MODEL
@@ -261,12 +265,13 @@ async def update_audio_config(
 
     return {
         "tts": {
-            "OPENAI_API_BASE_URL": request.app.state.config.TTS_OPENAI_API_BASE_URL,
-            "OPENAI_API_KEY": request.app.state.config.TTS_OPENAI_API_KEY,
-            "API_KEY": request.app.state.config.TTS_API_KEY,
             "ENGINE": request.app.state.config.TTS_ENGINE,
             "MODEL": request.app.state.config.TTS_MODEL,
             "VOICE": request.app.state.config.TTS_VOICE,
+            "OPENAI_API_BASE_URL": request.app.state.config.TTS_OPENAI_API_BASE_URL,
+            "OPENAI_API_KEY": request.app.state.config.TTS_OPENAI_API_KEY,
+            "OPENAI_PARAMS": request.app.state.config.TTS_OPENAI_PARAMS,
+            "API_KEY": request.app.state.config.TTS_API_KEY,
             "SPLIT_ON": request.app.state.config.TTS_SPLIT_ON,
             "AZURE_SPEECH_REGION": request.app.state.config.TTS_AZURE_SPEECH_REGION,
             "AZURE_SPEECH_BASE_URL": request.app.state.config.TTS_AZURE_SPEECH_BASE_URL,
@@ -336,6 +341,11 @@ async def speech(request: Request, user=Depends(get_verified_user)):
             async with aiohttp.ClientSession(
                 timeout=timeout, trust_env=True
             ) as session:
+                payload = {
+                    **payload,
+                    **(request.app.state.config.TTS_OPENAI_PARAMS or {}),
+                }
+
                 r = await session.post(
                     url=f"{request.app.state.config.TTS_OPENAI_API_BASE_URL}/audio/speech",
                     json=payload,
@@ -458,7 +468,7 @@ async def speech(request: Request, user=Depends(get_verified_user)):
 
         try:
             data = f"""<speak version="1.0" xmlns="http://www.w3.org/2001/10/synthesis" xml:lang="{locale}">
-                <voice name="{language}">{payload["input"]}</voice>
+                <voice name="{language}">{html.escape(payload["input"])}</voice>
             </speak>"""
             timeout = aiohttp.ClientTimeout(total=AIOHTTP_CLIENT_TIMEOUT)
             async with aiohttp.ClientSession(
