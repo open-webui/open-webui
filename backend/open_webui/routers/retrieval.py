@@ -2139,7 +2139,7 @@ def get_web_search_hash(query: str, search_engine: str) -> str:
     return hashlib.sha256(content).hexdigest()[:16]
 
 
-def check_web_search_cache(search_hash: str) -> str:
+async def check_web_search_cache(search_hash: str) -> str:
     """
     Check if a web search result is cached in vector DB.
 
