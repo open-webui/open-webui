@@ -364,37 +364,37 @@ export const triggerComprehensiveCleanup = async (
 };
 
 export interface ChatLifetimeScheduleInfo {
-enabled: boolean;
-status: string;
-next_run: string | null;
-lifetime_days: number;
-schedule?: string;
-error?: string;
+	enabled: boolean;
+	status: string;
+	next_run: string | null;
+	lifetime_days: number;
+	schedule?: string;
+	error?: string;
 }
 
 export const getChatLifetimeSchedule = async (token: string): Promise<ChatLifetimeScheduleInfo> => {
-let error = null;
+	let error = null;
 
-const res = await fetch(`${WEBUI_API_BASE_URL}/configs/chat-lifetime/schedule`, {
-method: "GET",
-headers: {
-"Content-Type": "application/json",
-Authorization: `Bearer ${token}`
-}
-})
-.then(async (res) => {
-if (!res.ok) throw await res.json();
-return res.json();
-})
-.catch((err) => {
-console.log(err);
-error = err.detail;
-return null;
-});
+	const res = await fetch(`${WEBUI_API_BASE_URL}/configs/chat-lifetime/schedule`, {
+		method: 'GET',
+		headers: {
+			'Content-Type': 'application/json',
+			Authorization: `Bearer ${token}`
+		}
+	})
+		.then(async (res) => {
+			if (!res.ok) throw await res.json();
+			return res.json();
+		})
+		.catch((err) => {
+			console.log(err);
+			error = err.detail;
+			return null;
+		});
 
-if (error) {
-throw error;
-}
+	if (error) {
+		throw error;
+	}
 
-return res;
+	return res;
 };
