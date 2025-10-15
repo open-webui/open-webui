@@ -1163,17 +1163,36 @@ update_sync_nodes() {
 
     # Try to query Supabase for sync-enabled clients
     if [[ "$node_a_exists" == "yes" ]] || [[ "$node_b_exists" == "yes" ]]; then
-        # Source credentials
+        # Source credentials to get ADMIN_URL
         cd "${SCRIPT_DIR}/SYNC"
-        source .credentials 2>/dev/null || true
+        if [ -f .credentials ]; then
+            source .credentials
+        else
+            echo "⚠️  WARNING: Credentials file not found"
+            echo "   Cannot check for sync-enabled clients"
+            echo
+            ADMIN_URL=""
+        fi
 
-        # Query for sync-enabled clients
-        sync_enabled_clients=$(docker exec -i openwebui-sync-node-a python3 2>/dev/null << 'EOF'
+        # Check if we have ADMIN_URL
+        if [ -z "$ADMIN_URL" ]; then
+            echo "⚠️  WARNING: ADMIN_URL not found in credentials"
+            echo "   Cannot check for sync-enabled clients"
+            echo "   The update can proceed, but please manually verify no syncs are running"
+            echo
+        else
+            # Query for sync-enabled clients (pass ADMIN_URL to container)
+            sync_enabled_clients=$(docker exec -i -e ADMIN_URL="$ADMIN_URL" openwebui-sync-node-a python3 2>&1 << 'EOF'
 import asyncpg, asyncio, os, sys
 
 async def check_clients():
     try:
-        conn = await asyncpg.connect(os.getenv('ADMIN_URL'))
+        admin_url = os.getenv('ADMIN_URL')
+        if not admin_url:
+            print("ERROR:ADMIN_URL not set")
+            sys.exit(1)
+
+        conn = await asyncpg.connect(admin_url)
         rows = await conn.fetch('''
             SELECT client_name, container_name, status, last_sync_at, last_sync_status
             FROM sync_metadata.client_deployments
