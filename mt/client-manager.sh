@@ -640,12 +640,27 @@ import asyncpg, asyncio, os, sys
 async def show_last_job():
     try:
         conn = await asyncpg.connect(os.getenv('ADMIN_URL'))
+
+        # First get the deployment_id for this client
+        deployment = await conn.fetchrow('''
+            SELECT deployment_id
+            FROM sync_metadata.client_deployments
+            WHERE client_name = \$1
+        ''', '$client_name')
+
+        if not deployment:
+            print(f"❌ Client '$client_name' not found in sync system")
+            print(f"   Use option 1 to register this client for sync")
+            await conn.close()
+            return
+
+        # Now get the last completed sync job using deployment_id
         row = await conn.fetchrow('''
             SELECT job_id, status, tables_synced, tables_total,
                    duration_seconds, time_since_last_completed
             FROM sync_metadata.v_last_completed_sync_jobs
-            WHERE client_name = \$1
-        ''', '$client_name')
+            WHERE deployment_id = \$1
+        ''', deployment['deployment_id'])
 
         if row:
             # Calculate tables synced percentage
