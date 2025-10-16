@@ -529,11 +529,11 @@ EOF
 
                 echo "Select sync interval for '$client_name':"
                 echo
-                echo "1) 1 minute (60 seconds)"
-                echo "2) 5 minutes (300 seconds) [Default]"
-                echo "3) 1 hour (3600 seconds)"
-                echo "4) 4 hours (14400 seconds)"
-                echo "5) 24 hours (86400 seconds)"
+                echo "1) 1 minute (60 seconds)$([ $default_option -eq 1 ] && echo ' [Current]')"
+                echo "2) 5 minutes (300 seconds)$([ $default_option -eq 2 ] && echo ' [Current]')"
+                echo "3) 1 hour (3600 seconds)$([ $default_option -eq 3 ] && echo ' [Current]')"
+                echo "4) 4 hours (14400 seconds)$([ $default_option -eq 4 ] && echo ' [Current]')"
+                echo "5) 24 hours (86400 seconds)$([ $default_option -eq 5 ] && echo ' [Current]')"
                 echo
                 echo "Current interval: $current_interval seconds"
                 echo

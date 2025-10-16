@@ -415,6 +415,10 @@ import asyncio
 async def update_timestamp():
     try:
         conn = await asyncpg.connect('$DATABASE_URL')
+
+        # Set session context for RLS policy (if enabled)
+        await conn.execute(\"SET app.current_client_name = '$CLIENT_NAME'\")
+
         await conn.execute('''
             UPDATE sync_metadata.client_deployments
             SET last_sync_at = NOW(),
@@ -424,7 +428,9 @@ async def update_timestamp():
         await conn.close()
         return True
     except Exception as e:
-        print(f'Error: {e}', flush=True)
+        print(f'Error updating timestamp: {e}', flush=True)
+        import traceback
+        traceback.print_exc()
         return False
 
 asyncio.run(update_timestamp())
