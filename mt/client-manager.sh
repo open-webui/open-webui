@@ -445,12 +445,11 @@ sync_management_menu() {
         echo "4) Manual Sync (Full)"
         echo "5) Manual Sync (Incremental)"
         echo "6) View Sync Status"
-        echo "7) View Recent Sync Job"
-        echo "8) Deregister Client"
-        echo "9) Help (View Scripts Reference)"
-        echo "10) Return to Client Menu"
+        echo "7) Deregister Client"
+        echo "8) Help (View Scripts Reference)"
+        echo "9) Return to Client Menu"
         echo
-        echo -n "Select action (1-10): "
+        echo -n "Select action (1-9): "
         read action
 
         case "$action" in
@@ -661,28 +660,52 @@ EOF
                 cd "${SCRIPT_DIR}/SYNC"
                 source .credentials
 
-                docker exec -i -e ADMIN_URL="$ADMIN_URL" openwebui-sync-node-a python3 << EOF
+                docker exec -i -e ADMIN_URL="$ADMIN_URL" -e CLIENT_NAME="$client_name" openwebui-sync-node-a python3 << 'EOF'
 import asyncpg, asyncio, os, sys
 
 async def check_status():
     try:
         conn = await asyncpg.connect(os.getenv('ADMIN_URL'))
-        row = await conn.fetchrow('''
-            SELECT sync_enabled, status, sync_interval, last_sync_at, last_sync_status
-            FROM sync_metadata.client_deployments
-            WHERE client_name = \$1
-        ''', '$client_name')
+        client_name = os.getenv('CLIENT_NAME')
 
-        if row:
-            print(f"Client: $client_name")
-            print(f"  Sync Enabled: {row['sync_enabled']}")
-            print(f"  Status: {row['status']}")
-            print(f"  Interval: {row['sync_interval']}s")
-            print(f"  Last Sync: {row['last_sync_at']}")
-            print(f"  Last Status: {row['last_sync_status']}")
-        else:
-            print(f"❌ Client '$client_name' not found in sync system")
+        # Get deployment info
+        deployment = await conn.fetchrow('''
+            SELECT deployment_id, sync_enabled, status, sync_interval, last_sync_at, last_sync_status
+            FROM sync_metadata.client_deployments
+            WHERE client_name = $1
+        ''', client_name)
+
+        if not deployment:
+            print(f"❌ Client '{client_name}' not found in sync system")
             print(f"   Use option 1 to register this client for sync")
+            await conn.close()
+            return
+
+        # Get last completed sync job info
+        last_job = await conn.fetchrow('''
+            SELECT tables_synced, tables_total, duration_seconds, time_since_last_completed
+            FROM sync_metadata.v_last_completed_sync_jobs
+            WHERE deployment_id = $1
+        ''', deployment['deployment_id'])
+
+        print(f"Client: {client_name}")
+        print(f"  Sync Enabled: {deployment['sync_enabled']}")
+        print(f"  Status: {deployment['status']}")
+        print(f"  Interval: {deployment['sync_interval']}s")
+        print(f"  Last Sync: {deployment['last_sync_at']}")
+        print(f"  Last Status: {deployment['last_sync_status']}")
+
+        if last_job:
+            # Calculate percentage
+            if last_job['tables_total'] and last_job['tables_total'] > 0:
+                tables_pct = (last_job['tables_synced'] / last_job['tables_total']) * 100
+            else:
+                tables_pct = 0.0
+
+            print(f"  Tables Synced: {last_job['tables_synced']}/{last_job['tables_total']} ({tables_pct:.1f}%)")
+            if last_job['duration_seconds']:
+                print(f"  Duration: {last_job['duration_seconds']:.1f}s")
+            print(f"  Time Since Sync: {last_job['time_since_last_completed']}")
 
         await conn.close()
     except Exception as e:
@@ -696,75 +719,6 @@ EOF
                 read
                 ;;
             7)
-                # View Recent Sync Job
-                clear
-                echo "╔════════════════════════════════════════╗"
-                echo "║        Recent Sync Job                 ║"
-                echo "╚════════════════════════════════════════╝"
-                echo
-
-                # Load credentials to get ADMIN_URL
-                cd "${SCRIPT_DIR}/SYNC"
-                source .credentials
-
-                docker exec -i -e ADMIN_URL="$ADMIN_URL" -e CLIENT_NAME="$client_name" openwebui-sync-node-a python3 << 'EOF'
-import asyncpg, asyncio, os, sys
-
-async def show_last_job():
-    try:
-        conn = await asyncpg.connect(os.getenv('ADMIN_URL'))
-        client_name = os.getenv('CLIENT_NAME')
-
-        # First get the deployment_id for this client
-        deployment = await conn.fetchrow('''
-            SELECT deployment_id
-            FROM sync_metadata.client_deployments
-            WHERE client_name = $1
-        ''', client_name)
-
-        if not deployment:
-            print(f"❌ Client '{client_name}' not found in sync system")
-            print(f"   Use option 1 to register this client for sync")
-            await conn.close()
-            return
-
-        # Now get the last completed sync job using deployment_id
-        row = await conn.fetchrow('''
-            SELECT job_id, status, tables_synced, tables_total,
-                   duration_seconds, time_since_last_completed
-            FROM sync_metadata.v_last_completed_sync_jobs
-            WHERE deployment_id = $1
-        ''', deployment['deployment_id'])
-
-        if row:
-            # Calculate tables synced percentage
-            if row['tables_total'] and row['tables_total'] > 0:
-                tables_synced_pct = (row['tables_synced'] / row['tables_total']) * 100
-            else:
-                tables_synced_pct = 0.0
-
-            print(f"Client: {client_name}")
-            print(f"  Job ID: {row['job_id']}")
-            print(f"  Status: {row['status']}")
-            print(f"  Tables Synced: {row['tables_synced']}/{row['tables_total']} ({tables_synced_pct:.1f}%)")
-            print(f"  Duration: {row['duration_seconds']:.1f}s" if row['duration_seconds'] else "  Duration: -")
-            print(f"  Time Since Sync: {row['time_since_last_completed']}")
-        else:
-            print(f"No completed sync jobs found for client: {client_name}")
-            print(f"   Use option 4 or 5 to run a manual sync")
-
-        await conn.close()
-    except Exception as e:
-        print(f"Error: {e}")
-        sys.exit(1)
-
-asyncio.run(show_last_job())
-EOF
-                echo
-                echo "Press Enter to continue..."
-                read
-                ;;
-            8)
                 # Deregister Client
                 clear
                 echo "╔════════════════════════════════════════╗"
@@ -809,7 +763,7 @@ EOF
                 echo "Press Enter to continue..."
                 read
                 ;;
-            9)
+            8)
                 # Help - Display SCRIPTS_REFERENCE.md
                 clear
                 if [ -f "${SCRIPT_DIR}/SYNC/SCRIPTS_REFERENCE.md" ]; then
@@ -822,7 +776,7 @@ EOF
                     read
                 fi
                 ;;
-            10)
+            9)
                 # Return to Client Menu
                 return
                 ;;
