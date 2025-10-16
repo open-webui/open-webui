@@ -488,14 +488,87 @@ sync_management_menu() {
                 echo "║          Start/Resume Sync             ║"
                 echo "╚════════════════════════════════════════╝"
                 echo
-                echo "This will enable automatic syncing for '$client_name'."
+
+                # Get current sync interval if client is registered
+                cd "${SCRIPT_DIR}/SYNC"
+                source .credentials
+
+                current_interval=$(docker exec -i -e ADMIN_URL="$ADMIN_URL" -e CLIENT_NAME="$client_name" openwebui-sync-node-a python3 << 'EOF'
+import asyncpg, asyncio, os, sys
+
+async def get_interval():
+    try:
+        conn = await asyncpg.connect(os.getenv('ADMIN_URL'))
+        client_name = os.getenv('CLIENT_NAME')
+        row = await conn.fetchrow('''
+            SELECT sync_interval
+            FROM sync_metadata.client_deployments
+            WHERE client_name = $1
+        ''', client_name)
+        await conn.close()
+        if row and row['sync_interval']:
+            print(row['sync_interval'])
+        else:
+            print("300")
+    except:
+        print("300")
+
+asyncio.run(get_interval())
+EOF
+)
+
+                # Map current interval to menu option
+                case $current_interval in
+                    60) default_option=1 ;;
+                    300) default_option=2 ;;
+                    3600) default_option=3 ;;
+                    14400) default_option=4 ;;
+                    86400) default_option=5 ;;
+                    *) default_option=2 ;;
+                esac
+
+                echo "Select sync interval for '$client_name':"
+                echo
+                echo "1) 1 minute (60 seconds)"
+                echo "2) 5 minutes (300 seconds) [Default]"
+                echo "3) 1 hour (3600 seconds)"
+                echo "4) 4 hours (14400 seconds)"
+                echo "5) 24 hours (86400 seconds)"
+                echo
+                echo "Current interval: $current_interval seconds"
+                echo
+                echo -n "Enter choice [1-5] (default: $default_option): "
+                read interval_choice
+
+                # Use default if no input
+                interval_choice=${interval_choice:-$default_option}
+
+                # Map choice to interval value
+                case $interval_choice in
+                    1) sync_interval=60 ;;
+                    2) sync_interval=300 ;;
+                    3) sync_interval=3600 ;;
+                    4) sync_interval=14400 ;;
+                    5) sync_interval=86400 ;;
+                    *)
+                        echo
+                        echo "Invalid choice. Operation cancelled."
+                        echo
+                        echo "Press Enter to continue..."
+                        read
+                        continue
+                        ;;
+                esac
+
+                echo
+                echo "Selected interval: $sync_interval seconds"
                 echo
                 echo -n "Continue? (y/N): "
                 read confirm
 
                 if [[ "$confirm" =~ ^[Yy]$ ]]; then
                     echo
-                    "${SCRIPT_DIR}/SYNC/scripts/start-sync.sh" "$client_name"
+                    "${SCRIPT_DIR}/SYNC/scripts/start-sync.sh" "$client_name" "$sync_interval"
                 else
                     echo "Operation cancelled."
                 fi

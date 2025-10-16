@@ -5,7 +5,9 @@
 # This script ONLY enables sync for an already registered client.
 # If the client is not registered, use register-sync-client-to-supabase.sh first.
 #
-# Usage: ./start-sync.sh CLIENT_NAME
+# Usage: ./start-sync.sh CLIENT_NAME [SYNC_INTERVAL]
+#   CLIENT_NAME: Name of the client to enable sync for
+#   SYNC_INTERVAL: (Optional) Sync interval in seconds (e.g., 60, 300, 3600)
 #
 # What this script does:
 # 1. Validates client is registered
@@ -28,6 +30,7 @@ set -euo pipefail
 # ============================================================================
 
 CLIENT_NAME="${1:-}"
+SYNC_INTERVAL="${2:-}"  # Optional: sync interval in seconds
 
 # Colors
 RED='\033[0;31m'
@@ -171,9 +174,12 @@ print(f\"  Last Sync Status: {data['last_sync_status']}\")
 # Enable sync for client
 enable_sync() {
     log_info "Enabling sync for client: $CLIENT_NAME"
+    if [[ -n "$SYNC_INTERVAL" ]]; then
+        log_info "Setting sync interval to: $SYNC_INTERVAL seconds"
+    fi
 
     local result
-    result=$(docker exec -i -e ADMIN_URL="$ADMIN_URL" -e CLIENT_NAME="$CLIENT_NAME" openwebui-sync-node-a python3 << 'PYEOF'
+    result=$(docker exec -i -e ADMIN_URL="$ADMIN_URL" -e CLIENT_NAME="$CLIENT_NAME" -e SYNC_INTERVAL="$SYNC_INTERVAL" openwebui-sync-node-a python3 << 'PYEOF'
 import asyncpg
 import asyncio
 import os
@@ -181,18 +187,33 @@ import os
 async def enable_sync():
     admin_url = os.getenv('ADMIN_URL')
     client_name = os.getenv('CLIENT_NAME')
+    sync_interval = os.getenv('SYNC_INTERVAL')
     if not admin_url or not client_name:
         return False
 
     try:
         conn = await asyncpg.connect(admin_url)
-        await conn.execute('''
-            UPDATE sync_metadata.client_deployments
-            SET sync_enabled = true,
-                status = 'active',
-                updated_at = NOW()
-            WHERE client_name = $1
-        ''', client_name)
+
+        # Build UPDATE query based on whether sync_interval is provided
+        if sync_interval and sync_interval.strip():
+            await conn.execute('''
+                UPDATE sync_metadata.client_deployments
+                SET sync_enabled = true,
+                    status = 'active',
+                    sync_interval = $2,
+                    updated_at = NOW()
+                WHERE client_name = $1
+            ''', client_name, int(sync_interval))
+        else:
+            # No sync_interval provided, don't modify it
+            await conn.execute('''
+                UPDATE sync_metadata.client_deployments
+                SET sync_enabled = true,
+                    status = 'active',
+                    updated_at = NOW()
+                WHERE client_name = $1
+            ''', client_name)
+
         await conn.close()
         print('success')
         return True
