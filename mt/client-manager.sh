@@ -584,7 +584,11 @@ sync_management_menu() {
                 echo "╚════════════════════════════════════════╝"
                 echo
 
-                docker exec -i openwebui-sync-node-a python3 << EOF
+                # Load credentials to get ADMIN_URL
+                cd "${SCRIPT_DIR}/SYNC"
+                source .credentials
+
+                docker exec -i -e ADMIN_URL="$ADMIN_URL" openwebui-sync-node-a python3 << EOF
 import asyncpg, asyncio, os, sys
 
 async def check_status():
@@ -626,7 +630,11 @@ EOF
                 echo "╚════════════════════════════════════════╝"
                 echo
 
-                docker exec -i openwebui-sync-node-a python3 << 'EOF'
+                # Load credentials to get ADMIN_URL
+                cd "${SCRIPT_DIR}/SYNC"
+                source .credentials
+
+                docker exec -i -e ADMIN_URL="$ADMIN_URL" openwebui-sync-node-a python3 << EOF
 import asyncpg, asyncio, os, sys
 
 async def show_jobs():
