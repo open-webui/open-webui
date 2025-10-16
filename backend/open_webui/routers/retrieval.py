@@ -466,6 +466,11 @@ async def get_rag_config(request: Request, user=Depends(get_admin_user)):
         "DOCUMENT_INTELLIGENCE_ENDPOINT": request.app.state.config.DOCUMENT_INTELLIGENCE_ENDPOINT,
         "DOCUMENT_INTELLIGENCE_KEY": request.app.state.config.DOCUMENT_INTELLIGENCE_KEY,
         "MISTRAL_OCR_API_KEY": request.app.state.config.MISTRAL_OCR_API_KEY,
+        # MinerU settings
+        "MINERU_API_MODE": request.app.state.config.MINERU_API_MODE,
+        "MINERU_API_URL": request.app.state.config.MINERU_API_URL,
+        "MINERU_API_KEY": request.app.state.config.MINERU_API_KEY,
+        "MINERU_PARAMS": request.app.state.config.MINERU_PARAMS,
         # Reranking settings
         "RAG_RERANKING_MODEL": request.app.state.config.RAG_RERANKING_MODEL,
         "RAG_RERANKING_ENGINE": request.app.state.config.RAG_RERANKING_ENGINE,
@@ -646,6 +651,12 @@ class ConfigForm(BaseModel):
     DOCUMENT_INTELLIGENCE_ENDPOINT: Optional[str] = None
     DOCUMENT_INTELLIGENCE_KEY: Optional[str] = None
     MISTRAL_OCR_API_KEY: Optional[str] = None
+
+    # MinerU settings
+    MINERU_API_MODE: Optional[str] = None
+    MINERU_API_URL: Optional[str] = None
+    MINERU_API_KEY: Optional[str] = None
+    MINERU_PARAMS: Optional[dict] = None
 
     # Reranking settings
     RAG_RERANKING_MODEL: Optional[str] = None
@@ -884,6 +895,28 @@ async def update_rag_config(
         form_data.MISTRAL_OCR_API_KEY
         if form_data.MISTRAL_OCR_API_KEY is not None
         else request.app.state.config.MISTRAL_OCR_API_KEY
+    )
+
+    # MinerU settings
+    request.app.state.config.MINERU_API_MODE = (
+        form_data.MINERU_API_MODE
+        if form_data.MINERU_API_MODE is not None
+        else request.app.state.config.MINERU_API_MODE
+    )
+    request.app.state.config.MINERU_API_URL = (
+        form_data.MINERU_API_URL
+        if form_data.MINERU_API_URL is not None
+        else request.app.state.config.MINERU_API_URL
+    )
+    request.app.state.config.MINERU_API_KEY = (
+        form_data.MINERU_API_KEY
+        if form_data.MINERU_API_KEY is not None
+        else request.app.state.config.MINERU_API_KEY
+    )
+    request.app.state.config.MINERU_PARAMS = (
+        form_data.MINERU_PARAMS
+        if form_data.MINERU_PARAMS is not None
+        else request.app.state.config.MINERU_PARAMS
     )
 
     # Reranking settings
@@ -1150,6 +1183,11 @@ async def update_rag_config(
         "DOCUMENT_INTELLIGENCE_ENDPOINT": request.app.state.config.DOCUMENT_INTELLIGENCE_ENDPOINT,
         "DOCUMENT_INTELLIGENCE_KEY": request.app.state.config.DOCUMENT_INTELLIGENCE_KEY,
         "MISTRAL_OCR_API_KEY": request.app.state.config.MISTRAL_OCR_API_KEY,
+        # MinerU settings
+        "MINERU_API_MODE": request.app.state.config.MINERU_API_MODE,
+        "MINERU_API_URL": request.app.state.config.MINERU_API_URL,
+        "MINERU_API_KEY": request.app.state.config.MINERU_API_KEY,
+        "MINERU_PARAMS": request.app.state.config.MINERU_PARAMS,
         # Reranking settings
         "RAG_RERANKING_MODEL": request.app.state.config.RAG_RERANKING_MODEL,
         "RAG_RERANKING_ENGINE": request.app.state.config.RAG_RERANKING_ENGINE,
@@ -1560,6 +1598,10 @@ def process_file(
                         DOCUMENT_INTELLIGENCE_ENDPOINT=request.app.state.config.DOCUMENT_INTELLIGENCE_ENDPOINT,
                         DOCUMENT_INTELLIGENCE_KEY=request.app.state.config.DOCUMENT_INTELLIGENCE_KEY,
                         MISTRAL_OCR_API_KEY=request.app.state.config.MISTRAL_OCR_API_KEY,
+                        MINERU_API_MODE=request.app.state.config.MINERU_API_MODE,
+                        MINERU_API_URL=request.app.state.config.MINERU_API_URL,
+                        MINERU_API_KEY=request.app.state.config.MINERU_API_KEY,
+                        MINERU_PARAMS=request.app.state.config.MINERU_PARAMS,
                     )
                     docs = loader.load(
                         file.filename, file.meta.get("content_type"), file_path

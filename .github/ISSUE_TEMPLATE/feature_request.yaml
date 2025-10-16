@@ -8,8 +8,9 @@ body:
       value: |
         ## Important Notes
         ### Before submitting
-        Please check the [Issues](https://github.com/open-webui/open-webui/issues) or [Discussions](https://github.com/open-webui/open-webui/discussions) to see if a similar request has been posted.
+        Please check the open AND closed [Issues](https://github.com/open-webui/open-webui/issues) AND [Discussions](https://github.com/open-webui/open-webui/discussions) to see if a similar request has been posted.
         It's likely we're already tracking it! If you’re unsure, start a discussion post first.
+        If your feature request might impact others in the community, consider opening a discussion instead and evaluate whether and how to implement it.
         This will help us efficiently focus on improving the project.
 
         ### Collaborate respectfully
@@ -35,7 +36,7 @@ body:
       label: Check Existing Issues
       description: Please confirm that you've checked for existing similar requests
       options:
-        - label: I have searched the existing issues and discussions.
+        - label: I have searched all existing open AND closed issues and discussions for similar requests. I have found none that is comparable to my request.
           required: true
   - type: textarea
     id: problem-description

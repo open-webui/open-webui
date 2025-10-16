@@ -112,6 +112,7 @@ export const importChat = async (
 export const getChatList = async (
 	token: string = '',
 	page: number | null = null,
+	include_pinned: boolean = false,
 	include_folders: boolean = false
 ) => {
 	let error = null;
@@ -123,6 +124,10 @@ export const getChatList = async (
 
 	if (include_folders) {
 		searchParams.append('include_folders', 'true');
+	}
+
+	if (include_pinned) {
+		searchParams.append('include_pinned', 'true');
 	}
 
 	const res = await fetch(`${WEBUI_API_BASE_URL}/chats/?${searchParams.toString()}`, {
