@@ -156,15 +156,23 @@ print(f\"  Last Sync Status: {data['last_sync_status']}\")
 
     # Check if already enabled
     local sync_enabled
+    local current_sync_interval
     sync_enabled=$(echo "$client_info" | python3 -c "import sys, json; print(json.load(sys.stdin)['sync_enabled'])")
+    current_sync_interval=$(echo "$client_info" | python3 -c "import sys, json; print(json.load(sys.stdin)['sync_interval'])")
 
     if [[ "$sync_enabled" == "True" ]]; then
         local sync_status
         sync_status=$(echo "$client_info" | python3 -c "import sys, json; print(json.load(sys.stdin)['status'])")
 
         if [[ "$sync_status" == "active" ]]; then
-            log_warning "Sync is already enabled and active for client: $CLIENT_NAME"
-            return 2  # Special code for already enabled
+            # If sync_interval is provided and different from current, allow update
+            if [[ -n "$SYNC_INTERVAL" ]] && [[ "$SYNC_INTERVAL" != "$current_sync_interval" ]]; then
+                log_info "Sync is already enabled. Updating sync interval: $current_sync_interval → $SYNC_INTERVAL seconds"
+                return 0  # Continue to update
+            else
+                log_warning "Sync is already enabled and active for client: $CLIENT_NAME"
+                return 2  # Special code for already enabled (no changes needed)
+            fi
         fi
     fi
 
@@ -333,6 +341,10 @@ main() {
     echo -e "${GREEN}✅ Sync Started Successfully${NC}"
     echo -e "${BLUE}========================================${NC}"
     echo ""
+    if [[ -n "$SYNC_INTERVAL" ]]; then
+        echo -e "${GREEN}Sync interval set to: $SYNC_INTERVAL seconds${NC}"
+        echo ""
+    fi
     echo -e "${GREEN}What happens next:${NC}"
     echo "  - The sync cluster will detect the enabled client"
     echo "  - Automatic syncing will begin according to the configured interval"
