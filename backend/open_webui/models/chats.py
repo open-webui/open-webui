@@ -3,6 +3,7 @@ import uuid
 import logging
 from typing import Optional
 
+from open_webui.env import SRC_LOG_LEVELS
 from open_webui.internal.db import get_db
 from open_webui.models.base import Base
 from open_webui.models.tags import TagModel, Tags
@@ -12,6 +13,7 @@ from sqlalchemy import BigInteger, Boolean, Column, String, Text, JSON
 from sqlalchemy import or_, and_, text
 
 log = logging.getLogger(__name__)
+log.setLevel(SRC_LOG_LEVELS["MODELS"])
 
 ####################
 # Chat DB Schema
