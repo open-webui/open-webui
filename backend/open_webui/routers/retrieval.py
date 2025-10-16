@@ -1333,7 +1333,7 @@ async def process_web_search(
             f"Generated search hash for query '{form_data.query}' with engine '{request.app.state.config.RAG_WEB_SEARCH_ENGINE}': {search_hash}"
         )
 
-        cached_collection = check_web_search_cache(search_hash)
+        cached_collection = await check_web_search_cache(search_hash)
         log.info(f"Cache check result: {cached_collection}")
 
         if cached_collection:
@@ -1409,45 +1409,6 @@ async def process_web_search(
                     cached_urls = ["cached_results"]
 
                 log.info(f"🎯 Returning {len(cached_urls)} cached URLs: {cached_urls}")
-                return {
-                    "status": True,
-                    "collection_name": cached_collection,
-                    "filenames": cached_urls,
-                    "loaded_count": (
-                        len(cached_result.metadatas)
-                        if cached_result and cached_result.metadatas
-                        else 0
-                    ),
-                    "cached": True,
-                }
-                if not cached_urls:
-                    log.warning(
-                        "No URLs found in cached metadata, falling back to similarity search"
-                    )
-                    result = query_collection(
-                        collection_names=[cached_collection],
-                        queries=[form_data.query],
-                        embedding_function=request.app.state.EMBEDDING_FUNCTION,
-                        k=request.app.state.config.RAG_WEB_SEARCH_RESULT_COUNT,
-                    )
-
-                    if (
-                        result
-                        and result.get("metadatas")
-                        and len(result["metadatas"]) > 0
-                    ):
-                        for metadata in result["metadatas"][0]:
-                            if "source" in metadata:
-                                url = metadata["source"]
-                                if url not in cached_urls:
-                                    cached_urls.append(url)
-
-                # Final fallback
-                if not cached_urls:
-                    log.warning("No URLs found in cached results, using fallback")
-                    cached_urls = ["cached_results"]
-
-                log.info(f"Returning {len(cached_urls)} cached URLs: {cached_urls}")
                 return {
                     "status": True,
                     "collection_name": cached_collection,
