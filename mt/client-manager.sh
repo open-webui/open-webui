@@ -2274,9 +2274,9 @@ generate_nginx_config() {
     echo "╚════════════════════════════════════════╝"
     echo
 
-    # List available clients
+    # List available clients (exclude sync nodes)
     echo "Available deployments:"
-    clients=($(docker ps -a --filter "name=openwebui-" --format "{{.Names}}" | sed 's/openwebui-//'))
+    clients=($(docker ps -a --filter "name=openwebui-" --format "{{.Names}}" | grep -v "openwebui-sync-node-" | sed 's/openwebui-//'))
 
     if [ ${#clients[@]} -eq 0 ]; then
         echo "No deployments found. Create a deployment first."
