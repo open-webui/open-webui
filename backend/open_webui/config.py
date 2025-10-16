@@ -2297,6 +2297,36 @@ DATALAB_MARKER_OUTPUT_FORMAT = PersistentConfig(
     os.environ.get("DATALAB_MARKER_OUTPUT_FORMAT", "markdown"),
 )
 
+MINERU_API_MODE = PersistentConfig(
+    "MINERU_API_MODE",
+    "rag.mineru_api_mode",
+    os.environ.get("MINERU_API_MODE", "local"),  # "local" or "cloud"
+)
+
+MINERU_API_URL = PersistentConfig(
+    "MINERU_API_URL",
+    "rag.mineru_api_url",
+    os.environ.get("MINERU_API_URL", "http://localhost:8000"),
+)
+
+MINERU_API_KEY = PersistentConfig(
+    "MINERU_API_KEY",
+    "rag.mineru_api_key",
+    os.environ.get("MINERU_API_KEY", ""),
+)
+
+mineru_params = os.getenv("MINERU_PARAMS", "")
+try:
+    mineru_params = json.loads(mineru_params)
+except json.JSONDecodeError:
+    mineru_params = {}
+
+MINERU_PARAMS = PersistentConfig(
+    "MINERU_PARAMS",
+    "rag.mineru_params",
+    mineru_params,
+)
+
 EXTERNAL_DOCUMENT_LOADER_URL = PersistentConfig(
     "EXTERNAL_DOCUMENT_LOADER_URL",
     "rag.external_document_loader_url",
