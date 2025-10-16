@@ -445,7 +445,7 @@ sync_management_menu() {
         echo "4) Manual Sync (Full)"
         echo "5) Manual Sync (Incremental)"
         echo "6) View Sync Status"
-        echo "7) View Recent Sync Jobs"
+        echo "7) View Recent Sync Job"
         echo "8) Deregister Client"
         echo "9) Help (View Scripts Reference)"
         echo "10) Return to Client Menu"
@@ -623,10 +623,10 @@ EOF
                 read
                 ;;
             7)
-                # View Recent Sync Jobs
+                # View Recent Sync Job
                 clear
                 echo "╔════════════════════════════════════════╗"
-                echo "║        Recent Sync Jobs                ║"
+                echo "║        Recent Sync Job                 ║"
                 echo "╚════════════════════════════════════════╝"
                 echo
 
@@ -637,36 +637,39 @@ EOF
                 docker exec -i -e ADMIN_URL="$ADMIN_URL" openwebui-sync-node-a python3 << EOF
 import asyncpg, asyncio, os, sys
 
-async def show_jobs():
+async def show_last_job():
     try:
         conn = await asyncpg.connect(os.getenv('ADMIN_URL'))
-        rows = await conn.fetch('''
-            SELECT job_id, started_at, status, sync_type, triggered_by,
-                   rows_synced, duration_seconds
-            FROM sync_metadata.sync_jobs
-            WHERE client_name = $1
-            ORDER BY started_at DESC
-            LIMIT 10
+        row = await conn.fetchrow('''
+            SELECT job_id, status, tables_synced, tables_total,
+                   duration_seconds, time_since_last_completed
+            FROM sync_metadata.v_last_completed_sync_jobs
+            WHERE client_name = \$1
         ''', '$client_name')
 
-        if rows:
-            print(f"{'Started':<20} {'Status':<10} {'Type':<6} {'By':<15} {'Rows':<8} {'Duration':<8}")
-            print("-" * 85)
+        if row:
+            # Calculate tables synced percentage
+            if row['tables_total'] and row['tables_total'] > 0:
+                tables_synced_pct = (row['tables_synced'] / row['tables_total']) * 100
+            else:
+                tables_synced_pct = 0.0
 
-            for row in rows:
-                duration = f"{row['duration_seconds']:.1f}s" if row['duration_seconds'] else "-"
-                rows_synced = row['rows_synced'] or 0
-                print(f"{str(row['started_at']):<20} {row['status']:<10} {row['sync_type']:<6} "
-                      f"{row['triggered_by']:<15} {rows_synced:<8} {duration:<8}")
+            print(f"Client: $client_name")
+            print(f"  Job ID: {row['job_id']}")
+            print(f"  Status: {row['status']}")
+            print(f"  Tables Synced: {row['tables_synced']}/{row['tables_total']} ({tables_synced_pct:.1f}%)")
+            print(f"  Duration: {row['duration_seconds']:.1f}s" if row['duration_seconds'] else "  Duration: -")
+            print(f"  Time Since Sync: {row['time_since_last_completed']}")
         else:
-            print(f"No sync jobs found for client: $client_name")
+            print(f"No completed sync jobs found for client: $client_name")
+            print(f"   Use option 4 or 5 to run a manual sync")
 
         await conn.close()
     except Exception as e:
         print(f"Error: {e}")
         sys.exit(1)
 
-asyncio.run(show_jobs())
+asyncio.run(show_last_job())
 EOF
                 echo
                 echo "Press Enter to continue..."
