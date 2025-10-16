@@ -1253,6 +1253,7 @@ EOF
             echo "✅ No clients with sync enabled found"
             echo
         fi
+        fi
     else
         echo "⚠️  WARNING: Cannot check for sync-enabled clients (no nodes running)"
         echo "   Proceeding with update assuming no active syncs"
