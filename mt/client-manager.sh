@@ -634,22 +634,23 @@ EOF
                 cd "${SCRIPT_DIR}/SYNC"
                 source .credentials
 
-                docker exec -i -e ADMIN_URL="$ADMIN_URL" openwebui-sync-node-a python3 << EOF
+                docker exec -i -e ADMIN_URL="$ADMIN_URL" -e CLIENT_NAME="$client_name" openwebui-sync-node-a python3 << 'EOF'
 import asyncpg, asyncio, os, sys
 
 async def show_last_job():
     try:
         conn = await asyncpg.connect(os.getenv('ADMIN_URL'))
+        client_name = os.getenv('CLIENT_NAME')
 
         # First get the deployment_id for this client
         deployment = await conn.fetchrow('''
             SELECT deployment_id
             FROM sync_metadata.client_deployments
-            WHERE client_name = \$1
-        ''', '$client_name')
+            WHERE client_name = $1
+        ''', client_name)
 
         if not deployment:
-            print(f"❌ Client '$client_name' not found in sync system")
+            print(f"❌ Client '{client_name}' not found in sync system")
             print(f"   Use option 1 to register this client for sync")
             await conn.close()
             return
@@ -659,7 +660,7 @@ async def show_last_job():
             SELECT job_id, status, tables_synced, tables_total,
                    duration_seconds, time_since_last_completed
             FROM sync_metadata.v_last_completed_sync_jobs
-            WHERE deployment_id = \$1
+            WHERE deployment_id = $1
         ''', deployment['deployment_id'])
 
         if row:
@@ -669,14 +670,14 @@ async def show_last_job():
             else:
                 tables_synced_pct = 0.0
 
-            print(f"Client: $client_name")
+            print(f"Client: {client_name}")
             print(f"  Job ID: {row['job_id']}")
             print(f"  Status: {row['status']}")
             print(f"  Tables Synced: {row['tables_synced']}/{row['tables_total']} ({tables_synced_pct:.1f}%)")
             print(f"  Duration: {row['duration_seconds']:.1f}s" if row['duration_seconds'] else "  Duration: -")
             print(f"  Time Since Sync: {row['time_since_last_completed']}")
         else:
-            print(f"No completed sync jobs found for client: $client_name")
+            print(f"No completed sync jobs found for client: {client_name}")
             print(f"   Use option 4 or 5 to run a manual sync")
 
         await conn.close()
