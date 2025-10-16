@@ -268,6 +268,11 @@ from open_webui.config import (
     PDF_EXTRACT_IMAGES,
     YOUTUBE_LOADER_LANGUAGE,
     YOUTUBE_LOADER_PROXY_URL,
+    DEFAULT_RAG_SETTINGS,
+    DOWNLOADED_EMBEDDING_MODELS,
+    DOWNLOADED_RERANKING_MODELS,
+    LOADED_EMBEDDING_MODELS,
+    LOADED_RERANKING_MODELS,
     # Retrieval (Web Search)
     ENABLE_WEB_SEARCH,
     WEB_SEARCH_ENGINE,
@@ -939,6 +944,11 @@ app.state.config.EXTERNAL_WEB_SEARCH_API_KEY = EXTERNAL_WEB_SEARCH_API_KEY
 app.state.config.EXTERNAL_WEB_LOADER_URL = EXTERNAL_WEB_LOADER_URL
 app.state.config.EXTERNAL_WEB_LOADER_API_KEY = EXTERNAL_WEB_LOADER_API_KEY
 
+app.state.config.DEFAULT_RAG_SETTINGS = DEFAULT_RAG_SETTINGS
+app.state.config.DOWNLOADED_EMBEDDING_MODELS = DOWNLOADED_EMBEDDING_MODELS
+app.state.config.DOWNLOADED_RERANKING_MODELS = DOWNLOADED_RERANKING_MODELS
+app.state.config.LOADED_EMBEDDING_MODELS = LOADED_EMBEDDING_MODELS
+app.state.config.LOADED_RERANKING_MODELS = LOADED_RERANKING_MODELS
 
 app.state.config.PLAYWRIGHT_WS_URL = PLAYWRIGHT_WS_URL
 app.state.config.PLAYWRIGHT_TIMEOUT = PLAYWRIGHT_TIMEOUT
@@ -946,73 +956,82 @@ app.state.config.FIRECRAWL_API_BASE_URL = FIRECRAWL_API_BASE_URL
 app.state.config.FIRECRAWL_API_KEY = FIRECRAWL_API_KEY
 app.state.config.TAVILY_EXTRACT_DEPTH = TAVILY_EXTRACT_DEPTH
 
-app.state.EMBEDDING_FUNCTION = None
-app.state.RERANKING_FUNCTION = None
-app.state.ef = None
-app.state.rf = None
+app.state.EMBEDDING_FUNCTION = {}
+app.state.RERANKING_FUNCTION = {}
+app.state.ef = {}
+app.state.rf = {}
 
 app.state.YOUTUBE_LOADER_TRANSLATION = None
 
 
 try:
-    app.state.ef = get_ef(
-        app.state.config.RAG_EMBEDDING_ENGINE,
-        app.state.config.RAG_EMBEDDING_MODEL,
-        RAG_EMBEDDING_MODEL_AUTO_UPDATE,
-    )
-    if (
-        app.state.config.ENABLE_RAG_HYBRID_SEARCH
-        and not app.state.config.BYPASS_EMBEDDING_AND_RETRIEVAL
-    ):
-        app.state.rf = get_rf(
-            app.state.config.RAG_RERANKING_ENGINE,
-            app.state.config.RAG_RERANKING_MODEL,
-            app.state.config.RAG_EXTERNAL_RERANKER_URL,
-            app.state.config.RAG_EXTERNAL_RERANKER_API_KEY,
-            RAG_RERANKING_MODEL_AUTO_UPDATE,
-        )
-    else:
-        app.state.rf = None
+    # Load all embedding models that are currently in use
+    for engine, model_list in app.state.config.LOADED_EMBEDDING_MODELS.items():
+        for model in model_list:
+            if engine == "azure_openai":
+                # For Azure OpenAI, model is a dict: {model_name: version}
+                model_name, azure_openai_api_version = next(iter(model.items()))
+                model = model_name
+
+            app.state.ef[model] = get_ef(
+                engine,
+                model,
+                RAG_EMBEDDING_MODEL_AUTO_UPDATE,
+            )
+            app.state.EMBEDDING_FUNCTION[model] = get_embedding_function(
+                engine,
+                model,
+                app.state.ef[model],
+                url=(
+                    app.state.config.RAG_OPENAI_API_BASE_URL
+                    if engine == "openai"
+                    else (
+                        app.state.config.RAG_OLLAMA_BASE_URL
+                        if engine == "ollama"
+                        else app.state.config.RAG_AZURE_OPENAI_BASE_URL
+                    )
+                ),
+                key=(
+                    app.state.config.RAG_OPENAI_API_KEY
+                    if engine == "openai"
+                    else (
+                        app.state.config.RAG_OLLAMA_API_KEY
+                        if engine == "ollama"
+                        else app.state.config.RAG_AZURE_OPENAI_API_KEY
+                    )
+                ),
+                embedding_batch_size=app.state.config.RAG_EMBEDDING_BATCH_SIZE,
+                azure_api_version=(
+                    app.state.config.RAG_AZURE_OPENAI_API_VERSION
+                    if engine == "azure_openai"
+                    else None
+                ),
+            )
+   # Load all reranking models that are currently in use
+    for engine, model_list in app.state.config.LOADED_RERANKING_MODELS.items():
+        for model in model_list:
+            app.state.rf[model["RAG_RERANKING_MODEL"]] = get_rf(
+                engine,
+                model["RAG_RERANKING_MODEL"],
+                model["RAG_EXTERNAL_RERANKER_URL"],
+                model["RAG_EXTERNAL_RERANKER_API_KEY"],
+            )
+
+            app.state.RERANKING_FUNCTION[model["RAG_RERANKING_MODEL"]] = get_reranking_function(
+                engine,
+                model["RAG_RERANKING_MODEL"],
+                reranking_function=app.state.rf[model["RAG_RERANKING_MODEL"]],
+            )
+
+
 except Exception as e:
     log.error(f"Error updating models: {e}")
     pass
 
-
-app.state.EMBEDDING_FUNCTION = get_embedding_function(
-    app.state.config.RAG_EMBEDDING_ENGINE,
-    app.state.config.RAG_EMBEDDING_MODEL,
-    embedding_function=app.state.ef,
-    url=(
-        app.state.config.RAG_OPENAI_API_BASE_URL
-        if app.state.config.RAG_EMBEDDING_ENGINE == "openai"
-        else (
-            app.state.config.RAG_OLLAMA_BASE_URL
-            if app.state.config.RAG_EMBEDDING_ENGINE == "ollama"
-            else app.state.config.RAG_AZURE_OPENAI_BASE_URL
-        )
-    ),
-    key=(
-        app.state.config.RAG_OPENAI_API_KEY
-        if app.state.config.RAG_EMBEDDING_ENGINE == "openai"
-        else (
-            app.state.config.RAG_OLLAMA_API_KEY
-            if app.state.config.RAG_EMBEDDING_ENGINE == "ollama"
-            else app.state.config.RAG_AZURE_OPENAI_API_KEY
-        )
-    ),
-    embedding_batch_size=app.state.config.RAG_EMBEDDING_BATCH_SIZE,
-    azure_api_version=(
-        app.state.config.RAG_AZURE_OPENAI_API_VERSION
-        if app.state.config.RAG_EMBEDDING_ENGINE == "azure_openai"
-        else None
-    ),
-)
-
-app.state.RERANKING_FUNCTION = get_reranking_function(
-    app.state.config.RAG_RERANKING_ENGINE,
-    app.state.config.RAG_RERANKING_MODEL,
-    reranking_function=app.state.rf,
-)
+log.info(f"Loaded embedding models: {list(app.state.ef.keys())}")
+log.info(f"Loaded reranking models: {list(app.state.rf.keys())}")
+log.info(f"Embedding functions: {list(app.state.EMBEDDING_FUNCTION.keys())}")
+log.info(f"Reranking functions: {list(app.state.RERANKING_FUNCTION.keys())}")
 
 ########################################
 #

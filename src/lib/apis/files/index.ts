@@ -1,13 +1,16 @@
 import { WEBUI_API_BASE_URL } from '$lib/constants';
 import { splitStream } from '$lib/utils';
 
-export const uploadFile = async (token: string, file: File, metadata?: object | null) => {
+export const uploadFile = async (token: string, file: File, metadata?: object | null, knowledge_id?: string) => {
 	const data = new FormData();
 	data.append('file', file);
 	if (metadata) {
 		data.append('metadata', JSON.stringify(metadata));
 	}
 
+	if (knowledge_id) {
+		data.append('knowledge_id', knowledge_id);
+	}
 	let error = null;
 
 	const res = await fetch(`${WEBUI_API_BASE_URL}/files/`, {
