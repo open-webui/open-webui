@@ -297,6 +297,8 @@ def actual_transfer(file, file_size):
 
             remote_dir = "/tsi/proj/model-cache/gguf/"
             remote_path = os.path.join(remote_dir, filename)
+            if not os.path.exists(remote_dir):
+                os.makedirs(remote_dir)
 
             # Ensure remote directory exists
             ensure_remote_dir(sftp, remote_dir)
@@ -390,6 +392,10 @@ def receive_upload_model():
 
     job_status["running"] = True
     job_status["current_job"] = inspect.currentframe().f_code.co_name
+
+    remote_dir = "/tsi/proj/model-cache/gguf/"
+    if not os.path.exists(remote_dir):
+        os.makedirs(remote_dir)
 
     file_name = os.path.basename(data["actual_name"])
 
@@ -546,6 +552,9 @@ def receive_pull_model():
     job_status["running"] = True
     job_status["current_job"] = inspect.currentframe().f_code.co_name
 
+    remote_dir = "/tsi/proj/model-cache/gguf/"
+    if not os.path.exists(remote_dir):
+        os.makedirs(remote_dir)
     try:
         test1 = data["human_name"]
         test2 = data["actual_name"]
