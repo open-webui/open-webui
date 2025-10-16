@@ -1070,7 +1070,7 @@
 
 							<div class="mt-1 mb-1 text-xs text-gray-400 dark:text-gray-500">
 								{$i18n.t(
-									'Warning: If you update or change your embedding model, you will need to re-import all documents.'
+									'After updating or changing the embedding model, you must reindex the knowledge base for the changes to take effect. You can do this using the "Reindex" button below.'
 								)}
 							</div>
 						</div>
