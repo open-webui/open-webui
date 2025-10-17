@@ -15,6 +15,99 @@ export interface ModerationResponse {
 	child_prompt: string;
 }
 
+export interface ScenarioPayload {
+  scenario_id?: string;
+  user_id: string;
+  child_id: string;
+  scenario_prompt: string;
+  original_response: string;
+}
+
+export interface AnswerPayload {
+  scenario_id: string;
+  question_key: string;
+  value: boolean | string | Record<string, any>;
+  answered_at: number;
+}
+
+export interface VersionPayload {
+  scenario_id: string;
+  version_index: number;
+  strategies: string[];
+  custom_instructions: { id: string; text: string }[];
+  highlighted_texts: string[];
+  refactored_response: string;
+}
+
+export const upsertScenario = async (token: string, payload: ScenarioPayload) => {
+  const res = await fetch(`${WEBUI_API_BASE_URL}/moderation/scenarios`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${token}`
+    },
+    body: JSON.stringify(payload)
+  });
+  if (!res.ok) throw await res.json();
+  return res.json();
+};
+
+export const patchScenario = async (
+  token: string,
+  scenarioId: string,
+  payload: Partial<{ is_applicable: boolean; decision: string; decided_at: number }>
+) => {
+  const res = await fetch(`${WEBUI_API_BASE_URL}/moderation/scenarios/${scenarioId}`, {
+    method: 'PATCH',
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${token}`
+    },
+    body: JSON.stringify(payload)
+  });
+  if (!res.ok) throw await res.json();
+  return res.json();
+};
+
+export const upsertAnswer = async (token: string, scenarioId: string, payload: AnswerPayload) => {
+  const res = await fetch(`${WEBUI_API_BASE_URL}/moderation/scenarios/${scenarioId}/answers`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${token}`
+    },
+    body: JSON.stringify(payload)
+  });
+  if (!res.ok) throw await res.json();
+  return res.json();
+};
+
+export const createVersion = async (token: string, scenarioId: string, payload: VersionPayload) => {
+  const res = await fetch(`${WEBUI_API_BASE_URL}/moderation/scenarios/${scenarioId}/versions`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${token}`
+    },
+    body: JSON.stringify(payload)
+  });
+  if (!res.ok) throw await res.json();
+  return res.json();
+};
+
+export const confirmVersion = async (token: string, scenarioId: string, versionIndex: number) => {
+  const res = await fetch(`${WEBUI_API_BASE_URL}/moderation/scenarios/${scenarioId}/confirm`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${token}`
+    },
+    body: JSON.stringify({ version_index: versionIndex })
+  });
+  if (!res.ok) throw await res.json();
+  return res.json();
+};
+
 export const applyModeration = async (
 	token: string,
 	moderationTypes: string[],  // Standard moderation types

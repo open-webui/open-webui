@@ -23,6 +23,8 @@ class Selection(Base):
     role = Column(String, nullable=False)  # 'user' or 'assistant'
     selected_text = Column(Text, nullable=False)  # The actual selected text
     child_id = Column(String, nullable=True)  # Link to child profile for kids mode
+    scenario_id = Column(String, nullable=True)  # Moderation scenario association
+    source = Column(String, nullable=True)  # 'prompt' | 'response'
     context = Column(Text, nullable=True)  # Surrounding context for analysis
     meta = Column(JSON, nullable=True)  # Additional metadata (model used, timestamp, etc.)
     
@@ -35,6 +37,8 @@ class Selection(Base):
         Index('idx_selection_chat_id', 'chat_id'),
         Index('idx_selection_message_id', 'message_id'),
         Index('idx_selection_created_at', 'created_at'),
+        Index('idx_selection_scenario_id', 'scenario_id'),
+        Index('idx_selection_source', 'source'),
     )
 
 class SelectionModel(BaseModel):
@@ -47,6 +51,8 @@ class SelectionModel(BaseModel):
     role: str
     selected_text: str
     child_id: Optional[str] = None
+    scenario_id: Optional[str] = None
+    source: Optional[str] = None
     context: Optional[str] = None
     meta: Optional[dict] = None
     created_at: int
@@ -58,6 +64,8 @@ class SelectionForm(BaseModel):
     role: str
     selected_text: str
     child_id: Optional[str] = None
+    scenario_id: Optional[str] = None
+    source: Optional[str] = None  # 'prompt' | 'response'
     context: Optional[str] = None
     meta: Optional[dict] = None
 
@@ -79,6 +87,8 @@ class SelectionTable:
                     "role": form_data.role,
                     "selected_text": form_data.selected_text,
                     "child_id": form_data.child_id,
+                    "scenario_id": form_data.scenario_id,
+                    "source": form_data.source,
                     "context": form_data.context,
                     "meta": form_data.meta,
                     "created_at": ts,
@@ -144,6 +154,24 @@ class SelectionTable:
                 db.commit()
                 return True
             return False
+
+    def delete_selection_by_text(self, user_id: str, chat_id: str, selected_text: str, role: str | None = None) -> int:
+        """Delete selection(s) by user, chat, text, and optional role. Returns count deleted."""
+        with get_db() as db:
+            query = db.query(Selection).filter(
+                Selection.user_id == user_id,
+                Selection.chat_id == chat_id,
+                Selection.selected_text == selected_text,
+            )
+            if role:
+                query = query.filter(Selection.role == role)
+            deleted = 0
+            for sel in query.all():
+                db.delete(sel)
+                deleted += 1
+            if deleted:
+                db.commit()
+            return deleted
 
     def get_selection_stats(self) -> dict:
         """Get statistics about selections for analytics"""

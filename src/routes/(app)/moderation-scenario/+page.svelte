@@ -4,7 +4,8 @@
 	import { showSidebar, user } from '$lib/stores';
 	import { toast } from 'svelte-sonner';
 	import MenuLines from '$lib/components/icons/MenuLines.svelte';
-	import { applyModeration, generateFollowUpPrompt, type ModerationResponse } from '$lib/apis/moderation';
+import { applyModeration, generateFollowUpPrompt, type ModerationResponse, upsertScenario, patchScenario, upsertAnswer, createVersion, confirmVersion } from '$lib/apis/moderation';
+import { WEBUI_API_BASE_URL } from '$lib/constants';
 	import Tooltip from '$lib/components/common/Tooltip.svelte';
 
 	const i18n = getContext('i18n');
@@ -156,13 +157,16 @@
 	let childPrompt1: string = scenarioList[0][0];
 	let originalResponse1: string = scenarioList[0][1];
 	let highlightedTexts1: string[] = [];
+	let childPromptHTML: string = '';
 	
 	// Text selection UI state
 	let responseContainer1: HTMLElement;
+	let promptContainer1: HTMLElement;
 	let selectionButtonsVisible1: boolean = false;
 	let selectionButtonsTop1: number = 0;
 	let selectionButtonsLeft1: number = 0;
 	let currentSelection1: string = '';
+	let selectionInPrompt: boolean = false;
 	
 	// UI state
 	let showOriginal1: boolean = false;
@@ -175,7 +179,7 @@
 
 	// Helper function to handle text selection
 	function handleTextSelection(event: MouseEvent) {
-		const container = responseContainer1;
+		const container = (event.currentTarget as HTMLElement) || responseContainer1;
 		if (!container) return;
 		
 		setTimeout(() => {
@@ -189,6 +193,7 @@
 			}
 			
 			currentSelection1 = selectedText;
+			selectionInPrompt = !!promptContainer1 && container === promptContainer1;
 			
 			const range = selection.getRangeAt(0);
 			const rect = range.getBoundingClientRect();
@@ -210,6 +215,34 @@
 		
 		if (!highlightedTexts1.includes(text)) {
 			highlightedTexts1 = [...highlightedTexts1, text];
+
+			// Persist selection immediately with source
+			try {
+				const scenarioId = `scenario_${selectedScenarioIndex}`;
+				const source = selectionInPrompt ? 'prompt' : 'response';
+				const role = selectionInPrompt ? 'user' : 'assistant';
+				const body = {
+					chat_id: scenarioId,
+					message_id: `${scenarioId}:${source}`,
+					role,
+					selected_text: text,
+					child_id: localStorage.getItem('selectedChildId') || 'unknown',
+					scenario_id: scenarioId,
+					source,
+					context: null,
+					meta: {}
+				};
+				fetch(`${WEBUI_API_BASE_URL}/selections`, {
+					method: 'POST',
+					headers: {
+						'Content-Type': 'application/json',
+						Authorization: `Bearer ${localStorage.token}`
+					},
+					body: JSON.stringify(body)
+				});
+			} catch (e) {
+				console.error('Failed to persist selection', e);
+			}
 		}
 		selectionButtonsVisible1 = false;
 		currentSelection1 = '';
@@ -222,6 +255,29 @@
 	
 	function removeHighlight(text: string) {
 		highlightedTexts1 = highlightedTexts1.filter(t => t !== text);
+
+		// Debounced removal from DB
+		try {
+			const scenarioId = `scenario_${selectedScenarioIndex}`;
+			const role = 'assistant'; // Removal is text-only; role-agnostic on backend unless provided
+			if (!window.__removeSelectionDebounce) {
+				window.__removeSelectionDebounce = {};
+			}
+			const key = `${scenarioId}:${text}`;
+			clearTimeout(window.__removeSelectionDebounce[key]);
+			window.__removeSelectionDebounce[key] = setTimeout(() => {
+				fetch(`${WEBUI_API_BASE_URL}/selections/delete_by_text`, {
+					method: 'POST',
+					headers: {
+						'Content-Type': 'application/json',
+						Authorization: `Bearer ${localStorage.token}`
+					},
+					body: JSON.stringify({ chat_id: scenarioId, selected_text: text, role })
+				});
+			}, 250);
+		} catch (e) {
+			console.error('Failed to schedule selection removal', e);
+		}
 	}
 	
 	function getHighlightedHTML(text: string, highlights: string[]): string {
@@ -258,6 +314,9 @@
 		}
 		return getHighlightedHTML(originalResponse1, highlightedTexts1);
 	})();
+
+	// Highlighted Prompt HTML
+	$: childPromptHTML = getHighlightedHTML(childPrompt1, highlightedTexts1);
 
 	// Timer management functions
 	function startTimer(scenarioIndex: number) {
@@ -560,6 +619,14 @@
 		console.log('Accept original - state:', { hasInitialDecision, acceptedOriginal, confirmedVersionIndex, markedNotApplicable });
 		saveCurrentScenarioState(); // Save the decision
 		toast.success('Original response accepted');
+
+		// Persist decision
+		try {
+			const scenarioId = `scenario_${selectedScenarioIndex}`;
+			patchScenario(localStorage.token, scenarioId, { decision: 'accept_original', decided_at: Date.now() });
+		} catch (e) {
+			console.error('Failed to persist accept_original decision', e);
+		}
 	}
 
 	function startModerating() {
@@ -618,6 +685,14 @@
 		saveCurrentScenarioState(); // Save the decision
 		toast.success('Scenario marked as not applicable');
 		console.log('User marked scenario as not applicable:', selectedScenarioIndex);
+
+		// Persist decision immediately
+		try {
+			const scenarioId = `scenario_${selectedScenarioIndex}`;
+			patchScenario(localStorage.token, scenarioId, { decision: 'not_applicable', decided_at: Date.now() });
+		} catch (e) {
+			console.error('Failed to persist not_applicable decision', e);
+		}
 	}
 
 	function unmarkNotApplicable() {
@@ -707,6 +782,21 @@
 				
 				const total = standardStrategies.length + customTexts.length;
 				toast.success(`Created version ${versions.length} with ${total} moderation strateg${total === 1 ? 'y' : 'ies'}`);
+
+				// Persist version row
+				try {
+					const scenarioId = `scenario_${selectedScenarioIndex}`;
+					createVersion(localStorage.token, scenarioId, {
+						scenario_id: scenarioId,
+						version_index: currentVersionIndex,
+						strategies: [...standardStrategies],
+						custom_instructions: usedCustomInstructions,
+						highlighted_texts: [...highlightedTexts1],
+						refactored_response: result.refactored_response
+					});
+				} catch (e) {
+					console.error('Failed to persist version', e);
+				}
 			} else {
 				toast.error('Failed to apply moderation');
 			}
@@ -765,6 +855,20 @@
 		
 		// Start timer for the initial scenario
 		startTimer(selectedScenarioIndex);
+
+		// Bootstrap scenario persistence
+		try {
+			const scenarioId = `scenario_${selectedScenarioIndex}`;
+			upsertScenario(localStorage.token, {
+				scenario_id: scenarioId,
+				user_id: $user?.id || 'unknown',
+				child_id: localStorage.getItem('selectedChildId') || 'unknown',
+				scenario_prompt: childPrompt1,
+				original_response: originalResponse1
+			});
+		} catch (e) {
+			console.error('Failed to bootstrap scenario', e);
+		}
 	});
 	
 	onDestroy(() => {
@@ -961,8 +1065,39 @@
 			<div class="flex-1 overflow-y-auto p-6 space-y-4">
 				<!-- Child Prompt Bubble -->
 				<div class="flex justify-end">
-					<div class="max-w-[80%] bg-blue-500 text-white rounded-2xl rounded-tr-sm px-4 py-3 shadow-sm">
-						<p class="text-sm whitespace-pre-wrap">{childPrompt1}</p>
+					<div class="max-w-[80%] bg-blue-500 text-white rounded-2xl rounded-tr-sm px-4 py-3 shadow-sm relative select-text"
+						bind:this={promptContainer1}
+						on:mouseup={handleTextSelection}
+					>
+						<p class="text-sm whitespace-pre-wrap">{@html childPromptHTML}</p>
+						{#if selectionButtonsVisible1 && showOriginal1 && selectionInPrompt}
+							<div 
+								class="absolute z-50 bg-white dark:bg-gray-700 shadow-lg rounded-lg px-2 py-1 flex items-center space-x-2"
+								style="top: {selectionButtonsTop1}px; left: {selectionButtonsLeft1}px;"
+								on:mousedown|stopPropagation
+								on:mouseup|stopPropagation
+								role="toolbar"
+								aria-label="Text selection toolbar"
+							>
+								<button
+									on:click|stopPropagation|preventDefault={saveSelection}
+									on:mousedown|stopPropagation
+									class="px-3 py-1 text-xs font-medium bg-yellow-500 hover:bg-yellow-600 text-white rounded transition-colors"
+								>
+									💡 Highlight
+								</button>
+								<button
+									on:click|stopPropagation={() => selectionButtonsVisible1 = false}
+									on:mousedown|stopPropagation
+									class="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
+									aria-label="Close"
+								>
+									<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+										<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+									</svg>
+								</button>
+							</div>
+						{/if}
 					</div>
 				</div>
 
@@ -977,7 +1112,7 @@
 								{@html response1HTML}
 							</div>
 							
-							{#if selectionButtonsVisible1 && showOriginal1}
+							{#if selectionButtonsVisible1 && showOriginal1 && !selectionInPrompt}
 								<div 
 									class="absolute z-50 bg-white dark:bg-gray-700 shadow-lg rounded-lg px-2 py-1 flex items-center space-x-2"
 									style="top: {selectionButtonsTop1}px; left: {selectionButtonsLeft1}px;"
@@ -1149,6 +1284,25 @@
 									{/each}
 								</div>
 							</div>
+						<!-- Confirmation: only show the confirm button inside -->
+						<div class="mt-3">
+							{#if confirmedVersionIndex === null}
+								<button
+									on:click={() => {
+										confirmCurrentVersion();
+										try {
+											const scenarioId = `scenario_${selectedScenarioIndex}`;
+											confirmVersion(localStorage.token, scenarioId, currentVersionIndex);
+										} catch (e) {
+											console.error('Failed to persist confirm', e);
+										}
+									}}
+									class="px-6 py-2 rounded-lg font-medium transition-all duration-200 bg-green-500 hover:bg-green-600 text-white shadow-lg hover:shadow-xl"
+								>
+									I am satisfied with this response
+								</button>
+							{/if}
+						</div>
 						{/if}
 						</div>
 					</div>
@@ -1167,6 +1321,19 @@
 							on:click={() => {
 								isApplicable = true;
 								applicabilityAnswered = true;
+								// Persist Q1 answer
+								try {
+									const scenarioId = `scenario_${selectedScenarioIndex}`;
+									upsertAnswer(localStorage.token, scenarioId, {
+										scenario_id: scenarioId,
+										question_key: 'is_applicable',
+										value: true,
+										answered_at: Date.now()
+									});
+									patchScenario(localStorage.token, scenarioId, { is_applicable: true });
+								} catch (e) {
+									console.error('Failed to persist Q1 yes', e);
+								}
 							}}
 							class="w-full px-3 py-1.5 rounded-lg font-medium transition-all duration-200 bg-green-500 hover:bg-green-600 text-white shadow-lg hover:shadow-xl flex items-center justify-start space-x-2"
 						>
@@ -1197,8 +1364,22 @@
 							Question 2: How do you feel about the AI's response?
 						</h4>
 						
-						<button
-							on:click={startModerating}
+					<button
+						on:click={() => {
+							startModerating();
+							// Persist Q2 answer as 'moderate' intent
+							try {
+								const scenarioId = `scenario_${selectedScenarioIndex}`;
+								upsertAnswer(localStorage.token, scenarioId, {
+									scenario_id: scenarioId,
+									question_key: 'satisfaction',
+									value: 'moderate',
+									answered_at: Date.now()
+								});
+							} catch (e) {
+								console.error('Failed to persist Q2 moderate', e);
+							}
+						}}
 							class="w-full px-3 py-1.5 rounded-lg font-medium transition-all duration-200 bg-green-500 hover:bg-green-600 text-white shadow-lg hover:shadow-xl flex items-center justify-start space-x-2"
 						>
 							<svg class="w-5 h-5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -1207,14 +1388,28 @@
 							<span>I would like to moderate this response</span>
 						</button>
 						
-						<button
-							on:click={acceptOriginalResponse}
+					<button
+						on:click={() => {
+							acceptOriginalResponse();
+							// Persist Q2 answer as 'satisfied'
+							try {
+								const scenarioId = `scenario_${selectedScenarioIndex}`;
+								upsertAnswer(localStorage.token, scenarioId, {
+									scenario_id: scenarioId,
+									question_key: 'satisfaction',
+									value: 'satisfied',
+									answered_at: Date.now()
+								});
+							} catch (e) {
+								console.error('Failed to persist Q2 satisfied', e);
+							}
+						}}
 							class="w-full px-3 py-1.5 rounded-lg font-medium transition-all duration-200 bg-green-500 hover:bg-green-600 text-white shadow-lg hover:shadow-xl flex items-center justify-start space-x-2"
 						>
 							<svg class="w-5 h-5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
 								<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
 							</svg>
-							<span>I am satisfied with this response</span>
+						<span>I am satisfied with this response</span>
 						</button>
 						
 						<!-- Back button -->
@@ -1241,39 +1436,26 @@
 				<div class="w-full max-w-md px-4">
 					<div class="p-4 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg">
 						<p class="text-sm font-medium text-blue-900 dark:text-blue-200 mb-3 text-center">
-							Highlight any text you find concerning in the response above.
+							If there is any text you would change in the prompt or response, if at all, please highlight it by dragging over it and then selecting "Highlight". If not, click "Done" to continue.
 						</p>
-						{#if highlightedTexts1.length > 0}
-							<button
-								on:click={finishHighlighting}
-								class="w-full px-4 py-2 bg-green-500 hover:bg-green-600 text-white font-semibold rounded-lg transition-colors"
-							>
+						<button
+							on:click={finishHighlighting}
+							class="w-full px-4 py-2 bg-green-500 hover:bg-green-600 text-white font-semibold rounded-lg transition-colors"
+						>
+							{#if highlightedTexts1.length > 0}
 								Done ({highlightedTexts1.length} concern{highlightedTexts1.length === 1 ? '' : 's'} highlighted)
-							</button>
-						{:else}
-							<p class="text-xs text-blue-700 dark:text-blue-300 text-center">
-								Select text in the response to highlight it as a concern, then click "Done" to continue.
-							</p>
-						{/if}
+							{:else}
+								Done (no concerns highlighted)
+							{/if}
+						</button>
 					</div>
 				</div>
 			</div>
 		{/if}
 
-		<!-- Confirmation Button/Indicator -->
-		{#if versions.length > 0 && !showOriginal1}
-			{#if confirmedVersionIndex === null}
-				<!-- Show button when no version is confirmed -->
-				<div class="flex justify-center">
-					<button
-						on:click={confirmCurrentVersion}
-						class="px-6 py-2 rounded-lg font-medium transition-all duration-200 bg-green-500 hover:bg-green-600 text-white shadow-lg hover:shadow-xl"
-					>
-						I am satisfied with this response
-					</button>
-				</div>
-			{:else if confirmedVersionIndex === currentVersionIndex}
-				<!-- Show indicator with unconfirm link when viewing confirmed version -->
+		<!-- Confirmation Indicator moved below the response area -->
+		{#if versions.length > 0 && !showOriginal1 && confirmedVersionIndex !== null}
+			{#if confirmedVersionIndex === currentVersionIndex}
 				<div class="mt-3">
 					<div class="flex items-center justify-between px-3 py-2 bg-green-50 dark:bg-green-900/20 rounded-lg border border-green-200 dark:border-green-800">
 						<div class="flex items-center space-x-2">
@@ -1281,19 +1463,26 @@
 								<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
 							</svg>
 							<span class="text-xs font-medium text-green-700 dark:text-green-300">
-								Refactored version confirmed as satisfactory
+								Scenario Moderated
 							</span>
 						</div>
-						<button
-							on:click={confirmCurrentVersion}
+									<button
+										on:click={() => {
+											confirmCurrentVersion();
+											try {
+												const scenarioId = `scenario_${selectedScenarioIndex}`;
+												confirmVersion(localStorage.token, scenarioId, currentVersionIndex);
+											} catch (e) {
+												console.error('Failed to persist confirm', e);
+											}
+										}}
 							class="text-xs text-blue-600 dark:text-blue-400 hover:underline font-medium"
 						>
-							Unconfirm
+							Edit Moderation
 						</button>
 					</div>
 				</div>
 			{:else}
-				<!-- Show disabled indicator when viewing non-confirmed version -->
 				<div class="mt-3">
 					<div class="flex items-center justify-center px-3 py-2 bg-gray-100 dark:bg-gray-800 rounded-lg">
 						<span class="text-xs font-medium text-gray-600 dark:text-gray-400">
@@ -1309,22 +1498,7 @@
 				<div class="mt-4 p-4 bg-gray-50 dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700">
 					<div class="flex items-center justify-between mb-1">
 						<h3 class="text-sm font-semibold text-gray-900 dark:text-white">Select Moderation Strategies</h3>
-					<button
-						on:click={() => {
-							moderationPanelVisible = false;
-							highlightingMode = false;
-							applicabilityAnswered = false;
-							isApplicable = null;
-							hasInitialDecision = false;
-						}}
-						disabled={moderationLoading}
-						class="px-3 py-1.5 text-xs font-medium rounded-lg transition-all flex items-center justify-center space-x-1 bg-gray-300 hover:bg-gray-400 dark:bg-gray-600 dark:hover:bg-gray-500 text-gray-800 dark:text-gray-200 disabled:opacity-50"
-					>
-						<svg class="w-3 h-3 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-							<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"></path>
-						</svg>
-						<span>Back</span>
-					</button>
+						<!-- Back button removed -->
 					</div>
 					<p class="text-xs text-gray-600 dark:text-gray-400 mb-3">
 						Choose up to 3 strategies to improve the AI's response. Hover over each option for details, or highlight concerning text in the original response above.

@@ -130,6 +130,31 @@ async def delete_selection(
         log.error(f"Error deleting selection: {e}")
         raise HTTPException(status_code=500, detail="Internal server error")
 
+
+class SelectionDeleteByTextForm(BaseModel):
+    chat_id: str
+    selected_text: str
+    role: Optional[str] = None
+
+
+@router.post("/selections/delete_by_text")
+async def delete_selection_by_text(
+    form_data: SelectionDeleteByTextForm,
+    current_user: UserModel = Depends(get_current_user)
+):
+    """Delete selection(s) by text with optional role filter (debounced removal)."""
+    try:
+        count = Selections.delete_selection_by_text(
+            current_user.id,
+            form_data.chat_id,
+            form_data.selected_text,
+            role=form_data.role,
+        )
+        return {"deleted": count}
+    except Exception as e:
+        log.error(f"Error deleting selection by text: {e}")
+        raise HTTPException(status_code=500, detail="Internal server error")
+
 @router.get("/selections/stats", response_model=SelectionStatsResponse)
 async def get_selection_stats(
     current_user: UserModel = Depends(get_current_user)
