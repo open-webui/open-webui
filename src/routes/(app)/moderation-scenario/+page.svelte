@@ -104,6 +104,10 @@
 	let customInstructions: Array<{id: string, text: string}> = [];
 	let attentionCheckSelected: boolean = false;
 	
+	// Two-question flow state
+	let applicabilityAnswered: boolean = false;
+	let isApplicable: boolean | null = null;
+	
 	// Version management state
 	let versions: ModerationVersion[] = [];
 	let currentVersionIndex: number = -1;
@@ -296,6 +300,10 @@
 			attentionCheckSelected = savedState.attentionCheckSelected || false;
 			markedNotApplicable = savedState.markedNotApplicable || false;
 			
+			// Reset two-question flow state for new scenario
+			applicabilityAnswered = false;
+			isApplicable = null;
+			
 			// Set moderation panel visibility based on confirmation state and initial decision
 			moderationPanelVisible = confirmedVersionIndex === null && hasInitialDecision && !acceptedOriginal && !markedNotApplicable;
 			
@@ -318,6 +326,10 @@
 			acceptedOriginal = false;
 			attentionCheckSelected = false;
 			markedNotApplicable = false;
+			
+			// Reset two-question flow state for new scenario
+			applicabilityAnswered = false;
+			isApplicable = null;
 		}
 		
 		childPrompt1 = prompt;
@@ -444,6 +456,16 @@
 		customInstructionInput = '';
 		
 		toast.success('Custom instruction added - click it to select');
+	}
+
+	function unmarkSatisfaction() {
+		// Reset question flow state only
+		applicabilityAnswered = false;
+		isApplicable = null;
+		hasInitialDecision = false;
+		acceptedOriginal = false;
+		
+		toast.info('Response unmarked. Please answer the questions again.');
 	}
 	
 	function removeCustomInstruction(id: string) {
@@ -783,7 +805,7 @@
 			<div class="flex-shrink-0 border-b border-gray-200 dark:border-gray-800 p-4">
 				<h1 class="text-xl font-bold text-gray-900 dark:text-white">Conversation Review</h1>
 				<p class="text-sm text-gray-600 dark:text-gray-400">
-					Read the conversation below, then decide if you're satisfied with the AI's response, want to moderate it, or if it's not applicable to you.
+					Please the conversation below, and answer the questions that follow.
 				</p>
 			</div>
 
@@ -848,10 +870,10 @@
 										</span>
 									</div>
 									<button
-										on:click={startModerating}
+										on:click={unmarkSatisfaction}
 										class="text-xs text-blue-600 dark:text-blue-400 hover:underline font-medium"
 									>
-										Change & Moderate
+										Unmark
 									</button>
 								</div>
 							</div>
@@ -972,40 +994,87 @@
 						</div>
 					</div>
 
-			<!-- Initial Decision Buttons -->
-			{#if !hasInitialDecision}
-				<div class="flex justify-center mt-6">
-					<div class="flex flex-col sm:flex-row gap-3 w-full max-w-3xl px-4">
+		<!-- Initial Decision Buttons -->
+		{#if !hasInitialDecision}
+			<!-- Question 1: Realism/Applicability -->
+			{#if !applicabilityAnswered}
+				<div class="flex justify-center mt-4">
+					<div class="flex flex-col space-y-2 w-full max-w-md px-4">
+						<h4 class="text-md font-medium text-gray-800 dark:text-gray-200 mb-2">
+							Is this interaction realistic and applicable to you and your child, or not?
+						</h4>
+						
 						<button
-							on:click={acceptOriginalResponse}
-							class="flex-1 px-6 py-4 rounded-lg font-medium transition-all duration-200 bg-green-500 hover:bg-green-600 text-white shadow-lg hover:shadow-xl flex items-center justify-center space-x-2"
+							on:click={() => {
+								isApplicable = true;
+								applicabilityAnswered = true;
+							}}
+							class="w-full px-3 py-1.5 rounded-lg font-medium transition-all duration-200 bg-green-500 hover:bg-green-600 text-white shadow-lg hover:shadow-xl flex items-center justify-start space-x-2"
 						>
-							<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+							<svg class="w-5 h-5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
 								<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
 							</svg>
-							<span>I am satisfied with this response</span>
+							<span>Yes, this interaction is realistic and applicable to me</span>
 						</button>
-						<button
-							on:click={startModerating}
-							class="flex-1 px-6 py-4 rounded-lg font-medium transition-all duration-200 bg-blue-500 hover:bg-blue-600 text-white shadow-lg hover:shadow-xl flex items-center justify-center space-x-2"
-						>
-							<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-								<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path>
-							</svg>
-							<span>I'd like to moderate this response</span>
-						</button>
+						
 						<button
 							on:click={markNotApplicable}
-							class="flex-1 px-6 py-4 rounded-lg font-medium transition-all duration-200 bg-gray-500 hover:bg-gray-600 text-white shadow-lg hover:shadow-xl flex items-center justify-center space-x-2"
+							class="w-full px-3 py-1.5 rounded-lg font-medium transition-all duration-200 bg-green-500 hover:bg-green-600 text-white shadow-lg hover:shadow-xl flex items-center justify-start space-x-2"
 						>
-							<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-								<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636"></path>
+							<svg class="w-5 h-5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+								<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M18.364 5.636L5.636 18.364m0-12.728l12.728 12.728M12 2.25c-5.385 0-9.75 4.365-9.75 9.75s4.365 9.75 9.75 9.75 9.75-4.365 9.75-9.75S17.385 2.25 12 2.25z"></path>
 							</svg>
-							<span>This interaction is not applicable to me</span>
+							<span>No, this interaction is not realistic and applicable to me</span>
 						</button>
 					</div>
 				</div>
 			{/if}
+			
+			<!-- Question 2: Satisfaction vs Moderation (only if applicable) -->
+			{#if applicabilityAnswered && isApplicable}
+				<div class="flex justify-center mt-6">
+					<div class="flex flex-col space-y-2 w-full max-w-md px-4">
+						<h4 class="text-md font-medium text-gray-800 dark:text-gray-200 mb-2">
+							Question 2: How do you feel about the AI's response?
+						</h4>
+						
+						<button
+							on:click={startModerating}
+							class="w-full px-3 py-1.5 rounded-lg font-medium transition-all duration-200 bg-green-500 hover:bg-green-600 text-white shadow-lg hover:shadow-xl flex items-center justify-start space-x-2"
+						>
+							<svg class="w-5 h-5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+								<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path>
+							</svg>
+							<span>I would like to moderate this response</span>
+						</button>
+						
+						<button
+							on:click={acceptOriginalResponse}
+							class="w-full px-3 py-1.5 rounded-lg font-medium transition-all duration-200 bg-green-500 hover:bg-green-600 text-white shadow-lg hover:shadow-xl flex items-center justify-start space-x-2"
+						>
+							<svg class="w-5 h-5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+								<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+							</svg>
+							<span>I am satisfied with this response</span>
+						</button>
+						
+						<!-- Back button -->
+						<button
+							on:click={() => {
+								applicabilityAnswered = false;
+								isApplicable = null;
+							}}
+							class="w-full px-3 py-1.5 rounded-lg font-medium transition-all duration-200 bg-gray-300 hover:bg-gray-400 dark:bg-gray-600 dark:hover:bg-gray-500 text-gray-800 dark:text-gray-200 flex items-center justify-center space-x-2 mt-2"
+						>
+							<svg class="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+								<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"></path>
+							</svg>
+							<span>Back</span>
+						</button>
+					</div>
+				</div>
+			{/if}
+		{/if}
 
 			<!-- Confirmation Button -->
 			{#if versions.length > 0 && !showOriginal1}
@@ -1067,7 +1136,7 @@
 								<button
 									on:click={() => toggleModerationSelection(option)}
 									disabled={moderationLoading}
-									class="w-full p-3 text-xs font-medium text-center rounded-lg transition-all {
+									class="w-full p-3 text-xs font-medium text-center rounded-lg transition-all min-h-[60px] flex items-center justify-center {
 										selectedModerations.has(option)
 											? 'bg-blue-500 text-white hover:bg-blue-600 ring-2 ring-blue-400'
 											: 'bg-white dark:bg-gray-700 text-gray-900 dark:text-white hover:bg-gray-100 dark:hover:bg-gray-600 border border-gray-200 dark:border-gray-600'
@@ -1085,7 +1154,7 @@
 						<button
 							on:click={() => toggleModerationSelection('ATTENTION_CHECK')}
 							disabled={moderationLoading}
-							class="p-3 text-xs font-medium text-center rounded-lg transition-all {
+							class="p-3 text-xs font-medium text-center rounded-lg transition-all min-h-[60px] flex items-center justify-center {
 								attentionCheckSelected
 									? 'bg-blue-500 text-white hover:bg-blue-600 ring-2 ring-blue-400'
 									: 'bg-white dark:bg-gray-700 text-gray-900 dark:text-white hover:bg-gray-100 dark:hover:bg-gray-600 border border-gray-200 dark:border-gray-600'
@@ -1094,21 +1163,22 @@
 							Select This Every Time
 						</button>
 						
-						<!-- Satisfied With Original Button (2 columns) -->
-						<Tooltip
-							content="Accept the original response without any modifications and close the moderation panel"
-							placement="top-end"
-							className="col-span-2 w-full"
-							tippyOptions={{ delay: [200, 0] }}
+						<!-- Back Button (2 columns) -->
+						<button
+							on:click={() => {
+								moderationPanelVisible = false;
+								applicabilityAnswered = false;
+								isApplicable = null;
+								hasInitialDecision = false;
+							}}
+							disabled={moderationLoading}
+							class="col-span-2 w-full p-3 text-xs font-medium text-center rounded-lg transition-all min-h-[60px] flex items-center justify-center space-x-2 bg-gray-300 hover:bg-gray-400 dark:bg-gray-600 dark:hover:bg-gray-500 text-gray-800 dark:text-gray-200 disabled:opacity-50"
 						>
-							<button
-								on:click={satisfiedWithOriginalFromPanel}
-								disabled={moderationLoading}
-								class="w-full p-3 text-xs font-medium text-center rounded-lg transition-all bg-green-500 text-white hover:bg-green-600 shadow-md hover:shadow-lg disabled:opacity-50"
-							>
-								I'm Satisfied With Original
-							</button>
-						</Tooltip>
+							<svg class="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+								<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"></path>
+							</svg>
+							<span>Back</span>
+						</button>
 					</div>
 
 						<!-- Custom Instructions -->
