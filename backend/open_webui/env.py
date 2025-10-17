@@ -91,6 +91,7 @@ log_sources = [
     "OLLAMA",
     "OPENAI",
     "RAG",
+    "SCHEDULER",
     "WEBHOOK",
     "SOCKET",
     "JIRA",

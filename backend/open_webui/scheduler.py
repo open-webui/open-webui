@@ -5,6 +5,7 @@ from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from apscheduler.triggers.cron import CronTrigger
 from datetime import datetime
 
+from open_webui.env import SRC_LOG_LEVELS
 from open_webui.config import (
     CHAT_LIFETIME_ENABLED,
     CHAT_LIFETIME_DAYS,
@@ -13,6 +14,7 @@ from open_webui.config import (
 )
 
 log = logging.getLogger(__name__)
+log.setLevel(SRC_LOG_LEVELS["SCHEDULER"])
 
 # Global scheduler instance
 scheduler = None
