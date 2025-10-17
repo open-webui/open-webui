@@ -6,10 +6,10 @@
 #
 # BEFORE USING:
 # 1. Replace YOUR_SSH_PUBLIC_KEY_HERE with your actual SSH public key
-# 2. Optional: Change username from 'deployer' to your preference
+# 2. Optional: Change username from 'qbmgr' to your preference
 
 users:
-  - name: deployer
+  - name: qbmgr
     groups: sudo, docker
     shell: /bin/bash
     sudo: ['ALL=(ALL) NOPASSWD:ALL']
@@ -32,25 +32,25 @@ packages:
 
 # Ensure Docker service is enabled and started
 runcmd:
-  # Add deployer to docker group (redundant but ensures it's set)
-  - usermod -aG docker deployer
+  # Add qbmgr to docker group (redundant but ensures it's set)
+  - usermod -aG docker qbmgr
 
-  # Clone Open WebUI repository to deployer's home
-  - sudo -u deployer git clone https://github.com/imagicrafter/open-webui.git /home/deployer/open-webui
+  # Clone Open WebUI repository to qbmgr's home
+  - sudo -u qbmgr git clone https://github.com/imagicrafter/open-webui.git /home/qbmgr/open-webui
 
   # Set ownership
-  - chown -R deployer:deployer /home/deployer/open-webui
+  - chown -R qbmgr:qbmgr /home/qbmgr/open-webui
 
   # Create common directories
   - mkdir -p /opt/openwebui-nginx
-  - chown -R deployer:deployer /opt/openwebui-nginx
+  - chown -R qbmgr:qbmgr /opt/openwebui-nginx
 
   # Restart Docker to ensure group changes take effect
   - systemctl restart docker
 
   # Create welcome message
   - |
-    cat > /home/deployer/WELCOME.txt << 'EOF'
+    cat > /home/qbmgr/WELCOME.txt << 'EOF'
     ╔════════════════════════════════════════════════════════════╗
     ║          Open WebUI Deployment Server Ready                ║
     ╚════════════════════════════════════════════════════════════╝
@@ -58,13 +58,13 @@ runcmd:
     Your server is configured and ready for Open WebUI deployment!
 
     Quick Start:
-    1. SSH as deployer: ssh deployer@YOUR_DROPLET_IP
+    1. SSH as qbmgr: ssh qbmgr@YOUR_DROPLET_IP
     2. Navigate to repo: cd ~/open-webui/mt/nginx-container
     3. Deploy nginx: ./deploy-nginx-container.sh
     4. Create client: cd ~/open-webui/mt && ./client-manager.sh
 
-    Repository location: /home/deployer/open-webui
-    User: deployer (has sudo and docker access)
+    Repository location: /home/qbmgr/open-webui
+    User: qbmgr (has sudo and docker access)
 
     Documentation:
     - Quick Start: ~/open-webui/mt/QUICKSTART-FRESH-DEPLOYMENT.md
@@ -74,10 +74,10 @@ runcmd:
     Check nginx container: docker ps --filter "name=openwebui-nginx"
 
     For security, root SSH login is disabled after first boot.
-    Always use 'deployer' user for deployments.
+    Always use 'qbmgr' user for deployments.
     EOF
 
-  - chown deployer:deployer /home/deployer/WELCOME.txt
+  - chown qbmgr:qbmgr /home/qbmgr/WELCOME.txt
 
 # Disable root SSH login for security (after cloud-init completes)
 bootcmd:
@@ -91,11 +91,11 @@ final_message: |
 
   Open WebUI deployment server is ready!
 
-  SSH as deployer: ssh deployer@YOUR_DROPLET_IP
+  SSH as qbmgr: ssh qbmgr@YOUR_DROPLET_IP
   Read welcome message: cat ~/WELCOME.txt
 
   System is configured with:
-  - User 'deployer' (sudo + docker access)
+  - User 'qbmgr' (sudo + docker access)
   - Open WebUI repository cloned
   - Docker ready
   - Certbot installed
