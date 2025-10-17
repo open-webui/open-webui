@@ -17,7 +17,7 @@ YELLOW='\033[1;33m'
 NC='\033[0m'
 
 # Configuration
-DEPLOY_USER="${DEPLOY_USER:-deployer}"
+DEPLOY_USER="${DEPLOY_USER:-qbmgr}"
 REPO_URL="https://github.com/imagicrafter/open-webui.git"
 
 echo -e "${BLUE}╔════════════════════════════════════════════════════════════╗${NC}"
@@ -154,7 +154,7 @@ echo
 
 # Step 8: Create welcome message
 echo -e "${BLUE}Step 8: Create welcome message${NC}"
-cat > "/home/$DEPLOY_USER/WELCOME.txt" << 'EOF'
+cat > "/home/$DEPLOY_USER/WELCOME.txt" << EOF
 ╔════════════════════════════════════════════════════════════╗
 ║          Open WebUI Deployment Server Ready                ║
 ╚════════════════════════════════════════════════════════════╝
@@ -167,7 +167,7 @@ Quick Start:
 3. Create client: cd ~/open-webui/mt && ./client-manager.sh
 
 Repository location: ~/open-webui
-User: deployer (has sudo and docker access)
+User: $DEPLOY_USER (has sudo and docker access)
 
 Documentation:
 - Quick Start: ~/open-webui/mt/QUICKSTART-FRESH-DEPLOYMENT.md
@@ -238,3 +238,23 @@ else
     echo -e "${YELLOW}⚠️  Root SSH is still enabled - disable after testing $DEPLOY_USER access${NC}"
 fi
 echo
+
+# Option to switch to qbmgr and run client-manager
+echo -e "${BLUE}═══════════════════════════════════════════════════════════${NC}"
+echo -e "${YELLOW}Would you like to switch to $DEPLOY_USER and start client-manager now?${NC}"
+echo -n "Start client-manager? (Y/n): "
+read start_manager
+
+if [[ ! "$start_manager" =~ ^[Nn]$ ]]; then
+    echo
+    echo -e "${GREEN}Switching to $DEPLOY_USER and starting client-manager...${NC}"
+    echo
+    sleep 1
+    # Switch to qbmgr and run client manager
+    exec sudo -u "$DEPLOY_USER" bash -c 'cd ~/open-webui/mt && ./client-manager.sh'
+else
+    echo
+    echo -e "${GREEN}Setup complete! You can run client-manager later with:${NC}"
+    echo "  sudo -u $DEPLOY_USER bash -c 'cd ~/open-webui/mt && ./client-manager.sh'"
+    echo
+fi
