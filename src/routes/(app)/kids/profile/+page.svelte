@@ -28,6 +28,11 @@
 	let showForm: boolean = false; // Control form visibility
 	let showConfirmationModal: boolean = false; // Confirmation modal for workflow progression
 	let isEditing: boolean = false; // Track edit mode
+	let isProfileCompleted: boolean = false; // Track if profile is completed
+	let childSelectedForQuestions: number = -1; // Track which child is selected for questions (-1 = none selected)
+	// State for scroll indicator
+	let showScrollIndicator: boolean = false;
+	let hasScrolled: boolean = false;
 
 	function getChildGridTemplate(): string {
 		const cols = Math.max(1, Math.min((childProfiles?.length || 0) + 1, 5));
@@ -90,6 +95,11 @@
 	}
 
 	function addNewProfile() {
+		// Don't reset if already adding a new profile
+		if (selectedChildIndex === -1 && showForm && isEditing) {
+			return;
+		}
+		
 		// Reset form fields
 		childName = '';
 		childAge = '';
@@ -98,6 +108,8 @@
 		parentingStyle = '';
 		showForm = true;
 		isEditing = true; // Set editing mode
+		// Set selected index to -1 to indicate we're creating a new profile
+		selectedChildIndex = -1;
 	}
 
 	async function saveNewProfile() {
@@ -175,9 +187,13 @@
 				selectedChildIndex = 0;
 				hydrateFormFromSelectedChild();
 				showForm = false; // Don't show form initially, wait for Edit click
+				isProfileCompleted = true; // Profile exists
+				childSelectedForQuestions = -1; // Reset selection state
 			} else {
 				selectedChildIndex = -1;
 				showForm = false;
+				isProfileCompleted = false;
+				childSelectedForQuestions = -1;
 			}
 		} catch (error) {
 			console.error('Failed to load child profiles:', error);
@@ -202,8 +218,8 @@
 				return;
 			}
 
-			// If no profiles exist, create a new one
-			if (childProfiles.length === 0) {
+			// If no profiles exist or we're creating a new profile, create a new one
+			if (childProfiles.length === 0 || selectedChildIndex === -1) {
 				const newChild = await childProfileSync.createChildProfile({
 					name: childName,
 					child_age: childAge,
@@ -211,8 +227,13 @@
 					child_characteristics: childCharacteristics,
 					parenting_style: parentingStyle
 				});
-				childProfiles = [newChild];
-				selectedChildIndex = 0;
+				if (childProfiles.length === 0) {
+					childProfiles = [newChild];
+					selectedChildIndex = 0;
+				} else {
+					childProfiles = [...childProfiles, newChild];
+					selectedChildIndex = childProfiles.length - 1;
+				}
 			} else {
 				// Apply current form to selected child
 				applyFormToSelectedChild();
@@ -232,9 +253,10 @@
 			
 			toast.success('Child profile saved successfully!');
 			
-			// Exit edit mode after saving
+			// Exit edit mode after saving and mark as completed
 			isEditing = false;
 			showForm = false;
+			isProfileCompleted = true;
 		} catch (error) {
 			console.error('Failed to save child profile:', error);
 			toast.error('Failed to save child profile');
@@ -256,8 +278,19 @@
 		showForm = true;
 	}
 
-	function handleDone() {
-		toast.success('Task 1 Complete');
+	function selectChildForQuestions(index: number) {
+		childSelectedForQuestions = index;
+		const childId = childProfiles[index]?.id;
+		if (childId) {
+			localStorage.setItem('selectedChildForQuestions', childId.toString());
+		}
+	// Unlock Step 2 immediately before showing the modal
+	localStorage.setItem('assignmentStep', '2');
+	localStorage.setItem('moderationScenariosAccessed', 'true');
+	localStorage.setItem('unlock_moderation', 'true');
+	window.dispatchEvent(new Event('storage'));
+	window.dispatchEvent(new Event('workflow-updated'));
+		toast.success(`${childProfiles[index]?.name} selected for questions`);
 		showConfirmationModal = true;
 	}
 
@@ -274,8 +307,53 @@
 		}
 	}
 
-	onMount(async () => {
-		await loadChildProfile();
+	onMount(() => {
+		(async () => {
+		// Redirect if instructions not confirmed
+		if (localStorage.getItem('instructionsCompleted') !== 'true') {
+			goto('/assignment-instructions');
+			return;
+		}
+			await loadChildProfile();
+			
+			// Check if child has been selected for questions
+			const savedChildId = localStorage.getItem('selectedChildForQuestions');
+			if (savedChildId) {
+				const index = childProfiles.findIndex(c => c.id?.toString() === savedChildId);
+				if (index !== -1) {
+					childSelectedForQuestions = index;
+				}
+			}
+		})();
+		
+		// Set up scroll indicator
+		const timer = setTimeout(() => {
+			if (!hasScrolled) {
+				showScrollIndicator = true;
+			}
+		}, 8000); // Show after 8 seconds
+
+		const handleScroll = () => {
+			hasScrolled = true;
+			showScrollIndicator = false;
+		};
+
+		// Find the scrollable container
+		const scrollContainer = document.querySelector('.overflow-y-auto');
+		
+		// Attach to both window and container
+		if (scrollContainer) {
+			scrollContainer.addEventListener('scroll', handleScroll);
+		}
+		window.addEventListener('scroll', handleScroll);
+		
+		return () => {
+			clearTimeout(timer);
+			if (scrollContainer) {
+				scrollContainer.removeEventListener('scroll', handleScroll);
+			}
+			window.removeEventListener('scroll', handleScroll);
+		};
 	});
 </script>
 
@@ -289,26 +367,58 @@
 		: ''} max-w-full"
 >
 	<nav class="px-2.5 pt-1 backdrop-blur-xl w-full drag-region">
-		<div class="flex items-center">
-			<div class="{$showSidebar ? 'md:hidden' : ''} flex flex-none items-center self-end">
-				<button
-					id="sidebar-toggle-button"
-					class="cursor-pointer p-1.5 flex rounded-xl hover:bg-gray-100 dark:hover:bg-gray-850 transition"
-					on:click={() => {
-						showSidebar.set(!$showSidebar);
-					}}
-					aria-label="Toggle Sidebar"
-				>
-					<div class="m-auto self-center">
-						<MenuLines />
+		<div class="flex items-center justify-between">
+			<div class="flex items-center">
+				<div class="{$showSidebar ? 'md:hidden' : ''} flex flex-none items-center self-end">
+					<button
+						id="sidebar-toggle-button"
+						class="cursor-pointer p-1.5 flex rounded-xl hover:bg-gray-100 dark:hover:bg-gray-850 transition"
+						on:click={() => {
+							showSidebar.set(!$showSidebar);
+						}}
+						aria-label="Toggle Sidebar"
+					>
+						<div class="m-auto self-center">
+							<MenuLines />
+						</div>
+					</button>
+				</div>
+
+				<div class="flex w-full">
+					<div class="flex items-center text-xl font-semibold">
+						Child Profile
 					</div>
-				</button>
+				</div>
 			</div>
 
-			<div class="flex w-full">
-				<div class="flex items-center text-xl font-semibold">
-					Child Profile
-				</div>
+			<!-- Navigation Buttons -->
+			<div class="flex items-center space-x-2">
+				<button
+					on:click={() => goto('/assignment-instructions')}
+					class="px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg transition-colors flex items-center space-x-2"
+				>
+					<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+						<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path>
+					</svg>
+					<span>Previous Task</span>
+				</button>
+				<button
+					on:click={() => {
+						localStorage.setItem('assignmentStep', '2');
+						goto('/moderation-scenario');
+					}}
+					disabled={childSelectedForQuestions === -1}
+					class="px-4 py-2 text-sm font-medium rounded-lg transition-colors flex items-center space-x-2 {
+						childSelectedForQuestions !== -1
+							? 'bg-blue-500 hover:bg-blue-600 text-white'
+							: 'text-gray-400 dark:text-gray-500 cursor-not-allowed'
+					}"
+				>
+					<span>Next Task</span>
+					<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+						<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path>
+					</svg>
+				</button>
 			</div>
 		</div>
 	</nav>
@@ -325,16 +435,40 @@
 					<h2 class="text-lg font-semibold text-gray-900 dark:text-white mb-4">Select Your Profile</h2>
 					<div class="grid gap-3" style={`grid-template-columns: ${getChildGridTemplate()}`}>
 						{#each childProfiles as c, i}
-							<div class="relative group">
+							<div class="relative group flex flex-col">
 								<button 
 									type="button"
 									class={`w-full px-6 py-4 rounded-full transition-all duration-200 ${i===selectedChildIndex ? 'bg-gradient-to-r from-blue-500 to-purple-600 text-white shadow-lg ring-2 ring-blue-400/50 transform scale-105' : 'bg-gradient-to-r from-gray-700 to-gray-600 text-white ring-1 ring-gray-500/30 hover:from-gray-600 hover:to-gray-500 hover:ring-gray-400/50 hover:scale-102'}`}
 									on:click={() => selectChild(i)}>
 									<span class="font-medium">{c.name || `Kid ${i + 1}`}</span>
+									{#if childSelectedForQuestions === i}
+										<div class="absolute -top-1 -left-1 w-6 h-6 bg-green-500 rounded-full flex items-center justify-center z-10">
+											<svg class="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+												<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+											</svg>
+										</div>
+									{/if}
 								</button>
+								
+								<!-- Add "Select for questions" button below each profile -->
+								{#if childSelectedForQuestions !== i}
+									<button
+										type="button"
+										on:click={() => selectChildForQuestions(i)}
+										class="mt-2 w-full px-4 py-2 text-sm bg-green-500 hover:bg-green-600 text-white rounded-lg transition-all"
+									>
+										Select for questions
+									</button>
+								{:else}
+									<div class="mt-2 w-full px-4 py-2 text-sm bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-200 rounded-lg text-center font-medium">
+										Selected ✓
+									</div>
+								{/if}
+								
+								<!-- Delete button -->
 								<button 
 									type="button"
-									class="absolute -top-2 -right-2 w-6 h-6 bg-red-500 hover:bg-red-600 text-white rounded-full text-xs opacity-0 group-hover:opacity-100 transition-opacity duration-200 flex items-center justify-center"
+									class="absolute -top-2 -right-2 w-6 h-6 bg-red-500 hover:bg-red-600 text-white rounded-full text-xs opacity-0 group-hover:opacity-100 transition-opacity duration-200 flex items-center justify-center z-20"
 									on:click|stopPropagation={() => deleteChild(i)}
 									title="Delete child">
 									×
@@ -343,7 +477,7 @@
 						{/each}
 						<button 
 							type="button" 
-							class="px-6 py-4 rounded-full bg-gradient-to-r from-emerald-500 to-teal-600 text-white shadow-lg ring-1 ring-emerald-400/30 hover:from-emerald-400 hover:to-teal-500 hover:ring-emerald-300/50 hover:scale-105 transition-all duration-200" 
+							class="px-6 py-4 rounded-full bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 shadow-lg ring-1 ring-gray-300/30 dark:ring-gray-600/30 hover:bg-gray-300 dark:hover:bg-gray-600 hover:ring-gray-400/50 dark:hover:ring-gray-500/50 hover:scale-105 transition-all duration-200" 
 							on:click={addNewProfile}>
 							<span class="font-medium">+ Add Profile</span>
 						</button>
@@ -388,37 +522,27 @@
 			</div>
 			<div class="space-y-4">
 				<div>
-					<label class="block text-sm font-medium text-gray-500 dark:text-gray-400 mb-1">Name</label>
+					<div class="block text-sm font-medium text-gray-500 dark:text-gray-400 mb-1">Name</div>
 					<p class="text-gray-900 dark:text-white">{childProfiles[selectedChildIndex]?.name || 'Not specified'}</p>
 				</div>
 				<div>
-					<label class="block text-sm font-medium text-gray-500 dark:text-gray-400 mb-1">Age</label>
+					<div class="block text-sm font-medium text-gray-500 dark:text-gray-400 mb-1">Age</div>
 					<p class="text-gray-900 dark:text-white">{childProfiles[selectedChildIndex]?.child_age || 'Not specified'}</p>
 				</div>
 				<div>
-					<label class="block text-sm font-medium text-gray-500 dark:text-gray-400 mb-1">Gender</label>
+					<div class="block text-sm font-medium text-gray-500 dark:text-gray-400 mb-1">Gender</div>
 					<p class="text-gray-900 dark:text-white">{childProfiles[selectedChildIndex]?.child_gender || 'Not specified'}</p>
 				</div>
 				<div>
-					<label class="block text-sm font-medium text-gray-500 dark:text-gray-400 mb-1">Characteristics & Interests</label>
+					<div class="block text-sm font-medium text-gray-500 dark:text-gray-400 mb-1">Characteristics & Interests</div>
 					<p class="text-gray-900 dark:text-white whitespace-pre-wrap">{childProfiles[selectedChildIndex]?.child_characteristics || 'Not specified'}</p>
 				</div>
 				<div>
-					<label class="block text-sm font-medium text-gray-500 dark:text-gray-400 mb-1">Parenting Style</label>
+					<div class="block text-sm font-medium text-gray-500 dark:text-gray-400 mb-1">Parenting Style</div>
 					<p class="text-gray-900 dark:text-white whitespace-pre-wrap">{childProfiles[selectedChildIndex]?.parenting_style || 'Not specified'}</p>
 				</div>
 			</div>
-		</div>
-		
-		<!-- Floating Done Button Overlay -->
-		<div class="fixed bottom-4 right-4 z-50">
-			<button
-				type="button"
-				on:click={handleDone}
-				class="px-4 py-2 rounded-lg font-medium transition-all shadow-lg bg-green-500 text-white hover:bg-green-600"
-			>
-				Done
-			</button>
+			
 		</div>
 		{/if}
 
@@ -515,13 +639,15 @@
 
 				<!-- Save Button -->
 				<div class="flex justify-end space-x-3 pt-6">
-					<button
-						type="button"
-						on:click={cancelAddProfile}
-						class="bg-gray-500 hover:bg-gray-600 text-white px-8 py-3 rounded-lg font-medium transition-all duration-200"
-					>
-						Cancel
-					</button>
+					{#if childProfiles.length > 0}
+						<button
+							type="button"
+							on:click={cancelAddProfile}
+							class="bg-gray-500 hover:bg-gray-600 text-white px-8 py-3 rounded-lg font-medium transition-all duration-200"
+						>
+							Cancel
+						</button>
+					{/if}
 					<button
 						type="submit"
 						class="bg-gradient-to-r from-blue-500 to-purple-600 hover:from-blue-600 hover:to-purple-700 text-white px-8 py-3 rounded-lg font-medium transition-all duration-200 shadow-lg hover:shadow-xl"
@@ -536,7 +662,9 @@
 
 		<!-- Confirmation Modal for Workflow Progression -->
 		{#if showConfirmationModal}
+		<!-- svelte-ignore a11y-click-events-have-key-events a11y-no-static-element-interactions -->
 		<div class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50" on:click={() => showConfirmationModal = false}>
+			<!-- svelte-ignore a11y-click-events-have-key-events a11y-no-static-element-interactions -->
 			<div class="bg-white dark:bg-gray-800 rounded-xl p-8 max-w-md w-full mx-4 shadow-2xl" on:click|stopPropagation>
 				<div class="text-center mb-6">
 					<div class="w-16 h-16 bg-gradient-to-r from-green-500 to-emerald-600 rounded-full flex items-center justify-center mx-auto mb-4">
@@ -571,4 +699,14 @@
 		{/if}
 	</div>
 	</div>
+
+	<!-- Scroll Indicator -->
+	{#if showScrollIndicator}
+		<div class="fixed bottom-8 left-1/2 transform -translate-x-1/2 z-40 flex flex-col items-center animate-bounce">
+			<span class="text-sm text-gray-400 dark:text-gray-500 mb-1">Scroll down</span>
+			<svg class="w-6 h-6 text-gray-400 dark:text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+				<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 14l-7 7m0 0l-7-7m7 7V3"></path>
+			</svg>
+		</div>
+	{/if}
 </div>

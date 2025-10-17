@@ -94,6 +94,7 @@ from open_webui.routers import (
     moderation,
     child_profiles,
 )
+from open_webui.routers import exit_quiz
 
 from open_webui.routers.retrieval import (
     get_embedding_function,
@@ -1291,6 +1292,9 @@ app.include_router(selections.router, prefix="/api/v1", tags=["selections"])
 
 # Include child profiles router
 app.include_router(child_profiles.router, prefix="/api/v1", tags=["child_profiles"])
+
+# Include exit quiz router
+app.include_router(exit_quiz.router, prefix="/api/v1", tags=["exit_quiz"])
 
 # SCIM 2.0 API for identity management
 if SCIM_ENABLED:

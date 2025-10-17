@@ -276,15 +276,29 @@
 	// Workflow navigation guard
 	const enforceWorkflowNavigation = async () => {
 		const currentPath = $page.url.pathname;
-		const assignmentStep = parseInt(localStorage.getItem('assignmentStep') || '1');
+		const assignmentStep = parseInt(localStorage.getItem('assignmentStep') || '0'); // Start with 0 for new users
+		const assignmentCompleted = localStorage.getItem('assignmentCompleted') === 'true';
+		const instructionsCompleted = localStorage.getItem('instructionsCompleted') === 'true';
 		
-		// Allow navigation to home/intro page
+		// Prevent access to main chat page after assignment completion (except for admins)
+		if (currentPath === '/' && assignmentCompleted && $user?.role !== 'admin') {
+			await goto('/completion');
+			return;
+		}
+		
+		// Allow navigation to home/intro page for non-completed users
 		if (currentPath === '/') {
 			return;
 		}
 		
 		// Allow access to assignment instructions page
 		if (currentPath === '/assignment-instructions') {
+			return;
+		}
+
+		// Block Kids Profile until instructions are confirmed
+		if (currentPath.startsWith('/kids/profile') && !instructionsCompleted) {
+			await goto('/assignment-instructions');
 			return;
 		}
 		

@@ -90,48 +90,93 @@
 	let currentChild: ChildProfile | null = null;
 	let selectedChildIndex: number = 0;
 
-	// Assignment workflow state
-	let assignmentStep: number = 1; // 1: child-profile, 2: moderation-scenario, 3: exit-survey
-	let showAssignmentSetup: boolean = false;
-	let assignmentCompleted: boolean = false;
-	let moderationScenariosAccessed: boolean = false; // Track if user has accessed moderation scenarios
+    // Assignment workflow state
+    let assignmentStep: number = 1; // 1: child-profile, 2: moderation-scenario, 3: exit-survey
+    let showAssignmentSetup: boolean = false;
+    let assignmentCompleted: boolean = false;
+    let moderationScenariosAccessed: boolean = false; // Track if user has accessed moderation scenarios
+    let instructionsCompleted: boolean = false;
+    let unlock_kids: boolean = false;
+    let unlock_moderation: boolean = false;
+    let unlock_exit: boolean = false;
+    let unlock_completion: boolean = false;
 
-	// Make assignmentStep reactive to localStorage changes
-	$: if (typeof window !== 'undefined') {
-		const storedStep = localStorage.getItem('assignmentStep');
-		if (storedStep) {
-			assignmentStep = parseInt(storedStep);
-		}
-		const moderationAccessed = localStorage.getItem('moderationScenariosAccessed');
-		moderationScenariosAccessed = moderationAccessed === 'true';
-	}
+    // Make assignment state reactive to localStorage changes
+    $: if (typeof window !== 'undefined') {
+        const storedStep = localStorage.getItem('assignmentStep');
+        if (storedStep) {
+            assignmentStep = parseInt(storedStep);
+        }
+        const moderationAccessed = localStorage.getItem('moderationScenariosAccessed');
+        moderationScenariosAccessed = moderationAccessed === 'true';
+        assignmentCompleted = localStorage.getItem('assignmentCompleted') === 'true';
+        instructionsCompleted = localStorage.getItem('instructionsCompleted') === 'true';
+        unlock_kids = localStorage.getItem('unlock_kids') === 'true';
+        unlock_moderation = localStorage.getItem('unlock_moderation') === 'true';
+        unlock_exit = localStorage.getItem('unlock_exit') === 'true';
+        unlock_completion = localStorage.getItem('unlock_completion') === 'true';
+    }
 
-	// Listen for localStorage changes from other tabs/windows
-	onMount(() => {
-		// Check assignment step on mount
-		const storedStep = localStorage.getItem('assignmentStep');
-		if (storedStep) {
-			assignmentStep = parseInt(storedStep);
-		}
+    // Listen for state changes
+    onMount(() => {
+        // Initialize from localStorage
+        const storedStep = localStorage.getItem('assignmentStep');
+        if (storedStep) {
+            assignmentStep = parseInt(storedStep);
+        }
+        moderationScenariosAccessed = localStorage.getItem('moderationScenariosAccessed') === 'true';
+        assignmentCompleted = localStorage.getItem('assignmentCompleted') === 'true';
+        instructionsCompleted = localStorage.getItem('instructionsCompleted') === 'true';
+
+        const handleStorageChange = (e) => {
+            if (e.key === 'assignmentStep' && e.newValue) {
+                assignmentStep = parseInt(e.newValue);
+            }
+            if (e.key === 'moderationScenariosAccessed' && e.newValue) {
+                moderationScenariosAccessed = e.newValue === 'true';
+            }
+            if (e.key === 'assignmentCompleted' && e.newValue) {
+                assignmentCompleted = e.newValue === 'true';
+            }
+            if (e.key === 'instructionsCompleted' && e.newValue) {
+                instructionsCompleted = e.newValue === 'true';
+            }
+            if (e.key === 'unlock_kids' && e.newValue) {
+                unlock_kids = e.newValue === 'true';
+            }
+            if (e.key === 'unlock_moderation' && e.newValue) {
+                unlock_moderation = e.newValue === 'true';
+            }
+            if (e.key === 'unlock_exit' && e.newValue) {
+                unlock_exit = e.newValue === 'true';
+            }
+            if (e.key === 'unlock_completion' && e.newValue) {
+                unlock_completion = e.newValue === 'true';
+            }
+        };
 		
-		// Check moderation scenarios access on mount
-		const moderationAccessed = localStorage.getItem('moderationScenariosAccessed');
-		moderationScenariosAccessed = moderationAccessed === 'true';
+        window.addEventListener('storage', handleStorageChange);
+
+        // Intra-tab updates via custom event
+        const handleWorkflowUpdated = () => {
+            const storedStepNow = localStorage.getItem('assignmentStep');
+            if (storedStepNow) {
+                assignmentStep = parseInt(storedStepNow);
+            }
+            moderationScenariosAccessed = localStorage.getItem('moderationScenariosAccessed') === 'true';
+            assignmentCompleted = localStorage.getItem('assignmentCompleted') === 'true';
+            instructionsCompleted = localStorage.getItem('instructionsCompleted') === 'true';
+            unlock_kids = localStorage.getItem('unlock_kids') === 'true';
+            unlock_moderation = localStorage.getItem('unlock_moderation') === 'true';
+            unlock_exit = localStorage.getItem('unlock_exit') === 'true';
+            unlock_completion = localStorage.getItem('unlock_completion') === 'true';
+        };
+        window.addEventListener('workflow-updated', handleWorkflowUpdated as EventListener);
 		
-		const handleStorageChange = (e) => {
-			if (e.key === 'assignmentStep' && e.newValue) {
-				assignmentStep = parseInt(e.newValue);
-			}
-			if (e.key === 'moderationScenariosAccessed' && e.newValue) {
-				moderationScenariosAccessed = e.newValue === 'true';
-			}
-		};
-		
-		window.addEventListener('storage', handleStorageChange);
-		
-		return () => {
-			window.removeEventListener('storage', handleStorageChange);
-		};
+        return () => {
+            window.removeEventListener('storage', handleStorageChange);
+            window.removeEventListener('workflow-updated', handleWorkflowUpdated as EventListener);
+        };
 	});
 
 	// 加载当前选择的personal
@@ -1106,11 +1151,11 @@
 
 					<!-- Step 1: Child Profile -->
 					<div class="px-1.5 flex justify-center text-gray-800 dark:text-gray-200">
-						<div class="grow flex items-center space-x-3 rounded-lg px-2 py-[7px] transition {assignmentStep >= 1 ? 'hover:bg-gray-100 dark:hover:bg-gray-900' : 'opacity-50 cursor-not-allowed'}">
+						<div class="grow flex items-center space-x-3 rounded-lg px-2 py-[7px] transition {assignmentStep >= 1 && instructionsCompleted && unlock_kids ? 'hover:bg-gray-100 dark:hover:bg-gray-900' : 'opacity-50 cursor-not-allowed'}">
 							<button
 								class="flex items-center space-x-3 flex-1"
 								on:click={() => goto('/kids/profile')}
-								disabled={assignmentStep < 1}
+								disabled={assignmentStep < 1 || !instructionsCompleted || !unlock_kids}
 							>
 								<div class="self-center">
 									<div class="w-6 h-6 rounded-full flex items-center justify-center {assignmentStep >= 1 ? 'bg-blue-500 text-white' : 'bg-gray-300 dark:bg-gray-600 text-gray-500'}">
@@ -1154,14 +1199,14 @@
 					<!-- Step 2: Moderation Scenarios -->
 					<div class="px-1.5 flex justify-center text-gray-800 dark:text-gray-200">
 						<button
-							class="grow flex items-center space-x-3 rounded-lg px-2 py-[7px] transition {assignmentStep >= 2 ? 'hover:bg-gray-100 dark:hover:bg-gray-900' : 'opacity-50 cursor-not-allowed'}"
+							class="grow flex items-center space-x-3 rounded-lg px-2 py-[7px] transition {unlock_moderation ? 'hover:bg-gray-100 dark:hover:bg-gray-900' : 'opacity-50 cursor-not-allowed'}"
 							on:click={() => {
-								if (assignmentStep >= 2) {
+								if (unlock_moderation) {
 									localStorage.setItem('moderationScenariosAccessed', 'true');
 									goto('/moderation-scenario');
 								}
 							}}
-							disabled={assignmentStep < 2}
+							disabled={!unlock_moderation}
 						>
 							<div class="self-center">
 								<div class="w-6 h-6 rounded-full flex items-center justify-center {assignmentStep >= 2 ? 'bg-purple-500 text-white' : 'bg-gray-300 dark:bg-gray-600 text-gray-500'}">
@@ -1183,13 +1228,17 @@
 					<!-- Step 3: Exit Survey -->
 					<div class="px-1.5 flex justify-center text-gray-800 dark:text-gray-200">
 						<button
-							class="grow flex items-center space-x-3 rounded-lg px-2 py-[7px] transition {assignmentStep >= 3 && moderationScenariosAccessed ? 'hover:bg-gray-100 dark:hover:bg-gray-900' : 'opacity-50 cursor-not-allowed'}"
-							on:click={() => goToStep(3)}
-							disabled={assignmentStep < 3 || !moderationScenariosAccessed}
+							class="grow flex items-center space-x-3 rounded-lg px-2 py-[7px] transition {(assignmentStep >= 3 || unlock_exit) ? 'hover:bg-gray-100 dark:hover:bg-gray-900' : 'opacity-50 cursor-not-allowed'}"
+							on:click={() => {
+								if (assignmentStep >= 3 || unlock_exit) {
+									goto('/exit-survey');
+								}
+							}}
+							disabled={!(assignmentStep >= 3 || unlock_exit)}
 						>
 							<div class="self-center">
-								<div class="w-6 h-6 rounded-full flex items-center justify-center {assignmentStep >= 3 && moderationScenariosAccessed ? 'bg-green-500 text-white' : 'bg-gray-300 dark:bg-gray-600 text-gray-500'}">
-									{#if assignmentCompleted}
+								<div class="w-6 h-6 rounded-full flex items-center justify-center {(assignmentStep >= 3 || unlock_exit) ? 'bg-green-500 text-white' : 'bg-gray-300 dark:bg-gray-600 text-gray-500'}">
+									{#if assignmentCompleted || unlock_completion}
 										<svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
 											<path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"></path>
 										</svg>

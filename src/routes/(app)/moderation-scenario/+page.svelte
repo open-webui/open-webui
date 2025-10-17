@@ -644,6 +644,9 @@
 		// Update assignment step to 3 (exit survey)
 		localStorage.setItem('assignmentStep', '3');
 		localStorage.setItem('moderationScenariosAccessed', 'true');
+    localStorage.setItem('unlock_exit', 'true');
+    window.dispatchEvent(new Event('storage'));
+    window.dispatchEvent(new Event('workflow-updated'));
 		goto('/exit-survey');
 	}
 
@@ -652,12 +655,12 @@
 	}
 
 	onMount(() => {
-		// Check if user should be on this page
-		const currentStep = parseInt(localStorage.getItem('assignmentStep') || '1');
-		if (currentStep < 2) {
-			goto('/kids/profile');
-			return;
-		}
+	// Guard navigation if user tries to jump ahead
+	const step = parseInt(localStorage.getItem('assignmentStep') || '0');
+	if (step < 1) {
+		goto('/kids/profile');
+		return;
+	}
 		
 		// Start timer for the initial scenario
 		startTimer(selectedScenarioIndex);
@@ -698,6 +701,40 @@
 			<div class="flex w-full items-center justify-between">
 				<div class="flex items-center text-xl font-semibold">
 					Moderation Scenarios
+				</div>
+
+				<!-- Navigation Buttons -->
+				<div class="flex items-center space-x-2">
+					<button
+						on:click={() => goto('/kids/profile')}
+						class="px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg transition-colors flex items-center space-x-2"
+					>
+						<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+							<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path>
+						</svg>
+						<span>Previous Task</span>
+					</button>
+					<button
+						on:click={() => {
+							// Unlock Step 3 immediately before any popup/navigation
+							localStorage.setItem('assignmentStep', '3');
+							localStorage.setItem('unlock_exit', 'true');
+							window.dispatchEvent(new Event('storage'));
+							window.dispatchEvent(new Event('workflow-updated'));
+							goto('/exit-survey');
+						}}
+						disabled={!scenarioStates || scenarioStates.size < 3}
+						class="px-4 py-2 text-sm font-medium rounded-lg transition-colors flex items-center space-x-2 {
+							scenarioStates && scenarioStates.size >= 3
+								? 'bg-blue-500 hover:bg-blue-600 text-white'
+								: 'text-gray-400 dark:text-gray-500 cursor-not-allowed'
+						}"
+					>
+						<span>Next Task</span>
+						<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+							<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path>
+						</svg>
+					</button>
 				</div>
 			</div>
 		</div>
