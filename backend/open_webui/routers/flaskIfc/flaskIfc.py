@@ -1126,6 +1126,10 @@ def chats():
             )
             if result:
                 response_text = result
+                # Remove the command from the beginning of the response if present
+                if response_text.startswith(command):
+                    response_text = response_text[len(command) :].lstrip()
+
                 start_phrases = ["llama_perf_sampler_print: ", "OPU Profiling Results:"]
 
                 matched_phrase = next(
@@ -1257,6 +1261,10 @@ def chat():
             )
             if result:
                 response_text = result
+                # Remove the command from the beginning of the response if present
+                if response_text.startswith(command):
+                    response_text = response_text[len(command) :].lstrip()
+
                 start_phrases = ["llama_perf_sampler_print: ", "OPU Profiling Results:"]
                 matched_phrase = next(
                     (phrase for phrase in start_phrases if phrase in response_text),
