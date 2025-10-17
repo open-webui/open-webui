@@ -167,12 +167,6 @@
 			};
 		});
 
-		// if ($config?.features?.enable_individual_knowledge_file_attachments) {
-		// 	items = items.filter((item) => item.type === 'file');
-		// } 
-		// else {
-		// 	items = items.filter((item) => item.type === 'collection');
-		// }
 		if (!($config?.features?.enable_individual_knowledge_file_attachments ?? true)) {
 			items = items.filter((it) => it.type !== 'file');
 		}
