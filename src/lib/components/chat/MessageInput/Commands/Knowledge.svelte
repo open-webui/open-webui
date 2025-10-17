@@ -13,7 +13,7 @@
 	import Database from '$lib/components/icons/Database.svelte';
 	import GlobeAlt from '$lib/components/icons/GlobeAlt.svelte';
 	import Youtube from '$lib/components/icons/Youtube.svelte';
-	import { folders } from '$lib/stores';
+	import { folders, config } from '$lib/stores';
 	import Folder from '$lib/components/icons/Folder.svelte';
 
 	const i18n = getContext('i18n');
@@ -166,6 +166,16 @@
 				...(item?.legacy || item?.meta?.legacy || item?.meta?.document ? { legacy: true } : {})
 			};
 		});
+
+		// if ($config?.features?.enable_individual_knowledge_file_attachments) {
+		// 	items = items.filter((item) => item.type === 'file');
+		// } 
+		// else {
+		// 	items = items.filter((item) => item.type === 'collection');
+		// }
+		if (!($config?.features?.enable_individual_knowledge_file_attachments ?? true)) {
+			items = items.filter((it) => it.type !== 'file');
+		}
 
 		fuse = new Fuse(items, {
 			keys: ['name', 'description']
